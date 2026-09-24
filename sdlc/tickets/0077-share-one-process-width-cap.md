@@ -1,12 +1,12 @@
 ---
 flow: build
 priority: 77
-opens: crates/thinkthen/src/engine/http.rs crates/thinkthen/src/engine/mod.rs crates/thinkthen/src/engine/request.rs crates/thinkthen/src/engine/schedule.rs crates/thinkthen/src/engine/annotate_schedule.rs crates/thinkthen/src/engine/workers.rs crates/thinkthen/src/cli/asking.rs crates/thinkthen/src/cli/annotate.rs crates/thinkthen/src/cli/find.rs crates/thinkthen/src/cli/schedule.rs crates/thinkthen/src/cli/failure.rs crates/thinkthen/tests/backend sdlc/scripts/policy.py sdlc/ratchet.json sdlc/planning/adr/0017-libraries-over-one-bound-core.md sdlc/planning/libraries
+opens: crates/thinkthen/src/engine/http.rs crates/thinkthen/src/engine/mod.rs crates/thinkthen/src/engine/request.rs crates/thinkthen/src/engine/schedule.rs crates/thinkthen/src/engine/annotate_schedule.rs crates/thinkthen/src/engine/workers.rs crates/thinkthen/src/cli/asking.rs crates/thinkthen/src/cli/annotate.rs crates/thinkthen/src/cli/find.rs crates/thinkthen/src/cli/schedule.rs crates/thinkthen/src/cli/failure.rs crates/thinkthen/src/cli/recognize.rs crates/thinkthen/src/cli/relate.rs crates/thinkthen/src/cli/relate/config.rs crates/thinkthen/tests/backend sdlc/scripts/policy.py sdlc/ratchet.json sdlc/planning/adr/0017-libraries-over-one-bound-core.md sdlc/planning/libraries
 ---
 
 # 0077: Share one process width cap
 
-Status: ready; implementation waits for tickets 0082, 0083, and 0076 to land
+Status: draft, revised after design review; needs re-review. Owner: Claude. Implementation waits for 0082, 0083, and 0076.
 
 ## Outcome and authority
 
@@ -14,7 +14,7 @@ Every live HTTP attempt in one process shares one width cap. Ordinary record sch
 
 Ian ruled the selection contract exactly. An engine built with no explicit width does not set the process cap. The first engine built with an explicit width sets it. Engines with no explicit width follow the active cap and never conflict. A later explicit engine with the same width succeeds. Only a later explicit engine with a different width fails locally before any request. Its diagnostic names the active width and says to match it or drop the argument.
 
-This ticket records the design now and does not move implementation ahead of the launch work. The current build queue places 0079 through 0083 and 0087 before the ordered 0076 through 0078 controls sequence. Ticket 0076 lands the deadline state first. Ticket 0077 then composes the gate wait with that state without reopening the deadline contract. ADR 0017 owns one gate for the process, and the current queue supplies the later width-selection ruling where ADR 0017's older settings table still reads as though every engine defaults its own width to 4.
+This ticket records the design now and does not move implementation ahead of the launch work. `sdlc/planning/one-line-plan-2026-09-24.md` places 0082 and 0083 before the 0076, 0077, 0078 controls sequence. Ticket 0076 lands the deadline state first. Ticket 0077 then composes the gate wait with that state without reopening the deadline contract. ADR 0017 owns one gate for the process, and the current queue supplies the later width-selection ruling where ADR 0017's older settings table still reads as though every engine defaults its own width to 4.
 
 ## Current facts
 
@@ -59,15 +59,15 @@ The command follows the same rule. An omitted `--jobs` uses the unbound fallback
 
 One operating-system process owns one cap for one linked engine image. Host threads, async tasks that enter the blocking engine, database worker threads inside that process, explicit engines, and the lazy convenience engine share it. Separate command processes and PostgreSQL backend processes have independent caps. This ticket does not coordinate limits across processes.
 
-Ticket 0078 owns complete fork recovery. It must compare the current process ID before touching an inherited width wait primitive, connection pool, cache coordinator, or other request-path lock. On a mismatch it publishes fresh child state without taking an inherited lock and abandons the inherited state. The child starts with no selected explicit width. Its first child call then contributes that engine's explicit width or remains implicit. Parent state does not change. Ticket 0077 must keep width registration and permit state in one replaceable process-state component and must not hide another global lock or condition variable that 0078 cannot replace.
+Ticket 0096 owns complete fork recovery. It must compare the current process ID before touching an inherited width wait primitive, connection pool, cache coordinator, or other request-path lock. On a mismatch it publishes fresh child state without taking an inherited lock and abandons the inherited state. The child starts with no selected explicit width. Its first child call then contributes that engine's explicit width or remains implicit. Parent state does not change. Ticket 0077 must keep width registration and permit state in one replaceable process-state component and must not hide another global lock or condition variable that 0078 cannot replace.
 
-Ticket 0077 does not claim warm-child or busy-child safety by itself. The public Rust API and real surface integration remain blocked until 0078 proves the gate and pool rebuild together. The C planning page also permits a host to load two copies of the library. Two independently loaded native images cannot share a Rust static. The surface integration ticket must either prevent duplicate engine images in one host process or provide a cross-image process primitive before it repeats an absolute one-process claim. This ticket proves one linked engine image and records that boundary plainly.
+Ticket 0077 does not claim warm-child or busy-child safety by itself. The public Rust API and real surface integration remain blocked until 0096 proves the gate and pool rebuild together. The C planning page also permits a host to load two copies of the library. Two independently loaded native images cannot share a Rust static. Draft ADR 0047 item 5 puts the choice between preventing duplicate images, a cross-image primitive, and a per-copy cap to Ian. This ticket proves one linked engine image and records that boundary plainly.
 
 ## Scope and exclusions
 
 Allowed: one private process-width component; preservation of explicit versus omitted width; cancellation-aware permit acquisition; one gated HTTP-attempt path; ordinary and grouped scheduler plumbing needed to read the effective width; the exact conflict mapping; mechanical enforcement against another live-send door; deterministic unit and loopback tests; the ADR 0017 width-selection correction; directly affected library planning sentences; exact ratchet, ticket, queue, and record updates.
 
-Production may touch at most ten Rust files and add at most 550 nonblank Rust lines. Focused tests may add at most 750 nonblank Rust lines. Reuse ticket 0073's 50 ms cancellation poll and existing scoped workers. Add no dependency, async runtime, resident worker thread, pacer, second scheduler, generalized resource pool, or host callback.
+Production may touch at most twelve Rust files and add at most 550 nonblank Rust lines. Focused tests may add at most 750 nonblank Rust lines. Reuse ticket 0073's 50 ms cancellation poll and existing scoped workers. Add no dependency, async runtime, resident worker thread, pacer, second scheduler, generalized resource pool, or host callback.
 
 Excluded: changing the 1 through 32 accepted command range, changing the fallback of 4, rate-per-minute control, HTTP/2, one connection for several simultaneous HTTP/1.1 requests, deadlines, public Rust types, full fork recovery, connection-pool rebuild, host signal ownership, cache or recording semantics, counter meanings, retry classification, output order, memory-window rules, workflows, surfaces implementation, site, paid calls, and publication. Do not change 0087's implementation position or begin 0077 implementation before 0087 lands.
 
@@ -80,25 +80,27 @@ Excluded: changing the 1 through 32 accepted command range, changing the fallbac
 - One synchronized loopback listener holds replies and counts active sockets. Concurrent direct judgments, ordinary records, grouped `annotate` work, aggregate `find` work, split chunks, `recognize`, `relate`, retries, and every live path added by tickets 0082 and 0083 share one cap. The listener observes exactly the active width and receives no next request until one held reply is released. The final maximum never exceeds the cap. Use channels and barriers for each phase; use only a generous outer timeout to detect deadlock.
 - A retry releases its permit after the failed attempt, performs no wait while holding capacity, and reacquires before the next attempt. A cache hit and replay acquire no permit. Existing send and usage counts remain exact.
 - Cancellation while waiting for width returns the existing cancelled cause within the shared polling protocol, sends nothing for that waiter, and leaves no permit consumed. Attempts already holding permits follow ticket 0073's existing finish rule. All scoped workers still join.
-- A process-state seam proves PID inspection precedes access to every replaceable width wait state. Ticket 0077 makes no child-success claim. Ticket 0078 must add warm-parent and busy-parent fork tests against the real loopback wire before the public API opens.
+- Every access to width wait state goes through one accessor function, and a test pins that accessor as the only door. Ticket 0096 later guards the accessor with its PID check. Ticket 0077 makes no child-success claim.
+- A waiter held behind a full gate whose deadline expires returns `Deadline` and sends nothing. The listener's count stays frozen, and no permit is used up. Ticket 0076 hands this proof here by name.
+- Planted-bug proof: for error-index row R2-9, the record plants a per-settings gate and shows the two-engine test turning red.
 - A future-facing constructor test pins `None` for the lazy convenience engine and omitted builder width. If the public functions are still absent, place the private seam and its test now, then make tickets 0084 through 0086 consume that seam without translating `None` to 4.
 - Existing `--jobs` order, bounded-memory, annotate queue, cancellation, retry, cache, secrecy, and exact-output tests remain green. Focused tests, policy, exact ratchet, formatting, Clippy, and `git diff --check` pass before code review. The coordinator then runs `sdlc/scripts/install`, `lint`, `test`, and `spec` sequentially. No gate or proof opens a non-loopback socket.
 
 ## Dependencies and follow-through
 
-Tickets 0055, 0064, 0072, 0073, and 0074 provide the private engine boundary, bounded retries, fast refusal, cancellation, and command SIGINT behavior this gate must preserve. Tickets 0079 through 0083 and 0087 must land before implementation by Ian's launch-first queue. Ticket 0076 is the direct prerequisite because a whole-call deadline must bound the new gate wait. Ticket 0078 must compose fork recovery and pool replacement with this process state before tickets 0084 through 0086 expose the public Rust API and packages.
+Tickets 0055, 0064, 0072, 0073, and 0074 provide the private engine boundary, bounded retries, fast refusal, cancellation, and command SIGINT behavior this gate must preserve. Tickets 0082 and 0083 land first under the one-line plan. Ticket 0076 is the direct prerequisite because a whole-call deadline must bound the new gate wait. Ticket 0096 composes fork recovery with this state after 0085 and before 0086.
 
 The separate `surfaces` branch proves rehearsal behavior over a stand-in. Its earlier settings-keyed state allowed a narrow engine beside a wide engine. Ian's later one-process ruling supersedes that behavior. Real surface integration must remove per-settings width gates, preserve settings differences unrelated to width, and run the combined-path proof against the production engine.
 
 ## Complexity and routing
 
-Contract 2; State/timing 4; Reach 4; Proof 4; Cost of error 4; Total 18. Minimum and final level: 4. One process-global concurrency decision crosses every paid request path and must hand state safely to fork recovery. A mistake can exceed the selected vendor-facing concurrency, deadlock cancellation or a forked host, or reject a valid later engine. Route implementation to `gpt-5.6-sol` with medium reasoning. Use separate Sol design and code reviewers. Stop and redesign if proof requires a second transport door, cross-process coordination, or a dependency.
+Contract 2; State/timing 4; Reach 4; Proof 4; Cost of error 4; Total 18. Minimum and final level: 4. One process-global concurrency decision crosses every paid request path and must hand state safely to fork recovery. A mistake can exceed the selected vendor-facing concurrency, deadlock cancellation or a forked host, or reject a valid later engine. Claude builds (Opus subagent). A fresh Claude session reviews design and code. Stop and redesign if proof requires a second transport door, cross-process coordination, or a dependency.
 
 ## Source-backed blockers
 
 - Implementation order is blocked until 0082, 0083, and 0076 land. Ticket 0087 has landed.
 - Public convenience-call proof cannot finish on this ticket because the public Rust API is scheduled in 0084 through 0086. This ticket must land the private `Option<Width>` seam that those tickets consume.
-- Public fork-safe claims remain blocked on 0078. ADR 0017 requires a PID check before inherited locks and a fresh pool and gate in the child.
+- Public fork-safe claims remain blocked on 0096. ADR 0017 requires a PID check before inherited locks and a fresh pool and gate in the child.
 - An absolute cap across two separately loaded copies remains unresolved. `sdlc/planning/libraries/c.md` permits that host shape, while a Rust process static covers one linked image. Draft ADR 0047 (ticket 0093) states one cap per loaded copy and defers a cross-image cap past 0.1; Ian can overturn it.
 
 ## What Ian can overturn
