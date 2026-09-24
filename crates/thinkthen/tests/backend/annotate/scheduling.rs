@@ -4,6 +4,7 @@ use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::{Condvar, Mutex, PoisonError};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -287,16 +288,61 @@ fn annotate_equal_groups_share_one_cache_request() {
     assert_eq!(listener.requests().len(), 1);
 }
 
+/// The groups the listener has seen, which a reply can wait on.
+#[derive(Default)]
+struct Arrivals {
+    seen: Mutex<Vec<usize>>,
+    arrived: Condvar,
+}
+
+/// The longest a held reply waits for a request a correct run sends.
+const FAILSAFE: Duration = Duration::from_secs(10);
+
+/// How long group 2 waits for a fourth request that a correct run never sends.
+const NO_FOURTH_REQUEST: Duration = Duration::from_secs(3);
+
+impl Arrivals {
+    fn note(&self, group: usize) {
+        self.seen
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .push(group);
+        self.arrived.notify_all();
+    }
+
+    fn wait_for(&self, group: usize, limit: Duration) {
+        let seen = self.seen.lock().unwrap_or_else(PoisonError::into_inner);
+        let _seen = self
+            .arrived
+            .wait_timeout_while(seen, limit, |seen| !seen.contains(&group));
+    }
+}
+
 #[test]
 fn a_model_mismatch_cancels_groups_that_have_not_started() {
-    let listener = Listener::answering(|body| {
+    // Group 0 answers first and sets the model. Group 1 answers with another
+    // model only once group 2 has arrived, so group 2 has started before the
+    // mismatch. Group 2 then waits for group 3, which a correct run never
+    // sends. The wait ends early when group 3 arrives, so a run that fails to
+    // cancel shows its fourth request, however slowly the machine runs.
+    let arrivals = Arrivals::default();
+    let listener = Listener::answering(move |body| {
         let body = String::from_utf8_lossy(body);
-        if body.contains("group 0") {
-            Canned::ok(&yes("jev-1.2", 1, 1)).after(10)
-        } else if body.contains("group 1") {
-            Canned::ok(&yes("jev-1.3", 1, 1)).after(20)
-        } else {
-            Canned::ok(&yes("jev-1.2", 1, 1)).after(40)
+        let group = (0..4)
+            .find(|group| body.contains(&format!("group {group}")))
+            .unwrap_or(3);
+        arrivals.note(group);
+        match group {
+            0 => Canned::ok(&yes("jev-1.2", 1, 1)),
+            1 => {
+                arrivals.wait_for(2, FAILSAFE);
+                Canned::ok(&yes("jev-1.3", 1, 1))
+            }
+            2 => {
+                arrivals.wait_for(3, NO_FOURTH_REQUEST);
+                Canned::ok(&yes("jev-1.2", 1, 1))
+            }
+            _ => Canned::ok(&yes("jev-1.2", 1, 1)),
         }
     })
     .expect("a listener");
