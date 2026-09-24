@@ -6,7 +6,7 @@ opens: libraries/r sdlc/scripts sdlc/planning/libraries/r.md sdlc/planning/adr/0
 
 # 0108: Port the R surface
 
-Status: design accepted 2026-09-24 after re-review, amended 2026-09-24 for the no-paid-backend rule. Owner: Claude. Depends on the 0084 builder amendment.
+Status: design and its 2026-09-24 amendment accepted. Owner: Claude. Depends on the 0084 builder amendment.
 
 ## Outcome and authority
 
@@ -243,5 +243,6 @@ Contract 2; state and timing 3; reach 2; proof 3; cost of error 3; total 13. Fin
 - Final check (same file) rejected one point: `tt_engine` built on the empty builder and dropped the address, key, and cache the environment gives. Decision 4 now starts from `EngineBuilder::from_env` (0084 amendment `f19cf437`), exposes every section 5 setting but the key, and names what happens after a verb has run and what `tt_usage` reads. Tests pin the kept environment, a set `base_url` over the variable, and one refusal per argument.
 - Second final check (same file) accepted it and left two notes for the code reviewer, now in the acceptance list: the loopback plant sends nothing without a key, and the `model = ""` refusal holds either way.
 - Amendment of 2026-09-24: decision 18 applies the no-paid-backend rule at main `d783ab6b`. The empty-builder plant and its note leave. The seed test proves the environment through `THINKTHEN_CACHE`, and the checks run with the real key removed.
-- Amendment review (`/tmp/claude-1000/sweep-amendments-review.md`) rejected decision 18 at `e89fe8b5`. A scratch `HOME` for every step of `check.sh` hid the R library holding jsonlite 2.0.0, the toolchain folder, the cargo home, and the deny advisory database. Decision 18 now limits the scratch `HOME` to the R test children, exports the R library list as absolute paths first, and gives each child a fresh `XDG_CONFIG_HOME`. Confirmation pending.
+- Amendment review (`sdlc/records/2026-09-24-amendment-review-0108-0109-0112.md`) rejected decision 18 at `e89fe8b5`. A scratch `HOME` for every step of `check.sh` hid the R library holding jsonlite 2.0.0, the toolchain folder, the cargo home, and the deny advisory database. Decision 18 now limits the scratch `HOME` to the R test children, exports the R library list as absolute paths first, and gives each child a fresh `XDG_CONFIG_HOME`.
+- Amendment re-check (same file) accepted decision 18 at `87e5d053`.
 - Code review: pending. Reviewer's note for it: the "before a call" test and the first `.tt_call` test signal the child itself, and R handles a pending SIGINT at its evaluator's next periodic check. If that check comes before the check under test, the interrupt jumps in R code, and the test passes with or without its plant. The record shows each of the two plants turning red. If one cannot, the builder moves the signal next to the check, for example into the forced argument's last expression.
