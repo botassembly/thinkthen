@@ -6,7 +6,7 @@ opens: libraries/c probes/c-churn sdlc/planning/adr/0037-the-c-door-serves-every
 
 # 0094: Port the C interface
 
-Status: revised after confirmation; final check. Owner: Claude.
+Status: design accepted 2026-09-24 after re-review. Owner: Claude.
 
 ## Outcome and authority
 
@@ -68,5 +68,5 @@ Contract 3; state and timing 3; reach 3; proof 3; cost of error 3; total 15. Fin
 
 ## Review
 
-- Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-engine.md`) found that the header cannot keep its meaning, that the JSON door owns some grammar, a library-name collision, a weak churn count, and stale deadline text. All applied. The re-review (`sdlc/records/2026-09-24-rereview-engine.md`) asked for the whole header table, relate's record input, the seven door keys, and the committed churn probe; all applied. The confirmation (same file) asked for default relate fields only, question keys beside the verb, one rank spelling, and the ignored churn variables; all applied. Final check pending.
+- Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-engine.md`) found that the header cannot keep its meaning, that the JSON door owns some grammar, a library-name collision, a weak churn count, and stale deadline text. All applied. The re-review (`sdlc/records/2026-09-24-rereview-engine.md`) asked for the whole header table, relate's record input, the seven door keys, and the committed churn probe; all applied. The confirmation (same file) asked for default relate fields only, question keys beside the verb, one rank spelling, and the ignored churn variables; all applied. The final check accepted it.
 - Code review: pending.
