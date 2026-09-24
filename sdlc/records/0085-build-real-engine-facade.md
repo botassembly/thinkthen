@@ -110,3 +110,7 @@ Measured with `git diff -U0 86f4012e HEAD -- '*.rs'`, nonblank lines:
 - The command's stdin feeder stays detached and command-owned, because a blocked read cannot be joined. `records` and `groups` take the reader as a closure.
 - Two test-only hooks: `workers::SENDS`, which the ticket asks for, and `Engine::gated`, which gives a test its own width gate inside one test binary.
 - `sdlc/issues/2026-09-24-reconcile-signal-dependencies-after-0078.md` stays open. This build adds no dependency.
+
+## Ladder
+
+At `9a9ddfe8`, run one rung after another with the key and base-address variables unset, while the one-minute load stood at 4.08, the observed exits were `install` 0, `lint` 0, `test` 0, and `spec` 0 (demos 21 green, 0 red). `ratchet.mjs` read 49701/49701. An earlier run at `92d02ffe` failed `lint`. `facade_tests.rs` held 625 nonblank lines against the 500-line file cap, so `9a9ddfe8` split the contract checks into their own file. This section changes only this record.
