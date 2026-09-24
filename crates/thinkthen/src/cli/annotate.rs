@@ -276,7 +276,9 @@ impl<'a> Judging<'a> {
                     self.engine.backend().model(),
                 )?;
                 answered.push(aggregation::ChunkAnswer {
-                    places: places.next().unwrap_or_default(),
+                    places: places
+                        .next()
+                        .ok_or(Failure::Defect("an annotate chunk has no question places"))?,
                     reply: result.reply,
                     digest: result.request.as_str().to_owned(),
                     requests_sent: result.requests_sent,

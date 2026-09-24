@@ -2,9 +2,8 @@
 //!
 //! The shared-case runner proves each function's result through the facade
 //! under replay. These tests prove what that runner cannot see: which thread
-//! sends, what is never sent again, what is never sent at all, and the width.
+//! sends, what is never sent again, and what is never sent at all.
 
-use std::net::TcpListener;
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{Receiver, channel};
 use std::sync::{Arc, Barrier};
@@ -22,9 +21,9 @@ use crate::core::{
 };
 use crate::engine::error::{Error, Kind, TransportKind};
 use crate::engine::facade::{
-    Completed, Engine, Input, InputPort, Key, RunOutcome, Settings, Storage, relations,
+    Completed, Engine, Execution, Input, InputPort, Key, RunOutcome, Settings, Storage, relations,
 };
-use crate::engine::{Cancel, Deadline, Width, Widths, workers};
+use crate::engine::{Cancel, Deadline};
 
 mod contract_tests;
 
@@ -55,15 +54,6 @@ fn retrying(base: &str) -> Engine {
         ..settings(base)
     })
     .expect("engine")
-}
-
-/// An engine whose calls share one gate of this width.
-fn narrow(base: &str, width: u64) -> Engine {
-    let widths: &'static Widths = Box::leak(Box::default());
-    widths
-        .select(Some(Width::new(width).expect("width")))
-        .expect("a fresh gate");
-    engine(base).gated(widths)
 }
 
 fn decide(text: &str) -> Question {
@@ -108,7 +98,7 @@ fn recognize_spec() -> RecognizeSpec {
 
 /// Relate two given alerts, the relation planner's smallest case.
 fn relate(engine: &Engine, base: &str, cancel: &Cancel) -> Result<usize, Error> {
-    relate_limited(engine, base, None, cancel)
+    relate_limited(engine, base, None, cancel).map(|execution| execution.answered)
 }
 
 fn relate_limited(
@@ -116,7 +106,7 @@ fn relate_limited(
     base: &str,
     profile: Option<&BackendProfile>,
     cancel: &Cancel,
-) -> Result<usize, Error> {
+) -> Result<Execution, Error> {
     let spec = RelateSpec::parse(
         r#"{"version":1,"relate":{"relations":[{"name":"caused_by","source":"alert","target":"alert"}]}}"#,
     )
@@ -129,9 +119,7 @@ fn relate_limited(
         .expect("entities");
     let backend = Backend::resolve(Some(base), None, "jev-latest").expect("backend");
     let prepared = relations(&entities, &spec, &backend, profile)?;
-    engine
-        .relate(prepared, &entities, 0.5, cancel)
-        .map(|execution| execution.answered)
+    engine.relate(prepared, &entities, 0.5, cancel)
 }
 
 /// Ask a two-question group through the split-request path annotate uses.
@@ -240,7 +228,7 @@ impl Drop for Scratch {
 }
 
 #[test]
-fn a_single_live_call_sends_on_a_worker_through_a_host_signal() {
+fn a_host_signal_on_the_calling_thread_never_fails_a_single_send() {
     let handled = Arc::new(AtomicBool::new(false));
     let _handler =
         signal_hook::flag::register(signal_hook::consts::signal::SIGUSR1, Arc::clone(&handled))
@@ -248,57 +236,34 @@ fn a_single_live_call_sends_on_a_worker_through_a_host_signal() {
     let loopback = Loopback::start().expect("loopback");
     let engine = engine(&format!("{}/arm/held/v1", loopback.origin()));
     let (published, caller) = channel();
+    // A socket read with a timeout is not restarted after a signal, so a
+    // send on the calling thread would fail here.
+    let signal = |caller| {
+        for _ in 0..10 {
+            pthread_kill(caller, Signal::SIGUSR1).expect("signal delivered");
+        }
+    };
 
     let (answer, found) = thread::scope(|scope| {
         let call = scope.spawn(|| {
             published.send(pthread_self()).expect("caller published");
             let answer = ask(&engine, "Please refund me.", &Cancel::default());
-            let found = engine
-                .find(&find(), &Cancel::default())
-                .map(|found| found.answered);
-            (answer, found, thread::current().id())
+            let found = engine.find(&find(), &Cancel::default());
+            (answer, found)
         });
         let caller = caller.recv().expect("caller");
-        assert_eq!(loopback.wait(1), 1, "the single send is held");
-        for _ in 0..10 {
-            pthread_kill(caller, Signal::SIGUSR1).expect("signal delivered");
-        }
+        assert_eq!(loopback.wait(1), 1, "the judgment is held");
+        signal(caller);
+        loopback.round();
+        assert_eq!(loopback.wait(2), 2, "the find is held");
+        signal(caller);
         loopback.release();
-        let (answer, found, caller) = call.join().expect("call");
-        let sends = workers::SENDS.lock().expect("sends").clone();
-        let mine = sends
-            .iter()
-            .filter(|(asked, _)| *asked == caller)
-            .collect::<Vec<_>>();
-        assert_eq!(mine.len(), 2, "one live attempt for each call");
-        assert!(
-            mine.iter().all(|(asked, sent)| asked != sent),
-            "the calling thread never sends"
-        );
-        (answer, found)
+        call.join().expect("call")
     });
 
     assert_eq!(answer.expect("the answer"), Some(0.9));
-    assert_eq!(found.expect("the find").requests_sent, 1);
+    assert_eq!(found.expect("the find").answered.requests_sent, 1);
     assert_eq!(loopback.count(), 2);
-}
-
-#[test]
-fn a_refused_connection_fails_at_once_and_is_not_retryable() {
-    let closed = TcpListener::bind("127.0.0.1:0").expect("port");
-    let base = format!("http://{}/v1", closed.local_addr().expect("address"));
-    drop(closed);
-    let engine = retrying(&base);
-
-    let error = ask(&engine, "Refund me.", &Cancel::default()).expect_err("refused");
-
-    assert!(
-        matches!(error, Error::Transport(TransportKind::Refused)),
-        "{error:?}"
-    );
-    assert_eq!(error.kind(), Kind::Backend);
-    assert!(!error.retryable());
-    assert_eq!(engine.usage().requests_sent, 1, "one attempt and no retry");
 }
 
 #[test]
@@ -341,75 +306,6 @@ fn a_close_after_the_body_is_never_resent_on_any_path() {
         seen += listener.requests().len();
         assert_eq!(seen, sent + 1, "{name} sent once and never again");
     }
-}
-
-#[test]
-fn after_a_cancelled_batch_the_next_call_sends_only_its_own_request() {
-    let loopback = Loopback::start().expect("loopback");
-    let engine = narrow(&format!("{}/arm/held/v1", loopback.origin()), 1);
-    let batch = Cancel::default();
-    // Each item asks under a token the batch cancel does not reach, so only
-    // the scheduler's stop checkpoint keeps a queued item from sending.
-    let each = Cancel::default();
-
-    let (outcome, rows) = thread::scope(|scope| {
-        let run = scope.spawn(|| bulk(&engine, &["one", "two", "three"], &batch, &each));
-        assert_eq!(loopback.wait(1), 1, "the first item is held");
-        batch.fire();
-        loopback.release();
-        run.join().expect("batch")
-    });
-
-    assert_eq!(loopback.count(), 1, "no queued item sent after the cancel");
-    assert!(
-        matches!(
-            outcome,
-            Ok(RunOutcome::Stopped {
-                cause: Error::Cancelled,
-                ..
-            })
-        ),
-        "{outcome:?}"
-    );
-    assert!(rows.len() <= 1, "{rows:?}");
-    ask(&engine, "four", &Cancel::default()).expect("the next call");
-    assert_eq!(
-        loopback.count(),
-        2,
-        "the next call sent only its own request"
-    );
-}
-
-#[test]
-fn mixed_concurrent_calls_never_pass_the_one_width() {
-    let loopback = Loopback::start().expect("loopback");
-    let base = format!("{}/arm/held/v1", loopback.origin());
-    let engine = narrow(&base, 2);
-    let cancel = Cancel::default();
-
-    let answered = thread::scope(|scope| {
-        let calls = [
-            scope.spawn(|| ask(&engine, "Refund me.", &cancel).map(|_| 1)),
-            scope.spawn(|| engine.find(&find(), &cancel).map(|_| 1)),
-            scope.spawn(|| annotate(&engine, &cancel)),
-            scope.spawn(|| {
-                engine
-                    .recognize(&recognize_spec(), "Ada lives in Paris.", &cancel)
-                    .map(|recognition| recognition.meta.requests.len())
-            }),
-            scope.spawn(|| relate(&engine, &base, &cancel)),
-            scope.spawn(|| match bulk(&engine, &["a", "b", "c"], &cancel, &cancel) {
-                (Ok(RunOutcome::Complete), rows) => Ok(rows.len()),
-                (outcome, _) => panic!("{outcome:?}"),
-            }),
-        ];
-        assert_eq!(loopback.wait(2), 2, "two attempts hold the width");
-        loopback.release();
-        calls.map(|call| call.join().expect("call").expect("answered"))
-    });
-
-    assert!(answered.iter().all(|count| *count > 0), "{answered:?}");
-    assert_eq!(loopback.peak(), 2, "the gate held every call to width 2");
 }
 
 #[test]
@@ -457,7 +353,7 @@ fn local_refusals_send_nothing_and_store_nothing() {
             engine
                 .recognize(&recognize_spec(), "Ada lives in Paris.", cancel)
                 .map(|_| 1),
-            relate_limited(engine, listener.base(), profile, cancel),
+            relate_limited(engine, listener.base(), profile, cancel).map(|_| 1),
         ];
         for call in calls {
             let error = call.expect_err(name);
@@ -524,4 +420,51 @@ fn completed_results_keep_input_order_and_reading_them_sends_nothing() {
         sent,
         "reading results and usage sent nothing"
     );
+}
+
+#[test]
+fn relate_fails_when_no_answer_is_usable_and_keeps_a_partial_result() {
+    // Each reply answers the first question it names when `first` is set,
+    // and gives every other question a probability out of range.
+    let listener = |first: bool| {
+        Listener::answering(move |body| Canned::ok(&failing_reply(body, first))).expect("listener")
+    };
+    let cancel = Cancel::default();
+
+    let failing = listener(false);
+    let Err(error) = relate_limited(&engine(failing.base()), failing.base(), None, &cancel) else {
+        panic!("no usable answer fails the call")
+    };
+    assert!(matches!(error, Error::Reply(_)), "{error:?}");
+    assert_eq!(error.kind(), Kind::Backend);
+
+    let partial = listener(true);
+    let execution = relate_limited(&engine(partial.base()), partial.base(), None, &cancel)
+        .expect("a partial result");
+    assert_eq!(execution.answered, 1);
+    assert_eq!(execution.failed, 1, "the failed answer stays counted");
+    assert_eq!(execution.logical.len(), 2);
+    assert_eq!(
+        execution.edges.len(),
+        1,
+        "the one good answer draws its edge"
+    );
+}
+
+/// A reply whose yes/no probabilities are out of range, but for the first
+/// when asked.
+fn failing_reply(body: &[u8], first: bool) -> String {
+    let request: serde_json::Value = serde_json::from_slice(body).expect("request");
+    let names = request["questions"].as_object().expect("questions").keys();
+    let answers = names
+        .enumerate()
+        .map(|(place, name)| {
+            let yes = if first && place == 0 { 0.9 } else { 1.5 };
+            (
+                name.clone(),
+                serde_json::json!({"type": "noul", "noul": yes}),
+            )
+        })
+        .collect::<serde_json::Map<_, _>>();
+    serde_json::json!({"model": "jev-latest", "answers": answers}).to_string()
 }

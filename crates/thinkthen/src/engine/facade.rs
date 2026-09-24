@@ -132,26 +132,6 @@ impl Engine {
         &self.state
     }
 
-    /// Send through this gate and follow its width, in place of the process ones.
-    ///
-    /// A unit-test binary shares one process, so a test that must hold one
-    /// width across several calls names its own gate here.
-    #[cfg(test)]
-    pub(crate) fn gated(self, widths: &'static crate::engine::Widths) -> Self {
-        let Self { state, .. } = self;
-        Self {
-            width: widths
-                .select(None)
-                .unwrap_or(crate::engine::Width::FALLBACK)
-                .get(),
-            state: State {
-                client: state.client.gated(widths),
-                ..state
-            },
-            ..self
-        }
-    }
-
     /// The address and model every request of this engine names.
     pub(crate) const fn backend(&self) -> &Backend {
         &self.backend

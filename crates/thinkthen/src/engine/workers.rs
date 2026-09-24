@@ -10,30 +10,17 @@ thread_local! {
     static ENGINE_WORKER: Cell<bool> = const { Cell::new(false) };
 }
 
-/// Which thread asked and which thread sent, for each live attempt a test makes.
-#[cfg(test)]
-pub(crate) static SENDS: Mutex<Vec<(thread::ThreadId, thread::ThreadId)>> = Mutex::new(Vec::new());
-
 /// Run one live attempt on an engine worker: this thread when it is one, or
 /// else one scoped worker joined before return.
 pub(crate) fn on_worker<T: Send>(send: impl FnOnce() -> T + Send) -> T {
-    #[cfg(test)]
-    let caller = thread::current().id();
-    let sent = move || {
-        #[cfg(test)]
-        if let Ok(mut sends) = SENDS.lock() {
-            sends.push((caller, thread::current().id()));
-        }
-        send()
-    };
     if ENGINE_WORKER.get() {
-        return sent();
+        return send();
     }
     thread::scope(|scope| {
         scope
             .spawn(|| {
                 enter();
-                sent()
+                send()
             })
             .join()
             .unwrap_or_else(|panic| std::panic::resume_unwind(panic))
