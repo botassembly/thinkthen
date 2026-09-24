@@ -192,6 +192,22 @@ pub(crate) enum Command {
 
     /// List or print the built-in jq transforms without running them.
     Transform(crate::cli::transform::TransformArguments),
+
+    /// Grade saved decide and choose answers against an answer key.
+    ///
+    /// RESULTS holds the lines `decide` or `choose` printed, and KEY holds one
+    /// JSON object per record: its id, the right value, and an optional part of
+    /// tune or held. audit prints agreement with its 95% interval, both kinds of
+    /// disagreement, AUC, calibration, a coverage curve, and a suggested cut
+    /// tuned on one part and checked on the other. An answer inside a band is
+    /// not sure, and it counts apart from right and wrong.
+    ///
+    /// audit sends no request and reads no key.
+    ///
+    /// To grade a recording, replay it with --details and pass the output:
+    ///
+    /// thinkthen decide 'Is it red?' --jsonl --details --replay runs/red < records.jsonl | thinkthen audit - key.jsonl
+    Audit(crate::cli::audit::AuditArguments),
 }
 
 #[derive(Args, Debug)]
@@ -223,7 +239,10 @@ pub(crate) struct PruneArguments {
 
 impl Command {
     pub(crate) const fn reads_input(&self) -> bool {
-        !matches!(self, Self::Cache(_) | Self::Status(_) | Self::Transform(_))
+        !matches!(
+            self,
+            Self::Cache(_) | Self::Status(_) | Self::Transform(_) | Self::Audit(_)
+        )
     }
 
     /// The input file one command named, if any.
@@ -239,7 +258,7 @@ impl Command {
             Self::Annotate(arguments) => arguments.common.input.as_deref(),
             Self::Recognize(arguments) => arguments.common.input.as_deref(),
             Self::Relate(arguments) => arguments.common.input.as_deref(),
-            Self::Cache(_) | Self::Status(_) | Self::Transform(_) => None,
+            Self::Cache(_) | Self::Status(_) | Self::Transform(_) | Self::Audit(_) => None,
         }
     }
 
@@ -256,7 +275,7 @@ impl Command {
             Self::Annotate(arguments) => arguments.common.timeout,
             Self::Recognize(arguments) => arguments.common.timeout,
             Self::Relate(arguments) => arguments.common.timeout,
-            Self::Cache(_) | Self::Status(_) | Self::Transform(_) => 1,
+            Self::Cache(_) | Self::Status(_) | Self::Transform(_) | Self::Audit(_) => 1,
         }
     }
 }
