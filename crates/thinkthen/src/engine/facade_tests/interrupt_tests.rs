@@ -14,10 +14,12 @@ use std::time::Duration;
 
 use conformance_backend::{Backend as Loopback, Canned, Listener};
 
-use super::{Scratch, ask, bulk, engine, settings};
+use super::{Scratch, ask, bulk, engine, feed, settings};
 use crate::engine::cache_lock;
 use crate::engine::error::{Error, Kind};
-use crate::engine::facade::{Engine, RunOutcome, Settings, Storage};
+use crate::engine::facade::{
+    Completed, Engine, GroupOutcome, GroupPort, Prepared, RunOutcome, Settings, Storage,
+};
 use crate::engine::{Cancel, Deadline};
 
 /// The longest a held call waits for its check to stop it.
@@ -35,16 +37,21 @@ struct Held<R> {
     stopped_in_time: bool,
 }
 
-/// Run `call` on its own thread under a check that stops it on its third run
-/// while `holding` holds. `release` lets the held work go once the check stopped
-/// the call, or once `BOUND` passed without a stop.
+/// A call token whose deadline frees a call the check failed to stop.
+fn bounded() -> Cancel<'static> {
+    Cancel::default().with_deadline(Deadline::after(BOUND))
+}
+
+/// Run `call` on its own thread under `base` and a check that stops it on its
+/// third run while `holding` holds. `release` lets the held work go once the
+/// check stopped the call, or once `BOUND` passed without a stop.
 fn hold<R: Send>(
+    base: &Cancel<'_>,
     sent: &(dyn Fn() -> usize + Sync),
     holding: &(dyn Fn() -> bool + Sync),
     release: &dyn Fn(),
     call: impl FnOnce(&Cancel<'_>) -> R + Send,
 ) -> Held<R> {
-    let base = Cancel::default();
     let (stopped, stop) = channel();
     thread::scope(|scope| {
         let run = scope.spawn(|| {
@@ -62,9 +69,6 @@ fn hold<R: Send>(
             (result, thread::current().id(), runs)
         });
         let stopped_in_time = stop.recv_timeout(BOUND).is_ok();
-        if !stopped_in_time {
-            base.fire();
-        }
         release();
         let (result, caller, runs) = run.join().expect("the held call");
         Held {
@@ -94,30 +98,85 @@ fn stop_kind(result: &Result<Option<f64>, Error>) -> Option<Kind> {
     result.as_ref().err().map(Error::kind)
 }
 
-#[test]
-fn a_true_check_stops_each_held_wait_from_the_calling_thread_and_sends_nothing_new() {
-    // Width gate: four calls hold every permit of the engine's gate of four.
+/// Hold a call at a width gate that four sends fill. The four ask on the
+/// call's own base token when `shared`, so their sends are not the call's.
+fn width_gate(name: &str, shared: bool) {
     let loopback = Loopback::start().expect("loopback");
-    let gated = engine(&format!("{}/arm/held/v1", loopback.origin()));
+    let gated = &engine(&format!("{}/arm/held/v1", loopback.origin()));
+    let base = bounded();
     thread::scope(|scope| {
         let holders: Vec<_> = (0..4)
-            .map(|_| scope.spawn(|| ask(&gated, "Refund me.", &Cancel::default())))
+            .map(|_| {
+                let token = if shared { base.clone() } else { bounded() };
+                scope.spawn(move || ask(gated, "Refund me.", &token))
+            })
             .collect();
-        assert_eq!(loopback.wait(4), 4, "four sends hold the gate");
+        assert_eq!(loopback.wait(4), 4, "{name}: four sends hold the gate");
         let held = hold(
+            &base,
             &|| loopback.count(),
             &|| loopback.count() == 4,
             &|| loopback.release(),
-            |cancel| ask(&gated, "Refund me too.", cancel),
+            |cancel| ask(gated, "Refund me too.", cancel),
         );
-        assert_stopped_on_the_caller("width gate", &held, 4);
-        assert_eq!(stop_kind(&held.result), Some(Kind::Cancelled));
+        assert_stopped_on_the_caller(name, &held, 4);
+        assert_eq!(stop_kind(&held.result), Some(Kind::Cancelled), "{name}");
         for holder in holders {
             let answer = holder.join().expect("holder");
             assert_eq!(answer.expect("a sent attempt finishes"), Some(0.9));
         }
-        assert_eq!(loopback.count(), 4, "width gate: nothing new was sent");
+        assert_eq!(loopback.count(), 4, "{name}: nothing new was sent");
     });
+}
+
+/// Run six records through a scheduler that takes the call's token.
+type Scheduled<'a> = &'a (dyn Fn(&Engine, &[&'static str], &Cancel<'_>) -> Option<Error> + Sync);
+
+/// The stop cause of six records through the grouped annotate scheduler.
+fn grouped(engine: &Engine, texts: &[&'static str], cancel: &Cancel<'_>) -> Option<Error> {
+    let items = texts.to_vec();
+    let outcome = engine.groups(
+        true,
+        cancel,
+        move |requests, port: GroupPort<&'static str, Option<f64>, Error>| {
+            thread::spawn(move || feed(items, &requests, |input| port.send(input)));
+        },
+        |text| {
+            Ok(Prepared {
+                seed: (),
+                accumulator: (),
+                work: vec![text],
+            })
+        },
+        &|text| ask(engine, text, cancel),
+        |(), _| Ok(()),
+        |(), ()| {
+            Ok(Completed {
+                value: (),
+                replayed: false,
+                partial_failure: false,
+            })
+        },
+        |()| Ok(true),
+    );
+    match outcome {
+        Ok(GroupOutcome::Stopped { cause, .. }) => Some(cause),
+        _ => None,
+    }
+}
+
+/// The stop cause of six records through the record scheduler.
+fn recorded(engine: &Engine, texts: &[&'static str], cancel: &Cancel<'_>) -> Option<Error> {
+    match bulk(engine, texts, cancel, cancel).0 {
+        Ok(RunOutcome::Stopped { cause, .. }) => Some(cause),
+        _ => None,
+    }
+}
+
+#[test]
+fn a_true_check_stops_each_held_wait_from_the_calling_thread_and_sends_nothing_new() {
+    width_gate("width gate", false);
+    width_gate("width gate on a shared token", true);
 
     // Retry wait: the first reply asks for a retry after a wait of 20 s.
     let busy = Listener::answering(|_| Canned::status(503, "")).expect("listener");
@@ -128,9 +187,13 @@ fn a_true_check_stops_each_held_wait_from_the_calling_thread_and_sends_nothing_n
         ..settings(busy.base())
     })
     .expect("engine");
-    let held = hold(&|| busy.count(), &|| busy.count() == 1, &|| (), |cancel| {
-        ask(&retrying, "Refund me.", cancel)
-    });
+    let held = hold(
+        &bounded(),
+        &|| busy.count(),
+        &|| busy.count() == 1,
+        &|| (),
+        |cancel| ask(&retrying, "Refund me.", cancel),
+    );
     assert_stopped_on_the_caller("retry wait", &held, 0);
     assert_eq!(stop_kind(&held.result), Some(Kind::Cancelled));
     assert_eq!(busy.count(), 1, "retry wait: nothing new was sent");
@@ -151,6 +214,7 @@ fn a_true_check_stops_each_held_wait_from_the_calling_thread_and_sends_nothing_n
     })
     .expect("engine");
     let held = hold(
+        &bounded(),
         &|| quiet.count(),
         &|| true,
         &|| drop(owner.lock().map(|mut owner| owner.take())),
@@ -161,22 +225,23 @@ fn a_true_check_stops_each_held_wait_from_the_calling_thread_and_sends_nothing_n
     assert_eq!(quiet.count(), 0, "lock wait: nothing was sent");
 
     // Bulk reply: six records over four workers, whose four replies are held.
-    let loopback = Loopback::start().expect("loopback");
-    let batch = engine(&format!("{}/arm/held/v1", loopback.origin()));
-    let texts = ["one", "two", "three", "four", "five", "six"];
-    let held = hold(
-        &|| loopback.count(),
-        &|| loopback.count() == 4,
-        &|| loopback.release(),
-        |cancel| bulk(&batch, &texts, cancel, cancel).0,
-    );
-    assert_stopped_on_the_caller("bulk reply", &held, 0);
-    let Ok(RunOutcome::Stopped { cause, .. }): &Result<RunOutcome<Error>, Error> = &held.result
-    else {
-        panic!("bulk reply: {:?}", held.result)
-    };
-    assert_eq!(cause.kind(), Kind::Cancelled, "{cause:?}");
-    assert_eq!(loopback.count(), 4, "bulk reply: nothing new was sent");
+    let schedulers: [(&str, Scheduled<'_>); 2] = [("records", &recorded), ("groups", &grouped)];
+    for (name, scheduled) in schedulers {
+        let loopback = Loopback::start().expect("loopback");
+        let batch = engine(&format!("{}/arm/held/v1", loopback.origin()));
+        let texts = ["one", "two", "three", "four", "five", "six"];
+        let held = hold(
+            &bounded(),
+            &|| loopback.count(),
+            &|| loopback.count() == 4,
+            &|| loopback.release(),
+            |cancel| scheduled(&batch, &texts, cancel),
+        );
+        assert_stopped_on_the_caller(name, &held, 0);
+        let kind = held.result.as_ref().map(Error::kind);
+        assert_eq!(kind, Some(Kind::Cancelled), "{name}: {:?}", held.result);
+        assert_eq!(loopback.count(), 4, "{name}: nothing new was sent");
+    }
 }
 
 #[test]

@@ -111,6 +111,7 @@ impl<'a> Cancel<'a> {
                 run: check,
                 caller: thread::current().id(),
             }),
+            sends: Arc::default(),
             ..self.clone()
         }
     }
