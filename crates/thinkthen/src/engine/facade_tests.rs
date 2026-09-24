@@ -26,6 +26,7 @@ use crate::engine::facade::{
 use crate::engine::{Cancel, Deadline};
 
 mod contract_tests;
+mod interrupt_tests;
 
 const TEST_KEY: &str = "sk-facade-test-7f3a";
 

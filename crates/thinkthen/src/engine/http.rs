@@ -129,8 +129,9 @@ impl Client {
             // it. Cancellation keeps its one pre-attempt checkpoint.
             let budget = cancel.remaining()?;
             let limit = budget.map_or(self.timeout, |budget| budget.min(self.timeout));
+            let sending = cancel.sending();
             let sent = send(&self.agent, exchange, limit);
-            drop(permit);
+            drop((sending, permit));
             let attempt = match sent {
                 Ok(body) => {
                     return Ok(HttpAnswer {

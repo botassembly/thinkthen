@@ -23,11 +23,11 @@ mod schedule;
 
 const SECOND: Duration = Duration::from_secs(1);
 
-fn within(budget: Duration) -> Cancel {
+fn within(budget: Duration) -> Cancel<'static> {
     Cancel::default().with_deadline(Deadline::after(budget))
 }
 
-fn spent() -> Cancel {
+fn spent() -> Cancel<'static> {
     within(Duration::ZERO)
 }
 
