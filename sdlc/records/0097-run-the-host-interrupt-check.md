@@ -58,3 +58,7 @@ Measured with `git diff -U0` over `*.rs`, nonblank lines, against the merge of m
 - The command shares one long-lived token across its calls, and 0086 may map one host token onto one private token. The first build shared the send count through that token. The code review found it (F1).
 - The "joins without cancelling" plant can turn red only on a single call. A scheduler never queues work beyond its free workers, so a bulk run has no queued item left to send. The panic test therefore holds a single call at the width gate.
 
+
+## Ladder
+
+At `381a1ab4`, which merges main `badb9c57` over the review-fix commit `54ad43a2`, the rungs ran one after another with the key and base-address variables unset. The one-minute load stood at 1.51 at the start. The observed exits were `install` 0, `lint` 0, `test` 0 (811 passed, 0 failed), and `spec` 0 (demos 21 green, 0 red). `ratchet.mjs` read 50276/50276. This section changes only this record.
