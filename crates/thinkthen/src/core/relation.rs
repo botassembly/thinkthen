@@ -229,10 +229,17 @@ fn choice_plan<E: RelationEntityView>(
             "none".to_owned(),
             Some(Description::text(format!("No listed {option_kind}."))),
         ));
+        // The blank stands where the options go: after the relation words when
+        // the source asks, and before them when the target asks.
+        let asking = reference(asking_entity, *asker);
+        let reads = &relation.reads;
+        let clause = if reversed {
+            format!("___ {reads} {asking}")
+        } else {
+            format!("{asking} {reads} ___")
+        };
         let text = format!(
-            "Which listed {option_kind} fills the blank: {} {} ___? Choose none if no listed {option_kind} does.",
-            reference(asking_entity, *asker),
-            relation.reads
+            "Which listed {option_kind} fills the blank: {clause}? Choose none if no listed {option_kind} does."
         );
         questions.push(Question::Choose {
             text: QuestionText::new(text).map_err(|_| RelationPlanError)?,

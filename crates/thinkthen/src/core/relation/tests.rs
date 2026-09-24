@@ -107,3 +107,33 @@ fn wildcards_expand_to_concrete_kinds_in_first_seen_order() {
         !matches!(mapping, super::QuestionMap::Pair { source, target } if source == target)
     })));
 }
+
+#[test]
+fn a_choice_puts_the_blank_on_the_side_the_options_fill() {
+    let wording = |entities: &[RelationEntity]| {
+        let plans = plan(entities, &rule("person", "organization", false)).expect("plan");
+        let crate::core::Question::Choose { text, .. } = &plans[0].questions[0] else {
+            panic!("cross-kind planner did not choose");
+        };
+        text.as_json().as_str().expect("text").to_owned()
+    };
+    let one = |name: &str, kind: &str| RelationEntity::new(name, kind).expect("entity");
+    assert_eq!(
+        wording(&[
+            one("Ada", "person"),
+            one("Grace", "person"),
+            one("Acme", "organization")
+        ]),
+        "Which listed organization fills the blank: Item 1 (person \"Ada\") is linked to ___? \
+         Choose none if no listed organization does."
+    );
+    assert_eq!(
+        wording(&[
+            one("Ada", "person"),
+            one("Acme", "organization"),
+            one("Beta", "organization")
+        ]),
+        "Which listed person fills the blank: ___ is linked to Item 2 (organization \"Acme\")? \
+         Choose none if no listed person does."
+    );
+}
