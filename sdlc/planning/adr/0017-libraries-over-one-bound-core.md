@@ -224,5 +224,5 @@ The throttle is the most requests in flight at once, per loaded copy of the libr
 - Each surface spells the setting the way its host spells its other settings, such as `thinkthen_throttle` in SQL and `throttle=` in Python.
 - Every page and ADR calls it the throttle. Section 5's width row reads as the throttle row.
 - The command's flag stays `--jobs N`, because `jobs` is the usual command-line name for parallel work. The pages for `--jobs` say it sets the throttle.
-- Private names in code may stay `width` for now. The conflict message of the width amendment reaches a user only through a second engine in one process, and only the public API can build one. Ticket 0086 rewords it: `throttle 4 is already active for this process; use throttle 4 or drop the throttle argument`.
+- Private names in code may stay `width` for now. The conflict message of the width amendment reaches a user only through a second engine in one process, and only the public API can build one. The range message reaches a user the same way, because `--jobs` refuses an out-of-range number first. Ticket 0086 rewords both: `throttle 4 is already active for this process; use throttle 4 or drop the throttle argument` and `a throttle is a whole number from 1 through 32`.
 - Records, reviews, and issues written before this date keep the word they used.

@@ -357,7 +357,7 @@ After the post-0078 reconciliation, 0086 owns public delegation, lazy `default_e
 
 Ticket 0086 extracts the inventory into signature fixtures and records normalized `cargo public-api` output. Compile-pass fixtures cover every declaration, all methods and free functions, a `ChooseQuestion<Team>` returning `Option<Team>`, a `TagQuestion<Topic>` returning `Vec<Topic>`, checked loaded-question binding, both description forms including repeated `example`, question-set insertion, every builder terminal, exhaustive error matching, `Batch`, `Send + Sync`, recognition slicing, and relation endpoints.
 
-Compile-fail fixtures prove a band cannot reach `filter`; unfinished builders, typed choice mismatches, and unbound loaded choices fail; and no derive, async method, reset, public module, connector, planner, callback beyond the interrupt check, mutable result field, public `ErrorDetail` constructor, or string-based `Error` constructor/conversion exists. Public tuple variants remain constructors.
+Compile-fail fixtures prove a band cannot reach `filter`; unfinished builders, typed choice mismatches, and unbound loaded choices fail; and no derive, async method, reset, public module, connector, planner, callback beyond the interrupt check, mutable result field, public `ErrorDetail` constructor/conversion, or string-based `Error` constructor/conversion exists. Public tuple variants remain constructors.
 
 Package proof compares Cargo metadata with and without default features and rejects every package activated only by `cli`, including `clap`, `csv-core`, and `signal-hook`, but allows `nix`.
 

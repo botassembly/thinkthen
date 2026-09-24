@@ -64,7 +64,7 @@ Engine rows by spine ticket: 0076 carries R1-23 and R6-4. 0077 carries R2-9 and 
 | ID | Surface | Status | Why it retires |
 |---|---|---|---|
 | R1-7 | standin | closed | fixture in stand-in product code |
-| R1-8 | standin | closed | stand-in settings; real builder takes base_url and width (0086) |
+| R1-8 | standin | closed | stand-in settings; real builder takes base_url and throttle (0086) |
 | R1-26 | gate | partial | branch is never merged |
 | R1-27 | contract | closed | connector retires; 0084 bans it |
 | R1-32 | gate | closed | branch file retires; union ticket owns coverage |
