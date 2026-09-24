@@ -1,6 +1,6 @@
 # 0090: Rename the profile-warning key `calibrated` to `tuned_for`
 
-Status: built on `ticket/0090-tuned-for`, not merged. A fresh Claude code review (`sdlc/records/0090-code-review.md`) rejected the record only, for an incomplete list of `calibrat` uses. This revision completes the list and takes follow-ups FU1 and FU3. Owner: Claude.
+Status: landed. Main fast-forwarded to `565f8b4f`. A fresh Claude code review (`sdlc/records/0090-code-review.md`) rejected the record only, for an incomplete list of `calibrat` uses. This revision completes the list and takes follow-ups FU1 and FU3. Owner: Claude.
 
 ## Result
 
@@ -49,4 +49,4 @@ The list comes from `git grep -n -i calibrat` over the whole repository, with `s
 
 ## Gates
 
-At `dcf0354e`, with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, one rung at a time on a machine shared with one other build: `install` 0, `lint` 0 (ratchet 43776/43776), `test` 0 (library 275 passed and 2 ignored, backend 352 passed, live-test all cases passed with dummy keys), `spec` 0 (21 how-tos green, 0 red), and `git diff --check` clean. No live or paid command ran. The annotate global-queue test passed on the first run.
+At `565f8b4f` (the branch merged with main `860086d2`, the exact commit that landed), with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, one rung at a time on a machine shared with one other build: `install` 0, `lint` 0 (ratchet 43782/43782), `test` 0 (library 276 passed and 2 ignored, backend 352 passed, live-test all cases passed with dummy keys), `spec` 0 (21 how-tos green, 0 red), and `git diff --check` clean. No live or paid command ran. The annotate global-queue test passed on the first run. An earlier ladder at `dcf0354e` also passed.
