@@ -201,7 +201,7 @@ fn route(cases: &Cases, gate: &Arc<Gate>, request: &Recorded) -> Canned {
         }
         (Some("arm"), Some("refuse"), _) => Canned::status(422, "refused"),
         (Some("arm"), Some("held"), _) => generic(&request.body, None).held_by(Arc::clone(gate)),
-        (Some("arm"), Some("delay"), value) => match value.and_then(whole) {
+        (Some("arm"), Some("delay"), value) => match value.and_then(whole::<u64>) {
             None => drift("the delay arm needs a whole number of milliseconds"),
             Some(millis) if millis > MOST_DELAY => {
                 drift("the delay arm allows at most 10000 milliseconds")

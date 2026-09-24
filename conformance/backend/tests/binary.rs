@@ -91,7 +91,10 @@ fn finish(Started(mut child, input, lines, _): Started) -> Result<Vec<String>, B
 /// The final count, skipping any `wait` line that was still pending.
 fn last(backend: Started) -> Result<String, Box<dyn Error>> {
     let rest = finish(backend)?;
-    let count = rest.into_iter().rev().find(|text| !text.starts_with("wait "));
+    let count = rest
+        .into_iter()
+        .rev()
+        .find(|text| !text.starts_with("wait "));
     Ok(count.ok_or("no final count")?)
 }
 
@@ -308,7 +311,14 @@ fn a_wait_line_with_no_whole_number_prints_nothing() -> Tested {
     for text in ["wait x", "wait +1", "count"] {
         send(&mut backend, text)?;
     }
-    assert_eq!(finish(backend)?, ["0", "0"]);
+    assert_eq!(backend.2.recv_timeout(LINE)?, "0");
+    let late = backend.2.recv_timeout(Duration::from_millis(300));
+    assert_eq!(
+        late,
+        Err(RecvTimeoutError::Timeout),
+        "a bad wait printed a line"
+    );
+    assert_eq!(finish(backend)?, ["0"]);
     Ok(())
 }
 
