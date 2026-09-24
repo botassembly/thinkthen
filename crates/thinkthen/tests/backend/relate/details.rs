@@ -71,14 +71,22 @@ fn the_detailed_question_digest_hashes_the_printed_line_question() {
         &["linked", "--either", "--lines", "--details"],
         b"Ada\nGrace\n",
     );
-    assert_eq!(output.status.code(), Some(0), "{}", String::from_utf8_lossy(&output.stderr));
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let text = String::from_utf8(output.stdout).expect("details text");
     assert!(
         text.contains(r#""question":{"verb":"relate","fields":null,"relations":[{"name":"linked","source":"*","target":"*","reads":"linked","either":true}],"threshold":0.5},"#),
         "{text}"
     );
     let result: Value = serde_json::from_str(&text).expect("details");
-    assert_eq!(result["meta"]["question_sha256"], "5d1aa1f27838358f922a082922c989994bb79461f6b6e694be95b5a3577af794");
+    assert_eq!(
+        result["meta"]["question_sha256"],
+        "5d1aa1f27838358f922a082922c989994bb79461f6b6e694be95b5a3577af794"
+    );
 }
 
 #[test]
@@ -118,7 +126,12 @@ fn a_target_side_asker_keeps_its_roles_and_the_declared_edge_direction() {
         &["works_for=person:organization", "--details"],
         br#"[{"name":"Ada","kind":"person"},{"name":"Acme","kind":"organization"},{"name":"Beta","kind":"organization"}]"#,
     );
-    assert_eq!(output.status.code(), Some(0), "{}", String::from_utf8_lossy(&output.stderr));
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let result: Value = serde_json::from_slice(&output.stdout).expect("details");
     let ada = serde_json::json!({"name":"Ada","kind":"person"});
     let questions = result["answer"]["questions"].as_array().expect("questions");
@@ -131,7 +144,10 @@ fn a_target_side_asker_keeps_its_roles_and_the_declared_edge_direction() {
         );
         assert_eq!(question["candidates"][0]["role"], "source");
         assert_eq!(question["candidates"][0]["entity"], ada);
-        assert_eq!(question["pick"], serde_json::json!({"role":"source","entity":ada}));
+        assert_eq!(
+            question["pick"],
+            serde_json::json!({"role":"source","entity":ada})
+        );
     }
     let edges = result["value"].as_array().expect("edges");
     assert_eq!(edges.len(), 2);

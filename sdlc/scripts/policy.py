@@ -43,6 +43,8 @@ ACCEPTED_DEPENDENCIES = {
 ACCEPTED_TARGET_DEPENDENCIES = {"thinkthen": {"nix"}}
 ACCEPTED_DEV_DEPENDENCIES = {"thinkthen": {"proptest"}}
 MAX_FILE_LINES = 500
+# Main held three `rustfmt::skip` attributes when ticket 0088 pinned this count.
+MAX_FORMAT_SKIPS = 3
 INHERITED = {"workspace": True}
 
 # ADR 0010's clarification of 2026-09-19: other backends will come, so the
@@ -653,6 +655,9 @@ def check_sources() -> None:
         if lines > MAX_FILE_LINES:
             relative = source.relative_to(REPO)
             fail("size", f"{relative} has {lines} non-blank lines and the ceiling is {MAX_FILE_LINES}")
+    skips = sum(source.read_text(encoding="utf-8").count("rustfmt::skip") for source in sources)
+    if skips > MAX_FORMAT_SKIPS:
+        fail("format", f"crates hold {skips} rustfmt::skip attributes and the ceiling is {MAX_FORMAT_SKIPS}")
 
 
 def adapter_paths() -> tuple[str, ...]:

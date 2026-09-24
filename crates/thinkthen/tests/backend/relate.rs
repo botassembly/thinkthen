@@ -71,7 +71,10 @@ pub(crate) fn scripted(answers: &'static [&'static str]) -> Listener {
             .enumerate()
             .map(|(place, name)| {
                 let answer = answers.get(place).or(answers.last()).expect("an answer");
-                (name.clone(), serde_json::from_str::<Value>(answer).expect("answer"))
+                (
+                    name.clone(),
+                    serde_json::from_str::<Value>(answer).expect("answer"),
+                )
             })
             .collect::<serde_json::Map<_, _>>();
         Canned::ok(&serde_json::json!({"model":"local-1","answers":replies}).to_string())
@@ -83,11 +86,29 @@ pub(crate) fn scripted(answers: &'static [&'static str]) -> Listener {
 fn dry_run_reports_the_exact_plan_and_the_digest_a_real_run_sends() {
     let listener = Listener::answering(answered).expect("listener");
     let input = br#"[{"name":"Ada","kind":"person"},{"name":"Acme","kind":"organization"}]"#;
-    let output = run(&listener, &["works_for=person:organization", "--dry-run"], input);
-    assert_eq!(output.status.code(), Some(0), "{}", String::from_utf8_lossy(&output.stderr));
+    let output = run(
+        &listener,
+        &["works_for=person:organization", "--dry-run"],
+        input,
+    );
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     assert_eq!(listener.connections(), 0);
-    let sent = run(&listener, &["works_for=person:organization", "--details"], input);
-    assert_eq!(sent.status.code(), Some(0), "{}", String::from_utf8_lossy(&sent.stderr));
+    let sent = run(
+        &listener,
+        &["works_for=person:organization", "--details"],
+        input,
+    );
+    assert_eq!(
+        sent.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&sent.stderr)
+    );
     let sent: Value = serde_json::from_slice(&sent.stdout).expect("details");
     let digest = sent["meta"]["requests"][0].as_str().expect("sent digest");
     let body = concat!(
@@ -132,12 +153,22 @@ fn a_wildcard_rule_expands_to_concrete_kinds_in_first_seen_order() {
         .as_array()
         .expect("relations")
         .iter()
-        .map(|relation| (relation["source"].clone(), relation["target"].clone(), relation["method"].clone()))
+        .map(|relation| {
+            (
+                relation["source"].clone(),
+                relation["target"].clone(),
+                relation["method"].clone(),
+            )
+        })
         .collect::<Vec<_>>();
     assert_eq!(
         kinds,
         [
-            ("organization".into(), "organization".into(), "yes_no".into()),
+            (
+                "organization".into(),
+                "organization".into(),
+                "yes_no".into()
+            ),
             ("person".into(), "organization".into(), "choice".into()),
         ]
     );
@@ -348,7 +379,12 @@ fn a_backend_profile_option_limit_falls_back_per_concrete_relation_in_the_plan()
             options.extend(["--profile", profile.to_str().expect("path")]);
         }
         let output = run(&listener, &options, input);
-        assert_eq!(output.status.code(), Some(0), "{}", String::from_utf8_lossy(&output.stderr));
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
         plans.push(serde_json::from_slice::<Value>(&output.stdout).expect("plan"));
     }
     assert_eq!(plans[0]["backend_profile"], Value::Null);
@@ -383,7 +419,10 @@ fn the_default_and_named_caches_answer_a_repeated_run_without_a_send() {
         if let Some(folder) = cache {
             arguments.extend(["--cache", folder]);
         }
-        let environment = [("THINKTHEN_API_KEY", "secret"), ("XDG_CACHE_HOME", xdg.as_str())];
+        let environment = [
+            ("THINKTHEN_API_KEY", "secret"),
+            ("XDG_CACHE_HOME", xdg.as_str()),
+        ];
         let first = spawn(&arguments, &environment, input).expect("first run");
         assert_eq!(first.status.code(), Some(0), "{cache:?}");
         assert_eq!(listener.requests().len(), 1, "{cache:?}");
@@ -393,7 +432,10 @@ fn the_default_and_named_caches_answer_a_repeated_run_without_a_send() {
         let first: Value = serde_json::from_slice(&first.stdout).expect("first details");
         let second: Value = serde_json::from_slice(&second.stdout).expect("second details");
         assert_eq!(first["answer"], second["answer"], "{cache:?}");
-        assert_eq!(first["meta"]["requests"], second["meta"]["requests"], "{cache:?}");
+        assert_eq!(
+            first["meta"]["requests"], second["meta"]["requests"],
+            "{cache:?}"
+        );
         assert_eq!(second["meta"]["cached"], true, "{cache:?}");
         assert_eq!(second["meta"]["requests_sent"], 0, "{cache:?}");
     }
