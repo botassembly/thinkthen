@@ -213,3 +213,16 @@ Tickets 0080 and 0081 own command behavior and the shared planner and exclude pu
 Section 4 gives the poll callback to the binding and keeps it off the public surface. A binding crate reaches only the public API, so it cannot hand the engine a callback through private code. Ian accepted queue item 7 of `sdlc/planning/one-line-plan-2026-09-24.md` on 2026-09-24: the public contract gains an interrupt check. Ticket 0095 defines `CallOptions::interrupt`. The engine runs it only on the calling thread, at each poll while the call waits. A `true` return acts as the call's cancel token firing at that moment. The binding still decides what the check does: Python checks signals, PostgreSQL runs its interrupt check, SQLite reads its progress state. No signal handler enters the engine. Ian can overturn it.
 
 The same pass adds supporting forms that bindings need and no new function: `CallOptions::deadline_seconds` and `deadline_millis` (host deadline numbers), `QuestionKind` with `Question::kind` and `QuestionSet::members`, `LabelBuilder` through `Question::choose_labels` and `tag_labels` (labels known at run time), `Recognize` and `Relate` `from_json` and `load`, `Row::probability`, `ErrorKind::name`, and `to_json` on `Details`, `Recognized`, and `Edge` with `AnnotatedRecord::value_json`. Ticket 0095 defines each and says why. They are question setup and supporting forms under Ian's 2026-09-20 library ruling. Ian can overturn any of them.
+
+## Amendment, 2026-09-24: the width is called the throttle
+
+Ian ruled on 2026-09-24 that the setting this ADR calls the width is named the throttle. Version 0.1 has not shipped, so the rename costs text alone today. After ticket 0086 builds the public API, a rename would break users.
+
+The throttle is the most requests in flight at once, per loaded copy of the library. Every rule of the amendment "one width for the process" holds under the new name. Claude set the scope below. Ian can overturn it.
+
+- The Rust library setting is `EngineBuilder::throttle(n)`. It replaces `EngineBuilder::width` in the inventory of ticket 0084 and the range rule of ticket 0095. Ticket 0086 builds the public name.
+- Each surface spells the setting the way its host spells its other settings, such as `thinkthen_throttle` in SQL and `throttle=` in Python.
+- Every page and ADR calls it the throttle. Section 5's width row reads as the throttle row.
+- The command's flag stays `--jobs N`, because `jobs` is the usual command-line name for parallel work. The pages for `--jobs` say it sets the throttle.
+- Private names in code may stay `width` for now. The conflict message of the width amendment reaches a user only through a second engine in one process, and only the public API can build one. Ticket 0086 rewords it: `throttle 4 is already active for this process; use throttle 4 or drop the throttle argument`.
+- Records, reviews, and issues written before this date keep the word they used.
