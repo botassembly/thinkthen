@@ -1,6 +1,6 @@
 # The default --jobs width runs past the documented request limit on short records
 
-Status: Open. No owner yet. Split out by ticket 0100 from `2026-09-20-accuracy-round-on-three-public-sets-and-a-speed-rerun.md`, which closed when its `cost.jq` defect was fixed.
+Status: Open. Owner: Claude, as this repository's queue owner, through a Quick Fix. Split out by ticket 0100 from `2026-09-20-accuracy-round-on-three-public-sets-and-a-speed-rerun.md`, which closed when its `cost.jq` defect was fixed.
 
 ## The question
 
@@ -12,7 +12,7 @@ The accuracy issue recommended no pacer, a test that replays a 429 in the middle
 
 ## What 0077 decides
 
-Ticket 0077 (`sdlc/tickets/0077-share-one-process-width-cap.md` on `ticket/0077-process-width-cap`) keeps the fallback width at 4 on purpose. It says the command still schedules an unbound batch at the existing fallback width 4, so command behavior and help remain unchanged. It does not take this question.
+Ticket 0077 landed on main at `15fb302a`. It keeps the fallback width at 4 and changes no command behavior. It moves the fallback into one constant, `Width::FALLBACK`, so a change to the default is now one line. Its code review (`sdlc/records/0077-code-review.md`, section 5) found no new defect. It named this a pre-existing default question plus a documentation gap, owned by Claude through a Quick Fix.
 
 ## The missing numbers
 
@@ -20,5 +20,9 @@ The accuracy issue asked the `--jobs` reference page to give the measured number
 
 ## Fix
 
-1. Decide the default: keep 4 with the reason, or drop to 3.
-2. Put the measured numbers on the `--jobs` reference pages, naming experiment 206 and the accuracy issue as the measuring record.
+A Quick Fix ticket takes both parts:
+
+1. Decide the default under the configuration rule: keep 4 with the reason, or drop to 3. Change `Width::FALLBACK` if it drops, and record the reason in the ticket.
+2. Put the measured numbers on the `--jobs` reference pages, `specification/records.md` and `site/src/pages/reference.astro`, naming experiment 206 and the accuracy issue as the measuring record.
+
+Ian can overturn the default width the Quick Fix picks.
