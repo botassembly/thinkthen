@@ -173,3 +173,13 @@ Contract 2; state and timing 3; reach 2; proof 3; cost of error 3; total 13. Fin
 - Amendment of 2026-09-24: decision 16 applies the no-paid-backend rule (`d783ab6b`). The seed test proves the environment through the cache folder, and the helper removes the real key from every child.
 - Amendment review: `sdlc/records/2026-09-24-amendment-review-0108-0109-0112.md` accepted decision 16 at `6f5eddf3`, with two notes for the builder, now in the acceptance list.
 - Code review: pending.
+
+## Evidence
+
+Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk.md` asks every product ticket to name these five parts. This note changes no design.
+
+- Starts from: The tag `surfaces-wave7-frozen-2026-09-24b` holds `databases/sqlite/src/lib.rs`, `Cargo.toml`, `README.md`, `examples.json`, and `check.sh`, with 12 files in `tests/` and 3 in `tools/`. `experiments/207-thinkthen-db/FINDINGS.md` found that rusqlite's headers stop at SQLite 3.34, set 256-row chunks, and measured cancel landing 106 ms after the interrupt. `experiments/218-thinkthen-release-qa/wave2/PLAN.md` found that `@q.json` served stale answers after the file changed and that functions were marked safe for untrusted files. `repos/jev-experiments`: none found.
+- Keeps: The eight functions, the two table-valued functions, the `sqlite3_thinkthen_init` entry point, the direct-only and non-deterministic flags, the error codes, and `slide.sql`.
+- Changes: Four setting functions, the engine's disk cache in place of the saved map, a worker per call, relate over entities, a `foldhash` deny exception, and the SQLite 3.50.0 toolchain.
+- Proof: The settings tests with plants, the cancel case, the function list of 12 names and 18 registrations, one exported symbol, the deny plant, and the relate id-mapping test.
+- Defers: Packaging, macOS, filter, rank, and find beyond `WHERE`, and relate over query text. Experiment 218's stale-question-file probe carries forward as a check on the engine cache.
