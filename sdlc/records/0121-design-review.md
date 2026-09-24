@@ -16,3 +16,7 @@ Ticket: `sdlc/tickets/0121-add-the-backend-check-command.md`. Reviewer: a fresh,
 10. Style: trailing "so" clauses split and the model clause dropped from Evidence.
 
 The reviewer confirmed as sound: the Evidence format, the key rule, the address refusal through `Backend::resolve`, the stop counts of 1 and the refuse count of 4 under the retry rule, one-question failures surfacing as whole-reply errors, and the pinned warnings on the generic and malformed arms.
+
+## Confirmation, at `10427e1d`: ACCEPT
+
+The same reviewer checked each fix against the code and found no new contradiction. It checked the stop table and its counts, the wire range for a failed tag, the score probe's level map, the harness home, the dry run tied to `Engine::split`, and the refusal line. It left three notes for the builder, all applied in the next commit. The dry run and `spec/check.md` pass a loopback `--url`. The trailing "so" and "which" clauses are split. The Stops test pins `unchecked usage`.
