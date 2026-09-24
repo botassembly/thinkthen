@@ -118,3 +118,13 @@ Contract 2; state and timing 4; reach 2; proof 3; cost of error 4; total 15. Fin
 
 - Design review: its rows came from finding 2 of the 0110 design review. The confirmation in the same record (`sdlc/records/2026-09-24-design-review-0110.md`) found the R4-5 plant had no code to act on and that a forked child could write to the parent's pipe. Both are applied, with the small fix. The final check (same file) accepted this design at `c4010827`, with one note for the builder in decision 7.
 - Code review: pending.
+
+## Evidence
+
+Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk.md` asks every product ticket to name these five parts. This note changes no design.
+
+- Starts from: The tag `surfaces-wave7-frozen-2026-09-24b` holds `databases/duckdb/src/connections.rs` and `src/relate.rs` and 8 relate suites in `databases/duckdb/tools/`, under ADR 0038. `experiments/218-thinkthen-release-qa/wave2/PLAN.md` found that relate's global connection saw the wrong database and no temp tables, and that `random()` let the count query and the run query disagree past the row cap. `repos/jev-experiments`: none found.
+- Keeps: One kept connection per database, the reaper, the guard that allows one read-only `SELECT`, and the queue-wait sentence.
+- Changes: Relate reads entity rows, honours 0110's settings, runs on a worker, and uses a signal pipe. Its hooks sit behind `test-hooks`.
+- Proof: The two relate conformance cases, `cancelled` within 100 ms, width 8 reaching relate, and a cache hit on the second run, and the relate panic reading `defect`.
+- Defers: Temp-table and open-transaction visibility, relate between new and old rows, links to a known entity table, and settings for warm. Experiment 218's volatile-function row-cap probe carries forward as a regression case.
