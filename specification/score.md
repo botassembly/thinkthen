@@ -54,7 +54,7 @@ thinkthen score 'How much disruption does this report?' 'None.' 'Work continues 
 
 ## The measured warning
 
-Measurement of the first decider model showed rubric judgments rejecting 18% to 46% of work that people had accepted.
+Measurement of the first System One model showed rubric judgments rejecting 18% to 46% of work that people had accepted.
 
 A live run then placed forty made-up incident reports on five levels. The cases are few and they are made up. The order held well: the value tracked the trusted level with a rank correlation of 0.9703, and no text missed by more than one level, on 40 of 40. The exact level was right on 31 of 40. The absolute level ran one step high on 9 of 40, all of them one step and never more. A cut on the number is therefore tuned on labeled cases before anyone trusts it. The help text for `score` says so.
 

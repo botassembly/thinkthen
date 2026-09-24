@@ -49,7 +49,10 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
         ),
         ("score", "Place a text on a scale you name"),
         ("tag", "Name every label that fits"),
-        ("annotate", "Fill out a question set for every record"),
+        (
+            "annotate",
+            "Answer a saved set of questions about every record",
+        ),
         (
             "recognize",
             "Find every name in a text and assign one of the given kinds",
@@ -121,4 +124,87 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
     }
 
     assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+/// The long or short help one command prints, after checking it exited 0.
+fn help(arguments: &[&str]) -> String {
+    let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+        .args(arguments)
+        .env_clear()
+        .output()
+        .expect("the compiled binary runs");
+    assert_eq!(output.status.code(), Some(0), "{arguments:?}");
+    String::from_utf8_lossy(&output.stdout).into_owned()
+}
+
+#[test]
+fn annotate_opens_with_the_saved_question_set_sentence_and_keeps_each_part_once() {
+    const ANNOTATE: &str = "Answer a saved set of questions about every record";
+    assert!(
+        help(&["--help"]).contains(&format!("\n  annotate   {ANNOTATE}\n")),
+        "the root row"
+    );
+    let short = help(&["annotate", "-h"]);
+    assert!(short.starts_with(&format!("{ANNOTATE}\n\n")), "{short}");
+    let long = help(&["annotate", "--help"]);
+    assert!(long.starts_with(&format!("{ANNOTATE}.\n\n")), "{long}");
+    for part in [
+        "Usage: thinkthen annotate",
+        "\nOptions:\n",
+        "The answer is one annotated JSON object.",
+        "\nExamples:\n",
+        "thinkthen annotate checks.json < message.txt",
+        "A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers.",
+        "A completed run with one or more failed questions exits 6.",
+    ] {
+        assert_eq!(long.matches(part).count(), 1, "{part}\n{long}");
+    }
+}
+
+#[test]
+fn recognize_and_relate_keep_the_beta_warning_the_cuts_and_the_disclosure() {
+    for (verb, said) in [
+        (
+            "recognize",
+            "Relations are beta. `--threshold` gates computed name strength; `--relation-threshold` gates a relation's model probability.\n",
+        ),
+        (
+            "relate",
+            "Relations are beta. Every entity leaves together as one complete entity set and sees every other entity admitted by a rule.",
+        ),
+        (
+            "relate",
+            "Keep edges whose model probability reaches this cut. [default: 0.5]",
+        ),
+    ] {
+        let long = help(&[verb, "--help"]);
+        assert_eq!(long.matches(said).count(), 1, "{verb}: {said}\n{long}");
+    }
+}
+
+#[test]
+fn the_specification_defines_unresolved_once_and_names_no_decider_model() {
+    const DEFINITION: &str = "`unresolved` is the formal name for a not sure answer.";
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let mut defined = Vec::new();
+    let mut pages = vec![root.join("crates/thinkthen/Cargo.toml")];
+    for entry in std::fs::read_dir(root.join("specification")).expect("the specification") {
+        pages.push(entry.expect("a page").path());
+    }
+    for page in pages.iter().filter(|page| page.is_file()) {
+        let text = std::fs::read_to_string(page).expect("a readable page");
+        for _ in text.matches(DEFINITION) {
+            defined.push(
+                page.file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .into_owned(),
+            );
+        }
+        let lower = text.to_lowercase();
+        for banned in ["decider model", "decision model"] {
+            assert!(!lower.contains(banned), "{} says {banned}", page.display());
+        }
+    }
+    assert_eq!(defined, ["decide.md"]);
 }

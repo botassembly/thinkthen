@@ -146,6 +146,6 @@ Settled by ADR 0008 item 3 and replaced in part by ADR 0027. `meta.questions_sha
 
 ## What a high probability does not mean
 
-A decider model judges only the evidence it was shown. A probability of 0.98 says nothing about facts that were absent from the input. In one measurement the model approved every case at 0.98 while human reviewers had refused 23% of them. The only test of a question is a measurement against labeled cases.
+The model judges only the evidence it was shown. A probability of 0.98 says nothing about facts that were absent from the input. In one measurement the model approved every case at 0.98 while human reviewers had refused 23% of them. The only test of a question is a measurement against labeled cases.
 
 Every reply behind one row must report the same model version. Different versions fail the record because one row cannot represent two measurements. The diagnostic safely names both short model identifiers when it can. It tells the user to pin `--model` and rerun with `--record` or `--cache`.

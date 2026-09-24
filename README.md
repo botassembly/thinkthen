@@ -1,6 +1,6 @@
 # thinkthen
 
-`thinkthen` puts a System One model in the shell. The model never writes text. It reads a state, answers a typed question, and returns probabilities that a script can branch on. The question is a yes/no, one pick, every applicable label, or a rating on a scale. A command names the job, asks the question, and reads the evidence on standard input.
+`thinkthen` puts a System One model in the shell. The model never writes text. It reads a state, answers a typed question, and returns probabilities that a script can branch on. The question is a yes/no, one pick, every applicable label, or a level on a scale. A command names the job, asks the question, and reads the evidence on standard input.
 
 ```sh
 thinkthen decide 'Does the customer ask for a refund?' < message.txt
@@ -12,7 +12,7 @@ thinkthen find 'Which line answers the question?' --lines < handbook.txt
 
 The first prints `true`, `false`, or `null`, and its exit code works in a shell `if`. The second prints one label. The third prints every applicable label as a JSON array. The fourth prints the records that pass. The fifth sends the bounded set together and returns the best original unit. `--details` adds the probabilities behind any answer.
 
-Those commands are the design. `specification/` is the contract, and code follows it. `annotate` reads a saved question set when several judgments belong on the same input.
+Those commands are the design. `specification/` is the contract, and code follows it. `annotate` reads a saved question set when several questions belong on the same input.
 
 ## What it will and will not do
 

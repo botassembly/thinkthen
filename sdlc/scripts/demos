@@ -22,6 +22,46 @@ prose() {
 	awk '/^```/ { fenced = !fenced; next } !fenced' "$1"
 }
 
+# The approved public words, from the vocabulary the 2026-09-21 issue records
+# and ticket 0082 rules. A fixed phrase is wrong on every page and in every
+# help text. A context word is wrong only in the built help, where the command
+# speaks for itself; a how-to may still say rows for saved detailed rows. Fenced
+# code and paths are not prose and are skipped. Each hit prints one line.
+vocabulary() {
+	awk -v file="$1" -v scope="$2" '
+		function check(word, rule) {
+			if (match(line, "(^|[^a-z])" word "s?([^a-z]|$)"))
+				printf "demos: %s:%d: \"%s\" breaks the %s rule\n", file, FNR, word, rule
+		}
+		/^```/ { fenced = !fenced; next }
+		fenced { next }
+		{
+			line = tolower($0)
+			gsub(/[^ \t]*\/[^ \t]*/, " ", line)
+			check("decider model", "fixed-phrase")
+			check("decision model", "fixed-phrase")
+			check("rating", "fixed-phrase")
+			check("the mark", "fixed-phrase")
+			check("judgment", "fixed-phrase")
+			if (scope == "prose") next
+			# A CSV table has a header row; that row is the table'"'"'s, not a record.
+			gsub(/header row/, " ", line)
+			check("row", "help-word")
+			check("document", "help-word")
+			check("unit", "help-word")
+			# The formal name belongs to the specification; help says not sure.
+			check("unresolved", "help-word")
+			# `tag` owns label, and a `choose` pick is an option. LABEL=DESCRIPTION
+			# is the placeholder `choose.md` and the `--option` refusal share.
+			gsub(/label=description/, " ", line)
+			if (scope == "choose") check("label", "help-word")
+		}
+	'
+}
+
+hits=$(mktemp)
+trap 'rm -f -- "$hits"' EXIT
+
 green=0
 red=0
 for page in */README.md; do
@@ -181,7 +221,21 @@ for page in */README.md; do
 	# mustmatch runs a block from the folder of the page it came from, so the
 	# relative paths a demo reads its own input files by are the demo's own.
 	printf 'demos: running %s\n' "$page"
+	vocabulary "$page" prose <"$page" >>"$hits"
 	mustmatch test "$page"
 	green=$((green + 1))
 done
+vocabulary "$REPO/README.md" prose <"$REPO/README.md" >>"$hits"
+vocabulary README.md prose <README.md >>"$hits"
+thinkthen --help | vocabulary 'thinkthen --help' help >>"$hits"
+for verb in decide filter rank choose find score tag annotate recognize relate; do
+	for flag in -h --help; do
+		thinkthen "$verb" "$flag" | vocabulary "thinkthen $verb $flag" "$verb" >>"$hits"
+	done
+done
+if [ -s "$hits" ]; then
+	cat -- "$hits" >&2
+	printf 'demos: %s words break the approved vocabulary\n' "$(wc -l <"$hits" | tr -d ' ')" >&2
+	exit 1
+fi
 printf 'demos: %s green, %s red\n' "$green" "$red"

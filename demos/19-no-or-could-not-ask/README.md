@@ -49,7 +49,7 @@ esac | mustmatch "hold: the judge did not answer, exit 5"
 
 ## Step 2: keep the answer for the audit
 
-The gate above throws the judgment away. Drop `--quiet`, keep the result, and read the exit code from the same run. `answer.probability` is how far the command came, which is what a reviewer reads when a gate is questioned.
+The gate above throws the answer away. Drop `--quiet`, keep the result, and read the exit code from the same run. `answer.probability` is how far the command came, which is what a reviewer reads when a gate is questioned.
 
 ```bash
 set -euo pipefail

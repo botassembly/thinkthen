@@ -444,23 +444,35 @@ fn the_long_help_says_a_transport_failure_is_never_sent_again() {
 fn record_capable_help_pins_run_exit_behavior() {
     const RECORD_EXIT: &str = "A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers.";
     const SHORT: &str = "Answer one yes or no question about a text. A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers\n\nUsage:";
+    const WHOLE_SET: &str = "A run that answers some relation questions and fails others prints what it has and exits 6. A run whose relation questions all fail prints nothing and exits 4.";
+    const TEACHING: &str = "The exit code is 0 for yes, 1 for no, 3 for not sure, and any other code when the run is broken or interrupted.";
+    let long = |command: &str| {
+        let output = run(&[command, "--help"], &[], b"").expect("the compiled binary runs");
+        String::from_utf8_lossy(&output.stdout).into_owned()
+    };
     let output = run(&["decide", "-h"], &[], b"").expect("the compiled binary runs");
     let short = String::from_utf8_lossy(&output.stdout);
     assert!(short.starts_with(SHORT), "decide short help: {short}");
 
-    for command in ["decide", "choose", "tag", "score", "filter", "rank"] {
-        let output = run(&[command, "--help"], &[], b"").expect("the compiled binary runs");
-        let help = String::from_utf8_lossy(&output.stdout);
-        assert!(help.contains(RECORD_EXIT), "{command}: {help}");
+    for command in [
+        "decide",
+        "filter",
+        "rank",
+        "choose",
+        "score",
+        "tag",
+        "annotate",
+        "recognize",
+    ] {
+        let help = long(command);
+        assert_eq!(help.matches(RECORD_EXIT).count(), 1, "{command}: {help}");
     }
-
-    let output = run(&["annotate", "--help"], &[], b"").expect("the compiled binary runs");
-    let help = String::from_utf8_lossy(&output.stdout);
-    assert!(help.contains(RECORD_EXIT), "annotate: {help}");
-    assert!(
-        help.contains("A completed run with one or more failed questions exits 6."),
-        "annotate: {help}"
-    );
+    let relate = long("relate");
+    assert!(!relate.contains("A record run"), "relate: {relate}");
+    assert_eq!(relate.matches(WHOLE_SET).count(), 1, "relate: {relate}");
+    let decide = long("decide");
+    assert_eq!(decide.matches(TEACHING).count(), 1, "decide: {decide}");
+    assert!(!decide.contains("3 for unresolved"), "decide: {decide}");
 }
 
 #[test]
@@ -473,7 +485,7 @@ fn shared_help_defers_order_and_document_rules_to_each_command() {
             "{command}: {help}"
         );
         assert!(
-            help.contains("On a command that accepts one document"),
+            help.contains("On a command that accepts a single text"),
             "{command}: {help}"
         );
     }

@@ -108,7 +108,7 @@ sh ../../transforms/cost/example.sh | jq -c '{rows, usd}' | mustmatch '{"rows":4
 - **A transform stops with exit 5.** `jq` exits 5 for a line it cannot parse and for an error the transform raises.
 - **A missing entry in the recording is exit 5 too, from the tool.** `thinkthen` names the entry it wanted. A body that differs by one byte from the recorded one is a different entry, so evidence read through a pipe has to arrive exactly as it did when the exchange was recorded.
 - **Assuming a zero for a missing count.** A backend that reports no usage leaves `meta.usage` absent. Those rows are listed in `no_usage` and add nothing, so a total is never quietly short.
-- **Pricing output tokens with the input price.** They are reported beside the input tokens and never converted. A decider model answers with numbers, so output is small, and only the input side is worth watching.
+- **Pricing output tokens with the input price.** They are reported beside the input tokens and never converted. The model answers with numbers, so output is small, and only the input side is worth watching.
 - **Reading the price from this page.** 0.042 for a million input tokens is what the hosted service charged on 2026-09-19. Another address has another price, and the argument exists so nobody hard-codes one.
 - **A loop over files has no budget.** Each file is its own run, and nothing stops at a cap. `sdlc/scripts/live` is the door for a paid call in this repository, and it refuses at the ledger's limit.
 

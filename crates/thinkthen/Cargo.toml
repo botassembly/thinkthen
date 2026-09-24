@@ -3,7 +3,7 @@ name = "thinkthen"
 version = "0.0.1"
 edition.workspace = true
 rust-version.workspace = true
-description = "Put a decider model in the shell"
+description = "Semantic commands for the shell: if, grep, and sort that understand meaning"
 license = "MIT"
 publish = false
 

@@ -26,7 +26,7 @@ The folder numbers never change. Demo 11 left with `segment` under ADR 0010, and
 
 ## What a demo never asks
 
-Measurement of the first decider model fixes the shape of every question on these pages. A narrow yes/no question about a fact visible in the evidence works. A pick from a short list of options that exclude one another is steady, and adding an irrelevant option or changing the order moves the odds. Rating on a rubric is weak. Judging quality, completeness, or correctness fails badly. High confidence can be wrong when the needed evidence was never shown, and answers inside the unresolved band flip between runs.
+Measurement of the first System One model fixes the shape of every question on these pages. A narrow yes/no question about a fact visible in the evidence works. A pick from a short list of options that exclude one another is steady, and adding an irrelevant option or changing the order moves the odds. Scoring on a rubric is weak. Judging quality, completeness, or correctness fails badly. High confidence can be wrong when the needed evidence was never shown, and answers inside the unresolved band flip between runs.
 
 So no demo asks whether something is good. Every demo asks about a visible fact, and every demo has a branch for unresolved.
 
@@ -70,7 +70,7 @@ So no demo asks whether something is good. Every demo asks about a visible fact,
 
 ## Evals
 
-An eval is a reproducible workflow over the same commands as everything else. The tool obtains the judgments and keeps the evidence, and ordinary code does the policies, the metrics, and the comparisons. `documentation-plan.md` maps Ian's six capabilities to the how-tos that teach each one.
+An eval is a reproducible workflow over the same commands as everything else. The tool obtains the answers and keeps the evidence, and ordinary code does the policies, the metrics, and the comparisons. `documentation-plan.md` maps Ian's six capabilities to the how-tos that teach each one.
 
 | # | How to | Verbs | Status |
 | --- | --- | --- | --- |
