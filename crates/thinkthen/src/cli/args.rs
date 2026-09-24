@@ -161,7 +161,7 @@ pub(crate) struct Common {
     )]
     pub(crate) jobs: Option<u8>,
 
-    /// How many times a transport failure or a retried status is sent again.
+    /// How many times a retried status is sent again. A transport failure is never sent again.
     #[arg(long, value_name = "N", default_value_t = 2, hide_short_help = true)]
     pub(crate) max_retries: u32,
 }

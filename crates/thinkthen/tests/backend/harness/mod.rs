@@ -37,6 +37,7 @@ pub(crate) struct Canned {
     answered: Option<Sender<()>>,
     asked: Vec<(String, String)>,
     close_without_reply: bool,
+    reset: bool,
 }
 
 impl Canned {
@@ -48,45 +49,34 @@ impl Canned {
     /// Answer with a permanent redirect to somewhere else.
     pub(crate) fn redirect(url: &str) -> Self {
         Self {
-            status: 302,
-            body: String::new(),
             location: Some(url.to_owned()),
-            promised: None,
-            delay: Duration::ZERO,
-            release: None,
-            answered: None,
-            asked: Vec::new(),
-            close_without_reply: false,
+            ..Self::status(302, "")
         }
     }
 
     /// Promise a body of this length and close the connection without it.
     pub(crate) fn cut_short() -> Self {
         Self {
-            status: 200,
-            body: String::new(),
-            location: None,
             promised: Some(4096),
-            delay: Duration::ZERO,
-            release: None,
-            answered: None,
-            asked: Vec::new(),
-            close_without_reply: false,
+            ..Self::ok("")
         }
     }
 
     /// Read the complete request and close before writing response headers.
     pub(crate) fn close_without_reply() -> Self {
         Self {
-            status: 200,
-            body: String::new(),
-            location: None,
-            promised: None,
-            delay: Duration::ZERO,
-            release: None,
-            answered: None,
-            asked: Vec::new(),
             close_without_reply: true,
+            ..Self::ok("")
+        }
+    }
+
+    /// Leave the complete request unread and drop the connection.
+    ///
+    /// Linux and macOS answer a close over unread bytes with a reset.
+    pub(crate) fn reset() -> Self {
+        Self {
+            reset: true,
+            ..Self::ok("")
         }
     }
 
@@ -102,6 +92,7 @@ impl Canned {
             answered: None,
             asked: Vec::new(),
             close_without_reply: false,
+            reset: false,
         }
     }
 
@@ -266,10 +257,16 @@ fn serve_script(listener: &TcpListener, responses: Vec<Canned>, sender: &Sender<
         let Ok((stream, _)) = listener.accept() else {
             return;
         };
-        let Some(request) = read_request(&stream) else {
+        let Some((request, used)) = peek_request(&stream) else {
             return;
         };
         if sender.send(request).is_err() {
+            return;
+        }
+        if canned.reset {
+            continue;
+        }
+        if consume(&stream, used).is_none() {
             return;
         }
         serve(stream, &canned);
@@ -305,9 +302,8 @@ fn serve_kept(
     counts: &Counts,
     events: Option<&Sender<Observed>>,
 ) {
-    let mut reader = BufReader::new(stream);
     loop {
-        let Some(request) = read_kept(&mut reader) else {
+        let Some((request, used)) = peek_request(stream) else {
             return;
         };
         let held = counts.in_flight.fetch_add(1, Ordering::SeqCst) + 1;
@@ -318,6 +314,10 @@ fn serve_kept(
         }
         if let Some(events) = events {
             let _ = events.send(Observed::Request);
+        }
+        if canned.reset || consume(stream, used).is_none() {
+            counts.in_flight.fetch_sub(1, Ordering::SeqCst);
+            return;
         }
         thread::sleep(canned.delay);
         if let Some(release) = canned.release.as_ref() {
@@ -331,30 +331,47 @@ fn serve_kept(
     }
 }
 
-/// Read one request from a connection that stays open, or nothing at its end.
-fn read_kept(reader: &mut BufReader<&TcpStream>) -> Option<Recorded> {
-    let mut line = String::new();
-    if reader.read_line(&mut line).ok()? == 0 {
-        return None;
+/// Peek until one whole request sits in the socket buffer, then parse it.
+///
+/// The bytes stay unread, so a reset can drop them. The count says how many
+/// bytes the request took, for [`consume`] to read past. A request too long to
+/// peek whole is read at once instead, and a reset of it is a plain close.
+fn peek_request(stream: &TcpStream) -> Option<(Recorded, usize)> {
+    let mut buffer = vec![0; 32 * 1024];
+    loop {
+        let seen = stream.peek(&mut buffer).ok()?;
+        if seen == 0 {
+            return None;
+        }
+        let mut rest = buffer.get(..seen)?;
+        if let Some(request) = read_request(&mut rest) {
+            return Some((request, seen - rest.len()));
+        }
+        if seen == buffer.len() {
+            return read_request(&mut BufReader::new(stream)).map(|request| (request, 0));
+        }
+        thread::sleep(Duration::from_millis(1));
     }
-    read_rest(reader, line)
+}
+
+/// Read past the bytes one peeked request took.
+fn consume(mut stream: &TcpStream, used: usize) -> Option<()> {
+    stream.read_exact(&mut vec![0; used]).ok()
 }
 
 /// Read one request line, its headers, and the body its content length names.
-fn read_request(stream: &TcpStream) -> Option<Recorded> {
-    let mut reader = BufReader::new(stream);
+fn read_request(reader: &mut impl BufRead) -> Option<Recorded> {
     let mut line = String::new();
     reader.read_line(&mut line).ok()?;
-    read_rest(&mut reader, line)
-}
-
-/// Read the headers and the body that follow one request line.
-fn read_rest(reader: &mut BufReader<&TcpStream>, line: String) -> Option<Recorded> {
     let mut headers = Vec::new();
     let mut length = 0;
     loop {
         let mut header = String::new();
         reader.read_line(&mut header).ok()?;
+        // A line cut off by the end of what arrived so far is no line yet.
+        if !header.ends_with('\n') {
+            return None;
+        }
         let header = header.trim_end().to_owned();
         if header.is_empty() {
             break;

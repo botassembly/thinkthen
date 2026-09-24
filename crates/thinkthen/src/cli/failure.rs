@@ -449,7 +449,7 @@ const fn transport_message(kind: TransportKind) -> &'static str {
             "the backend refused the connection; check that it is running and that --url is correct"
         }
         TransportKind::PrematureClose => {
-            "the backend closed the connection before a reply; try again or change --max-retries"
+            "the backend closed the connection before a reply and may have received the request; it was not sent again"
         }
         TransportKind::Other => "the backend could not be reached; check --url and the network",
     }

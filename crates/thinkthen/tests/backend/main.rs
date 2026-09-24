@@ -44,6 +44,7 @@ mod refused;
     reason = "fixture failures should stop this compiled relation boundary proof"
 )]
 mod relate;
+mod resend;
 mod result_assertions;
 mod scheduling;
 mod secrecy;

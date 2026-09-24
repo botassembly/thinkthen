@@ -100,7 +100,7 @@ ADR 0032 adds `meta.profile_warning` only when a saved calibration name and the 
 | `url` | The URL that answered |
 | `model` | The model that answered, as the backend reported it |
 | `usage` | The token counts the backend reported. Absent when the backend reports none |
-| `requests_sent` | The HTTP attempts that produced this result. A replay or cache hit reports zero. Retries add one each |
+| `requests_sent` | The HTTP attempts that produced this result. A replay or cache hit reports zero. Each retry of a retried status adds one |
 | `cached` | `true` when the answer came entirely from stored exchanges — a recording or a cache — rather than a live backend |
 | `requests` | The recording digests of the logical requests that produced the result, in construction order. Retries add nothing, and equal logical requests keep separate positions |
 | `failed_questions` | The number of failed logical questions in this result. Always present, including zero |
