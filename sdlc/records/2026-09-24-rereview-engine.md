@@ -85,3 +85,18 @@ Read-only, after `git fetch`: 0086 `c7f167a7`, 0093 and ADR 0047 `93abb321`, 009
 - 0086 ACCEPT. The `test` rung now runs the excluded `conformance/consumer` workspace by manifest path, and `sdlc/scripts/test` is in `opens`. Nothing else changed.
 - 0093 and ADR 0047 ACCEPT. The rule now refuses any binding test that returns before its first assertion. That rule catches the planted "print skipped and return" test. The script budget rose to 300 with a re-score line. The narrowed lock check still catches the planted ureq-version lock.
 - 0094 ACCEPT. Relate reads only the default `/name` and `/kind`, matching 0095. `rank` has one spelling, and the question keys sit beside the verb for `from_json` to validate. The ignored churn variables are recorded, and the probe still exercises the resolver path through `timeout_global`.
+
+## Builder amendment confirmation
+
+Reviewed 0086 at `1fb1aded` and 0084 at `2aad6550` (after `0e3c91e4`), read-only.
+
+**0086: ACCEPT.** P1 is fixed. Every child starts from a cleared environment and sets a fake key only beside a loopback `THINKTHEN_BASE_URL`. The listener counts zero wherever no send is expected, and the text cites the port guide rule. P2 is fixed. The digest arm asserts a loopback address through the seam before its first call. The plant turns the settings-seam arm red, and the listener counts zero during the plant run. The seam arm fails before the digest arm sends, so the zero count holds. P3 is fixed: the example now reads `from_env()?.no_cache().build()`.
+
+**0084: ACCEPT.** `wc -m` is 29,996, under the 30,000 cap with 4 characters to spare.
+- The package commands are back as one amendment line. The line gives `cargo check`, `test`, and `package` with `--locked -p thinkthen --no-default-features`. The flags and the package are the same as the deleted sentence. `sdlc/scripts/package` and 0086 also carry these runs, so a builder has them in three places.
+- The shorter amendment loses nothing that matters. The four ADR 0017 section 5 settings, "exactly as", and the per-setter override are all spelled out in detail in 0086's amendment, which owns environment capture. The contract facts remain: the new signature is in the inventory, setters override, `Engine::from_env()` equals `EngineBuilder::from_env()?.build()`, and Ian can overturn it.
+- The dependencies line dropped "as Outcome states". The Outcome section still states that 0078 blocks the `Engine` portion and lists the reconciliation items. Nothing is lost.
+- Re-score sentence: not needed. 0085 records its own scores. 0086 has explicit re-score triggers and a stop-and-re-score rule before any budget or contract crossing. Both code tickets already carry this.
+- Routing line: not stale, since it named Claude builders and fresh Claude reviewers. It is not needed either. 0085 (line 116) and 0086 (Complexity) each name the Opus builder and the fresh Claude reviewer, and 0084 is design only. Restoring it would repeat what the code tickets say.
+
+Both tickets can move from "confirmation pending" to accepted.

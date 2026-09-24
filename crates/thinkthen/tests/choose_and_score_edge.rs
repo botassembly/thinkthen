@@ -3,6 +3,11 @@
 use std::io::{self, Write};
 use std::process::{Command, Output, Stdio};
 
+#[path = "../src/test_deadline/run.rs"]
+mod run;
+#[path = "../src/test_deadline/wait.rs"]
+mod wait;
+
 /// The teams a routing question picks between.
 const TEAMS: [&str; 4] = ["billing", "shipping", "account", "other"];
 
@@ -26,7 +31,7 @@ fn run(arguments: &[&str]) -> io::Result<Output> {
         .ok_or_else(|| io::Error::other("no pipe to standard input"))?;
     let _ = input.write_all(b"The renewal charge bounced last night.");
     drop(input);
-    child.wait_with_output()
+    wait::finish(child, &arguments.join(" "))
 }
 
 /// Run one verb over the labels a case names, plus whatever else it names.
@@ -198,9 +203,9 @@ fn the_help_of_each_verb_carries_the_advice_its_page_names() {
         "contradicted",
         "supported",
         "case $rc",
-        "Exit 0 is a label and exit 3 is unresolved.",
+        "Exit 0 is an option and exit 3 is not sure.",
         "never exits 1",
-        "--raw is available for one document, --lines, and --jsonl.",
+        "--raw is available for a single text, --lines, and --jsonl.",
         "CSV and TSV always print JSONL and refuse --raw.",
     ] {
         assert!(choose.contains(said), "{said} is missing from {choose}");
@@ -235,20 +240,17 @@ fn a_question_that_is_blank_and_evidence_that_is_blank_are_both_refused() {
         run(&["choose", "  ", "billing", "other", "--dry-run"]).expect("the compiled binary runs");
     assert_eq!(blank.status.code(), Some(2));
 
-    let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
-    let empty = command
-        .env_clear()
-        .args([
-            "score",
-            "How much disruption?",
-            "none",
-            "blocked",
-            "--dry-run",
-        ])
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .expect("the compiled binary runs");
+    let empty = run::output(
+        Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+            .env_clear()
+            .args([
+                "score",
+                "How much disruption?",
+                "none",
+                "blocked",
+                "--dry-run",
+            ]),
+    )
+    .expect("the compiled binary runs");
     assert_eq!(empty.status.code(), Some(2));
 }

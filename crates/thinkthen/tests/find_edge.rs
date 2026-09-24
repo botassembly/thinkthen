@@ -6,6 +6,9 @@ use std::io::Write as _;
 use std::path::PathBuf;
 use std::process::{Command, Output, Stdio};
 
+#[path = "../src/test_deadline/wait.rs"]
+mod wait;
+
 fn run(arguments: &[&str], input: &[u8]) -> io::Result<Output> {
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .env_clear()
@@ -20,7 +23,7 @@ fn run(arguments: &[&str], input: &[u8]) -> io::Result<Output> {
         .take()
         .ok_or_else(|| io::Error::other("no stdin"))?
         .write_all(input)?;
-    child.wait_with_output()
+    wait::finish(child, &arguments.join(" "))
 }
 
 fn status_without_output(arguments: &[&str], input: &[u8]) -> io::Result<std::process::ExitStatus> {
@@ -37,7 +40,7 @@ fn status_without_output(arguments: &[&str], input: &[u8]) -> io::Result<std::pr
         .take()
         .ok_or_else(|| io::Error::other("no stdin"))?
         .write_all(input)?;
-    child.wait()
+    wait::finish(child, &arguments.join(" ")).map(|output| output.status)
 }
 
 fn lines(case: &str, size: usize, answer: Option<usize>) -> Vec<u8> {
@@ -86,9 +89,9 @@ fn help_leads_with_whole_set_disclosure_and_all_three_bounds() {
         let output = run(&["find", flag], b"").expect("binary runs");
         assert_eq!(output.status.code(), Some(0));
         let help = String::from_utf8_lossy(&output.stdout);
-        assert!(help.contains("Every unit leaves together and sees every other unit"));
+        assert!(help.contains("Every line or record leaves together and sees every other one"));
         if flag == "--help" {
-            assert!(help.contains("2 to 255 units, or 2 to 254 with --none"));
+            assert!(help.contains("2 to 255 lines or records, or 2 to 254 with --none"));
             assert!(help.contains("at most 16 MiB across the original input"));
             assert!(help.contains(
                 "`find --none` prints nothing and exits 3 when `none` wins or ties for first."
