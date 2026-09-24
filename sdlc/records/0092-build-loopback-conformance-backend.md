@@ -1,6 +1,6 @@
 # 0092: Serve the shared cases from a loopback backend
 
-Status: built at `ea2d01ef` on `ticket/0092-loopback-conformance-backend`, rebased onto `origin/main` `18c0dc10`. Code review pending. The review route is a fresh read-only Claude session. It also serves as the second-agent review the repo requires for the new dependency, the raised ceiling, and the crate's new public surface.
+Status: landed. Built at `ea2d01ef` on `ticket/0092-loopback-conformance-backend`. The code review (`sdlc/records/0092-code-review.md`) was also the second-agent review the repo requires for the new dependency, the raised ceiling, and the crate's new public surface. Its fixes are listed under "Review follow-up", and the coordinator accepted them without another review.
 
 ## Result
 
@@ -34,7 +34,12 @@ Red first: before any arm existed, a stub that sent every request to the drift s
 - `21-backend-fault` is both an injection case and the one backend fault case. It still runs in-process in the engine runner. The loopback runner also runs it on a new `refuse` arm, status 422, which is what its injection `response_refusal` maps to. The ticket names no refusal arm, and this arm is the smallest way to carry the case on the wire.
 - The 450-line cap holds for the backend's source, 378 lines. With its own tests the crate is 509 lines net of the moved harness. The ticket does not say whether tests count.
 - `ratchet.mjs` is the shared reader other repos copy. It now accepts a list of folders. Without that change, the new member would sit outside the ceiling the ticket puts it under.
-- The in-crate runner `src/cli/conformance_tests/command.rs` keeps its own one-shot loopback listener, `serve_once`. Moving it onto the backend would remove a duplicate, but `src/cli` is out of bounds while 0076 builds there. It is a follow-up.
+- The in-crate runner `src/cli/conformance_tests/command.rs` keeps its own one-shot loopback listener, `serve_once`. Moving it onto the backend would remove a duplicate, but `src/cli` is out of bounds while 0076 builds there. `sdlc/issues/2026-09-24-hand-rolled-loopback-listeners-duplicate-the-test-backend.md` tracks it.
+
+## Review follow-up
+
+- `DRIFT`, `Reply`, and `Listener::routing` are now private to the crate. The public surface is `Backend`, `run`, `Canned`, `Listener`, `Observed`, and `Recorded`. Clippy on the workspace compiles clean, which proves nothing outside the crate names them.
+- The duplicate loopback listeners are filed as an issue: `serve_once` and the two that 0076 adds.
 
 ## Ceiling
 

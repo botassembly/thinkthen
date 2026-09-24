@@ -115,7 +115,7 @@ impl Canned {
 }
 
 /// What a listener answers one request with.
-pub type Reply = dyn Fn(&Recorded) -> Canned + Send + Sync;
+pub(crate) type Reply = dyn Fn(&Recorded) -> Canned + Send + Sync;
 
 /// A gate that holds answers until it is set, and then stays open.
 pub(crate) type Gate = OnceLock<()>;
@@ -201,7 +201,7 @@ impl Listener {
     /// Answer every connection from the whole request, and keep no copy of it.
     ///
     /// A long run through the conformance backend holds only its counts.
-    pub fn routing(
+    pub(crate) fn routing(
         reply: impl Fn(&Recorded) -> Canned + Send + Sync + 'static,
     ) -> io::Result<Self> {
         Self::answering_observed(reply, None, false)

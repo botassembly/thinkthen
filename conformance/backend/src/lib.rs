@@ -7,5 +7,5 @@
 mod arms;
 mod listener;
 
-pub use arms::{Backend, DRIFT, run};
-pub use listener::{Canned, Listener, Observed, Recorded, Reply};
+pub use arms::{Backend, run};
+pub use listener::{Canned, Listener, Observed, Recorded};

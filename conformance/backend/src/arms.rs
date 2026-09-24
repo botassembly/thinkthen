@@ -17,7 +17,7 @@ use serde_json::value::RawValue;
 use crate::listener::{Canned, Gate, Listener, Recorded};
 
 /// The status every unknown body, arm, or request earns, and no arm serves.
-pub const DRIFT: u16 = 500;
+pub(crate) const DRIFT: u16 = 500;
 
 /// The shared cases, compiled in so the binary needs no path.
 const CASES: &str = include_str!("../../cases.json");

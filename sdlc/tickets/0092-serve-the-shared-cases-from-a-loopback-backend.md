@@ -6,7 +6,7 @@ opens: Cargo.toml Cargo.lock deny.toml conformance crates/thinkthen/Cargo.toml c
 
 # 0092: Serve the shared cases from a loopback backend
 
-Status: built 2026-09-24, code review pending. Design accepted 2026-09-24 after re-review. Owner: Claude.
+Status: landed 2026-09-24. Code review (`sdlc/records/0092-code-review.md`) found two mechanical fixes, both applied and accepted without another review. Owner: Claude.
 
 ## Outcome and authority
 
@@ -54,4 +54,4 @@ Contract 1; state and timing 2; reach 2; proof 2; cost of error 1; total 8. Fina
 ## Review
 
 - Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-controls.md`) found broken digests, no way to name an arm, an arm the command cannot run, and a missing order. All applied, and the coordinator added the generic arm. The re-review (`sdlc/records/2026-09-24-rereview-near.md`) found the harness cannot move whole into a binary crate and the loopback cases unnamed; both applied. Confirmation accepted it.
-- Code review: pending.
+- Code review: `sdlc/records/0092-code-review.md` found three items. The public surface was narrowed, the duplicate listeners were filed as an issue, and the ceiling was re-measured after the rebase. The coordinator accepted the fixes without another review.
