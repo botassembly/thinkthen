@@ -6,7 +6,7 @@ opens: libraries/python conformance/backend sdlc/ratchet.json sdlc/planning/libr
 
 # 0106: Port the Python Polars data frame layer
 
-Status: revised after confirmation; final check. Owner: Claude.
+Status: design accepted 2026-09-24 after re-review. Owner: Claude.
 
 ## Outcome and authority
 
@@ -122,5 +122,5 @@ Contract 2; state and timing 3; reach 2; proof 4; cost of error 4; total 15. Fin
 
 ## Review
 
-- Design review: `sdlc/records/2026-09-24-design-review-0105-0106.md` found nine items. This version answers all nine: the missing files and the `_arrow_probe` hook, the R1-24 deadline plant, wall time in the width proof, frames other than Polars, the pandas check order, the budgets, a plant for each R4-15 and R5-6 assertion, the dependency versions, and the `NOTES.md` cap. The confirmation (same file) found that 0092's held arm cannot release replies on a timer. The delay arm in decision 10 answers it. The final check is pending.
+- Design review: `sdlc/records/2026-09-24-design-review-0105-0106.md` found nine items. This version answers all nine: the missing files and the `_arrow_probe` hook, the R1-24 deadline plant, wall time in the width proof, frames other than Polars, the pandas check order, the budgets, a plant for each R4-15 and R5-6 assertion, the dependency versions, and the `NOTES.md` cap. The confirmation (same file) found that 0092's held arm cannot release replies on a timer. The delay arm in decision 10 answers it. The final check (same file) accepted it.
 - Code review: pending.
