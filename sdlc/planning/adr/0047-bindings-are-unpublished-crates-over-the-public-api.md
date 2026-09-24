@@ -37,13 +37,24 @@ ADR 0017 bans publishing a split of the engine's layers. A binding crate adds no
 
 ## Every surface ticket
 
-Each surface ticket follows ticket 0093's pattern and changes only host code.
+Each surface ticket follows ticket 0093's pattern and changes only host code. `libraries/rust` is the reference copy of every file below.
 
-- Replace the connector, engine static, and stand-in path dependencies with the path dependency above, inside the binding's own workspace.
+1. Folder. The binding lives at the folder its line in `sdlc/surfaces.txt` names. Change that line from `planned` to `landed` in the same commit. `lint` refuses a binding folder that is not a landed line.
+2. `Cargo.toml`. Give it an empty `[workspace]` table, so the binding is its own workspace. Set `publish = false`, and use the root `edition` and `rust-version`. Depend on `thinkthen = { path = "../../crates/thinkthen", default-features = false }` once, in `[dependencies]`. Depend on no other binding. Copy the root `[profile.release]`. Copy the root lint tables into `[lints.rust]` and `[lints.clippy]`, with `unsafe_code = "deny"`. Tests may start the loopback backend through a dev-dependency on `conformance/backend`.
+3. `clippy.toml`. Copy `libraries/rust/clippy.toml`, which holds the shared thresholds and test allowances.
+4. `Cargo.lock`. Start from a copy of the root lock, then let Cargo prune it offline. `thinkthen`'s own tree must resolve to the root lock's versions.
+5. `unsafe`. Only a file named `ffi.rs` holds it, under `#[allow(unsafe_code, reason = "…")]`.
+6. Tests. A bare `cargo test` runs every Rust test. No test is `#[ignore]`d, and none returns before its first assertion (R2-28).
+7. `ratchet.json`. Name the source folders under `directory`, never the folder itself, so `target` stays uncounted. Set `max` to the measured count. Add one `ratchet.<ext>.json` per host language.
+8. `check.sh`. The surface rung passes the loopback port as `$1`. The check runs offline and exits 0 on a pass. It exits 77 when its host toolchain is missing, and the rung reports "not run", never "pass" (R6-2). A Rust binding's check runs `cargo fmt --check`, Clippy with warnings denied, and `cargo test`.
+9. The rung. `sdlc/scripts/surfaces` is the fifth ladder step, after `spec`. It runs every landed surface's `check.sh`, including heavy Docker checks, and never runs from `test`. `lint` runs `surfaces --registry`. That check refuses a landed surface with no `check.sh`, runs each landed ratchet, and runs `cargo deny` over each landed lock.
+10. `policy.py` checks items 2 through 6 for every `libraries/*/Cargo.toml` and `databases/*/Cargo.toml`, registered or not.
+11. `README.md`. State that the width cap holds per loaded copy (item 5).
+
+The host work follows the same list for every surface.
+
 - Map types per section 3.1 of `sdlc/planning/surfaces-port-guide.md`. A binding may use `CallOptions::interrupt` for its host's interrupt channel, or keep the worker-thread pattern. Use `deadline_seconds` or `deadline_millis` for host numbers, and one-question `annotate` for bulk `choose`, `score`, and `tag`.
-- Its `check.sh` receives the 0092 loopback port and runs offline. A missing host toolchain reports "not run", never "pass" (R6-2). The surface rung is `sdlc/scripts/surfaces`, the fifth ladder step after `spec`. It runs every landed surface's `check.sh`, including heavy Docker checks, and never runs from `test`. `lint` runs its cheap registry check, which refuses a listed surface with no `check.sh`.
 - Run the shared cases through the 0092 backend. Re-run the surface's error-index rows against the real engine, each with a planted bug that turns its test red. Report a skipped case as not run.
-- Come under its own lint table, deny, and ratchet file, and register in the surface rung that refuses a missing surface.
 - Write any ruling that lived only in notes as an ADR (R2-29).
 
 ## Consequences
