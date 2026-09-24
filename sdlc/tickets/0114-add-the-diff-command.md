@@ -236,3 +236,13 @@ Depends on the ten functions done (0086 landed) and on 0113 landed, because it s
 ## Complexity
 
 Contract 2; State/timing 0; Reach 1; Proof 2; Cost of error 1; Total 6. Final level: 2.
+
+## Evidence
+
+Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk.md` asks every product ticket to name these five parts. This note changes no design.
+
+- Starts from: The `diff` half of the prototype `scripts/tools/measure.py` in the private Beatles Bench repository at `be7cea2e`, its README, and the six diff goldens in `tests/fixtures/audit/golden/`. Those files are unchanged through the 2026-09-24 head `b0bf4ae`. The Beatles Bench issue `sdlc/issues/2026-09-24-diff-mcnemar-leaves-out-pairs-that-become-right-from-not-sure.md` asks for a wider McNemar rule. `experiments/249-jev-answer-audit/README.md` compares the control and softer wordings behind the `diff-249` goldens. `experiments/212-thinkthen-repeat/RESULTS.md` and `experiments/235-beatles-judgment/README.md` show identical requests moving probabilities and flipping answers. `experiments/235-beatles-judgment/README.md` and `experiments/243-beatles-workarounds/README.md` replay a stricter cut from a recording at no cost, the `--compare-threshold` case. `repos/jev-experiments`: none found.
+- Keeps: diff keeps the prototype's grammar, pairing by answer name and record id, the effect table, the summary members, and the table form. McNemar counts only wrong-to-right and right-to-wrong pairs, as the `diff-choose` golden does.
+- Changes: diff refuses a record repeated under one answer name in a run, where the prototype keeps the last one. It inherits 0113's departures on failures, numbers, JSON, pointers, and key values.
+- Proof: The six goldens, the extra captures, and the three table captures match. Hand tests come from the prototype's `Diff` tests. Exact integer sums check the log-space McNemar up to n = 120. Each planted bug in "Acceptance" turns a test red, and 0113's no-request and secrecy tests cover every diff path.
+- Defers: The wider McNemar rule waits for Ian's ruling on the Beatles Bench issue, and "Switching the McNemar rule" gives the steps. Checking record text or question identity across runs stays with the `compare` transform. A probability-shift member and the agent-run needs wait until after 0.1.
