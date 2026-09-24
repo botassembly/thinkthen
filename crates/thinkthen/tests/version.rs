@@ -38,7 +38,7 @@ fn help_opens_with_the_semantic_commands_introduction() {
 
 #[test]
 fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
-    const INTRODUCTIONS: [(&str, &str); 9] = [
+    const INTRODUCTIONS: [(&str, &str); 10] = [
         ("decide", "Answer one yes or no question about a text"),
         ("filter", "Keep the records where the answer is yes"),
         ("rank", "Sort records by how likely the answer is yes"),
@@ -53,6 +53,10 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
         (
             "recognize",
             "Find every name in a text and assign one of the given kinds",
+        ),
+        (
+            "relate",
+            "Find named relations across one complete entity set",
         ),
     ];
 
@@ -97,7 +101,7 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
         .lines()
         .filter_map(|line| line.split_whitespace().next())
         .collect();
-    const ORDER: [&str; 12] = [
+    const ORDER: [&str; 13] = [
         "status",
         "decide",
         "filter",
@@ -108,6 +112,7 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
         "tag",
         "annotate",
         "recognize",
+        "relate",
         "cache",
         "help",
     ];
