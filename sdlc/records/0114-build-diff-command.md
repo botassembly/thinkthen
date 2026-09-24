@@ -4,7 +4,7 @@ Status: built and reviewed on `ticket/0114-diff-command`. A fresh read-only Clau
 
 ## Order and base
 
-The coordinator asked for 0114 to start at once on top of the 0113 branch, since diff reuses audit's code. Merge commit `2315151e` brought `origin/ticket/0113-audit-command` at `6c37aba3` into this branch. 0113 is in code review. If that review changes shared code, the fixes merge in here. The ticket's "Dependencies and order" section asked for 0113 and 0086 to land first. That section no longer binds.
+The coordinator asked for 0114 to start at once on top of the 0113 branch, since diff reuses audit's code. Merge commit `2315151e` brought `origin/ticket/0113-audit-command` at `6c37aba3` into this branch. 0113's second review changed shared code. Merge commit `e210d664` brought in the reviewed 0113 at `7babf4c9`, and `c31dce98` brought in main at `10d425e5`. diff now rounds floats once at output through `rounded_line`, as audit does. Its goldens compare byte for byte, and the tolerance reader is gone. The ticket's "Dependencies and order" section asked for 0113 and 0086 to land first. That section no longer binds.
 
 ## McNemar
 
@@ -25,7 +25,7 @@ Builder notes: the readers ignore members they do not use (`diff::a_run_line_wit
 
 ## Golden match
 
-The six upstream diff goldens and the two extra captures match byte for byte. `diff::goldens_match` checks the tolerance and then the exact bytes. The three table captures match byte for byte. Before any capture, the prototype reproduced all six upstream diff goldens exactly.
+The six upstream diff goldens and the two extra captures match byte for byte. `diff::goldens_match` compares the exact bytes. The three table captures match byte for byte. Before any capture, the prototype reproduced all six upstream diff goldens exactly.
 
 The five captures came from the prototype at `be7cea2e` (SHA-256 `7be20681…16a1`), read with `git show` into a scratch file and run under Python 3.12.3 from the fixture folder. The fixture README lists their commands and checksums. `extra/diff-annotate` shows two `withdrawn` effects, and `extra/diff-249-cuts-nokey` shows 67 moves from no to yes and `mcnemar_p` 0.0 on yes answers.
 
@@ -62,9 +62,9 @@ Each bug was planted alone. The core and integration suites ran with `--no-fail-
 
 | Bound | Limit | Measured |
 | --- | ---: | ---: |
-| Production Rust nonblank lines | 450 | 523: 422 in the two new files, 101 net in edited files |
+| Production Rust nonblank lines | 450 | 509 over the reviewed 0113: 420 in the two new files, 89 net in edited files |
 | Existing production files touched | 3 plus `cli/measure.rs` | 7: `cli/args/command.rs`, `cli/mod.rs`, `cli/measure.rs`, `cli/audit.rs`, `core/measure.rs`, `core/measure/answer.rs`, `core/measure/audit.rs` |
-| Rust test nonblank lines | 500 | 362 |
+| Rust test nonblank lines | 500 | 359 |
 | New test files | 2 | 1 (`tests/diff.rs`); the rest extend 0113's files |
 | Script nonblank lines | 25 | 23 in `policy.py` (13 removed), 1 in `demos` |
 | Largest Rust file | 500 | `tests/audit_refusals.rs` 393 |
@@ -72,7 +72,7 @@ Each bug was planted alone. The core and integration suites ran with `--no-fail-
 
 The overrun and the extra files come from moving shared code out of audit, so diff imports nothing from `cli/audit.rs`. The move saved 38 lines in audit and added them once in the shared modules. diff's own files carry the rest. The agent re-scored and kept it. Ian can overturn the re-score.
 
-The ratchet rises from 52,720 to 53,605 (+885): 523 production and 362 test. Duplication checked first: 0113's answer reader, key reader, rule parsing, line reading, rule text, and table helpers. diff reuses each one, and the rule parsing, line reading, and rule text now live once in shared code.
+After both merges the ratchet is 54,155: the reviewed 0113's 53,287 plus diff's 868 (509 production and 359 test). Duplication checked first: 0113's answer reader, key reader, rule parsing, line reading, rule text, and table helpers. diff reuses each one, and the rule parsing, line reading, and rule text now live once in shared code.
 
 ## Policy and help
 
@@ -98,4 +98,4 @@ A fresh read-only Claude session reviewed `2315151e..cf14e4d6`. It checked the p
 
 ## Gates
 
-Filled in after the ladder run.
+Filled in after the ladder run on the merged branch.
