@@ -87,7 +87,7 @@ Allowed: one private engine value and completion facade; typed settings, call op
 
 Excluded: any `pub` user API, the interrupt check (0097), fork recovery (0096), public `engine` module, semver promise, C ABI, language or database binding, Polars door, `surfaces` merge or edit, connector or stand-in import, API or HTTP service, command grammar or output change, new setting, new result field, new error kind, new parser, new scheduler, new splitter, new transport, async runtime, resident worker, cache format change, counter reset, signal handler, dependency, workflow, installer, publication, live call, paid call, or quality-policy change for recognition or relations.
 
-This ticket may change at most sixteen production Rust files and add at most 1,200 nonblank production Rust lines. Focused tests may add at most 2,100 nonblank Rust lines. The combined change may add at most 3,300 nonblank Rust lines and may not raise any file above 500 nonblank lines. Delete superseded command plumbing before raising the exact ratchet. The implementation record must name production additions, deletions, net growth, every touched owner, and where duplication was removed or deliberately retained. Add no dependency.
+This ticket may change at most sixteen production Rust files (the owner lifted this to 29 on 2026-09-24 after the code review, because only 8 files carry new logic) and add at most 1,200 nonblank production Rust lines. Focused tests may add at most 2,100 nonblank Rust lines. The combined change may add at most 3,300 nonblank Rust lines and may not raise any file above 500 nonblank lines. Delete superseded command plumbing before raising the exact ratchet. The implementation record must name production additions, deletions, net growth, every touched owner, and where duplication was removed or deliberately retained. Add no dependency.
 
 ## Dependencies and stop conditions
 
@@ -118,4 +118,4 @@ The coordinator then runs `sdlc/scripts/install`, `lint`, `test`, and `spec` seq
 ## Review
 
 - Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-engine.md`) asked to split the interrupt check out (now 0097), route to Claude, order 0092 first, and plant bugs per row. All applied. The re-review (`sdlc/records/2026-09-24-rereview-engine.md`) asked for a sharper R5-19 plant, the private bulk row in G4, and no fork owner before 0096; all applied. The sending-thread decision comes from the 0078 re-review (`sdlc/records/2026-09-24-rereview-near.md`). Confirmation accepted it.
-- Code review: pending.
+- Code review: `sdlc/records/0085-code-review.md` returned findings. The fixes and the lifted file budget are in `sdlc/records/0085-build-real-engine-facade.md`.
