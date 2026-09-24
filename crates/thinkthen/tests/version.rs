@@ -209,4 +209,6 @@ fn the_specification_defines_unresolved_once_and_keeps_the_closed_wording() {
     assert_eq!(defined, ["decide.md"]);
     let index = std::fs::read_to_string(root.join("specification/README.md")).expect("the index");
     assert!(index.contains("the five answer kinds |"), "{index}");
+    let demos = std::fs::read_to_string(root.join("demos/README.md")).expect("the how-to index");
+    assert!(demos.contains(" All ten functions are built. "), "{demos}");
 }

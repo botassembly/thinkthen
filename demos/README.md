@@ -16,7 +16,7 @@ Every `thinkthen` command that would otherwise reach a backend carries `--replay
 
 ## Red and green
 
-A demo starts **red**, and this list marks it **coming** with the ticket or the slice that writes it. `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `annotate`, and `find` are built. Pages that still need a command or recordings remain plans. A red page argues for a design choice, and `FINDINGS.md` gathers those arguments across every page.
+A demo starts **red**, and this list marks it **coming** with the ticket or the slice that writes it. All ten functions are built. Pages that still need a command or recordings remain plans. A red page argues for a design choice, and `FINDINGS.md` gathers those arguments across every page.
 
 A demo turns **green** when the `spec` rung runs it against a recording and it passes. When it turns green it takes the how-to form and the argument leaves the page. `sdlc/scripts/demos` runs every page whose status line reads exactly `Status: green` and skips every red one. It refuses a green page out of form, a green page this index does not list, and a green page that names a `--replay` folder it does not hold.
 
