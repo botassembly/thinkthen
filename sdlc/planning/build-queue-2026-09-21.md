@@ -4,6 +4,10 @@ Written 2026-09-21 by the product side at Ian's request. It folds the quality wa
 
 Ian can overturn any placement here.
 
+## Superseded order, 2026-09-24
+
+[One line, one owner](one-line-plan-2026-09-24.md) is the current order and ownership. The sections below are history where they differ.
+
 ## Current handoff, 2026-09-23
 
 Tickets 0074, 0087, 0079, 0080, and 0081 are landed on remote main. The launch-first queue continues with 0088 public `relate` command; 0082–0083 command completion; 0076–0078 deadlines, shared width, fork recovery, and host signal ownership; then 0084–0086 public Rust API and packaging. Independent ticket lanes may proceed in parallel when their write sets and dependencies do not overlap. Command completion follows both functions, 0077 follows 0076, 0078 follows both, and the public API follows stable controls and result shapes.
