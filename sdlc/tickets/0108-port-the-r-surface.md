@@ -256,3 +256,5 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Changes: `tt_engine` holds settings, the crate becomes `thinkthen-r`, `lib.rs` splits into five files, and every call runs on a worker. Column choose, score, and tag make one `annotate_with` call. The global active-call state retires, and R gets its own `deny.toml`.
 - Proof: The interrupt tests under ADR 0042, an offline tarball install into a scratch library, the deny plant, and the extendr lint probe.
 - Defers: CRAN and R-universe, binaries, Windows and macOS, the C door, a user cancel token, and async.
+
+Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. The engine argument `width = NULL` becomes `throttle = NULL`, and every public `width` here reads as `throttle`.
