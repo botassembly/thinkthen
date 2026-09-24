@@ -251,6 +251,14 @@ No golden reaches these. Each is the agent's decision, and Ian can overturn it.
 - **State names.** The prototype reads an option named `tied` or `unresolved` as that state. The port keeps it an option.
 - **Parts.** The README says every key line has a part or none does. The code checks each group's labeled records. The port follows the code.
 
+## Builder note: keep the formats open
+
+`sdlc/issues/2026-09-24-audit-and-diff-needs-for-graded-agent-runs.md` lists four needs for grading agent runs after 0.1. None enters 0.1, and nothing here changes a golden or an accepted input. Keep three things open.
+
+- The key reader ignores members it does not use, beside `id`, `value`, and `part`. The result reader already ignores `meta` and other unused members. A test pins one extra member in a key line and one in a result line.
+- The duplicate identity (answer name, record id, text) lives in one core function, so a sample key can join it later.
+- `specification/audit.md` says that readers of audit output should ignore members they do not know, because later versions may add them.
+
 ## Budgets and the ratchet
 
 - Production Rust: six new files and at most four existing files touched (`core/mod.rs`, `cli/mod.rs`, `cli/args/command.rs`, one failure-mapping file). At most 1,000 nonblank lines.
