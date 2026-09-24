@@ -11,11 +11,12 @@ use std::time::{Duration, Instant};
 /// and the longest waits out the tool's 30-second request timeout.
 pub(crate) const CHILD_DEADLINE: Duration = Duration::from_secs(60);
 
-/// Collect the child's piped output and wait for it to end.
+/// Close the child's input, collect its piped output, and wait for it to end.
 ///
 /// A child still running at `CHILD_DEADLINE` is killed, and the error names
 /// `what`, so a hang fails its test with a message.
 pub(crate) fn finish(mut child: Child, what: &str) -> io::Result<Output> {
+    drop(child.stdin.take());
     let stdout = child.stdout.take().map(drain);
     let stderr = child.stderr.take().map(drain);
     let end = Instant::now() + CHILD_DEADLINE;
