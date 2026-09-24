@@ -6,6 +6,15 @@ Sources read: tag `surfaces-wave7-final` (`f6a7faea`), lanes `origin/w7/gate3`, 
 
 Port source: tag `surfaces-wave7-frozen-2026-09-24b` (`9df8bae9`). It merges the three lanes into `surfaces-wave7`, and every surface check ran there once. `sdlc/records/surfaces-freeze-2026-09-24.md` on that tag lists each result. DuckDB, Ruby, and PostgreSQL did not run, because they need the network or Docker. Each surface ticket starts from this tag and carries the three follow-ups that record lists.
 
+Shared rules for every surface ticket, set by Claude on 2026-09-24 from the design reviews of 0105 to 0112. Ian can overturn any of them.
+
+- A surface check never depends on Docker. The ladder runs on any developer machine that has the pinned toolchains.
+- Toolchains and runtimes live under `~/.cache/thinkthen-toolchains/`, never in the product's answer cache. A one-time download of a public archive is setup, not a gate. It needs a sha256 pinned in the repo and a refusal on mismatch. Gates then run offline.
+- Each test gets its own product cache folder and its own loopback backend. The arms beyond 0092 (fixed delay, a held reply that can hold again, one backend per test) belong to ticket 0117.
+- Ctrl-C is prompt for single calls and batches alike. The engine waits for requests already sent, so the binding runs every call on a detachable worker and returns `Cancelled` at once. The worker finishes the sent requests.
+- A deny plant proves the rule it names while offline. A git-sourced dependency fails before deny runs when offline, so use a plant that reaches deny.
+- Tests that need parallel requests set the engine width they need, never the default.
+
 ## 1. The error index, sorted
 
 Every one of the index's 197 rows falls in one of three classes.
