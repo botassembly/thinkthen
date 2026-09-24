@@ -215,11 +215,12 @@ fn say(line: &str) {
 /// Give a rule-breaking question in a child whose environment holds no key.
 pub(super) fn form(case: &Case) {
     let output = child(&case.id);
+    let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
-        output.status.success(),
-        "{}: {}",
+        output.status.success() && stdout.lines().any(|line| line == "form-child sees []"),
+        "{}: {stdout}{}",
         case.id,
-        String::from_utf8_lossy(&output.stdout)
+        String::from_utf8_lossy(&output.stderr)
     );
 }
 
