@@ -2,8 +2,10 @@
 
 use std::cell::Cell;
 use std::sync::Mutex;
-use std::sync::mpsc::{Receiver, Sender, SyncSender, sync_channel};
+use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, SyncSender, sync_channel};
 use std::thread;
+
+use crate::engine::Cancel;
 
 thread_local! {
     /// Whether this thread is an engine worker with host signals masked.
@@ -12,16 +14,25 @@ thread_local! {
 
 /// Run one live attempt on an engine worker: this thread when it is one, or
 /// else one scoped worker joined before return.
-pub(crate) fn on_worker<T: Send>(send: impl FnOnce() -> T + Send) -> T {
+///
+/// The calling thread polls the call's stop meanwhile, so the host check runs
+/// there during a width gate or retry wait and never during a blocking send.
+pub(crate) fn on_worker<T: Send>(cancel: &Cancel<'_>, send: impl FnOnce() -> T + Send) -> T {
     if ENGINE_WORKER.get() {
         return send();
     }
+    let (done, finished) = sync_channel(1);
     thread::scope(|scope| {
-        scope
-            .spawn(|| {
-                enter();
-                send()
-            })
+        let worker = scope.spawn(move || {
+            enter();
+            let sent = send();
+            let _caller_waits = done.send(());
+            sent
+        });
+        while let Err(RecvTimeoutError::Timeout) = finished.recv_timeout(Cancel::poll()) {
+            cancel.poll_between_sends();
+        }
+        worker
             .join()
             .unwrap_or_else(|panic| std::panic::resume_unwind(panic))
     })

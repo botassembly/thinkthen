@@ -1,9 +1,9 @@
 //! Private request execution, recording, locking, and bounded scheduling.
 
 use std::fmt;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
-use std::thread;
+use std::thread::{self, ThreadId};
 use std::time::{Duration, Instant};
 
 const CANCEL_POLL: Duration = Duration::from_millis(50);
@@ -28,18 +28,46 @@ impl Deadline {
 }
 
 /// One private cooperative stop flag shared by a whole engine run, and the
-/// optional deadline of the one call that carries it.
+/// optional deadline and host interrupt check of the one call that carries it.
 #[derive(Clone, Debug, Default)]
-pub(crate) struct Cancel {
+pub(crate) struct Cancel<'a> {
     fired: Arc<AtomicBool>,
     deadline: Option<Deadline>,
+    check: Option<Check<'a>>,
+    sends: Arc<AtomicUsize>,
     #[cfg(test)]
     blocked: Option<std::sync::mpsc::Sender<()>>,
     #[cfg(test)]
-    keys: Arc<std::sync::atomic::AtomicUsize>,
+    keys: Arc<AtomicUsize>,
 }
 
-impl Cancel {
+/// A host's interrupt check and the one thread that may run it.
+#[derive(Clone, Copy)]
+struct Check<'a> {
+    run: &'a (dyn Fn() -> bool + Sync),
+    caller: ThreadId,
+}
+
+impl fmt::Debug for Check<'_> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("Check")
+            .field("caller", &self.caller)
+            .finish_non_exhaustive()
+    }
+}
+
+/// One blocking send in flight, counted until it drops.
+#[derive(Debug)]
+pub(crate) struct Sending<'a>(&'a AtomicUsize);
+
+impl Drop for Sending<'_> {
+    fn drop(&mut self) {
+        self.0.fetch_sub(1, Ordering::AcqRel);
+    }
+}
+
+impl<'a> Cancel<'a> {
     #[cfg(test)]
     pub(crate) fn fire(&self) {
         self.fired.store(true, Ordering::Release);
@@ -69,12 +97,66 @@ impl Cancel {
         }
     }
 
-    /// Observe cancellation first and the deadline second, or the budget left.
+    /// Share this stop flag with one call whose host check runs on this thread.
+    #[allow(
+        dead_code,
+        reason = "the command passes no check; ticket 0086 exposes it"
+    )]
+    pub(crate) fn with_check<'b>(&self, check: &'b (dyn Fn() -> bool + Sync)) -> Cancel<'b>
+    where
+        'a: 'b,
+    {
+        Cancel {
+            check: Some(Check {
+                run: check,
+                caller: thread::current().id(),
+            }),
+            sends: Arc::default(),
+            ..self.clone()
+        }
+    }
+
+    /// Observe cancellation, then the host check on its calling thread, then
+    /// the deadline, or return the budget left.
     pub(crate) fn stop_or_remaining(&self) -> Result<Option<Duration>, error::Error> {
-        if self.fired() {
+        if self.fired() || self.checked() {
             return Err(error::Error::Cancelled);
         }
         self.remaining()
+    }
+
+    /// Run the host check on its calling thread. A `true` return fires this
+    /// call's stop. A panic fires it too, then resumes unchanged, so every
+    /// worker stops before the unwinding scope joins it.
+    fn checked(&self) -> bool {
+        let Some(check) = self
+            .check
+            .filter(|check| check.caller == thread::current().id())
+        else {
+            return false;
+        };
+        let interrupted = std::panic::catch_unwind(std::panic::AssertUnwindSafe(check.run))
+            .unwrap_or_else(|panic| {
+                self.fired.store(true, Ordering::Release);
+                std::panic::resume_unwind(panic)
+            });
+        if interrupted {
+            self.fired.store(true, Ordering::Release);
+        }
+        interrupted
+    }
+
+    /// Count one blocking send, during which the calling thread runs no check.
+    pub(crate) fn sending(&self) -> Sending<'_> {
+        self.sends.fetch_add(1, Ordering::AcqRel);
+        Sending(&self.sends)
+    }
+
+    /// Poll from the calling thread while a worker carries this call's attempt.
+    pub(crate) fn poll_between_sends(&self) {
+        if self.sends.load(Ordering::Acquire) == 0 {
+            let _stop = self.stop();
+        }
     }
 
     /// Observe the deadline alone, or the budget left.

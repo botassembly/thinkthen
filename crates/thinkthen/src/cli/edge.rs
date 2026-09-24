@@ -40,7 +40,7 @@ pub(crate) struct Environment {
     config_path: Option<PathBuf>,
     retry_wait_ms: Option<u64>,
     pub(super) sigint_ack: Option<PathBuf>,
-    pub(super) cancel: crate::engine::Cancel,
+    pub(super) cancel: crate::engine::Cancel<'static>,
     usage: std::sync::Arc<Counters>,
     usage_path: Option<PathBuf>,
 }
@@ -127,7 +127,7 @@ impl Environment {
         self.retry_wait_ms.map_or(RETRY_WAIT, Duration::from_millis)
     }
 
-    pub(crate) const fn cancel(&self) -> &crate::engine::Cancel {
+    pub(crate) const fn cancel(&self) -> &crate::engine::Cancel<'static> {
         &self.cancel
     }
 }

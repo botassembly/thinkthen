@@ -94,7 +94,7 @@ where
                 max_retries: transport.max_retries,
                 retry_wait: transport.retry_wait,
             };
-            crate::engine::workers::on_worker(|| {
+            crate::engine::workers::on_worker(cancel, || {
                 transport
                     .client
                     .post_observed(&exchange, cancel, || transport.usage.request_sent())
@@ -248,7 +248,7 @@ mod tests {
     fn wait_on_request(
         request: (Backend, Plan, PreparedRequest),
         recorder: Recorder,
-        observed: (crate::engine::Cancel, Counts),
+        observed: (crate::engine::Cancel<'static>, Counts),
     ) -> thread::JoinHandle<Result<Answered, Error>> {
         let (backend, plan, prepared) = request;
         let (cancel, counts) = observed;

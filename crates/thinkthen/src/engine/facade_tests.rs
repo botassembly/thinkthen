@@ -26,6 +26,7 @@ use crate::engine::facade::{
 use crate::engine::{Cancel, Deadline};
 
 mod contract_tests;
+mod interrupt_tests;
 
 const TEST_KEY: &str = "sk-facade-test-7f3a";
 
@@ -171,18 +172,23 @@ fn reader<T: Send + 'static, R: Send + 'static>(
     items: Vec<T>,
 ) -> impl FnOnce(Receiver<()>, InputPort<T, R, Error>) {
     move |requests, events| {
-        thread::spawn(move || feed(items, &requests, &events));
+        thread::spawn(move || feed(items, &requests, |input| events.send(input)));
     }
 }
 
-fn feed<T, R>(items: Vec<T>, requests: &Receiver<()>, events: &InputPort<T, R, Error>) {
+/// Hand one item per request through `send`, then the end.
+fn feed<T>(
+    items: Vec<T>,
+    requests: &Receiver<()>,
+    send: impl Fn(Input<T, Error>) -> Result<(), ()>,
+) {
     let mut inputs = items
         .into_iter()
         .map(Input::Item)
         .chain(std::iter::once(Input::End));
     while requests.recv().is_ok() {
         let Some(input) = inputs.next() else { return };
-        if events.send(input).is_err() {
+        if send(input).is_err() {
             return;
         }
     }

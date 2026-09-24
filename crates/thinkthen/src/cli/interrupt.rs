@@ -22,7 +22,7 @@ const ACTIONS: [Action; 4] = [
 ];
 
 struct State {
-    cancel: Cancel,
+    cancel: Cancel<'static>,
     default_armed: Arc<AtomicBool>,
     active: Arc<AtomicBool>,
     installed: bool,
@@ -144,7 +144,7 @@ enum Routing {
 }
 
 impl Routing {
-    fn start(cancel: Cancel, acknowledgment: Option<PathBuf>) -> Result<Self, StartError> {
+    fn start(cancel: Cancel<'static>, acknowledgment: Option<PathBuf>) -> Result<Self, StartError> {
         #[cfg(unix)]
         {
             UnixRouting::start(cancel, acknowledgment).map(Self::Unix)
@@ -177,12 +177,12 @@ struct UnixRouting {
 
 #[cfg(unix)]
 impl UnixRouting {
-    fn start(cancel: Cancel, path: Option<PathBuf>) -> Result<Self, StartError> {
+    fn start(cancel: Cancel<'static>, path: Option<PathBuf>) -> Result<Self, StartError> {
         Self::start_with(cancel, path, [false; 4])
     }
 
     fn start_with(
-        cancel: Cancel,
+        cancel: Cancel<'static>,
         path: Option<PathBuf>,
         failures: [bool; 4],
     ) -> Result<Self, StartError> {
@@ -311,7 +311,7 @@ fn carrier(
     signal: nix::sys::signal::SigSet,
     stopped: std::sync::mpsc::Receiver<()>,
     ready: std::sync::mpsc::SyncSender<Result<(), ()>>,
-    cancel: Cancel,
+    cancel: Cancel<'static>,
     acknowledgment: Acknowledgment,
     readiness_fails: bool,
 ) -> Result<(), ()> {
