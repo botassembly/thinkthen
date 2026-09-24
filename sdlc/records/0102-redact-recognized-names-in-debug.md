@@ -31,3 +31,7 @@ Run in the worktree with `THINKTHEN_API_KEY`, `THINKTHEN_BASE_URL`, and `THINKTH
 - `test` exited 0 with 737 passed and 0 failed. An earlier run under a load of 14.7 failed once on `annotate::scheduling::one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32` (peak concurrency at 32 jobs). The rerun passed it.
 - `spec` exited 0 with "demos: 21 green, 0 red".
 - `sdlc/scripts/live` never ran.
+
+## Landing
+
+Rebased onto `18c0dc10` (0091 landed). The only conflict was `sdlc/ratchet.json`, set to the measured 44867. At `0343e927`, with the backend variables unset and a one-minute load of 3.8, `lint` exited 0 ("ratchet: crates 44867/44867") and `test` exited 0 with 738 passed and 0 failed. The global-queue test did not flake. This paragraph is the only change after that run.
