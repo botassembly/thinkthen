@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine/http.rs crates/thinkthen/src/engine/mod.rs cr
 
 # 0077: Share one process width cap
 
-Status: revised after re-review; confirming. Owner: Claude. Implementation waits for 0082, 0083, 0076, and 0092.
+Status: design accepted 2026-09-24 after re-review. Owner: Claude. Implementation waits for 0082, 0083, 0076, and 0092.
 
 ## Outcome and authority
 
