@@ -185,3 +185,13 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Defers: Async iterables, streams, the bytes form, a column form, Bun and Deno, publishing, a browser build, and an API key option.
 
 Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. The engine option `width: 4` becomes `throttle: 4`, and every public `width` here reads as `throttle`.
+
+## Spike finding (2026-09-24)
+
+Experiment 256 on beelink (`~/workspace/experiments/256-thinkthen-ts-ruby-r-spike/`, `REPORT.md`) prototyped this binding over `crates/thinkthen` at main `e7696ca8`, on the 0092 backend on loopback with a fake key. It changes three points of the plan. The builder can overturn none of them without a new measurement.
+
+- **Release the threadsafe function on settle (gap in decisions 4 and 5).** The handle keeps a clone of the threadsafe function so `detach()` can abort it. After a normal settle that clone keeps Node alive indefinitely. `invoke` must call `handle.detach()` or a `release` once the envelope arrives. Add an acceptance line: a settled call lets Node exit within 500 ms. Plant: skip the release, and Node stays alive past 3 s. The spike's test observed both.
+- **Amendment change 2 premise.** Main's `engine/workers.rs::on_worker` runs every live attempt on an engine worker thread with the default stack, so the binding's worker does not host the TLS handshake. Measured with the engine's ureq 3.4.2 and rustls 0.23.45 on loopback: the handshake needs at most 192 KiB in debug and 48 KiB in release. The 2 MiB decision stands.
+- **Lint.** `#[napi]` on a class and its `impl` trips `missing_docs` under `clippy -D warnings`. `src/node.rs` needs `#![allow(missing_docs, reason = "...")]` beside its `unsafe_code` allow. No forbid-level lint fired.
+
+Retired by the spike: Node 22.22.3 sha256 matches nodejs.org's `SHASUMS256.txt` (`2e5d13569282d016861fae7c8f935e741693c269101a5bebcf761a5376d1f99f`). `npm ci --offline` with `typescript` 7.0.2 and the napi build, Clippy and unit tests run `--locked --offline`. Abort rejects in under 5 ms, and Node exits in under 15 ms during a held send. A late envelope meets a closed function and never reaches JavaScript. SIGINT ends Node in under 5 ms. `THINKTHEN_CACHE` outranks the XDG default in the command, as amendment change 3 assumes. The seed test itself waits for 0086.
