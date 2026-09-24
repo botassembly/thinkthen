@@ -60,4 +60,8 @@ Duplication remains in one place. Relate's `add_meta` repeats recognition's `Agg
 
 The builder ran `install`, `lint`, `test`, and `spec` one at a time from `bacf6405` with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, then `git diff --check`. Every command exited 0. `lint` reported `ratchet: crates 43563/43563` and `pages: 1 coming, 21 green`. `test` passed 715 Rust tests with 2 ignored and 0 failed across 13 test binaries, plus its script self-tests. `spec` reported `demos: 21 green, 0 red`. Only this record and the ticket's budget line changed after that run.
 
+## Landing
+
+Main fast-forwarded to `71841025`, the merge of `origin/main` into the ticket branch. The builder ran `install`, `lint`, `test`, and `spec` one at a time at that exact commit with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset. Every command exited 0. `lint` reported `ratchet: crates 43563/43563` and `pages: 1 coming, 21 green`. `test` passed 715 Rust tests with 2 ignored and 0 failed across 13 test binaries. `spec` reported `demos: 21 green, 0 red`. This landing note is a doc-only commit after that run, so the gate result still applies to the code.
+
 No live, paid, or external call ran. Tests used replay and loopback listeners.
