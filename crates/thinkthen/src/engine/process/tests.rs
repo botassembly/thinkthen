@@ -198,29 +198,25 @@ fn racing_children_publish_one_state() {
 fn a_waiting_child_stops_with_its_call() {
     let guarded = Arc::new(Guarded::empty());
     let _parent = call(&guarded, PARENT, Ok("parent"));
-    let (building, built) = (Arc::new(Barrier::new(2)), Arc::new(Barrier::new(2)));
+    let ((building, started), (finish, finishing)) = (channel(), channel::<()>());
     let builder = {
-        let (guarded, building, built) = (
-            Arc::clone(&guarded),
-            Arc::clone(&building),
-            Arc::clone(&built),
-        );
+        let guarded = Arc::clone(&guarded);
         thread::spawn(move || {
             guarded.current(
                 CHILD,
                 || Err("waited"),
                 || {
-                    building.wait();
-                    built.wait();
+                    let _started = building.send(());
+                    let _finish = finishing.recv_timeout(BOUND);
                     Ok("child")
                 },
             )
         })
     };
-    building.wait();
+    started.recv_timeout(BOUND).expect("the builder started");
 
     let (got, builds) = call(&guarded, CHILD, Ok("second"));
-    built.wait();
+    let _finish = finish.send(());
 
     assert_eq!((got, builds), (Err("waited on a rebuild"), 0));
     assert_eq!(
