@@ -108,4 +108,5 @@ Contract 1; state and timing 3; reach 1; proof 2; cost of error 1; total 8. Fina
 ## Review
 
 - Design review: `sdlc/records/0117-design-review.md` found eight items. The arms held. This version adds the output reader with a timeout and a plant that can turn the `wait x` test red. It adds the order plant for back-to-back rounds, and bounds, pinned sentences, and a digits-only parse for the delay refusals. It keeps all twenty backends alive until every port is read and runs `wait` off the input thread. It sets the parallel bound at 800 ms, corrects the `spent` line, and adds `Backend::wait`. The re-review at `dbb55129` accepted the design and left three notes for the builder. The same record holds the confirmation.
+- Build: `sdlc/records/0117-build-backend-arms-for-surfaces.md` gives every criterion, its proof, and each plant turning red.
 - Code review: pending.
