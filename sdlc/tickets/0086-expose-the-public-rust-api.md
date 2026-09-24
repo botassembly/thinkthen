@@ -1,12 +1,12 @@
 ---
 flow: build
 priority: 86
-opens: Cargo.toml Cargo.lock conformance/consumer probes crates/thinkthen/Cargo.toml crates/thinkthen/src/lib.rs crates/thinkthen/src/public crates/thinkthen/tests sdlc/scripts/package sdlc/scripts/install sdlc/scripts/lint sdlc/scripts/policy.py sdlc/ratchet.json README.md sdlc/planning/libraries/rust.md
+opens: Cargo.toml Cargo.lock conformance/consumer probes sdlc/scripts/test crates/thinkthen/Cargo.toml crates/thinkthen/src/lib.rs crates/thinkthen/src/public crates/thinkthen/tests sdlc/scripts/package sdlc/scripts/install sdlc/scripts/lint sdlc/scripts/policy.py sdlc/ratchet.json README.md sdlc/planning/libraries/rust.md
 ---
 
 # 0086: Expose the public Rust API
 
-Status: revised after re-review; confirming. Owner: Claude. Implementation waits for 0084, 0095, 0085, 0097, 0096, 0078, 0091, 0092, and 0099.
+Status: revised after confirmation; final check. Owner: Claude. Implementation waits for 0084, 0095, 0085, 0097, 0096, 0078, 0091, 0092, and 0099.
 
 ## Outcome and authority
 
@@ -36,7 +36,7 @@ Excluded: C and every other language or database surface; the `surfaces` branch 
 
 ## Deterministic acceptance
 
-- The external consumer lives at `conformance/consumer`. It is its own Cargo workspace, and the root `Cargo.toml` excludes it, so it is not a root member (0093 keeps that entry when it adds its own). It has two members. `consumer` uses the root lint table, including `unsafe_code = "forbid"`. `fork-probe` is a test-only crate whose lint table equals the root table except `unsafe_code = "deny"`. Its one module carries `#[allow(unsafe_code, reason = "…")]` and holds the single fork call. Neither is published. The workspace's lock pins the root lock's version of every shared package.
+- The external consumer lives at `conformance/consumer`. It is its own Cargo workspace, and the root `Cargo.toml` excludes it, so it is not a root member (0093 keeps that entry when it adds its own). It has two members. `consumer` uses the root lint table, including `unsafe_code = "forbid"`. `fork-probe` is a test-only crate whose lint table equals the root table except `unsafe_code = "deny"`. Its one module carries `#[allow(unsafe_code, reason = "…")]` and holds the single fork call. Neither is published. Because the root excludes it, the `test` rung runs `cargo test --locked --offline --manifest-path conformance/consumer/Cargo.toml`, so the real-fork proofs, the G10 cases, and the consumer examples gate every change. The workspace's lock pins the root lock's version of every shared package.
 - The external consumer crate builds offline against the packaged path with default features disabled and exercises every frozen public type, builder, result, engine method, and approved convenience. The same examples compile as doctests. The command parser and command-only modules do not compile in that consumer graph.
 - `cargo tree -p thinkthen -e normal,build --no-default-features` and the packaged manifest prove one library target, no proc-macro target, and no `clap`, `csv-core`, `nix`, or other CLI-only normal dependency. Workspace metadata is not asserted, since 0092 adds a test-only member. `cargo package` strips versionless path dev-dependencies, so only the unpacked library build is checked. The default-feature command build stays green.
 - Compile-fail fixtures are generated from one table file and pin the 0084 type-state refusals, including a banded question passed to `filter`, a wrong question kind, an incomplete builder, and access to private engine internals. Diagnostics are matched by stable substance rather than compiler line decoration. Compile-pass fixtures cover string and built-question inputs, `choices!`, typed descriptions, question sets, all ten methods, and every approved convenience.
@@ -76,5 +76,5 @@ Re-score if implementation changes public semantics, requires a new dependency o
 
 ## Review
 
-- Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-engine.md`) found two contradictions, a churn test too weak to catch the crash, and a budget too small. The panic exemption, the dependency-tree check, the churn probe, and the split into 0097 and 0098 answer them. The re-review (`sdlc/records/2026-09-24-rereview-engine.md`) found the fork call, the R4-24 test, and the churn comparison unbuildable as written; all rewritten. Confirmation pending.
+- Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-engine.md`) found two contradictions, a churn test too weak to catch the crash, and a budget too small. The panic exemption, the dependency-tree check, the churn probe, and the split into 0097 and 0098 answer them. The re-review (`sdlc/records/2026-09-24-rereview-engine.md`) found the fork call, the R4-24 test, and the churn comparison unbuildable as written; all rewritten. The confirmation (same file) asked which rung runs the consumer; `test` does. Final check pending.
 - Code review: pending.
