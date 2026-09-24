@@ -1,91 +1,59 @@
 ---
 flow: build
 priority: 81
-opens: crates/thinkthen/src/core crates/thinkthen/src/engine crates/thinkthen/src/cli crates/thinkthen/tests conformance specification spec demos sdlc/ratchet.json sdlc/planning
+opens: crates/thinkthen/src/core crates/thinkthen/src/engine crates/thinkthen/src/cli/recognize crates/thinkthen/tests sdlc/ratchet.json sdlc/planning
 ---
 
-# 0081: Build `relate` over the shared relation planner
+# 0081: Build the shared relation foundation
 
-Status: second design remediation complete; Ian ruled partial output at exit 6; ready for Sol re-review.
+Status: ready for independent design review.
 
 ## Outcome
 
-Add `thinkthen relate`. It reads one complete entity set, asks bounded relation questions through the shared planner, and emits self-contained edges. Standalone endpoints contain only `name` and `kind`; recognition endpoints retain offsets and strength. Bare output is one edge per line. Detailed output uses Ian's ruled Option A: one `thinkthen.result/1` object whose `value` is the accepted edge array and whose `answer.questions` is the ordered audit of every successful or recoverably failed logical relation question.
+Make the relation implementation landed by 0080 genuinely reusable before a public `relate` command exists. The pure core owns a generic entity view, a standalone `RelationEntity`, a generic self-contained edge, concrete wildcard expansion, one question map and assembler, and the exact typed relation request state. Recognition moves onto that foundation without changing its public JSON or non-relation requests.
 
-The exact current contract is `sdlc/planning/relate-design.md`. Product code may start only after Sol accepts the amended design.
+Ticket 0081 adds no `relate` command, argument, help, specification page, detailed result, dry-run report, framing path, or how-to. Ticket 0088 consumes this foundation and owns that public surface. The complete settled contract remains in `sdlc/planning/relate-design.md`.
 
-## Current facts from the second Sol rejection
+## Current facts
 
-- The first remediation gave only one successful choice example. It did not define the outer result, reversed choice asking, directed and either H entries, or failed choice and H entries.
-- It conflated the fixed 255-option ceiling with profile `max_options`, did not state exact-limit behavior, and did not separate split limits from fallback limits.
-- It contradicted the ruled structured field defaults by assigning synthetic kind `*` when no override was present.
-- It described H state conceptually without fixing its JSON keys, order, entity ids, concrete wildcard expansion, recognize evidence field, or exact H instructions.
-- It underestimated work around files already at 491, 497, 499, and 500 nonblank lines and omitted the full gate and shared secrecy matrix.
-- It promised partial output without settling the outward-facing exit code.
+- Landed 0080 binds planning and `RelationEdge` directly to `RecognizedName`. Wildcards match entities directly instead of expanding one rule into ordered concrete-kind plans.
+- Same-kind pair questions repeat names, kinds, and relation wording in instructions. Relation requests use the original text state rather than the ruled typed relation state.
+- The fixed 255-option fallback exists. Profile `max_options`, exact request-byte fallback, final H preflight, and the boundary between split-only and fallback limits remain spread across recognition and generic request preparation.
+- These defects can be proved through recognition and pure-core tests. They do not require a public `relate` parser or renderer.
 
-## Fixed input mapping
+## Scope
 
-The command forms are `thinkthen relate [OPTIONS] RELATION...` and `thinkthen relate [OPTIONS] @links.json`. `@links.json` is a relation question file; entities still come from standard input or `--input FILE`.
+`core/relation` owns `RelationEntity { name, kind }`, `RelationEntityView`, `RelationEdge<E>`, ordered concrete wildcard expansion, method selection, mappings, assembly, and relation state. `RecognizedName` implements the view. Recognition returns `RelationEdge<RecognizedName>` with its current complete endpoints.
 
-JSONL, CSV, and TSV records default to name pointer `/name` and kind pointer `/kind`. Exactly one `--field POINTER` may replace the name pointer, and exactly one `--kind-field POINTER` may replace the kind pointer. Both pointers resolve independently against the original parsed record. CSV and TSV headers form the object they address. Each selected value must be a nonempty JSON string. A missing pointer, another JSON type, blank value, duplicate name-and-kind identity, absent concrete rule kind, or 256th entity refuses the complete set at exit 2 before any request.
+Wildcard sides expand to admitted concrete kinds in first-seen entity order. Planning runs once per expanded concrete pair in rule, kind, and entity order. The synthetic line kind remains reserved for 0088. Same-kind plans use H. Different-kind plans use choice from the larger side over the smaller side plus `none`; equal counts ask from the declared source side. Either rules normalize to input order. Directed same-kind and `*:*` plans retain both legal directions. The assembler alone applies the inclusive cut, excludes self-edges, interprets mappings, and normalizes direction.
 
-`--lines` refuses both field options, uses the complete nonempty line as `name`, assigns synthetic kind `*`, and accepts only bare or `*:*` rules. Structured input never receives a synthetic kind. Empty structured or line input succeeds after rule syntax validation with no request and no edge.
+Every relation request uses the exact state and H instructions in `relate-design.md`. Recognition includes its unchanged normalized source under `evidence`; the state then contains every entity with stable `i1`-based ids and one expanded concrete relation. H sends no criteria. Directed H asks `Does the relation hold from iN to iM?`; either H asks `Does the relation hold between iN and iM?`.
 
-The resolved detailed `question.fields` is `{"name":NAME_POINTER,"kind":KIND_POINTER}` for structured input and `null` for lines. Field mapping participates in `question_sha256`; entities do not.
+The effective choice ceiling is `min(255, profile.max_options)` when the profile sets a limit. Equality stays choice and one over changes only that concrete relation to H. `max_questions` splits without fallback. `max_request_bytes` first permits 0079 splitting and falls back only when one complete choice question cannot fit alone. `max_evidence_bytes` refuses without fallback. The complete H replacement is encoded and preflighted again; an impossible H plan refuses before replay, cache, key access, or a send.
 
-## Shared planner and request corrections
+Relation request bytes, recording digests, and cache identities intentionally change. Non-relation request bytes and identities do not change. Recognition's public entity and edge JSON, offsets, strength, ordering, aggregate metadata, failure behavior, and command grammar remain unchanged.
 
-`core/relation` owns one `RelationEntity { name, kind }`, one `RelationEntityView`, one generic `RelationEdge<E>`, wildcard expansion, question mappings, and assembly. `RecognizedName` implements the view. Relate uses `RelationEdge<RelationEntity>` and recognition uses `RelationEdge<RecognizedName>`. No second planner, mapping table, threshold comparison, edge type, or edge serializer is allowed.
+## Exclusions
 
-Rule wildcards expand to admitted concrete kinds in first-seen order before method selection. Same-kind concrete relations use H. Different-kind concrete relations use choice from the larger side over the smaller side plus `none`; equal sides ask from the declared source side. `--either` removes reverse duplicates. One-way same-kind relations retain ordered directions. The line synthetic kind remains one same-kind set.
+No public `relate` command or file grammar; no standalone entity input; no Option A result; no partial-output exit handling; no relate dry run, help, specification, replay page, secrecy route, or fixture; no public Rust or other surface; no second planner, assembler, threshold, splitter, scheduler, or request encoder; no dependency, credential, live call, or paid call.
 
-The fixed choice ceiling is 255 total options including `none`. A selected profile lowers the effective ceiling to `min(255, max_options)`. Exact equality passes; one over changes that whole concrete relation to H. `max_questions` only splits. `max_request_bytes` first splits through ticket 0079 and causes H fallback only when one choice question with complete state cannot fit alone. `max_evidence_bytes` never falls back. The final H plan is preflighted again; an impossible H request exits 2 with zero sends.
+## Owners and budget
 
-Every relation request uses the exact typed state fixed in `relate-design.md`. For recognize it carries the original normalized source text under `evidence`; standalone relate omits that key. It then carries all entities as stable `i1`-based ids and one concrete relation object. Directed H asks exactly `Does the relation hold from iN to iM?`; either H asks exactly `Does the relation hold between iN and iM?`. H sends no criteria and repeats no name, kind, or `reads` text in instructions. Non-relation request bytes remain unchanged.
+Production owners are `core/relation.rs` and behavior-local submodules, `core/mod.rs`, and a split `cli/recognize/relation.rs` called by `cli/recognize.rs`. `core/text.rs`, `core/backend_profile.rs`, `engine/prepared_request.rs`, and the generic System One encoder may change only if the exact state or fallback cannot use their existing typed seams. Test owners are relation unit tests plus the existing backend recognize, profile, cache-identity, recording/replay, and refusal suites.
 
-## Ruled Option A detailed result
+Change or add at most 10 production Rust files and 7 test-only Rust files. Add at most 800 nonblank production Rust lines and 700 nonblank test Rust lines, 1,500 gross. Keep every Rust file at or below 500 nonblank lines and add no dependency. Split the 491-line `cli/recognize.rs` before adding relation behavior. Do not add the result to 499-line `core/result.rs`, add relation logic to 458-line request encoding, or widen generic `Plan` when a behavior-local owner suffices. The implementation record lists actual files and gross additions and explains any variance before code review.
 
-The outer object, resolved question, successful source-asking and target-asking choice entries, directed and either H entries, rejected candidates, and failed choice and H entries are exact in `relate-design.md`. The public direction values are `source_to_target` and `either`. A choice entry also carries `asker.role`, so a target-side question never reverses the relation edge.
+## Acceptance gates
 
-Candidate `accepted` means that candidate produces an edge at the selected inclusive cut. `none` is always `accepted: false`. `pick` names the first highest-probability wire option before the cut. Failed entries preserve question identity and request digest but omit probabilities, `accepted`, and `pick`. `meta.failed_questions` is always present. `meta.requests`, sends, usage, cache truth, and model agreement follow existing aggregate rules.
+1. An independent Sol reviewer returns `ACCEPT` on this ticket and the 0081 sections of `relate-design.md` before product code starts.
+2. Red then green: `cargo test --locked -p thinkthen --lib relation` pins generic ownership, concrete wildcard order, same-kind and cross-kind selection, direction, self exclusion, inclusive cuts, exact 255/profile boundaries, and all exact relation-state and H bytes.
+3. Red then green: `cargo test --locked -p thinkthen --test backend recognize` pins public recognize JSON compatibility, complete source preservation, exact request order, profile equality and one-over fallback, splittable choice bytes, unsplittable choice fallback, impossible final H with zero sends, changed relation request digests, replay/cache identity, and one unchanged non-relation request body.
+4. Red then green: `cargo test --locked -p thinkthen --test backend refusals` counts zero loopback requests for every new local relation refusal and proves refusal occurs before key access where applicable.
+5. Independent Sol code review checks that one generic planner, mapping, assembler, edge type, fallback decision, and exact state serve recognition and future relate. It also checks budgets, request identity, cache/replay behavior, and unchanged public recognition output.
+6. The coordinator runs `sdlc/scripts/install`, `sdlc/scripts/lint`, `sdlc/scripts/test`, and `sdlc/scripts/spec` sequentially from the exact candidate revision with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset and no competing Rust build, then runs `git diff --check`. Every command exits 0. No live or paid call runs.
 
-## Ian ruling: partial-failure exit behavior
+## Dependencies and route
 
-This decision applies only when decoding produced at least one valid logical relation answer and at least one recoverable failed logical relation answer. A reply with no valid answer remains exit 4. Transport, status, replay, local, output, cancellation, and defect failures retain their existing codes and never become partial success.
+Landed tickets 0079 and 0080 are the only dependencies. Ticket 0088 depends on landed 0081.
 
-Ian chose exit 6 with partial output on 2026-09-23. Buffer the aggregate until all relation requests finish. Emit successful bare edges, or the complete Option A object with failed entries, and exit 6 when any recoverable logical question failed. This matches `annotate`, preserves paid valid answers, and tells bare-output callers that the graph is incomplete.
-
-Exit 4 with no output and exit 0 with partial output are rejected alternatives. A reply with no valid logical answer remains exit 4. Transport, status, replay, local, output, cancellation, and defect failures retain their existing codes.
-
-## Scope and exclusions
-
-Scope includes the shared entity/view and generic edge migration; exact relation state; wildcard and fallback corrections; relation question-file parsing and digest; entity input and field mapping; relate command, result, dry-run, help, specification, and replay-only how-to; 0079 request execution; the ruled Option A serializer; offline fixtures; focused recognition compatibility; full shared secrecy/refusal coverage; exact ratchet; and durable review records.
-
-Exclusions include a second planner, edge assembler, threshold rule, scheduler, or splitter; unrelated recognize behavior; public Rust, C, language, library, database, or `surfaces` APIs; incremental or two-set input; runner-up questions; one-to-many controls; method flags; an unmeasured Jev byte constant; dependencies; credentials; production data; retained test artifacts; live calls; and paid calls.
-
-## Acceptance
-
-- Focused red/green tests pin structured and line field mapping, complete-set validation, wildcard expansion, method routing, direction, duplicate suppression, state bytes, Option A JSON, inclusive thresholds, partial output at exit 6, and exact 255/profile boundaries.
-- Profile tests prove 255 passes without a lower profile, 256 falls back, `max_options = N` passes at N and falls back at N+1, `max_questions` splits without fallback, a splittable byte overflow stays choice, an unsplittable one-choice byte overflow falls back, and impossible H or evidence limits send zero requests.
-- Compiled recognize regressions pin unchanged endpoint JSON, source text under relation state, exact H instructions, request order, fallback behavior, and non-relation request bytes.
-- The shared secrecy route matrix adds relate bare/details, lines/JSONL/CSV/TSV, success, dry-run, default and explicit cache, record, replay, replay miss, missing key, transport/status/decode and mixed logical failures, profile and field refusals, hostile and damaged recordings, storage failure, and the authorization-header-only key path. It inspects stdout, stderr, every `Debug` value, request bodies, recording/cache files, and fixtures. Relate gets no smaller command-only secrecy substitute.
-- The shared refusal sweep pins exact safe messages and loopback request count zero for malformed rules/entities/pointers, duplicate identities, absent kinds, 256 entities, impossible profiles, dry-run, replay miss before key access where applicable, and every other local no-send path.
-- After implementation and independent code review, the coordinator runs `sdlc/scripts/install`, `sdlc/scripts/lint`, `sdlc/scripts/test`, and `sdlc/scripts/spec` sequentially with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset and no competing Rust build. The exact ratchet, per-file limit, policy, formatting, Clippy, package checks, all offline tests, replay checks, executable how-tos, and `git diff --check` must pass. No live or paid call runs.
-
-## Budget
-
-These are gross additions from landed 0080 and include Option A, the shared corrections, mandatory near-limit file splits, and full secrecy proof. They do not count 0080's 2,304 lines again.
-
-- Change or add at most 18 production Rust files and 12 test-only Rust files.
-- Add at most 1,650 nonblank production Rust lines and 1,550 nonblank test Rust lines, for 3,200 gross nonblank Rust lines.
-- Keep every Rust file at or below 500 nonblank lines and add no dependency.
-- Split `cli/recognize.rs` before relation migration, `cli/failure.rs` before relate failures, and `tests/backend/secrecy.rs` before adding the relate matrix. Do not add the relate result to 499-line `core/result.rs`; give it a private relate owner. Prefer a new relate args owner over filling `cli/args.rs`, and keep relation state beside `core/relation` rather than widening generic `Plan` or the request encoder.
-- Expected owners are `core/relation.rs` plus relation submodules, `core/recognize.rs`, `core/digest.rs`, `core/mod.rs`, relate question-file/config owners, the recognize relation split, relate args/command/input/result/dry-run/failure modules, and shared backend secrecy/refusal/profile/result tests. The implementation record must list actual counts and explain every variance before Sol code review.
-
-## Dependencies, complexity, and review
-
-Dependencies are landed 0079 request scheduling and landed 0080 relation planning. No dependency is added.
-
-Contract 2; state and timing 2; reach 1; proof 2; cost of error 1; total 8; minimum level 3 because partial failure, cache/replay identity, and secrecy interact; final level 3; Luna Max owns design, implementation, and remediation; Sol High independently reviews design and code.
-
-Sol has rejected two design rounds. This is Luna remediation pass 2, the trial limit. The second rejection required the corrections above. Ian ruled partial output at exit 6, and the design is ready for Sol re-review. No product code, surface file, live call, paid call, implementation gate, targeted Sol repair, reopened implementation defect, or trustworthy elapsed start-to-accept time exists. `sdlc/records/0081-build-relate.md` holds the concise trial record.
+Contract 1; state and timing 1; reach 1; proof 2; cost of error 1; total 6; final level 2. Exact-byte identity, profile fallback, and recognition compatibility set the proof score. Ian ended the Luna trial after two 0081 remediation passes and ordered Sol Medium to drive the redesigned 0081 and 0088. A separate Sol reviewer remains independent. Stop and re-score if implementation needs a public surface, changed non-relation bytes, a second scheduler or encoder, a dependency, or more than this budget.

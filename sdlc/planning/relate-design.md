@@ -1,8 +1,14 @@
 # `relate`: design authority for the command and future surfaces
 
-Status: amended after Sol's second 0081 design rejection. Ian's Option A detailed-result and partial-output exit rulings are settled. This page authorizes no live or paid run.
+Status: split into independently reviewable tickets 0081 and 0088 after the Luna trial reached two remediation passes. Ian's method, Option A detailed-result, and partial-output exit rulings remain settled. Sol Medium drives both tickets. This page authorizes no live or paid run.
 
 Read `recognize-design.md` first. `recognize` and `relate` use one shared relation planner, request-state type, question map, and generic edge assembler. Recognition retains its complete name fields. Standalone relate returns name-and-kind endpoints.
+
+## Delivery split
+
+Ticket 0081 owns only the shared relation foundation: generic entity and edge ownership, concrete wildcard expansion, exact H state, profile fallback, request identity, and recognition compatibility. It adds no public `relate` command.
+
+Ticket 0088 depends on landed 0081 and owns the complete public command: inline and `@entities` grammar, entity input and framing, bare output, exact dry-run schema, ruled Option A details, partial output at exit 6, help, specification, replay-only how-to, and secrecy proof. Neither ticket may reopen a settled product ruling or create a second planner, assembler, fallback path, threshold comparison, splitter, edge serializer, or request-state owner.
 
 ## The one line
 
@@ -12,10 +18,20 @@ Read `recognize-design.md` first. `recognize` and `relate` use one shared relati
 
 ```text
 thinkthen relate [OPTIONS] RELATION...
-thinkthen relate [OPTIONS] @links.json
+thinkthen relate [OPTIONS] @entities.json
 ```
 
-`@links.json` is a relation question file. Entities come from standard input or `--input FILE`. One-way rules use `NAME=SOURCE_KIND:TARGET_KIND`. A bare `NAME` means `NAME=*:*`. `--either` makes one unordered relation. The question file carries the same rules and may add `reads`.
+`@entities.json` is the complete relation question file. Entities still come from standard input or `--input FILE`; the `@` file never contains entity rows. One-way inline rules use `NAME=SOURCE_KIND:TARGET_KIND`. A bare `NAME` means `NAME=*:*`. `--either` marks the inline rules unordered. Inline rules and the `@entities` form are mutually exclusive.
+
+The closed version-one file is:
+
+```json
+{"version":1,"relate":{"fields":{"name":"/name","kind":"/kind"},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":false}]},"threshold":0.5,"model":"jev-latest","profile":"measured-profile"}
+```
+
+`version`, `relate`, and a nonempty ordered `relations` array are required. `relate.fields` is optional. It contains exactly `name` and `kind`, each one JSON Pointer, and defaults to `/name` and `/kind`. Every relation contains exactly `name`, `source`, and `target`, plus optional `reads` and `either`. Names and concrete kinds are nonempty strings. `*` is the only wildcard spelling. `reads` defaults to the relation name with underscores replaced by spaces. `either` defaults to `false`. Relation names are distinct. `threshold` is one cut and defaults to `0.5`. `model` and `profile` keep their ordinary meanings. No framing, input path, entity, method, packing, one-to-many, or runner-up key exists.
+
+Command-line `--field`, `--kind-field`, `--threshold`, `--model`, and `--profile` override their matching file values independently. Framing and `--input` remain command-only. An unreadable, invalid, extra-key, wrong-version, or wrong-shape question file exits 5. Naming a non-relate question file on the relate command exits 2. The canonical public question writes `verb`, `fields`, `relations`, then `threshold`; each relation writes `name`, `source`, `target`, `reads`, then `either`. The question digest hashes those exact compact bytes and excludes entities, model, profile, address, and every backend setting.
 
 JSONL, CSV, and TSV records default to `/name` and `/kind`. Exactly one `--field POINTER` overrides the name pointer, and exactly one `--kind-field POINTER` overrides the kind pointer. Both resolve independently against the original parsed record. CSV and TSV headers form that record object. Each selected value is a nonempty JSON string. Structured input never receives a synthetic kind.
 
@@ -23,7 +39,17 @@ JSONL, CSV, and TSV records default to `/name` and `/kind`. Exactly one `--field
 
 The complete entity set is validated before any request. A missing pointer, wrong JSON type, blank selected value, duplicate name-and-kind identity, absent concrete rule kind, malformed rule, or 256th entity is exit 2 with zero sends. Empty input succeeds after rule syntax validation with no request and no edge.
 
-No planner method, one-or-many marker, runner-up question, or packing control is public. The threshold defaults to `0.5` and accepts the cut. `--dry-run` sends nothing and reports the final routed methods, fallback facts, logical question counts, split request counts, and exact encoded bytes without token or price claims.
+No planner method, one-or-many marker, runner-up question, or packing control is public. The threshold defaults to `0.5` and accepts the cut.
+
+## Exact dry-run schema
+
+`--dry-run` validates the complete entity set, resolves the profile, expands concrete relations, performs final fallback and 0079 splitting, and sends nothing. It prints one compact object with this key order:
+
+```json
+{"schema":"thinkthen.relate-plan/1","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY","framing":"jsonl","fields":{"name":"/name","kind":"/kind"},"entity_count":3,"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":false,"method":"choice","fallback":null,"logical_questions":2,"request_count":1}],"logical_questions":2,"request_count":1,"requests":[{"digest":"<request-digest>","bytes":512,"body_utf8":"<exact compact request body>"}]}
+```
+
+`framing` is `document`, `lines`, `jsonl`, `csv`, or `tsv`. `fields` is null for lines. `relations` contains one entry per expanded concrete relation in planning order. `method` is `choice` or `yes_no`. `fallback` is null, `max_options`, or `max_request_bytes`. Counts are exact after splitting. Each request entry is in send order. `bytes` is the UTF-8 byte length of `body_utf8`; decoding that JSON string yields the exact bytes that would be sent. Empty valid input prints zero counts and empty relation and request arrays. The report makes no token, price, or backend-acceptance claim.
 
 ## Current bare output
 
@@ -147,15 +173,15 @@ Exit 4 with no output and exit 0 with partial output are rejected alternatives.
 
 ## Proof and delivery boundary
 
-Implementation adds relate to the full shared secrecy matrix, not a smaller command-specific substitute. The matrix covers bare/details, all four framings, success, dry-run, cache, record, replay, replay miss, key absence, transport/status/decode and mixed logical failures, profile and field refusals, hostile/damaged recordings, storage failure, and the authorization-header-only key path. It inspects stdout, stderr, `Debug`, request bodies, recording/cache files, and fixtures. Shared refusal tests count loopback requests on every local no-send path.
+Ticket 0081 proves the shared foundation through pure relation tests and compiled recognition compatibility. It pins generic ownership, concrete expansion, exact state and H bodies, every fallback boundary, relation digest changes, replay/cache identity, zero-send final refusal, unchanged public recognition JSON, and one unchanged non-relation request body. It changes at most 10 production and 7 test-only Rust files and adds at most 800 production plus 700 test nonblank Rust lines, 1,500 gross.
 
-After focused red/green proof and independent code review, the coordinator runs `install`, `lint`, `test`, and `spec` sequentially with key and base-address variables unset and no competing Rust build, then runs `git diff --check`. No live or paid call belongs to a gate.
+Ticket 0088 adds relate to the full shared secrecy matrix, not a smaller command-specific substitute. The matrix covers bare/details, lines/JSONL/CSV/TSV, success, dry run, cache, record, replay, replay miss, key absence, transport/status/decode and mixed logical failures, profile and field refusals, hostile or damaged requested recordings, storage failure, and the authorization-header-only key path. It inspects stdout, stderr, `Debug`, request bodies, recording/cache files, and fixtures. Shared refusal tests count loopback requests on every local no-send path. It changes at most 15 production and 11 test-only Rust files and adds at most 1,200 production plus 1,100 test nonblank Rust lines, 2,300 gross.
 
-Ticket 0081 may change at most 18 production Rust files and 12 test-only Rust files and add at most 1,650 production plus 1,550 test nonblank Rust lines, 3,200 gross. Every file remains at or below 500 lines. Near-limit recognize, failure, result, args, and secrecy owners split or receive a new behavior-local owner before additions. No dependency enters.
+Each ticket requires focused red/green proof and independent code review. The coordinator then runs `install`, `lint`, `test`, and `spec` sequentially from the exact candidate revision with key and base-address variables unset and no competing Rust build, followed by `git diff --check`. Every Rust file remains at or below 500 nonblank lines. Near-limit recognize, failure, result, args, and secrecy owners split or receive a new behavior-local owner before additions. No dependency, live call, or paid call enters either ticket.
 
 ## Future surfaces
 
-Library and database surfaces remain future work. They must consume the same edge meaning and must not create a second planner. Ticket 0081 does not change the `surfaces` tree or settle future host-language result types.
+Library and database surfaces remain future work. They must consume the same edge meaning and must not create a second planner. Tickets 0081 and 0088 do not change the `surfaces` tree or settle future host-language result types.
 
 ## Superseded history: 2026-09-21 pick-one proposal
 
@@ -171,4 +197,4 @@ The three-way proposal asked a directed pair to choose source-to-target, target-
 
 ## Current rule
 
-Current rule: `relate` uses first-seen concrete wildcard expansion, cross-kind choice, same-kind H, the lower of 255 and profile `max_options`, one exact typed relation state, one shared generic planner and edge assembler, name-and-kind-only standalone endpoints, the ruled Option A detailed schema, and partial output at exit 6. Recognition keeps offsets and strength. Implementation starts only after Sol accepts the amended design.
+Current rule: 0081 first lands first-seen concrete wildcard expansion, cross-kind choice, same-kind H, the lower of 255 and profile `max_options`, one exact typed relation state, request identity, and one shared generic planner and edge assembler while recognition keeps offsets, strength, and its public output. Dependent 0088 then adds the complete `@entities` command grammar, name-and-kind-only standalone endpoints, exact dry-run schema, ruled Option A detailed schema, partial output at exit 6, documentation, and secrecy proof. The Luna trial stopped after two remediation passes. Sol Medium drives both tickets, and each starts product code only after independent Sol design acceptance.
