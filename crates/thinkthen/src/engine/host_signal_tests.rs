@@ -11,7 +11,7 @@ use std::thread;
 use std::time::Duration;
 
 use nix::sys::pthread::{pthread_kill, pthread_self};
-use nix::sys::signal::Signal;
+use nix::sys::signal::{SigSet, Signal};
 
 use crate::core::Url;
 use crate::core::recording::Exchange as Recorded;
@@ -57,11 +57,10 @@ fn held_reply() -> (
 
 #[test]
 fn a_host_signal_during_a_held_send_on_a_worker_leaves_the_call_whole() {
-    let _handler = signal_hook::flag::register(
-        signal_hook::consts::signal::SIGUSR1,
-        Arc::new(AtomicBool::new(false)),
-    )
-    .expect("a no-op host handler");
+    let handled = Arc::new(AtomicBool::new(false));
+    let _handler =
+        signal_hook::flag::register(signal_hook::consts::signal::SIGUSR1, Arc::clone(&handled))
+            .expect("a no-op host handler");
     let (url, held, release, server) = held_reply();
     let widths: &'static Widths = Box::leak(Box::default());
     let client = Client::new(SECOND * 5, false).gated(widths);
@@ -85,12 +84,26 @@ fn a_host_signal_during_a_held_send_on_a_worker_leaves_the_call_whole() {
             work.send(()).expect("work queued");
             let worker = worker.recv_timeout(SECOND * 2).expect("worker thread");
             held.recv_timeout(SECOND * 2).expect("the send is held");
-            pthread_kill(worker, Signal::SIGUSR1).expect("signal delivered");
-            thread::sleep(Duration::from_millis(100));
+            // Several sends, so an unmasked worker meets one inside its read.
+            for _ in 0..10 {
+                pthread_kill(worker, Signal::SIGUSR1).expect("signal delivered");
+                thread::sleep(Duration::from_millis(10));
+            }
             release.send(()).expect("reply released");
         },
     );
 
+    // A blocked signal stays pending on the worker and ends with it, so the
+    // handler never runs. This holds however the scheduler times the sends.
+    assert!(
+        !handled.load(Ordering::SeqCst),
+        "the worker kept SIGUSR1 blocked"
+    );
+    let calling = SigSet::thread_get_mask().expect("calling thread mask");
+    assert!(
+        !calling.contains(Signal::SIGUSR1),
+        "the calling thread keeps the host's mask"
+    );
     let answer = answers
         .recv()
         .expect("one result")
@@ -166,7 +179,19 @@ fn file_size_child() {
     };
     let response = format!("{{\"pad\":\"{}\"}}", "x".repeat(8_192));
 
-    let result = permit.finish(&exchange, response.as_bytes(), &digest.file_name());
+    let name = digest.file_name();
+    let (results, finished) = channel();
+    // The write runs on an engine worker, whose mask must leave SIGXFSZ open.
+    workers::scoped_observed(
+        1,
+        results,
+        &|permit: crate::engine::recorder::WritePermit| {
+            permit.finish(&exchange, response.as_bytes(), &name)
+        },
+        &|| (),
+        |work| work.send(permit).expect("write queued"),
+    );
+    let result = finished.recv().expect("one write");
 
     assert!(matches!(result, Err(Error::RecordingStorage)), "{result:?}");
     assert!(ran.swap(false, Ordering::SeqCst), "the host action ran");
