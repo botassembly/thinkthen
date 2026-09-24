@@ -1,6 +1,6 @@
 # Reconcile the signal dependencies after 0078
 
-Status: Open
+Status: Closed by Quick Fix `qf-signal-deps` on 2026-09-24 (`sdlc/records/qf-signal-deps.md`).
 
 Found by the 0084 and 0095 code review (`sdlc/records/0084-0095-code-review.md`, item 6). Ticket 0078 landed at `1901eebe`. It made `nix` (feature `signal`) a non-optional Unix dependency of the library, and it made `signal-hook` optional and selected by `cli`. `policy.py` now fails if `nix` is missing from the default-features-off graph, or if `signal-hook` is in it.
 
