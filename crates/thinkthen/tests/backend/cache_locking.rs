@@ -11,7 +11,7 @@ use std::time::Duration;
 
 #[cfg(target_os = "linux")]
 use crate::harness::process_has_file;
-use crate::harness::{Canned, Listener, Observed, spawn};
+use crate::harness::{Canned, Listener, Observed, finish, spawn};
 use crate::result_assertions::normalized_details;
 
 const QUESTION: &str = "asks for a refund";
@@ -76,8 +76,8 @@ impl ReapedChild {
     fn wait(mut self) -> io::Result<Output> {
         self.0
             .take()
-            .ok_or_else(|| io::Error::other("child already reaped"))?
-            .wait_with_output()
+            .ok_or_else(|| io::Error::other("child already reaped"))
+            .and_then(|child| finish(child, "a cache-lock run"))
     }
 
     fn write_input(&mut self, input: &[u8]) -> io::Result<()> {

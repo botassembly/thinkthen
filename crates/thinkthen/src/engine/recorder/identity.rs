@@ -212,9 +212,7 @@ fn pause(stage: &str) {
     }
     let ready = std::env::var_os("THINKTHEN_TEST_IDENTITY_READY").expect("test ready path");
     fs::write(ready, []).expect("test pause signal");
-    loop {
-        std::thread::park();
-    }
+    crate::test_deadline::park_for_signal();
 }
 
 #[cfg(not(test))]

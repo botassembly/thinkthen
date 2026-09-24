@@ -8,7 +8,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use super::set;
-use crate::harness::{Canned, Gathering, Listener, spawn};
+use crate::harness::{Canned, Gathering, Listener, finish, spawn};
 
 pub(super) fn yes(model: &str, input: u64, output: u64) -> String {
     format!(
@@ -436,7 +436,7 @@ fn a_backend_failure_after_the_output_pipe_closes_stays_quiet() {
     assert!(first.contains(r#""record":1"#), "{first}");
     drop(output);
 
-    let result = child.wait_with_output().expect("the command ends");
+    let result = finish(child, "annotate").expect("the command ends");
     assert_eq!(result.status.code(), Some(0));
     assert!(result.stderr.is_empty());
     assert_eq!(listener.requests().len(), 3);

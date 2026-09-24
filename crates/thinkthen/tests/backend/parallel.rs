@@ -8,7 +8,7 @@ use std::process::{Command, Output, Stdio};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
-use crate::harness::{Canned, Gathering, Listener, spawn};
+use crate::harness::{Canned, Gathering, Listener, finish, spawn};
 
 /// The question every case on this page asks.
 const QUESTION: &str = "Does this report a payment failure?";
@@ -360,7 +360,9 @@ fn a_reader_that_closes_the_pipe_stops_the_reading_and_the_scheduling() {
     reader.read_line(&mut row).expect("one row");
     drop(reader);
 
-    let status = child.wait().expect("the compiled binary ends");
+    let status = finish(child, "thinkthen after `head -1`")
+        .expect("the compiled binary ends")
+        .status;
     assert_eq!(status.code(), Some(0));
     assert_eq!(row, wrapped(1));
     // The tool learns of the closed pipe from the write that fails, so it
