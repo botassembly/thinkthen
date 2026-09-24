@@ -15,3 +15,7 @@ Five non-blocking notes followed, and the author took all five:
 5. Reword the lint comment to "The workspace caps an agents file at 5,000 characters."
 
 The four wording fixes pushed the file to 5,014 characters. The author then shortened four other phrases, with no rule lost, to reach 4,988.
+
+## Second pass
+
+ACCEPT on the follow-up commits at 4,988 characters. One non-blocking nit: "the bans and inward dependencies" reads looser than "the inward dependency direction" and still states the same rule.
