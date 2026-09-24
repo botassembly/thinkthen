@@ -246,3 +246,13 @@ Contract 2; state and timing 3; reach 2; proof 3; cost of error 3; total 13. Fin
 - Amendment review (`sdlc/records/2026-09-24-amendment-review-0108-0109-0112.md`) rejected decision 18 at `e89fe8b5`. A scratch `HOME` for every step of `check.sh` hid the R library holding jsonlite 2.0.0, the toolchain folder, the cargo home, and the deny advisory database. Decision 18 now limits the scratch `HOME` to the R test children, exports the R library list as absolute paths first, and gives each child a fresh `XDG_CONFIG_HOME`.
 - Amendment re-check (same file) accepted decision 18 at `87e5d053`.
 - Code review: pending. Reviewer's note for it: the "before a call" test and the first `.tt_call` test signal the child itself, and R handles a pending SIGINT at its evaluator's next periodic check. If that check comes before the check under test, the interrupt jumps in R code, and the test passes with or without its plant. The record shows each of the two plants turning red. If one cannot, the builder moves the signal next to the check, for example into the forced argument's last expression.
+
+## Evidence
+
+Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk.md` asks every product ticket to name these five parts. This note changes no design.
+
+- Starts from: The tag `surfaces-wave7-frozen-2026-09-24b` holds the package in `libraries/r/thinkthen/` (`R/thinkthen.R`, `src/rust/src/lib.rs`, `NAMESPACE`, `DESCRIPTION`, `configure`, `Makevars.in`, `entrypoint.c`) and `libraries/r/check.sh`, `tools/make-tarball.sh`, `examples.R`, and `slide.R`. Its 16 test and interrupt scripts sit in `libraries/r/`. `experiments/205-thinkthen-libs/FINDINGS.md` found that R leaks a receiver per interrupt, leaves 16 threads parked, adds 16 to 21 µs a call, and needs no Arrow door. `repos/jev-experiments`: none found.
+- Keeps: The 13 exports, `NA` for unsure, a column in and a column out, the six kinds as conditions with a retry signal, and the ported test assertions.
+- Changes: `tt_engine` holds settings, the crate becomes `thinkthen-r`, `lib.rs` splits into five files, and every call runs on a worker. Column choose, score, and tag make one `annotate_with` call. The global active-call state retires, and R gets its own `deny.toml`.
+- Proof: The interrupt tests under ADR 0042, an offline tarball install into a scratch library, the deny plant, and the extendr lint probe.
+- Defers: CRAN and R-universe, binaries, Windows and macOS, the C door, a user cancel token, and async.
