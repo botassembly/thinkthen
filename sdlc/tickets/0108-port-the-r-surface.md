@@ -6,7 +6,7 @@ opens: libraries/r sdlc/scripts sdlc/planning/libraries/r.md sdlc/planning/adr/0
 
 # 0108: Port the R surface
 
-Status: revised after review; confirmation pending. Owner: Claude.
+Status: design accepted 2026-09-24 after re-review. Owner: Claude. Depends on the 0084 builder amendment.
 
 ## Outcome and authority
 
@@ -174,6 +174,8 @@ Each child runs under `timeout`, with its own backend and cache folder (decision
 - `cache = FALSE` sends a repeated question twice. `max_requests = 1L` refuses a two-text `tt_decide` before its first request.
 - A relate frame with a repeated name and kind sends one entity for it, and each edge carries names and kinds. `igraph::graph_from_data_frame` accepts the result.
 - `tt_details` on a score question carries `answer.level`, and on a decide question it carries none.
+- The loopback test's plant sends nothing. The record shows that the empty-builder engine refuses before any send when `THINKTHEN_API_KEY` is unset. If it does not refuse, the plant sets `base_url` to a closed loopback port in place of the empty default.
+- The `model = ""` test pins `thinkthen_usage` with a count of 0 whether or not `EngineBuilder::model` refuses an empty string. If the builder accepts it, the R type check refuses it first.
 - Nothing reaches a non-loopback address. `THINKTHEN_API_KEY` stays unset. A secrecy test reads every condition message and `print` output for the key and for credentials in the base URL.
 
 ## The check it adds to the gate ladder
@@ -233,4 +235,5 @@ Contract 2; state and timing 3; reach 2; proof 3; cost of error 3; total 13. Fin
 - Design review: `sdlc/records/2026-09-24-design-review-0108.md` found eight findings and a list of small fixes, all answered. R5-38 rides with R4-7 and has its own plant. Every interrupt child catches the interrupt and stays alive past the last count read, and the single call gains a plant that can turn red. Every R API call and every `unsafe` sits in `ffi`. ADR 0042's three check points each have a test, the blank-line window has one, and the four cleanup pieces are kept or retired with reasons. `cargo vendor` and `cargo package` carry their flags. The jsonlite versions are named and the check tests the one it uses. The `paste` entry has its full reason in the binding's own deny config, away from the root run. The rename covers `document.rs` and both `Makevars.in` lines. The coordinator's later request is applied too: decision 17 follows the six shared surface rules and says where ADR 0042 governs R. The small fixes are applied: the ratchet place, R needed for unit tests, the worker edge test, R1-13's call-expression count, the tight R budget, and the `missing_docs` reason.
 - Confirmation (same file) rejected one point: the width reached the engine through a hidden `thinkthen:::` hook, against shared rule 6, and cited the rules at an old commit. Decision 4 now gives R the public `tt_engine(width =)` setting, and decision 17 cites `446a4d6b`. The two stop clauses about a missing width setting are gone.
 - Final check (same file) rejected one point: `tt_engine` built on the empty builder and dropped the address, key, and cache the environment gives. Decision 4 now starts from `EngineBuilder::from_env` (0084 amendment `f19cf437`), exposes every section 5 setting but the key, and names what happens after a verb has run and what `tt_usage` reads. Tests pin the kept environment, a set `base_url` over the variable, and one refusal per argument.
+- Second final check (same file) accepted it and left two notes for the code reviewer, now in the acceptance list: the loopback plant sends nothing without a key, and the `model = ""` refusal holds either way.
 - Code review: pending. Reviewer's note for it: the "before a call" test and the first `.tt_call` test signal the child itself, and R handles a pending SIGINT at its evaluator's next periodic check. If that check comes before the check under test, the interrupt jumps in R code, and the test passes with or without its plant. The record shows each of the two plants turning red. If one cannot, the builder moves the signal next to the check, for example into the forced argument's last expression.
