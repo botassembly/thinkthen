@@ -4,7 +4,7 @@ The package and binary are both `thinkthen`. Read `README.md` first, then `speci
 
 ## Building
 
-- Red-green test-driven development. Write the failing test, watch it fail for the stated reason, make it pass, then clean up.
+- Red-green test-driven development. Write the failing test, watch it fail for the stated reason, make it pass, then clean up. A red-green test is scaffolding. Before a ticket lands, turn each one into an outside-in behavior test through the command line or public API, a table of edge cases, a contract check, or a regression test that failed before its fix. Delete the rest. Code review checks this.
 - Build the simplest thing that works. YAGNI, DRY, locality of behavior, separation of concerns. A command or an option enters only when a demo cannot be written without it.
 - The gate ladder is `sdlc/scripts/{install,lint,test,spec}`. Run the cheapest rung first and the whole ladder before handing back.
 - `sdlc/ratchet.json` holds the source size ceiling. The ceiling equals the measured total. The commit that raises it says what grew, why it earns its lines, and where you looked for duplication to delete first.
@@ -45,6 +45,8 @@ This repository will go public. Never name a private project or a customer. Desc
 - A `jq` transform never uses `//` for a three-way rule, because `false` and a missing value read alike under it.
 - A number on a page names the record that measured it, and a change in behavior changes its pages in the same commit.
 - A script that checks something runs from a rung, or it rots.
+- A new test answers four questions: what behavior it protects, what credible regression makes it fail, why no existing test already catches it, and whether it needs an export, flag, or hook that only tests use. A missing answer rejects it. A test that needs a test-only hook moves to the real boundary. The source is the workspace decision `2026-09-24-tests-earn-their-place.md`.
+- Review rejects the junk patterns from the OpenClaw `test-audit` skill (https://github.com/openclaw/openclaw/tree/main/.agents/skills/test-audit). These include a test with no assertion, a value compared to itself, an expected value computed by the code under test, a mock that implements the asserted behavior, a copied inventory or export list, and one contract tested at several layers.
 
 ## Where things are
 
