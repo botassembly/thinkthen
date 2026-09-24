@@ -66,7 +66,7 @@ Usage: thinkthen decide [OPTIONS] <QUESTION>
 Arguments:
   <QUESTION>
           The question to answer, or `@` and the path of a question file.
-          
+
           As text it is one argument naming one visible fact. As `@FILE` it is a question file holding one `decide` question, and a value typed beside it replaces the file's value. A question that must begin with `@` is written in a file.
 
 Options:
@@ -84,7 +84,7 @@ Options:
 
       --details
           Print the full result object in place of the bare value.
-          
+
           In record mode the object also carries `input`, the whole record as it arrived, so a row names the record it answered. `input` repeats every record in the output, and a run over large records pays for that on every row.
 
       --input <FILE>
@@ -92,27 +92,27 @@ Options:
 
       --lines
           Take each line as one text record.
-          
+
           Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
 
       --jsonl
           Take each line as one JSON record.
-          
+
           Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
 
       --csv
           Read a comma-separated table with a required header row.
-          
+
           Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
 
       --tsv
           Read a tab-separated table with a required header row.
-          
+
           Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
 
       --field <POINTER>
           Send only the part of each record this RFC 6901 pointer names.
-          
+
           Give it more than once to send an object of the named parts, keyed by the last part of each pointer. On a command that accepts one document, no record framing reads the whole input as one JSON value. The pointer is the disclosure boundary: only the pointed value leaves the machine.
 
       --dry-run
@@ -123,47 +123,47 @@ Options:
 
       --profile <FILE>
           Read enforceable backend limits and a calibration name from FILE.
-          
+
           A profile never selects an address, model, key, adapter, or cache.
 
       --model <NAME>
           The model named in the request. [default: jev-latest]
-          
+
           It outranks a `model` key in a single question file. A question set holds no model.
 
       --record <DIR>
           Call the backend, then write the exchange into DIR. DIR is created when absent.
-          
+
           An explicit recording folder suppresses the platform default cache.
 
       --replay <DIR>
           Answer from DIR alone. No connection opens, and no key is read.
-          
+
           An explicit replay folder suppresses the platform default cache.
 
       --cache <DIR>
           Replay DIR and record into it, overriding THINKTHEN_CACHE and the platform default.
-          
+
           It is --record DIR and --replay DIR together, so it stands beside neither of them. A finished record is answered from disk, and only the rest goes to the backend.
 
       --no-cache
           Do not read or write the answer cache for this run.
-          
+
           Answers are otherwise cached by default in the platform cache folder. Entries contain the judged text. A new default folder is private to its owner. This option conflicts with --cache but may accompany an explicit --record or --replay folder.
 
       --timeout <SECONDS>
           Positive seconds that bound one attempt from connect to last byte, and each retry wait
-          
+
           [default: 30]
 
       --jobs <N>
           How many requests are in flight at once, from 1 to 32. [default: 4]
-          
+
           It acts in record mode and on `annotate`, where one document can make several grouped requests. Output follows the order the command defines.
 
       --max-retries <N>
           How many times a retried status is sent again. A transport failure is never sent again
-          
+
           [default: 2]
 
   -h, --help
@@ -210,7 +210,7 @@ Usage: thinkthen filter [OPTIONS] <QUESTION>
 Arguments:
   <QUESTION>
           The question asked of each record, or `@` and the path of a question file.
-          
+
           As `@FILE` it is a question file holding one `decide` question, and a value typed beside it replaces the file's value.
 
 Options:
@@ -225,7 +225,7 @@ Options:
 
       --details
           Print the full result object in place of the bare value.
-          
+
           In record mode the object also carries `input`, the whole record as it arrived, so a row names the record it answered. `input` repeats every record in the output, and a run over large records pays for that on every row.
 
       --input <FILE>
@@ -233,27 +233,27 @@ Options:
 
       --lines
           Take each line as one text record.
-          
+
           Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
 
       --jsonl
           Take each line as one JSON record.
-          
+
           Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
 
       --csv
           Read a comma-separated table with a required header row.
-          
+
           Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
 
       --tsv
           Read a tab-separated table with a required header row.
-          
+
           Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
 
       --field <POINTER>
           Send only the part of each record this RFC 6901 pointer names.
-          
+
           Give it more than once to send an object of the named parts, keyed by the last part of each pointer. On a command that accepts one document, no record framing reads the whole input as one JSON value. The pointer is the disclosure boundary: only the pointed value leaves the machine.
 
       --dry-run
@@ -264,47 +264,47 @@ Options:
 
       --profile <FILE>
           Read enforceable backend limits and a calibration name from FILE.
-          
+
           A profile never selects an address, model, key, adapter, or cache.
 
       --model <NAME>
           The model named in the request. [default: jev-latest]
-          
+
           It outranks a `model` key in a single question file. A question set holds no model.
 
       --record <DIR>
           Call the backend, then write the exchange into DIR. DIR is created when absent.
-          
+
           An explicit recording folder suppresses the platform default cache.
 
       --replay <DIR>
           Answer from DIR alone. No connection opens, and no key is read.
-          
+
           An explicit replay folder suppresses the platform default cache.
 
       --cache <DIR>
           Replay DIR and record into it, overriding THINKTHEN_CACHE and the platform default.
-          
+
           It is --record DIR and --replay DIR together, so it stands beside neither of them. A finished record is answered from disk, and only the rest goes to the backend.
 
       --no-cache
           Do not read or write the answer cache for this run.
-          
+
           Answers are otherwise cached by default in the platform cache folder. Entries contain the judged text. A new default folder is private to its owner. This option conflicts with --cache but may accompany an explicit --record or --replay folder.
 
       --timeout <SECONDS>
           Positive seconds that bound one attempt from connect to last byte, and each retry wait
-          
+
           [default: 30]
 
       --jobs <N>
           How many requests are in flight at once, from 1 to 32. [default: 4]
-          
+
           It acts in record mode and on `annotate`, where one document can make several grouped requests. Output follows the order the command defines.
 
       --max-retries <N>
           How many times a retried status is sent again. A transport failure is never sent again
-          
+
           [default: 2]
 
   -h, --help
@@ -349,13 +349,13 @@ Usage: thinkthen rank [OPTIONS] <QUESTION>
 Arguments:
   <QUESTION>
           The question asked of each record, or `@` and the path of a question file.
-          
+
           As `@FILE` it is a question file holding one `decide` question, and a value typed beside it replaces the file's value.
 
 Options:
       --top <N>
           Print the first N records of the order, from 1 upward.
-          
+
           It saves no request, because every record is judged before anything is sorted.
 
       --true <TEXT>
@@ -366,7 +366,7 @@ Options:
 
       --details
           Print the full result object in place of the bare value.
-          
+
           In record mode the object also carries `input`, the whole record as it arrived, so a row names the record it answered. `input` repeats every record in the output, and a run over large records pays for that on every row.
 
       --input <FILE>
@@ -374,27 +374,27 @@ Options:
 
       --lines
           Take each line as one text record.
-          
+
           Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
 
       --jsonl
           Take each line as one JSON record.
-          
+
           Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
 
       --csv
           Read a comma-separated table with a required header row.
-          
+
           Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
 
       --tsv
           Read a tab-separated table with a required header row.
-          
+
           Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
 
       --field <POINTER>
           Send only the part of each record this RFC 6901 pointer names.
-          
+
           Give it more than once to send an object of the named parts, keyed by the last part of each pointer. On a command that accepts one document, no record framing reads the whole input as one JSON value. The pointer is the disclosure boundary: only the pointed value leaves the machine.
 
       --dry-run
@@ -405,47 +405,47 @@ Options:
 
       --profile <FILE>
           Read enforceable backend limits and a calibration name from FILE.
-          
+
           A profile never selects an address, model, key, adapter, or cache.
 
       --model <NAME>
           The model named in the request. [default: jev-latest]
-          
+
           It outranks a `model` key in a single question file. A question set holds no model.
 
       --record <DIR>
           Call the backend, then write the exchange into DIR. DIR is created when absent.
-          
+
           An explicit recording folder suppresses the platform default cache.
 
       --replay <DIR>
           Answer from DIR alone. No connection opens, and no key is read.
-          
+
           An explicit replay folder suppresses the platform default cache.
 
       --cache <DIR>
           Replay DIR and record into it, overriding THINKTHEN_CACHE and the platform default.
-          
+
           It is --record DIR and --replay DIR together, so it stands beside neither of them. A finished record is answered from disk, and only the rest goes to the backend.
 
       --no-cache
           Do not read or write the answer cache for this run.
-          
+
           Answers are otherwise cached by default in the platform cache folder. Entries contain the judged text. A new default folder is private to its owner. This option conflicts with --cache but may accompany an explicit --record or --replay folder.
 
       --timeout <SECONDS>
           Positive seconds that bound one attempt from connect to last byte, and each retry wait
-          
+
           [default: 30]
 
       --jobs <N>
           How many requests are in flight at once, from 1 to 32. [default: 4]
-          
+
           It acts in record mode and on `annotate`, where one document can make several grouped requests. Output follows the order the command defines.
 
       --max-retries <N>
           How many times a retried status is sent again. A transport failure is never sent again
-          
+
           [default: 2]
 
   -h, --help
@@ -510,12 +510,12 @@ Arguments:
 Options:
       --option <LABEL=DESCRIPTION>
           One label and what it means, as LABEL=DESCRIPTION. Give it once per label.
-          
+
           The first `=` splits the label from the description, and the description travels beside the label so the model reads both. It does not stand beside the positional labels, because two lists have no order between them.
 
       --options <POINTER>
           Take each record's own options from this RFC 6901 pointer.
-          
+
           The record holds a list of labels, or a map from each label to the description that travels with it. It needs --jsonl, because a pointer needs a JSON record, and it takes no list on the command line.
 
       --threshold <T>
@@ -523,7 +523,7 @@ Options:
 
       --raw
           Print the label without quotation marks, and nothing when unresolved.
-          
+
           This view is available for one document, --lines, and --jsonl. CSV and TSV always print JSONL and refuse --raw.
 
       --quiet
@@ -531,7 +531,7 @@ Options:
 
       --details
           Print the full result object in place of the bare value.
-          
+
           In record mode the object also carries `input`, the whole record as it arrived, so a row names the record it answered. `input` repeats every record in the output, and a run over large records pays for that on every row.
 
       --input <FILE>
@@ -539,27 +539,27 @@ Options:
 
       --lines
           Take each line as one text record.
-          
+
           Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
 
       --jsonl
           Take each line as one JSON record.
-          
+
           Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
 
       --csv
           Read a comma-separated table with a required header row.
-          
+
           Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
 
       --tsv
           Read a tab-separated table with a required header row.
-          
+
           Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
 
       --field <POINTER>
           Send only the part of each record this RFC 6901 pointer names.
-          
+
           Give it more than once to send an object of the named parts, keyed by the last part of each pointer. On a command that accepts one document, no record framing reads the whole input as one JSON value. The pointer is the disclosure boundary: only the pointed value leaves the machine.
 
       --dry-run
@@ -570,47 +570,47 @@ Options:
 
       --profile <FILE>
           Read enforceable backend limits and a calibration name from FILE.
-          
+
           A profile never selects an address, model, key, adapter, or cache.
 
       --model <NAME>
           The model named in the request. [default: jev-latest]
-          
+
           It outranks a `model` key in a single question file. A question set holds no model.
 
       --record <DIR>
           Call the backend, then write the exchange into DIR. DIR is created when absent.
-          
+
           An explicit recording folder suppresses the platform default cache.
 
       --replay <DIR>
           Answer from DIR alone. No connection opens, and no key is read.
-          
+
           An explicit replay folder suppresses the platform default cache.
 
       --cache <DIR>
           Replay DIR and record into it, overriding THINKTHEN_CACHE and the platform default.
-          
+
           It is --record DIR and --replay DIR together, so it stands beside neither of them. A finished record is answered from disk, and only the rest goes to the backend.
 
       --no-cache
           Do not read or write the answer cache for this run.
-          
+
           Answers are otherwise cached by default in the platform cache folder. Entries contain the judged text. A new default folder is private to its owner. This option conflicts with --cache but may accompany an explicit --record or --replay folder.
 
       --timeout <SECONDS>
           Positive seconds that bound one attempt from connect to last byte, and each retry wait
-          
+
           [default: 30]
 
       --jobs <N>
           How many requests are in flight at once, from 1 to 32. [default: 4]
-          
+
           It acts in record mode and on `annotate`, where one document can make several grouped requests. Output follows the order the command defines.
 
       --max-retries <N>
           How many times a retried status is sent again. A transport failure is never sent again
-          
+
           [default: 2]
 
   -h, --help
@@ -681,12 +681,12 @@ Options:
 
       --record <DIR>
           Write the completed exchange into DIR.
-          
+
           An explicit recording folder suppresses the platform default cache.
 
       --replay <DIR>
           Answer from DIR alone.
-          
+
           An explicit replay folder suppresses the platform default cache.
 
       --cache <DIR>
@@ -694,17 +694,17 @@ Options:
 
       --no-cache
           Do not read or write answers in the default cache.
-          
+
           Answers are otherwise cached by default in the platform cache folder. Entries contain the judged text. A new default folder is private to its owner. This option conflicts with --cache but may accompany an explicit --record or --replay folder.
 
       --timeout <SECONDS>
           Positive seconds that bound one attempt from connect to last byte, and each retry wait
-          
+
           [default: 30]
 
       --max-retries <N>
           How many times a retried status is sent again. A transport failure is never sent again
-          
+
           [default: 2]
 
   -h, --help
@@ -756,7 +756,7 @@ Arguments:
 Options:
       --details
           Print the full result object in place of the bare value.
-          
+
           In record mode the object also carries `input`, the whole record as it arrived, so a row names the record it answered. `input` repeats every record in the output, and a run over large records pays for that on every row.
 
       --input <FILE>
@@ -764,27 +764,27 @@ Options:
 
       --lines
           Take each line as one text record.
-          
+
           Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
 
       --jsonl
           Take each line as one JSON record.
-          
+
           Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
 
       --csv
           Read a comma-separated table with a required header row.
-          
+
           Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
 
       --tsv
           Read a tab-separated table with a required header row.
-          
+
           Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
 
       --field <POINTER>
           Send only the part of each record this RFC 6901 pointer names.
-          
+
           Give it more than once to send an object of the named parts, keyed by the last part of each pointer. On a command that accepts one document, no record framing reads the whole input as one JSON value. The pointer is the disclosure boundary: only the pointed value leaves the machine.
 
       --dry-run
@@ -795,47 +795,47 @@ Options:
 
       --profile <FILE>
           Read enforceable backend limits and a calibration name from FILE.
-          
+
           A profile never selects an address, model, key, adapter, or cache.
 
       --model <NAME>
           The model named in the request. [default: jev-latest]
-          
+
           It outranks a `model` key in a single question file. A question set holds no model.
 
       --record <DIR>
           Call the backend, then write the exchange into DIR. DIR is created when absent.
-          
+
           An explicit recording folder suppresses the platform default cache.
 
       --replay <DIR>
           Answer from DIR alone. No connection opens, and no key is read.
-          
+
           An explicit replay folder suppresses the platform default cache.
 
       --cache <DIR>
           Replay DIR and record into it, overriding THINKTHEN_CACHE and the platform default.
-          
+
           It is --record DIR and --replay DIR together, so it stands beside neither of them. A finished record is answered from disk, and only the rest goes to the backend.
 
       --no-cache
           Do not read or write the answer cache for this run.
-          
+
           Answers are otherwise cached by default in the platform cache folder. Entries contain the judged text. A new default folder is private to its owner. This option conflicts with --cache but may accompany an explicit --record or --replay folder.
 
       --timeout <SECONDS>
           Positive seconds that bound one attempt from connect to last byte, and each retry wait
-          
+
           [default: 30]
 
       --jobs <N>
           How many requests are in flight at once, from 1 to 32. [default: 4]
-          
+
           It acts in record mode and on `annotate`, where one document can make several grouped requests. Output follows the order the command defines.
 
       --max-retries <N>
           How many times a retried status is sent again. A transport failure is never sent again
-          
+
           [default: 2]
 
   -h, --help
@@ -892,7 +892,7 @@ Options:
 
       --details
           Print the full result object in place of the bare value.
-          
+
           In record mode the object also carries `input`, the whole record as it arrived, so a row names the record it answered. `input` repeats every record in the output, and a run over large records pays for that on every row.
 
       --input <FILE>
@@ -900,27 +900,27 @@ Options:
 
       --lines
           Take each line as one text record.
-          
+
           Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
 
       --jsonl
           Take each line as one JSON record.
-          
+
           Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
 
       --csv
           Read a comma-separated table with a required header row.
-          
+
           Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
 
       --tsv
           Read a tab-separated table with a required header row.
-          
+
           Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
 
       --field <POINTER>
           Send only the part of each record this RFC 6901 pointer names.
-          
+
           Give it more than once to send an object of the named parts, keyed by the last part of each pointer. On a command that accepts one document, no record framing reads the whole input as one JSON value. The pointer is the disclosure boundary: only the pointed value leaves the machine.
 
       --dry-run
@@ -931,47 +931,47 @@ Options:
 
       --profile <FILE>
           Read enforceable backend limits and a calibration name from FILE.
-          
+
           A profile never selects an address, model, key, adapter, or cache.
 
       --model <NAME>
           The model named in the request. [default: jev-latest]
-          
+
           It outranks a `model` key in a single question file. A question set holds no model.
 
       --record <DIR>
           Call the backend, then write the exchange into DIR. DIR is created when absent.
-          
+
           An explicit recording folder suppresses the platform default cache.
 
       --replay <DIR>
           Answer from DIR alone. No connection opens, and no key is read.
-          
+
           An explicit replay folder suppresses the platform default cache.
 
       --cache <DIR>
           Replay DIR and record into it, overriding THINKTHEN_CACHE and the platform default.
-          
+
           It is --record DIR and --replay DIR together, so it stands beside neither of them. A finished record is answered from disk, and only the rest goes to the backend.
 
       --no-cache
           Do not read or write the answer cache for this run.
-          
+
           Answers are otherwise cached by default in the platform cache folder. Entries contain the judged text. A new default folder is private to its owner. This option conflicts with --cache but may accompany an explicit --record or --replay folder.
 
       --timeout <SECONDS>
           Positive seconds that bound one attempt from connect to last byte, and each retry wait
-          
+
           [default: 30]
 
       --jobs <N>
           How many requests are in flight at once, from 1 to 32. [default: 4]
-          
+
           It acts in record mode and on `annotate`, where one document can make several grouped requests. Output follows the order the command defines.
 
       --max-retries <N>
           How many times a retried status is sent again. A transport failure is never sent again
-          
+
           [default: 2]
 
   -h, --help
@@ -1021,7 +1021,7 @@ Arguments:
 Options:
       --details
           Print the full result object in place of the bare value.
-          
+
           In record mode the object also carries `input`, the whole record as it arrived, so a row names the record it answered. `input` repeats every record in the output, and a run over large records pays for that on every row.
 
       --input <FILE>
@@ -1029,27 +1029,27 @@ Options:
 
       --lines
           Take each line as one text record.
-          
+
           Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
 
       --jsonl
           Take each line as one JSON record.
-          
+
           Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
 
       --csv
           Read a comma-separated table with a required header row.
-          
+
           Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
 
       --tsv
           Read a tab-separated table with a required header row.
-          
+
           Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
 
       --field <POINTER>
           Send only the part of each record this RFC 6901 pointer names.
-          
+
           Give it more than once to send an object of the named parts, keyed by the last part of each pointer. On a command that accepts one document, no record framing reads the whole input as one JSON value. The pointer is the disclosure boundary: only the pointed value leaves the machine.
 
       --dry-run
@@ -1060,47 +1060,47 @@ Options:
 
       --profile <FILE>
           Read enforceable backend limits and a calibration name from FILE.
-          
+
           A profile never selects an address, model, key, adapter, or cache.
 
       --model <NAME>
           The model named in the request. [default: jev-latest]
-          
+
           It outranks a `model` key in a single question file. A question set holds no model.
 
       --record <DIR>
           Call the backend, then write the exchange into DIR. DIR is created when absent.
-          
+
           An explicit recording folder suppresses the platform default cache.
 
       --replay <DIR>
           Answer from DIR alone. No connection opens, and no key is read.
-          
+
           An explicit replay folder suppresses the platform default cache.
 
       --cache <DIR>
           Replay DIR and record into it, overriding THINKTHEN_CACHE and the platform default.
-          
+
           It is --record DIR and --replay DIR together, so it stands beside neither of them. A finished record is answered from disk, and only the rest goes to the backend.
 
       --no-cache
           Do not read or write the answer cache for this run.
-          
+
           Answers are otherwise cached by default in the platform cache folder. Entries contain the judged text. A new default folder is private to its owner. This option conflicts with --cache but may accompany an explicit --record or --replay folder.
 
       --timeout <SECONDS>
           Positive seconds that bound one attempt from connect to last byte, and each retry wait
-          
+
           [default: 30]
 
       --jobs <N>
           How many requests are in flight at once, from 1 to 32. [default: 4]
-          
+
           It acts in record mode and on `annotate`, where one document can make several grouped requests. Output follows the order the command defines.
 
       --max-retries <N>
           How many times a retried status is sent again. A transport failure is never sent again
-          
+
           [default: 2]
 
   -h, --help
@@ -1161,7 +1161,7 @@ Options:
 
       --details
           Print the full result object in place of the bare value.
-          
+
           In record mode the object also carries `input`, the whole record as it arrived, so a row names the record it answered. `input` repeats every record in the output, and a run over large records pays for that on every row.
 
       --input <FILE>
@@ -1169,27 +1169,27 @@ Options:
 
       --lines
           Take each line as one text record.
-          
+
           Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
 
       --jsonl
           Take each line as one JSON record.
-          
+
           Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
 
       --csv
           Read a comma-separated table with a required header row.
-          
+
           Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
 
       --tsv
           Read a tab-separated table with a required header row.
-          
+
           Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
 
       --field <POINTER>
           Send only the part of each record this RFC 6901 pointer names.
-          
+
           Give it more than once to send an object of the named parts, keyed by the last part of each pointer. On a command that accepts one document, no record framing reads the whole input as one JSON value. The pointer is the disclosure boundary: only the pointed value leaves the machine.
 
       --dry-run
@@ -1200,47 +1200,47 @@ Options:
 
       --profile <FILE>
           Read enforceable backend limits and a calibration name from FILE.
-          
+
           A profile never selects an address, model, key, adapter, or cache.
 
       --model <NAME>
           The model named in the request. [default: jev-latest]
-          
+
           It outranks a `model` key in a single question file. A question set holds no model.
 
       --record <DIR>
           Call the backend, then write the exchange into DIR. DIR is created when absent.
-          
+
           An explicit recording folder suppresses the platform default cache.
 
       --replay <DIR>
           Answer from DIR alone. No connection opens, and no key is read.
-          
+
           An explicit replay folder suppresses the platform default cache.
 
       --cache <DIR>
           Replay DIR and record into it, overriding THINKTHEN_CACHE and the platform default.
-          
+
           It is --record DIR and --replay DIR together, so it stands beside neither of them. A finished record is answered from disk, and only the rest goes to the backend.
 
       --no-cache
           Do not read or write the answer cache for this run.
-          
+
           Answers are otherwise cached by default in the platform cache folder. Entries contain the judged text. A new default folder is private to its owner. This option conflicts with --cache but may accompany an explicit --record or --replay folder.
 
       --timeout <SECONDS>
           Positive seconds that bound one attempt from connect to last byte, and each retry wait
-          
+
           [default: 30]
 
       --jobs <N>
           How many requests are in flight at once, from 1 to 32. [default: 4]
-          
+
           It acts in record mode and on `annotate`, where one document can make several grouped requests. Output follows the order the command defines.
 
       --max-retries <N>
           How many times a retried status is sent again. A transport failure is never sent again
-          
+
           [default: 2]
 
   -h, --help
@@ -1292,7 +1292,7 @@ Options:
 
       --details
           Print the full result object in place of the bare value.
-          
+
           In record mode the object also carries `input`, the whole record as it arrived, so a row names the record it answered. `input` repeats every record in the output, and a run over large records pays for that on every row.
 
       --input <FILE>
@@ -1300,27 +1300,27 @@ Options:
 
       --lines
           Take each line as one text record.
-          
+
           Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
 
       --jsonl
           Take each line as one JSON record.
-          
+
           Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
 
       --csv
           Read a comma-separated table with a required header row.
-          
+
           Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
 
       --tsv
           Read a tab-separated table with a required header row.
-          
+
           Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
 
       --field <POINTER>
           Send only the part of each record this RFC 6901 pointer names.
-          
+
           Give it more than once to send an object of the named parts, keyed by the last part of each pointer. On a command that accepts one document, no record framing reads the whole input as one JSON value. The pointer is the disclosure boundary: only the pointed value leaves the machine.
 
       --dry-run
@@ -1331,47 +1331,47 @@ Options:
 
       --profile <FILE>
           Read enforceable backend limits and a calibration name from FILE.
-          
+
           A profile never selects an address, model, key, adapter, or cache.
 
       --model <NAME>
           The model named in the request. [default: jev-latest]
-          
+
           It outranks a `model` key in a single question file. A question set holds no model.
 
       --record <DIR>
           Call the backend, then write the exchange into DIR. DIR is created when absent.
-          
+
           An explicit recording folder suppresses the platform default cache.
 
       --replay <DIR>
           Answer from DIR alone. No connection opens, and no key is read.
-          
+
           An explicit replay folder suppresses the platform default cache.
 
       --cache <DIR>
           Replay DIR and record into it, overriding THINKTHEN_CACHE and the platform default.
-          
+
           It is --record DIR and --replay DIR together, so it stands beside neither of them. A finished record is answered from disk, and only the rest goes to the backend.
 
       --no-cache
           Do not read or write the answer cache for this run.
-          
+
           Answers are otherwise cached by default in the platform cache folder. Entries contain the judged text. A new default folder is private to its owner. This option conflicts with --cache but may accompany an explicit --record or --replay folder.
 
       --timeout <SECONDS>
           Positive seconds that bound one attempt from connect to last byte, and each retry wait
-          
+
           [default: 30]
 
       --jobs <N>
           How many requests are in flight at once, from 1 to 32. [default: 4]
-          
+
           It acts in record mode and on `annotate`, where one document can make several grouped requests. Output follows the order the command defines.
 
       --max-retries <N>
           How many times a retried status is sent again. A transport failure is never sent again
-          
+
           [default: 2]
 
   -h, --help

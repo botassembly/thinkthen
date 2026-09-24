@@ -8,11 +8,11 @@ The built help, the README, the how-to index, the green how-tos, the crate descr
 
 `sdlc/scripts/demos` (rung 3) now checks the approved vocabulary over the built root help, `-h` and `--help` for all ten functions, the root README, the how-to index, and every green how-to. It prints `demos: FILE:LINE: "WORD" breaks the RULE rule` for every hit and fails on any. Its unsanctioned-hit count on this branch is 0 (`demos: 21 green, 0 red`). Before the fix it printed 93 hits.
 
-Commits: `331e85f7` (the wording, the pins, the check), `3ef97c06` (row 41), `a7987762` (row 39), and this record.
+Commits: `331e85f7` (the wording, the pins, the check), `3ef97c06` (row 41), `a7987762` (row 39), `48a57d84` (this record), `3358001c` (the clippy fix below), and `05223ae1` (main merged after 0090 landed).
 
 ## Baseline and byte diff
 
-The baseline is main at `ccc947d5`, which holds the 0088 and 0089 landing records. The branch rebased onto it before any product edit. `sdlc/records/0082-help-before.txt` holds the 21 captures from that binary: root `--help`, then `-h` and `--help` for each function in root order. `sdlc/records/0082-help-after.txt` holds the same 21 captures from this branch. Every capture exited 0 before and after.
+The baseline is main at `ccc947d5`, which holds the 0088 and 0089 landing records. The branch rebased onto it before any product edit. `sdlc/records/0082-help-before.txt` holds the 21 captures from that binary: root `--help`, then `-h` and `--help` for each function in root order. `sdlc/records/0082-help-after.txt` holds the same 21 captures from this branch. Every capture exited 0 before and after. Clap prints trailing spaces on blank lines inside long help. The committed files drop them so `git diff --check` passes, and no other byte changed.
 
 | Command | Capture | Exit | First sentence before | First sentence after |
 |---|---|---|---|---|
@@ -121,11 +121,21 @@ Every test below was written first and ran red on the baseline binary for the st
 ## Budget
 
 - Production Rust: 3 files (`cli/args.rs`, `cli/args/command.rs`, `cli/args/find.rs`), 58 lines added, +8 net nonblank. Cap: 4 files and 60 lines.
-- Rust tests: 5 files (`version.rs`, `decide_edge.rs`, `tag_edge.rs`, `find_edge.rs`, `choose_and_score_edge.rs`), 121 lines added, +99 net nonblank. Cap: 5 files and 220 lines.
+- Rust tests: 5 files (`version.rs`, `decide_edge.rs`, `tag_edge.rs`, `find_edge.rs`, `choose_and_score_edge.rs`), 124 lines added, +102 net nonblank. Cap: 5 files and 220 lines.
 - Vocabulary enforcement: `sdlc/scripts/demos` +52 and `demos-self-test` +32 nonblank, 84 in all. Cap: 140.
 - Public prose: 16 files, 0 net nonblank lines. The files are `Cargo.toml`, `README.md`, `demos/README.md`, demos 02, 16, 17, 19, 28, and 40, and `specification/` `README.md`, `channels.md`, `choose.md`, `decide.md`, `result.md`, `score.md`, and `threshold.md`. Cap: 16 files and 120 lines.
-- Ratchet: 43754 to 43861 (+107), equal to the measured Rust increase. No Rust file is near 500 nonblank lines; the largest touched is `decide_edge.rs` at 484. No dependency added.
+- Ratchet: +110 over main, equal to the measured Rust increase. The branch measured 43754 to 43864 before the merge. Main moved to 43782 with 0090, and the merged ceiling is 43892. No Rust file is near 500 nonblank lines; the largest touched is `decide_edge.rs` at 484. No dependency added.
 
 ## Gates
 
-Pending the final ladder run.
+The first lint run at `48a57d84` failed in clippy: `expect_used` on the shared `help` helper in `tests/version.rs`, which is not a test function. `3358001c` makes it return an `io::Result`. Then 0090 landed on main, and `05223ae1` merged main. The merged binary prints the same 21 captures as `sdlc/records/0082-help-after.txt`.
+
+At `05223ae1`, run one rung at a time with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset:
+
+- `sdlc/scripts/install`: exit 0.
+- `sdlc/scripts/lint`: exit 0. Ratchet `crates 43892/43892`.
+- `sdlc/scripts/test`: exit 0. 729 Rust tests passed and 0 failed. The script self-tests and `live-test: all cases passed`. The annotate global-queue test did not flake.
+- `sdlc/scripts/spec`: exit 0. `demos-self-test: 19 cases pass` and `demos: 21 green, 0 red`, with zero vocabulary hits.
+- `git diff --check`: exit 0 after the capture whitespace fix.
+
+No live or paid command ran.
