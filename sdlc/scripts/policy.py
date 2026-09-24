@@ -210,11 +210,30 @@ def check_toolchain() -> None:
         fail("toolchain", "libraries/ruby/Dockerfile installs exactly the pinned channel")
     if re.findall(r"--component\s+(\S+)", dockerfile) != ["clippy,rustfmt"]:
         fail("toolchain", "libraries/ruby/Dockerfile installs exactly clippy and rustfmt")
-    # A later rustup call or a toolchain variable could switch away from
-    # the pin after the install line (surfaces-review-7 verifier).
-    code = [line for line in dockerfile.splitlines() if not line.lstrip().startswith("#")]
-    if any("rustup" in line and "sh.rustup.rs" not in line for line in code) or "RUSTUP_TOOLCHAIN" in dockerfile:
+    if ruby_rustup_switches(dockerfile):
         fail("toolchain", "libraries/ruby/Dockerfile calls rustup only in its one install line")
+    install = (
+        "RUN curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain 1.93.1 \\\n"
+        "    --component clippy,rustfmt\n"
+    )
+    plants = (
+        install + "RUN rustup default nightly\n",
+        install + "ENV RUSTUP_TOOLCHAIN=nightly\n",
+        install.replace("1.93.1 ", "1.93.1 && rustup default nightly "),
+        install.replace("rustfmt", "rustfmt && ~/.cargo/bin/rustup default nightly"),
+    )
+    if ruby_rustup_switches(install) or not all(ruby_rustup_switches(plant) for plant in plants):
+        fail("toolchain", "the planted rustup switches are refused and the install line passes")
+
+
+def ruby_rustup_switches(dockerfile: str) -> bool:
+    """A rustup call beside the installer, or a toolchain variable, could
+    switch away from the pin (surfaces-review-7 verifier). The install
+    line is joined across its continuations and its installer URL removed,
+    so a call appended to that line counts too."""
+    joined = re.sub(r"\\\n", " ", dockerfile)
+    code = [line for line in joined.splitlines() if not line.lstrip().startswith("#")]
+    return any("rustup" in line.replace("https://sh.rustup.rs", "") for line in code) or "RUSTUP_TOOLCHAIN" in dockerfile
     if read_toml("rustfmt.toml") != {"style_edition": "2024"}:
         fail("rustfmt", "rustfmt.toml selects the 2024 style edition and nothing else")
 

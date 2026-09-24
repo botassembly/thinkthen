@@ -185,6 +185,14 @@ gnu=(
   'timeout "$T" true'  # portable-shell: data
   't=$(date +%s%3N)'  # portable-shell: data
   'sed -i "s/a/b/" f  # portable-shell: data'  # portable-shell: data
+  'sed -Ei "s/a/b/" f'  # portable-shell: data
+  'sed -ni "s/a/b/p" f'  # portable-shell: data
+  'sed -e "s/a/b/;s/c/d/" -i f'  # portable-shell: data
+  "sed -i'' 's/a/b/' f"  # portable-shell: data
+  'sed -i"" "s/a/b/" f'  # portable-shell: data
+  '"timeout" 5 true'  # portable-shell: data
+  't=$(date +%s%-3N)'  # portable-shell: data
+  'x=$(sed -i "s/a/b/" f)'  # portable-shell: data
 )
 printf '%s\n' "${gnu[@]}" \
   '# timeout 5 in a comment' 'sed -i.bak "s/a/b/" f' '"$TIMEOUT" 5 true' 'psql --timeout 5' >"$planted"  # portable-shell: data
@@ -193,6 +201,26 @@ status=0
 said=$(bash scripts/check_portable_shell.sh "$planted") || status=$?
 rm -f "$planted"
 expect "GNU-only shell spellings, and a data mark outside the checker" "$status:$said" "$want"
+
+# A continuation line carries the -i, and the hit names the first line.
+printf '%s\n' 'echo start' 'sed \' '  -i "s/a/b/" f' >"$planted"  # portable-shell: data
+status=0
+said=$(bash scripts/check_portable_shell.sh "$planted") || status=$?
+rm -f "$planted"
+expect "sed -i on a continuation line" "$status:$said" "1:FAIL     $planted:2:sed   -i \"s/a/b/\" f"  # portable-shell: data
+
+# With no arguments the check lists tracked shell scripts by name and by
+# shebang, so an extension-less script outside sdlc/scripts is read.
+bare=$(mktemp -d "${TMPDIR:-/tmp}/gate-bare.XXXXXX")
+mkdir -p "$bare/scripts" "$bare/probes/x"
+cp scripts/check_portable_shell.sh "$bare/scripts/"
+printf '#!/usr/bin/env bash\nsed -i "s/a/b/" f\n' >"$bare/probes/x/run"  # portable-shell: data
+printf '#!/usr/bin/env python3\nimport os  # sed -i x f\n' >"$bare/probes/x/tool"  # portable-shell: data
+git -C "$bare" init -q && git -C "$bare" add -A
+status=0
+said=$(bash "$bare/scripts/check_portable_shell.sh") || status=$?
+rm -rf "$bare"
+expect "an extension-less script found by its shebang" "$status:$said" '1:FAIL     probes/x/run:2:sed -i "s/a/b/" f'  # portable-shell: data
 
 # A missing file fails, and a tree without git fails rather than
 # reading no script.
