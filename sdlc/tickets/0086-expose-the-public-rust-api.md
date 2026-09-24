@@ -76,15 +76,31 @@ Re-score if implementation changes public semantics, requires a new dependency o
 
 ## Amended 2026-09-24
 
-0084 adds `EngineBuilder::from_env() -> Result<EngineBuilder, Error>`. It reads the environment exactly as `Engine::from_env` does, and `Engine::from_env` becomes `EngineBuilder::from_env()?.build()`. The environment is read in one place. The inventory check counts the new member. Tests:
+0084 adds `EngineBuilder::from_env() -> Result<EngineBuilder, Error>`, and `Engine::from_env` becomes `EngineBuilder::from_env()?.build()`. The inventory check counts the new member. The command keeps its own reader in `cli/edge.rs`, so the tests below compare the two readers.
 
-- With nothing overridden, an engine built from `EngineBuilder::from_env()` equals one from `Engine::from_env()` in settings, request digests, and refusals. It runs in a child process with the environment set, like the R4-24 test.
-- Each ADR 0017 section 5 override takes effect after the environment seed: `width`, `max_requests`, `cache_at`, `no_cache`, `default_cache`, and `cache_bytes`. Each is observed through a counted loopback listener or the cache folder.
-- The key never appears in the builder's or the engine's `Debug` output.
-- Seeding and building create no wire traffic; the listener counts zero requests.
-- Planted bug: a seed that skips the cache variable, and the equality test turns red.
+What is read, and when:
 
-Ticket 0085 needs no change, because the facade takes typed settings and the public layer owns environment capture.
+- `from_env` reads what `Environment::read` reads: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, the XDG cache home, and the XDG config file (model, cache on or off, `cache_bytes`). It never reads a `THINKTHEN_TEST_*` variable.
+- `from_env` captures every value when it is called, the key included. The setters and `build` read no environment. A builder seeded at one time and built later uses the seed-time values.
+- `from_env` also resolves the default cache folder, once. `default_cache()` selects that captured folder, so a seeded builder never resolves the XDG path again. `Engine::builder()` keeps 0084's own resolution at `build`.
+- A malformed variable or config field returns `Error::Usage` from `from_env`, naming the variable or file and never a key value. A config file that exists but cannot be read returns `Error::Local`.
+- A missing cache home (no `HOME`) does not fail `from_env`. A host such as a database service account calls `from_env()?.no_cache()` or `.cache_at(..)`. `build` fails with `Usage` only if the default cache is still selected, with the command's sentence: "no default cache folder is available; set THINKTHEN_CACHE or use no_cache".
+- The seed leaves width omitted until `width()` is called, as 0077 requires of `Engine::from_env`.
+- The builder holds settings only. `from_env` opens no file, creates no counter or usage handle, registers no width, and installs no handler. Registration and process state start at `build`, inside 0096's `ProcessState` accessor. A builder seeded in a parent and built in a forked child carries the parent's snapshot and gets fresh child state.
+
+Tests, each in a child process with the environment set, like the R4-24 test:
+
+- Oracle equality: with `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, and a fixture config under `XDG_CONFIG_HOME`, an engine from `EngineBuilder::from_env()?.build()` equals one from `Engine::builder()` given each value explicitly. The comparison covers settings through a private `cfg(test)` settings seam and request digests on a counted listener. The same environment's command plan (`plan_document`) names the same address, model, and cache folder.
+- Width stays omitted after seeding, and the seam shows `None`. In its own child process, `from_env()?.width(8)?.build()` registers 8, and after an explicit 4 it fails with 0077's conflict diagnostic.
+- Overrides after the seed take effect: `max_requests`, `cache_at`, `no_cache`, `default_cache`, and `cache_bytes`, each observed through the settings seam, and cache placement also through the folder. With environment key A, `api_key(B)` makes the listener see B. `base_url(second)` moves the digest and the send to the second listener; this carries R4-24 onto the path surfaces use. `model` overrides the config model.
+- A malformed variable returns `Usage` naming it. An unreadable config returns `Local`. With `HOME` unset, `from_env()?.no_cache()?.build()` succeeds, and `from_env()?.build()` fails with the sentence above.
+- Secrecy: a sentinel key set both by the variable and by `api_key` never appears in `{:?}` or `{:#?}` of the builder or the engine, nor in the `Display` or `Debug` of an error returned after the key was set.
+- No effects: seeding and building send nothing on the listener, and seeding creates no file, counter, or width registration.
+- Planted bug: a seed that skips `THINKTHEN_CACHE`, and the oracle equality test turns red.
+
+`sdlc/scripts/package` gains `cargo test --locked --offline --package thinkthen --no-default-features`, the one library-only run it lacks.
+
+Ticket 0085 needs no change. The facade takes typed settings and reads no environment, and the public layer owns environment capture.
 
 ## Review
 
