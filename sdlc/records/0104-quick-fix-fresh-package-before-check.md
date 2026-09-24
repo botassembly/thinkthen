@@ -1,6 +1,6 @@
 # 0104: Fresh package before the check
 
-Status: awaiting a fresh review. Not merged.
+Status: landed. A fresh review of `62c89764` accepted it (`sdlc/records/0104-review.md`) and kept the plant in `lint`.
 
 ## Result
 

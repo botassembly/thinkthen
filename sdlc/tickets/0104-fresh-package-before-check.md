@@ -6,7 +6,7 @@ opens: lint
 
 # 0104: Fresh package before the check
 
-Status: in review. Owner: Claude.
+Status: landed. Owner: Claude. The review accepted it (`sdlc/records/0104-review.md`).
 
 ## Outcome and authority
 
