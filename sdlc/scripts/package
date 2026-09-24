@@ -40,6 +40,9 @@ RS
 }
 prove_private target/private-proof-default
 prove_private target/private-proof-no-default --no-default-features
+# Ticket 0104: `cargo package` rewrites a stale crate without truncating it, and
+# `tar` then refuses the trailing bytes. Remove it first. `lint` plants one.
+rm -f -- target/package/thinkthen-*.crate
 # The conformance backend is a test-only member and never ships (ticket 0092).
 cargo package --locked --offline --allow-dirty --package thinkthen
 
