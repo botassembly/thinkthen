@@ -22,7 +22,7 @@ The API stays blocking. `Engine` construction validates settings and creates no 
 
 Implement the frozen builders directly in this crate. `Description` supports the ruled typed fields and additional ordered keys. Question, question-set, recognition, and relation builders preserve the production grammar and canonical bytes. Builder steps that can fail return `Result` at the failing step. The declarative `choices!` macro and `Choice` trait live in `thinkthen`; the macro emits the frozen inherent helpers and trait implementation. The first API has no derive and no generated user type. Structured annotate forms use the explicit builder fixed by the typed-builder ruling.
 
-Call options carry only the frozen caller controls. Public cancellation is a clonable token safe to set from another thread. A deadline is an absolute instant derived from the caller's budget at call time. They are the cancel token, the deadline forms, and 0095's interrupt check, which delegates to 0085's private check. No host signal hook appears. A past deadline or already-cancelled token sends nothing. The six public kinds remain `usage`, `backend`, `local`, `cancelled`, `deadline`, and `defect`, with the frozen retryable signal and structured source data. No public signature returns a string error or `Box<dyn Error>`.
+Call options carry only the frozen caller controls. Public cancellation is a clonable token safe to set from another thread. A deadline is an absolute instant derived from the caller's budget at call time. They are the cancel token, the deadline forms, and 0095's interrupt check, which delegates to 0097's private check. No host signal hook appears. A past deadline or already-cancelled token sends nothing. The six public kinds remain `usage`, `backend`, `local`, `cancelled`, `deadline`, and `defect`, with the frozen retryable signal and structured source data. No public signature returns a string error or `Box<dyn Error>`.
 
 Return the frozen typed values and detailed results without converting through command JSON. Preserve `Answer::Unsure`, ordered bulk results, partial per-question failures, request digests, sends, cache state, model, usage, entity strength, relation probability, and `source`/`target` exactly as 0084 defines them.
 
@@ -103,6 +103,16 @@ Tests, each in a child process with the environment set, like the R4-24 test. Ev
 Ticket 0085 needs no change. The facade takes typed settings and reads no environment, and the public layer owns environment capture.
 
 Amended 2026-09-24: 0078 made `nix` (feature `signal`) a Unix library dependency and `signal-hook` CLI-only. The library-graph check follows it, and 0086 adds no dependency.
+
+## Builder note from 0097, 2026-09-24
+
+The 0097 code review (`sdlc/records/0097-run-the-host-interrupt-check.md` on `ticket/0097-interrupt-check`) left five duties to this ticket:
+
+1. `Batch::next` calls the private stop poll, `Cancel::stop_or_remaining`, on the calling thread at each tick. `Batch` is neither `Send` nor `Sync`, so the check's thread ID holds while the batch stays on the thread that built it.
+2. Each public call attaches the check with `Cancel::with_check` at call entry, on the calling thread. That call records the thread ID. A check attached anywhere else never runs.
+3. The door tells a check panic from an engine defect before it maps a panic to `Defect`. 0097 resumes the host's payload unchanged and leaves no marker. One answer: the public wrapper catches the panic around the host closure, stores the payload, returns `true`, and resumes the payload after the call joins. This ticket picks one answer and records it.
+4. A `true` check fires the shared stop flag. When the host passes its own cancel token, `is_cancelled()` then reads `true`, and every sibling call on that token stops. This ticket states that in the public docs, or gives each call its own flag.
+5. When the public interrupt tests land, the facade rows in `engine/facade_tests/interrupt_tests.rs` move to `CallOptions::interrupt` or are deleted, so one contract is tested at one layer.
 
 ## Review
 
