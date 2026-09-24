@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core/recognize.rs crates/thinkthen/src/core/records.
 
 # 0102: Redact recognized names in Debug output
 
-Status: in review. Owner: Claude. Record: `sdlc/records/0102-redact-recognized-names-in-debug.md`.
+Status: landed on main after a fresh review accepted it (`sdlc/records/0102-review.md`). Owner: Claude. Record: `sdlc/records/0102-redact-recognized-names-in-debug.md`.
 
 ## Outcome
 

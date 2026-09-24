@@ -1,6 +1,6 @@
 # 0102: Redact recognized names in Debug output
 
-Status: built on `ticket/0102-redact-recognized-names-in-debug`, awaiting a fresh review. Quick Fix under `sdlc/tickets/0102-redact-recognized-names-in-debug.md`.
+Status: landed. A fresh review accepted it (`sdlc/records/0102-review.md`). Quick Fix under `sdlc/tickets/0102-redact-recognized-names-in-debug.md`.
 
 ## Result
 
@@ -20,7 +20,7 @@ The new test `cli::failure::tests::no_recognize_debug_line_shows_the_evidence` f
 
 ## Size
 
-The ratchet rose by 89 non-blank lines, from 44335 to 44424. The Debug impls add 50 lines and the test adds 39. The commit message names where I looked for duplication.
+The ratchet rose by 89 non-blank lines. It went from 44335 to 44424 on the first build and from 44778 to 44867 after the rebase onto 0091. The Debug impls add 50 lines and the test adds 39. The commit message names where I looked for duplication.
 
 ## Ladder
 
