@@ -6,11 +6,11 @@ opens: sdlc/tickets/0084-freeze-the-public-rust-contract.md sdlc/planning/adr/00
 
 # 0084: Freeze the public Rust contract
 
-Status: ready
+Status: draft, design not reviewed. Owner: Claude. Was accepted after three remediation passes; reopened 2026-09-24 so it can carry all nine surfaces.
 
 ## Outcome and authority
 
-Specify the candidate Rust source contract for ten user functions before 0085 and 0086 expose it. This ticket changes design records only.
+Specify the candidate Rust source contract for ten user functions before 0085 and 0086 expose it.
 
 0080 and 0081 own `recognize` and `relate` behavior but exclude public Rust. This ticket owns their Rust shape. ADR 0017 owns one blocking crate, shared options, and six error kinds. Its proposed amendment names the authorized ten functions. `decide_many`, `details`, and `usage` are supporting forms.
 
@@ -18,12 +18,16 @@ This design may be reviewed and recorded now. `Engine`, `EngineBuilder`, and `de
 
 ## Fixed boundaries
 
-- One `thinkthen` package supplies library and default-`cli` binary. Modules stay private. No connector, planner, callback, C symbol, async form, runtime, second crate, or proc macro is public.
+- One `thinkthen` package supplies library and default-`cli` binary. Modules stay private. No connector, planner, C symbol, async form, runtime, second crate, or proc macro is public. The one public callback is 0095's interrupt check.
 - All calls block. Every fallible constructor or builder step returns `Result<_, Error>` at the step that receives the bad value. Builder terminal methods consume the builder.
 - `ChooseQuestion<C>` and `TagQuestion<C>` retain their `Choice` type from builder through call. `Question` holds decide, score, rank, find, and parsed unbound values; `into_choose::<C>` and `into_tag::<C>` check a loaded value before binding it. `BandedQuestion` is separate. Only `decide` and `details` accept a band. `filter(&BandedQuestion, ..)` does not compile; a non-decision `Question` returns `Error::Usage` before an external effect.
 - Streaming functions are `filter`, `decide_many`, and `annotate`. They accept `IntoIterator`, return `Batch`, bound retained work by effective width, and preserve input order. `rank`, `find`, and `relate` consume a finite iterator before they can answer and return one finite aggregate.
 - Bulk records implement `Evidence`; `String` and `&str` work directly. JSON Pointer extraction stays command-only in 0.1.
 - The first release keeps the typed `Description` and `QuestionSet` builders, `choices!`, and no derive. Structured descriptions retain insertion order. Duplicate named or extension fields fail. An implicit engine omits width; it never materializes the command default as an explicit width.
+
+## Changes on reopening, 2026-09-24
+
+Ticket 0095 adds the binding members and records why these changed here: `Batch` carries `'a`; `Evidence::evidence` returns `&str`; `deadline_after` returns `Result` and refuses a budget above 4,294,967,295 seconds; `both_ways` takes two kinds; `width` refuses 0 and anything above 32. `Question::from_json` and `QuestionSet::from_json` report a broken rule as `Usage`, and `load` reports it as `Local`, as `question-file.md` rules for a named file. Ticket 0086 checks 0084 and 0095 as one inventory.
 
 ## Normative public inventory
 
@@ -44,20 +48,20 @@ impl Engine {
     pub fn score_with(&self, question: &Question, evidence: &str, options: CallOptions<'_>) -> Result<f64, Error>;
     pub fn tag<C: Choice>(&self, question: &TagQuestion<C>, evidence: &str) -> Result<Vec<C>, Error>;
     pub fn tag_with<C: Choice>(&self, question: &TagQuestion<C>, evidence: &str, options: CallOptions<'_>) -> Result<Vec<C>, Error>;
-    pub fn filter<I>(&self, question: &Question, records: I) -> Batch<I::Item> where I: IntoIterator, I::Item: Evidence;
-    pub fn filter_with<I>(&self, question: &Question, records: I, options: CallOptions<'_>) -> Batch<I::Item> where I: IntoIterator, I::Item: Evidence;
+    pub fn filter<'a, I>(&'a self, question: &'a Question, records: I) -> Batch<'a, I::Item> where I: IntoIterator + 'a, I::Item: Evidence;
+    pub fn filter_with<'a, I>(&'a self, question: &'a Question, records: I, options: CallOptions<'a>) -> Batch<'a, I::Item> where I: IntoIterator + 'a, I::Item: Evidence;
     pub fn rank<I>(&self, question: &Question, records: I) -> Result<Vec<Ranked<I::Item>>, Error> where I: IntoIterator, I::Item: Evidence;
     pub fn rank_with<I>(&self, question: &Question, records: I, options: CallOptions<'_>) -> Result<Vec<Ranked<I::Item>>, Error> where I: IntoIterator, I::Item: Evidence;
     pub fn find<I>(&self, question: &Question, units: I) -> Result<Found<I::Item>, Error> where I: IntoIterator, I::Item: Evidence;
     pub fn find_with<I>(&self, question: &Question, units: I, options: CallOptions<'_>) -> Result<Found<I::Item>, Error> where I: IntoIterator, I::Item: Evidence;
-    pub fn annotate<I>(&self, questions: &QuestionSet, records: I) -> Batch<AnnotatedRecord<I::Item>> where I: IntoIterator, I::Item: Evidence;
-    pub fn annotate_with<I>(&self, questions: &QuestionSet, records: I, options: CallOptions<'_>) -> Batch<AnnotatedRecord<I::Item>> where I: IntoIterator, I::Item: Evidence;
+    pub fn annotate<'a, I>(&'a self, questions: &'a QuestionSet, records: I) -> Batch<'a, AnnotatedRecord<I::Item>> where I: IntoIterator + 'a, I::Item: Evidence;
+    pub fn annotate_with<'a, I>(&'a self, questions: &'a QuestionSet, records: I, options: CallOptions<'a>) -> Batch<'a, AnnotatedRecord<I::Item>> where I: IntoIterator + 'a, I::Item: Evidence;
     pub fn recognize(&self, ask: &Recognize, evidence: &str) -> Result<Recognized, Error>;
     pub fn recognize_with(&self, ask: &Recognize, evidence: &str, options: CallOptions<'_>) -> Result<Recognized, Error>;
     pub fn relate<I>(&self, ask: &Relate, entities: I) -> Result<Vec<Edge>, Error> where I: IntoIterator<Item = Entity>;
     pub fn relate_with<I>(&self, ask: &Relate, entities: I, options: CallOptions<'_>) -> Result<Vec<Edge>, Error> where I: IntoIterator<Item = Entity>;
-    pub fn decide_many<I, Q: DecisionQuestion + ?Sized>(&self, question: &Q, records: I) -> Batch<Row<I::Item, Answer>> where I: IntoIterator, I::Item: Evidence;
-    pub fn decide_many_with<I, Q: DecisionQuestion + ?Sized>(&self, question: &Q, records: I, options: CallOptions<'_>) -> Batch<Row<I::Item, Answer>> where I: IntoIterator, I::Item: Evidence;
+    pub fn decide_many<'a, I, Q: DecisionQuestion + ?Sized>(&'a self, question: &'a Q, records: I) -> Batch<'a, Row<I::Item, Answer>> where I: IntoIterator + 'a, I::Item: Evidence;
+    pub fn decide_many_with<'a, I, Q: DecisionQuestion + ?Sized>(&'a self, question: &'a Q, records: I, options: CallOptions<'a>) -> Batch<'a, Row<I::Item, Answer>> where I: IntoIterator + 'a, I::Item: Evidence;
     pub fn details<Q: DetailQuestion + ?Sized>(&self, question: &Q, evidence: &str) -> Result<Details, Error>;
     pub fn details_with<Q: DetailQuestion + ?Sized>(&self, question: &Q, evidence: &str, options: CallOptions<'_>) -> Result<Details, Error>;
     pub fn usage(&self) -> Counters;
@@ -71,20 +75,20 @@ pub fn score(question: &Question, evidence: &str) -> Result<f64, Error>;
 pub fn score_with(question: &Question, evidence: &str, options: CallOptions<'_>) -> Result<f64, Error>;
 pub fn tag<C: Choice>(question: &TagQuestion<C>, evidence: &str) -> Result<Vec<C>, Error>;
 pub fn tag_with<C: Choice>(question: &TagQuestion<C>, evidence: &str, options: CallOptions<'_>) -> Result<Vec<C>, Error>;
-pub fn filter<I>(question: &Question, records: I) -> Batch<I::Item> where I: IntoIterator, I::Item: Evidence;
-pub fn filter_with<I>(question: &Question, records: I, options: CallOptions<'_>) -> Batch<I::Item> where I: IntoIterator, I::Item: Evidence;
+pub fn filter<'a, I>(question: &'a Question, records: I) -> Batch<'a, I::Item> where I: IntoIterator + 'a, I::Item: Evidence;
+pub fn filter_with<'a, I>(question: &'a Question, records: I, options: CallOptions<'a>) -> Batch<'a, I::Item> where I: IntoIterator + 'a, I::Item: Evidence;
 pub fn rank<I>(question: &Question, records: I) -> Result<Vec<Ranked<I::Item>>, Error> where I: IntoIterator, I::Item: Evidence;
 pub fn rank_with<I>(question: &Question, records: I, options: CallOptions<'_>) -> Result<Vec<Ranked<I::Item>>, Error> where I: IntoIterator, I::Item: Evidence;
 pub fn find<I>(question: &Question, units: I) -> Result<Found<I::Item>, Error> where I: IntoIterator, I::Item: Evidence;
 pub fn find_with<I>(question: &Question, units: I, options: CallOptions<'_>) -> Result<Found<I::Item>, Error> where I: IntoIterator, I::Item: Evidence;
-pub fn annotate<I>(questions: &QuestionSet, records: I) -> Batch<AnnotatedRecord<I::Item>> where I: IntoIterator, I::Item: Evidence;
-pub fn annotate_with<I>(questions: &QuestionSet, records: I, options: CallOptions<'_>) -> Batch<AnnotatedRecord<I::Item>> where I: IntoIterator, I::Item: Evidence;
+pub fn annotate<'a, I>(questions: &'a QuestionSet, records: I) -> Batch<'a, AnnotatedRecord<I::Item>> where I: IntoIterator + 'a, I::Item: Evidence;
+pub fn annotate_with<'a, I>(questions: &'a QuestionSet, records: I, options: CallOptions<'a>) -> Batch<'a, AnnotatedRecord<I::Item>> where I: IntoIterator + 'a, I::Item: Evidence;
 pub fn recognize(ask: &Recognize, evidence: &str) -> Result<Recognized, Error>;
 pub fn recognize_with(ask: &Recognize, evidence: &str, options: CallOptions<'_>) -> Result<Recognized, Error>;
 pub fn relate<I>(ask: &Relate, entities: I) -> Result<Vec<Edge>, Error> where I: IntoIterator<Item = Entity>;
 pub fn relate_with<I>(ask: &Relate, entities: I, options: CallOptions<'_>) -> Result<Vec<Edge>, Error> where I: IntoIterator<Item = Entity>;
-pub fn decide_many<I, Q: DecisionQuestion + ?Sized>(question: &Q, records: I) -> Batch<Row<I::Item, Answer>> where I: IntoIterator, I::Item: Evidence;
-pub fn decide_many_with<I, Q: DecisionQuestion + ?Sized>(question: &Q, records: I, options: CallOptions<'_>) -> Batch<Row<I::Item, Answer>> where I: IntoIterator, I::Item: Evidence;
+pub fn decide_many<'a, I, Q: DecisionQuestion + ?Sized>(question: &'a Q, records: I) -> Batch<'a, Row<I::Item, Answer>> where I: IntoIterator + 'a, I::Item: Evidence;
+pub fn decide_many_with<'a, I, Q: DecisionQuestion + ?Sized>(question: &'a Q, records: I, options: CallOptions<'a>) -> Batch<'a, Row<I::Item, Answer>> where I: IntoIterator + 'a, I::Item: Evidence;
 pub fn details<Q: DetailQuestion + ?Sized>(question: &Q, evidence: &str) -> Result<Details, Error>;
 pub fn details_with<Q: DetailQuestion + ?Sized>(question: &Q, evidence: &str, options: CallOptions<'_>) -> Result<Details, Error>;
 pub fn usage() -> Result<Counters, Error>;
@@ -104,7 +108,7 @@ impl EngineBuilder {
     pub fn build(self) -> Result<Engine, Error>;
 }
 
-pub trait Evidence { fn evidence(&self) -> Result<&str, Error>; }
+pub trait Evidence { fn evidence(&self) -> &str; }
 impl Evidence for String {}
 impl Evidence for &str {}
 pub trait DecisionQuestion: private::Sealed {}
@@ -222,16 +226,16 @@ impl<'a> CallOptions<'a> {
     pub const fn new() -> Self;
     pub const fn cancel(self, value: &'a CancelToken) -> Self;
     pub fn deadline_at(self, value: std::time::Instant) -> Self;
-    pub fn deadline_after(self, value: std::time::Duration) -> Self;
+    pub fn deadline_after(self, value: std::time::Duration) -> Result<Self, Error>;
 }
 pub struct CancelToken { /* private */ }
 impl Clone for CancelToken {}
 impl std::fmt::Debug for CancelToken {}
 impl Default for CancelToken {}
 impl CancelToken { pub fn new() -> Self; pub fn cancel(&self); pub fn is_cancelled(&self) -> bool; }
-pub struct Batch<T> { /* private */ }
-impl<T> std::fmt::Debug for Batch<T> {}
-impl<T> Iterator for Batch<T> { type Item = Result<T, Error>; }
+pub struct Batch<'a, T> { /* private */ }
+impl<T> std::fmt::Debug for Batch<'_, T> {}
+impl<T> Iterator for Batch<'_, T> { type Item = Result<T, Error>; }
 
 pub enum Answer { Yes, No, Unsure }
 pub enum Judgment { Decision(Answer), Choice(Option<String>), Score(f64), Tags(Vec<String>) }
@@ -277,7 +281,7 @@ impl Kind { pub fn new(name: &str, description: Option<Description>) -> Result<S
 pub struct RelationRule { /* private */ }
 impl RelationRule {
     pub fn one_way(name: &str, source: &str, target: &str) -> Result<Self, Error>;
-    pub fn both_ways(name: &str, kind: &str) -> Result<Self, Error>;
+    pub fn both_ways(name: &str, source: &str, target: &str) -> Result<Self, Error>;
     pub fn reads(self, value: &str) -> Result<Self, Error>;
     pub fn name(&self) -> &str;
 }
@@ -330,7 +334,7 @@ The crate root exports `choices!` and no module. The macro accepts attributes, v
 
 `Usage` is only the optional provider token report attached to one `Details`. `Counters` is the broader process total returned by `Engine::usage`; it includes sends from failed calls and retries and has no reset. `requests_sent` in `Details` counts successful-result attempts only. These three counts never share a type.
 
-Public `Error` tuple variants are constructors for stable matching. `ErrorDetail` has no public constructor or string conversion; `Error` has no string-based constructor or conversion. Callers cannot manufacture an engine detail from prose.
+Public `Error` tuple variants are constructors for stable matching. `ErrorDetail` has no public constructor or string conversion; `Error` has no string-based constructor or conversion.
 
 `DescriptionBuilder::example` is the sole examples method. Each call appends its string to one JSON array in call order. The `examples` member occupies the object's position of the first `example` call, appears once, and is omitted when no example was added. Thus `what("x")?.example("a")?.not_for("y")?.example("b")?.build()?` emits `{"what":"x","examples":["a","b"],"not_for":"y"}`. `field_json("examples", ..)` conflicts with `example` in either order and fails on the call that introduces the conflict. Strings are preserved except required JSON escaping; no call sorts or normalizes them.
 
@@ -342,7 +346,7 @@ Each choose option or tag label must be the next member of `C::labels()`; a dupl
 
 `Found::candidates` contains every input in stable order and the synthetic `none` candidate last when enabled. `selected` borrows the chosen original input. `Ranked` owns the original input. `Recognized::relations()` returns `None` when no rule was supplied and `Some(&[])` when rules produced no edge. Recognition offsets count Unicode scalar values; the helpers return `None` for an invalid engine range and never panic. `Relation` repeats complete recognized endpoints. `Edge` repeats complete standalone `Entity` endpoints.
 
-`RecognizeBuilder` accepts zero to twenty uniquely named kinds in insertion order. Zero kinds means `person`, `organization`, and `place`, in that order. Name and relation cuts default to inclusive `0.5`. Rules are uniquely named and preserve insertion order. `RelateBuilder` requires at least one uniquely named rule and defaults its inclusive cut to `0.5`. `relate` accepts at most 255 unique `name` plus `kind` entities, preserves iterator order, and rejects an exact duplicate before an external effect. `RelationRule::both_ways(name, "*")` is the library spelling of bare `--either NAME`; a concrete value names the same kind at both ends. Neither builder exposes planner selection, one/many, packing, recognition policy, or a second input set.
+`RecognizeBuilder` accepts zero to twenty uniquely named kinds in insertion order. Zero kinds means `person`, `organization`, and `place`, in that order. Name and relation cuts default to inclusive `0.5`. Rules are uniquely named and preserve insertion order. `RelateBuilder` requires at least one uniquely named rule and defaults its inclusive cut to `0.5`. `relate` accepts at most 255 unique `name` plus `kind` entities, preserves iterator order, and rejects an exact duplicate before an external effect. `RelationRule::both_ways(name, "*", "*")` is the library spelling of bare `--either NAME`; two kinds match a relate-file rule with `"either":true`. Neither builder exposes planner selection, one/many, packing, recognition policy, or a second input set.
 
 ## Runtime ownership after acceptance
 
@@ -354,23 +358,23 @@ After the post-0078 reconciliation, 0086 owns public delegation, lazy `default_e
 
 Ticket 0086 extracts the inventory into signature fixtures and records normalized `cargo public-api` output. Compile-pass fixtures cover every declaration, all methods and free functions, a `ChooseQuestion<Team>` returning `Option<Team>`, a `TagQuestion<Topic>` returning `Vec<Topic>`, checked loaded-question binding, both description forms including repeated `example`, question-set insertion, every builder terminal, exhaustive error matching, `Batch`, `Send + Sync`, recognition slicing, and relation endpoints.
 
-Compile-fail fixtures prove a band cannot reach `filter`; unfinished builders, typed choice mismatches, and unbound loaded choices fail; and no derive, async method, reset, public module, connector, planner, callback, mutable result field, public `ErrorDetail` constructor, or string-based `Error` constructor/conversion exists. Public tuple variants remain constructors.
+Compile-fail fixtures prove a band cannot reach `filter`; unfinished builders, typed choice mismatches, and unbound loaded choices fail; and no derive, async method, reset, public module, connector, planner, callback beyond the interrupt check, mutable result field, public `ErrorDetail` constructor, or string-based `Error` constructor/conversion exists. Public tuple variants remain constructors.
 
-Package proof compares Cargo metadata with and without default features and rejects every package activated only by `cli`, including `clap`, `csv-core`, and `nix`. `signal-hook` is currently nonoptional and remains in the library graph; 0084 does not misclassify or move it. Ticket 0078 owns signal dependency placement. After it lands, 0086 records the accepted classification and rejects `signal-hook` only if 0078 makes it CLI-only. Run `cargo check --locked -p thinkthen --no-default-features`, `cargo test --locked -p thinkthen --no-default-features`, and `cargo package --locked -p thinkthen --no-default-features`. The binary still requires `cli`; one package supplies both targets.
+Package proof compares Cargo metadata with and without default features and rejects every package activated only by `cli`, including `clap`, `csv-core`, and `nix`. Ticket 0078 owns `signal-hook` placement; 0086 rejects it only if 0078 made it CLI-only. Run `cargo check --locked -p thinkthen --no-default-features`, `cargo test --locked -p thinkthen --no-default-features`, and `cargo package --locked -p thinkthen --no-default-features`.
 
 0084 acceptance is design-only: the proposed ADR amendment and this ticket agree; the signature block parses as the fixture generator's input; every public name has one owner and one exact shape; `wc -m` stays under 30,000; and `git diff --check` passes. No compile check is credited as proof of runtime behavior.
 
 ## Dependencies and exclusions
 
-0080/0081 supply product behavior; 0076/0077 supply deadline and width behavior. 0078 blocks the `Engine` portion's freeze and both implementation tickets. Reconcile only the list under Outcome and authority after it lands. 0086 follows 0085.
+0080/0081 supply behavior; 0076/0077 deadline and width. 0095 is reviewed beside it. 0078 blocks the `Engine` portion, as Outcome states. 0086 follows 0085.
 
-Excluded: implementation, dependencies, features, ratchets, publication, C ABI, bindings, live calls, and paid calls. `surfaces` is evidence only; its second crate and public connector do not ship.
+Excluded: implementation, dependencies, features, ratchets, publication, C ABI, bindings, live calls, and paid calls. `surfaces` is evidence only.
 
 ## Complexity
 
-Contract 2; state and timing 0; reach 2; proof 2; cost of error 1; total 7. Minimum floor: none. Final level: 3. Reasons: this ticket fixes a new public compatibility surface used by later bindings, and its proof needs exhaustive compile and package compatibility checks; it changes no state or runtime behavior. Selected implementation model for the later code ticket: `gpt-5.6-sol`, medium reasoning. Re-score 0085 and 0086 independently when each starts.
+Contract 2; state and timing 0; reach 2; proof 2; cost of error 1; total 7. Final level: 3. Re-score 0085 and 0086 when each starts.
 
 ## Review
 
-- Design review: accepted after three remediation passes. The final reviewer found no remaining material contradiction or impossible acceptance claim.
-- Code review: not applicable; this ticket changes design records only.
+- Design review: pending for the 2026-09-24 changes, together with 0095.
+- Code review: not applicable; design records only.

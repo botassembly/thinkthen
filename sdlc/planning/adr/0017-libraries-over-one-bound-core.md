@@ -140,6 +140,10 @@ Ian authorized `recognize` and `relate` after this ADR fixed the original eight-
 
 Tickets 0080 and 0081 own command behavior and the shared planner and exclude public library APIs. Ticket 0084 owns the Rust builders, calls, and values. Its design may be reviewed and recorded before ticket 0078 lands, but its `Engine`, `EngineBuilder`, and `default_engine` declarations remain provisional. Ticket 0078 must land before that portion is frozen and before 0085 or 0086 implementation. Then reconcile construction, `Engine`'s `Clone + Send + Sync + Debug` promises, implicit-engine initialization, omitted-width registration, fork recovery, and signal dependency placement. A change outside that list reopens full 0084 design review. This amendment changes no behavior by itself. Ian can overturn it before implementation.
 
+## Proposed amendment, 2026-09-24: the interrupt check is a public call option
+
+Section 4 gives the poll callback to the binding and keeps it off the public surface. A binding crate reaches only the public API, so it cannot hand the engine a callback through private code. Ian accepted queue item 7 of `sdlc/planning/one-line-plan-2026-09-24.md` on 2026-09-24: the public contract gains an interrupt check. Ticket 0095 defines `CallOptions::interrupt`. The engine runs it only on the calling thread, at each poll while the call waits. A `true` return acts as the call's cancel token firing at that moment. The binding still decides what the check does: Python checks signals, PostgreSQL runs its interrupt check, SQLite reads its progress state. No signal handler enters the engine. Ian can overturn it.
+
 ### Ruled after acceptance, 2026-09-21: the data frame is Polars
 
 Ian ruled on 2026-09-21 that Python's data frame container is Polars, not pandas: `annotate` and `recognize` take and return Polars DataFrames, the bulk form accepts a Polars column, Polars rides as an optional dependency behind `pip install thinkthen[polars]`, and pandas leaves the surface. The ruling is recorded with its reasons in `sdlc/issues/2026-09-21-rulings-on-the-surfaces-and-the-next-experiment-brief.md`.
