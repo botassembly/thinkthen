@@ -37,3 +37,7 @@ The load loop ran the lib test binary over and over. One run left the subprocess
 ## Ratchet
 
 The ceiling rises from 48801 to 48812. The helper gains a constructor, and the lock test gains its hold. Moving the helper deleted its copy in the annotate test. The other holds in the backend tests use `Barrier` for a different shape of wait.
+
+## Checks
+
+Main moved to `7c8c3063` while this fix was open. The merge re-measured the ratchet at 48812/48812. The whole ladder ran with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset and each rung under `timeout`, at the commit that adds this section, which is the commit that lands. The merge commit on main states its result. `sdlc/scripts/live` did not run.
