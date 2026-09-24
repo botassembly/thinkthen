@@ -6,7 +6,7 @@ opens: libraries/python sdlc/scripts sdlc/planning/libraries/python.md sdlc/plan
 
 # 0105: Port the Python surface
 
-Status: amended after acceptance; confirmation pending. Owner: Claude.
+Status: design accepted 2026-09-24, owner Claude.
 
 ## Outcome and authority
 
@@ -165,10 +165,12 @@ The shared rules for every surface ticket (`sdlc/planning/surfaces-port-guide.md
    - *Loopback sees the fake key.* Loopback requests carry the fake key. A test on the loopback backend checks that the fake key arrived there, so the key went only to loopback.
    - *Helper test.* The test sets a sentinel key value in the parent. The gate runs with no real key, so the test supplies the sentinel itself. The test asserts the child's environment holds the fake key and a loopback address, and never the sentinel.
    - *Planted bug.* The helper passes the parent's environment through unchanged. The child then holds the sentinel in place of the fake key, and the helper test turns red before any engine is built. A second plant drops `unset THINKTHEN_API_KEY` from `check.sh` and runs it with a sentinel key set. A pytest check that reads `os.environ` in the parent sees the sentinel, and the step fails.
+   - *Builder note 1, from the key-handling check.* The second plant's environment check runs at pytest session start in `conftest.py`, before any test runs. The helper test sets its own sentinel with `monkeypatch`, which restores the environment afterward, so the session check never sees that sentinel.
+   - *Builder note 2, from the key-handling check.* The loopback backend cannot show a request header. Its line protocol offers `count`, `release`, `round`, and `wait N`, and none prints a header. So the "fake key arrived at loopback" test runs a small listener from Python's standard library (`http.server` on port 0) in the child. The listener records the `Authorization` header, and the test asserts it carries the fake key. This touches no file under `conformance/`.
    - Ian can overturn the fake key's spelling or the choice to unset the key in `check.sh` in place of refusing to run.
 
 ## Review
 
 - Design review: `sdlc/records/2026-09-24-design-review-0105-0106.md` found eight items, all answered: the R1-6 plant, six unowned Python halves, the R1-10 trigger, the Ctrl-C test's end, deny and the forbid-level lints, the dependency versions and second review, `--offline`, and the small fixes. The confirmation (same file) found that the deny plant could not turn red and asked for a prompt single-call interrupt. Both are applied. The final check (same file) accepted it with three notes for the builder, now in the acceptance list.
-- Amendment of 2026-09-24: the amendment check (same file as the design review) rejected change 7 for shipping its hooks and noted the deny plant's cargo home and the shared venv. Changes 8 to 10 answer all three. Change 11 then replaced the width hook with a public `tt.Engine` under the shared rule at `446a4d6b`. Change 12 builds it on the 0084 amendment's `EngineBuilder::from_env()`. The final amendment check (same file) rejected change 12's plant because it could reach the vendor address. Change 13 proves the seed through `THINKTHEN_CACHE` and adds the width range tests. The paid-backend check (same file) rejected 0105 for the missing real-key removal and fake key, and asked that the stale deny clause be marked. Change 14 adds the key handling and its planted bug, and the gate section marks the old deny plant as superseded. Confirmation pending.
+- Amendment of 2026-09-24: the amendment check (same file as the design review) rejected change 7 for shipping its hooks and noted the deny plant's cargo home and the shared venv. Changes 8 to 10 answer all three. Change 11 then replaced the width hook with a public `tt.Engine` under the shared rule at `446a4d6b`. Change 12 builds it on the 0084 amendment's `EngineBuilder::from_env()`. The final amendment check (same file) rejected change 12's plant because it could reach the vendor address. Change 13 proves the seed through `THINKTHEN_CACHE` and adds the width range tests. The paid-backend check (same file) rejected 0105 for the missing real-key removal and fake key, and asked that the stale deny clause be marked. Change 14 adds the key handling and its planted bug, and the gate section marks the old deny plant as superseded. The key-handling check (same file) accepted 0105 at `8ea43bab` with two builder notes, now in change 14.
 - Code review: pending.
