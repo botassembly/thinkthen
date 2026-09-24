@@ -24,3 +24,5 @@ The ten functions come first. audit and diff land after the ten are done and bef
 ## Asked of the ThinkThen team
 
 Add audit and diff to the 0.1 plan behind the ten functions, with a ticket each. The marketing deck says "after 0.1" until the tickets exist, then changes to 0.1.
+
+Tickets: 0113 `thinkthen audit` on `ticket/0113-audit-command` and 0114 `thinkthen diff` on `ticket/0114-diff-command`, both design drafts pending review. `sdlc/planning/one-line-plan-2026-09-24.md` queues them after the ten functions and before the release build.
