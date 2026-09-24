@@ -7,7 +7,7 @@ use crate::core::{self, Labels, LabelsError, Meaning, ModelName, QuestionText, T
 use crate::public::choice::Choice;
 use crate::public::error::Error;
 use crate::public::question::{
-    BandedQuestion, ChooseQuestion, Description, Kind, Question, TagQuestion, cut, model_of,
+    BandedQuestion, ChooseQuestion, Description, Kind, Question, TagQuestion, cut, model_of, once,
     text_of,
 };
 
@@ -72,7 +72,7 @@ impl DecideBuilder {
     ///
     /// Returns [`Error::Usage`] for sides outside zero to one or out of order.
     pub fn band(self, low: f64, high: f64) -> Result<BandedQuestion, Error> {
-        let rule = Threshold::band(low, high).map_err(|error| Error::usage(error.to_string()))?;
+        let rule = Threshold::band(low, high).map_err(Error::refused)?;
         Ok(BandedQuestion(self.finish(rule, Kind::Banded)))
     }
 
@@ -81,14 +81,6 @@ impl DecideBuilder {
         question.model = self.model;
         question
     }
-}
-
-fn once<T>(held: &mut Option<T>, value: T, name: &str) -> Result<(), Error> {
-    if held.is_some() {
-        return Err(Error::usage(format!("{name} is already set")));
-    }
-    *held = Some(value);
-    Ok(())
 }
 
 /// The labels and model a list question gathers before it closes.
@@ -135,19 +127,18 @@ impl Listing {
     }
 
     fn finish(self, verb: Verb, threshold: Option<Threshold>) -> Result<Question, Error> {
-        let usage = |error: LabelsError| Error::usage(error.to_string());
         let (core, kind) = match verb {
             Verb::Tag => (
                 core::Question::Tag {
                     text: self.text,
-                    labels: Labels::tags(self.labels).map_err(usage)?,
+                    labels: Labels::tags(self.labels).map_err(Error::refused)?,
                 },
                 Kind::Tag,
             ),
             _ => (
                 core::Question::Choose {
                     text: self.text,
-                    options: Labels::described(self.labels).map_err(usage)?,
+                    options: Labels::described(self.labels).map_err(Error::refused)?,
                 },
                 Kind::Choose,
             ),
@@ -188,7 +179,7 @@ impl LabelBuilder {
                 Verb::Tag => LabelsError::TagDuplicate,
                 _ => LabelsError::OptionDuplicate,
             };
-            return Err(Error::usage(error.to_string()));
+            return Err(Error::refused(error));
         }
         Ok(Self {
             listing: self.listing.push(value, description)?,
@@ -366,8 +357,7 @@ impl ScoreBuilder {
     ///
     /// Returns [`Error::Usage`] for fewer than 2 or more than 10 levels, or a repeated one.
     pub fn build(self) -> Result<Question, Error> {
-        let levels =
-            Labels::levels(self.0.labels).map_err(|error| Error::usage(error.to_string()))?;
+        let levels = Labels::levels(self.0.labels).map_err(Error::refused)?;
         Ok(Question {
             core: core::Question::Score {
                 text: self.0.text,

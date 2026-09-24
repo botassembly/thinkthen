@@ -32,7 +32,7 @@ Rust is blocking (ADR 0017 pick 7). Plain calls return `Result`, no `.await` exi
 - A decision is `Question` for a cut and `BandedQuestion` for a band, so `filter` with a band is unrepresentable. `ChooseQuestion<C>` and `TagQuestion<C>` retain the `Choice` type from builder through call. Parsed choices and tags bind through checked `Question::into_choose::<C>` and `into_tag::<C>`. `load` returns `LoadedQuestion::Question` or `LoadedQuestion::Banded`. The decide builder's `.cut()` closes with the grammar default (205).
 - One `thinkthen::Error` enum from `thiserror`, with the six named variants of ADR 0017 section 3. Each carries a safe `ErrorDetail`; callers match the variant or use `kind()`, and `retryable()` is true only for the ruled backend failures.
 - A client is `Send + Sync`. A test drives several requests at once from two threads.
-- The crate names its `rust-version` honestly: the core needs edition 2024 (let chains), so the floor is 1.88 at minimum, and the repo pins 1.93.1 (205). `cargo public-api` fails a breaking release under a minor version.
+- The crate names its `rust-version` honestly: the core needs edition 2024 (let chains), so the floor is 1.88 at minimum, and the repo pins 1.95.0 (205, Quick Fix qf-rust-195). `cargo public-api` fails a breaking release under a minor version.
 
 ## Anti-goals
 
@@ -46,7 +46,7 @@ Rust is blocking (ADR 0017 pick 7). Plain calls return `Result`, no `.await` exi
 
 - **A fresh TLS handshake per call.** The engine pools one connection for the life of the process, sized to the throttle gate. 211 measured the HTTP client's default pool of ten idle connections churning 488 connections where 33 serve, so the pool is sized to the gate.
 - **No runtime exists to build.** 211 measured zero threads held between calls where the async stand-in parked 16. The transient spike is one worker per in-flight request plus the HTTP client's resolver, one short-lived thread per simultaneous dial; a synchronous numeric resolver halves the ramp, and the spike never persists.
-- **Copying the evidence.** `filter` returns the very records it is handed, and the engine borrows the text into the request buffer.
+- **Copying the evidence.** `filter` returns the very records it is handed. The batch copies each record's text once to hand it to a worker, and the record itself is never cloned.
 - **Generics all the way down.** A verb generic at every layer compiles the engine again at each call site. Keep it outermost over one inner function that is not generic.
 - **Rust has no barrier, so the waste is shape.** Any `IntoIterator` reaches the engine through the record's `Evidence` implementation. `String` and `&str` work without an implementation. The widest container is the one the caller already holds. The batch spine returns results in order, and `decide_many` uses that same spine (ADR 0017 section 8, step 2).
 - **One request at a time in a caller's loop.** A `for` loop that judges each record sends one request and waits. The bulk verbs hand the iterator to the engine, which runs it at the throttle and keeps input order. Memory follows the throttle and not the length of the input, so an endless iterator runs flat.

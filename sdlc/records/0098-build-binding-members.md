@@ -2,7 +2,7 @@
 
 Status: built, code review pending. Owner: Claude.
 
-Branch `ticket/0098-binding-members`. The build sits on `origin/ticket/0086-public-rust-api` at `e12dd73e`, merged while 0086 is in its code-review fix round. It merges main again when 0086 lands. Ian can overturn every choice this record marks as decided.
+Branch `ticket/0098-binding-members`. The build sits on `origin/ticket/0086-public-rust-api` at `0b4b4e58`, after 0086's code-review fixes, merged while 0086 waits to land. It merges main again when 0086 lands. Ian can overturn every choice this record marks as decided.
 
 ## Result
 
@@ -46,7 +46,6 @@ Each test answers the four questions in `CLAUDE.md`.
   - `Relate::from_json` with `"either":true` equals the `both_ways` builder. Equality covers the whole parsed spec, and the digest reads only that spec. A broken rule is `Usage` from `from_json` and `Local` from `load`, with the same sentence, for both readers. A non-default `fields` and a recognize `on` are `Usage` with exact sentences.
   - `Row::probability` equals the served numbers 0.3 and 0.8, and equals the yes probability `details` reads for the same record.
   - `ErrorKind::name` gives the six words of `conformance/cases.json` in its order.
-- `sdlc/scripts/package` runs `public_members` in the library-only run, since it never starts the command.
 - No test needs a test-only hook. Every send goes to a loopback listener with a fake key.
 
 ## Planted bugs
@@ -62,16 +61,16 @@ Each plant ran alone under the heavy lock and was reverted.
 
 ## Budgets
 
-Measured nonblank lines against the merge of 0086 (`2293aaa6`):
+Measured nonblank lines against 0086 at `0b4b4e58`:
 
-- Production Rust: 15 files touched, net 342 lines against 500. The serializer lines that left `cli/asking.rs` are counted in the net.
-- The file budget is ten, and this crosses it. This is the re-score. Each member lives beside its type, in `question.rs`, `builders.rs`, `set.rs`, `recognize.rs`, `relate.rs`, `results.rs`, and `error.rs`. `bulk.rs` and `engine.rs` pass the probability and the backend. `mod.rs` and `lib.rs` declare modules and exports. `result_json.rs` is the one new module the ticket asks for. `choice.rs` and `annotated.rs` exist only to keep two files under the 500-line ceiling. Folding members into fewer files would break locality and the ceiling.
+- Production Rust: 16 files touched, net 342 lines against 500. The serializer lines that left `cli/asking.rs` are counted in the net.
+- The file budget is ten, and this crosses it. This is the re-score. Each member lives beside its type, in `question.rs`, `builders.rs`, `set.rs`, `recognize.rs`, `relate.rs`, `results.rs`, and `error.rs`. `bulk.rs` and `engine.rs` pass the probability and the backend. `mod.rs` and `lib.rs` declare modules and exports. `core/mod.rs` exports `LabelsError` again, which 0086 had dropped as unused, so the runtime step refuses a repeat with the core's own sentence. `result_json.rs` is the one new module the ticket asks for. `choice.rs` and `annotated.rs` exist only to keep two files under the 500-line ceiling. Folding members into fewer files would break locality and the ceiling.
 - Tests: 3 files, 416 lines against 700.
-- Scripts: `inventory` shrinks by 5 lines, and `package` changes one line.
+- Scripts: `inventory` shrinks by 5 lines. 0086's library-only package run now takes every test target, so `public_members` runs there with no script change.
 
 ## Ratchet
 
-The ceiling rises from 60,306 to 61,048. The base measured 60,290, 16 lines under its own ceiling, so this build adds 758 lines: 342 production and 416 test lines. Before adding lines, I looked for code to delete. The four `load` functions each read a file and map it to `Local` in three lines. A shared helper would save no net lines. The command's details assembly moved and was not copied. The test engine builders sit in separate test binaries, which cannot share a helper without a new support module.
+The ceiling rises from 0086's 60,351 to 61,109, an increase of 758 lines: 342 production and 416 test lines. Before adding lines, I looked for code to delete. The four `load` functions each read a file and map it to `Local` in three lines. A shared helper would save no net lines. The command's details assembly moved and was not copied. The test engine builders sit in separate test binaries, which cannot share a helper without a new support module.
 
 ## Ladder
 

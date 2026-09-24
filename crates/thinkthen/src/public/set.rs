@@ -34,8 +34,7 @@ impl QuestionSet {
     ///
     /// Returns [`Error::Usage`] naming what the set breaks.
     pub fn from_json(value: &str) -> Result<Self, Error> {
-        let set =
-            core::QuestionSet::parse(value).map_err(|error| Error::usage(error.to_string()))?;
+        let set = core::QuestionSet::parse(value).map_err(Error::refused)?;
         let root = Pointer::new("").map_err(|_| Error::defect("the root pointer was refused"))?;
         if set
             .questions()
@@ -97,12 +96,12 @@ impl QuestionSetBuilder {
                 "a question set member takes no model; the engine names it",
             ));
         }
+        core::check_name(name).map_err(Error::refused)?;
         if self.0.iter().any(|(held, _)| held == name) {
-            let error = core::QuestionSetError::Duplicate(name.to_owned());
-            return Err(Error::usage(error.to_string()));
+            return Err(Error::refused(core::QuestionSetError::Duplicate(
+                name.to_owned(),
+            )));
         }
-        core::QuestionSet::from_parts(vec![(name.to_owned(), value.core.clone(), None)])
-            .map_err(|error| Error::usage(error.to_string()))?;
         self.0.push((name.to_owned(), value));
         Ok(self)
     }
@@ -147,6 +146,6 @@ impl QuestionSetBuilder {
             .collect();
         core::QuestionSet::from_parts(members)
             .map(QuestionSet)
-            .map_err(|error| Error::usage(error.to_string()))
+            .map_err(Error::refused)
     }
 }

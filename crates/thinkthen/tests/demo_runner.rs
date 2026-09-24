@@ -1,4 +1,5 @@
 //! The demo runner of the `spec` rung, against fixture pages of its own.
+#![cfg(feature = "cli")]
 
 use std::env;
 use std::io;

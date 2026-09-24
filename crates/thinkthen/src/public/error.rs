@@ -130,6 +130,11 @@ impl Error {
         Self::of(ErrorKind::Usage, message)
     }
 
+    /// A usage error whose message is the refusal the core gave.
+    pub(crate) fn refused(error: impl std::fmt::Display) -> Self {
+        Self::usage(error.to_string())
+    }
+
     pub(crate) fn local(message: impl Into<String>) -> Self {
         Self::of(ErrorKind::Local, message)
     }

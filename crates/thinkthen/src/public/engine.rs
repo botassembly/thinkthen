@@ -119,7 +119,9 @@ impl Engine {
         EngineBuilder::from_env()?.build()
     }
 
-    /// Start from the library defaults, which read no environment.
+    /// Start from the library defaults. The builder reads no environment; with
+    /// the default cache still selected, `build` resolves the platform cache
+    /// folder from `HOME` and `XDG_CACHE_HOME`.
     #[must_use]
     pub fn builder() -> EngineBuilder {
         EngineBuilder::new()
@@ -197,7 +199,8 @@ impl Engine {
     ) -> Result<Option<C>, Error> {
         match self.judge(&question.0, evidence, options)?.value {
             Value::Choice(Some(label)) => C::from_label(&label).map(Some).ok_or_else(unbound),
-            _ => Ok(None),
+            Value::Choice(None) => Ok(None),
+            _ => Err(Error::defect("a choose answer held no choice")),
         }
     }
 
