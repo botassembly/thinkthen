@@ -6,7 +6,7 @@ opens: sdlc/tickets/0084-freeze-the-public-rust-contract.md sdlc/planning/adr/00
 
 # 0084: Freeze the public Rust contract
 
-Status: revised after re-review; confirming. Owner: Claude.
+Status: design accepted 2026-09-24 after re-review. Owner: Claude.
 
 ## Outcome and authority
 
@@ -326,7 +326,7 @@ impl std::fmt::Debug for Error {}
 impl std::error::Error for Error {}
 ```
 
-Every public type is `Debug`. `Engine` is provisionally `Clone + Send + Sync`; `CancelToken` is `Clone + Default + Send + Sync`; `CallOptions` is `Copy + Clone + Default`. Questions and values are `Clone + PartialEq` when generic members are; `Description`, `Kind`, and `Entity` also are `Eq`. `Answer`, `FailureCause`, `ErrorKind`, `Usage`, and `Counters` are `Copy + Clone + Eq + PartialEq`. Builders, `Error`, and `ErrorDetail` are neither `Clone` nor `Copy`. Formatting is log-safe. Shown enums, including `Error`, are exhaustive and stable for matching.
+Every public type is `Debug`. `Engine` is provisionally `Clone + Send + Sync`; `CancelToken` is `Clone + Default + Send + Sync`; `CallOptions` is `Copy + Clone + Default + Send + Sync`. Questions and values are `Clone + PartialEq` when generic members are; `Description`, `Kind`, and `Entity` also are `Eq`. `Answer`, `FailureCause`, `ErrorKind`, `Usage`, and `Counters` are `Copy + Clone + Eq + PartialEq`. Builders, `Error`, and `ErrorDetail` are neither `Clone` nor `Copy`. Formatting is log-safe. Shown enums, including `Error`, are exhaustive and stable for matching.
 
 The crate root exports `choices!` and no module. The macro accepts attributes, visibility, an enum name, and at least one `Variant => "label"` entry, with an optional trailing comma. Duplicate labels fail compilation. The emitted enum and methods are exactly those stated in the inventory.
 
@@ -376,6 +376,6 @@ Contract 2; state and timing 0; reach 2; proof 2; cost of error 1; total 7. Fina
 
 ## Review
 
-- Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-contract.md`) rejected it for one stale example in `rust.md`, now fixed. Re-review `2026-09-24-rereview-contract.md` asked for rustfmt wording and 0096 as fork owner; both applied.
+- Design review: `sdlc/records/2026-09-24-spine-review-contract.md` rejected, then `2026-09-24-rereview-contract.md` accepted after fixes.
 - Routing: the later code tickets use Claude builders (Opus subagent) and fresh Claude reviewers.
 - Code review: not applicable; design records only.
