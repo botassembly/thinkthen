@@ -13,7 +13,7 @@ Shared rules for every surface ticket, set by Claude on 2026-09-24 from the desi
 - Each test gets its own product cache folder and its own loopback backend. The arms beyond 0092 (fixed delay, a held reply that can hold again, one backend per test) belong to ticket 0117.
 - Ctrl-C is prompt for single calls and batches alike. The engine waits for requests already sent, so the binding runs every call on a detachable worker and returns `Cancelled` at once. The worker finishes the sent requests.
 - A deny plant proves the rule it names while offline. A git-sourced dependency fails before deny runs when offline, so use a plant that reaches deny.
-- Tests that need parallel requests set the engine width they need, never the default.
+- Tests that need parallel requests set the width they need with `EngineBuilder::width` (0084), never the default. Width is process-wide under 0077, so each such test runs in its own child process. No test-only width hook.
 
 ## 1. The error index, sorted
 
