@@ -38,4 +38,4 @@ The ceiling falls from 48812 to 48806.
 
 ## Checks
 
-The whole ladder ran with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset and each rung under `timeout`, at the commit that adds this record, which is the commit that lands. The merge commit on main states its result. `sdlc/scripts/live` did not run.
+The whole ladder ran with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset and each rung under `timeout`, at the branch head that lands, after main was merged in at `5a156efa` and the ratchet re-measured at 48806/48806. The merge commit on main states its result. `sdlc/scripts/live` did not run.
