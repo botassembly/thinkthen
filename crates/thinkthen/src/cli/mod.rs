@@ -7,6 +7,7 @@ pub(crate) mod asked;
 pub(crate) mod asking;
 mod audit;
 pub(crate) mod cache;
+mod check;
 mod diff;
 pub(crate) mod edge;
 pub(crate) mod failure;
@@ -127,6 +128,7 @@ fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitC
             args::CacheCommand::Prune(arguments) => cache::prune(arguments, environment, writer),
         },
         Some(Command::Status(arguments)) => status::run(arguments, environment, writer),
+        Some(Command::Check(arguments)) => check::run(arguments, environment, writer),
         Some(Command::Transform(_) | Command::Audit(_) | Command::Diff(_)) => Err(Failure::Defect(
             "the catalog, audit, and diff return before setup",
         )),

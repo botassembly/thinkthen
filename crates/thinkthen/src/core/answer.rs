@@ -418,7 +418,6 @@ impl Answer {
     }
 
     /// The backend's own confidence, when the backend reported one.
-    #[cfg(test)]
     pub(crate) fn confidence(&self) -> Option<Probability> {
         match &self.0 {
             Shape::YesNo { .. } => None,
