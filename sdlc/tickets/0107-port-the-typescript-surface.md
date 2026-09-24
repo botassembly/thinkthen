@@ -183,3 +183,5 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Changes: Calls go through one JSON door on a worker thread per call. `tt.Engine` holds settings, `find` returns `null`, and offsets count UTF-16 units. The stand-in cases and `DIVERGENCES.md` retire, as "What moves from the tag" lists.
 - Proof: Abort rejects within 100 ms for a single call and a batch with plants, a 300 ms deadline rejects by 450 ms, and the surrogate, settings, export-name, `unsafe`, and `file://` deny checks pass.
 - Defers: Async iterables, streams, the bytes form, a column form, Bun and Deno, publishing, a browser build, and an API key option.
+
+Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. The engine option `width: 4` becomes `throttle: 4`, and every public `width` here reads as `throttle`.
