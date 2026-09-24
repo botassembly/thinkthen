@@ -120,7 +120,7 @@ pub(crate) fn run(arguments: &[&str], input: &[u8]) -> Output {
     let mut stdin = child.stdin.take().expect("standard input");
     let _ignored = stdin.write_all(input);
     drop(stdin);
-    child.wait_with_output().expect("the binary finishes")
+    crate::wait::finish(child, "thinkthen").expect("the binary finishes")
 }
 
 /// Run `audit` with these arguments and input: the exit code, standard output, and standard error.

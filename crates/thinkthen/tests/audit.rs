@@ -7,6 +7,8 @@
 
 #[path = "support/measure.rs"]
 mod measure_support;
+#[path = "../src/test_deadline/wait.rs"]
+mod wait;
 
 use std::fs;
 use std::path::Path;
@@ -117,14 +119,18 @@ fn a_replayed_recording_piped_to_audit_grades_as_the_prototype_does() {
         .stdout(Stdio::piped())
         .spawn()
         .expect("decide runs");
-    let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+    let audit = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .args(["audit", "-", "replay/key.jsonl"])
         .env_clear()
         .current_dir(fixtures())
         .stdin(decide.stdout.take().expect("the pipe"))
-        .output()
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
         .expect("audit runs");
-    assert_eq!(decide.wait().expect("decide finishes").code(), Some(0));
+    let output = wait::finish(audit, "thinkthen audit").expect("audit finishes");
+    let decided = wait::finish(decide, "thinkthen decide").expect("decide finishes");
+    assert_eq!(decided.status.code(), Some(0));
     assert_eq!(String::from_utf8_lossy(&output.stderr), "");
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),

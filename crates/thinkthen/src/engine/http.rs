@@ -78,7 +78,7 @@ impl Client {
     /// a proxy would send the key and the evidence to another machine in
     /// clear text. `ureq` reads `ALL_PROXY`, `HTTPS_PROXY`, `HTTP_PROXY`, and
     /// `NO_PROXY` on its own, and `proxy(None)` cancels all four.
-    pub(crate) fn new(timeout: Duration, secure: bool) -> Self {
+    pub(crate) fn new(timeout: Duration, secure: bool, widths: &'static Widths) -> Self {
         let mut config = Agent::config_builder()
             .timeout_global(Some(timeout))
             .http_status_as_error(false)
@@ -89,7 +89,7 @@ impl Client {
         Self {
             agent: config.build().into(),
             timeout,
-            width: crate::engine::client_width(),
+            width: crate::engine::client_width(widths),
         }
     }
 
@@ -450,7 +450,11 @@ mod tests {
         });
         let url = format!("http://{address}/v1/systemone");
         let key = Key::of("sk-test-value");
-        let client = Client::new(Duration::from_secs(2), false);
+        let client = Client::new(
+            Duration::from_secs(2),
+            false,
+            crate::engine::process_width(),
+        );
         let attempts = Cell::new(0_u32);
         let exchange = Exchange {
             url: &url,
@@ -475,7 +479,11 @@ mod tests {
     #[test]
     fn a_refused_attempt_is_observed_once_and_returned_without_a_retry() {
         let key = Key::of("sk-test-value");
-        let client = Client::new(Duration::from_secs(4), false);
+        let client = Client::new(
+            Duration::from_secs(4),
+            false,
+            crate::engine::process_width(),
+        );
         let observed = Cell::new(0_u32);
         let exchange = Exchange {
             url: "http://127.0.0.1:0/v1/systemone",

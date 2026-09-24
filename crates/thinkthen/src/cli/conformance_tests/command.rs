@@ -192,7 +192,7 @@ fn child(job: &str) -> Output {
     for (name, _) in std::env::vars_os().filter(|(name, _)| steers(name)) {
         command.env_remove(name);
     }
-    command.output().expect("form child")
+    crate::test_deadline::output(&mut command).expect("form child")
 }
 
 /// A loopback address whose listener counts each connection and answers none.
@@ -286,11 +286,12 @@ fn probe() {
 #[test]
 fn the_runner_hides_a_key_and_an_address_from_its_children() {
     let (url, count) = counting();
-    let output = test_child("form_runner")
-        .env("THINKTHEN_API_KEY", "test-key-not-real")
-        .env("THINKTHEN_BASE_URL", &url)
-        .output()
-        .expect("form runner");
+    let output = crate::test_deadline::output(
+        test_child("form_runner")
+            .env("THINKTHEN_API_KEY", "test-key-not-real")
+            .env("THINKTHEN_BASE_URL", &url),
+    )
+    .expect("form runner");
     let stdout = String::from_utf8_lossy(&output.stdout);
     let lines = stdout
         .lines()
@@ -407,7 +408,11 @@ pub(super) fn counters(case: &Case, expected: &Counters) {
         ModelName::new("jev-latest").expect("model"),
     );
     let recorder = Recorder::of_private(Some(&cache), Some(&cache), false, true).expect("cache");
-    let client = Client::new(Duration::from_secs(5), false);
+    let client = Client::new(
+        Duration::from_secs(5),
+        false,
+        crate::engine::process_width(),
+    );
     let process = usage::Counters::new(Some(totals.clone()));
     let before = usage::read(&totals, &month_now())
         .expect("totals before")

@@ -2,13 +2,19 @@
 
 use std::process::Command;
 
+#[path = "../src/test_deadline/run.rs"]
+mod run;
+#[path = "../src/test_deadline/wait.rs"]
+mod wait;
+
 #[test]
 fn tag_short_help_leads_with_described_labels() {
-    let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .args(["tag", "-h"])
-        .env_clear()
-        .output()
-        .expect("the compiled binary runs");
+    let output = run::output(
+        Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+            .args(["tag", "-h"])
+            .env_clear(),
+    )
+    .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(0));
     let help = String::from_utf8_lossy(&output.stdout);
@@ -37,11 +43,12 @@ fn tag_and_annotate_help_leads_with_the_description_and_ends_with_examples() {
         ),
     ] {
         for flag in ["-h", "--help"] {
-            let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-                .args([verb, flag])
-                .env_clear()
-                .output()
-                .expect("the compiled binary runs");
+            let output = run::output(
+                Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+                    .args([verb, flag])
+                    .env_clear(),
+            )
+            .expect("the compiled binary runs");
 
             assert_eq!(output.status.code(), Some(0), "{verb} {flag}");
             assert!(output.stderr.is_empty(), "{verb} {flag}");

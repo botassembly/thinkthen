@@ -15,6 +15,11 @@ use std::time::{Duration, Instant};
 
 use sha2::{Digest as _, Sha256};
 
+#[path = "../src/test_deadline/run.rs"]
+mod run;
+#[path = "../src/test_deadline/wait.rs"]
+mod wait;
+
 const LIST: &str =
     "band\ncalibration\ncompare\ncost\ncounts\nmonitor\nscore\nsweep\ntriage\ntrials\n";
 const UNKNOWN: &str =
@@ -83,12 +88,13 @@ fn folder(label: &str) -> PathBuf {
 }
 
 fn catalog(arguments: &[&str], cwd: &Path) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .args(arguments)
-        .env_clear()
-        .current_dir(cwd)
-        .output()
-        .expect("the compiled binary runs")
+    run::output(
+        Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+            .args(arguments)
+            .env_clear()
+            .current_dir(cwd),
+    )
+    .expect("the compiled binary runs")
 }
 
 fn sha256(bytes: &[u8]) -> String {
@@ -104,14 +110,15 @@ fn list_prints_the_closed_names_in_byte_order_everywhere() {
     for cwd in [empty.as_path(), Path::new("/")] {
         for locale in ["C", "POSIX", "tr_TR.UTF-8", "de_DE.UTF-8"] {
             for _repeat in 0..2 {
-                let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-                    .args(["transform", "list"])
-                    .env_clear()
-                    .env("LC_ALL", locale)
-                    .env("LANG", locale)
-                    .current_dir(cwd)
-                    .output()
-                    .expect("the compiled binary runs");
+                let output = run::output(
+                    Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+                        .args(["transform", "list"])
+                        .env_clear()
+                        .env("LC_ALL", locale)
+                        .env("LANG", locale)
+                        .current_dir(cwd),
+                )
+                .expect("the compiled binary runs");
                 assert_eq!(String::from_utf8_lossy(&output.stdout), LIST, "{locale}");
                 assert!(output.stderr.is_empty(), "{locale}");
                 assert_eq!(output.status.code(), Some(0), "{locale}");

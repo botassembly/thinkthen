@@ -8,6 +8,8 @@
 
 #[path = "support/measure.rs"]
 mod measure_support;
+#[path = "../src/test_deadline/wait.rs"]
+mod wait;
 
 use std::fs;
 use std::io::{ErrorKind, Write as _};
@@ -292,7 +294,7 @@ fn audit_sends_no_request_reads_no_key_and_writes_nothing() {
         let mut stdin = child.stdin.take().expect("standard input");
         let _ignored = stdin.write_all(input.as_bytes());
         drop(stdin);
-        let output = child.wait_with_output().expect("the binary finishes");
+        let output = wait::finish(child, "thinkthen").expect("the binary finishes");
         assert!(
             matches!(output.status.code(), Some(0 | 2 | 5)),
             "{arguments:?}"
