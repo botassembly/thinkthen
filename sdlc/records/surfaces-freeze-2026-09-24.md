@@ -14,7 +14,7 @@ The three open lanes were merged into `surfaces-wave7` at `f6a7faea` (tag `surfa
 
 The ratchet conflict was arithmetic. `w7/gate3` raised the ceiling from 36,510 to 36,531 and `w7/python4` raised it from 36,510 to 36,808. The merged tree measures 36,829, the sum of both raises. The merge sets the ceiling to 36,829.
 
-Tag `surfaces-wave7-frozen-2026-09-24` points at `40c8f70563c7ed04f4972706c3427130e1d4721d`. Every result below was measured at that commit. This record lands after it and changes no code.
+Tag `surfaces-wave7-frozen-2026-09-24` points at `40c8f70563c7ed04f4972706c3427130e1d4721d`. Every surface result below was measured at that commit. A second-agent review then landed as `sdlc/records/surfaces-notes/REVIEW-wave-7-freeze.md`, with the whole review beside it in `surfaces-ceiling-review.md`. The size-ceiling check and its self-test were run again after that commit. Tag `surfaces-wave7-frozen-2026-09-24b` marks the tip that carries the review and this record. Neither commit changes code.
 
 ## How the checks ran
 
@@ -30,8 +30,8 @@ SQLite failed that run for want of a SQLite amalgamation in `databases/sqlite/.r
 
 | Surface | Check command | Result |
 |---|---|---|
-| Surfaces ratchet | `node sdlc/scripts/surfaces-ratchet.mjs` | FAIL. Count 36,829 equals the ceiling. Nine commits lack a second-agent review (below). |
-| Ratchet self-test | `sdlc/scripts/surfaces-ratchet-self-test` | pass, 25 ok lines |
+| Surfaces ratchet | `node sdlc/scripts/surfaces-ratchet.mjs` | pass after the review, 36,829/36,829. At `40c8f705` it failed because nine commits lacked a review (below). |
+| Ratchet self-test | `sdlc/scripts/surfaces-ratchet-self-test` | pass, 25 ok lines, before and after the review |
 | Workspace lint | `sdlc/scripts/lint-workspaces` | FAIL on `libraries/ruby` only (needs Ruby or its builder container). Clippy and cargo-deny pass on the other 12 workspaces. |
 | Workspace lint self-test | `sdlc/scripts/lint-workspaces-self-test` | pass |
 | Contract | `cd contract && cargo test --locked` | pass, 29 tests |
@@ -53,13 +53,20 @@ SQLite failed that run for want of a SQLite amalgamation in `databases/sqlite/.r
 
 ## Failing cases
 
-- `sdlc/scripts/surfaces-ratchet.mjs:233`: these commits move the ceiling with no `Verdict: ACCEPT <sha>` record: `ff57ef565186314293ffc2c12c242642e5feac25` (the python4 merge), `b590a8994e0181c0d10c747b17b1c53f534f0faa`, `d74d95fb248fcb65b0d30ccf31c0d45002f49b9c`, `d048261edac1145775f9cdb951c5eede392df5c4`, `385afd29a72973e55b3226a3ed5942c1715ecf05`, `417433b48d6fd99d36024645976c6b70adaef243` (python4), and `ce2aef10eb1f51ac20cc88e174d4ba29992da5b2` (gate3).
-- `sdlc/scripts/surfaces-ratchet.mjs:243`: the script-change check did not run, because the raise check exits first. Two gate3 commits change the guarded files, and no review record names them: `35229b813ea8845f31f8796a2847470924000508` and `1a3df4931e1265cfe3fa4c6d81bc18628bcbb7a8`.
+- `sdlc/scripts/surfaces-ratchet.mjs:233` (fixed by the review): at `40c8f705` these commits move the ceiling with no `Verdict: ACCEPT <sha>` record: `ff57ef565186314293ffc2c12c242642e5feac25` (the python4 merge), `b590a8994e0181c0d10c747b17b1c53f534f0faa`, `d74d95fb248fcb65b0d30ccf31c0d45002f49b9c`, `d048261edac1145775f9cdb951c5eede392df5c4`, `385afd29a72973e55b3226a3ed5942c1715ecf05`, `417433b48d6fd99d36024645976c6b70adaef243` (python4), and `ce2aef10eb1f51ac20cc88e174d4ba29992da5b2` (gate3).
+- `sdlc/scripts/surfaces-ratchet.mjs:243` (fixed by the review): the script-change check did not run, because the raise check exits first. Two gate3 commits change the guarded files, and no review record names them: `35229b813ea8845f31f8796a2847470924000508` and `1a3df4931e1265cfe3fa4c6d81bc18628bcbb7a8`.
 - `sdlc/scripts/lint-workspaces:234`: `libraries/ruby` failed because Ruby is not on `PATH` and Docker was blocked.
 - `databases/duckdb/check.sh:36`: not set up. `databases/sqlite/check.sh:34` failed the same way in the first run and passed in the second.
 
+## Review follow-ups
+
+Fix each one when its surface ports to main.
+
+- `d74d95fb` (Python): the `snapshot()` test helper sits inside the doc comment of `refusal` in `libraries/python/src/arrow.rs`. Move the helper below `refusal`.
+- `d048261e` (Python): the bounds check that refuses with `UNREADABLE` is written out five times. Fold it into one helper, and give the null batch child its own refusal sentence.
+- `35229b81` (gate): the ratchet stops at the first kind of waiting commit, so a pending raise hides a pending script change. Report both lists in one run, then drop the self-test's retry loop.
+
 ## Open
 
-- A fresh reviewer that wrote none of these commits accepts or rejects the nine SHAs above in a `REVIEW-*.md` record under `sdlc/records`. The ratchet turns green only then.
 - DuckDB, Ruby, and PostgreSQL need a machine where `make configure` and Docker are allowed. Each port ticket re-runs its surface against the real engine anyway.
 - The `surfaces` branch still points at `398d7bb2`. Fast-forwarding it waits for Ian.
