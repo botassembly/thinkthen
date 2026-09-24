@@ -38,7 +38,7 @@ fn start() -> Result<Started, Box<dyn Error>> {
     let mut child = Command::new(env!("CARGO_BIN_EXE_conformance-backend"))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::null())
+        .stderr(Stdio::piped())
         .spawn()?;
     let input = child.stdin.take().ok_or("no standard input")?;
     let output = BufReader::new(child.stdout.take().ok_or("no standard output")?);
@@ -308,7 +308,7 @@ fn a_wait_line_gives_up_at_5_s_and_holds_up_no_line_behind_it() -> Tested {
 #[test]
 fn a_wait_line_with_no_whole_number_prints_nothing() -> Tested {
     let mut backend = start()?;
-    for text in ["wait x", "wait +1", "count"] {
+    for text in ["wait x", "wait +0", "count"] {
         send(&mut backend, text)?;
     }
     assert_eq!(backend.2.recv_timeout(LINE)?, "0");
@@ -330,6 +330,33 @@ fn port(backend: &Backend) -> Result<u16, Box<dyn Error>> {
         .next()
         .ok_or("no port")?
         .parse()?)
+}
+
+#[test]
+fn a_delay_refusal_says_why_on_standard_error() -> Tested {
+    let mut backend = start()?;
+    let mut errors = backend.0.stderr.take().ok_or("no standard error")?;
+    for path in ["/arm/delay/abc/v1/x", "/arm/delay/10001/v1/x"] {
+        post(backend.3, path, DECIDE)?;
+    }
+    finish(backend)?;
+    let mut text = String::new();
+    errors.read_to_string(&mut text)?;
+    assert_eq!(
+        text,
+        format!("conformance-backend: {WHOLE}\nconformance-backend: {CEILING}\n")
+    );
+    Ok(())
+}
+
+#[test]
+fn closing_the_input_exits_without_waiting_for_a_pending_wait() -> Tested {
+    let mut backend = start()?;
+    let began = Instant::now();
+    send(&mut backend, "wait 1")?;
+    assert_eq!(finish(backend)?, ["0"]);
+    assert!(began.elapsed() < Duration::from_secs(1), "the exit waited");
+    Ok(())
 }
 
 #[test]

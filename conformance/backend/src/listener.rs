@@ -375,12 +375,13 @@ fn serve_kept(
         let Some((request, used)) = peek_request(stream) else {
             return;
         };
-        // Choose before counting: a held answer takes its round number first,
-        // so a `round` sent after the count reads this request lets it go.
-        let canned = reply(&request);
-        counts.requests.fetch_add(1, Ordering::SeqCst);
         let held = counts.in_flight.fetch_add(1, Ordering::SeqCst) + 1;
         counts.peak.fetch_max(held, Ordering::SeqCst);
+        // A reply may block, so the request is in flight before it is chosen.
+        // It is counted after: a held answer takes its round number first,
+        // and a `round` sent after the count reads this request lets it go.
+        let canned = reply(&request);
+        counts.requests.fetch_add(1, Ordering::SeqCst);
         if sender.is_some_and(|sender| sender.send(request).is_err()) {
             return;
         }
