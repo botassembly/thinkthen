@@ -4,8 +4,8 @@ use crate::core::{
     LimitKind, ProfileError, ProfileLimit, ProfileName, QuestionSetError, RecordError, Url,
 };
 use crate::engine::error::{Error as EngineError, TransportKind};
-use std::process::ExitCode;
-use std::time::Duration;
+use crate::engine::{http::Client, process_width};
+use std::{process::ExitCode, time::Duration};
 
 /// The key and the evidence every case here is built from.
 ///
@@ -42,7 +42,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
         partial_failure: false,
         profile_mismatch: None,
     };
-    let client = crate::engine::http::Client::new(Duration::from_secs(1), false);
+    let client = Client::new(Duration::from_secs(1), false, process_width());
     // `rank` holds every record in memory until the input ends, so the
     // sink that holds them is the one new place a whole record could leak.
     let mut written = Vec::new();
