@@ -41,3 +41,25 @@ Observed by command: 20 starts of 0092's debug binary, all kept alive until ever
    - The in-process half of "one backend per test" must wait for each count to read 1 before `round`. It then needs its own polling loop. Either expose the `wait` loop as `Backend::wait(n)` and have `run` call it, or say that the one test loop is accepted. Decision 3 says the library needs no counterpart, and this test contradicts it.
 
 The writing rules hold. I found no cleft sentence, contrastive appositive, dash gloss, or trailing "which" clause. Each overturnable choice names Ian's lever.
+
+## Confirmation
+
+ACCEPT
+
+Read 0117 at `dbb55129`. All eight findings are fixed in the text.
+
+1. A reader thread feeds a channel, and `line` reads with a 7 s timeout. The ticket corrects its claim about main.
+2. The `wait x` test counts the lines that follow the input close, so the zero plant adds a third line and turns the test red.
+3. "Round, back to back" waits 1 s for each reply and names the order plant.
+4. Refusals have 1 s and 300 ms bounds, both bodies are pinned, a digits-only parse covers `+200`, and four plants cover bad values, `from_str`, a dropped ceiling, and an off-by-one ceiling.
+5. All twenty backends stay alive until every port is read.
+6. `wait` runs off the input thread, and a plant proves that a `count` sent after a `wait` still answers at once.
+7. The parallel bound is 800 ms.
+8. The `spent` line now reads 38, and `Backend::wait` removes the extra polling loop.
+
+The new `wait` design is race-free. `Backend::wait` reads the same count that the order rule advances only after the reply's round number is taken, so a `round` sent after `wait K` always releases the reply it counted. The `wait` prefix tells a late line apart from a `count` line. One lock orders every write. The 80, 260, and 340 budgets add up and fit the listed parts. The `.rs`-only ratchet makes 80 + 260 = 340.
+
+Notes for the builder. Neither note blocks this confirmation.
+- A `wait` still pending when standard input closes can print its line before or after the final count. The `finish` helper takes the next line as the final count. It should skip lines that start with `wait `, or every test should let each `wait` answer before it closes the input.
+- Sharing the output with a detached thread needs `run` to take a writer that is `Send + 'static`, and it rules out `thread::scope`. A scope would join the pending `wait` and break "exits without waiting". The routing line already names this as the new bound on `run`'s output.
+- The ticket cites `sdlc/records/0117-design-review.md` for the 112 ms measurement. That record must land with the ticket.
