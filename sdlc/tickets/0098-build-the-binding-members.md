@@ -6,7 +6,7 @@ opens: crates/thinkthen/src crates/thinkthen/tests sdlc/scripts sdlc/ratchet.jso
 
 # 0098: Build the binding members
 
-Status: draft, revised after design review; needs re-review. Owner: Claude.
+Status: design accepted 2026-09-24 after re-review. Owner: Claude.
 
 Split out of 0086 on 2026-09-24 so 0086 fits its budget (`sdlc/records/2026-09-24-spine-review-engine.md`, finding F7). It lands after 0086 and before 0093.
 
@@ -45,5 +45,5 @@ Builder: Claude (Opus subagent). Reviewer: a fresh Claude session for design and
 
 ## Review
 
-- Design review: pending.
+- Design review: accepted in `sdlc/records/2026-09-24-rereview-engine.md`.
 - Code review: pending.
