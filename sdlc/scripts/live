@@ -244,6 +244,24 @@ def reservation_value(text):
         refuse("usage: sdlc/scripts/live --max-tokens N JOB [ARG...]", 2)
 
 
+def shell_job(job):
+    line = b"#!/bin/sh\n"
+    try:
+        descriptor = os.open(job, os.O_RDONLY | os.O_CLOEXEC)
+        try:
+            start = b""
+            while len(start) < len(line):
+                chunk = os.read(descriptor, len(line) - len(start))
+                if not chunk:
+                    break
+                start += chunk
+        finally:
+            os.close(descriptor)
+    except OSError:
+        return False
+    return start == line
+
+
 def launch(arguments, checkout, authority, key):
     if len(arguments) < 3 or arguments[0] != "--max-tokens":
         refuse("usage: sdlc/scripts/live --max-tokens N JOB [ARG...]", 2)
@@ -252,6 +270,8 @@ def launch(arguments, checkout, authority, key):
     job = job_argument if job_argument.startswith(b"/") else os.path.join(checkout, job_argument)
     if not os.path.isfile(job):
         refuse("the named live job is not a file", 2)
+    if not shell_job(job):
+        refuse("the named live job must start with the line #!/bin/sh, so no call goes out", 2)
     binary = os.path.join(checkout, b"target/debug/thinkthen")
     if not os.path.isfile(binary) or not os.access(binary, os.X_OK):
         refuse("target/debug/thinkthen must be built before a live job", 2)

@@ -22,12 +22,12 @@ const EVIDENCE: &str = "marker-evidence-7b3ac5";
 /// in this list.
 #[test]
 fn no_debug_line_shows_the_key_or_the_evidence() {
-    let key = crate::http::Key::of(KEY);
+    let key = crate::engine::http::Key::of(KEY);
     let body = format!(r#"{{"state":"{EVIDENCE}"}}"#);
     let url = Url::new("http://127.0.0.1:1/v1/systemone").expect("an address");
     let recorded = Recorded::new(&url, body.as_bytes());
     let entry = Entry::of(&recorded, body.as_bytes()).expect("both bodies are JSON");
-    let exchange = crate::http::Exchange {
+    let exchange = crate::engine::http::Exchange {
         url: url.as_str(),
         body: body.as_bytes(),
         key: &key,
@@ -42,7 +42,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
         partial_failure: false,
         profile_mismatch: None,
     };
-    let client = crate::http::Client::new(Duration::from_secs(1), false);
+    let client = crate::engine::http::Client::new(Duration::from_secs(1), false);
     // `rank` holds every record in memory until the input ends, so the
     // sink that holds them is the one new place a whole record could leak.
     let mut written = Vec::new();
@@ -63,7 +63,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
     let entity = crate::core::RelationEntity::new(EVIDENCE, EVIDENCE).expect("an entity");
     let shown = format!(
         "{key:?} {exchange:?} {judged:?} {client:?} {recorded:?} {entry:?} \
-             {ordered:?} {entity:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
+             {ordered:?} {entity:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
         Failure::NoKey("THINKTHEN_API_KEY".to_owned()),
         Failure::Status(401),
         Failure::QuestionSet(QuestionSetError::Duplicate(format!("{KEY}.{EVIDENCE}"))),
@@ -87,12 +87,93 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
             file: true,
             error: crate::core::RelateConfigError::Relation,
         }),
-        Failure::Relate(super::relate::Error::Logical),
     );
 
     assert!(!shown.contains(KEY), "{shown}");
     assert!(!shown.contains(EVIDENCE), "{shown}");
     assert!(shown.contains("withheld"), "{shown}");
+}
+
+/// `choose --options` reads its labels from the record, and the request body
+/// carries the evidence as `state`. Neither `Debug` line shows the record.
+#[test]
+fn no_record_label_or_request_debug_line_shows_the_evidence() {
+    let record = crate::core::Reading::new(crate::core::Framing::Jsonl, Vec::new())
+        .expect("a JSON reading")
+        .record(format!(r#"{{"options":["{EVIDENCE}","other"]}}"#).as_bytes())
+        .expect("a JSON record");
+    let question = crate::core::Question::Choose {
+        text: crate::core::QuestionText::new("Which one fits?").expect("a question"),
+        options: record
+            .choices(&crate::core::Pointer::new("/options").expect("a pointer"))
+            .expect("two options"),
+    };
+    let plan = crate::core::Plan::new(
+        crate::core::Evidence::new(EVIDENCE).expect("evidence"),
+        crate::core::ModelName::new("jev-latest").expect("a model"),
+        vec![question.clone()],
+    )
+    .expect("a plan");
+    let request = crate::core::adapters::built_in::request(&plan).expect("a request");
+    let shown = format!("{question:?} {plan:?} {plan:#?} {request:?} {request:#?}");
+    assert!(!shown.contains(EVIDENCE), "{shown}");
+    assert_eq!(
+        format!("{request:?}"),
+        r#"Request { state: <24 bytes withheld>, model: "jev-latest", .. }"#
+    );
+    assert_eq!(
+        format!("{question:?}"),
+        r#"Choose { text: QuestionText(String("Which one fits?")), options: Labels(<27 bytes withheld>) }"#
+    );
+}
+
+/// `recognize` reads its evidence as tokens and names, in plain and pretty `Debug`.
+#[test]
+fn no_recognize_debug_line_shows_the_evidence() {
+    let name = crate::core::RecognizedName {
+        name: EVIDENCE.to_owned(),
+        kind: "person".to_owned(),
+        start: 0,
+        end: 1,
+        strength: 0.9,
+    };
+    let edge = crate::core::RelationEdge {
+        relation: "works_for".to_owned(),
+        source: name.clone(),
+        target: name.clone(),
+        probability: 0.8,
+    };
+    let tokens = crate::core::tokenize(EVIDENCE);
+    let input = crate::engine::facade::TokenInput {
+        token: EVIDENCE.to_owned(),
+        detection_probability: 0.9,
+        kind_probabilities: vec![0.9],
+    };
+    let lines = crate::core::Reading::new(crate::core::Framing::Lines, Vec::new())
+        .expect("a text reading")
+        .record(format!("\u{e9}{EVIDENCE}").as_bytes())
+        .expect("a text record");
+    let object =
+        crate::core::Record::string_fields(vec![(EVIDENCE.to_owned(), EVIDENCE.to_owned())]);
+    let shown = format!(
+        "{name:?} {name:#?} {edge:?} {edge:#?} {tokens:?} {tokens:#?} {input:?} {input:#?} \
+         {lines:?} {lines:#?} {object:?} {object:#?}"
+    );
+    assert!(!shown.contains(EVIDENCE), "{shown}");
+    assert_eq!(shown.matches("withheld").count(), 14, "{shown}");
+    // A two-byte letter sets the byte places apart from the character places.
+    let placed = crate::core::tokenize(&format!("\u{e9} {EVIDENCE}"));
+    assert_eq!(
+        format!("{placed:?}"),
+        "[Token { text: <2 bytes withheld>, byte_start: 0, byte_end: 2, start: 0, end: 1 }, \
+         Token { text: <22 bytes withheld>, byte_start: 3, byte_end: 25, start: 2, end: 24 }]"
+    );
+    assert_eq!(format!("{lines:?}"), "Record(text, <24 bytes withheld>)");
+    assert_eq!(format!("{object:?}"), "Record(json, <51 bytes withheld>)");
+    assert!(
+        shown.contains(r#"kind: "person", start: 0, end: 1, strength: 0.9"#),
+        "{shown}"
+    );
 }
 
 /// No message a user reads holds the key or the evidence.
@@ -252,7 +333,7 @@ fn transport_kinds_give_fixed_actions() {
         ),
         (
             TransportKind::PrematureClose,
-            "thinkthen: the backend closed the connection before a reply; try again or change --max-retries\n",
+            "thinkthen: the backend closed the connection before a reply and may have received the request; it was not sent again\n",
         ),
         (
             TransportKind::Other,

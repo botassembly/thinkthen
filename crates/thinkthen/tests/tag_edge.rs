@@ -29,7 +29,7 @@ fn tag_and_annotate_help_leads_with_the_description_and_ends_with_examples() {
         ),
         (
             "annotate",
-            "Fill out a question set for every record",
+            "Answer a saved set of questions about every record",
             [
                 "thinkthen annotate checks.json < message.txt",
                 "thinkthen annotate checks.json --input message.txt",

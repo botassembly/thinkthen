@@ -86,9 +86,9 @@ fn help_leads_with_whole_set_disclosure_and_all_three_bounds() {
         let output = run(&["find", flag], b"").expect("binary runs");
         assert_eq!(output.status.code(), Some(0));
         let help = String::from_utf8_lossy(&output.stdout);
-        assert!(help.contains("Every unit leaves together and sees every other unit"));
+        assert!(help.contains("Every line or record leaves together and sees every other one"));
         if flag == "--help" {
-            assert!(help.contains("2 to 255 units, or 2 to 254 with --none"));
+            assert!(help.contains("2 to 255 lines or records, or 2 to 254 with --none"));
             assert!(help.contains("at most 16 MiB across the original input"));
             assert!(help.contains(
                 "`find --none` prints nothing and exits 3 when `none` wins or ties for first."

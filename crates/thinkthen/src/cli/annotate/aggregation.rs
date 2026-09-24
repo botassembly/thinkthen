@@ -39,7 +39,11 @@ pub(super) fn finish(
     let mut failed_questions = 0;
     for group in answered {
         for chunk in group.answered {
-            check_model(&mut model, chunk.reply.model(), judging.backend.model())?;
+            check_model(
+                &mut model,
+                chunk.reply.model(),
+                judging.engine.backend().model(),
+            )?;
             requests.push(chunk.digest.clone());
             usage = add_usage(usage, chunk.reply.usage())?;
             replayed &= chunk.replayed;
@@ -62,7 +66,7 @@ pub(super) fn finish(
         let meta = AnnotateMeta::new(
             env!("CARGO_PKG_VERSION"),
             judging.set.sha256()?,
-            judging.backend.url().clone(),
+            judging.engine.backend().url().clone(),
             model.ok_or(Failure::Defect("no group reported a model"))?,
             usage,
             RequestMeta::new(replayed, requests_sent, requests)

@@ -25,7 +25,7 @@ pub(crate) fn inject(injection: Injection) -> Error {
         Injection::Backend => Error::Status(422),
         Injection::Local => Error::RecordingStorage,
         Injection::Cancelled => Error::Cancelled,
-        Injection::Deadline => Error::Deadline,
+        Injection::Deadline => Error::Deadline(crate::engine::error::Budget(Duration::ZERO)),
         Injection::Defect => Error::Defect("injected invariant failure"),
     }
 }
@@ -55,6 +55,29 @@ where
     E: From<Error>,
 {
     let prepared = PreparedRequest::with_profile(backend, plan, profile).map_err(E::from)?;
+    ask_sent(backend, plan, prepared, recorder, cancel, transport, key)
+}
+
+/// Send one prepared request through replay, transport, and recording.
+///
+/// Every live attempt goes out on an engine worker, so a host signal on the
+/// calling thread never lands in a socket read. A replay spawns nothing.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one prepared request carries explicit cancellation, transport, storage, and key boundaries"
+)]
+pub(crate) fn ask_sent<E>(
+    backend: &Backend,
+    plan: &Plan,
+    prepared: PreparedRequest,
+    recorder: &Recorder,
+    cancel: &crate::engine::Cancel,
+    transport: Transport<'_>,
+    key: impl FnOnce() -> Result<Key, E>,
+) -> Result<Answered, E>
+where
+    E: From<Error>,
+{
     ask_prepared(
         backend,
         plan,
@@ -64,50 +87,19 @@ where
         transport.usage,
         key,
         |prepared, key| {
-            transport
-                .client
-                .post_observed(
-                    &Exchange {
-                        url: backend.url().as_str(),
-                        body: &prepared.body,
-                        key,
-                        max_retries: transport.max_retries,
-                        retry_wait: transport.retry_wait,
-                    },
-                    cancel,
-                    || transport.usage.request_sent(),
-                )
-                .map_err(E::from)
-        },
-    )
-}
-
-#[cfg(test)]
-pub(crate) fn ask_with<E>(
-    backend: &Backend,
-    plan: &Plan,
-    recorder: &Recorder,
-    key: impl FnOnce() -> Result<Key, E>,
-    send: impl FnOnce(&PreparedRequest, &Key) -> Result<Vec<u8>, E>,
-) -> Result<Answered, E>
-where
-    E: From<Error>,
-{
-    let prepared = PreparedRequest::new(backend, plan).map_err(E::from)?;
-    let usage = Counters::default();
-    ask_prepared(
-        backend,
-        plan,
-        prepared,
-        recorder,
-        &crate::engine::Cancel::default(),
-        &usage,
-        key,
-        |prepared, key| {
-            send(prepared, key).map(|body| HttpAnswer {
-                body,
-                requests_sent: 1,
+            let exchange = Exchange {
+                url: backend.url().as_str(),
+                body: &prepared.body,
+                key,
+                max_retries: transport.max_retries,
+                retry_wait: transport.retry_wait,
+            };
+            crate::engine::workers::on_worker(|| {
+                transport
+                    .client
+                    .post_observed(&exchange, cancel, || transport.usage.request_sent())
             })
+            .map_err(E::from)
         },
     )
 }
@@ -149,6 +141,7 @@ where
             0,
         ),
         PreparedRecording::Live(permit) => {
+            cancel.key_lookup();
             let (permit, key) = finish_or_cancel(permit, key())?;
             let (permit, answered) = finish_or_cancel(permit, send(&prepared, &key))?;
             let decoded = built_in::decode_observed(plan, &answered.body);
@@ -183,13 +176,13 @@ fn observe_cancel<E>(
 where
     E: From<Error>,
 {
-    if !cancel.fired() {
+    let Some(stop) = cancel.stop() else {
         return Ok(operation);
-    }
+    };
     if let PreparedRecording::Live(permit) = operation {
         permit.cancel().map_err(E::from)?;
     }
-    Err(E::from(Error::Cancelled))
+    Err(E::from(stop))
 }
 
 fn finish_or_cancel<T, E>(permit: WritePermit, result: Result<T, E>) -> Result<(WritePermit, T), E>

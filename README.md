@@ -1,6 +1,6 @@
 # thinkthen
 
-`thinkthen` puts a System One model in the shell. The model never writes text. It reads a state, answers a typed question, and returns probabilities that a script can branch on. The question is a yes/no, one pick, every applicable label, or a rating on a scale. A command names the job, asks the question, and reads the evidence on standard input.
+`thinkthen` puts a System One model in the shell. The model never writes text. It reads a state, answers a typed question, and returns probabilities that a script can branch on. The question is a yes/no, one pick, every applicable label, or a level on a scale. A command names the job, asks the question, and reads the evidence on standard input.
 
 ```sh
 thinkthen decide 'Does the customer ask for a refund?' < message.txt
@@ -12,13 +12,13 @@ thinkthen find 'Which line answers the question?' --lines < handbook.txt
 
 The first prints `true`, `false`, or `null`, and its exit code works in a shell `if`. The second prints one label. The third prints every applicable label as a JSON array. The fourth prints the records that pass. The fifth sends the bounded set together and returns the best original unit. `--details` adds the probabilities behind any answer.
 
-Those commands are the design. `specification/` is the contract, and code follows it. `annotate` reads a saved question set when several judgments belong on the same input.
+Those commands are the design. `specification/` is the contract, and code follows it. `annotate` reads a saved question set when several questions belong on the same input.
 
 ## What it will and will not do
 
 - The shell sequences programs. `jq` reshapes data. `thinkthen` judges meaning and does nothing else.
 - Code parses the command line. The model reads only the question, the options, and the evidence.
-- A yes, a no, an unresolved answer, and an error stay four different outcomes in the output and in the exit code.
+- A yes, a no, a not sure answer, and a broken run stay four different outcomes in the output and in the exit code.
 - A backend is an address that speaks one wire shape, System One. TypeSafe's Jev is the first System One model. `THINKTHEN_API_KEY` holds the key and `THINKTHEN_BASE_URL` names the address. A local model is reached by a small server that presents the same shape.
 - A run can be recorded and replayed with no network. A recording holds the evidence that was sent, so committing one publishes it. A threshold is measured against labeled cases before anyone trusts it.
 

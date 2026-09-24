@@ -3,7 +3,7 @@ name = "thinkthen"
 version = "0.0.1"
 edition.workspace = true
 rust-version.workspace = true
-description = "Put a decider model in the shell"
+description = "Semantic commands for the shell: if, grep, and sort that understand meaning"
 license = "MIT"
 publish = false
 
@@ -14,7 +14,7 @@ required-features = ["cli"]
 
 [features]
 default = ["cli"]
-cli = ["dep:clap", "dep:csv-core", "dep:nix"]
+cli = ["dep:clap", "dep:csv-core", "dep:signal-hook"]
 
 [dependencies]
 clap = { version = "4.6.7", features = ["derive"], optional = true }
@@ -22,7 +22,7 @@ csv-core = { version = "0.1.13", optional = true }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.151", features = ["raw_value"] }
 sha2 = { version = "0.11", default-features = false }
-signal-hook = "0.3.18"
+signal-hook = { version = "0.3.18", optional = true }
 thiserror = "2.0.20"
 ureq = { version = "3.4.2", default-features = false, features = ["rustls"] }
 
@@ -30,7 +30,12 @@ ureq = { version = "3.4.2", default-features = false, features = ["rustls"] }
 workspace = true
 
 [dev-dependencies]
+conformance-backend = { path = "../../conformance/backend" }
 proptest = { version = "1.11.0", default-features = false, features = ["std"] }
+signal-hook = "0.3.18"
+
+[target."cfg(unix)".dev-dependencies]
+nix = { version = "0.29", default-features = false, features = ["pthread", "signal"] }
 
 [target."cfg(unix)".dependencies]
-nix = { version = "0.29", default-features = false, features = ["signal"], optional = true }
+nix = { version = "0.29", default-features = false, features = ["signal"] }

@@ -40,7 +40,7 @@ Under `--threshold 0.1:0.9`, p of 0.1 is unresolved because it reaches the low e
 
 Under a single cut, "no" means the answer did not reach the mark. It does not mean the model is sure of no. `--threshold 0.9` calls p of 0.88 a no, and it calls p of 0.02 a no, and the two are not the same evidence. The help says so.
 
-Measurement of the first decider model showed answers inside an unresolved band flipping between identical runs 5% to 14% of the time. Answers outside such a band flipped 0.5% to 2%. A band names the region where a second look pays. A single cut hides it.
+Measurement of the first System One model showed answers inside an unresolved band flipping between identical runs 5% to 14% of the time. Answers outside such a band flipped 0.5% to 2%. A band names the region where a second look pays. A single cut hides it.
 
 ## Which verbs take which form
 

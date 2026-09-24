@@ -12,6 +12,21 @@ ROOT=target/demos-standard
 
 rm -rf -- "$REPO/$ROOT"
 failures=0
+cases=0
+
+# The vocabulary check reads the built help. This stand-in prints clean help,
+# or the line a case plants for one command, so a case tests the check alone.
+mkdir -p "$REPO/$ROOT/bin"
+: >"$REPO/$ROOT/bin/planted"
+cat >"$REPO/$ROOT/bin/thinkthen" <<'STAND_IN'
+#!/bin/sh
+awk -F '\t' -v args="$*" '$1 == args && $2 == "EXIT 2" { failed = 1; exit }
+	$1 == args { print $2; found = 1 }
+	END { if (failed) exit 2; if (!found) print "Clean help." }' "$(dirname -- "$0")/planted"
+STAND_IN
+chmod +x "$REPO/$ROOT/bin/thinkthen"
+PATH=$REPO/$ROOT/bin:$PATH
+export PATH
 
 # Build one fixture root holding one page, whose body arrives on standard
 # input. The index lists the folder, so the form checks pass and the standard
@@ -27,6 +42,7 @@ expect() {
 	name=$1
 	code=$2
 	sentence=$3
+	cases=$((cases + 1))
 	said=$(sh -- "$RUNNER" "$ROOT/$name" 2>&1) && ran=0 || ran=$?
 	if [ "$ran" -ne "$code" ]; then
 		printf 'demos-self-test: %s exited %s and %s was wanted\n%s\n' \
@@ -234,8 +250,67 @@ expect rule8-repeats 1 'demos: page/README.md breaks rule 8 of ADR 0016: two clo
 } | fixture standard-ok
 expect standard-ok 0 'demos: 1 green, 0 red'
 
+# The approved vocabulary: a fixed phrase fails on a page, a context word fails
+# in the built help, and each sanctioned use passes.
+in_form() {
+	head_of_a_page "$1"
+	printf '%s\n\n' "$2"
+	block "$ok"
+	printf '## What can go wrong\n\nNothing here reaches a backend.\n\n'
+	printf '## Related how-tos\n\n- [How to read the standard](../one/)\n'
+}
+
+in_form 'say an old word' 'The decider model answers.' | fixture vocabulary-page
+expect vocabulary-page 1 'demos: page/README.md:9: "decider model" breaks the fixed-phrase rule'
+
+printf 'choose --help\tPick from one document.\n' >"$REPO/$ROOT/bin/planted"
+in_form 'plant a word in help' 'The help is planted.' | fixture vocabulary-help
+expect vocabulary-help 1 'demos: thinkthen choose --help:1: "document" breaks the help-word rule'
+
+printf 'tag --help\tName every tag label.\ndecide --help\tRead a table with a required header row.\n' \
+	>"$REPO/$ROOT/bin/planted"
+in_form 'keep the sanctioned words' 'Save the detailed rows and read each failed question.' |
+	fixture vocabulary-sanctioned
+expect vocabulary-sanctioned 0 'demos: 1 green, 0 red'
+printf 'score -h\tA judgement.\n' >"$REPO/$ROOT/bin/planted"
+in_form 'spell an old word' 'The help is planted.' | fixture vocabulary-spelling
+expect vocabulary-spelling 1 'demos: thinkthen score -h:1: "judgement" breaks the fixed-phrase rule'
+
+# Ticket 0083: the catalog's help is scanned like a function's.
+printf 'transform show --help\tPrint one saved row.\n' >"$REPO/$ROOT/bin/planted"
+in_form 'plant a word in catalog help' 'The help is planted.' | fixture vocabulary-catalog
+expect vocabulary-catalog 1 'demos: thinkthen transform show --help:1: "row" breaks the help-word rule'
+
+# A help command that fails is a failure, never a clean scan.
+printf 'relate --help\tEXIT 2\n' >"$REPO/$ROOT/bin/planted"
+in_form 'lose a help page' 'The help is planted.' | fixture vocabulary-no-help
+expect vocabulary-no-help 1 'demos: thinkthen relate --help failed, so its help was not checked'
+: >"$REPO/$ROOT/bin/planted"
+
+# Ticket 0103: `like ""` matches any output, so the runner refuses it on any
+# page, red or green, before it runs one.
+{
+	head_of_a_page 'claim an empty stream'
+	block 'printf '\''stray'\'' | mustmatch like ""'
+	printf '## What can go wrong\n\nNothing here reaches a backend.\n\n'
+	printf '## Related how-tos\n\n- [How to read the standard](../one/)\n'
+} | fixture loose-empty
+expect loose-empty 1 'demos: page/README.md:12: `like ""` matches any output; use `test -z`'
+
+# An option before or after `like` changes nothing about what it matches.
+for form in 'loose-ignore-case mustmatch -i like ""' 'loose-dashes mustmatch like -- ""'; do
+	name=${form%% *}
+	{
+		head_of_a_page 'claim an empty stream with an option'
+		block "printf 'stray' | ${form#* }"
+		printf '## What can go wrong\n\nNothing here reaches a backend.\n\n'
+		printf '## Related how-tos\n\n- [How to read the standard](../one/)\n'
+	} | fixture "$name"
+	expect "$name" 1 'demos: page/README.md:12: `like ""` matches any output; use `test -z`'
+done
+
 if [ "$failures" -ne 0 ]; then
 	printf 'demos-self-test: %s cases failed\n' "$failures" >&2
 	exit 1
 fi
-printf 'demos-self-test: 16 cases pass\n'
+printf 'demos-self-test: %s cases pass\n' "$cases"

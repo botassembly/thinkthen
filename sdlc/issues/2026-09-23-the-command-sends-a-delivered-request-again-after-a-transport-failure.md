@@ -1,6 +1,6 @@
 # The command sends a delivered request again after a transport failure
 
-Status: Open
+Status: Closed by ticket 0089, landed on main at 29578528. The record is `sdlc/records/0089-build-no-transport-resend.md`.
 
 One `thinkthen decide` call sends the same paid request three times when the backend reads the whole request and then resets the connection or never answers. The backend received every copy, and the vendor bills each delivery. The user sees one failure and pays for three sends.
 

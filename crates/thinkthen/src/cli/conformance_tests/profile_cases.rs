@@ -1,7 +1,7 @@
 use super::{asked, conformance_support::Document};
 use crate::core::{Backend, BackendProfile, ProfileName, ProfileWarning};
 use crate::engine::error::Error;
-use crate::prepared_request::PreparedRequest;
+use crate::engine::facade;
 use serde::Deserialize;
 use serde_json::value::RawValue;
 
@@ -36,15 +36,16 @@ enum Expectation {
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct MismatchCase {
     id: String,
-    calibrated: Option<String>,
+    tuned_for: Option<String>,
     running: Option<String>,
     warning: bool,
 }
 
 #[test]
-fn shared_profile_cases_cross_the_production_parser_and_encoder() {
+fn shared_profile_cases_cross_the_facade_preparation() {
     let source: Document = serde_json::from_str(CASES).expect("main cases");
     let profiles: ProfileDocument = serde_json::from_str(PROFILES).expect("profile cases");
     assert_eq!(profiles.schema, "thinkthen.backend-profile-conformance/1");
@@ -60,7 +61,7 @@ fn shared_profile_cases_cross_the_production_parser_and_encoder() {
             .expect("production question grammar")
             .plan;
         let profile = BackendProfile::parse(profile_case.profile.get()).expect("profile parser");
-        let result = PreparedRequest::with_profile(&backend, &plan, Some(&profile));
+        let result = facade::split(&backend, Some(&profile), &plan);
         match profile_case.expect {
             Expectation::Pass(word) => {
                 assert_eq!(word, "pass", "{}", profile_case.id);
@@ -91,12 +92,12 @@ fn shared_profile_cases_cross_the_production_parser_and_encoder() {
     }
 
     for case in profiles.mismatches {
-        let calibrated = case
-            .calibrated
+        let tuned_for = case
+            .tuned_for
             .as_deref()
             .map(ProfileName::new)
             .transpose()
-            .expect("calibrated name");
+            .expect("tuned_for name");
         let running = case
             .running
             .as_deref()
@@ -104,10 +105,16 @@ fn shared_profile_cases_cross_the_production_parser_and_encoder() {
             .transpose()
             .expect("running name");
         assert_eq!(
-            ProfileWarning::between(calibrated.as_ref(), running.as_ref()).is_some(),
+            ProfileWarning::between(tuned_for.as_ref(), running.as_ref()).is_some(),
             case.warning,
             "{}",
             case.id
         );
     }
+}
+
+#[test]
+fn a_mismatch_case_with_the_old_calibrated_key_is_refused() {
+    let old = r#"{"id":"old","calibrated":"jev","running":"jev","warning":false}"#;
+    assert!(serde_json::from_str::<MismatchCase>(old).is_err());
 }

@@ -32,6 +32,8 @@ A question that must begin with `@` is written in a file. Nothing escapes the `@
 
 An unreadable file is exit 5. A file that is not JSON, that is not one object, or that breaks a rule below is exit 5, because the file is a local input the user can fix. A command that names the wrong verb for the file is exit 2, because the line to fix is the one the user typed.
 
+A question given as JSON text, as a library or a database builds it from the caller's arguments, is a `usage` error when it breaks a rule below. The caller typed that text, so it fails as a typed value does. The same question loaded from a named file is `local`, as above. The shared case pair `29-usage-json-text` and `30-local-question-file` in `conformance/cases.json` fixes the split.
+
 A JSON syntax error says `the question file is not valid JSON: the JSON at line LINE column COLUMN is not one`. The line and column come from the JSON parser. The message carries no parser text and repeats no byte from the file.
 
 ## The grammar

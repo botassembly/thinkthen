@@ -1,6 +1,6 @@
 # Stop GitHub Actions from running on every push
 
-Status: Open. High priority. Ian's ruling: no GitHub Actions for now. All testing runs on the local machines.
+Status: Closed by ticket 0100. `gate.yml` now runs only on `workflow_dispatch`. Both workflows were disabled by hand on GitHub on 2026-09-22. A branch that still carries the old `gate.yml` runs it on push until it merges main. Ian's ruling: no GitHub Actions for now. All testing runs on the local machines.
 
 `.github/workflows/gate.yml` runs on every push and every pull request, on every branch. ThinkThen is private, so each run spends the botassembly organization's free-plan allowance of 2,000 Actions minutes a month. GitHub warned Ian at 90 percent on 2026-09-22.
 

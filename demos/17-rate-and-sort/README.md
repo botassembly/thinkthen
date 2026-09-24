@@ -75,7 +75,7 @@ Those two numbers are three hundredths apart and do not mean the same thing. The
 
 - **No answer of `score` sets the exit code.** A run that printed a number exits 0 whatever the number was, and the cut lives in `jq`. Exit 2 is a usage error with nothing sent, 4 is the backend, and 5 is local.
 - **`score` takes no `--threshold`, no `--quiet`, and no `--raw`.** Each is a usage error. Fewer than two levels, more than ten, a blank level, and a repeat are usage errors too.
-- **Rating is the weakest thing a decider model does.** Measurement of the first decider model showed rubric judgments rejecting 18% to 46% of work that people had accepted. A number belongs in a queue a person reads, and a gate that has to hold belongs in `decide` or `choose`.
+- **A score is the weakest thing the model gives.** Measurement of the first System One model showed rubric scores rejecting 18% to 46% of work that people had accepted. A number belongs in a queue a person reads, and a gate that has to hold belongs in `decide` or `choose`.
 - **Two runs over different level lists are two different scales.** Divide each number by the number of levels minus one before comparing them, and even then say what changed.
 - **`sort -n` reads the locale.** `LC_ALL=C` keeps the decimal point a point.
 - **The Bash way to branch on levels is `choose`** with the levels as ordered labels, because a label matches in a `case` and a number does not.
