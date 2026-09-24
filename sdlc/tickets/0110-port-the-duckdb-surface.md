@@ -36,14 +36,15 @@ Draft ADR 0047 (on the 0093 branch until 0093 lands) fixes the crate's place and
 
 ## Shared rules
 
-This ticket follows the six shared rules of `sdlc/planning/surfaces-port-guide.md` on main (`446a4d6b`, with the builder wording of `6eb1303e`).
+This ticket follows the seven shared rules of `sdlc/planning/surfaces-port-guide.md` on main (`446a4d6b`, with the builder wording of `6eb1303e` and the paid-backend rule of `d783ab6b`).
 
 1. **No Docker.** The check runs offline on Linux with the pinned toolchains and no container. See the gate section.
 2. **Toolchains under `~/.cache/thinkthen-toolchains/`.** The DuckDB v1.5.5 CLI and the test venv live under `~/.cache/thinkthen-toolchains/duckdb/v1.5.5/`. The one download is setup with a sha256 pinned in `tools/version.env` and a refusal on mismatch. Gates then run offline.
 3. **One cache and one backend per test.** Each test sets its own temporary cache folder through `SET thinkthen_cache`, or through `THINKTHEN_CACHE` for warm, and starts its own loopback backend. The held reply that can hold again and one backend per test come from ticket 0117.
 4. **Prompt Ctrl-C.** Decision 7 runs every engine call on a detachable worker. R4-22, R5-23, and case 23 meet 100 ms.
 5. **A deny plant that reaches deny offline.** The plant removes one license exception. See the gate section.
-6. **Public engine settings.** Decision 5 exposes width, `max_requests`, cache, and `cache_bytes` as DuckDB settings on an engine built on `EngineBuilder::from_env()`. Each test that needs requests in flight runs `SET thinkthen_width = 8` in its own child process and never uses a hidden hook or the default.
+6. **No test or plant reaches a paid backend.** `check.sh` unsets `THINKTHEN_API_KEY` and sets a fake key only beside a `THINKTHEN_BASE_URL` on `127.0.0.1`. It refuses to start a suite when the address is anything else. The secrecy test's base URL with credentials is a loopback address. Environment seeding is proved through the cache folder, never through a request. No plant here changes the address the engine is built with.
+7. **Public engine settings.** Decision 5 exposes width, `max_requests`, cache, and `cache_bytes` as DuckDB settings on an engine built on `EngineBuilder::from_env()`. Each test that needs requests in flight runs `SET thinkthen_width = 8` in its own child process and never uses a hidden hook or the default.
 
 ## What moves from the tag
 
@@ -120,7 +121,7 @@ Not closed here: G9 waits on ADR 0047 item 5. The venv's `duckdb` module loading
 - A fork test loads the extension in Python, warms it, calls `os.fork`, and gets an answer in the child. The parent's `thinkthen_usage` does not move (0096).
 - Nothing reaches a non-loopback address. A secrecy test sets a sentinel `THINKTHEN_API_KEY` and a base URL with credentials, then reads every error message and every `thinkthen_details` row for both.
 - The worker survives a closed channel, and a channel that closes with no result raises `defect`. A Rust unit test covers each edge.
-- Settings keep the environment's address. With `THINKTHEN_BASE_URL` pointed at the test's loopback backend, `SET thinkthen_width = 8` and a 64-text held batch hold 8 counted requests on that backend. Plant: build the engine with `Engine::builder()` when a setting is present. The call then targets the built-in address, and the loopback count reads 0. Each other setting gets one test: `thinkthen_max_requests` refuses a chunk over its limit with zero counted requests, `thinkthen_cache` writes into the named folder, and `thinkthen_cache_bytes` reaches the engine's cap.
+- Settings keep the environment's seeding. A first run with `THINKTHEN_CACHE` set to the test's folder fills it from the loopback backend. A second run with `SET thinkthen_width = 8` answers the same texts with `cached` true, and the loopback count for that run reads 0. Plant: reset the cache to the default folder when a setting is present, with `XDG_CACHE_HOME` pointed at an empty temporary folder. The count then reads 1, and the red is read from the loopback listener. The plant keeps the environment's address, so no request can leave the machine. Each other setting gets one test: `thinkthen_max_requests` refuses a chunk over its limit with zero counted requests, `thinkthen_cache` writes into the named folder, and `thinkthen_cache_bytes` reaches the engine's cap.
 - `thinkthen_warm('@q.json', body)` reads `usage` with the pinned `read_text` sentence and zero opens of `q.json`.
 
 ## The check it adds to the gate ladder
