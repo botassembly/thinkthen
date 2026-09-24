@@ -7,8 +7,10 @@ use clap::{Args, Parser};
 
 mod command;
 mod find;
+mod relate;
 pub(crate) use command::{CacheCommand, Command, PruneArguments, StatusArguments};
 pub(crate) use find::FindArguments;
+pub(crate) use relate::RelateArguments;
 
 /// Semantic commands for the shell: if, grep, and sort that understand meaning
 #[derive(Debug, Parser)]

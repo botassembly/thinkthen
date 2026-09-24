@@ -10,5 +10,6 @@ mod harness;
 mod corpus;
 mod grammar;
 mod overrides;
+mod relate;
 mod secrecy;
 mod structured;

@@ -81,7 +81,7 @@ The first live answers on 2026-09-19 returned the same probability for two ident
 
 `meta.cached` is `true` when the answer came entirely from stored exchanges and `false` when a backend answered. It is always present. `meta.requests` carries the same digest that names the requested recording entry. Replay and live execution therefore report one request identity. Everything else in the result is what the recorded response yields, the usage included. A later token ledger counts only answers that a backend gave.
 
-A recorded partial reply replays the same good answers, failed markers, failure count, and exit 6. Recording keeps the raw response and request bytes unchanged.
+A recorded partial reply replays the same good answers, failed markers, failure count, and exit 6. This includes `relate` edges and Option A question entries. Recording keeps the raw response and request bytes unchanged.
 
 ## A recording holds the evidence
 

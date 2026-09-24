@@ -6,7 +6,7 @@ use clap::{Args, Subcommand};
 
 use super::{
     AnnotateArguments, ChooseArguments, DecideArguments, FilterArguments, FindArguments,
-    RankArguments, RecognizeArguments, ScoreArguments, TagArguments,
+    RankArguments, RecognizeArguments, RelateArguments, ScoreArguments, TagArguments,
 };
 
 /// The verbs the tool answers to.
@@ -172,6 +172,13 @@ pub(crate) enum Command {
     /// `--relation-threshold` gates a relation's model probability.
     Recognize(RecognizeArguments),
 
+    /// Find named relations across one complete entity set.
+    ///
+    /// Relations are beta. Every entity leaves together as one complete entity
+    /// set and sees every other entity admitted by a rule. Inline rules use
+    /// NAME=SOURCE_KIND:TARGET_KIND. A bare NAME means NAME=*:*.
+    Relate(RelateArguments),
+
     /// Inspect and maintain answer-cache folders without sending a request.
     Cache(CacheArguments),
 }
@@ -220,6 +227,7 @@ impl Command {
             Self::Find(arguments) => arguments.common.input.as_deref(),
             Self::Annotate(arguments) => arguments.common.input.as_deref(),
             Self::Recognize(arguments) => arguments.common.input.as_deref(),
+            Self::Relate(arguments) => arguments.common.input.as_deref(),
             Self::Cache(_) => None,
             Self::Status(_) => None,
         }
@@ -237,6 +245,7 @@ impl Command {
             Self::Find(arguments) => arguments.common.timeout,
             Self::Annotate(arguments) => arguments.common.timeout,
             Self::Recognize(arguments) => arguments.common.timeout,
+            Self::Relate(arguments) => arguments.common.timeout,
             Self::Cache(_) => 1,
             Self::Status(_) => 1,
         }

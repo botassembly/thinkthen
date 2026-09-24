@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:thinkthen:question-file",
   "title": "thinkthen question file",
-  "description": "The structural grammar of a question file, shared by the parser and this schema. A question file is one object that names exactly one verb, so it validates under exactly one of the four entry definitions. Semantic checks the schema cannot express are listed in specification/question-file.md: blank-string and control-character rules beyond the name pattern, unique and unrepeated names, threshold ranges and band form, RFC 6901 pointers, and the duplicate-member rejection the parser performs before any member is read.",
+  "description": "The structural grammar of a question file, shared by the parser and this schema. A question file is one object that names exactly one verb, so it validates under exactly one entry definition. Semantic checks the schema cannot express are listed in specification/question-file.md: blank-string and control-character rules beyond the name pattern, unique and unrepeated names, threshold ranges and band form, RFC 6901 pointers, and the duplicate-member rejection the parser performs before any member is read.",
   "anyOf": [
     {
       "$ref": "#/$defs/decide"
@@ -15,6 +15,9 @@
     },
     {
       "$ref": "#/$defs/score"
+    },
+    {
+      "$ref": "#/$defs/relate"
     }
   ],
   "$defs": {
@@ -127,6 +130,87 @@
         },
         "profile": {
           "$ref": "#/$defs/profile"
+        }
+      }
+    },
+    "relate": {
+      "description": "A `relate` entry: one ordered set of relation rules and the pointers that identify each entity.",
+      "type": "object",
+      "required": [
+        "version",
+        "relate"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "relate": {
+          "type": "object",
+          "required": [
+            "relations"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "fields": {
+              "type": "object",
+              "required": [
+                "name",
+                "kind"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "kind": {
+                  "type": "string"
+                }
+              }
+            },
+            "relations": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/relation"
+              }
+            }
+          }
+        },
+        "threshold": {
+          "$ref": "#/$defs/cut"
+        },
+        "model": {
+          "$ref": "#/$defs/name"
+        },
+        "profile": {
+          "$ref": "#/$defs/profile"
+        }
+      }
+    },
+    "relation": {
+      "type": "object",
+      "required": [
+        "name",
+        "source",
+        "target"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/name"
+        },
+        "source": {
+          "$ref": "#/$defs/name"
+        },
+        "target": {
+          "$ref": "#/$defs/name"
+        },
+        "reads": {
+          "$ref": "#/$defs/name"
+        },
+        "either": {
+          "type": "boolean"
         }
       }
     },

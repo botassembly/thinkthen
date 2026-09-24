@@ -75,6 +75,12 @@ pub(crate) enum RecordError {
     /// The record holds nothing at one of the pointers.
     #[error("the record holds nothing at `{0}`")]
     Missed(String),
+    /// The selected entity member is not text.
+    #[error("the entity value at `{0}` is not a string")]
+    EntityText(String),
+    /// A complete structured entity document is not one list.
+    #[error("the entity document is one JSON array")]
+    EntityDocument,
     /// A pointer was taken into a text record, which has no members.
     #[error("{}", ReadingError::TextHasNoMembers)]
     TextHasNoMembers,
@@ -183,6 +189,16 @@ impl Record {
             _ => return Err(shape()),
         };
         Ok(Labels::described(listed)?)
+    }
+
+    /// Read one required entity string without exposing the rest of the record.
+    pub(crate) fn entity_text(&self, pointer: &Pointer) -> Result<&str, RecordError> {
+        let Held::Json(value) = &self.0 else {
+            return Err(RecordError::TextHasNoMembers);
+        };
+        found(pointer, value)?
+            .as_str()
+            .ok_or_else(|| RecordError::EntityText(pointer.as_str().to_owned()))
     }
 }
 
@@ -311,6 +327,25 @@ impl Reading {
             return Ok(Record(Held::Json(value)));
         }
         Ok(Record(Held::Text(text.to_owned())))
+    }
+
+    /// Read one structured document as a complete ordered entity set.
+    pub(crate) fn entity_document(&self, bytes: &[u8]) -> Result<Vec<Record>, RecordError> {
+        if bytes.len() > MAX_RECORD_BYTES {
+            return Err(RecordError::TooLarge);
+        }
+        let text = str::from_utf8(bytes).map_err(|_| RecordError::NotUtf8)?;
+        let value = Json::parse(text).map_err(|error| match error {
+            JsonError::Syntax { line, column } => RecordError::InputJson { line, column },
+            other => RecordError::Json(other),
+        })?;
+        let Json::Array(items) = value else {
+            return Err(RecordError::EntityDocument);
+        };
+        Ok(items
+            .into_iter()
+            .map(|item| Record(Held::Json(item)))
+            .collect())
     }
 
     /// Read an annotation record, preserving a whole JSON object when present.

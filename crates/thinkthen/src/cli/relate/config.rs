@@ -1,0 +1,129 @@
+use std::fs;
+
+use serde::Serialize;
+
+use crate::args::RelateArguments;
+use crate::core::{Framing, ModelName, RelateConfigError, RelateSpec, Source};
+use crate::failure::Failure;
+
+pub(super) struct Settled {
+    pub(super) spec: RelateSpec,
+    pub(super) framing: Framing,
+    pub(super) from: Option<From>,
+}
+
+#[derive(Clone, Copy, Debug, Serialize)]
+#[rustfmt::skip]
+pub(super) struct From {
+    question: Source, threshold: Source, model: Source,
+    field: Source, kind_field: Source,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    profile: Option<Source>,
+}
+
+pub(super) fn settle(arguments: &RelateArguments) -> Result<Settled, Failure> {
+    if arguments.common.field.len() > 1 {
+        return Err(Failure::Usage("--field takes one pointer on `relate`"));
+    }
+    let file = arguments
+        .relations
+        .first()
+        .and_then(|relation| relation.strip_prefix('@'));
+    let (mut spec, mut from) = if let Some(path) = file {
+        if arguments.relations.len() != 1 || arguments.either {
+            return Err(config_error(false, RelateConfigError::Relation));
+        }
+        let text = fs::read_to_string(path).map_err(Failure::OpenQuestionFile)?;
+        let spec = RelateSpec::parse(&text).map_err(|error| config_error(true, error))?;
+        let presence = spec.presence();
+        let has_profile = spec.profile.is_some();
+        (
+            spec,
+            Some(From {
+                question: Source::File,
+                threshold: file_or_default(presence.threshold),
+                model: file_or_default(presence.model),
+                field: file_or_default(presence.fields),
+                kind_field: file_or_default(presence.fields),
+                profile: has_profile.then_some(Source::File),
+            }),
+        )
+    } else {
+        (
+            RelateSpec::inline(&arguments.relations, arguments.either)
+                .map_err(|error| config_error(false, error))?,
+            None,
+        )
+    };
+    if let Some(threshold) = arguments.threshold.as_deref() {
+        spec.override_threshold(threshold)
+            .map_err(|error| config_error(false, error))?;
+        if let Some(sources) = &mut from {
+            sources.threshold = Source::CommandLine;
+        }
+    }
+    let name = arguments.common.field.first().map(String::as_str);
+    spec.override_fields(name, arguments.kind_field.as_deref())
+        .map_err(|error| config_error(false, error))?;
+    if let Some(sources) = &mut from {
+        if name.is_some() {
+            sources.field = Source::CommandLine;
+        }
+        if arguments.kind_field.is_some() {
+            sources.kind_field = Source::CommandLine;
+        }
+    }
+    if let Some(model) = arguments.common.model.as_deref() {
+        spec.model = Some(
+            ModelName::new(model)
+                .map_err(|_| Failure::Usage("--model is text, not white space"))?,
+        );
+        if let Some(sources) = &mut from {
+            sources.model = Source::CommandLine;
+        }
+    }
+    let framing = framing(arguments);
+    if framing == Framing::Lines {
+        if name.is_some() || arguments.kind_field.is_some() {
+            return Err(Failure::Usage(
+                "--lines takes neither --field nor --kind-field",
+            ));
+        }
+        if spec
+            .relations
+            .iter()
+            .any(|rule| rule.source != "*" || rule.target != "*")
+        {
+            return Err(Failure::Usage(
+                "--lines takes only bare relation names or NAME=*:*",
+            ));
+        }
+    }
+    Ok(Settled {
+        spec,
+        framing,
+        from,
+    })
+}
+
+fn framing(arguments: &RelateArguments) -> Framing {
+    if arguments.common.lines {
+        Framing::Lines
+    } else if arguments.common.jsonl {
+        Framing::Jsonl
+    } else if arguments.common.csv {
+        Framing::Csv
+    } else if arguments.common.tsv {
+        Framing::Tsv
+    } else {
+        Framing::Document
+    }
+}
+
+fn config_error(file: bool, error: RelateConfigError) -> Failure {
+    Failure::Relate(crate::failure::relate::Error::Config { file, error })
+}
+
+const fn file_or_default(file: bool) -> Source {
+    if file { Source::File } else { Source::Default }
+}

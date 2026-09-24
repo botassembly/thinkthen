@@ -1,6 +1,6 @@
 # Documentation plan
 
-Written 2026-09-19, rewritten to ADR 0018 by ticket 0021. ADR 0011 rules that one file is the demo, the how-to, and the test. ADR 0016 cut the list from 40 pages to 27 and put limits on each. ADR 0018 cut it again to 20, keeping the limits. This page holds the list. Each line names the number, the task, the slice of `plan.md` that turns it green, and its state. A demo number is a folder under `demos/`. New numbers are reserved here and get a folder when their slice starts.
+Written 2026-09-19, rewritten to ADR 0018 by ticket 0021. ADR 0011 rules that one file is the demo, the how-to, and the test. ADR 0016 cut the list from 40 pages to 27 and put limits on each. ADR 0018 cut it again to 20, keeping the limits. Accepted ticket 0088 added page 45 for the new `relate` command. This page holds the list. Each line names the number, the task, the slice or ticket that turns it green, and its state. A demo number is a folder under `demos/`. New numbers are reserved here and get a folder when their slice starts.
 
 The published documentation has three kinds of page. How-tos are the green demos. Reference is `specification/`, with its executable examples in `spec/`. The README is the one tutorial and the one explanation. Nothing is written twice.
 
@@ -21,6 +21,7 @@ ADR 0016 adds the limits: at most 120 lines and 900 words, at most six asserting
 | 27 | Test a script with no network | Ticket 0010 | green |
 | 18 | Point the tool at another server and compare two deciders | 13 | coming, slice 13 |
 | 44 | Find names in a text without a network | Ticket 0080 | green |
+| 45 | Map relationships in a complete entity set | Ticket 0088 | green |
 
 ## Gates and branches
 

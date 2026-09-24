@@ -117,7 +117,7 @@ for page in */README.md; do
 		}
 		{
 			rest = $0
-			while (match(rest, /thinkthen (decide|choose|score|filter|rank|annotate|find)/)) {
+			while (match(rest, /thinkthen (decide|choose|score|filter|rank|annotate|find|relate)/)) {
 				used[substr(rest, RSTART + 10, RLENGTH - 10)] = 1
 				rest = substr(rest, RSTART + RLENGTH)
 			}

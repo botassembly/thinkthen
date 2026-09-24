@@ -38,6 +38,12 @@ mod recording_durability;
 mod recordings;
 mod refusals;
 mod refused;
+#[rustfmt::skip]
+#[allow(clippy::expect_used, clippy::indexing_slicing, reason = "fixture failures should stop this compiled relation boundary proof")]
+mod relate;
+#[rustfmt::skip]
+#[allow(clippy::expect_used, clippy::indexing_slicing, clippy::too_many_lines, reason = "fixture failures should stop this relation secrecy proof")]
+mod relate_security;
 mod result_assertions;
 mod scheduling;
 mod secrecy;

@@ -12,6 +12,14 @@ Every structural setting of a question has two homes. One is an option on the co
 {"version":1,"recognize":{"kinds":{"person":"A person's name.","organization":"An organization name."},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for"}]},"threshold":0.5,"relation_threshold":0.5,"model":"jev-latest","profile":"measured-profile","on":"/body"}
 ```
 
+## Relation files
+
+`relate @FILE` reads a closed version-one object. Ordered `relate.relations` is required. Each entry carries `name`, `source`, `target`, optional `reads`, and optional `either`. Optional `relate.fields` carries RFC 6901 `name` and `kind` pointers. Top-level `threshold`, `model`, and saved calibration `profile` have their ordinary meanings. [relate.md](relate.md) gives the complete grammar and precedence.
+
+```json
+{"version":1,"relate":{"fields":{"name":"/name","kind":"/kind"},"relations":[{"name":"works_for","source":"person","target":"organization"}]},"threshold":0.5,"model":"jev-latest","profile":"measured-profile"}
+```
+
 ## Naming a file
 
 The first argument of `decide`, `choose`, `tag`, `score`, `filter`, and `rank` is the question. `filter` and `rank` ask a yes/no question of each record, so both read a `decide` file. It is the question text, or `@` and a path to a question file.
@@ -62,7 +70,7 @@ A description that is an object conventionally holds `what`, `not_for`, and `exa
 
 ## The published schema
 
-`question-file.schema.json`, beside this page, is the grammar above as a Draft 2020-12 JSON Schema. Its root composes four definitions, `decide`, `choose`, `tag`, and `score`, each one the complete structural shape of a single question file for that verb. A question-set member has additional contextual rules from [annotate.md](annotate.md), so these definitions do not validate one by themselves. `fixtures/question-file/corpus.json` is the shared corpus: every case names a file and a verdict, a self-test under the test rung proves the schema and each named definition agree with each verdict, and an integration test runs each case through the parser and `--dry-run` for the same verdict.
+`question-file.schema.json`, beside this page, is the grammar above as a Draft 2020-12 JSON Schema. Its root composes five definitions, `decide`, `choose`, `tag`, `score`, and `relate`, each one the complete structural shape of a single question file for that verb. A question-set member has additional contextual rules from [annotate.md](annotate.md), so these definitions do not validate one by themselves. `fixtures/question-file/corpus.json` is the shared corpus: every case names a file and a verdict, a self-test under the test rung proves the schema and each named definition agree with each verdict, and an integration test runs each case through the parser and `--dry-run` for the same verdict.
 
 The schema is structural; agreement with it is not agreement with this page. The checks it cannot express stay in the parser: members of one object that share a name, repeated label or level names, the threshold's range and band form, and RFC 6901 pointer syntax. The schema's name pattern is also stricter than the `model` check, which refuses only blank text. A run never interprets the schema; `--dry-run` runs the production parser and its full semantic validation.
 
@@ -117,7 +125,7 @@ The digest is the SHA-256 of the canonical form below, written as 64 lowercase h
 
 The canonical form is one JSON object on one line. Another implementation follows these rules and reaches the same digest.
 
-1. **The keys come in a fixed order and no other key appears.** For `decide`: `verb`, `text`, `true`, `false`, `threshold`, `profile`. For `choose`: `verb`, `text`, `options`, `threshold`, `profile`. For `tag`: `verb`, `text`, `labels`, `threshold`, `profile`. For `score`: `verb`, `text`, `levels`, `profile`. For `recognize`: `verb`, `kinds`, optional `relations`, `threshold`, `relation_threshold`, optional `profile`. Each relation keeps `name`, `source`, `target`, `reads`, `either` order. `verb` holds the command name. An absent optional key is omitted. Runtime `model` and `on` settings do not identify the question and are absent.
+1. **The keys come in a fixed order and no other key appears.** For `decide`: `verb`, `text`, `true`, `false`, `threshold`, `profile`. For `choose`: `verb`, `text`, `options`, `threshold`, `profile`. For `tag`: `verb`, `text`, `labels`, `threshold`, `profile`. For `score`: `verb`, `text`, `levels`, `profile`. For `recognize`: `verb`, `kinds`, optional `relations`, `threshold`, `relation_threshold`, optional `profile`. For `relate`: `verb`, `fields`, `relations`, `threshold`, optional `profile`. Each relation keeps `name`, `source`, `target`, `reads`, `either` order. `verb` holds the command name. An absent optional key is omitted. Runtime `model`, framing, and backend profile settings do not identify the question and are absent.
 2. **A key with no value is absent.** `true` and `false` are absent when no text was given. `threshold` is absent on `score`, which takes no rule, and on a `choose` with no cut.
 3. **There is no insignificant white space.** No space follows a colon or a comma, and there is no newline inside the form. The digest is taken over the UTF-8 bytes of that one line.
 4. **Text is escaped as JSON escapes it, and no further.** A quotation mark is `\"`, a backslash is `\\`, and the control characters use their JSON escapes. Every other character is written as itself, including every character outside ASCII. No `\u` escape is used where the character can stand for itself.

@@ -15,6 +15,7 @@ pub(crate) mod judge;
 pub(crate) mod normalize;
 pub(crate) mod profile;
 pub(crate) mod recognize;
+pub(crate) mod relate;
 pub(crate) mod schedule;
 pub(crate) mod status;
 pub(crate) mod table;
@@ -93,6 +94,7 @@ fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitC
         Some(Command::Recognize(arguments)) => {
             recognize::run(arguments, environment, input, writer)
         }
+        Some(Command::Relate(arguments)) => relate::run(arguments, environment, input, writer),
         Some(Command::Cache(arguments)) => match &arguments.command {
             args::CacheCommand::Prune(arguments) => cache::prune(arguments, environment, writer),
         },

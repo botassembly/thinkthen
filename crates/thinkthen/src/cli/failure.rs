@@ -15,14 +15,13 @@ use crate::table;
 
 pub(crate) mod recognize;
 mod recording;
+pub(crate) mod relate;
 mod status;
 
 const NOT_TEXT: &str = "the evidence is not valid UTF-8";
 
-/// What a usage error with no sentence of its own would be told.
 const UNNAMED: &str = "defect: a usage error with no sentence";
 
-/// What stopped the command.
 #[derive(Debug)]
 pub(crate) enum Failure {
     /// The flags and the environment name no backend.
@@ -36,6 +35,7 @@ pub(crate) enum Failure {
         error: ProfileError,
     },
     ProfileLimit(ProfileLimit),
+    Relate(relate::Error),
     Recognize(recognize::Error),
     QuietWithDetails,
     RawWithAnotherView,
@@ -299,6 +299,9 @@ fn stopped(failure: &Failure, writer: &mut dyn Write) -> Option<u8> {
 }
 
 fn special_failure(failure: &Failure) -> Option<(u8, String)> {
+    if let Some(message) = relate::message(failure) {
+        return Some(message);
+    }
     Some(match failure {
         Failure::OpenProfile { path, error } => (
             5,

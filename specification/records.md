@@ -26,6 +26,7 @@ Under `--lines` and under `--jsonl` a carriage return before the line feed is st
 | `filter`, `rank` | One record flag is required. One document is not a stream |
 | `annotate` | One document by default. All four record flags are accepted |
 | `find` | Lines by default or JSONL. CSV and TSV are not options |
+| `relate` | One JSON array by default. Lines, JSONL, CSV, and TSV form one complete entity set |
 
 ### CSV and TSV
 
@@ -90,6 +91,7 @@ Settled by ADR 0008, accepted in ADR 0010, with the `find` exception settled by 
 | `decide`, `choose`, `tag`, `score`, `filter`, `rank` over N records | N |
 | `annotate` over N records | N times the number of distinct `on` sets |
 | `find` | 1 |
+| `relate` | The shared relation planner's exact request count for the complete set |
 | `--dry-run`, `--replay` | 0 |
 
 `rank` sorts locally and makes no pairwise calls. Without a cache, every request inside one command is independent of every other. A command is therefore one round, and the round runs in parallel with output order kept. With a cache, equal request digests share one backend call and each record still receives its own logical judgment in input order.
@@ -97,6 +99,8 @@ Settled by ADR 0008, accepted in ADR 0010, with the `find` exception settled by 
 ## Empty input
 
 An empty line or JSONL stream succeeds with no output and no request. CSV and TSV require a header, so an empty CSV or TSV input exits 2. An empty document is a usage error, because a judgment about nothing is a mistake in the pipeline.
+
+For `relate`, an empty line or JSONL stream and a header-only table are successful empty sets. A blank line in either stream is invalid. The default document must be a nonempty JSON array. The command validates the whole set before any request. [relate.md](relate.md) gives its independent name and kind pointers and complete-set refusals.
 
 ## Failure
 

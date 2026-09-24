@@ -1,6 +1,6 @@
 # How-tos
 
-Every page here is one shell job written so that it runs. A green page is the how-to, the demo, and the test at once, and `sdlc/scripts/spec` runs every block that asserts something against a committed recording. ADR 0011 rules that nobody writes a second copy.
+Every page here is one shell job written so that it runs. A green page is the how-to, the demo, and the test at once, and `sdlc/scripts/spec` runs every block that asserts something against a committed recording. ADR 0011 rules that nobody writes a second copy. Ticket 0088 added the twenty-first page for the new `relate` command.
 
 A how-to is one of the four names in the table in [`../README.md`](../README.md).
 
@@ -39,6 +39,7 @@ So no demo asks whether something is good. Every demo asks about a visible fact,
 | 27 | [Test a script with no network](27-test-with-no-network/) | `decide` | green |
 | 18 | Point the tool at another server and compare two deciders | `decide` | coming, slice 13 |
 | 44 | [Find names in a text without a network](44-recognize-names/) | `recognize` | green |
+| 45 | [Map relationships in a complete entity set](45-map-relationships/) | `relate` | green |
 
 ## Gates and branches
 

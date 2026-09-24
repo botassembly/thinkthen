@@ -13,6 +13,7 @@ One internal result model feeds both views. The view never changes the request o
 | `tag` | a JSON array of every label that reaches the cut, including `[]` |
 | `score` | a JSON number |
 | `recognize` | an object with `entities` and optional beta `relations` |
+| `relate` | one compact name-and-kind edge per line, or no lines when no edge reaches the cut |
 | `filter` | each kept line or JSONL record as it arrived; each kept table row as compact JSON, in input order |
 | `rank` | each line or JSONL record as it arrived and each table row as compact JSON, most likely yes first |
 | `annotate` | one JSON object per record |
@@ -37,6 +38,8 @@ Every result is compact and sits on one line, so one answer is also one record f
 - `meta` carries the run. `usage` may be absent when the backend reports none. `profile_warning` appears only for a calibration mismatch. The other fields are always present.
 
 ## A detailed result keeps everything
+
+`relate --details` is an aggregate Option A result. `value` holds accepted edges. `question` holds the resolved fields, ordered relation rules, threshold, and optional saved calibration profile. `answer.questions` keeps each choice or yes/no relation question, including its asker or endpoints, candidates, probabilities, pre-threshold pick, accepted markers, failure marker, and request digest. `meta.failed_questions` counts failed entries and is always present. [relate.md](relate.md) fixes the exact ordered schema.
 
 `recognize --details` keeps the bare object under `value`, the resolved recognition shape under `question`, and each token's detection probability and ordered kind probabilities under `answer.tokens`. `meta.requests` lists recognition chunks first and relation chunks in rule order. Name `strength` is computed from these inputs and is not itself a probability.
 

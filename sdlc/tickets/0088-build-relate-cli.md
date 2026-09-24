@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core crates/thinkthen/src/cli crates/thinkthen/tests
 
 # 0088: Build the public `relate` command
 
-Status: design accepted by independent Sol Medium review at `113642b2`; landed 0081 clears implementation.
+Status: implemented in the ticket worktree from clean `cdfd0e5e`; independent code review and landing remain open.
 
 ## Outcome
 
