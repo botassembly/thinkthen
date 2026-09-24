@@ -1,6 +1,6 @@
 # 0095: Build the binding members of the Rust contract
 
-Status: built on `ticket/0095-binding-contract-members`. Not landed. Owner: Claude.
+Status: landed on main through `ticket/0095-binding-contract-members`. Owner: Claude.
 
 ## Result
 
@@ -35,3 +35,7 @@ At `d886fec6`, observed: `install` 0, `lint` 0, `test` 0, `spec` 0. `ratchet.mjs
 ## Code review
 
 The code review (`sdlc/records/0084-0095-code-review.md`) accepted 0095. It asked for the 0084 fix to ADR 0017 to reach this branch through a merge, which it did after `d886fec6`. The rerun commands for the checks are in `sdlc/records/0084-build-contract.md`.
+
+## Landing
+
+0084 landed on main at `7d11ed01`. This branch merged that main at `62bdc623`. The first ladder run there started while the one-minute load stood at 10.27. `test` exited 101 with one failure: `parallel::different_cache_digests_do_not_share_a_lock` saw a peak of 1 concurrent request where it expects 2. This branch changes no code, and the same code passed on 0084's merge `d9f12f6d`. After the load fell below 10, a second run at `62bdc623` observed: `install` 0, `lint` 0, `test` 0, `spec` 0 (demos 21 green, 0 red). `ratchet.mjs` read `48547/48547`, main's measured total. `sdlc/issues/2026-09-24-parallel-lock-test-fails-under-load.md` records the load-sensitive test. The commit that adds this section changes only records, the ticket's status line, and that issue, and `lint` ran on it before the merge to main.
