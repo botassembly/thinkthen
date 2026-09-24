@@ -6,7 +6,7 @@ opens: Cargo.toml Cargo.lock conformance/consumer probes sdlc/scripts/test crate
 
 # 0086: Expose the public Rust API
 
-Status: amended after acceptance; confirmation pending. Owner: Claude.
+Status: design and its 2026-09-24 amendment accepted. Owner: Claude.
 
 ## Outcome and authority
 
