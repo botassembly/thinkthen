@@ -12,6 +12,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import tempfile
 import tomllib
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -1049,22 +1050,71 @@ def check_dependencies() -> None:
             fail("dependencies", f"locked package {locked['name']} carries a crates.io source and a checksum")
     print(f"policy: checked {len(nodes)} resolved packages")
 
-    # Ticket 0078: the library alone installs no signal handler, and on Unix it
-    # masks host signals on its workers through nix.
-    minimal = subprocess.run(
-        ["cargo", "tree", "--locked", "-p", "thinkthen", "-e", "normal",
-         "--no-default-features", "--depth", "1", "--prefix", "none"],
-        cwd=REPO, check=False, capture_output=True, text=True,
-    )
-    if minimal.returncode != 0:
-        fail("dependencies", f"default-features-off cargo tree succeeds: {minimal.stderr.strip()}")
-        return
-    direct = {line.split()[0] for line in minimal.stdout.splitlines()[1:] if line.strip()}
-    if direct & {"clap", "csv-core", "signal-hook"}:
-        fail("dependencies", "the default-features-off graph excludes command dependencies")
-    if sys.platform != "win32" and "nix" not in direct:
-        fail("dependencies", "the default-features-off graph holds nix on Unix")
+    check_library_graph()
 
+
+# Ticket 0078: the library alone installs no signal handler, and on Unix it
+# masks host signals on its workers through nix. The graph covers every target
+# and build edges. Dev edges stay out, because the tests use `signal-hook`.
+COMMAND_ONLY = {"clap", "csv-core", "signal-hook"}
+GRAPH_PLANTS = (
+    '[target."cfg(windows)".dependencies]\nclap = "4.6.7"\n',
+    '[build-dependencies]\nclap = "4.6.7"\n',
+)
+GRAPH_FILES = (
+    "Cargo.toml", "Cargo.lock", "crates/thinkthen/Cargo.toml", "conformance/backend/Cargo.toml",
+)
+GRAPH_STUBS = (
+    "crates/thinkthen/src/lib.rs", "crates/thinkthen/src/main.rs",
+    "conformance/backend/src/lib.rs", "conformance/backend/src/main.rs",
+)
+
+
+def library_direct(root: pathlib.Path, frozen: str) -> set[str] | str:
+    """Name the library's direct normal and build dependencies on every target."""
+    result = subprocess.run(
+        ["cargo", "tree", frozen, "-p", "thinkthen", "-e", "normal,build", "--target", "all",
+         "--no-default-features", "--depth", "1", "--prefix", "none"],
+        cwd=root, check=False, capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        return result.stderr.strip()
+    return {line.split()[0] for line in result.stdout.splitlines()[1:] if line.strip()}
+
+
+def graph_failures(direct: set[str]) -> list[str]:
+    held = []
+    if direct & COMMAND_ONLY:
+        held.append("the default-features-off graph excludes command dependencies")
+    if sys.platform != "win32" and "nix" not in direct:
+        held.append("the default-features-off graph holds nix on Unix")
+    return held
+
+
+def check_library_graph() -> None:
+    direct = library_direct(REPO, "--locked")
+    if isinstance(direct, str):
+        fail("dependencies", f"default-features-off cargo tree succeeds: {direct}")
+        return
+    for failure in graph_failures(direct):
+        fail("dependencies", failure)
+    for plant in GRAPH_PLANTS:
+        with tempfile.TemporaryDirectory() as scratch:
+            root = pathlib.Path(scratch)
+            for relative in GRAPH_FILES + GRAPH_STUBS:
+                (root / relative).parent.mkdir(parents=True, exist_ok=True)
+                source = REPO / relative
+                (root / relative).write_text(
+                    source.read_text(encoding="utf-8") if relative in GRAPH_FILES else "",
+                    encoding="utf-8",
+                )
+            manifest = root / "crates/thinkthen/Cargo.toml"
+            manifest.write_text(manifest.read_text(encoding="utf-8") + "\n" + plant, encoding="utf-8")
+            planted = library_direct(root, "--offline")
+            if isinstance(planted, str):
+                fail("dependencies", f"the planted graph reads through cargo tree: {planted}")
+            elif not graph_failures(planted):
+                fail("dependencies", f"the planted graph {plant.splitlines()[0]!r} is refused")
 
 def main() -> int:
     check_toolchain()
