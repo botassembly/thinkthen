@@ -185,33 +185,6 @@ impl<R, E> Run<R, E> {
     }
 }
 
-/// Schedule framed inputs over scoped workers with an unfired compatibility token.
-#[cfg(test)]
-pub(crate) fn run<T, R, E>(
-    jobs: usize,
-    held: bool,
-    start_reader: impl FnOnce(Receiver<()>, InputPort<T, R, E>),
-    answer: &(impl Fn(&T) -> Result<Completed<R>, E> + Sync),
-    emit: impl FnMut(R) -> Result<bool, E>,
-    defect: fn(&'static str) -> E,
-) -> Result<Outcome<E>, E>
-where
-    T: Send + 'static,
-    R: Send,
-    E: Send,
-{
-    run_cancelled(
-        jobs,
-        held,
-        &crate::engine::Cancel::default(),
-        start_reader,
-        answer,
-        emit,
-        defect,
-        |_| defect("an unavailable stop fired"),
-    )
-}
-
 /// Schedule framed inputs over scoped workers and emit results in input order.
 #[expect(
     clippy::too_many_arguments,

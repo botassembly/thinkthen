@@ -104,36 +104,6 @@ where
     )
 }
 
-#[cfg(test)]
-pub(crate) fn ask_with<E>(
-    backend: &Backend,
-    plan: &Plan,
-    recorder: &Recorder,
-    key: impl FnOnce() -> Result<Key, E>,
-    send: impl FnOnce(&PreparedRequest, &Key) -> Result<Vec<u8>, E>,
-) -> Result<Answered, E>
-where
-    E: From<Error>,
-{
-    let prepared = PreparedRequest::new(backend, plan).map_err(E::from)?;
-    let usage = Counters::default();
-    ask_prepared(
-        backend,
-        plan,
-        prepared,
-        recorder,
-        &crate::engine::Cancel::default(),
-        &usage,
-        key,
-        |prepared, key| {
-            send(prepared, key).map(|body| HttpAnswer {
-                body,
-                requests_sent: 1,
-            })
-        },
-    )
-}
-
 #[expect(
     clippy::too_many_arguments,
     reason = "one prepared request carries explicit transport, storage, and counter boundaries"

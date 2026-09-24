@@ -25,7 +25,7 @@ use std::time::Duration;
 use std::{fs, thread};
 
 /// A case's temporary folder, removed when the case ends, pass or fail.
-struct Scratch(PathBuf);
+pub(super) struct Scratch(PathBuf);
 
 impl Drop for Scratch {
     fn drop(&mut self) {
@@ -101,10 +101,11 @@ struct PrintedMeta {
 }
 
 /// Replay a recognize or relate case through the command with `--details`.
-pub(super) fn staged(case: &Case, success: &Success) {
+/// A case's scratch folder and, inside it, a replay folder that holds every
+/// exchange of the case under the canonical address.
+pub(super) fn replay(case: &Case) -> (Scratch, PathBuf) {
     let scratch = folder(case);
-    let folder = scratch.0.clone();
-    let replay = folder.join("replay");
+    let replay = scratch.0.join("replay");
     fs::create_dir_all(&replay).expect("replay folder");
     let url = Url::new("https://api.typesafe.ai/v1/systemone").expect("canonical URL");
     for exchange in &case.exchanges {
@@ -113,6 +114,12 @@ pub(super) fn staged(case: &Case, success: &Success) {
         let text = entry.written().expect("entry text");
         fs::write(replay.join(recorded.digest().file_name()), text).expect("replay entry");
     }
+    (scratch, replay)
+}
+
+pub(super) fn staged(case: &Case, success: &Success) {
+    let (scratch, replay) = replay(case);
+    let folder = scratch.0.clone();
     let input = match (&case.text, &case.entities) {
         (Some(text), None) => text.clone().into_bytes(),
         (None, Some(entities)) => entities.get().as_bytes().to_vec(),
