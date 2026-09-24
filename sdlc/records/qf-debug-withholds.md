@@ -23,7 +23,7 @@ Red first: before the fix, the new test printed `Labels([Label { name: "marker-e
 
 ## Ratchet
 
-The ceiling rises from 48140 to 48212. The two secrecy tests take 41 lines. The `Request` and `Labels` impls, `Withheld`, and the `Record` rewrite take the rest, less the lines the `Withheld` sites gave back.
+The ceiling rises from 48140 to 48212 on the tree this fix started from, and to 48547 after ticket 0117 merged in. The two secrecy tests take 41 lines. The `Request` and `Labels` impls, `Withheld`, and the `Record` rewrite take the rest, less the lines the `Withheld` sites gave back.
 
 ## Checks
 
@@ -35,4 +35,4 @@ With `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, at `8524cec2`, with the
 - `spec`: exit 0, `demos: 21 green, 0 red`.
 - `sdlc/scripts/live` did not run.
 
-Main then moved by `3dc68449`, a planning note only. The merge re-measured the ratchet at 48212/48212. The whole ladder ran again at the commit that adds this section, which is the commit that lands, and the landing commit on main records that run.
+Main then moved twice. `3dc68449` changed a planning note, and the ratchet stayed at 48212/48212. Ticket 0117 then landed at `9eb26289` with code and a ceiling of 48475. The merge re-measured the ratchet at 48547, which is 48475 plus this fix's 72 lines. The whole ladder ran again at the commit that adds this paragraph, which is the commit that lands. The merge commit on main states that run.
