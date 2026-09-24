@@ -29,6 +29,62 @@ unset THINKTHEN_API_KEY THINKTHEN_BASE_URL
 CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0
 export CARGO_NET_OFFLINE RUSTUP_AUTO_INSTALL
 
+# Each workspace and the host runtime it needs, in lint order.
+ENTRIES='contract: standin: thinkthen-core: libraries/rust: libraries/c:
+libraries/python:python3 libraries/r/thinkthen/src/rust:R
+libraries/typescript/addon:node libraries/ruby:ruby databases/duckdb:
+databases/sqlite: databases/postgresql:pg_config tools/wire-stub:'
+WORKSPACES=$(for entry in $ENTRIES; do printf '%s ' "${entry%%:*}"; done)
+
+# `--select FILE` reads changed paths, one per line, and prints the
+# workspaces whose lint they can change: `.` for the root workspace, then
+# each named workspace in lint order. A path inside a workspace selects
+# it. A shared input selects every workspace and the root: the path crates
+# every surface builds on, the files compiled in with include_str!, any
+# lock file, the toolchain, the lint and format rules, and this rung's own
+# scripts. `--paths FILE` lints exactly the workspaces `--select` names.
+# `sdlc/scripts/lint --changed BASE` uses both.
+select_paths() {
+	WORKSPACES=$WORKSPACES awk '
+	BEGIN { n = split(ENVIRON["WORKSPACES"], ws, " ") }
+	/^(contract|thinkthen-core|standin|conformance|specification|\.cargo)\// ||
+	/(^|\/)Cargo\.lock$/ || /^(rust-toolchain|deny|rustfmt|clippy|\.clippy)\.toml$/ ||
+	/^sdlc\/scripts\/(lint|lint-workspaces)$/ {
+		hit["."] = 1
+		for (i = 1; i <= n; i++) hit[ws[i]] = 1
+		next
+	}
+	/^crates\// || /^Cargo\.toml$/ || /^sdlc\/scripts\/(policy\.py|package)$/ { hit["."] = 1 }
+	{ for (i = 1; i <= n; i++) if (index($0, ws[i] "/") == 1) hit[ws[i]] = 1 }
+	END {
+		if ("." in hit) print "."
+		for (i = 1; i <= n; i++) if (ws[i] in hit) print ws[i]
+	}' "$1"
+}
+case ${1:-} in
+--select | --paths)
+	[ $# -eq 2 ] || { printf 'usage: lint-workspaces %s PATHS-FILE\n' "$1" >&2; exit 2; }
+	selected=$(select_paths "$2") || exit 2
+	[ "$1" = --select ] && { [ -z "$selected" ] || printf '%s\n' "$selected"; exit 0; }
+	# The root workspace is lint's own business; the rest lint here.
+	set -- $(printf '%s\n' "$selected" | grep -vx '\.' || true)
+	if [ $# -eq 0 ]; then
+		printf '%s\n' 'lint-workspaces: no workspace reads a changed path'
+		exit 0
+	fi
+	;;
+esac
+
+# Named workspaces lint alone; none named lints every one. An unknown name
+# fails, so a typo never skips a lint.
+only=$*
+for name in $only; do
+	case " $WORKSPACES" in
+	*" $name "*) ;;
+	*) printf 'lint-workspaces: %s is not a workspace; the workspaces are: %s\n' "$name" "$WORKSPACES" >&2; exit 2 ;;
+	esac
+done
+
 if ! command -v cargo >/dev/null 2>&1; then
 	printf '%s\n' 'lint-workspaces: cargo is not on PATH' >&2
 	exit 1
@@ -129,23 +185,17 @@ workspace_deny() {
 }
 
 fail=0
-for entry in \
-	'contract:' \
-	'standin:' \
-	'thinkthen-core:' \
-	'libraries/rust:' \
-	'libraries/c:' \
-	'libraries/python:python3' \
-	'libraries/r/thinkthen/src/rust:R' \
-	'libraries/typescript/addon:node' \
-	'libraries/ruby:ruby' \
-	'databases/duckdb:' \
-	'databases/sqlite:' \
-	'databases/postgresql:pg_config' \
-	'tools/wire-stub:' \
-; do
+for entry in $ENTRIES; do
 	workspace=${entry%%:*}
 	needs=${entry#*:}
+	case " $only " in
+	'  ') ;;
+	*" $workspace "*) ;;
+	*)
+		printf 'lint: %s not selected\n' "$workspace"
+		continue
+		;;
+	esac
 	if [ ! -f "$workspace/Cargo.toml" ]; then
 		printf 'lint: %s skipped: not landed\n' "$workspace"
 		continue
@@ -223,4 +273,8 @@ if [ "$fail" -ne 0 ]; then
 	printf '%s\n' 'lint-workspaces: a workspace failed its lint rules' >&2
 	exit 1
 fi
-printf '%s\n' 'lint-workspaces: every landed workspace is clean'
+if [ -n "$only" ]; then
+	printf 'lint-workspaces: every selected workspace is clean: %s\n' "$only"
+else
+	printf '%s\n' 'lint-workspaces: every landed workspace is clean'
+fi
