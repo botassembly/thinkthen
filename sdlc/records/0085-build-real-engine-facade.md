@@ -1,6 +1,6 @@
 # 0085: Build the real engine facade
 
-Status: built on `ticket/0085-real-engine-facade`; code review pending. Owner: Claude.
+Status: landed on main from `ticket/0085-real-engine-facade`. The code review accepted `8b8035ce` (`sdlc/records/0085-code-review.md`). Owner: Claude.
 
 ## Call-path inventory before the first code change
 
@@ -117,4 +117,14 @@ Measured with `git diff -U0 86f4012e HEAD -- '*.rs'`, nonblank lines:
 
 ## Ladder
 
-At `a4474607`, the rungs ran one after another with the key and base-address variables unset. The one-minute load stood at 5.27 at the start. The observed exits were `install` 0, `lint` 0, `test` 0 (808 passed, 0 failed), and `spec` 0 (demos 21 green, 0 red). `ratchet.mjs` read 49742/49742. An earlier run at `3644f7e4` failed `test` on `annotate::scheduling::a_model_mismatch_cancels_groups_that_have_not_started`. The same test failed 8 of 8 alone on main at `d4ebe645` under the same load, so this build did not cause it. `sdlc/issues/2026-09-24-the-model-mismatch-cancel-check-fails-under-load.md` records it. This section changes only this record.
+At `a66a9944`, the merge of origin/main into the ticket branch, the rungs ran one after another with the key and base-address variables unset. The one-minute load stood at 8.08 at the start. The observed exits were `install` 0, `lint` 0, `test` 0 (808 passed, 0 failed), and `spec` 0 (demos 21 green, 0 red). `ratchet.mjs` read 49739/49739. The known model-mismatch test passed on the first run. The code review re-ran the workspace tests at `8b8035ce`: 806 passed, 0 failed.
+
+An earlier ladder at `a4474607` also passed. Before it, a run at `3644f7e4` failed `annotate::scheduling::a_model_mismatch_cancels_groups_that_have_not_started`. The same test failed 8 of 8 alone on main at `d4ebe645` under the same load. `sdlc/issues/2026-09-24-the-model-mismatch-cancel-check-fails-under-load.md` records it.
+
+## Ratchet
+
+The ceiling moved from 49701 to 49742 for the review's width child and relate tests, then to 49728 when the unreachable relate check went, then to 49739 when origin/main added 11 test lines.
+
+## Landed
+
+The ticket branch merged into main with a merge commit after the ladder above. The merge adds only this record's status and these last sections to the tested tree.
