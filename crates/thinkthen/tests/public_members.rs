@@ -248,3 +248,26 @@ fn each_error_kind_names_its_word_in_the_shared_cases() {
     .to_vec();
     assert_eq!(serde_json::json!(named), cases["error_kinds"]);
 }
+
+#[test]
+fn a_builders_debug_line_withholds_its_question_labels_and_descriptions() {
+    let said = || thinkthen::Description::text("sentinel-said").expect("description");
+    let asked = "sentinel-asked";
+    let lines = [
+        shown(Question::decide(asked).and_then(|b| b.yes(said()))),
+        shown(Question::choose::<Team>(asked).and_then(|b| b.option(Team::Billing, Some(said())))),
+        shown(Question::tag::<Team>(asked).and_then(|b| b.label(Team::Billing, Some(said())))),
+        shown(Question::score(asked).and_then(|b| b.level("sentinel-level", Some(said())))),
+        shown(Question::choose_labels(asked).and_then(|b| b.label("sentinel-label", Some(said())))),
+        shown(thinkthen::Description::builder().what("sentinel-what")),
+    ];
+    for line in lines.iter().flatten() {
+        assert!(!line.contains("sentinel"), "{line}");
+    }
+}
+
+/// A builder's plain and pretty `Debug` lines.
+fn shown<T: std::fmt::Debug>(built: Result<T, thinkthen::Error>) -> [String; 2] {
+    let built = built.expect("builder");
+    [format!("{built:?}"), format!("{built:#?}")]
+}

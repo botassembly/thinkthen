@@ -6,7 +6,7 @@ opens: crates/thinkthen/src crates/thinkthen/tests sdlc/scripts sdlc/ratchet.jso
 
 # 0098: Build the binding members
 
-Status: design accepted 2026-09-24 after re-review. Owner: Claude.
+Status: built; code review round 1 fixed, re-review of the fix pending; whole ladder passed before the fix. Waits on 0086. Owner: Claude.
 
 Split out of 0086 on 2026-09-24 so 0086 fits its budget (`sdlc/records/2026-09-24-spine-review-engine.md`, finding F7). It lands after 0086 and before 0093.
 
@@ -35,6 +35,8 @@ Build the public members that ticket 0095 defines and 0086 leaves out: `Question
 
 At most ten production files and 500 nonblank production lines, net of the serializer lines that leave `cli`; at most 700 test lines. No dependency.
 
+Re-scored 2026-09-24 at build: sixteen production files. The members sit beside their types, and two files split to stay under the 500-line ceiling. `sdlc/records/0098-build-binding-members.md` gives the measured numbers. Ian can overturn this.
+
 ## Dependencies
 
 After 0086. Before 0093, 0094, and every surface ticket.
@@ -46,7 +48,7 @@ Builder: Claude (Opus subagent). Reviewer: a fresh Claude session for design and
 ## Review
 
 - Design review: accepted in `sdlc/records/2026-09-24-rereview-engine.md`.
-- Code review: pending.
+- Code review: round 1 returned one must-fix and five nits, all addressed in `sdlc/records/0098-build-binding-members.md`. Re-review pending.
 
 ## Evidence
 

@@ -135,11 +135,20 @@ impl Description {
     }
 }
 
-/// One description object, with members in call order.
-#[derive(Debug)]
+/// One description object, with members in call order. `Debug` counts the
+/// members and withholds what they say.
 pub struct DescriptionBuilder {
     members: Vec<(String, Json)>,
     examples: Option<usize>,
+}
+
+impl fmt::Debug for DescriptionBuilder {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("DescriptionBuilder")
+            .field("members", &self.members.len())
+            .finish_non_exhaustive()
+    }
 }
 
 impl DescriptionBuilder {
