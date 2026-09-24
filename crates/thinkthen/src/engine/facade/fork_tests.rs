@@ -122,6 +122,11 @@ fn busy_parent_child() {
     thread::scope(|scope| {
         scope.spawn(|| parent_done.send(ask_as_parent(&engine, &parent)));
         assert_eq!(loopback.wait(1), 1, "the parent's send is held");
+        let directory = fs::File::open(&folder).expect("the recording folder");
+        assert!(
+            matches!(directory.try_lock(), Err(fs::TryLockError::WouldBlock)),
+            "a held request keeps its shared folder lock until it is saved"
+        );
         scope.spawn(|| {
             let child = Evidence::new("child").expect("evidence");
             let judged = engine.judge(&decide(), None, child, &Cancel::default());

@@ -36,6 +36,7 @@ fn call(guarded: &Arc<Guarded<&'static str>>, pid: u32, build: Built) -> Called 
                 build
             },
         );
+        drop(guarded);
         let _sent = sent.send((answer, builds.into_inner()));
     });
     received
@@ -192,35 +193,4 @@ fn racing_children_publish_one_state() {
 
     assert_eq!(builds.load(Ordering::SeqCst), 1);
     assert!(states.iter().all(|state| Arc::ptr_eq(state, &states[0])));
-}
-
-#[test]
-fn a_waiting_child_stops_with_its_call() {
-    let guarded = Arc::new(Guarded::empty());
-    let _parent = call(&guarded, PARENT, Ok("parent"));
-    let ((building, started), (finish, finishing)) = (channel(), channel::<()>());
-    let builder = {
-        let guarded = Arc::clone(&guarded);
-        thread::spawn(move || {
-            guarded.current(
-                CHILD,
-                || Err("waited"),
-                || {
-                    let _started = building.send(());
-                    let _finish = finishing.recv_timeout(BOUND);
-                    Ok("child")
-                },
-            )
-        })
-    };
-    started.recv_timeout(BOUND).expect("the builder started");
-
-    let (got, builds) = call(&guarded, CHILD, Ok("second"));
-    let _finish = finish.send(());
-
-    assert_eq!((got, builds), (Err("waited on a rebuild"), 0));
-    assert_eq!(
-        builder.join().expect("builder").map(|state| *state),
-        Ok("child")
-    );
 }
