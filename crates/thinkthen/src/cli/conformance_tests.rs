@@ -13,10 +13,14 @@ use crate::core::{
     AnswerOutcome, Cutting, Evidence, Find, ModelName, Plan, QuestionFile, QuestionSet,
     QuestionText, Threshold, Typed, Url, Value, Verb, question_sha256, ranking, resolve,
 };
-use conformance_support::{Case, Document, Exchange, ExpectedAnswer, Success};
+use conformance_support::{Case, Document, Exchange, ExpectedAnswer, QuestionForm, Success};
 use serde::Deserialize;
 use std::collections::BTreeSet;
 
+#[path = "conformance_tests/command.rs"]
+mod command;
+#[path = "conformance_tests/mutations.rs"]
+mod mutations;
 #[path = "conformance_tests/runner.rs"]
 mod runner;
 
@@ -27,6 +31,8 @@ const CAPTURED_REFUND: &str = include_str!(
 const VERBS: [&str; 8] = [
     "annotate", "choose", "decide", "filter", "find", "rank", "score", "tag",
 ];
+/// The command-only verbs whose assembly the command runner alone checks.
+const STAGED: [&str; 2] = ["recognize", "relate"];
 const ERRORS: [&str; 6] = [
     "backend",
     "cancelled",
@@ -111,7 +117,7 @@ fn annotate(case: &Case, place: usize, exchange: &Exchange) -> Result<Asked, Str
     let mut digests = Vec::new();
     let group = set
         .groups()
-        .get(place)
+        .get(place % set.groups().len().max(1))
         .cloned()
         .ok_or_else(|| format!("{} has no annotate group {place}", case.id))?;
     for question_place in group {
@@ -261,7 +267,7 @@ fn validate_exchange(
             .as_str()
             .to_owned();
         let expected_requests = if case.verb == "annotate" {
-            requests
+            record_requests(case, place, requests)?
         } else {
             std::slice::from_ref(&exchange_request)
         };
@@ -270,6 +276,27 @@ fn validate_exchange(
         }
     }
     Ok((values, reply.model().as_str().to_owned(), failed_questions))
+}
+
+/// The requests of the record one annotate exchange belongs to, in group order.
+fn record_requests<'a>(
+    case: &Case,
+    place: usize,
+    requests: &'a [String],
+) -> Result<&'a [String], String> {
+    let raw = case
+        .question_set
+        .as_ref()
+        .ok_or_else(|| format!("{} has no question set", case.id))?;
+    let count = QuestionSet::parse(raw.get())
+        .map_err(|error| error.to_string())?
+        .groups()
+        .len()
+        .max(1);
+    let start = place / count * count;
+    requests
+        .get(start..start + count)
+        .ok_or_else(|| format!("{} has a partial annotate record", case.id))
 }
 
 fn validate_operation(
@@ -312,9 +339,23 @@ fn validate_fault(case: &Case, kind: &str) -> Result<(), String> {
         .question
         .as_ref()
         .ok_or_else(|| format!("{} has no question", case.id))?;
-    let file = QuestionFile::parse(raw.get()).map_err(|error| error.to_string())?;
-    resolve(word(&case.verb)?, None, Some(&file), &Typed::default())
-        .map_err(|error| error.to_string())?;
+    let resolved = QuestionFile::parse(raw.get())
+        .map_err(|error| error.to_string())
+        .and_then(|file| {
+            resolve(word(&case.verb)?, None, Some(&file), &Typed::default())
+                .map_err(|error| error.to_string())
+        });
+    if let Some(form) = case.question_form {
+        let wanted = if form == QuestionForm::Text {
+            "usage"
+        } else {
+            "local"
+        };
+        return (resolved.is_err() && kind == wanted)
+            .then_some(())
+            .ok_or_else(|| format!("{} breaks no rule as {kind}", case.id));
+    }
+    resolved?;
     let injection = &case
         .operation
         .as_ref()
@@ -346,7 +387,7 @@ fn validate(text: &str) -> Result<(), String> {
         if !ids.insert(case.id.as_str()) {
             return Err(format!("duplicate case id `{}`", case.id));
         }
-        if !VERBS.contains(&case.verb.as_str()) {
+        if !VERBS.contains(&case.verb.as_str()) && !STAGED.contains(&case.verb.as_str()) {
             return Err(format!("unknown verb `{}`", case.verb));
         }
         verbs.insert(case.verb.as_str());
@@ -361,6 +402,10 @@ fn validate(text: &str) -> Result<(), String> {
             .success
             .as_ref()
             .ok_or_else(|| format!("{} has no outcome", case.id))?;
+        if STAGED.contains(&case.verb.as_str()) {
+            validate_staged(case, success)?;
+            continue;
+        }
         let mut odds = Vec::new();
         let mut values = Vec::new();
         let mut model: Option<String> = None;
@@ -396,74 +441,26 @@ fn validate(text: &str) -> Result<(), String> {
         }
         validate_operation(case, success, &odds, &values)?;
     }
-    if verbs != BTreeSet::from(VERBS) || errors != BTreeSet::from(ERRORS) {
+    if verbs.len() != VERBS.len() + STAGED.len() || errors != BTreeSet::from(ERRORS) {
         return Err("verb or error-kind coverage is incomplete".to_owned());
     }
     Ok(())
 }
 
-#[test]
-fn shared_cases_match_the_production_core() {
-    validate(CASES).expect("the shared cases match the core");
+/// A recognize or relate case holds sound exchanges and one whole-result answer.
+fn validate_staged(case: &Case, success: &Success) -> Result<(), String> {
+    for exchange in &case.exchanges {
+        exchange.provenance.validate(exchange)?;
+    }
+    match success.answers.as_slice() {
+        [answer] if answer.name == "result" && answer.details.answer.is_none() => Ok(()),
+        _ => Err(format!("{} has no whole-result answer", case.id)),
+    }
 }
 
 #[test]
-fn focused_mutations_are_refused() {
-    let duplicate_backend_fault = CASES
-        .replacen(
-            "\"injection\": \"recording_read_failure\"",
-            "\"injection\": \"response_refusal\"",
-            1,
-        )
-        .replacen("\"kind\": \"local\"", "\"kind\": \"backend\"", 1);
-    let mutations = [
-        CASES.replacen("\"bare\": true", "\"bare\": false", 1),
-        CASES.replacen(
-            "https://api.typesafe.ai/v1/systemone",
-            "https://wrong.example/v1/systemone",
-            1,
-        ),
-        CASES.replacen(
-            "e8b7d68fe0567786d9905df174191873ff0876e0c56efc008ff7a07a4de45d3e",
-            "08b7d68fe0567786d9905df174191873ff0876e0c56efc008ff7a07a4de45d3e",
-            1,
-        ),
-        CASES.replacen("{\\\"state\\\":\\\"From:", "{\\\"state\\\":\\\"XFrom:", 1),
-        CASES.replacen(
-            "\"id\": \"02-decide-no\"",
-            "\"id\": \"01-decide-yes-captured\"",
-            1,
-        ),
-        CASES.replacen("\"verb\": \"decide\"", "\"verb\": \"guess\"", 1),
-        duplicate_backend_fault,
-        CASES.replacen('{', "{\"authorization\":\"secret\",", 1),
-        CASES.replacen('{', "{\"api_key\":\"secret\",", 1),
-        CASES.replacen('{', "{\"x-api-key\":\"secret\",", 1),
-        CASES.replacen("\"kind\": \"filter\"", "\"kind\": \"single\"", 1),
-        CASES.replacen(
-            "\"operation\": {\n            \"indexes\"",
-            "\"ignored\": {\n            \"indexes\"",
-            1,
-        ),
-        CASES.replacen(
-            "\"kind\": \"single\",\n          \"answers\"",
-            "\"kind\": \"single\",\n          \"operation\": {},\n          \"answers\"",
-            1,
-        ),
-        CASES.replacen(
-            "      \"exchanges\": [",
-            "      \"operation\": {\"injection\":\"cancel_token\"},\n      \"exchanges\": [",
-            1,
-        ),
-        CASES.replacen(
-            "\"refund\": {\n            \"decide\":",
-            "\"refund\": {\n            \"choose\":",
-            1,
-        ),
-    ];
-    for (place, mutation) in mutations.into_iter().enumerate() {
-        assert!(validate(&mutation).is_err(), "mutation {place} passed");
-    }
+fn shared_cases_match_the_production_core() {
+    validate(CASES).expect("the shared cases match the core");
 }
 
 impl conformance_support::Provenance {

@@ -19,12 +19,13 @@ pub(crate) enum Command {
     /// it completes without a partial or whole-run failure. The printed
     /// values carry the individual answers.
     ///
-    /// The answer is a bare `true`, `false`, or `null`, and the exit code is 0
-    /// for yes, 1 for no, and 3 for unresolved. Under `set -e` or `set -o
-    /// pipefail` a no or not sure answer ends the script, so put the command in
-    /// an `if`, a `case`, or a `||` list.
+    /// The answer is a bare `true`, `false`, or `null`. The exit code is 0 for
+    /// yes, 1 for no, 3 for not sure, and any other code when the run is broken
+    /// or interrupted. Under `set -e` or `set -o pipefail` a no or not sure
+    /// answer ends the script, so put the command in an `if`, a `case`, or a
+    /// `||` list.
     ///
-    /// A single cut answers no when the probability did not reach the mark. It
+    /// A single cut answers no when the probability did not reach the cut. It
     /// never says the model is sure of no. A three-way gate takes a band, as
     /// `--threshold 0.1:0.9` writes one.
     ///
@@ -34,7 +35,7 @@ pub(crate) enum Command {
     ///
     /// case $? in 0) route refunds ;; 1) route support ;; 3) route triage ;; *) exit 4 ;; esac
     ///
-    /// Word the question in the form where yes permits the action. A failure
+    /// Word the question in the form where yes permits the action. A broken run
     /// then never permits anything, because every outcome other than 0 leaves
     /// the action undone.
     Decide(DecideArguments),
@@ -43,7 +44,7 @@ pub(crate) enum Command {
     ///
     /// `filter` asks one yes/no question of each record and prints the records
     /// that reach `--threshold` in input order. Line and JSONL records return
-    /// as they arrived; CSV and TSV rows become compact JSON objects. It needs
+    /// as they arrived; CSV and TSV records become compact JSON objects. It needs
     /// a record framing and makes one paid request for every record.
     ///
     /// A single cut keeps or drops, and there is no third pile. A run that
@@ -79,26 +80,26 @@ pub(crate) enum Command {
     ///
     /// The answer is a bare JSON string, or `null` when the winning option
     /// falls under `--threshold` or the top two options tie exactly. Exit 0 is
-    /// a label and exit 3 is unresolved. `choose` never exits 1, because a pick
+    /// an option and exit 3 is not sure. `choose` never exits 1, because a pick
     /// is not a two-sided decision.
     ///
-    /// --raw is available for one document, --lines, and --jsonl. CSV and TSV
+    /// --raw is available for a single text, --lines, and --jsonl. CSV and TSV
     /// always print JSONL and refuse --raw.
     ///
-    /// A script reads the exit code first and the label second, so it takes two
-    /// `case` blocks. `--raw` prints nothing at all for an unresolved answer,
-    /// and an empty string is no label, so only the exit code tells an
-    /// unresolved pick from a command that failed:
+    /// A script reads the exit code first and the option second, so it takes
+    /// two `case` blocks. `--raw` prints nothing at all for a not sure answer,
+    /// and an empty string is no option, so only the exit code tells a not
+    /// sure pick from a broken run:
     ///
-    /// label=$(thinkthen choose 'Which team owns this?' billing shipping other --raw < m.txt) && rc=0 || rc=$?
+    /// pick=$(thinkthen choose 'Which team owns this?' billing shipping other --raw < m.txt) && rc=0 || rc=$?
     ///
-    /// case $rc in 0) ;; 3) label=unresolved ;; *) exit "$rc" ;; esac
+    /// case $rc in 0) ;; 3) pick=not_sure ;; *) exit "$rc" ;; esac
     ///
-    /// case $label in billing) pay ;; unresolved) triage ;; *) exit 2 ;; esac
+    /// case $pick in billing) pay ;; not_sure) triage ;; *) exit 2 ;; esac
     ///
-    /// "Not stated" is a different answer from "false". "Does the document
+    /// "Not stated" is a different answer from "false". "Does the text
     /// establish X?" and "Is X true?" are different questions. When the
-    /// difference matters, ask `choose` with labels such as supported,
+    /// difference matters, ask `choose` with options such as supported,
     /// contradicted, and not_stated rather than one yes/no question.
     ///
     /// Word the options so that they exclude one another, and type a catch-all
@@ -109,13 +110,13 @@ pub(crate) enum Command {
     /// failure. The printed values carry the individual answers.
     Choose(ChooseArguments),
 
-    /// Pick the one line or record that best answers a question. Every unit
-    /// leaves together and sees every other unit.
+    /// Pick the one line or record that best answers a question. Every line or
+    /// record leaves together and sees every other one.
     ///
-    /// Every unit leaves together in one request and sees every other unit.
-    /// Input defaults to lines; --jsonl reads records and --field selects what
-    /// the model sees. The set holds 2 to 255 units, or 2 to 254 with --none,
-    /// and at most 16 MiB across the original input.
+    /// Every line or record leaves together in one request and sees every other
+    /// one. Input defaults to lines; --jsonl reads records and --field selects
+    /// what the model sees. The set holds 2 to 255 lines or records, or 2 to
+    /// 254 with --none, and at most 16 MiB across the original input.
     ///
     /// `find --none` prints nothing and exits 3 when `none` wins or ties for
     /// first.
@@ -134,12 +135,12 @@ pub(crate) enum Command {
     /// and 0.5, 0, 0.5 both score 1. Read `--details` for the odds of every
     /// level when the difference matters.
     ///
-    /// Measurement of the first decider model showed rubric judgments rejecting
+    /// Measurement of the first System One model showed rubric scores rejecting
     /// 18% to 46% of work people had accepted. A later run ordered forty made-up
     /// reports well and ran one level high on 9 of 40, so tune a cut on labeled
     /// cases. A number belongs in a review queue a person reads. A gate that has
     /// to hold belongs in `decide` or `choose`, and the Bash way to branch on
-    /// levels is `choose` with the levels as ordered labels.
+    /// levels is `choose` with the levels as ordered options.
     ///
     /// A record run exits 0 when it completes without a partial or whole-run
     /// failure. The printed values carry the individual answers.
@@ -155,7 +156,7 @@ pub(crate) enum Command {
     )]
     Tag(TagArguments),
 
-    /// Fill out a question set for every record.
+    /// Answer a saved set of questions about every record.
     ///
     /// The answer is one annotated JSON object. A record run exits 0 when it
     /// completes without a partial or whole-run failure. The printed values
@@ -170,6 +171,9 @@ pub(crate) enum Command {
     ///
     /// Relations are beta. `--threshold` gates computed name strength;
     /// `--relation-threshold` gates a relation's model probability.
+    ///
+    /// A record run exits 0 when it completes without a partial or whole-run
+    /// failure. The printed values carry the individual answers.
     Recognize(RecognizeArguments),
 
     /// Find named relations across one complete entity set.
@@ -177,10 +181,47 @@ pub(crate) enum Command {
     /// Relations are beta. Every entity leaves together as one complete entity
     /// set and sees every other entity admitted by a rule. Inline rules use
     /// NAME=SOURCE_KIND:TARGET_KIND. A bare NAME means NAME=*:*.
+    ///
+    /// A run that answers some relation questions and fails others prints what
+    /// it has and exits 6. A run whose relation questions all fail prints
+    /// nothing and exits 4.
     Relate(RelateArguments),
 
     /// Inspect and maintain answer-cache folders without sending a request.
     Cache(CacheArguments),
+
+    /// List or print the built-in jq transforms without running them.
+    Transform(crate::cli::transform::TransformArguments),
+
+    /// Grade saved decide and choose answers against an answer key.
+    ///
+    /// RESULTS holds the lines `decide` or `choose` printed, and KEY holds one
+    /// JSON object per record: its id, the right value, and an optional part of
+    /// tune or held. audit prints agreement with its 95% interval, both kinds of
+    /// disagreement, AUC, calibration, a coverage curve, and a suggested cut
+    /// tuned on one part and checked on the other. An answer inside a band is
+    /// not sure, and it counts apart from right and wrong.
+    ///
+    /// audit sends no request and reads no key.
+    ///
+    /// To grade a recording, replay it with --details and pass the output:
+    ///
+    /// thinkthen decide 'Is it red?' --jsonl --details --replay runs/red < records.jsonl | thinkthen audit - key.jsonl
+    Audit(crate::cli::audit::AuditArguments),
+
+    /// Show which saved answers changed between two runs or two cuts.
+    ///
+    /// A and B hold the lines `decide` or `choose` printed for the same
+    /// records. Without B, diff compares A under --threshold with A under
+    /// --compare-threshold. Two cuts on one run cost nothing. The probabilities
+    /// are already saved. Each changed answer prints on one line, and a summary
+    /// with its McNemar test prints last. With --key, each change says whether
+    /// it gained or lost a right answer. An answer inside a band is not sure.
+    ///
+    /// diff sends no request and reads no key.
+    ///
+    /// thinkthen diff runs/before.jsonl runs/after.jsonl --key key.jsonl --table
+    Diff(crate::cli::diff::DiffArguments),
 }
 
 #[derive(Args, Debug)]
@@ -212,7 +253,10 @@ pub(crate) struct PruneArguments {
 
 impl Command {
     pub(crate) const fn reads_input(&self) -> bool {
-        !matches!(self, Self::Cache(_) | Self::Status(_))
+        !matches!(
+            self,
+            Self::Cache(_) | Self::Status(_) | Self::Transform(_) | Self::Audit(_) | Self::Diff(_)
+        )
     }
 
     /// The input file one command named, if any.
@@ -228,8 +272,11 @@ impl Command {
             Self::Annotate(arguments) => arguments.common.input.as_deref(),
             Self::Recognize(arguments) => arguments.common.input.as_deref(),
             Self::Relate(arguments) => arguments.common.input.as_deref(),
-            Self::Cache(_) => None,
-            Self::Status(_) => None,
+            Self::Cache(_)
+            | Self::Status(_)
+            | Self::Transform(_)
+            | Self::Audit(_)
+            | Self::Diff(_) => None,
         }
     }
 
@@ -246,8 +293,11 @@ impl Command {
             Self::Annotate(arguments) => arguments.common.timeout,
             Self::Recognize(arguments) => arguments.common.timeout,
             Self::Relate(arguments) => arguments.common.timeout,
-            Self::Cache(_) => 1,
-            Self::Status(_) => 1,
+            Self::Cache(_)
+            | Self::Status(_)
+            | Self::Transform(_)
+            | Self::Audit(_)
+            | Self::Diff(_) => 1,
         }
     }
 }

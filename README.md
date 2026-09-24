@@ -1,6 +1,6 @@
 # thinkthen
 
-`thinkthen` puts a System One model in the shell. The model never writes text. It reads a state, answers a typed question, and returns probabilities that a script can branch on. The question is a yes/no, one pick, every applicable label, or a rating on a scale. A command names the job, asks the question, and reads the evidence on standard input.
+`thinkthen` puts a System One model in the shell. The model never writes text. It reads a state, answers a typed question, and returns probabilities that a script can branch on. The question is a yes/no, one pick, every applicable label, or a level on a scale. A command names the job, asks the question, and reads the evidence on standard input.
 
 ```sh
 thinkthen decide 'Does the customer ask for a refund?' < message.txt
@@ -12,13 +12,13 @@ thinkthen find 'Which line answers the question?' --lines < handbook.txt
 
 The first prints `true`, `false`, or `null`, and its exit code works in a shell `if`. The second prints one label. The third prints every applicable label as a JSON array. The fourth prints the records that pass. The fifth sends the bounded set together and returns the best original unit. `--details` adds the probabilities behind any answer.
 
-Those commands are the design. `specification/` is the contract, and code follows it. `annotate` reads a saved question set when several judgments belong on the same input.
+Those commands are the design. `specification/` is the contract, and code follows it. `annotate` reads a saved question set when several questions belong on the same input.
 
 ## What it will and will not do
 
 - The shell sequences programs. `jq` reshapes data. `thinkthen` judges meaning and does nothing else.
 - Code parses the command line. The model reads only the question, the options, and the evidence.
-- A yes, a no, an unresolved answer, and an error stay four different outcomes in the output and in the exit code.
+- A yes, a no, a not sure answer, and a broken run stay four different outcomes in the output and in the exit code.
 - A backend is an address that speaks one wire shape, System One. TypeSafe's Jev is the first System One model. `THINKTHEN_API_KEY` holds the key and `THINKTHEN_BASE_URL` names the address. A local model is reached by a small server that presents the same shape.
 - A run can be recorded and replayed with no network. A recording holds the evidence that was sent, so committing one publishes it. A threshold is measured against labeled cases before anyone trusts it.
 
@@ -29,9 +29,23 @@ The answer cache is on by default. Cache entries contain the complete request an
 ## What it is not for
 
 - **A loop that needs many decisions a second.** One measured call took over 300 ms, and a shell tool adds a process start on top of that. No pipeline of separate processes reaches that rate. Record mode through a `coproc` serves a steady loop from one long-lived process, and that is the ceiling.
-- **A call from inside a program written in another language.** Records, recordings, transforms, and exit codes buy a program nothing, because the program already holds its data. The honest answer there is a library over the same pure core, and `specification/roadmap.md` holds it for after version one.
+- **A call from inside a program written in another language.** Records, recordings, transforms, and exit codes buy a program nothing, because the program already holds its data. A Rust program uses the library below. The other languages wait on their own tickets, and `specification/roadmap.md` holds them.
 
 `sdlc/planning/ten-use-cases.md` measured both against ten real uses.
+
+## Use it from Rust
+
+The same crate is a library. A dependency on `thinkthen` with `default-features = false` leaves out the command and its argument parser. Every call blocks and returns `Result<_, thinkthen::Error>`. The error has six kinds, and `retryable()` says whether the same call may succeed later.
+
+```rust
+let engine = thinkthen::Engine::from_env()?;
+let question = thinkthen::Question::decide("Asks for money back.")?.cut_at(0.9)?;
+for row in engine.filter(&question, ["Please refund my order.", "Where is my parcel?"]) {
+    println!("{}", row?);
+}
+```
+
+`Engine::from_env` reads the same variables and configuration file as the command. `Engine::builder()` sets each value in code, and `throttle(n)` caps the requests in flight for the whole process. The bulk calls `filter`, `decide_many`, and `annotate` read any iterator lazily and return rows in input order. `sdlc/planning/libraries/rust.md` holds the goals, and ticket 0084 holds the frozen declarations.
 
 ## Four names
 

@@ -2,34 +2,12 @@ use std::io::{ErrorKind, Write};
 
 use serde::Serialize;
 
-use super::plan::Method;
 use crate::core::{
-    Answer, AnswerOutcome, Backend, BackendFailure, Framing, Meta, ModelName, ProfileWarning,
-    QuestionMap, RelateQuestion, RelateSpec, RelationEdge, RelationEntity, RelationRule,
-    RequestMeta, Usage, json_line, reaches_cut,
+    Answer, AnswerOutcome, Backend, BackendFailure, Framing, Meta, ProfileWarning, QuestionMap,
+    RelateQuestion, RelateSpec, RelationEdge, RelationEntity, RequestMeta, json_line, reaches_cut,
 };
+use crate::engine::facade::{Execution, Logical, Method};
 use crate::failure::Failure;
-
-/// One logical question with the answer or failure the backend gave it.
-pub(super) struct Logical {
-    pub(super) relation: RelationRule,
-    pub(super) mapping: QuestionMap,
-    pub(super) outcome: AnswerOutcome,
-    pub(super) request: String,
-}
-
-#[derive(Default)]
-pub(super) struct Execution {
-    pub(super) edges: Vec<RelationEdge<RelationEntity>>,
-    pub(super) logical: Vec<Logical>,
-    pub(super) model: Option<ModelName>,
-    pub(super) usage: Option<Usage>,
-    pub(super) replayed: bool,
-    pub(super) requests_sent: u64,
-    pub(super) requests: Vec<String>,
-    pub(super) failed: usize,
-    pub(super) answered: usize,
-}
 
 pub(super) struct Output<'a> {
     pub(super) details: bool,

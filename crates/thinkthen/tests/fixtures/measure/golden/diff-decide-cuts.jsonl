@@ -1,0 +1,2 @@
+{"id":"r3","name":null,"from":"no","to":"yes","probability":[0.45,0.45],"key":"yes","effect":"gained"}
+{"summary":{"records":6,"changed":1,"only_a":0,"only_b":0,"moves":[{"from":"no","to":"yes","count":1}],"labeled":6,"right_a":4,"right_b":5,"gained":1,"lost":0,"mcnemar_on":"right answers","mcnemar_p":1.0,"compare":"cuts","a":"as run","b":0.4}}

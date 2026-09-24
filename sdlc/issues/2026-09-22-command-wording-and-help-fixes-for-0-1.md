@@ -1,6 +1,6 @@
 # Command wording and help fixes for 0.1
 
-Status: Open. For the build team, lane A1. One ticket takes the whole list.
+Status: Closed by ticket 0082 (`331e85f7`, `4662310a`) and ticket 0090 (`565f8b4f`). The 0082 ticket audits all 45 items. Item 27 is stale under ticket 0058's secrecy decision. Ticket 0090 landed the tool and specification half of item 44. Surfaces and site copy take the rest of item 44 later.
 
 This merges sixteen wording issues filed between 2026-09-19 and 2026-09-21. Each source file is closed and points here. The source is named on every item so the reproduction stays reachable. Ticket 0057 landed some help work on 2026-09-21, so the ticket checks each item against the current binary before it writes a fix.
 

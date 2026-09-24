@@ -50,10 +50,14 @@ function loc(dir) {
   return n;
 }
 
-const total = loc(join(REPO, directory));
+// `directory` names one folder or a list of them (thinkthen ticket 0092 adds
+// the conformance backend beside the crate).
+const folders = [directory].flat();
+const total = folders.reduce((sum, folder) => sum + loc(join(REPO, folder)), 0);
+const named = folders.join(" + ");
 if (total !== max) {
   const remedy = total < max ? `lower it to ${total}` : `raise it to ${total}`;
-  console.error(`ratchet: ${directory} is ${total} non-blank lines, ceiling is ${max}. The ceiling must equal the total; ${remedy} in sdlc/ratchet.json, in a commit that says why.`);
+  console.error(`ratchet: ${named} is ${total} non-blank lines, ceiling is ${max}. The ceiling must equal the total; ${remedy} in sdlc/ratchet.json, in a commit that says why.`);
   process.exit(1);
 }
-console.log(`ratchet: ${directory} ${total}/${max}`);
+console.log(`ratchet: ${named} ${total}/${max}`);

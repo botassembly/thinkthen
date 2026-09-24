@@ -93,7 +93,7 @@ Two notes name a broken thing plainly, and the model put every point of probabil
 | --- | --- | --- |
 | 0 | A label was returned | Read it |
 | 2 | A usage error: a blank option, one option, more than 255, a repeat, or a band on `--threshold` | Fix the command line. Nothing was sent |
-| 3 | The winner fell under the mark, or the top two tied exactly | Send the ticket to a person |
+| 3 | The winner fell under the threshold, or the top two tied exactly | Send the ticket to a person |
 | 4 | The backend failed, or the adapter refused the reply | Retry or stop. It is no answer about the ticket |
 | 5 | A local failure: the recording folder, standard input | Fix the machine |
 
