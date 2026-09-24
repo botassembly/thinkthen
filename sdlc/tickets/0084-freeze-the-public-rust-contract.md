@@ -6,7 +6,7 @@ opens: sdlc/tickets/0084-freeze-the-public-rust-contract.md sdlc/planning/adr/00
 
 # 0084: Freeze the public Rust contract
 
-Status: amended after acceptance; confirmation pending. Owner: Claude.
+Status: design and its 2026-09-24 amendment accepted. Owner: Claude.
 
 ## Outcome and authority
 
