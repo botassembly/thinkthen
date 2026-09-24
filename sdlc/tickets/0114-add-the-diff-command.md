@@ -206,6 +206,14 @@ Add `specification/diff.md`, Status **Settled** on landing. It states the comman
 
 No golden reaches these. Each is the agent's decision, and Ian can overturn it. 0113's departures on failures, bad numbers, JSON, the pointer, rule text, key values, and state names also hold here. diff adds decision 6, the refused repeat.
 
+## Builder note: keep the formats open
+
+`sdlc/issues/2026-09-24-audit-and-diff-needs-for-graded-agent-runs.md` lists four needs for grading agent runs after 0.1. None enters 0.1, and nothing here changes a golden or an accepted input. Keep three things open.
+
+- diff reads the key and the runs through 0113's readers, which ignore members they do not use. A test pins one extra member in a run line.
+- The repeat check of decision 6 keys on (answer name, record id) in one function, so a sample key can join it later.
+- `specification/diff.md` says that readers of diff output should ignore members they do not know, because later versions may add them.
+
 ## Budgets and the ratchet
 
 - Production Rust: two new files and at most three existing files touched (`core/measure.rs`, `cli/mod.rs`, `cli/args/command.rs`), plus `cli/measure.rs` if its roles need a line. At most 450 nonblank lines.
