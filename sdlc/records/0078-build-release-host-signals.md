@@ -1,6 +1,6 @@
 # 0078: Build release host signals
 
-Status: built on `ticket/0078-fork-and-host-signals` at `b7bf265e`, merged with main at `9f47bd18`. Code review pending: a fresh read-only Claude session reviews the final diff and the dependency change. Owner: Claude.
+Status: landed 2026-09-24 (`sdlc/records/0078-land-release-host-signals.md`). Code review accepted at `fa5d836f`. Owner: Claude.
 
 ## Result
 
