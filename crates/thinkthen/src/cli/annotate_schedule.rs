@@ -67,7 +67,7 @@ where
         },
         |judged| output.take(judged),
         Failure::Defect,
-        || Failure::from(crate::engine::error::Error::Cancelled),
+        Failure::from,
     )?;
     match outcome {
         RunOutcome::Complete { partial_failure } => Ok(if partial_failure {

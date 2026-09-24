@@ -25,7 +25,7 @@ pub(crate) fn inject(injection: Injection) -> Error {
         Injection::Backend => Error::Status(422),
         Injection::Local => Error::RecordingStorage,
         Injection::Cancelled => Error::Cancelled,
-        Injection::Deadline => Error::Deadline,
+        Injection::Deadline => Error::Deadline(crate::engine::error::Budget(Duration::ZERO)),
         Injection::Defect => Error::Defect("injected invariant failure"),
     }
 }
@@ -149,6 +149,7 @@ where
             0,
         ),
         PreparedRecording::Live(permit) => {
+            cancel.key_lookup();
             let (permit, key) = finish_or_cancel(permit, key())?;
             let (permit, answered) = finish_or_cancel(permit, send(&prepared, &key))?;
             let decoded = built_in::decode_observed(plan, &answered.body);
@@ -183,13 +184,13 @@ fn observe_cancel<E>(
 where
     E: From<Error>,
 {
-    if !cancel.fired() {
+    let Some(stop) = cancel.stop() else {
         return Ok(operation);
-    }
+    };
     if let PreparedRecording::Live(permit) = operation {
         permit.cancel().map_err(E::from)?;
     }
-    Err(E::from(Error::Cancelled))
+    Err(E::from(stop))
 }
 
 fn finish_or_cancel<T, E>(permit: WritePermit, result: Result<T, E>) -> Result<(WritePermit, T), E>

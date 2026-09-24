@@ -68,7 +68,7 @@ impl From<EngineError> for Failure {
             EngineError::Usage(message) => Self::Usage(message),
             EngineError::ProfileLimit(limit) => Self::ProfileLimit(limit),
             EngineError::Cancelled => Self::Cancelled,
-            EngineError::Deadline => Self::Defect("an unavailable deadline reached the command"),
+            EngineError::Deadline(_) => Self::Defect("an unavailable deadline reached the command"),
         }
     }
 }
