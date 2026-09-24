@@ -6,7 +6,7 @@ opens: libraries/r sdlc/scripts sdlc/planning/libraries/r.md sdlc/planning/adr/0
 
 # 0108: Port the R surface
 
-Status: design accepted 2026-09-24 after re-review. Owner: Claude. Depends on the 0084 builder amendment.
+Status: design accepted 2026-09-24 after re-review, amended 2026-09-24 for the no-paid-backend rule. Owner: Claude. Depends on the 0084 builder amendment.
 
 ## Outcome and authority
 
@@ -81,6 +81,11 @@ Draft ADR 0047 (on the 0093 branch) fixes the crate's place and its checklist. T
     - Ctrl-C is prompt for single calls and batches alike, and every call runs on a detachable worker that finishes the requests already sent (decision 5). ADR 0042 governs two differences. R raises its own `interrupt` condition, caught by `tryCatch(interrupt = ...)`, in place of a `Cancelled` class that R does not have. "At once" means at the next 100 ms tick, the first residual window of ADR 0042, and the tests bound it at 0.5 s.
     - A deny plant proves the rule it names while offline. A git-sourced dependency fails at resolution before deny runs offline, so the binding drops the git plant. The deny plant removes the `paste` entry of decision 15. Deny then reads RUSTSEC-2024-0436 from the local advisory database and fails, which proves the advisories rule offline.
     - Tests that need parallel requests set the engine width they need. The batch interrupt test and the R2-23 tests call `tt_engine(width = 8L)` in their own child before the first verb, through the public setting of decision 4. No test uses a hidden hook. Each such child is its own process, so two widths never meet.
+
+18. **Amendment of 2026-09-24: no test or plant can reach a paid backend.** Main's shared rule at `d783ab6b` forbids it. The environment-seed plant in "Other acceptance" started from the empty `Engine::builder()`. That engine ignores `THINKTHEN_BASE_URL` and posts to the built-in vendor address. Its safety rested on an unset key, and nothing proved the refusal. That plant leaves, and its fallback clause leaves with it.
+    - *The real key never reaches a test.* `check.sh` runs every step under `env -u THINKTHEN_API_KEY`, with `HOME` and `XDG_CACHE_HOME` pointed at a scratch folder. That covers the tarball install, the conformance runs, and every child. `tests/with-backend.sh` exports the fake key `tt-test-not-a-key` in the same step that exports the loopback `THINKTHEN_BASE_URL`, and nowhere else. Before any R process starts, it refuses to run unless the address's host is `127.0.0.1`, `localhost`, or `[::1]`. A test for that guard hands it a non-loopback address and expects a refusal with no R process started. The secrecy test searches every condition message and `print` output for the fake key.
+    - *The environment-seed test sends only to loopback.* It proves the seed through the cache folder. That setting needs no extra request. The child sets `THINKTHEN_CACHE` to folder A, and `HOME` and `XDG_CACHE_HOME` to a scratch folder. It calls `tt_engine(width = 8L, base_url = <its loopback backend>)` and runs `tt_decide` on the same text twice. The test asserts one counted send and one entry in A. Plant: after `from_env()`, the Rust half calls `cache_at` with the default folder under `XDG_CACHE_HOME`. That call drops the `THINKTHEN_CACHE` value. The entry is missing from A, and the planted run writes only into the scratch folder. The address stays loopback in both runs, and the loopback listener counts one send in each. The two runs differ only in which folder gets the entry.
+    - *Every other plant keeps the builder.* Each plant in this ticket keeps `EngineBuilder::from_env()` and a loopback address. The record shows the loopback count for every planted run.
 
 ## What moves from the tag
 
@@ -168,15 +173,14 @@ Each child runs under `timeout`, with its own backend and cache folder (decision
 - Case 68 (an accent and an emoji) gives the same `start` and `end` in R, after the one-based shift, as in Rust.
 - `fork_check.R` warms the default engine and forks with `parallel::mcparallel`. The child answers, and the parent's counters do not move (0096, Q15).
 - `tt_engine(width = 8L)` in a child lets a 200-text `tt_decide` on the held arm reach a count of 8 before any release, and never more. Plant: drop the width from the builder. The count stops at 4.
-- `tt_engine(width = 8L)` keeps the environment. A child sets `THINKTHEN_BASE_URL` to the backend and `THINKTHEN_CACHE` to its own folder, calls `tt_engine(width = 8L)`, and one `tt_decide` counts 1 on the backend and writes one entry into that folder. Plant: start from the empty `Engine::builder()`. The count reads 0 and the folder stays empty. The planted run has no network and no key, so nothing leaves the machine.
+- `tt_engine(width = 8L)` keeps the environment, proved through the cache folder as decision 18 states. Both runs count one send on the loopback backend.
 - A set `base_url` wins over the variable. With `THINKTHEN_BASE_URL` naming a refused loopback port, `tt_engine(base_url = <backend>)` counts 1 on the backend.
 - One refusal test per argument, each with a count of 0 and `thinkthen_usage`: `base_url = 5`, `model = ""`, `width = 0L` and `33L`, `max_requests = -1`, `cache = TRUE`, and `cache_bytes = -1`. A second `tt_engine(width = 4L)` after `width = 8L` raises it too.
 - `cache = FALSE` sends a repeated question twice. `max_requests = 1L` refuses a two-text `tt_decide` before its first request.
 - A relate frame with a repeated name and kind sends one entity for it, and each edge carries names and kinds. `igraph::graph_from_data_frame` accepts the result.
 - `tt_details` on a score question carries `answer.level`, and on a decide question it carries none.
-- The loopback test's plant sends nothing. The record shows that the empty-builder engine refuses before any send when `THINKTHEN_API_KEY` is unset. If it does not refuse, the plant sets `base_url` to a closed loopback port in place of the empty default.
 - The `model = ""` test pins `thinkthen_usage` with a count of 0 whether or not `EngineBuilder::model` refuses an empty string. If the builder accepts it, the R type check refuses it first.
-- Nothing reaches a non-loopback address. `THINKTHEN_API_KEY` stays unset. A secrecy test reads every condition message and `print` output for the key and for credentials in the base URL.
+- Nothing reaches a non-loopback address. The real `THINKTHEN_API_KEY` is removed, and the fake key rides only beside a loopback address (decision 18). A secrecy test reads every condition message and `print` output for the fake key and for credentials in the base URL.
 
 ## The check it adds to the gate ladder
 
@@ -236,4 +240,5 @@ Contract 2; state and timing 3; reach 2; proof 3; cost of error 3; total 13. Fin
 - Confirmation (same file) rejected one point: the width reached the engine through a hidden `thinkthen:::` hook, against shared rule 6, and cited the rules at an old commit. Decision 4 now gives R the public `tt_engine(width =)` setting, and decision 17 cites `446a4d6b`. The two stop clauses about a missing width setting are gone.
 - Final check (same file) rejected one point: `tt_engine` built on the empty builder and dropped the address, key, and cache the environment gives. Decision 4 now starts from `EngineBuilder::from_env` (0084 amendment `f19cf437`), exposes every section 5 setting but the key, and names what happens after a verb has run and what `tt_usage` reads. Tests pin the kept environment, a set `base_url` over the variable, and one refusal per argument.
 - Second final check (same file) accepted it and left two notes for the code reviewer, now in the acceptance list: the loopback plant sends nothing without a key, and the `model = ""` refusal holds either way.
+- Amendment of 2026-09-24: decision 18 applies the no-paid-backend rule at main `d783ab6b`. The empty-builder plant and its note leave. The seed test proves the environment through `THINKTHEN_CACHE`, and the checks run with the real key removed. Confirmation pending.
 - Code review: pending. Reviewer's note for it: the "before a call" test and the first `.tt_call` test signal the child itself, and R handles a pending SIGINT at its evaluator's next periodic check. If that check comes before the check under test, the interrupt jumps in R code, and the test passes with or without its plant. The record shows each of the two plants turning red. If one cannot, the builder moves the signal next to the check, for example into the forced argument's last expression.
