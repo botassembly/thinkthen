@@ -246,3 +246,5 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Changes: diff refuses a record repeated under one answer name in a run, where the prototype keeps the last one. It inherits 0113's departures on failures, numbers, JSON, pointers, and key values.
 - Proof: The six goldens, the extra captures, and the three table captures match. Hand tests come from the prototype's `Diff` tests. Exact integer sums check the log-space McNemar up to n = 120. Each planted bug in "Acceptance" turns a test red, and 0113's no-request and secrecy tests cover every diff path.
 - Defers: The wider McNemar rule waits for Ian's ruling on the Beatles Bench issue, and "Switching the McNemar rule" gives the steps. Checking record text or question identity across runs stays with the `compare` transform. A probability-shift member and the agent-run needs wait until after 0.1.
+
+Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. This ticket names no width. Any public name or text it writes uses the throttle.
