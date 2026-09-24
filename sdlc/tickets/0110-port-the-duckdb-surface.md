@@ -6,7 +6,7 @@ opens: databases/duckdb sdlc/scripts sdlc/issues sdlc/planning/databases/duckdb.
 
 # 0110: Port the DuckDB surface
 
-Status: revised after final check; final confirmation pending. Owner: Claude.
+Status: design accepted 2026-09-24. Owner: Claude.
 
 ## Outcome and authority
 
@@ -185,5 +185,5 @@ Contract 2; state and timing 4; reach 2; proof 3; cost of error 3; total 14. Fin
 
 ## Review
 
-- Design review: `sdlc/records/2026-09-24-design-review-0110.md` found ten items. This version answers all ten: the batch interrupt (decision 7), the split (decision 1 and ticket 0118), the deny plant, the license reasoning, the plants that could not turn red, the names (decision 2), the shipped-build check (decision 14), the budgets, the site pages (decision 15), and the small fixes. R4-22 goes whole to 0118, since each row has one owner. The confirmation (same file) found that the spike did not cover decision 5's engine settings. The spike now reads all eight values and has a fallback for each path. Its builder notes are applied: the engine map bound, the width range, the address guard's plant, and the split clauses. The final check (same file) found the width range should be 1 to 32 and that the engine-settings fallback named environment variables that do not exist. Both are fixed. The fallback is now a registered `thinkthen_configure` call. The final confirmation (same file) found that a cache folder set from SQL bypassed the caller's file settings. A SQL cache folder now passes decision 10's check, with its own row and plant, and the configure swap note is applied.
+- Design review: `sdlc/records/2026-09-24-design-review-0110.md` found ten items. This version answers all ten: the batch interrupt (decision 7), the split (decision 1 and ticket 0118), the deny plant, the license reasoning, the plants that could not turn red, the names (decision 2), the shipped-build check (decision 14), the budgets, the site pages (decision 15), and the small fixes. R4-22 goes whole to 0118, since each row has one owner. The confirmation (same file) found that the spike did not cover decision 5's engine settings. The spike now reads all eight values and has a fallback for each path. Its builder notes are applied: the engine map bound, the width range, the address guard's plant, and the split clauses. The final check (same file) found the width range should be 1 to 32 and that the engine-settings fallback named environment variables that do not exist. Both are fixed. The fallback is now a registered `thinkthen_configure` call. The final confirmation (same file) found that a cache folder set from SQL bypassed the caller's file settings. A SQL cache folder now passes decision 10's check, with its own row and plant, and the configure swap note is applied. The cache-folder fix check (same file) accepted this design at `4e4e0324`.
 - Code review: pending.
