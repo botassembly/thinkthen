@@ -12,7 +12,7 @@ use crate::core::json::{Json, JsonError};
 use crate::core::pointer::Pointer;
 use crate::core::question::{Labels, LabelsError};
 use crate::core::render::{RenderError, json_line};
-use crate::core::text::{BlankTextError, Description, Evidence, EvidenceShapeError};
+use crate::core::text::{BlankTextError, Description, Evidence, EvidenceShapeError, Withheld};
 
 /// The most one record may hold before the tool refuses to judge it.
 ///
@@ -108,10 +108,19 @@ pub(crate) enum RecordError {
 #[serde(transparent)]
 pub(crate) struct Record(Held);
 
-/// A record is evidence, so `Debug` withholds all of it.
+/// A record is evidence, so `Debug` withholds its bytes and keeps its kind
+/// and its length. A JSON record's length is the length of its JSON line.
 impl std::fmt::Debug for Record {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter.write_str("Record(<withheld>)")
+        let (kind, length) = match &self.0 {
+            Held::Text(text) => ("text", text.len()),
+            Held::Json(value) => ("json", json_line(value).map_or(0, |line| line.len())),
+        };
+        formatter
+            .debug_tuple("Record")
+            .field(&format_args!("{kind}"))
+            .field(&Withheld(length))
+            .finish()
     }
 }
 
