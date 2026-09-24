@@ -6,7 +6,7 @@ opens: databases/duckdb sdlc/planning/databases/duckdb.md sdlc/planning/adr/0038
 
 # 0118: Relate on the caller's DuckDB database
 
-Status: design accepted 2026-09-24. Owner: Claude.
+Status: amended after acceptance; confirmation pending. Owner: Claude.
 
 ## Outcome and authority
 
@@ -138,3 +138,11 @@ Experiment 253 on Beelink (`~/workspace/experiments/253-thinkthen-duckdb-sqlite-
 - **Decision 7: passed.** The handler stores the descriptor, then the process id, with release ordering, and loads them in the reverse order with acquire ordering. It then compares the id with `getpid()` and writes one byte. Over 20 forks from a Python parent that loaded the extension, a child's SIGINT before and after building its own pipe never reached the parent's pipe (0 of 20). Each child also answered a query on its own new DuckDB connection. The planted build without the comparison leaked all 20 (20 of 20).
 - **Inherited contradiction in decision 5.** 0110's finding on the same date applies here. Main keeps the first explicit width for the process's life, so relate's engine through the shared map cannot take a second throttle. A different `SET` reads `usage` with main's sentence. The `@file` check for `rules` moves to the caller's DuckDB file system with 0110's change, and the copied-setting rule leaves.
 - **Naming.** `SET thinkthen_width = 8` becomes `SET thinkthen_throttle = 8` under Ian's 2026-09-24 throttle ruling.
+
+## Amended 2026-09-24
+
+This section mirrors the amendment to 0110 of the same date. Where it conflicts with text above, this section wins. Ian can overturn each item.
+
+1. **Rules files through the caller's own file system (amends decision 5).** Relate's bind keeps the caller's file system from `duckdb_client_context_get_file_system` through `duckdb_table_function_get_client_context`. `rules` given as `'@file.json'` opens and reads through `duckdb_file_system_open` on it. The copied four-setting rule leaves. R4-5's test and plant stand: a failed settings or file-system read refuses, and the plant allows the file.
+2. **The throttle is process-wide (amends decision 5).** Relate's engine comes from 0110's map. Its engines differ only by `max_requests`, the cache folder, and `cache_bytes`. A `SET thinkthen_throttle` that conflicts with the active one reads the engine's `usage` sentence at the next relate, with zero counted requests. A range error on `SET` also fires at the next relate.
+3. **A fresh `XDG_CACHE_HOME` per test child.** Each relate test child gets a fresh `XDG_CACHE_HOME` and `XDG_CONFIG_HOME`, as 0110's amendment requires.
