@@ -3,15 +3,11 @@
 use std::fmt;
 use std::ops::Range;
 
-use crate::core::{self, ModelName, RecognizeSpec, RecognizedName, Threshold, default_kinds};
+use crate::core::{self, ModelName, RecognizeSpec, RecognizedName, default_kinds};
 use crate::public::engine::Engine;
 use crate::public::error::Error;
 use crate::public::options::{CallOptions, Stop};
-use crate::public::question::Description;
-
-pub(super) fn usage(error: impl fmt::Display) -> Error {
-    Error::usage(error.to_string())
-}
+use crate::public::question::{self, Description};
 
 fn nonblank(value: &str, what: &str) -> Result<String, Error> {
     if value.trim().is_empty() || value.chars().any(char::is_control) {
@@ -23,7 +19,7 @@ fn nonblank(value: &str, what: &str) -> Result<String, Error> {
 }
 
 pub(super) fn cut(value: f64) -> Result<f64, Error> {
-    Threshold::cut(value).map(|_| value).map_err(usage)
+    question::cut(value).map(|_| value)
 }
 
 /// One kind of name recognition looks for, and what it means.
@@ -118,10 +114,7 @@ pub(super) fn add_rule(
     Ok(())
 }
 
-pub(super) fn model(held: &mut Option<ModelName>, value: &str) -> Result<(), Error> {
-    *held = Some(ModelName::new(value).map_err(usage)?);
-    Ok(())
-}
+pub(super) use crate::public::question::model_of as model;
 
 /// A recognition request: its kinds, relations, cuts, and model.
 #[derive(Clone, Debug, PartialEq)]
@@ -233,7 +226,7 @@ impl RecognizeBuilder {
             written(self.threshold).as_deref(),
             written(self.relation_threshold).as_deref(),
         )
-        .map_err(usage)?;
+        .map_err(Error::refused)?;
         spec.model = self.model;
         Ok(Recognize(spec))
     }

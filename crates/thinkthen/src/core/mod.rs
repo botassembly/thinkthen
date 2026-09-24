@@ -54,12 +54,12 @@ pub(crate) use crate::core::order::ranking;
 pub(crate) use crate::core::plan::Plan;
 pub(crate) use crate::core::plan_document::PlanDocument;
 pub(crate) use crate::core::pointer::{Pointer, PointerError};
-pub(crate) use crate::core::question::{Labels, LabelsError, Question};
+pub(crate) use crate::core::question::{Labels, Question};
 pub(crate) use crate::core::question_file::{
     Cutting, QuestionFile, QuestionFileError, Resolved, Source, Sources, Typed, Verb, pointers,
     resolve,
 };
-pub(crate) use crate::core::question_set::{QuestionSet, QuestionSetError};
+pub(crate) use crate::core::question_set::{QuestionSet, QuestionSetError, check_name};
 pub(crate) use crate::core::recognize::{
     RecognizedName, TokenAnswer, assemble as assemble_names, kind_questions, recognition_questions,
     tokenize,

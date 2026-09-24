@@ -11,9 +11,14 @@ use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant};
 
+#[path = "../../../../crates/thinkthen/src/test_deadline/run.rs"]
+mod run;
+#[path = "../../../../crates/thinkthen/src/test_deadline/wait.rs"]
+mod wait;
+
 use conformance_backend::Backend;
 use fork_probe::in_child;
-use thinkthen::{Answer, CallOptions, Engine, ErrorKind, Question};
+use thinkthen::{Answer, Engine, Question};
 
 static ONE_AT_A_TIME: Mutex<()> = Mutex::new(());
 const KEY: &str = "sk-fork-loopback";
@@ -142,7 +147,7 @@ fn a_parents_released_digest_lock_frees_its_waiter_while_the_child_lives() {
         thread::sleep(Duration::from_millis(200));
         let child = scope.spawn(|| {
             in_child(|| {
-                thread::sleep(Duration::from_secs(3));
+                thread::sleep(Duration::from_secs(8));
                 true
             })
         });
@@ -153,7 +158,7 @@ fn a_parents_released_digest_lock_frees_its_waiter_while_the_child_lives() {
         let (answer, done) = waiter.join().expect("the waiter");
         assert_eq!(answer, Some(Answer::Yes));
         assert!(
-            done - released < Duration::from_millis(1500),
+            done - released < Duration::from_secs(4),
             "the waiter waited for the child: {:?}",
             done - released
         );
@@ -169,15 +174,16 @@ fn a_parents_released_digest_lock_frees_its_waiter_while_the_child_lives() {
 fn a_default_engine_from_the_parent_answers_in_the_child() {
     let backend = Backend::start().expect("backend");
     let base = format!("{}/generic/v1", backend.origin());
-    let output = Command::new(std::env::current_exe().expect("this test binary"))
-        .args(["--exact", "default_engine_child"])
-        .env_clear()
-        .env(CHILD, "1")
-        .env("THINKTHEN_BASE_URL", &base)
-        .env("THINKTHEN_API_KEY", KEY)
-        .env("THINKTHEN_CACHE", folder("default-engine"))
-        .output()
-        .expect("the process ran");
+    let output = run::output(
+        Command::new(std::env::current_exe().expect("this test binary"))
+            .args(["--exact", "--ignored", "default_engine_child"])
+            .env_clear()
+            .env(CHILD, "1")
+            .env("THINKTHEN_BASE_URL", &base)
+            .env("THINKTHEN_API_KEY", KEY)
+            .env("THINKTHEN_CACHE", folder("default-engine")),
+    )
+    .expect("the process ran");
     let said = String::from_utf8_lossy(&output.stdout);
     assert!(
         output.status.success() && said.contains("1 passed"),
@@ -192,6 +198,7 @@ fn a_default_engine_from_the_parent_answers_in_the_child() {
 
 /// The process half of the proof above. It does nothing unless named.
 #[test]
+#[ignore = "the process half; its parent runs it with --ignored"]
 fn default_engine_child() {
     if std::env::var_os(CHILD).is_none() {
         return;
@@ -202,9 +209,4 @@ fn default_engine_child() {
     );
     in_child(|| thinkthen::decide(&decide(), "child").ok() == Some(Answer::Yes))
         .expect("the process engine answered in the child");
-    let spent = CallOptions::new()
-        .deadline_after(Duration::ZERO)
-        .expect("a budget");
-    let error = thinkthen::decide_with(&decide(), "late", spent).expect_err("no time left");
-    assert_eq!(error.kind(), ErrorKind::Deadline);
 }

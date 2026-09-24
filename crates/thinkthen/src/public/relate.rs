@@ -9,7 +9,7 @@ use crate::engine::facade;
 use crate::public::engine::Engine;
 use crate::public::error::{Error, ErrorKind};
 use crate::public::options::{CallOptions, Stop};
-use crate::public::recognize::{RelationRule, add_rule, cut, model, usage};
+use crate::public::recognize::{RelationRule, add_rule, cut, model};
 
 /// The most entities one `relate` call takes.
 const MOST_ENTITIES: usize = 255;
@@ -101,7 +101,7 @@ impl RelateBuilder {
         };
         let text = serde_json::to_string(&file)
             .map_err(|_| Error::defect("a relate request could not be written"))?;
-        RelateSpec::parse(&text).map(Relate).map_err(usage)
+        RelateSpec::parse(&text).map(Relate).map_err(Error::refused)
     }
 }
 
@@ -129,7 +129,7 @@ impl Entity {
     ///
     /// Returns [`Error::Usage`] for a blank name or kind.
     pub fn new(name: &str, kind: &str) -> Result<Self, Error> {
-        core::RelationEntity::new(name, kind).map_err(usage)?;
+        core::RelationEntity::new(name, kind).map_err(Error::refused)?;
         Ok(Self {
             name: name.to_owned(),
             kind: kind.to_owned(),
@@ -224,14 +224,14 @@ impl Engine {
             .take(MOST_ENTITIES + 1)
             .map(|entity| (entity.name, entity.kind))
             .collect();
-        let admitted = ask.0.admit(&pairs).map_err(usage)?;
+        let admitted = ask.0.admit(&pairs).map_err(Error::refused)?;
+        let stop = Stop::begin(options)?;
         if admitted.is_empty() {
             return Ok(Vec::new());
         }
         let engine = self.for_model(ask.0.model.as_ref())?;
         let prepared = facade::relations(&admitted, &ask.0, engine.backend(), None)?;
         let threshold = ask.0.threshold.cut_value().unwrap_or(0.5);
-        let stop = Stop::begin(options)?;
         let execution = stop.run(|cancel| {
             engine
                 .relate(prepared, &admitted, threshold, cancel)

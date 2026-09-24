@@ -80,7 +80,7 @@ impl Description {
     pub(super) fn meaning(&self) -> Result<Meaning, Error> {
         match &self.value {
             Json::String(text) => {
-                Meaning::new(text.clone()).map_err(|error| Error::usage(error.to_string()))
+                Meaning::new(text.clone()).map_err(Error::refused)
             }
             other => Meaning::structured(other)
                 .ok_or_else(|| Error::usage("a meaning is text or an object")),
@@ -230,18 +230,22 @@ pub enum LoadedQuestion {
 }
 
 pub(super) fn text_of(value: &str) -> Result<QuestionText, Error> {
-    QuestionText::new(value).map_err(|error| Error::usage(error.to_string()))
+    QuestionText::new(value).map_err(Error::refused)
 }
 
 pub(super) fn cut(value: f64) -> Result<Threshold, Error> {
-    Threshold::cut(value).map_err(|error| Error::usage(error.to_string()))
+    Threshold::cut(value).map_err(Error::refused)
 }
 
 pub(super) fn model_of(held: &mut Option<ModelName>, value: &str) -> Result<(), Error> {
+    once(held, ModelName::new(value).map_err(Error::refused)?, "the model")
+}
+
+pub(super) fn once<T>(held: &mut Option<T>, value: T, name: &str) -> Result<(), Error> {
     if held.is_some() {
-        return Err(Error::usage("the model is already set"));
+        return Err(Error::usage(format!("{name} is already set")));
     }
-    *held = Some(ModelName::new(value).map_err(|error| Error::usage(error.to_string()))?);
+    *held = Some(value);
     Ok(())
 }
 
@@ -312,10 +316,9 @@ impl Question {
     ///
     /// Returns [`Error::Usage`] naming what the file breaks.
     pub fn from_json(value: &str) -> Result<LoadedQuestion, Error> {
-        let usage = |error: &dyn fmt::Display| Error::usage(error.to_string());
-        let file = QuestionFile::parse(value).map_err(|error| usage(&error))?;
+        let file = QuestionFile::parse(value).map_err(Error::refused)?;
         let resolved = resolve(file.verb(), None, Some(&file), &Typed::default())
-            .map_err(|error| usage(&error))?;
+            .map_err(Error::refused)?;
         if resolved
             .on()
             .iter()

@@ -14,7 +14,10 @@ RUSTDOCFLAGS='--cfg thinkthen_internal_doctest' \
     cargo test --locked --workspace --doc --all-features
 # Ticket 0086: the external consumer is its own workspace, so the root build
 # above does not reach it. It runs the shared cases and the real-fork proofs.
-cargo test --locked --offline --manifest-path conformance/consumer/Cargo.toml
+# It builds under the root target, so no generated source lands in a folder
+# the ratchet counts.
+cargo test --locked --offline --manifest-path conformance/consumer/Cargo.toml \
+    --target-dir target/consumer
 sh specification/fixtures/question-file/self-test
 sh probes/probability-total-0038/self-test
 sh probes/find-0040/self-test
