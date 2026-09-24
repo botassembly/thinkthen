@@ -6,7 +6,7 @@ opens: libraries/polars sdlc/planning/adr/0047-bindings-are-unpublished-crates-o
 
 # 0120: Build the Rust Polars surface
 
-Status: design accepted 2026-09-24, amended 2026-09-24 after spike 257, confirmation pending. Owner Claude.
+Status: design accepted 2026-09-24, amendment after spike 257 accepted 2026-09-24. Owner Claude.
 
 ## Outcome and authority
 
@@ -211,5 +211,5 @@ Contract 2; state and timing 2; reach 2; proof 3; cost of error 2; total 11. Fin
 
 ## Review
 
-- Design review: `sdlc/records/2026-09-24-design-review-0120.md`. Five rounds of fresh read-only reviewers found 22 items, and every one is answered. The sixth round accepted it.
+- Design review: `sdlc/records/2026-09-24-design-review-0120.md`. Five rounds of fresh read-only reviewers found 22 items, and every one is answered. The sixth round accepted it. The amendment after spike 257 took three more rounds, recorded in the same file, and was accepted at `3318a7ba`.
 - Code review: pending.
