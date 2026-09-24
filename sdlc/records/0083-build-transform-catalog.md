@@ -1,6 +1,6 @@
 # 0083: Build the read-only transform catalog
 
-Status: built on `ticket/0083-transform-catalog`, awaiting a fresh Claude code review. Not merged. Owner: Claude.
+Status: landed. A fresh Claude code review (`sdlc/records/0083-code-review.md`) returned two findings. Both are fixed: `specification/roadmap.md` now points to `transform.md`, and `spec/transform.md` checks empty output with `test -z` and the byte count exactly; each fixed line was shown to fail on wrong output (`11735`, `x`). The review's note on catalog help vocabulary is also taken: `sdlc/scripts/demos` scans `transform`, `transform list`, and `transform show` help, and a planted `row` in `demos-self-test` fails it. The coordinator accepted the fixes without another review. Owner: Claude.
 
 ## Result
 
