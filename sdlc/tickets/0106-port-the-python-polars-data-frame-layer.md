@@ -6,7 +6,7 @@ opens: libraries/python sdlc/planning/libraries/python.md sdlc/planning/adr/0047
 
 # 0106: Port the Python Polars data frame layer
 
-Status: design accepted 2026-09-24 after re-review. The delay arm then moved to ticket 0117. A confirmation re-check is pending. Owner: Claude.
+Status: amended after acceptance; confirmation pending. Owner: Claude.
 
 ## Outcome and authority
 
@@ -14,13 +14,13 @@ Port the Polars data frame layer of the Python surface from tag `surfaces-wave7-
 
 Ian ruled on 2026-09-21 that Python's data frame is Polars at 0.1 and that pandas leaves the surface (ADR 0017, "Ruled after acceptance, 2026-09-21: the data frame is Polars"). His clarification the same day makes pure Python and Polars both first-class, with all scaling and vectorization in Rust. He named the proof: a Polars column reads the same wall time and the same requests in flight as the plain-list form. Polars rides as the optional extra `pip install thinkthen[polars]`. The only open Polars question is a Rust Polars door after 0.1 (ADR 0047 item 8), and this ticket does not touch it.
 
-Draft ADR 0047 fixes the crate's place, and ticket 0105 builds the crate. Section 3.2 of `sdlc/planning/surfaces-port-guide.md` gives the port map. The 2026-09-24 design review (`sdlc/records/2026-09-24-design-review-0105-0106.md`) found nine items, and its confirmation found one more. This version answers all ten. Ian can overturn every decision below except the ruling itself.
+Draft ADR 0047 fixes the crate's place, and ticket 0105 builds the crate. Section 3.2 of `sdlc/planning/surfaces-port-guide.md` gives the port map. The 2026-09-24 design review (`sdlc/records/2026-09-24-design-review-0105-0106.md`) found nine items, and its confirmation found one more. This version answers all ten. The amendment of 2026-09-24 at the end brings it in line with 0105's amendment and the shared rules on main at `6eb1303e`. Ian can overturn every decision below except the ruling itself.
 
 ## Design and decisions
 
 1. **Order of checks.** The pandas module check from 0105 runs first, before any capability check. pandas 3.0.6 objects expose `__arrow_c_stream__`, and the door would otherwise read them. The pandas sentence stays pinned.
 2. **Columns.** The door reads any non-pandas object that exposes `__arrow_c_stream__` or `__arrow_c_array__`: a Polars `Series`, a `pyarrow` array, or a `pyarrow` chunked array. `decide`, `score`, `choose`, and `tag` on a Polars `Series` return a Polars `Series`, rebuilt through the series class the caller passed, as at the tag. Nulls in the answer mean "not sure". The same verbs on a `pyarrow` column return a plain list, as at the tag.
-3. **One call per column.** `decide` over a column calls `decide_many` once over the borrowed strings. `choose`, `score`, and `tag` over a column call `annotate` once over a one-question set, the bulk form 0095 rules. One `CallOptions` covers the whole column. That gives one deadline and one interrupt check per column. The tag's per-row loop and its between-rows token check leave.
+3. **One call per column.** `decide` over a column calls `decide_many` once over the borrowed strings. `choose`, `score`, and `tag` over a column call `annotate` once over a one-question set, the bulk form 0095 rules. One `CallOptions` covers the whole column, so one deadline covers it. The call runs on 0105's detachable worker, as every verb does (amendment change 1). The tag's per-row loop and its between-rows token check leave.
 4. **Frames are Polars only.** `annotate(set, frame, on=)` and `recognize(frame, on=)` take a Polars `DataFrame`, identified by its type's top-level module `polars`. Any other frame raises `UsageError` before any request. That covers a `pyarrow` `Table`, a `RecordBatchReader`, and any object exposing `__dataframe__` or a stream of struct batches. The pandas rebuild probe `_probe_frame_rebuild` retires. `annotate` reads the `on` column, calls `Engine::annotate_with` once, and writes one new column per question. `recognize` calls `recognize_with` for each text in Rust under one `CallOptions` and writes its columns as at the tag.
 5. **Out of scope at 0.1.** `filter`, `rank`, `find`, and `relate` stay on lists. A column passed to them raises `UsageError` naming the list form. `relate` caps input at 255 entities, and a user passes `df.select("name", "kind").rows()`. The tag's `relate_stream` retires.
 6. **Nulls and failures.** A null text is refused with the tag's sentence. A failed question widens its answer column to text and carries the failed marker.
@@ -62,17 +62,17 @@ Source: `sdlc/issues/2026-09-23-surfaces-branch-error-index.md`. Ticket 0105 def
 | R5-6 (d) | partial/waive | A buffer table short of its count raises the pinned sentence. | Remove the pointer-table check. |
 | R7-2 | open | UTF-8 offsets `60000000, 60000001` over a three-byte buffer raise the pinned sentence in a child that exits 0. | Force `Readable` to answer yes. The sentence is missing whether the child crashes or reads. |
 | R7-8 | open | The new `NOTES.md` states exactly which sizes-buffer shapes are refused and names the test that proves each. A `check.sh` step fails when `NOTES.md` names a test the suite lacks. | Cite a test name that does not exist. |
-| R1-24 Polars half | closed | Deadline: `score` over a 200-row Polars `Series` at width 8 on `/arm/delay/100` with `deadline=1.0` raises `DeadlineError` near 1 s with at most 96 counted sends. Cancel: a token set from a second thread at 0.5 s stops the same call within 8 further sends. | Build `CallOptions` per row. The deadline restarts on each row, the call runs past 1 s, and all 200 send. |
-| R4-23 Polars half | closed | A `SIGINT` from a timer thread during the same `score` stops new sends within one tick and raises `Cancelled`. | Run the column without the interrupt check. All 200 send. |
+| R1-24 Polars half | closed | In a child with `tt.Engine(width=8, base_url=".../arm/delay/100/v1")`: `score` over a 200-row Polars `Series` with `deadline=1.0` raises `DeadlineError` near 1 s with at most 96 counted sends. Cancel: a token set from a second thread at 0.5 s stops the same call within 8 further sends. | Build `CallOptions` per row. The deadline restarts on each row, the call runs past 1 s, and all 200 send. |
+| R4-23 Polars half | closed | In a child with `tt.Engine(width=8)` on 0092's held arm, a `score` over a 200-row `Series` gets `SIGINT` once the backend's `count` line reads 8. `Cancelled` arrives within 100 ms, and the count still reads 8 after 300 ms. | Two plants. Run the column on the calling thread, or join the worker in place of detaching it. The 100 ms assertion turns red. |
 
 R3-19 retires. It found that the pandas docstring's advice gave all-NaN answers on a non-default index. pandas left the surface under the 2026-09-21 ruling, so no pandas advice or door remains. The record names the ruling as the reason.
 
 ## Other acceptance
 
-- Width equality, the proof Ian named. 200 texts at width 8 run through `decide_many` on `/arm/delay/100` twice: once as a list and once as a Polars `Series`. Each run finishes in about 200 / 8 × 0.1 s = 2.5 s with 200 counted requests and equal answers. The two wall times fall within 5 percent of each other. The tag's `bench_width_polars.py` measured a 0.0162 percent spread. In flight: on 0092's held arm with no release, each run reaches exactly 8 counted requests. A planted per-row call through Python holds 1 in flight and runs about eight times longer. Both assertions turn red.
+- Width equality, the proof Ian named. In a child, `tt.Engine(width=8, base_url=".../arm/delay/100/v1")` runs 200 texts through `decide_many` twice: once as a list and once as a Polars `Series`. Each run finishes in about 200 / 8 × 0.1 s = 2.5 s with 200 counted requests and equal answers. The two wall times fall within 5 percent of each other. The tag's `bench_width_polars.py` measured a 0.0162 percent spread. In flight: in a second child with `tt.Engine(width=8)` on 0092's held arm with no release, each run reaches exactly 8 counted requests. A planted per-row call through Python holds 1 in flight and runs about eight times longer. Both assertions turn red.
 - Pandas stays out of the door. A pandas `Series` passed to `decide` raises the pinned pandas sentence with zero counted requests. Plant: move the module check after the capability check. The door reads the Series and the count is nonzero.
 - Other frames: a `pyarrow` `Table` passed to `annotate(on=)` raises `UsageError` with zero counted requests. Plant: accept any Arrow-stream frame. The count is nonzero.
-- Zero copy: the values and view buffer addresses `_arrow_probe` reports equal the addresses Polars reports.
+- Zero copy: `_arrow_probe` reads the buffer addresses on the worker thread, from the batches the worker holds. They equal the addresses Polars reports. Plant: copy the texts into a `Vec<String>` before the hand-off. The addresses differ.
 - `import thinkthen` leaves `polars` out of `sys.modules` in a fresh subprocess.
 - The slide sample's `tt.annotate("form.json", df, on="body")` runs as drawn on a Polars frame against the 0092 generic arm.
 - Every shared case that 0105 runs over a list also runs over a `Series` and gives equal values.
@@ -108,7 +108,7 @@ A pandas door of any kind. A Rust Polars `Series` door (ADR 0047 item 8, after 0
 
 ## Dependencies
 
-After 0105 lands, and so after 0086, 0098, 0093, and 0094. After 0117 lands, for the delay arm.
+After 0105 lands, and so after 0086, 0098, 0093, and 0094. After 0117 lands, for the delay arm. Through 0105, after the 0084 amendment that adds `EngineBuilder::from_env()`.
 
 ## Routing
 
@@ -118,7 +118,17 @@ Builder: Claude (Opus subagent). Reviewer: a fresh Claude session for design and
 
 Contract 2; state and timing 3; reach 2; proof 4; cost of error 4; total 15. Final level: 4. The door reads producer memory through 121 `unsafe` sites inside a host process, and a missed check kills the user's interpreter.
 
+## Amended 2026-09-24
+
+0105's amendment (changes 1 to 12 at `4b2de64c`) and the shared rules in `sdlc/planning/surfaces-port-guide.md` on main at `6eb1303e` changed three things this ticket relied on. The amendment final check in `sdlc/records/2026-09-24-design-review-0105-0106.md` named them. Ian can overturn each change.
+
+1. **No interrupt check.** 0105 change 2 removed the `CallOptions::interrupt` closure and put every verb on its detachable worker. The shared rules require prompt Ctrl-C for batches too. Column and frame verbs now run on that worker: the calling thread's 50 ms tick runs `check_signals` and reads the caller's token. On a raise it cancels the internal token, detaches the worker, and raises `Cancelled`. Decision 3 and the R4-23 Polars half follow. Their plants are a column run on the calling thread and a joined worker.
+2. **Width through the public engine value.** Under 0077 the default engine runs at 4. The shared rules set width through each surface's public engine setting, never a hidden hook. Each test that asserts width 8 builds `tt.Engine(width=8, ...)` in its own child process (0105 changes 5 and 11). `tt.Engine` is built on `EngineBuilder::from_env()` (0105 change 12), so the child's `THINKTHEN_BASE_URL` and `THINKTHEN_CACHE` still apply. A `base_url=` keyword picks an arm. Each child gets its own cache folder and backend. No `_set_width` hook exists.
+3. **Zero copy on the worker.** A detachable worker must own its inputs, because the caller may leave while it runs. Decision: the worker owns the imported Arrow batches and reads the strings in place. The calling thread imports the stream, takes every batch, and moves that owned column into the worker. The worker holds each batch unreleased until its sends end, so the producer's buffers stay alive by the C data interface's release rule. The worker then releases them on its own thread. The tag's notes record that the interface lets a consumer release from any thread. The readable-memory check runs on the worker before the first send, and a refusal returns through the channel. A column is never copied, so zero copy holds end to end. The owned column is the one type in `src/arrow/` that the ticket marks `Send`, with the reason on its `unsafe impl`. The address test reads from the worker and pins this choice, and the record says which option was taken. For a frame, the worker builds the output batches, and the calling thread rebuilds the frame through the caller's class.
+4. **The delay arm stays with 0117.** 0117 carries `/arm/delay/<ms>` with its own test and plant, in the form this ticket first carried. A base names it as `/arm/delay/100/v1`, the form 0092 and 0117 define. This ticket opens nothing under `conformance/` and leaves the root ratchet unchanged.
+5. **Shared rules cited.** Toolchains live under `~/.cache/thinkthen-toolchains/` (0105 changes 4 and 10). No check depends on Docker. Each test gets its own product cache folder and backend. The `probe` feature that builds `_arrow_probe` is 0105's, and 0105's wheel content check already refuses the name.
+
 ## Review
 
-- Design review: `sdlc/records/2026-09-24-design-review-0105-0106.md` found nine items. This version answers all nine: the missing files and the `_arrow_probe` hook, the R1-24 deadline plant, wall time in the width proof, frames other than Polars, the pandas check order, the budgets, a plant for each R4-15 and R5-6 assertion, the dependency versions, and the `NOTES.md` cap. The confirmation (same file) found that 0092's held arm cannot release replies on a timer. The delay arm in decision 10 answers it. The final check (same file) accepted it. The delay arm then moved to ticket 0117. Decision 10 now depends on it, and the tests that use the arm stay here. A confirmation re-check of that change is pending.
+- Design review: `sdlc/records/2026-09-24-design-review-0105-0106.md` found nine items. This version answers all nine: the missing files and the `_arrow_probe` hook, the R1-24 deadline plant, wall time in the width proof, frames other than Polars, the pandas check order, the budgets, a plant for each R4-15 and R5-6 assertion, the dependency versions, and the `NOTES.md` cap. The confirmation (same file) found that 0092's held arm cannot release replies on a timer. The delay arm in decision 10 answers it. The final check (same file) accepted it. The delay arm then moved to ticket 0117. Decision 10 now depends on it, and the tests that use the arm stay here. The amendment below then answered the amendment final check (same file). Its confirmation is pending.
 - Code review: pending.
