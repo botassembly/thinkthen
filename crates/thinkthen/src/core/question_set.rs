@@ -437,7 +437,7 @@ mod resolved;
 mod tests;
 
 /// A member name is lowercase ASCII letters, digits, and underscores.
-fn check_name(name: &str) -> Result<(), QuestionSetError> {
+pub(crate) fn check_name(name: &str) -> Result<(), QuestionSetError> {
     if name.is_empty()
         || !name
             .bytes()

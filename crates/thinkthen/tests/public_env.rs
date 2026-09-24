@@ -12,6 +12,11 @@
     reason = "a failed fixture or child stops the proof"
 )]
 
+#[path = "../src/test_deadline/run.rs"]
+mod run;
+#[path = "../src/test_deadline/wait.rs"]
+mod wait;
+
 use std::fs;
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
@@ -49,13 +54,14 @@ fn entries(path: &Path) -> usize {
 
 /// Run one child case with only these variables, and return what it wrote.
 fn in_child(case: &str, environment: &[(&str, &str)]) -> String {
-    let output = Command::new(std::env::current_exe().expect("this test binary"))
-        .args(["child_case", "--exact", "--test-threads=1"])
-        .env_clear()
-        .env(CASE, case)
-        .envs(environment.iter().copied())
-        .output()
-        .expect("the child runs");
+    let output = run::output(
+        Command::new(std::env::current_exe().expect("this test binary"))
+            .args(["child_case", "--exact", "--ignored", "--test-threads=1"])
+            .env_clear()
+            .env(CASE, case)
+            .envs(environment.iter().copied()),
+    )
+    .expect("the child runs");
     let written = String::from_utf8_lossy(&output.stdout);
     assert!(output.status.success(), "{case}: {written}");
     written
@@ -67,6 +73,7 @@ fn in_child(case: &str, environment: &[(&str, &str)]) -> String {
 
 /// The child: one named case, reported line by line.
 #[test]
+#[ignore = "the child half; its parent runs it with --ignored"]
 fn child_case() {
     let Ok(case) = std::env::var(CASE) else {
         return;
@@ -74,6 +81,8 @@ fn child_case() {
     let argument = std::env::var(ARGUMENT).unwrap_or_default();
     let mut out = std::io::stdout().lock();
     for line in run(&case, &argument) {
+        // One output line per result, so a pretty debug line reaches the parent whole.
+        let line = line.replace('\n', "\\n");
         writeln!(out, "child: {line}").expect("standard output");
     }
 }
@@ -140,8 +149,10 @@ fn run(case: &str, argument: &str) -> Vec<String> {
             shown(Engine::from_env()),
         ],
         "secrecy" => {
-            let builder = seed().api_key(argument).unwrap();
-            let mut lines = vec![format!("{builder:?}"), format!("{builder:#?}")];
+            let seeded = seed();
+            let mut lines = vec![format!("{seeded:?}"), format!("{seeded:#?}")];
+            let builder = seeded.api_key(argument).unwrap();
+            lines.extend([format!("{builder:?}"), format!("{builder:#?}")]);
             let engine = builder.no_cache().build().unwrap();
             lines.extend([format!("{engine:?}"), format!("{engine:#?}")]);
             let question = Question::decide("asks for a refund").unwrap().cut();
@@ -260,20 +271,26 @@ fn a_seeded_engine_equals_one_given_each_value_and_the_command_plan() {
         "the answer is cached under THINKTHEN_CACHE"
     );
 
-    fs::write(config.join("evidence"), EVIDENCE).unwrap();
-    let plan = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .args(["decide", "asks for a refund", "--dry-run"])
-        .stdin(fs::File::open(config.join("evidence")).unwrap())
-        .env_clear()
-        .envs(environment)
-        .output()
-        .expect("the command runs");
-    let plan = String::from_utf8_lossy(&plan.stdout);
-    assert!(
-        plan.contains(&format!(r#""url":"{}""#, served.url())),
-        "{plan}"
-    );
-    assert!(plan.contains(r#""model":"model-from-config""#), "{plan}");
+    // The command plan needs the binary, which the library-only build lacks.
+    #[cfg(feature = "cli")]
+    {
+        fs::write(config.join("evidence"), EVIDENCE).unwrap();
+        let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
+        command
+            .args(["decide", "asks for a refund", "--dry-run"])
+            .env_clear()
+            .envs(environment)
+            .stdin(fs::File::open(config.join("evidence")).unwrap())
+            .stdout(std::process::Stdio::piped());
+        let plan = wait::finish(command.spawn().expect("the command runs"), "the plan")
+            .expect("the command ends");
+        let plan = String::from_utf8_lossy(&plan.stdout);
+        assert!(
+            plan.contains(&format!(r#""url":"{}""#, served.url())),
+            "{plan}"
+        );
+        assert!(plan.contains(r#""model":"model-from-config""#), "{plan}");
+    }
 }
 
 #[test]
@@ -357,7 +374,7 @@ fn no_key_reaches_a_debug_line_or_a_later_error() {
             (ARGUMENT, "sk-sentinel-from-setter"),
         ],
     );
-    assert!(said.lines().count() >= 7, "{said}");
+    assert_eq!(said.lines().count(), 9, "{said}");
     assert!(!said.contains("sk-sentinel"), "{said}");
     assert_eq!(refusing.count(), 1, "the error came from a real send");
 }

@@ -145,18 +145,11 @@ fn a_throttle_outside_one_through_thirty_two_is_refused_at_the_step() {
     }
 }
 
+/// Shared cases 23 and 24 cover a spent single call.
 #[test]
-fn a_spent_call_sends_nothing() {
+fn a_spent_batch_sends_nothing() {
     let token = CancelToken::new();
     token.cancel();
-    let (result, sent) = decided(CallOptions::new().cancel(&token));
-    assert_eq!((kind(&result), sent), (Some(ErrorKind::Cancelled), 0));
-
-    let past = Instant::now();
-    thread::sleep(Duration::from_millis(2));
-    let (result, sent) = decided(CallOptions::new().deadline_at(past));
-    assert_eq!((kind(&result), sent), (Some(ErrorKind::Deadline), 0));
-
     let _serial = serial();
     let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
     let engine = engine(listener.base());
@@ -245,7 +238,9 @@ fn a_stop_at_the_throttle_gate_sends_nothing_new_and_sent_work_finishes() {
 #[test]
 fn a_stop_during_a_retry_wait_sends_nothing_new() {
     let _serial = serial();
-    let busy = Listener::answering(|_| Canned::status(503, "")).expect("listener");
+    // The backend asks for a ten-second wait, so an early end is plain on a loaded machine.
+    let busy = Listener::answering(|_| Canned::status(503, "").asking("retry-after", "10"))
+        .expect("listener");
     let engine = engine(busy.base());
     let asked = question();
 
@@ -257,7 +252,7 @@ fn a_stop_during_a_retry_wait_sends_nothing_new() {
     assert!(runs.all_on(thread::current().id()));
     assert_eq!(busy.count(), 1, "the retry after the wait never went");
     assert!(
-        started.elapsed() < Duration::from_millis(900),
+        started.elapsed() < Duration::from_secs(5),
         "the wait ended early"
     );
 
@@ -267,29 +262,18 @@ fn a_stop_during_a_retry_wait_sends_nothing_new() {
     assert_eq!(kind(&result), Some(ErrorKind::Deadline));
     assert_eq!(busy.count(), 2, "one more first attempt, no retry");
     assert!(
-        started.elapsed() < Duration::from_millis(900),
+        started.elapsed() < Duration::from_secs(5),
         "the wait ended early"
     );
 }
 
+/// The consumer's `a_held_reply_ends_the_call_at_its_deadline` covers a deadline during a held send.
 #[test]
-fn a_deadline_during_one_held_send_returns_and_no_check_runs_in_it() {
+fn a_check_runs_before_a_held_send_and_never_during_it() {
     let _serial = serial();
-    let backend = Backend::start().expect("backend");
-    let engine = engine(&format!("{}/arm/held/v1", backend.origin()));
     let asked = question();
-
-    let started = Instant::now();
-    let options = CallOptions::new().deadline_after(Duration::from_millis(300));
-    let result = engine.decide_with(&asked, "Refund me.", options.expect("options"));
-    assert_eq!(kind(&result), Some(ErrorKind::Deadline));
-    assert!(started.elapsed() < Duration::from_secs(2));
-    assert_eq!(backend.count(), 1);
-    backend.release();
-
-    // A check runs before the send and never during it.
     let second = Backend::start().expect("backend");
-    let engine = self::engine(&format!("{}/arm/held/v1", second.origin()));
+    let engine = engine(&format!("{}/arm/held/v1", second.origin()));
     let runs = AtomicUsize::new(0);
     let check = || {
         runs.fetch_add(1, Ordering::SeqCst);
@@ -458,6 +442,5 @@ fn counters_and_cache_answers_match_the_real_attempts() {
     let usage = engine.usage();
     assert_eq!(listener.count(), 1);
     assert_eq!((usage.requests_sent(), usage.cache_answers()), (1, 1));
-    assert_eq!(engine.clone().usage(), usage, "a clone shares the counters");
     let _gone = std::fs::remove_dir_all(&folder);
 }

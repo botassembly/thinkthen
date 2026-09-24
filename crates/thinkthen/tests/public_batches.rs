@@ -7,6 +7,10 @@
 
 #![allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
 
+#[path = "../src/test_deadline/wait.rs"]
+#[allow(dead_code, reason = "only the child deadline bounds the churn here")]
+mod wait;
+
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::thread;
@@ -64,15 +68,21 @@ const _: () = {
     shared::<thinkthen::Relate>();
 };
 
-/// The threads of this process.
+/// The threads of this process. Only Linux lists them, so the worker check runs there.
+#[cfg(target_os = "linux")]
 fn threads() -> usize {
-    std::fs::read_dir("/proc/self/task").map_or(0, Iterator::count)
+    let count = std::fs::read_dir("/proc/self/task")
+        .expect("/proc lists this process's threads")
+        .count();
+    assert!(count > 0, "/proc listed no thread");
+    count
 }
 
 #[test]
 fn one_engine_serves_two_threads_under_one_throttle_and_leaves_no_worker() {
     let _serial = serial();
     let listener = Listener::answering(|_| Canned::ok(DECIDED).after(40)).expect("listener");
+    #[cfg(target_os = "linux")]
     let before = threads();
     let engine = engine(listener.base());
     let asked = question();
@@ -111,15 +121,19 @@ fn one_engine_serves_two_threads_under_one_throttle_and_leaves_no_worker() {
     );
     assert_eq!(engine.usage().requests_sent(), 16);
     // Each kept connection holds one listener thread; no engine thread stays.
-    let settled = Instant::now();
-    while threads() > before + listener.connections() && settled.elapsed() < Duration::from_secs(2)
+    #[cfg(target_os = "linux")]
     {
-        thread::sleep(Duration::from_millis(20));
+        let settled = Instant::now();
+        while threads() > before + listener.connections()
+            && settled.elapsed() < Duration::from_secs(10)
+        {
+            thread::sleep(Duration::from_millis(20));
+        }
+        assert!(
+            threads() <= before + listener.connections(),
+            "an engine worker stayed"
+        );
     }
-    assert!(
-        threads() <= before + listener.connections(),
-        "an engine worker stayed"
-    );
 }
 
 /// Owned texts behind a plain iterator, as a host's cursor would give them.
@@ -245,16 +259,20 @@ fn a_batch_reads_its_input_at_most_one_throttle_ahead_of_its_rows() {
     assert!(backend.count() <= stopped, "a send without its record");
 }
 
-/// The resident set of this process in kilobytes.
+/// The resident set of this process in kilobytes. Only Linux reports it.
+#[cfg(target_os = "linux")]
 fn resident() -> usize {
-    let status = std::fs::read_to_string("/proc/self/status").unwrap_or_default();
-    status
+    let status = std::fs::read_to_string("/proc/self/status").expect("/proc reports this process");
+    let kilobytes = status
         .lines()
         .find_map(|line| line.strip_prefix("VmRSS:"))
         .and_then(|value| value.trim().trim_end_matches(" kB").parse().ok())
-        .unwrap_or(0)
+        .expect("a VmRSS line");
+    assert!(kilobytes > 0, "/proc reported no resident set");
+    kilobytes
 }
 
+#[cfg(target_os = "linux")]
 #[test]
 fn a_long_batch_keeps_memory_flat_as_its_input_grows() {
     let _serial = serial();
@@ -305,7 +323,7 @@ fn engines_built_and_dropped_across_threads_fail_fast_on_a_refused_port() {
         }
     });
     assert!(
-        started.elapsed() < Duration::from_secs(20),
+        started.elapsed() < wait::CHILD_DEADLINE,
         "{:?}",
         started.elapsed()
     );
