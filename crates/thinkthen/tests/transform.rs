@@ -187,7 +187,7 @@ fn transform_help_pins_its_three_introductions() {
     let empty = folder("help");
     let root = catalog(&["--help"], &empty);
     let root = String::from_utf8_lossy(&root.stdout);
-    assert!(root.contains(&format!("\n  cache      Inspect and maintain answer-cache folders without sending a request\n  transform  {ROOT}\n  help ")), "{root}");
+    assert!(root.contains(&format!("\n  cache      Inspect and maintain answer-cache folders without sending a request\n  transform  {ROOT}\n  audit      ")), "{root}");
     for flag in ["-h", "--help"] {
         for (arguments, sentence) in [
             (vec!["transform", flag], ROOT),

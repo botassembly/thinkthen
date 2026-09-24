@@ -16,6 +16,7 @@ mod backend_profile;
 mod digest;
 mod find;
 mod json;
+pub(crate) mod measure;
 mod order;
 mod plan;
 mod plan_document;
@@ -83,10 +84,9 @@ pub(crate) use crate::core::result::{
     AnnotatedValue, DecisionResult, Meta, NamedValues, ProfileWarning, RecordValue, RequestMeta,
     Usage,
 };
-pub(crate) use crate::core::text::{Description, Evidence, ModelName, QuestionText};
-pub(crate) use crate::core::threshold::{Outcome, Threshold};
+pub(crate) use crate::core::text::{Description, Evidence, ModelName, QuestionText, Withheld};
+pub(crate) use crate::core::threshold::{Outcome, Threshold, ThresholdError};
 
-#[cfg(test)]
 pub(crate) use crate::core::find::FindAnswer;
 #[cfg(test)]
 pub(crate) use crate::core::text::Url;

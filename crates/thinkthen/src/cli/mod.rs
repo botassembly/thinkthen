@@ -5,13 +5,16 @@ pub(crate) mod annotate_schedule;
 pub(crate) mod args;
 pub(crate) mod asked;
 pub(crate) mod asking;
+mod audit;
 pub(crate) mod cache;
 pub(crate) mod config;
 pub(crate) mod edge;
 pub(crate) mod failure;
+mod file_size;
 pub(crate) mod find;
 mod interrupt;
 pub(crate) mod judge;
+mod measure;
 pub(crate) mod normalize;
 pub(crate) mod profile;
 pub(crate) mod recognize;
@@ -50,6 +53,18 @@ pub fn entry() -> ExitCode {
             Ok(()) => ExitCode::SUCCESS,
             Err(failure) => failure::report(&failure, stderr.lock()),
         };
+    }
+    if let Some(Command::Audit(arguments)) = &cli.command {
+        return match audit::run(arguments, stdout.lock()) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(failure) => failure::report(&failure, stderr.lock()),
+        };
+    }
+    // Every command that reads input may write a recording or a cache entry.
+    if cli.command.as_ref().is_some_and(Command::reads_input)
+        && let Err(failure) = file_size::claim()
+    {
+        return failure::report(&failure, stderr.lock());
     }
     let mut environment = match Environment::read() {
         Ok(environment) => environment,
@@ -106,7 +121,9 @@ fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitC
             args::CacheCommand::Prune(arguments) => cache::prune(arguments, environment, writer),
         },
         Some(Command::Status(arguments)) => status::run(arguments, environment, writer),
-        Some(Command::Transform(_)) => Err(Failure::Defect("the catalog returns before setup")),
+        Some(Command::Transform(_) | Command::Audit(_)) => {
+            Err(Failure::Defect("the catalog and audit return before setup"))
+        }
         None => Err(Failure::Defect("no command and no version was parsed")),
     }
 }

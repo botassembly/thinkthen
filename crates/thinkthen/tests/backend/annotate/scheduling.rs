@@ -8,7 +8,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use super::set;
-use crate::harness::{Canned, Listener, spawn};
+use crate::harness::{Canned, Gathering, Listener, finish, spawn};
 
 pub(super) fn yes(model: &str, input: u64, output: u64) -> String {
     format!(
@@ -71,8 +71,12 @@ fn one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32() {
             ),
         ];
         let answer = yes("local-1", 10, 2);
-        let listener =
-            Listener::answering(move |_| Canned::ok(&answer).after(25)).expect("a listener");
+        let gathering = Gathering::new(jobs.min(6));
+        let listener = Listener::answering(move |_| {
+            gathering.hold();
+            Canned::ok(&answer)
+        })
+        .expect("a listener");
         let output = spawn(
             &[
                 "annotate",
@@ -98,8 +102,7 @@ fn one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32() {
                 assert!(body.contains(&format!("record 1 group {place}")), "{body}");
             }
         }
-        assert!(listener.peak() <= jobs, "document at {jobs}");
-        assert!(jobs == 1 || listener.peak() > 1, "document at {jobs}");
+        assert_eq!(listener.peak(), jobs.min(6), "document at {jobs}");
 
         let answer = yes("local-1", 10, 2);
         let listener =
@@ -286,15 +289,15 @@ fn annotate_equal_groups_share_one_cache_request() {
 
 #[test]
 fn a_model_mismatch_cancels_groups_that_have_not_started() {
+    // One request at a time, so the engine reads group 1's other model before
+    // it could send group 2. The count then depends on no timing at all.
     let listener = Listener::answering(|body| {
-        let body = String::from_utf8_lossy(body);
-        if body.contains("group 0") {
-            Canned::ok(&yes("jev-1.2", 1, 1)).after(10)
-        } else if body.contains("group 1") {
-            Canned::ok(&yes("jev-1.3", 1, 1)).after(20)
+        let model = if String::from_utf8_lossy(body).contains("group 1") {
+            "jev-1.3"
         } else {
-            Canned::ok(&yes("jev-1.2", 1, 1)).after(40)
-        }
+            "jev-1.2"
+        };
+        Canned::ok(&yes(model, 1, 1))
     })
     .expect("a listener");
     let file = grouped("model-stop", 4);
@@ -307,20 +310,14 @@ fn a_model_mismatch_cancels_groups_that_have_not_started() {
             "--model",
             "jev-latest",
             "--jobs",
-            "2",
+            "1",
         ],
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         grouped_input(1, 4).as_bytes(),
     )
     .expect("the run");
     assert_eq!(output.status.code(), Some(4));
-    let requests = listener.requests();
-    assert_eq!(requests.len(), 3);
-    assert!(
-        requests
-            .iter()
-            .all(|request| { !String::from_utf8_lossy(&request.body).contains("group 3") })
-    );
+    assert_eq!(listener.requests().len(), 2);
 }
 
 #[test]
@@ -439,7 +436,7 @@ fn a_backend_failure_after_the_output_pipe_closes_stays_quiet() {
     assert!(first.contains(r#""record":1"#), "{first}");
     drop(output);
 
-    let result = child.wait_with_output().expect("the command ends");
+    let result = finish(child, "annotate").expect("the command ends");
     assert_eq!(result.status.code(), Some(0));
     assert!(result.stderr.is_empty());
     assert_eq!(listener.requests().len(), 3);

@@ -1,7 +1,7 @@
 use super::{asked, conformance_support::Document};
 use crate::core::{Backend, BackendProfile, ProfileName, ProfileWarning};
 use crate::engine::error::Error;
-use crate::prepared_request::PreparedRequest;
+use crate::engine::facade;
 use serde::Deserialize;
 use serde_json::value::RawValue;
 
@@ -45,7 +45,7 @@ struct MismatchCase {
 }
 
 #[test]
-fn shared_profile_cases_cross_the_production_parser_and_encoder() {
+fn shared_profile_cases_cross_the_facade_preparation() {
     let source: Document = serde_json::from_str(CASES).expect("main cases");
     let profiles: ProfileDocument = serde_json::from_str(PROFILES).expect("profile cases");
     assert_eq!(profiles.schema, "thinkthen.backend-profile-conformance/1");
@@ -61,7 +61,7 @@ fn shared_profile_cases_cross_the_production_parser_and_encoder() {
             .expect("production question grammar")
             .plan;
         let profile = BackendProfile::parse(profile_case.profile.get()).expect("profile parser");
-        let result = PreparedRequest::with_profile(&backend, &plan, Some(&profile));
+        let result = facade::split(&backend, Some(&profile), &plan);
         match profile_case.expect {
             Expectation::Pass(word) => {
                 assert_eq!(word, "pass", "{}", profile_case.id);
