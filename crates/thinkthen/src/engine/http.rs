@@ -112,11 +112,10 @@ impl Client {
         let mut wait = exchange.retry_wait;
         let mut retries = 0;
         loop {
-            if cancel.fired() {
-                return Err(Error::Cancelled);
-            }
+            let budget = cancel.stop_or_remaining()?;
+            let limit = budget.map_or(self.timeout, |budget| budget.min(self.timeout));
             before_attempt();
-            let attempt = match send(&self.agent, exchange) {
+            let attempt = match send(&self.agent, exchange, limit) {
                 Ok(body) => {
                     return Ok(HttpAnswer {
                         body,
@@ -125,11 +124,17 @@ impl Client {
                 }
                 Err(attempt) => attempt,
             };
+            if matches!(attempt.failure, Error::Transport(TransportKind::Timeout))
+                && limit < self.timeout
+                && let Some(passed) = cancel.passed()
+            {
+                return Err(passed);
+            }
             if retries >= exchange.max_retries || !is_retried(&attempt.failure) {
                 return Err(attempt.failure);
             }
-            if cancel.wait(bounded_wait(attempt.asked, wait, self.timeout)) {
-                return Err(Error::Cancelled);
+            if let Some(stop) = cancel.wait(bounded_wait(attempt.asked, wait, self.timeout)) {
+                return Err(stop);
             }
             wait = wait.saturating_mul(2);
             retries += 1;
@@ -211,10 +216,13 @@ fn bounded_wait(asked: Option<Duration>, exponential: Duration, timeout: Duratio
     asked.unwrap_or(exponential).min(timeout)
 }
 
-/// Post the request once.
-fn send(agent: &Agent, exchange: &Exchange<'_>) -> Result<Vec<u8>, Attempt> {
+/// Post the request once, blocking for at most `limit`.
+fn send(agent: &Agent, exchange: &Exchange<'_>, limit: Duration) -> Result<Vec<u8>, Attempt> {
     let request = agent
         .post(exchange.url)
+        .config()
+        .timeout_global(Some(limit))
+        .build()
         .header("content-type", "application/json")
         .header(
             "authorization",

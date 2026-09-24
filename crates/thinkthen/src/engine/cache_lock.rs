@@ -4,6 +4,8 @@ use std::fs::{self, File};
 use std::io;
 use std::path::{Path, PathBuf};
 
+use crate::engine::error::Error;
+
 /// An exclusive digest lock, released when its file closes.
 #[derive(Debug)]
 pub(crate) struct CacheLock {
@@ -34,14 +36,13 @@ pub(crate) fn shared_folder(folder: &Path) -> io::Result<FolderGate> {
 pub(crate) fn shared_folder_cancelled(
     folder: &Path,
     cancel: &crate::engine::Cancel,
-) -> io::Result<Option<FolderGate>> {
+) -> io::Result<Result<FolderGate, Error>> {
     let directory = File::open(folder)?;
-    if !lock_cancelled(&directory, true, cancel)? {
-        return Ok(None);
-    }
-    Ok(Some(FolderGate {
-        _directory: directory,
-    }))
+    Ok(
+        lock_cancelled(&directory, true, cancel)?.map(|()| FolderGate {
+            _directory: directory,
+        }),
+    )
 }
 
 pub(crate) fn exclusive_folder(folder: &Path) -> io::Result<FolderGate> {
@@ -62,12 +63,9 @@ pub(crate) fn acquire_cancelled(
     folder: &Path,
     digest: &str,
     cancel: &crate::engine::Cancel,
-) -> io::Result<Option<CacheLock>> {
+) -> io::Result<Result<CacheLock, Error>> {
     let (file, path, locks) = opened_lock(folder, digest)?;
-    if !lock_cancelled(&file, false, cancel)? {
-        return Ok(None);
-    }
-    Ok(Some(CacheLock {
+    Ok(lock_cancelled(&file, false, cancel)?.map(|()| CacheLock {
         _file: file,
         path,
         folder: locks,
@@ -102,12 +100,16 @@ fn acquire_after_open(folder: &Path, digest: &str, opened: impl FnOnce()) -> io:
     })
 }
 
-fn lock_cancelled(file: &File, shared: bool, cancel: &crate::engine::Cancel) -> io::Result<bool> {
+fn lock_cancelled(
+    file: &File,
+    shared: bool,
+    cancel: &crate::engine::Cancel,
+) -> io::Result<Result<(), Error>> {
     use std::fs::TryLockError;
 
     loop {
-        if cancel.fired() {
-            return Ok(false);
+        if let Some(stop) = cancel.stop() {
+            return Ok(Err(stop));
         }
         let attempted = if shared {
             file.try_lock_shared()
@@ -115,11 +117,11 @@ fn lock_cancelled(file: &File, shared: bool, cancel: &crate::engine::Cancel) -> 
             file.try_lock()
         };
         match attempted {
-            Ok(()) => return Ok(true),
+            Ok(()) => return Ok(Ok(())),
             Err(TryLockError::WouldBlock) => {
                 cancel.observed_block();
-                if cancel.wait(crate::engine::Cancel::poll()) {
-                    return Ok(false);
+                if let Some(stop) = cancel.wait(crate::engine::Cancel::poll()) {
+                    return Ok(Err(stop));
                 }
             }
             Err(TryLockError::Error(error)) => return Err(error),

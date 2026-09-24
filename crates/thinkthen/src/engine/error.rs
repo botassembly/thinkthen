@@ -1,5 +1,8 @@
 //! Structured failures produced below the command boundary.
 
+use std::fmt;
+use std::time::Duration;
+
 use crate::core::ProfileLimit;
 use crate::core::adapters::built_in::DecodeError;
 
@@ -51,7 +54,26 @@ pub(crate) enum Error {
     Usage(&'static str),
     ProfileLimit(ProfileLimit),
     Cancelled,
-    Deadline,
+    Deadline(Budget),
+}
+
+/// The whole-call budget a spent deadline was made from.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct Budget(pub(crate) Duration);
+
+impl fmt::Display for Budget {
+    /// Name the budget in the largest whole unit, in integers alone.
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let budget = self.0;
+        if budget.subsec_nanos() == 0 {
+            write!(formatter, "the deadline of {} s", budget.as_secs())?;
+        } else if budget.subsec_nanos().is_multiple_of(1_000_000) {
+            write!(formatter, "the deadline of {} ms", budget.as_millis())?;
+        } else {
+            write!(formatter, "the deadline of {} ns", budget.as_nanos())?;
+        }
+        formatter.write_str(" passed before the call answered")
+    }
 }
 
 #[allow(
@@ -74,7 +96,7 @@ impl Error {
             Self::Defect(_) => Kind::Defect,
             Self::Usage(_) | Self::ProfileLimit(_) => Kind::Usage,
             Self::Cancelled => Kind::Cancelled,
-            Self::Deadline => Kind::Deadline,
+            Self::Deadline(_) => Kind::Deadline,
         }
     }
 }

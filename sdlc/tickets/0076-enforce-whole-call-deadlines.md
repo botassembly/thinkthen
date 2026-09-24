@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine crates/thinkthen/src/engine/request.rs crates
 
 # 0076: Enforce whole-call deadlines
 
-Status: design accepted 2026-09-24 after review; small fixes applied. Owner: Claude.
+Status: built 2026-09-24; code review pending. Build record `sdlc/records/0076-build-whole-call-deadlines.md`. Owner: Claude.
 
 ## Outcome and authority
 
@@ -73,7 +73,7 @@ Re-score if the post-0083 inventory reveals another transport door, the work cha
 ## Review
 
 - Design review: accepted by independent Sol High after routing and dependency attribution were corrected. The 2026-09-24 spine review (`sdlc/records/2026-09-24-spine-review-controls.md`) accepted it again with three small fixes, applied: Claude routing, 0089 as a prerequisite, and the shared runner file in `opens`.
-- Code review: pending.
+- Code review: pending, by a fresh Claude session. The build record lists the proofs and departures.
 
 ## What Ian can overturn
 

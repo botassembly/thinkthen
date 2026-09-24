@@ -278,6 +278,9 @@ pub(crate) fn write_line(mut writer: impl Write, line: &str) -> Result<bool, Fai
 }
 
 #[cfg(test)]
+mod deadline_tests;
+
+#[cfg(test)]
 mod tests {
     use super::{Chunks, opened, write_line};
     use crate::failure::Failure;
