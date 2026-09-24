@@ -6,7 +6,7 @@ opens: sdlc/tickets/0084-freeze-the-public-rust-contract.md sdlc/planning/adr/00
 
 # 0084: Freeze the public Rust contract
 
-Status: draft, design not reviewed. Owner: Claude. Was accepted after three remediation passes; reopened 2026-09-24 so it can carry all nine surfaces.
+Status: draft, revised after design review; needs re-review. Owner: Claude.
 
 ## Outcome and authority
 
@@ -27,7 +27,7 @@ This design may be reviewed and recorded now. `Engine`, `EngineBuilder`, and `de
 
 ## Changes on reopening, 2026-09-24
 
-Ticket 0095 adds the binding members and records why these changed here: `Batch` carries `'a`; `Evidence::evidence` returns `&str`; `deadline_after` returns `Result` and refuses a budget above 4,294,967,295 seconds; `both_ways` takes two kinds; `width` refuses 0 and anything above 32. `Question::from_json` and `QuestionSet::from_json` report a broken rule as `Usage`, and `load` reports it as `Local`, as `question-file.md` rules for a named file. Ticket 0086 checks 0084 and 0095 as one inventory.
+Ticket 0095 records why five declarations changed and adds the binding members; 0086 checks both as one inventory. The free `filter`, `decide_many`, and `annotate` return a `default_engine` build failure as the batch's first item. `Batch` is neither `Send` nor `Sync`, so a host that runs work on another thread builds the batch there.
 
 ## Normative public inventory
 
@@ -362,7 +362,7 @@ Compile-fail fixtures prove a band cannot reach `filter`; unfinished builders, t
 
 Package proof compares Cargo metadata with and without default features and rejects every package activated only by `cli`, including `clap`, `csv-core`, and `nix`. Ticket 0078 owns `signal-hook` placement; 0086 rejects it only if 0078 made it CLI-only. Run `cargo check --locked -p thinkthen --no-default-features`, `cargo test --locked -p thinkthen --no-default-features`, and `cargo package --locked -p thinkthen --no-default-features`.
 
-0084 acceptance is design-only: the proposed ADR amendment and this ticket agree; the signature block parses as the fixture generator's input; every public name has one owner and one exact shape; `wc -m` stays under 30,000; and `git diff --check` passes. No compile check is credited as proof of runtime behavior.
+0084 acceptance is design-only: the proposed ADR amendment and this ticket agree; `rustfmt --check` passes on the extracted blocks of 0084 and 0095; every public name has one owner and one exact shape; `wc -m` stays under 30,000; and `git diff --check` passes. No compile check is credited as proof of runtime behavior.
 
 ## Dependencies and exclusions
 
@@ -376,5 +376,6 @@ Contract 2; state and timing 0; reach 2; proof 2; cost of error 1; total 7. Fina
 
 ## Review
 
-- Design review: pending for the 2026-09-24 changes, together with 0095.
+- Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-contract.md`) rejected it for one stale example in `rust.md`, now fixed. Re-review pending, together with 0095.
+- Routing: the later code tickets use Claude builders (Opus subagent) and fresh Claude reviewers.
 - Code review: not applicable; design records only.

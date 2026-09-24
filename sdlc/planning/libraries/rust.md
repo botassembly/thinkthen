@@ -10,8 +10,8 @@ A Rust user adds one line to `Cargo.toml` and the build stays fast. The crate pu
 use thinkthen as tt;
 
 impl tt::Evidence for Note {
-    fn evidence(&self) -> Result<&str, tt::Error> {
-        Ok(&self.text)
+    fn evidence(&self) -> &str {
+        &self.text
     }
 }
 
@@ -28,7 +28,7 @@ Rust is blocking (ADR 0017 pick 7). Plain calls return `Result`, no `.await` exi
 
 - One published crate named `thinkthen`, the binary behind a default `cli` feature, and `cargo add thinkthen --no-default-features` resolving no argument parser.
 - One crate-root API exposes the ten functions and question setup. The `engine` module stays private. A separate binding crate consumes the public crate-root API after 0086; only a shim compiled inside the `thinkthen` crate may call private modules. A check fails when the public API grows without an ADR.
-- Blocking is the only surface (ADR 0017 pick 7 and section 2). No async mirror, no runtime, `block_on` nowhere. Scoped threads run a batch at width and vanish when it ends.
+- Blocking is the only surface (ADR 0017 pick 7 and section 2). No async mirror, no runtime, `block_on` nowhere. A `Batch` runs at width and joins its workers when it finishes or drops.
 - A decision is `Question` for a cut and `BandedQuestion` for a band, so `filter` with a band is unrepresentable. `ChooseQuestion<C>` and `TagQuestion<C>` retain the `Choice` type from builder through call. Parsed choices and tags bind through checked `Question::into_choose::<C>` and `into_tag::<C>`. `load` returns `LoadedQuestion::Question` or `LoadedQuestion::Banded`. The decide builder's `.cut()` closes with the grammar default (205).
 - One `thinkthen::Error` enum from `thiserror`, with the six named variants of ADR 0017 section 3. Each carries a safe `ErrorDetail`; callers match the variant or use `kind()`, and `retryable()` is true only for the ruled backend failures.
 - A client is `Send + Sync`. A test drives several requests at once from two threads.
