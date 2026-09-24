@@ -212,3 +212,29 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Defers: Packaging, PostgreSQL versions other than 16, Mac, an address or key setting, `PARALLEL SAFE`, and `site/`.
 
 Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. The setting `thinkthen.width` becomes `thinkthen.throttle`, and every public `width` here reads as `throttle`.
+
+## Spike finding, 2026-09-24
+
+Experiment `~/workspace/experiments/254-thinkthen-postgresql-spike` on Beelink ran a settings-only pgrx extension in a PostgreSQL 16.15 server started from the pinned package as the user, on a socket, with no root. Raw logs are in its `logs/` folder. The spike used the old name `thinkthen.width`, and each result holds for `thinkthen.throttle`. Three findings contradict the accepted design, and the builder resolves them before code.
+
+Retired:
+
+- pgrx 0.17.0 with the server and headers. `apt-get download` gives the pinned SHA256 without root. The `dpkg-deb -x` tree runs from any folder, and `postgres -V` equals `pg_config --version` at 16.15-0ubuntu0.24.04.1. `cargo pgrx package` builds, and `CREATE EXTENSION` loads the build lazily and preloaded. Edition 2024 and the root clippy denies with `-D warnings` pass on pgrx's macro code, and `cargo test --lib` links.
+- "Not run" prints both versions. A prototype gate with a shimmed `pg_config` at 16.16 prints both versions and the fetch. A new Ubuntu revision, a wrong pin, a missing package, and a `Darwin` shim each report "not run".
+- The -1 defaults. The defaults give an empty setter plan, and a counting stand-in sees zero calls. The backend keeps `THINKTHEN_BASE_URL` and `THINKTHEN_CACHE`. The end-to-end run through `EngineBuilder::from_env` waits for 0086.
+- `cache_bytes = 0` refuses with 22023 and the pinned sentence. `'1MB'` reaches 1,048,576 bytes. A `'2GB'` value in the server's configuration logs a WARNING at start, and the setting then stays at -1. The README states that.
+- `unexpected_cfgs`. `forbid` fails on `pg_module_magic!` and `deny` passes. A hand-written `allow`, `expect`, `cfg_attr` form, or multi-line `allow` compiles under `deny`, and so does a `build.rs` that widens `check-cfg`. `policy.py` refuses the token `unexpected_cfgs` anywhere in the crate's Rust files. It also refuses a `build.rs` and a crate-local `.cargo/config*`.
+- The fake key beside loopback. The guarded start gives the postmaster and a backend `tt-loopback-fake` on each start, even while the caller exports a sentinel. The plain-start plant gives both the sentinel.
+
+Contradictions with the accepted design:
+
+1. `SuBackend` does not do what decision 3 says. With lazy loading, any `pg_reload_conf()` makes each new session drop every `thinkthen.*` value from the server's configuration, even when nothing changed. PostgreSQL logs no warning. `ALTER ROLE … SET` and `ALTER DATABASE … SET` fail with 55P02 when the library is preloaded. When it loads lazily, each session warns and ignores the role's value. The per-role spend limit of decision 3 does not work. Decision: the four settings use `Suset`. Under `Suset` the configuration file, a reload, and `ALTER ROLE` all work, and an ordinary role still gets 42501 through `PGOPTIONS`, `SET` before load, and `SET` after load. A superuser can `SET` a value mid-session. So each call compares the plan it reads (decision 6) with the plan its engine was built from, and rebuilds the engine when they differ. The README drops the restart rule. Ian can overturn this.
+2. The key setting leaks under `Suset`. An ordinary role's `SET thinkthen.api_key = '…'` fails in PostgreSQL's privilege check, and the log records `STATEMENT:` with the value. Decision: register `thinkthen.api_key` as `Userset`, keeping `NO_SHOW_ALL`, `SUPERUSER_ONLY`, and `DISALLOW_IN_AUTO_FILE`. Any role's `SET` then succeeds, the next call refuses with 22023, the log holds no line with the value, and `SHOW` by an ordinary role still refuses with 42501. The secrecy test runs its `SET` as an ordinary role as well as a superuser. Ian can overturn this.
+3. `unsafe_code = "deny"` breaks `cargo pgrx package`. The design probe ran `cargo check --lib --bins`, which passes. The package step injects generated `unsafe extern` blocks into the embed binary, and the build fails with six errors. Decision: `src/bin/pgrx_embed.rs` carries `#![allow(unsafe_code, reason = "…")]`, and `policy.py` accepts `unsafe_code` in that file and in `src/ffi/`. The ADR 0047 section records it.
+
+Other changes for the build:
+
+- The start function parses the address's host. A prefix match accepts `http://127.0.0.1:80@example.com/`, whose host is `example.com`.
+- `check.sh` never calls `pg_ctl restart`. A restart takes the caller's environment, and a shell that exports a key gives it to the server. Each restart is a stop, then the guarded start.
+- `SHOW thinkthen.<name>` fails with "unrecognized configuration parameter" in a session that has not loaded the library. R5-17's test calls a thinkthen function first in that session, or its plant stays green.
+- Ubuntu's archive keeps only the newest 16.x in `noble-updates`. After an upgrade the check stays "not run" until a commit moves `runtime.sha256` to the new package.
