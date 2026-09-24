@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core crates/thinkthen/src/cli crates/thinkthen/tests
 
 # 0113: Add the audit command
 
-Status: built, reviewed, and fixed on `ticket/0113-audit-command`, awaiting the reviewer's check of the fixes; see `sdlc/records/0113-build-audit-command.md`. Design accepted 2026-09-24 after re-review. Owner: Claude.
+Status: landed on main 2026-09-24 after the fixes were accepted at `7babf4c9`; see `sdlc/records/0113-build-audit-command.md`. Two plants still pass every test: ascending disagreement order and the boolean `choose` refusal without `&& !failed`. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it. The first design review is `sdlc/records/0113-0114-design-review.md`. This page is rewritten whole after it.
 
