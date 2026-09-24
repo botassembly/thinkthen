@@ -36,7 +36,7 @@ An edge repeats both complete names. A reader never follows an entity number:
 {"relation":"works_for","source":{"name":"Maria Chen","kind":"person","start":0,"end":10,"strength":0.98},"target":{"name":"Northwind Freight","kind":"organization","start":18,"end":35,"strength":1.0},"probability":1.0}
 ```
 
-Different-kind rules use one choice per member of the larger side, with the smaller side plus `none` as options. Every option at or above the cut becomes an edge. Same-kind rules use yes/no pair questions. A name is never related to itself. A choice over 255 options or one choice that cannot fit the selected backend profile falls back to yes/no pairs for that whole relation.
+Wildcard sides expand to concrete kinds in first-seen name order. Different-kind concrete relations use one choice per member of the larger side, with the smaller side plus `none` as options. Every option at or above the cut becomes an edge. Same-kind concrete relations use yes/no pair questions. A name is never related to itself. A choice over 255 options or one choice that cannot fit the selected backend profile falls back to yes/no pairs for that concrete relation only. Sibling concrete relations choose their methods independently.
 
 `relations` is absent when no rule was supplied. It is an empty list when rules were supplied and no edge passed.
 

@@ -27,7 +27,11 @@ fn automatic_answers(body: &[u8], every_relation_option: bool, pair_probability:
             let words = question["instructions"].as_str().expect("instructions");
             let pick = match (criteria.contains_key("IN"), criteria.contains_key("person")) {
                 (true, _) => ["[[met]]", "[[and]]", "[[x]]", "[[.]]"].iter().any(|word| words.contains(word)).then_some("OUT").unwrap_or("IN"),
-                (_, true) => (words.contains("[[Acme]]") || words.contains("[[Corp]]") || words.contains("[[O")).then_some("organization").unwrap_or("person"),
+                (_, true) => {
+                    if words.contains("[[Town") { "place" }
+                    else if words.contains("[[Acme]]") || words.contains("[[Corp]]") || words.contains("[[O") { "organization" }
+                    else { "person" }
+                },
                 _ => criteria.keys().find(|label| label.starts_with('i')).expect("relation option"),
             };
             let relation_options = criteria.keys().filter(|label| label.starts_with('i')).count();
@@ -142,7 +146,11 @@ fn split_recognition_and_relation_batches_assemble_normalized_choice_and_pair_ed
     assert_eq!(edges, [("works_for", "Ada Lovelace", "Acme"), ("works_for", "Ada Lovelace", "Corp"), ("partners", "Acme", "Corp"), ("partners", "Corp", "Acme")]);
     let requests = listener.requests();
     assert!(requests.len() > text.split(|byte| byte.is_ascii_whitespace()).count() * 2);
-    assert!(requests.iter().all(|request| serde_json::from_slice::<Value>(&request.body).unwrap()["state"] == "Ada Lovelace met Acme and Corp."));
+    let states = requests.iter().map(|request| serde_json::from_slice::<Value>(&request.body).unwrap()["state"].clone()).collect::<Vec<_>>();
+    assert!(states.iter().any(|state| state == "Ada Lovelace met Acme and Corp."));
+    let relation_states = states.iter().filter(|state| state.is_object()).collect::<Vec<_>>();
+    assert!(relation_states.iter().all(|state| state["evidence"] == "Ada Lovelace met Acme and Corp."));
+    assert!(relation_states.iter().all(|state| state["entities"].as_array().unwrap().len() == 3));
 }
 
 #[test]
@@ -165,6 +173,46 @@ fn split_recognition_mixes_cache_and_live_then_replays_without_a_key() {
     assert_eq!(replay.status.code(), Some(0));
     assert_eq!(mixed.stdout, replay.stdout);
     assert!(listener.requests().is_empty());
+}
+
+#[test]
+fn relation_identity_drives_recording_replay_and_cache_without_changing_recognition_bytes() {
+    let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("recognize-relation-identity");
+    let _removed = fs::remove_dir_all(&root);
+    let baseline = Listener::answering(automatic).expect("baseline");
+    let output = run(&baseline, &[], b"Ada met Acme.");
+    assert_eq!(output.status.code(), Some(0));
+    let recognition_body = baseline.requests().pop().expect("recognition request").body;
+
+    let recording = root.join("recording");
+    let listener = Listener::answering(automatic).expect("recording listener");
+    let recorded = spawn(&["recognize", "--url", listener.base(), "--model", "local-1", "--record", &recording.to_string_lossy(), "--no-cache", "--relation", "works_for=person:organization"], &[("THINKTHEN_API_KEY", "key")], b"Ada met Acme.").expect("record");
+    assert_eq!(recorded.status.code(), Some(0));
+    let requests = listener.requests();
+    assert_eq!(requests.first().expect("recognition request").body, recognition_body);
+    let relation = requests.iter().find(|request| serde_json::from_slice::<Value>(&request.body).unwrap()["state"].is_object()).expect("relation request");
+    let digest = crate::support::digest(listener.url(), &relation.body);
+    let mut old: Value = serde_json::from_slice(&relation.body).unwrap();
+    old["state"] = Value::String("Ada met Acme.".to_owned());
+    let old_digest = crate::support::digest(listener.url(), &serde_json::to_vec(&old).unwrap());
+    assert_ne!(digest, old_digest);
+    assert!(recording.join(format!("{digest}.json")).is_file());
+
+    let replayed = spawn(&["recognize", "--url", listener.base(), "--model", "local-1", "--replay", &recording.to_string_lossy(), "--no-cache", "--relation", "works_for=person:organization"], &[], b"Ada met Acme.").expect("replay");
+    assert_eq!(replayed.status.code(), Some(0));
+    assert_eq!(replayed.stdout, recorded.stdout);
+    assert!(listener.requests().is_empty());
+
+    let cache = root.join("cache");
+    let arguments = ["recognize", "--url", listener.base(), "--model", "local-1", "--cache", &cache.to_string_lossy(), "--relation", "works_for=person:organization"];
+    let filled = spawn(&arguments, &[("THINKTHEN_API_KEY", "key")], b"Ada met Acme.").expect("fill cache");
+    assert_eq!(filled.status.code(), Some(0));
+    let _sent = listener.requests();
+    let cached = spawn(&arguments, &[], b"Ada met Acme.").expect("cached");
+    assert_eq!(cached.status.code(), Some(0));
+    assert_eq!(cached.stdout, filled.stdout);
+    assert!(listener.requests().is_empty());
+    assert!(cache.join(format!("{digest}.json")).is_file());
 }
 
 #[test]
@@ -216,6 +264,70 @@ fn two_hundred_fifty_five_choice_options_stay_on_the_choice_path() {
     let questions = request["questions"].as_object().unwrap();
     assert_eq!(relations.iter().map(|request| serde_json::from_slice::<Value>(&request.body).unwrap()["questions"].as_object().unwrap().len()).sum::<usize>(), 255);
     assert!(questions.values().all(|question| question["criteria"].as_object().unwrap().len() == 255));
+}
+
+#[test]
+fn runtime_option_limit_falls_back_per_expanded_concrete_relation() {
+    let profile = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("recognize-three-options.json");
+    fs::write(&profile, r#"{"schema":"thinkthen.backend-profile/1","name":"three","max_options":3}"#).unwrap();
+    let listener = Listener::answering(automatic).expect("listener");
+    let output = run(&listener, &["--profile", &profile.to_string_lossy(), "--relation", "links=person:*"], b"P1 x P2 x P3 x P4 x O1 x O2 x Town1 x Town2 x Town3");
+    assert_eq!(output.status.code(), Some(0), "{}", String::from_utf8_lossy(&output.stderr));
+    let relations = listener.requests().into_iter().filter_map(|request| {
+        let body: Value = serde_json::from_slice(&request.body).unwrap();
+        body["state"]["relation"].is_object().then_some(body)
+    }).collect::<Vec<_>>();
+    let methods = relations.iter().map(|body| {
+        let relation = &body["state"]["relation"];
+        let method = if body["questions"].as_object().unwrap().values().all(|question| question["type"] == "choice") { "choice" } else { "yes_no" };
+        (relation["source"].as_str().unwrap(), relation["target"].as_str().unwrap(), method)
+    }).collect::<Vec<_>>();
+    assert_eq!(methods, [("person", "person", "yes_no"), ("person", "organization", "choice"), ("person", "place", "yes_no")]);
+}
+
+#[test]
+fn unsplittable_choice_bytes_fall_back_per_expanded_concrete_relation() {
+    let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR"));
+    let one = root.join("recognize-wildcard-one-question.json");
+    fs::write(&one, r#"{"schema":"thinkthen.backend-profile/1","name":"one","max_questions":1}"#).unwrap();
+    let long = "z".repeat(120);
+    let text = format!("P1 x P2 x P3 x P4 x O1 x O2 x Town1{long} x Town2{long} x Town3{long}");
+    let baseline = Listener::answering(automatic).expect("baseline");
+    let output = run(&baseline, &["--profile", &one.to_string_lossy(), "--relation", "links=person:*"], text.as_bytes());
+    assert_eq!(output.status.code(), Some(0));
+    let baseline_requests = baseline.requests();
+    let bodies = baseline_requests.iter().filter_map(|request| {
+        let body: Value = serde_json::from_slice(&request.body).unwrap();
+        (body["state"]["relation"]["target"] == "organization" && body["questions"].as_object().unwrap().values().all(|question| question["type"] == "choice")).then_some(request.body.len())
+    }).collect::<Vec<_>>();
+    let place_choices = baseline_requests.iter().filter_map(|request| {
+        let body: Value = serde_json::from_slice(&request.body).unwrap();
+        (body["state"]["relation"]["target"] == "place" && body["questions"].as_object().unwrap().values().all(|question| question["type"] == "choice")).then_some(request.body.len())
+    }).collect::<Vec<_>>();
+    let option_fallback = root.join("recognize-wildcard-option-fallback.json");
+    fs::write(&option_fallback, r#"{"schema":"thinkthen.backend-profile/1","name":"option-fallback","max_questions":1,"max_options":3}"#).unwrap();
+    let h_listener = Listener::answering(automatic).expect("H baseline");
+    let output = run(&h_listener, &["--profile", &option_fallback.to_string_lossy(), "--relation", "links=person:*"], text.as_bytes());
+    assert_eq!(output.status.code(), Some(0));
+    let place_h = h_listener.requests().into_iter().filter_map(|request| {
+        let body: Value = serde_json::from_slice(&request.body).unwrap();
+        (body["state"]["relation"]["target"] == "place" && body["questions"].as_object().unwrap().values().all(|question| question["type"] == "noul")).then_some(request.body.len())
+    }).collect::<Vec<_>>();
+    let limit = bodies.iter().chain(&place_h).copied().max().expect("fitting request");
+    assert!(place_choices.iter().all(|bytes| *bytes > limit));
+    let profile = root.join("recognize-wildcard-byte-fallback.json");
+    fs::write(&profile, format!(r#"{{"schema":"thinkthen.backend-profile/1","name":"bytes","max_questions":1,"max_request_bytes":{limit}}}"#)).unwrap();
+    let listener = Listener::answering(automatic).expect("fallback");
+    let output = run(&listener, &["--profile", &profile.to_string_lossy(), "--relation", "links=person:*"], text.as_bytes());
+    assert_eq!(output.status.code(), Some(0), "{}", String::from_utf8_lossy(&output.stderr));
+    let methods = listener.requests().into_iter().filter_map(|request| {
+        let body: Value = serde_json::from_slice(&request.body).unwrap();
+        let target = body["state"]["relation"]["target"].as_str()?;
+        let method = if body["questions"].as_object().unwrap().values().all(|question| question["type"] == "choice") { "choice" } else { "yes_no" };
+        Some((target.to_owned(), method))
+    }).collect::<Vec<_>>();
+    assert!(methods.contains(&("organization".to_owned(), "choice")));
+    assert!(methods.contains(&("place".to_owned(), "yes_no")));
 }
 
 #[test]

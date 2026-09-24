@@ -11,11 +11,10 @@ use crate::asking::{Folders, ask_prepared};
 use crate::core::{
     Answer, AnswerOutcome, Backend, BackendProfile, Description, Meta, ModelName, Outcome, Plan,
     Reading, RecognizeSpec, RecognizedName, Record, RecordValue, RelationEdge, RequestMeta,
-    TokenAnswer, Usage, assemble_edges, assemble_names, json_line, kind_questions, plan_pairs,
-    plan_relation, recognition_questions, recognize_sha256, tokenize,
+    TokenAnswer, Usage, assemble_names, json_line, kind_questions, recognition_questions,
+    recognize_sha256, tokenize,
 };
 use crate::edge::{self, Environment};
-use crate::engine::error::Error as EngineError;
 use crate::failure::Failure;
 use crate::http::Client;
 use crate::prepared_request::PreparedRequests;
@@ -26,12 +25,13 @@ use crate::table::Rows as TableRows;
 
 mod config;
 mod dry_run;
+mod relation;
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
 struct Recognized {
     entities: Vec<RecognizedName>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    relations: Option<Vec<RelationEdge>>,
+    relations: Option<Vec<RelationEdge<RecognizedName>>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -312,7 +312,7 @@ fn recognize_one(
             kind_probabilities: answer.kind_probabilities.clone(),
         })
         .collect();
-    let relations = recognize_relations(running, spec, &evidence, &entities, &mut aggregate)?;
+    let relations = relation::recognize(running, spec, text, &entities, &mut aggregate)?;
     Ok((
         Recognized {
             entities,
@@ -321,60 +321,6 @@ fn recognize_one(
         inputs,
         aggregate,
     ))
-}
-
-fn recognize_relations(
-    running: &Running<'_>,
-    spec: &RecognizeSpec,
-    evidence: &crate::core::Evidence,
-    entities: &[RecognizedName],
-    aggregate: &mut Aggregate,
-) -> Result<Option<Vec<RelationEdge>>, Failure> {
-    if spec.relations.is_empty() {
-        return Ok(None);
-    }
-    let mut edges = Vec::new();
-    for rule in &spec.relations {
-        let mut planned = plan_relation(entities, rule)
-            .map_err(|_| Failure::Defect("relation planning failed"))?;
-        if planned.questions.is_empty() {
-            continue;
-        }
-        let mut relation_plan = Plan::new(
-            evidence.clone(),
-            running.backend.model().clone(),
-            planned.questions.clone(),
-        )
-        .map_err(|_| Failure::Defect("relation planned no questions"))?;
-        let needs_pairs = matches!(
-            PreparedRequests::with_profile(
-                &running.backend,
-                &relation_plan,
-                running.profile.as_ref()
-            ),
-            Err(EngineError::ProfileLimit(limit)) if limit.permits_relation_fallback()
-        );
-        if needs_pairs {
-            planned = plan_pairs(entities, rule)
-                .map_err(|_| Failure::Defect("relation fallback planning failed"))?;
-            relation_plan = Plan::new(
-                evidence.clone(),
-                running.backend.model().clone(),
-                planned.questions.clone(),
-            )
-            .map_err(|_| Failure::Defect("relation fallback planned no questions"))?;
-        }
-        let (relation_answers, relation_meta) = execute(running, &relation_plan)?;
-        aggregate.add(relation_meta)?;
-        edges.extend(assemble_edges(
-            entities,
-            rule,
-            &planned.mappings,
-            &relation_answers,
-            spec.relation_threshold.cut_value().unwrap_or(0.5),
-        ));
-    }
-    Ok(Some(edges))
 }
 
 fn token_answers(

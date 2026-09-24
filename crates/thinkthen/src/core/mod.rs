@@ -29,7 +29,7 @@ mod recognize_file;
 pub(crate) mod recording;
 pub(crate) mod recording_identity;
 mod records;
-mod relation;
+pub(crate) mod relation;
 mod render;
 mod reply;
 mod result;
@@ -69,7 +69,8 @@ pub(crate) use crate::core::records::{
     Framing, MAX_RECORD_BYTES, Reading, ReadingError, Record, RecordError,
 };
 pub(crate) use crate::core::relation::{
-    RelationEdge, RelationRule, assemble_edges, plan as plan_relation, plan_pairs,
+    RelationEdge, RelationPlan, RelationRule, assemble_edges, plan as plan_relation, plan_pairs,
+    relation_evidence,
 };
 pub(crate) use crate::core::render::{RenderError, json_line};
 pub(crate) use crate::core::reply::{AnswerOutcome, FailedValue, Reply};
