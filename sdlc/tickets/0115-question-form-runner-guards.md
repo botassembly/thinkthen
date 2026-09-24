@@ -6,7 +6,7 @@ opens: test
 
 # 0115: Question-form runner guards
 
-Status: open. Owner: Claude.
+Status: landed. Owner: Claude. The review accepted it (`sdlc/records/0115-review.md`).
 
 ## Outcome and authority
 
