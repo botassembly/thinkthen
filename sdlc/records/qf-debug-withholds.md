@@ -24,3 +24,15 @@ Red first: before the fix, the new test printed `Labels([Label { name: "marker-e
 ## Ratchet
 
 The ceiling rises from 48140 to 48212. The two secrecy tests take 41 lines. The `Request` and `Labels` impls, `Withheld`, and the `Record` rewrite take the rest, less the lines the `Withheld` sites gave back.
+
+## Checks
+
+With `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, at `8524cec2`, with the one-minute load between 8.2 and 9.5:
+
+- `install`: exit 0.
+- `lint`: exit 0, `ratchet: crates + conformance 48212/48212`.
+- `test`: exit 0, 782 passed, 0 failed, 6 ignored across 18 result lines, `live-test: all cases passed`.
+- `spec`: exit 0, `demos: 21 green, 0 red`.
+- `sdlc/scripts/live` did not run.
+
+Main then moved by `3dc68449`, a planning note only. The merge re-measured the ratchet at 48212/48212. The whole ladder ran again at the commit that adds this section, which is the commit that lands, and the landing commit on main records that run.
