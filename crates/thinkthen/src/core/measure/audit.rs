@@ -4,9 +4,9 @@
 use std::cmp::Reverse;
 use std::collections::BTreeSet;
 
-use serde::{Serialize, Serializer};
+use serde::Serialize;
 
-use crate::core::measure::answer::{Answer, Rule, Said, Verb};
+use crate::core::measure::answer::{Answer, Rule, Said, Shown, Verb};
 use crate::core::measure::key::{Key, Outcome, Part, Want, outcome};
 use crate::core::measure::{
     Calibration, MeasureError, SplitMix64, auc, calibration, python_float_text, python_sum,
@@ -19,24 +19,6 @@ use crate::core::threshold::Threshold;
 pub(crate) enum By {
     Question,
     Verb,
-}
-
-/// A rule as the output prints it: `"as run"`, a cut as a number, or a band as text.
-#[derive(Clone, Debug, PartialEq)]
-pub(crate) enum Shown {
-    AsRun,
-    Cut(f64),
-    Band(String),
-}
-
-impl Serialize for Shown {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        match self {
-            Self::AsRun => serializer.serialize_str("as run"),
-            Self::Cut(cut) => six(cut, serializer),
-            Self::Band(band) => serializer.serialize_str(band),
-        }
-    }
 }
 
 /// What one audit run was asked.

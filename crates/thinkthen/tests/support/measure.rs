@@ -88,6 +88,102 @@ pub(crate) const TABLES: [(&str, [&str; 2]); 3] = [
     ),
 ];
 
+/// Each diff golden file and the diff command line that prints it.
+pub(crate) const DIFF_GOLDENS: [(&str, &[&str]); 8] = [
+    (
+        "golden/diff-decide-cuts.jsonl",
+        &[
+            "small/decide.jsonl",
+            "--key",
+            "small/decide-key.jsonl",
+            "--compare-threshold",
+            "0.4",
+        ],
+    ),
+    (
+        "golden/diff-decide-wordings.jsonl",
+        &[
+            "small/decide.jsonl",
+            "small/decide-b.jsonl",
+            "--key",
+            "small/decide-key.jsonl",
+        ],
+    ),
+    (
+        "golden/diff-decide-nokey.jsonl",
+        &["small/decide.jsonl", "small/decide-b.jsonl"],
+    ),
+    (
+        "golden/diff-choose.jsonl",
+        &[
+            "small/choose.jsonl",
+            "small/choose-b.jsonl",
+            "--key",
+            "small/choose-key.jsonl",
+        ],
+    ),
+    (
+        "golden/diff-249-cuts.jsonl",
+        &[
+            "249/control.jsonl",
+            "--key",
+            "249/key.jsonl",
+            "--compare-threshold",
+            "0.42",
+        ],
+    ),
+    (
+        "golden/diff-249-soft.jsonl",
+        &[
+            "249/control.jsonl",
+            "249/soft.jsonl",
+            "--key",
+            "249/key.jsonl",
+        ],
+    ),
+    (
+        "golden/extra/diff-annotate.jsonl",
+        &[
+            "small/annotate.jsonl",
+            "--key",
+            "small/annotate-key.jsonl",
+            "--compare-threshold",
+            "0.75",
+        ],
+    ),
+    (
+        "golden/extra/diff-249-cuts-nokey.jsonl",
+        &["249/control.jsonl", "--compare-threshold", "0.42"],
+    ),
+];
+
+/// Each diff table capture and the command line that prints it without `--table`.
+pub(crate) const DIFF_TABLES: [(&str, &[&str]); 3] = [
+    (
+        "golden/table/diff-decide-cuts.txt",
+        &[
+            "small/decide.jsonl",
+            "--key",
+            "small/decide-key.jsonl",
+            "--compare-threshold",
+            "0.4",
+        ],
+    ),
+    (
+        "golden/table/diff-decide-nokey.txt",
+        &["small/decide.jsonl", "small/decide-b.jsonl"],
+    ),
+    (
+        "golden/table/diff-choose.txt",
+        &[
+            "small/choose.jsonl",
+            "small/choose-b.jsonl",
+            "--key",
+            "small/choose-key.jsonl",
+        ],
+    ),
+];
+
 /// The fixture folder every command line runs from.
 pub(crate) fn fixtures() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/measure")
@@ -209,7 +305,12 @@ pub(crate) fn same_lines(got: &str, golden: &str) -> Result<(), String> {
 
 /// Run `audit` with these arguments and input: the exit code, standard output, and standard error.
 pub(crate) fn audit(arguments: &[&str], input: &[u8]) -> (i32, String, String) {
-    let output = run(&[&["audit"], arguments].concat(), input);
+    measure(&[&["audit"], arguments].concat(), input)
+}
+
+/// Run a command line with this input: the exit code, standard output, and standard error.
+pub(crate) fn measure(arguments: &[&str], input: &[u8]) -> (i32, String, String) {
+    let output = run(arguments, input);
     let text = |bytes: Vec<u8>| String::from_utf8(bytes).expect("UTF-8 output");
     (
         output.status.code().expect("an exit code"),

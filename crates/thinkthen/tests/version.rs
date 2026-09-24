@@ -104,7 +104,7 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
         .lines()
         .filter_map(|line| line.split_whitespace().next())
         .collect();
-    const ORDER: [&str; 15] = [
+    const ORDER: [&str; 16] = [
         "status",
         "decide",
         "filter",
@@ -119,6 +119,7 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
         "cache",
         "transform",
         "audit",
+        "diff",
         "help",
     ];
     if listed != ORDER {

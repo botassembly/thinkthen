@@ -1,11 +1,12 @@
 //! Hand-checked values from the prototype's own tests, and the cases its review planted.
 
-use super::answer::{self, Rule};
-use super::audit::{self, By, Settings, Shown};
-use super::key::Key;
+use super::answer::{self, Identity, Rule, Shown};
+use super::audit::{self, By, Settings};
+use super::diff::{Discordant, discordant};
+use super::key::{Key, Outcome};
 use super::{
-    SplitMix64, auc, calibration_error, json_lines, python_float_text, rounded, three_places,
-    wilson,
+    SplitMix64, auc, calibration_error, json_lines, mcnemar, python_float_text, rounded,
+    three_places, wilson,
 };
 use crate::core::pointer::Pointer;
 
@@ -28,7 +29,7 @@ fn audit_text(results: &str, key: &str) -> Vec<audit::Row> {
     let results = json_lines(results.as_bytes()).expect("result lines");
     let key = Key::read(&json_lines(key.as_bytes()).expect("key lines")).expect("a key");
     let pointer = Pointer::new("/id").expect("a pointer");
-    let answers = answer::read(&results, &pointer).expect("answers");
+    let answers = answer::read(&results, &pointer, Identity::Question).expect("answers");
     let settings = Settings {
         by: By::Question,
         rule: Rule::AsRun,
@@ -133,4 +134,48 @@ fn a_seeded_split_over_five_ids_tunes_on_two() {
     let tune = suggested.tune.as_ref().expect("a tuning part");
     let held = suggested.held.as_ref().expect("a held part");
     assert_eq!((suggested.split, tune.n, held.n), ("seeded", 2, 3));
+}
+
+#[test]
+fn mcnemar_matches_exact_integer_sums_to_120_and_the_pinned_values() {
+    for n in 0..=120_u32 {
+        let mut choose = vec![1_u128];
+        for i in 0..n {
+            choose.push(choose[i as usize] * u128::from(n - i) / u128::from(i + 1));
+        }
+        for a in 0..=n {
+            let tail: u128 = choose[..=a.min(n - a) as usize].iter().sum();
+            #[allow(clippy::cast_precision_loss, reason = "the exact sum rounds once")]
+            let exact = (2.0 * tail as f64 / 2_f64.powi(n.cast_signed())).min(1.0);
+            let got = mcnemar(a as usize, (n - a) as usize);
+            assert!((got - exact).abs() <= 1e-12 * exact, "{a}, {}", n - a);
+        }
+    }
+    let pinned = [
+        ((0, 0), 1.0),
+        ((1, 0), 1.0),
+        ((2, 0), 0.5),
+        ((5, 0), 0.0625),
+        ((39, 28), 0.221_549),
+        ((36, 34), 0.904_975),
+    ];
+    for ((a, b), p) in pinned {
+        assert_eq!(rounded(mcnemar(a, b)), p, "{a}, {b}");
+    }
+}
+
+#[test]
+fn discordant_counts_only_wrong_to_right_and_right_to_wrong() {
+    use Outcome::{Right, Tied, Unresolved, Wrong};
+    let every = [Right, Wrong, Unresolved, Tied];
+    for a in every {
+        for b in every {
+            let expected = match (a, b) {
+                (Wrong, Right) => Some(Discordant::OtherToRight),
+                (Right, Wrong) => Some(Discordant::RightToOther),
+                _ => None,
+            };
+            assert_eq!(discordant(a, b), expected, "{a:?} -> {b:?}");
+        }
+    }
 }

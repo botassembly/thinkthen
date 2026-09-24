@@ -7,8 +7,9 @@ use std::fmt;
 use std::io::Read as _;
 use std::path::Path;
 
-use crate::core::ThresholdError;
-use crate::core::measure::MeasureError;
+use crate::core::measure::answer::{Rule, Shown};
+use crate::core::measure::{Line, MeasureError, json_lines};
+use crate::core::{Threshold, ThresholdError};
 
 /// Why a measuring command stopped, told with the command name and the input's role.
 ///
@@ -28,8 +29,10 @@ pub(crate) struct Refusal {
 pub(crate) enum Cause {
     /// The input could not be read.
     Unreadable,
-    /// Both inputs name standard input.
+    /// Two inputs name standard input.
     TwoStandardInputs,
+    /// `diff` has neither a second run nor `--compare-threshold`.
+    NoSecondRun,
     /// `--id` is not a JSON pointer.
     Pointer,
     /// A threshold option is not a rule.
@@ -60,6 +63,9 @@ impl fmt::Display for Refusal {
         match cause {
             Cause::Unreadable => write!(formatter, "cannot read the {role} file"),
             Cause::TwoStandardInputs => formatter.write_str("only one input may be standard input"),
+            Cause::NoSecondRun => {
+                formatter.write_str("diff needs a second run or --compare-threshold")
+            }
             Cause::Pointer => formatter.write_str("--id takes a JSON pointer such as /id or ''"),
             Cause::Rule(option, error) => write!(formatter, "{option}: {error}"),
             Cause::Measure(error) => said(formatter, command, role, *error),
@@ -90,9 +96,14 @@ fn said(
             "{role} line {line} holds a probability outside 0 to 1 or an empty distribution"
         ),
         MeasureError::Repeated(line) => {
+            let one = if command == "diff" {
+                "answer"
+            } else {
+                "question"
+            };
             write!(
                 formatter,
-                "{role} line {line} repeats a record for one question"
+                "{role} line {line} repeats a record for one {one}"
             )
         }
         MeasureError::KeyLine(line) => write!(
@@ -119,12 +130,37 @@ fn said(
     }
 }
 
+/// A threshold option as the rule answers are read under and the rule the output prints.
+///
+/// # Errors
+///
+/// Returns [`Cause::Rule`] naming the option when the text is not a rule.
+pub(crate) fn rule(option: &'static str, text: Option<&str>) -> Result<(Rule, Shown), Cause> {
+    let Some(text) = text else {
+        return Ok((Rule::AsRun, Shown::AsRun));
+    };
+    let threshold: Threshold = text.parse().map_err(|error| Cause::Rule(option, error))?;
+    let shown = threshold
+        .cut_value()
+        .map_or_else(|| Shown::Band(text.to_owned()), Shown::Cut);
+    Ok((Rule::Threshold(threshold), shown))
+}
+
+/// Read one named input and split it into numbered JSON lines.
+///
+/// # Errors
+///
+/// Returns [`Cause::Unreadable`] or the core's refusal of a line.
+pub(crate) fn lines(path: &Path) -> Result<Vec<Line>, Cause> {
+    read(path).and_then(|bytes| json_lines(&bytes).map_err(Cause::Measure))
+}
+
 /// Read one named input whole: a path, or standard input for `-`.
 ///
 /// # Errors
 ///
 /// Returns [`Cause::Unreadable`] when the bytes cannot be read.
-pub(crate) fn read(path: &Path) -> Result<Vec<u8>, Cause> {
+fn read(path: &Path) -> Result<Vec<u8>, Cause> {
     if path == Path::new("-") {
         let mut bytes = Vec::new();
         return std::io::stdin()

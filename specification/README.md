@@ -29,6 +29,7 @@ The names table in [`../README.md`](../README.md) fixes the four names: question
 | [relate.md](relate.md) | `relate`, complete entity sets, relation plans, and edges | Settled |
 | [transform.md](transform.md) | `transform list` and `transform show`, the read-only catalog of built-in `jq` transforms | Settled |
 | [audit.md](audit.md) | `audit`, which grades saved `decide` and `choose` answers against an answer key | Settled |
+| [diff.md](diff.md) | `diff`, which shows the saved answers that changed between two runs or two cuts | Settled |
 | [fixtures/](fixtures/) | Request and response files. Tests read them, and another implementer can test against them | Settled |
 
 [roadmap.md](roadmap.md) lists every held verb and option with the reason it is held. The roadmap is not a contract. It carries no status word.

@@ -2,8 +2,10 @@
 
 use std::collections::BTreeSet;
 
+use serde::{Serialize, Serializer};
+
 use crate::core::json::Json;
-use crate::core::measure::{MeasureError, record_id};
+use crate::core::measure::{MeasureError, python_float_text, record_id, rounded, six};
 use crate::core::pointer::Pointer;
 use crate::core::probability::Probability;
 use crate::core::threshold::{Outcome as Judged, Threshold};
@@ -36,6 +38,35 @@ pub(crate) enum Rule {
     Threshold(Threshold),
 }
 
+/// A rule as the output prints it: `"as run"`, a cut as a number, or a band as text.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) enum Shown {
+    AsRun,
+    Cut(f64),
+    Band(String),
+}
+
+impl Serialize for Shown {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::AsRun => serializer.serialize_str("as run"),
+            Self::Cut(cut) => six(cut, serializer),
+            Self::Band(band) => serializer.serialize_str(band),
+        }
+    }
+}
+
+impl Shown {
+    /// The rule as a table writes it, a cut in Python's float text.
+    pub(crate) fn text(&self) -> String {
+        match self {
+            Self::AsRun => "as run".to_owned(),
+            Self::Cut(cut) => python_float_text(rounded(*cut)),
+            Self::Band(band) => band.clone(),
+        }
+    }
+}
+
 /// What one answer says under a rule. An option named `tied` stays an option.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum Said<'a> {
@@ -49,6 +80,28 @@ pub(crate) enum Said<'a> {
     Unresolved,
     /// Two or more options share the top probability.
     Tied,
+}
+
+impl Said<'_> {
+    /// The answer as the output names it.
+    pub(crate) const fn text(&self) -> &str {
+        match self {
+            Self::Yes => "yes",
+            Self::No => "no",
+            Self::Option(option) => option,
+            Self::Unresolved => "unresolved",
+            Self::Tied => "tied",
+        }
+    }
+}
+
+/// Which answers count as one record twice.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum Identity {
+    /// One answer name, record id, and question text: one question in `audit`.
+    Question,
+    /// One answer name and record id: one answer in a `diff` run.
+    Answer,
 }
 
 /// The top of a `choose` distribution.
@@ -97,15 +150,19 @@ enum Printed {
 /// # Errors
 ///
 /// Returns [`MeasureError`] for a line without an id, another verb, a
-/// probability that is not one, or a record repeated for one question.
-pub(crate) fn read(lines: &[(usize, Json)], id: &Pointer) -> Result<Vec<Answer>, MeasureError> {
+/// probability that is not one, or a record repeated under the identity.
+pub(crate) fn read(
+    lines: &[(usize, Json)],
+    id: &Pointer,
+    identity: Identity,
+) -> Result<Vec<Answer>, MeasureError> {
     let mut read = Vec::new();
     for (line, row) in lines {
         let found = row.member("input").and_then(|input| id.resolve(input));
         let record = found.and_then(record_id).ok_or(MeasureError::NoId(*line))?;
         read.extend(answers(*line, &record, row)?);
     }
-    refuse_repeats(&read)?;
+    refuse_repeats(&read, identity)?;
     Ok(read)
 }
 
@@ -121,18 +178,19 @@ fn answers(line: usize, id: &str, row: &Json) -> Result<Vec<Answer>, MeasureErro
     }
 }
 
-/// Refuse one question holding one record twice.
-///
-/// The identity is the answer name, the record id, and the question text.
+/// Refuse one record twice under the identity, failed answers included.
 ///
 /// # Errors
 ///
 /// Returns [`MeasureError::Repeated`] at the line of the second one.
-fn refuse_repeats(answers: &[Answer]) -> Result<(), MeasureError> {
+fn refuse_repeats(answers: &[Answer], identity: Identity) -> Result<(), MeasureError> {
     let mut seen = BTreeSet::new();
     for answer in answers {
-        let identity = (&answer.name, &answer.id, &answer.text);
-        if !seen.insert(identity) {
+        let text = match identity {
+            Identity::Question => answer.text.as_ref(),
+            Identity::Answer => None,
+        };
+        if !seen.insert((&answer.name, &answer.id, text)) {
             return Err(MeasureError::Repeated(answer.line));
         }
     }

@@ -760,10 +760,15 @@ def check_catalog_policy() -> None:
             fail("catalog", f"the catalog control {control!r} stays allowed")
 
 
-# Ticket 0113: audit reads the paths it is handed, or standard input, and
+# Tickets 0113 and 0114: audit and diff read the paths it is handed, or standard input, and
 # writes only standard output. It may open a file, and nothing else the catalog
 # refuses. A token check cannot prove which paths it opens; review checks that.
-MEASURE = ("crates/thinkthen/src/cli/measure.rs", "crates/thinkthen/src/cli/audit.rs")
+MEASURE = (
+    "crates/thinkthen/src/cli/measure.rs",
+    "crates/thinkthen/src/cli/audit.rs",
+    "crates/thinkthen/src/cli/diff.rs",
+)
+MEASURE_COMMANDS = ("Audit", "Diff")
 MEASURE_BANNED_WORDS = CATALOG_BANNED_WORDS - {"fs", "File", "stdin", "Stdin"}
 MEASURE_WRITES = {
     "create", "create_dir", "create_dir_all", "remove_file", "remove_dir", "remove_dir_all",
@@ -788,17 +793,20 @@ def measure_policy_failures(text: str) -> list[str]:
 
 
 def route_failures(text: str) -> list[str]:
-    """Refuse a router that reads the environment before audit returns."""
+    """Refuse a router that reads the environment before a measuring command returns."""
     tokens = rust_tokens(text)
 
     def first(path: tuple[str, ...]) -> int | None:
         return next((place for place in range(len(tokens))
                      if token_path_at(tokens, place, path)), None)
 
-    audit, read = first(("Command", "Audit")), first(("Environment", "read"))
-    if audit is None or read is None or audit > read:
-        return ["audit returns after Environment::read"]
-    return []
+    read = first(("Environment", "read"))
+    held = []
+    for command in MEASURE_COMMANDS:
+        found = first(("Command", command))
+        if found is None or read is None or found > read:
+            held.append(f"{command} returns after Environment::read")
+    return held
 
 
 def check_measure_policy() -> None:
@@ -806,8 +814,8 @@ def check_measure_policy() -> None:
         held = measure_policy_failures((REPO / relative).read_text(encoding="utf-8"))
         if held:
             fail("measure", f"{relative} {held}")
-    if route_failures((REPO / ROUTER).read_text(encoding="utf-8")):
-        fail("measure", f"{ROUTER} returns for audit before Environment::read")
+    for held in route_failures((REPO / ROUTER).read_text(encoding="utf-8")):
+        fail("measure", f"{ROUTER}: {held}")
     plants = (
         'std::env::var("THINKTHEN_API_KEY")',
         'std::net::TcpStream::connect("127.0.0.1:1")',
@@ -837,10 +845,11 @@ def check_measure_policy() -> None:
     for control in controls:
         if measure_policy_failures(control):
             fail("measure", f"the measure control {control!r} stays allowed")
-    late = "let e = Environment::read(); if let Some(Command::Audit(a)) = c {}"
-    early = "if let Some(Command::Audit(a)) = c {} let e = Environment::read();"
-    if not route_failures(late) or route_failures(early):
-        fail("measure", "a late audit return is refused and an early one allowed")
+    audit, diff = "if let Some(Command::Audit(a)) = c {}", "if let Some(Command::Diff(a)) = c {}"
+    read = "let e = Environment::read();"
+    if route_failures(audit + read + diff) != ["Diff returns after Environment::read"] \
+            or route_failures(audit + diff + read):
+        fail("measure", "a late diff return is refused and early returns allowed")
 
 
 # Ticket 0077: every live attempt passes the one process width gate in the
