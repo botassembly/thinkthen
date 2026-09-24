@@ -1,6 +1,6 @@
 # 0088: Build the public `relate` command
 
-Status: The first review (`0088-review-claude.md`) rejected the handed-off diff. The builder fixed findings 1 through 9 on the ticket branch. A fresh independent review and landing remain open. Finding 10 is outside this ticket and is open as `sdlc/issues/2026-09-24-a-target-side-choice-asks-the-reversed-relation.md` on main.
+Status: The first review (`0088-review-claude.md`) rejected the handed-off diff, and the builder fixed findings 1 through 9. The Codex re-review (`0088-review-codex.md`) rejected `6f0e094c`. The queue owner decided each Codex finding, and the builder fixed all four on the ticket branch. A fresh independent review and landing remain open.
 
 ## Result
 
@@ -14,13 +14,20 @@ The handed-off state is commit `328c2f25`. Everything below records the review f
 2. `@FILE` beside inline rules. Any `@` argument beside another rule exits 2 with a fixed sentence and zero sends (`6b117f17`). Red: the test exited 0 for `calls @q.json`.
 3. Bare name holding `:`. The inline grammar refuses it (`a1169a15`). Red: the core grammar test accepted `works_for:person`.
 4. Shared secrecy and refusal suites. Relate is a row of the shared verb table (`7eacd9cc`). Every backend and recording route runs over it in document and JSONL framings, and over lines, CSV, and TSV, in both views. That covers success, dry run, default and explicit cache, record, replay, replay miss, damaged and hostile entries, a refused address, transport failure, status and decode failures, retries, storage failure, and a missing key. The sweep now points the platform default cache into each case folder, reads what it wrote, and requires the success route to write it. Every shared refusal row runs on relate, with its own sentence where the grammar differs, and nine relate rows pin complete-set refusals with zero sends. The profile refusal sweep includes relate (`b0a2c0bf`), and the `Debug` sweep reads relate failures and relation entities (`dd27952c`). The mixed logical failure route stays in `secrecy_relate.rs`, so the `secrecy` filter runs it (`489a277c`). The 500-line secrecy page split first (`a6920ef3`). Red: the refusal sweep found that relate accepted `--jobs` and sent a request, and the `Debug` sweep found that `RelationEntity` printed its name and kind. A planted `eprintln!` of the entities failed both secrecy tests before it was removed.
-5. Second fallback and threshold owners. `SettledRelation::settle` in `engine/prepared_request.rs` is now the one fallback owner, and recognize and relate both call it. The assembler exports its one cut, `reaches_cut`, which relate's detailed entries call (`de73902f`). The unreachable limit arm is gone. This is a refactor under a behavior test that passed before and after, `a_backend_profile_option_limit_falls_back_per_concrete_relation_in_the_plan`.
+5. Second fallback and threshold owners. `SettledRelation::settle` in `engine/prepared_request.rs` is now the one fallback owner, and recognize and relate both call it. The assembler exports its one cut, `reaches_cut`, which relate's detailed entries call (`de73902f`). The unreachable limit arm is gone. This is a refactor under a behavior test that passed before and after, `a_backend_profile_option_limit_falls_back_per_concrete_relation_in_the_plan`. Codex finding 4 below removes the second preparation this left in recognition.
 6. Digest. The core owns `RelateQuestion`, including null fields under `--lines`, and production hashes it (`22ab8f5a`). Red: the core test failed to compile because the question did not exist. A backend test pins the production `meta.question_sha256` for a lines run, which `sha256sum` confirmed from the printed question bytes.
-7. Budget. Every added `#[rustfmt::skip]` and the `too_many_arguments` expectation are gone (`032ba90e`, `de73902f`). The failure conversions moved out of `cli/failure.rs` before relate's variant, and the two deleted doc comments are back.
+7. Budget. The added production `#[rustfmt::skip]` attributes and the `too_many_arguments` expectation are gone (`032ba90e`, `de73902f`). One skip on the `relate` test module stayed until Codex finding 2 below removed it. The failure conversions moved out of `cli/failure.rs` before relate's variant, and the two deleted doc comments are back.
 8. Number format. Detailed entries are serde structures, so edges and entries both write `1.0` (`22ab8f5a`). Red: the exact Option A test failed on the old `"probability":1`.
 9. Dead code. `Meta::new` discarded `failed_questions`, so relate's string replacement was not dead. `Meta::new` now keeps the count, and the replacement is gone (`22ab8f5a`). The unreachable arm went with finding 5. A valid question file for another verb exits 2, and an invalid one exits 5 (`31d90282`). Red: the mixed test reported `failed_questions` 0 once the replacement was removed, and an invalid decide file exited 2.
 
 Further proof added: the exact dry-run object and its request digest equal to the digest a real run sends, an H entry at the inclusive cut, bare exit 6, wildcard concrete order, default and named cache reuse with zero sends on the second run, and a runtime backend profile that leaves saved calibration provenance alone.
+
+## Codex review findings and fixes
+
+1. Reversed target-side wording. When the asker is the target, the choice now asks `___ {reads} {asker}` (`c84051f1`). Red: `a_choice_puts_the_blank_on_the_side_the_options_fill` failed on "Acme is linked to ___". No recorded fixture held a target-side choice, so no digest changed. The issue on main is closed by this commit (`e61ffee9`).
+2. Budget. The queue owner amended the ticket's budget line with the gross numbers below. A `#[rustfmt::skip]` ceiling in `policy.py` now fails the lint rung above three (`16e61190`). A planted fourth skip failed it with `format: crates hold 4 rustfmt::skip attributes and the ceiling is 3`. Main holds three: two in `src` and one on the `recognize` test module.
+3. `--lib relate_file` cases. `RelateSpec::admit` and `RelateSpec::check_lines` in `core/relate_file.rs` own the 255 limit, blank names, duplicates, absent kinds, and line rules (`f88954d8`). The command edge calls them. Six `relate_file` unit tests pin those rules. The old copy in `cli/relate/input.rs` is gone.
+4. Second preparation. Recognition now sends the chunks `SettledRelation::settle` prepared. Recognize and relate both send through `Asking::chunks` in `cli/asking/request.rs` (`714247eb`). Red: a thread-local preparation counter read 2 for one settled relation. It reads 1 now.
 
 ## Decisions Ian can overturn
 
@@ -30,26 +37,27 @@ Further proof added: the exact dry-run object and its request digest equal to th
 
 ## Budget
 
-Measured with `git diff cdfd0e5e HEAD`, nonblank Rust lines under `crates`:
+Measured with `git diff --unified=0 cdfd0e5e...HEAD -- 'crates/**/*.rs'`, gross nonblank lines added under `crates`:
 
-- Production: 25 files changed, 1,446 lines added, 276 removed, 1,170 net. The cap is 15 files and 1,200 lines.
-- Test-only: 18 files changed, 1,344 lines added, 244 removed, 1,100 net. The cap is 11 files and 1,100 lines.
-- Total net growth is 2,270, within the 2,300 cap. Added lines count code moved between files.
-- The ceiling in `sdlc/ratchet.json` is 43,315, up from main's 41,045. The handed-off diff had set 43,020 with the formatter suppressed.
-- No Rust file exceeds 500 nonblank lines. The largest changed files are `core/result.rs` at 499 and `tests/backend/refusals.rs` at 469.
+- Production: 26 files changed and 1,518 lines added. The original cap was 15 files and 1,200 lines.
+- Test-only: 19 files changed and 1,544 lines added. The original cap was 11 files and 1,100 lines.
+- Total: 3,062 lines added against the original 2,300 gross cap. Added lines count code moved between files.
+- The queue owner amended the ticket to these numbers after the Codex review. Growth is the command, the shared secrecy and refusal matrices, the required file splits, and the 0081 shared fixes.
+- The ceiling in `sdlc/ratchet.json` is 43,563, up from main's 41,045.
+- No Rust file exceeds 500 nonblank lines.
 
-The file counts exceed the ticket because the review's fixes live in shared owners. Those owners are `core/relation.rs` (asker, cut, withheld `Debug`), `engine/prepared_request.rs` (fallback owner, outside the ticket's `opens` list), `cli/recognize/relation.rs`, `core/result.rs`, `core/recognize_file.rs`, `cli/failure/convert.rs`, and `Common::framing` in `cli/args.rs`, which replaced four copies in `annotate.rs`, `asking.rs`, `recognize.rs`, and `recognize/config.rs`. These change 0081's shared owners without changing recognition output. The ticket's stop rule asks for a re-score when that happens, so the ceiling raise, the file counts, and the 0081 owner changes need second-agent review.
+The shared owners outside the ticket's first list are `core/relation.rs`, `engine/prepared_request.rs`, `cli/recognize/relation.rs`, `cli/asking/request.rs`, `core/result.rs`, `core/recognize_file.rs`, `cli/failure/convert.rs`, and `Common::framing` in `cli/args.rs`. `Common::framing` replaced four copies. These change 0081's shared owners without changing recognition output.
+
+Duplication remains in one place. Relate's `add_meta` and recognition's `Aggregate::add_answered` fold replies the same way.
 
 ## What is not proven
 
-- Line restrictions, duplicates, absent kinds, and the 255/256 boundary are pinned by the shared refusal sweep and backend tests, not by `--lib relate_file`.
 - The help test checks fragments with `contains`.
 - The request digest identity is pinned for one choice relation, not for every method.
-- Relate output for one-way cross-kind rules where the target side asks depends on the open finding 10 issue.
 - `RecognizedName` still derives `Debug` with its name. It belongs to recognition and is outside this ticket.
 
 ## Gates
 
-The builder ran `install`, `lint`, `test`, and `spec` one at a time from `f1f02fc3` with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, then `git diff --check`. Every command exited 0. `lint` reported `ratchet: crates 43315/43315` and `pages: 1 coming, 21 green`. `test` passed 710 Rust tests with 2 ignored and 0 failed across 13 test binaries, plus its script self-tests. `spec` reported `demos: 21 green, 0 red`, and page 45 passed 3 cases. The first `test` run, from `7a6b43f6`, failed one test. The version test did not list relate in the root command order, and `f1f02fc3` fixed it. Only this record changed after that run.
+The builder ran `install`, `lint`, `test`, and `spec` one at a time from `bacf6405` with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, then `git diff --check`. Every command exited 0. `lint` reported `ratchet: crates 43563/43563` and `pages: 1 coming, 21 green`. `test` passed 715 Rust tests with 2 ignored and 0 failed across 13 test binaries, plus its script self-tests. `spec` reported `demos: 21 green, 0 red`. Only this record and the ticket's budget line changed after that run.
 
 No live, paid, or external call ran. Tests used replay and loopback listeners.
