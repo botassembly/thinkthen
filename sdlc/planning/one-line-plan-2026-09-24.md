@@ -1,6 +1,6 @@
 # One line, one owner
 
-Written 2026-09-24 by Claude, which now owns the whole ThinkThen queue at Ian's direction: main line, surfaces, QA, and launch. Codex (Astra) reviews as the other vendor. The ticket flow is the workspace `AGENTS.md` flow. This page supersedes the order in `build-queue-2026-09-21.md` where they differ. Ian can overturn any placement here.
+Written 2026-09-24 by Claude, which now owns the whole ThinkThen queue at Ian's direction: main line, surfaces, QA, and launch. Every ticket is reviewed by a fresh Claude session; no other vendor reviews this queue. The ticket flow is the workspace `AGENTS.md` flow. This page supersedes the order in `build-queue-2026-09-21.md` where they differ. Ian can overturn any placement here.
 
 ## Why
 
@@ -30,14 +30,14 @@ Three lanes run at once. Each lane is serial inside.
 After Lane A:
 
 1. 0093 Rust examples as the first binding crate, with draft ADR 0047.
-2. 0094 the C interface (ADR 0037).
+2. 0094 the C interface (ADR 0037). It closes R7-1 (G3, the C-door churn crash) with the tag's committed churn probe. 0086 runs a Rust churn probe first and claims no fix.
 3. One ticket per remaining surface onto the public API: Python with Polars, TypeScript, DuckDB, Ruby, R, SQLite, PostgreSQL. Each brings its `check.sh`, tests, notes, and error-index rows, and follows ADR 0047's surface checklist.
 4. New: release build and installers (archives, checksums, Homebrew line, download script; Ian's 2026-09-21 ruling). Nothing tickets this today.
 
 Changes from the first version of this queue:
 
 - 0078 split. 0078 keeps host signals. Fork recovery became 0096 and moved after 0085, because the retained pools it rebuilds do not exist before the façade, and the crate cannot call `fork()` without `unsafe`. The real-fork proofs live in 0086's outside consumer crate.
-- The interrupt check (old item 7) is designed in 0095 and built in 0097, between 0085 and 0086. The 0095 members beyond the 0084 inventory are built in 0098, after 0086, so 0086 fits its budget.
+- The interrupt check (old item 7) is designed in 0095 and built in 0097, between 0085 and 0086. Ticket 0086 exposes `interrupt`, `deadline_seconds`, and `deadline_millis` from 0095. Ticket 0098 builds the other 0095 members after 0086, so 0086 fits its budget.
 - Rust examples (0093) run before C (0094). They have no FFI and no host toolchain, so they prove the workspace, lint, ratchet, and surface-rung pattern alone. C then carries only its door and still precedes every other surface.
 - Every engine row a ticket carries needs a planted-bug proof in its record: the row's test turns red on the planted bug.
 
