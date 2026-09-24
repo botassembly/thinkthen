@@ -341,7 +341,7 @@ fn complete_set_refusals_finish_before_any_send() {
 }
 
 #[test]
-fn relation_recording_replays_without_a_key_and_cache_reuses_the_same_identity() {
+fn relation_recording_replays_without_a_key_and_keeps_the_same_identity() {
     let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("relate-record-replay");
     let _removed = fs::remove_dir_all(&root);
     let listener = Listener::answering(answered).expect("listener");
@@ -511,4 +511,45 @@ fn a_backend_profile_option_limit_falls_back_per_concrete_relation_in_the_plan()
     assert_eq!(plans[1]["relations"][0]["fallback"], "max_options");
     assert_eq!(plans[1]["logical_questions"], 6);
     assert_eq!(listener.connections(), 0);
+}
+
+#[test]
+fn the_default_and_named_caches_answer_a_repeated_run_without_a_send() {
+    let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("relate-caches");
+    let _removed = fs::remove_dir_all(&root);
+    let xdg = root.join("xdg").to_string_lossy().into_owned();
+    let named = root.join("named").to_string_lossy().into_owned();
+    let input = br#"[{"name":"Ada","kind":"person"},{"name":"Acme","kind":"organization"}]"#;
+    for cache in [None, Some(named.as_str())] {
+        let listener = Listener::answering(answered).expect("listener");
+        let mut arguments = vec![
+            "relate",
+            "works_for=person:organization",
+            "--url",
+            listener.base(),
+            "--model",
+            "local-1",
+            "--details",
+        ];
+        if let Some(folder) = cache {
+            arguments.extend(["--cache", folder]);
+        }
+        let environment = [("THINKTHEN_API_KEY", "secret"), ("XDG_CACHE_HOME", xdg.as_str())];
+        let first = spawn(&arguments, &environment, input).expect("first run");
+        assert_eq!(first.status.code(), Some(0), "{cache:?}");
+        assert_eq!(listener.requests().len(), 1, "{cache:?}");
+        let second = spawn(&arguments, &environment, input).expect("second run");
+        assert_eq!(second.status.code(), Some(0), "{cache:?}");
+        assert!(listener.requests().is_empty(), "{cache:?}");
+        let first: Value = serde_json::from_slice(&first.stdout).expect("first details");
+        let second: Value = serde_json::from_slice(&second.stdout).expect("second details");
+        assert_eq!(first["answer"], second["answer"], "{cache:?}");
+        assert_eq!(first["meta"]["requests"], second["meta"]["requests"], "{cache:?}");
+        assert_eq!(second["meta"]["cached"], true, "{cache:?}");
+        assert_eq!(second["meta"]["requests_sent"], 0, "{cache:?}");
+    }
+    let named_files = crate::secrecy::written(&root.join("named"));
+    assert!(!named_files.is_empty());
+    let default_files = crate::secrecy::written(&root.join("xdg"));
+    assert!(!default_files.is_empty());
 }
