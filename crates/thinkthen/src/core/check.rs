@@ -45,8 +45,8 @@ pub(crate) struct Probe {
     pub(crate) plan: Plan,
 }
 
-/// The four probes for one model, or `None` when a fixed probe no longer
-/// parses, which only a defect can cause.
+/// The four probes for one model. `None` means a fixed probe no longer
+/// parses, and only a defect can cause it.
 pub(crate) fn probes(model: &ModelName) -> Option<Vec<Probe>> {
     let object = Evidence::structured(Json::parse(OBJECT).ok()?).ok()?;
     let text = Evidence::new(TEXT).ok()?;

@@ -1,6 +1,6 @@
 //! `thinkthen check` against the loopback backend, with a fake key.
 //!
-//! Every run goes through `check`, which proves the key's bytes reach neither
+//! Every run goes through `check`. It proves the key's bytes reach neither
 //! output stream nor any file the run wrote under its cache folder.
 
 use std::fs;
@@ -220,7 +220,6 @@ fn an_unset_key_stops_the_check_before_any_request() {
 fn a_dry_run_prints_the_four_fixed_bodies_and_sends_nothing() {
     let backend = Backend::start().expect("backend");
     let url = format!("{}/arm/full/v1", backend.origin());
-    let output = check(&["--url", url.as_str(), "--dry-run"], &[]);
     let fixture = concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../specification/fixtures/check/requests.jsonl"
@@ -231,11 +230,14 @@ fn a_dry_run_prints_the_four_fixed_bodies_and_sends_nothing() {
         .zip(bodies.lines())
         .map(|(probe, body)| format!("request {probe} {body}\n"))
         .collect();
-    assert_eq!(
-        text(&output.stdout),
-        head(&backend, "/arm/full/v1") + &requests
-    );
-    assert_eq!(text(&output.stderr), "");
-    assert_eq!(output.status.code(), Some(0));
+    // Keyless, a dry run that read the key would fail. Keyed, the helper
+    // proves the dry run's output carries no key.
+    for environment in [&[][..], &[("THINKTHEN_API_KEY", KEY)][..]] {
+        let output = check(&["--url", url.as_str(), "--dry-run"], environment);
+        let printed = head(&backend, "/arm/full/v1") + &requests;
+        assert_eq!(text(&output.stdout), printed);
+        assert_eq!(text(&output.stderr), "");
+        assert_eq!(output.status.code(), Some(0));
+    }
     assert_eq!(backend.count(), 0);
 }

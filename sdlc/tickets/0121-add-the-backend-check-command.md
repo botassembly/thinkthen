@@ -188,7 +188,7 @@ Stop and re-score before crossing a budget, adding a dependency, changing an exi
 
 ## Scope and exclusions
 
-Excluded: any change to the adapter, the decoder, the transport, the retry rule, or the address rules. Any change to `status`. A `--json` form. A strict mode that fails on warnings. Probing a backend's limits. Any live or paid call. `sdlc/scripts/live` never runs for this ticket.
+Excluded: any change to the adapter, the decoder, the transport, the retry rule, or the address rules. The build crossed the adapter exclusion and the core budget. `sdlc/records/0121-build-backend-check.md` says how and why. Any change to `status`. A `--json` form. A strict mode that fails on warnings. Probing a backend's limits. Any live or paid call. `sdlc/scripts/live` never runs for this ticket.
 
 ## Dependencies and order
 
