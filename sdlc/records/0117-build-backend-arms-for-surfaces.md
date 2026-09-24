@@ -1,6 +1,6 @@
 # 0117: The loopback backend arms the surface tests need
 
-Status: built on `ticket/0117-backend-arms-for-surfaces`. The code review (`sdlc/records/0117-code-review.md`) found two blocking items and two gaps. All four are fixed below. Not merged.
+Status: landed 2026-09-24. Built at `816f253f` on `ticket/0117-backend-arms-for-surfaces`. The code review (`sdlc/records/0117-code-review.md`) found two blocking items and two gaps. All four are fixed below, and its confirmation accepted `816f253f`. That review is also the second-agent review the repo requires for the raised ceiling and the new public surface (`Backend::round`, `Backend::wait`, and the `Send + 'static` output on `run`).
 
 ## Result
 
@@ -101,3 +101,9 @@ The full ladder ran at `f125072c`, the merged tree with every code fix, with `TH
 - `spec`: exit 0, `demos: 21 green, 0 red`.
 
 The commit after `f125072c` adds only this section. `sdlc/scripts/live` did not run.
+
+## Landing
+
+- `50646dfd` merged `origin/main` at `d8ffb5b0` into the branch. Main's three new commits changed only Markdown. The merge was clean, and the ratchet stayed at 48475.
+- With only Markdown new since the ladder at `f125072c`, only `sdlc/scripts/lint` ran again. It ran on the commit that adds this section and exited 0.
+- The branch then merged into main with a merge commit.

@@ -38,3 +38,17 @@ Read: `origin/ticket/0117-backend-arms-for-surfaces` at `e5160f41`. That covers 
 ## Verdict
 
 FINDINGS. Fix finding 1 and finding 2, then show the scheduling test green in a loop. Finding 3 is the owner's call.
+
+## Confirmation at 816f253f
+
+ACCEPT
+
+Read `e5160f41..816f253f`. `fe40e545` fixes the code. `8d568bd1` merges main at `9f47bd18`. The last two commits change only the ticket, the build record, and `sdlc/records/0117-code-review.md`. I ran everything in a scratch copy of `816f253f` under `/tmp/claude-1000/` and deleted it after.
+
+- **The blocker fix matches mine.** `serve_kept` now adds the request to `in_flight` and `peak` before `reply(&request)`, and adds it to `requests` after. The comment says why. The 0116 test `one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32` passed 15 of 15 runs at a load near 9 to 15. It then passed 5 of 5 runs with 40 busy loops running, at a load of 36.
+- **`wait +0` catches plant A.** With the `wait` line parsed by `str::parse::<usize>`, `a_wait_line_with_no_whole_number_prints_nothing` failed.
+- **The two new tests fail under my plants.** Plant D (a whole-number refusal with no standard-error line) turned `a_delay_refusal_says_why_on_standard_error` red. Plant E (`run` joins every pending `wait` before the final count) turned `closing_the_input_exits_without_waiting_for_a_pending_wait` red. The first test pins both sentences exactly.
+- **Nothing else changed.** Outside the Markdown records, `e5160f41..fe40e545` touches only `listener.rs` (the move above) and `binary.rs`. The `binary.rs` changes are the `wait +0` change, the two new tests, and standard error piped in place of null. The merge commit differs from `9f47bd18` only in the 0117 files and `sdlc/ratchet.json`. `git diff origin/main...816f253f -- crates` is empty.
+- **The ratchet.** `sdlc/scripts/ratchet.mjs` measured 48475/48475 on the scratch copy.
+- **Load.** All 17 `binary.rs` tests passed 6 of 6 runs at a load of 36. The new 1 s exit bound held on every run.
+- **Main moved again.** It is now at `d8ffb5b0`, three commits that touch only Markdown notes. `git merge-tree` against it is clean.
