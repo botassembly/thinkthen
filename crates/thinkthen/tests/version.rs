@@ -126,27 +126,30 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
 
-/// The long or short help one command prints, after checking it exited 0.
-fn help(arguments: &[&str]) -> String {
+/// The long or short help one command prints, refused unless it exited 0.
+fn help(arguments: &[&str]) -> std::io::Result<String> {
     let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .args(arguments)
         .env_clear()
-        .output()
-        .expect("the compiled binary runs");
-    assert_eq!(output.status.code(), Some(0), "{arguments:?}");
-    String::from_utf8_lossy(&output.stdout).into_owned()
+        .output()?;
+    if output.status.code() != Some(0) {
+        return Err(std::io::Error::other(format!("{arguments:?} failed")));
+    }
+    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
 }
 
 #[test]
 fn annotate_opens_with_the_saved_question_set_sentence_and_keeps_each_part_once() {
     const ANNOTATE: &str = "Answer a saved set of questions about every record";
     assert!(
-        help(&["--help"]).contains(&format!("\n  annotate   {ANNOTATE}\n")),
+        help(&["--help"])
+            .expect("the help prints")
+            .contains(&format!("\n  annotate   {ANNOTATE}\n")),
         "the root row"
     );
-    let short = help(&["annotate", "-h"]);
+    let short = help(&["annotate", "-h"]).expect("the help prints");
     assert!(short.starts_with(&format!("{ANNOTATE}\n\n")), "{short}");
-    let long = help(&["annotate", "--help"]);
+    let long = help(&["annotate", "--help"]).expect("the help prints");
     assert!(long.starts_with(&format!("{ANNOTATE}.\n\n")), "{long}");
     for part in [
         "Usage: thinkthen annotate",
@@ -177,7 +180,7 @@ fn recognize_and_relate_keep_the_beta_warning_the_cuts_and_the_disclosure() {
             "Keep edges whose model probability reaches this cut. [default: 0.5]",
         ),
     ] {
-        let long = help(&[verb, "--help"]);
+        let long = help(&[verb, "--help"]).expect("the help prints");
         assert_eq!(long.matches(said).count(), 1, "{verb}: {said}\n{long}");
     }
 }
