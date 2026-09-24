@@ -5,6 +5,11 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
 
+#[path = "../src/test_deadline/run.rs"]
+mod run;
+#[path = "../src/test_deadline/wait.rs"]
+mod wait;
+
 /// The repository the compiled binary was built inside.
 fn repository() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -23,12 +28,13 @@ fn demos(root: &str) -> io::Result<Output> {
         (Some(folder), Err(_)) => folder.display().to_string(),
         (None, path) => path.unwrap_or_default(),
     };
-    Command::new("sh")
-        .arg("--")
-        .arg(repository.join("sdlc/scripts/demos"))
-        .arg(root)
-        .env("PATH", reachable)
-        .output()
+    run::output(
+        Command::new("sh")
+            .arg("--")
+            .arg(repository.join("sdlc/scripts/demos"))
+            .arg(root)
+            .env("PATH", reachable),
+    )
 }
 
 /// Everything the run printed, whichever channel carried it.
