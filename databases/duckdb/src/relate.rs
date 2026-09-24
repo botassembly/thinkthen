@@ -489,7 +489,7 @@ unsafe fn run_query(bind: &Bind, deadline: Option<Instant>, seconds: u64) -> Res
     // 600 MB before any row ran.
     let left = deadline.map(|deadline| deadline.saturating_duration_since(Instant::now()));
     if left == Some(Duration::ZERO) {
-        return Err(time_limit_message(seconds));
+        return Err(queue_limit_message(seconds));
     }
     let (outcome, stopped) = under_time_limit(connection, left, || unsafe {
         ensure_single_statement(connection, &bind.query)?;
@@ -505,6 +505,15 @@ unsafe fn run_query(bind: &Bind, deadline: Option<Instant>, seconds: u64) -> Res
     let _ = unsafe { execute(connection, c"ROLLBACK") };
     let _ = unsafe { execute(connection, c"RESET search_path") };
     stop_outcome(outcome, stopped, crate::signal_count() != signals, seconds)
+}
+
+/// The refusal a relate earns when its time limit runs out while it waits
+/// behind another relate on the same database. Its query never ran, so
+/// the running-query message would mislead (wave-7 verifier).
+fn queue_limit_message(seconds: u64) -> String {
+    format!(
+        "thinkthen usage: the relate query waited past its {seconds}-second limit in the queue behind another relate on this database and did not run; retry after that relate ends or raise SET {SECONDS_SETTING} (0 turns the limit off)"
+    )
 }
 
 /// The refusal a relate earns when its time limit runs out.
@@ -548,7 +557,7 @@ fn wait_for_gate(
             );
         }
         if deadline.is_some_and(|deadline| Instant::now() >= deadline) {
-            return Err(time_limit_message(seconds));
+            return Err(queue_limit_message(seconds));
         }
         std::thread::sleep(Duration::from_millis(5));
     }
@@ -1004,5 +1013,19 @@ mod stop_tests {
         assert_eq!(stop_outcome(interrupted.clone(), true, true, 2), interrupted);
         assert_eq!(stop_outcome(interrupted.clone(), true, false, 2), Err(time_limit_message(2)));
         assert_eq!(stop_outcome(Ok(()), true, false, 2), Ok(()));
+    }
+
+    /// A relate whose limit runs out in the queue says it waited and never
+    /// ran; it does not claim its query ran past the limit.
+    #[test]
+    fn a_queued_relate_names_its_wait() {
+        let gate = std::sync::Mutex::new(());
+        let _held = gate.lock().unwrap();
+        let deadline = Instant::now() + Duration::from_millis(20);
+        let refused = wait_for_gate(&gate, Some(deadline), 3).map(|_| ());
+        assert_eq!(
+            refused,
+            Err("thinkthen usage: the relate query waited past its 3-second limit in the queue behind another relate on this database and did not run; retry after that relate ends or raise SET thinkthen_relate_seconds (0 turns the limit off)".to_string())
+        );
     }
 }
