@@ -87,7 +87,7 @@ impl Edge { pub fn to_json(&self) -> String; }
 
 | Q | Answer | Owner |
 |---|---|---|
-| 1, 2, 3, 4, 5, 6, 7, 12 | As above | this ticket; 0085 runtime; 0086 fixtures |
+| 1, 2, 3, 4, 5, 6, 7, 12 | As above | this ticket; built by 0097, 0086, and 0098 |
 | 8 | Bindings are unpublished workspace crates over the public API. The C door is one of them. Draft ADR 0047 | 0093, 0094 |
 | 9 | Awaiting Ian: ADR 0047 item 5 gives the options and recommends a per-copy cap for 0.1 | Ian |
 | 10 | A loopback backend serves the shared cases and each fault. No null backend or public fault hook | 0092 |
