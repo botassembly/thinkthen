@@ -50,4 +50,6 @@ The file counts exceed the ticket because the review's fixes live in shared owne
 
 ## Gates
 
+The builder ran `install`, `lint`, `test`, and `spec` one at a time from `f1f02fc3` with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, then `git diff --check`. Every command exited 0. `lint` reported `ratchet: crates 43315/43315` and `pages: 1 coming, 21 green`. `test` passed 710 Rust tests with 2 ignored and 0 failed across 13 test binaries, plus its script self-tests. `spec` reported `demos: 21 green, 0 red`, and page 45 passed 3 cases. The first `test` run, from `7a6b43f6`, failed one test. The version test did not list relate in the root command order, and `f1f02fc3` fixed it. Only this record changed after that run.
+
 No live, paid, or external call ran. Tests used replay and loopback listeners.
