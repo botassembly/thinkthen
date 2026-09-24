@@ -17,7 +17,7 @@ Cost: surfaces sit idle until 0086, each binding shim is rewritten against diffe
 ## The queue
 
 1. 0088 public `relate`: Claude reviews Codex's uncommitted diff, then gates and lands.
-2. New: stop resending a delivered request after a transport failure (money; `issues/2026-09-23-the-command-sends-a-delivered-request-again-after-a-transport-failure.md`). Port the branch fix `dd8a383` idea, not the code. Built as ticket 0089 at 3686414f and awaiting review.
+2. New: stop resending a delivered request after a transport failure (money; `issues/2026-09-23-the-command-sends-a-delivered-request-again-after-a-transport-failure.md`). Port the branch fix `dd8a383` idea, not the code. Landed as ticket 0089 at 29578528.
 3. 0082 command contract. Ian ruled `tuned_for` on 2026-09-23 per the 0082 ticket branch, so it is not blocked.
 4. 0083 transform catalog.
 5. 0076 whole-call deadlines, 0077 one process width cap, 0078 fork recovery and host signals.

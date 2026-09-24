@@ -1,6 +1,6 @@
 # 0089: Never send a request again after a transport failure
 
-Status: built at `3686414f` on `ticket/0089-no-transport-resend`, rebased over 0088 (`ab72203c`). Awaiting a fresh review. Not merged.
+Status: landed. A fresh review accepted `18221ad7` (`sdlc/records/0089-code-review.md`). Main fast-forwarded to `29578528`.
 
 ## Result
 
@@ -53,3 +53,9 @@ Production: 4 files (`engine/http.rs`, `cli/failure.rs`, `cli/args.rs`, `cli/arg
 ## Gates
 
 The builder ran `install`, `lint`, `test`, and `spec` one at a time from `d2a76dd9` on this Linux machine, with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, then `git diff --check ab72203c HEAD`. Every command exited 0. `lint` reported `ratchet: crates 43753/43753` and `pages: 1 coming, 21 green`. `test` passed 724 Rust tests with 2 ignored and 0 failed, plus its script self-tests. `spec` reported `demos: 21 green, 0 red`. No live call ran. Only this paragraph changed after that run.
+
+## Landing
+
+The landing commits after the review pin the whole stopped-run sentence in the record-run test and raise the ratchet to 43754. They also align the site reference and catalog with the `--max-retries` help, correct this record's line counts, and fix the ticket's gate-host wording. The review's harness follow-up is `sdlc/issues/2026-09-24-the-loopback-reset-reply-has-two-silent-edges.md`.
+
+The builder ran `install`, `lint`, `test`, and `spec` one at a time at `29578528` on this Linux machine, with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, then `git diff --check ab72203c 29578528`. `origin/main` was still `ab72203c`, so the merge added nothing. Every command exited 0. `lint` reported `ratchet: crates 43754/43754` and `pages: 1 coming, 21 green`. `test` passed 724 Rust tests with 2 ignored and 0 failed. The flaky annotate queue test passed on the first run. `spec` reported `demos: 21 green, 0 red`. No live call ran. Main fast-forwarded to `29578528`. This landing note is a doc-only commit after that run, so the gate result still applies to the code.

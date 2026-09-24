@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine/http.rs crates/thinkthen/src/cli/failure.rs c
 
 # 0089: Never send a request again after a transport failure
 
-Status: built at 3686414f on its branch, rebased over 0088, and awaiting a fresh review (`sdlc/records/0089-build-no-transport-resend.md`). Owner: Claude.
+Status: landed on main at 29578528 after a fresh review accepted it (`sdlc/records/0089-code-review.md`). Owner: Claude.
 
 ## Outcome
 
