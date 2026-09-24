@@ -10,11 +10,11 @@
 mod measure_support;
 
 use std::fs;
-use std::io::ErrorKind;
+use std::io::{ErrorKind, Write as _};
 use std::net::TcpListener;
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 use measure_support::{GOLDENS, TABLES, audit, fixtures, run};
 
@@ -152,13 +152,7 @@ fn each_failure_prints_one_line_that_names_no_record_id_value_or_path() {
         fs::write(root.join(name), text).expect("a key file");
     }
     for (arguments, input, expected, sentence) in REFUSALS {
-        let arguments: Vec<String> = arguments
-            .split(' ')
-            .map(|word| match word.strip_prefix('@') {
-                Some(name) => root.join(name).to_string_lossy().into_owned(),
-                None => word.to_owned(),
-            })
-            .collect();
+        let arguments = words(arguments, &root);
         let arguments: Vec<&str> = arguments.iter().map(String::as_str).collect();
         let (code, stdout, stderr) = audit(&arguments, input.as_bytes());
         assert_eq!(
@@ -227,38 +221,55 @@ fn tree(root: &Path) -> Vec<(PathBuf, u64)> {
     found
 }
 
+/// Split a refusal's arguments, naming `@file` inside the folder.
+fn words(arguments: &str, folder: &Path) -> Vec<String> {
+    arguments
+        .split(' ')
+        .map(|word| match word.strip_prefix('@') {
+            Some(name) => folder.join(name).to_string_lossy().into_owned(),
+            None => word.to_owned(),
+        })
+        .collect()
+}
+
 #[test]
 fn audit_sends_no_request_reads_no_key_and_writes_nothing() {
     let root = std::env::temp_dir().join(format!("thinkthen-0113-guarded-{}", std::process::id()));
     let _absent = fs::remove_dir_all(&root);
     fs::create_dir_all(root.join("locked")).expect("a folder");
+    for (name, text) in FILES {
+        fs::write(root.join(name), text).expect("a key file");
+    }
     let listener = TcpListener::bind("127.0.0.1:0").expect("a loopback listener");
     listener.set_nonblocking(true).expect("nonblocking");
     let url = format!("http://{}/v1", listener.local_addr().expect("an address"));
     let before = (tree(&root), tree(&fixtures()));
     fs::set_permissions(root.join("locked"), fs::Permissions::from_mode(0o000)).expect("locked");
-    let mut lines: Vec<Vec<&str>> = GOLDENS
+    let owned = |list: &[&str]| list.iter().map(|word| (*word).to_owned()).collect();
+    let mut lines: Vec<(Vec<String>, &str)> = GOLDENS
         .iter()
-        .map(|(_, arguments)| arguments.to_vec())
+        .map(|(_, arguments)| (owned(arguments), ""))
         .collect();
     lines.extend(
         TABLES
             .iter()
-            .map(|(_, [results, key])| vec![*results, *key, "--table"]),
+            .map(|(_, [results, key])| (owned(&[results, key, "--table"]), "")),
     );
-    lines.push(vec![
-        "small/choose.jsonl",
-        "small/choose-key.jsonl",
-        "--threshold",
-        "0.4:0.6",
-    ]);
-    for arguments in lines {
+    lines.extend(
+        REFUSALS
+            .iter()
+            .map(|(arguments, input, _, _)| (words(arguments, &root), *input)),
+    );
+    for (arguments, input) in lines {
         let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
         command
             .arg("audit")
             .args(&arguments)
             .env_clear()
-            .current_dir(fixtures());
+            .current_dir(fixtures())
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
         for variable in [
             "HOME",
             "XDG_CONFIG_HOME",
@@ -267,12 +278,19 @@ fn audit_sends_no_request_reads_no_key_and_writes_nothing() {
         ] {
             command.env(variable, root.join("locked").join(variable));
         }
-        let output = command
+        let mut child = command
             .env("THINKTHEN_API_KEY", "canary-0113")
             .env("THINKTHEN_BASE_URL", &url)
-            .output()
+            .spawn()
             .expect("the binary runs");
-        assert!(matches!(output.status.code(), Some(0 | 2)), "{arguments:?}");
+        let mut stdin = child.stdin.take().expect("standard input");
+        let _ignored = stdin.write_all(input.as_bytes());
+        drop(stdin);
+        let output = child.wait_with_output().expect("the binary finishes");
+        assert!(
+            matches!(output.status.code(), Some(0 | 2 | 5)),
+            "{arguments:?}"
+        );
         for channel in [&output.stdout, &output.stderr] {
             assert!(
                 !String::from_utf8_lossy(channel).contains("canary-0113"),

@@ -1,6 +1,6 @@
 # 0113: Build the audit command
 
-Status: built on the ticket branch, awaiting a fresh Claude code review. Not merged to main. Owner: Claude.
+Status: built and reviewed on the ticket branch. Not merged to main. A fresh read-only Claude code review returned two findings. Both are fixed below. Owner: Claude.
 
 ## Dependency on 0086
 
@@ -46,7 +46,7 @@ The 249 two-question case rewrites every line's question text, not only one ques
 | --- | ---: | ---: |
 | New production Rust nonblank lines, six files | 1,000 | 1,490 |
 | Existing production files touched | 4 | 4 (`core/mod.rs`, `cli/mod.rs`, `cli/args/command.rs`, `cli/failure.rs`) |
-| Test Rust nonblank lines | 850 | 802, plus the two-line inventory edit |
+| Test Rust nonblank lines | 850 | 819, plus two edited lines in `version.rs` and one in `transform.rs` |
 | Test files | 3 plus support | `core/measure/tests.rs`, `tests/audit.rs`, `tests/audit_refusals.rs`, `tests/support/measure.rs` |
 | Script lines | 70 | about 95 nonblank in `policy.py`, 3 in `demos` |
 | Largest Rust file | 500 | `core/measure/audit.rs` 444 |
@@ -54,7 +54,7 @@ The 249 two-question case rewrites every line's question text, not only one ques
 
 The production budget was an estimate of the prototype's 250 audit lines at three to four Rust lines each. rustfmt, typed output structs, and doc comments gave six. The agent re-scored: the math has no duplicate in the crate, and cutting docs or merging modules saves little. Ian can overturn the re-score. The integration tests split into two files because one file passed the 500-line policy ceiling.
 
-The ratchet rises from 50,378 to 52,703 (+2,325): 1,490 production, 802 test, and 33 in edited files. Duplication checked first: `core/pointer.rs` (reused for `--id`), `core/threshold.rs` (reused for every cut and band, `judge` included), `core/json.rs` (reused for every line), `core/probability.rs` (reused), `cli/table.rs` (a CSV reader, nothing shared), and `cli/transform.rs` (its early-return and output-error shape copied, nothing to delete).
+The ratchet rises from 50,378 to 52,720 (+2,342): 1,490 production, 819 test, and 33 in edited files. The review fix added 17 test lines. Duplication checked first: `core/pointer.rs` (reused for `--id`), `core/threshold.rs` (reused for every cut and band, `judge` included), `core/json.rs` (reused for every line), `core/probability.rs` (reused), `cli/table.rs` (a CSV reader, nothing shared), and `cli/transform.rs` (its early-return and output-error shape copied, nothing to delete).
 
 ## Policy
 
@@ -67,6 +67,24 @@ The ratchet rises from 50,378 to 52,703 (+2,325): 1,490 production, 802 test, an
 - The replay pipeline replays `transforms/rows/recording` with `decide --jsonl --field /body --details`. The key `replay/key.jsonl` holds the case labels.
 - The two table-less extras and the three table captures sit under `golden/extra/` and `golden/table/` with the ticket's names.
 
+## Code review
+
+A fresh read-only Claude session reviewed `e1396333..2d980c78`. It checked the pure core and the route, fidelity to the ticket, the tests, the ratchet, public hygiene, and the pages. It found no duplication worth deleting and no private name in shipped files. It returned two findings:
+
+1. The record named no gate results. Fixed: "Gates" below lists each command and its result.
+2. The "sends nothing" test ran only one failure case. Fixed: `audit_sends_no_request_reads_no_key_and_writes_nothing` now runs all 19 `REFUSALS` rows with their standard input, beside the goldens and tables, under the canary key, the loopback address, and locked folders. The listener saw no connection, and neither folder tree changed.
+
+The full ladder also caught `transform_help_pins_its_three_introductions`, which pinned `help` right after `transform` in root help. It now pins `audit` there.
+
 ## Gates
 
-See the final commit message and the reply to the coordinator for the ladder run.
+On the final commit, with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, load average 3.59:
+
+| Command | Result |
+| --- | --- |
+| `sdlc/scripts/install` | exit 0 |
+| `sdlc/scripts/lint` | exit 0 |
+| `sdlc/scripts/test` | exit 0 |
+| `sdlc/scripts/spec` | exit 0: 3 passed, demos 21 green, 0 red |
+| `git diff --check` | clean |
+| `node sdlc/scripts/ratchet.mjs` | 52720/52720 |
