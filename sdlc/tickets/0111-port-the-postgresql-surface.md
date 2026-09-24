@@ -200,3 +200,13 @@ Contract 2; state and timing 3; reach 2; proof 3; cost of error 3; total 13. Fin
 - Second confirmation (same record, "Second confirmation") at `2894e6bc`: ACCEPT. The owner then took four of its non-blocking notes. Width defaults to -1, meaning unset, so the engine default applies. Decision 3 states what `cache_bytes = 0` does. The unset test also covers the apply function through a counting stand-in, with its own plant. The upgrade decision names the queued release-build ticket as the owner of the release checklist.
 - Third check (same record, "Third check") at `39d1c932`: REJECT on two items, with ACCEPT once both are fixed and no further pass. The release build is queue item 6, not item 4, and all three mentions now say item 6. The binding now refuses `cache_bytes = 0` itself with 22023 and a unit test, and the hedge is gone.
 - Code review: pending.
+
+## Evidence
+
+Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk.md` asks every product ticket to name these five parts. This note changes no design.
+
+- Starts from: The tag `surfaces-wave7-frozen-2026-09-24b` holds `databases/postgresql/src/lib.rs`, `src/descriptor_path.rs`, `src/bin/pgrx_embed.rs`, `thinkthen.control`, `runner.py`, `check.sh`, `README.md`, `examples.json`, 10 fixtures, and `tests/examples.py`. The other tests are steps in `check.sh`. `experiments/207-thinkthen-db/FINDINGS.md` found that the key placeholder and the reload log leaked the key and that lazy start per backend avoids the fork hang. `experiments/211-thinkthen-blocking-engine/postgres/NOTES.md` found that start-up makes no network call and that `pg_cancel_backend` returned in 0.22 s. `experiments/241-beatles-surfaces/README.md` found that the tag recomputed a score of 1.91 where the backend said 1.9. `repos/jev-experiments`: none found.
+- Keeps: The SQL names, the authority block and grants, the file gate, `deadline_ms` as a user setting, and the key refusal at call time.
+- Changes: Saved answers move to the engine cache, and a worker under a full signal mask amends ADR 0043. Relate reads rows, `score` returns the position, and the recognize columns are renamed. The check runs a local server from a pinned package, and `unexpected_cfgs` becomes deny.
+- Proof: The local-server steps in `check.sh`, the runtime checksum and version match, the deny plants, and the `allow(unexpected_cfgs)` plant.
+- Defers: Packaging, PostgreSQL versions other than 16, Mac, an address or key setting, `PARALLEL SAFE`, and `site/`.
