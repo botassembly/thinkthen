@@ -8,6 +8,7 @@ The repository gate and its hand-run support scripts.
 | `lint` | Rung 1. Runs policy, page, size, agents-file size, dependency, format, Clippy, and documentation checks |
 | `test` | Rung 2. Runs Rust tests and documentation tests, then `sdlc/live-test` on Linux |
 | `spec` | Rung 3. Runs executable specification pages, transforms, and green how-tos |
+| `heavy-lock` | Sourced by `install`, `test`, and `spec`. Runs one heavy rung at a time under `flock`, and a nested rung skips the lock |
 | `demos`, `demos-self-test` | Run green how-tos and prove the runner's refusals |
 | `pages`, `pages-self-test` | Keep the how-to lists, titles, states, and links aligned |
 | `tickets` | Fails rung 1 when a ticket numbered 0120 or higher lacks its five-part Evidence section. `--self-test` runs its planted cases first |

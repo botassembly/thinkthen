@@ -1,0 +1,29 @@
+# Sourced by the heavy rungs `install`, `test`, and `spec` before they change
+# directory. It re-runs the calling rung under an exclusive `flock`. Heavy
+# rungs on one machine then run one at a time. The lock is released when the
+# rung exits.
+#
+# THINKTHEN_HEAVY_LOCK overrides the path. The default sits under
+# XDG_RUNTIME_DIR. It differs from the /tmp/thinkthen-heavy.lock agents used by
+# hand. An old hand wrapper around a rung is then only redundant. On the same
+# path, the rung would wait forever on its own wrapper.
+#
+# The holder exports THINKTHEN_HEAVY_LOCK_HELD. A rung or script called
+# under it skips the lock instead of deadlocking. `flock -o` keeps the lock
+# descriptor out of the rung. A daemon a build starts, such as a compiler cache
+# server, then cannot hold the lock after the rung exits. The `flock` process
+# holds the lock. Killing that one process frees the lock while the rung runs on.
+
+heavy_lock=${THINKTHEN_HEAVY_LOCK:-${XDG_RUNTIME_DIR:-/tmp}/thinkthen-heavy.lock}
+if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$heavy_lock" ]; then
+	if ! command -v flock >/dev/null 2>&1; then
+		printf '%s: flock is not on PATH. This rung runs without the heavy-build lock\n' "${0##*/}" >&2
+	else
+		THINKTHEN_HEAVY_LOCK_HELD=$heavy_lock
+		export THINKTHEN_HEAVY_LOCK_HELD
+		if ! flock -n "$heavy_lock" true; then
+			printf '%s: waiting for the heavy-build lock %s\n' "${0##*/}" "$heavy_lock" >&2
+		fi
+		exec flock -o "$heavy_lock" /bin/sh "$0" "$@"
+	fi
+fi
