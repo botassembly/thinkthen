@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine crates/thinkthen/tests sdlc/ratchet.json
 
 # 0097: Run the host interrupt check
 
-Status: built; record `0097-run-the-host-interrupt-check.md`; code review pending. Owner: Claude.
+Status: landed; record `0097-run-the-host-interrupt-check.md`. Owner: Claude.
 
 Split out of 0085 on 2026-09-24 (`sdlc/records/2026-09-24-spine-review-engine.md`, finding F1). It lands after 0085 and before 0086.
 
@@ -47,4 +47,4 @@ Builder: Claude (Opus subagent). Reviewer: a fresh Claude session for design and
 ## Review
 
 - Design review: `sdlc/records/2026-09-24-spine-review-engine.md`, then `sdlc/records/2026-09-24-rereview-contract.md` (cancel before join, the two waits, one entry point, the `Sync` reason). All applied; Confirmation accepted it.
-- Code review: pending.
+- Code review: `sdlc/records/0097-code-review.md`. Findings F1 to F4 were fixed at `54ad43a2`, and the re-review accepted `d8666c50`.
