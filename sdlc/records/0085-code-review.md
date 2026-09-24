@@ -101,3 +101,45 @@ Timing: every phase in the new tests waits on a channel, a barrier, a held reply
 3. Record fixes: lift the file budget; correct the R5-19 plant note (P7 is red in the scheduler test); correct the runner's bare-value claim (F3); name the three kept metadata copies; add the 0086 note for annotate assembly (F4).
 
 Recommended in the same pass: section 4 (move both hooks and delete the two duplicate tests), `rows.len() == 1`, and a `Defect` in place of `unwrap_or_default`.
+
+## Re-review at 8b8035ce
+
+Verdict: ACCEPT.
+
+I re-read the code diff from `8d9a6dfd` to `8b8035ce` and exported `8b8035ce` to a scratch copy. `cargo test --workspace --all-targets --all-features` ran with the key unset: 806 passed, 0 failed. This covers `8b8035ce`, which the ladder did not run in full. The count is one lower than before. The review removed three tests and added two.
+
+### Each finding is fixed
+
+- F1 is fixed. `cli/schedule/width_tests/facade_tests.rs` runs in the width child process. In that process, `Engine::new` registers width 1 and refuses width 2 with `WidthActive`, under the `usage` kind. The process width stays 1, and nothing is sent.
+- F2 is fixed. `relate_fails_when_no_answer_is_usable_and_keeps_a_partial_result` covers all answers failed and a partial failure. The failure check it was written for is now deleted (see below).
+- F3 and F4 and the kept copies are fixed. The record now says the runner does not compare bare values. It names the three metadata copies as kept on purpose. It tells 0086 to move annotate, filter, and rank assembly below the facade.
+- The R5-19 note now cites the scheduler test for the ticket's plant. `rows == [Some(0.9)]` replaces `rows.len() <= 1`.
+- Both hooks are gone. `workers::SENDS` and `Engine::gated` are removed. The signal test holds both the judgment and the find, and sends signals during each. The width test copy and the refused-connection test copy are deleted. The R5-19 test now runs in the child process.
+- `unwrap_or_default` is now a `Defect`.
+- The file budget is lifted to 29 in the ticket and in the record.
+
+### Plants, each on a clean copy across the whole workspace
+
+| Plant | Result |
+| --- | --- |
+| P1 send on the calling thread | red: `a_host_signal_on_the_calling_thread_never_fails_a_single_send` |
+| P2 `Engine::new` ignores the explicit width | red: the facade width child test (was green) |
+| P3 `ask_chunks` uses a fresh cancel token | red: `local_refusals_...`, `a_spent_deadline_on_every_direct_path_...`, `sigint_between_recognition_chunks_...` |
+| P4 `judge` drops the threshold | red: 8 command tests |
+| P6 the gate lets one extra through | red: 4 width tests and the shared-cap child test |
+| P7 the ticket's R5-19 plant | red: `schedule::tests::cancellation_with_work_in_flight_...` |
+| P8 `records` uses a fresh token | red: the facade width child test, `a_spent_deadline_over_records_...` |
+| P9 `Refused` is retryable | red: 2 transport tests and 1 command test |
+| P10 relate stops counting a failed answer | red: the new relate test and 4 command relate tests |
+
+P5 no longer applies, because its check is gone. Load: 20 busy loops, load average 22 to 23. The facade, width, scheduler, and interrupt tests ran 30 times (37 tests each) with 0 failures.
+
+### The deleted check was safe to delete
+
+- The check cannot be reached. `decode_response` in `core/adapters/systemone/response.rs` returns an error when every answer in a reply failed. That decoder builds every production `Reply`: `Reply::new` has no other production caller. Replay and live replies go through `decode` or `decode_observed`, which both call it. So every reply `relate` sees holds at least one answered question. `failed > 0` implies one reply exists, which implies `answered >= 1`. `answered == 0 && failed > 0` cannot happen.
+- Nothing else reaches the error. After the commit, `RelateLogical` and `relate::Error::Logical` appear nowhere in code. Only the record and the earlier review text name them.
+- The output and exit codes do not change. An all-failed relate reply was already a decode `Reply` error on `main`, so it exits 4 with the decode message, before and after. The deleted message, "the backend returned no usable relation answer", could never print. No spec page, demo, or test names it. The spec's rules for a partial failure (exit 6) and a reply with no usable answer (exit 4) still hold. Plant P10 shows the command's relate partial-failure tests stay live.
+
+### Not blocking
+
+- The ticket's "Sending thread" bullet still asks for a `cfg(test)` thread-ID seam. The record explains the removal under the new test rule. Add one clause to the ticket bullet saying the rule replaced the seam, so the two texts agree.
