@@ -19,6 +19,6 @@ Status 2026-09-24: paused, not done. Ian asked for the work to wrap up, so the b
 - `examples/functions.txt` is not pinned. `tests/c/opts.c` expects a score of `0.1`, which no run has checked.
 - `libraries/c/Cargo.lock` was copied from the root lock and is not yet checked against it.
 - No planted bug has been shown for R1-9, R2-7, R2-16, R2-26, or R3-24.
-- Churn (R7-1, G3): not run. `probes/c-churn/churn.c` is committed. The runner planned for it runs 8 at a time under the heavy lock. The tag's library build was queued and then stopped at the wrap-up request, so no count exists on either side.
+- Churn (R7-1, G3): not run. `probes/c-churn/churn.c` is committed. The runner planned for it runs 8 at a time under the heavy lock. The tag's library build was queued and then stopped at the wrap-up request, so no count exists on either side. Ian ruled on 2026-09-24 that the churn probe is a one-time measurement. 0094 runs the C-door churn once to close R7-1, only when the load is low and under the heavy lock. It never runs in the ladder, `check.sh`, or a review.
 - The ladder has not run. Until the crate builds and its ratchets hold, `lint`'s registry check and the surface rung fail on this branch.
 - No code review, and no merge of `origin/main`.
