@@ -99,7 +99,7 @@ Contract 2; State/timing 4; Reach 4; Proof 4; Cost of error 4; Total 18. Minimum
 - Implementation order is blocked until 0082, 0083, and 0076 land. Ticket 0087 has landed.
 - Public convenience-call proof cannot finish on this ticket because the public Rust API is scheduled in 0084 through 0086. This ticket must land the private `Option<Width>` seam that those tickets consume.
 - Public fork-safe claims remain blocked on 0078. ADR 0017 requires a PID check before inherited locks and a fresh pool and gate in the child.
-- An absolute cap across two separately loaded copies remains unresolved. `sdlc/planning/libraries/c.md` permits that host shape, while a Rust process static covers one linked image. Surface integration must reconcile the two statements before release.
+- An absolute cap across two separately loaded copies remains unresolved. `sdlc/planning/libraries/c.md` permits that host shape, while a Rust process static covers one linked image. Draft ADR 0047 (ticket 0093) states one cap per loaded copy and defers a cross-image cap past 0.1; Ian can overturn it.
 
 ## What Ian can overturn
 
