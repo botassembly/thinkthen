@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine/http.rs crates/thinkthen/src/engine/mod.rs cr
 
 # 0077: Share one process width cap
 
-Status: built 2026-09-24 on `ticket/0077-process-width-cap` after 0082, 0083, 0076, and 0092 landed. Build record `sdlc/records/0077-build-process-width-cap.md`. Code review pending. Owner: Claude.
+Status: landed 2026-09-24. Owner: Claude. The review accepted it (`sdlc/records/0077-code-review.md`). Build record `sdlc/records/0077-build-process-width-cap.md`. Land record `sdlc/records/0077-land-process-width-cap.md`.
 
 ## Outcome and authority
 
