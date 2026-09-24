@@ -12,36 +12,22 @@ use crate::core::adapters::systemone::{EncodeError, wire_name};
 use crate::core::json::Json;
 use crate::core::plan::Plan;
 use crate::core::question::{Labels, Question};
-use crate::core::render::json_line;
-use crate::core::text::{Description, QuestionText, Withheld};
+use crate::core::text::{Description, QuestionText};
 
 /// The body one request carries.
 ///
 /// `state` is a string for the text evidence a run has always sent, and the
 /// object or list itself when a pointer selection made one, so the JSON is
 /// never folded into a sentence or written twice.
+///
+/// It lives only inside [`encode_raw`], which writes it at once, so nothing
+/// outside a test can print it and it derives `Debug` only in tests.
 #[derive(Serialize)]
-#[cfg_attr(test, derive(serde::Deserialize, PartialEq))]
+#[cfg_attr(test, derive(Debug, serde::Deserialize, PartialEq))]
 pub(crate) struct Request {
     state: Json,
     model: String,
     questions: Questions,
-}
-
-/// `state` is the evidence, and a pick's criteria may come from a record, so
-/// `Debug` withholds both and shows the model. The length is the JSON's. The
-/// question types derive `Debug` only in tests, so nothing else prints them.
-impl std::fmt::Debug for Request {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter
-            .debug_struct("Request")
-            .field(
-                "state",
-                &Withheld(json_line(&self.state).map_or(0, |line| line.len())),
-            )
-            .field("model", &self.model)
-            .finish_non_exhaustive()
-    }
 }
 
 /// The wire questions in request order.
@@ -165,16 +151,12 @@ pub(crate) fn encode(plan: &Plan) -> Result<Vec<u8>, EncodeError> {
 
 /// Write the plan as the request body the plan document embeds.
 pub(crate) fn encode_raw(plan: &Plan) -> Result<Box<RawValue>, EncodeError> {
-    serde_json::value::to_raw_value(&request(plan)?).map_err(|error| EncodeError::of(&error))
-}
-
-/// Build the body one plan sends, before it is written as JSON.
-pub(crate) fn request(plan: &Plan) -> Result<Request, EncodeError> {
-    Ok(Request {
+    let request = Request {
         state: plan.evidence().as_json(),
         model: plan.model().as_str().to_owned(),
         questions: questions(plan)?,
-    })
+    };
+    serde_json::value::to_raw_value(&request).map_err(|error| EncodeError::of(&error))
 }
 
 /// Expand logical tag questions into one wire yes/no question per label.
