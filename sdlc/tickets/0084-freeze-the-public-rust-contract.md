@@ -335,8 +335,6 @@ The crate root exports `choices!` and no module. The macro accepts attributes, v
 
 `Usage` is only the optional provider token report attached to one `Details`. `Counters` is the broader process total returned by `Engine::usage`; it includes sends from failed calls and retries and has no reset. `requests_sent` in `Details` counts successful-result attempts only. These three counts never share a type.
 
-Public `Error` tuple variants are constructors for stable matching. `ErrorDetail` has no public constructor or string conversion; `Error` has no string-based constructor or conversion.
-
 `DescriptionBuilder::example` is the sole examples method. Each call appends its string to one JSON array in call order. The `examples` member occupies the object's position of the first `example` call, appears once, and is omitted when no example was added. Thus `what("x")?.example("a")?.not_for("y")?.example("b")?.build()?` emits `{"what":"x","examples":["a","b"],"not_for":"y"}`. `field_json("examples", ..)` conflicts with `example` in either order and fails on the call that introduces the conflict. Strings are preserved except required JSON escaping; no call sorts or normalizes them.
 
 `Details::nearest` is `Some` only for score. `Probabilities::YesNo` carries the probability of yes. `Probabilities::Named` preserves declared option, label, or level order. A typed single call maps a failed logical answer to `Error::Backend`; it never maps failure to `None`, `Unsure`, or an empty collection. `Failed::kind()` always returns `ErrorKind::Backend`; `FailureCause` is the exact closed mapping of the six backend-answer failures already in main.
@@ -359,7 +357,7 @@ After the post-0078 reconciliation, 0086 owns public delegation, lazy `default_e
 
 Ticket 0086 extracts the inventory into signature fixtures and records normalized `cargo public-api` output. Compile-pass fixtures cover every declaration, all methods and free functions, a `ChooseQuestion<Team>` returning `Option<Team>`, a `TagQuestion<Topic>` returning `Vec<Topic>`, checked loaded-question binding, both description forms including repeated `example`, question-set insertion, every builder terminal, exhaustive error matching, `Batch`, `Send + Sync`, recognition slicing, and relation endpoints.
 
-Compile-fail fixtures prove a band cannot reach `filter`; unfinished builders, typed choice mismatches, and unbound loaded choices fail; and no derive, async method, reset, public module, connector, planner, callback beyond the interrupt check, mutable result field, public `ErrorDetail` constructor, or string-based `Error` constructor/conversion exists. Public tuple variants remain constructors.
+Compile-fail fixtures prove a band cannot reach `filter`; unfinished builders, typed choice mismatches, and unbound loaded choices fail; and no derive, async method, reset, public module, connector, planner, callback beyond the interrupt check, mutable result field, public `ErrorDetail` constructor/conversion, or string-based `Error` constructor/conversion exists. Public tuple variants remain constructors.
 
 Package proof compares Cargo metadata with and without default features and rejects every package activated only by `cli`, including `clap`, `csv-core`, and `signal-hook`, but allows `nix`.
 
@@ -379,9 +377,11 @@ Contract 2; state and timing 0; reach 2; proof 2; cost of error 1; total 7. Fina
 
 ADR 0017 section 5 has surfaces configure the engine. `EngineBuilder::from_env` reads the environment like `Engine::from_env`. Setters override. `Engine::from_env()` equals `EngineBuilder::from_env()?.build()`. 0086 tests it. Ian can overturn it.
 
-Amended 2026-09-24: package proof runs `cargo check`, `test`, and `package` with `--locked -p thinkthen --no-default-features`.
+Package proof runs `cargo check`, `test`, and `package` with `--locked -p thinkthen --no-default-features`.
 
-Amended 2026-09-24: 0078 made `nix` a Unix library dependency.
+0078 made `nix` a Unix library dependency.
+
+Amended 2026-09-24: the ADR 0017 amendment of that date renames the width to the throttle. `EngineBuilder::width` above is `EngineBuilder::throttle`, and an omitted width is an omitted throttle. 0086 builds that name.
 
 ## Review
 

@@ -30,3 +30,7 @@ Ian can overturn the file shape, name grammar, units, warning rule, and metadata
 ## Amendment, 2026-09-24, by ticket 0090
 
 Ian ruled on 2026-09-23 that `meta.profile_warning.calibrated` becomes `tuned_for`. The saved name identifies the profile under which a person tuned the threshold, and it proves no statistical calibration. The metadata value is now exactly `{"tuned_for":NAME,"running":NAME}`. The standard-error warning reads `threshold tuned for profile X is running under profile Y`. The question-file key stays `profile`. No reader accepts the old key, because ThinkThen has not released 0.1.
+
+## Amendment, 2026-09-24: the width is called the throttle
+
+ADR 0017's amendment of 2026-09-24 renames the width to the throttle. A profile selects no throttle. Ian can overturn it.
