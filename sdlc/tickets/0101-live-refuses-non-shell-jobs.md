@@ -1,7 +1,7 @@
 ---
 flow: quick-fix
 priority: 95
-opens: sdlc/scripts/live sdlc/live-test sdlc/issues/2026-09-20-packing-rows-into-one-request-measured.md sdlc/records/0101-live-refuses-non-shell-jobs.md
+opens: sdlc/scripts/live sdlc/scripts/README.md sdlc/live-test sdlc/issues/2026-09-20-packing-rows-into-one-request-measured.md sdlc/records/0101-live-refuses-non-shell-jobs.md
 ---
 
 # 0101: Refuse a non-shell live job before any charge
@@ -19,7 +19,7 @@ The launcher reads the job's first line before it takes the lock. The line must 
 Decisions Ian can overturn:
 
 - The rule is an exact `#!/bin/sh` line. A `#!/bin/bash` or `#!/bin/sh -e` line is refused too, because `/bin/sh` would ignore that shebang and run the file with other rules than it names.
-- The issue's second guard, a sentence in `sdlc/scripts/README.md`, waits. Ticket 0083 edits that file. The refusal message names the rule, so a user learns it at the door.
+- The issue's second guard lands too. `sdlc/scripts/README.md` says a job is a shell script. That edit waited for ticket 0083, which owned the file, and followed its landing.
 
 ## Proof
 

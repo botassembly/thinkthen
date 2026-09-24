@@ -55,7 +55,7 @@ So the totals hold at 10 rows and the single answers do not. About 3 rows in 100
 
 `sdlc/scripts/live` runs the job through `/bin/sh`. The builder's first job was a Python file. It died at once, and the launcher kept the whole reservation of 560,000 tokens, about 2.4 US cents, because the ledger has no refund. A shell wrapper fixed it. Two cheap guards would stop the next one: the launcher refuses a job whose first line is not a shell line, and `sdlc/scripts/README.md` says in its first paragraph that a job is a shell script. The no-refund rule is right and should stay.
 
-Ticket 0101 closed the first guard: the launcher refuses a job whose first line is not `#!/bin/sh` before it charges. The README sentence waits for ticket 0083, which owns `sdlc/scripts/README.md`.
+Ticket 0101 closed both guards. The launcher refuses a job whose first line is not `#!/bin/sh` before it charges, and `sdlc/scripts/README.md` says a job is a shell script.
 
 ## Limits
 
