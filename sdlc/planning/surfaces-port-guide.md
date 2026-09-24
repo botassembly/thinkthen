@@ -4,6 +4,8 @@ Written 2026-09-24 by Claude for queue items 6, 7, 9, and 10 of `one-line-plan-2
 
 Sources read: tag `surfaces-wave7-final` (`f6a7faea`), lanes `origin/w7/gate3`, `origin/w7/python4`, and `origin/w7/fast`, ticket branches 0076, 0077, 0078, 0084, 0085, and 0086, ADR 0017 and ADR 0037 on main, and `sdlc/issues/2026-09-23-surfaces-branch-error-index.md`. Nothing was built or run.
 
+Port source: tag `surfaces-wave7-frozen-2026-09-24b` (`9df8bae9`). It merges the three lanes into `surfaces-wave7`, and every surface check ran there once. `sdlc/records/surfaces-freeze-2026-09-24.md` on that tag lists each result. DuckDB, Ruby, and PostgreSQL did not run, because they need the network or Docker. Each surface ticket starts from this tag and carries the three follow-ups that record lists.
+
 ## 1. The error index, sorted
 
 Every one of the index's 197 rows falls in one of three classes.
