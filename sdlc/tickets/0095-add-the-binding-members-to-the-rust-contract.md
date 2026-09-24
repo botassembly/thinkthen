@@ -6,7 +6,7 @@ opens: sdlc/tickets/0095-add-the-binding-members-to-the-rust-contract.md sdlc/ti
 
 # 0095: Add the binding members to the Rust contract
 
-Status: draft, revised after design review; needs re-review. Owner: Claude.
+Status: revised after re-review; confirming. Owner: Claude.
 
 ## Outcome and authority
 
@@ -67,7 +67,7 @@ impl Edge { pub fn to_json(&self) -> String; }
 
 ## Meanings
 
-**Interrupt check (G1, Q1).** The engine runs the check only on the calling thread, never on a worker. It runs once before the first send, then at every existing 50 ms poll while the call waits: the width gate, a retry wait, a recording or lock wait, and bulk results. A `Batch` runs it inside `next`. It does not run during one blocking send, because a sent attempt finishes under 0073 anyway. A `true` return is the call's cancel token firing at that moment: nothing new starts, sent attempts finish, and the call returns `Cancelled` with the existing stop metadata. A panic inside the check joins every engine worker and then resumes unchanged to the caller, since the panic belongs to the host. With no check set, behavior is 0084's. The worker-thread pattern stays legal for a host that prefers it, and no binding needs it.
+**Interrupt check (G1, Q1).** The engine runs the check only on the calling thread, never on a worker. It runs once before the first send, then at every existing 50 ms poll while the call waits: the width gate, a retry wait, a recording or lock wait, and bulk results. A `Batch` runs it inside `next`. It does not run during one blocking send, because a sent attempt finishes under 0073 anyway. A `true` return is the call's cancel token firing at that moment: nothing new starts, sent attempts finish, and the call returns `Cancelled` with the existing stop metadata. A panic inside the check fires the call's cancel token, joins every worker, then resumes the payload unchanged to the caller. The panic belongs to the host. With no check set, behavior is 0084's. The check is `Sync` because `CallOptions` stays `Send + Sync` for the workers that share it. A host whose handle is not `Sync`, such as a SQLite database pointer, wraps it in its FFI module. The worker-thread pattern stays legal for a host that prefers it, and no binding needs it.
 
 **Host deadline numbers (G7, Q5).** `deadline_seconds` and `deadline_millis` apply branch ADR 0041 whole: `-1` is no deadline, `0` is spent (the call returns `Deadline` and sends nothing), any other negative, NaN, or infinity is `Usage`, and a budget above 4,294,967,295 seconds is `Usage`. The message names the host's exact value. When options receive several deadline calls, the last one wins, and `-1` clears an earlier deadline. Host rules stay in the binding: refusing a bool (ADR 0041's Python amendment) and clamping a computed budget at zero. Ticket 0099 ports ADR 0041 to main before 0086, and its owner sentence then names these two methods in place of the retired contract crate.
 
@@ -106,7 +106,7 @@ impl Edge { pub fn to_json(&self) -> String; }
 
 ## Acceptance
 
-Design only. 0084 and this ticket agree; the added block parses as the 0086 fixture generator's input; each name has one owner and shape; `wc -m` stays under 16,000; `git diff --check` passes.
+Design only. 0084 and this ticket agree; rustfmt parses the extracted blocks of 0084 and 0095; each name has one owner and shape; `wc -m` stays under 16,000; `git diff --check` passes.
 
 ## Complexity
 
@@ -118,5 +118,5 @@ Design only. The code tickets use Claude builders (Opus subagent) and fresh Clau
 
 ## Review
 
-- Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-contract.md`) asked for an ADR record of the added members and four clarifications, all applied. Re-review pending, together with 0084.
+- Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-contract.md`) asked for an ADR record of the added members and four clarifications, all applied. The re-review (`sdlc/records/2026-09-24-rereview-contract.md`) asked for the rustfmt wording, cancel before join on a panic, and the `Sync` reason; all applied.
 - Code review: not applicable; design records only.
