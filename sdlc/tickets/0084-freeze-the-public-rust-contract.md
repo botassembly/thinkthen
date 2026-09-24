@@ -376,6 +376,6 @@ Contract 2; state and timing 0; reach 2; proof 2; cost of error 1; total 7. Fina
 
 ## Review
 
-- Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-contract.md`) rejected it for one stale example in `rust.md`, now fixed. The re-review (`sdlc/records/2026-09-24-rereview-contract.md`) asked for rustfmt wording and 0096 as fork owner; both applied.
+- Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-contract.md`) rejected it for one stale example in `rust.md`, now fixed. Re-review `2026-09-24-rereview-contract.md` asked for rustfmt wording and 0096 as fork owner; both applied.
 - Routing: the later code tickets use Claude builders (Opus subagent) and fresh Claude reviewers.
 - Code review: not applicable; design records only.
