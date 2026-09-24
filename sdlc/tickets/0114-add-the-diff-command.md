@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core crates/thinkthen/src/cli crates/thinkthen/tests
 
 # 0114: Add the diff command
 
-Status: built and reviewed (ACCEPT) on `ticket/0114-diff-command`, not merged; see `sdlc/records/0114-build-diff-command.md`. Design accepted 2026-09-24 after re-review. Owner: Claude.
+Status: landed on main 2026-09-24 after code review ACCEPT at `0cd64fbd`; see `sdlc/records/0114-build-diff-command.md`. The production re-score past 450 lines is approved by the queue owner, and Ian can overturn it. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it. The first design review is `sdlc/records/0113-0114-design-review.md`. This page is rewritten whole after it.
 

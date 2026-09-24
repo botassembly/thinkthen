@@ -1,6 +1,6 @@
 # 0114: Build the diff command
 
-Status: built and reviewed on `ticket/0114-diff-command`. A fresh read-only Claude code review returned seven findings, and all seven are fixed. The same reviewer rechecked the fixes and both merges at `0cd64fbd` and returned ACCEPT. Not merged to main. Owner: Claude.
+Status: landed on main 2026-09-24. A fresh read-only Claude code review returned seven findings, and all seven are fixed. The same reviewer rechecked the fixes and both merges at `0cd64fbd` and returned ACCEPT. Owner: Claude.
 
 ## Order and base
 
