@@ -85,6 +85,6 @@ Ticket 0099 ported this ADR to main at its number from tag `surfaces-wave7-final
 
 The contract crate that owned the conversion and the sentinel retires. Main ships one `thinkthen` crate (ADR 0017). The new owner is `CallOptions::deadline_seconds` and `CallOptions::deadline_millis` in `thinkthen`, designed in ticket 0095. Where this ADR names the contract, its converters, or `deadline_in`, read those two methods. Refusing a bool and clamping a computed budget at zero stay in each binding.
 
-The public door keeps the rule of the second 2026-09-23 amendment. That amendment replaced the Decision's sentence that treated an unrepresentable budget as no deadline. Once ticket 0095 is accepted, `deadline_seconds` and `deadline_millis` refuse a budget above 4,294,967,295 seconds (`u32::MAX`) as `usage` before anything is sent. Until then, main has no public deadline door, and this rule binds 0095's design.
+The public door keeps the rule of the second 2026-09-23 amendment. That amendment replaced the Decision's sentence that treated an unrepresentable budget as no deadline. Ticket 0095 designs `deadline_seconds` and `deadline_millis`, and ticket 0086 builds them. Once 0086 lands, they refuse a budget above 4,294,967,295 seconds (`u32::MAX`) as `usage` before anything is sent. Until then, main has no public deadline door. This rule binds 0095's design and 0086's tests.
 
 Ian can overturn the new owner by ruling a different home for the conversion. The cost is moving the tests 0095 names.

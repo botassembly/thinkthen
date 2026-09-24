@@ -1,3 +1,13 @@
+# Confirmation, 2026-09-24
+
+Checked read-only. For each ticket I diffed the reviewed commit against its revision, and I checked ADR 0041 at tag `surfaces-wave7-final`, the 0085 ticket at `d5be12cc`, and the port guide on `origin/main` at `fdb7c535`.
+
+- ACCEPT 0077 (083bb5e6): both blocking findings are resolved. The `Width` type covers 1 through 32, and 0 and 33 fail as `Usage`. A new R2-9 bullet adds the two-engine test. Each row has a planted bug. All four follow-ups are resolved: the stale text, the `policy.py` rule with a planted failure, the in-crate command proofs, and the 1,000-line test cap with 0092 as a prerequisite. Nothing new broke.
+- ACCEPT 0078 (fc9a8712): all three blocking findings are resolved. `nix` changes to a non-optional Unix dependency, with `Cargo.lock` and `deny.toml` in scope and a second dependency reviewer. The promise now covers worker threads only, and 0085 `d5be12cc` sends every live attempt on a worker with a planted-bug thread-ID test. R5-3 moved to 0096 in the ticket and in the port guide on main. The follow-ups are resolved: the retry-wait phase is dropped, `SIGXFSZ` is excluded from the mask, the default-action child is killed, the child proofs run in the all-features binary, and `cargo tree` runs in `lint`. Nothing new broke.
+- ACCEPT 0092 (71cd757e): the crate has a library target and a thin binary. `spawn` and `process_has_file` stay in the harness, with a reviewed path dev-dependency. The loopback cases are named, and the injection cases 20 through 25 stay in-process. The unknown-body test has a planted fall-through. Nothing new broke.
+- ACCEPT 0091 (7af36977): the counter step for case 17 is added. The pending mark sits in `provenance` only, and each schema refusal has a planted bad case.
+- ACCEPT 0099 (c0dfef20): the 0041 amendment records the upper bound above 4,294,967,295 seconds, conditional on 0095. That matches the tag's own 2026-09-23 amendment of ADR 0041, which supersedes the no-deadline sentence.
+
 # Re-review: 0077, 0078, 0091, 0092, 0099
 
 Reviewer: fresh read-only Claude session, 2026-09-24. Read: workspace `CLAUDE.md` Tickets section, repo `CLAUDE.md`, `one-line-plan-2026-09-24.md` and `surfaces-port-guide.md` on main `860086d2`, the prior review `spine-review-controls.md`, the error index rows R2-9, R4-12, R5-3, R6-3, and on main: `Cargo.toml` (root and crate), `tests/backend/harness/mod.rs`, `core/reply.rs`, `cli/interrupt.rs`, `sdlc/scripts/{test,lint}`, engine thread spawn sites. Also ureq 3.4.2 source in the cargo registry and tag `surfaces-wave7-final` ADRs 0041–0046. Nothing was built, run, or edited.
