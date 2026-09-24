@@ -8,7 +8,7 @@ use crate::core::json::Json;
 use crate::core::recognize_file::{parse_json_cut, parse_relations, parse_typed_cut};
 use crate::core::{
     ModelName, Pointer, ProfileName, QuestionFile, RecognizeConfigError, RecognizeSpec,
-    RelationRule, RenderError, Threshold, json_line,
+    RelationEntity, RelationEntityView, RelationRule, RenderError, Threshold, json_line,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -77,6 +77,24 @@ pub(crate) enum RelateConfigError {
     Threshold,
     #[error("the question file holds another command's question")]
     WrongVerb,
+}
+
+/// The most entities one complete set holds.
+const MAX_ENTITIES: usize = 255;
+
+/// Why a complete entity set is refused before any request.
+#[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
+pub(crate) enum EntitySetError {
+    #[error("relate takes at most 255 entities")]
+    TooMany,
+    #[error("an entity name and kind are nonempty strings")]
+    Blank,
+    #[error("the complete entity set contains no duplicate name-and-kind identity")]
+    Duplicate,
+    #[error("a concrete relation kind is absent from the complete entity set")]
+    AbsentKind,
+    #[error("--lines takes only bare relation names or NAME=*:*")]
+    LineRule,
 }
 
 #[derive(Deserialize)]
@@ -202,6 +220,48 @@ impl RelateSpec {
             self.fields.kind = Pointer::new(kind).map_err(|_| RelateConfigError::Fields)?;
         }
         Ok(())
+    }
+
+    /// Admit one complete entity set in input order, or refuse all of it.
+    pub(crate) fn admit(
+        &self,
+        pairs: &[(String, String)],
+    ) -> Result<Vec<RelationEntity>, EntitySetError> {
+        if pairs.len() > MAX_ENTITIES {
+            return Err(EntitySetError::TooMany);
+        }
+        let mut entities: Vec<RelationEntity> = Vec::new();
+        for (name, kind) in pairs {
+            let entity = RelationEntity::new(name, kind).map_err(|_| EntitySetError::Blank)?;
+            if entities.contains(&entity) {
+                return Err(EntitySetError::Duplicate);
+            }
+            entities.push(entity);
+        }
+        let concrete = self
+            .relations
+            .iter()
+            .flat_map(|rule| [&rule.source, &rule.target])
+            .filter(|kind| *kind != "*");
+        for kind in concrete {
+            if !entities.is_empty() && !entities.iter().any(|entity| entity.kind() == kind) {
+                return Err(EntitySetError::AbsentKind);
+            }
+        }
+        Ok(entities)
+    }
+
+    /// Line input has one synthetic kind, so every rule is bare or `*:*`.
+    pub(crate) fn check_lines(&self) -> Result<(), EntitySetError> {
+        if self
+            .relations
+            .iter()
+            .all(|rule| rule.source == "*" && rule.target == "*")
+        {
+            Ok(())
+        } else {
+            Err(EntitySetError::LineRule)
+        }
     }
 
     pub(crate) const fn fields(&self) -> &RelateFields {

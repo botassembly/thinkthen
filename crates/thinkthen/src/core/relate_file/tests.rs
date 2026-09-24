@@ -1,4 +1,4 @@
-use super::RelateSpec;
+use super::{EntitySetError, RelateSpec};
 
 #[test]
 fn file_defaults_precedence_and_canonical_identity_are_stable() {
@@ -60,5 +60,54 @@ fn inline_grammar_and_closed_file_shape_are_refused() {
         r#"{"version":2,"relate":{"relations":[{"name":"x","source":"a","target":"b"}]}}"#,
     ] {
         assert!(RelateSpec::parse(text).is_err(), "{text}");
+    }
+}
+
+fn entities(count: usize) -> Vec<(String, String)> {
+    (0..count)
+        .map(|place| (format!("entity-{place}"), "record".to_owned()))
+        .collect()
+}
+
+#[test]
+fn a_complete_set_admits_255_entities_and_refuses_the_256th() {
+    let spec = RelateSpec::inline(&["linked".to_owned()], false).expect("inline");
+    assert_eq!(spec.admit(&entities(255)).expect("255 entities").len(), 255);
+    assert_eq!(spec.admit(&entities(256)), Err(EntitySetError::TooMany));
+}
+
+#[test]
+fn a_complete_set_refuses_blanks_duplicates_and_absent_concrete_kinds() {
+    let pair = |name: &str, kind: &str| (name.to_owned(), kind.to_owned());
+    let typed =
+        RelateSpec::inline(&["works_for=person:organization".to_owned()], false).expect("inline");
+    assert_eq!(
+        typed.admit(&[pair("Ada", "person"), pair("Ada", "person")]),
+        Err(EntitySetError::Duplicate)
+    );
+    assert_eq!(
+        typed.admit(&[pair(" ", "person")]),
+        Err(EntitySetError::Blank)
+    );
+    assert_eq!(
+        typed.admit(&[pair("Ada", "person")]),
+        Err(EntitySetError::AbsentKind)
+    );
+    let admitted = typed
+        .admit(&[pair("Ada", "person"), pair("Ada", "organization")])
+        .expect("one name under two kinds is two entities");
+    assert_eq!(admitted.len(), 2);
+    assert_eq!(typed.admit(&[]), Ok(Vec::new()));
+}
+
+#[test]
+fn line_input_takes_only_bare_or_wildcard_rules() {
+    for rule in ["linked", "linked=*:*"] {
+        let spec = RelateSpec::inline(&[rule.to_owned()], false).expect("inline");
+        assert_eq!(spec.check_lines(), Ok(()), "{rule}");
+    }
+    for rule in ["linked=record:record", "linked=*:record"] {
+        let spec = RelateSpec::inline(&[rule.to_owned()], false).expect("inline");
+        assert_eq!(spec.check_lines(), Err(EntitySetError::LineRule), "{rule}");
     }
 }

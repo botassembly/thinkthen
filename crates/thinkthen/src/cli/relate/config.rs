@@ -114,15 +114,8 @@ fn lines_only(pointed: bool, spec: &RelateSpec) -> Result<(), Failure> {
             "--lines takes neither --field nor --kind-field",
         ));
     }
-    if spec
-        .relations
-        .iter()
-        .any(|rule| rule.source != "*" || rule.target != "*")
-    {
-        return Err(Failure::Usage(
-            "--lines takes only bare relation names or NAME=*:*",
-        ));
-    }
+    spec.check_lines()
+        .map_err(|error| Failure::Relate(crate::failure::relate::Error::Entities(error)))?;
     Ok(())
 }
 

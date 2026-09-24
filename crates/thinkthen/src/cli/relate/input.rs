@@ -1,11 +1,9 @@
 use std::io::BufRead;
 
-use crate::core::{Framing, Reading, Record, RelateSpec, RelationEntity, RelationEntityView};
+use crate::core::{Framing, Reading, Record, RelateSpec, RelationEntity};
 use crate::edge::Chunks;
 use crate::failure::Failure;
 use crate::table::{Kind as TableKind, Rows as TableRows};
-
-const MAX_ENTITIES: usize = 255;
 
 pub(super) fn read(
     source: Box<dyn BufRead + Send>,
@@ -19,16 +17,14 @@ pub(super) fn read(
         Framing::Csv => table(source, TableKind::Csv)?,
         Framing::Tsv => table(source, TableKind::Tsv)?,
     };
-    let mut entities = Vec::new();
+    let mut pairs = Vec::new();
     for record in records {
-        push(
-            &mut entities,
-            record.entity_text(spec.name_field())?,
-            record.entity_text(spec.kind_field())?,
-        )?;
+        pairs.push((
+            record.entity_text(spec.name_field())?.to_owned(),
+            record.entity_text(spec.kind_field())?.to_owned(),
+        ));
     }
-    validate_kinds(&entities, spec)?;
-    Ok(entities)
+    admitted(spec, &pairs)
 }
 
 fn document(source: Box<dyn BufRead + Send>, spec: &RelateSpec) -> Result<Vec<Record>, Failure> {
@@ -62,45 +58,14 @@ fn lines(
     spec: &RelateSpec,
 ) -> Result<Vec<RelationEntity>, Failure> {
     let reading = Reading::new(Framing::Lines, Vec::new())?;
-    let mut entities = Vec::new();
+    let mut pairs = Vec::new();
     for bytes in Chunks::new(source, true) {
-        let bytes = bytes?;
-        push(&mut entities, reading.as_it_arrived(&bytes)?, "*")?;
+        pairs.push((reading.as_it_arrived(&bytes?)?.to_owned(), "*".to_owned()));
     }
-    validate_kinds(&entities, spec)?;
-    Ok(entities)
+    admitted(spec, &pairs)
 }
 
-fn push(entities: &mut Vec<RelationEntity>, name: &str, kind: &str) -> Result<(), Failure> {
-    if entities.len() == MAX_ENTITIES {
-        return Err(Failure::Usage("relate takes at most 255 entities"));
-    }
-    let entity = RelationEntity::new(name, kind)
-        .map_err(|_| Failure::Usage("an entity name and kind are nonempty strings"))?;
-    if entities
-        .iter()
-        .any(|held| held.name() == entity.name() && held.kind() == entity.kind())
-    {
-        return Err(Failure::Usage(
-            "the complete entity set contains no duplicate name-and-kind identity",
-        ));
-    }
-    entities.push(entity);
-    Ok(())
-}
-
-fn validate_kinds(entities: &[RelationEntity], spec: &RelateSpec) -> Result<(), Failure> {
-    if entities.is_empty() {
-        return Ok(());
-    }
-    for rule in &spec.relations {
-        for kind in [&rule.source, &rule.target] {
-            if kind != "*" && !entities.iter().any(|entity| entity.kind() == kind) {
-                return Err(Failure::Usage(
-                    "a concrete relation kind is absent from the complete entity set",
-                ));
-            }
-        }
-    }
-    Ok(())
+fn admitted(spec: &RelateSpec, pairs: &[(String, String)]) -> Result<Vec<RelationEntity>, Failure> {
+    spec.admit(pairs)
+        .map_err(|error| Failure::Relate(crate::failure::relate::Error::Entities(error)))
 }
