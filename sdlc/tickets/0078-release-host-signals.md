@@ -6,7 +6,7 @@ opens: Cargo.lock deny.toml crates/thinkthen/Cargo.toml crates/thinkthen/src/mai
 
 # 0078: Release host signals
 
-Status: revised after re-review; confirming. Owner: Claude.
+Status: design accepted 2026-09-24 after re-review. Owner: Claude.
 
 This ticket was "0078a" in the 2026-09-24 spine review. It keeps the number 0078 and the host-signal half of the earlier draft. Fork recovery and error-index row R5-3 moved to ticket 0096, which lands after 0085, because the pools it rebuilds do not exist before the facade (`sdlc/records/2026-09-24-spine-review-controls.md`, 0078 finding 2).
 
@@ -53,5 +53,5 @@ Builder: Claude (Opus subagent). Reviewer: a fresh Claude session for design and
 
 ## Review
 
-- Design review: `sdlc/records/2026-09-24-spine-review-controls.md`, then `sdlc/records/2026-09-24-rereview-near.md` (the `nix` feature, the calling thread, and R5-3). This revision answers both; confirmation pending.
+- Design review: `sdlc/records/2026-09-24-spine-review-controls.md`, then `sdlc/records/2026-09-24-rereview-near.md` (the `nix` feature, the calling thread, and R5-3). This revision answers both; Confirmation accepted it.
 - Code review: pending.
