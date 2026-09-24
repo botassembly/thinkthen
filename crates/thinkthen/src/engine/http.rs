@@ -112,9 +112,11 @@ impl Client {
         let mut wait = exchange.retry_wait;
         let mut retries = 0;
         loop {
+            cancel.stop_or_remaining()?;
+            before_attempt();
+            // Accounting may wait on the usage lock, so read the budget after it.
             let budget = cancel.stop_or_remaining()?;
             let limit = budget.map_or(self.timeout, |budget| budget.min(self.timeout));
-            before_attempt();
             let attempt = match send(&self.agent, exchange, limit) {
                 Ok(body) => {
                     return Ok(HttpAnswer {
@@ -125,7 +127,7 @@ impl Client {
                 Err(attempt) => attempt,
             };
             if matches!(attempt.failure, Error::Transport(TransportKind::Timeout))
-                && limit < self.timeout
+                && budget.is_some_and(|budget| budget <= self.timeout)
                 && let Some(passed) = cancel.passed()
             {
                 return Err(passed);
