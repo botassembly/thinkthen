@@ -39,9 +39,17 @@ ACCEPTED_DEPENDENCIES = {
     "thinkthen": {
         "clap", "csv-core", "serde", "serde_json", "sha2", "signal-hook", "thiserror", "ureq"
     },
+    "conformance-backend": {"serde", "serde_json"},
 }
-ACCEPTED_TARGET_DEPENDENCIES = {"thinkthen": {"nix"}}
-ACCEPTED_DEV_DEPENDENCIES = {"thinkthen": {"proptest"}}
+ACCEPTED_TARGET_DEPENDENCIES = {"thinkthen": {"nix"}, "conformance-backend": set()}
+ACCEPTED_DEV_DEPENDENCIES = {
+    "thinkthen": {"proptest", "conformance-backend"},
+    "conformance-backend": set(),
+}
+# Ticket 0092 rules that a test-only, unpublished member may sit beside the
+# crate: the loopback backend every surface's tests start. It is held to the
+# same lints, license, size, and dependency tables as the crate.
+MEMBERS = {"thinkthen": "crates/thinkthen", "conformance-backend": "conformance/backend"}
 MAX_FILE_LINES = 500
 # Main held three `rustfmt::skip` attributes when ticket 0088 pinned this count.
 MAX_FORMAT_SKIPS = 3
@@ -209,8 +217,8 @@ def check_toolchain() -> None:
 def check_workspace() -> None:
     manifest = read_toml("Cargo.toml")
     workspace = manifest.get("workspace", {})
-    if workspace.get("members") != ["crates/thinkthen"]:
-        fail("workspace", "thinkthen is the one workspace member")
+    if workspace.get("members") != list(MEMBERS.values()):
+        fail("workspace", "thinkthen and the conformance backend are the workspace members")
     if workspace.get("resolver") != "3":
         fail("workspace", "resolver is 3")
     package = workspace.get("package", {})
@@ -229,48 +237,57 @@ def check_workspace() -> None:
         fail("lints", "the workspace Clippy lint table matches the accepted copy")
 
 
+def check_member(name: str) -> dict:
+    """Hold one member to the shared lints, license, and dependency tables."""
+    manifest = read_toml(f"{MEMBERS[name]}/Cargo.toml")
+    package = manifest.get("package", {})
+    if manifest.get("lints") != INHERITED:
+        fail("lints", f"{name} inherits the workspace lint table")
+    for field in ("edition", "rust-version"):
+        if package.get(field) != INHERITED:
+            fail("workspace", f"{name} inherits the workspace {field}")
+    if package.get("publish") is not False:
+        fail("workspace", f"{name} is not publishable while the repository is private")
+    if package.get("license") != "MIT":
+        fail("workspace", f'{name} declares license = "MIT", as ADR 0015 rules')
+    if set(manifest.get("dependencies", {})) != ACCEPTED_DEPENDENCIES[name]:
+        fail("dependencies", f"{name} declares the accepted direct dependency set")
+    target = manifest.get("target", {}).get("cfg(unix)", {}).get("dependencies", {})
+    if set(target) != ACCEPTED_TARGET_DEPENDENCIES[name]:
+        fail("dependencies", f"{name} declares the accepted target dependency set")
+    if set(manifest.get("dev-dependencies", {})) != ACCEPTED_DEV_DEPENDENCIES[name]:
+        fail("dependencies", f"{name} declares the accepted development dependency set")
+    return manifest
+
+
 def check_crates() -> None:
-    for name in sorted(ACCEPTED_DEPENDENCIES):
-        manifest = read_toml(f"crates/{name}/Cargo.toml")
-        package = manifest.get("package", {})
-        if manifest.get("lints") != INHERITED:
-            fail("lints", f"{name} inherits the workspace lint table")
-        for field in ("edition", "rust-version"):
-            if package.get(field) != INHERITED:
-                fail("workspace", f"{name} inherits the workspace {field}")
-        if package.get("publish") is not False:
-            fail("workspace", f"{name} is not publishable while the repository is private")
-        if package.get("license") != "MIT":
-            fail("workspace", f'{name} declares license = "MIT", as ADR 0015 rules')
-        if set(manifest.get("dependencies", {})) != ACCEPTED_DEPENDENCIES[name]:
-            fail("dependencies", f"{name} declares the accepted direct dependency set")
-        target = manifest.get("target", {}).get("cfg(unix)", {}).get("dependencies", {})
-        if set(target) != ACCEPTED_TARGET_DEPENDENCIES[name]:
-            fail("dependencies", f"{name} declares the accepted target dependency set")
-        if target.get("nix") != {
-            "version": "0.29",
-            "default-features": False,
-            "features": ["signal"],
-            "optional": True,
-        }:
-            fail("dependencies", "nix is optional on Unix with only its signal feature")
-        if set(manifest.get("dev-dependencies", {})) != ACCEPTED_DEV_DEPENDENCIES[name]:
-            fail("dependencies", f"{name} declares the accepted development dependency set")
-        optional = {
-            dependency for dependency, specification in
-            (manifest.get("dependencies", {}) | target).items()
-            if isinstance(specification, dict) and specification.get("optional") is True
-        }
-        if optional != {"clap", "csv-core", "nix"}:
-            fail("dependencies", "exactly the command dependencies are optional")
-        binary = manifest.get("bin", [])
-        if len(binary) != 1 or binary[0].get("required-features") != ["cli"]:
-            fail("workspace", "the binary requires the cli feature")
-        features = manifest.get("features", {})
-        if features.get("default") != ["cli"] or set(features.get("cli", [])) != {
-            "dep:clap", "dep:csv-core", "dep:nix",
-        }:
-            fail("dependencies", "the default cli feature selects only command dependencies")
+    backend = check_member("conformance-backend")
+    if backend.get("features") or backend.get("target"):
+        fail("dependencies", "the conformance backend declares no feature and no target table")
+    manifest = check_member("thinkthen")
+    target = manifest.get("target", {}).get("cfg(unix)", {}).get("dependencies", {})
+    if target.get("nix") != {
+        "version": "0.29",
+        "default-features": False,
+        "features": ["signal"],
+        "optional": True,
+    }:
+        fail("dependencies", "nix is optional on Unix with only its signal feature")
+    optional = {
+        dependency for dependency, specification in
+        (manifest.get("dependencies", {}) | target).items()
+        if isinstance(specification, dict) and specification.get("optional") is True
+    }
+    if optional != {"clap", "csv-core", "nix"}:
+        fail("dependencies", "exactly the command dependencies are optional")
+    binary = manifest.get("bin", [])
+    if len(binary) != 1 or binary[0].get("required-features") != ["cli"]:
+        fail("workspace", "the binary requires the cli feature")
+    features = manifest.get("features", {})
+    if features.get("default") != ["cli"] or set(features.get("cli", [])) != {
+        "dep:clap", "dep:csv-core", "dep:nix",
+    }:
+        fail("dependencies", "the default cli feature selects only command dependencies")
 
 
 def check_clippy_configs() -> None:
@@ -733,7 +750,9 @@ def check_crate_roots() -> None:
 
 
 def check_sources() -> None:
-    sources = sorted((REPO / "crates").rglob("*.rs"))
+    sources = sorted(
+        source for folder in ("crates", "conformance") for source in (REPO / folder).rglob("*.rs")
+    )
     if not sources:
         fail("size", "the workspace holds at least one Rust source file")
     for source in sources:
@@ -915,7 +934,7 @@ def check_dependencies() -> None:
     packages = {package["id"]: package for package in metadata["packages"]}
     members = {packages[identifier]["name"]: identifier for identifier in metadata["workspace_members"]}
     if set(members) != set(ACCEPTED_DEPENDENCIES):
-        fail("dependencies", "cargo metadata reports exactly the thinkthen package")
+        fail("dependencies", "cargo metadata reports exactly the accepted members")
         return
 
     nodes = {node["id"]: node for node in metadata["resolve"]["nodes"]}

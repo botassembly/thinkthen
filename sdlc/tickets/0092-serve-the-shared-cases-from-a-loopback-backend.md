@@ -6,7 +6,7 @@ opens: Cargo.toml Cargo.lock deny.toml conformance crates/thinkthen/Cargo.toml c
 
 # 0092: Serve the shared cases from a loopback backend
 
-Status: design accepted 2026-09-24 after re-review. Owner: Claude.
+Status: built 2026-09-24, code review pending. Design accepted 2026-09-24 after re-review. Owner: Claude.
 
 ## Outcome and authority
 

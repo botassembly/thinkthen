@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/thinkthen"]
+members = ["crates/thinkthen", "conformance/backend"]
 resolver = "3"
 
 [workspace.package]

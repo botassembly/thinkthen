@@ -26,6 +26,12 @@ mod interrupt;
 mod json_syntax;
 mod keeping;
 mod limits;
+mod loopback_arms;
+#[allow(
+    clippy::indexing_slicing,
+    reason = "a missing member of a shared case reads as null and fails its comparison"
+)]
+mod loopback_cases;
 mod parallel;
 mod profile;
 #[rustfmt::skip]
