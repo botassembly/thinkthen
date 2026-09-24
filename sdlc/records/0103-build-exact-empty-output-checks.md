@@ -7,7 +7,7 @@ Status: awaiting code review.
 - `spec/version.md` and `spec/decide.md` check an empty stream with `test -z`, the form 0083 used in `spec/transform.md`. The empty-record line in `spec/decide.md` now captures the output first, so `set -e` also checks that the command succeeds.
 - `sdlc/scripts/demos` refuses `mustmatch like ""` and `mustmatch not like ""` in `spec/*.md` and in every page under the demo root, red or green. The failure names the file and line.
 - `sdlc/scripts/demos-self-test` gains the `loose-empty` case. It counts its cases instead of printing a fixed number, which read 21 while 22 cases ran.
-- 41 `mustmatch like "N"` checks of short numbers in `spec/version.md` and `spec/decide.md` became exact `mustmatch "N"`. `like "2"` passes on an exit code of 12. `demos/` held none. The `mustmatch not like "0"` counts stay, because they cannot pass on a count of zero.
+- 37 `mustmatch like "N"` checks of short numbers in `spec/version.md` and `spec/decide.md` became exact `mustmatch "N"`. `like "2"` passes on an exit code of 12. `demos/` held none. The `mustmatch not like "0"` counts stay, because they cannot pass on a count of zero.
 
 ## Red and green
 
