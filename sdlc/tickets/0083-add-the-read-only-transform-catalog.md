@@ -1,12 +1,12 @@
 ---
 flow: build
 priority: 83
-opens: crates/thinkthen/src/cli crates/thinkthen/transforms crates/thinkthen/tests specification spec sdlc/scripts sdlc/ratchet.json sdlc/planning
+opens: crates/thinkthen/src/cli crates/thinkthen/transforms crates/thinkthen/tests specification spec sdlc/scripts sdlc/ratchet.json sdlc/planning sdlc/records sdlc/tickets transforms/README.md
 ---
 
 # 0083: Add the read-only transform catalog
 
-Status: draft, revised after design review; needs re-review. Owner: Claude.
+Status: design accepted 2026-09-24 after re-review. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex (Astra) reviews as the other vendor under `sdlc/planning/one-line-plan-2026-09-24.md`. Revised 2026-09-24 after `sdlc/records/0083-design-review.md`.
 
@@ -93,7 +93,7 @@ Release artifacts and publication remain later authorized work. This ticket prov
 
 ## Budgets
 
-Production Rust changes may touch at most four existing files and add one new file, `crates/thinkthen/src/cli/transform.rs`. That file holds both the nested `list` and `show` grammar and the closed table. A separate `cli/args/transform.rs` is not allowed. The likely existing files are `cli/mod.rs` for routing, `cli/args/command.rs` for the variant, and `sdlc/scripts/policy.py`, which is not Rust. They may add at most 180 nonblank production Rust lines. Total Rust additions, including tests, may not exceed 500 nonblank lines. The package adds exactly ten `.jq` files totaling 66,328 bytes and 1,418 newline-terminated lines, each byte-identical to the table above. Add no dependency and no build script. Keep every Rust source and test file within the repository's 500-nonblank-line ceiling.
+Production Rust changes may touch at most four existing files and add one new file, `crates/thinkthen/src/cli/transform.rs`. That file holds both the nested `list` and `show` grammar and the closed table. A separate `cli/args/transform.rs` is not allowed. The likely existing Rust files are `cli/mod.rs` for routing and `cli/args/command.rs` for the variant. The four-file cap counts Rust files only. `sdlc/scripts/policy.py`, `sdlc/scripts/package`, and `sdlc/scripts/lint` also change and do not count against it. They may add at most 180 nonblank production Rust lines. Total Rust additions, including tests, may not exceed 500 nonblank lines. The package adds exactly ten `.jq` files totaling 66,328 bytes and 1,418 newline-terminated lines, each byte-identical to the table above. Add no dependency and no build script. Keep every Rust source and test file within the repository's 500-nonblank-line ceiling.
 
 Search the existing nested `cache` command grammar, early `--version` path, locked writer, failure mapping, policy scanner, package rung, and compiled-command test helpers before raising the exact ratchet. The implementation record names every production file touched, the net Rust increase, and where duplication was removed or avoided. Stop and re-score before exceeding any file, line, byte, dependency, or surface bound.
 
@@ -109,7 +109,7 @@ Search the existing nested `cache` command grammar, early `--version` path, lock
 - Prove no standard-input or user-file access. Run with standard input held open and with decoy files named after every transform in the current directory; the commands complete from embedded bytes and leave access markers unchanged. The command grammar admits no input option or path, and policy forbids filesystem APIs in the catalog owner.
 - Run `cargo package --locked --offline`, inspect the generated `.crate`, and prove exactly the ten named package files and their bytes are present. Unpack it into a temporary directory outside the checkout, build it offline, remove the unpacked source tree after copying the binary, and run every `list` and `show` check from an empty directory. The isolated run must use no path back into the checkout.
 - Prove the package check can fail by changing one copied byte, deleting one packaged member, and adding one unlisted `.jq` member in isolated fixtures. Each planted fault must fail the rung for the stated reason.
-- Publish a Settled specification page for the two commands and an executable page that pins the list, one representative exact `show`, and the fixed unknown refusal. Update command help and the transform index without claiming that the tool runs a transform.
+- Publish a Settled specification page for the two commands and an executable page that pins the list, one representative exact `show`, and the fixed unknown refusal. Update command help and the transform index in `transforms/README.md` without claiming that the tool runs a transform.
 - Run focused tests, the policy self-test, package rung, exact ratchet, formatting, Clippy, `git diff --check`, then all four local gates sequentially with key and base-address variables unset. An independent reviewer checks public names, exact bytes, early routing, forbidden-capability proof, package independence, exclusions, and budgets. No live or paid call runs.
 
 ## Dependencies and canonical status
