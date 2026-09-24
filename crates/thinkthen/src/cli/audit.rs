@@ -10,7 +10,7 @@ use clap::{Args, ValueEnum};
 
 use crate::cli::measure::{Cause, Refusal, read};
 use crate::core::measure::answer::{self, Rule};
-use crate::core::measure::audit::{self as grade, By, Row, Settings, Shown};
+use crate::core::measure::audit::{self as grade, By, Row, Settings, Shown, Suggested};
 use crate::core::measure::key::Key;
 use crate::core::measure::{json_lines, python_float_text, rounded, three_places};
 use crate::core::{Pointer, Threshold, json_line};
@@ -196,32 +196,12 @@ fn table(row: &Row, out: &mut String) {
             calibration.note
         ));
     }
-    if let Some(suggested) = &row.suggested {
-        match (suggested.cut, &suggested.tune, &suggested.held) {
-            (Some(cut), Some(tune), Some(held)) => {
-                let extra = if row.verb == Some("decide") {
-                    let [run, at] = [&held.at_run, &held.at_cut].map(|c| three(c.yes_recall));
-                    format!(", yes recall {run} -> {at}")
-                } else {
-                    let [run, at] = [&held.at_run, &held.at_cut].map(|c| three(c.coverage));
-                    format!(", coverage {run} -> {at}")
-                };
-                line(format!(
-                    "  suggested cut {} ({}; {} split, tuned on {}, checked on {} held out): held agreement {} as run -> {} at the cut{extra}",
-                    python_float_text(rounded(cut)),
-                    suggested.objective,
-                    suggested.split,
-                    tune.n,
-                    held.n,
-                    three(held.at_run.agreement),
-                    three(held.at_cut.agreement)
-                ));
-            }
-            _ => line(format!(
-                "  suggested cut: none reaches {}",
-                suggested.objective
-            )),
-        }
+    if let Some(text) = row
+        .suggested
+        .as_ref()
+        .map(|suggested| suggested_line(row, suggested))
+    {
+        line(text);
     }
     for (place, point) in row.coverage.iter().flatten().enumerate() {
         if place == 0 {
@@ -239,4 +219,29 @@ fn table(row: &Row, out: &mut String) {
             three(point.accuracy)
         ));
     }
+}
+
+/// The suggested cut's line, or the sentence that says no cut reaches the target.
+fn suggested_line(row: &Row, suggested: &Suggested) -> String {
+    let (Some(cut), Some(tune), Some(held)) = (suggested.cut, &suggested.tune, &suggested.held)
+    else {
+        return format!("  suggested cut: none reaches {}", suggested.objective);
+    };
+    let extra = if row.verb == Some("decide") {
+        let [run, at] = [&held.at_run, &held.at_cut].map(|c| three(c.yes_recall));
+        format!(", yes recall {run} -> {at}")
+    } else {
+        let [run, at] = [&held.at_run, &held.at_cut].map(|c| three(c.coverage));
+        format!(", coverage {run} -> {at}")
+    };
+    format!(
+        "  suggested cut {} ({}; {} split, tuned on {}, checked on {} held out): held agreement {} as run -> {} at the cut{extra}",
+        python_float_text(rounded(cut)),
+        suggested.objective,
+        suggested.split,
+        tune.n,
+        held.n,
+        three(held.at_run.agreement),
+        three(held.at_cut.agreement)
+    )
 }

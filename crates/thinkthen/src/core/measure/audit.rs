@@ -333,7 +333,7 @@ fn cut(k: u32) -> Threshold {
 
 /// A rule's number as the band text writes it: `0.45`, `0.3`, `0`, `1`.
 fn number(hundredths: u32) -> String {
-    if hundredths % 100 == 0 {
+    if hundredths.is_multiple_of(100) {
         (hundredths / 100).to_string()
     } else {
         python_float_text(f64::from(hundredths) / 100.0)

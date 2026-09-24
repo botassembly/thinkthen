@@ -3,13 +3,90 @@
 //! Two outputs match when they hold the same JSON values in the same order,
 //! objects with the same member names in the same order, and each golden
 //! float is a float within `1e-6 + 1e-12`, one last place after rounding.
+#![allow(dead_code, reason = "each test file uses part of the helper")]
 
 use std::fmt;
+use std::fs;
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 
 use serde::de::{Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
+
+/// Each golden file and the audit command line that prints it.
+pub(crate) const GOLDENS: [(&str, &[&str]); 10] = [
+    (
+        "golden/audit-decide.jsonl",
+        &["small/decide.jsonl", "small/decide-key.jsonl"],
+    ),
+    (
+        "golden/audit-decide-0.4.jsonl",
+        &[
+            "small/decide.jsonl",
+            "small/decide-key.jsonl",
+            "--threshold",
+            "0.4",
+        ],
+    ),
+    (
+        "golden/audit-decide-band.jsonl",
+        &["small/decide-band.jsonl", "small/decide-key.jsonl"],
+    ),
+    (
+        "golden/audit-decide-bare.jsonl",
+        &["small/decide-bare.jsonl", "small/decide-key.jsonl"],
+    ),
+    (
+        "golden/audit-choose.jsonl",
+        &["small/choose.jsonl", "small/choose-key.jsonl"],
+    ),
+    (
+        "golden/audit-annotate.jsonl",
+        &["small/annotate.jsonl", "small/annotate-key.jsonl"],
+    ),
+    (
+        "golden/audit-249.jsonl",
+        &["249/control.jsonl", "249/key.jsonl", "--by", "verb"],
+    ),
+    (
+        "golden/audit-249-seed.jsonl",
+        &[
+            "249/control.jsonl",
+            "249/key-noparts.jsonl",
+            "--by",
+            "verb",
+            "--seed",
+            "249",
+        ],
+    ),
+    (
+        "golden/extra/audit-decide-reversed.jsonl",
+        &[
+            "small/decide-reversed.jsonl",
+            "small/decide-key-noparts.jsonl",
+        ],
+    ),
+    (
+        "golden/extra/audit-decide-odd.jsonl",
+        &["small/decide.jsonl", "small/decide-key-odd.jsonl"],
+    ),
+];
+
+/// Each table capture and the inputs it grades.
+pub(crate) const TABLES: [(&str, [&str; 2]); 3] = [
+    (
+        "golden/table/audit-decide.txt",
+        ["small/decide.jsonl", "small/decide-key.jsonl"],
+    ),
+    (
+        "golden/table/audit-choose.txt",
+        ["small/choose.jsonl", "small/choose-key.jsonl"],
+    ),
+    (
+        "golden/table/audit-annotate.txt",
+        ["small/annotate.jsonl", "small/annotate-key.jsonl"],
+    ),
+];
 
 /// The fixture folder every command line runs from.
 pub(crate) fn fixtures() -> PathBuf {
@@ -128,4 +205,26 @@ pub(crate) fn same_lines(got: &str, golden: &str) -> Result<(), String> {
         &Ordered::List(parse(golden)),
         "",
     )
+}
+
+/// Run `audit` with these arguments and input: the exit code, standard output, and standard error.
+pub(crate) fn audit(arguments: &[&str], input: &[u8]) -> (i32, String, String) {
+    let output = run(&[&["audit"], arguments].concat(), input);
+    let text = |bytes: Vec<u8>| String::from_utf8(bytes).expect("UTF-8 output");
+    (
+        output.status.code().expect("an exit code"),
+        text(output.stdout),
+        text(output.stderr),
+    )
+}
+
+/// A fixture file as text.
+pub(crate) fn fixture(path: &str) -> String {
+    fs::read_to_string(fixtures().join(path)).expect("a fixture")
+}
+
+/// One row member as its compact JSON text.
+pub(crate) fn member(line: &str, pointer: &str) -> String {
+    let row: serde_json::Value = serde_json::from_str(line).expect("a JSON row");
+    row.pointer(pointer).expect("the member").to_string()
 }
