@@ -43,7 +43,7 @@ Red first: before any arm existed, a stub that sent every request to the drift s
 
 ## Ceiling
 
-44778 to 45905 (+1127): the backend +870, of which 361 lines moved; the harness -371; `loopback_cases.rs` +430; `loopback_arms.rs` +192; `main.rs` +6.
+Built at 44778 to 45905. After the rebase onto `c53b6f78` it is 44867 to 45994, the same +1127: the backend +870, of which 361 lines moved; the harness -371; `loopback_cases.rs` +430; `loopback_arms.rs` +192; `main.rs` +6.
 
 ## Checks
 
