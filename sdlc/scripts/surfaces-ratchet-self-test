@@ -49,14 +49,20 @@ git config user.email self-test@example.invalid
 # change, say) would fail every case below. The clone accepts exactly the
 # commits the real ratchet names, so each case tests only what it adds.
 # The real ratchet, run after this test, still judges those commits.
+# The ratchet names one kind of waiting commit per run, so the clone
+# asks again until nothing new is named.
 cp "$SCRIPT" sdlc/scripts/surfaces-ratchet.mjs
-waiting=$(node sdlc/scripts/surfaces-ratchet.mjs 2>&1 | grep -oE '\b[0-9a-f]{40}\b' || true)
-if [ -n "$waiting" ]; then
-  mkdir -p sdlc/records
-  for sha in $waiting; do echo "Verdict: ACCEPT $sha"; done > sdlc/records/REVIEW-self-test-baseline.md
-  git add sdlc/records/REVIEW-self-test-baseline.md
+mkdir -p sdlc/records
+baseline=sdlc/records/REVIEW-self-test-baseline.md
+for _ in 1 2 3; do
+  waiting=$(node sdlc/scripts/surfaces-ratchet.mjs 2>&1 | grep -oE '\b[0-9a-f]{40}\b' || true)
+  [ -n "$waiting" ] || break
+  for sha in $waiting; do echo "Verdict: ACCEPT $sha"; done >> "$baseline"
+  git add "$baseline"
   git commit -q -m "Accept the commits awaiting review, for the self-test only" -m "baseline"
-  echo "note:    the clone accepts $(echo "$waiting" | wc -l) commit(s) still awaiting review; the real ratchet judges them next"
+done
+if [ -f "$baseline" ]; then
+  echo "note:    the clone accepts $(wc -l < "$baseline") commit(s) still awaiting review; the real ratchet judges them next"
 fi
 start=$(git rev-parse HEAD)
 fresh() {
