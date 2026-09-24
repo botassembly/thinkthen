@@ -48,6 +48,37 @@ fn file_backed_dry_run_reports_every_independent_precedence_source() {
             "field":"command line","kind_field":"file","profile":"file"
         })
     );
+
+    // A runtime backend profile is reported apart and leaves the saved
+    // calibration identity and its provenance alone.
+    let runtime = written(
+        "relate-runtime-profile",
+        r#"{"schema":"thinkthen.backend-profile/1","name":"runtime","max_questions":8}"#,
+    );
+    let runtime = runtime.strip_prefix('@').unwrap_or(&runtime);
+    let profiled = run(
+        &[
+            "relate",
+            &file,
+            "--dry-run",
+            "--url",
+            CLOSED,
+            "--no-cache",
+            "--profile",
+            runtime,
+        ],
+        br#"[{"title":"Ada","type":"person"},{"title":"Acme","type":"organization"}]"#,
+    )
+    .expect("binary runs");
+    assert_eq!(
+        profiled.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&profiled.stderr)
+    );
+    let profiled: Value = serde_json::from_slice(&profiled.stdout).expect("plan");
+    assert_eq!(profiled["backend_profile"], "runtime");
+    assert_eq!(profiled["from"]["profile"], "file");
 }
 
 #[test]
