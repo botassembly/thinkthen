@@ -3,17 +3,17 @@
 //! The command reads the two paths it is handed and nothing else, sends no
 //! request, and reads no setting. `sdlc/scripts/policy.py` holds it to that.
 
-use std::io::{ErrorKind, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use clap::{Args, ValueEnum};
 
-use crate::cli::measure::{Cause, Refusal, read};
-use crate::core::measure::answer::{self, Rule};
-use crate::core::measure::audit::{self as grade, By, Row, Settings, Shown, Suggested};
+use crate::cli::measure::{Cause, Refusal, lines, rule, write};
+use crate::core::Pointer;
+use crate::core::measure::answer::{self, Identity};
+use crate::core::measure::audit::{self as grade, By, Row, Settings, Suggested};
 use crate::core::measure::key::Key;
-use crate::core::measure::{json_lines, python_float_text, rounded, rounded_line, three_places};
-use crate::core::{Pointer, Threshold};
+use crate::core::measure::{places, python_float_text, rounded, rounded_line};
 use crate::failure::Failure;
 
 /// The command line of `audit`. Its help is on the `Audit` command.
@@ -62,7 +62,7 @@ fn target(text: &str) -> Result<f64, String> {
 }
 
 /// Grade, then write JSON lines or the table and flush.
-pub(crate) fn run(arguments: &AuditArguments, mut writer: impl Write) -> Result<(), Failure> {
+pub(crate) fn run(arguments: &AuditArguments, writer: impl Write) -> Result<(), Failure> {
     let rows = grade_all(arguments).map_err(Failure::Measure)?;
     let mut text = String::new();
     for row in &rows {
@@ -73,13 +73,7 @@ pub(crate) fn run(arguments: &AuditArguments, mut writer: impl Write) -> Result<
             text.push('\n');
         }
     }
-    match writer
-        .write_all(text.as_bytes())
-        .and_then(|()| writer.flush())
-    {
-        Err(error) if error.kind() != ErrorKind::BrokenPipe => Err(Failure::Output(error)),
-        _ => Ok(()),
-    }
+    write(writer, &text)
 }
 
 fn grade_all(arguments: &AuditArguments) -> Result<Vec<Row>, Refusal> {
@@ -94,27 +88,12 @@ fn grade_all(arguments: &AuditArguments) -> Result<Vec<Row>, Refusal> {
     }
     let pointer =
         Pointer::new(arguments.id.as_str()).map_err(|_| refusal("results", Cause::Pointer))?;
-    let (rule, shown) = match &arguments.threshold {
-        None => (Rule::AsRun, Shown::AsRun),
-        Some(text) => {
-            let threshold: Threshold = text
-                .parse()
-                .map_err(|error| refusal("results", Cause::Rule("--threshold", error)))?;
-            let shown = threshold
-                .cut_value()
-                .map_or_else(|| Shown::Band(text.clone()), Shown::Cut);
-            (Rule::Threshold(threshold), shown)
-        }
-    };
-    let lines = |role, path: &Path| {
-        read(path)
-            .and_then(|bytes| json_lines(&bytes).map_err(Cause::Measure))
-            .map_err(|cause| refusal(role, cause))
-    };
-    let results = lines("results", &arguments.results)?;
-    let key_lines = lines("key", &arguments.key)?;
-    let answers =
-        answer::read(&results, &pointer).map_err(|e| refusal("results", Cause::Measure(e)))?;
+    let (rule, shown) = rule("--threshold", arguments.threshold.as_deref())
+        .map_err(|cause| refusal("results", cause))?;
+    let results = lines(&arguments.results).map_err(|cause| refusal("results", cause))?;
+    let key_lines = lines(&arguments.key).map_err(|cause| refusal("key", cause))?;
+    let answers = answer::read(&results, &pointer, Identity::Question)
+        .map_err(|e| refusal("results", Cause::Measure(e)))?;
     let key = Key::read(&key_lines).map_err(|e| refusal("key", Cause::Measure(e)))?;
     let settings = Settings {
         by: match arguments.by {
@@ -131,15 +110,7 @@ fn grade_all(arguments: &AuditArguments) -> Result<Vec<Row>, Refusal> {
 
 /// A float as the table writes a number: three places, or `-` for none.
 fn three(value: Option<f64>) -> String {
-    three_places(value.map(rounded))
-}
-
-fn shown(rule: &Shown) -> String {
-    match rule {
-        Shown::AsRun => "as run".to_owned(),
-        Shown::Cut(cut) => python_float_text(rounded(*cut)),
-        Shown::Band(band) => band.clone(),
-    }
+    places(value.map(rounded), 3)
 }
 
 /// The prototype's table for one group, word for word.
@@ -155,7 +126,7 @@ fn table(row: &Row, out: &mut String) {
         row.rows,
         row.labeled,
         row.failed,
-        shown(&row.threshold)
+        row.threshold.text()
     ));
     let [low, high] = row
         .interval
@@ -213,7 +184,7 @@ fn table(row: &Row, out: &mut String) {
         line(format!(
             "  {:>5}  {:<10} {:>8} {:>8} {:>8}",
             python_float_text(rounded(point.cut)),
-            shown(&point.threshold),
+            point.threshold.text(),
             point.answered,
             three(point.coverage),
             three(point.accuracy)

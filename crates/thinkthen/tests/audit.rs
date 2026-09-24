@@ -70,7 +70,7 @@ fn every_fixture_keeps_its_checksum() {
     }
     found.sort();
     assert_eq!(found, listed);
-    assert_eq!(listed.len(), 40);
+    assert_eq!(listed.len(), 45);
 }
 
 #[test]

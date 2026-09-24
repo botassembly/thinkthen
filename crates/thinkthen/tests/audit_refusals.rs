@@ -18,13 +18,14 @@ use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-use measure_support::{GOLDENS, TABLES, audit, fixtures, run};
+use measure_support::{DIFF_GOLDENS, DIFF_TABLES, GOLDENS, TABLES, audit, fixtures, measure, run};
 
 /// A decide line whose record id and text are planted secrets.
 const YES: &str = "{\"input\":{\"id\":\"secret-id-5150\",\"text\":\"secret-text\"},\"value\":true,\"answer\":{\"probability\":0.9}}\n";
 
 /// The key files a refusal names as `@name`, with a planted key value.
-const FILES: [(&str, &str); 6] = [
+const FILES: [(&str, &str); 7] = [
+    ("run.jsonl", YES),
     (
         "key.jsonl",
         "{\"id\":\"secret-id-5150\",\"value\":\"secret-value\"}\n",
@@ -42,112 +43,198 @@ const FILES: [(&str, &str); 6] = [
     ),
 ];
 
-/// Each refusal: the arguments, standard input (`YES` where empty is not asked), the exit code, and the sentence.
-const REFUSALS: [(&str, &str, i32, &str); 20] = [
+/// One record twice under one answer, asked in two question texts.
+const TWICE: &str = "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":true,\"question\":{\"text\":\"secret-text\"}}\n{\"input\":{\"id\":\"secret-id-5150\"},\"value\":true,\"question\":{\"text\":\"other\"}}\n";
+
+/// Each refusal: the command line, standard input (`YES` where empty is not asked), the exit code, and the sentence.
+const REFUSALS: [(&str, &str, i32, &str); 33] = [
     (
-        "@secret-path @key.jsonl",
+        "audit @secret-path @key.jsonl",
         "",
         5,
         "cannot read the results file",
     ),
-    ("- @secret-path", YES, 5, "cannot read the key file"),
+    ("audit - @secret-path", YES, 5, "cannot read the key file"),
     (
-        "- @key.jsonl",
+        "audit - @key.jsonl",
         "{\"input\":{\"id\":\"secret-id-5150\"}}\n\n[\"secret-text\"]\n",
         2,
         "results line 3 is not a JSON object",
     ),
-    ("- @dup.jsonl", YES, 2, "key line 1 is not a JSON object"),
     (
-        "- @key.jsonl",
+        "audit - @dup.jsonl",
+        YES,
+        2,
+        "key line 1 is not a JSON object",
+    ),
+    (
+        "audit - @key.jsonl",
         "{\"input\":{\"id\":1.5},\"value\":true}\n",
         2,
         "results line 1 has no string or integer id at the --id pointer",
     ),
     (
-        "- @key.jsonl --id secret-text",
+        "audit - @key.jsonl --id secret-text",
         YES,
         2,
         "--id takes a JSON pointer such as /id or ''",
     ),
     (
-        "- @key.jsonl",
+        "audit - @key.jsonl",
         "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":[],\"question\":{\"verb\":\"tag\",\"text\":\"secret-text\"}}\n",
         2,
         "results line 1 holds an answer audit cannot grade; audit grades decide and choose",
     ),
     (
-        "- @key.jsonl",
+        "audit - @key.jsonl",
         "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":true,\"question\":{\"verb\":\"choose\"}}\n",
         2,
         "results line 1 holds an answer audit cannot grade; audit grades decide and choose",
     ),
     (
-        "- @key.jsonl",
+        "audit - @key.jsonl",
         "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":5,\"question\":{\"verb\":\"choose\"}}\n",
         2,
         "results line 1 holds an answer audit cannot grade; audit grades decide and choose",
     ),
     (
-        "- @key.jsonl",
+        "audit - @key.jsonl",
         "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":true,\"answer\":{\"probability\":1.5}}\n",
         2,
         "results line 1 holds a probability outside 0 to 1 or an empty distribution",
     ),
     (
-        "- @key.jsonl",
+        "audit - @key.jsonl",
         "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":\"secret-text\",\"answer\":{\"probabilities\":{}}}\n",
         2,
         "results line 1 holds a probability outside 0 to 1 or an empty distribution",
     ),
     (
-        "- @key.jsonl",
+        "audit - @key.jsonl",
         "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":true}\n{\"input\":{\"id\":\"secret-id-5150\"},\"value\":false}\n",
         2,
         "results line 2 repeats a record for one question",
     ),
     (
-        "- @part.jsonl",
+        "audit - @part.jsonl",
         YES,
         2,
         "key line 1 needs a new id, a value, and a part of tune or held when present",
     ),
     (
-        "- @choose.jsonl",
+        "audit - @choose.jsonl",
         "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":\"secret-text\"}\n",
         2,
         "key line 1 gives a choose value that is not text",
     ),
     (
-        "- @mixed.jsonl",
+        "audit - @mixed.jsonl",
         "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":true,\"answer\":{\"probability\":0.9}}\n{\"input\":{\"id\":\"b\"},\"value\":true,\"answer\":{\"probability\":0.9}}\n",
         2,
         "the key gives a part on some labeled records and not on others",
     ),
     (
-        "- @key.jsonl",
+        "audit - @key.jsonl",
         "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":true,\"question\":{\"text\":\"secret-text\"}}\n{\"input\":{\"id\":\"b\"},\"value\":\"a\",\"question\":{\"text\":\"secret-text\"}}\n",
         2,
         "one question holds both decide and choose answers",
     ),
     (
-        "- @yes.jsonl --threshold 0.5",
+        "audit - @yes.jsonl --threshold 0.5",
         "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":true}\n",
         2,
         "--threshold needs probabilities; rerun the question with --details",
     ),
     (
-        "small/choose.jsonl small/choose-key.jsonl --threshold 0.4:0.6",
+        "audit small/choose.jsonl small/choose-key.jsonl --threshold 0.4:0.6",
         "",
         2,
         "choose takes a single cut; a band applies to decide",
     ),
-    ("- -", YES, 2, "only one input may be standard input"),
+    ("audit - -", YES, 2, "only one input may be standard input"),
     (
-        "- @key.jsonl --threshold 0",
+        "audit - @key.jsonl --threshold 0",
         YES,
         2,
         "--threshold: a single cut is above zero and at most one",
+    ),
+    (
+        "diff @secret-path",
+        "",
+        2,
+        "diff needs a second run or --compare-threshold",
+    ),
+    (
+        "diff - @run.jsonl",
+        TWICE,
+        2,
+        "first run line 2 repeats a record for one answer",
+    ),
+    (
+        "diff @run.jsonl -",
+        TWICE,
+        2,
+        "second run line 2 repeats a record for one answer",
+    ),
+    (
+        "diff - @run.jsonl --key -",
+        YES,
+        2,
+        "only one input may be standard input",
+    ),
+    (
+        "diff @secret-path @run.jsonl",
+        "",
+        5,
+        "cannot read the first run file",
+    ),
+    (
+        "diff @run.jsonl @secret-path",
+        "",
+        5,
+        "cannot read the second run file",
+    ),
+    (
+        "diff @run.jsonl @run.jsonl --key @secret-path",
+        "",
+        5,
+        "cannot read the key file",
+    ),
+    (
+        "diff @run.jsonl --compare-threshold 2",
+        "",
+        2,
+        "--compare-threshold: a single cut is above zero and at most one",
+    ),
+    (
+        "diff @run.jsonl @run.jsonl --threshold secret-text",
+        "",
+        2,
+        "--threshold: a threshold is a decimal fraction, or two of them as LOW:HIGH",
+    ),
+    (
+        "diff - @run.jsonl",
+        "{\"input\":{\"id\":\"secret-id-5150\"}}\n\n[\"secret-text\"]\n",
+        2,
+        "first run line 3 is not a JSON object",
+    ),
+    (
+        "diff @run.jsonl -",
+        "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":[],\"question\":{\"verb\":\"tag\"}}\n",
+        2,
+        "second run line 1 holds an answer diff cannot grade; diff grades decide and choose",
+    ),
+    (
+        "diff @run.jsonl @run.jsonl --key @dup.jsonl",
+        "",
+        2,
+        "key line 1 is not a JSON object",
+    ),
+    (
+        "diff - --compare-threshold 0.5",
+        "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":true}\n",
+        2,
+        "--threshold needs probabilities; rerun the question with --details",
     ),
 ];
 
@@ -162,10 +249,10 @@ fn each_failure_prints_one_line_that_names_no_record_id_value_or_path() {
     for (arguments, input, expected, sentence) in REFUSALS {
         let arguments = words(arguments, &root);
         let arguments: Vec<&str> = arguments.iter().map(String::as_str).collect();
-        let (code, stdout, stderr) = audit(&arguments, input.as_bytes());
+        let (code, stdout, stderr) = measure(&arguments, input.as_bytes());
         assert_eq!(
             stderr,
-            format!("thinkthen: audit: {sentence}\n"),
+            format!("thinkthen: {}: {sentence}\n", arguments[0]),
             "{arguments:?}"
         );
         assert_eq!((code, stdout.as_str()), (expected, ""), "{sentence}");
@@ -198,7 +285,7 @@ fn help_names_audit_after_transform_and_says_what_it_never_does() {
     let text =
         |arguments: &[&str]| String::from_utf8(run(arguments, b"").stdout).expect("UTF-8 help");
     let root = text(&["--help"]);
-    assert!(root.contains(&format!("\n  transform  List or print the built-in jq transforms without running them\n  audit      {}\n  help ", ROW.trim_end_matches('.'))), "{root}");
+    assert!(root.contains(&format!("\n  transform  List or print the built-in jq transforms without running them\n  audit      {}\n  diff ", ROW.trim_end_matches('.'))), "{root}");
     assert!(text(&["audit", "-h"]).starts_with(&format!("{}\n\n", ROW.trim_end_matches('.'))));
     let long = text(&["audit", "--help"]);
     assert!(long.starts_with(&format!("{ROW}\n\n")), "{long}");
@@ -256,12 +343,23 @@ fn audit_sends_no_request_reads_no_key_and_writes_nothing() {
     let owned = |list: &[&str]| list.iter().map(|word| (*word).to_owned()).collect();
     let mut lines: Vec<(Vec<String>, &str)> = GOLDENS
         .iter()
-        .map(|(_, arguments)| (owned(arguments), ""))
+        .map(|(_, arguments)| (owned(&[&["audit"], *arguments].concat()), ""))
         .collect();
     lines.extend(
         TABLES
             .iter()
-            .map(|(_, [results, key])| (owned(&[results, key, "--table"]), "")),
+            .map(|(_, [results, key])| (owned(&["audit", results, key, "--table"]), "")),
+    );
+    lines.extend(
+        DIFF_GOLDENS
+            .iter()
+            .chain(&DIFF_TABLES)
+            .map(|(_, arguments)| (owned(&[&["diff"], *arguments, &["--table"]].concat()), "")),
+    );
+    lines.extend(
+        DIFF_GOLDENS
+            .iter()
+            .map(|(_, arguments)| (owned(&[&["diff"], *arguments].concat()), "")),
     );
     lines.extend(
         REFUSALS
@@ -271,7 +369,6 @@ fn audit_sends_no_request_reads_no_key_and_writes_nothing() {
     for (arguments, input) in lines {
         let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
         command
-            .arg("audit")
             .args(&arguments)
             .env_clear()
             .current_dir(fixtures())

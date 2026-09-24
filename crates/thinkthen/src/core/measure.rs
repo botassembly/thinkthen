@@ -6,6 +6,7 @@
 
 pub(crate) mod answer;
 pub(crate) mod audit;
+pub(crate) mod diff;
 pub(crate) mod key;
 
 use serde::Serialize;
@@ -52,6 +53,9 @@ pub(crate) enum MeasureError {
     /// A band was named over a `choose` answer.
     BandOnChoose,
 }
+
+/// One numbered JSON line of an input.
+pub(crate) type Line = (usize, Json);
 
 /// Every nonblank line of an input as a JSON object, with its one-based number.
 ///
@@ -246,14 +250,28 @@ pub(crate) fn calibration(pairs: &[(f64, bool)], seed: u64) -> Option<Calibratio
     })
 }
 
+/// The exact two-sided McNemar test: the binomial test of the discordant pairs at one half.
+///
+/// The terms are summed in log space, so any count works without big integers.
+pub(crate) fn mcnemar(a: usize, b: usize) -> f64 {
+    let n = a + b;
+    let mut term = -(n as f64) * std::f64::consts::LN_2;
+    let mut tail = term.exp();
+    for i in 0..a.min(b) {
+        term += ((n - i) as f64 / (i + 1) as f64).ln();
+        tail += term.exp();
+    }
+    (2.0 * tail).min(1.0)
+}
+
 /// A float rounded to six places, as Python's `round(x, 6)` does.
 pub(crate) fn rounded(value: f64) -> f64 {
     format!("{value:.6}").parse().unwrap_or(value)
 }
 
-/// A float with three decimals, rounded half to even on its exact binary value.
-pub(crate) fn three_places(value: Option<f64>) -> String {
-    value.map_or_else(|| "-".to_owned(), |value| format!("{value:.3}"))
+/// A float with this many decimals, rounded half to even on its exact binary value, or `-` for none.
+pub(crate) fn places(value: Option<f64>, digits: usize) -> String {
+    value.map_or_else(|| "-".to_owned(), |value| format!("{value:.digits$}"))
 }
 
 /// A float as Python's `str` writes it: the shortest text that reads back,
