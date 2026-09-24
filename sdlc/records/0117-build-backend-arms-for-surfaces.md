@@ -1,13 +1,13 @@
 # 0117: The loopback backend arms the surface tests need
 
-Status: built on `ticket/0117-backend-arms-for-surfaces`. Code review pending. Not merged.
+Status: built on `ticket/0117-backend-arms-for-surfaces`. The code review (`sdlc/records/0117-code-review.md`) found two blocking items and two gaps. All four are fixed below. Not merged.
 
 ## Result
 
 - `/arm/delay/MS/v1` answers by the generic rule after MS milliseconds. The sleep runs on each connection's own thread through `Canned::after`. A value that is not a whole number gets status 500 and `the delay arm needs a whole number of milliseconds`. A value above 10000 gets status 500 and `the delay arm allows at most 10000 milliseconds`. Both answer at once.
 - A whole number is ASCII digits only. `whole` in `arms.rs` checks the digits before it parses, so `+200` is refused. The delay arm and `wait` share it.
 - The held gate holds an open flag and a round number. A held reply takes the round number when its answer is chosen. `round` and `Backend::round` add one to the number. `release` and `Backend::release` set the flag and stay permanent.
-- `serve_kept` in `listener.rs` now chooses the answer before it counts the request. A comment says why.
+- `serve_kept` in `listener.rs` adds the request to in-flight and peak, then chooses the answer, then adds it to the count. A comment says why.
 - `Backend::wait(n)` returns the count once it reads at least N, or at 5 s. The `wait N` line runs it on a thread of its own and then prints `wait K`. Every output line goes through one lock.
 - `run` now takes an output that is `Send + 'static`, and `main` passes `io::stdout()`. The `wait` thread is detached, so closing standard input prints the final count and exits without waiting for it.
 - `Listener` keeps its record receiver behind a `Mutex`. `Backend` is then shareable with the `wait` thread. The public API of `Listener` is unchanged.
@@ -72,6 +72,14 @@ The bad-`wait` test first followed the ticket's wording: send three lines, close
 
 The start cost measured again: twenty debug binaries started at once, and each read its port line. Three runs took 20 ms, 21 ms, and 18 ms, with twenty distinct ports each, at a one-minute load near 5. The design review measured 112 ms at a load near 13.
 
+## Code review fixes
+
+- **In-flight order.** Choosing the reply before the in-flight count hid a blocked request from the peak. The 0116 test `one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32` then flaked, because its `answering` closure blocks. Only the request count now follows the reply. On the merged tree `8d568bd1` that test passed 20 of 20 runs.
+- **`wait +0`.** The bad-`wait` test sends `wait +0` in place of `wait +1`. With a `wait` parse through `str::parse::<usize>`, it read `wait 0` and failed.
+- **Standard error.** `a_delay_refusal_says_why_on_standard_error` pins both refusal lines. With the whole-number refusal built without `drift`, it read only the ceiling line and failed.
+- **Exit.** `closing_the_input_exits_without_waiting_for_a_pending_wait` sends `wait 1`, closes the input, and requires the exit within 1 s with only the final count. With `run` joining every pending `wait`, it read `wait 0` and `0` after 5 s and failed.
+- The round-order plant, with count before choosing and a 20 ms sleep, still turns `fifty_rounds_back_to_back_…` red under the new order.
+
 ## Budgets
 
 | Budget | Limit | Measured, nonblank lines |
@@ -79,19 +87,10 @@ The start cost measured again: twenty debug binaries started at once, and each r
 | `conformance/backend/src` | 80 | 77 |
 | `conformance/backend/tests/binary.rs` | 260 | 232 |
 | `conformance/README.md` | 30 | 15 |
-| Ratchet rise | 340 | 309, from 47007 to 47316 |
+| Ratchet rise | 340 | 335 |
 
-The ratchet rose in two commits. `4ce44871` added 299, and `db84ef82` added 10 for the bad-`wait` silence check.
+The source measures 78 and the tests 257 after the review fixes. The ratchet rose in three commits: `4ce44871` added 299, `db84ef82` added 10 for the bad-`wait` silence check, and `fe40e545` added 26 for the review fixes. The merge with `origin/main` at `9f47bd18` set it to the measured 48475, main's 48140 plus 335.
 
 ## Checks
 
-The full ladder ran once at `db84ef82` with `THINKTHEN_API_KEY`, `THINKTHEN_BASE_URL`, and `THINKTHEN_URL` unset.
-
-- `install`: exit 0.
-- `lint`: exit 0, with the ratchet at 47316/47316.
-- `test`: exit 0. The cargo suites reported 779 passed and 0 failed, including all 15 tests in `binary.rs` and `a_held_reply_answers_only_after_its_release` in `crates`. `live-test: all cases passed`. It uses dummy keys and local jobs.
-- `spec`: exit 0, `demos: 21 green, 0 red`.
-
-The commit after `db84ef82` adds only Markdown: this record, the issue note, and the ticket's review line.
-
-`sdlc/scripts/live` did not run.
+CHECKS
