@@ -173,3 +173,13 @@ Contract 3; state and timing 3; reach 2; proof 3; cost of error 3; total 14. Fin
 
 - Design review: `sdlc/records/2026-09-24-design-review-0107.md` found nine items, all answered. R3-25 now sets width 4 and runs on a pool of 2 (decision 4 closes the row). The deny plant uses the `file://` git repository and pins `source-not-allowed`. `check.sh` builds and names the backend and the command. The pack list holds eight paths. The R4-14 TypeScript half has a row. The detachable worker lets Node exit after an abort, and a test proves it. Huge deadlines name the JavaScript number. The test and JavaScript budgets rose and name their helpers. The `unsafe` step has an exact pattern, the tag's `lto` leaves, the deadline test cites 0086, and the licenses are named. The coordinator then replaced the hidden width hook with the public engine settings of ADR 0017 section 5 (decision 3, shared rule at `446a4d6b`). The confirmation (same file) rejected on three findings: the unmeasured worker stack, a settings plant that could reach the public address, and a missing `cache` that overrode the environment. Amendment changes 1 to 3 of 2026-09-24 answer them, change 1 under the no-paid-backend rule at `d783ab6b`. Two builder notes landed: `XDG_CACHE_HOME` under the test folder and exponent form below 1e-6. The final check (same file) accepted it at `7256b957`.
 - Code review: pending.
+
+## Evidence
+
+Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk.md` asks every product ticket to name these five parts. This note changes no design.
+
+- Starts from: The tag `surfaces-wave7-frozen-2026-09-24b` holds `libraries/typescript/index.js`, `index.mjs`, `index.d.ts`, `addon/src/lib.rs`, `package.json`, `build-addon.sh`, `check.sh`, and `DIVERGENCES.md`. Its tests sit in `libraries/typescript/tests/`, 13 tests, two fork helpers, and `form.json`. `experiments/205-thinkthen-libs/FINDINGS.md` measured 16 to 43 µs added per native call and suggested a bytes form for large batches. `repos/jev-experiments`: none found.
+- Keeps: The exported names, the roles of `CancelHandle`, `Op`, `guarded`, and `deadline_of`, and the assertions of the ported tests.
+- Changes: Calls go through one JSON door on a worker thread per call. `tt.Engine` holds settings, `find` returns `null`, and offsets count UTF-16 units. The stand-in cases and `DIVERGENCES.md` retire, as "What moves from the tag" lists.
+- Proof: Abort rejects within 100 ms for a single call and a batch with plants, a 300 ms deadline rejects by 450 ms, and the surrogate, settings, export-name, `unsafe`, and `file://` deny checks pass.
+- Defers: Async iterables, streams, the bytes form, a column form, Bun and Deno, publishing, a browser build, and an API key option.
