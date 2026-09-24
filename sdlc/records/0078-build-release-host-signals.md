@@ -41,6 +41,17 @@ The recorder no longer registers a `SIGXFSZ` handler, and its `OnceLock` is gone
 - No seam forces the claim to fail, so no test drives that path. The claim runs before `Environment::read`, input, key lookup, and transport by its position in `entry`.
 - A failed recording leaves the `.locks` folder in place, as before. The host proof checks files only.
 
+## Code review fixes
+
+The first code review found four gaps, and the coordinator accepted choices (a) to (d). Each fix landed on this branch.
+
+- Finding 1: the library graph check reads `cargo tree -e normal,build --target all`. Two manifest plants run in a scratch copy of the workspace: `clap` under `cfg(windows)` and `clap` as a build dependency. Both must fail the check, and both passed under the old `-e normal` flags.
+- Finding 2: the file-size child writes on an engine worker through `scoped_observed`. Planted `SIGXFSZ` in the worker mask: both host proofs failed. The default child survived, and the handled child's flag stayed unset.
+- Finding 3: the held-send test checks that the calling thread's mask still leaves `SIGUSR1` unblocked. Planted the mask on the calling thread before the scope: the test failed on `the calling thread keeps the host's mask`.
+- Finding 4: the held-send test sends `SIGUSR1` ten times across the hold and checks that the host handler never ran. A blocked signal stays pending on its worker and ends with it, so this check does not depend on scheduling. With the mask removed, the test went red 20 of 20 times.
+
+The ceiling rose by 25 test lines to 48394, then to 48801 after the merge with main at `c19771a8` (main's 48547 plus this ticket's 254).
+
 ## Ladder
 
-On `073a7e48`, `sdlc/scripts/install`, `lint`, `test`, and `spec` ran in order and each exited 0. `spec` ended with `demos: 21 green, 0 red`. The ratchet reads 48369 of 48369.
+The first build: on `073a7e48`, `sdlc/scripts/install`, `lint`, `test`, and `spec` ran in order and each exited 0. `spec` ended with `demos: 21 green, 0 red`. The ratchet reads 48369 of 48369. The coordinator's report carries the ladder at the final commit.
