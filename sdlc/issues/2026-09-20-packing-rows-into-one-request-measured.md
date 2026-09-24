@@ -1,6 +1,6 @@
 # Packing many rows into one request, measured
 
-Status: Open. The numbers are in. One design question for an ADR, and one defect in the live launcher.
+Status: Open for the design question. The numbers are in. The live-launcher defect is closed by ticket 0101 (`sdlc/records/0101-live-refuses-non-shell-jobs.md`).
 
 Public projects that put Jev inside PostgreSQL and DuckDB pack many rows into one request. That is where their speed comes from. `2026-09-20-database-extensions-ruled-in-as-a-fast-follow.md` raised the question, and this page answers it with our own run. A builder ran it as experiment 208 in the workspace, at `experiments/208-thinkthen-row-packing/`, under Ian's standing go-ahead of 2026-09-20. The arms, the layout, and the label hashes were fixed in `PREREGISTRATION.md` before the first paid call, and every arm that ran is reported. That folder can rot. This page is the record.
 
@@ -54,6 +54,8 @@ So the totals hold at 10 rows and the single answers do not. About 3 rows in 100
 ## A defect in the live launcher
 
 `sdlc/scripts/live` runs the job through `/bin/sh`. The builder's first job was a Python file. It died at once, and the launcher kept the whole reservation of 560,000 tokens, about 2.4 US cents, because the ledger has no refund. A shell wrapper fixed it. Two cheap guards would stop the next one: the launcher refuses a job whose first line is not a shell line, and `sdlc/scripts/README.md` says in its first paragraph that a job is a shell script. The no-refund rule is right and should stay.
+
+Ticket 0101 closed the first guard: the launcher refuses a job whose first line is not `#!/bin/sh` before it charges. The README sentence waits for ticket 0083, which owns `sdlc/scripts/README.md`.
 
 ## Limits
 

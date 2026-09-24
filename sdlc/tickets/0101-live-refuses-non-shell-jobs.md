@@ -6,7 +6,7 @@ opens: sdlc/scripts/live sdlc/live-test sdlc/issues/2026-09-20-packing-rows-into
 
 # 0101: Refuse a non-shell live job before any charge
 
-Status: in progress. Owner: Claude.
+Status: in progress, awaiting a fresh code review of `465a730e`; record `sdlc/records/0101-live-refuses-non-shell-jobs.md`. Owner: Claude.
 
 ## Problem
 
