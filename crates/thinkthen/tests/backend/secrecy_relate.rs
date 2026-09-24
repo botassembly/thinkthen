@@ -3,31 +3,14 @@
 //! Every other backend, recording, cache, and refusal route runs over relate in
 //! `secrecy.rs` and `refusals.rs`.
 
-use serde_json::Value;
-
-use crate::harness::{Canned, Listener, spawn};
+use crate::harness::spawn;
+use crate::relate::{WRONG, scripted};
 use crate::secrecy::{EVIDENCE, environment, folder, nothing_leaked};
 
 #[test]
 fn a_partial_relation_answer_prints_and_exits_six_without_quoting_evidence() {
     let into = folder("relate-partial").expect("folder");
-    let listener = Listener::answering(|body| {
-        let request: Value = serde_json::from_slice(body).expect("request");
-        let names = request["questions"]
-            .as_object()
-            .expect("questions")
-            .keys()
-            .cloned()
-            .collect::<Vec<_>>();
-        Canned::ok(
-            &serde_json::json!({"model":"local-1","answers":{
-                names[0].clone(): {"type":"noul","noul":0.9},
-                names[1].clone(): {"type":"choice","probabilities":{"wrong":1.0}}
-            }})
-            .to_string(),
-        )
-    })
-    .expect("listener");
+    let listener = scripted(&[r#"{"type":"noul","noul":0.9}"#, WRONG]);
     let output = spawn(
         &[
             "relate",

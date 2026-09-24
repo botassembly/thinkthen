@@ -54,6 +54,29 @@ fn answered(body: &[u8]) -> Canned {
     )
 }
 
+/// A choice answer the backend gives for a label no option has.
+pub(crate) const WRONG: &str = r#"{"type":"choice","probabilities":{"wrong":1.0}}"#;
+
+/// A backend that answers question N of each request with `answers[N]`,
+/// repeating the last answer for every later question.
+pub(crate) fn scripted(answers: &'static [&'static str]) -> Listener {
+    Listener::answering(move |body| {
+        let request: Value = serde_json::from_slice(body).expect("request");
+        let replies = request["questions"]
+            .as_object()
+            .expect("questions")
+            .keys()
+            .enumerate()
+            .map(|(place, name)| {
+                let answer = answers.get(place).or(answers.last()).expect("an answer");
+                (name.clone(), serde_json::from_str::<Value>(answer).expect("answer"))
+            })
+            .collect::<serde_json::Map<_, _>>();
+        Canned::ok(&serde_json::json!({"model":"local-1","answers":replies}).to_string())
+    })
+    .expect("listener")
+}
+
 #[test]
 fn dry_run_reports_the_exact_plan_and_the_digest_a_real_run_sends() {
     let listener = Listener::answering(answered).expect("listener");
@@ -95,23 +118,7 @@ fn dry_run_reports_the_exact_plan_and_the_digest_a_real_run_sends() {
 
 #[test]
 fn an_h_entry_at_the_cut_is_accepted_and_bare_partial_output_exits_six() {
-    let listener = Listener::answering(|body| {
-        let request: Value = serde_json::from_slice(body).expect("request");
-        let names = request["questions"]
-            .as_object()
-            .expect("questions")
-            .keys()
-            .cloned()
-            .collect::<Vec<_>>();
-        Canned::ok(
-            &serde_json::json!({"model":"local-1","answers":{
-                names[0].clone(): {"type":"noul","noul":0.5},
-                names[1].clone(): {"type":"choice","probabilities":{"wrong":1.0}}
-            }})
-            .to_string(),
-        )
-    })
-    .expect("listener");
+    let listener = scripted(&[r#"{"type":"noul","noul":0.5}"#, WRONG]);
     let input = br#"[{"name":"Ada","kind":"person"},{"name":"Grace","kind":"person"}]"#;
     let details = run(&listener, &["follows=person:person", "--details"], input);
     assert_eq!(details.status.code(), Some(6));
@@ -203,26 +210,7 @@ fn choice_and_h_edges_keep_ruled_order_and_endpoint_shape() {
 
 #[test]
 fn mixed_logical_failure_prints_details_and_exits_six() {
-    let listener = Listener::answering(|body| {
-        let request: Value = serde_json::from_slice(body).expect("request");
-        let names = request["questions"]
-            .as_object()
-            .expect("questions")
-            .keys()
-            .cloned()
-            .collect::<Vec<_>>();
-        let mut answers = serde_json::Map::new();
-        answers.insert(
-            names[0].clone(),
-            serde_json::json!({"type":"noul","noul":0.9}),
-        );
-        answers.insert(
-            names[1].clone(),
-            serde_json::json!({"type":"choice","probabilities":{"wrong":1.0}}),
-        );
-        Canned::ok(&serde_json::json!({"model":"local-1","answers":answers}).to_string())
-    })
-    .expect("listener");
+    let listener = scripted(&[r#"{"type":"noul","noul":0.9}"#, WRONG]);
     let output = run(
         &listener,
         &["follows=person:person", "--details"],
@@ -267,30 +255,10 @@ fn the_detailed_question_digest_hashes_the_printed_line_question() {
 
 #[test]
 fn successful_and_failed_choice_entries_keep_the_exact_option_a_shape() {
-    let listener = Listener::answering(|body| {
-        let request: Value = serde_json::from_slice(body).expect("request");
-        let questions = request["questions"].as_object().expect("questions");
-        let mut answers = serde_json::Map::new();
-        for (place, (name, question)) in questions.iter().enumerate() {
-            let answer = if place == 0 {
-                let labels = question["criteria"].as_object().expect("criteria");
-                let pick = labels
-                    .keys()
-                    .find(|label| label.starts_with('i'))
-                    .expect("entity option");
-                let probabilities = labels
-                    .keys()
-                    .map(|label| (label.clone(), Value::from(f64::from(label == pick))))
-                    .collect::<serde_json::Map<_, _>>();
-                serde_json::json!({"type":"choice","choice":pick,"probabilities":probabilities})
-            } else {
-                serde_json::json!({"type":"choice","probabilities":{"wrong":1.0}})
-            };
-            answers.insert(name.clone(), answer);
-        }
-        Canned::ok(&serde_json::json!({"model":"local-1","answers":answers}).to_string())
-    })
-    .expect("listener");
+    let listener = scripted(&[
+        r#"{"type":"choice","choice":"i3","probabilities":{"i3":1.0,"none":0.0}}"#,
+        WRONG,
+    ]);
     let output = run(
         &listener,
         &["works_for=person:organization", "--details"],
@@ -316,22 +284,7 @@ fn successful_and_failed_choice_entries_keep_the_exact_option_a_shape() {
 
 #[test]
 fn no_valid_logical_answer_exits_four_without_output() {
-    let listener = Listener::answering(|body| {
-        let request: Value = serde_json::from_slice(body).expect("request");
-        let answers = request["questions"]
-            .as_object()
-            .expect("questions")
-            .keys()
-            .map(|name| {
-                (
-                    name.clone(),
-                    serde_json::json!({"type":"choice","probabilities":{"wrong":1.0}}),
-                )
-            })
-            .collect::<serde_json::Map<_, _>>();
-        Canned::ok(&serde_json::json!({"model":"local-1","answers":answers}).to_string())
-    })
-    .expect("listener");
+    let listener = scripted(&[WRONG]);
     let output = run(
         &listener,
         &["follows=person:person", "--details"],
@@ -379,33 +332,6 @@ fn every_settled_empty_input_outcome_is_identical_in_normal_and_dry_runs() {
             assert!(output.stdout.is_empty(), "{options:?}");
         }
     }
-    assert_eq!(listener.connections(), 0);
-}
-
-#[test]
-fn complete_set_refusals_finish_before_any_send() {
-    let listener = Listener::answering(answered).expect("listener");
-    let duplicate = br#"[{"name":"Ada","kind":"person"},{"name":"Ada","kind":"person"}]"#;
-    let absent = br#"[{"name":"Ada","kind":"person"}]"#;
-    let wrong_type = br#"[{"name":7,"kind":"person"}]"#;
-    for (options, input) in [
-        (vec!["linked=person:person"], duplicate.as_slice()),
-        (vec!["linked=person:organization"], absent.as_slice()),
-        (vec!["linked=person:person"], wrong_type.as_slice()),
-        (
-            vec!["linked=person:person", "--field", "/missing"],
-            absent.as_slice(),
-        ),
-    ] {
-        let output = run(&listener, &options, input);
-        assert_eq!(output.status.code(), Some(2), "{options:?}");
-        assert!(output.stdout.is_empty());
-    }
-    let too_many = (0..256)
-        .map(|place| format!("entity-{place}\n"))
-        .collect::<String>();
-    let output = run(&listener, &["linked", "--lines"], too_many.as_bytes());
-    assert_eq!(output.status.code(), Some(2));
     assert_eq!(listener.connections(), 0);
 }
 
