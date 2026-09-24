@@ -1,12 +1,12 @@
 ---
 flow: build
 priority: 90
-opens: crates/thinkthen/src/core crates/thinkthen/src/cli crates/thinkthen/tests conformance specification sdlc/planning/adr sdlc/ratchet.json sdlc/records
+opens: crates/thinkthen/src/core crates/thinkthen/src/cli crates/thinkthen/tests conformance specification site/src/pages/reference.astro sdlc/planning/adr sdlc/ratchet.json sdlc/records
 ---
 
 # 0090: Rename the profile-warning key `calibrated` to `tuned_for`
 
-Status: draft, revised after design review; needs re-review. Owner: Claude.
+Status: revised after re-review; confirming. Split from 0082's review; `sdlc/records/0090-design-rereview.md` is its first review. Owner: Claude.
 
 ## Design and decisions
 
@@ -14,6 +14,7 @@ Ian ruled on 2026-09-23 that `meta.profile_warning.calibrated` becomes `tuned_fo
 
 Decisions, each of which Ian can overturn:
 
+- The ruling renames only the result key. The question-file key stays `profile`. `sdlc/planning/quality-plan.md` says a question file's threshold carries `tuned_for`, and that means the result key.
 - The result object becomes exactly `{"tuned_for":NAME,"running":NAME}`. New results emit only `tuned_for`. No compatibility reader exists, because ThinkThen has not released 0.1.
 - The standard-error warning in `crates/thinkthen/src/cli/profile.rs` line 70 follows the same ruling. `threshold calibrated for profile X is running under profile Y` becomes `threshold tuned for profile X is running under profile Y`.
 - The conformance case key in `conformance/backend-profiles.json` becomes `tuned_for`. Each surface ticket in queue item 10 inherits the key from that file.
@@ -27,7 +28,7 @@ Review route: a fresh read-only Claude session reviews this design and the final
 
 ## Closure of item 44
 
-Item 44 closes when the rename lands in the tool, the specification, all nine surfaces, and the site copy. This ticket closes the tool and specification half. The issue stays open. The landing record states which half landed and names Claude, the queue owner, as owner of the rest. The surfaces half lands with each surface ticket in queue item 10. The site half lands with the site copy work before launch. `site/src/pages/reference.astro` still shows `{"calibrated":NAME,"running":NAME}` until then.
+Ian ruled "the key is `tuned_for`, everywhere in one commit". Item 44 closes when the rename lands in the tool, the specification, all nine surfaces, and the site copy. One commit in this ticket renames the key in the tool, the specification, the conformance cases, and the site reference page at `site/src/pages/reference.astro` line 76, because all of them live on main. The surfaces are the only part that lands later, because they are not on main. Each surface ticket in queue item 10 inherits `tuned_for` from the conformance file. The issue stays open until the last surface lands. The landing record states which part landed and names Claude, the queue owner, as owner of the surfaces part.
 
 ## Scope
 
@@ -40,24 +41,25 @@ Allowed:
 - `crates/thinkthen/src/cli/conformance_tests/profile_cases.rs` and `conformance/backend-profiles.json`: the case key.
 - `crates/thinkthen/tests/backend/profile.rs` and `crates/thinkthen/tests/backend/profile/warnings.rs`: the exact pins.
 - `specification/result.md` line 94 and any other specification line that names the key.
+- `site/src/pages/reference.astro` line 76: the `profile_warning` field string only.
 - `sdlc/planning/adr/0032-explicit-backend-profiles-carry-limits-and-calibration.md`: one dated amendment.
 - `sdlc/ratchet.json` and the landing record.
 
-Excluded: the site, the deck, the nine surfaces, the `surfaces` branch, the noun `calibration` in help and specification prose, the `calibration` transform, command help, `sdlc/scripts/lint`, request bytes, digests, recording and cache formats, exit codes, dependencies, live calls, and paid calls. Historical tickets, records, issues, and probes stay unchanged.
+Excluded: the rest of the site, the deck, the nine surfaces, the `surfaces` branch, the noun `calibration` in help and specification prose, the `calibration` transform, command help, `sdlc/scripts/lint`, request bytes, digests, recording and cache formats, exit codes, dependencies, live calls, and paid calls. Historical tickets, records, issues, and probes stay unchanged.
 
 ## Deterministic acceptance
 
 - Red first: change the exact test in `tests/backend/profile.rs` to expect `meta.profile_warning` equal to exactly `{"tuned_for":"old","running":"new"}` and the standard-error line `thinkthen: warning: threshold tuned for profile old is running under profile new\n`. Watch it fail on the old key and the old sentence. Make it pass.
-- The inline test in `cli/profile.rs` and the three `matches(...)` counts in `tests/backend/profile/warnings.rs` pin `warning: threshold tuned for` and still count the warning exactly once per run.
+- The inline test in `cli/profile.rs` and all four `matches(...)` counts pin `warning: threshold tuned for` and still count the warning exactly once per run: `tests/backend/profile.rs` line 441 and `tests/backend/profile/warnings.rs` lines 35, 71, and 108.
 - The conformance cases in `conformance/backend-profiles.json` use `tuned_for` and `profile_cases.rs` reads it. All four cases keep their `warning` outcomes.
-- A fixed-string test in `tests/backend/profile.rs` reads `specification/result.md` and `conformance/backend-profiles.json` and finds no `"calibrated"` key and no `calibrated` field name. It finds `{"tuned_for":NAME,"running":NAME}` exactly once in `result.md`. A planted old line makes it fail.
-- `git grep -n calibrated -- crates specification conformance spec demos README.md` returns only the lines the record lists as historical or out of scope, each with its reason.
+- A fixed-string test in `tests/backend/profile.rs` reads `specification/result.md`, `conformance/backend-profiles.json`, and `site/src/pages/reference.astro` and finds no `"calibrated"` key and no `calibrated` field name. It finds `{"tuned_for":NAME,"running":NAME}` exactly once in `result.md` and exactly once in `reference.astro`. A planted old line makes it fail.
+- `git grep -n calibrated -- crates specification conformance spec demos site README.md` returns only the lines the record lists as historical or out of scope, each with its reason. The list includes `let calibrated` in the calibration-identity test at `core/digest.rs` line 302 and the fixture name `calibrated-question.json`. Neither names the field.
 - Question and question-set digests, request bytes, and recordings are unchanged. The existing digest tests pass without edits.
 - Run `sdlc/scripts/install`, `sdlc/scripts/lint`, `sdlc/scripts/test`, and `sdlc/scripts/spec` in sequence with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, then `git diff --check`. No live or paid command runs.
 
 ## Budgets
 
-Production Rust changes may touch at most six files and add at most 10 net nonblank lines. Most edits are renames. Rust tests may touch at most four files and add at most 60 nonblank lines. Specification, conformance, and ADR prose may touch at most four files. Add no dependency. The ratchet increase equals the measured Rust increase, and the record says why it earns its lines.
+Production Rust changes may touch at most six files and add at most 10 net nonblank lines. Most edits are renames. Rust tests may touch at most four files and add at most 60 nonblank lines. Specification, conformance, site, and ADR prose may touch at most five files. Add no dependency. The ratchet increase equals the measured Rust increase, and the record says why it earns its lines.
 
 ## Dependencies and order
 
