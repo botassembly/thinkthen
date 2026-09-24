@@ -4,7 +4,7 @@ Date: 2026-09-23. Budget: 12,000 characters. Ian requested this assessment and p
 
 ## Assessment
 
-Current update: tickets 0074, 0087, and 0079 are landed on remote main. Ctrl-C, the documentation corrections, and deterministic request splitting now pass independent review and the full integrated local ladder. The remaining authorized launch-first queue is 0080, 0081, 0082–0083, 0076–0078, then 0084–0086. Non-overlapping ticket design and documentation lanes may run in parallel; dependent code does not bypass this order.
+Current update: tickets 0074, 0087, 0079, and 0080 are landed on remote main. Ctrl-C, documentation corrections, deterministic request splitting, and recognition now pass independent review and the full integrated local ladder. Ian split oversized 0081. The remaining authorized launch-first queue is 0081 shared relation foundation, 0088 public `relate` command, 0082–0083, 0076–0078, then 0084–0086. The Luna 0081 trial stopped after two design-remediation passes. Sol Medium now drives 0081 and 0088 with independent Sol review. Non-overlapping design and documentation lanes may run in parallel; 0088 implementation waits for landed 0081.
 
 Eight commands work, Ctrl-C and request splitting are on main, and local checks are strong. Two new functions, command completion, the remaining private controls, the public Rust API, adapter integration, and installation remain unfinished. The source-package gate does not establish an installable 0.1 release.
 
@@ -17,9 +17,8 @@ The review started on clean main `2b63c872925c7237ded0491dc13f69247cf6f142`, equ
 | `repos/thinkthen` | Clean main at `2b63c87` | Production core, engine, and CLI live under `crates/thinkthen/src/{core,engine,cli}` |
 | `worktrees/thinkthen-0074` | `ticket/0074-cli-sigint` at `b3d9133`; 11 tracked modifications and 4 untracked paths | Active draft, including its untracked ticket. No 0074 code commit or remote branch existed. Main was three documentation commits ahead |
 | `worktrees/thinkthen-surfaces` | Clean `surfaces` at `f942e06`, equal to its remote | Language/database adapters, contract, and stand-in engine remain separate. Comparison with main found 266 main-only and 246 surfaces-only commits |
-| Other retained checkouts | 83 clean old worktrees with tips contained in main | Historical work, not 83 outstanding features. Only `workspace sweep` may remove registered worktrees |
 
-Git listed 87 worktrees including main and this review checkout. `surfaces` was the only local branch with commits outside main; the uncommitted 0074 draft cannot appear in a commit-ancestry check. Existing task worktrees were preserved. The planning commit advances main beyond this snapshot. Unrelated site edits appeared on main during landing and were left uncommitted by this review.
+Git listed 87 worktrees. `surfaces` was the only local branch with commits outside main. Existing worktrees and unrelated site edits were preserved.
 
 ## What is already on main
 
@@ -27,8 +26,6 @@ Git listed 87 worktrees including main and this review checkout. `surfaces` was 
 - Tickets 0053–0065 added request identity, preserved good partial answers, the one-package boundary, corrected filtering, backend limits, records beside answers, durable recording, the bounded default cache, status/counts, bounded retries, and backend-bound recording folders.
 - Tickets 0066–0069 improved help and structured questions/evidence. `meta.cached` is canonical; historical readers remain supported.
 - Ticket 0072 makes a refused connection fail after one attempt. Ticket 0073 adds the private cancellation token and checks in schedulers, requests, retry waits, and recording-lock waits. It does not bind Ctrl-C.
-
-Recent production commits: `8912884` (cached metadata), `55a2f04` and `8a1879e` (structured descriptions/evidence), `2e3c7c6` (refused connections), and `70831ff` (cancellation). Each has tests and review records. The latest three main commits update review records.
 
 Quality checks enforce the pure core, worker lifetimes, the 500-nonblank-line file limit, and an exact total ceiling. Gates exercise replay, local listeners, failures, documentation, and package boundaries. Preserve independent review and coordinator-run gates.
 
@@ -59,14 +56,14 @@ Done means the actual Unix subprocess dies from SIGINT after completed output is
 ## After 0074
 
 1. Complete the remaining private controls in bounded reviewed tickets: process-wide width, whole-call deadlines, fork recovery, and host signal ownership. Fast refused-connection failure and the private cancellation token are already landed.
-2. Reconcile the recognition/relation request and policy contracts against the current rulings, then build `recognize` and `relate`, their command paths, and shared cases. Retain the measured baseline where packing lacks accepted evidence. The existing survey records a relation-method conflict; this review does not settle it or authorize paid measurements.
+2. Land ticket 0081's shared relation foundation without a public command. It owns generic entities and edges, concrete wildcard expansion, exact H state, per-concrete runtime backend-profile fallback, request identity, the recognize specification update, and recognition compatibility. Then land ticket 0088's public `relate` command with the complete `@entities` grammar, saved calibration identity, exact dry-run provenance and backend-profile name, Option A schema, settled empty-input behavior, partial output at exit 6, documentation, and secrecy proof. The settled hybrid method needs no paid measurement.
 3. Open the real Rust API over all ten functions after controls and result shapes are stable. The crate currently exposes `entry()` only; its public judgment API is unfinished. Add C and then integrate the separately owned surfaces through a reviewed merge. Replace the stand-in and duplicate parser/scheduler behavior; prove request counts, cancellation, partial results, and ownership against the real engine.
 4. Prepare installable artifacts and rehearse them locally: release archives/checksums, the agreed Homebrew and download-script paths, clean-prefix installation, Linux/macOS checks, manual/help/skill/catalog work, missing package metadata, and release documentation. The current version is `0.0.1` with `publish = false`; the source-package check is not a release installer.
 5. Re-run the remaining quality work against the installed real artifacts. The accepted first release remains simultaneous 0.1 across the agreed surfaces. No publication or registry-name action follows from this planning update.
 
 ## Surfaces evidence and limits
 
-Main contains review documents about `surfaces`; this does not mean it contains that branch's code. The [third review](../issues/2026-09-22-surfaces-branch-third-review-the-unheld-fixes.md) first lists serious failures and then appends independent verification at `f942e06`. Read both. The appended verification closes most tested findings. It leaves DuckDB sanitizer lifetime proof, signal payload and concurrent-query checks, the stand-in contention residual, and committed R NUL fixtures open. Do not repeat the original failure list as if every item remains broken, or treat a stand-in pass as real-engine integration.
+Main contains review documents about `surfaces`; it does not contain that branch. The [third review](../issues/2026-09-22-surfaces-branch-third-review-the-unheld-fixes.md) closes most tested findings at `f942e06` and names the remaining proof gaps. Stand-in passes do not prove real-engine integration.
 
 This review does not rerun the surface runtime suites, macOS checks, website deployment, or live model quality tests. No paid call ran. GitHub Actions remains paused; local results supply current gate evidence.
 

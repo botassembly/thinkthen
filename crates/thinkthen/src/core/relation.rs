@@ -1,8 +1,60 @@
-//! Pure relation planning and edge assembly shared by recognition and relate.
+//! Pure relation planning, state, and edge assembly shared by recognition and relate.
 
-use crate::core::recognize::RecognizedName;
 use serde::Serialize;
 use thiserror::Error;
+
+use crate::core::json::Json;
+use crate::core::recognize::RecognizedName;
+use crate::core::{Description, Evidence, Labels, Question, QuestionText};
+
+const MAX_CHOICE_OPTIONS: usize = 255;
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub(crate) struct RelationEntity {
+    name: String,
+    kind: String,
+}
+
+impl RelationEntity {
+    pub(crate) fn new(name: &str, kind: &str) -> Result<Self, RelationEntityError> {
+        if name.trim().is_empty() || kind.trim().is_empty() {
+            return Err(RelationEntityError);
+        }
+        Ok(Self {
+            name: name.to_owned(),
+            kind: kind.to_owned(),
+        })
+    }
+}
+
+pub(crate) trait RelationEntityView: Clone {
+    fn name(&self) -> &str;
+    fn kind(&self) -> &str;
+}
+
+impl RelationEntityView for RelationEntity {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn kind(&self) -> &str {
+        &self.kind
+    }
+}
+
+impl RelationEntityView for RecognizedName {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn kind(&self) -> &str {
+        &self.kind
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
+#[error("a relation entity has a nonblank name and kind")]
+pub(crate) struct RelationEntityError;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub(crate) struct RelationRule {
@@ -15,15 +67,16 @@ pub(crate) struct RelationRule {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct RelationPlan {
-    pub(crate) questions: Vec<crate::core::Question>,
+    pub(crate) relation: RelationRule,
+    pub(crate) questions: Vec<Question>,
     pub(crate) mappings: Vec<QuestionMap>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
-pub(crate) struct RelationEdge {
+pub(crate) struct RelationEdge<E> {
     pub(crate) relation: String,
-    pub(crate) source: RecognizedName,
-    pub(crate) target: RecognizedName,
+    pub(crate) source: E,
+    pub(crate) target: E,
     pub(crate) probability: f64,
 }
 
@@ -37,41 +90,95 @@ pub(crate) enum QuestionMap {
 #[error("a relation question could not be built")]
 pub(crate) struct RelationPlanError;
 
-pub(crate) fn plan(
-    entities: &[RecognizedName],
+pub(crate) fn plan<E: RelationEntityView>(
+    entities: &[E],
     rule: &RelationRule,
-) -> Result<RelationPlan, RelationPlanError> {
-    if rule.source == rule.target {
-        return pair_plan(entities, rule);
-    }
-    let sources = matching(entities, &rule.source);
-    let targets = matching(entities, &rule.target);
-    if sources.len().min(targets.len()).saturating_add(1) > 255 {
-        return pair_plan(entities, rule);
-    }
-    choice_plan(entities, rule, sources, targets)
+) -> Result<Vec<RelationPlan>, RelationPlanError> {
+    concrete_relations(entities, rule)
+        .into_iter()
+        .map(|relation| plan_concrete(entities, relation))
+        .collect()
 }
 
-fn matching(entities: &[RecognizedName], kind: &str) -> Vec<usize> {
+fn concrete_relations<E: RelationEntityView>(
+    entities: &[E],
+    rule: &RelationRule,
+) -> Vec<RelationRule> {
+    let kinds = admitted_kinds(entities);
+    let sources = expanded_side(&rule.source, &kinds);
+    let targets = expanded_side(&rule.target, &kinds);
+    let mut relations: Vec<RelationRule> = Vec::new();
+    for source in sources {
+        for target in &targets {
+            if rule.either
+                && relations
+                    .iter()
+                    .any(|held| held.source == *target && held.target == source)
+            {
+                continue;
+            }
+            let mut concrete = rule.clone();
+            concrete.source.clone_from(&source);
+            concrete.target.clone_from(target);
+            relations.push(concrete);
+        }
+    }
+    relations
+}
+
+fn admitted_kinds<E: RelationEntityView>(entities: &[E]) -> Vec<String> {
+    let mut kinds = Vec::new();
+    for entity in entities {
+        if !kinds.iter().any(|kind| kind == entity.kind()) {
+            kinds.push(entity.kind().to_owned());
+        }
+    }
+    kinds
+}
+
+fn expanded_side(side: &str, kinds: &[String]) -> Vec<String> {
+    if side == "*" {
+        kinds.to_vec()
+    } else {
+        vec![side.to_owned()]
+    }
+}
+
+fn plan_concrete<E: RelationEntityView>(
+    entities: &[E],
+    relation: RelationRule,
+) -> Result<RelationPlan, RelationPlanError> {
+    if relation.source == relation.target {
+        return pair_plan(entities, relation);
+    }
+    let sources = matching(entities, &relation.source);
+    let targets = matching(entities, &relation.target);
+    if sources.len().min(targets.len()).saturating_add(1) > MAX_CHOICE_OPTIONS {
+        return pair_plan(entities, relation);
+    }
+    choice_plan(entities, relation, sources, targets)
+}
+
+fn matching<E: RelationEntityView>(entities: &[E], kind: &str) -> Vec<usize> {
     entities
         .iter()
         .enumerate()
-        .filter(|(_, entity)| kind == "*" || entity.kind == kind)
+        .filter(|(_, entity)| entity.kind() == kind)
         .map(|(place, _)| place)
         .collect()
 }
 
-fn choice_plan(
-    entities: &[RecognizedName],
-    rule: &RelationRule,
+fn choice_plan<E: RelationEntityView>(
+    entities: &[E],
+    relation: RelationRule,
     sources: Vec<usize>,
     targets: Vec<usize>,
 ) -> Result<RelationPlan, RelationPlanError> {
     let reversed = sources.len() < targets.len();
     let (asking, options, option_kind) = if reversed {
-        (&targets, &sources, rule.source.as_str())
+        (&targets, &sources, relation.source.as_str())
     } else {
-        (&sources, &targets, rule.target.as_str())
+        (&sources, &targets, relation.target.as_str())
     };
     let mut questions = Vec::new();
     let mut mappings = Vec::new();
@@ -85,10 +192,10 @@ fn choice_plan(
             let Some(entity) = entities.get(*option) else {
                 return Err(RelationPlanError);
             };
-            let label = format!("i{}", option + 1);
+            let label = entity_id(*option);
             labels.push((
                 label.clone(),
-                Some(crate::core::Description::text(reference(entity, *option))),
+                Some(Description::text(reference(entity, *option))),
             ));
             let (source, target) = if reversed {
                 (*option, *asker)
@@ -102,51 +209,51 @@ fn choice_plan(
         }
         labels.push((
             "none".to_owned(),
-            Some(crate::core::Description::text(format!(
-                "No listed {option_kind}."
-            ))),
+            Some(Description::text(format!("No listed {option_kind}."))),
         ));
         let text = format!(
             "Which listed {option_kind} fills the blank: {} {} ___? Choose none if no listed {option_kind} does.",
             reference(asking_entity, *asker),
-            rule.reads
+            relation.reads
         );
-        questions.push(crate::core::Question::Choose {
-            text: crate::core::QuestionText::new(text).map_err(|_| RelationPlanError)?,
-            options: crate::core::Labels::described(labels).map_err(|_| RelationPlanError)?,
+        questions.push(Question::Choose {
+            text: QuestionText::new(text).map_err(|_| RelationPlanError)?,
+            options: Labels::described(labels).map_err(|_| RelationPlanError)?,
         });
         mappings.push(QuestionMap::Choice(map));
     }
     Ok(RelationPlan {
+        relation,
         questions,
         mappings,
     })
 }
 
-fn pair_plan(
-    entities: &[RecognizedName],
-    rule: &RelationRule,
+fn pair_plan<E: RelationEntityView>(
+    entities: &[E],
+    relation: RelationRule,
 ) -> Result<RelationPlan, RelationPlanError> {
-    let sources = matching(entities, &rule.source);
-    let targets = matching(entities, &rule.target);
+    let sources = matching(entities, &relation.source);
+    let targets = matching(entities, &relation.target);
     let mut questions = Vec::new();
     let mut mappings = Vec::new();
     for source in sources {
         for target in targets.iter().copied() {
-            if source == target || (rule.either && source > target) {
+            if source == target
+                || (relation.either && relation.source == relation.target && source > target)
+            {
                 continue;
             }
-            let (Some(left), Some(right)) = (entities.get(source), entities.get(target)) else {
-                return Err(RelationPlanError);
-            };
+            let (source, target) = normalized_pair(source, target, relation.either);
+            let direction = if relation.either { "between" } else { "from" };
+            let joining = if relation.either { "and" } else { "to" };
             let text = format!(
-                "Does this hold: {} {} {}?",
-                reference(left, source),
-                rule.reads,
-                reference(right, target)
+                "Does the relation hold {direction} {} {joining} {}?",
+                entity_id(source),
+                entity_id(target)
             );
-            questions.push(crate::core::Question::Decide {
-                text: crate::core::QuestionText::new(text).map_err(|_| RelationPlanError)?,
+            questions.push(Question::Decide {
+                text: QuestionText::new(text).map_err(|_| RelationPlanError)?,
                 yes: None,
                 no: None,
             });
@@ -154,25 +261,68 @@ fn pair_plan(
         }
     }
     Ok(RelationPlan {
+        relation,
         questions,
         mappings,
     })
 }
 
-pub(crate) fn plan_pairs(
-    entities: &[RecognizedName],
-    rule: &RelationRule,
+pub(crate) fn plan_pairs<E: RelationEntityView>(
+    entities: &[E],
+    relation: &RelationRule,
 ) -> Result<RelationPlan, RelationPlanError> {
-    pair_plan(entities, rule)
+    pair_plan(entities, relation.clone())
 }
 
-pub(crate) fn assemble_edges(
-    entities: &[RecognizedName],
-    rule: &RelationRule,
+pub(crate) fn relation_evidence<E: RelationEntityView>(
+    source: Option<&str>,
+    entities: &[E],
+    relation: &RelationRule,
+) -> Result<Evidence, RelationPlanError> {
+    let state = RelationState {
+        evidence: source,
+        entities: entities
+            .iter()
+            .enumerate()
+            .map(|(place, entity)| {
+                let entity = RelationEntity::new(entity.name(), entity.kind())?;
+                Ok(StateEntity {
+                    id: entity_id(place),
+                    name: entity.name,
+                    kind: entity.kind,
+                })
+            })
+            .collect::<Result<Vec<_>, RelationEntityError>>()
+            .map_err(|_| RelationPlanError)?,
+        relation,
+    };
+    let text = serde_json::to_string(&state).map_err(|_| RelationPlanError)?;
+    let value = Json::parse(&text).map_err(|_| RelationPlanError)?;
+    Evidence::structured(value).map_err(|_| RelationPlanError)
+}
+
+#[derive(Serialize)]
+struct RelationState<'a> {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    evidence: Option<&'a str>,
+    entities: Vec<StateEntity>,
+    relation: &'a RelationRule,
+}
+
+#[derive(Serialize)]
+struct StateEntity {
+    id: String,
+    name: String,
+    kind: String,
+}
+
+pub(crate) fn assemble_edges<E: RelationEntityView>(
+    entities: &[E],
+    relation: &RelationRule,
     mappings: &[QuestionMap],
     answers: &[crate::core::Answer],
     threshold: f64,
-) -> Vec<RelationEdge> {
+) -> Vec<RelationEdge<E>> {
     let mut edges = Vec::new();
     for (mapping, answer) in mappings.iter().zip(answers) {
         match mapping {
@@ -181,7 +331,7 @@ pub(crate) fn assemble_edges(
                 push_choice_edges(
                     &mut edges,
                     entities,
-                    rule,
+                    relation,
                     options,
                     &probabilities,
                     threshold,
@@ -189,7 +339,14 @@ pub(crate) fn assemble_edges(
             }
             QuestionMap::Pair { source, target } => {
                 if let Some(probability) = answer.yes().filter(|value| *value >= threshold) {
-                    push_edge(&mut edges, entities, rule, *source, *target, probability);
+                    push_edge(
+                        &mut edges,
+                        entities,
+                        relation,
+                        *source,
+                        *target,
+                        probability,
+                    );
                 }
             }
         }
@@ -197,10 +354,10 @@ pub(crate) fn assemble_edges(
     edges
 }
 
-fn push_choice_edges(
-    edges: &mut Vec<RelationEdge>,
-    entities: &[RecognizedName],
-    rule: &RelationRule,
+fn push_choice_edges<E: RelationEntityView>(
+    edges: &mut Vec<RelationEdge<E>>,
+    entities: &[E],
+    relation: &RelationRule,
     options: &[(String, usize, usize)],
     probabilities: &[(&str, f64)],
     threshold: f64,
@@ -209,33 +366,55 @@ fn push_choice_edges(
         let probability = probabilities
             .iter()
             .find_map(|(held, probability)| (*held == label).then_some(*probability));
-        if let Some(probability) = probability.filter(|value| *value >= threshold) {
-            push_edge(edges, entities, rule, *source, *target, probability);
-        }
+        let Some(probability) = probability.filter(|value| *value >= threshold) else {
+            continue;
+        };
+        push_edge(edges, entities, relation, *source, *target, probability);
     }
 }
 
-fn push_edge(
-    edges: &mut Vec<RelationEdge>,
-    entities: &[RecognizedName],
-    rule: &RelationRule,
+fn push_edge<E: RelationEntityView>(
+    edges: &mut Vec<RelationEdge<E>>,
+    entities: &[E],
+    relation: &RelationRule,
     source: usize,
     target: usize,
     probability: f64,
 ) {
+    let (source, target) = normalized_pair(source, target, relation.either);
+    if source == target {
+        return;
+    }
     let (Some(source), Some(target)) = (entities.get(source), entities.get(target)) else {
         return;
     };
     edges.push(RelationEdge {
-        relation: rule.name.clone(),
+        relation: relation.name.clone(),
         source: source.clone(),
         target: target.clone(),
         probability,
     });
 }
 
-fn reference(entity: &RecognizedName, place: usize) -> String {
-    format!("Item {} ({} \"{}\")", place + 1, entity.kind, entity.name)
+fn normalized_pair(source: usize, target: usize, either: bool) -> (usize, usize) {
+    if either && source > target {
+        (target, source)
+    } else {
+        (source, target)
+    }
+}
+
+fn entity_id(place: usize) -> String {
+    format!("i{}", place + 1)
+}
+
+fn reference<E: RelationEntityView>(entity: &E, place: usize) -> String {
+    format!(
+        "Item {} ({} \"{}\")",
+        place + 1,
+        entity.kind(),
+        entity.name()
+    )
 }
 
 #[cfg(test)]
@@ -244,8 +423,12 @@ fn reference(entity: &RecognizedName, place: usize) -> String {
 mod experiment_239;
 
 #[cfg(test)]
+#[path = "relation/boundary_tests.rs"]
+mod boundary_tests;
+
+#[cfg(test)]
 mod tests {
-    use super::{RelationRule, plan};
+    use super::{RelationEntity, RelationEntityView, RelationRule, plan};
     use crate::core::recognize::RecognizedName;
 
     fn entity(name: &str, kind: &str, start: usize) -> RecognizedName {
@@ -275,9 +458,10 @@ mod tests {
             entity("Grace", "person", 4),
             entity("Acme", "organization", 10),
         ];
-        let planned = plan(&entities, &rule("person", "organization", false)).expect("plan");
+        let plans = plan(&entities, &rule("person", "organization", false)).expect("plan");
+        let planned = plans.first().expect("concrete plan");
         assert_eq!(planned.questions.len(), 2);
-        for question in planned.questions {
+        for question in &planned.questions {
             let crate::core::Question::Choose { options, .. } = question else {
                 panic!("cross-kind planner did not choose");
             };
@@ -295,6 +479,8 @@ mod tests {
         assert_eq!(
             plan(&entities, &rule("person", "person", true))
                 .expect("plan")
+                .first()
+                .expect("concrete plan")
                 .questions
                 .len(),
             3
@@ -302,52 +488,53 @@ mod tests {
         assert_eq!(
             plan(&entities, &rule("person", "person", false))
                 .expect("plan")
+                .first()
+                .expect("concrete plan")
                 .questions
                 .len(),
             6
         );
+        let either = plan(&entities, &rule("person", "person", true)).expect("plan");
+        let question = either
+            .first()
+            .and_then(|planned| planned.questions.first())
+            .expect("question");
+        let crate::core::Question::Decide { text, yes, no } = question else {
+            panic!("H question");
+        };
+        assert_eq!(
+            text.as_json().as_str(),
+            Some("Does the relation hold between i1 and i2?")
+        );
+        assert_eq!((yes, no), (&None, &None));
     }
 
     #[test]
-    fn explicit_wildcards_match_kinds_without_relating_a_name_to_itself() {
-        let entities = [entity("A", "person", 0), entity("B", "place", 2)];
-        assert_eq!(
-            plan(&entities, &rule("*", "*", true))
-                .expect("plan")
-                .questions
-                .len(),
-            1
-        );
-        assert_eq!(
-            plan(&entities, &rule("*", "*", false))
-                .expect("plan")
-                .questions
-                .len(),
-            2
-        );
-    }
-
-    #[test]
-    fn two_hundred_fifty_six_choice_options_make_every_relation_question_a_pair() {
-        let mut entities = (0..256)
-            .map(|place| entity(&format!("P{place}"), "person", place))
+    fn wildcards_expand_to_concrete_kinds_in_first_seen_order() {
+        let entities = [
+            entity("Ada", "person", 0),
+            entity("Acme", "organization", 4),
+            entity("Grace", "person", 9),
+        ];
+        let plans = plan(&entities, &rule("*", "*", false)).expect("plan");
+        let standalone = RelationEntity::new("Ada", "person").expect("entity");
+        assert_eq!(standalone.name(), entities[0].name());
+        assert_eq!(standalone.kind(), entities[0].kind());
+        let kinds = plans
+            .iter()
+            .map(|plan| (plan.relation.source.as_str(), plan.relation.target.as_str()))
             .collect::<Vec<_>>();
-        entities.extend(
-            (0..255).map(|place| entity(&format!("O{place}"), "organization", place + 256)),
+        assert_eq!(
+            kinds,
+            [
+                ("person", "person"),
+                ("person", "organization"),
+                ("organization", "person"),
+                ("organization", "organization"),
+            ]
         );
-        let planned = plan(&entities, &rule("person", "organization", false)).expect("pair plan");
-        assert_eq!(planned.questions.len(), 256 * 255);
-        assert!(
-            planned
-                .questions
-                .iter()
-                .all(|question| matches!(question, crate::core::Question::Decide { .. }))
-        );
-        assert!(
-            planned
-                .mappings
-                .iter()
-                .all(|mapping| matches!(mapping, super::QuestionMap::Pair { .. }))
-        );
+        assert!(plans.iter().all(|plan| plan.mappings.iter().all(|mapping| {
+            !matches!(mapping, super::QuestionMap::Pair { source, target } if source == target)
+        })));
     }
 }

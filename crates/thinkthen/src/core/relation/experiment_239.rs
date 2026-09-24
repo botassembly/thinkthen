@@ -60,7 +60,8 @@ fn experiment_239_replays_only_the_recorded_cross_kind_planner_proof() {
             either: false,
             reads: reads.to_owned(),
         };
-        let planned = plan(&entities, &rule).expect("plan");
+        let plans = plan(&entities, &rule).expect("plan");
+        let planned = plans.first().expect("concrete plan");
         assert_eq!(planned.questions.len(), 184);
         let recorded = recorded_questions(prefix);
         for (question, expected) in planned.questions.iter().zip(&recorded) {
@@ -77,7 +78,7 @@ fn experiment_239_replays_only_the_recorded_cross_kind_planner_proof() {
             }
         }
         let answers = recorded_answers(prefix, &planned.questions);
-        let edges = assemble_edges(&entities, &rule, &planned.mappings, &answers, 0.5);
+        let edges = assemble_edges(&entities, &planned.relation, &planned.mappings, &answers, 0.5);
         assert_eq!(edges.len(), edge_count);
         let expected = recorded.iter().zip(recorded_probabilities(prefix)).flat_map(|(question, probabilities)| {
             let source = fixture_entity(&input, &question.choose);
