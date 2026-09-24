@@ -20,6 +20,12 @@ pub(crate) struct PreparedChunk {
     pub(crate) request: PreparedRequest,
 }
 
+#[cfg(test)]
+thread_local! {
+    /// How many plans this thread has prepared, so a test can catch a second preparation.
+    pub(crate) static PREPARATIONS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
 /// Every chunk prepared and checked before execution starts.
 pub(crate) struct PreparedRequests {
     chunks: Vec<PreparedChunk>,
@@ -31,6 +37,8 @@ impl PreparedRequests {
         plan: &Plan,
         profile: Option<&BackendProfile>,
     ) -> Result<Self, Error> {
+        #[cfg(test)]
+        PREPARATIONS.with(|count| count.set(count.get() + 1));
         let mut chunks = Vec::new();
         let mut consumed = 0;
         while consumed < plan.questions().len() {
@@ -63,7 +71,6 @@ impl PreparedRequests {
 /// One concrete relation after the only relation fallback decision.
 pub(crate) struct SettledRelation {
     pub(crate) planned: RelationPlan,
-    pub(crate) plan: Plan,
     pub(crate) requests: PreparedRequests,
     /// The backend-profile limit that turned a choice into yes/no questions.
     pub(crate) fallback: Option<LimitKind>,
@@ -85,7 +92,6 @@ impl SettledRelation {
         match PreparedRequests::with_profile(backend, &plan, profile) {
             Ok(requests) => Ok(Self {
                 planned,
-                plan,
                 requests,
                 fallback: None,
             }),
@@ -99,7 +105,6 @@ impl SettledRelation {
                 let requests = PreparedRequests::with_profile(backend, &plan, profile)?;
                 Ok(Self {
                     planned,
-                    plan,
                     requests,
                     fallback: Some(limit.kind),
                 })

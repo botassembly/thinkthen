@@ -7,7 +7,7 @@ use std::time::Duration;
 use serde::Serialize;
 
 use crate::args::{Common, RecognizeArguments};
-use crate::asking::{Folders, ask_prepared};
+use crate::asking::{Asking, Folders};
 use crate::core::{
     Answer, AnswerOutcome, Backend, BackendProfile, Description, Meta, ModelName, Outcome, Plan,
     Reading, RecognizeSpec, RecognizedName, Record, RecordValue, RelationEdge, RequestMeta,
@@ -289,7 +289,9 @@ fn recognize_one(
         .map_err(|_| Failure::Defect("record evidence became blank"))?;
     let plan = Plan::new(evidence.clone(), running.backend.model().clone(), questions)
         .map_err(|_| Failure::Defect("recognize planned no token questions"))?;
-    let (answers, mut aggregate) = execute(running, &plan)?;
+    let prepared =
+        PreparedRequests::with_profile(&running.backend, &plan, running.profile.as_ref())?;
+    let (answers, mut aggregate) = execute(running, prepared)?;
     let token_answers = token_answers(&answers, tokens.len(), &spec.kinds)?;
     let kind_names = spec
         .kinds
@@ -377,29 +379,29 @@ fn token_answers(
     Ok(built)
 }
 
-fn execute(running: &Running<'_>, plan: &Plan) -> Result<(Vec<Answer>, Aggregate), Failure> {
-    let prepared =
-        PreparedRequests::with_profile(&running.backend, plan, running.profile.as_ref())?;
+/// Send requests prepared earlier; one failed question fails the record.
+fn execute(
+    running: &Running<'_>,
+    prepared: PreparedRequests,
+) -> Result<(Vec<Answer>, Aggregate), Failure> {
     let mut answers = Vec::new();
     let mut aggregate = Aggregate::default();
-    for chunk in prepared.into_chunks() {
-        let answered = ask_prepared(
-            &running.backend,
-            &chunk.plan,
-            chunk.request,
-            running.common,
-            running.environment,
-            &running.recorder,
-            &running.client,
-        )?;
+    let asking = Asking {
+        backend: &running.backend,
+        common: running.common,
+        environment: running.environment,
+        recorder: &running.recorder,
+        client: &running.client,
+    };
+    asking.chunks(prepared.into_chunks(), |answered| {
         for outcome in answered.reply.outcomes() {
             match outcome {
                 AnswerOutcome::Answered(answer) => answers.push(answer.clone()),
                 AnswerOutcome::Failed(_) => return Err(logical_failure()),
             }
         }
-        aggregate.add_answered(&answered)?;
-    }
+        aggregate.add_answered(&answered)
+    })?;
     Ok((answers, aggregate))
 }
 

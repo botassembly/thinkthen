@@ -27,7 +27,7 @@ mod folders;
 mod request;
 
 pub(crate) use folders::Folders;
-pub(crate) use request::{ask, ask_prepared};
+pub(crate) use request::{Asking, ask, ask_prepared};
 
 /// Where one record's question comes from.
 ///

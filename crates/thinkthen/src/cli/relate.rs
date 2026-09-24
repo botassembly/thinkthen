@@ -2,8 +2,8 @@ use std::io::{Read, Write};
 use std::process::ExitCode;
 use std::time::Duration;
 
-use crate::args::{Common, RelateArguments};
-use crate::asking::{Folders, ask_prepared};
+use crate::args::RelateArguments;
+use crate::asking::{Asking, Folders};
 use crate::core::{AnswerOutcome, Backend, ModelName, RelationEntity, assemble_edges};
 use crate::edge::Environment;
 use crate::failure::Failure;
@@ -17,15 +17,6 @@ mod dry_run;
 mod input;
 mod plan;
 mod result;
-
-/// The boundaries every relation request passes through.
-struct Asking<'a> {
-    backend: &'a Backend,
-    common: &'a Common,
-    environment: &'a Environment,
-    recorder: Recorder,
-    client: Client,
-}
 
 pub(crate) fn run(
     arguments: &RelateArguments,
@@ -70,20 +61,22 @@ pub(crate) fn run(
         dry_run::write(&mut writer, context, &prepared)?;
         return Ok(ExitCode::SUCCESS);
     }
+    let recorder = Recorder::of_private(
+        folders.record.as_deref(),
+        folders.replay.as_deref(),
+        folders.private_default,
+        folders.cache_answers,
+    )?;
+    let client = Client::new(
+        Duration::from_secs(arguments.common.timeout),
+        backend.is_secure(),
+    );
     let asking = Asking {
         backend: &backend,
         common: &arguments.common,
         environment,
-        recorder: Recorder::of_private(
-            folders.record.as_deref(),
-            folders.replay.as_deref(),
-            folders.private_default,
-            folders.cache_answers,
-        )?,
-        client: Client::new(
-            Duration::from_secs(arguments.common.timeout),
-            backend.is_secure(),
-        ),
+        recorder: &recorder,
+        client: &client,
     };
     let threshold = settled.spec.threshold.cut_value().unwrap_or(0.5);
     let execution = execute(&asking, prepared, &entities, threshold)?;
@@ -121,30 +114,21 @@ fn execute(
     };
     for relation in prepared {
         let mut mappings = relation.mappings.into_iter();
-        for chunk in relation.chunks {
-            let answered = ask_prepared(
-                asking.backend,
-                &chunk.plan,
-                chunk.request,
-                asking.common,
-                asking.environment,
-                &asking.recorder,
-                &asking.client,
-            )?;
+        asking.chunks(relation.chunks, |answered| {
             add_meta(&mut execution, &answered)?;
             for outcome in answered.reply.outcomes() {
-                let mapping = mappings
-                    .next()
-                    .ok_or(Failure::Defect("a relation reply exceeds its question map"))?;
                 let logical = result::Logical {
                     relation: relation.relation.clone(),
-                    mapping,
+                    mapping: mappings
+                        .next()
+                        .ok_or(Failure::Defect("a relation reply exceeds its question map"))?,
                     outcome: outcome.clone(),
                     request: answered.request.as_str().to_owned(),
                 };
                 add_logical(&mut execution, entities, logical, threshold);
             }
-        }
+            Ok(())
+        })?;
         if mappings.next().is_some() {
             return Err(Failure::Defect(
                 "a relation reply did not cover its question map",

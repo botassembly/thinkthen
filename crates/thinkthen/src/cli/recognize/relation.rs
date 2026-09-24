@@ -30,12 +30,12 @@ pub(super) fn recognize(
                 entities,
                 planned,
             )?;
-            prepared.push((settled.planned, settled.plan));
+            prepared.push((settled.planned, settled.requests));
         }
     }
     let mut edges = Vec::new();
-    for (planned, request_plan) in prepared {
-        let (answers, meta) = execute(running, &request_plan)?;
+    for (planned, requests) in prepared {
+        let (answers, meta) = execute(running, requests)?;
         aggregate.add(meta)?;
         edges.extend(assemble_edges(
             entities,
@@ -47,3 +47,6 @@ pub(super) fn recognize(
     }
     Ok(Some(edges))
 }
+
+#[cfg(test)]
+mod tests;
