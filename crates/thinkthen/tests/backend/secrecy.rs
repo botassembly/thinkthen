@@ -25,7 +25,7 @@ pub(crate) const EVIDENCE: &str = "marker-evidence-7b3ac5";
 
 pub(crate) const QUESTION: &str = "Does this report a payment failure?";
 
-pub(crate) const VERBS: [(&str, &[&str], &str); 5] = [
+pub(crate) const VERBS: [(&str, &[&str], &str); 6] = [
     ("decide", &[], r#""type":"noul","noul":0.92"#),
     (
         "choose",
@@ -43,7 +43,41 @@ pub(crate) const VERBS: [(&str, &[&str], &str); 5] = [
         &["person"],
         r#""type":"choice","choice":"IN","probabilities":{"IN":0.9,"OUT":0.1}"#,
     ),
+    // Two entities of one kind ask one unordered yes/no question.
+    (
+        "relate",
+        &["linked", "--either"],
+        r#""type":"noul","noul":0.92"#,
+    ),
 ];
+
+/// Whether the verb takes the shared question as its first operand.
+pub(crate) fn asks_question(verb: &str) -> bool {
+    !["recognize", "relate"].contains(&verb)
+}
+
+/// The standard input one verb judges under one framing, holding the evidence.
+///
+/// `relate` reads a complete entity set, so the evidence is one entity name.
+pub(crate) fn evidence(verb: &str, framing: Option<&str>) -> Vec<u8> {
+    let text = match (verb, framing) {
+        ("relate", None) => {
+            format!(
+                r#"[{{"name":"{EVIDENCE}","kind":"record"}},{{"name":"Acme","kind":"record"}}]"#
+            )
+        }
+        ("relate", Some("--jsonl")) => format!(
+            "{{\"body\":\"{EVIDENCE}\",\"kind\":\"record\"}}\n{{\"body\":\"Acme\",\"kind\":\"record\"}}\n"
+        ),
+        ("relate", Some("--lines")) => format!("{EVIDENCE}\nAcme\n"),
+        ("relate", Some("--csv")) => format!("name,kind\n{EVIDENCE},record\nAcme,record\n"),
+        ("relate", Some("--tsv")) => format!("name\tkind\n{EVIDENCE}\trecord\nAcme\trecord\n"),
+        (_, Some("--jsonl")) => format!("{{\"body\":\"{EVIDENCE}\"}}\n"),
+        (_, Some("--lines")) => format!("{EVIDENCE}\n"),
+        _ => EVIDENCE.to_owned(),
+    };
+    text.into_bytes()
+}
 
 const RECORD_VERBS: [(&str, &[&str], &str); 2] = [
     ("filter", &[], r#""type":"noul","noul":0.92"#),
@@ -144,11 +178,7 @@ fn sweep(
     let into = folder(&case)?;
     let dir = into.join("recording");
     let listener = Listener::serving(route.answers.script(answer))?;
-    let evidence = match framing {
-        Some("--jsonl") => format!("{{\"body\":\"{EVIDENCE}\"}}\n"),
-        Some("--lines") => format!("{EVIDENCE}\n"),
-        _ => EVIDENCE.to_owned(),
-    };
+    let evidence = evidence(name, framing);
     let named = |argument: &&str| match *argument {
         "{dir}" => dir.to_string_lossy().into_owned(),
         "{closed}" => CLOSED.to_owned(),
@@ -156,7 +186,7 @@ fn sweep(
     };
     let adds: Vec<String> = route.adds.iter().map(named).collect();
     let mut asked = vec![name.to_owned()];
-    if name != "recognize" {
+    if asks_question(name) {
         asked.push(QUESTION.to_owned());
     }
     asked.extend(operands.iter().map(|operand| (*operand).to_owned()));
@@ -187,7 +217,7 @@ fn sweep(
                 }
             })
             .collect();
-        let first = spawn(&priming, &environment(true), evidence.as_bytes())?;
+        let first = spawn(&priming, &environment(true), &evidence)?;
         assert_eq!(first.status.code(), Some(0), "{case}: the priming run");
     }
     if let Some(damage) = route.damage {
@@ -203,7 +233,12 @@ fn sweep(
     }
 
     let arguments: Vec<&str> = asked.iter().map(String::as_str).collect();
-    let output = spawn(&arguments, &environment(route.keyed), evidence.as_bytes())?;
+    // The platform default cache lands inside this case's folder, so the reader
+    // below reads every file the default cache wrote.
+    let cache = into.join("cache").to_string_lossy().into_owned();
+    let mut environment = environment(route.keyed);
+    environment.push(("XDG_CACHE_HOME", &cache));
+    let output = spawn(&arguments, &environment, &evidence)?;
 
     assert_eq!(
         output.status.code(),
@@ -219,6 +254,12 @@ fn sweep(
     if let Some(says) = route.says {
         let said = String::from_utf8_lossy(&output.stderr);
         assert!(said.contains(says), "{case} {view:?}: {said}");
+    }
+    if route.named == "a success" {
+        assert!(
+            !written(&into.join("cache")).is_empty(),
+            "{case} {view:?}: the default cache kept the answer"
+        );
     }
     nothing_leaked(&format!("{case} {view:?}"), &output, &into);
     if route.damage == Some(HOSTILE) {
@@ -248,6 +289,16 @@ const RECORD_WAYS: [(&[&str], Option<&str>); 4] = [
     (&["--details"], Some("--jsonl")),
 ];
 
+/// The complete-set framings only `relate` reads, in the bare and detailed views.
+const TABLE_WAYS: [(&[&str], Option<&str>); 6] = [
+    (&[], Some("--lines")),
+    (&[], Some("--csv")),
+    (&[], Some("--tsv")),
+    (&["--details"], Some("--lines")),
+    (&["--details"], Some("--csv")),
+    (&["--details"], Some("--tsv")),
+];
+
 /// The environment one run is given, with or without the key.
 pub(crate) fn environment(keyed: bool) -> Vec<(&'static str, &'static str)> {
     if keyed {
@@ -275,6 +326,15 @@ fn no_command_on_any_backend_path_writes_the_key_or_quotes_the_evidence() {
             sweep(hostile, verb, view, framing).expect("the compiled binary runs");
         }
     }
+    let relate = VERBS
+        .into_iter()
+        .find(|(name, _, _)| *name == "relate")
+        .expect("relate stays in the matrix");
+    for route in &PATHS {
+        for (view, framing) in TABLE_WAYS {
+            sweep(route, relate, view, framing).expect("the compiled binary runs");
+        }
+    }
 }
 
 ///
@@ -289,10 +349,10 @@ fn the_key_reaches_the_authorization_header_and_nothing_else() {
             Listener::serving(vec![Canned::ok(&good(answer))]).expect("a loopback listener");
         let base = listener.base().to_owned();
         let kept = dir.to_string_lossy().into_owned();
-        let asked = if name == "recognize" {
-            vec![name]
-        } else {
+        let asked = if asks_question(name) {
             vec![name, QUESTION]
+        } else {
+            vec![name]
         };
         let named = [
             "--url",
@@ -307,7 +367,7 @@ fn the_key_reaches_the_authorization_header_and_nothing_else() {
         let output = spawn(
             &[&asked, operands, &named[..]].concat(),
             &environment(true),
-            EVIDENCE.as_bytes(),
+            &evidence(name, None),
         )
         .expect("the compiled binary runs");
 

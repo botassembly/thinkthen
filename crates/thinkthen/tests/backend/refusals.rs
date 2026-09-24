@@ -10,7 +10,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::harness::{Canned, Listener, spawn};
-use crate::secrecy::{EVIDENCE, KEY, QUESTION, VERBS, nothing_leaked};
+use crate::secrecy::{EVIDENCE, KEY, QUESTION, VERBS, asks_question, evidence, nothing_leaked};
 
 /// One refusal, driven over every verb that has it.
 struct Refusal {
@@ -362,6 +362,120 @@ const OVER_RECORDS: Refusal = Refusal {
     )
 };
 
+/// The complete-set refusals only `relate` has, each before any send.
+const RELATE: [Refusal; 9] = [
+    Refusal {
+        evidence: r#"[{"name":"marker-evidence-7b3ac5","kind":"record"},{"name":"marker-evidence-7b3ac5","kind":"record"}]"#,
+        ..only(
+            "a duplicate entity",
+            &["relate"],
+            &[],
+            "the complete entity set contains no duplicate name-and-kind identity",
+            2,
+        )
+    },
+    Refusal {
+        operands: Some(&["linked=record:person"]),
+        ..only(
+            "an absent concrete kind",
+            &["relate"],
+            &[],
+            "a concrete relation kind is absent from the complete entity set",
+            2,
+        )
+    },
+    Refusal {
+        operands: Some(&["linked"]),
+        evidence: "{entities}",
+        ..only(
+            "a 256th entity",
+            &["relate"],
+            &["--lines"],
+            "relate takes at most 255 entities",
+            2,
+        )
+    },
+    Refusal {
+        operands: Some(&["linked"]),
+        evidence: "marker-evidence-7b3ac5\n\nAcme\n",
+        ..only(
+            "a blank entity line",
+            &["relate"],
+            &["--lines"],
+            "an entity name and kind are nonempty strings",
+            2,
+        )
+    },
+    Refusal {
+        operands: Some(&["linked=record:record"]),
+        evidence: "marker-evidence-7b3ac5\nAcme\n",
+        ..only(
+            "a typed rule over lines",
+            &["relate"],
+            &["--lines"],
+            "--lines takes only bare relation names or NAME=*:*",
+            2,
+        )
+    },
+    Refusal {
+        evidence: r#"[{"name":7,"kind":"marker-evidence-7b3ac5"}]"#,
+        ..only(
+            "an entity name that is not text",
+            &["relate"],
+            &[],
+            "the entity value at `/name` is not a string",
+            2,
+        )
+    },
+    Refusal {
+        operands: Some(&["linked=record"]),
+        ..only(
+            "a relation rule with one kind",
+            &["relate"],
+            &[],
+            "a relate relation is NAME=SOURCE_KIND:TARGET_KIND, or a bare NAME",
+            2,
+        )
+    },
+    Refusal {
+        operands: Some(&["linked:record"]),
+        ..only(
+            "a bare relation name holding a colon",
+            &["relate"],
+            &[],
+            "a relate relation is NAME=SOURCE_KIND:TARGET_KIND, or a bare NAME",
+            2,
+        )
+    },
+    Refusal {
+        operands: Some(&["linked", "@question.json"]),
+        ..only(
+            "a question file beside an inline rule",
+            &["relate"],
+            &[],
+            "relate takes inline relation rules or one @FILE, never both",
+            2,
+        )
+    },
+];
+
+/// The sentence a verb gives in place of a shared row's, where its grammar differs.
+fn own_sentence(verb: &str, row: &str) -> Option<&'static str> {
+    Some(match (verb, row) {
+        ("recognize" | "relate", "a blank model") => "--model is text, not white space",
+        ("relate", "blank evidence") => "the input is not valid JSON",
+        ("relate", "a pointer in another language") => {
+            "relate fields are RFC 6901 pointers named `name` and `kind`"
+        }
+        ("relate", "a pointer beside lines") => "--lines takes neither --field nor --kind-field",
+        ("relate", "two pointers ending in one name") => "--field takes one pointer on `relate`",
+        ("relate", "jobs on one document") => {
+            "`relate` sends its requests in order, so it takes no --jobs"
+        }
+        _ => return None,
+    })
+}
+
 /// A folder this run owns, remade so each run starts empty.
 fn folder(named: &str) -> io::Result<PathBuf> {
     let path = Path::new(env!("CARGO_TARGET_TMPDIR"))
@@ -382,6 +496,10 @@ fn evidence_of(named: &str) -> Vec<u8> {
             bytes
         }
         "{binary}" => [EVIDENCE.as_bytes(), &[0xff, 0xfe]].concat(),
+        "{entities}" => (0..256)
+            .map(|place| format!("{EVIDENCE}-{place}\n"))
+            .collect::<String>()
+            .into_bytes(),
         text => text.as_bytes().to_vec(),
     }
 }
@@ -390,7 +508,7 @@ fn evidence_of(named: &str) -> Vec<u8> {
 fn refuse(refusal: &Refusal, verb: (&str, &[&str], &str), listener: &Listener) -> io::Result<()> {
     let (name, own, _) = verb;
     if (!refusal.verbs.is_empty() && !refusal.verbs.contains(&name))
-        || (name == "recognize" && refusal.named == "a blank question")
+        || (!asks_question(name) && refusal.named == "a blank question")
     {
         return Ok(());
     }
@@ -409,7 +527,7 @@ fn refuse(refusal: &Refusal, verb: (&str, &[&str], &str), listener: &Listener) -
         refusal.question
     };
     let mut asked = vec![name.to_owned()];
-    if name != "recognize" {
+    if asks_question(name) {
         asked.push(question.to_owned());
     }
     asked.extend(operands.iter().map(|operand| (*operand).to_owned()));
@@ -425,7 +543,11 @@ fn refuse(refusal: &Refusal, verb: (&str, &[&str], &str), listener: &Listener) -
     let output = spawn(
         &arguments,
         &[("THINKTHEN_API_KEY", KEY)],
-        &evidence_of(refusal.evidence),
+        &if refusal.evidence.is_empty() {
+            evidence(name, None)
+        } else {
+            evidence_of(refusal.evidence)
+        },
     )?;
 
     assert_eq!(
@@ -439,11 +561,7 @@ fn refuse(refusal: &Refusal, verb: (&str, &[&str], &str), listener: &Listener) -
         "{named}: a refusal prints nothing"
     );
     let message = String::from_utf8_lossy(&output.stderr);
-    let says = if name == "recognize" && refusal.named == "a blank model" {
-        "--model is text, not white space"
-    } else {
-        refusal.says
-    };
+    let says = own_sentence(name, refusal.named).unwrap_or(refusal.says);
     assert!(
         message.contains(says),
         "{named}: the message names another refusal\n{message}"
@@ -460,7 +578,12 @@ fn refuse(refusal: &Refusal, verb: (&str, &[&str], &str), listener: &Listener) -
 fn no_refusal_on_any_command_writes_the_key_quotes_the_evidence_or_sends_anything() {
     let listener = Listener::serving(Vec::<Canned>::new()).expect("a loopback listener");
 
-    for refusal in REFUSALS.iter().chain(&OPERANDS).chain([&OVER_RECORDS]) {
+    for refusal in REFUSALS
+        .iter()
+        .chain(&OPERANDS)
+        .chain([&OVER_RECORDS])
+        .chain(&RELATE)
+    {
         for verb in VERBS {
             refuse(refusal, verb, &listener).expect("the compiled binary runs");
         }
