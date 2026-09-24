@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 119
-opens: crates/thinkthen/src crates/thinkthen/tests sdlc/ratchet.json .gitignore sdlc/issues/2026-09-24-red-green-scaffold-tests-outlive-their-purpose.md
+opens: crates/thinkthen/src crates/thinkthen/tests sdlc/ratchet.json sdlc/issues/2026-09-24-red-green-scaffold-tests-outlive-their-purpose.md
 ---
 
 # 0119: Mutation audit of the engine tests
@@ -16,14 +16,15 @@ This ticket carries out steps 3 and 4 of `sdlc/issues/2026-09-24-red-green-scaff
 
 2. **The host and the load.** The audit runs on the Beelink under the workspace load rule. A mutation batch starts only when the one-minute load is under about two thirds of the cores and memory has room. `--jobs` fits that room, and the record states the value and the load at each run. Suite-time runs are timing evidence, so they run with the host otherwise idle.
 
-3. **Scope.** Mutants come from `crates/thinkthen/src/core` and `crates/thinkthen/src/engine`. Deletion candidates are the `#[test]` and `#[tokio::test]` functions in `crates/thinkthen` whose code only a test reaches: inline `#[cfg(test)]` modules, the `*_tests.rs` and `tests/` folders under `src`, and `crates/thinkthen/tests`. Candidates are judged by `cargo test -p thinkthen --all-targets`, the command `cargo-mutants` runs.
-   - Out of scope, kept whole: `conformance/`, the secrecy tests, `spec/` pages, green demos, `sdlc/live-test`, the shell self-tests, and the documentation tests. Secrecy tests guard code not yet written, and mutants of today's code cannot measure that. The mutation run ignores the shell tests, so its evidence errs toward keeping a test.
-   - The `cli` module is out of scope for mutants. Tickets 0113 and 0114 add CLI code, and a CLI audit waits for them. Its tests still count as covering tests for engine mutants.
+3. **Scope.** Mutants come from all of `crates/thinkthen/src`: `core`, `engine`, and `cli`. Deletion candidates are the `#[test]` and `#[tokio::test]` functions in `crates/thinkthen`: inline `#[cfg(test)]` modules, the `*_tests.rs` files and `tests/` folders under `src`, and `crates/thinkthen/tests`. Every candidate therefore faces mutants of the code it reaches, including tests that run the binary through the command line.
+   - Out of scope, kept whole: `conformance/`, the secrecy tests in `crates/thinkthen/tests/backend/secrecy*.rs`, `spec/` pages, green demos, `sdlc/live-test`, the shell self-tests, and the documentation tests. Secrecy tests check every command and failure path, including ones added later. Mutants of today's code cannot measure that. The mutation run ignores the shell tests and the documentation tests, so its evidence errs toward keeping a test.
+   - Every run uses one command line: `cargo mutants -p thinkthen --cargo-test-arg=--all-targets --timeout T -j J -o DIR`, plus the `-f` list decision 4 names. `T` comes from the first baseline and stays fixed for the whole audit, so load cannot move a mutant between missed and timeout. `DIR` lies outside the repository. The record writes each full command line.
 
 4. **The deletion rule.** Delete a test only when mutation evidence shows other tests catch every bug it catches.
-   - A baseline run over the whole scope records each mutant as caught, missed, timeout, or unviable.
+   - A baseline run over the whole scope records each mutant as caught, missed, timeout, or unviable. A second run with nothing deleted follows at once. A mutant that changes outcome between the two is flaky. If any mutant is flaky, the builder stops by decision 6.
    - The builder picks candidates by reading first: tests that match a junk pattern in `AGENTS.md`, tests that pin one step of a red-green cycle, and tests that repeat one contract at several layers. A test does not become a candidate for being slow or static.
-   - Candidates go in batches of one test file or one `#[cfg(test)]` module. The builder deletes the batch and reruns the mutants in the source files the batch calls. If any mutant moves out of the caught or timeout set, the batch comes back whole and the builder splits it to find the test that alone caught it. That test stays.
+   - Candidates go in batches of one test file or one `#[cfg(test)]` module. The builder deletes the batch and reruns mutants chosen by file. A `#[cfg(test)]` module or a `*_tests.rs` file selects its parent module's source files with `-f`. A batch from `crates/thinkthen/tests` or a `tests/` folder reruns the whole scope.
+   - The comparison reads `caught.txt` and `timeout.txt` from the batch's output folder. Every mutant in those two files from the last accepted run, for the same source files, must appear in one of them again. A move between caught and timeout counts as no change. If any mutant drops out, the batch comes back whole, and the builder splits it to find the test that alone caught that mutant. That test stays.
    - A kept test that fits none of the four kinds gets turned into one only when that takes no new test-only hook. Otherwise it stays as it is and the record names it.
    - For each deleted test the record states what it could catch and which remaining test catches the same mutants. A test that another record names as its proof gets the same line, so the old record has a forward pointer.
    - A full scope run at the end must show the baseline's caught and timeout sets unchanged. A mutant that moved restores the batch that moved it.
@@ -34,7 +35,7 @@ This ticket carries out steps 3 and 4 of `sdlc/issues/2026-09-24-red-green-scaff
    - every candidate batch has been judged;
    - three batches in a row come back whole;
    - the remaining candidates hold fewer than 500 lines.
-   The builder also stops and reports if the baseline suite is red or a test fails on a rerun with no mutation. A flaky suite gives no evidence.
+   The builder also stops and reports if the baseline suite is red, a test fails on a rerun with no mutation, or the second baseline run shows a flaky mutant. A flaky suite gives no evidence.
 
 7. **Missed mutants are findings.** The audit adds no test and changes no product code. The record lists missed mutants by module, and one issue files them for later tickets.
 
@@ -47,11 +48,11 @@ This ticket carries out steps 3 and 4 of `sdlc/issues/2026-09-24-red-green-scaff
    - any junk pattern that kept coming back, with counts.
    The workspace reads this report to decide whether other repos get the same audit. A pattern that kept coming back is the case for a new ratchet, and the report names it without building one.
 
-Not in this ticket: a mutation gate in the ladder, a CLI audit, mutation tests of `conformance/`, and any audit of another repo.
+Not in this ticket: a mutation gate in the ladder, mutation tests of `conformance/`, and any audit of another repo.
 
 ## Outcome and authority
 
-The engine's test code shrinks to tests that earn a place, with mutation evidence for each deletion and a report the workspace can act on. Ticket 0119 authorizes edits to test code and `#[cfg(test)]` modules under `crates/thinkthen`, a lower ceiling in `sdlc/ratchet.json`, a `mutants.out*` line in `.gitignore`, one issue for missed mutants, and this ticket's record and reviews. It authorizes no product code change and no ceiling rise.
+The engine's test code shrinks to tests that earn a place, with mutation evidence for each deletion and a report the workspace can act on. Ticket 0119 authorizes edits to test code and `#[cfg(test)]` modules under `crates/thinkthen`, a lower ceiling in `sdlc/ratchet.json`, one issue for missed mutants, and this ticket's record and reviews. It authorizes no product code change and no ceiling rise.
 
 ## Timing
 
@@ -60,7 +61,7 @@ The owner decided the timing on 2026-09-24, and Ian can overturn it. Most test c
 ## Work
 
 1. Install the pinned `cargo-mutants` by decision 1 and record the version, the sha256, and the install lines.
-2. Measure the baseline: suite times, test function count, test-only lines, and one full scope mutation run.
+2. Measure the baseline: suite times, test function count, test-only lines, and two full scope mutation runs with nothing deleted.
 3. Read the candidates and list them in judgment order.
 4. Judge the batches by decisions 4 and 5 until the stop rule holds.
 5. Run the final full scope mutation run and the suite times again.
