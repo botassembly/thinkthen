@@ -128,3 +128,10 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Changes: The crate exports 0084's frozen types, builders, the ten methods, and the approved conveniences. It adds the three 0095 members and `EngineBuilder::from_env`, an inventory check in `lint`, and a library-only package test.
 - Proof: An external consumer in `conformance/consumer` runs from the `test` rung with compile-fail and compile-pass fixtures, `cargo tree` and package checks, and counted-listener tests. The churn probe, the real-fork proofs, the `from_env` equality test, and the planted bugs in "Deterministic acceptance" complete it.
 - Defers: C and every other surface, async, derive macros, release, and publication. The other 0095 members go to 0098. Experiment 205's hidden engine module and async-first surface are superseded by ADR 0017's blocking engine and stay out.
+
+## Owner's ruling, 2026-09-24
+
+Under the tests-earn-their-place rule, and Ian can overturn it:
+
+1. The two test-only seams go: the private `cfg(test)` settings seam and the private panic seam below the public door. Each behavior is driven through the public API or the command instead, as 0096 passed the process ID as an argument. If one behavior truly has no real boundary, the record names it and keeps the smallest seam with its reason.
+2. The public inventory check is a contract check only. It reads the frozen declarations in the landed 0084 ticket and the 0086 part of the 0095 block, the single source, and compares them with the built API. No test file holds a hand-copied list. The record notes this change.
