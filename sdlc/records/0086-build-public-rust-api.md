@@ -91,6 +91,7 @@ Each plant ran alone under the heavy lock on the branch after `28f49ea3`, and wa
 - A cache folder belongs to one backend address, so the busy-parent child needs its own folder.
 - `fork-probe` names `libc` and `nix` (feature `process`) directly. Both were already in the root lock, so no package entered it.
 - The loopback backend costs about 20 to 40 ms a request. It writes the head and the body separately with Nagle's algorithm on, which is the likely cause, not yet confirmed. The memory test uses cache hits to stay short. This belongs to the backend as an issue.
+- Under `--no-default-features`, cargo builds no command binary but still sets `CARGO_BIN_EXE_thinkthen` to its old path. A library-only `cargo test --all-targets` then ran main's audit tests against a stale binary that lacked `diff`, and they failed. The package rung's library-only run is therefore `--lib` plus the three public test files that never start the command.
 - The public API has no transport timeout setting, so the churn probe gives each call a deadline instead.
 
 ## Budgets
