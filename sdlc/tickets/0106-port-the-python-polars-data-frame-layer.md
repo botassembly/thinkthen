@@ -1,12 +1,12 @@
 ---
 flow: build
 priority: 106
-opens: libraries/python sdlc/planning/libraries/python.md sdlc/planning/adr/0047-bindings-are-unpublished-crates-over-the-public-api.md
+opens: libraries/python conformance/backend sdlc/ratchet.json sdlc/planning/libraries/python.md sdlc/planning/adr/0047-bindings-are-unpublished-crates-over-the-public-api.md
 ---
 
 # 0106: Port the Python Polars data frame layer
 
-Status: design draft; review pending. Owner: Claude.
+Status: revised after confirmation; final check. Owner: Claude.
 
 ## Outcome and authority
 
@@ -14,7 +14,7 @@ Port the Polars data frame layer of the Python surface from tag `surfaces-wave7-
 
 Ian ruled on 2026-09-21 that Python's data frame is Polars at 0.1 and that pandas leaves the surface (ADR 0017, "Ruled after acceptance, 2026-09-21: the data frame is Polars"). His clarification the same day makes pure Python and Polars both first-class, with all scaling and vectorization in Rust. He named the proof: a Polars column reads the same wall time and the same requests in flight as the plain-list form. Polars rides as the optional extra `pip install thinkthen[polars]`. The only open Polars question is a Rust Polars door after 0.1 (ADR 0047 item 8), and this ticket does not touch it.
 
-Draft ADR 0047 fixes the crate's place, and ticket 0105 builds the crate. Section 3.2 of `sdlc/planning/surfaces-port-guide.md` gives the port map. The 2026-09-24 design review (`sdlc/records/2026-09-24-design-review-0105-0106.md`) found nine items, and this version answers each. Ian can overturn every decision below except the ruling itself.
+Draft ADR 0047 fixes the crate's place, and ticket 0105 builds the crate. Section 3.2 of `sdlc/planning/surfaces-port-guide.md` gives the port map. The 2026-09-24 design review (`sdlc/records/2026-09-24-design-review-0105-0106.md`) found nine items, and its confirmation found one more. This version answers all ten. Ian can overturn every decision below except the ruling itself.
 
 ## Design and decisions
 
@@ -27,6 +27,7 @@ Draft ADR 0047 fixes the crate's place, and ticket 0105 builds the crate. Sectio
 7. **The FFI module.** `src/arrow.rs` becomes the directory module `src/arrow/`, in files under 500 nonblank lines: the C structs and guards, the readable-memory check, the column reader, the frame reader, and the writers. `mod arrow` carries the binding's one `#[allow(unsafe_code, reason = "…")]` under ADR 0047 item 3. The root table denies `indexing_slicing`, `expect_used`, `unwrap_used`, and `panic`, and forbids `missing_debug_implementations` and `unreachable_pub`. The tag's pointer code breaks the first four in many places. The rewrite to checked access (`get`, `split_at_checked`, `?`) is a known cost inside the budget. A forbid-level lint that pyo3's generated code trips stops the ticket for an ADR 0047 amendment.
 8. **The address hook.** `_arrow_probe` returns the buffer addresses Rust reads. It builds only under a test-only Cargo feature `probe`. `check.sh` builds the tested extension with it. `build-wheel.sh` never enables it, and the wheel content check fails if the wheel's extension carries the name `_arrow_probe`. 0105's registration test leaves `_` names out.
 9. **Waivers kept.** Two R5-6 shapes stay waived as at the tag: an extent that runs into another readable allocation, and a guard page off Linux, where `mincore` sees only unmapped pages. Memory a producer unmaps mid-call stays a recorded risk. They land in ADR 0047's Python section with their levers (R2-29). Ian can overturn each.
+10. **A fixed-delay reply arm.** 0092's held arm releases every reply at once through a one-time gate (`conformance/backend/src/arms.rs`), so no timing proof can run on it. This ticket adds the arm `/arm/delay/<ms>` to `conformance/backend`. It answers by the generic rule after sleeping the named milliseconds on the connection's own thread. It refuses a missing or non-numeric value and a delay above 10,000 ms with the backend's distinct 5xx, and a line on standard error. This mirrors the tag's 300 ms stub delay. The command and every other binding may use it. Ian can overturn the arm's form.
 
 ## What moves from the tag
 
@@ -61,14 +62,15 @@ Source: `sdlc/issues/2026-09-23-surfaces-branch-error-index.md`. Ticket 0105 def
 | R5-6 (d) | partial/waive | A buffer table short of its count raises the pinned sentence. | Remove the pointer-table check. |
 | R7-2 | open | UTF-8 offsets `60000000, 60000001` over a three-byte buffer raise the pinned sentence in a child that exits 0. | Force `Readable` to answer yes. The sentence is missing whether the child crashes or reads. |
 | R7-8 | open | The new `NOTES.md` states exactly which sizes-buffer shapes are refused and names the test that proves each. A `check.sh` step fails when `NOTES.md` names a test the suite lacks. | Cite a test name that does not exist. |
-| R1-24 Polars half | closed | Deadline: over a 200-row Polars `Series` at width 8 on the held arm, the test releases one held reply every 100 ms, and `score` runs with `deadline=1.0`. The call raises `DeadlineError` with at most 24 counted sends. Cancel: a token set from a second thread stops the same call within 8 further sends. | Build `CallOptions` per row. The deadline restarts on each row and all 200 send. |
+| R1-24 Polars half | closed | Deadline: `score` over a 200-row Polars `Series` at width 8 on `/arm/delay/100` with `deadline=1.0` raises `DeadlineError` near 1 s with at most 96 counted sends. Cancel: a token set from a second thread at 0.5 s stops the same call within 8 further sends. | Build `CallOptions` per row. The deadline restarts on each row, the call runs past 1 s, and all 200 send. |
 | R4-23 Polars half | closed | A `SIGINT` from a timer thread during the same `score` stops new sends within one tick and raises `Cancelled`. | Run the column without the interrupt check. All 200 send. |
 
 R3-19 retires. It found that the pandas docstring's advice gave all-NaN answers on a non-default index. pandas left the surface under the 2026-09-21 ruling, so no pandas advice or door remains. The record names the ruling as the reason.
 
 ## Other acceptance
 
-- Width equality, the proof Ian named. 200 texts at width 8 run through `decide_many` twice: once as a list and once as a Polars `Series`. The test releases held replies on a fixed 100 ms timer. Both runs reach exactly 8 counted requests while held, finish with 200 counted requests and equal answers, and take wall times within 5 percent of each other. The tag's `bench_width_polars.py` measured a 0.0162 percent spread. A planted per-row call through Python holds 1 in flight and runs about eight times longer. Both assertions turn red.
+- Width equality, the proof Ian named. 200 texts at width 8 run through `decide_many` on `/arm/delay/100` twice: once as a list and once as a Polars `Series`. Each run finishes in about 200 / 8 × 0.1 s = 2.5 s with 200 counted requests and equal answers. The two wall times fall within 5 percent of each other. The tag's `bench_width_polars.py` measured a 0.0162 percent spread. In flight: on 0092's held arm with no release, each run reaches exactly 8 counted requests. A planted per-row call through Python holds 1 in flight and runs about eight times longer. Both assertions turn red.
+- The delay arm's own test, in `conformance/backend/tests/binary.rs`: `/arm/delay/200` answers the generic reply no sooner than 200 ms. Eight concurrent requests all finish within 400 ms. That proves the sleep is per connection. A value above 10,000 or a non-number gets the distinct 5xx. Plant: sleep on the accept thread. The concurrency assertion turns red.
 - Pandas stays out of the door. A pandas `Series` passed to `decide` raises the pinned pandas sentence with zero counted requests. Plant: move the module check after the capability check. The door reads the Series and the count is nonzero.
 - Other frames: a `pyarrow` `Table` passed to `annotate(on=)` raises `UsageError` with zero counted requests. Plant: accept any Arrow-stream frame. The count is nonzero.
 - Zero copy: the values and view buffer addresses `_arrow_probe` reports equal the addresses Polars reports.
@@ -79,7 +81,7 @@ R3-19 retires. It found that the pandas docstring's advice gave all-NaN answers 
 
 ## The check it adds to the gate ladder
 
-No new rung. `libraries/python/check.sh` gains these steps: the door suite, the Arrow safety suite in child processes, width equality, the address proof, the frame slide sample, the frame recognize bench, the `NOTES.md` test-name check, and the wheel check for `_arrow_probe`. Every `cargo` and `maturin` step keeps 0105's `--locked` and `--offline`. The `surfaces` rung runs the script as before, and `lint` runs deny and the ratchets as 0105 set them.
+No new rung. The root `test` rung runs the delay arm's test with 0092's backend tests. `libraries/python/check.sh` gains these steps: the door suite, the Arrow safety suite in child processes, width equality, the address proof, the frame slide sample, the frame recognize bench, the `NOTES.md` test-name check, and the wheel check for `_arrow_probe`. Every `cargo` and `maturin` step keeps 0105's `--locked` and `--offline`. The `surfaces` rung runs the script as before, and `lint` runs deny and the ratchets as 0105 set them.
 
 ## Dependencies and second review
 
@@ -97,13 +99,14 @@ No new rung. `libraries/python/check.sh` gains these steps: the door suite, the 
 - Python tests: at most ten files and 1,700 nonblank lines. The named files measure about 1,009 before the review-suite cases, the frame cases, and the new proofs.
 - Scripts: at most 60 nonblank lines added to `check.sh` and `build-wheel.sh`.
 - Documentation: at most 200 net nonblank lines across `NOTES.md`, `README.md`, `sdlc/planning/libraries/python.md`, and the ADR 0047 Python section. `NOTES.md` may grow past 0105's 120-line cap by at most 100 lines for the R7-8 shape list and the waivers. Those lines count here.
-- Ratchet: `libraries/python/ratchet.json` and `ratchet.py.json` rise to the measured totals in the commit that adds the code. The commit says what grew and why. The root `sdlc/ratchet.json` does not change.
+- The delay arm: at most 30 nonblank lines in `conformance/backend/src` and 40 in its test. No dependency.
+- Ratchet: `libraries/python/ratchet.json` and `ratchet.py.json` rise to the measured totals in the commit that adds the code. The root `sdlc/ratchet.json` counts `conformance`, so it rises by the delay arm's measured lines. Each commit says what grew and why.
 
-Stop and re-score before crossing a budget, adding a dependency, touching `crates/thinkthen`, adding a pandas path, or starting a Rust Polars door.
+Stop and re-score before crossing a budget, adding a dependency, touching `crates/thinkthen` or any backend arm but the delay arm, adding a pandas path, or starting a Rust Polars door.
 
 ## Exclusions
 
-A pandas door of any kind. A Rust Polars `Series` door (ADR 0047 item 8, after 0.1). Polars plugin expressions. `filter`, `rank`, `find`, and `relate` over a column. Release wheels and uploads (queue item 4). Any change to `thinkthen`. Any live or paid call.
+A pandas door of any kind. A Rust Polars `Series` door (ADR 0047 item 8, after 0.1). Polars plugin expressions. `filter`, `rank`, `find`, and `relate` over a column. Release wheels and uploads (queue item 4). Any change to `thinkthen`. Any change to 0092's other arms. Any live or paid call.
 
 ## Dependencies
 
@@ -119,5 +122,5 @@ Contract 2; state and timing 3; reach 2; proof 4; cost of error 4; total 15. Fin
 
 ## Review
 
-- Design review: `sdlc/records/2026-09-24-design-review-0105-0106.md` found nine items. This version answers all nine: the missing files and the `_arrow_probe` hook, the R1-24 deadline plant, wall time in the width proof, frames other than Polars, the pandas check order, the budgets, a plant for each R4-15 and R5-6 assertion, the dependency versions, and the `NOTES.md` cap. A confirmation review is pending.
+- Design review: `sdlc/records/2026-09-24-design-review-0105-0106.md` found nine items. This version answers all nine: the missing files and the `_arrow_probe` hook, the R1-24 deadline plant, wall time in the width proof, frames other than Polars, the pandas check order, the budgets, a plant for each R4-15 and R5-6 assertion, the dependency versions, and the `NOTES.md` cap. The confirmation (same file) found that 0092's held arm cannot release replies on a timer. The delay arm in decision 10 answers it. The final check is pending.
 - Code review: pending.
