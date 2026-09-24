@@ -73,13 +73,15 @@ The review found that `post_observed` read the remaining budget before `before_a
 
 ## Gates
 
-One sequential run on the final tree, with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset. The one-minute load stayed between 5 and 8 on the shared 16-core machine.
+This is the final run, on the rebased tree at `daac6bbc` plus the review fix. The backend variables were unset, and the one-minute load was 1.7 to 5.6.
 
 - `sdlc/scripts/install`: exit 0.
-- `sdlc/scripts/lint` (format, Clippy with `-D warnings`, policy, exact ratchet at 45,721, per-file size): exit 0. An earlier run failed on per-file size (`annotate_schedule.rs` 502, `deadline_tests.rs` 652, ceiling 500). The scheduler tests then moved to `deadline_tests/schedule.rs`, and two stop checks became one line each.
-- `sdlc/scripts/test`: exit 0. The global-queue test did not flake.
-- `sdlc/scripts/spec`: exit 0 (demos 21 green, 0 red).
-- `git diff --check`: clean.
+- `sdlc/scripts/lint` (format, Clippy, policy, exact ratchet at 46,972, per-file size, package): exit 0.
+- `sdlc/scripts/test`: exit 0, with 767 tests passing and none failing. The global-queue test did not flake.
+- `sdlc/scripts/spec`: exit 0, with 21 demos green and 0 red.
+- An earlier ladder run on the first version of the fix hung in the test rung. Review fix above explains it.
+- Before the rebase, the build's first lint run failed on the per-file size limit. The scheduler tests moved to `deadline_tests/schedule.rs` to fix it.
+- `sdlc/scripts/live` never ran.
 
 ## What Ian can overturn
 
