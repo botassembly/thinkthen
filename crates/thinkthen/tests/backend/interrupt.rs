@@ -10,13 +10,15 @@ use std::sync::mpsc::channel;
 use std::sync::{Arc, Barrier};
 use std::time::Duration;
 
-use crate::harness::{Canned, Listener, Observed};
+use crate::harness::{Canned, Listener, Observed, finish};
 
 const YES: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
 const PICKED: &str = concat!(
     r#"{"model":"local-1","answers":{"q1":{"type":"choice","choice":"u002","#,
     r#""probabilities":{"u001":0.1,"u002":0.9}}}}"#,
 );
+const RECOGNIZED: &str = r#"{"model":"local-1","answers":{"q1":{"type":"choice","choice":"IN","probabilities":{"IN":1.0,"OUT":0.0}}}}"#;
+const RELATED: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.1}}}"#;
 
 struct Acknowledgment(std::path::PathBuf);
 
@@ -102,7 +104,7 @@ fn held(
     );
     acknowledgment.wait()?;
     release.wait();
-    let output = child.wait_with_output()?;
+    let output = finish(child, "the interrupted command")?;
     assert_eq!(
         output.status.signal(),
         Some(signal_hook::consts::signal::SIGINT),
@@ -149,7 +151,7 @@ fn record_finishes_the_started_row_stops_before_another_and_completes_cache() {
 }
 
 #[test]
-fn sent_single_decide_and_aggregate_find_flush_before_sigint_status() {
+fn sent_single_decide_and_aggregate_commands_flush_before_sigint_status() {
     let cases = [
         (
             YES,
@@ -162,6 +164,12 @@ fn sent_single_decide_and_aggregate_find_flush_before_sigint_status() {
             vec!["find", "Which unit answers?"],
             b"first\nsecond\n".as_slice(),
             "second\n",
+        ),
+        (
+            RELATED,
+            vec!["relate", "calls=service:service", "--no-cache"],
+            br#"[{"name":"gateway","kind":"service"},{"name":"billing","kind":"service"}]"#,
+            "{\"relation\":\"calls\",\"source\":{\"name\":\"gateway\",\"kind\":\"service\"},\"target\":{\"name\":\"billing\",\"kind\":\"service\"},\"probability\":0.9}\n",
         ),
     ];
     for (answer, command, input, expected) in cases {
@@ -181,4 +189,26 @@ fn sigint_during_retry_wait_makes_exactly_one_request() {
     .expect("interrupt run");
     assert!(output.stdout.is_empty());
     assert!(output.stderr.is_empty());
+}
+
+#[test]
+fn sigint_between_recognition_chunks_starts_no_later_chunk() {
+    let profile = Path::new(env!("CARGO_TARGET_TMPDIR")).join("recognize-interrupt-profile.json");
+    fs::write(
+        &profile,
+        r#"{"schema":"thinkthen.backend-profile/1","name":"one","max_questions":1}"#,
+    )
+    .expect("profile");
+    let output = held(
+        &[
+            "recognize",
+            "--profile",
+            &profile.to_string_lossy(),
+            "--no-cache",
+        ],
+        b"Ada Acme",
+        || Canned::ok(RECOGNIZED),
+    )
+    .expect("recognize stops");
+    assert!(output.stdout.is_empty());
 }

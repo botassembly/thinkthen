@@ -102,6 +102,21 @@ impl Counters {
         self.warned.load(Ordering::Relaxed)
     }
 
+    /// The process totals so far. Reading them sends and writes nothing.
+    #[allow(
+        dead_code,
+        reason = "the command reads durable totals; ticket 0086 exposes this snapshot"
+    )]
+    pub(crate) fn snapshot(&self) -> Counts {
+        Counts {
+            requests_sent: self.requests_sent.load(Ordering::Relaxed),
+            input_tokens: self.input_tokens.load(Ordering::Relaxed),
+            output_tokens: self.output_tokens.load(Ordering::Relaxed),
+            cache_answers: self.cache_answers.load(Ordering::Relaxed),
+            ..Counts::default()
+        }
+    }
+
     fn add(&self, delta: Counts) {
         let process_ok = checked_atomic_add(&self.requests_sent, delta.requests_sent)
             && checked_atomic_add(&self.input_tokens, delta.input_tokens)

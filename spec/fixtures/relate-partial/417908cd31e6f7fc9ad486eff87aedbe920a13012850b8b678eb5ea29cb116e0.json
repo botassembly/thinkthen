@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":{"entities":[{"id":"i1","name":"gateway","kind":"service"},{"id":"i2","name":"billing","kind":"service"}],"relation":{"name":"calls","source":"service","target":"service","reads":"calls","either":false}},"model":"local-1","questions":{"q1":{"type":"noul","instructions":"Does the relation hold from i1 to i2?"},"q2":{"type":"noul","instructions":"Does the relation hold from i2 to i1?"}}},
+  "response": {"model":"local-1","answers":{"q1":{"type":"noul","noul":0.91},"q2":{"type":"choice","probabilities":{"wrong":1.0}}},"usage":{"input_tokens":40,"output_tokens":4}}
+}

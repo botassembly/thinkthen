@@ -26,3 +26,7 @@ The option appears in short help. A profile can prevent evidence from reaching a
 This decision supersedes only ADR 0010's removal of the old `--profile` name. It does not restore configuration discovery or backend selection. A user names every profile file. A backend with only a token limit needs a tokenizer or a verified byte ceiling before this schema can enforce it. The repository publishes no invented conversion.
 
 Ian can overturn the file shape, name grammar, units, warning rule, and metadata shape.
+
+## Amendment, 2026-09-24, by ticket 0090
+
+Ian ruled on 2026-09-23 that `meta.profile_warning.calibrated` becomes `tuned_for`. The saved name identifies the profile under which a person tuned the threshold, and it proves no statistical calibration. The metadata value is now exactly `{"tuned_for":NAME,"running":NAME}`. The standard-error warning reads `threshold tuned for profile X is running under profile Y`. The question-file key stays `profile`. No reader accepts the old key, because ThinkThen has not released 0.1.

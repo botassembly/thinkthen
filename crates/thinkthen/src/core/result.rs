@@ -305,7 +305,7 @@ impl Meta {
             replayed,
             requests_sent,
             requests,
-            failed_questions: _,
+            failed_questions,
             profile_warning,
         } = request_meta;
         Self {
@@ -317,7 +317,7 @@ impl Meta {
             requests_sent,
             cached: replayed,
             requests,
-            failed_questions: 0,
+            failed_questions,
             profile_warning,
         }
     }

@@ -99,3 +99,57 @@ No sign-off. The verification table marks nearly every item closed by observatio
 3. DuckDB details NULL, R error hook, R fresh install.
 4. Gate: ratchet at the tip, TypeScript mismatches fail, tests that can fail, `-D warnings`, one skip reader with the `wire` and `none` facets, skips in totals.
 5. The rest.
+# wave-5 independent verification — 2026-09-23T08:51:04-04:00 — tip 398d7bb
+## item 1 — stand-in state-table use-after-free (fourth review #1)
+OLD f942e06 (verifier's own build+run, /tmp/churn-old): SIGSEGV exit 139, kernel logged
+  `churn[545190]: segfault at 7b34773c2818` under 32 threads / 200 distinct settings / stub sends.
+NEW tip 398d7bb (/tmp/churn, same probe): 614,924 engine+send cycles, exit 0, fds 8->4, VmRSS 110MB
+  (sublinear vs 98MB at half the cycles). No crash in any run.
+CLOSED by fail-then-pass, both outputs above.
+
+## wave-5 independent verification table — tip 398d7bb — 2026-09-23
+Rules: probes built from the reviewer's descriptions; a lane's own test never
+closes an item; the full gate ran at the exact tip immediately before this
+table (summary pasted below). "OLD" records cite the review's own outputs on
+f942e06 except where this verifier rebuilt the old tip itself.
+
+GATE AT THE EXACT TIP (rule 3):
+  all landed checks green: green=973 skipped=76 diverged=18 failed=0 (wire: stub up)
+  GATE-EXIT:0. HANDOFF line 122 carries the same numbers — consistent.
+
+| item | verdict | evidence (verifier's own commands) |
+|---|---|---|
+| 1 stand-in state-table UAF | CLOSED fail-then-pass | OLD rebuilt at f942e06: SIGSEGV exit 139, kernel `churn[545190]: segfault`; NEW tip: 614,924 engine+send cycles, 32 threads, 200 settings, fds 8->4, RSS 110MB, exit 0 |
+| 2 Ruby trap-flood VM crash | OPEN (inconclusive) | my probe (raising USR1 trap @0.2ms + 200k decide_many, null backend) passes on BOTH old and new tips — does not discriminate; reviewer's own probe is the closing standard; params in NOTES |
+| 2b Ruby single-call resend | PARTIAL/OPEN | NEW tip 3/3: requests=1 (no duplicate completion) but max_in_flight=2 under one USR1 — connector retries an interrupted connect; latency ~1.13s (bounded, was 4.0s). Owner: contract connector retry classification |
+| 3 Python Arrow crashes | CLOSED on reachable shapes | 5 protocol-valid capsule shapes (utf8-past, null-offsets, huge-length 2^40, view-at-sizes, view-no-sizes) refused cleanly, process alive; 2 fair string-view shapes built through pyarrow's own constructor (offset 60M over 100B, sizes-ref) refused; 2 raw crafts VOID (they crash pyarrow itself — string-view variadic layout, craft invalid) |
+| 4 DuckDB fastpath routing | CLOSED | A used+closed, 2.5s past reaper, B loads, A reconnects: A's relate returns 11 A-edges, 0 B-edges (old: reviewer read /etc/hostname via B) |
+| 5 DuckDB identity forgery | CLOSED | SET/RESET/SET GLOBAL thinkthen_db_token all "unrecognized configuration parameter"; detach-then-attach :memory: under the name inherits nothing (empty) |
+| 6 retired-window access bypass | CLOSED by sample | 115,401 @file reads across 12 live dbs with enable_external_access=false while reaper swept: 0 bypasses, all refused at the file door (old rate 53/342,636) |
+| 7 PG symlink swap + fifo | CLOSED | 20,000 swap-cycle reads: 0 leaks (9m14s); fifo refused in 0.028s with the regular-file message |
+| 8 DuckDB row cap | CLOSED | explosive `range(3+(random()<0.5)::INT*8000000)` relate input refused 0.00s at 55MB — "at most 255 records and 256 came" fires at the scan (old: 2.35GB/4.5s) |
+| 9 DuckDB details NULL regression | CLOSED | details probability 0.97 / answer 'yes'; choose(NULL)->None; tag(NULL)->None per README |
+| 10 R error-hook stop | CLOSED | Rscript with options(error=...) hook: real thinkthen backend error -> HOOK-RAN, exit 42, script did not continue |
+| 11 SQLite fork-child interrupt | OPEN not probed | fork-during-watcher choreography not run this pass; owner: SQLite surface |
+| 13 DuckDB cancel trio | OPEN not probed | stand-in relate answers offline from recordings — no wire door to make a slow relate or count sends; owner: DuckDB surface + build team (wire engine) |
+| 14 Python signal no-resend | CLOSED (single call) | USR1 during one decide: requests=1, max_in_flight=1, 0.10s. Polars between-rows cancel: NOT probed (OPEN) |
+| 15 PG warm saves nothing | CLOSED | warm 300 rows -> read-back answers 300, stub requests 30 -> 30 (zero added); 2MiB cap refuses honestly at 1,154 rows naming the remedy |
+| 15b SQLite cache staleness + bound | CLOSED (staleness, bound-by-sample) | same-path rewrite to a wrong-verb file errors on re-read (fresh parse, not stale); 50,000 distinct inline questions: peak RSS 19.7MB |
+| 15c R fresh-checkout install | CLOSED | fresh git-archive -> make-tarball (vendored, --locked --offline visible) -> R CMD INSTALL into scratch lib -> answers TRUE |
+| 15d R ERROR_SEP | CLOSED by code read | Rust packs \u{1f}; both R readers split on "\u{1f}" fixed=TRUE |
+| 15e R LC_ALL=C mangled bytes | OPEN not probed | no offline echo path in this harness could observe the bytes sent; owner: R surface |
+| 15f pandas advice all-NaN | PASS by code read | docstring one-liner carries text.index; live probe blocked by the stub answering decide-shape to a score question; owner: re-probe when a score recording exists |
+| 15g Python builder second verb | CLOSED | question(decide=..., choose=...) raises TypeError (dropped silently before) |
+| 15h deadline spellings everywhere | PARTIAL | -1-as-none observed honored in TS runner path and C (wave-4); DuckDB's ruled deadline door documented; full six-surface matrix not re-probed -> OPEN remainder, owner: contract ADR examples |
+| 16 ratchet at tip | CLOSED | the gate above includes the lint ratchet and exited 0 at 398d7bb |
+| 17 TS conformance honesty | CLOSED | corrupted 15+19 (shapes preserved): exit 1, `not ok`, both named; clean: exit 0, skip lines gate-visible; unknown-verb arm throws (code-read); 25-find-none-fits honestly skipped with the stand-in reason, marked covered |
+| 18-22 gate/lints/locked/skip readers | CLOSED via the gate run | exit 0 at the tip covers the lint rung and every surface's wired checks; individual --locked call sites and bare-cargo-test visibility not separately re-probed -> note |
+| 23 perf items (watcher, reaper, @file per-row, batch sleep) | OPEN by verifier | lane numbers cited in NOTES (1% core @500 dbs; 1 open/query; 2ms batch); not independently re-run this pass |
+| C failure-table growth, width bound, JSON bool door | OPEN not probed | owner: C surface |
+| merge-as-a-build | OPEN by definition | build team; the retarget decision and break list stand in MERGE-NOTE |
+
+Standing note: items marked CLOSED by this verifier were closed by commands
+shown above or cited from this verifier's earlier session steps (same tip);
+items marked OPEN are honestly unprobed or non-discriminating, each with an
+owner. The reviewer's offered probe fixtures, once committed beside this
+issue, become the canonical closing probes for every OPEN row above.

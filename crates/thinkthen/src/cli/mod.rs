@@ -9,14 +9,18 @@ pub(crate) mod cache;
 pub(crate) mod config;
 pub(crate) mod edge;
 pub(crate) mod failure;
+mod file_size;
 pub(crate) mod find;
 mod interrupt;
 pub(crate) mod judge;
 pub(crate) mod normalize;
 pub(crate) mod profile;
+pub(crate) mod recognize;
+pub(crate) mod relate;
 pub(crate) mod schedule;
 pub(crate) mod status;
 pub(crate) mod table;
+mod transform;
 
 #[cfg(test)]
 mod conformance_tests;
@@ -41,6 +45,18 @@ pub fn entry() -> ExitCode {
             Ok(_) => ExitCode::SUCCESS,
             Err(failure) => failure::report(&failure, stderr.lock()),
         };
+    }
+    if let Some(Command::Transform(arguments)) = &cli.command {
+        return match transform::run(&arguments.command, stdout.lock()) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(failure) => failure::report(&failure, stderr.lock()),
+        };
+    }
+    // Every command that reads input may write a recording or a cache entry.
+    if cli.command.as_ref().is_some_and(Command::reads_input)
+        && let Err(failure) = file_size::claim()
+    {
+        return failure::report(&failure, stderr.lock());
     }
     let mut environment = match Environment::read() {
         Ok(environment) => environment,
@@ -89,10 +105,15 @@ fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitC
         Some(Command::Rank(arguments)) => judge::rank(arguments, environment, input, writer),
         Some(Command::Find(arguments)) => find::run(arguments, environment, input, writer),
         Some(Command::Annotate(arguments)) => annotate::run(arguments, environment, input, writer),
+        Some(Command::Recognize(arguments)) => {
+            recognize::run(arguments, environment, input, writer)
+        }
+        Some(Command::Relate(arguments)) => relate::run(arguments, environment, input, writer),
         Some(Command::Cache(arguments)) => match &arguments.command {
             args::CacheCommand::Prune(arguments) => cache::prune(arguments, environment, writer),
         },
         Some(Command::Status(arguments)) => status::run(arguments, environment, writer),
+        Some(Command::Transform(_)) => Err(Failure::Defect("the catalog returns before setup")),
         None => Err(Failure::Defect("no command and no version was parsed")),
     }
 }

@@ -1,136 +1,208 @@
-# `relate`: the design for the command and the nine surfaces
+# `relate`: design authority for the command and future surfaces
 
-Status: Proposed by the marketing side on 2026-09-21, which holds the product and library shape job by Ian's word. Ian ruled the same day: "Let's have them build relate at the same time." `relate` is the tenth function and is built with `recognize`. The build team reviews this page before any ticket. It authorizes no build and no paid run.
+Status: ticket 0081 landed on remote main at `4229bbfa`. Accepted ticket 0088 is unblocked. Ian's method, Option A detailed-result, and partial-output exit rulings remain settled. Sol Medium drives ticket 0088. This page authorizes no live or paid run.
 
-Read `recognize-design.md` first. `relate` reuses its relation rule unchanged, and step three of `recognize` is `relate` run over the names found in a text. The engine holds one pair-asking path for both.
+Read `recognize-design.md` first. `recognize` and `relate` use one shared relation planner, request-state type, question map, and generic edge assembler. Recognition retains its complete name fields. Standalone relate returns name-and-kind endpoints.
+
+## Delivery split
+
+Ticket 0081 owns only the shared relation foundation: generic entity and edge ownership, concrete wildcard expansion, exact H state, runtime backend-profile fallback, request identity, and recognition compatibility. It adds no public `relate` command.
+
+Ticket 0088 depends on landed 0081 and owns the complete public command: inline and `@entities` grammar, entity input and framing, bare output, exact dry-run schema, ruled Option A details, partial output at exit 6, help, specification, replay-only how-to, and secrecy proof. Neither ticket may reopen a settled product ruling or create a second planner, assembler, fallback path, threshold comparison, splitter, edge serializer, or request-state owner.
 
 ## The one line
 
 **Find records that clash, repeat, or rely on each other.**
 
-Beta, like the relations in `recognize`, and every page says so in the same sentence.
+## Current command and field contract
 
-## The command
-
-```
-thinkthen relate [OPTIONS] [RELATION]...
-thinkthen relate [OPTIONS] @links.json
+```text
+thinkthen relate [OPTIONS] RELATION...
+thinkthen relate [OPTIONS] @entities.json
 ```
 
-The relations sit where `tag` puts its labels. A bare name is a one-way relation between any two records.
+`@entities.json` is the complete relation question file. Entities still come from standard input or `--input FILE`; the `@` file never contains entity rows. One-way inline rules use `NAME=SOURCE_KIND:TARGET_KIND`. A bare `NAME` means `NAME=*:*`. `--either` marks the inline rules unordered. Inline rules and the `@entities` form are mutually exclusive.
 
-```
-thinkthen relate caused_by --either same_as --lines < alerts.txt
-thinkthen relate covers=test:requirement --jsonl --kind-field /type < items.jsonl
-```
+The closed version-one file is:
 
-| Option | Does |
-| --- | --- |
-| `RELATION` as `NAME` or `NAME=FROM:TO` | A one-way rule. `NAME` alone means `NAME=*:*`. `FROM` and `TO` are a kind or `*` |
-| `--either NAME` or `--either NAME=KIND:KIND` | A rule that reads the same both ways. Asked once per pair |
-| `--kind-field POINTER` | Where each JSON record keeps its kind. Without it every record is kind `*`, and a rule that names a kind is a usage error |
-| `--threshold T` | The bar an edge must reach. Default 0.5 |
-| `--details`, `--input`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field`, `--dry-run`, `--cache`, `--replay`, `--no-cache` | As on every function |
-
-A question file carries the same rules with a `reads` phrase for each, exactly as in `recognize-design.md`, under the key `relate`.
-
-Exit codes: 0 when the run finished, including no edges. 2, 4, 5, and 70 as everywhere.
-
-## How it asks
-
-Ian ruled the method on 2026-09-21: it is organized around choices.
-
-- The rules and the kinds give the list of legal pairs. A record is never paired with itself.
-- Each unordered pair is one pick-one question. The options are the relations that pair allows, each way round where the rule is one-way, plus "no relation". The user never writes "no relation".
-- All the records cross once, and as many pairs as the backend's question limit allows ride in each request.
-- `--dry-run` prints the pair count and the request count. Pairs grow with the square of the records. `relate` refuses more than 255 records, the `find` limit, with exit 2.
-
-## What comes back
-
-One JSON object per edge, one per line, so the output pipes:
-
-```
-{"name":"caused_by","source":1,"target":4,"probability":0.94}
-{"name":"caused_by","source":2,"target":4,"probability":0.94}
+```json
+{"version":1,"relate":{"fields":{"name":"/name","kind":"/kind"},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":false}]},"threshold":0.5,"model":"jev-latest","profile":"measured-profile"}
 ```
 
-- `source` and `target` are record numbers, counted from 1 in input order. `source` is the subject and `target` is the object: record 1 was caused by record 4.
-- `--details` adds both records' text and every option's probability.
-- An `--either` edge prints once, with the lower record number in `source`.
-- `probability` is the probability of the picked option. It is a plain probability, so the vocabulary's word holds.
+`version`, `relate`, and a nonempty ordered `relations` array are required. `relate.fields` is optional. It contains exactly `name` and `kind`, each one JSON Pointer, and defaults to `/name` and `/kind`. Every relation contains exactly `name`, `source`, and `target`, plus optional `reads` and `either`. Names and concrete kinds are nonempty strings. `*` is the only wildcard spelling. `reads` defaults to the relation name with underscores replaced by spaces. `either` defaults to `false`. Relation names are distinct. `threshold` is one cut and defaults to `0.5`. `model` keeps its ordinary runtime meaning. Saved `profile` is only the safe name of the calibration profile used to tune the threshold. No framing, input path, entity, runtime profile file, method, packing, one-to-many, or runner-up key exists.
 
-**One thing to reconcile.** `recognize-design.md` calls the number on a relation `confidence`, because the recognize specification discounts it by the margin. One engine path should print one number under one name. The suggestion: relations print `probability` in both functions, and the margin discount stays on names only.
+Command-line `--field`, `--kind-field`, `--threshold`, and `--model` override their matching file values independently. Saved calibration `profile` has no command-line override. `--profile FILE` instead selects the separate runtime backend-profile document from `specification/backends.md`; it supplies local limits and a running profile name but does not change saved calibration identity. Framing and `--input` remain command-only. An unreadable, invalid, extra-key, wrong-version, or wrong-shape question file exits 5. Naming a valid non-relate question file on the relate command exits 2.
 
-## The first real output
+The canonical question writes `verb`, `fields`, `relations`, `threshold`, then optional saved `profile`; each relation writes `name`, `source`, `target`, `reads`, then `either`. The question digest hashes those exact compact bytes. Saved calibration identity changes the digest. Entities, model, selected backend-profile file and name, address, and every other backend setting are absent. Selecting another `--profile FILE` alone does not change question identity.
 
-`experiments/225-relate-demo/`, run on 2026-09-21 through the live guard. Four made-up alerts, two rules, six pairs, one request, 1,365 input tokens. At the default bar the model returned four `caused_by` edges. Two were sound, at 0.94 each. One tied a late export to a full disk at 0.84, which the text does not support. One split between `caused_by` at 0.59 and `same_as` at 0.31. A bar of 0.9 kept the two sound edges. The deck slide shows both runs, because the number and the bar are the product.
+JSONL, CSV, and TSV records default to `/name` and `/kind`. Exactly one `--field POINTER` overrides the name pointer, and exactly one `--kind-field POINTER` overrides the kind pointer. Both resolve independently against the original parsed record. CSV and TSV headers form that record object. Each selected value is a nonempty JSON string. Structured input never receives a synthetic kind.
 
-## The libraries and the databases
+`--lines` refuses both field options, takes each complete nonempty line as the name, assigns synthetic kind `*`, and accepts only a bare rule or `*:*`. The line set remains one same-kind set and does not expand.
 
-| Surface | The call | Returns |
-| --- | --- | --- |
-| Python | `tt.relate(alerts, relations=["caused_by"], either=["same_as"])` | A list of edges. `tt.relate(df, on="body", ...)` returns a DataFrame of edges with the source indexes, ready for `networkx.from_pandas_edgelist` |
-| TypeScript | `await tt.relate(alerts, { relations: ["caused_by"], either: ["same_as"], signal })` | `Edge[]` |
-| Ruby | `ThinkThen.relate(alerts, relations: %w[caused_by], either: %w[same_as])` | An array of structs |
-| R | `tt_relate(alerts$body, relations = "caused_by", either = "same_as")` | A data frame of edges, ready for `igraph::graph_from_data_frame` |
-| Rust | `tt.relate(&Relate::new().relation("caused_by", Kind::Any, Kind::Any)?.either("same_as", Kind::Any)?, &alerts)?` | `Vec<Edge>` |
-| C | `thinkthen_relate(tt, spec_json, texts, lens, count, &out_json, &out_len)` | The edges as a JSON string |
-| DuckDB | `SELECT * FROM thinkthen_relate((SELECT id, body FROM alerts), ['caused_by'])` | Rows `(name, from_id, to_id, probability)` |
-| SQLite | `thinkthen_relate('alerts', 'id', 'body', 'caused_by')`, table-valued | The same rows |
-| PostgreSQL | `thinkthen_relate('SELECT id, body FROM alerts', ARRAY['caused_by'])`, set-returning | The same rows |
+The complete entity set is validated before any request. A missing pointer, wrong JSON type, blank selected value, duplicate name-and-kind identity, absent concrete rule kind, malformed inline rule, or 256th entity is exit 2 with zero sends.
 
-`relate` is the one function a database cannot run row by row, because it needs every record at once. Each engine therefore takes a table or a query. Edges as rows are what a recursive query walks, and the manual shows one.
+Empty bytes under `--lines` or `--jsonl` succeed with no output and no request. A blank line under `--lines` is one invalid empty entity at exit 2; JSONL permits no blank line and refuses one at exit 2. Empty bytes under `--csv` or `--tsv` exit 2 because the required header is missing. A valid CSV or TSV header without data rows succeeds with no output and no request. Empty document input exits 2. Dry run has the same outcomes: successful empty streams and header-only tables print nothing.
 
-## What is open for the build team
+No planner method, one-or-many marker, runner-up question, or packing control is public. The threshold defaults to `0.5` and accepts the cut.
 
-1. The `probability` and `confidence` question above.
-2. A pick-one question allows one relation per pair. The experiment brief measures how often that loses a true second relation.
-3. The one-question-per-subject form for a relation where a subject has one object. It costs one question per record. The brief measures it against pairs, and `find --in` is the same form.
-4. The record limit of 255 is a guess taken from `find`.
+## Exact dry-run schema
 
-## One tool, ten functions
+`--dry-run` validates the complete entity set, resolves the runtime backend profile, expands concrete relations, performs final fallback and 0079 splitting, and sends nothing. A nonempty file-backed run prints one compact object with this key order:
 
-`--details` prints the standard result object, `thinkthen.result/1`, with this function's value in `value` and the same `question`, `answer`, and `meta` keys as the other functions. The question file grammar, the exit-code table, the cache, and the recording are the same. A caller that handles one function's result handles this one. A question that fails inside a request that otherwise succeeded is marked on that answer and counted in `meta`. It never prints `null`, because `null` means "not sure".
+```json
+{"schema":"thinkthen.relate-plan/1","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY","backend_profile":"local_1","framing":"jsonl","fields":{"name":"/name","kind":"/kind"},"from":{"question":"file","threshold":"file","model":"file","field":"file","kind_field":"file","profile":"file"},"entity_count":3,"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":false,"method":"choice","fallback":null,"logical_questions":2,"request_count":1}],"logical_questions":2,"request_count":1,"requests":[{"digest":"<request-digest>","bytes":512,"body_utf8":"<exact compact request body>"}]}
+```
 
-## Ruled 2026-09-21: `relate` reads records, and names the user already has are records
+`backend_profile` is the resolved name inside the selected `thinkthen.backend-profile/1` file and is null when no runtime profile was selected. It is never the question file's saved calibration `profile`. `framing` is `document`, `lines`, `jsonl`, `csv`, or `tsv`. `fields` is null for lines.
 
-The recognize team's closing note says `relate` works "over records or provided entities". The product side rules one form. `relate` reads records. A user who already has names passes each name as a record, with its kind in the field `--kind-field` points at, and the relation rules apply to those kinds. No second input form exists.
+`from` is absent for inline rules. A file-backed run writes `question`, `threshold`, `model`, `field`, and `kind_field` in that order, each as `file`, `command line`, or `default`; optional `profile` follows only when the saved calibration identity exists and is always `file`. `--profile FILE` never appears in `from`, because `backend_profile` reports it separately.
 
-One case is different: names inside one text, where the sentence around them decides the relation. That is `recognize` given names the user already found. It stays in the backlog, in `sdlc/issues/2026-09-21-candidates-for-a-tenth-function-relate-and-find-in.md`. Ian can overturn this.
+`relations` contains one entry per expanded concrete relation in planning order. `method` is `choice` or `yes_no`. `fallback` is null, `max_options`, or `max_request_bytes`. Counts are exact after splitting. Each request entry is in send order. `bytes` is the UTF-8 byte length of `body_utf8`; decoding that JSON string yields the exact bytes that would be sent. The report makes no token, price, or backend-acceptance claim.
 
-## Ruled 2026-09-21: a relation's ends are `source` and `target`, everywhere
+## Current bare output
 
-`from` is a reserved word in Python and in SQL, so four of the nine surfaces could never say it. The library team chose `source` and `target` for every host. The product side extends that to the command's own JSON and to the question file, so no door converts anything and a user sees one pair of words on every surface. The rule on the command line is unchanged, `--relation NAME=FROM:TO`, because it names no field. This section overrides any older line on this page that says `from`, `to`, `head`, or `tail`. Ian can overturn it.
+Bare output emits one edge per line:
 
-## Direction 2026-09-23: rebuild the graph from strings, and relate plans its own questions
+```json
+{"relation":"sung_by","source":{"name":"Octopus's Garden","kind":"song"},"target":{"name":"Ringo Starr","kind":"person"},"probability":0.93}
+```
 
-Ian's direction on 2026-09-23. The user hands relate a list of entities, each a name and a kind, the same shape recognize returns: `John Lennon, person`, `Octopus's Garden, song`, `Help!, album`, `Help!, song`. The user also names the relations: `sung_by=song:person`, `appears_on=song:album`. Relate returns the graph as edges. The user never picks a method, and relate plans the questions per relation.
+One-way edges keep the rule's source-to-target direction even when the target side asked the choice. `--either` normalizes endpoints to input order. Edges print by relation declaration, concrete-kind expansion, asker or pair, then candidate order. No edge prints twice.
 
-- A relation between two different kinds asks one `choose` per source entity over the legal targets plus "none". Every option above the cut becomes an edge, so a duet yields two `sung_by` edges.
-- A relation within one kind (duplicates, contradicts, causes) asks method H.
-- One entity name may carry two kinds (`Help!` the song and `Help!` the album). An entity is its name plus its kind.
-- Recognize's relation step runs the same planner over the names it found. `recognize | relate` and relate over a user's own list give one output shape.
+## Current final hybrid planner — authoritative
 
-The open question is whether the kind shape alone picks the method, or whether a rule needs a `one` or `many` marker. Choose splits one probability across its picks, so a source with three true targets may fall under the cut (experiment 237, duplicate clusters). The Beatles graph test answers it: about 200 official songs, the four Beatles, and the albums, with sourced truth from `experiments/238-beatles-real-data/data/songs.tsv`. That test runs the planner against method H alone. Ticket 0081's design review waits for it. The edge shape does not change.
+This is the only current method ruling. It applies to standalone relate and to recognition relations.
 
-### Result 2026-09-23: the kinds pick the method, and no marker is needed
+### Shared entity and edge ownership
 
-`experiments/239-beatles-graph/` ran the direction above on 184 songs, the four Beatles, and 13 albums from Wikipedia (386 true edges). The planner (choose per song) beat method H on precision and F1 for both relations at every cut. It asked 368 questions against 3,128 and used 116,011 input tokens against 140,283. At its best cut of 0.4 the planner scored precision 0.83, recall 0.68, F1 0.75. H scored 0.48, 0.72, 0.58 at 0.6. Taking only the top pick scored the same F1 as keeping every option above the cut, so a rule needs no one/many marker. The kind shape picks the method. Duets are a known limit. Both singers came back for 1 of 19 duets under either method, because the model is unsure of the second singer however the question is asked. `scripts/relate.py` there is the reference harness: entities and rules in, edges in the ruled shape out. The default cut stays 0.5 until a second set confirms 0.4. Ticket 0081 can start design review on this planner.
+`core/relation` owns one validated `RelationEntity { name, kind }`, one `RelationEntityView` implemented by `RelationEntity` and `RecognizedName`, one generic `RelationEdge<E>`, wildcard expansion, question mappings, and assembly. The planner remains index-based and generic over the view. The assembler owns the only threshold comparison, direction normalization, self exclusion, and mapping interpretation.
 
-### The planner's two remaining rules, 2026-09-23
+Relate parses `RelationEntity` and serializes `RelationEdge<RelationEntity>`. Recognition owns `RecognizedName` and serializes `RelationEdge<RecognizedName>`. The migration generalizes the existing edge and assembler before relate calls them. No command owns a second planner, mapping table, threshold comparison, edge type, or edge serializer.
 
-Decided by the product side and open to Ian's overturn. First, a relation between two kinds asks from the side with more entities and offers the smaller side as options. Songs pick among four people, and people never pick among 184 songs. Second, when the options for one question would pass the tool's 255-option ceiling or an explicit profile's request-byte limit, that relation falls back to method H. Probes accepted 101 and 255 options. No Jev byte ceiling is named until a measurement supports one. The duet limit stays open. A cheap second step would ask one yes/no for each runner-up option above a low floor. It is untested and does not block ticket 0081, because the method is internal and the edge shape does not change.
+### Wildcard expansion and method selection
 
-## Ruled 2026-09-23, revised after experiment 237: method H for every relation
+The planner records admitted concrete kinds in first-seen entity order. A concrete rule side expands to itself. A rule `*` expands to every admitted concrete kind in that order. It plans each expanded concrete kind pair separately, keeps rule/kind/entity order, and excludes self-pairs. The synthetic line kind is one same-kind exception and does not expand.
 
-Ian passed this to the build team on 2026-09-23, after the bake-off in `sdlc/issues/2026-09-23-relate-methods-bake-off.md` (`2a8d43f`). Every relation, and recognize's relation step, uses method H. H asks one yes/no per pair per relation, and the wording the questions share rides once per request. Each direction of a one-way relation is its own yes/no. The three-way choice for one-way relations is withdrawn. The default cut stays 0.5, and requests are split under an explicit profile's limits. Across seven sets H found 89 of 89 true links with 11 false ones, at the fewest tokens on every set. Matching one list against another is `choose` per record, not relate. The edge shape ruled below and in ticket 0081 does not change. This section overrides the method in the section that follows.
+Same-kind concrete relations use H. Both-way rules ask one unordered yes/no per pair. One-way rules ask one yes/no per ordered direction. Different-kind concrete relations ask from the side with more entities, offer the smaller side plus `none`, and ask from the declared source side on equal counts. Every non-`none` option at or above the cut becomes an edge.
 
-## Ruled 2026-09-23: yes/no per both-ways relation, a three-way choice per one-way relation
+`--either` removes reverse duplicates by first-seen kind and entity order. One-way `*:*` retains both directions. The user supplies no method or one-to-many marker.
 
-Ian ruled on 2026-09-23 and overturned the pick-one method of 2026-09-21. A relation that reads the same both ways, such as `same_as`, gets one yes/no question per pair. A relation with a direction gets one three-way choice per pair: source to target, target to source, or neither. A pair can hold several relations, and each direction keeps its own probability. The evidence is `experiments/225-recognize-harvest-package/relate/measurements/VERDICTS.md`, arm (a). Twelve pairs held two true relations each. Pick-one found 11 of 24 at 2,449 tokens, and yes/no found 22 of 24 at 1,714 tokens. With several rules, yes/no asks one question per rule and stays cheaper up to about three rules. This section overrides the method sentence above.
+### Exact option and backend-profile fallback
 
-Two more answers to the build team the same day. Recognition policy knobs stay out of this round, and only `--threshold` and `--relation-threshold` ship. Splitting is in this round and required. An explicit backend profile supplies exact byte, expanded-question, and choice-option limits. No Jev byte ceiling is known until measured. Splitting is a correctness fix and needs no paid measurement. Dry-run sizes and replay prove it. Packing to save money stays out of this round. A request that fits keeps its historical bytes, and no cost claim changes.
+The fixed ceiling is 255 total wire options in one choice, including `none`. With runtime backend profile `max_options = N`, the effective ceiling is `min(255, N)`. A choice with exactly the effective ceiling stays choice. One over changes only that expanded concrete relation to H. Other concrete relations from the same wildcard rule retain their independently selected method.
 
-## What Ian can overturn
+`max_questions` never changes method; ticket 0079 splits the ordered plan. `max_request_bytes` first uses the 0079 splitter and changes a concrete relation to H only when one choice question with its complete state cannot fit alone. `max_evidence_bytes` never changes method and refuses the run. After fallback, the complete H plan is encoded and preflighted again. An impossible H plan exits 2 before replay, cache, key access, or a send.
 
-All of it. He has ruled: `relate` is built with `recognize`, and it asks by yes/no for a both-ways relation and by a three-way choice for a one-way relation (2026-09-23).
+Tests pin 255 and backend-profile equality as choice, 256 and backend-profile N+1 as H, a splittable request-byte overflow as choice chunks, an unsplittable one-choice byte overflow as H, and impossible final H as zero sends. For one wildcard rule, one mixed option-limit case and one mixed unsplittable-byte case each prove that exactly one concrete relation falls back while a sibling remains choice, with requests and edges in concrete expansion order. Recognition runs the same cases, and ticket 0081 updates `specification/recognize.md` from whole-rule wording to this per-concrete rule.
+
+## Exact relation request state
+
+Every relation request uses a typed state with this key order. Entity ids are `i1`, `i2`, and onward in original input order. The entity array contains the complete entity set. After wildcard expansion, `relation.source` and `relation.target` are the concrete kinds for this plan.
+
+Recognition state includes its original normalized source text exactly:
+
+```json
+{"evidence":"Ada works for Acme.","entities":[{"id":"i1","name":"Ada","kind":"person"},{"id":"i2","name":"Acme","kind":"organization"}],"relation":{"name":"works_for","source":"person","target":"organization","reads":"works for","either":false}}
+```
+
+Standalone relate omits only `evidence`:
+
+```json
+{"entities":[{"id":"i1","name":"Ada","kind":"person"},{"id":"i2","name":"Acme","kind":"organization"}],"relation":{"name":"works_for","source":"person","target":"organization","reads":"works for","either":false}}
+```
+
+The typed state is converted to the existing structured `Evidence` path. Generic `Plan`, non-relation evidence, and the System One request encoder keep their current behavior. Relation request bytes, recording digests, and cache identities intentionally change to the final encoded state. New offline relation fixtures replace no historical experiment source.
+
+A directed H wire question is exactly:
+
+```json
+{"type":"noul","instructions":"Does the relation hold from i1 to i2?"}
+```
+
+An either H wire question is exactly:
+
+```json
+{"type":"noul","instructions":"Does the relation hold between i1 and i2?"}
+```
+
+H sends no `criteria`. Its instructions repeat no name, kind, relation name, or `reads` text. The state carries those values once per request. Directed H question order is source entity then target entity. Either H uses normalized input order. Compiled recognize and relate tests pin both complete request bodies, source preservation, question order, and digest changes. A non-relation request fixture pins unchanged bytes.
+
+## Ruled Option A detailed result — exact public schema
+
+One `--details` run prints one compact `thinkthen.result/1` object. It has no top-level `input` or `threshold`; the resolved question carries fields, threshold, and optional saved calibration `profile` like recognize carries its resolved settings. Key order is `schema`, `value`, `question`, `answer`, `meta`.
+
+```json
+{"schema":"thinkthen.result/1","value":[{"relation":"works_for","source":{"name":"Ada","kind":"person"},"target":{"name":"Acme","kind":"organization"},"probability":0.84}],"question":{"verb":"relate","fields":{"name":"/name","kind":"/kind"},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":false}],"threshold":0.5},"answer":{"questions":[{"relation":"works_for","reads":"works for","method":"choice","direction":"source_to_target","asker":{"role":"source","entity":{"name":"Ada","kind":"person"}},"candidates":[{"role":"target","entity":{"name":"Acme","kind":"organization"},"probability":0.84,"accepted":true},{"role":"target","entity":{"name":"Other","kind":"organization"},"probability":0.10,"accepted":false},{"none":true,"probability":0.06,"accepted":false}],"pick":{"role":"target","entity":{"name":"Acme","kind":"organization"}},"request":"<request-digest>"}]},"meta":{"tool":"thinkthen 0.0.1","question_sha256":"<digest>","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":100,"output_tokens":20},"requests_sent":1,"cached":false,"requests":["<request-digest>"],"failed_questions":0}}
+```
+
+For `--lines`, `question.fields` is `null`. For structured input it always contains the two resolved pointers. Each relation object always writes `name`, `source`, `target`, `reads`, and `either` in that order. Optional saved calibration `profile` follows `threshold`. The question digest hashes this exact compact `question` object; entities and runtime backend settings are absent. `usage` may be absent under the existing aggregate rule. `profile_warning` follows the existing saved-versus-running mismatch rule. Every other shown meta field is present, and `failed_questions` is always present.
+
+`answer.questions` follows logical construction order and contains one of four entry unions below. Every entry ends with its producing request digest. `direction` is `source_to_target` for a one-way rule and `either` for an either rule.
+
+### Successful choice entry
+
+```json
+{"relation":"works_for","reads":"works for","method":"choice","direction":"source_to_target","asker":{"role":"source","entity":{"name":"Ada","kind":"person"}},"candidates":[{"role":"target","entity":{"name":"Acme","kind":"organization"},"probability":0.84,"accepted":true},{"role":"target","entity":{"name":"Other","kind":"organization"},"probability":0.10,"accepted":false},{"none":true,"probability":0.06,"accepted":false}],"pick":{"role":"target","entity":{"name":"Acme","kind":"organization"}},"request":"<request-digest>"}
+```
+
+When the larger target side asks, `asker.role` is `target`, each entity candidate role is `source`, and `pick.role` is `source`. The public relation direction stays `source_to_target`; asking from the target side never reverses emitted edges. Under `--either`, direction is `either` and emitted endpoints normalize to input order.
+
+Candidates remain in wire option order with `none` last. A real candidate has `accepted: true` exactly when its probability reaches the inclusive cut and therefore creates an edge. Several real candidates may be accepted. `none` is always false because it creates no edge. `pick` is the first highest-probability wire option before thresholding and is `{"none":true}` when none leads.
+
+### Successful H entry
+
+```json
+{"relation":"duplicates","reads":"duplicates","method":"yes_no","direction":"either","source":{"name":"A","kind":"record"},"target":{"name":"B","kind":"record"},"probability":0.18,"accepted":false,"request":"<request-digest>"}
+```
+
+For a one-way H question, direction is `source_to_target` and source and target are the ordered edge roles tested by that question. For either H, source and target are normalized input order. `probability` is the backend probability of yes. `accepted` is true exactly at or above the inclusive cut.
+
+### Failed choice entry
+
+```json
+{"relation":"works_for","reads":"works for","method":"choice","direction":"source_to_target","asker":{"role":"source","entity":{"name":"Ada","kind":"person"}},"candidates":[{"role":"target","entity":{"name":"Acme","kind":"organization"}},{"role":"target","entity":{"name":"Other","kind":"organization"}},{"none":true}],"failure":{"kind":"backend","cause":"missing_probability"},"request":"<request-digest>"}
+```
+
+### Failed H entry
+
+```json
+{"relation":"duplicates","reads":"duplicates","method":"yes_no","direction":"either","source":{"name":"A","kind":"record"},"target":{"name":"B","kind":"record"},"failure":{"kind":"backend","cause":"wrong_kind"},"request":"<request-digest>"}
+```
+
+Failed entries preserve the complete question identity and candidate identities. They omit `probability`, `accepted`, and `pick`. Failure causes reuse the closed result contract. `value` contains accepted edges only. `meta.failed_questions` equals the number of failed entries.
+
+## Ruled outward behavior: partial-failure exit
+
+The choice applies when one or more logical relation answers are valid and one or more are recoverably failed. A reply with no valid logical answer remains exit 4. Transport, status, replay, local, output, cancellation, and defect failures keep their existing codes and never become a partial success.
+
+Ian chose exit 6 with partial output on 2026-09-23. Buffer the aggregate until every relation request succeeds at the request level. Emit successful bare edges, or the complete Option A object with failed entries, and exit 6 when any recoverable logical answer failed. This matches annotate, preserves valid paid answers, and gives bare pipelines a machine-readable incomplete-run signal.
+
+Exit 4 with no output and exit 0 with partial output are rejected alternatives.
+
+## Proof and delivery boundary
+
+Ticket 0081 proves the shared foundation through pure relation tests and compiled recognition compatibility. It pins generic ownership, concrete expansion, exact state and H bodies, every fallback boundary, relation digest changes, replay/cache identity, zero-send final refusal, unchanged public recognition JSON, and one unchanged non-relation request body. It changes at most 10 production and 7 test-only Rust files and adds at most 800 production plus 700 test nonblank Rust lines, 1,500 gross.
+
+Ticket 0088 adds relate to the full shared secrecy matrix, not a smaller command-specific substitute. The matrix covers bare/details, document/lines/JSONL/CSV/TSV, every settled empty-input case, success, dry run, cache, record, replay, replay miss, key absence, transport/status/decode and mixed logical failures, backend-profile and field refusals, hostile or damaged requested recordings, storage failure, and the authorization-header-only key path. It inspects stdout, stderr, `Debug`, request bodies, recording/cache files, and fixtures. Shared refusal tests count loopback requests on every local no-send path. It changes at most 15 production and 11 test-only Rust files and adds at most 1,200 production plus 1,100 test nonblank Rust lines, 2,300 gross.
+
+Each ticket requires focused red/green proof and independent code review. The coordinator then runs `install`, `lint`, `test`, and `spec` sequentially from the exact candidate revision with key and base-address variables unset and no competing Rust build, followed by `git diff --check`. Every Rust file remains at or below 500 nonblank lines. Near-limit recognize, failure, result, args, and secrecy owners split or receive a new behavior-local owner before additions. No dependency, live call, or paid call enters either ticket.
+
+## Future surfaces
+
+Library and database surfaces remain future work. They must consume the same edge meaning and must not create a second planner. Tickets 0081 and 0088 do not change the `surfaces` tree or settle future host-language result types.
+
+## Superseded history: 2026-09-21 pick-one proposal
+
+The first proposal asked one pick-one question per unordered pair, with every legal relation and `no relation` as options. It used record numbers in output and packed pairs under backend limits. It predates entity input, the hybrid method, and name-and-kind endpoints. It is history only.
+
+## Superseded history: 2026-09-23 all-H proposal
+
+The all-H proposal asked one yes/no per pair for every relation. Ian's later final direction combines cross-kind choice with same-kind H. The all-H method is superseded.
+
+## Superseded history: 2026-09-23 three-way proposal
+
+The three-way proposal asked a directed pair to choose source-to-target, target-to-source, or neither. It is superseded. One-way relations now use cross-kind choice or ordered same-kind H.
+
+## Current rule
+
+Current rule: 0081 first lands first-seen concrete wildcard expansion, cross-kind choice, same-kind H, the lower of 255 and runtime backend-profile `max_options`, per-concrete fallback, one exact typed relation state, request identity, and one shared generic planner and edge assembler while recognition keeps offsets, strength, and its public output. Dependent 0088 then adds the complete `@entities` command grammar, saved calibration identity, name-and-kind-only standalone endpoints, exact dry-run schema, ruled Option A detailed schema, partial output at exit 6, documentation, and secrecy proof. The Luna trial stopped after two remediation passes. Sol Medium drives both tickets, and each starts product code only after independent Sol design acceptance.

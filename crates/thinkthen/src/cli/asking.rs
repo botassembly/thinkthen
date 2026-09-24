@@ -7,27 +7,54 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 use crate::core::{
-    Backend, BackendProfile, DecisionResult, Framing, Meta, Outcome, Plan, PlanDocument, Pointer,
+    Backend, BackendProfile, DecisionResult, Evidence, Meta, Outcome, Plan, PlanDocument, Pointer,
     Question, QuestionText, Reading, Record, RecordValue, RequestMeta, Resolved, Sources,
     Threshold, Value, json_line, question_sha256_with_profile,
 };
 
 use crate::args::Common;
 use crate::edge::{self, Environment};
+use crate::engine::Width;
+use crate::engine::facade::{self, Engine, Settings, Storage};
 use crate::failure::Failure;
-use crate::http::Client;
 use crate::judge::{Asked, Keeping, View};
-use crate::prepared_request::PreparedRequest;
 use crate::profile::{self, Mismatch};
-use crate::recorder::Recorder;
 use crate::schedule::{self, Judged, Output};
 use crate::table::{Kind as TableKind, Rows as TableRows};
 
 mod folders;
-mod request;
 
 pub(crate) use folders::Folders;
-pub(crate) use request::{ask, ask_prepared};
+
+/// Build the one engine a command calls, from what the command resolved.
+///
+/// `width` is the `--jobs` a record command registered, or `None`.
+pub(crate) fn engine(
+    common: &Common,
+    environment: &Environment,
+    folders: Folders,
+    backend: Backend,
+    profile: Option<BackendProfile>,
+    width: Option<u8>,
+) -> Result<Engine, Failure> {
+    let width = width.map(|jobs| Width::new(u64::from(jobs))).transpose()?;
+    Ok(Engine::new(Settings {
+        backend,
+        profile,
+        timeout: Duration::from_secs(common.timeout),
+        max_retries: common.max_retries,
+        retry_wait: environment.retry_wait(),
+        width,
+        storage: Storage {
+            record: folders.record,
+            replay: folders.replay,
+            private_default: folders.private_default,
+            cache_answers: folders.cache_answers,
+        },
+        key: edge::key,
+        usage: environment.counters(),
+    })?)
+}
 
 /// Where one record's question comes from.
 ///
@@ -60,12 +87,12 @@ impl Asks {
     }
 }
 
-/// One record, the question it was asked, and the request that carries both.
+/// One record, the question it was asked, and the evidence it is asked of.
 #[derive(Debug)]
 struct Sending {
     record: Record,
     question: Question,
-    plan: Plan,
+    evidence: Evidence,
 }
 
 /// The one question every record is asked, which every verb but one has.
@@ -128,7 +155,7 @@ pub(crate) fn run(
     if view.quiet && reading.streams() {
         return Err(Failure::QuietOverRecords);
     }
-    let jobs = schedule::jobs_of(common.jobs, reading.streams())?;
+    schedule::jobs_of(common.jobs, reading.streams())?;
     let source = edge::source(common.input.as_deref(), input)?;
     let configuration = JudgingInput {
         common,
@@ -154,7 +181,7 @@ pub(crate) fn run(
     };
 
     if let Some(kind) = table_kind(common) {
-        return over_table(configuration, &reading, source, kind, jobs, output);
+        return over_table(configuration, &reading, source, kind, output);
     }
 
     let mut chunks = edge::Chunks::new(source, reading.streams());
@@ -183,10 +210,9 @@ pub(crate) fn run(
         return Ok(exit_code(outcome));
     }
     schedule::over_records(
+        &judging.engine,
         &|bytes: &Vec<u8>| judging.row(&reading, bytes),
         chunks,
-        jobs,
-        judging.recorder.reported(),
         judging.environment.cancel(),
         output,
     )
@@ -197,7 +223,6 @@ fn over_table(
     reading: &Reading,
     source: Box<dyn std::io::BufRead + Send>,
     kind: TableKind,
-    jobs: usize,
     output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure> {
     let mut rows = TableRows::new(source, kind)?;
@@ -217,10 +242,9 @@ fn over_table(
     }
     let judging = Judging::new(configuration)?;
     schedule::over_records(
+        &judging.engine,
         &|record| judging.typed_row(reading, record),
         rows,
-        jobs,
-        judging.recorder.reported(),
         judging.environment.cancel(),
         output,
     )
@@ -228,18 +252,7 @@ fn over_table(
 
 /// Read the framing the command line asked for, over the settled pointers.
 fn read_by(common: &Common, settled: &Resolved) -> Result<Reading, Failure> {
-    let framing = if common.lines {
-        Framing::Lines
-    } else if common.jsonl {
-        Framing::Jsonl
-    } else if common.csv {
-        Framing::Csv
-    } else if common.tsv {
-        Framing::Tsv
-    } else {
-        Framing::Document
-    };
-    Ok(Reading::new(framing, settled.on().to_vec())?)
+    Ok(Reading::new(common.framing(), settled.on().to_vec())?)
 }
 
 fn table_kind(common: &Common) -> Option<TableKind> {
@@ -302,10 +315,16 @@ fn plan_record(
     let Some(record) = first else {
         return Ok(ExitCode::SUCCESS);
     };
-    let sending = asked_of(reading, record, backend, planning.asks)?;
-    let _prepared = PreparedRequest::with_profile(backend, &sending.plan, profile)?;
+    let sending = asked_of(reading, record, planning.asks)?;
+    let plan = Plan::new(
+        sending.evidence,
+        backend.model().clone(),
+        vec![sending.question],
+    )
+    .map_err(|_| Failure::Defect("a plan of one question asks nothing"))?;
+    let _prepared = facade::split(backend, profile, &plan)?;
     mismatch.print_once()?;
-    let document = PlanDocument::of(backend, &sending.plan)
+    let document = PlanDocument::of(backend, &plan)
         .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
     let document = if reading.streams() {
         document.reading(reading)
@@ -320,41 +339,24 @@ fn plan_record(
     Ok(ExitCode::SUCCESS)
 }
 
-/// Read one record and build the one request it asks, which both paths do.
-fn asked_of(
-    reading: &Reading,
-    record: Record,
-    backend: &Backend,
-    asks: &Asks,
-) -> Result<Sending, Failure> {
-    let question = asks.of(&record)?;
-    let plan = Plan::new(
-        reading.evidence(&record)?,
-        backend.model().clone(),
-        vec![question.clone()],
-    )
-    .map_err(|_| Failure::Defect("a plan of one question asks nothing"))?;
+/// Read one record and the question it is asked, which both paths do.
+fn asked_of(reading: &Reading, record: Record, asks: &Asks) -> Result<Sending, Failure> {
     Ok(Sending {
+        question: asks.of(&record)?,
+        evidence: reading.evidence(&record)?,
         record,
-        question,
-        plan,
     })
 }
 
-/// One question over one backend, asked of every record in turn.
-#[derive(Debug)]
+/// One question over one engine, asked of every record in turn.
 struct Judging<'a> {
-    common: &'a Common,
     environment: &'a Environment,
-    recorder: Recorder,
-    backend: Backend,
-    client: Client,
+    engine: Engine,
     asks: Asks,
     threshold: Option<Threshold>,
     view: View,
     keeping: Keeping,
     streams: bool,
-    profile: Option<BackendProfile>,
     mismatch: Mismatch,
 }
 
@@ -390,22 +392,13 @@ impl Judging<'_> {
             mismatch,
         } = input;
         Ok(Judging {
-            common,
             environment,
-            client: Client::new(Duration::from_secs(common.timeout), backend.is_secure()),
-            recorder: Recorder::of_private(
-                folders.record.as_deref(),
-                folders.replay.as_deref(),
-                folders.private_default,
-                folders.cache_answers,
-            )?,
-            backend,
+            engine: engine(common, environment, folders, backend, profile, common.jobs)?,
             asks,
             threshold,
             view,
             keeping,
             streams,
-            profile,
             mismatch,
         })
     }
@@ -431,21 +424,15 @@ impl Judging<'_> {
         record: Record,
         arrived: Option<&[u8]>,
     ) -> Result<Judged, Failure> {
-        let sending = asked_of(reading, record, &self.backend, &self.asks)?;
-        let answered = ask(
-            &self.backend,
-            &sending.plan,
-            self.common,
-            self.environment,
-            &self.recorder,
-            &self.client,
-            self.profile.as_ref(),
+        let sending = asked_of(reading, record, &self.asks)?;
+        let judged = self.engine.judge(
+            &sending.question,
+            self.threshold,
+            sending.evidence,
+            self.environment.cancel(),
         )?;
-        let [crate::core::AnswerOutcome::Answered(answer)] = answered.reply.outcomes() else {
-            return Err(Failure::Defect("the adapter answered no question"));
-        };
-        let answer = answer.clone();
-        let (value, outcome) = answer.read(self.threshold);
+        let (answer, value, outcome, answered) =
+            (judged.answer, judged.value, judged.outcome, judged.answered);
         let probability = answer.yes();
         let printed = if self.view.details
             && (self.keeping != Keeping::Passing || outcome == Outcome::Yes)
@@ -455,9 +442,9 @@ impl Judging<'_> {
                 question_sha256_with_profile(
                     &sending.question,
                     self.threshold,
-                    self.calibrated_profile(),
+                    self.tuned_for_profile(),
                 )?,
-                self.backend.url().clone(),
+                self.engine.backend().url().clone(),
                 answered.reply.model().clone(),
                 answered.reply.usage(),
                 RequestMeta::new(
@@ -513,8 +500,8 @@ impl Judging<'_> {
         })
     }
 
-    fn calibrated_profile(&self) -> Option<&crate::core::ProfileName> {
-        self.mismatch.calibrated()
+    fn tuned_for_profile(&self) -> Option<&crate::core::ProfileName> {
+        self.mismatch.tuned_for()
     }
 }
 

@@ -18,7 +18,7 @@ Status: **Settled** for version one, by ADR 0007.
 
 - It never runs a command, and it never writes a file the user did not name.
 - It never reads free text as a command. An unknown word is a usage error.
-- Code parses the command line. The decider model reads only the question text, the options or levels, and the evidence.
+- Code parses the command line. The model reads only the question text, the options or levels, and the evidence.
 - It never prints a key. No key appears in a plan, a result, a recording, or an error.
 
 ## Arguments
@@ -55,10 +55,14 @@ A reader that closes the pipe early is no error. `thinkthen ... | head -1` ends 
 | 3 | Single-input `decide` and `choose`: the answer is unresolved. `find --none`: nothing fits |
 | 4 | The backend failed or sent a reply the adapter refused |
 | 5 | A local failure: a file or a recording |
-| 6 | `annotate` completed its input, but one or more logical questions failed |
+| 6 | `annotate` or `relate` completed with at least one valid and one failed logical question |
 | 70 | A defect in the tool |
 
 Codes 7 and 8 stay reserved. One function maps every error to its exit code. Exit 6 prints no diagnostic because the result marks each failed question.
+
+`recognize` exits 0 for every complete result, including no names. It never uses 1 or 3. A failed required detection, kind, or relation question exits 4 and prints no partial value for that input.
+
+`relate` exits 0 for a complete result, including no accepted edges. Recoverable mixed logical failure prints the buffered partial result and exits 6. If no valid logical answer remains, it exits 4 with no output. [relate.md](relate.md) fixes its aggregate behavior.
 
 In record mode the exit code reports the run. A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers. `annotate` exits 6 when a completed run contains one or more failed questions; good answers and failed markers both print. A valid answer on standard output can accompany exit 1, 3, or 6, so a script that wants the value reads it and then reads `$?`.
 
@@ -105,3 +109,5 @@ A run that read a question file carries one more field, `from`, between `input` 
 ```
 
 `annotate --dry-run` also checks the saved file, and its `input` object names each question's pointers. [annotate.md](annotate.md) gives both.
+
+`relate --dry-run` reports the complete entity set, expanded relations, method and fallback choices, and every exact split request under `thinkthen.relate-plan/1`. It sends nothing and makes no token or price claim. [relate.md](relate.md) fixes that schema.

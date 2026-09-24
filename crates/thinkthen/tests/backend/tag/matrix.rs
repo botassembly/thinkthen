@@ -4,7 +4,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::process::{Command, Stdio};
 
 use super::file;
-use crate::harness::{Canned, Listener, spawn};
+use crate::harness::{Canned, Listener, finish, spawn};
 
 fn answer(probabilities: &[f64]) -> String {
     let answers = probabilities
@@ -278,7 +278,7 @@ fn a_closed_tag_output_pipe_stops_quietly() {
     let mut first = String::new();
     output.read_line(&mut first).expect("one row");
     drop(output);
-    let finished = child.wait_with_output().expect("tag ends");
+    let finished = finish(child, "tag").expect("tag ends");
     assert_eq!(finished.status.code(), Some(0));
     assert_eq!(first, "{\"input\":\"row 1\",\"value\":[\"billing\"]}\n");
     assert!(finished.stderr.is_empty());

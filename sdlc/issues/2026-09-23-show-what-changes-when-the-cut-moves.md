@@ -17,3 +17,7 @@ The Beatles runs showed that the cut matters more than the wording on knowledge 
 Ian set `report` aside for `jq` transforms (`specification/roadmap.md`). This flag is narrower: one comparison, on the command the user already runs, reading only the cache. The build team says whether it belongs in the command or ships as a documented transform first.
 
 Ian can overturn any line.
+
+## Added 2026-09-23: accuracy at each coverage level
+
+Given labeled cases, the same cache-only pass can report a curve: for each cut, the share of cases that still get an answer and the share of those answers that are right. A cut of 0.9 answers fewer cases and gets more of them right. The curve shows the user where to set the cut before trusting a question, and it costs nothing once the answers are saved. Doug Turnbull's public study of query classification (https://softwaredoug.com/blog/2026/09/22/jev-query-understanding.html) makes this curve its main result: Jev trades coverage for accuracy smoothly, and a chat model that answers everything sits at one point.

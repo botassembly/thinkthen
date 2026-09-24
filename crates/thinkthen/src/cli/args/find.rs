@@ -10,10 +10,10 @@ use super::Common;
 /// Everything `find` was asked before its bounded unit set is read.
 #[derive(Args, Debug)]
 pub(crate) struct FindArguments {
-    /// The question the selected unit best answers.
+    /// The question the selected line or record best answers.
     pub(crate) question: String,
 
-    /// Let the answer say that no unit fits.
+    /// Let the answer say that no line or record fits.
     #[arg(long)]
     pub(crate) none: bool,
 
@@ -25,19 +25,19 @@ pub(crate) struct FindArguments {
 /// The shared options that apply to one aggregate `find` request.
 #[derive(Args, Debug)]
 pub(crate) struct FindCommon {
-    /// Print the full result object in place of the original selected unit.
+    /// Print the full result object in place of the original selected line or record.
     #[arg(long)]
     pub(crate) details: bool,
-    /// Read units from FILE instead of standard input.
+    /// Read the lines or records from FILE instead of standard input.
     #[arg(long, value_name = "FILE")]
     pub(crate) input: Option<PathBuf>,
-    /// Take each line as one text unit.
+    /// Take each line as one text record.
     #[arg(long, conflicts_with = "jsonl")]
     pub(crate) lines: bool,
-    /// Take each line as one JSON unit.
+    /// Take each line as one JSON record.
     #[arg(long)]
     pub(crate) jsonl: bool,
-    /// Send only the part of each JSON unit this RFC 6901 pointer names.
+    /// Send only the part of each JSON record this RFC 6901 pointer names.
     #[arg(long, value_name = "POINTER")]
     pub(crate) field: Vec<String>,
     /// Print the complete one-request plan and send nothing.
@@ -86,7 +86,7 @@ pub(crate) struct FindCommon {
         hide_short_help = true
     )]
     pub(crate) timeout: u64,
-    /// How many transport or retried-status attempts follow the first.
+    /// How many times a retried status is sent again. A transport failure is never sent again.
     #[arg(long, value_name = "N", default_value_t = 2, hide_short_help = true)]
     pub(crate) max_retries: u32,
 }

@@ -1,0 +1,211 @@
+//! The staged recognize command over the shared splitter and relation planner.
+
+use std::io::{Read, Write};
+use std::process::ExitCode;
+
+use serde::Serialize;
+
+use crate::args::{Common, RecognizeArguments};
+use crate::asking::{self, Folders};
+use crate::core::{
+    Backend, Meta, ModelName, Outcome, Reading, RecognizeSpec, Record, RecordValue, RequestMeta,
+    json_line, recognize_sha256,
+};
+use crate::edge::{self, Environment};
+use crate::engine::facade::{Engine, Recognized, TokenInput};
+use crate::failure::Failure;
+use crate::profile;
+use crate::schedule;
+use crate::table::Rows as TableRows;
+
+mod config;
+mod dry_run;
+
+#[derive(Debug, Serialize)]
+struct Detailed<'a> {
+    schema: &'static str,
+    value: &'a Recognized,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    input: Option<Record>,
+    question: &'a RecognizeSpec,
+    answer: StrengthInputs<'a>,
+    meta: Meta,
+}
+
+#[derive(Debug, Serialize)]
+struct StrengthInputs<'a> {
+    tokens: &'a [TokenInput],
+}
+
+struct Running<'a> {
+    common: &'a Common,
+    environment: &'a Environment,
+    engine: Engine,
+    mismatch: profile::Mismatch,
+}
+
+#[expect(
+    clippy::too_many_lines,
+    reason = "the command edge keeps validation and mode selection in their observable order"
+)]
+pub(crate) fn run(
+    arguments: &RecognizeArguments,
+    environment: &Environment,
+    input: impl Read + Send + 'static,
+    mut writer: impl Write,
+) -> Result<ExitCode, Failure> {
+    let mut spec = config::settle(arguments)?;
+    let pointers = if arguments.common.field.is_empty() {
+        spec.on.clone()
+    } else {
+        let fields = arguments
+            .common
+            .field
+            .iter()
+            .map(String::as_str)
+            .collect::<Vec<_>>();
+        crate::core::pointers(&fields, crate::core::Source::CommandLine, "field")?
+    };
+    if let Some(model) = arguments.common.model.as_deref() {
+        spec.model = Some(
+            ModelName::new(model)
+                .map_err(|_| Failure::Usage("--model is text, not white space"))?,
+        );
+    }
+    let reading = Reading::new(arguments.common.framing(), pointers)?;
+    schedule::jobs_of(arguments.common.jobs, reading.streams())?;
+    let source = edge::source(arguments.common.input.as_deref(), input)?;
+    let configured = spec
+        .model
+        .as_ref()
+        .map(ModelName::as_str)
+        .or_else(|| environment.model());
+    let backend = Backend::resolve(
+        arguments.common.url.as_deref(),
+        environment.base_url(),
+        configured.unwrap_or(crate::core::DEFAULT_MODEL),
+    )?;
+    let selected_profile = profile::read(&arguments.common)?;
+    let mismatch = profile::Mismatch::new(spec.profile.as_ref(), selected_profile.as_ref());
+
+    if arguments.common.dry_run {
+        let folders = Folders::of(&arguments.common, environment)?;
+        if folders.named() {
+            return Err(Failure::DryRunWithRecording);
+        }
+        return dry_run::run(
+            &reading,
+            source,
+            &backend,
+            selected_profile.as_ref(),
+            (
+                &spec,
+                arguments
+                    .kinds
+                    .first()
+                    .is_some_and(|kind| kind.starts_with('@')),
+            ),
+            &mut writer,
+        );
+    }
+
+    let running = Running {
+        common: &arguments.common,
+        environment,
+        engine: asking::engine(
+            &arguments.common,
+            environment,
+            Folders::of(&arguments.common, environment)?,
+            backend,
+            selected_profile,
+            arguments.common.jobs,
+        )?,
+        mismatch,
+    };
+    if let Some(kind) = config::table_kind(&arguments.common) {
+        let rows = TableRows::new(source, kind)?;
+        return schedule::over_records(
+            &running.engine,
+            &|record: &Record| judged_record(&running, &reading, &spec, record.clone(), true),
+            rows,
+            environment.cancel(),
+            &mut schedule::Output::Streaming(&mut writer),
+        );
+    }
+    let streams = reading.streams();
+    let mut chunks = edge::Chunks::new(source, streams);
+    if !streams {
+        let bytes = chunks.next().transpose()?.unwrap_or_default();
+        let record = reading
+            .record(&bytes)
+            .map_err(|error| Failure::record(error, streams))?;
+        let judged = judged_record(&running, &reading, &spec, record, streams)?;
+        schedule::Output::Streaming(&mut writer).take(judged)?;
+        return Ok(ExitCode::SUCCESS);
+    }
+    schedule::over_records(
+        &running.engine,
+        &|bytes: &Vec<u8>| {
+            let record = reading
+                .record(bytes)
+                .map_err(|error| Failure::record(error, streams))?;
+            judged_record(&running, &reading, &spec, record, streams)
+        },
+        chunks,
+        environment.cancel(),
+        &mut schedule::Output::Streaming(&mut writer),
+    )
+}
+
+fn judged_record(
+    running: &Running<'_>,
+    reading: &Reading,
+    spec: &RecognizeSpec,
+    record: Record,
+    streams: bool,
+) -> Result<schedule::Judged, Failure> {
+    let evidence = reading.evidence(&record)?;
+    let text = evidence.as_text()?.into_owned();
+    let recognition = running
+        .engine
+        .recognize(spec, &text, running.environment.cancel())?;
+    let (value, inputs, aggregate) = (recognition.value, recognition.inputs, recognition.meta);
+    let line = if running.common.details {
+        let model = aggregate
+            .model
+            .unwrap_or_else(|| running.engine.backend().model().clone());
+        let meta = Meta::new(
+            env!("CARGO_PKG_VERSION"),
+            recognize_sha256(spec)?,
+            running.engine.backend().url().clone(),
+            model,
+            aggregate.usage,
+            RequestMeta::new(
+                aggregate.replayed,
+                aggregate.requests_sent,
+                aggregate.requests,
+            )
+            .with_profile_warning(running.mismatch.warning()),
+        );
+        json_line(&Detailed {
+            schema: crate::core::RESULT_SCHEMA,
+            value: &value,
+            input: streams.then_some(record),
+            question: spec,
+            answer: StrengthInputs { tokens: &inputs },
+            meta,
+        })?
+    } else if streams {
+        json_line(&RecordValue::new(record, value))?
+    } else {
+        json_line(&value)?
+    };
+    Ok(schedule::Judged {
+        printed: Some(line),
+        outcome: Outcome::Yes,
+        replayed: aggregate.replayed,
+        probability: None,
+        partial_failure: false,
+        profile_mismatch: running.mismatch.notice(),
+    })
+}

@@ -26,6 +26,7 @@ Under `--lines` and under `--jsonl` a carriage return before the line feed is st
 | `filter`, `rank` | One record flag is required. One document is not a stream |
 | `annotate` | One document by default. All four record flags are accepted |
 | `find` | Lines by default or JSONL. CSV and TSV are not options |
+| `relate` | One JSON array by default. Lines, JSONL, CSV, and TSV form one complete entity set |
 
 ### CSV and TSV
 
@@ -90,6 +91,7 @@ Settled by ADR 0008, accepted in ADR 0010, with the `find` exception settled by 
 | `decide`, `choose`, `tag`, `score`, `filter`, `rank` over N records | N |
 | `annotate` over N records | N times the number of distinct `on` sets |
 | `find` | 1 |
+| `relate` | The shared relation planner's exact request count for the complete set |
 | `--dry-run`, `--replay` | 0 |
 
 `rank` sorts locally and makes no pairwise calls. Without a cache, every request inside one command is independent of every other. A command is therefore one round, and the round runs in parallel with output order kept. With a cache, equal request digests share one backend call and each record still receives its own logical judgment in input order.
@@ -97,6 +99,8 @@ Settled by ADR 0008, accepted in ADR 0010, with the `find` exception settled by 
 ## Empty input
 
 An empty line or JSONL stream succeeds with no output and no request. CSV and TSV require a header, so an empty CSV or TSV input exits 2. An empty document is a usage error, because a judgment about nothing is a mistake in the pipeline.
+
+For `relate`, an empty line or JSONL stream and a header-only table are successful empty sets. A blank line in either stream is invalid. The default document must be a nonempty JSON array. The command validates the whole set before any request. [relate.md](relate.md) gives its independent name and kind pointers and complete-set refusals.
 
 ## Failure
 
@@ -122,7 +126,9 @@ Each digest keeps the first complete response installed in the folder. Concurren
 
 ## `jobs`
 
-`jobs` bounds how many requests are in flight at once. The configuration file that held it left version one with ADR 0010, and [roadmap.md](roadmap.md) says so. ADR 0010 gives it the advanced option `--jobs N`, which takes a whole number from 1 to 32 and defaults to 4. The vendor's own example code uses 4 to 12 workers and says the public endpoint limits concurrency above about eight, so 4 is safe everywhere and a measured run can raise it. `annotate` also accepts `--jobs` for one document because distinct evidence groups make distinct requests. Another command refuses it outside record mode.
+`jobs` bounds how many requests are in flight at once. The configuration file that held it left version one with ADR 0010, and [roadmap.md](roadmap.md) says so. ADR 0010 gives it the advanced option `--jobs N`, which takes a whole number from 1 to 32 and defaults to 4. The vendor's own example code uses 4 to 12 workers and says the public endpoint limits concurrency above about eight. A measured run can raise it. `annotate` also accepts `--jobs` for one document because distinct evidence groups make distinct requests. Another command refuses it outside record mode.
+
+The default can run past the vendor's documented 1,200 requests a minute on short records. Experiment 206 measured it from one machine, and `sdlc/issues/2026-09-20-accuracy-round-on-three-public-sets-and-a-speed-rerun.md` records it. On three 200-record checks of short lines, a width of 4 sent 1,267, 1,319, and 1,272 requests a minute. On five checks, a width of 3 sent between 972 and 1,017. At a width of 3, 3,000 short lines took 183.6 seconds, or 980 a minute. The accuracy record reports that longer records answer more slowly and stay under the limit at 4. It gives no rate for them. The service refused nothing in those runs, or at about 4,300 a minute in an earlier run that `sdlc/issues/2026-09-20-live-probe-findings-packing-tagging-status-and-cost.md` records. A run that must stay inside the documented limit on short records sets `--jobs 3`. `sdlc/issues/2026-09-24-the-default-jobs-width-runs-past-the-documented-limit.md` records why the default stays at 4.
 
 Output order never depends on `jobs`. A run with any number prints the bytes that `--jobs 1` prints, on standard output and on standard error, whether it finished or stopped. The tool holds finished rows in a bounded buffer until the rows before them are written, and the buffer holds at most `jobs` rows, so the memory of a long run stays flat.
 
