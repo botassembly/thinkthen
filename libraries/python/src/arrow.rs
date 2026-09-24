@@ -248,24 +248,69 @@ const UNREADABLE: &str = "the column's buffers declare bytes this process cannot
 #[cfg(target_os = "linux")]
 const NO_MAP: &str = "this process cannot read its memory map (/proc/self/maps), so the Arrow door cannot check a column before it reads it";
 
-/// The memory this process can read, taken once before a column is read.
+/// The memory this process can read, taken once a call before its
+/// columns are read and reused for every batch and column of that call.
 ///
 /// The interface gives no allocation length, so a declared extent past a
 /// short allocation would read into whatever follows it. When nothing
 /// readable follows (an unmapped page, a guard page, a reservation), the
 /// read would kill the host. The reader checks each extent against this
 /// snapshot first. On Linux the snapshot is the readable mappings in
-/// `/proc/self/maps`, adjacent ones merged, so a protected page and an
-/// unmapped page both fail the check. The check reads a file and makes no
-/// system call a sandbox might forbid or answer with a kill, and it faults
-/// in no page. A process that cannot read its own map gets a refusal for
+/// `/proc/self/maps`, so a protected page and an unmapped page both fail
+/// the check. A process that cannot read its own map gets a refusal for
 /// every Arrow column. Off Linux, `mincore` finds unmapped pages only.
+///
+/// A mapping of a file is listed readable to its end, but a page past the
+/// end of the file raises SIGBUS when touched (a file truncated under a
+/// memory map, or a mapping longer than its memfd). For such a mapping
+/// the check first bounds it by the file's current size: `stat` on the
+/// mapped path, trusted only when the inode matches the map line. The
+/// device is not compared, because overlay and btrfs report a different
+/// device in the map than `stat` does. When the size cannot be learned
+/// that way (a memfd, a deleted file, a replaced path), each page the
+/// check needs is read one byte through `/proc/self/mem`, which answers a
+/// page past the end of a file with an I/O error instead of a signal.
+/// When neither works the page counts as unreadable. The file's size is
+/// learned once a snapshot and only for a mapping a check reaches.
+///
 /// Memory that is mapped and readable but belongs to another allocation
-/// cannot be told apart by any reader; that lie stays the producer's.
+/// cannot be told apart by any reader, and memory the producer unmaps or
+/// truncates after the snapshot is not seen; those lies stay the
+/// producer's (NOTES.md, "What the readability check cannot see").
+#[derive(Default)]
 pub(crate) struct Readable {
     #[cfg(target_os = "linux")]
-    ranges: Vec<(usize, usize)>,
+    segments: Vec<Segment>,
+    /// `/proc/self/mem`, opened the first time a page needs a probe.
+    #[cfg(target_os = "linux")]
+    mem: std::cell::OnceCell<Option<std::fs::File>>,
 }
+
+/// One readable mapping from `/proc/self/maps`.
+#[cfg(target_os = "linux")]
+#[derive(Debug, PartialEq)]
+struct Segment {
+    low: usize,
+    high: usize,
+    /// The backing file of a file mapping; `None` for anonymous memory.
+    file: Option<Backing>,
+}
+
+/// Where a file mapping's bytes come from, and, once learned, the address
+/// where the file's pages end (`Some(None)`: the size could not be learned).
+#[cfg(target_os = "linux")]
+#[derive(Debug, PartialEq)]
+struct Backing {
+    offset: u64,
+    inode: u64,
+    path: String,
+    end: std::cell::OnceCell<Option<usize>>,
+}
+
+/// The page size every supported Linux target maps readable data with at
+/// the least; a larger page only makes the per-page probe ask twice.
+#[cfg(target_os = "linux")]
+const PAGE: usize = 4096;
 
 impl Readable {
     /// Take the snapshot.
@@ -274,7 +319,7 @@ impl Readable {
         {
             let map = std::fs::read_to_string("/proc/self/maps")
                 .map_err(|_| UsageError::new_err(NO_MAP))?;
-            Ok(Self { ranges: readable_ranges(&map) })
+            Ok(Self { segments: readable_segments(&map), mem: std::cell::OnceCell::new() })
         }
         #[cfg(not(target_os = "linux"))]
         Ok(Self {})
@@ -285,11 +330,7 @@ impl Readable {
         let first = start as usize;
         #[cfg(target_os = "linux")]
         {
-            let place = self.ranges.partition_point(|&(_, high)| high <= first);
-            match self.ranges.get(place) {
-                Some(&(low, high)) if low <= first => (high - first).min(cap),
-                _ => 0,
-            }
+            self.readable_until(first, first.saturating_add(cap)) - first
         }
         #[cfg(not(target_os = "linux"))]
         {
@@ -319,26 +360,103 @@ impl Readable {
         };
         #[cfg(target_os = "linux")]
         {
-            let place = self.ranges.partition_point(|&(_, high)| high <= first);
-            self.ranges
-                .get(place)
-                .is_some_and(|&(low, high)| low <= first && end <= high)
+            self.readable_until(first, end) == end
         }
         #[cfg(not(target_os = "linux"))]
         mapped(first, end - 1)
     }
+
+    /// The first address at or after `first`, and no later than `want`,
+    /// that cannot be read, walking touching mappings in order.
+    #[cfg(target_os = "linux")]
+    fn readable_until(&self, first: usize, want: usize) -> usize {
+        let mut at = first;
+        let mut place = self.segments.partition_point(|segment| segment.high <= at);
+        while at < want {
+            let Some(segment) = self.segments.get(place) else { break };
+            if segment.low > at {
+                break;
+            }
+            let stop = segment.high.min(want);
+            let good = match &segment.file {
+                None => stop,
+                Some(file) => self.file_until(segment, file, at, stop),
+            };
+            if good < stop {
+                return good;
+            }
+            at = stop;
+            place += 1;
+        }
+        at
+    }
+
+    /// How far from `at` toward `stop` a file mapping's pages are backed
+    /// by the file.
+    #[cfg(target_os = "linux")]
+    fn file_until(&self, segment: &Segment, file: &Backing, at: usize, stop: usize) -> usize {
+        match *file.end.get_or_init(|| file_end(segment, file)) {
+            Some(end) => end.clamp(at, stop),
+            None => self.probe_until(at, stop),
+        }
+    }
+
+    /// Read one byte a page through `/proc/self/mem` from `at` toward
+    /// `stop`, and give where the first page that fails begins.
+    #[cfg(target_os = "linux")]
+    fn probe_until(&self, at: usize, stop: usize) -> usize {
+        use std::os::unix::fs::FileExt;
+        let Some(mem) = self.mem.get_or_init(|| std::fs::File::open("/proc/self/mem").ok()) else {
+            return at;
+        };
+        let mut page = at - at % PAGE;
+        while page < stop {
+            let asked = page.max(at);
+            if !matches!(mem.read_at(&mut [0u8], asked as u64), Ok(1)) {
+                return asked;
+            }
+            page += PAGE;
+        }
+        stop
+    }
 }
 
-/// The readable ranges of a `/proc/self/maps` text, in address order, with
-/// touching ranges merged so an extent across two mappings still checks.
+/// The address where a file mapping's backing pages end, from the file's
+/// current size, or `None` when the size cannot be learned by path.
 #[cfg(target_os = "linux")]
-fn readable_ranges(map: &str) -> Vec<(usize, usize)> {
-    let mut ranges: Vec<(usize, usize)> = Vec::new();
+fn file_end(segment: &Segment, file: &Backing) -> Option<usize> {
+    use std::os::unix::fs::MetadataExt;
+    if !file.path.starts_with('/') || file.path.ends_with(" (deleted)") {
+        return None;
+    }
+    let found = std::fs::metadata(&file.path).ok()?;
+    if found.ino() != file.inode {
+        return None;
+    }
+    if !found.is_file() {
+        // A device mapping has no end-of-file rule; the map line stands.
+        return Some(segment.high);
+    }
+    let backed = found.size().saturating_sub(file.offset);
+    let pages = usize::try_from(backed.div_ceil(PAGE as u64) * PAGE as u64).unwrap_or(usize::MAX);
+    Some(segment.low.saturating_add(pages).min(segment.high))
+}
+
+/// The readable mappings of a `/proc/self/maps` text, in address order.
+/// A line with a nonzero inode is a file mapping and keeps its offset,
+/// inode, and path, so the check can bound it by the file's size.
+#[cfg(target_os = "linux")]
+fn readable_segments(map: &str) -> Vec<Segment> {
+    let mut segments = Vec::new();
     for line in map.lines() {
-        let mut fields = line.split_whitespace();
-        let (Some(span), Some(access)) = (fields.next(), fields.next()) else {
-            continue;
+        let mut rest = line;
+        let mut field = || {
+            rest = rest.trim_start();
+            let (one, after) = rest.split_once(' ').unwrap_or((rest, ""));
+            rest = after;
+            one
         };
+        let (span, access, offset, _device, inode) = (field(), field(), field(), field(), field());
         let Some((low, high)) = span.split_once('-') else {
             continue;
         };
@@ -349,12 +467,20 @@ fn readable_ranges(map: &str) -> Vec<(usize, usize)> {
         if !access.starts_with('r') {
             continue;
         }
-        match ranges.last_mut() {
-            Some(last) if last.1 == low => last.1 = high,
-            _ => ranges.push((low, high)),
-        }
+        let file = match (u64::from_str_radix(offset, 16), inode.parse::<u64>()) {
+            (Ok(_), Ok(0)) => None,
+            (Ok(offset), Ok(inode)) => Some(Backing {
+                offset,
+                inode,
+                path: rest.trim_start().to_owned(),
+                end: std::cell::OnceCell::new(),
+            }),
+            // A line this parser cannot read is never trusted as readable.
+            _ => continue,
+        };
+        segments.push(Segment { low, high, file });
     }
-    ranges
+    segments
 }
 
 /// True when every page from `first` to `last` is mapped (off Linux).
@@ -2466,12 +2592,11 @@ mod malformed_tests {
 
     #[test]
     #[cfg(target_os = "linux")]
-    fn the_memory_map_keeps_readable_ranges_and_merges_touching_ones() {
+    fn the_memory_map_keeps_readable_ranges_and_walks_touching_ones() {
         // Review 7, second pass: a protected page (`---p`) is mapped but
         // unreadable, so it must leave a gap the check refuses.
-        let map = "1000-2000 r--p 0 00:00 0 /lib\n2000-3000 rw-p 0 00:00 0\n3000-4000 ---p 0 00:00 0\n5000-6000 r-xp 0 00:00 0\nbad line\n";
-        assert_eq!(readable_ranges(map), [(0x1000, 0x3000), (0x5000, 0x6000)]);
-        let memory = Readable { ranges: readable_ranges(map) };
+        let map = "1000-2000 r--p 00000000 00:00 0\n2000-3000 rw-p 00000000 00:00 0\n3000-4000 ---p 00000000 00:00 0\n5000-6000 r-xp 00000000 00:00 0\nbad line\n";
+        let memory = Readable { segments: readable_segments(map), ..Readable::default() };
         let at = |place: usize| place as *const u8;
         assert!(memory.covers(at(0x1800), 0x1000));
         assert!(!memory.covers(at(0x2800), 0x1000));
@@ -2479,6 +2604,103 @@ mod malformed_tests {
         assert!(memory.covers(at(0x5000), 0x1000));
         assert!(!memory.covers(at(0x5000), 0x1001));
         assert!(memory.covers(at(0x4800), 0));
+        assert_eq!(memory.reach(at(0x1800), 0x10_0000), 0x1800);
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn a_file_mapping_keeps_its_offset_inode_and_path() {
+        let map = "7f00-9f00 r--s 00001000 fd:01 4242 /data/a file.arrow\n9f00-af00 r--p 00000000 00:00 0 [heap]\n";
+        let segments = readable_segments(map);
+        assert_eq!(segments.len(), 2);
+        let Some(file) = &segments[0].file else { panic!("the first line maps a file") };
+        assert_eq!((file.offset, file.inode, file.path.as_str()), (0x1000, 4242, "/data/a file.arrow"));
+        assert!(segments[1].file.is_none());
+    }
+
+    #[cfg(target_os = "linux")]
+    extern "C" {
+        fn memfd_create(name: *const c_char, flags: u32) -> c_int;
+    }
+
+    /// Two pages mapped shared over a one-page file, with `tail` written
+    /// at the end of the first page: the second page is listed readable
+    /// in the memory map, and touching it raises SIGBUS.
+    #[cfg(target_os = "linux")]
+    struct PastEnd {
+        base: *mut u8,
+        _file: std::fs::File,
+    }
+
+    #[cfg(target_os = "linux")]
+    impl PastEnd {
+        fn new(file: std::fs::File, tail: &[u8]) -> Self {
+            use std::os::fd::AsRawFd;
+            file.set_len(4096).expect("the file sizes");
+            // PROT_READ | PROT_WRITE, MAP_SHARED.
+            let base = unsafe { mmap(std::ptr::null_mut(), 8192, 0x1 | 0x2, 0x01, file.as_raw_fd(), 0) } as *mut u8;
+            assert!(!base.is_null() && base as isize != -1, "the file maps");
+            unsafe { std::ptr::copy_nonoverlapping(tail.as_ptr(), base.add(4096 - tail.len()), tail.len()) };
+            Self { base, _file: file }
+        }
+
+        /// The three backings the check tells apart: a file whose path
+        /// still names it, a file deleted after it mapped, and a memfd.
+        fn each(tail: &[u8]) -> Vec<(&'static str, Self)> {
+            use std::os::fd::FromRawFd;
+            let path = std::env::temp_dir().join(format!("thinkthen-past-end-{}", std::process::id()));
+            let named = std::fs::File::options().read(true).write(true).create(true).truncate(true).open(&path).expect("the file opens");
+            let named = Self::new(named, tail);
+            let gone_path = path.with_extension("gone");
+            let gone = std::fs::File::options().read(true).write(true).create(true).truncate(true).open(&gone_path).expect("the file opens");
+            let gone = Self::new(gone, tail);
+            std::fs::remove_file(&gone_path).expect("the file deletes");
+            let fd = unsafe { memfd_create(c"thinkthen-past-end".as_ptr(), 0) };
+            assert!(fd >= 0, "the memfd opens");
+            let memfd = Self::new(unsafe { std::fs::File::from_raw_fd(fd) }, tail);
+            vec![("named", named), ("deleted", gone), ("memfd", memfd)]
+        }
+
+        fn tail(&self, length: usize) -> *const u8 {
+            unsafe { self.base.add(4096 - length) }
+        }
+
+        fn past(&self) -> *const u8 {
+            unsafe { self.base.add(4096) }
+        }
+    }
+
+    #[cfg(target_os = "linux")]
+    impl Drop for PastEnd {
+        fn drop(&mut self) {
+            unsafe { munmap(self.base.cast(), 8192) };
+        }
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn a_file_mapping_past_the_end_of_its_file_is_unreadable() {
+        // Review 7, fourth pass: a mapping longer than its file is listed
+        // readable, and a row, a format string, or a metadata blob placed
+        // past the end of the file raised SIGBUS. The file's own bytes
+        // still read, whichever way its size is learned.
+        let words = |parts: &[i32]| parts.iter().flat_map(|one| one.to_le_bytes()).collect::<Vec<u8>>();
+        for (backing, file) in PastEnd::each(b"abc") {
+            let memory = Readable::snapshot().expect("the memory map reads");
+            assert!(memory.covers(file.tail(3), 3), "{backing}: the file's bytes read");
+            assert!(!memory.covers(file.tail(3), 4), "{backing}: one byte past the file");
+            assert_eq!(memory.reach(file.tail(3), 100), 3, "{backing}");
+            assert!(!memory.covers(file.past(), 1), "{backing}: the page past the file");
+            assert_eq!(borrowed(utf8_at(&[0, 3], file.tail(3), Text::Utf8)), ["abc"], "{backing}");
+            assert_eq!(refusal(utf8_at(&[0, 200], file.tail(3), Text::Utf8)), UNREADABLE, "{backing}");
+            assert_eq!(refusal(SchemaTree::default().text(file.past().cast(), Some(&memory))), BAD_TEXT, "{backing}");
+            assert_eq!(refusal(SchemaTree::default().metadata(file.past().cast(), Some(&memory))), BAD_METADATA, "{backing}");
+            // A blob whose length words sit in the file and whose bytes run past it.
+            let blob = words(&[1, 64]);
+            let at = file.tail(blob.len());
+            unsafe { std::ptr::copy_nonoverlapping(blob.as_ptr(), at as *mut u8, blob.len()) };
+            assert_eq!(refusal(SchemaTree::default().metadata(at.cast(), Some(&memory))), BAD_METADATA, "{backing}");
+        }
     }
 
     /// The strings a shape borrows, or a panic naming the refusal: a live

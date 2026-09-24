@@ -222,3 +222,81 @@ def test_a_table_builds_without_the_memory_map():
         "refused: this process cannot read its memory map (/proc/self/maps), "
         "so the Arrow door cannot check a column before it reads it",
     ]
+
+
+# Review 7, fourth pass: a file mapping is listed readable to its end, but
+# a page past the end of its file raises SIGBUS when touched. This child
+# maps a pyarrow IPC file, truncates the file to half, and reads a 10-row
+# slice from each end: the head still lies inside the file and answers,
+# and the tail now lies past its end and is refused. A second mapping of
+# two pages over a one-page memfd holds a format string past its end.
+TRUNCATED = r"""
+import ctypes as C, os, sys
+import pyarrow as pa, pyarrow.ipc as ipc
+import thinkthen as tt
+
+path = sys.argv[1]
+rows = ["please refund %06d " % i + "x" * 200 for i in range(20000)]
+with ipc.new_file(path, pa.schema([("t", pa.string())])) as out:
+    out.write_table(pa.table({"t": rows}))
+column = ipc.open_file(pa.memory_map(path, "r")).read_all().column("t").chunk(0)
+os.truncate(path, os.path.getsize(path) // 2)
+for name, at in (("head", 0), ("tail", 19990)):
+    try:
+        print(name, "answered", len(tt.decide_many("Is this a refund?", pa.chunked_array([column.slice(at, 10)]))))
+    except tt.UsageError as refused:
+        print(name, "refused:", refused)
+
+libc = C.CDLL(None, use_errno=True)
+libc.mmap.restype = C.c_void_p
+libc.mmap.argtypes = [C.c_void_p, C.c_size_t, C.c_int, C.c_int, C.c_int, C.c_long]
+fd = libc.memfd_create(b"past-end", 0)
+os.ftruncate(fd, 4096)
+past = libc.mmap(None, 8192, 1, 1, fd, 0) + 4096
+
+class Schema(C.Structure):
+    _fields_ = [("format", C.c_void_p), ("name", C.c_char_p), ("metadata", C.c_void_p),
+        ("flags", C.c_int64), ("n_children", C.c_int64), ("children", C.c_void_p),
+        ("dictionary", C.c_void_p), ("release", C.c_void_p), ("private_data", C.c_void_p)]
+
+class PastEnd:
+    def __arrow_c_stream__(self, requested_schema=None):
+        stream = pa.chunked_array([pa.array(["please refund"])])
+        capsule = stream.__arrow_c_stream__()
+        get = C.pythonapi.PyCapsule_GetPointer
+        get.restype, get.argtypes = C.c_void_p, [C.py_object, C.c_char_p]
+        pointer = get(capsule, b"arrow_array_stream")
+        GET_SCHEMA = C.CFUNCTYPE(C.c_int, C.c_void_p, C.POINTER(Schema))
+        inner = GET_SCHEMA(C.c_void_p.from_address(pointer).value)
+        def get_schema(stream_pointer, out):
+            got = inner(stream_pointer, out)
+            out.contents.format = past
+            return got
+        self.keep = (stream, GET_SCHEMA(get_schema))
+        C.c_void_p.from_address(pointer).value = C.cast(self.keep[1], C.c_void_p).value
+        return capsule
+
+try:
+    tt.decide_many("Is this a refund?", PastEnd())
+    print("format answered")
+except tt.UsageError as refused:
+    print("format refused:", refused)
+"""
+
+
+def test_a_mapping_past_the_end_of_its_file_is_refused(tmp_path):
+    if sys.platform != "linux":
+        import pytest
+
+        pytest.skip("memfd and the truncated-mapping signal are Linux behavior")
+    env = dict(os.environ, ENGINE_NULL="1", THINKTHEN_NULL="1")
+    done = subprocess.run(
+        [sys.executable, "-c", TRUNCATED, str(tmp_path / "column.arrow")],
+        env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=120,
+    )
+    assert done.returncode == 0, (done.returncode, done.stderr[-2000:])
+    assert done.stdout.splitlines() == [
+        "head answered 10",
+        "tail refused: the column's buffers declare bytes this process cannot read",
+        "format refused: an Arrow format, name, or error string has no end within 64 KiB of readable memory",
+    ]
