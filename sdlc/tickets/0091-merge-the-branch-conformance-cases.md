@@ -6,7 +6,7 @@ opens: conformance crates/thinkthen/src/cli/conformance_tests crates/thinkthen/t
 
 # 0091: Merge the branch conformance cases
 
-Status: draft, revised after design review; needs re-review. Owner: Claude.
+Status: design accepted 2026-09-24 after re-review. Owner: Claude.
 
 ## Outcome and authority
 
@@ -16,7 +16,7 @@ Fold the portable cases from the `surfaces` branch's `conformance/conformance.js
 
 - New cases take IDs from 26 upward and record their branch ID in `provenance`. Branch IDs collide with main's.
 - Add branch cases 06, 19, 80, 23, 76, 79, 82, 83, and 84 after re-encoding per port guide section 4.1.
-- Add one-question `annotate` cases for `choose`, `score`, and `tag` whose values equal their scalar cases. They follow ADR 0017 section 6 item 8 (bulk is the same verbs over the host's container). Ticket 0095's ruling on the bulk form is pending review, so these cases are marked pending until 0095 is accepted.
+- Add one-question `annotate` cases for `choose`, `score`, and `tag` whose values equal their scalar cases. They follow ADR 0017 section 6 item 8 (bulk is the same verbs over the host's container). Ticket 0095's ruling on the bulk form is pending review, so these cases carry a pending mark until 0095 is accepted. The mark sits in `provenance` only. The cases still run and must pass, so no skip table returns.
 - Recognize stays in main's fixture folder `crates/thinkthen/tests/fixtures/recognize-225`, whose 40 replay files pass today. Branch cases map branch to main (`other` to `MISC`), and main's ten counted divergences stay as they are. `cases.json` gains only branch case 68 (offsets past an accent and an emoji; TypeScript converts them to UTF-16, Q13) and the relation cases below.
 - Relate: one same-kind case (branch 69) and one cross-kind case (branch 71), plus the nine recognize cases with relations. All enter as `synthetic_contract` exchanges built from main's planner request bytes. Entities gain concrete kinds, since the branch method used `*` over bare text. Expected edges follow from the stated synthetic probabilities, and 36-C09 splits "Karst and Vellum" under main's rule. Branch case 70 adds only bulk and is cut. A captured re-record needs a live run under Ian's authorization and is deferred past 0.1.
 - Case 17 asserts counter differences around a call, since counters have no reset (Q11). It runs in the command runner with a temporary cache folder, not in the pure-core test.
@@ -24,7 +24,7 @@ Fold the portable cases from the `surfaces` branch's `conformance/conformance.js
 
 ## Runner arms
 
-The command runner gains three success arms (`decide_many`, `recognize`, `relate`) and one `question_form: text|file` field for the usage and local pair. Nothing else.
+The command runner gains three success arms (`decide_many`, `recognize`, `relate`) and one `question_form: text|file` field for the usage and local pair, and one counter step for case 17. Nothing else.
 
 ## Rulings this ticket applies (Q16)
 
@@ -39,7 +39,7 @@ Branch case 18, case 81 (SQL NULL), and the `jobs` field on 05, 19, and 80 are b
 ## Acceptance
 
 - The pure-core conformance test and the command runner pass on the grown file with no key and no network.
-- A schema check refuses an unknown success kind, a `captured` case without a stable recording path, and a header or credential in an exchange.
+- A schema check refuses an unknown success kind, a `captured` case without a stable recording path, and a header or credential in an exchange. Each refusal has a planted bad case that turns its test red.
 - Test and runner changes stay under 650 nonblank Rust lines. `git diff --check` passes.
 
 ## Shared files
@@ -60,5 +60,5 @@ Contract 2; state and timing 0; reach 2; proof 2; cost of error 2; total 8. Fina
 
 ## Review
 
-- Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-controls.md`) found six mechanical gaps and one needless edit to case 19. All applied; re-review pending.
+- Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-controls.md`) found six mechanical gaps and one needless edit to case 19. All applied. The re-review (`sdlc/records/2026-09-24-rereview-near.md`) accepted it with one edit, applied.
 - Code review: pending.
