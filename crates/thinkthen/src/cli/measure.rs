@@ -4,12 +4,13 @@
 //! and hands the bytes to the pure core. `sdlc/scripts/policy.py` holds it to that.
 
 use std::fmt;
-use std::io::Read as _;
+use std::io::{ErrorKind, Read as _, Write};
 use std::path::Path;
 
 use crate::core::measure::answer::{Rule, Shown};
 use crate::core::measure::{Line, MeasureError, json_lines};
 use crate::core::{Threshold, ThresholdError};
+use crate::failure::Failure;
 
 /// Why a measuring command stopped, told with the command name and the input's role.
 ///
@@ -153,6 +154,21 @@ pub(crate) fn rule(option: &'static str, text: Option<&str>) -> Result<(Rule, Sh
 /// Returns [`Cause::Unreadable`] or the core's refusal of a line.
 pub(crate) fn lines(path: &Path) -> Result<Vec<Line>, Cause> {
     read(path).and_then(|bytes| json_lines(&bytes).map_err(Cause::Measure))
+}
+
+/// Write the whole output and flush. A reader that closed early is not a failure.
+///
+/// # Errors
+///
+/// Returns [`Failure::Output`] when standard output refuses the bytes.
+pub(crate) fn write(mut writer: impl Write, text: &str) -> Result<(), Failure> {
+    match writer
+        .write_all(text.as_bytes())
+        .and_then(|()| writer.flush())
+    {
+        Err(error) if error.kind() != ErrorKind::BrokenPipe => Err(Failure::Output(error)),
+        _ => Ok(()),
+    }
 }
 
 /// Read one named input whole: a path, or standard input for `-`.

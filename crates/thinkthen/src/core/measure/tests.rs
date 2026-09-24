@@ -5,8 +5,8 @@ use super::audit::{self, By, Settings};
 use super::diff::{Discordant, discordant};
 use super::key::{Key, Outcome};
 use super::{
-    SplitMix64, auc, calibration_error, json_lines, mcnemar, python_float_text, rounded,
-    three_places, wilson,
+    SplitMix64, auc, calibration_error, json_lines, mcnemar, places, python_float_text, rounded,
+    wilson,
 };
 use crate::core::pointer::Pointer;
 
@@ -105,10 +105,10 @@ fn numbers_print_as_python_prints_them() {
     for (value, text) in cases {
         assert_eq!(python_float_text(value), text, "{value}");
     }
-    assert_eq!(three_places(Some(0.0625)), "0.062");
-    assert_eq!(three_places(Some(0.6875)), "0.688");
-    assert_eq!(three_places(Some(rounded(0.687_499_6))), "0.688");
-    assert_eq!(three_places(None), "-");
+    assert_eq!(places(Some(0.0625), 3), "0.062");
+    assert_eq!(places(Some(0.6875), 3), "0.688");
+    assert_eq!(places(Some(rounded(0.687_499_6)), 3), "0.688");
+    assert_eq!(places(None, 3), "-");
 }
 
 #[test]

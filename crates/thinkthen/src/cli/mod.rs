@@ -128,9 +128,9 @@ fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitC
             args::CacheCommand::Prune(arguments) => cache::prune(arguments, environment, writer),
         },
         Some(Command::Status(arguments)) => status::run(arguments, environment, writer),
-        Some(Command::Transform(_) | Command::Audit(_) | Command::Diff(_)) => {
-            Err(Failure::Defect("the catalog and audit return before setup"))
-        }
+        Some(Command::Transform(_) | Command::Audit(_) | Command::Diff(_)) => Err(Failure::Defect(
+            "the catalog, audit, and diff return before setup",
+        )),
         None => Err(Failure::Defect("no command and no version was parsed")),
     }
 }

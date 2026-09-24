@@ -4,16 +4,16 @@
 //! request, and reads no setting. `sdlc/scripts/policy.py` holds it to that.
 
 use std::fmt::Write as _;
-use std::io::{ErrorKind, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use clap::Args;
 
-use crate::cli::measure::{Cause, Refusal, lines, rule};
+use crate::cli::measure::{Cause, Refusal, lines, rule, write};
 use crate::core::measure::answer::{self, Identity};
 use crate::core::measure::diff::{self as compare, Change, Effect, Last, Side, Summary};
 use crate::core::measure::key::Key;
-use crate::core::measure::{rounded, three_places};
+use crate::core::measure::{places, rounded};
 use crate::core::{Pointer, json_line};
 use crate::failure::Failure;
 
@@ -47,7 +47,7 @@ pub(crate) struct DiffArguments {
 }
 
 /// Compare, then write JSON lines or the table and flush.
-pub(crate) fn run(arguments: &DiffArguments, mut writer: impl Write) -> Result<(), Failure> {
+pub(crate) fn run(arguments: &DiffArguments, writer: impl Write) -> Result<(), Failure> {
     let (changes, summary) = compare_all(arguments).map_err(Failure::Measure)?;
     let text = if arguments.table {
         table(&changes, &summary)
@@ -61,13 +61,7 @@ pub(crate) fn run(arguments: &DiffArguments, mut writer: impl Write) -> Result<(
         text.push('\n');
         text
     };
-    match writer
-        .write_all(text.as_bytes())
-        .and_then(|()| writer.flush())
-    {
-        Err(error) if error.kind() != ErrorKind::BrokenPipe => Err(Failure::Output(error)),
-        _ => Ok(()),
-    }
+    write(writer, &text)
 }
 
 fn compare_all(arguments: &DiffArguments) -> Result<(Vec<Change>, Summary), Refusal> {
@@ -136,11 +130,6 @@ fn compare_all(arguments: &DiffArguments) -> Result<(Vec<Change>, Summary), Refu
         .map_err(|cause| refusal("first run", Cause::Measure(cause)))
 }
 
-/// A probability as the table writes it: two places, or `-` for none.
-fn two(value: Option<f64>) -> String {
-    value.map_or_else(|| "-".to_owned(), |value| format!("{value:.2}"))
-}
-
 /// The prototype's table, word for word.
 fn table(changes: &[Change], summary: &Summary) -> String {
     let mut out = String::new();
@@ -149,7 +138,7 @@ fn table(changes: &[Change], summary: &Summary) -> String {
             .name
             .as_ref()
             .map_or_else(String::new, |name| format!("/{name}"));
-        let [pa, pb] = change.probability.map(|p| two(p.map(rounded)));
+        let [pa, pb] = change.probability.map(|p| places(p.map(rounded), 2));
         let _ = write!(
             out,
             "{}{name}  {} -> {}  p {pa} -> {pb}",
@@ -186,11 +175,7 @@ fn table(changes: &[Change], summary: &Summary) -> String {
         );
     }
     if let (Some(p), Some(on)) = (summary.mcnemar_p, summary.mcnemar_on) {
-        let _ = write!(
-            out,
-            "; McNemar p {} on {on}",
-            three_places(Some(rounded(p)))
-        );
+        let _ = write!(out, "; McNemar p {} on {on}", places(Some(rounded(p)), 3));
     }
     if summary.only_a > 0 || summary.only_b > 0 {
         let _ = write!(

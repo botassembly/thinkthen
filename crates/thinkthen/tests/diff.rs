@@ -8,8 +8,6 @@
 #[path = "support/measure.rs"]
 mod measure_support;
 
-use std::fs;
-
 use measure_support::{DIFF_GOLDENS, DIFF_TABLES, fixture, measure, member, run, same_lines};
 
 fn diff(arguments: &[&str], input: &[u8]) -> (i32, String, String) {
@@ -55,17 +53,13 @@ fn the_held_out_half_reads_as_the_prototype_reports() {
         .filter(|line| line.contains("\"held\""))
         .map(|line| format!("{line}\n"))
         .collect();
-    let path = std::env::temp_dir().join(format!("thinkthen-0114-held-{}", std::process::id()));
-    fs::write(&path, held).expect("a key");
-    let key = path.to_str().expect("a path");
     let summary = |arguments: &[&str]| {
-        let (code, stdout, _) = diff(&[arguments, &["--key", key]].concat(), b"");
+        let (code, stdout, _) = diff(&[arguments, &["--key", "-"]].concat(), held.as_bytes());
         assert_eq!(code, 0);
         stdout.lines().last().expect("a summary").to_owned()
     };
     let cuts = summary(&["249/control.jsonl", "--compare-threshold", "0.42"]);
     let soft = summary(&["249/control.jsonl", "249/soft.jsonl"]);
-    fs::remove_file(&path).expect("cleanup");
     let rights = |line: &str| {
         [
             member(line, "/summary/right_a"),
@@ -105,7 +99,7 @@ fn help_names_diff_after_audit_and_says_what_it_never_does() {
         "diff sends no request and reads no key.",
         "Two cuts on one run cost nothing.",
         "The probabilities are already saved.",
-        "not sure",
+        "An answer inside a band is not sure.",
     ] {
         assert!(long.contains(sentence), "{sentence}");
     }

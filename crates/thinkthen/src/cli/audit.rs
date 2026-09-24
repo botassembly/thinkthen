@@ -3,16 +3,16 @@
 //! The command reads the two paths it is handed and nothing else, sends no
 //! request, and reads no setting. `sdlc/scripts/policy.py` holds it to that.
 
-use std::io::{ErrorKind, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use clap::{Args, ValueEnum};
 
-use crate::cli::measure::{Cause, Refusal, lines, rule};
+use crate::cli::measure::{Cause, Refusal, lines, rule, write};
 use crate::core::measure::answer::{self, Identity};
 use crate::core::measure::audit::{self as grade, By, Row, Settings, Suggested};
 use crate::core::measure::key::Key;
-use crate::core::measure::{python_float_text, rounded, three_places};
+use crate::core::measure::{places, python_float_text, rounded};
 use crate::core::{Pointer, json_line};
 use crate::failure::Failure;
 
@@ -62,7 +62,7 @@ fn target(text: &str) -> Result<f64, String> {
 }
 
 /// Grade, then write JSON lines or the table and flush.
-pub(crate) fn run(arguments: &AuditArguments, mut writer: impl Write) -> Result<(), Failure> {
+pub(crate) fn run(arguments: &AuditArguments, writer: impl Write) -> Result<(), Failure> {
     let rows = grade_all(arguments).map_err(Failure::Measure)?;
     let mut text = String::new();
     for row in &rows {
@@ -73,13 +73,7 @@ pub(crate) fn run(arguments: &AuditArguments, mut writer: impl Write) -> Result<
             text.push('\n');
         }
     }
-    match writer
-        .write_all(text.as_bytes())
-        .and_then(|()| writer.flush())
-    {
-        Err(error) if error.kind() != ErrorKind::BrokenPipe => Err(Failure::Output(error)),
-        _ => Ok(()),
-    }
+    write(writer, &text)
 }
 
 fn grade_all(arguments: &AuditArguments) -> Result<Vec<Row>, Refusal> {
@@ -116,7 +110,7 @@ fn grade_all(arguments: &AuditArguments) -> Result<Vec<Row>, Refusal> {
 
 /// A float as the table writes a number: three places, or `-` for none.
 fn three(value: Option<f64>) -> String {
-    three_places(value.map(rounded))
+    places(value.map(rounded), 3)
 }
 
 /// The prototype's table for one group, word for word.

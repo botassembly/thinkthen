@@ -269,9 +269,9 @@ pub(crate) fn rounded(value: f64) -> f64 {
     format!("{value:.6}").parse().unwrap_or(value)
 }
 
-/// A float with three decimals, rounded half to even on its exact binary value.
-pub(crate) fn three_places(value: Option<f64>) -> String {
-    value.map_or_else(|| "-".to_owned(), |value| format!("{value:.3}"))
+/// A float with this many decimals, rounded half to even on its exact binary value, or `-` for none.
+pub(crate) fn places(value: Option<f64>, digits: usize) -> String {
+    value.map_or_else(|| "-".to_owned(), |value| format!("{value:.digits$}"))
 }
 
 /// A float as Python's `str` writes it: the shortest text that reads back,

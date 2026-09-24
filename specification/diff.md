@@ -85,4 +85,5 @@ diff routes before any setup. It reads the named inputs and nothing else: no API
 
 No golden file reaches these. Each is the agent's decision, and Ian can overturn it. audit's departures on failures, bad numbers, JSON, empty input, the pointer, rule text, key values, `choose` values, and state names hold here too.
 
+- **Numbers.** The prototype prints a probability saved as an integer, such as `1`, as `1` in JSON and in the table. The port always prints a probability as a float: `1.0` in JSON and `1.00` in the table.
 - **Repeats.** The prototype keeps the last of two answers with one answer name and record id in a run. The port refuses the run, failed answers included.
