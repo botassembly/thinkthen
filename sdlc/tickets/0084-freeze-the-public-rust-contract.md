@@ -379,6 +379,8 @@ Contract 2; state and timing 0; reach 2; proof 2; cost of error 1; total 7. Fina
 
 ADR 0017 section 5 has every surface set width, `max_requests`, cache, and `cache_bytes` on the engine. `EngineBuilder::from_env` seeds a builder by reading the environment exactly as `Engine::from_env` does. Each setter then overrides. `Engine::from_env()` equals `EngineBuilder::from_env()?.build()`. 0086 tests it. Ian can overturn it.
 
+Amended 2026-09-24: the amendment commit dropped three package-proof commands by mistake. They stand. Run `cargo check --locked -p thinkthen --no-default-features`, `cargo test --locked -p thinkthen --no-default-features`, and `cargo package --locked -p thinkthen --no-default-features`.
+
 ## Review
 
 - Design review: `sdlc/records/2026-09-24-spine-review-contract.md` rejected, then `2026-09-24-rereview-contract.md` accepted after fixes.
