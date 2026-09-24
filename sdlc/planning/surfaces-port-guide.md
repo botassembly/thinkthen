@@ -44,7 +44,7 @@ The three lanes touch these rows: gate3 (R3-29, R3-32, R5-5, R5-28, R7-4, plus a
 | R7-1 | standin | open | no ticket, gap G3 (main links the same ureq 3.4.2 resolver) | A churn probe crashes the stand-in through the C door: 2 of 104 runs SIGSEGV in ureq's… |
 
 
-Engine rows by spine ticket: 0076 carries R1-23 and R6-4. 0077 carries R2-9 and the width half of R4-12. 0078 carries R5-3 and R6-3. 0085 carries R2-21 and R5-19. 0086 carries R1-10, R1-11, R4-24, and the deadline half of R4-12. No ticket carries R5-4, R6-15, or R7-1.
+Engine rows by spine ticket: 0076 carries R1-23 and R6-4. 0077 carries R2-9 and the width half of R4-12. 0078 carries R6-3. 0096 carries R5-3. 0089 (landed) fixed R5-4 and R6-15 (G2), and 0085 re-proves them on every facade path, with R2-21 and R5-19. 0086 carries R1-10, R1-11, R4-24, and the deadline half of R4-12, and runs a Rust churn probe toward R7-1. 0094 closes R7-1.
 
 ### Standin-only rows (31)
 
