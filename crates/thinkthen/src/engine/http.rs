@@ -9,6 +9,7 @@ use std::time::Duration;
 
 use ureq::Agent;
 
+use crate::engine::Widths;
 use crate::engine::error::{Error, TransportKind};
 
 /// The key one request carries. Diagnostics and `Debug` never expose it.
@@ -60,6 +61,7 @@ const MAX_RETRY_WAIT: Duration = Duration::from_secs(60);
 pub(crate) struct Client {
     agent: Agent,
     timeout: Duration,
+    width: &'static Widths,
 }
 
 impl fmt::Debug for Client {
@@ -89,7 +91,15 @@ impl Client {
         Self {
             agent: config.build().into(),
             timeout,
+            width: crate::engine::client_width(),
         }
+    }
+
+    /// Send through this gate in place of the one `new` chose.
+    #[cfg(test)]
+    pub(crate) const fn gated(mut self, width: &'static Widths) -> Self {
+        self.width = width;
+        self
     }
 
     /// Post the request and hand back the response body the backend answered with.
@@ -112,13 +122,18 @@ impl Client {
         let mut wait = exchange.retry_wait;
         let mut retries = 0;
         loop {
+            // The permit covers the attempt alone: never a retry wait, decoding,
+            // recording, or output.
+            let permit = self.width.acquire(cancel)?;
             cancel.stop_or_remaining()?;
             before_attempt();
             // Accounting may wait on the usage lock, so read the budget after
             // it. Cancellation keeps its one pre-attempt checkpoint.
             let budget = cancel.remaining()?;
             let limit = budget.map_or(self.timeout, |budget| budget.min(self.timeout));
-            let attempt = match send(&self.agent, exchange, limit) {
+            let sent = send(&self.agent, exchange, limit);
+            drop(permit);
+            let attempt = match sent {
                 Ok(body) => {
                     return Ok(HttpAnswer {
                         body,

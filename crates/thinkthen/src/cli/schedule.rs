@@ -11,10 +11,9 @@ use crate::edge;
 use crate::engine::schedule::{
     self as engine_schedule, Completed, Input, InputPort, Outcome as RunOutcome,
 };
+use crate::engine::{Width, Widths};
 use crate::failure::Failure;
 use crate::profile::Mismatch;
-
-const DEFAULT_JOBS: usize = 4;
 
 type Asking<'a, T> = dyn Fn(&T) -> Result<Judged, Failure> + Sync + 'a;
 
@@ -133,9 +132,24 @@ impl Output<'_> {
 pub(crate) fn jobs_of(asked: Option<u8>, streams: bool) -> Result<usize, Failure> {
     match asked {
         Some(_) if !streams => Err(Failure::JobsOutsideRecords),
-        Some(number) => Ok(usize::from(number)),
-        None => Ok(DEFAULT_JOBS),
+        asked => width(asked),
     }
+}
+
+/// Register this command's `--jobs` with the process and return the width
+/// its calls follow.
+pub(crate) fn width(asked: Option<u8>) -> Result<usize, Failure> {
+    width_in(crate::engine::process_width(), asked)
+}
+
+/// `--jobs N` selects N. An omitted `--jobs` selects nothing and follows the
+/// width the process runs at, which is 4 until something selects another.
+pub(crate) fn width_in(widths: &Widths, asked: Option<u8>) -> Result<usize, Failure> {
+    let asked = asked.map(|jobs| Width::new(u64::from(jobs))).transpose()?;
+    widths
+        .select(asked)
+        .map(Width::get)
+        .map_err(Failure::WidthActive)
 }
 
 pub(crate) fn over_records<T, I>(
@@ -209,3 +223,6 @@ fn read_records<T, I>(
         }
     }
 }
+
+#[cfg(test)]
+mod width_tests;

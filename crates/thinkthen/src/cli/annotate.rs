@@ -48,6 +48,7 @@ pub(crate) fn run(
         }
         Err(error) => return Err(error.into()),
     };
+    let jobs = crate::schedule::width(arguments.common.jobs)?;
     let folders = Folders::of(&arguments.common, environment)?;
     if arguments.common.dry_run && folders.named() {
         return Err(Failure::DryRunWithRecording);
@@ -100,7 +101,6 @@ pub(crate) fn run(
             streams: reading.streams(),
             recording_reported: folders.reported(),
         };
-        let jobs = arguments.common.jobs.map_or(4, usize::from);
         return crate::annotate_schedule::run(
             &judging,
             &reading,
@@ -142,7 +142,6 @@ pub(crate) fn run(
         streams: reading.streams(),
         recording_reported: folders.reported(),
     };
-    let jobs = arguments.common.jobs.map_or(4, usize::from);
     crate::annotate_schedule::run(
         &judging,
         &reading,
