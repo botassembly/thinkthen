@@ -3,8 +3,8 @@
 //! Each program runs as a user runs it: in its own process, through
 //! `Engine::from_env`, with nothing in its environment but a loopback
 //! address, a fake key, and a fresh cache folder. The loopback backend's
-//! generic arm answers every question, so each pinned text is that arm's
-//! rule and not a model's judgment.
+//! generic arm answers every question, so each pinned text follows that
+//! arm's rule. A model would answer differently.
 
 use std::path::Path;
 use std::process::Command;

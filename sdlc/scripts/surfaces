@@ -52,13 +52,16 @@ if [ "${1:-}" = --registry ]; then
 		exit 1
 	fi
 	for surface in $(landed sdlc/surfaces.txt); do
-		node sdlc/scripts/ratchet.mjs "$surface/ratchet.json"
-		jq --arg at "$REPO/$surface/" '.max += 1 | .directory = ([.directory] | flatten | map($at + .))' \
-			"$surface/ratchet.json" >"$planted.json"
-		if node sdlc/scripts/ratchet.mjs "$planted.json" >/dev/null 2>&1; then
-			echo "surfaces: the ratchet passed a ceiling one above $surface's count" >&2
-			exit 1
-		fi
+		# One ratchet file per language: ratchet.json for Rust, ratchet.<ext>.json for each host.
+		for config in "$surface"/ratchet*.json; do
+			node sdlc/scripts/ratchet.mjs "$config"
+			jq --arg at "$REPO/$surface/" '.max += 1 | .directory = ([.directory] | flatten | map($at + .))' \
+				"$config" >"$planted.json"
+			if node sdlc/scripts/ratchet.mjs "$planted.json" >/dev/null 2>&1; then
+				echo "surfaces: the ratchet passed a ceiling one above $config's count" >&2
+				exit 1
+			fi
+		done
 		cargo deny --offline --manifest-path "$surface/Cargo.toml" check --config deny.toml \
 			advisories bans licenses
 	done
@@ -70,7 +73,7 @@ registry sdlc/surfaces.txt
 cargo build --locked --quiet --package conformance-backend
 fifo=$(mktemp -u)
 mkfifo "$fifo"
-target/debug/conformance-backend <"$fifo" >"$fifo.port" &
+"${CARGO_TARGET_DIR:-target}/debug/conformance-backend" <"$fifo" >"$fifo.port" &
 exec 3>"$fifo"
 trap 'exec 3>&-; rm -f -- "$fifo" "$fifo.port"' EXIT
 tries=0
@@ -84,7 +87,8 @@ port=$(head -n 1 "$fifo.port")
 failed=0
 for surface in $(landed sdlc/surfaces.txt); do
 	set +e
-	sh "$surface/check.sh" "$port"
+	# A daemon a check starts must not hold the backend's input open.
+	sh "$surface/check.sh" "$port" 3>&-
 	code=$?
 	set -e
 	case $code in

@@ -15,6 +15,6 @@ The engine's width is the limit on requests in flight at once. It holds per load
 
 ## Checks
 
-`cargo test` runs `tests/examples.rs`. It starts a loopback backend for each program, runs the program in its own process, and compares its output with the `.txt` file beside it. The loopback backend's generic arm answers every question by a fixed rule: the first option, level, label, or yes gets 0.9. The pinned text shows that rule's answers, not a model's judgment.
+A bare `cargo test` builds every example, then runs `tests/examples.rs`. `cargo test --test examples` alone would run stale programs. It starts a loopback backend for each program, runs the program in its own process, and compares its output with the `.txt` file beside it. The loopback backend's generic arm answers every question by a fixed rule: the first option, level, label, or yes gets 0.9. The pinned text shows that rule's answers. A model would answer differently.
 
 `check.sh` is this surface's entry in the surface rung, `sdlc/scripts/surfaces`. It runs the formatter, Clippy, and the tests. It then runs the slide against the rung's own loopback backend. That run proves the port the rung hands every surface.

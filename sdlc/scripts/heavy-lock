@@ -1,4 +1,4 @@
-# Sourced by the heavy rungs `install`, `test`, and `spec` before they change
+# Sourced by the heavy rungs `install`, `test`, `spec`, and `surfaces` before they change
 # directory. It re-runs the calling rung under an exclusive `flock`. Heavy
 # rungs on one machine then run one at a time. The lock is released when the
 # rung exits.

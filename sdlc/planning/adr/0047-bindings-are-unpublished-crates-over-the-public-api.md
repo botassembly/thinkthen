@@ -44,10 +44,10 @@ Each surface ticket follows ticket 0093's pattern and changes only host code. `l
 3. `clippy.toml`. Copy `libraries/rust/clippy.toml`, which holds the shared thresholds and test allowances.
 4. `Cargo.lock`. Start from a copy of the root lock, then let Cargo prune it offline. `thinkthen`'s own tree must resolve to the root lock's versions.
 5. `unsafe`. Only a file named `ffi.rs` holds it, under `#[allow(unsafe_code, reason = "…")]`.
-6. Tests. A bare `cargo test` runs every Rust test. No test is `#[ignore]`d, and none returns before its first assertion (R2-28).
-7. `ratchet.json`. Name the source folders under `directory`, never the folder itself, so `target` stays uncounted. Set `max` to the measured count. Add one `ratchet.<ext>.json` per host language.
+6. Tests. A bare `cargo test` runs every Rust test. No test is `#[ignore]`d, and none returns before its first assertion (R2-28). The check reads `#[test]` functions only. It misses `cfg_attr(…, ignore)`, a skip branch that never returns, and other test macros. A host test framework tightens it when it arrives.
+7. `ratchet.json`. Name the source folders under `directory`, never the folder itself, so `target` stays uncounted. Set `max` to the measured count. Add one `ratchet.<ext>.json` per host language beside it.
 8. `check.sh`. The surface rung passes the loopback port as `$1`. The check runs offline and exits 0 on a pass. It exits 77 when its host toolchain is missing, and the rung reports "not run", never "pass" (R6-2). A Rust binding's check runs `cargo fmt --check`, Clippy with warnings denied, and `cargo test`.
-9. The rung. `sdlc/scripts/surfaces` is the fifth ladder step, after `spec`. It runs every landed surface's `check.sh`, including heavy Docker checks, and never runs from `test`. `lint` runs `surfaces --registry`. That check refuses a landed surface with no `check.sh`, runs each landed ratchet, and runs `cargo deny` over each landed lock.
+9. The rung. `sdlc/scripts/surfaces` is the fifth ladder step, after `spec`. It runs every landed surface's `check.sh`, including heavy Docker checks, and never runs from `test`. The CI workflow runs the first four rungs only, and `lint` there still runs the registry, ratchet, and deny checks. `lint` runs `surfaces --registry`. That check refuses a landed surface with no `check.sh`, runs every `ratchet*.json` file of each landed surface, and runs `cargo deny` over each landed lock.
 10. `policy.py` checks items 2 through 6 for every `libraries/*/Cargo.toml` and `databases/*/Cargo.toml`, registered or not.
 11. `README.md`. State that the width cap holds per loaded copy (item 5).
 

@@ -350,6 +350,9 @@ BINDING_PLANTS = (
         "default-features = false", "default-features = true")),
     ("dependency on another binding", "Cargo.toml", lambda text: text.replace(
         "[dependencies]\n", '[dependencies]\nthinkthen-c = { path = "../c" }\n')),
+    ("renamed thinkthen with default features", "Cargo.toml", lambda text: text.replace(
+        "[dev-dependencies]\n", '[dev-dependencies]\nengine = { package = "thinkthen", path = "../../crates/thinkthen" }\n')),
+    ("patch toward another binding", "Cargo.toml", lambda text: text + '\n[patch.crates-io]\nx = { path = "../c" }\n'),
     ("unsafe outside an FFI module", "src/lib.rs", lambda text: text + "unsafe fn planted() {}\n"),
     ("overflow-checks = false", "Cargo.toml", lambda text: text.replace(
         "overflow-checks = true", "overflow-checks = false")),
@@ -370,7 +373,11 @@ def binding_files(folder: pathlib.Path) -> dict[str, str]:
 
 
 def lock_tree(lock: dict) -> set[tuple[str, str]]:
-    """The name and version of every package in thinkthen's resolved tree."""
+    """The name and version of every package in thinkthen's resolved tree.
+
+    The root lock's tree also holds thinkthen's development dependencies, so it
+    is a superset of the normal tree a binding resolves.
+    """
     packages = lock.get("package", [])
 
     def named(spec: str) -> list[tuple[str, str]]:
@@ -427,16 +434,21 @@ def binding_failures(name: str, files: dict[str, str]) -> list[str]:
         held.append(f"{name} sets publish = false")
     if any(package.get(field) != root.get("package", {}).get(field) for field in ("edition", "rust-version")):
         held.append(f"{name} uses the root edition and rust-version")
-    tables = [manifest, *manifest.get("target", {}).values()]
-    dependencies = [(kind, dependency, specification) for table in tables
-                    for kind in ("dependencies", "dev-dependencies", "build-dependencies")
+    # Every table a dependency can hide in: the package, each target, the
+    # workspace's shared table, and each patch source.
+    tables = [manifest, *manifest.get("target", {}).values(), manifest.get("workspace", {}),
+              *({"patch": table} for table in manifest.get("patch", {}).values())]
+    dependencies = [(kind, specification.get("package", dependency) if isinstance(specification, dict)
+                     else dependency, specification) for table in tables
+                    for kind in ("dependencies", "dev-dependencies", "build-dependencies", "patch")
                     for dependency, specification in table.get(kind, {}).items()]
     if [(kind, specification) for kind, dependency, specification in dependencies
             if dependency == "thinkthen"] != [("dependencies", BINDING_THINKTHEN)]:
         held.append(f"{name} depends on thinkthen once, by path, with default features off")
     for _, dependency, specification in dependencies:
         path = specification.get("path") if isinstance(specification, dict) else None
-        reached = posixpath.normpath(posixpath.join(name, path)) if path else ""
+        reached = posixpath.relpath(posixpath.normpath(posixpath.join(REPO.as_posix(), name, path)),
+                                    REPO.as_posix()) if path else ""
         if reached.split("/")[0] in ("libraries", "databases") and not f"{reached}/".startswith(f"{name}/"):
             held.append(f"{name} depends on another binding through {dependency}")
     if lints and manifest.get("lints") != {**lints, "rust": {**lints["rust"], "unsafe_code": "deny"}}:

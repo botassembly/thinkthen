@@ -52,7 +52,8 @@ function loc(dir) {
   let n = 0;
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const p = join(dir, entry.name);
-    if (entry.isDirectory()) n += loc(p);
+    // Build output under `target` is never source (ticket 0093).
+    if (entry.isDirectory()) n += entry.name === "target" ? 0 : loc(p);
     else if (entry.name.endsWith(extension)) n += nonBlank(readFileSync(p, "utf8"));
   }
   return n;
