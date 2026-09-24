@@ -184,3 +184,5 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Changes: Every call reaches the real engine on a detachable worker with a Ctrl-C tick. A public `tt.Engine` holds the settings. pandas objects and, until 0106, Arrow objects are refused. The stand-in parts leave, as "What moves from the tag" lists.
 - Proof: The ported tests, the SIGINT tests on the held arm, the fork test, the offset case, the secrecy tests, and the `file://` deny plant in "Error-index rows" and "Other acceptance".
 - Defers: The Polars and Arrow layer goes to 0106. Release wheels, async, and an `api_key` keyword stay out, as "Exclusions" lists. The re-derived examples must settle the slide sample's None against False mismatch that experiment 252 found.
+
+Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. `tt.Engine(width=8)` becomes `tt.Engine(throttle=8)`, and every public `width` here reads as `throttle`.
