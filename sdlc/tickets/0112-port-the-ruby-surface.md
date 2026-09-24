@@ -221,3 +221,13 @@ Contract 2; state and timing 3; reach 2; proof 3; cost of error 3; total 13. Fin
   - The test cap rises to 1,950 lines. The small fixes are applied, including the four trailing "since" clauses.
 - Rejected as written: a detached batch cannot hold only one width slot. The engine keeps each sent request until it ends (0073), and width is one process-wide gate (0077). Holding one slot would need an engine change or a wait. This ticket excludes the engine change, and the wait gives up the prompt Ctrl-C. Decision 5 states the real cost and names both levers.
 - Code review: pending.
+
+## Evidence
+
+Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk.md` asks every product ticket to name these five parts. This note changes no design.
+
+- Starts from: The tag `surfaces-wave7-frozen-2026-09-24b` holds `libraries/ruby/lib/thinkthen.rb`, `lib/thinkthen/version.rb`, `src/lib.rs`, `thinkthen.gemspec`, `.cargo/config.toml`, `build.sh`, `check.sh`, and `Dockerfile`. Its tests sit in `libraries/ruby/tests/`, 19 Ruby files and one fixture. `experiments/205-thinkthen-libs/FINDINGS.md` found the fork hang and a batch that no one could cancel. `experiments/241-beatles-surfaces/README.md` ran the tag only in Docker. `repos/jev-experiments`: none found.
+- Keeps: The module methods, `with_tick` and its watchdog, the error hierarchy, `ThinkThen::Cancel`, and the `cross`, `wait_for`, and `wake` helpers.
+- Changes: `ThinkThen::Engine` holds settings, calls run on a detachable worker, and JSON methods replace hand-built values. A source-built Ruby 3.4.11 replaces Docker. The interrupt tests regroup into two files on the held arm.
+- Proof: The `check.sh` steps for gem content, slide, and conformance, the `file://` deny plant, and the "not run" probe.
+- Defers: The C door, release gems, Mac, `api_key:`, async, and Docker. The libyaml checksum stays unverified.
