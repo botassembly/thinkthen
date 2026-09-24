@@ -12,6 +12,7 @@ ROOT=target/demos-standard
 
 rm -rf -- "$REPO/$ROOT"
 failures=0
+cases=0
 
 # The vocabulary check reads the built help. This stand-in prints clean help,
 # or the line a case plants for one command, so a case tests the check alone.
@@ -41,6 +42,7 @@ expect() {
 	name=$1
 	code=$2
 	sentence=$3
+	cases=$((cases + 1))
 	said=$(sh -- "$RUNNER" "$ROOT/$name" 2>&1) && ran=0 || ran=$?
 	if [ "$ran" -ne "$code" ]; then
 		printf 'demos-self-test: %s exited %s and %s was wanted\n%s\n' \
@@ -285,8 +287,18 @@ in_form 'lose a help page' 'The help is planted.' | fixture vocabulary-no-help
 expect vocabulary-no-help 1 'demos: thinkthen relate --help failed, so its help was not checked'
 : >"$REPO/$ROOT/bin/planted"
 
+# Ticket 0103: `like ""` matches any output, so the runner refuses it on any
+# page, red or green, before it runs one.
+{
+	head_of_a_page 'claim an empty stream'
+	block 'printf '\''stray'\'' | mustmatch like ""'
+	printf '## What can go wrong\n\nNothing here reaches a backend.\n\n'
+	printf '## Related how-tos\n\n- [How to read the standard](../one/)\n'
+} | fixture loose-empty
+expect loose-empty 1 'demos: page/README.md:12: `like ""` matches any output; use `test -z`'
+
 if [ "$failures" -ne 0 ]; then
 	printf 'demos-self-test: %s cases failed\n' "$failures" >&2
 	exit 1
 fi
-printf 'demos-self-test: 21 cases pass\n'
+printf 'demos-self-test: %s cases pass\n' "$cases"

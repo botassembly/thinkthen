@@ -1,6 +1,6 @@
 # Empty-output checks pass on any output
 
-Status: Open
+Status: Closed by ticket 0103. The fix lands on main when 0103 merges.
 
 Found by the 0083 code review (`sdlc/records/0083-code-review.md`). `mustmatch like ""` matches every output, so a line that claims "prints nothing" proves nothing. 0083 fixed the same pattern in `spec/transform.md`.
 

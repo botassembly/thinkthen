@@ -15,6 +15,18 @@ fi
 
 cd -- "$REPO/$ROOT"
 
+# `mustmatch like ""` matches every output, so a line that claims a stream is
+# empty proves nothing. Issue 2026-09-24 and ticket 0103 rule `test -z` instead.
+# Every page is scanned, red or green, in spec/ and under the demo root.
+loose=$({
+	(cd -- "$REPO" && grep -nE "mustmatch( not)? like (\"\"|'')" spec/*.md) || :
+	grep -rnE --include='*.md' "mustmatch( not)? like (\"\"|'')" . | sed 's#^\./##' || :
+})
+if [ -n "$loose" ]; then
+	printf '%s\n' "$loose" | sed 's/^\([^:]*:[0-9]*\):.*/demos: \1: `like ""` matches any output; use `test -z`/' >&2
+	exit 1
+fi
+
 # The status line and the form are read from the prose alone. A block on a page
 # may show a heading or a status line as an example, and an example is not the
 # form it shows.
