@@ -281,3 +281,13 @@ Depends on the ten functions done: 0086 landed, after 0082 and 0083. The queue i
 ## Complexity
 
 Contract 2; State/timing 0; Reach 1; Proof 2; Cost of error 1; Total 6. Final level: 2.
+
+## Evidence
+
+Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk.md` asks every product ticket to name these five parts. This note changes no design.
+
+- Starts from: The prototype `scripts/tools/measure.py`, its `scripts/tools/README.md`, `tests/test_measure.py`, and `tests/fixtures/audit/` in the private Beatles Bench repository at `be7cea2e`. A diff of those files from `be7cea2e` to the 2026-09-24 head `b0bf4ae` is empty. `experiments/249-jev-answer-audit/README.md` in the workspace reports the held-out numbers that the `audit-249` goldens reproduce. `experiments/212-thinkthen-repeat/RESULTS.md` shows answers flipping at a 0.5 cut between identical runs, which a graded audit must expose. `experiments/206-thinkthen-accuracy/RESULTS.md` uses the same ten calibration bins. `repos/jev-experiments/experiments/029-scale-closed-lists/README.md` tunes a cut on one slice and checks it on another, as the suggested cut does. The other experiment folders checked (145, 219, 224, 228, 238, 240, 245, 246) held nothing relevant.
+- Keeps: The port keeps the prototype's command grammar, math, output members, table words, and seeded split. The eight audit goldens and the three table captures decide any disagreement.
+- Changes: The port refuses bad numbers, duplicate JSON members, non-finite values, bad pointers, and out-of-range options. Its failures name only the input's role and a line number. "Departures" lists every change.
+- Proof: The eight goldens, the extra captures, and the three table captures match. Hand-checked core tests come from `test_measure.py`. Each planted bug in "Acceptance" turns a test red. A loopback listener counts zero requests, and a canary key never appears in output.
+- Defers: The agent-run grading needs in `sdlc/issues/2026-09-24-audit-and-diff-needs-for-graded-agent-runs.md`, reading a recording folder directly, a `schema` member, and other verbs wait until after 0.1. Naming the private repository waits for Ian's answer on the open item. Two known limits stay as the prototype has them. Binned calibration error is biased upward under resampling, so its bootstrap interval can exclude its own point value (`experiments/249-jev-answer-audit/README.md`, step 3). A tie at the top counts as `tied` apart, where experiment 249 scored it wrong.
