@@ -63,7 +63,7 @@ fn a_host_signal_during_a_held_send_on_a_worker_leaves_the_call_whole() {
             .expect("a no-op host handler");
     let (url, held, release, server) = held_reply();
     let widths: &'static Widths = Box::leak(Box::default());
-    let client = Client::new(SECOND * 5, false).gated(widths);
+    let client = Client::new(SECOND * 5, false, crate::engine::process_width()).gated(widths);
     let key = Key::of("sk-test-value");
     let exchange = Exchange {
         url: &url,

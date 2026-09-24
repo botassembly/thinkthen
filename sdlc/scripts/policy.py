@@ -23,7 +23,7 @@ ALLOWED_LICENSES = {
     "Unicode-3.0",
     "Unlicense",
 }
-# `csv-core` and `signal-hook` use the already accepted terms. Three more licenses
+# `arc-swap`, `csv-core`, and `signal-hook` use the already accepted terms. Three more licenses
 # arrive with the TLS stack under ureq and with nothing
 # else. Each one is tied to the crates that force it, so the allowance cannot
 # quietly cover a crate that lands later. All three are permissive and carry no
@@ -38,7 +38,8 @@ LICENSE_EXCEPTIONS = {
 }
 ACCEPTED_DEPENDENCIES = {
     "thinkthen": {
-        "clap", "csv-core", "serde", "serde_json", "sha2", "signal-hook", "thiserror", "ureq"
+        "arc-swap", "clap", "csv-core", "serde", "serde_json", "sha2", "signal-hook",
+        "thiserror", "ureq",
     },
     "conformance-backend": {"serde", "serde_json"},
 }

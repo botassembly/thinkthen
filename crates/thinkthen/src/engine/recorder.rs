@@ -4,8 +4,7 @@ use std::fs::{self, File};
 use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
 use std::process;
-use std::sync::Mutex;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use crate::core::recording::{Digest, Entry, Exchange};
 use crate::engine::cache_lock::{self, CacheLock, FolderGate};
@@ -31,7 +30,9 @@ pub(crate) struct Recorder {
     replaying: bool,
     private_default: bool,
     cache_answers: bool,
-    gate: Mutex<Option<FolderGate>>,
+    /// Whether the folder's backend identity has matched once. The folder
+    /// gate itself belongs to each operation, so no lock outlives a request.
+    checked: AtomicBool,
 }
 
 /// Work selected before a key is read or a request is sent.
@@ -44,10 +45,12 @@ pub(crate) enum PreparedRecording {
     Live(WritePermit),
 }
 
-/// An already-open private temporary entry and any missing-entry lock.
+/// An already-open private temporary entry and any missing-entry lock, under
+/// the shared folder gate held until installation.
 #[derive(Debug)]
 pub(crate) struct WritePermit {
     write: Option<PreparedWrite>,
+    _gate: Option<FolderGate>,
 }
 
 #[derive(Debug)]
@@ -100,7 +103,7 @@ impl Recorder {
             replaying: replay.is_some(),
             private_default,
             cache_answers,
-            gate: Mutex::new(None),
+            checked: AtomicBool::new(false),
         })
     }
 
@@ -112,39 +115,19 @@ impl Recorder {
         self.folder.is_some() && !self.private_default
     }
 
-    fn lock_gate(
-        &self,
-        cancel: &crate::engine::Cancel,
-    ) -> Result<std::sync::MutexGuard<'_, Option<FolderGate>>, Error> {
-        loop {
-            if let Some(stop) = cancel.stop() {
-                return Err(stop);
-            }
-            match self.gate.try_lock() {
-                Ok(gate) => return Ok(gate),
-                Err(std::sync::TryLockError::WouldBlock) => {}
-                Err(std::sync::TryLockError::Poisoned(_)) => {
-                    return Err(Error::Defect("the recording folder gate is poisoned"));
-                }
-            }
-            if let Some(stop) = cancel.wait(crate::engine::Cancel::poll()) {
-                return Err(stop);
-            }
-        }
-    }
-
-    fn ready(
+    /// Open the shared folder gate one operation holds, checking the
+    /// folder's backend identity the first time.
+    fn gate(
         &self,
         exchange: &Exchange<'_>,
         name: &str,
         cancel: &crate::engine::Cancel,
-    ) -> Result<(), Error> {
+    ) -> Result<Option<FolderGate>, Error> {
         let Some(folder) = self.folder.as_deref() else {
-            return Ok(());
+            return Ok(None);
         };
-        let mut gate = self.lock_gate(cancel)?;
-        if gate.is_some() {
-            return Ok(());
+        if let Some(stop) = cancel.stop() {
+            return Err(stop);
         }
         if self.recording {
             make_folder(folder)?;
@@ -155,9 +138,11 @@ impl Recorder {
             identity::require_private(folder)?;
         }
         let opened = cache_lock::shared_folder_cancelled(folder, cancel).map_err(storage)??;
-        identity::check(folder, &exchange.backend_identity(), self.recording)?;
-        *gate = Some(opened);
-        Ok(())
+        if !self.checked.load(Ordering::Acquire) {
+            identity::check(folder, &exchange.backend_identity(), self.recording)?;
+            self.checked.store(true, Ordering::Release);
+        }
+        Ok(Some(opened))
     }
 
     /// Decide replay or prepare every write resource before live work.
@@ -177,10 +162,30 @@ impl Recorder {
         cancel: &crate::engine::Cancel,
     ) -> Result<PreparedRecording, Error> {
         let Some(folder) = self.folder.as_ref() else {
-            return Ok(PreparedRecording::Live(WritePermit { write: None }));
+            return Ok(PreparedRecording::Live(WritePermit {
+                write: None,
+                _gate: None,
+            }));
         };
         let name = digest.file_name();
-        self.ready(exchange, &name, cancel)?;
+        let gate = self.gate(exchange, &name, cancel)?;
+        Ok(
+            match self.prepare_in(folder, name, exchange, digest, cancel)? {
+                PreparedRecording::Live(permit) => PreparedRecording::Live(permit.under(gate)),
+                replay @ PreparedRecording::Replay(_) => replay,
+            },
+        )
+    }
+
+    /// Decide replay or prepare the write while the folder gate is held.
+    fn prepare_in(
+        &self,
+        folder: &Path,
+        name: String,
+        exchange: &Exchange<'_>,
+        digest: &Digest,
+        cancel: &crate::engine::Cancel,
+    ) -> Result<PreparedRecording, Error> {
         let entry = folder.join(&name);
         let first = existing(&entry, exchange)?;
 
@@ -217,6 +222,11 @@ impl Recorder {
 }
 
 impl WritePermit {
+    fn under(mut self, gate: Option<FolderGate>) -> Self {
+        self._gate = gate;
+        self
+    }
+
     /// Install a decoded backend response or compare it with the valid winner.
     pub(crate) fn finish(
         mut self,
@@ -368,6 +378,7 @@ fn prepared_write(
             replace_damaged,
             lock,
         }),
+        _gate: None,
     }))
 }
 
@@ -433,34 +444,4 @@ fn remove_lock(lock: CacheLock) -> Result<(), Error> {
 fn sync_recording_directory(folder: &Path) -> io::Result<()> {
     maybe_fail_io(StorageStageName::DirectorySync)?;
     cache_lock::sync_directory(folder)
-}
-
-#[cfg(test)]
-mod tests {
-    use std::time::Duration;
-
-    use crate::core::Url;
-    use crate::core::recording::Exchange;
-    use crate::engine::error::Error;
-    use crate::engine::{Cancel, Deadline};
-
-    use super::Recorder;
-
-    #[test]
-    fn a_held_recorder_gate_ends_as_the_deadline_without_the_owner() {
-        let folder =
-            std::env::temp_dir().join(format!("thinkthen-deadline-gate-{}", std::process::id()));
-        let recorder = Recorder::of(Some(&folder), None).expect("recorder");
-        let url = Url::new("http://127.0.0.1:1/v1/systemone").expect("url");
-        let exchange = Exchange::new(&url, b"{}");
-        let cancel = Cancel::default().with_deadline(Deadline::after(Duration::from_millis(200)));
-        let owner = recorder.gate.lock().expect("gate owner");
-
-        let result = recorder.prepare_cancelled(&exchange, &exchange.digest(), &cancel);
-
-        assert!(matches!(result, Err(Error::Deadline(_))));
-        assert!(owner.is_none(), "the waiter never opened the folder");
-        drop(owner);
-        assert!(!folder.exists(), "the waiter made no folder");
-    }
 }

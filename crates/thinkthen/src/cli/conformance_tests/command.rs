@@ -407,7 +407,11 @@ pub(super) fn counters(case: &Case, expected: &Counters) {
         ModelName::new("jev-latest").expect("model"),
     );
     let recorder = Recorder::of_private(Some(&cache), Some(&cache), false, true).expect("cache");
-    let client = Client::new(Duration::from_secs(5), false);
+    let client = Client::new(
+        Duration::from_secs(5),
+        false,
+        crate::engine::process_width(),
+    );
     let process = usage::Counters::new(Some(totals.clone()));
     let before = usage::read(&totals, &month_now())
         .expect("totals before")
