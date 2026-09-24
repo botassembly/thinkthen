@@ -331,15 +331,7 @@ impl Reading {
 
     /// Read one structured document as a complete ordered entity set.
     pub(crate) fn entity_document(&self, bytes: &[u8]) -> Result<Vec<Record>, RecordError> {
-        if bytes.len() > MAX_RECORD_BYTES {
-            return Err(RecordError::TooLarge);
-        }
-        let text = str::from_utf8(bytes).map_err(|_| RecordError::NotUtf8)?;
-        let value = Json::parse(text).map_err(|error| match error {
-            JsonError::Syntax { line, column } => RecordError::InputJson { line, column },
-            other => RecordError::Json(other),
-        })?;
-        let Json::Array(items) = value else {
+        let Record(Held::Json(Json::Array(items))) = self.record(bytes)? else {
             return Err(RecordError::EntityDocument);
         };
         Ok(items

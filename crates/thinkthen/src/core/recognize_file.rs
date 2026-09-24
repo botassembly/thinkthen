@@ -172,7 +172,9 @@ fn validate_kinds(kinds: &[(String, Option<Description>)]) -> Result<(), Recogni
         .map_err(|_| RecognizeConfigError::Kinds)
 }
 
-fn parse_relations(value: Option<&Json>) -> Result<Vec<RelationRule>, RecognizeConfigError> {
+pub(super) fn parse_relations(
+    value: Option<&Json>,
+) -> Result<Vec<RelationRule>, RecognizeConfigError> {
     let Some(value) = value else {
         return Ok(Vec::new());
     };
@@ -247,7 +249,7 @@ fn validate_relations(
     Ok(())
 }
 
-fn parse_typed_cut(value: Option<&str>) -> Result<Threshold, RecognizeConfigError> {
+pub(super) fn parse_typed_cut(value: Option<&str>) -> Result<Threshold, RecognizeConfigError> {
     value
         .unwrap_or("0.5")
         .parse::<Threshold>()
@@ -256,7 +258,7 @@ fn parse_typed_cut(value: Option<&str>) -> Result<Threshold, RecognizeConfigErro
         .ok_or(RecognizeConfigError::Threshold)
 }
 
-fn parse_json_cut(value: Option<&Json>) -> Result<Threshold, RecognizeConfigError> {
+pub(super) fn parse_json_cut(value: Option<&Json>) -> Result<Threshold, RecognizeConfigError> {
     match value {
         None => Ok(Threshold::default()),
         Some(Json::String(text)) => parse_typed_cut(Some(text)),

@@ -1,12 +1,14 @@
+use serde::de::IgnoredAny;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
 use thiserror::Error;
 
 use crate::core::digest::hex;
 use crate::core::json::Json;
+use crate::core::recognize_file::{parse_json_cut, parse_relations, parse_typed_cut};
 use crate::core::{
-    ModelName, Pointer, ProfileName, QuestionFile, RecognizeSpec, RelationRule, RenderError,
-    Threshold, json_line,
+    ModelName, Pointer, ProfileName, QuestionFile, RecognizeConfigError, RecognizeSpec,
+    RelationRule, RenderError, Threshold, json_line,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -82,7 +84,9 @@ pub(crate) enum RelateConfigError {
 struct FileShape {
     version: u8,
     relate: RelateShape,
-    threshold: Option<CutShape>,
+    /// Read from the parsed JSON by the shared cut reader.
+    #[serde(rename = "threshold")]
+    _threshold: Option<IgnoredAny>,
     model: Option<String>,
     profile: Option<String>,
 }
@@ -91,7 +95,9 @@ struct FileShape {
 #[serde(deny_unknown_fields)]
 struct RelateShape {
     fields: Option<FieldsShape>,
-    relations: Vec<RelationShape>,
+    /// Read from the parsed JSON by the shared relation reader.
+    #[serde(rename = "relations")]
+    _relations: IgnoredAny,
 }
 
 #[derive(Deserialize)]
@@ -99,24 +105,6 @@ struct RelateShape {
 struct FieldsShape {
     name: String,
     kind: String,
-}
-
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct RelationShape {
-    name: String,
-    source: String,
-    target: String,
-    reads: Option<String>,
-    #[serde(default)]
-    either: bool,
-}
-
-#[derive(Deserialize)]
-#[serde(untagged)]
-enum CutShape {
-    Text(String),
-    Number(f64),
 }
 
 impl RelateSpec {
@@ -159,31 +147,16 @@ impl RelateSpec {
                     kind: Pointer::new(&fields.kind).map_err(|_| RelateConfigError::Fields)?,
                 })
             })?;
-        let relations = parsed
-            .relate
-            .relations
-            .into_iter()
-            .map(|relation| {
-                let name = checked_text(&relation.name)?;
-                Ok(RelationRule {
-                    reads: relation
-                        .reads
-                        .map_or_else(|| Ok(name.replace('_', " ")), |reads| checked_text(&reads))?,
-                    name,
-                    source: checked_text(&relation.source)?,
-                    target: checked_text(&relation.target)?,
-                    either: relation.either,
-                })
-            })
-            .collect::<Result<Vec<_>, RelateConfigError>>()?;
+        let relations = value
+            .member("relate")
+            .and_then(|relate| relate.member("relations"));
+        let relations = parse_relations(relations).map_err(|error| match error {
+            RecognizeConfigError::Shape => RelateConfigError::Shape,
+            _ => RelateConfigError::Relation,
+        })?;
         validate_relations(&relations)?;
-        let threshold = match parsed.threshold {
-            None => Threshold::default(),
-            Some(CutShape::Text(text)) => parse_typed_cut(&text)?,
-            Some(CutShape::Number(number)) => {
-                Threshold::cut(number).map_err(|_| RelateConfigError::Threshold)?
-            }
-        };
+        let threshold =
+            parse_json_cut(value.member("threshold")).map_err(|_| RelateConfigError::Threshold)?;
         let model = parsed
             .model
             .as_deref()
@@ -213,7 +186,7 @@ impl RelateSpec {
     }
 
     pub(crate) fn override_threshold(&mut self, value: &str) -> Result<(), RelateConfigError> {
-        self.threshold = parse_typed_cut(value)?;
+        self.threshold = parse_typed_cut(Some(value)).map_err(|_| RelateConfigError::Threshold)?;
         Ok(())
     }
 
@@ -286,6 +259,7 @@ fn validate_relations(relations: &[RelationRule]) -> Result<(), RelateConfigErro
         return Err(RelateConfigError::Relations);
     }
     for (place, relation) in relations.iter().enumerate() {
+        checked_text(&relation.reads)?;
         if relations
             .iter()
             .skip(place + 1)
@@ -301,14 +275,6 @@ fn checked_text(value: &str) -> Result<String, RelateConfigError> {
     (!value.trim().is_empty() && !value.chars().any(char::is_control))
         .then(|| value.to_owned())
         .ok_or(RelateConfigError::Relation)
-}
-
-fn parse_typed_cut(value: &str) -> Result<Threshold, RelateConfigError> {
-    value
-        .parse::<Threshold>()
-        .ok()
-        .filter(|threshold| threshold.is_cut())
-        .ok_or(RelateConfigError::Threshold)
 }
 
 #[cfg(test)]
