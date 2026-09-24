@@ -1,0 +1,1378 @@
+==> thinkthen --help (exit 0) <==
+Semantic commands for the shell: if, grep, and sort that understand meaning
+
+Usage: thinkthen [COMMAND]
+
+Commands:
+  status     Report resolved local settings, cache size, and local usage counts
+  decide     Answer one yes or no question about a text. A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers
+  filter     Keep the records where the answer is yes
+  rank       Sort records by how likely the answer is yes. `rank` asks one yes/no question of each record and sorts locally; it never compares two records
+  choose     Pick one option from your list
+  find       Pick the one line or record that best answers a question. Every unit leaves together and sees every other unit
+  score      Place a text on a scale you name
+  tag        Name every label that fits
+  annotate   Fill out a question set for every record
+  recognize  Find every name in a text and assign one of the given kinds
+  relate     Find named relations across one complete entity set
+  cache      Inspect and maintain answer-cache folders without sending a request
+  help       Print this message or the help of the given subcommand(s)
+
+Options:
+  -V, --version  Print the version and exit
+  -h, --help     Print help
+==> thinkthen decide -h (exit 0) <==
+Answer one yes or no question about a text. A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers
+
+Usage: thinkthen decide [OPTIONS] <QUESTION>
+
+Arguments:
+  <QUESTION>  The question to answer, or `@` and the path of a question file
+
+Options:
+      --true <TEXT>             One sentence saying what a yes means, sent beside the question
+      --false <TEXT>            One sentence saying what a no means, sent beside the question
+      --threshold <T|LOW:HIGH>  The rule: one cut T, or a band LOW:HIGH that leaves a middle unresolved. It defaults to 0.5
+      --quiet                   Print nothing on standard output. The exit code still carries the answer
+      --details                 Print the full result object in place of the bare value
+      --input <FILE>            Read the records from FILE instead of from standard input
+      --lines                   Take each line as one text record
+      --jsonl                   Take each line as one JSON record
+      --csv                     Read a comma-separated table with a required header row
+      --tsv                     Read a tab-separated table with a required header row
+      --field <POINTER>         Send only the part of each record this RFC 6901 pointer names
+      --dry-run                 Print what would be sent and stop. No key is read and no connection opens
+      --url <URL>               The base the request is posted under, which outranks THINKTHEN_BASE_URL
+      --profile <FILE>          Read enforceable backend limits and a calibration name from FILE
+      --no-cache                Do not read or write the answer cache for this run
+  -h, --help                    Print help (see more with '--help')
+==> thinkthen decide --help (exit 0) <==
+Answer one yes or no question about a text. A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers.
+
+The answer is a bare `true`, `false`, or `null`, and the exit code is 0 for yes, 1 for no, and 3 for unresolved. Under `set -e` or `set -o pipefail` a no or not sure answer ends the script, so put the command in an `if`, a `case`, or a `||` list.
+
+A single cut answers no when the probability did not reach the mark. It never says the model is sure of no. A three-way gate takes a band, as `--threshold 0.1:0.9` writes one.
+
+A script that acts on the answer reads all four outcomes:
+
+thinkthen decide 'The customer asks for a refund.' --threshold 0.1:0.9 --quiet < m.txt
+
+case $? in 0) route refunds ;; 1) route support ;; 3) route triage ;; *) exit 4 ;; esac
+
+Word the question in the form where yes permits the action. A failure then never permits anything, because every outcome other than 0 leaves the action undone.
+
+Usage: thinkthen decide [OPTIONS] <QUESTION>
+
+Arguments:
+  <QUESTION>
+          The question to answer, or `@` and the path of a question file.
+          
+          As text it is one argument naming one visible fact. As `@FILE` it is a question file holding one `decide` question, and a value typed beside it replaces the file's value. A question that must begin with `@` is written in a file.
+
+Options:
+      --true <TEXT>
+          One sentence saying what a yes means, sent beside the question
+
+      --false <TEXT>
+          One sentence saying what a no means, sent beside the question
+
+      --threshold <T|LOW:HIGH>
+          The rule: one cut T, or a band LOW:HIGH that leaves a middle unresolved. It defaults to 0.5
+
+      --quiet
+          Print nothing on standard output. The exit code still carries the answer
+
+      --details
+          Print the full result object in place of the bare value.
+          
+          In record mode the object also carries `input`, the whole record as it arrived, so a row names the record it answered. `input` repeats every record in the output, and a run over large records pays for that on every row.
+
+      --input <FILE>
+          Read the records from FILE instead of from standard input
+
+      --lines
+          Take each line as one text record.
+          
+          Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
+
+      --jsonl
+          Take each line as one JSON record.
+          
+          Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
+
+      --csv
+          Read a comma-separated table with a required header row.
+          
+          Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
+
+      --tsv
+          Read a tab-separated table with a required header row.
+          
+          Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
+
+      --field <POINTER>
+          Send only the part of each record this RFC 6901 pointer names.
+          
+          Give it more than once to send an object of the named parts, keyed by the last part of each pointer. On a command that accepts one document, no record framing reads the whole input as one JSON value. The pointer is the disclosure boundary: only the pointed value leaves the machine.
+
+      --dry-run
+          Print what would be sent and stop. No key is read and no connection opens
+
+      --url <URL>
+          The base the request is posted under, which outranks THINKTHEN_BASE_URL
+
+      --profile <FILE>
+          Read enforceable backend limits and a calibration name from FILE.
+          
+          A profile never selects an address, model, key, adapter, or cache.
+
+      --model <NAME>
+          The model named in the request. [default: jev-latest]
+          
+          It outranks a `model` key in a single question file. A question set holds no model.
+
+      --record <DIR>
+          Call the backend, then write the exchange into DIR. DIR is created when absent.
+          
+          An explicit recording folder suppresses the platform default cache.
+
+      --replay <DIR>
+          Answer from DIR alone. No connection opens, and no key is read.
+          
+          An explicit replay folder suppresses the platform default cache.
+
+      --cache <DIR>
+          Replay DIR and record into it, overriding THINKTHEN_CACHE and the platform default.
+          
+          It is --record DIR and --replay DIR together, so it stands beside neither of them. A finished record is answered from disk, and only the rest goes to the backend.
+
+      --no-cache
+          Do not read or write the answer cache for this run.
+          
+          Answers are otherwise cached by default in the platform cache folder. Entries contain the judged text. A new default folder is private to its owner. This option conflicts with --cache but may accompany an explicit --record or --replay folder.
+
+      --timeout <SECONDS>
+          Positive seconds that bound one attempt from connect to last byte, and each retry wait
+          
+          [default: 30]
+
+      --jobs <N>
+          How many requests are in flight at once, from 1 to 32. [default: 4]
+          
+          It acts in record mode and on `annotate`, where one document can make several grouped requests. Output follows the order the command defines.
+
+      --max-retries <N>
+          How many times a retried status is sent again. A transport failure is never sent again
+          
+          [default: 2]
+
+  -h, --help
+          Print help (see a summary with '-h')
+==> thinkthen filter -h (exit 0) <==
+Keep the records where the answer is yes
+
+Usage: thinkthen filter [OPTIONS] <QUESTION>
+
+Arguments:
+  <QUESTION>  The question asked of each record, or `@` and the path of a question file
+
+Options:
+      --threshold <T>    One cut T on the probability of yes. A band is a usage error. It defaults to 0.5
+      --true <TEXT>      One sentence saying what a yes means, sent beside the question
+      --false <TEXT>     One sentence saying what a no means, sent beside the question
+      --details          Print the full result object in place of the bare value
+      --input <FILE>     Read the records from FILE instead of from standard input
+      --lines            Take each line as one text record
+      --jsonl            Take each line as one JSON record
+      --csv              Read a comma-separated table with a required header row
+      --tsv              Read a tab-separated table with a required header row
+      --field <POINTER>  Send only the part of each record this RFC 6901 pointer names
+      --dry-run          Print what would be sent and stop. No key is read and no connection opens
+      --url <URL>        The base the request is posted under, which outranks THINKTHEN_BASE_URL
+      --profile <FILE>   Read enforceable backend limits and a calibration name from FILE
+      --no-cache         Do not read or write the answer cache for this run
+  -h, --help             Print help (see more with '--help')
+==> thinkthen filter --help (exit 0) <==
+Keep the records where the answer is yes.
+
+`filter` asks one yes/no question of each record and prints the records that reach `--threshold` in input order. Line and JSONL records return as they arrived; CSV and TSV rows become compact JSON objects. It needs a record framing and makes one paid request for every record.
+
+A single cut keeps or drops, and there is no third pile. A run that wants one asks `decide --details` and splits with `jq`:
+
+thinkthen decide 'The report is reproducible.' --jsonl --field /body --details < i.jsonl | jq -c 'select(.answer.probability >= 0.9)'
+
+A finished run prints nothing on standard error, so two kept records out of five and two out of two look alike on the way out.
+
+A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers.
+
+Usage: thinkthen filter [OPTIONS] <QUESTION>
+
+Arguments:
+  <QUESTION>
+          The question asked of each record, or `@` and the path of a question file.
+          
+          As `@FILE` it is a question file holding one `decide` question, and a value typed beside it replaces the file's value.
+
+Options:
+      --threshold <T>
+          One cut T on the probability of yes. A band is a usage error. It defaults to 0.5
+
+      --true <TEXT>
+          One sentence saying what a yes means, sent beside the question
+
+      --false <TEXT>
+          One sentence saying what a no means, sent beside the question
+
+      --details
+          Print the full result object in place of the bare value.
+          
+          In record mode the object also carries `input`, the whole record as it arrived, so a row names the record it answered. `input` repeats every record in the output, and a run over large records pays for that on every row.
+
+      --input <FILE>
+          Read the records from FILE instead of from standard input
+
+      --lines
+          Take each line as one text record.
+          
+          Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
+
+      --jsonl
+          Take each line as one JSON record.
+          
+          Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
+
+      --csv
+          Read a comma-separated table with a required header row.
+          
+          Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
+
+      --tsv
+          Read a tab-separated table with a required header row.
+          
+          Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
+
+      --field <POINTER>
+          Send only the part of each record this RFC 6901 pointer names.
+          
+          Give it more than once to send an object of the named parts, keyed by the last part of each pointer. On a command that accepts one document, no record framing reads the whole input as one JSON value. The pointer is the disclosure boundary: only the pointed value leaves the machine.
+
+      --dry-run
+          Print what would be sent and stop. No key is read and no connection opens
+
+      --url <URL>
+          The base the request is posted under, which outranks THINKTHEN_BASE_URL
+
+      --profile <FILE>
+          Read enforceable backend limits and a calibration name from FILE.
+          
+          A profile never selects an address, model, key, adapter, or cache.
+
+      --model <NAME>
+          The model named in the request. [default: jev-latest]
+          
+          It outranks a `model` key in a single question file. A question set holds no model.
+
+      --record <DIR>
+          Call the backend, then write the exchange into DIR. DIR is created when absent.
+          
+          An explicit recording folder suppresses the platform default cache.
+
+      --replay <DIR>
+          Answer from DIR alone. No connection opens, and no key is read.
+          
+          An explicit replay folder suppresses the platform default cache.
+
+      --cache <DIR>
+          Replay DIR and record into it, overriding THINKTHEN_CACHE and the platform default.
+          
+          It is --record DIR and --replay DIR together, so it stands beside neither of them. A finished record is answered from disk, and only the rest goes to the backend.
+
+      --no-cache
+          Do not read or write the answer cache for this run.
+          
+          Answers are otherwise cached by default in the platform cache folder. Entries contain the judged text. A new default folder is private to its owner. This option conflicts with --cache but may accompany an explicit --record or --replay folder.
+
+      --timeout <SECONDS>
+          Positive seconds that bound one attempt from connect to last byte, and each retry wait
+          
+          [default: 30]
+
+      --jobs <N>
+          How many requests are in flight at once, from 1 to 32. [default: 4]
+          
+          It acts in record mode and on `annotate`, where one document can make several grouped requests. Output follows the order the command defines.
+
+      --max-retries <N>
+          How many times a retried status is sent again. A transport failure is never sent again
+          
+          [default: 2]
+
+  -h, --help
+          Print help (see a summary with '-h')
+==> thinkthen rank -h (exit 0) <==
+Sort records by how likely the answer is yes. `rank` asks one yes/no question of each record and sorts locally; it never compares two records
+
+Usage: thinkthen rank [OPTIONS] <QUESTION>
+
+Arguments:
+  <QUESTION>  The question asked of each record, or `@` and the path of a question file
+
+Options:
+      --top <N>          Print the first N records of the order, from 1 upward
+      --true <TEXT>      One sentence saying what a yes means, sent beside the question
+      --false <TEXT>     One sentence saying what a no means, sent beside the question
+      --details          Print the full result object in place of the bare value
+      --input <FILE>     Read the records from FILE instead of from standard input
+      --lines            Take each line as one text record
+      --jsonl            Take each line as one JSON record
+      --csv              Read a comma-separated table with a required header row
+      --tsv              Read a tab-separated table with a required header row
+      --field <POINTER>  Send only the part of each record this RFC 6901 pointer names
+      --dry-run          Print what would be sent and stop. No key is read and no connection opens
+      --url <URL>        The base the request is posted under, which outranks THINKTHEN_BASE_URL
+      --profile <FILE>   Read enforceable backend limits and a calibration name from FILE
+      --no-cache         Do not read or write the answer cache for this run
+  -h, --help             Print help (see more with '--help')
+==> thinkthen rank --help (exit 0) <==
+Sort records by how likely the answer is yes. `rank` asks one yes/no question of each record and sorts locally; it never compares two records.
+
+The printed order puts the most likely yes first. An exact tie keeps input order. `rank` never runs a tournament.
+
+It holds every record until the input ends, because a final order needs the whole set, so an endless stream is cut into windows upstream. `--top N` prints the first N of the order and saves no request.
+
+`rank` orders and never selects. A floor is `filter` in front of it.
+
+A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers.
+
+Usage: thinkthen rank [OPTIONS] <QUESTION>
+
+Arguments:
+  <QUESTION>
+          The question asked of each record, or `@` and the path of a question file.
+          
+          As `@FILE` it is a question file holding one `decide` question, and a value typed beside it replaces the file's value.
+
+Options:
+      --top <N>
+          Print the first N records of the order, from 1 upward.
+          
+          It saves no request, because every record is judged before anything is sorted.
+
+      --true <TEXT>
+          One sentence saying what a yes means, sent beside the question
+
+      --false <TEXT>
+          One sentence saying what a no means, sent beside the question
+
+      --details
+          Print the full result object in place of the bare value.
+          
+          In record mode the object also carries `input`, the whole record as it arrived, so a row names the record it answered. `input` repeats every record in the output, and a run over large records pays for that on every row.
+
+      --input <FILE>
+          Read the records from FILE instead of from standard input
+
+      --lines
+          Take each line as one text record.
+          
+          Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
+
+      --jsonl
+          Take each line as one JSON record.
+          
+          Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
+
+      --csv
+          Read a comma-separated table with a required header row.
+          
+          Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
+
+      --tsv
+          Read a tab-separated table with a required header row.
+          
+          Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
+
+      --field <POINTER>
+          Send only the part of each record this RFC 6901 pointer names.
+          
+          Give it more than once to send an object of the named parts, keyed by the last part of each pointer. On a command that accepts one document, no record framing reads the whole input as one JSON value. The pointer is the disclosure boundary: only the pointed value leaves the machine.
+
+      --dry-run
+          Print what would be sent and stop. No key is read and no connection opens
+
+      --url <URL>
+          The base the request is posted under, which outranks THINKTHEN_BASE_URL
+
+      --profile <FILE>
+          Read enforceable backend limits and a calibration name from FILE.
+          
+          A profile never selects an address, model, key, adapter, or cache.
+
+      --model <NAME>
+          The model named in the request. [default: jev-latest]
+          
+          It outranks a `model` key in a single question file. A question set holds no model.
+
+      --record <DIR>
+          Call the backend, then write the exchange into DIR. DIR is created when absent.
+          
+          An explicit recording folder suppresses the platform default cache.
+
+      --replay <DIR>
+          Answer from DIR alone. No connection opens, and no key is read.
+          
+          An explicit replay folder suppresses the platform default cache.
+
+      --cache <DIR>
+          Replay DIR and record into it, overriding THINKTHEN_CACHE and the platform default.
+          
+          It is --record DIR and --replay DIR together, so it stands beside neither of them. A finished record is answered from disk, and only the rest goes to the backend.
+
+      --no-cache
+          Do not read or write the answer cache for this run.
+          
+          Answers are otherwise cached by default in the platform cache folder. Entries contain the judged text. A new default folder is private to its owner. This option conflicts with --cache but may accompany an explicit --record or --replay folder.
+
+      --timeout <SECONDS>
+          Positive seconds that bound one attempt from connect to last byte, and each retry wait
+          
+          [default: 30]
+
+      --jobs <N>
+          How many requests are in flight at once, from 1 to 32. [default: 4]
+          
+          It acts in record mode and on `annotate`, where one document can make several grouped requests. Output follows the order the command defines.
+
+      --max-retries <N>
+          How many times a retried status is sent again. A transport failure is never sent again
+          
+          [default: 2]
+
+  -h, --help
+          Print help (see a summary with '-h')
+==> thinkthen choose -h (exit 0) <==
+Pick one option from your list
+
+Usage: thinkthen choose [OPTIONS] <QUESTION> [OPTIONS]...
+
+Arguments:
+  <QUESTION>    The question that states what decides the pick, or `@` and a file path
+  [OPTIONS]...  The labels to pick between, 2 to 255 of them, in the order they are sent
+
+Options:
+      --option <LABEL=DESCRIPTION>  One label and what it means, as LABEL=DESCRIPTION. Give it once per label
+      --options <POINTER>           Take each record's own options from this RFC 6901 pointer
+      --threshold <T>               One cut T on the winning option's probability. A band is a usage error
+      --raw                         Print the label without quotation marks, and nothing when unresolved
+      --quiet                       Print nothing on standard output. The exit code still carries the answer
+      --details                     Print the full result object in place of the bare value
+      --input <FILE>                Read the records from FILE instead of from standard input
+      --lines                       Take each line as one text record
+      --jsonl                       Take each line as one JSON record
+      --csv                         Read a comma-separated table with a required header row
+      --tsv                         Read a tab-separated table with a required header row
+      --field <POINTER>             Send only the part of each record this RFC 6901 pointer names
+      --dry-run                     Print what would be sent and stop. No key is read and no connection opens
+      --url <URL>                   The base the request is posted under, which outranks THINKTHEN_BASE_URL
+      --profile <FILE>              Read enforceable backend limits and a calibration name from FILE
+      --no-cache                    Do not read or write the answer cache for this run
+  -h, --help                        Print help (see more with '--help')
+==> thinkthen choose --help (exit 0) <==
+Pick one option from your list.
+
+The answer is a bare JSON string, or `null` when the winning option falls under `--threshold` or the top two options tie exactly. Exit 0 is a label and exit 3 is unresolved. `choose` never exits 1, because a pick is not a two-sided decision.
+
+--raw is available for one document, --lines, and --jsonl. CSV and TSV always print JSONL and refuse --raw.
+
+A script reads the exit code first and the label second, so it takes two `case` blocks. `--raw` prints nothing at all for an unresolved answer, and an empty string is no label, so only the exit code tells an unresolved pick from a command that failed:
+
+label=$(thinkthen choose 'Which team owns this?' billing shipping other --raw < m.txt) && rc=0 || rc=$?
+
+case $rc in 0) ;; 3) label=unresolved ;; *) exit "$rc" ;; esac
+
+case $label in billing) pay ;; unresolved) triage ;; *) exit 2 ;; esac
+
+"Not stated" is a different answer from "false". "Does the document establish X?" and "Is X true?" are different questions. When the difference matters, ask `choose` with labels such as supported, contradicted, and not_stated rather than one yes/no question.
+
+Word the options so that they exclude one another, and type a catch-all such as other yourself, last. Keep the option order fixed once a cut is tuned, because a run with a reordered list is a different measurement.
+
+A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers.
+
+Usage: thinkthen choose [OPTIONS] <QUESTION> [OPTIONS]...
+
+Arguments:
+  <QUESTION>
+          The question that states what decides the pick, or `@` and a file path
+
+  [OPTIONS]...
+          The labels to pick between, 2 to 255 of them, in the order they are sent
+
+Options:
+      --option <LABEL=DESCRIPTION>
+          One label and what it means, as LABEL=DESCRIPTION. Give it once per label.
+          
+          The first `=` splits the label from the description, and the description travels beside the label so the model reads both. It does not stand beside the positional labels, because two lists have no order between them.
+
+      --options <POINTER>
+          Take each record's own options from this RFC 6901 pointer.
+          
+          The record holds a list of labels, or a map from each label to the description that travels with it. It needs --jsonl, because a pointer needs a JSON record, and it takes no list on the command line.
+
+      --threshold <T>
+          One cut T on the winning option's probability. A band is a usage error
+
+      --raw
+          Print the label without quotation marks, and nothing when unresolved.
+          
+          This view is available for one document, --lines, and --jsonl. CSV and TSV always print JSONL and refuse --raw.
+
+      --quiet
+          Print nothing on standard output. The exit code still carries the answer
+
+      --details
+          Print the full result object in place of the bare value.
+          
+          In record mode the object also carries `input`, the whole record as it arrived, so a row names the record it answered. `input` repeats every record in the output, and a run over large records pays for that on every row.
+
+      --input <FILE>
+          Read the records from FILE instead of from standard input
+
+      --lines
+          Take each line as one text record.
+          
+          Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
+
+      --jsonl
+          Take each line as one JSON record.
+          
+          Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
+
+      --csv
+          Read a comma-separated table with a required header row.
+          
+          Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
+
+      --tsv
+          Read a tab-separated table with a required header row.
+          
+          Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
+
+      --field <POINTER>
+          Send only the part of each record this RFC 6901 pointer names.
+          
+          Give it more than once to send an object of the named parts, keyed by the last part of each pointer. On a command that accepts one document, no record framing reads the whole input as one JSON value. The pointer is the disclosure boundary: only the pointed value leaves the machine.
+
+      --dry-run
+          Print what would be sent and stop. No key is read and no connection opens
+
+      --url <URL>
+          The base the request is posted under, which outranks THINKTHEN_BASE_URL
+
+      --profile <FILE>
+          Read enforceable backend limits and a calibration name from FILE.
+          
+          A profile never selects an address, model, key, adapter, or cache.
+
+      --model <NAME>
+          The model named in the request. [default: jev-latest]
+          
+          It outranks a `model` key in a single question file. A question set holds no model.
+
+      --record <DIR>
+          Call the backend, then write the exchange into DIR. DIR is created when absent.
+          
+          An explicit recording folder suppresses the platform default cache.
+
+      --replay <DIR>
+          Answer from DIR alone. No connection opens, and no key is read.
+          
+          An explicit replay folder suppresses the platform default cache.
+
+      --cache <DIR>
+          Replay DIR and record into it, overriding THINKTHEN_CACHE and the platform default.
+          
+          It is --record DIR and --replay DIR together, so it stands beside neither of them. A finished record is answered from disk, and only the rest goes to the backend.
+
+      --no-cache
+          Do not read or write the answer cache for this run.
+          
+          Answers are otherwise cached by default in the platform cache folder. Entries contain the judged text. A new default folder is private to its owner. This option conflicts with --cache but may accompany an explicit --record or --replay folder.
+
+      --timeout <SECONDS>
+          Positive seconds that bound one attempt from connect to last byte, and each retry wait
+          
+          [default: 30]
+
+      --jobs <N>
+          How many requests are in flight at once, from 1 to 32. [default: 4]
+          
+          It acts in record mode and on `annotate`, where one document can make several grouped requests. Output follows the order the command defines.
+
+      --max-retries <N>
+          How many times a retried status is sent again. A transport failure is never sent again
+          
+          [default: 2]
+
+  -h, --help
+          Print help (see a summary with '-h')
+==> thinkthen find -h (exit 0) <==
+Pick the one line or record that best answers a question. Every unit leaves together and sees every other unit
+
+Usage: thinkthen find [OPTIONS] <QUESTION>
+
+Arguments:
+  <QUESTION>  The question the selected unit best answers
+
+Options:
+      --none             Let the answer say that no unit fits
+      --details          Print the full result object in place of the original selected unit
+      --input <FILE>     Read units from FILE instead of standard input
+      --lines            Take each line as one text unit
+      --jsonl            Take each line as one JSON unit
+      --field <POINTER>  Send only the part of each JSON unit this RFC 6901 pointer names
+      --dry-run          Print the complete one-request plan and send nothing
+      --url <URL>        The backend base, which outranks THINKTHEN_BASE_URL
+      --profile <FILE>   Read enforceable backend limits and a calibration name from FILE
+      --no-cache         Do not read or write answers in the default cache
+  -h, --help             Print help (see more with '--help')
+==> thinkthen find --help (exit 0) <==
+Pick the one line or record that best answers a question. Every unit leaves together and sees every other unit.
+
+Every unit leaves together in one request and sees every other unit. Input defaults to lines; --jsonl reads records and --field selects what the model sees. The set holds 2 to 255 units, or 2 to 254 with --none, and at most 16 MiB across the original input.
+
+`find --none` prints nothing and exits 3 when `none` wins or ties for first.
+
+Usage: thinkthen find [OPTIONS] <QUESTION>
+
+Arguments:
+  <QUESTION>
+          The question the selected unit best answers
+
+Options:
+      --none
+          Let the answer say that no unit fits
+
+      --details
+          Print the full result object in place of the original selected unit
+
+      --input <FILE>
+          Read units from FILE instead of standard input
+
+      --lines
+          Take each line as one text unit
+
+      --jsonl
+          Take each line as one JSON unit
+
+      --field <POINTER>
+          Send only the part of each JSON unit this RFC 6901 pointer names
+
+      --dry-run
+          Print the complete one-request plan and send nothing
+
+      --url <URL>
+          The backend base, which outranks THINKTHEN_BASE_URL
+
+      --profile <FILE>
+          Read enforceable backend limits and a calibration name from FILE
+
+      --model <NAME>
+          The model named in the request. [default: jev-latest]
+
+      --record <DIR>
+          Write the completed exchange into DIR.
+          
+          An explicit recording folder suppresses the platform default cache.
+
+      --replay <DIR>
+          Answer from DIR alone.
+          
+          An explicit replay folder suppresses the platform default cache.
+
+      --cache <DIR>
+          Replay and record through one DIR, overriding THINKTHEN_CACHE and the platform default
+
+      --no-cache
+          Do not read or write answers in the default cache.
+          
+          Answers are otherwise cached by default in the platform cache folder. Entries contain the judged text. A new default folder is private to its owner. This option conflicts with --cache but may accompany an explicit --record or --replay folder.
+
+      --timeout <SECONDS>
+          Positive seconds that bound one attempt from connect to last byte, and each retry wait
+          
+          [default: 30]
+
+      --max-retries <N>
+          How many times a retried status is sent again. A transport failure is never sent again
+          
+          [default: 2]
+
+  -h, --help
+          Print help (see a summary with '-h')
+==> thinkthen score -h (exit 0) <==
+Place a text on a scale you name
+
+Usage: thinkthen score [OPTIONS] <QUESTION> [LEVELS]...
+
+Arguments:
+  <QUESTION>   The question that names what is being placed, or `@` and a file path
+  [LEVELS]...  The levels, 2 to 10 of them, lowest first
+
+Options:
+      --details          Print the full result object in place of the bare value
+      --input <FILE>     Read the records from FILE instead of from standard input
+      --lines            Take each line as one text record
+      --jsonl            Take each line as one JSON record
+      --csv              Read a comma-separated table with a required header row
+      --tsv              Read a tab-separated table with a required header row
+      --field <POINTER>  Send only the part of each record this RFC 6901 pointer names
+      --dry-run          Print what would be sent and stop. No key is read and no connection opens
+      --url <URL>        The base the request is posted under, which outranks THINKTHEN_BASE_URL
+      --profile <FILE>   Read enforceable backend limits and a calibration name from FILE
+      --no-cache         Do not read or write the answer cache for this run
+  -h, --help             Print help (see more with '--help')
+==> thinkthen score --help (exit 0) <==
+Place a text on a scale you name.
+
+The levels come lowest first, and the number is the backend's probability-weighted position on them, from 0 to the number of levels minus one. `score` takes no threshold, and no answer sets the exit code. `jq -e` cuts on the number in one line and sets one:
+
+thinkthen score 'How much disruption?' none workaround blocked < t.txt | jq -e '. >= 2' > /dev/null
+
+One number hides the shape of the distribution. The level odds 0, 1, 0 and 0.5, 0, 0.5 both score 1. Read `--details` for the odds of every level when the difference matters.
+
+Measurement of the first decider model showed rubric judgments rejecting 18% to 46% of work people had accepted. A later run ordered forty made-up reports well and ran one level high on 9 of 40, so tune a cut on labeled cases. A number belongs in a review queue a person reads. A gate that has to hold belongs in `decide` or `choose`, and the Bash way to branch on levels is `choose` with the levels as ordered labels.
+
+A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers.
+
+Usage: thinkthen score [OPTIONS] <QUESTION> [LEVELS]...
+
+Arguments:
+  <QUESTION>
+          The question that names what is being placed, or `@` and a file path
+
+  [LEVELS]...
+          The levels, 2 to 10 of them, lowest first
+
+Options:
+      --details
+          Print the full result object in place of the bare value.
+          
+          In record mode the object also carries `input`, the whole record as it arrived, so a row names the record it answered. `input` repeats every record in the output, and a run over large records pays for that on every row.
+
+      --input <FILE>
+          Read the records from FILE instead of from standard input
+
+      --lines
+          Take each line as one text record.
+          
+          Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
+
+      --jsonl
+          Take each line as one JSON record.
+          
+          Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
+
+      --csv
+          Read a comma-separated table with a required header row.
+          
+          Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
+
+      --tsv
+          Read a tab-separated table with a required header row.
+          
+          Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
+
+      --field <POINTER>
+          Send only the part of each record this RFC 6901 pointer names.
+          
+          Give it more than once to send an object of the named parts, keyed by the last part of each pointer. On a command that accepts one document, no record framing reads the whole input as one JSON value. The pointer is the disclosure boundary: only the pointed value leaves the machine.
+
+      --dry-run
+          Print what would be sent and stop. No key is read and no connection opens
+
+      --url <URL>
+          The base the request is posted under, which outranks THINKTHEN_BASE_URL
+
+      --profile <FILE>
+          Read enforceable backend limits and a calibration name from FILE.
+          
+          A profile never selects an address, model, key, adapter, or cache.
+
+      --model <NAME>
+          The model named in the request. [default: jev-latest]
+          
+          It outranks a `model` key in a single question file. A question set holds no model.
+
+      --record <DIR>
+          Call the backend, then write the exchange into DIR. DIR is created when absent.
+          
+          An explicit recording folder suppresses the platform default cache.
+
+      --replay <DIR>
+          Answer from DIR alone. No connection opens, and no key is read.
+          
+          An explicit replay folder suppresses the platform default cache.
+
+      --cache <DIR>
+          Replay DIR and record into it, overriding THINKTHEN_CACHE and the platform default.
+          
+          It is --record DIR and --replay DIR together, so it stands beside neither of them. A finished record is answered from disk, and only the rest goes to the backend.
+
+      --no-cache
+          Do not read or write the answer cache for this run.
+          
+          Answers are otherwise cached by default in the platform cache folder. Entries contain the judged text. A new default folder is private to its owner. This option conflicts with --cache but may accompany an explicit --record or --replay folder.
+
+      --timeout <SECONDS>
+          Positive seconds that bound one attempt from connect to last byte, and each retry wait
+          
+          [default: 30]
+
+      --jobs <N>
+          How many requests are in flight at once, from 1 to 32. [default: 4]
+          
+          It acts in record mode and on `annotate`, where one document can make several grouped requests. Output follows the order the command defines.
+
+      --max-retries <N>
+          How many times a retried status is sent again. A transport failure is never sent again
+          
+          [default: 2]
+
+  -h, --help
+          Print help (see a summary with '-h')
+==> thinkthen tag -h (exit 0) <==
+Name every label that fits
+
+Usage: thinkthen tag [OPTIONS] <QUESTION> [LABEL]...
+
+Arguments:
+  <QUESTION>  The question that frames the labels, or `@` and a question-file path
+  [LABEL]...  The labels to test independently, 1 to 20, in request and output order
+
+Options:
+      --label <LABEL=DESCRIPTION>  One label and what it means, as LABEL=DESCRIPTION. Give it once per label
+      --threshold <T>              One cut applied to every label's probability of yes. It defaults to 0.5
+      --details                    Print the full result object in place of the bare value
+      --input <FILE>               Read the records from FILE instead of from standard input
+      --lines                      Take each line as one text record
+      --jsonl                      Take each line as one JSON record
+      --csv                        Read a comma-separated table with a required header row
+      --tsv                        Read a tab-separated table with a required header row
+      --field <POINTER>            Send only the part of each record this RFC 6901 pointer names
+      --dry-run                    Print what would be sent and stop. No key is read and no connection opens
+      --url <URL>                  The base the request is posted under, which outranks THINKTHEN_BASE_URL
+      --profile <FILE>             Read enforceable backend limits and a calibration name from FILE
+      --no-cache                   Do not read or write the answer cache for this run
+  -h, --help                       Print help (see more with '--help')
+
+Examples:
+
+thinkthen tag 'Which topics?' --label billing='About charges.' --label urgent='Needs prompt attention.' < message.txt
+thinkthen tag 'Which topics?' billing urgent < message.txt
+==> thinkthen tag --help (exit 0) <==
+Name every label that fits.
+
+The answer is one JSON array holding every applicable label. A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers.
+
+Usage: thinkthen tag [OPTIONS] <QUESTION> [LABEL]...
+
+Arguments:
+  <QUESTION>
+          The question that frames the labels, or `@` and a question-file path
+
+  [LABEL]...
+          The labels to test independently, 1 to 20, in request and output order
+
+Options:
+      --label <LABEL=DESCRIPTION>
+          One label and what it means, as LABEL=DESCRIPTION. Give it once per label
+
+      --threshold <T>
+          One cut applied to every label's probability of yes. It defaults to 0.5
+
+      --details
+          Print the full result object in place of the bare value.
+          
+          In record mode the object also carries `input`, the whole record as it arrived, so a row names the record it answered. `input` repeats every record in the output, and a run over large records pays for that on every row.
+
+      --input <FILE>
+          Read the records from FILE instead of from standard input
+
+      --lines
+          Take each line as one text record.
+          
+          Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
+
+      --jsonl
+          Take each line as one JSON record.
+          
+          Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
+
+      --csv
+          Read a comma-separated table with a required header row.
+          
+          Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
+
+      --tsv
+          Read a tab-separated table with a required header row.
+          
+          Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
+
+      --field <POINTER>
+          Send only the part of each record this RFC 6901 pointer names.
+          
+          Give it more than once to send an object of the named parts, keyed by the last part of each pointer. On a command that accepts one document, no record framing reads the whole input as one JSON value. The pointer is the disclosure boundary: only the pointed value leaves the machine.
+
+      --dry-run
+          Print what would be sent and stop. No key is read and no connection opens
+
+      --url <URL>
+          The base the request is posted under, which outranks THINKTHEN_BASE_URL
+
+      --profile <FILE>
+          Read enforceable backend limits and a calibration name from FILE.
+          
+          A profile never selects an address, model, key, adapter, or cache.
+
+      --model <NAME>
+          The model named in the request. [default: jev-latest]
+          
+          It outranks a `model` key in a single question file. A question set holds no model.
+
+      --record <DIR>
+          Call the backend, then write the exchange into DIR. DIR is created when absent.
+          
+          An explicit recording folder suppresses the platform default cache.
+
+      --replay <DIR>
+          Answer from DIR alone. No connection opens, and no key is read.
+          
+          An explicit replay folder suppresses the platform default cache.
+
+      --cache <DIR>
+          Replay DIR and record into it, overriding THINKTHEN_CACHE and the platform default.
+          
+          It is --record DIR and --replay DIR together, so it stands beside neither of them. A finished record is answered from disk, and only the rest goes to the backend.
+
+      --no-cache
+          Do not read or write the answer cache for this run.
+          
+          Answers are otherwise cached by default in the platform cache folder. Entries contain the judged text. A new default folder is private to its owner. This option conflicts with --cache but may accompany an explicit --record or --replay folder.
+
+      --timeout <SECONDS>
+          Positive seconds that bound one attempt from connect to last byte, and each retry wait
+          
+          [default: 30]
+
+      --jobs <N>
+          How many requests are in flight at once, from 1 to 32. [default: 4]
+          
+          It acts in record mode and on `annotate`, where one document can make several grouped requests. Output follows the order the command defines.
+
+      --max-retries <N>
+          How many times a retried status is sent again. A transport failure is never sent again
+          
+          [default: 2]
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+Examples:
+
+thinkthen tag 'Which topics?' --label billing='About charges.' --label urgent='Needs prompt attention.' < message.txt
+thinkthen tag 'Which topics?' billing urgent < message.txt
+==> thinkthen annotate -h (exit 0) <==
+Fill out a question set for every record
+
+Usage: thinkthen annotate [OPTIONS] <QUESTIONS>
+
+Arguments:
+  <QUESTIONS>  A JSON question set containing the named judgments to apply
+
+Options:
+      --details          Print the full result object in place of the bare value
+      --input <FILE>     Read the records from FILE instead of from standard input
+      --lines            Take each line as one text record
+      --jsonl            Take each line as one JSON record
+      --csv              Read a comma-separated table with a required header row
+      --tsv              Read a tab-separated table with a required header row
+      --field <POINTER>  Send only the part of each record this RFC 6901 pointer names
+      --dry-run          Print what would be sent and stop. No key is read and no connection opens
+      --url <URL>        The base the request is posted under, which outranks THINKTHEN_BASE_URL
+      --profile <FILE>   Read enforceable backend limits and a calibration name from FILE
+      --no-cache         Do not read or write the answer cache for this run
+  -h, --help             Print help (see more with '--help')
+
+Examples:
+
+thinkthen annotate checks.json < message.txt
+thinkthen annotate checks.json --input message.txt
+==> thinkthen annotate --help (exit 0) <==
+Fill out a question set for every record.
+
+The answer is one annotated JSON object. A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers. A completed run with one or more failed questions exits 6.
+
+Usage: thinkthen annotate [OPTIONS] <QUESTIONS>
+
+Arguments:
+  <QUESTIONS>
+          A JSON question set containing the named judgments to apply
+
+Options:
+      --details
+          Print the full result object in place of the bare value.
+          
+          In record mode the object also carries `input`, the whole record as it arrived, so a row names the record it answered. `input` repeats every record in the output, and a run over large records pays for that on every row.
+
+      --input <FILE>
+          Read the records from FILE instead of from standard input
+
+      --lines
+          Take each line as one text record.
+          
+          Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
+
+      --jsonl
+          Take each line as one JSON record.
+          
+          Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
+
+      --csv
+          Read a comma-separated table with a required header row.
+          
+          Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
+
+      --tsv
+          Read a tab-separated table with a required header row.
+          
+          Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
+
+      --field <POINTER>
+          Send only the part of each record this RFC 6901 pointer names.
+          
+          Give it more than once to send an object of the named parts, keyed by the last part of each pointer. On a command that accepts one document, no record framing reads the whole input as one JSON value. The pointer is the disclosure boundary: only the pointed value leaves the machine.
+
+      --dry-run
+          Print what would be sent and stop. No key is read and no connection opens
+
+      --url <URL>
+          The base the request is posted under, which outranks THINKTHEN_BASE_URL
+
+      --profile <FILE>
+          Read enforceable backend limits and a calibration name from FILE.
+          
+          A profile never selects an address, model, key, adapter, or cache.
+
+      --model <NAME>
+          The model named in the request. [default: jev-latest]
+          
+          It outranks a `model` key in a single question file. A question set holds no model.
+
+      --record <DIR>
+          Call the backend, then write the exchange into DIR. DIR is created when absent.
+          
+          An explicit recording folder suppresses the platform default cache.
+
+      --replay <DIR>
+          Answer from DIR alone. No connection opens, and no key is read.
+          
+          An explicit replay folder suppresses the platform default cache.
+
+      --cache <DIR>
+          Replay DIR and record into it, overriding THINKTHEN_CACHE and the platform default.
+          
+          It is --record DIR and --replay DIR together, so it stands beside neither of them. A finished record is answered from disk, and only the rest goes to the backend.
+
+      --no-cache
+          Do not read or write the answer cache for this run.
+          
+          Answers are otherwise cached by default in the platform cache folder. Entries contain the judged text. A new default folder is private to its owner. This option conflicts with --cache but may accompany an explicit --record or --replay folder.
+
+      --timeout <SECONDS>
+          Positive seconds that bound one attempt from connect to last byte, and each retry wait
+          
+          [default: 30]
+
+      --jobs <N>
+          How many requests are in flight at once, from 1 to 32. [default: 4]
+          
+          It acts in record mode and on `annotate`, where one document can make several grouped requests. Output follows the order the command defines.
+
+      --max-retries <N>
+          How many times a retried status is sent again. A transport failure is never sent again
+          
+          [default: 2]
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+Examples:
+
+thinkthen annotate checks.json < message.txt
+thinkthen annotate checks.json --input message.txt
+==> thinkthen recognize -h (exit 0) <==
+Find every name in a text and assign one of the given kinds
+
+Usage: thinkthen recognize [OPTIONS] [KIND]...
+
+Arguments:
+  [KIND]...  Kinds to assign, or one `@FILE` recognize question file
+
+Options:
+      --kind <KIND=DESCRIPTION>        One kind and what it means, as KIND=DESCRIPTION
+      --relation <NAME=SOURCE:TARGET>  A beta relation rule, as NAME=SOURCE:TARGET. `*` explicitly means any kind
+      --threshold <T>                  Keep names whose computed strength reaches this cut. [default: 0.5]
+      --relation-threshold <T>         Keep beta relation edges whose model probability reaches this cut. [default: 0.5]
+      --details                        Print the full result object in place of the bare value
+      --input <FILE>                   Read the records from FILE instead of from standard input
+      --lines                          Take each line as one text record
+      --jsonl                          Take each line as one JSON record
+      --csv                            Read a comma-separated table with a required header row
+      --tsv                            Read a tab-separated table with a required header row
+      --field <POINTER>                Send only the part of each record this RFC 6901 pointer names
+      --dry-run                        Print what would be sent and stop. No key is read and no connection opens
+      --url <URL>                      The base the request is posted under, which outranks THINKTHEN_BASE_URL
+      --profile <FILE>                 Read enforceable backend limits and a calibration name from FILE
+      --no-cache                       Do not read or write the answer cache for this run
+  -h, --help                           Print help (see more with '--help')
+==> thinkthen recognize --help (exit 0) <==
+Find every name in a text and assign one of the given kinds.
+
+Relations are beta. `--threshold` gates computed name strength; `--relation-threshold` gates a relation's model probability.
+
+Usage: thinkthen recognize [OPTIONS] [KIND]...
+
+Arguments:
+  [KIND]...
+          Kinds to assign, or one `@FILE` recognize question file
+
+Options:
+      --kind <KIND=DESCRIPTION>
+          One kind and what it means, as KIND=DESCRIPTION
+
+      --relation <NAME=SOURCE:TARGET>
+          A beta relation rule, as NAME=SOURCE:TARGET. `*` explicitly means any kind
+
+      --threshold <T>
+          Keep names whose computed strength reaches this cut. [default: 0.5]
+
+      --relation-threshold <T>
+          Keep beta relation edges whose model probability reaches this cut. [default: 0.5]
+
+      --details
+          Print the full result object in place of the bare value.
+          
+          In record mode the object also carries `input`, the whole record as it arrived, so a row names the record it answered. `input` repeats every record in the output, and a run over large records pays for that on every row.
+
+      --input <FILE>
+          Read the records from FILE instead of from standard input
+
+      --lines
+          Take each line as one text record.
+          
+          Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
+
+      --jsonl
+          Take each line as one JSON record.
+          
+          Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
+
+      --csv
+          Read a comma-separated table with a required header row.
+          
+          Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
+
+      --tsv
+          Read a tab-separated table with a required header row.
+          
+          Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
+
+      --field <POINTER>
+          Send only the part of each record this RFC 6901 pointer names.
+          
+          Give it more than once to send an object of the named parts, keyed by the last part of each pointer. On a command that accepts one document, no record framing reads the whole input as one JSON value. The pointer is the disclosure boundary: only the pointed value leaves the machine.
+
+      --dry-run
+          Print what would be sent and stop. No key is read and no connection opens
+
+      --url <URL>
+          The base the request is posted under, which outranks THINKTHEN_BASE_URL
+
+      --profile <FILE>
+          Read enforceable backend limits and a calibration name from FILE.
+          
+          A profile never selects an address, model, key, adapter, or cache.
+
+      --model <NAME>
+          The model named in the request. [default: jev-latest]
+          
+          It outranks a `model` key in a single question file. A question set holds no model.
+
+      --record <DIR>
+          Call the backend, then write the exchange into DIR. DIR is created when absent.
+          
+          An explicit recording folder suppresses the platform default cache.
+
+      --replay <DIR>
+          Answer from DIR alone. No connection opens, and no key is read.
+          
+          An explicit replay folder suppresses the platform default cache.
+
+      --cache <DIR>
+          Replay DIR and record into it, overriding THINKTHEN_CACHE and the platform default.
+          
+          It is --record DIR and --replay DIR together, so it stands beside neither of them. A finished record is answered from disk, and only the rest goes to the backend.
+
+      --no-cache
+          Do not read or write the answer cache for this run.
+          
+          Answers are otherwise cached by default in the platform cache folder. Entries contain the judged text. A new default folder is private to its owner. This option conflicts with --cache but may accompany an explicit --record or --replay folder.
+
+      --timeout <SECONDS>
+          Positive seconds that bound one attempt from connect to last byte, and each retry wait
+          
+          [default: 30]
+
+      --jobs <N>
+          How many requests are in flight at once, from 1 to 32. [default: 4]
+          
+          It acts in record mode and on `annotate`, where one document can make several grouped requests. Output follows the order the command defines.
+
+      --max-retries <N>
+          How many times a retried status is sent again. A transport failure is never sent again
+          
+          [default: 2]
+
+  -h, --help
+          Print help (see a summary with '-h')
+==> thinkthen relate -h (exit 0) <==
+Find named relations across one complete entity set
+
+Usage: thinkthen relate [OPTIONS] <RELATION>...
+
+Arguments:
+  <RELATION>...  Relation rules as NAME=SOURCE_KIND:TARGET_KIND, bare NAME, or one @FILE
+
+Options:
+      --either                Treat every inline relation as unordered
+      --threshold <T>         Keep edges whose model probability reaches this cut. [default: 0.5]
+      --kind-field <POINTER>  Read each structured entity's kind from this RFC 6901 pointer
+      --details               Print the full result object in place of the bare value
+      --input <FILE>          Read the records from FILE instead of from standard input
+      --lines                 Take each line as one text record
+      --jsonl                 Take each line as one JSON record
+      --csv                   Read a comma-separated table with a required header row
+      --tsv                   Read a tab-separated table with a required header row
+      --field <POINTER>       Send only the part of each record this RFC 6901 pointer names
+      --dry-run               Print what would be sent and stop. No key is read and no connection opens
+      --url <URL>             The base the request is posted under, which outranks THINKTHEN_BASE_URL
+      --profile <FILE>        Read enforceable backend limits and a calibration name from FILE
+      --no-cache              Do not read or write the answer cache for this run
+  -h, --help                  Print help (see more with '--help')
+==> thinkthen relate --help (exit 0) <==
+Find named relations across one complete entity set.
+
+Relations are beta. Every entity leaves together as one complete entity set and sees every other entity admitted by a rule. Inline rules use NAME=SOURCE_KIND:TARGET_KIND. A bare NAME means NAME=*:*.
+
+Usage: thinkthen relate [OPTIONS] <RELATION>...
+
+Arguments:
+  <RELATION>...
+          Relation rules as NAME=SOURCE_KIND:TARGET_KIND, bare NAME, or one @FILE
+
+Options:
+      --either
+          Treat every inline relation as unordered
+
+      --threshold <T>
+          Keep edges whose model probability reaches this cut. [default: 0.5]
+
+      --kind-field <POINTER>
+          Read each structured entity's kind from this RFC 6901 pointer
+
+      --details
+          Print the full result object in place of the bare value.
+          
+          In record mode the object also carries `input`, the whole record as it arrived, so a row names the record it answered. `input` repeats every record in the output, and a run over large records pays for that on every row.
+
+      --input <FILE>
+          Read the records from FILE instead of from standard input
+
+      --lines
+          Take each line as one text record.
+          
+          Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
+
+      --jsonl
+          Take each line as one JSON record.
+          
+          Value verbs keep `input` beside `value`. Record-returning verbs return records. `annotate` enriches object records.
+
+      --csv
+          Read a comma-separated table with a required header row.
+          
+          Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
+
+      --tsv
+          Read a tab-separated table with a required header row.
+          
+          Every cell is a string, and every result is JSONL. The tool never guesses this framing from a filename.
+
+      --field <POINTER>
+          Send only the part of each record this RFC 6901 pointer names.
+          
+          Give it more than once to send an object of the named parts, keyed by the last part of each pointer. On a command that accepts one document, no record framing reads the whole input as one JSON value. The pointer is the disclosure boundary: only the pointed value leaves the machine.
+
+      --dry-run
+          Print what would be sent and stop. No key is read and no connection opens
+
+      --url <URL>
+          The base the request is posted under, which outranks THINKTHEN_BASE_URL
+
+      --profile <FILE>
+          Read enforceable backend limits and a calibration name from FILE.
+          
+          A profile never selects an address, model, key, adapter, or cache.
+
+      --model <NAME>
+          The model named in the request. [default: jev-latest]
+          
+          It outranks a `model` key in a single question file. A question set holds no model.
+
+      --record <DIR>
+          Call the backend, then write the exchange into DIR. DIR is created when absent.
+          
+          An explicit recording folder suppresses the platform default cache.
+
+      --replay <DIR>
+          Answer from DIR alone. No connection opens, and no key is read.
+          
+          An explicit replay folder suppresses the platform default cache.
+
+      --cache <DIR>
+          Replay DIR and record into it, overriding THINKTHEN_CACHE and the platform default.
+          
+          It is --record DIR and --replay DIR together, so it stands beside neither of them. A finished record is answered from disk, and only the rest goes to the backend.
+
+      --no-cache
+          Do not read or write the answer cache for this run.
+          
+          Answers are otherwise cached by default in the platform cache folder. Entries contain the judged text. A new default folder is private to its owner. This option conflicts with --cache but may accompany an explicit --record or --replay folder.
+
+      --timeout <SECONDS>
+          Positive seconds that bound one attempt from connect to last byte, and each retry wait
+          
+          [default: 30]
+
+      --jobs <N>
+          How many requests are in flight at once, from 1 to 32. [default: 4]
+          
+          It acts in record mode and on `annotate`, where one document can make several grouped requests. Output follows the order the command defines.
+
+      --max-retries <N>
+          How many times a retried status is sent again. A transport failure is never sent again
+          
+          [default: 2]
+
+  -h, --help
+          Print help (see a summary with '-h')
