@@ -84,7 +84,7 @@ Measured with `git diff -U0 5d317098 HEAD -- '*.rs'`, nonblank lines:
 
 ## Ladder
 
-LADDER
+At `138c1def`, which merges main `5783815b` (with 0097 and `qf-test-deadlines`), the rungs ran one after another with the key and base-address variables unset. The one-minute load stood at 3.16 at the start. The observed exits were `install` 0, `lint` 0, `test` 0 (817 passed, 0 failed), and `spec` 0 (demos 21 green, 0 red). `ratchet.mjs` read 50970/50970. Main then moved to `e7696ca8`, which changes only `sdlc/planning/one-line-plan-2026-09-24.md`. The later merge and this record add no code.
 
 ## Ratchet
 
