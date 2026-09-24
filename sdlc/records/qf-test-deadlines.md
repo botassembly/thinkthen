@@ -43,3 +43,7 @@ Other test binaries still wait on children with no limit. That is filed as `sdlc
 ## Ratchet
 
 The ceiling rises from 50276 to 50378. The shared helper and the child-side park add about 75 lines. The review's input fix adds one. The imports and call sites add the rest. The deleted `loop { park() }` copies and `wait_with_output` calls paid back what they could. The two 2-second promptness loops in `scheduling` and `annotate/scheduling` check a different limit and stay.
+
+## Checks
+
+The whole ladder ran with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset and each rung under `timeout`, at the commit that adds this section. That commit lands. The merge commit on main states its result. `sdlc/scripts/live` did not run.
