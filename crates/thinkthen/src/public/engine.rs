@@ -4,16 +4,12 @@
 use std::fmt;
 use std::sync::Arc;
 
-use crate::core::{self, Find, Plan, Value, ranking};
-use crate::engine::facade::{self, Completed, Settings};
-use crate::public::batch::{self, Batch};
+use crate::core::{self, Value};
+use crate::engine::facade::{self, Settings};
 use crate::public::error::Error;
 use crate::public::options::{CallOptions, Stop, guarded};
 use crate::public::question::{Choice, ChooseQuestion, Kind, Question, TagQuestion};
-use crate::public::results::{
-    self, AnnotatedRecord, Answer, Counters, Details, Found, Ranked, Row,
-};
-use crate::public::set::QuestionSet;
+use crate::public::results::{self, Answer, Counters, Details};
 use crate::public::settings::EngineBuilder;
 
 /// One engine: its settings, its connection pool, its cache, and its counters.
@@ -23,7 +19,7 @@ use crate::public::settings::EngineBuilder;
 #[derive(Clone)]
 pub struct Engine {
     pub(crate) inner: Arc<facade::Engine>,
-    most: Option<usize>,
+    pub(super) most: Option<usize>,
 }
 
 impl fmt::Debug for Engine {
@@ -96,7 +92,7 @@ impl DetailQuestion for crate::public::question::BandedQuestion {}
 impl<C: Choice> DetailQuestion for ChooseQuestion<C> {}
 impl<C: Choice> DetailQuestion for TagQuestion<C> {}
 
-fn only(question: &Question, kinds: &[Kind], call: &str) -> Result<(), Error> {
+pub(super) fn only(question: &Question, kinds: &[Kind], call: &str) -> Result<(), Error> {
     if kinds.contains(&question.kind) {
         Ok(())
     } else {
@@ -110,13 +106,7 @@ pub(crate) fn evidence(text: &str) -> Result<core::Evidence, Error> {
     core::Evidence::new(text).map_err(|_| Error::usage("evidence is text, not white space"))
 }
 
-/// One record's named values, in set order.
-type Values = Vec<(String, core::AnnotatedValue)>;
-
-/// One record's answer and its probability of yes.
-type Decided = (Answer, f64);
-
-const DECISIONS: &[Kind] = &[Kind::Decide, Kind::Banded];
+pub(super) const DECISIONS: &[Kind] = &[Kind::Decide, Kind::Banded];
 
 impl Engine {
     /// Build from what the command reads: see [`EngineBuilder::from_env`].
@@ -310,207 +300,8 @@ impl Engine {
         Details::of(&judged, &question.core, question.threshold)
     }
 
-    /// The records whose answer is yes, lazily, in input order.
-    pub fn filter<'a, I>(&'a self, question: &'a Question, records: I) -> Batch<'a, I::Item>
-    where
-        I: IntoIterator + 'a,
-        I::Item: Evidence,
-    {
-        self.filter_with(question, records, CallOptions::new())
-    }
-
-    /// [`Engine::filter`] under these controls.
-    pub fn filter_with<'a, I>(
-        &'a self,
-        question: &'a Question,
-        records: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, I::Item>
-    where
-        I: IntoIterator + 'a,
-        I::Item: Evidence,
-    {
-        Batch::of(only(question, &[Kind::Decide], "filter").and_then(|()| {
-            self.decisions(question, records, options, |item, (answer, _)| {
-                (answer == Answer::Yes).then_some(item)
-            })
-        }))
-    }
-
-    /// Each record with its answer, lazily, in input order.
-    pub fn decide_many<'a, I, Q: DecisionQuestion + ?Sized>(
-        &'a self,
-        question: &'a Q,
-        records: I,
-    ) -> Batch<'a, Row<I::Item, Answer>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: Evidence,
-    {
-        self.decide_many_with(question, records, CallOptions::new())
-    }
-
-    /// [`Engine::decide_many`] under these controls.
-    pub fn decide_many_with<'a, I, Q: DecisionQuestion + ?Sized>(
-        &'a self,
-        question: &'a Q,
-        records: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, Row<I::Item, Answer>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: Evidence,
-    {
-        let question = question.question();
-        Batch::of(only(question, DECISIONS, "decide_many").and_then(|()| {
-            self.decisions(question, records, options, |item, (answer, _)| {
-                Some(Row::new(item, answer))
-            })
-        }))
-    }
-
-    /// Every record, most likely yes first; ties keep input order.
-    ///
-    /// # Errors
-    ///
-    /// The first record's [`Error`], and [`Error::Usage`] for another kind of
-    /// question or more records than the engine's request limit.
-    pub fn rank<I>(&self, question: &Question, records: I) -> Result<Vec<Ranked<I::Item>>, Error>
-    where
-        I: IntoIterator,
-        I::Item: Evidence,
-    {
-        self.rank_with(question, records, CallOptions::new())
-    }
-
-    /// [`Engine::rank`] under these controls.
-    ///
-    /// # Errors
-    ///
-    /// As [`Engine::rank`].
-    pub fn rank_with<I>(
-        &self,
-        question: &Question,
-        records: I,
-        options: CallOptions<'_>,
-    ) -> Result<Vec<Ranked<I::Item>>, Error>
-    where
-        I: IntoIterator,
-        I::Item: Evidence,
-    {
-        only(question, &[Kind::Rank], "rank")?;
-        let records = self.within_limit(records)?;
-        let rows = self
-            .decisions(question, records, options, |item, (_, yes)| {
-                Some(Ranked::new(item, yes))
-            })?
-            .collect::<Result<Vec<_>, _>>()?;
-        let order = ranking(
-            &rows.iter().map(Ranked::probability).collect::<Vec<_>>(),
-            None,
-        );
-        let mut rows: Vec<Option<Ranked<I::Item>>> = rows.into_iter().map(Some).collect();
-        Ok(order
-            .into_iter()
-            .filter_map(|place| rows.get_mut(place).and_then(Option::take))
-            .collect())
-    }
-
-    /// Select the one unit that best answers the question, from 2 to 255.
-    ///
-    /// # Errors
-    ///
-    /// As [`Engine::decide`], and [`Error::Usage`] for another kind of
-    /// question or a unit count outside 2 to 255.
-    pub fn find<I>(&self, question: &Question, units: I) -> Result<Found<I::Item>, Error>
-    where
-        I: IntoIterator,
-        I::Item: Evidence,
-    {
-        self.find_with(question, units, CallOptions::new())
-    }
-
-    /// [`Engine::find`] under these controls.
-    ///
-    /// # Errors
-    ///
-    /// As [`Engine::find`].
-    pub fn find_with<I>(
-        &self,
-        question: &Question,
-        units: I,
-        options: CallOptions<'_>,
-    ) -> Result<Found<I::Item>, Error>
-    where
-        I: IntoIterator,
-        I::Item: Evidence,
-    {
-        only(question, &[Kind::Find], "find")?;
-        let units: Vec<I::Item> = self.within_limit(units)?.collect();
-        let texts = units
-            .iter()
-            .map(|unit| evidence(unit.evidence()))
-            .collect::<Result<Vec<_>, _>>()?;
-        let core::Question::Decide { text, .. } = &question.core else {
-            return Err(Error::defect("a find question held no text"));
-        };
-        let engine = self.asking(question)?;
-        let find = Find::new(
-            text.clone(),
-            &texts,
-            engine.backend().model().clone(),
-            false,
-        )
-        .map_err(|_| Error::usage("find takes 2 to 255 units"))?;
-        let stop = Stop::begin(options)?;
-        let found = stop.run(|cancel| engine.find(&find, cancel).map_err(Error::from))?;
-        Found::new(units, &found)
-    }
-
-    /// Each record with every value of the set, lazily, in input order. A
-    /// question the backend failed reads [`Annotated::Failed`](crate::Annotated::Failed).
-    pub fn annotate<'a, I>(
-        &'a self,
-        questions: &'a QuestionSet,
-        records: I,
-    ) -> Batch<'a, AnnotatedRecord<I::Item>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: Evidence,
-    {
-        self.annotate_with(questions, records, CallOptions::new())
-    }
-
-    /// [`Engine::annotate`] under these controls.
-    pub fn annotate_with<'a, I>(
-        &'a self,
-        questions: &'a QuestionSet,
-        records: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, AnnotatedRecord<I::Item>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: Evidence,
-    {
-        Batch::of(Stop::begin(options).map(|stop| {
-            let (engine, set, cancel) =
-                (Arc::clone(&self.inner), questions.0.clone(), stop.shared());
-            let worker = Arc::clone(&engine);
-            let answer: Arc<batch::Answer<_>> =
-                Arc::new(move |text: &str| annotated(&worker, &set, text, &cancel));
-            batch::start(
-                engine,
-                records.into_iter(),
-                stop,
-                self.most,
-                answer,
-                |item, values| Some(AnnotatedRecord::new(item, values)),
-            )
-        }))
-    }
-
     /// The facade engine that asks this question's model.
-    fn asking(&self, question: &Question) -> Result<Arc<facade::Engine>, Error> {
+    pub(super) fn asking(&self, question: &Question) -> Result<Arc<facade::Engine>, Error> {
         self.for_model(question.model.as_ref())
     }
 
@@ -542,88 +333,6 @@ impl Engine {
                 .map_err(Error::from)
         })
     }
-
-    /// Hold a finite input whole, and refuse it over the request limit.
-    fn within_limit<I: IntoIterator>(
-        &self,
-        records: I,
-    ) -> Result<std::vec::IntoIter<I::Item>, Error> {
-        let records: Vec<I::Item> = records.into_iter().collect();
-        match self.most {
-            Some(most) if records.len() > most => Err(Error::usage(format!(
-                "this engine answers at most {most} records in one call"
-            ))),
-            _ => Ok(records.into_iter()),
-        }
-    }
-
-    fn decisions<'a, I, T: 'a>(
-        &self,
-        question: &Question,
-        records: I,
-        options: CallOptions<'a>,
-        pair: fn(I::Item, Decided) -> Option<T>,
-    ) -> Result<Batch<'a, T>, Error>
-    where
-        I: IntoIterator + 'a,
-        I::Item: Evidence,
-    {
-        let stop = Stop::begin(options)?;
-        let engine = self.asking(question)?;
-        let (worker, core, threshold, cancel) = (
-            Arc::clone(&engine),
-            question.core.clone(),
-            question.threshold,
-            stop.shared(),
-        );
-        let answer: Arc<batch::Answer<Decided>> = Arc::new(move |text: &str| {
-            let judged = worker.judge(&core, threshold, evidence(text)?, &cancel)?;
-            Ok(Completed {
-                value: (
-                    results::answer(&judged.value),
-                    judged.answer.yes().unwrap_or_default(),
-                ),
-                replayed: judged.answered.replayed,
-                partial_failure: false,
-            })
-        });
-        Ok(batch::start(
-            engine,
-            records.into_iter(),
-            stop,
-            self.most,
-            answer,
-            pair,
-        ))
-    }
-}
-
-/// Answer every question of the set for one record.
-fn annotated(
-    engine: &facade::Engine,
-    set: &core::QuestionSet,
-    text: &str,
-    cancel: &crate::engine::Cancel<'_>,
-) -> Result<Completed<Values>, Error> {
-    let evidence = evidence(text)?;
-    let model = engine.backend().model();
-    let plan = |places: &[usize]| {
-        let questions = places
-            .iter()
-            .filter_map(|place| set.questions().get(*place));
-        Plan::new(
-            evidence.clone(),
-            model.clone(),
-            questions.map(|named| named.question().clone()).collect(),
-        )
-        .map_err(|_| crate::engine::error::Error::Defect("an annotate group asks nothing"))
-    };
-    let annotation = engine.annotate(set, plan, cancel)?;
-    Ok(Completed {
-        replayed: annotation.replayed,
-        partial_failure: annotation.failed_questions > 0,
-        value: annotation.values,
-    })
 }
 
 fn unbound() -> Error {

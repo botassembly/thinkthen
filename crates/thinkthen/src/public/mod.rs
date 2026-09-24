@@ -6,27 +6,31 @@
 use std::sync::OnceLock;
 
 mod batch;
+mod builders;
+mod bulk;
 mod engine;
 mod error;
 mod options;
 mod question;
 mod recognize;
+mod relate;
 mod results;
 mod set;
 mod settings;
 
 pub use batch::Batch;
+pub use builders::{ChooseBuilder, DecideBuilder, ScoreBuilder, TagBuilder};
 pub use engine::{DecisionQuestion, DetailQuestion, Engine, Evidence};
 pub use error::{Error, ErrorDetail, ErrorKind};
 pub use options::{CallOptions, CancelToken};
 pub use question::{
-    BandedQuestion, Choice, ChooseBuilder, ChooseQuestion, DecideBuilder, Description,
-    DescriptionBuilder, LoadedQuestion, Question, ScoreBuilder, TagBuilder, TagQuestion,
+    BandedQuestion, Choice, ChooseQuestion, Description, DescriptionBuilder, LoadedQuestion,
+    Question, TagQuestion,
 };
 pub use recognize::{
-    Edge, Entity, Kind, Recognize, RecognizeBuilder, Recognized, RecognizedEntity, Relate,
-    RelateBuilder, Relation, RelationRule,
+    Kind, Recognize, RecognizeBuilder, Recognized, RecognizedEntity, Relation, RelationRule,
 };
+pub use relate::{Edge, Entity, Relate, RelateBuilder};
 pub use results::{
     Annotated, AnnotatedRecord, Answer, Candidate, Counters, Details, Failed, FailureCause, Found,
     Judgment, NamedAnnotation, NamedProbability, Probabilities, Ranked, Row, Usage,

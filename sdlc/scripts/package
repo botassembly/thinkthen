@@ -7,11 +7,23 @@ REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
 
 cargo build --locked --offline --package thinkthen --lib --no-default-features
-if cargo tree --locked --offline --package thinkthen --no-default-features -e normal --prefix none \
-    | grep -Eq '^(clap|csv-core) '; then
+# Ticket 0086: the library graph carries no command-only crate, and on Unix it
+# keeps `nix` with `signal` for the host signal owner (ticket 0078).
+graph=$(cargo tree --locked --offline --package thinkthen --no-default-features -e normal,build --prefix none -f '{p} {f}')
+if printf '%s\n' "$graph" | grep -Eq '^(clap|csv-core|signal-hook) '; then
     printf '%s\n' 'package: command dependency entered the library-only graph' >&2
     exit 1
 fi
+if [ "$(uname -s)" = Linux ] && ! printf '%s\n' "$graph" | grep -Eq '^nix v[^ ]+ .*signal'; then
+    printf '%s\n' 'package: the library graph lost nix with feature signal' >&2
+    exit 1
+fi
+# One library target, a command binary, and no procedural macro of its own.
+targets=$(cargo metadata --locked --offline --no-deps --format-version 1 \
+    | python3 -c 'import json,sys; print(" ".join(sorted(k for p in json.load(sys.stdin)["packages"] if p["name"]=="thinkthen" for t in p["targets"] for k in t["kind"] if k in ("lib","proc-macro","bin"))))')
+test "$targets" = "bin lib" \
+    || { printf 'package: thinkthen has targets %s, not one lib and one bin\n' "$targets" >&2; exit 1; }
+cargo test --locked --offline --package thinkthen --no-default-features --all-targets
 RUSTFLAGS='--cfg thinkthen_internal_doctest' \
 RUSTDOCFLAGS='--cfg thinkthen_internal_doctest' \
     cargo test --locked --offline --package thinkthen --doc --no-default-features
@@ -45,6 +57,12 @@ prove_private target/private-proof-no-default --no-default-features
 rm -f -- target/package/thinkthen-*.crate
 # The conformance backend is a test-only member and never ships (ticket 0092).
 cargo package --locked --offline --allow-dirty --package thinkthen
+# The package holds the crate's source, tests, transforms, license, and README,
+# and nothing from a sibling crate, a worktree, a build, or a release.
+unexpected=$(cargo package --locked --offline --allow-dirty --package thinkthen --list \
+    | grep -Ev '^(src/|tests/|transforms/|Cargo\.(toml|toml\.orig|lock)$|\.cargo_vcs_info\.json$|clippy\.toml$|LICENSE$|README\.md$)' || true)
+test -z "$unexpected" \
+    || { printf 'package: unexpected packaged file %s\n' $unexpected >&2; exit 1; }
 
 # Ticket 0083: the source package carries the ten transforms byte for byte, and
 # a binary built from the unpacked package alone prints them from an empty
@@ -55,6 +73,9 @@ isolated=$(mktemp -d)
 trap 'rm -rf -- "$isolated"' EXIT
 mkdir "$isolated/source" "$isolated/empty" "$isolated/out"
 tar -xzf "$crate" -C "$isolated/source" --strip-components=1
+RUSTUP_TOOLCHAIN=$(sed -n 's/^channel = "\([^"]*\)"$/\1/p' rust-toolchain.toml) \
+CARGO_TARGET_DIR="$isolated/target" \
+    cargo build --quiet --locked --offline --manifest-path "$isolated/source/Cargo.toml" --lib --no-default-features
 RUSTUP_TOOLCHAIN=$(sed -n 's/^channel = "\([^"]*\)"$/\1/p' rust-toolchain.toml) \
 CARGO_TARGET_DIR="$isolated/target" \
     cargo build --quiet --locked --offline --manifest-path "$isolated/source/Cargo.toml" --bin thinkthen
