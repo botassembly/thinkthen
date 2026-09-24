@@ -1,12 +1,12 @@
 ---
 flow: build
 priority: 76
-opens: crates/thinkthen/src/engine crates/thinkthen/src/cli crates/thinkthen/tests/backend sdlc/ratchet.json sdlc/planning
+opens: crates/thinkthen/src/engine crates/thinkthen/src/engine/request.rs crates/thinkthen/src/cli crates/thinkthen/src/cli/conformance_tests/runner.rs crates/thinkthen/tests/backend sdlc/ratchet.json sdlc/planning
 ---
 
 # 0076: Enforce whole-call deadlines
 
-Status: ready
+Status: design accepted 2026-09-24 after review; small fixes applied. Owner: Claude.
 
 ## Outcome and authority
 
@@ -30,7 +30,7 @@ Both schedulers observe the same deadline while waiting for input or worker resu
 
 Allowed: one private deadline value; deadline-aware polling in both schedulers, prepared-request and recording waits, retries, and HTTP sends; unbounded deadline plumbing through every post-0083 request path; structural deadline error data; deterministic unit and loopback tests; exact ratchet; and later implementation updates to the ticket, ADR, queue, and record.
 
-Before implementation, inventory the rebased tree and name every live request path added through 0083. Direct judgments, ordinary record scheduling, grouped `annotate`, aggregate `find`, split requests, `recognize`, `relate`, and retries must converge on the same deadline-aware prepared-request and transport boundaries. Production may touch at most twelve Rust files and add at most 500 nonblank Rust lines. Focused tests may add at most 750 nonblank Rust lines. Reuse the existing 50 ms poll, schedulers, prepared-request choke point, recorder waits, and blocking HTTP client.
+Before implementation, inventory the rebased tree and name every live request path added through 0083. Direct judgments, ordinary record scheduling, grouped `annotate`, aggregate `find`, split requests, `recognize`, `relate`, and retries must converge on the same deadline-aware prepared-request and transport boundaries. Production may touch at most twelve Rust files and add at most 500 nonblank Rust lines. Focused tests may add at most 1,000 nonblank Rust lines. Command-path proofs are in-crate unit tests against the private engine; add no `THINKTHEN_TEST_*` environment hook. Reuse the existing 50 ms poll, schedulers, prepared-request choke point, recorder waits, and blocking HTTP client.
 
 Excluded: a command `--deadline` option, changes to `--timeout`, public Rust or binding APIs, a process-width gate or gate-wait implementation, fork recovery, host signal ownership, interrupting cancellation's already-started attempts, retry classification, request or recording bytes, result shapes, cache semantics, counter meanings, dependencies, async code, resident threads, workflows, surfaces implementation, site work, paid calls, and publication. Add no second scheduler, transport door, timer thread, or generalized runtime.
 
@@ -38,15 +38,18 @@ Excluded: a command `--deadline` option, changes to `--timeout`, public Rust or 
 
 - A pre-spent deadline on every direct post-0083 request path returns the deadline kind before key lookup, request accounting, connection, or request. Count each boundary. Cover direct judgments, aggregate `find`, ordinary records, grouped `annotate`, split requests, `recognize`, and `relate`; do not infer no-send behavior from an error alone.
 - One call over several records, chunks, or annotation groups shares one deadline instant. Synchronized fixtures let an early item finish, hold later work, spend the budget, and prove no undispatched request starts. Completed ordered results and stopped-at metadata remain correct, annotation clears undispatched groups, and every worker has joined when the call returns.
-- A loopback listener accepts one request and withholds its reply. The call returns `Error::Deadline` before the listener releases the socket, observes exactly one send, and leaves the request count frozen after return. A control with no deadline reaches the existing backend timeout kind. Channels establish the phases; a generous outer timeout only detects deadlock.
+- A loopback listener accepts one request and withholds its reply. The call returns `Error::Deadline` before the listener releases the socket, observes exactly one send, and leaves the request count frozen after return. It opens no second connection, since 0089 ends a transport failure after one attempt. A control with no deadline reaches the existing backend timeout kind. Channels establish the phases; a generous outer timeout only detects deadlock.
 - A retryable 503 with a retry delay longer than the remaining budget returns the deadline kind during the wait and opens no second connection. A shorter delay still retries. A second case gives the retry enough time to start but less than the per-attempt timeout; the blocking send ends as deadline, not backend timeout. Attempt and usage counts include only attempts that started.
 - Synchronized held-folder, recorder-mutex, and digest-lock cases return the deadline kind without waiting for the fixture owner and send nothing. Release the owner before filesystem assertions. Existing cancellation-first and cleanup-failure precedence tests remain green.
 - Scheduler, request, and HTTP unit tests pin cancellation before deadline when both are observed at a pre-send checkpoint, deadline before a not-yet-started backend operation, and backend or local failures received before either stop. A barrier race queues a worker result before the coordinator's deadline check and proves the documented checkpoint order rather than guessing worker completion time. A sent attempt that reaches its deadline-derived socket timeout returns deadline even if cancellation became set while the attempt was in flight; a completed response remains its response. The deadline error carries the original budget and maps to `Kind::Deadline`, never `Kind::Backend`.
-- A pre-spent deadline over an empty bulk input returns the deadline kind, not an empty success. The deadline error keeps the budget as whole units, so a budget of 4,294,967,295 seconds prints exactly with no float step. Amended 2026-09-24 for error-index row R6-4.
+- A pre-spent deadline over an empty bulk input returns the deadline kind, not an empty success. The deadline error keeps the budget as a `Duration` and its private `Display` formats integers only, so a budget of 4,294,967,295 seconds prints exactly. An instant that cannot be represented (`checked_add` returns `None`) means no deadline, never a panic; 0095 owns the public refusal of large budgets. Amended 2026-09-24 for error-index row R6-4.
 - A private seam proves an unbounded call preserves the existing attempt timeout, retry waits, request counts, output order, cache/replay behavior, and exact request and recording bytes. Ticket 0077's accepted design names the remaining proof: a future width-gate waiter must use this deadline and send nothing after it expires.
+- Planted-bug proof: the record names one planted bug per carried row and shows its test turning red. R1-23: a retry wait that ignores the deadline. R6-4: an empty-input path that skips the spent-deadline check.
 - Focused tests, policy, exact ratchet, formatting, Clippy, and `git diff --check` pass before code review. The coordinator then runs `sdlc/scripts/install`, `lint`, `test`, and `spec` sequentially. No test opens a non-loopback socket or uses a paid service.
 
 ## Dependencies and order
+
+Ticket 0089 lands first. Both tickets write `engine/http.rs`, and a deadline that fires after the body left must return `Deadline` with one send and never retry under 0089's rule. `Error::Deadline` gaining its budget changes `inject(Injection::Deadline)` in `engine/request.rs`, which `cli/conformance_tests/runner.rs` matches; 0091 edits that runner too, so whichever lands second rebases.
 
 Tickets 0055, 0064, 0072, 0073, and 0074 provide the private engine boundary, bounded per-attempt retry waits, fast refusal, cooperative cancellation, and command SIGINT behavior that this deadline must preserve. ADR 0017 section 4 and the settled surface ledger fix the whole-call and spent-deadline rules.
 
@@ -63,14 +66,13 @@ Tickets 0055, 0064, 0072, 0073, and 0074 provide the private engine boundary, bo
 - Minimum level floor: level 3 for concurrency and timing
 - Final level: 3
 - Reasons: level 3 applies because one instant crosses concurrent schedulers, durable request locks, retries, and blocking sends. Wrong ordering can send paid work after a caller's budget, misreport a deadline as backend illness, or leave a host waiting past its bound. The contract is explicit, remains private, adds no dependency, and defers the future width gate.
-- Selected route: Luna Max (`gpt-5.6-luna`, `max`) owns design, case analysis, implementation, and remediation. Independent design and code reviews use separate Sol High (`gpt-5.6-sol`, `high`) sessions under the three-ticket trial.
-- Required trial measurements: record the Luna reasoning level, design outcome, substantive Sol findings, review rounds, Luna remediation passes, any Sol repair, focused and complete gate results, reopened defects, and trustworthy elapsed start-to-accept time. Record usage and cost only when the tools expose trustworthy figures.
+- Selected route: Claude builds (Opus subagent). A fresh Claude session reviews design and code.
 
 Re-score if the post-0083 inventory reveals another transport door, the work changes a public API or command surface, requires a dependency, or cannot preserve one deadline across all paths without a broader scheduler change.
 
 ## Review
 
-- Design review: accepted by independent Sol High after routing and dependency attribution were corrected.
+- Design review: accepted by independent Sol High after routing and dependency attribution were corrected. The 2026-09-24 spine review (`sdlc/records/2026-09-24-spine-review-controls.md`) accepted it again with three small fixes, applied: Claude routing, 0089 as a prerequisite, and the shared runner file in `opens`.
 - Code review: pending.
 
 ## What Ian can overturn
