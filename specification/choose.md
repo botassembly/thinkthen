@@ -96,7 +96,7 @@ thinkthen choose 'Which kind of request is this?' bug feature other --jsonl --fi
 
 `choose` never runs the option it picks. A label is a string that the next program reads.
 
-Measurement of the first decider model found picking from a fixed list stable. A live run then judged sixty made-up support messages over five labels. The cases are few and they are made up. Reversing the list changed 2 of 60 picks and shuffling it changed 1 of 60. Every change landed on the catch-all `other`. Keep the option order fixed once a cut is tuned, because a run with a reordered list is a different measurement. Put the catch-all last.
+Measurement of the first System One model found picking from a fixed list stable. A live run then judged sixty made-up support messages over five labels. The cases are few and they are made up. Reversing the list changed 2 of 60 picks and shuffling it changed 1 of 60. Every change landed on the catch-all `other`. Keep the option order fixed once a cut is tuned, because a run with a reordered list is a different measurement. Put the catch-all last.
 
 The same run added a sixth label that fits nothing. It changed 0 of 60 picks, and the model gave it a probability of 0.0 on all 60 rows. That measures one kind of added option, on sixty made-up cases. A label that overlaps a real one is untested, and the vendor's own documents warn about it. Word the options so that they exclude one another, and keep the list short. One vendor page reports weaker picks above about 240 options, which is under the tool's ceiling of 255.
 

@@ -95,6 +95,23 @@ assert_has 'charged_tokens 10'
 THINKTHEN_API_KEY=dummy run "$concurrent" --max-tokens 1 job.sh
 assert_status 1
 
+language=$(repo language)
+run "$language" --init
+printf '#!/usr/bin/python3\nopen("should-not-run", "w")\n' >"$language/job.py"
+: >"$language/empty.sh"
+chmod 755 "$language/job.py" "$language/empty.sh"
+for job in job.py empty.sh; do
+	THINKTHEN_API_KEY=dummy run "$language" --max-tokens 4 "$job"
+	refusal=$output
+	refused=$status
+	run "$language" --status
+	assert_has 'charged_tokens 0'
+	[ "$refused" -eq 2 ] || fail "non-shell job $job exited $refused"
+	[ "$refusal" = 'live: the named live job must start with the line #!/bin/sh, so no call goes out' ] ||
+		fail "unexpected non-shell refusal: $refusal"
+done
+[ ! -e "$language/should-not-run" ] || fail 'non-shell job ran'
+
 malformed=$(repo malformed)
 run "$malformed" --init
 printf 'charge ' >>"$malformed/.git/thinkthen-live/ledger"

@@ -75,6 +75,12 @@ pub(crate) enum RecordError {
     /// The record holds nothing at one of the pointers.
     #[error("the record holds nothing at `{0}`")]
     Missed(String),
+    /// The selected entity member is not text.
+    #[error("the entity value at `{0}` is not a string")]
+    EntityText(String),
+    /// A complete structured entity document is not one list.
+    #[error("the entity document is one JSON array")]
+    EntityDocument,
     /// A pointer was taken into a text record, which has no members.
     #[error("{}", ReadingError::TextHasNoMembers)]
     TextHasNoMembers,
@@ -98,9 +104,16 @@ pub(crate) enum RecordError {
 }
 
 /// One record, as it arrived, which `--details` prints back under `input`.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, PartialEq, Serialize)]
 #[serde(transparent)]
 pub(crate) struct Record(Held);
+
+/// A record is evidence, so `Debug` withholds all of it.
+impl std::fmt::Debug for Record {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("Record(<withheld>)")
+    }
+}
 
 /// What one record holds, which the framing decides.
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -183,6 +196,16 @@ impl Record {
             _ => return Err(shape()),
         };
         Ok(Labels::described(listed)?)
+    }
+
+    /// Read one required entity string without exposing the rest of the record.
+    pub(crate) fn entity_text(&self, pointer: &Pointer) -> Result<&str, RecordError> {
+        let Held::Json(value) = &self.0 else {
+            return Err(RecordError::TextHasNoMembers);
+        };
+        found(pointer, value)?
+            .as_str()
+            .ok_or_else(|| RecordError::EntityText(pointer.as_str().to_owned()))
     }
 }
 
@@ -311,6 +334,17 @@ impl Reading {
             return Ok(Record(Held::Json(value)));
         }
         Ok(Record(Held::Text(text.to_owned())))
+    }
+
+    /// Read one structured document as a complete ordered entity set.
+    pub(crate) fn entity_document(&self, bytes: &[u8]) -> Result<Vec<Record>, RecordError> {
+        let Record(Held::Json(Json::Array(items))) = self.record(bytes)? else {
+            return Err(RecordError::EntityDocument);
+        };
+        Ok(items
+            .into_iter()
+            .map(|item| Record(Held::Json(item)))
+            .collect())
     }
 
     /// Read an annotation record, preserving a whole JSON object when present.

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """The how-to lists and the folders under demos/ say the same thing.
 
-ADR 0018 fixes the list of 20. Three places carry it: `demos/README.md`,
+ADR 0018 fixed the original list of 20, and ticket 0088 added page 45. Three places carry it: `demos/README.md`,
 `sdlc/planning/documentation-plan.md`, and the folders themselves. This check
 holds them together and refuses a link that goes nowhere.
 

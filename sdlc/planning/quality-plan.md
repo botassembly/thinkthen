@@ -78,8 +78,12 @@ The full pass runs at the exact release commit, on Linux and macOS, from the ins
 12. The surfaces review's classes are closed or waived: wrong answers with no error, host crashes at a boundary, cancel per host, and the security rows (file access behind the host's own switch, functions marked direct-only, PUBLIC revoked, relate on the caller's connection).
 13. The packages carry licenses and platforms, and no package ships recordings: a recording commits its evidence, and a published package publishes it.
 14. A mechanical hygiene check runs zero-hit: no private repository names, no home-directory paths, in shipped files and comments.
-15. The transform catalog surface exists (`thinkthen transform list` and `show`, ticket 0050's promise) or the release record names who deferred it; no open ticket owns it today.
+15. The transform catalog surface exists (`thinkthen transform list` and `show`, ticket 0050's promise) or the release record names who deferred it; ticket 0083 owns the implementation.
 16. Issue statuses are normalized to a two-value vocabulary (Open and everything-else) before the waiver sweep runs; the record currently carries nine status words and two files with none.
+17. The surfaces branch's error index (the fifth review's companion page) has a row for every confirmed defect across all five rounds, each row closed or waived by an independent probe named in the row, and the release pass re-runs the proving probes, because the branch's own history shows a closed item can stop holding.
+18. The naming and consistency review (quality plan Part 4) is green: vocabulary lint zero-hit, the nine-column matrix generated and drift-free, every public name documented with one shape example, every bound stated strict or inclusive, the stranger name-test run with its gaps filed or fixed.
+19. The performance matrix is complete (quality plan Part 5): every public surface measured on every runtime and storage backend, from named scripts at the exact release build; the fastest and slowest surface named per runtime and overall; the wave-1 baselines re-run on the release build; every gap between fastest and slowest explained or filed.
+20. The crash sets and resource claims are green (quality plan Part 5): every surface's committed crafted-input set passes on the release build in every runtime, fallback environments included (a locked-down Linux container, not just macOS); every printed speed, cost, or memory number on a public page names its measuring record.
 
 ## Part 3: the exploring tester
 
@@ -91,7 +95,69 @@ A standing brief for one agent that pokes around after each release and on a sch
 - **What it hands back.** One page: what was run, what passed, what failed, what was not run, the one thing most likely to embarrass us next, and a "what would not embarrass us" paragraph. The embarrassment order is money first, by Ian's ruling of 2026-09-21: silent spend leads, and the release checklist separately blocks on any open blocker.
 - **The standing rules.** No paid call without Ian's authorization for that test through `sdlc/scripts/live`; the run's log states which address each command will reach before anything runs; no key is set unless the step needs one, and then it is a canary value; an explicit `--url` on every command that reads a key; test only this workspace's software on this workspace's machines; temporary files die with the test.
 
+## Part 4: the naming and consistency review (the public API's face)
+
+The 0.1 release locks the public API first, so names, bounds, and documentation are release surface, not decoration. One function means one thing across all nine surfaces: Rust, Python, TypeScript, R, Ruby, C, DuckDB, PostgreSQL, SQLite. A surface may follow its language's norms for casing and calling; it may not differ in meaning, bounds, defaults, or errors. This review is a checklist the reader-tester walks before release, and most rows are mechanically checkable, because a convention worth keeping is a check.
+
+### The vocabulary check
+
+1. One word per concept, everywhere: code, help, errors, manuals, docstrings, and the site. The ruled public words are the single source (`mktg/products/thinkthen/vocabulary.md` and the manual); a vocabulary lint reads that list and fails on a banned word in shipped files. Ruled so far: the judged thing is `evidence`; the object a program holds is the `engine`, never `connection`; a question file's threshold carries `tuned_for` (ruled 2026-09-23 over `calibrated`, which claims a proof of probability correctness nobody made); `annotate` keeps its name (`structure` promises extraction, which is `recognize`'s job).
+2. Names say what the thing does, never how it is built: no implementation words, no internal jokes, no abbreviations a newcomer must learn.
+3. Functions are verbs, values are nouns, booleans read as predicates (`is_`, `has_`, `allow_`); a bare adjective that could mean either polarity is a finding.
+
+### The ambiguity check
+
+4. Every bound is named or documented as strict or inclusive, and inclusive is the stated default: `min` and `max` include their value, `under` and `over` exclude it, and any name that does not make this obvious carries it in its doc line. No public comparison whose strictness a reader must guess.
+5. Every number in a public name or type carries its unit, either in the name (`deadline_ms`) or in a type the language already times (`Duration`, `timedelta`). No bare numbers.
+6. Every option documents its default and the precedence order that resolves it (flag over file over environment, or whatever the contract rules), once, in the same words, in all nine surfaces.
+
+### The consistency check
+
+7. The nine-column matrix: one row per public concept, one column per surface, holding the local spelling, the parameter list, the default, the error, and the result field names. Two rows come from the same source of truth (the contract), generated where a generator exists, and the matrix test fails when surfaces drift. A concept that cannot exist in a surface is marked absent with the reason, not silently skipped.
+8. The same failure produces the same sentence, translated for the language's idiom, not reworded; exit codes and error kinds match across surfaces. Two surfaces disagreeing about the same failure is the two-pages finding inside one product.
+9. Differences among surfaces are only the language's norms: casing, positional versus keyword arguments, exceptions versus result types, blocking versus async. Anything beyond idiom is drift and a finding.
+
+### The documentation check
+
+10. Every public function, option, field, and error is documented in the surface's own home (rustdoc, docstrings, typedoc, help text), with one shape example each. Examples that can run, run: doctests are part of the ladder.
+11. Documentation is tested surface: help matches the manual matches the docstrings matches the site, and the words in one place that disagree with another are a finding the day they are found. The reader-tester reads the information a newcomer would read, in order, and asks whether each page predicts the behavior the binary showed.
+12. The stranger name-test: a reader who has never seen the product predicts what each public name does from the name alone; the gap between the prediction and the behavior is a naming finding. The blind tester runs this cold.
+
+### The lockdown check
+
+13. Public names change only with an architecture decision record and a version bump: a lint fails a pull request that renames or removes a public symbol without one. After 0.1 this is the compatibility wall.
+14. A vocabulary change lands everywhere in one commit: code, tests, help, errors, manuals, and the site, across all nine surfaces at once. No half-renamed state on main, ever.
+
+## Part 5: resource truth — RAM, crashes, and measured time
+
+Added 2026-09-23 after the Python verifier's three findings on the surfaces branch: a crash from trusting caller-declared metadata lengths (five crafted inputs, five process deaths), a memory check that scanned a whole 1 GB column to read ten rows (0.3 ms to 158 ms; a 1,024-piece walk from 6 s to 103 s; a memory-mapped read faulting the entire file), and a fallback gap the notes pinned to macOS while locked-down Linux containers crashed too. The plan covers three resource dimensions for every surface, in every runtime and storage backend.
+
+### Crashes: no surface trusts a caller's arithmetic
+
+Every length, count, and offset that arrives in data — metadata, headers, column statistics — is validated before use. A crafted input produces a refused request or an error line, never a process death. Each surface ships a committed crash set, grown from every input that once killed it (this wave's five seed the Python set), and the gate replays it. Fallback paths count as first-class: when the strong check is unavailable, the fallback is verified in the environment that lacks the strong check, not assumed equivalent on the strongest machine — the "Mac only" note that let Linux containers crash is the standing example. Concurrency is tested by rounds, not inspection: shared ownership under simultaneous release from several threads ran 30 clean rounds against the old build's crash, and that test, not the review sentence, is what holds it.
+
+### RAM: a read pays for what it reads
+
+A request for ten rows from the end of a 1 GB column may not examine, fault, or hold the whole file. Memory checks cover the requested range, not the container. The test that guards this pins exactly which bytes get checked, never a wall-clock time — the fixer's slowdown test is the model. The wave-1 streaming bounds (16 MB streaming, 220 MB `rank`, at 1M records) apply per runtime: the Python library and the database extension meet them with their own measured numbers, not the Rust binary's.
+
+### Time: every number names its record
+
+A printed speed, cost, or memory number names the script, the machine, and the build SHA that produced it; a page and its number move together (checklist item 6, and the wave-1 issue that ruled it). Tests that guard performance pin steps, bytes, or ranges — never clocks.
+
+### The performance matrix
+
+The deliverable is `experiments/218-thinkthen-release-qa/wave2/perf-matrix.md`: one row per public surface, one group per runtime — Rust CLI per-process, Rust CLI batched or streaming, Python library holding one warm engine, database extension answering in-query — crossed with storage backends (no cache, SQLite cache, memory cache, column files). Each cell carries the median and 95th-percentile per call, rows per second for streams, peak RAM, and the crash-set result. The matrix names the fastest and slowest surface per runtime and overall, and explains or files every gap wider than an order of magnitude. Wave-1 baselines seed the first rows: 1.17 ms dry-run, 19.4 ms loopback full call, 4,660 records/s stand-in ceiling, 5.7 µs cache hit, 1.2 ms process cold-start. The matrix is checklist item 19, so 0.1 ships with the comparison measured, not promised.
+
 ## The two reviews, both gates
+
+Both reviews are gates, not opinions. The library and database tier now has its own review lane on the surfaces branch, and its process rules from the 2026-09-23 fourth review are binding on every fix, ours included:
+
+1. Every closing probe is shown failing on the old code and passing on the new code, with both outputs in the record.
+2. The verifier runs the reviewer's probe. A lane's own test does not close an item.
+3. The gate runs at the exact tip right before a closure note is written.
+4. A fix that held in one review can stop holding; the branch's third review (fixes that did not hold) is the reason every closed item keeps its proving probe named, and the release pass re-runs the probe.
+
+Our own findings obey the same rules: the wave fragments carry the failing output and the passing output, and the release checklist re-runs the proving probes.
 
 A review by someone who types commands and a review by someone who calls the tool from a program find different classes of fault, and the plan names both as gates. The typing review is the how-to and demo ladder above. The caller review is the parity, dry-run, sizes, and refused-question tests, and it joins the exploring tester's rotation. (Standing rule added 2026-09-21 from the caller's review that found four things wave 1 missed.)
 

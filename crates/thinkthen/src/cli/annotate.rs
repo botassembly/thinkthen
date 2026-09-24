@@ -48,6 +48,7 @@ pub(crate) fn run(
         }
         Err(error) => return Err(error.into()),
     };
+    let jobs = crate::schedule::width(arguments.common.jobs)?;
     let folders = Folders::of(&arguments.common, environment)?;
     if arguments.common.dry_run && folders.named() {
         return Err(Failure::DryRunWithRecording);
@@ -100,7 +101,6 @@ pub(crate) fn run(
             streams: reading.streams(),
             recording_reported: folders.reported(),
         };
-        let jobs = arguments.common.jobs.map_or(4, usize::from);
         return crate::annotate_schedule::run(
             &judging,
             &reading,
@@ -142,7 +142,6 @@ pub(crate) fn run(
         streams: reading.streams(),
         recording_reported: folders.reported(),
     };
-    let jobs = arguments.common.jobs.map_or(4, usize::from);
     crate::annotate_schedule::run(
         &judging,
         &reading,
@@ -186,20 +185,6 @@ fn input_looks_like_set(arguments: &AnnotateArguments) -> bool {
         .is_some_and(|text| QuestionSet::parse(&text).is_ok())
 }
 
-fn framing(common: &Common) -> Framing {
-    if common.lines {
-        Framing::Lines
-    } else if common.jsonl {
-        Framing::Jsonl
-    } else if common.csv {
-        Framing::Csv
-    } else if common.tsv {
-        Framing::Tsv
-    } else {
-        Framing::Document
-    }
-}
-
 fn table_kind(common: &Common) -> Option<TableKind> {
     common
         .csv
@@ -215,7 +200,7 @@ fn reading(common: &Common) -> Result<Reading, Failure> {
             Pointer::new(typed).map_err(|error| Failure::Pointer("--field", typed.clone(), error))
         })
         .collect::<Result<Vec<_>, _>>()?;
-    Ok(Reading::new(framing(common), fields)?)
+    Ok(Reading::new(common.framing(), fields)?)
 }
 
 pub(crate) struct Judging<'a> {

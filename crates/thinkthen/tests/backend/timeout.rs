@@ -58,30 +58,31 @@ fn zero_timeout_precedes_input_key_and_connection_in_both_argument_homes() {
 }
 
 #[test]
-fn a_one_document_dry_run_refuses_jobs_before_printing_a_plan() {
-    let listener = Listener::serving(vec![Canned::ok(ANSWER)]).expect("a loopback listener");
-    let output = spawn(
-        &[
+fn a_one_document_run_refuses_jobs_and_sends_nothing() {
+    for dry_run in [true, false] {
+        let listener = Listener::serving(vec![Canned::ok(ANSWER)]).expect("a loopback listener");
+        let mut arguments = vec![
             "decide",
             "Does this pass?",
-            "--dry-run",
             "--jobs",
             "1",
             "--url",
             listener.base(),
-        ],
-        &[],
-        b"yes",
-    )
-    .expect("the compiled binary runs");
+        ];
+        if dry_run {
+            arguments.push("--dry-run");
+        }
+        let output = spawn(&arguments, &[], b"yes").expect("the compiled binary runs");
 
-    assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: --jobs bounds the requests in flight, and one document sends one request\n"
-    );
-    assert_eq!(listener.connections(), 0);
+        assert_eq!(output.status.code(), Some(2), "dry run {dry_run}");
+        assert!(output.stdout.is_empty(), "dry run {dry_run}");
+        assert_eq!(
+            String::from_utf8_lossy(&output.stderr),
+            "thinkthen: --jobs bounds the requests in flight, and a single text sends one request\n"
+        );
+        assert_eq!(listener.connections(), 0, "dry run {dry_run}");
+        assert!(listener.requests().is_empty(), "dry run {dry_run}");
+    }
 }
 
 #[test]

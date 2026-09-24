@@ -7,9 +7,9 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 use crate::core::{
-    Backend, BackendProfile, DecisionResult, Framing, Meta, Outcome, Plan, PlanDocument, Pointer,
-    Question, QuestionText, Reading, Record, RecordValue, RequestMeta, Resolved, Sources,
-    Threshold, Value, json_line, question_sha256_with_profile,
+    Backend, BackendProfile, DecisionResult, Meta, Outcome, Plan, PlanDocument, Pointer, Question,
+    QuestionText, Reading, Record, RecordValue, RequestMeta, Resolved, Sources, Threshold, Value,
+    json_line, question_sha256_with_profile,
 };
 
 use crate::args::Common;
@@ -27,7 +27,7 @@ mod folders;
 mod request;
 
 pub(crate) use folders::Folders;
-pub(crate) use request::{ask, ask_prepared};
+pub(crate) use request::{Asking, ask, ask_prepared};
 
 /// Where one record's question comes from.
 ///
@@ -228,18 +228,7 @@ fn over_table(
 
 /// Read the framing the command line asked for, over the settled pointers.
 fn read_by(common: &Common, settled: &Resolved) -> Result<Reading, Failure> {
-    let framing = if common.lines {
-        Framing::Lines
-    } else if common.jsonl {
-        Framing::Jsonl
-    } else if common.csv {
-        Framing::Csv
-    } else if common.tsv {
-        Framing::Tsv
-    } else {
-        Framing::Document
-    };
-    Ok(Reading::new(framing, settled.on().to_vec())?)
+    Ok(Reading::new(common.framing(), settled.on().to_vec())?)
 }
 
 fn table_kind(common: &Common) -> Option<TableKind> {
@@ -455,7 +444,7 @@ impl Judging<'_> {
                 question_sha256_with_profile(
                     &sending.question,
                     self.threshold,
-                    self.calibrated_profile(),
+                    self.tuned_for_profile(),
                 )?,
                 self.backend.url().clone(),
                 answered.reply.model().clone(),
@@ -513,8 +502,8 @@ impl Judging<'_> {
         })
     }
 
-    fn calibrated_profile(&self) -> Option<&crate::core::ProfileName> {
-        self.mismatch.calibrated()
+    fn tuned_for_profile(&self) -> Option<&crate::core::ProfileName> {
+        self.mismatch.tuned_for()
     }
 }
 

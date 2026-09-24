@@ -12,6 +12,8 @@ One internal result model feeds both views. The view never changes the request o
 | `choose` | a JSON string, or `null`. `--raw` prints the bare label, as [choose.md](choose.md) describes |
 | `tag` | a JSON array of every label that reaches the cut, including `[]` |
 | `score` | a JSON number |
+| `recognize` | an object with `entities` and optional beta `relations` |
+| `relate` | one compact name-and-kind edge per line, or no lines when no edge reaches the cut |
 | `filter` | each kept line or JSONL record as it arrived; each kept table row as compact JSON, in input order |
 | `rank` | each line or JSONL record as it arrived and each table row as compact JSON, most likely yes first |
 | `annotate` | one JSON object per record |
@@ -36,6 +38,10 @@ Every result is compact and sits on one line, so one answer is also one record f
 - `meta` carries the run. `usage` may be absent when the backend reports none. `profile_warning` appears only for a calibration mismatch. The other fields are always present.
 
 ## A detailed result keeps everything
+
+`relate --details` is an aggregate Option A result. `value` holds accepted edges. `question` holds the resolved fields, ordered relation rules, threshold, and optional saved calibration profile. `answer.questions` keeps each choice or yes/no relation question, including its asker or endpoints, candidates, probabilities, pre-threshold pick, accepted markers, failure marker, and request digest. `meta.failed_questions` counts failed entries and is always present. [relate.md](relate.md) fixes the exact ordered schema.
+
+`recognize --details` keeps the bare object under `value`, the resolved recognition shape under `question`, and each token's detection probability and ordered kind probabilities under `answer.tokens`. `meta.requests` lists recognition chunks first and relation chunks in rule order. Name `strength` is computed from these inputs and is not itself a probability.
 
 Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probability of every option or every level, and it carries the backend's own `confidence` when the backend reports one. A saved run can then be swept at another rule with no second request.
 
@@ -85,7 +91,7 @@ The canonical `find` question is compact JSON with keys in this order: `{"verb":
 
 ADR 0036 names the stored-answer field `cached`, replacing `replayed` without changing its meaning. New results emit only `cached`. The cost and trials readers still accept historical rows with `replayed`; a present `cached` field takes precedence even when false. Explicit read-only replay also reports `cached: true`.
 
-ADR 0032 adds `meta.profile_warning` only when a saved calibration name and the explicitly selected run profile differ. Its value is `{"calibrated":NAME,"running":NAME}`. The command prints the same mismatch once on standard error at the first successful logical result. `filter` still warns when it rejects every result and prints no records. A failure on the first logical record warns nobody, even when a later parallel worker completed. A missing name on either side and equal names add no field. The run profile itself stays out of metadata because the field records a warning, not backend selection.
+ADR 0032 adds `meta.profile_warning` only when a saved calibration name and the explicitly selected run profile differ. Its value is `{"tuned_for":NAME,"running":NAME}`. The command prints the same mismatch once on standard error at the first successful logical result. `filter` still warns when it rejects every result and prints no records. A failure on the first logical record warns nobody, even when a later parallel worker completed. A missing name on either side and equal names add no field. The run profile itself stays out of metadata because the field records a warning, not backend selection.
 
 | Field | Holds |
 | --- | --- |
@@ -94,7 +100,7 @@ ADR 0032 adds `meta.profile_warning` only when a saved calibration name and the 
 | `url` | The URL that answered |
 | `model` | The model that answered, as the backend reported it |
 | `usage` | The token counts the backend reported. Absent when the backend reports none |
-| `requests_sent` | The HTTP attempts that produced this result. A replay or cache hit reports zero. Retries add one each |
+| `requests_sent` | The HTTP attempts that produced this result. A replay or cache hit reports zero. Each retry of a retried status adds one |
 | `cached` | `true` when the answer came entirely from stored exchanges — a recording or a cache — rather than a live backend |
 | `requests` | The recording digests of the logical requests that produced the result, in construction order. Retries add nothing, and equal logical requests keep separate positions |
 | `failed_questions` | The number of failed logical questions in this result. Always present, including zero |
@@ -140,6 +146,6 @@ Settled by ADR 0008 item 3 and replaced in part by ADR 0027. `meta.questions_sha
 
 ## What a high probability does not mean
 
-A decider model judges only the evidence it was shown. A probability of 0.98 says nothing about facts that were absent from the input. In one measurement the model approved every case at 0.98 while human reviewers had refused 23% of them. The only test of a question is a measurement against labeled cases.
+The model judges only the evidence it was shown. A probability of 0.98 says nothing about facts that were absent from the input. In one measurement the model approved every case at 0.98 while human reviewers had refused 23% of them. The only test of a question is a measurement against labeled cases.
 
 Every reply behind one row must report the same model version. Different versions fail the record because one row cannot represent two measurements. The diagnostic safely names both short model identifiers when it can. It tells the user to pin `--model` and rerun with `--record` or `--cache`.

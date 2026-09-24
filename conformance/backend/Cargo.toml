@@ -1,0 +1,15 @@
+[package]
+name = "conformance-backend"
+version = "0.0.1"
+edition.workspace = true
+rust-version.workspace = true
+description = "An offline loopback backend that serves the shared conformance cases"
+license = "MIT"
+publish = false
+
+[dependencies]
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.151", features = ["raw_value"] }
+
+[lints]
+workspace = true

@@ -2,13 +2,15 @@
 
 use std::path::PathBuf;
 
-use crate::core::DEFAULT_MODEL;
+use crate::core::{DEFAULT_MODEL, Framing};
 use clap::{Args, Parser};
 
 mod command;
 mod find;
+mod relate;
 pub(crate) use command::{CacheCommand, Command, PruneArguments, StatusArguments};
 pub(crate) use find::FindArguments;
+pub(crate) use relate::RelateArguments;
 
 /// Semantic commands for the shell: if, grep, and sort that understand meaning
 #[derive(Debug, Parser)]
@@ -33,9 +35,9 @@ pub(crate) struct Common {
     /// Print the full result object in place of the bare value.
     ///
     /// In record mode the object also carries `input`, the whole record as it
-    /// arrived, so a row names the record it answered. `input` repeats every
-    /// record in the output, and a run over large records pays for that on
-    /// every row.
+    /// arrived, so each answer names the record it answered. `input` repeats
+    /// every record in the output, and a run over large records pays for that
+    /// on every answer.
     #[arg(long)]
     pub(crate) details: bool,
 
@@ -74,7 +76,7 @@ pub(crate) struct Common {
     /// Send only the part of each record this RFC 6901 pointer names.
     ///
     /// Give it more than once to send an object of the named parts, keyed by
-    /// the last part of each pointer. On a command that accepts one document,
+    /// the last part of each pointer. On a command that accepts a single text,
     /// no record framing reads the whole input as one JSON value. The pointer is the disclosure boundary:
     /// only the pointed value leaves the machine.
     #[arg(long, value_name = "POINTER")]
@@ -149,7 +151,7 @@ pub(crate) struct Common {
 
     /// How many requests are in flight at once, from 1 to 32. [default: 4]
     ///
-    /// It acts in record mode and on `annotate`, where one document can make
+    /// It acts in record mode and on `annotate`, where a single text can make
     /// several grouped requests. Output follows the order the command defines.
     #[arg(
         long,
@@ -159,9 +161,26 @@ pub(crate) struct Common {
     )]
     pub(crate) jobs: Option<u8>,
 
-    /// How many times a transport failure or a retried status is sent again.
+    /// How many times a retried status is sent again. A transport failure is never sent again.
     #[arg(long, value_name = "N", default_value_t = 2, hide_short_help = true)]
     pub(crate) max_retries: u32,
+}
+
+impl Common {
+    /// The record framing the command line asked for.
+    pub(crate) const fn framing(&self) -> Framing {
+        if self.lines {
+            Framing::Lines
+        } else if self.jsonl {
+            Framing::Jsonl
+        } else if self.csv {
+            Framing::Csv
+        } else if self.tsv {
+            Framing::Tsv
+        } else {
+            Framing::Document
+        }
+    }
 }
 
 /// Everything `decide` was asked, before any of it is read.
@@ -179,7 +198,7 @@ pub(crate) struct DecideArguments {
     #[command(flatten)]
     pub(crate) meanings: Meanings,
 
-    /// The rule: one cut T, or a band LOW:HIGH that leaves a middle unresolved.
+    /// The rule: one cut T, or a band LOW:HIGH whose middle answers not sure.
     /// It defaults to 0.5.
     #[arg(long, value_name = "T|LOW:HIGH", allow_negative_numbers = true)]
     pub(crate) threshold: Option<String>,
@@ -293,21 +312,21 @@ pub(crate) struct ChooseArguments {
     /// The question that states what decides the pick, or `@` and a file path.
     pub(crate) question: String,
 
-    /// The labels to pick between, 2 to 255 of them, in the order they are sent.
+    /// The options to pick between, 2 to 255 of them, in the order they are sent.
     pub(crate) options: Vec<String>,
 
-    /// One label and what it means, as LABEL=DESCRIPTION. Give it once per label.
+    /// One option and what it means, as LABEL=DESCRIPTION. Give it once per option.
     ///
-    /// The first `=` splits the label from the description, and the
-    /// description travels beside the label so the model reads both. It does
-    /// not stand beside the positional labels, because two lists have no order
-    /// between them.
+    /// The first `=` splits the option from the description, and the
+    /// description travels beside the option so the model reads both. It does
+    /// not stand beside the positional options, because two lists have no
+    /// order between them.
     #[arg(long = "option", value_name = "LABEL=DESCRIPTION")]
     pub(crate) described: Vec<String>,
 
     /// Take each record's own options from this RFC 6901 pointer.
     ///
-    /// The record holds a list of labels, or a map from each label to the
+    /// The record holds a list of options, or a map from each option to the
     /// description that travels with it. It needs --jsonl, because a pointer
     /// needs a JSON record, and it takes no list on the command line.
     #[arg(long = "options", value_name = "POINTER")]
@@ -317,9 +336,9 @@ pub(crate) struct ChooseArguments {
     #[arg(long, value_name = "T", allow_negative_numbers = true)]
     pub(crate) threshold: Option<String>,
 
-    /// Print the label without quotation marks, and nothing when unresolved.
+    /// Print the option without quotation marks, and nothing when not sure.
     ///
-    /// This view is available for one document, --lines, and --jsonl. CSV and
+    /// This view is available for a single text, --lines, and --jsonl. CSV and
     /// TSV always print JSONL and refuse --raw.
     #[arg(long)]
     pub(crate) raw: bool,
@@ -393,10 +412,38 @@ pub(crate) struct ScoreArguments {
     pub(crate) common: Common,
 }
 
+/// Everything `recognize` was asked before its input is read.
+#[derive(Args, Debug)]
+pub(crate) struct RecognizeArguments {
+    /// Kinds to assign, or one `@FILE` recognize question file.
+    #[arg(value_name = "KIND")]
+    pub(crate) kinds: Vec<String>,
+
+    /// One kind and what it means, as KIND=DESCRIPTION.
+    #[arg(long = "kind", value_name = "KIND=DESCRIPTION")]
+    pub(crate) described: Vec<String>,
+
+    /// A beta relation rule, as NAME=SOURCE:TARGET. `*` explicitly means any kind.
+    #[arg(long = "relation", value_name = "NAME=SOURCE:TARGET")]
+    pub(crate) relations: Vec<String>,
+
+    /// Keep names whose computed strength reaches this cut. [default: 0.5]
+    #[arg(long, value_name = "T", allow_negative_numbers = true)]
+    pub(crate) threshold: Option<String>,
+
+    /// Keep beta relation edges whose model probability reaches this cut. [default: 0.5]
+    #[arg(long, value_name = "T", allow_negative_numbers = true)]
+    pub(crate) relation_threshold: Option<String>,
+
+    /// The options every judging verb takes.
+    #[command(flatten)]
+    pub(crate) common: Common,
+}
+
 /// Everything `annotate` was asked, before the set or evidence is read.
 #[derive(Args, Debug)]
 pub(crate) struct AnnotateArguments {
-    /// A JSON question set containing the named judgments to apply.
+    /// A JSON question set containing the named questions to ask.
     pub(crate) questions: PathBuf,
 
     /// A likely input file written without `--input`.
