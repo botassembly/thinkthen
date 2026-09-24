@@ -39,4 +39,12 @@ After merging main with ticket 0085, the ceiling rises from 49733 to 49884, by 1
 
 ## Checks
 
-Pending.
+With `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, at `477839fd`, with the one-minute load at 8.1 when the ladder started:
+
+- `install`: exit 0.
+- `lint`: exit 0, `ratchet: crates + conformance 49884/49884`.
+- `test`: exit 0, 808 passed, 0 failed, 8 ignored across 18 result lines, `live-test: all cases passed`.
+- `spec`: exit 0, `demos: 21 green, 0 red`.
+- `sdlc/scripts/live` did not run.
+
+The whole ladder ran again at the commit that adds this section, which is the commit that lands. The merge commit on main states that run.
