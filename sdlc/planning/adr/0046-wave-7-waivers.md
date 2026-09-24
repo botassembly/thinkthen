@@ -57,3 +57,40 @@ does not name it.
 
 Overturn: ask for a history rewrite. The cost is a force-push of the
 surfaces branches and a rebuild of every open worktree.
+
+## Ratchet: full SHAs, a guarded script, and two known limits
+
+Decided by the wave-7 gate3 lane. Ian can overturn each.
+
+Full SHAs. A verdict or a grandfather entry names the full 40-character
+SHA and matches it exactly. A 7-character prefix was ground onto a
+forged raise in 14 seconds. The 19 prefix rows in the committed review
+records and the 12-character grandfather keys were rewritten to full
+SHAs copied from `git rev-parse`. Rewriting keeps one rule and one place
+to look. A constant list of full SHAs in the script would be a second
+record of the same reviews. The rows name the same commits as before.
+
+The script guards itself. A commit after `f6a7fae` that changes
+`surfaces-ratchet.mjs` or `surfaces-ratchet-self-test` needs a
+structured verdict, the same as a raise. Changes up to `f6a7fae` stay
+exempt. The self-test accepts, in its own clone only, the commits the
+real ratchet names as waiting for review. The real ratchet still fails
+on them until a review record lands.
+
+Known limit: the raiser can write their own verdict. A later commit by
+the same agent that adds "Verdict: ACCEPT <sha>" passes. Git holds no
+mechanical mark that tells one agent from another. The review record's
+"What I checked" section and the steering session's dispatch record
+are the evidence. Overturn: require signed commits from a reviewer key.
+The cost is key setup on every machine and agent.
+
+Known limit: a merge stays flagged when its first parent lowers the
+ceiling and its second parent raises it. The merge's value differs from
+both parents and is above the first, so the rule reads it as a raise and
+asks for a review of the merge too. The rule is strict and costs one
+extra review row. Overturn: teach the walk that a merge equal to a
+reviewed parent's count passes.
+
+Not checked: an uncommitted change to the script itself. The self-test
+runs the working copy against a clone, so refusing a local edit would
+block the test of that edit. The commit that lands the edit is checked.
