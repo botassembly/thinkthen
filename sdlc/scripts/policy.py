@@ -309,6 +309,31 @@ def check_clippy_configs() -> None:
         fail("clippy-config", "crates/thinkthen/clippy.toml matches the complete accepted copy")
 
 
+def lock_versions(relative: str) -> dict[str, set[str]]:
+    versions: dict[str, set[str]] = {}
+    for package in read_toml(relative).get("package", []):
+        versions.setdefault(package["name"], set()).add(package["version"])
+    return versions
+
+
+def check_consumer() -> None:
+    """Ticket 0086: the external consumer builds against the root's versions and lints."""
+    root, consumer = lock_versions("Cargo.lock"), lock_versions("conformance/consumer/Cargo.lock")
+    for name in sorted(set(consumer) - {"consumer", "fork-probe"}):
+        if not consumer[name] <= root.get(name, set()):
+            fail("consumer", f"conformance/consumer/Cargo.lock pins {name} {sorted(consumer[name])}, "
+                 f"and the root lock pins {sorted(root.get(name, set()))}")
+    workspace = read_toml("conformance/consumer/Cargo.toml").get("workspace", {})
+    lints = read_toml("Cargo.toml").get("workspace", {}).get("lints")
+    if workspace.get("lints") != lints:
+        fail("consumer", "the consumer workspace lint table equals the root table")
+    if read_toml("conformance/consumer/consumer/Cargo.toml").get("lints") != INHERITED:
+        fail("consumer", "the consumer crate inherits the root lint table")
+    probe = read_toml("conformance/consumer/fork-probe/Cargo.toml").get("lints")
+    if lints and probe != {**lints, "rust": {**lints["rust"], "unsafe_code": "deny"}}:
+        fail("consumer", "fork-probe uses the root lint table with unsafe_code denied, not forbidden")
+
+
 CORE_ALLOWED_DEPENDENCIES = {"serde", "serde_json", "sha2", "thiserror"}
 CORE_PROHIBITED_PATHS = (
     ("std", "fs"),
@@ -1231,6 +1256,7 @@ def main() -> int:
     check_workspace()
     check_crates()
     check_clippy_configs()
+    check_consumer()
     check_crate_roots()
     check_core_policy()
     check_catalog_policy()

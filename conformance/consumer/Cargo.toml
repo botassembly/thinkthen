@@ -1,18 +1,14 @@
+# The external consumer of the public Rust API, ticket 0086. It is its own
+# workspace, so the crate is built the way an outside user builds it: by path,
+# with default features off. `sdlc/scripts/policy.py` holds its lock to the
+# root lock's versions and its lint tables to the root table.
 [workspace]
-members = ["crates/thinkthen", "conformance/backend"]
-# Ticket 0086: the external consumer is its own workspace, built by the test rung.
-exclude = ["conformance/consumer"]
+members = ["consumer", "fork-probe"]
 resolver = "3"
 
 [workspace.package]
 edition = "2024"
 rust-version = "1.93.1"
-
-[profile.release]
-# A library must unwind through a host. The command's release build selects
-# abort through its dedicated build path.
-overflow-checks = true
-panic = "unwind"
 
 [workspace.lints.rust]
 missing_debug_implementations = "forbid"
