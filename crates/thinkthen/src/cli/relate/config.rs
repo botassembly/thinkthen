@@ -25,12 +25,17 @@ pub(super) fn settle(arguments: &RelateArguments) -> Result<Settled, Failure> {
     if arguments.common.field.len() > 1 {
         return Err(Failure::Usage("--field takes one pointer on `relate`"));
     }
-    let file = arguments
-        .relations
-        .first()
-        .and_then(|relation| relation.strip_prefix('@'));
+    let file = match arguments.relations.as_slice() {
+        [only] => only.strip_prefix('@'),
+        many if many.iter().any(|relation| relation.starts_with('@')) => {
+            return Err(Failure::Usage(
+                "relate takes inline relation rules or one @FILE, never both",
+            ));
+        }
+        _ => None,
+    };
     let (mut spec, mut from) = if let Some(path) = file {
-        if arguments.relations.len() != 1 || arguments.either {
+        if arguments.either {
             return Err(config_error(false, RelateConfigError::Relation));
         }
         let text = fs::read_to_string(path).map_err(Failure::OpenQuestionFile)?;

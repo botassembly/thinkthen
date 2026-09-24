@@ -19,7 +19,7 @@ The alternative form takes exactly one `@FILE`. The closed version-one file is:
 {"version":1,"relate":{"fields":{"name":"/name","kind":"/kind"},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":false}]},"threshold":0.5,"model":"jev-latest","profile":"measured"}
 ```
 
-`relations` is required, ordered, nonempty, and has distinct names. `reads` defaults to the relation name with underscores replaced by spaces. `either` defaults to false. `fields` defaults to `{"name":"/name","kind":"/kind"}`. `threshold` defaults to `0.5`. `model` and saved calibration `profile` are optional. Inline rules and `@FILE` never mix.
+`relations` is required, ordered, nonempty, and has distinct names. `reads` defaults to the relation name with underscores replaced by spaces. `either` defaults to false. `fields` defaults to `{"name":"/name","kind":"/kind"}`. `threshold` defaults to `0.5`. `model` and saved calibration `profile` are optional. Inline rules and `@FILE` never mix. An `@FILE` beside any other rule exits 2 with zero sends.
 
 `--field`, `--kind-field`, `--threshold`, and `--model` independently replace file values. Framing and `--input` are command-only. Saved `profile` has no command-line replacement. `--profile FILE` selects a runtime backend profile and does not replace saved calibration identity.
 

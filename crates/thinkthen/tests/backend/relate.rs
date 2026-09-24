@@ -434,3 +434,26 @@ fn a_target_side_asker_keeps_its_roles_and_the_declared_edge_direction() {
         assert_eq!(edge["target"]["name"], target);
     }
 }
+
+#[test]
+fn a_question_file_beside_inline_rules_is_refused_before_any_send() {
+    let listener = Listener::answering(answered).expect("listener");
+    let input = br#"[{"name":"Ada","kind":"person"},{"name":"Acme","kind":"organization"}]"#;
+    for rules in [["calls", "@q.json"], ["@q.json", "calls"]] {
+        for dry in [false, true] {
+            let mut options = rules.to_vec();
+            if dry {
+                options.push("--dry-run");
+            }
+            let output = run(&listener, &options, input);
+            assert_eq!(output.status.code(), Some(2), "{options:?}");
+            assert!(output.stdout.is_empty(), "{options:?}");
+            assert_eq!(
+                String::from_utf8_lossy(&output.stderr),
+                "thinkthen: relate takes inline relation rules or one @FILE, never both\n",
+                "{options:?}"
+            );
+        }
+    }
+    assert_eq!(listener.connections(), 0);
+}
