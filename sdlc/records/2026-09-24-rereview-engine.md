@@ -75,3 +75,13 @@ Reviewer: fresh read-only Claude session, 2026-09-24. Read: workspace `CLAUDE.md
 
 - FU1: The port guide on main still says "0078 carries R5-3 and R6-3" and "no ticket carries R5-4, R6-15, or R7-1". Update it: 0096 now carries R5-3, 0085 carries G2, and 0086 and 0094 carry R7-1.
 - FU2: If 0086 finding 3 leaves G3 open, record in the plan that 0094 is the ticket that closes R7-1.
+
+---
+
+# Final check
+
+Read-only, after `git fetch`: 0086 `c7f167a7`, 0093 and ADR 0047 `93abb321`, 0094 `17ade79e`. Nothing was built or run.
+
+- 0086 ACCEPT. The `test` rung now runs the excluded `conformance/consumer` workspace by manifest path, and `sdlc/scripts/test` is in `opens`. Nothing else changed.
+- 0093 and ADR 0047 ACCEPT. The rule now refuses any binding test that returns before its first assertion. That rule catches the planted "print skipped and return" test. The script budget rose to 300 with a re-score line. The narrowed lock check still catches the planted ureq-version lock.
+- 0094 ACCEPT. Relate reads only the default `/name` and `/kind`, matching 0095. `rank` has one spelling, and the question keys sit beside the verb for `from_json` to validate. The ignored churn variables are recorded, and the probe still exercises the resolver path through `timeout_global`.

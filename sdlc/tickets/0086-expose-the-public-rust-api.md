@@ -6,7 +6,7 @@ opens: Cargo.toml Cargo.lock conformance/consumer probes sdlc/scripts/test crate
 
 # 0086: Expose the public Rust API
 
-Status: revised after confirmation; final check. Owner: Claude. Implementation waits for 0084, 0095, 0085, 0097, 0096, 0078, 0091, 0092, and 0099.
+Status: design accepted 2026-09-24 after re-review. Owner: Claude.
 
 ## Outcome and authority
 
@@ -76,5 +76,5 @@ Re-score if implementation changes public semantics, requires a new dependency o
 
 ## Review
 
-- Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-engine.md`) found two contradictions, a churn test too weak to catch the crash, and a budget too small. The panic exemption, the dependency-tree check, the churn probe, and the split into 0097 and 0098 answer them. The re-review (`sdlc/records/2026-09-24-rereview-engine.md`) found the fork call, the R4-24 test, and the churn comparison unbuildable as written; all rewritten. The confirmation (same file) asked which rung runs the consumer; `test` does. Final check pending.
+- Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-engine.md`) found two contradictions, a churn test too weak to catch the crash, and a budget too small. The panic exemption, the dependency-tree check, the churn probe, and the split into 0097 and 0098 answer them. The re-review (`sdlc/records/2026-09-24-rereview-engine.md`) found the fork call, the R4-24 test, and the churn comparison unbuildable as written; all rewritten. The confirmation (same file) asked which rung runs the consumer; `test` does. The final check accepted it.
 - Code review: pending.
