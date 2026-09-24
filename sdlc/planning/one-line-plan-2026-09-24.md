@@ -47,6 +47,6 @@ Launch waits on the queue. The engineering gates are 0088, the release build, pu
 
 ## Needs Ian
 
-1. Accept or overturn main as the spine. It sets how the library team's branch ends.
+1. Ian accepted this plan on 2026-09-24, including main as the spine.
 2. Claim the package names, the Homebrew tap, and thinkthen.dev DNS. The site deploys through GitHub Actions, which Ian paused, so the site needs a deploy path he approves.
 3. Whether arXiv endorsement is held or pending: `notes/todos/2026-09-09-arxiv-endorsement-status.md` and `repos/mktg/products/thinkthen/go-live.md` disagree.
