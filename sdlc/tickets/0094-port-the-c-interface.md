@@ -6,7 +6,7 @@ opens: libraries/c probes/c-churn sdlc/planning/adr/0037-the-c-door-serves-every
 
 # 0094: Port the C interface
 
-Status: design accepted 2026-09-24 after re-review. Owner: Claude.
+Status: design accepted 2026-09-24 after re-review; build paused 2026-09-24 with work in progress, not compiled, not reviewed (see `sdlc/records/0094-build-c-interface.md`). Owner: Claude.
 
 ## Outcome and authority
 
