@@ -119,4 +119,4 @@ Design only. The code tickets use Claude builders (Opus subagent) and fresh Clau
 ## Review
 
 - Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-contract.md`) asked for an ADR record of the added members and four clarifications, all applied. The re-review (`sdlc/records/2026-09-24-rereview-contract.md`) asked for the rustfmt wording, cancel before join on a panic, and the `Sync` reason; all applied.
-- Code review: not applicable; design records only.
+- Code review: `sdlc/records/0084-0095-code-review.md` accepted it.

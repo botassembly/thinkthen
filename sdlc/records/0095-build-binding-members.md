@@ -30,4 +30,8 @@ Each plant ran alone on a scratch copy, and each turned the check red.
 
 ## Ladder
 
-`sdlc/scripts/install`, `lint`, `test`, and `spec` run once at the commit that adds this record. The builder reports that result with the commit.
+At `d886fec6`, observed: `install` 0, `lint` 0, `test` 0, `spec` 0. `ratchet.mjs` read `48140/48140`.
+
+## Code review
+
+The code review (`sdlc/records/0084-0095-code-review.md`) accepted 0095. It asked for the 0084 fix to ADR 0017 to reach this branch through a merge, which it did after `d886fec6`. The rerun commands for the checks are in `sdlc/records/0084-build-contract.md`.
