@@ -6,7 +6,7 @@ opens: sdlc/tickets/0084-freeze-the-public-rust-contract.md sdlc/planning/adr/00
 
 # 0084: Freeze the public Rust contract
 
-Status: design accepted 2026-09-24 after re-review. Owner: Claude.
+Status: amended after acceptance; confirmation pending. Owner: Claude.
 
 ## Outcome and authority
 
@@ -96,6 +96,7 @@ pub fn usage() -> Result<Counters, Error>;
 pub struct EngineBuilder { /* private */ }
 impl std::fmt::Debug for EngineBuilder {}
 impl EngineBuilder {
+    pub fn from_env() -> Result<Self, Error>;
     pub fn base_url(self, value: &str) -> Result<Self, Error>;
     pub fn api_key(self, value: &str) -> Result<Self, Error>;
     pub fn model(self, value: &str) -> Result<Self, Error>;
@@ -360,7 +361,7 @@ Ticket 0086 extracts the inventory into signature fixtures and records normalize
 
 Compile-fail fixtures prove a band cannot reach `filter`; unfinished builders, typed choice mismatches, and unbound loaded choices fail; and no derive, async method, reset, public module, connector, planner, callback beyond the interrupt check, mutable result field, public `ErrorDetail` constructor, or string-based `Error` constructor/conversion exists. Public tuple variants remain constructors.
 
-Package proof compares Cargo metadata with and without default features and rejects every package activated only by `cli`, including `clap`, `csv-core`, and `nix`. Ticket 0078 owns `signal-hook` placement; 0086 rejects it only if 0078 made it CLI-only. Run `cargo check --locked -p thinkthen --no-default-features`, `cargo test --locked -p thinkthen --no-default-features`, and `cargo package --locked -p thinkthen --no-default-features`.
+Package proof compares Cargo metadata with and without default features and rejects every package activated only by `cli`, including `clap`, `csv-core`, and `nix`. Ticket 0078 owns `signal-hook` placement; 0086 rejects it only if 0078 made it CLI-only.
 
 0084 acceptance is design-only: the proposed ADR amendment and this ticket agree; rustfmt parses the extracted blocks of 0084 and 0095; every public name has one owner and one exact shape; `wc -m` stays under 30,000; and `git diff --check` passes. No compile check is credited as proof of runtime behavior.
 
@@ -372,10 +373,13 @@ Excluded: implementation, dependencies, features, ratchets, publication, C ABI, 
 
 ## Complexity
 
-Contract 2; state and timing 0; reach 2; proof 2; cost of error 1; total 7. Final level: 3. Re-score 0085 and 0086 when each starts.
+Contract 2; state and timing 0; reach 2; proof 2; cost of error 1; total 7. Final level: 3.
+
+## Amended 2026-09-24
+
+ADR 0017 section 5 has every surface set width, `max_requests`, cache, and `cache_bytes` on the engine. `EngineBuilder::from_env` seeds a builder by reading the environment exactly as `Engine::from_env` does. Each setter then overrides. `Engine::from_env()` equals `EngineBuilder::from_env()?.build()`. 0086 tests it. Ian can overturn it.
 
 ## Review
 
 - Design review: `sdlc/records/2026-09-24-spine-review-contract.md` rejected, then `2026-09-24-rereview-contract.md` accepted after fixes.
-- Routing: the later code tickets use Claude builders (Opus subagent) and fresh Claude reviewers.
 - Code review: not applicable; design records only.
