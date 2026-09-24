@@ -39,4 +39,4 @@ The noun `calibration` stays for a later wording decision, outside the ruling:
 
 ## Gates
 
-Recorded after the ladder at the final commit.
+At `dcf0354e`, with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, one rung at a time on a machine shared with one other build: `install` 0, `lint` 0 (ratchet 43776/43776), `test` 0 (library 275 passed and 2 ignored, backend 352 passed, live-test all cases passed with dummy keys), `spec` 0 (21 how-tos green, 0 red), and `git diff --check` clean. No live or paid command ran. The annotate global-queue test passed on the first run.
