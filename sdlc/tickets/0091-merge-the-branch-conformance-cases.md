@@ -1,45 +1,58 @@
 ---
 flow: build
 priority: 91
-opens: conformance crates/thinkthen/tests crates/thinkthen/tests/fixtures/recognize-225 specification/find.md sdlc/planning
+opens: conformance crates/thinkthen/src/cli/conformance_tests crates/thinkthen/tests/fixtures/recognize-225 crates/thinkthen/tests/backend/recognize.rs specification/question-file.md sdlc/planning
 ---
 
 # 0091: Merge the branch conformance cases
 
-Status: draft, design not reviewed. Owner: Claude.
+Status: draft, revised after design review; needs re-review. Owner: Claude.
 
 ## Outcome and authority
 
-Fold the portable cases from the `surfaces` branch's `conformance/conformance.json` into main's `conformance/cases.json`, so 0085 and every surface run one file. Queue item 6 of `sdlc/planning/one-line-plan-2026-09-24.md`. The case-by-case map is section 4 of `sdlc/planning/surfaces-port-guide.md` (branch `planning/surfaces-port-guide`). The ADR 0017 shared-case amendment governs format and provenance. Ian can overturn any word ruling below.
+Fold the portable cases from the `surfaces` branch's `conformance/conformance.json` into main's `conformance/cases.json`, so 0085 and every surface run one file. Queue item 6 of `sdlc/planning/one-line-plan-2026-09-24.md`. Section 4 of `sdlc/planning/surfaces-port-guide.md` maps the cases. The ADR 0017 shared-case amendment governs format and provenance. Ian can overturn any word ruling below.
 
-## Work
+## Cases
 
-- Re-encode per port guide section 4.1. Add the success kinds main lacks for `decide_many`, `recognize`, and `relate`, and nothing more.
-- Add branch cases 06, 19, 80, 23, 76, 79, 82, 83, 84, and 68. Case 68 keeps scalar-value offsets past an accent and an emoji. The TypeScript ticket converts them to UTF-16 units (Q13).
-- Add one-question `annotate` cases for `choose`, `score`, and `tag` whose values equal their scalar cases, the ruled bulk form of ticket 0095 (G4).
-- Refresh main's recognize fixture digests. Map `MISC` to `other` for C05, C15, and C22. C06, C11, C13, C14, and C16 stay known divergences in tests.
-- Relate cases 69–71 and the nine recognize cases with relations enter as `synthetic_contract` exchanges built from main's planner request bytes. No branch probability or digest carries over. A captured re-record needs a live run under Ian's authorization and is deferred past 0.1; the shaped exchanges prove the shapes.
-- Case 17 asserts counter differences around a call, since counters have no reset (Q11). Cases 18 and 27 become main's `cancel_token` and `expired_deadline` injections.
+- New cases take IDs from 26 upward and record their branch ID in `provenance`. Branch IDs collide with main's.
+- Add branch cases 06, 19, 80, 23, 76, 79, 82, 83, and 84 after re-encoding per port guide section 4.1.
+- Add one-question `annotate` cases for `choose`, `score`, and `tag` whose values equal their scalar cases. They follow ADR 0017 section 6 item 8 (bulk is the same verbs over the host's container). Ticket 0095's ruling on the bulk form is pending review, so these cases are marked pending until 0095 is accepted.
+- Recognize stays in main's fixture folder `crates/thinkthen/tests/fixtures/recognize-225`, whose 40 replay files pass today. Branch cases map branch to main (`other` to `MISC`), and main's ten counted divergences stay as they are. `cases.json` gains only branch case 68 (offsets past an accent and an emoji; TypeScript converts them to UTF-16, Q13) and the relation cases below.
+- Relate: one same-kind case (branch 69) and one cross-kind case (branch 71), plus the nine recognize cases with relations. All enter as `synthetic_contract` exchanges built from main's planner request bytes. Entities gain concrete kinds, since the branch method used `*` over bare text. Expected edges follow from the stated synthetic probabilities, and 36-C09 splits "Karst and Vellum" under main's rule. Branch case 70 adds only bulk and is cut. A captured re-record needs a live run under Ian's authorization and is deferred past 0.1.
+- Case 17 asserts counter differences around a call, since counters have no reset (Q11). It runs in the command runner with a temporary cache folder, not in the pure-core test.
+- Branch case 27 duplicates main's `24-deadline-fault` and is dropped. Branch case 18 (a mid-batch cancel that keeps finished results) stays with the surfaces.
+
+## Runner arms
+
+The command runner gains three success arms (`decide_many`, `recognize`, `relate`) and one `question_form: text|file` field for the usage and local pair. Nothing else.
 
 ## Rulings this ticket applies (Q16)
 
-- The cases say `unsure`, per ADR 0017 section 6 item 4. The specification grammar keeps "unresolved".
-- `find` with no selection has value `null`, as `specification/find.md` says. `none` stays the answer's pick word. Fix main's case 19 `bare: "none"` and the case that says kind `choice` where `result.md` says `find`.
-- A question given as JSON text that breaks a rule is `usage`. The same question loaded from a named file is `local`, as `question-file.md` rules. Cases 08, 09, 10, and 22 test JSON text as `usage`, and one new case tests `load` as `local`.
+- The cases say `unsure`, per ADR 0017 section 6 item 4. The specification grammar keeps "unresolved". Main's case IDs already agree.
+- `find` with no selection is `null` in `operation`, as `specification/find.md` says. Case 19 is correct and stays unedited: `answers[]` holds the wire-level choice decode, where `bare: "none"` and `kind: "choice"` are right. `conformance/README.md` gains one sentence saying so.
+- A question given as JSON text that breaks a rule is `usage`. The same question loaded from a named file is `local`. `specification/question-file.md` gains the JSON-text sentence, since the specification is the contract. Branch cases 08 and 10 form the pair. Cases 09 and 22 are verb mismatches, which are `usage` either way, and add nothing to the split.
 
 ## Left to surface tickets
 
-Branch cases 17 (reset form), 81 (SQL NULL), and the `jobs` field on 05, 19, and 80 are binding tests. The branch skip table is not ported. Each surface runner reports a skipped case as not run (R5-32). Each surface ticket adds a mid-batch cancel arm for case 18 or proves it in its own tests.
+Branch case 18, case 81 (SQL NULL), and the `jobs` field on 05, 19, and 80 are binding tests. The branch skip table is not ported. Each surface runner reports a skipped case as not run (R5-32).
 
 ## Acceptance
 
-- The existing pure-core conformance test and the command runner pass on the grown file with no key and no network.
-- A schema check refuses a case with an unknown success kind, a `captured` case without a stable recording path, or a header or credential in an exchange.
-- `git diff --check` passes. Test changes stay under 400 nonblank Rust lines.
+- The pure-core conformance test and the command runner pass on the grown file with no key and no network.
+- A schema check refuses an unknown success kind, a `captured` case without a stable recording path, and a header or credential in an exchange.
+- Test and runner changes stay under 650 nonblank Rust lines. `git diff --check` passes.
+
+## Shared files
+
+`conformance/README.md` with 0090, `cli/conformance_tests/runner.rs` with 0076, and `specification/` with 0082. Whichever lands second rebases.
 
 ## Dependencies
 
-After 0088 lands the public relate shape and `sdlc/issues/2026-09-24-a-target-side-choice-asks-the-reversed-relation.md` closes. Before 0085.
+After 0090. 0088 landed on main at `71841025`, and the target-side relation issue is closed by 0088. Before 0085 and 0092.
+
+## Routing
+
+Builder: Claude (Opus subagent). Reviewer: a fresh Claude session for design and for code.
 
 ## Complexity
 
@@ -47,5 +60,5 @@ Contract 2; state and timing 0; reach 2; proof 2; cost of error 2; total 8. Fina
 
 ## Review
 
-- Design review: pending.
+- Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-controls.md`) found six mechanical gaps and one needless edit to case 19. All applied; re-review pending.
 - Code review: pending.
