@@ -1,6 +1,6 @@
 # 0096: Build fork recovery
 
-Status: built on `ticket/0096-fork-recovery`; code review pending. Owner: Claude.
+Status: landed 2026-09-24 (`sdlc/records/0096-land-fork-recovery.md`). The code review accepted `4d2945e6`. Owner: Claude.
 
 Base: main `ba6864d4` with 0085 and 0097, merged at `5d317098`. Code commits `09359a3a` and `147e7f78`.
 
@@ -66,7 +66,7 @@ The first R5-3 run showed an unbounded wait in `a_waiting_child_stops_with_its_c
 
 ## Code review fixes
 
-The code review (`/tmp` review of `e685740b`, reply relayed by the coordinator) returned F1 to F6.
+The code review (`sdlc/records/0096-code-review.md`) of `e685740b` returned F1 to F6.
 
 - F1: `an_ordinary_drop_frees_the_state` failed 6 times in 60 under load. The thread in `call` sent its answer before dropping its clone of the guarded state, so the test could still see two owners. `call` now drops the clone before it sends.
 - F2: nothing held the per-request folder lock until the recording is saved. While the parent's send is held, `busy_parent_child` now checks that a non-blocking exclusive lock on the folder is refused. Plant: the write permit drops its folder lock once the write is prepared. Red at the new assertion.
