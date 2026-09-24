@@ -17,7 +17,7 @@ One command call sends a paid request at most once when the transport fails. A r
 - `engine/http.rs::is_retried` returns false for `Transport(Refused)` and true for every other `Transport` kind. `post_observed` loops on it up to `--max-retries`, default 2.
 - The issue measured three full 120-byte POSTs from one `decide` on a loopback stub that read the whole body and then reset, and three more when the stub stalled past `--timeout 2` (wall 9.22 s). Every copy reached the backend.
 - `TransportKind` has five values: `Timeout`, `NameLookup`, `Refused`, `PrematureClose`, `Other`. `Other` holds `ureq::Error::ConnectionFailed`, TLS failures, an interrupted call, and a response body past the 1 MiB bound.
-- The client sets only `timeout_global`. ureq 3.4.2 then reports every timeout as `Timeout::Global`, whatever the phase (`timings.rs`), so the engine cannot tell a connect timeout from a read timeout.
+- The client sets only `timeout_global`. ureq 3.4.2 then reports every timeout as `Timeout::Global`, whatever the phase (`timings.rs`). The engine cannot tell a connect timeout from a read timeout.
 - Both send paths reach `post_observed`: `engine/request.rs:69` and `cli/asking/request.rs:63`. `decide`, `choose`, `score`, `tag`, `find`, `annotate`, `recognize`, and `relate` all share it.
 - `specification/recording.md:24` counts every HTTP attempt before it is sent. `thinkthen status` therefore shows three requests for the measured failure today.
 - `tests/backend/exchange.rs::a_close_before_headers_follows_the_transport_retry_rule` pins the old rule (two sends, `requests_sent:2`). Records 0064 and 0072 kept it on purpose.
@@ -47,10 +47,10 @@ Cost: a DNS blip, or a pooled connection that died between ureq's `is_open` prob
 ## Interactions
 
 - `--jobs`: each worker calls `post_observed` for its own request. The rule holds per request, and no worker sends another worker's failed body. The scheduler, the stop rule, and in-flight handling do not change.
-- Cache: a transport failure installs no entry. The 0039 lock still lets the next waiter for the same digest send after the owner fails. That second send answers a second record the user asked for, which it would send with no cache too, so it stays.
+- Cache: a transport failure installs no entry. The 0039 lock still lets the next waiter for the same digest send after the owner fails. That second send answers a second record the user asked for, and a run with no cache sends it too. The lock rule stays.
 - Record and replay: a transport failure writes no recording entry. Replay never reaches the network and does not change.
 - Accounting (0063, 0064): `before_attempt` still counts each attempt before it is sent. The measured failure now adds one request to `thinkthen status`. `requests_sent` on a success counts status retries only.
-- Cancellation (0073, 0074): unchanged. A transport failure returns before the retry wait, so no cancellation check is added.
+- Cancellation (0073, 0074): unchanged. A transport failure returns before the retry wait. No cancellation check is added.
 
 ## Scope
 
@@ -77,7 +77,7 @@ Every "sends once" claim counts POSTs on the loopback listener. `--dry-run` and 
 2. Red then green, compiled binary, new `tests/backend/resend.rs`, default `--max-retries`:
    - close after the full body (`close_without_reply`): listener counts 1 POST, exit 4, stdout empty, stderr is the exact new sentence.
    - reset after the full body: a new harness reply peeks until the whole request is in the socket buffer, records it, and drops the stream with those bytes unread. Linux and macOS send a reset for that close, and std alone does it. Listener counts 1 POST, exit 4, the same exact sentence.
-   - stall past `--timeout 1` (`after(2500)`): listener counts 1 POST, exit 4, the exact timeout sentence, elapsed under 2 s. The harness sets `THINKTHEN_TEST_RETRY_WAIT_MS=1`, so the old code takes about 3 s. The POST count carries the proof.
+   - stall past `--timeout 1` (`after(2500)`): listener counts 1 POST, exit 4, the exact timeout sentence, elapsed under 2 s. The harness sets `THINKTHEN_TEST_RETRY_WAIT_MS=1`. The old code takes about 3 s. The POST count carries the proof.
    - cut-short body after a 200 header: listener counts 1 POST, exit 4, stderr is the exact new close-before-reply sentence.
    - a 200 reply whose body passes the 1 MiB bound: listener counts 1 POST, exit 4, stderr is the exact sentence `a_response_body_past_the_bound_is_exit_four_and_never_fills_memory` already expects.
    - A 503 then 200 still sends 2 and prints `requests_sent:2`. This guards the status path.
