@@ -1,6 +1,6 @@
 # 0116: Deterministic global-queue test
 
-Status: built on `ticket/0116-deterministic-global-queue-test` from `65f43693`. A fresh review has not run yet. The ceiling rise needs that review before landing.
+Status: landed. A fresh review of `7b156f08` accepted it (`sdlc/records/0116-review.md`), including the ceiling rise.
 
 ## Result
 

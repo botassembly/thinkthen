@@ -6,7 +6,7 @@ opens: crates/thinkthen/tests/backend/annotate/scheduling.rs sdlc/ratchet.json
 
 # 0116: Deterministic global-queue test
 
-Status: in progress. Owner: Claude. Built and recorded (`sdlc/records/0116-quick-fix-deterministic-global-queue-test.md`). A fresh review is next.
+Status: landed. Owner: Claude. The review accepted it (`sdlc/records/0116-review.md`).
 
 ## Outcome and authority
 
