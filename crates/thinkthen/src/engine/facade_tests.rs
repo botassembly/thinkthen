@@ -360,6 +360,7 @@ fn after_a_cancelled_batch_the_next_call_sends_only_its_own_request() {
         run.join().expect("batch")
     });
 
+    assert_eq!(loopback.count(), 1, "no queued item sent after the cancel");
     assert!(
         matches!(
             outcome,
@@ -371,7 +372,6 @@ fn after_a_cancelled_batch_the_next_call_sends_only_its_own_request() {
         "{outcome:?}"
     );
     assert!(rows.len() <= 1, "{rows:?}");
-    assert_eq!(loopback.count(), 1, "no queued item sent after the cancel");
     ask(&engine, "four", &Cancel::default()).expect("the next call");
     assert_eq!(
         loopback.count(),
