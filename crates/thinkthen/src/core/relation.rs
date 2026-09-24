@@ -82,7 +82,11 @@ pub(crate) struct RelationEdge<E> {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum QuestionMap {
-    Choice(Vec<(String, usize, usize)>),
+    /// One choice asked by `asker`, with each option's label and edge ends.
+    Choice {
+        asker: usize,
+        options: Vec<(String, usize, usize)>,
+    },
     Pair { source: usize, target: usize },
 }
 
@@ -220,7 +224,10 @@ fn choice_plan<E: RelationEntityView>(
             text: QuestionText::new(text).map_err(|_| RelationPlanError)?,
             options: Labels::described(labels).map_err(|_| RelationPlanError)?,
         });
-        mappings.push(QuestionMap::Choice(map));
+        mappings.push(QuestionMap::Choice {
+            asker: *asker,
+            options: map,
+        });
     }
     Ok(RelationPlan {
         relation,
@@ -326,7 +333,7 @@ pub(crate) fn assemble_edges<E: RelationEntityView>(
     let mut edges = Vec::new();
     for (mapping, answer) in mappings.iter().zip(answers) {
         match mapping {
-            QuestionMap::Choice(options) => {
+            QuestionMap::Choice { options, .. } => {
                 let probabilities = answer.choice_probabilities().unwrap_or_default();
                 push_choice_edges(
                     &mut edges,

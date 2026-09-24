@@ -403,3 +403,34 @@ fn a_closed_output_pipe_ends_the_aggregate_quietly() {
     assert_eq!(output.status.code(), Some(0));
     assert!(output.stderr.is_empty());
 }
+
+#[test]
+fn a_target_side_asker_keeps_its_roles_and_the_declared_edge_direction() {
+    let listener = Listener::answering(answered).expect("listener");
+    let output = run(
+        &listener,
+        &["works_for=person:organization", "--details"],
+        br#"[{"name":"Ada","kind":"person"},{"name":"Acme","kind":"organization"},{"name":"Beta","kind":"organization"}]"#,
+    );
+    assert_eq!(output.status.code(), Some(0), "{}", String::from_utf8_lossy(&output.stderr));
+    let result: Value = serde_json::from_slice(&output.stdout).expect("details");
+    let ada = serde_json::json!({"name":"Ada","kind":"person"});
+    let questions = result["answer"]["questions"].as_array().expect("questions");
+    assert_eq!(questions.len(), 2);
+    for (question, asker) in questions.iter().zip(["Acme", "Beta"]) {
+        assert_eq!(question["direction"], "source_to_target");
+        assert_eq!(
+            question["asker"],
+            serde_json::json!({"role":"target","entity":{"name":asker,"kind":"organization"}})
+        );
+        assert_eq!(question["candidates"][0]["role"], "source");
+        assert_eq!(question["candidates"][0]["entity"], ada);
+        assert_eq!(question["pick"], serde_json::json!({"role":"source","entity":ada}));
+    }
+    let edges = result["value"].as_array().expect("edges");
+    assert_eq!(edges.len(), 2);
+    for (edge, target) in edges.iter().zip(["Acme", "Beta"]) {
+        assert_eq!(edge["source"], ada);
+        assert_eq!(edge["target"]["name"], target);
+    }
+}

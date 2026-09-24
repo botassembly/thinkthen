@@ -128,13 +128,13 @@ fn entry(
     threshold: f64,
 ) -> Result<String, Failure> {
     match (&logical.mapping, &logical.outcome) {
-        (QuestionMap::Choice(options), AnswerOutcome::Answered(answer)) => {
-            choice(logical, entities, options, answer, threshold)
+        (QuestionMap::Choice { asker, options }, AnswerOutcome::Answered(answer)) => {
+            choice(logical, entities, *asker, options, answer, threshold)
         }
-        (QuestionMap::Choice(options), AnswerOutcome::Failed(failure)) => Ok(format!(
+        (QuestionMap::Choice { asker, options }, AnswerOutcome::Failed(failure)) => Ok(format!(
             "{}{},\"failure\":{},\"request\":{}}}",
-            choice_prefix(logical, entities, options)?,
-            failed_candidates(entities, options)?,
+            choice_prefix(logical, entities, *asker, options)?,
+            failed_candidates(entities, *asker, options)?,
             json_line(failure)?,
             json_line(&logical.request)?
         )),
@@ -161,6 +161,7 @@ fn entry(
 fn choice(
     logical: &Logical,
     entities: &[RelationEntity],
+    asker: usize,
     options: &[(String, usize, usize)],
     answer: &Answer,
     threshold: f64,
@@ -168,7 +169,7 @@ fn choice(
     let probabilities = answer.choice_probabilities().ok_or(Failure::Defect(
         "a relation choice answer has the wrong kind",
     ))?;
-    let (_, role, _) = choice_roles(options)?;
+    let (_, role, _) = choice_roles(asker, options)?;
     let mut candidates = Vec::new();
     for (label, source, target) in options {
         let probability = probability(&probabilities, label)?;
@@ -185,7 +186,7 @@ fn choice(
     ));
     Ok(format!(
         "{}{}],\"pick\":{},\"request\":{}}}",
-        choice_prefix(logical, entities, options)?,
+        choice_prefix(logical, entities, asker, options)?,
         candidates.join(","),
         pick_json(&probabilities, options, entities, role)?,
         json_line(&logical.request)?
@@ -194,9 +195,9 @@ fn choice(
 
 #[rustfmt::skip]
 fn choice_prefix(
-    logical: &Logical, entities: &[RelationEntity], options: &[(String, usize, usize)],
+    logical: &Logical, entities: &[RelationEntity], asker: usize, options: &[(String, usize, usize)],
 ) -> Result<String, Failure> {
-    let (role, _, asker) = choice_roles(options)?;
+    let (role, _, asker) = choice_roles(asker, options)?;
     Ok(format!(
         "{{\"relation\":{},\"reads\":{},\"method\":\"choice\",\"direction\":{},\"asker\":{{\"role\":{role:?},\"entity\":{}}},\"candidates\":[",
         json_line(&logical.relation.name)?,
@@ -208,9 +209,9 @@ fn choice_prefix(
 
 #[rustfmt::skip]
 fn failed_candidates(
-    entities: &[RelationEntity], options: &[(String, usize, usize)],
+    entities: &[RelationEntity], asker: usize, options: &[(String, usize, usize)],
 ) -> Result<String, Failure> {
-    let (_, role, _) = choice_roles(options)?;
+    let (_, role, _) = choice_roles(asker, options)?;
     let mut candidates = options
         .iter()
         .map(|(_, source, target)| {
@@ -240,11 +241,9 @@ fn pair_prefix(
 }
 
 #[rustfmt::skip]
-fn choice_roles(options: &[(String, usize, usize)]) -> Result<(&'static str, &'static str, usize), Failure> {
-    let (_, source, target) = options.first().ok_or(Failure::Defect("a relation choice maps no candidates"))?;
-    if options.iter().all(|(_, held, _)| held == source) {
-        Ok(("source", "target", *source))
-    } else { Ok(("target", "source", *target)) }
+fn choice_roles(asker: usize, options: &[(String, usize, usize)]) -> Result<(&'static str, &'static str, usize), Failure> {
+    let (_, source, _) = options.first().ok_or(Failure::Defect("a relation choice maps no candidates"))?;
+    if *source == asker { Ok(("source", "target", asker)) } else { Ok(("target", "source", asker)) }
 }
 
 #[rustfmt::skip]
