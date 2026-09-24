@@ -183,3 +183,5 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Changes: Four setting functions, the engine's disk cache in place of the saved map, a worker per call, relate over entities, a `foldhash` deny exception, and the SQLite 3.50.0 toolchain.
 - Proof: The settings tests with plants, the cancel case, the function list of 12 names and 18 registrations, one exported symbol, the deny plant, and the relate id-mapping test.
 - Defers: Packaging, macOS, filter, rank, and find beyond `WHERE`, and relate over query text. Experiment 218's stale-question-file probe carries forward as a check on the engine cache.
+
+Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. The pragma `thinkthen_width(n)` becomes `thinkthen_throttle(n)`, and every public `width` here reads as `throttle`.
