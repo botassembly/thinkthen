@@ -1,6 +1,6 @@
 # The SIGINT test child can park forever
 
-Status: open. Found 2026-09-24 during Quick Fix `qf-parallel-lock-test`. Owner: Claude.
+Status: closed by Quick Fix `qf-test-deadlines`. Found 2026-09-24 during Quick Fix `qf-parallel-lock-test`. Owner: Claude.
 
 `cli::interrupt::tests::unix::sigint_child` is an ignored test that `partial_prefixes_and_an_armed_follow_up_sigint_use_the_default` starts as a subprocess. It has two modes. In prefix mode (`THINKTHEN_SIGINT_PREFIX`) it prints `ready` and then runs `loop { std::thread::park(); }`. In the second mode (`THINKTHEN_SIGINT_CHILD`) it prints `armed` and then runs the same loop. Only a SIGINT from the parent ends either one.
 

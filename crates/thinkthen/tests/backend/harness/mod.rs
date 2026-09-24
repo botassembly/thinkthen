@@ -11,6 +11,11 @@ use std::time::Duration;
 
 pub(crate) use conformance_backend::{Canned, Listener, Observed};
 
+#[path = "../../../src/test_deadline/wait.rs"]
+mod wait;
+
+pub(crate) use wait::finish;
+
 /// Whether this Linux process has the expected inode open.
 #[cfg(target_os = "linux")]
 pub(crate) fn process_has_file(process: u32, expected: &std::fs::Metadata) -> io::Result<bool> {
@@ -30,8 +35,9 @@ pub(crate) fn process_has_file(process: u32, expected: &std::fs::Metadata) -> io
 /// Run the compiled binary with no environment but what the case names.
 ///
 /// Every case on this binary drives the tool as a process, so the spawning,
-/// the pipes, and the short retry wait live here once. The wait is set for
-/// every run, because a case that never retries is not slowed by it.
+/// the pipes, the short retry wait, and the run's deadline live here once.
+/// The retry wait is set for every run, because a case that never retries is
+/// not slowed by it.
 pub(crate) fn spawn(
     arguments: &[&str],
     environment: &[(&str, &str)],
@@ -62,7 +68,7 @@ pub(crate) fn spawn(
         .ok_or_else(|| io::Error::other("no pipe to standard input"))?;
     let _ = input.write_all(evidence);
     drop(input);
-    child.wait_with_output()
+    finish(child, &format!("thinkthen {}", arguments.join(" ")))
 }
 
 /// Holds each of the first `wanted` requests until all of them are in flight.
