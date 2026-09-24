@@ -634,6 +634,92 @@ def check_core_policy() -> None:
         fail("core", "the outer-dependency and alias plants are refused")
 
 
+# Ticket 0083: the transform catalog prints embedded bytes and owns nothing
+# else. It names no file, environment, network, clock, process, thread, or
+# signal API, reaches no other command module, and uses only `clap` outside
+# the standard library.
+CATALOG = "crates/thinkthen/src/cli/transform.rs"
+CATALOG_BANNED_WORDS = {
+    "fs", "env", "net", "time", "process", "thread", "os", "stdin", "Stdin",
+    "Command", "File", "OpenOptions", "TcpStream", "UdpSocket", "Instant", "SystemTime",
+    "engine", "edge", "cache", "interrupt", "usage", "recording", "Environment", "args",
+    "include_str", "env_var", "option_env", "nix", "ureq", "signal_hook", "libc", "csv_core",
+}
+CATALOG_CRATE_PATHS = {("crate", "failure", "Failure")}
+CATALOG_ROOTS = {"std", "clap", "crate", "super", "self"}
+
+
+def catalog_policy_failures(text: str) -> list[str]:
+    """Name every capability or owner the catalog source reaches."""
+    tokens = rust_tokens(text)
+    held = {f"names {token}" for token in tokens if token in CATALOG_BANNED_WORDS}
+    for path, alias in rust_use_paths(tokens):
+        if aliases_outer_root(path, alias) or imports_outer_glob(path):
+            held.add("aliases or globs an outer module")
+        elif path[:1] == ("crate",) and path not in CATALOG_CRATE_PATHS:
+            held.add("uses " + "::".join(path))
+        elif path[:1] == ("super",) and path not in {("super", "CATALOG"), ("super", "lookup")}:
+            held.add("uses " + "::".join(path))
+        elif path and path[0] not in CATALOG_ROOTS:
+            held.add("uses " + "::".join(path))
+    for place, token in enumerate(tokens[:-1]):
+        if token in {"crate", "super"} and tokens[place + 1] == "::" and not any(
+                token_path_at(tokens, place, allowed) for allowed in CATALOG_CRATE_PATHS):
+            if not (token == "super" and tokens[place - 1:place] == ["use"]):
+                held.add(f"reaches {token}::{tokens[place + 2] if place + 2 < len(tokens) else ''}")
+    if extern_crates(tokens):
+        held.add("declares an extern crate")
+    return sorted(held)
+
+
+def check_catalog_policy() -> None:
+    held = catalog_policy_failures((REPO / CATALOG).read_text(encoding="utf-8"))
+    if held:
+        fail("catalog", f"{CATALOG} {held}")
+    plants = (
+        'std::fs::read("band.jq")',
+        "use std::fs::File;",
+        'std::env::var("THINKTHEN_API_KEY")',
+        "use std::env as e;",
+        'std::net::TcpStream::connect("127.0.0.1:1")',
+        "std::time::Instant::now()",
+        "std::time::SystemTime::now()",
+        'std::process::Command::new("jq")',
+        'use std::process::Command; Command::new("/usr/bin/jq").status();',
+        'std::os::unix::process::CommandExt::exec(&mut command);',
+        'nix::unistd::execv(path, &[])',
+        "std::io::stdin().lock()",
+        "crate::engine::request()",
+        "use crate::engine::cache_prune as prune;",
+        "crate::cli::edge::Environment::read()",
+        "use super::edge::Environment;",
+        "super::interrupt::activate(&mut environment)",
+        "use super::cache;",
+        "crate::cli::find::run(arguments, environment, input, writer)",
+        "use crate::*; engine::request();",
+        "use super::*;",
+        "use crate as root;",
+        "extern crate self as root;",
+        'include_str!("/etc/passwd")',
+        "ureq::get(url)",
+    )
+    for plant in plants:
+        if not catalog_policy_failures(plant):
+            fail("catalog", f"the planted catalog violation {plant!r} is refused")
+    controls = (
+        "use std::io::{ErrorKind, Write};",
+        "use clap::{Args, Subcommand};",
+        "use crate::failure::Failure;",
+        "use super::{CATALOG, lookup};",
+        'const NOTE: &str = "std::fs::read and crate::engine stay text";',
+        "// std::process::Command in a comment",
+        'include_bytes!("../../transforms/band.jq")',
+    )
+    for control in controls:
+        if catalog_policy_failures(control):
+            fail("catalog", f"the catalog control {control!r} stays allowed")
+
+
 def check_crate_roots() -> None:
     for relative, attributes in ACCEPTED_CRATE_ROOT_ATTRIBUTES.items():
         try:
@@ -895,6 +981,7 @@ def main() -> int:
     check_clippy_configs()
     check_crate_roots()
     check_core_policy()
+    check_catalog_policy()
     check_sources()
     check_seam()
     check_license_grammar()

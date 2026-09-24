@@ -189,6 +189,9 @@ pub(crate) enum Command {
 
     /// Inspect and maintain answer-cache folders without sending a request.
     Cache(CacheArguments),
+
+    /// List or print the built-in jq transforms without running them.
+    Transform(crate::cli::transform::TransformArguments),
 }
 
 #[derive(Args, Debug)]
@@ -220,7 +223,7 @@ pub(crate) struct PruneArguments {
 
 impl Command {
     pub(crate) const fn reads_input(&self) -> bool {
-        !matches!(self, Self::Cache(_) | Self::Status(_))
+        !matches!(self, Self::Cache(_) | Self::Status(_) | Self::Transform(_))
     }
 
     /// The input file one command named, if any.
@@ -236,8 +239,7 @@ impl Command {
             Self::Annotate(arguments) => arguments.common.input.as_deref(),
             Self::Recognize(arguments) => arguments.common.input.as_deref(),
             Self::Relate(arguments) => arguments.common.input.as_deref(),
-            Self::Cache(_) => None,
-            Self::Status(_) => None,
+            Self::Cache(_) | Self::Status(_) | Self::Transform(_) => None,
         }
     }
 
@@ -254,8 +256,7 @@ impl Command {
             Self::Annotate(arguments) => arguments.common.timeout,
             Self::Recognize(arguments) => arguments.common.timeout,
             Self::Relate(arguments) => arguments.common.timeout,
-            Self::Cache(_) => 1,
-            Self::Status(_) => 1,
+            Self::Cache(_) | Self::Status(_) | Self::Transform(_) => 1,
         }
     }
 }

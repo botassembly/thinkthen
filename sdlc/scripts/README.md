@@ -12,7 +12,8 @@ The repository gate and its hand-run support scripts.
 | `pages`, `pages-self-test` | Keep the how-to lists, titles, states, and links aligned |
 | `live` | The hand-run paid-call door. It initializes, reads, locks, validates, and appends the shared ledger, then replaces itself with one charged job |
 | `policy.py` | Holds accepted Rust policy tables for rung 1 |
-| `package` | Proves the one-package, no-default-feature, private behavioral-doctest harness, package-tree, and release panic contracts |
+| `catalog.py` | Holds the shipped transform copies, the catalog table, and the source package byte-identical to `transforms/` for rung 1 |
+| `package` | Proves the one-package, no-default-feature, private behavioral-doctest harness, package-tree, release panic, and unpacked transform-catalog contracts |
 | `ratchet.mjs` | Enforces the Rust source ceiling in `sdlc/ratchet.json` |
 
 Build without the credential, then run a charged job:

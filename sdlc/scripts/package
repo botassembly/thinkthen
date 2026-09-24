@@ -1,5 +1,6 @@
 #!/bin/sh
-# Prove the library-only graph, package tree, doctests, and panic strategies.
+# Prove the library-only graph, package tree, doctests, panic strategies, and
+# the transform catalog built from the unpacked source package.
 set -eu
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
@@ -41,9 +42,42 @@ prove_private target/private-proof-default
 prove_private target/private-proof-no-default --no-default-features
 cargo package --locked --offline --allow-dirty
 
+# Ticket 0083: the source package carries the ten transforms byte for byte, and
+# a binary built from the unpacked package alone prints them from an empty
+# folder after the unpacked source is gone.
+crate="target/package/thinkthen-$(sed -n 's/^version = "\([^"]*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -1).crate"
+python3 sdlc/scripts/catalog.py --crate "$crate"
+isolated=$(mktemp -d)
+trap 'rm -rf -- "$isolated"' EXIT
+mkdir "$isolated/source" "$isolated/empty" "$isolated/out"
+tar -xzf "$crate" -C "$isolated/source" --strip-components=1
+RUSTUP_TOOLCHAIN=$(sed -n 's/^channel = "\([^"]*\)"$/\1/p' rust-toolchain.toml) \
+CARGO_TARGET_DIR="$isolated/target" \
+    cargo build --quiet --locked --offline --manifest-path "$isolated/source/Cargo.toml" --bin thinkthen
+cp "$isolated/target/debug/thinkthen" "$isolated/thinkthen"
+rm -rf -- "$isolated/source" "$isolated/target"
+names='band calibration compare cost counts monitor score sweep triage trials'
+(
+	cd -- "$isolated/empty"
+	"$isolated/thinkthen" transform list >"$isolated/out/list" 2>"$isolated/out/stderr"
+	for name in $names; do
+		"$isolated/thinkthen" transform show "$name" >"$isolated/out/$name.jq" 2>>"$isolated/out/stderr"
+	done
+)
+printf '%s\n' $names | cmp -s - "$isolated/out/list" \
+	|| { printf '%s\n' 'package: the unpacked build lists another catalog' >&2; exit 1; }
+test ! -s "$isolated/out/stderr" \
+	|| { printf '%s\n' 'package: the unpacked build wrote to standard error' >&2; exit 1; }
+for name in $names; do
+	cmp -s "transforms/$name/$name.jq" "$isolated/out/$name.jq" \
+		|| { printf 'package: the unpacked build shows other bytes for %s\n' "$name" >&2; exit 1; }
+done
+test -z "$(ls -A "$isolated/empty")" \
+	|| { printf '%s\n' 'package: the unpacked build wrote into its folder' >&2; exit 1; }
+
 cargo rustc --locked --offline --release --package thinkthen --lib --no-default-features \
     -- --print cfg | grep -Fx 'panic="unwind"' >/dev/null
 RUSTFLAGS='-C panic=abort' cargo rustc --locked --offline --release --package thinkthen \
     --bin thinkthen -- --print cfg | grep -Fx 'panic="abort"' >/dev/null
 
-printf '%s\n' 'package: library graph, package tree, doctests, and panic strategies pass'
+printf '%s\n' 'package: library graph, package tree, doctests, panic strategies, and unpacked catalog pass'

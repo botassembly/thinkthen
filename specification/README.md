@@ -27,6 +27,7 @@ The names table in [`../README.md`](../README.md) fixes the four names: question
 | [find.md](find.md) | `find`, and the `none` option that says nothing fits | Settled |
 | [recognize.md](recognize.md) | `recognize` and its beta relation output | Settled |
 | [relate.md](relate.md) | `relate`, complete entity sets, relation plans, and edges | Settled |
+| [transform.md](transform.md) | `transform list` and `transform show`, the read-only catalog of built-in `jq` transforms | Settled |
 | [fixtures/](fixtures/) | Request and response files. Tests read them, and another implementer can test against them | Settled |
 
 [roadmap.md](roadmap.md) lists every held verb and option with the reason it is held. The roadmap is not a contract. It carries no status word.
