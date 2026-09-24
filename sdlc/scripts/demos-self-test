@@ -274,6 +274,11 @@ printf 'score -h\tA judgement.\n' >"$REPO/$ROOT/bin/planted"
 in_form 'spell an old word' 'The help is planted.' | fixture vocabulary-spelling
 expect vocabulary-spelling 1 'demos: thinkthen score -h:1: "judgement" breaks the fixed-phrase rule'
 
+# Ticket 0083: the catalog's help is scanned like a function's.
+printf 'transform show --help\tPrint one saved row.\n' >"$REPO/$ROOT/bin/planted"
+in_form 'plant a word in catalog help' 'The help is planted.' | fixture vocabulary-catalog
+expect vocabulary-catalog 1 'demos: thinkthen transform show --help:1: "row" breaks the help-word rule'
+
 # A help command that fails is a failure, never a clean scan.
 printf 'relate --help\tEXIT 2\n' >"$REPO/$ROOT/bin/planted"
 in_form 'lose a help page' 'The help is planted.' | fixture vocabulary-no-help

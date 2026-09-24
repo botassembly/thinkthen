@@ -245,6 +245,12 @@ for verb in decide filter rank choose find score tag annotate recognize relate; 
 		scan_help "$verb" "$verb" "$flag"
 	done
 done
+for command in transform 'transform list' 'transform show'; do
+	for flag in -h --help; do
+		# The unquoted command splits into its words.
+		scan_help transform $command "$flag"
+	done
+done
 if [ -s "$hits" ]; then
 	cat -- "$hits" >&2
 	printf 'demos: %s words break the approved vocabulary\n' "$(wc -l <"$hits" | tr -d ' ')" >&2

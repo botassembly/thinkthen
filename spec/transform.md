@@ -22,7 +22,7 @@ set -euo pipefail
 root=$(git rev-parse --show-toplevel)
 
 thinkthen transform show counts | cmp - "$root/transforms/counts/counts.jq"
-thinkthen transform show counts | wc -c | mustmatch like "1735"
+thinkthen transform show counts | wc -c | tr -d ' ' | mustmatch "1735"
 ```
 
 An unknown name prints nothing on standard output, exits 2, and never repeats the name.
@@ -33,6 +33,6 @@ thinkthen transform show Counts.jq >/dev/null 2>&1
 code=$?
 set -e
 test "$code" -eq 2
-thinkthen transform show Counts.jq 2>/dev/null | mustmatch like ""
+test -z "$(thinkthen transform show Counts.jq 2>/dev/null)"
 thinkthen transform show Counts.jq 2>&1 >/dev/null | mustmatch "thinkthen: transform: unknown name; run \`thinkthen transform list\` to see the catalog"
 ```
