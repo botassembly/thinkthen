@@ -112,7 +112,7 @@ impl Resolved {
         &self.sources
     }
 
-    /// The profile this saved threshold was calibrated under, when named.
+    /// The profile this saved threshold was tuned under, when named.
     pub(crate) const fn profile(&self) -> Option<&ProfileName> {
         self.profile.as_ref()
     }

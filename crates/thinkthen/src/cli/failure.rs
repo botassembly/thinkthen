@@ -58,6 +58,8 @@ pub(crate) enum Failure {
     UsageOverflow,
     /// A command-line shape was understood but cannot act.
     Usage(&'static str),
+    /// `--jobs` differs from the width this process already selected.
+    WidthActive(crate::engine::WidthActive),
     /// `--option` was given beside a list of options on the command line.
     OptionWithList,
     /// `--label` was given beside positional labels.
@@ -342,6 +344,7 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
             4,
             "the backend returned different model versions for one record; pin --model and rerun with --record or --cache".to_owned(),
         ),
+        Failure::WidthActive(active) => (2, active.to_string()),
         Failure::UsageOverflow => (
             4,
             "the backend reported token counts whose total is too large".to_owned(),
@@ -429,7 +432,7 @@ const fn refused(failure: &Failure) -> Option<&'static str> {
             "--quiet carries the answer in the exit code, and no record's answer sets it"
         }
         Failure::JobsOutsideRecords => {
-            "--jobs bounds the requests in flight, and one document sends one request"
+            "--jobs bounds the requests in flight, and a single text sends one request"
         }
         Failure::TopIsZero => {
             "`--top` prints the first N of the order, and N is a whole number of 1 or more"
@@ -449,7 +452,7 @@ const fn transport_message(kind: TransportKind) -> &'static str {
             "the backend refused the connection; check that it is running and that --url is correct"
         }
         TransportKind::PrematureClose => {
-            "the backend closed the connection before a reply; try again or change --max-retries"
+            "the backend closed the connection before a reply and may have received the request; it was not sent again"
         }
         TransportKind::Other => "the backend could not be reached; check --url and the network",
     }

@@ -83,10 +83,9 @@ pub(crate) use crate::core::result::{
     AnnotatedValue, DecisionResult, Meta, NamedValues, ProfileWarning, RecordValue, RequestMeta,
     Usage,
 };
-pub(crate) use crate::core::text::{Description, Evidence, ModelName, QuestionText};
+pub(crate) use crate::core::text::{Description, Evidence, ModelName, QuestionText, Withheld};
 pub(crate) use crate::core::threshold::{Outcome, Threshold};
 
-#[cfg(test)]
 pub(crate) use crate::core::find::FindAnswer;
 #[cfg(test)]
 pub(crate) use crate::core::text::Url;

@@ -457,7 +457,7 @@ fn a_body_the_backend_cut_short_is_exit_four() {
     assert!(output.stdout.is_empty());
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the backend closed the connection before a reply; try again or change --max-retries\n"
+        "thinkthen: the backend closed the connection before a reply and may have received the request; it was not sent again\n"
     );
 }
 
@@ -481,7 +481,7 @@ fn a_backend_that_closes_before_headers_fails_promptly() {
     assert!(output.stdout.is_empty());
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the backend closed the connection before a reply; try again or change --max-retries\n"
+        "thinkthen: the backend closed the connection before a reply and may have received the request; it was not sent again\n"
     );
     assert!(!String::from_utf8_lossy(&output.stderr).contains("private evidence"));
 }
@@ -511,25 +511,15 @@ fn an_open_peer_that_sends_no_reply_reaches_the_timeout_diagnostic() {
 }
 
 #[test]
-fn a_close_before_headers_follows_the_transport_retry_rule() {
+fn a_close_before_headers_is_not_sent_again() {
     let listener = Listener::serving(vec![Canned::close_without_reply(), Canned::ok(ANSWERED)])
         .expect("a loopback listener");
 
-    let output = decide(
-        listener.base(),
-        &["--max-retries", "1", "--details"],
-        KEY,
-        "Refund me.",
-    )
-    .expect("the compiled binary runs");
+    let output = decide(listener.base(), &["--max-retries", "1"], KEY, "Refund me.")
+        .expect("the compiled binary runs");
 
-    assert_eq!(listener.requests().len(), 2);
-    assert_eq!(output.status.code(), Some(0));
-    let printed = String::from_utf8_lossy(&output.stdout);
-    assert!(
-        printed.contains(r#""requests_sent":2,"cached":false"#),
-        "{printed}"
-    );
+    assert_eq!(listener.requests().len(), 1);
+    assert_eq!(output.status.code(), Some(4));
 }
 
 #[test]

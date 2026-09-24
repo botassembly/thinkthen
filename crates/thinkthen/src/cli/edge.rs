@@ -9,7 +9,9 @@ use std::time::Duration;
 use crate::core::KEY_VAR;
 
 use crate::cli::config::{self, Config};
-use crate::engine::http::Key;
+use crate::engine::error::Error as EngineError;
+use crate::engine::facade::Key;
+use crate::engine::usage::Counters;
 use crate::failure::Failure;
 
 /// The wait before the first retry, which only a test shortens.
@@ -38,8 +40,8 @@ pub(crate) struct Environment {
     config_path: Option<PathBuf>,
     retry_wait_ms: Option<u64>,
     pub(super) sigint_ack: Option<PathBuf>,
-    pub(super) cancel: crate::engine::Cancel,
-    usage: crate::engine::usage::Counters,
+    pub(super) cancel: crate::engine::Cancel<'static>,
+    usage: std::sync::Arc<Counters>,
     usage_path: Option<PathBuf>,
 }
 
@@ -63,7 +65,7 @@ impl Environment {
             retry_wait_ms: read("THINKTHEN_TEST_RETRY_WAIT_MS").and_then(|text| text.parse().ok()),
             sigint_ack: read("THINKTHEN_TEST_SIGINT_ACK").map(PathBuf::from),
             cancel: crate::engine::Cancel::default(),
-            usage: crate::engine::usage::Counters::new(usage_path.clone()),
+            usage: std::sync::Arc::new(Counters::new(usage_path.clone())),
             usage_path,
         })
     }
@@ -104,8 +106,12 @@ impl Environment {
     pub(crate) fn usage_path(&self) -> Option<&Path> {
         self.usage_path.as_deref()
     }
-    pub(crate) const fn usage(&self) -> &crate::engine::usage::Counters {
+    pub(crate) fn usage(&self) -> &Counters {
         &self.usage
+    }
+    /// The process counters, shared with the engine a command builds.
+    pub(crate) fn counters(&self) -> std::sync::Arc<Counters> {
+        std::sync::Arc::clone(&self.usage)
     }
     pub(crate) fn api_key_set(&self) -> bool {
         read(KEY_VAR).is_some()
@@ -121,7 +127,7 @@ impl Environment {
         self.retry_wait_ms.map_or(RETRY_WAIT, Duration::from_millis)
     }
 
-    pub(crate) const fn cancel(&self) -> &crate::engine::Cancel {
+    pub(crate) const fn cancel(&self) -> &crate::engine::Cancel<'static> {
         &self.cancel
     }
 }
@@ -250,12 +256,12 @@ pub(crate) fn waiting(input: Option<&Path>, writer: impl Write) {
 ///
 /// # Errors
 ///
-/// Returns [`Failure::NoKey`] when the variable is unset or blank. The message
+/// Returns [`EngineError::NoKey`] when the variable is unset or blank. The message
 /// names the variable and never a value.
-pub(crate) fn key() -> Result<Key, Failure> {
+pub(crate) fn key() -> Result<Key, EngineError> {
     let value = read(KEY_VAR).unwrap_or_default();
     if value.trim().is_empty() {
-        return Err(Failure::NoKey(KEY_VAR.to_owned()));
+        return Err(EngineError::NoKey(KEY_VAR));
     }
     Ok(Key::new(value))
 }
@@ -276,6 +282,9 @@ pub(crate) fn write_line(mut writer: impl Write, line: &str) -> Result<bool, Fai
         Ok(()) => Ok(true),
     }
 }
+
+#[cfg(test)]
+mod deadline_tests;
 
 #[cfg(test)]
 mod tests {

@@ -330,12 +330,12 @@ fn a_profile_mismatch_warns_once_and_reaches_detailed_metadata() {
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        "thinkthen: warning: threshold calibrated for profile old is running under profile new\n"
+        "thinkthen: warning: threshold tuned for profile old is running under profile new\n"
     );
     let row: serde_json::Value = serde_json::from_slice(&output.stdout).expect("result JSON");
     assert_eq!(
         row["meta"]["profile_warning"],
-        serde_json::json!({"calibrated":"old","running":"new"})
+        serde_json::json!({"tuned_for":"old","running":"new"})
     );
 }
 
@@ -438,7 +438,7 @@ fn replay_warns_once_without_a_key_and_keeps_request_identity() {
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(
         String::from_utf8_lossy(&output.stderr)
-            .matches("warning: threshold calibrated")
+            .matches("warning: threshold tuned for")
             .count(),
         1
     );
@@ -479,4 +479,29 @@ fn over_limit_precedes_replay_and_cache_answers() {
         );
         assert!(output.stdout.is_empty(), "{option}");
     }
+}
+
+const TUNED_SHAPE: &str = r#"{"tuned_for":NAME,"running":NAME}"#;
+
+/// Whether a page names no old key and shows the result shape `shapes` times.
+fn names_only_tuned_for(text: &str, shapes: usize) -> bool {
+    !text.contains(r#""calibrated""#)
+        && !text.contains("calibrated:")
+        && text.matches(TUNED_SHAPE).count() == shapes
+}
+
+#[test]
+fn contract_pages_name_the_tuned_for_key_and_never_the_old_one() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    for (page, shapes) in [
+        ("specification/result.md", 1),
+        ("site/src/pages/reference.astro", 1),
+        ("conformance/backend-profiles.json", 0),
+    ] {
+        let text = fs::read_to_string(root.join(page)).expect("contract page");
+        assert!(names_only_tuned_for(&text, shapes), "{page}");
+    }
+    let planted = format!("{TUNED_SHAPE}\n{}", r#"{"calibrated":NAME,"running":NAME}"#);
+    assert!(!names_only_tuned_for(&planted, 1));
+    assert!(names_only_tuned_for(TUNED_SHAPE, 1));
 }

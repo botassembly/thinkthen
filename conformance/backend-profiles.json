@@ -11,9 +11,9 @@
     {"id":"annotate-later-group-over","source_case":"18-annotate-two-groups","exchange":1,"profile":{"schema":"thinkthen.backend-profile/1","name":"edge","max_evidence_bytes":16},"expect":{"kind":"evidence bytes","limit":16,"actual":17}}
   ],
   "mismatches": [
-    {"id":"equal","calibrated":"jev","running":"jev","warning":false},
-    {"id":"different","calibrated":"jev","running":"local","warning":true},
-    {"id":"no-calibration","calibrated":null,"running":"jev","warning":false},
-    {"id":"no-run-profile","calibrated":"jev","running":null,"warning":false}
+    {"id":"equal","tuned_for":"jev","running":"jev","warning":false},
+    {"id":"different","tuned_for":"jev","running":"local","warning":true},
+    {"id":"no-calibration","tuned_for":null,"running":"jev","warning":false},
+    {"id":"no-run-profile","tuned_for":"jev","running":null,"warning":false}
   ]
 }

@@ -13,7 +13,7 @@ The names table in [`../README.md`](../README.md) fixes the four names: question
 | [channels.md](channels.md) | Arguments, the five channels, exit codes, `--quiet`, `--raw`, `--dry-run`, option placement | Settled |
 | [threshold.md](threshold.md) | The one threshold rule, its two forms, and which verbs take which | Settled |
 | [question-file.md](question-file.md) | The two homes of every setting, the question file grammar, precedence, and the question digest | Settled |
-| [result.md](result.md) | The bare value, the `--details` object, and the four answer kinds | Settled, with one open point |
+| [result.md](result.md) | The bare value, the `--details` object, and the five answer kinds | Settled, with one open point |
 | [records.md](records.md) | Reading a stream of records: framing, pointers, order, failure, resume, `--cache`, `--jobs` | Settled |
 | [backends.md](backends.md) | One wire shape, the key, the address, the request, retries, the `systemone` adapter | Settled, with Draft sections |
 | [recording.md](recording.md) | `--record` and `--replay`: a folder of exchanges that runs again with no network | Settled |
@@ -27,6 +27,7 @@ The names table in [`../README.md`](../README.md) fixes the four names: question
 | [find.md](find.md) | `find`, and the `none` option that says nothing fits | Settled |
 | [recognize.md](recognize.md) | `recognize` and its beta relation output | Settled |
 | [relate.md](relate.md) | `relate`, complete entity sets, relation plans, and edges | Settled |
+| [transform.md](transform.md) | `transform list` and `transform show`, the read-only catalog of built-in `jq` transforms | Settled |
 | [fixtures/](fixtures/) | Request and response files. Tests read them, and another implementer can test against them | Settled |
 
 [roadmap.md](roadmap.md) lists every held verb and option with the reason it is held. The roadmap is not a contract. It carries no status word.

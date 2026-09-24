@@ -1,6 +1,6 @@
 # Accuracy on three public sets, and a speed rerun inside the documented limit
 
-Status: Open. The numbers are in. One defect and one question about the default width are for the builders.
+Status: Closed. Ticket 0044 fixed the `cost.jq` defect in `ce96895b`. The transform now reads the id only when `input` is an object. The open default-width question and the missing `--jobs` page numbers moved to `2026-09-24-the-default-jobs-width-runs-past-the-documented-limit.md`.
 
 Ian gave a standing go-ahead on 2026-09-20 for paid marketing measurements up to one US dollar. `2026-09-20-launch-gaps-found-in-marketing-prep.md` records it. This is the first round under it. A builder ran it as experiment 206 in the workspace, at `experiments/206-thinkthen-accuracy/`. `PREREGISTRATION.md` there fixed the samples, the question wording, the options, and a hash of each labels file before the first paid call. No wording was tuned against a test sample, and every arm that ran is reported. `RESULTS.md` there is the long form. That folder can rot. This page is the record.
 

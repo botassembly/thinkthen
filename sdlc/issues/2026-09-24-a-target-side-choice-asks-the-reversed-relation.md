@@ -1,6 +1,6 @@
 # A target-side choice asks the reversed relation
 
-Status: Closed by ticket 0088 in commit `c84051f1`. The fix lands on main when 0088 merges.
+Status: Closed by ticket 0088 in commit `c84051f1`, which is on main. `core/relation.rs` line 237 asks `___ {reads} {asking}` when the planner asks from the target side.
 
 When the target kind of a one-way cross-kind relation has more entities than the source kind, the shared planner asks from the target side. The question text still puts the asker before the relation words. The backend is asked the reverse of the declared relation, and the edge it produces is recorded in the declared direction.
 

@@ -15,12 +15,68 @@ fi
 
 cd -- "$REPO/$ROOT"
 
+# `mustmatch like ""` matches every output, so a line that claims a stream is
+# empty proves nothing. Issue 2026-09-24 and ticket 0103 rule `test -z` instead.
+# Every page is scanned, red or green, in spec/ and under the demo root.
+# Options may stand on either side of `like`, and none of them narrows it.
+opt='([ ]+(-i|--ignore-case|-q|--quiet|--|not))*'
+loose_re="mustmatch$opt[ ]+like$opt[ ]+(\"\"|'')"
+loose=$({
+	(cd -- "$REPO" && grep -nE "$loose_re" spec/*.md) || :
+	grep -rnE --include='*.md' "$loose_re" . | sed 's#^\./##' || :
+})
+if [ -n "$loose" ]; then
+	printf '%s\n' "$loose" | sed 's/^\([^:]*:[0-9]*\):.*/demos: \1: `like ""` matches any output; use `test -z`/' >&2
+	exit 1
+fi
+
 # The status line and the form are read from the prose alone. A block on a page
 # may show a heading or a status line as an example, and an example is not the
 # form it shows.
 prose() {
 	awk '/^```/ { fenced = !fenced; next } !fenced' "$1"
 }
+
+# The approved public words, from the vocabulary the 2026-09-21 issue records
+# and ticket 0082 rules. A fixed phrase is wrong on every page and in every
+# help text. A context word is wrong only in the built help, where the command
+# speaks for itself; a how-to may still say rows for saved detailed rows. Fenced
+# code and paths are not prose and are skipped. Each hit prints one line.
+vocabulary() {
+	awk -v file="$1" -v scope="$2" '
+		function check(word, rule) {
+			if (match(line, "(^|[^a-z])" word "s?([^a-z]|$)"))
+				printf "demos: %s:%d: \"%s\" breaks the %s rule\n", file, FNR, word, rule
+		}
+		/^```/ { fenced = !fenced; next }
+		fenced { next }
+		{
+			line = tolower($0)
+			gsub(/[^ \t]*\/[^ \t]*/, " ", line)
+			check("decider model", "fixed-phrase")
+			check("decision model", "fixed-phrase")
+			check("rating", "fixed-phrase")
+			check("the mark", "fixed-phrase")
+			check("judgment", "fixed-phrase")
+			check("judgement", "fixed-phrase")
+			if (scope == "prose") next
+			# A CSV table has a header row; that row is the table'"'"'s, not a record.
+			gsub(/header row/, " ", line)
+			check("row", "help-word")
+			check("document", "help-word")
+			check("unit", "help-word")
+			# The formal name belongs to the specification; help says not sure.
+			check("unresolved", "help-word")
+			# `tag` owns label, and a `choose` pick is an option. LABEL=DESCRIPTION
+			# is the placeholder `choose.md` and the `--option` refusal share.
+			gsub(/label=description/, " ", line)
+			if (scope == "choose") check("label", "help-word")
+		}
+	'
+}
+
+hits=$(mktemp)
+trap 'rm -f -- "$hits"' EXIT
 
 green=0
 red=0
@@ -181,7 +237,38 @@ for page in */README.md; do
 	# mustmatch runs a block from the folder of the page it came from, so the
 	# relative paths a demo reads its own input files by are the demo's own.
 	printf 'demos: running %s\n' "$page"
+	vocabulary "$page" prose <"$page" >>"$hits"
 	mustmatch test "$page"
 	green=$((green + 1))
 done
+vocabulary "$REPO/README.md" prose <"$REPO/README.md" >>"$hits"
+vocabulary README.md prose <README.md >>"$hits"
+# The help is captured before it is scanned. A pipe would report only the
+# scan, and a help command that failed would pass as clean.
+scan_help() {
+	scope=$1
+	shift
+	if ! help=$(thinkthen "$@"); then
+		printf 'demos: thinkthen %s failed, so its help was not checked\n' "$*" >&2
+		exit 1
+	fi
+	printf '%s\n' "$help" | vocabulary "thinkthen $*" "$scope" >>"$hits"
+}
+scan_help help --help
+for verb in decide filter rank choose find score tag annotate recognize relate; do
+	for flag in -h --help; do
+		scan_help "$verb" "$verb" "$flag"
+	done
+done
+for command in transform 'transform list' 'transform show'; do
+	for flag in -h --help; do
+		# The unquoted command splits into its words.
+		scan_help transform $command "$flag"
+	done
+done
+if [ -s "$hits" ]; then
+	cat -- "$hits" >&2
+	printf 'demos: %s words break the approved vocabulary\n' "$(wc -l <"$hits" | tr -d ' ')" >&2
+	exit 1
+fi
 printf 'demos: %s green, %s red\n' "$green" "$red"

@@ -10,7 +10,7 @@ use thiserror::Error;
 use crate::core::adapters::built_in;
 use crate::core::digest::hex;
 use crate::core::recording_identity::BackendIdentity;
-use crate::core::text::Url;
+use crate::core::text::{Url, Withheld};
 
 /// The schema string a version one recording entry carries.
 const SCHEMA: &str = "thinkthen.recording/1";
@@ -78,10 +78,7 @@ impl fmt::Debug for Exchange<'_> {
         formatter
             .debug_struct("Exchange")
             .field("url", &self.url)
-            .field(
-                "request",
-                &format_args!("<{} bytes withheld>", self.request.len()),
-            )
+            .field("request", &Withheld(self.request.len()))
             .finish()
     }
 }

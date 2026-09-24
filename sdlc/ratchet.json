@@ -1,5 +1,8 @@
 {
-  "directory": "crates",
+  "directory": [
+    "crates",
+    "conformance"
+  ],
   "extension": ".rs",
-  "max": 43563
+  "max": 50276
 }

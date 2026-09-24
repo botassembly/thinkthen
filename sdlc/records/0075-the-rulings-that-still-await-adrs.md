@@ -6,6 +6,8 @@ relate) already consumed their rulings. This is what remains, where each
 lives today, and what its ADR must decide. None of these is blocked on the
 other; each is small.
 
+Update, 2026-09-23 (surfaces-review-7 R2-29): ADR 0041 took item 1 and ADR 0043 took item 2. Ticket 0099 ported both to main. ADR 0042 records the R interrupt window from record 0074. Items 3 and 4 went to branch ADRs 0044 and 0045, which stay at tag `surfaces-wave7-final`.
+
 1. **One deadline spelling everywhere.** `-1` is the only no-deadline
    spelling on every surface; every other negative refuses; zero is spent;
    computed budgets clamp to zero. Lives in
