@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core crates/thinkthen/src/cli crates/thinkthen/tests
 
 # 0088: Build the public `relate` command
 
-Status: implemented in the ticket worktree from `cdfd0e5e`. The first code review rejected it, the builder fixed findings 1 through 9, and a fresh independent review and landing remain open. The review fixes changed shared 0081 owners and exceeded the file-count budget, so this ticket needs the re-score its stop rule names.
+Status: landed. The first code review and the Codex re-review each rejected it, and the builder fixed every finding. The queue owner re-scored the budget after the Codex round. A fresh independent review accepted `5010dd21`. `sdlc/records/0088-build-relate-cli.md` names the landed commit.
 
 ## Outcome
 

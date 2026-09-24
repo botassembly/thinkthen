@@ -1,6 +1,6 @@
 # 0088: Build the public `relate` command
 
-Status: The first review (`0088-review-claude.md`) rejected the handed-off diff, and the builder fixed findings 1 through 9. The Codex re-review (`0088-review-codex.md`) rejected `6f0e094c`. The queue owner decided each Codex finding, and the builder fixed all four on the ticket branch. A fresh independent review and landing remain open.
+Status: The first review (`0088-review-claude.md`) rejected the handed-off diff, and the builder fixed findings 1 through 9. The Codex re-review (`0088-review-codex.md`) rejected `6f0e094c`. The queue owner decided each Codex finding, and the builder fixed all four on the ticket branch. A fresh Opus review (`0088-review-final.md`) accepted `5010dd21`. Its follow-ups F1, F2, and F4 are issues on main.
 
 ## Result
 
@@ -48,7 +48,7 @@ Measured with `git diff --unified=0 cdfd0e5e...HEAD -- 'crates/**/*.rs'`, gross 
 
 The shared owners outside the ticket's first list are `core/relation.rs`, `engine/prepared_request.rs`, `cli/recognize/relation.rs`, `cli/asking/request.rs`, `core/result.rs`, `core/recognize_file.rs`, `cli/failure/convert.rs`, and `Common::framing` in `cli/args.rs`. `Common::framing` replaced four copies. These change 0081's shared owners without changing recognition output.
 
-Duplication remains in one place. Relate's `add_meta` and recognition's `Aggregate::add_answered` fold replies the same way.
+Duplication remains in one place. Relate's `add_meta` repeats recognition's `Aggregate::add_answered`. On a model mismatch, relate reports `ModelsDiffer(None)` and drops the two model names that recognition prints.
 
 ## What is not proven
 
