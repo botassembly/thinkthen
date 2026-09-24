@@ -213,3 +213,12 @@ Contract 2; state and timing 2; reach 2; proof 3; cost of error 2; total 11. Fin
 
 - Design review: `sdlc/records/2026-09-24-design-review-0120.md`. Five rounds of fresh read-only reviewers found 22 items, and every one is answered. The sixth round accepted it. The amendment after spike 257 took three more rounds, recorded in the same file, and was accepted at `3318a7ba`.
 - Code review: pending.
+
+## Spike finding, 2026-09-24 (spike 255)
+
+Spike 255 answered its risk 5 in `~/workspace/experiments/255-thinkthen-python-polars-spike/`. The full note is in ticket 0106 on its branch. What matters here:
+
+1. **0106 stays off the `polars` crate.** Python Polars reads the same zero-copy buffer through the public `__arrow_c_stream__` capsule as through pyo3-polars. The spike keeps 0106's Arrow stream door. "The two doors share no Polars crate" holds.
+2. **Decision 7 holds.** pyo3-polars 0.28.0 with polars 0.55.2 stops on Rust 1.93.1, because `sysinfo` 0.39 needs 1.95. It builds on 1.95. This matches spike 257. pyo3 0.29.2 builds and runs on 1.95 too, so the repo-wide move costs the Python surface nothing.
+3. **A working set, if the doors ever share a crate.** pyo3 `=0.29.2` with `abi3-py310`, pyo3-polars `=0.28.0`, polars `=0.55.2`, and Rust 1.95 read Python Polars 1.30.0, 1.40.0, and 1.44.2 zero copy. With `thinkthen` and pyo3-polars' `derive` feature, the lock held 262 packages, and a cold build took 238 s at `-j 4` with sccache off.
+4. **The exclusion of a plugin holds on measured grounds.** A plugin expression runs, but Ctrl-C during `collect()` surfaced only when the plugin call returned, 2.5 s after the signal.
