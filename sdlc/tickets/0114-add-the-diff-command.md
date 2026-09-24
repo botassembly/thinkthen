@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core crates/thinkthen/src/cli crates/thinkthen/tests
 
 # 0114: Add the diff command
 
-Status: design draft; review pending. Owner: Claude.
+Status: design accepted 2026-09-24 after re-review. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it. The first design review is `sdlc/records/0113-0114-design-review.md`. This page is rewritten whole after it.
 
@@ -121,7 +121,7 @@ If the prototype's owner rules for every discordant pair, the switch runs in thi
 1. Upstream rewrites its goldens. The pinned commit and every SHA-256 in the fixture README move to the new commit.
 2. Recapture `golden/extra/diff-annotate.jsonl` and `golden/table/diff-choose.txt`. In `diff-annotate`, a3 moves from right to not sure and becomes discordant. In `diff-choose`, p becomes 0.5.
 3. `discordant` also counts tied or not sure to right, and right to tied or not sure. Nothing else in the code changes. `gained` and `lost` stay effects.
-4. `specification/diff.md` and the choose hand test change in the same commit.
+4. `specification/diff.md`, the choose hand test, and the `discordant` test change in the same commit. The `discordant` test then expects `resolved` and `withdrawn` pairs to count.
 
 ## Output and failures
 
