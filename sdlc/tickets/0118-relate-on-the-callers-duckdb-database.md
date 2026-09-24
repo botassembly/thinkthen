@@ -128,3 +128,5 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Changes: Relate reads entity rows, honours 0110's settings, runs on a worker, and uses a signal pipe. Its hooks sit behind `test-hooks`.
 - Proof: The two relate conformance cases, `cancelled` within 100 ms, width 8 reaching relate, and a cache hit on the second run, and the relate panic reading `defect`.
 - Defers: Temp-table and open-transaction visibility, relate between new and old rows, links to a known entity table, and settings for warm. Experiment 218's volatile-function row-cap probe carries forward as a regression case.
+
+Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. The DuckDB setting `thinkthen_width` becomes `thinkthen_throttle`, and every public `width` here reads as `throttle`.
