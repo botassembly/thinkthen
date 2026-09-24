@@ -185,3 +185,12 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Defers: Packaging, macOS, filter, rank, and find beyond `WHERE`, and relate over query text. Experiment 218's stale-question-file probe carries forward as a check on the engine cache.
 
 Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. The pragma `thinkthen_width(n)` becomes `thinkthen_throttle(n)`, and every public `width` here reads as `throttle`.
+
+## Spike finding, 2026-09-24
+
+Experiment 253 on Beelink (`~/workspace/experiments/253-thinkthen-duckdb-sqlite-spike/`, local only) built a spike extension over main at `a2e5f1fa`. Raw logs sit in its `logs/` folder. No finding contradicts an accepted decision.
+
+- **Build: passed.** A `cdylib` over main's `thinkthen` (default features off) and `rusqlite` 0.40.2 with `loadable_extension` built offline with `--locked`. It exports exactly `sqlite3_thinkthen_init`, with the engine linked (6.4 MB) and without it. It loads in the 3.50.0 CLI and in Python through `LD_LIBRARY_PATH`. The stock 3.45.1 library refuses it with the floor sentence. The root deny rejects only `foldhash` 0.2.0 (Zlib), and the one exception passes. The lock holds `hashbrown` 0.16.1 and 0.17.1.
+- **Naming.** Ian's 2026-09-24 ruling names the width setting the throttle. `thinkthen_width(n)` becomes `thinkthen_throttle(n)`. The spike's `thinkthen_throttle` returned its argument. It refused 0 and 33 with main's sentence `a width is a whole number from 1 through 32`, and refused every setting call after the engine build. `SQLITE_DIRECTONLY` refused a settings call in a CHECK constraint and in a view.
+- **Cache seeding: passed on main's engine through the command.** With `THINKTHEN_CACHE=A`, `--jobs 8`, and `XDG_CACHE_HOME` on a scratch folder, the first run sent 3 to the loopback backend and filled A, and the second sent 0. The plant without `THINKTHEN_CACHE` sent 3 and wrote into `XDG_CACHE_HOME/thinkthen`. The usage counter file lands under `XDG_CACHE_HOME/thinkthen-usage/` even with `THINKTHEN_CACHE` set, so decision 14's fresh `XDG_CACHE_HOME` per child is required. The binding seam (`EngineBuilder::from_env` plus a setter) and the note on whether an empty `Engine::builder()` caches wait for 0086.
+- **Toolchains.** The pinned amalgamation and the host library and CLI built from it now sit under `~/.cache/thinkthen-toolchains/`. Both pinned hashes matched.
