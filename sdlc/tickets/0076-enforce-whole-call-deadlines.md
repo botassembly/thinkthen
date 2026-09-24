@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine crates/thinkthen/src/engine/request.rs crates
 
 # 0076: Enforce whole-call deadlines
 
-Status: built 2026-09-24; code review pending. Build record `sdlc/records/0076-build-whole-call-deadlines.md`. Owner: Claude.
+Status: built 2026-09-24; the code review's one finding is fixed (`sdlc/records/0076-code-review.md`). Build record `sdlc/records/0076-build-whole-call-deadlines.md`. Owner: Claude.
 
 ## Outcome and authority
 
@@ -73,7 +73,7 @@ Re-score if the post-0083 inventory reveals another transport door, the work cha
 ## Review
 
 - Design review: accepted by independent Sol High after routing and dependency attribution were corrected. The 2026-09-24 spine review (`sdlc/records/2026-09-24-spine-review-controls.md`) accepted it again with three small fixes, applied: Claude routing, 0089 as a prerequisite, and the shared runner file in `opens`.
-- Code review: pending, by a fresh Claude session. The build record lists the proofs and departures.
+- Code review: a fresh Claude session found one blocking gap: a slow usage update let a send go out after the deadline. It is fixed and proved red-green, and the build record lists the proof. When the budget runs out during accounting, `requests_sent` may count one attempt that never went out. The first command deadline door must replace the `convert.rs` defect mapping.
 
 ## What Ian can overturn
 

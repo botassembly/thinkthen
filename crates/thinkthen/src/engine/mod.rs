@@ -73,6 +73,11 @@ impl Cancel {
         if self.fired() {
             return Err(error::Error::Cancelled);
         }
+        self.remaining()
+    }
+
+    /// Observe the deadline alone, or the budget left.
+    pub(crate) fn remaining(&self) -> Result<Option<Duration>, error::Error> {
         let Some(deadline) = self.deadline else {
             return Ok(None);
         };

@@ -1,6 +1,6 @@
 # 0076: Build whole-call deadlines
 
-Status: built on `ticket/0076-whole-call-deadlines`, rebased onto main at `18c0dc10`. Code review pending: a fresh Claude session reviews. Owner: Claude.
+Status: built on `ticket/0076-whole-call-deadlines`, rebased onto main at `daac6bbc` (0092 and 0104 landed). A fresh Claude code review (`sdlc/records/0076-code-review.md`) returned one blocking finding. It is fixed below. The coordinator accepted both departures as they stand. Owner: Claude.
 
 ## Result
 
@@ -52,13 +52,24 @@ No path opens another transport door. The re-score condition did not trigger.
 | Nonblank production lines added | 500 | under 200 gross; `git diff -U0` counts 199 added nonblank lines in those files, test-only lines in `mod.rs` and `recorder.rs` included |
 | Nonblank focused test lines added | 1,000 | 847: `engine/deadline_tests.rs` 360, `engine/deadline_tests/schedule.rs` 301, `cli/edge/deadline_tests.rs` 164, and the `recorder.rs` test |
 
-The ratchet rose from 44,778 to 45,721 (+943). Most of the growth is tests (about 850 lines). The production growth is the deadline type, the stop observation, and the integer budget text. Before adding code I looked for duplication to delete. `Cancel::wait` and the three lock loops already shared one poll; each now returns the stop it saw, so no second wait or timer was added. The two scheduler stop mappings became one `Fn(Error) -> E`, which replaced two cancel-only closures. One duplicate remains: the engine test fixture `request()` repeats the private one in `request.rs`'s test module. That module is private, and reaching it would mean widening a test module's visibility.
+On main at `daac6bbc` the ratchet measures `crates` and `conformance`. The build commit raised it from 45,994 to 46,937 (+943), and the review fix raised it to 46,972 (+35: one test, a second budget read, and `Cancel::remaining`, split out of `stop_or_remaining`). Most of the growth is tests (about 850 lines). The production growth is the deadline type, the stop observation, and the integer budget text. Before adding code I looked for duplication to delete. `Cancel::wait` and the three lock loops already shared one poll; each now returns the stop it saw, so no second wait or timer was added. The two scheduler stop mappings became one `Fn(Error) -> E`, which replaced two cancel-only closures. One duplicate remains: the engine test fixture `request()` repeats the private one in `request.rs`'s test module. That module is private, and reaching it would mean widening a test module's visibility.
 
 ## Departures
 
 - The command-path proofs pin the command's existing defect sentence for an engine deadline. The ticket forbids a command diagnostic, and the command has no deadline kind to print.
 - Key lookups are counted at the engine's one key call in `ask_prepared`, through a test-only counter on the call's token. A process-wide counter in `edge::key` would have raced other in-crate tests that look up a key.
 - `tests/backend` is untouched, because every command-path proof is an in-crate unit test, as the ticket requires.
+
+## Review fix
+
+The review found that `post_observed` read the remaining budget before `before_attempt`. That call is the usage update, and it can wait on the usage lock and fsync without observing the deadline. The send then used the stale limit. The reviewer's probe gave a 200 ms budget and a 500 ms usage step, and the request went out at 500 ms.
+
+- Red: `accounting_that_outlasts_the_budget_sends_nothing` gives a 200 ms budget, an accounting step that takes 500 ms, and a nonblocking loopback listener. Before the fix it failed on the listener assertion, because a connection was accepted. The run took 0.70 s.
+- Green: `post_observed` still checks for a stop before the observer, so a spent deadline observes no attempt. After the observer it reads the deadline again through `Cancel::remaining` and sets the send limit from that reading. This second reading covers the deadline only. A first version also checked cancellation there. The ladder then hung in 0073's `cancellation_during_a_retry_wait_starts_no_second_attempt`, because that test fires cancellation inside the observer and expects the attempt to go out. Cancellation therefore keeps its single pre-attempt checkpoint, so cancelled calls behave as before. The test now returns `Deadline` in under a second with zero connections. All 19 deadline tests pass.
+- Consequence: when the budget runs out inside the accounting step, `requests_sent` counts one attempt that never went out. Counting one extra request costs less than sending one after the deadline. Making the usage lock observe the deadline is larger than this ticket allows. Ticket 0077's width gate is the place to revisit it.
+- Same pattern elsewhere: none found. `Cancel::wait` reads the budget on each pass and sleeps at most that long. Both schedulers poll with `Cancel::stop`. The recorder gate and the folder and digest locks check before and after each wait. `ask_prepared` checks before the key lookup. The key lookup reads the environment and does not wait. The send checks again after the lookup.
+- The review's edge note is also taken. A timeout counts as the deadline when the budget set the limit, and that now includes a budget exactly equal to `--timeout`.
+- A note for 0084 through 0086: the first command deadline door must replace the `convert.rs` defect mapping and the pinned `DEADLINE` sentence in `cli/edge/deadline_tests.rs`.
 
 ## Gates
 

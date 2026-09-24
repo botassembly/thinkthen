@@ -114,8 +114,9 @@ impl Client {
         loop {
             cancel.stop_or_remaining()?;
             before_attempt();
-            // Accounting may wait on the usage lock, so read the budget after it.
-            let budget = cancel.stop_or_remaining()?;
+            // Accounting may wait on the usage lock, so read the budget after
+            // it. Cancellation keeps its one pre-attempt checkpoint.
+            let budget = cancel.remaining()?;
             let limit = budget.map_or(self.timeout, |budget| budget.min(self.timeout));
             let attempt = match send(&self.agent, exchange, limit) {
                 Ok(body) => {
