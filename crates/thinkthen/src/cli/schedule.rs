@@ -6,7 +6,7 @@ use std::process::ExitCode;
 use std::sync::mpsc::Receiver;
 use std::thread;
 
-use crate::core::{Outcome, ranking};
+use crate::core::{Outcome, Withheld, ranking};
 use crate::edge;
 use crate::engine::schedule::{
     self as engine_schedule, Completed, Input, InputPort, Outcome as RunOutcome,
@@ -33,10 +33,7 @@ impl fmt::Debug for Judged {
             .debug_struct("Judged")
             .field(
                 "printed",
-                &format_args!(
-                    "<{} bytes withheld>",
-                    self.printed.as_ref().map_or(0, String::len)
-                ),
+                &Withheld(self.printed.as_ref().map_or(0, String::len)),
             )
             .field("outcome", &self.outcome)
             .field("replayed", &self.replayed)

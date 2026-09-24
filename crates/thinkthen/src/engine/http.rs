@@ -9,6 +9,7 @@ use std::time::Duration;
 
 use ureq::Agent;
 
+use crate::core::Withheld;
 use crate::engine::Widths;
 use crate::engine::error::{Error, TransportKind};
 
@@ -186,10 +187,7 @@ impl fmt::Debug for Exchange<'_> {
         formatter
             .debug_struct("Exchange")
             .field("url", &self.url)
-            .field(
-                "body",
-                &format_args!("<{} bytes withheld>", self.body.len()),
-            )
+            .field("body", &Withheld(self.body.len()))
             .field("key", &self.key)
             .field("max_retries", &self.max_retries)
             .field("retry_wait", &self.retry_wait)
