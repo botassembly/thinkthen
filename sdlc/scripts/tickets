@@ -33,12 +33,16 @@ HEADING = re.compile(r"^(#{1,6})\s+(.*?)\s*$")
 
 def prose(text):
     """The lines outside every fenced block."""
-    out, fenced = [], False
+    out, opener = [], None
     for line in text.splitlines():
-        if FENCE.match(line):
-            fenced = not fenced
+        hit = FENCE.match(line)
+        if hit and opener is None:
+            opener = hit.group(1)
             continue
-        if not fenced:
+        if hit and hit.group(1) == opener:
+            opener = None
+            continue
+        if opener is None:
             out.append(line)
     return out
 
@@ -65,8 +69,8 @@ def failures(path):
         return [f"{path.name}: ticket {FIRST:04d} and later needs a `## Evidence` section"]
     out = []
     for part in PARTS:
-        item = re.compile(rf"^\s*[-*]\s+(\*\*)?{part}(\*\*)?:(\*\*)?\s*[^\s*]")
-        if not any(item.match(line) for line in body):
+        item = re.compile(rf"^\s*[-*]\s+{part}:\s*\S")
+        if not any(item.match(line.replace("**", "")) for line in body):
             out.append(f"{path.name}: the Evidence section lacks a `- {part}:` item with text")
     return out
 
@@ -124,6 +128,13 @@ CASES = [
         ["0126-tilde.md: ticket 0120 and later needs a `## Evidence` section"],
     ),
     ("0127-bold-colon-out.md", GOOD.replace("- Proof: a test.", "- **Proof**: a test."), []),
+    ("0128-bold-text.md", GOOD.replace("- Proof: a test.", "- **Proof:** **ticket 0118** pins it."), []),
+    ("0129-italic-text.md", GOOD.replace("- Proof: a test.", "- Proof: *a* test."), []),
+    (
+        "0130-mixed-fence.md",
+        "# 0130\n\n```\n~~~\n" + GOOD + "```\n",
+        ["0130-mixed-fence.md: ticket 0120 and later needs a `## Evidence` section"],
+    ),
     (
         "0124-elsewhere.md",
         GOOD.replace("- **Keeps:** the answer shape.\n", "").replace("## Design\n", "## Design\n\n- Keeps: late.\n"),

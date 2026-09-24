@@ -14,3 +14,12 @@ Not accepted. Two blocking findings and four non-blocking ones.
 6. The decision says "product ticket", and the check covers every numbered ticket. `sdlc/README.md` now says every numbered ticket here counts as a product ticket.
 
 It confirmed the lint wiring, the filename match and exemption, the section bounds, the planted-bug counts, the `CLAUDE.md` size, and the README wording.
+
+## Second pass, commit df6c6b27
+
+Not accepted. One blocking finding and three non-blocking ones.
+
+1. Blocking. The new item pattern refused real text that opens with emphasis, such as `- Proof: **ticket 0118** pins it.` The check now removes `**` from the line and needs text after the colon. Self-test cases for bold and italic openings pin it.
+2. A backtick fence closed on `~~~`, and the reverse. A fence now closes only on the marker that opened it, and a self-test case pins it.
+3. The product-ticket sentence broke the reference of "They" in `sdlc/README.md`. It moved to the end of the paragraph.
+4. This page lacked the second pass. This section adds it.
