@@ -6,7 +6,7 @@ opens: databases/duckdb sdlc/scripts sdlc/issues sdlc/planning/databases/duckdb.
 
 # 0110: Port the DuckDB surface
 
-Status: design accepted 2026-09-24. Owner: Claude.
+Status: amended after acceptance; confirmation pending. Owner: Claude.
 
 ## Outcome and authority
 
@@ -211,3 +211,15 @@ Experiment 253 on Beelink (`~/workspace/experiments/253-thinkthen-duckdb-sqlite-
 - **Configure, deny, and the tree: passed.** `thinkthen_configure` with named arguments read the caller's settings through `duckdb_table_function_get_client_context`, refused as `Binder Error: thinkthen usage: …`, and the next query answered. Its cache check through the caller's file system was not run. With main's `thinkthen` linked, the tree built offline. The root deny rejects exactly `foldhash` 0.1.5, `zlib-rs` 0.6.8, and `tiny-keccak` 2.0.2, and the three exceptions pass.
 - **Isolation.** Main writes its usage counter file under `XDG_CACHE_HOME/thinkthen-usage/` even while `THINKTHEN_CACHE` is set. Shared rule 3 also gives each test child a fresh `XDG_CACHE_HOME` and `XDG_CONFIG_HOME`, as 0109 decision 14 does.
 - **Toolchains.** The pinned CLI and the venv now sit under `~/.cache/thinkthen-toolchains/duckdb/v1.5.5/`, copied from the `thinkthen-surfaces` worktree with the sha256 checked.
+
+## Amended 2026-09-24
+
+Experiment 253's spike finding above contradicts decisions 10 and 5. This section replaces those parts. Where it conflicts with text above, this section wins. Ian can overturn each item.
+
+1. **File access through the caller's own file system (replaces decision 10's copied rule).** The copied four-setting rule leaves. `disabled_filesystems` always reads back empty, and a missing path escapes through `..` or a symlink. The rule disagreed with DuckDB's own refusal in 10 of 35 cases. The scalar init keeps the caller's client context and its file system from `duckdb_client_context_get_file_system` until the state's destroy callback. Each `@file` read opens the file through `duckdb_file_system_open` on that file system and reads through the same handle. DuckDB's own settings then decide. A cache folder given from SQL is checked by opening `<folder>/.probe` for reading through the caller's file system. That probe matched DuckDB in 35 of 35 cases and created nothing. The refusal sentences stay pinned. The per-statement question cache keeps its key.
+   - Test: the spike's 35 access cases run through `@file` and through `SET thinkthen_cache`, and each result matches DuckDB's own `read_text` refusal on the same path. The cases include `disabled_filesystems = 'LocalFileSystem'`, a missing path under `..`, and a missing path under a symlink. Plant: restore the copied four-setting rule. Ten cases disagree.
+   - R2-3's plant becomes: open the file with `std::fs` after the caller's check passes on its folder. The `disabled_filesystems` case reads the file.
+   - Configure's cache check: `thinkthen_configure(cache := '<tmp>')` reads the caller's file system through `duckdb_table_function_get_client_context` and runs the same probe. With the caller's `enable_external_access = false`, the call reads `usage` with the pinned sentence, `strace` shows zero creates under `<tmp>`, and the loopback count reads 0. Plant: skip the probe in configure. The folder gains an entry.
+2. **The throttle is process-wide (amends decision 5 and the configure fallback).** Under 0077 the first explicit throttle holds for the life of the process, and a different one is `usage`. The engine map may differ only by `max_requests`, the cache folder, and `cache_bytes`. A `SET thinkthen_throttle` that conflicts with the active one reads the engine's own `usage` sentence at the next ThinkThen call. `thinkthen_configure(throttle := N)` with a different value reads the same sentence. A test pins that sentence as main prints it, with zero counted requests. The README says the first throttle wins. Tests that need 8 in flight set `SET thinkthen_throttle = 8` first in their own child process. The spike showed that neither fallback of decision 10 is needed.
+3. **Every scalar is volatile.** DuckDB folds a non-volatile scalar with a constant argument at plan time. Each scalar registers as volatile. DuckDB has no check step for a registered setting, so `SET thinkthen_throttle = 33` succeeds, and the range refusal fires at the next ThinkThen call. A test sets 33, then calls decide, and reads the engine's `usage` sentence with zero counted requests. A second test calls decide twice on a constant text and counts two scalar invokes. Plant: register decide as consistent. The invoke count reads 1.
+4. **A fresh `XDG_CACHE_HOME` per test child.** Main writes its usage counter under `XDG_CACHE_HOME/thinkthen-usage/` even while `THINKTHEN_CACHE` is set. Shared rule 3 therefore gives each test child a fresh `XDG_CACHE_HOME` and `XDG_CONFIG_HOME`. `check.sh` refuses to start a suite when either is unset or points at the user's home folders.
