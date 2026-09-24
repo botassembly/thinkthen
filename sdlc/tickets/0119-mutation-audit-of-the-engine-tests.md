@@ -82,3 +82,5 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Changes: The audit deletes a test only when mutation evidence shows other tests catch the same mutants. It works in batches and lowers `sdlc/ratchet.json` with each accepted batch. It pins `cargo-mutants` 27.1.0 by checksum.
 - Proof: Two baseline runs with no flaky mutants, a batch comparison on the caught and timeout lists, and a final full run that keeps the whole baseline caught set. Code review plants three mutants that deleted tests used to catch.
 - Defers: Missed mutants go to one issue. No mutation gate, no audit of `conformance/`, and no audit of another repo. A recurring junk pattern gets a name, not a ratchet.
+
+Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. This ticket names no width. Any public name or text it writes uses the throttle.
