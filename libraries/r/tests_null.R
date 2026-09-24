@@ -247,6 +247,15 @@ check("a factor deadline is usage", identical(
 check("a difftime deadline is usage", identical(
   tryCatch(tt_decide("Q?", "refund me", deadline = as.difftime(1, units = "mins")), thinkthen_error = function(e) conditionMessage(e)),
   classed_message))
+# I() only marks a value to be kept as it is, so a plain number inside it
+# is seconds; I() over a classed value still refuses (review 7, fourth pass).
+check("a number wrapped in I() is seconds", isTRUE(tt_decide("Q?", "refund me", deadline = I(5))))
+check("I() over zero stays the spent deadline", identical(
+  tryCatch(tt_decide("Q?", "refund me", deadline = I(0L)), thinkthen_error = function(e) e$kind),
+  "deadline"))
+check("I() over a factor is usage", identical(
+  tryCatch(tt_decide("Q?", "refund me", deadline = I(factor("5"))), thinkthen_error = function(e) conditionMessage(e)),
+  classed_message))
 
 # the counters count sends. No reset exists (ruling 4): the difference
 # across the three sends carries the same proof.

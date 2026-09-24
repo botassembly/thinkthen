@@ -222,3 +222,217 @@ def test_a_table_builds_without_the_memory_map():
         "refused: this process cannot read its memory map (/proc/self/maps), "
         "so the Arrow door cannot check a column before it reads it",
     ]
+
+
+# Review 7, fourth pass: a file mapping is listed readable to its end, but
+# a page past the end of its file raises SIGBUS when touched. This child
+# maps a pyarrow IPC file, truncates the file to half, and reads a 10-row
+# slice from each end: the head still lies inside the file and answers,
+# and the tail now lies past its end and is refused. A second mapping of
+# two pages over a one-page memfd holds a format string past its end.
+TRUNCATED = r"""
+import ctypes as C, os, sys
+import pyarrow as pa, pyarrow.ipc as ipc
+import thinkthen as tt
+
+path = sys.argv[1]
+rows = ["please refund %06d " % i + "x" * 200 for i in range(20000)]
+with ipc.new_file(path, pa.schema([("t", pa.string())])) as out:
+    out.write_table(pa.table({"t": rows}))
+column = ipc.open_file(pa.memory_map(path, "r")).read_all().column("t").chunk(0)
+os.truncate(path, os.path.getsize(path) // 2)
+for name, at in (("head", 0), ("tail", 19990)):
+    try:
+        print(name, "answered", len(tt.decide_many("Is this a refund?", pa.chunked_array([column.slice(at, 10)]))))
+    except tt.UsageError as refused:
+        print(name, "refused:", refused)
+
+libc = C.CDLL(None, use_errno=True)
+libc.mmap.restype = C.c_void_p
+libc.mmap.argtypes = [C.c_void_p, C.c_size_t, C.c_int, C.c_int, C.c_int, C.c_long]
+fd = libc.memfd_create(b"past-end", 0)
+os.ftruncate(fd, 4096)
+past = libc.mmap(None, 8192, 1, 1, fd, 0) + 4096
+
+class Schema(C.Structure):
+    _fields_ = [("format", C.c_void_p), ("name", C.c_char_p), ("metadata", C.c_void_p),
+        ("flags", C.c_int64), ("n_children", C.c_int64), ("children", C.c_void_p),
+        ("dictionary", C.c_void_p), ("release", C.c_void_p), ("private_data", C.c_void_p)]
+
+class PastEnd:
+    def __arrow_c_stream__(self, requested_schema=None):
+        stream = pa.chunked_array([pa.array(["please refund"])])
+        capsule = stream.__arrow_c_stream__()
+        get = C.pythonapi.PyCapsule_GetPointer
+        get.restype, get.argtypes = C.c_void_p, [C.py_object, C.c_char_p]
+        pointer = get(capsule, b"arrow_array_stream")
+        GET_SCHEMA = C.CFUNCTYPE(C.c_int, C.c_void_p, C.POINTER(Schema))
+        inner = GET_SCHEMA(C.c_void_p.from_address(pointer).value)
+        def get_schema(stream_pointer, out):
+            got = inner(stream_pointer, out)
+            out.contents.format = past
+            return got
+        self.keep = (stream, GET_SCHEMA(get_schema))
+        C.c_void_p.from_address(pointer).value = C.cast(self.keep[1], C.c_void_p).value
+        return capsule
+
+try:
+    tt.decide_many("Is this a refund?", PastEnd())
+    print("format answered")
+except tt.UsageError as refused:
+    print("format refused:", refused)
+"""
+
+
+def test_a_mapping_past_the_end_of_its_file_is_refused(tmp_path):
+    if sys.platform != "linux":
+        import pytest
+
+        pytest.skip("memfd and the truncated-mapping signal are Linux behavior")
+    env = dict(os.environ, ENGINE_NULL="1", THINKTHEN_NULL="1")
+    done = subprocess.run(
+        [sys.executable, "-c", TRUNCATED, str(tmp_path / "column.arrow")],
+        env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=120,
+    )
+    assert done.returncode == 0, (done.returncode, done.stderr[-2000:])
+    assert done.stdout.splitlines() == [
+        "head answered 10",
+        "tail refused: the column's buffers declare bytes this process cannot read",
+        "format refused: an Arrow format, name, or error string has no end within 64 KiB of readable memory",
+    ]
+
+
+# Review 7, fourth pass: the reader read /proc/self/maps once a batch, so a
+# call cost chunks times map lines. A 100-chunk column in a process with
+# 30,000 mappings took 1.3 s a call. This child adds 20,000 mappings and
+# compares a 100-chunk call with a 1-chunk call, the best of five each.
+# One snapshot a call keeps the two close; one a batch makes the 100-chunk
+# call dozens of times slower.
+SNAPSHOTS = r"""
+import ctypes as C, time
+import pyarrow as pa
+import thinkthen as tt
+
+libc = C.CDLL(None)
+libc.mmap.restype = C.c_void_p
+libc.mmap.argtypes = [C.c_void_p, C.c_size_t, C.c_int, C.c_int, C.c_int, C.c_long]
+# Alternate the protection so the kernel cannot merge neighbours.
+held = [libc.mmap(None, 4096, 1 if place % 2 else 3, 0x22, -1, 0) for place in range(20000)]
+
+def best(column):
+    tt.decide_many("Is this a refund?", column)
+    times = []
+    for _ in range(5):
+        start = time.perf_counter()
+        tt.decide_many("Is this a refund?", column)
+        times.append(time.perf_counter() - start)
+    return min(times)
+
+one = best(pa.chunked_array([pa.array(["please refund %d" % place for place in range(100)])]))
+many = best(pa.chunked_array([pa.array(["please refund %d" % place]) for place in range(100)]))
+print(f"{many / one:.1f} {one * 1000:.2f} {many * 1000:.2f}")
+"""
+
+
+def test_a_many_chunk_column_reads_the_memory_map_once():
+    if sys.platform != "linux":
+        import pytest
+
+        pytest.skip("the memory-map snapshot is the Linux check")
+    env = dict(os.environ, ENGINE_NULL="1", THINKTHEN_NULL="1")
+    done = subprocess.run(
+        [sys.executable, "-c", SNAPSHOTS],
+        env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=300,
+    )
+    assert done.returncode == 0, (done.returncode, done.stderr[-2000:])
+    ratio, one, many = done.stdout.split()
+    assert float(ratio) < 10, f"100 chunks took {many} ms, one chunk {one} ms"
+
+
+# Review 7, fourth pass: the reader read a batch's pointer tables without a
+# check. This child wraps a pyarrow stream's get_next and moves a table to
+# the end of a readable page, before a PROT_NONE page, keeping fewer slots
+# than the batch counts: the buffer table of a column (two of three), and
+# the child table of a frame (one of two). Each read ran into the guard.
+TABLES = r"""
+import ctypes as C, mmap, sys
+import pyarrow as pa
+import thinkthen as tt
+from thinkthen import _thinkthen as native
+
+libc = C.CDLL(None)
+page = mmap.PAGESIZE
+regions = []
+
+def guarded(slots):
+    region = mmap.mmap(-1, 2 * page)
+    base = C.addressof(C.c_char.from_buffer(region))
+    assert libc.mprotect(C.c_void_p(base + page), page, 0) == 0
+    at = base + page - 8 * len(slots)
+    (C.c_void_p * len(slots)).from_address(at)[:] = slots
+    regions.append(region)
+    return at
+
+NEXT = C.CFUNCTYPE(C.c_int, C.c_void_p, C.c_void_p)
+RELEASE = C.CFUNCTYPE(None, C.c_void_p)
+
+class Cut:
+    # A stream whose batches carry a table cut short: `field` is 5 for the
+    # buffer table (count at 3) and 6 for the child table (count at 4).
+    def __init__(self, source, field, keep):
+        self.source, self.field, self.keep, self.releases = source, field, keep, []
+
+    def __arrow_c_stream__(self, requested_schema=None):
+        capsule = self.source.__arrow_c_stream__()
+        get = C.pythonapi.PyCapsule_GetPointer
+        get.restype, get.argtypes = C.c_void_p, [C.py_object, C.c_char_p]
+        stream = get(capsule, b"arrow_array_stream")
+        inner = NEXT(C.c_void_p.from_address(stream + 8).value)
+        def get_next(pointer, out):
+            got = inner(pointer, out)
+            words = (C.c_void_p * 10).from_address(out)
+            if words[8]:
+                whole = words[self.field]
+                words[self.field] = guarded(list((C.c_void_p * self.keep).from_address(whole)))
+                # pyarrow's own release walks the child table, so it gets
+                # its whole table back before it runs.
+                release = RELEASE(words[8])
+                def restore(array):
+                    (C.c_void_p * 10).from_address(array)[self.field] = whole
+                    release(array)
+                self.releases.append(RELEASE(restore))
+                words[8] = C.cast(self.releases[-1], C.c_void_p).value
+            return got
+        self.hold = (capsule, NEXT(get_next))
+        C.c_void_p.from_address(stream + 8).value = C.cast(self.hold[1], C.c_void_p).value
+        return capsule
+
+column = pa.chunked_array([pa.array(["please refund", "hello"])])
+frame = pa.table({"body": ["please refund", "hello"], "n": [1, 2]})
+for name, call in (
+    ("buffers", lambda: tt.decide_many("Is this a refund?", Cut(column, 5, 2))),
+    ("children", lambda: native.annotate_stream(sys.argv[1], Cut(frame, 6, 1), "body")),
+):
+    try:
+        call()
+        print(name, "answered", flush=True)
+    except tt.UsageError as refused:
+        print(name, "refused:", refused, flush=True)
+"""
+
+
+def test_a_pointer_table_shorter_than_its_count_is_refused():
+    if sys.platform != "linux":
+        import pytest
+
+        pytest.skip("the guard page here is set with mprotect on Linux")
+    env = dict(os.environ, ENGINE_NULL="1", THINKTHEN_NULL="1")
+    done = subprocess.run(
+        [sys.executable, "-c", TABLES, FORM],
+        env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=120,
+    )
+    assert done.returncode == 0, (done.returncode, done.stderr[-2000:])
+    assert done.stdout.splitlines() == [
+        "buffers refused: the column's buffers declare bytes this process cannot read",
+        "children refused: the column's buffers declare bytes this process cannot read",
+    ]
