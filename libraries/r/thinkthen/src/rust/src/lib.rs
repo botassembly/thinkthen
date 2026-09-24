@@ -218,7 +218,12 @@ fn deadline_of(value: &Robj) -> StdResult<Option<f64>, String> {
     }
     // A plain R integer is a number (`-1L` reads as -1), NA_integer_ is NA,
     // and a classed value refuses: a factor's integer is its level code.
-    let plain = value.len() == 1 && value.class().is_none();
+    // `I()` alone marks a value to be kept as it is and changes no unit,
+    // so `I(5)` is five seconds; `I()` over a classed value still refuses.
+    let plain = value.len() == 1
+        && value.class().is_none_or(|mut names| {
+            names.next() == Some("AsIs") && names.next().is_none()
+        });
     let held = match value.rtype() {
         Rtype::Doubles if plain => unsafe { REAL_ELT(value.get(), 0) },
         Rtype::Integers if plain => match unsafe { INTEGER_ELT(value.get(), 0) } {
