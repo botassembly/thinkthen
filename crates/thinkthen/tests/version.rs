@@ -110,8 +110,9 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
         .lines()
         .filter_map(|line| line.split_whitespace().next())
         .collect();
-    const ORDER: [&str; 16] = [
+    const ORDER: [&str; 17] = [
         "status",
+        "check",
         "decide",
         "filter",
         "rank",
