@@ -1,0 +1,2282 @@
+{
+ "version": 1,
+ "questions": {
+  "c_sung_by_1": {
+   "choose": "Which listed person fills the blank: Item 1 (song \"Across the Universe\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_2": {
+   "choose": "Which listed person fills the blank: Item 2 (song \"Act Naturally\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_3": {
+   "choose": "Which listed person fills the blank: Item 3 (song \"All I've Got to Do\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_4": {
+   "choose": "Which listed person fills the blank: Item 4 (song \"All My Loving\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_5": {
+   "choose": "Which listed person fills the blank: Item 5 (song \"All Together Now\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_6": {
+   "choose": "Which listed person fills the blank: Item 6 (song \"All You Need Is Love\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_7": {
+   "choose": "Which listed person fills the blank: Item 7 (song \"And I Love Her\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_8": {
+   "choose": "Which listed person fills the blank: Item 8 (song \"And Your Bird Can Sing\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_9": {
+   "choose": "Which listed person fills the blank: Item 9 (song \"Anna (Go to Him)\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_10": {
+   "choose": "Which listed person fills the blank: Item 10 (song \"Another Girl\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_11": {
+   "choose": "Which listed person fills the blank: Item 11 (song \"Any Time at All\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_12": {
+   "choose": "Which listed person fills the blank: Item 12 (song \"Ask Me Why\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_13": {
+   "choose": "Which listed person fills the blank: Item 13 (song \"Baby It's You\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_14": {
+   "choose": "Which listed person fills the blank: Item 14 (song \"Baby, You're a Rich Man\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_15": {
+   "choose": "Which listed person fills the blank: Item 15 (song \"Baby's in Black\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_16": {
+   "choose": "Which listed person fills the blank: Item 16 (song \"Back in the U.S.S.R.\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_17": {
+   "choose": "Which listed person fills the blank: Item 17 (song \"Because\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_18": {
+   "choose": "Which listed person fills the blank: Item 18 (song \"Being for the Benefit of Mr. Kite!\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_19": {
+   "choose": "Which listed person fills the blank: Item 19 (song \"Birthday\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_20": {
+   "choose": "Which listed person fills the blank: Item 20 (song \"Blackbird\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_21": {
+   "choose": "Which listed person fills the blank: Item 21 (song \"Blue Jay Way\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_22": {
+   "choose": "Which listed person fills the blank: Item 22 (song \"Boys\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_23": {
+   "choose": "Which listed person fills the blank: Item 23 (song \"Can't Buy Me Love\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_24": {
+   "choose": "Which listed person fills the blank: Item 24 (song \"Carry That Weight\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_25": {
+   "choose": "Which listed person fills the blank: Item 25 (song \"Chains\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_26": {
+   "choose": "Which listed person fills the blank: Item 26 (song \"Come Together\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_27": {
+   "choose": "Which listed person fills the blank: Item 27 (song \"The Continuing Story of Bungalow Bill\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_28": {
+   "choose": "Which listed person fills the blank: Item 28 (song \"Cry Baby Cry\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_29": {
+   "choose": "Which listed person fills the blank: Item 29 (song \"A Day in the Life\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_30": {
+   "choose": "Which listed person fills the blank: Item 30 (song \"Dear Prudence\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_31": {
+   "choose": "Which listed person fills the blank: Item 31 (song \"Devil in Her Heart\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_32": {
+   "choose": "Which listed person fills the blank: Item 32 (song \"Dig a Pony\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_33": {
+   "choose": "Which listed person fills the blank: Item 33 (song \"Dig It\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_34": {
+   "choose": "Which listed person fills the blank: Item 34 (song \"Dizzy Miss Lizzy\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_35": {
+   "choose": "Which listed person fills the blank: Item 35 (song \"Do You Want to Know a Secret\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_36": {
+   "choose": "Which listed person fills the blank: Item 36 (song \"Doctor Robert\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_37": {
+   "choose": "Which listed person fills the blank: Item 37 (song \"Don't Bother Me\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_38": {
+   "choose": "Which listed person fills the blank: Item 38 (song \"Don't Pass Me By\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_39": {
+   "choose": "Which listed person fills the blank: Item 39 (song \"Drive My Car\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_40": {
+   "choose": "Which listed person fills the blank: Item 40 (song \"Eight Days a Week\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_41": {
+   "choose": "Which listed person fills the blank: Item 41 (song \"Eleanor Rigby\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_42": {
+   "choose": "Which listed person fills the blank: Item 42 (song \"The End\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_43": {
+   "choose": "Which listed person fills the blank: Item 43 (song \"Every Little Thing\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_44": {
+   "choose": "Which listed person fills the blank: Item 44 (song \"Everybody's Got Something to Hide Except Me and My Monkey\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_45": {
+   "choose": "Which listed person fills the blank: Item 45 (song \"Everybody's Trying to Be My Baby\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_46": {
+   "choose": "Which listed person fills the blank: Item 46 (song \"Fixing a Hole\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_47": {
+   "choose": "Which listed person fills the blank: Item 47 (song \"Flying\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_48": {
+   "choose": "Which listed person fills the blank: Item 48 (song \"The Fool on the Hill\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_49": {
+   "choose": "Which listed person fills the blank: Item 49 (song \"For No One\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_50": {
+   "choose": "Which listed person fills the blank: Item 50 (song \"For You Blue\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_51": {
+   "choose": "Which listed person fills the blank: Item 51 (song \"Get Back\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_52": {
+   "choose": "Which listed person fills the blank: Item 52 (song \"Getting Better\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_53": {
+   "choose": "Which listed person fills the blank: Item 53 (song \"Girl\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_54": {
+   "choose": "Which listed person fills the blank: Item 54 (song \"Glass Onion\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_55": {
+   "choose": "Which listed person fills the blank: Item 55 (song \"Golden Slumbers\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_56": {
+   "choose": "Which listed person fills the blank: Item 56 (song \"Good Day Sunshine\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_57": {
+   "choose": "Which listed person fills the blank: Item 57 (song \"Good Morning Good Morning\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_58": {
+   "choose": "Which listed person fills the blank: Item 58 (song \"Good Night\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_59": {
+   "choose": "Which listed person fills the blank: Item 59 (song \"Got to Get You into My Life\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_60": {
+   "choose": "Which listed person fills the blank: Item 60 (song \"Happiness Is a Warm Gun\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_61": {
+   "choose": "Which listed person fills the blank: Item 61 (song \"A Hard Day's Night\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_62": {
+   "choose": "Which listed person fills the blank: Item 62 (song \"Hello, Goodbye\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_63": {
+   "choose": "Which listed person fills the blank: Item 63 (song \"Help!\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_64": {
+   "choose": "Which listed person fills the blank: Item 64 (song \"Helter Skelter\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_65": {
+   "choose": "Which listed person fills the blank: Item 65 (song \"Her Majesty\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_66": {
+   "choose": "Which listed person fills the blank: Item 66 (song \"Here Comes the Sun\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_67": {
+   "choose": "Which listed person fills the blank: Item 67 (song \"Here, There and Everywhere\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_68": {
+   "choose": "Which listed person fills the blank: Item 68 (song \"Hey Bulldog\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_69": {
+   "choose": "Which listed person fills the blank: Item 69 (song \"Hold Me Tight\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_70": {
+   "choose": "Which listed person fills the blank: Item 70 (song \"Honey Don't\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_71": {
+   "choose": "Which listed person fills the blank: Item 71 (song \"Honey Pie\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_72": {
+   "choose": "Which listed person fills the blank: Item 72 (song \"I Am the Walrus\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_73": {
+   "choose": "Which listed person fills the blank: Item 73 (song \"I Don't Want to Spoil the Party\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_74": {
+   "choose": "Which listed person fills the blank: Item 74 (song \"I Me Mine\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_75": {
+   "choose": "Which listed person fills the blank: Item 75 (song \"I Need You\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_76": {
+   "choose": "Which listed person fills the blank: Item 76 (song \"I Saw Her Standing There\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_77": {
+   "choose": "Which listed person fills the blank: Item 77 (song \"I Should Have Known Better\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_78": {
+   "choose": "Which listed person fills the blank: Item 78 (song \"I Wanna Be Your Man\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_79": {
+   "choose": "Which listed person fills the blank: Item 79 (song \"I Want to Tell You\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_80": {
+   "choose": "Which listed person fills the blank: Item 80 (song \"I Want You (She's So Heavy)\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_81": {
+   "choose": "Which listed person fills the blank: Item 81 (song \"I Will\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_82": {
+   "choose": "Which listed person fills the blank: Item 82 (song \"If I Fell\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_83": {
+   "choose": "Which listed person fills the blank: Item 83 (song \"If I Needed Someone\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_84": {
+   "choose": "Which listed person fills the blank: Item 84 (song \"I'll Be Back\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_85": {
+   "choose": "Which listed person fills the blank: Item 85 (song \"I'll Cry Instead\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_86": {
+   "choose": "Which listed person fills the blank: Item 86 (song \"I'll Follow the Sun\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_87": {
+   "choose": "Which listed person fills the blank: Item 87 (song \"I'm a Loser\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_88": {
+   "choose": "Which listed person fills the blank: Item 88 (song \"I'm Happy Just to Dance with You\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_89": {
+   "choose": "Which listed person fills the blank: Item 89 (song \"I'm Looking Through You\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_90": {
+   "choose": "Which listed person fills the blank: Item 90 (song \"I'm Only Sleeping\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_91": {
+   "choose": "Which listed person fills the blank: Item 91 (song \"I'm So Tired\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_92": {
+   "choose": "Which listed person fills the blank: Item 92 (song \"I've Got a Feeling\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_93": {
+   "choose": "Which listed person fills the blank: Item 93 (song \"I've Just Seen a Face\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_94": {
+   "choose": "Which listed person fills the blank: Item 94 (song \"In My Life\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_95": {
+   "choose": "Which listed person fills the blank: Item 95 (song \"It Won't Be Long\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_96": {
+   "choose": "Which listed person fills the blank: Item 96 (song \"It's All Too Much\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_97": {
+   "choose": "Which listed person fills the blank: Item 97 (song \"It's Only Love\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_98": {
+   "choose": "Which listed person fills the blank: Item 98 (song \"Julia\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_99": {
+   "choose": "Which listed person fills the blank: Item 99 (song \"Kansas City/Hey-Hey-Hey-Hey!\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_100": {
+   "choose": "Which listed person fills the blank: Item 100 (song \"Let It Be\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_101": {
+   "choose": "Which listed person fills the blank: Item 101 (song \"Little Child\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_102": {
+   "choose": "Which listed person fills the blank: Item 102 (song \"The Long and Winding Road\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_103": {
+   "choose": "Which listed person fills the blank: Item 103 (song \"Long, Long, Long\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_104": {
+   "choose": "Which listed person fills the blank: Item 104 (song \"Love Me Do\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_105": {
+   "choose": "Which listed person fills the blank: Item 105 (song \"Love You To\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_106": {
+   "choose": "Which listed person fills the blank: Item 106 (song \"Lovely Rita\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_107": {
+   "choose": "Which listed person fills the blank: Item 107 (song \"Lucy in the Sky with Diamonds\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_108": {
+   "choose": "Which listed person fills the blank: Item 108 (song \"Maggie Mae\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_109": {
+   "choose": "Which listed person fills the blank: Item 109 (song \"Magical Mystery Tour\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_110": {
+   "choose": "Which listed person fills the blank: Item 110 (song \"Martha My Dear\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_111": {
+   "choose": "Which listed person fills the blank: Item 111 (song \"Maxwell's Silver Hammer\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_112": {
+   "choose": "Which listed person fills the blank: Item 112 (song \"Mean Mr. Mustard\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_113": {
+   "choose": "Which listed person fills the blank: Item 113 (song \"Michelle\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_114": {
+   "choose": "Which listed person fills the blank: Item 114 (song \"Misery\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_115": {
+   "choose": "Which listed person fills the blank: Item 115 (song \"Money (That's What I Want)\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_116": {
+   "choose": "Which listed person fills the blank: Item 116 (song \"Mother Nature's Son\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_117": {
+   "choose": "Which listed person fills the blank: Item 117 (song \"Mr. Moonlight\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_118": {
+   "choose": "Which listed person fills the blank: Item 118 (song \"The Night Before\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_119": {
+   "choose": "Which listed person fills the blank: Item 119 (song \"No Reply\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_120": {
+   "choose": "Which listed person fills the blank: Item 120 (song \"Norwegian Wood (This Bird Has Flown)\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_121": {
+   "choose": "Which listed person fills the blank: Item 121 (song \"Not a Second Time\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_122": {
+   "choose": "Which listed person fills the blank: Item 122 (song \"Nowhere Man\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_123": {
+   "choose": "Which listed person fills the blank: Item 123 (song \"Ob-La-Di, Ob-La-Da\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_124": {
+   "choose": "Which listed person fills the blank: Item 124 (song \"Octopus's Garden\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_125": {
+   "choose": "Which listed person fills the blank: Item 125 (song \"Oh! Darling\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_126": {
+   "choose": "Which listed person fills the blank: Item 126 (song \"One After 909\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_127": {
+   "choose": "Which listed person fills the blank: Item 127 (song \"Only a Northern Song\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_128": {
+   "choose": "Which listed person fills the blank: Item 128 (song \"Penny Lane\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_129": {
+   "choose": "Which listed person fills the blank: Item 129 (song \"Piggies\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_130": {
+   "choose": "Which listed person fills the blank: Item 130 (song \"Please Mr. Postman\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_131": {
+   "choose": "Which listed person fills the blank: Item 131 (song \"Please Please Me\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_132": {
+   "choose": "Which listed person fills the blank: Item 132 (song \"Polythene Pam\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_133": {
+   "choose": "Which listed person fills the blank: Item 133 (song \"P.S. I Love You\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_134": {
+   "choose": "Which listed person fills the blank: Item 134 (song \"Revolution 1\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_135": {
+   "choose": "Which listed person fills the blank: Item 135 (song \"Revolution 9\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_136": {
+   "choose": "Which listed person fills the blank: Item 136 (song \"Rock and Roll Music\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_137": {
+   "choose": "Which listed person fills the blank: Item 137 (song \"Rocky Raccoon\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_138": {
+   "choose": "Which listed person fills the blank: Item 138 (song \"Roll Over Beethoven\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_139": {
+   "choose": "Which listed person fills the blank: Item 139 (song \"Run for Your Life\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_140": {
+   "choose": "Which listed person fills the blank: Item 140 (song \"Savoy Truffle\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_141": {
+   "choose": "Which listed person fills the blank: Item 141 (song \"Sexy Sadie\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_142": {
+   "choose": "Which listed person fills the blank: Item 142 (song \"Sgt. Pepper's Lonely Hearts Club Band\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_143": {
+   "choose": "Which listed person fills the blank: Item 143 (song \"Sgt. Pepper's Lonely Hearts Club Band (Reprise)\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_144": {
+   "choose": "Which listed person fills the blank: Item 144 (song \"She Came In Through the Bathroom Window\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_145": {
+   "choose": "Which listed person fills the blank: Item 145 (song \"She Said She Said\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_146": {
+   "choose": "Which listed person fills the blank: Item 146 (song \"She's Leaving Home\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_147": {
+   "choose": "Which listed person fills the blank: Item 147 (song \"Something\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_148": {
+   "choose": "Which listed person fills the blank: Item 148 (song \"Strawberry Fields Forever\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_149": {
+   "choose": "Which listed person fills the blank: Item 149 (song \"Sun King\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_150": {
+   "choose": "Which listed person fills the blank: Item 150 (song \"A Taste of Honey\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_151": {
+   "choose": "Which listed person fills the blank: Item 151 (song \"Taxman\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_152": {
+   "choose": "Which listed person fills the blank: Item 152 (song \"Tell Me What You See\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_153": {
+   "choose": "Which listed person fills the blank: Item 153 (song \"Tell Me Why\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_154": {
+   "choose": "Which listed person fills the blank: Item 154 (song \"There's a Place\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_155": {
+   "choose": "Which listed person fills the blank: Item 155 (song \"Things We Said Today\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_156": {
+   "choose": "Which listed person fills the blank: Item 156 (song \"Think for Yourself\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_157": {
+   "choose": "Which listed person fills the blank: Item 157 (song \"Ticket to Ride\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_158": {
+   "choose": "Which listed person fills the blank: Item 158 (song \"Till There Was You\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_159": {
+   "choose": "Which listed person fills the blank: Item 159 (song \"Tomorrow Never Knows\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_160": {
+   "choose": "Which listed person fills the blank: Item 160 (song \"Twist and Shout\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_161": {
+   "choose": "Which listed person fills the blank: Item 161 (song \"Two of Us\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_162": {
+   "choose": "Which listed person fills the blank: Item 162 (song \"Wait\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_163": {
+   "choose": "Which listed person fills the blank: Item 163 (song \"What Goes On\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_164": {
+   "choose": "Which listed person fills the blank: Item 164 (song \"What You're Doing\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_165": {
+   "choose": "Which listed person fills the blank: Item 165 (song \"When I Get Home\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_166": {
+   "choose": "Which listed person fills the blank: Item 166 (song \"When I'm Sixty-Four\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_167": {
+   "choose": "Which listed person fills the blank: Item 167 (song \"While My Guitar Gently Weeps\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_168": {
+   "choose": "Which listed person fills the blank: Item 168 (song \"Why Don't We Do It in the Road?\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_169": {
+   "choose": "Which listed person fills the blank: Item 169 (song \"Wild Honey Pie\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_170": {
+   "choose": "Which listed person fills the blank: Item 170 (song \"With a Little Help from My Friends\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_171": {
+   "choose": "Which listed person fills the blank: Item 171 (song \"Within You Without You\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_172": {
+   "choose": "Which listed person fills the blank: Item 172 (song \"The Word\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_173": {
+   "choose": "Which listed person fills the blank: Item 173 (song \"Words of Love\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_174": {
+   "choose": "Which listed person fills the blank: Item 174 (song \"Yellow Submarine\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_175": {
+   "choose": "Which listed person fills the blank: Item 175 (song \"Yer Blues\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_176": {
+   "choose": "Which listed person fills the blank: Item 176 (song \"Yesterday\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_177": {
+   "choose": "Which listed person fills the blank: Item 177 (song \"You Can't Do That\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_178": {
+   "choose": "Which listed person fills the blank: Item 178 (song \"You Like Me Too Much\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_179": {
+   "choose": "Which listed person fills the blank: Item 179 (song \"You Never Give Me Your Money\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_180": {
+   "choose": "Which listed person fills the blank: Item 180 (song \"You Really Got a Hold on Me\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_181": {
+   "choose": "Which listed person fills the blank: Item 181 (song \"You Won't See Me\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_182": {
+   "choose": "Which listed person fills the blank: Item 182 (song \"Your Mother Should Know\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_183": {
+   "choose": "Which listed person fills the blank: Item 183 (song \"You're Going to Lose That Girl\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_sung_by_184": {
+   "choose": "Which listed person fills the blank: Item 184 (song \"You've Got to Hide Your Love Away\") has its lead vocal sung by ___? Choose none if no listed person does.",
+   "options": {
+    "i185": "Item 185 (person \"John Lennon\")",
+    "i186": "Item 186 (person \"Paul McCartney\")",
+    "i187": "Item 187 (person \"George Harrison\")",
+    "i188": "Item 188 (person \"Ringo Starr\")",
+    "none": "No listed person."
+   }
+  },
+  "c_appears_on_1": {
+   "choose": "Which listed album fills the blank: Item 1 (song \"Across the Universe\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  },
+  "c_appears_on_2": {
+   "choose": "Which listed album fills the blank: Item 2 (song \"Act Naturally\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  },
+  "c_appears_on_3": {
+   "choose": "Which listed album fills the blank: Item 3 (song \"All I've Got to Do\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  },
+  "c_appears_on_4": {
+   "choose": "Which listed album fills the blank: Item 4 (song \"All My Loving\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  },
+  "c_appears_on_5": {
+   "choose": "Which listed album fills the blank: Item 5 (song \"All Together Now\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  },
+  "c_appears_on_6": {
+   "choose": "Which listed album fills the blank: Item 6 (song \"All You Need Is Love\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  },
+  "c_appears_on_7": {
+   "choose": "Which listed album fills the blank: Item 7 (song \"And I Love Her\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  },
+  "c_appears_on_8": {
+   "choose": "Which listed album fills the blank: Item 8 (song \"And Your Bird Can Sing\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  },
+  "c_appears_on_9": {
+   "choose": "Which listed album fills the blank: Item 9 (song \"Anna (Go to Him)\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  },
+  "c_appears_on_10": {
+   "choose": "Which listed album fills the blank: Item 10 (song \"Another Girl\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  },
+  "c_appears_on_11": {
+   "choose": "Which listed album fills the blank: Item 11 (song \"Any Time at All\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  },
+  "c_appears_on_12": {
+   "choose": "Which listed album fills the blank: Item 12 (song \"Ask Me Why\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  },
+  "c_appears_on_13": {
+   "choose": "Which listed album fills the blank: Item 13 (song \"Baby It's You\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  },
+  "c_appears_on_14": {
+   "choose": "Which listed album fills the blank: Item 14 (song \"Baby, You're a Rich Man\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  },
+  "c_appears_on_15": {
+   "choose": "Which listed album fills the blank: Item 15 (song \"Baby's in Black\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  },
+  "c_appears_on_16": {
+   "choose": "Which listed album fills the blank: Item 16 (song \"Back in the U.S.S.R.\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  },
+  "c_appears_on_17": {
+   "choose": "Which listed album fills the blank: Item 17 (song \"Because\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  },
+  "c_appears_on_18": {
+   "choose": "Which listed album fills the blank: Item 18 (song \"Being for the Benefit of Mr. Kite!\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  },
+  "c_appears_on_19": {
+   "choose": "Which listed album fills the blank: Item 19 (song \"Birthday\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  },
+  "c_appears_on_20": {
+   "choose": "Which listed album fills the blank: Item 20 (song \"Blackbird\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  },
+  "c_appears_on_21": {
+   "choose": "Which listed album fills the blank: Item 21 (song \"Blue Jay Way\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  },
+  "c_appears_on_22": {
+   "choose": "Which listed album fills the blank: Item 22 (song \"Boys\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  },
+  "c_appears_on_23": {
+   "choose": "Which listed album fills the blank: Item 23 (song \"Can't Buy Me Love\") appears on ___? Choose none if no listed album does.",
+   "options": {
+    "i189": "Item 189 (album \"Please Please Me\")",
+    "i190": "Item 190 (album \"With the Beatles\")",
+    "i191": "Item 191 (album \"A Hard Day's Night\")",
+    "i192": "Item 192 (album \"Beatles for Sale\")",
+    "i193": "Item 193 (album \"Help!\")",
+    "i194": "Item 194 (album \"Rubber Soul\")",
+    "i195": "Item 195 (album \"Revolver\")",
+    "i196": "Item 196 (album \"Sgt. Pepper's Lonely Hearts Club Band\")",
+    "i197": "Item 197 (album \"Magical Mystery Tour\")",
+    "i198": "Item 198 (album \"The Beatles (White Album)\")",
+    "i199": "Item 199 (album \"Yellow Submarine\")",
+    "i200": "Item 200 (album \"Abbey Road\")",
+    "i201": "Item 201 (album \"Let It Be\")",
+    "none": "No listed album."
+   }
+  }
+ }
+}

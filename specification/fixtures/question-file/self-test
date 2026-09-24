@@ -19,7 +19,7 @@ with open(f"{here}/../../question-file.schema.json", encoding="utf-8") as held:
 Draft202012Validator.check_schema(schema)
 validator = Draft202012Validator(schema)
 
-verbs = ("decide", "choose", "tag", "score")
+verbs = ("decide", "choose", "tag", "score", "relate")
 missing = [verb for verb in verbs if verb not in schema.get("$defs", {})]
 if missing:
     print(

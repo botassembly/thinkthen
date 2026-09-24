@@ -47,6 +47,11 @@ fn every_command_family_keeps_profile_failures_free_of_keys_and_evidence() {
         vec!["rank".to_owned(), "Ready?".to_owned(), "--lines".to_owned()],
         vec!["find".to_owned(), "Which line?".to_owned()],
         vec!["annotate".to_owned(), set.to_string_lossy().into_owned()],
+        vec![
+            "relate".to_owned(),
+            "linked".to_owned(),
+            "--either".to_owned(),
+        ],
     ];
     let routes = [
         (missing, 5, "could not be opened"),
@@ -56,11 +61,20 @@ fn every_command_family_keeps_profile_failures_free_of_keys_and_evidence() {
     for command in commands {
         for (path, code, phrase) in &routes {
             let mut arguments = command.clone();
-            arguments.extend(["--profile".to_owned(), path.to_string_lossy().into_owned()]);
-            let input = if command.first().is_some_and(|verb| verb == "find") {
-                format!("{EVIDENCE}\nother\n")
-            } else {
-                EVIDENCE.to_owned()
+            // A closed loopback port keeps a refusal that stopped refusing off
+            // every real backend.
+            arguments.extend([
+                "--profile".to_owned(),
+                path.to_string_lossy().into_owned(),
+                "--url".to_owned(),
+                crate::secrecy::CLOSED.to_owned(),
+            ]);
+            let input = match command.first().map(String::as_str) {
+                Some("find") => format!("{EVIDENCE}\nother\n"),
+                Some("relate") => format!(
+                    r#"[{{"name":"{EVIDENCE}","kind":"record"}},{{"name":"Acme","kind":"record"}}]"#
+                ),
+                _ => EVIDENCE.to_owned(),
             };
             let borrowed = arguments.iter().map(String::as_str).collect::<Vec<_>>();
             let output =

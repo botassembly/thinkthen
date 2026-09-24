@@ -59,9 +59,11 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
         writer: &mut written,
     };
 
+    // `relate` reads its evidence as entity names and kinds.
+    let entity = crate::core::RelationEntity::new(EVIDENCE, EVIDENCE).expect("an entity");
     let shown = format!(
         "{key:?} {exchange:?} {judged:?} {client:?} {recorded:?} {entry:?} \
-             {ordered:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
+             {ordered:?} {entity:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
         Failure::NoKey("THINKTHEN_API_KEY".to_owned()),
         Failure::Status(401),
         Failure::QuestionSet(QuestionSetError::Duplicate(format!("{KEY}.{EVIDENCE}"))),
@@ -79,12 +81,58 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
             limit: 1,
             actual: EVIDENCE.len(),
         }),
+        Failure::Recognize(super::recognize::Error::LogicalQuestion),
         Failure::RecordingStorage,
+        Failure::Relate(super::relate::Error::Config {
+            file: true,
+            error: crate::core::RelateConfigError::Relation,
+        }),
+        Failure::Relate(super::relate::Error::Logical),
     );
 
     assert!(!shown.contains(KEY), "{shown}");
     assert!(!shown.contains(EVIDENCE), "{shown}");
     assert!(shown.contains("withheld"), "{shown}");
+}
+
+/// `recognize` reads its evidence as tokens and names, in plain and pretty `Debug`.
+#[test]
+fn no_recognize_debug_line_shows_the_evidence() {
+    let name = crate::core::RecognizedName {
+        name: EVIDENCE.to_owned(),
+        kind: "person".to_owned(),
+        start: 0,
+        end: 1,
+        strength: 0.9,
+    };
+    let edge = crate::core::RelationEdge {
+        relation: "works_for".to_owned(),
+        source: name.clone(),
+        target: name.clone(),
+        probability: 0.8,
+    };
+    let tokens = crate::core::tokenize(EVIDENCE);
+    let input = crate::cli::recognize::TokenInput {
+        token: EVIDENCE.to_owned(),
+        detection_probability: 0.9,
+        kind_probabilities: vec![0.9],
+    };
+    let lines = crate::core::Reading::new(crate::core::Framing::Lines, Vec::new())
+        .expect("a text reading")
+        .record(EVIDENCE.as_bytes())
+        .expect("a text record");
+    let object =
+        crate::core::Record::string_fields(vec![(EVIDENCE.to_owned(), EVIDENCE.to_owned())]);
+    let shown = format!(
+        "{name:?} {name:#?} {edge:?} {edge:#?} {tokens:?} {tokens:#?} {input:?} {input:#?} \
+         {lines:?} {lines:#?} {object:?} {object:#?}"
+    );
+    assert!(!shown.contains(EVIDENCE), "{shown}");
+    assert_eq!(shown.matches("withheld").count(), 14, "{shown}");
+    assert!(
+        shown.contains(r#"kind: "person", start: 0, end: 1, strength: 0.9"#),
+        "{shown}"
+    );
 }
 
 /// No message a user reads holds the key or the evidence.
@@ -139,6 +187,7 @@ fn no_diagnostic_holds_the_key_or_the_evidence() {
             limit: 1,
             actual: EVIDENCE.len(),
         }),
+        Failure::Recognize(super::recognize::Error::LogicalQuestion),
         Failure::RecordingStorage,
         Failure::Defect("a ranked row carries no probability"),
     ];
@@ -243,7 +292,7 @@ fn transport_kinds_give_fixed_actions() {
         ),
         (
             TransportKind::PrematureClose,
-            "thinkthen: the backend closed the connection before a reply; try again or change --max-retries\n",
+            "thinkthen: the backend closed the connection before a reply and may have received the request; it was not sent again\n",
         ),
         (
             TransportKind::Other,

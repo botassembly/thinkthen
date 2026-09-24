@@ -2,13 +2,151 @@
 
 use crate::core::adapters::built_in;
 use crate::core::recording::{Digest, Exchange as Recorded};
-use crate::core::{Backend, BackendProfile, Plan, Reply};
+use crate::core::{
+    Backend, BackendProfile, LimitKind, Plan, Question, RelationEntityView, RelationPlan, Reply,
+    plan_pairs, relation_evidence,
+};
 
 use crate::engine::error::Error;
 
 pub(crate) struct PreparedRequest {
     pub(crate) body: Vec<u8>,
     pub(crate) digest: Digest,
+}
+
+/// One contiguous plan chunk and the exact request prepared from it.
+pub(crate) struct PreparedChunk {
+    pub(crate) plan: Plan,
+    pub(crate) request: PreparedRequest,
+}
+
+#[cfg(test)]
+thread_local! {
+    /// How many plans this thread has prepared, so a test can catch a second preparation.
+    pub(crate) static PREPARATIONS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// Every chunk prepared and checked before execution starts.
+pub(crate) struct PreparedRequests {
+    chunks: Vec<PreparedChunk>,
+}
+
+impl PreparedRequests {
+    pub(crate) fn with_profile(
+        backend: &Backend,
+        plan: &Plan,
+        profile: Option<&BackendProfile>,
+    ) -> Result<Self, Error> {
+        #[cfg(test)]
+        PREPARATIONS.with(|count| count.set(count.get() + 1));
+        let mut chunks = Vec::new();
+        let mut consumed = 0;
+        while consumed < plan.questions().len() {
+            let remaining = plan.questions().len() - consumed;
+            let mut longest = None;
+            for count in 1..=remaining {
+                match prepare_chunk(backend, plan, profile, consumed, count) {
+                    Ok(chunk) => longest = Some((count, chunk)),
+                    Err(Error::ProfileLimit(limit)) if limit.permits_split() => break,
+                    Err(error) => return Err(error),
+                }
+            }
+            let Some((count, chunk)) = longest else {
+                let _impossible = prepare_chunk(backend, plan, profile, consumed, 1)?;
+                return Err(Error::Defect(
+                    "an impossible request chunk passed preflight",
+                ));
+            };
+            chunks.push(chunk);
+            consumed += count;
+        }
+        Ok(Self { chunks })
+    }
+
+    pub(crate) fn into_chunks(self) -> Vec<PreparedChunk> {
+        self.chunks
+    }
+}
+
+/// One concrete relation after the only relation fallback decision.
+pub(crate) struct SettledRelation {
+    pub(crate) planned: RelationPlan,
+    pub(crate) requests: PreparedRequests,
+    /// The backend-profile limit that turned a choice into yes/no questions.
+    pub(crate) fallback: Option<LimitKind>,
+}
+
+impl SettledRelation {
+    /// Prepare one planned concrete relation for `recognize` and `relate`.
+    ///
+    /// A choice refused by a backend-profile option or request-byte limit
+    /// becomes yes/no questions for this concrete relation alone.
+    pub(crate) fn settle<E: RelationEntityView>(
+        backend: &Backend,
+        profile: Option<&BackendProfile>,
+        source: Option<&str>,
+        entities: &[E],
+        planned: RelationPlan,
+    ) -> Result<Self, Error> {
+        let plan = relation_request(backend, source, entities, &planned)?;
+        match PreparedRequests::with_profile(backend, &plan, profile) {
+            Ok(requests) => Ok(Self {
+                planned,
+                requests,
+                fallback: None,
+            }),
+            Err(Error::ProfileLimit(limit))
+                if matches!(planned.questions.first(), Some(Question::Choose { .. }))
+                    && limit.permits_relation_fallback() =>
+            {
+                let planned = plan_pairs(entities, &planned.relation)
+                    .map_err(|_| Error::Defect("relation fallback planning failed"))?;
+                let plan = relation_request(backend, source, entities, &planned)?;
+                let requests = PreparedRequests::with_profile(backend, &plan, profile)?;
+                Ok(Self {
+                    planned,
+                    requests,
+                    fallback: Some(limit.kind),
+                })
+            }
+            Err(error) => Err(error),
+        }
+    }
+}
+
+fn relation_request<E: RelationEntityView>(
+    backend: &Backend,
+    source: Option<&str>,
+    entities: &[E],
+    planned: &RelationPlan,
+) -> Result<Plan, Error> {
+    let evidence = relation_evidence(source, entities, &planned.relation)
+        .map_err(|_| Error::Defect("relation state could not be built"))?;
+    Plan::new(evidence, backend.model().clone(), planned.questions.clone())
+        .map_err(|_| Error::Defect("relation planned no questions"))
+}
+
+fn prepare_chunk(
+    backend: &Backend,
+    plan: &Plan,
+    profile: Option<&BackendProfile>,
+    consumed: usize,
+    count: usize,
+) -> Result<PreparedChunk, Error> {
+    let questions = plan
+        .questions()
+        .iter()
+        .skip(consumed)
+        .take(count)
+        .cloned()
+        .collect();
+    let chunk = Plan::new(plan.evidence().clone(), plan.model().clone(), questions)
+        .map_err(|_| Error::Defect("a request chunk asks nothing"))?;
+    let request = PreparedRequest::with_profile(backend, &chunk, profile)?;
+    Ok(PreparedChunk {
+        plan: chunk,
+        request,
+    })
 }
 
 impl PreparedRequest {

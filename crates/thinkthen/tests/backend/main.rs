@@ -26,18 +26,41 @@ mod interrupt;
 mod json_syntax;
 mod keeping;
 mod limits;
+mod loopback_arms;
+#[allow(
+    clippy::indexing_slicing,
+    reason = "a missing member of a shared case reads as null and fails its comparison"
+)]
+mod loopback_cases;
 mod parallel;
 mod profile;
+#[rustfmt::skip]
+#[allow(clippy::excessive_nesting, clippy::expect_used, clippy::indexing_slicing, clippy::obfuscated_if_else, reason = "fixture failures should stop this compiled command-boundary proof")]
+mod recognize;
+mod recognize_refusals;
 mod record_values;
 mod recording_conflicts;
 mod recording_durability;
 mod recordings;
 mod refusals;
 mod refused;
+#[allow(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    reason = "fixture failures should stop this compiled relation boundary proof"
+)]
+mod relate;
+mod resend;
 mod result_assertions;
 mod scheduling;
 mod secrecy;
 mod secrecy_find;
+#[allow(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    reason = "fixture failures should stop this relation secrecy proof"
+)]
+mod secrecy_relate;
 mod state;
 mod streaming;
 mod support;

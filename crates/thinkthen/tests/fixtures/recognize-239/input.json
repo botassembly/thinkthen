@@ -1,0 +1,815 @@
+{
+ "entities": [
+  {
+   "name": "Across the Universe",
+   "kind": "song"
+  },
+  {
+   "name": "Act Naturally",
+   "kind": "song"
+  },
+  {
+   "name": "All I've Got to Do",
+   "kind": "song"
+  },
+  {
+   "name": "All My Loving",
+   "kind": "song"
+  },
+  {
+   "name": "All Together Now",
+   "kind": "song"
+  },
+  {
+   "name": "All You Need Is Love",
+   "kind": "song"
+  },
+  {
+   "name": "And I Love Her",
+   "kind": "song"
+  },
+  {
+   "name": "And Your Bird Can Sing",
+   "kind": "song"
+  },
+  {
+   "name": "Anna (Go to Him)",
+   "kind": "song"
+  },
+  {
+   "name": "Another Girl",
+   "kind": "song"
+  },
+  {
+   "name": "Any Time at All",
+   "kind": "song"
+  },
+  {
+   "name": "Ask Me Why",
+   "kind": "song"
+  },
+  {
+   "name": "Baby It's You",
+   "kind": "song"
+  },
+  {
+   "name": "Baby, You're a Rich Man",
+   "kind": "song"
+  },
+  {
+   "name": "Baby's in Black",
+   "kind": "song"
+  },
+  {
+   "name": "Back in the U.S.S.R.",
+   "kind": "song"
+  },
+  {
+   "name": "Because",
+   "kind": "song"
+  },
+  {
+   "name": "Being for the Benefit of Mr. Kite!",
+   "kind": "song"
+  },
+  {
+   "name": "Birthday",
+   "kind": "song"
+  },
+  {
+   "name": "Blackbird",
+   "kind": "song"
+  },
+  {
+   "name": "Blue Jay Way",
+   "kind": "song"
+  },
+  {
+   "name": "Boys",
+   "kind": "song"
+  },
+  {
+   "name": "Can't Buy Me Love",
+   "kind": "song"
+  },
+  {
+   "name": "Carry That Weight",
+   "kind": "song"
+  },
+  {
+   "name": "Chains",
+   "kind": "song"
+  },
+  {
+   "name": "Come Together",
+   "kind": "song"
+  },
+  {
+   "name": "The Continuing Story of Bungalow Bill",
+   "kind": "song"
+  },
+  {
+   "name": "Cry Baby Cry",
+   "kind": "song"
+  },
+  {
+   "name": "A Day in the Life",
+   "kind": "song"
+  },
+  {
+   "name": "Dear Prudence",
+   "kind": "song"
+  },
+  {
+   "name": "Devil in Her Heart",
+   "kind": "song"
+  },
+  {
+   "name": "Dig a Pony",
+   "kind": "song"
+  },
+  {
+   "name": "Dig It",
+   "kind": "song"
+  },
+  {
+   "name": "Dizzy Miss Lizzy",
+   "kind": "song"
+  },
+  {
+   "name": "Do You Want to Know a Secret",
+   "kind": "song"
+  },
+  {
+   "name": "Doctor Robert",
+   "kind": "song"
+  },
+  {
+   "name": "Don't Bother Me",
+   "kind": "song"
+  },
+  {
+   "name": "Don't Pass Me By",
+   "kind": "song"
+  },
+  {
+   "name": "Drive My Car",
+   "kind": "song"
+  },
+  {
+   "name": "Eight Days a Week",
+   "kind": "song"
+  },
+  {
+   "name": "Eleanor Rigby",
+   "kind": "song"
+  },
+  {
+   "name": "The End",
+   "kind": "song"
+  },
+  {
+   "name": "Every Little Thing",
+   "kind": "song"
+  },
+  {
+   "name": "Everybody's Got Something to Hide Except Me and My Monkey",
+   "kind": "song"
+  },
+  {
+   "name": "Everybody's Trying to Be My Baby",
+   "kind": "song"
+  },
+  {
+   "name": "Fixing a Hole",
+   "kind": "song"
+  },
+  {
+   "name": "Flying",
+   "kind": "song"
+  },
+  {
+   "name": "The Fool on the Hill",
+   "kind": "song"
+  },
+  {
+   "name": "For No One",
+   "kind": "song"
+  },
+  {
+   "name": "For You Blue",
+   "kind": "song"
+  },
+  {
+   "name": "Get Back",
+   "kind": "song"
+  },
+  {
+   "name": "Getting Better",
+   "kind": "song"
+  },
+  {
+   "name": "Girl",
+   "kind": "song"
+  },
+  {
+   "name": "Glass Onion",
+   "kind": "song"
+  },
+  {
+   "name": "Golden Slumbers",
+   "kind": "song"
+  },
+  {
+   "name": "Good Day Sunshine",
+   "kind": "song"
+  },
+  {
+   "name": "Good Morning Good Morning",
+   "kind": "song"
+  },
+  {
+   "name": "Good Night",
+   "kind": "song"
+  },
+  {
+   "name": "Got to Get You into My Life",
+   "kind": "song"
+  },
+  {
+   "name": "Happiness Is a Warm Gun",
+   "kind": "song"
+  },
+  {
+   "name": "A Hard Day's Night",
+   "kind": "song"
+  },
+  {
+   "name": "Hello, Goodbye",
+   "kind": "song"
+  },
+  {
+   "name": "Help!",
+   "kind": "song"
+  },
+  {
+   "name": "Helter Skelter",
+   "kind": "song"
+  },
+  {
+   "name": "Her Majesty",
+   "kind": "song"
+  },
+  {
+   "name": "Here Comes the Sun",
+   "kind": "song"
+  },
+  {
+   "name": "Here, There and Everywhere",
+   "kind": "song"
+  },
+  {
+   "name": "Hey Bulldog",
+   "kind": "song"
+  },
+  {
+   "name": "Hold Me Tight",
+   "kind": "song"
+  },
+  {
+   "name": "Honey Don't",
+   "kind": "song"
+  },
+  {
+   "name": "Honey Pie",
+   "kind": "song"
+  },
+  {
+   "name": "I Am the Walrus",
+   "kind": "song"
+  },
+  {
+   "name": "I Don't Want to Spoil the Party",
+   "kind": "song"
+  },
+  {
+   "name": "I Me Mine",
+   "kind": "song"
+  },
+  {
+   "name": "I Need You",
+   "kind": "song"
+  },
+  {
+   "name": "I Saw Her Standing There",
+   "kind": "song"
+  },
+  {
+   "name": "I Should Have Known Better",
+   "kind": "song"
+  },
+  {
+   "name": "I Wanna Be Your Man",
+   "kind": "song"
+  },
+  {
+   "name": "I Want to Tell You",
+   "kind": "song"
+  },
+  {
+   "name": "I Want You (She's So Heavy)",
+   "kind": "song"
+  },
+  {
+   "name": "I Will",
+   "kind": "song"
+  },
+  {
+   "name": "If I Fell",
+   "kind": "song"
+  },
+  {
+   "name": "If I Needed Someone",
+   "kind": "song"
+  },
+  {
+   "name": "I'll Be Back",
+   "kind": "song"
+  },
+  {
+   "name": "I'll Cry Instead",
+   "kind": "song"
+  },
+  {
+   "name": "I'll Follow the Sun",
+   "kind": "song"
+  },
+  {
+   "name": "I'm a Loser",
+   "kind": "song"
+  },
+  {
+   "name": "I'm Happy Just to Dance with You",
+   "kind": "song"
+  },
+  {
+   "name": "I'm Looking Through You",
+   "kind": "song"
+  },
+  {
+   "name": "I'm Only Sleeping",
+   "kind": "song"
+  },
+  {
+   "name": "I'm So Tired",
+   "kind": "song"
+  },
+  {
+   "name": "I've Got a Feeling",
+   "kind": "song"
+  },
+  {
+   "name": "I've Just Seen a Face",
+   "kind": "song"
+  },
+  {
+   "name": "In My Life",
+   "kind": "song"
+  },
+  {
+   "name": "It Won't Be Long",
+   "kind": "song"
+  },
+  {
+   "name": "It's All Too Much",
+   "kind": "song"
+  },
+  {
+   "name": "It's Only Love",
+   "kind": "song"
+  },
+  {
+   "name": "Julia",
+   "kind": "song"
+  },
+  {
+   "name": "Kansas City/Hey-Hey-Hey-Hey!",
+   "kind": "song"
+  },
+  {
+   "name": "Let It Be",
+   "kind": "song"
+  },
+  {
+   "name": "Little Child",
+   "kind": "song"
+  },
+  {
+   "name": "The Long and Winding Road",
+   "kind": "song"
+  },
+  {
+   "name": "Long, Long, Long",
+   "kind": "song"
+  },
+  {
+   "name": "Love Me Do",
+   "kind": "song"
+  },
+  {
+   "name": "Love You To",
+   "kind": "song"
+  },
+  {
+   "name": "Lovely Rita",
+   "kind": "song"
+  },
+  {
+   "name": "Lucy in the Sky with Diamonds",
+   "kind": "song"
+  },
+  {
+   "name": "Maggie Mae",
+   "kind": "song"
+  },
+  {
+   "name": "Magical Mystery Tour",
+   "kind": "song"
+  },
+  {
+   "name": "Martha My Dear",
+   "kind": "song"
+  },
+  {
+   "name": "Maxwell's Silver Hammer",
+   "kind": "song"
+  },
+  {
+   "name": "Mean Mr. Mustard",
+   "kind": "song"
+  },
+  {
+   "name": "Michelle",
+   "kind": "song"
+  },
+  {
+   "name": "Misery",
+   "kind": "song"
+  },
+  {
+   "name": "Money (That's What I Want)",
+   "kind": "song"
+  },
+  {
+   "name": "Mother Nature's Son",
+   "kind": "song"
+  },
+  {
+   "name": "Mr. Moonlight",
+   "kind": "song"
+  },
+  {
+   "name": "The Night Before",
+   "kind": "song"
+  },
+  {
+   "name": "No Reply",
+   "kind": "song"
+  },
+  {
+   "name": "Norwegian Wood (This Bird Has Flown)",
+   "kind": "song"
+  },
+  {
+   "name": "Not a Second Time",
+   "kind": "song"
+  },
+  {
+   "name": "Nowhere Man",
+   "kind": "song"
+  },
+  {
+   "name": "Ob-La-Di, Ob-La-Da",
+   "kind": "song"
+  },
+  {
+   "name": "Octopus's Garden",
+   "kind": "song"
+  },
+  {
+   "name": "Oh! Darling",
+   "kind": "song"
+  },
+  {
+   "name": "One After 909",
+   "kind": "song"
+  },
+  {
+   "name": "Only a Northern Song",
+   "kind": "song"
+  },
+  {
+   "name": "Penny Lane",
+   "kind": "song"
+  },
+  {
+   "name": "Piggies",
+   "kind": "song"
+  },
+  {
+   "name": "Please Mr. Postman",
+   "kind": "song"
+  },
+  {
+   "name": "Please Please Me",
+   "kind": "song"
+  },
+  {
+   "name": "Polythene Pam",
+   "kind": "song"
+  },
+  {
+   "name": "P.S. I Love You",
+   "kind": "song"
+  },
+  {
+   "name": "Revolution 1",
+   "kind": "song"
+  },
+  {
+   "name": "Revolution 9",
+   "kind": "song"
+  },
+  {
+   "name": "Rock and Roll Music",
+   "kind": "song"
+  },
+  {
+   "name": "Rocky Raccoon",
+   "kind": "song"
+  },
+  {
+   "name": "Roll Over Beethoven",
+   "kind": "song"
+  },
+  {
+   "name": "Run for Your Life",
+   "kind": "song"
+  },
+  {
+   "name": "Savoy Truffle",
+   "kind": "song"
+  },
+  {
+   "name": "Sexy Sadie",
+   "kind": "song"
+  },
+  {
+   "name": "Sgt. Pepper's Lonely Hearts Club Band",
+   "kind": "song"
+  },
+  {
+   "name": "Sgt. Pepper's Lonely Hearts Club Band (Reprise)",
+   "kind": "song"
+  },
+  {
+   "name": "She Came In Through the Bathroom Window",
+   "kind": "song"
+  },
+  {
+   "name": "She Said She Said",
+   "kind": "song"
+  },
+  {
+   "name": "She's Leaving Home",
+   "kind": "song"
+  },
+  {
+   "name": "Something",
+   "kind": "song"
+  },
+  {
+   "name": "Strawberry Fields Forever",
+   "kind": "song"
+  },
+  {
+   "name": "Sun King",
+   "kind": "song"
+  },
+  {
+   "name": "A Taste of Honey",
+   "kind": "song"
+  },
+  {
+   "name": "Taxman",
+   "kind": "song"
+  },
+  {
+   "name": "Tell Me What You See",
+   "kind": "song"
+  },
+  {
+   "name": "Tell Me Why",
+   "kind": "song"
+  },
+  {
+   "name": "There's a Place",
+   "kind": "song"
+  },
+  {
+   "name": "Things We Said Today",
+   "kind": "song"
+  },
+  {
+   "name": "Think for Yourself",
+   "kind": "song"
+  },
+  {
+   "name": "Ticket to Ride",
+   "kind": "song"
+  },
+  {
+   "name": "Till There Was You",
+   "kind": "song"
+  },
+  {
+   "name": "Tomorrow Never Knows",
+   "kind": "song"
+  },
+  {
+   "name": "Twist and Shout",
+   "kind": "song"
+  },
+  {
+   "name": "Two of Us",
+   "kind": "song"
+  },
+  {
+   "name": "Wait",
+   "kind": "song"
+  },
+  {
+   "name": "What Goes On",
+   "kind": "song"
+  },
+  {
+   "name": "What You're Doing",
+   "kind": "song"
+  },
+  {
+   "name": "When I Get Home",
+   "kind": "song"
+  },
+  {
+   "name": "When I'm Sixty-Four",
+   "kind": "song"
+  },
+  {
+   "name": "While My Guitar Gently Weeps",
+   "kind": "song"
+  },
+  {
+   "name": "Why Don't We Do It in the Road?",
+   "kind": "song"
+  },
+  {
+   "name": "Wild Honey Pie",
+   "kind": "song"
+  },
+  {
+   "name": "With a Little Help from My Friends",
+   "kind": "song"
+  },
+  {
+   "name": "Within You Without You",
+   "kind": "song"
+  },
+  {
+   "name": "The Word",
+   "kind": "song"
+  },
+  {
+   "name": "Words of Love",
+   "kind": "song"
+  },
+  {
+   "name": "Yellow Submarine",
+   "kind": "song"
+  },
+  {
+   "name": "Yer Blues",
+   "kind": "song"
+  },
+  {
+   "name": "Yesterday",
+   "kind": "song"
+  },
+  {
+   "name": "You Can't Do That",
+   "kind": "song"
+  },
+  {
+   "name": "You Like Me Too Much",
+   "kind": "song"
+  },
+  {
+   "name": "You Never Give Me Your Money",
+   "kind": "song"
+  },
+  {
+   "name": "You Really Got a Hold on Me",
+   "kind": "song"
+  },
+  {
+   "name": "You Won't See Me",
+   "kind": "song"
+  },
+  {
+   "name": "Your Mother Should Know",
+   "kind": "song"
+  },
+  {
+   "name": "You're Going to Lose That Girl",
+   "kind": "song"
+  },
+  {
+   "name": "You've Got to Hide Your Love Away",
+   "kind": "song"
+  },
+  {
+   "name": "John Lennon",
+   "kind": "person"
+  },
+  {
+   "name": "Paul McCartney",
+   "kind": "person"
+  },
+  {
+   "name": "George Harrison",
+   "kind": "person"
+  },
+  {
+   "name": "Ringo Starr",
+   "kind": "person"
+  },
+  {
+   "name": "Please Please Me",
+   "kind": "album"
+  },
+  {
+   "name": "With the Beatles",
+   "kind": "album"
+  },
+  {
+   "name": "A Hard Day's Night",
+   "kind": "album"
+  },
+  {
+   "name": "Beatles for Sale",
+   "kind": "album"
+  },
+  {
+   "name": "Help!",
+   "kind": "album"
+  },
+  {
+   "name": "Rubber Soul",
+   "kind": "album"
+  },
+  {
+   "name": "Revolver",
+   "kind": "album"
+  },
+  {
+   "name": "Sgt. Pepper's Lonely Hearts Club Band",
+   "kind": "album"
+  },
+  {
+   "name": "Magical Mystery Tour",
+   "kind": "album"
+  },
+  {
+   "name": "The Beatles (White Album)",
+   "kind": "album"
+  },
+  {
+   "name": "Yellow Submarine",
+   "kind": "album"
+  },
+  {
+   "name": "Abbey Road",
+   "kind": "album"
+  },
+  {
+   "name": "Let It Be",
+   "kind": "album"
+  }
+ ],
+ "relations": [
+  "sung_by=song:person",
+  "appears_on=song:album"
+ ],
+ "phrases": {
+  "sung_by": "has its lead vocal sung by"
+ }
+}

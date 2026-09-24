@@ -40,6 +40,7 @@ fn questions() -> PathBuf {
 mod partial_failure;
 mod request_identity;
 mod scheduling;
+mod splitting;
 mod structured;
 
 #[test]

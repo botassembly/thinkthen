@@ -1,5 +1,6 @@
 //! A named backend's locally enforceable request limits.
 
+use serde::{Serialize, Serializer};
 use thiserror::Error;
 
 use crate::core::json::{Json, JsonError};
@@ -8,6 +9,12 @@ use crate::core::plan::Plan;
 /// A public backend name used for limits and threshold calibration.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct ProfileName(String);
+
+impl Serialize for ProfileName {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
+    }
+}
 
 impl ProfileName {
     /// Read a safe profile name.
@@ -35,6 +42,7 @@ pub(crate) struct BackendProfile {
     max_evidence_bytes: Option<usize>,
     max_request_bytes: Option<usize>,
     max_questions: Option<usize>,
+    max_options: Option<usize>,
 }
 
 impl BackendProfile {
@@ -51,6 +59,7 @@ impl BackendProfile {
                 "max_evidence_bytes",
                 "max_request_bytes",
                 "max_questions",
+                "max_options",
             ]
             .contains(&name.as_str())
             {
@@ -68,7 +77,12 @@ impl BackendProfile {
         let max_evidence_bytes = limit(&value, "max_evidence_bytes")?;
         let max_request_bytes = limit(&value, "max_request_bytes")?;
         let max_questions = limit(&value, "max_questions")?;
-        if max_evidence_bytes.is_none() && max_request_bytes.is_none() && max_questions.is_none() {
+        let max_options = limit(&value, "max_options")?;
+        if max_evidence_bytes.is_none()
+            && max_request_bytes.is_none()
+            && max_questions.is_none()
+            && max_options.is_none()
+        {
             return Err(ProfileError::NoLimit);
         }
         Ok(Self {
@@ -76,6 +90,7 @@ impl BackendProfile {
             max_evidence_bytes,
             max_request_bytes,
             max_questions,
+            max_options,
         })
     }
 
@@ -97,6 +112,19 @@ impl BackendProfile {
             LimitKind::EvidenceBytes,
             self.max_evidence_bytes,
             evidence.len(),
+        )?;
+        check_limit(
+            &self.name,
+            LimitKind::Options,
+            self.max_options,
+            plan.questions()
+                .iter()
+                .filter_map(|question| match question {
+                    crate::core::Question::Choose { options, .. } => Some(options.count()),
+                    _ => None,
+                })
+                .max()
+                .unwrap_or(0),
         )?;
         check_limit(
             &self.name,
@@ -178,6 +206,7 @@ pub(crate) enum LimitKind {
     EvidenceBytes,
     RequestBytes,
     Questions,
+    Options,
 }
 
 impl LimitKind {
@@ -186,6 +215,7 @@ impl LimitKind {
             Self::EvidenceBytes => "evidence bytes",
             Self::RequestBytes => "request bytes",
             Self::Questions => "questions",
+            Self::Options => "options",
         }
     }
 }
@@ -197,6 +227,17 @@ pub(crate) struct ProfileLimit {
     pub(crate) kind: LimitKind,
     pub(crate) limit: usize,
     pub(crate) actual: usize,
+}
+
+impl ProfileLimit {
+    /// Whether another contiguous request can satisfy this kind of limit.
+    pub(crate) const fn permits_split(&self) -> bool {
+        matches!(self.kind, LimitKind::RequestBytes | LimitKind::Questions)
+    }
+
+    pub(crate) const fn permits_relation_fallback(&self) -> bool {
+        matches!(self.kind, LimitKind::RequestBytes | LimitKind::Options)
+    }
 }
 
 #[cfg(test)]

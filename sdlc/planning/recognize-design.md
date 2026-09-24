@@ -179,7 +179,13 @@ An audit of `experiments/RECOGNIZE-PRODUCT-SPEC.md` against this page found five
 | Word positions in the main object | Under `--details` only |
 | A margin term in the confidence formula | The harvest package's formula, the least of the word probabilities times the mean of the kind probabilities, with connector words left out. It is what every recorded case used |
 
-The internal rules stay internal and have no option: how overlapping names are settled (highest total probability, then leftmost-longest) and the trailing possessive rule. Their home is `experiments/225-recognize-harvest-package/rules/rules.md`, each with a test. Ian ruled on 2026-09-21 that the connector word list is deleted, at a measured price of 0.93 F1 on one corpus and nothing on the other (`experiments/229-listless/`). The pipeline now holds no word list, no dictionary, and no template, so every member word counts toward a name's strength. A name joined by a lowercase connector may come back in two parts, and the manual says so in one sentence.
+The internal rules stay internal and have no option. The trailing possessive rule remains. Ian ruled on 2026-09-21 that the connector word list is deleted, at a measured price of 0.93 F1 on one corpus and nothing on the other (`experiments/229-listless/`). The pipeline now holds no word list, no dictionary, and no template, so every member word counts toward a name's strength. A name joined by a lowercase connector may come back in two parts, and the manual says so in one sentence.
+
+## Ruled 2026-09-23: ship the measured maximal-run baseline
+
+One maximal contiguous run of `IN` words is one candidate. Runs are disjoint. Ticket 0080 has no overlap promise or resolver. This ruling explicitly overturns this page's earlier settled line that overlapping names use highest total probability and leftmost-longest ties. Historical experiment files remain unchanged.
+
+Later Beatles Bench branch-function research found boundary errors, not overlap errors: `album` enters `the album Abbey Road`; `Don't` drops from `Don't Pass Me By`; long titles lose their middles; exact-match songs measured precision 0.23 and recall 0.15; overlap matching measured precision 1.00 and recall 0.54. The evidence creates or queues no ticket. See `sdlc/issues/2026-09-23-harvest-the-beatles-and-relate-runs-for-efficiency-thresholds-and-tuning.md`.
 
 ## One tool, ten functions
 

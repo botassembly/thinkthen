@@ -77,3 +77,7 @@ The count above read "seven pages leave" and then named eight: 20, 24, 07, 30, 2
 Ian ruled that page 16 is the page the talk, site, and README lead with. It moves from seventh to first without changing the seven pages.
 
 Ticket 0041 turned page 16 green on 2026-09-21. Pages 04 and 07 then left: pages 19 and 13 already held 04's band and coverage trade, page 14 held 07's several judged columns, and page 16 now holds the review pile, flat audit row, table input, JSONL output, explicit null, and collision caution.
+
+## Amendment, 2026-09-23, by ticket 0088
+
+Accepted ticket 0088 adds the public `relate` command and requires one replay-only ADR 0011 how-to. Page 45, “Map relationships in a complete entity set,” owns that command. The portfolio therefore has 21 pages. No earlier page leaves because none teaches complete-set relation planning, name-and-kind edges, or partial relation output.

@@ -4,11 +4,21 @@ Written 2026-09-21 by the product side at Ian's request. It folds the quality wa
 
 Ian can overturn any placement here.
 
+## Superseded order, 2026-09-24
+
+[One line, one owner](one-line-plan-2026-09-24.md) is the current order and ownership. The sections below are history where they differ.
+
 ## Current handoff, 2026-09-23
 
-Ticket 0074 now passes independent code review and the full integrated local ladder. Its landing is in progress. Ian replaced the older controls-first remainder with this launch-first order: 0079 request splitting; 0080 recognize; 0081 relate; 0082–0083 command completion; 0087 documentation corrections; 0076–0078 shared width, deadlines, fork recovery, and host signal ownership; then 0084–0086 public Rust API and packaging. Independent ticket lanes may proceed in parallel when their write sets and dependencies do not overlap. Dependent implementation still waits: recognize uses 0079 splitting, relate follows the settled planner, command completion follows both functions, and the public API follows stable controls and result shapes.
+Tickets 0074, 0087, 0079, 0080, and 0081 are landed on remote main. The launch-first queue continues with 0088 public `relate` command; 0082–0083 command completion; 0076–0078 deadlines, shared width, fork recovery, and host signal ownership; then 0084–0086 public Rust API and packaging. Independent ticket lanes may proceed in parallel when their write sets and dependencies do not overlap. Command completion follows both functions, 0077 follows 0076, 0078 follows both, and the public API follows stable controls and result shapes.
 
-The final relate planner is in `relate-design.md`: different kinds choose from the smaller kind while asking the larger kind; same-kind relations use lean yes/no pairs; over-limit choose questions fall back to pairs; the default cut remains 0.5; recognize reuses this planner. Ticket 0077 follows ADR 0017's one process cap: an implicit engine sets no cap, the first explicit width sets it, implicit engines follow it, and only a later conflicting explicit width fails locally.
+Ticket 0081 landed at `4229bbfa` after independent Sol Medium acceptance and a green four-gate ladder. The shared relation foundation now provides concrete wildcard expansion, exact relation state, per-concrete runtime backend-profile fallback, request identity, and recognition compatibility without a public `relate` command. Ticket 0088 is next and consumes that landed foundation for the public command.
+
+The final relation contract is in `relate-design.md`: wildcards expand to first-seen concrete kinds; different kinds choose from the smaller kind while asking the larger kind; same-kind relations use lean yes/no pairs; runtime backend-profile option and unsplittable request-byte limits fall back per concrete relation; the default cut remains 0.5; recognize and relate reuse one typed state, planner, mapping, and assembler. Ticket 0088 owns the complete `@entities` grammar, saved calibration identity, exact dry-run and Option A schemas, partial output at exit 6, help, specification, replay documentation, and secrecy. Ticket 0077 follows ADR 0017's one process cap: an implicit engine sets no cap, the first explicit width sets it, implicit engines follow it, and only a later conflicting explicit width fails locally.
+
+Ian ended the Luna-first 0081 trial after two substantive design-remediation passes and authorized the split. The original combined ticket reached its trial limit before implementation. Sol Medium now drives redesigned tickets 0081 and 0088; separate Sol sessions independently review each design and finished diff. Existing product rulings, evidence, test gates, and landing rules remain fixed. The trial status of 0082 and 0083 is unchanged; 0082 still pauses until Ian rules on `meta.profile_warning.calibrated` versus `tuned_for`.
+
+The 0081 record preserves the stopped trial's level, substantive Sol findings, two Luna remediation passes, Ian's exit-6 ruling, and the absence of implementation or gate results. Repository practice does not create an 0088 record before work runs. Each replacement ticket has its own realistic owners, file and line budget, focused proof, independent review, and full sequential gate. A reviewer remains read-only. Ticket 0080 began before the trial ruling and is not a trial result.
 
 The [mainline assessment and 0074 checklist](mainline-readiness-2026-09-23.md) preserve the evidence that completed 0074. Their original snapshot and controls-first ordering are historical where the update above differs. The separate `surfaces` branch remains unmerged. Release installers and installed-artifact checks remain open. Earlier snapshots below are historical.
 

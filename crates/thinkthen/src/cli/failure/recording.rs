@@ -1,6 +1,17 @@
 //! Fixed local recording diagnostics.
 
 use super::Failure;
+use crate::core::RecordError;
+
+impl Failure {
+    /// Name invalid text by its framing while preserving every other record error.
+    pub(crate) fn record(error: RecordError, streamed: bool) -> Self {
+        match error {
+            RecordError::NotUtf8 => Self::InvalidUtf8 { record: streamed },
+            other => Self::Record(other),
+        }
+    }
+}
 
 pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {
     Some(match failure {

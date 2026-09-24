@@ -3,7 +3,7 @@ name = "thinkthen"
 version = "0.0.1"
 edition.workspace = true
 rust-version.workspace = true
-description = "Put a decider model in the shell"
+description = "Semantic commands for the shell: if, grep, and sort that understand meaning"
 license = "MIT"
 publish = false
 
@@ -30,6 +30,7 @@ ureq = { version = "3.4.2", default-features = false, features = ["rustls"] }
 workspace = true
 
 [dev-dependencies]
+conformance-backend = { path = "../../conformance/backend" }
 proptest = { version = "1.11.0", default-features = false, features = ["std"] }
 
 [target."cfg(unix)".dependencies]

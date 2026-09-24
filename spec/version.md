@@ -12,22 +12,22 @@ thinkthen -V | mustmatch like "thinkthen $package_version"
 Both spellings print one line to standard output and exit zero. Nothing reaches standard error.
 
 ```bash
-thinkthen --version 2>/dev/null | wc -l | mustmatch like "1"
-thinkthen --version 2>&1 >/dev/null | mustmatch like ""
+thinkthen --version 2>/dev/null | wc -l | mustmatch "1"
+test -z "$(thinkthen --version 2>&1 >/dev/null)"
 ```
 
 The help names the tool and the two flags it carries today.
 
 ```bash
 thinkthen --help | head -1 | mustmatch like "Semantic commands for the shell: if, grep, and sort that understand meaning"
-thinkthen --help | grep -c -- '--version' | mustmatch like "1"
-thinkthen --help | grep -c -- '--help' | mustmatch like "1"
+thinkthen --help | grep -c -- '--version' | mustmatch "1"
+thinkthen --help | grep -c -- '--help' | mustmatch "1"
 ```
 
 With no arguments the tool asks for one. It prints its help on standard error and exits two, so a script that forgets an argument stops instead of reading an empty answer.
 
 ```bash
 thinkthen >/dev/null 2>&1 && exit 1
-thinkthen 2>/dev/null | mustmatch like ""
+test -z "$(thinkthen 2>/dev/null)"
 thinkthen 2>&1 >/dev/null | head -1 | mustmatch like "Semantic commands for the shell: if, grep, and sort that understand meaning"
 ```
