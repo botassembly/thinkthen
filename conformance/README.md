@@ -23,3 +23,21 @@ The pure-core integration test validates this file offline through the productio
 `backend-profiles.json` adds the shared limit and calibration cases. Its exact edges cross the production profile parser and request encoder. It covers evidence bytes, request bytes, expanded tags, grouped annotate, equal and differing names, and either absent name.
 
 `record-values.json` fixes the host-neutral default bulk row. Typed records and bare values cross the production serializer. Command-line framing stays in compiled binary tests.
+
+## The loopback backend
+
+`conformance/backend` is an offline backend every surface's tests can start. Run `cargo run --package conformance-backend`. It binds 127.0.0.1 on a free port and prints the port on its first line. A `count` line on standard input prints the requests read so far, a `release` line lets held replies go, and closing standard input prints the final count and exits. The command's own tests use its library in process.
+
+A caller picks an arm by the base it gives, because the engine appends `/systemone` to any base.
+
+| Base path | Answer |
+| --- | --- |
+| `/case/ID/v1` | The named case's response for each of its exact request bodies. Request digests hash the served URL, so a runner recomputes each expected digest |
+| `/generic/v1` | Any well-formed request. The first option, level, or yes gets 0.9, and the rest share the remainder in declared order |
+| `/arm/reset/v1` | A reset after the whole request arrives |
+| `/arm/429/v1`, `/arm/503/v1` | That status with `retry-after-ms: 10` |
+| `/arm/refuse/v1` | Status 422, the refusal that case `21-backend-fault` injects |
+| `/arm/held/v1` | The generic answer, held until a `release` line |
+| `/arm/malformed/CAUSE/v1` | The generic answer with the last question broken for one of the six failure causes. A distribution cause needs a choice or score question |
+
+An unknown body, arm, or request gets status 500 and a line on standard error, so drift fails loud.

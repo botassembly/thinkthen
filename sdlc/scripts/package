@@ -40,7 +40,8 @@ RS
 }
 prove_private target/private-proof-default
 prove_private target/private-proof-no-default --no-default-features
-cargo package --locked --offline --allow-dirty
+# The conformance backend is a test-only member and never ships (ticket 0092).
+cargo package --locked --offline --allow-dirty --package thinkthen
 
 # Ticket 0083: the source package carries the ten transforms byte for byte, and
 # a binary built from the unpacked package alone prints them from an empty
