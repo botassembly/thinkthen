@@ -1,4 +1,9 @@
 //! The read-only transform catalog prints embedded bytes and touches nothing.
+#![allow(
+    clippy::expect_used,
+    clippy::panic,
+    reason = "a failed fixture stops the proof"
+)]
 
 use std::fs;
 use std::io::{ErrorKind, Read as _};
