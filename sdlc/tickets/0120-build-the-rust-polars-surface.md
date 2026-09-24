@@ -6,7 +6,7 @@ opens: libraries/polars sdlc/planning/adr/0047-bindings-are-unpublished-crates-o
 
 # 0120: Build the Rust Polars surface
 
-Status: draft 2026-09-24, owner Claude.
+Status: design accepted 2026-09-24, owner Claude.
 
 ## Outcome and authority
 
@@ -96,7 +96,7 @@ The index (`sdlc/issues/2026-09-23-surfaces-branch-error-index.md`) has no Rust 
 
 | Mirrors | Rust proof | Planted bug |
 |---|---|---|
-| R1-24 Polars half | `score_series` over 200 rows at throttle 8 on the delay arm at 100 ms, with a 1 s deadline, returns `Deadline` near 1 s with at most 96 counted. | Pass `CallOptions::new()` to the engine in place of the caller's options. The call runs past 2 s and all 200 are counted. |
+| R1-24 Polars half | `score_series` over 200 distinct texts at throttle 8 on the delay arm at 100 ms, with a 1 s deadline, returns `Deadline` near 1 s with at most 96 counted. | Pass `CallOptions::new()` to the engine in place of the caller's options. The call runs past 2 s and all 200 are counted. |
 | R4-23 and R2-24 Polars halves | Covered by the R1-24 row. `CallOptions` has no getters, so the door cannot keep the deadline and drop the cancel token. It passes the caller's value whole or not at all. One pass-through test therefore covers the deadline, the cancel token, and the interrupt check. The R1-24 test stops a column mid-batch, and it stands as this surface's proof for the port guide's `18-cancel-mid-batch`. The per-row loop of the tag is caught by the throttle equality test below. | The R1-24 plant. |
 | R1-3, with R2-12 folded in | A three-chunk `Series` built with `concat` and no rechunk, then sliced at offset 5, gives each row its own answer on the case arm. In safe Rust a slice is already applied to each chunk, so R2-12's own defect cannot occur here, and this test covers the slice beside the chunks. | Read `chunks()[0]` for every chunk. |
 | R1-4 | `annotate_frame` returns the caller's `Categorical`, `Enum`, struct, and list columns with their dtypes and values equal to the input. | Cast the caller's `Categorical` column to `String` and leave it there. The dtype check turns red. |
@@ -168,5 +168,5 @@ Contract 2; state and timing 2; reach 2; proof 3; cost of error 2; total 11. Fin
 
 ## Review
 
-- Design review: pending.
+- Design review: `sdlc/records/2026-09-24-design-review-0120.md`. Five rounds of fresh read-only reviewers found 22 items, and every one is answered. The sixth round accepted it.
 - Code review: pending.
