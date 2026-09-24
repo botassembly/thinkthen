@@ -59,7 +59,9 @@ pub(crate) struct Counters {
     input_tokens: AtomicU64,
     output_tokens: AtomicU64,
     cache_answers: AtomicU64,
-    persistent: Mutex<Option<PathBuf>>,
+    path: Option<PathBuf>,
+    /// Held across one durable update. `false` once an update has failed.
+    persistent: Mutex<bool>,
     warned: AtomicBool,
 }
 
@@ -70,9 +72,15 @@ impl Counters {
             input_tokens: AtomicU64::new(0),
             output_tokens: AtomicU64::new(0),
             cache_answers: AtomicU64::new(0),
-            persistent: Mutex::new(path),
+            path,
+            persistent: Mutex::new(true),
             warned: AtomicBool::new(false),
         }
+    }
+
+    /// The usage folder these counters add to, fixed when they were made.
+    pub(crate) fn path(&self) -> Option<&Path> {
+        self.path.as_deref()
     }
 
     pub(crate) fn request_sent(&self) {
@@ -122,13 +130,15 @@ impl Counters {
             && checked_atomic_add(&self.input_tokens, delta.input_tokens)
             && checked_atomic_add(&self.output_tokens, delta.output_tokens)
             && checked_atomic_add(&self.cache_answers, delta.cache_answers);
-        let Ok(mut state) = self.persistent.lock() else {
+        let Ok(mut writing) = self.persistent.lock() else {
             self.warned.store(true, Ordering::Relaxed);
             return;
         };
-        let Some(path) = state.as_deref() else { return };
+        let Some(path) = self.path.as_deref().filter(|_| *writing) else {
+            return;
+        };
         if !process_ok || update(path, &month_now(), delta).is_err() {
-            *state = None;
+            *writing = false;
             self.warned.store(true, Ordering::Relaxed);
         }
     }
