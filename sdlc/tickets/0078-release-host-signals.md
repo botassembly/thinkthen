@@ -6,7 +6,7 @@ opens: Cargo.lock deny.toml crates/thinkthen/Cargo.toml crates/thinkthen/src/mai
 
 # 0078: Release host signals
 
-Status: design accepted 2026-09-24 after re-review. Owner: Claude.
+Status: built 2026-09-24; code review pending. Build record: `sdlc/records/0078-build-release-host-signals.md`. Owner: Claude.
 
 This ticket was "0078a" in the 2026-09-24 spine review. It keeps the number 0078 and the host-signal half of the earlier draft. Fork recovery and error-index row R5-3 moved to ticket 0096, which lands after 0085, because the pools it rebuilds do not exist before the facade (`sdlc/records/2026-09-24-spine-review-controls.md`, 0078 finding 2).
 
