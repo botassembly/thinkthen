@@ -80,7 +80,7 @@ pub(super) fn settle(arguments: &RelateArguments) -> Result<Settled, Failure> {
             sources.model = Source::CommandLine;
         }
     }
-    let framing = framing(arguments);
+    let framing = arguments.common.framing();
     if framing == Framing::Lines {
         lines_only(name.is_some() || arguments.kind_field.is_some(), &spec)?;
     }
@@ -124,20 +124,6 @@ fn lines_only(pointed: bool, spec: &RelateSpec) -> Result<(), Failure> {
         ));
     }
     Ok(())
-}
-
-fn framing(arguments: &RelateArguments) -> Framing {
-    if arguments.common.lines {
-        Framing::Lines
-    } else if arguments.common.jsonl {
-        Framing::Jsonl
-    } else if arguments.common.csv {
-        Framing::Csv
-    } else if arguments.common.tsv {
-        Framing::Tsv
-    } else {
-        Framing::Document
-    }
 }
 
 fn config_error(file: bool, error: RelateConfigError) -> Failure {

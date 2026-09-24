@@ -2,7 +2,7 @@
 
 use std::path::PathBuf;
 
-use crate::core::DEFAULT_MODEL;
+use crate::core::{DEFAULT_MODEL, Framing};
 use clap::{Args, Parser};
 
 mod command;
@@ -164,6 +164,23 @@ pub(crate) struct Common {
     /// How many times a transport failure or a retried status is sent again.
     #[arg(long, value_name = "N", default_value_t = 2, hide_short_help = true)]
     pub(crate) max_retries: u32,
+}
+
+impl Common {
+    /// The record framing the command line asked for.
+    pub(crate) const fn framing(&self) -> Framing {
+        if self.lines {
+            Framing::Lines
+        } else if self.jsonl {
+            Framing::Jsonl
+        } else if self.csv {
+            Framing::Csv
+        } else if self.tsv {
+            Framing::Tsv
+        } else {
+            Framing::Document
+        }
+    }
 }
 
 /// Everything `decide` was asked, before any of it is read.

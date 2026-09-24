@@ -7,9 +7,9 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 use crate::core::{
-    Backend, BackendProfile, DecisionResult, Framing, Meta, Outcome, Plan, PlanDocument, Pointer,
-    Question, QuestionText, Reading, Record, RecordValue, RequestMeta, Resolved, Sources,
-    Threshold, Value, json_line, question_sha256_with_profile,
+    Backend, BackendProfile, DecisionResult, Meta, Outcome, Plan, PlanDocument, Pointer, Question,
+    QuestionText, Reading, Record, RecordValue, RequestMeta, Resolved, Sources, Threshold, Value,
+    json_line, question_sha256_with_profile,
 };
 
 use crate::args::Common;
@@ -228,18 +228,7 @@ fn over_table(
 
 /// Read the framing the command line asked for, over the settled pointers.
 fn read_by(common: &Common, settled: &Resolved) -> Result<Reading, Failure> {
-    let framing = if common.lines {
-        Framing::Lines
-    } else if common.jsonl {
-        Framing::Jsonl
-    } else if common.csv {
-        Framing::Csv
-    } else if common.tsv {
-        Framing::Tsv
-    } else {
-        Framing::Document
-    };
-    Ok(Reading::new(framing, settled.on().to_vec())?)
+    Ok(Reading::new(common.framing(), settled.on().to_vec())?)
 }
 
 fn table_kind(common: &Common) -> Option<TableKind> {

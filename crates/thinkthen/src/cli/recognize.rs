@@ -116,7 +116,7 @@ pub(crate) fn run(
                 .map_err(|_| Failure::Usage("--model is text, not white space"))?,
         );
     }
-    let reading = Reading::new(config::framing(&arguments.common), pointers)?;
+    let reading = Reading::new(arguments.common.framing(), pointers)?;
     let jobs = schedule::jobs_of(arguments.common.jobs, reading.streams())?;
     let source = edge::source(arguments.common.input.as_deref(), input)?;
     let configured = spec

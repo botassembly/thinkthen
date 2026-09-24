@@ -3,9 +3,7 @@
 use std::fs;
 
 use crate::args::{Common, RecognizeArguments};
-use crate::core::{
-    Description, Framing, RecognizeConfigError, RecognizeKinds, RecognizeSpec, RelationRule,
-};
+use crate::core::{Description, RecognizeConfigError, RecognizeKinds, RecognizeSpec, RelationRule};
 use crate::failure::Failure;
 use crate::table::Kind as TableKind;
 
@@ -119,20 +117,6 @@ fn command_rule(text: &str) -> Result<RelationRule, Failure> {
 
 pub(super) fn error(file: bool, error: RecognizeConfigError) -> Failure {
     Failure::Recognize(crate::cli::failure::recognize::Error::Config { file, error })
-}
-
-pub(super) fn framing(common: &Common) -> Framing {
-    if common.lines {
-        Framing::Lines
-    } else if common.jsonl {
-        Framing::Jsonl
-    } else if common.csv {
-        Framing::Csv
-    } else if common.tsv {
-        Framing::Tsv
-    } else {
-        Framing::Document
-    }
 }
 
 pub(super) fn table_kind(common: &Common) -> Option<TableKind> {
