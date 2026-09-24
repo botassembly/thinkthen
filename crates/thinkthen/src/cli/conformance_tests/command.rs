@@ -195,7 +195,7 @@ pub(super) fn counters(case: &Case, expected: &Counters) {
     let response = exchange.response.get().as_bytes().to_vec();
     let server = thread::spawn(move || serve_once(listener, request, response));
     let backend = Backend::from_parts(
-        Url::new(&format!("http://{address}/v1/systemone")).expect("loopback URL"),
+        Url::new(format!("http://{address}/v1/systemone")).expect("loopback URL"),
         ModelName::new("jev-latest").expect("model"),
     );
     let recorder = Recorder::of_private(Some(&cache), Some(&cache), false, true).expect("cache");

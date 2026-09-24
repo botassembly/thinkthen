@@ -18,38 +18,6 @@ fn focused_mutations_are_refused() {
         )
         .replacen("\"kind\": \"local\"", "\"kind\": \"usage\"", 1);
     let mutations = [
-        CASES.replacen(
-            "\"kind\": \"decide_many\"",
-            "\"kind\": \"decide_several\"",
-            1,
-        ),
-        CASES.replacen(
-            "\"kind\": \"synthetic_contract\"",
-            "\"kind\": \"captured\"",
-            1,
-        ),
-        CASES.replacen(
-            "\"kind\": \"synthetic_contract\"",
-            "\"kind\": \"captured\", \"path\": \"demos/unstable.json\"",
-            1,
-        ),
-        CASES.replacen("\"evidence\": ", "\"headers\": {}, \"evidence\": ", 1),
-        CASES.replacen(
-            "\"evidence\": ",
-            "\"x-api-key\": \"secret\", \"evidence\": ",
-            1,
-        ),
-        CASES.replacen(
-            "\"branch\": \"06-filter-empty-list\"",
-            "\"branch\": null",
-            1,
-        ),
-        CASES.replacen(
-            "\"question_form\": \"file\"",
-            "\"question_form\": \"text\"",
-            1,
-        ),
-        CASES.replacen("\"name\": \"result\"", "\"name\": \"q1\"", 1),
         CASES.replacen("\"bare\": true", "\"bare\": false", 1),
         CASES.replacen(
             "https://api.typesafe.ai/v1/systemone",
@@ -96,5 +64,50 @@ fn focused_mutations_are_refused() {
     ];
     for (place, mutation) in mutations.into_iter().enumerate() {
         assert!(validate(&mutation).is_err(), "mutation {place} passed");
+    }
+}
+
+/// Each ported-case refusal turns red when its check is removed.
+#[test]
+fn ported_case_mutations_are_refused() {
+    let mutations = [
+        CASES.replacen(
+            "\"kind\": \"decide_many\"",
+            "\"kind\": \"decide_several\"",
+            1,
+        ),
+        CASES.replacen(
+            "\"kind\": \"synthetic_contract\"",
+            "\"kind\": \"captured\"",
+            1,
+        ),
+        CASES.replacen(
+            "\"kind\": \"synthetic_contract\"",
+            "\"kind\": \"captured\", \"path\": \"demos/unstable.json\"",
+            1,
+        ),
+        CASES.replacen("\"evidence\": ", "\"headers\": {}, \"evidence\": ", 1),
+        CASES.replacen(
+            "\"evidence\": ",
+            "\"x-api-key\": \"secret\", \"evidence\": ",
+            1,
+        ),
+        CASES.replacen(
+            "\"branch\": \"06-filter-empty-list\"",
+            "\"branch\": null",
+            1,
+        ),
+        CASES.replacen(
+            "\"question_form\": \"file\"",
+            "\"question_form\": \"text\"",
+            1,
+        ),
+        CASES.replacen("\"name\": \"result\"", "\"name\": \"q1\"", 1),
+    ];
+    for (place, mutation) in mutations.into_iter().enumerate() {
+        assert!(
+            validate(&mutation).is_err(),
+            "ported mutation {place} passed"
+        );
     }
 }
