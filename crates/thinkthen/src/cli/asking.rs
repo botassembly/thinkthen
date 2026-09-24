@@ -444,7 +444,7 @@ impl Judging<'_> {
                 question_sha256_with_profile(
                     &sending.question,
                     self.threshold,
-                    self.calibrated_profile(),
+                    self.tuned_for_profile(),
                 )?,
                 self.backend.url().clone(),
                 answered.reply.model().clone(),
@@ -502,8 +502,8 @@ impl Judging<'_> {
         })
     }
 
-    fn calibrated_profile(&self) -> Option<&crate::core::ProfileName> {
-        self.mismatch.calibrated()
+    fn tuned_for_profile(&self) -> Option<&crate::core::ProfileName> {
+        self.mismatch.tuned_for()
     }
 }
 
