@@ -54,6 +54,8 @@ Experiment 218 keeps its method. Its wave 2 conditions assumed a branch merge th
 
 ## Launch
 
+Ian moved marketing and Beatles Bench to a separate agent on 2026-09-24. Claude keeps the engineering gates above and does not edit launch copy.
+
 Launch waits on the queue. The engineering gates are 0088, the release build, published crates, and every surface at 0.1. Until then, marketing copy that shows unbuilt features (deck slides 16–18 and 21, the site's "comes with 0.1" tabs, the article's "shipped" section) stays marked planned. The measurement requests (backend time per call, cut movement, audit and diff) become tickets after item 11 unless Ian moves them.
 
 ## Needs Ian
