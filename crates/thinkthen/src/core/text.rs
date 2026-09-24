@@ -229,6 +229,15 @@ impl Meaning {
     }
 }
 
+/// How many bytes a `Debug` line left out, which it prints in their place.
+pub(crate) struct Withheld(pub(crate) usize);
+
+impl fmt::Debug for Withheld {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "<{} bytes withheld>", self.0)
+    }
+}
+
 impl fmt::Debug for Meaning {
     /// A criterion may hold evidence, so debug text withholds what it says.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {

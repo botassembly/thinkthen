@@ -58,6 +58,8 @@ pub(crate) enum Failure {
     UsageOverflow,
     /// A command-line shape was understood but cannot act.
     Usage(&'static str),
+    /// `--jobs` differs from the width this process already selected.
+    WidthActive(crate::engine::WidthActive),
     /// `--option` was given beside a list of options on the command line.
     OptionWithList,
     /// `--label` was given beside positional labels.
@@ -342,6 +344,7 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
             4,
             "the backend returned different model versions for one record; pin --model and rerun with --record or --cache".to_owned(),
         ),
+        Failure::WidthActive(active) => (2, active.to_string()),
         Failure::UsageOverflow => (
             4,
             "the backend reported token counts whose total is too large".to_owned(),

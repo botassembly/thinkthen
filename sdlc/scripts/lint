@@ -5,6 +5,13 @@ set -eu
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
 
+# The workspace caps an agents file at 5,000 characters. CLAUDE.md links to AGENTS.md.
+python3 -c '
+import sys
+n = len(open("CLAUDE.md", encoding="utf-8").read())
+print(f"agents file: CLAUDE.md {n}/5000 characters")
+sys.exit(n > 5000)
+'
 python3 sdlc/scripts/policy.py
 python3 sdlc/scripts/catalog.py
 # Ticket 0104: a stale crate longer than the fresh one must not reach `tar`.

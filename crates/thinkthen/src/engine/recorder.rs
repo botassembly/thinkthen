@@ -4,8 +4,8 @@ use std::fs::{self, File};
 use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
 use std::process;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::core::recording::{Digest, Entry, Exchange};
 use crate::engine::cache_lock::{self, CacheLock, FolderGate};
@@ -23,9 +23,6 @@ pub(crate) fn fail_cleanup() {
 
 static WRITES: AtomicU64 = AtomicU64::new(0);
 
-#[cfg(unix)]
-static RECORDING_SIGNAL: OnceLock<Result<(), ()>> = OnceLock::new();
-
 /// Which folders `--record` and `--replay` named, once they agree.
 #[derive(Debug)]
 pub(crate) struct Recorder {
@@ -38,7 +35,10 @@ pub(crate) struct Recorder {
 }
 
 /// Work selected before a key is read or a request is sent.
-#[derive(Debug)]
+///
+/// A replayed body keys its odds by the labels a record gave, so this derives
+/// `Debug` only in tests.
+#[cfg_attr(test, derive(Debug))]
 pub(crate) enum PreparedRecording {
     Replay(Vec<u8>),
     Live(WritePermit),
@@ -117,20 +117,18 @@ impl Recorder {
         cancel: &crate::engine::Cancel,
     ) -> Result<std::sync::MutexGuard<'_, Option<FolderGate>>, Error> {
         loop {
-            if cancel.fired() {
-                return Err(Error::Cancelled);
+            if let Some(stop) = cancel.stop() {
+                return Err(stop);
             }
             match self.gate.try_lock() {
                 Ok(gate) => return Ok(gate),
-                Err(std::sync::TryLockError::WouldBlock)
-                    if cancel.wait(crate::engine::Cancel::poll()) =>
-                {
-                    return Err(Error::Cancelled);
-                }
                 Err(std::sync::TryLockError::WouldBlock) => {}
                 Err(std::sync::TryLockError::Poisoned(_)) => {
                     return Err(Error::Defect("the recording folder gate is poisoned"));
                 }
+            }
+            if let Some(stop) = cancel.wait(crate::engine::Cancel::poll()) {
+                return Err(stop);
             }
         }
     }
@@ -156,9 +154,7 @@ impl Recorder {
         if self.private_default {
             identity::require_private(folder)?;
         }
-        let opened = cache_lock::shared_folder_cancelled(folder, cancel)
-            .map_err(storage)?
-            .ok_or(Error::Cancelled)?;
+        let opened = cache_lock::shared_folder_cancelled(folder, cancel).map_err(storage)??;
         identity::check(folder, &exchange.backend_identity(), self.recording)?;
         *gate = Some(opened);
         Ok(())
@@ -186,9 +182,6 @@ impl Recorder {
         let name = digest.file_name();
         self.ready(exchange, &name, cancel)?;
         let entry = folder.join(&name);
-        if self.recording {
-            install_sigxfsz_handler()?;
-        }
         let first = existing(&entry, exchange)?;
 
         if !self.recording {
@@ -205,8 +198,7 @@ impl Recorder {
             Existing::Valid(_) => prepared_write(folder, entry, false, None),
             Existing::Missing | Existing::Damaged(_) => {
                 let lock = cache_lock::acquire_cancelled(folder, digest.as_str(), cancel)
-                    .map_err(storage)?
-                    .ok_or(Error::Cancelled)?;
+                    .map_err(storage)??;
                 match existing(&entry, exchange)? {
                     Existing::Valid(response) if self.replaying => {
                         remove_lock(lock)?;
@@ -427,24 +419,6 @@ fn make_folder(folder: &Path) -> Result<(), Error> {
     fs::create_dir_all(folder).map_err(storage)
 }
 
-#[cfg(unix)]
-fn install_sigxfsz_handler() -> Result<(), Error> {
-    let result = RECORDING_SIGNAL.get_or_init(|| {
-        signal_hook::flag::register(
-            signal_hook::consts::signal::SIGXFSZ,
-            Arc::new(AtomicBool::new(false)),
-        )
-        .map(|_| ())
-        .map_err(|_| ())
-    });
-    result.map_err(|()| Error::RecordingStorage)
-}
-
-#[cfg(not(unix))]
-fn install_sigxfsz_handler() -> Result<(), Error> {
-    Ok(())
-}
-
 fn storage(_error: io::Error) -> Error {
     Error::RecordingStorage
 }
@@ -459,4 +433,34 @@ fn remove_lock(lock: CacheLock) -> Result<(), Error> {
 fn sync_recording_directory(folder: &Path) -> io::Result<()> {
     maybe_fail_io(StorageStageName::DirectorySync)?;
     cache_lock::sync_directory(folder)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use crate::core::Url;
+    use crate::core::recording::Exchange;
+    use crate::engine::error::Error;
+    use crate::engine::{Cancel, Deadline};
+
+    use super::Recorder;
+
+    #[test]
+    fn a_held_recorder_gate_ends_as_the_deadline_without_the_owner() {
+        let folder =
+            std::env::temp_dir().join(format!("thinkthen-deadline-gate-{}", std::process::id()));
+        let recorder = Recorder::of(Some(&folder), None).expect("recorder");
+        let url = Url::new("http://127.0.0.1:1/v1/systemone").expect("url");
+        let exchange = Exchange::new(&url, b"{}");
+        let cancel = Cancel::default().with_deadline(Deadline::after(Duration::from_millis(200)));
+        let owner = recorder.gate.lock().expect("gate owner");
+
+        let result = recorder.prepare_cancelled(&exchange, &exchange.digest(), &cancel);
+
+        assert!(matches!(result, Err(Error::Deadline(_))));
+        assert!(owner.is_none(), "the waiter never opened the folder");
+        drop(owner);
+        assert!(!folder.exists(), "the waiter made no folder");
+    }
 }

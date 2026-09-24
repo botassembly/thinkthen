@@ -1,29 +1,31 @@
 //! Shared cases that cross the command itself: staged verbs, question forms, and counters.
 
-use super::conformance_support::{Case, Counters, QuestionForm, Success};
-use super::{asked, same_json};
+use super::conformance_support::{Case, Counters, Document, QuestionForm, Success};
+use super::{CASES, asked, same_json};
 use crate::args::{Cli, Command};
 use crate::core::recording::{Entry, Exchange as Recorded};
 use crate::core::{Backend, ModelName, Url};
 use crate::edge::Environment;
 use crate::engine::error::Error as EngineError;
 use crate::engine::http::{Client, Key};
+use crate::engine::recorder::Recorder;
 use crate::engine::request::{Transport, ask_profile};
 use crate::engine::usage::{self, month_now};
 use crate::failure::{Failure, report};
-use crate::recorder::Recorder;
 use clap::Parser as _;
 use serde::Deserialize;
 use std::collections::BTreeMap;
 use std::io::{Cursor, Read as _, Write as _};
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
-use std::process::ExitCode;
+use std::process::{self, ExitCode, Output};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 use std::{fs, thread};
 
 /// A case's temporary folder, removed when the case ends, pass or fail.
-struct Scratch(PathBuf);
+pub(super) struct Scratch(PathBuf);
 
 impl Drop for Scratch {
     fn drop(&mut self) {
@@ -99,10 +101,11 @@ struct PrintedMeta {
 }
 
 /// Replay a recognize or relate case through the command with `--details`.
-pub(super) fn staged(case: &Case, success: &Success) {
+/// A case's scratch folder and, inside it, a replay folder that holds every
+/// exchange of the case under the canonical address.
+pub(super) fn replay(case: &Case) -> (Scratch, PathBuf) {
     let scratch = folder(case);
-    let folder = scratch.0.clone();
-    let replay = folder.join("replay");
+    let replay = scratch.0.join("replay");
     fs::create_dir_all(&replay).expect("replay folder");
     let url = Url::new("https://api.typesafe.ai/v1/systemone").expect("canonical URL");
     for exchange in &case.exchanges {
@@ -111,6 +114,12 @@ pub(super) fn staged(case: &Case, success: &Success) {
         let text = entry.written().expect("entry text");
         fs::write(replay.join(recorded.digest().file_name()), text).expect("replay entry");
     }
+    (scratch, replay)
+}
+
+pub(super) fn staged(case: &Case, success: &Success) {
+    let (scratch, replay) = replay(case);
+    let folder = scratch.0.clone();
     let input = match (&case.text, &case.entities) {
         (Some(text), None) => text.clone().into_bytes(),
         (None, Some(entities)) => entities.get().as_bytes().to_vec(),
@@ -154,12 +163,169 @@ pub(super) fn staged(case: &Case, success: &Success) {
     assert_eq!(printed.meta.requests, held.details.requests, "{}", case.id);
 }
 
+/// Names a form child's job: a case id, or `probe` for a valid question.
+const CHILD: &str = "THINKTHEN_TEST_FORM_CHILD";
+
+/// Whether a variable names a key or an address, and so could reach a paid backend.
+fn steers(name: &std::ffi::OsStr) -> bool {
+    name.to_str().is_some_and(|name| {
+        name.starts_with("THINKTHEN_") && (name.contains("KEY") || name.contains("URL"))
+    })
+}
+
+/// Run one ignored test of this module as a child of the test binary.
+fn test_child(name: &str) -> process::Command {
+    let mut command = process::Command::new(std::env::current_exe().expect("test binary"));
+    command.args([
+        "--ignored",
+        "--exact",
+        "--nocapture",
+        &format!("cli::conformance_tests::command::{name}"),
+    ]);
+    command
+}
+
+/// Run a form child for one job with no key and no address in its environment.
+fn child(job: &str) -> Output {
+    let mut command = test_child("form_child");
+    command.env(CHILD, job);
+    for (name, _) in std::env::vars_os().filter(|(name, _)| steers(name)) {
+        command.env_remove(name);
+    }
+    command.output().expect("form child")
+}
+
+/// A loopback address whose listener counts each connection and answers none.
+fn counting() -> (String, Arc<AtomicUsize>) {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("loopback listener");
+    let url = format!(
+        "http://{}/v1",
+        listener.local_addr().expect("loopback address")
+    );
+    let count = Arc::new(AtomicUsize::new(0));
+    let seen = Arc::clone(&count);
+    thread::spawn(move || {
+        for stream in listener.incoming() {
+            seen.fetch_add(1, Ordering::SeqCst);
+            drop(stream);
+        }
+    });
+    (url, count)
+}
+
+fn say(line: &str) {
+    let mut output = std::io::stdout().lock();
+    writeln!(output, "form-child {line}").expect("write");
+    output.flush().expect("flush");
+}
+
+/// Give a rule-breaking question in a child whose environment holds no key.
+pub(super) fn form(case: &Case) {
+    let output = child(&case.id);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        output.status.success() && stdout.lines().any(|line| line == "form-child sees []"),
+        "{}: {stdout}{}",
+        case.id,
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
+#[ignore = "run as a child by the command runner"]
+fn form_child() {
+    let Some(job) = std::env::var_os(CHILD) else {
+        return;
+    };
+    let seen = std::env::vars_os()
+        .map(|(name, _)| name)
+        .filter(|name| steers(name))
+        .map(|name| name.to_string_lossy().into_owned())
+        .collect::<Vec<_>>();
+    say(&format!("sees [{}]", seen.join(" ")));
+    if job == "probe" {
+        probe();
+    } else {
+        let document: Document = serde_json::from_str(CASES).expect("shared document");
+        let case = document
+            .cases
+            .iter()
+            .find(|case| job == case.id.as_str())
+            .expect("the named case");
+        let kind = &case.expect.error.as_ref().expect("a fault").kind;
+        rule_breaking(case, kind);
+    }
+    assert!(seen.is_empty(), "the child sees {seen:?}");
+}
+
+/// Ask a valid question with loopback as the only address, and report what went out.
+fn probe() {
+    let (url, count) = counting();
+    let arguments = [
+        "thinkthen",
+        "decide",
+        "Does the writer ask for a refund?",
+        "--url",
+        url.as_str(),
+        "--no-cache",
+    ]
+    .map(str::to_owned);
+    let (result, _output) = dispatch(&arguments, b"I want a refund.\n".to_vec());
+    let mut diagnostic = Vec::new();
+    if let Err(failure) = result {
+        let _code = report(&failure, &mut diagnostic);
+    }
+    say(&format!("requests {}", count.load(Ordering::SeqCst)));
+    say(&format!(
+        "says {}",
+        String::from_utf8_lossy(&diagnostic).trim_end()
+    ));
+}
+
+/// The runner, started under a planted key and address, hides both from its child.
+#[test]
+fn the_runner_hides_a_key_and_an_address_from_its_children() {
+    let (url, count) = counting();
+    let output = test_child("form_runner")
+        .env("THINKTHEN_API_KEY", "test-key-not-real")
+        .env("THINKTHEN_BASE_URL", &url)
+        .output()
+        .expect("form runner");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let lines = stdout
+        .lines()
+        .filter(|line| line.starts_with("form-child "))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        lines,
+        [
+            "form-child sees []",
+            "form-child requests 0",
+            "form-child says thinkthen: the environment variable `THINKTHEN_API_KEY` is unset or blank, so no key is sent",
+        ]
+    );
+    assert!(output.status.success(), "{stdout}");
+    assert_eq!(count.load(Ordering::SeqCst), 0);
+}
+
+#[test]
+#[ignore = "run under a planted key by the guard's test"]
+fn form_runner() {
+    if std::env::var("THINKTHEN_API_KEY").as_deref() != Ok("test-key-not-real") {
+        return;
+    }
+    let output = child("probe");
+    std::io::stdout().write_all(&output.stdout).expect("relay");
+    assert!(output.status.success());
+}
+
 /// Give a rule-breaking question as typed text or as a named file and read the exit.
 #[allow(
     clippy::disallowed_types,
     reason = "fixture-only question members become command-line text"
 )]
-pub(super) fn form(case: &Case, kind: &str) {
+fn rule_breaking(case: &Case, kind: &str) {
+    let (url, count) = counting();
     let scratch = folder(case);
     let folder = scratch.0.clone();
     let mut arguments = vec!["thinkthen".to_owned(), case.verb.clone()];
@@ -181,7 +347,7 @@ pub(super) fn form(case: &Case, kind: &str) {
             }
         }
     }
-    arguments.push("--no-cache".to_owned());
+    arguments.extend(["--url".to_owned(), url, "--no-cache".to_owned()]);
     if case.verb == "rank" {
         arguments.push("--lines".to_owned());
     }
@@ -203,6 +369,7 @@ pub(super) fn form(case: &Case, kind: &str) {
         case.id
     );
     assert!(output.is_empty(), "{}", case.id);
+    assert_eq!(count.load(Ordering::SeqCst), 0, "{}", case.id);
 }
 
 /// Answer one request on loopback, then refuse any later one.

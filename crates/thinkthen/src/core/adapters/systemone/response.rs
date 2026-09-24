@@ -16,8 +16,10 @@ use crate::core::text::ModelName;
 /// Decimal rounding observed in System One probability distributions.
 const DISTRIBUTION_ROUNDING: f64 = 0.01;
 
-/// The body one response carries.
-#[derive(Debug, Deserialize)]
+/// The body one response carries. Its keys may be labels a record gave, so it
+/// and [`ResponseAnswer`] derive `Debug` only in tests.
+#[derive(Deserialize)]
+#[cfg_attr(test, derive(Debug))]
 struct Response {
     model: String,
     answers: BTreeMap<String, ResponseAnswer>,
@@ -30,7 +32,8 @@ struct Response {
 /// The vendor also sends `choice`, `score`, and `legend`. Each one is derived
 /// from the distribution and the question that was asked, so the adapter
 /// computes them rather than reading them, and one answer keeps one arithmetic.
-#[derive(Debug, Deserialize)]
+#[derive(Deserialize)]
+#[cfg_attr(test, derive(Debug))]
 #[serde(tag = "type", rename_all = "snake_case")]
 enum ResponseAnswer {
     /// The answer to a yes/no question, as one probability.
