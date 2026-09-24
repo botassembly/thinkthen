@@ -27,7 +27,7 @@ import tempfile
 FIRST = 120
 PARTS = ("Starts from", "Keeps", "Changes", "Proof", "Defers")
 NAME = re.compile(r"^(\d{4})-.*\.md$")
-FENCE = re.compile(r"^\s*```")
+FENCE = re.compile(r"^\s*(```|~~~)")
 HEADING = re.compile(r"^(#{1,6})\s+(.*?)\s*$")
 
 
@@ -65,7 +65,7 @@ def failures(path):
         return [f"{path.name}: ticket {FIRST:04d} and later needs a `## Evidence` section"]
     out = []
     for part in PARTS:
-        item = re.compile(rf"^\s*[-*]\s+(\*\*)?{part}(\*\*)?:(\*\*)?\s*\S")
+        item = re.compile(rf"^\s*[-*]\s+(\*\*)?{part}(\*\*)?:(\*\*)?\s*[^\s*]")
         if not any(item.match(line) for line in body):
             out.append(f"{path.name}: the Evidence section lacks a `- {part}:` item with text")
     return out
@@ -113,6 +113,17 @@ CASES = [
         GOOD.replace("- Proof: a test.", "- Proof:"),
         ["0123-empty.md: the Evidence section lacks a `- Proof:` item with text"],
     ),
+    (
+        "0125-bold-empty.md",
+        GOOD.replace("- **Keeps:** the answer shape.", "- **Keeps:**"),
+        ["0125-bold-empty.md: the Evidence section lacks a `- Keeps:` item with text"],
+    ),
+    (
+        "0126-tilde.md",
+        "# 0126\n\n~~~\n" + GOOD + "~~~\n",
+        ["0126-tilde.md: ticket 0120 and later needs a `## Evidence` section"],
+    ),
+    ("0127-bold-colon-out.md", GOOD.replace("- Proof: a test.", "- **Proof**: a test."), []),
     (
         "0124-elsewhere.md",
         GOOD.replace("- **Keeps:** the answer shape.\n", "").replace("## Design\n", "## Design\n\n- Keeps: late.\n"),
