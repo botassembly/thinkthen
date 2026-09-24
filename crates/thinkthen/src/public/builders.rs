@@ -4,10 +4,11 @@
 use std::marker::PhantomData;
 
 use crate::core::{self, Labels, LabelsError, Meaning, ModelName, QuestionText, Threshold, Verb};
+use crate::public::choice::Choice;
 use crate::public::error::Error;
 use crate::public::question::{
-    BandedQuestion, Choice, ChooseQuestion, Description, Kind, Question, TagQuestion, cut,
-    model_of, text_of,
+    BandedQuestion, ChooseQuestion, Description, Kind, Question, TagQuestion, cut, model_of,
+    text_of,
 };
 
 /// A `decide` question under construction.
@@ -107,11 +108,7 @@ impl Listing {
         })
     }
 
-    fn next<C: Choice>(
-        mut self,
-        value: &C,
-        description: Option<Description>,
-    ) -> Result<Self, Error> {
+    fn next<C: Choice>(self, value: &C, description: Option<Description>) -> Result<Self, Error> {
         let place = self.labels.len();
         if C::labels().get(place) != Some(&value.label()) {
             return Err(Error::usage(format!(
@@ -119,8 +116,12 @@ impl Listing {
                 place + 1
             )));
         }
+        self.push(value.label(), description)
+    }
+
+    fn push(mut self, label: &str, description: Option<Description>) -> Result<Self, Error> {
         self.labels.push((
-            value.label().to_owned(),
+            label.to_owned(),
             description.map(|held| held.core()).transpose()?,
         ));
         Ok(self)
@@ -130,6 +131,10 @@ impl Listing {
         if self.labels.len() != C::labels().len() {
             return Err(Error::usage("every label of the choice must be given"));
         }
+        self.finish(verb, threshold)
+    }
+
+    fn finish(self, verb: Verb, threshold: Option<Threshold>) -> Result<Question, Error> {
         let usage = |error: LabelsError| Error::usage(error.to_string());
         let (core, kind) = match verb {
             Verb::Tag => (
@@ -153,6 +158,72 @@ impl Listing {
             model: self.model,
             kind,
         })
+    }
+}
+
+/// A `choose` or `tag` question under construction from labels known only
+/// at run time. It yields an unbound [`Question`], as a question file does.
+#[derive(Debug)]
+pub struct LabelBuilder {
+    listing: Listing,
+    verb: Verb,
+}
+
+impl LabelBuilder {
+    pub(super) fn new(text: &str, verb: Verb) -> Result<Self, Error> {
+        Ok(Self {
+            listing: Listing::new(text)?,
+            verb,
+        })
+    }
+
+    /// Add the next label, after the labels already added.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Usage`] for a label already given, which is out of order.
+    pub fn label(self, value: &str, description: Option<Description>) -> Result<Self, Error> {
+        if self.listing.labels.iter().any(|(held, _)| held == value) {
+            let error = match self.verb {
+                Verb::Tag => LabelsError::TagDuplicate,
+                _ => LabelsError::OptionDuplicate,
+            };
+            return Err(Error::usage(error.to_string()));
+        }
+        Ok(Self {
+            listing: self.listing.push(value, description)?,
+            verb: self.verb,
+        })
+    }
+
+    /// Ask this model instead of the engine's.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Usage`] for a blank model or a second one.
+    pub fn model(mut self, value: &str) -> Result<Self, Error> {
+        model_of(&mut self.listing.model, value)?;
+        Ok(self)
+    }
+
+    /// Finish under the verb's default rule: no cut for `choose`, 0.5 for `tag`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Usage`] for too few or too many labels, or a blank one.
+    pub fn build(self) -> Result<Question, Error> {
+        let rule = (self.verb == Verb::Tag).then(Threshold::default);
+        self.listing.finish(self.verb, rule)
+    }
+
+    /// Finish under this cut.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Usage`] for a bad cut or a bad label list.
+    pub fn cut_at(self, value: f64) -> Result<Question, Error> {
+        let rule = cut(value)?;
+        self.listing.finish(self.verb, Some(rule))
     }
 }
 

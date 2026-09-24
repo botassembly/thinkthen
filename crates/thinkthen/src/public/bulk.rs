@@ -4,16 +4,17 @@ use std::sync::Arc;
 
 use crate::core::{self, Find, Plan, ranking};
 use crate::engine::facade::{self, Completed};
+use crate::public::annotated::AnnotatedRecord;
 use crate::public::batch::{self, Batch};
 use crate::public::engine::{DECISIONS, DecisionQuestion, Engine, Evidence, evidence, only};
 use crate::public::error::Error;
 use crate::public::options::{CallOptions, Stop};
 use crate::public::question::{Kind, Question};
-use crate::public::results::{self, AnnotatedRecord, Answer, Found, Ranked, Row};
+use crate::public::results::{self, Answer, Found, Ranked, Row, Written};
 use crate::public::set::QuestionSet;
 
-/// One record's named values, in set order.
-type Values = Vec<(String, core::AnnotatedValue)>;
+/// One record's named values, in set order, and their bare JSON line.
+type Values = (Vec<(String, core::AnnotatedValue)>, Written);
 
 /// One record's answer and its probability of yes.
 type Decided = (Answer, f64);
@@ -72,8 +73,8 @@ impl Engine {
     {
         let question = question.question();
         Batch::of(only(question, DECISIONS, "decide_many").and_then(|()| {
-            self.decisions(question, records, options, |item, (answer, _)| {
-                Some(Row::new(item, answer))
+            self.decisions(question, records, options, |item, (answer, yes)| {
+                Some(Row::new(item, answer, yes))
             })
         }))
     }
@@ -213,7 +214,7 @@ impl Engine {
                 stop,
                 self.most,
                 answer,
-                |item, values| Some(AnnotatedRecord::new(item, values)),
+                |item, (values, json)| Some(AnnotatedRecord::new(item, values, json)),
             )
         }))
     }
@@ -294,9 +295,10 @@ fn annotated(
         .map_err(|_| crate::engine::error::Error::Defect("an annotate group asks nothing"))
     };
     let annotation = engine.annotate(set, plan, cancel)?;
+    let json = Written::of(&core::NamedValues::new(annotation.values.clone()))?;
     Ok(Completed {
         replayed: annotation.replayed,
         partial_failure: annotation.failed_questions > 0,
-        value: annotation.values,
+        value: (annotation.values, json),
     })
 }
