@@ -79,9 +79,7 @@ impl Description {
 
     pub(super) fn meaning(&self) -> Result<Meaning, Error> {
         match &self.value {
-            Json::String(text) => {
-                Meaning::new(text.clone()).map_err(Error::refused)
-            }
+            Json::String(text) => Meaning::new(text.clone()).map_err(Error::refused),
             other => Meaning::structured(other)
                 .ok_or_else(|| Error::usage("a meaning is text or an object")),
         }
@@ -238,7 +236,11 @@ pub(super) fn cut(value: f64) -> Result<Threshold, Error> {
 }
 
 pub(super) fn model_of(held: &mut Option<ModelName>, value: &str) -> Result<(), Error> {
-    once(held, ModelName::new(value).map_err(Error::refused)?, "the model")
+    once(
+        held,
+        ModelName::new(value).map_err(Error::refused)?,
+        "the model",
+    )
 }
 
 pub(super) fn once<T>(held: &mut Option<T>, value: T, name: &str) -> Result<(), Error> {
@@ -317,8 +319,8 @@ impl Question {
     /// Returns [`Error::Usage`] naming what the file breaks.
     pub fn from_json(value: &str) -> Result<LoadedQuestion, Error> {
         let file = QuestionFile::parse(value).map_err(Error::refused)?;
-        let resolved = resolve(file.verb(), None, Some(&file), &Typed::default())
-            .map_err(Error::refused)?;
+        let resolved =
+            resolve(file.verb(), None, Some(&file), &Typed::default()).map_err(Error::refused)?;
         if resolved
             .on()
             .iter()

@@ -116,8 +116,7 @@ impl EngineBuilder {
     ///
     /// Returns [`Error::Usage`] for an address the backend rule refuses.
     pub fn base_url(mut self, value: &str) -> Result<Self, Error> {
-        Backend::resolve(Some(value), None, DEFAULT_MODEL)
-            .map_err(Error::refused)?;
+        Backend::resolve(Some(value), None, DEFAULT_MODEL).map_err(Error::refused)?;
         self.base_url = Some(value.to_owned());
         Ok(self)
     }
@@ -228,8 +227,8 @@ impl EngineBuilder {
     /// folder is available, or when a different throttle is already active.
     pub fn build(self) -> Result<super::Engine, Error> {
         let model = self.model.as_ref().map_or(DEFAULT_MODEL, ModelName::as_str);
-        let backend = Backend::resolve(self.base_url.as_deref(), None, model)
-            .map_err(Error::refused)?;
+        let backend =
+            Backend::resolve(self.base_url.as_deref(), None, model).map_err(Error::refused)?;
         let key = self.key.clone();
         let settings = Settings {
             backend,

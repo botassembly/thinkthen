@@ -87,15 +87,21 @@ fn convenience_child() {
             Some(thinkthen::Answer::Yes)
         );
         assert_eq!(
-            explicit.decide(&decide, "a note").expect("the engine decides"),
+            explicit
+                .decide(&decide, "a note")
+                .expect("the engine decides"),
             thinkthen::decide(&decide, "a note").expect("the convenience decides")
         );
         assert_eq!(
-            explicit.details(&score, "a note").expect("the engine detailss"),
+            explicit
+                .details(&score, "a note")
+                .expect("the engine detailss"),
             thinkthen::details(&score, "a note").expect("the convenience detailss")
         );
         assert_eq!(
-            explicit.choose(&team, "a note").expect("the engine chooses"),
+            explicit
+                .choose(&team, "a note")
+                .expect("the engine chooses"),
             thinkthen::choose(&team, "a note").expect("the convenience chooses")
         );
         assert_eq!(
@@ -166,7 +172,9 @@ fn questions() -> (Question, ChooseQuestion<Team>, QuestionSet) {
 
 /// Every row of a batch, each mapped or `None` for an error.
 fn rows<T, U>(batch: thinkthen::Batch<'_, T>, keep: impl Fn(T) -> U) -> Vec<U> {
-    batch.map(|row| keep(row.expect("each row answers"))).collect()
+    batch
+        .map(|row| keep(row.expect("each row answers")))
+        .collect()
 }
 
 #[test]

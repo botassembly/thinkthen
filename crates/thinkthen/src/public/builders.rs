@@ -286,8 +286,7 @@ impl ScoreBuilder {
     ///
     /// Returns [`Error::Usage`] for fewer than 2 or more than 10 levels, or a repeated one.
     pub fn build(self) -> Result<Question, Error> {
-        let levels =
-            Labels::levels(self.0.labels).map_err(Error::refused)?;
+        let levels = Labels::levels(self.0.labels).map_err(Error::refused)?;
         Ok(Question {
             core: core::Question::Score {
                 text: self.0.text,

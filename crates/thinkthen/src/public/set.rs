@@ -33,8 +33,7 @@ impl QuestionSet {
     ///
     /// Returns [`Error::Usage`] naming what the set breaks.
     pub fn from_json(value: &str) -> Result<Self, Error> {
-        let set =
-            core::QuestionSet::parse(value).map_err(Error::refused)?;
+        let set = core::QuestionSet::parse(value).map_err(Error::refused)?;
         let root = Pointer::new("").map_err(|_| Error::defect("the root pointer was refused"))?;
         if set
             .questions()
@@ -90,7 +89,9 @@ impl QuestionSetBuilder {
         }
         core::check_name(name).map_err(Error::refused)?;
         if self.0.iter().any(|(held, _)| held == name) {
-            return Err(Error::refused(core::QuestionSetError::Duplicate(name.to_owned())));
+            return Err(Error::refused(core::QuestionSetError::Duplicate(
+                name.to_owned(),
+            )));
         }
         self.0.push((name.to_owned(), value));
         Ok(self)
