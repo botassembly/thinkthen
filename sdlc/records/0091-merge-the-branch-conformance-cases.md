@@ -1,6 +1,6 @@
 # 0091: Merge the branch conformance cases
 
-Status: built on `ticket/0091-conformance-union`. The code review (`0091-code-review.md`) found two blocking problems, and both are fixed below. Not merged.
+Status: built on `ticket/0091-conformance-union`. The code review (`0091-code-review.md`) found two blocking problems, and both are fixed below. The re-review (`0091-code-review-2.md`) accepted `a90de0d4`. Landed on main.
 
 ## Result
 
@@ -82,3 +82,8 @@ Test and runner Rust: 524 nonblank lines added gross and 81 removed, measured wi
 The branch was rebased onto `origin/main` at `ce0e3d6f`. At `906c39f2`, with `THINKTHEN_API_KEY`, `THINKTHEN_BASE_URL`, `THINKTHEN_URL`, and `THINKTHEN_CACHE` unset, one rung at a time, the one-minute load was 1.98 at the start. `install` exit 0. `lint` exit 0, `ratchet: crates 44340/44340`, `pages: 1 coming, 21 green`. `test` exit 0, 730 passed, 0 failed, 2 ignored across 13 result lines. `spec` exit 0, `demos: 21 green, 0 red`. `git diff --check origin/main...HEAD` passed. Only this record, the copied review, and the ticket's review line changed after that run.
 
 No paid or live call ran. The generator and the counter step used loopback listeners only.
+
+## Landing
+
+The branch was rebased onto `origin/main` at `c7daaebc`, which holds 0083, 0100, and 0103. The only conflict was `sdlc/ratchet.json`. The ceiling is the measured 44,778, main's 44,335 plus this ticket's 443. At `a3dd1bc9`, with `THINKTHEN_API_KEY`, `THINKTHEN_BASE_URL`, `THINKTHEN_URL`, and `THINKTHEN_CACHE` unset, one rung at a time, the one-minute load was 4.70 at the start and 6.47 at the last rung. `install` exit 0. `lint` exit 0, `ratchet: crates 44778/44778`, `pages: 1 coming, 21 green`. `test` exit 0, 737 passed, 0 failed, 2 ignored across 14 result lines, and `live-test: all cases passed`. `spec` exit 0, `demos: 21 green, 0 red`. `git diff --check` passed. The known global-queue test did not fail, so no rerun was needed. Only this record, the copied re-review, and the ticket status changed after that run. The re-review's two non-blocking notes are filed as `sdlc/issues/2026-09-24-the-question-form-runner-lacks-two-guards.md`.
+
