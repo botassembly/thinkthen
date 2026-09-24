@@ -1,6 +1,6 @@
 # 0113: Build the audit command
 
-Status: built and reviewed on the ticket branch. Not merged to main. A fresh read-only Claude code review returned two findings. Both are fixed below. Owner: Claude.
+Status: built and reviewed on the ticket branch. Not merged to main. The first code review returned two findings, and the second returned four. All are fixed below, and the second reviewer is checking the fixes. Owner: Claude.
 
 ## Dependency on 0086
 
@@ -14,9 +14,9 @@ Builder notes: both readers ignore unknown members (`audit::readers_ignore_membe
 
 ## Golden match
 
-The eight prototype audit goldens and the two extra captures pass `goldens_match`, and their bytes match the prototype's. The three table captures match byte for byte. `replay/audit.jsonl`, captured from the prototype over the replayed recording, matches byte for byte.
+The eight prototype audit goldens and the four extra captures match the prototype byte for byte. `goldens_match` compares bytes, so the tolerance reader the ticket described is gone: every golden matches exactly, and a byte compare is the only check that sees the compensated sum. The three table captures match byte for byte. `replay/audit.jsonl`, captured from the prototype over the replayed recording, matches byte for byte.
 
-Python 3.12's `sum` compensates each float step (Neumaier). The port copies it in `python_sum` for the calibration bins and the mean. The ticket did not name this.
+Python 3.12's `sum` compensates each float step (Neumaier). The port copies it in `python_sum` for the calibration bins and the mean. The ticket did not name this. `golden/extra/audit-249-question-seed-7.jsonl` differs in the sixth place without it.
 
 ## Planted bugs
 
@@ -44,25 +44,25 @@ The 249 two-question case rewrites every line's question text, not only one ques
 
 | Bound | Limit | Measured |
 | --- | ---: | ---: |
-| New production Rust nonblank lines, six files | 1,000 | 1,490 |
-| Existing production files touched | 4 | 4 (`core/mod.rs`, `cli/mod.rs`, `cli/args/command.rs`, `cli/failure.rs`) |
-| Test Rust nonblank lines | 850 | 819, plus two edited lines in `version.rs` and one in `transform.rs` |
+| New production Rust nonblank lines, six files | 1,000 | 1,477 |
+| Existing production files touched | 4 | 4 (`core/mod.rs`, `cli/mod.rs`, `cli/args/command.rs`, `cli/failure.rs`), 32 lines |
+| Test Rust nonblank lines | 850 | 736, plus one edited line in `version.rs` |
 | Test files | 3 plus support | `core/measure/tests.rs`, `tests/audit.rs`, `tests/audit_refusals.rs`, `tests/support/measure.rs` |
 | Script lines | 70 | about 95 nonblank in `policy.py`, 3 in `demos` |
 | Largest Rust file | 500 | `core/measure/audit.rs` 444 |
 | Dependencies | 0 | 0 |
 
-The production budget was an estimate of the prototype's 250 audit lines at three to four Rust lines each. rustfmt, typed output structs, and doc comments gave six. The agent re-scored: the math has no duplicate in the crate, and cutting docs or merging modules saves little. Ian can overturn the re-score. The integration tests split into two files because one file passed the 500-line policy ceiling.
+The production budget was an estimate of the prototype's 250 audit lines at three to four Rust lines each. rustfmt, typed output structs, and doc comments gave six. The agent re-scored: the math has no duplicate in the crate, and cutting docs or merging modules saves little. The second reviewer accepted the re-score at about 1,400 lines with two cuts, and the owner accepted it and recorded it here. The two cuts landed: floats round once at output, and a map counts the disagreements. They saved less than the reviewer's estimate, because `Said::text` and the output rounding walk took some of the lines back. Ian can overturn the re-score. The integration tests split into two files because one file passed the 500-line policy ceiling.
 
-The ratchet rises from 50,378 to 52,720 (+2,342): 1,490 production, 819 test, and 33 in edited files. The review fix added 17 test lines. Duplication checked first: `core/pointer.rs` (reused for `--id`), `core/threshold.rs` (reused for every cut and band, `judge` included), `core/json.rs` (reused for every line), `core/probability.rs` (reused), `cli/table.rs` (a CSV reader, nothing shared), and `cli/transform.rs` (its early-return and output-error shape copied, nothing to delete).
+On main at `fb069b51` the ratchet is 53,287: main's 51,041 plus this branch's 2,246 (1,509 production and 737 test). Duplication checked first: `core/pointer.rs` (reused for `--id`), `core/threshold.rs` (reused for every cut and band, `judge` included), `core/json.rs` (reused for every line), `core/probability.rs` (reused), `cli/table.rs` (a CSV reader, nothing shared), and `cli/transform.rs` (its early-return and output-error shape copied, nothing to delete).
 
 ## Policy
 
-`catalog_policy_failures` now takes a banned-word set and allowed path prefixes. `measure_policy_failures` holds `cli/measure.rs` and `cli/audit.rs` to the catalog's bans minus `fs`, `File`, `stdin`, and `Stdin`, and refuses the write-side `fs` names. `route_failures` refuses a `cli/mod.rs` whose `Command::Audit` return follows `Environment::read`. The self-test plants 13 violations and a late return, and keeps 6 controls and an early return.
+`catalog_policy_failures` now takes a banned-word set and allowed paths. The catalog keeps exact matching, and only the measure check matches prefixes. `measure_policy_failures` holds `cli/measure.rs` and `cli/audit.rs` to the catalog's bans minus `fs`, `File`, `stdin`, and `Stdin`, and refuses the write-side `fs` names. `route_failures` refuses a `cli/mod.rs` whose `Command::Audit` return follows `Environment::read`. It also refuses `File::create_new`, `File::options`, `DirBuilder`, file links, and aliased or globbed `std::fs` imports. The self-test plants 21 measure violations and a late return, and keeps 6 controls and an early return. Three catalog plants keep the exact matching: `use crate::failure::Failure::Output;`, `use super::CATALOG::x;`, and `use super::lookup::inner;`.
 
 ## Departures beyond the ticket
 
-- A saved `choose` value that is neither text nor null is refused as an answer audit cannot grade. The prototype counts it wrong. `specification/audit.md` lists it.
+- A saved `choose` value that is neither text nor null, `true` and `false` included, is refused as an answer audit cannot grade. The prototype grades it. The ticket's Departures and `specification/audit.md` list it.
 - A bad `--threshold` prints `thinkthen: audit: --threshold: ` and the existing threshold sentence, so the line keeps audit's prefix.
 - The replay pipeline replays `transforms/rows/recording` with `decide --jsonl --field /body --details`. The key `replay/key.jsonl` holds the case labels.
 - The two table-less extras and the three table captures sit under `golden/extra/` and `golden/table/` with the ticket's names.
@@ -75,6 +75,17 @@ A fresh read-only Claude session reviewed `e1396333..2d980c78`. It checked the p
 2. The "sends nothing" test ran only one failure case. Fixed: `audit_sends_no_request_reads_no_key_and_writes_nothing` now runs all 19 `REFUSALS` rows with their standard input, beside the goldens and tables, under the canary key, the loopback address, and locked folders. The listener saw no connection, and neither folder tree changed.
 
 The full ladder also caught `transform_help_pins_its_three_introductions`, which pinned `help` right after `transform` in root help. It now pins `audit` there.
+
+## Second code review
+
+A second fresh read-only Claude session reviewed `6c37aba3`. Its report is outside the repository, so its findings and fixes are listed here:
+
+1. A `choose` answer of `true` or `false` counted as not sure. Fixed: `answer.rs` refuses it, and a `REFUSALS` row pins the sentence. With the fix removed, that row fails.
+2. Two rules had no failing test. Fixed with two captures from the prototype. `golden/extra/audit-choose-target-1.jsonl` (`--target 1`) turns red when the target test uses `>`. `golden/extra/audit-249-question-seed-7.jsonl` turns red when `python_sum` drops its compensation. Each was planted and seen red in `goldens_match`.
+3. The catalog check had loosened, and the measure check missed some writes. Fixed as "Policy" describes.
+4. The merge must adopt main's child deadline. Fixed: the audit tests wait through `test_deadline/wait.rs`.
+
+The reviewer also asked for two cuts, and both landed. The Wilson and AUC core tests repeated the goldens, and they are deleted. The reviewer's two other survivors, an empty name that does not fall through and disagreements in ascending order, have no fixture that reaches them, and no test was added for them.
 
 ## Gates
 

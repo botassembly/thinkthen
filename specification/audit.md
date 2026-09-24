@@ -124,6 +124,6 @@ No golden file reaches these. Each is the agent's decision, and Ian can overturn
 - **Rule text.** The prototype parses with `float()`. The port uses the settled grammar.
 - **Seed and target.** The port refuses a negative seed and a target outside 0 to 1.
 - **Key values.** Python reads a `decide` key of `1` or `0` as yes or no. The port leaves it unlabeled. The port refuses a `choose` key value that is not text.
-- **Choose values.** The prototype compares a saved `choose` value that is neither text nor null with the key and counts it wrong. The port refuses it as an answer it cannot grade.
+- **Choose values.** The prototype grades a saved `choose` value that is neither text nor null, `true` and `false` included. As run it compares the value with the key and counts it wrong, and under `--threshold` it grades the pick. The port refuses it as an answer it cannot grade.
 - **State names.** The prototype reads an option named `tied` or `unresolved` as that state. The port keeps it an option.
 - **Parts.** The prototype README says every key line has a part or none does. The code checks each group's labeled records. The port follows the code.
