@@ -210,3 +210,5 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Changes: Saved answers move to the engine cache, and a worker under a full signal mask amends ADR 0043. Relate reads rows, `score` returns the position, and the recognize columns are renamed. The check runs a local server from a pinned package, and `unexpected_cfgs` becomes deny.
 - Proof: The local-server steps in `check.sh`, the runtime checksum and version match, the deny plants, and the `allow(unexpected_cfgs)` plant.
 - Defers: Packaging, PostgreSQL versions other than 16, Mac, an address or key setting, `PARALLEL SAFE`, and `site/`.
+
+Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. The setting `thinkthen.width` becomes `thinkthen.throttle`, and every public `width` here reads as `throttle`.
