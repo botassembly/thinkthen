@@ -6,7 +6,7 @@ opens: libraries/ruby sdlc/scripts sdlc/planning/libraries/ruby.md sdlc/planning
 
 # 0112: Port the Ruby surface
 
-Status: design accepted 2026-09-24 after re-review; amended 2026-09-24 for the no-paid-backend rule. Owner: Claude. Depends on the 0084 builder amendment and 0117.
+Status: design and its 2026-09-24 amendment accepted. Owner: Claude. Depends on the 0084 builder amendment and 0117.
 
 ## Outcome and authority
 
@@ -158,6 +158,9 @@ R2-29 asks for rulings on record. The rulings that live only in the tag's `NOTES
 - Case 68 (an accent and an emoji) returns the same `start` and `end` in Ruby as in Rust.
 - Only the FFI module allows `unsafe`, with a reason (ADR 0047 item 3).
 - Nothing reaches a non-loopback address. The real `THINKTHEN_API_KEY` is unset, and a fake key appears only beside a loopback address (decision 15). A secrecy test reads every raised message and `inspect` for the key and for the base URL's credentials.
+- Builder note from the amendment review: the seed plant pins its loopback count. The count is 1 if the empty `Engine::builder()` caches by default and 2 if it starts with no cache. The builder checks that against the 0084 branch, pins the observed number, and the record shows it.
+- Builder note from the amendment review: the slide sample runs under `tests/backend.rb` with its own loopback backend. If it cannot, `check.sh` refuses a missing or non-loopback `THINKTHEN_BASE_URL` before that step, as 0108's guard does. A missing variable must never send a request to the built-in vendor address.
+- Builder note from the amendment review: `tests/backend.rb` gives each child a fresh `XDG_CONFIG_HOME`. No configuration file can then supply an address or a key.
 
 ## The check it adds to the gate ladder
 
@@ -213,7 +216,8 @@ Contract 2; state and timing 3; reach 2; proof 3; cost of error 3; total 13. Fin
   - Dependencies: all 22 new crates are listed with versions, deny's result is recorded, and the `Send + 'static` assertion is added. The lock gives rustc-hash 2.1.3, where the review read 1.1.0.
   - Toolchain: the folder follows the shared rule (`~/.cache/thinkthen-toolchains/`) in place of the review's `thinkthen-dev`. The prefix is built per machine, the pins are in the repository, setup is repeatable, and authorization follows decision 13. Docker is rejected on the recorded rule and on three checkable grounds, and three more options are weighed. Fiddle is left out of the extension check.
   - After the review, the shared rule at `446a4d6b` added a public engine value. Decision 14 adds `ThinkThen::Engine` on `EngineBuilder::from_env()`, and the Rust and Ruby caps rise for it.
-  - Amendment of 2026-09-24: decision 15 applies the no-paid-backend rule at `d783ab6b`. The seed test's `EngineBuilder::new()` plant could reach the vendor address, so a cache-folder test replaces it. The design stays accepted. Confirmation pending.
+  - Amendment of 2026-09-24: decision 15 applies the no-paid-backend rule at `d783ab6b`. The seed test's `EngineBuilder::new()` plant could reach the vendor address, so a cache-folder test replaces it. The design stays accepted.
+  - Amendment review: `sdlc/records/2026-09-24-amendment-review-0108-0109-0112.md` accepted decision 15 at `be816553`, with three notes for the builder, now in the acceptance list.
   - The test cap rises to 1,950 lines. The small fixes are applied, including the four trailing "since" clauses.
 - Rejected as written: a detached batch cannot hold only one width slot. The engine keeps each sent request until it ends (0073), and width is one process-wide gate (0077). Holding one slot would need an engine change or a wait. This ticket excludes the engine change, and the wait gives up the prompt Ctrl-C. Decision 5 states the real cost and names both levers.
 - Code review: pending.
