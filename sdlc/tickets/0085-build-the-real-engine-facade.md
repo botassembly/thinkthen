@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core crates/thinkthen/src/engine crates/thinkthen/sr
 
 # 0085: Build the real engine facade
 
-Status: revised after re-review; confirming. Owner: Claude. Implementation waits for 0080–0083, 0076, 0077, 0078, 0089, 0091, 0092, 0084, and 0095.
+Status: design accepted 2026-09-24 after re-review. Owner: Claude. Implementation waits for 0080–0083, 0076, 0077, 0078, 0089, 0091, 0092, 0084, and 0095.
 
 ## Outcome and authority
 
@@ -75,7 +75,7 @@ Ticket 0078 masks host signals on engine worker threads only. A send on the host
 - Exercise live-path behavior only against synchronized loopback listeners. Across mixed concurrent calls to all ten functions, the maximum in-flight attempts never exceeds ticket 0077's one process cap. Cancellation and deadlines stop new attempts at their established checkpoints. Started attempts finish under the existing rule. Retry attempts reacquire the shared permit and increment sends and counters exactly once each.
 - A test pins the private state accessor as the only door to retained pool, width, counter, and coordinator state. Ticket 0096 guards that accessor.
 - Prove that reading bare values, details, metadata, usage snapshots, cache status, and CLI status after a completed call causes no extra request. A counted listener must remain unchanged. The standalone details call, if retained by 0084, is tested separately as an ordinary cache or network judgment.
-- Sending thread: a `cfg(test)` seam records the sending thread ID. A single judgment and `find` send on a thread other than the caller. A no-op `SIGUSR1` sent to the calling thread during a held single send leaves the call answering with exactly one send. Planted bug: send on the calling thread, and the thread-ID test turns red.
+- Sending thread: a `cfg(test)` seam records the sending thread ID. A single judgment and `find` send on a thread other than the caller. The test first installs a do-nothing `SIGUSR1` handler through the existing `signal_hook::flag::register`, because the default action kills the test process. A `SIGUSR1` sent to the calling thread during a held single send leaves the call answering with exactly one send. Planted bug: send on the calling thread, and the thread-ID test turns red.
 - Transport resend (0089, G2): on every facade path, a loopback close after the request body left produces zero resends and the backend kind. A refused connection fails at once and is not retryable (R2-21). After a cancelled batch, the next single call sends only its own request (R5-19). The R5-19 test holds one reply across the cancel, releases it, and counts sends after the release.
 - Bulk forms (0095, G4): the private bulk row carries the yes probability that `details` returns for the same record. A one-question `annotate` over `choose`, `score`, and `tag` returns the values the scalar calls return on 0091's cases.
 - Prove all engine-owned workers and feeders have joined when every facade call returns. An endless or long generated input remains bounded by effective width and the existing queue window. No test depends on sleep for ordering; channels, barriers, and held loopback replies establish each phase.
@@ -117,5 +117,5 @@ The coordinator then runs `sdlc/scripts/install`, `lint`, `test`, and `spec` seq
 
 ## Review
 
-- Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-engine.md`) asked to split the interrupt check out (now 0097), route to Claude, order 0092 first, and plant bugs per row. All applied. The re-review (`sdlc/records/2026-09-24-rereview-engine.md`) asked for a sharper R5-19 plant, the private bulk row in G4, and no fork owner before 0096; all applied. The sending-thread decision comes from the 0078 re-review (`sdlc/records/2026-09-24-rereview-near.md`). Confirmation pending.
+- Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-engine.md`) asked to split the interrupt check out (now 0097), route to Claude, order 0092 first, and plant bugs per row. All applied. The re-review (`sdlc/records/2026-09-24-rereview-engine.md`) asked for a sharper R5-19 plant, the private bulk row in G4, and no fork owner before 0096; all applied. The sending-thread decision comes from the 0078 re-review (`sdlc/records/2026-09-24-rereview-near.md`). Confirmation accepted it.
 - Code review: pending.
