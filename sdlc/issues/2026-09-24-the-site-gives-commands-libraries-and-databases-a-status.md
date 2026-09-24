@@ -185,6 +185,17 @@ These 28 cells carry `"status": "planned"` or `"status": "preview"`. `site/scrip
 
 Another 99 example files carry `"status": "drawn"`. The word stays in the data. `site/src/components/Code.astro:5` turns it into the badge "not run yet", and `site/src/components/CrossView.astro:37` and `:41` add "comes with 0.1" or "is planned". Those three lines are the fix for the drawn cells.
 
+## Lines a review added
+
+A code review on the marketing side found six more lines. Each one gates a page on a status or colours a status badge.
+
+- `site/src/styles/site.css:143`: `.status.shipped, .status.ships-first { color: var(--then); }`
+- `site/src/pages/functions/[name]/index.astro:36`: `` <p class="lede">You give it {fn.takes}. You get back {fn.gives}.{shipped && <> Every answer carries a probability, and <code>--details</code> prints it.</>}</p> ``. The `shipped` gate hides the probability sentence on the recognize and relate pages.
+- `site/src/pages/[surface]/index.astro:21`: `const headline = shipped`. The headline splits on the Bash status.
+- `site/src/pages/[surface]/index.astro:24`: `const when = surface.release && !shipped`
+- `site/src/pages/[surface]/index.astro:31`: `{!shipped && (`. It opens the note that says the code has not run.
+- `site/src/pages/[surface]/index.astro:77`: `))}. {shipped`. It picks between the two "lands here" sentences at lines 78 and 79.
+
 ## Done when
 
 - No page on the built site shows preview, planned, beta, ships first, not run yet, at launch, works today, comes with a release, or not shipped as a status.
