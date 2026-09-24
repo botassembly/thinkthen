@@ -38,7 +38,7 @@ enum Expectation {
 #[derive(Deserialize)]
 struct MismatchCase {
     id: String,
-    calibrated: Option<String>,
+    tuned_for: Option<String>,
     running: Option<String>,
     warning: bool,
 }
@@ -91,12 +91,12 @@ fn shared_profile_cases_cross_the_production_parser_and_encoder() {
     }
 
     for case in profiles.mismatches {
-        let calibrated = case
-            .calibrated
+        let tuned_for = case
+            .tuned_for
             .as_deref()
             .map(ProfileName::new)
             .transpose()
-            .expect("calibrated name");
+            .expect("tuned_for name");
         let running = case
             .running
             .as_deref()
@@ -104,7 +104,7 @@ fn shared_profile_cases_cross_the_production_parser_and_encoder() {
             .transpose()
             .expect("running name");
         assert_eq!(
-            ProfileWarning::between(calibrated.as_ref(), running.as_ref()).is_some(),
+            ProfileWarning::between(tuned_for.as_ref(), running.as_ref()).is_some(),
             case.warning,
             "{}",
             case.id

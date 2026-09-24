@@ -232,7 +232,7 @@ impl QuestionSet {
         &self.questions
     }
 
-    /// The profile this set's thresholds were calibrated under, when named.
+    /// The profile this set's thresholds were tuned under, when named.
     pub(crate) const fn profile(&self) -> Option<&ProfileName> {
         self.profile.as_ref()
     }
