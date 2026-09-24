@@ -89,7 +89,7 @@ The reviewer also asked for two cuts, and both landed. The Wilson and AUC core t
 
 ## Gates
 
-On the final commit, with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, load average 3.59:
+On `86730e41`, with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, starting at load 9.23. The install, test, and spec rungs took the shared heavy-build lock themselves.
 
 | Command | Result |
 | --- | --- |
@@ -98,4 +98,6 @@ On the final commit, with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, lo
 | `sdlc/scripts/test` | exit 0 |
 | `sdlc/scripts/spec` | exit 0: 3 passed, demos 21 green, 0 red |
 | `git diff --check` | clean |
-| `node sdlc/scripts/ratchet.mjs` | 52720/52720 |
+| `node sdlc/scripts/ratchet.mjs` | 53287/53287 |
+
+The commit after it changes only this record.
