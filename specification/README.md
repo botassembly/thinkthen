@@ -13,7 +13,7 @@ The names table in [`../README.md`](../README.md) fixes the four names: question
 | [channels.md](channels.md) | Arguments, the five channels, exit codes, `--quiet`, `--raw`, `--dry-run`, option placement | Settled |
 | [threshold.md](threshold.md) | The one threshold rule, its two forms, and which verbs take which | Settled |
 | [question-file.md](question-file.md) | The two homes of every setting, the question file grammar, precedence, and the question digest | Settled |
-| [result.md](result.md) | The bare value, the `--details` object, and the four answer kinds | Settled, with one open point |
+| [result.md](result.md) | The bare value, the `--details` object, and the five answer kinds | Settled, with one open point |
 | [records.md](records.md) | Reading a stream of records: framing, pointers, order, failure, resume, `--cache`, `--jobs` | Settled |
 | [backends.md](backends.md) | One wire shape, the key, the address, the request, retries, the `systemone` adapter | Settled, with Draft sections |
 | [recording.md](recording.md) | `--record` and `--replay`: a folder of exchanges that runs again with no network | Settled |

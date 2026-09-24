@@ -183,7 +183,7 @@ fn recognize_and_relate_keep_the_beta_warning_the_cuts_and_the_disclosure() {
 }
 
 #[test]
-fn the_specification_defines_unresolved_once_and_names_no_decider_model() {
+fn the_specification_defines_unresolved_once_and_keeps_the_closed_wording() {
     const DEFINITION: &str = "`unresolved` is the formal name for a not sure answer.";
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let mut defined = Vec::new();
@@ -207,4 +207,6 @@ fn the_specification_defines_unresolved_once_and_names_no_decider_model() {
         }
     }
     assert_eq!(defined, ["decide.md"]);
+    let index = std::fs::read_to_string(root.join("specification/README.md")).expect("the index");
+    assert!(index.contains("the five answer kinds |"), "{index}");
 }
