@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core crates/thinkthen/src/engine crates/thinkthen/sr
 
 # 0085: Build the real engine facade
 
-Status: draft, design not reviewed. Owner: Claude. Was marked ready; implementation waits for tickets 0080, 0081, 0082, 0083, 0076, 0077, 0078, 0089, 0091, 0084, and 0095 to land
+Status: draft, revised after design review; needs re-review. Owner: Claude. Implementation waits for 0080–0083, 0076, 0077, 0078, 0089, 0091, 0092, 0084, and 0095.
 
 ## Outcome and authority
 
@@ -34,7 +34,7 @@ Keep the low-level engine modules private. Add no C symbol, connector trait, dyn
 
 ## Facade contract
 
-One immutable engine value holds resolved engine settings. Construction validates all local settings before external effects and preserves explicit versus omitted width for ticket 0077. It holds no resident worker thread. Every call enters ticket 0078's current-process guard before touching a pool, width waiter, cache coordinator, recorder, counter, scheduler queue, or request-path lock inherited across a fork.
+One immutable engine value holds resolved engine settings. Construction validates all local settings before external effects and preserves explicit versus omitted width for ticket 0077. It holds no resident worker thread. The engine value keeps its retained pool, width state, counters, and recorder and cache coordinators behind one private state accessor from the start. Ticket 0096 lands after this ticket and puts its PID guard in that accessor. Nothing outside the accessor holds a raw reference to that state.
 
 Every function has one typed call path. Convenience within the command may reduce to shared helpers, but one function never re-parses another function's rendered output. Scalar and bulk forms use the same typed judgment path. `filter` and `rank` retain record identity through input indexes or typed borrowed records. `find` returns its selected input and all candidate probabilities. `annotate` preserves named-question order and answered-or-failed members. `recognize` and `relate` consume the 0080 planner and result owners without another tokenizer, splitter, planner, threshold rule, or edge assembler.
 
@@ -42,9 +42,9 @@ Every successful logical result carries the production metadata its contract req
 
 Bulk calls return completed outcomes in input order, independent of worker completion order. A valid unresolved answer remains distinct from a failed judgment. A logical failure preserves already completed good outcomes and the exact failure marker or structured cause required by conformance. Cancellation, deadline, local failure, or backend failure preserves only results the owning scheduler considers complete, carries existing stopped-at metadata, dispatches no later work after the stop checkpoint, and joins every engine worker before returning. The facade does not collect an unbounded input merely to simplify a host result.
 
-Each call accepts the shared cancel token, an optional one-instant deadline, and ticket 0095's optional interrupt check. The check runs only on the calling thread: once before the first send and at every existing 50 ms poll while the call waits on the width gate, a retry wait, a recording or lock wait, or bulk results. A `true` return fires the call's cancel token at that moment. It never runs on a worker or during one blocking send. A panic in the check joins every engine worker, then resumes unchanged. It does not become command signal policy; the command passes no check. Cancellation and deadline precedence, gate waits, retry waits, sent-attempt completion, and worker joining remain exactly as tickets 0073, 0076, and 0077 fix them.
+Each call accepts the shared cancel token and an optional one-instant deadline. Cancellation and deadline precedence, gate waits, retry waits, sent-attempt completion, and worker joining remain exactly as tickets 0073, 0076, and 0077 fix them. Keep the cancel and deadline poll in one function. Ticket 0097 adds 0095's interrupt check there after this ticket lands.
 
-The facade uses the one process width state and current-process state from tickets 0077 and 0078. An omitted width stays omitted. A conflicting explicit width fails locally before input dispatch, key lookup, cache or recording mutation, request accounting, connection, or send. A child does not retain a parent pool, gate, queue, process counters, or userspace cache lock. The facade installs no process signal handler. The command alone retains its SIGINT and `SIGXFSZ` behavior.
+The facade uses the one process width state from ticket 0077. An omitted width stays omitted. A conflicting explicit width fails locally before input dispatch, key lookup, cache or recording mutation, request accounting, connection, or send. The facade installs no process signal handler. The command alone retains its SIGINT and `SIGXFSZ` behavior.
 
 Cache, replay, recording, and request coalescing keep their production meanings. A stored answer reports zero sends and increments the cache-answer counter under the existing rule. A live retry counts every started attempt. Process usage snapshots remain cumulative and reset in a forked child as ticket 0078 specifies; durable command totals remain the command's count-only files. The facade does not add a counter reset. The CLI `status` and cache commands continue to read the same cache and counter owners rather than a facade-side mirror.
 
@@ -52,7 +52,7 @@ The six facade failure kinds are `usage`, `backend`, `local`, `cancelled`, `dead
 
 ### Error-index rows this ticket carries
 
-`sdlc/issues/2026-09-23-surfaces-branch-error-index.md`, as sorted by the port guide: R2-21 (a refused connection is not retried), R5-19 (no leftover send after a cancelled batch), and on every facade path the 0089 rule behind R5-4 and R6-15. The G1 rows marked `*` in the port guide gain the interrupt check here; their surface tickets re-run them.
+`sdlc/issues/2026-09-23-surfaces-branch-error-index.md`, as sorted by the port guide: R2-21 (a refused connection is not retried), R5-19 (no leftover send after a cancelled batch), and on every facade path the 0089 rule behind R5-4 and R6-15. The G1 rows marked `*` in the port guide wait for ticket 0097. The record names one planted bug per carried row and shows its test turning red: R2-21 marks `Refused` as retried; R5-19 returns before the worker join; G2 resends after a close that follows the body.
 
 ## No copied machinery
 
@@ -69,9 +69,8 @@ Mechanical checks must keep the boundary from drifting. Extend the existing poli
 - Prove partial results with an early success, a valid unsure or null answer, a failed logical answer, and a later undispatched item. Keep completed outcomes in input order, preserve the failed marker or cause, report the exact stopped position, and never turn absence after failure into a negative judgment. Repeat the ownership seam for `annotate`, `recognize`, and `relate` without duplicating their internal planner tests.
 - Count loopback requests and filesystem effects for malformed typed input, impossible backend limits, request-budget refusal, conflicting width, pre-fired cancellation, and a zero or spent deadline. Each sends nothing. Local preflight creates no cache entry, recording entry, durable usage delta, or request count. A cache hit and replay also send nothing but retain their accepted cache and counter meanings.
 - Exercise live-path behavior only against synchronized loopback listeners. Across mixed concurrent calls to all ten functions, the maximum in-flight attempts never exceeds ticket 0077's one process cap. Cancellation and deadlines stop new attempts at their established checkpoints. Started attempts finish under the existing rule. Retry attempts reacquire the shared permit and increment sends and counters exactly once each.
-- Fork from warm and busy synchronized states through the facade. The child enters the PID guard before inherited mutable state, builds fresh process state, keeps the parent unchanged, and completes against its own loopback listener. Include cache-hit, counter, held-width, queued-worker, recorder wait, and digest-lock cases already owned by ticket 0078. This ticket proves that every facade entry uses that owner; it does not recreate the fork suite.
+- A test pins the private state accessor as the only door to retained pool, width, counter, and coordinator state. Ticket 0096 guards that accessor.
 - Prove that reading bare values, details, metadata, usage snapshots, cache status, and CLI status after a completed call causes no extra request. A counted listener must remain unchanged. The standalone details call, if retained by 0084, is tested separately as an ordinary cache or network judgment.
-- Interrupt check (0095): a counted loopback listener and a recorded thread id prove the check runs only on the calling thread, before the first send and at each poll during a held width gate, a retry wait, and a held bulk reply. After it returns `true`, the listener sees no new request, sent attempts finish, the call returns `Cancelled` with stop metadata, and every worker has joined. A check that panics resumes the same panic after the join. No check runs during one held single send.
 - Transport resend (0089, G2): on every facade path, a loopback close after the request body left produces zero resends and the backend kind. A refused connection fails at once and is not retryable (R2-21). After a cancelled batch, the next single call sends only its own request (R5-19).
 - Bulk forms (0095, G4): `Row::probability` equals the yes probability `details` returns for the same record. A one-question `annotate` over `choose`, `score`, and `tag` returns the values the scalar calls return on 0091's cases.
 - Prove all engine-owned workers and feeders have joined when every facade call returns. An endless or long generated input remains bounded by effective width and the existing queue window. No test depends on sleep for ordering; channels, barriers, and held loopback replies establish each phase.
@@ -81,13 +80,13 @@ Mechanical checks must keep the boundary from drifting. Extend the existing poli
 
 Allowed: one private engine value and completion facade; typed settings, call options, outcomes, metadata, usage snapshots, and six-kind errors fixed by 0084; all ten private function entries; command conversion to and from the facade; consolidation or deletion of superseded command adapters; reuse of the real parser, planner, scheduler, transport, cache, recording, counter, cancellation, deadline, width, and fork owners; one offline facade runner over the shared conformance files; focused unit, integration, loopback, policy, secrecy, ordering, partial-result, bounded-memory, and worker-lifetime tests; exact ratchet, ticket, queue, and record updates during implementation.
 
-Excluded: any `pub` user API (0086 exposes 0095's interrupt check), public `engine` module, semver promise, C ABI, language or database binding, Polars door, `surfaces` merge or edit, connector or stand-in import, API or HTTP service, command grammar or output change, new setting, new result field, new error kind, new parser, new scheduler, new splitter, new transport, async runtime, resident worker, cache format change, counter reset, signal handler, dependency, workflow, installer, publication, live call, paid call, or quality-policy change for recognition or relations.
+Excluded: any `pub` user API, the interrupt check (0097), fork recovery (0096), public `engine` module, semver promise, C ABI, language or database binding, Polars door, `surfaces` merge or edit, connector or stand-in import, API or HTTP service, command grammar or output change, new setting, new result field, new error kind, new parser, new scheduler, new splitter, new transport, async runtime, resident worker, cache format change, counter reset, signal handler, dependency, workflow, installer, publication, live call, paid call, or quality-policy change for recognition or relations.
 
 This ticket may change at most sixteen production Rust files and add at most 1,200 nonblank production Rust lines. Focused tests may add at most 2,100 nonblank Rust lines. The combined change may add at most 3,300 nonblank Rust lines and may not raise any file above 500 nonblank lines. Delete superseded command plumbing before raising the exact ratchet. The implementation record must name production additions, deletions, net growth, every touched owner, and where duplication was removed or deliberately retained. Add no dependency.
 
 ## Dependencies and stop conditions
 
-Implementation starts from main after 0080 and 0081 have landed the real ninth and tenth functions, 0082 and 0083 have closed the command and transform work that can add request paths, 0076 through 0078 and 0089 have landed and passed their private-control proofs, 0091 has merged the branch conformance cases, and 0084 and 0095 have frozen the Rust contract used here. Rebase first, rewrite the call-path inventory against that exact tree, and make the first red test prove the missing facade rather than an obsolete branch shape.
+Implementation starts from main after 0080 and 0081 have landed the real ninth and tenth functions, 0082 and 0083 have closed the command and transform work that can add request paths, 0076, 0077, 0078, and 0089 have landed and passed their private-control proofs, 0091 has merged the branch conformance cases, 0092 has moved the loopback harness these tests build on, and 0084 and 0095 have frozen the Rust contract used here. Rebase first, rewrite the call-path inventory against that exact tree, and make the first red test prove the missing facade rather than an obsolete branch shape.
 
 Ticket 0086 depends on this ticket and exposes the public Rust API without another engine path. C and the separately reviewed language and database integration follow 0086. The `surfaces` branch remains untouched until that integration ticket.
 
@@ -109,9 +108,9 @@ The coordinator then runs `sdlc/scripts/install`, `lint`, `test`, and `spec` seq
 - Total: 19
 - Minimum and final level: 4
 - Reasons: this private seam reaches every function and every paid request path, composes cancellation, deadlines, width, fork recovery, cache, counters, replay, and partial completion, and becomes the only implementation path for the command and later public API. A wrong seam can double-send, reorder results, lose good partial answers, bypass a process limit, deadlock a forked host, or freeze copied behavior into every binding.
-- Selected implementation: `sol-implementer` (`gpt-5.6-sol`, medium reasoning). Use separate `sol-reviewer` sessions for design and code review. Use a research agent only for the post-0084 call-path inventory, never to decide the contract.
+- Selected implementation: Claude builds (Opus subagent). A fresh Claude session reviews design and code. A research subagent may take the post-0084 call-path inventory, never the contract.
 
 ## Review
 
-- Design review: pending.
+- Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-engine.md`) asked to split the interrupt check out (now 0097), route to Claude, order 0092 first, and plant bugs per row. All applied; re-review pending.
 - Code review: pending.
