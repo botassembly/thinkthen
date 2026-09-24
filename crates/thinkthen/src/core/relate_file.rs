@@ -10,9 +10,9 @@ use crate::core::{
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
-#[rustfmt::skip]
 pub(crate) struct RelateFields {
-    name: Pointer, kind: Pointer,
+    name: Pointer,
+    kind: Pointer,
 }
 
 impl RelateFields {
@@ -25,17 +25,20 @@ impl RelateFields {
 }
 
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-#[rustfmt::skip]
 pub(crate) struct RelatePresence {
-    pub(crate) fields: bool, pub(crate) threshold: bool, pub(crate) model: bool,
+    pub(crate) fields: bool,
+    pub(crate) threshold: bool,
+    pub(crate) model: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-#[rustfmt::skip]
 pub(crate) struct RelateSpec {
-    fields: RelateFields, pub(crate) relations: Vec<RelationRule>,
-    pub(crate) threshold: Threshold, pub(crate) model: Option<ModelName>,
-    pub(crate) profile: Option<ProfileName>, presence: RelatePresence,
+    fields: RelateFields,
+    pub(crate) relations: Vec<RelationRule>,
+    pub(crate) threshold: Threshold,
+    pub(crate) model: Option<ModelName>,
+    pub(crate) profile: Option<ProfileName>,
+    presence: RelatePresence,
 }
 
 /// The resolved relation question, whose compact bytes the digest hashes.
@@ -76,31 +79,35 @@ pub(crate) enum RelateConfigError {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-#[rustfmt::skip]
 struct FileShape {
-    version: u8, relate: RelateShape, threshold: Option<CutShape>,
-    model: Option<String>, profile: Option<String>,
+    version: u8,
+    relate: RelateShape,
+    threshold: Option<CutShape>,
+    model: Option<String>,
+    profile: Option<String>,
 }
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-#[rustfmt::skip]
 struct RelateShape {
-    fields: Option<FieldsShape>, relations: Vec<RelationShape>,
+    fields: Option<FieldsShape>,
+    relations: Vec<RelationShape>,
 }
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-#[rustfmt::skip]
 struct FieldsShape {
-    name: String, kind: String,
+    name: String,
+    kind: String,
 }
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
-#[rustfmt::skip]
 struct RelationShape {
-    name: String, source: String, target: String, reads: Option<String>,
+    name: String,
+    source: String,
+    target: String,
+    reads: Option<String>,
     #[serde(default)]
     either: bool,
 }

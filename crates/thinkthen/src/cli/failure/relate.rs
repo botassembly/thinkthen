@@ -1,8 +1,32 @@
 use super::Failure;
+use crate::core::RelateConfigError;
 
+/// What stopped `relate` after its shared checks passed.
 #[derive(Debug)]
-#[rustfmt::skip]
-pub(crate) enum Error { Config { file: bool, error: crate::core::RelateConfigError }, Logical }
+pub(crate) enum Error {
+    /// The inline rules or the question file are refused.
+    Config {
+        file: bool,
+        error: RelateConfigError,
+    },
+    /// No logical relation question has a usable answer.
+    Logical,
+}
 
-#[rustfmt::skip]
-pub(super) fn message(failure: &Failure) -> Option<(u8, String)> { Some(match failure { Failure::Relate(Error::Config { file, error }) => (if *file && !matches!(error, crate::core::RelateConfigError::WrongVerb) { 5 } else { 2 }, error.to_string()), Failure::Relate(Error::Logical) => (4, "the backend returned no usable relation answer".to_owned()), _ => return None }) }
+pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {
+    match failure {
+        Failure::Relate(Error::Config { file, error }) => {
+            let code = if *file && *error != RelateConfigError::WrongVerb {
+                5
+            } else {
+                2
+            };
+            Some((code, error.to_string()))
+        }
+        Failure::Relate(Error::Logical) => Some((
+            4,
+            "the backend returned no usable relation answer".to_owned(),
+        )),
+        _ => None,
+    }
+}

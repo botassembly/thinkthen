@@ -7,9 +7,10 @@ use crate::table::{Kind as TableKind, Rows as TableRows};
 
 const MAX_ENTITIES: usize = 255;
 
-#[rustfmt::skip]
 pub(super) fn read(
-    source: Box<dyn BufRead + Send>, framing: Framing, spec: &RelateSpec,
+    source: Box<dyn BufRead + Send>,
+    framing: Framing,
+    spec: &RelateSpec,
 ) -> Result<Vec<RelationEntity>, Failure> {
     let records = match framing {
         Framing::Document => document(source, spec)?,

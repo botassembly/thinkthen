@@ -13,10 +13,12 @@ pub(super) struct Settled {
 }
 
 #[derive(Clone, Copy, Debug, Serialize)]
-#[rustfmt::skip]
 pub(super) struct From {
-    question: Source, threshold: Source, model: Source,
-    field: Source, kind_field: Source,
+    question: Source,
+    threshold: Source,
+    model: Source,
+    field: Source,
+    kind_field: Source,
     #[serde(skip_serializing_if = "Option::is_none")]
     profile: Option<Source>,
 }

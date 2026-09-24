@@ -10,9 +10,10 @@ use crate::core::{
     ReadingError, RecordError, RenderError, Source,
 };
 
-use crate::engine::error::{Error as EngineError, TransportKind};
+use crate::engine::error::TransportKind;
 use crate::table;
 
+mod convert;
 pub(crate) mod recognize;
 mod recording;
 pub(crate) mod relate;
@@ -20,8 +21,10 @@ mod status;
 
 const NOT_TEXT: &str = "the evidence is not valid UTF-8";
 
+/// What a usage error with no sentence of its own would be told.
 const UNNAMED: &str = "defect: a usage error with no sentence";
 
+/// What stopped the command.
 #[derive(Debug)]
 pub(crate) enum Failure {
     /// The flags and the environment name no backend.
@@ -449,72 +452,6 @@ const fn transport_message(kind: TransportKind) -> &'static str {
             "the backend closed the connection before a reply; try again or change --max-retries"
         }
         TransportKind::Other => "the backend could not be reached; check --url and the network",
-    }
-}
-
-impl From<BackendError> for Failure {
-    fn from(error: BackendError) -> Self {
-        Self::Backend(error)
-    }
-}
-
-impl From<QuestionFileError> for Failure {
-    fn from(error: QuestionFileError) -> Self {
-        Self::Question(error)
-    }
-}
-
-impl From<QuestionSetError> for Failure {
-    fn from(error: QuestionSetError) -> Self {
-        Self::QuestionSet(error)
-    }
-}
-
-impl From<DecodeError> for Failure {
-    fn from(error: DecodeError) -> Self {
-        Self::Reply(error)
-    }
-}
-
-impl From<ReadingError> for Failure {
-    fn from(error: ReadingError) -> Self {
-        Self::Reading(error)
-    }
-}
-
-impl From<RecordError> for Failure {
-    fn from(error: RecordError) -> Self {
-        Self::Record(error)
-    }
-}
-
-impl From<RenderError> for Failure {
-    fn from(error: RenderError) -> Self {
-        Self::Render(error)
-    }
-}
-
-impl From<EngineError> for Failure {
-    fn from(error: EngineError) -> Self {
-        match error {
-            EngineError::Transport(message) => Self::Transport(message),
-            EngineError::Status(status) => Self::Status(status),
-            EngineError::Reply(error) => Self::Reply(error),
-            EngineError::ReplayMiss(name) => Self::ReplayMiss(name),
-            EngineError::Entry(name, message) => Self::Entry(name, message),
-            EngineError::RecordingConflict(name) => Self::RecordingConflict(name),
-            EngineError::RecordingStorage => Self::RecordingStorage,
-            EngineError::RecordingPathIsFile => Self::RecordingPathIsFile,
-            EngineError::RecordingBackendMismatch => Self::RecordingBackendMismatch,
-            EngineError::RecordingFolderLegacy => Self::RecordingFolderLegacy,
-            EngineError::DefaultCachePrivate => Self::DefaultCachePrivate,
-            EngineError::CacheEntry => Self::CacheEntry,
-            EngineError::Defect(message) => Self::Defect(message),
-            EngineError::Usage(message) => Self::Usage(message),
-            EngineError::ProfileLimit(limit) => Self::ProfileLimit(limit),
-            EngineError::Cancelled => Self::Cancelled,
-            EngineError::Deadline => Self::Defect("an unavailable deadline reached the command"),
-        }
     }
 }
 
