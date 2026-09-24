@@ -18,6 +18,8 @@ mod engine;
 
 mod public;
 
+mod result_json;
+
 pub use public::*;
 
 #[cfg(test)]

@@ -4,9 +4,10 @@ use std::fmt;
 use std::path::Path;
 
 use crate::core::{self, Pointer, Threshold};
+use crate::public::choice::Choice;
 use crate::public::error::Error;
 use crate::public::question::{
-    BandedQuestion, Choice, ChooseQuestion, Kind, Question, TagQuestion,
+    BandedQuestion, ChooseQuestion, Kind, Question, QuestionKind, TagQuestion,
 };
 
 /// Ordered, named questions that `annotate` asks of each record.
@@ -57,6 +58,14 @@ impl QuestionSet {
         let text = std::fs::read_to_string(path)
             .map_err(|_| Error::local("the question set could not be read"))?;
         Self::from_json(&text).map_err(|error| Error::local(error.detail().message()))
+    }
+
+    /// Each member's name and kind, in set order. A banded member reads `Decide`.
+    pub fn members(&self) -> impl ExactSizeIterator<Item = (&str, QuestionKind)> + '_ {
+        self.0
+            .questions()
+            .iter()
+            .map(|member| (member.name(), QuestionKind::of(member.question())))
     }
 
     /// Name questions one at a time.

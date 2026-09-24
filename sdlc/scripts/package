@@ -27,7 +27,7 @@ test "$targets" = "bin lib" \
 # its old path, so a test that runs the command would run a stale one. Only
 # the library's own tests and the public tests that never start it run here.
 cargo test --locked --offline --package thinkthen --no-default-features --lib \
-    --test public_controls --test public_batches --test compile_contract
+    --test public_controls --test public_batches --test compile_contract --test public_members
 RUSTFLAGS='--cfg thinkthen_internal_doctest' \
 RUSTDOCFLAGS='--cfg thinkthen_internal_doctest' \
     cargo test --locked --offline --package thinkthen --doc --no-default-features
