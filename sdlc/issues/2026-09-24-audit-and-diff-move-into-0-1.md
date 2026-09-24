@@ -11,7 +11,7 @@ The ten functions come first. audit and diff land after the ten are done and bef
 ## What the prototype fixes
 
 - `botassembly/beatles-bench`, `scripts/tools/measure.py` (561 lines of Python) and `tests/test_measure.py` (272 lines).
-- 15 golden files under `tests/fixtures/audit/golden/`, listed with their command lines in `scripts/tools/README.md`. The Rust output must match their parsed JSON.
+- 14 golden files under `tests/fixtures/audit/golden/`, listed with their command lines in `scripts/tools/README.md`. The Rust output must match their parsed JSON.
 - Neither command sends a request or reads a key. Both read ThinkThen's own JSONL output and recordings, plus an answer key for audit.
 - audit: agreement with a Wilson interval, both disagreement directions, AUC, calibration, a coverage curve, and a suggested cut tuned on one half and checked on the other.
 - diff: what flipped between two runs or two cuts on one run, which way, and exact McNemar on right answers.

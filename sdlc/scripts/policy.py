@@ -737,6 +737,61 @@ def check_catalog_policy() -> None:
             fail("catalog", f"the catalog control {control!r} stays allowed")
 
 
+# Ticket 0077: every live attempt passes the one process width gate in the
+# HTTP module, so no other production file reaches the HTTP library, and only
+# the one accessor names the process width state.
+HTTP_DOOR = "crates/thinkthen/src/engine/http.rs"
+WIDTH_DOOR = "crates/thinkthen/src/engine/mod.rs"
+WIDTH_STATE = "PROCESS_WIDTH"
+
+
+def is_test_source(relative: str) -> bool:
+    return ("/tests/" in relative or "_tests/" in relative
+            or relative.endswith(("/tests.rs", "_tests.rs")))
+
+
+def door_failures(sources: dict[str, str]) -> list[str]:
+    """Name each second live-send door and each second width-state reference."""
+    held = []
+    for relative, text in sorted(sources.items()):
+        tokens = rust_tokens(text)
+        if "ureq" in tokens and relative != HTTP_DOOR and not is_test_source(relative):
+            held.append(f"{relative} reaches ureq outside {HTTP_DOOR}")
+        uses = tokens.count(WIDTH_STATE)
+        if uses and (relative != WIDTH_DOOR or uses != 2):
+            held.append(f"{relative} names {WIDTH_STATE} {uses} times")
+    return held
+
+
+def check_doors() -> None:
+    sources = {
+        source.relative_to(REPO).as_posix(): source.read_text(encoding="utf-8")
+        for source in sorted((REPO / "crates/thinkthen/src").rglob("*.rs"))
+    }
+    if WIDTH_STATE not in rust_tokens(sources.get(WIDTH_DOOR, "")):
+        fail("doors", f"{WIDTH_DOOR} holds the process width state")
+    for failure in door_failures(sources):
+        fail("doors", failure)
+    plants = (
+        ("crates/thinkthen/src/cli/find.rs", "ureq::post(url).send(body)"),
+        ("crates/thinkthen/src/engine/request.rs", "use ureq::Agent;"),
+        ("crates/thinkthen/src/cli/schedule.rs", "crate::engine::PROCESS_WIDTH.select(None)"),
+        ("crates/thinkthen/src/engine/width_tests.rs", "&super::PROCESS_WIDTH"),
+        (WIDTH_DOOR, "fn second() -> &'static Widths { &PROCESS_WIDTH }"),
+    )
+    for relative, text in plants:
+        if not door_failures({**sources, relative: sources.get(relative, "") + "\n" + text}):
+            fail("doors", f"the planted door {text[-60:]!r} in {relative} is refused")
+    controls = (
+        ("crates/thinkthen/src/cli/find.rs", "// ureq stays in the HTTP module"),
+        ("crates/thinkthen/src/cli/find.rs", 'const NOTE: &str = "PROCESS_WIDTH";'),
+        ("crates/thinkthen/src/engine/http/tests.rs", "ureq::Error::HostNotFound"),
+    )
+    for relative, text in controls:
+        if door_failures({**sources, relative: sources.get(relative, "") + "\n" + text}):
+            fail("doors", f"the door control {text!r} in {relative} stays allowed")
+
+
 def check_crate_roots() -> None:
     for relative, attributes in ACCEPTED_CRATE_ROOT_ATTRIBUTES.items():
         try:
@@ -1001,6 +1056,7 @@ def main() -> int:
     check_crate_roots()
     check_core_policy()
     check_catalog_policy()
+    check_doors()
     check_sources()
     check_seam()
     check_license_grammar()

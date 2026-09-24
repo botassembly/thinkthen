@@ -1,6 +1,6 @@
 # The question-form runner lacks two guards
 
-Status: Open
+Status: Closed by ticket 0115. The runner hides the key and any address from its children, and a ported mutation guards the evidence rule.
 
 The 0091 re-review (`sdlc/records/0091-code-review-2.md`) left two notes about the question-form cases in `conformance/cases.json`.
 

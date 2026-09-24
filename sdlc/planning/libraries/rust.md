@@ -46,7 +46,7 @@ Rust is blocking (ADR 0017 pick 7). Plain calls return `Result`, no `.await` exi
 - **Rust has no barrier, so the waste is shape.** A slice, any `IntoIterator`, and any `Iterator` reach the engine as borrowed `&str`. The widest container is the one the caller already holds. The batch spine takes an iterator and returns results in order, and `decide_many` over a slice is a thin wrapper (ADR 0017 section 8, step 2).
 - **One request at a time in a caller's loop.** A `for` loop that judges each record sends one request and waits. The bulk verbs hand the iterator to the engine, which runs it at width `jobs` and keeps input order. Memory follows the width and not the length of the input, so an endless iterator runs flat.
 - **A map built before the call.** The engine sends an equal pair of question and evidence once when the batch shares a cache, and it answers an existing entry with no request. A caller who de-duplicates first pays for a hash table and saves nothing.
-- **Width set twice.** `jobs` is one number for the whole process, the engine's scheduler owns it, and two clients in one process share it.
+- **Width set twice.** `jobs` is one number for the whole process, and two clients in one process share its one attempt gate. A builder that omits the width follows the process. A second builder with a different width fails before it sends (ADR 0017, amendment of 2026-09-24).
 - **The one-at-a-time form is serial.** `tt::filter` and `decide_many` are the bulk forms, and the documents show them first.
 
 ## How little code
