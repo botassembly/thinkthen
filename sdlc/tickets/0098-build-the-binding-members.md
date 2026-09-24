@@ -6,7 +6,7 @@ opens: crates/thinkthen/src crates/thinkthen/tests sdlc/scripts sdlc/ratchet.jso
 
 # 0098: Build the binding members
 
-Status: built; code review round 1 fixed, re-review of the fix pending; whole ladder passed before the fix. Waits on 0086. Owner: Claude.
+Status: built; code review accepted at round 2. The whole ladder passed at `9c0fc2cb`, before the Debug fix, and must rerun after merging main once 0086 lands. Owner: Claude.
 
 Split out of 0086 on 2026-09-24 so 0086 fits its budget (`sdlc/records/2026-09-24-spine-review-engine.md`, finding F7). It lands after 0086 and before 0093.
 
@@ -48,7 +48,7 @@ Builder: Claude (Opus subagent). Reviewer: a fresh Claude session for design and
 ## Review
 
 - Design review: accepted in `sdlc/records/2026-09-24-rereview-engine.md`.
-- Code review: round 1 returned one must-fix and five nits, all addressed in `sdlc/records/0098-build-binding-members.md`. Re-review pending.
+- Code review: round 1 returned one must-fix and five nits, all addressed in `sdlc/records/0098-build-binding-members.md`. Round 2 accepted.
 
 ## Evidence
 
@@ -58,6 +58,6 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Keeps: Each member delegates to its existing owner: the core parsers, the 0085 facade, and the one command serializer. No new parser, serializer, request path, or dependency enters.
 - Changes: The command's result serializer moves out of `cli` into one shared private module. The members listed in "Design" join the public contract.
 - Proof: The JSON methods match the command's output bytes. `choose_labels` equals `from_json` with no added send. `either` equals `both_ways`, digest included. The inventory check covers all of 0095, and the two planted bugs turn tests red.
-- Defers: The first binding crate (0093), C (0094), and every surface. A `fields` pointer other than the default stays a usage error.
+- Defers: The first binding crate (0093), C (0094), and every surface. A `fields` pointer other than the default stays a usage error. `QuestionSetBuilder`'s derived `Debug` still prints member names.
 
 Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. This ticket adds no width member. Any public name or text it writes uses the throttle.

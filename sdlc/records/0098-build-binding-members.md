@@ -31,7 +31,7 @@ Each member delegates to an existing owner. No parser, request path, or dependen
 - The runtime label step refuses a repeat with the core's own sentence: "a list holds each option once" for `choose` and "a list holds each label once" for `tag`.
 - `public/question.rs` and `public/results.rs` would pass the 500-line file ceiling. `Choice` and `choices!` moved to `public/choice.rs` unchanged. The annotate results moved to `public/annotated.rs`, and there they gained the `value_json` member and its field. `results.rs` shares `withheld_debug` with the new file.
 - Every JSON line is written once, when its result is made. The four methods then return `String` with no error, as 0095 declares them. An annotate row pays one serialization even when the caller never asks for JSON. `Details::of` digests the question twice, once for its field and once inside the shared line. Both costs are small beside the request, and removing the second digest would widen the shared function for the command too. Ian can overturn this.
-- The builders' `Debug` lines withhold the question, the labels, and the descriptions. 0086's builders derived `Debug`, so a builder's line printed the question text. `Listing`, `DecideBuilder`, and `DescriptionBuilder` now write their own lines, which count what they hold. Every builder reads through one of them. The fix sits here because `LabelBuilder` would have leaked the same way, and 0086 is past its fix round. 0086 carries the leak until this ticket lands.
+- The builders' `Debug` lines withhold the question, the labels, and the descriptions. 0086's builders derived `Debug`, so a builder's line printed the question text. `Listing`, `DecideBuilder`, and `DescriptionBuilder` now write their own lines, which count what they hold. Every question and description builder reads through one of them. `QuestionSetBuilder` still derives `Debug` and prints member names, which `QuestionSet`'s own line withholds. That gap is deferred to a later ticket. Ian can overturn this. The fix sits here because `LabelBuilder` would have leaked the same way, and 0086 is past its fix round. 0086 carries the leak until this ticket lands.
 
 ## Inventory check
 
@@ -48,7 +48,7 @@ Each test answers the four questions in `CLAUDE.md`.
   - `Relate::from_json` with `"either":true` equals the `both_ways` builder. Equality covers the whole parsed spec, and the digest reads only that spec. A broken rule is `Usage` from `from_json` and `Local` from `load`, with the same sentence, for both readers. A non-default `fields` and a recognize `on` are `Usage` with exact sentences.
   - `Row::probability` equals the served numbers 0.3 and 0.8, and equals the yes probability `details` reads for the same record.
   - `ErrorKind::name` gives the six words of `conformance/cases.json` in its order.
-- A builder's plain and pretty `Debug` lines hold no word of its question, labels, or descriptions, for all six builders. It protects the rule that formatting is safe to log. A derived `Debug` fails it, and it failed on 0086's builders. No other test formats a builder.
+- A builder's plain and pretty `Debug` lines hold no word of its question, labels, or descriptions, for all six question and description builders. It protects the rule that formatting is safe to log. A derived `Debug` fails it, and it failed on 0086's builders. No other test formats a builder.
 - No test needs a test-only hook. Every send goes to a loopback listener with a fake key.
 
 ## Planted bugs
@@ -90,3 +90,5 @@ A fresh read-only Opus reviewer read `9c0fc2cb` against 0086 at `0b4b4e58`. It c
 4. A garbled doc sentence on `LabelBuilder::label`. Fixed.
 5. A second digest in `Details::of` and eager annotate JSON. Kept and recorded above.
 6. The ticket's Scope said ten files. The ticket now records the re-score.
+
+The same reviewer re-read `3909e8b2` and returned ACCEPT. Its one nit, the overstated builder count, is corrected above, and the `QuestionSetBuilder` gap is deferred. Clippy with `-D warnings` and `git diff --check` pass on the fix commit.
