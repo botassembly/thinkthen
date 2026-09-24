@@ -213,6 +213,7 @@ fn a_file_size_limit_returns_the_fixed_failure_and_removes_the_temporary_entry()
 
     assert_eq!(output.status.code(), Some(5));
     assert_eq!(String::from_utf8_lossy(&output.stderr), STORAGE);
+    assert_eq!(listener.requests().len(), 1, "no extra request");
     assert!(entries(&recording).expect("entries").is_empty());
     let temporary = fs::read_dir(&recording)
         .expect("recording folder")

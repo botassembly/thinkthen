@@ -12,6 +12,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import tempfile
 import tomllib
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -43,9 +44,11 @@ ACCEPTED_DEPENDENCIES = {
 }
 ACCEPTED_TARGET_DEPENDENCIES = {"thinkthen": {"nix"}, "conformance-backend": set()}
 ACCEPTED_DEV_DEPENDENCIES = {
-    "thinkthen": {"proptest", "conformance-backend"},
+    "thinkthen": {"proptest", "conformance-backend", "signal-hook"},
     "conformance-backend": set(),
 }
+# Ticket 0078: the host signal proofs deliver a signal to one worker thread.
+ACCEPTED_TARGET_DEV_DEPENDENCIES = {"thinkthen": {"nix"}, "conformance-backend": set()}
 # Ticket 0092 rules that a test-only, unpublished member may sit beside the
 # crate: the loopback backend every surface's tests start. It is held to the
 # same lints, license, size, and dependency tables as the crate.
@@ -257,6 +260,9 @@ def check_member(name: str) -> dict:
         fail("dependencies", f"{name} declares the accepted target dependency set")
     if set(manifest.get("dev-dependencies", {})) != ACCEPTED_DEV_DEPENDENCIES[name]:
         fail("dependencies", f"{name} declares the accepted development dependency set")
+    target_dev = manifest.get("target", {}).get("cfg(unix)", {}).get("dev-dependencies", {})
+    if set(target_dev) != ACCEPTED_TARGET_DEV_DEPENDENCIES[name]:
+        fail("dependencies", f"{name} declares the accepted target development dependency set")
     return manifest
 
 
@@ -266,26 +272,33 @@ def check_crates() -> None:
         fail("dependencies", "the conformance backend declares no feature and no target table")
     manifest = check_member("thinkthen")
     target = manifest.get("target", {}).get("cfg(unix)", {}).get("dependencies", {})
+    # Ticket 0078: engine workers mask host signals, so the library needs nix.
     if target.get("nix") != {
         "version": "0.29",
         "default-features": False,
         "features": ["signal"],
-        "optional": True,
     }:
-        fail("dependencies", "nix is optional on Unix with only its signal feature")
+        fail("dependencies", "nix is a Unix library dependency with only its signal feature")
+    target_dev = manifest.get("target", {}).get("cfg(unix)", {}).get("dev-dependencies", {})
+    if target_dev.get("nix") != {
+        "version": "0.29",
+        "default-features": False,
+        "features": ["pthread", "signal"],
+    }:
+        fail("dependencies", "tests add only the pthread feature to nix")
     optional = {
         dependency for dependency, specification in
         (manifest.get("dependencies", {}) | target).items()
         if isinstance(specification, dict) and specification.get("optional") is True
     }
-    if optional != {"clap", "csv-core", "nix"}:
+    if optional != {"clap", "csv-core", "signal-hook"}:
         fail("dependencies", "exactly the command dependencies are optional")
     binary = manifest.get("bin", [])
     if len(binary) != 1 or binary[0].get("required-features") != ["cli"]:
         fail("workspace", "the binary requires the cli feature")
     features = manifest.get("features", {})
     if features.get("default") != ["cli"] or set(features.get("cli", [])) != {
-        "dep:clap", "dep:csv-core", "dep:nix",
+        "dep:clap", "dep:csv-core", "dep:signal-hook",
     }:
         fail("dependencies", "the default cli feature selects only command dependencies")
 
@@ -743,6 +756,8 @@ def check_catalog_policy() -> None:
 HTTP_DOOR = "crates/thinkthen/src/engine/http.rs"
 WIDTH_DOOR = "crates/thinkthen/src/engine/mod.rs"
 WIDTH_STATE = "PROCESS_WIDTH"
+# Ticket 0078: an embedding host keeps its signal dispositions.
+ENGINE = "crates/thinkthen/src/engine/"
 
 
 def is_test_source(relative: str) -> bool:
@@ -757,6 +772,9 @@ def door_failures(sources: dict[str, str]) -> list[str]:
         tokens = rust_tokens(text)
         if "ureq" in tokens and relative != HTTP_DOOR and not is_test_source(relative):
             held.append(f"{relative} reaches ureq outside {HTTP_DOOR}")
+        if ("signal_hook" in tokens and relative.startswith(ENGINE)
+                and not is_test_source(relative)):
+            held.append(f"{relative} installs a signal handler inside the engine")
         uses = tokens.count(WIDTH_STATE)
         if uses and (relative != WIDTH_DOOR or uses != 2):
             held.append(f"{relative} names {WIDTH_STATE} {uses} times")
@@ -778,6 +796,7 @@ def check_doors() -> None:
         ("crates/thinkthen/src/cli/schedule.rs", "crate::engine::PROCESS_WIDTH.select(None)"),
         ("crates/thinkthen/src/engine/width_tests.rs", "&super::PROCESS_WIDTH"),
         (WIDTH_DOOR, "fn second() -> &'static Widths { &PROCESS_WIDTH }"),
+        ("crates/thinkthen/src/engine/recorder.rs", "signal_hook::flag::register(SIGXFSZ, flag)"),
     )
     for relative, text in plants:
         if not door_failures({**sources, relative: sources.get(relative, "") + "\n" + text}):
@@ -786,6 +805,8 @@ def check_doors() -> None:
         ("crates/thinkthen/src/cli/find.rs", "// ureq stays in the HTTP module"),
         ("crates/thinkthen/src/cli/find.rs", 'const NOTE: &str = "PROCESS_WIDTH";'),
         ("crates/thinkthen/src/engine/http/tests.rs", "ureq::Error::HostNotFound"),
+        ("crates/thinkthen/src/engine/host_signal_tests.rs", "signal_hook::flag::register"),
+        ("crates/thinkthen/src/cli/file_size.rs", "signal_hook::flag::register"),
     )
     for relative, text in controls:
         if door_failures({**sources, relative: sources.get(relative, "") + "\n" + text}):
@@ -1029,24 +1050,71 @@ def check_dependencies() -> None:
             fail("dependencies", f"locked package {locked['name']} carries a crates.io source and a checksum")
     print(f"policy: checked {len(nodes)} resolved packages")
 
-    minimal = subprocess.run(
-        ["cargo", "metadata", "--locked", "--format-version", "1", "--no-default-features"],
-        cwd=REPO, check=False, capture_output=True, text=True,
-    )
-    if minimal.returncode != 0:
-        fail("dependencies", f"default-features-off metadata succeeds: {minimal.stderr.strip()}")
-        return
-    graph = json.loads(minimal.stdout)
-    packages = {package["id"]: package for package in graph["packages"]}
-    package = next((item for item in graph["packages"] if item["name"] == "thinkthen"), None)
-    if package is None:
-        fail("dependencies", "the minimal graph contains thinkthen")
-        return
-    node = next(item for item in graph["resolve"]["nodes"] if item["id"] == package["id"])
-    direct = {packages[item["pkg"]]["name"] for item in node["deps"]}
-    if direct & {"clap", "csv-core", "nix"}:
-        fail("dependencies", "the default-features-off graph excludes command dependencies")
+    check_library_graph()
 
+
+# Ticket 0078: the library alone installs no signal handler, and on Unix it
+# masks host signals on its workers through nix. The graph covers every target
+# and build edges. Dev edges stay out, because the tests use `signal-hook`.
+COMMAND_ONLY = {"clap", "csv-core", "signal-hook"}
+GRAPH_PLANTS = (
+    '[target."cfg(windows)".dependencies]\nclap = "4.6.7"\n',
+    '[build-dependencies]\nclap = "4.6.7"\n',
+)
+GRAPH_FILES = (
+    "Cargo.toml", "Cargo.lock", "crates/thinkthen/Cargo.toml", "conformance/backend/Cargo.toml",
+)
+GRAPH_STUBS = (
+    "crates/thinkthen/src/lib.rs", "crates/thinkthen/src/main.rs",
+    "conformance/backend/src/lib.rs", "conformance/backend/src/main.rs",
+)
+
+
+def library_direct(root: pathlib.Path, frozen: str) -> set[str] | str:
+    """Name the library's direct normal and build dependencies on every target."""
+    result = subprocess.run(
+        ["cargo", "tree", frozen, "-p", "thinkthen", "-e", "normal,build", "--target", "all",
+         "--no-default-features", "--depth", "1", "--prefix", "none"],
+        cwd=root, check=False, capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        return result.stderr.strip()
+    return {line.split()[0] for line in result.stdout.splitlines()[1:] if line.strip()}
+
+
+def graph_failures(direct: set[str]) -> list[str]:
+    held = []
+    if direct & COMMAND_ONLY:
+        held.append("the default-features-off graph excludes command dependencies")
+    if sys.platform != "win32" and "nix" not in direct:
+        held.append("the default-features-off graph holds nix on Unix")
+    return held
+
+
+def check_library_graph() -> None:
+    direct = library_direct(REPO, "--locked")
+    if isinstance(direct, str):
+        fail("dependencies", f"default-features-off cargo tree succeeds: {direct}")
+        return
+    for failure in graph_failures(direct):
+        fail("dependencies", failure)
+    for plant in GRAPH_PLANTS:
+        with tempfile.TemporaryDirectory() as scratch:
+            root = pathlib.Path(scratch)
+            for relative in GRAPH_FILES + GRAPH_STUBS:
+                (root / relative).parent.mkdir(parents=True, exist_ok=True)
+                source = REPO / relative
+                (root / relative).write_text(
+                    source.read_text(encoding="utf-8") if relative in GRAPH_FILES else "",
+                    encoding="utf-8",
+                )
+            manifest = root / "crates/thinkthen/Cargo.toml"
+            manifest.write_text(manifest.read_text(encoding="utf-8") + "\n" + plant, encoding="utf-8")
+            planted = library_direct(root, "--offline")
+            if isinstance(planted, str):
+                fail("dependencies", f"the planted graph reads through cargo tree: {planted}")
+            elif not graph_failures(planted):
+                fail("dependencies", f"the planted graph {plant.splitlines()[0]!r} is refused")
 
 def main() -> int:
     check_toolchain()
