@@ -5,13 +5,28 @@ use serde::Serialize;
 const DETECTION_WORDS: &str = "The snippet shows five consecutive words from a news document; the word in question is wrapped in [[ ]]. <BEGINNING> marks the start of the document and <END> the end. Decide whether the wrapped word is part of the name of an entity: a person, an organization, a place, or another named entity such as a nationality, an event, a product, or a creative work. Ordinary words, dates, and numbers that are not part of such a name are not named.";
 const KIND_WORDS: &str = "The snippet shows five consecutive words from a news document; the word in question is wrapped in [[ ]]. <BEGINNING> marks the start of the document and <END> the end. If the wrapped word is part of an entity's name, which kind of entity is it part of? Answer for every word; the answer only matters when the word is part of a name.";
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub(crate) struct Token {
     text: String,
     byte_start: usize,
     byte_end: usize,
     start: usize,
     end: usize,
+}
+
+/// A token is evidence, so `Debug` withholds its text and keeps its place.
+impl std::fmt::Debug for Token {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("Token")
+            .field(
+                "text",
+                &format_args!("<{} bytes withheld>", self.text.len()),
+            )
+            .field("start", &self.start)
+            .field("end", &self.end)
+            .finish_non_exhaustive()
+    }
 }
 
 impl Token {
@@ -28,13 +43,30 @@ pub(crate) struct TokenAnswer {
     pub(crate) kind_probabilities: Vec<f64>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, PartialEq, Serialize)]
 pub(crate) struct RecognizedName {
     pub(crate) name: String,
     pub(crate) kind: String,
     pub(crate) start: usize,
     pub(crate) end: usize,
     pub(crate) strength: f64,
+}
+
+/// A name is evidence, so `Debug` withholds it and keeps the configured kind.
+impl std::fmt::Debug for RecognizedName {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("RecognizedName")
+            .field(
+                "name",
+                &format_args!("<{} bytes withheld>", self.name.len()),
+            )
+            .field("kind", &self.kind)
+            .field("start", &self.start)
+            .field("end", &self.end)
+            .field("strength", &self.strength)
+            .finish()
+    }
 }
 
 pub(crate) fn tokenize(text: &str) -> Vec<Token> {

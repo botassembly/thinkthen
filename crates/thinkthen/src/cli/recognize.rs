@@ -50,11 +50,26 @@ struct StrengthInputs<'a> {
     tokens: &'a [TokenInput],
 }
 
-#[derive(Debug, Serialize)]
-struct TokenInput {
-    token: String,
-    detection_probability: f64,
-    kind_probabilities: Vec<f64>,
+#[derive(Serialize)]
+pub(crate) struct TokenInput {
+    pub(crate) token: String,
+    pub(crate) detection_probability: f64,
+    pub(crate) kind_probabilities: Vec<f64>,
+}
+
+/// A token is evidence, so `Debug` withholds it and keeps the probabilities.
+impl std::fmt::Debug for TokenInput {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("TokenInput")
+            .field(
+                "token",
+                &format_args!("<{} bytes withheld>", self.token.len()),
+            )
+            .field("detection_probability", &self.detection_probability)
+            .field("kind_probabilities", &self.kind_probabilities)
+            .finish()
+    }
 }
 
 #[derive(Debug)]
