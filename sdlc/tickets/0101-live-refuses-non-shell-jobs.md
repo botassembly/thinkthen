@@ -6,7 +6,7 @@ opens: sdlc/scripts/live sdlc/scripts/README.md sdlc/live-test sdlc/issues/2026-
 
 # 0101: Refuse a non-shell live job before any charge
 
-Status: in progress, awaiting a fresh code review of `465a730e`; record `sdlc/records/0101-live-refuses-non-shell-jobs.md`. Owner: Claude.
+Status: in progress, awaiting a fresh code review of the branch head; record `sdlc/records/0101-live-refuses-non-shell-jobs.md`. Owner: Claude.
 
 ## Problem
 
