@@ -55,3 +55,7 @@ Measured with `git diff -U0` over `*.rs`, nonblank lines, against the merge of m
 - 0085 moved a single call's gate and retry wait onto a worker, so polling in the waits alone would never run the check on the calling thread. The calling thread's join now polls, and the send count keeps the check out of a blocking send.
 - `Batch` and its `next` do not exist until 0086. The facade's `records` and `groups` loops poll each tick. 0086's `Batch::next` must reach the same poll.
 - The "joins without cancelling" plant can turn red only on a single call. A scheduler never queues work beyond its free workers, so a bulk run has no queued item left to send. The panic test therefore holds a single call at the width gate.
+
+## Ladder
+
+At `4f35138d`, which contains main `836e3f23` with 0085, the rungs ran one after another with the key and base-address variables unset. The one-minute load stood at 3.40 at the start. The observed exits were `install` 0, `lint` 0, `test` 0 (811 passed, 0 failed), and `spec` 0 (demos 21 green, 0 red). `ratchet.mjs` read 50059/50059. This section changes only this record.
