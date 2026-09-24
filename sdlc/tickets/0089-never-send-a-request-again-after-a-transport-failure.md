@@ -1,12 +1,12 @@
 ---
 flow: build
 priority: 89
-opens: crates/thinkthen/src/engine/http.rs crates/thinkthen/src/cli/failure.rs crates/thinkthen/src/cli/args.rs crates/thinkthen/tests specification/backends.md specification/result.md sdlc/ratchet.json sdlc/issues sdlc/records sdlc/planning
+opens: crates/thinkthen/src/engine/http.rs crates/thinkthen/src/cli/failure.rs crates/thinkthen/src/cli/args.rs crates/thinkthen/src/cli/args/find.rs crates/thinkthen/tests specification/backends.md specification/result.md sdlc/ratchet.json sdlc/issues sdlc/records sdlc/planning
 ---
 
 # 0089: Never send a request again after a transport failure
 
-Status: draft, design not reviewed. Owner: Claude.
+Status: design accepted 2026-09-24 after independent review; implementation waits for 0088 to land. Owner: Claude.
 
 ## Outcome
 
@@ -34,12 +34,12 @@ Reasons:
 3. A retried status means the backend answered. A transport failure after the body left means the backend may have billed the call.
 4. The surfaces bind this engine after 0086. One rule keeps the command and every surface billing the same.
 
-Cost: a DNS blip, or a pooled connection that died between ureq's `is_open` probe and the write, now fails the call at exit 4 instead of healing. The user's own second run is the retry, and it is visible in `thinkthen status`. Ian can overturn this rule. The lever is follow-up 1.
+Cost: a DNS blip, or a pooled connection that died between ureq's `is_open` probe and the write, now fails the call at exit 4 instead of healing. One process shares one pool (`Client::new`). A dead pooled connection can therefore stop a whole `--jobs` or record run over one pooled connection at its failed record. The user's own second run is the retry, and it is visible in `thinkthen status`. Ian can overturn this rule. The lever is follow-up 1.
 
 ## What the user sees
 
 - Exit code 4, unchanged. Standard output stays empty. A record run still stops at the failed record with its existing stopped-run line.
-- The close-before-reply message becomes exactly `thinkthen: the backend closed the connection before a reply; the request may have reached it, so it was not sent again`. It no longer names `--max-retries`, because that option no longer governs it.
+- The close-before-reply message becomes exactly `thinkthen: the backend closed the connection before a reply and may have received the request; it was not sent again`. It no longer names `--max-retries`. That option no longer governs a transport failure.
 - The timeout, name lookup, refused, and other-transport messages keep their exact text. The status 500 message keeps `--max-retries`, which still governs it.
 - `--max-retries` long help becomes exactly `How many times a retried status is sent again. A transport failure is never sent again.`
 - A transport failure ends after one attempt. It never waits a retry wait.
@@ -57,7 +57,7 @@ Cost: a DNS blip, or a pooled connection that died between ureq's `is_open` prob
 - `engine/http.rs`: `is_retried` returns false for every `Error::Transport`. Update the module and `Exchange::max_retries` comments.
 - `cli/failure.rs`: the one close-before-reply message.
 - `cli/args.rs` and `cli/args/find.rs`: both `--max-retries` doc comments. `find.rs` says "How many transport or retried-status attempts follow the first" today.
-- `specification/backends.md`: the retry sentence at line 61, the `--max-retries` sentence at line 59, and the close-before-reply guidance at line 76. `specification/result.md`: the `requests_sent` row says retries of a retried status.
+- `specification/backends.md`: the retry sentence at line 61, the `--max-retries` sentence at line 59, and the close-before-reply guidance at line 76. The line-76 clause "A refused connection fails after its first attempt" folds into the one new rule sentence: every transport failure, a refused connection included, fails after its first attempt. `specification/result.md`: the `requests_sent` row says retries of a retried status.
 - Tests as listed under acceptance, a new record `sdlc/records/0089-...md`, the issue status set to Closed with the landing SHA, and the exact ratchet.
 - The record notes that item 8 of `2026-09-22-small-leftovers-from-early-reviews.md` (a cut-short or oversized body is retried) and item 22 (a transport failure that cannot succeed is retried three times) are settled here.
 
@@ -67,7 +67,7 @@ Status retry rules and waits, `TransportKind` values, the connect-phase split, p
 
 ## Allowed paths
 
-`crates/thinkthen/src/engine/http.rs`, `crates/thinkthen/src/cli/failure.rs`, `crates/thinkthen/src/cli/failure/tests.rs`, `crates/thinkthen/src/cli/args.rs`, `crates/thinkthen/src/cli/args/find.rs`, `crates/thinkthen/src/cli/interrupt/tests.rs` if a message pin lives there, `crates/thinkthen/tests/backend/{exchange,main,resend,state}.rs`, `crates/thinkthen/tests/status.rs`, `crates/thinkthen/tests/backend/harness/mod.rs`, `specification/backends.md`, `specification/result.md`, `sdlc/ratchet.json`, `sdlc/records/0089-*.md`, this ticket, the issue file, and `sdlc/planning/one-line-plan-2026-09-24.md` for its status mark.
+`crates/thinkthen/src/engine/http.rs`, `crates/thinkthen/src/cli/failure.rs`, `crates/thinkthen/src/cli/failure/tests.rs`, `crates/thinkthen/src/cli/args.rs`, `crates/thinkthen/src/cli/args/find.rs`, `crates/thinkthen/src/cli/interrupt/tests.rs` if a message pin lives there, `crates/thinkthen/tests/backend/{exchange,main,resend,state}.rs`, `crates/thinkthen/tests/status.rs`, `crates/thinkthen/tests/decide_edge.rs` and `crates/thinkthen/tests/find_edge.rs` for the help pin, `crates/thinkthen/tests/backend/harness/mod.rs`, `specification/backends.md`, `specification/result.md`, `sdlc/ratchet.json`, `sdlc/records/0089-*.md`, this ticket, the issue file, and `sdlc/planning/one-line-plan-2026-09-24.md` for its status mark.
 
 ## Acceptance with proof
 
@@ -77,25 +77,27 @@ Every "sends once" claim counts POSTs on the loopback listener. `--dry-run` and 
 2. Red then green, compiled binary, new `tests/backend/resend.rs`, default `--max-retries`:
    - close after the full body (`close_without_reply`): listener counts 1 POST, exit 4, stdout empty, stderr is the exact new sentence.
    - reset after the full body: a new harness reply peeks until the whole request is in the socket buffer, records it, and drops the stream with those bytes unread. Linux and macOS send a reset for that close, and std alone does it. Listener counts 1 POST, exit 4, the same exact sentence.
-   - stall past `--timeout 1` (`after(3000)`): listener counts 1 POST, exit 4, the exact timeout sentence, elapsed under 3 s. The old code needs at least 5 s.
-   - cut-short body after a 200 header: listener counts 1 POST, exit 4.
+   - stall past `--timeout 1` (`after(2500)`): listener counts 1 POST, exit 4, the exact timeout sentence, elapsed under 2 s. The harness sets `THINKTHEN_TEST_RETRY_WAIT_MS=1`, so the old code takes about 3 s. The POST count carries the proof.
+   - cut-short body after a 200 header: listener counts 1 POST, exit 4, stderr is the exact new close-before-reply sentence.
+   - a 200 reply whose body passes the 1 MiB bound: listener counts 1 POST, exit 4, stderr is the exact sentence `a_response_body_past_the_bound_is_exit_four_and_never_fills_memory` already expects.
    - A 503 then 200 still sends 2 and prints `requests_sent:2`. This guards the status path.
 3. Red then green: `a_close_before_headers_follows_the_transport_retry_rule` becomes `a_close_before_headers_is_not_sent_again`. It counts 1 POST and expects exit 4. The two existing message pins in `exchange.rs` and the one in `cli/failure/tests.rs` take the new sentence.
 4. Red then green, accounting: with an isolated `XDG_CACHE_HOME`, one reset run adds exactly 1 to `requests_sent` in `thinkthen status` and adds no cache answer.
 5. Red then green, record mode: `decide --jsonl --jobs 4 --cache DIR` over three distinct records, where the second record's request resets. Each distinct request body reaches the listener at most once. The run exits 4 with the existing stopped-run line, and the cache folder holds no entry for the second body.
-6. A secrecy check reads stdout, stderr, and every `Debug` line on the reset and stall paths and finds neither the key nor the evidence.
-7. `specification/backends.md` and `result.md` state the new rule. `sdlc/scripts/spec` passes with no page example claiming a transport retry.
-8. The coordinator runs `sdlc/scripts/install`, `lint`, `test`, and `spec` in order from the exact candidate SHA on the gate host, with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset. Then `git diff --check`. Every command exits 0. No live call runs.
+6. Red then green, help: one test pins the exact `--max-retries` long help line on `decide` and on `find`.
+7. A secrecy check reads stdout, stderr, and every `Debug` line on the reset and stall paths and finds neither the key nor the evidence.
+8. `specification/backends.md` and `result.md` state the new rule. `sdlc/scripts/spec` passes with no page example claiming a transport retry.
+9. The coordinator runs `sdlc/scripts/install`, `lint`, `test`, and `spec` in order from the exact candidate SHA on the gate host, with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset. Then `git diff --check`. Every command exits 0. No live call runs.
 
 ## Budget
 
-At most 4 production Rust files and 20 changed nonblank production lines. At most 6 test-only Rust files and 260 nonblank test lines. New tests go in `resend.rs`, because `exchange.rs` sits at 496 nonblank lines. No new dependency, no `unsafe`, no `libc`. The ratchet rises by the new test file less any lines removed. A second agent reviews that raise and names what it checked.
+At most 4 production Rust files and 20 changed nonblank production lines. At most 8 test-only Rust files and 300 nonblank test lines. New tests go in `resend.rs`, because `exchange.rs` sits at 496 nonblank lines. No new dependency, no `unsafe`, no `libc`. The ratchet rises by the new test file less any lines removed. A second agent reviews that raise and names what it checked.
 
 ## Dependencies and route
 
-None. It lands before 0082 in the queue.
+Implementation waits for 0088 to land. 0088 conflicts in `tests/backend/main.rs`, `sdlc/ratchet.json`, `specification/result.md`, `cli/failure.rs`, and `cli/failure/tests.rs`. Rebase over 0088 if it lands first, and re-measure the ratchet ceiling. `relate` reaches `post_observed` and inherits the rule. This ticket lands before 0082 in the queue.
 
-Contract 1; state and timing 1; reach 1; proof 1; cost of error 2; total 6; final level 2. The cost of error is money on every surface. Design review by an independent Codex reviewer before code. Build by the Opus tier. Stop and re-score if the change needs a new `TransportKind`, per-phase timeouts, a scheduler change, or more than this budget.
+Contract 1; state and timing 1; reach 1; proof 1; cost of error 2; total 6; final level 2. The cost of error is money on every surface. An independent reviewer accepted the design on 2026-09-24 (`sdlc/records/0089-design-review.md`). Build by the Opus tier. Stop and re-score if the change needs a new `TransportKind`, per-phase timeouts, a scheduler change, or more than this budget.
 
 ## Follow-ups (not this ticket)
 
