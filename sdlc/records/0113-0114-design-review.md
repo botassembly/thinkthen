@@ -94,3 +94,28 @@ Items that pass:
 ## Writing and names
 
 Both tickets otherwise follow subject, verb, object, with no cleft sentences and no dash glosses. Neither names a customer or a private project other than beatles-bench, which 0113-1 covers. The fixtures carry `api.typesafe.ai` and `jev-1.13.0` in `meta`. `README.md` on main already names both.
+
+## Confirmation
+
+I re-read 0113 at a0c8e52f and 0114 at c835d064. I checked only whether the findings are fixed and whether anything new broke.
+
+- 0113 audit: **ACCEPT**
+- 0114 diff: **ACCEPT**
+
+What I checked for 0113:
+- **Finding 1.** Both tickets now call the repository private. The shipped files avoid its name while it stays private. An open item leaves the choice to Ian.
+- **Finding 2.** Each of the five survivors now has a named test or capture. I re-ran two of them against the prototype:
+  - `decide-reversed` with the parts stripped gives the cut 0.71 at seed 0.
+  - `decide-key-odd`, which drops `r6`, gives a seeded split of 2 and 3 with the cut 0.45.
+- **Finding 3.** `audit` joins the `scan_help` loop, and the scripts budget covers it.
+- **The table words.** The ruling that the table keeps "unresolved" is sound. Ticket 0082 rejects the word only in built help and teaching prose. It keeps `unresolved` as exact contract language, and the table labels JSON members of the same name. The `demos` vocabulary scan reads help, the README, and green how-tos. It does not read command output or `spec/`. Decision 7 records the choice, and Ian can overturn it.
+- **Finding 4.** `cli/measure.rs` carries the command name and the input's role. `tests/support/measure.rs` holds the golden helper, and the duplicate rule stays with each command.
+- **Findings 5 to 8.** Each is fixed: the group-name fallback, the all-failed group, the table formatting from rounded values, `python_float_text`, the typed band test, the full departures list with a probability failure row, the generalized policy with write-side, clock, thread, and signal bans and the early-return order check, the golden-to-test table, the pinned `git show` capture, and the recorded Python version.
+
+What I checked for 0114:
+- **Finding 1.** The private repository is covered by 0113's open item.
+- **Finding 2.** The new capture `extra/diff-249-cuts-nokey` catches bug 9. I measured p at 0.0 against 1.0 under the bug.
+- **Finding 3.** The McNemar rule now lives in one function, `discordant`. The ticket gives the switch steps and cites the upstream issue.
+- **Findings 4 and 5.** diff imports nothing from `cli/audit.rs`, and the ticket says it refuses a bad `part`. The help sentence is split in two, and `diff` joins the scan loop.
+
+Nothing new broke. One non-blocking note: switch step 4 of 0114 should also name the hand test that says `discordant` returns nothing for `resolved` and `withdrawn`, because that test flips with the rule.
