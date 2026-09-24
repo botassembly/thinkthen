@@ -32,7 +32,9 @@ After Lane A:
 1. 0093 Rust examples as the first binding crate, with draft ADR 0047.
 2. 0094 the C interface (ADR 0037). It closes R7-1 (G3, the C-door churn crash) with the tag's committed churn probe. 0086 runs a Rust churn probe first and claims no fix.
 3. One ticket per remaining surface onto the public API: Python with Polars, TypeScript, DuckDB, Ruby, R, SQLite, PostgreSQL. Each brings its `check.sh`, tests, notes, and error-index rows, and follows ADR 0047's surface checklist.
-4. New: release build and installers (archives, checksums, Homebrew line, download script; Ian's 2026-09-21 ruling). Nothing tickets this today.
+4. 0113 `thinkthen audit`. Ian's 2026-09-24 ruling (`sdlc/issues/2026-09-24-audit-and-diff-move-into-0-1.md`) puts both in 0.1, after the ten functions are done and before the release build. Both wait on 0086. audit lands before diff, and 0114 reuses 0113's code. Neither touches a binding, so either may build beside a surface ticket whose files it does not share.
+5. 0114 `thinkthen diff`, after 0113 under the same ruling.
+6. New: release build and installers (archives, checksums, Homebrew line, download script; Ian's 2026-09-21 ruling). Nothing tickets this today.
 
 Changes from the first version of this queue:
 
@@ -56,7 +58,7 @@ Experiment 218 keeps its method. Its wave 2 conditions assumed a branch merge th
 
 Ian moved marketing and Beatles Bench to a separate agent on 2026-09-24. Claude keeps the engineering gates above and does not edit launch copy.
 
-Launch waits on the queue. The engineering gates are 0088, the release build, published crates, and every surface at 0.1. Until then, marketing copy that shows unbuilt features (deck slides 16–18 and 21, the site's "comes with 0.1" tabs, the article's "shipped" section) stays marked planned. The measurement requests (backend time per call, cut movement, audit and diff) become tickets after item 11 unless Ian moves them.
+Launch waits on the queue. The engineering gates are 0088, the release build, published crates, and every surface at 0.1. Until then, marketing copy that shows unbuilt features (deck slides 16–18 and 21, the site's "comes with 0.1" tabs, the article's "shipped" section) stays marked planned. Ian moved audit and diff into 0.1 on 2026-09-24. Tickets 0113 and 0114 hold them, and diff covers cut movement. Backend time per call becomes a ticket after item 11 unless Ian moves it.
 
 ## Needs Ian
 

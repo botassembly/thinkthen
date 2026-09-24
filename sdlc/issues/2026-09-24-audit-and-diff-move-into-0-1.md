@@ -11,7 +11,7 @@ The ten functions come first. audit and diff land after the ten are done and bef
 ## What the prototype fixes
 
 - `botassembly/beatles-bench`, `scripts/tools/measure.py` (561 lines of Python) and `tests/test_measure.py` (272 lines).
-- 15 golden files under `tests/fixtures/audit/golden/`, listed with their command lines in `scripts/tools/README.md`. The Rust output must match their parsed JSON.
+- 14 golden files under `tests/fixtures/audit/golden/`, listed with their command lines in `scripts/tools/README.md`. The Rust output must match their parsed JSON.
 - Neither command sends a request or reads a key. Both read ThinkThen's own JSONL output and recordings, plus an answer key for audit.
 - audit: agreement with a Wilson interval, both disagreement directions, AUC, calibration, a coverage curve, and a suggested cut tuned on one half and checked on the other.
 - diff: what flipped between two runs or two cuts on one run, which way, and exact McNemar on right answers.
@@ -24,3 +24,5 @@ The ten functions come first. audit and diff land after the ten are done and bef
 ## Asked of the ThinkThen team
 
 Add audit and diff to the 0.1 plan behind the ten functions, with a ticket each. The marketing deck says "after 0.1" until the tickets exist, then changes to 0.1.
+
+Tickets: 0113 `thinkthen audit` on `ticket/0113-audit-command` and 0114 `thinkthen diff` on `ticket/0114-diff-command`, both design drafts pending review. `sdlc/planning/one-line-plan-2026-09-24.md` queues them after the ten functions and before the release build.
