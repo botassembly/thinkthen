@@ -87,7 +87,10 @@ pub(crate) enum QuestionMap {
         asker: usize,
         options: Vec<(String, usize, usize)>,
     },
-    Pair { source: usize, target: usize },
+    Pair {
+        source: usize,
+        target: usize,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
@@ -345,7 +348,9 @@ pub(crate) fn assemble_edges<E: RelationEntityView>(
                 );
             }
             QuestionMap::Pair { source, target } => {
-                if let Some(probability) = answer.yes().filter(|value| *value >= threshold) {
+                if let Some(probability) =
+                    answer.yes().filter(|value| reaches_cut(*value, threshold))
+                {
                     push_edge(
                         &mut edges,
                         entities,
@@ -361,6 +366,11 @@ pub(crate) fn assemble_edges<E: RelationEntityView>(
     edges
 }
 
+/// The one relation cut: a probability at or above the threshold makes an edge.
+pub(crate) fn reaches_cut(probability: f64, threshold: f64) -> bool {
+    probability >= threshold
+}
+
 fn push_choice_edges<E: RelationEntityView>(
     edges: &mut Vec<RelationEdge<E>>,
     entities: &[E],
@@ -373,7 +383,7 @@ fn push_choice_edges<E: RelationEntityView>(
         let probability = probabilities
             .iter()
             .find_map(|(held, probability)| (*held == label).then_some(*probability));
-        let Some(probability) = probability.filter(|value| *value >= threshold) else {
+        let Some(probability) = probability.filter(|value| reaches_cut(*value, threshold)) else {
             continue;
         };
         push_edge(edges, entities, relation, *source, *target, probability);

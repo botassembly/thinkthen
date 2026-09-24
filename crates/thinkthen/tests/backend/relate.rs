@@ -457,3 +457,36 @@ fn a_question_file_beside_inline_rules_is_refused_before_any_send() {
     }
     assert_eq!(listener.connections(), 0);
 }
+
+#[test]
+fn a_backend_profile_option_limit_falls_back_per_concrete_relation_in_the_plan() {
+    let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("relate-fallback");
+    fs::create_dir_all(&folder).expect("profile folder");
+    let profile = folder.join("narrow.json");
+    fs::write(
+        &profile,
+        r#"{"schema":"thinkthen.backend-profile/1","name":"narrow","max_options":2}"#,
+    )
+    .expect("profile");
+    let listener = Listener::answering(answered).expect("listener");
+    let input = br#"[{"name":"Ada","kind":"person"},{"name":"Grace","kind":"person"},{"name":"Acme","kind":"organization"},{"name":"Beta","kind":"organization"},{"name":"Core","kind":"organization"}]"#;
+    let mut plans = Vec::new();
+    for profiled in [false, true] {
+        let mut options = vec!["works_for=person:organization", "--dry-run"];
+        if profiled {
+            options.extend(["--profile", profile.to_str().expect("path")]);
+        }
+        let output = run(&listener, &options, input);
+        assert_eq!(output.status.code(), Some(0), "{}", String::from_utf8_lossy(&output.stderr));
+        plans.push(serde_json::from_slice::<Value>(&output.stdout).expect("plan"));
+    }
+    assert_eq!(plans[0]["backend_profile"], Value::Null);
+    assert_eq!(plans[0]["relations"][0]["method"], "choice");
+    assert_eq!(plans[0]["relations"][0]["fallback"], Value::Null);
+    assert_eq!(plans[0]["logical_questions"], 3);
+    assert_eq!(plans[1]["backend_profile"], "narrow");
+    assert_eq!(plans[1]["relations"][0]["method"], "yes_no");
+    assert_eq!(plans[1]["relations"][0]["fallback"], "max_options");
+    assert_eq!(plans[1]["logical_questions"], 6);
+    assert_eq!(listener.connections(), 0);
+}

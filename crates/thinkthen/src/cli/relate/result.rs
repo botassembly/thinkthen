@@ -6,7 +6,7 @@ use sha2::{Digest as _, Sha256};
 use crate::core::{
     Answer, AnswerOutcome, Backend, Framing, Meta, ModelName, ProfileWarning, QuestionMap,
     RelateFields, RelateSpec, RelationEdge, RelationEntity, RelationEntityView, RequestMeta, Usage,
-    json_line,
+    json_line, reaches_cut,
 };
 use crate::failure::Failure;
 
@@ -44,14 +44,14 @@ struct Endpoint {
 pub(super) struct Output<'a> {
     pub(super) details: bool, pub(super) framing: Framing, pub(super) spec: &'a RelateSpec,
     pub(super) entities: &'a [RelationEntity], pub(super) backend: &'a Backend,
-    pub(super) warning: Option<ProfileWarning>, pub(super) execution: Execution,
+    pub(super) warning: Option<ProfileWarning>,
 }
 
 #[rustfmt::skip]
-pub(super) fn write(writer: &mut dyn Write, output: Output<'_>) -> Result<(), Failure> {
-    let Output { details, framing, spec, entities, backend, warning, execution } = output;
+pub(super) fn write(writer: &mut dyn Write, output: &Output<'_>, execution: &Execution) -> Result<(), Failure> {
+    let Output { details, framing, spec, entities, backend, ref warning } = *output;
     let output = if details {
-        details_line(framing, spec, entities, backend, warning, &execution)? + "\n"
+        details_line(framing, spec, entities, backend, warning.clone(), execution)? + "\n"
     } else {
         execution
             .edges
@@ -145,7 +145,7 @@ fn entry(
             Ok(format!(
                 "{}\"probability\":{probability},\"accepted\":{},\"request\":{}}}",
                 pair_prefix(logical, entities, *source, *target)?,
-                probability >= threshold,
+                reaches_cut(probability, threshold),
                 json_line(&logical.request)?
             ))
         }
@@ -177,7 +177,7 @@ fn choice(
         candidates.push(format!(
             "{{\"role\":{role:?},\"entity\":{},\"probability\":{probability},\"accepted\":{}}}",
             json_line(&endpoint(entities, place)?)?,
-            probability >= threshold
+            reaches_cut(probability, threshold)
         ));
     }
     let none = probability(&probabilities, "none")?;

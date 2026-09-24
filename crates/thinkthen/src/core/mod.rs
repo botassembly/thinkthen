@@ -71,7 +71,7 @@ pub(crate) use crate::core::records::{
 pub(crate) use crate::core::relate_file::{RelateConfigError, RelateFields, RelateSpec};
 pub(crate) use crate::core::relation::{
     QuestionMap, RelationEdge, RelationEntity, RelationEntityView, RelationPlan, RelationRule,
-    assemble_edges, plan as plan_relation, plan_pairs, relation_evidence,
+    assemble_edges, plan as plan_relation, plan_pairs, reaches_cut, relation_evidence,
 };
 pub(crate) use crate::core::render::{RenderError, json_line};
 pub(crate) use crate::core::reply::{AnswerOutcome, FailedValue, Reply};
