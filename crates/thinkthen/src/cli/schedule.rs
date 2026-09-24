@@ -8,9 +8,7 @@ use std::thread;
 
 use crate::core::{Outcome, Withheld, ranking};
 use crate::edge;
-use crate::engine::schedule::{
-    self as engine_schedule, Completed, Input, InputPort, Outcome as RunOutcome,
-};
+use crate::engine::facade::{Completed, Engine, Input, InputPort, RunOutcome};
 use crate::engine::{Width, Widths};
 use crate::failure::Failure;
 use crate::profile::Mismatch;
@@ -150,10 +148,9 @@ pub(crate) fn width_in(widths: &Widths, asked: Option<u8>) -> Result<usize, Fail
 }
 
 pub(crate) fn over_records<T, I>(
+    engine: &Engine,
     row: &Asking<'_, T>,
     chunks: I,
-    jobs: usize,
-    recording: bool,
     cancel: &crate::engine::Cancel,
     output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure>
@@ -161,9 +158,9 @@ where
     T: Send + 'static,
     I: Iterator<Item = Result<T, Failure>> + Send + 'static,
 {
+    let recording = engine.recording();
     let held = output.holds();
-    let outcome = engine_schedule::run_cancelled(
-        jobs,
+    let outcome = engine.records(
         held,
         cancel,
         |requests, events| {
@@ -177,8 +174,6 @@ where
             })
         },
         |judged| output.take(judged),
-        Failure::Defect,
-        Failure::from,
     )?;
     match outcome {
         RunOutcome::Complete => {

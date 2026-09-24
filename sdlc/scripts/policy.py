@@ -813,6 +813,115 @@ def check_doors() -> None:
             fail("doors", f"the door control {text!r} in {relative} stays allowed")
 
 
+# Ticket 0085: the command reaches the engine through the one facade. Only
+# the facade builds the production HTTP pool, and no command file names the
+# scheduler, request, recorder, or transport modules underneath it.
+FACADE = "crates/thinkthen/src/engine/facade.rs"
+CLI = "crates/thinkthen/src/cli/"
+LIBRARY_ROOT = "crates/thinkthen/src/lib.rs"
+LOW_MODULES = frozenset({
+    "annotate_schedule", "http", "prepared_request", "recorder", "request", "schedule", "workers",
+})
+# `crate::schedule` and `crate::annotate_schedule` name the command's own modules.
+LOW_ALIASES = LOW_MODULES - {"annotate_schedule", "schedule"}
+
+
+def without_test_modules(tokens: list[str]) -> list[str]:
+    """Drop each `#[cfg(test)] mod name { ... }` block from one token list."""
+    kept = []
+    place = 0
+    marker = ["#", "[", "cfg", "(", "test", ")", "]", "mod"]
+    while place < len(tokens):
+        if tokens[place:place + len(marker)] != marker or place + 9 >= len(tokens) \
+                or tokens[place + 9] != "{":
+            kept.append(tokens[place])
+            place += 1
+            continue
+        place += 9
+        depth = 0
+        while place < len(tokens):
+            depth += int(tokens[place] == "{") - int(tokens[place] == "}")
+            place += 1
+            if depth == 0:
+                break
+    return kept
+
+
+def facade_failures(sources: dict[str, str]) -> list[str]:
+    """Name each second pool builder and each command path under the facade."""
+    held = []
+    for relative, text in sorted(sources.items()):
+        if is_test_source(relative):
+            continue
+        tokens = without_test_modules(rust_tokens(text))
+        if relative != FACADE and any(
+                token_path_at(tokens, place, ("Client", "new")) for place in range(len(tokens))):
+            held.append(f"{relative} builds the HTTP pool outside {FACADE}")
+        if relative == LIBRARY_ROOT:
+            for path, _ in rust_use_paths(tokens):
+                if path[:1] == ("engine",) and len(path) > 1 and path[1] in LOW_MODULES:
+                    held.append(f"{relative} re-exports engine::{path[1]}")
+        if not relative.startswith(CLI):
+            continue
+        for place, token in enumerate(tokens):
+            if token == "engine" and tokens[place + 1:place + 2] == ["::"] \
+                    and tokens[place + 2:place + 3] and tokens[place + 2] in LOW_MODULES:
+                held.append(f"{relative} names engine::{tokens[place + 2]}")
+            if token == "crate" and tokens[place + 1:place + 2] == ["::"] \
+                    and tokens[place + 2:place + 3] and tokens[place + 2] in LOW_ALIASES:
+                held.append(f"{relative} names crate::{tokens[place + 2]}")
+        for path, alias in rust_use_paths(tokens):
+            if path[:2] != ("crate", "engine"):
+                continue
+            if len(path) > 2 and path[2] in LOW_MODULES:
+                held.append(f"{relative} imports engine::{path[2]}")
+            if len(path) == 2 and alias is not None or path[2:] == ("*",):
+                held.append(f"{relative} aliases or globs the engine")
+    return sorted(set(held))
+
+
+def check_facade() -> None:
+    sources = {
+        source.relative_to(REPO).as_posix(): source.read_text(encoding="utf-8")
+        for source in sorted((REPO / "crates/thinkthen/src").rglob("*.rs"))
+    }
+    if not any(token_path_at(rust_tokens(sources.get(FACADE, "")), place, ("Client", "new"))
+               for place in range(len(rust_tokens(sources.get(FACADE, ""))))):
+        fail("facade", f"{FACADE} builds the HTTP pool")
+    for failure in facade_failures(sources):
+        fail("facade", failure)
+    plants = (
+        ("crates/thinkthen/src/cli/find.rs", "fn pool() { let _ = Client::new(timeout, true); }"),
+        ("crates/thinkthen/src/engine/request.rs",
+         "#[cfg(test)] mod t {}\nfn pool() -> Client { Client::new(Duration::ZERO, true) }"),
+        ("crates/thinkthen/src/cli/judge.rs", "use crate::engine::schedule::run_cancelled;"),
+        ("crates/thinkthen/src/cli/annotate.rs",
+         "use crate::engine::{facade, annotate_schedule as grouped};"),
+        ("crates/thinkthen/src/cli/asking.rs",
+         "fn f() { crate::engine::recorder::Recorder::of(None, None); }"),
+        ("crates/thinkthen/src/cli/asking.rs", "use crate::engine::{self as low};"),
+        ("crates/thinkthen/src/cli/relate.rs", "use crate::engine::*;"),
+        ("crates/thinkthen/src/cli/find.rs", "fn f() { crate::prepared_request::split(); }"),
+        (LIBRARY_ROOT, "pub(crate) use engine::{http, recorder};"),
+    )
+    for relative, text in plants:
+        if not facade_failures({**sources, relative: sources.get(relative, "") + "\n" + text}):
+            fail("facade", f"the planted facade bypass {text[-60:]!r} in {relative} is refused")
+    controls = (
+        ("crates/thinkthen/src/cli/find.rs", "use crate::engine::facade::{Engine, Found};"),
+        ("crates/thinkthen/src/cli/judge.rs", "use crate::schedule::Output;"),
+        ("crates/thinkthen/src/cli/find.rs", "// crate::engine::http::Client::new stays below"),
+        ("crates/thinkthen/src/engine/http/tests.rs", "Client::new(Duration::ZERO, false)"),
+        ("crates/thinkthen/src/cli/failure/tests.rs",
+         "crate::engine::http::Client::new(Duration::ZERO, false)"),
+        ("crates/thinkthen/src/engine/http.rs",
+         "#[cfg(test)]\nmod more { fn f() { Client::new(Duration::ZERO, false); } }"),
+    )
+    for relative, text in controls:
+        if facade_failures({**sources, relative: sources.get(relative, "") + "\n" + text}):
+            fail("facade", f"the facade control {text!r} in {relative} stays allowed")
+
+
 def check_crate_roots() -> None:
     for relative, attributes in ACCEPTED_CRATE_ROOT_ATTRIBUTES.items():
         try:
@@ -1125,6 +1234,7 @@ def main() -> int:
     check_core_policy()
     check_catalog_policy()
     check_doors()
+    check_facade()
     check_sources()
     check_seam()
     check_license_grammar()

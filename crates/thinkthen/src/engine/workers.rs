@@ -1,8 +1,37 @@
-//! Scoped request workers shared by the command schedulers.
+//! Scoped request workers shared by the schedulers and the single calls.
 
+use std::cell::Cell;
 use std::sync::Mutex;
 use std::sync::mpsc::{Receiver, Sender, SyncSender, sync_channel};
 use std::thread;
+
+thread_local! {
+    /// Whether this thread is an engine worker with host signals masked.
+    static ENGINE_WORKER: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Run one live attempt on an engine worker: this thread when it is one, or
+/// else one scoped worker joined before return.
+pub(crate) fn on_worker<T: Send>(send: impl FnOnce() -> T + Send) -> T {
+    if ENGINE_WORKER.get() {
+        return send();
+    }
+    thread::scope(|scope| {
+        scope
+            .spawn(|| {
+                enter();
+                send()
+            })
+            .join()
+            .unwrap_or_else(|panic| std::panic::resume_unwind(panic))
+    })
+}
+
+/// Mark this thread an engine worker and mask host signals for its lifetime.
+fn enter() {
+    mask_host_signals();
+    ENGINE_WORKER.set(true);
+}
 
 /// Run a bounded group of workers around one scheduler body.
 ///
@@ -40,7 +69,7 @@ where
             let results = results.clone();
             let queue = &queue;
             scope.spawn(move || {
-                mask_host_signals();
+                enter();
                 let _lifetime = begin();
                 worker(queue, &results, work);
             });

@@ -11,8 +11,6 @@ pub(crate) enum Error {
     },
     /// The complete entity set is refused before any request.
     Entities(EntitySetError),
-    /// No logical relation question has a usable answer.
-    Logical,
 }
 
 pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {
@@ -26,10 +24,6 @@ pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {
             Some((code, error.to_string()))
         }
         Failure::Relate(Error::Entities(error)) => Some((2, error.to_string())),
-        Failure::Relate(Error::Logical) => Some((
-            4,
-            "the backend returned no usable relation answer".to_owned(),
-        )),
         _ => None,
     }
 }
