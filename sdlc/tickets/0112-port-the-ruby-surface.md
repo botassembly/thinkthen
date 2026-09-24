@@ -233,3 +233,15 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Defers: The C door, release gems, Mac, `api_key:`, async, and Docker. The libyaml checksum stays unverified.
 
 Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. The engine keyword `width: nil` becomes `throttle: nil`, and every public `width` here reads as `throttle`.
+
+## Spike finding (2026-09-24)
+
+Experiment 256 on beelink (`~/workspace/experiments/256-thinkthen-ts-ruby-r-spike/`, `REPORT.md`) built the pinned Ruby and a magnus extension over `crates/thinkthen` at main `e7696ca8`. It settles the pins and changes four points of the plan.
+
+- **libyaml pin verified.** `yaml-0.2.5.tar.gz` sha256 `c642ae9b75fee120b2d96c712538bd2cf283228d2337df2cf2988e3c02678ef4` matches buildroot's `libyaml.hash`, and its sha512 `dadd7d8e0d88b5ebab005e5d521d56d541580198aa497370966b98c904586e642a1cd4f3881094eb57624f218d50db77417bbfd0ffdce50340f011e35e8c4c02` matches Alpine's `APKBUILD`. The Ruby sha256 matches ruby-lang.org's `index.txt`. The "Defers" line on the libyaml checksum no longer applies.
+- **Contradiction with R5-35.** This machine now has `/usr/bin/ruby` 3.2.3 from a system package. Any `PATH` holding `/usr/bin` finds it, so the guard "`command -v ruby` finds nothing" fails. The lint block needs a `PATH` built from named tools without `/usr/bin`, or a guard aimed at the pinned prefix. The plant still turns red, because rb-sys finds Ruby 3.2 and stops on a missing `ruby.h`.
+- **Unit tests need `link-ruby`.** A unit test that touches a Ruby symbol fails to link. Add the dev-dependency `rb-sys = { version = "=0.9.130", features = ["link-ruby"] }`. Test binaries then link `libruby.so.3.4` and run with `LD_LIBRARY_PATH` at the prefix's `lib`. The extension still links no libruby.
+- **Lint.** `#[magnus::init]` trips `missing_docs` under `clippy -D warnings`, and an item-level `allow` does not carry through the macro. The FFI module needs `#![allow(missing_docs, reason = "...")]`.
+- **Scratch cache home.** The command writes `thinkthen-usage/<month>.json` under `XDG_CACHE_HOME` even when `THINKTHEN_CACHE` is set. `tests/backend.rb` should give each child a fresh `HOME` and `XDG_CACHE_HOME` beside the fresh `XDG_CONFIG_HOME`, as 0107 and 0108 do.
+
+Retired by the spike: the source build with `--with-libyaml-source-dir` passes `-rpsych -rzlib -ropenssl -rminitest` with no sudo. The build, Clippy, `cargo test --lib` and deny run `--locked --offline` with llvm-18's libclang. The new crates match this ticket's list of 22. A `tests/backend.rb` prototype passed: the child sees only the fake key beside `127.0.0.1`, a parent sentinel key never reaches it, sends count on loopback, and a non-loopback address is refused before any child starts.
