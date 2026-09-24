@@ -1,0 +1,131 @@
+//! Run a measuring command from the measure fixtures, and compare its JSON lines with a golden file.
+//!
+//! Two outputs match when they hold the same JSON values in the same order,
+//! objects with the same member names in the same order, and each golden
+//! float is a float within `1e-6 + 1e-12`, one last place after rounding.
+
+use std::fmt;
+use std::io::Write as _;
+use std::path::{Path, PathBuf};
+use std::process::{Command, Output, Stdio};
+
+use serde::de::{Deserialize, Deserializer, MapAccess, SeqAccess, Visitor};
+
+/// The fixture folder every command line runs from.
+pub(crate) fn fixtures() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures/measure")
+}
+
+/// Run the binary from the fixture folder with a clear environment and these bytes on standard input.
+pub(crate) fn run(arguments: &[&str], input: &[u8]) -> Output {
+    let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+        .args(arguments)
+        .env_clear()
+        .current_dir(fixtures())
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("the compiled binary runs");
+    let mut stdin = child.stdin.take().expect("standard input");
+    let _ignored = stdin.write_all(input);
+    drop(stdin);
+    child.wait_with_output().expect("the binary finishes")
+}
+
+/// One JSON value that keeps member order and tells a float from an integer.
+#[derive(Debug)]
+enum Ordered {
+    Null,
+    Bool(bool),
+    Integer(i128),
+    Float(f64),
+    Text(String),
+    List(Vec<Ordered>),
+    Object(Vec<(String, Ordered)>),
+}
+
+struct Reader;
+
+impl<'de> Visitor<'de> for Reader {
+    type Value = Ordered;
+    fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("a JSON value")
+    }
+    fn visit_unit<E>(self) -> Result<Ordered, E> {
+        Ok(Ordered::Null)
+    }
+    fn visit_bool<E>(self, value: bool) -> Result<Ordered, E> {
+        Ok(Ordered::Bool(value))
+    }
+    fn visit_i64<E>(self, value: i64) -> Result<Ordered, E> {
+        Ok(Ordered::Integer(value.into()))
+    }
+    fn visit_u64<E>(self, value: u64) -> Result<Ordered, E> {
+        Ok(Ordered::Integer(value.into()))
+    }
+    fn visit_f64<E>(self, value: f64) -> Result<Ordered, E> {
+        Ok(Ordered::Float(value))
+    }
+    fn visit_str<E>(self, value: &str) -> Result<Ordered, E> {
+        Ok(Ordered::Text(value.to_owned()))
+    }
+    fn visit_seq<A: SeqAccess<'de>>(self, mut access: A) -> Result<Ordered, A::Error> {
+        let mut items = Vec::new();
+        while let Some(item) = access.next_element()? {
+            items.push(item);
+        }
+        Ok(Ordered::List(items))
+    }
+    fn visit_map<A: MapAccess<'de>>(self, mut access: A) -> Result<Ordered, A::Error> {
+        let mut members = Vec::new();
+        while let Some(member) = access.next_entry()? {
+            members.push(member);
+        }
+        Ok(Ordered::Object(members))
+    }
+}
+
+impl<'de> Deserialize<'de> for Ordered {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        deserializer.deserialize_any(Reader)
+    }
+}
+
+fn same(got: &Ordered, want: &Ordered, at: &str) -> Result<(), String> {
+    let differs = || Err(format!("{at}: got {got:?}, want {want:?}"));
+    match (got, want) {
+        (Ordered::Float(x), Ordered::Float(y)) if (x - y).abs() <= 1e-6 + 1e-12 => Ok(()),
+        (Ordered::List(xs), Ordered::List(ys)) if xs.len() == ys.len() => xs
+            .iter()
+            .zip(ys)
+            .enumerate()
+            .try_for_each(|(place, (x, y))| same(x, y, &format!("{at}[{place}]"))),
+        (Ordered::Object(xs), Ordered::Object(ys))
+            if xs.iter().map(|m| &m.0).eq(ys.iter().map(|m| &m.0)) =>
+        {
+            xs.iter()
+                .zip(ys)
+                .try_for_each(|((name, x), (_, y))| same(x, y, &format!("{at}/{name}")))
+        }
+        (Ordered::Null, Ordered::Null) => Ok(()),
+        (Ordered::Bool(x), Ordered::Bool(y)) if x == y => Ok(()),
+        (Ordered::Integer(x), Ordered::Integer(y)) if x == y => Ok(()),
+        (Ordered::Text(x), Ordered::Text(y)) if x == y => Ok(()),
+        _ => differs(),
+    }
+}
+
+/// Compare the JSON lines a command printed with a golden file's.
+pub(crate) fn same_lines(got: &str, golden: &str) -> Result<(), String> {
+    let parse = |text: &str| -> Vec<Ordered> {
+        text.lines()
+            .map(|line| serde_json::from_str(line).expect("a JSON line"))
+            .collect()
+    };
+    same(
+        &Ordered::List(parse(got)),
+        &Ordered::List(parse(golden)),
+        "",
+    )
+}
