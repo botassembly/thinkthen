@@ -88,7 +88,7 @@ true"
 - **A blank text.** An empty `--true` or an empty `true` key is a usage error, not an absent text.
 - **Reading 0.81 as a measurement.** Three made-up notices show the direction. A cut is tuned on labeled cases. A confident answer is about what the notice says, never about the world the notice never raises.
 - **Two branches when the script wants three.** A pick with `supported`, `contradicted`, and `not_stated` keeps silence as its own label, which has to be typed because nothing adds it.
-- **Reading a pick's odds.** `--details` on a pick prints a probability for every option in the order they were sent, so a margin over the runner-up is a rule a desk writes in `jq`. An `ambiguous` label is the model hedging, and exit 3 is the tool saying no option cleared the mark.
+- **Reading a pick's odds.** `--details` on a pick prints a probability for every option in the order they were sent, so a margin over the runner-up is a rule a desk writes in `jq`. An `ambiguous` label is the model hedging, and exit 3 is the tool saying no option cleared the threshold.
 
 ## Related how-tos
 

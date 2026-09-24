@@ -3,6 +3,7 @@
 use std::collections::{BTreeMap, VecDeque};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, SyncSender, channel};
 
+use crate::engine::error::Error;
 use crate::engine::schedule::{Completed, Input};
 use crate::engine::workers;
 
@@ -139,7 +140,7 @@ pub(crate) fn run<T, S, A, W, G, R, E>(
     finish: impl Fn(S, A) -> Result<Completed<R>, E>,
     mut emit: impl FnMut(R) -> Result<bool, E>,
     defect: fn(&'static str) -> E,
-    cancelled: impl Fn() -> E + Sync,
+    stopped: impl Fn(Error) -> E + Sync,
 ) -> Result<Outcome<E>, E>
 where
     T: Send + 'static,
@@ -157,18 +158,17 @@ where
         &|task: Task<W>| Event::Answered {
             row: task.row,
             group: task.group,
-            answer: if cancel.fired() {
-                Err(cancelled())
-            } else {
-                answer(task.work)
+            answer: match cancel.stop() {
+                Some(stop) => Err(stopped(stop)),
+                None => answer(task.work),
             },
         },
         |work| {
             let mut state = Run::new();
             loop {
                 drain(&mut state, &mut emit)?;
-                if cancel.fired() && !state.halted {
-                    state.cancel(cancelled());
+                if let Some(stop) = cancel.stop().filter(|_| !state.halted) {
+                    state.cancel(stopped(stop));
                 }
                 dispatch(&mut state, &work, jobs, defect)?;
                 request_input(&mut state, &request, jobs, streams, defect);
@@ -453,7 +453,7 @@ mod tests {
                 },
                 |_| Ok(true),
                 |_| "defect",
-                || "cancelled",
+                |_| "cancelled",
             );
             outcome_send.send(result).expect("returned outcome");
         });
@@ -504,7 +504,7 @@ mod tests {
                 },
                 |_| Ok(true),
                 |_| "defect",
-                || "cancelled",
+                |_| "cancelled",
             );
             outcome_send.send(outcome).expect("returned outcome");
         });

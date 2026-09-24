@@ -6,7 +6,7 @@ A transform is a folder, as ADR 0012 proposes. It holds a `.jq` file with a head
 
 `thinkthen` runs none of this. The tool obtains the judgments and keeps the evidence. `jq` does the arithmetic.
 
-These repository files are the current distribution. The agent's evidence-based verdict declines a separate `report` command, and Ian can overturn that decision. During release preparation, after the one-crate move, a read-only catalog will let an installed `thinkthen` list and print selected transforms for `jq -f`. The catalog's membership and public names are still for that later implementation ticket. The tool will not run `jq`, interpret a transform, or combine reports.
+These folders are the development sources. The agent's evidence-based verdict declines a separate `report` command, and Ian can overturn that decision. An installed `thinkthen` carries all ten transforms in a read-only catalog. `thinkthen transform list` prints the folder names, and `thinkthen transform show NAME` prints one `.jq` file byte for byte for `jq -f`. [`specification/transform.md`](../specification/transform.md) holds the contract. The shipped copies live in `crates/thinkthen/transforms/`, and the lint rung holds them byte-identical to these files, so a change to a transform changes both copies in one commit. The tool does not run `jq`, interpret a transform, or combine reports.
 
 ## The rows every transform reads
 

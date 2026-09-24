@@ -104,9 +104,16 @@ pub(crate) enum RecordError {
 }
 
 /// One record, as it arrived, which `--details` prints back under `input`.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, PartialEq, Serialize)]
 #[serde(transparent)]
 pub(crate) struct Record(Held);
+
+/// A record is evidence, so `Debug` withholds all of it.
+impl std::fmt::Debug for Record {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter.write_str("Record(<withheld>)")
+    }
+}
 
 /// What one record holds, which the framing decides.
 #[derive(Clone, Debug, PartialEq, Serialize)]

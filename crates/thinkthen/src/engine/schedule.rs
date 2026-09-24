@@ -3,6 +3,7 @@
 use std::collections::BTreeMap;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, SyncSender, channel};
 
+use crate::engine::error::Error;
 use crate::engine::workers;
 
 /// One framed input event from the command-owned reader.
@@ -207,7 +208,7 @@ where
         answer,
         emit,
         defect,
-        || defect("an unavailable cancel token fired"),
+        |_| defect("an unavailable stop fired"),
     )
 }
 
@@ -224,7 +225,7 @@ pub(crate) fn run_cancelled<T, R, E>(
     answer: &(impl Fn(&T) -> Result<Completed<R>, E> + Sync),
     emit: impl FnMut(R) -> Result<bool, E>,
     defect: fn(&'static str) -> E,
-    cancelled: impl Fn() -> E + Sync,
+    stopped: impl Fn(Error) -> E + Sync,
 ) -> Result<Outcome<E>, E>
 where
     T: Send + 'static,
@@ -239,7 +240,7 @@ where
         answer,
         emit,
         defect,
-        &cancelled,
+        &stopped,
         &|| (),
     )
 }
@@ -256,7 +257,7 @@ fn run_observed<T, R, E, G>(
     answer: &(impl Fn(&T) -> Result<Completed<R>, E> + Sync),
     mut emit: impl FnMut(R) -> Result<bool, E>,
     defect: fn(&'static str) -> E,
-    cancelled: &(impl Fn() -> E + Sync),
+    stopped: &(impl Fn(Error) -> E + Sync),
     begin: &(impl Fn() -> G + Sync),
 ) -> Result<Outcome<E>, E>
 where
@@ -274,10 +275,9 @@ where
         &|(place, value)| {
             Event::Answered(
                 place,
-                if cancel.fired() {
-                    Err(cancelled())
-                } else {
-                    answer(&value)
+                match cancel.stop() {
+                    Some(stop) => Err(stopped(stop)),
+                    None => answer(&value),
                 },
             )
         },
@@ -286,8 +286,8 @@ where
             let mut state = Run::new();
             loop {
                 state.drain(&mut emit)?;
-                if cancel.fired() && !state.halted {
-                    state.refuse(cancelled());
+                if let Some(stop) = cancel.stop().filter(|_| !state.halted) {
+                    state.refuse(stopped(stop));
                     continue;
                 }
                 if state.done() {
@@ -342,7 +342,7 @@ mod tests {
                 },
                 |_| Ok(true),
                 |_| "defect",
-                || "cancelled",
+                |_| "cancelled",
             );
             outcome_send.send(outcome).expect("returned outcome");
         });
@@ -427,7 +427,7 @@ mod tests {
                     Ok(true)
                 },
                 |_| "defect",
-                || "cancelled",
+                |_| "cancelled",
             );
             outcome_send.send(result).expect("returned outcome");
         });
@@ -495,7 +495,7 @@ mod tests {
             },
             |_| Ok(true),
             |_| (),
-            &|| (),
+            &|_| (),
             &worker_lifetime,
         )
         .expect("the scheduler runs");

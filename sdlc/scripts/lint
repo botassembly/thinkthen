@@ -6,6 +6,11 @@ REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
 
 python3 sdlc/scripts/policy.py
+python3 sdlc/scripts/catalog.py
+# Ticket 0104: a stale crate longer than the fresh one must not reach `tar`.
+mkdir -p target/package
+head -c 4194304 /dev/urandom \
+    >"target/package/thinkthen-$(sed -n 's/^version = "\([^"]*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -1).crate"
 sh sdlc/scripts/package
 python3 sdlc/scripts/pages-self-test
 python3 sdlc/scripts/pages

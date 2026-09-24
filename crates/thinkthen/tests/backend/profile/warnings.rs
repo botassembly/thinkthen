@@ -32,7 +32,7 @@ fn a_parallel_record_run_prints_one_profile_warning() {
     assert_eq!(String::from_utf8_lossy(&output.stdout).lines().count(), 4);
     assert_eq!(
         String::from_utf8_lossy(&output.stderr)
-            .matches("warning: threshold calibrated")
+            .matches("warning: threshold tuned for")
             .count(),
         1
     );
@@ -68,7 +68,7 @@ fn a_mismatched_filter_warns_once_when_every_successful_row_is_filtered_out() {
     assert!(output.stdout.is_empty());
     assert_eq!(
         String::from_utf8_lossy(&output.stderr)
-            .matches("warning: threshold calibrated")
+            .matches("warning: threshold tuned for")
             .count(),
         1
     );
@@ -105,7 +105,7 @@ fn a_filtered_first_row_warns_once_before_a_later_row_is_printed() {
     assert_eq!(String::from_utf8_lossy(&output.stdout), "two\n");
     assert_eq!(
         String::from_utf8_lossy(&output.stderr)
-            .matches("warning: threshold calibrated")
+            .matches("warning: threshold tuned for")
             .count(),
         1
     );

@@ -19,6 +19,7 @@ pub(crate) mod relate;
 pub(crate) mod schedule;
 pub(crate) mod status;
 pub(crate) mod table;
+mod transform;
 
 #[cfg(test)]
 mod conformance_tests;
@@ -41,6 +42,12 @@ pub fn entry() -> ExitCode {
     if cli.version {
         return match edge::write_line(stdout.lock(), &version_line(env!("CARGO_PKG_VERSION"))) {
             Ok(_) => ExitCode::SUCCESS,
+            Err(failure) => failure::report(&failure, stderr.lock()),
+        };
+    }
+    if let Some(Command::Transform(arguments)) = &cli.command {
+        return match transform::run(&arguments.command, stdout.lock()) {
+            Ok(()) => ExitCode::SUCCESS,
             Err(failure) => failure::report(&failure, stderr.lock()),
         };
     }
@@ -99,6 +106,7 @@ fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitC
             args::CacheCommand::Prune(arguments) => cache::prune(arguments, environment, writer),
         },
         Some(Command::Status(arguments)) => status::run(arguments, environment, writer),
+        Some(Command::Transform(_)) => Err(Failure::Defect("the catalog returns before setup")),
         None => Err(Failure::Defect("no command and no version was parsed")),
     }
 }

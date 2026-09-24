@@ -198,9 +198,9 @@ fn the_help_of_each_verb_carries_the_advice_its_page_names() {
         "contradicted",
         "supported",
         "case $rc",
-        "Exit 0 is a label and exit 3 is unresolved.",
+        "Exit 0 is an option and exit 3 is not sure.",
         "never exits 1",
-        "--raw is available for one document, --lines, and --jsonl.",
+        "--raw is available for a single text, --lines, and --jsonl.",
         "CSV and TSV always print JSONL and refuse --raw.",
     ] {
         assert!(choose.contains(said), "{said} is missing from {choose}");

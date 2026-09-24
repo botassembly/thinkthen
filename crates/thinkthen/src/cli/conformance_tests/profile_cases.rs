@@ -36,9 +36,10 @@ enum Expectation {
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct MismatchCase {
     id: String,
-    calibrated: Option<String>,
+    tuned_for: Option<String>,
     running: Option<String>,
     warning: bool,
 }
@@ -91,12 +92,12 @@ fn shared_profile_cases_cross_the_production_parser_and_encoder() {
     }
 
     for case in profiles.mismatches {
-        let calibrated = case
-            .calibrated
+        let tuned_for = case
+            .tuned_for
             .as_deref()
             .map(ProfileName::new)
             .transpose()
-            .expect("calibrated name");
+            .expect("tuned_for name");
         let running = case
             .running
             .as_deref()
@@ -104,10 +105,16 @@ fn shared_profile_cases_cross_the_production_parser_and_encoder() {
             .transpose()
             .expect("running name");
         assert_eq!(
-            ProfileWarning::between(calibrated.as_ref(), running.as_ref()).is_some(),
+            ProfileWarning::between(tuned_for.as_ref(), running.as_ref()).is_some(),
             case.warning,
             "{}",
             case.id
         );
     }
+}
+
+#[test]
+fn a_mismatch_case_with_the_old_calibrated_key_is_refused() {
+    let old = r#"{"id":"old","calibrated":"jev","running":"jev","warning":false}"#;
+    assert!(serde_json::from_str::<MismatchCase>(old).is_err());
 }

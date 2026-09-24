@@ -4,6 +4,18 @@ Written 2026-09-24 by Claude for queue items 6, 7, 9, and 10 of `one-line-plan-2
 
 Sources read: tag `surfaces-wave7-final` (`f6a7faea`), lanes `origin/w7/gate3`, `origin/w7/python4`, and `origin/w7/fast`, ticket branches 0076, 0077, 0078, 0084, 0085, and 0086, ADR 0017 and ADR 0037 on main, and `sdlc/issues/2026-09-23-surfaces-branch-error-index.md`. Nothing was built or run.
 
+Port source: tag `surfaces-wave7-frozen-2026-09-24b` (`9df8bae9`). It merges the three lanes into `surfaces-wave7`, and every surface check ran there once. `sdlc/records/surfaces-freeze-2026-09-24.md` on that tag lists each result. DuckDB, Ruby, and PostgreSQL did not run, because they need the network or Docker. Each surface ticket starts from this tag and carries the three follow-ups that record lists.
+
+Shared rules for every surface ticket, set by Claude on 2026-09-24 from the design reviews of 0105 to 0112. Ian can overturn any of them.
+
+- A surface check never depends on Docker. The ladder runs on any developer machine that has the pinned toolchains.
+- Toolchains and runtimes live under `~/.cache/thinkthen-toolchains/`, never in the product's answer cache. A one-time download of a public archive is setup, not a gate. It needs a sha256 pinned in the repo and a refusal on mismatch. Gates then run offline.
+- Each test gets its own product cache folder and its own loopback backend. The arms beyond 0092 (fixed delay, a held reply that can hold again, one backend per test) belong to ticket 0117.
+- Ctrl-C is prompt for single calls and batches alike. The engine waits for requests already sent, so the binding runs every call on a detachable worker and returns `Cancelled` at once. The worker finishes the sent requests.
+- No test or plant can reach a paid backend. Surface tests run with the real key removed and a fake key set only beside a loopback address. A plant that changes how the engine is built must be shown to send nothing, counted on the loopback listener. Prove environment seeding through a setting that needs no request, such as the cache folder.
+- A deny plant proves the rule it names while offline. A git-sourced dependency fails before deny runs when offline, so use a plant that reaches deny.
+- Every surface exposes the engine settings in ADR 0017 section 5, width included, on its engine value, spelled the way that host spells its other settings. The surface builds that engine on `EngineBuilder::from_env()` (0084, amended 2026-09-24), so the address, key, and cache still come from the environment. Tests that need parallel requests set width through that public setting, never a hidden hook. Width is process-wide under 0077, so each such test runs in its own child process.
+
 ## 1. The error index, sorted
 
 Every one of the index's 197 rows falls in one of three classes.
@@ -44,7 +56,7 @@ The three lanes touch these rows: gate3 (R3-29, R3-32, R5-5, R5-28, R7-4, plus a
 | R7-1 | standin | open | no ticket, gap G3 (main links the same ureq 3.4.2 resolver) | A churn probe crashes the stand-in through the C door: 2 of 104 runs SIGSEGV in ureq's… |
 
 
-Engine rows by spine ticket: 0076 carries R1-23 and R6-4. 0077 carries R2-9 and the width half of R4-12. 0078 carries R5-3 and R6-3. 0085 carries R2-21 and R5-19. 0086 carries R1-10, R1-11, R4-24, and the deadline half of R4-12. No ticket carries R5-4, R6-15, or R7-1.
+Engine rows by spine ticket: 0076 carries R1-23 and R6-4. 0077 carries R2-9 and the width half of R4-12. 0078 carries R6-3. 0096 carries R5-3. 0089 (landed) fixed R5-4 and R6-15 (G2), and 0085 re-proves them on every facade path, with R2-21 and R5-19. 0086 carries R1-10, R1-11, R4-24, and the deadline half of R4-12, and runs a Rust churn probe toward R7-1. 0094 closes R7-1.
 
 ### Standin-only rows (31)
 
@@ -208,7 +220,7 @@ Common to every surface: replace the connector line, the engine static, and the 
 
 | Surface | What changes | Carries over untouched | Risks | Needs from the lanes |
 |---|---|---|---|---|
-| Python, with pandas | `src/lib.rs` imports and engine static. `bulk()` drops the `poll` tick, or runs on a worker like `step()` (G1). Choose and tag go through a loaded question (G5). `score` returns the position; `nearest` moves to `details`. `rank` and `find` rebuild index and probability from input-carrying results. Recognize and relate specs move to builders or wait for G6. | `src/arrow.rs` (Arrow C data import and export), `thinkthen/__init__.py` dispatch, `step()` and `TokenBridge`, the six exception classes, `check.sh` shape, NOTES, and tests that import `thinkthen`. | The null backend underlies most suites. Bulk interrupt latency regresses without G1 (R1-24, R4-23). R5-6 and R4-15 crash shapes stay open in the Arrow layer. | python4 (8 commits): the file-mapping bound, one map snapshot per call, and pointer-table checks for R5-6, with 3 tests. Take `origin/w7/python4:libraries/python` as the port base. |
+| Python, with Polars | The pandas door leaves: Ian ruled on 2026-09-21 that Python's data frame is Polars (ADR 0017, "the data frame is Polars"). `src/lib.rs` imports and engine static. `bulk()` drops the `poll` tick, or runs on a worker like `step()` (G1). Choose and tag go through a loaded question (G5). `score` returns the position; `nearest` moves to `details`. `rank` and `find` rebuild index and probability from input-carrying results. Recognize and relate specs move to builders or wait for G6. | `src/arrow.rs` (Arrow C data import and export), `thinkthen/__init__.py` dispatch, `step()` and `TokenBridge`, the six exception classes, `check.sh` shape, NOTES, and tests that import `thinkthen`. | The null backend underlies most suites. Bulk interrupt latency regresses without G1 (R1-24, R4-23). R5-6 and R4-15 crash shapes stay open in the Arrow layer. | python4 (8 commits): the file-mapping bound, one map snapshot per call, and pointer-table checks for R5-6, with 3 tests. Take `origin/w7/python4:libraries/python` as the port base. |
 | Polars | The Python Polars door rides the Arrow layer and ports with Python. `libraries/rust/src/polars.rs` is a feature-gated Series door over the stand-in. | The Arrow path and `test_polars_door`. | 0084 and 0086 allow one crate and exclude a Polars door. The Rust Series door has no home until a review rules on a second crate or a feature on `thinkthen`. | none |
 | TypeScript | `addon/src/lib.rs` imports and engine static. `deadline_of` keeps its own rule (G7). The JSON envelope needs a result serializer (G8). Recognize offsets convert from scalar values to UTF-16 code units. | The napi `AsyncTask`, `AbortSignal` bridge, `index.js`, `index.mjs`, `index.d.ts`, `loader.cjs`, and the can-fail conformance probe. | One libuv worker per call stays a waiver (R2-27, R3-25). `DIVERGENCES.md` is stale (R7-12). | none |
 | Ruby | `src/lib.rs` imports and engine value. `Recognize`, `Relate`, and `Question` from JSON need G6. | `cross()` (worker thread, `pthread_sigmask`, GVL release, `rb_thread_check_ints`), the watchdog, the six classes, and the Docker build. | The build image and the toolchain pin (R7-3, R7-10). `test_tick_gc` cannot fail (R7-9). The conformance runner has no rank or find arms. | none |
@@ -264,7 +276,7 @@ Main has no success kind for `decide_many`, `recognize`, or `relate`, and no `us
 | Unsure word (03, 12, 15, file header) | `unsure: true`, `public_word_for_unsure: "unsure"` | The specification says "unresolved"; 0084 says `Answer::Unsure`. | The union ticket picks one word for cases and records it. |
 | Find (24, 25) | A bare-string question, an index answer, `details.kind: "find"`, and `null` when nothing fits. | `{find, none, units}` questions, `bare: "u002"`, `cases.json` says kind `choice` while `result.md` says `find`, and case 19 says `bare: "none"` while `find.md` says null. | Main settles its own two contradictions first. |
 | Invalid rule inside a JSON question (08, 09, 10, 22) | `usage` | `question-file.md`: a file that breaks a rule is `local` (exit 5); `usage` is for values typed on the command line. | Rule how a binding's JSON question maps. A question built from a binding's arguments reads as typed, which argues for `usage`. |
-| `tuned_for` vs `calibrated` | No case touches it. | `backend-profiles.json` (same on both) carries `calibrated` in 4 rows. 0082 item 44 renames it `tuned_for`, per Ian's 2026-09-23 ruling. `specification/result.md:88` still says `calibrated`. | 0082 renames both. No conflict with the branch. |
+| `tuned_for` vs `calibrated` | No case touches it. | Ticket 0090 renamed the key to `tuned_for` in `backend-profiles.json`, `specification/result.md`, and the tool, per Ian's 2026-09-23 ruling. The case reader refuses the old `calibrated` key. | Each surface ticket reads `tuned_for` from main. No conflict with the branch. |
 
 ### 4.4 The skip table and divergences
 
