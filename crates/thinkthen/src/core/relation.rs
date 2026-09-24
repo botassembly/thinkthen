@@ -328,21 +328,14 @@ pub(crate) fn assemble_edges<E: RelationEntityView>(
         match mapping {
             QuestionMap::Choice(options) => {
                 let probabilities = answer.choice_probabilities().unwrap_or_default();
-                for (label, source, target) in options {
-                    let probability = probabilities
-                        .iter()
-                        .find_map(|(held, probability)| (*held == label).then_some(*probability));
-                    if let Some(probability) = probability.filter(|value| *value >= threshold) {
-                        push_edge(
-                            &mut edges,
-                            entities,
-                            relation,
-                            *source,
-                            *target,
-                            probability,
-                        );
-                    }
-                }
+                push_choice_edges(
+                    &mut edges,
+                    entities,
+                    relation,
+                    options,
+                    &probabilities,
+                    threshold,
+                );
             }
             QuestionMap::Pair { source, target } => {
                 if let Some(probability) = answer.yes().filter(|value| *value >= threshold) {
@@ -359,6 +352,25 @@ pub(crate) fn assemble_edges<E: RelationEntityView>(
         }
     }
     edges
+}
+
+fn push_choice_edges<E: RelationEntityView>(
+    edges: &mut Vec<RelationEdge<E>>,
+    entities: &[E],
+    relation: &RelationRule,
+    options: &[(String, usize, usize)],
+    probabilities: &[(&str, f64)],
+    threshold: f64,
+) {
+    for (label, source, target) in options {
+        let probability = probabilities
+            .iter()
+            .find_map(|(held, probability)| (*held == label).then_some(*probability));
+        let Some(probability) = probability.filter(|value| *value >= threshold) else {
+            continue;
+        };
+        push_edge(edges, entities, relation, *source, *target, probability);
+    }
 }
 
 fn push_edge<E: RelationEntityView>(
