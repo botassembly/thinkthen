@@ -6,7 +6,7 @@ opens: libraries/python sdlc/scripts sdlc/planning/libraries/python.md sdlc/plan
 
 # 0105: Port the Python surface
 
-Status: revised after confirmation; final check. Owner: Claude.
+Status: design accepted 2026-09-24 after re-review. Owner: Claude.
 
 ## Outcome and authority
 
@@ -54,7 +54,7 @@ Source: `sdlc/issues/2026-09-23-surfaces-branch-error-index.md`. The index lists
 | R3-18 | closed | `tt.question(decide=..., choose=...)` raises `TypeError` naming both verbs. An unknown keyword raises `TypeError`. | Take the first verb and ignore the rest. The question builds. |
 | R4-14 | closed | `check.sh` runs `pytest tests/` whole. The built wheel holds `__init__.pyi` and `py.typed`. The manylinux tag moves to the release ticket (queue item 4). | A new failing `tests/test_planted.py` turns `check.sh` red. A wheel built without `py.typed` fails the wheel content check. |
 | R4-23 (batch) | closed | A `SIGINT` from a timer thread during a 200-text `decide_many` at width 8 stops new sends within one tick and raises `Cancelled`. | An interrupt check that never calls `check_signals`. The batch sends all 200. |
-| R4-23 (single) | closed | The test holds one `decide` on the held arm and sends `SIGINT` at 0.2 s. `Cancelled` arrives by 0.3 s. The test then releases the reply, and the count stays at exactly one. | Run single calls on the calling thread. The 0.3 s assertion turns red. |
+| R4-23 (single) | closed | The test holds one `decide` on the held arm and sends `SIGINT` once the backend's `count` line reads 1. `Cancelled` arrives within 100 ms of the signal. The test then releases the reply, and the count stays at exactly one. | Run single calls on the calling thread. The 100 ms assertion turns red. |
 | R5-7 | closed | The module docstring and `README.md` carry the pinned deadline sentence. `deadline=-1` runs with no deadline. `deadline=-2` raises `UsageError`. | Refuse `-1`. The run test turns red. |
 | R5-8 | closed | `deadline=True`, `False`, and `numpy.bool_(True)` raise `UsageError` with zero counted requests. | Drop the bool check. `True` runs as one second. |
 | R6-11 | closed | `tt.decide(42, "x")` and `tt.decide({"bad": 1}, "x")` raise `UsageError` with `kind == "usage"` and `retryable is False`. | Raise a bare `TypeError`. |
@@ -77,6 +77,9 @@ R2-29 asks for rulings on record. The rulings that live only in the tag's `NOTES
 
 ## Other acceptance
 
+- Single-call test timing: the test sends `SIGINT` only once the backend's `count` line reads 1. A signal at a fixed time can land before the send and leave the count at 0.
+- A caller's token cancels promptly during a send. The calling thread's 50 ms tick also reads the caller's `token=`. When it is cancelled, the tick cancels the internal token, detaches the worker, and raises `Cancelled`, as the `SIGINT` path does. A test cancels the token from a second thread during a held single send and gets `Cancelled` within 100 ms with one counted send.
+- The worker survives a closed channel. When the caller has left, the worker ignores the failed send on the channel and does not panic. When the channel closes with no result, the calling thread raises `DefectError`. A Rust unit test covers each edge.
 - Red first: the ported tests fail against an empty `libraries/python` workspace for the stated reason, then pass.
 - `cargo test --no-default-features --lib --locked --offline` in `libraries/python` passes with libpython linked.
 - The conformance runner runs every applicable case through the 0092 case arm with recomputed digests. Case 18 (cancel mid-batch) uses 0092's existing held arm. No backend arm is added.
@@ -129,5 +132,5 @@ Contract 2; state and timing 3; reach 2; proof 3; cost of error 3; total 13. Fin
 
 ## Review
 
-- Design review: `sdlc/records/2026-09-24-design-review-0105-0106.md` found eight items, all answered: the R1-6 plant, six unowned Python halves, the R1-10 trigger, the Ctrl-C test's end, deny and the forbid-level lints, the dependency versions and second review, `--offline`, and the small fixes. The confirmation (same file) found that the deny plant could not turn red and asked for a prompt single-call interrupt. Both are applied. The final check is pending.
+- Design review: `sdlc/records/2026-09-24-design-review-0105-0106.md` found eight items, all answered: the R1-6 plant, six unowned Python halves, the R1-10 trigger, the Ctrl-C test's end, deny and the forbid-level lints, the dependency versions and second review, `--offline`, and the small fixes. The confirmation (same file) found that the deny plant could not turn red and asked for a prompt single-call interrupt. Both are applied. The final check (same file) accepted it with three notes for the builder, now in the acceptance list.
 - Code review: pending.
