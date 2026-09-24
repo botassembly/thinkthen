@@ -1,4 +1,17 @@
-REJECT
+ACCEPT
+
+## Confirmation at 2279a31a (2026-09-24)
+
+Checked the diff a1153d48..2279a31a against main at ab72203c.
+
+Resolved: B1. The site reference line joins the one commit, is added to Scope and `opens`, and falls under the fixed-string test and the `git grep` check. Only the surfaces land later, and the ticket gives the reason. `reference.astro` has one `calibrated` hit on main, at line 76. The prose file cap of five holds four files: result.md, backend-profiles.json, reference.astro, and ADR 0032.
+All four follow-ups are resolved: all four `matches` counts are named (profile.rs:441 and warnings.rs:35, :71, :108); the quality-plan sentence is clarified, and the question-file key stays `profile`; the status line records the split; and digest.rs:302 and `calibrated-question.json` are listed as out of scope.
+Nothing new broke. The stop rule, the six-file production budget, and the order after 0082 and 0083 are unchanged and still hold.
+
+---
+
+## Earlier re-review at a1153d48 (superseded above)
+
 
 Reviewer: fresh read-only Claude (Opus) session, 2026-09-24. Checked: ticket at ticket/0090-tuned-for (a1153d48), Ian's ruling as recorded on the 0082 branch (line 17, and commit 42b96a94), the ruling line in the merged issue (item 44, commit f14011e0) and in quality-plan.md, ADR 0032, and every `calibrat` hit on main in crates, specification, conformance, spec, demos, transforms, and site.
 

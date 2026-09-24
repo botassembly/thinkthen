@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core crates/thinkthen/src/cli crates/thinkthen/tests
 
 # 0090: Rename the profile-warning key `calibrated` to `tuned_for`
 
-Status: revised after re-review; confirming. Split from 0082's review; `sdlc/records/0090-design-rereview.md` is its first review. Owner: Claude.
+Status: design accepted 2026-09-24 after re-review. Owner: Claude.
 
 ## Design and decisions
 
