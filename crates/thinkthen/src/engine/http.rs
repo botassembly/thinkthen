@@ -44,9 +44,6 @@ impl fmt::Debug for Key {
 /// fill this process's memory.
 const MAX_RESPONSE_BYTES: u64 = 1024 * 1024;
 
-/// The statuses a backend is asked again after.
-const RETRIED: [u16; 6] = [429, 500, 502, 503, 504, 529];
-
 /// The longest a `Retry-After` header moves the wait to.
 ///
 /// The header is the backend's own number and this process trusts it only so
@@ -294,7 +291,7 @@ fn io_transport(error: &io::Error) -> TransportKind {
 
 /// Say whether this failure earns another attempt: only a retried status does.
 fn is_retried(failure: &Error) -> bool {
-    matches!(failure, Error::Status(status) if RETRIED.contains(status))
+    failure.retryable()
 }
 
 #[cfg(test)]

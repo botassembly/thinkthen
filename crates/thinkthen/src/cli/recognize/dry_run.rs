@@ -10,8 +10,8 @@ use crate::core::{
     recognition_questions, tokenize,
 };
 use crate::edge;
+use crate::engine::facade;
 use crate::failure::Failure;
-use crate::prepared_request::PreparedRequests;
 
 #[derive(Debug, Serialize)]
 struct DryRun {
@@ -64,9 +64,7 @@ pub(super) fn run(
         .map_err(|_| Failure::Defect("record evidence became blank"))?;
     let plan = Plan::new(evidence, backend.model().clone(), questions)
         .map_err(|_| Failure::Defect("recognize dry run planned no questions"))?;
-    let requests = PreparedRequests::with_profile(backend, &plan, profile)?
-        .into_chunks()
-        .len();
+    let requests = facade::split(backend, profile, &plan)?.len();
     let relation_pairs_upper_bound = relation_upper_bound(spec, tokens.len());
     write(
         writer,

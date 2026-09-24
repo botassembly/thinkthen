@@ -86,7 +86,6 @@ pub(crate) use crate::core::result::{
 pub(crate) use crate::core::text::{Description, Evidence, ModelName, QuestionText, Withheld};
 pub(crate) use crate::core::threshold::{Outcome, Threshold};
 
-#[cfg(test)]
 pub(crate) use crate::core::find::FindAnswer;
 #[cfg(test)]
 pub(crate) use crate::core::text::Url;

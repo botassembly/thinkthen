@@ -1,7 +1,7 @@
 use super::{asked, conformance_support::Document};
 use crate::core::{Backend, BackendProfile, ProfileName, ProfileWarning};
 use crate::engine::error::Error;
-use crate::prepared_request::PreparedRequest;
+use crate::engine::prepared_request::PreparedRequest;
 use serde::Deserialize;
 use serde_json::value::RawValue;
 

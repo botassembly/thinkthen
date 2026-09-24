@@ -55,6 +55,29 @@ where
     E: From<Error>,
 {
     let prepared = PreparedRequest::with_profile(backend, plan, profile).map_err(E::from)?;
+    ask_sent(backend, plan, prepared, recorder, cancel, transport, key)
+}
+
+/// Send one prepared request through replay, transport, and recording.
+///
+/// Every live attempt goes out on an engine worker, so a host signal on the
+/// calling thread never lands in a socket read. A replay spawns nothing.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one prepared request carries explicit cancellation, transport, storage, and key boundaries"
+)]
+pub(crate) fn ask_sent<E>(
+    backend: &Backend,
+    plan: &Plan,
+    prepared: PreparedRequest,
+    recorder: &Recorder,
+    cancel: &crate::engine::Cancel,
+    transport: Transport<'_>,
+    key: impl FnOnce() -> Result<Key, E>,
+) -> Result<Answered, E>
+where
+    E: From<Error>,
+{
     ask_prepared(
         backend,
         plan,
@@ -64,20 +87,19 @@ where
         transport.usage,
         key,
         |prepared, key| {
-            transport
-                .client
-                .post_observed(
-                    &Exchange {
-                        url: backend.url().as_str(),
-                        body: &prepared.body,
-                        key,
-                        max_retries: transport.max_retries,
-                        retry_wait: transport.retry_wait,
-                    },
-                    cancel,
-                    || transport.usage.request_sent(),
-                )
-                .map_err(E::from)
+            let exchange = Exchange {
+                url: backend.url().as_str(),
+                body: &prepared.body,
+                key,
+                max_retries: transport.max_retries,
+                retry_wait: transport.retry_wait,
+            };
+            crate::engine::workers::on_worker(|| {
+                transport
+                    .client
+                    .post_observed(&exchange, cancel, || transport.usage.request_sent())
+            })
+            .map_err(E::from)
         },
     )
 }

@@ -55,7 +55,24 @@ pub(crate) enum Error {
     ProfileLimit(ProfileLimit),
     Cancelled,
     Deadline(Budget),
+    /// The key variable holds nothing, so no key can be sent.
+    NoKey(&'static str),
+    /// A later explicit width differs from the one this process selected.
+    WidthActive(crate::engine::WidthActive),
+    /// Replies for one logical result named different model versions.
+    ModelsDiffer(Option<(String, String)>),
+    /// Reply token counts cannot be represented as one total.
+    UsageOverflow,
+    /// Recognition asked for more kinds than one kind question can carry.
+    RecognizeKinds,
+    /// The backend failed one question recognition requires.
+    RecognizeLogical,
+    /// No logical relation question has a usable answer.
+    RelateLogical,
 }
+
+/// The statuses a backend is asked again after.
+const RETRIED: [u16; 6] = [429, 500, 502, 503, 504, 529];
 
 /// The whole-call budget a spent deadline was made from.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -83,7 +100,13 @@ impl fmt::Display for Budget {
 impl Error {
     pub(crate) const fn kind(&self) -> Kind {
         match self {
-            Self::Transport(_) | Self::Status(_) | Self::Reply(_) => Kind::Backend,
+            Self::Transport(_)
+            | Self::Status(_)
+            | Self::Reply(_)
+            | Self::ModelsDiffer(_)
+            | Self::UsageOverflow
+            | Self::RecognizeLogical
+            | Self::RelateLogical => Kind::Backend,
             Self::ReplayMiss(_)
             | Self::Entry(_, _)
             | Self::RecordingConflict(_)
@@ -94,10 +117,21 @@ impl Error {
             | Self::DefaultCachePrivate => Kind::Local,
             Self::CacheEntry => Kind::Local,
             Self::Defect(_) => Kind::Defect,
-            Self::Usage(_) | Self::ProfileLimit(_) => Kind::Usage,
+            Self::Usage(_)
+            | Self::ProfileLimit(_)
+            | Self::NoKey(_)
+            | Self::WidthActive(_)
+            | Self::RecognizeKinds => Kind::Usage,
             Self::Cancelled => Kind::Cancelled,
             Self::Deadline(_) => Kind::Deadline,
         }
+    }
+
+    /// Whether the same call may succeed when sent again: only a busy or
+    /// failing backend status. A transport failure may already have reached
+    /// the backend, so it is never retried.
+    pub(crate) fn retryable(&self) -> bool {
+        matches!(self, Self::Status(status) if RETRIED.contains(status))
     }
 }
 

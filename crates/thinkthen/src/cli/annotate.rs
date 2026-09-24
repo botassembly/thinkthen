@@ -3,21 +3,16 @@
 use std::fs;
 use std::io::{Read, Write};
 use std::process::ExitCode;
-use std::time::Duration;
 
 use crate::core::adapters::built_in;
-use crate::core::{
-    Backend, BackendProfile, Framing, ModelName, Plan, Pointer, QuestionSet, Reading, Record,
-};
+use crate::core::{Backend, Framing, ModelName, Plan, Pointer, QuestionSet, Reading, Record};
 
 use crate::args::{AnnotateArguments, Common};
-use crate::asking::{Folders, ask_prepared};
+use crate::asking::{self, Folders};
 use crate::edge::{self, Environment};
+use crate::engine::facade::{Chunk, Engine};
 use crate::failure::Failure;
-use crate::http::Client;
-use crate::prepared_request::{PreparedRequest, PreparedRequests};
 use crate::profile::{self, Mismatch};
-use crate::recorder::Recorder;
 use crate::schedule::{Judged, Output};
 use crate::table::{Kind as TableKind, Rows as TableRows};
 
@@ -48,7 +43,7 @@ pub(crate) fn run(
         }
         Err(error) => return Err(error.into()),
     };
-    let jobs = crate::schedule::width(arguments.common.jobs)?;
+    crate::schedule::width(arguments.common.jobs)?;
     let folders = Folders::of(&arguments.common, environment)?;
     if arguments.common.dry_run && folders.named() {
         return Err(Failure::DryRunWithRecording);
@@ -81,31 +76,24 @@ pub(crate) fn run(
                 &mut writer,
             );
         }
-        let judging = Judging {
-            common: &arguments.common,
+        let judging = Judging::new(
+            arguments,
             environment,
-            recorder: Recorder::of_private(
-                folders.record.as_deref(),
-                folders.replay.as_deref(),
-                folders.private_default,
-                folders.cache_answers,
+            asking::engine(
+                &arguments.common,
+                environment,
+                folders,
+                backend,
+                profile,
+                arguments.common.jobs,
             )?,
-            client: Client::new(
-                Duration::from_secs(arguments.common.timeout),
-                backend.is_secure(),
-            ),
-            backend,
             set,
-            profile,
             mismatch,
-            streams: reading.streams(),
-            recording_reported: folders.reported(),
-        };
+        );
         return crate::annotate_schedule::run(
             &judging,
             &reading,
             rows.map(|row| row.map(crate::annotate_schedule::Input::Record)),
-            jobs,
             environment.cancel(),
             &mut Output::Streaming(&mut writer),
         );
@@ -122,31 +110,24 @@ pub(crate) fn run(
             &mut writer,
         );
     }
-    let judging = Judging {
-        common: &arguments.common,
+    let judging = Judging::new(
+        arguments,
         environment,
-        recorder: Recorder::of_private(
-            folders.record.as_deref(),
-            folders.replay.as_deref(),
-            folders.private_default,
-            folders.cache_answers,
+        asking::engine(
+            &arguments.common,
+            environment,
+            folders,
+            backend,
+            profile,
+            arguments.common.jobs,
         )?,
-        client: Client::new(
-            Duration::from_secs(arguments.common.timeout),
-            backend.is_secure(),
-        ),
-        backend,
         set,
-        profile,
         mismatch,
-        streams: reading.streams(),
-        recording_reported: folders.reported(),
-    };
+    );
     crate::annotate_schedule::run(
         &judging,
         &reading,
         chunks.map(|row| row.map(crate::annotate_schedule::Input::Bytes)),
-        jobs,
         environment.cancel(),
         &mut Output::Streaming(&mut writer),
     )
@@ -206,19 +187,33 @@ fn reading(common: &Common) -> Result<Reading, Failure> {
 pub(crate) struct Judging<'a> {
     common: &'a Common,
     environment: &'a Environment,
-    recorder: Recorder,
-    client: Client,
-    backend: Backend,
+    engine: Engine,
     set: QuestionSet,
-    profile: Option<BackendProfile>,
     mismatch: Mismatch,
     streams: bool,
-    recording_reported: bool,
 }
 
-impl Judging<'_> {
-    pub(crate) const fn recording_named(&self) -> bool {
-        self.recording_reported
+impl<'a> Judging<'a> {
+    fn new(
+        arguments: &'a AnnotateArguments,
+        environment: &'a Environment,
+        engine: Engine,
+        set: QuestionSet,
+        mismatch: Mismatch,
+    ) -> Self {
+        let common = &arguments.common;
+        Self {
+            streams: common.framing() != Framing::Document,
+            engine,
+            common,
+            environment,
+            set,
+            mismatch,
+        }
+    }
+
+    pub(crate) const fn engine(&self) -> &Engine {
+        &self.engine
     }
 
     pub(crate) fn record(
@@ -241,7 +236,7 @@ impl Judging<'_> {
     }
 
     pub(crate) const fn requested_model(&self) -> &ModelName {
-        self.backend.model()
+        self.engine.backend().model()
     }
 
     pub(crate) fn finish(
@@ -258,55 +253,45 @@ impl Judging<'_> {
         record: &Record,
         places: Vec<usize>,
     ) -> Result<PreparedGroup, Failure> {
-        let plan = plan_for(&self.set, &places, &self.backend, base, record)?;
-        let prepared = PreparedRequests::with_profile(&self.backend, &plan, self.profile.as_ref())?;
-        let mut places = places.into_iter();
-        let chunks = prepared
-            .into_chunks()
-            .into_iter()
-            .map(|chunk| PreparedGroupChunk {
-                places: places.by_ref().take(chunk.plan.questions().len()).collect(),
-                plan: chunk.plan,
-                prepared: chunk.request,
+        let plan = plan_for(&self.set, &places, self.engine.backend(), base, record)?;
+        let chunks = self.engine.split(&plan)?;
+        let places = chunks
+            .iter()
+            .scan(places.into_iter(), |places, chunk| {
+                Some(places.by_ref().take(chunk.plan.questions().len()).collect())
             })
             .collect();
-        Ok(PreparedGroup { chunks })
+        Ok(PreparedGroup { places, chunks })
     }
 
     pub(crate) fn answer_group(&self, group: PreparedGroup) -> Result<GroupAnswer, Failure> {
         let mut answered = Vec::with_capacity(group.chunks.len());
         let mut model = None;
-        for chunk in group.chunks {
-            let result = ask_prepared(
-                &self.backend,
-                &chunk.plan,
-                chunk.prepared,
-                self.common,
-                self.environment,
-                &self.recorder,
-                &self.client,
-            )?;
-            check_model(&mut model, result.reply.model(), self.backend.model())?;
-            answered.push(aggregation::ChunkAnswer {
-                places: chunk.places,
-                reply: result.reply,
-                digest: result.request.as_str().to_owned(),
-                requests_sent: result.requests_sent,
-                replayed: result.replayed,
-            });
-        }
+        let mut places = group.places.into_iter();
+        self.engine
+            .ask_chunks(group.chunks, self.environment.cancel(), |result| {
+                check_model(
+                    &mut model,
+                    result.reply.model(),
+                    self.engine.backend().model(),
+                )?;
+                answered.push(aggregation::ChunkAnswer {
+                    places: places.next().unwrap_or_default(),
+                    reply: result.reply,
+                    digest: result.request.as_str().to_owned(),
+                    requests_sent: result.requests_sent,
+                    replayed: result.replayed,
+                });
+                Ok::<(), Failure>(())
+            })?;
         Ok(GroupAnswer { answered, model })
     }
 }
 
+/// One group's chunks, prepared once, and the question places each chunk asks.
 pub(crate) struct PreparedGroup {
-    chunks: Vec<PreparedGroupChunk>,
-}
-
-struct PreparedGroupChunk {
-    places: Vec<usize>,
-    plan: Plan,
-    prepared: PreparedRequest,
+    places: Vec<Vec<usize>>,
+    chunks: Vec<Chunk>,
 }
 
 fn collisions(set: &QuestionSet, record: &Record) -> Result<(), Failure> {

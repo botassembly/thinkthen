@@ -69,6 +69,18 @@ impl From<EngineError> for Failure {
             EngineError::ProfileLimit(limit) => Self::ProfileLimit(limit),
             EngineError::Cancelled => Self::Cancelled,
             EngineError::Deadline(_) => Self::Defect("an unavailable deadline reached the command"),
+            EngineError::NoKey(variable) => Self::NoKey(variable.to_owned()),
+            EngineError::WidthActive(active) => Self::WidthActive(active),
+            EngineError::ModelsDiffer(models) => Self::ModelsDiffer(models),
+            EngineError::UsageOverflow => Self::UsageOverflow,
+            EngineError::RecognizeKinds => Self::Recognize(super::recognize::Error::Config {
+                file: false,
+                error: crate::core::RecognizeConfigError::Kinds,
+            }),
+            EngineError::RecognizeLogical => {
+                Self::Recognize(super::recognize::Error::LogicalQuestion)
+            }
+            EngineError::RelateLogical => Self::Relate(super::relate::Error::Logical),
         }
     }
 }
