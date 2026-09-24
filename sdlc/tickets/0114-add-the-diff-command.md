@@ -8,28 +8,33 @@ opens: crates/thinkthen/src/core crates/thinkthen/src/cli crates/thinkthen/tests
 
 Status: design draft; review pending. Owner: Claude.
 
-Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
+Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it. The first design review is `sdlc/records/0113-0114-design-review.md`. This page is rewritten whole after it.
 
-## Outcome and authority
+## Design
 
-Build `thinkthen diff`. It compares two runs over the same records, or two cuts on one run. It lists each answer that changed, says which way it moved, and runs the exact McNemar test. It sends no request and reads no key.
+`thinkthen diff A [B]` compares two runs over the same records, or two cuts on one run. It lists each answer that changed, says which way it moved, and runs the exact McNemar test. It sends no request and reads no key.
 
-Ian's ruling of 2026-09-24 (`sdlc/issues/2026-09-24-audit-and-diff-move-into-0-1.md`) moves diff into 0.1, after audit. The 2026-09-23 ruling in `sdlc/issues/2026-09-23-a-measurement-tier-for-thinkthen-audit-and-diff.md` folds "show what changes when the cut moves" into diff across two cuts on one run.
+Ian's ruling of 2026-09-24 (`sdlc/issues/2026-09-24-audit-and-diff-move-into-0-1.md`) moves diff into 0.1, after audit. The 2026-09-23 ruling folds "show what changes when the cut moves" into diff across two cuts on one run.
 
-The definition is the `diff` half of `scripts/tools/measure.py` in the public `botassembly/beatles-bench` repository at commit `be7cea2e4aa41097e7f629e35b62dadedeaca544`, with its tests and README at that commit. Where this ticket and the prototype disagree, the golden files decide.
+The definition is the `diff` half of `scripts/tools/measure.py` in the private `botassembly/beatles-bench` repository at commit `be7cea2e4aa41097e7f629e35b62dadedeaca544`. The golden files decide where this page and the prototype disagree.
 
-This ticket builds on ticket 0113. It reuses the result reader, the key reader, the graded answer, the rule, the rounding, the fixtures, the golden comparison helper, the failure mapping, and the policy entry that 0113 lands.
+diff stands on ticket 0113. It uses 0113's core (`core/measure.rs`, `answer.rs`, `key.rs`), the neutral reader and failure type in `cli/measure.rs`, the fixtures, and the golden helper in `tests/support/measure.rs`. It imports nothing from `cli/audit.rs`. It adds `core/measure/diff.rs` for pairing and the summary, and `cli/diff.rs` for the arguments and the table. One function, `discordant`, decides which pairs the McNemar test counts. A change to that rule touches only that function, its goldens, and its pages.
 
 ## Decisions
 
-Each of these is the agent's decision, and Ian can overturn any of them.
+Each is the agent's decision. Ian can overturn any of them.
 
-1. The command line copies the prototype's diff grammar, including `--table`.
-2. Output rows carry no `schema` member, for the reason 0113 gives.
-3. diff pairs answers by answer name and record id only. It does not check that the two runs saw the same record text or the same question. The `compare` transform does check both under ADR 0021, and `specification/diff.md` points to `thinkthen transform show compare` for that check. Adding those members would break the goldens. A later change starts in the prototype and its goldens.
-4. `McNemar on right answers` counts the gained and lost pairs only, as the prototype's code and the `diff-choose` golden do. See "The McNemar count" below.
-5. `diff` routes before `Environment::read`, as `audit` does. Root help lists `diff` right after `audit`.
-6. A record that appears twice under one answer name in one run is a usage error. The prototype keeps the last one silently.
+1. The command line copies the prototype's diff grammar, `--table` included.
+2. Output rows carry no `schema` member, as in 0113.
+3. diff pairs answers by answer name and record id only. It does not check that the two runs saw the same record text or question. The `compare` transform checks both under ADR 0021, and `specification/diff.md` points to it. Extra members would break the goldens.
+4. The McNemar test with a key counts only wrong-to-right and right-to-wrong pairs, as the prototype's code and the `diff-choose` golden do. The prototype's README says "on right answers", and the prototype's owner filed `sdlc/issues/2026-09-24-diff-mcnemar-leaves-out-pairs-that-become-right-from-not-sure.md` in Beatles Bench. The goldens decide until that issue is ruled. "Switching the McNemar rule" gives the steps.
+5. `diff` routes before `Environment::read`. Root help lists `diff` right after `audit`.
+6. diff refuses a record twice under one answer name in one run. The prototype keeps the last one.
+7. The table keeps the prototype's words, `unresolved` and `tied` included, for the reason 0113's decision 7 gives.
+
+## Open item for Ian: the prototype is private
+
+0113's open item covers both tickets. While Beatles Bench stays private, the captures this ticket adds are recorded in the fixture README under "the prototype measurement script", and `specification/diff.md` cites "the prototype measurement script at commit `be7cea2e`". If Ian makes it public, `specification/diff.md`'s citation gains the repository name and URL, and the fixture README changes once under 0113.
 
 ## Command line
 
@@ -37,41 +42,43 @@ Each of these is the agent's decision, and Ian can overturn any of them.
 thinkthen diff A [B] [--key KEY] [--threshold RULE] [--compare-threshold RULE] [--id POINTER] [--table]
 ```
 
-- `A` and `B` are files of saved result lines, read as ticket 0113 reads RESULTS. `-` reads standard input for at most one input.
-- With `B`, the two runs are compared. Without `B`, A is compared with itself under a second rule, and `--compare-threshold` is required.
-- A reads under `--threshold`. B reads under `--compare-threshold`, or under `--threshold` when that is absent. Without a rule, an answer stays as it was printed, and the output says `"as run"`. Both options take the settled threshold grammar.
-- `--key KEY` is an answer key in 0113's format. Its `part` members are ignored.
+- `A` and `B` hold saved result lines. At most one input, `KEY` included, may be `-`.
+- With `B`, two runs are compared. Without `B`, A is compared with itself, and `--compare-threshold` is required.
+- A reads under `--threshold`. B reads under `--compare-threshold`, or under `--threshold` when that is absent. Without a rule an answer stays as printed, and the output says `"as run"`. Both take the settled threshold grammar.
+- `--key KEY` is read by 0113's key reader. A bad `part` value is refused. Valid parts play no role in diff.
 - `--id POINTER` works as in 0113, default `/id`.
-- `--table` prints the same results for a person instead of JSONL.
+- `--table` prints the results for a person instead of JSONL.
 
-The golden command lines, run from the fixture folder, are exactly:
+The golden command lines, run from `tests/fixtures/measure/`:
 
-```text
-thinkthen diff small/decide.jsonl --key small/decide-key.jsonl --compare-threshold 0.4
-thinkthen diff small/decide.jsonl small/decide-b.jsonl --key small/decide-key.jsonl
-thinkthen diff small/decide.jsonl small/decide-b.jsonl
-thinkthen diff small/choose.jsonl small/choose-b.jsonl --key small/choose-key.jsonl
-thinkthen diff 249/control.jsonl --key 249/key.jsonl --compare-threshold 0.42
-thinkthen diff 249/control.jsonl 249/soft.jsonl --key 249/key.jsonl
-```
+| Output | Command line | Test |
+| --- | --- | --- |
+| `golden/diff-decide-cuts.jsonl` | `diff small/decide.jsonl --key small/decide-key.jsonl --compare-threshold 0.4` | `diff_goldens::decide_cuts` |
+| `golden/diff-decide-wordings.jsonl` | `diff small/decide.jsonl small/decide-b.jsonl --key small/decide-key.jsonl` | `diff_goldens::decide_wordings` |
+| `golden/diff-decide-nokey.jsonl` | `diff small/decide.jsonl small/decide-b.jsonl` | `diff_goldens::decide_nokey` |
+| `golden/diff-choose.jsonl` | `diff small/choose.jsonl small/choose-b.jsonl --key small/choose-key.jsonl` | `diff_goldens::choose` |
+| `golden/diff-249-cuts.jsonl` | `diff 249/control.jsonl --key 249/key.jsonl --compare-threshold 0.42` | `diff_goldens::beatles_cuts` |
+| `golden/diff-249-soft.jsonl` | `diff 249/control.jsonl 249/soft.jsonl --key 249/key.jsonl` | `diff_goldens::beatles_soft` |
+| `golden/extra/diff-annotate.jsonl` | `diff small/annotate.jsonl --key small/annotate-key.jsonl --compare-threshold 0.75` | `diff_goldens::annotate` |
+| `golden/extra/diff-249-cuts-nokey.jsonl` | `diff 249/control.jsonl --compare-threshold 0.42` | `diff_goldens::beatles_cuts_nokey` |
 
-Root help row: `Show which saved answers changed between two runs or two cuts.` Short and long help open with the same sentence. Long help also carries these sentences: `diff sends no request and reads no key.` and `Two cuts on one run cost nothing, because the probabilities are already saved.` Help says "not sure" for an answer inside a band. It never prints `unresolved`, and it passes the vocabulary check of ticket 0082.
+Root help row: `Show which saved answers changed between two runs or two cuts.` Short and long help open with it. Long help also carries `diff sends no request and reads no key.`, `Two cuts on one run cost nothing.`, and `The probabilities are already saved.` It says "not sure" for an answer inside a band.
 
 ## The math
 
-Every definition below is the prototype's. `said`, the key's value, the outcome, and the confidence come from 0113's `core/measure/answer.rs`. The confidence is `p` for `decide` and the top probability for `choose`, or null without probabilities.
+Every definition is the prototype's. The answer under a rule, the key's value, and the outcome come from 0113. The confidence is `p` for `decide` and the top probability for `choose`, or null without probabilities.
 
-**Pairing.** Read the answers of A, and of B when given. Without B, B is A. Leave out failed answers. An answer's pair key is `(answer name, record id)`. `only_a` counts the distinct pair keys of A missing from B, and `only_b` counts those of B missing from A.
+**Pairing.** Read A, and B when given. Without B, B is A. Leave out failed answers. The pair key is `(answer name, record id)`. `only_a` counts the distinct pair keys of A missing from B, and `only_b` the reverse.
 
-**Each pair.** Walk A's answers in file order and skip each one without a partner in B. For each pair `(x, y)`:
+**Each pair.** Walk A's answers in file order and skip each one without a partner. For each pair `(x, y)`:
 
 - `records` adds one.
-- `from = said(x, rule A)` and `to = said(y, rule B)`.
-- With a key, the key's value comes from `x`. When it is not null: `labeled` adds one, `right_a` adds one when `from` is right, and `right_b` adds one when `to` is right.
+- `from` is x's answer under rule A, and `to` is y's answer under rule B.
+- With a key, the key's value comes from x. When it is not null, `labeled` adds one, `right_a` adds one when `from` is right, and `right_b` adds one when `to` is right. `discordant(oa, ob)` then adds to `right_to_other` or `other_to_right`.
 - When `from` equals `to`, nothing more happens.
-- Otherwise `changed` adds one, the move `(from, to)` adds one, and the pair prints a row.
+- Otherwise `changed` adds one, the move `(from, to)` adds one, and the pair prints a row. Without a key, a move from yes to no adds to `yes_no`, and from no to yes to `no_yes`.
 
-**The effect** of a changed pair with a labeled key, from the outcomes `oa` and `ob`:
+**The effect** of a changed pair with a labeled key:
 
 | `oa` | `ob` | effect |
 | --- | --- | --- |
@@ -82,97 +89,100 @@ Every definition below is the prototype's. `said`, the key's value, the outcome,
 | right or wrong | tied or unresolved | `withdrawn` |
 | any other pair | | `changed` |
 
-Without a key, or with an unlabeled record, the effect is null. `gained` and `lost` count the effects of those names.
+Without a key, or for an unlabeled record, the effect is null. `gained` and `lost` count those effects.
 
-**A row** prints `{id, name, from, to, probability, key, effect}` in that order. `name` is the `annotate` answer name or null. `probability` is `[confidence of x, confidence of y]`. `key` is the key's value (`"yes"` or `"no"` for `decide`, the option for `choose`) or null.
+**`discordant(oa, ob)`** lives in `core/measure/diff.rs` and is the one place the McNemar rule lives. Today it returns `other_to_right` for wrong to right and `right_to_other` for right to wrong. It returns nothing for every other pair. So today `other_to_right` equals `gained` and `right_to_other` equals `lost`.
 
-**The summary** is the last line, `{"summary": S}`. `S` prints in this order: `records`, `changed`, `only_a`, `only_b`, `moves`, `labeled`, `right_a`, `right_b`, `gained`, `lost`, `mcnemar_on`, `mcnemar_p`, `compare`, `a`, `b`.
+**A row** prints `{id, name, from, to, probability, key, effect}`. `name` is the `annotate` answer name or null. `probability` is `[confidence of x, confidence of y]`. `key` is `"yes"` or `"no"` for `decide`, the option for `choose`, or null.
 
-- `moves` lists `{from, to, count}` sorted by count descending, then by `from`, then by `to`, in code point order.
+**The summary** is the last line, `{"summary": S}`. `S` prints `records`, `changed`, `only_a`, `only_b`, `moves`, `labeled`, `right_a`, `right_b`, `gained`, `lost`, `mcnemar_on`, `mcnemar_p`, `compare`, `a`, `b`.
+
+- `moves` lists `{from, to, count}` by count descending, then `from`, then `to`, in code point order.
 - Without a key, `labeled`, `right_a`, `right_b`, `gained`, and `lost` are null.
-- `compare` is `"runs"` with B and `"cuts"` without it.
-- `a` and `b` are `"as run"`, a cut number, or the band text as typed.
+- `compare` is `"runs"` with B and `"cuts"` without.
+- `a` and `b` print `"as run"`, the cut as a number, or the band as typed.
 
-**The McNemar test** is exact and two-sided. With a key, it runs on `(gained, lost)`, and `mcnemar_on` is `"right answers"`. Without a key, when every answer of A, failed ones included, is `decide`, it runs on `(yes_no, no_yes)`: the changed pairs that moved from yes to no and from no to yes. Then `mcnemar_on` is `"yes answers"`. Otherwise both members are null. For counts `a` and `b`:
+**McNemar.** With a key: `mcnemar(other_to_right, right_to_other)`, and `mcnemar_on` is `"right answers"`. Without a key, when every answer of A is `decide`, failed ones included: `mcnemar(yes_no, no_yes)`, and `mcnemar_on` is `"yes answers"`. Otherwise both are null. For counts `a` and `b`:
 
 ```text
-n = a + b
-p = 1.0 when n = 0
+n = a + b; p = 1.0 when n = 0
 tail = Σ for i = 0..min(a, b) of C(n, i) / 2ⁿ
 p = min(1, 2 · tail)
 ```
 
-The prototype sums exact integers. The port adds `mcnemar` to `core/measure.rs`. It computes each term in log space, starting from `ln C(n, 0) − n·ln 2 = −n·ln 2` and adding `ln((n − i)/(i + 1))` for each step. It sums the exponentials. This holds for any `n` without overflow and without a big-integer dependency. A unit test compares it with exact integer sums, done in `u128`, for every `n` up to 120 and every split. It agrees to a relative `1e-12`. The test also pins `mcnemar(1, 0) = 1.0`, `mcnemar(2, 0) = 0.5`, `mcnemar(0, 0) = 1.0`, and `mcnemar(5, 0) = 0.0625`.
+`mcnemar` in `core/measure.rs` sums the terms in log space. It starts at `−n·ln 2` and adds `ln((n − i)/(i + 1))` at each step. That holds for any `n` without a big-integer dependency. A unit test compares it with exact `u128` sums for every split up to `n = 120` within a relative `1e-12`. The review measured a worst error of 3.0e-14. The test also pins `(0,0)` 1.0, `(1,0)` 1.0, `(2,0)` 0.5, `(5,0)` 0.0625, `(39,28)` 0.221549, and `(36,34)` 0.904975.
 
-**The McNemar count.** A textbook McNemar on right answers counts every discordant pair: right in A and not in B, and the reverse. The prototype counts only `gained` and `lost`. It leaves out a pair that became right from tied or not sure (`resolved`) and a right one that became tied or not sure (`withdrawn`). The `diff-choose` golden shows it: `right_a` 2, `right_b` 4, `gained` 1, `lost` 0, and `mcnemar_p` 1.0. The discordant count would give 0.5. The port follows the golden. `specification/diff.md` states the rule in these words. Any change starts in the prototype and its goldens.
+**Printing** follows 0113: six-place rounding, integers kept, and `python_float_text` for rules in the table.
 
-**Rounding** follows 0113: every float rounds to six places, and integers stay integers.
+## Switching the McNemar rule
+
+If the prototype's owner rules for every discordant pair, the switch runs in this order:
+
+1. Upstream rewrites its goldens. The pinned commit and every SHA-256 in the fixture README move to the new commit.
+2. Recapture `golden/extra/diff-annotate.jsonl` and `golden/table/diff-choose.txt`. In `diff-annotate`, a3 moves from right to not sure and becomes discordant. In `diff-choose`, p becomes 0.5.
+3. `discordant` also counts tied or not sure to right, and right to tied or not sure. Nothing else in the code changes. `gained` and `lost` stay effects.
+4. `specification/diff.md` and the choose hand test change in the same commit.
 
 ## Output and failures
 
-diff builds every line before it prints. On success it writes the changed rows in A's order, then the summary, one JSON object per line, and exits 0. Two runs with nothing in common print only the summary.
+diff builds every line before printing. On success it prints the changed rows in A's order, then the summary, and exits 0.
 
-`--table` prints the prototype's `diff_table` text. Each changed row prints as `ID[/NAME]  FROM -> TO  p PA -> PB`, with `  key KEY: EFFECT` appended when the key has a value. Probabilities print with two decimals, and `-` stands for null. The count line then follows:
+`--table` prints the prototype's `diff_table` text. A changed row prints `ID[/NAME]  FROM -> TO  p PA -> PB`, plus `  key KEY: EFFECT` when the key has a value. Probabilities print with two decimals, and `-` stands for null. The count line follows:
 
-- It starts with `A -> B`, or `A -> B (at RULE_A and RULE_B)` when either side has a rule, or `RULE_A -> RULE_B` for two cuts.
-- It goes on with `: C of N changed`, then `; FROM -> TO COUNT` for each move.
+- It starts `A -> B`, or `A -> B (at RULE_A and RULE_B)` when either side has a rule, or `RULE_A -> RULE_B` for two cuts.
+- It goes on `: C of N changed`, then `; FROM -> TO COUNT` for each move.
 - With a key it adds `; gained G, lost L (RA -> RB right of LABELED)`.
-- With a test it adds `; McNemar p P on ON`, where `P` has three decimals.
-- When a run holds unpaired answers it adds `; only in A X, only in B Y`.
+- With a test it adds `; McNemar p P on ON`, `P` with three decimals.
+- With unpaired answers it adds `; only in A X, only in B Y`.
 
-Rounding in the table is half to even on the exact binary value, as in 0113.
+Rounding in the table is half to even on the rounded value, as in 0113.
 
-On any failure diff prints nothing on standard output and one line on standard error. It reuses 0113's failure table with the prefix `thinkthen: diff:`, and it names inputs `first run`, `second run`, and `key` in place of `results` and `key`. It adds these rows:
+On failure diff prints nothing on standard output and one line on standard error. It renders 0113's failure rows through `cli/measure.rs` with the prefix `thinkthen: diff:` and the roles `first run`, `second run`, and `key`. It adds these rows, each pinned by a test:
 
 | Case | Exit | Standard error |
 | --- | ---: | --- |
 | No B and no `--compare-threshold` | 2 | `thinkthen: diff: diff needs a second run or --compare-threshold` |
-| The same answer name and record twice in one run | 2 | `thinkthen: diff: first run line N repeats a record for one answer` (or `second run line N`) |
+| One answer name and record twice in one run | 2 | `thinkthen: diff: ROLE line N repeats a record for one answer` |
 | More than one input is `-` | 2 | `thinkthen: diff: only one input may be standard input` |
-
-Each sentence is pinned exactly by a test.
 
 ## Where the code lives
 
-- `crates/thinkthen/src/core/measure.rs`: add `mcnemar` beside 0113's statistics.
-- `crates/thinkthen/src/core/measure/diff.rs` (new): pairing, the effect, the moves, the summary, and the output structs in the member order above. It is pure.
-- `crates/thinkthen/src/cli/diff.rs` (new): the Clap arguments, reading A, B, and KEY through 0113's reader, calling the core, the table, and the failure mapping.
+- `core/measure.rs`: add `mcnemar`.
+- `core/measure/diff.rs` (new): pairing, `discordant`, the effect, the moves, the summary, and the row structs. It is pure.
+- `cli/diff.rs` (new): Clap arguments, the table, and the call into the core.
+- `cli/measure.rs`: gain the diff roles and the three failure rows, if 0113 did not already carry them.
 
-Extend 0113's `policy.py` entry to hold `cli/diff.rs` to the same bans as `cli/audit.rs`. Plant one forbidden reference in the policy self-test and prove it is refused. Move a helper only when both commands need it. Duplicate none.
+Extend 0113's generalized policy check to `cli/diff.rs`, with the same banned words and the same early-return order check for `Diff` in `cli/mod.rs`. The self-test plants one forbidden reference and a late early return, and each must be refused.
 
 ## Fixtures and provenance
 
-Ticket 0113 copies all fixtures, the six diff goldens included, and records their provenance in `crates/thinkthen/tests/fixtures/measure/README.md`. This ticket turns on the six diff goldens.
+0113 copies every fixture, the six diff goldens included, and records their provenance. This ticket captures four outputs from the prototype at `be7cea2e`, read with `git show be7cea2:scripts/tools/measure.py` into a scratch file, under Python 3.12.3. It adds them to the fixture README with their commands and SHA-256 values.
 
-It also captures four outputs from the prototype at the same commit, standard output only, and adds them to that README with their commands and SHA-256 values:
-
-- `golden/extra/diff-annotate.jsonl` from `diff small/annotate.jsonl --key small/annotate-key.jsonl --compare-threshold 0.75`. No upstream golden diffs `annotate` answers. This one pins pairing by answer name and two `withdrawn` effects.
-- `golden/table/diff-decide-cuts.txt` from `diff small/decide.jsonl --key small/decide-key.jsonl --compare-threshold 0.4 --table`.
-- `golden/table/diff-decide-nokey.txt` from `diff small/decide.jsonl small/decide-b.jsonl --table`.
-- `golden/table/diff-choose.txt` from `diff small/choose.jsonl small/choose-b.jsonl --key small/choose-key.jsonl --table`.
-
-Running the prototype reads that repository and writes nothing to it.
+- `golden/extra/diff-annotate.jsonl`, from the table above. No upstream golden diffs `annotate` answers. It pins pairing by answer name and two `withdrawn` effects.
+- `golden/extra/diff-249-cuts-nokey.jsonl`, from the table above. It shows 67 moves from no to yes and `mcnemar_p` 0.0 on yes answers.
+- `golden/table/diff-decide-cuts.txt`, `diff-decide-nokey.txt`, and `diff-choose.txt`: the lines `diff-decide-cuts`, `diff-decide-nokey`, and `diff-choose` with `--table`.
 
 ## Acceptance
 
-**Goldens.** For each of the six diff command lines and the extra annotate line, run the built binary from `tests/fixtures/measure/` and compare parsed JSON with 0113's helper and tolerance. The lists match in length and order. Objects match in member names and order. Strings, booleans, nulls, and integers are equal. Floats are floats and differ by at most `1e-6 + 1e-12`. Each run exits 0 with empty standard error. The three table captures match byte for byte.
+**Goldens.** Run each line of the table above from `tests/fixtures/measure/` and compare with 0113's helper and tolerance. Each run exits 0 with empty standard error. The table captures match byte for byte.
 
-**Hand-checked values.** Port the `Diff` class and the diff half of `LeaningNo` in `tests/test_measure.py` as Rust tests on the core:
+**Hand-checked values.** Port the `Diff` class and the diff half of `LeaningNo` from `tests/test_measure.py` as core tests:
 
-- two cuts on one run: one row, `r3` from no to yes, `gained`; summary 6 records, 1 changed, p 1.0, `compare` `cuts`, `a` `as run`, `b` 0.4;
-- two wordings: `r2` and `r3` both gained, probabilities `[0.7, 0.3]` on `r2`, `right_a` 4, `right_b` 6, `only_b` 1, p 0.5, and moves in the pinned order;
-- no key: `mcnemar_on` `yes answers`, p 1.0, `gained` null;
-- choose: `c2` from tied to green `resolved`, `c5` `gained`, p 1.0;
-- the Beatles control against the cut 0.42 on the held-out key: `right_a` 87, `right_b` 89, and every move from no to yes;
-- the control against the softer wording on the held-out key: `right_a` 87, `right_b` 84.
+- Two cuts on one run: one row, `r3` from no to yes, `gained`; 6 records, 1 changed, p 1.0, `cuts`, `as run`, 0.4.
+- Two wordings: `r2` and `r3` gained, `r2` probabilities `[0.7, 0.3]`, `right_a` 4, `right_b` 6, `only_b` 1, p 0.5, moves in the pinned order.
+- No key: `yes answers`, p 1.0, `gained` null.
+- Choose: `c2` tied to green `resolved`, `c5` `gained`, p 1.0.
+- The Beatles control at 0.42 on the held-out key: `right_a` 87, `right_b` 89, every move from no to yes.
+- The control against the softer wording on the held-out key: `right_a` 87, `right_b` 84.
+- `discordant` returns nothing for `resolved` and `withdrawn` pairs.
 
-**No request, no key.** Bind a counting loopback listener named in `THINKTHEN_BASE_URL`. Set `THINKTHEN_API_KEY` to a canary. Make the normal configuration and cache locations unreadable. Run every golden line, every table line, and every failure case. The listener accepts zero connections. The canary appears in no standard output, standard error, Debug line, or temporary file. No cache, usage counter, lock, or folder is created or changed.
+**No request, no key.** As in 0113: a counting loopback listener in `THINKTHEN_BASE_URL`, a canary `THINKTHEN_API_KEY`, and unreadable configuration and cache locations. Run every golden line, table line, and failure case. Zero connections, no canary anywhere, and no file created or changed.
 
-**Failures.** Each failure row has a test that pins its exit code, its exact standard-error line, and empty standard output. The secrecy test of 0113 gains every diff failure path.
+**Failures.** Each failure row has a test for its exit code, exact line, and empty standard output. 0113's secrecy test gains every diff failure path.
 
-**Help.** Edit the one root inventory assertion to insert `diff` after `audit`. Pin the root row, the short and long introductions, and the two long-help sentences. The vocabulary check passes with zero unsanctioned hits.
+**Help and vocabulary.** Edit the one root inventory assertion to insert `diff` after `audit`. Pin the root row, both introductions, and the three long-help sentences. Add `diff` to the `scan_help` loop in `sdlc/scripts/demos`. The check finds zero unsanctioned hits.
 
-**Red-green.** Write each test first and watch it fail for its stated reason. Then plant each bug below in the finished code, one at a time. Record in the build record which named test turns red. A planted bug that no test catches gets a new test before landing.
+**Red-green.** Write each test first and watch it fail for its stated reason. Then plant each bug below, one at a time, and record which named test turns red. A bug no test catches gets a new test before landing.
 
 1. McNemar one-sided, without the doubling.
 2. McNemar summed to `min(a, b) − 1`.
@@ -181,41 +191,40 @@ Running the prototype reads that repository and writes nothing to it.
 5. `from` and `to` swapped in the moves.
 6. `resolved` counted as `gained`.
 7. `only_a` and `only_b` swapped.
-8. Pairing by record id alone, ignoring the answer name.
-9. The no-key test run on `gained` and `lost`.
+8. Pairing by record id alone.
+9. The no-key test run on the discordant counts. `extra/diff-249-cuts-nokey` catches it: p 0.0 becomes 1.0.
 10. B's failed answers paired.
 11. B read under `--threshold` when `--compare-threshold` is given.
 
-**Gates.** Run focused tests, the policy self-test, the fixture checksum test, formatting, Clippy, the exact ratchet, and `git diff --check`. Then run `sdlc/scripts/install`, `lint`, `test`, and `spec` in sequence with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset. No live or paid call runs.
+**Gates.** Focused tests, then `sdlc/scripts/install`, `lint`, `test`, and `spec` in sequence with the key and base address unset, and `git diff --check`. No live or paid call.
 
 ## Specification pages
 
-Add `specification/diff.md` with Status **Settled** once this ticket lands. It states the command line, pairing, the effect table, the summary, the McNemar rule with the count above, the table form, and the failure rows. It cites the prototype commit and points to the `compare` transform for a comparison that checks record text and question identity. Add its row to `specification/README.md`. Add an executable `spec/diff.md` that runs the two-cut table on `small/decide.jsonl` and pins its count line, `as run -> 0.4: 1 of 6 changed; no -> yes 1; gained 1, lost 0 (4 -> 5 right of 6); McNemar p 1.000 on right answers`, and pins the missing-second-run refusal with its exit code.
+Add `specification/diff.md`, Status **Settled** on landing. It states the command line, pairing, the effect table, the summary, the McNemar rule and its switch, the table form, and the failures. It cites the prototype as the open item allows and points to the `compare` transform. Add its index row. Add `spec/diff.md`. It pins the two-cut table's count line, `as run -> 0.4: 1 of 6 changed; no -> yes 1; gained 1, lost 0 (4 -> 5 right of 6); McNemar p 1.000 on right answers`, and the missing-second-run refusal with its exit code.
+
+## Departures
+
+No golden reaches these. Each is the agent's decision, and Ian can overturn it. 0113's departures on failures, bad numbers, JSON, the pointer, rule text, key values, and state names also hold here. diff adds decision 6, the refused repeat.
 
 ## Budgets and the ratchet
 
-- Production Rust: two new files (`core/measure/diff.rs`, `cli/diff.rs`) and at most four existing files touched, likely `core/measure.rs`, `cli/mod.rs`, `cli/args/command.rs`, and `cli/audit.rs` for a shared reader. At most 450 nonblank production lines.
-- Rust tests: at most 500 nonblank lines across at most two new test files and the edited inventory assertion.
-- Scripts: `policy.py` and its self-test, at most 20 nonblank lines.
-- Fixtures: the four captures and the README update.
-- Prose: `specification/diff.md`, one index row, `spec/diff.md`, and command help.
-- Every Rust file stays under the 500-nonblank-line ceiling.
-- Dependencies: none. The log-space sum replaces a big-integer crate. A new dependency stops the build for a second review that names what it checked.
+- Production Rust: two new files and at most three existing files touched (`core/measure.rs`, `cli/mod.rs`, `cli/args/command.rs`), plus `cli/measure.rs` if its roles need a line. At most 450 nonblank lines.
+- Rust tests: at most 500 nonblank lines in at most two new test files, and the edited inventory assertion.
+- Scripts: `policy.py`, its self-test, and the `demos` loop, at most 25 nonblank lines.
+- Fixtures: the five captures and the README update.
+- Every Rust file stays under 500 nonblank lines.
+- Dependencies: none. The log-space sum replaces a big-integer crate. A new one stops the build for a second review.
 
-`sdlc/ratchet.json` rises by the measured Rust increase in the commit that needs it. That commit message says what grew, why it earns its lines, and where the builder looked for duplication first: at least 0113's reader, answer, and table code. This ticket raises the ceiling and widens the public surface, so a second agent reviews it and names what it checked.
-
-Stop and re-score if the work exceeds any budget, needs a dependency, changes a golden, or reaches a behavior outside this page.
+`sdlc/ratchet.json` rises by the measured Rust increase in the commit that needs it. That message says what grew, why it earns its lines, and where the builder looked for duplication: at least 0113's reader, answer, key, and table code. The ticket raises the ceiling and widens the public surface, so a second agent reviews it and names what it checked. Stop and re-score past any budget, on any dependency, or on any golden change.
 
 ## Scope and exclusions
 
-Allowed: the diff command and its help, the core pairing and test, the four captures, the policy extension, the specification and executable pages, the inventory assertion edit, and the ratchet.
-
-Excluded: checking record text or question identity across runs; a probability-shift member; diffing `tag`, `score`, `find`, `recognize`, or `relate` answers; reading a recording or cache folder directly; any API in Rust, C, language packages, or databases; a `schema` member; any change to the goldens; edits to the Beatles Bench repository; live or paid calls; release artifacts.
+Excluded: checking record text or question identity across runs, a probability-shift member, other verbs, reading a recording folder directly, library or database surfaces, a `schema` member, changing a golden, editing Beatles Bench, live calls, and release artifacts.
 
 ## Dependencies and order
 
-Depends on the ten functions done: ticket 0086 (public Rust API) landed on main. Depends on ticket 0113 landed, because it shares `core/measure.rs`, `core/measure/answer.rs`, the reader, the fixtures, and the test helper. The queue in `sdlc/planning/one-line-plan-2026-09-24.md` places diff after audit and before the release build. The two do not build in parallel.
+Depends on the ten functions done (0086 landed) and on 0113 landed, because it shares the core, `cli/measure.rs`, the fixtures, and the helper. The queue in `sdlc/planning/one-line-plan-2026-09-24.md` places diff after audit and before the release build. The two do not build in parallel.
 
 ## Complexity
 
-Contract 2; State/timing 0; Reach 1; Proof 2; Cost of error 1; Total 6. Final level: 2. Reasons: a new public command with exact output and a statistical test ported from exact integers to floating point. The runtime holds no state and sends nothing.
+Contract 2; State/timing 0; Reach 1; Proof 2; Cost of error 1; Total 6. Final level: 2.
