@@ -367,7 +367,7 @@ Package proof compares Cargo metadata with and without default features and reje
 
 ## Dependencies and exclusions
 
-0080/0081 supply behavior; 0076/0077 deadline and width. 0095 is reviewed beside it. 0078 blocks the `Engine` portion, as Outcome states. 0086 follows 0085.
+0080/0081 supply behavior; 0076/0077 deadline and width. 0095 is reviewed beside it. 0078 blocks the `Engine` portion. 0086 follows 0085.
 
 Excluded: implementation, dependencies, features, ratchets, publication, C ABI, bindings, live calls, and paid calls. `surfaces` is evidence only.
 
@@ -377,9 +377,9 @@ Contract 2; state and timing 0; reach 2; proof 2; cost of error 1; total 7. Fina
 
 ## Amended 2026-09-24
 
-ADR 0017 section 5 has every surface set width, `max_requests`, cache, and `cache_bytes` on the engine. `EngineBuilder::from_env` seeds a builder by reading the environment exactly as `Engine::from_env` does. Each setter then overrides. `Engine::from_env()` equals `EngineBuilder::from_env()?.build()`. 0086 tests it. Ian can overturn it.
+ADR 0017 section 5 has surfaces configure the engine. `EngineBuilder::from_env` reads the environment like `Engine::from_env`. Setters override. `Engine::from_env()` equals `EngineBuilder::from_env()?.build()`. 0086 tests it. Ian can overturn it.
 
-Amended 2026-09-24: the amendment commit dropped three package-proof commands by mistake. They stand. Run `cargo check --locked -p thinkthen --no-default-features`, `cargo test --locked -p thinkthen --no-default-features`, and `cargo package --locked -p thinkthen --no-default-features`.
+Amended 2026-09-24: package proof runs `cargo check`, `test`, and `package` with `--locked -p thinkthen --no-default-features`.
 
 ## Review
 
