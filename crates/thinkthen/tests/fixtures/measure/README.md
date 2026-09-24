@@ -26,6 +26,8 @@ The files under `golden/extra/`, `golden/table/`, and `replay/audit.jsonl` were 
 | `golden/audit-249-seed.jsonl` | `audit 249/control.jsonl 249/key-noparts.jsonl --by verb --seed 249` | `audit::goldens_match` |
 | `golden/extra/audit-decide-reversed.jsonl` | `audit small/decide-reversed.jsonl small/decide-key-noparts.jsonl` | `audit::goldens_match` |
 | `golden/extra/audit-decide-odd.jsonl` | `audit small/decide.jsonl small/decide-key-odd.jsonl` | `audit::goldens_match` |
+| `golden/extra/audit-choose-target-1.jsonl` | `audit small/choose.jsonl small/choose-key.jsonl --target 1` | `audit::goldens_match` |
+| `golden/extra/audit-249-question-seed-7.jsonl` | `audit 249/control.jsonl 249/key.jsonl --by question --seed 7` | `audit::goldens_match` |
 | `golden/table/audit-decide.txt` | `audit small/decide.jsonl small/decide-key.jsonl --table` | `audit::tables_match_byte_for_byte` |
 | `golden/table/audit-choose.txt` | `audit small/choose.jsonl small/choose-key.jsonl --table` | `audit::tables_match_byte_for_byte` |
 | `golden/table/audit-annotate.txt` | `audit small/annotate.jsonl small/annotate-key.jsonl --table` | `audit::tables_match_byte_for_byte` |
@@ -52,6 +54,8 @@ The files under `golden/extra/`, `golden/table/`, and `replay/audit.jsonl` were 
 | `golden/diff-decide-cuts.jsonl` | `ae00a2514257d35c36658c3c63abe2c92e9dbc711950bdcef7864f891d081682` |
 | `golden/diff-decide-nokey.jsonl` | `ad99f8572fa59ab30168859f119114892656e0e61efbe0e633cba5c93727a284` |
 | `golden/diff-decide-wordings.jsonl` | `593398f0617796069712dcbad935a0b181ed57e1a78c362e41fcaf15c0ccc3f5` |
+| `golden/extra/audit-249-question-seed-7.jsonl` | `c65d036e65d60803ef4da3ae87c3037ddb4ef8ea3853d6ba85f04600aabb05bb` |
+| `golden/extra/audit-choose-target-1.jsonl` | `1a7c2316601e6d5ce2a6b92c2e1c4d16ce56432ecda3e34fbda7ef284a893cda` |
 | `golden/extra/audit-decide-odd.jsonl` | `f4cf6493b4e0620bedff38628ade3b48e1c2fba91c35934c5a6d9ad6e4a930ac` |
 | `golden/extra/audit-decide-reversed.jsonl` | `376ce4dbd96c6d1619ee7ff340e54510785c528a2f5560ef83c027a726704282` |
 | `golden/table/audit-annotate.txt` | `64c8acad1ccf1dafe3aad01fb5e0cf8f96e7dbde83a9769e2d2bde767713822a` |

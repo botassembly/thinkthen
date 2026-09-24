@@ -8,9 +8,11 @@ pub(crate) mod answer;
 pub(crate) mod audit;
 pub(crate) mod key;
 
-use serde::{Serialize, Serializer};
+use serde::Serialize;
+use serde_json::Number;
 
 use crate::core::json::Json;
+use crate::core::render::{RenderError, json_line};
 
 /// The two-sided 95% normal quantile.
 const Z: f64 = 1.959_963_984_540_054;
@@ -206,10 +208,8 @@ pub(crate) fn quantile(sorted: &[f64], q: f64) -> f64 {
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub(crate) struct Calibration {
     /// The error over every pair.
-    #[serde(serialize_with = "six")]
     pub(crate) error: f64,
     /// The 2.5% and 97.5% quantiles of the resampled errors.
-    #[serde(serialize_with = "six")]
     pub(crate) interval: [f64; 2],
     /// Always [`BINS`].
     pub(crate) bins: usize,
@@ -274,36 +274,31 @@ pub(crate) fn python_float_text(value: f64) -> String {
     format!("{digits}e{sign}{:02}", exponent.abs())
 }
 
-/// A value whose floats print rounded to six places.
-pub(crate) trait Rounded {
-    /// The value with every float rounded.
-    fn rounded(&self) -> Self;
+/// A value as one JSON line with every float rounded to six places, as the prototype prints it.
+///
+/// # Errors
+///
+/// Returns [`RenderError`] when the value cannot be written as JSON.
+pub(crate) fn rounded_line<T: Serialize>(value: &T) -> Result<String, RenderError> {
+    let tree = Json::parse(&json_line(value)?).map_err(|_| RenderError)?;
+    json_line(&round(tree))
 }
 
-impl Rounded for f64 {
-    fn rounded(&self) -> Self {
-        rounded(*self)
+fn round(value: Json) -> Json {
+    match value {
+        Json::Number(number) if number.is_f64() => number
+            .as_f64()
+            .and_then(|held| Number::from_f64(rounded(held)))
+            .map_or(Json::Null, Json::Number),
+        Json::Array(items) => Json::Array(items.into_iter().map(round).collect()),
+        Json::Object(members) => Json::Object(
+            members
+                .into_iter()
+                .map(|(name, held)| (name, round(held)))
+                .collect(),
+        ),
+        other => other,
     }
-}
-
-impl<T: Rounded> Rounded for Option<T> {
-    fn rounded(&self) -> Self {
-        self.as_ref().map(T::rounded)
-    }
-}
-
-impl<T: Rounded> Rounded for [T; 2] {
-    fn rounded(&self) -> Self {
-        self.each_ref().map(T::rounded)
-    }
-}
-
-/// Write a value with its floats rounded to six places.
-pub(crate) fn six<T: Rounded + Serialize, S: Serializer>(
-    value: &T,
-    serializer: S,
-) -> Result<S::Ok, S::Error> {
-    value.rounded().serialize(serializer)
 }
 
 #[cfg(test)]

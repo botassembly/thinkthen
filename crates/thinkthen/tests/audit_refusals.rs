@@ -41,7 +41,7 @@ const FILES: [(&str, &str); 6] = [
 ];
 
 /// Each refusal: the arguments, standard input (`YES` where empty is not asked), the exit code, and the sentence.
-const REFUSALS: [(&str, &str, i32, &str); 19] = [
+const REFUSALS: [(&str, &str, i32, &str); 20] = [
     (
         "@secret-path @key.jsonl",
         "",
@@ -71,6 +71,12 @@ const REFUSALS: [(&str, &str, i32, &str); 19] = [
     (
         "- @key.jsonl",
         "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":[],\"question\":{\"verb\":\"tag\",\"text\":\"secret-text\"}}\n",
+        2,
+        "results line 1 holds an answer audit cannot grade; audit grades decide and choose",
+    ),
+    (
+        "- @key.jsonl",
+        "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":true,\"question\":{\"verb\":\"choose\"}}\n",
         2,
         "results line 1 holds an answer audit cannot grade; audit grades decide and choose",
     ),

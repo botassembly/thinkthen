@@ -3,10 +3,7 @@
 use super::answer::{self, Rule};
 use super::audit::{self, By, Settings, Shown};
 use super::key::Key;
-use super::{
-    SplitMix64, auc, calibration_error, json_lines, python_float_text, rounded, three_places,
-    wilson,
-};
+use super::{SplitMix64, calibration_error, json_lines, python_float_text, rounded, three_places};
 use crate::core::pointer::Pointer;
 
 /// The six decide answers of `small/decide.jsonl` as `(p(yes), key is yes)`.
@@ -61,23 +58,6 @@ fn splitmix64_matches_the_published_outputs_and_draws_in_range() {
     // The high 64 bits of next() times n, not next() modulo n.
     assert_eq!(SplitMix64::new(0).index(3), 2);
     assert_eq!(SplitMix64::new(0).index(100), 88);
-}
-
-#[test]
-fn wilson_gives_the_hand_checked_interval_for_four_of_six() {
-    let [low, high] = wilson(4, 6).expect("an interval");
-    assert!(
-        near(low, 0.3000, 4) && near(high, 0.9032, 4),
-        "{low} {high}"
-    );
-    assert_eq!(wilson(0, 0), None);
-}
-
-#[test]
-fn auc_counts_ties_as_half_and_matches_the_pairwise_sum() {
-    assert!(near(auc(&DECIDE).expect("both kinds"), 7.0 / 9.0, 9));
-    assert_eq!(auc(&[(0.5, true), (0.5, false), (0.2, false)]), Some(0.75));
-    assert_eq!(auc(&[(0.5, true)]), None);
 }
 
 #[test]

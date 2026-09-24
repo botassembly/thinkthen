@@ -2,7 +2,7 @@
 //! coverage, and a suggested cut tuned on one part and checked on the other.
 
 use std::cmp::Reverse;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Serialize, Serializer};
 
@@ -10,7 +10,7 @@ use crate::core::measure::answer::{Answer, Rule, Said, Verb};
 use crate::core::measure::key::{Key, Outcome, Part, Want, outcome};
 use crate::core::measure::{
     Calibration, MeasureError, SplitMix64, auc, calibration, python_float_text, python_sum,
-    shuffle, six, wilson,
+    shuffle, wilson,
 };
 use crate::core::threshold::Threshold;
 
@@ -33,7 +33,7 @@ impl Serialize for Shown {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self {
             Self::AsRun => serializer.serialize_str("as run"),
-            Self::Cut(cut) => six(cut, serializer),
+            Self::Cut(cut) => serializer.serialize_f64(*cut),
             Self::Band(band) => serializer.serialize_str(band),
         }
     }
@@ -62,11 +62,8 @@ pub(crate) struct Counts {
     pub(crate) false_yes: usize,
     pub(crate) true_no: usize,
     pub(crate) false_no: usize,
-    #[serde(serialize_with = "six")]
     pub(crate) agreement: Option<f64>,
-    #[serde(serialize_with = "six")]
     pub(crate) coverage: Option<f64>,
-    #[serde(serialize_with = "six")]
     pub(crate) yes_recall: Option<f64>,
 }
 
@@ -81,14 +78,11 @@ pub(crate) struct Disagreement {
 /// One point of the coverage curve.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub(crate) struct Point {
-    #[serde(serialize_with = "six")]
     pub(crate) cut: f64,
     pub(crate) threshold: Shown,
     pub(crate) answered: usize,
-    #[serde(serialize_with = "six")]
     pub(crate) coverage: Option<f64>,
     pub(crate) right: usize,
-    #[serde(serialize_with = "six")]
     pub(crate) accuracy: Option<f64>,
 }
 
@@ -103,7 +97,6 @@ pub(crate) struct Checked {
 /// The suggested cut.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub(crate) struct Suggested {
-    #[serde(serialize_with = "six")]
     pub(crate) cut: Option<f64>,
     pub(crate) objective: String,
     pub(crate) split: &'static str,
@@ -128,19 +121,14 @@ pub(crate) struct Row {
     pub(crate) wrong: usize,
     pub(crate) unresolved: usize,
     pub(crate) tied: usize,
-    #[serde(serialize_with = "six")]
     pub(crate) agreement: Option<f64>,
-    #[serde(serialize_with = "six")]
     pub(crate) interval: Option<[f64; 2]>,
     pub(crate) true_yes: Option<usize>,
     pub(crate) false_yes: Option<usize>,
     pub(crate) true_no: Option<usize>,
     pub(crate) false_no: Option<usize>,
-    #[serde(serialize_with = "six")]
     pub(crate) yes_recall: Option<f64>,
-    #[serde(serialize_with = "six")]
     pub(crate) mean_probability: Option<f64>,
-    #[serde(serialize_with = "six")]
     pub(crate) auc: Option<f64>,
     pub(crate) disagreements: Option<Vec<Disagreement>>,
     pub(crate) calibration: Option<Calibration>,
@@ -295,34 +283,20 @@ fn count(items: &[Graded<'_>], rule: Rule) -> Result<Counts, MeasureError> {
 }
 
 fn disagreements(items: &[Graded<'_>], rule: Rule) -> Result<Vec<Disagreement>, MeasureError> {
-    let mut pairs: Vec<Disagreement> = Vec::new();
+    let mut counts: BTreeMap<(String, String), usize> = BTreeMap::new();
     for (answer, want) in items {
         let said = answer.said(rule)?;
-        if outcome(&said, want) != Outcome::Wrong {
-            continue;
-        }
-        let said = match said {
-            Said::Option(option) => option,
-            Said::Yes => "yes",
-            _ => "no",
-        };
-        match pairs
-            .iter_mut()
-            .find(|d| d.key == want.text() && d.said == said)
-        {
-            Some(pair) => pair.count += 1,
-            None => pairs.push(Disagreement {
-                key: want.text().to_owned(),
-                said: said.to_owned(),
-                count: 1,
-            }),
+        if outcome(&said, want) == Outcome::Wrong {
+            *counts
+                .entry((want.text().to_owned(), said.text().to_owned()))
+                .or_default() += 1;
         }
     }
-    pairs.sort_by(|a, b| {
-        (b.count.cmp(&a.count))
-            .then_with(|| a.key.cmp(&b.key))
-            .then_with(|| a.said.cmp(&b.said))
-    });
+    let mut pairs: Vec<Disagreement> = counts
+        .into_iter()
+        .map(|((key, said), count)| Disagreement { key, said, count })
+        .collect();
+    pairs.sort_by_key(|pair| Reverse(pair.count));
     Ok(pairs)
 }
 

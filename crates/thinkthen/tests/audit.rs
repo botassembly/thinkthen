@@ -12,7 +12,7 @@ use std::fs;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-use measure_support::{GOLDENS, TABLES, audit, fixture, fixtures, member, same_lines};
+use measure_support::{GOLDENS, TABLES, audit, fixture, fixtures, member};
 use sha2::{Digest as _, Sha256};
 
 #[test]
@@ -20,9 +20,7 @@ fn goldens_match() {
     for (golden, arguments) in GOLDENS {
         let (code, stdout, stderr) = audit(arguments, b"");
         assert_eq!((code, stderr.as_str()), (0, ""), "{golden}");
-        if let Err(difference) = same_lines(&stdout, &fixture(golden)) {
-            panic!("{golden}: {difference}");
-        }
+        assert_eq!(stdout, fixture(golden), "{golden}");
     }
 }
 
@@ -70,7 +68,7 @@ fn every_fixture_keeps_its_checksum() {
     }
     found.sort();
     assert_eq!(found, listed);
-    assert_eq!(listed.len(), 38);
+    assert_eq!(listed.len(), 40);
 }
 
 #[test]
@@ -86,7 +84,7 @@ fn readers_ignore_members_they_do_not_use_and_a_band_prints_as_typed() {
     let (code, stdout, _) = audit(&["-", wider.to_str().expect("a path")], results.as_bytes());
     fs::remove_file(&wider).expect("cleanup");
     assert_eq!(code, 0);
-    same_lines(&stdout, &fixture("golden/audit-decide.jsonl")).expect("the golden");
+    assert_eq!(stdout, fixture("golden/audit-decide.jsonl"));
 
     let key = key.to_str().expect("a path");
     let (_, band, _) = audit(

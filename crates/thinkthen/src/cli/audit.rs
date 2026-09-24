@@ -12,8 +12,8 @@ use crate::cli::measure::{Cause, Refusal, read};
 use crate::core::measure::answer::{self, Rule};
 use crate::core::measure::audit::{self as grade, By, Row, Settings, Shown, Suggested};
 use crate::core::measure::key::Key;
-use crate::core::measure::{json_lines, python_float_text, rounded, three_places};
-use crate::core::{Pointer, Threshold, json_line};
+use crate::core::measure::{json_lines, python_float_text, rounded, rounded_line, three_places};
+use crate::core::{Pointer, Threshold};
 use crate::failure::Failure;
 
 /// The command line of `audit`. Its help is on the `Audit` command.
@@ -69,7 +69,7 @@ pub(crate) fn run(arguments: &AuditArguments, mut writer: impl Write) -> Result<
         if arguments.table {
             table(row, &mut text);
         } else {
-            text.push_str(&json_line(row).map_err(Failure::Render)?);
+            text.push_str(&rounded_line(row).map_err(Failure::Render)?);
             text.push('\n');
         }
     }

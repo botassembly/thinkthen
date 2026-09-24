@@ -51,6 +51,19 @@ pub(crate) enum Said<'a> {
     Tied,
 }
 
+impl Said<'_> {
+    /// The answer as the output names it.
+    pub(crate) const fn text(&self) -> &str {
+        match self {
+            Self::Yes => "yes",
+            Self::No => "no",
+            Self::Option(option) => option,
+            Self::Unresolved => "unresolved",
+            Self::Tied => "tied",
+        }
+    }
+}
+
 /// The top of a `choose` distribution.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Top {
@@ -157,6 +170,9 @@ impl Answer {
             _ => Verb::Choose,
         };
         let printed = match value {
+            Some(Json::Bool(_)) if verb == Verb::Choose && !failed => {
+                return Err(MeasureError::Ungradable(line));
+            }
             Some(Json::Bool(held)) => Some(Printed::Bool(*held)),
             Some(Json::String(text)) => Some(Printed::Option(text.clone())),
             None | Some(Json::Null) => None,
