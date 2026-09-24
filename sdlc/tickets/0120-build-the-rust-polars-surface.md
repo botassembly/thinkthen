@@ -6,7 +6,7 @@ opens: libraries/polars sdlc/planning/adr/0047-bindings-are-unpublished-crates-o
 
 # 0120: Build the Rust Polars surface
 
-Status: design accepted 2026-09-24, owner Claude.
+Status: design accepted 2026-09-24, amended 2026-09-24 after spike 257, confirmation pending. Owner Claude.
 
 ## Outcome and authority
 
@@ -169,6 +169,37 @@ Spike 257 ran on beelink in `~/workspace/experiments/257-thinkthen-rust-polars-s
 3. **Deny.** Advisories and bans pass with the root `deny.toml` (advisory database of 2026-09-23). Licenses fail on four crates, for 0.54.4 and 0.55.2 alike: `foldhash` 0.2.0 (Zlib), `slotmap` 1.1.1 (Zlib), `xxhash-rust` 0.8.18 (BSL-1.0), and `ar_archive_writer` 0.5.3 (Apache-2.0 WITH LLVM-exception alone, a build dependency of `psm` under `stacker`). This is the stop the ticket names. The narrowest fix is a binding `deny.toml` with four per-crate `exceptions` entries and the root `allow` list unchanged.
 4. **Shared versions.** With the binding lock seeded from the root `Cargo.lock`, 73 of the 76 shared crate names hold the root's versions, and every `thinkthen` dependency keeps its root version. The three others are additions: `getrandom` 0.4.3 and `r-efi` 6.0.0 through `uuid`, and `signal-hook` 0.4.4 through `polars-error`. A fresh resolve drifts `thiserror` to 2.0.21 and `zerocopy` to 0.8.58, so the builder seeds the lock from the root lock. New duplicates: `getrandom` (0.2.17, 0.3.4, 0.4.3) and `r-efi` (5.3.0, 6.0.0). The `hashbrown`, `syn`, and `windows-sys` duplicates already exist in the root lock.
 5. **Build cost.** Cold `cargo fmt --check`, `cargo clippy --all-targets -D warnings`, and `cargo test` at `-j 4`, sccache off, under the heavy-build lock: 63 s and an 885 MB target folder for 0.54.4 on 1.93.1. 0.55.2 on 1.95 took 59 s and 886 MB. The Mac was not measured. The lever is the spike's `scripts/cold-build.sh` on the M5.
+
+## Amended 2026-09-24: current Polars on a repo-wide Rust 1.95
+
+The owner decided this after spike 257 (the finding above). Ian can overturn it. Where this section conflicts with the text above, this section wins, and the text above stays as history.
+
+The decision: 0120 targets the current Polars release, 0.55.x. It does not take the spike's 0.54.4 recommendation. A Rust Polars crate forces its users onto its own Polars version, so a pin one minor behind would lock them out of current Polars. The spike ran a scratch copy of main at Rust 1.95, and deny, fmt, clippy, doc, test, and doctest all passed.
+
+1. **Decision 7: the repo moves to Rust 1.95.** One Quick Fix moves the root `rust-toolchain.toml` and the workspace `rust-version` to 1.95. It lands right after 0086 and before any surface build. It runs the steps the spike skipped: `sdlc/live-test` and the Python and shell self-tests. This crate then builds on the repo's own toolchain. `setup-toolchain.sh`, `toolchain.sha256`, and the per-crate toolchain folder leave the design. `check.sh` has no toolchain step, and its only "not run" state is the failed probe. The crate's `rust-version` is the workspace value.
+2. **Decision 8: Polars 0.55.x, pinned exactly.** The manifest reads `polars = { version = "=0.55.N", default-features = false }`. N is the newest 0.55 release the build verifies. The spike measured 0.55.2. The five methods need no Polars feature. The README names Polars 0.55. The builder seeds the binding lock from the root `Cargo.lock`, because a fresh resolve drifts `thiserror` and `zerocopy` off the root versions (spike finding 4). The builder confirms that serde_json's `preserve_order` stays off at 0.55, so the sorted-map plant keeps its form.
+3. **A `polars-core` dev-dependency.** Only the R1-4 test needs `Categorical`, `Enum`, and struct columns. Those features on `polars` pull `polars-io` and `polars-ops`, and the spike measured 346 packages at 0.54.4. So the tests take `polars-core` at the same exact version as `polars`, with `dtype-categorical` and `dtype-struct`, as a dev-dependency. The spike measured 169 packages with that shape at 0.54.4. The code review checks that the two versions stay equal.
+4. **A binding `deny.toml`.** `libraries/polars/deny.toml` equals the root file with the `allow` list unchanged and four per-crate `exceptions`. Each entry carries its reason as a comment:
+   - `foldhash` (Zlib): the hash that `hashbrown` and Polars' own hash tables use.
+   - `slotmap` (Zlib): the arena Polars' query and expression code keeps its nodes in.
+   - `xxhash-rust` (BSL-1.0): the row and string hash inside `polars-core` and `polars-utils`.
+   - `ar_archive_writer` (Apache-2.0 WITH LLVM-exception, with no plain Apache-2.0 offered): a build dependency of `psm` under `stacker`. `stacker` grows the stack for Polars' deep recursion. It runs at build time and ships no code.
+   Each exception names its crate and license, so a new crate under the same license still fails. The binding's deny call uses this file. `policy.py` checks that it differs from the root `deny.toml` only by these four entries, with one planted fifth entry that fails. The root `deny.toml` does not change. The earlier stop clause on a license outside the root list is answered by this item.
+5. **Budgets, re-scored.**
+   - Scripts: `check.sh` at most 80 nonblank lines. The setup script leaves.
+   - Gate changes under `sdlc/scripts`: at most 30 nonblank lines. The deny-file check and its plant add to the registry entry.
+   - The binding lock: at most 200 packages, measured at 0.55.N with the `polars-core` dev-dependency. The spike measured 169 at 0.54.4. The record gives the count.
+   - The binding `deny.toml`: at most 60 nonblank lines.
+   - Production Rust, Rust tests, and documentation keep their budgets. The documentation budget now covers the four exception reasons in the README.
+   - Cold build: the spike measured 59 s and an 886 MB target folder for 0.55.2 on 1.95 on Linux. The record gives the Mac time from the spike's `scripts/cold-build.sh` on the M5.
+
+Changes that follow from the five items:
+
+- The R2-28 row: the empty-`HOME` plant leaves with the toolchain folder. Its plants are now a failed probe, run with `CARGO_HOME` pointing at an empty scratch folder, which prints "not run" and counts no pass, and a failing test, which fails and does not print "not run".
+- The paid-backend bullet: `check.sh` still leaves `HOME` alone. It no longer looks for a toolchain folder.
+- Dependencies: after 0086, then the 1.95 Quick Fix, then 0098 and 0093. Spike 257 has run. New to the binding lock beyond the list above: `polars-core` as a dev-dependency, and `getrandom` 0.4, `r-efi` 6, and `signal-hook` 0.4 through Polars (spike finding 4).
+- If spike 255 moves 0106 onto `pyo3-polars`, both doors share one Polars 0.55 version and the repo toolchain, and the pins move together.
+- The Evidence section's `Defers` item loses "more than one Polars minor version per release" for 0.55. That limit still holds for later minors.
 
 ## Routing
 
