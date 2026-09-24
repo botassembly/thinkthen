@@ -5,7 +5,8 @@ use thiserror::Error;
 use crate::core::digest::hex;
 use crate::core::json::Json;
 use crate::core::{
-    ModelName, Pointer, ProfileName, RelationRule, RenderError, Threshold, json_line,
+    ModelName, Pointer, ProfileName, QuestionFile, RecognizeSpec, RelationRule, RenderError,
+    Threshold, json_line,
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
@@ -134,9 +135,7 @@ impl RelateSpec {
             return Err(RelateConfigError::Shape);
         };
         if !members.iter().any(|(name, _)| name == "relate")
-            && members.iter().any(|(name, _)| {
-                ["decide", "choose", "tag", "score", "recognize"].contains(&name.as_str())
-            })
+            && (QuestionFile::parse(text).is_ok() || RecognizeSpec::parse(text).is_ok())
         {
             return Err(RelateConfigError::WrongVerb);
         }

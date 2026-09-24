@@ -57,9 +57,24 @@ fn invalid_unreadable_and_wrong_verb_files_keep_their_ruled_exit_codes() {
         r#"{"version":1,"relate":{"relations":[{"name":"x","source":"a","target":"b"}]},"extra":true}"#,
     );
     let wrong = written("relate-wrong", r#"{"decide":"Is this valid?"}"#);
+    let wrong_recognize = written(
+        "relate-wrong-recognize",
+        r#"{"version":1,"recognize":{"kinds":{"person":"A person's name."}}}"#,
+    );
+    let invalid_decide = written(
+        "relate-invalid-decide",
+        r#"{"decide":"Is this valid?","relations":[]}"#,
+    );
+    let invalid_recognize = written(
+        "relate-invalid-recognize",
+        r#"{"version":1,"recognize":{"kinds":{}},"extra":true}"#,
+    );
     for (file, code) in [
         (invalid, 5),
         (wrong, 2),
+        (wrong_recognize, 2),
+        (invalid_decide, 5),
+        (invalid_recognize, 5),
         ("@/path/that/does/not/exist.json".to_owned(), 5),
     ] {
         let output = run(&["relate", &file, "--dry-run"], b"[]").expect("binary runs");
