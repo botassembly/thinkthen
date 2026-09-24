@@ -73,3 +73,4 @@ Launch waits on the queue. The engineering gates are 0088, the release build, pu
 - The width setting is named the throttle. The public library setting is `throttle`, and the command keeps `--jobs`. ADR 0017's amendment records the scope.
 - Package names, the tap, the site, and papers are Ian's. Claude's job is the code: the main line and every surface.
 - Surfaces move as fast as possible once 0086 lands. Risk spikes 253 to 256 on the Beelink retire surface risks before then, and 0086 builds beside 0096.
+- The repo's Rust toolchain moves from 1.93.1 to 1.95 in one Quick Fix. It lands right after 0086 and before any surface build. Spike 257 showed nothing breaks, and current Polars 0.55 needs 1.95. Ian can overturn this.
