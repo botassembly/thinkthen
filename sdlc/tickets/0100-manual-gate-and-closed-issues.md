@@ -1,7 +1,7 @@
 ---
 flow: quick-fix
 priority: 100
-opens: .github/workflows/gate.yml sdlc/issues sdlc/tickets/0100-manual-gate-and-closed-issues.md sdlc/records/0100-quick-fix-manual-gate-and-closed-issues.md
+opens: .github/workflows/gate.yml sdlc/issues sdlc/tickets/0100-manual-gate-and-closed-issues.md sdlc/records/0100-quick-fix-manual-gate-and-closed-issues.md sdlc/records/0100-review.md
 ---
 
 # 0100: Run the gate only by hand and close five fixed issues
