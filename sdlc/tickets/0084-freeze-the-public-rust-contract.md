@@ -361,7 +361,7 @@ Ticket 0086 extracts the inventory into signature fixtures and records normalize
 
 Compile-fail fixtures prove a band cannot reach `filter`; unfinished builders, typed choice mismatches, and unbound loaded choices fail; and no derive, async method, reset, public module, connector, planner, callback beyond the interrupt check, mutable result field, public `ErrorDetail` constructor, or string-based `Error` constructor/conversion exists. Public tuple variants remain constructors.
 
-Package proof compares Cargo metadata with and without default features and rejects every package activated only by `cli`, including `clap`, `csv-core`, and `nix`. Ticket 0078 owns `signal-hook` placement; 0086 rejects it only if 0078 made it CLI-only.
+Package proof compares Cargo metadata with and without default features and rejects every package activated only by `cli`, including `clap`, `csv-core`, and `signal-hook`, but allows `nix`.
 
 0084 acceptance is design-only: the proposed ADR amendment and this ticket agree; rustfmt parses the extracted blocks of 0084 and 0095; every public name has one owner and one exact shape; `wc -m` stays under 30,000; and `git diff --check` passes. No compile check is credited as proof of runtime behavior.
 
@@ -380,6 +380,8 @@ Contract 2; state and timing 0; reach 2; proof 2; cost of error 1; total 7. Fina
 ADR 0017 section 5 has surfaces configure the engine. `EngineBuilder::from_env` reads the environment like `Engine::from_env`. Setters override. `Engine::from_env()` equals `EngineBuilder::from_env()?.build()`. 0086 tests it. Ian can overturn it.
 
 Amended 2026-09-24: package proof runs `cargo check`, `test`, and `package` with `--locked -p thinkthen --no-default-features`.
+
+Amended 2026-09-24: 0078 made `nix` a Unix library dependency.
 
 ## Review
 

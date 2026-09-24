@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core crates/thinkthen/src/engine crates/thinkthen/sr
 
 # 0085: Build the real engine facade
 
-Status: built on `ticket/0085-real-engine-facade`; code review pending. Record: `sdlc/records/0085-build-real-engine-facade.md`. Owner: Claude.
+Status: landed on main; code review accepted at `8b8035ce`. Record: `sdlc/records/0085-build-real-engine-facade.md`. Owner: Claude.
 
 ## Outcome and authority
 
