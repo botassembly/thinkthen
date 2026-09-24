@@ -5,7 +5,7 @@ use crate::core::{Backend, BackendProfile, Plan};
 use crate::edge::{self, Environment};
 use crate::failure::Failure;
 use crate::http::{Client, Exchange};
-use crate::prepared_request::{Answered, PreparedRequest};
+use crate::prepared_request::{Answered, PreparedChunk, PreparedRequest};
 use crate::recorder::Recorder;
 
 #[expect(
@@ -74,4 +74,35 @@ pub(crate) fn ask_prepared(
                 .map_err(Failure::from)
         },
     )
+}
+
+/// The boundaries every prepared request of one command passes through.
+pub(crate) struct Asking<'a> {
+    pub(crate) backend: &'a Backend,
+    pub(crate) common: &'a Common,
+    pub(crate) environment: &'a Environment,
+    pub(crate) recorder: &'a Recorder,
+    pub(crate) client: &'a Client,
+}
+
+impl Asking<'_> {
+    /// Send chunks prepared earlier, in order, and hand each reply on.
+    pub(crate) fn chunks(
+        &self,
+        chunks: Vec<PreparedChunk>,
+        mut each: impl FnMut(Answered) -> Result<(), Failure>,
+    ) -> Result<(), Failure> {
+        for chunk in chunks {
+            each(ask_prepared(
+                self.backend,
+                &chunk.plan,
+                chunk.request,
+                self.common,
+                self.environment,
+                self.recorder,
+                self.client,
+            )?)?;
+        }
+        Ok(())
+    }
 }

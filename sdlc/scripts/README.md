@@ -12,7 +12,8 @@ The repository gate and its hand-run support scripts.
 | `pages`, `pages-self-test` | Keep the how-to lists, titles, states, and links aligned |
 | `live` | The hand-run paid-call door. It initializes, reads, locks, validates, and appends the shared ledger, then replaces itself with one charged job |
 | `policy.py` | Holds accepted Rust policy tables for rung 1 |
-| `package` | Proves the one-package, no-default-feature, private behavioral-doctest harness, package-tree, and release panic contracts |
+| `catalog.py` | Holds the shipped transform copies, the catalog table, and the source package byte-identical to `transforms/` for rung 1 |
+| `package` | Proves the one-package, no-default-feature, private behavioral-doctest harness, package-tree, release panic, and unpacked transform-catalog contracts |
 | `ratchet.mjs` | Enforces the Rust source ceiling in `sdlc/ratchet.json` |
 
 Build without the credential, then run a charged job:
@@ -22,7 +23,7 @@ env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL cargo build --locked --package th
 sdlc/scripts/live --max-tokens N JOB [ARG...]
 ```
 
-`N` is a positive canonical decimal no greater than 999,999,999. A relative job is resolved from the checkout. The prebuilt checkout binary leads `PATH`, the job starts in the checkout, and the job receives the caller's environment and `THINKTHEN_API_KEY`. The wrapper adds one durable `charge N` row before it starts the job. A failed or killed job keeps the charge. The wrapper owns no completion line or recovery state.
+`N` is a positive canonical decimal no greater than 999,999,999. A job is a shell script. Its first line must be exactly `#!/bin/sh`, or the wrapper refuses it before any charge. A relative job is resolved from the checkout. The prebuilt checkout binary leads `PATH`, the job starts in the checkout, and the job receives the caller's environment and `THINKTHEN_API_KEY`. The wrapper adds one durable `charge N` row before it starts the job. A failed or killed job keeps the charge. The wrapper owns no completion line or recovery state.
 
 `sdlc/scripts/live --status` takes the shared lock, validates the durable initialization marker and every ledger row, and prints the limit, charge, and remainder. A missing ledger after initialization, a partial row, an unterminated row, or an unknown row disables live work. If appending or syncing reports failure, the charge may still exist. Run `--status` or inspect the ledger under the lock before any retry.
 

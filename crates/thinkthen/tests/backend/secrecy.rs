@@ -1,8 +1,4 @@
-//! The one sweep that proves no key leaves this process and no error quotes the
-//! evidence.
-//!
-//! One reader checks standard output, standard error, and every file written
-//! across all command families, backend paths, framings, and views.
+//! One sweep checks output and files across commands, paths, framings, and views.
 
 use std::fs;
 use std::io;
@@ -10,6 +6,10 @@ use std::path::{Path, PathBuf};
 use std::process::Output;
 
 use crate::harness::{Canned, Listener, spawn};
+
+mod routes;
+use routes::good;
+pub(crate) use routes::{PATHS, Route};
 
 /// The key every run here carries.
 ///
@@ -23,14 +23,9 @@ pub(crate) const KEY: &str = "sk-marker-2f9d41c6";
 /// and the evidence is the untrusted string.
 pub(crate) const EVIDENCE: &str = "marker-evidence-7b3ac5";
 
-/// The question every run here asks.
 pub(crate) const QUESTION: &str = "Does this report a payment failure?";
 
-/// Each verb, the operands it needs, and the answer a good reply carries.
-///
-/// A command enters this sweep by adding one row here. Every path below then
-/// runs over it, on one document and over records, in both views.
-pub(crate) const VERBS: [(&str, &[&str], &str); 4] = [
+pub(crate) const VERBS: [(&str, &[&str], &str); 6] = [
     ("decide", &[], r#""type":"noul","noul":0.92"#),
     (
         "choose",
@@ -43,7 +38,46 @@ pub(crate) const VERBS: [(&str, &[&str], &str); 4] = [
         &["none", "some", "much"],
         r#""type":"score","probabilities":{"0":0.1,"1":0.2,"2":0.7}"#,
     ),
+    (
+        "recognize",
+        &["person"],
+        r#""type":"choice","choice":"IN","probabilities":{"IN":0.9,"OUT":0.1}"#,
+    ),
+    // Two entities of one kind ask one unordered yes/no question.
+    (
+        "relate",
+        &["linked", "--either"],
+        r#""type":"noul","noul":0.92"#,
+    ),
 ];
+
+/// Whether the verb takes the shared question as its first operand.
+pub(crate) fn asks_question(verb: &str) -> bool {
+    !["recognize", "relate"].contains(&verb)
+}
+
+/// The standard input one verb judges under one framing, holding the evidence.
+///
+/// `relate` reads a complete entity set, so the evidence is one entity name.
+pub(crate) fn evidence(verb: &str, framing: Option<&str>) -> Vec<u8> {
+    let text = match (verb, framing) {
+        ("relate", None) => {
+            format!(
+                r#"[{{"name":"{EVIDENCE}","kind":"record"}},{{"name":"Acme","kind":"record"}}]"#
+            )
+        }
+        ("relate", Some("--jsonl")) => format!(
+            "{{\"body\":\"{EVIDENCE}\",\"kind\":\"record\"}}\n{{\"body\":\"Acme\",\"kind\":\"record\"}}\n"
+        ),
+        ("relate", Some("--lines")) => format!("{EVIDENCE}\nAcme\n"),
+        ("relate", Some("--csv")) => format!("name,kind\n{EVIDENCE},record\nAcme,record\n"),
+        ("relate", Some("--tsv")) => format!("name\tkind\n{EVIDENCE}\trecord\nAcme\trecord\n"),
+        (_, Some("--jsonl")) => format!("{{\"body\":\"{EVIDENCE}\"}}\n"),
+        (_, Some("--lines")) => format!("{EVIDENCE}\n"),
+        _ => EVIDENCE.to_owned(),
+    };
+    text.into_bytes()
+}
 
 const RECORD_VERBS: [(&str, &[&str], &str); 2] = [
     ("filter", &[], r#""type":"noul","noul":0.92"#),
@@ -65,222 +99,13 @@ pub(crate) const HOSTILE: &str = concat!(
 pub(crate) const HOSTILE_SCHEMA_MARKER: &str = "PWNED";
 
 /// A recording entry that is not JSON, holding the evidence it recorded.
-const DAMAGED: &str = concat!(
+pub(crate) const DAMAGED: &str = concat!(
     r#"{"schema":"thinkthen.recording/1","adapter":"systemone","#,
     r#""request":{"evidence":"marker-evidence-7b3ac5"} "response":{}}"#,
 );
 
 /// The address of a port nothing listens on, which fails in the transport.
 pub(crate) const CLOSED: &str = "http://127.0.0.1:1/v1";
-
-/// A whole reply carrying this one answer.
-fn good(answer: &str) -> String {
-    format!(r#"{{"model":"jev-1.13.0","answers":{{"q1":{{{answer}}}}},"#,)
-        + r#""usage":{"input_tokens":9,"output_tokens":3}}"#
-}
-
-/// An error body that quotes the evidence back, as a real backend may.
-///
-/// Nothing the tool prints may carry it, so every message names the status and
-/// never the body.
-fn quoting() -> String {
-    format!(r#"{{"error":{{"message":"refused: {EVIDENCE}"}}}}"#)
-}
-
-/// A reply that is JSON no adapter reads, quoting the evidence back.
-///
-/// A JSON reader names the value it stopped on, so a reply shaped like this one
-/// is what would carry the evidence into a diagnostic.
-fn unreadable() -> String {
-    format!(r#"{{"model":"jev-1.13.0","answers":"{EVIDENCE}"}}"#)
-}
-
-/// What the loopback backend answers one run with.
-#[derive(Clone, Copy, Debug)]
-pub(crate) enum Answers {
-    /// A good reply for the one question the verb asked.
-    Good,
-    /// A status that fails at once, with a body that quotes the evidence.
-    Status(u16),
-    /// A rate limit that lifts, then a good reply.
-    RateLimit,
-    /// A rate limit that never lifts, past the one retry the run allows.
-    RateLimited,
-    /// A reply that is JSON no adapter reads, quoting the evidence back.
-    Unreadable,
-    /// Nothing at all, because the run must not reach the listener.
-    Nothing,
-}
-
-impl Answers {
-    /// The responses the listener serves, in order, for this verb.
-    pub(crate) fn script(self, answer: &str) -> Vec<Canned> {
-        match self {
-            Self::Good => vec![Canned::ok(&good(answer))],
-            Self::Status(status) => vec![Canned::status(status, &quoting())],
-            Self::RateLimit => vec![Canned::status(429, &quoting()), Canned::ok(&good(answer))],
-            Self::RateLimited => vec![
-                Canned::status(429, &quoting()),
-                Canned::status(429, &quoting()),
-            ],
-            Self::Unreadable => vec![Canned::ok(&unreadable())],
-            Self::Nothing => Vec::new(),
-        }
-    }
-}
-
-/// One way a run can end, driven over every verb and both views.
-///
-/// `adds` may hold `{dir}`, which becomes this run's own folder, and `{closed}`,
-/// which becomes the address of a port nothing listens on.
-pub(crate) struct Route {
-    pub(crate) named: &'static str,
-    pub(crate) adds: &'static [&'static str],
-    pub(crate) answers: Answers,
-    /// How many requests the listener must see, which pins "sends nothing".
-    pub(crate) requests: usize,
-    /// The exit code the run earns, which pins that the path really ran.
-    pub(crate) code: i32,
-    /// Whether a recording is written into the folder before the run.
-    pub(crate) primed: bool,
-    /// What every entry the priming run wrote is overwritten with, if anything.
-    pub(crate) damage: Option<&'static str>,
-    /// The part of the message that names this refusal and no other one.
-    ///
-    /// Two routes can share an exit code, so a route that would otherwise pass
-    /// on a neighbour's refusal pins the sentence it means.
-    pub(crate) says: Option<&'static str>,
-    /// Whether the run carries the key at all.
-    pub(crate) keyed: bool,
-}
-
-pub(crate) const PATHS: [Route; 17] = [
-    route("a success", &[], Answers::Good, 1, 0),
-    route("a plan", &["--dry-run"], Answers::Nothing, 0, 0),
-    route("a record run", &["--record", "{dir}"], Answers::Good, 1, 0),
-    route("a cache", &["--cache", "{dir}"], Answers::Good, 1, 0),
-    // The listener answers the priming run alone. The replay that follows it
-    // finds no answer waiting, so the one request the listener counted is the
-    // priming one and the replay opened no connection at all.
-    Route {
-        named: "a replay",
-        adds: &["--replay", "{dir}"],
-        answers: Answers::Good,
-        requests: 1,
-        code: 0,
-        primed: true,
-        damage: None,
-        says: None,
-        keyed: true,
-    },
-    // The entry is damaged after it is written, so the reply the run reads is
-    // untrusted bytes holding the evidence that was recorded.
-    Route {
-        named: "a damaged entry",
-        adds: &["--replay", "{dir}"],
-        answers: Answers::Good,
-        requests: 1,
-        code: 5,
-        primed: true,
-        damage: Some(DAMAGED),
-        says: Some("the file is not a recording entry: the JSON at line 1 column 105 is not one"),
-        keyed: true,
-    },
-    // The entry parses and every field of it is hostile text, so the refusal
-    // comes after the reading rather than during it.
-    Route {
-        named: "a hostile entry",
-        adds: &["--replay", "{dir}"],
-        answers: Answers::Good,
-        requests: 1,
-        code: 5,
-        primed: true,
-        damage: Some(HOSTILE),
-        says: Some(
-            "the entry names a schema this version does not read, \
-             and this version reads `thinkthen.recording/1`",
-        ),
-        keyed: true,
-    },
-    route(
-        "a replay miss",
-        &["--replay", "{dir}"],
-        Answers::Nothing,
-        0,
-        5,
-    ),
-    route(
-        "a refused address",
-        &["--url", "http://example.com/v1"],
-        Answers::Nothing,
-        0,
-        2,
-    ),
-    route(
-        "a failed request",
-        &["--url", "{closed}"],
-        Answers::Nothing,
-        0,
-        4,
-    ),
-    route("a refused request", &[], Answers::Status(400), 1, 4),
-    route("a rate limit that lifts", &[], Answers::RateLimit, 2, 0),
-    route(
-        "a rate limit that stays",
-        &["--max-retries", "1"],
-        Answers::RateLimited,
-        2,
-        4,
-    ),
-    route(
-        "an exhausted backend failure",
-        &["--max-retries", "0"],
-        Answers::Status(500),
-        1,
-        4,
-    ),
-    route("an unreadable answer", &[], Answers::Unreadable, 1, 4),
-    // Recording preflight refuses an unusable folder before a key or request.
-    route(
-        "a recording folder that cannot be made",
-        &["--record", "/dev/null/x"],
-        Answers::Nothing,
-        0,
-        5,
-    ),
-    Route {
-        named: "a run with no key",
-        adds: &[],
-        answers: Answers::Nothing,
-        requests: 0,
-        code: 4,
-        primed: false,
-        damage: None,
-        says: None,
-        keyed: false,
-    },
-];
-
-/// One route with the two uncommon fields at their usual values.
-const fn route(
-    named: &'static str,
-    adds: &'static [&'static str],
-    answers: Answers,
-    requests: usize,
-    code: i32,
-) -> Route {
-    Route {
-        named,
-        adds,
-        answers,
-        requests,
-        code,
-        primed: false,
-        damage: None,
-        says: None,
-        keyed: true,
-    }
-}
 
 /// A folder this run owns, remade so each run starts empty.
 pub(crate) fn folder(named: &str) -> io::Result<PathBuf> {
@@ -338,7 +163,6 @@ pub(crate) fn nothing_leaked(named: &str, output: &Output, folder: &Path) {
     }
 }
 
-/// Run one verb down one route, in one view and one framing.
 fn sweep(
     route: &Route,
     verb: (&str, &[&str], &str),
@@ -354,18 +178,17 @@ fn sweep(
     let into = folder(&case)?;
     let dir = into.join("recording");
     let listener = Listener::serving(route.answers.script(answer))?;
-    let evidence = match framing {
-        Some("--jsonl") => format!("{{\"body\":\"{EVIDENCE}\"}}\n"),
-        Some("--lines") => format!("{EVIDENCE}\n"),
-        _ => EVIDENCE.to_owned(),
-    };
+    let evidence = evidence(name, framing);
     let named = |argument: &&str| match *argument {
         "{dir}" => dir.to_string_lossy().into_owned(),
         "{closed}" => CLOSED.to_owned(),
         other => other.to_owned(),
     };
     let adds: Vec<String> = route.adds.iter().map(named).collect();
-    let mut asked = vec![name.to_owned(), QUESTION.to_owned()];
+    let mut asked = vec![name.to_owned()];
+    if asks_question(name) {
+        asked.push(QUESTION.to_owned());
+    }
     asked.extend(operands.iter().map(|operand| (*operand).to_owned()));
     // A route that names its own address keeps it, and every other route posts
     // to the listener this case opened.
@@ -394,23 +217,20 @@ fn sweep(
                 }
             })
             .collect();
-        let first = spawn(&priming, &environment(true), evidence.as_bytes())?;
+        let first = spawn(&priming, &environment(true), &evidence)?;
         assert_eq!(first.status.code(), Some(0), "{case}: the priming run");
     }
     if let Some(damage) = route.damage {
-        let entries = written(&dir);
-        assert!(!entries.is_empty(), "{case}: an entry to damage");
-        for entry in entries.into_iter().filter(|entry| {
-            entry
-                .file_name()
-                .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
-        }) {
-            fs::write(&entry, damage)?;
-        }
+        damage_entries(&case, &dir, damage)?;
     }
 
     let arguments: Vec<&str> = asked.iter().map(String::as_str).collect();
-    let output = spawn(&arguments, &environment(route.keyed), evidence.as_bytes())?;
+    // The platform default cache lands inside this case's folder, so the reader
+    // below reads every file the default cache wrote.
+    let cache = into.join("cache").to_string_lossy().into_owned();
+    let mut environment = environment(route.keyed);
+    environment.push(("XDG_CACHE_HOME", &cache));
+    let output = spawn(&arguments, &environment, &evidence)?;
 
     assert_eq!(
         output.status.code(),
@@ -427,6 +247,12 @@ fn sweep(
         let said = String::from_utf8_lossy(&output.stderr);
         assert!(said.contains(says), "{case} {view:?}: {said}");
     }
+    if route.named == "a success" {
+        assert!(
+            !written(&into.join("cache")).is_empty(),
+            "{case} {view:?}: the default cache kept the answer"
+        );
+    }
     nothing_leaked(&format!("{case} {view:?}"), &output, &into);
     if route.damage == Some(HOSTILE) {
         for bytes in [&output.stdout, &output.stderr] {
@@ -435,6 +261,20 @@ fn sweep(
                 assert!(!text.contains(forbidden), "{case} {view:?}: {forbidden}");
             }
         }
+    }
+    Ok(())
+}
+
+/// Overwrite every entry a priming run recorded with the damaged bytes.
+fn damage_entries(case: &str, dir: &Path, damage: &str) -> io::Result<()> {
+    let entries = written(dir);
+    assert!(!entries.is_empty(), "{case}: an entry to damage");
+    for entry in entries.into_iter().filter(|entry| {
+        entry
+            .file_name()
+            .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
+    }) {
+        fs::write(&entry, damage)?;
     }
     Ok(())
 }
@@ -453,6 +293,16 @@ const RECORD_WAYS: [(&[&str], Option<&str>); 4] = [
     (&[], Some("--jsonl")),
     (&["--details"], Some("--lines")),
     (&["--details"], Some("--jsonl")),
+];
+
+/// The complete-set framings only `relate` reads, in the bare and detailed views.
+const TABLE_WAYS: [(&[&str], Option<&str>); 6] = [
+    (&[], Some("--lines")),
+    (&[], Some("--csv")),
+    (&[], Some("--tsv")),
+    (&["--details"], Some("--lines")),
+    (&["--details"], Some("--csv")),
+    (&["--details"], Some("--tsv")),
 ];
 
 /// The environment one run is given, with or without the key.
@@ -482,6 +332,15 @@ fn no_command_on_any_backend_path_writes_the_key_or_quotes_the_evidence() {
             sweep(hostile, verb, view, framing).expect("the compiled binary runs");
         }
     }
+    let relate = VERBS
+        .into_iter()
+        .find(|(name, _, _)| *name == "relate")
+        .expect("relate stays in the matrix");
+    for route in &PATHS {
+        for (view, framing) in TABLE_WAYS {
+            sweep(route, relate, view, framing).expect("the compiled binary runs");
+        }
+    }
 }
 
 ///
@@ -496,7 +355,11 @@ fn the_key_reaches_the_authorization_header_and_nothing_else() {
             Listener::serving(vec![Canned::ok(&good(answer))]).expect("a loopback listener");
         let base = listener.base().to_owned();
         let kept = dir.to_string_lossy().into_owned();
-        let asked = [name, QUESTION];
+        let asked = if asks_question(name) {
+            vec![name, QUESTION]
+        } else {
+            vec![name]
+        };
         let named = [
             "--url",
             &base,
@@ -508,9 +371,9 @@ fn the_key_reaches_the_authorization_header_and_nothing_else() {
         ];
 
         let output = spawn(
-            &[&asked[..], operands, &named[..]].concat(),
+            &[&asked, operands, &named[..]].concat(),
             &environment(true),
-            EVIDENCE.as_bytes(),
+            &evidence(name, None),
         )
         .expect("the compiled binary runs");
 

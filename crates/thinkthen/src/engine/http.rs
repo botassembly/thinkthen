@@ -1,4 +1,7 @@
 //! One HTTP exchange with a backend, retried as `specification/backends.md` says.
+//!
+//! A retried status is sent again. A transport failure never is, because the
+//! backend may already have the request and may bill it.
 
 use std::fmt;
 use std::io;
@@ -6,6 +9,8 @@ use std::time::Duration;
 
 use ureq::Agent;
 
+use crate::core::Withheld;
+use crate::engine::Widths;
 use crate::engine::error::{Error, TransportKind};
 
 /// The key one request carries. Diagnostics and `Debug` never expose it.
@@ -57,6 +62,7 @@ const MAX_RETRY_WAIT: Duration = Duration::from_secs(60);
 pub(crate) struct Client {
     agent: Agent,
     timeout: Duration,
+    width: &'static Widths,
 }
 
 impl fmt::Debug for Client {
@@ -86,7 +92,15 @@ impl Client {
         Self {
             agent: config.build().into(),
             timeout,
+            width: crate::engine::client_width(),
         }
+    }
+
+    /// Send through this gate in place of the one `new` chose.
+    #[cfg(test)]
+    pub(crate) const fn gated(mut self, width: &'static Widths) -> Self {
+        self.width = width;
+        self
     }
 
     /// Post the request and hand back the response body the backend answered with.
@@ -98,7 +112,8 @@ impl Client {
     /// # Errors
     ///
     /// Returns [`Error`] when the backend cannot be reached, when it answers
-    /// with an error status, or when both still hold after the last retry.
+    /// with an error status, or when a retried status still holds after the
+    /// last retry. A transport failure returns after its one attempt.
     pub(crate) fn post_observed(
         &self,
         exchange: &Exchange<'_>,
@@ -108,11 +123,18 @@ impl Client {
         let mut wait = exchange.retry_wait;
         let mut retries = 0;
         loop {
-            if cancel.fired() {
-                return Err(Error::Cancelled);
-            }
+            // The permit covers the attempt alone: never a retry wait, decoding,
+            // recording, or output.
+            let permit = self.width.acquire(cancel)?;
+            cancel.stop_or_remaining()?;
             before_attempt();
-            let attempt = match send(&self.agent, exchange) {
+            // Accounting may wait on the usage lock, so read the budget after
+            // it. Cancellation keeps its one pre-attempt checkpoint.
+            let budget = cancel.remaining()?;
+            let limit = budget.map_or(self.timeout, |budget| budget.min(self.timeout));
+            let sent = send(&self.agent, exchange, limit);
+            drop(permit);
+            let attempt = match sent {
                 Ok(body) => {
                     return Ok(HttpAnswer {
                         body,
@@ -121,11 +143,17 @@ impl Client {
                 }
                 Err(attempt) => attempt,
             };
+            if matches!(attempt.failure, Error::Transport(TransportKind::Timeout))
+                && budget.is_some_and(|budget| budget <= self.timeout)
+                && let Some(passed) = cancel.passed()
+            {
+                return Err(passed);
+            }
             if retries >= exchange.max_retries || !is_retried(&attempt.failure) {
                 return Err(attempt.failure);
             }
-            if cancel.wait(bounded_wait(attempt.asked, wait, self.timeout)) {
-                return Err(Error::Cancelled);
+            if let Some(stop) = cancel.wait(bounded_wait(attempt.asked, wait, self.timeout)) {
+                return Err(stop);
             }
             wait = wait.saturating_mul(2);
             retries += 1;
@@ -147,7 +175,7 @@ pub(crate) struct Exchange<'a> {
     pub(crate) body: &'a [u8],
     /// The key the one authorization header carries.
     pub(crate) key: &'a Key,
-    /// How many times a retried failure is sent again.
+    /// How many times a retried status is sent again.
     pub(crate) max_retries: u32,
     /// The first wait, which doubles on every retry after it.
     pub(crate) retry_wait: Duration,
@@ -159,10 +187,7 @@ impl fmt::Debug for Exchange<'_> {
         formatter
             .debug_struct("Exchange")
             .field("url", &self.url)
-            .field(
-                "body",
-                &format_args!("<{} bytes withheld>", self.body.len()),
-            )
+            .field("body", &Withheld(self.body.len()))
             .field("key", &self.key)
             .field("max_retries", &self.max_retries)
             .field("retry_wait", &self.retry_wait)
@@ -207,10 +232,13 @@ fn bounded_wait(asked: Option<Duration>, exponential: Duration, timeout: Duratio
     asked.unwrap_or(exponential).min(timeout)
 }
 
-/// Post the request once.
-fn send(agent: &Agent, exchange: &Exchange<'_>) -> Result<Vec<u8>, Attempt> {
+/// Post the request once, blocking for at most `limit`.
+fn send(agent: &Agent, exchange: &Exchange<'_>, limit: Duration) -> Result<Vec<u8>, Attempt> {
     let request = agent
         .post(exchange.url)
+        .config()
+        .timeout_global(Some(limit))
+        .build()
         .header("content-type", "application/json")
         .header(
             "authorization",
@@ -264,15 +292,9 @@ fn io_transport(error: &io::Error) -> TransportKind {
     }
 }
 
-/// Say whether this failure earns another attempt.
+/// Say whether this failure earns another attempt: only a retried status does.
 fn is_retried(failure: &Error) -> bool {
-    match failure {
-        // A refused connection names a closed port; waiting cannot open one.
-        Error::Transport(TransportKind::Refused) => false,
-        Error::Transport(_) => true,
-        Error::Status(status) => RETRIED.contains(status),
-        _ => false,
-    }
+    matches!(failure, Error::Status(status) if RETRIED.contains(status))
 }
 
 #[cfg(test)]
@@ -385,13 +407,13 @@ mod tests {
     }
 
     #[test]
-    fn only_a_refused_transport_failure_loses_its_retry() {
+    fn no_transport_failure_is_sent_again() {
         let cases = [
             (Error::Transport(TransportKind::Refused), false),
-            (Error::Transport(TransportKind::Timeout), true),
-            (Error::Transport(TransportKind::NameLookup), true),
-            (Error::Transport(TransportKind::PrematureClose), true),
-            (Error::Transport(TransportKind::Other), true),
+            (Error::Transport(TransportKind::Timeout), false),
+            (Error::Transport(TransportKind::NameLookup), false),
+            (Error::Transport(TransportKind::PrematureClose), false),
+            (Error::Transport(TransportKind::Other), false),
             (Error::Status(429), true),
             (Error::Status(500), true),
             (Error::Status(502), true),

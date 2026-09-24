@@ -69,7 +69,7 @@ One exchange is one file named `DIGEST.json`. `DIGEST` is the SHA-256, in lowerc
 - Every recording or cache operation also holds a shared lock on the already-open directory handle from its first lookup through replay or installation. Replay creates no gate file and remains read-only. `cache prune` holds the exclusive side of the same gate, so it cannot split the digest-lock namespace while a request uses the folder.
 - A completed lock file is removed while its owner still holds the original inode and after a valid final entry exists. An existing waiter remains on that inode, rechecks the valid entry, and does not send a duplicate cache request. A failed owner with no valid final entry leaves one empty lock file. Lock files carry only the lowercase digest as their name and contain no data. On Unix the `.locks` directory has mode `0700` and files created by the tool have mode `0600`. Closing a file releases its lock after success, failure, or process death. Lock files left by an older version remain until a later prune command. No owner record or recovery step exists.
 
-Every recording storage failure exits 5 and prints `thinkthen: the recording folder could not be read or written; check its permissions and free space`. The message carries no path, entry bytes, evidence, credential, or operating-system error. On Unix the process safely handles `SIGXFSZ`, so a file-size limit reaches this failure and the normal temporary cleanup path instead of terminating the process. A later disk-full or sync failure can still discard an answer the backend already returned.
+Every recording storage failure exits 5 and prints `thinkthen: the recording folder could not be read or written; check its permissions and free space`. The message carries no path, entry bytes, evidence, credential, or operating-system error. On Unix the process safely handles `SIGXFSZ`, so a file-size limit reaches this failure and the normal temporary cleanup path instead of terminating the process. The command installs that handler before it reads input. The engine library installs no signal handler, so an embedding host keeps the disposition it chose. A later disk-full or sync failure can still discard an answer the backend already returned.
 
 A successful recorded run can replay the answers it printed. A run that receives different responses for one digest stops at the conflict instead of saving a history that would replay differently. A repeated trial that wants another backend answer uses a fresh folder.
 
@@ -81,7 +81,7 @@ The first live answers on 2026-09-19 returned the same probability for two ident
 
 `meta.cached` is `true` when the answer came entirely from stored exchanges and `false` when a backend answered. It is always present. `meta.requests` carries the same digest that names the requested recording entry. Replay and live execution therefore report one request identity. Everything else in the result is what the recorded response yields, the usage included. A later token ledger counts only answers that a backend gave.
 
-A recorded partial reply replays the same good answers, failed markers, failure count, and exit 6. Recording keeps the raw response and request bytes unchanged.
+A recorded partial reply replays the same good answers, failed markers, failure count, and exit 6. This includes `relate` edges and Option A question entries. Recording keeps the raw response and request bytes unchanged.
 
 ## A recording holds the evidence
 

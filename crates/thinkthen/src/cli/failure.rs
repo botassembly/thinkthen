@@ -10,10 +10,13 @@ use crate::core::{
     ReadingError, RecordError, RenderError, Source,
 };
 
-use crate::engine::error::{Error as EngineError, TransportKind};
+use crate::engine::error::TransportKind;
 use crate::table;
 
+mod convert;
+pub(crate) mod recognize;
 mod recording;
+pub(crate) mod relate;
 mod status;
 
 const NOT_TEXT: &str = "the evidence is not valid UTF-8";
@@ -35,6 +38,8 @@ pub(crate) enum Failure {
         error: ProfileError,
     },
     ProfileLimit(ProfileLimit),
+    Relate(relate::Error),
+    Recognize(recognize::Error),
     QuietWithDetails,
     RawWithAnotherView,
     /// The question file, or a value beside it, was refused.
@@ -53,6 +58,8 @@ pub(crate) enum Failure {
     UsageOverflow,
     /// A command-line shape was understood but cannot act.
     Usage(&'static str),
+    /// `--jobs` differs from the width this process already selected.
+    WidthActive(crate::engine::WidthActive),
     /// `--option` was given beside a list of options on the command line.
     OptionWithList,
     /// `--label` was given beside positional labels.
@@ -154,16 +161,6 @@ pub(crate) enum Failure {
     Render(RenderError),
 }
 
-impl Failure {
-    /// Name invalid text by its framing while preserving every other record error.
-    pub(crate) fn record(error: RecordError, streamed: bool) -> Self {
-        match error {
-            RecordError::NotUtf8 => Self::InvalidUtf8 { record: streamed },
-            other => Self::Record(other),
-        }
-    }
-}
-
 /// Every message a user reads is written here. No message carries a key or any
 /// evidence text. A backend that answers with an error status is named by that
 /// status and by the fixed phrase its status carries, never by its body,
@@ -183,6 +180,10 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         return code;
     }
     if let Some((code, message)) = recording::message(failure) {
+        let _unwritten = writeln!(writer, "{}: {message}", crate::core::NAME);
+        return code;
+    }
+    if let Some((code, message)) = recognize::message(failure) {
         let _unwritten = writeln!(writer, "{}: {message}", crate::core::NAME);
         return code;
     }
@@ -303,6 +304,9 @@ fn stopped(failure: &Failure, writer: &mut dyn Write) -> Option<u8> {
 }
 
 fn special_failure(failure: &Failure) -> Option<(u8, String)> {
+    if let Some(message) = relate::message(failure) {
+        return Some(message);
+    }
     Some(match failure {
         Failure::OpenProfile { path, error } => (
             5,
@@ -340,6 +344,7 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
             4,
             "the backend returned different model versions for one record; pin --model and rerun with --record or --cache".to_owned(),
         ),
+        Failure::WidthActive(active) => (2, active.to_string()),
         Failure::UsageOverflow => (
             4,
             "the backend reported token counts whose total is too large".to_owned(),
@@ -427,7 +432,7 @@ const fn refused(failure: &Failure) -> Option<&'static str> {
             "--quiet carries the answer in the exit code, and no record's answer sets it"
         }
         Failure::JobsOutsideRecords => {
-            "--jobs bounds the requests in flight, and one document sends one request"
+            "--jobs bounds the requests in flight, and a single text sends one request"
         }
         Failure::TopIsZero => {
             "`--top` prints the first N of the order, and N is a whole number of 1 or more"
@@ -447,75 +452,9 @@ const fn transport_message(kind: TransportKind) -> &'static str {
             "the backend refused the connection; check that it is running and that --url is correct"
         }
         TransportKind::PrematureClose => {
-            "the backend closed the connection before a reply; try again or change --max-retries"
+            "the backend closed the connection before a reply and may have received the request; it was not sent again"
         }
         TransportKind::Other => "the backend could not be reached; check --url and the network",
-    }
-}
-
-impl From<BackendError> for Failure {
-    fn from(error: BackendError) -> Self {
-        Self::Backend(error)
-    }
-}
-
-impl From<QuestionFileError> for Failure {
-    fn from(error: QuestionFileError) -> Self {
-        Self::Question(error)
-    }
-}
-
-impl From<QuestionSetError> for Failure {
-    fn from(error: QuestionSetError) -> Self {
-        Self::QuestionSet(error)
-    }
-}
-
-impl From<DecodeError> for Failure {
-    fn from(error: DecodeError) -> Self {
-        Self::Reply(error)
-    }
-}
-
-impl From<ReadingError> for Failure {
-    fn from(error: ReadingError) -> Self {
-        Self::Reading(error)
-    }
-}
-
-impl From<RecordError> for Failure {
-    fn from(error: RecordError) -> Self {
-        Self::Record(error)
-    }
-}
-
-impl From<RenderError> for Failure {
-    fn from(error: RenderError) -> Self {
-        Self::Render(error)
-    }
-}
-
-impl From<EngineError> for Failure {
-    fn from(error: EngineError) -> Self {
-        match error {
-            EngineError::Transport(message) => Self::Transport(message),
-            EngineError::Status(status) => Self::Status(status),
-            EngineError::Reply(error) => Self::Reply(error),
-            EngineError::ReplayMiss(name) => Self::ReplayMiss(name),
-            EngineError::Entry(name, message) => Self::Entry(name, message),
-            EngineError::RecordingConflict(name) => Self::RecordingConflict(name),
-            EngineError::RecordingStorage => Self::RecordingStorage,
-            EngineError::RecordingPathIsFile => Self::RecordingPathIsFile,
-            EngineError::RecordingBackendMismatch => Self::RecordingBackendMismatch,
-            EngineError::RecordingFolderLegacy => Self::RecordingFolderLegacy,
-            EngineError::DefaultCachePrivate => Self::DefaultCachePrivate,
-            EngineError::CacheEntry => Self::CacheEntry,
-            EngineError::Defect(message) => Self::Defect(message),
-            EngineError::Usage(message) => Self::Usage(message),
-            EngineError::ProfileLimit(limit) => Self::ProfileLimit(limit),
-            EngineError::Cancelled => Self::Cancelled,
-            EngineError::Deadline => Self::Defect("an unavailable deadline reached the command"),
-        }
     }
 }
 

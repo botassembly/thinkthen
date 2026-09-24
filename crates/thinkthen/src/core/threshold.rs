@@ -122,6 +122,15 @@ impl Threshold {
         matches!(self.0, Rule::Cut(_))
     }
 
+    /// Read the value of a single cut.
+    #[must_use]
+    pub(crate) const fn cut_value(self) -> Option<f64> {
+        match self.0 {
+            Rule::Cut(value) => Some(value),
+            Rule::Band { .. } => None,
+        }
+    }
+
     /// Read one probability under this rule.
     pub(crate) fn judge(self, probability: Probability) -> Outcome {
         let probability = probability.as_f64();

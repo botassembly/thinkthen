@@ -29,16 +29,16 @@ pub(crate) fn read(common: &Common) -> Result<Option<BackendProfile>, Failure> {
 /// One run's mismatch, printed once and copied into every detailed row.
 #[derive(Clone, Debug)]
 pub(crate) struct Mismatch {
-    calibrated: Option<ProfileName>,
+    tuned_for: Option<ProfileName>,
     warning: Option<ProfileWarning>,
     printed: Arc<AtomicBool>,
 }
 
 impl Mismatch {
-    pub(crate) fn new(calibrated: Option<&ProfileName>, profile: Option<&BackendProfile>) -> Self {
+    pub(crate) fn new(tuned_for: Option<&ProfileName>, profile: Option<&BackendProfile>) -> Self {
         Self {
-            calibrated: calibrated.cloned(),
-            warning: ProfileWarning::between(calibrated, profile.map(BackendProfile::name)),
+            tuned_for: tuned_for.cloned(),
+            warning: ProfileWarning::between(tuned_for, profile.map(BackendProfile::name)),
             printed: Arc::new(AtomicBool::new(false)),
         }
     }
@@ -47,8 +47,8 @@ impl Mismatch {
         self.warning.clone()
     }
 
-    pub(crate) fn calibrated(&self) -> Option<&ProfileName> {
-        self.calibrated.as_ref()
+    pub(crate) fn tuned_for(&self) -> Option<&ProfileName> {
+        self.tuned_for.as_ref()
     }
 
     pub(crate) fn notice(&self) -> Option<Self> {
@@ -67,9 +67,9 @@ impl Mismatch {
             return Ok(());
         }
         let line = format!(
-            "{}: warning: threshold calibrated for profile {} is running under profile {}",
+            "{}: warning: threshold tuned for profile {} is running under profile {}",
             crate::core::NAME,
-            warning.calibrated(),
+            warning.tuned_for(),
             warning.running()
         );
         writeln!(writer, "{line}")
@@ -101,12 +101,12 @@ mod tests {
     }
 
     fn mismatch() -> Mismatch {
-        let calibrated = ProfileName::new("old").expect("safe name");
+        let tuned_for = ProfileName::new("old").expect("safe name");
         let running = BackendProfile::parse(
             r#"{"schema":"thinkthen.backend-profile/1","name":"new","max_questions":1}"#,
         )
         .expect("profile");
-        Mismatch::new(Some(&calibrated), Some(&running))
+        Mismatch::new(Some(&tuned_for), Some(&running))
     }
 
     #[test]
@@ -127,7 +127,7 @@ mod tests {
             .expect("second boundary");
         assert_eq!(
             String::from_utf8(written).expect("warning text"),
-            "thinkthen: warning: threshold calibrated for profile old is running under profile new\n"
+            "thinkthen: warning: threshold tuned for profile old is running under profile new\n"
         );
     }
 }

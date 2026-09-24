@@ -2,7 +2,7 @@
 
 The contract for `thinkthen`. Code follows these documents. A behavior that is absent here is absent from the tool. Ian reads the design here, and a ticket cites the section it builds. ADR 0007 fixes the surface, and changing a Settled section takes a new ADR.
 
-Version one is eight judgment commands: `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `annotate`, and `find`. ADR 0010 removed named address profiles and their configuration command. ADR 0033 later added the smaller read-only bounded-cache configuration. `roadmap.md` holds what remains out.
+Version one is ten commands: `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `annotate`, `find`, `recognize`, and `relate`. ADR 0010 removed named address profiles and their configuration command. ADR 0033 later added the smaller read-only bounded-cache configuration. `roadmap.md` holds what remains out.
 
 The names table in [`../README.md`](../README.md) fixes the four names: question file, transform, how-to, and pipeline. A question file holds one question, and a question set holds several named questions.
 
@@ -13,7 +13,7 @@ The names table in [`../README.md`](../README.md) fixes the four names: question
 | [channels.md](channels.md) | Arguments, the five channels, exit codes, `--quiet`, `--raw`, `--dry-run`, option placement | Settled |
 | [threshold.md](threshold.md) | The one threshold rule, its two forms, and which verbs take which | Settled |
 | [question-file.md](question-file.md) | The two homes of every setting, the question file grammar, precedence, and the question digest | Settled |
-| [result.md](result.md) | The bare value, the `--details` object, and the four answer kinds | Settled, with one open point |
+| [result.md](result.md) | The bare value, the `--details` object, and the five answer kinds | Settled, with one open point |
 | [records.md](records.md) | Reading a stream of records: framing, pointers, order, failure, resume, `--cache`, `--jobs` | Settled |
 | [backends.md](backends.md) | One wire shape, the key, the address, the request, retries, the `systemone` adapter | Settled, with Draft sections |
 | [recording.md](recording.md) | `--record` and `--replay`: a folder of exchanges that runs again with no network | Settled |
@@ -25,6 +25,9 @@ The names table in [`../README.md`](../README.md) fixes the four names: question
 | [rank.md](rank.md) | `rank` | Settled |
 | [annotate.md](annotate.md) | `annotate` and the saved question set | Settled |
 | [find.md](find.md) | `find`, and the `none` option that says nothing fits | Settled |
+| [recognize.md](recognize.md) | `recognize` and its beta relation output | Settled |
+| [relate.md](relate.md) | `relate`, complete entity sets, relation plans, and edges | Settled |
+| [transform.md](transform.md) | `transform list` and `transform show`, the read-only catalog of built-in `jq` transforms | Settled |
 | [fixtures/](fixtures/) | Request and response files. Tests read them, and another implementer can test against them | Settled |
 
 [roadmap.md](roadmap.md) lists every held verb and option with the reason it is held. The roadmap is not a contract. It carries no status word.
@@ -45,3 +48,4 @@ Each section carries one of three words. **Settled** means code may be built aga
 | `rank QUESTION` | Prints the records in order of the probability of yes |
 | `annotate FILE` | Asks a saved question set and adds one field per question |
 | `find QUESTION` | Picks the unit that best answers a question, out of a set the model sees at once |
+| `relate RELATION...` | Finds named relationships in one complete entity set |

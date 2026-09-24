@@ -33,7 +33,7 @@ const BACKEND_OPTIONS = [
   ['--model NAME', 'The model the request carries. Name a version to pin a run. The default is jev-latest.'],
   ['--url BASE', 'The backend base address. It outranks THINKTHEN_BASE_URL.'],
   ['--timeout SECONDS', 'How long one attempt may take. The default is 30.'],
-  ['--max-retries N', 'Retries after the first attempt. The default is 2.'],
+  ['--max-retries N', 'How many times a retried status is sent again. A transport failure is never sent again. The default is 2.'],
   ['--record DIR', 'Calls the backend and saves each exchange in DIR.'],
   ['--replay DIR', 'Answers from DIR alone, with no key and no network.'],
   ['--cache DIR', 'Answers from DIR when it can and saves new exchanges there.'],

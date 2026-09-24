@@ -10,7 +10,10 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::harness::{Canned, Listener, spawn};
-use crate::secrecy::{EVIDENCE, KEY, QUESTION, VERBS, nothing_leaked};
+
+mod relate;
+use crate::secrecy::{EVIDENCE, KEY, QUESTION, VERBS, asks_question, evidence, nothing_leaked};
+use relate::{RELATE, own_sentence};
 
 /// One refusal, driven over every verb that has it.
 struct Refusal {
@@ -382,6 +385,10 @@ fn evidence_of(named: &str) -> Vec<u8> {
             bytes
         }
         "{binary}" => [EVIDENCE.as_bytes(), &[0xff, 0xfe]].concat(),
+        "{entities}" => (0..256)
+            .map(|place| format!("{EVIDENCE}-{place}\n"))
+            .collect::<String>()
+            .into_bytes(),
         text => text.as_bytes().to_vec(),
     }
 }
@@ -389,7 +396,9 @@ fn evidence_of(named: &str) -> Vec<u8> {
 /// Drive one refusal over one verb and read everything the run wrote.
 fn refuse(refusal: &Refusal, verb: (&str, &[&str], &str), listener: &Listener) -> io::Result<()> {
     let (name, own, _) = verb;
-    if !refusal.verbs.is_empty() && !refusal.verbs.contains(&name) {
+    if (!refusal.verbs.is_empty() && !refusal.verbs.contains(&name))
+        || (!asks_question(name) && refusal.named == "a blank question")
+    {
         return Ok(());
     }
     let named = format!("{}-{name}", refusal.named.replace(' ', "-"));
@@ -406,7 +415,10 @@ fn refuse(refusal: &Refusal, verb: (&str, &[&str], &str), listener: &Listener) -
     } else {
         refusal.question
     };
-    let mut asked = vec![name.to_owned(), question.to_owned()];
+    let mut asked = vec![name.to_owned()];
+    if asks_question(name) {
+        asked.push(question.to_owned());
+    }
     asked.extend(operands.iter().map(|operand| (*operand).to_owned()));
     // A row that names its own base keeps it. Every other row points at the
     // listener, which answers nothing, so a row that stopped refusing would
@@ -420,7 +432,11 @@ fn refuse(refusal: &Refusal, verb: (&str, &[&str], &str), listener: &Listener) -
     let output = spawn(
         &arguments,
         &[("THINKTHEN_API_KEY", KEY)],
-        &evidence_of(refusal.evidence),
+        &if refusal.evidence.is_empty() {
+            evidence(name, None)
+        } else {
+            evidence_of(refusal.evidence)
+        },
     )?;
 
     assert_eq!(
@@ -434,8 +450,9 @@ fn refuse(refusal: &Refusal, verb: (&str, &[&str], &str), listener: &Listener) -
         "{named}: a refusal prints nothing"
     );
     let message = String::from_utf8_lossy(&output.stderr);
+    let says = own_sentence(name, refusal.named).unwrap_or(refusal.says);
     assert!(
-        message.contains(refusal.says),
+        message.contains(says),
         "{named}: the message names another refusal\n{message}"
     );
     nothing_leaked(&named, &output, &into);
@@ -450,7 +467,12 @@ fn refuse(refusal: &Refusal, verb: (&str, &[&str], &str), listener: &Listener) -
 fn no_refusal_on_any_command_writes_the_key_quotes_the_evidence_or_sends_anything() {
     let listener = Listener::serving(Vec::<Canned>::new()).expect("a loopback listener");
 
-    for refusal in REFUSALS.iter().chain(&OPERANDS).chain([&OVER_RECORDS]) {
+    for refusal in REFUSALS
+        .iter()
+        .chain(&OPERANDS)
+        .chain([&OVER_RECORDS])
+        .chain(&RELATE)
+    {
         for verb in VERBS {
             refuse(refusal, verb, &listener).expect("the compiled binary runs");
         }
