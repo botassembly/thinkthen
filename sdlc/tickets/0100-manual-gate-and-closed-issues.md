@@ -6,7 +6,7 @@ opens: .github/workflows/gate.yml sdlc/issues sdlc/tickets/0100-manual-gate-and-
 
 # 0100: Run the gate only by hand and close five fixed issues
 
-Status: in progress. Owner: Claude.
+Status: landed 2026-09-24; record `sdlc/records/0100-quick-fix-manual-gate-and-closed-issues.md`, review `sdlc/records/0100-review.md`. Owner: Claude.
 
 ## Work
 

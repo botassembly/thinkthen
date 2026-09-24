@@ -21,7 +21,7 @@ No rung of `sdlc/scripts/lint` reads `.github/workflows/`. The proof is a YAML c
 | Issue | Command and result |
 | --- | --- |
 | `2026-09-22-command-wording-and-help-fixes-for-0-1` | `git merge-base --is-ancestor` puts `331e85f7` (0082) and `565f8b4f` (0090) on main. Ticket 0082 marks item 27 stale and item 44 moved. Ticket 0090 says landed. |
-| `2026-09-20-accuracy-round-on-three-public-sets-and-a-speed-rerun` | A text-input row through `cost.jq` from `ce96895b~1` fails with `Cannot index string with string "id"`, exit 5. The same row through main's `transforms/cost/cost.jq` prints the totals, exit 0. The default-width question stays open for ticket 0077. |
+| `2026-09-20-accuracy-round-on-three-public-sets-and-a-speed-rerun` | A text-input row through `cost.jq` from `ce96895b~1` fails with `Cannot index string with string "id"`, exit 5. The same row through main's `transforms/cost/cost.jq` prints the totals, exit 0. The default-width question and the missing `--jobs` page numbers moved to a new open issue, `2026-09-24-the-default-jobs-width-runs-past-the-documented-limit.md`. |
 | `2026-09-23-score-spec-says-the-vendor-score-agrees-and-it-differs` | `grep` on `specification/score.md` line 25 finds the differences sentence and no "so the two agree". `37746b36` (0087) is on main. |
 | `2026-09-24-a-target-side-choice-asks-the-reversed-relation` | `c84051f1` (0088) is on main. `core/relation.rs` line 237 writes `___ {reads} {asking}` for the reversed side. |
 | `2026-09-22-stop-github-actions-on-push` | Closed by this ticket. |
@@ -35,4 +35,6 @@ Run in the worktree with every `THINKTHEN_` variable unset. `sdlc/scripts/live` 
 
 ## Review
 
-Pending. A fresh read-only reviewer checks the branch before it merges.
+A fresh read-only Claude session reviewed `664f07ed`. `sdlc/records/0100-review.md` holds the review. It returned one finding: the accuracy issue named ticket 0077 as owner of the default-width question, and 0077 keeps the default at 4 on purpose and never takes the question. The fix moves the question and the missing `--jobs` page numbers into their own open issue and points the closed issue there. The coordinator accepted the fix as issue text only, with no second review.
+
+The review noted that ticket 0087's Status line still reads `accepted`. That file is outside this ticket's scope.
