@@ -8,7 +8,7 @@ Status: landed on `ticket/0115-runner-guards`. A fresh review accepted `7ac7bd81
 - The child passes `--url` for a loopback listener that counts connections, and it requires zero. The runner requires the child's `form-child sees []` line, so a renamed child cannot pass silently.
 - `the_runner_hides_a_key_and_an_address_from_its_children` starts the runner with `THINKTHEN_API_KEY=test-key-not-real` and `THINKTHEN_BASE_URL` set to a counting loopback listener. The child asks a valid question.
 - A ported mutation drops `evidence` from case 29.
-- Ratchet 46972 to 47122 (+150): the child harness, the counting listener, and the guard test.
+- Ratchet +150 over main: the child harness, the counting listener, and the guard test. After the rebase onto `6eb1303e` it moves from 47007 to 47157.
 
 ## Red and green
 
