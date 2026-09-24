@@ -117,13 +117,13 @@ Measured with `git diff -U0 86f4012e HEAD -- '*.rs'`, nonblank lines:
 
 ## Ladder
 
-At `a66a9944`, the merge of origin/main into the ticket branch, the rungs ran one after another with the key and base-address variables unset. The one-minute load stood at 8.08 at the start. The observed exits were `install` 0, `lint` 0, `test` 0 (808 passed, 0 failed), and `spec` 0 (demos 21 green, 0 red). `ratchet.mjs` read 49739/49739. The known model-mismatch test passed on the first run. The code review re-ran the workspace tests at `8b8035ce`: 806 passed, 0 failed.
+At `2b5da803`, the last merge of origin/main into the ticket branch, the rungs ran one after another with the key and base-address variables unset. The one-minute load stood at 3.36 at the start. The observed exits were `install` 0, `lint` 0, `test` 0 (808 passed, 0 failed), and `spec` 0 (demos 21 green, 0 red). `ratchet.mjs` read 49733/49733. No rerun was needed. The code review re-ran the workspace tests at `8b8035ce`: 806 passed, 0 failed.
 
-An earlier ladder at `a4474607` also passed. Before it, a run at `3644f7e4` failed `annotate::scheduling::a_model_mismatch_cancels_groups_that_have_not_started`. The same test failed 8 of 8 alone on main at `d4ebe645` under the same load. `sdlc/issues/2026-09-24-the-model-mismatch-cancel-check-fails-under-load.md` records it.
+Earlier ladders at `a4474607` and `a66a9944` also passed. Before them, a run at `3644f7e4` failed `annotate::scheduling::a_model_mismatch_cancels_groups_that_have_not_started`. The same test failed 8 of 8 alone on main at `d4ebe645` under the same load. Quick Fix `qf-model-mismatch-test` closed that issue on main before this merge.
 
 ## Ratchet
 
-The ceiling moved from 49701 to 49742 for the review's width child and relate tests, then to 49728 when the unreachable relate check went, then to 49739 when origin/main added 11 test lines.
+The ceiling moved from 49701 to 49742 for the review's width child and relate tests, then to 49728 when the unreachable relate check went. Merging origin/main raised it to 49739 for 11 lines of test code. The second merge lowered it to 49733, because the model-mismatch Quick Fix removed 6 lines.
 
 ## Landed
 
