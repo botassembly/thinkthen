@@ -6,7 +6,7 @@ opens: sdlc/planning/adr
 
 # 0099: Port the branch ADRs to main
 
-Status: draft, revised after design review; needs re-review. Owner: Claude.
+Status: design accepted 2026-09-24 after re-review. Owner: Claude.
 
 ## Outcome and authority
 
@@ -15,7 +15,7 @@ Bring branch ADRs 0041, 0042, and 0043 from tag `surfaces-wave7-final` (`f6a7fae
 ## Work
 
 - Copy each ADR whole and keep its accepted history.
-- Add one amendment, dated at the port, to 0041. The contract crate that owned the conversion retires. The owner becomes `CallOptions::deadline_seconds` and `deadline_millis` in `thinkthen` (ticket 0095).
+- Add one amendment, dated at the port, to 0041. The contract crate that owned the conversion retires. The owner becomes `CallOptions::deadline_seconds` and `deadline_millis` in `thinkthen` (ticket 0095). The same amendment records that the public door refuses a budget above 4,294,967,295 seconds as `usage`, where 0041 treated an unrepresentable budget as no deadline, conditional on 0095's acceptance.
 - Add one amendment to 0042 and one to 0043 that name their surface tickets as the owners going forward. Their rulings stay as they are.
 - Fix references to branch-only records (`sdlc/records/surfaces-notes/…`, `sdlc/records/0070-…`, `sdlc/records/0074-…`) so each names the tag and path.
 
@@ -33,4 +33,4 @@ Builder: Claude (Opus subagent). Reviewer: a fresh Claude session.
 
 ## Review
 
-- Design review: pending.
+- Design review: accepted by the re-review (`sdlc/records/2026-09-24-rereview-near.md`) with one edit, applied.
