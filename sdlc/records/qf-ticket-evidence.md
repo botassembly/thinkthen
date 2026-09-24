@@ -1,0 +1,32 @@
+# Quick Fix qf-ticket-evidence: tickets from 0120 on name their evidence in five parts
+
+Status: landed. It carries out workspace decision `2026-09-24-experiments-reduce-risk.md` in the dotfiles repo. That decision asks each product ticket to name its evidence, retained behavior, deliberate changes, current proof, and deferred gaps. A fresh read-only Opus review is in `sdlc/records/qf-ticket-evidence-review.md`.
+
+## Result
+
+- `sdlc/README.md` states the rule under the folder table and cites the decision. A ticket numbered 0120 or higher carries a `## Evidence` section with five list items: `Starts from`, `Keeps`, `Changes`, `Proof`, and `Defers`. Earlier tickets are exempt by number.
+- `sdlc/tickets/README.md` points to that paragraph in one sentence.
+- `sdlc/scripts/tickets` checks every `sdlc/tickets/NNNN-*.md` at or above 0120. It strips fenced blocks, finds the first `## Evidence` heading, and needs each label as a list item with text after its colon. A bold label passes. A label outside the section fails.
+- `sdlc/scripts/lint` runs `tickets --self-test` and then `tickets` right after the catalog check. `sdlc/scripts/README.md` lists the script.
+- `CLAUDE.md` is unchanged at 4,988 of 5,000 characters.
+
+## Planted bugs
+
+The self-test builds one fresh tree per case and pins the whole failure list. It holds seven cases: a good ticket, an exempt 0119, a missing section, a section inside a fence, a missing `Defers` item, an empty `Proof` item, and a `Keeps` item under the wrong heading.
+
+Each plant below ran by hand in the worktree and was then removed.
+
+| Plant | Command | Observed | Exit |
+|---|---|---|---|
+| A real `sdlc/tickets/0120-planted.md` with no Evidence section | `tickets` | `0120-planted.md: ticket 0120 and later needs a `## Evidence` section` | 1 |
+| The same ticket with four of five items, `Defers` missing | `tickets` | `0120-planted.md: the Evidence section lacks a `- Defers:` item with text` | 1 |
+| `FIRST = 10000`, which exempts every ticket | `tickets --self-test` | `2/7 cases hold` | 1 |
+| The item pattern drops its "text after the colon" clause | `tickets --self-test` | `6/7 cases hold`, the `0123-empty.md` case fails | 1 |
+| The check reads raw lines and skips the fence strip | `tickets --self-test` | `6/7 cases hold`, the `0121-fenced.md` case fails | 1 |
+| All plants removed | `tickets --self-test`, `tickets` | `7/7 cases hold`, `tickets: 0 evidence failures from ticket 0120 on` | 0 |
+
+## Checks
+
+`sdlc/scripts/lint` exited 0. It printed `tickets self-test: 7/7 cases hold`, `tickets: 0 evidence failures from ticket 0120 on`, and `ratchet: crates + conformance 50378/50378`.
+
+`sdlc/scripts/live` did not run.

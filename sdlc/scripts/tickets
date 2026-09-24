@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+"""Every ticket from 0120 on names its evidence in five parts.
+
+Workspace decision `2026-09-24-experiments-reduce-risk.md` asks each product
+ticket to name the evidence it starts from, the behavior it keeps, what it
+deliberately changes, what proves it, and the gaps it defers. A ticket numbered
+0120 or higher carries a `## Evidence` section with one list item per part:
+
+    - Starts from: ...
+    - Keeps: ...
+    - Changes: ...
+    - Proof: ...
+    - Defers: ...
+
+Each label may be bold, and each needs text after its colon. Tickets below 0120
+are exempt by number. Fenced blocks do not count.
+
+Usage: tickets [ROOT]. ROOT defaults to the repository. With --self-test, it
+runs each rule against a ticket built to break it and pins the whole sentence.
+"""
+
+import pathlib
+import re
+import sys
+import tempfile
+
+FIRST = 120
+PARTS = ("Starts from", "Keeps", "Changes", "Proof", "Defers")
+NAME = re.compile(r"^(\d{4})-.*\.md$")
+FENCE = re.compile(r"^\s*```")
+HEADING = re.compile(r"^(#{1,6})\s+(.*?)\s*$")
+
+
+def prose(text):
+    """The lines outside every fenced block."""
+    out, fenced = [], False
+    for line in text.splitlines():
+        if FENCE.match(line):
+            fenced = not fenced
+            continue
+        if not fenced:
+            out.append(line)
+    return out
+
+
+def section(lines, title):
+    """The lines under the first `## title` heading, up to the next heading of its level or higher."""
+    body, level = None, 0
+    for line in lines:
+        hit = HEADING.match(line)
+        if body is None:
+            if hit and len(hit.group(1)) == 2 and hit.group(2) == title:
+                body, level = [], 2
+            continue
+        if hit and len(hit.group(1)) <= level:
+            break
+        body.append(line)
+    return body
+
+
+def failures(path):
+    """Every sentence that says how one ticket misses the rule."""
+    body = section(prose(path.read_text(encoding="utf-8")), "Evidence")
+    if body is None:
+        return [f"{path.name}: ticket {FIRST:04d} and later needs a `## Evidence` section"]
+    out = []
+    for part in PARTS:
+        item = re.compile(rf"^\s*[-*]\s+(\*\*)?{part}(\*\*)?:(\*\*)?\s*\S")
+        if not any(item.match(line) for line in body):
+            out.append(f"{path.name}: the Evidence section lacks a `- {part}:` item with text")
+    return out
+
+
+def check(root):
+    """The failures across every numbered ticket at or above the first."""
+    out = []
+    for path in sorted((root / "sdlc" / "tickets").glob("*.md")):
+        hit = NAME.match(path.name)
+        if hit and int(hit.group(1)) >= FIRST:
+            out += failures(path)
+    return out
+
+
+GOOD = """# 0120: A fixture
+
+## Evidence
+
+- Starts from: probes/one.
+- **Keeps:** the answer shape.
+- Changes: one flag.
+- Proof: a test.
+- Defers: nothing.
+
+## Design
+"""
+
+CASES = [
+    ("0120-good.md", GOOD, []),
+    ("0119-old.md", "# 0119: exempt\n", []),
+    ("0120-none.md", "# 0120\n\n## Design\n", ["0120-none.md: ticket 0120 and later needs a `## Evidence` section"]),
+    (
+        "0121-fenced.md",
+        "# 0121\n\n```\n## Evidence\n```\n",
+        ["0121-fenced.md: ticket 0120 and later needs a `## Evidence` section"],
+    ),
+    (
+        "0122-part.md",
+        GOOD.replace("- Defers: nothing.\n", ""),
+        ["0122-part.md: the Evidence section lacks a `- Defers:` item with text"],
+    ),
+    (
+        "0123-empty.md",
+        GOOD.replace("- Proof: a test.", "- Proof:"),
+        ["0123-empty.md: the Evidence section lacks a `- Proof:` item with text"],
+    ),
+    (
+        "0124-elsewhere.md",
+        GOOD.replace("- **Keeps:** the answer shape.\n", "").replace("## Design\n", "## Design\n\n- Keeps: late.\n"),
+        ["0124-elsewhere.md: the Evidence section lacks a `- Keeps:` item with text"],
+    ),
+]
+
+
+def self_test():
+    """Run each case alone in a fresh tree and pin its whole output."""
+    bad = 0
+    for name, text, expected in CASES:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            (root / "sdlc" / "tickets").mkdir(parents=True)
+            (root / "sdlc" / "tickets" / name).write_text(text, encoding="utf-8")
+            actual = check(root)
+        if actual != expected:
+            bad += 1
+            print(f"tickets self-test: {name}: expected {expected}, got {actual}", file=sys.stderr)
+    print(f"tickets self-test: {len(CASES) - bad}/{len(CASES)} cases hold")
+    return bad
+
+
+def main(argv):
+    if argv[1:] == ["--self-test"]:
+        return 1 if self_test() else 0
+    root = pathlib.Path(argv[1]) if len(argv) > 1 else pathlib.Path(__file__).resolve().parents[2]
+    found = check(root)
+    for line in found:
+        print(line, file=sys.stderr)
+    print(f"tickets: {len(found)} evidence failures from ticket {FIRST:04d} on")
+    return 1 if found else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
