@@ -21,6 +21,7 @@ pub(crate) struct Completed<R> {
 }
 
 /// The ordered stop metadata returned after all request workers have joined.
+#[derive(Debug)]
 pub(crate) enum Outcome<E> {
     Complete,
     Stopped {

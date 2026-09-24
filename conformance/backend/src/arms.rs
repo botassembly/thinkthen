@@ -116,6 +116,11 @@ impl Backend {
         self.listener.count()
     }
 
+    /// The most requests the backend held at once.
+    pub fn peak(&self) -> usize {
+        self.listener.peak()
+    }
+
     /// Let every held reply go, now and from here on.
     pub fn release(&self) {
         self.gate.release();
