@@ -269,3 +269,26 @@ impl fmt::Debug for Stop<'_> {
         formatter.debug_struct("Stop").finish_non_exhaustive()
     }
 }
+
+/// R1-10 has no real seam: no input makes the engine panic, and the owner's
+/// ruling removed the private fault hook. This row holds the one door every
+/// public call passes, so dropping its guard turns it red.
+#[cfg(test)]
+mod tests {
+    use std::panic::resume_unwind;
+
+    use super::guarded;
+    use crate::public::error::{Error, ErrorKind};
+
+    #[test]
+    fn a_panic_below_the_door_is_a_defect_and_the_next_call_runs() {
+        let panicked: Result<(), Error> = guarded(|| resume_unwind(Box::new("engine fault")));
+        let error = panicked.err();
+        assert_eq!(error.as_ref().map(Error::kind), Some(ErrorKind::Defect));
+        assert_eq!(
+            error.map(|error| error.to_string()).as_deref(),
+            Some("defect: the engine panicked below the public door")
+        );
+        assert_eq!(guarded(|| Ok(7)).ok(), Some(7));
+    }
+}
