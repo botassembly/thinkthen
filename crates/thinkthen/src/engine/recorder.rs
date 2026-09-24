@@ -4,8 +4,8 @@ use std::fs::{self, File};
 use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
 use std::process;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
-use std::sync::{Arc, Mutex, OnceLock};
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::core::recording::{Digest, Entry, Exchange};
 use crate::engine::cache_lock::{self, CacheLock, FolderGate};
@@ -22,9 +22,6 @@ pub(crate) fn fail_cleanup() {
 }
 
 static WRITES: AtomicU64 = AtomicU64::new(0);
-
-#[cfg(unix)]
-static RECORDING_SIGNAL: OnceLock<Result<(), ()>> = OnceLock::new();
 
 /// Which folders `--record` and `--replay` named, once they agree.
 #[derive(Debug)]
@@ -182,9 +179,6 @@ impl Recorder {
         let name = digest.file_name();
         self.ready(exchange, &name, cancel)?;
         let entry = folder.join(&name);
-        if self.recording {
-            install_sigxfsz_handler()?;
-        }
         let first = existing(&entry, exchange)?;
 
         if !self.recording {
@@ -420,24 +414,6 @@ fn make_folder(folder: &Path) -> Result<(), Error> {
     }
     #[cfg(not(unix))]
     fs::create_dir_all(folder).map_err(storage)
-}
-
-#[cfg(unix)]
-fn install_sigxfsz_handler() -> Result<(), Error> {
-    let result = RECORDING_SIGNAL.get_or_init(|| {
-        signal_hook::flag::register(
-            signal_hook::consts::signal::SIGXFSZ,
-            Arc::new(AtomicBool::new(false)),
-        )
-        .map(|_| ())
-        .map_err(|_| ())
-    });
-    result.map_err(|()| Error::RecordingStorage)
-}
-
-#[cfg(not(unix))]
-fn install_sigxfsz_handler() -> Result<(), Error> {
-    Ok(())
 }
 
 fn storage(_error: io::Error) -> Error {

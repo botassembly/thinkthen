@@ -95,6 +95,39 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
     assert!(shown.contains("withheld"), "{shown}");
 }
 
+/// `choose --options` reads its labels from the record, and the request body
+/// carries the evidence as `state`. Neither `Debug` line shows the record.
+#[test]
+fn no_record_label_or_request_debug_line_shows_the_evidence() {
+    let record = crate::core::Reading::new(crate::core::Framing::Jsonl, Vec::new())
+        .expect("a JSON reading")
+        .record(format!(r#"{{"options":["{EVIDENCE}","other"]}}"#).as_bytes())
+        .expect("a JSON record");
+    let question = crate::core::Question::Choose {
+        text: crate::core::QuestionText::new("Which one fits?").expect("a question"),
+        options: record
+            .choices(&crate::core::Pointer::new("/options").expect("a pointer"))
+            .expect("two options"),
+    };
+    let plan = crate::core::Plan::new(
+        crate::core::Evidence::new(EVIDENCE).expect("evidence"),
+        crate::core::ModelName::new("jev-latest").expect("a model"),
+        vec![question.clone()],
+    )
+    .expect("a plan");
+    let request = crate::core::adapters::built_in::request(&plan).expect("a request");
+    let shown = format!("{question:?} {plan:?} {plan:#?} {request:?} {request:#?}");
+    assert!(!shown.contains(EVIDENCE), "{shown}");
+    assert_eq!(
+        format!("{request:?}"),
+        r#"Request { state: <24 bytes withheld>, model: "jev-latest", .. }"#
+    );
+    assert_eq!(
+        format!("{question:?}"),
+        r#"Choose { text: QuestionText(String("Which one fits?")), options: Labels(<27 bytes withheld>) }"#
+    );
+}
+
 /// `recognize` reads its evidence as tokens and names, in plain and pretty `Debug`.
 #[test]
 fn no_recognize_debug_line_shows_the_evidence() {
@@ -119,7 +152,7 @@ fn no_recognize_debug_line_shows_the_evidence() {
     };
     let lines = crate::core::Reading::new(crate::core::Framing::Lines, Vec::new())
         .expect("a text reading")
-        .record(EVIDENCE.as_bytes())
+        .record(format!("\u{e9}{EVIDENCE}").as_bytes())
         .expect("a text record");
     let object =
         crate::core::Record::string_fields(vec![(EVIDENCE.to_owned(), EVIDENCE.to_owned())]);
@@ -129,6 +162,15 @@ fn no_recognize_debug_line_shows_the_evidence() {
     );
     assert!(!shown.contains(EVIDENCE), "{shown}");
     assert_eq!(shown.matches("withheld").count(), 14, "{shown}");
+    // A two-byte letter sets the byte places apart from the character places.
+    let placed = crate::core::tokenize(&format!("\u{e9} {EVIDENCE}"));
+    assert_eq!(
+        format!("{placed:?}"),
+        "[Token { text: <2 bytes withheld>, byte_start: 0, byte_end: 2, start: 0, end: 1 }, \
+         Token { text: <22 bytes withheld>, byte_start: 3, byte_end: 25, start: 2, end: 24 }]"
+    );
+    assert_eq!(format!("{lines:?}"), "Record(text, <24 bytes withheld>)");
+    assert_eq!(format!("{object:?}"), "Record(json, <51 bytes withheld>)");
     assert!(
         shown.contains(r#"kind: "person", start: 0, end: 1, strength: 0.9"#),
         "{shown}"

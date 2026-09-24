@@ -317,6 +317,9 @@ pub(crate) mod cache_prune;
 #[cfg(test)]
 mod deadline_tests;
 pub(crate) mod error;
+#[cfg(test)]
+#[cfg(unix)]
+mod host_signal_tests;
 pub(crate) mod http;
 pub(crate) mod prepared_request;
 pub(crate) mod recorder;
