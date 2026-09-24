@@ -2677,6 +2677,8 @@ mod malformed_tests {
     struct PastEnd {
         base: *mut u8,
         _file: std::fs::File,
+        /// The named file, removed when the mapping drops.
+        path: Option<std::path::PathBuf>,
     }
 
     #[cfg(target_os = "linux")]
@@ -2688,7 +2690,7 @@ mod malformed_tests {
             let base = unsafe { mmap(std::ptr::null_mut(), 8192, 0x1 | 0x2, 0x01, file.as_raw_fd(), 0) } as *mut u8;
             assert!(!base.is_null() && base as isize != -1, "the file maps");
             unsafe { std::ptr::copy_nonoverlapping(tail.as_ptr(), base.add(4096 - tail.len()), tail.len()) };
-            Self { base, _file: file }
+            Self { base, _file: file, path: None }
         }
 
         /// The three backings the check tells apart: a file whose path
@@ -2697,7 +2699,8 @@ mod malformed_tests {
             use std::os::fd::FromRawFd;
             let path = std::env::temp_dir().join(format!("thinkthen-past-end-{}", std::process::id()));
             let named = std::fs::File::options().read(true).write(true).create(true).truncate(true).open(&path).expect("the file opens");
-            let named = Self::new(named, tail);
+            let mut named = Self::new(named, tail);
+            named.path = Some(path.clone());
             let gone_path = path.with_extension("gone");
             let gone = std::fs::File::options().read(true).write(true).create(true).truncate(true).open(&gone_path).expect("the file opens");
             let gone = Self::new(gone, tail);
@@ -2721,6 +2724,9 @@ mod malformed_tests {
     impl Drop for PastEnd {
         fn drop(&mut self) {
             unsafe { munmap(self.base.cast(), 8192) };
+            if let Some(path) = &self.path {
+                let _ = std::fs::remove_file(path);
+            }
         }
     }
 
