@@ -22,7 +22,16 @@ use std::process::ExitCode;
 use std::time::Duration;
 use std::{fs, thread};
 
-fn folder(case: &Case) -> PathBuf {
+/// A case's temporary folder, removed when the case ends, pass or fail.
+struct Scratch(PathBuf);
+
+impl Drop for Scratch {
+    fn drop(&mut self) {
+        let _removed = fs::remove_dir_all(&self.0);
+    }
+}
+
+fn folder(case: &Case) -> Scratch {
     let path = std::env::temp_dir().join(format!(
         "thinkthen-conformance-{}-{}",
         std::process::id(),
@@ -30,8 +39,24 @@ fn folder(case: &Case) -> PathBuf {
     ));
     let _absent = fs::remove_dir_all(&path);
     fs::create_dir_all(&path).expect("case folder");
-    path
+    Scratch(path)
 }
+
+/// The exact diagnostic the command prints for each rule-breaking question case.
+const SENTENCES: [(&str, &str); 3] = [
+    (
+        "29-usage-json-text",
+        "thinkthen: --threshold: a single cut is above zero and at most one\n",
+    ),
+    (
+        "30-local-question-file",
+        "thinkthen: the question file's `decide`: a question is text, not white space\n",
+    ),
+    (
+        "31-usage-rank-blank-question",
+        "thinkthen: a question is text, not white space\n",
+    ),
+];
 
 fn question_file(case: &Case, folder: &Path) -> String {
     let path = folder.join("question.json");
@@ -75,7 +100,8 @@ struct PrintedMeta {
 
 /// Replay a recognize or relate case through the command with `--details`.
 pub(super) fn staged(case: &Case, success: &Success) {
-    let folder = folder(case);
+    let scratch = folder(case);
+    let folder = scratch.0.clone();
     let replay = folder.join("replay");
     fs::create_dir_all(&replay).expect("replay folder");
     let url = Url::new("https://api.typesafe.ai/v1/systemone").expect("canonical URL");
@@ -126,7 +152,6 @@ pub(super) fn staged(case: &Case, success: &Success) {
     );
     assert_eq!(printed.meta.model, held.details.model, "{}", case.id);
     assert_eq!(printed.meta.requests, held.details.requests, "{}", case.id);
-    fs::remove_dir_all(folder).expect("case folder removed");
 }
 
 /// Give a rule-breaking question as typed text or as a named file and read the exit.
@@ -135,7 +160,8 @@ pub(super) fn staged(case: &Case, success: &Success) {
     reason = "fixture-only question members become command-line text"
 )]
 pub(super) fn form(case: &Case, kind: &str) {
-    let folder = folder(case);
+    let scratch = folder(case);
+    let folder = scratch.0.clone();
     let mut arguments = vec!["thinkthen".to_owned(), case.verb.clone()];
     if case.question_form == Some(QuestionForm::File) {
         arguments.push(question_file(case, &folder));
@@ -156,13 +182,27 @@ pub(super) fn form(case: &Case, kind: &str) {
         }
     }
     arguments.push("--no-cache".to_owned());
-    let (result, output) = dispatch(&arguments, Vec::new());
+    if case.verb == "rank" {
+        arguments.push("--lines".to_owned());
+    }
+    let evidence = case.evidence.clone().expect("valid evidence");
+    let (result, output) = dispatch(&arguments, evidence.into_bytes());
     let failure = result.expect_err("a rule-breaking question fails");
-    let code = report(&failure, &mut Vec::new());
+    let mut diagnostic = Vec::new();
+    let code = report(&failure, &mut diagnostic);
     let wanted = ExitCode::from(if kind == "usage" { 2 } else { 5 });
     assert_eq!(code, wanted, "{}", case.id);
+    let sentence = SENTENCES
+        .iter()
+        .find_map(|(id, sentence)| (*id == case.id).then_some(*sentence))
+        .expect("a pinned sentence");
+    assert_eq!(
+        String::from_utf8_lossy(&diagnostic),
+        sentence,
+        "{}",
+        case.id
+    );
     assert!(output.is_empty(), "{}", case.id);
-    fs::remove_dir_all(folder).expect("case folder removed");
 }
 
 /// Answer one request on loopback, then refuse any later one.
@@ -185,7 +225,8 @@ fn serve_once(listener: TcpListener, request: Vec<u8>, response: Vec<u8>) {
 
 /// Repeat one call through a cache folder and read the process counters around it.
 pub(super) fn counters(case: &Case, expected: &Counters) {
-    let folder = folder(case);
+    let scratch = folder(case);
+    let folder = scratch.0.clone();
     let cache = folder.join("cache");
     let totals = folder.join("usage");
     let listener = TcpListener::bind("127.0.0.1:0").expect("loopback listener");
@@ -230,5 +271,4 @@ pub(super) fn counters(case: &Case, expected: &Counters) {
         "{} cache answers",
         case.id
     );
-    fs::remove_dir_all(folder).expect("case folder removed");
 }

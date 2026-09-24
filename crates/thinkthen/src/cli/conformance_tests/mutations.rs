@@ -72,6 +72,16 @@ fn focused_mutations_are_refused() {
 fn ported_case_mutations_are_refused() {
     let mutations = [
         CASES.replacen(
+            "\"provenance\": {\n        \"branch\"",
+            "\"surprise\": 1, \"provenance\": {\n        \"branch\"",
+            1,
+        ),
+        CASES.replacen(
+            "\"kind\": \"decide_many\",",
+            "\"kind\": \"decide_many\", \"counterz\": 1,",
+            1,
+        ),
+        CASES.replacen(
             "\"kind\": \"decide_many\"",
             "\"kind\": \"decide_several\"",
             1,

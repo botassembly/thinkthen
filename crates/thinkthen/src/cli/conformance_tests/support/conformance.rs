@@ -46,6 +46,7 @@ pub(super) struct Case {
     pub(super) question_set: Option<Box<RawValue>>,
     pub(super) question_form: Option<QuestionForm>,
     pub(super) text: Option<String>,
+    pub(super) evidence: Option<String>,
     pub(super) entities: Option<Box<RawValue>>,
     pub(super) operation: Option<Injection>,
     pub(super) exchanges: Vec<Exchange>,
@@ -74,7 +75,13 @@ impl Case {
             .provenance
             .as_ref()
             .is_some_and(|held| held.branch.is_some() || held.pending.is_some());
-        if self.id.as_str() >= "26" && !named {
+        let number = self
+            .id
+            .split('-')
+            .next()
+            .and_then(|lead| lead.parse::<u32>().ok())
+            .ok_or_else(|| format!("{} has no leading number", self.id))?;
+        if number >= 26 && !named {
             return Err(format!("{} names no provenance", self.id));
         }
         if (self.verb == "recognize") != self.text.is_some()
@@ -127,7 +134,10 @@ impl Case {
             .operation
             .as_ref()
             .is_some_and(|held| !held.injection.is_empty());
-        if !self.exchanges.is_empty() || injected == self.question_form.is_some() {
+        if !self.exchanges.is_empty()
+            || injected == self.question_form.is_some()
+            || self.question_form.is_some() != self.evidence.is_some()
+        {
             return Err(format!("{} is not a schema-only fault", self.id));
         }
         Ok(())

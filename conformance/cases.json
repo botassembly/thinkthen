@@ -2575,6 +2575,7 @@
         "threshold": 90
       },
       "question_form": "text",
+      "evidence": "I want a refund.",
       "exchanges": [],
       "expect": {
         "error": {
@@ -2592,6 +2593,7 @@
         "decide": "   "
       },
       "question_form": "file",
+      "evidence": "I want a refund.",
       "exchanges": [],
       "expect": {
         "error": {
@@ -2609,6 +2611,7 @@
         "decide": "   "
       },
       "question_form": "text",
+      "evidence": "one\ntwo\n",
       "exchanges": [],
       "expect": {
         "error": {
