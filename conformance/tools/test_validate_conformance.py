@@ -154,7 +154,7 @@ def test_an_unrecorded_request_id_fails():
     data = json.loads(CASES.read_text())
     changed = None
     for case in data["cases"]:
-        if case["verb"] in ("relate", "recognize") and case["requests"]:
+        if case["verb"] == "relate" and case["requests"]:
             case["requests"][0] = "0" * 64
             changed = case["id"]
             break
@@ -171,6 +171,29 @@ def test_an_unrecorded_request_id_fails():
     )
 
 
+def test_a_stale_replay_case_name_fails():
+    """A relate replay row names its case. Renaming the case without the
+    row leaves build_relate_yes_no.py pointing at nothing."""
+    data = json.loads(CASES.read_text())
+    changed = None
+    for case in data["cases"]:
+        if case["verb"] == "relate" and not any(
+                skip.get("when", {}).get("id") == case["id"] for skip in data["skips"]):
+            changed = case["id"]
+            case["id"] = changed + "-renamed"
+            break
+    with tempfile.TemporaryDirectory() as scratch:
+        copy = pathlib.Path(scratch) / "renamed.json"
+        copy.write_text(json.dumps(data))
+        done = run([str(copy)], scratch)
+    want = f"{changed}-renamed replay row names case {changed!r}, not this one"
+    report(
+        "a relate case renamed without its replay row fails the check",
+        changed is not None and done.returncode == 1 and want in (done.stdout + done.stderr),
+        f"exit {done.returncode}, wanted {want!r}: {(done.stdout + done.stderr).strip()[:200]}",
+    )
+
+
 def main():
     test_default_from_repo_root()
     test_explicit_relative_path()
@@ -180,6 +203,7 @@ def main():
     test_wrong_case_count_fails()
     test_skip_table_entries_are_checked()
     test_an_unrecorded_request_id_fails()
+    test_a_stale_replay_case_name_fails()
     if FAILURES:
         print(f"{FAILURES} checker test(s) failed")
         return 1
