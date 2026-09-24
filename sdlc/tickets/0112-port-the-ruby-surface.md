@@ -6,7 +6,7 @@ opens: libraries/ruby sdlc/scripts sdlc/planning/libraries/ruby.md sdlc/planning
 
 # 0112: Port the Ruby surface
 
-Status: design accepted 2026-09-24 after re-review. Owner: Claude. Depends on the 0084 builder amendment and 0117.
+Status: design accepted 2026-09-24 after re-review; amended 2026-09-24 for the no-paid-backend rule. Owner: Claude. Depends on the 0084 builder amendment and 0117.
 
 ## Outcome and authority
 
@@ -41,6 +41,9 @@ Draft ADR 0047 (branch `ticket/0093-first-binding-crate`) fixes the crate's plac
    - *Checks.* A boolean or non-integer `width:`, `max_requests:`, or `cache_bytes:` raises `UsageError`, as decision 7 checks `deadline:`. `width: 0` and `width: 33` raise `UsageError` from the builder (0086, R4-12). A second explicit width that differs from the process cap raises the 0077 conflict through the kind table.
    - *Methods.* An `Engine` value has the ten verbs, `decide_many`, `details`, `usage`, and `with_tick` as methods with the module functions' signatures. It wraps `thinkthen::Engine`. That type is `Clone + Send + Sync`, and each worker takes a clone. One implementation serves both spellings.
    - Ian can overturn the class spelling, `cache: false`, and the missing `api_key:` keyword.
+15. **Amendment of 2026-09-24: no test or plant can reach a paid backend.** The shared rule on main at `d783ab6b` forbids it. Decision 14's seed test had a plant that started from `EngineBuilder::new()`. That plant ignores `THINKTHEN_BASE_URL` and sends to the built-in address, the paid vendor's endpoint. The test and its plant leave, and the cache-folder test under "Other acceptance" replaces them, following 0105 change 13.
+   - *The key.* `check.sh` unsets `THINKTHEN_API_KEY` before its first step. `cargo test --lib`, the conformance runner, and the slide sample therefore never see the real key. `tests/backend.rb` builds each child's environment from that scrubbed one. It sets a fake `THINKTHEN_API_KEY` only together with the loopback `THINKTHEN_BASE_URL` of the child's own backend.
+   - *The address.* Every test and plant that builds an engine has a loopback address. It comes from `THINKTHEN_BASE_URL` through `EngineBuilder::from_env()` or from an explicit `base_url:` keyword. A Rust unit test builds no engine that sends. A plant that changes how the engine is built keeps a loopback `base_url:`. The test counts its sends on the loopback backend.
 
 ## The toolchain
 
@@ -143,7 +146,7 @@ R2-29 asks for rulings on record. The rulings that live only in the tag's `NOTES
 
 ## Other acceptance
 
-- Engine settings, each in a child with its own backend and cache folder, following 0105 decision 11. With `THINKTHEN_BASE_URL` naming the loopback backend, `ThinkThen::Engine.new(width: 8).decide(...)` counts one send there. Plant: start from `EngineBuilder::new()` in place of `from_env()`. The call goes to the built-in address, and the count reads 0. `width: 8` holds exactly 8 counted in flight on the held arm. Plant: drop the width mapping, and the count reads 4. `width: 33` and `width: true` raise `UsageError`, and the count does not move. `max_requests: 2` refuses three texts, and the count does not move. `cache:` writes only in the named folder, and `cache: false` writes nothing. `model:` appears in the `details` document. `base_url:` wins over `THINKTHEN_BASE_URL`: the keyword's backend counts one send and the variable's counts none. Plant: read the variable after the keyword.
+- Engine settings, each in a child with its own backend and cache folder, following 0105 decision 11 and change 13. The environment seed is proved through the cache folder (decision 15). `THINKTHEN_CACHE` names folder A, and `HOME` and `XDG_CACHE_HOME` name a scratch folder. The child builds `ThinkThen::Engine.new(width: 8, base_url: <its loopback>)` and decides the same text twice. The test asserts one counted send and a cache entry in A. Plant: start from `Engine::builder()` in place of `EngineBuilder::from_env()`, keeping the loopback `base_url:`. The entry is missing from A, and any send lands on the loopback count. `width: 8` holds exactly 8 counted in flight on the held arm. Plant: drop the width mapping, and the count reads 4. `width: 33` and `width: true` raise `UsageError`, and the count does not move. `max_requests: 2` refuses three texts, and the count does not move. `cache:` writes only in the named folder, and `cache: false` writes nothing. `model:` appears in the `details` document. `base_url:` wins over `THINKTHEN_BASE_URL`: the keyword's backend counts one send and the variable's counts none. Plant: read the variable after the keyword.
 - A raising tick is prompt. A held single `decide` runs under a tick that raises on its second run. The tick's error arrives within 150 ms of its raise. The test waits at most 1 s before it releases, and the count stays 1. Plant: raise only once the crossing returns, the old rule. The 150 ms assertion turns red.
 - A caller's token cancels promptly during a send. The test cancels it from a second thread during a held single `decide` and gets `CancelledError` within 150 ms with one counted send.
 - A pre-cancelled token sends nothing, single or bulk, and raises `CancelledError`.
@@ -154,7 +157,7 @@ R2-29 asks for rulings on record. The rulings that live only in the tag's `NOTES
 - A fork test warms the default engine, calls `Process.fork`, and gets an answer in the child. The parent's counters do not move (0096, Q15). The parent's read runs under a 10 s bound.
 - Case 68 (an accent and an emoji) returns the same `start` and `end` in Ruby as in Rust.
 - Only the FFI module allows `unsafe`, with a reason (ADR 0047 item 3).
-- Nothing reaches a non-loopback address. `THINKTHEN_API_KEY` stays unset. A secrecy test reads every raised message and `inspect` for the key and for the base URL's credentials.
+- Nothing reaches a non-loopback address. The real `THINKTHEN_API_KEY` is unset, and a fake key appears only beside a loopback address (decision 15). A secrecy test reads every raised message and `inspect` for the key and for the base URL's credentials.
 
 ## The check it adds to the gate ladder
 
@@ -210,6 +213,7 @@ Contract 2; state and timing 3; reach 2; proof 3; cost of error 3; total 13. Fin
   - Dependencies: all 22 new crates are listed with versions, deny's result is recorded, and the `Send + 'static` assertion is added. The lock gives rustc-hash 2.1.3, where the review read 1.1.0.
   - Toolchain: the folder follows the shared rule (`~/.cache/thinkthen-toolchains/`) in place of the review's `thinkthen-dev`. The prefix is built per machine, the pins are in the repository, setup is repeatable, and authorization follows decision 13. Docker is rejected on the recorded rule and on three checkable grounds, and three more options are weighed. Fiddle is left out of the extension check.
   - After the review, the shared rule at `446a4d6b` added a public engine value. Decision 14 adds `ThinkThen::Engine` on `EngineBuilder::from_env()`, and the Rust and Ruby caps rise for it.
+  - Amendment of 2026-09-24: decision 15 applies the no-paid-backend rule at `d783ab6b`. The seed test's `EngineBuilder::new()` plant could reach the vendor address, so a cache-folder test replaces it. The design stays accepted. Confirmation pending.
   - The test cap rises to 1,950 lines. The small fixes are applied, including the four trailing "since" clauses.
 - Rejected as written: a detached batch cannot hold only one width slot. The engine keeps each sent request until it ends (0073), and width is one process-wide gate (0077). Holding one slot would need an engine change or a wait. This ticket excludes the engine change, and the wait gives up the prompt Ctrl-C. Decision 5 states the real cost and names both levers.
 - Code review: pending.
