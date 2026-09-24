@@ -1,6 +1,6 @@
 # The model-mismatch cancel check fails under load
 
-Status: Open.
+Status: Closed by Quick Fix `qf-model-mismatch-test` on 2026-09-24 (`sdlc/records/qf-model-mismatch-test.md`). Filed on the 0085 branch at `a4474607` and copied to main by that Quick Fix, because 0085 had not landed.
 
 `annotate::scheduling::a_model_mismatch_cancels_groups_that_have_not_started` asserts at `tests/backend/annotate/scheduling.rs:356` that the listener saw 3 requests. The listener orders its replies with fixed delays of 10, 20, and 40 ms. On a loaded machine the command also sends group 3, the listener sees 4 requests, and the check fails. The command still exits 4 with the model-mismatch message.
 
