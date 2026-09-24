@@ -130,3 +130,11 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Defers: Temp-table and open-transaction visibility, relate between new and old rows, links to a known entity table, and settings for warm. Experiment 218's volatile-function row-cap probe carries forward as a regression case.
 
 Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. The DuckDB setting `thinkthen_width` becomes `thinkthen_throttle`, and every public `width` here reads as `throttle`.
+
+## Spike finding, 2026-09-24
+
+Experiment 253 on Beelink (`~/workspace/experiments/253-thinkthen-duckdb-sqlite-spike/`, local only) tested decision 7 and the settings path this ticket inherits. Raw logs sit in its `logs/` folder.
+
+- **Decision 7: passed.** The handler stores the descriptor, then the process id, with release ordering, and loads them in the reverse order with acquire ordering. It then compares the id with `getpid()` and writes one byte. Over 20 forks from a Python parent that loaded the extension, a child's SIGINT before and after building its own pipe never reached the parent's pipe (0 of 20). Each child also answered a query on its own new DuckDB connection. The planted build without the comparison leaked all 20 (20 of 20).
+- **Inherited contradiction in decision 5.** 0110's finding on the same date applies here. Main keeps the first explicit width for the process's life, so relate's engine through the shared map cannot take a second throttle. A different `SET` reads `usage` with main's sentence. The `@file` check for `rules` moves to the caller's DuckDB file system with 0110's change, and the copied-setting rule leaves.
+- **Naming.** `SET thinkthen_width = 8` becomes `SET thinkthen_throttle = 8` under Ian's 2026-09-24 throttle ruling.
