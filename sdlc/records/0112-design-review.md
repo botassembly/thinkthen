@@ -64,3 +64,27 @@ Observed by command on this machine: rustc 1.93.1; libclang 17 and 18; the liste
    - Writing: four trailing "since" clauses (decision 1, decision 3, "Where the check runs", and "Not carried"). Split each into two sentences. The rest follows the writing rules.
 
 ACCEPT once findings 1 through 5 are applied. Finding 6 needs one number or one sentence, and finding 7 is small edits.
+
+## Confirmation
+
+Read 0112 at `562f0b8f`. Also read the shared rules on main at `6eb1303e` (`surfaces-port-guide.md` lines 9 to 16), the 0084 amendment at `f19cf437`, ticket 0117 on its branch, the filed Mac issue, main's `specification/backends.md`, and main's `crates/thinkthen/src/engine/http.rs`.
+
+### ACCEPT
+
+**The rejected finding.** My finding 3 did not ask for one slot. It asked the ticket to state that a detached batch holds up to W slots, record the departure from ADR 0017, name Ian's lever, and test a following call. Decision 5 now does all four. So the "rejected as written" line in the ticket's Review section misreads the finding. The substance is accepted, and I count finding 3 as fixed. The cost is stated honestly.
+- Under 0073 and 0095, a cancelled call starts nothing new, and requests already sent finish. The width gate covers the whole process (0077). A detached call therefore keeps at most W sends and W slots.
+- Each attempt ends within 30 s. `http.rs:340` sets `Duration::from_secs(30)`, and `backends.md:59` defines that limit as one attempt from connect to the last byte. No retry starts on a cancelled token, and a library has no environment setting that lengthens the limit.
+- Repeated Ctrl-C does not add up past W, because every new call waits at the same gate. The waiting call is itself in 50 ms slices, so a second Ctrl-C still returns at once.
+- Both levers are real and correctly costed. One changes 0073, and the other gives up the prompt Ctrl-C that the shared rule requires. The R1-20 test's check that a following call answers proves the slots come back.
+
+**The libyaml plan is sound.** The recalled hash is marked unverified and cannot land as written. buildroot's `libyaml.hash` and Alpine's `APKBUILD` are two separate published sources for the same `yaml-0.2.5.tar.gz`. Pinning both the SHA-256 and the SHA-512, checking both during setup, and stopping when they disagree is stronger than one checksum. Note for the builder: `toolchain.env` and the stamp carry both libyaml hashes. The record names the two pages that were read.
+
+**Other findings.** All are fixed in the text.
+- Rows: R3-32 and R4-10 are carried with a portability step and a plant. The count reads sixteen, which matches the table. R1-29 is held by the stamp against `toolchain.env`. R5-35 is held by the no-Ruby `lint` block and its `cargo check` plant. R5-37 has a filed issue. R2-8 has its own unmarked-`Value` plant.
+- Held arm: each test has its own backend and cache. R4-2 uses 0117's `round`. Zero-send checks compare counts. Every poll uses `wait N`, which 0117 bounds at 5 s.
+- Interrupts: the slice reads the call's own token, so a raising tick is prompt, with a test and a plant. R3-5 runs in a child at 3,000 calls with an `rb_protect` plant.
+- Dependencies: all 22 crates are listed. I re-read the tag's lock, and the ticket's rustc-hash 2.1.3 is correct. My 1.1.0 was wrong. Deny's result is recorded, and the `Send + 'static` assertion is added.
+- Toolchain: the prefix lives in `~/.cache/thinkthen-toolchains/`, per the shared rule. It is built on each machine, both URLs are in `toolchain.env`, the setup builds in a temporary folder and renames it into place, it checks the extensions it needs, and it writes the stamp. Decision 13 records the no-Docker rule and the one-time fetch rule as Claude decisions that Ian can overturn, which satisfies the durable-record rule. The Docker rejection now rests on checkable grounds, and options (d) to (f) are weighed fairly.
+- Budgets rise to 900 lines of Rust, 490 of Ruby library, 1,950 of tests, and 260 of scripts. Each rise has a stated cause.
+- `ThinkThen::Engine` is built on `EngineBuilder::from_env()`, which matches the amendment. It has a plant for the address and one for the width.
+- The writing rules hold, and no private names appear.

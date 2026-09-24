@@ -6,7 +6,7 @@ opens: libraries/ruby sdlc/scripts sdlc/planning/libraries/ruby.md sdlc/planning
 
 # 0112: Port the Ruby surface
 
-Status: revised after review; confirmation pending. Owner: Claude.
+Status: design accepted 2026-09-24 after re-review. Owner: Claude. Depends on the 0084 builder amendment and 0117.
 
 ## Outcome and authority
 
