@@ -22,7 +22,7 @@ Landed: 0088 public `relate` (`71841025`) and 0089 no resend after a transport f
 
 Three lanes run at once. Each lane is serial inside.
 
-- **Lane A, engine controls and the public API:** 0082 command contract → 0083 transform catalog → 0076 whole-call deadlines → 0077 one process width cap → 0078 host signals → 0084 and 0095 contract (design only) → 0085 engine façade → 0097 interrupt check → 0096 fork recovery → 0086 public Rust API → 0098 binding members. 0078 may build beside 0077 once 0076 lands.
+- **Lane A, engine controls and the public API:** 0082 command contract → 0083 transform catalog → 0076 whole-call deadlines → 0077 one process width cap → 0078 host signals → 0084 and 0095 contract (design only) → 0085 engine façade → 0097 interrupt check → 0096 fork recovery → 0086 public Rust API → 0098 binding members → 0119 mutation audit of the engine tests. 0078 may build beside 0077 once 0076 lands. 0119 builds before 0.1 ships, may build beside a surface ticket, and never builds beside 0113 or 0114 (`sdlc/issues/2026-09-24-red-green-scaffold-tests-outlive-their-purpose.md`).
 - **Lane B, cases:** 0090 `tuned_for` rename → 0091 conformance union. It lands before 0085.
 - **Lane C, test backend:** 0092 loopback backend, after 0089 and 0091, and before 0076's tests are written.
 - **Any time before 0086:** 0099 ports branch ADRs 0041–0043.
