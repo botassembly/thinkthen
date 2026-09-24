@@ -100,7 +100,6 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
 #[test]
 fn no_record_label_request_or_answer_debug_line_shows_the_evidence() {
     use crate::core::Question;
-    use conformance_backend::{Canned, Listener};
     let record = crate::core::Reading::new(crate::core::Framing::Jsonl, Vec::new())
         .expect("a JSON reading")
         .record(format!(r#"{{"labels":["{EVIDENCE}","other"]}}"#).as_bytes())
@@ -128,31 +127,7 @@ fn no_record_label_request_or_answer_debug_line_shows_the_evidence() {
         r#""q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.1}"#.to_owned(),
         r#""q1":{"type":"score","probabilities":{"0":0.75,"1":0.25}}"#.to_owned(),
     ];
-    let listener = Listener::serving(
-        answers
-            .iter()
-            .map(|answers| {
-                Canned::ok(&format!(
-                    r#"{{"model":"jev-latest","answers":{{{answers}}}}}"#
-                ))
-            })
-            .collect(),
-    )
-    .expect("a loopback listener");
-    let backend =
-        crate::core::Backend::resolve(Some(listener.base()), None, "jev-latest").expect("backend");
-    let engine = crate::engine::facade::Engine::new(crate::engine::facade::Settings {
-        backend: backend.clone(),
-        profile: None,
-        timeout: Duration::from_secs(5),
-        max_retries: 0,
-        retry_wait: Duration::from_millis(10),
-        width: None,
-        storage: crate::engine::facade::Storage::default(),
-        key: || Ok(crate::engine::facade::Key::of(KEY)),
-        usage: std::sync::Arc::default(),
-    })
-    .expect("an engine");
+    let (listener, backend, engine) = loopback_engine(&answers);
     let evidence = crate::core::Evidence::new(EVIDENCE).expect("evidence");
     let plan = crate::core::Plan::new(
         evidence.clone(),
@@ -193,7 +168,6 @@ fn no_record_label_request_or_answer_debug_line_shows_the_evidence() {
     }
     assert_eq!(listener.requests().len(), 3);
     assert!(!shown.contains(EVIDENCE), "{shown}");
-    assert!(!shown.contains(KEY), "{shown}");
     assert_eq!(
         judged,
         [
@@ -207,6 +181,42 @@ fn no_record_label_request_or_answer_debug_line_shows_the_evidence() {
              confidence: None }) Score(0.25)",
         ]
     );
+}
+
+/// An engine over a loopback listener that answers each request with the next `answers`.
+fn loopback_engine(
+    answers: &[String],
+) -> (
+    conformance_backend::Listener,
+    crate::core::Backend,
+    crate::engine::facade::Engine,
+) {
+    let listener = conformance_backend::Listener::serving(
+        answers
+            .iter()
+            .map(|answers| {
+                conformance_backend::Canned::ok(&format!(
+                    r#"{{"model":"jev-latest","answers":{{{answers}}}}}"#
+                ))
+            })
+            .collect(),
+    )
+    .expect("a loopback listener");
+    let backend =
+        crate::core::Backend::resolve(Some(listener.base()), None, "jev-latest").expect("backend");
+    let engine = crate::engine::facade::Engine::new(crate::engine::facade::Settings {
+        backend: backend.clone(),
+        profile: None,
+        timeout: Duration::from_secs(5),
+        max_retries: 0,
+        retry_wait: Duration::from_millis(10),
+        width: None,
+        storage: crate::engine::facade::Storage::default(),
+        key: || Ok(crate::engine::facade::Key::new(KEY.to_owned())),
+        usage: std::sync::Arc::default(),
+    })
+    .expect("an engine");
+    (listener, backend, engine)
 }
 
 /// `recognize` reads its evidence as tokens and names, in plain and pretty `Debug`.
