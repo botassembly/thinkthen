@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core crates/thinkthen/src/cli crates/thinkthen/tests
 
 # 0088: Build the public `relate` command
 
-Status: Carver review of `5828fece` remediated; ready for independent design re-review. Implementation waits for landed 0081.
+Status: design accepted by independent Sol Medium review at `113642b2`; implementation waits for landed 0081.
 
 ## Outcome
 

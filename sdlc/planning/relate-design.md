@@ -1,6 +1,6 @@
 # `relate`: design authority for the command and future surfaces
 
-Status: Carver's independent review of split-design commit `5828fece` is remediated and ready for re-review. Ian's method, Option A detailed-result, and partial-output exit rulings remain settled. Sol Medium drives both tickets. This page authorizes no live or paid run.
+Status: Carver independently accepted both split designs at `113642b2`. Ticket 0081 may begin implementation; accepted ticket 0088 waits for landed 0081. Ian's method, Option A detailed-result, and partial-output exit rulings remain settled. Sol Medium drives both tickets. This page authorizes no live or paid run.
 
 Read `recognize-design.md` first. `recognize` and `relate` use one shared relation planner, request-state type, question map, and generic edge assembler. Recognition retains its complete name fields. Standalone relate returns name-and-kind endpoints.
 

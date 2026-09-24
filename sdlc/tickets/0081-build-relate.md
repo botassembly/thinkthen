@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core crates/thinkthen/src/engine crates/thinkthen/sr
 
 # 0081: Build the shared relation foundation
 
-Status: Carver review of `5828fece` remediated; ready for independent design re-review.
+Status: design accepted by independent Sol Medium review at `113642b2`; implementation may begin.
 
 ## Outcome
 
