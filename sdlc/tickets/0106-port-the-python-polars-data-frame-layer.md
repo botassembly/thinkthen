@@ -149,3 +149,24 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Defers: Column forms of filter, rank, find, and relate, a Rust Polars door, plugins, and pandas. The fork advice from experiment 228 (spawn, or fork before Polars warms) and the three Arrow crash probes from experiment 218 carry forward to the tests and page.
 
 Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. `tt.Engine(width=8)` becomes `tt.Engine(throttle=8)`, and every public `width` here reads as `throttle`.
+
+## Spike finding, 2026-09-24 (spike 255)
+
+Spike 255 ran on beelink in `~/workspace/experiments/255-thinkthen-python-polars-spike/`. Its plan, scripts, spike crates, and raw logs are there. The tool refused a `REPORT.md` file in that folder, so this note and the 0105 note are the report. The spike used stand-in crates and no public API. Ian can overturn each point.
+
+1. **Change 6 holds.** A worker took each stream and its batches and released them inside `Python::try_attach` after the caller had left. 200 calls ran on each of four producers: a ctypes producer, a raw producer, a Polars `Series`, and a pyarrow chunked array. They ran on CPython 3.10.18, 3.12.3, 3.13.5, and 3.14.0b4. Every run released all 200, left no live worker, and dropped every Python object (`logs/09`, `10`). The plant turns red. With the release unattached, the raw producer aborts on all four Pythons, and the ctypes producer still exits 0 (`logs/12`).
+2. **`try_attach` alone does not make finalization safe, and this changes change 6.** Under `abi3-py310`, pyo3 0.29.2 compiles out its `Py_IsFinalizing` check (`#[cfg(Py_3_13)]` in `src/internal/state.rs`). A worker that passes the check just before teardown then waits on the lock, and CPython freezes it during finalization. The spike landed releases 0 to 8 ms after the caller left. With `try_attach` alone, 9 of 200 traced runs woke and never finished the release or the leak. With an exit gate, 0 of 200 did (`logs/16`). The exit gate:
+   - At import the module registers an `atexit` hook.
+   - The hook sets an `exiting` flag. It then waits, detached, for the write side of one `RwLock`.
+   - Each worker holds the read side across its flag check and its attached release. A worker that sees the flag leaks on purpose.
+   - Every run of both builds exited 0, so the test needs an observable beyond the exit code. The spike used a trace file (`logs/15`). A `probe` counter of leaks and attached releases serves the same purpose.
+   - Plant: remove the gate. Releases landing 0 to 8 ms after the caller leaves then show workers that never finish.
+   The owner amends change 6 or records why not.
+3. **Builder note: `PyGILState_Check` is not in pyo3-ffi under `abi3`.** It lives in `pyo3_ffi::cpython`. `_raw_producer` declares it with its own `extern "C"`. That links and works on 3.10 to 3.14. The aborting child dumps core, so the test sets `RLIMIT_CORE` to 0 in the child.
+4. **Python Polars needs neither the Rust polars crates nor pyo3-polars.** The public `__arrow_c_stream__` capsule gives format `vu` and the same data-buffer address pyo3-polars sees. The address is equal across calls and between paths, over 1,000,000 strings, so both paths are zero copy (`logs/20`). pyo3-polars also works:
+   - The working set is pyo3 `=0.29.2` with `abi3-py310`, pyo3-polars `=0.28.0`, polars `=0.55.2` with default features off, and Rust 1.95.
+   - pyo3-polars 0.28.0 needs pyo3 0.29 and polars 0.55.1 or later. On 1.93.1 the build stops, because `sysinfo` 0.39 needs 1.95 (`logs/17`).
+   - It reads Python Polars 1.30.0, 1.40.0, and 1.44.2 (`logs/21`).
+   It costs 262 lock packages against 70, a 238 s cold build against 19 s, and a 16.3 MB stripped extension against 0.57 MB. It reads only Polars producers. It couples the wheel to the private `Series._s._export`, polars-ffi ABI 0.1, and Polars' global allocator. It would also bring spike 257's four deny license exceptions into this lock. Its one gain is the removal of the hand-written FFI and its memory-safety rows. The spike recommends keeping the Arrow stream door and "No Rust dependency is added".
+5. **Plugin expressions lose prompt Ctrl-C.** A plugin expression ran and matched the list form. During `collect()` of a plugin call that blocks for 3 s, `SIGINT` sent at 0.5 s surfaced only when the call ended, 2.5 s later, on all four Pythons (`logs/20`). The exclusion of plugin expressions stands on measured grounds.
+6. **Contradiction with Ian's ruling of 2026-09-24.** The outcome and the exclusions still place a Rust Polars `Series` door after 0.1 under ADR 0047 item 8. Ian put Rust Polars in 0.1, and ticket 0120 carries it. The owner updates both lines to name 0120. The `throttle` rename at `4e85e50b` already answers the spike's other finding.
