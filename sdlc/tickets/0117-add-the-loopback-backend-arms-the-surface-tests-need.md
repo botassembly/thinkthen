@@ -85,7 +85,7 @@ No new rung and no new script. The root `test` rung already runs `conformance/ba
 - `conformance/backend/tests/binary.rs`: at most 260 nonblank lines added, including the reader thread.
 - `conformance/README.md`: at most 30 lines added.
 - No dependency. The crate keeps `serde` and `serde_json` only.
-- The ratchet. `sdlc/ratchet.json` counts `.rs` files under `crates` and `conformance`. It rises to the measured total in the commit that adds the code, at most 340. That commit says what grew and why. It names where the builder looked for a duplicate to delete first: the held-reply loop in `binary.rs`, which `wait` replaces, the one in `loopback_arms.rs`, and a shared post helper for the new tests.
+- The ratchet. `sdlc/ratchet.json` counts `.rs` files under `crates` and `conformance`. It rises to the measured total in the commit that adds the code, at most 340. That commit says what grew and why. It names where the builder looked for a duplicate to delete first: the held-reply loop in `binary.rs`, the one in `loopback_arms.rs`, and a shared post helper for the new tests. The `wait` line replaces the loop in `binary.rs`.
 
 Stop and re-score before crossing a budget, adding a dependency, touching `crates/thinkthen`, or changing an existing arm's answer.
 
