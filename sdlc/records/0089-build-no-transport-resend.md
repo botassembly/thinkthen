@@ -52,4 +52,4 @@ Production: 4 files (`engine/http.rs`, `cli/failure.rs`, `cli/args.rs`, `cli/arg
 
 ## Gates
 
-Pending the ladder at the candidate commit.
+The builder ran `install`, `lint`, `test`, and `spec` one at a time from `d2a76dd9` on this Linux machine, with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, then `git diff --check ab72203c HEAD`. Every command exited 0. `lint` reported `ratchet: crates 43753/43753` and `pages: 1 coming, 21 green`. `test` passed 724 Rust tests with 2 ignored and 0 failed, plus its script self-tests. `spec` reported `demos: 21 green, 0 red`. No live call ran. Only this paragraph changed after that run. The coordinator still owes the gate-host run from the exact candidate SHA (acceptance 9).
