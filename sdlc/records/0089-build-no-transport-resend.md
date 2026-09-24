@@ -44,7 +44,7 @@ The record-mode run over `--jobs 4 --cache DIR` exits 4. Its standard error star
 
 ## Budget
 
-Production: 4 files (`engine/http.rs`, `cli/failure.rs`, `cli/args.rs`, `cli/args/find.rs`), 11 nonblank lines added and 13 removed outside test modules. Tests: 6 test-only files plus the unit test module in `http.rs`, 254 nonblank lines added. The ratchet rose from 43563 to 43753. No dependency, no `unsafe`, no `libc`, no `rustfmt::skip`.
+Production: 4 files (`engine/http.rs`, `cli/failure.rs`, `cli/args.rs`, `cli/args/find.rs`), 11 nonblank lines added and 13 removed outside test modules. Tests: 6 test-only files plus the unit test module in `http.rs`, 254 nonblank lines added. The ratchet rose from 43563 to 43753, then to 43754 when the record-run test pinned the whole stopped-run sentence. No dependency, no `unsafe`, no `libc`, no `rustfmt::skip`.
 
 ## Found on the way
 
