@@ -6,7 +6,7 @@ opens: crates/thinkthen/src crates/thinkthen/tests sdlc/ratchet.json sdlc/issues
 
 # 0119: Mutation audit of the engine tests
 
-Status: ready. It builds after 0098 lands and before 0.1 ships. Owner: Claude.
+Status: ready. The design review accepted it (`sdlc/records/0119-design-review.md`). It builds after 0098 lands and before 0.1 ships. Owner: Claude.
 
 ## Design and decisions
 
@@ -27,7 +27,7 @@ This ticket carries out steps 3 and 4 of `sdlc/issues/2026-09-24-red-green-scaff
    - The comparison reads `caught.txt` and `timeout.txt` from the batch's output folder. Every mutant in those two files from the last accepted run, for the same source files, must appear in one of them again. A move between caught and timeout counts as no change. If any mutant drops out, the batch comes back whole, and the builder splits it to find the test that alone caught that mutant. That test stays.
    - A kept test that fits none of the four kinds gets turned into one only when that takes no new test-only hook. Otherwise it stays as it is and the record names it.
    - For each deleted test the record states what it could catch and which remaining test catches the same mutants. A test that another record names as its proof gets the same line, so the old record has a forward pointer.
-   - A full scope run at the end must show the baseline's caught and timeout sets unchanged. A mutant that moved restores the batch that moved it.
+   - A full scope run at the end must show every mutant in the baseline's caught or timeout files still in one of them. A move between caught and timeout counts as no change. A mutant that dropped out restores the batch that moved it. The builder finds that batch by rerunning the moved mutant with `-F` at each accepted batch commit in turn, newest first.
 
 5. **The ratchet effect.** Each judgment runs against the suite as it stands after the batches before it, never against the baseline suite. Two tests that each cover the other cannot both go. The first one judged goes, and the second one then holds the last cover and stays. Order therefore changes the result, so the builder judges the weakest-looking tests first and records the order. Each accepted batch lands as one commit that lowers `sdlc/ratchet.json` by the lines it removed, because the ceiling equals the measured total. The room it frees goes to product code, and the ceiling never rises in this ticket.
 
