@@ -72,3 +72,13 @@ The owner decided the timing on 2026-09-24, and Ian can overturn it. Most test c
 
 - Design review: a fresh read-only Opus session reviews this ticket before any build.
 - Code review: a fresh read-only Opus session picks three deleted tests at random. For each one it plants the mutant the deleted test caught and shows the named covering test fails on it. It checks that the final run's caught set matches the baseline and that no product code changed.
+
+## Evidence
+
+Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk.md` asks every product ticket to name these five parts. This note changes no design.
+
+- Starts from: Workspace decision `2026-09-24-tests-earn-their-place.md` and `sdlc/issues/2026-09-24-red-green-scaffold-tests-outlive-their-purpose.md`, which counts 787 tests and 28,164 lines in test paths. `sdlc/records/0119-design-review.md` accepted the design. No experiment ran mutation testing on thinkthen. `experiments/170-hgparse-alteration-grammar` used it on another project and gives no finding to carry forward. The frozen tag, `probes/`, and `repos/jev-experiments`: none found.
+- Keeps: No product code changes, and the ceiling never rises. `conformance/`, the secrecy tests, `spec/`, green demos, the live test, and the shell and doc tests stay whole.
+- Changes: The audit deletes a test only when mutation evidence shows other tests catch the same mutants. It works in batches and lowers `sdlc/ratchet.json` with each accepted batch. It pins `cargo-mutants` 27.1.0 by checksum.
+- Proof: Two baseline runs with no flaky mutants, a batch comparison on the caught and timeout lists, and a final full run that keeps the whole baseline caught set. Code review plants three mutants that deleted tests used to catch.
+- Defers: Missed mutants go to one issue. No mutation gate, no audit of `conformance/`, and no audit of another repo. A recurring junk pattern gets a name, not a ratchet.
