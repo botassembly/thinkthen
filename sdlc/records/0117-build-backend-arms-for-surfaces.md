@@ -93,4 +93,11 @@ The source measures 78 and the tests 257 after the review fixes. The ratchet ros
 
 ## Checks
 
-CHECKS
+The full ladder ran at `f125072c`, the merged tree with every code fix, with `THINKTHEN_API_KEY`, `THINKTHEN_BASE_URL`, and `THINKTHEN_URL` unset. The one-minute load was 9.88 when it started.
+
+- `install`: exit 0.
+- `lint`: exit 0, with the ratchet at 48475/48475.
+- `test`: exit 0. The cargo suites reported 795 passed and 0 failed, including all 17 tests in `binary.rs`. `live-test: all cases passed`. It uses dummy keys and local jobs.
+- `spec`: exit 0, `demos: 21 green, 0 red`.
+
+The commit after `f125072c` adds only this section. `sdlc/scripts/live` did not run.
