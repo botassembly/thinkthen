@@ -550,6 +550,12 @@ unsafe fn borrow_strings(
             "the column's buffer table names more buffers than a text column carries",
         ));
     }
+    // The table itself is the producer's memory: every slot its count
+    // names must be readable before one is read.
+    let slots = (*array).n_buffers as usize * size_of::<*const c_void>();
+    if !memory.covers((*array).buffers as *const u8, slots) {
+        return Err(UsageError::new_err(UNREADABLE));
+    }
     let carried = ((*array).offset as usize).saturating_add((*array).length as usize);
     if carried > MAX_ROWS {
         return Err(UsageError::new_err(
@@ -966,12 +972,18 @@ pub(crate) fn frame_column(records: &Bound<'_, PyAny>, on: &str) -> PyResult<Fra
             "the frame names columns but carries no column arrays",
         ));
     }
+    if !memory.covers(schema.children as *const u8, count * size_of::<*mut ArrowSchema>()) {
+        return Err(UsageError::new_err(UNREADABLE));
+    }
     let mut names = Vec::with_capacity(count);
     let mut on_index = None;
     for place in 0..count {
         let child = unsafe { *schema.children.add(place) };
         if child.is_null() {
             return Err(UsageError::new_err("the frame named a column it did not carry"));
+        }
+        if !memory.covers(child as *const u8, size_of::<ArrowSchema>()) {
+            return Err(UsageError::new_err(UNREADABLE));
         }
         let child_ref = unsafe { &*child };
         let name = unsafe { checked_text(child_ref.name, memory) }?
@@ -1007,6 +1019,17 @@ pub(crate) fn frame_column(records: &Bound<'_, PyAny>, on: &str) -> PyResult<Fra
                 return Err(UsageError::new_err(
                     "a frame batch names columns but carries no column arrays",
                 ));
+            }
+            // The child table and every child struct are the producer's
+            // memory; the output aliases each child, so all are checked.
+            if !memory.covers(held.child_ptrs as *const u8, names.len() * size_of::<*mut ArrowArray>()) {
+                return Err(UsageError::new_err(UNREADABLE));
+            }
+            for place in 0..names.len() {
+                let child = *held.child_ptrs.add(place);
+                if child.is_null() || !memory.covers(child as *const u8, size_of::<ArrowArray>()) {
+                    return Err(UsageError::new_err(UNREADABLE));
+                }
             }
             let root_offset = held.root.offset.max(0) as usize;
             let root_length = held.root.length.max(0) as usize;
@@ -1297,10 +1320,17 @@ impl SchemaTree {
     /// # Safety
     /// `source` must point at a live schema struct.
     unsafe fn copy(&mut self, source: *const ArrowSchema, memory: Option<&Readable>) -> PyResult<*mut ArrowSchema> {
+        let readable = |at: *const u8, length: usize| memory.is_none_or(|memory| !at.is_null() && memory.covers(at, length));
+        if !readable(source.cast(), size_of::<ArrowSchema>()) {
+            return Err(UsageError::new_err(UNREADABLE));
+        }
+        let count = unsafe { (*source).n_children }.max(0) as usize;
+        if count > 0 && !readable(unsafe { (*source).children }.cast(), count * size_of::<*mut ArrowSchema>()) {
+            return Err(UsageError::new_err(UNREADABLE));
+        }
         let format = self.text(unsafe { (*source).format }, memory)?;
         let name = self.text(unsafe { (*source).name }, memory)?;
         let metadata = self.metadata(unsafe { (*source).metadata }, memory)?;
-        let count = unsafe { (*source).n_children }.max(0) as usize;
         let mut children = Vec::with_capacity(count);
         for place in 0..count {
             let child = unsafe { *(*source).children.add(place) };
@@ -2718,6 +2748,44 @@ mod malformed_tests {
             unsafe { std::ptr::copy_nonoverlapping(blob.as_ptr(), at as *mut u8, blob.len()) };
             assert_eq!(refusal(SchemaTree::default().metadata(at.cast(), Some(&memory))), BAD_METADATA, "{backing}");
         }
+    }
+
+    #[test]
+    #[cfg(target_os = "linux")]
+    fn a_pointer_table_shorter_than_its_count_is_refused() {
+        // Review 7, fourth pass: the buffer table and the child tables were
+        // read without a check. A table of two slots against a guard page
+        // with a count of three killed the host.
+        let offsets = [0i32, 3].map(i32::to_le_bytes).concat();
+        let values = b"abc".to_vec();
+        let slots = [0usize, offsets.as_ptr() as usize].map(usize::to_le_bytes).concat();
+        let (_region, table) = Guarded::ending_with(&slots);
+        let mut outer = unsafe { std::mem::zeroed::<ArrowArray>() };
+        outer.length = 1;
+        outer.n_buffers = 3;
+        outer.buffers = table as *mut *const c_void;
+        assert_eq!(refusal(unsafe { borrow_strings(&outer, &snapshot(), Text::Utf8, 0, 1) }), UNREADABLE);
+        // The same table with its third slot readable borrows.
+        let whole = [0usize, offsets.as_ptr() as usize, values.as_ptr() as usize].map(usize::to_le_bytes).concat();
+        let (_region, table) = Guarded::ending_with(&whole);
+        outer.buffers = table as *mut *const c_void;
+        assert_eq!(borrowed(unsafe { borrow_strings(&outer, &snapshot(), Text::Utf8, 0, 1) }), ["abc"]);
+        // A schema whose child table holds one slot against a guard page
+        // while it counts two, and a child struct that runs into one.
+        let mut leaf = unsafe { std::mem::zeroed::<ArrowSchema>() };
+        leaf.format = c"u".as_ptr();
+        let one = (&raw mut leaf as usize).to_le_bytes();
+        let (_region, children) = Guarded::ending_with(&one);
+        let mut root = unsafe { std::mem::zeroed::<ArrowSchema>() };
+        root.format = c"+s".as_ptr();
+        root.n_children = 2;
+        root.children = children as *mut *mut ArrowSchema;
+        assert_eq!(refusal(unsafe { SchemaTree::default().copy(&root, Some(&snapshot())) }), UNREADABLE);
+        root.n_children = 1;
+        assert!(unsafe { SchemaTree::default().copy(&root, Some(&snapshot())) }.is_ok());
+        let short = vec![0u8; size_of::<ArrowSchema>() - 8];
+        let (_region, cut) = Guarded::ending_with(&short);
+        assert_eq!(refusal(unsafe { SchemaTree::default().copy(cut.cast(), Some(&snapshot())) }), UNREADABLE);
     }
 
     /// The strings a shape borrows, or a panic naming the refusal: a live

@@ -347,3 +347,92 @@ def test_a_many_chunk_column_reads_the_memory_map_once():
     assert done.returncode == 0, (done.returncode, done.stderr[-2000:])
     ratio, one, many = done.stdout.split()
     assert float(ratio) < 10, f"100 chunks took {many} ms, one chunk {one} ms"
+
+
+# Review 7, fourth pass: the reader read a batch's pointer tables without a
+# check. This child wraps a pyarrow stream's get_next and moves a table to
+# the end of a readable page, before a PROT_NONE page, keeping fewer slots
+# than the batch counts: the buffer table of a column (two of three), and
+# the child table of a frame (one of two). Each read ran into the guard.
+TABLES = r"""
+import ctypes as C, mmap, sys
+import pyarrow as pa
+import thinkthen as tt
+from thinkthen import _thinkthen as native
+
+libc = C.CDLL(None)
+page = mmap.PAGESIZE
+regions = []
+
+def guarded(slots):
+    region = mmap.mmap(-1, 2 * page)
+    base = C.addressof(C.c_char.from_buffer(region))
+    assert libc.mprotect(C.c_void_p(base + page), page, 0) == 0
+    at = base + page - 8 * len(slots)
+    (C.c_void_p * len(slots)).from_address(at)[:] = slots
+    regions.append(region)
+    return at
+
+NEXT = C.CFUNCTYPE(C.c_int, C.c_void_p, C.c_void_p)
+RELEASE = C.CFUNCTYPE(None, C.c_void_p)
+
+class Cut:
+    # A stream whose batches carry a table cut short: `field` is 5 for the
+    # buffer table (count at 3) and 6 for the child table (count at 4).
+    def __init__(self, source, field, keep):
+        self.source, self.field, self.keep, self.releases = source, field, keep, []
+
+    def __arrow_c_stream__(self, requested_schema=None):
+        capsule = self.source.__arrow_c_stream__()
+        get = C.pythonapi.PyCapsule_GetPointer
+        get.restype, get.argtypes = C.c_void_p, [C.py_object, C.c_char_p]
+        stream = get(capsule, b"arrow_array_stream")
+        inner = NEXT(C.c_void_p.from_address(stream + 8).value)
+        def get_next(pointer, out):
+            got = inner(pointer, out)
+            words = (C.c_void_p * 10).from_address(out)
+            if words[8]:
+                whole = words[self.field]
+                words[self.field] = guarded(list((C.c_void_p * self.keep).from_address(whole)))
+                # pyarrow's own release walks the child table, so it gets
+                # its whole table back before it runs.
+                release = RELEASE(words[8])
+                def restore(array):
+                    (C.c_void_p * 10).from_address(array)[self.field] = whole
+                    release(array)
+                self.releases.append(RELEASE(restore))
+                words[8] = C.cast(self.releases[-1], C.c_void_p).value
+            return got
+        self.hold = (capsule, NEXT(get_next))
+        C.c_void_p.from_address(stream + 8).value = C.cast(self.hold[1], C.c_void_p).value
+        return capsule
+
+column = pa.chunked_array([pa.array(["please refund", "hello"])])
+frame = pa.table({"body": ["please refund", "hello"], "n": [1, 2]})
+for name, call in (
+    ("buffers", lambda: tt.decide_many("Is this a refund?", Cut(column, 5, 2))),
+    ("children", lambda: native.annotate_stream(sys.argv[1], Cut(frame, 6, 1), "body")),
+):
+    try:
+        call()
+        print(name, "answered", flush=True)
+    except tt.UsageError as refused:
+        print(name, "refused:", refused, flush=True)
+"""
+
+
+def test_a_pointer_table_shorter_than_its_count_is_refused():
+    if sys.platform != "linux":
+        import pytest
+
+        pytest.skip("the guard page here is set with mprotect on Linux")
+    env = dict(os.environ, ENGINE_NULL="1", THINKTHEN_NULL="1")
+    done = subprocess.run(
+        [sys.executable, "-c", TABLES, FORM],
+        env=env, stdin=subprocess.DEVNULL, capture_output=True, text=True, timeout=120,
+    )
+    assert done.returncode == 0, (done.returncode, done.stderr[-2000:])
+    assert done.stdout.splitlines() == [
+        "buffers refused: the column's buffers declare bytes this process cannot read",
+        "children refused: the column's buffers declare bytes this process cannot read",
+    ]
