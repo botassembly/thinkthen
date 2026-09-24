@@ -258,3 +258,12 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Defers: CRAN and R-universe, binaries, Windows and macOS, the C door, a user cancel token, and async.
 
 Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. The engine argument `width = NULL` becomes `throttle = NULL`, and every public `width` here reads as `throttle`.
+
+## Spike finding (2026-09-24)
+
+Experiment 256 on beelink (`~/workspace/experiments/256-thinkthen-ts-ruby-r-spike/`, `REPORT.md`) built crate `thinkthen-r` on extendr-api 0.8.2 over `crates/thinkthen` at main `e7696ca8`, installed it into a scratch library, and ran R children with a scratch home. It confirms decisions 10, 15 and 18 and fixes two details.
+
+- **Pin.** `jsonlite_2.0.0.tar.gz` sha256 is `75eb910c82b350ec33f094779da0f87bff154c232e4ae39c9896a9b89f3ac82d`. CRAN's MD5 `3e54e6fbc0c9063936e3d01e91419c14` agrees. `tools/setup.sh` can pin it.
+- **Deny config.** Root `deny.toml` already holds `ignore = []`. The binding copy must replace that line. A second `ignore` key is a parse error, and it reads as a deny failure.
+
+Retired by the spike: the build, Clippy, `cargo test --lib` (linking `libR.so` without running R), and `R CMD INSTALL` with `CARGO_NET_OFFLINE=true` all pass offline on R 4.3.3. Root deny fails on RUSTSEC-2024-0436, and the one-entry config passes. `#[extendr]` needs the module-level `missing_docs` allow this ticket names. With the library list resolved under the real `HOME` and exported as absolute `R_LIBS`, children with a scratch `HOME`, `XDG_CACHE_HOME` and `XDG_CONFIG_HOME` load jsonlite 2.0.0 and send to loopback. Without `R_LIBS`, or with `R_LIBS_USER` left as `~/…`, they load the system 1.8.8 and `library()` fails loudly. `cargo` under a scratch `HOME` made rustup start a network toolchain sync, which confirms the amendment's limit to the R test children.
