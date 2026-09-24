@@ -2,6 +2,9 @@
 # Rung 2: the unit tests, the integration tests, and the documentation tests.
 set -eu
 
+# One heavy rung at a time on this machine. See heavy-lock.
+. "$(dirname -- "$0")/heavy-lock"
+
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
 
