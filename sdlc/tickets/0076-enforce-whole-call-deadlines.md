@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine crates/thinkthen/src/engine/request.rs crates
 
 # 0076: Enforce whole-call deadlines
 
-Status: built 2026-09-24; the code review's one finding is fixed (`sdlc/records/0076-code-review.md`). Build record `sdlc/records/0076-build-whole-call-deadlines.md`. Owner: Claude.
+Status: landed on main 2026-09-24. The first code review's one finding is fixed (`sdlc/records/0076-code-review.md`), and the re-review accepted the fix (`sdlc/records/0076-code-review-2.md`). Build record `sdlc/records/0076-build-whole-call-deadlines.md`. Owner: Claude.
 
 ## Outcome and authority
 

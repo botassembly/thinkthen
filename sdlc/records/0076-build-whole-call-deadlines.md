@@ -1,6 +1,6 @@
 # 0076: Build whole-call deadlines
 
-Status: built on `ticket/0076-whole-call-deadlines`, rebased onto main at `daac6bbc` (0092 and 0104 landed). A fresh Claude code review (`sdlc/records/0076-code-review.md`) returned one blocking finding. It is fixed below. The coordinator accepted both departures as they stand. Owner: Claude.
+Status: built on `ticket/0076-whole-call-deadlines`, rebased onto main at `daac6bbc` (0092 and 0104 landed). A fresh Claude code review (`sdlc/records/0076-code-review.md`) returned one blocking finding. It is fixed below, and the re-review (`sdlc/records/0076-code-review-2.md`) accepted the fix at `726ddb8f`. The coordinator accepted both departures as they stand. Status: landed. Owner: Claude.
 
 ## Result
 
