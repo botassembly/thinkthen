@@ -1,4 +1,7 @@
-use super::{CASES, Document, asked, expected, find_asked, outcomes, validate_operation};
+use super::{
+    CASES, Document, STAGED, asked, command, expected, find_asked, outcomes, record_requests,
+    validate_operation,
+};
 use crate::core::{Backend, ModelName, Url, Value};
 use crate::engine::error::Error as EngineError;
 use crate::engine::http::Key;
@@ -25,6 +28,10 @@ fn command_runner_crosses_the_private_engine_for_every_case() {
             continue;
         }
         let success = case.expect.success.as_ref().expect("successful case");
+        if STAGED.contains(&case.verb.as_str()) {
+            command::staged(case, success);
+            continue;
+        }
         let requests = case
             .exchanges
             .iter()
@@ -92,7 +99,7 @@ fn command_runner_crosses_the_private_engine_for_every_case() {
                     case.id
                 );
                 let actual_requests = if case.verb == "annotate" {
-                    requests.as_slice()
+                    record_requests(case, place, &requests).expect("record requests")
                 } else {
                     std::slice::from_ref(&requests[place])
                 };
@@ -107,10 +114,17 @@ fn command_runner_crosses_the_private_engine_for_every_case() {
             case.id
         );
         validate_operation(case, success, &odds, &values).expect("expected operation output");
+        if let Some(counters) = &success.counters {
+            command::counters(case, counters);
+        }
     }
 }
 
 fn run_fault(case: &super::Case, expected: &str) {
+    if case.question_form.is_some() {
+        command::form(case, expected);
+        return;
+    }
     let injection = &case.operation.as_ref().expect("fault injection").injection;
     let outcome = schedule::run(
         1,

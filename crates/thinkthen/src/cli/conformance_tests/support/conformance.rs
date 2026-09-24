@@ -37,18 +37,51 @@ impl Document {
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(super) struct Case {
     pub(super) id: String,
+    provenance: Option<CaseProvenance>,
     pub(super) verb: String,
     pub(super) question: Option<Box<RawValue>>,
     pub(super) question_set: Option<Box<RawValue>>,
+    pub(super) question_form: Option<QuestionForm>,
+    pub(super) text: Option<String>,
+    pub(super) entities: Option<Box<RawValue>>,
     pub(super) operation: Option<Injection>,
     pub(super) exchanges: Vec<Exchange>,
     pub(super) expect: Expect,
 }
 
+/// Where a case numbered 26 or above came from, and any ruling it waits on.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CaseProvenance {
+    branch: Option<String>,
+    pending: Option<String>,
+}
+
+/// How a rule-breaking question reaches a surface: as JSON text or as a named file.
+#[derive(Clone, Copy, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub(super) enum QuestionForm {
+    Text,
+    File,
+}
+
 impl Case {
     pub(super) fn validate_shape(&self) -> Result<(), String> {
+        let named = self
+            .provenance
+            .as_ref()
+            .is_some_and(|held| held.branch.is_some() || held.pending.is_some());
+        if self.id.as_str() >= "26" && !named {
+            return Err(format!("{} names no provenance", self.id));
+        }
+        if (self.verb == "recognize") != self.text.is_some()
+            || (self.verb == "relate") != self.entities.is_some()
+        {
+            return Err(format!("{} has the wrong input shape", self.id));
+        }
         match (&self.expect.success, &self.expect.error) {
             (Some(success), None) => self.validate_success(success)?,
             (None, Some(_)) => self.validate_fault()?,
@@ -65,20 +98,21 @@ impl Case {
     }
 
     fn validate_success(&self, success: &Success) -> Result<(), String> {
-        if self.exchanges.is_empty() {
+        if self.exchanges.is_empty() && self.verb != "filter" {
             return Err(format!("{} has no successful exchange", self.id));
         }
-        if self.operation.is_some() {
+        if self.operation.is_some() || self.question_form.is_some() {
             return Err(format!("{} carries a fault injection on success", self.id));
         }
-        let expected = match self.verb.as_str() {
-            "filter" => "filter",
-            "rank" => "rank",
-            "find" => "find",
-            "annotate" => "annotate",
-            _ => "single",
+        let expected: &[&str] = match self.verb.as_str() {
+            "decide" => &["single", "decide_many"],
+            verb @ ("filter" | "rank" | "find" | "annotate" | "recognize" | "relate") => &[verb],
+            _ => &["single"],
         };
-        if success.kind != expected {
+        if !expected.contains(&success.kind.as_str())
+            || (success.kind == "single" && self.exchanges.len() != 1)
+            || (success.counters.is_some() && success.kind != "single")
+        {
             return Err(format!("{} has success kind `{}`", self.id, success.kind));
         }
         let takes_operation = matches!(self.verb.as_str(), "filter" | "rank" | "find");
@@ -89,11 +123,11 @@ impl Case {
     }
 
     fn validate_fault(&self) -> Result<(), String> {
-        let injection = self
+        let injected = self
             .operation
             .as_ref()
-            .ok_or_else(|| format!("{} has no injection", self.id))?;
-        if !self.exchanges.is_empty() || injection.injection.is_empty() {
+            .is_some_and(|held| !held.injection.is_empty());
+        if !self.exchanges.is_empty() || injected == self.question_form.is_some() {
             return Err(format!("{} is not a schema-only fault", self.id));
         }
         Ok(())
@@ -132,12 +166,23 @@ pub(super) struct ExpectedError {
 }
 
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(super) struct Success {
     pub(super) kind: String,
     pub(super) answers: Vec<ExpectedAnswer>,
     pub(super) operation: Option<Box<RawValue>>,
     #[serde(default)]
     pub(super) failed_questions: usize,
+    pub(super) counters: Option<Counters>,
+}
+
+/// The counter differences a run of `calls` identical calls leaves behind.
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct Counters {
+    pub(super) calls: usize,
+    pub(super) requests: u64,
+    pub(super) cache_answers: u64,
 }
 
 #[derive(Deserialize)]
