@@ -260,6 +260,9 @@ for verb in decide filter rank choose find score tag annotate recognize relate; 
 		scan_help "$verb" "$verb" "$flag"
 	done
 done
+for flag in -h --help; do
+	scan_help audit audit "$flag"
+done
 for command in transform 'transform list' 'transform show'; do
 	for flag in -h --help; do
 		# The unquoted command splits into its words.

@@ -16,6 +16,7 @@ mod backend_profile;
 mod digest;
 mod find;
 mod json;
+pub(crate) mod measure;
 mod order;
 mod plan;
 mod plan_document;
@@ -89,7 +90,7 @@ pub(crate) use crate::core::result::{
 pub(crate) use crate::core::text::{
     Description, Evidence, Meaning, ModelName, QuestionText, Withheld,
 };
-pub(crate) use crate::core::threshold::{Outcome, Threshold};
+pub(crate) use crate::core::threshold::{Outcome, Threshold, ThresholdError};
 
 pub(crate) use crate::core::find::FindAnswer;
 #[cfg(test)]

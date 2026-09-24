@@ -1,0 +1,6 @@
+{"id":"r1","value":true,"part":"tune"}
+{"id":"r2","value":false,"part":"tune"}
+{"id":"r3","value":"yes","part":"tune"}
+{"id":"r4","value":false,"part":"held"}
+{"id":"r5","value":"no","part":"held"}
+{"id":"r6","value":true,"part":"held"}

@@ -702,25 +702,38 @@ CATALOG_BANNED_WORDS = {
     "include_str", "env_var", "option_env", "nix", "ureq", "signal_hook", "libc", "csv_core",
 }
 CATALOG_CRATE_PATHS = {("crate", "failure", "Failure")}
+CATALOG_SUPER_PATHS = {("super", "CATALOG"), ("super", "lookup")}
 CATALOG_ROOTS = {"std", "clap", "crate", "super", "self"}
 
 
-def catalog_policy_failures(text: str) -> list[str]:
-    """Name every capability or owner the catalog source reaches."""
+def catalog_policy_failures(text: str, banned: set[str] = CATALOG_BANNED_WORDS,
+                            crate_paths: set[tuple[str, ...]] = CATALOG_CRATE_PATHS,
+                            super_paths: set[tuple[str, ...]] = CATALOG_SUPER_PATHS,
+                            prefix: bool = False) -> list[str]:
+    """Name every capability or owner a read-only command source reaches.
+
+    A path is allowed when it is an allowed path, or with `prefix` when one is its prefix.
+    """
     tokens = rust_tokens(text)
-    held = {f"names {token}" for token in tokens if token in CATALOG_BANNED_WORDS}
+    held = {f"names {token}" for token in tokens if token in banned}
+
+    def allowed(path: tuple[str, ...], prefixes: set[tuple[str, ...]]) -> bool:
+        if not prefix:
+            return path in prefixes
+        return any(path[:len(held)] == held for held in prefixes)
+
     for path, alias in rust_use_paths(tokens):
         if aliases_outer_root(path, alias) or imports_outer_glob(path):
             held.add("aliases or globs an outer module")
-        elif path[:1] == ("crate",) and path not in CATALOG_CRATE_PATHS:
+        elif path[:1] == ("crate",) and not allowed(path, crate_paths):
             held.add("uses " + "::".join(path))
-        elif path[:1] == ("super",) and path not in {("super", "CATALOG"), ("super", "lookup")}:
+        elif path[:1] == ("super",) and not allowed(path, super_paths):
             held.add("uses " + "::".join(path))
         elif path and path[0] not in CATALOG_ROOTS:
             held.add("uses " + "::".join(path))
     for place, token in enumerate(tokens[:-1]):
         if token in {"crate", "super"} and tokens[place + 1] == "::" and not any(
-                token_path_at(tokens, place, allowed) for allowed in CATALOG_CRATE_PATHS):
+                token_path_at(tokens, place, allowed) for allowed in crate_paths):
             if not (token == "super" and tokens[place - 1:place] == ["use"]):
                 held.add(f"reaches {token}::{tokens[place + 2] if place + 2 < len(tokens) else ''}")
     if extern_crates(tokens):
@@ -758,6 +771,9 @@ def check_catalog_policy() -> None:
         "extern crate self as root;",
         'include_str!("/etc/passwd")',
         "ureq::get(url)",
+        "use crate::failure::Failure::Output;",
+        "use super::CATALOG::x;",
+        "use super::lookup::inner;",
     )
     for plant in plants:
         if not catalog_policy_failures(plant):
@@ -774,6 +790,99 @@ def check_catalog_policy() -> None:
     for control in controls:
         if catalog_policy_failures(control):
             fail("catalog", f"the catalog control {control!r} stays allowed")
+
+
+# Ticket 0113: audit reads the paths it is handed, or standard input, and
+# writes only standard output. It may open a file, and nothing else the catalog
+# refuses. A token check cannot prove which paths it opens; review checks that.
+MEASURE = ("crates/thinkthen/src/cli/measure.rs", "crates/thinkthen/src/cli/audit.rs")
+MEASURE_BANNED_WORDS = CATALOG_BANNED_WORDS - {"fs", "File", "stdin", "Stdin"} | {"DirBuilder"}
+MEASURE_WRITES = {
+    "create", "create_new", "options", "create_dir", "create_dir_all", "remove_file",
+    "remove_dir", "remove_dir_all", "rename", "copy", "set_permissions", "write", "hard_link",
+    "soft_link", "symlink",
+}
+MEASURE_CRATE_PATHS = {("crate", "core"), ("crate", "cli", "measure"), ("crate", "failure", "Failure")}
+ROUTER = "crates/thinkthen/src/cli/mod.rs"
+
+
+def measure_policy_failures(text: str) -> list[str]:
+    """Name every capability a measuring command reaches beyond reading its inputs."""
+    held = set(catalog_policy_failures(text, MEASURE_BANNED_WORDS, MEASURE_CRATE_PATHS, set(),
+                                       prefix=True))
+    tokens = rust_tokens(text)
+    for place in range(len(tokens) - 2):
+        if tokens[place] in {"fs", "File"} and tokens[place + 1] == "::" \
+                and tokens[place + 2] in MEASURE_WRITES:
+            held.add(f"writes through {tokens[place]}::{tokens[place + 2]}")
+    for path, alias in rust_use_paths(tokens):
+        if path[:2] == ("std", "fs") and (set(path[2:]) & MEASURE_WRITES or alias or "*" in path):
+            held.add("uses " + "::".join(path))
+    return sorted(held)
+
+
+def route_failures(text: str) -> list[str]:
+    """Refuse a router that reads the environment before audit returns."""
+    tokens = rust_tokens(text)
+
+    def first(path: tuple[str, ...]) -> int | None:
+        return next((place for place in range(len(tokens))
+                     if token_path_at(tokens, place, path)), None)
+
+    audit, read = first(("Command", "Audit")), first(("Environment", "read"))
+    if audit is None or read is None or audit > read:
+        return ["audit returns after Environment::read"]
+    return []
+
+
+def check_measure_policy() -> None:
+    for relative in MEASURE:
+        held = measure_policy_failures((REPO / relative).read_text(encoding="utf-8"))
+        if held:
+            fail("measure", f"{relative} {held}")
+    if route_failures((REPO / ROUTER).read_text(encoding="utf-8")):
+        fail("measure", f"{ROUTER} returns for audit before Environment::read")
+    plants = (
+        'std::env::var("THINKTHEN_API_KEY")',
+        'std::net::TcpStream::connect("127.0.0.1:1")',
+        "std::time::Instant::now()",
+        "std::thread::spawn(|| ())",
+        "signal_hook::flag::register(2, flag)",
+        'std::process::Command::new("jq")',
+        "crate::engine::request()",
+        "crate::cli::edge::Environment::read()",
+        "std::fs::write(path, bytes)",
+        "use std::fs::remove_file;",
+        "use std::fs::{read, rename};",
+        "std::fs::File::create(path)",
+        "std::fs::OpenOptions::new()",
+        "std::fs::File::create_new(path)",
+        "std::fs::File::options()",
+        "std::fs::DirBuilder::new().create(path)",
+        "std::fs::hard_link(a, b)",
+        "std::fs::soft_link(a, b)",
+        "std::os::unix::fs::symlink(a, b)",
+        "use std::fs::File as F; F::open(path);",
+        "use std::fs::*;",
+    )
+    for plant in plants:
+        if not measure_policy_failures(plant):
+            fail("measure", f"the planted measure violation {plant!r} is refused")
+    controls = (
+        "std::fs::read(path)",
+        "std::io::stdin().lock()",
+        "use crate::core::measure::key::Key;",
+        "use crate::cli::measure::{Cause, Refusal, read};",
+        "use crate::failure::Failure;",
+        "use clap::{Args, ValueEnum};",
+    )
+    for control in controls:
+        if measure_policy_failures(control):
+            fail("measure", f"the measure control {control!r} stays allowed")
+    late = "let e = Environment::read(); if let Some(Command::Audit(a)) = c {}"
+    early = "if let Some(Command::Audit(a)) = c {} let e = Environment::read();"
+    if not route_failures(late) or route_failures(early):
+        fail("measure", "a late audit return is refused and an early one allowed")
 
 
 # Ticket 0077: every live attempt passes the one process width gate in the
@@ -1260,6 +1369,7 @@ def main() -> int:
     check_crate_roots()
     check_core_policy()
     check_catalog_policy()
+    check_measure_policy()
     check_doors()
     check_facade()
     check_sources()
