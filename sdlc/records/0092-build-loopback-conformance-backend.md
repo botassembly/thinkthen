@@ -56,3 +56,10 @@ Run once at `ea2d01ef` with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, 
 - `sdlc/scripts/live` did not run.
 
 Ian or the queue owner can overturn the `refuse` arm, the status-500 choice for drift, the ratchet reader change, and the way the runner nests case 18's record.
+
+## Landing checks
+
+Run once at `987b09ba`, rebased onto `c53b6f78`, with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset. The one-minute load was under 4.
+
+- `sdlc/scripts/lint`: exit 0, ratchet `crates + conformance 45994/45994`.
+- `sdlc/scripts/test`: exit 0 on the first run. The global-queue test did not flake. `live-test: all cases passed`.
