@@ -1,10 +1,10 @@
 # 0114: Build the diff command
 
-Status: built and reviewed on `ticket/0114-diff-command`. A fresh read-only Claude code review returned seven findings, and all seven are fixed. Not merged to main. Owner: Claude.
+Status: built and reviewed on `ticket/0114-diff-command`. A fresh read-only Claude code review returned seven findings, and all seven are fixed. The same reviewer rechecked the fixes and both merges at `0cd64fbd` and returned ACCEPT. Not merged to main. Owner: Claude.
 
 ## Order and base
 
-The coordinator asked for 0114 to start at once on top of the 0113 branch, since diff reuses audit's code. Merge commit `2315151e` brought `origin/ticket/0113-audit-command` at `6c37aba3` into this branch. 0113's second review changed shared code. Merge commit `e210d664` brought in the reviewed 0113 at `7babf4c9`, and `c31dce98` brought in main at `10d425e5`. diff now rounds floats once at output through `rounded_line`, as audit does. Its goldens compare byte for byte, and the tolerance reader is gone. The ticket's "Dependencies and order" section asked for 0113 and 0086 to land first. That section no longer binds.
+The coordinator asked for 0114 to start at once on top of the 0113 branch, since diff reuses audit's code. Merge commit `2315151e` brought `origin/ticket/0113-audit-command` at `6c37aba3` into this branch. 0113's second review changed shared code. Merge commit `e210d664` brought in the reviewed 0113 at `7babf4c9`, and `c31dce98` brought in main at `10d425e5`. `a22931d0` brought in main at `18a69c70`, where 0113 has landed. That merge changed only 0113's ticket status line. diff now rounds floats once at output through `rounded_line`, as audit does. Its goldens compare byte for byte, and the tolerance reader is gone. The ticket's "Dependencies and order" section asked for 0113 and 0086 to land first. That section no longer binds.
 
 ## McNemar
 
@@ -98,4 +98,15 @@ A fresh read-only Claude session reviewed `2315151e..cf14e4d6`. It checked the p
 
 ## Gates
 
-Filled in after the ladder run on the merged branch.
+The ladder ran on the code of `0cd64fbd`, with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, starting at load 8.13. The install, test, and spec rungs took the shared heavy-build lock themselves. `a22931d0` adds only a status line in another ticket, so the result holds for it.
+
+| Command | Result |
+| --- | --- |
+| `sdlc/scripts/install` | exit 0 |
+| `sdlc/scripts/lint` | exit 0 |
+| `sdlc/scripts/test` | exit 0 |
+| `sdlc/scripts/spec` | exit 0: 3 passed, demos 21 green, 0 red |
+| `git diff --check` | clean |
+| `node sdlc/scripts/ratchet.mjs` | 54155/54155 |
+
+The first ladder on `cf14e4d6` started at load 123, before the wait rule was applied. It passed, and this run replaces it.
