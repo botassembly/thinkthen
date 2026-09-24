@@ -231,3 +231,5 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Changes: `ThinkThen::Engine` holds settings, calls run on a detachable worker, and JSON methods replace hand-built values. A source-built Ruby 3.4.11 replaces Docker. The interrupt tests regroup into two files on the held arm.
 - Proof: The `check.sh` steps for gem content, slide, and conformance, the `file://` deny plant, and the "not run" probe.
 - Defers: The C door, release gems, Mac, `api_key:`, async, and Docker. The libyaml checksum stays unverified.
+
+Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. The engine keyword `width: nil` becomes `throttle: nil`, and every public `width` here reads as `throttle`.
