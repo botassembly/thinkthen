@@ -69,7 +69,7 @@ The first R5-3 run showed an unbounded wait in `a_waiting_child_stops_with_its_c
 
 Measured with `git diff -U0 5d317098 HEAD -- '*.rs'`, nonblank lines:
 
-- Production: 7 files (`cli/schedule.rs`, `engine/facade.rs`, `engine/http.rs`, `engine/mod.rs`, `engine/process.rs`, `engine/recorder.rs`, `engine/usage.rs`) plus the manifest. 265 lines added and 112 deleted. The deleted count includes the 21-line recorder test removed above. The budget is 14 files and 650 lines.
+- Production: 7 files (`cli/schedule.rs`, `engine/facade.rs`, `engine/http.rs`, `engine/mod.rs`, `engine/process.rs`, `engine/recorder.rs`, `engine/usage.rs`) plus the manifest. 265 lines added and 112 deleted. The deleted count includes the 24-line recorder test removed above. The budget is 14 files and 650 lines.
 - Tests: 465 lines added and 25 deleted, under the 950-line budget.
 - `cli/failure/tests.rs` sits at its 500-line ceiling. Its two `std` imports merged to make room for the new `Client::new` argument.
 
