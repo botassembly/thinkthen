@@ -30,3 +30,7 @@ On rustc 1.95.0, with the heavy lock the scripts take:
 - `sdlc/scripts/spec` exited 0: the spec pages and 21 demos green, 0 red.
 
 `sdlc/scripts/live` did not run.
+
+## Landing
+
+Landed 2026-09-24 ahead of 0086. On the main checkout, `lint` failed after the merge. The private-surface probe in `sdlc/scripts/package` took the first `libthinkthen-*.rlib` it found, which was the 1.93.1 build, and rustc refused it (E0514). The fix takes the newest build. A clean worktree never showed the failure, so the reviewed ladder still holds. After the fix, lint passed on the main checkout. The coordinator reviewed the two-line fix alone. Neither reviewer saw it.
