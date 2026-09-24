@@ -240,6 +240,8 @@ fn inline_rule(text: &str, either: bool) -> Result<RelationRule, RelateConfigErr
             return Err(RelateConfigError::Relation);
         }
         (name, source, target)
+    } else if text.contains(':') {
+        return Err(RelateConfigError::Relation);
     } else {
         (text, "*", "*")
     };

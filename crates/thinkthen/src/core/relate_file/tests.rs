@@ -40,6 +40,7 @@ fn inline_grammar_and_closed_file_shape_are_refused() {
         "works_for=person",
         "works_for=:organization",
         "works_for=person:organization:extra",
+        "works_for:person",
     ] {
         assert!(
             RelateSpec::inline(&[relation.to_owned()], false).is_err(),
