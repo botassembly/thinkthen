@@ -152,7 +152,7 @@ fn no_recognize_debug_line_shows_the_evidence() {
     };
     let lines = crate::core::Reading::new(crate::core::Framing::Lines, Vec::new())
         .expect("a text reading")
-        .record(EVIDENCE.as_bytes())
+        .record(format!("\u{e9}{EVIDENCE}").as_bytes())
         .expect("a text record");
     let object =
         crate::core::Record::string_fields(vec![(EVIDENCE.to_owned(), EVIDENCE.to_owned())]);
@@ -169,7 +169,7 @@ fn no_recognize_debug_line_shows_the_evidence() {
         "[Token { text: <2 bytes withheld>, byte_start: 0, byte_end: 2, start: 0, end: 1 }, \
          Token { text: <22 bytes withheld>, byte_start: 3, byte_end: 25, start: 2, end: 24 }]"
     );
-    assert_eq!(format!("{lines:?}"), "Record(text, <22 bytes withheld>)");
+    assert_eq!(format!("{lines:?}"), "Record(text, <24 bytes withheld>)");
     assert_eq!(format!("{object:?}"), "Record(json, <51 bytes withheld>)");
     assert!(
         shown.contains(r#"kind: "person", start: 0, end: 1, strength: 0.9"#),

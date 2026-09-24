@@ -29,7 +29,8 @@ pub(crate) struct Request {
 }
 
 /// `state` is the evidence, and a pick's criteria may come from a record, so
-/// `Debug` withholds both and shows the model. The length is the JSON's.
+/// `Debug` withholds both and shows the model. The length is the JSON's. The
+/// question types derive `Debug` only in tests, so nothing else prints them.
 impl std::fmt::Debug for Request {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
@@ -44,8 +45,7 @@ impl std::fmt::Debug for Request {
 }
 
 /// The wire questions in request order.
-#[derive(Debug)]
-#[cfg_attr(test, derive(PartialEq))]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 pub(crate) struct Questions(Vec<(String, RequestQuestion)>);
 
 #[cfg(test)]
@@ -73,8 +73,8 @@ impl<'de> Deserialize<'de> for Questions {
 }
 
 /// One named question inside a request, in the shape its verb asks for.
-#[derive(Debug, Serialize)]
-#[cfg_attr(test, derive(serde::Deserialize, PartialEq))]
+#[derive(Serialize)]
+#[cfg_attr(test, derive(Debug, serde::Deserialize, PartialEq))]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub(crate) enum RequestQuestion {
     /// A yes/no question, which the vendor calls `noul`.
@@ -101,8 +101,8 @@ pub(crate) enum RequestQuestion {
 /// module alone knows they travel here. A question that names neither carries
 /// no `criteria` at all, so its request is byte for byte the request of the
 /// version before the two texts existed.
-#[derive(Debug, Serialize)]
-#[cfg_attr(test, derive(serde::Deserialize, PartialEq))]
+#[derive(Serialize)]
+#[cfg_attr(test, derive(Debug, serde::Deserialize, PartialEq))]
 pub(crate) struct NoulCriteria {
     #[serde(rename = "true", skip_serializing_if = "Option::is_none")]
     yes: Option<Json>,
@@ -116,8 +116,7 @@ pub(crate) struct NoulCriteria {
 /// there. `--options` reads a map from a record, and each value travels as the
 /// description. The keys keep the order they were given, because option order
 /// moves the odds.
-#[derive(Debug)]
-#[cfg_attr(test, derive(PartialEq))]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 pub(crate) struct Criteria(Vec<(String, Option<Json>)>);
 
 impl Serialize for Criteria {
