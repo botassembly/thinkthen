@@ -7,7 +7,7 @@
 name = "thinkthen-c"
 version = "0.0.1"
 edition = "2024"
-rust-version = "1.93.1"
+rust-version = "1.95.0"
 description = "The C door: one header, a shared and a static library, and every exported symbol"
 license = "MIT"
 publish = false

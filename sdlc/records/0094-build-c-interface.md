@@ -4,7 +4,7 @@ Status 2026-09-24: paused, not done. Ian asked for the work to wrap up, so the b
 
 ## Done
 
-- The branch merged `ticket/0093-first-binding-crate` and `ticket/0098-binding-members`. 0094 needs no 0098 member beyond what 0098 builds, and it changes none.
+- The branch merged `ticket/0093-first-binding-crate` and `ticket/0098-binding-members`, the latter last at `9c0fc2cb`, which brought Rust 1.95.0. The crate names `rust-version = "1.95.0"` to match the root. 0094 needs no 0098 member beyond what 0098 builds, and it changes none.
 - `libraries/c` holds the crate `thinkthen-c`, in its own workspace under ADR 0047. Its library is named `thinkthen_c`, its crate types are `cdylib` and `staticlib`, and `build.rs` sets the soname `libthinkthen.so.0`.
 - `include/thinkthen.h` follows the ticket's header table. It keeps all 19 functions.
 - `src/` splits the door into `ffi.rs` (the only file that allows `unsafe`), `call.rs` (the envelope and the serializer), `door.rs` (the typed doors), and `failures.rs` (the per-thread, per-engine failure table, its thread-exit cleanup, and the panic guard).
@@ -21,5 +21,4 @@ Status 2026-09-24: paused, not done. Ian asked for the work to wrap up, so the b
 - No planted bug has been shown for R1-9, R2-7, R2-16, R2-26, or R3-24.
 - Churn (R7-1, G3): not run. `probes/c-churn/churn.c` is committed. The runner planned for it runs 8 at a time under the heavy lock. The tag's library build was queued and then stopped at the wrap-up request, so no count exists on either side.
 - The ladder has not run. Until the crate builds and its ratchets hold, `lint`'s registry check and the surface rung fail on this branch.
-- Rust moved to 1.95.0 on main. The crate still names `rust-version = "1.93.1"`, and it follows the root once main is merged.
 - No code review, and no merge of `origin/main`.
