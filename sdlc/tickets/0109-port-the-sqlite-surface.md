@@ -6,7 +6,7 @@ opens: databases/sqlite sdlc/scripts sdlc/planning/databases/sqlite.md sdlc/plan
 
 # 0109: Port the SQLite surface
 
-Status: design accepted 2026-09-24 after re-review, amended 2026-09-24 for the no-paid-backend rule. Owner: Claude. Depends on the 0084 builder amendment and 0117.
+Status: design and its 2026-09-24 amendment accepted. Owner: Claude. Depends on the 0084 builder amendment and 0117.
 
 ## Outcome and authority
 
@@ -88,6 +88,8 @@ Not closed here: G9 (a Python wheel and this extension in one process) waits on 
 
 - Builder note from the confirmation: the three counted sends on the 503 arm (R2-24) assume the library retries twice. The test pins that count to the engine's actual default retry count and cites where the engine sets it, or reads the count from the engine.
 - Builder note from the confirmation: the builder states whether `thinkthen_usage()` builds the engine. If it does, a setting call after it raises `usage`, a test pins that sentence, and the README says so.
+- Builder note from the amendment review: the seed plant's count of 1 assumes the empty `Engine::builder()` caches by default. 0084 lists `default_cache()` as a setter, so the empty builder may start with no cache. Check that against the 0084 branch before writing the test. If the empty builder has no cache, the planted run counts 2 and writes nothing to the scratch folder, and the test pins 2. The test still turns red because A stays empty. The record shows the observed count.
+- Builder note from the amendment review: the seed plant refuses when `THINKTHEN_BASE_URL` is missing. It never falls back to the built-in vendor address.
 - Red first: the ported tests fail against an empty `databases/sqlite` workspace for the stated reason, then pass.
 - The slide runs as drawn in the CLI built from the amalgamation: warm 5, the WHERE keeps the complaint rows, and the count agrees. The query after the warm counts no new request.
 - The volatile check stays: `pragma_function_list` shows twelve names, eighteen registrations, and none with flag `0x800`. An index expression over `thinkthen_decide` refuses with `unsafe use of thinkthen_decide()`.
@@ -168,5 +170,6 @@ Contract 2; state and timing 3; reach 2; proof 3; cost of error 3; total 13. Fin
 
 - Design review: `sdlc/records/2026-09-24-design-review-0109.md` found fourteen items. This version applies all of them. Width 8 now comes from the public `thinkthen_width`, one of four section 5 settings built on `EngineBuilder::from_env` (ADR 0017 section 5, shared rule at `446a4d6b`, decision 2). The review offered a run at the default width instead, and the shared rules rule that out. The 503 clause asserts the retry loop's real outcome. The four dead plants are replaced. Relate and warm run on the detachable worker. Clippy and rustfmt run on the binding. R1-28, R3-28, R5-8, and R5-32 are named. The code reviewer checks the R2-29 section. The five smaller edits are applied. The held-arm and isolation fixes move to 0117 and decision 14. The ticket also follows the guide's shared rules at `bced9c4d`.
 - Confirmation (same file): ACCEPT at `1af17e52`, with two notes for the builder, now in the acceptance list.
-- Amendment of 2026-09-24: decision 16 applies the no-paid-backend rule (`d783ab6b`). The seed test proves the environment through the cache folder, and the helper removes the real key from every child. Confirmation pending.
+- Amendment of 2026-09-24: decision 16 applies the no-paid-backend rule (`d783ab6b`). The seed test proves the environment through the cache folder, and the helper removes the real key from every child.
+- Amendment review: `sdlc/records/2026-09-24-amendment-review-0108-0109-0112.md` accepted decision 16 at `6f5eddf3`, with two notes for the builder, now in the acceptance list.
 - Code review: pending.
