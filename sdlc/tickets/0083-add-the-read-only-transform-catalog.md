@@ -6,7 +6,9 @@ opens: crates/thinkthen/src/cli crates/thinkthen/transforms crates/thinkthen/tes
 
 # 0083: Add the read-only transform catalog
 
-Status: ready
+Status: draft, revised after design review; needs re-review. Owner: Claude.
+
+Review route: a fresh read-only Claude session reviews this design and the final diff. Codex (Astra) reviews as the other vendor under `sdlc/planning/one-line-plan-2026-09-24.md`. Revised 2026-09-24 after `sdlc/records/0083-design-review.md`.
 
 ## Outcome and authority
 
@@ -21,7 +23,7 @@ Ticket 0050 and ADR 0015 approve this surface after the one-crate move. Ticket 0
 
 The command lists or prints embedded `jq` source. It does not apply, parse, validate, interpret, or execute a transform. It does not read a key, environment configuration, standard input, a user file, the repository transform tree, or a platform folder. It does not enter the engine, install the interrupt carrier, open a socket, or start a process.
 
-Root help keeps `status` first, then the ten judgment functions in their settled order, then `cache`, then `transform`, then Clap's generated `help` row. The exact root description is `List or print the built-in jq transforms without running them.` The nested introductions are `List the names of the built-in jq transforms.` for `transform list` and `Print one built-in jq transform exactly as shipped.` for `transform show`. Ticket 0082's post-0081 baseline records the pre-catalog command list; ticket 0083 adds only this utility row immediately after `cache` and before generated `help`, and pins every earlier row byte for byte.
+Root help keeps `status` first, then the ten judgment functions in their settled order, then `cache`, then `transform`, then Clap's generated `help` row. The exact root description is `List or print the built-in jq transforms without running them.` The nested introductions are `List the names of the built-in jq transforms.` for `transform list` and `Print one built-in jq transform exactly as shipped.` for `transform show`. Main after 0082 lands holds the pre-catalog command list. This ticket adds only this utility row immediately after `cache` and before generated `help`, and pins every earlier row byte for byte.
 
 ## Catalog contract
 
@@ -91,14 +93,14 @@ Release artifacts and publication remain later authorized work. This ticket prov
 
 ## Budgets
 
-Production Rust changes may touch at most four existing files and add one catalog module. They may add at most 180 nonblank production Rust lines. Total Rust additions, including tests, may not exceed 500 nonblank lines. The package adds exactly ten `.jq` files totaling 66,328 bytes and 1,418 newline-terminated lines, each byte-identical to the table above. Add no dependency and no build script. Keep every Rust source and test file within the repository's 500-nonblank-line ceiling.
+Production Rust changes may touch at most four existing files and add one new file, `crates/thinkthen/src/cli/transform.rs`. That file holds both the nested `list` and `show` grammar and the closed table. A separate `cli/args/transform.rs` is not allowed. The likely existing files are `cli/mod.rs` for routing, `cli/args/command.rs` for the variant, and `sdlc/scripts/policy.py`, which is not Rust. They may add at most 180 nonblank production Rust lines. Total Rust additions, including tests, may not exceed 500 nonblank lines. The package adds exactly ten `.jq` files totaling 66,328 bytes and 1,418 newline-terminated lines, each byte-identical to the table above. Add no dependency and no build script. Keep every Rust source and test file within the repository's 500-nonblank-line ceiling.
 
 Search the existing nested `cache` command grammar, early `--version` path, locked writer, failure mapping, policy scanner, package rung, and compiled-command test helpers before raising the exact ratchet. The implementation record names every production file touched, the net Rust increase, and where duplication was removed or avoided. Stop and re-score before exceeding any file, line, byte, dependency, or surface bound.
 
 ## Acceptance
 
-- Observe focused red tests before implementation. Pin the exact list bytes, final newline, empty standard error, exit 0, and identical output across repeated runs, changed locales, unrelated current directories, and deliberately shuffled internal fixture input.
-- Pin root help with `status` first, the ten judgment functions unchanged, `cache` immediately after them, `transform` immediately after `cache`, and generated `help` last. Pin the exact root, `list`, and `show` descriptions above in short and long help. No earlier command row or introduction changes from the post-0082 baseline.
+- Observe focused red tests before implementation. Pin the exact list bytes, final newline, empty standard error, exit 0, and identical output across repeated runs, changed locales, and unrelated current directories. A unit test asserts the closed table is strictly ascending bytewise and free of duplicates.
+- Edit 0082's exact root inventory assertion, which ends `cache`, `help`, to insert `transform` between them. Do not add a second inventory assertion beside it, or both fail. The edited assertion pins `status` first, the ten judgment functions unchanged, `cache` immediately after them, `transform` immediately after `cache`, and generated `help` last. Pin the exact root, `list`, and `show` descriptions above in short and long help. No earlier command row or introduction changes from main after 0082 lands.
 - Pin all ten `show` results against byte fixtures and the byte counts and SHA-256 values above. Prove each result has no added prefix, suffix, newline, UTF-8 rewrite, or line-ending rewrite.
 - Pin exact-name lookup. Refuse case variants, `.jq` suffixes, `./` paths, traversal strings, prefixes, empty values, and unknown Unicode names. The lookup refusal has empty standard output, exit 2, and the exact fixed sentence above without the rejected value.
 - Prove the command path reads no key or configuration by setting canary values for every recognized environment variable and making the normal platform/configuration locations inaccessible. Both catalog commands still return the exact bytes and create or change no file, cache, counter, lock, or folder.
@@ -112,10 +114,12 @@ Search the existing nested `cache` command grammar, early `--version` path, lock
 
 ## Dependencies and canonical status
 
-Ticket 0050 supplies the approved catalog ruling. Ticket 0055 supplies the landed one-crate package boundary. Under the launch-first queue, implementation waits for tickets 0080, 0081, and 0082 to land on main; 0082 is the immediate prerequisite because both tickets complete nested read-only command surfaces and can overlap the CLI grammar, early routing, help, package checks, and command tests. Drafting and independent design review may proceed before those tickets land. Code starts from their integrated main and rechecks the budgets against that tree.
+Ticket 0050 supplies the approved catalog ruling. Ticket 0055 supplies the landed one-crate package boundary. Implementation starts from main containing the landing records for 0088 (public `relate`), 0089 (no resend after a transport failure), and 0082 (command contract). 0089 edits `cli/args.rs`, `cli/args/find.rs`, `specification/result.md`, and `sdlc/ratchet.json`. "No earlier command row changes" is measured against that tree, and the budgets are rechecked against it.
 
-This ticket is the sole ready implementation authority for the transform catalog. Ticket 0050 remains the landed decision record and does not authorize a second implementation. The quality plan's release-checklist row 15 points here. The canonical ticket status is `ready`; only implementation changes it to `in progress`, and only a reviewed landed record changes it to `landed`.
+Queue order: 0089, 0082, 0083, 0090. None of them builds in parallel with another. This ticket shares `cli/args/command.rs`, the root inventory test, `sdlc/ratchet.json`, `sdlc/scripts/lint`, and possibly `specification/README.md` with 0082. The unpacked-crate offline build adds a full compile to the lint rung, and it runs only when no other gate runs.
+
+This ticket is the sole ready implementation authority for the transform catalog. Ticket 0050 remains the landed decision record and does not authorize a second implementation. The quality plan's release-checklist row 15 points here. The status becomes `ready` after the re-review accepts this design. Only implementation changes it to `in progress`, and only a reviewed landed record changes it to `landed`.
 
 ## Complexity
 
-Contract 1; State/timing 0; Reach 1; Proof 2; Cost of error 1; Total 5. Final level: 2. Reasons: the runtime is a closed static lookup with no state, while exact public bytes, early exclusion of all effectful setup, and proof from an unpacked source package cross the CLI, policy, and package rung. Luna Extra High owns implementation design, case analysis, code, and remediation under the three-ticket trial. Independent Sol High sessions recheck this amended ticket before code and review the final diff. Stop and re-score if implementation adds runtime discovery, transform interpretation, a dependency or build script, any API surface, any effectful setup before catalog dispatch, changed transform bytes, release artifacts, or more than the stated file, line, or byte budget.
+Contract 1; State/timing 0; Reach 1; Proof 2; Cost of error 1; Total 5. Final level: 2. Reasons: the runtime is a closed static lookup with no state, while exact public bytes, early exclusion of all effectful setup, and proof from an unpacked source package cross the CLI, policy, and package rung. Claude owns the queue and builds this ticket. Stop and re-score if implementation adds runtime discovery, transform interpretation, a dependency or build script, any API surface, any effectful setup before catalog dispatch, changed transform bytes, release artifacts, or more than the stated file, line, or byte budget.
