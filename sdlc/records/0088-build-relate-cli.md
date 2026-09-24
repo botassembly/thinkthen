@@ -33,9 +33,9 @@ Further proof added: the exact dry-run object and its request digest equal to th
 Measured with `git diff cdfd0e5e HEAD`, nonblank Rust lines under `crates`:
 
 - Production: 25 files changed, 1,446 lines added, 276 removed, 1,170 net. The cap is 15 files and 1,200 lines.
-- Test-only: 17 files changed, 1,337 lines added, 242 removed, 1,095 net. The cap is 11 files and 1,100 lines.
-- Total net growth is 2,265, within the 2,300 cap. Added lines count code moved between files.
-- The ceiling in `sdlc/ratchet.json` is 43,310, up from main's 41,045. The handed-off diff had set 43,020 with the formatter suppressed.
+- Test-only: 18 files changed, 1,344 lines added, 244 removed, 1,100 net. The cap is 11 files and 1,100 lines.
+- Total net growth is 2,270, within the 2,300 cap. Added lines count code moved between files.
+- The ceiling in `sdlc/ratchet.json` is 43,315, up from main's 41,045. The handed-off diff had set 43,020 with the formatter suppressed.
 - No Rust file exceeds 500 nonblank lines. The largest changed files are `core/result.rs` at 499 and `tests/backend/refusals.rs` at 469.
 
 The file counts exceed the ticket because the review's fixes live in shared owners. Those owners are `core/relation.rs` (asker, cut, withheld `Debug`), `engine/prepared_request.rs` (fallback owner, outside the ticket's `opens` list), `cli/recognize/relation.rs`, `core/result.rs`, `core/recognize_file.rs`, `cli/failure/convert.rs`, and `Common::framing` in `cli/args.rs`, which replaced four copies in `annotate.rs`, `asking.rs`, `recognize.rs`, and `recognize/config.rs`. These change 0081's shared owners without changing recognition output. The ticket's stop rule asks for a re-score when that happens, so the ceiling raise, the file counts, and the 0081 owner changes need second-agent review.
