@@ -1,6 +1,6 @@
 # 0091: Merge the branch conformance cases
 
-Status: built on `ticket/0091-conformance-union`. Code review pending. Not merged.
+Status: built on `ticket/0091-conformance-union`. The code review (`0091-code-review.md`) found two blocking problems, and both are fixed below. Not merged.
 
 ## Result
 
@@ -15,9 +15,9 @@ The runner gains the three success arms, the `question_form` field, and the coun
 | 26-filter-empty-list | 06 | `filter` with no exchange and `indexes: []`. The branch `jobs` field is left to the surfaces |
 | 27-decide-many | 19 | `decide_many`, one exchange per record. The branch `jobs` field is left to the surfaces |
 | 28-decide-many-repeated-texts | 80 | `decide_many` over ten alternating records |
-| 29-usage-json-text | 08 | threshold 90, `question_form: text`, `usage` |
-| 30-local-question-file | 10 | blank question, `question_form: file`, `local` |
-| 31-usage-rank-blank-question | 23 | blank `rank` question, `question_form: text`, `usage` |
+| 29-usage-json-text | 08 | threshold 90, `question_form: text`, valid evidence, `usage` |
+| 30-local-question-file | 10 | blank question, `question_form: file`, valid evidence, `local` |
+| 31-usage-rank-blank-question | 23 | blank `rank` question, `question_form: text`, two records under `--lines`, `usage` |
 | 32-score-equal-distribution | 76 | score 0.99, `level: weak` |
 | 33-tag-threshold-excludes | 79 | cut 0.6 keeps one label |
 | 34-annotate-repeated-texts | 82 | three records, one exchange each |
@@ -31,6 +31,9 @@ The runner gains the three success arms, the `question_form` field, and the coun
 | 42 to 50 `-recognize-Cnn-relations` | 28, 29, 39, 40, 41, 45, 51, 60, 67 | `recognize` with relations |
 | 51-same-kind-alerts | 69 | `relate`, kind `alert`, yes/no pairs |
 | 52-cross-kind-staff | 71 | `relate`, `person` to `organization`, one choice per person |
+| main's 19-find-none | 25 | already covered. The README now says why `bare` is `"none"` and `selected` is `null` |
+
+The 31 recognize cases without a relation stay in main's fixture `crates/thinkthen/tests/fixtures/recognize-225`.
 
 Dropped as the ticket says: 27 duplicates `24-deadline-fault`, 70 adds only bulk, and 18 and 81 stay with the surfaces. Cases 09 and 22 add nothing to the text and file split. `36-C09` has no relation, so it stays in the recognize fixture, which already splits "Karst and Vellum".
 
@@ -55,6 +58,13 @@ Each case with digests then ran alone on the new sources with its production dig
 
 The counter step went red with the cache folder removed: the second call sent again, and the loopback listener refused it (`Transport(Refused)`). Each acceptance refusal went red when its check was removed. With privacy off, ported mutation 3 (a `headers` key in an exchange) passed. With the kind check off, ported mutation 0 (`decide_several`) passed. With the captured-path check off, ported mutation 1 (a `captured` exchange with no path) passed.
 
+## Code review fixes
+
+1. The text-form arm passed for the wrong reason. It sent empty input, so `decide` and `rank` exited 2 whatever the question said. Cases 29 to 31 now carry valid `evidence`, `rank` runs under `--lines`, and a fault with a `question_form` must carry evidence. The runner pins each exact diagnostic: `thinkthen: --threshold: a single cut is above zero and at most one` for 29, `thinkthen: the question file's \`decide\`: a question is text, not white space` for 30, and `thinkthen: a question is text, not white space` for 31. Red: with 29's threshold set to 0.9 the runner failed on exit 4 against 2. With 31's question made non-blank it failed the same assertion. The core also failed both with "breaks no rule as usage".
+2. Nothing guarded the unknown-key refusal. Ported mutations now plant `"surprise": 1` on a case and `"counterz": 1` in a `success` object. With `deny_unknown_fields` removed from `Case`, ported mutation 0 passed. With it removed from `Success`, ported mutation 1 passed.
+
+Non-blocking notes applied: the provenance rule parses the leading case number, and a drop guard removes each case folder when the case fails. The stand-in limits stay as the review states them. A captured re-record is the only fix for them.
+
 ## Decisions Ian can overturn
 
 - The command runner has no JSON-text door, so `question_form: text` passes the question's members as typed command-line values. The port guide equates the two.
@@ -65,10 +75,10 @@ The counter step went red with the cache folder removed: the second call sent ag
 
 ## Budget
 
-Test and runner Rust: 467 nonblank lines added gross and 81 removed, measured with `git diff --unified=0 origin/main...HEAD -- 'crates/**/*.rs'`. About 70 of the added lines are the mutation test moved out of `conformance_tests.rs` to keep it under 500 lines. The ticket cap is 650. The ratchet rose to 44,283. The runner arms needed new command-side code, and the shared helpers `asked`, `same_json`, and `record_requests` are reused, not copied. No production Rust changed.
+Test and runner Rust: 524 nonblank lines added gross and 81 removed, measured with `git diff --unified=0 origin/main...HEAD -- 'crates/**/*.rs'`. About 70 of the added lines are the mutation test moved out of `conformance_tests.rs` to keep it under 500 lines. The ticket cap is 650. The ratchet rose to 44,340 on `origin/main` at `ce0e3d6f`. The runner arms needed new command-side code, and the shared helpers `asked`, `same_json`, and `record_requests` are reused, not copied. No production Rust changed.
 
 ## Gates
 
-At `c004abdd`, with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset, one rung at a time: `install` exit 0. `lint` exit 0, `ratchet: crates 44283/44283`, `pages: 1 coming, 21 green`. `test` exit 0, 730 passed, 0 failed, 2 ignored across 13 result lines. `spec` exit 0, `demos: 21 green, 0 red`. `git diff --check origin/main...HEAD` passed. `c004abdd` includes the merge of `origin/main` after 0082 landed. Only this record changed after that run.
+The branch was rebased onto `origin/main` at `ce0e3d6f`. At `906c39f2`, with `THINKTHEN_API_KEY`, `THINKTHEN_BASE_URL`, `THINKTHEN_URL`, and `THINKTHEN_CACHE` unset, one rung at a time, the one-minute load was 1.98 at the start. `install` exit 0. `lint` exit 0, `ratchet: crates 44340/44340`, `pages: 1 coming, 21 green`. `test` exit 0, 730 passed, 0 failed, 2 ignored across 13 result lines. `spec` exit 0, `demos: 21 green, 0 red`. `git diff --check origin/main...HEAD` passed. Only this record, the copied review, and the ticket's review line changed after that run.
 
 No paid or live call ran. The generator and the counter step used loopback listeners only.

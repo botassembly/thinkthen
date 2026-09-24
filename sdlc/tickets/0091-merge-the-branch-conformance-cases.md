@@ -61,4 +61,4 @@ Contract 2; state and timing 0; reach 2; proof 2; cost of error 2; total 8. Fina
 ## Review
 
 - Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-controls.md`) found six mechanical gaps and one needless edit to case 19. All applied. The re-review (`sdlc/records/2026-09-24-rereview-near.md`) accepted it with one edit, applied.
-- Code review: pending.
+- Code review: `sdlc/records/0091-code-review.md` found two blocking problems at `df303345`. Both are fixed at `906c39f2`. A re-review is pending.
