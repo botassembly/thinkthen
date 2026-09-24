@@ -289,15 +289,15 @@ fn annotate_equal_groups_share_one_cache_request() {
 
 #[test]
 fn a_model_mismatch_cancels_groups_that_have_not_started() {
+    // One request at a time, so the engine reads group 1's other model before
+    // it could send group 2. The count then depends on no timing at all.
     let listener = Listener::answering(|body| {
-        let body = String::from_utf8_lossy(body);
-        if body.contains("group 0") {
-            Canned::ok(&yes("jev-1.2", 1, 1)).after(10)
-        } else if body.contains("group 1") {
-            Canned::ok(&yes("jev-1.3", 1, 1)).after(20)
+        let model = if String::from_utf8_lossy(body).contains("group 1") {
+            "jev-1.3"
         } else {
-            Canned::ok(&yes("jev-1.2", 1, 1)).after(40)
-        }
+            "jev-1.2"
+        };
+        Canned::ok(&yes(model, 1, 1))
     })
     .expect("a listener");
     let file = grouped("model-stop", 4);
@@ -310,20 +310,14 @@ fn a_model_mismatch_cancels_groups_that_have_not_started() {
             "--model",
             "jev-latest",
             "--jobs",
-            "2",
+            "1",
         ],
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         grouped_input(1, 4).as_bytes(),
     )
     .expect("the run");
     assert_eq!(output.status.code(), Some(4));
-    let requests = listener.requests();
-    assert_eq!(requests.len(), 3);
-    assert!(
-        requests
-            .iter()
-            .all(|request| { !String::from_utf8_lossy(&request.body).contains("group 3") })
-    );
+    assert_eq!(listener.requests().len(), 2);
 }
 
 #[test]
