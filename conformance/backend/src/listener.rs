@@ -1,9 +1,9 @@
 //! A loopback listener that serves scripted responses and records what it was sent.
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
-use std::sync::{Arc, Barrier, OnceLock};
+use std::sync::{Arc, Barrier, Mutex};
 use std::thread;
 use std::time::Duration;
 
@@ -19,7 +19,7 @@ pub struct Canned {
     promised: Option<usize>,
     delay: Duration,
     release: Option<Arc<Barrier>>,
-    held: Option<Arc<Gate>>,
+    held: Option<(Arc<Gate>, u64)>,
     answered: Option<Sender<()>>,
     asked: Vec<(String, String)>,
     close_without_reply: bool,
@@ -95,9 +95,10 @@ impl Canned {
         self
     }
 
-    /// Hold the answer until the gate opens.
+    /// Hold the answer until the gate opens or its round moves past this one.
     pub(crate) fn held_by(mut self, gate: Arc<Gate>) -> Self {
-        self.held = Some(gate);
+        let round = gate.round.load(Ordering::SeqCst);
+        self.held = Some((gate, round));
         self
     }
 
@@ -117,8 +118,29 @@ impl Canned {
 /// What a listener answers one request with.
 pub(crate) type Reply = dyn Fn(&Recorded) -> Canned + Send + Sync;
 
-/// A gate that holds answers until it is set, and then stays open.
-pub(crate) type Gate = OnceLock<()>;
+/// A gate that holds answers until the next round, or for good once released.
+#[derive(Debug, Default)]
+pub(crate) struct Gate {
+    open: AtomicBool,
+    round: AtomicU64,
+}
+
+impl Gate {
+    /// Let every held answer go, now and from here on.
+    pub(crate) fn release(&self) {
+        self.open.store(true, Ordering::SeqCst);
+    }
+
+    /// Let go every answer held now. A later answer holds again.
+    pub(crate) fn next_round(&self) {
+        self.round.fetch_add(1, Ordering::SeqCst);
+    }
+
+    /// Whether an answer taken in this round still waits.
+    fn holds(&self, round: u64) -> bool {
+        !self.open.load(Ordering::SeqCst) && self.round.load(Ordering::SeqCst) <= round
+    }
+}
 
 /// One request or output event, ordered as the scheduling test observes it.
 #[derive(Debug)]
@@ -165,7 +187,7 @@ pub struct Listener {
     origin: String,
     base: String,
     url: String,
-    recorded: Receiver<Recorded>,
+    recorded: Mutex<Receiver<Recorded>>,
     counts: Arc<Counts>,
 }
 
@@ -183,7 +205,7 @@ impl Listener {
             origin,
             base,
             url,
-            recorded,
+            recorded: Mutex::new(recorded),
             counts,
         })
     }
@@ -247,7 +269,7 @@ impl Listener {
             origin,
             base,
             url,
-            recorded,
+            recorded: Mutex::new(recorded),
             counts,
         })
     }
@@ -284,7 +306,11 @@ impl Listener {
 
     /// Every request the listener has read so far, in the order it read them.
     pub fn requests(&self) -> Vec<Recorded> {
-        self.recorded.try_iter().collect()
+        // The lock keeps a listener shareable across threads.
+        self.recorded
+            .lock()
+            .map(|recorded| recorded.try_iter().collect())
+            .unwrap_or_default()
     }
 }
 
@@ -349,10 +375,12 @@ fn serve_kept(
         let Some((request, used)) = peek_request(stream) else {
             return;
         };
+        // Choose before counting: a held answer takes its round number first,
+        // so a `round` sent after the count reads this request lets it go.
+        let canned = reply(&request);
         counts.requests.fetch_add(1, Ordering::SeqCst);
         let held = counts.in_flight.fetch_add(1, Ordering::SeqCst) + 1;
         counts.peak.fetch_max(held, Ordering::SeqCst);
-        let canned = reply(&request);
         if sender.is_some_and(|sender| sender.send(request).is_err()) {
             return;
         }
@@ -370,7 +398,7 @@ fn serve_kept(
         while canned
             .held
             .as_ref()
-            .is_some_and(|gate| gate.get().is_none())
+            .is_some_and(|(gate, round)| gate.holds(*round))
         {
             thread::sleep(Duration::from_millis(5));
         }

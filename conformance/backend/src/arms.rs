@@ -8,7 +8,10 @@
 use std::collections::BTreeMap;
 use std::fmt;
 use std::io::{self, BufRead, Write};
-use std::sync::Arc;
+use std::str::FromStr;
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::{Duration, Instant};
 
 use serde::Deserialize;
 use serde::de::{Deserializer, IgnoredAny, MapAccess, SeqAccess, Visitor};
@@ -18,6 +21,12 @@ use crate::listener::{Canned, Gate, Listener, Recorded};
 
 /// The status every unknown body, arm, or request earns, and no arm serves.
 pub(crate) const DRIFT: u16 = 500;
+
+/// The longest delay the delay arm serves, under the engine's request timeout.
+const MOST_DELAY: u64 = 10_000;
+
+/// How long a `wait` line waits for its count.
+const WAIT_BOUND: Duration = Duration::from_secs(5);
 
 /// The shared cases, compiled in so the binary needs no path.
 const CASES: &str = include_str!("../../cases.json");
@@ -109,26 +118,67 @@ impl Backend {
 
     /// Let every held reply go, now and from here on.
     pub fn release(&self) {
-        let _ = self.gate.set(());
+        self.gate.release();
+    }
+
+    /// Let go every reply held now. A reply that arrives later holds again.
+    pub fn round(&self) {
+        self.gate.next_round();
+    }
+
+    /// The count once it reads at least `least`, or at 5 s, whichever comes first.
+    pub fn wait(&self, least: usize) -> usize {
+        let deadline = Instant::now() + WAIT_BOUND;
+        loop {
+            let count = self.count();
+            if count >= least || Instant::now() >= deadline {
+                return count;
+            }
+            thread::sleep(Duration::from_millis(5));
+        }
     }
 }
 
-/// Print the port, answer `count` and `release` lines, and print the count at the end.
-pub fn run(input: impl BufRead, mut output: impl Write) -> io::Result<()> {
-    let backend = Backend::start()?;
+/// Print the port, answer `count`, `release`, `round`, and `wait N` lines, and
+/// print the count at the end.
+///
+/// A `wait` answers on a thread of its own, so the lines behind it run at once.
+/// The output is shared with that thread, and the end does not wait for it.
+pub fn run(input: impl BufRead, output: impl Write + Send + 'static) -> io::Result<()> {
+    let backend = Arc::new(Backend::start()?);
+    let output = Arc::new(Mutex::new(output));
     let port = backend.origin().rsplit(':').next().unwrap_or_default();
-    writeln!(output, "{port}")?;
-    output.flush()?;
+    say(&output, port)?;
     for line in input.lines() {
         match line?.trim() {
-            "count" => writeln!(output, "{}", backend.count())?,
+            "count" => say(&output, backend.count())?,
             "release" => backend.release(),
-            other => writeln!(io::stderr(), "conformance-backend: unknown line `{other}`")?,
+            "round" => backend.round(),
+            other => match other.strip_prefix("wait ").and_then(whole) {
+                Some(least) => {
+                    let (backend, output) = (Arc::clone(&backend), Arc::clone(&output));
+                    thread::spawn(move || say(&output, format!("wait {}", backend.wait(least))));
+                }
+                None => writeln!(io::stderr(), "conformance-backend: unknown line `{other}`")?,
+            },
         }
-        output.flush()?;
     }
-    writeln!(output, "{}", backend.count())?;
+    say(&output, backend.count())
+}
+
+/// Write one line under the output lock and flush it.
+fn say(output: &Mutex<impl Write>, text: impl fmt::Display) -> io::Result<()> {
+    let mut output = output
+        .lock()
+        .map_err(|_| io::Error::other("the output lock was poisoned"))?;
+    writeln!(output, "{text}")?;
     output.flush()
+}
+
+/// A whole number: ASCII digits only, so `+1` and `-1` are not one.
+fn whole<T: FromStr>(text: &str) -> Option<T> {
+    let digits = !text.is_empty() && text.bytes().all(|byte| byte.is_ascii_digit());
+    digits.then(|| text.parse().ok()).flatten()
 }
 
 /// Pick the arm the request's path names.
@@ -151,6 +201,13 @@ fn route(cases: &Cases, gate: &Arc<Gate>, request: &Recorded) -> Canned {
         }
         (Some("arm"), Some("refuse"), _) => Canned::status(422, "refused"),
         (Some("arm"), Some("held"), _) => generic(&request.body, None).held_by(Arc::clone(gate)),
+        (Some("arm"), Some("delay"), value) => match value.and_then(whole) {
+            None => drift("the delay arm needs a whole number of milliseconds"),
+            Some(millis) if millis > MOST_DELAY => {
+                drift("the delay arm allows at most 10000 milliseconds")
+            }
+            Some(millis) => generic(&request.body, None).after(millis),
+        },
         (Some("arm"), Some("malformed"), Some(cause)) => generic(&request.body, Some(cause)),
         _ => drift(&format!("no arm at `{path}`")),
     }
