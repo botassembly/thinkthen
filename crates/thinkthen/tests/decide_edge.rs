@@ -4,6 +4,9 @@ use std::io::{self, Write};
 use std::process::{Command, Output, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+#[path = "../src/test_deadline/wait.rs"]
+mod wait;
+
 const DEFAULT_MODEL: &str = "jev-latest";
 
 /// A port nothing listens on, so a connection would be refused at once.
@@ -35,7 +38,7 @@ fn run(arguments: &[&str], environment: &[(&str, &str)], evidence: &[u8]) -> io:
         .ok_or_else(|| io::Error::other("no pipe to standard input"))?;
     let _ = input.write_all(evidence);
     drop(input);
-    child.wait_with_output()
+    wait::finish(child, &arguments.join(" "))
 }
 
 /// Run `decide` over one line of evidence.
