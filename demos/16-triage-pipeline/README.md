@@ -4,7 +4,7 @@ Status: green
 
 Verbs: `annotate`
 
-Use this when one record needs several judgments before ordinary policy code can choose an action. Six fictional support tickets become complete audit rows in three files.
+Use this when one record needs several answers before ordinary policy code can choose an action. Six fictional support tickets become complete audit rows in three files.
 
 ```bash
 ./run --replay recording/ | mustmatch "SUP-1042	Duplicate renewal charge	draft	routine
@@ -65,7 +65,7 @@ jq -c '{id: .input.id, values: .value, policy}' "$work/triage/block.jsonl" \
   | mustmatch '{"id":"SUP-1044","values":{"credential_request":true,"queue":"account","urgency":1.02},"policy":{"action":"block","reason":"credential_request"}}'
 ```
 
-The script reserves the output name before it judges, then builds inside a hidden staging directory. A failed judgment, malformed policy input, failed file write, or catchable interruption removes the directory. A caller reads it only after the script returns successfully. An unresolved value remains JSON `null` and fails closed into the review file.
+The script reserves the output name before it judges, then builds inside a hidden staging directory. A failed question, malformed policy input, failed file write, or catchable interruption removes the directory. A caller reads it only after the script returns successfully. An unresolved value remains JSON `null` and fails closed into the review file.
 
 ## Step 3: fail unresolved answers closed
 
@@ -83,7 +83,7 @@ printf '%s\n' '{"value":{"credential_request":false,"queue":null,"urgency":0}}' 
 - The output directory must not exist. This prevents a second run from mixing old and new rows.
 - A question name may not collide with a field already in the input row. `annotate` refuses that record before sending it. Keep names such as `queue` and `urgency` out of the TSV header.
 - `/body` is the disclosure boundary. `--dry-run` shows the exact request without sending it. Detailed output still contains the full local row, including `reviewed_action`, so treat the three files as audit data.
-- Adding, removing, or changing one question changes the whole packed request and its cache digest. A rerun asks and pays for all three judgments again, and an answer near its cut can move.
+- Adding, removing, or changing one question changes the whole packed request and its cache digest. A rerun asks and pays for all three questions again, and an answer near its cut can move.
 - The policy refuses missing, malformed, and unknown values. It never silently drafts them.
 
 ## Related how-tos

@@ -1,0 +1,232 @@
+#!/usr/bin/env python3
+"""Compare the built public Rust API with its frozen declarations.
+
+The one source is the ticket text: the normative block of ticket 0084, the
+part of ticket 0095's block that ticket 0086 names, the export sentence for
+`choices!`, and the ADR 0017 throttle rename. No file here copies that list.
+`cargo public-api`, pinned by the install rung, reads the built crate. The
+self-test plants an added export, a removed item, and a changed signature
+into the real listing and proves each one fails.
+"""
+
+from __future__ import annotations
+
+import pathlib
+import re
+import subprocess
+import sys
+
+REPO = pathlib.Path(__file__).resolve().parents[2]
+TICKETS = REPO / "sdlc" / "tickets"
+ADR = REPO / "sdlc" / "planning" / "adr" / "0017-libraries-over-one-bound-core.md"
+# Traits a type may carry beyond the block: its prose makes every type Debug and
+# values Clone, PartialEq, Eq, or Copy. The derive adds StructuralPartialEq.
+EXTRA_TRAITS = {"Debug", "Clone", "Copy", "PartialEq", "Eq", "StructuralPartialEq"}
+NEVER_CLONE = re.compile(r"^(\w+Builder|Error|ErrorDetail)$")
+
+
+def text(pattern: str) -> str:
+    [path] = TICKETS.glob(pattern)
+    return path.read_text(encoding="utf-8")
+
+
+def block(page: str, heading: str) -> str:
+    match = re.search(re.escape(heading) + r"\n.*?```rust\n(.*?)```", page, re.S)
+    if not match:
+        sys.exit(f"inventory: no rust block under {heading!r}")
+    return match.group(1)
+
+
+def depth_split(value: str, separator: str) -> list[str]:
+    """Split at a separator outside (), [], {}, and <>; `->` opens nothing."""
+    parts, depth, start = [], 0, 0
+    for index, char in enumerate(value):
+        if char in "([{<":
+            depth += 1
+        elif char in ")]}" or (char == ">" and value[index - 1] != "-"):
+            depth -= 1
+        elif char == separator and depth == 0:
+            parts.append(value[start:index].strip())
+            start = index + 1
+    parts.append(value[start:].strip())
+    return [part for part in parts if part]
+
+
+def path_split(value: str) -> tuple[str, str]:
+    """Split `Type<..>::name(..)` into the type and the rest, at depth zero."""
+    depth = 0
+    for index, char in enumerate(value):
+        if char == "(" and depth == 0:
+            break
+        if char == "<":
+            depth += 1
+        elif char == ">" and value[index - 1] != "-":
+            depth -= 1
+        elif value.startswith("::", index) and depth == 0:
+            head, rest = path_split(value[index + 2 :])
+            return (value[:index] + ("::" + head if head else "")), rest
+    return "", value
+
+
+def clean(value: str) -> str:
+    value = re.sub(r"/\*.*?\*/", "", value)
+    value = re.sub(r"\s+", " ", value).strip()
+    while True:
+        stripped = re.sub(r"(?<![\w:])[a-z_][a-z0-9_]*::", "", value)
+        if stripped == value:
+            break
+        value = stripped
+    value = re.sub(r"<(\w+) as IntoIterator>::", r"\1::", value)
+    return value.replace("( ", "(").replace(" )", ")")
+
+
+def signature(owner: str, item: str) -> str:
+    """One function as `fn Owner::name(types) -> ret`, names dropped."""
+    item = clean(item).removeprefix("pub ")
+    const = "const " if item.startswith("const ") else ""
+    item = item.removeprefix("const ").removeprefix("fn ")
+    open_at = next(i for i, c in enumerate(item) if c == "(" and item[:i].count("<") == item[:i].count(">"))
+    close_at, depth = open_at, 0
+    for close_at in range(open_at, len(item)):
+        depth += {"(": 1, ")": -1}.get(item[close_at], 0)
+        if depth == 0:
+            break
+    args = [re.sub(r"^(mut )?[a-z_][a-z0-9_]*: ", "", arg) for arg in depth_split(item[open_at + 1 : close_at], ",")]
+    whole = f"{item[:open_at]}({', '.join(args)}){item[close_at + 1 :]}"
+    if owner:
+        whole = re.sub(r"\bSelf\b(?!::)", owner, whole)
+        owner = re.sub(r"<.*", "", owner) + "::"
+    return f"{const}fn {owner}{whole}".rstrip(";").strip()
+
+
+def impl_key(head: str) -> tuple[str, str]:
+    """`impl<..> Trait for Type` as `impl Trait for Base`, or the inherent type."""
+    head = clean(head).removeprefix("impl")
+    if head.startswith("<"):
+        head = head[len(depth_split(head, " ")[0]) :]
+    head = head.strip()
+    if " for " in head:
+        trait, target = head.split(" for ", 1)
+        return f"impl {trait} for {re.sub(r'<.*', '', target)}", ""
+    return "", head
+
+
+def declared(source: str) -> set[str]:
+    """The canonical items of one declaration block."""
+    source = re.sub(r"//[^\n]*", "", re.sub(r"/\*.*?\*/", "", source, flags=re.S))
+    items: set[str] = set()
+    for item in depth_split(source.replace("}", "};"), ";"):
+        head, _, body = item.partition("{")
+        body = body.rstrip("}").strip()
+        head = clean(head)
+        if head.startswith("pub struct "):
+            items.add(head.removeprefix("pub "))
+        elif head.startswith("pub enum "):
+            name = head.split()[-1]
+            items.add(f"enum {name}")
+            for variant in depth_split(body.replace("};", "}"), ","):
+                label, _, fields = clean(variant).partition(" {")
+                items.add(f"{name}::{label}")
+                items.update(f"{name}::{label}::{f}" for f in depth_split(fields.rstrip("}"), ","))
+        elif head.startswith("pub trait "):
+            items.add(head.removeprefix("pub "))
+            name = re.match(r"pub trait (\w+)", head).group(1)
+            items.update(signature(name, m) for m in depth_split(body, ";"))
+        elif head.startswith("pub fn ") or head.startswith("pub const fn "):
+            items.add(signature("", item))
+        elif head.startswith("impl"):
+            key, owner = impl_key(head)
+            if key:
+                items.add(key)
+                base = key.split(" for ")[1]
+                items.update(f"type {base}::{clean(t).removeprefix('type ')}" for t in depth_split(body, ";"))
+            else:
+                items.update(signature(owner, m) for m in depth_split(body, ";"))
+    return items
+
+
+def contract() -> set[str]:
+    page = text("0084-*.md")
+    items = declared(block(page, "## Normative public inventory"))
+    taken = re.search(r"From ticket 0095 this ticket takes only (.*?)\. ", text("0086-*.md")).group(1)
+    names = re.findall(r"`(?:(\w+)::)?(\w+)`", taken)
+    owner = names[0][0]
+    wanted = {f"{owner}::{name}" for _, name in names}
+    added = declared(block(text("0095-*.md"), "## Added declarations"))
+    items |= {i for i in added if re.sub(r"^(const )?fn (\w+::\w+).*", r"\2", i) in wanted}
+    new, old = re.search(r"`EngineBuilder::(\w+)\(n\)`\. It replaces `EngineBuilder::(\w+)`", ADR.read_text()).groups()
+    items = {i.replace(f"fn EngineBuilder::{old}(", f"fn EngineBuilder::{new}(") for i in items}
+    items.add("macro " + re.search(r"The crate root exports `(\w+!)`", page).group(1))
+    return items
+
+
+def built(listing: list[str]) -> set[str]:
+    """The canonical items of `cargo public-api -ss` output."""
+    items: set[str] = set()
+    in_trait_impl = False
+    for line in listing:
+        line = line.strip().replace("pub macro thinkthen::", "macro ")
+        bare = line.removeprefix("pub ").removeprefix("const ").removeprefix("fn ")
+        owner, _ = path_split(bare.removeprefix("thinkthen::"))
+        if line.startswith("impl"):
+            key, _ = impl_key(line)
+            in_trait_impl = bool(key)
+            items.add(key) if key else None
+        elif re.match(r"pub (const )?fn ", line):
+            if owner and in_trait_impl:
+                continue
+            const = "const " if line.startswith("pub const ") else ""
+            rest = bare.removeprefix("thinkthen::").removeprefix(owner).removeprefix("::")
+            items.add(signature(clean(owner), const + rest) if owner else signature("", line))
+            in_trait_impl = in_trait_impl and bool(owner)
+        elif line.startswith("pub type "):
+            items.add("type " + re.sub(r"<[^:]*?>::", "::", clean(line.removeprefix("pub type "))))
+        elif line and line != "pub mod thinkthen":
+            in_trait_impl = False
+            items.add(re.sub(r"\(_(, _)*\)$", "", clean(line).removeprefix("pub ")))
+    return items
+
+
+def problems(listing: list[str], wanted: set[str]) -> list[str]:
+    have = built(listing)
+    found = [f"missing: {item}" for item in sorted(wanted - have)]
+    for item in sorted(have - wanted):
+        match = re.match(r"impl (\w+) for (\S+)$", item)
+        if not match or match.group(1) not in EXTRA_TRAITS:
+            found.append(f"not in the contract: {item}")
+        elif match.group(1) in {"Clone", "Copy"} and NEVER_CLONE.match(match.group(2)):
+            found.append(f"the contract makes this neither Clone nor Copy: {item}")
+    for item in sorted(have):
+        name = re.match(r"(?:struct|enum) (\w+)", item)
+        if name and f"impl Debug for {name.group(1)}" not in have:
+            found.append(f"every public type is Debug: {name.group(1)}")
+    return found
+
+
+def main() -> int:
+    command = ["cargo", "+nightly", "public-api", "--package", "thinkthen", "--no-default-features", "-ss"]
+    run = subprocess.run(command, cwd=REPO, capture_output=True, text=True, check=False)
+    if run.returncode != 0:
+        print(run.stderr, file=sys.stderr)
+        return 1
+    listing = run.stdout.splitlines()
+    wanted = contract()
+    found = problems(listing, wanted)
+    for problem in found:
+        print(f"inventory: {problem}", file=sys.stderr)
+    plants = {
+        "an added export": listing + ["pub fn thinkthen::planted() -> u8"],
+        "a removed item": [line for line in listing if "Engine::usage(" not in line],
+        "a changed signature": [line.replace("throttle(self, u8)", "throttle(self, u16)") for line in listing],
+        "an extra trait": listing + ["impl core::default::Default for thinkthen::DecideBuilder"],
+    }
+    for name, planted in plants.items():
+        if len(problems(planted, wanted)) <= len(found):
+            print(f"inventory: the self-test planted {name} and the check passed", file=sys.stderr)
+            found.append(name)
+    print(f"inventory: {len(wanted)} declared items checked, {len(plants)} plants refused")
+    return 1 if found else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

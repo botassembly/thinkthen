@@ -1,5 +1,7 @@
 [workspace]
-members = ["crates/thinkthen"]
+members = ["crates/thinkthen", "conformance/backend"]
+# Ticket 0086: the external consumer is its own workspace, built by the test rung.
+exclude = ["conformance/consumer"]
 resolver = "3"
 
 [workspace.package]

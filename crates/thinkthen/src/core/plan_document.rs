@@ -8,14 +8,14 @@ use crate::core::backend::{Backend, KEY_VAR};
 use crate::core::plan::Plan;
 use crate::core::question_file::Sources;
 use crate::core::records::{Reading, ReadingPlan};
-use crate::core::text::{ModelName, Url};
+use crate::core::text::{ModelName, Url, Withheld};
 
 /// What the command would send, in the four fields `channels.md` fixes.
 ///
 /// `key_env` names the variable a key would be read from, so a script can
 /// prove that a key stays home. The document carries the request body, and the
 /// request body carries the evidence.
-#[derive(Debug, Serialize)]
+#[derive(Serialize)]
 pub(crate) struct PlanDocument<'a> {
     url: &'a Url,
     model: &'a ModelName,
@@ -27,6 +27,23 @@ pub(crate) struct PlanDocument<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     on: Option<QuestionPointers>,
     request: Box<RawValue>,
+}
+
+/// The request carries the evidence and any labels a record gave, so `Debug`
+/// shows its length in their place.
+impl std::fmt::Debug for PlanDocument<'_> {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("PlanDocument")
+            .field("url", &self.url)
+            .field("model", &self.model)
+            .field("key_env", &self.key_env)
+            .field("input", &self.input)
+            .field("from", &self.from)
+            .field("on", &self.on)
+            .field("request", &Withheld(self.request.get().len()))
+            .finish()
+    }
 }
 
 impl<'a> PlanDocument<'a> {

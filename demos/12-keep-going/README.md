@@ -73,7 +73,7 @@ Every row reads `true` here, because the committed recording holds all four exch
 
 ## Step 4: send several records at once
 
-`--jobs N` bounds how many requests are in flight, and it defaults to 4. The rows print in input order whatever the number is.
+`--jobs N` sets the throttle. The throttle is the most requests in flight at once, and it defaults to 4. The rows print in input order whatever the number is.
 
 ```bash
 set -eu

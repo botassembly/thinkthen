@@ -12,7 +12,16 @@
 
 mod core;
 
+mod config;
+
 mod engine;
+
+mod public;
+
+pub use public::*;
+
+#[cfg(test)]
+mod test_deadline;
 
 #[cfg(feature = "cli")]
 mod cli;
@@ -21,7 +30,6 @@ mod cli;
 pub(crate) use cli::{annotate, args, asking, edge, failure, judge, profile, table};
 #[cfg(feature = "cli")]
 pub(crate) use cli::{annotate_schedule, schedule};
-pub(crate) use engine::{http, prepared_request, recorder};
 
 #[cfg(feature = "cli")]
 pub use cli::entry;

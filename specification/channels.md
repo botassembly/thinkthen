@@ -18,7 +18,7 @@ Status: **Settled** for version one, by ADR 0007.
 
 - It never runs a command, and it never writes a file the user did not name.
 - It never reads free text as a command. An unknown word is a usage error.
-- Code parses the command line. The decider model reads only the question text, the options or levels, and the evidence.
+- Code parses the command line. The model reads only the question text, the options or levels, and the evidence.
 - It never prints a key. No key appears in a plan, a result, a recording, or an error.
 
 ## Arguments

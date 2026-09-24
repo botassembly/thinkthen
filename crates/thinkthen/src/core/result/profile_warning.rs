@@ -7,26 +7,26 @@ use crate::core::backend_profile::ProfileName;
 /// A saved threshold and this run name different backend profiles.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 pub(crate) struct ProfileWarning {
-    calibrated: String,
+    tuned_for: String,
     running: String,
 }
 
 impl ProfileWarning {
     /// Build the mismatch only when both names exist and differ.
     pub(crate) fn between(
-        calibrated: Option<&ProfileName>,
+        tuned_for: Option<&ProfileName>,
         running: Option<&ProfileName>,
     ) -> Option<Self> {
-        calibrated.zip(running).and_then(|(calibrated, running)| {
-            (calibrated != running).then(|| Self {
-                calibrated: calibrated.as_str().to_owned(),
+        tuned_for.zip(running).and_then(|(tuned_for, running)| {
+            (tuned_for != running).then(|| Self {
+                tuned_for: tuned_for.as_str().to_owned(),
                 running: running.as_str().to_owned(),
             })
         })
     }
 
-    pub(crate) fn calibrated(&self) -> &str {
-        &self.calibrated
+    pub(crate) fn tuned_for(&self) -> &str {
+        &self.tuned_for
     }
 
     pub(crate) fn running(&self) -> &str {

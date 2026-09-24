@@ -5,7 +5,7 @@ use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-use crate::harness::spawn;
+use crate::harness::{finish, spawn};
 
 /// The line a run reading from a terminal writes on standard error.
 const WAITING: &str =
@@ -64,7 +64,7 @@ fn through_a_terminal(
             .ok_or_else(|| io::Error::other("no pipe into the terminal"))?;
         let _typed = typed.write_all(evidence.as_bytes());
         drop(typed);
-        if child.wait()?.success() && out.exists() && err.exists() {
+        if finish(child, "the terminal run")?.status.success() && out.exists() && err.exists() {
             return Ok((fs::read_to_string(&out)?, fs::read_to_string(&err)?));
         }
     }

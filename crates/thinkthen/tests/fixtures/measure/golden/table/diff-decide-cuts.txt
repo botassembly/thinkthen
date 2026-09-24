@@ -1,0 +1,2 @@
+r3  no -> yes  p 0.45 -> 0.45  key yes: gained
+as run -> 0.4: 1 of 6 changed; no -> yes 1; gained 1, lost 0 (4 -> 5 right of 6); McNemar p 1.000 on right answers

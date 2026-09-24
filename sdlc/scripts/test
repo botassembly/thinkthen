@@ -2,6 +2,9 @@
 # Rung 2: the unit tests, the integration tests, and the documentation tests.
 set -eu
 
+# One heavy rung at a time on this machine. See heavy-lock.
+. "$(dirname -- "$0")/heavy-lock"
+
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
 
@@ -9,6 +12,9 @@ cargo test --locked --workspace --all-targets --all-features
 RUSTFLAGS='--cfg thinkthen_internal_doctest' \
 RUSTDOCFLAGS='--cfg thinkthen_internal_doctest' \
     cargo test --locked --workspace --doc --all-features
+# Ticket 0086: the external consumer is its own workspace, so the root build
+# above does not reach it. It runs the shared cases and the real-fork proofs.
+cargo test --locked --offline --manifest-path conformance/consumer/Cargo.toml
 sh specification/fixtures/question-file/self-test
 sh probes/probability-total-0038/self-test
 sh probes/find-0040/self-test

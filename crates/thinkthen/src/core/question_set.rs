@@ -175,13 +175,7 @@ impl QuestionSet {
         }
         let mut questions = Vec::with_capacity(entries.len());
         for (name, held) in entries {
-            if name.is_empty()
-                || !name
-                    .bytes()
-                    .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'_')
-            {
-                return Err(QuestionSetError::Name(name.clone()));
-            }
+            check_name(name)?;
             let Json::Object(fields) = held else {
                 return Err(QuestionSetError::Shape {
                     path: format!("questions.{name}"),
@@ -226,13 +220,40 @@ impl QuestionSet {
         Ok(Self { questions, profile })
     }
 
+    /// Name built questions, in order, each reading the whole record.
+    pub(crate) fn from_parts(
+        members: Vec<(String, Question, Option<Threshold>)>,
+    ) -> Result<Self, QuestionSetError> {
+        if members.is_empty() {
+            return Err(QuestionSetError::Empty);
+        }
+        let root = Pointer::new("").map_err(|_| QuestionSetError::Render)?;
+        let mut questions: Vec<NamedQuestion> = Vec::with_capacity(members.len());
+        for (name, question, threshold) in members {
+            check_name(&name)?;
+            if questions.iter().any(|held| held.name == name) {
+                return Err(QuestionSetError::Duplicate(name));
+            }
+            questions.push(NamedQuestion {
+                name,
+                question,
+                threshold,
+                on: vec![root.clone()],
+            });
+        }
+        Ok(Self {
+            questions,
+            profile: None,
+        })
+    }
+
     /// Read the resolved questions in file order.
     #[must_use]
     pub(crate) fn questions(&self) -> &[NamedQuestion] {
         &self.questions
     }
 
-    /// The profile this set's thresholds were calibrated under, when named.
+    /// The profile this set's thresholds were tuned under, when named.
     pub(crate) const fn profile(&self) -> Option<&ProfileName> {
         self.profile.as_ref()
     }
@@ -414,3 +435,15 @@ mod resolved;
 
 #[cfg(test)]
 mod tests;
+
+/// A member name is lowercase ASCII letters, digits, and underscores.
+fn check_name(name: &str) -> Result<(), QuestionSetError> {
+    if name.is_empty()
+        || !name
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'_')
+    {
+        return Err(QuestionSetError::Name(name.to_owned()));
+    }
+    Ok(())
+}

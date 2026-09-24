@@ -108,4 +108,10 @@ impl FailedValue {
     pub(crate) const fn new(failed: BackendFailure) -> Self {
         Self { failed }
     }
+
+    /// The closed cause of the failed answer.
+    #[must_use]
+    pub(crate) const fn cause(self) -> BackendFailureCause {
+        self.failed.cause
+    }
 }

@@ -1,0 +1,3 @@
+{"id":"a2","name":"kind","from":"bug","to":"unresolved","probability":[0.6,0.6],"key":"feature","effect":"withdrawn"}
+{"id":"a3","name":"kind","from":"bug","to":"unresolved","probability":[0.7,0.7],"key":"bug","effect":"withdrawn"}
+{"summary":{"records":5,"changed":2,"only_a":0,"only_b":0,"moves":[{"from":"bug","to":"unresolved","count":2}],"labeled":5,"right_a":3,"right_b":2,"gained":0,"lost":0,"mcnemar_on":"right answers","mcnemar_p":1.0,"compare":"cuts","a":"as run","b":0.75}}
