@@ -8,7 +8,7 @@ The built help, the README, the how-to index, the green how-tos, the crate descr
 
 `sdlc/scripts/demos` (rung 3) now checks the approved vocabulary over the built root help, `-h` and `--help` for all ten functions, the root README, the how-to index, and every green how-to. It prints `demos: FILE:LINE: "WORD" breaks the RULE rule` for every hit and fails on any. Its unsanctioned-hit count on this branch is 0 (`demos: 21 green, 0 red`). Before the fix it printed 93 hits.
 
-Commits: `331e85f7` (the wording, the pins, the check), `3ef97c06` (row 41), `a7987762` (row 39), `48a57d84` (this record), `3358001c` (the clippy fix below), and `05223ae1` (main merged after 0090 landed).
+Commits: `331e85f7` (the wording, the pins, the check), `3ef97c06` (row 41), `a7987762` (row 39), `48a57d84` (this record), `3358001c` (the clippy fix below), `05223ae1` (main merged after 0090 landed), `4662310a` (the code review fixes), and `56a9c764` (newer main merged).
 
 ## Baseline and byte diff
 
@@ -141,14 +141,14 @@ After the code review, these ran red first:
 
 ## Gates
 
-The first lint run at `48a57d84` failed in clippy: `expect_used` on the shared `help` helper in `tests/version.rs`, which is not a test function. `3358001c` makes it return an `io::Result`. Then 0090 landed on main, and `05223ae1` merged main. The merged binary prints the same 21 captures as `sdlc/records/0082-help-after.txt`.
+The first lint run at `48a57d84` failed in clippy: `expect_used` on the shared `help` helper in `tests/version.rs`, which is not a test function. `3358001c` makes it return an `io::Result`. Then 0090 landed on main, and `05223ae1` merged main. The ladder passed there. The code review then rejected on B1 and B2. `4662310a` applies the fixes, and `56a9c764` merges newer main (documentation only). The merged binary prints the same 21 captures as `sdlc/records/0082-help-after.txt`.
 
-At `05223ae1`, run one rung at a time with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset:
+At `56a9c764`, run one rung at a time with `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` unset:
 
 - `sdlc/scripts/install`: exit 0.
-- `sdlc/scripts/lint`: exit 0. Ratchet `crates 43892/43892`.
+- `sdlc/scripts/lint`: exit 0. Ratchet `crates 43897/43897`.
 - `sdlc/scripts/test`: exit 0. 729 Rust tests passed and 0 failed. The script self-tests and `live-test: all cases passed`. The annotate global-queue test did not flake.
-- `sdlc/scripts/spec`: exit 0. `demos-self-test: 19 cases pass` and `demos: 21 green, 0 red`, with zero vocabulary hits.
-- `git diff --check`: exit 0 after the capture whitespace fix.
+- `sdlc/scripts/spec`: exit 0. `demos-self-test: 21 cases pass` and `demos: 21 green, 0 red`, with zero vocabulary hits.
+- `git diff --check origin/main...HEAD`: exit 0.
 
 No live or paid command ran.
