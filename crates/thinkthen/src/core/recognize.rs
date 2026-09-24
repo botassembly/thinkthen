@@ -2,6 +2,8 @@
 
 use serde::Serialize;
 
+use crate::core::text::Withheld;
+
 const DETECTION_WORDS: &str = "The snippet shows five consecutive words from a news document; the word in question is wrapped in [[ ]]. <BEGINNING> marks the start of the document and <END> the end. Decide whether the wrapped word is part of the name of an entity: a person, an organization, a place, or another named entity such as a nationality, an event, a product, or a creative work. Ordinary words, dates, and numbers that are not part of such a name are not named.";
 const KIND_WORDS: &str = "The snippet shows five consecutive words from a news document; the word in question is wrapped in [[ ]]. <BEGINNING> marks the start of the document and <END> the end. If the wrapped word is part of an entity's name, which kind of entity is it part of? Answer for every word; the answer only matters when the word is part of a name.";
 
@@ -14,18 +16,17 @@ pub(crate) struct Token {
     end: usize,
 }
 
-/// A token is evidence, so `Debug` withholds its text and keeps its place.
+/// A token is evidence, so `Debug` withholds its text and keeps its places.
 impl std::fmt::Debug for Token {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("Token")
-            .field(
-                "text",
-                &format_args!("<{} bytes withheld>", self.text.len()),
-            )
+            .field("text", &Withheld(self.text.len()))
+            .field("byte_start", &self.byte_start)
+            .field("byte_end", &self.byte_end)
             .field("start", &self.start)
             .field("end", &self.end)
-            .finish_non_exhaustive()
+            .finish()
     }
 }
 
@@ -57,10 +58,7 @@ impl std::fmt::Debug for RecognizedName {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("RecognizedName")
-            .field(
-                "name",
-                &format_args!("<{} bytes withheld>", self.name.len()),
-            )
+            .field("name", &Withheld(self.name.len()))
             .field("kind", &self.kind)
             .field("start", &self.start)
             .field("end", &self.end)
