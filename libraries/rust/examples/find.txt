@@ -1,0 +1,1 @@
+Some("Refunds are issued within 30 days of purchase.")
