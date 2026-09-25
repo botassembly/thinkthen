@@ -14,8 +14,10 @@ Gem::Specification.new do |spec|
   # A platform gem: it carries the extension built on this host, under the
   # name this host's Ruby loads.
   spec.platform = Gem::Platform::CURRENT
-  extension = Dir.glob("lib/thinkthen/thinkthen.#{RbConfig::CONFIG["DLEXT"]}").first
-  spec.files = ["lib/thinkthen.rb", "lib/thinkthen/version.rb", extension].compact
+  extension = "lib/thinkthen/thinkthen.#{RbConfig::CONFIG["DLEXT"]}"
+  raise "#{extension} is missing; run build.sh" unless File.file?(File.expand_path(extension, __dir__))
+
+  spec.files = ["lib/thinkthen.rb", extension, "lib/thinkthen/version.rb"]
   spec.require_paths = ["lib"]
   # Built and tested on 3.4 only. 4.x is another ABI.
   spec.required_ruby_version = [">= 3.4", "< 4"].freeze

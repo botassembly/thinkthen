@@ -19,9 +19,10 @@ for file in Dockerfile rust-toolchain rust-toolchain.toml; do
   [ ! -e "$file" ] || fail "$file is back; the host toolchain builds this surface"
 done
 ! grep -q '^\[features\]' Cargo.toml || fail "Cargo.toml has a [features] table; the port has one build"
-# cargo fmt reads no lock and takes neither flag.
+# cargo fmt reads no lock, cargo deny takes --offline alone, and the deny
+# plant fetches its local file:// git source into a scratch home.
 if sed '/^[[:space:]]*#/d' check.sh build.sh | grep -E '(^|[^[:alnum:]_])cargo [a-z]' |
-   grep -v -e 'cargo fmt' -e '--locked --offline' -e "grep -E" >&2; then
+   grep -v -e 'cargo fmt' -e 'cargo deny' -e 'plant/copy' -e '--locked --offline' -e "grep -E" >&2; then
   fail "a cargo call above lacks --locked --offline"
 fi
 if sed '/^[[:space:]]*#/d' build.sh | grep -nE '(^|[^-[:alnum:]_])(apt-get|curl|wget|docker)([^-[:alnum:]_]|$)' >&2 ||
@@ -34,6 +35,38 @@ if sed '/^[[:space:]]*#/d' build.sh | grep -nE '\.(so|bundle|dylib)([^[:alnum:]]
 fi
 guards=$(cat src/*.rs | grep -o 'catch_unwind(' | wc -l)
 [ "$guards" -eq 1 ] || fail "src holds $guards catch_unwind sites; the binding has one guard"
+# R4-2 closed by construction: the worker never takes the VM lock back.
+! grep -n 'rb_thread_call_with_gvl' src/*.rs >&2 || fail "src retakes the VM lock inside the released region"
+# R2-8, R7-9, and R4-18 closed by design: Rust holds no Ruby object, so the
+# collector can take none from under it. Ticks live in the watchdog's Ruby row.
+! grep -nE 'Opaque|BoxValue|rb_gc_register' src/*.rs >&2 || fail "src holds a Ruby object"
+awk '/#\[magnus::wrap/ { held = 1; next }
+     held && /(^|[^[:alnum:]_])Value([^[:alnum:]_]|$)/ { print FILENAME ": " $0; bad = 1 }
+     held && (/^}/ || /\);[[:space:]]*$/) { held = 0 }
+     END { exit bad }' src/*.rs >&2 || fail "a wrapped struct above holds a Ruby Value"
+
+# deny on the lock, then a planted file:// git source meets the sources rule
+# (R3-28). This is the Ruby lint block: lint reaches this surface only
+# through surfaces --registry, and the pinned-Ruby guard lives below (R5-35).
+cargo deny --version >/dev/null 2>&1 || not_run "no cargo-deny; install it once, with the network"
+cargo deny --offline --manifest-path Cargo.toml check --config "$repo/deny.toml" advisories bans licenses sources
+plant=$(mktemp -d)
+trap 'rm -rf -- "$plant"' EXIT
+mkdir -p "$plant/dep/src" "$plant/copy/src"
+printf '[package]\nname = "planted"\nversion = "0.0.1"\nedition = "2024"\nlicense = "MIT"\n' >"$plant/dep/Cargo.toml"
+: >"$plant/dep/src/lib.rs"
+: >"$plant/copy/src/lib.rs"
+git -C "$plant/dep" init -q && git -C "$plant/dep" add -A
+git -C "$plant/dep" -c user.name=plant -c user.email=plant@example.invalid commit -qm plant
+printf '[package]\nname = "binding"\nversion = "0.0.1"\nedition = "2024"\nlicense = "MIT"\n[dependencies]\nplanted = { git = "file://%s/dep" }\n' "$plant" >"$plant/copy/Cargo.toml"
+# A local file:// fetch under a scratch CARGO_HOME: no network and no residue.
+CARGO_HOME="$plant/home" cargo fetch --quiet --manifest-path "$plant/copy/Cargo.toml"
+set +e
+# cargo-deny exits with bit 8 set when the sources check fails.
+CARGO_HOME="$plant/home" cargo deny --offline --manifest-path "$plant/copy/Cargo.toml" check --config "$repo/deny.toml" sources >"$plant/deny" 2>&1
+code=$?
+set -e
+[ "$code" -eq 8 ] && grep -q source-not-allowed "$plant/deny" || fail "deny passed a git source (exit $code)"
 
 # The host and toolchain probe. Only the pinned prefix runs, never a ruby
 # found on PATH.
@@ -49,7 +82,7 @@ if [ -n "${RUBY:-}" ] && [ "$RUBY" != "$prefix/bin/ruby" ]; then
   fail "RUBY names $RUBY; this check runs only $prefix/bin/ruby"
 fi
 RUBY=$prefix/bin/ruby
-"$RUBY" -v | grep -q "^ruby $RUBY_VERSION " || not_run "$RUBY is not Ruby $RUBY_VERSION; $setup"
+"$RUBY" -v | grep -q "^ruby $RUBY_VERSION " || fail "$RUBY is not Ruby $RUBY_VERSION behind a matching stamp"
 clang=$(for lib in /usr/lib/llvm-*/lib; do [ -e "$lib/libclang.so.1" ] && echo "$lib"; done | sort -V | tail -n 1)
 [ -n "$clang" ] || not_run "no libclang under /usr/lib/llvm-*/lib; install the host's libclang"
 cargo fetch --locked --offline --quiet 2>/dev/null ||
@@ -72,12 +105,15 @@ for test in tests/test_*.rb; do
 done
 timeout 120 "$RUBY" -I lib tests/conformance.rb || fail "the conformance runner failed"
 timeout 120 "$RUBY" -I lib tests/examples.rb || fail "an example failed"
-"$RUBY" -rrubygems/package -e '
+"$RUBY" -rrubygems/package -I lib -rthinkthen/version -e '
   spec = Gem::Package.new(Dir["thinkthen-*.gem"].fetch(0)).spec
   version = File.read("../../crates/thinkthen/Cargo.toml")[/^version = "([^"]+)"/, 1]
+  files = ["lib/thinkthen.rb", "lib/thinkthen/thinkthen.#{RbConfig::CONFIG["DLEXT"]}", "lib/thinkthen/version.rb"]
   abort "the gem is not MIT" unless spec.licenses == ["MIT"]
   abort "the gem names no platform" if spec.platform.to_s == "ruby"
   abort "the gem is #{spec.version}, the engine is #{version}" unless spec.version.to_s == version
+  abort "ThinkThen::VERSION is #{ThinkThen::VERSION}, the engine is #{version}" unless ThinkThen::VERSION == version
+  abort "the gem holds #{spec.files.sort}" unless spec.files.sort == files.sort
 ' || fail "the gem check failed"
 timeout 120 "$RUBY" -I lib tests/slide_sample.rb || fail "the slide sample failed"
 echo "check ruby: pass"

@@ -153,7 +153,8 @@ module TestBackend
     backend&.close
   end
 
-  # Run a script to its end and return its JSON lines and the final count.
+  # Run a script to its end and return its JSON lines, the final count, and
+  # the child's standard error.
   def self.run(script, arm: "generic")
     backend = Backend.new
     Dir.mktmpdir do |root|
@@ -161,7 +162,7 @@ module TestBackend
                                            unsetenv_others: true)
       raise "the child failed (#{status.exitstatus}): #{errors}" unless status.success?
 
-      [out.lines.map { |line| JSON.parse(line) }, backend.count]
+      [out.lines.map { |line| JSON.parse(line) }, backend.count, errors]
     end
   ensure
     backend&.close

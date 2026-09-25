@@ -49,8 +49,12 @@ impl Ask {
             | Self::Rank(_, records)
             | Self::Find(_, records)
             | Self::Annotate(_, records) => Some(records.len()),
-            Self::Relate(_, entities) => Some(entities.len()),
-            Self::Decide(..) | Self::Details(..) | Self::Score(..) | Self::Recognize(..) => None,
+            // The engine does not cap relate's entities by the record limit.
+            Self::Decide(..)
+            | Self::Details(..)
+            | Self::Score(..)
+            | Self::Recognize(..)
+            | Self::Relate(..) => None,
         }
     }
 }

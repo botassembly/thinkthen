@@ -45,9 +45,12 @@ class TestFlood < Minitest::Test
     end
   end
 
+  # A leaked watchdog row keeps running its tick with no call in flight, so
+  # the tick's run count keeps growing after the storm.
   def test_a_raise_storm_leaves_no_crash_and_no_watchdog_row
     lines, = TestBackend.run(<<~RUBY)
-      T.with_tick {}
+      runs = 0
+      T.with_tick { runs += 1 }
       main = Thread.current
       3000.times do |n|
         raiser = Thread.new { sleep(rand * 0.005); main.raise(RuntimeError, "the storm") }
@@ -61,7 +64,10 @@ class TestFlood < Minitest::Test
         nil
       end
       GC.start
-      say T.instance_variable_get(:@rows).size
+      sleep 0.2
+      before = runs
+      sleep 0.3
+      say runs - before
     RUBY
     assert_equal [0], lines
   end

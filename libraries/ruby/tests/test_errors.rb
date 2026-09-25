@@ -51,21 +51,29 @@ class TestErrors < Minitest::Test
   end
 
   def test_no_message_or_inspect_line_holds_the_key_or_the_address_credentials
-    lines, count = TestBackend.run(<<~RUBY)
+    lines, count, errors = TestBackend.run(<<~RUBY)
       base = ENV.fetch("THINKTHEN_BASE_URL").delete_suffix("/generic/v1")
       seen = []
       [-> { T::Engine.new(base_url: base.sub("127.0.0.1", "user:hunter2@127.0.0.1") + "/generic/v1") },
        -> { T::Engine.new(base_url: base + "/arm/refuse/v1", cache: false).decide("Is it urgent?", "text") },
        -> { T::Engine.new(base_url: base + "/arm/status/401/v1", cache: false).decide("Is it urgent?", "text") },
-       -> { T.decide("Is it urgent?", "text", deadline: "soon") }].each do |call|
+       -> { T.decide("Is it urgent?", "text", deadline: "soon") },
+       -> { T.decide("Is it urgent?", "text", cancel: T::Cancel.new.tap(&:cancel)) },
+       -> { T.decide("Is it urgent?", "text", deadline: 0) }].each do |call|
         call.call
       rescue T::Error => e
         seen << e.message << e.inspect << e.full_message
       end
       seen << T::Engine.new.inspect << T.details("Is it urgent?", "text").to_s
       say [seen.size, seen.grep(/\#{ENV.fetch("THINKTHEN_API_KEY")}|hunter2/)]
+      warn seen.join("\n")
     RUBY
-    assert_equal [[14, []]], lines
+    assert_equal [[20, []]], lines
     assert_equal 3, count
+    # The child printed every line it saw to stderr, so the check covers
+    # what the process itself wrote too.
+    refute_includes errors, TestBackend::FAKE_KEY
+    refute_includes errors, "hunter2"
+    assert_includes errors, "cancelled"
   end
 end
