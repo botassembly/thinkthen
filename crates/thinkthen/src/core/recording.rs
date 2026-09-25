@@ -190,12 +190,15 @@ impl Entry {
         Ok(entry.response.get().as_bytes().to_owned())
     }
 
-    /// Validate one final cache entry and return its digest, its response
-    /// model, and the model its request asked for when that is a string.
+    /// Validate one final cache entry and return its digest, reply model, and request model.
     pub(crate) fn inspected(bytes: &[u8]) -> Result<(Digest, String, Option<String>), EntryError> {
         #[derive(Deserialize)]
         struct StoredResponse {
             model: String,
+        }
+        #[derive(Deserialize)]
+        struct StoredRequest {
+            model: Option<String>,
         }
         let entry: Self = serde_json::from_slice(bytes).map_err(place)?;
         if entry.schema != SCHEMA || entry.adapter != built_in::NAME {
@@ -207,9 +210,9 @@ impl Entry {
         if response.model.trim().is_empty() {
             return Err(EntryError::MissingModel);
         }
-        let requested = serde_json::from_str::<serde_json::Value>(entry.request.get())
+        let requested = serde_json::from_str::<StoredRequest>(entry.request.get())
             .ok()
-            .and_then(|request| request.get("model")?.as_str().map(str::to_owned));
+            .and_then(|request| request.model);
         Ok((exchange.digest(), response.model, requested))
     }
 }

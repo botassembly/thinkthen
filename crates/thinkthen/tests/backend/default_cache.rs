@@ -252,14 +252,15 @@ fn prune_model_selection_and_scan_before_delete_hold() {
     assert!(!String::from_utf8_lossy(&output.stderr).contains("private malformed marker"));
 }
 
-/// The allocated bytes of the named entries, as prune counts them.
-fn allocated(folder: &Path, names: &[&String]) -> u64 {
+/// The allocated bytes of one entry, as prune counts them.
+fn allocated(folder: &Path, name: &str) -> io::Result<u64> {
     use std::os::unix::fs::MetadataExt as _;
-    names
-        .iter()
-        .map(|name| fs::metadata(folder.join(name)).expect("entry").blocks() * 512)
-        .sum()
+    Ok(fs::metadata(folder.join(name))?.blocks() * 512)
 }
+
+/// MODEL, other options, the second entry's reply, and which of the two
+/// entries leave. `None` means the alias refusal.
+type PruneRow<'a> = (&'a str, &'a [&'a str], &'a str, Option<[bool; 2]>);
 
 #[test]
 fn prune_refuses_the_alias_and_keeps_the_upgrade() {
@@ -270,9 +271,7 @@ fn prune_refuses_the_alias_and_keeps_the_upgrade() {
     );
     let url = format!("{DEFAULT_BASE}/{ENDPOINT_PATH}");
     let echoed = ANSWERED.replace("jev-1.13.0", DEFAULT_MODEL);
-    // Row: MODEL, other options, the second entry's reply, and which of the
-    // two entries leave. `None` means the alias refusal.
-    let rows: [(&str, &[&str], &str, Option<[bool; 2]>); 7] = [
+    let rows: [PruneRow; 7] = [
         ("jev-latest", &[], ANSWERED, None),
         ("jev-latest", &["--older-than", "1d"], ANSWERED, None),
         ("jev-1.14.0", &[], ANSWERED, Some([true, true])),
@@ -287,10 +286,7 @@ fn prune_refuses_the_alias_and_keeps_the_upgrade() {
         let request = encoded_decide(EVIDENCE, DEFAULT_MODEL, "another question");
         let second = plant_recording(&folder, &url, &request, second_reply).expect("second");
         let names = [&first, &second];
-        let bytes = [
-            allocated(&folder, &[&first]),
-            allocated(&folder, &[&second]),
-        ];
+        let bytes = [&first, &second].map(|name| allocated(&folder, name).expect("allocated"));
         let before = [
             fs::read(folder.join(&first)),
             fs::read(folder.join(&second)),
