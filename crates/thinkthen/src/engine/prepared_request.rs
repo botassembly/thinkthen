@@ -32,12 +32,8 @@ pub(crate) struct PreparedRequests {
 }
 
 impl PreparedRequests {
-    /// Split `plan` into the fewest contiguous chunks that pass `profile`.
-    ///
-    /// A chunk of two or more questions also stays at most `ceiling` encoded
-    /// bytes. One question alone always passes the ceiling. Each chunk is the
-    /// longest fitting prefix. Every limit only tightens as a chunk grows, so
-    /// doubling from one question and then halving the gap finds it.
+    /// Split `plan` into the fewest contiguous chunks that pass `profile`,
+    /// each at most `ceiling` bytes unless it holds one question.
     pub(crate) fn with_profile(
         backend: &Backend,
         plan: &Plan,
@@ -77,9 +73,7 @@ impl SettledRelation {
     /// Prepare one planned concrete relation for `recognize` and `relate`.
     ///
     /// A choice refused by a backend-profile option or request-byte limit
-    /// becomes yes/no questions for this concrete relation alone. At the
-    /// built-in address the relation's chunks also stay under the built-in
-    /// ceiling, unless the profile names its own request-byte limit.
+    /// becomes yes/no questions for this concrete relation alone.
     pub(crate) fn settle<E: RelationEntityView>(
         backend: &Backend,
         profile: Option<&BackendProfile>,
@@ -128,14 +122,10 @@ fn relation_request<E: RelationEntityView>(
         .map_err(|_| Error::Defect("relation planned no questions"))
 }
 
-/// One chunk's plan and its checked encoded body.
 type Candidate = (Plan, Vec<u8>);
 
-/// The longest fitting chunk after `consumed`: its question count, plan, and body.
-///
-/// The count doubles from one up to the remainder, then the gap to the first
-/// count that does not fit halves. One question alone is taken or refused as
-/// the profile says.
+/// The longest fitting chunk after `consumed`. Every limit tightens as a chunk
+/// grows, so the count doubles up to the remainder, then the gap halves.
 fn longest(
     plan: &Plan,
     profile: Option<&BackendProfile>,
@@ -167,7 +157,6 @@ fn longest(
     Ok(best)
 }
 
-/// The `count` questions after `consumed`, and their checked encoded body.
 fn candidate(
     plan: &Plan,
     profile: Option<&BackendProfile>,

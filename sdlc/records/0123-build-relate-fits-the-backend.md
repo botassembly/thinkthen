@@ -8,8 +8,8 @@ Branch `ticket/0123-relate-fits-the-backend`. Ticket `sdlc/tickets/0123-relate-f
 
 - `Backend::relation_ceiling` in `core/backend.rs` returns 96,000 when the resolved posting URL equals `https://api.typesafe.ai/v1/systemone` byte for byte, and nothing otherwise.
 - `SettledRelation::settle` passes that ceiling to `PreparedRequests::with_profile`, unless the profile names `max_request_bytes`. Every other caller passes `None`. The ceiling reaches `relate` and the relation step of `recognize`.
-- `PreparedRequests::with_profile` grows each chunk by doubling from one question, stopping at the remainder. It then halves the gap to the first count that does not fit. It keeps the longest fitting prefix and digests only that chunk. One question alone always passes the ceiling. When one question alone fails the profile, the splitter returns that error, as the old loop did. `ProfileLimit::permits_split` lost its last caller and was removed. Any failure now counts as "does not fit" during the search. The non-split limits (evidence bytes and options) belong to single questions, so the chunk stops before the failing question and the next chunk returns that question's own error. The old loop returned the same error with the same counts.
-- `engine/http.rs` reads a 400 body with `.limit(4096).read_to_vec()` and reads only `detail.error_type`. The exact value `max_tokens_exceeded` becomes `Error::TokenLimit`, which carries no data, has `Kind::Backend`, and is not retried. Every other body stays `Error::Status(400)`. The command prints the ticket's fixed sentence. `public/error.rs` keeps `the backend answered with status 400`. `check` treats it as a probe row, as it does status 400.
+- `PreparedRequests::with_profile` takes each chunk from a new `longest` function. It grows each chunk by doubling from one question, stopping at the remainder. It then halves the gap to the first count that does not fit. It keeps the longest fitting prefix and digests only that chunk. One question alone always passes the ceiling. When one question alone fails the profile, the splitter returns that error, as the old loop did. `ProfileLimit::permits_split` lost its last caller and was removed. Any failure now counts as "does not fit" during the search. The non-split limits (evidence bytes and options) belong to single questions, so the chunk stops before the failing question and the next chunk returns that question's own error. The old loop returned the same error with the same counts.
+- `engine/http.rs` reads a 400 body with `.limit(4096).read_to_vec()` and reads only `detail.error_type`. The exact value `max_tokens_exceeded` becomes `Error::TokenLimit`, which carries no data, has `Kind::Backend`, and is not retried. Every other body stays `Error::Status(400)`. The command prints the ticket's fixed sentence from `special_failure`, because `say` sits at clippy's 90-line limit. `public/error.rs` keeps `the backend answered with status 400`. `check` treats it as a probe row, as it does status 400.
 - `relate --either @FILE` prints its own refusal sentence. `relate --help` hides `--jobs` through `mut_arg` and carries the cost sentence.
 
 ## Measurements
@@ -58,13 +58,13 @@ Each fault was planted in the source, the named test ran, and the file was resto
 
 ## A part budget crossed
 
-The ticket put the 400 rows in `tests/backend/exchange.rs` with a budget of 30 lines. The rows took 21 there, but `exchange.rs` then held 507 nonblank lines and the lint rung's 500-line file ceiling refused it. The rows moved to a new `tests/backend/status_reason.rs`, which spawns `decide` itself. That spawn and the file's header cost 39 lines more than the budget. The move also leaves `exchange.rs` as main has it, so ticket 0127 no longer shares that file. The total stays at 325, under the ticket's 350. The coordinator decides whether to accept the shift. Ian can overturn it.
+The ticket put the 400 rows in `tests/backend/exchange.rs` with a budget of 30 lines. The rows took 21 there, but `exchange.rs` then held 507 nonblank lines and the lint rung's 500-line file ceiling refused it. The rows moved to a new `tests/backend/status_reason.rs`, which spawns `decide` itself. That spawn and the file's header cost 39 lines more than the budget. The move also leaves `exchange.rs` as main has it, so ticket 0127 no longer shares that file. The total stays at 327, under the ticket's 350. The coordinator decides whether to accept the shift. Ian can overturn it.
 
-The three 400 plants ran again against the new file after the move.
+The three 400 plants ran again against the new file after the move. Clippy's nesting rule then moved the chunk search into `longest`. Plants 4, 5, and 6 ran again against that code and turned red. Only doc comments changed after that run.
 
 ## Lines and the ratchet
 
-Main measured 61,972 nonblank lines at `f3176b5d`, after ticket 0124 landed. This branch measures 62,297, so the ratchet rises by 325.
+Main measured 61,972 nonblank lines at `f3176b5d`, after ticket 0124 landed. This branch measures 62,299, so the ratchet rises by 327.
 
 | Part | Budget | Nonblank lines, net |
 | --- | --- | --- |
@@ -76,7 +76,7 @@ Main measured 61,972 nonblank lines at `f3176b5d`, after ticket 0124 landed. Thi
 | `tests/backend/status_reason.rs` and its `mod` line, in place of `exchange.rs` | 30 | 60 |
 | `tests/backend/refusals/relate.rs` and `tests/relate_edge.rs` | 20 | 20 |
 | Other call sites (`facade.rs`, `facade/recognize.rs`, `backend_profile.rs`) | none | 1 |
-| Total | 350 | 325 |
+| Total | 350 | 327 |
 
 Where I looked for duplication first: the status phrases in `cli/failure/status.rs` hold one new constant and no copy. `core/backend_profile.rs` lost `permits_split`, and its new `limits_request_bytes` replaces it line for line. `checked_body` now serves both the single request and the splitter, which removed the old `prepare_chunk` copy of the encode-and-check lines. The relate test helpers in `tests/backend/relate.rs` send to a listener with a key, so the dry-run tests keep their own small `plan` helper.
 
