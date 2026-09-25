@@ -1,0 +1,51 @@
+{
+ "schema": "thinkthen.examples/1",
+ "surface": "r",
+ "language": "r",
+ "install": "install.packages(\"thinkthen\", repos = NULL, type = \"source\")",
+ "examples": {
+  "decide": {
+   "r": "cat(tt_decide(\"Is this a complaint?\", \"I demand a refund today\"), \"\\n\")",
+   "expected": "TRUE"
+  },
+  "choose": {
+   "r": "cat(tt_choose(\"Which team owns this?\", \"please route this ticket\", options = c(\"the refund desk\", \"the maybe desk\", \"anywhere else\")), \"\\n\")",
+   "expected": "the refund desk"
+  },
+  "tag": {
+   "r": "cat(tt_tag(\"Which words appear?\", \"the refund and the shipping\", labels = c(\"refund\", \"shipping\"))[[1]], \"\\n\")",
+   "expected": "refund shipping"
+  },
+  "score": {
+   "r": "cat(tt_score(\"How urgent is this?\", \"maybe later\", levels = c(\"Routine.\", \"Soon.\", \"Immediate.\")), \"\\n\")",
+   "expected": "0.15"
+  },
+  "filter": {
+   "r": "cat(tt_filter(\"Is this a complaint?\", c(\"good morning\", \"I demand a refund today\")), \"\\n\")",
+   "expected": "good morning I demand a refund today"
+  },
+  "rank": {
+   "r": "cat(tt_rank(\"Is this a complaint?\", c(\"good morning\", \"I demand a refund today\"))$record, \"\\n\")",
+   "expected": "good morning I demand a refund today"
+  },
+  "find": {
+   "r": "cat(tt_find(\"Which line asks for money back?\", c(\"good morning\", \"I want a refund\"))$unit, \"\\n\")",
+   "expected": "good morning"
+  },
+  "annotate": {
+   "files": {
+    "form.json": "{\"version\":1,\"questions\":{\"refund\":{\"decide\":\"Does the customer ask for a refund?\"},\"complaint\":{\"decide\":\"Is this a complaint?\",\"threshold\":0.5}}}"
+   },
+   "r": "out <- tt_annotate(\"form.json\", data.frame(body = \"I demand a refund today\"), on = \"body\"); cat(out$refund, out$complaint, \"\\n\")",
+   "expected": "TRUE TRUE"
+  },
+  "recognize": {
+   "r": "found <- tt_recognize(\"Maria Chen joined Northwind Freight in Chicago last spring.\", kinds = c(\"person\", \"organization\", \"place\"))[[1]]; cat(paste(found$name, found$kind, found$start, found$end, sep = \"|\"), \"\\n\")",
+   "expected": "Maria Chen joined Northwind Freight in Chicago last spring.|person|1|59"
+  },
+  "relate": {
+   "r": "alerts <- data.frame(name = c(\"Checkout returns 500 at the payment step.\", \"The payments database ran out of disk space.\"), kind = \"alert\"); edges <- tt_relate(alerts, relations = \"caused_by\"); cat(edges$relation, edges$probability, \"\\n\")",
+   "expected": "caused_by caused_by 0.9 0.9"
+  }
+ }
+}

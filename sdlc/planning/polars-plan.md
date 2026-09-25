@@ -50,3 +50,7 @@ The Polars work starts after the surfaces experiment closes and the Python surfa
 ## What Ian can overturn
 
 All of it. The cheap overturn is the plugin door. The Series door and the list crossing answer both containers without it, and the plugin adds only the lazy-frame expression. The measured costs arrive with experiments 212 through 216, and any one of them can stop the shape it tests.
+
+## Status, 2026-09-25
+
+The Series door now stands on the public API, not on `contract/`. Rust's door is `thinkthen-polars` at `libraries/polars` (ticket 0120), on Polars 0.55. Python's door reads the Arrow C stream capsule (ticket 0106). The two share no Polars crate, and both write frames by ADR 0047 item 10.

@@ -1,0 +1,4 @@
+decide: 1 0.90
+decide_many 0: 1 0.90
+decide_many 1: 1 0.90
+decide_many 2: 1 0.90

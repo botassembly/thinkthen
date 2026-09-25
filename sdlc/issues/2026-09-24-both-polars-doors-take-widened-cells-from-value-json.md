@@ -17,3 +17,7 @@ The fix: 0106's builder takes widened cells from `value_json` the same way. The 
 | failed | | the marker from `value_json`, such as `{"failed":{"kind":"backend","cause":"missing_probability"}}` |
 
 Whichever Polars door lands first writes this table as the Polars item of ADR 0047, and the other cites it. Ian can overturn the table.
+
+## Amended 2026-09-25
+
+The 0120 build found that a column widens only when the same reply also holds a usable answer. The engine refuses a reply with no usable answer (`specification/backends.md` line 93, `specification/annotate.md` line 48). A series call, a one-member set, or a request chunk whose only answer failed therefore ends the call with a `Backend` error, and no cell holds the marker. 0106 is hit the same way: its bulk `choose`, `score`, and `tag` over one-question `annotate` end the call on a failed row. ADR 0047 item 10 records the rule.

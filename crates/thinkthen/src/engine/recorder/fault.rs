@@ -27,7 +27,6 @@ pub(super) enum StorageStage {
     DirectorySync,
     Cleanup,
     LockRemove,
-    LockDirectorySync,
     FinalRead,
 }
 
@@ -45,7 +44,6 @@ pub(super) enum StorageStageName {
     DirectorySync,
     Cleanup,
     LockRemove,
-    LockDirectorySync,
     FinalRead,
 }
 
@@ -74,7 +72,6 @@ pub(super) fn maybe_fail_io(stage: StorageStageName) -> io::Result<()> {
         StorageStageName::DirectorySync => StorageStage::DirectorySync,
         StorageStageName::Cleanup => StorageStage::Cleanup,
         StorageStageName::LockRemove => StorageStage::LockRemove,
-        StorageStageName::LockDirectorySync => StorageStage::LockDirectorySync,
         StorageStageName::FinalRead => StorageStage::FinalRead,
     };
     STORAGE_FAULT.with(|fault| {
@@ -174,7 +171,6 @@ mod tests {
             (StorageStage::DirectorySync, true, false, false),
             (StorageStage::Cleanup, true, false, true),
             (StorageStage::LockRemove, true, true, false),
-            (StorageStage::LockDirectorySync, true, false, false),
             (StorageStage::FinalRead, true, true, false),
         ];
         for (stage, final_exists, lock_exists, partial_exists) in cases {
@@ -228,7 +224,6 @@ mod tests {
             (StorageStage::DirectorySync, true, false),
             (StorageStage::Cleanup, true, false),
             (StorageStage::LockRemove, true, true),
-            (StorageStage::LockDirectorySync, true, true),
             (StorageStage::FinalRead, true, true),
         ];
         for (number, (stage, same_answer, plant_after_lock)) in cases.into_iter().enumerate() {

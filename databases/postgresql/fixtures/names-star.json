@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "recognize": {
+    "kinds": ["person", "organization", "place"],
+    "relations": [
+      { "name": "works_for", "source": "*", "target": "*", "reads": "works for" }
+    ]
+  },
+  "threshold": 0.5,
+  "relation_threshold": 0.5
+}

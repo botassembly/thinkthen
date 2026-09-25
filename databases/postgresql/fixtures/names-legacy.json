@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "recognize": {
+    "kinds": {
+      "person": "A human being, by name.",
+      "organization": "A company, agency, or institution.",
+      "place": "A city, region, or country."
+    },
+    "relations": [
+      { "name": "works_for", "from": "person", "to": "organization", "reads": "works for" }
+    ]
+  },
+  "threshold": 0.5,
+  "relation_threshold": 0.5
+}
