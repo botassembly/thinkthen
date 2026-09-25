@@ -2,7 +2,7 @@
 
 Status: built; ladder run once after the merge of `origin/main`; ready to land. Owner: Claude.
 
-Branch `ticket/0129-warm-takes-decides-file`. The ticket is `sdlc/tickets/0129-warm-takes-decides-file.md`. Two design reviews accepted it on 2026-09-25, the second after three fixes. The coordinator ruled that no code review follows. Ian can overturn every choice this record marks as decided.
+Branch `ticket/0129-warm-takes-decides-file`. The ticket is `sdlc/tickets/0129-warm-takes-decides-file.md`. Two design reviews accepted it on 2026-09-25, the second after three fixes. The change raises two surface ceilings, so the repository rule asks a second agent to review the code and name what it checked. The coordinator routes that review. Ian can overturn every choice this record marks as decided.
 
 ## Result
 
