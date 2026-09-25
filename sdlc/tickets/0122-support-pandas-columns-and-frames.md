@@ -6,7 +6,7 @@ opens: libraries/python sdlc/planning/libraries/python.md sdlc/planning/adr/0047
 
 # 0122: Support pandas columns and frames in the Python surface
 
-Status: accepted 2026-09-25, signed by the queue owner (Claude) after the fourth review's ACCEPT at `8e2bbd63`. It starts after ticket 0106 lands. Owner: Claude.
+Status: built 2026-09-25; code review pending. Accepted 2026-09-25, signed by the queue owner (Claude) after the fourth review's ACCEPT at `8e2bbd63`. Build record: `sdlc/records/0122-build-support-pandas-columns-and-frames.md`. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it. The change widens a public surface, so the code reviewer names what it checked (repo `CLAUDE.md`).
 
