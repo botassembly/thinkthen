@@ -1,6 +1,6 @@
 # Quick Fix qf-diff-warnings: diff warns when nothing pairs or the question digests differ, and McNemar counts every pair that crosses right
 
-Status: built on branch `ticket/qf-diff-warnings`. It awaits landing. It closes `sdlc/issues/closed/2026-09-25-diff-exits-0-when-nothing-pairs-and-pairs-different-questions-silently.md` and `sdlc/issues/closed/2026-09-25-diff-mcnemar-leaves-out-pairs-that-become-right-from-not-sure.md`. The coordinator added the second issue during review, because it touches the same files.
+Status: landed 2026-09-25 from branch `ticket/qf-diff-warnings`. It closes `sdlc/issues/closed/2026-09-25-diff-exits-0-when-nothing-pairs-and-pairs-different-questions-silently.md` and `sdlc/issues/closed/2026-09-25-diff-mcnemar-leaves-out-pairs-that-become-right-from-not-sure.md`. The coordinator added the second issue during review, because it touches the same files.
 
 ## Prior evidence
 
@@ -87,3 +87,7 @@ After merging origin/main at 0c38769e, with `THINKTHEN_API_KEY` unset. Each rung
 - Declining option 5: exit 2 on differing digests, with an option to allow them.
 - Declining option 6: a `question_mismatch` member in the summary.
 - The wider McNemar rule. It counts a pair that moves between right and tied or not sure. Restoring the prototype's narrow rule reverses `discordant`, its unit test, the McNemar edge rows, the two `diff-choose` captures, the McNemar block in `spec/diff.md`, and the fixtures README checksums and note.
+
+## Landing
+
+The landing test run failed twice on flaky tests that were already on main. Neither involves `diff`. `profile::a_structured_dry_run_counts_its_complete_body_at_the_edge` read a profile file that its parallel sibling had just truncated. The dry-run test now writes its own `plan-` files, and the send test keeps the names its pinned sentence uses. This raises the ceiling from 62100 to 62101, and a second agent reviewed the raise. The `find_edge` broken-pipe failure was fixed on main by ticket 0129's landing. After that fix, lint, test, and spec each exited 0.
