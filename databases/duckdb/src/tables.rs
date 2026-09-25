@@ -10,6 +10,10 @@ use crate::scalars::decided;
 use crate::signal::Invoke;
 use crate::worker;
 
+mod ffi;
+
+pub(crate) use ffi::{register_usage, register_warm};
+
 /// The usage table's rows: each counter summed over every engine this
 /// process keeps. Counters have no reset.
 pub(crate) fn usage_rows() -> Vec<(&'static str, i64)> {

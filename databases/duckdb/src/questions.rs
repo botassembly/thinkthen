@@ -12,7 +12,10 @@ use thinkthen::{Engine, Error, ErrorKind, LoadedQuestion, Question, QuestionSet,
 
 use crate::engines::Asked;
 use crate::errors::{failure, prefix, usage};
-use crate::ffi::{Files, Opened};
+
+mod ffi;
+
+pub(crate) use ffi::{Files, Opened};
 
 /// One calling database's state for one init: its engine, its file system,
 /// and the files this init has read.

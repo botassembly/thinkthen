@@ -22,6 +22,10 @@ use crate::questions::{Caller, Members, members};
 use crate::signal::Invoke;
 use crate::worker;
 
+mod ffi;
+
+pub(crate) use ffi::register_scalar;
+
 /// Which verb one registered scalar runs.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Verb {
