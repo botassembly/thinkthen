@@ -2,6 +2,8 @@
 
 Status: Open. Filed on 2026-09-25 by the Beatles Bench owner for Beatles Bench ticket 0011. That ticket moves grading onto `thinkthen audit` only where audit gives the same numbers. This gap keeps one bench measure in Python.
 
+Ian ruled on 2026-09-25 that everything is in 0.1 (`sdlc/planning/one-line-plan-2026-09-25.md`, commit `82336e9a`). Ticket 0131 (`sdlc/tickets/0131-audit-matches-the-bench.md`) settles this issue after ticket 0125 lands.
+
 ## What happens
 
 `specification/audit.md`, "The suggested cut": audit tunes the cut on one part and checks it on the other. The parts come from the key's `part` or from a seeded split. The held-out result covers one half of the records.

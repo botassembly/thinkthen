@@ -2,6 +2,8 @@
 
 Status: Open. Filed on 2026-09-25 by the Beatles Bench owner for Beatles Bench ticket 0011, which moves the bench's grading onto `thinkthen audit`.
 
+Ian ruled on 2026-09-25 that everything is in 0.1 (`sdlc/planning/one-line-plan-2026-09-25.md`, commit `82336e9a`). Ticket 0131 (`sdlc/tickets/0131-audit-matches-the-bench.md`) settles this issue after ticket 0125 lands.
+
 ## What happens
 
 `specification/audit.md`, "The answer under a rule": a `choose` answer whose top probability is shared by two or more options is `"tied"` under every rule. "The outcome" keeps `"tied"` as its own state. It is never right. Audit prints only the count of tied answers. It does not say whether the right option was among the tied ones.
