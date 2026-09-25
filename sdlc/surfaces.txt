@@ -5,7 +5,7 @@ libraries/rust        landed
 libraries/polars      landed
 libraries/c           landed
 libraries/python      planned
-libraries/typescript  planned
+libraries/typescript  landed
 libraries/ruby        planned
 libraries/r           planned
 databases/duckdb      planned

@@ -1,0 +1,465 @@
+//! The one door every call passes. It reads the op, the question, and the
+//! payload, calls the public engine, and writes one envelope: `{"ok": value}`
+//! or `{"err": {kind, retryable, message}}`. It holds no rule of its own
+//! beyond the host's deadline spelling.
+
+use std::panic::{AssertUnwindSafe, catch_unwind};
+
+use serde_json::{Map, Value, json};
+use thinkthen::{
+    Answer, CallOptions, CancelToken, DecisionQuestion, DetailQuestion, Engine, EngineBuilder,
+    Entity, Error, ErrorKind, Evidence, Judgment, LoadedQuestion, Question, QuestionKind,
+    QuestionSet, Recognize, Relate,
+};
+
+/// The most milliseconds a deadline takes: 4,294,967,295 seconds (ADR 0041).
+const MOST_MILLIS: f64 = 4_294_967_295_000.0;
+
+/// A failure as the envelope carries it.
+#[derive(Debug)]
+pub(crate) struct Failure {
+    kind: ErrorKind,
+    retryable: bool,
+    message: String,
+}
+
+impl Failure {
+    fn of(kind: ErrorKind, message: impl Into<String>) -> Self {
+        Self {
+            kind,
+            retryable: false,
+            message: message.into(),
+        }
+    }
+
+    pub(crate) fn usage(message: impl Into<String>) -> Self {
+        Self::of(ErrorKind::Usage, message)
+    }
+
+    pub(crate) fn local(message: impl Into<String>) -> Self {
+        Self::of(ErrorKind::Local, message)
+    }
+
+    /// The envelope for this failure. The kind comes from the engine's one table.
+    pub(crate) fn envelope(&self) -> String {
+        json!({ "err": {
+            "kind": self.kind.name(),
+            "retryable": self.retryable,
+            "message": self.message,
+        }})
+        .to_string()
+    }
+}
+
+impl From<Error> for Failure {
+    fn from(error: Error) -> Self {
+        Self {
+            kind: error.kind(),
+            retryable: error.retryable(),
+            message: error.to_string(),
+        }
+    }
+}
+
+type Answered = Result<String, Failure>;
+
+/// Run one body and write its envelope. The binding's one panic guard turns a
+/// panic into `defect`.
+pub(crate) fn guarded(body: impl FnOnce() -> Answered) -> String {
+    match caught(body) {
+        Ok(raw) => format!("{{\"ok\":{raw}}}"),
+        Err(failure) => failure.envelope(),
+    }
+}
+
+/// The binding's one panic guard: a panic in `body` becomes `defect`, so no
+/// panic crosses into Node.
+pub(crate) fn caught<T>(body: impl FnOnce() -> Result<T, Failure>) -> Result<T, Failure> {
+    catch_unwind(AssertUnwindSafe(body)).unwrap_or_else(|_| {
+        Err(Failure::of(
+            ErrorKind::Defect,
+            "defect: the Node binding panicked",
+        ))
+    })
+}
+
+/// One call as it crossed from JavaScript.
+#[derive(Debug)]
+pub(crate) struct Call {
+    pub(crate) op: String,
+    pub(crate) spec: Option<String>,
+    pub(crate) payload: String,
+    pub(crate) deadline_ms: Option<f64>,
+}
+
+/// A record and its place, so `filter` and `rank` report indexes.
+struct Indexed(usize, String);
+
+impl Evidence for Indexed {
+    fn evidence(&self) -> &str {
+        &self.1
+    }
+}
+
+/// The host's deadline: `None` and `-1` are no deadline, `0` is spent, and
+/// any other value must be a whole number of milliseconds in range. The
+/// check runs before any cast, so the cast is exact.
+pub(crate) fn deadline_of(value: Option<f64>) -> Result<Option<i64>, Failure> {
+    match value {
+        None => Ok(None),
+        Some(-1.0) => Ok(None),
+        Some(held)
+            if held.is_finite() && held.fract() == 0.0 && (0.0..=MOST_MILLIS).contains(&held) =>
+        {
+            #[expect(
+                clippy::cast_possible_truncation,
+                reason = "the value is whole and at most 4294967295000"
+            )]
+            Ok(Some(held as i64))
+        }
+        Some(held) => Err(Failure::usage(format!(
+            "deadlineMs {} is not a deadline; use -1, null, or a whole number of milliseconds from 0 to 4294967295000",
+            js_number(held)
+        ))),
+    }
+}
+
+/// A number as JavaScript's `String()` prints it.
+fn js_number(value: f64) -> String {
+    if value.is_nan() {
+        return "NaN".to_owned();
+    }
+    if value.is_infinite() {
+        return if value > 0.0 { "Infinity" } else { "-Infinity" }.to_owned();
+    }
+    let size = value.abs();
+    if size >= 1e21 || (size != 0.0 && size < 1e-6) {
+        let written = format!("{value:e}");
+        return match written.split_once('e') {
+            Some((digits, power)) if !power.starts_with('-') => format!("{digits}e+{power}"),
+            _ => written,
+        };
+    }
+    format!("{value}")
+}
+
+/// Answer one call on this thread and write its envelope.
+pub(crate) fn answer(engine: Option<&Engine>, call: &Call, token: &CancelToken) -> String {
+    guarded(|| {
+        let deadline = deadline_of(call.deadline_ms)?;
+        let engine = match engine {
+            Some(engine) => engine,
+            None => thinkthen::default_engine()?,
+        };
+        let mut options = CallOptions::new().cancel(token);
+        if let Some(millis) = deadline {
+            options = options.deadline_millis(millis)?;
+        }
+        run(engine, call, options)
+    })
+}
+
+fn run(engine: &Engine, call: &Call, options: CallOptions<'_>) -> Answered {
+    let spec = call.spec.as_deref().unwrap_or_default();
+    let text = call.payload.as_str();
+    Ok(match call.op.as_str() {
+        "decide" => word(engine.decide_with(decision(&question(spec)?), text, options)?),
+        "decide_many" => {
+            let asked = question(spec)?;
+            let rows = engine.decide_many_with(decision(&asked), records(text)?, options);
+            let words = rows
+                .map(|row| row.map(|row| word(*row.value())))
+                .collect::<Result<Vec<_>, _>>()?;
+            format!("[{}]", words.join(","))
+        }
+        "choose" | "tag" => {
+            let asked = kind_of(&call.op, question(spec)?)?;
+            match engine.details_with(detail(&asked), text, options)?.value() {
+                Judgment::Choice(pick) => json!(pick).to_string(),
+                Judgment::Tags(labels) => json!(labels).to_string(),
+                _ => {
+                    return Err(Failure::of(
+                        ErrorKind::Defect,
+                        "defect: a pick held no label",
+                    ));
+                }
+            }
+        }
+        "score" => match kind_of("score", question(spec)?)? {
+            LoadedQuestion::Question(asked) => {
+                json!(engine.score_with(&asked, text, options)?).to_string()
+            }
+            LoadedQuestion::Banded(_) => {
+                return Err(Failure::usage("score does not take a banded question"));
+            }
+        },
+        "filter" => match question(spec)? {
+            LoadedQuestion::Question(asked) => {
+                let kept = engine
+                    .filter_with(&asked, indexed(text)?, options)
+                    .map(|kept| kept.map(|Indexed(at, _)| at))
+                    .collect::<Result<Vec<_>, _>>()?;
+                json!(kept).to_string()
+            }
+            LoadedQuestion::Banded(_) => {
+                return Err(Failure::usage("filter does not take a banded question"));
+            }
+        },
+        "rank" => {
+            let ranked = engine.rank_with(&Question::rank(spec)?, indexed(text)?, options)?;
+            let rows: Vec<Value> = ranked
+                .iter()
+                .map(|row| json!({ "index": row.input().0, "probability": row.probability() }))
+                .collect();
+            Value::from(rows).to_string()
+        }
+        "find" => found(engine, spec, text, options)?,
+        "annotate" => annotated(engine, spec, text, options)?,
+        "details" => engine
+            .details_with(detail(&question(spec)?), text, options)?
+            .to_json(),
+        "recognize" => engine
+            .recognize_with(&Recognize::from_json(spec)?, text, options)?
+            .to_json(),
+        "relate" => related(engine, spec, text, options)?,
+        other => return Err(Failure::usage(format!("the door knows no op {other}"))),
+    })
+}
+
+/// The selected unit's index and probability, or `null` when none was selected.
+fn found(engine: &Engine, spec: &str, text: &str, options: CallOptions<'_>) -> Answered {
+    let found = engine.find_with(&Question::find(spec)?, indexed(text)?, options)?;
+    let picked = found.candidates().iter().find_map(|candidate| {
+        let unit = candidate.input()?;
+        (found.selected().map(|held| held.0) == Some(unit.0))
+            .then(|| json!({ "index": unit.0, "probability": candidate.probability() }))
+    });
+    Ok(picked.unwrap_or(Value::Null).to_string())
+}
+
+/// Each record's bare `annotate` value. The set is a path or the set's JSON.
+fn annotated(engine: &Engine, spec: &str, text: &str, options: CallOptions<'_>) -> Answered {
+    let set = if spec.trim_start().starts_with('{') {
+        QuestionSet::from_json(spec)?
+    } else {
+        QuestionSet::load(spec)?
+    };
+    let rows = engine
+        .annotate_with(&set, records(text)?, options)
+        .map(|row| row.map(|row| row.value_json()))
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(format!("[{}]", rows.join(",")))
+}
+
+/// Each edge as the command's bare `relate` line.
+fn related(engine: &Engine, spec: &str, text: &str, options: CallOptions<'_>) -> Answered {
+    let pairs: Vec<(String, String)> = serde_json::from_str(text)
+        .map_err(|_| Failure::usage("relate takes a list of [name, kind] pairs"))?;
+    let entities = pairs
+        .iter()
+        .map(|(name, kind)| Entity::new(name, kind))
+        .collect::<Result<Vec<_>, _>>()?;
+    let edges = engine.relate_with(&Relate::from_json(spec)?, entities, options)?;
+    let lines: Vec<String> = edges.iter().map(thinkthen::Edge::to_json).collect();
+    Ok(format!("[{}]", lines.join(",")))
+}
+
+fn question(spec: &str) -> Result<LoadedQuestion, Failure> {
+    Ok(Question::from_json(spec)?)
+}
+
+/// Refuse a question of another kind before any send.
+fn kind_of(op: &str, asked: LoadedQuestion) -> Result<LoadedQuestion, Failure> {
+    let (kind, wanted) = match (&asked, op) {
+        (LoadedQuestion::Banded(_), _) => (QuestionKind::Decide, false),
+        (LoadedQuestion::Question(held), "choose") => {
+            (held.kind(), held.kind() == QuestionKind::Choose)
+        }
+        (LoadedQuestion::Question(held), "tag") => (held.kind(), held.kind() == QuestionKind::Tag),
+        (LoadedQuestion::Question(held), _) => (held.kind(), held.kind() == QuestionKind::Score),
+    };
+    if wanted {
+        Ok(asked)
+    } else {
+        Err(Failure::usage(format!(
+            "{op} does not take a {} question",
+            kind_word(kind)
+        )))
+    }
+}
+
+/// The word a refusal uses for a question kind.
+const fn kind_word(kind: QuestionKind) -> &'static str {
+    match kind {
+        QuestionKind::Decide => "decide",
+        QuestionKind::Choose => "choose",
+        QuestionKind::Tag => "tag",
+        QuestionKind::Score => "score",
+        QuestionKind::Rank => "rank",
+        QuestionKind::Find => "find",
+    }
+}
+
+fn decision(asked: &LoadedQuestion) -> &dyn DecisionQuestion {
+    match asked {
+        LoadedQuestion::Question(held) => held,
+        LoadedQuestion::Banded(held) => held,
+    }
+}
+
+fn detail(asked: &LoadedQuestion) -> &dyn DetailQuestion {
+    match asked {
+        LoadedQuestion::Question(held) => held,
+        LoadedQuestion::Banded(held) => held,
+    }
+}
+
+fn word(answer: Answer) -> String {
+    match answer {
+        Answer::Yes => "true",
+        Answer::No => "false",
+        Answer::Unsure => "null",
+    }
+    .to_owned()
+}
+
+fn records(payload: &str) -> Result<Vec<String>, Failure> {
+    serde_json::from_str(payload).map_err(|_| Failure::usage("records is an array of strings"))
+}
+
+fn indexed(payload: &str) -> Result<Vec<Indexed>, Failure> {
+    Ok(records(payload)?
+        .into_iter()
+        .enumerate()
+        .map(|(at, text)| Indexed(at, text))
+        .collect())
+}
+
+/// Build an engine from `EngineBuilder::from_env()` and the given options.
+pub(crate) fn engine(options: &str) -> Result<Engine, Failure> {
+    caught(|| built(options))
+}
+
+fn built(options: &str) -> Result<Engine, Failure> {
+    let given: Map<String, Value> = serde_json::from_str(options)
+        .map_err(|_| Failure::usage("new Engine takes one options object"))?;
+    let mut builder = EngineBuilder::from_env()?;
+    for (key, value) in &given {
+        builder = setting(builder, key, value)?;
+    }
+    Ok(builder.build()?)
+}
+
+fn setting(builder: EngineBuilder, key: &str, value: &Value) -> Result<EngineBuilder, Failure> {
+    let text = || {
+        value
+            .as_str()
+            .ok_or_else(|| Failure::usage(format!("options.{key} is a string")))
+    };
+    let whole = || {
+        value
+            .as_u64()
+            .ok_or_else(|| Failure::usage(format!("options.{key} is a whole number")))
+    };
+    Ok(match (key, value) {
+        ("baseUrl", _) => builder.base_url(text()?)?,
+        ("model", _) => builder.model(text()?)?,
+        ("throttle", _) => builder.throttle(u8::try_from(whole()?).unwrap_or(u8::MAX))?,
+        ("maxRequests", _) => {
+            builder.max_requests(Some(usize::try_from(whole()?).unwrap_or(usize::MAX)))?
+        }
+        ("cache", Value::Bool(false)) => builder.no_cache(),
+        ("cache", Value::String(folder)) => builder.cache_at(folder)?,
+        ("cache", _) => return Err(Failure::usage("options.cache is false or a folder path")),
+        ("cacheBytes", _) => builder.cache_bytes(whole()?)?,
+        _ => return Err(Failure::usage(format!("new Engine takes no option {key}"))),
+    })
+}
+
+/// The engine's four counters as one JSON object.
+pub(crate) fn usage(engine: Option<&Engine>) -> String {
+    guarded(|| {
+        let counters = match engine {
+            Some(engine) => engine.usage(),
+            None => thinkthen::usage()?,
+        };
+        Ok(json!({
+            "requests_sent": counters.requests_sent(),
+            "cache_answers": counters.cache_answers(),
+            "input_tokens": counters.input_tokens(),
+            "output_tokens": counters.output_tokens(),
+        })
+        .to_string())
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::Value;
+    use thinkthen::ErrorKind;
+
+    use super::{Failure, deadline_of, guarded};
+
+    fn kind(envelope: &str) -> Value {
+        serde_json::from_str::<Value>(envelope).unwrap()["err"]["kind"].clone()
+    }
+
+    /// R1-10: a panic below the door is `defect`, and the next call answers.
+    #[test]
+    fn a_panic_is_a_defect_and_the_next_call_answers() {
+        let planted = guarded(|| panic!("planted"));
+        assert_eq!(
+            planted,
+            r#"{"err":{"kind":"defect","message":"defect: the Node binding panicked","retryable":false}}"#
+        );
+        assert_eq!(guarded(|| Ok("7".to_owned())), r#"{"ok":7}"#);
+    }
+
+    /// R1-31: each of the six kinds keeps its conformance word.
+    #[test]
+    fn each_kind_keeps_its_word() {
+        let table = [
+            (ErrorKind::Usage, "usage"),
+            (ErrorKind::Backend, "backend"),
+            (ErrorKind::Local, "local"),
+            (ErrorKind::Cancelled, "cancelled"),
+            (ErrorKind::Deadline, "deadline"),
+            (ErrorKind::Defect, "defect"),
+        ];
+        for (held, word) in table {
+            assert_eq!(kind(&Failure::of(held, "m").envelope()), word);
+        }
+    }
+
+    /// R1-11: a native caller that skips the wrapper still meets the check.
+    #[test]
+    fn a_hostile_deadline_is_usage_with_its_number() {
+        let table = [
+            (f64::NAN, "NaN"),
+            (f64::INFINITY, "Infinity"),
+            (1e300, "1e+300"),
+            (f64::MAX, "1.7976931348623157e+308"),
+            (-2.0, "-2"),
+            (0.5, "0.5"),
+            (1e-7, "1e-7"),
+            (4_294_967_296_000.0, "4294967296000"),
+        ];
+        for (held, written) in table {
+            let refused = deadline_of(Some(held)).unwrap_err();
+            assert_eq!(kind(&refused.envelope()), "usage");
+            assert_eq!(
+                refused.message,
+                format!(
+                    "deadlineMs {written} is not a deadline; use -1, null, or a whole number of milliseconds from 0 to 4294967295000"
+                )
+            );
+        }
+        assert_eq!(deadline_of(Some(-1.0)).unwrap(), None);
+        assert_eq!(deadline_of(None).unwrap(), None);
+        assert_eq!(deadline_of(Some(0.0)).unwrap(), Some(0));
+        assert_eq!(
+            deadline_of(Some(4_294_967_295_000.0)).unwrap(),
+            Some(4_294_967_295_000)
+        );
+    }
+}

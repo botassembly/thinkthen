@@ -73,6 +73,19 @@ The host work follows the same list for every surface.
 - Run the shared cases through the 0092 backend. Re-run the surface's error-index rows against the real engine, each with a planted bug that turns its test red. Report a skipped case as not run.
 - Write any ruling that lived only in notes as an ADR (R2-29).
 
+## The TypeScript surface (ticket 0107)
+
+These rulings lived only in the tag's notes (R2-29). Ian can overturn each one.
+
+- One error class, `ThinkThenError`, carries `kind` and `retryable`.
+- An `AbortSignal` is the cancel gesture. The promise rejects at once, and the binding fires the call's `CancelToken`.
+- `deadlineMs` counts milliseconds and converts through `CallOptions::deadline_millis`.
+- A question value is a frozen function that carries its spec.
+- `new tt.Engine(options)` exposes ADR 0017 section 5's settings. The first explicit throttle holds for the process.
+- Each call runs on a detachable worker thread of its own. The tag's calls on the libuv pool retire. `detach()` fires the token and closes the threadsafe function, so Node may exit after any settle.
+- The napi module `src/node.rs` holds the macro output under one `allow(unsafe_code)`. No hand-written `unsafe` exists, so item 5's `ffi.rs` rule holds.
+- The package ships its own `index.js`, `index.mjs`, `index.d.ts`, and a nine-line `loader.js`. No generated loader remains.
+
 ## Consequences
 
 - 0077's duplicate-image boundary follows item 5. Each loaded copy has its own cap, and each surface page says so.

@@ -1,0 +1,35 @@
+{
+  "name": "thinkthen",
+  "version": "0.0.1",
+  "license": "MIT",
+  "description": "Semantic judgments over text for Node, through the thinkthen engine. Not published.",
+  "private": true,
+  "main": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.mjs",
+      "require": "./index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "index.mjs",
+    "index.d.ts",
+    "loader.js",
+    "LICENSE",
+    "thinkthen.node"
+  ],
+  "scripts": {
+    "build": "./build-addon.sh",
+    "test": "node --test --test-timeout=30000 tests/"
+  },
+  "devDependencies": {
+    "typescript": "7.0.2"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
