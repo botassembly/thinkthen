@@ -16,8 +16,8 @@ Status: built on `ticket/0120-port-rust-polars` in the surface batch; code revie
 
 ## Budgets
 
-- Production Rust: 3 files, 406 nonblank lines (limit 4 and 450).
-- Rust tests: 5 files, 746 nonblank lines (limit 8 and 900).
+- Production Rust: 3 files, 399 nonblank lines (limit 4 and 450).
+- Rust tests: 5 files, 753 nonblank lines (limit 8 and 900).
 - `check.sh`: 21 nonblank lines (limit 80).
 - Gate changes: 29 nonblank lines in `policy.py` (limit 30).
 - Documentation: about 72 net nonblank lines across the README, the ADR 0047 amendment, `rust.md`, and `polars-plan.md` (limit 180).
