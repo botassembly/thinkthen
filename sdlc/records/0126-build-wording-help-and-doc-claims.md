@@ -1,6 +1,6 @@
 # 0126: Build the wording, help, and doc-claim fixes
 
-Status: built. Plants recorded. Ladder results below. Owner: Claude.
+Status: built. Plants recorded. Ladder green. Owner: Claude.
 
 Branch `ticket/0126-wording-help-and-doc-claims`. The ticket is `sdlc/tickets/0126-wording-help-and-doc-claims.md`. Its design review accepted it after three rounds. Ian can overturn each choice this record marks as decided.
 
@@ -56,7 +56,14 @@ Each plant was applied alone, its test run, the file restored and touched. All e
 
 ## Ladder
 
-LADDER
+The final run was on merge `78d50824`, after main's `6acf7d80` brought 0129. Each rung ran once, and none was wrapped in the heavy lock: lint 0, install 0, test 0, and spec 0. The test rung ran all 32 test binaries, 370 of them in `backend`. The spec rung ran the pages and 21 green demos. The surfaces rung did not run. No surface changed, because the public throttle sentence reads as the surfaces already pin it.
+
+Earlier runs found four problems, all fixed before the final run.
+
+- Lint stopped on `tests/decide_edge.rs` at its 500-line cap. The help sentence test moved to `tests/version.rs`. Plant 11 was rerun against the moved test and turned red.
+- Clippy refused an index in the new check test. It now reads the model with `get`.
+- `tests/transform.rs` pinned `transform` between `cache` and `audit` in the root help. It now finds its own row anywhere, like the audit and diff tests. `tests/version.rs` pins the order.
+- One test run failed `annotate::scheduling::a_backend_failure_after_the_output_pipe_closes_stays_quiet`, exit 4 against 0. That run overlapped a plant run on the same worktree under load. The test passed five times alone and in the final run. This ticket does not touch annotate scheduling. No stop rule was crossed.
 
 ## Found on the way
 
