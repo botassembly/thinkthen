@@ -47,7 +47,7 @@ Each is the agent's decision unless it says otherwise. Ian can overturn any of t
 8. **`--write` checks the digest.** Every graded line must carry `meta.question_sha256`, or `meta.questions_sha256` for a question set, equal to the digest the file resolves to with no command-line override. The digest covers the threshold (question-file rule 8). A run with `--threshold` typed beside `@FILE` therefore fails the check. The rule refuses a file that did not ask these answers, and it refuses results that mix questions.
 9. **`--write` never overwrites a band.** audit tunes a single cut. A file that holds a band keeps it, and audit says so.
 10. **`--write` writes in place with one `std::fs::write` of the whole new text.** It keeps the file's owner, mode, and any symbolic link. A crash between the truncate and the write could leave a short file. The file is a few hundred bytes, so this ticket accepts that risk and names it in "Defers". A temporary file and a rename would create a file the user did not name.
-11. **A `score` question takes no bar in a file.** ADR 0010 settles that `score` takes no threshold. audit grades `score` and prints suggested level cuts. `--write` leaves a `score` question unchanged and says why. Putting level cuts in the question file overturns ADR 0010. That needs Ian's ruling, and it is the one question this ticket brings him.
+11. **A `score` question takes no bar in a file.** ADR 0010 settles that `score` takes no threshold. audit grades `score` and prints suggested level cuts. `--write` leaves a `score` question unchanged and says why. Putting level cuts in the question file would overturn ADR 0010. The queue owner chose to keep ADR 0010 on 2026-09-25, and "What Ian can overturn" records the choice.
 12. **`find` and `rank` take no bar.** Neither command takes a threshold. audit grades both and suggests nothing.
 13. **The `tag` key lists the labels that apply.** A label missing from the list means no. A null value leaves the record unlabeled. This matches the `tag` result, where `[]` is a complete answer. The backlog gives this rule to the dev team.
 14. **A `tag` question prints one row per label and one pooled row.** Each label row grades as yes/no and carries its own suggestion. The pooled row counts every label decision and carries the one shared cut the question file takes. Labels ride in one request, so their errors move together. The pooled row therefore prints no interval, calibration, coverage, or AUC.
@@ -275,11 +275,11 @@ Stop, write down what happened, and re-score before any of these:
 
 ## Scope and exclusions
 
-Excluded: diff, which is the Quick Fix. `--all`. Per-label cuts in a `tag` file. `choose` option weights, which change how `choose` picks and need an ADR. `recognize` relation edges, which are beta. Level cuts in a `score` file, which wait for Ian. A backup file. Grading a recording folder directly. Cost per row, repeated samples, and run identity, which the issue keeps after 0.1. Any live or paid call.
+Excluded: diff, which is the Quick Fix. `--all`. Per-label cuts in a `tag` file. `choose` option weights, which change how `choose` picks and need an ADR. `recognize` relation edges, which are beta. Level cuts in a `score` file, which ADR 0010 keeps out. A backup file. Grading a recording folder directly. Cost per row, repeated samples, and run identity, which the issue keeps after 0.1. Any live or paid call.
 
 ## Dependencies and order
 
-Build from main. Tickets 0113 and 0114 are on main. No in-flight ticket owns a file this ticket opens, apart from the shared `answer.rs` noted in "The split from diff".
+Build from main. Tickets 0113 and 0114 are on main. No in-flight ticket owns a file this ticket opens, apart from two shared spots. The first is `answer.rs`, noted in "The split from diff". The second is the root-help asserts at `tests/audit_refusals.rs:289` and `tests/diff.rs:90`. Ticket 0126 rewrites them so they ignore order. Whichever of 0125 and 0126 lands second merges those lines.
 
 ## Complexity
 
@@ -297,7 +297,7 @@ On landing, the lander closes `sdlc/issues/2026-09-25-audit-is-complete-for-0-1.
 - The in-place write over a temporary file and a rename.
 - Leaving `find` and `rank` without a bar.
 - F1 as the default measure for names and edges.
-- **Needs Ian:** level cuts for `score`. Option A keeps ADR 0010: audit prints the cuts, and a user applies them with `jq`. Option B amends ADR 0010: a `score` question file gains `cuts`, and `score` prints a level beside its number. Option B widens the question file, the result, and every surface that reads a score. It costs a ticket of its own after this one. The recommendation is A for 0.1.
+- **Level cuts for `score`, decided 2026-09-25 by the queue owner: Option A.** ADR 0010 stands. audit grades `score` and prints suggested level cuts, and `--write` never writes them. A user applies them with `jq`. Ian can overturn this and take Option B: amend ADR 0010, so a `score` question file gains `cuts` and `score` prints a level beside its number. Option B widens the question file, the result, and every surface that reads a score. It would take a ticket of its own after this one.
 
 ## Evidence
 
@@ -305,4 +305,4 @@ On landing, the lander closes `sdlc/issues/2026-09-25-audit-is-complete-for-0-1.
 - Keeps: Every 0113 output member, its order, and its value. Every golden and table capture, byte for byte, once the named additions are removed. The key format and `part`. The seeded split at `--seed`. Every existing failure row except the ungradable sentence. audit sends nothing and reads no key or setting.
 - Changes: Six more verbs. `--optimize` and two new measures on every row. `steady` on every suggestion. `--write` and the first file audit writes. The ungradable sentence. The `find` unit id rule on two pages.
 - Proof: The tests in "Proof", each with a planted fault that turns it red. The hand values come from experiment 259 and the issue, not from the code under test. `spec/audit.md` runs the picks and a write round trip.
-- Defers: diff, as a Quick Fix. `--all`. Per-label `tag` cuts in a file. `choose` option weights. `recognize` relation edges. Level cuts in a `score` file, pending Ian. A crash-safe write. A warning when no answer matches the key (experiment 259, D14). Cost per row, repeated samples, and run identity.
+- Defers: diff, as a Quick Fix. `--all`. Per-label `tag` cuts in a file. `choose` option weights. `recognize` relation edges. Level cuts in a `score` file, kept out by ADR 0010 unless Ian overturns it. A crash-safe write. A warning when no answer matches the key (experiment 259, D14). Cost per row, repeated samples, and run identity.
