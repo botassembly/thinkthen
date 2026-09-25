@@ -21,8 +21,10 @@ done
 ! grep -q '^\[features\]' Cargo.toml || fail "Cargo.toml has a [features] table; the port has one build"
 # cargo fmt reads no lock, cargo deny takes --offline alone, and the deny
 # plant fetches its local file:// git source into a scratch home.
-if sed '/^[[:space:]]*#/d' check.sh build.sh | grep -E '(^|[^[:alnum:]_])cargo [a-z]' |
-   grep -v -e 'cargo fmt' -e 'cargo deny' -e 'plant/copy' -e '--locked --offline' -e "grep -E" >&2; then
+if sed '/^[[:space:]]*#/d; s/[[:space:]]#.*$//' check.sh build.sh | grep -E '(^|[^[:alnum:]_])cargo [a-z]' |
+   grep -vE -e '^[[:space:]]*cargo fmt --check$' -e '^[[:space:]]*(CARGO_HOME="\$plant/home" )?cargo deny ' \
+     -e '^CARGO_HOME="\$plant/home" cargo fetch --quiet --manifest-path "\$plant/copy/Cargo.toml"$' \
+     -e '--locked --offline' -e "grep -v?E " -e "^[[:space:]]+-e '" >&2; then
   fail "a cargo call above lacks --locked --offline"
 fi
 if sed '/^[[:space:]]*#/d' build.sh | grep -nE '(^|[^-[:alnum:]_])(apt-get|curl|wget|docker)([^-[:alnum:]_]|$)' >&2 ||
@@ -35,15 +37,19 @@ if sed '/^[[:space:]]*#/d' build.sh | grep -nE '\.(so|bundle|dylib)([^[:alnum:]]
 fi
 guards=$(cat src/*.rs | grep -o 'catch_unwind(' | wc -l)
 [ "$guards" -eq 1 ] || fail "src holds $guards catch_unwind sites; the binding has one guard"
-# R4-2 closed by construction: the worker never takes the VM lock back.
+# R4-2 closed by construction: the wait, the unblock function, the handoff,
+# and the worker never touch Ruby. lib.rs and call.rs hold the worker and
+# the handoff, and they name no Ruby crate.
+! grep -nE 'rb_sys|magnus' src/lib.rs src/call.rs >&2 || fail "the worker or the handoff above touches Ruby"
+awk '/^(unsafe extern "C" )?fn (wait_for|wake)\(/ { held = 1 }
+     held && /rb_sys|magnus/ { print FILENAME ": " $0; bad = 1 }
+     held && /^}/ { held = 0 }
+     END { exit bad }' src/ffi.rs >&2 || fail "the released wait above touches Ruby"
 ! grep -n 'rb_thread_call_with_gvl' src/*.rs >&2 || fail "src retakes the VM lock inside the released region"
-# R2-8, R7-9, and R4-18 closed by design: Rust holds no Ruby object, so the
-# collector can take none from under it. Ticks live in the watchdog's Ruby row.
-! grep -nE 'Opaque|BoxValue|rb_gc_register' src/*.rs >&2 || fail "src holds a Ruby object"
-awk '/#\[magnus::wrap/ { held = 1; next }
-     held && /(^|[^[:alnum:]_])Value([^[:alnum:]_]|$)/ { print FILENAME ": " $0; bad = 1 }
-     held && (/^}/ || /\);[[:space:]]*$/) { held = 0 }
-     END { exit bad }' src/*.rs >&2 || fail "a wrapped struct above holds a Ruby Value"
+# R2-8, R7-9, and R4-18 closed by design: Rust holds no Ruby object. A
+# compile-time Send assertion in lib.rs covers every wrapped struct, and
+# this catches the rooting calls that dodge it.
+! grep -nE 'Opaque|BoxValue|rb_gc_register|magnus::gc|register_mark_object' src/*.rs >&2 || fail "src holds a Ruby object"
 
 # deny on the lock, then a planted file:// git source meets the sources rule
 # (R3-28). This is the Ruby lint block: lint reaches this surface only

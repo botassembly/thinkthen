@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-# The crash shapes. R4-2: a raising USR1 trap every 0.2 ms through four held
-# 2,000-record batches. The old crossing took the lock back inside the
-# released region and crashed or hung. R3-5: 3,000 calls, each under a
-# Thread#raise at a random offset, which must neither crash the process nor
-# leave a watchdog row behind.
+# Crash and hang smoke tests. A raising USR1 trap every 0.2 ms through four
+# held 2,000-record batches must end each round with the trap's raise, and
+# 3,000 calls, each under a Thread#raise at a random offset, must neither
+# crash the process nor leave a watchdog row behind (R3-5). R4-2 is closed
+# by construction and guarded by check.sh's source checks, not here.
 require "minitest/autorun"
 require_relative "backend"
 

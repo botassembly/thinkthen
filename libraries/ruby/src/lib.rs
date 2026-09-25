@@ -237,6 +237,12 @@ const _: fn() = || {
     held::<thinkthen::Recognize>();
     held::<thinkthen::Relate>();
     held::<thinkthen::Entity>();
+    // Rust holds no Ruby object. Every Ruby value is !Send, so a Ruby field
+    // in a wrapped struct fails this build.
+    held::<ffi::CancelValue>();
+    held::<ffi::QuestionValue>();
+    held::<ffi::SetValue>();
+    held::<ffi::EngineValue>();
 };
 
 #[cfg(test)]

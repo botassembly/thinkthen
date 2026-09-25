@@ -25,7 +25,7 @@ use crate::{Fault, Handoff, Settings, Taken, class_name, guarded, start};
 
 #[magnus::wrap(class = "ThinkThen::Cancel", free_immediately, size)]
 #[derive(Debug, Default)]
-struct CancelValue(CancelToken);
+pub(crate) struct CancelValue(CancelToken);
 
 impl CancelValue {
     fn cancel(&self) {
@@ -39,7 +39,7 @@ impl CancelValue {
 
 #[magnus::wrap(class = "ThinkThen::Question", free_immediately, size)]
 #[derive(Debug)]
-struct QuestionValue {
+pub(crate) struct QuestionValue {
     json: String,
     loaded: LoadedQuestion,
 }
@@ -52,7 +52,7 @@ impl QuestionValue {
 
 #[magnus::wrap(class = "ThinkThen::QuestionSet", free_immediately, size)]
 #[derive(Debug)]
-struct SetValue(QuestionSet);
+pub(crate) struct SetValue(QuestionSet);
 
 impl SetValue {
     fn names(&self) -> Vec<String> {
@@ -62,7 +62,7 @@ impl SetValue {
 
 #[magnus::wrap(class = "ThinkThen::Native::Engine", free_immediately, size)]
 #[derive(Debug)]
-struct EngineValue {
+pub(crate) struct EngineValue {
     engine: Engine,
     most: Option<usize>,
 }

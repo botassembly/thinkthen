@@ -39,7 +39,7 @@ Each plant was applied to the committed source, built when it touched Rust, and 
 | R5-9 | No slice and no unblock function | red: Ctrl-C missed 150 ms |
 | R4-2 | Retake the lock inside the released region and run `rb_thread_check_ints` there | green on 3 of 3 runs. The worker never touches Ruby, so this plant was harmless (review ruling, below) |
 | R4-2 | `rb_thread_check_ints` with no lock, in `wait_for` | green on 3 of 3 runs |
-| R4-2 | `rb_thread_check_ints` with no lock, in the unblock function `wake` | red on 3 of 3 runs: the flood round's raise never reached the parent |
+| R4-2 | `rb_thread_check_ints` with no lock, in the unblock function `wake` | red on 3 of 3 runs. `wake` runs on the interrupting side, so this breaks interrupt delivery, a different fault. It does not model R4-2 |
 | R4-2 | `rb_thread_call_with_gvl` in `src` | red: "src retakes the VM lock inside the released region" |
 | R2-15 | A wake closes the handoff | red: the held batch raised |
 | R2-15 | The caller's token is the engine's cancel | red: the sibling cancelled |
@@ -49,7 +49,8 @@ Each plant was applied to the committed source, built when it touched Rust, and 
 | R3-16 | A tick kept on the module | green at first; red after the test fix below (a tick ran 5 times on another thread's call) |
 | R3-16 | `nil` crosses as `"null"` | red |
 | R7-9, R2-8, R4-18 | The row holds the tick through a `WeakRef` | green at first; red once the plant also drops the crossing's local. The review then retired these rows (below) |
-| R7-9, R2-8, R4-18 | An `Opaque<Value>` in a wrapped struct; a `Value` field in a wrapped struct | red: "src holds a Ruby object"; "a wrapped struct above holds a Ruby Value" |
+| R7-9, R2-8, R4-18 | An `Opaque<Value>` in a wrapped struct | red: "src holds a Ruby object" |
+| R7-9, R2-8, R4-18 | A `tick: RHash` field in a wrapped struct | the build fails on the `Send` assertion (below) |
 | R5-35 | A stub prefix with the real stamp and a `ruby` that prints 3.2.3 | red: "is not Ruby 3.4.11 behind a matching stamp" |
 | R5-35 | `RUBY=/usr/bin/ruby` | red: "RUBY names /usr/bin/ruby" |
 | R3-28 | A `file://` git source in a scratch crate | `check.sh` plants it on every run and requires exit 8 with `source-not-allowed` |
@@ -75,15 +76,15 @@ Two tests changed after their plants stayed green.
 
 ## Stop rules crossed
 
-- R4-2: the ticket says the builder stops if three runs of the lock-retake plant stay green. They did, and the builder stopped. The code review ruled that the worker never touches Ruby, so that plant was harmless. `check.sh` now fails when `src` names `rb_thread_call_with_gvl`. An interrupt check with no lock in `wake` turns the flood test red, so `test_flood.rb` keeps its R4-2 half with that plant as proof.
+- R4-2: the ticket says the builder stops if three runs of the lock-retake plant stay green. They did, and the builder stopped. The re-review ruled that no Ruby test models the row: the worker never touches Ruby, and an unlocked `rb_thread_check_ints` in `wait_for` also stayed green on 3 of 3 runs. R4-2 is closed by construction, guarded by the source check. `check.sh` fails when `lib.rs` or `call.rs` names `rb_sys` or `magnus`, when `wait_for` or `wake` does, or when `src` names `rb_thread_call_with_gvl`. `test_flood.rb` stays as a crash and hang smoke test and claims no row but R3-5.
 
 ## After the code review
 
-The review of `2001843e` found the extension sound and returned eight findings. All are fixed.
+The review of `2001843e` found the extension sound and returned eight findings. All are fixed. The re-review of `7cf2d1a1` confirmed six and returned three items, fixed here: the R4-2 ruling above, the `Send` assertion, and the ticket rows. The cargo-flags check now strips trailing comments, so `# cargo deny` after a call cannot exempt it.
 
 - The deny run and the `file://` plant moved into `check.sh`, after the TypeScript surface's form. `lint` reaches Ruby only through `surfaces --registry`. The ticket's R5-35 row now says so.
 - A wrong Ruby behind a matching stamp fails. It no longer prints "not run".
-- The collector test left. R2-8, R7-9, and R4-18 closed by design: Rust holds no Ruby object. `check.sh` fails when `src` names `Opaque`, `BoxValue`, `rb_gc_register`, or a `Value` field in a `#[magnus::wrap]` struct. The own-thread tick test (R3-16) stays, in `test_tick_thread.rb`.
+- The collector test left. R2-8, R7-9, and R4-18 closed by design: Rust holds no Ruby object. A compile-time `Send` assertion in `lib.rs` covers each wrapped struct, and every Ruby value is not `Send`. `check.sh` also fails when `src` names `Opaque`, `BoxValue`, `rb_gc_register`, `magnus::gc`, or `register_mark_object`. The own-thread tick test (R3-16) stays, in `test_tick_thread.rb`.
 - The gemspec raises when the extension is missing. The gem check requires exactly `lib/thinkthen.rb`, `lib/thinkthen/thinkthen.<DLEXT>`, and `lib/thinkthen/version.rb`, and `ThinkThen::VERSION` equal to the crate's version.
 - The raise storm reads no private state. A counting tick must not run in the 0.3 s after the storm and `GC.start`.
 - `relate` is no longer capped by the record limit, because the engine does not cap it.
