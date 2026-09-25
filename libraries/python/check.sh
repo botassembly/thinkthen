@@ -87,7 +87,7 @@ VIRTUAL_ENV=$venv maturin develop --quiet --locked --offline --features probe
 echo "== the Python tests, each engine call in a child on its own backend: the door,"
 echo "   the Arrow safety suite, the exit freeze, throttle equality, and the address proof"
 precondition "$python" True "pandas 3"
-"$python" -m pytest -q -p no:cacheprovider tests/
+"$python" -m pytest -q -p no:cacheprovider --tb=short tests/
 
 echo "== the shared cases and the examples, on the rung's backend"
 scratch=$(mktemp -d)
@@ -103,5 +103,5 @@ sh build-wheel.sh
 echo "== the pandas 2 lane: the same extension, the pandas tests, and the secrecy test"
 pinned requirements-pandas2.txt requirements-pandas2.txt
 precondition "$venv/bin/python" False "pandas 2"
-"$venv/bin/python" -m pytest -q -p no:cacheprovider tests/test_pandas.py tests/test_secrecy.py
+"$venv/bin/python" -m pytest -q -p no:cacheprovider --tb=short tests/test_pandas.py tests/test_secrecy.py
 echo "pandas 2 lane passed on pandas $("$venv/bin/python" -c 'import pandas; print(pandas.__version__)')"

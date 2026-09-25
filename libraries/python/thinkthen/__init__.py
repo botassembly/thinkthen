@@ -162,7 +162,7 @@ def _column(call, verb, asked, value, deadline, token):
     """A column verb. A pandas Series gets the caller's Series back, with its
     index and name, through its own class (decision 3)."""
     kind = _pandas(value)
-    if kind is None or verb == "details":
+    if kind is None:
         return _rebuilt(value, call(verb, asked, value, deadline, token))
     values, dtype = call(verb, asked, _marked(value, kind), deadline, token)
     return type(value)(values, index=value.index, name=value.name, dtype=dtype)
@@ -312,8 +312,10 @@ class Engine:
             column = _on(records, on, asked._names())
             answers = _thinkthen._annotate_column(self._engine, asked, _marked(column, "Series"),
                                                   deadline, token)
-            return records.assign(**{name: type(column)(values, index=records.index, dtype=dtype)
-                                     for name, (values, dtype) in answers.items()})
+            out = records.assign()
+            for name, (values, dtype) in answers.items():
+                out[name] = type(column)(values, index=records.index, dtype=dtype)
+            return out
         return type(records)(_Stream(_thinkthen._annotate_frame(self._engine, asked, records,
                                                                 on, deadline, token)))
 

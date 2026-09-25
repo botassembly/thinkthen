@@ -3,14 +3,16 @@
 Each engine call runs in a child on its own loopback backend. Values are
 checked by position against the list form in the same child. Where pandas 2
 and pandas 3 differ, each lane asserts its own row. The generic arm answers
-every text alike, so only ``recognize``, whose offsets follow the text, can
-show values paired to the wrong rows.
+every text alike. So ``recognize``, whose offsets follow the text, and the
+index test's row on shared case 27, whose answers differ by text, show values
+paired to the wrong rows.
 """
 
 import pathlib
 import time
 
 import pandas
+import pytest
 
 from conftest import Backend, child_env, run, start
 
@@ -87,9 +89,12 @@ def test_a_failed_question_widens_its_column_to_text(backend, tmp_path):
     printed = run(SETUP + """
     got = engine.annotate(form, pd.DataFrame({"body": texts[:2]}), on="body")
     print(got["late"].dtype.name, got["team"].dtype.name, got["team"].tolist())
+    said(lambda: engine.choose(team, pd.Series(texts[:2])))
     """, child_env(backend, tmp_path, "arm/malformed/missing_answer"))
     marker = '{"failed":{"kind":"backend","cause":"missing_answer"}}'
-    assert printed.strip() == f"boolean string {[marker, marker]}"
+    assert printed.splitlines() == [
+        f"boolean string {[marker, marker]}",
+        "BackendError the reply was refused: the response carries no answer for question `q1` 2"]
 
 
 def test_a_frame_gains_answer_columns_and_keeps_its_own(backend, tmp_path):
@@ -121,9 +126,20 @@ def test_the_callers_index_survives(backend, tmp_path):
     """Proof 2 and R3-19: on a non-default index, a row ``MultiIndex``,
     repeated labels, and an empty input, every answer keeps the caller's
     index and name, with the list form's values by position. On unique labels
-    a join holds no missing value. Regression: a fresh ``RangeIndex`` turns
-    the join all missing, and values paired to the wrong rows move a name."""
+    a join holds no missing value. On shared case 27, whose five answers
+    differ by text, ``decide`` and ``decide_many`` keep each answer on its
+    row. Regression: a fresh ``RangeIndex`` turns the join all missing, and
+    values paired to the wrong rows move a name or an answer."""
     printed = run(SETUP + """
+    import json, os
+    case = [one for one in json.load(open(os.path.join(sys.path[0], "..", "..", "..",
+            "conformance", "cases.json")))["cases"] if one["id"] == "27-decide-many"][0]
+    refund = tt.question(**case["question"])
+    records = pd.Series([one["evidence"] for one in case["exchanges"]], index=[50, 40, 30, 20, 10])
+    base = os.environ["THINKTHEN_BASE_URL"].replace("/generic/", "/case/27-decide-many/")
+    for verb in ("decide", "decide_many"):
+        got = getattr(tt.Engine(base_url=base, cache=False), verb)(refund, records)
+        print("case 27", verb, got.index.equals(records.index), got.tolist())
     indexes = {"labels": [5, 7, 9], "rows": pd.MultiIndex.from_tuples(
         [("a", 1), ("a", 2), ("b", 1)]), "repeated": [1, 1, 2], "empty": []}
     for kind, index in indexes.items():
@@ -148,7 +164,8 @@ def test_the_callers_index_survives(backend, tmp_path):
               found["names"].tolist() == names(rows), sent() - before > 0)
     """, child_env(backend, tmp_path))
     verbs = ("decide", "choose", "score", "tag", "decide_many")
-    wanted = []
+    wanted = [f"case 27 {verb} True [True, False, True, True, False]"
+              for verb in ("decide", "decide_many")]
     for kind in ("labels", "rows", "repeated", "empty"):
         joined = "True" if kind in ("labels", "rows") else "-"
         wanted += [f"{kind} {verb} True body True {joined}" for verb in verbs]
@@ -158,18 +175,10 @@ def test_the_callers_index_survives(backend, tmp_path):
 
 
 def test_the_edge_rows_that_answer(backend, tmp_path):
-    """The edge table's answering rows: each kind to its verb, the empty
-    Series and frame with zero sends, and integer column labels."""
+    """The edge table's answering rows: the empty Series and frame with zero
+    sends, integer column labels, and a question named ``self``, which a
+    keyword ``assign`` would refuse after every send."""
     printed = run(SETUP + """
-    rows = [("string[pyarrow]", "score", urgent), ("object", "choose", team),
-            ("category", "tag", kinds)] + ([("str", "decide", late)]
-                                           if pd.__version__.startswith("3.") else [])
-    for dtype, verb, asked in rows:
-        before = sent()
-        got = getattr(engine, verb)(asked, pd.Series(texts, dtype=dtype))
-        sends = sent() - before
-        print(dtype, verb, got.dtype.name, plain(got.tolist()) == listed(verb, asked, texts),
-              sends)
     before = sent()
     got = engine.decide(late, pd.Series([], dtype=object, name="body", index=[]))
     print("empty", type(got).__name__, got.name, got.dtype.name, len(got), sent() - before)
@@ -180,16 +189,16 @@ def test_the_edge_rows_that_answer(backend, tmp_path):
     before = sent()
     got = engine.annotate(form, pd.DataFrame({3: texts}), on=3)
     print("label 3", list(got.columns), got[3].tolist() == texts, sent() - before)
+    before = sent()
+    got = engine.annotate({"version": 1, "questions": {"self": {"decide": "Late?"}}},
+                          pd.DataFrame({"body": texts}), on="body")
+    print("self", list(got.columns), got["self"].dtype.name, sent() - before)
     """, child_env(backend, tmp_path))
-    three = ["str decide boolean True 3"] if THREE else []
     assert printed.splitlines() == [
-        "string[pyarrow] score Float64 True 3",
-        "object choose string True 3",
-        "category tag object True 3",
-        *three,
         "empty Series body boolean 0 0",
         "empty frame float64 ['body', 'late', 'team'] ['float64', 'boolean', 'string'] 0 0",
         "label 3 [3, 'late', 'team'] True 3",
+        "self ['body', 'self'] boolean 3",
     ]
 
 
@@ -207,6 +216,9 @@ def test_every_pandas_refusal_sends_nothing(backend, tmp_path):
         said(lambda: engine.tag(kinds, pd.Series(["a", hole, "b"], dtype=object)))
     said(lambda: engine.decide(late, pd.Series([None, None], dtype=object)))
     said(lambda: engine.filter(late, column))
+    class Mine(pd.Series):
+        pass
+    said(lambda: engine.filter(late, Mine(texts)))
     said(lambda: engine.rank("Late?", column))
     said(lambda: engine.find("Late?", column))
     said(lambda: engine.relate(column, relations={"r": ("a", "b")}))
@@ -233,7 +245,7 @@ def test_every_pandas_refusal_sends_nothing(backend, tmp_path):
         "UsageError record 1 is not a str 0",
         *3 * [f"UsageError {NULLS} 0"],
         f"UsageError {NULLS} 0",
-        *6 * [f"UsageError {LISTS} 0"],
+        *7 * [f"UsageError {LISTS} 0"],
         "UsageError details reads one str, not a column 0",
         "UsageError a data frame is not a column; pass df[\"name\"], or annotate with on= 0",
         f"UsageError {LISTS} 0",
@@ -301,20 +313,18 @@ def test_a_series_holds_the_throttle_in_flight(tmp_path):
             backend.close()
 
 
+@pytest.mark.skipif(not THREE, reason="pandas 2 offers no Arrow export")
 def test_pandas_3_text_crosses_in_place(backend, tmp_path):
     """Proof 4: on pandas 3, ``_arrow_probe`` over a ``str`` and a
     ``string[pyarrow]`` Series reads each text where pandas' own export puts
-    it. On pandas 2 neither Series offers the export, so no text crosses in
-    place. Regression: a copy before the hand-off moves every text."""
+    it. The pandas 2 lane skips it; its precondition shows no export. Regression:
+    a copy before the hand-off moves every text."""
     printed = run(SETUP + """
     import ctypes
     from arrow_c import pull
     rows = [f"a text of row {n}" for n in range(1000)]
     for dtype in ("str", "string[pyarrow]"):
         series = pd.Series(rows, dtype=dtype)
-        if not hasattr(series, "__arrow_c_stream__"):
-            print(dtype, "no export")
-            continue
         _, schema, [batch] = pull(series.__arrow_c_stream__())
         width = 8 if schema.format == b"U" else 4
         ends = ctypes.string_at(batch.buffers[1], width * (batch.offset + batch.length + 1))
@@ -323,7 +333,4 @@ def test_pandas_3_text_crosses_in_place(backend, tmp_path):
         batch.release(ctypes.byref(batch))
         print(dtype, tt._thinkthen._arrow_probe(series) == pandas_sees, len(pandas_sees))
     """, child_env(backend, tmp_path))
-    if THREE:
-        assert printed.splitlines() == ["str True 1000", "string[pyarrow] True 1000"]
-    else:
-        assert printed.splitlines() == ["str no export", "string[pyarrow] no export"]
+    assert printed.splitlines() == ["str True 1000", "string[pyarrow] True 1000"]

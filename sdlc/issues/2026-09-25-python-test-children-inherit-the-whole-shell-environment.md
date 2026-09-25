@@ -11,6 +11,11 @@ Filed on 2026-09-25 from the pandas build (ticket 0122). No key was used, and no
 - pytest's default traceback shows the `env` argument of `run` when a child exits nonzero.
 - The secrecy test's planted bug formats the child's environment into an error message. The test turns red as it should, and its assertion diff prints every inherited variable.
 
+Two more points:
+
+- The gate prints the same way. `libraries/python/check.sh` ran pytest with its default traceback. Any failing child then printed the start of the shell environment into the gate's output. The 0122 review fix adds `--tb=short` to both pytest calls as a stopgap. The allow list below removes the cause.
+- The shell's other `THINKTHEN_*` variables reach each child too. `child_env` removes only `THINKTHEN_API_KEY`. A developer's own cache folder, timeout, throttle, or model setting can therefore change a test's result.
+
 The 0122 build ran pytest with `--tb=native` to keep the first path quiet. The second path printed unrelated keys from the builder's shell into the plant run's output. That output lived only in the session's scratch folder and was deleted.
 
 ## What would fix it

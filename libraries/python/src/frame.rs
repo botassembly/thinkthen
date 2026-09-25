@@ -70,12 +70,9 @@ impl Source {
         let Ok(marked) = value.cast::<Pandas>() else {
             return Ok((Self::Door(Imported::column(value)?), false));
         };
-        let Pandas(inner, list) = marked.get();
-        let inner = inner.bind(value.py());
-        let source = if *list {
-            Self::List(listed(inner)?)
-        } else {
-            Self::Door(Imported::column(inner)?)
+        let source = match marked.get() {
+            Pandas(inner, true) => Self::List(listed(inner.bind(value.py()))?),
+            Pandas(inner, false) => Self::Door(Imported::column(inner.bind(value.py()))?),
         };
         Ok((source, true))
     }

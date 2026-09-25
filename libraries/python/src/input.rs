@@ -21,11 +21,19 @@ pub(crate) const ARROW: &str = "filter, rank, find, and relate read a list of st
 pub(crate) const DEADLINE: &str =
     "deadline is seconds from now, a number; no deadline is spelled None or -1";
 
-/// The top-level module of a value's type, such as `pandas` or `polars`.
+/// The top-level module of a value's type, or `pandas` when any class in its
+/// method resolution order is pandas', so a subclass counts.
 pub(crate) fn top(value: &Bound<'_, PyAny>) -> PyResult<String> {
-    let module = value.get_type().module()?;
-    let top = module.to_str()?.split('.').next().unwrap_or_default();
-    Ok(top.to_owned())
+    let mut first = None;
+    for kind in value.get_type().mro() {
+        let module = kind.getattr("__module__")?.str()?;
+        let top = module.to_str()?.split('.').next().unwrap_or_default();
+        if top == "pandas" {
+            return Ok(top.to_owned());
+        }
+        first.get_or_insert_with(|| top.to_owned());
+    }
+    Ok(first.unwrap_or_default())
 }
 
 /// Refuse a pandas, Polars, or pyarrow value, then any Arrow-shaped object,
@@ -42,8 +50,7 @@ pub(crate) fn refuse_container(value: &Bound<'_, PyAny>) -> PyResult<()> {
     Ok(())
 }
 
-/// A pandas Series the package marked with its reader (ticket 0122): 0106's
-/// door over a one-shot stream holder, or 0105's list reader over the Series.
+/// A pandas Series the package marked for the door (a holder) or the list reader.
 #[pyclass(frozen, name = "_Pandas", module = "thinkthen._thinkthen")]
 #[derive(Debug)]
 pub(crate) struct Pandas(pub(crate) Py<PyAny>, pub(crate) bool);
@@ -56,8 +63,7 @@ impl Pandas {
     }
 }
 
-/// True for an Arrow column or a pandas value. The package marks every pandas
-/// Series a column verb reads, so an unmarked one here is refused by `details`.
+/// True for an Arrow column or a pandas value, marked or not (`details` refuses).
 pub(crate) fn is_column(value: &Bound<'_, PyAny>) -> PyResult<bool> {
     Ok(value.is_instance_of::<Pandas>()
         || top(value)? == "pandas"
