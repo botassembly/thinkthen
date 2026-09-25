@@ -6,7 +6,7 @@ opens: libraries/polars sdlc/planning/adr/0047-bindings-are-unpublished-crates-o
 
 # 0120: Build the Rust Polars surface
 
-Status: design accepted 2026-09-24, amendment after spike 257 accepted 2026-09-24. Owner Claude.
+Status: design accepted; porting in the surface batch (sdlc/planning/one-line-plan-2026-09-25.md). Owner: Claude.
 
 ## Outcome and authority
 
@@ -22,7 +22,7 @@ No. Ticket 0106 (design accepted on `origin/ticket/0106-port-python-polars`) rea
 
 Rust Polars needs nothing from Python Polars either. It calls the `polars` crate's own Rust types and holds no pointer code.
 
-So the two doors share no Polars crate. Building the wheel on the `polars` crate was considered and dropped. It would add the Polars dependency tree and a second Rust toolchain to the wheel. It would tie the wheel to one Polars Rust minor version. 0106's zero-copy and width proofs already hold without it.
+So the two doors share no Polars crate. Building the wheel on the `polars` crate was considered and dropped. It would add the Polars dependency tree and a second Rust toolchain to the wheel. It would tie the wheel to one Polars Rust minor version. 0106's zero-copy and throttle proofs already hold without it.
 
 ## Design and decisions
 
@@ -84,7 +84,7 @@ What each door keeps is host conversion. Python reads Arrow C buffers through `u
 
 ## Evidence
 
-- Starts from: spike 255's plan, whose risk 5 covers this ticket's toolchain, and tag `surfaces-wave7-frozen-2026-09-24b` (`9df8bae9`), `libraries/rust/src/polars.rs` (the feature-gated Series door over the stand-in, with its `decide_column`, `choose_column`, `score_column`, `tag_column`, and `annotate_frame`) and `libraries/rust/tests/polars_door.rs` (eight tests). They passed under the stand-in's null backend with Rust 1.95 in the freeze run (`sdlc/records/surfaces-freeze-2026-09-24.md` at that tag: Rust, 39 tests). Experiments 213 to 216 (`~/workspace/experiments/228-polars-experiments/NOTES.md`) measured the width gate through a column, the fork with a warm Polars pool, and the Polars 0.55 toolchain need.
+- Starts from: spike 255's plan, whose risk 5 covers this ticket's toolchain, and tag `surfaces-wave7-frozen-2026-09-24b` (`9df8bae9`), `libraries/rust/src/polars.rs` (the feature-gated Series door over the stand-in, with its `decide_column`, `choose_column`, `score_column`, `tag_column`, and `annotate_frame`) and `libraries/rust/tests/polars_door.rs` (eight tests). They passed under the stand-in's null backend with Rust 1.95 in the freeze run (`sdlc/records/surfaces-freeze-2026-09-24.md` at that tag: Rust, 39 tests). Experiments 213 to 216 (`~/workspace/experiments/228-polars-experiments/NOTES.md`) measured the throttle gate (then called the width gate) through a column, the fork with a warm Polars pool, and the Polars 0.55 toolchain need.
 - Keeps: one crossing per column through the batch path, answers in input order, null as "not sure" in a decide column, the null-row and non-text refusals, the caller's frame columns unchanged, and the widening of a failed question's column to text.
 - Changes: the door leaves the stand-in for the public `thinkthen` API in its own crate. `choose`, `score`, and `tag` over a column become one `annotate_with` call. At the tag they made one engine call per row, the same defect as index rows R1-24 and R4-23 in Python. Every method takes `CallOptions`. The tag's methods took none. The caller's engine value replaces the tag's inherent methods on a stand-in engine. Frame tag columns become JSON text to match the Python door. At the tag the Rust frame wrote `List(String)`. Tests leave `ENGINE_NULL` for the loopback backend.
 - Proof: the acceptance tests below, each with its planted bug, run by `libraries/polars/check.sh` in the `surfaces` rung. The equality of a Series call with a slice call at throttle 8, in wall time and in requests in flight, is the proof Ian named for Python Polars on 2026-09-21. This ticket applies it to Rust.
