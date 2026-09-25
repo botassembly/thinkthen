@@ -6,7 +6,7 @@ opens: libraries/typescript sdlc/scripts sdlc/planning/libraries/javascript.md s
 
 # 0107: Port the TypeScript surface
 
-Status: code review ACCEPT after fixes; waiting for the batch integration (`sdlc/records/0107-build-typescript-surface.md`). Owner: Claude.
+Status: landed 2026-09-25 in the surface batch, at batch head `03580733` on `ticket/surface-batch`. Integration record: `sdlc/records/surface-batch-integration.md`. Owner: Claude.
 
 ## Design and decisions
 

@@ -6,7 +6,7 @@ opens: databases/postgresql sdlc/scripts sdlc/issues sdlc/planning/databases/pos
 
 # 0111: Port the PostgreSQL surface
 
-Status: design accepted; porting in the surface batch (sdlc/planning/one-line-plan-2026-09-25.md). Owner: Claude.
+Status: landed 2026-09-25 in the surface batch, at batch head `03580733` on `ticket/surface-batch`. Integration record: `sdlc/records/surface-batch-integration.md`. Owner: Claude.
 
 ## Outcome and authority
 

@@ -6,7 +6,7 @@ opens: libraries/ruby sdlc/scripts sdlc/planning/libraries/ruby.md sdlc/planning
 
 # 0112: Port the Ruby surface
 
-Status: code review ACCEPT after fixes, waiting for the batch integration. Owner: Claude.
+Status: landed 2026-09-25 in the surface batch, at batch head `03580733` on `ticket/surface-batch`. Integration record: `sdlc/records/surface-batch-integration.md`. Owner: Claude.
 
 ## Outcome and authority
 

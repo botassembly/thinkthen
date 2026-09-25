@@ -6,7 +6,7 @@ opens: libraries/r sdlc/scripts sdlc/planning/libraries/r.md sdlc/planning/adr/0
 
 # 0108: Port the R surface
 
-Status: code review ACCEPT after fixes; waiting for the batch integration (sdlc/planning/one-line-plan-2026-09-25.md). Owner: Claude.
+Status: landed 2026-09-25 in the surface batch, at batch head `03580733` on `ticket/surface-batch`. Integration record: `sdlc/records/surface-batch-integration.md`. Owner: Claude.
 
 ## Outcome and authority
 

@@ -6,7 +6,7 @@ opens: libraries/polars sdlc/planning/adr/0047-bindings-are-unpublished-crates-o
 
 # 0120: Build the Rust Polars surface
 
-Status: built; code review ACCEPT at `bfc17052` (fresh re-review, 2026-09-25); waiting for the surface batch integration run (sdlc/planning/one-line-plan-2026-09-25.md). Owner: Claude.
+Status: landed 2026-09-25 in the surface batch, at batch head `03580733` on `ticket/surface-batch`. Integration record: `sdlc/records/surface-batch-integration.md`. Owner: Claude.
 
 ## Outcome and authority
 

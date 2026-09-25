@@ -6,7 +6,7 @@ opens: databases/sqlite sdlc/scripts sdlc/planning/databases/sqlite.md sdlc/plan
 
 # 0109: Port the SQLite surface
 
-Status: code review ACCEPT after fixes; waiting for the batch integration (sdlc/planning/one-line-plan-2026-09-25.md). Owner: Claude.
+Status: landed 2026-09-25 in the surface batch, at batch head `03580733` on `ticket/surface-batch`. Integration record: `sdlc/records/surface-batch-integration.md`. Owner: Claude.
 
 ## Outcome and authority
 
