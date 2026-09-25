@@ -34,7 +34,7 @@ In nonblank lines added, net of removals:
 | `engine/mod.rs`, `public/error.rs`, `cli/failure/recording.rs` | 5 | -2 |
 | Tests | 170 | 150 |
 
-The ratchet rises by 224 lines. It went from 61768 to 61992 on the branch, and from 61972 to 62196 after the merge of main at `f3176b5d`, which brought 0122 and 0124 against the ticket's 280. The code, the check replies, and their test pins make up most of the growth. The builder deleted the public error's throttle copy and the engine test's two text pins first.
+The ratchet rises by 223 lines. It went from 61768 to 61992 on the branch. After the merge of main at `f3176b5d`, which brought 0122 and 0124, it went from 61972 to 62196. Moving the help sentence test into `tests/version.rs` saved one line, so the final figure is 62195, measured after the merge of `3a86d814`. The ticket allowed 280. The code, the check replies, and their test pins make up most of the growth. The builder deleted the public error's throttle copy and the engine test's two text pins first.
 
 ## Plants
 
