@@ -62,3 +62,13 @@ The host work follows the same list for every surface.
 - 0077's duplicate-image boundary follows item 5. Each loaded copy has its own cap, and each surface page says so.
 - The ADR 0037 header moves from `contract/include/thinkthen.h` to `libraries/c/include/thinkthen.h` in ticket 0094.
 - Ian can overturn every item. Items 5 and 8 touch his rulings most closely.
+
+## Python (ticket 0105)
+
+These rulings lived only in the tag's Python notes (R2-29). Ticket 0105 records them here. Ian can overturn each one.
+
+- `Cancelled` subclasses both `KeyboardInterrupt` and `ThinkThenError`. Code that catches Ctrl-C and code that catches every thinkthen failure both see a stop.
+- Only a `KeyboardInterrupt` from a signal handler becomes `Cancelled`. Any other error a handler raises, such as `SystemExit`, passes through unchanged.
+- A pandas object is refused with a `UsageError` that says the Python data frame is Polars (the 2026-09-21 ruling in ADR 0017). The check reads the type's top-level module before any Arrow check, because pandas objects also expose `__arrow_c_stream__`.
+- Every call runs on a detachable worker thread, so Ctrl-C and a caller's token stop a single send and a batch within one 50 ms tick. A detached send ends on its own, and no new request starts.
+- The Rust unit tests link libpython, so they run as `cargo test --no-default-features --lib` from `check.sh`, which sets the library path. A bare `cargo test` builds the extension-module form, which does not link libpython (item 6).
