@@ -1,5 +1,7 @@
 # check prints the model it sent, not the model that answered
 
+Status: Open
+
 Found 2026-09-25 while drawing the talk's "Bring your own backend" slide. Ian asked for this change.
 
 ## What happens
