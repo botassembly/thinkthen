@@ -231,3 +231,30 @@ fn the_specification_defines_unresolved_once_and_keeps_the_closed_wording() {
     let score = std::fs::read_to_string(root.join("specification/score.md")).expect("score.md");
     assert!(score.contains("showed rubric scores rejecting"), "{score}");
 }
+
+/// Each sentence names a cost or a stop a user meets only after a run starts.
+#[test]
+fn the_long_help_names_connections_conflicts_paid_requests_and_models() {
+    let table = [
+        (
+            "decide",
+            " A run opens up to one connection for each request in flight, so --jobs N opens up to N connections.\n",
+        ),
+        (
+            "decide",
+            " A folder that already holds an answer stops at exit 5 when the backend answers that request differently.\n",
+        ),
+        (
+            "recognize",
+            "\n\nEach record makes paid requests: a detection question for every word, a kind question for every word when two or more kinds are given, and relation questions when rules are given. --dry-run prints the exact requests for the first record.\n\n",
+        ),
+        (
+            "check",
+            " The report names the model asked for, the model sent, and the model each reply names.\n\n",
+        ),
+    ];
+    for (command, sentence) in table {
+        let help = help(&[command, "--help"]).expect("the compiled binary runs");
+        assert!(help.contains(sentence), "{command}: {sentence}: {help}");
+    }
+}

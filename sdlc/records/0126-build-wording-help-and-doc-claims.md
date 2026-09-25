@@ -10,7 +10,7 @@ Branch `ticket/0126-wording-help-and-doc-claims`. The ticket is `sdlc/tickets/01
 - **Throttle sentence.** The engine's `WidthActive` says throttle. `public/error.rs` prints the engine's sentence. `cli/schedule/width_tests.rs` and `tests/public_env.rs` pin it. `engine/width_tests.rs` asserts the `WidthActive` value.
 - **check.** The report opens with `url`, `provider systemone`, `model asked NAME|unspecified`, and `model sent NAME`. It prints one `reply PROBE JSON` line per decoded reply, before the rows. `core::check::PROVIDER` is `built_in::NAME`, the adapter alias of `systemone::NAME`. Code outside the adapter names it through that alias, as the seam policy asks. `core::check::reply_line` serializes the decoded reply through `json_line`. A failed logical question prints the `FailedValue` marker. The help gains one sentence.
 - **recognize --dry-run.** It prints `thinkthen.recognize-plan/1` with `url`, `model`, `key_env`, `words`, `request_count`, and a `requests` list of `digest`, `bytes`, and `body_utf8`. The three backend fields cost 6 nonblank lines, under the 9 the ticket allows. The request entry owns its strings. It borrows nothing from the split chunks, so one report value serves the empty and the full case. Relate keeps its own copy of the struct until 0123 lands.
-- **Help sentences.** New sentences cover the recognize cost, the `--jobs` connections, the `--record` conflict stop, and the check models. `tests/decide_edge.rs` pins all four as whole sentences.
+- **Help sentences.** New sentences cover the recognize cost, the `--jobs` connections, the `--record` conflict stop, and the check models. `tests/version.rs` pins all four as whole sentences. It sits beside the root help test, because `tests/decide_edge.rs` is at its 500-line size cap.
 - **Conflict message.** The command prints ``the backend answered the request in entry `NAME` differently from the saved response; record into a fresh folder, or use --cache DIR to answer from the saved entries``. `tests/backend/recording_conflicts.rs` pins it whole. The public layer's own sentence for library callers is unchanged, because a library caller has no `--cache DIR`.
 - **Docs.** ADR 0010 gains its 2026-09-25 amendment. `specification/recording.md`, `threshold.md`, `records.md`, `recognize.md`, `channels.md`, and `check.md` changed. So did `spec/check.md` and `spec/recognize.md`, the interface audit's history note, `README.md`, `ten-use-cases.md`, `site/src/pages/backends.astro`, and the three database READMEs.
 
@@ -52,7 +52,7 @@ Each plant was applied alone, its test run, the file restored and touched. All e
 | 8 | Put `width` back in the engine's sentence | `cli::schedule::width_tests::the_command_selects_only_an_explicit_jobs_and_refuses_a_later_different_one` |
 | 9 | Give `public/error.rs` its own `width` copy | `public_env::a_seed_leaves_the_throttle_omitted_and_an_explicit_one_registers_at_build` |
 | 10 | Drop the `--cache` clause from the conflict message | `recording_conflicts::whitespace_padded_responses_with_different_values_conflict` |
-| 11 | Drop the `--jobs` connection sentence | `decide_edge::the_long_help_names_connections_conflicts_paid_requests_and_models` |
+| 11 | Drop the `--jobs` connection sentence | `version::the_long_help_names_connections_conflicts_paid_requests_and_models` |
 
 ## Ladder
 
