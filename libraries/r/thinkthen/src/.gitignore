@@ -1,0 +1,5 @@
+Makevars
+thinkthen.so
+*.o
+*.a
+.cargo/

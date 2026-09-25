@@ -62,3 +62,16 @@ The host work follows the same list for every surface.
 - 0077's duplicate-image boundary follows item 5. Each loaded copy has its own cap, and each surface page says so.
 - The ADR 0037 header moves from `contract/include/thinkthen.h` to `libraries/c/include/thinkthen.h` in ticket 0094.
 - Ian can overturn every item. Items 5 and 8 touch his rulings most closely.
+
+## R section, 2026-09-25 (ticket 0108)
+
+These rulings lived only in the R surface's notes (R2-29). Ian can overturn each.
+
+- **Layout.** R's crate sits at `libraries/r/thinkthen/src/rust`, inside the R package, because `R CMD INSTALL` builds from the package folder. Its lock and `clippy.toml` sit there too. `libraries/r/deny.toml` and the two ratchet files sit at `libraries/r`. The registry check and `policy.py` look for `libraries/r/Cargo.toml` today, so they must learn this path before R lands. The record of ticket 0108 names the change.
+- **`I()` over a number.** A deadline may carry the `AsIs` class. Any other class, such as `factor` or `difftime`, is `usage`.
+- **Deadline numbers.** `NULL`, `-1`, and `-1L` mean no deadline. The engine's `deadline_seconds` rules every other number.
+- **Bulk choose, score, and tag.** A column crosses as one `annotate` of a one-question set. This closes R2-23.
+- **jsonlite stays** as the one import, at the tested 2.0.0. Its archive is pinned by sha256.
+- **relate takes a frame** with `name` and `kind` columns and dedupes it by item 9.
+- **The ratchets.** `ratchet.json` counts the crate's Rust. `ratchet.R.json` counts `.R` files under the package's `R` and `tools` folders, `tests`, and `examples`.
+- **The `paste` advisory.** `extendr-api` 0.8.2 depends on `paste`, which RUSTSEC-2024-0436 reports unmaintained. The binding's own `deny.toml` equals the root one plus that one ignore entry with its reason.
