@@ -74,3 +74,18 @@ The rungs above ran inside this ticket's own `flock` wrapper, before the coordin
 ## Warnings
 
 The four Polars exceptions go unused in lanes whose trees never meet Polars: the Ruby and TypeScript surfaces, the `surfaces --registry` loop, and the other bindings' copies. cargo-deny reports `license-exception-not-encountered` there as a warning, and no lane fails on it. Stop rule 2 was not crossed.
+
+## Final run
+
+A second merge of origin/main (3a86d814) came first, then the ratchet was measured again. The rung scripts were called directly, without a wrapper, at a9f17c1f:
+
+| Rung | Exit | Time |
+| --- | --- | --- |
+| install | 0 | 417 s |
+| lint | 0 | 119 s |
+| test | 101, then 0 on one rerun | 734 s, then 282 s |
+| spec | 0 | 116 s |
+| surfaces | 0, every surface passed, DuckDB and Polars included | 597 s |
+
+The one test failure came from main's code, and this ticket did not touch it. `crates/thinkthen/tests/backend/profile.rs` has two tests that call `structured_tag()`. Each rewrites the same file, `profiles/structured-tag`, and they run in parallel. One test read the file while the other was rewriting it, so it saw an empty file: "the question file is not valid JSON: the JSON at line 1 column 0 is not one". The rerun passed. The fix belongs to the owner of that test: give each test its own file name.
+
