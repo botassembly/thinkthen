@@ -1,0 +1,44 @@
+# frozen_string_literal: true
+
+# The loaded module's public names equal one pinned list (R5-14, R6-12). A
+# name the native half defines counts too, and the private Native module,
+# the watchdog's row, and the helpers stay out of it.
+require "json"
+require "minitest/autorun"
+require "open3"
+require "rbconfig"
+
+class TestPublicNames < Minitest::Test
+  CONSTANTS = %i[BackendError Cancel CancelledError DeadlineError DefectError Edge Engine Entity Error Found
+                 LocalError Question QuestionSet Ranked Recognized Relation UsageError VERSION].freeze
+  VERBS = %i[annotate choose decide decide_many decide_many_with_probabilities details filter find rank
+             recognize relate score score_with_level tag usage with_tick].freeze
+
+  def test_the_loaded_module_shows_only_the_pinned_names
+    out, errors, status = Open3.capture3(RbConfig.ruby, "-I", File.expand_path("../lib", __dir__), "-rjson", "-rthinkthen", "-e", <<~RUBY)
+      T = ThinkThen
+      puts JSON.generate(
+        constants: T.constants.sort,
+        module: T.singleton_methods.sort,
+        engine: T::Engine.public_instance_methods(false).sort,
+        engine_class: T::Engine.singleton_methods.sort,
+        cancel: T::Cancel.public_instance_methods(false).sort,
+        question: T::Question.public_instance_methods(false).sort,
+        set: T::QuestionSet.public_instance_methods(false).sort,
+        ranked: T::Ranked.public_instance_methods(false).sort
+      )
+    RUBY
+    assert status.success?, errors
+    names = JSON.parse(out, symbolize_names: true).transform_values { |list| list.map(&:to_sym) }
+    assert_equal({
+                   constants: CONSTANTS,
+                   module: (VERBS + %i[question set]).sort,
+                   engine: (VERBS + %i[inspect]).sort,
+                   engine_class: [],
+                   cancel: %i[cancel cancelled?],
+                   question: %i[json],
+                   set: %i[names],
+                   ranked: %i[index index= probability probability= record record= to_s]
+                 }, names)
+  end
+end

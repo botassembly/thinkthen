@@ -104,3 +104,14 @@ These rulings lived only in the tag's `NOTES.md` (R2-29). Ian can overturn each.
 - 0077's duplicate-image boundary follows item 5. Each loaded copy has its own cap, and each surface page says so.
 - The ADR 0037 header moves from `contract/include/thinkthen.h` to `libraries/c/include/thinkthen.h` in ticket 0094.
 - Ian can overturn every item. Items 5 and 8 touch his rulings most closely.
+
+## Ruby rulings (ticket 0112, R2-29)
+
+These rulings lived only in the tag's Ruby `NOTES.md`. Ian can overturn each one.
+
+- The crossing never takes the VM lock beneath the engine call. Each call runs on its own worker thread with asynchronous signals blocked. The Ruby thread waits in 50 ms slices with the lock released, through `rb_thread_call_without_gvl` and an unblock function that only wakes the wait. Between slices, with the lock held, it reads pending interrupts under `rb_protect`, then the caller's token and the call's own.
+- The return is prompt. Any stop fires the call's own token and returns within one slice. The worker finishes its sent requests alone, and its answer is dropped.
+- Ctrl-C raises `ThinkThen::CancelledError`, with the `Interrupt` as its cause. Every other raise, such as `Thread#raise` or a trap's error, passes through unchanged.
+- The detach cost of decision 5: a stopped call's worker lives until its sent requests end. A stopped batch can hold up to the throttle in flight after the raise. It never sends a new request, because its own token is fired.
+- The watchdog runs ticks every 0.1 s on one Ruby thread. A tick belongs to the thread that set it. A tick that raises fires its call's own token, and the call raises the tick's error.
+- A `nil` record refuses with `UsageError` naming its index. A record that is not a `String` crosses as its JSON text.
