@@ -36,3 +36,22 @@ Each costs cents and needs Ian's authorization through `sdlc/scripts/live`.
 ## What Ian can overturn
 
 The cap of 10, the default width, and whether packing is worth an answer that depends on its neighbours.
+
+## Results, experiment 260
+
+Ran on 2026-09-25 under Ian's authorization, through `sdlc/scripts/live`. Model `jev-1.13.0`. Declared 2,870,000 tokens and billed 1,785,631 input tokens, 7.5 US cents. Every request answered 200. No answer came back missing, misnamed, or the wrong count. The full record is `~/workspace/experiments/260-row-packing-shapes/RESULTS.md`, with the preregistration, bodies, and replies beside it.
+
+- **Noise floor (experiment 1).** The same 1,000 SMS rows sent singly a second time crossed the 0.5 cut for 5 rows and moved none by more than 0.1. Regrouping at 10 per request crossed it for 34 (experiment 208). Jev's own noise is small. The neighbour effect is real, about six times the noise.
+- **Row shapes (experiment 3, closed book).** All 228 Beatles-only yes/no questions at 10 per request. Rows as `{"text"}` scored 0.693, named columns 0.702, one TSV table string 0.675, single-row 0.680. No gap is beyond chance. Packing cut tokens 4.1 times, and the table cut them 4.6 times.
+- **Pick-one answers (experiment 2).** 200 Beatles `choose` questions, each row with its own `choice` question and options. Jev answered each by name. Every packed arm scored below single-row (0.705), from 0.685 down to 0.600. The loss starts at one row a request, so the per-row wrapper wording causes it. Width 10 cut tokens 2.3 times. `score` and `tag` were not tested.
+- **Shared context (experiment 3, open book).** The song catalog sent once per 10 questions scored 188 of 196 against 187 for one question per request. Input tokens fell from 2,394,007 to 266,183, nine times fewer, about 0.057 dollars per 1,000 questions.
+- **Size edge (experiment 4).** 100 BoolQ rows at 10 per request, passages padded with other passages. Accuracy fell from 0.92 at about 2,000 tokens a request to 0.86 at 10,000, 0.83 at 20,000, and 0.79 at 27,000. The same long rows sent singly scored 0.86. No request was refused.
+
+What this means for the design:
+
+1. Keep the cap of 10 for yes/no. The row shape does not matter for accuracy, so the engine can pick the cheapest encoding.
+2. Do not pack `choose` until a width-1 packed request matches single-row accuracy. The per-row instruction needs rewording and remeasuring first.
+3. A shared context sent once per pack buys the largest saving measured, nine times on open book.
+4. The byte budget matters. Accuracy slid well under the 32,000-token text limit. A first budget near 10,000 tokens a request fits this evidence.
+
+Ian can overturn the reading of each point. Each rests on one day, one grouping per arm, and samples of 100 to 1,000.
