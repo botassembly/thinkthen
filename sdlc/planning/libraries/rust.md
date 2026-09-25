@@ -60,7 +60,7 @@ There is no binding tool. Separate binding crates call the public `thinkthen::*`
 
 ## Polars
 
-A Rust program that holds Polars data uses `thinkthen-polars` at `libraries/polars` (ticket 0120). It adds `decide_series`, `choose_series`, `score_series`, `tag_series`, and `annotate_frame` to the caller's own `Engine`. Each reads a text column in place and makes one engine call over the whole column, at the throttle, through the batch path a slice takes. The crate pins one Polars minor version, 0.55, and re-exports it. Its frame columns follow the Polars table in ADR 0047 item 10, shared with the Python door. `libraries/polars/README.md` is its user page.
+A Rust program that holds Polars data turns on the `polars` feature of `thinkthen` (tickets 0120 and 0130). The trait `PolarsEngine` adds `decide_series`, `choose_series`, `score_series`, `tag_series`, and `annotate_frame` to the caller's own `Engine`. Each reads a text column in place and makes one engine call over the whole column, at the throttle, through the batch path a slice takes. The feature takes one Polars minor version, 0.55, and `thinkthen::polars` re-exports it. Its frame columns follow the Polars table in ADR 0047 item 10, shared with the Python door. `libraries/polars/README.md` is its user page.
 
 ## Tests only this surface needs
 

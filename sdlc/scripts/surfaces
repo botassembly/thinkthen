@@ -20,6 +20,12 @@ landed() {
 	awk '!/^#/ && $2 == "landed" { print $1 }' "$1"
 }
 
+# A `feature` line is a Cargo feature of `thinkthen` (ticket 0130). Its check
+# runs with the landed ones, and the root ratchet and deny cover its code.
+feature() {
+	awk '!/^#/ && $2 == "feature" { print $1 }' "$1"
+}
+
 # A binding's manifest sits in its folder, or in the crate folder a third field names.
 manifest() {
 	awk -v at="$2" '!/^#/ && $1 == at { print $1 "/" (NF == 3 ? $3 "/" : "") "Cargo.toml" }' "$1"
@@ -27,7 +33,7 @@ manifest() {
 
 registry() {
 	status=0
-	if awk '!/^#/ && NF && (NF < 2 || NF > 3 || ($2 != "landed" && $2 != "planned") || $3 ~ /^\/|(^|\/)\.\.(\/|$)/) { bad = 1 } END { exit !bad }' "$1"; then
+	if awk '!/^#/ && NF && (NF < 2 || NF > 3 || ($2 != "landed" && $2 != "planned" && $2 != "feature") || ($2 == "feature" && NF != 2) || $3 ~ /^\/|(^|\/)\.\.(\/|$)/) { bad = 1 } END { exit !bad }' "$1"; then
 		printf 'surfaces: %s holds a line other than a folder, landed or planned, and a crate folder inside it\n' "$1" >&2
 		status=1
 	fi
@@ -41,9 +47,15 @@ registry() {
 			status=1
 		fi
 	done
+	for surface in $(feature "$1"); do
+		if [ ! -f "$surface/check.sh" ] || [ -n "$(find "$surface" -mindepth 1 ! -name check.sh ! -name README.md -print -quit)" ]; then
+			printf 'surfaces: %s is a feature and holds more than its check.sh and README.md\n' "$surface" >&2
+			status=1
+		fi
+	done
 	for folder in libraries/*/ databases/*/; do
 		[ -d "$folder" ] || continue
-		if ! landed "$1" | grep -qx "${folder%/}"; then
+		if ! { landed "$1"; feature "$1"; } | grep -qx "${folder%/}"; then
 			printf 'surfaces: %s is not a landed surface in %s\n' "${folder%/}" "$1" >&2
 			status=1
 		fi
@@ -69,6 +81,12 @@ if [ "${1:-}" = --registry ]; then
 	sed 's|^\(libraries/r  *landed\) .*|\1  ../rust|' sdlc/surfaces.txt >"$planted"
 	if registry "$planted" 2>/dev/null; then
 		echo 'surfaces: the registry check passed a crate folder outside its binding' >&2
+		exit 1
+	fi
+	# A feature folder holds no code of its own. The Rust examples' folder does.
+	sed 's|^libraries/rust  *landed$|libraries/rust feature|' sdlc/surfaces.txt >"$planted"
+	if registry "$planted" 2>/dev/null; then
+		echo 'surfaces: the registry check passed a feature folder that holds a Cargo.toml' >&2
 		exit 1
 	fi
 	for surface in $(landed sdlc/surfaces.txt); do
@@ -108,7 +126,7 @@ done
 port=$(head -n 1 "$fifo.port")
 
 failed=0
-for surface in $(landed sdlc/surfaces.txt); do
+for surface in $(landed sdlc/surfaces.txt) $(feature sdlc/surfaces.txt); do
 	set +e
 	# A daemon a check starts must not hold the backend's input open.
 	sh "$surface/check.sh" "$port" 3>&-

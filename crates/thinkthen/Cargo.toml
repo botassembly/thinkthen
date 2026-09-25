@@ -19,11 +19,14 @@ required-features = ["cli"]
 [features]
 default = ["cli"]
 cli = ["dep:clap", "dep:csv-core", "dep:signal-hook"]
+# The Rust Polars door (ticket 0130). Off by default.
+polars = ["dep:polars"]
 
 [dependencies]
 arc-swap = "=1.7.1"
 clap = { version = "4.6.7", features = ["derive"], optional = true }
 csv-core = { version = "0.1.13", optional = true }
+polars = { version = "0.55.2", default-features = false, optional = true }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.151", features = ["raw_value"] }
 sha2 = { version = "0.11", default-features = false }
@@ -44,3 +47,25 @@ nix = { version = "0.29", default-features = false, features = ["pthread", "sign
 
 [target."cfg(unix)".dependencies]
 nix = { version = "0.29", default-features = false, features = ["signal"] }
+
+# The Polars door's tests run only with the feature, in the Rust Polars lane
+# (`libraries/polars/check.sh`). Each file is its own process.
+[[test]]
+name = "polars_door"
+path = "tests/polars/door.rs"
+required-features = ["polars"]
+
+[[test]]
+name = "polars_cases"
+path = "tests/polars/cases.rs"
+required-features = ["polars"]
+
+[[test]]
+name = "polars_deadline"
+path = "tests/polars/deadline.rs"
+required-features = ["polars"]
+
+[[test]]
+name = "polars_throttle"
+path = "tests/polars/throttle_equality.rs"
+required-features = ["polars"]

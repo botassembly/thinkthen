@@ -14,9 +14,9 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use conformance_backend::Backend;
+use thinkthen::PolarsEngine;
+use thinkthen::polars::prelude::{NamedFrom, Series};
 use thinkthen::{Answer, CallOptions, Engine, Question};
-use thinkthen_polars::PolarsEngine;
-use thinkthen_polars::polars::prelude::{NamedFrom, Series};
 
 const THROTTLE: u8 = 8;
 const TEXTS: usize = 200;

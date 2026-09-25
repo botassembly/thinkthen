@@ -12,6 +12,8 @@ mod bulk;
 mod choice;
 mod engine;
 mod error;
+#[cfg(feature = "polars")]
+mod frame;
 mod options;
 mod question;
 mod recognize;
@@ -26,6 +28,8 @@ pub use builders::{ChooseBuilder, DecideBuilder, LabelBuilder, ScoreBuilder, Tag
 pub use choice::Choice;
 pub use engine::{DecisionQuestion, DetailQuestion, Engine, Evidence};
 pub use error::{Error, ErrorDetail, ErrorKind};
+#[cfg(feature = "polars")]
+pub use frame::PolarsEngine;
 pub use options::{CallOptions, CancelToken};
 pub use question::{
     BandedQuestion, ChooseQuestion, Description, DescriptionBuilder, LoadedQuestion, Question,
@@ -41,6 +45,10 @@ pub use results::{
 };
 pub use set::{QuestionSet, QuestionSetBuilder};
 pub use settings::EngineBuilder;
+
+/// The Polars crate the door takes, so a caller names the exact version.
+#[cfg(feature = "polars")]
+pub use ::polars;
 
 /// The process engine the free functions use, built once from the
 /// environment. A failed build is returned and tried again on the next call.
