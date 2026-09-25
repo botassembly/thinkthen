@@ -41,23 +41,32 @@ fn archive() -> &'static Path {
     FOLDER.get_or_init(|| {
         let built = Command::new(env!("CARGO"))
             .args(["build", "--locked", "--offline", "--lib"])
+            .arg("--message-format=json-render-diagnostics")
             .current_dir(crate_dir())
             .output()
             .expect("cargo ran");
         let said = String::from_utf8_lossy(&built.stderr);
         assert!(built.status.success(), "{said}");
         assert!(!said.contains("collision"), "the build warned: {said}");
-        let profile = std::env::current_exe().expect("this test");
-        let profile = profile
-            .parent()
-            .and_then(Path::parent)
-            .expect("the profile folder");
+        // Only `cargo doc` warns when the door's library shares the engine's
+        // crate name, so the build's own report of its files is checked.
+        let files: Vec<PathBuf> = text(&built.stdout)
+            .lines()
+            .filter_map(|line| serde_json::from_str::<serde_json::Value>(line).ok())
+            .filter(|message| message["target"]["name"] == "thinkthen_c")
+            .flat_map(|message| message["filenames"].as_array().cloned().unwrap_or_default())
+            .filter_map(|file| file.as_str().map(PathBuf::from))
+            .collect();
         let folder = scratch("archive");
         for (from, to) in [
             ("libthinkthen_c.so", "libthinkthen.so"),
             ("libthinkthen_c.a", "libthinkthen.a"),
         ] {
-            std::fs::copy(profile.join(from), folder.join(to)).expect("a built library");
+            let file = files
+                .iter()
+                .find(|file| file.file_name().is_some_and(|name| name == from))
+                .expect("the build reported the door's library under its own name");
+            std::fs::copy(file, folder.join(to)).expect("a built library");
         }
         std::os::unix::fs::symlink("libthinkthen.so", folder.join("libthinkthen.so.0"))
             .expect("the soname link");
@@ -128,7 +137,14 @@ fn run(binary: &Path, base: &str, input: &[u8]) -> Output {
         }
         std::thread::sleep(Duration::from_millis(20));
     }
-    child.wait_with_output().expect("its output")
+    let output = child.wait_with_output().expect("its output");
+    for (stream, bytes) in [("output", &output.stdout), ("error", &output.stderr)] {
+        assert!(
+            !text(bytes).contains(KEY),
+            "the key reached standard {stream}"
+        );
+    }
+    output
 }
 
 fn text(bytes: &[u8]) -> String {
@@ -245,8 +261,11 @@ fn every_c_row_holds_under_the_sanitizer() {
             (Some(0), String::new()),
             "{name}"
         );
-        if name == "nulls" {
-            assert_eq!(backend.count(), 0, "a refusal sent a request");
+        match name {
+            "nulls" => assert_eq!(backend.count(), 0, "a refusal sent a request"),
+            // The parent's first call and the child's; the parent's last is cached.
+            "fork" => assert_eq!(backend.count(), 2, "the child's call crossed the wire"),
+            _ => {}
         }
     }
 }

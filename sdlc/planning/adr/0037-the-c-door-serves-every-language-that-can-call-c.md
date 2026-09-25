@@ -28,7 +28,7 @@ Landed on branch `surfaces`: `8c83765` ("Give the C door its cancel token, per-c
 
 Ticket 0094 ported the door onto the public API as the crate `thinkthen-c` at `libraries/c`, in its own workspace under ADR 0047. The header moved to `libraries/c/include/thinkthen.h`. The decision above names its old path. The port kept all 19 functions and added none. `libraries/c/DESIGN.md` holds the whole header table. The changes:
 
-- `thinkthen_engine_new` builds through `Engine::from_env`. NULL means the environment settings are invalid. No throttle argument exists.
+- `thinkthen_engine_new` builds through `Engine::from_env`. NULL means the environment settings are invalid or the cache or configuration cannot be read. The error functions called with NULL name the calling thread's last failed build. No throttle argument exists.
 - `thinkthen_error_retryable` follows ticket 0089's rule. A retried status earns 1. A transport failure, a 401, and every kind but backend earn 0.
 - `deadline_ms` is `int64_t`, as the header already declared, and goes through `CallOptions::deadline_millis` (ADR 0041). The "unsigned long" above is superseded.
 - `thinkthen_call` owns a grammar of ten verbs and five envelope keys. Every other key forms the question object. `rank` is the only rank spelling.

@@ -3,16 +3,12 @@
 //! Each case runs in its own `tests/c/driver.c` process, through the JSON door
 //! and, where one fits, a typed function. Expected request digests were
 //! recorded against the canonical URL, so each is recomputed for the URL the
-//! backend served. Six cases do not apply to the door:
+//! backend served. Five cases do not apply to the door:
 //!
 //! - `18-find-second` and `19-find-none` set `none: true`, and the `find` verb
 //!   takes its question text alone.
 //! - `18-annotate-two-groups` reads parts of a record through `on`, and a
 //!   record at the door is one whole text.
-//! - `22-local-fault` breaks the cache folder, which main's engine refuses
-//!   while it is built. `thinkthen_engine_new` then returns null, and the
-//!   header gives a null engine no failure kind. `tests/c/nulls.c` covers
-//!   the null engine.
 //! - `25-defect-fault` injects an internal invariant failure, which no outside
 //!   boundary reaches. The panic test in `src/failures.rs` covers the kind.
 //! - `30-local-question-file` loads a question file, and the door reads none.
@@ -25,15 +21,14 @@ use serde_json::value::RawValue;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
-use crate::{compile, crate_dir, run, text};
+use crate::{compile, crate_dir, run, scratch, text};
 
 const CASES: &str = include_str!("../../../../conformance/cases.json");
 const CANONICAL: &str = "https://api.typesafe.ai/v1/systemone";
-const SKIPPED: [&str; 6] = [
+const SKIPPED: [&str; 5] = [
     "18-find-second",
     "19-find-none",
     "18-annotate-two-groups",
-    "22-local-fault",
     "25-defect-fault",
     "30-local-question-file",
 ];
@@ -82,6 +77,30 @@ fn every_applicable_shared_case_passes_through_the_door() {
     }
     assert!(failures.is_empty(), "{failures:#?}");
     assert_eq!(ran, cases.len() - SKIPPED.len());
+}
+
+/// The retry signal after a failure: 1 for a status the engine retries,
+/// 0 for a refused key.
+#[test]
+fn a_retried_status_is_retryable_and_a_refused_key_is_not() {
+    let backend = Backend::start().expect("the conformance backend");
+    let asked = r#"{"decide":"Does this need attention?"}"#;
+    let mut script = Script::default();
+    let folder = scratch("retryable");
+    for arm in ["503", "401"] {
+        // A cache folder answers one backend address, so each arm gets its own.
+        let cache = folder.join(arm).display().to_string();
+        script.ask("env", &["THINKTHEN_CACHE", &cache]);
+        let path = if arm == "401" { "status/401" } else { arm };
+        let base = format!("{}/arm/{path}/v1", backend.origin());
+        script.ask("retryable", &[&base, asked, "Is this urgent?"]);
+    }
+    let driver = compile(&crate_dir().join("tests/c/driver.c"));
+    let output = run(&driver, "", &script.0);
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    let got = replies(&output.stdout).expect("framed replies");
+    let want = [(0, "2 1".to_owned()), (0, "2 0".to_owned())];
+    assert_eq!(got, want);
 }
 
 /// Run one case's requests through the driver and judge its replies.
@@ -333,6 +352,14 @@ fn refused<'a>(
                     urgent,
                 ],
             );
+        }
+        // The engine opens its cache while it is built, so the null engine
+        // names this failure.
+        "22-local-fault" => {
+            let file = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("cases-not-a-folder");
+            std::fs::write(&file, "not a folder").map_err(|error| error.to_string())?;
+            script.ask("env", &["THINKTHEN_CACHE", &file.display().to_string()]);
+            script.ask("decide", &[&generic, asked, urgent]);
         }
         "23-cancelled-fault" => script.ask("cancelled", &[&generic, asked, urgent]),
         "24-deadline-fault" => script.ask("expired", &[&generic, asked, urgent]),

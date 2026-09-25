@@ -5,7 +5,7 @@
  * largest values, and a fired token. The details flag reads its value
  * (R2-26: `"details": false` once turned the audit view on).
  *
- * `tests/door.rs` runs it against the loopback backend's generic arm.
+ * `tests/door/` runs it against the loopback backend's generic arm.
  */
 #include <stdio.h>
 #include <stdlib.h>

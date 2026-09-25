@@ -1,6 +1,6 @@
 /* The ten functions through the C door, one call each.
  *
- * `tests/door.rs` builds this program against the door, runs it against
+ * `tests/door/` builds this program against the door, runs it against
  * the loopback backend's generic arm, and compares its output with
  * `functions.txt`. That arm gives the first option, level, label, or yes
  * 0.9 and shares the rest; a model would answer differently.

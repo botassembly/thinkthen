@@ -8,7 +8,7 @@
  * yes side 0.9 on every question, so every answer here is THINKTHEN_YES at
  * 0.90. A model would answer "just saying hi" with THINKTHEN_NO.
  *
- * `tests/door.rs` builds and runs it against that arm.
+ * `tests/door/` builds and runs it against that arm.
  */
 
 #include <assert.h>

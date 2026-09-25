@@ -10,7 +10,7 @@ The tag header declares 19 functions. The port kept all 19 and added none.
 
 | Symbol | Verdict | Change |
 |---|---|---|
-| `thinkthen_engine_new` | changed | Builds through `Engine::from_env`, the constructor `default_engine` uses. It reads the variables that constructor reads. `THINKTHEN_TIMEOUT_SECS` and `THINKTHEN_MAX_RETRIES` are not read. NULL means the environment settings are invalid. A cache folder the engine cannot open also returns NULL, so the host gets no failure kind for it. No throttle argument and no throttle variable exist. |
+| `thinkthen_engine_new` | changed | Builds through `Engine::from_env`, the constructor `default_engine` uses. It reads the variables that constructor reads. `THINKTHEN_TIMEOUT_SECS` and `THINKTHEN_MAX_RETRIES` are not read. NULL means the environment settings are invalid. A cache folder or configuration file the engine cannot read also returns NULL, as the local kind. The calling thread keeps that failure in its own slot, and the three error functions called with NULL name it until the thread's next engine builds. No throttle argument and no throttle variable exist. |
 | `thinkthen_engine_free` | kept | |
 | `thinkthen_error_message` | kept | Messages come from the engine's `Error` display text. |
 | `thinkthen_error_code` | kept | Codes 1 to 6 map from `ErrorKind` in the header's order. |
@@ -86,7 +86,7 @@ On success the door requires one judgment per record. A short list is `THINKTHEN
 
 The door checks its pointers before it asks the engine, so a refusal sends nothing:
 
-- A null `engine` returns `THINKTHEN_EUSAGE`, or NULL from `thinkthen_call`. No engine holds a message.
+- A null `engine` returns `THINKTHEN_EUSAGE`, or NULL from `thinkthen_call`. The error functions with a null engine name the calling thread's last failed build, or else the usage code, zero, and a message that no engine came.
 - A null or non-UTF-8 `question_json`, `request_json`, or `spec_json` is a usage failure. These strings end in NUL and carry no length.
 - A null `text` with a zero length is the empty text, and the engine's blank-evidence rule refuses it. A null `text` with a nonzero length is a usage failure. A non-null `text` reads exactly `text_len` bytes.
 - Null `texts`, `lengths`, or bulk `out` arrays are usage failures when `count` is nonzero. A zero count reads and writes nothing.

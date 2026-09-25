@@ -1,5 +1,5 @@
 /*
- * The door driver `tests/door.rs` feeds the shared cases through.
+ * The door driver `tests/door/` feeds the shared cases through.
  *
  * Standard input holds requests. Each is a line `VERB COUNT`, then COUNT
  * fields, each a line holding its byte length and then its bytes and a
@@ -12,13 +12,16 @@
  *   decide BASE QUESTION TEXT         -> thinkthen_decide
  *   expired BASE QUESTION TEXT        -> thinkthen_decide_opts, budget 0
  *   cancelled BASE QUESTION TEXT      -> thinkthen_decide_opts, fired token
+ *   retryable BASE QUESTION TEXT      -> thinkthen_decide, then the code and
+ *                                        thinkthen_error_retryable as "CODE RETRYABLE"
  *   many BASE QUESTION TEXT...        -> thinkthen_decide_many
  *   recognize BASE SPEC TEXT          -> thinkthen_recognize
  *   relate BASE SPEC RECORD...        -> thinkthen_relate
  *
  * Each request but `env` prints a line `CODE LENGTH`, then LENGTH bytes and
  * a newline: the answer when CODE is 0, where a judgment is `OUTCOME
- * PROBABILITY`, or else the engine's message.
+ * PROBABILITY`, or else the engine's message. When no engine builds, the
+ * reply is the null engine's code and message.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -92,6 +95,13 @@ static void answer(thinkthen_engine *tt, const char *verb, size_t count) {
             judged(&one, 1);
             return;
         }
+    } else if (strcmp(verb, "retryable") == 0) {
+        thinkthen_answer one;
+        char line[32];
+        rc = thinkthen_decide(tt, fields[1], fields[2], lengths[2], &one);
+        int used = snprintf(line, sizeof line, "%d %d", rc, thinkthen_error_retryable(tt));
+        said(THINKTHEN_OK, line, (size_t)used);
+        return;
     } else if (strcmp(verb, "many") == 0) {
         static thinkthen_answer many[MOST];
         rc = thinkthen_decide_many(tt, fields[1], rest, &lengths[2], count - 2, many);
@@ -137,11 +147,13 @@ int main(void) {
             base = strdup(fields[0]);
             setenv("THINKTHEN_BASE_URL", base, 1);
             tt = thinkthen_engine_new();
-            if (tt == NULL) {
-                fail("no engine came");
-            }
         }
-        answer(tt, verb, count);
+        if (tt == NULL) {
+            const char *message = thinkthen_error_message(NULL);
+            said(thinkthen_error_code(NULL), message, strlen(message));
+        } else {
+            answer(tt, verb, count);
+        }
         fflush(stdout);
         for (size_t place = 0; place < count; place++) {
             free(fields[place]);

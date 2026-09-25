@@ -4,7 +4,10 @@
 
 ```sh
 cargo build --release
-cc -std=c11 -I include examples/slide.c -L target/release -lthinkthen_c -o slide
+mkdir -p lib
+cp target/release/libthinkthen_c.so lib/libthinkthen.so
+ln -sf libthinkthen.so lib/libthinkthen.so.0
+cc -std=c11 -I include examples/slide.c -L lib -lthinkthen -Wl,-rpath,"$PWD/lib" -o slide
 ```
 
 A release renames the built files `libthinkthen.so` and `libthinkthen.a`, with the soname `libthinkthen.so.0`. `thinkthen_engine_new` reads `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, and `THINKTHEN_CACHE` as the command does.

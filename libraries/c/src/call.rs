@@ -3,7 +3,7 @@
 //! A request names one verb of ten and up to five envelope keys. Every other
 //! key forms the question object, which the public `from_json` readers
 //! validate, so the door holds no question grammar of its own. Each answer
-//! is the bare value the command prints, and `tests/door.rs` holds the
+//! is the bare value the command prints, and `tests/door/` holds the
 //! writer to the command's bytes on the shared cases.
 
 use std::collections::BTreeMap;
@@ -14,7 +14,7 @@ use thinkthen::{
     CallOptions, CancelToken, Engine, Judgment, LoadedQuestion, Question, QuestionSet,
 };
 
-use crate::door::{self, MOST_RELATED};
+use crate::door;
 use crate::failures::Failure;
 
 const VERBS: [&str; 10] = [
@@ -172,13 +172,8 @@ fn answer(engine: &Engine, request: &Request, options: CallOptions<'_>) -> Resul
             let records = member(request, "records", |raw| {
                 serde_json::from_str::<Vec<Box<RawValue>>>(raw)
             })?;
-            if records.len() > MOST_RELATED {
-                return Err(Failure::usage("relate takes at most 255 records"));
-            }
-            let entities = records
-                .iter()
-                .map(|record| door::entity(record.get()))
-                .collect::<Result<_, _>>()?;
+            let records: Vec<&str> = records.iter().map(|record| record.get()).collect();
+            let entities = door::entities(&records)?;
             door::relate(engine, &object(&request.question)?, entities, options)
         }
     }

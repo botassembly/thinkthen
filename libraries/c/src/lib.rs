@@ -19,3 +19,20 @@ pub mod ffi;
 mod call;
 mod door;
 mod failures;
+
+use failures::Held;
+
+/// The header's `thinkthen_answer`: the outcome code, then the probability
+/// of yes. Two fixed fields, never a third.
+#[repr(C)]
+#[derive(Debug)]
+pub struct Judgment {
+    /// `THINKTHEN_YES`, `THINKTHEN_NO`, or `THINKTHEN_UNSURE`.
+    pub outcome: i32,
+    /// The probability the backend gave the yes side.
+    pub probability: f64,
+}
+
+/// The header's opaque `thinkthen_engine`: one engine and its failure table.
+#[derive(Debug)]
+pub struct Door(Held);

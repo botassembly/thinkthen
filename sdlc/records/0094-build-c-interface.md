@@ -46,8 +46,29 @@ The first R2-7 plant stayed green. The old `atexit.c` failed only after teardown
 
 Sizes: `src/` is 1,142 nonblank lines and `build.rs` 11, 1,153 in all. rustfmt's wrapping added most of the growth over the earlier 1,082. The unit test module in `failures.rs` holds 55 of those lines, so production code without it is 1,098, under the 1,100 budget by 2. `call.rs` is 248 lines, under 350. `ratchet.json` holds 2,067 and `ratchet.c.json` 664, the measured totals.
 
+## Code review fixes, 2026-09-25
+
+A fresh review of `9dae61b8` found no memory-safety bug and no leak. It returned eleven findings. Finding 1, the churn run, stays with the coordinator. The rest are fixed:
+
+- A failed `thinkthen_engine_new` now keeps its failure in a per-thread slot, reached only through `try_with`. With a null engine, `thinkthen_error_code`, `_message`, and `_retryable` read that slot, and they keep their old answers when it is empty. A built engine clears the slot. The header names the local kind for an unreadable cache or configuration, and its failure rule gains one sentence. Shared case `22-local-fault` now runs through the door and returns `THINKTHEN_ELOCAL`. The driver prints a null engine's code and message in place of stopping.
+- `ffi.rs` fell from 517 to 439 nonblank lines. One `plain!` macro writes the five plain spellings. One `typed` helper holds the shared shape of the four typed `_opts` bodies. `door::capped` and `door::entities` hold relate's 255 cap and its record mapping for both doors. The C `Judgment` and `Door` types moved to `lib.rs`, and `outs` moved to `door.rs`.
+- The test-only `entries` method left `failures.rs`. The unit test reads the table directly.
+- The fork child asks about new text, and the sanitizer test pins the backend count at 2.
+- A new driver row prints the retry signal after a failure. The 503 arm pins `2 1`, and the 401 arm pins `2 0`.
+- `run()` in `tests/door/main.rs` fails when the key appears on standard output or standard error.
+- The collision plant, the library renamed to `thinkthen`, did not turn the old check red. `cargo build` never warns about that collision; only `cargo doc` does, and a stale `libthinkthen_c.so` from an earlier build hid the rename. The archive now copies the files that the build reports under the target name `thinkthen_c`. With the plant, the soname test fails with "the build reported the door's library under its own name".
+- The README's build line now uses the soname layout that `check.sh` uses.
+- Comments now say `try_with`, "the calling thread's", and `tests/door/`.
+- Each unsafe block has a `// SAFETY:` line, and `held`, `string`, `text`, `texts`, `hand_over`, and `typed` each have a `# Safety` section.
+
+The sizes after the review:
+
+- `ffi.rs`: 439 nonblank lines.
+- Production code in `src/` plus `build.rs`: 1,160 lines, or 1,097 without the unit test module in `failures.rs`.
+- Ratchets: `ratchet.json` holds 2,119, and `ratchet.c.json` holds 678.
+
 ## Not done
 
 - Churn (R7-1, G3): not run. `probes/c-churn/churn.c` is committed. The runner planned for it runs 8 at a time under the heavy lock. The tag's library build was queued and then stopped at the wrap-up request, so no count exists on either side. Ian ruled on 2026-09-24 that the churn probe is a one-time measurement. 0094 runs the C-door churn once to close R7-1, only when the load is low and under the heavy lock. It never runs in the ladder, `check.sh`, or a review.
 - The ladder has not run. The integration step runs it once for all surfaces.
-- No code review.
+- Code review: findings 2 through 11 fixed as above; the re-review is pending.

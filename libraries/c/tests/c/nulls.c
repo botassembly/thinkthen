@@ -2,7 +2,7 @@
  * The header's argument rules, one row per pointer (DESIGN.md section 4).
  *
  * Each row checks the return, the recorded code, the exact message, and
- * that the out parameters kept what they held. `tests/door.rs` also counts
+ * that the out parameters kept what they held. `tests/door/` also counts
  * the loopback backend's requests after this program and expects none,
  * because every refusal comes before the engine sends.
  */

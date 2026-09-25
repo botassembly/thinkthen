@@ -32,7 +32,9 @@
  * what it held before the call, and `thinkthen_error_code`,
  * `thinkthen_error_message`, and `thinkthen_error_retryable` name the
  * failure. Nothing partial is delivered: a cancelled or deadline-expired
- * bulk call returns its code with no rows.
+ * bulk call returns its code with no rows. With a null engine, the three
+ * name the calling thread's last failed `thinkthen_engine_new` until that
+ * thread's next engine builds.
  *
  * Version 0.1.0 freezes the symbol names, the `thinkthen_answer` layout,
  * the argument types (exact-width `size_t` lengths and counts, `int64_t`
@@ -114,8 +116,9 @@ typedef struct thinkthen_answer {
  * THINKTHEN_BASE_URL for the address, THINKTHEN_API_KEY for the key,
  * THINKTHEN_CACHE for the cache folder, and otherwise the XDG cache home
  * and the XDG configuration file. Building sends nothing. Returns NULL
- * when the environment settings are invalid or the process cannot hold
- * an engine at all. */
+ * when the environment settings are invalid (THINKTHEN_EUSAGE) or the
+ * cache folder or configuration file cannot be read (THINKTHEN_ELOCAL);
+ * the error functions called with NULL then name that failure. */
 thinkthen_engine *thinkthen_engine_new(void);
 
 /* Free an engine. NULL is accepted and ignored. Free it only after every
@@ -126,20 +129,23 @@ void thinkthen_engine_free(thinkthen_engine *engine);
  * engine, valid until that thread records its next failure; another
  * thread's calls never replace it. A deadline's message names the limit
  * and its value. Never NULL: before any failure it names that nothing
- * failed yet, and with a null engine it names that no engine came. */
+ * failed yet. With a null engine it is the calling thread's last failed
+ * build's message, valid until that thread's next `thinkthen_engine_new`,
+ * or else it names that no engine came. */
 const char *thinkthen_error_message(const thinkthen_engine *engine);
 
 /* Whether the same call could pass later: 1 for a backend status the
  * engine retries, such as busy or failing; 0 for a transport failure,
  * which may already have reached the backend, for a refused key, and for
- * every kind but the backend kind. Zero when nothing failed and zero with
- * a null engine. */
+ * every kind but the backend kind. Zero when nothing failed. With a null
+ * engine it follows the calling thread's last failed build, else zero. */
 int thinkthen_error_retryable(const thinkthen_engine *engine);
 
-/* The code of the last failure on this engine: the value the failing call
- * returned, THINKTHEN_OK when nothing failed yet. Success does not clear
- * it, so read it when a call fails. With a null engine it is
- * THINKTHEN_EUSAGE, because no engine holds a failure. */
+/* The code of the calling thread's last failure on this engine: the value
+ * the failing call returned, THINKTHEN_OK when nothing failed yet. Success
+ * does not clear it, so read it when a call fails. With a null engine it
+ * is the calling thread's last failed build's code, else THINKTHEN_EUSAGE,
+ * because no engine holds a failure. */
 int thinkthen_error_code(const thinkthen_engine *engine);
 
 /* Create a cancel token. */
