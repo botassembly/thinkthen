@@ -9,7 +9,7 @@ Branch `ticket/0110-port-duckdb-surface`. Built on Beelink on 2026-09-25 with th
 - `tools/`: `harness.py`, `verbs_suite.py`, `settings_suite.py`, `signal_suite.py`, `conformance.py`, `site_examples.py`, `source_checks.py`, `selftests.sh`, `setup.sh`, `version.env`, and `requirements.txt`. That is 11 files, under the ticket's 16.
 - `deny.toml`, the root copy plus one exception for `zlib-rs`.
 - `README.md`, a new `NOTES.md`, the first part of the ADR 0038 amendment, the planning page's wrapper paragraph, the site-example issue, and the query-hook issue moved from the tag with an update.
-- `sdlc/surfaces.txt` moves `databases/duckdb` to landed.
+- `sdlc/surfaces.txt` stays main's copy, with `databases/duckdb` planned. The landing sets the registry line.
 
 ## Deviations from the ticket
 
@@ -24,9 +24,10 @@ Branch `ticket/0110-port-duckdb-surface`. Built on Beelink on 2026-09-25 with th
 ## Results
 
 - `check.sh` passes at `d45a8cc4`, the head with every review fix: fmt, clippy with `-D warnings`, the unit tests, both builds, the source checks, deny and its plant, the stock CLI call, every suite, conformance, the site examples, and the selftests. It prints 50 `ok` lines. The site-example check runs 8 drawn blocks and names 2 closed divergences.
-- Ratchets: `src` holds 2176 non-blank Rust lines and `tools` holds 1116 non-blank Python lines. Each ceiling equals its total. The request total of decision 17 added its check in `src/engines.rs` and one call site in `src/scalars.rs`.
+- Ratchets: `src` holds 2254 non-blank Rust lines and `tools` holds 1349 non-blank Python lines. Each ceiling equals its total. See the re-scores below.
 - Conformance: 49 pass, 0 fail, 5 not run, 54 cases.
 - Owed proofs, added after the first review: R1-15 counts 0 opens of `q.json` under `strace` with access off. R2-18 counts 1 open over 20,000 rows under `SET threads = 1`. R5-21's 10,000 SIGINTs while four threads allocate end with exit 0 well under 60 s. An `@file` read of `/dev/zero` stops at 1 MiB. The secrecy case now covers every verb's refusal on the refuse arm with its `backend` kind pinned, every details member on the generic arm, a usage error, a local error, and an address carrying a password, with more than 0 counted sends.
+- Fork (0096): a parent loads the extension, warms, decides under a total of 10, and forks. The child opens its own database, sets a total of 1, and answers, and its `requests_sent` reads 1. The parent's reads 2 before and after the fork, and the backend counts 3. The parent bounds its wait for the child at 30 s. The test also stands as the proof for the map's build outside its lock. It shows the child uses the parent's map after a fork. It does not fork during a build.
 - Access cases: all 35 cache cases agree with DuckDB's `COPY … TO`, and all 35 `@file` cases agree with `read_text`. Each refused cache case sent nothing and created nothing in the case folders. The check reads folder listings, not `strace`.
 - SIGINT: a held batch of 64 texts at throttle 8 and a single held `thinkthen_details` each read `cancelled` within 100 ms, and the count stayed put after release. 50 stop-then-answer rounds, 50 signals between queries, and 20 chained signals all pass.
 - The volatile test uses `EXPLAIN`, with a count of 0.
@@ -54,13 +55,14 @@ Each plant changed one or two lines, rebuilt the extension, and ran its one case
 | Read the file on every call | `r1_15_and_r2_18_file_opens_under_strace` | 10 opens for 1 |
 | Open the file with `std::fs`, past the caller's settings | `r1_15_and_r2_18_file_opens_under_strace` | the refused read answered |
 | `Mutex::lock` in the handler | `source_checks.py` | R5-21 names `lock` and `Mutex` |
+| The total keeps a spent count a fork inherits | `a_forked_child_answers_from_a_zero_total` | the child read the spent-total sentence under a total of 1 |
 | Annotate spends two requests per text | `an_annotate_set_spends_one_request_per_text` | 1 send for 2 |
 | No cap on an `@file` read | `an_atfile_read_stops_at_one_mib` | the 30 s timeout fired |
 | The total checked only at the engine call | `a_negative_request_total_refuses_before_the_map` | a NULL row answered |
 | Install without `SA_SIGINFO` | `r3_13_an_siginfo_host_handler_gets_the_number_and_sender` | a garbage sender id |
 | Count engine calls only (R6-6) | `r6_6_a_chained_host_handler_sees_every_signal` | green: see below |
 
-The R6-6 plant starts the invoke after the chunk read. It stays green, because a chunk read takes well under the 10 ms window the predicate already honors, and no outside test can land a signal inside it without a test hook. The fix stands, since it is strictly earlier, and this gap is deferred.
+The R6-6 plant starts the invoke after the chunk read. It stays green. A chunk read takes microseconds, and no outside test can land a signal inside a read that short. The fix stands, since it is strictly earlier, and this gap is deferred.
 
 ## Not yet done
 
@@ -74,11 +76,11 @@ Deferred gaps, each with its reason:
 
 The coordinator approved these on 2026-09-25, and Ian can overturn each one.
 
-- Ratchets: `src` rises to 2254 non-blank Rust lines for the split's module headers and imports, the `@file` cap, and the map's build outside its lock. `tools` rises to 1288 non-blank Python lines for the strace, stress, `SA_SIGINFO`, secrecy, `/dev/zero`, and total cases.
+- Files: `src/` holds 14 files against the ticket's budget of 12. The review's splits of `src/ffi.rs` and `src/scalars.rs` added them. The coordinator approved the 14 on 2026-09-25 as queue owner.
+- Ratchets: `src` rises to 2254 non-blank Rust lines for the split's module headers and imports, the `@file` cap, and the map's build outside its lock. `tools` rises to 1288 non-blank Python lines for the strace, stress, `SA_SIGINFO`, secrecy, `/dev/zero`, and total cases. The re-review asked for the fork test, which raises `tools` to 1349. The coordinator has yet to confirm that rise.
 
 ## For the landing agent
 
-- The `surfaces` registry step runs `cargo deny` on this crate with the root `deny.toml`, whose `exceptions = []` refuses `zlib-rs` 0.6.8 (Zlib). The crate's own `deny.toml` carries that one exception under ADR 0047. The step needs the exception in the root file, or it needs to read `databases/duckdb/deny.toml`.
-- `policy.py`'s binding check passes on this crate as it stands. The root workspace already excludes `databases`.
-- `sdlc/surfaces.txt` moves `databases/duckdb` to landed, as the port brief asked.
-- The `zlib-rs` deny exception goes into the root gate change with the other surfaces' changes.
+- The `surfaces` script already reads the binding's own `deny.toml`. This crate's copy is the root file plus one license exception, `{ crate = "zlib-rs", allow = ["Zlib"] }`, for `zlib-rs` 0.6.8 through `flate2` and `zip` in `libduckdb-sys`'s build dependencies. The landing adds its `BINDING_DENY` entry: `"databases/duckdb": [("licenses", "exceptions", [{"crate": "zlib-rs", "allow": ["Zlib"]}])]`.
+- The landing sets `databases/duckdb` to landed in `sdlc/surfaces.txt`. This branch carries main's copy unchanged.
+
