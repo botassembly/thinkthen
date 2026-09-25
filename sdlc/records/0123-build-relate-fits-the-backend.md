@@ -35,7 +35,7 @@ No stop rule was crossed on these numbers.
 
 ## Tests
 
-New file `tests/backend/relate/ceiling.rs`, five tests, all dry runs through the harness spawn. `tests/backend/exchange.rs` gained the body rows of the status table. `tests/backend/refusals/relate.rs` gained the `--either @FILE` row. `tests/relate_edge.rs` pins the cost sentence and the absence of `--jobs`. The four questions are answered in the ticket's Acceptance section. None uses a test-only hook.
+New file `tests/backend/relate/ceiling.rs`, five tests, all dry runs through the harness spawn. A new `tests/backend/status_reason.rs` holds the 400 body table. `tests/backend/exchange.rs` is unchanged from main. `tests/backend/refusals/relate.rs` gained the `--either @FILE` row. `tests/relate_edge.rs` pins the cost sentence and the absence of `--jobs`. The four questions are answered in the ticket's Acceptance section. None uses a test-only hook.
 
 ## Planted faults
 
@@ -49,16 +49,22 @@ Each fault was planted in the source, the named test ran, and the file was resto
 | 4 | One question over the ceiling is refused | `one_question_over_the_ceiling_goes_alone_and_is_not_refused` | red |
 | 5 | Each chunk keeps one question fewer than the longest fit | `the_splitter_keeps_the_longest_fitting_prefix_the_old_loop_chose` | red |
 | 6 | Chunks grow one question at a time, the old loop's cost | `a_full_line_set_plans_inside_the_child_deadline` | red, killed at the 60 s child deadline |
-| 7 | The 400 body is never read | `common_request_statuses_name_fixed_actions_and_hide_the_body` | red |
+| 7 | The 400 body is never read | `a_400_names_only_the_known_reason_from_a_bounded_body` | red |
 | 8 | Any `error_type` counts | same | red |
 | 9 | The body is read up to the 1 MiB reply bound | same | red |
 | 10 | `--either @FILE` returns the grammar sentence | `no_refusal_on_any_command_writes_the_key_quotes_the_evidence_or_sends_anything` | red |
 | 11 | `mut_arg` dropped | `help_names_the_beta_complete_set_and_secrecy_contract` | red |
 | 12 | The cost sentence reworded | same | red |
 
+## A part budget crossed
+
+The ticket put the 400 rows in `tests/backend/exchange.rs` with a budget of 30 lines. The rows took 21 there, but `exchange.rs` then held 507 nonblank lines and the lint rung's 500-line file ceiling refused it. The rows moved to a new `tests/backend/status_reason.rs`, which spawns `decide` itself. That spawn and the file's header cost 39 lines more than the budget. The move also leaves `exchange.rs` as main has it, so ticket 0127 no longer shares that file. The total stays at 325, under the ticket's 350. The coordinator decides whether to accept the shift. Ian can overturn it.
+
+The three 400 plants ran again against the new file after the move.
+
 ## Lines and the ratchet
 
-Main measured 61,768 nonblank lines at `02dc0b96`. This branch measures 62,054, so the ratchet rises by 286.
+Main measured 61,768 nonblank lines at `02dc0b96`. This branch measures 62,093, so the ratchet rises by 325.
 
 | Part | Budget | Nonblank lines, net |
 | --- | --- | --- |
@@ -67,10 +73,10 @@ Main measured 61,768 nonblank lines at `02dc0b96`. This branch measures 62,054, 
 | The 400 reason: `http.rs` 27, `error.rs` 3, `failure.rs` 3, `failure/status.rs` 2, `convert.rs` 1, `public/error.rs` 1, `check.rs` 0 | 45 | 37 |
 | Wording: `args/command.rs` 7, `relate/config.rs` 2 | 12 | 9 |
 | `tests/backend/relate/ceiling.rs` and its `mod` line | 200 | 158 |
-| `tests/backend/exchange.rs` | 30 | 21 |
+| `tests/backend/status_reason.rs` and its `mod` line, in place of `exchange.rs` | 30 | 60 |
 | `tests/backend/refusals/relate.rs` and `tests/relate_edge.rs` | 20 | 20 |
 | Other call sites (`facade.rs`, `facade/recognize.rs`, `backend_profile.rs`) | none | 1 |
-| Total | 350 | 286 |
+| Total | 350 | 325 |
 
 Where I looked for duplication first: the status phrases in `cli/failure/status.rs` hold one new constant and no copy. `core/backend_profile.rs` lost `permits_split`, and its new `limits_request_bytes` replaces it line for line. `checked_body` now serves both the single request and the splitter, which removed the old `prepare_chunk` copy of the encode-and-check lines. The relate test helpers in `tests/backend/relate.rs` send to a listener with a key, so the dry-run tests keep their own small `plan` helper.
 
