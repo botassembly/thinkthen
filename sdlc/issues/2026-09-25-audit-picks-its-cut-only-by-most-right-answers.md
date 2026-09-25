@@ -22,15 +22,25 @@ The bench example shows the gap. The question is "It appears on the album Abbey 
 
 audit suggests 0.85 because that bar gets the most right. F1 picks 0.75, which catches all seven. A user who cannot miss one needs 0.75, and audit never names it.
 
+The four scores pick three different bars on this data:
+
+| Score | Best value | Bar | Formula |
+| --- | --- | --- | --- |
+| accuracy | 94% | 0.85 | right answers / all answers |
+| precision | 100% | 0.95 | right yeses / all yeses |
+| recall | 100% | 0.75 | real yeses caught / all real yeses |
+| F1 | 74% | 0.73 | 2 × precision × recall / (precision + recall) |
+
 ## Asks
 
-1. `audit --optimize accuracy|f1|recall|precision` sets what the suggested cut serves. `accuracy` stays the default.
-   - `accuracy`: the bar with the most right answers.
-   - `f1`: the bar with the best F1. F1 weighs misses and wrong yeses together.
-   - `recall`: the highest bar whose recall reaches `--target`. With a target of 1, that bar misses no real yes. The Abbey Road example gives 0.75.
-   - `precision`: the lowest bar whose precision reaches `--target`. With a target of 0.9, nine in ten yeses are right.
-   - The highest and lowest rule matters. Recall alone is perfect at a bar of 0, and precision alone is perfect near 1. The target turns each into a useful choice. Ties break as the spec breaks them today.
-2. `--target` already sets the agreement a `choose` cut must reach. It takes the recall or precision floor for `decide` too, with a default of 0.9. With no bar that reaches the target, the cut is null, as for `choose`.
-3. The count object adds `precision` and `f1` beside `yes_recall`, and `--table` prints them.
+Ian's design of 2026-09-25.
+
+1. `audit --optimize accuracy|precision|recall|f1` sets the score the suggested cut maximizes. `accuracy` stays the default.
+2. Each score's top is usually shared by a run of bars. Tie rules make each pick useful:
+   - recall takes the highest bar with the top recall. A bar of 0 also reaches 100%, but it says yes to everything.
+   - precision takes the lowest bar with the top precision.
+   - accuracy and F1 keep the spec's rule today: nearest to 0.5, then the smaller bar.
+3. The count object adds `precision` and `f1` beside `yes_recall`, and `--table` prints all four scores at the suggested cut.
+4. An optional `--all` prints the suggested cut for each of the four scores in one run. The talk's audit slide draws those four lines on one table.
 
 The suggested object already names its `objective`, so the output shape holds. Ian can overturn all three.
