@@ -205,6 +205,9 @@ pub(crate) enum Command {
     Relate(RelateArguments),
 
     /// Inspect and maintain answer-cache folders without sending a request.
+    ///
+    /// The cache never trims itself. It grows until you run cache prune, and
+    /// it holds the judged text until then.
     #[command(display_order = 1004)]
     Cache(CacheArguments),
 
@@ -253,7 +256,7 @@ pub(crate) struct CacheArguments {
 
 #[derive(Debug, Subcommand)]
 pub(crate) enum CacheCommand {
-    /// Remove selected entries, then the oldest entries above the size target.
+    /// Remove selected entries, then the oldest entries until the folder fits the size target.
     Prune(PruneArguments),
 }
 
@@ -261,13 +264,16 @@ pub(crate) enum CacheCommand {
 pub(crate) struct PruneArguments {
     /// The cache or recording folder to maintain.
     pub(crate) directory: PathBuf,
-    /// Keep recognized entries at or below this many allocated bytes.
+    /// Trim to this many allocated bytes. Without it, the configuration's
+    /// cache_bytes applies, or 100000000.
     #[arg(long, value_name = "BYTES")]
     pub(crate) max_size: Option<String>,
     /// Remove entries strictly older than a duration such as 30d or 12h.
     #[arg(long, value_name = "Nd|Nh|Nm|Ns")]
     pub(crate) older_than: Option<String>,
-    /// Remove entries answered by any other model.
+    /// Remove entries whose reply names another model. Give the version that
+    /// answered, as a result's meta.model shows it, not the alias passed to
+    /// --model. A name no reply carries removes every entry.
     #[arg(long, value_name = "MODEL")]
     pub(crate) answered_by_other_than: Option<String>,
 }
