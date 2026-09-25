@@ -19,6 +19,7 @@ ASK = "SELECT thinkthen_decide('Is it a refund?', 'refund now')"
 PROBE_REFUSAL = "thinkthen usage: the cache folder is outside what this database's file settings allow"
 SHAPE = "thinkthen usage: a cache folder set from SQL is an absolute local path with no scheme"
 THROTTLE = "thinkthen usage: a throttle is a whole number from 1 through 32"
+SPENT = "thinkthen usage: this process has spent its request total of 3; raise SET thinkthen_max_requests_total or RESET it"
 
 
 @case
@@ -55,9 +56,9 @@ def the_process_request_total_holds_across_calls():
     with Backend() as backend:
         ten = "SELECT thinkthen_decide('Is it a refund?', 'refund ' || i) FROM range(10) t(i)"
         got = run(["SET thinkthen_max_requests_total = 3", ten, ASK], backend.base())
-        expect(said(got[1]), "thinkthen usage: this engine answers at most 3 records in one call", "ten rows under a total of 3")
+        expect(said(got[1]), SPENT, "ten rows under a total of 3")
         expect(backend.count(), 3, "counted sends")
-        expect(said(got[2]), "thinkthen usage: this process has spent its request total of 3; raise SET thinkthen_max_requests_total or RESET it", "the next call")
+        expect(said(got[2]), SPENT, "the next call")
         expect(backend.count(), 3, "counted sends after the refusal")
 
 

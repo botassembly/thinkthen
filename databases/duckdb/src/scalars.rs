@@ -251,9 +251,13 @@ pub(crate) fn run(
             });
             groups.answer(|(argument, listed, due), texts| {
                 let (set, due) = (members(kind, argument, listed)?, *due);
-                let records = on_worker(invoke, &engine, &asked, move |engine, token| {
-                    annotated(engine, &set, texts, token, due)
-                })?;
+                let records = on_worker(
+                    invoke,
+                    &engine,
+                    &asked,
+                    texts,
+                    move |engine, texts, token| annotated(engine, &set, texts, token, due),
+                )?;
                 records.iter().map(member).collect()
             })
         }
@@ -263,9 +267,15 @@ pub(crate) fn run(
             });
             groups.answer(|kinds, texts| {
                 let ask = recognize_kinds(kinds)?;
-                on_worker(invoke, &engine, &asked, move |engine, token| {
-                    recognized(engine, &ask, texts, token, None, entities)
-                })
+                on_worker(
+                    invoke,
+                    &engine,
+                    &asked,
+                    texts,
+                    move |engine, texts, token| {
+                        recognized(engine, &ask, texts, token, None, entities)
+                    },
+                )
             })
         }
     }
@@ -285,7 +295,7 @@ fn asked_once(
     match verb {
         Verb::Annotate => {
             let set = caller.set(argument)?;
-            let records = on_worker(invoke, engine, asked, move |engine, token| {
+            let records = on_worker(invoke, engine, asked, texts, move |engine, texts, token| {
                 annotated(engine, &set, texts, token, due)
             })?;
             Ok(records
@@ -295,36 +305,39 @@ fn asked_once(
         }
         Verb::Relations => {
             let ask = caller.recognize(argument)?;
-            on_worker(invoke, engine, asked, move |engine, token| {
+            on_worker(invoke, engine, asked, texts, move |engine, texts, token| {
                 recognized(engine, &ask, texts, token, due, relations)
             })
         }
         Verb::Details => {
             let question = caller.question(argument)?;
-            on_worker(invoke, engine, asked, move |engine, token| {
+            on_worker(invoke, engine, asked, texts, move |engine, texts, token| {
                 detailed(engine, &question, &texts, token, due)
             })
         }
         _ => {
             let question = caller.question(argument)?;
             let probability = verb == Verb::Probability;
-            on_worker(invoke, engine, asked, move |engine, token| {
+            on_worker(invoke, engine, asked, texts, move |engine, texts, token| {
                 decided(engine, &question, texts, token, due, probability)
             })
         }
     }
 }
 
-/// One engine call on a detachable worker, on the engine the process's
-/// request total leaves this call.
+/// One engine call over `texts` on a detachable worker, within what the
+/// process's request total leaves.
 fn on_worker<T: Send + 'static>(
     invoke: &Invoke,
     engine: &Arc<Engine>,
     asked: &Asked,
-    work: impl FnOnce(&Engine, &CancelToken) -> Result<T, Error> + Send + 'static,
+    texts: Vec<String>,
+    work: impl FnOnce(&Engine, Vec<String>, &CancelToken) -> Result<T, Error> + Send + 'static,
 ) -> Result<T, String> {
-    let engine = engines::for_call(engine, asked)?;
-    worker::run(invoke, move |token| work(&engine, token))
+    let (texts, cut) = engines::within_total(asked, texts)?;
+    let engine = Arc::clone(engine);
+    let answered = worker::run(invoke, move |token| work(&engine, texts, token))?;
+    cut.map_or(Ok(answered), Err)
 }
 
 /// The controls one call carries: its token and its deadline in milliseconds.
