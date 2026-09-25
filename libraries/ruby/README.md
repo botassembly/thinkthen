@@ -1,67 +1,31 @@
 # The Ruby surface
 
-The eight verbs as module methods on `ThinkThen`, over the one engine
-through the contract. The acceptance sample, drawn in
-the product deck's surfaces page,
-runs as drawn through `tests/slide_sample.rb`:
+The `thinkthen` gem: the engine's verbs as module methods on `ThinkThen`, over the public `thinkthen` Rust API through a magnus extension. The deck's slide runs as drawn through `tests/slide_sample.rb`.
 
 ```ruby
 require "thinkthen"
 
 upset = ThinkThen.filter("Is this a complaint?", reviews)
 urgent = ThinkThen.rank("Is this urgent?", inbox, top: 5)
-ThinkThen.score("How urgent is this?", outage, levels: [...])
+ThinkThen.score("How urgent is this?", outage, levels: ["Routine.", "Soon.", "Immediate."])
 ```
 
-`nil` is "not sure". A `Range` threshold is the band. Any `Enumerable`
-crosses into the engine once and runs at the process width: the width is
-the number of requests in flight, and each in-flight request holds its own
-connection — 1,000 records at width 32 measured 33 pooled connections. The
-bulk spelling is `decide_many`. Every failure is a `ThinkThen::Error`: the
-six kind classes — `UsageError`, `BackendError`, `DeadlineError`,
-`LocalError`, `CancelledError`, `DefectError` — inherit it, each carrying
-`kind` and `retryable`, and the wrapper's own refusals raise
-`UsageError`. A record or an evidence text that is not a `String` crosses
-as its JSON text. The interrupt shape: every call runs on its own thread
-while the calling Ruby thread waits in slices with the VM lock released.
-Between slices MRI runs the host's interrupts: Ctrl-C, `Thread#raise`,
-`Thread#kill`, and a raising trap fire the call's own cancel token, sent
-requests finish, no new one starts, and the raise surfaces when they
-have. A spurious `Thread#wakeup` and a trapped signal that raises
-nothing cancel nothing, and an interrupt never fires a token the caller
-shared. The call's thread blocks asynchronous signals, so a signal never
-interrupts a send and a paid request is never sent twice. The proofs are
-`tests/test_interrupt_fast.rb`, `tests/test_harmless_wakeups.rb`,
-`tests/test_interrupt_wire.rb`, and `tests/test_signal_no_resend.rb`. A
-bulk call can also run a tick about ten times a second on the watchdog
-thread, and a raise inside the tick cancels the engine; the proof is
-`tests/test_cancel.rb`.
+The module methods use one engine built on first use from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, and the rest that the command reads. `ThinkThen::Engine.new(base_url:, model:, throttle:, max_requests:, cache:, cache_bytes:)` builds another. Each omitted keyword comes from the environment. `cache: false` turns the cache off. There is no key keyword, and the key never enters a Ruby object.
 
-## Question helpers, and the names the check allows
+## The verbs
 
-Beyond the fourteen ruled functions, the module carries exactly these
-documented helpers, and `scripts/check_public_names.py` fails the tree on
-any other public name. `check.sh` runs it over the loaded module, so a
-name the native half defines counts too:
+`decide`, `decide_many`, `decide_many_with_probabilities`, `filter`, `rank`, `find`, `choose`, `score`, `score_with_level`, `tag`, `details`, `annotate`, `recognize`, `relate`, and `usage`. `ThinkThen.question(**keywords)` builds a question from the question file's keys, and a `Range` threshold is the band. `ThinkThen.set(path)` loads a question set, and `ThinkThen.set(name: spec, ...)` builds one. `nil` means unsure.
 
-- `ThinkThen.question(**keywords)` and `ThinkThen.set(path)` build the same
-  question value from keywords and from a question file, and
-  `ThinkThen.built(value)` wraps a question already built.
-- `ThinkThen.with_tick(&tick)` runs a block about ten times a second on
-  the watchdog thread, for a host that wants progress or its own stop gesture during
-  a long bulk call; a raise inside the tick cancels the call as the section
-  above says. It is optional: a bulk call already hears a real
-  `Thread#raise`, Ctrl-C, and `Thread#kill` without one.
-- `ThinkThen.score_with_level(question, evidence, levels:)` and
-  `ThinkThen.decide_many_with_probabilities(question, records)` are the
-  level-carrying and probability-carrying forms the slide check and the
-  conformance runner read; the plain verbs return the bare answers.
-- `ThinkThen::Error` is the base of the six kind classes,
-  `ThinkThen::Cancel` is the token the `cancel:` keyword takes,
-  `ThinkThen::Question` and `ThinkThen::QuestionSet` are the values
-  `question` and `set` return, and `ThinkThen::VERSION` is the gem version.
+A record that is not a `String` crosses as its JSON text. `nil`, invalid UTF-8, and a NUL byte refuse with `UsageError` naming the index, before any request. Every failure is a `ThinkThen::Error`. Its six kind classes are `UsageError`, `BackendError`, `LocalError`, `CancelledError`, `DeadlineError`, and `DefectError`, and each carries `kind` and `retryable`.
 
-Ruby is not installed on this machine; `./build.sh` and `./check.sh` run
-everything inside the `ruby:3.4-trixie` container (removed after each
-run) with the image's own pinned Rust toolchain. The gem builds from
-`thinkthen.gemspec` and is never published.
+## Stopping a call
+
+Every call runs on its own worker thread while the calling Ruby thread waits in 50 ms slices with the VM lock released. Ctrl-C raises `CancelledError` with the `Interrupt` as its cause. `Thread#raise`, `Thread#kill`, and a raising trap stop the call and pass through unchanged. `cancel:` takes a `ThinkThen::Cancel`, and `deadline:` takes seconds. Each stop returns within one slice. Requests already sent finish on the detached worker, and no new request starts. `with_tick { ... }` runs a block about ten times a second during the thread's calls, and a raise inside it stops the call with that error.
+
+## The throttle is per loaded copy
+
+The throttle is the limit on requests in flight at once. It holds per loaded copy of the engine. A process that loads this gem and another surface's native package can run up to twice the throttle (ADR 0047 item 5).
+
+## Building and checking
+
+`setup-ruby.sh` builds the pinned Ruby 3.4.11 once per machine, with the network, into `~/.cache/thinkthen-toolchains/ruby/3.4.11`. `toolchain.env` pins both source archives by hash. `build.sh` builds the extension and the gem offline with that Ruby. `check.sh` is this surface's entry in the surface rung. It runs the file checks, the toolchain probe, the build, Clippy, the Rust unit tests, each Ruby test file, the conformance runner, the examples, the gem check, and the slide. Each test starts its own loopback backend and runs its calls in a scrubbed child with a fake key. Without the pinned prefix, `check.sh` prints "not run" and exits 77. The gem is never published.

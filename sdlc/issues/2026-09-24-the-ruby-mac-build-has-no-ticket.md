@@ -13,3 +13,5 @@ The release ticket carries these Ruby pieces:
 - One recorded Mac run of the Ruby check.
 
 Found by the design review of 0112 (`sdlc/records/0112-design-review.md`, finding 1).
+
+Ticket 0112 ran nothing on a Mac. Its `check.sh` exits 77 on any host other than Linux.
