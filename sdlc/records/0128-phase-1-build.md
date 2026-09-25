@@ -1,0 +1,105 @@
+# 0128 Phase 1 build: versions, installer, time limit, and workflow checks
+
+Builder: Claude (Opus subagent), 2026-09-25, on `ticket/0128-release-and-install` from the accepted ticket at `b8cf0076`. The build commit is `130c30ae`. `origin/main` at `0c38769e` merged cleanly at `45253335` before the final run. Ian can overturn every decision below. Phases 2 to 4 each wait for their own go-ahead. This build took no outward step: no workflow dispatch, no tag, and no GitHub setting.
+
+## Outcome
+
+Phase 1 is built on Linux, and every rung passes on the merged head. A version check reads 46 places and can set them all. A download script passes 32 edge cases under dash and bash. One time-limit helper replaces GNU `timeout` in every surface check. `surfaces --release` fails a "not run". A workflow check holds both workflows to dispatch-only runs and pinned code. Every package carries its publish metadata. The R package builds outside the repository against the packed crate. The six community files exist. The dry bump to 0.1.0 passes the ladder with the held Rust test edits applied.
+
+## Ian's rulings folded in
+
+The coordinator relayed Ian's 2026-09-25 rulings during the build.
+
+- `CITATION.cff` and the gemspec list Ian Maurer as the only author.
+- `CODE_OF_CONDUCT.md` names Ian as its only contact, and conduct reports go to GitHub issues. The build adds no other community file or channel. `SECURITY.md` still points to GitHub's private vulnerability reporting, as item 13 says. Ian can overturn that and send security reports to issues too.
+- One package per language, plus the download script. No per-platform npm packages. This matches decision 6.
+- Visibility and going live are Ian's calls. The go-public recommendation and the cost estimate left the ticket.
+- Ian's one-time steps now sit in the ticket's one "Ian's setup list" section.
+
+## What each item built
+
+1. `sdlc/scripts/versions` reads 46 places at 0.0.1. It finds binding manifests through `sdlc/surfaces.txt` and lock entries through `lock_versions` over every tracked `Cargo.lock`. `--tag` and `--set` work. Its self-test holds 9 cases. `lint` runs the self-test and the check.
+2. Version-free tests: **held.** Ticket 0119 is not on main, so item 4 holds the Rust test edits. The five edits sit ready as a script and run in the dry bump below. The PostgreSQL half landed: `check.sh` reads `EXT_VERSION` from `thinkthen.control` for the shipped SQL name and the update-path plant.
+3. The dry bump: see its section below.
+4. The Rust test exception: held, as item 2 says.
+5. Publish metadata on the crate, `pyproject.toml`, `package.json`, the gemspec, and `DESCRIPTION`. The TypeScript loader picks `thinkthen-<platform>-<arch>.node`, and any other pair gets the pinned refusal "thinkthen: no native addon for <pair>; this package ships linux-x64, linux-arm64, darwin-x64, and darwin-arm64". `check.sh` tests that refusal and the four-name pack list. `publish = false` and `"private": true` stay until Phase 4 step 3.
+6. R's published shape in `tools/config.R`. `libraries/r/check.sh` gains a step that builds a copy of the package outside the repository. It uses `cargo package`'s copy of the crate through `[patch.crates-io]` in a private `CARGO_HOME` with `CARGO_NET_OFFLINE=true`. It then asserts the rewritten dependency line and answers one question through the loopback backend.
+7. and 8. `install.sh` and its byte-identical site copy, with `THINKTHEN_INSTALL_BASE` and `THINKTHEN_INSTALL_API`. `sdlc/scripts/installer-test` runs 16 edge rows under dash and bash, 32 cases, against a loopback fake GitHub. `lint` runs it.
+9. `sdlc/scripts/verdict.sh` and `surfaces --release`. The registry self-test pins the six lines over 0, 77, and 1 in both modes.
+10. `sdlc/scripts/time-limit` replaces all sixteen `timeout` calls. The registry self-test pins a passed-through exit code and a timeout that leaves no process alive.
+11. The first-run sample: see "Deviations".
+12. The README: **held** until ticket 0126 lands, per the coordinator.
+13. The six community files.
+14. The site's lines: held until Phase 4 step 3, per the ticket.
+15. `gate.yml` installs the public API tool, its nightly, and PyYAML from the install rung's pins.
+16. `pages.yml` runs by dispatch alone, and every action is pinned to a commit.
+17. `sdlc/scripts/workflows` with a 14-case self-test, including a planted `release.yml`. `lint` runs both.
+
+## Deviations
+
+- **The first-run sample reuses demo 27.** Item 11 asked for a new `examples/first-run/`. `demos/27-test-with-no-network` already holds one input, `report.txt`, and a one-entry recording that answers `thinkthen decide 'Does this report say what the person did before the problem appeared?' --replay … < report.txt` with `true`. A copy would duplicate it, so Phase 2 packs the release file from the demo. Ian can overturn this and ask for the separate folder.
+- **time-limit kills a process group.** Item 10 said "kills it by process id". A kill by process id leaves the command's children alive, and those children hold the output pipe open. perl's `setpgrp` gives the command its own group, so one kill reaches everything it started. perl also restores the interrupt and quit signals, which POSIX `sh` ignores in a background command. Without that restore, the Ruby Ctrl-C test timed out in the first run.
+- **gate.yml reads only `PUBLIC_API_TOOLCHAIN`.** The nightly Quick Fix landed on main before this build, so the fallback for the older pin name was dropped.
+- **Two binding ratchets rose.** `libraries/typescript/ratchet.js.json` rose by 7 for the loader's platform pick and refusal. `libraries/r/ratchet.R.json` rose by 17 for the published shape. `sdlc/ratchet.json` did not move.
+
+## Budgets
+
+Nonblank lines.
+
+| Budget | Limit | Measured |
+|---|---|---|
+| `sdlc/scripts/versions` | 140 | **157** |
+| `databases/postgresql/check.sh` version lines | 6 changed | 5 |
+| `loader.js` | 20 | 10 added |
+| `tools/config.R` | 30 added | 18 |
+| `install.sh` | 260 | 176 |
+| `sdlc/scripts/installer-test` | 200 | 190 |
+| `sdlc/scripts/time-limit` | 25 | 23 |
+| The sixteen `timeout` calls | 24 changed | 16 call lines, plus 5 `LIMIT` lines and their 5 comments |
+| `surfaces` and `verdict.sh` | 30 added | **34** (25 and 9; 28 net of the 6 lines removed) |
+| `sdlc/scripts/workflows` | 170 | **202** |
+| `gate.yml` | 15 added | 11 |
+| `pages.yml` | 15 changed | 13 |
+| The six community files | 220 | 52 |
+| The `surfaces` rung | +2 minutes | Not measured on a warm build. Run3's rung took about 19 minutes, lock wait included. Run1's took about 18 minutes, before the R step's first success |
+
+Three budgets were crossed. The coordinator accepted all three on 2026-09-25, because each carries a self-test or a planted fixture that a rung runs. `versions` carries a 9-case self-test with the full output pinned. `workflows` carries a 42-line planted `release.yml` for its 14-case self-test. The `surfaces` overage is the release-rule table and the time-limit self-test. Each file was trimmed first: headers shortened, a shared package-name helper, the three C version rows folded into one, and the pre-Quick-Fix nightly branch dropped.
+
+## Plants
+
+Each plant ran, went red, was restored, and had its file touched.
+
+| Plant | Result |
+|---|---|
+| `install.sh` without the checksum comparison | `installer-test` 30/32: the wrong-checksum row installed under dash and bash |
+| `versions` without the `version.rb` row | self-test 8/9: the `ruby` case failed |
+| `workflows` accepting a tag pin | self-test 13/14: the `tag-pin` case failed |
+| `verdict` passing 77 in release mode | `surfaces --registry` exit 1: "the release rule printed" |
+| `time-limit` without the group kills | `surfaces --registry` exit 1: "time-limit returned 3 and 124, or left a process alive" |
+| R's published shape off (`.published_shape <- FALSE`), on the scratch branch | `libraries/r/check.sh` exit 1: the outside build failed to read `/tmp/crates/thinkthen/Cargo.toml` |
+| The dry bump without the `recordings.rs` edit | `meta_holds_the_url_the_model_the_usage_and_the_cached_flag` fails at `recordings.rs:234`: the row reads "thinkthen 0.1.0", and the test pins 0.0.1 on line 224 |
+
+The two `time-limit` and `verdict` plants ran again on the trimmed files, with the same results.
+
+## Rungs
+
+On the merged head `45253335`, run once each through the rungs' own lock: install, lint, test, spec, and surfaces all exit 0. Lint prints "versions self-test: 9/9 cases hold", "versions: 46 places read 0.0.1", "workflows self-test: 14/14 cases hold", and "installer-test: 32/32 cases hold under dash and bash". Every landed surface passes: rust, polars, c, python, typescript, ruby, r, duckdb, sqlite, and postgresql. Every ratchet was re-measured after the merge and holds. `sdlc/ratchet.json` stays at 61764.
+
+The first run, on the unmerged tree, failed two surfaces. Ruby's Ctrl-C test timed out, because time-limit's command inherited an ignored interrupt signal. time-limit now restores it. R's outside step built from `git archive HEAD`, which did not hold the uncommitted `config.R`. It passed once committed, and the patch moved into a private `CARGO_HOME`, as the ticket says.
+
+## The dry bump
+
+Local branch `scratch/0128-dry-bump` never lands and is not pushed. It ran `versions --set 0.1.0`, which rewrote 37 files, and applied the held Rust test edits. Then it ran the whole ladder.
+
+1. `lint` failed on `cargo fmt --check`. The `exchange.rs` edit sits inside a `format!` call, and rustfmt splits it over three lines. Fix: the held edit script now writes the formatted form.
+2. `lint` then failed on the ratchet: 61766 against 61764. The three-line form adds 2 Rust lines. The coordinator accepted the rise, and the ticket's deferred gaps now say so.
+3. One `test` run failed a SIGINT test in `cli::interrupt`. The builder had started that run with a shell `&`, so the ladder inherited an ignored interrupt signal. The same run without `&` passed. No product fault.
+4. `test`, `spec`, and `surfaces` then exit 0 at 0.1.0, with every surface passing.
+
+No other test pinned the version.
+
+## Held
+
+- README edits, until ticket 0126 lands.
+- The Rust test version edits, item 2's four tests and the fixture, until ticket 0119 lands. The edit script lives outside the repository. The dry bump proved it at 0.1.0.
+- The site's tap, "Coming with 0.1", and uninstall lines, until Phase 4 step 3.

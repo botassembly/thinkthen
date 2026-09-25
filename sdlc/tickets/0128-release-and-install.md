@@ -365,7 +365,7 @@ Contract 2; state and timing 2; reach 3; proof 2; cost of error 3; total 12. Fin
 - Keeps: The gate run by hand and `gate.yml` dispatch only. Every surface's current check and its source build. The plain `surfaces` rung's "not run" line. The version 0.0.1 on main until Phase 4 step 3. Every Rust source file outside the four tests Phase 1 item 2 names. The key rules: no job reads `THINKTHEN_API_KEY` and no gate calls the network. `publish = false` on every binding crate. The R repository and tarball shapes.
 - Changes: One version check with `--set`, one download script, one time-limit helper, one packer, one smoke, one workflow check, and one dispatch-only release workflow. `gate.yml` installs the public API tool and its nightly. `pages.yml` loses its push trigger and pins its actions. `surfaces --release` counts "not run" as a failure. Each `check.sh` can test an installed file. DuckDB, PostgreSQL, and Ruby build on macOS. R builds against the published crate outside the repository. Every package gains its publish metadata. The README gains install, key, exit-code, and badge rows, and six community files appear. The tap moves to `botassembly`. `crates/thinkthen` drops `publish = false` in the 0.1.0 commit.
 - Proof: The ten rows of "Acceptance". Six self-tests and the host smoke run from rungs, each with a planted fault. The recorded dry bump, container proof, and first rehearsal. The public install checks of Phase 4 step 8.
-- Defers: Windows. `cargo-dist`. The Rust Polars feature move, which ticket 0130 owns. CRAN, DuckDB community extensions, PostgreSQL packages beyond 16, per-platform npm packages, a PyPI source distribution, macOS signing, and provenance attestations. The docs-issue items: VHS, the skill file, `llms.txt`, and the broken-link check.
+- Defers: Windows. `cargo-dist`. The Rust Polars feature move, which ticket 0130 owns. CRAN, DuckDB community extensions, PostgreSQL packages beyond 16, per-platform npm packages, a PyPI source distribution, macOS signing, and provenance attestations. The docs-issue items: VHS, the skill file, `llms.txt`, and the broken-link check. The held Rust test edits of Phase 1 item 2 raise the Rust ceiling by 2 when they land after ticket 0119. Whoever lands them re-measures with `sdlc/scripts/ratchet.mjs`.
 
 ## Closes
 
@@ -373,7 +373,7 @@ On landing Phase 4: `sdlc/issues/2026-09-25-release-and-install-for-0-1.md`. Stu
 
 ## What Ian can overturn
 
-Every decision above. The ones most worth his look: no PyPI source distribution (7), the sample as its own release file (8), R against the published crate (10), and leaving the Rust Polars move to ticket 0130 (15).
+Every decision above. The ones most worth his look: no PyPI source distribution (7), the sample as its own release file (8), R against the published crate (10), and leaving the Rust Polars move to ticket 0130 (15). `SECURITY.md` keeps GitHub's private vulnerability reporting, which stays on GitHub.
 
 ## Review
 
