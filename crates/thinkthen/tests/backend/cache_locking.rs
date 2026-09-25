@@ -382,9 +382,13 @@ fn a_failed_owner_keeps_the_empty_lock_name_and_a_waiter_sends_nothing() {
         observed.recv_timeout(Duration::from_secs(2)),
         Ok(Observed::Request)
     ));
-    let mut permissions = fs::metadata(&cache).expect("cache metadata").permissions();
-    permissions.set_mode(0o500);
-    fs::set_permissions(&cache, permissions).expect("cache made read only");
+    // A directory at the entry stops the install even for root; mode 0500 does not.
+    let lock = fs::read_dir(cache.join(".locks"))
+        .expect("lock folder")
+        .find_map(Result::ok)
+        .expect("owner lock");
+    let entry = cache.join(lock.file_name()).with_extension("json");
+    fs::create_dir(&entry).expect("entry path blocked");
     let waiter = thread::spawn({
         let base = listener.base().to_owned();
         let named = named.clone();
@@ -397,9 +401,6 @@ fn a_failed_owner_keeps_the_empty_lock_name_and_a_waiter_sends_nothing() {
     owner.join().expect("owner joins");
     assert_eq!(failed.status.code(), Some(5));
     assert!(observed.recv_timeout(Duration::from_millis(300)).is_err());
-    let mut permissions = fs::metadata(&cache).expect("cache metadata").permissions();
-    permissions.set_mode(0o700);
-    fs::set_permissions(&cache, permissions).expect("cache made writable");
     let refused = waiter.join().expect("waiter joins");
 
     assert_eq!(refused.status.code(), Some(5));
