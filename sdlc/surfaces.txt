@@ -10,6 +10,6 @@ libraries/python      landed
 libraries/typescript  landed
 libraries/ruby        landed
 libraries/r           landed  thinkthen/src/rust
-databases/duckdb      planned
+databases/duckdb      landed
 databases/sqlite      landed
 databases/postgresql  landed

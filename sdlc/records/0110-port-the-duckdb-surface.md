@@ -77,7 +77,7 @@ Deferred gaps, each with its reason:
 The coordinator approved these on 2026-09-25, and Ian can overturn each one.
 
 - Files: `src/` holds 14 files against the ticket's budget of 12. The review's splits of `src/ffi.rs` and `src/scalars.rs` added them. The coordinator approved the 14 on 2026-09-25 as queue owner.
-- Ratchets: `src` rises to 2254 non-blank Rust lines for the split's module headers and imports, the `@file` cap, and the map's build outside its lock. `tools` rises to 1288 non-blank Python lines for the strace, stress, `SA_SIGINFO`, secrecy, `/dev/zero`, and total cases. The re-review asked for the fork test, which raises `tools` to 1349. The coordinator has yet to confirm that rise.
+- Ratchets: `src` rises to 2254 non-blank Rust lines for the split's module headers and imports, the `@file` cap, and the map's build outside its lock. `tools` rises to 1288 non-blank Python lines for the strace, stress, `SA_SIGINFO`, secrecy, `/dev/zero`, and total cases. The re-review asked for the fork test, which raises `tools` to 1349. The coordinator confirmed that rise from 1288 to 1349 on 2026-09-25 as queue owner, for the 61-line fork test. Ian can overturn it.
 
 ## For the landing agent
 
