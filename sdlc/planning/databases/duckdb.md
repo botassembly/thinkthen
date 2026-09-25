@@ -23,7 +23,7 @@ SELECT id, a.* FROM (
 ## Goals
 
 - `INSTALL thinkthen FROM community` on every platform DuckDB's CI builds and signs. The version pin and its cost: the current Rust path builds only against the unstable C API at a pinned DuckDB version, so the host CLI and the extension must move together; a v1.1.3 host cannot load a current build, and v1.5.5 is the floor today. `USE_UNSTABLE_C_API=1` is not optional on that path (207).
-- The whole chunk of 2,048 rows crosses into the engine once and runs at the width the engine names.
+- The whole chunk of 2,048 rows crosses into the engine once and runs at the throttle the engine names.
 - Repeated text in one chunk costs one judgment. The shim groups the chunk by the pair of question and text, and writes the one answer into every row holding that pair.
 - A bad question or a bad threshold fails before any paid request. The bind-time check is dropped for the first release: the scalar-bind accessors are broken on the stable C API, and the first-row parse already fails before any request, measured at zero requests (207). Rule 4 stays the aspiration, with this experiment as the citation.
 - `thinkthen_annotate` returns a real `STRUCT`, so `a.*` expands into typed columns. `thinkthen_tag` returns a real `LIST`.
@@ -41,14 +41,14 @@ SELECT id, a.* FROM (
 
 - **A call per row.** DuckDB hands a scalar function a chunk of up to 2,048 rows. The shim reads the whole chunk into one engine call and writes the answers back into the output vector. A per-row loop pays the crossing 2,048 times and judges in series.
 - **A repeated value judged again.** DuckDB has constant vectors and dictionary vectors, and C++ reads the vector type and the unified vector format without flattening. The stable C extension API exposes neither. It hands out the data pointer, the validity mask, and the logical type, and no call names the storage form. Grouping the chunk by value in the shim buys the same saving: a constant column becomes one judgment and a dictionary column one judgment for each distinct value. The cost is a hash of each string.
-- **A chunk is the ceiling on one call.** 2,048 rows bound how much work one `invoke` starts. The C API could gather more through a table function or an aggregate. It supports both, with bind, init, and local init on the table function. `duckdb-rs` wires up neither, and whether a larger batch beats a chunk is unchecked.
-- **Threads.** DuckDB is one process with many threads. The `threads` setting names how many call the function at once, and it defaults to the core count. The engine's gate is one process-wide width, not one batch width: 207 measured 100 concurrent single-row calls arriving 85 wide on 101 connections under a per-batch gate, and the process gate of ADR 0017 section 2 closes that.
+- **A chunk is the ceiling on one call.** 2,048 rows bound how much work one `invoke` starts. The C API could gather more through a table function or an aggregate. It supports both, with bind, init, and local init on the table function. The port registers the aggregate `thinkthen_warm` through it, and whether a larger batch beats a chunk is unchecked.
+- **Threads.** DuckDB is one process with many threads. The `threads` setting names how many call the function at once, and it defaults to the core count. The engine's gate is one process-wide throttle, not one batch throttle: 207 measured 100 concurrent single-row calls arriving 85 wide on 101 connections under a per-batch gate, and the process gate of ADR 0017 section 2 closes that.
 - **The same call in `WHERE` and in `SELECT`.** `colliber/duckdb-jev` warns that the query asks twice and does not fix it. Whether DuckDB folds the two appearances is unchecked. The engine's cache is keyed by the whole request and answers the second for free.
 - **The volatile marking.** Rule 8 marks the function volatile, and `duckdb_scalar_function_set_volatile()` is the C call. DuckDB issue 13238 constant-folded the first result of a volatile function that took no arguments, and pull request 13241 closed it in version 1.1.0. Every function here takes arguments, so the bug should not reach them.
 
 ## How little code
 
-**`duckdb-rs` with the `vscalar` feature, laid out like `duckdb/extension-template-rs`.** `vscalar` stays: the Arrow path through `vscalar-arrow` measured the same at 10,000 rows and adds the `arrow` feature to the build for nothing measured (207). The template builds on the stable C extension API, and the community build expects it. The template's README calls itself experimental, and C++ is still DuckDB's main path.
+**The raw C API through `libduckdb-sys`, with no wrapper crate.** Ticket 0110 (2026-09-25) replaced `duckdb-rs` and its `vscalar` feature. Every scalar needs an init callback, which reads the caller's client context and file system, and `VScalar` registers none. The usage table and the warm aggregate already went through the raw C API. The `duckdb` crate's `arrow` and `hashlink` trees leave with it. Experiment 207's choice of `vscalar` stands as history.
 
 The shim holds the signatures, the question parse, the key lookup, chunk conversion in and out, grouping by value, `STRUCT` and `LIST` construction, NULL handling, and the mapping from an engine failure to a DuckDB error. Rule 1 keeps everything else in the engine. The line ceiling for this surface is about 400 code lines for the provable functions, 748 with the mechanisms the page itself demands (207).
 
@@ -56,7 +56,7 @@ Two gaps sit in the Rust binding rather than in DuckDB. The `VScalar` trait requ
 
 ## Tests only this surface needs
 
-- A 2,048-row chunk shows the stub's highest in-flight count near the engine's width and a wall near one round of the stub's delay.
+- A 2,048-row chunk shows the stub's highest in-flight count near the engine's throttle and a wall near one round of the stub's delay.
 - A chunk holding one distinct text leaves one request on the stub. A chunk holding 64 distinct texts leaves 64.
 - The same call in `WHERE` and in `SELECT` leaves one request on the stub's counter.
 - A bad threshold in a constant question fails with zero requests.
@@ -65,6 +65,10 @@ Two gaps sit in the Rust binding rather than in DuckDB. The `VScalar` trait requ
 - A `NULL` text returns `NULL` with no request. A backend failure raises an error rather than `NULL`.
 - `a.*` over `thinkthen_annotate` gives one typed column per question.
 - Test shapes force evaluation: `count(*)` over a subquery projection elided the volatile call entirely, zero requests observed, so the count tests use shapes that cannot elide (207).
+
+## Relate on the caller's database, 2026-09-25
+
+Ticket 0118 ports `thinkthen_relate(query, rules)` onto the public API under ADR 0038. The query runs as one read-only `SELECT` on a connection LOAD opened on the caller's database, found through a random probe database and never through a name. It reads at most 255 rows, runs under `SET thinkthen_relate_seconds`, and passes a plan-size guard first. A Ctrl-C reaches the running query through a bridge thread and the engine call through the worker. The row cap is stricter than the engine's unique-pair cap. Temporary tables and the caller's open transaction stay out of sight, as the stable C API bounds them. The README's relate section pins each sentence, and `sdlc/records/0118-relate-on-the-callers-duckdb-database.md` holds the proof.
 
 ## Open questions for the ADR
 
@@ -75,7 +79,7 @@ Two gaps sit in the Rust binding rather than in DuckDB. The `VScalar` trait requ
 5. Answered by 207: the key stays in the environment. No secret call and no setting registration exist on this API, and a `SET` puts the key in SQL text anyway.
 6. Answered on 2026-09-21, in the Python section below and `experiments/207-thinkthen-db/duckdb/NOTES.md`: Ctrl-C stops the query inside one round, DuckDB Python surfaces its own `Query interrupted`, and a host handler survives with the worker-thread-plus-`thinkthen_cancel` shape.
 7. Does the extension ship signed through the community repository first, or unsigned from its own releases while the pull request waits?
-8. Answered by 207 and ADR 0017 pick 10: `thinkthen_warm` exists, costs little, buys nothing on distinct data and 4x on repeats when the cache is absent, and stays for the shared name on all three databases. DuckDB's chunk already carries the width.
+8. Answered by 207 and ADR 0017 pick 10: `thinkthen_warm` exists, costs little, buys nothing on distinct data and 4x on repeats when the cache is absent, and stays for the shared name on all three databases. DuckDB's chunk already carries the throttle.
 
 ## Ctrl-C inside a Python process, 2026-09-21
 
