@@ -110,6 +110,6 @@ The filed recommendation was 1 first and 2 if users ask.
 
 ## Timing
 
-- Ticket 0113 (`ticket/0113-audit-command`) is reviewed and holds the prototype port for `decide` and `choose`. Whether it lands first and one follow-on ticket builds this issue, or 0113 grows, is the owner's call.
-- Either way, everything here ships in 0.1. The Beatles Bench goldens stay the definition of today's behavior. New behavior gets new goldens.
+- Tickets 0113 (audit) and 0114 (diff) landed on main with the prototype's `decide` and `choose` grading. A new ticket builds this issue on top of them.
+- Everything here ships in 0.1. The Beatles Bench goldens stay the definition of today's behavior. New behavior gets new goldens.
 - Ian can overturn any design point above. The ruling that audit is complete in 0.1 is his.
