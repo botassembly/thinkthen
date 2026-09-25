@@ -3,9 +3,8 @@
 //! and `thinkthen_cache_bytes` (ticket 0109 decision 2), and the process
 //! request total `thinkthen_max_requests_total` (decision 17).
 
-use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::{LazyLock, Mutex, MutexGuard, OnceLock, PoisonError};
+use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 
 use rusqlite::functions::Context;
 use rusqlite::types::ValueRef;
@@ -72,57 +71,34 @@ pub(crate) fn engine() -> Result<&'static Engine, Failure> {
     Ok(ENGINE.get_or_init(|| built))
 }
 
-/// Engines built with a smaller request limit, keyed by that limit. A key
-/// is a remaining total below one warm flush, so at most 255 exist.
-static LIMITED: LazyLock<Mutex<HashMap<usize, &'static Engine>>> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
-
-fn limited() -> MutexGuard<'static, HashMap<usize, &'static Engine>> {
-    LIMITED.lock().unwrap_or_else(PoisonError::into_inner)
+/// The engine when one is built, for `thinkthen_usage`, which builds none.
+pub(crate) fn built() -> Option<&'static Engine> {
+    ENGINE.get()
 }
 
-/// Every engine built in this process, for `thinkthen_usage`, which builds none.
-pub(crate) fn built() -> Vec<&'static Engine> {
-    ENGINE
-        .get()
-        .into_iter()
-        .chain(limited().values().copied())
-        .collect()
+/// What remains of the process request total (decision 17), or `None` with
+/// no total. A spent total refuses before any send.
+pub(crate) fn remaining() -> Result<Option<usize>, Failure> {
+    let Some(total) = stored().total else {
+        return Ok(None);
+    };
+    let sent = built().map_or(0, |engine| engine.usage().requests_sent());
+    match total.saturating_sub(sent) {
+        0 => Err(spent(total)),
+        left => Ok(Some(usize::try_from(left).unwrap_or(usize::MAX))),
+    }
 }
 
-/// The engine for one call of `records` records under the process total
-/// (decision 17). The requests every engine here has sent are summed first.
-/// A spent total refuses before any send. Otherwise the call's limit is the
-/// smaller of the remaining total and `thinkthen_max_requests`, so the total
-/// holds to within one call's retries.
-pub(crate) fn engine_for(records: usize) -> Result<&'static Engine, Failure> {
-    let main = engine()?;
-    let (total, most) = {
-        let held = stored();
-        (held.total, held.max_requests.flatten())
-    };
-    let Some(total) = total else {
-        return Ok(main);
-    };
-    let sent: u64 = built().iter().map(|one| one.usage().requests_sent()).sum();
-    let remaining = usize::try_from(total.saturating_sub(sent)).unwrap_or(usize::MAX);
-    if remaining == 0 {
-        return Err(Failure::usage(format!(
-            "this process has sent its total of {total} requests (thinkthen_max_requests_total)"
-        )));
-    }
-    if remaining >= records || most.is_some_and(|most| most <= remaining) {
-        return Ok(main);
-    }
-    let mut engines = limited();
-    if let Some(engine) = engines.get(&remaining) {
-        return Ok(engine);
-    }
-    let builder = stored().apply(EngineBuilder::from_env()?)?;
-    let engine: &'static Engine =
-        Box::leak(Box::new(builder.max_requests(Some(remaining))?.build()?));
-    engines.insert(remaining, engine);
-    Ok(engine)
+/// The refusal once the process request total is spent.
+pub(crate) fn spent(total: u64) -> Failure {
+    Failure::usage(format!(
+        "this process has sent its total of {total} requests (thinkthen_max_requests_total)"
+    ))
+}
+
+/// The process request total, when one is set.
+pub(crate) fn total() -> Option<u64> {
+    stored().total
 }
 
 /// Check one setting against a fresh builder, then store it.

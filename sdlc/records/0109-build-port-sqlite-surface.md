@@ -65,6 +65,9 @@ Each plant was applied to the source, rebuilt, and run against its test. Every o
 | R6-9 | the same watcher | the grandchild's call is not cancelled |
 | decision 17 | the total checked only at the engine build | a 10-row `WHERE` under a total of 3 answers every row |
 | decision 17 | the same plant | a 150-row warm flush with 100 remaining judges all 150 |
+
+After the code review of `9034aaab` the total moved to one `settings::remaining()` check and a cut warm flush. Both decision 17 plants were run again against that design, and both turned red.
+
 | R3-30 | the runner skips one case | the counts sum to 53 of 54 |
 | R5-32 | a mismatch reported as not run | the planted-failure test fails |
 
@@ -79,11 +82,10 @@ With the watcher planted, the single-call cancel test stays green. Only the fork
 - `sdlc/scripts/surfaces --registry` runs `cargo deny` with the root `deny.toml` for each landed binding. With this surface landed, `lint` fails on `foldhash` until that call uses `$surface/deny.toml` when present. The ticket's lint check comparing the two deny files is also not written. The port's brief forbade ladder-script changes, so both wait for the landing agent.
 - The full ladder was not run, as the brief directed.
 - Ian ruled on 2026-09-25 for a process request total. Decision 17 adds `thinkthen_max_requests_total`, and the issue now records the ruling and the bound as built.
-- `thinkthen_max_requests` caps one engine call, and each scalar row is its own call, so it caps nothing on a large statement. The README and ADR 0047 say so. Ian decides the fix in `sdlc/issues/2026-09-25-sqlite-max-requests-caps-nothing-per-statement.md`.
 
 ## Budget
 
-- Production Rust: 1,476 nonblank lines in seven files, each under 500. Unit tests: 158. `ratchet.json` holds 1,634. Decision 17 added 88 lines for the total. The review fix shared one file-error rule between `question.rs` and `tables.rs`.
+- Production Rust: 1,449 nonblank lines in seven files, each under 500. Unit tests: 158. `ratchet.json` holds 1,607. Decision 17 added 61 lines for the total. The review fix shared one file-error rule between `question.rs` and `tables.rs`.
 - Python: 947 lines in eight test files and the helper. The runner and its planted-failure test: 225. `ratchet.py.json` holds 1,172. The review fixes added the file-kind sentences, the settings in the secrecy test, the thread-count poll, and the not-run report. `ratchet.sql.json` holds 18.
 - Scripts: 99 nonblank lines. Documentation: 89 nonblank lines added.
 - No change under `crates/thinkthen`, no backend arm, and no dependency beyond the ticket's list.

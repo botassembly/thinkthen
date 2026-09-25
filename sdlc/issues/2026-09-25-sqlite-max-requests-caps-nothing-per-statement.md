@@ -20,10 +20,12 @@ A cap per process, in this exact form. Each database surface adds a total settin
 
 ## The bound as built
 
-- A scalar row or a warm flush can pass the total only by that call's retries. The engine retries a failed send twice (`max_retries: 2`), so one call can add at most two sends per record past its limit.
+- On one thread, a scalar row or a warm flush can pass the total only by that call's retries. The engine retries a failed send twice (`max_retries: 2`), so one call can add at most two sends per record past its limit.
 - A `thinkthen_recognize` or `thinkthen_relate` call counts as one record but may send several requests. It can pass the total by that call's own requests and their retries.
 - A forked child starts again from zero. A probe on ticket 0109 measured it: the parent sent 1 under a total of 2, and the child still sent 2.
 - A spent total refuses every later call, even one the cache could answer.
+- Calls running at the same time can each spend what remains, so the total can be exceeded by one call per thread in flight, plus retries.
+- The public API has no per-call request limit. The SQLite binding therefore cuts a warm flush to the remaining total and then refuses, rather than passing the remaining total as `max_requests`.
 
 ## The recommendation as filed
 

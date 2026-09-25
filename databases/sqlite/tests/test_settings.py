@@ -115,7 +115,7 @@ db.execute("CREATE TABLE t(body TEXT)")
 db.executemany("INSERT INTO t VALUES (?)", [(f"row {at}",) for at in range(150)])
 say(spent=spent, warm=run(db, "SELECT thinkthen_warm('Is it red?', body) FROM t"), next=run(db, "SELECT thinkthen_decide('Is it red?', 'door 0')"))
 """, environment(backend))
-    expect(held, {"spent": [[[1]]] * 3, "warm": "thinkthen usage: this engine answers at most 100 records in one call",
+    expect(held, {"spent": [[[1]]] * 3, "warm": SPENT.format(103),
                   "next": SPENT.format(103)}, "the calls: a spent total refuses even a cached answer")
     expect(backend.close(), 103, "sends")
 

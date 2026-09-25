@@ -22,7 +22,7 @@ The tag's `NOTES.md` stays at `surfaces-wave7-frozen-2026-09-24b` as history. Th
 
 ## Measurements
 
-- Production Rust: 1,476 nonblank lines in seven files. Unit tests: 158 lines.
+- Production Rust: 1,449 nonblank lines in seven files. Unit tests: 158 lines.
 - Python: 947 lines in eight test files and the helper. The conformance runner and its planted-failure test: 225 lines.
 - Scripts: `check.sh`, `setup.sh`, and `tests/host_sqlite.sh` hold 99 nonblank lines.
 - Conformance: 38 pass, 0 FAIL, 16 not run, 54 of 54.

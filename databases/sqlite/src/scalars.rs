@@ -207,8 +207,8 @@ fn usage(context: &Context<'_>) -> rusqlite::Result<String> {
                 "thinkthen_usage takes no arguments; the counters are cumulative, so subtract two snapshots"
             }));
         }
-        let totals: Vec<_> = settings::built().iter().map(|one| one.usage()).collect();
-        let read = |field: fn(&thinkthen::Counters) -> u64| totals.iter().map(field).sum::<u64>();
+        let totals = settings::built().map(thinkthen::Engine::usage);
+        let read = |field: fn(&thinkthen::Counters) -> u64| totals.as_ref().map_or(0, field);
         Ok(format!(
             r#"{{"requests_sent":{},"cache_answers":{},"input_tokens":{},"output_tokens":{}}}"#,
             read(thinkthen::Counters::requests_sent),
@@ -277,25 +277,30 @@ impl WarmState {
     }
 }
 
-/// Judge one chunk on a worker, one send per text the cache lacks.
-fn flush(context: &Context<'_>, (held, texts): Flush) -> Result<i64, Failure> {
+/// Judge one chunk on a worker, one send per text the cache lacks. Under a
+/// process request total the chunk is cut to what remains, and once that
+/// part is judged the call refuses with the total's sentence (decision 17).
+fn flush(context: &Context<'_>, (held, mut texts): Flush) -> Result<i64, Failure> {
+    let left = settings::remaining()?;
+    let cut = left.is_some_and(|left| left < texts.len());
+    if let Some(left) = left {
+        texts.truncate(left);
+    }
     let count =
         i64::try_from(texts.len()).map_err(|_| Failure::defect("a warm chunk is too long"))?;
     if count == 0 {
         return Ok(0);
     }
-    let records = texts.len();
-    worker::run_many(
-        ffi::handle_of(context),
-        None,
-        records,
-        move |engine, options| {
-            for row in engine.decide_many_with(plain(&held)?, texts, options) {
-                row?;
-            }
-            Ok(count)
-        },
-    )
+    worker::run(ffi::handle_of(context), None, move |engine, options| {
+        for row in engine.decide_many_with(plain(&held)?, texts, options) {
+            row?;
+        }
+        Ok(count)
+    })?;
+    match settings::total() {
+        Some(total) if cut => Err(settings::spent(total)),
+        _ => Ok(count),
+    }
 }
 
 /// Warm's question: decide only, any other kind named to `thinkthen_decide`.

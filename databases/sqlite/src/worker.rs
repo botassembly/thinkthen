@@ -25,23 +25,14 @@ const TICK: Duration = Duration::from_millis(50);
 /// Run `work` on a detached worker over the process engine, under the call's
 /// deadline in milliseconds, while this thread listens on `db` for SQLite's
 /// interrupt.
+/// A spent process request total refuses first, with no send.
 pub(crate) fn run<T: Send + 'static>(
     db: *mut sqlite3,
     deadline: Option<i64>,
     work: impl FnOnce(&'static Engine, CallOptions<'_>) -> Result<T, Failure> + Send + 'static,
 ) -> Result<T, Failure> {
-    run_many(db, deadline, 1, work)
-}
-
-/// As [`run`], for a call over `records` records, which the process
-/// request total may limit.
-pub(crate) fn run_many<T: Send + 'static>(
-    db: *mut sqlite3,
-    deadline: Option<i64>,
-    records: usize,
-    work: impl FnOnce(&'static Engine, CallOptions<'_>) -> Result<T, Failure> + Send + 'static,
-) -> Result<T, Failure> {
-    let engine = settings::engine_for(records)?;
+    let engine = settings::engine()?;
+    settings::remaining()?;
     let token = CancelToken::new();
     let theirs = token.clone();
     let (answers, _detached) = spawn(move || {
