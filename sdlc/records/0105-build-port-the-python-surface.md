@@ -38,7 +38,7 @@ After the first code review, `only()` checks the question's kind and then its cu
 | `check.sh` and `build-wheel.sh` | 220 | 106 |
 | Documentation, net | 260 | about 115 |
 
-`ratchet.json` sets `src` at 1,299 (production and unit tests). `ratchet.py.json` sets `thinkthen` and `tests` at 1,109. The secrecy test grew from 1,082 when the review asked it to cover every verb and the address credentials. The root ceiling does not change. The tag's duplicate code went first: its 1,703-line `lib.rs`, its generator, and its spec readers do not come across. Each block earns its lines as follows: the kind table and guard (`lib.rs`), the worker and tick (`worker.rs`), whole-list reading and the refusals (`input.rs`), the question and result values (`asked.rs`), and the engine settings and verb shapes (`engine.rs`).
+`ratchet.json` sets `src` at 1,299 (production and unit tests). `ratchet.py.json` sets `thinkthen` and `tests` at 1,120. The secrecy test grew from 1,082 when the reviews asked it to cover every verb, the address credentials, and each whole sentence. The root ceiling does not change. The tag's duplicate code went first: its 1,703-line `lib.rs`, its generator, and its spec readers do not come across. Each block earns its lines as follows: the kind table and guard (`lib.rs`), the worker and tick (`worker.rs`), whole-list reading and the refusals (`input.rs`), the question and result values (`asked.rs`), and the engine settings and verb shapes (`engine.rs`).
 
 ## Error-index rows and plants
 
