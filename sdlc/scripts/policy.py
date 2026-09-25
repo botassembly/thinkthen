@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import json
 import pathlib
+import posixpath
 import re
 import subprocess
 import sys
+import tempfile
 import tomllib
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
@@ -22,7 +24,7 @@ ALLOWED_LICENSES = {
     "Unicode-3.0",
     "Unlicense",
 }
-# `csv-core` and `signal-hook` use the already accepted terms. Three more licenses
+# `arc-swap`, `csv-core`, and `signal-hook` use the already accepted terms. Three more licenses
 # arrive with the TLS stack under ureq and with nothing
 # else. Each one is tied to the crates that force it, so the allowance cannot
 # quietly cover a crate that lands later. All three are permissive and carry no
@@ -37,15 +39,18 @@ LICENSE_EXCEPTIONS = {
 }
 ACCEPTED_DEPENDENCIES = {
     "thinkthen": {
-        "clap", "csv-core", "serde", "serde_json", "sha2", "signal-hook", "thiserror", "ureq"
+        "arc-swap", "clap", "csv-core", "serde", "serde_json", "sha2", "signal-hook",
+        "thiserror", "ureq",
     },
     "conformance-backend": {"serde", "serde_json"},
 }
 ACCEPTED_TARGET_DEPENDENCIES = {"thinkthen": {"nix"}, "conformance-backend": set()}
 ACCEPTED_DEV_DEPENDENCIES = {
-    "thinkthen": {"proptest", "conformance-backend"},
+    "thinkthen": {"proptest", "conformance-backend", "signal-hook"},
     "conformance-backend": set(),
 }
+# Ticket 0078: the host signal proofs deliver a signal to one worker thread.
+ACCEPTED_TARGET_DEV_DEPENDENCIES = {"thinkthen": {"nix"}, "conformance-backend": set()}
 # Ticket 0092 rules that a test-only, unpublished member may sit beside the
 # crate: the loopback backend every surface's tests start. It is held to the
 # same lints, license, size, and dependency tables as the crate.
@@ -219,6 +224,10 @@ def check_workspace() -> None:
     workspace = manifest.get("workspace", {})
     if workspace.get("members") != list(MEMBERS.values()):
         fail("workspace", "thinkthen and the conformance backend are the workspace members")
+    if workspace.get("exclude") != ["conformance/consumer", "libraries", "databases"]:
+        fail("workspace", "the consumer and every binding folder are their own workspaces (ADR 0047)")
+    if workspace.get("default-members") != ["crates/thinkthen"]:
+        fail("workspace", "a plain root build compiles thinkthen alone (ADR 0047)")
     if workspace.get("resolver") != "3":
         fail("workspace", "resolver is 3")
     package = workspace.get("package", {})
@@ -257,6 +266,9 @@ def check_member(name: str) -> dict:
         fail("dependencies", f"{name} declares the accepted target dependency set")
     if set(manifest.get("dev-dependencies", {})) != ACCEPTED_DEV_DEPENDENCIES[name]:
         fail("dependencies", f"{name} declares the accepted development dependency set")
+    target_dev = manifest.get("target", {}).get("cfg(unix)", {}).get("dev-dependencies", {})
+    if set(target_dev) != ACCEPTED_TARGET_DEV_DEPENDENCIES[name]:
+        fail("dependencies", f"{name} declares the accepted target development dependency set")
     return manifest
 
 
@@ -266,26 +278,33 @@ def check_crates() -> None:
         fail("dependencies", "the conformance backend declares no feature and no target table")
     manifest = check_member("thinkthen")
     target = manifest.get("target", {}).get("cfg(unix)", {}).get("dependencies", {})
+    # Ticket 0078: engine workers mask host signals, so the library needs nix.
     if target.get("nix") != {
         "version": "0.29",
         "default-features": False,
         "features": ["signal"],
-        "optional": True,
     }:
-        fail("dependencies", "nix is optional on Unix with only its signal feature")
+        fail("dependencies", "nix is a Unix library dependency with only its signal feature")
+    target_dev = manifest.get("target", {}).get("cfg(unix)", {}).get("dev-dependencies", {})
+    if target_dev.get("nix") != {
+        "version": "0.29",
+        "default-features": False,
+        "features": ["pthread", "signal"],
+    }:
+        fail("dependencies", "tests add only the pthread feature to nix")
     optional = {
         dependency for dependency, specification in
         (manifest.get("dependencies", {}) | target).items()
         if isinstance(specification, dict) and specification.get("optional") is True
     }
-    if optional != {"clap", "csv-core", "nix"}:
+    if optional != {"clap", "csv-core", "signal-hook"}:
         fail("dependencies", "exactly the command dependencies are optional")
     binary = manifest.get("bin", [])
     if len(binary) != 1 or binary[0].get("required-features") != ["cli"]:
         fail("workspace", "the binary requires the cli feature")
     features = manifest.get("features", {})
     if features.get("default") != ["cli"] or set(features.get("cli", [])) != {
-        "dep:clap", "dep:csv-core", "dep:nix",
+        "dep:clap", "dep:csv-core", "dep:signal-hook",
     }:
         fail("dependencies", "the default cli feature selects only command dependencies")
 
@@ -293,6 +312,175 @@ def check_crates() -> None:
 def check_clippy_configs() -> None:
     if read_toml("crates/thinkthen/clippy.toml") != accepted_core_clippy():
         fail("clippy-config", "crates/thinkthen/clippy.toml matches the complete accepted copy")
+
+
+def lock_versions(relative: str) -> dict[str, set[str]]:
+    versions: dict[str, set[str]] = {}
+    for package in read_toml(relative).get("package", []):
+        versions.setdefault(package["name"], set()).add(package["version"])
+    return versions
+
+
+def check_consumer() -> None:
+    """Ticket 0086: the external consumer builds against the root's versions and lints."""
+    root, consumer = lock_versions("Cargo.lock"), lock_versions("conformance/consumer/Cargo.lock")
+    for name in sorted(set(consumer) - {"consumer", "fork-probe"}):
+        if not consumer[name] <= root.get(name, set()):
+            fail("consumer", f"conformance/consumer/Cargo.lock pins {name} {sorted(consumer[name])}, "
+                 f"and the root lock pins {sorted(root.get(name, set()))}")
+    workspace = read_toml("conformance/consumer/Cargo.toml").get("workspace", {})
+    lints = read_toml("Cargo.toml").get("workspace", {}).get("lints")
+    if workspace.get("lints") != lints:
+        fail("consumer", "the consumer workspace lint table equals the root table")
+    if read_toml("conformance/consumer/consumer/Cargo.toml").get("lints") != INHERITED:
+        fail("consumer", "the consumer crate inherits the root lint table")
+    probe = read_toml("conformance/consumer/fork-probe/Cargo.toml").get("lints")
+    if lints and probe != {**lints, "rust": {**lints["rust"], "unsafe_code": "deny"}}:
+        fail("consumer", "fork-probe uses the root lint table with unsafe_code denied, not forbidden")
+
+
+# ADR 0047: each binding under `libraries` or `databases` is its own workspace
+# over the public API. Its plants copy the first binding, the Rust examples.
+BINDING_THINKTHEN = {"path": "../../crates/thinkthen", "default-features": False}
+BINDING_PLANT_BASE = "libraries/rust"
+PLANTED_TEST = '#[test]\nfn planted() {\n    eprintln!("skipped");\n    return;\n}\n'
+BINDING_PLANTS = (
+    ("publish = true", "Cargo.toml", lambda text: text.replace("publish = false", "publish = true")),
+    ("default features", "Cargo.toml", lambda text: text.replace(
+        "default-features = false", "default-features = true")),
+    ("dependency on another binding", "Cargo.toml", lambda text: text.replace(
+        "[dependencies]\n", '[dependencies]\nthinkthen-c = { path = "../c" }\n')),
+    ("renamed thinkthen with default features", "Cargo.toml", lambda text: text.replace(
+        "[dev-dependencies]\n", '[dev-dependencies]\nengine = { package = "thinkthen", path = "../../crates/thinkthen" }\n')),
+    ("patch toward another binding", "Cargo.toml", lambda text: text + '\n[patch.crates-io]\nx = { path = "../c" }\n'),
+    ("unsafe outside an FFI module", "src/lib.rs", lambda text: text + "unsafe fn planted() {}\n"),
+    ("overflow-checks = false", "Cargo.toml", lambda text: text.replace(
+        "overflow-checks = true", "overflow-checks = false")),
+    ("second ureq version", "Cargo.lock", lambda text: re.sub(
+        r'(name = "ureq"\nversion = ")[^"]+', r"\g<1>0.0.1", text, count=1)),
+    ("test that prints skipped and returns", "tests/examples.rs", lambda text: text + PLANTED_TEST),
+    ("ignored test", "tests/examples.rs", lambda text: text + "#[test]\n#[ignore]\nfn planted() {}\n"),
+)
+
+
+def binding_files(folder: pathlib.Path) -> dict[str, str]:
+    """One binding's manifest, lock, Clippy settings, and Rust sources, without build output."""
+    names = ["Cargo.toml", "Cargo.lock", "clippy.toml"] + [
+        source.relative_to(folder).as_posix() for source in folder.rglob("*.rs")
+        if "target" not in source.relative_to(folder).parts
+    ]
+    return {name: (folder / name).read_text(encoding="utf-8") for name in names if (folder / name).is_file()}
+
+
+def lock_tree(lock: dict) -> set[tuple[str, str]]:
+    """The name and version of every package in thinkthen's resolved tree.
+
+    The root lock's tree also holds thinkthen's development dependencies, so it
+    is a superset of the normal tree a binding resolves.
+    """
+    packages = lock.get("package", [])
+
+    def named(spec: str) -> list[tuple[str, str]]:
+        name, *version = spec.split()
+        return [(package["name"], package["version"]) for package in packages
+                if package["name"] == name and version[:1] in ([], [package["version"]])]
+
+    reached: set[tuple[str, str]] = set()
+    waiting = named("thinkthen")
+    while waiting:
+        pair = waiting.pop()
+        if pair not in reached:
+            reached.add(pair)
+            package = next(package for package in packages if (package["name"], package["version"]) == pair)
+            waiting += [found for spec in package.get("dependencies", []) for found in named(spec)]
+    return reached
+
+
+def binding_test_failures(relative: str, tokens: list[str]) -> list[str]:
+    """R2-28: no binding test is ignored, and none returns before its first assertion."""
+    held = []
+    for place in range(len(tokens)):
+        attribute = tokens[place:place + 3]
+        if attribute == ["#", "[", "ignore"]:
+            held.append(f"{relative} ignores a test")
+        if attribute != ["#", "[", "test"] or "{" not in tokens[place:]:
+            continue
+        start = tokens.index("{", place)
+        depth, end = 0, start
+        for end in range(start, len(tokens)):
+            depth += {"{": 1, "}": -1}.get(tokens[end], 0)
+            if depth == 0:
+                break
+        body = tokens[start:end]
+        asserted = next((at for at, token in enumerate(body[:-1])
+                         if token.startswith(("assert", "debug_assert")) and body[at + 1] == "!"), len(body))
+        if "return" in body[:asserted]:
+            held.append(f"{relative} has a test that returns before its first assertion")
+    return held
+
+
+def binding_failures(name: str, files: dict[str, str]) -> list[str]:
+    try:
+        manifest = tomllib.loads(files.get("Cargo.toml", ""))
+        lock = tomllib.loads(files.get("Cargo.lock", ""))
+        clippy = tomllib.loads(files.get("clippy.toml", ""))
+    except tomllib.TOMLDecodeError as error:
+        return [f"{name} holds a manifest, lock, and clippy.toml that parse: {error}"]
+    root = read_toml("Cargo.toml").get("workspace", {})
+    lints = root.get("lints", {})
+    package = manifest.get("package", {})
+    held = []
+    if package.get("publish") is not False:
+        held.append(f"{name} sets publish = false")
+    if any(package.get(field) != root.get("package", {}).get(field) for field in ("edition", "rust-version")):
+        held.append(f"{name} uses the root edition and rust-version")
+    # Every table a dependency can hide in: the package, each target, the
+    # workspace's shared table, and each patch source.
+    tables = [manifest, *manifest.get("target", {}).values(), manifest.get("workspace", {}),
+              *({"patch": table} for table in manifest.get("patch", {}).values())]
+    dependencies = [(kind, specification.get("package", dependency) if isinstance(specification, dict)
+                     else dependency, specification) for table in tables
+                    for kind in ("dependencies", "dev-dependencies", "build-dependencies", "patch")
+                    for dependency, specification in table.get(kind, {}).items()]
+    if [(kind, specification) for kind, dependency, specification in dependencies
+            if dependency == "thinkthen"] != [("dependencies", BINDING_THINKTHEN)]:
+        held.append(f"{name} depends on thinkthen once, by path, with default features off")
+    for _, dependency, specification in dependencies:
+        path = specification.get("path") if isinstance(specification, dict) else None
+        reached = posixpath.relpath(posixpath.normpath(posixpath.join(REPO.as_posix(), name, path)),
+                                    REPO.as_posix()) if path else ""
+        if reached.split("/")[0] in ("libraries", "databases") and not f"{reached}/".startswith(f"{name}/"):
+            held.append(f"{name} depends on another binding through {dependency}")
+    if lints and manifest.get("lints") != {**lints, "rust": {**lints["rust"], "unsafe_code": "deny"}}:
+        held.append(f"{name} uses the root lint table with unsafe_code denied, not forbidden")
+    if clippy != ACCEPTED_SHARED_CLIPPY:
+        held.append(f"{name}/clippy.toml matches the shared thresholds and test allowances")
+    if manifest.get("profile", {}).get("release") != ACCEPTED_RELEASE_PROFILE:
+        held.append(f"{name} copies the root release profile")
+    ours, theirs = lock_tree(lock), lock_tree(tomllib.loads((REPO / "Cargo.lock").read_text(encoding="utf-8")))
+    if not ours or ours - theirs:
+        held.append(f"{name}/Cargo.lock resolves thinkthen's tree to the root lock's versions: "
+                    f"{sorted(ours - theirs) or 'thinkthen is absent'}")
+    for relative, text in files.items():
+        if relative.endswith(".rs"):
+            tokens = rust_tokens(text)
+            if "unsafe" in tokens and posixpath.basename(relative) != "ffi.rs":
+                held.append(f"{name}/{relative} holds unsafe outside the binding's FFI module")
+            held += binding_test_failures(f"{name}/{relative}", tokens)
+    return held
+
+
+def check_bindings() -> None:
+    """ADR 0047 and ticket 0093: every binding folder, then one planted failure of each kind."""
+    for manifest in sorted([*REPO.glob("libraries/*/Cargo.toml"), *REPO.glob("databases/*/Cargo.toml")]):
+        name = manifest.parent.relative_to(REPO).as_posix()
+        for failure in binding_failures(name, binding_files(manifest.parent)):
+            fail("binding", failure)
+    base = binding_files(REPO / BINDING_PLANT_BASE)
+    for label, relative, plant in BINDING_PLANTS:
+        planted = {**base, relative: plant(base.get(relative, ""))}
+        if planted[relative] == base.get(relative) or not binding_failures(BINDING_PLANT_BASE, planted):
+            fail("binding", f"the planted {label} is refused")
 
 
 CORE_ALLOWED_DEPENDENCIES = {"serde", "serde_json", "sha2", "thiserror"}
@@ -663,25 +851,38 @@ CATALOG_BANNED_WORDS = {
     "include_str", "env_var", "option_env", "nix", "ureq", "signal_hook", "libc", "csv_core",
 }
 CATALOG_CRATE_PATHS = {("crate", "failure", "Failure")}
+CATALOG_SUPER_PATHS = {("super", "CATALOG"), ("super", "lookup")}
 CATALOG_ROOTS = {"std", "clap", "crate", "super", "self"}
 
 
-def catalog_policy_failures(text: str) -> list[str]:
-    """Name every capability or owner the catalog source reaches."""
+def catalog_policy_failures(text: str, banned: set[str] = CATALOG_BANNED_WORDS,
+                            crate_paths: set[tuple[str, ...]] = CATALOG_CRATE_PATHS,
+                            super_paths: set[tuple[str, ...]] = CATALOG_SUPER_PATHS,
+                            prefix: bool = False) -> list[str]:
+    """Name every capability or owner a read-only command source reaches.
+
+    A path is allowed when it is an allowed path, or with `prefix` when one is its prefix.
+    """
     tokens = rust_tokens(text)
-    held = {f"names {token}" for token in tokens if token in CATALOG_BANNED_WORDS}
+    held = {f"names {token}" for token in tokens if token in banned}
+
+    def allowed(path: tuple[str, ...], prefixes: set[tuple[str, ...]]) -> bool:
+        if not prefix:
+            return path in prefixes
+        return any(path[:len(held)] == held for held in prefixes)
+
     for path, alias in rust_use_paths(tokens):
         if aliases_outer_root(path, alias) or imports_outer_glob(path):
             held.add("aliases or globs an outer module")
-        elif path[:1] == ("crate",) and path not in CATALOG_CRATE_PATHS:
+        elif path[:1] == ("crate",) and not allowed(path, crate_paths):
             held.add("uses " + "::".join(path))
-        elif path[:1] == ("super",) and path not in {("super", "CATALOG"), ("super", "lookup")}:
+        elif path[:1] == ("super",) and not allowed(path, super_paths):
             held.add("uses " + "::".join(path))
         elif path and path[0] not in CATALOG_ROOTS:
             held.add("uses " + "::".join(path))
     for place, token in enumerate(tokens[:-1]):
         if token in {"crate", "super"} and tokens[place + 1] == "::" and not any(
-                token_path_at(tokens, place, allowed) for allowed in CATALOG_CRATE_PATHS):
+                token_path_at(tokens, place, allowed) for allowed in crate_paths):
             if not (token == "super" and tokens[place - 1:place] == ["use"]):
                 held.add(f"reaches {token}::{tokens[place + 2] if place + 2 < len(tokens) else ''}")
     if extern_crates(tokens):
@@ -719,6 +920,9 @@ def check_catalog_policy() -> None:
         "extern crate self as root;",
         'include_str!("/etc/passwd")',
         "ureq::get(url)",
+        "use crate::failure::Failure::Output;",
+        "use super::CATALOG::x;",
+        "use super::lookup::inner;",
     )
     for plant in plants:
         if not catalog_policy_failures(plant):
@@ -735,6 +939,280 @@ def check_catalog_policy() -> None:
     for control in controls:
         if catalog_policy_failures(control):
             fail("catalog", f"the catalog control {control!r} stays allowed")
+
+
+# Tickets 0113 and 0114: audit and diff read the paths they are handed, or standard input, and
+# writes only standard output. It may open a file, and nothing else the catalog
+# refuses. A token check cannot prove which paths it opens; review checks that.
+MEASURE = (
+    "crates/thinkthen/src/cli/measure.rs",
+    "crates/thinkthen/src/cli/audit.rs",
+    "crates/thinkthen/src/cli/diff.rs",
+)
+MEASURE_COMMANDS = ("Audit", "Diff")
+MEASURE_BANNED_WORDS = CATALOG_BANNED_WORDS - {"fs", "File", "stdin", "Stdin"} | {"DirBuilder"}
+MEASURE_WRITES = {
+    "create", "create_new", "options", "create_dir", "create_dir_all", "remove_file",
+    "remove_dir", "remove_dir_all", "rename", "copy", "set_permissions", "write", "hard_link",
+    "soft_link", "symlink",
+}
+MEASURE_CRATE_PATHS = {("crate", "core"), ("crate", "cli", "measure"), ("crate", "failure", "Failure")}
+ROUTER = "crates/thinkthen/src/cli/mod.rs"
+
+
+def measure_policy_failures(text: str) -> list[str]:
+    """Name every capability a measuring command reaches beyond reading its inputs."""
+    held = set(catalog_policy_failures(text, MEASURE_BANNED_WORDS, MEASURE_CRATE_PATHS, set(),
+                                       prefix=True))
+    tokens = rust_tokens(text)
+    for place in range(len(tokens) - 2):
+        if tokens[place] in {"fs", "File"} and tokens[place + 1] == "::" \
+                and tokens[place + 2] in MEASURE_WRITES:
+            held.add(f"writes through {tokens[place]}::{tokens[place + 2]}")
+    for path, alias in rust_use_paths(tokens):
+        if path[:2] == ("std", "fs") and (set(path[2:]) & MEASURE_WRITES or alias or "*" in path):
+            held.add("uses " + "::".join(path))
+    return sorted(held)
+
+
+def route_failures(text: str) -> list[str]:
+    """Refuse a router that reads the environment before a measuring command returns."""
+    tokens = rust_tokens(text)
+
+    def first(path: tuple[str, ...]) -> int | None:
+        return next((place for place in range(len(tokens))
+                     if token_path_at(tokens, place, path)), None)
+
+    read = first(("Environment", "read"))
+    held = []
+    for command in MEASURE_COMMANDS:
+        found = first(("Command", command))
+        if found is None or read is None or found > read:
+            held.append(f"{command} returns after Environment::read")
+    return held
+
+
+def check_measure_policy() -> None:
+    for relative in MEASURE:
+        held = measure_policy_failures((REPO / relative).read_text(encoding="utf-8"))
+        if held:
+            fail("measure", f"{relative} {held}")
+    for held in route_failures((REPO / ROUTER).read_text(encoding="utf-8")):
+        fail("measure", f"{ROUTER}: {held}")
+    plants = (
+        'std::env::var("THINKTHEN_API_KEY")',
+        'std::net::TcpStream::connect("127.0.0.1:1")',
+        "std::time::Instant::now()",
+        "std::thread::spawn(|| ())",
+        "signal_hook::flag::register(2, flag)",
+        'std::process::Command::new("jq")',
+        "crate::engine::request()",
+        "crate::cli::edge::Environment::read()",
+        "std::fs::write(path, bytes)",
+        "use std::fs::remove_file;",
+        "use std::fs::{read, rename};",
+        "std::fs::File::create(path)",
+        "std::fs::OpenOptions::new()",
+        "std::fs::File::create_new(path)",
+        "std::fs::File::options()",
+        "std::fs::DirBuilder::new().create(path)",
+        "std::fs::hard_link(a, b)",
+        "std::fs::soft_link(a, b)",
+        "std::os::unix::fs::symlink(a, b)",
+        "use std::fs::File as F; F::open(path);",
+        "use std::fs::*;",
+    )
+    for plant in plants:
+        if not measure_policy_failures(plant):
+            fail("measure", f"the planted measure violation {plant!r} is refused")
+    controls = (
+        "std::fs::read(path)",
+        "std::io::stdin().lock()",
+        "use crate::core::measure::key::Key;",
+        "use crate::cli::measure::{Cause, Refusal, read};",
+        "use crate::failure::Failure;",
+        "use clap::{Args, ValueEnum};",
+    )
+    for control in controls:
+        if measure_policy_failures(control):
+            fail("measure", f"the measure control {control!r} stays allowed")
+    audit, diff = "if let Some(Command::Audit(a)) = c {}", "if let Some(Command::Diff(a)) = c {}"
+    read = "let e = Environment::read();"
+    if route_failures(audit + read + diff) != ["Diff returns after Environment::read"] \
+            or route_failures(audit + diff + read):
+        fail("measure", "a late diff return is refused and early returns allowed")
+
+
+# Ticket 0077: every live attempt passes the one process width gate in the
+# HTTP module, so no other production file reaches the HTTP library, and only
+# the one accessor names the process width state.
+HTTP_DOOR = "crates/thinkthen/src/engine/http.rs"
+WIDTH_DOOR = "crates/thinkthen/src/engine/mod.rs"
+WIDTH_STATE = "PROCESS_WIDTH"
+# Ticket 0078: an embedding host keeps its signal dispositions.
+ENGINE = "crates/thinkthen/src/engine/"
+
+
+def is_test_source(relative: str) -> bool:
+    return ("/tests/" in relative or "_tests/" in relative
+            or relative.endswith(("/tests.rs", "_tests.rs")))
+
+
+def door_failures(sources: dict[str, str]) -> list[str]:
+    """Name each second live-send door and each second width-state reference."""
+    held = []
+    for relative, text in sorted(sources.items()):
+        tokens = rust_tokens(text)
+        if "ureq" in tokens and relative != HTTP_DOOR and not is_test_source(relative):
+            held.append(f"{relative} reaches ureq outside {HTTP_DOOR}")
+        if ("signal_hook" in tokens and relative.startswith(ENGINE)
+                and not is_test_source(relative)):
+            held.append(f"{relative} installs a signal handler inside the engine")
+        uses = tokens.count(WIDTH_STATE)
+        if uses and (relative != WIDTH_DOOR or uses != 2):
+            held.append(f"{relative} names {WIDTH_STATE} {uses} times")
+    return held
+
+
+def check_doors() -> None:
+    sources = {
+        source.relative_to(REPO).as_posix(): source.read_text(encoding="utf-8")
+        for source in sorted((REPO / "crates/thinkthen/src").rglob("*.rs"))
+    }
+    if WIDTH_STATE not in rust_tokens(sources.get(WIDTH_DOOR, "")):
+        fail("doors", f"{WIDTH_DOOR} holds the process width state")
+    for failure in door_failures(sources):
+        fail("doors", failure)
+    plants = (
+        ("crates/thinkthen/src/cli/find.rs", "ureq::post(url).send(body)"),
+        ("crates/thinkthen/src/engine/request.rs", "use ureq::Agent;"),
+        ("crates/thinkthen/src/cli/schedule.rs", "crate::engine::PROCESS_WIDTH.select(None)"),
+        ("crates/thinkthen/src/engine/width_tests.rs", "&super::PROCESS_WIDTH"),
+        (WIDTH_DOOR, "fn second() -> &'static Widths { &PROCESS_WIDTH }"),
+        ("crates/thinkthen/src/engine/recorder.rs", "signal_hook::flag::register(SIGXFSZ, flag)"),
+    )
+    for relative, text in plants:
+        if not door_failures({**sources, relative: sources.get(relative, "") + "\n" + text}):
+            fail("doors", f"the planted door {text[-60:]!r} in {relative} is refused")
+    controls = (
+        ("crates/thinkthen/src/cli/find.rs", "// ureq stays in the HTTP module"),
+        ("crates/thinkthen/src/cli/find.rs", 'const NOTE: &str = "PROCESS_WIDTH";'),
+        ("crates/thinkthen/src/engine/http/tests.rs", "ureq::Error::HostNotFound"),
+        ("crates/thinkthen/src/engine/host_signal_tests.rs", "signal_hook::flag::register"),
+        ("crates/thinkthen/src/cli/file_size.rs", "signal_hook::flag::register"),
+    )
+    for relative, text in controls:
+        if door_failures({**sources, relative: sources.get(relative, "") + "\n" + text}):
+            fail("doors", f"the door control {text!r} in {relative} stays allowed")
+
+
+# Ticket 0085: the command reaches the engine through the one facade. Only
+# the facade builds the production HTTP pool, and no command file names the
+# scheduler, request, recorder, or transport modules underneath it.
+FACADE = "crates/thinkthen/src/engine/facade.rs"
+CLI = "crates/thinkthen/src/cli/"
+LIBRARY_ROOT = "crates/thinkthen/src/lib.rs"
+LOW_MODULES = frozenset({
+    "annotate_schedule", "http", "prepared_request", "recorder", "request", "schedule", "workers",
+})
+# `crate::schedule` and `crate::annotate_schedule` name the command's own modules.
+LOW_ALIASES = LOW_MODULES - {"annotate_schedule", "schedule"}
+
+
+def without_test_modules(tokens: list[str]) -> list[str]:
+    """Drop each `#[cfg(test)] mod name { ... }` block from one token list."""
+    kept = []
+    place = 0
+    marker = ["#", "[", "cfg", "(", "test", ")", "]", "mod"]
+    while place < len(tokens):
+        if tokens[place:place + len(marker)] != marker or place + 9 >= len(tokens) \
+                or tokens[place + 9] != "{":
+            kept.append(tokens[place])
+            place += 1
+            continue
+        place += 9
+        depth = 0
+        while place < len(tokens):
+            depth += int(tokens[place] == "{") - int(tokens[place] == "}")
+            place += 1
+            if depth == 0:
+                break
+    return kept
+
+
+def facade_failures(sources: dict[str, str]) -> list[str]:
+    """Name each second pool builder and each command path under the facade."""
+    held = []
+    for relative, text in sorted(sources.items()):
+        if is_test_source(relative):
+            continue
+        tokens = without_test_modules(rust_tokens(text))
+        if relative != FACADE and any(
+                token_path_at(tokens, place, ("Client", "new")) for place in range(len(tokens))):
+            held.append(f"{relative} builds the HTTP pool outside {FACADE}")
+        if relative == LIBRARY_ROOT:
+            for path, _ in rust_use_paths(tokens):
+                if path[:1] == ("engine",) and len(path) > 1 and path[1] in LOW_MODULES:
+                    held.append(f"{relative} re-exports engine::{path[1]}")
+        if not relative.startswith(CLI):
+            continue
+        for place, token in enumerate(tokens):
+            if token == "engine" and tokens[place + 1:place + 2] == ["::"] \
+                    and tokens[place + 2:place + 3] and tokens[place + 2] in LOW_MODULES:
+                held.append(f"{relative} names engine::{tokens[place + 2]}")
+            if token == "crate" and tokens[place + 1:place + 2] == ["::"] \
+                    and tokens[place + 2:place + 3] and tokens[place + 2] in LOW_ALIASES:
+                held.append(f"{relative} names crate::{tokens[place + 2]}")
+        for path, alias in rust_use_paths(tokens):
+            if path[:2] != ("crate", "engine"):
+                continue
+            if len(path) > 2 and path[2] in LOW_MODULES:
+                held.append(f"{relative} imports engine::{path[2]}")
+            if len(path) == 2 and alias is not None or path[2:] == ("*",):
+                held.append(f"{relative} aliases or globs the engine")
+    return sorted(set(held))
+
+
+def check_facade() -> None:
+    sources = {
+        source.relative_to(REPO).as_posix(): source.read_text(encoding="utf-8")
+        for source in sorted((REPO / "crates/thinkthen/src").rglob("*.rs"))
+    }
+    if not any(token_path_at(rust_tokens(sources.get(FACADE, "")), place, ("Client", "new"))
+               for place in range(len(rust_tokens(sources.get(FACADE, ""))))):
+        fail("facade", f"{FACADE} builds the HTTP pool")
+    for failure in facade_failures(sources):
+        fail("facade", failure)
+    plants = (
+        ("crates/thinkthen/src/cli/find.rs", "fn pool() { let _ = Client::new(timeout, true); }"),
+        ("crates/thinkthen/src/engine/request.rs",
+         "#[cfg(test)] mod t {}\nfn pool() -> Client { Client::new(Duration::ZERO, true) }"),
+        ("crates/thinkthen/src/cli/judge.rs", "use crate::engine::schedule::run_cancelled;"),
+        ("crates/thinkthen/src/cli/annotate.rs",
+         "use crate::engine::{facade, annotate_schedule as grouped};"),
+        ("crates/thinkthen/src/cli/asking.rs",
+         "fn f() { crate::engine::recorder::Recorder::of(None, None); }"),
+        ("crates/thinkthen/src/cli/asking.rs", "use crate::engine::{self as low};"),
+        ("crates/thinkthen/src/cli/relate.rs", "use crate::engine::*;"),
+        ("crates/thinkthen/src/cli/find.rs", "fn f() { crate::prepared_request::split(); }"),
+        (LIBRARY_ROOT, "pub(crate) use engine::{http, recorder};"),
+    )
+    for relative, text in plants:
+        if not facade_failures({**sources, relative: sources.get(relative, "") + "\n" + text}):
+            fail("facade", f"the planted facade bypass {text[-60:]!r} in {relative} is refused")
+    controls = (
+        ("crates/thinkthen/src/cli/find.rs", "use crate::engine::facade::{Engine, Found};"),
+        ("crates/thinkthen/src/cli/judge.rs", "use crate::schedule::Output;"),
+        ("crates/thinkthen/src/cli/find.rs", "// crate::engine::http::Client::new stays below"),
+        ("crates/thinkthen/src/engine/http/tests.rs", "Client::new(Duration::ZERO, false)"),
+        ("crates/thinkthen/src/cli/failure/tests.rs",
+         "crate::engine::http::Client::new(Duration::ZERO, false)"),
+        ("crates/thinkthen/src/engine/http.rs",
+         "#[cfg(test)]\nmod more { fn f() { Client::new(Duration::ZERO, false); } }"),
+    )
+    for relative, text in controls:
+        if facade_failures({**sources, relative: sources.get(relative, "") + "\n" + text}):
+            fail("facade", f"the facade control {text!r} in {relative} stays allowed")
 
 
 def check_crate_roots() -> None:
@@ -974,33 +1452,85 @@ def check_dependencies() -> None:
             fail("dependencies", f"locked package {locked['name']} carries a crates.io source and a checksum")
     print(f"policy: checked {len(nodes)} resolved packages")
 
-    minimal = subprocess.run(
-        ["cargo", "metadata", "--locked", "--format-version", "1", "--no-default-features"],
-        cwd=REPO, check=False, capture_output=True, text=True,
-    )
-    if minimal.returncode != 0:
-        fail("dependencies", f"default-features-off metadata succeeds: {minimal.stderr.strip()}")
-        return
-    graph = json.loads(minimal.stdout)
-    packages = {package["id"]: package for package in graph["packages"]}
-    package = next((item for item in graph["packages"] if item["name"] == "thinkthen"), None)
-    if package is None:
-        fail("dependencies", "the minimal graph contains thinkthen")
-        return
-    node = next(item for item in graph["resolve"]["nodes"] if item["id"] == package["id"])
-    direct = {packages[item["pkg"]]["name"] for item in node["deps"]}
-    if direct & {"clap", "csv-core", "nix"}:
-        fail("dependencies", "the default-features-off graph excludes command dependencies")
+    check_library_graph()
 
+
+# Ticket 0078: the library alone installs no signal handler, and on Unix it
+# masks host signals on its workers through nix. The graph covers every target
+# and build edges. Dev edges stay out, because the tests use `signal-hook`.
+COMMAND_ONLY = {"clap", "csv-core", "signal-hook"}
+GRAPH_PLANTS = (
+    '[target."cfg(windows)".dependencies]\nclap = "4.6.7"\n',
+    '[build-dependencies]\nclap = "4.6.7"\n',
+)
+GRAPH_FILES = (
+    "Cargo.toml", "Cargo.lock", "crates/thinkthen/Cargo.toml", "conformance/backend/Cargo.toml",
+)
+GRAPH_STUBS = (
+    "crates/thinkthen/src/lib.rs", "crates/thinkthen/src/main.rs",
+    "conformance/backend/src/lib.rs", "conformance/backend/src/main.rs",
+)
+
+
+def library_direct(root: pathlib.Path, frozen: str) -> set[str] | str:
+    """Name the library's direct normal and build dependencies on every target."""
+    result = subprocess.run(
+        ["cargo", "tree", frozen, "-p", "thinkthen", "-e", "normal,build", "--target", "all",
+         "--no-default-features", "--depth", "1", "--prefix", "none"],
+        cwd=root, check=False, capture_output=True, text=True,
+    )
+    if result.returncode != 0:
+        return result.stderr.strip()
+    return {line.split()[0] for line in result.stdout.splitlines()[1:] if line.strip()}
+
+
+def graph_failures(direct: set[str]) -> list[str]:
+    held = []
+    if direct & COMMAND_ONLY:
+        held.append("the default-features-off graph excludes command dependencies")
+    if sys.platform != "win32" and "nix" not in direct:
+        held.append("the default-features-off graph holds nix on Unix")
+    return held
+
+
+def check_library_graph() -> None:
+    direct = library_direct(REPO, "--locked")
+    if isinstance(direct, str):
+        fail("dependencies", f"default-features-off cargo tree succeeds: {direct}")
+        return
+    for failure in graph_failures(direct):
+        fail("dependencies", failure)
+    for plant in GRAPH_PLANTS:
+        with tempfile.TemporaryDirectory() as scratch:
+            root = pathlib.Path(scratch)
+            for relative in GRAPH_FILES + GRAPH_STUBS:
+                (root / relative).parent.mkdir(parents=True, exist_ok=True)
+                source = REPO / relative
+                (root / relative).write_text(
+                    source.read_text(encoding="utf-8") if relative in GRAPH_FILES else "",
+                    encoding="utf-8",
+                )
+            manifest = root / "crates/thinkthen/Cargo.toml"
+            manifest.write_text(manifest.read_text(encoding="utf-8") + "\n" + plant, encoding="utf-8")
+            planted = library_direct(root, "--offline")
+            if isinstance(planted, str):
+                fail("dependencies", f"the planted graph reads through cargo tree: {planted}")
+            elif not graph_failures(planted):
+                fail("dependencies", f"the planted graph {plant.splitlines()[0]!r} is refused")
 
 def main() -> int:
     check_toolchain()
     check_workspace()
     check_crates()
     check_clippy_configs()
+    check_consumer()
+    check_bindings()
     check_crate_roots()
     check_core_policy()
     check_catalog_policy()
+    check_measure_policy()
+    check_doors()
+    check_facade()
     check_sources()
     check_seam()
     check_license_grammar()

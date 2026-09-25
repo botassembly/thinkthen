@@ -8,7 +8,7 @@ use std::sync::{Arc, Barrier};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use crate::harness::{Canned, Listener, Observed};
+use crate::harness::{Canned, Listener, Observed, finish};
 
 const QUESTION: &str = "Does this report a payment failure?";
 static CHILDREN: AtomicU64 = AtomicU64::new(0);
@@ -146,7 +146,13 @@ fn an_answer_arrives_before_the_next_record_at_one_job_and_the_default() {
         }
 
         drop(input);
-        assert_eq!(child.wait().expect("the process ends").code(), Some(0));
+        assert_eq!(
+            finish(child, "the scheduled command")
+                .expect("the process ends")
+                .status
+                .code(),
+            Some(0)
+        );
     }
 }
 
@@ -222,7 +228,13 @@ fn ordered_output_bounds_every_dispatched_row() {
                 .expect("an ordered answer")
         })
         .collect();
-    assert_eq!(child.wait().expect("the process ends").code(), Some(0));
+    assert_eq!(
+        finish(child, "the scheduled command")
+            .expect("the process ends")
+            .status
+            .code(),
+        Some(0)
+    );
     for (place, row) in rows.iter().enumerate() {
         assert!(row.contains(&format!(r#""id":"R-{}""#, place + 1)), "{row}");
     }

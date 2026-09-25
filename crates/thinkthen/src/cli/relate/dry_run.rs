@@ -3,11 +3,11 @@ use std::io::Write;
 use serde::Serialize;
 
 use super::config::From;
-use super::plan::{Method, PreparedRelation};
 use crate::core::{
     Backend, BackendProfile, Framing, LimitKind, RelateFields, RelateSpec, json_line,
 };
 use crate::edge;
+use crate::engine::facade::{Method, PreparedRelation};
 use crate::failure::Failure;
 
 #[derive(Serialize)]

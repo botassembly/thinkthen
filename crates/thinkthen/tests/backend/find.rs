@@ -5,7 +5,7 @@ use std::io::Write as _;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
-use crate::harness::{Canned, Listener, spawn};
+use crate::harness::{Canned, Listener, finish, spawn};
 
 const PICKED: &str = concat!(
     r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"u002","#,
@@ -305,7 +305,7 @@ fn a_closed_output_pipe_ends_find_quietly_after_the_paid_answer_finishes() {
         .write_all(b"first\nsecond\n")
         .expect("units written");
     drop(child.stdout.take().expect("output pipe"));
-    let output = child.wait_with_output().expect("find stops");
+    let output = finish(child, "find with a closed output").expect("find stops");
     assert_eq!(output.status.code(), Some(0));
     assert!(output.stderr.is_empty());
     assert_eq!(listener.requests().len(), 1);

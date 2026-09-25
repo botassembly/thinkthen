@@ -1,0 +1,1 @@
+{"group":"decide","verb":"decide","rows":6,"failed":0,"labeled":6,"unlabeled":0,"threshold":"as run","right":4,"wrong":2,"unresolved":0,"tied":0,"agreement":0.666667,"interval":[0.299993,0.903229],"true_yes":2,"false_yes":1,"true_no":2,"false_no":1,"yes_recall":0.666667,"mean_probability":null,"auc":null,"disagreements":null,"calibration":null,"coverage":null,"suggested":null}

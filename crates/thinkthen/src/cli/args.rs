@@ -8,7 +8,7 @@ use clap::{Args, Parser};
 mod command;
 mod find;
 mod relate;
-pub(crate) use command::{CacheCommand, Command, PruneArguments, StatusArguments};
+pub(crate) use command::{CacheCommand, CheckArguments, Command, PruneArguments, StatusArguments};
 pub(crate) use find::FindArguments;
 pub(crate) use relate::RelateArguments;
 
