@@ -43,8 +43,11 @@ allow = [
     "Unlicense",
 ]
 # A crate offering `Apache-2.0 WITH LLVM-exception` beside plain Apache-2.0 or
-# MIT is taken on one of those, so no exception is needed and none is allowed.
-exceptions = []
+# MIT is taken on one of those. The one exception is target-lexicon, which
+# offers only that license and which pyo3's build pulls into the Python
+# binding. It runs at build time only, and the LLVM exception only adds a
+# permission. The queue owner decided this on 2026-09-25, and Ian can overturn it.
+exceptions = [{ crate = "target-lexicon", allow = ["Apache-2.0 WITH LLVM-exception"] }]
 confidence-threshold = 0.9
 unused-allowed-license = "deny"
 

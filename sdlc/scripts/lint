@@ -29,6 +29,27 @@ sh sdlc/scripts/surfaces --registry
 # `deny.toml` allows exactly the licenses the tree carries, and an advisory on
 # any crate in the lock file fails here. It reads the lock file and no network.
 cargo deny --offline check advisories bans licenses
+# A binding's deny runs `sources`. A file:// git source under a scratch
+# CARGO_HOME must fail it, with no network and no residue.
+plant=$(mktemp -d)
+trap 'rm -rf -- "$plant"' EXIT
+mkdir -p "$plant/dep/src" "$plant/copy/src"
+printf '[package]\nname = "planted"\nversion = "0.0.1"\nedition = "2024"\nlicense = "MIT"\n' >"$plant/dep/Cargo.toml"
+: >"$plant/dep/src/lib.rs"
+: >"$plant/copy/src/lib.rs"
+git -C "$plant/dep" init -q && git -C "$plant/dep" add -A
+git -C "$plant/dep" -c user.name=plant -c user.email=plant@example.invalid commit -qm plant
+printf '[package]\nname = "copy"\nversion = "0.0.1"\nedition = "2024"\nlicense = "MIT"\n[dependencies]\nplanted = { git = "file://%s/dep" }\n' "$plant" >"$plant/copy/Cargo.toml"
+CARGO_HOME="$plant/home" cargo fetch --quiet --manifest-path "$plant/copy/Cargo.toml"
+set +e
+# cargo-deny sets bit 8 of its exit code when the sources check fails.
+CARGO_HOME="$plant/home" cargo deny --offline --manifest-path "$plant/copy/Cargo.toml" check --config "$REPO/deny.toml" sources >"$plant/deny" 2>&1
+code=$?
+set -e
+if [ "$code" -ne 8 ] || ! grep -q source-not-allowed "$plant/deny"; then
+    echo "lint: deny's sources check passed a file:// git source (exit $code)" >&2
+    exit 1
+fi
 cargo fmt --all -- --check
 cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
 RUSTDOCFLAGS='-D warnings' cargo doc --locked --workspace --no-deps

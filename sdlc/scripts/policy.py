@@ -341,7 +341,6 @@ def check_consumer() -> None:
 
 # ADR 0047: each binding under `libraries` or `databases` is its own workspace
 # over the public API. Its plants copy the first binding, the Rust examples.
-BINDING_THINKTHEN = {"path": "../../crates/thinkthen", "default-features": False}
 BINDING_PLANT_BASE = "libraries/rust"
 # Polars asks for getrandom 0.2 with its `js` feature on WebAssembly targets
 # (polars-0.55.2 Cargo.toml, `old_getrandom`), so the lock's getrandom 0.2.17,
@@ -352,8 +351,21 @@ BINDING_WASM_ONLY = {"libraries/polars": {
     ("js-sys", "0.3.105"), ("pin-project-lite", "0.2.17"), ("rustversion", "1.0.23"), ("slab", "0.4.12"),
     ("wasm-bindgen", "0.2.128"), ("wasm-bindgen-macro", "0.2.128"),
     ("wasm-bindgen-macro-support", "0.2.128"), ("wasm-bindgen-shared", "0.2.128")}}
-# A binding holds a deny.toml only where this file checks it.
-BINDING_DENY_CHECKED = {"libraries/polars"}
+# A binding's deny.toml is the root file plus its named entries, each reason
+# aside. A binding holds a deny.toml only where this table names it.
+FOLDHASH = ("licenses", "exceptions", [{"crate": "foldhash", "allow": ["Zlib"]}])
+BINDING_DENY = {
+    "libraries/polars": [("licenses", "exceptions", [
+        {"crate": "foldhash", "allow": ["Zlib"]}, {"crate": "slotmap", "allow": ["Zlib"]},
+        {"crate": "xxhash-rust", "allow": ["BSL-1.0"]},
+        {"crate": "ar_archive_writer", "allow": ["Apache-2.0 WITH LLVM-exception"]}])],
+    "databases/sqlite": [FOLDHASH],
+    "libraries/r": [("advisories", "ignore", [{"id": "RUSTSEC-2024-0436"}])],
+    "databases/postgresql": [FOLDHASH, ("advisories", "ignore", ["RUSTSEC-2021-0127"])],
+}
+# pgrx's generated code needs `unexpected_cfgs` below forbid (ticket 0111).
+BINDING_LINTS = {"databases/postgresql": {"unexpected_cfgs": {
+    "level": "deny", "check-cfg": ["cfg(thinkthen_internal_doctest)"]}}}
 PLANTED_TEST = '#[test]\nfn planted() {\n    eprintln!("skipped");\n    return;\n}\n'
 BINDING_PLANTS = (
     ("publish = true", "Cargo.toml", lambda text: text.replace("publish = false", "publish = true")),
@@ -375,13 +387,23 @@ BINDING_PLANTS = (
 )
 
 
-def binding_files(folder: pathlib.Path) -> dict[str, str]:
-    """One binding's manifest, lock, Clippy settings, and Rust sources, without build output."""
-    names = ["Cargo.toml", "Cargo.lock", "clippy.toml", "deny.toml"] + [
+def binding_crates() -> dict[str, str]:
+    """The crate folder of each binding whose surfaces.txt line names one, such as R's inside its package."""
+    lines = (REPO / "sdlc/surfaces.txt").read_text(encoding="utf-8").splitlines()
+    return {fields[0]: f"{fields[0]}/{fields[2]}" for fields in map(str.split, lines)
+            if len(fields) == 3 and not fields[0].startswith("#")}
+
+
+def binding_files(name: str, crate: str) -> dict[str, str]:
+    """One binding's manifest, lock, Clippy settings, and Rust sources, without build output, and its deny.toml."""
+    folder = REPO / crate
+    names = ["Cargo.toml", "Cargo.lock", "clippy.toml"] + [
         source.relative_to(folder).as_posix() for source in folder.rglob("*.rs")
         if "target" not in source.relative_to(folder).parts
     ]
-    return {name: (folder / name).read_text(encoding="utf-8") for name in names if (folder / name).is_file()}
+    files = {name: (folder / name).read_text(encoding="utf-8") for name in names if (folder / name).is_file()}
+    deny = REPO / name / "deny.toml"
+    return {**files, "deny.toml": deny.read_text(encoding="utf-8")} if deny.is_file() else files
 
 
 def lock_tree(lock: dict) -> set[tuple[str, str]]:
@@ -431,7 +453,8 @@ def binding_test_failures(relative: str, tokens: list[str]) -> list[str]:
     return held
 
 
-def binding_failures(name: str, files: dict[str, str]) -> list[str]:
+def binding_failures(name: str, files: dict[str, str], crate: str = "") -> list[str]:
+    crate = crate or name
     try:
         manifest = tomllib.loads(files.get("Cargo.toml", ""))
         lock = tomllib.loads(files.get("Cargo.lock", ""))
@@ -455,15 +478,17 @@ def binding_failures(name: str, files: dict[str, str]) -> list[str]:
                     for kind in ("dependencies", "dev-dependencies", "build-dependencies", "patch")
                     for dependency, specification in table.get(kind, {}).items()]
     if [(kind, specification) for kind, dependency, specification in dependencies
-            if dependency == "thinkthen"] != [("dependencies", BINDING_THINKTHEN)]:
+            if dependency == "thinkthen"] != [("dependencies", {
+                "path": posixpath.relpath("crates/thinkthen", crate), "default-features": False})]:
         held.append(f"{name} depends on thinkthen once, by path, with default features off")
     for _, dependency, specification in dependencies:
         path = specification.get("path") if isinstance(specification, dict) else None
-        reached = posixpath.relpath(posixpath.normpath(posixpath.join(REPO.as_posix(), name, path)),
+        reached = posixpath.relpath(posixpath.normpath(posixpath.join(REPO.as_posix(), crate, path)),
                                     REPO.as_posix()) if path else ""
         if reached.split("/")[0] in ("libraries", "databases") and not f"{reached}/".startswith(f"{name}/"):
             held.append(f"{name} depends on another binding through {dependency}")
-    if lints and manifest.get("lints") != {**lints, "rust": {**lints["rust"], "unsafe_code": "deny"}}:
+    if lints and manifest.get("lints") != {**lints, "rust": {
+            **lints["rust"], "unsafe_code": "deny", **BINDING_LINTS.get(name, {})}}:
         held.append(f"{name} uses the root lint table with unsafe_code denied, not forbidden")
     if clippy != ACCEPTED_SHARED_CLIPPY:
         held.append(f"{name}/clippy.toml matches the shared thresholds and test allowances")
@@ -474,67 +499,134 @@ def binding_failures(name: str, files: dict[str, str]) -> list[str]:
     if not ours or drift:
         held.append(f"{name}/Cargo.lock resolves thinkthen's tree to the root lock's versions: "
                     f"{sorted(drift) or 'thinkthen is absent'}")
-    if "deny.toml" in files and name not in BINDING_DENY_CHECKED:
-        held.append(f"{name}/deny.toml is one no policy check reads")
+    if "deny.toml" in files:
+        held += deny_failures(name, tomllib.loads(files["deny.toml"]))
     for relative, text in files.items():
         if relative.endswith(".rs"):
             tokens = rust_tokens(text)
             if "unsafe" in tokens and posixpath.basename(relative) != "ffi.rs":
                 held.append(f"{name}/{relative} holds unsafe outside the binding's FFI module")
+            if "unexpected_cfgs" in tokens:
+                held.append(f"{name}/{relative} names unexpected_cfgs outside the lint table")
             held += binding_test_failures(f"{name}/{relative}", tokens)
     return held
 
 
+def deny_failures(name: str, deny: dict) -> list[str]:
+    if name not in BINDING_DENY:
+        return [f"{name}/deny.toml is one no policy check reads"]
+    root = read_toml("deny.toml")
+    tables = {(section, key): named for section, key, named in BINDING_DENY[name]}
+    for section, key in (("licenses", "exceptions"), ("advisories", "ignore")):
+        named = tables.get((section, key), [])
+        table, held = deny.get(section, {}), root.get(section, {}).get(key, [])
+        entries = [{field: value for field, value in entry.items() if field != "reason"}
+                   if isinstance(entry, dict) else entry for entry in table.get(key, [])]
+        # A binding may leave out a root entry its tree never meets.
+        if [entry for entry in entries if entry not in held] != named:
+            return [f"{name}/deny.toml is the root file plus its named {section} {key}"]
+        deny = {**deny, section: {**table, key: held}}
+    if deny != root:
+        return [f"{name}/deny.toml is the root file plus its named entries"]
+    return []
+
+
 def check_bindings() -> None:
     """ADR 0047 and ticket 0093: every binding folder, then one planted failure of each kind."""
-    for manifest in sorted([*REPO.glob("libraries/*/Cargo.toml"), *REPO.glob("databases/*/Cargo.toml")]):
-        name = manifest.parent.relative_to(REPO).as_posix()
-        for failure in binding_failures(name, binding_files(manifest.parent)):
+    crates = binding_crates()
+    for folder in sorted(path for path in [*REPO.glob("libraries/*"), *REPO.glob("databases/*")] if path.is_dir()):
+        name = folder.relative_to(REPO).as_posix()
+        crate = crates.get(name, name)
+        if not (REPO / crate / "Cargo.toml").is_file():
+            fail("binding", f"{name} holds a Cargo.toml, or its surfaces.txt line names its crate folder")
+            continue
+        for failure in binding_failures(name, binding_files(name, crate), crate):
             fail("binding", failure)
-    base = binding_files(REPO / BINDING_PLANT_BASE)
+    for name, tables in BINDING_DENY.items():
+        if not (REPO / name / "deny.toml").is_file():
+            continue
+        deny = read_toml(f"{name}/deny.toml")
+        other = {**deny, "bans": {**deny.get("bans", {}), "wildcards": "allow"}}
+        seconds = [{**deny, section: {**deny.get(section, {}), key: [*deny.get(section, {}).get(key, []), "planted"]}}
+                   for section, key, _ in tables]
+        if not all(deny_failures(name, planted) for planted in [other, *seconds]):
+            fail("binding", f"{name}/deny.toml with a planted extra entry or another difference is refused")
+    if "libraries/r" in crates:
+        crate = crates["libraries/r"]
+        files = binding_files("libraries/r", crate)
+        moved = files["Cargo.toml"].replace("../../../../../crates/thinkthen", "../../crates/thinkthen")
+        if not binding_failures("libraries/r", {**files, "Cargo.toml": moved}, crate):
+            fail("binding", "R's manifest with a thinkthen path from the binding folder is refused")
+    base = binding_files(BINDING_PLANT_BASE, BINDING_PLANT_BASE)
     for label, relative, plant in BINDING_PLANTS:
         planted = {**base, relative: plant(base.get(relative, ""))}
         if planted[relative] == base.get(relative) or not binding_failures(BINDING_PLANT_BASE, planted):
             fail("binding", f"the planted {label} is refused")
 
 
-# Ticket 0120: the Polars binding's deny file is the root file plus four named
-# license exceptions, and its polars and polars-core pins are equal.
-POLARS_EXCEPTIONS = [{"crate": "foldhash", "allow": ["Zlib"]}, {"crate": "slotmap", "allow": ["Zlib"]},
-                     {"crate": "xxhash-rust", "allow": ["BSL-1.0"]},
-                     {"crate": "ar_archive_writer", "allow": ["Apache-2.0 WITH LLVM-exception"]}]
-
-
-def polars_failures(deny: dict, manifest: dict) -> list[str]:
-    root, licenses = read_toml("deny.toml"), deny.get("licenses", {})
-    held = []
-    if (licenses.get("exceptions") != POLARS_EXCEPTIONS
-            or {**deny, "licenses": {**licenses, "exceptions": []}} != root):
-        held.append("libraries/polars/deny.toml is the root file plus its four license exceptions")
+# Ticket 0120: the Polars binding's polars and polars-core pins are equal.
+def polars_failures(manifest: dict) -> list[str]:
     pins = [manifest.get(table, {}).get(name, {}).get("version")
             for table, name in (("dependencies", "polars"), ("dev-dependencies", "polars-core"))]
     if pins[0] is None or pins[0] != pins[1]:
-        held.append("libraries/polars pins polars and polars-core to one exact version")
-    return held
+        return ["libraries/polars pins polars and polars-core to one exact version"]
+    return []
 
 
 def check_polars_binding() -> None:
     if not (REPO / "libraries/polars").is_dir():
         return
-    deny, manifest = read_toml("libraries/polars/deny.toml"), read_toml("libraries/polars/Cargo.toml")
-    for failure in polars_failures(deny, manifest):
+    manifest = read_toml("libraries/polars/Cargo.toml")
+    for failure in polars_failures(manifest):
         fail("binding", failure)
-    exceptions = [*deny.get("licenses", {}).get("exceptions", []), {"crate": "planted", "allow": ["Zlib"]}]
-    fifth = {**deny, "licenses": {**deny.get("licenses", {}), "exceptions": exceptions}}
     core = {**manifest.get("dev-dependencies", {}).get("polars-core", {}), "version": "=0.0.1"}
     unequal = {**manifest, "dev-dependencies": {**manifest.get("dev-dependencies", {}), "polars-core": core}}
-    if not polars_failures(fifth, manifest) or not polars_failures(deny, unequal):
-        fail("binding", "the planted fifth license exception and unequal Polars pins are refused")
-    files = binding_files(REPO / "libraries/polars")
+    if not polars_failures(unequal):
+        fail("binding", "unequal Polars pins are refused")
+    files = binding_files("libraries/polars", "libraries/polars")
     lock = files.get("Cargo.lock", "").replace(' "futures-util",\n "wasm-bindgen",\n', ' "futures-util",\n "planted",\n "wasm-bindgen",\n', 1)
     lock += '\n[[package]]\nname = "planted"\nversion = "0.0.1"\n'
     if not any("planted" in failure for failure in binding_failures("libraries/polars", {**files, "Cargo.lock": lock})):
         fail("binding", "a thirteenth new package in the Polars lock is refused")
+
+
+# Ticket 0111 item 15: nothing widens the PostgreSQL crate's check-cfg, and no
+# script restarts the server, because a restart passes the caller's environment.
+POSTGRESQL = "databases/postgresql"
+
+
+def postgresql_failures(files: dict[str, str], scripts: dict[str, str], configs: list[str]) -> list[str]:
+    held = [f"{POSTGRESQL}/build.rs can widen check-cfg"] if "build.rs" in files else []
+    held += [f"{config} can change the lints cargo applies" for config in configs]
+    for relative, text in scripts.items():
+        code = "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
+        if re.search(r"\bpg_ctl\b[^\n;&|]*\brestart\b", code):
+            held.append(f"{POSTGRESQL}/{relative} runs pg_ctl restart")
+    return held
+
+
+def check_postgresql_binding() -> None:
+    folder = REPO / POSTGRESQL
+    if not folder.is_dir():
+        return
+    files = binding_files(POSTGRESQL, POSTGRESQL)
+    scripts = {script.relative_to(folder).as_posix(): script.read_text(encoding="utf-8")
+               for script in folder.rglob("*.sh") if "target" not in script.relative_to(folder).parts}
+    configs = [f"{place}/.cargo/{name}" for place in (POSTGRESQL, "databases", ".")
+               for name in ("config", "config.toml") if (REPO / place / ".cargo" / name).exists()]
+    for failure in postgresql_failures(files, scripts, configs):
+        fail("binding", failure)
+    restart = {**scripts, "check.sh": scripts.get("check.sh", "") + '"$BIN/pg_ctl" -D "$DATA" restart\n'}
+    warm = files.get("src/warm.rs", "") + '#[cfg_attr(test, allow(unexpected_cfgs, reason = "planted"))]\nfn planted() {}\n'
+    forbid = files.get("Cargo.toml", "").replace('unexpected_cfgs = { level = "deny"', 'unexpected_cfgs = { level = "allow"')
+    rust = binding_files(BINDING_PLANT_BASE, BINDING_PLANT_BASE)
+    denied = rust["Cargo.toml"].replace('unexpected_cfgs = { level = "forbid"', 'unexpected_cfgs = { level = "deny"')
+    if not (all(postgresql_failures(*plant) for plant in [
+            ({**files, "build.rs": ""}, scripts, []), (files, restart, []), (files, scripts, [f"{POSTGRESQL}/.cargo/config"])])
+            and binding_failures(POSTGRESQL, {**files, "src/warm.rs": warm})
+            and binding_failures(POSTGRESQL, {**files, "Cargo.toml": forbid})
+            and binding_failures(BINDING_PLANT_BASE, {**rust, "Cargo.toml": denied})):
+        fail("binding", "a planted build.rs, cargo config, pg_ctl restart, unexpected_cfgs allow, or lint level is refused")
 
 
 CORE_ALLOWED_DEPENDENCIES = {"serde", "serde_json", "sha2", "thiserror"}
@@ -1580,6 +1672,7 @@ def main() -> int:
     check_consumer()
     check_bindings()
     check_polars_binding()
+    check_postgresql_binding()
     check_crate_roots()
     check_core_policy()
     check_catalog_policy()

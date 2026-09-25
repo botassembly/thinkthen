@@ -20,15 +20,24 @@ landed() {
 	awk '!/^#/ && $2 == "landed" { print $1 }' "$1"
 }
 
+# A binding's manifest sits in its folder, or in the crate folder a third field names.
+manifest() {
+	awk -v at="$2" '!/^#/ && $1 == at { print $1 "/" (NF == 3 ? $3 "/" : "") "Cargo.toml" }' "$1"
+}
+
 registry() {
 	status=0
-	if awk '!/^#/ && NF && (NF != 2 || ($2 != "landed" && $2 != "planned")) { bad = 1 } END { exit !bad }' "$1"; then
-		printf 'surfaces: %s holds a line other than a folder and landed or planned\n' "$1" >&2
+	if awk '!/^#/ && NF && (NF < 2 || NF > 3 || ($2 != "landed" && $2 != "planned")) { bad = 1 } END { exit !bad }' "$1"; then
+		printf 'surfaces: %s holds a line other than a folder, landed or planned, and a crate folder\n' "$1" >&2
 		status=1
 	fi
 	for surface in $(landed "$1"); do
 		if [ ! -f "$surface/check.sh" ]; then
 			printf 'surfaces: %s is landed and has no check.sh\n' "$surface" >&2
+			status=1
+		fi
+		if [ ! -f "$(manifest "$1" "$surface")" ]; then
+			printf 'surfaces: %s is landed and its line names no Cargo.toml\n' "$surface" >&2
 			status=1
 		fi
 	done
@@ -51,6 +60,12 @@ if [ "${1:-}" = --registry ]; then
 		echo 'surfaces: the registry check passed a landed surface with no check.sh' >&2
 		exit 1
 	fi
+	# R's crate sits inside its R package. A line without its crate folder fails.
+	sed 's|^\(libraries/r  *landed\) .*|\1|' sdlc/surfaces.txt >"$planted"
+	if registry "$planted" 2>/dev/null; then
+		echo 'surfaces: the registry check passed a landed surface whose line names no Cargo.toml' >&2
+		exit 1
+	fi
 	for surface in $(landed sdlc/surfaces.txt); do
 		# One ratchet file per language: ratchet.json for Rust, ratchet.<ext>.json for each host.
 		for config in "$surface"/ratchet*.json; do
@@ -65,8 +80,8 @@ if [ "${1:-}" = --registry ]; then
 		# A binding's own deny.toml, which policy.py checks, replaces the root file.
 		deny=deny.toml
 		if [ -f "$surface/deny.toml" ]; then deny="$surface/deny.toml"; fi
-		cargo deny --offline --manifest-path "$surface/Cargo.toml" check --config "$deny" \
-			advisories bans licenses
+		cargo deny --offline --manifest-path "$(manifest sdlc/surfaces.txt "$surface")" check --config "$deny" \
+			advisories bans licenses sources
 	done
 	echo 'surfaces: the registry holds every binding, and each landed one has its check, ratchet, and deny'
 	exit 0
