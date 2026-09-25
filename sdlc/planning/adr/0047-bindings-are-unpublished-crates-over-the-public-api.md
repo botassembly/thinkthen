@@ -57,6 +57,18 @@ The host work follows the same list for every surface.
 - Run the shared cases through the 0092 backend. Re-run the surface's error-index rows against the real engine, each with a planted bug that turns its test red. Report a skipped case as not run.
 - Write any ruling that lived only in notes as an ADR (R2-29).
 
+## The SQLite binding (ticket 0109)
+
+These rulings lived only in the tag's `NOTES.md` (R2-29). Ian can overturn each.
+
+- The floor is SQLite 3.50.0. Below it a CHECK constraint in an untrusted database reaches a volatile function, so a schema could spend money or read files. The load refuses below the floor and names the host's version.
+- Every function and both table-valued modules are direct-only, and none is deterministic. A view, trigger, DEFAULT, CHECK constraint, generated column, or index in a database file cannot call them, whatever `trusted_schema` says.
+- `'@name'` resolves against the process working directory. The extension follows symlinks and confines nothing. The file must be a regular file of at most 1 MiB, opened once without blocking.
+- `thinkthen_warm` takes decide questions only.
+- `thinkthen_relate` reads entities from a named table's id, name, and kind columns (item 9).
+- Every call that can send runs on a detachable worker. On an interrupt the calling thread returns at once, and the detached worker finishes the requests it already sent. That worker is the known exception to ADR 0017's rule that no thread outlives a call. It lives at most the 30-second request timeout and holds its throttle permits until then.
+- `rusqlite` brings `foldhash` 0.2.0 under the Zlib license. The root `deny.toml` does not allow Zlib and cannot, because its tree never uses it. `databases/sqlite/deny.toml` equals the root file plus that one exception. Zlib is permissive and has no copyleft term.
+
 ## Consequences
 
 - 0077's duplicate-image boundary follows item 5. Each loaded copy has its own cap, and each surface page says so.
