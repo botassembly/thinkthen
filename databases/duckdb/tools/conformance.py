@@ -25,14 +25,13 @@ CASES = Path(os.environ.get("THINKTHEN_CONFORMANCE_CASES", ROOT.parent.parent / 
 
 # The one closed list of reasons a case does not run here.
 NOT_RUN = {
-    "relate": "relate lands in 0118",
     "find": "SQL finds with ORDER BY and LIMIT over decide, so the find wire question never goes out",
     "on": "main's public API refuses `on` in a library question set, so SQL passes each record whole",
 }
 
 
 def reason(case: dict) -> str | None:
-    if case["verb"] in ("relate", "find"):
+    if case["verb"] == "find":
         return NOT_RUN[case["verb"]]
     members = case.get("question_set", {}).get("questions", {}).values()
     return NOT_RUN["on"] if any("on" in member for member in members) else None
@@ -134,6 +133,19 @@ def relations_wanted(case: dict) -> list:
     ]
 
 
+def related(case: dict, base: str) -> list:
+    """Relate cases: `thinkthen_relate` over the case's entities, each
+    entity's name as its id, with the case's own rules file text."""
+    table = ", ".join(f"({quoted(entity['name'])}, {quoted(entity['name'])}, {quoted(entity['kind'])})" for entity in case["entities"])
+    query = f"SELECT * FROM (VALUES {table}) v(id, name, kind)"
+    got = run([f"SELECT * FROM thinkthen_relate({quoted(query)}, {quoted(json.dumps(case['question']))})"], base)
+    kinds = {entity["name"]: entity["kind"] for entity in case["entities"]}
+    return [
+        {"relation": relation, "source": {"name": source, "kind": kinds[source]}, "target": {"name": target, "kind": kinds[target]}, "probability": probability}
+        for relation, source, target, probability in rows(got[0])
+    ]
+
+
 def counters(case: dict, base: str) -> dict:
     question, text = quoted(json.dumps(case["question"])), quoted(evidence(case)[0])
     with tempfile.TemporaryDirectory() as cache:
@@ -189,6 +201,8 @@ def check(case: dict) -> str | None:
         kind = success["kind"]
         if "counters" in success:
             got, wanted = counters(case, base), success["counters"]
+        elif kind == "relate":
+            got, wanted = related(case, base), expected(case)[0]
         elif kind == "recognize":
             got, wanted = relations(case, base), relations_wanted(case)
         elif kind == "filter":

@@ -66,6 +66,10 @@ Two gaps sit in the Rust binding rather than in DuckDB. The `VScalar` trait requ
 - `a.*` over `thinkthen_annotate` gives one typed column per question.
 - Test shapes force evaluation: `count(*)` over a subquery projection elided the volatile call entirely, zero requests observed, so the count tests use shapes that cannot elide (207).
 
+## Relate on the caller's database, 2026-09-25
+
+Ticket 0118 ports `thinkthen_relate(query, rules)` onto the public API under ADR 0038. The query runs as one read-only `SELECT` on a connection LOAD opened on the caller's database, found through a random probe database and never through a name. It reads at most 255 rows, runs under `SET thinkthen_relate_seconds`, and passes a plan-size guard first. A Ctrl-C reaches the running query through a bridge thread and the engine call through the worker. The row cap is stricter than the engine's unique-pair cap. Temporary tables and the caller's open transaction stay out of sight, as the stable C API bounds them. The README's relate section pins each sentence, and `sdlc/records/0118-relate-on-the-callers-duckdb-database.md` holds the proof.
+
 ## Open questions for the ADR
 
 1. Answered by 207: drop the bind-time check for the first release. The C API cannot support it, the first-row parse already fails before any request at zero cost, and rule 4 keeps the aspiration with the citation.

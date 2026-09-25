@@ -10,6 +10,7 @@
 - R1-33: every vendored script is named by check.sh or a tool.
 - R5-25: `deny.toml` is the root copy plus the one exception.
 - R5-23: the README pins the `con.interrupt()` limit.
+- R2-29: ADR 0038's DuckDB amendment keeps one pinned sentence per ruling.
 - R3-29: `requirements.txt` pins each line with `==` and names no URL.
 - Decision 14: the shipped extension carries no test hook.
 
@@ -124,6 +125,31 @@ def readme() -> None:
         fail("R5-23: the README lost the pinned interrupt limit")
 
 
+ADR = REPO / "sdlc" / "planning" / "adr" / "0038-duckdb-relate-runs-on-the-callers-database.md"
+RULINGS = {
+    "SIGINT at LOAD": "LOAD takes SIGINT through `sigaction` and chains to the host's own action with the signature its flags name.",
+    "the worker": "Every engine call runs on a detachable worker with its own cancel token.",
+    "the con.interrupt() limit": "DuckDB gives a scalar no view of its own interrupt, so `con.interrupt()` does not stop a held batch before its replies arrive.",
+    "file access": "`@file` opens through that file system, so the caller's own settings decide each read.",
+    "the engine settings": "The first throttle wins for the process, as main's `build` rules.",
+    "volatile scalars": "Every scalar registers as volatile, so the planner never folds a constant call into a send.",
+    "warm": "The aggregate has no client context, so `thinkthen_warm` refuses `@file` and runs on the engine the environment describes.",
+    "licenses": "One exception remains: `zlib-rs` (Zlib), a build-time dependency of `libduckdb-sys`.",
+    "relate from rows": "**The relate query returns `id, name, kind` or `id, name`, rows with the same name and kind become one entity, and each edge returns one row per pair of their ids.**",
+    "the row cap": "**Relate reads at most 255 rows, under `LIMIT 256`, and more is `usage`.**",
+    "the time limit": "**`SET thinkthen_relate_seconds` bounds the query and the engine call, and `memory_limit` stays the hard bound for a step that holds its input.**",
+    "the identity source": "**Each kept connection attaches an in-memory probe database named from 128 bits of `/dev/urandom`, and a caller matches only the probe its own context resolves.**",
+    "the bridge's pipe": "**The SIGINT handler writes one byte to a pipe only when the pipe's recorded process id equals `getpid()`, and a bridge thread interrupts each busy kept connection.**",
+}
+
+
+def rulings() -> None:
+    text = ADR.read_text()
+    for ruling, sentence in RULINGS.items():
+        if sentence not in text:
+            fail(f"R2-29: ADR 0038's DuckDB amendment lost its sentence on {ruling}")
+
+
 def requirements(path: Path) -> list[str]:
     wrong = []
     for line in path.read_text().splitlines():
@@ -160,6 +186,7 @@ def main() -> int:
     vendored()
     deny()
     readme()
+    rulings()
     FAILED.extend(requirements(ROOT / "tools" / "requirements.txt"))
     shipped()
     for message in FAILED:

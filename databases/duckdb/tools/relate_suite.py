@@ -119,8 +119,22 @@ def r5_22_the_time_limit_stops_a_slow_query():
         started = time.monotonic()
         got = run(["SET thinkthen_relate_seconds = 2", f"SELECT * FROM thinkthen_relate('{slow}', ['near'])"], backend.base(), timeout=30)
         elapsed = time.monotonic() - started
-        expect(said(got[1]), "thinkthen usage: the relate query ran past its 2-second limit and was stopped; filter the rows first or raise SET thinkthen_relate_seconds (0 turns the limit off)", "a slow query")
+        expect(said(got[1]), "thinkthen deadline: the relate query ran past its 2-second limit and was stopped; filter the rows first or raise SET thinkthen_relate_seconds (0 turns the limit off)", "a slow query")
         expect(elapsed < 10, True, f"stopped in {elapsed:.1f}s")
+
+
+@case
+def the_plan_guard_refuses_a_large_grouping_before_it_runs():
+    """Decision 4: the plan-size guard reads DuckDB's estimate and refuses a
+    grouping over ten million rows before any row is read. A sort under the
+    row cap's LIMIT plans as a top-N and holds only 256 rows."""
+    with Backend() as backend:
+        big = "SELECT min(i) AS id, ''n'' || (i % 5000000) AS name, ''k'' AS kind FROM range(10000000) t(i) GROUP BY name"
+        started = time.monotonic()
+        got = run([f"SELECT * FROM thinkthen_relate('{big}', ['near'])"], backend.base(), timeout=30)
+        expect(said(got[0]), "thinkthen usage: the relate query feeds about 10000000 rows into the HASH_GROUP_BY step before its LIMIT, and relate lets at most 1000000 rows into a sorting, grouping, windowing, or joining step; filter the rows first or raise SET thinkthen_relate_holding_rows", "a large grouping")
+        expect(time.monotonic() - started < 2, True, "refused before it ran")
+        expect(backend.count(), 0, "counted sends")
 
 
 @case

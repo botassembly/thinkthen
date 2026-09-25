@@ -181,7 +181,7 @@ os.kill(os.getpid(), signal.SIGINT); held.join()
 """,
             backend.base("arm/held"),
         )
-        expect(dict(got), {"queued": "Invalid Input Error: thinkthen usage: the relate query waited past its 1-second limit in the queue behind another relate on this database and did not run; retry after that relate ends or raise SET thinkthen_relate_seconds (0 turns the limit off)", "held": "Invalid Input Error: thinkthen cancelled: the call was cancelled"}, "the two relates")
+        expect(dict(got), {"queued": "Invalid Input Error: thinkthen deadline: the relate query waited past its 1-second limit in the queue behind another relate on this database and did not run; retry after that relate ends or raise SET thinkthen_relate_seconds (0 turns the limit off)", "held": "Invalid Input Error: thinkthen cancelled: the call was cancelled"}, "the two relates")
         expect(backend.count(), 1, "counted sends")
 
 

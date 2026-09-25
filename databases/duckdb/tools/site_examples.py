@@ -24,7 +24,7 @@ EXAMPLES = REPO_ROOT / "site" / "src" / "data" / "examples"
 ISSUE = "sdlc/issues/2026-09-24-duckdb-site-examples-draw-the-tag-shapes.md"
 DIVERGES = {
     "recognize__duckdb.json": f"draws the tag's thinkthen_relations table shape; see {ISSUE}",
-    "relate__duckdb.json": f"draws the tag's thinkthen_relate; ticket 0118 owns relate; see {ISSUE}",
+    "relate__duckdb.json": f"draws the tag's rules shape, a list holding the JSON {{\"either\": [...]}}; relate reads a list of NAME=SOURCE:TARGET rules or a rules file; see {ISSUE}",
 }
 FILES = {
     "form.json": {"version": 1, "questions": {"area": {"choose": "Which area is this about?", "options": ["export", "login", "billing"]}}},

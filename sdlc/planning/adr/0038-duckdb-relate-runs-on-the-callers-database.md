@@ -45,3 +45,12 @@ Ticket 0110 ports the extension onto `thinkthen`'s public API and carries this A
 - **Volatile scalars.** Every scalar registers as volatile, so the planner never folds a constant call into a send.
 - **Warm.** The aggregate has no client context, so `thinkthen_warm` refuses `@file` and runs on the engine the environment describes.
 - **Licenses.** The binding uses `libduckdb-sys` alone, so the `duckdb` crate's `arrow` and `hashlink` trees leave. `foldhash` and `tiny-keccak` leave with them. One exception remains: `zlib-rs` (Zlib), a build-time dependency of `libduckdb-sys`.
+
+## Amendment of 2026-09-25: the ported extension, part two (ticket 0118)
+
+Ticket 0118 ports relate onto `thinkthen`'s public API and completes this amendment. `databases/duckdb/tools/source_checks.py` reads each sentence in bold below, in both parts, and fails when one leaves (R2-29). Ian can overturn each point.
+
+- **Relate from rows.** **The relate query returns `id, name, kind` or `id, name`, rows with the same name and kind become one entity, and each edge returns one row per pair of their ids.** The rules read as a list of command-grammar rules, a rules file's JSON, or `@file` through the caller's own file system.
+- **The row cap and the time limit.** **Relate reads at most 255 rows, under `LIMIT 256`, and more is `usage`.** **`SET thinkthen_relate_seconds` bounds the query and the engine call, and `memory_limit` stays the hard bound for a step that holds its input.** A timer interrupts the kept connection at the limit, and the plan-size guard refuses a large holding step before the query runs.
+- **The identity source.** **Each kept connection attaches an in-memory probe database named from 128 bits of `/dev/urandom`, and a caller matches only the probe its own context resolves.** No setting names it, and a database that cannot attach one is never routed to. The reaper closes a kept connection once its database has no other, and a counted guard keeps a bound relate's connection across a pass.
+- **The bridge's per-process pipe.** **The SIGINT handler writes one byte to a pipe only when the pipe's recorded process id equals `getpid()`, and a bridge thread interrupts each busy kept connection.** The process id and the write end share one atomic, so the handler never pairs one process's id with another's descriptor. A forked child builds its own pipe on first use.

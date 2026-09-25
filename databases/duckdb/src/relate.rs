@@ -501,13 +501,17 @@ fn cancelled() -> String {
 /// The refusal a relate earns when its limit runs out while it waits behind
 /// another relate on the same database.
 fn queue_limit(seconds: u64) -> String {
-    usage(&format!(
+    deadline(&format!(
         "the relate query waited past its {seconds}-second limit in the queue behind another relate on this database and did not run; retry after that relate ends or raise SET thinkthen_relate_seconds (0 turns the limit off)"
     ))
 }
 
+fn deadline(message: &str) -> String {
+    format!("{}{message}", prefix(thinkthen::ErrorKind::Deadline))
+}
+
 fn time_limit(seconds: u64) -> String {
-    usage(&format!(
+    deadline(&format!(
         "the relate query ran past its {seconds}-second limit and was stopped; filter the rows first or raise SET thinkthen_relate_seconds (0 turns the limit off)"
     ))
 }
