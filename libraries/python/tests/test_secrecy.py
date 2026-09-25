@@ -46,20 +46,33 @@ def test_the_fake_key_arrives_at_a_loopback_listener(backend, tmp_path):
 
 
 def test_no_message_or_repr_carries_the_key_or_address_credentials(backend, tmp_path):
-    """Change 14: every failure path's message and ``repr``, and the reprs of
-    the public values, name neither the fake key nor URL credentials."""
+    """Change 14: every verb's failure on the refuse, 401, and 503 arms,
+    every other failure path's message and ``repr``, and the reprs of the
+    public values name neither the fake key nor URL credentials."""
     printed = run(f"""
         import thinkthen as tt
         port = {backend.port}
         late = tt.question(decide="Is it late?")
+        form = {{"version": 1, "questions": {{"late": {{"decide": "Late?"}}}}}}
         token = tt.CancelToken()
         token.cancel()
         shown = [repr(late), repr(token), repr(tt.Engine()), repr(tt.Entity("Ada", "person"))]
-        calls = [
-            lambda: tt.Engine(base_url=f"http://user:hidden-word@127.0.0.1:{{port}}/generic/v1"),
-            lambda: tt.Engine(base_url=f"http://127.0.0.1:{{port}}/arm/refuse/v1", cache=False).decide(late, "one"),
-            lambda: tt.Engine(base_url=f"http://127.0.0.1:{{port}}/arm/status/401/v1", cache=False).decide(late, "one"),
-            lambda: tt.Engine(base_url=f"http://127.0.0.1:{{port}}/arm/503/v1", cache=False).decide(late, "two"),
+        verbs = [
+            lambda engine: engine.decide(late, "one"),
+            lambda engine: engine.decide_many(late, ["one", "two"]),
+            lambda engine: engine.filter(late, ["one", "two"]),
+            lambda engine: engine.rank("Which is late?", ["one", "two"]),
+            lambda engine: engine.find("Which is late?", ["one", "two"]),
+            lambda engine: engine.annotate(form, ["one"]),
+            lambda engine: engine.recognize("Ada is here", kinds=["person"]),
+            lambda engine: engine.relate([("Ada", "person"), ("Bob", "person")],
+                                         relations={{"knows": ("person", "person")}}),
+        ]
+        calls = [lambda: tt.Engine(base_url=f"http://user:hidden-word@127.0.0.1:{{port}}/generic/v1")]
+        for arm in ("refuse", "status/401", "503"):
+            engine = tt.Engine(base_url=f"http://127.0.0.1:{{port}}/arm/{{arm}}/v1", cache=False)
+            calls += [lambda verb=verb, engine=engine: verb(engine) for verb in verbs]
+        calls += [
             lambda: tt.decide(late, "   "),
             lambda: tt.decide(late, "one", token=token),
             lambda: tt.decide(late, "one", deadline=0),
@@ -76,5 +89,21 @@ def test_no_message_or_repr_carries_the_key_or_address_credentials(backend, tmp_
         print("\\n".join(shown))
     """, child_env(backend, tmp_path))
     assert "no error" not in printed
-    assert "a base address carries no user information" in printed
+    assert printed.count("BackendError") >= 3 * 8
     assert FAKE not in printed and "hidden-word" not in printed
+
+
+def test_credentials_in_the_environment_address_are_refused_unshown(backend, tmp_path):
+    """Change 14: a ``THINKTHEN_BASE_URL`` with user information stops
+    ``tt.decide`` before any send, and the message names neither part."""
+    base = backend.base().replace("http://", "http://user:hidden-word@")
+    printed = run("""
+        import thinkthen as tt
+        try:
+            tt.decide("Is it late?", "one")
+        except tt.ThinkThenError as error:
+            print(type(error).__name__, error)
+    """, {**child_env(backend, tmp_path), "THINKTHEN_BASE_URL": base})
+    assert printed.strip() == ("UsageError THINKTHEN_BASE_URL: a base address carries "
+                               "no user information")
+    assert backend.count() == 0

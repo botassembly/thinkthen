@@ -58,7 +58,7 @@ Where the build differs from the goals below:
 - No pydantic, httpx, requests, or vendor SDK. Each costs import time and a resolver conflict.
 - No `__bool__` that raises under a single cut. A cut has two outcomes, and refusing the boolean throws away Python's best line.
 - No dict tree and no JSON text built in Python for the bare answer. The engine already holds the value.
-- No thread pool in Python. The lock serializes it, and the engine already runs requests at the width `jobs` names.
+- No thread pool in Python. The lock serializes it, and the engine already runs requests at the throttle `tt.Engine(throttle=)` names.
 - No pure-Python fallback. It drifts, and the digest must match the other surfaces.
 
 ## Where this language wastes time

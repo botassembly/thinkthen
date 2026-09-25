@@ -82,17 +82,23 @@ fn annotated(py: Python<'_>, value: Annotated) -> PyResult<Py<PyAny>> {
     )
 }
 
+/// Refuse a question whose kind is not `kind`, naming the verb.
+fn of_kind(py: Python<'_>, asked: &Asked, verb: &str, kind: &str) -> PyResult<()> {
+    if asked.kind() == kind {
+        return Ok(());
+    }
+    Err(usage(
+        py,
+        &format!("{verb} does not take a {} question", asked.kind()),
+    ))
+}
+
 /// The question a verb takes: its own kind, under one cut.
 fn only(py: Python<'_>, asked: &Asked, verb: &str, kind: &str) -> PyResult<thinkthen::Question> {
+    of_kind(py, asked, verb, kind)?;
     match asked {
-        Asked::Plain(question) if asked.kind() == kind => Ok(question.clone()),
-        Asked::Banded(_) if kind == "decide" => {
-            Err(usage(py, "this call takes one cut, not a band"))
-        }
-        _ => Err(usage(
-            py,
-            &format!("{verb} does not take a {} question", asked.kind()),
-        )),
+        Asked::Plain(question) => Ok(question.clone()),
+        Asked::Banded(_) => Err(usage(py, "this call takes one cut, not a band")),
     }
 }
 
@@ -188,13 +194,8 @@ fn many(
             .filter_with(cut, records, options)
             .collect::<Result<_, _>>()
             .map(Many::Kept),
-        (None, Asked::Plain(question)) => engine
-            .decide_many_with(question, records, options)
-            .map(value)
-            .collect::<Result<_, _>>()
-            .map(Many::Answers),
-        (None, Asked::Banded(question)) => engine
-            .decide_many_with(question, records, options)
+        (None, asked) => engine
+            .decide_many_with(asked.decision(), records, options)
             .map(value)
             .collect::<Result<_, _>>()
             .map(Many::Answers),
@@ -311,16 +312,12 @@ impl Engine {
         let py = question.py();
         guard(py, || {
             let (engine, asked) = (self.0.clone(), question.get().0.clone());
-            if verb != "details" && asked.kind() != verb {
-                return Err(usage(
-                    py,
-                    &format!("{verb} does not take a {} question", asked.kind()),
-                ));
+            if verb != "details" {
+                of_kind(py, &asked, verb, verb)?;
             }
             let (evidence, controls) = (text(evidence)?, controls(py, deadline, token)?);
-            let found = run(py, controls, move |options| match &asked {
-                Asked::Plain(question) => engine.details_with(question, &evidence, options),
-                Asked::Banded(question) => engine.details_with(question, &evidence, options),
+            let found = run(py, controls, move |options| {
+                engine.details_with(asked.detail(), &evidence, options)
             })?;
             if verb == "details" {
                 return Ok(found.to_json().into_pyobject(py)?.into_any().unbind());
