@@ -6,10 +6,9 @@ use std::thread;
 
 use crate::annotate::{GroupAnswer, Judging, PreparedGroup, check_model};
 use crate::core::{ModelName, Reading, Record};
-use crate::engine::annotate_schedule::{
-    self as engine_schedule, InputPort, Outcome as RunOutcome, Prepared,
+use crate::engine::facade::{
+    Completed, GroupOutcome as RunOutcome, GroupPort as InputPort, Input as EngineInput, Prepared,
 };
-use crate::engine::schedule::{Completed, Input as EngineInput};
 use crate::failure::Failure;
 use crate::schedule::Output;
 
@@ -31,15 +30,13 @@ pub(crate) fn run<I>(
     judging: &Judging<'_>,
     reading: &Reading,
     chunks: I,
-    jobs: usize,
     cancel: &crate::engine::Cancel,
     output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure>
 where
     I: Iterator<Item = Result<Input, Failure>> + Send + 'static,
 {
-    let outcome = engine_schedule::run(
-        jobs,
+    let outcome = judging.engine().groups(
         reading.streams(),
         cancel,
         |requests, events| {
@@ -66,8 +63,6 @@ where
                 })
         },
         |judged| output.take(judged),
-        Failure::Defect,
-        Failure::from,
     )?;
     match outcome {
         RunOutcome::Complete { partial_failure } => Ok(if partial_failure {
@@ -85,7 +80,7 @@ where
             at,
             finished,
             replayed,
-            recording: judging.recording_named(),
+            recording: judging.engine().recording(),
             held: false,
             cause: Box::new(cause),
         }),

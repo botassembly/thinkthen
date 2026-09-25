@@ -23,11 +23,11 @@ mod schedule;
 
 const SECOND: Duration = Duration::from_secs(1);
 
-fn within(budget: Duration) -> Cancel {
+fn within(budget: Duration) -> Cancel<'static> {
     Cancel::default().with_deadline(Deadline::after(budget))
 }
 
-fn spent() -> Cancel {
+fn spent() -> Cancel<'static> {
     within(Duration::ZERO)
 }
 
@@ -177,9 +177,13 @@ fn post(
         max_retries: 1,
         retry_wait: Duration::from_millis(10),
     };
-    Client::new(timeout, false).post_observed(&exchange, cancel, || {
-        attempts.set(attempts.get() + 1);
-    })
+    Client::new(timeout, false, crate::engine::process_width()).post_observed(
+        &exchange,
+        cancel,
+        || {
+            attempts.set(attempts.get() + 1);
+        },
+    )
 }
 
 #[test]
@@ -223,7 +227,7 @@ fn accounting_that_outlasts_the_budget_sends_nothing() {
     };
     let started = Instant::now();
 
-    let result = Client::new(SECOND * 30, false).post_observed(
+    let result = Client::new(SECOND * 30, false, crate::engine::process_width()).post_observed(
         &exchange,
         &within(Duration::from_millis(200)),
         || thread::sleep(Duration::from_millis(500)),

@@ -7,7 +7,7 @@ use std::process::{Command, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use crate::harness::{Canned, Listener, spawn};
+use crate::harness::{Canned, Listener, finish, spawn};
 
 const QUESTION: &str = "asks for a refund";
 const EVIDENCE: &str = "Refund me please.";
@@ -209,10 +209,11 @@ fn a_file_size_limit_returns_the_fixed_failure_and_removes_the_temporary_entry()
         .expect("input pipe")
         .write_all(&vec![b'x'; 8_192])
         .expect("evidence written");
-    let output = child.wait_with_output().expect("limited child finishes");
+    let output = finish(child, "the limited child").expect("limited child finishes");
 
     assert_eq!(output.status.code(), Some(5));
     assert_eq!(String::from_utf8_lossy(&output.stderr), STORAGE);
+    assert_eq!(listener.requests().len(), 1, "no extra request");
     assert!(entries(&recording).expect("entries").is_empty());
     let temporary = fs::read_dir(&recording)
         .expect("recording folder")

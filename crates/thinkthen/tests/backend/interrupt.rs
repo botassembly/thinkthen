@@ -10,7 +10,7 @@ use std::sync::mpsc::channel;
 use std::sync::{Arc, Barrier};
 use std::time::Duration;
 
-use crate::harness::{Canned, Listener, Observed};
+use crate::harness::{Canned, Listener, Observed, finish};
 
 const YES: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
 const PICKED: &str = concat!(
@@ -104,7 +104,7 @@ fn held(
     );
     acknowledgment.wait()?;
     release.wait();
-    let output = child.wait_with_output()?;
+    let output = finish(child, "the interrupted command")?;
     assert_eq!(
         output.status.signal(),
         Some(signal_hook::consts::signal::SIGINT),

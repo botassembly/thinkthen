@@ -6,15 +6,12 @@ use std::process::ExitCode;
 use std::sync::mpsc::Receiver;
 use std::thread;
 
-use crate::core::{Outcome, ranking};
+use crate::core::{Outcome, Withheld, ranking};
 use crate::edge;
-use crate::engine::schedule::{
-    self as engine_schedule, Completed, Input, InputPort, Outcome as RunOutcome,
-};
+use crate::engine::facade::{Completed, Engine, Input, InputPort, RunOutcome};
+use crate::engine::{Width, Widths};
 use crate::failure::Failure;
 use crate::profile::Mismatch;
-
-const DEFAULT_JOBS: usize = 4;
 
 type Asking<'a, T> = dyn Fn(&T) -> Result<Judged, Failure> + Sync + 'a;
 
@@ -34,10 +31,7 @@ impl fmt::Debug for Judged {
             .debug_struct("Judged")
             .field(
                 "printed",
-                &format_args!(
-                    "<{} bytes withheld>",
-                    self.printed.as_ref().map_or(0, String::len)
-                ),
+                &Withheld(self.printed.as_ref().map_or(0, String::len)),
             )
             .field("outcome", &self.outcome)
             .field("replayed", &self.replayed)
@@ -133,16 +127,30 @@ impl Output<'_> {
 pub(crate) fn jobs_of(asked: Option<u8>, streams: bool) -> Result<usize, Failure> {
     match asked {
         Some(_) if !streams => Err(Failure::JobsOutsideRecords),
-        Some(number) => Ok(usize::from(number)),
-        None => Ok(DEFAULT_JOBS),
+        asked => width(asked),
     }
 }
 
+/// Register this command's `--jobs` with the process and return the width
+/// its calls follow.
+pub(crate) fn width(asked: Option<u8>) -> Result<usize, Failure> {
+    width_in(crate::engine::process_width(), asked)
+}
+
+/// `--jobs N` selects N. An omitted `--jobs` selects nothing and follows the
+/// width the process runs at, which is 4 until something selects another.
+pub(crate) fn width_in(widths: &Widths, asked: Option<u8>) -> Result<usize, Failure> {
+    let asked = asked.map(|jobs| Width::new(u64::from(jobs))).transpose()?;
+    widths
+        .select(asked)
+        .map(Width::get)
+        .map_err(Failure::WidthActive)
+}
+
 pub(crate) fn over_records<T, I>(
+    engine: &Engine,
     row: &Asking<'_, T>,
     chunks: I,
-    jobs: usize,
-    recording: bool,
     cancel: &crate::engine::Cancel,
     output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure>
@@ -150,9 +158,9 @@ where
     T: Send + 'static,
     I: Iterator<Item = Result<T, Failure>> + Send + 'static,
 {
+    let recording = engine.recording();
     let held = output.holds();
-    let outcome = engine_schedule::run_cancelled(
-        jobs,
+    let outcome = engine.records(
         held,
         cancel,
         |requests, events| {
@@ -166,8 +174,6 @@ where
             })
         },
         |judged| output.take(judged),
-        Failure::Defect,
-        Failure::from,
     )?;
     match outcome {
         RunOutcome::Complete => {
@@ -209,3 +215,6 @@ fn read_records<T, I>(
         }
     }
 }
+
+#[cfg(test)]
+pub(crate) mod width_tests;

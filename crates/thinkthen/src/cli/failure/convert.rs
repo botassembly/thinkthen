@@ -7,6 +7,12 @@ use crate::core::{
 };
 use crate::engine::error::Error as EngineError;
 
+impl From<crate::config::ConfigError> for Failure {
+    fn from(error: crate::config::ConfigError) -> Self {
+        Self::Configuration(error.message)
+    }
+}
+
 impl From<BackendError> for Failure {
     fn from(error: BackendError) -> Self {
         Self::Backend(error)
@@ -69,6 +75,17 @@ impl From<EngineError> for Failure {
             EngineError::ProfileLimit(limit) => Self::ProfileLimit(limit),
             EngineError::Cancelled => Self::Cancelled,
             EngineError::Deadline(_) => Self::Defect("an unavailable deadline reached the command"),
+            EngineError::NoKey(variable) => Self::NoKey(variable.to_owned()),
+            EngineError::WidthActive(active) => Self::WidthActive(active),
+            EngineError::ModelsDiffer(models) => Self::ModelsDiffer(models),
+            EngineError::UsageOverflow => Self::UsageOverflow,
+            EngineError::RecognizeKinds => Self::Recognize(super::recognize::Error::Config {
+                file: false,
+                error: crate::core::RecognizeConfigError::Kinds,
+            }),
+            EngineError::RecognizeLogical => {
+                Self::Recognize(super::recognize::Error::LogicalQuestion)
+            }
         }
     }
 }
