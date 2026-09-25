@@ -33,8 +33,10 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 PASSED=0 FAILED=0
-# Each step runs in a subshell under errexit, so its first failing line fails it.
+# Each step runs in a subshell under errexit, so its first failing line fails
+# it. STEPS, when set, names the steps to run, for the planted-bug runs.
 check() {
+	case " ${STEPS:-$1} " in *" $1 "*) ;; *) return 0 ;; esac
 	set +e
 	(
 		set -e
@@ -235,6 +237,9 @@ bad_files_name_themselves() {
 check bad_files_name_themselves
 
 echo "== deadlines and cancels"
+start=$(now_ms)
+q -c "SELECT 1" >/dev/null
+echo "         psql start: $(($(now_ms) - start)) ms"
 deadline_setting_range() {
 	fresh generic
 	has "$(q -c "LOAD 'thinkthen'" -c "SET thinkthen.deadline_ms = -2")" "-2 is outside the valid range for parameter \"thinkthen.deadline_ms\""
@@ -248,15 +253,15 @@ deadline_setting_range() {
 	same "$(bcount)" 1
 }
 check deadline_setting_range
-# held_call ARM_CONFIG... STATEMENT: run the statement in the background on a held backend.
-held_call() {
-	statement=${*: -1}
-	fresh arm/held "${@:1:$#-1}"
-	q -c '\set VERBOSITY verbose' -c "$statement" >"$RUN/held.out" &
+# held STATEMENT: run the statement in the background. Each timed step
+# starts the server first, so its clock holds psql's start and nothing more.
+held() {
+	q -c '\set VERBOSITY verbose' -c "$1" >"$RUN/held.out" &
 	HELD=$!
 }
 single_cancel() {
-	held_call "SELECT thinkthen_decide('$Q', 'held')"
+	fresh arm/held
+	held "SELECT thinkthen_decide('$Q', 'held')"
 	bwait 1
 	start=$(now_ms)
 	q -c "SELECT pg_cancel_backend($(victim))" >/dev/null
@@ -269,10 +274,11 @@ single_cancel() {
 }
 check single_cancel
 single_statement_timeout() {
+	fresh arm/held
 	start=$(now_ms)
-	held_call "SET statement_timeout = '300ms'; SELECT thinkthen_decide('$Q', 'held')"
+	held "SET statement_timeout = '300ms'; SELECT thinkthen_decide('$Q', 'held')"
 	wait "$HELD" || true
-	within $(($(now_ms) - start)) 1500
+	within $(($(now_ms) - start)) 500
 	has "$(cat "$RUN/held.out")" "canceling statement due to statement timeout"
 	brelease
 	sleep 0.2
@@ -280,10 +286,11 @@ single_statement_timeout() {
 }
 check single_statement_timeout
 single_deadline() {
+	fresh arm/held
 	start=$(now_ms)
-	held_call "SET thinkthen.deadline_ms = 200; SELECT thinkthen_decide('$Q', 'held')"
+	held "SET thinkthen.deadline_ms = 200; SELECT thinkthen_decide('$Q', 'held')"
 	wait "$HELD" || true
-	within $(($(now_ms) - start)) 2000
+	within $(($(now_ms) - start)) 1000
 	has "$(cat "$RUN/held.out")" "57014"
 	has "$(cat "$RUN/held.out")" "thinkthen deadline"
 	brelease
@@ -292,17 +299,19 @@ single_deadline() {
 }
 check single_deadline
 batch_deadline() {
+	fresh arm/held "thinkthen.throttle = 8"
 	start=$(now_ms)
-	held_call "thinkthen.throttle = 8" "SET thinkthen.deadline_ms = 1000; SELECT count(*) FROM thinkthen_decide('$Q', $(rows 200))"
+	held "SET thinkthen.deadline_ms = 1000; SELECT count(*) FROM thinkthen_decide('$Q', $(rows 200))"
 	wait "$HELD" || true
-	within $(($(now_ms) - start)) 2500
+	within $(($(now_ms) - start)) 1500
 	has "$(cat "$RUN/held.out")" "thinkthen deadline"
 	same "$(bcount)" 8
 	brelease
 }
 check batch_deadline
 batch_cancel() {
-	held_call "thinkthen.throttle = 8" "SELECT count(*) FROM thinkthen_decide('$Q', $(rows 200))"
+	fresh arm/held "thinkthen.throttle = 8"
+	held "SELECT count(*) FROM thinkthen_decide('$Q', $(rows 200))"
 	bwait 8
 	start=$(now_ms)
 	q -c "SELECT pg_cancel_backend($(victim))" >/dev/null
@@ -317,7 +326,8 @@ batch_cancel() {
 }
 check batch_cancel
 benign_interrupt_finishes() {
-	held_call "thinkthen.throttle = 8" "SELECT count(*) FROM thinkthen_decide('$Q', $(rows 200))"
+	fresh arm/held "thinkthen.throttle = 8"
+	held "SELECT count(*) FROM thinkthen_decide('$Q', $(rows 200))"
 	bwait 8
 	q -c "SELECT pg_log_backend_memory_contexts($(victim))" >/dev/null
 	sleep 0.3
@@ -396,7 +406,8 @@ check the_cache_setting_names_the_folder
 
 echo "== engine settings"
 throttle_setting_holds_eight() {
-	held_call "thinkthen.throttle = 8" "SELECT count(*) FROM thinkthen_decide('$Q', $(rows 64))"
+	fresh arm/held "thinkthen.throttle = 8"
+	held "SELECT count(*) FROM thinkthen_decide('$Q', $(rows 64))"
 	bwait 8
 	sleep 0.3
 	same "$(bcount)" 8
@@ -464,6 +475,20 @@ zero_cache_cap_refuses() {
 }
 check zero_cache_cap_refuses
 
+# Ian's ruling of 2026-09-25: the backend's total holds across row calls.
+the_total_holds_across_rows() {
+	fresh generic "thinkthen.max_requests_total = 3"
+	out=$(q -c "SELECT count(*) FROM generate_series(1, 10) g WHERE thinkthen_decide('$Q', 'row ' || g)" \
+		-c "SELECT thinkthen_decide('$Q', 'after')")
+	same "$(grep -oF "thinkthen usage: thinkthen.max_requests_total allows 3 requests in this backend, and they are spent (retryable: no)" <<<"$out" | wc -l)" 2
+	same "$(bcount)" 3
+	out=$(q -c "SELECT thinkthen_decide('$Q', 'row 1')" -c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['a', 'b', 'c', 'd'])")
+	# A new backend starts from zero: a cached answer sends nothing, and a
+	# four-record batch sends the three the total leaves, then refuses.
+	has "$out" "$(printf 't\nERROR:  thinkthen usage: thinkthen.max_requests_total allows 3 requests in this backend, and they are spent')"
+	same "$(bcount)" 6
+}
+check the_total_holds_across_rows
 echo "== secrecy, signals, preload, panics"
 the_key_never_reaches_the_log() {
 	secret=tt-secret-value-4417
@@ -494,12 +519,14 @@ masks_hold() {
 	[ "$threads" -ge 1 ]
 }
 signal_masks() {
-	held_call "SELECT thinkthen_decide('$Q', 'held')"
+	fresh arm/held
+	held "SELECT thinkthen_decide('$Q', 'held')"
 	bwait 1
 	masks_hold
 	brelease
 	wait "$HELD"
-	held_call "thinkthen.throttle = 8" "SELECT count(*) FROM thinkthen_decide('$Q', $(rows 64))"
+	fresh arm/held "thinkthen.throttle = 8"
+	held "SELECT count(*) FROM thinkthen_decide('$Q', $(rows 64))"
 	bwait 8
 	masks_hold
 	brelease
@@ -562,6 +589,14 @@ runner_never_excuses_by_a_note() {
 	same "$out" "fail 01-decide-yes-captured: probability: got 0.99, expected 0.5"
 }
 check runner_never_excuses_by_a_note
+
+# The fake key never reaches a psql output or the server log.
+the_fake_key_stays_in_the_environment() {
+	same "$(cat "$RUN/psql.all" "$RUN/server.all" "$LOG" 2>/dev/null | grep -c "$FAKE_KEY" || true)" 0
+	[ -s "$RUN/psql.all" ]
+	[ -s "$RUN/server.all" ]
+}
+check the_fake_key_stays_in_the_environment
 
 echo "postgresql: $PASSED passed, $FAILED failed"
 [ "$FAILED" = 0 ]

@@ -56,11 +56,13 @@ fn inline_rule(text: &str, kinds: bool) -> Result<RelationRule, Refusal> {
     Ok(RelationRule::one_way(name, source, target)?)
 }
 
-/// The inline rules as one relate request.
+/// The inline rules as one relate request. `inline_rule` copies the
+/// command's `inline_rule` in `crates/thinkthen/src/core/relate_file.rs:295`,
+/// which the public API does not export.
 fn inline(rules: &[String], kinds: bool) -> Result<Relate, Refusal> {
     let mut ask = Relate::builder();
     for rule in rules {
-        ask = ask.relation(inline_rule(rule.trim(), kinds)?)?;
+        ask = ask.relation(inline_rule(rule, kinds)?)?;
     }
     Ok(ask.build()?)
 }
@@ -212,7 +214,9 @@ fn thinkthen_relate_file(
         name!(probability, f64),
     ),
 > {
-    let ask = crate::given(rules, "relate file").relate().or_raise();
+    let ask = crate::given(rules, "relate file")
+        .parse(Relate::from_json)
+        .or_raise();
     relate(query.unwrap_or_default(), |_| Ok(ask))
 }
 

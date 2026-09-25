@@ -92,8 +92,13 @@ pg_stop() {
 
 # psql as a role (PGUSER_AS, postgres by default), one statement per -c.
 # qs keeps psql's exit status; q prints any error for a test to read.
+# Every output also lands in psql.all, which the check reads for the fake key.
 qs() {
-	timeout "${QTIMEOUT:-30}" psql -X -q -At -h "$SOCK" -U "${PGUSER_AS:-postgres}" -d postgres "$@" 2>&1
+	local out code
+	out=$(timeout "${QTIMEOUT:-30}" psql -X -q -At -h "$SOCK" -U "${PGUSER_AS:-postgres}" -d postgres "$@" 2>&1)
+	code=$?
+	printf '%s\n' "$out" | tee -a "$RUN/psql.all"
+	return "$code"
 }
 q() { qs "$@" || true; }
 
@@ -140,6 +145,7 @@ fresh() {
 	CACHEDIR=$(mktemp -d "$RUN/cache.XXXXXX")
 	cp "$RUN/postgresql.conf.base" "$DATA/postgresql.conf"
 	for line in "$@"; do echo "$line" >>"$DATA/postgresql.conf"; done
+	[ ! -f "$LOG" ] || cat "$LOG" >>"$RUN/server.all"
 	: >"$LOG"
 	pg_start "http://127.0.0.1:$BPORT/$arm/v1" "$CACHEDIR"
 }

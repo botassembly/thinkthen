@@ -2,7 +2,7 @@
 //! distinct pair once and fills the engine's disk cache, so a later decide
 //! over the same pairs reads the cache and sends nothing (decision 4).
 
-use std::collections::HashMap;
+use std::collections::HashSet;
 
 use pgrx::pg_sys::FunctionCallInfo;
 use pgrx::prelude::*;
@@ -39,15 +39,13 @@ fn warm_unescape(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     let mut held = text.chars();
     while let Some(here) = held.next() {
-        match (here, here == '\\') {
-            (_, false) => out.push(here),
-            (_, true) => match held.next() {
-                Some('e') => out.push('\x1e'),
-                Some('f') => out.push('\x1f'),
-                Some(other) => out.push(other),
-                None => out.push('\\'),
-            },
-        }
+        let escaped = if here == '\\' { held.next() } else { None };
+        out.push(match escaped {
+            Some('e') => '\x1e',
+            Some('f') => '\x1f',
+            Some(other) => other,
+            None => here,
+        });
     }
     out
 }
@@ -95,14 +93,11 @@ fn warm_merge(one: &str, two: &str) -> String {
 /// each group's evidence distinct in first-seen order.
 fn warm_groups(state: &str) -> Vec<(String, Vec<String>)> {
     let mut groups: Vec<(String, Vec<String>)> = Vec::new();
-    let mut seen: HashMap<(String, String), ()> = HashMap::new();
+    let mut seen: HashSet<(String, String)> = HashSet::new();
     for row in warm_tail(state).split('\x1e').filter(|row| !row.is_empty()) {
         let (question, evidence) = row.split_once('\x1f').unwrap_or((row, ""));
         let (question, evidence) = (warm_unescape(question), warm_unescape(evidence));
-        if seen
-            .insert((question.clone(), evidence.clone()), ())
-            .is_some()
-        {
+        if !seen.insert((question.clone(), evidence.clone())) {
             continue;
         }
         match groups.iter_mut().find(|(held, _)| *held == question) {

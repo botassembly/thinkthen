@@ -4,7 +4,7 @@
 
 use std::path::{Component, Path, PathBuf};
 
-use thinkthen::{ErrorKind, LoadedQuestion, Question, QuestionSet, Recognize, Relate};
+use thinkthen::ErrorKind;
 
 use crate::call::Refusal;
 use crate::ffi;
@@ -140,6 +140,7 @@ fn read_named(what: &str, path: &str, directory: Option<&str>) -> Result<String,
 pub(crate) struct Given {
     json: String,
     file: Option<String>,
+    what: String,
 }
 
 impl Given {
@@ -153,24 +154,20 @@ impl Given {
         if text.trim().is_empty() {
             return Err(Refusal::usage(format!("the {what} is empty")));
         }
-        Ok(match arg_form(text, what)? {
-            ArgForm::File(path) => Self {
-                json: read_named(what, path, directory)?,
-                file: Some(path.to_owned()),
-            },
-            ArgForm::Json(json) => Self {
-                json: json.to_owned(),
-                file: None,
-            },
-        })
+        let (json, file) = match arg_form(text, what)? {
+            ArgForm::File(path) => (read_named(what, path, directory)?, Some(path.to_owned())),
+            ArgForm::Json(json) => (json.to_owned(), None),
+        };
+        let what = what.to_owned();
+        Ok(Self { json, file, what })
     }
 
     /// Parse the text. A file's parse failure is `local` and names the file (0095).
-    fn parse<T>(
+    pub(crate) fn parse<T>(
         &self,
-        what: &str,
         parse: impl FnOnce(&str) -> Result<T, thinkthen::Error>,
     ) -> Result<T, Refusal> {
+        let what = &self.what;
         parse(&self.json).map_err(|error| match &self.file {
             None => error.into(),
             Some(path) => Refusal::of(
@@ -208,22 +205,6 @@ impl Given {
         object.insert(key.to_owned(), serde_json::Value::from(members));
         self.json = value.to_string();
         Ok(self)
-    }
-
-    pub(crate) fn question(&self) -> Result<LoadedQuestion, Refusal> {
-        self.parse("question", Question::from_json)
-    }
-
-    pub(crate) fn set(&self) -> Result<QuestionSet, Refusal> {
-        self.parse("question set", QuestionSet::from_json)
-    }
-
-    pub(crate) fn recognize(&self) -> Result<Recognize, Refusal> {
-        self.parse("recognize spec", Recognize::from_json)
-    }
-
-    pub(crate) fn relate(&self) -> Result<Relate, Refusal> {
-        self.parse("relate file", Relate::from_json)
     }
 }
 

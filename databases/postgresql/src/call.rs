@@ -121,11 +121,6 @@ impl Plan {
             cache_bytes: u64::try_from(cache_bytes).ok(),
         })
     }
-
-    /// The request limit, which a call over held records checks before any send.
-    pub(crate) const fn most(&self) -> Option<usize> {
-        self.max_requests
-    }
 }
 
 /// Apply a plan to a seeded builder. The throttle passes only while this
@@ -154,9 +149,8 @@ fn apply(
 /// The explicit throttle this backend registered, 0 for none.
 static ACTIVE_THROTTLE: AtomicU8 = AtomicU8::new(0);
 
-/// Every engine this backend built, the current one last, beside the plan
-/// it was built from. Each engine counts its own sends, so the usage
-/// totals add them all.
+/// One engine per plan this backend used. Each engine counts its own sends,
+/// so the usage totals add them all.
 static ENGINES: Mutex<Vec<(Plan, Engine)>> = Mutex::new(Vec::new());
 
 fn engines() -> std::sync::MutexGuard<'static, Vec<(Plan, Engine)>> {
@@ -171,6 +165,11 @@ fn build(plan: &Plan) -> Result<Engine, Error> {
     let engine = apply(plan, active, EngineBuilder::from_env()?)?.build()?;
     if let (None, Some(value)) = (active, plan.throttle) {
         ACTIVE_THROTTLE.store(value, Ordering::Release);
+    }
+    // Kept before the call runs, so a cancelled call's sends still count.
+    let mut all = engines();
+    if !all.iter().any(|(held, _)| held == plan) {
+        all.push((plan.clone(), engine.clone()));
     }
     Ok(engine)
 }
@@ -194,6 +193,35 @@ pub(crate) fn totals() -> [u64; 4] {
 pub(crate) struct Call {
     pub(crate) plan: Plan,
     pub(crate) deadline_ms: i32,
+    /// `thinkthen.max_requests_total`, and the requests it still leaves.
+    total: Option<u64>,
+    left: Option<u64>,
+}
+
+/// The refusal once `thinkthen.max_requests_total` is spent.
+fn spent(total: u64) -> Refusal {
+    Refusal::usage(format!(
+        "thinkthen.max_requests_total allows {total} requests in this backend, and they are spent"
+    ))
+}
+
+impl Call {
+    /// Refuse held records over `max_requests` before any send. Return how
+    /// many of them the total leaves, when that is fewer than all.
+    pub(crate) fn within(&self, count: usize) -> Option<usize> {
+        if let Some(most) = self.plan.max_requests.filter(|most| count > *most) {
+            raise(Refusal::usage(format!(
+                "this engine answers at most {most} records in one call"
+            )));
+        }
+        let left = usize::try_from(self.left?).unwrap_or(usize::MAX);
+        (count > left).then_some(left)
+    }
+
+    /// The refusal after a call that sent only what the total left.
+    pub(crate) fn spent(&self) -> Refusal {
+        spent(self.total.unwrap_or_default())
+    }
 }
 
 /// How often the backend thread looks at its interrupt flags and deadline.
@@ -242,8 +270,6 @@ pub(crate) fn lost() -> Refusal {
     )
 }
 
-type Built<T> = (Option<Engine>, Result<T, Error>);
-
 /// Run one call on a detachable masked worker, waiting in 50 ms ticks. A
 /// cancel, terminate, or statement timeout cancels the token, detaches the
 /// worker, and raises PostgreSQL's error; a passed deadline raises `deadline`.
@@ -252,30 +278,26 @@ pub(crate) fn run<T: Send + 'static>(
     work: impl FnOnce(&Engine, CallOptions<'_>) -> Result<T, Error> + Send + 'static,
 ) -> T {
     let held = engines()
-        .last()
-        .filter(|(plan, _)| *plan == call.plan)
+        .iter()
+        .find(|(plan, _)| *plan == call.plan)
         .map(|(_, engine)| engine.clone());
     let millis = call.deadline_ms;
     let due = u64::try_from(millis)
         .ok()
         .map(|budget| Instant::now() + Duration::from_millis(budget));
     let token = CancelToken::new();
-    let (answer, answered) = mpsc::channel::<Built<T>>();
+    let (answer, answered) = mpsc::channel::<Result<T, Error>>();
     let (plan, worker_token) = (call.plan.clone(), token.clone());
     ffi::spawn_masked(move || {
         deliver(&answer, || {
-            let (engine, built) = match held {
-                Some(engine) => (engine, false),
-                None => match build(&plan) {
-                    Ok(engine) => (engine, true),
-                    Err(error) => return (None, Err(error)),
-                },
+            let engine = match held {
+                Some(engine) => engine,
+                None => build(&plan)?,
             };
-            let result = CallOptions::new()
+            CallOptions::new()
                 .cancel(&worker_token)
                 .deadline_millis(i64::from(millis))
-                .and_then(|options| work(&engine, options));
-            (built.then_some(engine), result)
+                .and_then(|options| work(&engine, options))
         });
     })
     .map_err(|_| Refusal::of(ErrorKind::Defect, "the call's worker could not start"))
@@ -290,12 +312,7 @@ pub(crate) fn run<T: Send + 'static>(
         }
     });
     match waited {
-        Waited::Done((built, result)) => {
-            if let Some(engine) = built {
-                engines().push((call.plan, engine));
-            }
-            result.or_raise()
-        }
+        Waited::Done(result) => result.or_raise(),
         Waited::Lost => raise(lost()),
         Waited::Cancel => {
             token.cancel();
@@ -317,6 +334,7 @@ static API_KEY: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new
 static FILE_DIRECTORY: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
 static THROTTLE: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
 static MAX_REQUESTS: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
+static MAX_REQUESTS_TOTAL: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
 static CACHE: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
 static CACHE_BYTES: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
 
@@ -343,9 +361,17 @@ pub(crate) fn read() -> Call {
         CACHE_BYTES.get(),
     )
     .or_raise();
+    // Ian's ruling of 2026-09-25: the backend's total, computed once per call.
+    let total = u64::try_from(MAX_REQUESTS_TOTAL.get()).ok();
+    let left = total.map(|total| total.saturating_sub(totals()[0]));
+    if left == Some(0) {
+        raise(spent(total.unwrap_or_default()));
+    }
     Call {
         plan,
         deadline_ms: DEADLINE_MS.get(),
+        total,
+        left,
     }
 }
 
@@ -372,6 +398,14 @@ pub(crate) fn register() {
         c"requests in flight at once; -1 leaves the engine default",
         &THROTTLE,
         32,
+        GucContext::Suset,
+        GucFlags::default(),
+    );
+    int(
+        c"thinkthen.max_requests_total",
+        c"most requests one backend sends; -1 means no total",
+        &MAX_REQUESTS_TOTAL,
+        i32::MAX,
         GucContext::Suset,
         GucFlags::default(),
     );
@@ -423,6 +457,21 @@ pub(crate) fn register() {
 mod tests {
     use super::*;
 
+    /// Decision 3: the registered defaults plan no setter, and each set
+    /// value reaches the plan. PostgreSQL's `'1MB'` arrives as bytes.
+    #[test]
+    fn the_registered_defaults_plan_nothing_and_set_values_carry() {
+        assert_eq!(Plan::of(UNSET, UNSET, None, UNSET), Ok(Plan::default()));
+        assert_eq!(Plan::of(UNSET, UNSET, Some(""), UNSET), Ok(Plan::default()));
+        let set = Plan {
+            throttle: Some(8),
+            max_requests: Some(3),
+            cache: Some(PathBuf::from("/srv/cache")),
+            cache_bytes: Some(1_048_576),
+        };
+        assert_eq!(Plan::of(8, 3, Some("/srv/cache"), 1_048_576), Ok(set));
+    }
+
     /// A zero cache cap refuses with the pinned sentence before any setter.
     #[test]
     fn a_zero_cache_cap_refuses_before_any_setter() {
@@ -442,22 +491,36 @@ mod tests {
         let table = [
             (
                 ErrorKind::Usage,
+                "usage",
                 PgSqlErrorCode::ERRCODE_INVALID_PARAMETER_VALUE,
             ),
             (
                 ErrorKind::Backend,
+                "backend",
                 PgSqlErrorCode::ERRCODE_EXTERNAL_ROUTINE_EXCEPTION,
             ),
-            (ErrorKind::Local, PgSqlErrorCode::ERRCODE_IO_ERROR),
-            (ErrorKind::Cancelled, PgSqlErrorCode::ERRCODE_QUERY_CANCELED),
-            (ErrorKind::Deadline, PgSqlErrorCode::ERRCODE_QUERY_CANCELED),
-            (ErrorKind::Defect, PgSqlErrorCode::ERRCODE_INTERNAL_ERROR),
+            (ErrorKind::Local, "local", PgSqlErrorCode::ERRCODE_IO_ERROR),
+            (
+                ErrorKind::Cancelled,
+                "cancelled",
+                PgSqlErrorCode::ERRCODE_QUERY_CANCELED,
+            ),
+            (
+                ErrorKind::Deadline,
+                "deadline",
+                PgSqlErrorCode::ERRCODE_QUERY_CANCELED,
+            ),
+            (
+                ErrorKind::Defect,
+                "defect",
+                PgSqlErrorCode::ERRCODE_INTERNAL_ERROR,
+            ),
         ];
-        for (kind, code) in table {
+        for (kind, word, code) in table {
             assert_eq!(sqlstate(kind), code, "{kind:?}");
             assert_eq!(
                 Refusal::of(kind, "why").text(),
-                format!("thinkthen {}: why (retryable: no)", kind.name())
+                format!("thinkthen {word}: why (retryable: no)")
             );
         }
     }

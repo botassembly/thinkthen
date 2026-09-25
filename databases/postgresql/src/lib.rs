@@ -17,7 +17,7 @@ mod files;
 mod relate;
 mod warm;
 
-use call::{OrRaise as _, Plan, Refusal};
+use call::{OrRaise as _, Refusal};
 use files::Given;
 
 pgrx::pg_module_magic!();
@@ -32,7 +32,7 @@ fn question(arg: Option<&str>, key: &str, members: Option<Array<'_, &str>>) -> L
     let members = members.map(|held| held.iter().flatten().map(str::to_owned).collect());
     given(arg, "question")
         .with_members(key, members)
-        .and_then(|held| held.question())
+        .and_then(|held| held.parse(thinkthen::Question::from_json))
         .or_raise()
 }
 
@@ -145,7 +145,9 @@ fn thinkthen_tag(
 
 #[pg_extern(parallel_restricted)]
 fn thinkthen_annotate(set: Option<&str>, evidence: Option<&str>) -> Option<JsonB> {
-    let set = given(set, "question set").set().or_raise();
+    let set = given(set, "question set")
+        .parse(thinkthen::QuestionSet::from_json)
+        .or_raise();
     let evidence = evidence?.to_owned();
     let value = call::run(call::read(), move |engine, options| {
         let mut records = engine.annotate_with(&set, [evidence.as_str()], options);
@@ -174,7 +176,6 @@ fn thinkthen_usage() -> TableIterator<
         name!(output_tokens, i64),
     ),
 > {
-    call::run(call::read(), |_, _| Ok(()));
     let wide = |value: u64| i64::try_from(value).unwrap_or(i64::MAX);
     let [sent, cached, input, output] = call::totals();
     TableIterator::once((wide(sent), wide(cached), wide(input), wide(output)))
@@ -258,7 +259,9 @@ fn thinkthen_recognize_spec(
         name!(strength, f64),
     ),
 > {
-    let ask = given(spec, "recognize spec").recognize().or_raise();
+    let ask = given(spec, "recognize spec")
+        .parse(Recognize::from_json)
+        .or_raise();
     TableIterator::new(names(body, ask))
 }
 
@@ -282,7 +285,9 @@ fn thinkthen_relations(
         name!(probability, f64),
     ),
 > {
-    let ask = given(spec, "recognize spec").recognize().or_raise();
+    let ask = given(spec, "recognize spec")
+        .parse(Recognize::from_json)
+        .or_raise();
     let Some(found) = recognized(body, ask) else {
         return TableIterator::new(Vec::new());
     };
@@ -305,20 +310,15 @@ fn thinkthen_relations(
     TableIterator::new(rows)
 }
 
-/// Refuse held records over the request limit before any send (ADR 0017).
-fn within(plan: &Plan, count: usize) {
-    if let Some(most) = plan.most().filter(|most| count > *most) {
-        call::raise(Refusal::usage(format!(
-            "this engine answers at most {most} records in one call"
-        )));
-    }
-}
-
-/// Decide each distinct text once, on one worker. `None` keeps a NULL row.
-fn decide_distinct(question: LoadedQuestion, distinct: Vec<String>) -> Vec<Option<bool>> {
+/// Decide each distinct text once, on one worker. A batch over the total's
+/// remaining requests sends only those, then refuses.
+fn decide_distinct(question: LoadedQuestion, mut distinct: Vec<String>) -> Vec<Option<bool>> {
     let call = call::read();
-    within(&call.plan, distinct.len());
-    call::run(call, move |engine, options| {
+    let short = call.within(distinct.len()).map(|left| {
+        distinct.truncate(left);
+        call.spent()
+    });
+    let decided = call::run(call, move |engine, options| {
         let rows = match &question {
             LoadedQuestion::Question(held) => engine
                 .decide_many_with(held, distinct.iter().map(String::as_str), options)
@@ -332,7 +332,11 @@ fn decide_distinct(question: LoadedQuestion, distinct: Vec<String>) -> Vec<Optio
                 .map(|row| answer_value(*row.value()))
                 .collect()
         })
-    })
+    });
+    if let Some(refusal) = short {
+        call::raise(refusal);
+    }
+    decided
 }
 
 /// The array form: one row per element, its place from 0, one worker.
