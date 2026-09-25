@@ -35,3 +35,7 @@ Claude offered a partial version with columns only and frames refused, and recom
 ## Landed, 2026-09-25
 
 Seven surfaces landed together on main at `eb3fae21`: C 0094, Rust Polars 0120, TypeScript 0107, SQLite 0109, Ruby 0112, R 0108, and PostgreSQL 0111. The full ladder passed once on the batch, and `sdlc/records/surface-batch-integration.md` holds the run. Claude landed these seven without waiting for Python and DuckDB, and Ian can overturn that. Python 0105 and 0106 are accepted and wait on Ian's word on the blocked merge. DuckDB 0110 and 0118 are still being fixed. Both follow as a second batch. 0094's one C churn probe is still owed.
+
+## Ian's ruling on landing, 2026-09-25
+
+Ian ruled: "You decide everything. Whatever's most efficient, you can merge whatever you want to merge. Whatever is ready, you do it." Claude lands each reviewed, checked surface as soon as it is ready and needs no batch. Python 0105 and 0106 land next, with `libraries/python/deny.toml` carrying the `target-lexicon` exception Ian approved the same day.
