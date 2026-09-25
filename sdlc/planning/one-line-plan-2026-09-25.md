@@ -31,3 +31,7 @@ Ian ruled that pandas is supported fully in 0.1. This overturns the 2026-09-21 l
 - `import thinkthen` still imports neither pandas nor Polars.
 
 Claude offered a partial version with columns only and frames refused, and recommended against it. A pandas user's first try is a whole frame, and a bare list back invites the lost-index bug R3-19 found. Ticket 0122 carries the work. It starts after 0106 lands, and it touches only `libraries/python`. It reuses the 2026-09-21 checks in `sdlc/issues/2026-09-21-pandas-is-supported-only-when-the-library-team-proves-it.md` as its starting proof.
+
+## Landed, 2026-09-25
+
+Seven surfaces landed together on main at `eb3fae21`: C 0094, Rust Polars 0120, TypeScript 0107, SQLite 0109, Ruby 0112, R 0108, and PostgreSQL 0111. The full ladder passed once on the batch, and `sdlc/records/surface-batch-integration.md` holds the run. Claude landed these seven without waiting for Python and DuckDB, and Ian can overturn that. Python 0105 and 0106 are accepted and wait on Ian's word on the blocked merge. DuckDB 0110 and 0118 are still being fixed. Both follow as a second batch. 0094's one C churn probe is still owed.
