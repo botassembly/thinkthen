@@ -1,6 +1,6 @@
 # A fresh cache can refuse itself as a retired layout
 
-Status: Open
+Status: Fixed on `ticket/qf-layout-race`, pending review. See `sdlc/records/qf-layout-race.md`.
 
 Filed by the qf-request-cost session on 2026-09-25.
 
