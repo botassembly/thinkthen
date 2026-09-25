@@ -1,12 +1,16 @@
 //! The compiled binary answers for its own identity.
+#![cfg(feature = "cli")]
 
 use std::process::Command;
 
+#[path = "../src/test_deadline/run.rs"]
+mod run;
+#[path = "../src/test_deadline/wait.rs"]
+mod wait;
+
 #[test]
 fn version_flag_prints_the_identity_line_and_exits_zero() {
-    let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .arg("--version")
-        .output()
+    let output = run::output(Command::new(env!("CARGO_BIN_EXE_thinkthen")).arg("--version"))
         .expect("the compiled binary runs");
 
     assert_eq!(
@@ -23,11 +27,12 @@ fn help_opens_with_the_semantic_commands_introduction() {
         "Semantic commands for the shell: if, grep, and sort that understand meaning";
 
     for flag in ["-h", "--help"] {
-        let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-            .arg(flag)
-            .env_clear()
-            .output()
-            .expect("the compiled binary runs");
+        let output = run::output(
+            Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+                .arg(flag)
+                .env_clear(),
+        )
+        .expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(0), "{flag}");
         assert!(output.stderr.is_empty(), "{flag}");
@@ -66,11 +71,12 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
     let mut failures = Vec::new();
     for (verb, sentence) in INTRODUCTIONS {
         for flag in ["-h", "--help"] {
-            let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-                .args([verb, flag])
-                .env_clear()
-                .output()
-                .expect("the compiled binary runs");
+            let output = run::output(
+                Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+                    .args([verb, flag])
+                    .env_clear(),
+            )
+            .expect("the compiled binary runs");
             assert_eq!(output.status.code(), Some(0), "{verb} {flag}");
             assert!(output.stderr.is_empty(), "{verb} {flag}");
             let help = String::from_utf8_lossy(&output.stdout);
@@ -89,11 +95,12 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
         }
     }
 
-    let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .arg("-h")
-        .env_clear()
-        .output()
-        .expect("the compiled binary runs");
+    let output = run::output(
+        Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+            .arg("-h")
+            .env_clear(),
+    )
+    .expect("the compiled binary runs");
     assert_eq!(output.status.code(), Some(0));
     let help = String::from_utf8_lossy(&output.stdout);
     let listed: Vec<&str> = help
@@ -104,8 +111,9 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
         .lines()
         .filter_map(|line| line.split_whitespace().next())
         .collect();
-    const ORDER: [&str; 14] = [
+    const ORDER: [&str; 17] = [
         "status",
+        "check",
         "decide",
         "filter",
         "rank",
@@ -118,6 +126,8 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
         "relate",
         "cache",
         "transform",
+        "audit",
+        "diff",
         "help",
     ];
     if listed != ORDER {
@@ -129,10 +139,11 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
 
 /// The long or short help one command prints, refused unless it exited 0.
 fn help(arguments: &[&str]) -> std::io::Result<String> {
-    let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .args(arguments)
-        .env_clear()
-        .output()?;
+    let output = run::output(
+        Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+            .args(arguments)
+            .env_clear(),
+    )?;
     if output.status.code() != Some(0) {
         return Err(std::io::Error::other(format!("{arguments:?} failed")));
     }

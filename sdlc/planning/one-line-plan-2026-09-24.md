@@ -22,7 +22,7 @@ Landed: 0088 public `relate` (`71841025`) and 0089 no resend after a transport f
 
 Three lanes run at once. Each lane is serial inside.
 
-- **Lane A, engine controls and the public API:** 0082 command contract → 0083 transform catalog → 0076 whole-call deadlines → 0077 one process width cap → 0078 host signals → 0084 and 0095 contract (design only) → 0085 engine façade → 0097 interrupt check → 0096 fork recovery → 0086 public Rust API → 0098 binding members. 0078 may build beside 0077 once 0076 lands.
+- **Lane A, engine controls and the public API:** 0082 command contract → 0083 transform catalog → 0076 whole-call deadlines → 0077 one process width cap → 0078 host signals → 0084 and 0095 contract (design only) → 0085 engine façade → 0097 interrupt check → 0096 fork recovery → 0086 public Rust API → 0098 binding members → 0119 mutation audit of the engine tests. 0078 may build beside 0077 once 0076 lands. 0119 builds before 0.1 ships, may build beside a surface ticket, and never builds beside 0113 or 0114 (`sdlc/issues/2026-09-24-red-green-scaffold-tests-outlive-their-purpose.md`).
 - **Lane B, cases:** 0090 `tuned_for` rename → 0091 conformance union. It lands before 0085.
 - **Lane C, test backend:** 0092 loopback backend, after 0089 and 0091, and before 0076's tests are written.
 - **Any time before 0086:** 0099 ports branch ADRs 0041–0043.
@@ -34,7 +34,7 @@ After Lane A:
 3. One ticket per remaining surface onto the public API: Python with Polars, TypeScript, DuckDB, Ruby, R, SQLite, PostgreSQL. Each brings its `check.sh`, tests, notes, and error-index rows, and follows ADR 0047's surface checklist.
 4. 0113 `thinkthen audit`. Ian's 2026-09-24 ruling (`sdlc/issues/2026-09-24-audit-and-diff-move-into-0-1.md`) puts both in 0.1, after the ten functions are done and before the release build. Both wait on 0086. audit lands before diff, and 0114 reuses 0113's code. Neither touches a binding, so either may build beside a surface ticket whose files it does not share.
 5. 0114 `thinkthen diff`, after 0113 under the same ruling.
-6. New: release build and installers (archives, checksums, Homebrew line, download script; Ian's 2026-09-21 ruling). Nothing tickets this today.
+6. New: release build and installers (archives, checksums, Homebrew line, download script; Ian's 2026-09-21 ruling). Nothing tickets this today. Its release checklist counts a surface check that reports "not run" as a failure (ticket 0111, decided 2026-09-24).
 
 Changes from the first version of this queue:
 
@@ -65,3 +65,14 @@ Launch waits on the queue. The engineering gates are 0088, the release build, pu
 1. Ian accepted this plan on 2026-09-24, including main as the spine.
 2. Claim the package names, the Homebrew tap, and thinkthen.dev DNS. The site deploys through GitHub Actions, which Ian paused, so the site needs a deploy path he approves.
 3. Whether arXiv endorsement is held or pending: `notes/todos/2026-09-09-arxiv-endorsement-status.md` and `repos/mktg/products/thinkthen/go-live.md` disagree.
+
+## Ian's rulings, afternoon of 2026-09-24
+
+- Everything is in 0.1. Nothing waits: audit and diff build now, beside the spine.
+- Rust Polars and Python Polars are both in 0.1. A Rust Polars surface ticket joins the surfaces.
+- The width setting is named the throttle. The public library setting is `throttle`, and the command keeps `--jobs`. ADR 0017's amendment records the scope.
+- Package names, the tap, the site, and papers are Ian's. Claude's job is the code: the main line and every surface.
+- Surfaces move as fast as possible once 0086 lands. Risk spikes 253 to 256 on the Beelink retire surface risks before then, and 0086 builds beside 0096.
+- The repo's Rust toolchain moves from 1.93.1 to 1.95 in one Quick Fix. It lands right after 0086 and before any surface build. Spike 257 showed nothing breaks, and current Polars 0.55 needs 1.95. Ian can overturn this.
+- A churn probe is a one-time measurement. It never runs in the ladder, a `check.sh`, a review, or a rerun, because it overloads the machine. 0086's Rust churn run stopped at the count its record gives. 0094 runs the C-door churn once to close R7-1, under the heavy lock at low load. Ian ruled this on the evening of 2026-09-24.
+- Mutation testing waits until the end. Ticket 0119 builds after every surface lands and before the release build. This replaces its earlier place beside a surface ticket. Ian ruled this on the morning of 2026-09-25.

@@ -131,8 +131,19 @@ pub(crate) enum DecodeError {
     UnexpectedAnswer,
 }
 
+/// The wire type one question travels as. The backend check names its
+/// one-question probes by it.
+pub(crate) const fn wire_type(question: &crate::core::question::Question) -> &'static str {
+    use crate::core::question::Question;
+    match question {
+        Question::Decide { .. } | Question::Tag { .. } => "noul",
+        Question::Choose { .. } => "choice",
+        Question::Score { .. } => "score",
+    }
+}
+
 /// The name a question carries on the wire: `q1` onward, in plan order.
-fn wire_name(place: usize) -> String {
+pub(crate) fn wire_name(place: usize) -> String {
     format!("q{}", place + 1)
 }
 

@@ -1,0 +1,21 @@
+[package]
+name = "churn-0086"
+version = "0.0.0"
+edition = "2024"
+publish = false
+description = "Engine churn under heavy load: G3 and R7-1, ticket 0086"
+license = "MIT"
+
+# A workspace of its own, so the root gates never build it.
+[workspace]
+
+[dependencies]
+# `run.sh` points this at the stand-in library of tag surfaces-wave7-final
+# and turns on `standin` for the first run.
+thinkthen = { path = "../../crates/thinkthen", default-features = false }
+
+[features]
+standin = []
+
+[profile.release]
+panic = "unwind"

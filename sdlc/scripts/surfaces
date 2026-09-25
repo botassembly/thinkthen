@@ -1,0 +1,100 @@
+#!/bin/sh
+# Rung 4, after `spec`: each landed surface's check.sh, given the port of one
+# loopback backend (ticket 0092). A check that exits 77 found no host
+# toolchain, and the rung reports it as not run, never as a pass.
+#
+# `surfaces --registry` is the cheap check `lint` runs. Every landed
+# surface has a check.sh, a ratchet that holds, and a lock `cargo deny`
+# accepts, and every binding folder is a landed surface.
+set -eu
+
+if [ "${1:-}" != --registry ]; then
+	# One heavy rung at a time on this machine. See heavy-lock.
+	. "$(dirname -- "$0")/heavy-lock"
+fi
+
+REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+cd -- "$REPO"
+
+landed() {
+	awk '!/^#/ && $2 == "landed" { print $1 }' "$1"
+}
+
+registry() {
+	status=0
+	if awk '!/^#/ && NF && (NF != 2 || ($2 != "landed" && $2 != "planned")) { bad = 1 } END { exit !bad }' "$1"; then
+		printf 'surfaces: %s holds a line other than a folder and landed or planned\n' "$1" >&2
+		status=1
+	fi
+	for surface in $(landed "$1"); do
+		if [ ! -f "$surface/check.sh" ]; then
+			printf 'surfaces: %s is landed and has no check.sh\n' "$surface" >&2
+			status=1
+		fi
+	done
+	for folder in libraries/*/ databases/*/; do
+		[ -d "$folder" ] || continue
+		if ! landed "$1" | grep -qx "${folder%/}"; then
+			printf 'surfaces: %s is not a landed surface in %s\n' "${folder%/}" "$1" >&2
+			status=1
+		fi
+	done
+	return "$status"
+}
+
+if [ "${1:-}" = --registry ]; then
+	registry sdlc/surfaces.txt
+	planted=$(mktemp)
+	trap 'rm -f -- "$planted" "$planted.json"' EXIT
+	{ cat sdlc/surfaces.txt; echo 'libraries/planted landed'; } >"$planted"
+	if registry "$planted" 2>/dev/null; then
+		echo 'surfaces: the registry check passed a landed surface with no check.sh' >&2
+		exit 1
+	fi
+	for surface in $(landed sdlc/surfaces.txt); do
+		# One ratchet file per language: ratchet.json for Rust, ratchet.<ext>.json for each host.
+		for config in "$surface"/ratchet*.json; do
+			node sdlc/scripts/ratchet.mjs "$config"
+			jq --arg at "$REPO/$surface/" '.max += 1 | .directory = ([.directory] | flatten | map($at + .))' \
+				"$config" >"$planted.json"
+			if node sdlc/scripts/ratchet.mjs "$planted.json" >/dev/null 2>&1; then
+				echo "surfaces: the ratchet passed a ceiling one above $config's count" >&2
+				exit 1
+			fi
+		done
+		cargo deny --offline --manifest-path "$surface/Cargo.toml" check --config deny.toml \
+			advisories bans licenses
+	done
+	echo 'surfaces: the registry holds every binding, and each landed one has its check, ratchet, and deny'
+	exit 0
+fi
+
+registry sdlc/surfaces.txt
+cargo build --locked --quiet --package conformance-backend
+fifo=$(mktemp -u)
+mkfifo "$fifo"
+"${CARGO_TARGET_DIR:-target}/debug/conformance-backend" <"$fifo" >"$fifo.port" &
+exec 3>"$fifo"
+trap 'exec 3>&-; rm -f -- "$fifo" "$fifo.port"' EXIT
+tries=0
+until [ -s "$fifo.port" ]; do
+	tries=$((tries + 1))
+	[ "$tries" -le 100 ] || { echo 'surfaces: the loopback backend printed no port' >&2; exit 1; }
+	sleep 0.1
+done
+port=$(head -n 1 "$fifo.port")
+
+failed=0
+for surface in $(landed sdlc/surfaces.txt); do
+	set +e
+	# A daemon a check starts must not hold the backend's input open.
+	sh "$surface/check.sh" "$port" 3>&-
+	code=$?
+	set -e
+	case $code in
+	0) echo "surfaces: pass $surface" ;;
+	77) echo "surfaces: not run $surface (no host toolchain)" ;;
+	*) echo "surfaces: FAIL $surface (exit $code)"; failed=1 ;;
+	esac
+done
+exit "$failed"

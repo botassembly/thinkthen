@@ -2,6 +2,9 @@
 # Rung 0: the tools the other rungs need, then the dependency closure.
 set -eu
 
+# One heavy rung at a time on this machine. See heavy-lock.
+. "$(dirname -- "$0")/heavy-lock"
+
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 
 # The version the workflow installs and the version this rung names in its
@@ -33,6 +36,21 @@ fi
 if ! cargo deny --version >/dev/null 2>&1; then
 	printf 'install: cargo-deny is not installed; rung 1 runs it over deny.toml\n' >&2
 	printf 'install: cargo install --locked cargo-deny@%s\n' "$DENY_VERSION" >&2
+	exit 1
+fi
+
+# Rung 1's public API check reads rustdoc JSON, whose format moves with the
+# nightly, so the tool and the nightly are pinned together.
+PUBLIC_API_VERSION=0.52.0
+PUBLIC_API_NIGHTLY=2026-08-23
+if ! cargo public-api --version 2>/dev/null | grep -qx "cargo-public-api $PUBLIC_API_VERSION"; then
+	printf 'install: rung 1 needs cargo public-api %s\n' "$PUBLIC_API_VERSION" >&2
+	printf 'install: cargo install --locked cargo-public-api@%s\n' "$PUBLIC_API_VERSION" >&2
+	exit 1
+fi
+if ! rustc +nightly --version 2>/dev/null | grep -q " $PUBLIC_API_NIGHTLY)\$"; then
+	printf 'install: rung 1 needs the nightly of %s for cargo public-api\n' "$PUBLIC_API_NIGHTLY" >&2
+	printf 'install: rustup toolchain install nightly-%s && rustup toolchain link nightly "$(rustc +nightly-%s --print sysroot)"\n' "$PUBLIC_API_NIGHTLY" "$PUBLIC_API_NIGHTLY" >&2
 	exit 1
 fi
 
