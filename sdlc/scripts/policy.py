@@ -569,6 +569,8 @@ def check_bindings() -> None:
         moved = files["Cargo.toml"].replace("../../../../../crates/thinkthen", "../../crates/thinkthen")
         if not binding_failures("libraries/r", {**files, "Cargo.toml": moved}, crate):
             fail("binding", "R's manifest with a thinkthen path from the binding folder is refused")
+    if "../tests/examples.rs" not in binding_files(BINDING_PLANT_BASE, f"{BINDING_PLANT_BASE}/src"):
+        fail("binding", "Rust files outside the crate folder go unread")
     base = binding_files(BINDING_PLANT_BASE, BINDING_PLANT_BASE)
     for label, relative, plant in BINDING_PLANTS:
         planted = {**base, relative: plant(base.get(relative, ""))}
@@ -615,7 +617,8 @@ def postgresql_failures(files: dict[str, str], scripts: dict[str, str], configs:
     held = [f"{POSTGRESQL} has a build script, which can widen check-cfg"] if "build.rs" in files or build else []
     held += [f"{config} can change the lints cargo applies" for config in configs]
     for relative, text in scripts.items():
-        code = "\n".join(line for line in text.replace("\\\n", " ").splitlines() if not line.lstrip().startswith("#"))
+        # Comments go first, so a comment ending in a backslash hides no real line.
+        code = "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#")).replace("\\\n", " ")
         if re.search(r"\bpg_ctl\b[^\n;&|]*\brestart\b", code):
             held.append(f"{POSTGRESQL}/{relative} runs pg_ctl restart")
     return held
@@ -634,6 +637,7 @@ def check_postgresql_binding() -> None:
         fail("binding", failure)
     restart = {**scripts, "check.sh": scripts.get("check.sh", "") + '"$BIN/pg_ctl" -D "$DATA" restart\n'}
     split = {**scripts, "check.sh": scripts.get("check.sh", "") + '"$BIN/pg_ctl" -D "$DATA" \\\n  restart\n'}
+    hidden = {**scripts, "check.sh": scripts.get("check.sh", "") + '# a comment \\\n"$BIN/pg_ctl" -D "$DATA" restart\n'}
     keyed = files.get("Cargo.toml", "").replace("[package]\n", '[package]\nbuild = "planted.rs"\n', 1)
     warm = files.get("src/warm.rs", "") + '#[cfg_attr(test, allow(unexpected_cfgs, reason = "planted"))]\nfn planted() {}\n'
     forbid = files.get("Cargo.toml", "").replace('unexpected_cfgs = { level = "deny"', 'unexpected_cfgs = { level = "allow"')
@@ -641,7 +645,7 @@ def check_postgresql_binding() -> None:
     denied = rust["Cargo.toml"].replace('unexpected_cfgs = { level = "forbid"', 'unexpected_cfgs = { level = "deny"')
     if not (all(postgresql_failures(*plant) for plant in [
             ({**files, "build.rs": ""}, scripts, []), ({**files, "Cargo.toml": keyed}, scripts, []),
-            (files, restart, []), (files, split, []), (files, scripts, [f"{POSTGRESQL}/.cargo/config"])])
+            (files, restart, []), (files, split, []), (files, hidden, []), (files, scripts, [f"{POSTGRESQL}/.cargo/config"])])
             and binding_failures(POSTGRESQL, {**files, "src/warm.rs": warm})
             and binding_failures(POSTGRESQL, {**files, "Cargo.toml": forbid})
             and binding_failures(BINDING_PLANT_BASE, {**rust, "Cargo.toml": denied})):
