@@ -114,3 +114,5 @@ Secrecy stopgap: both pytest calls in `check.sh` pass `--tb=short`. The environm
 ## Deferred
 
 A dictionary reader for categorical columns. pandas below 2.2.3 and Python below 3.12. Column forms of `filter`, `rank`, `find`, and `relate`. A faster return path through a pandas Arrow constructor. The Polars clash refusal (finding 3). The product side's pandas copy.
+
+On the stable Python interface, a metaclass that shadows `__mro__` with a non-tuple makes `top` (`libraries/python/src/input.rs:28`) panic in place of raising `UsageError`. The fix is `getattr("__mro__")?.try_iter()?`.

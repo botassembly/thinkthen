@@ -1,6 +1,6 @@
 # The Polars shape as the deck shows it
 
-Status: Open. Rust Polars (ticket 0120) and Python Polars (ticket 0106) landed. pandas is ticket 0122, not landed. Close this when 0122 lands.
+Status: Closed on 2026-09-25. Ticket 0122 landed pandas columns and frames through the surface batch, after Rust Polars 0120 and Python Polars 0106. Earlier status: Open until 0122 landed.
 
 Written 2026-09-21 by the product side. Ian ruled the same day that Python's data frame is Polars, that plain Python lists stay first-class, and that all scaling runs in Rust code. The engineering plan is `sdlc/planning/polars-plan.md`. This page rules what a user types. The deck's new slide `15a-polars` is drawn from it, and that slide is the acceptance test.
 
