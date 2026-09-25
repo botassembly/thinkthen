@@ -15,6 +15,7 @@ use thinkthen::{
     Recognize, Recognized,
 };
 
+use crate::engines::{self, Asked};
 use crate::errors::{failure, prefix};
 use crate::ffi::{Column, Type, Value};
 use crate::questions::{Caller, Members, members};
@@ -213,7 +214,7 @@ pub(crate) fn run(
             .get(if listed { 3 } else { 2 })
             .and_then(|found| found.int(row))
     };
-    let engine = Arc::clone(&caller.engine);
+    let (engine, asked) = (Arc::clone(&caller.engine), caller.asked.clone());
     match verb {
         Verb::Decide | Verb::Probability | Verb::Details | Verb::Annotate | Verb::Relations => {
             // Relations takes its body first and its recognize file second.
@@ -250,7 +251,7 @@ pub(crate) fn run(
             });
             groups.answer(|(argument, listed, due), texts| {
                 let (set, due) = (members(kind, argument, listed)?, *due);
-                let records = on_worker(invoke, &engine, move |engine, token| {
+                let records = on_worker(invoke, &engine, &asked, move |engine, token| {
                     annotated(engine, &set, texts, token, due)
                 })?;
                 records.iter().map(member).collect()
@@ -262,7 +263,7 @@ pub(crate) fn run(
             });
             groups.answer(|kinds, texts| {
                 let ask = recognize_kinds(kinds)?;
-                on_worker(invoke, &engine, move |engine, token| {
+                on_worker(invoke, &engine, &asked, move |engine, token| {
                     recognized(engine, &ask, texts, token, None, entities)
                 })
             })
@@ -280,11 +281,11 @@ fn asked_once(
     texts: Vec<String>,
     due: Option<i64>,
 ) -> Result<Vec<Value>, String> {
-    let engine = &Arc::clone(&caller.engine);
+    let (engine, asked) = (&Arc::clone(&caller.engine), &caller.asked.clone());
     match verb {
         Verb::Annotate => {
             let set = caller.set(argument)?;
-            let records = on_worker(invoke, engine, move |engine, token| {
+            let records = on_worker(invoke, engine, asked, move |engine, token| {
                 annotated(engine, &set, texts, token, due)
             })?;
             Ok(records
@@ -294,33 +295,35 @@ fn asked_once(
         }
         Verb::Relations => {
             let ask = caller.recognize(argument)?;
-            on_worker(invoke, engine, move |engine, token| {
+            on_worker(invoke, engine, asked, move |engine, token| {
                 recognized(engine, &ask, texts, token, due, relations)
             })
         }
         Verb::Details => {
             let question = caller.question(argument)?;
-            on_worker(invoke, engine, move |engine, token| {
+            on_worker(invoke, engine, asked, move |engine, token| {
                 detailed(engine, &question, &texts, token, due)
             })
         }
         _ => {
             let question = caller.question(argument)?;
             let probability = verb == Verb::Probability;
-            on_worker(invoke, engine, move |engine, token| {
+            on_worker(invoke, engine, asked, move |engine, token| {
                 decided(engine, &question, texts, token, due, probability)
             })
         }
     }
 }
 
-/// One engine call on a detachable worker.
+/// One engine call on a detachable worker, on the engine the process's
+/// request total leaves this call.
 fn on_worker<T: Send + 'static>(
     invoke: &Invoke,
     engine: &Arc<Engine>,
+    asked: &Asked,
     work: impl FnOnce(&Engine, &CancelToken) -> Result<T, Error> + Send + 'static,
 ) -> Result<T, String> {
-    let engine = Arc::clone(engine);
+    let engine = engines::for_call(engine, asked)?;
     worker::run(invoke, move |token| work(&engine, token))
 }
 

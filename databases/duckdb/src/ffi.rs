@@ -203,7 +203,7 @@ impl Files {
     }
 
     /// The four session settings; an unset or `RESET` one reads `None`.
-    fn settings(&self) -> Asked {
+    pub(crate) fn settings(&self) -> Asked {
         Asked {
             throttle: self
                 .setting(c"thinkthen_throttle")
@@ -216,6 +216,9 @@ impl Files {
                 .and_then(|value| value.text),
             cache_bytes: self
                 .setting(c"thinkthen_cache_bytes")
+                .and_then(|value| value.number),
+            max_requests_total: self
+                .setting(c"thinkthen_max_requests_total")
                 .and_then(|value| value.number),
         }
     }
@@ -478,7 +481,7 @@ unsafe extern "C" fn scalar_init(info: sys::duckdb_init_info) {
         let files = Files::of(info)?;
         let asked = files.settings();
         let engine = engines::engine_for(&asked, |path| files.probe(path))?;
-        Ok(Box::new(Caller::new(engine, files)))
+        Ok(Box::new(Caller::new(engine, asked, files)))
     });
     // SAFETY: DuckDB owns the state and calls `drop_caller` once.
     unsafe {
@@ -940,6 +943,7 @@ fn register_all(connection: sys::duckdb_connection) -> Result<(), String> {
     register_setting(connection, c"thinkthen_max_requests", &Type::BigInt)?;
     register_setting(connection, c"thinkthen_cache", &Type::Text)?;
     register_setting(connection, c"thinkthen_cache_bytes", &Type::BigInt)?;
+    register_setting(connection, c"thinkthen_max_requests_total", &Type::BigInt)?;
     for scalar in &SCALARS {
         register_scalar(connection, scalar)?;
     }

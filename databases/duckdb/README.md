@@ -30,12 +30,13 @@ SELECT id, thinkthen_choose('Which team owns this?', body, ['billing', 'shipping
 
 ## Settings
 
-The engine starts from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, and `THINKTHEN_CACHE`. SQL cannot name a backend or a key. Four session settings reach the engine's own setters:
+The engine starts from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, and `THINKTHEN_CACHE`. SQL cannot name a backend or a key. Four session settings reach the engine's own setters, and a fifth caps the whole process:
 
 - `SET thinkthen_throttle = N` caps live requests in flight at N, from 1 through 32. Live requests are capped by the active throttle, or by 4 when none is set. The first throttle holds for the life of the process, and a different one reads `thinkthen usage: throttle 8 is already active for this process; use throttle 8 or drop the throttle argument`.
 - `SET thinkthen_max_requests = N` caps one call's requests.
 - `SET thinkthen_cache = '/absolute/folder'` moves the cache. The folder must be an absolute local path with no scheme, and the calling database's own file settings must allow it. Each call checks both before it asks anything.
 - `SET thinkthen_cache_bytes = N` caps the cache's size.
+- `SET thinkthen_max_requests_total = N` caps the requests this process sends. Before each call the extension adds up what its engines have sent. A spent total reads `thinkthen usage: this process has spent its request total of N; raise SET thinkthen_max_requests_total or RESET it` and sends nothing. Otherwise the call may send at most what is left, or its own `thinkthen_max_requests` when that is smaller. The total holds to within one call's retries. A forked child starts from zero. `thinkthen_warm` reads no session setting, so the total does not bind it.
 
 A value out of range is refused at the next ThinkThen call with the setter's own sentence, so a bad `SET` never wraps into an accepted one. The extension keeps one engine per distinct throttle, request limit, and cache folder, at most 16.
 

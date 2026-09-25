@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use thinkthen::{Engine, Error, ErrorKind, LoadedQuestion, Question, QuestionSet, Recognize};
 
+use crate::engines::Asked;
 use crate::errors::{failure, prefix, usage};
 use crate::ffi::{Files, Opened};
 
@@ -18,6 +19,7 @@ use crate::ffi::{Files, Opened};
 #[derive(Debug)]
 pub(crate) struct Caller {
     pub(crate) engine: Arc<Engine>,
+    pub(crate) asked: Asked,
     files: Files,
     read: HashMap<String, String>,
 }
@@ -31,9 +33,10 @@ pub(crate) enum Members {
 }
 
 impl Caller {
-    pub(crate) fn new(engine: Arc<Engine>, files: Files) -> Self {
+    pub(crate) fn new(engine: Arc<Engine>, asked: Asked, files: Files) -> Self {
         Self {
             engine,
+            asked,
             files,
             read: HashMap::new(),
         }

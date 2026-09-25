@@ -20,16 +20,17 @@ Branch `ticket/0110-port-duckdb-surface`. Built on Beelink on 2026-09-25 with th
 
 ## Results
 
-- `check.sh` passes at the branch head: fmt, clippy with `-D warnings`, 4 unit tests, both builds, the source checks, deny and its plant, the stock CLI call, and 30 suite cases (verbs 12, settings 9, signal 9). The site-example check runs 8 drawn blocks and names 2 closed divergences. The selftests pass.
-- Ratchets: `src` holds 2114 non-blank Rust lines and `tools` holds 1105 non-blank Python lines. Each ceiling equals its total.
+- `check.sh` passes at the branch head: fmt, clippy with `-D warnings`, 4 unit tests, both builds, the source checks, deny and its plant, the stock CLI call, and 31 suite cases (verbs 12, settings 10, signal 9). The site-example check runs 8 drawn blocks and names 2 closed divergences. The selftests pass.
+- Ratchets: `src` holds 2202 non-blank Rust lines and `tools` holds 1115 non-blank Python lines. Each ceiling equals its total. The request total of decision 17 added 88 Rust lines in `src/engines.rs`, since main has no per-call request limit to reuse.
 - Conformance: 49 pass, 0 fail, 5 not run, 54 cases.
 - Access cases: all 35 cache cases agree with DuckDB's `COPY … TO`, and all 35 `@file` cases agree with `read_text`. Each refused cache case sent nothing and created nothing in the case folders. The check reads folder listings, not `strace`.
 - SIGINT: a held batch of 64 texts at throttle 8 and a single held `thinkthen_details` each read `cancelled` within 100 ms, and the count stayed put after release. 50 stop-then-answer rounds, 50 signals between queries, and 20 chained signals all pass.
 - The volatile test uses `EXPLAIN`, with a count of 0.
+- Request total (decision 17, Ian's ruling of 2026-09-25): a total of 3 and a decide over 10 distinct rows sent exactly 3 requests on the generic arm, and the next call read the pinned sentence with the count still 3.
 
 ## Planted bugs
 
-Each plant changed one line, rebuilt the extension, and ran its one case. All seven went red and the source was restored.
+Each plant changed one line, rebuilt the extension, and ran its one case. All eight went red and the source was restored.
 
 | Plant | Case | Read |
 | --- | --- | --- |
@@ -40,9 +41,16 @@ Each plant changed one line, rebuilt the extension, and ran its one case. All se
 | Scalars registered without `volatile` | `volatile_scalars_are_not_folded_at_plan_time` | wanted 0 sends while planning, got 1 |
 | Answers read by first place in the group | `r1_1_answers_map_back_by_text` | the rows came back wrong |
 | The stop latches on any past signal | `r1_21_the_next_query_answers_after_a_stop` | the next query read `cancelled` |
+| The total checked only when an engine is built | `the_process_request_total_holds_across_calls` | all 10 rows answered |
 
 ## Not yet done
 
 - Plants for the signal handler chain, the panic guard, and the secrecy case.
 - R5-21's 10,000-signal stress run, R2-18's 20,000-row open count under `strace`, R1-15's `strace` open count, the fork test, and the Python ratchet's measured ceiling review.
 - `examples.json` and its runner. The site-example check covers the drawn blocks instead.
+
+## For the landing agent
+
+- The `surfaces` registry step runs `cargo deny` on this crate with the root `deny.toml`, whose `exceptions = []` refuses `zlib-rs` 0.6.8 (Zlib). The crate's own `deny.toml` carries that one exception under ADR 0047. The step needs the exception in the root file, or it needs to read `databases/duckdb/deny.toml`.
+- `policy.py`'s binding check passes on this crate as it stands. The root workspace already excludes `databases`.
+- `sdlc/surfaces.txt` moves `databases/duckdb` to landed, as the port brief asked.

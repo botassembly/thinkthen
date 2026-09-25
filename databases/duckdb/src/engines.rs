@@ -8,10 +8,17 @@
 //! map is keyed by the throttle, the request limit, and the cache folder. It
 //! keeps no throttle of its own: main's `build` refuses a second, different
 //! throttle, and a failed build is never stored.
+//!
+//! `SET thinkthen_max_requests_total` caps the requests this process sends
+//! (Ian's ruling of 2026-09-25). Before each engine call, [`for_call`] sums
+//! `requests_sent` over every engine here. A spent total refuses with zero
+//! sends. Otherwise the call runs on its own engine whose request limit is
+//! the smaller of the remaining total and the session's own limit. Main's
+//! counters start from zero in a forked child, and so does the total.
 
 use std::sync::{Arc, Mutex, PoisonError};
 
-use thinkthen::{Engine, EngineBuilder};
+use thinkthen::{Counters, Engine, EngineBuilder};
 
 use crate::errors::{failure, usage};
 
@@ -25,6 +32,7 @@ pub(crate) struct Asked {
     pub(crate) max_requests: Option<i64>,
     pub(crate) cache: Option<String>,
     pub(crate) cache_bytes: Option<i64>,
+    pub(crate) max_requests_total: Option<i64>,
 }
 
 /// What the caller's own file system says about a folder.
@@ -113,26 +121,101 @@ fn checked(asked: &Asked) -> Result<(Key, EngineBuilder), String> {
     Ok(((throttle, most, asked.cache.clone()), builder))
 }
 
-/// The counters of every engine this process keeps, summed.
-pub(crate) fn usage_totals() -> [(&'static str, u64); 4] {
-    let engines = ENGINES.lock().unwrap_or_else(PoisonError::into_inner);
-    let mut totals = [
-        ("requests_sent", 0_u64),
-        ("cache_answers", 0),
-        ("input_tokens", 0),
-        ("output_tokens", 0),
-    ];
-    for (_, engine) in engines.iter() {
-        let counts = engine.usage();
-        let each = [
-            counts.requests_sent(),
-            counts.cache_answers(),
-            counts.input_tokens(),
-            counts.output_tokens(),
-        ];
-        for ((_, total), count) in totals.iter_mut().zip(each) {
-            *total = total.saturating_add(count);
-        }
+/// The engines built for one capped call each, and the counters of those
+/// already dropped, tagged with the process that counted them.
+#[derive(Debug, Default)]
+struct Capped {
+    pid: u32,
+    live: Vec<Arc<Engine>>,
+    folded: [u64; 4],
+}
+
+static CAPPED: Mutex<Option<Capped>> = Mutex::new(None);
+
+/// The engine one call runs on. With no total set, it is the caller's kept
+/// engine. With a total set, it is a new engine limited to what is left.
+pub(crate) fn for_call(kept: &Arc<Engine>, asked: &Asked) -> Result<Arc<Engine>, String> {
+    let Some(total) = asked.max_requests_total else {
+        return Ok(Arc::clone(kept));
+    };
+    let total = u64::try_from(total)
+        .map_err(|_| usage("a request total is a whole number of 0 or more"))?;
+    let [(_, spent), ..] = usage_totals();
+    let left = total.saturating_sub(spent);
+    if left == 0 {
+        return Err(usage(&format!(
+            "this process has spent its request total of {total}; raise SET thinkthen_max_requests_total or RESET it"
+        )));
     }
-    totals
+    let limit = usize::try_from(left).unwrap_or(usize::MAX);
+    let own = asked
+        .max_requests
+        .and_then(|most| usize::try_from(most).ok())
+        .map_or(limit, |most| most.min(limit));
+    let (_, builder) = checked(&Asked {
+        max_requests: i64::try_from(own).ok(),
+        ..asked.clone()
+    })?;
+    let engine = Arc::new(builder.build().map_err(|error| failure(&error))?);
+    capped(|held| held.live.push(Arc::clone(&engine)));
+    Ok(engine)
+}
+
+/// Run `work` on this process's capped engines, after folding the counters
+/// of each engine no call holds any longer.
+fn capped<T>(work: impl FnOnce(&mut Capped) -> T) -> T {
+    let mut held = CAPPED.lock().unwrap_or_else(PoisonError::into_inner);
+    let pid = std::process::id();
+    let current = held.get_or_insert_with(Capped::default);
+    if current.pid != pid {
+        *current = Capped {
+            pid,
+            ..Capped::default()
+        };
+    }
+    let (done, live): (Vec<_>, Vec<_>) = std::mem::take(&mut current.live)
+        .into_iter()
+        .partition(|engine| Arc::strong_count(engine) == 1);
+    current.live = live;
+    for engine in done {
+        add(&mut current.folded, &engine.usage());
+    }
+    work(current)
+}
+
+fn add(totals: &mut [u64; 4], counts: &Counters) {
+    let each = [
+        counts.requests_sent(),
+        counts.cache_answers(),
+        counts.input_tokens(),
+        counts.output_tokens(),
+    ];
+    for (total, count) in totals.iter_mut().zip(each) {
+        *total = total.saturating_add(count);
+    }
+}
+
+/// The counters of every engine this process keeps or kept, summed.
+pub(crate) fn usage_totals() -> [(&'static str, u64); 4] {
+    let mut totals = capped(|held| {
+        let mut totals = held.folded;
+        for engine in &held.live {
+            add(&mut totals, &engine.usage());
+        }
+        totals
+    });
+    for (_, engine) in ENGINES
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .iter()
+    {
+        add(&mut totals, &engine.usage());
+    }
+    let [requests, cache, input, output] = totals;
+    [
+        ("requests_sent", requests),
+        ("cache_answers", cache),
+        ("input_tokens", input),
+        ("output_tokens", output),
+    ]
 }
