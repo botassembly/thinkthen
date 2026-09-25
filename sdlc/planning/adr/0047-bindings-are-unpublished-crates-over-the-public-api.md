@@ -150,6 +150,7 @@ These rulings lived only in the tag's Python notes (R2-29). Ticket 0105 records 
 - `Cancelled` subclasses both `KeyboardInterrupt` and `ThinkThenError`. Code that catches Ctrl-C and code that catches every thinkthen failure both see a stop.
 - Only a `KeyboardInterrupt` from a signal handler becomes `Cancelled`. Any other error a handler raises, such as `SystemExit`, passes through unchanged.
 - A pandas object is refused with a `UsageError` that says the Python data frame is Polars (the 2026-09-21 ruling in ADR 0017). The check reads the type's top-level module before any Arrow check, because pandas objects also expose `__arrow_c_stream__`.
+  - Amended 2026-09-25: Ian's ruling of that date supports pandas fully (ADR 0017's amendment), and ticket 0122 removes this refusal. A pandas Series crosses the Arrow door or the list reader and comes back as the caller's Series. A pandas frame with `on=` comes back with new answer columns.
 - Every call runs on a detachable worker thread, so Ctrl-C and a caller's token stop a single send and a batch within one 50 ms tick. A detached send ends on its own, and no new request starts.
 - The Rust unit tests link libpython, so they run as `cargo test --no-default-features --lib` from `check.sh`, which sets the library path. A bare `cargo test` builds the extension-module form, which does not link libpython (item 6).
 
