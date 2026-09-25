@@ -9,6 +9,8 @@ use std::time::Duration;
 
 use ureq::Agent;
 
+use crate::core::Withheld;
+use crate::engine::Widths;
 use crate::engine::error::{Error, TransportKind};
 
 /// The key one request carries. Diagnostics and `Debug` never expose it.
@@ -42,9 +44,6 @@ impl fmt::Debug for Key {
 /// fill this process's memory.
 const MAX_RESPONSE_BYTES: u64 = 1024 * 1024;
 
-/// The statuses a backend is asked again after.
-const RETRIED: [u16; 6] = [429, 500, 502, 503, 504, 529];
-
 /// The longest a `Retry-After` header moves the wait to.
 ///
 /// The header is the backend's own number and this process trusts it only so
@@ -60,6 +59,7 @@ const MAX_RETRY_WAIT: Duration = Duration::from_secs(60);
 pub(crate) struct Client {
     agent: Agent,
     timeout: Duration,
+    width: &'static Widths,
 }
 
 impl fmt::Debug for Client {
@@ -78,7 +78,7 @@ impl Client {
     /// a proxy would send the key and the evidence to another machine in
     /// clear text. `ureq` reads `ALL_PROXY`, `HTTPS_PROXY`, `HTTP_PROXY`, and
     /// `NO_PROXY` on its own, and `proxy(None)` cancels all four.
-    pub(crate) fn new(timeout: Duration, secure: bool) -> Self {
+    pub(crate) fn new(timeout: Duration, secure: bool, widths: &'static Widths) -> Self {
         let mut config = Agent::config_builder()
             .timeout_global(Some(timeout))
             .http_status_as_error(false)
@@ -89,7 +89,15 @@ impl Client {
         Self {
             agent: config.build().into(),
             timeout,
+            width: crate::engine::client_width(widths),
         }
+    }
+
+    /// Send through this gate in place of the one `new` chose.
+    #[cfg(test)]
+    pub(crate) const fn gated(mut self, width: &'static Widths) -> Self {
+        self.width = width;
+        self
     }
 
     /// Post the request and hand back the response body the backend answered with.
@@ -112,11 +120,19 @@ impl Client {
         let mut wait = exchange.retry_wait;
         let mut retries = 0;
         loop {
-            if cancel.fired() {
-                return Err(Error::Cancelled);
-            }
+            // The permit covers the attempt alone: never a retry wait, decoding,
+            // recording, or output.
+            let permit = self.width.acquire(cancel)?;
+            cancel.stop_or_remaining()?;
             before_attempt();
-            let attempt = match send(&self.agent, exchange) {
+            // Accounting may wait on the usage lock, so read the budget after
+            // it. Cancellation keeps its one pre-attempt checkpoint.
+            let budget = cancel.remaining()?;
+            let limit = budget.map_or(self.timeout, |budget| budget.min(self.timeout));
+            let sending = cancel.sending();
+            let sent = send(&self.agent, exchange, limit);
+            drop((sending, permit));
+            let attempt = match sent {
                 Ok(body) => {
                     return Ok(HttpAnswer {
                         body,
@@ -125,11 +141,17 @@ impl Client {
                 }
                 Err(attempt) => attempt,
             };
+            if matches!(attempt.failure, Error::Transport(TransportKind::Timeout))
+                && budget.is_some_and(|budget| budget <= self.timeout)
+                && let Some(passed) = cancel.passed()
+            {
+                return Err(passed);
+            }
             if retries >= exchange.max_retries || !is_retried(&attempt.failure) {
                 return Err(attempt.failure);
             }
-            if cancel.wait(bounded_wait(attempt.asked, wait, self.timeout)) {
-                return Err(Error::Cancelled);
+            if let Some(stop) = cancel.wait(bounded_wait(attempt.asked, wait, self.timeout)) {
+                return Err(stop);
             }
             wait = wait.saturating_mul(2);
             retries += 1;
@@ -163,10 +185,7 @@ impl fmt::Debug for Exchange<'_> {
         formatter
             .debug_struct("Exchange")
             .field("url", &self.url)
-            .field(
-                "body",
-                &format_args!("<{} bytes withheld>", self.body.len()),
-            )
+            .field("body", &Withheld(self.body.len()))
             .field("key", &self.key)
             .field("max_retries", &self.max_retries)
             .field("retry_wait", &self.retry_wait)
@@ -211,10 +230,13 @@ fn bounded_wait(asked: Option<Duration>, exponential: Duration, timeout: Duratio
     asked.unwrap_or(exponential).min(timeout)
 }
 
-/// Post the request once.
-fn send(agent: &Agent, exchange: &Exchange<'_>) -> Result<Vec<u8>, Attempt> {
+/// Post the request once, blocking for at most `limit`.
+fn send(agent: &Agent, exchange: &Exchange<'_>, limit: Duration) -> Result<Vec<u8>, Attempt> {
     let request = agent
         .post(exchange.url)
+        .config()
+        .timeout_global(Some(limit))
+        .build()
         .header("content-type", "application/json")
         .header(
             "authorization",
@@ -270,7 +292,7 @@ fn io_transport(error: &io::Error) -> TransportKind {
 
 /// Say whether this failure earns another attempt: only a retried status does.
 fn is_retried(failure: &Error) -> bool {
-    matches!(failure, Error::Status(status) if RETRIED.contains(status))
+    failure.retryable()
 }
 
 #[cfg(test)]
@@ -428,7 +450,11 @@ mod tests {
         });
         let url = format!("http://{address}/v1/systemone");
         let key = Key::of("sk-test-value");
-        let client = Client::new(Duration::from_secs(2), false);
+        let client = Client::new(
+            Duration::from_secs(2),
+            false,
+            crate::engine::process_width(),
+        );
         let attempts = Cell::new(0_u32);
         let exchange = Exchange {
             url: &url,
@@ -453,7 +479,11 @@ mod tests {
     #[test]
     fn a_refused_attempt_is_observed_once_and_returned_without_a_retry() {
         let key = Key::of("sk-test-value");
-        let client = Client::new(Duration::from_secs(4), false);
+        let client = Client::new(
+            Duration::from_secs(4),
+            false,
+            crate::engine::process_width(),
+        );
         let observed = Cell::new(0_u32);
         let exchange = Exchange {
             url: "http://127.0.0.1:0/v1/systemone",

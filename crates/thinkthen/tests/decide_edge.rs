@@ -1,8 +1,12 @@
 //! The compiled binary at its own edge: usage, the plan, and standard input.
+#![cfg(feature = "cli")]
 
 use std::io::{self, Write};
 use std::process::{Command, Output, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
+
+#[path = "../src/test_deadline/wait.rs"]
+mod wait;
 
 const DEFAULT_MODEL: &str = "jev-latest";
 
@@ -35,7 +39,7 @@ fn run(arguments: &[&str], environment: &[(&str, &str)], evidence: &[u8]) -> io:
         .ok_or_else(|| io::Error::other("no pipe to standard input"))?;
     let _ = input.write_all(evidence);
     drop(input);
-    child.wait_with_output()
+    wait::finish(child, &arguments.join(" "))
 }
 
 /// Run `decide` over one line of evidence.

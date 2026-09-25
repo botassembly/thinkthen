@@ -211,6 +211,12 @@ impl FindAnswer {
     pub(crate) const fn selected(&self) -> Option<usize> {
         self.selected
     }
+
+    /// Every candidate's probability in input order, `none` last when asked.
+    #[must_use]
+    pub(crate) fn probabilities(&self) -> &[(String, f64)] {
+        &self.probabilities
+    }
 }
 
 impl Serialize for FindAnswer {

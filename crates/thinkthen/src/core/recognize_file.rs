@@ -288,6 +288,28 @@ fn parse_on(value: Option<&Json>) -> Result<Vec<Pointer>, RecognizeConfigError> 
         .map_err(|_| RecognizeConfigError::Shape)
 }
 
+/// The kinds recognition asks when the caller names none.
+pub(crate) fn default_kinds() -> RecognizeKinds {
+    vec![
+        (
+            "person".to_owned(),
+            Some(Description::text("Part of a person's name.")),
+        ),
+        (
+            "organization".to_owned(),
+            Some(Description::text(
+                "Part of the name of an organization: a company, band, team, agency, government body, or media outlet.",
+            )),
+        ),
+        (
+            "place".to_owned(),
+            Some(Description::text(
+                "Part of the name of a place: a country, region, city, or geographic feature.",
+            )),
+        ),
+    ]
+}
+
 pub(crate) fn recognize_sha256(spec: &RecognizeSpec) -> Result<String, crate::core::RenderError> {
     let canonical = crate::core::json_line(spec)?;
     let mut hasher = Sha256::new();

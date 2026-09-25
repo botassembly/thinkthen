@@ -113,6 +113,7 @@ fn ported_case_mutations_are_refused() {
             1,
         ),
         CASES.replacen("\"name\": \"result\"", "\"name\": \"q1\"", 1),
+        CASES.replacen("\"evidence\": \"I want a refund.\",\n", "", 1),
     ];
     for (place, mutation) in mutations.into_iter().enumerate() {
         assert!(
