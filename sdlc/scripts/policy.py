@@ -343,6 +343,17 @@ def check_consumer() -> None:
 # over the public API. Its plants copy the first binding, the Rust examples.
 BINDING_THINKTHEN = {"path": "../../crates/thinkthen", "default-features": False}
 BINDING_PLANT_BASE = "libraries/rust"
+# Polars asks for getrandom 0.2 with its `js` feature on WebAssembly targets
+# (polars-0.55.2 Cargo.toml, `old_getrandom`), so the lock's getrandom 0.2.17,
+# under ring in thinkthen's tree, gains these wasm-only packages. Exactly
+# these, and only for this binding.
+BINDING_WASM_ONLY = {"libraries/polars": {
+    ("bumpalo", "3.20.3"), ("futures-core", "0.3.34"), ("futures-task", "0.3.34"), ("futures-util", "0.3.34"),
+    ("js-sys", "0.3.105"), ("pin-project-lite", "0.2.17"), ("rustversion", "1.0.23"), ("slab", "0.4.12"),
+    ("wasm-bindgen", "0.2.128"), ("wasm-bindgen-macro", "0.2.128"),
+    ("wasm-bindgen-macro-support", "0.2.128"), ("wasm-bindgen-shared", "0.2.128")}}
+# A binding holds a deny.toml only where this file checks it.
+BINDING_DENY_CHECKED = {"libraries/polars"}
 PLANTED_TEST = '#[test]\nfn planted() {\n    eprintln!("skipped");\n    return;\n}\n'
 BINDING_PLANTS = (
     ("publish = true", "Cargo.toml", lambda text: text.replace("publish = false", "publish = true")),
@@ -360,12 +371,13 @@ BINDING_PLANTS = (
         r'(name = "ureq"\nversion = ")[^"]+', r"\g<1>0.0.1", text, count=1)),
     ("test that prints skipped and returns", "tests/examples.rs", lambda text: text + PLANTED_TEST),
     ("ignored test", "tests/examples.rs", lambda text: text + "#[test]\n#[ignore]\nfn planted() {}\n"),
+    ("deny.toml no check reads", "deny.toml", lambda text: text + "[licenses]\n"),
 )
 
 
 def binding_files(folder: pathlib.Path) -> dict[str, str]:
     """One binding's manifest, lock, Clippy settings, and Rust sources, without build output."""
-    names = ["Cargo.toml", "Cargo.lock", "clippy.toml"] + [
+    names = ["Cargo.toml", "Cargo.lock", "clippy.toml", "deny.toml"] + [
         source.relative_to(folder).as_posix() for source in folder.rglob("*.rs")
         if "target" not in source.relative_to(folder).parts
     ]
@@ -458,9 +470,12 @@ def binding_failures(name: str, files: dict[str, str]) -> list[str]:
     if manifest.get("profile", {}).get("release") != ACCEPTED_RELEASE_PROFILE:
         held.append(f"{name} copies the root release profile")
     ours, theirs = lock_tree(lock), lock_tree(tomllib.loads((REPO / "Cargo.lock").read_text(encoding="utf-8")))
-    if not ours or ours - theirs:
+    drift = ours - theirs - BINDING_WASM_ONLY.get(name, set())
+    if not ours or drift:
         held.append(f"{name}/Cargo.lock resolves thinkthen's tree to the root lock's versions: "
-                    f"{sorted(ours - theirs) or 'thinkthen is absent'}")
+                    f"{sorted(drift) or 'thinkthen is absent'}")
+    if "deny.toml" in files and name not in BINDING_DENY_CHECKED:
+        held.append(f"{name}/deny.toml is one no policy check reads")
     for relative, text in files.items():
         if relative.endswith(".rs"):
             tokens = rust_tokens(text)
@@ -481,6 +496,45 @@ def check_bindings() -> None:
         planted = {**base, relative: plant(base.get(relative, ""))}
         if planted[relative] == base.get(relative) or not binding_failures(BINDING_PLANT_BASE, planted):
             fail("binding", f"the planted {label} is refused")
+
+
+# Ticket 0120: the Polars binding's deny file is the root file plus four named
+# license exceptions, and its polars and polars-core pins are equal.
+POLARS_EXCEPTIONS = [{"crate": "foldhash", "allow": ["Zlib"]}, {"crate": "slotmap", "allow": ["Zlib"]},
+                     {"crate": "xxhash-rust", "allow": ["BSL-1.0"]},
+                     {"crate": "ar_archive_writer", "allow": ["Apache-2.0 WITH LLVM-exception"]}]
+
+
+def polars_failures(deny: dict, manifest: dict) -> list[str]:
+    root, licenses = read_toml("deny.toml"), deny.get("licenses", {})
+    held = []
+    if (licenses.get("exceptions") != POLARS_EXCEPTIONS
+            or {**deny, "licenses": {**licenses, "exceptions": []}} != root):
+        held.append("libraries/polars/deny.toml is the root file plus its four license exceptions")
+    pins = [manifest.get(table, {}).get(name, {}).get("version")
+            for table, name in (("dependencies", "polars"), ("dev-dependencies", "polars-core"))]
+    if pins[0] is None or pins[0] != pins[1]:
+        held.append("libraries/polars pins polars and polars-core to one exact version")
+    return held
+
+
+def check_polars_binding() -> None:
+    if not (REPO / "libraries/polars").is_dir():
+        return
+    deny, manifest = read_toml("libraries/polars/deny.toml"), read_toml("libraries/polars/Cargo.toml")
+    for failure in polars_failures(deny, manifest):
+        fail("binding", failure)
+    exceptions = [*deny.get("licenses", {}).get("exceptions", []), {"crate": "planted", "allow": ["Zlib"]}]
+    fifth = {**deny, "licenses": {**deny.get("licenses", {}), "exceptions": exceptions}}
+    core = {**manifest.get("dev-dependencies", {}).get("polars-core", {}), "version": "=0.0.1"}
+    unequal = {**manifest, "dev-dependencies": {**manifest.get("dev-dependencies", {}), "polars-core": core}}
+    if not polars_failures(fifth, manifest) or not polars_failures(deny, unequal):
+        fail("binding", "the planted fifth license exception and unequal Polars pins are refused")
+    files = binding_files(REPO / "libraries/polars")
+    lock = files.get("Cargo.lock", "").replace(' "futures-util",\n "wasm-bindgen",\n', ' "futures-util",\n "planted",\n "wasm-bindgen",\n', 1)
+    lock += '\n[[package]]\nname = "planted"\nversion = "0.0.1"\n'
+    if not any("planted" in failure for failure in binding_failures("libraries/polars", {**files, "Cargo.lock": lock})):
+        fail("binding", "a thirteenth new package in the Polars lock is refused")
 
 
 CORE_ALLOWED_DEPENDENCIES = {"serde", "serde_json", "sha2", "thiserror"}
@@ -1525,6 +1579,7 @@ def main() -> int:
     check_clippy_configs()
     check_consumer()
     check_bindings()
+    check_polars_binding()
     check_crate_roots()
     check_core_policy()
     check_catalog_policy()

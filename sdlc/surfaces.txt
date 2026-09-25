@@ -1,7 +1,8 @@
-# The nine surfaces and their state (ticket 0093, ADR 0047). Each line names a
+# The surfaces and their state (ticket 0093, ADR 0047). Each line names a
 # binding folder and `landed` or `planned`. `sdlc/scripts/surfaces` runs each
 # landed surface's `check.sh`, and a surface ticket moves its line to landed.
 libraries/rust        landed
+libraries/polars      landed
 libraries/c           landed
 libraries/python      planned
 libraries/typescript  planned

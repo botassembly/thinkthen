@@ -62,7 +62,10 @@ if [ "${1:-}" = --registry ]; then
 				exit 1
 			fi
 		done
-		cargo deny --offline --manifest-path "$surface/Cargo.toml" check --config deny.toml \
+		# A binding's own deny.toml, which policy.py checks, replaces the root file.
+		deny=deny.toml
+		if [ -f "$surface/deny.toml" ]; then deny="$surface/deny.toml"; fi
+		cargo deny --offline --manifest-path "$surface/Cargo.toml" check --config "$deny" \
 			advisories bans licenses
 	done
 	echo 'surfaces: the registry holds every binding, and each landed one has its check, ratchet, and deny'

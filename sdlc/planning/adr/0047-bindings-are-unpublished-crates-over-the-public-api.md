@@ -31,6 +31,22 @@ Main is the spine (`sdlc/planning/one-line-plan-2026-09-24.md`), and each of the
 8. The Polars surface at 0.1 is the Python Polars door, per the 2026-09-21 Polars ruling in ADR 0017. The branch's Rust Polars `Series` door is deferred past 0.1. A Rust user maps a `Series` of text into `decide_many`.
 9. Relate from rows (all three databases): the binding dedupes rows by name and kind in first-seen order and calls `relate` once. It maps each edge back to every row with that pair. The engine's 255 cap counts unique pairs.
 
+## Amended 2026-09-25: the Rust Polars door and the Polars column table
+
+Ian ruled on 2026-09-24 that Rust Polars and Python Polars are both in 0.1 (`sdlc/planning/one-line-plan-2026-09-24.md`, afternoon rulings). That ruling overturns item 8's deferral of the Rust `Series` door. Ticket 0120 builds it as `thinkthen-polars` at `libraries/polars`, a binding like the others under items 1 to 7. Its `deny.toml` is the root file plus four named license exceptions, and `policy.py` checks that difference.
+
+10. **The Polars column table.** Both Polars doors, 0120 in Rust and 0106 in Python, write a frame's new columns by this table. The issue `sdlc/issues/2026-09-24-both-polars-doors-take-widened-cells-from-value-json.md` holds its history.
+
+| Question | Column | Widened cell when any row of that question failed |
+| --- | --- | --- |
+| decide | `Boolean`, null for not sure | `true` or `false` from `value_json`, null for not sure |
+| choose | `String`, null for nothing fits | the plain label, null for nothing fits |
+| score | `Float64` | the number text from `value_json` |
+| tag | `String` holding the JSON array text | the array text from `value_json` |
+| failed | | the marker from `value_json`, such as `{"failed":{"kind":"backend","cause":"missing_probability"}}` |
+
+A column widens only when the same reply also holds a usable answer. The engine refuses a reply with no usable answer (`specification/annotate.md`), so a one-member set, a series call, or a request chunk whose only answer failed ends the call with a `Backend` error. A widened cell takes its text unchanged from `AnnotatedRecord::value_json`, the engine's one serializer. No door keeps its own table of failure causes. Ian can overturn the table.
+
 ## Why this is consistent with ADR 0017 and ADR 0037
 
 ADR 0017 bans publishing a split of the engine's layers. A binding crate adds no layer and holds no engine logic, and it is never published to crates.io, so the one Rust package stays `thinkthen`. ADR 0017 section 8 step 2 already puts every exported C name in a C binding outside the engine, and 0084 keeps C symbols out of `thinkthen`. ADR 0037 asks for everything through C. A Cargo feature on `thinkthen` cannot add a `cdylib` crate type. It would also put `unsafe` and exported symbols into the published package. So the C door is a separate crate.
