@@ -24,8 +24,13 @@ audit suggests 0.85 because that bar gets the most right. F1 picks 0.75, which c
 
 ## Asks
 
-1. `audit --objective accuracy|f1` chooses what the suggested cut maximizes. `accuracy` stays the default.
-2. `--min-recall R` suggests the highest bar that keeps recall at or above R. `--min-precision P` suggests the lowest bar that keeps precision at or above P. Precision or recall alone has no useful maximum: recall peaks at a bar of 0, and precision peaks near 1. Each needs a floor on the other side.
+1. `audit --optimize accuracy|f1|recall|precision` sets what the suggested cut serves. `accuracy` stays the default.
+   - `accuracy`: the bar with the most right answers.
+   - `f1`: the bar with the best F1. F1 weighs misses and wrong yeses together.
+   - `recall`: the highest bar whose recall reaches `--target`. With a target of 1, that bar misses no real yes. The Abbey Road example gives 0.75.
+   - `precision`: the lowest bar whose precision reaches `--target`. With a target of 0.9, nine in ten yeses are right.
+   - The highest and lowest rule matters. Recall alone is perfect at a bar of 0, and precision alone is perfect near 1. The target turns each into a useful choice. Ties break as the spec breaks them today.
+2. `--target` already sets the agreement a `choose` cut must reach. It takes the recall or precision floor for `decide` too, with a default of 0.9. With no bar that reaches the target, the cut is null, as for `choose`.
 3. The count object adds `precision` and `f1` beside `yes_recall`, and `--table` prints them.
 
 The suggested object already names its `objective`, so the output shape holds. Ian can overturn all three.
