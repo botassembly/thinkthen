@@ -1,0 +1,51 @@
+{
+ "schema": "thinkthen.examples/1",
+ "surface": "ruby",
+ "language": "ruby",
+ "install": "gem install thinkthen",
+ "examples": {
+  "decide": {
+   "ruby": "p ThinkThen.decide(\"Is this a complaint?\", \"I demand a refund today\")",
+   "expected": "true"
+  },
+  "choose": {
+   "ruby": "p ThinkThen.choose(\"Which team owns this?\", \"please route this ticket\", options: [\"the refund desk\", \"the maybe desk\", \"anywhere else\"])",
+   "expected": "\"the refund desk\""
+  },
+  "tag": {
+   "ruby": "p ThinkThen.tag(\"Which words appear?\", \"the refund and the shipping\", labels: [\"refund\", \"shipping\"])",
+   "expected": "[\"refund\"]"
+  },
+  "score": {
+   "ruby": "p ThinkThen.score(\"How urgent is this?\", \"maybe later\", levels: [\"Routine.\", \"Soon.\", \"Immediate.\"])",
+   "expected": "1.05"
+  },
+  "filter": {
+   "ruby": "p ThinkThen.filter(\"Is this a complaint?\", [\"good morning\", \"I demand a refund today\"])",
+   "expected": "[\"I demand a refund today\"]"
+  },
+  "rank": {
+   "ruby": "p ThinkThen.rank(\"Is this a complaint?\", [\"good morning\", \"I demand a refund today\"]).map { |one| [one.record, one.probability] }",
+   "expected": "[[\"I demand a refund today\", 0.97], [\"good morning\", 0.03]]"
+  },
+  "find": {
+   "ruby": "p ThinkThen.find(\"Which line asks for money back?\", [\"good morning\", \"I want a refund\"]).then { |one| [one.unit, one.probability] }",
+   "expected": "[\"I want a refund\", 0.97]"
+  },
+  "annotate": {
+   "files": {
+    "form.json": "{\"version\":1,\"questions\":{\"refund\":{\"decide\":\"Does the customer ask for a refund?\"},\"complaint\":{\"decide\":\"Is this a complaint?\",\"threshold\":0.5}}}"
+   },
+   "ruby": "p ThinkThen.annotate(ThinkThen.set(\"form.json\"), [\"maybe later\"])",
+   "expected": "[{refund: true, complaint: true}]"
+  },
+  "recognize": {
+   "ruby": "p ThinkThen.recognize(\"Maria Chen joined Northwind Freight in Chicago last spring.\", kinds: %w[person organization place]).entities.map { |one| [one.text, one.kind] }",
+   "expected": "[[\"Maria Chen\", \"person\"], [\"Northwind Freight\", \"organization\"], [\"Chicago\", \"place\"]]"
+  },
+  "relate": {
+   "ruby": "p ThinkThen.relate([\"Checkout returns 500 at the payment step.\", \"Card charges are failing for every customer.\", \"The nightly export ran two hours late.\", \"The payments database ran out of disk space.\"], relations: %w[caused_by]).map { |one| [one.name, one.source, one.target, one.probability] }",
+   "expected": "[[\"caused_by\", 1, 4, 0.71], [\"caused_by\", 2, 1, 0.65], [\"caused_by\", 2, 4, 0.73], [\"caused_by\", 3, 4, 0.55]]"
+  }
+ }
+}

@@ -1,0 +1,7 @@
+# Darwin: a Ruby extension must resolve rb_* symbols at load, not link time.
+# Without this the cdylib link fails with undefined _rb_* symbols on macOS.
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-arg=-Wl,-undefined,dynamic_lookup"]
+
+[target.x86_64-apple-darwin]
+rustflags = ["-C", "link-arg=-Wl,-undefined,dynamic_lookup"]

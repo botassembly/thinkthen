@@ -1,0 +1,46 @@
+[package]
+name = "thinkthen-ruby"
+version = "0.0.1"
+license = "MIT"
+edition = "2021"
+publish = false
+description = "The Ruby surface over the thinkthen contract. Not the product."
+
+[lib]
+crate-type = ["cdylib"]
+name = "thinkthen_native"
+
+# A surface builds on its own, outside the crates workspace, so its
+# manifest carries its own profile: a library artifact unwinds, because an
+# abort inside a host kills someone else's process.
+[workspace]
+
+[dependencies]
+magnus = { version = "0.7", features = ["rb-sys"] }
+rb-sys = "0.9"
+# The call's own thread blocks asynchronous signals (pthread_sigmask),
+# which the standard library does not expose; already in the lock
+# through the stand-in.
+libc = "0.2"
+thinkthen-contract = { path = "../../contract" }
+thinkthen-standin = { path = "../../standin" }
+
+# The stand-in's one synthesized partial failure (conformance case 74),
+# armed at compile time. The gate builds with it so the marker case runs;
+# a packaged build (build.sh without the argument) never carries it.
+
+# The strict rules the gate's lint rung enforces (surfaces-review-4:
+# these two workspaces carried no table while the others did).
+[lints.rust]
+missing_docs = "warn"
+missing_debug_implementations = "forbid"
+
+[lints.clippy]
+dbg_macro = "deny"
+todo = "deny"
+unimplemented = "deny"
+[features]
+synthetic-partial = ["thinkthen-standin/synthetic-partial"]
+
+[profile.release]
+panic = "unwind"

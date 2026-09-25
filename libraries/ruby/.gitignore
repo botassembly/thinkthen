@@ -1,0 +1,5 @@
+target/
+.runtimes/
+lib/thinkthen/thinkthen.so
+*.gem
+dist/
