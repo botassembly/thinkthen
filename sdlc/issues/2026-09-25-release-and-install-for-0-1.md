@@ -2,6 +2,13 @@
 
 Status: Open.
 
+## Ian's rulings, 2026-09-25
+
+- "I definitely want to move publishing to GitHub Actions as an intentional release process, and we'll try to do that with 0.1." Release publishing runs on GitHub Actions with trusted publishing to crates.io, PyPI, npm, and RubyGems. This overturns the 2026-09-22 pause for release jobs only. The gate stays run by hand. The local registry tokens are deleted once trusted publishing works.
+- The Homebrew tap lives under `botassembly`, not `genomoncology`. The site's install line changes to match.
+- R ships through R-universe. Ian: "if R is easier, our universe is easier, that's fine."
+- No separate Rust Polars crate. Ian asked why ThinkThen would not carry Polars itself. The Rust Polars door moves into the `thinkthen` crate behind an optional `polars` feature, the way Python ships `thinkthen[polars]`. Users who skip the feature never compile Polars. This amends ADR 0047's `thinkthen-polars` binding at `libraries/polars`. Ian can overturn this reading.
+
 No release ticket exists. The release build is queue item 6 of `sdlc/planning/one-line-plan-2026-09-24.md`, and the plan says "Nothing tickets this today." Seven surfaces landed on main on 2026-09-25, so the release is now the biggest gap before 0.1. This issue merges five files into one list for that ticket: `2026-09-25-release-and-install-for-0-1.md`, `2026-09-25-release-and-install-for-0-1.md`, `2026-09-25-release-and-install-for-0-1.md`, `2026-09-25-release-and-install-for-0-1.md`, and the release, install, and README parts of `2026-09-25-release-and-install-for-0-1.md`. Each item was checked against main on 2026-09-25.
 
 Ian's rulings that govern this work:

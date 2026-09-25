@@ -2,6 +2,8 @@
 
 Status: Open.
 
+Ian's ruling, 2026-09-25, on item 6: `check` shows the model, the provider, the URL, and all its outputs. When no model name is given, it prints "unspecified". It shows the model the user asked for and the model each reply names. Option 2, an optional model in every request, is not ruled.
+
 This issue merges nine issues. They were `2026-09-25-command-wording-and-help-fixes-before-0-1.md`, `2026-09-25-command-wording-and-help-fixes-before-0-1.md`, `2026-09-25-command-wording-and-help-fixes-before-0-1.md`, `2026-09-25-command-wording-and-help-fixes-before-0-1.md`, `2026-09-25-command-wording-and-help-fixes-before-0-1.md`, `2026-09-25-command-wording-and-help-fixes-before-0-1.md`, `2026-09-25-command-wording-and-help-fixes-before-0-1.md`, `2026-09-25-command-wording-and-help-fixes-before-0-1.md`, and `2026-09-25-command-wording-and-help-fixes-before-0-1.md`. Each one fixes a sentence a user reads: a refusal, a help line, or a printed report. None changes what the engine answers. They share one goal. The words must match the behavior before the 0.1.0 release. All evidence below was checked against main at `a95474be` on 2026-09-25.
 
 ## 1. A huge deadline prints hundreds of digits

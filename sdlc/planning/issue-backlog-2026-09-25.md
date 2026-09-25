@@ -51,17 +51,17 @@ These are fixes a user would hit, or work Ian ruled into 0.1.
 - `2026-09-25-test-harness-and-review-leftovers.md`, items 5 to 10.
 - Feature ideas, each its own design: `2026-09-24-rank-by-graded-relevance-for-search-reranking.md`, `2026-09-23-annotate-options-from-a-file-or-a-record.md`, `2026-09-23-record-the-backends-own-time-for-each-call.md`, `2026-09-21-what-a-procedure-runtime-asks-of-a-judgment.md`, `2026-09-22-what-the-vendors-founder-said-about-where-the-model-goes.md` (the default-model pin and the refusal on a model change).
 
-## Rulings Ian owes
+## Ian's rulings, 2026-09-25
 
-Asked of Ian on 2026-09-25. Each has a default the team can build on until he answers.
+Ian answered every question the sweep raised. Each ruling sits in its issue too.
 
-1. Release jobs on GitHub Actions, given his 2026-09-22 ruling that paused Actions. Trusted publishing to crates.io, PyPI, npm, and RubyGems needs it. Default: Actions for releases only.
-2. The Homebrew tap owner. The site says `genomoncology`, and the code lives under `botassembly`. Default: `botassembly`.
-3. How R ships. Default: R-universe.
-4. The Rust Polars crate name. Default: `thinkthen-polars`.
-5. The library `cache_bytes` setter, which does nothing. Default: remove it for 0.1.
-6. `check` and the model name. Default: print the model that answered now. Making the model optional for every backend needs an ADR.
-7. rusqlite's old headers. Default: keep the hand-extended API table, add a test, and file nothing upstream.
+1. Release publishing moves to GitHub Actions as an intentional release process in 0.1, with trusted publishing on all four registries. This overturns the 2026-09-22 Actions pause for release jobs only. See the release issue.
+2. The Homebrew tap lives under `botassembly`.
+3. R ships through R-universe.
+4. No separate Rust Polars crate. The Rust Polars door moves into `thinkthen` behind an optional `polars` feature. This amends ADR 0047. Ian can overturn this reading of his question.
+5. No setting may do nothing. `cache_bytes` leaves the library, ticket 0084, and every binding. Sweep the settings for any other setting with no effect before 0.1.
+6. `check` shows the model, the provider, the URL, and all its outputs. It prints "unspecified" when no model name is given.
+7. Nobody asks rusqlite upstream for a fix. Keep the workaround and add a test.
 
 These choices belong to the dev team. They need no ruling from Ian:
 

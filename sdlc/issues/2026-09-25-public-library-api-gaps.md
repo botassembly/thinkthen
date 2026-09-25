@@ -2,6 +2,8 @@
 
 Status: Open.
 
+Ian's ruling, 2026-09-25: "I don't want any settings that don't do anything. Get rid of it." Item 4 takes the second fix. `cache_bytes` leaves the library, ticket 0084's frozen contract, and every binding before 0.1. The same rule applies to any other setting that has no effect.
+
 This issue merges eight issues, now deleted: `2026-09-25-public-library-api-gaps.md`, `2026-09-25-public-library-api-gaps.md`, `2026-09-25-public-library-api-gaps.md`, `2026-09-25-public-library-api-gaps.md`, `2026-09-25-public-library-api-gaps.md`, `2026-09-25-public-library-api-gaps.md`, `2026-09-25-public-library-api-gaps.md`, and `2026-09-25-public-library-api-gaps.md`. Each one names a place where the public API (ticket 0084, `crates/thinkthen/src/public/`) falls short of what the command, a spec, or a ruling promises. Each gap makes a binding copy engine code, skip a shared case, or drift from the other bindings. One owner of the public API should close them together. Each section below was checked against main on 2026-09-25, after the Python and Python Polars landing. The issue `2026-09-25-status-sees-only-command-spend-and-the-sql-total-has-three-leaks.md` stays separate. Its per-process request total shares the root cause of item 1.
 
 ## 1. Engine counters count per engine, not per process

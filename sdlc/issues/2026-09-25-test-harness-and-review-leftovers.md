@@ -2,6 +2,8 @@
 
 Status: Open.
 
+Ian's ruling, 2026-09-25, on item 10: nobody asks the rusqlite maintainers for a fix. Keep the hand-extended API table and add a test.
+
 This issue merges six files: `2026-09-25-test-harness-and-review-leftovers.md`, `2026-09-25-test-harness-and-review-leftovers.md`, `2026-09-25-test-harness-and-review-leftovers.md`, `2026-09-25-test-harness-and-review-leftovers.md`, `2026-09-25-test-harness-and-review-leftovers.md`, and `2026-09-25-test-harness-and-review-leftovers.md`. Each item is small, and each came out of a review or a test run. Most touch the test harness: the shared loopback backend, the secrecy sweep, and the demo checks. The rest are review leftovers that still stand on main. Every item below was checked against main on 2026-09-25. Ticket 0119, the mutation audit of the engine tests, runs after the surfaces land. It should take item 1 alone. Items 2 to 10 are separate work, and items 2, 3, and 4 should land before 0119 starts, because 0119 leans on the secrecy sweep and the shared backend.
 
 ## 1. Hand-rolled loopback listeners duplicate the shared backend
