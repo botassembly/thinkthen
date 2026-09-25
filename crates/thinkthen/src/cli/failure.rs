@@ -151,7 +151,8 @@ pub(crate) enum Failure {
     RecordingConflict(String),
     RecordingStorage,
     RecordingPathIsFile,
-    RecordingBackendMismatch,
+    /// This run's endpoint URL, and whether the folder is the default cache.
+    RecordingBackendMismatch(String, bool),
     RecordingFolderLegacy,
     DefaultCacheUnavailable,
     DefaultCachePrivate,
@@ -233,7 +234,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         | Failure::RecordingConflict(_)
         | Failure::RecordingStorage
         | Failure::RecordingPathIsFile
-        | Failure::RecordingBackendMismatch
+        | Failure::RecordingBackendMismatch(..)
         | Failure::RecordingFolderLegacy => (
             70,
             "defect: a recording failure was not reported".to_owned(),

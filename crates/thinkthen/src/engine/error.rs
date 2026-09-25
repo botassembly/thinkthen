@@ -48,7 +48,9 @@ pub(crate) enum Error {
     RecordingConflict(String),
     RecordingStorage,
     RecordingPathIsFile,
-    RecordingBackendMismatch,
+    /// The folder is bound to another backend: this run's endpoint URL, and
+    /// whether the folder is the platform default cache.
+    RecordingBackendMismatch(String, bool),
     RecordingFolderLegacy,
     DefaultCachePrivate,
     CacheEntry,
@@ -112,7 +114,7 @@ impl Error {
             | Self::RecordingConflict(_)
             | Self::RecordingStorage
             | Self::RecordingPathIsFile
-            | Self::RecordingBackendMismatch
+            | Self::RecordingBackendMismatch(..)
             | Self::RecordingFolderLegacy
             | Self::DefaultCachePrivate => Kind::Local,
             Self::CacheEntry => Kind::Local,

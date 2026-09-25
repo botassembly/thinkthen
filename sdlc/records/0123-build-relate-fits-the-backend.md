@@ -64,7 +64,7 @@ The three 400 plants ran again against the new file after the move.
 
 ## Lines and the ratchet
 
-Main measured 61,768 nonblank lines at `02dc0b96`. This branch measures 62,093, so the ratchet rises by 325.
+Main measured 61,972 nonblank lines at `f3176b5d`, after ticket 0124 landed. This branch measures 62,297, so the ratchet rises by 325.
 
 | Part | Budget | Nonblank lines, net |
 | --- | --- | --- |

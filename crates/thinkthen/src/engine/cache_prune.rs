@@ -9,6 +9,12 @@ use crate::core::recording::Entry;
 use crate::engine::cache_lock;
 use crate::engine::error::Error;
 
+/// A model the requests asked for and no reply named is the alias, and
+/// pruning by it would remove every entry.
+const ALIAS: &str = "--answered-by-other-than names the model the requests asked for, \
+    and no reply names it, so prune removed nothing; \
+    name the version a result's meta.model shows, not the alias passed to --model";
+
 #[derive(Debug)]
 pub(crate) struct Prune {
     pub(crate) max_size: u64,
@@ -73,6 +79,7 @@ struct Found {
     bytes: u64,
     modified: SystemTime,
     model: String,
+    requested: Option<String>,
     remove: bool,
 }
 
@@ -83,6 +90,14 @@ pub(crate) fn run(folder: &Path, options: &Prune) -> Result<Pruned, Error> {
 
 fn run_at(folder: &Path, options: &Prune, now: SystemTime) -> Result<Pruned, Error> {
     let mut found = scan(folder)?;
+    if let Some(model) = options.answered_by_other_than.as_deref()
+        && found
+            .iter()
+            .any(|entry| entry.requested.as_deref() == Some(model))
+        && !found.iter().any(|entry| entry.model == model)
+    {
+        return Err(Error::Usage(ALIAS));
+    }
     for entry in &mut found {
         let old = options.older_than.is_some_and(|age| {
             now.checked_sub(age)
@@ -210,7 +225,7 @@ fn scan(folder: &Path) -> Result<Vec<Found>, Error> {
         if final_metadata.file_type().is_symlink() || !same_identity(&opened, &final_metadata) {
             return Err(Error::CacheEntry);
         }
-        let (digest, model) = Entry::inspected(&bytes).map_err(|_| Error::CacheEntry)?;
+        let (digest, model, requested) = Entry::inspected(&bytes).map_err(|_| Error::CacheEntry)?;
         if digest.file_name() != name {
             return Err(Error::CacheEntry);
         }
@@ -220,6 +235,7 @@ fn scan(folder: &Path) -> Result<Vec<Found>, Error> {
             bytes: allocated(&metadata),
             modified: metadata.modified().map_err(storage)?,
             model,
+            requested,
             remove: false,
         });
     }

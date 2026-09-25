@@ -67,7 +67,9 @@ impl From<EngineError> for Failure {
             EngineError::RecordingConflict(name) => Self::RecordingConflict(name),
             EngineError::RecordingStorage => Self::RecordingStorage,
             EngineError::RecordingPathIsFile => Self::RecordingPathIsFile,
-            EngineError::RecordingBackendMismatch => Self::RecordingBackendMismatch,
+            EngineError::RecordingBackendMismatch(url, default) => {
+                Self::RecordingBackendMismatch(url, default)
+            }
             EngineError::RecordingFolderLegacy => Self::RecordingFolderLegacy,
             EngineError::DefaultCachePrivate => Self::DefaultCachePrivate,
             EngineError::CacheEntry => Self::CacheEntry,
