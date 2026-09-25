@@ -23,7 +23,7 @@ Branch `ticket/0110-port-duckdb-surface`. Built on Beelink on 2026-09-25 with th
 
 ## Results
 
-- `check.sh` passes at the branch head: fmt, clippy with `-D warnings`, 4 unit tests, both builds, the source checks, deny and its plant, the stock CLI call, and 31 suite cases (verbs 12, settings 10, signal 9). The site-example check runs 8 drawn blocks and names 2 closed divergences. The selftests pass.
+- `check.sh` passes at `d45a8cc4`, the head with every review fix: fmt, clippy with `-D warnings`, the unit tests, both builds, the source checks, deny and its plant, the stock CLI call, every suite, conformance, the site examples, and the selftests. It prints 50 `ok` lines. The site-example check runs 8 drawn blocks and names 2 closed divergences.
 - Ratchets: `src` holds 2176 non-blank Rust lines and `tools` holds 1116 non-blank Python lines. Each ceiling equals its total. The request total of decision 17 added its check in `src/engines.rs` and one call site in `src/scalars.rs`.
 - Conformance: 49 pass, 0 fail, 5 not run, 54 cases.
 - Owed proofs, added after the first review: R1-15 counts 0 opens of `q.json` under `strace` with access off. R2-18 counts 1 open over 20,000 rows under `SET threads = 1`. R5-21's 10,000 SIGINTs while four threads allocate end with exit 0 well under 60 s. An `@file` read of `/dev/zero` stops at 1 MiB. The secrecy case now covers every verb's refusal on the refuse arm with its `backend` kind pinned, every details member on the generic arm, a usage error, a local error, and an address carrying a password, with more than 0 counted sends.
