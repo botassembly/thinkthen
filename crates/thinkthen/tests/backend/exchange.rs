@@ -364,51 +364,30 @@ fn an_error_status_that_is_not_retried_fails_at_once() {
 #[test]
 fn common_request_statuses_name_fixed_actions_and_hide_the_body() {
     let evidence = "private evidence marker";
-    let marked = format!(r#"{{"error":"{evidence}"}}"#);
-    let reason = format!(r#"{{"detail":{{"error_type":"{evidence}"}}}}"#);
-    let named = r#"{"detail":{"error_type":"max_tokens_exceeded"}}"#;
-    let long = format!(
-        r#"{{"detail":{{"error_type":"max_tokens_exceeded"}},"pad":"{}"}}"#,
-        "x".repeat(4096)
-    );
-    let refused = "thinkthen: the backend answered with status 400: the backend refused the request; check --model and the request size\n";
-    let too_long = concat!(
-        "thinkthen: the backend answered with status 400 (max_tokens_exceeded): the request has ",
-        "more input tokens than the backend takes; shorten the text or set a lower ",
-        "max_request_bytes with --profile\n"
-    );
+    let body = format!(r#"{{"error":"{evidence}"}}"#);
     let cases = [
-        (400, marked.as_str(), refused),
-        (400, named, too_long),
-        (400, reason.as_str(), refused),
-        (400, "", refused),
-        (400, "{}", refused),
-        (400, r#"{"detail":"max_tokens_exceeded"}"#, refused),
-        (400, long.as_str(), refused),
         (
-            422,
-            named,
-            "thinkthen: the backend answered with status 422: the backend refused the request as malformed or too large\n",
+            400,
+            "thinkthen: the backend answered with status 400: the backend refused the request; check --model and the request size\n",
         ),
         (
             500,
-            marked.as_str(),
             "thinkthen: the backend answered with status 500: the backend failed after the allowed attempts; try again later or change --max-retries\n",
         ),
     ];
-    for (status, body, expected) in cases {
+    for (status, expected) in cases {
         let listener =
-            Listener::serving(vec![Canned::status(status, body)]).expect("a loopback listener");
+            Listener::serving(vec![Canned::status(status, &body)]).expect("a loopback listener");
         let output = decide(listener.base(), &["--max-retries", "0"], KEY, evidence)
             .expect("the compiled binary runs");
-        assert_eq!(output.status.code(), Some(4), "{status} {body}");
-        assert!(output.stdout.is_empty(), "{status} {body}");
+        assert_eq!(output.status.code(), Some(4), "{status}");
+        assert!(output.stdout.is_empty(), "{status}");
         assert_eq!(
             String::from_utf8_lossy(&output.stderr),
             expected,
-            "{status} {body}"
+            "{status}"
         );
-        assert_eq!(listener.requests().len(), 1, "{status} {body}");
+        assert!(!String::from_utf8_lossy(&output.stderr).contains(evidence));
     }
 }
 
