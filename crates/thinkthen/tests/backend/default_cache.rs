@@ -252,6 +252,99 @@ fn prune_model_selection_and_scan_before_delete_hold() {
     assert!(!String::from_utf8_lossy(&output.stderr).contains("private malformed marker"));
 }
 
+/// The allocated bytes of one entry, as prune counts them.
+fn allocated(folder: &Path, name: &str) -> io::Result<u64> {
+    use std::os::unix::fs::MetadataExt as _;
+    Ok(fs::metadata(folder.join(name))?.blocks() * 512)
+}
+
+/// MODEL, other options, the second entry's reply, and which of the two
+/// entries leave. `None` means the alias refusal.
+type PruneRow<'a> = (&'a str, &'a [&'a str], &'a str, Option<[bool; 2]>);
+
+#[test]
+fn prune_refuses_the_alias_and_keeps_the_upgrade() {
+    const REFUSAL: &str = concat!(
+        "thinkthen: --answered-by-other-than names the model the requests asked for, ",
+        "and no reply names it, so prune removed nothing; ",
+        "name the version a result's meta.model shows, not the alias passed to --model\n",
+    );
+    let url = format!("{DEFAULT_BASE}/{ENDPOINT_PATH}");
+    let echoed = ANSWERED.replace("jev-1.13.0", DEFAULT_MODEL);
+    let rows: [PruneRow; 7] = [
+        ("jev-latest", &[], ANSWERED, None),
+        ("jev-latest", &["--older-than", "1d"], ANSWERED, None),
+        ("jev-1.14.0", &[], ANSWERED, Some([true, true])),
+        ("no-such-model", &[], ANSWERED, Some([true, true])),
+        ("JEV-LATEST", &[], ANSWERED, Some([true, true])),
+        ("jev-1.13.0", &[], ANSWERED, Some([false, false])),
+        ("jev-latest", &[], &echoed, Some([true, false])),
+    ];
+    for (row, (model, options, second_reply, removed)) in rows.into_iter().enumerate() {
+        let folder = folder(&format!("prune-alias-{row}"));
+        let first = plant(&folder, ANSWERED).expect("first entry");
+        let request = encoded_decide(EVIDENCE, DEFAULT_MODEL, "another question");
+        let second = plant_recording(&folder, &url, &request, second_reply).expect("second");
+        let names = [&first, &second];
+        let bytes = [&first, &second].map(|name| allocated(&folder, name).expect("allocated"));
+        let before = [
+            fs::read(folder.join(&first)),
+            fs::read(folder.join(&second)),
+        ]
+        .map(|read| read.expect("entry"));
+        let mut arguments = vec!["cache", "prune", folder.to_str().expect("folder")];
+        arguments.extend(["--answered-by-other-than", model]);
+        arguments.extend_from_slice(options);
+        let output = run(&arguments, &[]).expect("prune");
+        let Some(removed) = removed else {
+            assert_eq!(output.status.code(), Some(2), "{row}");
+            assert!(output.stdout.is_empty(), "{row}");
+            assert_eq!(String::from_utf8_lossy(&output.stderr), REFUSAL, "{row}");
+            for (name, bytes) in names.iter().zip(&before) {
+                assert_eq!(&fs::read(folder.join(name)).expect("kept"), bytes, "{row}");
+            }
+            continue;
+        };
+        let out = removed.iter().filter(|leaves| **leaves).count();
+        let out_bytes: u64 = (0..2)
+            .filter(|index| removed[*index])
+            .map(|index| bytes[index])
+            .sum();
+        let (kept, kept_bytes) = (2 - out, bytes.iter().sum::<u64>() - out_bytes);
+        assert_eq!(output.status.code(), Some(0), "{row}");
+        assert_eq!(
+            String::from_utf8_lossy(&output.stdout),
+            format!(
+                "removed {out} entries and {out_bytes} bytes; {kept} entries and {kept_bytes} bytes remain\n"
+            ),
+            "{row}"
+        );
+        for (index, name) in names.iter().enumerate() {
+            assert_eq!(folder.join(name).exists(), !removed[index], "{row}");
+        }
+    }
+
+    let empty = folder("prune-alias-empty");
+    fs::create_dir_all(&empty).expect("empty folder");
+    plant_backend_identity(&empty, &url).expect("marker");
+    let output = run(
+        &[
+            "cache",
+            "prune",
+            empty.to_str().expect("folder"),
+            "--answered-by-other-than",
+            "jev-latest",
+        ],
+        &[],
+    )
+    .expect("prune");
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "removed 0 entries and 0 bytes; 0 entries and 0 bytes remain\n"
+    );
+}
+
 #[test]
 fn prune_refuses_digest_mismatch_blank_model_and_nonregular_entries_before_deletion() {
     let url = format!("{DEFAULT_BASE}/{ENDPOINT_PATH}");
