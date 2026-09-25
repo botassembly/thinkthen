@@ -83,6 +83,8 @@ All four rungs passed at `ecf004b6` with the key and the address unset: install 
 
 0086 landed on main at `1b2e9df7`. `cf5c160e` merges `origin/main` with no conflict, and the measured total stays 60919. All four rungs passed there with the key and the address unset. Test had 51 suites green and none red, and spec ran 21 green demos.
 
+Main then moved to `0a5ed40c` with 0098 and 0093. `6140bd2f` merges it. Main measures 61153, so the ratchet is 61721, main plus this ticket's 568. All five rungs passed there, the new `surfaces` rung included, with the key and the address unset. Test had 56 suites green and none red, spec ran 21 green demos, and `surfaces` passed `libraries/rust`.
+
 ## Review
 
 A fresh, read-only Claude session (Opus) reviewed `cd95f138..ecf004b6`. It returned four findings:
