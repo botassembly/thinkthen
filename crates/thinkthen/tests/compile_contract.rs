@@ -10,7 +10,9 @@
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::Path;
-use std::process::Command;
+
+#[path = "../src/test_deadline/child.rs"]
+mod child;
 
 /// `None` compiles; `Some((code, phrase))` fails with that code and phrase.
 type Expected = Option<(&'static str, &'static str)>;
@@ -170,19 +172,30 @@ fn every_contract_fixture_compiles_or_fails_as_its_row_says() {
     for (name, _, body) in TABLE {
         fs::write(bins.join(format!("{name}.rs")), format!("{PRELUDE}{body}")).unwrap();
     }
-    let output = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned()))
-        .args([
-            "check",
-            "--offline",
-            "--keep-going",
-            "--bins",
-            "--message-format=json",
-        ])
-        .current_dir(&crate_dir)
-        .env("CARGO_TARGET_DIR", crate_dir.join("target"))
-        .env_remove("RUSTFLAGS")
-        .output()
-        .expect("cargo runs");
+    let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_owned());
+    let output = child::command(
+        cargo,
+        &[
+            "HOME",
+            "CARGO_HOME",
+            "RUSTUP_HOME",
+            "RUSTUP_TOOLCHAIN",
+            "CARGO_TARGET_DIR",
+            "RUSTC_WRAPPER",
+        ],
+    )
+    .args([
+        "check",
+        "--offline",
+        "--keep-going",
+        "--bins",
+        "--message-format=json",
+    ])
+    .current_dir(&crate_dir)
+    .env("CARGO_TARGET_DIR", crate_dir.join("target"))
+    .env_remove("RUSTFLAGS")
+    .output()
+    .expect("cargo runs");
     let mut errors: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for line in String::from_utf8_lossy(&output.stdout).lines() {
         let Ok(message) = serde_json::from_str::<serde_json::Value>(line) else {

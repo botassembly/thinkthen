@@ -166,17 +166,17 @@ pub(super) fn staged(case: &Case, success: &Success) {
 /// Names a form child's job: a case id, or `probe` for a valid question.
 const CHILD: &str = "THINKTHEN_TEST_FORM_CHILD";
 
-/// Whether a variable names a key or an address, and so could reach a paid backend.
+/// Whether a variable could steer the command: any `THINKTHEN_` name but the job's.
 fn steers(name: &std::ffi::OsStr) -> bool {
-    name.to_str().is_some_and(|name| {
-        name.starts_with("THINKTHEN_") && (name.contains("KEY") || name.contains("URL"))
-    })
+    name.to_str()
+        .is_some_and(|name| name.starts_with("THINKTHEN_") && name != CHILD)
 }
 
-/// Run one ignored test of this module as a child of the test binary.
+/// Run one ignored test of this module as a child of the test binary, with
+/// an empty environment.
 fn test_child(name: &str) -> process::Command {
     let mut command = process::Command::new(std::env::current_exe().expect("test binary"));
-    command.args([
+    command.env_clear().args([
         "--ignored",
         "--exact",
         "--nocapture",
@@ -185,13 +185,10 @@ fn test_child(name: &str) -> process::Command {
     command
 }
 
-/// Run a form child for one job with no key and no address in its environment.
+/// Run a form child for one job with only its job in its environment.
 fn child(job: &str) -> Output {
     let mut command = test_child("form_child");
     command.env(CHILD, job);
-    for (name, _) in std::env::vars_os().filter(|(name, _)| steers(name)) {
-        command.env_remove(name);
-    }
     crate::test_deadline::output(&mut command).expect("form child")
 }
 

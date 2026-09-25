@@ -7,6 +7,7 @@ require "json"
 require "minitest/autorun"
 require "open3"
 require "rbconfig"
+require_relative "../../../conformance/children/children"
 
 class TestPublicNames < Minitest::Test
   CONSTANTS = %i[BackendError Cancel CancelledError DeadlineError DefectError Edge Engine Entity Error Found
@@ -15,7 +16,8 @@ class TestPublicNames < Minitest::Test
              recognize relate score score_with_level tag usage with_tick].freeze
 
   def test_the_loaded_module_shows_only_the_pinned_names
-    out, errors, status = Open3.capture3(RbConfig.ruby, "-I", File.expand_path("../lib", __dir__), "-rjson", "-rthinkthen", "-e", <<~RUBY)
+    out, errors, status = Open3.capture3(Children.env(keep: %w[LD_LIBRARY_PATH]), RbConfig.ruby, "-I", File.expand_path("../lib", __dir__),
+                                         "-rjson", "-rthinkthen", "-e", <<~RUBY, unsetenv_others: true)
       T = ThinkThen
       puts JSON.generate(
         constants: T.constants.sort,

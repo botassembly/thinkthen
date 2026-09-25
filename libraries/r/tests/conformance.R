@@ -25,7 +25,7 @@ unreachable <- c(
 sha <- function(url, request) {
   file <- tempfile()
   writeBin(charToRaw(enc2utf8(paste0("systemone\n", url, "\n", request))), file)
-  strsplit(system2("sha256sum", file, stdout = TRUE), " ")[[1]][[1]]
+  strsplit(system2("env", c(clean_env(), "sha256sum", shQuote(file)), stdout = TRUE), " ")[[1]][[1]]
 }
 
 # A value with names sorted and numbers as doubles, so two readings compare.

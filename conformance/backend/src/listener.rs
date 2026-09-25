@@ -5,10 +5,19 @@ use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, Barrier, Mutex};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
+
+use crate::arms::drift;
 
 /// The path the engine appends to every base.
 const ENDPOINT_PATH: &str = "systemone";
+
+/// How long a peek may see no new bytes before the request is read instead,
+/// and how long a scripted connection may send nothing.
+const STALL: Duration = Duration::from_secs(2);
+
+/// Why a reset reply answers the drift status instead of a reset.
+const UNRESETTABLE: &str = "the loopback listener cannot reset a request it had to read";
 
 /// One response the listener will serve, in the order the script gives.
 #[derive(Debug)]
@@ -181,7 +190,10 @@ impl Recorded {
     }
 }
 
-/// A listener serving one scripted response per connection, then closing.
+/// A listener serving one scripted response per connection, then the drift status.
+///
+/// The serving thread owns the port until the process exits, even after the
+/// listener is dropped, so no later listener in the process can take it.
 #[derive(Debug)]
 pub struct Listener {
     origin: String,
@@ -200,7 +212,8 @@ impl Listener {
         let url = format!("{base}/{ENDPOINT_PATH}");
         let (sender, recorded) = channel();
         let counts = Arc::new(Counts::default());
-        thread::spawn(move || serve_script(&listener, responses, &sender));
+        let serving = Arc::clone(&counts);
+        thread::spawn(move || serve_script(&listener, responses, &sender, &serving));
         Ok(Self {
             origin,
             base,
@@ -314,25 +327,33 @@ impl Listener {
     }
 }
 
-/// Serve one response per connection until the script runs out, then close.
-fn serve_script(listener: &TcpListener, responses: Vec<Canned>, sender: &Sender<Recorded>) {
-    for canned in responses {
-        let Ok((stream, _)) = listener.accept() else {
-            return;
-        };
+/// Serve one response per connection until the script runs out, then drift.
+///
+/// A connection that closes or stays silent before a whole request takes no
+/// reply. A dropped listener only closes the record channel.
+fn serve_script(
+    listener: &TcpListener,
+    responses: Vec<Canned>,
+    sender: &Sender<Recorded>,
+    counts: &Counts,
+) {
+    let mut script = responses.into_iter();
+    for accepted in listener.incoming() {
+        let Ok(stream) = accepted else { return };
+        counts.connections.fetch_add(1, Ordering::SeqCst);
+        let _ = stream.set_read_timeout(Some(STALL));
         let Some((request, used)) = peek_request(&stream) else {
-            return;
-        };
-        if sender.send(request).is_err() {
-            return;
-        }
-        if canned.reset {
             continue;
+        };
+        let _ = sender.send(request);
+        let canned = script
+            .next()
+            .unwrap_or_else(|| drift("the script has no reply left for this connection"));
+        if canned.reset && used == 0 {
+            serve(stream, &drift(UNRESETTABLE));
+        } else if !canned.reset && consume(&stream, used).is_some() {
+            serve(stream, &canned);
         }
-        if consume(&stream, used).is_none() {
-            return;
-        }
-        serve(stream, &canned);
     }
 }
 
@@ -388,6 +409,9 @@ fn serve_kept(
         if let Some(events) = events {
             let _ = events.send(Observed::Request);
         }
+        if canned.reset && used == 0 {
+            write_answer(stream, &drift(UNRESETTABLE), true);
+        }
         if canned.reset || consume(stream, used).is_none() {
             counts.in_flight.fetch_sub(1, Ordering::SeqCst);
             return;
@@ -415,9 +439,12 @@ fn serve_kept(
 ///
 /// The bytes stay unread, so a reset can drop them. The count says how many
 /// bytes the request took, for [`consume`] to read past. A request too long to
-/// peek whole is read at once instead, and a reset of it is a plain close.
+/// peek whole, or one whose bytes stopped arriving for [`STALL`], is read at
+/// once instead. That read ends at a closed client's end of file, and the
+/// count of 0 turns a later reset into the drift status.
 fn peek_request(stream: &TcpStream) -> Option<(Recorded, usize)> {
     let mut buffer = vec![0; 32 * 1024];
+    let mut last = (0, Instant::now());
     loop {
         let seen = stream.peek(&mut buffer).ok()?;
         if seen == 0 {
@@ -427,7 +454,10 @@ fn peek_request(stream: &TcpStream) -> Option<(Recorded, usize)> {
         if let Some(request) = read_request(&mut rest) {
             return Some((request, seen - rest.len()));
         }
-        if seen == buffer.len() {
+        if seen != last.0 {
+            last = (seen, Instant::now());
+        }
+        if seen == buffer.len() || last.1.elapsed() >= STALL {
             return read_request(&mut BufReader::new(stream)).map(|request| (request, 0));
         }
         thread::sleep(Duration::from_millis(1));

@@ -13,14 +13,17 @@ import sys
 import tempfile
 
 FILE = pathlib.Path(__file__).resolve().parents[1] / "examples.json"
+sys.path.insert(0, str(FILE.parents[2] / "conformance" / "children"))
+from children import child_env  # noqa: E402  the shared helper, ticket 0127
 
 
 def run(example, port):
     with tempfile.TemporaryDirectory() as folder:
         for name, content in example.get("files", {}).items():
             pathlib.Path(folder, name).write_text(content)
-        env = dict(os.environ, THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/generic/v1",
-                   THINKTHEN_CACHE=str(pathlib.Path(folder, "cache")))
+        env = child_env(THINKTHEN_API_KEY=os.environ["THINKTHEN_API_KEY"],
+                        THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/generic/v1",
+                        THINKTHEN_CACHE=str(pathlib.Path(folder, "cache")))
         program = f"import thinkthen as tt\nprint(repr({example['python']}))"
         done = subprocess.run([sys.executable, "-c", program], capture_output=True, text=True,
                               cwd=folder, env=env, timeout=60)

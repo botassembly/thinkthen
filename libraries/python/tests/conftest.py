@@ -15,6 +15,8 @@ FAKE = "sk-fake-loopback-python-0105"
 REPO = pathlib.Path(__file__).resolve().parents[3]
 TARGET = pathlib.Path(os.environ.get("CARGO_TARGET_DIR") or REPO / "target")
 BINARY = TARGET / "debug" / "conformance-backend"
+sys.path.insert(0, str(REPO / "conformance" / "children"))
+from children import child_env as clean_env  # noqa: E402  the shared helper, ticket 0127
 
 
 def pytest_sessionstart(session):
@@ -28,7 +30,7 @@ class Backend:
     """The 0092 conformance backend, driven through its line protocol."""
 
     def __init__(self):
-        self.process = subprocess.Popen([str(BINARY)], stdin=subprocess.PIPE,
+        self.process = subprocess.Popen([str(BINARY)], stdin=subprocess.PIPE, env=clean_env(),
                                         stdout=subprocess.PIPE, text=True, bufsize=1)
         self.port = int(self.process.stdout.readline())
 
@@ -68,14 +70,10 @@ def backend():
 
 
 def child_env(backend, folder, arm="generic", **extra):
-    """The parent's environment, its key removed, then the fake key set
-    beside this test's loopback backend and its own cache folder."""
-    env = dict(os.environ)
-    env.pop("THINKTHEN_API_KEY", None)
-    env.update(THINKTHEN_API_KEY=FAKE, THINKTHEN_BASE_URL=backend.base(arm),
-               THINKTHEN_CACHE=str(pathlib.Path(folder) / "cache"))
-    env.update(extra)
-    return env
+    """Only PATH and the names set here: the fake key beside this test's
+    loopback backend, its own cache folder, and the caller's extras."""
+    return clean_env(THINKTHEN_API_KEY=FAKE, THINKTHEN_BASE_URL=backend.base(arm),
+                     THINKTHEN_CACHE=str(pathlib.Path(folder) / "cache"), **extra)
 
 
 def run(code, env, timeout=60):

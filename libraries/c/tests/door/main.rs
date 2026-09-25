@@ -11,6 +11,8 @@
 //! cleared environment, a loopback address, a fake key, and a fresh cache.
 
 mod bytes;
+#[path = "../../../../crates/thinkthen/src/test_deadline/child.rs"]
+mod child;
 mod cases;
 
 use std::path::{Path, PathBuf};
@@ -22,6 +24,8 @@ use std::time::{Duration, Instant};
 use conformance_backend::Backend;
 
 const KEY: &str = "sk-c-door-loopback";
+/// The names a nested `cargo` reads from this test's environment.
+const CARGO: &[&str] = &["HOME", "CARGO_HOME", "RUSTUP_HOME", "RUSTUP_TOOLCHAIN", "CARGO_TARGET_DIR", "RUSTC_WRAPPER"];
 
 fn crate_dir() -> &'static Path {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -39,7 +43,7 @@ fn scratch(name: &str) -> PathBuf {
 fn archive() -> &'static Path {
     static FOLDER: OnceLock<PathBuf> = OnceLock::new();
     FOLDER.get_or_init(|| {
-        let built = Command::new(env!("CARGO"))
+        let built = child::command(env!("CARGO"), CARGO)
             .args(["build", "--locked", "--offline", "--lib"])
             .arg("--message-format=json-render-diagnostics")
             .current_dir(crate_dir())
@@ -82,7 +86,7 @@ fn compile(source: &Path) -> PathBuf {
         .expect("a name");
     let binary = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("c-{name}"));
     let folder = archive();
-    let built = Command::new("cc")
+    let built = child::command("cc", &[])
         .args([
             "-std=c11",
             "-D_GNU_SOURCE",
@@ -156,7 +160,7 @@ fn text(bytes: &[u8]) -> String {
 #[test]
 fn the_library_carries_its_soname_and_exactly_the_header_symbols() {
     let library = archive().join("libthinkthen.so");
-    let dynamic = Command::new("readelf")
+    let dynamic = child::command("readelf", &[])
         .arg("-d")
         .arg(&library)
         .output()
@@ -168,7 +172,7 @@ fn the_library_carries_its_soname_and_exactly_the_header_symbols() {
     );
     let header =
         std::fs::read_to_string(crate_dir().join("include/thinkthen.h")).expect("the header");
-    let exported = Command::new("nm")
+    let exported = child::command("nm", &[])
         .args(["-D", "--defined-only"])
         .arg(&library)
         .output()

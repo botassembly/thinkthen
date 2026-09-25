@@ -1,6 +1,6 @@
 # Python test children inherit the whole shell environment
 
-Status: Open
+Status: Closed on 2026-09-25 by ticket 0127. Every Python test child now gets its whole environment from `conformance/children/children.py`: `PATH`, the names its call site keeps, and the values it sets. `test_secrecy.py` pins that a planted `FAKE_SERVICE_API_KEY` stays out of the child. `sdlc/scripts/children` refuses a new inheriting child in every surface language.
 
 Filed on 2026-09-25 from the pandas build (ticket 0122). No key was used, and no request left the machine.
 

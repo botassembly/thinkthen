@@ -22,6 +22,8 @@ from urllib.parse import urlsplit
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 REPO_ROOT = ROOT.parent.parent
+sys.path.insert(0, str(REPO_ROOT / "conformance" / "children"))
+from children import child_env as clean_env  # noqa: E402  the shared helper, ticket 0127
 EXTENSION = Path(os.environ.get("THINKTHEN_DUCKDB_EXTENSION", ROOT / "build" / "thinkthen.duckdb_extension"))
 HOOKS = Path(os.environ.get("THINKTHEN_DUCKDB_HOOKS", ROOT / "build" / "hooks" / "thinkthen.duckdb_extension"))
 BACKEND = os.environ.get("THINKTHEN_BACKEND_BIN", "")
@@ -35,7 +37,7 @@ class Backend:
         if not BACKEND:
             raise SystemExit("harness: THINKTHEN_BACKEND_BIN names no loopback backend")
         self.process = subprocess.Popen(
-            [BACKEND], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, bufsize=1
+            [BACKEND], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, bufsize=1, env=clean_env()
         )
         self.port = int(self._line())
 
@@ -87,15 +89,14 @@ def child_env(base: str, folder: Path, extra: dict[str, str] | None = None) -> d
     folder.mkdir(parents=True, exist_ok=True)
     for name in ("cache", "config", "home"):
         (folder / name).mkdir(exist_ok=True)
-    env = {
-        "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
-        "HOME": str(folder / "home"),
-        "XDG_CACHE_HOME": str(folder / "cache"),
-        "XDG_CONFIG_HOME": str(folder / "config"),
-        "THINKTHEN_API_KEY": FAKE_KEY,
-        "THINKTHEN_BASE_URL": base,
-    }
-    env.update(extra or {})
+    env = clean_env(
+        HOME=str(folder / "home"),
+        XDG_CACHE_HOME=str(folder / "cache"),
+        XDG_CONFIG_HOME=str(folder / "config"),
+        THINKTHEN_API_KEY=FAKE_KEY,
+        THINKTHEN_BASE_URL=base,
+        **(extra or {}),
+    )
     guard(env)
     return env
 

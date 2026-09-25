@@ -10,8 +10,12 @@ mod wait;
 
 #[test]
 fn version_flag_prints_the_identity_line_and_exits_zero() {
-    let output = run::output(Command::new(env!("CARGO_BIN_EXE_thinkthen")).arg("--version"))
-        .expect("the compiled binary runs");
+    let output = run::output(
+        Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+            .env_clear()
+            .arg("--version"),
+    )
+    .expect("the compiled binary runs");
 
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),

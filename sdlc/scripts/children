@@ -1,0 +1,263 @@
+#!/usr/bin/env python3
+"""No test child inherits the whole environment (ticket 0127).
+
+A test that starts a child builds the child's whole environment, and test
+code reads the parent's environment one name at a time. This scans every
+tracked Rust, Python, TypeScript, Ruby, and R file for the spawn forms and the
+whole-environment forms in ticket 0127's tables. It catches those forms and
+nothing else: a spawn through another library, a map reached through an alias,
+and an inline `#[cfg(test)]` module pass it. C sources and shell scripts are
+outside its scope.
+
+Usage: children [ROOT]. ROOT defaults to the repository. With --self-test, it
+runs each rule against a file built to break it and pins the whole output.
+"""
+
+import pathlib
+import re
+import subprocess
+import sys
+import tempfile
+
+LANGUAGES = {".rs": "Rust", ".py": "Python", ".mjs": "TypeScript", ".js": "TypeScript",
+             ".ts": "TypeScript", ".rb": "Ruby", ".R": "R"}
+COMMENT = {"Rust": "//", "TypeScript": "//", "Python": "#", "Ruby": "#", "R": "#"}
+
+# Each entry names a path prefix and why its findings do not count. An entry
+# whose path holds no finding fails, so neither table can rot.
+EXCLUDED = {
+    "sdlc/scripts/": "the gate's own tools run cargo, git, and node in the developer's toolchain",
+    "site/": "the site build is not a test",
+    "libraries/r/thinkthen/tools/": "the R package's install-time tools are not tests",
+}
+EXEMPT = {
+    "libraries/typescript/tests/fork.test.mjs": "the fork runs inside a child the helper already built",
+    "crates/thinkthen/src/cli/conformance_tests/command.rs":
+        "its form child scans its own whole environment, and that reading is the probe's evidence",
+}
+PENDING = {
+    "crates/thinkthen/tests/relate_edge.rs": "0123 and 0126 own relate and its help text",
+    "databases/postgresql/src/files.rs": "0129 owns databases/*/src",
+    "databases/duckdb/tools/databases_suite.py": "0129 owns this suite",
+    "databases/duckdb/tools/source_checks.py": "0129 owns these checks",
+}
+TABLES = {"excluded": EXCLUDED, "exempt": EXEMPT, "pending": PENDING}
+
+SPAWNS = {
+    "Rust": re.compile(r"Command::new\("),
+    "Python": re.compile(r"\b(?:subprocess\.(?:run|Popen|call|check_call|check_output)|asyncio\.create_subprocess_exec)\s*\("),
+    "TypeScript": re.compile(r"(?<![\w.])(?:spawn|spawnSync|exec|execSync|execFile|execFileSync|fork)\s*\("),
+    "Ruby": re.compile(r"(?:\bOpen3\.\w+|\bProcess\.spawn|\bIO\.popen|(?<![\w.])(?:spawn|system|exec))\s*\("),
+    "R": re.compile(r"(?<![\w.])system2?\s*\("),
+}
+PASSES = {
+    "Python": lambda call: re.search(r"\benv\s*=", call) and not re.search(r"\benv\s*=\s*None\b", call),
+    "TypeScript": lambda call: re.search(r"\benv\s*:", call) and not re.search(r"\benv\s*:\s*undefined\b", call),
+    "Ruby": lambda call: re.search(r"unsetenv_others:\s*true", call),
+    "R": lambda call: "clean_env(" in call,
+}
+OUTRIGHT = {
+    "Python": re.compile(r"\bos\.(?:system|popen|exec\w*|spawn\w*)\s*\("),
+    "Ruby": re.compile(r"`[^`\n]*`|%x[({\[]"),
+}
+WHOLE = {
+    "Rust": re.compile(r"env::vars(?:_os)?\s*\("),
+    "Python": re.compile(r"\bos\.environ\b"),
+    "TypeScript": re.compile(r"\bprocess\.env\b"),
+    "Ruby": re.compile(r"\bENV\b"),
+    "R": re.compile(r"\bSys\.getenv\("),
+}
+SINGLE = {
+    "Rust": re.compile(r"$^"),
+    "Python": re.compile(r"os\.environ(?:\.(?:get|pop|setdefault)\(|\[)"),
+    "TypeScript": re.compile(r"process\.env(?:\.\w+|\[)"),
+    "Ruby": re.compile(r"ENV(?:\[|\.fetch\(|\.key\?\()"),
+    "R": re.compile(r"Sys\.getenv\((?!\s*\)|\s*c\()"),
+}
+INHERITS = "this child inherits the whole environment; build it with the {} child helper"
+READS = "test code reads the whole environment; read one name at a time"
+
+
+def is_test(path):
+    parts = path.split("/")
+    return (any(part == "tests" or part.endswith("_tests") for part in parts[:-1])
+            or path.startswith(("conformance/", "databases/duckdb/tools/"))
+            or (path.endswith(".rs") and (parts[-1] == "tests.rs" or parts[-1].endswith("_tests.rs"))))
+
+
+def uncommented(text, language):
+    """The text with each comment line blanked, so line numbers hold."""
+    mark = COMMENT[language]
+    return "\n".join("" if line.lstrip().startswith(mark) else line for line in text.split("\n"))
+
+
+def extent(text, start, statement):
+    """From START to its closing bracket, or for a statement to its `;` at depth 0."""
+    depth, at = 0, start
+    while at < len(text):
+        char = text[at]
+        if char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth -= 1
+            if depth < 0 or (depth == 0 and not statement):
+                return at + 1
+        elif char == ";" and depth == 0 and statement:
+            return at + 1
+        at += 1
+    return at
+
+
+def rust_window(text, start):
+    """The spawn's statement, and the later statements on the name a `let` bound it to."""
+    end = extent(text, start, True)
+    before = text[max(text.rfind(";", 0, start), text.rfind("{", 0, start), text.rfind("}", 0, start)) + 1:start]
+    bound = re.search(r"let\s+(?:mut\s+)?(\w+)\s*=", before)
+    while bound:
+        rest = re.match(rf"\s*{bound.group(1)}\s*\.", text[end:])
+        if not rest:
+            break
+        end = extent(text, end + rest.start(0), True)
+    return text[start:end]
+
+
+def single_name(language, text, at):
+    """Whether the mention at AT names one variable, as the passing forms do."""
+    before = text[text.rfind("\n", 0, at) + 1:at]
+    if language == "Python" and re.search(r"\bin\s+$", before):
+        return not re.search(r"\bfor\b[^:]*\bin\s+$", before)
+    return bool(SINGLE[language].match(text, at))
+
+
+def findings(path, text):
+    """Every sentence that says how one file breaks a rule."""
+    language = LANGUAGES[pathlib.PurePath(path).suffix]
+    text = uncommented(text, language)
+    line = lambda at: text.count("\n", 0, at) + 1
+    out = []
+    if language != "TypeScript" or "child_process" in text:
+        for hit in SPAWNS[language].finditer(text):
+            if language == "Rust":
+                passed = ".env_clear()" in rust_window(text, hit.start())
+            else:
+                passed = PASSES[language](text[hit.end() - 1:extent(text, hit.end() - 1, False)])
+            if not passed:
+                out.append((line(hit.start()), INHERITS.format(language)))
+    for hit in OUTRIGHT.get(language, re.compile(r"$^")).finditer(text):
+        out.append((line(hit.start()), INHERITS.format(language)))
+    if is_test(path):
+        for hit in WHOLE[language].finditer(text):
+            if not single_name(language, text, hit.start()):
+                out.append((line(hit.start()), READS))
+    return [f"children: {path}:{number}: {why}" for number, why in sorted(set(out))]
+
+
+def tracked(root):
+    listed = subprocess.run(["git", "-C", str(root), "ls-files", "-z"], capture_output=True,
+                            env={"PATH": "/usr/bin:/bin"}, check=False)
+    if listed.returncode == 0:
+        return [name for name in listed.stdout.decode().split("\0") if name]
+    return sorted(str(path.relative_to(root)) for path in root.rglob("*") if path.is_file())
+
+
+def check(root, tables):
+    out, used = [], set()
+    for path in tracked(root):
+        if pathlib.PurePath(path).suffix not in LANGUAGES or not (root / path).is_file():
+            continue
+        found = findings(path, (root / path).read_text(encoding="utf-8", errors="replace"))
+        entry = next((prefix for table in tables.values() for prefix in table if path.startswith(prefix)), None)
+        if entry is None:
+            out += found
+        elif found:
+            used.add(entry)
+    for kind, table in tables.items():
+        out += [f"children: {prefix} is {kind} but holds no finding; remove the entry"
+                for prefix in table if prefix not in used]
+    return out
+
+
+def rust_msg(path, number):
+    return f"children: {path}:{number}: {INHERITS.format('Rust')}"
+
+
+CASES = [
+    ("a.rs", 'fn f() { Command::new("sh").arg("-c").output(); }\n', [rust_msg("a.rs", 1)]),
+    ("a.rs", 'fn f() { Command::new("sh").env_clear().arg("-c").output(); }\n', []),
+    ("a.rs", "fn f() {\n    let mut c = Command::new(x);\n    c.env_clear();\n    c.spawn();\n}\n", []),
+    ("a.rs", "fn f() {\n    run::output(Command::new(x).arg(\"--version\"));\n}\n", [rust_msg("a.rs", 2)]),
+    ("a.rs", "fn f() {\n    // Command::new(x) in a comment\n}\n", []),
+    ("tests/a.rs", "fn f() { Command::new(x).env_clear().envs(std::env::vars()); }\n",
+     [f"children: tests/a.rs:1: {READS}"]),
+    ("tests/a.rs", 'fn f() { std::env::var_os("PATH"); }\n', []),
+    ("a.py", 'subprocess.run(["x"], capture_output=True)\n', [f"children: a.py:1: {INHERITS.format('Python')}"]),
+    ("a.py", 'subprocess.run(["x"], env=None)\n', [f"children: a.py:1: {INHERITS.format('Python')}"]),
+    ("a.py", 'subprocess.run(["x"],\n               env=child_env())\n', []),
+    ("a.py", 'os.system("ls")\n', [f"children: a.py:1: {INHERITS.format('Python')}"]),
+    ("tests/a.py", "env = dict(os.environ)\n", [f"children: tests/a.py:1: {READS}"]),
+    ("tests/a.py", "names = os.environ.items()\n", [f"children: tests/a.py:1: {READS}"]),
+    ("tests/a.py", "for name in os.environ:\n    pass\n", [f"children: tests/a.py:1: {READS}"]),
+    ("tests/a.py", 'a = os.environ.get("PATH")\nb = os.environ["X"]\nc = "X" in os.environ\n'
+                   'os.environ.pop("K", None)\nos.environ.setdefault("U", "v")\n', []),
+    ("a.py", "env = dict(os.environ)\n", []),
+    ("a.mjs", "import { spawn } from 'node:child_process';\nspawn(bin, [], { stdio });\n",
+     [f"children: a.mjs:2: {INHERITS.format('TypeScript')}"]),
+    ("a.mjs", "import { spawn } from 'node:child_process';\nspawn(bin, [], { env: undefined });\n",
+     [f"children: a.mjs:2: {INHERITS.format('TypeScript')}"]),
+    ("a.mjs", "import { spawn } from 'node:child_process';\nspawn(bin, [], { env: childEnv() });\n", []),
+    ("a.mjs", "const hit = /x/.exec(text);\n", []),
+    ("tests/a.mjs", "const env = { ...process.env, X: '1' };\n", [f"children: tests/a.mjs:1: {READS}"]),
+    ("tests/a.mjs", "const bin = process.env.THINKTHEN_TEST_BACKEND;\nconst v = process.env[name];\n", []),
+    ("a.rb", 'Open3.capture3(env, ruby, "-e", s)\n', [f"children: a.rb:1: {INHERITS.format('Ruby')}"]),
+    ("a.rb", 'Open3.capture3(env, ruby, "-e", s,\n               unsetenv_others: true)\n', []),
+    ("a.rb", "out = `ls`\nmore = %x(ls)\n",
+     [f"children: a.rb:1: {INHERITS.format('Ruby')}", f"children: a.rb:2: {INHERITS.format('Ruby')}"]),
+    ("tests/a.rb", "base = ENV.to_h\n", [f"children: tests/a.rb:1: {READS}"]),
+    ("tests/a.rb", 'h = ENV.fetch("HOME")\nk = ENV["K"]\nt = ENV.key?("HOME")\n', []),
+    ("a.R", 'system2("sha256sum", file, stdout = TRUE)\n', [f"children: a.R:1: {INHERITS.format('R')}"]),
+    ("a.R", 'system2("env", c(clean_env(), shQuote("sha256sum"), shQuote(file)))\n', []),
+    ("tests/a.R", "all <- Sys.getenv()\n", [f"children: tests/a.R:1: {READS}"]),
+    ("tests/a.R", 'two <- Sys.getenv(c("A", "B"))\nn <- names(Sys.getenv())\n',
+     [f"children: tests/a.R:1: {READS}", f"children: tests/a.R:2: {READS}"]),
+    ("tests/a.R", 'a <- Sys.getenv("TT_TESTS")\nb <- Sys.getenv("TT_CASE", "")\nc <- Sys.getenv(name)\n', []),
+    ("x_tests/a.py", "env = dict(os.environ)\n", [f"children: x_tests/a.py:1: {READS}"]),
+]
+
+
+def self_test():
+    """Run each case alone in a fresh tree, then one stale table entry, and pin each output."""
+    bad = 0
+    for relative, text, expected in CASES:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = pathlib.Path(tmp)
+            (root / relative).parent.mkdir(parents=True, exist_ok=True)
+            (root / relative).write_text(text, encoding="utf-8")
+            actual = check(root, {})
+        if actual != expected:
+            bad += 1
+            print(f"children self-test: {relative}: expected {expected}, got {actual}", file=sys.stderr)
+    with tempfile.TemporaryDirectory() as tmp:
+        root = pathlib.Path(tmp)
+        (root / "held.py").write_text('subprocess.run(["x"])\n', encoding="utf-8")
+        actual = check(root, {"pending": {"held.py": "a fixture", "gone/": "a fixture"}})
+    expected = ["children: gone/ is pending but holds no finding; remove the entry"]
+    if actual != expected:
+        bad += 1
+        print(f"children self-test: tables: expected {expected}, got {actual}", file=sys.stderr)
+    print(f"children self-test: {len(CASES) + 1 - bad}/{len(CASES) + 1} cases hold")
+    return bad
+
+
+def main(argv):
+    if argv[1:] == ["--self-test"]:
+        return 1 if self_test() else 0
+    root = pathlib.Path(argv[1]) if len(argv) > 1 else pathlib.Path(__file__).resolve().parents[2]
+    found = check(root, TABLES)
+    for line in found:
+        print(line, file=sys.stderr)
+    print(f"children: {len(found)} findings")
+    return 1 if found else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

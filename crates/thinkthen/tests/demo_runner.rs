@@ -4,8 +4,10 @@
 use std::env;
 use std::io;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
+use std::process::Output;
 
+#[path = "../src/test_deadline/child.rs"]
+mod child;
 #[path = "../src/test_deadline/run.rs"]
 mod run;
 #[path = "../src/test_deadline/wait.rs"]
@@ -30,7 +32,8 @@ fn demos(root: &str) -> io::Result<Output> {
         (None, path) => path.unwrap_or_default(),
     };
     run::output(
-        Command::new("sh")
+        // The demos read the default cache folder under `HOME`.
+        child::command("sh", &["HOME"])
             .arg("--")
             .arg(repository.join("sdlc/scripts/demos"))
             .arg(root)

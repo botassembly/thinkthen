@@ -121,7 +121,7 @@ fn a_host_signal_during_a_held_send_on_a_worker_leaves_the_call_whole() {
 /// Run `file_size_child` under a one-block file-size limit.
 fn limited_child(mode: &str) -> std::process::Output {
     crate::test_deadline::output(
-        std::process::Command::new("sh")
+        crate::test_deadline::child::command("sh", &[])
             .arg("-c")
             .arg(concat!(
                 "ulimit -f 1; exec \"$0\" --exact ",

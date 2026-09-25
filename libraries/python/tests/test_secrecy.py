@@ -7,15 +7,19 @@ SENTINEL = "sk-sentinel-parent-key-never-crosses"
 
 
 def test_the_child_environment_holds_the_fake_key_beside_loopback(backend, tmp_path, monkeypatch):
-    """Change 14: the helper removes the parent's key before it sets the
-    fake one, so a developer's real key never reaches a test child."""
+    """Change 14 and ticket 0127: the helper builds the child's whole
+    environment, so neither the parent's key nor any other parent variable
+    reaches a test child. The child reports one named variable, never its
+    environment."""
     monkeypatch.setenv("THINKTHEN_API_KEY", SENTINEL)
+    monkeypatch.setenv("FAKE_SERVICE_API_KEY", SENTINEL)
     env = child_env(backend, tmp_path)
     printed = run("""
         import os
-        print(os.environ["THINKTHEN_API_KEY"], os.environ["THINKTHEN_BASE_URL"])
+        print(os.environ["THINKTHEN_API_KEY"], os.environ["THINKTHEN_BASE_URL"],
+              "FAKE_SERVICE_API_KEY" in os.environ)
     """, env)
-    assert printed.split() == [FAKE, backend.base()]
+    assert printed.split() == [FAKE, backend.base(), "False"]
     assert backend.base().startswith("http://127.0.0.1:")
     assert SENTINEL not in printed
 

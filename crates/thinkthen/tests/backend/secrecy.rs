@@ -23,6 +23,12 @@ pub(crate) const KEY: &str = "sk-marker-2f9d41c6";
 /// and the evidence is the untrusted string.
 pub(crate) const EVIDENCE: &str = "marker-evidence-7b3ac5";
 
+/// The second entity `relate` reads, held to the same rule as the evidence.
+pub(crate) const SECOND: &str = "marker-second-e41d09";
+
+/// The kind both relate entities carry, held to the same rule as the evidence.
+pub(crate) const KIND: &str = "marker-kind-93c2f0";
+
 pub(crate) const QUESTION: &str = "Does this report a payment failure?";
 
 pub(crate) const VERBS: [(&str, &[&str], &str); 6] = [
@@ -58,20 +64,21 @@ pub(crate) fn asks_question(verb: &str) -> bool {
 
 /// The standard input one verb judges under one framing, holding the evidence.
 ///
-/// `relate` reads a complete entity set, so the evidence is one entity name.
+/// `relate` reads a complete entity set: the evidence and the second entity,
+/// both of the marked kind wherever the framing carries a kind.
 pub(crate) fn evidence(verb: &str, framing: Option<&str>) -> Vec<u8> {
     let text = match (verb, framing) {
         ("relate", None) => {
             format!(
-                r#"[{{"name":"{EVIDENCE}","kind":"record"}},{{"name":"Acme","kind":"record"}}]"#
+                r#"[{{"name":"{EVIDENCE}","kind":"{KIND}"}},{{"name":"{SECOND}","kind":"{KIND}"}}]"#
             )
         }
         ("relate", Some("--jsonl")) => format!(
-            "{{\"body\":\"{EVIDENCE}\",\"kind\":\"record\"}}\n{{\"body\":\"Acme\",\"kind\":\"record\"}}\n"
+            "{{\"body\":\"{EVIDENCE}\",\"kind\":\"{KIND}\"}}\n{{\"body\":\"{SECOND}\",\"kind\":\"{KIND}\"}}\n"
         ),
-        ("relate", Some("--lines")) => format!("{EVIDENCE}\nAcme\n"),
-        ("relate", Some("--csv")) => format!("name,kind\n{EVIDENCE},record\nAcme,record\n"),
-        ("relate", Some("--tsv")) => format!("name\tkind\n{EVIDENCE}\trecord\nAcme\trecord\n"),
+        ("relate", Some("--lines")) => format!("{EVIDENCE}\n{SECOND}\n"),
+        ("relate", Some("--csv")) => format!("name,kind\n{EVIDENCE},{KIND}\n{SECOND},{KIND}\n"),
+        ("relate", Some("--tsv")) => format!("name\tkind\n{EVIDENCE}\t{KIND}\n{SECOND}\t{KIND}\n"),
         (_, Some("--jsonl")) => format!("{{\"body\":\"{EVIDENCE}\"}}\n"),
         (_, Some("--lines")) => format!("{EVIDENCE}\n"),
         _ => EVIDENCE.to_owned(),
@@ -134,21 +141,28 @@ pub(crate) fn written(folder: &Path) -> Vec<PathBuf> {
     found
 }
 
-/// Refuse both markers everywhere they may not be, for one finished run.
+/// Refuse every marker everywhere it may not be, for one finished run.
 ///
 /// This is the whole claim of secrecy, in one reader every case calls. The key
 /// may reach no byte of standard output, of standard error, or of any file the
 /// run wrote, and no header name that carries it may reach a file either. The
-/// evidence may reach no byte of standard error.
+/// evidence, the second relate entity, and their kind may reach no byte of
+/// standard error.
 pub(crate) fn nothing_leaked(named: &str, output: &Output, folder: &Path) {
     let out = String::from_utf8_lossy(&output.stdout);
     let err = String::from_utf8_lossy(&output.stderr);
     assert!(!out.contains(KEY), "{named}: the key is on standard output");
     assert!(!err.contains(KEY), "{named}: the key is on standard error");
-    assert!(
-        !err.contains(EVIDENCE),
-        "{named}: the evidence is in a diagnostic\n{err}"
-    );
+    for (marker, what) in [
+        (EVIDENCE, "evidence"),
+        (SECOND, "second entity"),
+        (KIND, "kind"),
+    ] {
+        assert!(
+            !err.contains(marker),
+            "{named}: the {what} is in a diagnostic\n{err}"
+        );
+    }
     for path in written(folder) {
         let read = fs::read(&path).unwrap_or_default();
         let text = String::from_utf8_lossy(&read).to_lowercase();
@@ -235,8 +249,9 @@ fn sweep(
     assert_eq!(
         output.status.code(),
         Some(route.code),
-        "{case} {view:?}: {}",
-        String::from_utf8_lossy(&output.stderr)
+        "{case} {view:?}: {}{}",
+        String::from_utf8_lossy(&output.stderr),
+        seen(&listener)
     );
     assert_eq!(
         listener.requests().len(),
@@ -263,6 +278,19 @@ fn sweep(
         }
     }
     Ok(())
+}
+
+/// The connections and requests a listener saw, without the bodies.
+fn seen(listener: &Listener) -> String {
+    let requests: Vec<String> = listener
+        .requests()
+        .iter()
+        .map(|request| format!("{} ({} body bytes)", request.line, request.body.len()))
+        .collect();
+    format!(
+        "the listener saw {} connections and requests {requests:?}",
+        listener.connections()
+    )
 }
 
 /// Overwrite every entry a priming run recorded with the damaged bytes.

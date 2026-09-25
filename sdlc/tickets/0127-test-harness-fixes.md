@@ -241,7 +241,7 @@ Each new test answers the four questions of `CLAUDE.md`.
 - **The check and its self-test.** It protects the rule that no test child inherits the shell. A new test that spawns without clearing fails it. No existing test reads the spawn sites. It needs no hook.
 - **The helper tests.** They protect the allow list and the refusal. A helper edited to copy the parent fails them. No existing test sets a variable in a parent and looks for it in a child. They need no hook: the parent's own environment is the real boundary.
 - **The `heavy-lock` line.** It protects the rung's unset. Removing the loop fails it. No existing check sources `heavy-lock`. It needs no hook, since the held-lock name is the file's own nested-rung path.
-- **The four listener tests.** They protect a clean end for a half request, a skip for a zero-byte stray, a loud answer for an impossible reset, and an open port after the script and after a drop. Each old-code behavior above fails them. No test sends raw bytes to a scripted listener today. They use the public `Listener` and a raw `TcpStream`, with no hook.
+- **The five listener tests.** They protect a clean end for a half request, a skip for a zero-byte stray, a loud answer for an impossible reset, and an open port after the script and after a drop. Each old-code behavior above fails them. No test sends raw bytes to a scripted listener today. They use the public `Listener` and a raw `TcpStream`, with no hook.
 - **The secrecy and `test_secrecy.py` changes.** They extend existing tests. No new test is added.
 
 ## Budgets and the ratchet

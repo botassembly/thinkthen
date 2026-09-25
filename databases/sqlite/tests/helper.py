@@ -21,6 +21,8 @@ import traceback
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent
+sys.path.insert(0, str(ROOT.parents[1] / "conformance" / "children"))
+from children import child_env  # noqa: E402  the shared helper, ticket 0127
 # One build-folder rule, as check.sh reads it: CARGO_TARGET_DIR, or each workspace's own target.
 BUILT = pathlib.Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target"))
 LIB = BUILT / "release" / "libthinkthen0.so"
@@ -54,7 +56,8 @@ class Backend:
 
     def __init__(self) -> None:
         self.process = subprocess.Popen(
-            [BACKEND], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True
+            [BACKEND], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True,
+            env=child_env(),
         )
         LIVE.append(self.process)
         self.port = int(self._line())
@@ -101,10 +104,11 @@ class Backend:
 
 
 def environment(backend: Backend | None, arm: str = "generic", **extra: str) -> dict[str, str]:
-    """A child's environment: the caller's, less its key, with fresh folders."""
+    """A child's whole environment: PATH, the pinned host's library path, and
+    fresh folders. The loopback key rides only beside a loopback address."""
     scratch = pathlib.Path(tempfile.mkdtemp(prefix="thinkthen-sqlite-"))
-    held = {name: value for name, value in os.environ.items() if name != "THINKTHEN_API_KEY"}
-    held.update(
+    held = child_env(
+        keep=("LD_LIBRARY_PATH",),
         THINKTHEN_CACHE=str(scratch / "cache"),
         XDG_CACHE_HOME=str(scratch / "xdg-cache"),
         XDG_CONFIG_HOME=str(scratch / "xdg-config"),

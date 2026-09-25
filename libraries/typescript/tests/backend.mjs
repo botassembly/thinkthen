@@ -1,6 +1,6 @@
 // One loopback backend per test, and child Node processes that reach it.
-// Each child gets a fresh cache, a scratch XDG_CACHE_HOME, the real key
-// removed, and a fake key only beside a 127.0.0.1 address. No test changes
+// Each child gets PATH, a fresh cache, a scratch XDG_CACHE_HOME, and a fake
+// key only beside a 127.0.0.1 address, and nothing else (ticket 0127). No test changes
 // its own environment, because the default engine reads it once.
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -9,13 +9,15 @@ import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
+import { childEnv as cleanEnv } from '../../../conformance/children/children.mjs';
+
 export const FAKE_KEY = 'fake-loopback-key';
 export const INDEX = fileURLToPath(new URL('../index.mjs', import.meta.url));
 export const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
 /** Start the conformance backend and close it when the test ends. */
 export async function startBackend(t) {
-  const proc = spawn(process.env.THINKTHEN_TEST_BACKEND, [], { stdio: ['pipe', 'pipe', 'inherit'] });
+  const proc = spawn(process.env.THINKTHEN_TEST_BACKEND, [], { stdio: ['pipe', 'pipe', 'inherit'], env: cleanEnv() });
   const lines = createInterface({ input: proc.stdout });
   const queue = [];
   const waiting = [];
@@ -45,14 +47,12 @@ export async function startBackend(t) {
   return backend;
 }
 
-/** The child's environment: the parent's, minus the key, plus the loopback address. */
+/** The child's whole environment: PATH, the fake key, and the loopback address. */
 export function childEnv(backend, arm = 'generic', extra = {}) {
-  const env = { ...process.env };
-  delete env.THINKTHEN_API_KEY;
   const url = extra.THINKTHEN_BASE_URL ?? backend.base(arm);
   if (new URL(url).hostname !== '127.0.0.1') throw new Error(`refusing a backend that is not loopback: ${url}`);
   const cache = mkdtempSync(join(backend.folder, 'cache-'));
-  return { ...env, THINKTHEN_API_KEY: FAKE_KEY, THINKTHEN_BASE_URL: url, THINKTHEN_CACHE: cache, XDG_CACHE_HOME: cache, ...extra };
+  return cleanEnv({ values: { THINKTHEN_API_KEY: FAKE_KEY, THINKTHEN_BASE_URL: url, THINKTHEN_CACHE: cache, XDG_CACHE_HOME: cache, ...extra } });
 }
 
 /** Start a child running BODY as the body of an async function with `tt`
