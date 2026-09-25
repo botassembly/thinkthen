@@ -138,6 +138,8 @@ The registry names are Ian's alone and were on his list before this rewrite.
 
 Ian ruled on 2026-09-21 that Python's data frame container is Polars, not pandas: `annotate` and `recognize` take and return Polars DataFrames, the bulk form accepts a Polars column, Polars rides as an optional dependency behind `pip install thinkthen[polars]`, and pandas leaves the surface. The ruling is recorded with its reasons in `sdlc/issues/2026-09-21-rulings-on-the-surfaces-and-the-next-experiment-brief.md`.
 
+Amended 2026-09-25: Ian ruled that pandas is supported fully in 0.1. A pandas column and a pandas frame go in and come back as pandas, on pandas 2 and 3, and the library still imports neither pandas nor Polars. Polars stays the frame the pages show first. See `sdlc/planning/one-line-plan-2026-09-25.md` and ticket 0122.
+
 ## What Ian can overturn
 
 All of it. Three reach widest. Staying blocking is measured now, and overturning it costs the fork story, the zero-thread holding, and the cheaper Python shim. Pick 3, the empty value for "not sure", is the one the one-shape page flagged for a second look, and its mitigation is teaching rather than code. The cache default, 100 MB by Ian's ruling and prune-enforced under plain files, changes with one number. The on-by-default reading of the cache ruling is Ian's alone to flip; the three guards stay either way. The registry names were his before this page and stay his.
