@@ -7,10 +7,6 @@
     unsafe_code,
     reason = "the C door reads and writes the host's pointers (ADR 0047 item 3)"
 )]
-#![expect(
-    clippy::too_many_arguments,
-    reason = "the header freezes each `_opts` signature"
-)]
 
 use std::ffi::{CStr, CString, c_char};
 
@@ -216,7 +212,17 @@ pub unsafe extern "C" fn thinkthen_decide(
     out: *mut Judgment,
 ) -> i32 {
     let null = std::ptr::null_mut();
-    unsafe { thinkthen_decide_opts(engine, question_json, text, text_len, NO_DEADLINE, null, out) }
+    unsafe {
+        thinkthen_decide_opts(
+            engine,
+            question_json,
+            text,
+            text_len,
+            NO_DEADLINE,
+            null,
+            out,
+        )
+    }
 }
 
 /// One yes-or-no question over one text; the judgment lands in `out`.
@@ -249,7 +255,12 @@ pub unsafe extern "C" fn thinkthen_decide_opts(
         })();
         match held.settle(asked) {
             Ok((outcome, probability)) => {
-                unsafe { *out = Judgment { outcome, probability } };
+                unsafe {
+                    *out = Judgment {
+                        outcome,
+                        probability,
+                    }
+                };
                 OK
             }
             Err(code) => code,
@@ -318,7 +329,12 @@ pub unsafe extern "C" fn thinkthen_decide_many_opts(
         match held.settle(asked) {
             Ok(rows) => {
                 for (place, (outcome, probability)) in rows.into_iter().enumerate() {
-                    unsafe { *out.add(place) = Judgment { outcome, probability } };
+                    unsafe {
+                        *out.add(place) = Judgment {
+                            outcome,
+                            probability,
+                        }
+                    };
                 }
                 OK
             }
@@ -357,7 +373,9 @@ pub unsafe extern "C" fn thinkthen_call_opts(
     };
     guard(Some(held), std::ptr::null_mut(), || {
         let asked = unsafe { string(request_json, "request") }.and_then(|request| {
-            crate::call::call(&held.engine, request, deadline_ms, unsafe { cancel.as_ref() })
+            crate::call::call(&held.engine, request, deadline_ms, unsafe {
+                cancel.as_ref()
+            })
         });
         match held.settle(asked.and_then(|json| {
             CString::new(json).map_err(|_| Failure::defect("the answer held a NUL"))
@@ -384,7 +402,16 @@ pub unsafe extern "C" fn thinkthen_recognize(
 ) -> i32 {
     let null = std::ptr::null_mut();
     unsafe {
-        thinkthen_recognize_opts(engine, spec_json, text, text_len, NO_DEADLINE, null, out, out_len)
+        thinkthen_recognize_opts(
+            engine,
+            spec_json,
+            text,
+            text_len,
+            NO_DEADLINE,
+            null,
+            out,
+            out_len,
+        )
     }
 }
 
@@ -482,7 +509,10 @@ pub unsafe extern "C" fn thinkthen_relate_opts(
             let options = door::options(deadline_ms, unsafe { cancel.as_ref() })?;
             let spec = unsafe { string(spec_json, "spec") }?;
             let records = unsafe { self::texts(texts, lengths, count) }?;
-            let entities = records.into_iter().map(door::entity).collect::<Result<_, _>>()?;
+            let entities = records
+                .into_iter()
+                .map(door::entity)
+                .collect::<Result<_, _>>()?;
             door::relate(&held.engine, spec, entities, options)
         })();
         match held.settle(asked) {

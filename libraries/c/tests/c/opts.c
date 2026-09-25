@@ -131,8 +131,11 @@ int main(void) {
     check(replies(tt, thinkthen_call(tt, "{\"decide\":\"Q?\",\"evidence\":\"x\",\"details\":false}"), "true"),
           "details false answers the bare value");
     char *audit = thinkthen_call(tt, "{\"decide\":\"Q?\",\"evidence\":\"x\",\"details\":true}");
-    check(audit != NULL && strncmp(audit, "{\"schema\":\"thinkthen.result/1\",\"value\":true,", 45) == 0,
-          "details true answers the audit line");
+    const char *head = "{\"schema\":\"thinkthen.result/1\",\"value\":true,";
+    check(audit != NULL && strncmp(audit, head, strlen(head)) == 0, "details true answers the audit line");
+    if (audit != NULL && strncmp(audit, head, strlen(head)) != 0) {
+        fprintf(stderr, "got %s\n", audit);
+    }
     thinkthen_free_string(audit);
     check(thinkthen_call(tt, "{\"decide\":\"Q?\",\"evidence\":\"x\",\"details\":1}") == NULL &&
               said(tt, 1, "the details key takes true or false"),

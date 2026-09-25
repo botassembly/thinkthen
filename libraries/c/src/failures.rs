@@ -202,7 +202,9 @@ pub(crate) fn guard<T>(held: Option<&Held>, fallback: T, body: impl FnOnce() -> 
                 .map(|text| (*text).to_owned())
                 .or_else(|| payload.downcast_ref::<String>().cloned())
                 .unwrap_or_default();
-            held.fail(Failure::defect(&format!("a panic crossed the C door: {said}")));
+            held.fail(Failure::defect(&format!(
+                "a panic crossed the C door: {said}"
+            )));
         }
         fallback
     })
@@ -234,7 +236,8 @@ mod tests {
         for _ in 0..200 {
             let shared = std::sync::Arc::clone(&engine);
             // A plain join waits for the thread's exit hooks.
-            let _ = std::thread::spawn(move || shared.fail(Failure::usage("a short thread"))).join();
+            let _ =
+                std::thread::spawn(move || shared.fail(Failure::usage("a short thread"))).join();
         }
         assert_eq!(engine.entries(), 0, "every exited thread's entry left");
         engine.fail(Failure::usage("this thread"));
@@ -246,10 +249,18 @@ mod tests {
     #[test]
     fn a_panic_behind_the_door_is_the_defect_kind() {
         let engine = held();
-        let code = guard(Some(&engine), DEFECT, || -> i32 { panic!("the probe panic") });
-        assert_eq!((code, engine.code(), engine.retryable()), (DEFECT, DEFECT, 0));
+        let code = guard(Some(&engine), DEFECT, || -> i32 {
+            panic!("the probe panic")
+        });
+        assert_eq!(
+            (code, engine.code(), engine.retryable()),
+            (DEFECT, DEFECT, 0)
+        );
         let message = message_of(&engine);
-        assert_eq!(message, "defect: a panic crossed the C door: the probe panic");
+        assert_eq!(
+            message,
+            "defect: a panic crossed the C door: the probe panic"
+        );
         assert_eq!(guard(Some(&engine), DEFECT, || USAGE), USAGE);
     }
 

@@ -10,7 +10,7 @@ The tag header declares 19 functions. The port kept all 19 and added none.
 
 | Symbol | Verdict | Change |
 |---|---|---|
-| `thinkthen_engine_new` | changed | Builds through `Engine::from_env`, the constructor `default_engine` uses. It reads the variables that constructor reads. `THINKTHEN_TIMEOUT_SECS` and `THINKTHEN_MAX_RETRIES` are not read. NULL means the environment settings are invalid. No width argument and no width variable exist. |
+| `thinkthen_engine_new` | changed | Builds through `Engine::from_env`, the constructor `default_engine` uses. It reads the variables that constructor reads. `THINKTHEN_TIMEOUT_SECS` and `THINKTHEN_MAX_RETRIES` are not read. NULL means the environment settings are invalid. A cache folder the engine cannot open also returns NULL, so the host gets no failure kind for it. No throttle argument and no throttle variable exist. |
 | `thinkthen_engine_free` | kept | |
 | `thinkthen_error_message` | kept | Messages come from the engine's `Error` display text. |
 | `thinkthen_error_code` | kept | Codes 1 to 6 map from `ErrorKind` in the header's order. |
@@ -137,6 +137,6 @@ Every result of open size crosses as JSON text, so a new field never changes a l
 
 ## Deferred
 
-- A checked width constructor, if a host needs one. A later ADR 0037 amendment adds it.
+- A checked throttle constructor, if a host needs one. A later ADR 0037 amendment adds it.
 - Partial rows, which need an engine capability that exposes a stopped call's finished judgments.
 - Windows. The first release is Linux and macOS.

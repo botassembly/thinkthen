@@ -48,9 +48,15 @@ fn archive() -> &'static Path {
         assert!(built.status.success(), "{said}");
         assert!(!said.contains("collision"), "the build warned: {said}");
         let profile = std::env::current_exe().expect("this test");
-        let profile = profile.parent().and_then(Path::parent).expect("the profile folder");
+        let profile = profile
+            .parent()
+            .and_then(Path::parent)
+            .expect("the profile folder");
         let folder = scratch("archive");
-        for (from, to) in [("libthinkthen_c.so", "libthinkthen.so"), ("libthinkthen_c.a", "libthinkthen.a")] {
+        for (from, to) in [
+            ("libthinkthen_c.so", "libthinkthen.so"),
+            ("libthinkthen_c.a", "libthinkthen.a"),
+        ] {
             std::fs::copy(profile.join(from), folder.join(to)).expect("a built library");
         }
         std::os::unix::fs::symlink("libthinkthen.so", folder.join("libthinkthen.so.0"))
@@ -61,11 +67,22 @@ fn archive() -> &'static Path {
 
 /// Compile one C program against the archive, under AddressSanitizer.
 fn compile(source: &Path) -> PathBuf {
-    let name = source.file_stem().and_then(|stem| stem.to_str()).expect("a name");
+    let name = source
+        .file_stem()
+        .and_then(|stem| stem.to_str())
+        .expect("a name");
     let binary = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("c-{name}"));
     let folder = archive();
     let built = Command::new("cc")
-        .args(["-std=c11", "-D_GNU_SOURCE", "-Wall", "-Wextra", "-Werror", "-pthread", "-g"])
+        .args([
+            "-std=c11",
+            "-D_GNU_SOURCE",
+            "-Wall",
+            "-Wextra",
+            "-Werror",
+            "-pthread",
+            "-g",
+        ])
         .args(["-fsanitize=address", "-fno-omit-frame-pointer", "-I"])
         .arg(crate_dir().join("include"))
         .arg(source)
@@ -77,7 +94,11 @@ fn compile(source: &Path) -> PathBuf {
         .arg(format!("-Wl,-rpath,{}", folder.display()))
         .output()
         .expect("cc ran");
-    assert!(built.status.success(), "{name}: {}", String::from_utf8_lossy(&built.stderr));
+    assert!(
+        built.status.success(),
+        "{name}: {}",
+        String::from_utf8_lossy(&built.stderr)
+    );
     binary
 }
 
@@ -119,14 +140,23 @@ fn text(bytes: &[u8]) -> String {
 #[test]
 fn the_library_carries_its_soname_and_exactly_the_header_symbols() {
     let library = archive().join("libthinkthen.so");
-    let dynamic = Command::new("readelf").arg("-d").arg(&library).output().expect("readelf");
+    let dynamic = Command::new("readelf")
+        .arg("-d")
+        .arg(&library)
+        .output()
+        .expect("readelf");
     assert!(
         text(&dynamic.stdout).contains("Library soname: [libthinkthen.so.0]"),
         "{}",
         text(&dynamic.stdout)
     );
-    let header = std::fs::read_to_string(crate_dir().join("include/thinkthen.h")).expect("the header");
-    let exported = Command::new("nm").args(["-D", "--defined-only"]).arg(&library).output().expect("nm");
+    let header =
+        std::fs::read_to_string(crate_dir().join("include/thinkthen.h")).expect("the header");
+    let exported = Command::new("nm")
+        .args(["-D", "--defined-only"])
+        .arg(&library)
+        .output()
+        .expect("nm");
     let mut symbols: Vec<String> = text(&exported.stdout)
         .lines()
         .filter_map(|line| line.split_whitespace().nth(2))
@@ -141,7 +171,12 @@ fn the_library_carries_its_soname_and_exactly_the_header_symbols() {
         .map(|part| {
             let line = format!("#define THINKTHEN_VERSION_{part} ");
             let at = header.find(&line).expect("a version macro") + line.len();
-            header[at..].lines().next().unwrap_or_default().trim().to_owned()
+            header[at..]
+                .lines()
+                .next()
+                .unwrap_or_default()
+                .trim()
+                .to_owned()
         })
         .collect();
     assert_eq!(version.join("."), env!("CARGO_PKG_VERSION"));
@@ -158,8 +193,14 @@ fn declared(header: &str) -> Vec<String> {
     }
     code.push_str(rest);
     let mut names: Vec<String> = code
-        .split(|letter: char| !(letter.is_alphanumeric() || letter == '_' || letter == '('))
-        .filter_map(|word| word.strip_suffix('('))
+        .match_indices('(')
+        .filter_map(|(at, _)| {
+            let name = code.get(..at)?.trim_end();
+            let start = name
+                .rfind(|letter: char| !(letter.is_alphanumeric() || letter == '_'))
+                .map_or(0, |at| at + 1);
+            name.get(start..)
+        })
         .filter(|name| name.starts_with("thinkthen_"))
         .map(str::to_owned)
         .collect();
@@ -182,7 +223,10 @@ fn the_examples_print_their_pinned_answers() {
         let pinned = std::fs::read_to_string(source.with_extension("txt")).expect("a pinned text");
         assert_eq!(text(&output.stdout), pinned, "{name}");
     }
-    assert!(backend.count() > 0, "the examples answered without the backend");
+    assert!(
+        backend.count() > 0,
+        "the examples answered without the backend"
+    );
 }
 
 /// The C rows: the argument rules, the `_opts` twins, two threads' messages

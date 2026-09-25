@@ -12,8 +12,11 @@ cargo build --quiet --locked --offline --lib
 target=${CARGO_TARGET_DIR:-target}/debug
 cache=$(mktemp -d)
 trap 'rm -rf -- "$cache"' EXIT
-cc -std=c11 -Wall -Wextra -Werror -I include examples/slide.c -L "$target" -lthinkthen_c \
-    -Wl,-rpath,"$target" -o "$cache/slide"
+# Lay the door out as a release archive does, so the soname resolves.
+cp -- "$target/libthinkthen_c.so" "$cache/libthinkthen.so"
+ln -s libthinkthen.so "$cache/libthinkthen.so.0"
+cc -std=c11 -Wall -Wextra -Werror -I include examples/slide.c -L "$cache" -lthinkthen \
+    -Wl,-rpath,"$cache" -o "$cache/slide"
 env -i THINKTHEN_CACHE="$cache/cache" THINKTHEN_API_KEY=sk-examples-loopback \
     THINKTHEN_BASE_URL="http://127.0.0.1:$1/generic/v1" \
     "$cache/slide" >"$cache/out" 2>"$cache/err"

@@ -3,17 +3,22 @@
 //! Each case runs in its own `tests/c/driver.c` process, through the JSON door
 //! and, where one fits, a typed function. Expected request digests were
 //! recorded against the canonical URL, so each is recomputed for the URL the
-//! backend served. Five cases do not apply to the door:
+//! backend served. Six cases do not apply to the door:
 //!
 //! - `18-find-second` and `19-find-none` set `none: true`, and the `find` verb
 //!   takes its question text alone.
 //! - `18-annotate-two-groups` reads parts of a record through `on`, and a
 //!   record at the door is one whole text.
+//! - `22-local-fault` breaks the cache folder, which main's engine refuses
+//!   while it is built. `thinkthen_engine_new` then returns null, and the
+//!   header gives a null engine no failure kind. `tests/c/nulls.c` covers
+//!   the null engine.
 //! - `25-defect-fault` injects an internal invariant failure, which no outside
 //!   boundary reaches. The panic test in `src/failures.rs` covers the kind.
 //! - `30-local-question-file` loads a question file, and the door reads none.
 
 use std::collections::BTreeMap;
+use std::path::Path;
 
 use conformance_backend::Backend;
 use serde_json::value::RawValue;
@@ -24,10 +29,11 @@ use crate::{compile, crate_dir, run, text};
 
 const CASES: &str = include_str!("../../../../conformance/cases.json");
 const CANONICAL: &str = "https://api.typesafe.ai/v1/systemone";
-const SKIPPED: [&str; 5] = [
+const SKIPPED: [&str; 6] = [
     "18-find-second",
     "19-find-none",
     "18-annotate-two-groups",
+    "22-local-fault",
     "25-defect-fault",
     "30-local-question-file",
 ];
@@ -44,9 +50,11 @@ pub(crate) struct Script(pub(crate) Vec<u8>);
 
 impl Script {
     pub(crate) fn ask(&mut self, verb: &str, fields: &[&str]) {
-        self.0.extend(format!("{verb} {}\n", fields.len()).as_bytes());
+        self.0
+            .extend(format!("{verb} {}\n", fields.len()).as_bytes());
         for field in fields {
-            self.0.extend(format!("{}\n{field}\n", field.len()).as_bytes());
+            self.0
+                .extend(format!("{}\n{field}\n", field.len()).as_bytes());
         }
     }
 }
@@ -54,8 +62,7 @@ impl Script {
 #[test]
 fn every_applicable_shared_case_passes_through_the_door() {
     let written: Members = serde_json::from_str(CASES).expect("the shared cases");
-    let cases: Vec<Members> =
-        serde_json::from_str(written["cases"].get()).expect("a case list");
+    let cases: Vec<Members> = serde_json::from_str(written["cases"].get()).expect("a case list");
     let driver = compile(&crate_dir().join("tests/c/driver.c"));
     let backend = Backend::start().expect("the conformance backend");
     let mut failures = Vec::new();
@@ -67,19 +74,23 @@ fn every_applicable_shared_case_passes_through_the_door() {
         }
         ran += 1;
         let mut script = Script::default();
-        let checked = plan(&backend, case, &mut script).and_then(|judge| {
-            let output = run(&driver, "", &script.0);
-            if !output.status.success() {
-                return Err(format!("the driver failed: {}", text(&output.stderr)));
-            }
-            judge(&replies(&output.stdout)?)
-        });
+        let checked =
+            plan(&backend, case, &mut script).and_then(|judge| driven(&driver, &script, &judge));
         if let Err(why) = checked {
             failures.push(format!("{id}: {why}"));
         }
     }
     assert!(failures.is_empty(), "{failures:#?}");
     assert_eq!(ran, cases.len() - SKIPPED.len());
+}
+
+/// Run one case's requests through the driver and judge its replies.
+fn driven(driver: &Path, script: &Script, judge: &Judge<'_>) -> Checked {
+    let output = run(driver, "", &script.0);
+    if !output.status.success() {
+        return Err(format!("the driver failed: {}", text(&output.stderr)));
+    }
+    judge(&replies(&output.stdout)?)
 }
 
 /// Write one case's requests and return the check of their replies.
@@ -91,7 +102,10 @@ fn plan<'a>(backend: &'a Backend, case: &Members, script: &mut Script) -> Checke
         return refused(backend, &id, case, kind, script);
     }
     let base = format!("{}/case/{id}/v1", backend.origin());
-    let exchanges = member(case, "exchanges").as_array().cloned().unwrap_or_default();
+    let exchanges = member(case, "exchanges")
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
     let served = format!("{base}/systemone");
     let renamed: BTreeMap<String, String> = exchanges
         .iter()
@@ -108,32 +122,9 @@ fn plan<'a>(backend: &'a Backend, case: &Members, script: &mut Script) -> Checke
     let records = json!(texts).to_string();
     let question = case.get("question").map_or("{}", |raw| raw.get());
     let first = texts.first().cloned().unwrap_or_default();
-    let evidence = json!(first).to_string();
     match (verb.as_str(), success["kind"].as_str().unwrap_or_default()) {
-        ("recognize", _) => {
-            let evidence = string(case, "text");
-            script.ask("call", &[&base, &with(question, "evidence", &json!(evidence).to_string())]);
-            script.ask("recognize", &[&base, question, &evidence]);
-            let want = success["answers"][0]["bare"].clone();
-            Ok(Box::new(move |got| {
-                same("call", &parsed(&got[0])?, &want)?;
-                same("recognize", &parsed(&got[1])?, &want)
-            }))
-        }
-        ("relate", _) => {
-            let entities = case.get("entities").map_or("[]", |raw| raw.get());
-            script.ask("call", &[&base, &with(question, "records", entities)]);
-            let each: Vec<Box<RawValue>> =
-                serde_json::from_str(entities).map_err(|error| error.to_string())?;
-            let mut fields = vec![base.as_str(), question];
-            fields.extend(each.iter().map(|one| one.get()));
-            script.ask("relate", &fields);
-            let want = json!({"edges": success["answers"][0]["bare"]});
-            Ok(Box::new(move |got| {
-                same("call", &parsed(&got[0])?, &want)?;
-                same("relate", &parsed(&got[1])?, &want)
-            }))
-        }
+        ("recognize", _) => Ok(recognized(script, &base, case, question, &success)),
+        ("relate", _) => related(script, &base, case, question, &success),
         ("annotate", _) => {
             let set = case.get("question_set").map_or("{}", |raw| raw.get());
             let request = format!(r#"{{"annotate":{set},"records":{records}}}"#);
@@ -141,75 +132,153 @@ fn plan<'a>(backend: &'a Backend, case: &Members, script: &mut Script) -> Checke
             Ok(Box::new(move |got| annotated(&parsed(&got[0])?, &success)))
         }
         ("rank", _) => {
-            let asked = serde_json::from_str::<Value>(question).map_err(|error| error.to_string())?;
+            let asked =
+                serde_json::from_str::<Value>(question).map_err(|error| error.to_string())?;
             let request = json!({"rank": asked["decide"], "records": texts}).to_string();
             script.ask("call", &[&base, &request]);
-            let ranking = success["operation"]["ranking"].as_array().cloned().unwrap_or_default();
-            let want = ranking.iter().map(|row| picked(&texts, &row["index"])).collect();
+            let ranking = success["operation"]["ranking"]
+                .as_array()
+                .cloned()
+                .unwrap_or_default();
+            let want = ranking
+                .iter()
+                .map(|row| picked(&texts, &row["index"]))
+                .collect();
             Ok(Box::new(move |got| same("rank", &parsed(&got[0])?, &want)))
         }
         (_, "filter") => {
             let request = with(&renamed_verb(question, "filter")?, "records", &records);
             script.ask("call", &[&base, &request]);
-            let indexes = success["operation"]["indexes"].as_array().cloned().unwrap_or_default();
+            let indexes = success["operation"]["indexes"]
+                .as_array()
+                .cloned()
+                .unwrap_or_default();
             let want = indexes.iter().map(|index| picked(&texts, index)).collect();
-            Ok(Box::new(move |got| same("filter", &parsed(&got[0])?, &want)))
+            Ok(Box::new(move |got| {
+                same("filter", &parsed(&got[0])?, &want)
+            }))
         }
         (_, "decide_many") => {
             let mut fields = vec![base.as_str(), question];
             fields.extend(texts.iter().map(String::as_str));
             script.ask("many", &fields);
             let answers = success["answers"].as_array().cloned().unwrap_or_default();
-            let want: Vec<Value> = answers.iter().map(|answer| answer["bare"].clone()).collect();
+            let want: Vec<Value> = answers
+                .iter()
+                .map(|answer| answer["bare"].clone())
+                .collect();
             Ok(Box::new(move |got| {
                 let rows = judged(&got[0])?;
                 let outcomes = rows.iter().map(|(outcome, _)| bare(*outcome)).collect();
                 same("decide_many", &outcomes, &json!(want))
             }))
         }
-        _ => {
-            script.ask("call", &[&base, &with(question, "evidence", &evidence)]);
-            let detailed = with(&with(question, "evidence", &evidence), "details", "true");
-            script.ask("call", &[&base, &detailed]);
-            let decide = verb == "decide";
-            if decide {
-                script.ask("decide", &[&base, question, &first]);
-            }
-            let counters = success.get("counters").cloned();
-            if let Some(counters) = &counters {
-                script.ask("call", &[&base, r#"{"usage":true}"#]);
-                for _ in 0..counters["calls"].as_u64().unwrap_or_default() {
-                    script.ask("call", &[&base, &with(question, "evidence", &evidence)]);
-                }
-                script.ask("call", &[&base, r#"{"usage":true}"#]);
-            }
-            let expected = success["answers"][0].clone();
-            Ok(Box::new(move |got| {
-                single(&got[0], &got[1], &expected)?;
-                let mut next = 2;
-                if decide {
-                    let rows = judged(&got[next])?;
-                    let (outcome, probability) = rows.first().copied().ok_or("no judgment")?;
-                    same("decide", &bare(outcome), &expected["bare"])?;
-                    let yes = &expected["details"]["answer"]["probability"];
-                    same("probability", &json!(probability), yes)?;
-                    next += 1;
-                }
-                let Some(counters) = &counters else {
-                    return Ok(());
-                };
-                let before = parsed(&got[next])?;
-                let after = parsed(got.last().ok_or("no usage reply")?)?;
-                let moved = |name: &str| after[name].as_u64().zip(before[name].as_u64()).map(|(a, b)| a - b);
-                let seen = json!({
-                    "calls": counters["calls"],
-                    "requests": moved("requests_sent"),
-                    "cache_answers": moved("cache_answers"),
-                });
-                same("counters", &seen, counters)
-            }))
-        }
+        _ => Ok(one_answer(script, &base, &verb, question, &first, &success)),
     }
+}
+
+/// Recognize through the JSON door and the typed door.
+fn recognized<'a>(
+    script: &mut Script,
+    base: &str,
+    case: &Members,
+    question: &str,
+    success: &Value,
+) -> Judge<'a> {
+    let evidence = string(case, "text");
+    let request = with(question, "evidence", &json!(evidence).to_string());
+    script.ask("call", &[base, &request]);
+    script.ask("recognize", &[base, question, &evidence]);
+    let want = success["answers"][0]["bare"].clone();
+    Box::new(move |got| {
+        same("call", &parsed(&got[0])?, &want)?;
+        same("recognize", &parsed(&got[1])?, &want)
+    })
+}
+
+/// Relate through the JSON door and the typed door.
+fn related<'a>(
+    script: &mut Script,
+    base: &str,
+    case: &Members,
+    question: &str,
+    success: &Value,
+) -> Checked<Judge<'a>> {
+    let entities = case.get("entities").map_or("[]", |raw| raw.get());
+    script.ask("call", &[base, &with(question, "records", entities)]);
+    let each: Vec<Box<RawValue>> =
+        serde_json::from_str(entities).map_err(|error| error.to_string())?;
+    let mut fields = vec![base, question];
+    fields.extend(each.iter().map(|one| one.get()));
+    script.ask("relate", &fields);
+    let want = json!({"edges": success["answers"][0]["bare"]});
+    Ok(Box::new(move |got| {
+        same("call", &parsed(&got[0])?, &want)?;
+        same("relate", &parsed(&got[1])?, &want)
+    }))
+}
+
+/// A single-answer verb: its bare and detailed replies, the typed decide
+/// where it fits, and the usage counters the case names.
+fn one_answer<'a>(
+    script: &mut Script,
+    base: &str,
+    verb: &str,
+    question: &str,
+    first: &str,
+    success: &Value,
+) -> Judge<'a> {
+    let evidence = json!(first).to_string();
+    let bare_request = with(question, "evidence", &evidence);
+    // The counters come first, while the cache is still empty.
+    let counters = success.get("counters").cloned();
+    let calls = counters
+        .as_ref()
+        .and_then(|counters| counters["calls"].as_u64())
+        .unwrap_or_default();
+    if counters.is_some() {
+        script.ask("call", &[base, r#"{"usage":true}"#]);
+        for _ in 0..calls {
+            script.ask("call", &[base, &bare_request]);
+        }
+        script.ask("call", &[base, r#"{"usage":true}"#]);
+    }
+    script.ask("call", &[base, &bare_request]);
+    script.ask("call", &[base, &with(&bare_request, "details", "true")]);
+    let decide = verb == "decide";
+    if decide {
+        script.ask("decide", &[base, question, first]);
+    }
+    let expected = success["answers"][0].clone();
+    Box::new(move |got| {
+        let mut next = 0;
+        if let Some(counters) = &counters {
+            let before = parsed(&got[0])?;
+            next = usize::try_from(calls).map_err(|error| error.to_string())? + 2;
+            let after = parsed(&got[next - 1])?;
+            let moved = |name: &str| {
+                after[name]
+                    .as_u64()
+                    .zip(before[name].as_u64())
+                    .map(|(a, b)| a - b)
+            };
+            let seen = json!({
+                "calls": counters["calls"],
+                "requests": moved("requests_sent"),
+                "cache_answers": moved("cache_answers"),
+            });
+            same("counters", &seen, counters)?;
+        }
+        single(&got[next], &got[next + 1], &expected)?;
+        if decide {
+            let rows = judged(&got[next + 2])?;
+            let (outcome, probability) = rows.first().copied().ok_or("no judgment")?;
+            same("decide", &bare(outcome), &expected["bare"])?;
+            let yes = &expected["details"]["answer"]["probability"];
+            same("probability", &json!(probability), yes)?;
+        }
+        Ok(())
+    })
 }
 
 /// A single judgment's bare reply and its `details` reply.
@@ -230,8 +299,12 @@ fn single(plain: &Reply, detailed: &Reply, expected: &Value) -> Checked {
 /// Each expected annotate value against its record's value object.
 fn annotated(rows: &Value, success: &Value) -> Checked {
     for expected in success["answers"].as_array().into_iter().flatten() {
-        let record = expected["exchange"].as_u64().and_then(|at| usize::try_from(at).ok());
-        let row = record.and_then(|at| rows.get(at)).ok_or("a record is missing")?;
+        let record = expected["exchange"]
+            .as_u64()
+            .and_then(|at| usize::try_from(at).ok());
+        let row = record
+            .and_then(|at| rows.get(at))
+            .ok_or("a record is missing")?;
         let name = expected["name"].as_str().unwrap_or_default();
         same(name, &row[name], &expected["bare"])?;
     }
@@ -252,31 +325,48 @@ fn refused<'a>(
     match id {
         "20-usage-fault" => script.ask("decide", &[&generic, asked, "   "]),
         "21-backend-fault" => {
-            script.ask("decide", &[&format!("{}/arm/refuse/v1", backend.origin()), asked, urgent]);
-        }
-        "22-local-fault" => {
-            let file = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("cases-not-a-folder");
-            std::fs::write(&file, "not a folder").map_err(|error| error.to_string())?;
-            script.ask("env", &["THINKTHEN_CACHE", &file.display().to_string()]);
-            script.ask("decide", &[&generic, asked, urgent]);
+            script.ask(
+                "decide",
+                &[
+                    &format!("{}/arm/refuse/v1", backend.origin()),
+                    asked,
+                    urgent,
+                ],
+            );
         }
         "23-cancelled-fault" => script.ask("cancelled", &[&generic, asked, urgent]),
         "24-deadline-fault" => script.ask("expired", &[&generic, asked, urgent]),
         "29-usage-json-text" => {
             let question = case.get("question").map_or("{}", |raw| raw.get());
             let evidence = string(case, "evidence");
-            script.ask("call", &[&generic, &with(question, "evidence", &json!(evidence).to_string())]);
+            script.ask(
+                "call",
+                &[
+                    &generic,
+                    &with(question, "evidence", &json!(evidence).to_string()),
+                ],
+            );
         }
         "31-usage-rank-blank-question" => {
-            script.ask("call", &[&generic, r#"{"rank":"   ","records":["one","two"]}"#]);
+            script.ask(
+                "call",
+                &[&generic, r#"{"rank":"   ","records":["one","two"]}"#],
+            );
         }
         other => return Err(format!("no door boundary is written for {other}")),
     }
-    let code = ["usage", "backend", "deadline", "local", "cancelled", "defect"]
-        .iter()
-        .position(|named| *named == kind)
-        .and_then(|at| i32::try_from(at + 1).ok())
-        .ok_or("an unknown kind")?;
+    let code = [
+        "usage",
+        "backend",
+        "deadline",
+        "local",
+        "cancelled",
+        "defect",
+    ]
+    .iter()
+    .position(|named| *named == kind)
+    .and_then(|at| i32::try_from(at + 1).ok())
+    .ok_or("an unknown kind")?;
     let sends = matches!(id, "21-backend-fault");
     let before = backend.count();
     Ok(Box::new(move |got| {
@@ -296,12 +386,21 @@ pub(crate) fn replies(output: &[u8]) -> Checked<Vec<Reply>> {
     let mut rest = output;
     let mut all = Vec::new();
     while !rest.is_empty() {
-        let line = rest.iter().position(|byte| *byte == b'\n').ok_or("a reply has no header")?;
+        let line = rest
+            .iter()
+            .position(|byte| *byte == b'\n')
+            .ok_or("a reply has no header")?;
         let header = String::from_utf8_lossy(&rest[..line]).into_owned();
-        let (code, length) = header.split_once(' ').ok_or("a reply header is malformed")?;
+        let (code, length) = header
+            .split_once(' ')
+            .ok_or("a reply header is malformed")?;
         let code: i32 = code.parse().map_err(|_| "a reply code is not a number")?;
-        let length: usize = length.parse().map_err(|_| "a reply length is not a number")?;
-        let body = rest.get(line + 1..line + 1 + length).ok_or("a reply is short")?;
+        let length: usize = length
+            .parse()
+            .map_err(|_| "a reply length is not a number")?;
+        let body = rest
+            .get(line + 1..line + 1 + length)
+            .ok_or("a reply is short")?;
         all.push((code, String::from_utf8_lossy(body).into_owned()));
         rest = rest.get(line + 2 + length..).unwrap_or_default();
     }
@@ -327,7 +426,9 @@ fn judged(reply: &Reply) -> Checked<Vec<(i32, f64)>> {
         .map(|pair| match pair {
             [outcome, probability] => Ok((
                 outcome.parse().map_err(|_| "an outcome is not a number")?,
-                probability.parse().map_err(|_| "a probability is not a number")?,
+                probability
+                    .parse()
+                    .map_err(|_| "a probability is not a number")?,
             )),
             _ => Err("a judgment is half written".to_owned()),
         })
@@ -345,7 +446,8 @@ fn bare(outcome: i32) -> Value {
 
 fn picked(texts: &[String], index: &Value) -> Value {
     let at = index.as_u64().and_then(|at| usize::try_from(at).ok());
-    at.and_then(|at| texts.get(at)).map_or(Value::Null, |text| json!(text))
+    at.and_then(|at| texts.get(at))
+        .map_or(Value::Null, |text| json!(text))
 }
 
 /// A question object's written bytes with one more member at the end.
@@ -357,8 +459,10 @@ pub(crate) fn with(object: &str, key: &str, value: &str) -> String {
 /// A `decide` question file asked under another verb's key.
 pub(crate) fn renamed_verb(question: &str, verb: &str) -> Checked<String> {
     question
-        .strip_prefix(r#"{"decide":"#)
-        .map(|rest| format!(r#"{{"{verb}":{rest}"#))
+        .trim_start()
+        .strip_prefix('{')
+        .and_then(|rest| rest.trim_start().strip_prefix(r#""decide""#))
+        .map(|rest| format!(r#"{{"{verb}"{rest}"#))
         .ok_or_else(|| format!("the question does not lead with decide: {question}"))
 }
 
@@ -379,7 +483,11 @@ fn digest(url: &str, request: &[u8]) -> String {
     hasher.update(url.as_bytes());
     hasher.update(b"\n");
     hasher.update(request);
-    hasher.finalize().iter().map(|byte| format!("{byte:02x}")).collect()
+    hasher
+        .finalize()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect()
 }
 
 fn swap(value: &Value, renamed: &BTreeMap<String, String>) -> Value {
@@ -402,11 +510,14 @@ fn same(what: &str, actual: &Value, expected: &Value) -> Checked {
                 (one.as_f64().unwrap_or(f64::NAN) - other.as_f64().unwrap_or(f64::NAN)).abs() < 1e-9
             }
             (Value::Array(one), Value::Array(other)) => {
-                one.len() == other.len() && one.iter().zip(other).all(|(one, other)| close(one, other))
+                one.len() == other.len()
+                    && one.iter().zip(other).all(|(one, other)| close(one, other))
             }
             (Value::Object(one), Value::Object(other)) => {
                 one.len() == other.len()
-                    && one.iter().all(|(name, value)| other.get(name).is_some_and(|held| close(value, held)))
+                    && one
+                        .iter()
+                        .all(|(name, value)| other.get(name).is_some_and(|held| close(value, held)))
             }
             (one, other) => one == other,
         }

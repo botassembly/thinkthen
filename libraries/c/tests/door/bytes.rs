@@ -35,36 +35,10 @@ fn the_doors_bare_values_are_the_commands_bytes() {
             continue;
         }
         let base = format!("{}/case/{id}/v1", backend.origin());
-        let question = case.get("question").map_or("{}", |raw| raw.get());
-        let path = folder.join(format!("{id}.json"));
-        std::fs::write(&path, question).expect("a question file");
-        let at = format!("@{}", path.display());
-        let exchanges = member(case, "exchanges");
-        let texts: Vec<&str> = exchanges
-            .as_array()
-            .into_iter()
-            .flatten()
-            .map(|exchange| exchange["evidence"].as_str().unwrap_or_default())
-            .collect();
-        let lines: String = texts.iter().map(|one| json!(one).to_string() + "\n").collect();
-        let records = json!(texts).to_string();
-        let (request, said) = match kind {
-            "single" => {
-                let evidence = json!(texts.first().copied().unwrap_or_default()).to_string();
-                let said = print(&command, &[&verb, &at, "--url", &base], texts.first().copied().unwrap_or_default());
-                (with(question, "evidence", &evidence), said)
-            }
-            "filter" => {
-                let said = print(&command, &["filter", &at, "--jsonl", "--url", &base], &lines);
-                (with(&renamed_verb(question, "filter").expect("a decide question"), "records", &records), joined(&said))
-            }
-            _ => {
-                let asked = serde_json::from_str::<serde_json::Value>(question).expect("a question");
-                let asked = asked["decide"].as_str().unwrap_or_default();
-                let said = print(&command, &["rank", asked, "--jsonl", "--url", &base], &lines);
-                (json!({"rank": asked, "records": texts}).to_string(), joined(&said))
-            }
-        };
+        let (request, said) = asked(&command, &folder, case, &base, kind, &verb);
+        // A cache folder answers one backend address, so each case gets its own.
+        let cache = folder.join(format!("cache-{id}")).display().to_string();
+        script.ask("env", &["THINKTHEN_CACHE", &cache]);
         script.ask("call", &[&base, &request]);
         printed.push((id, said));
     }
@@ -72,14 +46,29 @@ fn the_doors_bare_values_are_the_commands_bytes() {
     let units = ["good morning", "I want a refund"];
     let said = print(
         &command,
-        &["find", "Which line asks for money back?", "--jsonl", "--url", &generic],
-        &units.iter().map(|one| json!(one).to_string() + "\n").collect::<String>(),
+        &[
+            "find",
+            "Which line asks for money back?",
+            "--jsonl",
+            "--url",
+            &generic,
+        ],
+        &units
+            .iter()
+            .map(|one| json!(one).to_string() + "\n")
+            .collect::<String>(),
     );
     let request = json!({"find": "Which line asks for money back?", "units": units}).to_string();
+    let cache = folder.join("cache-find").display().to_string();
+    script.ask("env", &["THINKTHEN_CACHE", &cache]);
     script.ask("call", &[&generic, &request]);
     printed.push(("find".to_owned(), said));
 
-    let output = run(&compile(&crate_dir().join("tests/c/driver.c")), "", &script.0);
+    let output = run(
+        &compile(&crate_dir().join("tests/c/driver.c")),
+        "",
+        &script.0,
+    );
     assert!(output.status.success(), "{}", text(&output.stderr));
     let answered = replies(&output.stdout).expect("framed replies");
     assert_eq!(answered.len(), printed.len());
@@ -87,10 +76,71 @@ fn the_doors_bare_values_are_the_commands_bytes() {
         .iter()
         .zip(&answered)
         .filter(|((_, said), (code, reply))| *code != 0 || format!("{reply}\n") != *said)
-        .map(|((id, said), (code, reply))| format!("{id}: the door wrote {code} {reply}, the command printed {said}"))
+        .map(|((id, said), (code, reply))| {
+            format!("{id}: the door wrote {code} {reply}, the command printed {said}")
+        })
         .collect();
     assert!(differ.is_empty(), "{differ:#?}");
     assert_eq!(printed.len(), 21);
+}
+
+/// One case's request to the door and the command's printed bytes.
+fn asked(
+    command: &Path,
+    folder: &Path,
+    case: &Members,
+    base: &str,
+    kind: &str,
+    verb: &str,
+) -> (String, String) {
+    let id = string(case, "id");
+    let question = case.get("question").map_or("{}", |raw| raw.get());
+    let path = folder.join(format!("{id}.json"));
+    std::fs::write(&path, question).expect("a question file");
+    let at = format!("@{}", path.display());
+    let exchanges = member(case, "exchanges");
+    let texts: Vec<&str> = exchanges
+        .as_array()
+        .into_iter()
+        .flatten()
+        .map(|exchange| exchange["evidence"].as_str().unwrap_or_default())
+        .collect();
+    let lines: String = texts
+        .iter()
+        .map(|one| json!(one).to_string() + "\n")
+        .collect();
+    let records = json!(texts).to_string();
+    match kind {
+        "single" => {
+            let evidence = json!(texts.first().copied().unwrap_or_default()).to_string();
+            let said = print(
+                command,
+                &[verb, &at, "--url", base],
+                texts.first().copied().unwrap_or_default(),
+            );
+            (with(question, "evidence", &evidence), said)
+        }
+        "filter" => {
+            let said = print(command, &["filter", &at, "--jsonl", "--url", base], &lines);
+            (
+                with(
+                    &renamed_verb(question, "filter").expect("a decide question"),
+                    "records",
+                    &records,
+                ),
+                joined(&said),
+            )
+        }
+        _ => {
+            let asked = serde_json::from_str::<serde_json::Value>(question).expect("a question");
+            let asked = asked["decide"].as_str().unwrap_or_default();
+            let said = print(command, &["rank", asked, "--jsonl", "--url", base], &lines);
+            (
+                json!({"rank": asked, "records": texts}).to_string(),
+                joined(&said),
+            )
+        }
+    }
 }
 
 /// The command's `--jsonl` lines as one array and a line feed.
@@ -102,7 +152,14 @@ fn joined(lines: &str) -> String {
 fn built_command() -> PathBuf {
     let target = Path::new(env!("CARGO_TARGET_TMPDIR")).join("command");
     let built = Command::new(env!("CARGO"))
-        .args(["build", "--locked", "--offline", "--bin", "thinkthen", "--manifest-path"])
+        .args([
+            "build",
+            "--locked",
+            "--offline",
+            "--bin",
+            "thinkthen",
+            "--manifest-path",
+        ])
         .arg(crate_dir().join("../../Cargo.toml"))
         .arg("--target-dir")
         .arg(&target)

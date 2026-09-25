@@ -346,6 +346,7 @@ version = "0.0.1"
 dependencies = [
  "conformance-backend",
  "serde_json",
+ "sha2",
  "thinkthen",
 ]
 

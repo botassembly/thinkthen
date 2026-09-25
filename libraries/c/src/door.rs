@@ -57,7 +57,9 @@ pub(crate) fn decide(
     };
     match (details.value(), details.probabilities()) {
         (Judgment::Decision(answer), Probabilities::YesNo { yes }) => Ok((outcome(*answer), *yes)),
-        _ => Err(Failure::defect("a decide answer held no probability of yes")),
+        _ => Err(Failure::defect(
+            "a decide answer held no probability of yes",
+        )),
     }
 }
 
@@ -82,7 +84,9 @@ pub(crate) fn decide_many(
     if rows.len() == texts.len() {
         Ok(rows)
     } else {
-        Err(Failure::defect("the engine answered another number of records"))
+        Err(Failure::defect(
+            "the engine answered another number of records",
+        ))
     }
 }
 
@@ -100,8 +104,8 @@ pub(crate) fn recognize(
 /// One relate record: a JSON object with a string `name` and `kind`, read
 /// at the default `/name` and `/kind` as the command reads JSONL.
 pub(crate) fn entity(record: &str) -> Result<Entity, Failure> {
-    let value: Value = serde_json::from_str(record)
-        .map_err(|_| Failure::usage("a relate record is not JSON"))?;
+    let value: Value =
+        serde_json::from_str(record).map_err(|_| Failure::usage("a relate record is not JSON"))?;
     match (value.get("name"), value.get("kind")) {
         (Some(Value::String(name)), Some(Value::String(kind))) => Ok(Entity::new(name, kind)?),
         _ => Err(Failure::usage(

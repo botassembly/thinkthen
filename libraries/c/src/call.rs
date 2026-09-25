@@ -32,7 +32,10 @@ const VERBS: [&str; 10] = [
 
 /// Each envelope key and the verbs it goes with.
 const ENVELOPE: [(&str, &[&str]); 5] = [
-    ("evidence", &["decide", "choose", "score", "tag", "recognize"]),
+    (
+        "evidence",
+        &["decide", "choose", "score", "tag", "recognize"],
+    ),
     ("records", &["filter", "rank", "annotate", "relate"]),
     ("units", &["find"]),
     ("details", &["decide", "choose", "score", "tag"]),
@@ -112,7 +115,9 @@ fn answer(engine: &Engine, request: &Request, options: CallOptions<'_>) -> Resul
     let verb = request.verb.as_str();
     match verb {
         "decide" | "choose" | "score" | "tag" => {
-            let evidence = member(request, "evidence", |raw| serde_json::from_str::<String>(raw))?;
+            let evidence = member(request, "evidence", |raw| {
+                serde_json::from_str::<String>(raw)
+            })?;
             let details = match Question::from_json(&object(&request.question)?)? {
                 LoadedQuestion::Question(asked) => engine.details_with(&asked, &evidence, options),
                 LoadedQuestion::Banded(asked) => engine.details_with(&asked, &evidence, options),
@@ -130,30 +135,43 @@ fn answer(engine: &Engine, request: &Request, options: CallOptions<'_>) -> Resul
             let LoadedQuestion::Question(asked) = Question::from_json(&object(&question)?)? else {
                 return Err(Failure::usage("filter keeps a record at a cut, not a band"));
             };
-            let records = member(request, "records", |raw| serde_json::from_str::<Vec<String>>(raw))?;
-            let kept: Result<Vec<&str>, _> =
-                engine.filter_with(&asked, records.iter().map(String::as_str), options).collect();
+            let records = member(request, "records", |raw| {
+                serde_json::from_str::<Vec<String>>(raw)
+            })?;
+            let kept: Result<Vec<&str>, _> = engine
+                .filter_with(&asked, records.iter().map(String::as_str), options)
+                .collect();
             write(&json!(kept?))
         }
         "rank" => {
             let asked = Question::rank(&alone(request)?)?;
-            let records = member(request, "records", |raw| serde_json::from_str::<Vec<String>>(raw))?;
+            let records = member(request, "records", |raw| {
+                serde_json::from_str::<Vec<String>>(raw)
+            })?;
             let ranked = engine.rank_with(&asked, records.iter().map(String::as_str), options)?;
-            write(&json!(ranked.iter().map(|row| *row.input()).collect::<Vec<_>>()))
+            write(&json!(
+                ranked.iter().map(|row| *row.input()).collect::<Vec<_>>()
+            ))
         }
         "find" => {
             let asked = Question::find(&alone(request)?)?;
-            let units = member(request, "units", |raw| serde_json::from_str::<Vec<String>>(raw))?;
+            let units = member(request, "units", |raw| {
+                serde_json::from_str::<Vec<String>>(raw)
+            })?;
             let found = engine.find_with(&asked, units.iter().map(String::as_str), options)?;
             write(&json!(found.selected()))
         }
         "annotate" => annotate(engine, request, options),
         "recognize" => {
-            let evidence = member(request, "evidence", |raw| serde_json::from_str::<String>(raw))?;
+            let evidence = member(request, "evidence", |raw| {
+                serde_json::from_str::<String>(raw)
+            })?;
             door::recognize(engine, &object(&request.question)?, &evidence, options)
         }
         _ => {
-            let records = member(request, "records", |raw| serde_json::from_str::<Vec<Box<RawValue>>>(raw))?;
+            let records = member(request, "records", |raw| {
+                serde_json::from_str::<Vec<Box<RawValue>>>(raw)
+            })?;
             if records.len() > MOST_RELATED {
                 return Err(Failure::usage("relate takes at most 255 records"));
             }
@@ -166,12 +184,18 @@ fn answer(engine: &Engine, request: &Request, options: CallOptions<'_>) -> Resul
     }
 }
 
-fn annotate(engine: &Engine, request: &Request, options: CallOptions<'_>) -> Result<String, Failure> {
+fn annotate(
+    engine: &Engine,
+    request: &Request,
+    options: CallOptions<'_>,
+) -> Result<String, Failure> {
     let set = match request.question.get("annotate") {
         Some(set) if request.question.len() == 1 => QuestionSet::from_json(set.get())?,
         _ => return Err(Failure::usage("annotate takes its question set alone")),
     };
-    let records = member(request, "records", |raw| serde_json::from_str::<Vec<String>>(raw))?;
+    let records = member(request, "records", |raw| {
+        serde_json::from_str::<Vec<String>>(raw)
+    })?;
     let rows: Result<Vec<String>, _> = engine
         .annotate_with(&set, records.iter().map(String::as_str), options)
         .map(|row| row.map(|row| row.value_json()))
@@ -185,7 +209,9 @@ fn alone(request: &Request) -> Result<String, Failure> {
     match request.question.get(verb) {
         Some(text) if request.question.len() == 1 => serde_json::from_str::<String>(text.get())
             .map_err(|_| Failure::usage(format!("{verb} takes its question as a string"))),
-        _ => Err(Failure::usage(format!("{verb} takes its question text alone"))),
+        _ => Err(Failure::usage(format!(
+            "{verb} takes its question text alone"
+        ))),
     }
 }
 

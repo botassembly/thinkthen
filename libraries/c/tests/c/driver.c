@@ -4,7 +4,8 @@
  * Standard input holds requests. Each is a line `VERB COUNT`, then COUNT
  * fields, each a line holding its byte length and then its bytes and a
  * newline. The first field is the base address; the engine is built from
- * it through THINKTHEN_BASE_URL, as a host's would be.
+ * it through THINKTHEN_BASE_URL, as a host's would be, and serves each
+ * request to that base until an `env` request or another base comes.
  *
  *   env NAME VALUE                    -> setenv, for the engines after it
  *   call BASE REQUEST                 -> thinkthen_call
@@ -111,6 +112,8 @@ static void answer(thinkthen_engine *tt, const char *verb, size_t count) {
 int main(void) {
     char verb[16];
     size_t count = 0;
+    thinkthen_engine *tt = NULL;
+    char *base = NULL;
     while (scanf("%15s %zu", verb, &count) == 2) {
         if (getchar() != '\n' || count < 2 || count > MOST) {
             fail("a request line is malformed");
@@ -122,19 +125,29 @@ int main(void) {
             setenv(fields[0], fields[1], 1);
             free(fields[0]);
             free(fields[1]);
+            thinkthen_engine_free(tt);
+            tt = NULL;
             continue;
         }
-        setenv("THINKTHEN_BASE_URL", fields[0], 1);
-        thinkthen_engine *tt = thinkthen_engine_new();
-        if (tt == NULL) {
-            fail("no engine came");
+        /* One engine serves every request to one base, so its counters
+         * carry from call to call as a host's engine's do. */
+        if (tt == NULL || strcmp(base, fields[0]) != 0) {
+            thinkthen_engine_free(tt);
+            free(base);
+            base = strdup(fields[0]);
+            setenv("THINKTHEN_BASE_URL", base, 1);
+            tt = thinkthen_engine_new();
+            if (tt == NULL) {
+                fail("no engine came");
+            }
         }
         answer(tt, verb, count);
         fflush(stdout);
-        thinkthen_engine_free(tt);
         for (size_t place = 0; place < count; place++) {
             free(fields[place]);
         }
     }
+    thinkthen_engine_free(tt);
+    free(base);
     return 0;
 }
