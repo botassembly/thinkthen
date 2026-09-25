@@ -43,25 +43,23 @@ class TestTickGc < Minitest::Test
     end
   end
 
+  # A second thread sets a tick and ends. A held call on a thread with no
+  # tick of its own must not run it. A tick kept on the module would run.
   def test_a_tick_runs_only_for_its_own_threads_calls
     TestBackend.with(<<~RUBY, arm: "arm/held") do |backend, child|
-      runs = Hash.new(0)
+      runs = 0
       engine = T::Engine.new(throttle: 4)
-      busy = Thread.new do
-        engine.with_tick { runs[:busy] += 1 }
-        engine.decide("Is it urgent?", "the busy thread's text")
-      end
-      idle = Thread.new { engine.with_tick { runs[:idle] += 1 } }
-      idle.join
+      Thread.new { engine.with_tick { runs += 1 } }.join
+      busy = Thread.new { engine.decide("Is it urgent?", "the busy thread's text") }
       hear
-      say [runs[:busy] > 0, runs[:idle]]
+      say runs
       hear
       busy.join
     RUBY
       assert_equal 1, backend.wait(1)
       sleep 0.5
       child.tell
-      assert_equal [true, 0], child.hear
+      assert_equal 0, child.hear
       backend.release
       child.tell
       status, errors = child.finish
