@@ -99,6 +99,7 @@ fn bulk_and_one_question_annotate_answers_match_the_shared_cases() {
 fn only_the_one_accessor_reads_the_retained_state() {
     let sources = [
         include_str!("../facade.rs"),
+        include_str!("../facade/annotate.rs"),
         include_str!("../facade/recognize.rs"),
         include_str!("../facade/relate.rs"),
     ];
@@ -137,7 +138,7 @@ fn no_key_reaches_a_result_an_error_a_recording_or_a_count() {
         .expect("judged");
     let failed = ask(&engine, "broken", &cancel).expect_err("closed");
     let refused = Engine::new(Settings {
-        key: || Err(Error::NoKey("THINKTHEN_API_KEY")),
+        key: std::sync::Arc::new(|| Err(Error::NoKey("THINKTHEN_API_KEY"))),
         ..settings(listener.base())
     })
     .and_then(|engine| ask(&engine, "no key here", &cancel))

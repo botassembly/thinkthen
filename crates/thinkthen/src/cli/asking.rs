@@ -51,7 +51,7 @@ pub(crate) fn engine(
             private_default: folders.private_default,
             cache_answers: folders.cache_answers,
         },
-        key: edge::key,
+        key: std::sync::Arc::new(edge::key),
         usage: environment.counters(),
     })?)
 }

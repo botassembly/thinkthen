@@ -1,4 +1,5 @@
 //! The `tag` command at the binary edge.
+#![cfg(feature = "cli")]
 
 use std::process::Command;
 

@@ -1,4 +1,5 @@
 //! The public relate command boundary.
+#![cfg(feature = "cli")]
 
 use std::process::Command;
 

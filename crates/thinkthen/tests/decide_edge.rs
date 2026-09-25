@@ -1,4 +1,5 @@
 //! The compiled binary at its own edge: usage, the plan, and standard input.
+#![cfg(feature = "cli")]
 
 use std::io::{self, Write};
 use std::process::{Command, Output, Stdio};
