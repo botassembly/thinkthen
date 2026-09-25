@@ -11,17 +11,18 @@ use crate::core::measure::{MeasureError, mcnemar};
 /// Which McNemar count a pair of outcomes adds to.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Discordant {
-    /// The first side was not right and the second is.
+    /// The first side was wrong, tied, or not sure, and the second is right.
     OtherToRight,
-    /// The first side was right and the second is not.
+    /// The first side was right, and the second is wrong, tied, or not sure.
     RightToOther,
 }
 
 /// The one place the McNemar rule lives.
 pub(crate) const fn discordant(a: Outcome, b: Outcome) -> Option<Discordant> {
     match (a, b) {
-        (Outcome::Wrong, Outcome::Right) => Some(Discordant::OtherToRight),
-        (Outcome::Right, Outcome::Wrong) => Some(Discordant::RightToOther),
+        (Outcome::Right, Outcome::Right) => None,
+        (_, Outcome::Right) => Some(Discordant::OtherToRight),
+        (Outcome::Right, _) => Some(Discordant::RightToOther),
         _ => None,
     }
 }

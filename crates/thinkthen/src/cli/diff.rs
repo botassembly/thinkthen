@@ -78,7 +78,7 @@ fn warnings(summary: &Summary) -> String {
     if summary.digests_differ > 0 {
         let _ = writeln!(
             out,
-            "thinkthen: diff: warning: the question digest differs in {} of {} paired answers. A different question or threshold gives a different digest.",
+            "thinkthen: diff: warning: the question digest differs in {} of {} paired answers. A different question, threshold, or profile gives a different digest.",
             summary.digests_differ, summary.records
         );
     }

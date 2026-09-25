@@ -24,7 +24,7 @@ thinkthen diff A [B] [--key KEY] [--threshold RULE] [--compare-threshold RULE] [
 - `--id POINTER` works as in audit, default `/id`.
 - `--table` prints the results for a person instead of JSON lines.
 
-diff pairs answers by answer name and record id only. It does not check that the two runs saw the same record text. It compares each pair's `meta.question_sha256` and warns when the digests differ, as "Warnings" below says. The `compare` transform checks both the record text and the question.
+diff pairs answers by answer name and record id only. It does not check that the two runs saw the same record text. It compares each pair's question digest and warns when the digests differ, as "Warnings" below says. The `compare` transform checks both the record text and the question.
 
 ## The math
 
@@ -46,11 +46,11 @@ The answer under a rule, the key's value, and the outcome (right, wrong, not sur
 
 Without a key value the effect is null. `gained` and `lost` count those effects.
 
-**McNemar.** With a key, the test runs on the discordant pairs of right answers, and `mcnemar_on` is `"right answers"`. Today one function, `discordant`, counts only wrong to right and right to wrong, as the prototype's code and the `diff-choose` golden do. Pairs that become right from tied or not sure, or leave right for them, do not count. The prototype's README says "on right answers", and the prototype's owner has an open issue asking to count every pair that becomes right or stops being right. Until that issue is ruled, the goldens decide. Without a key, when every answer of A is `decide` (failed ones included), the test runs on yes-to-no against no-to-yes moves, and `mcnemar_on` is `"yes answers"`. Otherwise both members are null.
+**McNemar.** With a key, the test runs on the discordant pairs of right answers, and `mcnemar_on` is `"right answers"`. One function, `discordant`, counts a pair when it is right on one side and not right on the other. The other answer may be wrong, tied, or not sure. A tied answer that becomes right counts, and so does a right answer that becomes not sure. Quick Fix `qf-diff-warnings` widened the rule from the prototype's wrong-to-right and right-to-wrong. It closed `sdlc/issues/closed/2026-09-25-diff-mcnemar-leaves-out-pairs-that-become-right-from-not-sure.md`. The `diff-choose` golden moved from p 1.0 to p 0.5 (2 to 4 right of 5). Without a key, when every answer of A is `decide` (failed ones included), the test runs on yes-to-no against no-to-yes moves, and `mcnemar_on` is `"yes answers"`. Otherwise both members are null.
 
 For counts `a` and `b`, with `n = a + b`: `p` is 1 when `n` is 0. Otherwise `p = min(1, 2 · Σ C(n, i) / 2ⁿ)` for `i` from 0 to `min(a, b)`. The port sums the terms in log space, and a unit test holds it to exact integer sums up to `n = 120` within a relative `1e-12`.
 
-**Switching the McNemar rule.** If the owner rules for every discordant pair: upstream rewrites its goldens, and the fixture checksums move to the new commit. `golden/extra/diff-annotate.jsonl` and `golden/table/diff-choose.txt` are captured again. `discordant` also counts tied or not sure to right and right to tied or not sure, and nothing else in the code changes. This page and the `discordant` test change in the same commit.
+**The prototype's narrow rule.** The prototype counted only wrong to right and right to wrong. Restoring it changes `discordant`, its unit test, the McNemar edge rows in `tests/diff.rs`, and the two `diff-choose` captures in one commit.
 
 ## Output
 
@@ -71,9 +71,9 @@ diff prints at most two warning lines on standard error, after standard output. 
 | Case | Standard error |
 | --- | --- |
 | No answer paired: `records` is 0 | `thinkthen: diff: warning: no answer paired; check that both runs hold the same record ids and answer names` |
-| `D` of the `N` pairs carry different `meta.question_sha256` values | `thinkthen: diff: warning: the question digest differs in D of N paired answers. A different question or threshold gives a different digest.` |
+| `D` of the `N` pairs carry different question digests | `thinkthen: diff: warning: the question digest differs in D of N paired answers. A different question, threshold, or profile gives a different digest.` |
 
-The digest check counts a pair only when both lines carry a digest. An `annotate` line's digest covers the whole line, so each of its answers takes that one digest. The digest covers the threshold too, so two runs of one question at different thresholds also warn. Two cuts on one run compare a line with itself and never warn. With no pair, the second warning cannot print. Failed answers pair with nothing, so a run of only failed answers warns that no answer paired.
+A line's question digest is its `meta.question_sha256`. An `annotate` line carries `meta.questions_sha256` instead, one digest over all its questions. Each answer on that line takes that one digest, so one changed question flags every answer on the line. The digest check counts a pair only when both lines carry a digest. The digest covers the threshold and the profile too. Two runs of one question at different thresholds or under different profiles also warn. Two cuts on one run compare a line with itself and never warn. With no pair, the second warning cannot print. Failed answers pair with nothing, so a run of only failed answers warns that no answer paired.
 
 ## Failures
 

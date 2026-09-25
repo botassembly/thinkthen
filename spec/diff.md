@@ -37,5 +37,13 @@ When paired answers carry different question digests, diff warns with the count.
 ```bash
 cd "$(git rev-parse --show-toplevel)/crates/thinkthen/tests/fixtures/measure"
 
-thinkthen diff 249/control.jsonl 249/soft.jsonl 2>&1 >/dev/null | mustmatch "thinkthen: diff: warning: the question digest differs in 272 of 272 paired answers. A different question or threshold gives a different digest."
+thinkthen diff 249/control.jsonl 249/soft.jsonl 2>&1 >/dev/null | mustmatch "thinkthen: diff: warning: the question digest differs in 272 of 272 paired answers. A different question, threshold, or profile gives a different digest."
+```
+
+McNemar on right answers counts every pair that becomes right or stops being right. Here `c2` moves from tied to right, and it counts.
+
+```bash
+cd "$(git rev-parse --show-toplevel)/crates/thinkthen/tests/fixtures/measure"
+
+thinkthen diff small/choose.jsonl small/choose-b.jsonl --key small/choose-key.jsonl --table | tail -1 | mustmatch "A -> B: 2 of 5 changed; red -> green 1; tied -> green 1; gained 1, lost 0 (2 -> 4 right of 5); McNemar p 0.500 on right answers"
 ```

@@ -8,7 +8,7 @@ These files define `thinkthen audit` and `thinkthen diff`. The source is a proto
 | `tests/test_measure.py` | `d64f2d9088c4f6237c0d2a2a8faf06dc51f92cd4674dab20b2a4f7231c01fa4e` |
 | `scripts/tools/README.md` | `fae695523a16d1f2921ee9c73358c36e1613b58ee6acc9d720c6bc6e1d9e7fc7` |
 
-`small/`, `249/`, and the fourteen files directly under `golden/` are byte-for-byte copies of the prototype's `tests/fixtures/audit/` at that commit. `249/` holds `thinkthen decide --details` lines replayed from an earlier experiment's recordings with every key unset: 272 yes/no questions about Beatles songs.
+`small/`, `249/`, and the fourteen files directly under `golden/` are byte-for-byte copies of the prototype's `tests/fixtures/audit/` at that commit. One departs: Quick Fix qf-diff-warnings renamed the meta key in `small/annotate.jsonl` to `questions_sha256`, the key a real `annotate` line carries. The small fixtures share the placeholder digest `00`. The same Quick Fix recaptured `golden/diff-choose.jsonl` and `golden/table/diff-choose.txt` from `thinkthen diff` under the wider McNemar rule. Their McNemar p moved from 1.0 to 0.5. `249/` holds `thinkthen decide --details` lines replayed from an earlier experiment's recordings with every key unset: 272 yes/no questions about Beatles songs.
 
 Three inputs are derived from `small/`. `decide-reversed.jsonl` holds the lines of `decide.jsonl` in reverse. `decide-key-noparts.jsonl` holds the key without `part`. `decide-key-odd.jsonl` holds the key without `part` and without `r6`.
 
@@ -61,7 +61,7 @@ The files under `golden/extra/`, `golden/table/`, and `replay/audit.jsonl` were 
 | `golden/audit-decide.jsonl` | `7f14cfb18393671db70eb08a8cdc8ed31bbe7bc14d55c89bf02fb2a90339f8dd` |
 | `golden/diff-249-cuts.jsonl` | `76dfffe53438500267a548456deea5fdfc454ab05fec0a0e284ba52208475dd3` |
 | `golden/diff-249-soft.jsonl` | `69b1c96922b4c0c5bdc40ab919e0023eb08bac4b10baafd20d3af61b5f53ea44` |
-| `golden/diff-choose.jsonl` | `846ba7f3d93938f89c403eec7b973aed034b3d20cadc06970a4216e2e8b58d09` |
+| `golden/diff-choose.jsonl` | `fd677ab15a786ceaae633b89ddb46badbc36a953f721ef0d4d16e13c1600e44f` |
 | `golden/diff-decide-cuts.jsonl` | `ae00a2514257d35c36658c3c63abe2c92e9dbc711950bdcef7864f891d081682` |
 | `golden/diff-decide-nokey.jsonl` | `ad99f8572fa59ab30168859f119114892656e0e61efbe0e633cba5c93727a284` |
 | `golden/diff-decide-wordings.jsonl` | `593398f0617796069712dcbad935a0b181ed57e1a78c362e41fcaf15c0ccc3f5` |
@@ -74,13 +74,13 @@ The files under `golden/extra/`, `golden/table/`, and `replay/audit.jsonl` were 
 | `golden/table/audit-annotate.txt` | `64c8acad1ccf1dafe3aad01fb5e0cf8f96e7dbde83a9769e2d2bde767713822a` |
 | `golden/table/audit-choose.txt` | `acc4564c3a8e66acad7734311e66810c586f8444a86b67b3a33fcfd179d890c0` |
 | `golden/table/audit-decide.txt` | `6a79b6e1a273539233a5b61df3b6ff4a9bd354504d347a79d05ff5b0beaf2513` |
-| `golden/table/diff-choose.txt` | `a24e14564533ff91f6f038096df9e4d6fafa72ac3555f7177deefa4182868b6d` |
+| `golden/table/diff-choose.txt` | `7f1a11677eba121025ab46b1ad5ffdd6ec09e3cb4ac0d0519960b5ba7301c186` |
 | `golden/table/diff-decide-cuts.txt` | `c56e94bc2e3c09c525e7ef8fc3e2190a5af4216c5d91d769c4176cfea06536c8` |
 | `golden/table/diff-decide-nokey.txt` | `82edef392a2ddee9528a931453abd42c57d99a5c67a98e2984ffcc6e8be9f9c1` |
 | `replay/audit.jsonl` | `54901b07eec7e0569ff8492deb1822058d62e61b4830e0a26bc78c7a68b4d953` |
 | `replay/key.jsonl` | `6469595eef17159ed9563de7b84bdc4396249fb2bb8a704397e5cc31c0619042` |
 | `small/annotate-key.jsonl` | `fcaebb1e268c468d697e6bc6852c4b5aab5198e544552711d7d5c1b27e523b26` |
-| `small/annotate.jsonl` | `fd1fa69b635109d9a243d3ad43ec94fbac645c627967336ce3ed5265e72b42c3` |
+| `small/annotate.jsonl` | `c827c6ca44198b10c0561b49d930d85f74bdba88549169e1cc187e2320c24270` |
 | `small/choose-b.jsonl` | `b227bc45a7fbcb64db89352bda57d0da5eb53a9b9df01f2332c956dc844d8d51` |
 | `small/choose-key.jsonl` | `f908ef59696a2fc7ba06001e3bbaaf53e52427a4adf5d8f2d347e8bb7ca0ddfa` |
 | `small/choose.jsonl` | `b8f2178160860be3a58b4801e72eb68ded2cdfc0fd1675c34a23e95f8e9be7cb` |
