@@ -182,3 +182,22 @@ def test_a_handlers_system_exit_passes_through_unchanged(backend, tmp_path):
     assert backend.wait(8) == 8
     assert stopped(child, "exit", lambda: signal_child(child)) < 0.1
     settle(backend, child, 8)
+
+
+def test_ctrl_c_stops_a_held_polars_column_at_once(backend, tmp_path):
+    """R4-23, the Polars half: a column ``score`` runs on the detachable
+    worker, so ``SIGINT`` with 8 sends held raises ``Cancelled`` within
+    100 ms and the count stays at 8. Regression: a column run on the
+    calling thread, or a worker joined in place of detached."""
+    child = start(HOLD + """
+    import polars as pl
+    urgent = tt.question(score="How urgent?", levels=["Routine.", "Soon.", "Now."])
+    try:
+        engine.score(urgent, pl.Series(texts))
+    except tt.Cancelled as error:
+        print("cancelled", time.monotonic(), error, flush=True)
+    settle()
+    """, child_env(backend, tmp_path, "arm/held"))
+    assert backend.wait(8) == 8
+    assert stopped(child, "cancelled", lambda: signal_child(child)) < 0.1
+    settle(backend, child, 8)

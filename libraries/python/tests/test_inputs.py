@@ -7,8 +7,8 @@ from conftest import child_env, run
 
 PANDAS = ("thinkthen does not read pandas objects: the Python data frame is Polars. "
           "Pass a Polars Series or a list of str, such as series.tolist()")
-ARROW = ("this build reads a str or a list of str, not an Arrow, Polars, or pyarrow "
-         "column. Pass column.to_list()")
+ARROW = ("filter, rank, find, and relate read a list of str, not a column, and annotate and "
+         "recognize read a column only from a Polars frame with on=. Pass column.to_list()")
 DEADLINE_SENTENCE = "No deadline is spelled ``deadline=None`` or ``deadline=-1`` (ADR 0041)."
 README = pathlib.Path(__file__).resolve().parents[1] / "README.md"
 
@@ -26,16 +26,16 @@ REFUSED = """
 
 def test_containers_are_refused_before_any_send(backend, tmp_path):
     """R1-6 and R2-11: pandas objects raise the pandas sentence, since pandas
-    also exposes the Arrow stream. Arrow-shaped objects raise the Arrow
-    sentence until 0106 opens the door. Nothing is sent."""
+    also exposes the Arrow stream. A list-only verb or ``annotate``
+    without ``on=`` raises the Arrow sentence for a column. Nothing is sent."""
     printed = run(REFUSED + """
     import pandas, polars, pyarrow
     said(lambda: tt.decide_many(late, pandas.Series(["a"])))
     said(lambda: tt.filter(late, pandas.Series(["a"])))
     said(lambda: tt.annotate(form, pandas.DataFrame({"body": ["a"]})))
-    said(lambda: tt.decide_many(late, pyarrow.array(["a"])))
-    said(lambda: tt.decide_many(late, polars.Series(["a"])))
-    said(lambda: tt.decide(late, polars.Series(["a"])))
+    said(lambda: tt.filter(late, pyarrow.array(["a"])))
+    said(lambda: tt.rank("Late?", polars.Series(["a", "b"])))
+    said(lambda: tt.annotate(form, polars.DataFrame({"body": ["a"]})))
     """, child_env(backend, tmp_path))
     assert printed.splitlines() == 3 * [f"UsageError {PANDAS}"] + 3 * [f"UsageError {ARROW}"]
     assert backend.count() == 0

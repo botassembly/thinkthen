@@ -15,7 +15,16 @@ engine = tt.Engine(throttle=8, cache=False)
 engine.decide_many(refund, reviews)
 ```
 
-`None` means "not sure". A call reads one `str`, or a list, tuple, or other iterable of `str`, whole before its first request. A pandas object is refused, since the Python data frame is Polars. A Polars or Arrow column is refused until ticket 0106 opens that door. `examples.json` holds one checked example for each function.
+`None` means "not sure". A call reads one `str`, or a list, tuple, or other iterable of `str`, whole before its first request. A pandas object is refused, since the Python data frame is Polars. `examples.json` holds one checked example for each function.
+
+`decide`, `decide_many`, `choose`, `score`, and `tag` also read a Polars `Series` or another Arrow column in place, with no copy, in one engine call. A `Series` gets a `Series` back, and any other column gets a list. `annotate` and `recognize` read a Polars `DataFrame` with `on=`, the name of the text column:
+
+```python
+df = tt.annotate("form.json", df, on="body")  # one new column per question
+names = tt.recognize(df, kinds=["product"], on="body")  # row, text, kind, start, end, strength
+```
+
+`filter`, `rank`, `find`, and `relate` read lists only. The optional extra `thinkthen[polars]` names the tested Polars floor. The package never imports Polars itself. A warm Polars pool hangs a forked child, so start children with `spawn`.
 
 The module functions use one engine that the environment configures: `THINKTHEN_BASE_URL`, `THINKTHEN_CACHE`, and the rest. `tt.Engine` takes `base_url`, `model`, `throttle`, `max_requests`, `cache`, and `cache_bytes` as keywords and reads the environment for the rest. The key comes only from `THINKTHEN_API_KEY`. The throttle is the number of requests in flight. It is one per loaded copy of this package: the first explicit throttle sets it, and a second, different one raises `UsageError`.
 

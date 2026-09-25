@@ -11,7 +11,8 @@ use thinkthen::{
 };
 
 use crate::asked::{Asked, Edge, Question, QuestionSet, Recognize, Recognized, Relate};
-use crate::input::{controls, entities, text, texts, whole};
+use crate::frame::ask_column;
+use crate::input::{controls, entities, is_column, text, texts, whole};
 use crate::worker::{Token, run};
 use crate::{guard, raised, usage};
 
@@ -20,8 +21,8 @@ const MAX_REQUESTS: &str = "a request limit is a whole number of 1 or more";
 const CACHE_BYTES: &str = "a cache cap is a whole number of bytes above zero";
 const CACHE: &str = "cache is a folder path, False for no cache, or True for the default folder";
 
-type Arg<'a, 'py> = Option<&'a Bound<'py, PyAny>>;
-type Held<'a, 'py> = Option<&'a Bound<'py, Token>>;
+pub(crate) type Arg<'a, 'py> = Option<&'a Bound<'py, PyAny>>;
+pub(crate) type Held<'a, 'py> = Option<&'a Bound<'py, Token>>;
 
 /// One record and its place in the caller's list.
 #[derive(Debug)]
@@ -33,7 +34,7 @@ impl Evidence for Indexed {
     }
 }
 
-fn answer(py: Python<'_>, answer: Answer) -> Py<PyAny> {
+pub(crate) fn answer(py: Python<'_>, answer: Answer) -> Py<PyAny> {
     match answer {
         Answer::Yes => PyBool::new(py, true).to_owned().into_any().unbind(),
         Answer::No => PyBool::new(py, false).to_owned().into_any().unbind(),
@@ -51,7 +52,7 @@ fn judgment(py: Python<'_>, value: Judgment) -> PyResult<Py<PyAny>> {
 }
 
 /// A failed annotate question's cause, as the shared cases spell it.
-const fn cause(cause: FailureCause) -> &'static str {
+pub(crate) const fn cause(cause: FailureCause) -> &'static str {
     match cause {
         FailureCause::MissingAnswer => "missing_answer",
         FailureCause::WrongKind => "wrong_kind",
@@ -62,7 +63,7 @@ const fn cause(cause: FailureCause) -> &'static str {
     }
 }
 
-fn annotated(py: Python<'_>, value: Annotated) -> PyResult<Py<PyAny>> {
+pub(crate) fn annotated(py: Python<'_>, value: Annotated) -> PyResult<Py<PyAny>> {
     judgment(
         py,
         match value {
@@ -256,7 +257,7 @@ fn row(py: Python<'_>, values: Vec<(String, Annotated)>) -> PyResult<Py<PyAny>> 
 /// The engine behind `tt.Engine` and the module functions.
 #[pyclass(frozen, name = "_Engine", module = "thinkthen._thinkthen")]
 #[derive(Debug)]
-pub(crate) struct Engine(thinkthen::Engine);
+pub(crate) struct Engine(pub(crate) thinkthen::Engine);
 
 #[pymethods]
 impl Engine {
@@ -317,6 +318,9 @@ impl Engine {
                     &format!("{verb} does not take a {} question", asked.kind()),
                 ));
             }
+            if is_column(evidence)? {
+                return ask_column(&engine, verb, &asked, evidence, deadline, token);
+            }
             let (evidence, controls) = (text(evidence)?, controls(py, deadline, token)?);
             let found = run(py, controls, move |options| match &asked {
                 Asked::Plain(question) => engine.details_with(question, &evidence, options),
@@ -349,6 +353,9 @@ impl Engine {
                     py,
                     &format!("{verb} does not take a {} question", asked.kind()),
                 ));
+            }
+            if cut.is_none() && is_column(records)? {
+                return ask_column(&engine, "decide", &asked, records, deadline, token);
             }
             let (records, controls) = (texts(records)?, controls(py, deadline, token)?);
             let done = run(py, controls, move |options| {

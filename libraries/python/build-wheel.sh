@@ -30,7 +30,7 @@ if len(extensions) != 1:
 for extension in extensions:
     if home in extension:
         wrong.append("its extension names the builder's home")
-    for hook in (b"_live_workers", b"_arrow_probe"):
+    for hook in (b"_live_workers", b"_arrow_probe", b"_raw_producer", b"_probe_trace"):
         if hook in extension:
             wrong.append(f"its extension carries the test hook {hook.decode()}")
 if wrong:

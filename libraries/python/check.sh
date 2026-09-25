@@ -58,15 +58,24 @@ sites=$(grep -o 'catch_unwind(' src/*.rs | wc -l)
 echo "== format, lints, and the Rust unit tests with libpython linked"
 cargo fmt --check
 cargo clippy --locked --offline --all-targets -- -D warnings
+cargo clippy --locked --offline --all-targets --features probe -- -D warnings
 libdir=$("$python" -c 'import sysconfig; print(sysconfig.get_config_var("LIBDIR"))')
 home=$("$python" -c 'import sys; print(sys.base_prefix)')
 LD_LIBRARY_PATH="$libdir${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" PYTHONHOME=$home \
 	cargo test --quiet --no-default-features --lib --locked --offline
 
+echo "== every test NOTES.md names for a refused shape exists (R7-8)"
+cited=$(sed -n 's/.*proved by `\([a-z0-9_]*\)`.*/\1/p' NOTES.md)
+[ -n "$cited" ] || { echo "NOTES.md names no proving test" >&2; exit 1; }
+for name in $cited; do
+	grep -rqE "(fn|def) $name\(" src tests || { echo "NOTES.md names a missing test: $name" >&2; exit 1; }
+done
+
 echo "== the extension, with the test-only probe feature"
 VIRTUAL_ENV=$venv maturin develop --quiet --locked --offline --features probe
 
-echo "== the Python tests, each engine call in a child on its own backend"
+echo "== the Python tests, each engine call in a child on its own backend: the door,"
+echo "   the Arrow safety suite, the exit freeze, throttle equality, and the address proof"
 "$python" -m pytest -q -p no:cacheprovider tests/
 
 echo "== the shared cases and the examples, on the rung's backend"

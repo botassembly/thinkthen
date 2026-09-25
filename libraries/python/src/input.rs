@@ -1,8 +1,9 @@
 //! Reading Python arguments into owned Rust values before any request.
 //!
-//! A container this build does not read is refused first: pandas by its
-//! module, then anything Arrow-shaped (decision 2). A list is read whole, and
-//! a bad item raises `UsageError` naming its index (decision 7).
+//! A container a list verb does not read is refused first: pandas by its
+//! module, then anything Arrow-shaped (decision 2). A column reaches the verbs
+//! that read one through `frame` (ticket 0106). A list is read whole, and a
+//! bad item raises `UsageError` naming its index (decision 7).
 
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyDict, PyInt, PyString};
@@ -15,21 +16,28 @@ use crate::{raised, usage};
 /// The refusal for a pandas object. pandas left the surface on 2026-09-21.
 pub(crate) const PANDAS: &str = "thinkthen does not read pandas objects: the Python data frame is Polars. Pass a Polars Series or a list of str, such as series.tolist()";
 
-/// The refusal for an Arrow-shaped object until ticket 0106 opens the door.
-pub(crate) const ARROW: &str = "this build reads a str or a list of str, not an Arrow, Polars, or pyarrow column. Pass column.to_list()";
+/// The refusal for an Arrow-shaped object where a verb reads a list.
+pub(crate) const ARROW: &str = "filter, rank, find, and relate read a list of str, not a column, and annotate and recognize read a column only from a Polars frame with on=. Pass column.to_list()";
 
 /// The refusal for a deadline that is not a number (R5-8).
 pub(crate) const DEADLINE: &str =
     "deadline is seconds from now, a number; no deadline is spelled None or -1";
 
-/// Refuse pandas, then any Arrow-shaped object, before anything is read.
-pub(crate) fn refuse_container(value: &Bound<'_, PyAny>) -> PyResult<()> {
-    let py = value.py();
+/// Refuse pandas by its module.
+pub(crate) fn refuse_pandas(value: &Bound<'_, PyAny>) -> PyResult<String> {
     let module = value.get_type().module()?;
     let top = module.to_str()?.split('.').next().unwrap_or_default();
     if top == "pandas" {
-        return Err(usage(py, PANDAS));
+        return Err(usage(value.py(), PANDAS));
     }
+    Ok(top.to_owned())
+}
+
+/// Refuse pandas, then any Arrow-shaped object, before anything is read.
+pub(crate) fn refuse_container(value: &Bound<'_, PyAny>) -> PyResult<()> {
+    let py = value.py();
+    let top = refuse_pandas(value)?;
+    let top = top.as_str();
     let arrow = ["__arrow_c_stream__", "__arrow_c_array__", "__dataframe__"];
     if matches!(top, "polars" | "pyarrow")
         || arrow
@@ -37,6 +45,24 @@ pub(crate) fn refuse_container(value: &Bound<'_, PyAny>) -> PyResult<()> {
             .any(|name| value.hasattr(*name).unwrap_or(false))
     {
         return Err(usage(py, ARROW));
+    }
+    Ok(())
+}
+
+/// True for an Arrow column. pandas is refused first, since pandas 3 objects
+/// expose the stream too (decision 1).
+pub(crate) fn is_column(value: &Bound<'_, PyAny>) -> PyResult<bool> {
+    refuse_pandas(value)?;
+    Ok(value.hasattr("__arrow_c_stream__")? || value.hasattr("__arrow_c_array__")?)
+}
+
+/// A Polars frame, or a refusal before any request (decision 4).
+pub(crate) fn polars_frame(value: &Bound<'_, PyAny>, verb: &str) -> PyResult<()> {
+    if refuse_pandas(value)? != "polars" || !value.hasattr("__arrow_c_stream__")? {
+        return Err(usage(
+            value.py(),
+            &format!("{verb} with on= takes a Polars DataFrame; a list of str takes no on="),
+        ));
     }
     Ok(())
 }

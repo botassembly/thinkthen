@@ -6,7 +6,7 @@ opens: libraries/python sdlc/planning/libraries/python.md sdlc/planning/adr/0047
 
 # 0106: Port the Python Polars data frame layer
 
-Status: design accepted; porting in the surface batch (sdlc/planning/one-line-plan-2026-09-25.md). Owner: Claude.
+Status: built 2026-09-25; code review pending. Build record: `sdlc/records/0106-build-port-the-python-polars-data-frame-layer.md`. Owner: Claude.
 
 ## Outcome and authority
 
@@ -146,7 +146,7 @@ Contract 2; state and timing 3; reach 2; proof 4; cost of error 4; total 15. Fin
 ## Review
 
 - Design review: `sdlc/records/2026-09-24-design-review-0105-0106.md` found nine items. This version answers all nine: the missing files and the `_arrow_probe` hook, the R1-24 deadline plant, wall time in the throttle proof, frames other than Polars, the pandas check order, the budgets, a plant for each R4-15 and R5-6 assertion, the dependency versions, and the `NOTES.md` cap. The confirmation (same file) found that 0092's held arm cannot release replies on a timer. The delay arm in decision 10 answers it. The final check (same file) accepted it. The delay arm then moved to ticket 0117. Decision 10 now depends on it, and the tests that use the arm stay here. The amendment below then answered the amendment final check (same file). The final amendment check found that the worker released a foreign producer's batches without the interpreter lock, and change 6 answers it. Change 7 applies the no-paid-backend rule. The paid-backend and release check (same file) accepted changes 6 and 7 with four builder notes. Spike 255 then rewrote change 6 with the exit gate and moved the Rust Polars door to ticket 0120. The spike 255 amendment check (same file) reviews that change: ACCEPT at `760e3a90`, after one round of findings.
-- Code review: pending.
+- Code review: pending. Build record: `sdlc/records/0106-build-port-the-python-polars-data-frame-layer.md`.
 
 ## Evidence
 

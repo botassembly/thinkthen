@@ -1,12 +1,15 @@
 //! The Python binding: `import thinkthen as tt` (ticket 0105, ADR 0047).
 //!
 //! Every call reaches the real engine through the public `thinkthen` API on a
-//! detachable worker thread (`worker`). This file holds the module edge: the
+//! detachable worker thread (`worker`). A Polars column or frame crosses
+//! through the Arrow door (`arrow`, `frame`, ticket 0106). This file holds the module edge: the
 //! six exception classes, the one table from an error kind to its class, and
 //! the one panic guard.
 
+mod arrow;
 mod asked;
 mod engine;
+mod frame;
 mod input;
 mod worker;
 
@@ -166,8 +169,20 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<asked::Entity>()?;
     module.add_class::<asked::Edge>()?;
     module.add_class::<asked::Recognized>()?;
+    module.add_class::<arrow::Arrow>()?;
+    module.add_function(wrap_pyfunction!(frame::_annotate_frame, module)?)?;
+    module.add_function(wrap_pyfunction!(frame::_recognize_frame, module)?)?;
+    // A column's batches are released behind this hook at exit (change 6).
+    let gate = wrap_pyfunction!(arrow::_exit_gate, module)?;
+    py.import("atexit")?.call_method1("register", (&gate,))?;
+    module.add_function(gate)?;
     #[cfg(feature = "probe")]
-    module.add_function(wrap_pyfunction!(worker::_live_workers, module)?)?;
+    {
+        module.add_function(wrap_pyfunction!(worker::_live_workers, module)?)?;
+        module.add_function(wrap_pyfunction!(frame::_arrow_probe, module)?)?;
+        module.add_function(wrap_pyfunction!(arrow::_raw_producer, module)?)?;
+        module.add_function(wrap_pyfunction!(arrow::_probe_trace, module)?)?;
+    }
     Ok(())
 }
 

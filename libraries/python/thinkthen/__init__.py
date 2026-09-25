@@ -2,7 +2,11 @@
 
 Ten verbs, ``decide_many``, ``details``, ``question``, and ``usage``. A call
 takes one ``str`` or a list, tuple, or other iterable of ``str``. ``None``
-means "not sure". Every call reaches the real engine on its own worker
+means "not sure". ``decide``, ``choose``, ``score``, ``tag``, and
+``decide_many`` also take a Polars ``Series`` and give one back, and
+``annotate`` and ``recognize`` take a Polars ``DataFrame`` with ``on=``. The
+column crosses in place through the Arrow stream form, and the engine makes one
+call over it. This package never imports Polars. Every call reaches the real engine on its own worker
 thread, so Ctrl-C stops it at once and raises ``Cancelled``, a subclass of
 both ``KeyboardInterrupt`` and ``ThinkThenError``.
 
@@ -99,6 +103,24 @@ def _asked(value, verb, **parts):
     return value
 
 
+def _rebuilt(value, answer):
+    """A Polars input gets its answers back through its own class."""
+    if isinstance(answer, _thinkthen._Arrow):
+        return type(value)(answer)
+    return answer
+
+
+class _Stream:
+    """A frame answer offered only as a stream, since Polars reads an object
+    with ``__arrow_c_array__`` as one array."""
+
+    def __init__(self, held):
+        self._held = held
+
+    def __arrow_c_stream__(self, requested_schema=None):
+        return self._held.__arrow_c_stream__(requested_schema)
+
+
 def _ordering(value, verb):
     if isinstance(value, str):
         return Question._ordering(verb, value)
@@ -145,27 +167,28 @@ class Engine:
 
     def decide(self, question, text, *, deadline=None, token=None):
         """``True``, ``False``, or ``None`` when the rule says "not sure"."""
-        return self._engine.ask("decide", _asked(question, "decide"), text, deadline, token)
+        return _rebuilt(text, self._engine.ask("decide", _asked(question, "decide"), text,
+                                                deadline, token))
 
     def decide_many(self, question, records, *, deadline=None, token=None):
         """One ``decide`` answer per record, in input order."""
-        return self._engine.many("decide_many", _asked(question, "decide_many"), records,
-                                 deadline, token)
+        return _rebuilt(records, self._engine.many("decide_many", _asked(question, "decide_many"),
+                                                   records, deadline, token))
 
     def choose(self, question, text, *, options=None, deadline=None, token=None):
         """The option picked, or ``None`` when the rule says "not sure"."""
-        return self._engine.ask("choose", _asked(question, "choose", options=options), text,
-                                deadline, token)
+        return _rebuilt(text, self._engine.ask("choose", _asked(question, "choose", options=options),
+                                                text, deadline, token))
 
     def score(self, question, text, *, levels=None, deadline=None, token=None):
         """The position on the question's levels, from 0 to K-1."""
-        return self._engine.ask("score", _asked(question, "score", levels=levels), text,
-                                deadline, token)
+        return _rebuilt(text, self._engine.ask("score", _asked(question, "score", levels=levels),
+                                                text, deadline, token))
 
     def tag(self, question, text, *, labels=None, deadline=None, token=None):
         """The labels that reach the cut."""
-        return self._engine.ask("tag", _asked(question, "tag", labels=labels), text,
-                                deadline, token)
+        return _rebuilt(text, self._engine.ask("tag", _asked(question, "tag", labels=labels),
+                                                text, deadline, token))
 
     def details(self, question, text, *, deadline=None, token=None):
         """The command's ``--details`` document, as a ``dict``."""
@@ -195,18 +218,23 @@ class Engine:
         [(index, unit, probability)] = found
         return {"index": index, "unit": unit, "probability": probability}
 
-    def annotate(self, questions, records, *, deadline=None, token=None):
+    def annotate(self, questions, records, *, on=None, deadline=None, token=None):
         """Ask every question in a named set of every record.
 
         ``questions`` is a question-set file path or the file's ``dict``.
         One ``dict`` comes back per record. A question the backend failed
-        reads ``{"failed": {"kind": "backend", "cause": ...}}``.
+        reads ``{"failed": {"kind": "backend", "cause": ...}}``. With ``on=``,
+        ``records`` is a Polars ``DataFrame``, and the frame comes back with
+        one new column per question. A failed question's column holds text.
         """
         asked = _spec(_thinkthen._QuestionSet, questions)
-        return self._engine.annotate(asked, records, deadline, token)
+        if on is None:
+            return self._engine.annotate(asked, records, deadline, token)
+        return type(records)(_Stream(_thinkthen._annotate_frame(self._engine, asked, records,
+                                                                on, deadline, token)))
 
     def recognize(self, text, ask=None, *, kinds=None, relations=None, either=None,
-                  threshold=None, relation_threshold=None, deadline=None, token=None):
+                  threshold=None, relation_threshold=None, on=None, deadline=None, token=None):
         """Find every name in a text and say what kind it is.
 
         ``kinds`` lists kind words, or maps each to a description.
@@ -214,14 +242,21 @@ class Engine:
         and ``either`` names the rules that read both ways. ``ask`` is a
         file path or the file's ``dict`` in place of the keywords. Offsets
         count Python string positions, so ``text[e.start:e.end]`` is the
-        name.
+        name. With ``on=``, ``text`` is a Polars ``DataFrame``, and a frame
+        comes back with one row per name: ``row`` (counted from 1), ``text``,
+        ``kind``, ``start``, ``end``, and ``strength``. Relations take one text.
         """
+        if on is not None and relations is not None:
+            raise UsageError("recognize with on= takes no relations; ask them of one text")
         if ask is not None:
             spec = _spec(_thinkthen._Recognize, ask)
         else:
             named = kinds.items() if isinstance(kinds, dict) else [(k, None) for k in kinds or ()]
             spec = _thinkthen._Recognize._build(list(named), _rules(relations, either),
                                                threshold, relation_threshold)
+        if on is not None:
+            return type(text)(_Stream(_thinkthen._recognize_frame(self._engine, spec, text, on,
+                                                                  deadline, token)))
         return self._engine.recognize(spec, text, deadline, token)
 
     def relate(self, entities, ask=None, *, relations=None, either=None, threshold=None,
@@ -291,15 +326,15 @@ def find(question, units, *, deadline=None, token=None):
     return _engine().find(question, units, deadline=deadline, token=token)
 
 
-def annotate(questions, records, *, deadline=None, token=None):
-    return _engine().annotate(questions, records, deadline=deadline, token=token)
+def annotate(questions, records, *, on=None, deadline=None, token=None):
+    return _engine().annotate(questions, records, on=on, deadline=deadline, token=token)
 
 
 def recognize(text, ask=None, *, kinds=None, relations=None, either=None, threshold=None,
-              relation_threshold=None, deadline=None, token=None):
+              relation_threshold=None, on=None, deadline=None, token=None):
     return _engine().recognize(text, ask, kinds=kinds, relations=relations, either=either,
                                threshold=threshold, relation_threshold=relation_threshold,
-                               deadline=deadline, token=token)
+                               on=on, deadline=deadline, token=token)
 
 
 def relate(entities, ask=None, *, relations=None, either=None, threshold=None,

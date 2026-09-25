@@ -5,7 +5,9 @@ that loopback port. Each success case runs on its own case arm, with each
 expected request digest recomputed for the URL the backend served. Every
 case ends as pass, fail, or not run with its reason, and the three counts
 sum to the file's count. A case is not run only by a rule the library
-cannot meet, never by its id.
+cannot meet, never by its id. Each typed, ``decide_many``, and ``annotate``
+case also runs over a Polars column or frame, and must give the list form's
+values.
 """
 
 import hashlib
@@ -15,6 +17,8 @@ import os
 import pathlib
 import sys
 import tempfile
+
+import polars as pl
 
 import thinkthen as tt
 
@@ -86,6 +90,8 @@ def single(engine, question, text, success, base):
     detailed(details, expected)
     typed = getattr(engine, question.kind)(question, text)
     same("typed", typed, expected["bare"])
+    same("column", getattr(engine, question.kind)(question, pl.Series([text])).to_list(),
+         [expected["bare"]])
     counters = success.get("counters")
     if counters:
         cached = tt.Engine(base_url=base, cache=tempfile.mkdtemp())
@@ -107,6 +113,12 @@ def annotated(engine, case, texts, success):
         failed += isinstance(value, dict) and "failed" in value
         same("bare", value, expected["bare"])
     same("failed", failed, success.get("failed_questions", 0))
+    frame = engine.annotate(case["question_set"], pl.DataFrame({"record": texts}), on="record")
+    for got, listed in zip(frame.drop("record").to_dicts(), records):
+        for name, value in listed.items():
+            # A failed question's column holds each answer as text.
+            widened = isinstance(got[name], str) and not isinstance(value, str)
+            same("frame", json.loads(got[name]) if widened else got[name], value)
 
 
 def entity(one, place=True):
@@ -153,6 +165,7 @@ def succeeded(port, case):
                     success["operation"]["indexes"])
     if kind == "decide_many":
         answers = engine.decide_many(question, texts)
+        same("column", engine.decide_many(question, pl.Series(texts)).to_list(), answers)
         return same("bare", answers, [answer["bare"] for answer in success["answers"]])
     return single(engine, question, texts[0], success, base)
 
