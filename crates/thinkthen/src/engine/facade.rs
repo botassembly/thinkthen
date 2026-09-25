@@ -12,13 +12,14 @@ use std::sync::mpsc::Receiver;
 use std::time::Duration;
 
 use crate::core::{
-    Answer, AnswerOutcome, Backend, BackendProfile, Evidence, Find, FindAnswer, Outcome, Plan,
-    Question, Threshold, Value,
+    Answer, AnswerOutcome, Backend, BackendProfile, Evidence, Find, FindAnswer, ModelName, Outcome,
+    Plan, Question, Threshold, Value,
 };
 use crate::engine::annotate_schedule;
 use crate::engine::error::Error;
 use crate::engine::http::Client;
 use crate::engine::prepared_request::PreparedRequests;
+use crate::engine::process::Guarded;
 use crate::engine::recorder::Recorder;
 use crate::engine::request::{self, Transport};
 use crate::engine::schedule;
@@ -31,20 +32,29 @@ pub(crate) use crate::engine::annotate_schedule::{
 pub(crate) use crate::engine::http::Key;
 pub(crate) use crate::engine::prepared_request::{Answered, PreparedChunk as Chunk};
 pub(crate) use crate::engine::schedule::{Completed, Input, InputPort, Outcome as RunOutcome};
+pub(crate) use annotate::{GroupAnswer, PreparedGroup, assemble, check_model};
 pub(crate) use recognize::{Recognized, TokenInput};
 pub(crate) use relate::{Execution, Logical, Method, PreparedRelation, relations};
 
+mod annotate;
+#[cfg(test)]
+#[cfg(feature = "cli")]
+mod fork_tests;
 mod recognize;
 mod relate;
 
 /// The folders replies are replayed from and recorded to.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub(crate) struct Storage {
     pub(crate) record: Option<PathBuf>,
     pub(crate) replay: Option<PathBuf>,
     pub(crate) private_default: bool,
     pub(crate) cache_answers: bool,
 }
+
+/// Where a live attempt's key comes from: the command's variable, read at
+/// send time, or the value a library caller captured.
+pub(crate) type KeyReader = Arc<dyn Fn() -> Result<Key, Error> + Send + Sync>;
 
 /// Every engine setting, resolved at the host edge before the engine exists.
 pub(crate) struct Settings {
@@ -57,29 +67,39 @@ pub(crate) struct Settings {
     pub(crate) width: Option<Width>,
     pub(crate) storage: Storage,
     /// Read only when a live attempt is about to go out.
-    pub(crate) key: fn() -> Result<Key, Error>,
+    pub(crate) key: KeyReader,
     pub(crate) usage: Arc<Counters>,
 }
 
 /// One immutable engine: its settings and the retained state behind [`Engine::state`].
 ///
-/// It holds no resident thread. Ticket 0096 guards `state`.
+/// It holds no resident thread. Every setting here is plain data a forked
+/// child may read. Everything that can hold a lock lives in `state`. A clone
+/// shares that state.
+#[derive(Clone)]
 pub(crate) struct Engine {
     backend: Backend,
     profile: Option<BackendProfile>,
+    timeout: Duration,
     max_retries: u32,
     retry_wait: Duration,
-    key: fn() -> Result<Key, Error>,
-    width: usize,
-    state: State,
+    key: KeyReader,
+    /// The explicit width or `None`, applied again in each process.
+    width: Option<Width>,
+    storage: Storage,
+    usage_path: Option<PathBuf>,
+    recording: bool,
+    state: Arc<Guarded<State>>,
 }
 
 /// The retained pool and its width gate, the recorder and cache coordinator,
-/// and the process counters.
+/// the process counters, and the width this process's calls follow.
+#[derive(Debug)]
 struct State {
     client: Client,
     recorder: Recorder,
     usage: Arc<Counters>,
+    width: usize,
 }
 
 /// One typed judgment and the metadata its result carries.
@@ -101,35 +121,74 @@ impl Engine {
     ///
     /// Nothing here reads the key, opens a folder for writing, counts, or connects.
     pub(crate) fn new(settings: Settings) -> Result<Self, Error> {
-        let storage = settings.storage;
+        Self::built_by(settings, std::process::id())
+    }
+
+    /// Build this engine's state as process `pid`, which then owns it.
+    fn built_by(settings: Settings, pid: u32) -> Result<Self, Error> {
+        let mut engine = Self {
+            usage_path: settings.usage.path().map(PathBuf::from),
+            backend: settings.backend,
+            profile: settings.profile,
+            timeout: settings.timeout,
+            max_retries: settings.max_retries,
+            retry_wait: settings.retry_wait,
+            key: settings.key,
+            width: settings.width,
+            storage: settings.storage,
+            recording: false,
+            state: Arc::new(Guarded::empty()),
+        };
+        let (usage, cancel) = (settings.usage, Cancel::default());
+        let state = engine
+            .state
+            .current(pid, crate::engine::rebuild_wait(&cancel), || {
+                engine.fresh(pid, usage, &cancel)
+            })?;
+        engine.recording = state.recorder.reported();
+        Ok(engine)
+    }
+
+    /// State built from the immutable settings alone, as process `pid`.
+    fn fresh(&self, pid: u32, usage: Arc<Counters>, cancel: &Cancel) -> Result<State, Error> {
+        let storage = &self.storage;
         let recorder = Recorder::of_private(
             storage.record.as_deref(),
             storage.replay.as_deref(),
             storage.private_default,
             storage.cache_answers,
         )?;
-        let width = crate::engine::process_width()
-            .select(settings.width)
-            .map_err(Error::WidthActive)?
-            .get();
-        Ok(Self {
-            state: State {
-                client: Client::new(settings.timeout, settings.backend.is_secure()),
-                recorder,
-                usage: settings.usage,
-            },
-            backend: settings.backend,
-            profile: settings.profile,
-            max_retries: settings.max_retries,
-            retry_wait: settings.retry_wait,
-            key: settings.key,
+        let widths = crate::engine::process_width_of(pid, cancel)?;
+        let width = widths.select(self.width).map_err(Error::WidthActive)?.get();
+        Ok(State {
+            client: Client::new(self.timeout, self.backend.is_secure(), widths),
+            recorder,
+            usage,
             width,
         })
     }
 
-    /// The one door to the retained state.
-    const fn state(&self) -> &State {
-        &self.state
+    /// The one door to the retained state. It compares this process with the
+    /// state's owner first, and a forked child gets fresh state and fresh
+    /// counters before anything inherited is touched.
+    fn state(&self, cancel: &Cancel) -> Result<Arc<State>, Error> {
+        let pid = std::process::id();
+        self.state
+            .current(pid, crate::engine::rebuild_wait(cancel), || {
+                let usage = Arc::new(Counters::new(self.usage_path.clone()));
+                self.fresh(pid, usage, cancel)
+            })
+    }
+
+    /// The same engine asking another model. It shares this engine's state:
+    /// the pool, the recorder, the counters, and the width.
+    pub(crate) fn with_model(&self, model: ModelName) -> Result<Self, Error> {
+        let backend = Backend::resolve(Some(self.backend.url().as_str()), None, model.as_str())
+            .map_err(|_| Error::Defect("a resolved address was refused again"))?;
+        Ok(Self {
+            backend,
+            ..self.clone()
+        })
     }
 
     /// The address and model every request of this engine names.
@@ -139,16 +198,17 @@ impl Engine {
 
     /// Whether a folder the caller named, rather than the private default, is in use.
     pub(crate) const fn recording(&self) -> bool {
-        self.state().recorder.reported()
+        self.recording
     }
 
-    /// The process counters, cumulative since the process began.
+    /// The process counters, cumulative since the process began, or since
+    /// this process was forked.
     #[allow(
         dead_code,
         reason = "the command reads durable totals; ticket 0086 exposes this snapshot"
     )]
-    pub(crate) fn usage(&self) -> Counts {
-        self.state().usage.snapshot()
+    pub(crate) fn usage(&self) -> Result<Counts, Error> {
+        Ok(self.state(&Cancel::default())?.usage.snapshot())
     }
 
     /// Prepare every request one plan needs, split under the backend limits.
@@ -200,14 +260,15 @@ impl Engine {
         cancel: &Cancel,
         mut each: impl FnMut(Answered) -> Result<(), E>,
     ) -> Result<(), E> {
+        let state = self.state(cancel)?;
         for chunk in chunks {
             each(request::ask_sent(
                 &self.backend,
                 &chunk.plan,
                 chunk.request,
-                &self.state().recorder,
+                &state.recorder,
                 cancel,
-                self.transport(),
+                self.transport(&state),
                 || (self.key)().map_err(E::from),
             )?)?;
         }
@@ -231,8 +292,9 @@ impl Engine {
         R: Send,
         E: From<Error> + Send,
     {
+        let width = self.state(cancel)?.width;
         schedule::run_cancelled(
-            self.width,
+            width,
             held,
             cancel,
             start_reader,
@@ -266,8 +328,9 @@ impl Engine {
         R: Send,
         E: From<Error> + Send,
     {
+        let width = self.state(cancel)?.width;
         annotate_schedule::run(
-            self.width,
+            width,
             streams,
             cancel,
             start_reader,
@@ -282,19 +345,19 @@ impl Engine {
     }
 
     fn ask(&self, plan: &Plan, cancel: &Cancel) -> Result<Answered, Error> {
+        let state = self.state(cancel)?;
         request::ask_profile(
             &self.backend,
             plan,
             self.profile.as_ref(),
-            &self.state().recorder,
+            &state.recorder,
             cancel,
-            self.transport(),
-            self.key,
+            self.transport(&state),
+            || (self.key)(),
         )
     }
 
-    fn transport(&self) -> Transport<'_> {
-        let state = self.state();
+    fn transport<'a>(&self, state: &'a State) -> Transport<'a> {
         Transport {
             client: &state.client,
             max_retries: self.max_retries,

@@ -5,14 +5,17 @@ pub(crate) mod annotate_schedule;
 pub(crate) mod args;
 pub(crate) mod asked;
 pub(crate) mod asking;
+mod audit;
 pub(crate) mod cache;
-pub(crate) mod config;
+mod check;
+mod diff;
 pub(crate) mod edge;
 pub(crate) mod failure;
 mod file_size;
 pub(crate) mod find;
 mod interrupt;
 pub(crate) mod judge;
+mod measure;
 pub(crate) mod normalize;
 pub(crate) mod profile;
 pub(crate) mod recognize;
@@ -48,6 +51,18 @@ pub fn entry() -> ExitCode {
     }
     if let Some(Command::Transform(arguments)) = &cli.command {
         return match transform::run(&arguments.command, stdout.lock()) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(failure) => failure::report(&failure, stderr.lock()),
+        };
+    }
+    if let Some(Command::Audit(arguments)) = &cli.command {
+        return match audit::run(arguments, stdout.lock()) {
+            Ok(()) => ExitCode::SUCCESS,
+            Err(failure) => failure::report(&failure, stderr.lock()),
+        };
+    }
+    if let Some(Command::Diff(arguments)) = &cli.command {
+        return match diff::run(arguments, stdout.lock()) {
             Ok(()) => ExitCode::SUCCESS,
             Err(failure) => failure::report(&failure, stderr.lock()),
         };
@@ -113,7 +128,10 @@ fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitC
             args::CacheCommand::Prune(arguments) => cache::prune(arguments, environment, writer),
         },
         Some(Command::Status(arguments)) => status::run(arguments, environment, writer),
-        Some(Command::Transform(_)) => Err(Failure::Defect("the catalog returns before setup")),
+        Some(Command::Check(arguments)) => check::run(arguments, environment, writer),
+        Some(Command::Transform(_) | Command::Audit(_) | Command::Diff(_)) => Err(Failure::Defect(
+            "the catalog, audit, and diff return before setup",
+        )),
         None => Err(Failure::Defect("no command and no version was parsed")),
     }
 }

@@ -8,7 +8,7 @@ use std::time::Duration;
 
 use crate::core::KEY_VAR;
 
-use crate::cli::config::{self, Config};
+use crate::config::{self, Config};
 use crate::engine::error::Error as EngineError;
 use crate::engine::facade::Key;
 use crate::engine::usage::Counters;

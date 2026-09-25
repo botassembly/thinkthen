@@ -15,6 +15,11 @@ pub(crate) enum Command {
     /// Report resolved local settings, cache size, and local usage counts.
     Status(StatusArguments),
 
+    /// Check that a backend you name works with this tool, over four fixed requests.
+    ///
+    /// It exits 0 only when no finding is critical. Every request is real spend.
+    Check(CheckArguments),
+
     /// Answer one yes or no question about a text. A record run exits 0 when
     /// it completes without a partial or whole-run failure. The printed
     /// values carry the individual answers.
@@ -192,6 +197,36 @@ pub(crate) enum Command {
 
     /// List or print the built-in jq transforms without running them.
     Transform(crate::cli::transform::TransformArguments),
+
+    /// Grade saved decide and choose answers against an answer key.
+    ///
+    /// RESULTS holds the lines `decide` or `choose` printed, and KEY holds one
+    /// JSON object per record: its id, the right value, and an optional part of
+    /// tune or held. audit prints agreement with its 95% interval, both kinds of
+    /// disagreement, AUC, calibration, a coverage curve, and a suggested cut
+    /// tuned on one part and checked on the other. An answer inside a band is
+    /// not sure, and it counts apart from right and wrong.
+    ///
+    /// audit sends no request and reads no key.
+    ///
+    /// To grade a recording, replay it with --details and pass the output:
+    ///
+    /// thinkthen decide 'Is it red?' --jsonl --details --replay runs/red < records.jsonl | thinkthen audit - key.jsonl
+    Audit(crate::cli::audit::AuditArguments),
+
+    /// Show which saved answers changed between two runs or two cuts.
+    ///
+    /// A and B hold the lines `decide` or `choose` printed for the same
+    /// records. Without B, diff compares A under --threshold with A under
+    /// --compare-threshold. Two cuts on one run cost nothing. The probabilities
+    /// are already saved. Each changed answer prints on one line, and a summary
+    /// with its McNemar test prints last. With --key, each change says whether
+    /// it gained or lost a right answer. An answer inside a band is not sure.
+    ///
+    /// diff sends no request and reads no key.
+    ///
+    /// thinkthen diff runs/before.jsonl runs/after.jsonl --key key.jsonl --table
+    Diff(crate::cli::diff::DiffArguments),
 }
 
 #[derive(Args, Debug)]
@@ -223,7 +258,15 @@ pub(crate) struct PruneArguments {
 
 impl Command {
     pub(crate) const fn reads_input(&self) -> bool {
-        !matches!(self, Self::Cache(_) | Self::Status(_) | Self::Transform(_))
+        !matches!(
+            self,
+            Self::Cache(_)
+                | Self::Status(_)
+                | Self::Check(_)
+                | Self::Transform(_)
+                | Self::Audit(_)
+                | Self::Diff(_)
+        )
     }
 
     /// The input file one command named, if any.
@@ -239,7 +282,12 @@ impl Command {
             Self::Annotate(arguments) => arguments.common.input.as_deref(),
             Self::Recognize(arguments) => arguments.common.input.as_deref(),
             Self::Relate(arguments) => arguments.common.input.as_deref(),
-            Self::Cache(_) | Self::Status(_) | Self::Transform(_) => None,
+            Self::Cache(_)
+            | Self::Status(_)
+            | Self::Check(_)
+            | Self::Transform(_)
+            | Self::Audit(_)
+            | Self::Diff(_) => None,
         }
     }
 
@@ -256,7 +304,12 @@ impl Command {
             Self::Annotate(arguments) => arguments.common.timeout,
             Self::Recognize(arguments) => arguments.common.timeout,
             Self::Relate(arguments) => arguments.common.timeout,
-            Self::Cache(_) | Self::Status(_) | Self::Transform(_) => 1,
+            Self::Check(arguments) => arguments.timeout,
+            Self::Cache(_)
+            | Self::Status(_)
+            | Self::Transform(_)
+            | Self::Audit(_)
+            | Self::Diff(_) => 1,
         }
     }
 }
@@ -266,4 +319,20 @@ pub(crate) struct StatusArguments {
     /// Print one closed JSON object instead of name-value lines.
     #[arg(long)]
     pub(crate) json: bool,
+}
+
+#[derive(Args, Debug)]
+pub(crate) struct CheckArguments {
+    /// The base the requests are posted under, which outranks THINKTHEN_BASE_URL.
+    #[arg(long, value_name = "URL")]
+    pub(crate) url: Option<String>,
+    /// The model named in each request, resolved as every command resolves it.
+    #[arg(long, value_name = "NAME")]
+    pub(crate) model: Option<String>,
+    /// Positive seconds that bound one attempt from connect to last byte, and each retry wait.
+    #[arg(long, value_name = "SECONDS", default_value_t = 30)]
+    pub(crate) timeout: u64,
+    /// Print the four request bodies and stop. No key is read and nothing is sent.
+    #[arg(long)]
+    pub(crate) dry_run: bool,
 }

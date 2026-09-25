@@ -29,9 +29,23 @@ The answer cache is on by default. Cache entries contain the complete request an
 ## What it is not for
 
 - **A loop that needs many decisions a second.** One measured call took over 300 ms, and a shell tool adds a process start on top of that. No pipeline of separate processes reaches that rate. Record mode through a `coproc` serves a steady loop from one long-lived process, and that is the ceiling.
-- **A call from inside a program written in another language.** Records, recordings, transforms, and exit codes buy a program nothing, because the program already holds its data. The honest answer there is a library over the same pure core, and `specification/roadmap.md` holds it for after version one.
+- **A call from inside a program written in another language.** Records, recordings, transforms, and exit codes buy a program nothing, because the program already holds its data. A Rust program uses the library below. The other languages wait on their own tickets, and `specification/roadmap.md` holds them.
 
 `sdlc/planning/ten-use-cases.md` measured both against ten real uses.
+
+## Use it from Rust
+
+The same crate is a library. A dependency on `thinkthen` with `default-features = false` leaves out the command and its argument parser. Every call blocks and returns `Result<_, thinkthen::Error>`. The error has six kinds, and `retryable()` says whether the same call may succeed later.
+
+```rust
+let engine = thinkthen::Engine::from_env()?;
+let question = thinkthen::Question::decide("Asks for money back.")?.cut_at(0.9)?;
+for row in engine.filter(&question, ["Please refund my order.", "Where is my parcel?"]) {
+    println!("{}", row?);
+}
+```
+
+`Engine::from_env` reads the same variables and configuration file as the command. `Engine::builder()` sets each value in code, and `throttle(n)` caps the requests in flight for the whole process. The bulk calls `filter`, `decide_many`, and `annotate` read any iterator lazily and return rows in input order. `sdlc/planning/libraries/rust.md` holds the goals, and ticket 0084 holds the frozen declarations.
 
 ## Four names
 
@@ -80,9 +94,10 @@ sdlc/scripts/install
 sdlc/scripts/lint
 sdlc/scripts/test
 sdlc/scripts/spec
+sdlc/scripts/surfaces
 ```
 
-Cheapest rung first. No gate touches the network. `.github/workflows/gate.yml` runs the same four rungs on every push and every pull request.
+Cheapest rung first. No gate touches the network. `.github/workflows/gate.yml` runs the first four rungs on every push and every pull request.
 
 ## License
 

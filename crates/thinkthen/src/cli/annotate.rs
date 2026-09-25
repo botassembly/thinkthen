@@ -10,7 +10,7 @@ use crate::core::{Backend, Framing, ModelName, Plan, Pointer, QuestionSet, Readi
 use crate::args::{AnnotateArguments, Common};
 use crate::asking::{self, Folders};
 use crate::edge::{self, Environment};
-use crate::engine::facade::{Chunk, Engine};
+use crate::engine::facade::Engine;
 use crate::failure::Failure;
 use crate::profile::{self, Mismatch};
 use crate::schedule::{Judged, Output};
@@ -19,7 +19,7 @@ use crate::table::{Kind as TableKind, Rows as TableRows};
 mod aggregation;
 mod plan;
 
-pub(crate) use aggregation::{GroupAnswer, check_model};
+pub(crate) use crate::engine::facade::{GroupAnswer, PreparedGroup, check_model};
 use plan::{dry_run, dry_run_record};
 
 #[expect(
@@ -254,46 +254,12 @@ impl<'a> Judging<'a> {
         places: Vec<usize>,
     ) -> Result<PreparedGroup, Failure> {
         let plan = plan_for(&self.set, &places, self.engine.backend(), base, record)?;
-        let chunks = self.engine.split(&plan)?;
-        let places = chunks
-            .iter()
-            .scan(places.into_iter(), |places, chunk| {
-                Some(places.by_ref().take(chunk.plan.questions().len()).collect())
-            })
-            .collect();
-        Ok(PreparedGroup { places, chunks })
+        Ok(self.engine.prepare_group(&plan, places)?)
     }
 
     pub(crate) fn answer_group(&self, group: PreparedGroup) -> Result<GroupAnswer, Failure> {
-        let mut answered = Vec::with_capacity(group.chunks.len());
-        let mut model = None;
-        let mut places = group.places.into_iter();
-        self.engine
-            .ask_chunks(group.chunks, self.environment.cancel(), |result| {
-                check_model(
-                    &mut model,
-                    result.reply.model(),
-                    self.engine.backend().model(),
-                )?;
-                answered.push(aggregation::ChunkAnswer {
-                    places: places
-                        .next()
-                        .ok_or(Failure::Defect("an annotate chunk has no question places"))?,
-                    reply: result.reply,
-                    digest: result.request.as_str().to_owned(),
-                    requests_sent: result.requests_sent,
-                    replayed: result.replayed,
-                });
-                Ok::<(), Failure>(())
-            })?;
-        Ok(GroupAnswer { answered, model })
+        Ok(self.engine.answer_group(group, self.environment.cancel())?)
     }
-}
-
-/// One group's chunks, prepared once, and the question places each chunk asks.
-pub(crate) struct PreparedGroup {
-    places: Vec<Vec<usize>>,
-    chunks: Vec<Chunk>,
 }
 
 fn collisions(set: &QuestionSet, record: &Record) -> Result<(), Failure> {

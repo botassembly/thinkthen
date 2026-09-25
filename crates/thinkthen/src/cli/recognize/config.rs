@@ -71,32 +71,11 @@ fn command_kinds(arguments: &RecognizeArguments) -> Result<RecognizeKinds, Failu
             .collect();
     }
     let names = if arguments.kinds.is_empty() {
-        return Ok(default_kinds());
+        return Ok(crate::core::default_kinds());
     } else {
         arguments.kinds.clone()
     };
     Ok(names.into_iter().map(|name| (name, None)).collect())
-}
-
-fn default_kinds() -> RecognizeKinds {
-    vec![
-        (
-            "person".to_owned(),
-            Some(Description::text("Part of a person's name.")),
-        ),
-        (
-            "organization".to_owned(),
-            Some(Description::text(
-                "Part of the name of an organization: a company, band, team, agency, government body, or media outlet.",
-            )),
-        ),
-        (
-            "place".to_owned(),
-            Some(Description::text(
-                "Part of the name of a place: a country, region, city, or geographic feature.",
-            )),
-        ),
-    ]
 }
 
 fn command_rule(text: &str) -> Result<RelationRule, Failure> {

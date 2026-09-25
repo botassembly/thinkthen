@@ -2,8 +2,10 @@
 
 use std::time::{Duration, Instant};
 
+mod run;
 mod wait;
 
+pub(crate) use run::output;
 pub(crate) use wait::finish;
 
 /// How long a test child parks for the signal its parent sends.

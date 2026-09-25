@@ -26,7 +26,6 @@ use crate::engine::facade::{
 use crate::engine::{Cancel, Deadline};
 
 mod contract_tests;
-mod interrupt_tests;
 
 const TEST_KEY: &str = "sk-facade-test-7f3a";
 
@@ -39,7 +38,7 @@ fn settings(base: &str) -> Settings {
         retry_wait: Duration::from_millis(10),
         width: None,
         storage: Storage::default(),
-        key: || Ok(Key::of(TEST_KEY)),
+        key: Arc::new(|| Ok(Key::of(TEST_KEY))),
         usage: Arc::default(),
     }
 }
@@ -365,7 +364,7 @@ fn local_refusals_send_nothing_and_store_nothing() {
             let error = call.expect_err(name);
             assert_eq!(error.kind(), kind, "{name}: {error:?}");
         }
-        assert_eq!(engine.usage().requests_sent, 0, "{name}");
+        assert_eq!(engine.usage().expect("usage").requests_sent, 0, "{name}");
     }
     assert_eq!(listener.count(), 0, "no refusal reached the listener");
     assert_eq!(
@@ -418,7 +417,7 @@ fn completed_results_keep_input_order_and_reading_them_sends_nothing() {
     };
     assert_eq!((at, cause.kind()), (3, Kind::Backend), "{cause:?}");
     let sent = listener.count();
-    let usage = engine.usage();
+    let usage = engine.usage().expect("usage");
     assert_eq!((sent, usage.requests_sent), (3, 3));
     assert!(!engine.recording());
     assert_eq!(

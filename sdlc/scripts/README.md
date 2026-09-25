@@ -8,6 +8,8 @@ The repository gate and its hand-run support scripts.
 | `lint` | Rung 1. Runs policy, page, size, agents-file size, dependency, format, Clippy, and documentation checks |
 | `test` | Rung 2. Runs Rust tests and documentation tests, then `sdlc/live-test` on Linux |
 | `spec` | Rung 3. Runs executable specification pages, transforms, and green how-tos |
+| `surfaces` | Rung 4. Runs each landed surface's `check.sh` with one loopback backend's port and reports exit 77 as not run. `--registry` is the rung 1 check of `sdlc/surfaces.txt`, each binding ratchet, and each binding lock under `cargo deny` |
+| `heavy-lock` | Sourced by `install`, `test`, `spec`, and `surfaces`. Runs one heavy rung at a time under `flock`, and a nested rung skips the lock |
 | `demos`, `demos-self-test` | Run green how-tos and prove the runner's refusals |
 | `pages`, `pages-self-test` | Keep the how-to lists, titles, states, and links aligned |
 | `tickets` | Fails rung 1 when a ticket numbered 0120 or higher lacks its five-part Evidence section. `--self-test` runs its planted cases first |
@@ -15,7 +17,7 @@ The repository gate and its hand-run support scripts.
 | `policy.py` | Holds accepted Rust policy tables for rung 1 |
 | `catalog.py` | Holds the shipped transform copies, the catalog table, and the source package byte-identical to `transforms/` for rung 1 |
 | `package` | Proves the one-package, no-default-feature, private behavioral-doctest harness, package-tree, release panic, and unpacked transform-catalog contracts |
-| `ratchet.mjs` | Enforces the Rust source ceiling in `sdlc/ratchet.json` |
+| `ratchet.mjs` | Enforces the Rust source ceiling in `sdlc/ratchet.json`, or in the config its one optional argument names |
 
 Build without the credential, then run a charged job:
 

@@ -39,6 +39,8 @@ A caller picks an arm by the base it gives, because the engine appends `/systemo
 | `/arm/refuse/v1` | Status 422, the refusal that case `21-backend-fault` injects |
 | `/arm/held/v1` | The generic answer, held until a `release` line or the next `round` line |
 | `/arm/delay/MS/v1` | The generic answer after MS milliseconds, at most 10000. Each connection sleeps on its own thread. A bad value gets status 500 and `the delay arm needs a whole number of milliseconds`. A value above 10000 gets status 500 and `the delay arm allows at most 10000 milliseconds` |
+| `/arm/full/v1` | The generic answer, plus `"confidence":0.9` on every choice and score answer and `"usage":{"input_tokens":1,"output_tokens":1}` |
+| `/arm/status/CODE/v1` | Status CODE with body `status arm`, for CODE 401, 402, 403, or 404. Any other value gets status 500 and `the status arm takes 401, 402, 403, or 404` |
 | `/arm/malformed/CAUSE/v1` | The generic answer with the last question broken for one of the six failure causes. A distribution cause needs a choice or score question |
 
 An unknown body, arm, or request gets status 500 and a line on standard error, so drift fails loud.

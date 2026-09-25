@@ -6,7 +6,22 @@ use std::path::{Path, PathBuf};
 use serde::Deserialize;
 
 use crate::core::{Backend, DEFAULT_MODEL};
-use crate::failure::Failure;
+
+/// Why the configuration file was refused. The message names the file and a
+/// field, never a value.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct ConfigError {
+    pub(crate) message: &'static str,
+    /// The file exists but could not be read, which is a local failure.
+    pub(crate) unreadable: bool,
+}
+
+const fn refused(message: &'static str) -> ConfigError {
+    ConfigError {
+        message,
+        unreadable: false,
+    }
+}
 
 pub(crate) const DEFAULT_CACHE_BYTES: u64 = 100_000_000;
 
@@ -23,7 +38,7 @@ pub(crate) struct Config {
 }
 
 impl Config {
-    pub(crate) fn read(path: Option<&Path>) -> Result<Self, Failure> {
+    pub(crate) fn read(path: Option<&Path>) -> Result<Self, ConfigError> {
         let Some(path) = path else {
             return Ok(Self::default());
         };
@@ -33,22 +48,22 @@ impl Config {
                 return Ok(Self::default());
             }
             Err(_) => {
-                return Err(Failure::Configuration(
-                    "the configuration file could not be read",
-                ));
+                return Err(ConfigError {
+                    message: "the configuration file could not be read",
+                    unreadable: true,
+                });
             }
         };
-        let mut parsed: Self = serde_json::from_slice(&bytes).map_err(|_| {
-            Failure::Configuration("the configuration file is not valid closed JSON")
-        })?;
+        let mut parsed: Self = serde_json::from_slice(&bytes)
+            .map_err(|_| refused("the configuration file is not valid closed JSON"))?;
         parsed.present = true;
         parsed.validate()?;
         Ok(parsed)
     }
 
-    fn validate(&self) -> Result<(), Failure> {
+    fn validate(&self) -> Result<(), ConfigError> {
         if self.schema != "thinkthen.config/1" {
-            return Err(Failure::Configuration(
+            return Err(refused(
                 "configuration field `schema` must be `thinkthen.config/1`",
             ));
         }
@@ -57,19 +72,17 @@ impl Config {
             .as_ref()
             .is_some_and(|model| model.trim().is_empty())
         {
-            return Err(Failure::Configuration(
-                "configuration field `model` must not be blank",
-            ));
+            return Err(refused("configuration field `model` must not be blank"));
         }
         if self.cache_bytes == Some(0) {
-            return Err(Failure::Configuration(
+            return Err(refused(
                 "configuration field `cache_bytes` must be greater than zero",
             ));
         }
         if let Some(url) = self.url.as_deref()
             && Backend::resolve(Some(url), None, DEFAULT_MODEL).is_err()
         {
-            return Err(Failure::Configuration(
+            return Err(refused(
                 "configuration field `url` must be a safe backend base",
             ));
         }
