@@ -36,12 +36,15 @@ say(**{{name: [run(db, f"SELECT {{name}}(?, ?)", pair) for pair in (
 
 
 def test_a_banded_question_is_refused_where_it_has_no_answer() -> None:
-    """Decision 4: score, choose, tag, and warm name the two functions that take it."""
+    """Decision 4: score, choose, and tag name the two functions that take it. Warm
+    takes a band (ticket 0129) and still refuses a choose question."""
     backend = Backend()
+    choose = json.dumps({"choose": "Which colour?", "options": ["red", "blue"]})
     held = child(f"""
 db = connect()
 say(**{{name: run(db, f"SELECT {{name}}(?, 'a red door')", ({BANDED!r},))
-    for name in ("thinkthen_score", "thinkthen_choose", "thinkthen_tag", "thinkthen_warm")}})
+    for name in ("thinkthen_score", "thinkthen_choose", "thinkthen_tag")}},
+    thinkthen_warm=run(db, "SELECT thinkthen_warm(?, 'a red door')", ({choose!r},)))
 """, environment(backend))
     wanted = "thinkthen usage: {} does not take a banded question; use thinkthen_decide or thinkthen_details"
     expect(held, {name: wanted.format(name) for name in held} | {

@@ -25,7 +25,7 @@ The extension needs SQLite 3.50.0 or newer. Below 3.50.0 a CHECK constraint in a
 | `thinkthen_recognize(text, kinds)` | a table of `name, kind, start, end, strength` |
 | `thinkthen_relate(table, id, name, kind, rule, …)` | a table of `relation, source, target, probability` |
 
-A question is plain text for a decide question, JSON text starting with `{`, or `'@name'` for a question file. A question set for `thinkthen_annotate` takes the same three forms. A banded decide question goes to `thinkthen_decide` and `thinkthen_details` only. `thinkthen_warm` takes decide questions only.
+A question is plain text for a decide question, JSON text starting with `{`, or `'@name'` for a question file. A question set for `thinkthen_annotate` takes the same three forms. A banded decide question goes to `thinkthen_decide`, `thinkthen_details`, and `thinkthen_warm` only. `thinkthen_warm` takes decide questions only, and ignores a band, so it fills the answers decide reads with the same question.
 
 A NULL text answers NULL and sends nothing. A BLOB, a number, text holding a NUL byte, or text that is not UTF-8 raises `usage` before any send.
 
