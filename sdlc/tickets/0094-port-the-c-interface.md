@@ -6,7 +6,7 @@ opens: libraries/c probes/c-churn sdlc/planning/adr/0037-the-c-door-serves-every
 
 # 0094: Port the C interface
 
-Status: design accepted 2026-09-24 after re-review; build paused 2026-09-24 with work in progress, not compiled, not reviewed (see `sdlc/records/0094-build-c-interface.md`). Owner: Claude.
+Status: design accepted; porting in the surface batch (sdlc/planning/one-line-plan-2026-09-25.md). Build paused 2026-09-24 with work in progress, not compiled, not reviewed (see `sdlc/records/0094-build-c-interface.md`). Owner: Claude.
 
 ## Outcome and authority
 
@@ -18,7 +18,7 @@ The tag header (`contract/include/thinkthen.h` at `f6a7faea`) declares 19 functi
 
 | Symbol | Verdict | Change |
 |---|---|---|
-| `thinkthen_engine_new` | changed | Builds through 0084's environment constructor, the one `default_engine` uses. It reads the variables that constructor reads, and the comment lists them from there. Main reads neither `THINKTHEN_TIMEOUT_SECS` nor `THINKTHEN_MAX_RETRIES`, so the churn probe's 70 engines are identical on main and those two variables are ignored. "The connector refuses" becomes "the environment settings are invalid". No width argument and no width variable, so the door has no width refusal. |
+| `thinkthen_engine_new` | changed | Builds through 0084's environment constructor, the one `default_engine` uses. It reads the variables that constructor reads, and the comment lists them from there. Main reads neither `THINKTHEN_TIMEOUT_SECS` nor `THINKTHEN_MAX_RETRIES`, so the churn probe's 70 engines are identical on main and those two variables are ignored. "The connector refuses" becomes "the environment settings are invalid". No throttle argument and no throttle variable, so the door has no throttle refusal. |
 | `thinkthen_engine_free` | kept | |
 | `thinkthen_error_message` | kept | Messages come from main's `Error` display text. |
 | `thinkthen_error_code` | kept | Codes 1 to 6 map from `ErrorKind` in the header's order. |
@@ -31,7 +31,7 @@ The tag header (`contract/include/thinkthen.h` at `f6a7faea`) declares 19 functi
 | `thinkthen_relate`, `thinkthen_relate_opts` | changed | `spec_json` is main's relate section, read by `Relate::from_json`. Each of `texts` is one JSON record with `name` and `kind` at the default `/name` and `/kind`, as the command reads JSONL. A non-default `fields` pointer is `usage`, per 0095, so the door holds no second pointer resolver. `kind_field` and bare-name records leave. Edges take main's shape through `Edge::to_json`: `{"relation", "source":{name,kind}, "target":{name,kind}, "probability"}`. The 255 cap stays. |
 | `thinkthen_free_string` | kept | |
 
-No symbol is dropped, and the header gains no symbol. The version macros equal the `thinkthen-c` crate version, and the symbol check compares them. DESIGN section 2's reference to an unused conversion function is fixed, and the "deferred until the engine exposes them" line goes. A later ADR 0037 amendment may add a checked width constructor if a host needs one.
+No symbol is dropped, and the header gains no symbol. The version macros equal the `thinkthen-c` crate version, and the symbol check compares them. DESIGN section 2's reference to an unused conversion function is fixed, and the "deferred until the engine exposes them" line goes. A later ADR 0037 amendment may add a checked throttle constructor if a host needs one.
 
 ## Port
 
