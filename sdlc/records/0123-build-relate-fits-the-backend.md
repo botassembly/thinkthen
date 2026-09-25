@@ -58,7 +58,21 @@ Each fault was planted in the source, the named test ran, and the file was resto
 
 ## Lines and the ratchet
 
-RATCHET
+Main measured 61,768 nonblank lines at `02dc0b96`. This branch measures 62,054, so the ratchet rises by 286.
+
+| Part | Budget | Nonblank lines, net |
+| --- | --- | --- |
+| `engine/prepared_request.rs` | 30 | 28 |
+| `core/backend.rs` | 12 | 12 |
+| The 400 reason: `http.rs` 27, `error.rs` 3, `failure.rs` 3, `failure/status.rs` 2, `convert.rs` 1, `public/error.rs` 1, `check.rs` 0 | 45 | 37 |
+| Wording: `args/command.rs` 7, `relate/config.rs` 2 | 12 | 9 |
+| `tests/backend/relate/ceiling.rs` and its `mod` line | 200 | 158 |
+| `tests/backend/exchange.rs` | 30 | 21 |
+| `tests/backend/refusals/relate.rs` and `tests/relate_edge.rs` | 20 | 20 |
+| Other call sites (`facade.rs`, `facade/recognize.rs`, `backend_profile.rs`) | none | 1 |
+| Total | 350 | 286 |
+
+Where I looked for duplication first: the status phrases in `cli/failure/status.rs` hold one new constant and no copy. `core/backend_profile.rs` lost `permits_split`, and its new `limits_request_bytes` replaces it line for line. `checked_body` now serves both the single request and the splitter, which removed the old `prepare_chunk` copy of the encode-and-check lines. The relate test helpers in `tests/backend/relate.rs` send to a listener with a key, so the dry-run tests keep their own small `plan` helper.
 
 ## Rungs
 

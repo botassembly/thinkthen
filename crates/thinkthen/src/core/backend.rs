@@ -104,11 +104,9 @@ impl Backend {
         &self.model
     }
 
-    /// The request-byte ceiling a relation plan splits under, at the built-in address alone.
-    ///
-    /// The hosted backend refuses a request over 65,536 input tokens. Relate's
-    /// JSON measured 0.516 input tokens a byte, so 96,000 bytes comes to about
-    /// 49,500 tokens (ticket 0123). Every other address has no ceiling.
+    /// The request-byte ceiling a relation plan splits under: 96,000 at the
+    /// built-in address, and none elsewhere. The hosted backend refuses over
+    /// 65,536 input tokens, and relate's JSON runs 0.516 a byte (ticket 0123).
     #[must_use]
     pub(crate) fn relation_ceiling(&self) -> Option<usize> {
         let base = self
@@ -116,7 +114,7 @@ impl Backend {
             .as_str()
             .strip_suffix(built_in::ENDPOINT_PATH)
             .and_then(|rest| rest.strip_suffix('/'));
-        (base == Some(built_in::DEFAULT_BASE)).then_some(RELATION_CEILING)
+        (base == Some(built_in::DEFAULT_BASE)).then_some(96_000)
     }
 
     /// Say whether the request travels under TLS.
@@ -131,9 +129,6 @@ impl Backend {
         self.url.as_str().starts_with("https://")
     }
 }
-
-/// The built-in address's relation request-byte ceiling. See `Backend::relation_ceiling`.
-const RELATION_CEILING: usize = 96_000;
 
 /// The address one request is posted to: the base, then the endpoint path.
 ///
