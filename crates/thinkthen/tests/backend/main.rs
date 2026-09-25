@@ -40,6 +40,7 @@ mod loopback_arms;
 mod loopback_cases;
 mod parallel;
 mod profile;
+mod public_json;
 #[rustfmt::skip]
 #[allow(clippy::excessive_nesting, clippy::expect_used, clippy::indexing_slicing, clippy::obfuscated_if_else, reason = "fixture failures should stop this compiled command-boundary proof")]
 mod recognize;

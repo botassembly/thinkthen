@@ -2,8 +2,8 @@
 """Compare the built public Rust API with its frozen declarations.
 
 The one source is the ticket text: the normative block of ticket 0084, the
-part of ticket 0095's block that ticket 0086 names, the export sentence for
-`choices!`, and the ADR 0017 throttle rename. No file here copies that list.
+whole added block of ticket 0095 (tickets 0086 and 0098 built it), the export
+sentence for `choices!`, and the ADR 0017 throttle rename. No file here copies that list.
 `cargo public-api`, pinned by the install rung, reads the built crate. The
 self-test plants an added export, a removed item, and a changed signature
 into the real listing and proves each one fails.
@@ -148,12 +148,7 @@ def declared(source: str) -> set[str]:
 def contract() -> set[str]:
     page = text("0084-*.md")
     items = declared(block(page, "## Normative public inventory"))
-    taken = re.search(r"From ticket 0095 this ticket takes only (.*?)\. ", text("0086-*.md")).group(1)
-    names = re.findall(r"`(?:(\w+)::)?(\w+)`", taken)
-    owner = names[0][0]
-    wanted = {f"{owner}::{name}" for _, name in names}
-    added = declared(block(text("0095-*.md"), "## Added declarations"))
-    items |= {i for i in added if re.sub(r"^(const )?fn (\w+::\w+).*", r"\2", i) in wanted}
+    items |= declared(block(text("0095-*.md"), "## Added declarations"))
     new, old = re.search(r"`EngineBuilder::(\w+)\(n\)`\. It replaces `EngineBuilder::(\w+)`", ADR.read_text()).groups()
     items = {i.replace(f"fn EngineBuilder::{old}(", f"fn EngineBuilder::{new}(") for i in items}
     items.add("macro " + re.search(r"The crate root exports `(\w+!)`", page).group(1))

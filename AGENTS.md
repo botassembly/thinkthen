@@ -6,7 +6,7 @@ Read `README.md`, `specification/README.md`, and `sdlc/planning/rust-standards.m
 
 - Red-green test-driven development: watch the new test fail for the stated reason, make it pass, clean up. A red-green test is scaffolding. Before a ticket lands, turn it into an outside-in CLI or API test, an edge-case table, a contract check, or a regression test that failed before its fix, or delete it. Review checks this.
 - Build the simplest thing that works: YAGNI, DRY, locality of behavior, separation of concerns. A command or option enters only when a demo needs it.
-- The gate ladder is `sdlc/scripts/{install,lint,test,spec}`. Run the cheapest rung first and all four before handing back.
+- The gate ladder is `sdlc/scripts/{install,lint,test,spec,surfaces}`. Run the cheapest rung first and all five before handing back.
 - `sdlc/ratchet.json` holds the source size ceiling, equal to the measured total. A commit that raises it says what grew, why it earns its lines, and where you looked for duplication to delete first.
 - A second agent reviews any change that raises the ceiling, widens a public surface, or adds a dependency, and names what it checked.
 - A ticket that turns a demo green writes its page in ADR 0011's how-to form, and `sdlc/scripts/demos` checks it.

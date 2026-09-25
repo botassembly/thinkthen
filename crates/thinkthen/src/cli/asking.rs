@@ -7,9 +7,8 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 use crate::core::{
-    Backend, BackendProfile, DecisionResult, Evidence, Meta, Outcome, Plan, PlanDocument, Pointer,
-    Question, QuestionText, Reading, Record, RecordValue, RequestMeta, Resolved, Sources,
-    Threshold, Value, json_line, question_sha256_with_profile,
+    Backend, BackendProfile, Evidence, Outcome, Plan, PlanDocument, Pointer, Question,
+    QuestionText, Reading, Record, RecordValue, Resolved, Sources, Threshold, Value, json_line,
 };
 
 use crate::args::Common;
@@ -19,6 +18,7 @@ use crate::engine::facade::{self, Engine, Settings, Storage};
 use crate::failure::Failure;
 use crate::judge::{Asked, Keeping, View};
 use crate::profile::{self, Mismatch};
+use crate::result_json::{Run, decision};
 use crate::schedule::{self, Judged, Output};
 use crate::table::{Kind as TableKind, Rows as TableRows};
 
@@ -431,69 +431,57 @@ impl Judging<'_> {
             sending.evidence,
             self.environment.cancel(),
         )?;
-        let (answer, value, outcome, answered) =
-            (judged.answer, judged.value, judged.outcome, judged.answered);
-        let probability = answer.yes();
-        let printed = if self.view.details
-            && (self.keeping != Keeping::Passing || outcome == Outcome::Yes)
-        {
-            let meta = Meta::new(
-                env!("CARGO_PKG_VERSION"),
-                question_sha256_with_profile(
-                    &sending.question,
+        let (outcome, replayed) = (judged.outcome, judged.answered.replayed);
+        let probability = judged.answer.yes();
+        let printed =
+            if self.view.details && (self.keeping != Keeping::Passing || outcome == Outcome::Yes) {
+                // `rank` orders and never selects, so a ranked row carries no
+                // value. A value here would be a cut at 0.5 that nobody named.
+                let shown = if self.keeping == Keeping::Ordered {
+                    Value::YesNo(None)
+                } else {
+                    judged.value.clone()
+                };
+                let run = Run {
+                    backend: self.engine.backend(),
+                    tuned_for: self.tuned_for_profile(),
+                    warning: self.mismatch.warning(),
+                };
+                let input = self.streams.then_some(sending.record);
+                Some(decision(
+                    run,
+                    &judged,
+                    sending.question,
                     self.threshold,
-                    self.tuned_for_profile(),
-                )?,
-                self.engine.backend().url().clone(),
-                answered.reply.model().clone(),
-                answered.reply.usage(),
-                RequestMeta::new(
-                    answered.replayed,
-                    answered.requests_sent,
-                    vec![answered.request.as_str().to_owned()],
-                )
-                .with_profile_warning(self.mismatch.warning()),
-            );
-            // `rank` orders and never selects, so a ranked row carries no
-            // value. A value here would be a cut at 0.5 that nobody named.
-            let shown = if self.keeping == Keeping::Ordered {
-                Value::YesNo(None)
+                    shown,
+                    input,
+                )?)
+            } else if self.keeping == Keeping::Passing && outcome != Outcome::Yes {
+                None
+            } else if self.keeping.streams_only() {
+                Some(match arrived {
+                    Some(bytes) => reading.as_it_arrived(bytes)?.to_owned(),
+                    None => json_line(&sending.record)?,
+                })
+            } else if self.view.raw {
+                // One line stands for one record, so an unresolved record prints
+                // an empty line. On one document it prints nothing at all.
+                match judged.value.label() {
+                    Some(label) => Some(label.to_owned()),
+                    None if self.streams => Some(String::new()),
+                    None => None,
+                }
+            } else if self.view.quiet {
+                None
+            } else if self.streams {
+                Some(json_line(&RecordValue::new(sending.record, judged.value))?)
             } else {
-                value
+                Some(json_line(&judged.value)?)
             };
-            let row = DecisionResult::new(shown, sending.question, answer, self.threshold, meta);
-            let row = if self.streams {
-                row.with_input(sending.record)
-            } else {
-                row
-            };
-            Some(json_line(&row)?)
-        } else if self.keeping == Keeping::Passing && outcome != Outcome::Yes {
-            None
-        } else if self.keeping.streams_only() {
-            Some(match arrived {
-                Some(bytes) => reading.as_it_arrived(bytes)?.to_owned(),
-                None => json_line(&sending.record)?,
-            })
-        } else if self.view.raw {
-            // One line stands for one record, so an unresolved record prints
-            // an empty line. On one document it prints nothing at all.
-            match value.label() {
-                Some(label) => Some(label.to_owned()),
-                None if self.streams => Some(String::new()),
-                None => None,
-            }
-        } else if self.view.quiet {
-            None
-        } else if self.streams {
-            Some(json_line(&RecordValue::new(sending.record, value))?)
-        } else {
-            Some(json_line(&value)?)
-        };
         Ok(Judged {
             printed,
             outcome,
-            replayed: answered.replayed,
+            replayed,
             probability,
             partial_failure: false,
             profile_mismatch: self.mismatch.notice(),

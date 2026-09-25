@@ -2,12 +2,14 @@
 
 use std::fmt;
 use std::ops::Range;
+use std::path::Path;
 
 use crate::core::{self, ModelName, RecognizeSpec, RecognizedName, default_kinds};
 use crate::public::engine::Engine;
 use crate::public::error::Error;
 use crate::public::options::{CallOptions, Stop};
 use crate::public::question::{self, Description};
+use crate::public::results::Written;
 
 fn nonblank(value: &str, what: &str) -> Result<String, Error> {
     if value.trim().is_empty() || value.chars().any(char::is_control) {
@@ -131,6 +133,33 @@ impl Recognize {
             relation_threshold: None,
             model: None,
         }
+    }
+
+    /// Read one `recognize @FILE` question file. An `on` naming a part of a
+    /// record is refused, because a library call's evidence is one whole text.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Usage`] naming what the file breaks.
+    pub fn from_json(value: &str) -> Result<Self, Error> {
+        let spec = RecognizeSpec::parse(value).map_err(Error::refused)?;
+        if spec.on.iter().any(|pointer| !pointer.as_str().is_empty()) {
+            return Err(Error::usage(
+                "a library recognize reads its evidence whole, so it takes no `on`",
+            ));
+        }
+        Ok(Self(spec))
+    }
+
+    /// Read one recognize question file from disk.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Local`] when the file cannot be read or breaks a rule.
+    pub fn load(path: impl AsRef<Path>) -> Result<Self, Error> {
+        let text = std::fs::read_to_string(path)
+            .map_err(|_| Error::local("the recognize file could not be read"))?;
+        Self::from_json(&text).map_err(|error| Error::local(error.detail().message()))
     }
 }
 
@@ -334,6 +363,7 @@ impl Relation {
 pub struct Recognized {
     entities: Vec<RecognizedEntity>,
     relations: Option<Vec<Relation>>,
+    json: Written,
 }
 
 impl Recognized {
@@ -347,6 +377,12 @@ impl Recognized {
     #[must_use]
     pub fn relations(&self) -> Option<&[Relation]> {
         self.relations.as_deref()
+    }
+
+    /// The bare `recognize` object the command prints for this text.
+    #[must_use]
+    pub fn to_json(&self) -> String {
+        self.json.text()
     }
 }
 
@@ -380,7 +416,9 @@ impl Engine {
                     .map_err(Error::from)
             })?
             .value;
+        let json = Written::of(&found)?;
         Ok(Recognized {
+            json,
             entities: found.entities.into_iter().map(RecognizedEntity).collect(),
             relations: found.relations.map(|edges| {
                 edges

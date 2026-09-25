@@ -45,6 +45,22 @@ pub enum ErrorKind {
     Defect,
 }
 
+impl ErrorKind {
+    /// The conformance word: `usage`, `backend`, `local`, `cancelled`,
+    /// `deadline`, or `defect`.
+    #[must_use]
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Usage => "usage",
+            Self::Backend => "backend",
+            Self::Local => "local",
+            Self::Cancelled => "cancelled",
+            Self::Deadline => "deadline",
+            Self::Defect => "defect",
+        }
+    }
+}
+
 /// The safe message behind one [`Error`] and whether the same call may succeed later.
 #[derive(Debug)]
 pub struct ErrorDetail {

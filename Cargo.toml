@@ -1,7 +1,10 @@
 [workspace]
 members = ["crates/thinkthen", "conformance/backend"]
 # Ticket 0086: the external consumer is its own workspace, built by the test rung.
-exclude = ["conformance/consumer"]
+# ADR 0047: each binding under `libraries` or `databases` is its own workspace
+# too, and a plain `cargo build` here compiles `thinkthen` alone.
+exclude = ["conformance/consumer", "libraries", "databases"]
+default-members = ["crates/thinkthen"]
 resolver = "3"
 
 [workspace.package]
