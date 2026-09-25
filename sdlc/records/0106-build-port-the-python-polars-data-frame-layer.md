@@ -24,23 +24,23 @@ Builder: Claude (Opus subagent), 2026-09-25, on `ticket/0106-port-python-polars`
 4. **The recognize loop.** `recognize(frame, on=)` resolves its deadline once into an instant on the calling thread and gives every inner call `deadline_at` of it. `max_requests` caps each text's call, not the loop.
 5. **The exit gate never waits.** A release tries the gate's read side and leaks when the exit hook holds or waits for the write side. A blocking read could deadlock: a release on a thread that holds the interpreter would wait on the hook, and the hook waits for that release. Only the hook takes the write side, so a busy gate means exit is under way.
 6. **Borrowed reads need an owner.** `ffi::bytes` borrows producer memory for as long as its owner lives. A read with no owner (a pointer table, a struct, a C string, a metadata blob) goes through `ffi::copied`, whose borrow ends inside the call. No caller holds a `'static` slice of producer memory.
-7. **One hand-out helper.** `hand_out` gives every array or schema node its share and release and moves the root out. `drop_share` ends every release. Arrays and schemas share both through a small `Node` trait.
-5. **Input checks in `input.rs`.** `is_column` and `polars_frame` sit beside `refuse_pandas`, where 0105 keeps every refusal. `engine.rs` shares its `Arg` and `Held` aliases with `frame.rs`.
-6. **Frames skip the gate.** A frame is Polars only, and Polars releases in pure Rust, so frame batches release directly. Column batches from any producer go through the gate.
+7. **One hand-out helper.** `hand_out` gives every array or schema node its share and release and moves the root out. `drop_share` ends every release. Arrays and schemas share both through a small `Node` trait, whose `Keep` type names the memory each tree shares. The frame writer's two-batch unit test lives in `ffi.rs`, the one module that can build an `Imported` with no producer.
+8. **Input checks in `input.rs`.** `is_column` and `polars_frame` sit beside `refuse_pandas`, where 0105 keeps every refusal. `engine.rs` shares its `Arg` and `Held` aliases with `frame.rs`.
+9. **Frames skip the gate.** A frame is Polars only, and Polars releases in pure Rust, so frame batches release directly. Column batches from any producer go through the gate.
 
 ## Budgets
 
 | Budget | Limit | Measured |
 |---|---|---|
-| `src/arrow/` production, files, each under 500 | 2,400 in 8 | 2,099 in 8 (write.rs 487) |
+| `src/arrow/` production, files, each under 500 | 2,400 in 8 | 2,092 in 8 (write.rs 487) |
 | Glue: `frame.rs`, and the `lib.rs`, `input.rs`, and `engine.rs` edits | 250, re-scored to 291 | 291 (228, 17, 32, and 14) |
-| Rust unit tests | 800 | 765 |
+| Rust unit tests | 800 | 777 |
 | `__init__.py` and `__init__.pyi` added | 120 | 66 |
 | Python tests, new files and lines | 10 and 1,700 | 5 new files, about 690 lines with the edits |
 | `check.sh` and `build-wheel.sh` added | 60 | 9 |
 | Documentation, net | 200 | 38 |
 
-The glue first counted only `frame.rs` and `lib.rs`, at 249. The code review asked for an honest count. The column checks moved to `input.rs` add 32 lines, and the `engine.rs` column dispatch, the shared aliases, and the `pub(crate)` widenings add 14. The honest count is 291 against the ticket's 250. The queue owner approved a re-score of the glue budget to 291, the measured count, on 2026-09-25. Ian can overturn it. The checks stay in `input.rs`, beside 0105's refusals. `ratchet.json` rises from 1,299 to 4,436: the Arrow door, its unit tests, and the glue. `ratchet.py.json` rises from 1,109 to 1,831: the door's Python tests and the package's column paths. The root ceiling does not change. The tag's pandas probe, its pandas tests, and its benches did not come across.
+The glue first counted only `frame.rs` and `lib.rs`, at 249. The code review asked for an honest count. The column checks moved to `input.rs` add 32 lines, and the `engine.rs` column dispatch, the shared aliases, and the `pub(crate)` widenings add 14. The honest count is 291 against the ticket's 250. The queue owner approved a re-score of the glue budget to 291, the measured count, on 2026-09-25. Ian can overturn it. The checks stay in `input.rs`, beside 0105's refusals. `ratchet.json` rises from 1,299 to 4,441: the Arrow door, its unit tests, and the glue. `ratchet.py.json` rises from 1,120 to 1,842: the door's Python tests and the package's column paths. The root ceiling does not change. The tag's pandas probe, its pandas tests, and its benches did not come across.
 
 ## Error-index rows and plants
 

@@ -99,6 +99,8 @@ fn lay_out(node: ArrayNode, keep: &mut Keep) -> *mut ArrowArray {
 
 /// A C struct this module hands out: its release and its private data.
 trait Node: Sized {
+    /// The memory one handed-out tree shares.
+    type Keep;
     fn slots(
         &mut self,
     ) -> (
@@ -108,6 +110,7 @@ trait Node: Sized {
 }
 
 impl Node for ArrowArray {
+    type Keep = Keep;
     fn slots(
         &mut self,
     ) -> (
@@ -119,6 +122,7 @@ impl Node for ArrowArray {
 }
 
 impl Node for ArrowSchema {
+    type Keep = SchemaKeep;
     fn slots(
         &mut self,
     ) -> (
@@ -134,8 +138,8 @@ impl Node for ArrowSchema {
 ///
 /// # Safety
 /// Every node and the root name boxes `keep` owns, and `out` is writable.
-unsafe fn hand_out<K, N: Node>(
-    keep: K,
+unsafe fn hand_out<N: Node>(
+    keep: N::Keep,
     nodes: Vec<*mut N>,
     (root, out): (*mut N, *mut N),
     pick: impl Fn(*mut N) -> unsafe extern "C" fn(*mut N),
@@ -156,18 +160,18 @@ unsafe fn hand_out<K, N: Node>(
     }
 }
 
-/// Drop the share of `K` a node carries and mark it released, so a second
+/// Drop the share of `N::Keep` a node carries and mark it released, so a second
 /// call frees nothing.
 ///
 /// # Safety
-/// `node` is one `hand_out` gave a share of `K`.
-unsafe fn drop_share<K, N: Node>(node: *mut N) {
+/// `node` is one `hand_out` gave a share.
+unsafe fn drop_share<N: Node>(node: *mut N) {
     // SAFETY: `node` is one this module handed out, and its share is taken
     // once.
     unsafe {
         let (release, data) = (*node).slots();
         *release = None;
-        let share = std::mem::replace(data, ptr::null_mut()).cast::<Arc<K>>();
+        let share = std::mem::replace(data, ptr::null_mut()).cast::<Arc<N::Keep>>();
         if !share.is_null() {
             drop(Box::from_raw(share));
         }
@@ -207,7 +211,7 @@ unsafe extern "C" fn owned_release(node: *mut ArrowArray) {
                 release(child);
             }
         }
-        drop_share::<Keep, _>(node);
+        drop_share(node);
     }
 }
 
@@ -215,7 +219,7 @@ unsafe extern "C" fn owned_release(node: *mut ArrowArray) {
 /// and the caller's frame releases them with its last share.
 unsafe extern "C" fn alias_release(node: *mut ArrowArray) {
     // SAFETY: as `drop_share`.
-    unsafe { drop_share::<Keep, _>(node) };
+    unsafe { drop_share(node) };
 }
 
 /// One schema tree handed to a consumer, with the strings it points at.
@@ -304,7 +308,7 @@ unsafe extern "C" fn schema_release(node: *mut ArrowSchema) {
                 release(child);
             }
         }
-        drop_share::<SchemaKeep, _>(node);
+        drop_share(node);
     }
 }
 
