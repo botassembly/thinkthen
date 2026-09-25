@@ -57,6 +57,11 @@ impl Caller {
                     "the question file {path} was not read: it does not exist or could not be opened"
                 )));
             }
+            Opened::TooLarge => {
+                return Err(local(&format!(
+                    "the question file {path} was not read: it holds more than 1 MiB"
+                )));
+            }
             Opened::NotText => {
                 return Err(local(&format!(
                     "the question file {path} was not read: it is not UTF-8 text"

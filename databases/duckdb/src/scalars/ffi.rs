@@ -77,6 +77,9 @@ fn answer(
     };
     let scalar = scalar.ok_or_else(|| defect("the scalar ran with no function record"))?;
     let caller = caller.ok_or_else(|| defect("the scalar ran with no init state"))?;
+    // The invoke begins before the chunk read, so a SIGINT during the read
+    // counts as one during this query (R6-6).
+    let invoke = Invoke::begin();
     let columns: Vec<Column> = (0..count)
         .map(|index| {
             let of = scalar
@@ -91,7 +94,6 @@ fn answer(
             )
         })
         .collect();
-    let invoke = Invoke::begin();
     let values = crate::scalars::run(scalar.verb, caller, &invoke, &columns, rows)?;
     for (row, value) in values.iter().enumerate() {
         write(output, &scalar.result, row, value);

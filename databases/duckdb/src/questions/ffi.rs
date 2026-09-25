@@ -14,10 +14,15 @@ use libduckdb_sys as sys;
 use crate::engines::{Asked, Probe};
 use crate::errors::defect;
 
+/// The most bytes one `@file` read takes: a question file is small, and a
+/// device such as `/dev/zero` never ends.
+pub(crate) const MOST_BYTES: usize = 1024 * 1024;
+
 /// What opening a question file through the caller's file system found.
 #[derive(Debug)]
 pub(crate) enum Opened {
     Text(String),
+    TooLarge,
     NotText,
     Missing,
     Refused,
@@ -63,6 +68,9 @@ impl Files {
         let mut bytes = Vec::new();
         let mut buffer = vec![0_u8; 64 * 1024];
         let whole = loop {
+            if bytes.len() > MOST_BYTES {
+                break false;
+            }
             // SAFETY: the buffer holds `len` writable bytes.
             let read = unsafe {
                 sys::duckdb_file_handle_read(
@@ -81,6 +89,9 @@ impl Files {
         unsafe {
             sys::duckdb_file_handle_close(handle);
             sys::duckdb_destroy_file_handle(&raw mut handle);
+        }
+        if bytes.len() > MOST_BYTES {
+            return Opened::TooLarge;
         }
         if !whole {
             return Opened::Missing;

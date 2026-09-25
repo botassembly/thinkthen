@@ -4,7 +4,7 @@
 //! `SET thinkthen_throttle`, `thinkthen_max_requests`, `thinkthen_cache`, and
 //! `thinkthen_cache_bytes` reach the engine through `EngineBuilder`'s own
 //! setters on `EngineBuilder::from_env()`. Each call checks every value it
-//! was given before it reads the map, so a map hit never skips a check. The
+//! was given, the request total among them, before it reads the map, so a map hit never skips a check. The
 //! map is keyed by the throttle, the request limit, and the cache folder. It
 //! keeps no throttle of its own: main's `build` refuses a second, different
 //! throttle, and a failed build is never stored.
@@ -69,18 +69,33 @@ pub(crate) fn engine_for(
             ));
         }
     }
+    let full = || {
+        usage(
+            "this process already keeps 16 engines, one per throttle, request limit, and cache folder; reuse settings already in use",
+        )
+    };
+    {
+        let engines = ENGINES.lock().unwrap_or_else(PoisonError::into_inner);
+        if let Some((_, engine)) = engines.iter().find(|(held, _)| *held == key) {
+            return Ok(Arc::clone(engine));
+        }
+        if engines.len() >= MOST {
+            return Err(full());
+        }
+    }
+    // The build runs outside the lock, so a fork during a build never
+    // leaves the child's map locked. A racing build of the same key loses
+    // to the one stored first.
+    let built = Arc::new(builder.build().map_err(|error| failure(&error))?);
     let mut engines = ENGINES.lock().unwrap_or_else(PoisonError::into_inner);
     if let Some((_, engine)) = engines.iter().find(|(held, _)| *held == key) {
         return Ok(Arc::clone(engine));
     }
     if engines.len() >= MOST {
-        return Err(usage(
-            "this process already keeps 16 engines, one per throttle, request limit, and cache folder; reuse settings already in use",
-        ));
+        return Err(full());
     }
-    let engine = Arc::new(builder.build().map_err(|error| failure(&error))?);
-    engines.push((key, Arc::clone(&engine)));
-    Ok(engine)
+    engines.push((key, Arc::clone(&built)));
+    Ok(built)
 }
 
 /// The engine the environment alone describes, for the calls that cannot
@@ -118,7 +133,14 @@ fn checked(asked: &Asked) -> Result<(Key, EngineBuilder), String> {
             .map_err(|_| usage("a cache cap is a whole number of bytes above zero"))?;
         builder = builder.cache_bytes(cap).map_err(refused)?;
     }
+    if let Some(total) = asked.max_requests_total {
+        total_of(total)?;
+    }
     Ok(((throttle, most, asked.cache.clone()), builder))
+}
+
+fn total_of(total: i64) -> Result<u64, String> {
+    u64::try_from(total).map_err(|_| usage("a request total is a whole number of 0 or more"))
 }
 
 /// The texts a call may send, and the refusal it raises after them.
@@ -131,8 +153,7 @@ pub(crate) fn within_total(asked: &Asked, mut texts: Vec<String>) -> Result<Allo
     let Some(total) = asked.max_requests_total else {
         return Ok((texts, None));
     };
-    let total = u64::try_from(total)
-        .map_err(|_| usage("a request total is a whole number of 0 or more"))?;
+    let total = total_of(total)?;
     let [(_, spent), ..] = usage_totals();
     let spent_out = || {
         usage(&format!(

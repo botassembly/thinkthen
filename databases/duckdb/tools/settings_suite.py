@@ -63,6 +63,27 @@ def the_process_request_total_holds_across_calls():
 
 
 @case
+def a_negative_request_total_refuses_before_the_map():
+    with Backend() as backend:
+        # A NULL text reaches no engine call, so only the init's check sees it.
+        got = run([ASK, "SET thinkthen_max_requests_total = -1", "SELECT thinkthen_decide('Is it a refund?', x) FROM (VALUES (NULL::VARCHAR)) t(x)"], backend.base())
+        expect(said(got[2]), "thinkthen usage: a request total is a whole number of 0 or more", "a total of -1 on a map hit")
+        expect(backend.count(), 1, "counted sends")
+
+
+@case
+def an_annotate_set_spends_one_request_per_text():
+    """The engine asks every member of a library set in one request per
+    text, since a library set reads each record whole and so holds one
+    group. A total of 2 over three texts sends 2 and refuses."""
+    with Backend() as backend:
+        both = '{"version": 1, "questions": {"refund": {"decide": "Is it a refund?"}, "area": {"choose": "Which area?", "options": ["billing", "login"]}}}'
+        got = run(["SET thinkthen_max_requests_total = 2", f"SELECT thinkthen_annotate('{both}', x) FROM (VALUES ('one'), ('two'), ('three')) t(x)"], backend.base())
+        expect(said(got[1]), SPENT.replace("of 3", "of 2"), "three texts under a total of 2")
+        expect(backend.count(), 2, "counted sends")
+
+
+@case
 def cache_cap_is_checked_on_a_map_hit():
     with Backend() as backend:
         got = run([ASK, "SET thinkthen_cache_bytes = 0", "SELECT thinkthen_decide('Is it a refund?', 'other')"], backend.base())

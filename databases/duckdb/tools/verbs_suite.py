@@ -86,6 +86,13 @@ def r3_11_details_read_null_for_an_absent_member():
     expect(sent, 1, "requests_sent")
     expect(json.loads(value) is not None, True, "score details fill value")
     expect(tuple(rows(got[1])[0]), (0.9, "yes", '"yes"'), "decide details")
+    filled = run_generic(
+        [
+            "SELECT (thinkthen_details('{\"choose\": \"Which team?\", \"options\": [\"billing\", \"shipping\"]}', 'charged twice')).value",
+            "SELECT (thinkthen_details('{\"tag\": \"Which topics?\", \"labels\": [\"billing\", \"shipping\"]}', 'charged twice')).value",
+        ]
+    )
+    expect([column(result) for result in filled], [['"billing"'], ['["billing","shipping"]']], "choose and tag details fill value")
 
 
 @case
@@ -106,6 +113,9 @@ def probability_equals_details_with_no_added_send():
 def case_41_offsets_count_code_points():
     text = "Le café 😀 Maria Chen arrived."
     got = run_generic([f"SELECT r.name, r.start, r.\"end\" FROM (SELECT unnest(thinkthen_recognize('{text}', ['person'])) AS r)"])
+    # The generic arm names the whole text. Its end is 29 in code points
+    # and would be 33 in UTF-8 bytes.
+    expect(rows(got[0]), [[text, 0, 29]], "names and code-point offsets")
     for name, start, end in rows(got[0]):
         expect(text[start:end], name, "a recognized name sits at its code-point offsets")
 
@@ -173,26 +183,54 @@ def usage_counts_differences_around_a_call():
     expect(after["requests_sent"] - before, 1, "requests_sent moves by one")
 
 
+SET = '{"version": 1, "questions": {"refund": {"decide": "Is it a refund?"}}}'
+NAMES = '{"version": 1, "recognize": {"kinds": {"person": "A name of a person."}}}'
+CALLS = [
+    "SELECT thinkthen_decide('Is it a refund?', 'a')",
+    "SELECT thinkthen_probability('Is it a refund?', 'a')",
+    "SELECT thinkthen_details('Is it a refund?', 'a')",
+    "SELECT thinkthen_choose('Which?', 'a', ['x', 'y'])",
+    "SELECT thinkthen_tag('Which?', 'a', ['x', 'y'])",
+    f"SELECT thinkthen_annotate('{SET}', 'a')",
+    "SELECT thinkthen_recognize('Maria Chen arrived.', ['person'])",
+    f"SELECT thinkthen_relations('Maria Chen arrived.', '{NAMES}')",
+    "SELECT thinkthen_warm('Is it a refund?', 'a')",
+]
+
+
 @case
 def secrecy_no_key_or_credential_in_any_message():
-    with Backend() as backend:
-        sentinel = "sk-sentinel-4417"
-        base = f"http://user:pw-sentinel-4417@127.0.0.1:{backend.port}/arm/refuse/v1"
-        got = run(
+    """Every verb's refusal, every details member, a usage error, and a
+    local error carry neither the key nor a password in the address."""
+    sentinel = "sk-sentinel-4417"
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        extra = {"THINKTHEN_API_KEY": sentinel}
+        refused = run(CALLS, backend.base("arm/refuse"), extra=extra)
+        expect([said(result).split(":")[0] for result in refused], ["thinkthen backend"] * len(CALLS), "each refusal's kind")
+        answered = run(
             [
-                "SELECT thinkthen_decide('Is it a refund?', 'a')",
-                "SELECT thinkthen_details('Is it a refund?', 'a')",
-                "SELECT thinkthen_choose('Which?', 'a', ['x', 'y'])",
-                "SELECT thinkthen_warm('Is it a refund?', 'a')",
+                *CALLS,
+                "SELECT d.* FROM (SELECT thinkthen_details('Is it a refund?', 'refund now') AS d)",
+                "SELECT thinkthen_decide('{\"decide\": \"Is it?\", \"threshold\": 2}', 'a')",
+                f"SELECT thinkthen_decide('@{folder}/missing.json', 'a')",
             ],
-            "http://127.0.0.1:1/unused",
-            extra={"THINKTHEN_API_KEY": sentinel, "THINKTHEN_BASE_URL": base},
+            backend.base(),
+            extra=extra,
         )
-        for result in got:
+        expect(["error" in result for result in answered], [False] * 10 + [True, True], "which calls failed")
+        expect([said(result).split(":")[0] for result in answered[10:]], ["thinkthen usage", "thinkthen local"], "the usage and local kinds")
+        expect(backend.count() > 0, True, f"counted sends: {backend.count()}")
+        address = run(CALLS[:1], "http://127.0.0.1:1/unused", extra={"THINKTHEN_API_KEY": sentinel, "THINKTHEN_BASE_URL": f"http://user:pw-sentinel-4417@127.0.0.1:{backend.port}/v1"})
+        for result in [*refused, *answered, *address]:
             text = json.dumps(result)
-            for secret in ("sentinel-4417",):
-                if secret in text:
-                    raise AssertionError(f"a message carried a secret: {text}")
+            if "sentinel-4417" in text:
+                raise AssertionError(f"a message carried a secret: {text}")
+
+
+@case
+def an_atfile_read_stops_at_one_mib():
+    got = run_generic(["SELECT thinkthen_decide('@/dev/zero', 'a')"], timeout=30)
+    expect(said(got[0]), "thinkthen local: the question file /dev/zero was not read: it holds more than 1 MiB", "an endless file")
 
 
 @case

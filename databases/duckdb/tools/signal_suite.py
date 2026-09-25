@@ -226,6 +226,54 @@ def r1_10_a_panic_in_each_boundary_reads_defect():
             expect(got[1], {"rows": [[1]]}, f"the next query after a {boundary} panic")
 
 
+SIGINFO = r"""
+import ctypes, json, sys
+import duckdb
+libc = ctypes.CDLL(None, use_errno=True)
+class Info(ctypes.Structure):
+    _fields_ = [("signo", ctypes.c_int), ("errno", ctypes.c_int), ("code", ctypes.c_int), ("pad", ctypes.c_int), ("pid", ctypes.c_int)]
+class Action(ctypes.Structure):
+    _fields_ = [("handler", ctypes.c_void_p), ("mask", ctypes.c_ulong * 16), ("flags", ctypes.c_int), ("restorer", ctypes.c_void_p)]
+seen = []
+Handler = ctypes.CFUNCTYPE(None, ctypes.c_int, ctypes.POINTER(Info), ctypes.c_void_p)
+def record(number, info, context):
+    seen.append([number, info.contents.signo, info.contents.pid] if info else [number, None, None])
+handler = Handler(record)
+action = Action()
+action.handler = ctypes.cast(handler, ctypes.c_void_p).value
+action.flags = 4  # SA_SIGINFO
+if libc.sigaction(2, ctypes.byref(action), None) != 0:
+    raise SystemExit("sigaction failed")
+con = duckdb.connect(config={"allow_unsigned_extensions": "true"})
+con.execute(f"LOAD '{sys.argv[1]}'")
+print("loaded", flush=True)
+sys.stdin.readline()
+print(json.dumps(seen), flush=True)
+"""
+
+
+@case
+def r3_13_an_siginfo_host_handler_gets_the_number_and_sender():
+    """A host that installs its handler with SA_SIGINFO before LOAD gets
+    the real signal number and the sender's process id through the chain."""
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        child = subprocess.Popen(
+            [sys.executable, "-c", SIGINFO, str(EXTENSION)],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=child_env(backend.base(), Path(folder)),
+        )
+        try:
+            expect(child.stdout.readline().strip(), "loaded", "the child's LOAD")
+            child.send_signal(signal.SIGINT)
+            time.sleep(0.3)
+            child.stdin.write("\n")
+            child.stdin.flush()
+            expect(json.loads(child.stdout.readline()), [[2, 2, os.getpid()]], "the host handler's number, siginfo number, and sender")
+            expect(child.wait(timeout=20), 0, "the child's exit")
+        finally:
+            if child.poll() is None:
+                child.kill()
+
+
 STRESS = r"""
 import signal, sys, threading
 import duckdb

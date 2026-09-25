@@ -307,7 +307,9 @@ pub(crate) unsafe extern "C" fn thinkthen_init_c_api(
         // SAFETY: DuckDB hands a valid info and access table.
         unsafe {
             if !sys::duckdb_rs_extension_api_init(info, access, "v1.5.5").map_err(defect)? {
-                return Ok(());
+                return Err(defect(
+                    "DuckDB did not offer the C extension API v1.5.5 this extension was built for",
+                ));
             }
             let database =
                 (*access)
