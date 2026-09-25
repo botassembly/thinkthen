@@ -65,3 +65,7 @@ With `THINKTHEN_API_KEY` unset:
 - The loopback backend's 1 ms peek poll adds about 1 ms to every request in tests. The conformance backend could read the rest of a request with a blocking read. It serves tests only.
 - `sdlc/issues/2026-09-25-a-fresh-cache-can-refuse-itself-as-a-retired-layout.md` files a race found during the measurement. It predates this change.
 - The PostgreSQL warm was not rerun here. Its binding lives on `ticket/0111-port-postgresql-surface`.
+
+## Landing
+
+A fresh read-only review accepted `43db438f`. It checked crash safety, the fault tables, the unchanged modes, the prune sync, and the retired-layout race. It left two low notes, and `3d9dcafe` fixed both. The lock-removal comment no longer claims that every caller has synced the entry. The comment and the Cause section now say that prune removes a returned lock file when it removes that entry. `e6fee7c9` merged main. After the merge, `lint` and `test` both exited 0 with `THINKTHEN_API_KEY` unset. Main fast-forwarded to the commit that adds this section.
