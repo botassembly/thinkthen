@@ -22,7 +22,7 @@ The tag's `NOTES.md` stays at tag `surfaces-wave7-frozen-2026-09-24b` as history
 - DuckDB's own `con.interrupt()` does not reach a running engine call. A SIGINT does.
 - A SIGINT that lands between a chunked query's last engine call and its return cancels nothing. The query-hook issue names the lever.
 - `thinkthen_warm` cannot read a caller's settings, so it refuses `@file`, uses the environment's engine, and sits outside `thinkthen_max_requests_total`.
-- Main has no per-call request limit. A call under `thinkthen_max_requests_total` builds its own engine with the remaining total as its limit, and the extension folds that engine's counters into its totals once no call holds it.
+- Main has no per-call request limit. Under `thinkthen_max_requests_total`, a call sends only as many texts as the total leaves, then refuses with the total's sentence.
 - Main's public API refuses `on` in a library question set, so `thinkthen_annotate` reads each record whole. Conformance case `18-annotate-two-groups` does not run here for that reason.
 - SQL finds with `ORDER BY` and `LIMIT` over decide, so the find cases do not run here.
 - `thinkthen_recognize` takes kind names with no descriptions. The conformance runner checks recognize cases through `thinkthen_relations`, which reads the case's own question file.
