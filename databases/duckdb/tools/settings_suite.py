@@ -8,12 +8,14 @@ DuckDB's own `read_text` judges each `@file`.
 
 from __future__ import annotations
 
+import json
 import os
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
-from harness import Backend, case, expect, main, rows, run, said
+from harness import EXTENSION, Backend, case, child_env, expect, main, rows, run, said
 
 ASK = "SELECT thinkthen_decide('Is it a refund?', 'refund now')"
 PROBE_REFUSAL = "thinkthen usage: the cache folder is outside what this database's file settings allow"
@@ -251,6 +253,69 @@ def r1_15_and_r2_18_file_opens_under_strace():
         )
         expect(said(got[1]), f"thinkthen local: the question file {question} was not read: this database's file settings refuse it", "the refused read")
         expect(opens(refused, "q.json"), 0, "opens of q.json with access off")
+
+
+FORKED = r"""
+import json, os, sys, time
+import duckdb
+def opened():
+    database = duckdb.connect(config={"allow_unsigned_extensions": "true"})
+    database.execute(f"LOAD '{sys.argv[1]}'")
+    return database
+def usage(database):
+    return dict(database.execute("SELECT * FROM thinkthen_usage()").fetchall())["requests_sent"]
+parent = opened()
+parent.execute("SELECT thinkthen_warm('Is it a refund?', 'warm text')").fetchall()
+parent.execute("SET thinkthen_max_requests_total = 10")
+parent.execute("SELECT thinkthen_decide('Is it a refund?', 'parent text')").fetchall()
+before = usage(parent)
+reader, writer = os.pipe()
+pid = os.fork()
+if pid == 0:
+    os.close(reader)
+    try:
+        child = opened()
+        child.execute("SET thinkthen_max_requests_total = 1")
+        answer = child.execute("SELECT thinkthen_decide('Is it a refund?', 'child text')").fetchall()
+        report = {"answer": answer, "sent": usage(child)}
+    except BaseException as error:
+        report = {"error": str(error)}
+    os.write(writer, json.dumps(report).encode())
+    os._exit(0)
+os.close(writer)
+deadline = time.monotonic() + 30
+while os.waitpid(pid, os.WNOHANG) == (0, 0):
+    if time.monotonic() > deadline:
+        os.kill(pid, 9)
+        os.waitpid(pid, 0)
+        break
+    time.sleep(0.05)
+child = os.read(reader, 65536).decode() or '{"error": "the child timed out"}'
+print(json.dumps({"before": before, "after": usage(parent), "child": json.loads(child)}), flush=True)
+"""
+
+
+@case
+def a_forked_child_answers_from_a_zero_total():
+    """Ticket 0110 (0096): a warmed parent forks, and the child answers under
+    a total of 1, since its counters start from zero. The parent's usage does
+    not move. The child's wait is bounded at 30 s."""
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        done = subprocess.run(
+            [sys.executable, "-c", FORKED, str(EXTENSION)],
+            env=child_env(backend.base(), Path(folder)),
+            capture_output=True,
+            text=True,
+            timeout=90,
+            check=False,
+        )
+        lines = [line for line in done.stdout.splitlines() if line.startswith("{")]
+        if not lines:
+            raise AssertionError(f"the parent printed nothing: {done.stderr[-800:]}")
+        got = json.loads(lines[-1])
+        expect(got["child"], {"answer": [[True]], "sent": 1}, "the child's answer and its requests_sent")
+        expect((got["before"], got["after"]), (2, 2), "the parent's requests_sent before and after the fork")
+        expect(backend.count(), 3, "counted sends")
 
 
 if __name__ == "__main__":
