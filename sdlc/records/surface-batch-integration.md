@@ -26,7 +26,7 @@ Commit `c10f84c9`, "Teach the ladder every surface's layout". It adds 169 nonbla
 - **R's layout.** A `sdlc/surfaces.txt` line may carry a third field that names the crate folder inside the binding. R's line names `thinkthen/src/rust`. `surfaces --registry` refuses a landed surface whose line names no `Cargo.toml` and runs deny on the named manifest. `policy.py` reads the same field. It checks each folder under `libraries/*` and `databases/*`, refuses a folder where it finds no manifest, and computes the `thinkthen` path from the crate folder. R therefore needs `../../../../../crates/thinkthen`, and every other binding needs `../../crates/thinkthen`. The earlier glob already covered `databases/*/Cargo.toml`. The new folder walk keeps that.
 - **Binding deny files.** One table, `BINDING_DENY`, replaces `BINDING_DENY_CHECKED` and the Polars-only deny check. Each binding's `deny.toml` must equal the root file plus its named entries, with reasons ignored: Polars' four license exceptions, SQLite's `foldhash` Zlib exception, R's RUSTSEC-2024-0436 ignore, and PostgreSQL's `foldhash` exception and RUSTSEC-2021-0127 ignore. Any other difference fails. A binding may leave out a root entry its tree never uses. A `deny.toml` in a binding the table does not name still fails. The registry already passed the binding's own `deny.toml` (0120).
 - **`sources`.** The registry's deny call runs `advisories bans licenses sources` for every binding (R ticket departure item 3, SQLite ticket, 0105 amendment change 1). `lint` builds a one-crate manifest with a `file://` git dependency under a scratch `CARGO_HOME` and requires deny's `sources` check to exit 8 with `source-not-allowed` (0105 amendment change 9).
-- **Root `deny.toml`.** It admits `target-lexicon` under `Apache-2.0 WITH LLVM-exception` for pyo3's build. The coordinator decided this as queue owner, and Ian can overturn it. The root tree and six binding trees do not contain `target-lexicon`, so cargo-deny prints a `license-exception-not-encountered` warning on each run. The warning does not fail the run.
+- **Root `deny.toml`.** `c10f84c9` admitted `target-lexicon` in the root file for pyo3's build. After review the coordinator ruled that it leaves the root, and Ian can overturn that ruling. The follow-up commit restores the root file and its comment. The Python binding carries the entry in its own `deny.toml`, under `BINDING_DENY`. The Polars and R `deny.toml` comments again match the root file's comment.
 - **PostgreSQL (ticket 0111 item 15).** `policy.py` accepts that crate's lint table, with `unexpected_cfgs` at `deny` and the root's one `check-cfg` name. It refuses the token `unexpected_cfgs` in any binding's Rust files. For PostgreSQL it refuses a `build.rs`, a `.cargo/config` or `.cargo/config.toml` in `databases/postgresql`, `databases`, or the repository root, and `pg_ctl … restart` outside a comment in the crate's shell scripts. The existing rule keeps `unsafe` in `ffi.rs` only. The embed shim's `allow(unsafe_code)` holds no `unsafe` token, so that rule needs no change.
 - **What stays in `check.sh`.** TypeScript and Ruby run their own deny and `file://` plant in `check.sh`. SQLite runs fmt and Clippy there. C asked for nothing beyond the registry.
 
@@ -47,13 +47,35 @@ Each plant below ran against the real files. Each file was then restored with `g
 | A second ignore entry in PostgreSQL's `deny.toml` | `databases/postgresql/deny.toml is the root file plus its named advisories ignore` |
 | `yanked = "warn"` in PostgreSQL's `deny.toml` | `databases/postgresql/deny.toml is the root file plus its named entries` |
 | `cfg_attr(test, allow(unexpected_cfgs))` in `src/warm.rs` | `databases/postgresql/src/warm.rs names unexpected_cfgs outside the lint table` |
-| An empty `build.rs` in `databases/postgresql` | `databases/postgresql/build.rs can widen check-cfg` |
+| An empty `build.rs` in `databases/postgresql` | `databases/postgresql/build.rs can widen check-cfg` (the follow-up renames it `databases/postgresql has a build script, which can widen check-cfg`) |
 | `databases/postgresql/.cargo/config.toml` | `databases/postgresql/.cargo/config.toml can change the lints cargo applies` |
 | `"$BIN/pg_ctl" -D "$DATA" restart` in `check.sh` | `databases/postgresql/check.sh runs pg_ctl restart` |
 | `unexpected_cfgs` at `allow` in PostgreSQL's manifest | `databases/postgresql uses the root lint table with unsafe_code denied, not forbidden` |
 | A `file://` git source under the root `deny.toml` | deny exit 8, `sources FAILED` |
 
 `policy.py` and `surfaces --registry` also carry in-script copies of these plants on every run. The deny rule plants an extra entry in each named table and a changed `bans` setting for each binding. The lint-table rule plants PostgreSQL's `deny` level on `libraries/rust`.
+
+### Review follow-up
+
+A fresh review of `c10f84c9` found no weakening and no dropped merge side. The follow-up commit fixes its findings:
+
+- A crate-folder field that starts with `/` or holds a `..` part fails. `policy.py` requires the joined path to equal its normal form and to stay under the binding folder. The registry's `awk` refuses the same field.
+- For PostgreSQL, a `build` key in `[package]` fails like a `build.rs`.
+- The `pg_ctl restart` match joins backslash-newline pairs first.
+- For R, `policy.py` reads every `.rs` file under `libraries/r`, not only the crate folder.
+- ADR 0047 describes the crate-folder field under the surface ticket's item 1 and the `sources` check under item 9. The R section no longer says the registry has yet to learn R's layout.
+- `target-lexicon` leaves the root `deny.toml`, as above.
+
+| Plant | Red result |
+|---|---|
+| R's line naming `../rust`, in `policy.py` | `libraries/r's crate folder libraries/r/../rust leaves the binding folder` |
+| R's line naming `/tmp/rust`, in `policy.py` | `libraries/r's crate folder libraries/r//tmp/rust leaves the binding folder` |
+| R's line naming `../rust`, in `surfaces --registry` | the line is refused as a crate folder outside the binding |
+| `build = "planted.rs"` in PostgreSQL's `[package]` | `databases/postgresql has a build script, which can widen check-cfg` |
+| `pg_ctl -D "$DATA" \` then `restart` on the next line, in `check.sh` | `databases/postgresql/check.sh runs pg_ctl restart` |
+| `libraries/r/tests/planted.rs` holding `unsafe` | `libraries/r/../../../tests/planted.rs holds unsafe outside the binding's FFI module` |
+
+The in-script copies cover `../rust`, `/tmp/rust`, the `build` key, and the split restart.
 
 ## Rungs
 

@@ -394,14 +394,21 @@ def binding_crates() -> dict[str, str]:
             if len(fields) == 3 and not fields[0].startswith("#")}
 
 
+def crate_failures(crates: dict[str, str]) -> list[str]:
+    """A crate folder stays inside its binding folder: no leading `/` and no `..` part."""
+    return [f"{name}'s crate folder {crate} leaves the binding folder" for name, crate in crates.items()
+            if posixpath.normpath(crate) != crate or not crate.startswith(f"{name}/")]
+
+
 def binding_files(name: str, crate: str) -> dict[str, str]:
     """One binding's manifest, lock, Clippy settings, and Rust sources, without build output, and its deny.toml."""
     folder = REPO / crate
-    names = ["Cargo.toml", "Cargo.lock", "clippy.toml"] + [
-        source.relative_to(folder).as_posix() for source in folder.rglob("*.rs")
-        if "target" not in source.relative_to(folder).parts
-    ]
-    files = {name: (folder / name).read_text(encoding="utf-8") for name in names if (folder / name).is_file()}
+    files = {name: (folder / name).read_text(encoding="utf-8")
+             for name in ("Cargo.toml", "Cargo.lock", "clippy.toml") if (folder / name).is_file()}
+    # Every Rust file under the binding folder, so a crate folder hides none.
+    for source in (REPO / name).rglob("*.rs"):
+        if "target" not in source.relative_to(REPO / name).parts:
+            files[posixpath.relpath(source.as_posix(), folder.as_posix())] = source.read_text(encoding="utf-8")
     deny = REPO / name / "deny.toml"
     return {**files, "deny.toml": deny.read_text(encoding="utf-8")} if deny.is_file() else files
 
@@ -534,6 +541,11 @@ def deny_failures(name: str, deny: dict) -> list[str]:
 def check_bindings() -> None:
     """ADR 0047 and ticket 0093: every binding folder, then one planted failure of each kind."""
     crates = binding_crates()
+    for failure in crate_failures(crates):
+        fail("binding", failure)
+    crates = {name: crate for name, crate in crates.items() if not crate_failures({name: crate})}
+    if not all(crate_failures({"libraries/r": crate}) for crate in ("libraries/r/../rust", "libraries/r//tmp/rust")):
+        fail("binding", "R's crate folders ../rust and /tmp/rust are refused")
     for folder in sorted(path for path in [*REPO.glob("libraries/*"), *REPO.glob("databases/*")] if path.is_dir()):
         name = folder.relative_to(REPO).as_posix()
         crate = crates.get(name, name)
@@ -551,7 +563,7 @@ def check_bindings() -> None:
                    for section, key, _ in tables]
         if not all(deny_failures(name, planted) for planted in [other, *seconds]):
             fail("binding", f"{name}/deny.toml with a planted extra entry or another difference is refused")
-    if "libraries/r" in crates:
+    if "libraries/r" in crates and (REPO / crates["libraries/r"] / "Cargo.toml").is_file():
         crate = crates["libraries/r"]
         files = binding_files("libraries/r", crate)
         moved = files["Cargo.toml"].replace("../../../../../crates/thinkthen", "../../crates/thinkthen")
@@ -596,10 +608,14 @@ POSTGRESQL = "databases/postgresql"
 
 
 def postgresql_failures(files: dict[str, str], scripts: dict[str, str], configs: list[str]) -> list[str]:
-    held = [f"{POSTGRESQL}/build.rs can widen check-cfg"] if "build.rs" in files else []
+    try:
+        build = "build" in tomllib.loads(files.get("Cargo.toml", "")).get("package", {})
+    except tomllib.TOMLDecodeError:
+        build = True
+    held = [f"{POSTGRESQL} has a build script, which can widen check-cfg"] if "build.rs" in files or build else []
     held += [f"{config} can change the lints cargo applies" for config in configs]
     for relative, text in scripts.items():
-        code = "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
+        code = "\n".join(line for line in text.replace("\\\n", " ").splitlines() if not line.lstrip().startswith("#"))
         if re.search(r"\bpg_ctl\b[^\n;&|]*\brestart\b", code):
             held.append(f"{POSTGRESQL}/{relative} runs pg_ctl restart")
     return held
@@ -617,16 +633,19 @@ def check_postgresql_binding() -> None:
     for failure in postgresql_failures(files, scripts, configs):
         fail("binding", failure)
     restart = {**scripts, "check.sh": scripts.get("check.sh", "") + '"$BIN/pg_ctl" -D "$DATA" restart\n'}
+    split = {**scripts, "check.sh": scripts.get("check.sh", "") + '"$BIN/pg_ctl" -D "$DATA" \\\n  restart\n'}
+    keyed = files.get("Cargo.toml", "").replace("[package]\n", '[package]\nbuild = "planted.rs"\n', 1)
     warm = files.get("src/warm.rs", "") + '#[cfg_attr(test, allow(unexpected_cfgs, reason = "planted"))]\nfn planted() {}\n'
     forbid = files.get("Cargo.toml", "").replace('unexpected_cfgs = { level = "deny"', 'unexpected_cfgs = { level = "allow"')
     rust = binding_files(BINDING_PLANT_BASE, BINDING_PLANT_BASE)
     denied = rust["Cargo.toml"].replace('unexpected_cfgs = { level = "forbid"', 'unexpected_cfgs = { level = "deny"')
     if not (all(postgresql_failures(*plant) for plant in [
-            ({**files, "build.rs": ""}, scripts, []), (files, restart, []), (files, scripts, [f"{POSTGRESQL}/.cargo/config"])])
+            ({**files, "build.rs": ""}, scripts, []), ({**files, "Cargo.toml": keyed}, scripts, []),
+            (files, restart, []), (files, split, []), (files, scripts, [f"{POSTGRESQL}/.cargo/config"])])
             and binding_failures(POSTGRESQL, {**files, "src/warm.rs": warm})
             and binding_failures(POSTGRESQL, {**files, "Cargo.toml": forbid})
             and binding_failures(BINDING_PLANT_BASE, {**rust, "Cargo.toml": denied})):
-        fail("binding", "a planted build.rs, cargo config, pg_ctl restart, unexpected_cfgs allow, or lint level is refused")
+        fail("binding", "a planted build.rs, build key, cargo config, pg_ctl restart, unexpected_cfgs allow, or lint level is refused")
 
 
 CORE_ALLOWED_DEPENDENCIES = {"serde", "serde_json", "sha2", "thiserror"}
