@@ -28,7 +28,7 @@ Branch `ticket/0118-duckdb-relate`, built on ticket 0110's branch. Built on Beel
 
 The first code review, at `ee6e7dc0`, returned 2 medium and 6 low findings. Each is fixed here.
 
-- The reaper's shutdown at exit is back. `atexit` sets a flag, the reaper's tick ends its thread once the flag is set, and the bridge interrupts nothing after it. A unit test sets the flag and reads the tick's `false`.
+- The reaper's shutdown at exit is back. `atexit` sets a flag, the reaper's tick ends its thread once the flag is set, and the bridge interrupts nothing after it. A unit test sets the flag and reads the tick's `false`. The test covers only the flag check. No test runs the `atexit` hook itself.
 - The bridge interrupts each busy connection while it holds the registry, so the reaper cannot close one in between.
 - A caller that matches no probe reads one usage sentence: `this connection's database answers no loaded identity probe, so relate cannot find its own connection; LOAD the extension again on a writable database, since a read-only database cannot carry a probe and a released one lost it`. A writable caller no longer reads a read-only sentence because another database lacks a probe, and a forged probe reads usage, not `defect`.
 - Relate's refused rules file reads `the rules file PATH was not read`.
