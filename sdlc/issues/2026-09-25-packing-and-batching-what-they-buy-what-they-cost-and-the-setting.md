@@ -1,8 +1,36 @@
-# Pack rows for tables and frames: a plan to measure, then build
+# Packing and batching: what they buy, what they cost, and the setting
 
-Status: Open
+Status: Open. The dedicated issue for packing and batching, on Ian's request of 2026-09-25. It replaces `2026-09-25-pack-rows-for-tables-and-frames-a-plan-to-measure-then-build.md`, renamed here.
 
-Ian asked on 2026-09-25 for a strategy that makes database queries and data frames cheaper and faster by bundling rows, with a size rule based on the context limit. This page gathers what is measured, proposes a design, and names the experiments to run before an ADR.
+## In one paragraph
+
+Today every row is its own request to Jev. Each request pays a fixed part near 256 input tokens, so short rows cost mostly overhead, and the vendor's rate limit caps a table near 20 rows a second. Packing puts up to 10 rows, each with its own question, into one request. It cuts yes/no cost about four times and keeps accuracy. It has three costs. A row's answer can change with the rows packed beside it. Pick-one questions lose accuracy when packed today. Long packs read worse. Sending a shared context once per pack, such as a reference document, is the largest saving measured: nine times fewer tokens with no loss.
+
+## The trade-offs
+
+| Choice | What it buys | What it costs | Evidence |
+| --- | --- | --- | --- |
+| One row per request (today) | Each answer depends only on its row. Replay and the cache key are simple. | The fixed part on every row. About 20 rows a second at most. | `2026-09-21-one-state-per-request-caps-table-scale-classification.md` |
+| Pack yes/no rows, up to 10 | 3.3 to 4.6 times fewer tokens. About ten times fewer requests. | About 3% of answers near the bar change with their neighbours, six times Jev's own noise. | Experiments 208 and 260 |
+| Pack more than 10 | A little more saving | Accuracy slips at 20 and collapses at 40. Late rows read worse. | Experiment 208 |
+| Pack pick-one rows | 2.3 times fewer tokens | 2 to 10 points of accuracy with today's wording | Experiment 260; rewording under test in 261 |
+| Shared context once per pack | Nine times fewer tokens on the Beatles open-book run, $0.51 to about $0.06 per 1,000 questions | None measured: 188 of 196 against 187 | Experiment 260 |
+| Large packs | Fewer requests | Accuracy falls from 0.92 near 2,000 tokens a request to 0.79 near 27,000, well under the 32,000-token limit | Experiment 260 |
+
+## The setting
+
+Packing is a configuration setting that every surface reads the same way, not a fixed choice in the code. Ian ruled this on 2026-09-25.
+
+- **What it sets.** `pack`: how many rows share one request, from 1 (no packing) to 10. `pack_tokens`: the size at which a pack closes early. `context`: a shared text sent once per pack.
+- **Where it is set.** Everywhere the other engine settings are set: the command option and configuration file, the `THINKTHEN_` environment, the library engine builder, SQL `SET` and settings, and the question file, so a question that must stay unpacked can say so.
+- **Which answer types it covers.** Yes/no first. Pick-one, score, and tag only after a packed width-1 request matches single-row accuracy for that type.
+- **The default** is for the ADR, from the evidence here.
+
+## What the documentation carries
+
+- A site page, "Packing and batching", in the how-to form of ADR 0011, with the trade-off table above in plain words, the setting and where to set it, and one worked example at `pack` 1 and 10 with its token counts.
+- The size-and-cost page named in `2026-09-21-size-cost-and-other-backends-what-the-manual-and-the-tests-must-carry.md` links to it.
+- The talk carries one slide on it, from the marketing repository.
 
 ## What is measured
 
