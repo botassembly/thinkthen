@@ -6,7 +6,7 @@ opens: databases/sqlite/src/scalars.rs databases/sqlite/tests/test_files.py data
 
 # 0129: Warm takes the question file decide uses
 
-Status: in progress, design accepted on 2026-09-25 after two reviews. Owner: Claude.
+Status: built, ready to land (`sdlc/records/0129-build-warm-takes-decides-file.md`). Design accepted on 2026-09-25 after two reviews. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
