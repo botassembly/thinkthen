@@ -127,6 +127,8 @@ pub(crate) enum Failure {
     Transport(TransportKind),
     /// The backend answered with a status that is not a success.
     Status(u16),
+    /// The backend answered status 400 and named `max_tokens_exceeded`.
+    TokenLimit,
     /// The adapter refused what the backend answered.
     Reply(DecodeError),
     /// The two recording options named two different folders.
@@ -224,6 +226,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         ),
         Failure::Transport(kind) => (4, transport_message(*kind).to_owned()),
         Failure::Status(status) => (4, status::said(*status)),
+        Failure::TokenLimit => (4, status::TOKEN_LIMIT.to_owned()),
         Failure::Reply(error) => (4, format!("the reply was refused: {error}")),
         Failure::ReplayMiss(_)
         | Failure::Entry(_, _)

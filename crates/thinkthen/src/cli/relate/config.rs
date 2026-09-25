@@ -43,7 +43,9 @@ pub(super) fn settle(arguments: &RelateArguments) -> Result<Settled, Failure> {
     };
     let (mut spec, mut from) = if let Some(path) = file {
         if arguments.either {
-            return Err(config_error(false, RelateConfigError::Relation));
+            return Err(Failure::Usage(
+                "`--either` applies only to inline relation rules; a question file sets either on each relation",
+            ));
         }
         from_file(path)?
     } else {

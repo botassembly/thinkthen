@@ -96,7 +96,8 @@ impl Engine {
             Evidence::new(text).map_err(|_| Error::Defect("record evidence became blank"))?;
         let plan = Plan::new(evidence, self.backend.model().clone(), questions)
             .map_err(|_| Error::Defect("recognize planned no token questions"))?;
-        let prepared = PreparedRequests::with_profile(&self.backend, &plan, self.profile.as_ref())?;
+        let prepared =
+            PreparedRequests::with_profile(&self.backend, &plan, self.profile.as_ref(), None)?;
         let (answers, mut meta) = self.execute(prepared, cancel)?;
         let token_answers = token_answers(&answers, tokens.len(), &spec.kinds)?;
         let kind_names = spec

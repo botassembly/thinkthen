@@ -32,10 +32,17 @@ pub(crate) struct PreparedRequests {
 }
 
 impl PreparedRequests {
+    /// Split `plan` into the fewest contiguous chunks that pass `profile`.
+    ///
+    /// A chunk of two or more questions also stays at most `ceiling` encoded
+    /// bytes. One question alone always passes the ceiling. Each chunk is the
+    /// longest fitting prefix. Every limit only tightens as a chunk grows, so
+    /// doubling from one question and then halving the gap finds it.
     pub(crate) fn with_profile(
         backend: &Backend,
         plan: &Plan,
         profile: Option<&BackendProfile>,
+        ceiling: Option<usize>,
     ) -> Result<Self, Error> {
         #[cfg(test)]
         PREPARATIONS.with(|count| count.set(count.get() + 1));
@@ -43,21 +50,35 @@ impl PreparedRequests {
         let mut consumed = 0;
         while consumed < plan.questions().len() {
             let remaining = plan.questions().len() - consumed;
-            let mut longest = None;
-            for count in 1..=remaining {
-                match prepare_chunk(backend, plan, profile, consumed, count) {
-                    Ok(chunk) => longest = Some((count, chunk)),
-                    Err(Error::ProfileLimit(limit)) if limit.permits_split() => break,
-                    Err(error) => return Err(error),
+            let fits = |count| {
+                candidate(plan, profile, consumed, count)
+                    .ok()
+                    .filter(|(_, body)| count == 1 || ceiling.is_none_or(|most| body.len() <= most))
+            };
+            let mut best = (1, candidate(plan, profile, consumed, 1)?);
+            let mut over = None;
+            while over.is_none() && best.0 < remaining {
+                let count = (best.0 * 2).min(remaining);
+                match fits(count) {
+                    Some(found) => best = (count, found),
+                    None => over = Some(count),
                 }
             }
-            let Some((count, chunk)) = longest else {
-                let _impossible = prepare_chunk(backend, plan, profile, consumed, 1)?;
-                return Err(Error::Defect(
-                    "an impossible request chunk passed preflight",
-                ));
-            };
-            chunks.push(chunk);
+            if let Some(mut over) = over {
+                while over - best.0 > 1 {
+                    let count = best.0 + (over - best.0) / 2;
+                    match fits(count) {
+                        Some(found) => best = (count, found),
+                        None => over = count,
+                    }
+                }
+            }
+            let (count, (chunk, body)) = best;
+            let digest = Recorded::new(backend.url(), &body).digest();
+            chunks.push(PreparedChunk {
+                plan: chunk,
+                request: PreparedRequest { body, digest },
+            });
             consumed += count;
         }
         Ok(Self { chunks })
@@ -80,7 +101,9 @@ impl SettledRelation {
     /// Prepare one planned concrete relation for `recognize` and `relate`.
     ///
     /// A choice refused by a backend-profile option or request-byte limit
-    /// becomes yes/no questions for this concrete relation alone.
+    /// becomes yes/no questions for this concrete relation alone. At the
+    /// built-in address the relation's chunks also stay under the built-in
+    /// ceiling, unless the profile names its own request-byte limit.
     pub(crate) fn settle<E: RelationEntityView>(
         backend: &Backend,
         profile: Option<&BackendProfile>,
@@ -88,8 +111,11 @@ impl SettledRelation {
         entities: &[E],
         planned: RelationPlan,
     ) -> Result<Self, Error> {
+        let ceiling = backend
+            .relation_ceiling()
+            .filter(|_| profile.is_none_or(|profile| !profile.limits_request_bytes()));
         let plan = relation_request(backend, source, entities, &planned)?;
-        match PreparedRequests::with_profile(backend, &plan, profile) {
+        match PreparedRequests::with_profile(backend, &plan, profile, ceiling) {
             Ok(requests) => Ok(Self {
                 planned,
                 requests,
@@ -102,7 +128,7 @@ impl SettledRelation {
                 let planned = plan_pairs(entities, &planned.relation)
                     .map_err(|_| Error::Defect("relation fallback planning failed"))?;
                 let plan = relation_request(backend, source, entities, &planned)?;
-                let requests = PreparedRequests::with_profile(backend, &plan, profile)?;
+                let requests = PreparedRequests::with_profile(backend, &plan, profile, ceiling)?;
                 Ok(Self {
                     planned,
                     requests,
@@ -126,13 +152,13 @@ fn relation_request<E: RelationEntityView>(
         .map_err(|_| Error::Defect("relation planned no questions"))
 }
 
-fn prepare_chunk(
-    backend: &Backend,
+/// The `count` questions after `consumed`, and their checked encoded body.
+fn candidate(
     plan: &Plan,
     profile: Option<&BackendProfile>,
     consumed: usize,
     count: usize,
-) -> Result<PreparedChunk, Error> {
+) -> Result<(Plan, Vec<u8>), Error> {
     let questions = plan
         .questions()
         .iter()
@@ -142,11 +168,8 @@ fn prepare_chunk(
         .collect();
     let chunk = Plan::new(plan.evidence().clone(), plan.model().clone(), questions)
         .map_err(|_| Error::Defect("a request chunk asks nothing"))?;
-    let request = PreparedRequest::with_profile(backend, &chunk, profile)?;
-    Ok(PreparedChunk {
-        plan: chunk,
-        request,
-    })
+    let body = checked_body(&chunk, profile)?;
+    Ok((chunk, body))
 }
 
 impl PreparedRequest {
@@ -160,17 +183,7 @@ impl PreparedRequest {
         plan: &Plan,
         profile: Option<&BackendProfile>,
     ) -> Result<Self, Error> {
-        let body = built_in::encode(plan)
-            .map_err(|_| Error::Defect("a request could not be written as JSON"))?;
-        if let Some(profile) = profile {
-            let evidence = plan
-                .evidence()
-                .as_text()
-                .map_err(|_| Error::Defect("the evidence could not be written as JSON"))?;
-            profile
-                .check(plan, evidence.as_ref(), &body)
-                .map_err(Error::ProfileLimit)?;
-        }
+        let body = checked_body(plan, profile)?;
         let digest = Recorded::new(backend.url(), &body).digest();
         Ok(Self { body, digest })
     }
@@ -178,6 +191,22 @@ impl PreparedRequest {
     pub(crate) fn recorded<'a>(&'a self, backend: &'a Backend) -> Recorded<'a> {
         Recorded::new(backend.url(), &self.body)
     }
+}
+
+/// Encode `plan` and check the exact body against `profile`.
+fn checked_body(plan: &Plan, profile: Option<&BackendProfile>) -> Result<Vec<u8>, Error> {
+    let body = built_in::encode(plan)
+        .map_err(|_| Error::Defect("a request could not be written as JSON"))?;
+    if let Some(profile) = profile {
+        let evidence = plan
+            .evidence()
+            .as_text()
+            .map_err(|_| Error::Defect("the evidence could not be written as JSON"))?;
+        profile
+            .check(plan, evidence.as_ref(), &body)
+            .map_err(Error::ProfileLimit)?;
+    }
+    Ok(body)
 }
 
 pub(crate) struct Answered {
