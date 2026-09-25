@@ -1,5 +1,7 @@
 # The C surface: goals and anti-goals
 
+This page predates the door that shipped. Ticket 0094 landed the door at `libraries/c`, and `libraries/c/DESIGN.md` holds its design. Where the two differ, DESIGN.md holds.
+
 Shared rules live in [README.md](README.md). This page holds only what is particular to C.
 
 ## What really good looks like

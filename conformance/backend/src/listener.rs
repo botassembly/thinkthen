@@ -500,12 +500,12 @@ fn write_answer(mut stream: &TcpStream, canned: &Canned, closing: bool) {
         .iter()
         .map(|(name, value)| format!("{name}: {value}\r\n"))
         .collect();
-    let head = format!(
-        "HTTP/1.1 {} X\r\ncontent-type: application/json\r\n{location}{asked}content-length: {}\r\n{ending}\r\n",
+    let answer = format!(
+        "HTTP/1.1 {} X\r\ncontent-type: application/json\r\n{location}{asked}content-length: {}\r\n{ending}\r\n{}",
         canned.status,
-        canned.promised.unwrap_or(canned.body.len())
+        canned.promised.unwrap_or(canned.body.len()),
+        canned.body
     );
-    let _ = stream.write_all(head.as_bytes());
-    let _ = stream.write_all(canned.body.as_bytes());
+    let _ = stream.write_all(answer.as_bytes());
     let _ = stream.flush();
 }

@@ -1,0 +1,11 @@
+decide: yes 0.90
+choose: "the refund desk"
+tag: ["refund","shipping"]
+score: 0.15
+filter: ["good morning","I demand a refund today"]
+rank: ["good morning","I demand a refund today"]
+find: "good morning"
+annotate: [{"refund":true,"complaint":true}]
+recognize: {"entities":[{"name":"Maria Chen joined Northwind Freight in Chicago last spring.","kind":"person","start":0,"end":59,"strength":0.81}]}
+relate: {"edges":[{"relation":"caused_by","source":{"name":"Checkout returns 500 at the payment step.","kind":"alert"},"target":{"name":"The payments database ran out of disk space.","kind":"alert"},"probability":0.9},{"relation":"caused_by","source":{"name":"The payments database ran out of disk space.","kind":"alert"},"target":{"name":"Checkout returns 500 at the payment step.","kind":"alert"},"probability":0.9}]}
+usage: {"requests_sent":9,"input_tokens":0,"output_tokens":0,"cache_answers":3}

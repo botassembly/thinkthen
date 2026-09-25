@@ -1,0 +1,58 @@
+{
+ "cases": [
+  {
+   "id": "01-decide-yes-captured",
+   "verb": "decide",
+   "question": {
+    "decide": "Does the customer ask for money back?"
+   },
+   "exchanges": [
+    {
+     "provenance": {
+      "kind": "captured",
+      "path": "demos/01-refund-gate/recording/e8b7d68fe0567786d9905df174191873ff0876e0c56efc008ff7a07a4de45d3e.json"
+     },
+     "evidence": "From: sam.okafor@example.net\nSubject: order 4417\n\nThe blender arrived with a cracked jug. I do not want a replacement.\nPlease put the money back on my card.\n\nOrder 4417, bought on the 3rd.\n",
+     "request": "{\"state\":\"From: sam.okafor@example.net\\nSubject: order 4417\\n\\nThe blender arrived with a cracked jug. I do not want a replacement.\\nPlease put the money back on my card.\\n\\nOrder 4417, bought on the 3rd.\\n\",\"model\":\"jev-latest\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"Does the customer ask for money back?\"}}}",
+     "response": {
+      "model": "jev-1.13.0",
+      "answers": {
+       "q1": {
+        "type": "noul",
+        "noul": 0.99
+       }
+      },
+      "usage": {
+       "input_tokens": 331,
+       "output_tokens": 21
+      }
+     }
+    }
+   ],
+   "expect": {
+    "success": {
+     "kind": "single",
+     "answers": [
+      {
+       "exchange": 0,
+       "name": "q1",
+       "bare": true,
+       "details": {
+        "answer": {
+         "kind": "yes_no",
+         "probability": 0.5
+        },
+        "model": "jev-1.13.0",
+        "question_sha256": "ef16533e8bf1fb5e4d35e95dc520b50729bbe78fe5d522eec2860c59c5b55c55",
+        "requests": [
+         "e8b7d68fe0567786d9905df174191873ff0876e0c56efc008ff7a07a4de45d3e"
+        ]
+       }
+      }
+     ]
+    }
+   },
+   "note": "diverge: the stand-in answers 0.5 here, a known divergence"
+  }
+ ]
+}
