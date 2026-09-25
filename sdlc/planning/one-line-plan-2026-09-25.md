@@ -16,3 +16,7 @@ The frozen `surfaces-wave7` tag holds all nine surfaces, about 63,000 lines. Eac
 6. Land together. One landing agent merges the surfaces and owns the files every surface touches: the workspace members, `Cargo.lock`, the ratchet, `sdlc/surfaces.txt`, and the license exceptions.
 
 0094 runs its one C churn probe at low load and never again. 0119 waits until every surface lands.
+
+## Ian's ruling on SQL spending, 2026-09-25
+
+In SQL each row is its own engine call, so `max_requests` caps nothing on a large query (`sdlc/issues/2026-09-25-sqlite-max-requests-caps-nothing-per-statement.md` on ticket 0109). Ian chose a cap per process. SQLite, DuckDB, and PostgreSQL each add a total setting (`thinkthen_max_requests_total`, spelled the host's way), unset by default. Before each engine call the extension takes the requests its engines in this process have sent, refuses as `usage` with zero sends once the total is spent, and otherwise passes the remaining budget as that call's `max_requests`. The cap then holds to within the call's retries. A forked child starts from zero, and each README says so.
