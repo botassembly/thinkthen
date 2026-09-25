@@ -67,9 +67,9 @@ After merging origin/main at b6a8f491:
 | spec | 0 | 21 s |
 | surfaces | 1 | 671 s |
 
-Every surface passed except `databases/duckdb`. Its `tools/source_checks.py` check R5-25 needs its `deny.toml` to equal the root text with one exception added. The root file's exception list now holds the four Polars entries. DuckDB's copy now takes the root file whole and adds `zlib-rs` as the last list item. The R5-25 check and `check.sh`'s removal plant changed to match. `databases/duckdb/check.sh` then passed on its own (see below).
+Every surface passed except `databases/duckdb`. Its `tools/source_checks.py` check R5-25 needs its `deny.toml` to equal the root text with one exception added. The root file's exception list now holds the four Polars entries. DuckDB's copy now takes the root file whole and adds `zlib-rs` as the last list item. The R5-25 check and `check.sh`'s removal plant changed to match. The R5-25 check lost one line, so `databases/duckdb/ratchet.py.json` falls from 1821 to 1820. A run of `databases/duckdb/check.sh` on its own then passed its source checks and deny step. It next failed at "the stock CLI loads the extension" with "the backend refused the connection", because that run gave it the closed port 9 in place of the surfaces rung's loopback backend. The final surfaces rung below is the proof.
 
-The final rungs ran inside this ticket's own `flock` wrapper, before the coordinator's note against that arrived. The rung scripts take the heavy lock themselves. The result stands, but a rerun should call them directly.
+The rungs above ran inside this ticket's own `flock` wrapper, before the coordinator's note against that arrived. The rung scripts take the heavy lock themselves. The final run below called them directly.
 
 ## Warnings
 
