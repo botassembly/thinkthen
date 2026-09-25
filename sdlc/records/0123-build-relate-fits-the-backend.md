@@ -82,4 +82,4 @@ Where I looked for duplication first: the status phrases in `cli/failure/status.
 
 ## Rungs
 
-RUNGS
+After merging `origin/main` at `b3884c43` (branch merge `85e661d6`), each rung ran once with `THINKTHEN_API_KEY` unset. `install`, `lint`, `test`, `spec`, and `surfaces` each exited 0. The ratchet was re-measured with `sdlc/scripts/ratchet.mjs` after the merge. No live or paid call ran.
