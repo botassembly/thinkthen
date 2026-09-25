@@ -133,7 +133,7 @@ RULINGS = {
     "file access": "`@file` opens through that file system, so the caller's own settings decide each read.",
     "the engine settings": "The first throttle wins for the process, as main's `build` rules.",
     "volatile scalars": "Every scalar registers as volatile, so the planner never folds a constant call into a send.",
-    "warm": "The aggregate has no client context, so `thinkthen_warm` refuses `@file` and runs on the engine the environment describes.",
+    "warm": "**The aggregate reads `@file` through the kept connection of the database that registered it, under that database's gate, and runs on the engine the environment describes.**",
     "licenses": "One exception remains: `zlib-rs` (Zlib), a build-time dependency of `libduckdb-sys`.",
     "relate from rows": "**The relate query returns `id, name, kind` or `id, name`, rows with the same name and kind become one entity, and each edge returns one row per pair of their ids.**",
     "the row cap": "**Relate reads at most 255 rows, under `LIMIT 256`, and more is `usage`.**",

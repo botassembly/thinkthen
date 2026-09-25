@@ -5,10 +5,18 @@ use std::fs;
 use std::io;
 use std::io::Write as _;
 use std::path::PathBuf;
-use std::process::{Command, Output, Stdio};
+use std::process::{ChildStdin, Command, Output, Stdio};
 
 #[path = "../src/test_deadline/wait.rs"]
 mod wait;
+
+fn feed(stdin: Option<ChildStdin>, input: &[u8]) -> io::Result<()> {
+    let mut stdin = stdin.ok_or_else(|| io::Error::other("no stdin"))?;
+    match stdin.write_all(input) {
+        Err(error) if error.kind() == io::ErrorKind::BrokenPipe => Ok(()),
+        written => written,
+    }
+}
 
 fn run(arguments: &[&str], input: &[u8]) -> io::Result<Output> {
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
@@ -19,11 +27,7 @@ fn run(arguments: &[&str], input: &[u8]) -> io::Result<Output> {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()?;
-    child
-        .stdin
-        .take()
-        .ok_or_else(|| io::Error::other("no stdin"))?
-        .write_all(input)?;
+    feed(child.stdin.take(), input)?;
     wait::finish(child, &arguments.join(" "))
 }
 
@@ -36,11 +40,7 @@ fn status_without_output(arguments: &[&str], input: &[u8]) -> io::Result<std::pr
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()?;
-    child
-        .stdin
-        .take()
-        .ok_or_else(|| io::Error::other("no stdin"))?
-        .write_all(input)?;
+    feed(child.stdin.take(), input)?;
     wait::finish(child, &arguments.join(" ")).map(|output| output.status)
 }
 

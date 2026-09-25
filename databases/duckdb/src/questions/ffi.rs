@@ -59,6 +59,15 @@ impl Files {
         Self::held((!context.is_null()).then_some(context), "relate bind")
     }
 
+    /// A kept connection's handles (ticket 0129), for the warm aggregate,
+    /// which has no client context of its own.
+    pub(crate) fn of_connection(connection: sys::duckdb_connection) -> Result<Self, String> {
+        let mut context: sys::duckdb_client_context = std::ptr::null_mut();
+        // SAFETY: a live kept connection; DuckDB writes the out pointer.
+        unsafe { sys::duckdb_connection_get_client_context(connection, &raw mut context) };
+        Self::held((!context.is_null()).then_some(context), "warm")
+    }
+
     fn held(context: Option<sys::duckdb_client_context>, what: &str) -> Result<Self, String> {
         let context = context
             .ok_or_else(|| defect(&format!("the {what} got no client context from DuckDB")))?;
