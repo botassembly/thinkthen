@@ -213,12 +213,7 @@ fn message(error: &EngineError) -> String {
         EngineError::NoKey(variable) => {
             return format!("no key is set; set {variable} or call EngineBuilder::api_key");
         }
-        EngineError::WidthActive(active) => {
-            let active = active.0.get();
-            return format!(
-                "throttle {active} is already active for this process; use throttle {active} or drop the throttle argument"
-            );
-        }
+        EngineError::WidthActive(active) => return active.to_string(),
         EngineError::ModelsDiffer(_) => {
             "the backend returned different model versions for one call; pin the model and use a cache"
         }

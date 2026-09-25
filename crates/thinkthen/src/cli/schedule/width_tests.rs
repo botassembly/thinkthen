@@ -198,7 +198,7 @@ fn command_setup_child() {
     assert_eq!(report(&refused, &mut said), ExitCode::from(2));
     assert_eq!(
         String::from_utf8(said).expect("text"),
-        "thinkthen: width 4 is already active for this process; use width 4 or drop the width argument\n"
+        "thinkthen: throttle 4 is already active for this process; use throttle 4 or drop the throttle argument\n"
     );
     assert_eq!(unread.load(Ordering::SeqCst), 0, "no input was read");
     let after = (

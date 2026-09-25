@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/cli crates/thinkthen/src/core/check.rs crates/thinkt
 
 # 0126: Fix command wording, help, and wrong doc claims
 
-Status: ready. Owner: Claude.
+Status: in progress. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. The `check` report and the `recognize --dry-run` output change shape, so a second fresh Claude reviewer checks the code as well. Codex does not review this ticket unless Ian routes it.
 

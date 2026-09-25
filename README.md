@@ -24,11 +24,11 @@ Those commands are the design. `specification/` is the contract, and code follow
 
 The answer cache is on by default. Cache entries contain the complete request and response, including the evidence being judged. Filesystem access and backups can copy that evidence. A platform-default cache is created for its owner alone and an existing Unix folder must already have mode `0700`; an explicitly named `--cache` folder keeps its user-owned mode. The first write binds a folder to the resolved backend address. Reusing it with another address fails before any request and tells the user to restore the old settings or choose another folder. No key enters an entry. Use `--no-cache` for a run that must neither read nor write cached answers.
 
-`thinkthen status` reports the resolved configuration, cache size, and local request, token, and cache-answer counts for the current UTC month and in total. The count-only usage files live beside the platform cache and contain no judged evidence or key. They are local conservative statistics rather than an account bill.
+`thinkthen status` reports the resolved configuration, cache size, and local request, token, and cache-answer counts for the current UTC month and in total. It counts only what the command sends. A library, SQL extension, or data frame keeps its counts in memory for its own process, and `status` never sees them. The count-only usage files live beside the platform cache and contain no judged evidence or key. They are local conservative statistics rather than an account bill.
 
 ## What it is not for
 
-- **A loop that needs many decisions a second.** One measured call took over 300 ms, and a shell tool adds a process start on top of that. No pipeline of separate processes reaches that rate. Record mode through a `coproc` serves a steady loop from one long-lived process, and that is the ceiling.
+- **A loop that needs many decisions a second.** Each decision waits on a network round trip to a model, and a shell tool adds a process start to each one. A pipeline of separate processes pays both for every decision. Record mode through a `coproc` serves a steady loop from one long-lived process, and that is the ceiling.
 - **A call from inside a program written in another language.** Records, recordings, transforms, and exit codes buy a program nothing, because the program already holds its data. A Rust program uses the library below. The other languages wait on their own tickets, and `specification/roadmap.md` holds them.
 
 `sdlc/planning/ten-use-cases.md` measured both against ten real uses.

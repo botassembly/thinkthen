@@ -281,12 +281,15 @@ fn each_failure_prints_one_line_that_names_no_record_id_value_or_path() {
 }
 
 #[test]
-fn help_names_audit_after_transform_and_says_what_it_never_does() {
+fn help_names_audit_and_says_what_it_never_does() {
     const ROW: &str = "Grade saved decide and choose answers against an answer key.";
     let text =
         |arguments: &[&str]| String::from_utf8(run(arguments, b"").stdout).expect("UTF-8 help");
     let root = text(&["--help"]);
-    assert!(root.contains(&format!("\n  transform  List or print the built-in jq transforms without running them\n  audit      {}\n  diff ", ROW.trim_end_matches('.'))), "{root}");
+    assert!(
+        root.contains(&format!("\n  audit      {}\n", ROW.trim_end_matches('.'))),
+        "{root}"
+    );
     assert!(text(&["audit", "-h"]).starts_with(&format!("{}\n\n", ROW.trim_end_matches('.'))));
     let long = text(&["audit", "--help"]);
     assert!(long.starts_with(&format!("{ROW}\n\n")), "{long}");

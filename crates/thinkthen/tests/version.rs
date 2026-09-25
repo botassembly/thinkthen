@@ -112,8 +112,6 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
         .filter_map(|line| line.split_whitespace().next())
         .collect();
     const ORDER: [&str; 17] = [
-        "status",
-        "check",
         "decide",
         "filter",
         "rank",
@@ -124,11 +122,13 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
         "annotate",
         "recognize",
         "relate",
-        "cache",
-        "transform",
+        "help",
         "audit",
         "diff",
-        "help",
+        "status",
+        "check",
+        "cache",
+        "transform",
     ];
     if listed != ORDER {
         failures.push(format!("root Commands order is {listed:?}"));

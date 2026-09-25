@@ -30,8 +30,8 @@ pub(crate) fn run(
 ) -> Result<ExitCode, Failure> {
     let url = arguments.url.as_deref().or_else(|| environment.base_url());
     let url = url.ok_or(Failure::Usage(NO_ADDRESS))?;
-    let model = arguments.model.as_deref().or_else(|| environment.model());
-    let backend = Backend::resolve(Some(url), None, model.unwrap_or(DEFAULT_MODEL))?;
+    let asked = arguments.model.as_deref().or_else(|| environment.model());
+    let backend = Backend::resolve(Some(url), None, asked.unwrap_or(DEFAULT_MODEL))?;
     let probes =
         check::probes(backend.model()).ok_or(Failure::Defect("a check probe no longer parses"))?;
     let engine = Engine::new(Settings {
@@ -47,7 +47,9 @@ pub(crate) fn run(
     })?;
     let mut lines = vec![
         format!("url {}", engine.backend().url().as_str()),
-        format!("model {}", engine.backend().model().as_str()),
+        format!("provider {}", check::PROVIDER),
+        format!("model asked {}", asked.unwrap_or("unspecified")),
+        format!("model sent {}", engine.backend().model().as_str()),
     ];
     let mut report = Report::new(&probes);
     for probe in &probes {
@@ -58,7 +60,13 @@ pub(crate) fn run(
         if arguments.dry_run {
             let body = String::from_utf8_lossy(&chunk.request.body);
             lines.push(format!("request {} {body}", probe.name));
-        } else if !send(&engine, environment, probe, chunk, &mut report)? {
+        } else if !send(
+            &engine,
+            environment,
+            probe,
+            chunk,
+            (&mut report, &mut lines),
+        )? {
             break;
         }
     }
@@ -72,13 +80,14 @@ pub(crate) fn run(
     Ok(ExitCode::from(if critical { 4 } else { 0 }))
 }
 
-/// Send one probe and grade what came back. `false` stops the check.
+/// Send one probe, print its decoded reply, and grade what came back.
+/// `false` stops the check.
 fn send(
     engine: &Engine,
     environment: &Environment,
     probe: &Probe,
     chunk: Chunk,
-    report: &mut Report,
+    (report, lines): (&mut Report, &mut Vec<String>),
 ) -> Result<bool, Failure> {
     let mut reply = None;
     let sent = engine.ask_chunks(vec![chunk], environment.cancel(), |answered| {
@@ -87,6 +96,8 @@ fn send(
     });
     let error = match (sent, reply) {
         (Ok(()), Some(reply)) => {
+            let line = check::reply_line(probe, &reply);
+            lines.push(line.ok_or(Failure::Defect("a check reply did not render"))?);
             report.replied(probe, &reply);
             return Ok(true);
         }

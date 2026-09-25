@@ -25,7 +25,10 @@ pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {
         Failure::Entry(name, why) => (5, format!("the entry `{name}` was refused: {why}")),
         Failure::RecordingConflict(name) => (
             5,
-            format!("the entry `{name}` already records a different response"),
+            format!(
+                "the backend answered the request in entry `{name}` differently from the saved response; \
+                 record into a fresh folder, or use --cache DIR to answer from the saved entries"
+            ),
         ),
         Failure::RecordingStorage => (
             5,
