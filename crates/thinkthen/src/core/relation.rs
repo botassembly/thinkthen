@@ -5,7 +5,7 @@ use thiserror::Error;
 
 use crate::core::json::Json;
 use crate::core::recognize::RecognizedName;
-use crate::core::{Description, Evidence, Labels, Question, QuestionText};
+use crate::core::{Description, Evidence, Labels, Question, QuestionText, Withheld};
 
 const MAX_CHOICE_OPTIONS: usize = 255;
 
@@ -18,11 +18,10 @@ pub(crate) struct RelationEntity {
 /// Entity names and kinds are evidence, so `Debug` withholds them.
 impl std::fmt::Debug for RelationEntity {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            formatter,
-            "RelationEntity(<{} bytes withheld>)",
-            self.name.len() + self.kind.len()
-        )
+        formatter
+            .debug_tuple("RelationEntity")
+            .field(&Withheld(self.name.len() + self.kind.len()))
+            .finish()
     }
 }
 

@@ -1,0 +1,3 @@
+{"id":"r2","name":null,"from":"yes","to":"no","probability":[0.7,0.3],"key":"no","effect":"gained"}
+{"id":"r3","name":null,"from":"no","to":"yes","probability":[0.45,0.55],"key":"yes","effect":"gained"}
+{"summary":{"records":6,"changed":2,"only_a":0,"only_b":1,"moves":[{"from":"no","to":"yes","count":1},{"from":"yes","to":"no","count":1}],"labeled":6,"right_a":4,"right_b":6,"gained":2,"lost":0,"mcnemar_on":"right answers","mcnemar_p":0.5,"compare":"runs","a":"as run","b":"as run"}}

@@ -1,6 +1,6 @@
 # Debug follow-ups from the 0102 review
 
-Status: open. Found 2026-09-24 by the 0102 review (`sdlc/records/0102-review.md`). Owner: Claude.
+Status: Closed by Quick Fix `qf-debug-withholds` on 2026-09-24 (`sdlc/records/qf-debug-withholds.md`). The answer types it did not reach are filed as `2026-09-24-answers-still-print-record-labels-under-debug.md`. Found 2026-09-24 by the 0102 review (`sdlc/records/0102-review.md`). Owner: Claude.
 
 ## User text still printed under `{:?}`
 
