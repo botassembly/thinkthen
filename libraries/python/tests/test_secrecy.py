@@ -48,7 +48,8 @@ def test_the_fake_key_arrives_at_a_loopback_listener(backend, tmp_path):
 def test_no_message_or_repr_carries_the_key_or_address_credentials(backend, tmp_path):
     """Change 14: every verb's failure on the refuse, 401, and 503 arms,
     every other failure path's message and ``repr``, and the reprs of the
-    public values name neither the fake key nor URL credentials."""
+    public values name neither the fake key nor URL credentials. Each
+    message is pinned whole, so a sentence that grows a secret fails."""
     printed = run(f"""
         import thinkthen as tt
         port = {backend.port}
@@ -78,18 +79,28 @@ def test_no_message_or_repr_carries_the_key_or_address_credentials(backend, tmp_
             lambda: tt.decide(late, "one", deadline=0),
             lambda: tt.question(file="/nonexistent/question.json"),
         ]
+        said = []
         for call in calls:
             try:
                 call()
-                shown.append("no error")
+                said.append("no error")
             except tt.ThinkThenError as error:
-                shown += [str(error), repr(error)]
+                said.append(f"{{type(error).__name__}} {{error}}")
+                shown.append(repr(error))
         shown.append(repr(tt.recognize("Ada is here", kinds=["person"])))
         shown.append(repr(tt.details(late, "one")))
-        print("\\n".join(shown))
+        print("\\n".join(said + ["--"] + shown))
     """, child_env(backend, tmp_path))
-    assert "no error" not in printed
-    assert printed.count("BackendError") >= 3 * 8
+    said = printed.split("\n--\n")[0].splitlines()
+    assert said == [
+        "UsageError a base address carries no user information",
+        *[f"BackendError the backend answered with status {status}"
+          for status in (422, 401, 503) for _ in range(8)],
+        "UsageError evidence is text, not white space",
+        "Cancelled the call was cancelled",
+        "DeadlineError the deadline of 0 s passed before the call answered",
+        "LocalError the question file could not be read",
+    ]
     assert FAKE not in printed and "hidden-word" not in printed
 
 
