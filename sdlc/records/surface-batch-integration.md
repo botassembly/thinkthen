@@ -141,3 +141,13 @@ Ian ruled on 2026-09-25 that each ready surface lands without waiting for a batc
 - Plants in the real `libraries/python/deny.toml`: a second license exception turned red with "the root file plus its named licenses exceptions", and `yanked = "warn"` turned red with "the root file plus its named entries". The file was restored and touched.
 - The merge touched no workspace Rust, so `test` did not rerun. `lint` and `surfaces` each ran once under the heavy lock with the key unset at `69409b5b`, and both passed. All nine landed surfaces passed. Python ran 23 Rust unit tests and 46 Python tests, and its conformance was 50 pass, 0 fail, 4 not run, of 54.
 - Main at `c9a863fd` added only issue files. It merged as `8be229b2`, and no rung reran. Main then fast-forwarded to the commit that adds this section.
+
+## DuckDB landed
+
+DuckDB 0110 and 0118 landed under the same ruling as Python. With them, every surface in `sdlc/surfaces.txt` is landed.
+
+- Main at `1b66dbaf` merged as `bd640f72`. It touched no workspace Rust and no ladder script. `ticket/0118-duckdb-relate` at `b350556a`, which holds all of 0110 at `67cf3c8c`, merged cleanly as `a0288c76`.
+- `a9ae7e66` adds `databases/duckdb` to `BINDING_DENY` with its one `zlib-rs` Zlib license exception, which the coordinator approved as queue owner. It sets `databases/duckdb` landed and marks 0110 and 0118 landed. The same commit confirms the tools ratchet rises in both records: 0110 from 1288 to 1349, and 0118 from 1760 to 1821, for the 61-line fork test. The coordinator confirmed them as queue owner, and Ian can overturn that.
+- Plants in the real `databases/duckdb/deny.toml`: a second license exception turned red with "the root file plus its named licenses exceptions", and `yanked = "warn"` turned red with "the root file plus its named entries". The file was restored and touched.
+- No workspace Rust changed, so `test` did not rerun. `lint` and `surfaces` each ran once under the heavy lock with the key unset at `a9ae7e66`, and both passed. All ten landed surfaces passed. DuckDB passed 7 Rust unit tests and 77 check steps, and its conformance was 51 pass, 0 fail, 3 not run, of 54.
+- Main had not moved since the merge. Main then fast-forwarded to the commit that adds this section.
