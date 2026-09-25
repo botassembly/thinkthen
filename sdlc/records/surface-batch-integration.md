@@ -127,3 +127,7 @@ After the review follow-up (`98199562`), main at `defec033` merged cleanly as `0
 Surface detail: TypeScript conformance 49/0/5, Ruby conformance 49/0/5, R 46/0/8, SQLite 38/0/16, and PostgreSQL 51 steps with conformance 43/0/11. PostgreSQL's `twenty_thousand_warm_rows` passed. The root ratchet measures 61,768, which equals the ceiling main set.
 
 Python (0105, 0106) is not in this branch. Its merge was not made in this session. It follows with DuckDB, and it owes its own `libraries/python/deny.toml` entry for `target-lexicon` under `BINDING_DENY`.
+
+## Landed
+
+Main at `80f808ea` merged as `83fe0311`. It added one issue file, so no rung reran. `lint` had passed at `b59902cc`. Main then fast-forwarded to the commit that adds this section, whose parent is `83fe0311`. Seven surfaces landed: C, Rust Polars, TypeScript, SQLite, Ruby, R, and PostgreSQL. Python and DuckDB follow in a second batch.
