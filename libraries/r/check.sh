@@ -75,7 +75,10 @@ git -C "$root" archive HEAD | tar -x -C "$scratch/tree"
 # The cargo cache test first, against the builder's cargo home, so a
 # vendoring plant reads fail and never not run (R5-38).
 tarball=$(CARGO_NET_OFFLINE=true CARGO_TARGET_DIR="$scratch/target" "$scratch/tree/libraries/r/tools/make-tarball.sh" "$scratch/out")
-CARGO_HOME="$scratch/cargo" CARGO_NET_OFFLINE=true R CMD INSTALL -l "$scratch/lib" "$tarball" >"$scratch/tarball.log" 2>&1 ||
+# The empty cargo home keeps rustup's own home, and the repository's pinned
+# toolchain builds, because a tarball carries no rust-toolchain.toml.
+pinned=$(sed -n 's/^channel = "\(.*\)"/\1/p' "$root/rust-toolchain.toml")
+RUSTUP_TOOLCHAIN=$pinned CARGO_HOME="$scratch/cargo" CARGO_NET_OFFLINE=true R CMD INSTALL -l "$scratch/lib" "$tarball" >"$scratch/tarball.log" 2>&1 ||
   { cat "$scratch/tarball.log" >&2; exit 1; }
 cat >"$scratch/answer.R" <<'EOF'
 source(file.path(Sys.getenv("TT_TESTS"), "helper.R"))

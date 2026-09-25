@@ -51,7 +51,7 @@ test -f "$PKG/R/extendr-wrappers.R"
 # vendored checksums name.
 version=$(sed -n 's/^Version: *//p' "$PKG/DESCRIPTION")
 tarball="$OUT/thinkthen_$version.tar.gz"
-(cd "$STAGE" && GZIP=-9 tar -czf "$tarball" thinkthen)
+(cd "$STAGE" && tar -cf - thinkthen | gzip -9 >"$tarball")
 listed=$(tar -tzf "$tarball")
 for want in thinkthen/LICENSE thinkthen/src/rust/.cargo/config.toml thinkthen/src/rust/vendor/thinkthen/Cargo.toml; do
   grep -qx "$want" <<<"$listed" || { echo "make-tarball: $want is missing from the tarball" >&2; exit 1; }
