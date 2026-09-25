@@ -151,9 +151,17 @@ def the_cache_probe_runs_on_relates_bind():
 
 
 @case
-def throttle_reaches_relate_and_a_second_run_reads_the_cache():
-    """Shared rule 7: throttle 8 holds 8 requests in flight on the held arm,
-    and a second relate over the same rows answers from the cache."""
+def the_process_throttle_reaches_relate():
+    """Decision 5: a scalar builds the engine with throttle 8, and a relate
+    under throttle 4 reads main's sentence with zero sends."""
+    with Backend() as backend:
+        got = run([TABLE, "SET thinkthen_throttle = 8", "SELECT thinkthen_decide('Is it a refund?', 'a')", "SET thinkthen_throttle = 4", RELATE.format(WORKS)], backend.base())
+        expect(said(got[4]), "thinkthen usage: throttle 8 is already active for this process; use throttle 8 or drop the throttle argument", "throttle 4 after 8")
+        expect(backend.count(), 1, "counted sends")
+
+
+@case
+def a_second_relate_over_the_same_rows_reads_the_cache():
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         rows16 = "CREATE TABLE p AS SELECT i AS id, 'Person ' || i AS name, 'person' AS kind FROM range(16) t(i)"
         pairs = "SELECT count(*) FROM thinkthen_relate('SELECT id, name, kind FROM p', ['knows'])"
@@ -161,8 +169,8 @@ def throttle_reaches_relate_and_a_second_run_reads_the_cache():
         got = run([rows16, "SET thinkthen_throttle = 8", pairs], backend.base(), extra=extra, timeout=120)
         first = backend.count()
         again = run([rows16, "SET thinkthen_throttle = 8", pairs], backend.base(), extra=extra, timeout=120)
-        expect(rows(again[2]), rows(got[2]), "the second run's edges")
-        expect(backend.count(), first, "counted sends on the second run")
+        expect([first > 0, rows(again[2])], [True, rows(got[2])], "the first run's sends and the second run's edges")
+        expect(backend.count() - first, 0, "counted sends on the second run")
 
 
 if __name__ == "__main__":

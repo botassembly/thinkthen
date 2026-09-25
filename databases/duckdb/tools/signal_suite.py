@@ -17,7 +17,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from harness import HOOKS, Backend, case, child_env, expect, main, run, said, EXTENSION
+from harness import EXTENSION, HOOKS, Backend, case, child_env, expect, main, run, said
 
 CANCELLED = "thinkthen cancelled: the call was cancelled"
 
@@ -116,6 +116,83 @@ def r5_23_a_held_batch_stops_within_100_ms():
 @case
 def a_held_details_call_stops_within_100_ms():
     held_cancel("SELECT thinkthen_details('Is it a refund?', 'one held text')", 1)
+
+
+PAIR = "SELECT * FROM thinkthen_relate('SELECT * FROM (VALUES (1, ''Ada'', ''person''), (2, ''Acme'', ''organization'')) v(id, name, kind)', ['works_for=person:organization'])"
+
+
+@case
+def a_held_relate_stops_within_100_ms():
+    held_cancel(PAIR, 1)
+
+
+@case
+def the_bridge_stops_a_running_relate_query_within_100_ms():
+    """Decision 7: the SIGINT reaches the kept connection's running query
+    through the bridge, not only the engine call after it."""
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        child = Child(backend.base(), Path(folder))
+        try:
+            child.ask("SELECT * FROM thinkthen_relate('SELECT i AS id, ''n'' AS name, ''k'' AS kind FROM range(100000000000) t(i) WHERE i < 0', ['near'])")
+            time.sleep(0.5)
+            started = child.interrupt()
+            answer = child.read()
+            took = time.monotonic() - started
+            expect(said(answer), CANCELLED, "the running relate query")
+            if took > 0.1:
+                raise AssertionError(f"cancelled after {took * 1000:.0f} ms, over 100 ms")
+            expect(backend.count(), 0, "counted sends")
+        finally:
+            child.close()
+
+
+THREADS = r"""
+import json, signal, sys, threading
+import duckdb
+signal.signal(signal.SIGINT, lambda number, frame: None)
+con = duckdb.connect(config={"allow_unsigned_extensions": "true"})
+con.execute(f"LOAD '{sys.argv[1]}'")
+con.execute("SET GLOBAL thinkthen_throttle = 8")
+queries = json.loads(sys.argv[2])
+def ask(query):
+    try:
+        print(json.dumps({"rows": con.cursor().execute(query).fetchall()}, default=str), flush=True)
+    except BaseException as error:
+        print(json.dumps({"error": str(error)}), flush=True)
+threads = [threading.Thread(target=ask, args=(query,)) for query in queries]
+for thread in threads:
+    thread.start()
+for thread in threads:
+    thread.join()
+"""
+
+
+@case
+def r4_22_one_signal_stops_every_held_query_and_relate_asks_once():
+    """Two and then four queries at once, a relate among them: one SIGINT
+    stops each within 100 ms, and the backend's count stays put. 20 runs."""
+    queries = [PAIR, "SELECT thinkthen_decide('Is it a refund?', 'held a')", "SELECT thinkthen_details('Is it a refund?', 'held b')", "SELECT thinkthen_probability('Is it a refund?', 'held c')"]
+    for run_number in range(20):
+        for width in (2, 4):
+            with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+                child = subprocess.Popen(
+                    [sys.executable, "-c", THREADS, str(EXTENSION), json.dumps(queries[:width])],
+                    stdout=subprocess.PIPE, text=True, env=child_env(backend.base("arm/held"), Path(folder)),
+                )
+                try:
+                    expect(backend.wait(width), width, "requests in flight")
+                    started = time.monotonic()
+                    child.send_signal(signal.SIGINT)
+                    answers = [json.loads(child.stdout.readline()) for _ in range(width)]
+                    took = time.monotonic() - started
+                    expect([said(answer) for answer in answers], [CANCELLED] * width, f"run {run_number} with {width} queries")
+                    if took > 0.1:
+                        raise AssertionError(f"run {run_number} with {width} queries stopped after {took * 1000:.0f} ms")
+                    backend.release()
+                    time.sleep(0.2)
+                    expect(backend.count(), width, "the count after release")
+                finally:
+                    child.wait(timeout=20)
 
 
 @case
@@ -218,6 +295,9 @@ def r1_10_a_panic_in_each_boundary_reads_defect():
         "usage scan": "SELECT * FROM thinkthen_usage()",
         "warm update": "SELECT thinkthen_warm('Is it a refund?', 'a')",
         "warm finalize": "SELECT thinkthen_warm('Is it a refund?', 'a')",
+        "relate bind": PAIR,
+        "relate init": PAIR,
+        "relate scan": PAIR,
     }
     with Backend() as backend:
         for boundary, query in boundaries.items():
