@@ -2,24 +2,29 @@
 
 Status: Open
 
-Filed by the marketing session on 2026-09-25, from Beatles Bench ticket 0006. Build: thinkthen 0.0.1, release of 2026-09-24.
+Reported from a user's benchmark on 2026-09-25 and checked against main at `535cb3e7`. Verdict: confirmed. One correction: the report's second suggested fix named a `--id` option, and `find` has none.
 
-## What happened
+## What the user sees
 
-```sh
-jq -c '.records[]' examples/07-find/find-cold.jsonl \
-  | thinkthen find 'These are songs by the Beatles. Which one did they release first?' --jsonl --field /input --details
-```
+The user fed ten JSONL records to `find ... --jsonl --field /input --details`. The records carried their own ids `u01` to `u10`. The answer keyed the pick and every probability as `u001` to `u010`. Nothing in the output says which record each key means. The user had to rebuild the map from the input order. Their own `u01` and the generated `u001` look almost the same, which invites a wrong match.
 
-The ten records carry their own ids, `u01` to `u10`. The answer keys every probability and its pick as `u001` to `u010`. The output never says which record each key means.
+## What the code and specification do
+
+- The core builds each id from the unit's position: `format!("u{:03}", place + 1)` (`crates/thinkthen/src/core/find.rs:172-174`).
+- `--details` prints the pick and a `probabilities` map in wire order (`core/find.rs:199-228`). The `value` holds the selected record, so the pick can be read back. The other probabilities cannot.
+- `specification/find.md:41` says the answer holds "the selected generated unit id" and every probability "in input order". It never states the rule that `uNNN` is the one-based input position.
+- Only ADR 0030 line 10 says "Unit ids are `u001` onward". `specification/result.md:83` shows an example with no mapping.
+- `thinkthen find --help` says `--details` prints "the full result object" and says nothing about ids.
+
+So the output matches the specification. The specification and help leave the id rule for the reader to guess.
 
 ## Why it matters
 
-`specification/find.md` settles the generated ids and input order. A reader still has to rebuild the map from the input order. The talk's find slide and the bench page each needed that step. The records' own ids `u01` and the generated `u001` look alike, which invites a wrong join.
+A user reads `--details` to see how close the runners-up were. To do that, the user must know which record `u007` is. Today that knowledge lives only in an ADR. A user whose records carry similar ids can join the wrong rows and draw a wrong conclusion without any error.
 
-## Asks
+## Fix options
 
-1. Under `--details`, list each generated id with its record, or its index into the input.
-2. Or key the probabilities by the value at `--id` when the user names one.
+1. State the rule in `specification/find.md` and in the `--details` help line: `uNNN` is the one-based input position, zero-padded to three digits. This changes no output.
+2. Also add the position to the answer, for example an `index` beside each probability, or a `units` list of `{id, index}` in input order. This widens the result schema in `specification/result.md`.
 
-Ian can overturn both.
+Recommendation: option 1 now, as a small documentation fix. Option 2 changes a settled public schema and needs a ticket and a second reviewer. Take it only if a user still misjoins after the rule is written down. Ian can overturn this choice.
