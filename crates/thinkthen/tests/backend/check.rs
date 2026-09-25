@@ -301,7 +301,8 @@ fn models(output: &Output) -> (Vec<String>, Vec<String>) {
     let named = replies.map(|line| {
         let json = line.split_once(' ').expect("a probe name").1;
         let said: serde_json::Value = serde_json::from_str(json).expect("reply JSON");
-        said["model"].as_str().expect("a model").to_owned()
+        let model = said.get("model").and_then(serde_json::Value::as_str);
+        model.expect("a model").to_owned()
     });
     (header, named.collect())
 }
