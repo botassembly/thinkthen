@@ -1,15 +1,18 @@
 //! The answer a backend gave, in thinkthen's own words.
 
+use std::fmt;
+
 use serde::{Serialize, Serializer};
 
 use crate::core::probability::Probability;
+use crate::core::text::Withheld;
 use crate::core::threshold::{Outcome, Threshold};
 
 /// The decimal place a weighted score is rounded at, to drop summation noise.
 const ROUNDING: f64 = 1e12;
 
 /// The odds of every label in user order, replacing backend key order.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub(crate) struct Distribution {
     entries: Vec<(String, Probability)>,
     total: f64,
@@ -111,9 +114,39 @@ impl Serialize for Distribution {
     }
 }
 
+impl fmt::Debug for Distribution {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        labelled_odds(formatter, "Distribution", &self.entries)
+    }
+}
+
 /// Independent yes probabilities for tag labels, in user order.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 struct TagProbabilities(Vec<(String, Probability)>);
+
+impl fmt::Debug for TagProbabilities {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        labelled_odds(formatter, "TagProbabilities", &self.0)
+    }
+}
+
+/// A label may come from a record, so `Debug` shows the labels' total length
+/// and every probability.
+fn labelled_odds(
+    formatter: &mut fmt::Formatter<'_>,
+    name: &str,
+    entries: &[(String, Probability)],
+) -> fmt::Result {
+    let odds: Vec<f64> = entries.iter().map(|(_, odds)| odds.as_f64()).collect();
+    formatter
+        .debug_struct(name)
+        .field(
+            "labels",
+            &Withheld(entries.iter().map(|(label, _)| label.len()).sum()),
+        )
+        .field("probabilities", &odds)
+        .finish()
+}
 
 impl Serialize for TagProbabilities {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
@@ -125,6 +158,17 @@ impl Serialize for TagProbabilities {
     }
 }
 
+/// The label that led, which `Debug` withholds because a record may name it.
+#[derive(Clone, PartialEq, Serialize)]
+#[serde(transparent)]
+struct Label(String);
+
+impl fmt::Debug for Label {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        Withheld(self.0.len()).fmt(formatter)
+    }
+}
+
 /// The three shapes of answer, each carrying what its backend reported.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
@@ -133,7 +177,7 @@ enum Shape {
     YesNo { probability: Probability },
     /// One label picked from a list, with the odds of every option.
     Choice {
-        pick: String,
+        pick: Label,
         probabilities: Distribution,
         #[serde(skip_serializing_if = "Option::is_none")]
         confidence: Option<Probability>,
@@ -142,7 +186,7 @@ enum Shape {
     Tag { probabilities: TagProbabilities },
     /// A place on named levels, with the odds of every level.
     Score {
-        level: String,
+        level: Label,
         probabilities: Distribution,
         #[serde(skip_serializing_if = "Option::is_none")]
         confidence: Option<Probability>,
@@ -155,7 +199,7 @@ enum Shape {
 pub(crate) struct Answer(Shape);
 
 /// The bare value one judgment prints on standard output.
-#[derive(Clone, Debug, PartialEq, Serialize)]
+#[derive(Clone, PartialEq, Serialize)]
 #[serde(untagged)]
 pub(crate) enum Value {
     /// `decide`: `true`, `false`, or `null`.
@@ -166,6 +210,25 @@ pub(crate) enum Value {
     Tag(Vec<String>),
     /// `score`: the weighted position on the levels.
     Score(f64),
+}
+
+/// A label may come from a record, so `Debug` shows each label's length.
+impl fmt::Debug for Value {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let withheld = |label: &String| Withheld(label.len());
+        match self {
+            Self::YesNo(value) => formatter.debug_tuple("YesNo").field(value).finish(),
+            Self::Choice(label) => formatter
+                .debug_tuple("Choice")
+                .field(&label.as_ref().map(withheld))
+                .finish(),
+            Self::Tag(labels) => formatter
+                .debug_tuple("Tag")
+                .field(&labels.iter().map(withheld).collect::<Vec<_>>())
+                .finish(),
+            Self::Score(value) => formatter.debug_tuple("Score").field(value).finish(),
+        }
+    }
 }
 
 impl Value {
@@ -219,7 +282,7 @@ impl Answer {
         confidence: Option<Probability>,
     ) -> Option<Self> {
         let (pick, _) = probabilities.leader()?;
-        let pick = pick.to_owned();
+        let pick = Label(pick.to_owned());
         Some(Self(Shape::Choice {
             pick,
             probabilities,
@@ -242,7 +305,7 @@ impl Answer {
         confidence: Option<Probability>,
     ) -> Option<Self> {
         let (level, _) = probabilities.leader()?;
-        let level = level.to_owned();
+        let level = Label(level.to_owned());
         Some(Self(Shape::Score {
             level,
             probabilities,
@@ -271,7 +334,7 @@ impl Answer {
                     threshold.is_none_or(|rule| rule.judge(highest) == Outcome::Yes)
                 });
                 if cleared && !probabilities.tied() {
-                    (Value::Choice(Some(pick.clone())), Outcome::Yes)
+                    (Value::Choice(Some(pick.0.clone())), Outcome::Yes)
                 } else {
                     (Value::Choice(None), Outcome::Unresolved)
                 }
@@ -304,6 +367,34 @@ impl Answer {
         }
     }
 
+    /// Every label's probability in declared order, or `None` for a yes/no
+    /// answer.
+    #[must_use]
+    pub(crate) fn named(&self) -> Option<Vec<(&str, f64)>> {
+        let entries = match &self.0 {
+            Shape::YesNo { .. } => return None,
+            Shape::Choice { probabilities, .. } | Shape::Score { probabilities, .. } => {
+                &probabilities.entries
+            }
+            Shape::Tag { probabilities } => &probabilities.0,
+        };
+        Some(
+            entries
+                .iter()
+                .map(|(label, probability)| (label.as_str(), probability.as_f64()))
+                .collect(),
+        )
+    }
+
+    /// The level a placement leads with, or `None` for any other answer.
+    #[must_use]
+    pub(crate) fn level(&self) -> Option<&str> {
+        match &self.0 {
+            Shape::Score { level, .. } => Some(&level.0),
+            Shape::YesNo { .. } | Shape::Choice { .. } | Shape::Tag { .. } => None,
+        }
+    }
+
     /// The odds of every label, or `None` for a yes/no answer.
     #[cfg(test)]
     pub(crate) fn distribution(&self) -> Option<&Distribution> {
@@ -321,13 +412,12 @@ impl Answer {
     pub(crate) fn leader(&self) -> Option<&str> {
         match &self.0 {
             Shape::YesNo { .. } => None,
-            Shape::Choice { pick: label, .. } | Shape::Score { level: label, .. } => Some(label),
+            Shape::Choice { pick: label, .. } | Shape::Score { level: label, .. } => Some(&label.0),
             Shape::Tag { .. } => None,
         }
     }
 
     /// The backend's own confidence, when the backend reported one.
-    #[cfg(test)]
     pub(crate) fn confidence(&self) -> Option<Probability> {
         match &self.0 {
             Shape::YesNo { .. } => None,

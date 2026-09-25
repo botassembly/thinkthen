@@ -251,7 +251,7 @@ fn a_described_list_keeps_each_description_beside_its_own_label() {
 }
 
 #[test]
-fn a_question_shows_its_own_text_and_labels_in_debug_and_nothing_else() {
+fn a_question_shows_its_own_text_in_debug_and_withholds_its_labels() {
     let pick = Question::Choose {
         text: text(),
         options: Labels::options(listed(&["bug", "feature"])).expect("two options"),
@@ -261,11 +261,11 @@ fn a_question_shows_its_own_text_and_labels_in_debug_and_nothing_else() {
         levels: Labels::levels(named(&["None.", "Some."])).expect("two levels"),
     };
 
-    // A question never receives the evidence or the key, so its `Debug` has
-    // nothing to hide. This pins that, so a field carrying either one fails.
+    // A question never receives the evidence or the key. Its labels may come
+    // from a record, so `Debug` withholds them. A field carrying either fails.
     for shown in [format!("{pick:?}"), format!("{placement:?}")] {
         assert!(shown.contains("Which team owns this request?"), "{shown}");
-        for kept_out in ["state", "Evidence", "key", "api", "sk-"] {
+        for kept_out in ["state", "Evidence", "key", "api", "sk-", "feature", "Some."] {
             assert!(!shown.contains(kept_out), "{kept_out} in {shown}");
         }
     }

@@ -73,6 +73,7 @@ Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- 
 | 1 | `sdlc/scripts/lint` | Policy and package checks, the ratchet, the file ceiling, `cargo deny`, `cargo fmt --check`, clippy with warnings denied, `cargo doc` with warnings denied |
 | 2 | `sdlc/scripts/test` | `cargo test --locked --workspace --all-targets --all-features` |
 | 3 | `sdlc/scripts/spec` | The compiled binary against `spec/*.md` |
+| 4 | `sdlc/scripts/surfaces` | Each landed binding's `check.sh` against one loopback backend (ADR 0047) |
 
 Cheapest rung first. The whole ladder runs before any hand-back.
 
