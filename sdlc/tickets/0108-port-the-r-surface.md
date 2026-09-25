@@ -203,6 +203,16 @@ Each child runs under `timeout`, with its own backend and cache folder (decision
   - the registry check.
 - Lints. The binding's table equals the root table except `unsafe_code = "deny"`. The root forbids `missing_debug_implementations`, `unreachable_pub`, and `unsafe_code`, and denies `expect_used`, `unwrap_used`, `indexing_slicing`, `panic`, and `allow_attributes_without_reason`. A local `allow` cannot lift a forbid. The builder's first step compiles one empty `#[extendr]` function and `extendr_module!` inside `ffi` under this table and records the result. `R_init_thinkthen_extendr` is a generated `pub` item in a private module, so `unreachable_pub` is the likeliest trip. If extendr's generated code trips a forbid-level lint, the builder stops and records the case for an ADR 0047 amendment.
 
+### Departure: the ladder changes move to the landing agent (2026-09-25)
+
+The builder's brief forbade ladder changes, so this build does not touch `sdlc/scripts/`. The code review accepted the departure on the condition that the landing agent makes these five changes before the `surfaces` rung counts R:
+
+1. The registry reads R's manifest at `libraries/r/thinkthen/src/rust/Cargo.toml`. Today `sdlc/scripts/surfaces --registry` looks for `libraries/r/Cargo.toml`, which does not exist.
+2. Deny for R uses `libraries/r/deny.toml`. Today the registry passes the root `deny.toml`, which lacks the `paste` entry and fails on RUSTSEC-2024-0436.
+3. Deny for R runs the `sources` check with the other three: `advisories bans licenses sources`.
+4. `lint` runs the deny-config equality step of decision 15: R's `deny.toml` with its `ignore` list set back to `[]` equals the root file byte for byte.
+5. `policy.py` finds R's manifest at `libraries/r/thinkthen/src/rust/Cargo.toml`. Today it globs `libraries/*/Cargo.toml`, and its path rule expects `../../crates/thinkthen` where R's path is `../../../../../crates/thinkthen`.
+
 ## Dependencies and second review
 
 - Rust: `thinkthen` by path with default features off, and `extendr-api` 0.8.2 with `extendr-ffi` 0.8.2 and `extendr-macros` 0.8.2, from the tag's lock and this machine's cache. `paste` 1.0.15 comes in through `extendr-api`. The lock's versions for `thinkthen`'s own tree equal the root lock's (ADR 0047 item 1).
