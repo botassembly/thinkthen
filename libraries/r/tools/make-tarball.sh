@@ -27,7 +27,7 @@ rm -rf -- "$PKG/src/rust/.cargo" "$PKG/src/rust/target"
 # The crate as cargo publishes it, unpacked where the package's manifest
 # will point.
 (cd "$ROOT" && cargo package --locked --offline --no-verify -p thinkthen >/dev/null)
-crate=$(ls "$ROOT"/target/package/thinkthen-*.crate)
+crate=$(ls "${CARGO_TARGET_DIR:-$ROOT/target}"/package/thinkthen-*.crate)
 mkdir -p "$PKG/src/rust/vendor"
 tar -xzf "$crate" -C "$PKG/src/rust/vendor"
 mv "$PKG"/src/rust/vendor/thinkthen-* "$PKG/src/rust/vendor/thinkthen"
