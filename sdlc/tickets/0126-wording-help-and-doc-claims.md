@@ -67,7 +67,7 @@ ok connection
 critical 0, warning 0
 ```
 
-- `provider` names the wire interface the tool speaks through, the adapter's `NAME`. Today that is always `systemone`. It does not name who runs the server. The tool knows no fact about that.
+- `provider` names the wire interface the tool speaks through. The build prints `core::adapters::systemone::NAME`, never the crate's `core::NAME`, which is `thinkthen`. Today that is always `systemone`. It does not name who runs the server. The tool knows no fact about that.
 - `model asked` prints what `--model` or the configuration file's `model` named. With neither, it prints `unspecified`.
 - `model sent` prints the model the requests carry. That is the asked model, or `jev-latest` when none was asked. The wire rule still needs a model in every request. Ian did not rule on option 2, an optional model.
 - `reply PROBE JSON` prints one line for each probe whose reply decoded, in probe order. JSON is one compact object: `model` is the model that reply names, `answers` lists each logical question's decoded answer in plan order, and `usage` is the reply's token counts or `null`. An answer prints as the result object prints `answer`. A failed logical question prints as the result object prints its failure. A probe that met an error status, a transport failure, or a refused reply prints no reply line. Its finding row says why.
@@ -104,7 +104,7 @@ No loopback arm changes, and `conformance/backend/src/arms.rs` is not touched. E
 - `schema` names the plan, as `thinkthen.relate-plan/1` names relate's.
 - `url`, `model`, and `key_env` come first after `schema`, as in relate's plan. They cost at most 9 nonblank lines, because the backend is already in hand. If they cost more, the build drops them and records them as a gap. `schema` stays either way.
 
-- `tokens` becomes `words`, because it counts whitespace-split words and not model tokens.
+- `tokens` becomes `words`, because it counts words and not model tokens. A word is what `tokenize` in `core/recognize.rs` returns. The text splits at white space. Each trailing `.`, `!`, `?`, `,`, `:`, or `;` of a piece then counts as its own word. `Ada met Acme.` is four words: `Ada`, `met`, `Acme`, and `.`. `specification/recognize.md` states this definition beside the field.
 - `requests` becomes `request_count`, and `requests` now holds the list. These are relate's names for the same two things.
 - Each request carries its recording `digest`, UTF-8 `bytes`, and exact `body_utf8`. They come from the same `facade::split` call the count already uses.
 - `from`, `relation_pairs_upper_bound`, and `relation_requests_upper_bound` keep their meaning. `requests` prints last.
@@ -115,7 +115,7 @@ No loopback arm changes, and `conformance/backend/src/arms.rs` is not touched. E
 
 ### Cost and connection sentences (items 8 and 9)
 
-- The `recognize` help gains: `Each record makes paid requests: a detection question for every word, a kind question for every word when two or more kinds are given, and relation questions when rules are given. --dry-run prints the exact requests for the first record.` The spec states the kind rule at `specification/recognize.md:7`.
+- The `recognize` help gains: `Each record makes paid requests: a detection question for every word, a kind question for every word when two or more kinds are given, and relation questions when rules are given. --dry-run prints the exact requests for the first record.` "Word" has the meaning the dry-run section defines, so a trailing `.` gets its own detection question. The spec states the kind rule at `specification/recognize.md:7`.
 - The `--jobs` help and `specification/records.md` gain: `A run opens up to one connection for each request in flight, so --jobs N opens up to N connections.`
 
 ### Repeat answers are not the same (docs item 1)
@@ -187,7 +187,7 @@ Each is the agent's decision. Ian can overturn any of them.
 
 ## Proof
 
-Every test runs the built command against the loopback backend or with no backend at all, under a fake key or none. None needs a test-only hook. The four questions of `CLAUDE.md` are answered in the columns: what it protects, the credible regression that fails it (the plant), why no existing test catches it, and the hook (none for every row).
+Every test runs the built command against the loopback backend or with no backend at all, under a fake key or none. The four questions of `CLAUDE.md` are answered in the columns: what it protects, the credible regression that fails it (the plant), and why no existing test catches it. The fourth answer, the test-only hook it needs, is "none" for every row. Each row drives the real binary or the real public layer.
 
 | Test | Protects | Plant that turns it red | Why no existing test catches it |
 | --- | --- | --- | --- |
@@ -200,7 +200,7 @@ Every test runs the built command against the loopback backend or with no backen
 | `spec/recognize.md`: the `Ada met Acme.` dry run with its new fields | The page a user copies | Keep the key named `tokens`. The page fails | It pins the old names |
 | `cli/schedule/width_tests.rs` pins the throttle sentence at the command. `tests/public_env.rs` keeps its pin at the public layer. `engine/width_tests.rs` asserts the value and drops its text pin | One throttle sentence at every layer | Put `width` back in the engine `Display`. The command pin fails. Give `public/error.rs` its own copy with `width`. The public pin fails | The command pin holds the old word today. No new test |
 | `tests/backend/recording_conflicts.rs`: pin the whole new conflict sentence in place of `contains("already records a different response")` | The message names the fresh-folder and `--cache` routes | Drop the `--cache` clause. The pin fails | Today's check is a substring |
-| Help pins in `tests/decide_edge.rs`: the `--jobs` connection sentence, the `--record` conflict sentence, and the recognize cost sentence, each as one whole sentence | The three new help sentences | Remove any sentence. Its pin fails | None of the three exists yet |
+| Help pins in `tests/decide_edge.rs`: the `--jobs` connection sentence, the `--record` conflict sentence, the recognize cost sentence, and the new `check` help sentence, each as one whole sentence | The four new help sentences | Remove any sentence. Its pin fails | None of the four exists yet |
 
 The doc-only changes have no test. `sdlc/scripts/spec` runs the two `spec/` pages above. The reviewer checks each doc line against its source: experiment 212's and 259's figures, the audit rows against the binary, and each database README against the issue's three leaks.
 
@@ -237,12 +237,17 @@ Excluded: the items the ownership table names. A request-entry helper shared wit
 
 ## Dependencies and order
 
-Build from `origin/main`. It needs nothing from 0122 to 0125 or 0127 to 0129. Whichever ticket lands second merges each overlap:
+Build from `origin/main`. It needs nothing from 0122 to 0125 or 0127 to 0129. For every overlap below, whichever ticket lands second merges:
 
 - 0125: the root-help asserts at `tests/audit_refusals.rs:289` and `tests/diff.rs:90`, as the help-order section says.
 - 0123: the `--jobs` help at `cli/args.rs:152`. This ticket adds the connection sentence there, and 0123 hides `--jobs` from relate's help.
 - 0123: the recognize cost sentence in `cli/args/command.rs` sits next to the relate help, which 0123 owns and whose own cost sentence 0123 writes.
+- 0123: `cli/check.rs` and `public/error.rs`, where 0123 changes the 400 reason.
 - 0124: the `--record` help in `cli/args.rs` sits next to the `--cache` and `--no-cache` help that 0124's cache wording may change.
+- 0124: `cli/failure/recording.rs`, where 0124 changes the mismatch arm beside the conflict arm, and `specification/recording.md`.
+- 0127: `databases/sqlite/README.md` and `tests/version.rs`.
+- 0128: `README.md`.
+- 0129: `databases/sqlite/README.md` and `databases/duckdb/README.md`.
 
 ## Issues this closes
 
