@@ -201,5 +201,36 @@ def two_databases_each_judge_their_own_access():
         expect(said(files[2]), f"thinkthen local: the question file {question} was not read: this database's file settings refuse it", "B's read")
 
 
+def opens(trace: Path, name: str) -> int:
+    """How many `openat` calls in an `strace -f` log name the file `name`."""
+    return sum(1 for line in trace.read_text().splitlines() if "openat(" in line and f'/{name}"' in line)
+
+
+@case
+def r1_15_and_r2_18_file_opens_under_strace():
+    """A refused `@file` never opens the file (R1-15), and 20,000 rows on one
+    thread open it once (R2-18). strace counts the opens."""
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        question = Path(folder) / "q.json"
+        question.write_text('{"decide": "Is it a refund?"}')
+        many, refused = Path(folder) / "many.trace", Path(folder) / "refused.trace"
+        got = run(
+            ["SET threads = 1", f"SELECT sum(thinkthen_decide('@{question}', 'refund now')::INTEGER) FROM range(20000)"],
+            backend.base(),
+            wrap=["strace", "-f", "-e", "trace=openat", "-o", str(many)],
+            timeout=300,
+        )
+        expect(rows(got[1]), [[20000]], "yes answers over 20,000 rows")
+        expect(opens(many, "q.json"), 1, "opens of q.json over 20,000 rows")
+        got = run(
+            ["SET enable_external_access = false", f"SELECT thinkthen_decide('@{question}', 'refund now')"],
+            backend.base(),
+            wrap=["strace", "-f", "-e", "trace=openat", "-o", str(refused)],
+            timeout=120,
+        )
+        expect(said(got[1]), f"thinkthen local: the question file {question} was not read: this database's file settings refuse it", "the refused read")
+        expect(opens(refused, "q.json"), 0, "opens of q.json with access off")
+
+
 if __name__ == "__main__":
     sys.exit(main())

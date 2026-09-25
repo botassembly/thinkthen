@@ -141,14 +141,16 @@ def run(
     extra: dict[str, str] | None = None,
     extension: Path = EXTENSION,
     timeout: float = 60,
+    wrap: list[str] | None = None,
 ) -> list[dict]:
     """Run statements in one fresh child and return one result per statement.
     A statement given as `[NAME, SQL]` runs on database NAME, a separate
-    in-memory database in the same process; a plain one runs on `A`."""
+    in-memory database in the same process; a plain one runs on `A`.
+    `wrap` runs the child under a tracer such as `strace`."""
     with tempfile.TemporaryDirectory(prefix="thinkthen-duckdb-") as folder:
         env = child_env(base, Path(folder), extra)
         done = subprocess.run(
-            [sys.executable, "-c", CHILD, str(extension), json.dumps(statements)],
+            [*(wrap or []), sys.executable, "-c", CHILD, str(extension), json.dumps(statements)],
             env=env,
             capture_output=True,
             text=True,
