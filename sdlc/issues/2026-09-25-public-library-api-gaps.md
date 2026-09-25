@@ -90,6 +90,14 @@ The fix. Make Python's frame writer take widened cells and frame tag cells from 
 
 Done when: the same annotate frame gives byte-identical columns through the Python and Rust Polars doors, including a widened score, a failed marker, and a tag column.
 
+## 9. Every SQL surface matches both arms of `LoadedQuestion` by hand
+
+What happens today. A decide call on a `LoadedQuestion` needs a `match` on its two arms, because only `Question` and `BandedQuestion` implement `DecisionQuestion`. SQLite's `scalars.rs`, DuckDB's `scalars/calls.rs`, and PostgreSQL's `lib.rs` repeat that match for decide, details, and bulk decide. Ticket 0129 added one more in SQLite's warm.
+
+The fix. Decide whether `LoadedQuestion` implements `DecisionQuestion` and `DetailQuestion`, refusing a choose, tag, or score question at the call as `only` already does. Then delete the repeated matches.
+
+Done when: the public API says whether a loaded question is asked directly, and the surfaces follow it.
+
 ## Already fixed
 
 - One engine per process, rule 2. Rust's free functions use one lazily built `default_engine()` (`crates/thinkthen/src/public/mod.rs:51`). Python (`libraries/python/src/engine.rs:296`), TypeScript (`libraries/typescript/src/door.rs:152`), Ruby (`libraries/ruby/src/ffi.rs:304`), and R (`libraries/r/thinkthen/src/rust/src/lib.rs:157`) delegate to it. SQLite holds one engine for the process (`databases/sqlite/README.md:42`). Rules 1 and 4 were already ADR 0017. The rest of that issue is item 6.

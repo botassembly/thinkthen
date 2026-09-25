@@ -61,7 +61,7 @@ SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM staff', ['works_for=p
 
 ## Files and access
 
-An `'@file'` question opens through the calling database's own file system, so `enable_external_access`, `allowed_directories`, `allowed_paths`, and `disabled_filesystems` decide every read, and the extension copies none of them. A cache folder set from SQL passes the same check. `thinkthen_warm` cannot see a caller's settings, so it refuses `'@file'`; pass the file's text from DuckDB's own `read_text` instead. Warm reads no session setting. It takes its cache folder from `THINKTHEN_CACHE` alone and runs at the process's throttle, so set `THINKTHEN_CACHE` before the process starts. An `'@file'` read stops at 1 MiB and reads `thinkthen local: the question file PATH was not read: it holds more than 1 MiB`.
+An `'@file'` question opens through the calling database's own file system, so `enable_external_access`, `allowed_directories`, `allowed_paths`, and `disabled_filesystems` decide every read, and the extension copies none of them. A cache folder set from SQL passes the same check. `thinkthen_warm` reads `'@file'` through its database's own connection, so the same database-wide file settings decide, and it takes a banded question and ignores the band. It refuses a `'@~'` path, because `home_directory` is a session setting it cannot see, and it refuses while a relate query runs on the database. Warm reads no session setting. It takes its cache folder from `THINKTHEN_CACHE` alone and runs at the process's throttle, so set `THINKTHEN_CACHE` before the process starts. An `'@file'` read stops at 1 MiB and reads `thinkthen local: the question file PATH was not read: it holds more than 1 MiB`.
 
 ## Interrupts
 

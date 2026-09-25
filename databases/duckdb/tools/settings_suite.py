@@ -184,11 +184,25 @@ def access_cases_match_duckdb():
                     wrong.append(f"cache {setting} {name}: COPY {'allows' if oracle else 'refuses'}, we {'allow' if ours else 'refuse'}")
                 if not ours and (backend.count() != sent or before != (sorted(os.listdir(root / "out")), sorted(os.listdir(root / "ok")))):
                     wrong.append(f"cache {setting} {name}: a refused folder sent or created something")
-                files = run([*setup, f"SELECT count(*) FROM read_text('{path}/q.json')", f"SELECT thinkthen_decide('@{path}/q.json', 'refund now')"], backend.base())
-                oracle = judged(files[-2])
-                ours = "allowed" if "error" not in files[-1] else ("refused" if "file settings refuse it" in said(files[-1]) else "missing")
-                if oracle != ours:
-                    wrong.append(f"@file {setting} {name}: read_text {oracle}, we {ours}")
+                sent = backend.count()
+                files = run(
+                    [*setup, f"SELECT count(*) FROM read_text('{path}/q.json')", *(f"SELECT {verb}('@{path}/q.json', 'refund now')" for verb in ("thinkthen_decide", "thinkthen_warm"))],
+                    backend.base(),
+                )
+                oracle = judged(files[-3])
+                for verb, got in (("decide", files[-2]), ("warm", files[-1])):
+                    ours = "allowed" if "error" not in got else ("refused" if "file settings refuse it" in said(got) else "missing")
+                    if oracle != ours:
+                        wrong.append(f"@file {verb} {setting} {name}: read_text {oracle}, we {ours}")
+                if oracle != "allowed" and backend.count() != sent:
+                    wrong.append(f"@file {setting} {name}: a file DuckDB did not read sent something")
+        # Ticket 0129 decision 7: `~` follows the session's home_directory, which warm cannot see.
+        home = root / "home"
+        home.mkdir()
+        (home / "q.json").write_text('{"decide": "Is it a refund?"}')
+        tilde = run([f"SET home_directory = '{home}'", *(f"SELECT {verb}('@~/q.json', 'refund now')" for verb in ("thinkthen_decide", "thinkthen_warm"))], backend.base())
+        expect(rows(tilde[1]), [[True]], "decide reads ~ from the session's home_directory")
+        expect(said(tilde[2]), "thinkthen usage: thinkthen_warm cannot read an '@~' path, because home_directory is a session setting it cannot see; write the full path", "warm and ~")
         if wrong:
             raise AssertionError("; ".join(wrong))
 
@@ -222,6 +236,16 @@ def two_databases_each_judge_their_own_access():
         )
         expect(rows(files[1]), [[True]], "A reads the file")
         expect(said(files[2]), f"thinkthen local: the question file {question} was not read: this database's file settings refuse it", "B's read")
+        warm = run(
+            [
+                ["B", "SET enable_external_access = false"],
+                f"SELECT thinkthen_warm('@{question}', 'refund now')",
+                ["B", f"SELECT thinkthen_warm('@{question}', 'refund now')"],
+            ],
+            backend.base(),
+        )
+        expect(rows(warm[1]), [[1]], "A's warm reads the file")
+        expect(said(warm[2]), f"thinkthen local: the question file {question} was not read: this database's file settings refuse it", "B's warm")
 
 
 def opens(trace: Path, name: str) -> int:

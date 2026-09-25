@@ -47,6 +47,11 @@ impl Conn {
         unsafe { sys::duckdb_disconnect(&raw mut raw) };
     }
 
+    /// This connection's client context and file system (ticket 0129).
+    pub(crate) fn files(self) -> Result<Files, String> {
+        Files::of_connection(self.0)
+    }
+
     /// Stop the query running on this connection, if any.
     pub(crate) fn interrupt(self) {
         // SAFETY: a live connection; DuckDB's own thread-safe stop.
