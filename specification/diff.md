@@ -24,7 +24,7 @@ thinkthen diff A [B] [--key KEY] [--threshold RULE] [--compare-threshold RULE] [
 - `--id POINTER` works as in audit, default `/id`.
 - `--table` prints the results for a person instead of JSON lines.
 
-diff pairs answers by answer name and record id only. It does not check that the two runs saw the same record text or the same question. The `compare` transform checks both.
+diff pairs answers by answer name and record id only. It does not check that the two runs saw the same record text. It compares each pair's `meta.question_sha256` and warns when the digests differ, as "Warnings" below says. The `compare` transform checks both the record text and the question.
 
 ## The math
 
@@ -54,7 +54,7 @@ For counts `a` and `b`, with `n = a + b`: `p` is 1 when `n` is 0. Otherwise `p =
 
 ## Output
 
-diff builds every line before printing. It prints one JSON object per changed pair in A's order, then a summary line, and exits 0.
+diff builds every line before printing. It prints one JSON object per changed pair in A's order, then a summary line, and exits 0. A warning goes to standard error and changes neither standard output nor the exit code.
 
 A row prints `id`, `name` (the `annotate` answer name, or null), `from`, `to`, `probability` (the two confidences), `key` (`"yes"`, `"no"`, the option, or null), and `effect`.
 
@@ -63,6 +63,17 @@ The last line is `{"summary": S}`. `S` prints `records`, `changed`, `only_a`, `o
 Every float rounds to six places. A reader of this output ignores members it does not know, because a later version may add them.
 
 `--table` prints the prototype's table. A changed row prints `ID[/NAME]  FROM -> TO  p PA -> PB`, and `  key KEY: EFFECT` when the key has a value. Probabilities print with two decimals, and `-` stands for null. The count line starts `A -> B`, or `A -> B (at RULE_A and RULE_B)` when either side has a rule, or `RULE_A -> RULE_B` for two cuts. It goes on with `: C of N changed` and `; FROM -> TO COUNT` for each move. With a key it adds `; gained G, lost L (RA -> RB right of LABELED)`. With a test it adds `; McNemar p P on ON` with three decimals. With unpaired answers it adds `; only in A X, only in B Y`. The table keeps the prototype's words, `unresolved` and `tied` included, as audit's does. An answer inside a band is not sure, and the table calls it `unresolved`.
+
+## Warnings
+
+diff prints at most two warning lines on standard error, after standard output. Quick Fix `qf-diff-warnings` added them from the options in the closed issue `2026-09-25-diff-exits-0-when-nothing-pairs-and-pairs-different-questions-silently.md`. A script that wants to fail on either one reads standard error.
+
+| Case | Standard error |
+| --- | --- |
+| No answer paired: `records` is 0 | `thinkthen: diff: warning: no answer paired; check that both runs hold the same record ids and answer names` |
+| `D` of the `N` pairs carry different `meta.question_sha256` values | `thinkthen: diff: warning: the question digest differs in D of N paired answers. A different question or threshold gives a different digest.` |
+
+The digest check counts a pair only when both lines carry a digest. An `annotate` line's digest covers the whole line, so each of its answers takes that one digest. The digest covers the threshold too, so two runs of one question at different thresholds also warn. Two cuts on one run compare a line with itself and never warn. With no pair, the second warning cannot print. Failed answers pair with nothing, so a run of only failed answers warns that no answer paired.
 
 ## Failures
 

@@ -13,11 +13,24 @@ fn diff(arguments: &[&str], input: &[u8]) -> (i32, String, String) {
     measure(&[&["diff"], arguments].concat(), input)
 }
 
+const NO_PAIR: &str = "thinkthen: diff: warning: no answer paired; check that both runs hold the same record ids and answer names\n";
+
+fn digests_differ(count: usize, of: usize) -> String {
+    format!(
+        "thinkthen: diff: warning: the question digest differs in {count} of {of} paired answers. A different question or threshold gives a different digest.\n"
+    )
+}
+
 #[test]
 fn goldens_match() {
     for (golden, arguments) in DIFF_GOLDENS {
         let (code, stdout, stderr) = diff(arguments, b"");
-        assert_eq!((code, stderr.as_str()), (0, ""), "{golden}");
+        // The soft run rewords the question, so every pair's digest differs.
+        let warned = match golden {
+            "golden/diff-249-soft.jsonl" => digests_differ(272, 272),
+            _ => String::new(),
+        };
+        assert_eq!((code, stderr), (0, warned), "{golden}");
         assert_eq!(stdout, fixture(golden), "{golden}");
     }
 }
@@ -125,5 +138,45 @@ fn the_second_side_reads_under_compare_threshold_when_both_rules_are_given() {
             b"",
         );
         assert_eq!((code, stdout.as_str()), (0, table), "{arguments:?}");
+    }
+}
+
+#[test]
+fn warnings_go_to_standard_error_and_leave_the_output_and_exit_alone() {
+    let nothing_paired =
+        "A -> B: 0 of 0 changed; McNemar p 1.000 on yes answers; only in A 6, only in B 7\n";
+    let table = fixture("golden/table/diff-decide-nokey.txt");
+    let b = fixture("small/decide-b.jsonl");
+    let other_ids = b.replace("\"id\":\"r", "\"id\":\"x");
+    let rows: [(&str, String, &str, String); 5] = [
+        ("neither", b.clone(), &table, String::new()),
+        (
+            "digest mismatch",
+            b.replace("\"question_sha256\":\"00\"", "\"question_sha256\":\"01\""),
+            &table,
+            digests_differ(6, 6),
+        ),
+        (
+            "one side has no digest",
+            b.replace("\"question_sha256\":\"00\",", ""),
+            &table,
+            String::new(),
+        ),
+        (
+            "no pairs",
+            other_ids.clone(),
+            nothing_paired,
+            NO_PAIR.to_owned(),
+        ),
+        (
+            "no pairs and a digest mismatch",
+            other_ids.replace("\"question_sha256\":\"00\"", "\"question_sha256\":\"01\""),
+            nothing_paired,
+            NO_PAIR.to_owned(),
+        ),
+    ];
+    for (case, second, stdout, stderr) in rows {
+        let got = diff(&["small/decide.jsonl", "-", "--table"], second.as_bytes());
+        assert_eq!(got, (0, stdout.to_owned(), stderr), "{case}");
     }
 }

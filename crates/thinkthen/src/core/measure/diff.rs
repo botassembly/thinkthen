@@ -105,6 +105,9 @@ pub(crate) struct Summary {
     pub(crate) compare: &'static str,
     pub(crate) a: Shown,
     pub(crate) b: Shown,
+    /// Pairs whose two lines carry different question digests. It never prints in the summary.
+    #[serde(skip)]
+    pub(crate) digests_differ: usize,
 }
 
 /// The last output line, which holds the summary.
@@ -141,6 +144,7 @@ struct Tally {
     effects: [usize; 2],
     discordant: [usize; 2],
     yes: [usize; 2],
+    digests_differ: usize,
     moves: BTreeMap<(String, String), usize>,
 }
 
@@ -166,6 +170,10 @@ pub(crate) fn diff(
             continue;
         };
         tally.records += 1;
+        tally.digests_differ += usize::from(matches!(
+            (&x.digest, &y.digest),
+            (Some(p), Some(q)) if p != q
+        ));
         let (from, to) = (x.said(a.rule)?, y.said(b.rule)?);
         let want = match key {
             Some(key) => key.want(x)?,
@@ -237,6 +245,7 @@ pub(crate) fn diff(
         compare,
         a: shown_a,
         b: shown_b,
+        digests_differ: tally.digests_differ,
     };
     Ok((changes, summary))
 }

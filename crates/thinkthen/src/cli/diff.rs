@@ -46,7 +46,7 @@ pub(crate) struct DiffArguments {
     table: bool,
 }
 
-/// Compare, then write JSON lines or the table and flush.
+/// Compare, write JSON lines or the table and flush, then warn on standard error.
 pub(crate) fn run(arguments: &DiffArguments, writer: impl Write) -> Result<(), Failure> {
     let (changes, summary) = compare_all(arguments).map_err(Failure::Measure)?;
     let text = if arguments.table {
@@ -61,7 +61,28 @@ pub(crate) fn run(arguments: &DiffArguments, writer: impl Write) -> Result<(), F
         text.push('\n');
         text
     };
-    write(writer, &text)
+    write(writer, &text)?;
+    let mut stderr = std::io::stderr().lock();
+    let _unwritten = stderr
+        .write_all(warnings(&summary).as_bytes())
+        .and_then(|()| stderr.flush());
+    Ok(())
+}
+
+/// The warnings a result that exits 0 may still need. Neither changes standard output.
+fn warnings(summary: &Summary) -> String {
+    let mut out = String::new();
+    if summary.records == 0 {
+        out.push_str("thinkthen: diff: warning: no answer paired; check that both runs hold the same record ids and answer names\n");
+    }
+    if summary.digests_differ > 0 {
+        let _ = writeln!(
+            out,
+            "thinkthen: diff: warning: the question digest differs in {} of {} paired answers. A different question or threshold gives a different digest.",
+            summary.digests_differ, summary.records
+        );
+    }
+    out
 }
 
 fn compare_all(arguments: &DiffArguments) -> Result<(Vec<Change>, Summary), Refusal> {

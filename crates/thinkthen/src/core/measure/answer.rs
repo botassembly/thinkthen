@@ -126,6 +126,8 @@ pub(crate) struct Answer {
     pub(crate) name: Option<String>,
     /// The question text, when the line carries it.
     pub(crate) text: Option<String>,
+    /// The line's `meta.question_sha256`, when it carries one.
+    pub(crate) digest: Option<String>,
     /// The verb, named by the line or read from its value.
     pub(crate) verb: Verb,
     /// True when the answer failed and leaves every measure.
@@ -168,14 +170,22 @@ pub(crate) fn read(
 
 /// Read every answer one result line holds: the line itself, or each member of its `answers`.
 fn answers(line: usize, id: &str, row: &Json) -> Result<Vec<Answer>, MeasureError> {
-    match row.member("answers") {
+    let digest = row
+        .member("meta")
+        .and_then(|meta| meta.member("question_sha256"))
+        .and_then(Json::as_str);
+    let mut read = match row.member("answers") {
         Some(Json::Object(members)) => members
             .iter()
             .map(|(name, entry)| Answer::read(line, id, Some(name), entry))
             .collect(),
         Some(_) => Err(MeasureError::Ungradable(line)),
         None => Ok(vec![Answer::read(line, id, None, row)?]),
+    }?;
+    for answer in &mut read {
+        answer.digest = digest.map(str::to_owned);
     }
+    Ok(read)
 }
 
 /// Refuse one record twice under the identity, failed answers included.
@@ -243,6 +253,7 @@ impl Answer {
                 .and_then(|held| held.member("text"))
                 .and_then(Json::as_str)
                 .map(str::to_owned),
+            digest: None,
             verb,
             failed,
             value: printed,
