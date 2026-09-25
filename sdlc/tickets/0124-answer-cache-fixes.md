@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core/recording.rs crates/thinkthen/src/engine crates
 
 # 0124: Fix the answer cache's three faults
 
-Status: in progress. Design accepted after two review rounds. Owner: Claude.
+Status: in progress. Built; four rungs green after merging `0c38769e`; code review pending (`sdlc/records/0124-build-answer-cache-fixes.md`). Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 

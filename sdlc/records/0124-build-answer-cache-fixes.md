@@ -1,6 +1,6 @@
 # 0124 build: fix the answer cache's three faults
 
-Builder: Claude (Opus subagent), 2026-09-25, on `ticket/0124-answer-cache-fixes` from the accepted ticket at `7aae607d`, with `origin/main` at `c8ca9a65` merged before the final rung run. Ian can overturn every decision the ticket lists.
+Builder: Claude (Opus subagent), 2026-09-25, on `ticket/0124-answer-cache-fixes` from the accepted ticket at `7aae607d`, with `origin/main` merged twice: `c8ca9a65` before the first rung run, and `0c38769e` before the final one. Ian can overturn every decision the ticket lists.
 
 ## Outcome
 
@@ -52,14 +52,16 @@ Nonblank lines, net against main.
 
 The typed-struct fix first put `core/recording.rs` one line over its budget. The builder folded a two-line doc comment into one before any commit, so no budget was crossed in a commit.
 
-The ratchet rises from 61,768 to the measured total. That is under the ticket's cap of 290 above main. The growth is the prune check, the mismatch plumbing, and two table tests. Before the raise, the builder looked for duplication in the prune tests of `default_cache.rs` and the mismatch tests of `cache_identity.rs`. The old `--cache` mismatch test folded into the new table and left. `prune_model_selection_and_scan_before_delete_hold` stays. Its second half proves scan-before-delete on a folder its first half built, and the new table does not cover that.
+The ratchet rises from main's 61,764 to the measured 61,972, which is 208 lines. The ticket's cap is 290 above main. Main's Quick Fix lowered the ceiling and touched `cache_locking.rs`, so the builder took main's file at the merge and measured again. It did not merge the two numbers by hand. The growth is the prune check, the mismatch plumbing, and two table tests. Before the raise, the builder looked for duplication in the prune tests of `default_cache.rs` and the mismatch tests of `cache_identity.rs`. The old `--cache` mismatch test folded into the new table and left. `prune_model_selection_and_scan_before_delete_hold` stays. Its second half proves scan-before-delete on a folder its first half built, and the new table does not cover that.
 
 ## Rungs
 
-`origin/main` at `c8ca9a65` merged cleanly before the final run. The merge brought ticket 0122's pandas work and touched no file this ticket changes.
+The first run, after merging `c8ca9a65`: `install` exit 0, `test` exit 0, and `spec` exit 0. `lint` exited 101. The core bans dynamic JSON, and a draft of `Entry::inspected` read `serde_json::Value`. Clippy then found two test-helper faults: an `expect` in a helper that returns a number, and a complex row type. The builder fixed all three. `lint` and `test` then passed.
+
+The final run, after merging `0c38769e`, ran each rung once. The rungs take the heavy lock themselves, and each ran without `THINKTHEN_API_KEY`.
 
 - `install`: exit 0.
-- `lint`: the first run exited 101 on the core's dynamic-JSON ban, and Clippy then found two test-helper faults. Both are fixed. The rerun result is in the hand-back.
+- `lint`: exit 0. The ratchet reads 61,972 of 61,972.
 - `test`: exit 0.
 - `spec`: exit 0.
 - `surfaces`: not run. No surface and no public API shape changed. `public/error.rs` changes one match pattern and keeps its message.
