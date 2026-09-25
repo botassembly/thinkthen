@@ -11,9 +11,9 @@
 //! cleared environment, a loopback address, a fake key, and a fresh cache.
 
 mod bytes;
+mod cases;
 #[path = "../../../../crates/thinkthen/src/test_deadline/child.rs"]
 mod child;
-mod cases;
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};

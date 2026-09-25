@@ -30,7 +30,8 @@ Each list below was measured by running its site.
 | DuckDB children | nothing | `HOME`, the XDG folders, fake key, loopback address |
 | PostgreSQL `psql` | nothing | nothing |
 | TypeScript backend and children | nothing | fake key, loopback address, cache |
-| Ruby backend and children | `LD_LIBRARY_PATH` | loopback address and the values each test sets |
+| Ruby children | `LD_LIBRARY_PATH` and `LANG`: without `LANG`, the conformance child read `cases.json` as US-ASCII and failed on its first non-ASCII byte | loopback address and the values each test sets |
+| Ruby backend, and the public-names child | the backend nothing, the public-names child `LD_LIBRARY_PATH` | nothing |
 | R children | `R_LIBS`, `HOME`, `XDG_CACHE_HOME`, `XDG_CONFIG_HOME`, `TT_TESTS`, `TT_BACKEND_ORIGIN` | loopback address, fake key, cache |
 
 No child needed a kept `THINKTHEN_` or secret-shaped name.
@@ -50,7 +51,7 @@ Every plant ran, turned its check red, and was restored. Each restored file was 
 | Ruby helper starts from `ENV.to_h` | Red. "children ruby: FAIL the child" |
 | R helper without `-i` | Red. "children r: FAIL the child" |
 | `heavy-lock` without its unset loop | Red. "lint: heavy-lock left a stray THINKTHEN_ name or dropped its own" |
-| `test_secrecy.py`: `dict(os.environ)` restored in `conftest.py` `child_env` | PYTHON_PLANT |
+| `test_secrecy.py`: `dict(os.environ)` restored in `conftest.py` `child_env` | Red. The child printed `True` for the planted `FAKE_SERVICE_API_KEY`, and the assert failed |
 | Listener: stall rule removed | Red. The half-request row timed out |
 | Listener: return on a closed connection | Red. The zero-byte row's second client saw a reset |
 | Listener: read timeout removed | Red. The silent row timed out |
@@ -89,7 +90,7 @@ The secrecy tests ran three times each with main's listener and this branch's, i
 | `tests/listener.rs` | 150 | 96 |
 | `secrecy.rs` and `secrecy_relate.rs` changed | 30 | 30 |
 | Rust spawn sites | 50 | 40 |
-| Surface spawn sites, pandas included | 110 | 92 |
+| Surface spawn sites, pandas included | 110 | 104, the Part 4 docstring included |
 | `heavy-lock` added | 6 | 6 |
 | Part 4 docstring | 6 | 6 |
 | `sdlc/ratchet.json` rise | 280 | 184 |
@@ -98,11 +99,21 @@ The build first crossed three budgets: the Rust helper, `listener.rs`, and the s
 
 ## Ratchets
 
-Each ceiling moved to its measured total after the merge: `sdlc/ratchet.json` 61972 to 62156, `libraries/c` 2137 to 2139, `libraries/python` Python 2248 to 2253, `libraries/typescript` scripts 743 to 742, `libraries/ruby` Ruby 1526 to 1530, `libraries/r` R 1256 to 1266, `databases/duckdb` Python 1821 to 1822, `databases/sqlite` Python 1179 to 1189, `databases/postgresql` Python 243 to 249.
+Each ceiling moved to its measured total after the merge: `sdlc/ratchet.json` 61972 to 62156, `libraries/c` 2137 to 2139, `libraries/python` Python 2248 to 2253, `libraries/typescript` scripts 743 to 742, `libraries/ruby` Ruby 1526 to 1531, `libraries/r` R 1256 to 1266, `databases/duckdb` Python 1821 to 1822, `databases/sqlite` Python 1179 to 1189, `databases/postgresql` Python 243 to 249.
 
 ## Ladder
 
-LADDER
+The final ladder ran after the merge of `origin/main` at `3a86d814`, each rung once and none wrapped in `flock`, with `THINKTHEN_API_KEY` unset.
+
+| Rung | Result |
+| --- | --- |
+| `install` | exit 0 |
+| `lint` | exit 0: `children self-test: 34/34 cases hold`, `children: 0 findings` |
+| `test` | exit 0: each of the four helper checks printed `ok` |
+| `spec` | exit 0 |
+| `surfaces` | first run exit 1, then exit 0 after three fixes. Every surface passed on the second run |
+
+The first `surfaces` run found three faults this build made. The C door test's `mod child` sat out of `rustfmt` order. The DuckDB harness passed the fake key twice to `clean_env`, once from `extra`. The Ruby conformance child lacked `LANG` and read `cases.json` as US-ASCII. The fixes touch only those three test files and one ratchet, and `lint` ran again after them with exit 0.
 
 ## Issues
 

@@ -89,14 +89,14 @@ def child_env(base: str, folder: Path, extra: dict[str, str] | None = None) -> d
     folder.mkdir(parents=True, exist_ok=True)
     for name in ("cache", "config", "home"):
         (folder / name).mkdir(exist_ok=True)
-    env = clean_env(
-        HOME=str(folder / "home"),
-        XDG_CACHE_HOME=str(folder / "cache"),
-        XDG_CONFIG_HOME=str(folder / "config"),
-        THINKTHEN_API_KEY=FAKE_KEY,
-        THINKTHEN_BASE_URL=base,
+    env = clean_env(**{
+        "HOME": str(folder / "home"),
+        "XDG_CACHE_HOME": str(folder / "cache"),
+        "XDG_CONFIG_HOME": str(folder / "config"),
+        "THINKTHEN_API_KEY": FAKE_KEY,
+        "THINKTHEN_BASE_URL": base,
         **(extra or {}),
-    )
+    })
     guard(env)
     return env
 
