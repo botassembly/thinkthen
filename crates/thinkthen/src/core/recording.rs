@@ -112,6 +112,12 @@ impl<'a> Exchange<'a> {
     pub(crate) fn backend_identity(&self) -> BackendIdentity {
         BackendIdentity::new(self.url)
     }
+
+    /// The endpoint the exchange goes to.
+    #[must_use]
+    pub(crate) const fn url(&self) -> &Url {
+        self.url
+    }
 }
 
 /// One recorded exchange, in the five fields a recording file holds.
@@ -184,8 +190,9 @@ impl Entry {
         Ok(entry.response.get().as_bytes().to_owned())
     }
 
-    /// Validate one final cache entry and return its digest and response model.
-    pub(crate) fn inspected(bytes: &[u8]) -> Result<(Digest, String), EntryError> {
+    /// Validate one final cache entry and return its digest, its response
+    /// model, and the model its request asked for when that is a string.
+    pub(crate) fn inspected(bytes: &[u8]) -> Result<(Digest, String, Option<String>), EntryError> {
         #[derive(Deserialize)]
         struct StoredResponse {
             model: String,
@@ -200,7 +207,10 @@ impl Entry {
         if response.model.trim().is_empty() {
             return Err(EntryError::MissingModel);
         }
-        Ok((exchange.digest(), response.model))
+        let requested = serde_json::from_str::<serde_json::Value>(entry.request.get())
+            .ok()
+            .and_then(|request| request.get("model")?.as_str().map(str::to_owned));
+        Ok((exchange.digest(), response.model, requested))
     }
 }
 
