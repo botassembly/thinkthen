@@ -99,7 +99,9 @@ def test_annotate_on_a_frame_keeps_every_row_and_column(backend, tmp_path):
     """R1-3, R1-4, R2-12, and R4-15 (b): three chunks, a slice at a
     nonzero offset, and Categorical, Enum, struct, and list columns come
     back equal, and each row's own text is sent. Freed memory reads as 0xa5
-    under ``MALLOC_PERTURB_``, so a stale chunk shows."""
+    under ``MALLOC_PERTURB_``, so a stale chunk shows. Polars may hand the
+    three chunks over as fewer batches; the Rust unit test
+    ``each_batch_gets_its_own_rows_of_a_new_column`` pins each batch's cut."""
     printed = run(SETUP + """
     kinds = pl.Enum(["bill", "ship", "other"])
     def frame(rows):

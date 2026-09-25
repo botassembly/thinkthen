@@ -92,7 +92,7 @@ No new rung. `libraries/python/check.sh` gains these steps: the door suite, the 
 ## Budgets
 
 - Production Rust under `src/arrow/`: at most eight files and 2,400 nonblank lines, each under 500. The tag measures 2,114. The margin pays for the lint rewrite in decision 7. The record names what the fold of the five bounds checks and the removed pandas probe saved first.
-- Glue: `src/frame.rs` and edits to `lib.rs` at most 250 nonblank Rust lines. 0105's five-file cap covers 0105's files only.
+- Glue: `src/frame.rs` and edits to `lib.rs` at most 250 nonblank Rust lines. 0105's five-file cap covers 0105's files only. Re-scored 2026-09-25 after code review: the honest count adds the `input.rs` column checks and the `engine.rs` dispatch and widenings, 291 lines. The queue owner approved 291, the measured count. Ian can overturn it.
 - Rust unit tests: at most 800 nonblank lines. The tag's `malformed_tests` measures 584 before the R7-2, sizes-buffer, and R4-15 tests.
 - Python package: at most 120 nonblank lines added to `__init__.py` and `__init__.pyi`.
 - Python tests: at most ten files and 1,700 nonblank lines. The named files measure about 1,009 before the review-suite cases, the frame cases, and the new proofs.

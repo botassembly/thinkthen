@@ -97,8 +97,84 @@ fn lay_out(node: ArrayNode, keep: &mut Keep) -> *mut ArrowArray {
     at
 }
 
-/// Emit one node into `out`: the root is copied there, and every node gets
-/// its share and its release.
+/// A C struct this module hands out: its release and its private data.
+trait Node: Sized {
+    fn slots(
+        &mut self,
+    ) -> (
+        &mut Option<unsafe extern "C" fn(*mut Self)>,
+        &mut *mut c_void,
+    );
+}
+
+impl Node for ArrowArray {
+    fn slots(
+        &mut self,
+    ) -> (
+        &mut Option<unsafe extern "C" fn(*mut Self)>,
+        &mut *mut c_void,
+    ) {
+        (&mut self.release, &mut self.private_data)
+    }
+}
+
+impl Node for ArrowSchema {
+    fn slots(
+        &mut self,
+    ) -> (
+        &mut Option<unsafe extern "C" fn(*mut Self)>,
+        &mut *mut c_void,
+    ) {
+        (&mut self.release, &mut self.private_data)
+    }
+}
+
+/// Give every node one share of `keep` and the release `pick` names, then
+/// move the root into `out`. The root's box keeps no share of its own.
+///
+/// # Safety
+/// Every node and the root name boxes `keep` owns, and `out` is writable.
+unsafe fn hand_out<K, N: Node>(
+    keep: K,
+    nodes: Vec<*mut N>,
+    (root, out): (*mut N, *mut N),
+    pick: impl Fn(*mut N) -> unsafe extern "C" fn(*mut N),
+) {
+    let share = Arc::new(keep);
+    // SAFETY: every pointer names a box the share keeps, and `out` is the
+    // caller's writable struct.
+    unsafe {
+        for node in nodes {
+            let (release, data) = (*node).slots();
+            *data = Box::into_raw(Box::new(Arc::clone(&share))).cast();
+            *release = Some(pick(node));
+        }
+        *out = ptr::read(root);
+        let (release, data) = (*root).slots();
+        *release = None;
+        *data = ptr::null_mut();
+    }
+}
+
+/// Drop the share of `K` a node carries and mark it released, so a second
+/// call frees nothing.
+///
+/// # Safety
+/// `node` is one `hand_out` gave a share of `K`.
+unsafe fn drop_share<K, N: Node>(node: *mut N) {
+    // SAFETY: `node` is one this module handed out, and its share is taken
+    // once.
+    unsafe {
+        let (release, data) = (*node).slots();
+        *release = None;
+        let share = std::mem::replace(data, ptr::null_mut()).cast::<Arc<K>>();
+        if !share.is_null() {
+            drop(Box::from_raw(share));
+        }
+    }
+}
+
+/// Emit one batch into `out`: an alias keeps its producer's children.
 ///
 /// # Safety
 /// `out` is a writable struct.
@@ -107,37 +183,15 @@ unsafe fn emit(node: ArrayNode, out: *mut ArrowArray) {
     let root = lay_out(node, &mut keep);
     let nodes: Vec<*mut ArrowArray> = keep.arrays.iter_mut().map(|one| &raw mut **one).collect();
     let aliases = keep.aliases.clone();
-    let share = Arc::new(keep);
-    // SAFETY: every pointer names a box the share keeps, and `out` is the
-    // caller's writable struct.
-    unsafe {
-        for node in nodes {
-            (*node).private_data = Box::into_raw(Box::new(Arc::clone(&share))).cast();
-            (*node).release = Some(if aliases.contains(&node) {
-                alias_release
-            } else {
-                owned_release
-            });
+    let pick = |node| {
+        if aliases.contains(&node) {
+            alias_release
+        } else {
+            owned_release
         }
-        *out = ptr::read(root);
-        (*root).release = None;
-        (*root).private_data = ptr::null_mut();
-    }
-    drop(share);
-}
-
-/// Drop the share a node carries and mark it released, so a second call
-/// frees nothing.
-unsafe fn drop_share(node: *mut ArrowArray) {
-    // SAFETY: `node` is one this module emitted, and its share is taken once.
-    unsafe {
-        (*node).release = None;
-        let share = (*node).private_data.cast::<Arc<Keep>>();
-        (*node).private_data = ptr::null_mut();
-        if !share.is_null() {
-            drop(Box::from_raw(share));
-        }
-    }
+    };
+    // SAFETY: the nodes and root are `keep`'s boxes; `out` is writable.
+    unsafe { hand_out(keep, nodes, (root, out), pick) };
 }
 
 /// An owned node's release: release each child the consumer has not moved
@@ -153,7 +207,7 @@ unsafe extern "C" fn owned_release(node: *mut ArrowArray) {
                 release(child);
             }
         }
-        drop_share(node);
+        drop_share::<Keep, _>(node);
     }
 }
 
@@ -161,7 +215,7 @@ unsafe extern "C" fn owned_release(node: *mut ArrowArray) {
 /// and the caller's frame releases them with its last share.
 unsafe extern "C" fn alias_release(node: *mut ArrowArray) {
     // SAFETY: as `drop_share`.
-    unsafe { drop_share(node) };
+    unsafe { drop_share::<Keep, _>(node) };
 }
 
 /// One schema tree handed to a consumer, with the strings it points at.
@@ -232,18 +286,8 @@ unsafe fn hand_schema(node: &SchemaNode, out: *mut ArrowSchema) {
     let mut keep = SchemaKeep::default();
     let root = lay_out_schema(node, &mut keep);
     let nodes: Vec<*mut ArrowSchema> = keep.nodes.iter_mut().map(|one| &raw mut **one).collect();
-    let share = Arc::new(keep);
-    // SAFETY: every pointer names a box the share keeps, and `out` is the
-    // caller's writable struct.
-    unsafe {
-        for node in nodes {
-            (*node).private_data = Box::into_raw(Box::new(Arc::clone(&share))).cast();
-            (*node).release = Some(schema_release);
-        }
-        *out = ptr::read(root);
-        (*root).release = None;
-        (*root).private_data = ptr::null_mut();
-    }
+    // SAFETY: the nodes and root are `keep`'s boxes; `out` is writable.
+    unsafe { hand_out(keep, nodes, (root, out), |_| schema_release) };
 }
 
 /// A schema node's release: release each child and the dictionary the
@@ -260,12 +304,7 @@ unsafe extern "C" fn schema_release(node: *mut ArrowSchema) {
                 release(child);
             }
         }
-        (*node).release = None;
-        let share = (*node).private_data.cast::<Arc<SchemaKeep>>();
-        (*node).private_data = ptr::null_mut();
-        if !share.is_null() {
-            drop(Box::from_raw(share));
-        }
+        drop_share::<SchemaKeep, _>(node);
     }
 }
 

@@ -13,7 +13,7 @@
 use std::ffi::c_char;
 use std::ptr;
 
-use super::ffi::{ArrowArray, ArrowSchema, Imported, bytes, record};
+use super::ffi::{ArrowArray, ArrowSchema, Imported, bytes, copied, record};
 use super::memory::Readable;
 
 /// The most bytes a producer's format, name, or error string may hold.
@@ -45,18 +45,18 @@ pub(crate) enum Text {
 
 /// A producer's C string without its NUL, read only inside readable memory,
 /// or `None` for a null pointer.
-pub(super) fn c_text<'a, O: ?Sized>(
-    owner: &'a O,
+pub(super) fn c_text(
     memory: &Readable,
     at: *const c_char,
-) -> Result<Option<&'a [u8]>, &'static str> {
+) -> Result<Option<Vec<u8>>, &'static str> {
     if at.is_null() {
         return Ok(None);
     }
     let reach = memory.reach(at.addr(), MAX_TEXT + 1);
-    let held = bytes(owner, memory, at.cast(), reach).ok_or(BAD_TEXT)?;
+    let mut held = copied(memory, at.cast(), reach).ok_or(BAD_TEXT)?;
     let end = held.iter().position(|byte| *byte == 0).ok_or(BAD_TEXT)?;
-    Ok(held.get(..end))
+    held.truncate(end);
+    Ok(Some(held))
 }
 
 /// Check a schema is a whole text column, and say why not.
@@ -64,11 +64,11 @@ pub(super) fn text_layout(memory: &Readable, schema: &ArrowSchema) -> Result<Tex
     if !schema.dictionary.is_null() {
         return Err("a dictionary-encoded column is not read; cast it to text first".to_owned());
     }
-    let format = c_text(&(), memory, schema.format)?.ok_or("an Arrow schema carries no format")?;
+    let format = c_text(memory, schema.format)?.ok_or("an Arrow schema carries no format")?;
     if schema.n_children != 0 && format != b"+s" {
         return Err("a nested column is not a column of text".to_owned());
     }
-    match format {
+    match format.as_slice() {
         b"u" => Ok(Text::Utf8),
         b"U" => Ok(Text::LargeUtf8),
         b"vu" => Ok(Text::View),
@@ -77,7 +77,7 @@ pub(super) fn text_layout(memory: &Readable, schema: &ArrowSchema) -> Result<Tex
         }
         _ => Err(format!(
             "the column's Arrow format is '{}', not text",
-            String::from_utf8_lossy(format)
+            String::from_utf8_lossy(&format)
         )),
     }
 }
@@ -107,8 +107,8 @@ fn buffers(memory: &Readable, array: &ArrowArray) -> Result<Vec<*const u8>, &'st
     if array.buffers.is_null() {
         return Err("the column carries no buffer table");
     }
-    let table = bytes(&(), memory, array.buffers.cast(), count * WORD).ok_or(UNREADABLE)?;
-    Ok(words(table, WORD).map(address).collect())
+    let table = copied(memory, array.buffers.cast(), count * WORD).ok_or(UNREADABLE)?;
+    Ok(words(&table, WORD).map(address).collect())
 }
 
 /// Borrow one array's rows `skip .. skip + count` as text.
@@ -360,8 +360,8 @@ fn children<T: super::ffi::Plain>(
     if at.is_null() {
         return Err("the frame names columns but carries no column arrays");
     }
-    let table = bytes(&(), memory, at.cast_const().cast(), count * WORD).ok_or(UNREADABLE)?;
-    words(table, WORD)
+    let table = copied(memory, at.cast_const().cast(), count * WORD).ok_or(UNREADABLE)?;
+    words(&table, WORD)
         .map(|word| {
             let child = address(word).cast::<T>();
             record(memory, child)
@@ -378,7 +378,7 @@ pub(crate) fn frame<'a>(
     memory: &Readable,
 ) -> Result<Frame<'a>, String> {
     let schema = &held.schema;
-    let format = c_text(&(), memory, schema.format)?.ok_or("an Arrow schema carries no format")?;
+    let format = c_text(memory, schema.format)?.ok_or("an Arrow schema carries no format")?;
     if format != b"+s" {
         return Err("the stream is not a data frame".to_owned());
     }
@@ -389,7 +389,7 @@ pub(crate) fn frame<'a>(
     let fields = children(memory, schema.children, count)?;
     let mut place = None;
     for (index, (_, field)) in fields.iter().enumerate() {
-        if c_text(&(), memory, field.name)? == Some(on.as_bytes()) {
+        if c_text(memory, field.name)?.as_deref() == Some(on.as_bytes()) {
             place = Some(index);
         }
     }
@@ -431,19 +431,6 @@ pub(crate) fn frame<'a>(
         });
     }
     Ok(read)
-}
-
-#[cfg(feature = "probe")]
-/// The first batch's data and views (or offsets) buffer addresses, and its
-/// length, for the zero-copy proof.
-pub(crate) fn addresses(
-    column: &Imported,
-    memory: &Readable,
-) -> Result<(usize, usize, usize), String> {
-    let batch = column.batches.first().ok_or("the probe found no batch")?;
-    let table = buffers(memory, batch)?;
-    let at = |place: usize| table.get(place).map_or(0, |one| one.addr());
-    Ok((at(2), at(1), usize::try_from(batch.length).unwrap_or(0)))
 }
 
 #[cfg(test)]
@@ -802,7 +789,7 @@ mod tests {
                     "{backing}"
                 );
                 assert_eq!(
-                    c_text(&(), &memory, file.past().cast()),
+                    c_text(&memory, file.past().cast()),
                     Err(BAD_TEXT),
                     "{backing}"
                 );
@@ -917,7 +904,7 @@ mod tests {
         #[test]
         fn a_producer_string_is_read_only_inside_readable_memory() {
             let (_region, open) = Guarded::ending_with(b"abc");
-            assert_eq!(c_text(&(), &snapshot(), open.cast()), Err(BAD_TEXT));
+            assert_eq!(c_text(&snapshot(), open.cast()), Err(BAD_TEXT));
             let schema = ArrowSchema {
                 format: open.cast(),
                 ..EMPTY_SCHEMA
@@ -930,10 +917,7 @@ mod tests {
             };
             assert_eq!(text_layout(&snapshot(), &schema), Ok(Text::Utf8));
             let long = vec![b'x'; MAX_TEXT + 8];
-            assert_eq!(
-                c_text(&(), &snapshot(), long.as_ptr().cast()),
-                Err(BAD_TEXT)
-            );
+            assert_eq!(c_text(&snapshot(), long.as_ptr().cast()), Err(BAD_TEXT));
         }
     }
 }

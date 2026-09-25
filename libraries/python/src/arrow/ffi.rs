@@ -123,9 +123,16 @@ pub(super) fn bytes<'a, O: ?Sized>(
     Some(unsafe { std::slice::from_raw_parts(at, length) })
 }
 
+/// A copy of `length` bytes at `at`, for a read with no owner to borrow
+/// from: the borrow ends inside this call, so no caller can keep it.
+pub(super) fn copied(memory: &Readable, at: *const u8, length: usize) -> Option<Vec<u8>> {
+    let here = ();
+    bytes(&here, memory, at, length).map(<[u8]>::to_vec)
+}
+
 /// A copy of the struct at `at`, or `None` when its bytes are not readable.
 pub(super) fn record<T: Plain>(memory: &Readable, at: *const T) -> Option<T> {
-    let whole = bytes(&(), memory, at.cast(), size_of::<T>())?;
+    let whole = copied(memory, at.cast(), size_of::<T>())?;
     // SAFETY: `whole` holds `size_of::<T>()` readable bytes, and every bit
     // pattern is a valid `T` (`Plain`).
     Some(unsafe { ptr::read_unaligned(whole.as_ptr().cast::<T>()) })
@@ -152,6 +159,17 @@ unsafe impl Send for Imported {}
 unsafe impl Sync for Imported {}
 
 impl Imported {
+    /// An import with no stream and no batches, for a unit test to hold.
+    #[cfg(test)]
+    pub(super) const fn empty() -> Self {
+        Self {
+            stream: None,
+            schema: EMPTY_SCHEMA,
+            batches: Vec::new(),
+            gated: false,
+        }
+    }
+
     /// A column: any object with `__arrow_c_stream__` or `__arrow_c_array__`.
     pub(crate) fn column(value: &Bound<'_, PyAny>) -> PyResult<Self> {
         if value.hasattr("__arrow_c_stream__")? {
@@ -294,8 +312,8 @@ unsafe fn last_error(stream: *mut ArrowArrayStream, context: &str) -> String {
     };
     Readable::snapshot()
         .ok()
-        .and_then(|memory| read::c_text(&(), &memory, text).ok().flatten())
-        .and_then(|found| std::str::from_utf8(found).ok().map(str::to_owned))
+        .and_then(|memory| read::c_text(&memory, text).ok().flatten())
+        .and_then(|found| String::from_utf8(found).ok())
         .unwrap_or_else(|| context.to_owned())
 }
 

@@ -37,8 +37,6 @@ pub(crate) use gate::_probe_trace;
 pub(crate) use memory::Readable;
 #[cfg(feature = "probe")]
 pub(crate) use probe::_raw_producer;
-#[cfg(feature = "probe")]
-pub(crate) use read::addresses;
 pub(crate) use read::{frame, series};
 pub(crate) use write::{Arrow, Cells, Output, annotated, column, decided, table};
 

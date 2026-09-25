@@ -103,7 +103,8 @@ FREEZE = SETUP + """
 def freeze_python():
     """The oldest Python 3.12 or later here. Spike 255 saw the freeze most
     often on the oldest Python and never on 3.14, so the test uses the one
-    most able to catch it. The extension is abi3, so any of them loads it."""
+    most able to catch it. The extension is abi3, so any of them loads it.
+    With neither, it falls back to this Python, and every assert names it."""
     for name in ("python3.12", "python3.13"):
         found = shutil.which(name)
         if found:
@@ -169,12 +170,12 @@ def test_no_worker_freezes_at_exit(tmp_path):
         while windows < 100 and runs < 1000:
             for lines, window in pool.map(lambda n: one_run(n, python, tmp_path, stairs),
                                           range(runs, runs + 40)):
-                assert lines.count("wake") == 1 and lines.count("done") == 1, lines
-                assert len({"released", "leaked"} & set(lines)) == 1, lines
+                assert lines.count("wake") == 1 and lines.count("done") == 1, (python, lines)
+                assert len({"released", "leaked"} & set(lines)) == 1, (python, lines)
                 outcomes |= {"released", "leaked"} & set(lines)
                 windows += window
             runs += 40
     print(f"{python}: {windows} window runs of {runs}; outcomes {sorted(outcomes)}")
-    assert windows >= 100, f"only {windows} of {runs} runs fell in the exit window"
-    assert outcomes == {"released", "leaked"}
+    assert windows >= 100, f"{python}: only {windows} of {runs} runs fell in the exit window"
+    assert outcomes == {"released", "leaked"}, (python, outcomes)
 

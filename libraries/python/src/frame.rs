@@ -8,8 +8,7 @@ use std::time::{Duration, Instant};
 
 use pyo3::prelude::*;
 use thinkthen::{
-    Annotated, Answer, CallOptions, DecisionQuestion, Error, QuestionKind, QuestionSet,
-    RecognizedEntity,
+    Annotated, Answer, CallOptions, Error, QuestionKind, QuestionSet, RecognizedEntity,
 };
 
 use crate::arrow::{self, Arrow, Cells, Imported, Readable};
@@ -101,11 +100,7 @@ pub(crate) fn ask_column(
                 .ok_or("the engine answered a record with no value")?;
             return Ok(Answers::Annotated(question.kind(), values));
         }
-        let question: &dyn DecisionQuestion = match &asked {
-            Asked::Plain(question) => question,
-            Asked::Banded(question) => question,
-        };
-        let rows = engine.decide_many_with(question, texts, options);
+        let rows = engine.decide_many_with(asked.decision(), texts, options);
         Ok(Answers::Decided(
             rows.map(|row| row.map(|row| *row.value()))
                 .collect::<Result<_, _>>()?,
@@ -233,14 +228,15 @@ fn names(found: Vec<(i64, RecognizedEntity)>) -> Result<arrow::Output, String> {
     ])
 }
 
-/// The worker's view of the first batch's buffer addresses (`probe` only).
+/// Where each text the engine reads starts, read on the worker (`probe` only).
 #[cfg(feature = "probe")]
 #[pyfunction]
-pub(crate) fn _arrow_probe(series: &Bound<'_, PyAny>) -> PyResult<(usize, usize, usize)> {
+pub(crate) fn _arrow_probe(series: &Bound<'_, PyAny>) -> PyResult<Vec<usize>> {
     let py = series.py();
     let held = Imported::column(series)?;
     on_worker(py, Controls::default(), held, |held, _options| {
         let memory = Readable::snapshot()?;
-        Ok(arrow::addresses(&held, &memory)?)
+        let texts = arrow::series(&held, &memory)?;
+        Ok(texts.iter().map(|text| text.as_ptr().addr()).collect())
     })
 }
