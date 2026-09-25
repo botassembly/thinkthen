@@ -39,7 +39,7 @@ The first code review, at `ee6e7dc0`, returned 2 medium and 6 low findings. Each
 
 ## Results
 
-- `check.sh` passes: fmt, clippy with `-D warnings`, the unit tests with the fork test, both builds, the source checks with R2-29, deny and its plant, the stock CLI call, every suite, conformance, the site examples, and the selftests. It prints 70 `ok` lines.
+- `check.sh` passes at `e0142424`, after the merge of 0110's review fixes and this ticket's review fixes: fmt, clippy with `-D warnings`, the unit tests with the fork and shutdown tests, both builds, the source checks with R2-29, deny and its plant, the stock CLI call, every suite, conformance, the site examples, and the selftests. It prints 76 `ok` lines.
 - Conformance: 51 pass, 0 fail, 3 not run, 54 cases. The relate reason left the closed list.
 - R4-22: 20 runs of two and then four concurrent held queries, a relate among them, each stopped within 100 ms of one SIGINT.
 - A held relate reads `cancelled` within 100 ms, and the bridge stops a running relate query within 100 ms with 0 sends.
