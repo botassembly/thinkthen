@@ -436,8 +436,8 @@ fn storage(_error: io::Error) -> Error {
 
 /// Remove a completed lock file without syncing `.locks`.
 ///
-/// The entry and its folder are already synced. A power loss can bring back
-/// the empty lock file, which holds no answer and which prune removes. A sync
+/// A valid entry exists. A power loss can bring back the empty lock file. It
+/// holds no answer, and prune removes it when it removes that entry. A sync
 /// here cost one of the three per-entry syncs (`sdlc/records/qf-request-cost.md`).
 fn remove_lock(lock: CacheLock) -> Result<(), Error> {
     maybe_fail(StorageStageName::LockRemove)?;

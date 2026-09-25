@@ -25,7 +25,7 @@ A scratch program outside the repository called `decide_many` through the public
 
 ## Cause
 
-Each new cache entry paid for three disk syncs. `specification/recording.md` requires two of them: the tool syncs the complete entry and then the recording folder before success. The third synced `.locks` after the completed lock file's removal. Ticket 0061 added it, and neither the specification nor ADR 0017 requires it. If a power loss undoes the removal, an empty lock file comes back. It holds no answer, a later caller reads the valid entry and needs no lock, and prune removes the file.
+Each new cache entry paid for three disk syncs. `specification/recording.md` requires two of them: the tool syncs the complete entry and then the recording folder before success. The third synced `.locks` after the completed lock file's removal. Ticket 0061 added it, and neither the specification nor ADR 0017 requires it. If a power loss undoes the removal, an empty lock file comes back. It holds no answer, a later caller reads the valid entry and needs no lock, and prune removes it when it removes that entry.
 
 ## Change
 
