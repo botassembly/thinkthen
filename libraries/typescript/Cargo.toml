@@ -1,0 +1,55 @@
+# The Node binding (ticket 0107, ADR 0047). It is its own workspace with its
+# own lock, and it reaches `thinkthen` only through the public API.
+# `sdlc/scripts/policy.py` holds every table below to the root copies.
+[workspace]
+
+[package]
+name = "thinkthen-typescript"
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.95.0"
+description = "The Node-API addon behind the thinkthen package for Node"
+license = "MIT"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+thinkthen = { path = "../../crates/thinkthen", default-features = false }
+napi = { version = "=2.16.17", default-features = false, features = ["napi8"] }
+napi-derive = "=2.16.13"
+serde_json = "=1.0.151"
+
+[build-dependencies]
+napi-build = "=2.5.0"
+
+[profile.release]
+overflow-checks = true
+panic = "unwind"
+
+[lints.rust]
+missing_debug_implementations = "forbid"
+missing_docs = "warn"
+unexpected_cfgs = { level = "forbid", check-cfg = ["cfg(thinkthen_internal_doctest)"] }
+unreachable_pub = "forbid"
+unsafe_code = "deny"
+
+[lints.clippy]
+allow_attributes_without_reason = "deny"
+cognitive_complexity = "warn"
+dbg_macro = "deny"
+disallowed_macros = "allow"
+disallowed_methods = "allow"
+disallowed_types = "allow"
+excessive_nesting = "warn"
+expect_used = "deny"
+indexing_slicing = "deny"
+panic = "deny"
+print_stderr = "deny"
+print_stdout = "deny"
+todo = "deny"
+too_many_lines = "warn"
+unimplemented = "deny"
+unwrap_used = "deny"
+wildcard_imports = "warn"

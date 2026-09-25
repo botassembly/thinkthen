@@ -6,7 +6,7 @@ opens: libraries/typescript sdlc/scripts sdlc/planning/libraries/javascript.md s
 
 # 0107: Port the TypeScript surface
 
-Status: design accepted; porting in the surface batch (sdlc/planning/one-line-plan-2026-09-25.md). Owner: Claude.
+Status: built on `ticket/0107-port-typescript-surface`; code review pending. One test fails on an engine finding (`sdlc/records/0107-build-typescript-surface.md`). Owner: Claude.
 
 ## Design and decisions
 
