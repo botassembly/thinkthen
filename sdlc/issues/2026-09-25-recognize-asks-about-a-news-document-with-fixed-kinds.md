@@ -15,7 +15,7 @@ The bench call named the kinds person, song, album, and place. The request never
 
 ## Why it matters
 
-The output still came back right on the talk's sentence. A user reading the recording sees a news-document question about a song lyric sentence. A kind with no close CoNLL match may land in the wrong bucket.
+The output still came back right on the talk's sentence. A user reading the recording sees a news-document question about a sentence on a song. A kind with no close CoNLL match may land in the wrong bucket.
 
 ## Asks
 
