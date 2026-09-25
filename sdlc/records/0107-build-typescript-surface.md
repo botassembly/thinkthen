@@ -28,7 +28,7 @@ Not run: the five cases `18-annotate-two-groups`, `18-find-second`, `19-find-non
 
 ## Plants
 
-Each plant was applied, its check was run, and the file was restored. Every row below turned red and turned green again once the plant was removed.
+Each plant was applied, its check was run, and the file was restored. Every row below turned red and turned green again once the plant was removed. The green proof is the final fresh-build `check.sh` run, 23 of 23 node tests. The two new plants ran with the restored files touched first. The details plant had first run after the join plant on a stale addon, so it was rerun once on a fresh build with the sources touched: it turned red, and `shapes.test.mjs` passed 2 of 2 after the restore. Each earlier Rust plant edited its source before its build, so each red result came from a planted build.
 
 | Row | Plant | Red result |
 |---|---|---|
