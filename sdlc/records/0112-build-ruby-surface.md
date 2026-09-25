@@ -26,7 +26,7 @@ Status: built on `ticket/0112-port-ruby-surface`, awaiting code review and landi
 | Examples | 10 of 10 |
 | Gem check, slide sample | pass |
 
-Budgets: 13 Ruby test files and 1,139 nonblank lines, the runner 196 of them. `thinkthen.rb` and `version.rb` 387. Scripts 178. `ratchet.json` holds 791 and `ratchet.rb.json` holds 1,526, the measured totals.
+Budgets: 13 Ruby test files and 1,139 nonblank lines, the runner 196 of them. `thinkthen.rb` and `version.rb` 387. Scripts 178. `ratchet.json` holds 797 and `ratchet.rb.json` holds 1,526, the measured totals.
 
 ## Plants
 
@@ -50,7 +50,7 @@ Each plant was applied to the committed source, built when it touched Rust, and 
 | R3-16 | `nil` crosses as `"null"` | red |
 | R7-9, R2-8, R4-18 | The row holds the tick through a `WeakRef` | green at first; red once the plant also drops the crossing's local. The review then retired these rows (below) |
 | R7-9, R2-8, R4-18 | An `Opaque<Value>` in a wrapped struct | red: "src holds a Ruby object" |
-| R7-9, R2-8, R4-18 | A `tick: RHash` field in a wrapped struct | the build fails on the `Send` assertion (below) |
+| R7-9, R2-8, R4-18 | A `tick: RHash` field in a wrapped struct | the build fails: E0277, `NonNull<RBasic>` cannot be sent between threads safely, required by `RHash` in `QuestionValue` |
 | R5-35 | A stub prefix with the real stamp and a `ruby` that prints 3.2.3 | red: "is not Ruby 3.4.11 behind a matching stamp" |
 | R5-35 | `RUBY=/usr/bin/ruby` | red: "RUBY names /usr/bin/ruby" |
 | R3-28 | A `file://` git source in a scratch crate | `check.sh` plants it on every run and requires exit 8 with `source-not-allowed` |
