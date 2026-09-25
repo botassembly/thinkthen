@@ -83,3 +83,22 @@ What this means for the design:
 4. The byte budget matters. Accuracy slid well under the 32,000-token text limit. A first budget near 10,000 tokens a request fits this evidence.
 
 Ian can overturn the reading of each point. Each rests on one day, one grouping per arm, and samples of 100 to 1,000.
+
+## Results, experiment 261
+
+Ran on 2026-09-25 under Ian's authorization, through `sdlc/scripts/live`. Model `jev-1.13.0`. Declared 260,000 tokens and billed 162,822 input tokens, 0.7 US cents. Every request answered 200 with every answer named and typed. The full record is `~/workspace/experiments/261-packed-choice-wording/RESULTS.md`.
+
+The question: does rewording the per-row instruction remove the pick-one loss 260 found? Items: the two biggest Beatles `choose` templates in 260's sample, first album (56) and release month (21), 77 in all. Single-row got 56 of 77. Four wordings ran at one and ten rows a request:
+
+| Wording | Per-row instruction | Width 1 | Width 10 |
+| --- | --- | --- | --- |
+| W0, 260's | ``For the record `rows[i]`: <question>`` | 50 | 55 |
+| W1 | `For the text in rows[i].text: <question>` | 50 | 55 |
+| W2 | `<question>` alone | 54 | 30 |
+| W3 | `The text is "<input>", from rows[i].text. <question>` | 55 | 58 |
+
+- W3, the row's text quoted into its own instruction, won at both widths. It matched single-row at width 1 and at width 10, and it flipped fewest answers against single-row. Width 10 cut tokens 2.3 times. The quote costs about 5 percent more tokens than W0.
+- W2 shows that the question name does not act as a pointer. Ten look-alike questions with no row reference scored 30 of 77.
+- Choice answers are noisy. W0 at width 1 sent the same bytes as 260's CA01 and flipped 8 of 77 top options. So a gap of a few items is noise, and no wording beats single-row beyond chance.
+
+What this means for the design: packed `choice` quotes each row's text into its own instruction (W3). Before the engine ships it, rerun W3 on a larger sample at widths 1 and 10, with a repeat to size the noise. Ian can overturn the choice of W3 and the size of that check.
