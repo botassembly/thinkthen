@@ -31,7 +31,8 @@ pub(crate) fn wait_for_file(path: &std::path::Path) {
     while !path.exists() {
         assert!(
             Instant::now() < end,
-            "no resume file arrived within {} seconds",
+            "{} did not appear within {} seconds",
+            path.display(),
             SIGNAL_DEADLINE.as_secs()
         );
         std::thread::sleep(Duration::from_millis(5));

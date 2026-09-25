@@ -226,20 +226,27 @@ fn a_long_address_still_writes_one_private_fixed_marker() {
     complete(&folder, &expected);
 }
 
+/// A child that runs `interruption_child` and pauses at `stage`.
+fn paused_child(folder: &Path, ready: &Path, stage: &str) -> Command {
+    let mut command = Command::new(std::env::current_exe().expect("test executable"));
+    command
+        .args([
+            "--ignored",
+            "--exact",
+            "engine::recorder::identity::tests::interruption_child",
+        ])
+        .env("THINKTHEN_TEST_IDENTITY_FOLDER", folder)
+        .env("THINKTHEN_TEST_IDENTITY_READY", ready)
+        .env("THINKTHEN_TEST_IDENTITY_PAUSE", stage);
+    command
+}
+
 #[test]
 fn interruption_before_and_after_publication_allows_later_reuse() {
     for stage in ["before-install", "after-install"] {
         let folder = folder(stage);
         let ready = folder.join("ready");
-        let mut child = Command::new(std::env::current_exe().expect("test executable"))
-            .args([
-                "--ignored",
-                "--exact",
-                "engine::recorder::identity::tests::interruption_child",
-            ])
-            .env("THINKTHEN_TEST_IDENTITY_FOLDER", &folder)
-            .env("THINKTHEN_TEST_IDENTITY_READY", &ready)
-            .env("THINKTHEN_TEST_IDENTITY_PAUSE", stage)
+        let mut child = paused_child(&folder, &ready, stage)
             .spawn()
             .expect("interruption child");
         crate::test_deadline::wait_for_file(&ready);
@@ -260,16 +267,8 @@ fn interruption_before_and_after_publication_allows_later_reuse() {
 fn a_marker_published_while_this_writer_looks_for_entries_is_matched() {
     let folder = folder("published-during-check");
     let (ready, resume) = (folder.join("ready"), folder.join("resume"));
-    let child = Command::new(std::env::current_exe().expect("test executable"))
-        .args([
-            "--ignored",
-            "--exact",
-            "engine::recorder::identity::tests::interruption_child",
-        ])
-        .env("THINKTHEN_TEST_IDENTITY_FOLDER", &folder)
-        .env("THINKTHEN_TEST_IDENTITY_READY", &ready)
+    let child = paused_child(&folder, &ready, "after-missing-marker")
         .env("THINKTHEN_TEST_IDENTITY_RESUME", &resume)
-        .env("THINKTHEN_TEST_IDENTITY_PAUSE", "after-missing-marker")
         .stdout(std::process::Stdio::piped())
         .spawn()
         .expect("paused writer");

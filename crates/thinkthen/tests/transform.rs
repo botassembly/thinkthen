@@ -257,6 +257,7 @@ fn guarded(arguments: &[&str], root: &Path, url: &str) -> Output {
         "THINKTHEN_SIGINT_PREFIX",
         "THINKTHEN_TEST_IDENTITY_PAUSE",
         "THINKTHEN_TEST_IDENTITY_READY",
+        "THINKTHEN_TEST_IDENTITY_RESUME",
         "THINKTHEN_TEST_RETRY_WAIT_MS",
         "THINKTHEN_TEST_SIGINT_ACK",
     ] {
