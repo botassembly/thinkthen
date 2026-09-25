@@ -39,15 +39,15 @@ class TestInterruptSingle < Minitest::Test
   end
 
   # A tick that raises stops the call through the call's own token, and the
-  # tick's own error surfaces within 150 ms of its raise.
+  # tick's own error surfaces within 150 ms of its raise. The tick raises only
+  # after the backend has counted the held send and the parent says so.
   def test_a_raising_tick_stops_a_held_decide_at_once
     message, elapsed = held_stop(<<~RUBY)
-      runs = 0
+      held = false
       raised_at = nil
-      Thread.new { hear }
+      Thread.new { hear; held = true }
       T.with_tick do
-        runs += 1
-        if runs == 2
+        if held && raised_at.nil?
           raised_at = now
           raise ArgumentError, "the tick stops the call"
         end
