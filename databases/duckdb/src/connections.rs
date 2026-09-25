@@ -82,6 +82,11 @@ impl Kept {
         }
     }
 
+    /// Whether a relate query is running on the kept connection now.
+    pub(crate) fn running(&self) -> bool {
+        self.state.busy.load(Ordering::Acquire)
+    }
+
     /// Mark the kept connection busy for the SIGINT bridge until the
     /// returned value drops.
     pub(crate) fn busy(&self) -> Busy<'_> {
@@ -120,6 +125,8 @@ struct Entry {
     probe: Option<Probe>,
     connection: Conn,
     id: u64,
+    /// The process-wide name the warm aggregate carries (ticket 0129).
+    serial: u64,
     state: Arc<State>,
 }
 
@@ -135,6 +142,7 @@ impl Entry {
 }
 
 static KEPT: Mutex<Vec<Entry>> = Mutex::new(Vec::new());
+static SERIAL: AtomicU64 = AtomicU64::new(1);
 static REAPER: AtomicBool = AtomicBool::new(false);
 static SLEEP_MS: AtomicU64 = AtomicU64::new(200);
 static CURSOR: AtomicUsize = AtomicUsize::new(0);
@@ -156,8 +164,14 @@ fn kept() -> MutexGuard<'static, Vec<Entry>> {
     KEPT.lock().unwrap_or_else(PoisonError::into_inner)
 }
 
+/// A new process-wide serial for one LOAD. Connection ids repeat across
+/// databases, so the serial names the entry.
+pub(crate) fn next_serial() -> u64 {
+    SERIAL.fetch_add(1, Ordering::AcqRel)
+}
+
 /// Open the loading database's kept connection and attach its probe.
-pub(crate) fn register(database: duckdb_database) -> Result<(), String> {
+pub(crate) fn register(database: duckdb_database, serial: u64) -> Result<(), String> {
     let connection = Conn::open(database).map_err(|text| defect(&text))?;
     let probe = attach_probe(connection).ok();
     let id = connection.id();
@@ -165,6 +179,7 @@ pub(crate) fn register(database: duckdb_database) -> Result<(), String> {
         probe,
         connection,
         id,
+        serial,
         state: Arc::default(),
     });
     SLEEP_MS.store(200, Ordering::Release);
@@ -210,9 +225,18 @@ pub(crate) fn for_caller(files: &Files) -> Result<Kept, String> {
             "two loaded databases answered the caller's identity probe",
         )),
         (None, _) => Err(usage(
-            "this connection's database answers no loaded identity probe, so relate cannot find its own connection; LOAD the extension again on a writable database, since a read-only database cannot carry a probe and a released one lost it",
+            "this connection's database answers no loaded identity probe, so relate cannot find its own connection; reopen the database writable and LOAD the extension, since a read-only database cannot carry a probe and a released one lost it",
         )),
     }
+}
+
+/// The kept connection LOAD registered under `serial`, as a counted guard.
+/// The registry lock is released before the caller takes the gate.
+pub(crate) fn by_serial(serial: u64) -> Option<Kept> {
+    kept()
+        .iter()
+        .find(|entry| entry.serial == serial && !entry.state.retired.load(Ordering::Acquire))
+        .map(Entry::guard)
 }
 
 /// Interrupt every kept connection running a relate query. The SIGINT

@@ -293,8 +293,14 @@ fn flush(context: &Context<'_>, (held, mut texts): Flush) -> Result<i64, Failure
         return Ok(0);
     }
     worker::run(ffi::handle_of(context), None, move |engine, options| {
-        for row in engine.decide_many_with(plain(&held)?, texts, options) {
-            row?;
+        // The band stays out of the request, so decide reads what this fills.
+        match &*held {
+            LoadedQuestion::Question(asked) => engine
+                .decide_many_with(asked, texts, options)
+                .try_for_each(|row| row.map(drop))?,
+            LoadedQuestion::Banded(asked) => engine
+                .decide_many_with(asked, texts, options)
+                .try_for_each(|row| row.map(drop))?,
         }
         Ok(count)
     })?;
@@ -306,14 +312,18 @@ fn flush(context: &Context<'_>, (held, mut texts): Flush) -> Result<i64, Failure
     }
 }
 
-/// Warm's question: decide only, any other kind named to `thinkthen_decide`.
+/// Warm's question: decide only, cut or banded (ticket 0129), any other kind
+/// named to `thinkthen_decide`.
 fn warm_question(argument: &str) -> Result<Arc<LoadedQuestion>, Failure> {
     let held = question(argument)?;
-    let refused = |_| {
-        Failure::usage("thinkthen_warm takes a decide question; ask others with thinkthen_decide")
-    };
-    only(&held, "thinkthen_warm", QuestionKind::Decide).map_err(refused)?;
-    Ok(held)
+    match &*held {
+        LoadedQuestion::Question(asked) if asked.kind() != QuestionKind::Decide => {
+            Err(Failure::usage(
+                "thinkthen_warm takes a decide question; ask others with thinkthen_decide",
+            ))
+        }
+        _ => Ok(held),
+    }
 }
 
 /// `thinkthen_warm(question, text)`: judge every distinct pair once, filling

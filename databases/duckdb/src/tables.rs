@@ -3,12 +3,14 @@
 
 use std::collections::BTreeSet;
 
-use crate::engines;
-use crate::errors::usage;
-use crate::questions::inline;
+use thinkthen::{ErrorKind, LoadedQuestion, Question};
+
+use crate::errors::{prefix, usage};
+use crate::questions::{from_file, inline, read_named};
 use crate::scalars::decided;
 use crate::signal::Invoke;
 use crate::worker;
+use crate::{connections, engines};
 
 mod ffi;
 
@@ -62,23 +64,57 @@ impl Warm {
 
     /// Judge every distinct text once on the environment's engine, and
     /// answer how many were asked. A failure is the query's own error.
-    pub(crate) fn finish(&mut self) -> Result<i64, String> {
+    /// `serial` names the kept connection of the database that registered
+    /// this aggregate, which reads an `@file` question.
+    pub(crate) fn finish(&mut self, serial: u64) -> Result<i64, String> {
         let texts: Vec<String> = std::mem::take(&mut self.texts).into_iter().collect();
         let Some(question) = self.question.take().filter(|_| !texts.is_empty()) else {
             return Ok(0);
         };
-        if question.starts_with('@') {
-            return Err(usage(
-                "thinkthen_warm reads no '@file' question; pass the file's text from DuckDB's read_text, which applies this database's file settings",
-            ));
-        }
         let asked = i64::try_from(texts.len()).unwrap_or(i64::MAX);
-        let question = inline(&question)?;
-        let engine = engines::from_env()?;
         let invoke = Invoke::begin();
+        let question = match question.strip_prefix('@') {
+            Some(path) => kept_file(serial, path, &invoke)?,
+            None => inline(&question)?,
+        };
+        let engine = engines::from_env()?;
         worker::run(&invoke, move |token| {
             decided(&engine, &question, texts, token, None, false).map(drop)
         })?;
         Ok(asked)
     }
+}
+
+/// Warm's `@file` (ticket 0129 decisions 3, 4, 6, and 7): read through the kept
+/// connection of the database that registered warm, under its gate, so
+/// DuckDB's own file settings decide. A running relate query refuses at
+/// once, because a warm inside it would wait on the gate its own query holds.
+fn kept_file(serial: u64, path: &str, invoke: &Invoke) -> Result<LoadedQuestion, String> {
+    // The kept connection's session would expand `~` from its own
+    // `home_directory`, not the caller's (decision 7).
+    if path.starts_with('~') {
+        return Err(usage(
+            "thinkthen_warm cannot read an '@~' path, because home_directory is a session setting it cannot see; write the full path",
+        ));
+    }
+    let kept = connections::by_serial(serial).ok_or_else(|| {
+        usage(
+            "thinkthen_warm cannot read '@file' here, because this database's kept connection was released when its last connection closed; reopen the database and LOAD the extension, or pass the file's JSON text",
+        )
+    })?;
+    let _gate = kept.gate(|| {
+        if kept.running() {
+            Some(usage(
+                "thinkthen_warm cannot read '@file' while a relate query runs on this database; run it before or after the relate, or pass the file's JSON text",
+            ))
+        } else if invoke.stopped() {
+            Some(format!("{}the call was cancelled", prefix(ErrorKind::Cancelled)))
+        } else {
+            None
+        }
+    })?;
+    let files = kept.connection().files()?;
+    let text = read_named(&files, path, "question file")?;
+    drop(files);
+    Question::from_json(&text).map_err(|error| from_file(&error))
 }

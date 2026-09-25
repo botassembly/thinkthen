@@ -213,9 +213,18 @@ unsafe extern "C" fn warm_finalize(
     warm_error(
         info,
         guarded("warm finalize", || {
+            // SAFETY: `register_warm` set a boxed serial that lives as long
+            // as the function.
+            let serial = unsafe {
+                sys::duckdb_aggregate_function_get_extra_info(info)
+                    .cast::<u64>()
+                    .as_ref()
+                    .copied()
+            }
+            .ok_or_else(|| defect("the warm aggregate carries no serial"))?;
             for index in 0..count as usize {
                 // SAFETY: the array holds `count` states.
-                let asked = warm_at(unsafe { *source.add(index) })?.finish()?;
+                let asked = warm_at(unsafe { *source.add(index) })?.finish(serial)?;
                 write(
                     result,
                     &Type::BigInt,
@@ -228,7 +237,14 @@ unsafe extern "C" fn warm_finalize(
     );
 }
 
-pub(crate) fn register_warm(connection: sys::duckdb_connection) -> Result<(), String> {
+unsafe extern "C" fn drop_serial(serial: *mut std::ffi::c_void) {
+    if !serial.is_null() {
+        // SAFETY: `register_warm` leaked this box, and DuckDB frees it once.
+        drop(unsafe { Box::from_raw(serial.cast::<u64>()) });
+    }
+}
+
+pub(crate) fn register_warm(connection: sys::duckdb_connection, serial: u64) -> Result<(), String> {
     // SAFETY: as in `register_scalar`.
     unsafe {
         let mut aggregate = sys::duckdb_create_aggregate_function();
@@ -248,6 +264,11 @@ pub(crate) fn register_warm(connection: sys::duckdb_connection) -> Result<(), St
             Some(warm_finalize),
         );
         sys::duckdb_aggregate_function_set_destructor(aggregate, Some(warm_destroy));
+        sys::duckdb_aggregate_function_set_extra_info(
+            aggregate,
+            Box::into_raw(Box::new(serial)).cast(),
+            Some(drop_serial),
+        );
         let state = sys::duckdb_register_aggregate_function(connection, aggregate);
         sys::duckdb_destroy_aggregate_function(&raw mut aggregate);
         if state == sys::duckdb_state_DuckDBSuccess {
