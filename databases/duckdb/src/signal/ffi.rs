@@ -237,3 +237,64 @@ unsafe fn cloexec_pipe(ends: &mut [libc::c_int; 2]) -> bool {
                 .all(|end| libc::fcntl(*end, libc::F_SETFD, libc::FD_CLOEXEC) == 0)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::time::{Duration, Instant};
+
+    static PARENT: AtomicUsize = AtomicUsize::new(0);
+    static CHILD: AtomicUsize = AtomicUsize::new(0);
+
+    fn parent_woke() {
+        PARENT.fetch_add(1, Ordering::SeqCst);
+    }
+
+    fn child_woke() {
+        CHILD.fetch_add(1, Ordering::SeqCst);
+    }
+
+    fn waited(count: &AtomicUsize, least: usize) -> usize {
+        let until = Instant::now() + Duration::from_secs(2);
+        while count.load(Ordering::SeqCst) < least && Instant::now() < until {
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        count.load(Ordering::SeqCst)
+    }
+
+    /// R6-5: a forked child's wake, before and after it builds its own
+    /// bridge, never reaches the parent's bridge. The child exits 0 only
+    /// when its own bridge saw its second wake. Dropping the process-id
+    /// check in `wake_bridge` sends the child's first wake to the parent.
+    #[test]
+    fn a_forked_childs_wake_never_reaches_the_parents_bridge() {
+        super::start_bridge(parent_woke);
+        // SAFETY: the child calls only the bridge, then `_exit`.
+        let child = unsafe { libc::fork() };
+        assert!(child >= 0, "fork failed");
+        if child == 0 {
+            super::wake_bridge();
+            super::start_bridge(child_woke);
+            super::wake_bridge();
+            let code = i32::from(waited(&CHILD, 1) != 1);
+            // SAFETY: leave the forked copy of the test harness at once.
+            unsafe { libc::_exit(code) };
+        }
+        let mut status = 0;
+        // SAFETY: the child this test forked.
+        let reaped = unsafe { libc::waitpid(child, &raw mut status, 0) };
+        assert_eq!(reaped, child);
+        assert!(
+            libc::WIFEXITED(status) && libc::WEXITSTATUS(status) == 0,
+            "the child's bridge missed its wake: {status}"
+        );
+        std::thread::sleep(Duration::from_millis(100));
+        assert_eq!(
+            PARENT.load(Ordering::SeqCst),
+            0,
+            "the child's wakes reached the parent"
+        );
+        super::wake_bridge();
+        assert_eq!(waited(&PARENT, 1), 1, "the parent's own wake");
+    }
+}

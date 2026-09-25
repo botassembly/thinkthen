@@ -309,7 +309,10 @@ fn run_query(bound: &Bound) -> Result<connections::Rows, String> {
     // Only a SELECT parses as a subquery, and a statement that fails to
     // parse binds nothing: preparing `EXPORT DATABASE` itself makes its
     // folder.
-    match connection.is_select(&format!("SELECT * FROM ({}) AS thinkthen_kind", bound.query)) {
+    match connection.is_select(&format!(
+        "SELECT * FROM ({}) AS thinkthen_kind",
+        bound.query
+    )) {
         Ok(true) => {}
         Ok(false) => return Err(refused()),
         Err(text) if text.starts_with("Parser Error") => return Err(refused()),
