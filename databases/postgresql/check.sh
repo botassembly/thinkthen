@@ -491,6 +491,19 @@ the_total_holds_across_rows() {
 	same "$(bcount)" 6
 }
 check the_total_holds_across_rows
+a_cancelled_send_counts_toward_the_total() {
+	fresh arm/held "thinkthen.max_requests_total = 1"
+	q -c "SELECT thinkthen_decide('$Q', 'held')" -c "SELECT thinkthen_decide('$Q', 'next')" >"$RUN/held.out" 2>&1 &
+	HELD=$!
+	bwait 1
+	q -c "SELECT pg_cancel_backend($(victim))" >/dev/null
+	sleep 0.3
+	brelease
+	wait "$HELD" || true
+	has "$(cat "$RUN/held.out")" "thinkthen usage: thinkthen.max_requests_total allows 1 requests in this backend, and they are spent"
+	same "$(bcount)" 1
+}
+check a_cancelled_send_counts_toward_the_total
 echo "== secrecy, signals, preload, panics"
 the_key_never_reaches_the_log() {
 	secret=tt-secret-value-4417

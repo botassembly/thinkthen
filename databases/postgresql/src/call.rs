@@ -167,10 +167,12 @@ fn build(plan: &Plan) -> Result<Engine, Error> {
         ACTIVE_THROTTLE.store(value, Ordering::Release);
     }
     // Kept before the call runs, so a cancelled call's sends still count.
+    // A worker that lost the race uses the recorded engine, so every send counts.
     let mut all = engines();
-    if !all.iter().any(|(held, _)| held == plan) {
-        all.push((plan.clone(), engine.clone()));
+    if let Some((_, held)) = all.iter().find(|(held, _)| held == plan) {
+        return Ok(held.clone());
     }
+    all.push((plan.clone(), engine.clone()));
     Ok(engine)
 }
 
