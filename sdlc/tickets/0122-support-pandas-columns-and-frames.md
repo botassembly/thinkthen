@@ -23,7 +23,7 @@ This ticket touches only `libraries/python` and the pages that describe it. It b
 1. **Naming a pandas object.** The binding names a pandas object by its type's top-level module, as 0105 does. A pandas `Series` is a column. A pandas `DataFrame` is a frame. The check walks the type's method resolution order by class name and module, so a subclass counts, and it imports nothing. Any other pandas object, such as an `Index` or an extension array, raises `UsageError` before any send. That sentence names the fix: pass a pandas `Series`. The order of checks stays 0106's: pandas first, then Polars, then any other Arrow producer. pandas 3 objects expose `__arrow_c_stream__`, so the pandas check must still come first.
 
 2. **A Series goes in through the door, or through the list reader.** `decide`, `decide_many`, `choose`, `score`, and `tag` read a pandas `Series`. Every path makes exactly one engine call, as 0106's column verbs do, or none. The binding runs these steps in order on every pandas version, before any export:
-   - *Empty.* At `len(series) == 0`, the verb returns the empty answer with the caller's index, name, and the verb's dtype, and sends nothing. pandas 3 exports an empty object Series as the Arrow `null` type, and on pandas 3.0.6 `pd.DataFrame({"body": []})["body"]` is `float64`. The builder pins that column's dtype on pandas 2. Neither reaches the door.
+   - *Empty.* At `len(series) == 0`, the package sends the Series through the list reader, marked as pandas, and never calls the export. pandas 3 exports an empty object Series as the Arrow `null` type, and on pandas 3.0.6 `pd.DataFrame({"body": []})["body"]` is `float64`. The builder pins that column's dtype on pandas 2. Neither reaches the door. The list reader yields no text, and the engine starts one request per record (`crates/thinkthen/src/public/bulk.rs`, `decide_many_with` and `annotate_with`), so nothing is sent. Rust then builds the verb's empty `Cells` and names its dtype, as for any other answer (decision 3). Python holds no second dtype table. If the builder finds that 0105's empty list sends a request, the builder stops. Python then holds the dtype table and returns the empty answer itself, and the ticket records why.
    - *Nulls.* When the caller's `hasnans` reads true, the verb raises 0106's null sentence (decision 6). pandas 3 exports a Series of only `None` as the Arrow `null` type. The check catches it before the export.
    - *Categorical.* A Series whose `dtype.name` is `"category"` crosses the list reader on both versions. pandas 3 exports it as a dictionary array, and the door reads no dictionary. The list reader gets each category's text.
    - *The export, in Python.* When the Series has `__arrow_c_stream__`, the package calls `series.__arrow_c_stream__()` itself, inside `try`/`except Exception`. 0106's `Imported::column` cannot tell an export that raised from a stream the door refused, so the package makes that split before Rust sees anything. On success the package wraps the capsule in a one-shot holder like 0106's `_Stream`. The holder's `__arrow_c_stream__(requested_schema=None)` returns the capsule once and raises `UsageError` on a second call or on a requested schema. The package hands Rust the holder and tells the glue the input was pandas, so the answer comes back as values and a dtype name (decision 3). Rust reads the holder through the unchanged `Imported::column`, and no `ffi.rs` file changes.
@@ -41,11 +41,13 @@ This ticket touches only `libraries/python` and the pages that describe it. It b
    - A Polars `Series` still gets a Polars `Series` named by the verb, and a pyarrow column still gets a list. This ticket changes neither.
 
 4. **A frame goes in through its `on` column.** `annotate(set, df, on=)` and `recognize(df, on=)` take a pandas `DataFrame`. Before any send, the binding checks five things, each with a pinned sentence:
+   - `on` is hashable. The package calls `hash(on)` before any lookup. `on=["body"]` would make `df[on]` return a frame, so an unhashable `on` raises "on= takes one column label, such as \"body\"".
+   - The frame's column labels have one level. A frame whose columns are a `MultiIndex` is refused.
    - `on` names a column of the frame. A missing label gets 0106's sentence "the frame has no column named 'x'", with the label shown by Python's `repr`. That gives 0106's exact text for a `str` label.
    - `on` names exactly one column. pandas allows repeated labels, so a repeated `on` label is refused.
-   - The frame's column labels have one level. A frame whose columns are a `MultiIndex` is refused.
    - No new column's name equals a column label already in the frame. For `annotate` the new names are the set's question names, and for `recognize` the one new name is `names`. pandas' `assign` would overwrite that column without a word, so a clash is refused.
-   - `on` is hashable. The package calls `hash(on)` before any lookup. `on=["body"]` would make `df[on]` return a frame, so an unhashable `on` raises "on= takes one column label, such as \"body\"".
+
+   The checks run in that order, and the first that fails raises its sentence.
 
    *Labels.* `on` accepts any hashable label that names exactly one column, such as `3` or `"body"`. For pandas the label never reaches Rust. Python looks it up with `df[on]` and hands Rust the Series, so Rust's `on: String` in `_annotate_frame` and `_recognize_frame` stays Polars-only and unchanged. The Polars path still requires a `str`.
 
@@ -119,10 +121,10 @@ Values are checked against the list form in the same child, or against fixed val
 
 ### The two lanes in `check.sh`
 
-- *One build.* `check.sh` builds one probe wheel with `maturin build --profile dev --features probe --locked --offline` into its scratch folder. This build replaces 0106's `maturin develop` step. `uv pip install --offline --no-deps --reinstall` puts that wheel into both venvs. The wheel's version never changes between runs, so `--reinstall` keeps a stale extension out. `PYO3_PYTHON` stays on the main lane's venv. The extension is `abi3`, so one wheel serves both venvs on one host Python, and pyo3 compiles once.
+- *One build.* 0106's `maturin develop --features probe` step stays unchanged. `pyproject.toml` sets `python-source = "."`, so that step places the abi3 extension inside `libraries/python/thinkthen/`, and the tests import the package from that folder. Nothing is installed into venv 2. `PYO3_PYTHON` stays on the main lane's venv, so pyo3 compiles once.
 - The pandas 2 lane is the last step of `check.sh`. It runs after `build-wheel.sh`, so every main-lane step has passed first.
-- It uses the same host Python the main lane found. Its venv lives beside the first under `~/.cache/thinkthen-toolchains/python/`, with its own cache key: the main key's input plus the pin file's name.
-- *Lane preconditions.* Before its tests, each lane checks one fact in one line of `check.sh` and stops with a named failure when it is false. The main lane checks that a pandas 3 `str` Series has `__arrow_c_stream__`. The pandas 2 lane checks that a pandas 2 Series lacks it. These are pin checks and not tests.
+- It uses the same host Python the main lane found. Its venv lives beside the first under `~/.cache/thinkthen-toolchains/python/`, with its own cache key: the main key's input plus the pin file's name. The lane runs pytest with venv 2's python from `libraries/python/`, so it imports the same package folder and the same abi3 extension the main lane built.
+- *Lane preconditions.* Before its tests, each lane checks one fact in one line of `check.sh` and stops with a named failure when it is false. The main lane checks that a pandas 3 `str` Series has `__arrow_c_stream__`. The pandas 2 lane checks that a pandas 2 Series lacks it. Both lanes also check that `thinkthen._thinkthen.__file__` lies inside `libraries/python/thinkthen/`, so each lane tests the extension this checkout built. These are pin checks and not tests.
 - The pandas 2 lane then runs `tests/test_pandas.py` and `tests/test_secrecy.py`.
 - A pin missing from uv's cache exits 77, and the rung reports "not run". A "not run" pandas 2 lane blocks landing. The landing record shows the pandas 2 lane's pass line with its pandas version, or the ticket does not land.
 
@@ -190,7 +192,7 @@ No new rung. `libraries/python/check.sh` gains the pandas 2 lane and the two lan
 
 Nonblank lines, counted as 0106 counts them.
 
-- Rust glue in `src/frame.rs`, `src/input.rs`, `src/engine.rs`, and `src/lib.rs`: at most 150 lines added. `PANDAS` and its refusal leave first, and the record names what they saved.
+- Rust glue in `src/frame.rs`, `src/input.rs`, `src/engine.rs`, and `src/lib.rs`: at most 150 lines added. `PANDAS` and its refusal leave first, and the record names what they saved. The glue changes `refuse_container` and `is_column` to send a Series the package marked as pandas to the list reader, within this budget.
 - `src/arrow/`: at most 40 lines added, for the `Cells` to Python values step. No `ffi.rs` file changes, and no `unsafe` is added.
 - Python package, `__init__.py` and `__init__.pyi`: at most 100 lines added.
 - Python tests: `tests/test_pandas.py` at most 500 lines. Edits to `test_inputs.py`, `test_door.py`, and `test_secrecy.py` at most 60 net lines.
@@ -208,7 +210,6 @@ Stop and re-score with the owner before any of these:
 - Adding a test-only export, flag, or hook beyond 0106's `probe` hooks.
 - A Python loop over rows on any pandas path.
 - pandas 2.3.3 failing to install beside the reused pins. The builder records which pin conflicts and does not bump a shared pin without review.
-- The one probe wheel failing to import in venv 2. The builder records why and does not add a second pyo3 build without review.
 - The pandas 3 address proof failing on the pinned versions. The builder records the addresses and does not weaken the test.
 - A pandas behavior the edge table does not cover that would need a new public keyword.
 
@@ -218,7 +219,7 @@ Changes to the Polars door or the list reader beyond the "or pandas" words in tw
 
 ## Dependencies
 
-After 0106 lands, and so after 0105, 0117, and their own dependencies. The branch starts from 0106's head at `c2a3cbb6`. The builder merges main once 0106 lands and before the build starts. If 0105 or 0106 changes a sentence, a hook, or a file this ticket names, the builder updates this ticket first.
+After 0106 lands, and so after 0105, 0117, and their own dependencies. The branch's base is 0106's accepted head `366220eb`, merged into this branch on 2026-09-25. The branch first started from `c2a3cbb6`. The builder merges main once 0106 lands and before the build starts. If 0105 or 0106 changes a sentence, a hook, or a file this ticket names, the builder updates this ticket first.
 
 ## Routing
 
@@ -251,5 +252,6 @@ Contract 3; state and timing 2; reach 2; proof 3; cost of error 3; total 13. Fin
 ## Review
 
 - Design review, 2026-09-25, at `fcf25242`: not accepted, with 2 high, 4 medium, and 4 low findings. It agreed with the dtypes, the refusals, the pandas-first check, and the rebuild without a pandas import. This version answers each finding: empty and all-null columns before any export, values by position on repeated labels, the `recognize` reading and its overturn line, categorical on the list reader, the pandas 2 lane as a landing condition, the `Exception`-only fallback, the one-build second lane, the test-gate trims, the non-`str` `on` and Series-without-`on=` rows, and the reason for the caller's name. It also records why pandas 3 uses the door. 
-- Re-review, 2026-09-25, at `8f5c2cb0`: not accepted, with 1 high, 2 medium, and 5 low findings. It confirmed the edge rows against pandas 3.0.6 and pyarrow 25.0.1 and confirmed 7 earlier findings answered. This version answers each: `recognize` on a pandas frame follows the ruling with a `names` column, the package makes the export call itself and hands Rust a one-shot holder, one `--profile dev` probe wheel serves both venvs, the pandas 2 lane runs last, an unhashable `on` has its row, the not-sure wording names NA and `None`, R1-6 and R2-11 are their edge rows, and the empty-frame dtype is pinned per version. Re-review: pending.
+- Re-review, 2026-09-25, at `8f5c2cb0`: not accepted, with 1 high, 2 medium, and 5 low findings. It confirmed the edge rows against pandas 3.0.6 and pyarrow 25.0.1 and confirmed 7 earlier findings answered. This version answers each: `recognize` on a pandas frame follows the ruling with a `names` column, the package makes the export call itself and hands Rust a one-shot holder, one `--profile dev` probe wheel serves both venvs, the pandas 2 lane runs last, an unhashable `on` has its row, the not-sure wording names NA and `None`, R1-6 and R2-11 are their edge rows, and the empty-frame dtype is pinned per version. 
+- Third review, 2026-09-25, at `dad3242f`: the design is sound, and every edge row matches pandas 3.0.6. It left three items. This version answers each: 0106's `maturin develop` step stays, and the pandas 2 lane runs from the same folder with a precondition on the extension's path. The frame checks run in the order hashable, one level, present, not repeated, no clash. An empty Series goes through the list reader, and Rust names its dtype. It also names the `refuse_container` and `is_column` change and the base `366220eb`. Re-review: pending.
 - Code review: pending.
