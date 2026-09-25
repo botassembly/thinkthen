@@ -1,6 +1,6 @@
 # Test harness and review leftovers
 
-Status: Open. Ticket 0127 settles items 2, 3, and 10. It lands the item 4 fix. Item 4's proof, 50 clean sweeps at high load, is recorded in `sdlc/records/0127-build-test-harness-fixes.md`.
+Status: Open. Ticket 0127 settles items 2, 3, and 10. It lands the item 4 fix. Item 4's sweep passed 50 runs of 50 at normal load, recorded in `sdlc/records/0127-build-test-harness-fixes.md`. Its proof at high load is still owed.
 
 Ian's ruling, 2026-09-25, on item 10: nobody asks the rusqlite maintainers for a fix. Keep the hand-extended API table and add a test.
 

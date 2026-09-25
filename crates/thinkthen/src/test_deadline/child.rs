@@ -1,24 +1,25 @@
-//! A test child's whole environment, built from nothing (ticket 0127).
-//!
-//! The child gets `PATH` and the parent's value of each name the caller
-//! keeps. A secret-shaped or `THINKTHEN_` name is never kept: a test sets a
-//! `THINKTHEN_` value or a fake key explicitly with `.env`.
-use std::ffi::OsStr;
+//! A test child's whole environment, built from nothing, and the names cargo reads.
+#![allow(dead_code, reason = "each test file uses part of the helper")]
 use std::process::Command;
 
-/// Name parts that mark a secret, matched without regard to case.
-const SECRET: [&str; 6] = ["KEY", "TOKEN", "SECRET", "PASSWORD", "CREDENTIAL", "AUTH"];
+pub(crate) const CARGO: &[&str] = &[
+    "HOME",
+    "CARGO_HOME",
+    "RUSTUP_HOME",
+    "RUSTUP_TOOLCHAIN",
+    "CARGO_TARGET_DIR",
+    "RUSTC_WRAPPER",
+];
 
-/// A `Command` for `program` whose environment holds `PATH` and `keep` only.
-pub(crate) fn command(program: impl AsRef<OsStr>, keep: &[&str]) -> Command {
+/// A `Command` whose environment holds `PATH` and `keep`; a secret or `THINKTHEN_` name panics.
+pub(crate) fn command(program: &str, keep: &[&str]) -> Command {
     let mut command = Command::new(program);
     command.env_clear();
     for name in std::iter::once(&"PATH").chain(keep) {
         let upper = name.to_uppercase();
+        let secret = ["KEY", "TOKEN", "SECRET", "PASSWORD", "CREDENTIAL", "AUTH"];
         assert!(
-            *name == "PATH"
-                || !(upper.starts_with("THINKTHEN_")
-                    || SECRET.iter().any(|part| upper.contains(part))),
+            !upper.starts_with("THINKTHEN_") && !secret.iter().any(|part| upper.contains(part)),
             "a test child may not keep {name} from the parent: set a THINKTHEN_ value or a fake key explicitly"
         );
         if let Some(value) = std::env::var_os(name) {

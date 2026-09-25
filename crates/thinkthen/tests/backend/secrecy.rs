@@ -23,10 +23,8 @@ pub(crate) const KEY: &str = "sk-marker-2f9d41c6";
 /// and the evidence is the untrusted string.
 pub(crate) const EVIDENCE: &str = "marker-evidence-7b3ac5";
 
-/// The second entity `relate` reads, held to the same rule as the evidence.
 pub(crate) const SECOND: &str = "marker-second-e41d09";
 
-/// The kind both relate entities carry, held to the same rule as the evidence.
 pub(crate) const KIND: &str = "marker-kind-93c2f0";
 
 pub(crate) const QUESTION: &str = "Does this report a payment failure?";
@@ -64,8 +62,7 @@ pub(crate) fn asks_question(verb: &str) -> bool {
 
 /// The standard input one verb judges under one framing, holding the evidence.
 ///
-/// `relate` reads a complete entity set: the evidence and the second entity,
-/// both of the marked kind wherever the framing carries a kind.
+/// `relate` reads a complete entity set, so the evidence is one entity name.
 pub(crate) fn evidence(verb: &str, framing: Option<&str>) -> Vec<u8> {
     let text = match (verb, framing) {
         ("relate", None) => {
@@ -141,26 +138,21 @@ pub(crate) fn written(folder: &Path) -> Vec<PathBuf> {
     found
 }
 
-/// Refuse every marker everywhere it may not be, for one finished run.
+/// Refuse the key and each evidence marker wherever it may not be, in one run.
 ///
 /// This is the whole claim of secrecy, in one reader every case calls. The key
 /// may reach no byte of standard output, of standard error, or of any file the
 /// run wrote, and no header name that carries it may reach a file either. The
-/// evidence, the second relate entity, and their kind may reach no byte of
-/// standard error.
+/// evidence may reach no byte of standard error.
 pub(crate) fn nothing_leaked(named: &str, output: &Output, folder: &Path) {
     let out = String::from_utf8_lossy(&output.stdout);
     let err = String::from_utf8_lossy(&output.stderr);
     assert!(!out.contains(KEY), "{named}: the key is on standard output");
     assert!(!err.contains(KEY), "{named}: the key is on standard error");
-    for (marker, what) in [
-        (EVIDENCE, "evidence"),
-        (SECOND, "second entity"),
-        (KIND, "kind"),
-    ] {
+    for marker in [EVIDENCE, SECOND, KIND] {
         assert!(
             !err.contains(marker),
-            "{named}: the {what} is in a diagnostic\n{err}"
+            "{named}: {marker} is in a diagnostic\n{err}"
         );
     }
     for path in written(folder) {
@@ -282,15 +274,11 @@ fn sweep(
 
 /// The connections and requests a listener saw, without the bodies.
 fn seen(listener: &Listener) -> String {
-    let requests: Vec<String> = listener
-        .requests()
-        .iter()
-        .map(|request| format!("{} ({} body bytes)", request.line, request.body.len()))
-        .collect();
-    format!(
-        "the listener saw {} connections and requests {requests:?}",
-        listener.connections()
-    )
+    let mut saw = format!("the listener saw {} connections:", listener.connections());
+    for request in listener.requests() {
+        saw += &format!(" {} ({} body bytes)", request.line, request.body.len());
+    }
+    saw
 }
 
 /// Overwrite every entry a priming run recorded with the damaged bytes.

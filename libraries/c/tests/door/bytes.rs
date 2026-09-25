@@ -151,7 +151,7 @@ fn joined(lines: &str) -> String {
 /// The root command, built once into this test's folder.
 fn built_command() -> PathBuf {
     let target = Path::new(env!("CARGO_TARGET_TMPDIR")).join("command");
-    let built = crate::child::command(env!("CARGO"), crate::CARGO)
+    let built = crate::child::command(env!("CARGO"), crate::child::CARGO)
         .args([
             "build",
             "--locked",

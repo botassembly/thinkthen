@@ -9,7 +9,7 @@ const REFUSED = ['THINKTHEN_BASE_URL', 'OPENAI_API_KEY', 'GITHUB_TOKEN', 'db_pas
 const sentence = (name) => `a test child may not keep ${name} from the parent: set a THINKTHEN_ value or a fake key explicitly`;
 
 const env = childEnv({ keep: ['KEPT_0127', 'ABSENT_0127'], values: { SET_0127: 'set' } });
-const bad = spawnSync('sh', ['-c', PROBE], { env }).status === 0 ? [] : ['the child'];
+const bad = spawnSync('sh', ['-c', PROBE], { env: env }).status === 0 ? [] : ['the child'];
 for (const name of REFUSED) {
   try {
     childEnv({ keep: [name] });

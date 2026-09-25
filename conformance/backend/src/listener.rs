@@ -190,10 +190,8 @@ impl Recorded {
     }
 }
 
-/// A listener serving one scripted response per connection, then the drift status.
-///
-/// The serving thread owns the port until the process exits, even after the
-/// listener is dropped, so no later listener in the process can take it.
+/// A listener serving one scripted response per connection, then the drift
+/// status. Its thread keeps the port until the process exits.
 #[derive(Debug)]
 pub struct Listener {
     origin: String,
@@ -328,9 +326,6 @@ impl Listener {
 }
 
 /// Serve one response per connection until the script runs out, then drift.
-///
-/// A connection that closes or stays silent before a whole request takes no
-/// reply. A dropped listener only closes the record channel.
 fn serve_script(
     listener: &TcpListener,
     responses: Vec<Canned>,

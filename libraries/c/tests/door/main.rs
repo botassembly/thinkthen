@@ -24,8 +24,6 @@ use std::time::{Duration, Instant};
 use conformance_backend::Backend;
 
 const KEY: &str = "sk-c-door-loopback";
-/// The names a nested `cargo` reads from this test's environment.
-const CARGO: &[&str] = &["HOME", "CARGO_HOME", "RUSTUP_HOME", "RUSTUP_TOOLCHAIN", "CARGO_TARGET_DIR", "RUSTC_WRAPPER"];
 
 fn crate_dir() -> &'static Path {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -43,7 +41,7 @@ fn scratch(name: &str) -> PathBuf {
 fn archive() -> &'static Path {
     static FOLDER: OnceLock<PathBuf> = OnceLock::new();
     FOLDER.get_or_init(|| {
-        let built = child::command(env!("CARGO"), CARGO)
+        let built = child::command(env!("CARGO"), child::CARGO)
             .args(["build", "--locked", "--offline", "--lib"])
             .arg("--message-format=json-render-diagnostics")
             .current_dir(crate_dir())
