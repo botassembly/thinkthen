@@ -16,6 +16,11 @@ mod cache_identity;
 mod cache_locking;
 #[cfg(target_os = "linux")]
 mod cache_prune_locking;
+#[allow(
+    clippy::expect_used,
+    reason = "a helper that cannot run the check or read its files should stop the test"
+)]
+mod check;
 mod choosing;
 mod default_cache;
 mod distribution_total;

@@ -50,4 +50,7 @@ Built 2026-09-24 by Claude (Opus) on `ticket/0093-first-binding-crate`, over a m
 - The test check misses `cfg_attr(…, ignore)`, a skip branch that never returns, and test macros other than `#[test]`. ADR 0047 item 6 records the limits.
 - Nothing times out a hung `check.sh`. Add a timeout when the Docker checks arrive.
 - The site's Rust samples predate the public API: `sdlc/issues/2026-09-24-site-rust-samples-predate-the-public-api.md`.
-- Merge `origin/main` (Rust 1.95.0) once 0086 lands. Then set `libraries/rust/Cargo.toml`'s `rust-version` to the root value, which `policy.py` requires, and rerun the ladder.
+
+## Merge after 0086 landed
+
+`origin/main` at `1b2e9df7` merged in after 0086 landed. `sdlc/README.md` kept main's `flock -o` sentence and names `surfaces` among the heavy rungs. The root ceiling is the measured 60351, which equals main's value with build output skipped. `libraries/rust` moved to `rust-version = "1.95.0"`, and its lock still resolves offline under `--locked`. Ladder at `3deda370`: `install`, `lint`, `test`, `spec`, and `surfaces` each exited 0 at load 10 or below.

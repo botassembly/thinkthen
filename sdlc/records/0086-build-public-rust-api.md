@@ -1,6 +1,6 @@
 # 0086: Build the public Rust API
 
-Status: built; code review accepted the code at 9ca3dc55, and the record and churn results follow. Owner: Claude.
+Status: built; code review accepted the code at 9ca3dc55, and the record now holds the final churn counts. Owner: Claude.
 
 Branch `ticket/0086-public-rust-api`. The build merges main `af602ecb`, which brings Rust 1.95.0. Clippy found no new warning under 1.95. Ian can overturn every choice this record marks as decided.
 
@@ -88,10 +88,13 @@ Each plant ran alone under the heavy lock on the branch after `28f49ea3`, and wa
 
 ## Churn probe
 
-`probes/churn-0086` runs 32 threads over 70 engines, each thread making 20,000 calls to a refused loopback port, 8 runs at a time at nice 19. The ticket asked for 300 runs of each side. One batch of 8 public runs pushed the load to 120, so the 300-run target would take about 6 hours for the public side and 2 hours for the stand-in. The coordinator's load limit stopped the runs early.
+`probes/churn-0086` runs 32 threads over 70 engines, each thread making 20,000 calls to a refused loopback port. The ticket asked for 300 runs of each side. Ian ruled on 2026-09-24 that this churn is a one-time measurement. It does not run on every ticket or rerun, because it overloads the machine. The counts below are final, and the remaining runs are dropped by that ruling.
 
-- The stand-in at tag `surfaces-wave7-final` ran 24 times with no crash. G3 and R7-1 stay open for ticket 0094's C probe, and 0086 claims no fix.
-- The public API ran 48 times. 47 were clean, and none ended in SIGSEGV or an abort. One run ended with exit 101, a panic on the probe's main thread, at load near 60 with the machine in swap. Its output was not kept. The probe's main thread spawns scoped threads and calls `expect`, and a failed thread start panics there. That cause is likely but unproven, so the run stays open. The next 32 runs, with output capture and backtraces, were clean.
+- The stand-in at tag `surfaces-wave7-final` ran 24 times with no crash. At the C door's rate of about 1 in 100, 24 runs would show a crash only about 21% of the time, so this proves little. Decided: 0086 claims no fix for G3 and R7-1, and ticket 0094's C probe carries them. Ian can overturn this and ask for the stand-in runs.
+- The public API ran 152 times, and 151 ended cleanly. None ended in SIGSEGV or an abort.
+  - The first 48 ran 8 at a time and pushed the load to 120. One of them ended with exit 101, a panic on the probe's main thread, at a load near 60 with the machine in swap. Its output was not kept.
+  - After code review, 104 more runs of commit 13445804 ran 4 at a time. Each batch held the heavy lock and started at load 10 or below. All 104 ended cleanly, so no panic output exists to name the cause.
+- `sdlc/issues/2026-09-24-the-churn-probe-left-one-panic-unexplained.md` carries the unexplained 101 and the dropped runs. It also carries the probe's port weakness: the probe makes a refused port by binding one and freeing it, and another process can claim that port during a run.
 
 ## What the ticket did not foresee
 

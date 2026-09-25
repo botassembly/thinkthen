@@ -1,6 +1,7 @@
 //! The question builders: each step checks its value and the last step
 //! closes the question.
 
+use std::fmt;
 use std::marker::PhantomData;
 
 use crate::core::{self, Labels, LabelsError, Meaning, ModelName, QuestionText, Threshold, Verb};
@@ -11,13 +12,20 @@ use crate::public::question::{
     text_of,
 };
 
-/// A `decide` question under construction.
-#[derive(Debug)]
+/// A `decide` question under construction. `Debug` withholds what it asks.
 pub struct DecideBuilder {
     pub(super) text: QuestionText,
     pub(super) yes: Option<Meaning>,
     pub(super) no: Option<Meaning>,
     pub(super) model: Option<ModelName>,
+}
+
+impl fmt::Debug for DecideBuilder {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("DecideBuilder")
+            .finish_non_exhaustive()
+    }
 }
 
 impl DecideBuilder {
@@ -83,12 +91,21 @@ impl DecideBuilder {
     }
 }
 
-/// The labels and model a list question gathers before it closes.
-#[derive(Debug)]
+/// The labels and model a list question gathers before it closes. `Debug`
+/// counts the labels and withholds the text and the labels.
 pub(super) struct Listing {
     pub(super) text: QuestionText,
     pub(super) labels: Vec<(String, Option<core::Description>)>,
     pub(super) model: Option<ModelName>,
+}
+
+impl fmt::Debug for Listing {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("Listing")
+            .field("labels", &self.labels.len())
+            .finish_non_exhaustive()
+    }
 }
 
 impl Listing {
@@ -172,7 +189,7 @@ impl LabelBuilder {
     ///
     /// # Errors
     ///
-    /// Returns [`Error::Usage`] for a label already given, which is out of order.
+    /// Returns [`Error::Usage`] for a label already given.
     pub fn label(self, value: &str, description: Option<Description>) -> Result<Self, Error> {
         if self.listing.labels.iter().any(|(held, _)| held == value) {
             let error = match self.verb {

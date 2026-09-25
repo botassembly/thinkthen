@@ -15,7 +15,7 @@ A recording is a folder of backend exchanges. It lets a command run again with n
 
 Giving both options with two different folders is a usage error. So is giving either option beside `--dry-run`, because a plan sends nothing and reads nothing.
 
-With none of these options, normal commands use the platform answer cache: `$XDG_CACHE_HOME/thinkthen`, then `$HOME/.cache/thinkthen` on Linux, and `$HOME/Library/Caches/thinkthen` on macOS. `THINKTHEN_CACHE` selects another folder. `--no-cache` disables answer-cache lookup and writing for one run. Explicit `--record` or `--replay` suppresses the default cache. Dry runs, help, version, `status`, and `cache prune` create no default cache.
+With none of these options, normal commands use the platform answer cache: `$XDG_CACHE_HOME/thinkthen`, then `$HOME/.cache/thinkthen` on Linux, and `$HOME/Library/Caches/thinkthen` on macOS. `THINKTHEN_CACHE` selects another folder. `--no-cache` disables answer-cache lookup and writing for one run. Explicit `--record` or `--replay` suppresses the default cache. Dry runs, help, version, `status`, `check`, and `cache prune` create no default cache.
 
 `thinkthen status` is read-only and opens no connection. It reports the version, resolved configuration with provenance, key presence, answer-cache entry count and allocated bytes, and local usage for the current UTC month and all months. `status --json` emits the same facts as one closed `thinkthen.status/1` object. Status accepts no judgment overrides.
 

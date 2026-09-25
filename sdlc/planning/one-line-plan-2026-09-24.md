@@ -74,3 +74,5 @@ Launch waits on the queue. The engineering gates are 0088, the release build, pu
 - Package names, the tap, the site, and papers are Ian's. Claude's job is the code: the main line and every surface.
 - Surfaces move as fast as possible once 0086 lands. Risk spikes 253 to 256 on the Beelink retire surface risks before then, and 0086 builds beside 0096.
 - The repo's Rust toolchain moves from 1.93.1 to 1.95 in one Quick Fix. It lands right after 0086 and before any surface build. Spike 257 showed nothing breaks, and current Polars 0.55 needs 1.95. Ian can overturn this.
+- A churn probe is a one-time measurement. It never runs in the ladder, a `check.sh`, a review, or a rerun, because it overloads the machine. 0086's Rust churn run stopped at the count its record gives. 0094 runs the C-door churn once to close R7-1, under the heavy lock at low load. Ian ruled this on the evening of 2026-09-24.
+- Mutation testing waits until the end. Ticket 0119 builds after every surface lands and before the release build. This replaces its earlier place beside a surface ticket. Ian ruled this on the morning of 2026-09-25.

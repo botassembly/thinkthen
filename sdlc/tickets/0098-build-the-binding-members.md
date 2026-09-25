@@ -6,7 +6,7 @@ opens: crates/thinkthen/src crates/thinkthen/tests sdlc/scripts sdlc/ratchet.jso
 
 # 0098: Build the binding members
 
-Status: design accepted 2026-09-24 after re-review. Owner: Claude.
+Status: landed on main 2026-09-24 after code review ACCEPT; the ladder passed on `fbc24669`. See `sdlc/records/0098-build-binding-members.md`. Owner: Claude.
 
 Split out of 0086 on 2026-09-24 so 0086 fits its budget (`sdlc/records/2026-09-24-spine-review-engine.md`, finding F7). It lands after 0086 and before 0093.
 
@@ -35,6 +35,8 @@ Build the public members that ticket 0095 defines and 0086 leaves out: `Question
 
 At most ten production files and 500 nonblank production lines, net of the serializer lines that leave `cli`; at most 700 test lines. No dependency.
 
+Re-scored 2026-09-24 at build: sixteen production files. The members sit beside their types, and two files split to stay under the 500-line ceiling. `sdlc/records/0098-build-binding-members.md` gives the measured numbers. Ian can overturn this.
+
 ## Dependencies
 
 After 0086. Before 0093, 0094, and every surface ticket.
@@ -46,7 +48,7 @@ Builder: Claude (Opus subagent). Reviewer: a fresh Claude session for design and
 ## Review
 
 - Design review: accepted in `sdlc/records/2026-09-24-rereview-engine.md`.
-- Code review: pending.
+- Code review: round 1 returned one must-fix and five nits, all addressed in `sdlc/records/0098-build-binding-members.md`. Round 2 accepted.
 
 ## Evidence
 
@@ -56,6 +58,6 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Keeps: Each member delegates to its existing owner: the core parsers, the 0085 facade, and the one command serializer. No new parser, serializer, request path, or dependency enters.
 - Changes: The command's result serializer moves out of `cli` into one shared private module. The members listed in "Design" join the public contract.
 - Proof: The JSON methods match the command's output bytes. `choose_labels` equals `from_json` with no added send. `either` equals `both_ways`, digest included. The inventory check covers all of 0095, and the two planted bugs turn tests red.
-- Defers: The first binding crate (0093), C (0094), and every surface. A `fields` pointer other than the default stays a usage error.
+- Defers: The first binding crate (0093), C (0094), and every surface. A `fields` pointer other than the default stays a usage error. `QuestionSetBuilder`'s derived `Debug` still prints member names.
 
 Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. This ticket adds no width member. Any public name or text it writes uses the throttle.

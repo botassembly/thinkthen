@@ -15,6 +15,11 @@ pub(crate) enum Command {
     /// Report resolved local settings, cache size, and local usage counts.
     Status(StatusArguments),
 
+    /// Check that a backend you name works with this tool, over four fixed requests.
+    ///
+    /// It exits 0 only when no finding is critical. Every request is real spend.
+    Check(CheckArguments),
+
     /// Answer one yes or no question about a text. A record run exits 0 when
     /// it completes without a partial or whole-run failure. The printed
     /// values carry the individual answers.
@@ -255,7 +260,12 @@ impl Command {
     pub(crate) const fn reads_input(&self) -> bool {
         !matches!(
             self,
-            Self::Cache(_) | Self::Status(_) | Self::Transform(_) | Self::Audit(_) | Self::Diff(_)
+            Self::Cache(_)
+                | Self::Status(_)
+                | Self::Check(_)
+                | Self::Transform(_)
+                | Self::Audit(_)
+                | Self::Diff(_)
         )
     }
 
@@ -274,6 +284,7 @@ impl Command {
             Self::Relate(arguments) => arguments.common.input.as_deref(),
             Self::Cache(_)
             | Self::Status(_)
+            | Self::Check(_)
             | Self::Transform(_)
             | Self::Audit(_)
             | Self::Diff(_) => None,
@@ -293,6 +304,7 @@ impl Command {
             Self::Annotate(arguments) => arguments.common.timeout,
             Self::Recognize(arguments) => arguments.common.timeout,
             Self::Relate(arguments) => arguments.common.timeout,
+            Self::Check(arguments) => arguments.timeout,
             Self::Cache(_)
             | Self::Status(_)
             | Self::Transform(_)
@@ -307,4 +319,20 @@ pub(crate) struct StatusArguments {
     /// Print one closed JSON object instead of name-value lines.
     #[arg(long)]
     pub(crate) json: bool,
+}
+
+#[derive(Args, Debug)]
+pub(crate) struct CheckArguments {
+    /// The base the requests are posted under, which outranks THINKTHEN_BASE_URL.
+    #[arg(long, value_name = "URL")]
+    pub(crate) url: Option<String>,
+    /// The model named in each request, resolved as every command resolves it.
+    #[arg(long, value_name = "NAME")]
+    pub(crate) model: Option<String>,
+    /// Positive seconds that bound one attempt from connect to last byte, and each retry wait.
+    #[arg(long, value_name = "SECONDS", default_value_t = 30)]
+    pub(crate) timeout: u64,
+    /// Print the four request bodies and stop. No key is read and nothing is sent.
+    #[arg(long)]
+    pub(crate) dry_run: bool,
 }

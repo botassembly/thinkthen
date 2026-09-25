@@ -29,7 +29,9 @@ Each member delegates to an existing owner. No parser, request path, or dependen
 - `Relate::from_json` refuses any `fields` pointer other than `/name` and `/kind`, as 0095 rules. A file that spells the defaults out is accepted.
 - `LabelBuilder::build` keeps each verb's default rule: no cut for `choose`, the 0.5 cut for `tag`. This matches `ChooseBuilder::build` and `TagBuilder::cut`.
 - The runtime label step refuses a repeat with the core's own sentence: "a list holds each option once" for `choose` and "a list holds each label once" for `tag`.
-- `public/question.rs` and `public/results.rs` would pass the 500-line file ceiling. `Choice` and `choices!` moved to `public/choice.rs`, and the annotate results moved to `public/annotated.rs`. The moves change no code.
+- `public/question.rs` and `public/results.rs` would pass the 500-line file ceiling. `Choice` and `choices!` moved to `public/choice.rs` unchanged. The annotate results moved to `public/annotated.rs`, and there they gained the `value_json` member and its field. `results.rs` shares `withheld_debug` with the new file.
+- Every JSON line is written once, when its result is made. The four methods then return `String` with no error, as 0095 declares them. An annotate row pays one serialization even when the caller never asks for JSON. `Details::of` digests the question twice, once for its field and once inside the shared line. Both costs are small beside the request, and removing the second digest would widen the shared function for the command too. Ian can overturn this.
+- The builders' `Debug` lines withhold the question, the labels, and the descriptions. 0086's builders derived `Debug`, so a builder's line printed the question text. `Listing`, `DecideBuilder`, and `DescriptionBuilder` now write their own lines, which count what they hold. Every question and description builder reads through one of them. `QuestionSetBuilder` still derives `Debug` and prints member names, which `QuestionSet`'s own line withholds. That gap is deferred to a later ticket. Ian can overturn this. The fix sits here because `LabelBuilder` would have leaked the same way, and 0086 is past its fix round. 0086 carries the leak until this ticket lands.
 
 ## Inventory check
 
@@ -46,6 +48,7 @@ Each test answers the four questions in `CLAUDE.md`.
   - `Relate::from_json` with `"either":true` equals the `both_ways` builder. Equality covers the whole parsed spec, and the digest reads only that spec. A broken rule is `Usage` from `from_json` and `Local` from `load`, with the same sentence, for both readers. A non-default `fields` and a recognize `on` are `Usage` with exact sentences.
   - `Row::probability` equals the served numbers 0.3 and 0.8, and equals the yes probability `details` reads for the same record.
   - `ErrorKind::name` gives the six words of `conformance/cases.json` in its order.
+- A builder's plain and pretty `Debug` lines hold no word of its question, labels, or descriptions, for all six question and description builders. It protects the rule that formatting is safe to log. A derived `Debug` fails it, and it failed on 0086's builders. No other test formats a builder.
 - No test needs a test-only hook. Every send goes to a loopback listener with a fake key.
 
 ## Planted bugs
@@ -56,26 +59,36 @@ Each plant ran alone under the heavy lock and was reverted.
 | --- | --- |
 | The library's `Details` drops `meta.requests_sent` from its line | red: `each_json_method_prints_the_commands_bytes_on_the_shared_cases`, first at `01-decide-yes-captured` |
 | The shared serializer drops `meta.requests_sent` (`#[serde(skip)]` on the core `Meta`) | red: `a_result_serializes_in_the_order_the_specification_prints` and `meta_names_the_tool_and_drops_the_usage_a_backend_never_reported`. The byte test stays green, as it should, because both sides share the drop |
-| `LabelBuilder::label` skips its order check | red: `runtime_labels_build_the_files_question_and_refuse_a_repeat_at_its_step` |
+| `LabelBuilder::label` skips its repeat check. The ticket calls this the order check, but runtime labels have no order to check | red: `runtime_labels_build_the_files_question_and_refuse_a_repeat_at_its_step` |
+| 0086's derived `Debug` on the builders, before this ticket's fix | red: `a_builders_debug_line_withholds_its_question_labels_and_descriptions` printed `DecideBuilder { text: QuestionText(String("sentinel-asked")), .. }` |
 | An unexpected public export | red: `inventory: not in the contract: fn planted()` |
 
 ## Budgets
 
 Measured nonblank lines against 0086 at `0b4b4e58`:
 
-- Production Rust: 16 files touched, net 342 lines against 500. The serializer lines that left `cli/asking.rs` are counted in the net.
+- Production Rust: 16 files touched, net 365 lines against 500. The builders' `Debug` fix adds 23 of them. The serializer lines that left `cli/asking.rs` are counted in the net.
 - The file budget is ten, and this crosses it. This is the re-score. Each member lives beside its type, in `question.rs`, `builders.rs`, `set.rs`, `recognize.rs`, `relate.rs`, `results.rs`, and `error.rs`. `bulk.rs` and `engine.rs` pass the probability and the backend. `mod.rs` and `lib.rs` declare modules and exports. `core/mod.rs` exports `LabelsError` again, which 0086 had dropped as unused, so the runtime step refuses a repeat with the core's own sentence. `result_json.rs` is the one new module the ticket asks for. `choice.rs` and `annotated.rs` exist only to keep two files under the 500-line ceiling. Folding members into fewer files would break locality and the ceiling.
-- Tests: 3 files, 416 lines against 700.
+- Tests: 3 files, 437 lines against 700.
 - Scripts: `inventory` shrinks by 5 lines. 0086's library-only package run now takes every test target, so `public_members` runs there with no script change.
 
 ## Ratchet
 
-The ceiling rises from 0086's 60,351 to 61,109, an increase of 758 lines: 342 production and 416 test lines. Before adding lines, I looked for code to delete. The four `load` functions each read a file and map it to `Local` in three lines. A shared helper would save no net lines. The command's details assembly moved and was not copied. The test engine builders sit in separate test binaries, which cannot share a helper without a new support module.
+The ceiling rises from 0086's 60,351 to 61,153, an increase of 802 lines: 365 production and 437 test lines. The code review's `Debug` fix added 44 of them: three hand-written `Debug` lines and one test. Before adding lines, I looked for code to delete. The four `load` functions each read a file and map it to `Local` in three lines. A shared helper would save no net lines. The command's details assembly moved and was not copied. The test engine builders sit in separate test binaries, which cannot share a helper without a new support module.
 
 ## Ladder
 
-Recorded once the code review accepts a commit.
+At `9c0fc2cb`, `install`, `lint`, `test`, and `spec` passed in order under the heavy lock on 2026-09-24. The code review's fix commit changed three `Debug` lines and added one test after that run. Its focused `public_members` run passed, and the ratchet reads 61,153 of 61,153. After 0086 landed, `fbc24669` merged main at `1b2e9df7`. Main changed no crate lines, so the ratchet stays 61,153. `install`, `lint`, `test`, and `spec` passed in order on `fbc24669` on 2026-09-24.
 
 ## Review
 
-Pending.
+A fresh read-only Opus reviewer read `9c0fc2cb` against 0086 at `0b4b4e58`. It checked the shared serializer, the error kinds, the members, the ratchet, the inventory, the file sizes, the four-question gate, and the moves. It returned one must-fix and five nits.
+
+1. Must-fix: a builder's derived `Debug` printed the question text and the labels. Fixed as the choices above say, with a test that went red on the old builders.
+2. The record called both splits pure moves. Corrected.
+3. The planted-bug row named an order check. Renamed to the repeat check.
+4. A garbled doc sentence on `LabelBuilder::label`. Fixed.
+5. A second digest in `Details::of` and eager annotate JSON. Kept and recorded above.
+6. The ticket's Scope said ten files. The ticket now records the re-score.
+
+The same reviewer re-read `3909e8b2` and returned ACCEPT. Its one nit, the overstated builder count, is corrected above, and the `QuestionSetBuilder` gap is deferred. Clippy with `-D warnings` and `git diff --check` pass on the fix commit.
