@@ -35,6 +35,7 @@ A second agent reviewed the first push, `902214c`, read-only, and accepted it wi
 | new form without the directory | root | fail: `left: Some(0)`, `right: Some(5)` at the owner's exit code, as the old form failed |
 | planted fault, new form | root | fail: `left: Some(4)`, `right: Some(5)` at the waiter's exit code |
 | planted fault, `902214c` form | root | pass, so the fault went unseen |
+| new form with the wait skipped | root | pass. The waiter refuses at its first entry read, which is also correct. The wait is what exposes the re-read fault above |
 
 The planted fault sits in `prepare_in` in `crates/thinkthen/src/engine/recorder.rs`. After the waiter takes the digest lock, it treats the entry as missing instead of reading it again. So it skips the re-read that stops a waiter before it sends. The `902214c` waiter refused at its first read and never reached this path. The uid 1001 runs used the compiled `backend` test binary through `runuser`.
 
@@ -56,4 +57,6 @@ In a root cloud container, 4 cores, rustc 1.95.0, `THINKTHEN_API_KEY` unset, on 
 - `sdlc/scripts/lint`: exited 0, with ratchet 61764/61764 and `inventory: 353 declared items checked, 4 plants refused` on `+nightly-2026-08-24`. The first run after the merge stopped because this container had not fetched the crates of surfaces that landed since, such as `libraries/python`. The second stopped on clippy's `expect_used` in the new helper, which now returns `io::Result`. The third passed.
 - `sdlc/scripts/test`: exited 1. All 887 cargo tests passed, with 13 ignored. The last step, `sdlc/live-test`, failed with `expected status 1, got 0`, because root writes the ledger it makes mode `0400`. It passed as uid 1001 on `902214c`.
 - `sdlc/scripts/surfaces` ran once, on `902214c` before the merge. rust passed. polars failed once on its 5 percent timing check and passed on one rerun. c failed twice with `Text file busy` at `libraries/c/tests/door/main.rs:129`. The queue owner files the c failure and the root-only `sdlc/live-test` failure.
-- `sdlc/scripts/spec` and `sdlc/scripts/live` did not run.
+- `sdlc/scripts/spec` and `sdlc/scripts/live` did not run in the container. `live` never runs from an agent.
+
+On the Beelink at landing, as uid 1000 with `THINKTHEN_API_KEY` unset and `nightly-2026-08-24` installed, the queue owner ran install, lint, spec, and the `cache_locking` tests once each. install exited 0. lint exited 0, with the ratchet at 61764 and `inventory: 353 declared items checked, 4 plants refused`. `cargo test --test backend cache_locking` passed 8 of 8. spec exited 0, with 21 demos green and 0 red.
