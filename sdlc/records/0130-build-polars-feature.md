@@ -15,6 +15,11 @@ Date: 2026-09-25. Ticket: `sdlc/tickets/0130-polars-feature-in-thinkthen.md`. Ho
 - Tests: 737 lines.
 - Ratchet: 61972 on main after the second merge, 63063 on this branch, a rise of 1091. The budget was 1,125. The removed door and its crate held 1,152 lines, so the repository's Rust fell by 61. The number was measured after the merge, not merged by hand.
 - Lock: 90 packages added, no existing version changed. Their `.crate` files come to 8.09 MB.
+- Three files ran over their budgets. The coordinator re-scored and accepted each overrun on 2026-09-25:
+  - `sdlc/scripts/policy.py`: 78 lines added against 45 planned, 26 net.
+  - `sdlc/scripts/surfaces`: 20 lines against 15.
+  - The root `deny.toml`: 19 lines against 16.
+- One `policy.py` change was not in the plan. The license reader at `policy.py:1541` now admits a `WITH` license when the allow list names it in full. `ar_archive_writer` needs it. The plant at `policy.py:1604` guards it: the reader must admit the whole form and refuse the exception name alone.
 
 ## Lane times
 
@@ -67,7 +72,7 @@ After merging origin/main at b6a8f491:
 | spec | 0 | 21 s |
 | surfaces | 1 | 671 s |
 
-Every surface passed except `databases/duckdb`. Its `tools/source_checks.py` check R5-25 needs its `deny.toml` to equal the root text with one exception added. The root file's exception list now holds the four Polars entries. DuckDB's copy now takes the root file whole and adds `zlib-rs` as the last list item. The R5-25 check and `check.sh`'s removal plant changed to match. The R5-25 check lost one line, so `databases/duckdb/ratchet.py.json` falls from 1821 to 1820. A run of `databases/duckdb/check.sh` on its own then passed its source checks and deny step. It next failed at "the stock CLI loads the extension" with "the backend refused the connection", because that run gave it the closed port 9 in place of the surfaces rung's loopback backend. The final surfaces rung below is the proof.
+Every surface passed except `databases/duckdb`. Its `tools/source_checks.py` check R5-25 needs its `deny.toml` to equal the root text with one exception added. The root file's exception list now holds the four Polars entries. DuckDB's copy now takes the root file whole and adds `zlib-rs` as the last list item. The R5-25 check and `check.sh`'s removal plant changed to match. The R5-25 check lost one line, so `databases/duckdb/ratchet.py.json` falls from 1821 to 1820. A run of `databases/duckdb/check.sh` on its own then passed its source checks and deny step. It next failed at "the stock CLI loads the extension" with "the backend refused the connection", because that run gave it the closed port 9 in place of the surfaces rung's loopback backend. The final surfaces rung below is the proof. The in-tree plant of R5-25 was skipped. The permission system blocked it, and the coordinator told Ian. The reviewer judged that the remaining proof covers the check: DuckDB's own zlib-rs removal plant and the passing surfaces rung.
 
 The rungs above ran inside this ticket's own `flock` wrapper, before the coordinator's note against that arrived. The rung scripts take the heavy lock themselves. The final run below called them directly.
 

@@ -34,7 +34,7 @@ manifest() {
 registry() {
 	status=0
 	if awk '!/^#/ && NF && (NF < 2 || NF > 3 || ($2 != "landed" && $2 != "planned" && $2 != "feature") || ($2 == "feature" && NF != 2) || $3 ~ /^\/|(^|\/)\.\.(\/|$)/) { bad = 1 } END { exit !bad }' "$1"; then
-		printf 'surfaces: %s holds a line other than a folder, landed or planned, and a crate folder inside it\n' "$1" >&2
+		printf 'surfaces: %s holds a line other than a folder, landed, planned, or feature, and a crate folder inside it\n' "$1" >&2
 		status=1
 	fi
 	for surface in $(landed "$1"); do
