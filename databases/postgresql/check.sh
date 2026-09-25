@@ -370,8 +370,8 @@ warm_then_decide_sends_nothing() {
 check warm_then_decide_sends_nothing
 another_model_sends_again() {
 	fresh generic
-	q -c "SELECT thinkthen_warm('{\"decide\":\"Is it red?\",\"model\":\"judge-a\"}', 'item ' || g) FROM generate_series(1, 50) g" >/dev/null
-	q -c "SELECT count(*) FROM generate_series(1, 50) g WHERE thinkthen_decide('{\"decide\":\"Is it red?\",\"model\":\"judge-b\"}', 'item ' || g)" >/dev/null
+	q -c "SELECT count(*) FROM generate_series(1, 50) g WHERE thinkthen_decide('{\"decide\":\"Is it red?\",\"model\":\"judge-a\"}', 'item ' || g)" \
+		-c "SELECT count(*) FROM generate_series(1, 50) g WHERE thinkthen_decide('{\"decide\":\"Is it red?\",\"model\":\"judge-b\"}', 'item ' || g)" >/dev/null
 	same "$(bcount)" 100
 }
 check another_model_sends_again
