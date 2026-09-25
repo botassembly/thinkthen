@@ -350,8 +350,7 @@ pub(crate) fn annotate(
     ))
 }
 
-/// `choose`, `score`, or `tag` over a column as one `annotate` of a
-/// one-question set (0095), or row by row for a question a set refuses.
+/// `choose`, `score`, or `tag` over a column as one `annotate` of a one-question set (0095).
 /// The engine refuses a broken one-question reply whole, so a failed cell is a defect.
 pub(crate) fn column(
     json: &str,
@@ -377,7 +376,8 @@ pub(crate) fn column(
     Ok(List::from_values(cells.collect::<Crossed<Vec<Robj>>>()?))
 }
 
-/// One judgment a row, for a question no set can hold.
+/// One judgment a row. It runs on any set-builder refusal; today only a named model
+/// reaches it, because `.tt_settled` keeps rank and find out. Rows go one at a time.
 fn one_by_one(
     asked: Question,
     texts: Vec<String>,

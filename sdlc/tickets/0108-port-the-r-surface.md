@@ -6,7 +6,7 @@ opens: libraries/r sdlc/scripts sdlc/planning/libraries/r.md sdlc/planning/adr/0
 
 # 0108: Port the R surface
 
-Status: design accepted; porting in the surface batch (sdlc/planning/one-line-plan-2026-09-25.md). Owner: Claude.
+Status: code review ACCEPT after fixes; waiting for the batch integration (sdlc/planning/one-line-plan-2026-09-25.md). Owner: Claude.
 
 ## Outcome and authority
 
