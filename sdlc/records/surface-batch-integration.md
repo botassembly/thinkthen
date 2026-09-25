@@ -131,3 +131,13 @@ Python (0105, 0106) is not in this branch. Its merge was not made in this sessio
 ## Landed
 
 Main at `80f808ea` merged as `83fe0311`. It added one issue file, so no rung reran. `lint` had passed at `b59902cc`. Main then fast-forwarded to the commit that adds this section, whose parent is `83fe0311`. Seven surfaces landed: C, Rust Polars, TypeScript, SQLite, Ruby, R, and PostgreSQL. Python and DuckDB follow in a second batch.
+
+## Python landed
+
+Ian ruled on 2026-09-25 that each ready surface lands without waiting for a batch (`sdlc/planning/one-line-plan-2026-09-25.md`). Python 0105 and 0106 then landed alone. DuckDB 0110 and 0118 are still being fixed.
+
+- Main at `07622d49` merged as `1389aa3e`. `ticket/0106-port-python-polars` at `366220eb`, which holds all of 0105, merged as `0cc74cbd`. The ADR 0047 Python sections and `sdlc/surfaces.txt` conflicted, and both sides were kept.
+- `69409b5b` adds `libraries/python` to `BINDING_DENY` with its one `target-lexicon` license exception, which Ian approved. It sets `libraries/python` landed and marks 0105 and 0106 landed. The 0105 asks for the `sources` deny call and the `file://` plant were already in the gate.
+- Plants in the real `libraries/python/deny.toml`: a second license exception turned red with "the root file plus its named licenses exceptions", and `yanked = "warn"` turned red with "the root file plus its named entries". The file was restored and touched.
+- The merge touched no workspace Rust, so `test` did not rerun. `lint` and `surfaces` each ran once under the heavy lock with the key unset at `69409b5b`, and both passed. All nine landed surfaces passed. Python ran 23 Rust unit tests and 46 Python tests, and its conformance was 50 pass, 0 fail, 4 not run, of 54.
+- Main at `c9a863fd` added only issue files. It merged as `8be229b2`, and no rung reran. Main then fast-forwarded to the commit that adds this section.
