@@ -163,6 +163,29 @@ say(a.execute("SELECT database_name FROM duckdb_databases() WHERE database_name 
 
 
 @case
+def a_relate_queued_past_its_limit_refuses_with_zero_sends():
+    """Decision 2: one database's gate serializes relate. A held relate keeps
+    the gate, and a second relate under a 1-second limit reads the queue
+    sentence without sending. A SIGINT then ends the held one."""
+    with Backend() as backend:
+        got = script(
+            """
+import signal, threading
+signal.signal(signal.SIGINT, lambda number, frame: None)
+a = db(); staff(a, 1)
+held = threading.Thread(target=lambda: say(["held", edges(a.cursor())]))
+held.start(); time.sleep(1)
+second = a.cursor(); second.execute("SET thinkthen_relate_seconds = 1")
+say(["queued", edges(second)])
+os.kill(os.getpid(), signal.SIGINT); held.join()
+""",
+            backend.base("arm/held"),
+        )
+        expect(dict(got), {"queued": "Invalid Input Error: thinkthen usage: the relate query waited past its 1-second limit in the queue behind another relate on this database and did not run; retry after that relate ends or raise SET thinkthen_relate_seconds (0 turns the limit off)", "held": "Invalid Input Error: thinkthen cancelled: the call was cancelled"}, "the two relates")
+        expect(backend.count(), 1, "counted sends")
+
+
+@case
 def r3_23_idle_databases_cost_little():
     with Backend() as backend:
         got = script(
