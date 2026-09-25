@@ -1,0 +1,354 @@
+//! What a call asks, and what `recognize` and `relate` return.
+//!
+//! A question comes from question-file JSON the package composes from the
+//! caller's keywords, or from a file, so parts and files give one digest
+//! (decision 8). Recognize and relate asks come from their builders, a file,
+//! or JSON (decision 10).
+
+use std::path::PathBuf;
+
+use pyo3::prelude::*;
+use thinkthen::{
+    BandedQuestion, Description, Kind, LoadedQuestion, QuestionKind, RecognizedEntity, RelationRule,
+};
+
+use crate::raised;
+
+/// A question under one cut, or a `decide` question under a band.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) enum Asked {
+    Plain(thinkthen::Question),
+    Banded(BandedQuestion),
+}
+
+impl Asked {
+    /// The word for its kind. A banded question reads `decide`.
+    pub(crate) fn kind(&self) -> &'static str {
+        let kind = match self {
+            Self::Plain(question) => question.kind(),
+            Self::Banded(_) => QuestionKind::Decide,
+        };
+        match kind {
+            QuestionKind::Decide => "decide",
+            QuestionKind::Choose => "choose",
+            QuestionKind::Tag => "tag",
+            QuestionKind::Score => "score",
+            QuestionKind::Rank => "rank",
+            QuestionKind::Find => "find",
+        }
+    }
+}
+
+impl From<LoadedQuestion> for Asked {
+    fn from(loaded: LoadedQuestion) -> Self {
+        match loaded {
+            LoadedQuestion::Question(question) => Self::Plain(question),
+            LoadedQuestion::Banded(banded) => Self::Banded(banded),
+        }
+    }
+}
+
+/// One built question. Make one with `tt.question`.
+#[pyclass(frozen, name = "Question", module = "thinkthen._thinkthen")]
+#[derive(Debug)]
+pub(crate) struct Question(pub(crate) Asked);
+
+#[pymethods]
+impl Question {
+    /// Question-file JSON the caller's arguments made. A broken rule is usage.
+    #[staticmethod]
+    fn _from_json(py: Python<'_>, text: &str) -> PyResult<Self> {
+        thinkthen::Question::from_json(text)
+            .map(|loaded| Self(loaded.into()))
+            .map_err(|error| raised(py, &error))
+    }
+
+    /// A question file. A broken rule is local.
+    #[staticmethod]
+    fn _load(py: Python<'_>, path: PathBuf) -> PyResult<Self> {
+        thinkthen::Question::load(path)
+            .map(|loaded| Self(loaded.into()))
+            .map_err(|error| raised(py, &error))
+    }
+
+    /// The question `rank` or `find` asks, from its text.
+    #[staticmethod]
+    fn _ordering(py: Python<'_>, verb: &str, text: &str) -> PyResult<Self> {
+        let made = if verb == "find" {
+            thinkthen::Question::find(text)
+        } else {
+            thinkthen::Question::rank(text)
+        };
+        made.map(|question| Self(Asked::Plain(question)))
+            .map_err(|error| raised(py, &error))
+    }
+
+    /// What the question asks: `decide`, `choose`, `tag`, `score`, `rank`, or `find`.
+    #[getter]
+    fn kind(&self) -> &'static str {
+        self.0.kind()
+    }
+
+    fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {
+        other
+            .cast::<Self>()
+            .is_ok_and(|other| other.get().0 == self.0)
+    }
+
+    fn __repr__(&self) -> String {
+        format!("Question(kind='{}')", self.0.kind())
+    }
+}
+
+/// A named question set for `annotate`.
+#[pyclass(frozen, name = "_QuestionSet", module = "thinkthen._thinkthen")]
+#[derive(Debug)]
+pub(crate) struct QuestionSet(pub(crate) thinkthen::QuestionSet);
+
+#[pymethods]
+impl QuestionSet {
+    #[staticmethod]
+    fn _from_json(py: Python<'_>, text: &str) -> PyResult<Self> {
+        thinkthen::QuestionSet::from_json(text)
+            .map(Self)
+            .map_err(|error| raised(py, &error))
+    }
+
+    #[staticmethod]
+    fn _load(py: Python<'_>, path: PathBuf) -> PyResult<Self> {
+        thinkthen::QuestionSet::load(path)
+            .map(Self)
+            .map_err(|error| raised(py, &error))
+    }
+}
+
+/// One relation rule from the keyword form: name, source, target, and
+/// whether it reads both ways.
+type Rule = (String, String, String, bool);
+
+fn rule(py: Python<'_>, (name, source, target, either): &Rule) -> PyResult<RelationRule> {
+    let made = if *either {
+        RelationRule::both_ways
+    } else {
+        RelationRule::one_way
+    };
+    made(name, source, target).map_err(|error| raised(py, &error))
+}
+
+/// What `recognize` asks.
+#[pyclass(frozen, name = "_Recognize", module = "thinkthen._thinkthen")]
+#[derive(Debug)]
+pub(crate) struct Recognize(pub(crate) thinkthen::Recognize);
+
+#[pymethods]
+impl Recognize {
+    #[staticmethod]
+    fn _from_json(py: Python<'_>, text: &str) -> PyResult<Self> {
+        thinkthen::Recognize::from_json(text)
+            .map(Self)
+            .map_err(|error| raised(py, &error))
+    }
+
+    #[staticmethod]
+    fn _load(py: Python<'_>, path: PathBuf) -> PyResult<Self> {
+        thinkthen::Recognize::load(path)
+            .map(Self)
+            .map_err(|error| raised(py, &error))
+    }
+
+    /// The keyword form: kinds with optional descriptions, rules, and the cuts.
+    #[staticmethod]
+    fn _build(
+        py: Python<'_>,
+        kinds: Vec<(String, Option<String>)>,
+        relations: Vec<Rule>,
+        threshold: Option<f64>,
+        relation_threshold: Option<f64>,
+    ) -> PyResult<Self> {
+        let refused = |error: thinkthen::Error| raised(py, &error);
+        let mut builder = thinkthen::Recognize::builder();
+        for (name, meaning) in kinds {
+            let described = meaning
+                .map(|text| Description::text(&text))
+                .transpose()
+                .map_err(refused)?;
+            builder = builder
+                .kind(Kind::new(&name, described).map_err(refused)?)
+                .map_err(refused)?;
+        }
+        for one in &relations {
+            builder = builder.relation(rule(py, one)?).map_err(refused)?;
+        }
+        if let Some(cut) = threshold {
+            builder = builder.threshold(cut).map_err(refused)?;
+        }
+        if let Some(cut) = relation_threshold {
+            builder = builder.relation_threshold(cut).map_err(refused)?;
+        }
+        builder.build().map(Self).map_err(refused)
+    }
+}
+
+/// What `relate` asks.
+#[pyclass(frozen, name = "_Relate", module = "thinkthen._thinkthen")]
+#[derive(Debug)]
+pub(crate) struct Relate(pub(crate) thinkthen::Relate);
+
+#[pymethods]
+impl Relate {
+    #[staticmethod]
+    fn _from_json(py: Python<'_>, text: &str) -> PyResult<Self> {
+        thinkthen::Relate::from_json(text)
+            .map(Self)
+            .map_err(|error| raised(py, &error))
+    }
+
+    #[staticmethod]
+    fn _load(py: Python<'_>, path: PathBuf) -> PyResult<Self> {
+        thinkthen::Relate::load(path)
+            .map(Self)
+            .map_err(|error| raised(py, &error))
+    }
+
+    #[staticmethod]
+    fn _build(py: Python<'_>, relations: Vec<Rule>, threshold: Option<f64>) -> PyResult<Self> {
+        let refused = |error: thinkthen::Error| raised(py, &error);
+        let mut builder = thinkthen::Relate::builder();
+        for one in &relations {
+            builder = builder.relation(rule(py, one)?).map_err(refused)?;
+        }
+        if let Some(cut) = threshold {
+            builder = builder.threshold(cut).map_err(refused)?;
+        }
+        builder.build().map(Self).map_err(refused)
+    }
+}
+
+/// A name and its kind. `recognize` also gives where the name sits, counted
+/// in Python string positions, and its strength.
+#[pyclass(frozen, skip_from_py_object, module = "thinkthen._thinkthen")]
+#[derive(Clone, Debug)]
+pub(crate) struct Entity {
+    #[pyo3(get)]
+    pub(crate) name: String,
+    #[pyo3(get)]
+    pub(crate) kind: String,
+    #[pyo3(get)]
+    start: Option<usize>,
+    #[pyo3(get)]
+    end: Option<usize>,
+    #[pyo3(get)]
+    strength: Option<f64>,
+}
+
+#[pymethods]
+impl Entity {
+    #[new]
+    fn new(name: String, kind: String) -> Self {
+        Self {
+            name,
+            kind,
+            start: None,
+            end: None,
+            strength: None,
+        }
+    }
+
+    fn __repr__(&self) -> String {
+        format!("Entity(name={:?}, kind={:?})", self.name, self.kind)
+    }
+}
+
+impl Entity {
+    fn found(entity: &RecognizedEntity) -> Self {
+        Self {
+            name: entity.name().to_owned(),
+            kind: entity.kind().to_owned(),
+            start: Some(entity.start()),
+            end: Some(entity.end()),
+            strength: Some(entity.strength()),
+        }
+    }
+}
+
+/// One relation between two entities and its probability.
+#[pyclass(frozen, skip_from_py_object, module = "thinkthen._thinkthen")]
+#[derive(Clone, Debug)]
+pub(crate) struct Edge {
+    #[pyo3(get)]
+    relation: String,
+    #[pyo3(get)]
+    source: Entity,
+    #[pyo3(get)]
+    target: Entity,
+    #[pyo3(get)]
+    probability: f64,
+}
+
+#[pymethods]
+impl Edge {
+    fn __repr__(&self) -> String {
+        format!(
+            "Edge(relation={:?}, source={}, target={}, probability={})",
+            self.relation,
+            self.source.__repr__(),
+            self.target.__repr__(),
+            self.probability
+        )
+    }
+}
+
+impl From<&thinkthen::Edge> for Edge {
+    fn from(edge: &thinkthen::Edge) -> Self {
+        let entity =
+            |one: &thinkthen::Entity| Entity::new(one.name().to_owned(), one.kind().to_owned());
+        Self {
+            relation: edge.relation().to_owned(),
+            source: entity(edge.source()),
+            target: entity(edge.target()),
+            probability: edge.probability(),
+        }
+    }
+}
+
+/// What `recognize` found: the names, and the relations when rules were given.
+#[pyclass(frozen, skip_from_py_object, module = "thinkthen._thinkthen")]
+#[derive(Clone, Debug)]
+pub(crate) struct Recognized {
+    #[pyo3(get)]
+    entities: Vec<Entity>,
+    #[pyo3(get)]
+    relations: Option<Vec<Edge>>,
+}
+
+#[pymethods]
+impl Recognized {
+    fn __repr__(&self) -> String {
+        format!(
+            "Recognized(entities={}, relations={})",
+            self.entities.len(),
+            self.relations
+                .as_ref()
+                .map_or_else(|| "None".to_owned(), |held| held.len().to_string())
+        )
+    }
+}
+
+impl From<&thinkthen::Recognized> for Recognized {
+    fn from(found: &thinkthen::Recognized) -> Self {
+        Self {
+            entities: found.entities().iter().map(Entity::found).collect(),
+            relations: found.relations().map(|relations| {
+                relations
+                    .iter()
+                    .map(|one| Edge {
+                        relation: one.relation().to_owned(),
+                        source: Entity::found(one.source()),
+                        target: Entity::found(one.target()),
+                        probability: one.probability(),
+                    })
+                    .collect()
+            }),
+        }
+    }
+}

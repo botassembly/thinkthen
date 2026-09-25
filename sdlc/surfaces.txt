@@ -3,7 +3,7 @@
 # landed surface's `check.sh`, and a surface ticket moves its line to landed.
 libraries/rust        landed
 libraries/c           planned
-libraries/python      planned
+libraries/python      landed
 libraries/typescript  planned
 libraries/ruby        planned
 libraries/r           planned
