@@ -6,7 +6,7 @@ opens: Cargo.toml Cargo.lock conformance/consumer probes sdlc/scripts/test crate
 
 # 0086: Expose the public Rust API
 
-Status: built; code review pending (`sdlc/records/0086-build-public-rust-api.md`). Owner: Claude.
+Status: landed on main 2026-09-24 after code review ACCEPT at `5102516f`; see `sdlc/records/0086-build-public-rust-api.md`. The churn run stopped at 152 public-API runs and 24 stand-in runs under Ian's one-time churn ruling, and Ian can overturn that shortfall. Owner: Claude.
 
 ## Outcome and authority
 
