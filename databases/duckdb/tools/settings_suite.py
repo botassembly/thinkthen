@@ -1,4 +1,4 @@
-"""The four engine settings, the cache-folder check, `@file` access, and
+"""The engine settings, the process request total, the cache-folder check, `@file` access, and
 volatile scalars (ticket 0110 decisions 5, 10, and 16).
 
 The access table is experiment 253's 35 cases: five file settings over
@@ -47,6 +47,18 @@ def request_limit_range():
             got = run([f"SET thinkthen_max_requests = {value}", ASK], backend.base())
             expect(said(got[1]), "thinkthen usage: a request limit is a whole number of 1 or more", f"max_requests {value}")
         expect(backend.count(), 0, "counted sends")
+
+
+@case
+def the_process_request_total_holds_across_calls():
+    """Ian's ruling of 2026-09-25: a total per process, checked before each call."""
+    with Backend() as backend:
+        ten = "SELECT thinkthen_decide('Is it a refund?', 'refund ' || i) FROM range(10) t(i)"
+        got = run(["SET thinkthen_max_requests_total = 3", ten, ASK], backend.base())
+        expect(said(got[1]), "thinkthen usage: this engine answers at most 3 records in one call", "ten rows under a total of 3")
+        expect(backend.count(), 3, "counted sends")
+        expect(said(got[2]), "thinkthen usage: this process has spent its request total of 3; raise SET thinkthen_max_requests_total or RESET it", "the next call")
+        expect(backend.count(), 3, "counted sends after the refusal")
 
 
 @case
