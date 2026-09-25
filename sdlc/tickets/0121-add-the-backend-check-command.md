@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core crates/thinkthen/src/cli crates/thinkthen/tests
 
 # 0121: Add the backend check command
 
-Status: built; code review ACCEPT; main merged at `6140bd2f` (0a5ed40c), five-rung ladder green; ready to land (`sdlc/records/0121-build-backend-check.md`). Owner: Claude.
+Status: landed on main at `cad9237a` (`sdlc/records/0121-build-backend-check.md`). Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
