@@ -109,3 +109,19 @@ The root ratchet measures 61,721 and holds 61,721. No merge touched `crates` or 
 1. **Ruby, `TestInterruptSingle#test_a_raising_tick_stops_a_held_decide_at_once`.** Owner: ticket 0112. At `tests/test_interrupt_single.rb:13` the backend counted 0 held sends where the test expects 1. The test's tick raises on its second run, about 0.2 s after the watchdog starts, whatever the send has done. The call therefore stopped before its one request reached the backend. The other four tests in that file passed. A fixed tick count races the engine's first send, and the race is likely under load. The backend did not die: the same run's other held tests counted their sends. Fixed on `ticket/0112-port-ruby-surface` at `2e0ae18b`, at the coordinator's request. The child's tick now raises only after the parent's `backend.wait(1)` has counted the held send and the parent has told the child. No fixed delay remains. The fixed test passed 3 of 3 runs. Its plant made the watchdog swallow a tick's raise without firing the call's token. The test then turned red: the call stayed held, and the parent timed out waiting for the child's report. The restored file was touched. The fix merged into this branch at `c799af6f`. Ruby's `check.sh` then ran once under the heavy lock with the key unset, and it passed. Every test file ran, including the four after `test_interrupt_single.rb`.
 
 No failure came from a merge or from the gate commit.
+
+## Landing run
+
+After the review follow-up (`98199562`), main at `defec033` merged cleanly as `03580733`. That merge brings the engine request-cost fix and the cache-folder race fix. `c13d361c` marks the seven tickets landed. The 0094 status line says the one-time C churn probe is still owed. The full ladder then ran once at `c13d361c`, under the heavy lock, with the key unset, at a one-minute load below 3.
+
+| Rung | Result |
+|---|---|
+| `install` | pass |
+| `lint` | pass. No `license-exception-not-encountered` warning remains |
+| `test` | pass. 887 Rust tests passed and none failed |
+| `spec` | pass. 21 demos green, 0 red |
+| `surfaces` | pass. All eight landed surfaces pass |
+
+Surface detail: TypeScript conformance 49/0/5, Ruby conformance 49/0/5, R 46/0/8, SQLite 38/0/16, and PostgreSQL 51 steps with conformance 43/0/11. PostgreSQL's `twenty_thousand_warm_rows` passed. The root ratchet measures 61,768, which equals the ceiling main set.
+
+Python (0105, 0106) is not in this branch. Its merge was not made in this session. It follows with DuckDB, and it owes its own `libraries/python/deny.toml` entry for `target-lexicon` under `BINDING_DENY`.
