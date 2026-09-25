@@ -142,3 +142,21 @@ These rulings lived only in the R surface's notes (R2-29). Ian can overturn each
 - **relate takes a frame** with `name` and `kind` columns and dedupes it by item 9.
 - **The ratchets.** `ratchet.json` counts the crate's Rust. `ratchet.R.json` counts `.R` files under the package's `R` and `tools` folders, `tests`, and `examples`.
 - **The `paste` advisory.** `extendr-api` 0.8.2 depends on `paste`, which RUSTSEC-2024-0436 reports unmaintained. The binding's own `deny.toml` equals the root one plus that one ignore entry with its reason.
+
+## Python (ticket 0105)
+
+These rulings lived only in the tag's Python notes (R2-29). Ticket 0105 records them here. Ian can overturn each one.
+
+- `Cancelled` subclasses both `KeyboardInterrupt` and `ThinkThenError`. Code that catches Ctrl-C and code that catches every thinkthen failure both see a stop.
+- Only a `KeyboardInterrupt` from a signal handler becomes `Cancelled`. Any other error a handler raises, such as `SystemExit`, passes through unchanged.
+- A pandas object is refused with a `UsageError` that says the Python data frame is Polars (the 2026-09-21 ruling in ADR 0017). The check reads the type's top-level module before any Arrow check, because pandas objects also expose `__arrow_c_stream__`.
+- Every call runs on a detachable worker thread, so Ctrl-C and a caller's token stop a single send and a batch within one 50 ms tick. A detached send ends on its own, and no new request starts.
+- The Rust unit tests link libpython, so they run as `cargo test --no-default-features --lib` from `check.sh`, which sets the library path. A bare `cargo test` builds the extension-module form, which does not link libpython (item 6).
+
+## Python Polars door (ticket 0106)
+
+Ticket 0106 records these rulings. Ian can overturn each one.
+
+- Item 3 names one FFI module. `policy.py` admits `unsafe` only in files named `ffi.rs`, and one file would exceed the ticket's 500-line cap. So the Python door keeps its raw memory code in three `ffi.rs` files under `libraries/python/src/arrow/`: one reads a producer, one hands answers back, and one holds the probe build's test producer. Each carries its own `#[allow(unsafe_code, reason = "…")]`.
+- The worker releases a producer's batches attached to the interpreter, behind an `atexit` exit gate. A release that finds exit under way leaks the batches on purpose (spike 255). A release never waits on the gate: it tries the read side and leaks when the exit hook holds or waits for the write side, so a release on a thread that holds the interpreter cannot deadlock the hook.
+- Waived at 0.1 (R2-29): an extent that runs into another readable allocation, and a guard page off Linux, where `mincore` sees only unmapped pages. Memory a producer unmaps during a call stays a recorded risk. The lever for each is a producer that lies about its buffers.
