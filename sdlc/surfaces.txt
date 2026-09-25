@@ -7,6 +7,6 @@ libraries/python      planned
 libraries/typescript  planned
 libraries/ruby        planned
 libraries/r           planned
-databases/duckdb      planned
+databases/duckdb      landed
 databases/sqlite      planned
 databases/postgresql  planned
