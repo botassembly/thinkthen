@@ -434,11 +434,14 @@ fn storage(_error: io::Error) -> Error {
     Error::RecordingStorage
 }
 
+/// Remove a completed lock file without syncing `.locks`.
+///
+/// The entry and its folder are already synced. A power loss can bring back
+/// the empty lock file, which holds no answer and which prune removes. A sync
+/// here cost one of the three per-entry syncs (`sdlc/records/qf-request-cost.md`).
 fn remove_lock(lock: CacheLock) -> Result<(), Error> {
     maybe_fail(StorageStageName::LockRemove)?;
-    lock.unlink().map_err(storage)?;
-    maybe_fail(StorageStageName::LockDirectorySync)?;
-    lock.sync_folder().map_err(storage)
+    lock.unlink().map_err(storage)
 }
 
 fn sync_recording_directory(folder: &Path) -> io::Result<()> {
