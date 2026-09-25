@@ -9,4 +9,4 @@ libraries/ruby        planned
 libraries/r           planned
 databases/duckdb      planned
 databases/sqlite      planned
-databases/postgresql  planned
+databases/postgresql  landed

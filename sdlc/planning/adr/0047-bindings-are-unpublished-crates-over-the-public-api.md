@@ -57,6 +57,18 @@ The host work follows the same list for every surface.
 - Run the shared cases through the 0092 backend. Re-run the surface's error-index rows against the real engine, each with a planted bug that turns its test red. Report a skipped case as not run.
 - Write any ruling that lived only in notes as an ADR (R2-29).
 
+## PostgreSQL (ticket 0111, 2026-09-25)
+
+The PostgreSQL binding follows the list above with these recorded differences. Ian can overturn each one.
+
+- Lints. The lint tables equal the root's except `unsafe_code = "deny"` and `unexpected_cfgs` at `deny` with the root's one `check-cfg` name. `pgrx::pg_module_magic!()` expands its own `allow(unexpected_cfgs)`, and a forbid refuses it. `src/bin/pgrx_embed.rs` carries `#![allow(unsafe_code, reason = "…")]`, because `cargo pgrx package` injects generated `unsafe extern` blocks into it. Every other `unsafe` line lives in `src/ffi.rs` (item 5).
+- Settings (decision 3). `thinkthen.throttle`, `max_requests`, `cache`, and `cache_bytes` are `Suset` settings, -1 or empty for unset. An unset setting calls no setter, so `EngineBuilder::from_env` keeps the environment's and the configuration file's values. A changed plan rebuilds the engine. The throttle holds for the whole process under 0077, so a rebuild passes it only while no throttle is active. `cache_bytes = 0` refuses with 22023.
+- Saved answers (decision 4). The tag's in-backend answer map retires. `thinkthen_warm` fills the engine's disk cache, and a later decide reads it.
+- Relate (decision 10). `thinkthen_relate` reads its query's rows through SPI and refuses the 256th row, a stricter cap than the unique-pair cap.
+- The key (decision 12). `thinkthen.api_key` is a `Userset` setting that is never read. A set value refuses the next call with 22023, and the value never reaches the log.
+- Deny. `databases/postgresql/deny.toml` is the root file plus an `ignore` for RUSTSEC-2021-0127 (`serde_cbor` under pgrx) and a Zlib exception for `foldhash`.
+- Counters. Each engine counts its own sends, so `thinkthen_usage()` adds the counters of every engine the backend built.
+
 ## Consequences
 
 - 0077's duplicate-image boundary follows item 5. Each loaded copy has its own cap, and each surface page says so.
