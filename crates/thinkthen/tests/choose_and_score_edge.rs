@@ -1,7 +1,13 @@
 //! The two new verbs at the binary's own edge: usage, the plan, and the help.
+#![cfg(feature = "cli")]
 
 use std::io::{self, Write};
 use std::process::{Command, Output, Stdio};
+
+#[path = "../src/test_deadline/run.rs"]
+mod run;
+#[path = "../src/test_deadline/wait.rs"]
+mod wait;
 
 /// The teams a routing question picks between.
 const TEAMS: [&str; 4] = ["billing", "shipping", "account", "other"];
@@ -26,7 +32,7 @@ fn run(arguments: &[&str]) -> io::Result<Output> {
         .ok_or_else(|| io::Error::other("no pipe to standard input"))?;
     let _ = input.write_all(b"The renewal charge bounced last night.");
     drop(input);
-    child.wait_with_output()
+    wait::finish(child, &arguments.join(" "))
 }
 
 /// Run one verb over the labels a case names, plus whatever else it names.
@@ -235,20 +241,17 @@ fn a_question_that_is_blank_and_evidence_that_is_blank_are_both_refused() {
         run(&["choose", "  ", "billing", "other", "--dry-run"]).expect("the compiled binary runs");
     assert_eq!(blank.status.code(), Some(2));
 
-    let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
-    let empty = command
-        .env_clear()
-        .args([
-            "score",
-            "How much disruption?",
-            "none",
-            "blocked",
-            "--dry-run",
-        ])
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .expect("the compiled binary runs");
+    let empty = run::output(
+        Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+            .env_clear()
+            .args([
+                "score",
+                "How much disruption?",
+                "none",
+                "blocked",
+                "--dry-run",
+            ]),
+    )
+    .expect("the compiled binary runs");
     assert_eq!(empty.status.code(), Some(2));
 }

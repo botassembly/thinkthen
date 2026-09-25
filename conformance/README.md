@@ -26,7 +26,7 @@ The pure-core integration test validates this file offline through the productio
 
 ## The loopback backend
 
-`conformance/backend` is an offline backend every surface's tests can start. Run `cargo run --package conformance-backend`. It binds 127.0.0.1 on a free port and prints the port on its first line. A `count` line on standard input prints the requests read so far, a `release` line lets held replies go, and closing standard input prints the final count and exits. The command's own tests use its library in process.
+`conformance/backend` is an offline backend every surface's tests can start. Run `cargo run --package conformance-backend`. It binds 127.0.0.1 on a free port and prints the port on its first line. A `count` line on standard input prints the requests read so far. A `release` line lets every held reply go, now and from here on. A `round` line lets go the replies held at that moment, and a reply that arrives later holds again. A `wait N` line later prints `wait K`, where K is the count once it reads at least N, or at 5 s. Closing standard input prints the final count and exits without waiting for a pending `wait`. The command's own tests use its library in process.
 
 A caller picks an arm by the base it gives, because the engine appends `/systemone` to any base.
 
@@ -37,7 +37,22 @@ A caller picks an arm by the base it gives, because the engine appends `/systemo
 | `/arm/reset/v1` | A reset after the whole request arrives |
 | `/arm/429/v1`, `/arm/503/v1` | That status with `retry-after-ms: 10` |
 | `/arm/refuse/v1` | Status 422, the refusal that case `21-backend-fault` injects |
-| `/arm/held/v1` | The generic answer, held until a `release` line |
+| `/arm/held/v1` | The generic answer, held until a `release` line or the next `round` line |
+| `/arm/delay/MS/v1` | The generic answer after MS milliseconds, at most 10000. Each connection sleeps on its own thread. A bad value gets status 500 and `the delay arm needs a whole number of milliseconds`. A value above 10000 gets status 500 and `the delay arm allows at most 10000 milliseconds` |
+| `/arm/full/v1` | The generic answer, plus `"confidence":0.9` on every choice and score answer and `"usage":{"input_tokens":1,"output_tokens":1}` |
+| `/arm/status/CODE/v1` | Status CODE with body `status arm`, for CODE 401, 402, 403, or 404. Any other value gets status 500 and `the status arm takes 401, 402, 403, or 404` |
 | `/arm/malformed/CAUSE/v1` | The generic answer with the last question broken for one of the six failure causes. A distribution cause needs a choice or score question |
 
 An unknown body, arm, or request gets status 500 and a line on standard error, so drift fails loud.
+
+A whole number is ASCII digits only, in the delay arm and in `wait` alike. `+200`, `-1`, an empty value, and a value too large for 64 bits are not whole numbers. A `wait` with no whole number is an unknown line. It writes a line on standard error and nothing on standard output.
+
+### One backend per test
+
+Each test starts its own backend. The count, the held gate, the rounds, and the port live in that process, so no state needs a reset. Twenty backends start together within 5 s, and `sdlc/records/0117-design-review.md` measured 112 ms for twenty.
+
+1. Start the binary and read the port line.
+2. Drive `count`, `wait N`, `round`, and `release` from one writer.
+3. Close standard input at the end, and read the final count.
+
+Lines are served in order. A `wait` answers on its own line later and never holds up the lines behind it. Its `wait ` prefix tells it from a `count` line when the two interleave. A `wait` still pending at the end can print before or after the final count. Rust tests call `Backend::wait`, `Backend::round`, and `Backend::release` in process.
