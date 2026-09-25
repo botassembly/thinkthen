@@ -2,7 +2,7 @@
 
 Written 2026-09-24 by Claude for queue items 6, 7, 9, and 10 of `one-line-plan-2026-09-24.md`. Main is the spine. Each surface on `surfaces-wave7` is ported onto the 0086 public Rust API in its own ticket, and the branch is never merged. This page changes no ticket and no code. Ian can overturn any classification or recommendation here.
 
-Sources read: tag `surfaces-wave7-final` (`f6a7faea`), lanes `origin/w7/gate3`, `origin/w7/python4`, and `origin/w7/fast`, ticket branches 0076, 0077, 0078, 0084, 0085, and 0086, ADR 0017 and ADR 0037 on main, and `sdlc/issues/2026-09-23-surfaces-branch-error-index.md`. Nothing was built or run.
+Sources read: tag `surfaces-wave7-final` (`f6a7faea`), lanes `origin/w7/gate3`, `origin/w7/python4`, and `origin/w7/fast`, ticket branches 0076, 0077, 0078, 0084, 0085, and 0086, ADR 0017 and ADR 0037 on main, and `sdlc/issues/closed/2026-09-23-surfaces-branch-error-index.md`. Nothing was built or run.
 
 Port source: tag `surfaces-wave7-frozen-2026-09-24b` (`9df8bae9`). It merges the three lanes into `surfaces-wave7`, and every surface check ran there once. `sdlc/records/surfaces-freeze-2026-09-24.md` on that tag lists each result. DuckDB, Ruby, and PostgreSQL did not run, because they need the network or Docker. Each surface ticket starts from this tag and carries the three follow-ups that record lists.
 

@@ -1,6 +1,6 @@
 # Packing and batching: what they buy, what they cost, and the setting
 
-Status: Open. The dedicated issue for packing and batching, on Ian's request of 2026-09-25. It replaces `2026-09-25-pack-rows-for-tables-and-frames-a-plan-to-measure-then-build.md`, renamed here.
+Status: Open. The dedicated issue for packing and batching, on Ian's request of 2026-09-25. It replaces the earlier plan `2026-09-25-pack-rows-for-tables-and-frames-a-plan-to-measure-then-build.md`, renamed here.
 
 ## In one paragraph
 
@@ -10,7 +10,7 @@ Today every row is its own request to Jev. Each request pays a fixed part near 2
 
 | Choice | What it buys | What it costs | Evidence |
 | --- | --- | --- | --- |
-| One row per request (today) | Each answer depends only on its row. Replay and the cache key are simple. | The fixed part on every row. About 20 rows a second at most. | `2026-09-21-one-state-per-request-caps-table-scale-classification.md` |
+| One row per request (today) | Each answer depends only on its row. Replay and the cache key are simple. | The fixed part on every row. About 20 rows a second at most. | `closed/2026-09-21-one-state-per-request-caps-table-scale-classification.md` |
 | Pack yes/no rows, up to 10 | 3.3 to 4.6 times fewer tokens. About ten times fewer requests. | About 3% of answers near the bar change with their neighbours, six times Jev's own noise. | Experiments 208 and 260 |
 | Pack more than 10 | A little more saving | Accuracy slips at 20 and collapses at 40. Late rows read worse. | Experiment 208 |
 | Pack pick-one rows | 2.3 times fewer tokens | 2 to 10 points of accuracy with today's wording | Experiment 260; rewording under test in 261 |
@@ -26,22 +26,38 @@ Packing is a configuration setting that every surface reads the same way, not a 
 - **Which answer types it covers.** Yes/no first. Pick-one, score, and tag only after a packed width-1 request matches single-row accuracy for that type.
 - **The default** is for the ADR, from the evidence here.
 
+### Where each surface sets it
+
+No surface packs today. Every surface sends one request per row. The table proposes the name on each one. The ADR fixes the final names.
+
+| Surface | Today | Where `pack` goes |
+| --- | --- | --- |
+| Command | One request per line. `--throttle` sets how many run at once. | `--pack N` option, `pack` in the configuration file, `THINKTHEN_PACK` |
+| Question file | Holds the question, options, and threshold. | `"pack": 1` keeps a question unpacked everywhere |
+| Rust, Python, TypeScript, Ruby, C | One request per call. Batch calls run rows concurrently. | The engine builder, and a per-call override on batch calls |
+| Polars, pandas, R | One request per row of a column. | The engine builder, as for the library |
+| SQLite | One request per row. `thinkthen_warm` fills the cache. | A settings call, as the extension sets its other options |
+| DuckDB | Chunks of up to 2,048 rows, deduplicated, then one request per distinct text. | `SET thinkthen_pack = N` |
+| PostgreSQL | The array form takes many rows, then one request per row. | `SET thinkthen.pack = N` |
+
+A library gives the finest control: per engine and per call. The command and the databases take one value per run or session. The question file wins over all of them, so a question that packs badly can stay unpacked on every surface.
+
 ## What the documentation carries
 
 - A site page, "Packing and batching", in the how-to form of ADR 0011, with the trade-off table above in plain words, the setting and where to set it, and one worked example at `pack` 1 and 10 with its token counts.
-- The size-and-cost page named in `2026-09-21-size-cost-and-other-backends-what-the-manual-and-the-tests-must-carry.md` links to it.
+- The size-and-cost page named in `2026-09-25-docs-how-tos-and-spec-claims-owed.md` links to it.
 - The talk carries one slide on it, from the marketing repository.
 
 ## What is measured
 
-- One request per record is the rule on every surface (`specification/annotate.md`, `sdlc/planning/databases/README.md`). Each request pays a fixed part near 256 input tokens. At the documented 1,200 requests a minute that caps a table near 20 rows a second and near $1.08 per 100,000 short rows (`2026-09-21-one-state-per-request-caps-table-scale-classification.md`).
-- The endpoint accepts many rows in one request as a structured `state`: one `condition`, a `rows` list, and one `noul` question per row named `r0` to `rN` (`2026-09-22-wire-probe-can-one-request-carry-many-states.md`). A plain list `state` returns one silent answer and must never be sent.
+- One request per record is the rule on every surface (`specification/annotate.md`, `sdlc/planning/databases/README.md`). Each request pays a fixed part near 256 input tokens. At the documented 1,200 requests a minute that caps a table near 20 rows a second and near $1.08 per 100,000 short rows (`closed/2026-09-21-one-state-per-request-caps-table-scale-classification.md`).
+- The endpoint accepts many rows in one request as a structured `state`: one `condition`, a `rows` list, and one `noul` question per row named `r0` to `rN` (`closed/2026-09-22-wire-probe-can-one-request-carry-many-states.md`). A plain list `state` returns one silent answer and must never be sent.
 - Experiment 208 (`~/workspace/experiments/208-thinkthen-row-packing/RESULTS.md`), yes/no questions only:
   - 1,000 SMS rows at 10 per request: accuracy 0.968, equal to one per request, for 3.3 times fewer tokens and ten times fewer requests. The run took 5.8 seconds.
   - 500 BoolQ rows at 10 per request: 2.0 times fewer tokens, accuracy within half a point. BoolQ rows are five times longer than SMS rows and did not break sooner. Row count breaks packing, not row length.
   - At 20 rows accuracy slipped. At 40 recall fell from 0.941 to 0.434, and rows late in the list read worse.
-  - Regrouping the same rows at 10 per request moved 3.4% of answers across 0.5. A row's neighbours change its answer. The run did not measure plain run-to-run noise, and a separate measure puts it near 26% of repeats moving (`2026-09-21-the-same-request-answers-differently-twice-measured.md`).
-- The limits: about 32,000 tokens of text and about 64,000 for the whole request (`2026-09-21-size-cost-and-other-backends-what-the-manual-and-the-tests-must-carry.md`). Ticket 0079 splits requests under backend limits.
+  - Regrouping the same rows at 10 per request moved 3.4% of answers across 0.5. A row's neighbours change its answer. The run did not measure plain run-to-run noise, and a separate measure puts it near 26% of repeats moving (`2026-09-25-docs-how-tos-and-spec-claims-owed.md`).
+- The limits: about 32,000 tokens of text and about 64,000 for the whole request (`2026-09-25-docs-how-tos-and-spec-claims-owed.md`). Ticket 0079 splits requests under backend limits.
 - Every reply reports its billed `input_tokens`. No public tokenizer exists, and ticket 0080 bans guessing tokens from bytes in printed output.
 
 ## Proposed design
@@ -102,3 +118,23 @@ The question: does rewording the per-row instruction remove the pick-one loss 26
 - Choice answers are noisy. W0 at width 1 sent the same bytes as 260's CA01 and flipped 8 of 77 top options. So a gap of a few items is noise, and no wording beats single-row beyond chance.
 
 What this means for the design: packed `choice` quotes each row's text into its own instruction (W3). Before the engine ships it, rerun W3 on a larger sample at widths 1 and 10, with a repeat to size the noise. Ian can overturn the choice of W3 and the size of that check.
+
+## Results, experiment 262
+
+Ran on 2026-09-25 under Ian's authorization, through `sdlc/scripts/live`. Model `jev-1.13.0`. Declared 310,000 tokens and billed 222,140 input tokens, 0.9 US cents. Every request answered 200 with every answer named and typed. The full record is `~/workspace/experiments/262-packed-choice-confirm/RESULTS.md`.
+
+The question: does W3 hold on all 200 `choose` items of 260's sample? Single-row ran twice: the 2026-09-23 answers (S0) and the same bodies sent again (S1). W3 ran at width 1, and at width 10 in two groupings. The preregistered rule: W3 at width 10 is no worse when both groupings score at least S0 minus the wider of the single-row spread and 3 points.
+
+| Arm | Right of 200 | Flips vs S0 | Tokens a question |
+| --- | --- | --- | --- |
+| S0, single-row | 141 | — | 373.6 |
+| S1, single-row again | 139 | 15 | 373.6 |
+| W3, width 1 | 132 | 38 | 404.1 |
+| W3, width 10, sample order | 146 | 47 | 166.5 |
+| W3, width 10, shuffled | 140 | 49 | 166.5 |
+
+- The single-row spread is 1 point, so the margin is 3 points and the bar is 0.675. Both width-10 groupings pass (0.730 and 0.700). W3 at width 10 is no worse than single-row in aggregate, at 2.2 times fewer tokens.
+- W3 at width 1 falls short (0.660, the same as 260's W0 at width 1). 261's match at width 1 held only on its two song-title templates. The loss sits in the trap and control categories.
+- Packing moves single answers. The width-10 arms flip about a quarter of items against S0, three times the 15 flips between the two single-row runs. The two groupings flip 33 items against each other. Fixes and breaks balance, so accuracy holds.
+
+What this means for the design: packed `choice` may use W3 at width 10 where aggregate accuracy matters. A lone row goes as a bare string, not as a width-1 pack. Before a packed answer feeds a per-item decision, per-item agreement needs its own bar. Ian can overturn the pass bar and the reading of the flips.

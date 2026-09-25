@@ -14,7 +14,7 @@ A JSON syntax error names the input that owns it. A question file names the ques
 
 ## Current Facts
 
-Finding 5 in `sdlc/issues/2026-09-19-hands-on-test-pass-one.md` records the wrong noun. On current main, an empty question file, a UTF-8 BOM before an otherwise valid question file, and a trailing comma each exit 5 with `the question file is not JSON this tool reads: the record is not valid JSON`. The same three inputs as a whole document under `--field` exit 2 with `the record is not valid JSON`.
+Finding 5 in `sdlc/issues/closed/2026-09-19-hands-on-test-pass-one.md` records the wrong noun. On current main, an empty question file, a UTF-8 BOM before an otherwise valid question file, and a trailing comma each exit 5 with `the question file is not JSON this tool reads: the record is not valid JSON`. The same three inputs as a whole document under `--field` exit 2 with `the record is not valid JSON`.
 
 The shared `Json::parse` turns every serde syntax error into unit variant `JsonError::Syntax`. That variant owns the record-specific sentence and discards serde's line and column. `QuestionFileError` adds the question-file prefix after the detail has already lost its owner. `Reading::record` still knows whether it is parsing a whole document or a JSONL record, but both currently use the same `RecordError::Json` path.
 

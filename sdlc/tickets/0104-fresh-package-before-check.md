@@ -10,7 +10,7 @@ Status: landed. Owner: Claude. The review accepted it (`sdlc/records/0104-review
 
 ## Outcome and authority
 
-A rerun of `lint` fails when the new source package is shorter than the one left in `target/package`. `cargo package` writes over the old file without truncating it, and `tar` refuses the trailing bytes (`sdlc/issues/2026-09-24-a-rerun-package-rung-can-read-a-crate-with-trailing-bytes.md`). This quick fix follows the package check that tickets 0083 and 0092 shaped.
+A rerun of `lint` fails when the new source package is shorter than the one left in `target/package`. `cargo package` writes over the old file without truncating it, and `tar` refuses the trailing bytes (`sdlc/issues/closed/2026-09-24-a-rerun-package-rung-can-read-a-crate-with-trailing-bytes.md`). This quick fix follows the package check that tickets 0083 and 0092 shaped.
 
 ## Work
 

@@ -14,7 +14,7 @@ Status: landed
 
 ## Current Facts
 
-The three verbs read one document from standard input. `records.md` is Settled except the default of `jobs`, and ADR 0010 now gives `--jobs N` with a default of 4. This ticket builds the sequential form, and ticket 0013 adds `--jobs`, `--cache DIR`, and `choose --options POINTER`. The rows under `recipes/rows/` already have the record-mode shape, with the record under `input`, so the recipes are the first consumer. `result.md` says `meta.tool` is always present, and the binary does not write it (`sdlc/issues/2026-09-19-review-leftovers-from-ticket-0008.md`). `sdlc/issues/2026-09-19-ideas-carried-from-the-design-captures.md` lists small input rules that `records.md` never states.
+The three verbs read one document from standard input. `records.md` is Settled except the default of `jobs`, and ADR 0010 now gives `--jobs N` with a default of 4. This ticket builds the sequential form, and ticket 0013 adds `--jobs`, `--cache DIR`, and `choose --options POINTER`. The rows under `recipes/rows/` already have the record-mode shape, with the record under `input`, so the recipes are the first consumer. `result.md` says `meta.tool` is always present, and the binary does not write it (`sdlc/issues/closed/2026-09-19-review-leftovers-from-ticket-0008.md`). `sdlc/issues/closed/2026-09-19-ideas-carried-from-the-design-captures.md` lists small input rules that `records.md` never states.
 
 ## Scope
 

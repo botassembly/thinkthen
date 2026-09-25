@@ -10,7 +10,7 @@ Status: landed. Owner: Claude. The review accepted it (`sdlc/records/0115-review
 
 ## Outcome and authority
 
-The 0091 re-review left two gaps in the conformance command runner (`sdlc/issues/2026-09-24-the-question-form-runner-lacks-two-guards.md`). A mutated question-form case could reach the real backend when a key sits in the environment, and no test guards the rule that a question form needs evidence. This quick fix closes both.
+The 0091 re-review left two gaps in the conformance command runner (`sdlc/issues/closed/2026-09-24-the-question-form-runner-lacks-two-guards.md`). A mutated question-form case could reach the real backend when a key sits in the environment, and no test guards the rule that a question form needs evidence. This quick fix closes both.
 
 ## Work
 

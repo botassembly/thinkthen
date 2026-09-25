@@ -1,6 +1,6 @@
 # The scalar-bind surface is unusable on DuckDB's stable C API
 
-Status: Open
+Status: Open. Owner: ticket 0110 (DuckDB), not landed.
 
 Found by experiment 207 (`experiments/207-thinkthen-db/duckdb/NOTES.md`, entry on the round-one build, isolated step by step). Nobody opens an issue upstream. Ian decides.
 

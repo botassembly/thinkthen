@@ -10,7 +10,7 @@ Status: landed. Owner: Claude. The review accepted it (`sdlc/records/0103-review
 
 ## Outcome and authority
 
-`mustmatch like ""` matches any output, so four spec lines prove nothing (`sdlc/issues/2026-09-24-empty-output-checks-pass-on-any-output.md`). This quick fix follows the form 0083 used in `spec/transform.md`.
+`mustmatch like ""` matches any output, so four spec lines prove nothing (`sdlc/issues/closed/2026-09-24-empty-output-checks-pass-on-any-output.md`). This quick fix follows the form 0083 used in `spec/transform.md`.
 
 ## Work
 

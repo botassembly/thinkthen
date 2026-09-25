@@ -59,7 +59,7 @@ Excluded: partial-question failures, record-mode output changes, backend profile
 
 ## Dependencies
 
-Ticket 0052, the approved response in `sdlc/planning/build-team-response-to-handoff-2026-09-21.md`, and the product-side reply in `sdlc/issues/2026-09-21-the-product-sides-reply-to-the-build-teams-response.md`.
+Ticket 0052, the approved response in `sdlc/planning/build-team-response-to-handoff-2026-09-21.md`, and the product-side reply in `sdlc/issues/closed/2026-09-21-the-product-sides-reply-to-the-build-teams-response.md`.
 
 ## Complexity
 

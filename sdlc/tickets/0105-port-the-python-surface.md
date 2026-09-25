@@ -44,7 +44,7 @@ These stay at the tag for 0106 or retire: `src/arrow.rs`, `src/generated.rs` and
 
 ## Error-index rows
 
-Source: `sdlc/issues/2026-09-23-surfaces-branch-error-index.md`. The index lists 21 Python rows. This ticket re-proves ten of them. It also re-proves the Python halves of six cross-surface rows and of two engine rows. Each re-proof runs against the real engine through the 0092 loopback backend unless marked as a unit test. The record plants each bug below and shows its test turning red, then green once the bug is removed. "Counted" means the 0092 backend's `count` line.
+Source: `sdlc/issues/closed/2026-09-23-surfaces-branch-error-index.md`. The index lists 21 Python rows. This ticket re-proves ten of them. It also re-proves the Python halves of six cross-surface rows and of two engine rows. Each re-proof runs against the real engine through the 0092 loopback backend unless marked as a unit test. The record plants each bug below and shows its test turning red, then green once the bug is removed. "Counted" means the 0092 backend's `count` line.
 
 | Row | Status at tag | Re-proof here | Planted bug |
 |---|---|---|---|

@@ -14,7 +14,7 @@ Status: landed
 
 ## Current Facts
 
-Ticket 0005 landed the flat `decide`. The built-in profile still names an older key variable, and the address is fixed unless the hidden `--url` is given. `AGENTS.md` names `sdlc/scripts/live`, and the script does not exist (`sdlc/issues/2026-09-19-the-live-script-does-not-exist.md`). The key in `THINKTHEN_API_KEY` works: four calls by hand returned answers on 2026-09-19. Every demo is red.
+Ticket 0005 landed the flat `decide`. The built-in profile still names an older key variable, and the address is fixed unless the hidden `--url` is given. `AGENTS.md` names `sdlc/scripts/live`, and the script does not exist (`sdlc/issues/closed/2026-09-19-the-live-script-does-not-exist.md`). The key in `THINKTHEN_API_KEY` works: four calls by hand returned answers on 2026-09-19. Every demo is red.
 
 ## Scope
 

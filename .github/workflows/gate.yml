@@ -2,7 +2,7 @@
 #
 # Ian ruled on 2026-09-22 that no push or pull request starts this workflow.
 # The local sdlc/scripts ladder is the gate of record. The ruling is in
-# sdlc/issues/2026-09-22-stop-github-actions-on-push.md.
+# sdlc/issues/closed/2026-09-22-stop-github-actions-on-push.md.
 #
 # No step here holds a secret, reads a key, or sets a THINKTHEN_ variable. A
 # live call to the paid backend never happens here. A live run is a job done by
