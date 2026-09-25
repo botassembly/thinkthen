@@ -65,6 +65,7 @@ These rulings lived only in the tag's `NOTES.md` (R2-29). Ian can overturn each.
 - Every function and both table-valued modules are direct-only, and none is deterministic. A view, trigger, DEFAULT, CHECK constraint, generated column, or index in a database file cannot call them, whatever `trusted_schema` says.
 - `'@name'` resolves against the process working directory. The extension follows symlinks and confines nothing. The file must be a regular file of at most 1 MiB, opened once without blocking.
 - `thinkthen_warm` takes decide questions only.
+- `thinkthen_max_requests(n)` caps each engine call, not a statement. Each scalar row is a one-record call, and each warm flush is one call of up to 256 rows, so the limit caps nothing on a large `WHERE`. Ian decides the fix in `sdlc/issues/2026-09-25-sqlite-max-requests-caps-nothing-per-statement.md`.
 - `thinkthen_relate` reads entities from a named table's id, name, and kind columns (item 9).
 - Every call that can send runs on a detachable worker. On an interrupt the calling thread returns at once, and the detached worker finishes the requests it already sent. That worker is the known exception to ADR 0017's rule that no thread outlives a call. It lives at most the 30-second request timeout and holds its throttle permits until then.
 - `rusqlite` brings `foldhash` 0.2.0 under the Zlib license. The root `deny.toml` does not allow Zlib and cannot, because its tree never uses it. `databases/sqlite/deny.toml` equals the root file plus that one exception. Zlib is permissive and has no copyleft term.

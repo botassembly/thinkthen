@@ -11,7 +11,7 @@ use rusqlite::vtab::{Filters, IndexConstraintOp, IndexInfo};
 use serde_json::json;
 use thinkthen::{Entity, Kind, Recognize, Relate};
 
-use crate::question::{named_file, shown, text};
+use crate::question::{from_file, named_file, shown, text};
 use crate::{Failure, ffi, worker};
 
 /// The most distinct name and kind pairs one relate call takes.
@@ -102,7 +102,7 @@ fn argument(arguments: &[Value], at: usize, what: &str) -> Result<Option<String>
 /// A JSON argument or file read as a version-one file, wrapping a bare section.
 fn file_json(argument: &str, section: &str) -> Result<(serde_json::Value, bool), Failure> {
     let (source, file) = match argument.strip_prefix('@') {
-        Some(_) => (named_file(argument)?.0, true),
+        Some(_) => (named_file(argument, &format!("{section} spec"))?.0, true),
         None => (argument.to_owned(), false),
     };
     let value: serde_json::Value = serde_json::from_str(&source)
@@ -121,13 +121,7 @@ fn read<T>(
     file: bool,
     parse: fn(&str) -> Result<T, thinkthen::Error>,
 ) -> Result<T, Failure> {
-    parse(&whole.to_string()).map_err(|error| {
-        let mut failure = Failure::from(error);
-        if file && failure.kind == thinkthen::ErrorKind::Usage {
-            failure.kind = thinkthen::ErrorKind::Local;
-        }
-        failure
-    })
+    parse(&whole.to_string()).map_err(|error| from_file(error, file))
 }
 
 /// `thinkthen_recognize(text, kinds)`: one row per name in one text.

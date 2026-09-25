@@ -17,11 +17,12 @@ The tag's `NOTES.md` stays at `surfaces-wave7-frozen-2026-09-24b` as history. Th
 ## Findings for the landing agent
 
 - **The registry's deny call uses the root `deny.toml`.** `sdlc/scripts/surfaces --registry` runs `cargo deny … --config deny.toml` for every landed binding. The root file rejects `foldhash` 0.2.0 (Zlib), which `rusqlite` brings. The binding's own `deny.toml` passes. Moving this surface to landed therefore fails `lint` until the registry passes `--config "$surface/deny.toml"` when that file exists. The ticket's comparison check of the two deny files also belongs in `lint`. The brief for this port forbade ladder-script changes, so neither is made here.
+- **`thinkthen_max_requests` caps one engine call.** Each scalar row is its own call, so the limit caps nothing on a large statement. Ian decides the fix in `sdlc/issues/2026-09-25-sqlite-max-requests-caps-nothing-per-statement.md`.
 - **The shared port.** Every test here counts sends, so each starts its own backend. `check.sh` takes the rung's port and leaves it unused.
 
 ## Measurements
 
-- Production Rust: 1,392 nonblank lines in seven files. Unit tests: 158 lines.
-- Python: 896 lines in eight test files and the helper. The conformance runner and its planted-failure test: 225 lines.
+- Production Rust: 1,388 nonblank lines in seven files. Unit tests: 158 lines.
+- Python: 918 lines in eight test files and the helper. The conformance runner and its planted-failure test: 225 lines.
 - Scripts: `check.sh`, `setup.sh`, and `tests/host_sqlite.sh` hold 99 nonblank lines.
 - Conformance: 38 pass, 0 FAIL, 16 not run, 54 of 54.

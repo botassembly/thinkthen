@@ -33,6 +33,17 @@ def test_the_door_refuses_what_is_not_a_bounded_regular_file() -> None:
     for name in (folder / "fifo", folder / "fifo-link", "/dev/zero", folder / "big.json"):
         argument = f"@{name}"
         expect(asked(argument, timeout=5), (REFUSED.format(argument), 0), f"{name}")
+    backend = Backend()
+    held = child("""
+db = connect()
+db.execute("CREATE TABLE e(id INTEGER, name TEXT, kind TEXT)")
+say(recognize=run(db, "SELECT * FROM thinkthen_recognize('Ada', '@/dev/zero')"),
+    relate=run(db, "SELECT * FROM thinkthen_relate('e', 'id', 'name', 'kind', '@/dev/zero')"),
+    questions=run(db, "SELECT thinkthen_annotate('@/dev/zero', 'x')"))
+""", environment(backend), 5)
+    sentence = "thinkthen local: the {} file '@/dev/zero' did not read: it must be a regular file at most 1048576 bytes"
+    expect((held, backend.close()), ({"recognize": sentence.format("recognize spec"), "relate": sentence.format("relate spec"),
+                                      "questions": sentence.format("question set")}, 0), "each door names its file's kind")
 
 
 def test_a_link_to_a_question_file_reads_its_target() -> None:

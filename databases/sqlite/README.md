@@ -44,7 +44,7 @@ The extension holds one engine for the process, shared by every connection. It b
 Four setting functions change the engine before it builds. Each returns its argument and sends nothing. A bad value raises `usage` at the setting call. A setting after the engine builds raises `usage`.
 
 - `thinkthen_throttle(n)`: requests in flight at once, from 1 through 32. The default is 4.
-- `thinkthen_max_requests(n)`: the most records one call may answer. `NULL` means no limit.
+- `thinkthen_max_requests(n)`: the most records one engine call may answer. `NULL` means no limit. This is not a spending cap for a statement. Each scalar row is its own one-record call, and each warm flush is one call of up to 256 rows. A `WHERE thinkthen_decide(…)` over a million rows therefore passes any limit of 1 or more. The open question is `sdlc/issues/2026-09-25-sqlite-max-requests-caps-nothing-per-statement.md`.
 - `thinkthen_cache(folder)`: the answer cache's folder. `NULL` turns the cache off.
 - `thinkthen_cache_bytes(n)`: the cache's size cap in bytes.
 

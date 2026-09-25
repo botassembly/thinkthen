@@ -15,7 +15,7 @@ import os
 import subprocess
 import sys
 
-from helper import LIB, Backend, child, environment, expect, main
+from helper import LIB, Backend, NotRun, child, environment, expect, main
 
 DECIDE = "thinkthen_decide('@/etc/hostname', body)"
 ATTACK = """
@@ -77,8 +77,7 @@ def test_a_host_below_the_floor_refuses_the_load() -> None:
     version = subprocess.run([sys.executable, "-c", "import sqlite3; print(sqlite3.sqlite_version)"], env=stock,
                              capture_output=True, text=True, check=True).stdout.strip()
     if tuple(map(int, version.split("."))) >= (3, 50, 0):
-        print(f"not run  the stock host is {version}, at or above the floor")
-        return
+        raise NotRun(f"the stock host is {version}, at or above the floor")
     held = child(f"""
 db = sqlite3.connect(":memory:")
 db.enable_load_extension(True)

@@ -53,12 +53,13 @@ pub(crate) fn text(value: ValueRef<'_>, what: &str) -> Result<Option<String>, Fa
 
 /// Read the file `'@name'` names: one `O_NONBLOCK` open, a regular file of
 /// at most 1 MiB, symlinks followed, and one sentence for every cause.
-pub(crate) fn named_file(argument: &str) -> Result<(String, Stamp), Failure> {
+/// `what` names the file's kind in that sentence.
+pub(crate) fn named_file(argument: &str, what: &str) -> Result<(String, Stamp), Failure> {
     let refused = || {
         Failure::of(
             ErrorKind::Local,
             format!(
-                "the question file '{argument}' did not read: it must be a regular file at most {FILE_CAP} bytes"
+                "the {what} file '{argument}' did not read: it must be a regular file at most {FILE_CAP} bytes"
             ),
         )
     };
@@ -134,6 +135,7 @@ impl<T> Parsed<T> {
 fn cached<T>(
     cache: &Mutex<Parsed<T>>,
     argument: &str,
+    what: &str,
     parse: impl FnOnce(&str, bool) -> Result<T, Failure>,
 ) -> Result<Arc<T>, Failure> {
     let held = cache
@@ -146,7 +148,7 @@ fn cached<T>(
         return Ok(held);
     }
     let (source, stamp) = if argument.starts_with('@') {
-        let (source, stamp) = named_file(argument)?;
+        let (source, stamp) = named_file(argument, what)?;
         (source, Some(stamp))
     } else {
         (argument.to_owned(), None)
@@ -161,7 +163,7 @@ fn cached<T>(
 }
 
 /// A broken rule in a file is `local`; in an argument it stays `usage` (0095, Q16).
-fn from_file(error: thinkthen::Error, file: bool) -> Failure {
+pub(crate) fn from_file(error: thinkthen::Error, file: bool) -> Failure {
     let mut failure = Failure::from(error);
     if file && failure.kind == ErrorKind::Usage {
         failure.kind = ErrorKind::Local;
@@ -176,7 +178,7 @@ static SETS: LazyLock<Mutex<Parsed<QuestionSet>>> = LazyLock::new(|| Mutex::new(
 /// The question one argument names: `'@name'`, JSON that starts with `{`, or
 /// plain text asked as a decide question at the default cut.
 pub(crate) fn question(argument: &str) -> Result<Arc<LoadedQuestion>, Failure> {
-    cached(&QUESTIONS, argument, |source, file| {
+    cached(&QUESTIONS, argument, "question", |source, file| {
         if file || source.starts_with('{') {
             Question::from_json(source).map_err(|error| from_file(error, file))
         } else {
@@ -187,7 +189,7 @@ pub(crate) fn question(argument: &str) -> Result<Arc<LoadedQuestion>, Failure> {
 
 /// The question set one argument names, inline JSON or `'@name'`.
 pub(crate) fn set(argument: &str) -> Result<Arc<QuestionSet>, Failure> {
-    cached(&SETS, argument, |source, file| {
+    cached(&SETS, argument, "question set", |source, file| {
         QuestionSet::from_json(source).map_err(|error| from_file(error, file))
     })
 }

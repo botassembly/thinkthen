@@ -21,8 +21,10 @@ import traceback
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent
-LIB = ROOT / "target" / "release" / "libthinkthen0.so"
-BACKEND = os.environ.get("THINKTHEN_BACKEND", str(ROOT.parents[1] / "target" / "debug" / "conformance-backend"))
+# One build-folder rule, as check.sh reads it: CARGO_TARGET_DIR, or each workspace's own target.
+BUILT = pathlib.Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target"))
+LIB = BUILT / "release" / "libthinkthen0.so"
+BACKEND = os.environ.get("THINKTHEN_BACKEND", str(pathlib.Path(os.environ.get("CARGO_TARGET_DIR", ROOT.parents[1] / "target")) / "debug" / "conformance-backend"))
 CLI = os.environ.get("THINKTHEN_SQLITE_CLI", str(pathlib.Path.home() / ".cache/thinkthen-toolchains/sqlite-3500000-host/sqlite3"))
 LOOPBACK_KEY = "sk-sqlite-loopback"
 LIVE: list[subprocess.Popen] = []
@@ -175,6 +177,10 @@ def child(code: str, env: dict[str, str], timeout: float = 60) -> dict:
     return Child(code, env).result(timeout)
 
 
+class NotRun(Exception):
+    """A test that could not run here; `main` reports it apart from a pass."""
+
+
 def expect(held: object, wanted: object, what: str) -> None:
     """Fail with both values when they differ."""
     if held != wanted:
@@ -190,6 +196,8 @@ def main(tests: dict) -> int:
         try:
             test()
             print(f"ok       {name}")
+        except NotRun as reason:
+            print(f"not run  {name}: {reason}")
         except Exception:  # noqa: BLE001 (a test's failure of any kind is reported)
             failed += 1
             print(f"FAILED   {name}\n{traceback.format_exc()}")

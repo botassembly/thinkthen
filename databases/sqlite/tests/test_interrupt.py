@@ -153,7 +153,7 @@ say(error=isinstance(error, str), after=time.monotonic() - stopped[0])
 
 
 def test_cached_calls_return_at_once_and_leave_no_thread() -> None:
-    """R3-22: 200 cached answers take under 2 s, and no thread outlives them."""
+    """R3-22: 200 cached answers take under 2 s, and within 1 s no thread outlives them."""
     backend = Backend()
     code = """
 db = connect()
@@ -162,7 +162,11 @@ threads = lambda: int([line for line in open('/proc/self/status') if line.starts
 before, started = threads(), time.monotonic()
 for _ in range(200):
     db.execute("SELECT thinkthen_decide('Is it red?', 'a red door')").fetchall()
-say(took=time.monotonic() - started, before=before, after=threads())
+took = time.monotonic() - started
+settled = time.monotonic() + 1
+while threads() > before and time.monotonic() < settled:
+    time.sleep(0.01)
+say(took=took, before=before, after=threads())
 """
     result = Child(code, environment(backend)).result()
     expect(result["took"] < 2, True, f"200 cached calls took {result['took']} s")

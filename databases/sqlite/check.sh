@@ -35,7 +35,8 @@ cargo test --locked --offline --quiet --lib
 
 step "the release build carries no home path"
 RUSTFLAGS="--remap-path-prefix=$HOME=/build" cargo build --locked --offline --quiet --release
-library=target/release/libthinkthen0.so
+# One build-folder rule, as tests/helper.py reads it: CARGO_TARGET_DIR, or each workspace's own target.
+library=${CARGO_TARGET_DIR:-$here/target}/release/libthinkthen0.so
 found=$(strings -- "$library" | grep -c -- "$HOME" || true)
 [ "$found" = 0 ] || { echo "FAIL     $found strings in $library name $HOME" >&2; exit 1; }
 
@@ -47,8 +48,7 @@ guards=$(grep -rn 'catch_unwind(' src | wc -l)
 
 step "the loopback backend"
 cargo build --locked --offline --quiet --manifest-path ../../Cargo.toml --package conformance-backend
-THINKTHEN_BACKEND=${CARGO_TARGET_DIR:-$here/../../target}/debug/conformance-backend
-export THINKTHEN_BACKEND THINKTHEN_SQLITE_CLI="$host/sqlite3"
+export THINKTHEN_SQLITE_CLI="$host/sqlite3"
 export LD_LIBRARY_PATH="$host${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
 failed=""

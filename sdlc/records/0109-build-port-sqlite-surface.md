@@ -1,6 +1,6 @@
 # 0109 build: the SQLite surface on the public Rust API
 
-Built 2026-09-25 by Claude (Opus) on `ticket/0109-port-sqlite-surface`, from `9efb9abc`. It brings `databases/sqlite` over from tag `surfaces-wave7-frozen-2026-09-24b` and rebuilds it on the public `thinkthen` API. Code review: pending, by a fresh Claude session.
+Built 2026-09-25 by Claude (Opus) on `ticket/0109-port-sqlite-surface`, from `9efb9abc`. It brings `databases/sqlite` over from tag `surfaces-wave7-frozen-2026-09-24b` and rebuilds it on the public `thinkthen` API. Code review: a fresh Claude session found the extension code sound, accepted the six departures, and returned ten findings. Findings 2 through 10 are fixed in the second commit. Finding 1, the registry's deny rule and its plant, belongs to the landing agent.
 
 ## What landed
 
@@ -14,7 +14,7 @@ Built 2026-09-25 by Claude (Opus) on `ticket/0109-port-sqlite-surface`, from `9e
 
 ## Proof
 
-- `check.sh` exits 0 under the heavy lock: fmt, Clippy with warnings denied, 7 unit tests, the remapped release build with no home path, one exported symbol, one `catch_unwind` call, and 38 Python tests across nine files.
+- `check.sh` exits 0 under the heavy lock after the review fixes: fmt, Clippy with warnings denied, 7 unit tests, the remapped release build with no home path, one exported symbol, one `catch_unwind` call, and 38 Python tests across nine files.
 - Conformance: 38 pass, 0 FAIL, 16 not run, 54 of 54. The not-run cases are `rank` (3), `find` (2), the `on` case, the defect injection, and the nine recognize cases with relations (decision 10).
 - `python3 sdlc/scripts/policy.py` passes with the binding in place.
 - `cargo deny` with `databases/sqlite/deny.toml` passes offline. With the root `deny.toml` it rejects `foldhash` 0.2.0 on Zlib.
@@ -60,10 +60,13 @@ Each plant was applied to the source, rebuilt, and run against its test. Every o
 | cache | the folder ignored | the second child sends again |
 | cache_bytes | stored without the check | `0` returns 0 |
 | settings | a setting after the build applies silently | the call returns 8 |
+| R6-14 | a cached parse is always fresh | the rewritten set still answers `kind` |
+| R4-21 | the tag's process watcher: one static thread sets a flag the wait reads | the forked child's call is not cancelled |
+| R6-9 | the same watcher | the grandchild's call is not cancelled |
 | R3-30 | the runner skips one case | the counts sum to 53 of 54 |
 | R5-32 | a mismatch reported as not run | the planted-failure test fails |
 
-Not planted: R4-21 and R6-9. Their plant starts a helper thread in the parent, and the worker design has no such thread to plant. Both fork tests pass. R6-14's plant adds an answer map the design does not hold. Its test passes against the engine cache.
+With the watcher planted, the single-call cancel test stays green. Only the fork tests catch it, so both stay.
 
 ## Departures from the ticket's text
 
@@ -73,10 +76,11 @@ Not planted: R4-21 and R6-9. Their plant starts a helper thread in the parent, a
 
 - `sdlc/scripts/surfaces --registry` runs `cargo deny` with the root `deny.toml` for each landed binding. With this surface landed, `lint` fails on `foldhash` until that call uses `$surface/deny.toml` when present. The ticket's lint check comparing the two deny files is also not written. The port's brief forbade ladder-script changes, so both wait for the landing agent.
 - The full ladder was not run, as the brief directed.
+- `thinkthen_max_requests` caps one engine call, and each scalar row is its own call, so it caps nothing on a large statement. The README and ADR 0047 say so. Ian decides the fix in `sdlc/issues/2026-09-25-sqlite-max-requests-caps-nothing-per-statement.md`.
 
 ## Budget
 
-- Production Rust: 1,392 nonblank lines in seven files, each under 500. Unit tests: 158. `ratchet.json` holds 1,550.
-- Python: 896 lines in eight test files and the helper. The runner and its planted-failure test: 225. `ratchet.py.json` holds 1,121. `ratchet.sql.json` holds 18.
+- Production Rust: 1,388 nonblank lines in seven files, each under 500. Unit tests: 158. `ratchet.json` holds 1,546. The review fix shared one file-error rule between `question.rs` and `tables.rs`.
+- Python: 918 lines in eight test files and the helper. The runner and its planted-failure test: 225. `ratchet.py.json` holds 1,143. The review fixes added the file-kind sentences, the settings in the secrecy test, the thread-count poll, and the not-run report. `ratchet.sql.json` holds 18.
 - Scripts: 99 nonblank lines. Documentation: 89 nonblank lines added.
 - No change under `crates/thinkthen`, no backend arm, and no dependency beyond the ticket's list.

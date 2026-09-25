@@ -127,14 +127,16 @@ EVERY_CALL = """
 db = connect()
 db.execute("CREATE TABLE e(id INTEGER, name TEXT, kind TEXT)")
 db.executemany("INSERT INTO e VALUES (?, ?, ?)", [(1, "Ada", "person"), (2, "Acme", "organization")])
-calls = [f"SELECT {name}('Is it red?', 'a red door'{deadline})" for name in ("thinkthen_decide", "thinkthen_details", "thinkthen_warm") for deadline in ("", ", 0")]
+calls = ["SELECT thinkthen_throttle(4)", "SELECT thinkthen_max_requests(NULL)", "SELECT thinkthen_cache_bytes(1000000)",
+         "SELECT thinkthen_cache('" + os.environ["SCRATCH"] + "/cache')"]
+calls += [f"SELECT {name}('Is it red?', 'a red door'{deadline})" for name in ("thinkthen_decide", "thinkthen_details", "thinkthen_warm") for deadline in ("", ", 0")]
 calls += ["SELECT thinkthen_choose('{\\"choose\\":\\"Which?\\",\\"options\\":[\\"a\\",\\"b\\"]}', 'x')",
           "SELECT thinkthen_score('{\\"score\\":\\"How?\\",\\"levels\\":[\\"l\\",\\"h\\"]}', 'x')",
           "SELECT thinkthen_tag('{\\"tag\\":\\"Which?\\",\\"labels\\":[\\"a\\",\\"b\\"]}', 'x')",
           "SELECT thinkthen_annotate('{\\"version\\":1,\\"questions\\":{\\"k\\":{\\"decide\\":\\"Is it red?\\"}}}', 'x')",
           "SELECT * FROM thinkthen_recognize('Ada joined Acme.', 'person')",
           "SELECT * FROM thinkthen_relate('e', 'id', 'name', 'kind', 'works_for=person:organization')",
-          "SELECT thinkthen_decide('@/nonexistent/q.json', 'x')", "SELECT thinkthen_usage()"]
+          "SELECT thinkthen_decide('@/nonexistent/q.json', 'x')", "SELECT thinkthen_usage()", "SELECT thinkthen_throttle(8)"]
 say(said=[run(db, sql) for sql in calls])
 """
 
