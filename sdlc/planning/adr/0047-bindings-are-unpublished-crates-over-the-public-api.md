@@ -115,3 +115,16 @@ These rulings lived only in the tag's Ruby `NOTES.md`. Ian can overturn each one
 - The detach cost of decision 5: a stopped call's worker lives until its sent requests end. A stopped batch can hold up to the throttle in flight after the raise. It never sends a new request, because its own token is fired.
 - The watchdog runs ticks every 0.1 s on one Ruby thread. A tick belongs to the thread that set it. A tick that raises fires its call's own token, and the call raises the tick's error.
 - A `nil` record refuses with `UsageError` naming its index. A record that is not a `String` crosses as its JSON text.
+
+## R section, 2026-09-25 (ticket 0108)
+
+These rulings lived only in the R surface's notes (R2-29). Ian can overturn each.
+
+- **Layout.** R's crate sits at `libraries/r/thinkthen/src/rust`, inside the R package, because `R CMD INSTALL` builds from the package folder. Its lock and `clippy.toml` sit there too. `libraries/r/deny.toml` and the two ratchet files sit at `libraries/r`. The registry check and `policy.py` look for `libraries/r/Cargo.toml` today, so they must learn this path before R lands. The record of ticket 0108 names the change.
+- **`I()` over a number.** A deadline may carry the `AsIs` class. Any other class, such as `factor` or `difftime`, is `usage`.
+- **Deadline numbers.** `NULL`, `-1`, and `-1L` mean no deadline. The engine's `deadline_seconds` rules every other number.
+- **Bulk choose, score, and tag.** A column crosses as one `annotate` of a one-question set. This closes R2-23.
+- **jsonlite stays** as the one import, at the tested 2.0.0. Its archive is pinned by sha256.
+- **relate takes a frame** with `name` and `kind` columns and dedupes it by item 9.
+- **The ratchets.** `ratchet.json` counts the crate's Rust. `ratchet.R.json` counts `.R` files under the package's `R` and `tools` folders, `tests`, and `examples`.
+- **The `paste` advisory.** `extendr-api` 0.8.2 depends on `paste`, which RUSTSEC-2024-0436 reports unmaintained. The binding's own `deny.toml` equals the root one plus that one ignore entry with its reason.

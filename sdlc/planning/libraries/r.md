@@ -2,6 +2,8 @@
 
 Shared rules live in [README.md](README.md). This page holds only what is particular to R.
 
+Status 2026-09-25: ticket 0108 landed the surface on the public API at `libraries/r`. Its rulings live in `libraries/r/NOTES.md` and the R section of ADR 0047.
+
 ## What really good looks like
 
 An R user works a whole column at a time. A great R package takes a column and gives back one of the same length and order, in R's own type, inside `dplyr::mutate` or `dplyr::filter`. It says `NA` when unsure, because `is.na` is how R users find those rows. R is where Ian's speed rule is easiest to keep: one call carries the column down, and the engine runs its requests at once inside Rust.
@@ -18,10 +20,10 @@ triaged |> filter(is.na(refund)) |> send_to_a_person()
 
 ## Goals
 
-- One `tt_decide()` over n rows crosses the barrier once and runs n requests at the `jobs` width. R keeps the vectorized `decide`, which is its habit (ADR 0017 pick 8); the engine's batch spine carries it (section 8).
+- One `tt_decide()` over n rows crosses the barrier once and runs n requests at the engine's throttle. R keeps the vectorized `decide`, which is its habit (ADR 0017 pick 8); the engine's batch spine carries it (section 8).
 - Each verb returns R's own type: logical, `NA` under a band, a character vector from `tt_choose`, numeric from `tt_score` — the specification's position from 0 to K−1, with the nearest level's name in `tt_details` (ADR 0017 pick 6) — a list column from `tt_tag`. Order and names match the input, and `NA` evidence in returns `NA` with no request. `NA` evidence handed to `filter` is a usage error, as 205 measured; the two verbs differ on purpose and the page says so.
-- Ctrl-C during a long column returns control within one poll interval. The pattern is one plain worker thread, a channel, and a 100 ms `R_CheckUserInterrupt` poll on the main thread; the small receiver leak per interrupt is named in the shim's notes (205).
-- `Imports:` names nothing beyond base R, and the tests still run the verbs inside `dplyr`.
+- Ctrl-C during a long column returns control within one tick. The pattern is one plain worker thread, a channel, and a 100 ms check on the main thread, run inside `R_ToplevelExec` (ADR 0042). A drop guard cancels the call's token.
+- `Imports:` names only jsonlite 2.0.0, and the tests still run the verbs inside `dplyr`.
 - `install.packages("thinkthen")` on Windows and macOS installs a binary.
 
 ## Anti-goals
@@ -37,7 +39,7 @@ triaged |> filter(is.na(refund)) |> send_to_a_person()
 - **A crossing per element.** `.Call` converts each `CHARSXP` down and allocates up, and `mutate` copies the column it assigns. Fix: one crossing down, and one answer vector allocated in Rust at its final type. The character vector is already the widest container R has. A data frame is a list of vectors, so a column is that same vector and `VECTOR_ELT` hands it over with no copy.
 - **String re-encoding.** A character vector holds pointers into R's global `CHARSXP` cache, so equal strings already share storage and nothing is copied to reach Rust. extendr's `Strings` dereferences to a slice of `Rstr`, and reading one as `&str` views the `CHARSXP` bytes in place. That read assumes UTF-8 and checks no encoding mark, so the shim reads the mark itself. `translateCharUTF8` copies only when it re-encodes, and it returns the existing pointer for a UTF-8 or ASCII string.
 - **An Arrow column turned into a character vector first.** The `nanoarrow` package carries the Arrow C data and stream interfaces with no dependency on the `arrow` package, and it holds them as external pointers. `arrow-extendr` turns those into `FFI_ArrowArray` and `FFI_ArrowSchema` for Rust, so a string column arrives as one contiguous UTF-8 buffer with offsets. `nanoarrow` would be suggested, and `Imports:` still names nothing.
-- **Work the shim must not do.** The engine asks an equal pair of question and evidence once inside a batch, and a cached answer costs nothing. No `unique()` in R before the call. `jobs` is one number for the process, R runs one thread, and two calls in one session share that width. A per-row call is serial, and one `tt_decide()` over the column is the bulk form.
+- **Work the shim must not do.** The engine asks an equal pair of question and evidence once inside a batch, and a cached answer costs nothing. No `unique()` in R before the call. The throttle is one number for each loaded copy of the engine, R runs one thread, and two calls in one session share it. A per-row call is serial, and one `tt_decide()` over the column is the bulk form.
 - **The interrupt poll.** Only the main thread may read R's interrupt flag. Fix: the engine works on its own threads while the main thread waits on a channel with a short timeout. Rust never calls into R while waiting.
 
 ## How little code
@@ -62,5 +64,5 @@ The shim converts the column to string slices, maps arguments to engine options,
 2. How is replay scoped with no dependency? A `tt_replaying(dir, expr)` wrapper, an `options()` entry, and an inherited environment variable nest differently.
 3. Answered by measurement (205, round two): the Arrow door does not ship. The character vector already crosses with no copy, arrow's ALTREP hands its own column over with no pull step, and the per-row materialization tax (0.3–0.5 µs) is 0.03 percent of a wire call, while `arrow` costs a user 58.5 MB and 258–285 ms to load, 65 times the import budget. `Imports:` stays empty; `Suggests: nanoarrow` is the shape if a caller ever asks, loaded at call time.
 4. Does `tt_choose` return a character vector or a factor? The agreed grammar passes the answer to `switch()`, and `switch()` refuses a factor.
-5. `tt_choose`, `tt_score`, and `tt_tag` are designed here but unproven on a stand-in: the 205 engine resolved only the decide family. The real engine's conformance cases prove them, and until then they are unchecked, not promised.
+5. Answered by ticket 0108: `tt_choose`, `tt_score`, and `tt_tag` pass the shared conformance cases on the real engine, and each column crosses as one `annotate` call.
 6. Progress for a long column hangs on the poll loop. 205 did not build it, staying under the line ceiling; it stays open.

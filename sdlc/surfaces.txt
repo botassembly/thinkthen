@@ -7,7 +7,7 @@ libraries/c           landed
 libraries/python      planned
 libraries/typescript  landed
 libraries/ruby        landed
-libraries/r           planned
+libraries/r           landed
 databases/duckdb      planned
 databases/sqlite      landed
 databases/postgresql  planned
