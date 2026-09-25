@@ -105,7 +105,9 @@ darwin_reports_not_run() {
 	printf '#!/bin/sh\necho Darwin\n' >"$RUN/shim/uname"
 	chmod +x "$RUN/shim/uname"
 	set +e
-	out=$(PATH="$RUN/shim:$PATH" bash ./check.sh 2>&1)
+	# A missing toolchain folder stops a run that passes the kernel check
+	# at "not run", before it builds, sweeps, or starts a server.
+	out=$(PATH="$RUN/shim:$PATH" THINKTHEN_TOOLCHAINS="$RUN/none" timeout 60 bash ./check.sh 2>&1)
 	code=$?
 	set -e
 	same "$code" 77

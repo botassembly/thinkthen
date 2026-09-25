@@ -39,12 +39,15 @@ FROM tickets, thinkthen_annotate('@form.json', body) AS a ORDER BY urgency DESC;
 | `thinkthen.deadline_ms` | any role | the per-call budget in milliseconds. -1 means none, and 0 means already spent |
 | `thinkthen.throttle` | superuser | requests in flight at once, 0 to 32. -1 keeps the engine's value |
 | `thinkthen.max_requests` | superuser | the most records one call answers. -1 means no limit |
+| `thinkthen.max_requests_total` | superuser | the most requests one backend sends. -1 means no total |
 | `thinkthen.cache` | superuser | the answer cache folder. Empty keeps `THINKTHEN_CACHE` or the platform folder |
 | `thinkthen.cache_bytes` | superuser | the cache cap, such as `'500MB'`. -1 keeps the configured value. 0 refuses every call. The ceiling is 2,147,483,647 bytes |
 | `thinkthen.file_directory` | superuser | the one folder an unprivileged role may read named files from |
 | `thinkthen.api_key` | nobody | never read. A set value refuses the next call |
 
 The throttle holds for the whole backend process. The first explicit throttle stays until the backend exits, and a later, different value is not applied. An administrator's `ALTER ROLE ... SET` applies an engine setting to one role.
+
+`thinkthen.max_requests_total` caps spending on a large query, where each row is its own call. Before each call the backend adds the requests its engines have sent. Once the total is spent, the call refuses with 22023 and sends nothing. A batch with more records than remain sends only the ones that fit, then refuses. The total belongs to one backend process: each new connection forks a backend that starts from zero. A cancelled call's send already on the wire, and the engine's retries, can each pass the total by one call.
 
 ## Errors
 

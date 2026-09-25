@@ -14,7 +14,7 @@ CREATE EXTENSION thinkthen;
 SELECT id, body FROM reviews
 WHERE thinkthen_decide('{"decide":"The reviewer asks for a refund."}', body);
 
--- the warm form: one pass at full width fills the cache, and the query reads it back
+-- the warm form: one pass at the full throttle fills the cache, and the query reads it back
 SELECT thinkthen_warm('{"decide":"The reviewer asks for a refund."}', body) FROM reviews;
 
 -- the array form: one array in, one row per element out, position kept
@@ -30,7 +30,7 @@ LATERAL jsonb_to_record(thinkthen_annotate('@triage.json', i.body)) AS a(spam bo
 ## Goals
 
 - `CREATE EXTENSION thinkthen` from a prebuilt package, with no Rust toolchain on the server.
-- `thinkthen_warm(question, text)` is an aggregate. It runs the column at the engine's width, fills the cache on disk, and returns the count. The name and the meaning carry to the other two databases.
+- `thinkthen_warm(question, text)` is an aggregate. It runs the column at the engine's throttle, fills the cache on disk, and returns the count. The name and the meaning carry to the other two databases.
 - The array form overloads the same eight names on an array argument. No name beyond `thinkthen_warm` enters the surface. The set emits the position itself, so the join back needs no `WITH ORDINALITY`.
 - One array crosses into the engine once as pgrx's `Array<'_, &str>`. That type reads an element only when the iterator reaches it. `Vec<Option<String>>` detoasts and copies the whole array on entry.
 - A constant question is parsed once per backend, in a per-backend parse cache. `fn_extra` is replaced: pgrx offers nothing above raw `pg_sys`, and the map is stronger — one parse per backend, not per statement — at about 2 µs a parse saved per row (207).
@@ -44,7 +44,7 @@ LATERAL jsonb_to_record(thinkthen_annotate('@triage.json', i.body)) AS a(spam bo
 
 - Only `thinkthen_relate` takes query text, and it runs that query through SPI (ticket 0111 decision 10). No other function reads a table. The caller aggregates the column and hands over an array.
 - No whole-row argument and no read-ahead over a table's tuple identifiers. `pg-jev` does both.
-- No parallel-safe marking on a judging function. `PARALLEL RESTRICTED` everywhere, with its measured price: 1.22 s against 0.33 s for 1,000 rows on a 1.2 ms wire, and four workers would run four times the width without it (207). pgrx 0.17 spells the restricted case.
+- No parallel-safe marking on a judging function. `PARALLEL RESTRICTED` everywhere, with its measured price: 1.22 s against 0.33 s for 1,000 rows on a 1.2 ms wire, and four workers would run four times the throttle without it (207). pgrx 0.17 spells the restricted case.
 - No background worker, no queue table, no extension-owned table.
 - No runtime, no socket, and no wire touch in `_PG_init` under `shared_preload_libraries`. 207 measured the sharpest form: a shared-preload engine touch does not degrade a backend, it prevents startup outright — the postmaster's own `_PG_init` hung on the wire and the server never finished starting. The shipped shape registers settings and touches nothing else; the engine builds lazily per backend, and its process-ID check rebuilds in any backend that inherited a stamp (ADR 0017 section 2; 211's shared-preload arm answered from a backend whose init pid was the postmaster's).
 - No chase after managed services. RDS, Aurora, Cloud SQL, Neon, and Supabase allow only their own lists.
@@ -53,7 +53,7 @@ LATERAL jsonb_to_record(thinkthen_annotate('@triage.json', i.body)) AS a(spam bo
 
 - **A call per row.** A scalar function runs once per row inside one backend process. A thousand rows at a fifth of a second each is a serial wait of many minutes. The warm pass and the array form are the fix, and the documentation calls the scalar form serial.
 - **The fork.** Every connection is its own forked process. Threads do not survive `fork`: only the calling thread lives on, and a lock a vanished thread held stays locked. The engine stamps its process ID and rebuilds the pool and the gate on a mismatch, taking no inherited lock, so a backend answers on its first call whether the state was built in the backend or inherited from the postmaster (ADR 0017 section 2). Nothing is built in the postmaster beyond settings.
-- **Parallel workers.** A parallel worker is a separate process with its own memory, so it builds its own state and its own pool. Four workers would run four times the width and break the vendor's rate limit. `PARALLEL RESTRICTED` keeps a judging function in the leader alone and still lets the rest of the plan go parallel, at the measured 1.22 s against 0.33 s for 1,000 rows (207). `PARALLEL UNSAFE` would force the whole query serial for nothing.
+- **Parallel workers.** A parallel worker is a separate process with its own memory, so it builds its own state and its own pool. Four workers would run four times the throttle and break the vendor's rate limit. `PARALLEL RESTRICTED` keeps a judging function in the leader alone and still lets the rest of the plan go parallel, at the measured 1.22 s against 0.33 s for 1,000 rows (207). `PARALLEL UNSAFE` would force the whole query serial for nothing.
 - **A question parsed per row.** Without `fn_extra` the shim parses the same constant question a thousand times for a thousand rows.
 - **A set delivered a row at a time.** pgrx's `TableIterator` returns one row per call, and a materialized set fills a tuplestore once. Which is cheaper for a thousand rows is unchecked, and whether pgrx 0.17 offers the materialized mode is unchecked. Either way the context a set-returning function enters on each call is cleared between calls, so cross-call state belongs in `multi_call_memory_ctx`.
 - **The same call in `WHERE` and in `SELECT`.** A volatile function is evaluated at each appearance. The engine's cache, keyed by the whole request, answers the second for nothing.
@@ -75,7 +75,7 @@ The cache follows the XDG ruling of ADR 0017 section 5: the platform cache home 
 
 ## Tests only this surface needs
 
-- A 1,000-element array shows the stub's highest in-flight count near the engine's width and a wall near one round of the stub's delay. The warm aggregate over 1,000 rows shows the same pair.
+- A 1,000-element array shows the stub's highest in-flight count near the engine's throttle and a wall near one round of the stub's delay. The warm aggregate over 1,000 rows shows the same pair.
 - A query after a warm pass makes zero requests, counted on the stub.
 - A thousand rows holding one hundred distinct texts leave one hundred requests.
 - A plan with `max_parallel_workers_per_gather` above zero does not raise the stub's highest in-flight count.

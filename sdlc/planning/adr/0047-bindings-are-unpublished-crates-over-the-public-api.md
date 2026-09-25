@@ -67,7 +67,9 @@ The PostgreSQL binding follows the list above with these recorded differences. I
 - Relate (decision 10). `thinkthen_relate` reads its query's rows through SPI and refuses the 256th row, a stricter cap than the unique-pair cap.
 - The key (decision 12). `thinkthen.api_key` is a `Userset` setting that is never read. A set value refuses the next call with 22023, and the value never reaches the log.
 - Deny. `databases/postgresql/deny.toml` is the root file plus an `ignore` for RUSTSEC-2021-0127 (`serde_cbor` under pgrx) and a Zlib exception for `foldhash`.
-- Counters. Each engine counts its own sends, so `thinkthen_usage()` adds the counters of every engine the backend built.
+- Counters. Each engine counts its own sends, so `thinkthen_usage()` adds the counters of every engine the backend built. The binding keeps one engine per settings plan and records it right after the build, so a cancelled call's sends still count.
+- The request total. Ian ruled on 2026-09-25 that every SQL surface caps requests per process (`sdlc/planning/one-line-plan-2026-09-25.md`). `thinkthen.max_requests_total` is a `Suset` setting, -1 for unset. Each call reads what remains once. None left refuses with 22023 and no send, and a batch sends only what remains before it refuses. A new backend starts from zero.
+- Recognize. `thinkthen_recognize` takes a kinds array or a version-one spec, `'@names.json'`. The spec form carries the kinds' meanings and thresholds that the shared cases need.
 
 ## Consequences
 
