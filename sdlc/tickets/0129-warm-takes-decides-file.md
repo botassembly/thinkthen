@@ -6,7 +6,7 @@ opens: databases/sqlite/src/scalars.rs databases/sqlite/tests/test_files.py data
 
 # 0129: Warm takes the question file decide uses
 
-Status: built, ready to land (`sdlc/records/0129-build-warm-takes-decides-file.md`). Design accepted on 2026-09-25 after two reviews. Owner: Claude.
+Status: landed 2026-09-25 (`sdlc/records/0129-build-warm-takes-decides-file.md`). Design accepted after two reviews; code review accepted. Open proof gap: the `'@~'` access case pins its sentence but does not count sends. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -14,7 +14,7 @@ Review route: a fresh read-only Claude session reviews this design and the final
 
 A user writes a question once in a file and uses the same `'@file'` in every SQL call. `thinkthen_warm('@abbey.json', title)` fills the cache. A later `thinkthen_decide('@abbey.json', title)` over the same rows sends nothing. This holds on SQLite, DuckDB, and PostgreSQL, the only surfaces with a warm call. It holds when the file carries a band, such as `"threshold": "0.3:0.7"`.
 
-The ask is `sdlc/issues/2026-09-25-warm-refuses-the-question-file-decide-uses.md`. The backlog of 2026-09-25 does not list it, because it was filed after the backlog was written. The coordinator assigned it on 2026-09-25.
+The ask is `sdlc/issues/closed/2026-09-25-warm-refuses-the-question-file-decide-uses.md`. The backlog of 2026-09-25 does not list it, because it was filed after the backlog was written. The coordinator assigned it on 2026-09-25.
 
 ## What is wrong today
 
@@ -177,7 +177,7 @@ Contract 1; state and timing 3; reach 2; proof 2; cost of error 2; total 10. Fin
 
 ## Closes
 
-- `sdlc/issues/2026-09-25-warm-refuses-the-question-file-decide-uses.md`. The lander moves it to `sdlc/issues/closed/` in the landing commit. If decision 8's fallback runs, the issue closes with a status line that names the DuckDB fallback and its record.
+- `sdlc/issues/closed/2026-09-25-warm-refuses-the-question-file-decide-uses.md`. The lander moved it to `closed/` in the landing commit. If decision 8's fallback runs, the issue closes with a status line that names the DuckDB fallback and its record.
 
 ## Evidence
 
