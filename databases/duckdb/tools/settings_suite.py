@@ -63,6 +63,27 @@ def the_process_request_total_holds_across_calls():
 
 
 @case
+def a_negative_request_total_refuses_before_the_map():
+    with Backend() as backend:
+        # A NULL text reaches no engine call, so only the init's check sees it.
+        got = run([ASK, "SET thinkthen_max_requests_total = -1", "SELECT thinkthen_decide('Is it a refund?', x) FROM (VALUES (NULL::VARCHAR)) t(x)"], backend.base())
+        expect(said(got[2]), "thinkthen usage: a request total is a whole number of 0 or more", "a total of -1 on a map hit")
+        expect(backend.count(), 1, "counted sends")
+
+
+@case
+def an_annotate_set_spends_one_request_per_text():
+    """The engine asks every member of a library set in one request per
+    text, since a library set reads each record whole and so holds one
+    group. A total of 2 over three texts sends 2 and refuses."""
+    with Backend() as backend:
+        both = '{"version": 1, "questions": {"refund": {"decide": "Is it a refund?"}, "area": {"choose": "Which area?", "options": ["billing", "login"]}}}'
+        got = run(["SET thinkthen_max_requests_total = 2", f"SELECT thinkthen_annotate('{both}', x) FROM (VALUES ('one'), ('two'), ('three')) t(x)"], backend.base())
+        expect(said(got[1]), SPENT.replace("of 3", "of 2"), "three texts under a total of 2")
+        expect(backend.count(), 2, "counted sends")
+
+
+@case
 def cache_cap_is_checked_on_a_map_hit():
     with Backend() as backend:
         got = run([ASK, "SET thinkthen_cache_bytes = 0", "SELECT thinkthen_decide('Is it a refund?', 'other')"], backend.base())
@@ -199,6 +220,37 @@ def two_databases_each_judge_their_own_access():
         )
         expect(rows(files[1]), [[True]], "A reads the file")
         expect(said(files[2]), f"thinkthen local: the question file {question} was not read: this database's file settings refuse it", "B's read")
+
+
+def opens(trace: Path, name: str) -> int:
+    """How many `openat` calls in an `strace -f` log name the file `name`."""
+    return sum(1 for line in trace.read_text().splitlines() if "openat(" in line and f'/{name}"' in line)
+
+
+@case
+def r1_15_and_r2_18_file_opens_under_strace():
+    """A refused `@file` never opens the file (R1-15), and 20,000 rows on one
+    thread open it once (R2-18). strace counts the opens."""
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        question = Path(folder) / "q.json"
+        question.write_text('{"decide": "Is it a refund?"}')
+        many, refused = Path(folder) / "many.trace", Path(folder) / "refused.trace"
+        got = run(
+            ["SET threads = 1", f"SELECT sum(thinkthen_decide('@{question}', 'refund now')::INTEGER) FROM range(20000)"],
+            backend.base(),
+            wrap=["strace", "-f", "-e", "trace=openat", "-o", str(many)],
+            timeout=300,
+        )
+        expect(rows(got[1]), [[20000]], "yes answers over 20,000 rows")
+        expect(opens(many, "q.json"), 1, "opens of q.json over 20,000 rows")
+        got = run(
+            ["SET enable_external_access = false", f"SELECT thinkthen_decide('@{question}', 'refund now')"],
+            backend.base(),
+            wrap=["strace", "-f", "-e", "trace=openat", "-o", str(refused)],
+            timeout=120,
+        )
+        expect(said(got[1]), f"thinkthen local: the question file {question} was not read: this database's file settings refuse it", "the refused read")
+        expect(opens(refused, "q.json"), 0, "opens of q.json with access off")
 
 
 if __name__ == "__main__":

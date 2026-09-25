@@ -34,12 +34,12 @@ SELECT id, thinkthen_choose('Which team owns this?', body, ['billing', 'shipping
 The engine starts from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, and `THINKTHEN_CACHE`. SQL cannot name a backend or a key. Four session settings reach the engine's own setters, and a fifth caps the whole process:
 
 - `SET thinkthen_throttle = N` caps live requests in flight at N, from 1 through 32. Live requests are capped by the active throttle, or by 4 when none is set. The first throttle holds for the life of the process, and a different one reads `thinkthen usage: throttle 8 is already active for this process; use throttle 8 or drop the throttle argument`.
-- `SET thinkthen_max_requests = N` caps one call's requests.
+- `SET thinkthen_max_requests = N` caps one call's requests. One call covers one chunk of at most 2,048 rows, so the cap does not bound a whole query. `sdlc/issues/2026-09-21-the-scalar-bind-surface-is-unusable-on-duckdbs-stable-c-api.md` names the lever.
 - `SET thinkthen_cache = '/absolute/folder'` moves the cache. The folder must be an absolute local path with no scheme, and the calling database's own file settings must allow it. Each call checks both before it asks anything.
 - `SET thinkthen_cache_bytes = N` caps the cache's size.
 - `SET thinkthen_max_requests_total = N` caps the requests this process sends. Before each call the extension adds up what its engines have sent. A spent total reads `thinkthen usage: this process has spent its request total of N; raise SET thinkthen_max_requests_total or RESET it` and sends nothing. A call with more texts than remain sends only the first ones that fit, then raises the same sentence. Calls running at the same time can each spend what remains, so the total can be passed by one call per thread in flight, plus retries. A forked child starts from zero. `thinkthen_warm` reads no session setting, so the total does not bind it.
 
-A value out of range is refused at the next ThinkThen call with the setter's own sentence, so a bad `SET` never wraps into an accepted one. The extension keeps one engine per distinct throttle, request limit, and cache folder, at most 16.
+A bad value's `SET` succeeds, since DuckDB has no check step for an extension setting, and the next call refuses it. The refusal uses the setter's own sentence, so a bad `SET` never wraps into an accepted one. The extension keeps one engine per distinct throttle, request limit, and cache folder, at most 16.
 
 ## Relate
 
@@ -61,7 +61,7 @@ SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM staff', ['works_for=p
 
 ## Files and access
 
-An `'@file'` question opens through the calling database's own file system, so `enable_external_access`, `allowed_directories`, `allowed_paths`, and `disabled_filesystems` decide every read, and the extension copies none of them. A cache folder set from SQL passes the same check. `thinkthen_warm` cannot see a caller's settings, so it refuses `'@file'`; pass the file's text from DuckDB's own `read_text` instead. Warm runs on the engine the environment describes.
+An `'@file'` question opens through the calling database's own file system, so `enable_external_access`, `allowed_directories`, `allowed_paths`, and `disabled_filesystems` decide every read, and the extension copies none of them. A cache folder set from SQL passes the same check. `thinkthen_warm` cannot see a caller's settings, so it refuses `'@file'`; pass the file's text from DuckDB's own `read_text` instead. Warm reads no session setting. It takes its cache folder from `THINKTHEN_CACHE` alone and runs at the process's throttle, so set `THINKTHEN_CACHE` before the process starts. An `'@file'` read stops at 1 MiB and reads `thinkthen local: the question file PATH was not read: it holds more than 1 MiB`.
 
 ## Interrupts
 

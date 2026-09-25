@@ -6,7 +6,8 @@ use std::ffi::{CStr, CString};
 
 use libduckdb_sys as sys;
 
-use crate::ffi::{Files, message};
+use crate::ffi::message;
+use crate::questions::Files;
 
 /// One connection this extension opened on a loaded database.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

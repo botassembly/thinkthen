@@ -14,7 +14,8 @@ use super::{Bound, COLUMNS, HOLDING, Row, Rules, SECONDS, bind, rows};
 use crate::errors::{defect, guarded};
 #[cfg(feature = "test-hooks")]
 use crate::ffi::Value;
-use crate::ffi::{Files, Logical, Type, message, write};
+use crate::ffi::{Logical, Type, message, write};
+use crate::questions::Files;
 
 /// One scan's rows, built on its first call, and how many it has sent.
 #[derive(Debug, Default)]

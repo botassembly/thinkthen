@@ -4,7 +4,7 @@ Branch `ticket/0110-port-duckdb-surface`. Built on Beelink on 2026-09-25 with th
 
 ## What landed
 
-- `databases/duckdb`, its own Cargo workspace, on `thinkthen`'s public API and `libduckdb-sys =1.10505.0` with no wrapper crate. `src/` holds 9 files. Every `unsafe` line sits in `src/ffi.rs` or `src/signal/ffi.rs`.
+- `databases/duckdb`, its own Cargo workspace, on `thinkthen`'s public API and `libduckdb-sys =1.10505.0` with no wrapper crate. `src/` holds 14 files. Every `unsafe` line sits in a file named `ffi.rs`: `src/ffi.rs` for the types, chunk reads and writes, setting registration, and LOAD, and one `ffi.rs` beside the questions, scalars, tables, and signal modules. Each file holds under 500 nonblank lines.
 - `check.sh`, which builds the shipped and `test-hooks` extensions, runs the source checks, deny, and its plant, loads the extension in the stock CLI, and runs the suites.
 - `tools/`: `harness.py`, `verbs_suite.py`, `settings_suite.py`, `signal_suite.py`, `conformance.py`, `site_examples.py`, `source_checks.py`, `selftests.sh`, `setup.sh`, `version.env`, and `requirements.txt`. That is 11 files, under the ticket's 16.
 - `deny.toml`, the root copy plus one exception for `zlib-rs`.
@@ -13,16 +13,20 @@ Branch `ticket/0110-port-duckdb-surface`. Built on Beelink on 2026-09-25 with th
 
 ## Deviations from the ticket
 
-- `src/ffi/` became `src/ffi.rs` and `src/signal/ffi.rs`. `policy.py` allows `unsafe` only in a file named `ffi.rs`, and the ticket may not change the ladder scripts. R4-16's types rule reads the same way: every logical type is made and destroyed inside the `Logical` wrapper in `src/ffi.rs`, whose `Drop` destroys it.
+- `src/ffi/` became one `ffi.rs` per module. `policy.py` allows `unsafe` only in a file named `ffi.rs`, and the ticket may not change the ladder scripts. The first port held every C API call in one 928-line `src/ffi.rs`. A mechanical split moved the file system into `src/questions/ffi.rs`, the scalar callbacks into `src/scalars/ffi.rs`, and the usage table and warm aggregate into `src/tables/ffi.rs`. The engine calls behind the scalars moved into `src/scalars/calls.rs`. R4-16's types rule reads the same way: every logical type is made and destroyed inside the `Logical` wrapper in `src/ffi.rs`, whose `Drop` destroys it.
 - The binding uses `libduckdb-sys` alone. `duckdb`'s `VScalar` registers no init callback, and decision 10 needs one on every scalar. `foldhash` and `tiny-keccak` left the tree with `arrow` and `hashlink`. `cargo deny` with the root config now refuses only `zlib-rs` 0.6.8 (Zlib), through `flate2` and `zip` in `libduckdb-sys`'s build dependencies. The deny plant removes the `zlib-rs` exception, and `check.sh` pins deny's rejection line for `zlib-rs`.
 - The conformance runner reads find cases, case `18-annotate-two-groups`, and relate cases as "not run" from one closed list. SQL finds with `ORDER BY` and `LIMIT` over decide. Main's public API refuses `on` in a library question set. Relate lands in 0118. The recognize cases run through `thinkthen_relations` with each case's own question file and compare the relations. Entity offsets of a described kind are not readable from SQL, because `thinkthen_recognize` takes kind names only. `verbs_suite.py` checks case 41's offsets on the generic arm.
-- R3-13's `SA_SIGINFO` half is not proved: the Python host installs a one-argument handler. The chain, the ignored action, and the default action are proved.
+- R3-13's `SA_SIGINFO` half is proved with a host handler installed through `ctypes` and `sigaction` before LOAD. It reads signal 2 and the parent's process id.
+- Review finding 1 asked for a per-text cost equal to an annotate set's group count. The engine groups a set's members by their `on` pointers, and a library set refuses `on`, so every library set holds one group. A two-member set over three texts sent 3 requests on the generic arm. A total of 2 over those texts sends 2 and refuses. The test pins that, and the cut stays one text per request.
+- LOAD now returns false when DuckDB does not offer the v1.5.5 C API. No test reaches it, since the stock CLI always offers it.
+- The engine map builds an engine outside its lock and stores it under the lock, so a fork during a build never leaves the child's map locked. A racing build of the same key loses to the one stored first.
 
 ## Results
 
 - `check.sh` passes at the branch head: fmt, clippy with `-D warnings`, 4 unit tests, both builds, the source checks, deny and its plant, the stock CLI call, and 31 suite cases (verbs 12, settings 10, signal 9). The site-example check runs 8 drawn blocks and names 2 closed divergences. The selftests pass.
 - Ratchets: `src` holds 2176 non-blank Rust lines and `tools` holds 1116 non-blank Python lines. Each ceiling equals its total. The request total of decision 17 added its check in `src/engines.rs` and one call site in `src/scalars.rs`.
 - Conformance: 49 pass, 0 fail, 5 not run, 54 cases.
+- Owed proofs, added after the first review: R1-15 counts 0 opens of `q.json` under `strace` with access off. R2-18 counts 1 open over 20,000 rows under `SET threads = 1`. R5-21's 10,000 SIGINTs while four threads allocate end with exit 0 well under 60 s. An `@file` read of `/dev/zero` stops at 1 MiB. The secrecy case now covers every verb's refusal on the refuse arm with its `backend` kind pinned, every details member on the generic arm, a usage error, a local error, and an address carrying a password, with more than 0 counted sends.
 - Access cases: all 35 cache cases agree with DuckDB's `COPY … TO`, and all 35 `@file` cases agree with `read_text`. Each refused cache case sent nothing and created nothing in the case folders. The check reads folder listings, not `strace`.
 - SIGINT: a held batch of 64 texts at throttle 8 and a single held `thinkthen_details` each read `cancelled` within 100 ms, and the count stayed put after release. 50 stop-then-answer rounds, 50 signals between queries, and 20 chained signals all pass.
 - The volatile test uses `EXPLAIN`, with a count of 0.
@@ -30,7 +34,7 @@ Branch `ticket/0110-port-duckdb-surface`. Built on Beelink on 2026-09-25 with th
 
 ## Planted bugs
 
-Each plant changed one line, rebuilt the extension, and ran its one case. All eight went red and the source was restored.
+Each plant changed one or two lines, rebuilt the extension, and ran its one case. The source was restored and touched after each. All went red except the one row marked green.
 
 | Plant | Case | Read |
 | --- | --- | --- |
@@ -42,15 +46,39 @@ Each plant changed one line, rebuilt the extension, and ran its one case. All ei
 | Answers read by first place in the group | `r1_1_answers_map_back_by_text` | the rows came back wrong |
 | The stop latches on any past signal | `r1_21_the_next_query_answers_after_a_stop` | the next query read `cancelled` |
 | The total checked only when an engine is built | `the_process_request_total_holds_across_calls` | all 10 rows answered |
+| Probe only when the map builds an engine | `two_databases_each_judge_their_own_access` | B's decide answered |
+| One process-wide `@file` cache read before the open | `two_databases_each_judge_their_own_access` | B read A's file |
+| A one-argument host handler is not called | `r6_6_a_chained_host_handler_sees_every_signal` | the host saw 0 of 20 |
+| The callback body runs without `catch_unwind` (test-hooks build) | `r1_10_a_panic_in_each_boundary_reads_defect` | the process aborted |
+| An engine failure echoes the key | `secrecy_no_key_or_credential_in_any_message` | the sentinel key in a backend error |
+| Read the file on every call | `r1_15_and_r2_18_file_opens_under_strace` | 10 opens for 1 |
+| Open the file with `std::fs`, past the caller's settings | `r1_15_and_r2_18_file_opens_under_strace` | the refused read answered |
+| `Mutex::lock` in the handler | `source_checks.py` | R5-21 names `lock` and `Mutex` |
+| Annotate spends two requests per text | `an_annotate_set_spends_one_request_per_text` | 1 send for 2 |
+| No cap on an `@file` read | `an_atfile_read_stops_at_one_mib` | the 30 s timeout fired |
+| The total checked only at the engine call | `a_negative_request_total_refuses_before_the_map` | a NULL row answered |
+| Install without `SA_SIGINFO` | `r3_13_an_siginfo_host_handler_gets_the_number_and_sender` | a garbage sender id |
+| Count engine calls only (R6-6) | `r6_6_a_chained_host_handler_sees_every_signal` | green: see below |
+
+The R6-6 plant starts the invoke after the chunk read. It stays green, because a chunk read takes well under the 10 ms window the predicate already honors, and no outside test can land a signal inside it without a test hook. The fix stands, since it is strictly earlier, and this gap is deferred.
 
 ## Not yet done
 
-- Plants for the signal handler chain, the panic guard, and the secrecy case.
-- R5-21's 10,000-signal stress run, R2-18's 20,000-row open count under `strace`, R1-15's `strace` open count, the fork test, and the Python ratchet's measured ceiling review.
-- `examples.json` and its runner. The site-example check covers the drawn blocks instead.
+Deferred gaps, each with its reason:
+
+- `examples.json` and its runner. The site-example check covers the drawn blocks, and the relate block stays on its divergence list.
+- A test that lands a SIGINT inside the chunk read (R6-6). See the plant table.
+- A test for LOAD's false return. The stock CLI always offers the v1.5.5 API.
+
+## Re-scores
+
+The coordinator approved these on 2026-09-25, and Ian can overturn each one.
+
+- Ratchets: `src` rises to 2254 non-blank Rust lines for the split's module headers and imports, the `@file` cap, and the map's build outside its lock. `tools` rises to 1288 non-blank Python lines for the strace, stress, `SA_SIGINFO`, secrecy, `/dev/zero`, and total cases.
 
 ## For the landing agent
 
 - The `surfaces` registry step runs `cargo deny` on this crate with the root `deny.toml`, whose `exceptions = []` refuses `zlib-rs` 0.6.8 (Zlib). The crate's own `deny.toml` carries that one exception under ADR 0047. The step needs the exception in the root file, or it needs to read `databases/duckdb/deny.toml`.
 - `policy.py`'s binding check passes on this crate as it stands. The root workspace already excludes `databases`.
 - `sdlc/surfaces.txt` moves `databases/duckdb` to landed, as the port brief asked.
+- The `zlib-rs` deny exception goes into the root gate change with the other surfaces' changes.

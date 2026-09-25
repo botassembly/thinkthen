@@ -24,7 +24,7 @@ use std::time::Duration;
 use libduckdb_sys::duckdb_database;
 
 use crate::errors::{defect, usage};
-use crate::ffi::Files;
+use crate::questions::Files;
 
 mod ffi;
 

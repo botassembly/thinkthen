@@ -4,7 +4,7 @@ The tag's `NOTES.md` stays at tag `surfaces-wave7-frozen-2026-09-24b` as history
 
 ## Layout
 
-- `src/ffi.rs` holds every call into DuckDB's C API: types, chunk reads and writes, the caller's file system and settings, registration, and each callback. `src/signal/ffi.rs` holds the SIGINT handler and its install. `policy.py` allows `unsafe` only in files named `ffi.rs`, so the ticket's `src/ffi/` folder became these two files.
+- Every call into DuckDB's C API sits in a file named `ffi.rs`, because `policy.py` allows `unsafe` only there. `src/ffi.rs` holds the types, chunk reads and writes, setting registration, and LOAD. `src/questions/ffi.rs` holds the caller's file system and settings, `src/scalars/ffi.rs` the scalar callbacks, `src/tables/ffi.rs` the usage table and the warm aggregate, and `src/signal/ffi.rs` the SIGINT handler and its install. The ticket's `src/ffi/` folder became these five files.
 - `src/scalars.rs` groups each chunk by question and deadline, dedupes texts in first-seen order, and maps answers back by text.
 - `src/engines.rs` keeps the engine map. `src/questions.rs` reads questions and `@file`. `src/worker.rs` runs each engine call on a detachable worker. `src/tables.rs` holds usage and warm. `src/errors.rs` holds the one kind table and the one panic guard.
 

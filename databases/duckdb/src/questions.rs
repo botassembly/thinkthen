@@ -12,7 +12,10 @@ use thinkthen::{Engine, Error, ErrorKind, LoadedQuestion, Question, QuestionSet,
 
 use crate::engines::Asked;
 use crate::errors::{failure, prefix, usage};
-use crate::ffi::{Files, Opened};
+
+mod ffi;
+
+pub(crate) use ffi::{Files, Opened};
 
 /// One calling database's state for one init: its engine, its file system,
 /// and the files this init has read.
@@ -57,6 +60,11 @@ impl Caller {
             Opened::Missing => {
                 return Err(local(&format!(
                     "the question file {path} was not read: it does not exist or could not be opened"
+                )));
+            }
+            Opened::TooLarge => {
+                return Err(local(&format!(
+                    "the question file {path} was not read: it holds more than 1 MiB"
                 )));
             }
             Opened::NotText => {
