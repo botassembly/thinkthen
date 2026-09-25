@@ -1,310 +1,216 @@
 # frozen_string_literal: true
 
-# The Ruby surface's slice of the conformance file, offline against the
-# null backend. One line a case: ok, skip with a reason, or FAIL. The exit
-# is nonzero after any FAIL. Ported from the Rust surface's runner, case
-# for case.
+# Every applicable shared case through the Ruby surface, on the 0092
+# conformance backend. The parent starts the backend and runs this file
+# again as a scrubbed child with a fake key. The child runs each success
+# case on its own case arm. The expected request digests were recorded
+# against the canonical address, so each is recomputed for the address the
+# backend served. It prints one line a case and a count line, and exits
+# nonzero after any failure or a count that does not add up.
 #
-# Run with: ruby -I lib tests/conformance.rb  (ENGINE_NULL=1)
-#
-# Case 74's synthesized partial failure fires only in a build that armed
-# the compile-time `synthetic-partial` feature; check.sh builds the gate's
-# copy that way.
+# Five cases do not run here:
+NOT_RUN = {
+  "18-find-second" => "none: true; the public find has no switch for the none option",
+  "19-find-none" => "none: true; the public find has no switch for the none option",
+  "18-annotate-two-groups" => "reads parts of a record through a member's on; a call's evidence is one whole text",
+  "25-defect-fault" => "injects an internal invariant failure that no outside boundary reaches; src/lib.rs tests the guard",
+  "30-local-question-file" => "the surface has no question-file loader; ThinkThen.question takes keywords"
+}.freeze
+
+require "digest"
 require "json"
-require "open3"
+require "tmpdir"
+
+CASES = JSON.parse(File.read(File.expand_path("../../../conformance/cases.json", __dir__)))
+CANONICAL = "https://api.typesafe.ai/v1/systemone"
+
+unless ARGV.first == "--child"
+  require_relative "backend"
+  backend = TestBackend::Backend.new
+  status = Dir.mktmpdir do |root|
+    env = TestBackend.env(backend.url, root, "CONFORMANCE_PORT" => backend.port.to_s)
+    system(env, RbConfig.ruby, "-I", TestBackend::LIB, __FILE__, "--child", unsetenv_others: true)
+  end
+  backend.close
+  exit(status ? 0 : 1)
+end
+
 require "thinkthen"
+T = ThinkThen
+ORIGIN = "http://127.0.0.1:#{ENV.fetch('CONFORMANCE_PORT')}".freeze
 
-PATH = File.expand_path("../../../conformance/conformance.json", __dir__)
-FILE = JSON.parse(File.read(PATH))
-def wire_set?
-  ENV.key?("ENGINE_BASE_URL") || ENV.key?("THINKTHEN_BASE_URL")
-end
+def digest(url, request) = Digest::SHA256.hexdigest("systemone\n#{url}\n#{request}")
 
-SKIPS = FILE["skips"] || []
-SKIPLENGTH = SKIPS.length  # only to prove the table the reader loads is this file's
-
-# The shared skip table's decision for this case on this surface, through
-# the one reader (conformance/skiptable.py lookup): RUN, [disposition,
-# why], or nil on no entry. The private matcher this replaces was one of
-# nine disagreeing copies (surfaces-review-3).
-def central_skip(surface, one, wire)
-  cmd = ["python3", File.expand_path("../../../conformance/skiptable.py", __dir__),
-         "lookup", surface, one["id"].to_s, "--verb", one["verb"]]
-  kind = one.dig("expect", "error", "kind")
-  cmd += ["--kind", kind] if kind
-  cmd += ["--form", one["form"]] if one["form"]
-  cmd += ["--record", "null"] if (one["records"] || []).any?(&:nil?)
-  cmd += ["--none", "true"] if one["none"]
-  cmd += ["--error", "true"] if one.dig("expect", "error")
-  cmd += ["--wire", "true"] if wire
-  out, status = Open3.capture2(*cmd)
-  raise "skiptable lookup failed for #{one['id']}: #{out}" unless status.success?
-  line = out.strip
-  return nil if line == "RUN"
-  disposition, why = line.split("\t", 2)
-  [disposition == "DIVERGE" ? "diverge" : "skip", why]
-end
-
-def built(text)
-  ThinkThen.send(:_parse_question, text)
-rescue ThinkThen::UsageError => e
-  raise "the call failed: #{e.kind} (#{e.message})"
-end
-
-def ok_if(condition, what)
-  raise "FAIL: #{what}" unless condition
-end
-
-def expect_answer(value)
-  return true if value == true
-  return false if value == false
-
-  nil
-end
-
-def raise_kind
-  yield
-  nil
-rescue ThinkThen::UsageError, ThinkThen::BackendError, ThinkThen::DeadlineError,
-       ThinkThen::LocalError, ThinkThen::CancelledError, ThinkThen::DefectError => e
-  e.kind
-end
-
-def check_error(verb, question_text, evidence, records, kind)
-  begin
-    question = ThinkThen.send(:_parse_question, question_text)
-  rescue ThinkThen::UsageError => e
-    return if e.kind == kind
-
-    raise "FAIL: expected the #{kind} kind, got #{e.kind}"
+def swap(value, renamed)
+  case value
+  when String then renamed.fetch(value, value)
+  when Array then value.map { |item| swap(item, renamed) }
+  when Hash then value.transform_values { |item| swap(item, renamed) }
+  else value
   end
-  if kind == "deadline"
-    error = raise_kind { ThinkThen.decide(question, evidence, deadline: 0.0) }
-    return ok_if(error == kind, "expected the #{kind} kind, got #{error || 'an answer'}")
+end
+
+# Equal, holding numbers to a rounding tolerance.
+def close?(one, other)
+  case [one, other]
+  in [Numeric, Numeric] then (one - other).abs < 1e-9
+  in [Array, Array] then one.size == other.size && one.zip(other).all? { |a, b| close?(a, b) }
+  in [Hash, Hash] then one.size == other.size && one.all? { |name, held| other.key?(name) && close?(held, other[name]) }
+  else one == other
   end
-  error = case verb
-          when "filter" then raise_kind { ThinkThen.filter(question, records) }
-          when "decide" then raise_kind { ThinkThen.decide(question, evidence) }
-          when "choose" then raise_kind { ThinkThen.choose(question, evidence) }
-          when "decide_many" then raise_kind { ThinkThen.decide_many(question, records) }
-          when "rank" then raise_kind { ThinkThen.rank(question, records) }
-          else nil
+end
+
+def same(what, actual, expected)
+  raise "#{what}: got #{JSON.generate(actual)}, expected #{JSON.generate(expected)}" unless close?(actual, expected)
+end
+
+def engine(base, **settings) = T::Engine.new(base_url: base, cache: false, **settings)
+
+def question(held) = T.question(**held.transform_keys(&:to_sym))
+
+def entity(one) = { "name" => one.name, "kind" => one.kind, "start" => one.start, "end" => one.end, "strength" => one.strength }
+
+def detailed(document, expected)
+  wanted = expected["details"]
+  answer = wanted["answer"]
+  %w[probability probabilities level].each { |name| same(name, document["answer"][name], answer[name]) if answer.key?(name) }
+  %w[model question_sha256 requests].each { |name| same(name, document["meta"][name], wanted[name]) }
+end
+
+def single(engine, asked, text, success, base)
+  expected = success["answers"][0]
+  document = engine.details(asked, text)
+  detailed(document, expected)
+  typed = case document["answer"]["kind"]
+          when "yes_no" then engine.decide(asked, text)
+          when "score" then engine.score(asked, text)
+          when "choice" then engine.choose(asked, text)
+          when "tag" then engine.tag(asked, text)
           end
-  ok_if(error == kind, "expected the #{kind} kind, got #{error || 'an answer'}")
-end
-
-def check_details(expect, details)
-  # The audit's identity fields and the two 0053/0054 additions; the
-  # recorded probability is not compared because the null backend's own
-  # rule cannot reproduce case 73's recorded number.
-  ok_if(details["model"] == expect.dig("details", "model"),
-        "expected model #{expect.dig('details', 'model').inspect}, got #{details['model'].inspect}")
-  ok_if(details["digest"] == expect.dig("details", "question_sha256"), "the digest diverged")
-  wanted_requests = expect.dig("details", "requests")
-  ok_if(details["requests"] == wanted_requests, "the requests list diverged") if wanted_requests
-  wanted_failed = expect.dig("details", "failed_questions")
-  ok_if(details["failed_questions"] == wanted_failed, "failed_questions diverged") unless wanted_failed.nil?
-end
-
-def run_case(verb, question_text, evidence, records, expect, set_json, text = nil, form = nil)
-  if (error = expect["error"])
-    kind = error["kind"]
-
-    return check_error(verb, question_text, evidence, records, kind)
-  end
-
-  case verb
-  when "decide"
-    question = built(question_text)
-    details = ThinkThen.details(question, evidence)
-    check_details(expect, details)
-    ok_if(details["answer"] == expect_answer(expect["answer"]),
-          "expected #{expect['answer'].inspect}, got #{details['answer'].inspect}")
-  when "decide_many"
-    question = built(question_text)
-    judgments = ThinkThen.decide_many_with_probabilities(question, records)
-    answers = judgments.map { |one| one[:answer] }
-    ok_if(answers == expect["answers"].map { |value| expect_answer(value) },
-          "expected #{expect['answers'].inspect}, got #{answers.inspect}")
-    if expect["probabilities"]
-      judgments.zip(expect["probabilities"]).each do |one, wanted|
-        ok_if((one[:probability] - wanted).abs < 1e-9,
-              "expected probability #{wanted}, got #{one[:probability]}")
-      end
-    end
-    if expect["rows"]
-      # The ruled record row (go-ahead item 4): this host's own pair, the
-      # record and the value it carries, in input order.
-      rows = records.zip(answers).map { |record, value| { "input" => record, "value" => value } }
-      ok_if(rows == expect["rows"], "expected rows #{expect['rows'].inspect}, got #{rows.inspect}")
-    end
-  when "filter"
-    question = built(question_text)
-    kept = ThinkThen.filter(question, records)
-    wanted = expect["indexes"].map { |index| records[index] }
-    ok_if(kept == wanted, "expected #{wanted.inspect}, got #{kept.inspect}")
-    if expect["rows"]
-      rows = kept.map { |record| { "input" => record, "value" => true } }
-      ok_if(rows == expect["rows"], "expected rows #{expect['rows'].inspect}, got #{rows.inspect}")
-    end
-  when "choose"
-    question = built(question_text)
-    picked = ThinkThen.choose(question, evidence)
-    wanted = expect["answer"]
-    ok_if(wanted.nil? ? picked.nil? : picked == wanted,
-          "expected #{wanted.inspect}, got #{picked.inspect}")
-  when "score"
-    question = built(question_text)
-    value, level = ThinkThen.score_with_level(question, evidence)
-    ok_if((value - expect["answer"]).abs < 1e-9,
-          "expected #{expect['answer'].inspect}, got #{value}")
-    ok_if(level == expect.dig("details", "nearest_level"),
-          "expected level #{expect.dig('details', 'nearest_level').inspect}, got #{level.inspect}")
-  when "tag"
-    question = built(question_text)
-    labels = ThinkThen.tag(question, evidence)
-    ok_if(labels == expect["answer"], "expected #{expect['answer'].inspect}, got #{labels.inspect}")
-  when "annotate"
-    set = ThinkThen.send(:_parse_set, JSON.generate({ "version" => 1, "questions" => set_json }))
-    held = records.empty? ? [evidence] : records
-    answers = ThinkThen.annotate(set, held)
-    if expect["rows"]
-      # The multi-record form: one answer object a record, in input order,
-      # each field the bare answer (a score is its position).
-      wanted = expect["rows"].map { |row| row["value"] }
-      unless answers.length == wanted.length
-        raise "FAIL: #{answers.length} rows against the case's #{wanted.length}"
-      end
-
-      answers.each_with_index do |got, at|
-        want = wanted[at]
-        unless got.keys.map(&:to_s).sort == want.keys.sort
-          raise "FAIL: row #{at} fields #{got.keys.map(&:to_s).sort} against #{want.keys.sort}"
-        end
-
-        want.each do |name, value|
-          field = got[name.to_sym]
-          # This host spells a score field as [position, nearest]; the case
-          # pins the bare position, so read the position out.
-          field = field.first if value.is_a?(Float) && field.is_a?(Array) && field.first.is_a?(Numeric)
-          if value.is_a?(Float)
-            ok_if(field.is_a?(Numeric) && (field - value).abs < 1e-9,
-                  "row #{at} #{name}: #{field.inspect} against #{value.inspect}")
-          else
-            ok_if(field == value, "row #{at} #{name}: #{field.inspect} against #{value.inspect}")
-          end
-        end
-      end
-      return
-    end
-    first = answers.first or raise "FAIL: no annotated record came back"
-    expect["answers"].each do |name, wanted|
-      field = first.key?(name.to_sym) ? first[name.to_sym] : (raise "FAIL: no #{name} field in the answer")
-      if wanted.key?("failed")
-        # The ruled marker (0054), in this host's own spelling.
-        ok_if(field == { "failed" => wanted["failed"] },
-              "#{name}: expected the marker #{wanted['failed'].inspect}, got #{field.inspect}")
-        next
-      end
-      if wanted["answer"].is_a?(Array) || wanted["answer"].is_a?(Float)
-        raise "#{name} holds a field the runner does not check; compare it or hold the case back in the table"
-      end
-
-      ok_if(field == wanted["answer"],
-            "#{name}: expected #{wanted['answer'].inspect}, got #{field.inspect}")
-    end
-    wanted_failed = expect["failed_questions"]
-    if wanted_failed
-      counted = first.count { |_name, field| field.is_a?(Hash) && field.key?("failed") }
-      ok_if(counted == wanted_failed,
-            "expected #{wanted_failed} failed fields, got #{counted}")
-    end
-  when "details"
-    question = built(question_text)
-    check_details(expect, ThinkThen.details(question, evidence))
-  when "recognize"
-    spec = JSON.parse(question_text)
-    rules = (spec["relations"] || []).to_h do |rule|
-      [rule["name"], { source: rule["source"], target: rule["target"], either: rule["either"] }]
-    end
-    found = ThinkThen.recognize(text.to_s, kinds: spec["kinds"],
-                                relations: rules.empty? ? nil : rules,
-                                threshold: spec["threshold"],
-                                relation_threshold: spec["relation_threshold"])
-    wanted_entities = expect["entities"]
-    ok_if(found.entities.length == wanted_entities.length,
-          "expected #{wanted_entities.length} names, got #{found.entities.length}")
-    found.entities.zip(wanted_entities).each do |got, wanted|
-      ok_if([got.id, got.text, got.kind, got.start, got.end] ==
-              [wanted["id"], wanted["text"], wanted["kind"], wanted["start"], wanted["end"]],
-            "the name #{wanted['text'].inspect} diverged: " \
-            "#{[got.id, got.text, got.kind, got.start, got.end].inspect}")
-      ok_if((got.strength - wanted["strength"]).abs < 1e-9,
-            "strength diverged for #{wanted['text'].inspect}: #{got.strength}")
-    end
-    wanted_relations = expect["relations"]
-    ok_if(found.relations.length == wanted_relations.length,
-          "expected #{wanted_relations.length} relations, got #{found.relations.length}")
-    found.relations.zip(wanted_relations).each do |got, wanted|
-      ok_if([got.name, got.source, got.target] == [wanted["name"], wanted["source"], wanted["target"]] &&
-              (got.probability - wanted["probability"]).abs < 1e-9,
-            "the relation #{wanted['name']} diverged: " \
-            "#{[got.name, got.source, got.target, got.probability].inspect}")
-    end
-  when "relate"
-    spec = JSON.parse(question_text)
-    rules = (spec["relations"] || []).map do |rule|
-      next rule unless rule.is_a?(Hash)
-
-      { rule["name"] => { source: rule["source"], target: rule["target"], either: rule["either"] } }
-    end
-    edges = ThinkThen.relate(records, relations: rules.empty? ? nil : rules, either: spec["either"],
-                             threshold: spec["threshold"], kind_field: spec["kind_field"])
-    wanted_edges = expect["edges"]
-    ok_if(edges.length == wanted_edges.length,
-          "expected #{wanted_edges.length} edges, got #{edges.length}")
-    edges.zip(wanted_edges).each do |got, wanted|
-      ok_if([got.name, got.source, got.target] == [wanted["name"], wanted["source"], wanted["target"]] &&
-              (got.probability - wanted["probability"]).abs < 1e-9,
-            "edge #{[wanted['name'], wanted['source'], wanted['target']].inspect} diverged: " \
-            "#{[got.name, got.source, got.target, got.probability].inspect}")
-      %w[source_kind target_kind].each do |key|
-        ok_if(got[key.to_sym] == wanted[key], "#{key} diverged on #{wanted['name']}") if wanted.key?(key)
-      end
-    end
-  else
-    raise "no case shape for #{verb}; add an arm or hold the case back in the table"
+  same("typed", typed, expected["bare"])
+  counters = success["counters"] or return
+  Dir.mktmpdir do |folder|
+    cached = T::Engine.new(base_url: base, cache: folder)
+    before = cached.usage
+    counters["calls"].times { cached.details(asked, text) }
+    after = cached.usage
+    same("counters", { "calls" => counters["calls"], "requests" => after[:requests_sent] - before[:requests_sent],
+                       "cache_answers" => after[:cache_answers] - before[:cache_answers] }, counters)
   end
 end
 
-file = FILE
-failed = 0
-file["cases"].each do |one|
+def annotated(engine, set, texts, success)
+  records = Dir.mktmpdir do |folder|
+    File.write(File.join(folder, "set.json"), JSON.generate(set))
+    engine.annotate(T.set(File.join(folder, "set.json")), texts)
+  end
+  failed = 0
+  success["answers"].each do |expected|
+    value = records[expected["exchange"]].fetch(expected["name"].to_sym)
+    failed += 1 if value.is_a?(Hash) && value.key?("failed")
+    same("bare #{expected['name']}", value, expected["bare"])
+  end
+  same("failed", failed, success.fetch("failed_questions", 0))
+end
+
+def check(one)
   id = one["id"]
-  verb = one["verb"]
-  central = central_skip("ruby", one, wire_set?)
-  if central
-    disposition, why = central
-    puts "#{disposition.ljust(8)} #{id}: #{why}"
+  return refused(one, one["expect"]["error"]["kind"]) if one["expect"].key?("error")
+
+  base = "#{ORIGIN}/case/#{id}/v1"
+  exchanges = one["exchanges"]
+  renamed = exchanges.to_h { |exchange| [digest(CANONICAL, exchange["request"]), digest("#{base}/systemone", exchange["request"])] }
+  success = swap(one["expect"]["success"], renamed)
+  texts = exchanges.map { |exchange| exchange["evidence"] }
+  engine = engine(base)
+  held = one["question"]
+  case [one["verb"], success["kind"]]
+  in ["recognize", _]
+    rules = held["recognize"]
+    found = engine.recognize(one["text"], kinds: rules["kinds"], relations: rules["relations"],
+                                          threshold: held["threshold"], relation_threshold: held["relation_threshold"])
+    bare = { "entities" => found.entities.map { |e| entity(e) } }
+    unless found.relations.nil?
+      bare["relations"] = found.relations.map do |r|
+        { "relation" => r.relation, "source" => entity(r.source), "target" => entity(r.target), "probability" => r.probability }
+      end
+    end
+    same("result", bare, success["answers"][0]["bare"])
+  in ["relate", _]
+    pair = ->(e) { { "name" => e.name, "kind" => e.kind } }
+    edges = engine.relate(one["entities"], relations: held["relate"]["relations"], threshold: held["threshold"])
+    same("result", edges.map { |e| { "relation" => e.relation, "source" => pair.(e.source), "target" => pair.(e.target), "probability" => e.probability } },
+         success["answers"][0]["bare"])
+  in ["annotate", _]
+    annotated(engine, one["question_set"], texts, success)
+  in ["rank", _]
+    ranked = engine.rank(held["decide"], texts)
+    same("ranking", ranked.map { |row| { "index" => row.index, "probability" => row.probability } }, success["operation"]["ranking"])
+  in [_, "filter"]
+    kept = engine.filter(question(held), texts)
+    same("indexes", kept.map { |text| texts.index { |held_text| held_text.equal?(text) } }, success["operation"]["indexes"])
+  in [_, "decide_many"]
+    same("bare", engine.decide_many(question(held), texts), success["answers"].map { |answer| answer["bare"] })
+  else
+    single(engine, question(held), texts[0], success, base)
+  end
+end
+
+# Each error case at its public boundary: the kind, not retryable, a usage
+# message that names something, and one send only for the refusing arm.
+def refused(one, kind)
+  generic = "#{ORIGIN}/generic/v1"
+  text = one["question"]["decide"]
+  counted = engine(generic)
+  before = counted.usage[:requests_sent]
+  begin
+    case one["id"]
+    when "20-usage-fault" then counted.decide(text, "   ")
+    when "21-backend-fault" then (counted = engine("#{ORIGIN}/arm/refuse/v1")).decide(text, "Is this urgent?")
+    when "22-local-fault"
+      Dir.mktmpdir do |folder|
+        file = File.join(folder, "not-a-folder")
+        File.write(file, "not a folder")
+        T::Engine.new(base_url: generic, cache: file).decide(text, "Is this urgent?")
+      end
+    when "23-cancelled-fault"
+      token = T::Cancel.new
+      token.cancel
+      counted.decide(text, "Is this urgent?", cancel: token)
+    when "24-deadline-fault" then counted.decide(text, "Is this urgent?", deadline: 0)
+    when "29-usage-json-text" then T.question(decide: text, threshold: one["question"]["threshold"])
+    when "31-usage-rank-blank-question" then counted.rank(text, %w[one two])
+    else raise "no public boundary is written for #{one['id']}"
+    end
+  rescue T::Error => e
+    same("kind", e.kind, kind)
+    same("retryable", e.retryable, false)
+    raise "a usage error names nothing" if kind == "usage" && e.message.strip.empty?
+
+    sent = counted.usage[:requests_sent] - before
+    same("sent", sent, one["id"] == "21-backend-fault" ? 1 : 0)
+    return
+  end
+  raise "the case succeeded"
+end
+
+passed = failed = skipped = 0
+CASES["cases"].each do |one|
+  id = one["id"]
+  if (why = NOT_RUN[id])
+    skipped += 1
+    puts "not run #{id}: #{why}"
     next
   end
-  question_text = JSON.generate(one["question"])
-  evidence = one["evidence"].to_s
-  records = one["records"].to_a
   begin
-    run_case(verb, question_text, evidence, records, one["expect"], one["set"], one["text"], one["form"])
-    puts "ok       #{id}"
-  rescue RuntimeError => e
-    message = e.message.sub(/\AFAIL: /, "")
-    # A case this runner ran is compared: only the table skips or holds a
-    # case back (surfaces-review-5; conformance/skiptable.py defines both).
+    check(one)
+    passed += 1
+    puts "ok #{id}"
+  rescue StandardError => e
     failed += 1
-    puts "FAIL     #{id}: #{message}"
+    puts "FAIL #{id}: #{e.class}: #{e.message}"
   end
 end
-
-if failed.positive?
-  warn "#{failed} conformance case(s) failed"
-  exit 1
-end
-puts "conformance slice green for the Ruby surface"
+total = passed + failed + skipped
+puts "conformance: #{passed} passed, #{failed} failed, #{skipped} not run, #{total} of #{CASES['case_count']}"
+exit(failed.zero? && total == CASES["case_count"] && total == CASES["cases"].size ? 0 : 1)

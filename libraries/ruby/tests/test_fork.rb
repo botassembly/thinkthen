@@ -1,40 +1,36 @@
 # frozen_string_literal: true
 
-# Ian's item 6 for Ruby: a fork after the first call answers its own call.
-#
-# The parent answers once (whatever the engine holds is held before the
-# fork), forks, and the child answers the same question. The parent's read
-# is under a 10 s Timeout, so a hang fails the test instead of hanging it.
-#
-# Run with: ENGINE_NULL=1 ruby -I lib tests/test_fork.rb
+# A fork after the first call answers in the forked child, and the parent's
+# counters do not move (0096, Q15). The parent reads under a 10 s bound, so
+# a hang fails instead of stalling.
+require "minitest/autorun"
+require_relative "backend"
 
-require "thinkthen"
-require "timeout"
-
-BOUND_SECONDS = 10
-
-question = ThinkThen.question(decide: "Does the customer ask for a refund?")
-parent = ThinkThen.decide(question, "I want a refund for order 9")
-raise "the parent's first call did not answer" unless parent == true
-
-reader, writer = IO.pipe
-pid = Process.fork do
-  reader.close
-  answered = ThinkThen.decide(question, "I want a refund for order 9") == true
-  writer.write(answered ? "ok" : "wrong")
-  writer.close
-  exit!(0)
-end
-writer.close
-
-outcome =
-  begin
-    Timeout.timeout(BOUND_SECONDS) { reader.read }
-  rescue Timeout::Error
-    Process.kill("KILL", pid)
-    raise "the child hung past #{BOUND_SECONDS} s — a fork that does not answer"
+class TestFork < Minitest::Test
+  def test_a_forked_child_answers_and_the_parents_counters_hold
+    lines, count = TestBackend.run(<<~RUBY)
+      require "timeout"
+      T.decide("Is it urgent?", "before the fork")
+      before = T.usage
+      reader, writer = IO.pipe
+      pid = Process.fork do
+        reader.close
+        writer.write(JSON.generate([T.decide("Is it urgent?", "in the forked child"), T.usage[:requests_sent]]))
+        writer.close
+        exit!(0)
+      end
+      writer.close
+      forked = begin
+        Timeout.timeout(10) { reader.read }
+      rescue Timeout::Error
+        Process.kill("KILL", pid)
+        "the forked child hung"
+      end
+      Process.wait(pid)
+      say [forked, T.usage == before]
+    RUBY
+    # The child's counters start at zero (0096), so they read its one send.
+    assert_equal [["[true,1]", true]], lines
+    assert_equal 2, count
   end
-Process.wait(pid)
-raise "the child did not answer its own call" unless outcome == "ok"
-
-puts "fork after the first call answers in the child"
+end

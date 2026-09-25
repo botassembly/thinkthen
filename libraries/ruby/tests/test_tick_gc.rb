@@ -1,84 +1,71 @@
 # frozen_string_literal: true
 
-# The with_tick block must survive the collector while the call still
-# runs it. The block never crosses into Rust anymore - the fourth
-# review's crash fix moved every tick to the Ruby-side watchdog - so its
-# liveness is the registry row's hold: the row lives in the ThinkThen
-# module for the whole call, and that hold is an ordinary GC root. The
-# test drops the caller's thread-local, the only other reference, from
-# inside the block's first run, defines a finalizer so the collection
-# itself is observable, and runs GC.start from a second thread for the
-# whole batch. The finalizer must not run while the call is in flight.
-#
-# The block runs on the watchdog thread. Thread.current inside it names
-# the watchdog, so the drop names the caller's thread explicitly. The
-# seventh review found the old drop cleared the watchdog's local and
-# left the caller's hold in place, so a row that held the block weakly
-# still passed. The test also checks that the drop took.
-#
-# Offline; check.sh's null section runs it.
-#
-# Run with: ENGINE_NULL=1 ruby -I lib tests/test_tick_gc.rb
+# The tick lives in the watchdog's Ruby row, an ordinary root the collector
+# marks (R2-8, R7-9, R4-18). The first run clears the caller's thread-local
+# by name, the only other hold, and checks the drop took. A second thread
+# runs GC.start through a batch held for 20 ticks. A finalizer on the tick
+# must not run while the call still runs it. Ticks belong to their own
+# thread (R3-16).
+require "minitest/autorun"
+require_relative "backend"
 
-require "thinkthen"
-
-RECORDS = 2_000_000
-question = ThinkThen.question(decide: "Is this a complaint?")
-records = Array.new(RECORDS) { |i| "record #{i}" }
-
-caller = Thread.current
-collected = false
-ticks = 0
-dropped = nil
-
-tick = proc do
-  ticks += 1
-  if ticks == 1
-    # Drop the caller's reference, the only one outside the registry
-    # row: the row's hold must keep the block alive for the rest of the
-    # call.
-    caller[:thinkthen_tick] = nil
-    dropped = caller[:thinkthen_tick].nil?
+class TestTickGc < Minitest::Test
+  def test_the_collector_leaves_a_running_tick_alone
+    TestBackend.with(<<~RUBY, arm: "arm/held") do |backend, child|
+      caller = Thread.current
+      collected = false
+      dropped = nil
+      ticks = 0
+      tick = proc do
+        ticks += 1
+        if ticks == 1
+          caller[:thinkthen_tick] = nil
+          dropped = caller[:thinkthen_tick].nil?
+        end
+        say "twenty" if ticks == 20
+      end
+      ObjectSpace.define_finalizer(tick, proc { collected = true })
+      T.with_tick(&tick)
+      tick = nil
+      stop = false
+      pressure = Thread.new { until stop; GC.start; sleep 0.01; end }
+      answers = T::Engine.new(throttle: 4).decide_many("Is it urgent?", %w[one two three four])
+      stop = true
+      pressure.join
+      say [dropped, collected, ticks >= 20, answers.size]
+    RUBY
+      assert_equal "twenty", child.hear(10)
+      assert_equal 4, backend.count
+      backend.release
+      assert_equal [true, false, true, 4], child.hear
+      status, errors = child.finish
+      assert status.success?, errors
+    end
   end
-end
-ObjectSpace.define_finalizer(tick, proc { collected = true })
-ThinkThen.with_tick(&tick)
-tick = nil
 
-stop = false
-pressure = Thread.new do
-  until stop
-    GC.start
-    sleep 0.01
+  def test_a_tick_runs_only_for_its_own_threads_calls
+    TestBackend.with(<<~RUBY, arm: "arm/held") do |backend, child|
+      runs = Hash.new(0)
+      engine = T::Engine.new(throttle: 4)
+      busy = Thread.new do
+        engine.with_tick { runs[:busy] += 1 }
+        engine.decide("Is it urgent?", "the busy thread's text")
+      end
+      idle = Thread.new { engine.with_tick { runs[:idle] += 1 } }
+      idle.join
+      hear
+      say [runs[:busy] > 0, runs[:idle]]
+      hear
+      busy.join
+    RUBY
+      assert_equal 1, backend.wait(1)
+      sleep 0.5
+      child.tell
+      assert_equal [true, 0], child.hear
+      backend.release
+      child.tell
+      status, errors = child.finish
+      assert status.success?, errors
+    end
   end
-end
-
-answer = nil
-failure = nil
-begin
-  answer = ThinkThen.decide_many(question, records)
-rescue StandardError => e
-  failure = e
-ensure
-  stop = true
-  pressure.join
-end
-
-if failure
-  warn "the batch failed: #{failure.class}: #{failure.message}"
-  exit 1
-end
-
-failures = []
-failures << "the drop did not clear the caller's reference" unless dropped
-failures << "the collector took the tick while the call still ran it" if collected
-failures << "the tick ran once and stopped: #{ticks} ticks" if ticks < 2
-failures << "the batch answered #{answer.size} records, not #{RECORDS}" unless answer.size == RECORDS
-
-if failures.empty?
-  puts format("the tick survived the collector: %d ticks, %d answers, no collection",
-              ticks, answer.size)
-else
-  failures.each { |one| warn one }
-  exit 1
 end

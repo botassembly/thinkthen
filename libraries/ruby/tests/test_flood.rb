@@ -1,48 +1,68 @@
-# The fourth review's crash probe, as a suite file: a trap handler that
-# raises under a 0.2 ms signal flood during a 200k-record decide_many.
-# The old crossing re-took the VM lock inside the engine's wait and the
-# raise's jump crossed the with-gvl machinery - a core dump in
-# coroutine_transfer, four of four. The restructured crossing never
-# re-takes the lock beneath the engine call, so every round ends in a
-# caught raise and the VM survives.
-#
-# Offline: the null backend answers the batch; the flood supplies the
-# interrupts.
-$LOAD_PATH.unshift File.expand_path("../lib", __dir__)
-require "json"
-require "thinkthen"
+# frozen_string_literal: true
 
-FLOOD_US = 200
-RECORDS = 200_000
-ROUNDS = 4
+# The crash shapes. R4-2: a raising USR1 trap every 0.2 ms through four held
+# 2,000-record batches. The old crossing took the lock back inside the
+# released region and crashed or hung. R3-5: 3,000 calls, each under a
+# Thread#raise at a random offset, which must neither crash the process nor
+# leave a watchdog row behind.
+require "minitest/autorun"
+require_relative "backend"
 
-Signal.trap("USR1") { raise "trap raise" }
-question = ThinkThen.question(decide: "Is this a complaint?")
-
-def run_round(question, records)
-  outcome = nil
-  begin
-    begin
-      flood = Thread.new do
-        loop { Process.kill("USR1", Process.pid); sleep(FLOOD_US.to_f / 1_000_000) }
+class TestFlood < Minitest::Test
+  def test_a_raising_trap_flood_ends_each_held_round_with_the_traps_raise
+    TestBackend.with(<<~RUBY, arm: "arm/held") do |backend, child|
+      engine = T::Engine.new(throttle: 8)
+      $flooding = false
+      Signal.trap("USR1") { raise "the trap's raise" if $flooding }
+      4.times do |round|
+        before = threads
+        outcome = nil
+        begin
+          $flooding = true
+          flood = Thread.new { loop { Process.kill("USR1", Process.pid); sleep 0.0002 } }
+          engine.decide_many("Is it urgent?", (1..2000).map { |n| "round \#{round} record \#{n}" })
+          outcome = "answered"
+        rescue RuntimeError => e
+          outcome ||= e.message
+        ensure
+          $flooding = false
+          flood&.kill
+          flood&.join
+        end
+        say outcome
+        hear
+        say settled(before, 5) == before
       end
-      ThinkThen.decide_many(question, Array.new(records) { |i| "record #{i}" })
-      outcome = :completed
-    ensure
-      flood.kill rescue nil
-      flood.join rescue nil
+    RUBY
+      4.times do
+        assert_equal "the trap's raise", child.hear
+        backend.round
+        child.tell
+        assert_equal true, child.hear, "the round's worker did not end after its replies went"
+      end
+      status, errors = child.finish
+      assert status.success?, errors
     end
-  rescue Exception => e
-    outcome = e
   end
-  outcome
+
+  def test_a_raise_storm_leaves_no_crash_and_no_watchdog_row
+    lines, = TestBackend.run(<<~RUBY)
+      T.with_tick {}
+      main = Thread.current
+      3000.times do |n|
+        raiser = Thread.new { sleep(rand * 0.005); main.raise(RuntimeError, "the storm") }
+        begin
+          T.decide("Is it urgent?", "storm \#{n}")
+        rescue RuntimeError
+          nil
+        end
+        raiser.join
+      rescue RuntimeError
+        nil
+      end
+      GC.start
+      say T.instance_variable_get(:@rows).size
+    RUBY
+    assert_equal [0], lines
+  end
 end
-
-Signal.trap("USR1") { } # the flood must not kill the harness after the rounds
-
-results = ROUNDS.times.map { run_round(question, RECORDS) }
-raise "a round left no outcome" if results.any?(&:nil?)
-
-caught = results.count { |one| one.is_a?(StandardError) || one == :completed }
-raise "only #{caught}/#{ROUNDS} rounds ended cleanly: #{results.inspect[0, 200]}" unless caught == ROUNDS
-puts "ok  flood-1: #{ROUNDS} rounds under a raising trap flood, no VM crash"
