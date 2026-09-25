@@ -1,6 +1,6 @@
 # 0121: Build the backend check command
 
-Status: built; code review accepted; waits for 0086 to land. Owner: Claude.
+Status: built; code review accepted; main merged after 0086 landed, ladder green; ready to land. Owner: Claude.
 
 Branch `ticket/0121-backend-check`. The build merged `origin/ticket/0086-public-rust-api` at `cd95f138`, and `f126771c` merges it again after it moved. That merge brings main's Rust 1.95.0. Ticket 0086 has not landed. When it lands, the branch merges `origin/main` and reruns the ladder before landing. Ian can overturn every choice this record marks as decided.
 
@@ -80,6 +80,8 @@ Each bug was planted in the source, the named test ran, and the source was resto
 ## Ladder
 
 All four rungs passed at `ecf004b6` with the key and the address unset: install and lint on `d0aa1b0b`, then test and spec. The spec rung ran 44 pages, `spec/check.md` among them, and 21 green demos. After the second 0086 merge (`f126771c`) and Rust 1.95.0, all four rungs passed again with the key and the address unset. The code at that run matches `a330852d`, whose change is this record alone.
+
+0086 landed on main at `1b2e9df7`. `cf5c160e` merges `origin/main` with no conflict, and the measured total stays 60919. All four rungs passed there with the key and the address unset. Test had 51 suites green and none red, and spec ran 21 green demos.
 
 ## Review
 
