@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core/recording.rs crates/thinkthen/src/engine crates
 
 # 0124: Fix the answer cache's three faults
 
-Status: ready. Design review round 2 pending. Owner: Claude.
+Status: in progress. Design accepted after two review rounds. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -84,7 +84,7 @@ The cache grows until the user runs `thinkthen cache prune DIR`. Ian ruled out a
 - `specification/recording.md` says the configuration's `cache_bytes` is the target `cache prune` trims to, and that nothing trims the cache on its own. It names the two status fields. Its prune section states the alias refusal and the typo gap. Its binding paragraph states the two sentences.
 - `specification/README.md` and `specification/roadmap.md` drop "bounded" before "cache". `site/src/pages/reference.astro` says the value is the size `cache prune` trims to and that the cache grows until then.
 
-### Files shared with ticket 0126
+### Files shared with tickets 0123 and 0126
 
 Ticket 0126 owns help text outside the cache commands. It may also edit these files, which this ticket touches:
 
@@ -93,7 +93,17 @@ Ticket 0126 owns help text outside the cache commands. It may also edit these fi
 - `public/error.rs`: this ticket changes one match pattern.
 - `specification/recording.md`: this ticket edits the configuration, binding, status, and prune paragraphs.
 
-The `status` help stays with 0126. Whichever of 0124 and 0126 lands second merges the other's lines in these files. The lander resolves the overlap and reruns the rungs both tickets touch.
+The `status` help stays with 0126.
+
+Ticket 0123 adds a `TokenLimit` error and edits relate help. It shares these files:
+
+- `engine/error.rs`: 0123 adds a variant to `Error` and its arm in the exhaustive class match. This ticket adds two fields to `RecordingBackendMismatch` in the same enum and its arm.
+- `cli/failure.rs`: 0123 adds a `Failure` variant and a message arm. This ticket adds fields to `Failure::RecordingBackendMismatch` and edits its arm in the recording-defect list.
+- `cli/failure/convert.rs`: both tickets edit arms of `From<EngineError> for Failure`.
+- `public/error.rs`: both tickets edit arms of the engine-error match.
+- `cli/args/command.rs`: 0123 edits the `Relate` doc and relate arguments. This ticket edits only the cache docs.
+
+The same rule covers both tickets. Whichever of 0123, 0124, and 0126 lands second merges the other's lines in these files. The lander resolves the overlap and reruns the rungs both tickets touch.
 
 ## Decisions
 
@@ -126,7 +136,7 @@ Prune with `--answered-by-other-than MODEL`. Unless a row says otherwise, the fo
 | One entry whose reply names `jev-latest`, one whose reply names `jev-1.13.0` | `jev-latest` | none | Exit 0, the `jev-1.13.0` entry removed. A reply names MODEL, so no refusal |
 | One entry by `jev-1.13.0`, one by `jev-old` | `jev-1.13.0` | none | Exit 0, the `jev-old` entry removed. Today's test keeps this |
 | No entries, marker only | `jev-latest` | none | Exit 0, `removed 0 entries and 0 bytes; 0 entries and 0 bytes remain` |
-| A malformed digest-named file beside good entries | `jev-latest` | none | Exit 5, the scan refusal, nothing removed. The scan still comes first |
+| A malformed digest-named file beside good entries | `jev-1.13.0` | none | Exit 5, the scan refusal, nothing removed. Today's test keeps this. The alias check runs after the scan, because it needs the scanned entries, so the alias meets the same refusal |
 | Any | blank | none | Exit 2, the existing blank-model refusal |
 
 Backend mismatch, with the folder first bound by a run against loopback address A and then used by a run against loopback address B:
