@@ -126,3 +126,19 @@ Plants, each red, then restored and touched:
 Growth, accepted by the coordinator for these fixes: time-limit 23 to 33 nonblank lines. `versions` 157 to 169. `install.sh` 176 to 185. `installer-test` 190 to 196. `surfaces` 13 more added lines and 1 changed. `pages.yml` 7 more changed lines.
 
 Checks after the fixes: `lint` exit 0, with "versions self-test: 11/11 cases hold", "installer-test: 36/36 cases hold under dash and bash", "workflows self-test: 14/14 cases hold", and the `surfaces --registry` pass line. No Rust file moved, so `test` did not rerun.
+
+## Code re-review fixes
+
+The re-review accepted findings 2 to 4 and named two gaps in time-limit. Both are fixed.
+
+1. **The trap race.** time-limit set its traps after it started the command and the watcher. A signal in that window ended time-limit and left the command running. The traps and an empty `child` now come before the command starts. `stop` skips the command's group while `child` is empty.
+2. **A command that ignores TERM.** `stop` sent TERM only. It now starts the same escalation the watcher uses: TERM to the group, then KILL 2 seconds later. It then waits for the command. The watcher is stopped first.
+
+The `surfaces --registry` row now runs a command that ignores TERM (`trap "" TERM`) and starts a grandchild, which inherits the ignored TERM. The row sends TERM to time-limit. It then requires the grandchild to be dead within 4 seconds, before it waits on time-limit, and it requires exit 143. Waiting on time-limit first hid the fault: a TERM-only `stop` blocked until the command's own 30 seconds ran out.
+
+| Plant | Result |
+|---|---|
+| `stop` sends TERM only, with no KILL | `surfaces --registry` exit 1: "a TERM to time-limit left a process alive after 4 seconds" |
+| time-limit without its three traps | `surfaces --registry` exit 1, with the same line |
+
+`surfaces --registry` ran 20 times in a row after the fix: 20 passed, 0 failed. `lint` exit 0. time-limit grows from 33 to 39 nonblank lines, and `surfaces` changes 10 more lines.

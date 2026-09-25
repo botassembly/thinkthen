@@ -111,16 +111,20 @@ if [ "${1:-}" = --registry ]; then
 		echo "surfaces: time-limit returned $fast and $slow, or left a process alive" >&2
 		exit 1
 	fi
-	# A TERM to time-limit reaches the command's children, and time-limit exits 143.
-	sh "$limit" 30 sh -c 'sleep 30 & echo $! >"$0"; wait' "$planted.term" &
+	# A TERM to time-limit reaches the command's children, even one that ignores TERM, and exits 143.
+	sh "$limit" 30 sh -c 'trap "" TERM; sleep 30 & echo $! >"$0"; wait' "$planted.term" &
 	outer=$! term=0 i=0
 	while [ ! -s "$planted.term" ] && [ "$i" -lt 50 ]; do sleep 0.1; i=$((i + 1)); done
 	kill "$outer"
-	wait "$outer" || term=$?
 	i=0
-	while kill -0 "$(cat "$planted.term")" 2>/dev/null && [ "$i" -lt 20 ]; do sleep 0.1; i=$((i + 1)); done
-	if [ "$term" -ne 143 ] || kill -0 "$(cat "$planted.term")" 2>/dev/null; then
-		echo "surfaces: a TERM to time-limit returned $term, or left a process alive" >&2
+	while kill -0 "$(cat "$planted.term")" 2>/dev/null && [ "$i" -lt 40 ]; do sleep 0.1; i=$((i + 1)); done
+	if kill -0 "$(cat "$planted.term")" 2>/dev/null; then
+		echo "surfaces: a TERM to time-limit left a process alive after 4 seconds" >&2
+		exit 1
+	fi
+	wait "$outer" || term=$?
+	if [ "$term" -ne 143 ]; then
+		echo "surfaces: a TERM to time-limit returned $term" >&2
 		exit 1
 	fi
 	echo 'surfaces: the registry holds every binding, and each landed one has its check, ratchet, and deny'
