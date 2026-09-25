@@ -26,7 +26,7 @@ The coordinator's rulings of 2026-09-25 on the first review also govern it. The 
 
 ## The one rule on outward steps
 
-No agent step in this ticket publishes a package, pushes a tag, creates a GitHub release that is not a draft, claims a name, creates a repository, sets a secret or a setting, or pushes a workflow with any trigger but `workflow_dispatch`. Each outward step is a manual trigger that Ian starts or approves. "What only Ian can do" names every one. A builder who reaches an outward step stops and hands it to Ian.
+No agent step in this ticket publishes a package, pushes a tag, creates a GitHub release that is not a draft, claims a name, creates a repository, sets a secret or a setting, or pushes a workflow with any trigger but `workflow_dispatch`. Each outward step is a manual trigger that Ian starts or approves. "Ian's setup list" names every one. A builder who reaches an outward step stops and hands it to Ian.
 
 The release workflow enforces the rule three ways. It starts only from `workflow_dispatch`. Every job that uploads to a registry, pushes to the tap, or publishes the GitHub release runs in the GitHub environment `release`. That environment has Ian as its one required reviewer and allows `v*` tags only. A tag ruleset lets only Ian create a `v*` tag.
 
@@ -53,7 +53,7 @@ Everything here runs on the Linux gate host through the ladder. Nothing runs on 
     - `crates/thinkthen/Cargo.toml` gains `repository`, `homepage`, `readme`, `keywords`, and `categories`. It keeps `publish = false` until Phase 4 step 3.
     - `libraries/python/pyproject.toml` gains `description`, `readme`, `authors`, `classifiers`, and `[project.urls]`.
     - `libraries/typescript/package.json` drops "Not published." from its description and gains `repository`, `homepage`, `keywords`, and `os` and `cpu` lists for the four platforms. It keeps `"private": true` until Phase 4 step 3. `libraries/typescript/build-addon.sh` copies the built library, `.so` on Linux and `.dylib` on macOS, to `thinkthen-<platform>-<arch>.node`, with the two names from `node -p process.platform` and `node -p process.arch`. `files` drops `thinkthen.node` and lists `thinkthen-linux-x64.node`, `thinkthen-linux-arm64.node`, `thinkthen-darwin-x64.node`, and `thinkthen-darwin-arm64.node`. `loader.js` loads the one that matches `process.platform` and `process.arch`. On any other pair it throws exactly `thinkthen: no native addon for <platform>-<arch>; this package ships linux-x64, linux-arm64, darwin-x64, and darwin-arm64`. The TypeScript check pins that sentence by setting `process.platform` to `win32` before it loads the package.
-    - `libraries/ruby/thinkthen.gemspec` replaces the `example.invalid` homepage and gains `metadata` source and changelog links. Its `authors` come from Ian's answer in "What only Ian can do".
+    - `libraries/ruby/thinkthen.gemspec` replaces the `example.invalid` homepage and gains `metadata` source and changelog links. Its `authors` list Ian Maurer alone, by Ian's ruling of 2026-09-25.
     - `libraries/r/thinkthen/DESCRIPTION` gains `URL`, `BugReports`, and `OS_type: unix`. It keeps its `SystemRequirements: Cargo, rustc` line.
 6. **R outside the repository.** R-universe builds the package from its subfolder, where `crates/thinkthen` does not exist. `libraries/r/thinkthen/tools/config.R` gains a third shape beside the repository shape and the tarball shape. When `src/rust/vendor/registry` is absent and the path to `crates/thinkthen` does not exist, it does three things. It rewrites `src/rust/Cargo.toml` so the `thinkthen` dependency reads `=VERSION` from crates.io with no path. It runs `cargo update --package thinkthen`, so the lock gains the registry entry and keeps every other pin. It builds with `--locked` and without `--offline`, since R-universe fetches crates. The repository and tarball shapes keep `--locked --offline`.
 7. **The download script.** New root `install.sh`, ported from BioMCP's `install.sh`, with every behavior the issue lists. It installs to `~/.local/bin` or `THINKTHEN_INSTALL_DIR`. `site/public/install.sh` is the same bytes. The script is POSIX `sh`, because the site's line pipes into `sh` and Debian's `sh` is dash. It keeps the effect of `pipefail` by writing each download to a file and checking each step's exit code. It checks a checksum with `sha256sum` where present and `shasum -a 256` otherwise.
@@ -62,7 +62,7 @@ Everything here runs on the Linux gate host through the ladder. Nothing runs on 
 10. **One time limit for every check.** New `sdlc/scripts/time-limit SECONDS COMMAND...` in POSIX `sh`. It runs the command in the background, starts a sleeper that kills it by process id when time runs out, and returns the command's exit code or 124 on a kill. Every `timeout` call in a surface check moves to it. Every `timeout` call in a script a surface check runs moves to it too. They are in `databases/duckdb/check.sh` lines 70, 78, and 80, `databases/postgresql/check.sh` line 110, `databases/postgresql/runtime.sh` lines 61, 83, 90, and 98, `databases/sqlite/check.sh` line 57, `libraries/r/tests/with-backend.sh` line 36, `libraries/ruby/check.sh` lines 110, 112, 113, and 124, and `libraries/typescript/check.sh` lines 63 and 74. The two PostgreSQL lines that match "statement timeout" are server messages and stay.
 11. **The first run with no key.** New `examples/first-run/` holds one input file and the one-entry recording that answers it. It ships as the release file `thinkthen-first-run.tar.gz`. The README's "First run" block downloads it and runs one `decide` under `--replay`. The command archive keeps the binary alone.
 12. **The README.** The "Install" section waits for the Phase 4 step 3 commit, for the same reason as item 14. It goes above the first example and holds the Homebrew line, the download script, and one line on `cargo install thinkthen`. Phase 1 adds the rest. A "First run" block downloads the sample and runs it. One paragraph says who issues the key, the listed price with the record that measured it, and that `THINKTHEN_BASE_URL` swaps the backend. A table of the outcomes and their exit codes, 0 to 6 and 70, sits near the top and matches `specification/channels.md`. Three badges show the release workflow, the crates.io version, and the license. The Gates sentence says `gate.yml` runs only by hand. Phase 1 closes stumble-register rows 2 and 7. `README.md` is shared with ticket 0126. Whichever lands second merges the other's changes.
-13. **Community files.** `SECURITY.md` points to GitHub's private vulnerability reporting. `CONTRIBUTING.md` points to the ladder and `sdlc/`. `CODE_OF_CONDUCT.md` is the Contributor Covenant 2.1 with the contact Ian names. `CHANGELOG.md` starts at 0.1.0 and has a "Breaking changes" heading. `CITATION.cff` names the software, the authors Ian names, the repository, the license, and the version, and `versions` checks its version. `.github/ISSUE_TEMPLATE/bug.md` asks for the command, the output, and `thinkthen --version`.
+13. **Community files.** `SECURITY.md` points to GitHub's private vulnerability reporting. `CONTRIBUTING.md` points to the ladder and `sdlc/`. `CODE_OF_CONDUCT.md` is the Contributor Covenant 2.1. It names Ian as its only contact, and conduct reports go to GitHub issues. `CHANGELOG.md` starts at 0.1.0 and has a "Breaking changes" heading. `CITATION.cff` names the software, Ian Maurer as its only author, the repository, the license, and the version, and `versions` checks its version. `.github/ISSUE_TEMPLATE/bug.md` asks for the command, the output, and `thinkthen --version`.
 14. **The site's lines, held.** Phase 1 does not touch the site. The tap line, the "Coming with 0.1" markers, and the uninstall line change in the Phase 4 step 3 commit, so no page names an install that does not exist yet. That commit changes the tap line in `site/src/data/catalog.mjs` to `brew install botassembly/thinkthen/thinkthen`, drops "Coming with 0.1" from both install lines, and gives `install.astro` the uninstall line: delete `~/.local/bin/thinkthen` and its receipt `~/.local/bin/thinkthen.install.json`.
 15. **The gate workflow.** `gate.yml` installs the two tools the install rung requires and never installed. It reads the pins from `sdlc/scripts/install` with `sed`, so the two files cannot drift. It runs `cargo install --locked cargo-public-api@$PUBLIC_API_VERSION`. The Quick Fix on branch `ticket/qf-install-nightly-and-root-test`, not landed on 2026-09-25, renames the nightly pin. The step works whichever lands first. When the install script names `PUBLIC_API_TOOLCHAIN`, the step runs `rustup toolchain install "$PUBLIC_API_TOOLCHAIN" --profile minimal`. When it names only the older `PUBLIC_API_NIGHTLY`, the step installs the dated toolchain one day after that date, since a nightly's `rustc` reports the previous day, and links it as `nightly`, which the older check reads. It also runs `pip install PyYAML==6.0.1` for item 17. The install rung checks PyYAML by running `python3 -c 'import yaml; print(yaml.__version__)'` and requiring exactly `6.0.1`, the version on the gate host and in Ubuntu 24.04. `sdlc/scripts/lint` gains the calls to `versions`, `installer-test`, and `workflows`.
 16. **`pages.yml`.** Drop the `push` trigger and keep `workflow_dispatch`. Pin every action to a commit with the tag in a comment, as `gate.yml` does. The poll step stays.
@@ -132,7 +132,7 @@ Everything here runs on the Linux gate host through the ladder, plus one local p
 
 The agent writes this checklist into `sdlc/records/0128-release-0-1.md` and follows it beside Ian. Every step marked Ian is his. The run happens in one cycle, and nobody edits `release.yml` inside it. A change to `release.yml` restarts the checklist at step 2.
 
-1. Ian finishes every setup item in "What only Ian can do".
+1. Ian finishes every item in "Ian's setup list".
 2. Ian dispatches `rehearse` on the head of main. It passes.
 3. The agent runs `versions --set 0.1.0`, drops `publish = false` from `crates/thinkthen/Cargo.toml` and `"private": true` from `package.json`, and dates `CHANGELOG.md`. The same commit adds the README's "Install" section and the site's held lines from Phase 1 items 12 and 14. The coordinator lands that commit.
 4. Ian dispatches `rehearse` on that commit. It passes.
@@ -167,7 +167,7 @@ Each is the agent's decision unless marked the coordinator's. Ian can overturn a
 3. **Dispatch only, from the tag, with one approval per outward job.** The coordinator's ruling. A tag creates nothing on its own. Ian's click starts the workflow, and his approval releases each publish job. BioMCP starts its release on a tag push. This ticket does not, because the rule on outward steps forbids a workflow that runs on push.
 4. **A rehearsal with no tag.** A draft release with a commit target creates no tag until it is published. The rehearsal therefore proves the whole build and smoke on any commit with no outward name. It never publishes.
 5. **Static `musl` for the command, glibc 2.28 for loadable libraries.** One static file runs on any Linux. A library loads into a host process, and a glibc host cannot load a `musl` library. The `manylinux_2_28` floor matches BioMCP's. The Ruby gem's floor is its build image's, and the record states it.
-6. **One npm package with four addons.** The usual pattern adds one npm package per platform. Each of those is a new name, and names are Ian's. One package claims nothing new. It costs a larger download.
+6. **One npm package with four addons.** Ian ruled on 2026-09-25: one package per language, on crates.io, npm, PyPI, RubyGems, and R-universe, plus the download script for the command. The usual pattern adds one npm package per platform, and this ticket adds none. One package claims nothing new. It costs a larger download.
 7. **Wheels only on PyPI.** A source distribution would compile Rust on the user's machine and needs the engine crate beside it. Four abi3 wheels cover every shipped platform.
 8. **The first-run sample is its own release file.** Item 1 of the issue asks for the binary alone in the archive, and Homebrew wants that shape. The README fetches the small sample and runs it with no key.
 9. **The installer stays POSIX `sh`.** The site's line pipes into `sh`. Changing the line to `bash` would change Ian's site copy.
@@ -305,7 +305,7 @@ Phase 2 also stops when:
 Phase 3 also stops when:
 - A registry does not offer trusted publishing from GitHub Actions when the builder reads its current documentation. The builder brings the options: a token held as a `release` environment secret, or a hand publish for that registry.
 - A surface will not build or smoke on a macOS runner or on `ubuntu-24.04-arm`. No surface drops from the release silently.
-- `ubuntu-24.04-arm` is not available to this private repository. The builder brings the options in "What only Ian can do" item 1.
+- `ubuntu-24.04-arm` is not available to this repository when Ian turns runs on. The builder records it and waits for his word.
 - A change to `release.yml` after the rehearsal passes. The rehearsal runs again.
 
 Phase 4 stops at every step that is Ian's, and when any job fails. A failed publish job follows Phase 3 item 3.
@@ -325,26 +325,30 @@ Phase 1 builds after ticket 0119 lands, or beside it with item 4 held back, as i
 | `README.md` | 0126 | 0126 lands first |
 | `sdlc/scripts/lint` | 0127 | Whichever lands second adds its calls beside the other's |
 | `databases/postgresql/check.sh` | 0129 | Whichever lands second |
-| The crate list and every lock | 0130, new, which moves Rust Polars into `thinkthen` behind a `polars` feature | The version check finds manifests and locks rather than listing them, so either order works. The published crate carries the `polars` feature if 0130 lands before Phase 4 step 3 | Phase 3b's rehearsal needs Ian's setup items 2 to 4. Phase 4 step 8 needs the repository public, because the download script and Homebrew fetch release files with no login.
+| The crate list and every lock | 0130, new, which moves Rust Polars into `thinkthen` behind a `polars` feature | The version check finds manifests and locks rather than listing them, so either order works. The published crate carries the `polars` feature if 0130 lands before Phase 4 step 3 | Phase 3b's rehearsal needs Ian's setup items 1 to 3. Phase 4 step 8 needs the release files readable with no login, because the download script and Homebrew fetch them that way. That rests on Ian's visibility call.
 
-## What only Ian can do
+## Ian's setup list
 
-Numbered in the order the phases need them.
+Ian ruled on 2026-09-25 that his one-time setup steps sit in this one list. He tracks them in his own launch to-do and gets this list when the release job is ready. The builder asks him nothing more about publishing. Repository visibility, and when Actions runs go live, are his calls. Public Actions runs are off until he says to go live.
 
-1. Decide when the repository goes public. It is private today. GitHub bills runner minutes on a private repository, and macOS minutes bill at ten times the Linux rate. GitHub's standard `ubuntu-24.04-arm` runners began free for public repositories. The builder confirms from GitHub's current documentation whether they now run on a private one. If not, `aarch64` Linux waits for the repository to go public, or it runs on a paid larger runner. The cost of one rehearsal, estimated before any run: each target runs a build of about 30 minutes, the wheel, npm, gem, and crate jobs of about 15 minutes, and a smoke of about 25 minutes, so about 70 minutes per target. Two Linux targets bill about 140 minutes. Two macOS targets run about 140 minutes and bill about 1,400 at ten times the rate. One rehearsal then bills about 1,550 Linux minutes against the 2,000 free minutes of a private plan. Phase 4 runs two rehearsals and one release, about 4,650 minutes, or about 2,650 past the free minutes. The first rehearsal's record measures the real number. Recommendation: go public before the first rehearsal. Every run is then free, and every runner label works. Staying private costs about three quarters of a month's free minutes per rehearsal, and Phase 4 alone runs past them. Draft releases stay visible only to people with write access until published.
-2. Confirm that Actions run `release.yml` when he dispatches it. He disabled both workflows by hand on 2026-09-22. `gate.yml` and `pages.yml` stay disabled until he runs them by hand.
-3. Create the GitHub environment `release` with himself as the one required reviewer, allowing `v*` tags only. Set its variable `RELEASE_ARMED` to `true` last, after items 7 to 9.
-4. Add a tag ruleset on `v*` so only he can create, move, or delete a release tag.
-5. Name the contact for `CODE_OF_CONDUCT.md` and the authors for `CITATION.cff` and the gemspec.
-6. Turn on private vulnerability reporting in the repository settings, since `SECURITY.md` points there.
-7. Add `botassembly/thinkthen`, workflow `release.yml`, and environment `release` as a trusted publisher on crates.io, PyPI, npm, and RubyGems. Each registry's owner page holds this setting.
-8. Create the public repository `botassembly/homebrew-thinkthen`. Add a write deploy key to it and store the private half as the `release` environment secret `TAP_DEPLOY_KEY`.
-9. Create `botassembly/botassembly.r-universe.dev` with a `packages.json` that names `thinkthen` at subfolder `libraries/r/thinkthen`, tracking the latest release. Install the R-universe GitHub app on it.
-10. Dispatch each rehearsal, create tag `v0.1.0`, dispatch the release from it, and approve each publish job.
-11. Run `pages.yml` by hand after the release publishes.
-12. Approve the M5's light checks in Phase 4 step 8 under the two-worlds rule.
-13. Delete the four local registry tokens once trusted publishing works, and delete the rehearsal drafts.
-14. Fill the About box, the topics, and the social preview image the same day.
+One-time setup, in the order the phases need it:
+
+1. Turn Actions on for `release.yml` when he says runs go live. He disabled both workflows by hand on 2026-09-22. `gate.yml` and `pages.yml` stay disabled until he runs them by hand.
+2. Create the GitHub environment `release` with himself as the one required reviewer, allowing `v*` tags only.
+3. The tag rule: add a tag ruleset on `v*` so only he can create, move, or delete a release tag.
+4. Turn on private vulnerability reporting in the repository settings, since `SECURITY.md` points there.
+5. The trusted publishers: add `botassembly/thinkthen`, workflow `release.yml`, and environment `release` as a trusted publisher on crates.io, PyPI, npm, and RubyGems. Each registry's owner page holds this setting.
+6. The tap key: create the public repository `botassembly/homebrew-thinkthen`. Add a write deploy key to it and store the private half as the `release` environment secret `TAP_DEPLOY_KEY`.
+7. R-universe: create `botassembly/botassembly.r-universe.dev` with a `packages.json` that names `thinkthen` at subfolder `libraries/r/thinkthen`, tracking the latest release. Install the R-universe GitHub app on it.
+8. The arming switch: set the `release` environment variable `RELEASE_ARMED` to `true`, last, after items 5 to 7.
+
+His steps during the release run, in Phase 4:
+
+1. Dispatch each rehearsal, create tag `v0.1.0`, dispatch the release from it, and approve each publish job.
+2. Run `pages.yml` by hand after the release publishes.
+3. Approve the M5's light checks in Phase 4 step 8 under the two-worlds rule.
+4. Delete the four local registry tokens once trusted publishing works, and delete the rehearsal drafts.
+5. Fill the About box, the topics, and the social preview image the same day.
 
 ## What needs a Mac
 
@@ -369,9 +373,10 @@ On landing Phase 4: `sdlc/issues/2026-09-25-release-and-install-for-0-1.md`. Stu
 
 ## What Ian can overturn
 
-Every decision above. The ones most worth his look: one fat npm package in place of new per-platform names (6), no PyPI source distribution (7), the sample as its own release file (8), R against the published crate (10), and leaving the Rust Polars move to ticket 0130 (15). The recommendation to go public before the first rehearsal is his call on money and visibility.
+Every decision above. The ones most worth his look: no PyPI source distribution (7), the sample as its own release file (8), R against the published crate (10), and leaving the Rust Polars move to ticket 0130 (15).
 
 ## Review
 
 - Design review 1, 2026-09-25: findings, not ACCEPT. The coordinator ruled the four phases, the runner as the macOS proof of record, release dispatched from the tag, the tag ruleset, and three more items for Ian. This rewrite answers every finding. It adds the dry bump, `versions --set`, and the version-free tests; the full list of version places; the R rewrite, lock, and `OS_type`; one time-limit helper; the CI guards; publish metadata; the packed-crate smoke and the partial-publish rule; the loopback installer test and the `shasum` row; packing from the rung's builds; each container toolchain's source; the smoke runners and the import-path rule; and `gate.yml`'s public API tool and nightly.
 - Design review 2, 2026-09-25: the release-safety design is sound. This version answers the eleven items. The smoke and `surfaces` share `verdict` and neither calls the other. The M5 runs only `brew install`, `--version`, and the first-run block. Phase 3 splits at landing `release.yml` on main, with the `RELEASE_ARMED` guard. The version check finds every lock entry through `lock_versions`. It adds the five time-limit calls, the overlap table with 0130, the rehearsal's cost, the npm addon names and refusal sentence, the Quick Fix either-order rule and the PyYAML check, and holds the tap and site lines until Phase 4 step 3.
+- Ian's rulings, 2026-09-25: Ian Maurer is the only author in `CITATION.cff` and the gemspec. The Code of Conduct names him as its only contact, and conduct reports go to GitHub issues. No other community files or channels. One package per language, plus the download script, and no per-platform npm packages. Visibility and going live are his calls, so the go-public recommendation and the cost estimate left his list. His one-time setup steps moved into "Ian's setup list".

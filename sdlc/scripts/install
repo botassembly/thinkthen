@@ -32,6 +32,15 @@ if ! python3 -c 'from jsonschema import Draft202012Validator' >/dev/null 2>&1; t
 	exit 1
 fi
 
+# Rung 1's workflow check parses YAML with PyYAML (ticket 0128). The version is
+# pinned, and gate.yml installs the same one.
+PYYAML_VERSION=6.0.1
+if [ "$(python3 -c 'import yaml; print(yaml.__version__)' 2>/dev/null || true)" != "$PYYAML_VERSION" ]; then
+	printf 'install: rung 1 needs the python3 module PyYAML %s\n' "$PYYAML_VERSION" >&2
+	printf 'install: python3 -m pip install --user "PyYAML==%s"\n' "$PYYAML_VERSION" >&2
+	exit 1
+fi
+
 # cargo-deny is a cargo subcommand, so `command -v` does not find it.
 if ! cargo deny --version >/dev/null 2>&1; then
 	printf 'install: cargo-deny is not installed; rung 1 runs it over deny.toml\n' >&2

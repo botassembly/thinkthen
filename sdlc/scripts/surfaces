@@ -8,6 +8,11 @@
 # accepts, and every binding folder is a landed surface.
 set -eu
 
+# `surfaces --release` counts a check that reports "not run" as a failure (ticket 0128).
+. "$(dirname -- "$0")/verdict.sh"
+mode=plain
+[ "${1:-}" != --release ] || { mode=release; shift; }
+
 if [ "${1:-}" != --registry ]; then
 	# One heavy rung at a time on this machine. See heavy-lock.
 	. "$(dirname -- "$0")/heavy-lock"
@@ -54,7 +59,7 @@ registry() {
 if [ "${1:-}" = --registry ]; then
 	registry sdlc/surfaces.txt
 	planted=$(mktemp)
-	trap 'rm -f -- "$planted" "$planted.json"' EXIT
+	trap 'rm -f -- "$planted" "$planted.json" "$planted.pid"' EXIT
 	{ cat sdlc/surfaces.txt; echo 'libraries/planted landed'; } >"$planted"
 	if registry "$planted" 2>/dev/null; then
 		echo 'surfaces: the registry check passed a landed surface with no check.sh' >&2
@@ -88,6 +93,24 @@ if [ "${1:-}" = --registry ]; then
 		cargo deny --offline --manifest-path "$(manifest sdlc/surfaces.txt "$surface")" check --config "$deny" \
 			advisories bans licenses sources
 	done
+	# The release rule over 0, 77, and 1 in both modes, with the exact lines.
+	got=$(for m in plain release; do for c in 0 77 1; do if verdict "$m" planted "$c"; then echo '-> 0'; else echo '-> 1'; fi; done; done)
+	pass='surfaces: pass planted' fail='surfaces: FAIL planted (exit 1)'
+	want=$(printf '%s\n' "$pass" '-> 0' 'surfaces: not run planted (no host toolchain)' '-> 0' "$fail" '-> 1' \
+		"$pass" '-> 0' 'surfaces: FAIL planted (not run)' '-> 1' "$fail" '-> 1')
+	if [ "$got" != "$want" ]; then
+		printf 'surfaces: the release rule printed\n%s\n' "$got" >&2
+		exit 1
+	fi
+	# time-limit returns the command's code, or 124 with nothing it started left alive.
+	limit=$(dirname -- "$0")/time-limit
+	fast=0 slow=0
+	sh "$limit" 5 sh -c 'exit 3' || fast=$?
+	sh "$limit" 1 sh -c 'sleep 30 & echo $! >"$0"; sleep 3' "$planted.pid" 2>/dev/null || slow=$?
+	if [ "$fast" -ne 3 ] || [ "$slow" -ne 124 ] || kill -0 "$(cat "$planted.pid")" 2>/dev/null; then
+		echo "surfaces: time-limit returned $fast and $slow, or left a process alive" >&2
+		exit 1
+	fi
 	echo 'surfaces: the registry holds every binding, and each landed one has its check, ratchet, and deny'
 	exit 0
 fi
@@ -114,10 +137,6 @@ for surface in $(landed sdlc/surfaces.txt); do
 	sh "$surface/check.sh" "$port" 3>&-
 	code=$?
 	set -e
-	case $code in
-	0) echo "surfaces: pass $surface" ;;
-	77) echo "surfaces: not run $surface (no host toolchain)" ;;
-	*) echo "surfaces: FAIL $surface (exit $code)"; failed=1 ;;
-	esac
+	verdict "$mode" "$surface" "$code" || failed=1
 done
 exit "$failed"

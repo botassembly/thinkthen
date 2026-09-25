@@ -6,6 +6,7 @@ rust-version.workspace = true
 description = "Semantic commands for the shell: if, grep, and sort that understand meaning"
 license = "MIT"
 repository = "https://github.com/botassembly/thinkthen"
+homepage = "https://thinkthen.dev"
 readme = "../../README.md"
 keywords = ["classification", "llm", "cli", "text"]
 categories = ["command-line-utilities", "text-processing"]

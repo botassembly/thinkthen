@@ -1,0 +1,23 @@
+#!/bin/sh
+# time-limit SECONDS COMMAND...: GNU `timeout`, which macOS lacks (ticket 0128). It exits with
+# COMMAND's code, or 124 after it stops COMMAND and everything COMMAND started.
+set -u
+limit=$1
+shift
+mark=$(mktemp -d)
+# perl gives the command its own process group and this shell's standard input. It
+# restores the interrupt and quit signals, which a shell ignores in a background command.
+exec 3<&0
+perl -e '$SIG{INT} = $SIG{QUIT} = "DEFAULT"; setpgrp(0, 0); exec { $ARGV[0] } @ARGV or die "time-limit: cannot run $ARGV[0]: $!\n"' -- "$@" <&3 3<&- &
+child=$!
+exec 3<&-
+# The watcher holds no output open, so a reader of the command's output never waits on it.
+perl -e 'sleep $ARGV[1]; kill 0, $ARGV[0] or exit; open my $f, ">", $ARGV[2]; kill "TERM", -$ARGV[0]; sleep 2; kill "KILL", -$ARGV[0]' \
+	"$child" "$limit" "$mark/timed-out" </dev/null >/dev/null 2>&1 &
+watcher=$!
+wait "$child"
+code=$?
+kill "$watcher" 2>/dev/null
+[ ! -e "$mark/timed-out" ] || code=124
+rm -rf -- "$mark"
+exit "$code"

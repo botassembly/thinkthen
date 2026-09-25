@@ -1,0 +1,183 @@
+#!/usr/bin/env python3
+"""Every copy of the crate's version matches `crates/thinkthen/Cargo.toml` (ticket 0128).
+
+Binding manifests come from `sdlc/surfaces.txt` and lock entries from every tracked
+`Cargo.lock`. The site's `install.sh` must equal the root copy. Skipped on purpose:
+`conformance/`, `site/package.json`, the Ruby and TypeScript checks' planted crates,
+the sealed `probes/churn-0086/Cargo.lock`, and `libraries/c/DESIGN.md`'s history.
+Usage: versions [--tag vX.Y.Z | --set X.Y.Z | --self-test]
+"""
+
+import pathlib
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+from policy import lock_versions  # noqa: E402
+
+REPO = pathlib.Path(__file__).resolve().parents[2]
+CRATE = "crates/thinkthen/Cargo.toml"
+SKIPPED_LOCKS = {"probes/churn-0086/Cargo.lock"}
+PACKAGE = r'(?ms)^\[package\].*?^version = "([^"]+)"'
+WHOLE = lambda v: v  # noqa: E731
+PART = [lambda v, i=i: v.split(".")[i] for i in range(3)]
+# Each place: a file, a pattern whose one group holds the version or a part of it, and that part.
+PLACES = [
+    ("libraries/python/pyproject.toml", r'(?ms)^\[project\].*?^version = "([^"]+)"', WHOLE),
+    ("libraries/typescript/package.json", r'(?m)\A\{\s*"name": "thinkthen",\s*"version": "([^"]+)"', WHOLE),
+    ("libraries/typescript/package-lock.json", r'(?m)\A\{\s*"name": "thinkthen",\s*"version": "([^"]+)"', WHOLE),
+    ("libraries/typescript/package-lock.json", r'(?m)"": \{\s*"name": "thinkthen",\s*"version": "([^"]+)"', WHOLE),
+    ("libraries/ruby/lib/thinkthen/version.rb", r'VERSION = "([^"]+)"', WHOLE),
+    ("libraries/r/thinkthen/DESCRIPTION", r"(?m)^Version: (\S+)$", WHOLE),
+    ("libraries/c/include/thinkthen.h", r"(?m)^ \* thinkthen\.h .* version (\d+\.\d+\.\d+)\.$", WHOLE),
+    ("libraries/c/include/thinkthen.h", r"(?m)^/\* Version (\d+\.\d+\.\d+), the version", WHOLE),
+    *[("libraries/c/include/thinkthen.h", rf"(?m)^#define THINKTHEN_VERSION_{n} (\d+)$", PART[i])
+      for i, n in enumerate(["MAJOR", "MINOR", "PATCH"])],
+    ("databases/postgresql/thinkthen.control", r"(?m)^default_version = '([^']+)'$", WHOLE),
+    ("CITATION.cff", r'(?m)^version: "([^"]+)"$', WHOLE),
+]
+
+
+def manifests(root):
+    """The crate's manifest and each landed binding's, by the rule `surfaces` uses."""
+    out = [CRATE]
+    for line in (root / "sdlc/surfaces.txt").read_text(encoding="utf-8").splitlines():
+        field = line.split()
+        if field and not line.startswith("#") and field[1] == "landed":
+            out.append(f"{field[0]}/{field[2] + '/' if len(field) == 3 else ''}Cargo.toml")
+    return out
+
+
+def locks(root):
+    """Every tracked lock file, or every lock file when the root is not a checkout."""
+    listed = subprocess.run(["git", "-C", str(root), "ls-files", "*Cargo.lock"], capture_output=True, text=True)
+    names = listed.stdout.split() if listed.returncode == 0 else [
+        str(p.relative_to(root)) for p in root.rglob("Cargo.lock") if "target" not in p.parts]
+    return sorted(set(names) - SKIPPED_LOCKS)
+
+
+def places(root):
+    """Every (file, pattern, part) the version reaches."""
+    return [(m, PACKAGE, WHOLE) for m in manifests(root)] + PLACES
+
+
+def packages(root):
+    """The package names whose lock entries carry the version."""
+    return {"thinkthen"} | {re.search(r'(?m)^name = "([^"]+)"', (root / m).read_text(encoding="utf-8")).group(1)
+                            for m in manifests(root)[1:] if (root / m).is_file()}
+
+
+def check(root):
+    """Every sentence naming a copy that differs, and the count of places read."""
+    version = re.search(PACKAGE, (root / CRATE).read_text(encoding="utf-8")).group(1)
+    out, count, names = [], 0, packages(root)
+    for path, pattern, part in places(root):
+        text = (root / path).read_text(encoding="utf-8") if (root / path).is_file() else ""
+        found = re.search(pattern, text)
+        count += 1
+        if found is None:
+            out.append(f"versions: {path} has no version line the check can read")
+        elif found.group(1) != part(version):
+            out.append(f"versions: {path} reads {found.group(1)}, and {CRATE} reads {part(version)}")
+    for lock in locks(root):
+        for name, found in sorted(lock_versions(str(root / lock)).items()):
+            if name in names:
+                count += 1
+                if found != {version}:
+                    out.append(f"versions: {lock} pins {name} {', '.join(sorted(found))}, and {CRATE} reads {version}")
+    if (root / "install.sh").read_bytes() != (root / "site/public/install.sh").read_bytes():
+        out.append("versions: site/public/install.sh differs from install.sh")
+    return version, count, out
+
+
+def set_version(root, new):
+    """Write NEW into every place and every lock entry of a checked package."""
+    names = packages(root)
+    for path, pattern, part in places(root):
+        file = root / path
+        text = file.read_text(encoding="utf-8")
+        hit = re.search(pattern, text)
+        file.write_text(text[:hit.start(1)] + part(new) + text[hit.end(1):], encoding="utf-8")
+    entry = re.compile(r'(?m)^(name = "([^"]+)"\nversion = ")([^"]+)(")')
+    for lock in locks(root):
+        file = root / lock
+        text = file.read_text(encoding="utf-8")
+        file.write_text(entry.sub(lambda m: m.group(1) + (new if m.group(2) in names else m.group(3)) + m.group(4), text),
+                        encoding="utf-8")
+
+
+def run(root, argv):
+    """The exit code and the lines one command prints."""
+    if argv[:1] == ["--set"]:
+        set_version(root, argv[1])
+        argv = []
+    version, count, out = check(root)
+    if argv[:1] == ["--tag"] and argv[1] != f"v{version}":
+        out.append(f"versions: tag {argv[1]} does not match version {version}; the tag must read v{version}")
+    return (1, out) if out else (0, [f"versions: {count} places read {version}"])
+
+
+def self_test():
+    """Each edge row against a copy of the real places, with the whole output pinned."""
+    def fresh(tmp):
+        root = pathlib.Path(tmp)
+        planted = ["libraries/ruby/lib/thinkthen/version.rb", "libraries/r/thinkthen/DESCRIPTION",
+                   "databases/postgresql/thinkthen.control", "sdlc/surfaces.txt", "install.sh", "site/public/install.sh"]
+        for path in {p for p, _, _ in places(REPO)} | set(locks(REPO)) | set(planted):
+            (root / path).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO / path, root / path)
+        return root
+
+    def edit(root, path, old, new):
+        file = root / path
+        file.write_text(file.read_text(encoding="utf-8").replace(old, new, 1), encoding="utf-8")
+
+    version = re.search(PACKAGE, (REPO / CRATE).read_text(encoding="utf-8")).group(1)
+    ok = run(REPO, [])[1][0]
+    cases = [
+        ("agree", lambda r: None, [], (0, [ok])),
+        ("r", lambda r: edit(r, "libraries/r/thinkthen/DESCRIPTION", f"Version: {version}", "Version: 9.9.9"), [],
+         (1, [f"versions: libraries/r/thinkthen/DESCRIPTION reads 9.9.9, and {CRATE} reads {version}"])),
+        ("ruby", lambda r: edit(r, "libraries/ruby/lib/thinkthen/version.rb", f'"{version}"', '"9.9.9"'), [],
+         (1, [f"versions: libraries/ruby/lib/thinkthen/version.rb reads 9.9.9, and {CRATE} reads {version}"])),
+        ("lost", lambda r: edit(r, "databases/postgresql/thinkthen.control", "default_version", "# version"), [],
+         (1, ["versions: databases/postgresql/thinkthen.control has no version line the check can read"])),
+        ("lock", lambda r: edit(r, "conformance/consumer/Cargo.lock", f'name = "thinkthen"\nversion = "{version}"',
+                               'name = "thinkthen"\nversion = "9.9.9"'), [],
+         (1, [f"versions: conformance/consumer/Cargo.lock pins thinkthen 9.9.9, and {CRATE} reads {version}"])),
+        ("install", lambda r: edit(r, "site/public/install.sh", "#!/bin/sh", "#!/bin/sh "), [],
+         (1, ["versions: site/public/install.sh differs from install.sh"])),
+        ("tag", lambda r: None, ["--tag", f"v{version}"], (0, [ok])),
+        ("bare-tag", lambda r: None, ["--tag", version],
+         (1, [f"versions: tag {version} does not match version {version}; the tag must read v{version}"])),
+        ("set", lambda r: None, ["--set", "9.8.7"], (0, [ok.replace(version, "9.8.7")])),
+    ]
+    bad = 0
+    for name, plant, argv, expected in cases:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = fresh(tmp)
+            plant(root)
+            got = run(root, argv)
+            if got != expected:
+                bad += 1
+                print(f"versions self-test {name}: expected {expected}, got {got}", file=sys.stderr)
+    print(f"versions self-test: {len(cases) - bad}/{len(cases)} cases hold")
+    return 1 if bad else 0
+
+
+def main(argv):
+    if argv == ["--self-test"]:
+        return self_test()
+    if len(argv) not in (0, 2) or (argv and argv[0] not in ("--tag", "--set")):
+        print("usage: versions [--tag vX.Y.Z | --set X.Y.Z | --self-test]", file=sys.stderr)
+        return 2
+    code, lines = run(REPO, argv)
+    print("\n".join(lines), file=sys.stderr if code else sys.stdout)
+    return code
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
