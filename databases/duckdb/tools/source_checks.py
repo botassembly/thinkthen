@@ -112,10 +112,9 @@ def vendored() -> None:
 def deny() -> None:
     root = (REPO / "deny.toml").read_text()
     ours = (ROOT / "deny.toml").read_text()
-    start = ours.find("# ADR 0047: the DuckDB binding")
-    end = ours.find("\n", ours.find("exceptions = [{", start)) if start >= 0 else -1
-    exception = ours[start:end] if end > start else ""
-    if not exception or ours.replace(exception, "exceptions = []", 1) != root:
+    start = ours.find("    # ADR 0047: the DuckDB binding")
+    end = ours.find("\n", ours.find('{ crate = "zlib-rs"', start)) + 1 if start >= 0 else 0
+    if end <= start or ours[:start] + ours[end:] != root:
         fail("R5-25: deny.toml is not the root copy with the one DuckDB exception")
 
 
