@@ -147,6 +147,7 @@ What "scores better" means on one held part:
 | A `decide`, `choose`, or `tag` question file | the one question's `steady.cut`, from its pooled row for `tag` | top-level `threshold` |
 | A question set | each member's `steady.cut` | `questions.NAME.threshold` |
 | A `score` file or `score` member | nothing | nothing |
+| Any file, over `rank` results (from a `decide` file with no `threshold`) or `find` results | nothing | nothing |
 | A `recognize` or `relate` file | refused, since audit does not grade them yet | nothing |
 
 The value is the cut in its shortest form, such as `0.42` or `1`. When the member exists, its value bytes are replaced and every other byte stays. When it is absent, audit inserts it after the object's last member. The separator copies the bytes that come before the last member's key, from the comma on. With one member it is `, `. The key and colon copy the spacing of the last member's colon. A string, number, key, or nested object elsewhere in the file never changes.
@@ -158,7 +159,7 @@ The splice reads the file text with a small scanner in `core/measure/splice.rs`.
 1. Refuse `-` and `--threshold` beside `--write`.
 2. Read and grade the results and the key, as today.
 3. Read QUESTIONS. Parse it with the production parser: a question set when it holds `questions`, and a question file otherwise. Resolve it with `core` `resolve` and no typed value, and take its digest.
-4. Check the digest against every graded line.
+4. Check the digest against every graded line of a verb that can take a bar. `rank` and `find` lines skip the check: they write nothing, and their digest can never match a file. A `rank` question carries no threshold, and `find` reads no question file.
 5. Decide each bar: write, keep, or skip.
 6. Build the new text with the splice.
 7. When any bar changes, write the file.
@@ -178,6 +179,7 @@ A refusal before step 7 writes nothing and prints nothing on standard output. A 
 | No suggestion | `thinkthen: audit: kept the bar for TARGET; audit found no cut to suggest` |
 | A band | `thinkthen: audit: kept the band for TARGET; audit suggests a single cut` |
 | `score` | `thinkthen: audit: kept TARGET unchanged; a score question takes no threshold` |
+| `find` or `rank` | `thinkthen: audit: kept TARGET unchanged; audit suggests no bar for rank or find` |
 
 The command exits 0 in every case above.
 
@@ -271,7 +273,7 @@ Every test runs the built command, apart from the one core table named below. Ea
 | `audit_write::writes_one_value` | `--write` | A pretty-printed `decide` file with a non-ASCII question, an escaped key, and CRLF line ends. Replay `transforms/rows/recording` through `decide @FILE --jsonl --field /body --details`, then `audit --write FILE`. The file equals the hand-written expected bytes, and the report line is exact. A second `decide @FILE --details` prints the new `threshold` and a new digest | The splice re-serializes the file. The bytes differ |
 | `audit_write::inserts_when_absent` | insertion | The same file without `threshold`, and a set whose member lacks one. The expected bytes are hand-written | The separator is always `,`. The pretty file loses its line break |
 | `audit_write::refusals` | the refusal table | Each row: exit code, exact line, empty standard output, and the file byte for byte. The digest rows use a file whose text differs by one word, and results that mix two questions | The digest check is skipped. The mismatch row writes the file |
-| `audit_write::keeps` | the keep rows | A band file, a `score` file, and results where the steady bar never beats the run's rule. Each exits 0, prints its exact line, and leaves the file byte for byte | A band is overwritten. The band row changes the file |
+| `audit_write::keeps` | the keep rows | A band file, a `score` file, `rank` results from a `decide` file with no `threshold`, `find` results, and results where the steady bar never beats the run's rule. Each exits 0, prints its exact line, and leaves the file byte for byte | A band is overwritten. The band row changes the file |
 | `audit_refusals::each_failure_prints_one_line…` | secrecy | The existing sweep gains every new refusal and keep row with planted secrets. No id, record, key value, or path appears | The digest refusal names the path |
 | `audit_refusals::audit_sends_no_request…` | nothing else is touched | The existing no-request test gains every new line above. The listener sees no connection. Only the file `--write` names changes | Write a sibling temporary file. The folder check fails |
 | `core::measure::splice` edge-case table | the splice | Rows: compact one line; pretty; member present as a number, a string cut, and `null`; member absent in an object of one and of several members; `"threshold":` inside a string value; a nested `threshold` that must not change; an escaped key `"threshold"`; a set member path; trailing white space and no final newline. Each row pins the exact output bytes | The scanner skips string escapes. The row with `"threshold":` inside a string changes the wrong bytes |
@@ -324,6 +326,10 @@ Excluded: diff, which is the Quick Fix. audit of `recognize` and `relate`, which
 ## Dependencies and order
 
 Build from main. Tickets 0113 and 0114 are on main. No in-flight ticket owns a file this ticket opens, apart from two shared spots. The first is `core/measure/answer.rs`, which the diff Quick Fix also edits. The second is the root-help asserts at `tests/audit_refusals.rs:289` and `tests/diff.rs:90`. Ticket 0126 rewrites them so they ignore order, and this ticket changes the audit summary in them. Whichever lands second merges the description and the order.
+
+The third shared spot is the `Audit` variant in `cli/args/command.rs`, which 0126 and 0124 also edit. The second of those tickets to land merges it.
+
+`--write` reads each line's digest. The diff Quick Fix adds `Answer.digest`, read from `meta.question_sha256` in `answers()` of `core/measure/answer.rs`. If the Quick Fix lands first, this ticket reuses that field and extends it to read `meta.questions_sha256` for a question set. If this ticket builds first, it adds the field in the same shape, and the Quick Fix merges.
 
 ## Complexity
 
