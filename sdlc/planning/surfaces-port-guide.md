@@ -6,6 +6,17 @@ Sources read: tag `surfaces-wave7-final` (`f6a7faea`), lanes `origin/w7/gate3`, 
 
 Port source: tag `surfaces-wave7-frozen-2026-09-24b` (`9df8bae9`). It merges the three lanes into `surfaces-wave7`, and every surface check ran there once. `sdlc/records/surfaces-freeze-2026-09-24.md` on that tag lists each result. DuckDB, Ruby, and PostgreSQL did not run, because they need the network or Docker. Each surface ticket starts from this tag and carries the three follow-ups that record lists.
 
+Shared rules for every surface ticket, set by Claude on 2026-09-24 from the design reviews of 0105 to 0112. Ian can overturn any of them.
+
+- A surface check never depends on Docker. The ladder runs on any developer machine that has the pinned toolchains.
+- Toolchains and runtimes live under `~/.cache/thinkthen-toolchains/`, never in the product's answer cache. A one-time download of a public archive is setup, not a gate. It needs a sha256 pinned in the repo and a refusal on mismatch. Gates then run offline.
+- Each test gets its own product cache folder and its own loopback backend. The arms beyond 0092 (fixed delay, a held reply that can hold again, one backend per test) belong to ticket 0117.
+- Ctrl-C is prompt for single calls and batches alike. The engine waits for requests already sent, so the binding runs every call on a detachable worker and returns `Cancelled` at once. The worker finishes the sent requests.
+- No test or plant can reach a paid backend. Surface tests run with the real key removed and a fake key set only beside a loopback address. A plant that changes how the engine is built must be shown to send nothing, counted on the loopback listener. Prove environment seeding through a setting that needs no request, such as the cache folder.
+- A deny plant proves the rule it names while offline. A git-sourced dependency fails before deny runs when offline, so use a plant that reaches deny.
+- Every surface exposes the engine settings in ADR 0017 section 5, the throttle included, on its engine value, spelled the way that host spells its other settings, such as `thinkthen_throttle` in SQL and `throttle=` in Python. ADR 0017's amendment of 2026-09-24 renamed the width to the throttle. The surface builds that engine on `EngineBuilder::from_env()` (0084, amended 2026-09-24), so the address, key, and cache still come from the environment. Tests that need parallel requests set the throttle through that public setting, never a hidden hook. The throttle is process-wide under 0077, so each such test runs in its own child process.
+- Builder note (ADR 0047 item 5, settled 2026-09-24): each loaded copy of the engine has its own throttle. A host that loads two ThinkThen libraries, such as the Python wheel and the DuckDB extension, gets two throttles. Each surface README states that the throttle is per loaded copy. It uses the public name `throttle` and describes it in plain words as the most requests in flight at once, per loaded copy.
+
 ## 1. The error index, sorted
 
 Every one of the index's 197 rows falls in one of three classes.
@@ -53,7 +64,7 @@ Engine rows by spine ticket: 0076 carries R1-23 and R6-4. 0077 carries R2-9 and 
 | ID | Surface | Status | Why it retires |
 |---|---|---|---|
 | R1-7 | standin | closed | fixture in stand-in product code |
-| R1-8 | standin | closed | stand-in settings; real builder takes base_url and width (0086) |
+| R1-8 | standin | closed | stand-in settings; real builder takes base_url and throttle (0086) |
 | R1-26 | gate | partial | branch is never merged |
 | R1-27 | contract | closed | connector retires; 0084 bans it |
 | R1-32 | gate | closed | branch file retires; union ticket owns coverage |
@@ -132,11 +143,11 @@ Each moves with its surface ticket and re-runs against the real engine. Rows mar
 | duckdb | R1-1, R1-15, R1-16, R1-21*, R2-2, R2-3, R2-6, R2-13, R2-14, R2-18, R2-22, R3-1, R3-6, R3-7, R3-11, R3-12, R3-13, R3-23, R4-3, R4-4, R4-5, R4-22, R5-21, R5-25, R5-26, R6-5, R6-6 |
 | gate | R1-2, R1-28, R1-29, R3-28, R3-30, R4-19, R5-29, R5-30, R5-31, R5-32, R5-34, R5-35, R6-7, R6-12 |
 | packaging | R1-30, R1-33, R1-34, R3-31, R5-38 |
-| postgresql | R1-18, R1-19, R1-22*, R2-4, R2-19, R3-2, R3-8, R3-9, R3-10, R3-21, R4-6, R5-15, R5-16, R6-8, R6-14 |
+| postgresql | R1-18, R1-19, R1-22*, R2-4, R2-19, R2-32 (serde_cbor, ticket 0093), R3-2, R3-8, R3-9, R3-10, R3-21, R4-6, R5-15, R5-16, R6-8, R6-14 |
 | python | R1-3, R1-4, R1-6, R1-12, R1-24*, R2-11, R2-12, R2-17, R3-18, R3-19, R4-14, R4-23*, R5-7, R5-8, R6-11, R6-13 |
-| r | R1-5, R1-13*, R2-5, R3-3, R3-15, R3-17, R4-7, R5-10, R5-11, R5-12, R6-10 |
+| r | R1-5, R1-13*, R2-5, R2-32 (paste, ticket 0093), R3-3, R3-15, R3-17, R4-7, R5-10, R5-11, R5-12, R6-10 |
 | ruby | R1-20*, R2-8, R2-15, R3-5, R3-15b, R3-16, R4-2, R4-8, R4-9, R5-9*, R5-13, R5-14 |
-| rust | R2-32 |
+| rust | R2-28 (ticket 0093) |
 | sqlite | R1-14, R1-17, R2-1, R3-2b, R3-22, R4-21, R5-18, R5-20, R6-9 |
 | typescript | R1-25, R3-20, R3-26, R4-13 |
 
@@ -154,7 +165,7 @@ Each gap is an engine need that no spine ticket covers today. Each line names th
 | G6 | Reading specs and inspecting questions. 0084 has no `Recognize::from_json`, `Relate::from_json`, question kind getter, or question-set names and kinds. | Ruby, SQLite, PostgreSQL, DuckDB, and C read specs as JSON text. R1-5 shows a column must be typed before its first row. | Amend 0084 with `Recognize::from_json`, `Relate::from_json`, `Question::kind`, and `QuestionSet::members`, each delegating to the 0080 and 0081 parsers. Without them each binding writes a second parser. |
 | G7 | One rule for host deadline numbers: -1 none, 0 spent, above 4,294,967,295 seconds refused. 0084 has only `deadline_at` and an infallible `deadline_after`. | Five bindings call `deadline_from_seconds` or `deadline_from_millis`. R2-10 and R7-11 show the spellings drift. | Add to 0086 acceptance: `deadline_after(Duration::MAX)` neither panics nor wraps. Put the host number rule in one specification page with one conformance case per binding. A checked `CallOptions::deadline_seconds(f64) -> Result` in 0084 is the stronger fix. |
 | G8 | Result JSON for the JSON doors. 0084 drops `to_json`, `edges_json`, and `rows_json`. | The C door, TypeScript, R, and PostgreSQL cross results as JSON text. | Decide in the 0086 design review: a public serializer, or one specification page each JSON door follows. The C ticket owns the first serializer if the review declines a public one. |
-| G9 | Two engine images in one host process. 0077 and 0078 leave this to "surface integration", and no ticket owns it. | A Python wheel and a DuckDB extension each link their own engine. Each gets its own width cap. | The first surface ticket (Python) states the rule: prevent it, or qualify the one-process width claim on every surface page. |
+| G9 | Two engine images in one host process. 0077 and 0078 leave this to "surface integration", and no ticket owns it. | A Python wheel and a DuckDB extension each link their own engine. Each gets its own throttle. | Settled by ADR 0047 item 5: one throttle per loaded copy for 0.1, stated in each surface README. |
 | G10 | An offline test backend for bindings. The real engine has no null backend and no public fault hook. | Every `check.sh` runs on `ENGINE_NULL=1` or `THINKTHEN_NULL=1`. Case 74 and several suites build `synthetic-partial`. | Add to 0086 acceptance: an external crate runs the shared cases offline from a recording folder, and a loopback reply produces each `FailureCause`. The conformance union (plan item 6) ships that runner once for every surface. |
 | G11 | A binding record type that can refuse. `Evidence::evidence` returns `Result<&str, Error>`, and no binding can construct an `Error`. | Bindings refuse NULL, bad UTF-8, and NUL bytes per row. | Record in 0084 that bindings validate before the call and implement `Evidence` as infallible. Otherwise add one public usage constructor. |
 
@@ -168,7 +179,7 @@ The left column is `contract/src/lib.rs` at the tag. The right column is the 008
 | Stand-in | 0084 public API | Port note |
 |---|---|---|
 | `Connector`, `StandinConnector.connect(&EngineConfig::from_env())`, `Arc<dyn Engine>` | `Engine::from_env()`, `Engine::builder()…build()`, `default_engine()` | 0084 bans a connector trait. Each surface replaces its one connector line and its engine static. `Engine` is `Clone + Send + Sync`. |
-| `EngineConfig` / `Settings` (model, address, width) | `EngineBuilder::base_url`, `api_key`, `model`, `width(u8)`, `max_requests`, `cache_at`, `no_cache`, `cache_bytes` | Omitted width stays omitted (0077). PostgreSQL's refused `thinkthen.api_key` becomes `api_key`. |
+| `EngineConfig` / `Settings` (model, address, width) | `EngineBuilder::base_url`, `api_key`, `model`, `throttle(u8)`, `max_requests`, `cache_at`, `no_cache`, `cache_bytes` | The branch's `width` becomes `throttle`. An omitted throttle stays omitted (0077). PostgreSQL's refused `thinkthen.api_key` becomes `api_key`. |
 | Trait methods `decide_opts`, `choose_opts`, and the rest | `Engine::decide_with` and the other `_with` forms, plus free functions | Suffix `_opts` becomes `_with`. The stand-in's `decide_with(q, e, Option<&Cancel>)` becomes `decide_with(q, e, CallOptions)`. |
 | `Options::new().cancel(&t)`, `maybe_cancel`, `deadline(Instant)`, `deadline_in(Duration)` | `CallOptions::new().cancel(&t)`, `deadline_at`, `deadline_after` | `maybe_cancel` becomes a conditional builder step. `passed`, `seconds`, `remaining`, and `cancel_token` getters are gone. A binding that reads the budget keeps its own copy. |
 | `with_deadline_seconds`, `with_deadline_millis`, `deadline_from_*`, `NO_DEADLINE`, `MAX_DEADLINE_SECONDS` | none | Binding, under one rule (G7). |
@@ -290,7 +301,7 @@ Each surface can bind once these have answers on record.
 6. Refusals in bindings (G11). Must bindings validate before a call? May a binding produce a `thinkthen::Error`, or does each host own a parallel six-kind error?
 7. Result JSON (G8). One public serializer, or one specification page every JSON door follows?
 8. Binding crates. May `libraries/*` and `databases/*` live on main as unpublished workspace members with a path dependency on `crates/thinkthen`? Is the C door crate a permitted second crate under ADR 0017? Where does the Rust Polars Series door go?
-9. Two engine images in one process (G9). Prevent, or qualify the one-process width claim?
+9. Two engine images in one process (G9). Prevent, or qualify the one-process width claim? Answered by ADR 0047 item 5: qualify it, one cap per loaded copy.
 10. Offline tests for bindings (G10). Which fixture replaces the null backend, and which loopback reply stands in for `synthetic-partial`?
 11. Counters. With no reset, what does conformance case 17 assert on each surface?
 12. Score. Does `Annotated::Score` or a bulk form carry the nearest level, or does every surface call `details`?

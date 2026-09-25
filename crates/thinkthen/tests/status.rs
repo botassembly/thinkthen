@@ -1,7 +1,13 @@
 //! The read-only process status surface.
+#![cfg(feature = "cli")]
 
 use std::fs;
 use std::process::Command;
+
+#[path = "../src/test_deadline/run.rs"]
+mod run;
+#[path = "../src/test_deadline/wait.rs"]
+mod wait;
 
 fn command(home: &std::path::Path) -> Command {
     let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
@@ -18,10 +24,7 @@ fn absent_state_has_one_exact_closed_json_shape_and_changes_nothing() {
     let _absent = fs::remove_dir_all(&home);
     fs::create_dir(&home).expect("home");
 
-    let output = command(&home)
-        .args(["status", "--json"])
-        .output()
-        .expect("status runs");
+    let output = run::output(command(&home).args(["status", "--json"])).expect("status runs");
 
     assert!(
         output.status.success(),
@@ -44,7 +47,7 @@ fn absent_state_has_one_exact_closed_json_shape_and_changes_nothing() {
     assert_eq!(output.stdout.last(), Some(&b'\n'));
     assert_eq!(fs::read_dir(&home).expect("home remains").count(), 0);
 
-    let human = command(&home).arg("status").output().expect("human status");
+    let human = run::output(command(&home).arg("status")).expect("human status");
     assert!(human.status.success());
     let expected = format!(
         "version {}\nconfiguration_path {}\nconfiguration_present false\nurl https://api.typesafe.ai/v1/systemone\nurl_source built_in\nmodel jev-latest\nmodel_source built_in\napi_key_set false\ncache_enabled true\ncache_enabled_source built_in\ncache_path {}\ncache_path_source platform\ncache_entries 0\ncache_bytes 0\ncache_target_bytes 100000000\ncache_target_source built_in\nusage_path {}\nusage_month {}\nmonth_requests_sent 0\nmonth_input_tokens 0\nmonth_output_tokens 0\nmonth_cache_answers 0\ntotal_requests_sent 0\ntotal_input_tokens 0\ntotal_output_tokens 0\ntotal_cache_answers 0\n",
@@ -62,9 +65,7 @@ fn absent_state_has_one_exact_closed_json_shape_and_changes_nothing() {
 
 #[test]
 fn status_without_an_absolute_home_uses_the_exact_unavailable_shape() {
-    let output = command(std::path::Path::new("relative"))
-        .args(["status", "--json"])
-        .output()
+    let output = run::output(command(std::path::Path::new("relative")).args(["status", "--json"]))
         .expect("status runs");
     assert!(
         output.status.success(),
@@ -94,15 +95,16 @@ fn environment_and_configuration_provenance_are_independent_and_hide_the_key() {
         r#"{"schema":"thinkthen.config/1","url":"https://configured.example/v1","model":"fixed","cache":false,"cache_bytes":42}"#,
     ).expect("configuration");
     let mut status = command(&home);
-    let output = status
-        .args(["status", "--json"])
-        .env("XDG_CONFIG_HOME", &config_home)
-        .env("XDG_CACHE_HOME", &cache_home)
-        .env("THINKTHEN_BASE_URL", "https://environment.example/v1")
-        .env("THINKTHEN_CACHE", &named_cache)
-        .env("THINKTHEN_API_KEY", "secret-status-marker")
-        .output()
-        .expect("status");
+    let output = run::output(
+        status
+            .args(["status", "--json"])
+            .env("XDG_CONFIG_HOME", &config_home)
+            .env("XDG_CACHE_HOME", &cache_home)
+            .env("THINKTHEN_BASE_URL", "https://environment.example/v1")
+            .env("THINKTHEN_CACHE", &named_cache)
+            .env("THINKTHEN_API_KEY", "secret-status-marker"),
+    )
+    .expect("status");
     assert!(
         output.status.success(),
         "{}",
@@ -156,10 +158,7 @@ fn a_malformed_recognized_usage_month_fails_without_partial_output_or_repair() {
     fs::set_permissions(&month, fs::Permissions::from_mode(0o600)).expect("private month");
     let before = fs::read(&month).expect("before");
 
-    let output = command(&home)
-        .args(["status", "--json"])
-        .output()
-        .expect("status");
+    let output = run::output(command(&home).args(["status", "--json"])).expect("status");
     assert_eq!(output.status.code(), Some(5));
     assert!(output.stdout.is_empty());
     assert_eq!(
@@ -185,10 +184,7 @@ fn an_unsafe_cache_entry_uses_the_status_failure_without_leaking_local_bytes() {
     let entry = cache.join(format!("{}.json", "a".repeat(64)));
     symlink(&target, &entry).expect("entry symlink");
 
-    let output = command(&home)
-        .args(["status", "--json"])
-        .output()
-        .expect("status");
+    let output = run::output(command(&home).args(["status", "--json"])).expect("status");
     assert_eq!(output.status.code(), Some(5));
     assert!(output.stdout.is_empty());
     assert_eq!(

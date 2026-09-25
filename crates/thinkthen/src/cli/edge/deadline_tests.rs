@@ -47,7 +47,7 @@ fn spent(label: &str, arguments: &[&str], input: &[u8]) -> (ExitCode, String) {
     let totals = folder.join("usage");
     let environment = Environment {
         cancel: Cancel::default().with_deadline(Deadline::after(Duration::ZERO)),
-        usage: Counters::new(Some(totals.clone())),
+        usage: std::sync::Arc::new(Counters::new(Some(totals.clone()))),
         ..Environment::default()
     };
     let input = Cursor::new(input.to_vec());

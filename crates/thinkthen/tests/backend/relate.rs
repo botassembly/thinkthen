@@ -9,7 +9,7 @@ use std::{
 
 use serde_json::Value;
 
-use crate::harness::{Canned, Listener, spawn};
+use crate::harness::{Canned, Listener, finish, spawn};
 
 mod details;
 
@@ -332,7 +332,7 @@ fn a_closed_output_pipe_ends_the_aggregate_quietly() {
         .write_all(br#"[{"name":"Ada","kind":"person"},{"name":"Acme","kind":"organization"}]"#)
         .expect("input write");
     drop(child.stdout.take().expect("output"));
-    let output = child.wait_with_output().expect("completion");
+    let output = finish(child, "relate with a closed output").expect("completion");
     assert_eq!(output.status.code(), Some(0));
     assert!(output.stderr.is_empty());
 }

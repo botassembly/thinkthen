@@ -19,8 +19,11 @@ use crate::core::text::{Description, QuestionText};
 /// `state` is a string for the text evidence a run has always sent, and the
 /// object or list itself when a pointer selection made one, so the JSON is
 /// never folded into a sentence or written twice.
-#[derive(Debug, Serialize)]
-#[cfg_attr(test, derive(serde::Deserialize, PartialEq))]
+///
+/// It lives only inside [`encode_raw`], which writes it at once, so nothing
+/// outside a test can print it and it derives `Debug` only in tests.
+#[derive(Serialize)]
+#[cfg_attr(test, derive(Debug, serde::Deserialize, PartialEq))]
 pub(crate) struct Request {
     state: Json,
     model: String,
@@ -28,8 +31,7 @@ pub(crate) struct Request {
 }
 
 /// The wire questions in request order.
-#[derive(Debug)]
-#[cfg_attr(test, derive(PartialEq))]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 pub(crate) struct Questions(Vec<(String, RequestQuestion)>);
 
 #[cfg(test)]
@@ -57,8 +59,8 @@ impl<'de> Deserialize<'de> for Questions {
 }
 
 /// One named question inside a request, in the shape its verb asks for.
-#[derive(Debug, Serialize)]
-#[cfg_attr(test, derive(serde::Deserialize, PartialEq))]
+#[derive(Serialize)]
+#[cfg_attr(test, derive(Debug, serde::Deserialize, PartialEq))]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub(crate) enum RequestQuestion {
     /// A yes/no question, which the vendor calls `noul`.
@@ -85,8 +87,8 @@ pub(crate) enum RequestQuestion {
 /// module alone knows they travel here. A question that names neither carries
 /// no `criteria` at all, so its request is byte for byte the request of the
 /// version before the two texts existed.
-#[derive(Debug, Serialize)]
-#[cfg_attr(test, derive(serde::Deserialize, PartialEq))]
+#[derive(Serialize)]
+#[cfg_attr(test, derive(Debug, serde::Deserialize, PartialEq))]
 pub(crate) struct NoulCriteria {
     #[serde(rename = "true", skip_serializing_if = "Option::is_none")]
     yes: Option<Json>,
@@ -100,8 +102,7 @@ pub(crate) struct NoulCriteria {
 /// there. `--options` reads a map from a record, and each value travels as the
 /// description. The keys keep the order they were given, because option order
 /// moves the odds.
-#[derive(Debug)]
-#[cfg_attr(test, derive(PartialEq))]
+#[cfg_attr(test, derive(Debug, PartialEq))]
 pub(crate) struct Criteria(Vec<(String, Option<Json>)>);
 
 impl Serialize for Criteria {
