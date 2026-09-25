@@ -137,8 +137,9 @@ fn structured_tag(prefix: &str) -> (String, PathBuf, PathBuf) {
     );
     let limited =
         |name: &str, bytes: usize| profile(name, &format!(r#""max_request_bytes":{bytes}"#));
-    let exact = limited(&format!("{prefix}edge-structured"), STRUCTURED_TAG_BODY.len());
-    let under = limited(&format!("{prefix}under-structured"), STRUCTURED_TAG_BODY.len() - 1);
+    let [edge, under] = ["edge", "under"].map(|end| format!("{prefix}{end}-structured"));
+    let exact = limited(&edge, STRUCTURED_TAG_BODY.len());
+    let under = limited(&under, STRUCTURED_TAG_BODY.len() - 1);
     (format!("@{}", question.to_string_lossy()), exact, under)
 }
 
