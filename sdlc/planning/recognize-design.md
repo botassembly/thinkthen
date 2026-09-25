@@ -110,7 +110,7 @@ One JSON object per text:
 - The relation field is `name`, to match the rule that made it. The demo says `type`.
 - Names below the bar are left out. `--threshold 0` returns every candidate with its number.
 
-Under `--lines`, one object per line. Under `--jsonl`, `--csv`, and `--tsv`, each record comes back with the object attached under `recognize`, the way `annotate` attaches its answers. The record-loss finding in `sdlc/issues/2026-09-21-two-function-flows-lose-the-record-between-stages.md` does not repeat here.
+Under `--lines`, one object per line. Under `--jsonl`, `--csv`, and `--tsv`, each record comes back with the object attached under `recognize`, the way `annotate` attaches its answers. The record-loss finding in `sdlc/issues/closed/2026-09-21-two-function-flows-lose-the-record-between-stages.md` does not repeat here.
 
 ## Size and cost, stated to the user
 
@@ -185,7 +185,7 @@ The internal rules stay internal and have no option. The trailing possessive rul
 
 One maximal contiguous run of `IN` words is one candidate. Runs are disjoint. Ticket 0080 has no overlap promise or resolver. This ruling explicitly overturns this page's earlier settled line that overlapping names use highest total probability and leftmost-longest ties. Historical experiment files remain unchanged.
 
-Later Beatles Bench branch-function research found boundary errors, not overlap errors: `album` enters `the album Abbey Road`; `Don't` drops from `Don't Pass Me By`; long titles lose their middles; exact-match songs measured precision 0.23 and recall 0.15; overlap matching measured precision 1.00 and recall 0.54. The evidence creates or queues no ticket. See `sdlc/issues/2026-09-23-harvest-the-beatles-and-relate-runs-for-efficiency-thresholds-and-tuning.md`.
+Later Beatles Bench branch-function research found boundary errors, not overlap errors: `album` enters `the album Abbey Road`; `Don't` drops from `Don't Pass Me By`; long titles lose their middles; exact-match songs measured precision 0.23 and recall 0.15; overlap matching measured precision 1.00 and recall 0.54. The evidence creates or queues no ticket. See `sdlc/issues/closed/2026-09-23-harvest-the-beatles-and-relate-runs-for-efficiency-thresholds-and-tuning.md`.
 
 ## One tool, ten functions
 

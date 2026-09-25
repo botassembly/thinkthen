@@ -14,7 +14,7 @@ Equivalent ASCII case spellings of one DNS host resolve to the same URL and reco
 
 ## Current Facts
 
-Finding 4 in `sdlc/issues/2026-09-19-hands-on-test-pass-one.md` records that scheme case is normalized but host case is not. `http://LOCALHOST` and `http://localhost` both pass the case-insensitive loopback rule, yet their resolved URLs and recording digests differ. `specification/backends.md` promises one digest across equivalent address case without stating the host exception.
+Finding 4 in `sdlc/issues/closed/2026-09-19-hands-on-test-pass-one.md` records that scheme case is normalized but host case is not. `http://LOCALHOST` and `http://localhost` both pass the case-insensitive loopback rule, yet their resolved URLs and recording digests differ. `specification/backends.md` promises one digest across equivalent address case without stating the host exception.
 
 Ticket 0019 explicitly chose to keep host case because normalization changes older mixed-case recording identities. ADR 0025 overturns that choice. A current inventory found 1,059 committed recording entries and only two URL values: 1,057 hosted entries at `https://api.typesafe.ai/v1/systemone` and two loopback fixtures at `http://127.0.0.1:8721/v1/systemone`. All are already canonical.
 

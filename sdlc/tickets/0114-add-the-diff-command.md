@@ -14,7 +14,7 @@ Review route: a fresh read-only Claude session reviews this design and the final
 
 `thinkthen diff A [B]` compares two runs over the same records, or two cuts on one run. It lists each answer that changed, says which way it moved, and runs the exact McNemar test. It sends no request and reads no key.
 
-Ian's ruling of 2026-09-24 (`sdlc/issues/2026-09-24-audit-and-diff-move-into-0-1.md`) moves diff into 0.1, after audit. The 2026-09-23 ruling folds "show what changes when the cut moves" into diff across two cuts on one run.
+Ian's ruling of 2026-09-24 (`sdlc/issues/closed/2026-09-24-audit-and-diff-move-into-0-1.md`) moves diff into 0.1, after audit. The 2026-09-23 ruling folds "show what changes when the cut moves" into diff across two cuts on one run.
 
 The definition is the `diff` half of `scripts/tools/measure.py` in the private `botassembly/beatles-bench` repository at commit `be7cea2e4aa41097e7f629e35b62dadedeaca544`. The golden files decide where this page and the prototype disagree.
 
@@ -208,7 +208,7 @@ No golden reaches these. Each is the agent's decision, and Ian can overturn it. 
 
 ## Builder note: keep the formats open
 
-`sdlc/issues/2026-09-24-audit-and-diff-needs-for-graded-agent-runs.md` lists four needs for grading agent runs after 0.1. None enters 0.1, and nothing here changes a golden or an accepted input. Keep three things open.
+`sdlc/issues/closed/2026-09-24-audit-and-diff-needs-for-graded-agent-runs.md` lists four needs for grading agent runs after 0.1. None enters 0.1, and nothing here changes a golden or an accepted input. Keep three things open.
 
 - diff reads the key and the runs through 0113's readers, which ignore members they do not use. A test pins one extra member in a run line.
 - The repeat check of decision 6 keys on (answer name, record id) in one function, so a sample key can join it later.

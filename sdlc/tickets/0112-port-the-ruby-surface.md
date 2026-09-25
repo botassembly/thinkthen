@@ -98,7 +98,7 @@ These follow the shared rules.
 
 ## Error-index rows
 
-Source: `sdlc/issues/2026-09-23-surfaces-branch-error-index.md`. The index lists 15 `ruby` rows, and the port guide classes all 15 as binding. This ticket re-proves eleven. It retires four whose mechanism leaves, and a check guards each retirement. It re-proves the Ruby halves of sixteen cross-surface rows and of two engine rows. It retires the Ruby halves of two more cross-surface rows behind a check. One Ruby half moves to an issue. The record plants each bug, shows its test turning red, then green once the bug is removed.
+Source: `sdlc/issues/closed/2026-09-23-surfaces-branch-error-index.md`. The index lists 15 `ruby` rows, and the port guide classes all 15 as binding. This ticket re-proves eleven. It retires four whose mechanism leaves, and a check guards each retirement. It re-proves the Ruby halves of sixteen cross-surface rows and of two engine rows. It retires the Ruby halves of two more cross-surface rows behind a check. One Ruby half moves to an issue. The record plants each bug, shows its test turning red, then green once the bug is removed.
 
 ### Ruby rows
 
@@ -140,7 +140,7 @@ Source: `sdlc/issues/2026-09-23-surfaces-branch-error-index.md`. The index lists
 | R1-29 | closed | Retires with the floating `ruby:3.4-trixie` tag. `check.sh` compares the prefix's stamp with the hashes in `toolchain.env`. On a mismatch it prints "not run" and never "pass". | Change one hash in `toolchain.env`. The check prints "not run". |
 | R5-35 | closed | Retires with the lint container. `check.sh` holds the pinned-Ruby guard: it runs only the prefix's `bin/ruby`, refuses any other `RUBY`, and fails a Ruby other than 3.4.11 behind a matching stamp. It also runs deny on the lock and a `file://` plant that must exit 8 with `source-not-allowed`. `lint` reaches Ruby only through `surfaces --registry` (amended 2026-09-25 after the code review). | Plant one: a stub prefix with a copy of the real stamp and a `bin/ruby` that prints 3.2.3. `check.sh` fails. Plant two: set `RUBY` to another Ruby. `check.sh` fails. Plant three: the `file://` source, which `check.sh` plants on every run. |
 
-Moved: R5-37's Ruby half (the Mac build recipe) waits for the release ticket, queue item 4. Nothing tickets that item today, so this ticket files `sdlc/issues/2026-09-24-the-ruby-mac-build-has-no-ticket.md` to hold it. This ticket runs nothing on a Mac. R5-42 is standin-only in the port guide. R2-27 is not a Ruby row. G9 waits on ADR 0047 item 5, and the Ruby page states whichever answer Ian gives.
+Moved: R5-37's Ruby half (the Mac build recipe) waits for the release ticket, queue item 4. Nothing tickets that item today, so this ticket files `sdlc/issues/2026-09-25-release-and-install-for-0-1.md` to hold it. This ticket runs nothing on a Mac. R5-42 is standin-only in the port guide. R2-27 is not a Ruby row. G9 waits on ADR 0047 item 5, and the Ruby page states whichever answer Ian gives.
 
 R2-29 asks for rulings on record. The rulings that live only in the tag's `NOTES.md` land in a short Ruby section of ADR 0047. They cover the crossing that never takes the lock beneath the engine call, the prompt return, Ctrl-C as `CancelledError` with every other raise unchanged, the detach cost of decision 5, the watchdog's tick cadence, `nil` refused, and records as JSON.
 

@@ -14,7 +14,7 @@ Review route: a fresh read-only Claude session reviews this design and the final
 
 A user names an address and sets a key. `thinkthen check` then answers one question: does this backend work with ThinkThen? It checks the connection, the key, the one endpoint, and every request and reply field ThinkThen uses. It reports each finding as critical or warning. It exits 0 only when nothing is critical. A script or a list of backends can then trust the exit code.
 
-The ask is the issue `sdlc/issues/2026-09-24-a-backend-compliance-check.md`. Ian ruled on 2026-09-24 that the check goes into 0.1. The issue lets Ian overturn the command name and the split between critical and warning.
+The ask is the issue `sdlc/issues/closed/2026-09-24-a-backend-compliance-check.md`. Ian ruled on 2026-09-24 that the check goes into 0.1. The issue lets Ian overturn the command name and the split between critical and warning.
 
 ## Design
 
@@ -204,7 +204,7 @@ Contract 2; state and timing 1; reach 2; proof 2; cost of error 2; total 9. Fina
 
 ## Evidence
 
-- Starts from: The issue `sdlc/issues/2026-09-24-a-backend-compliance-check.md`. `experiments/220-thinkthen-second-backend/` in the workspace outside this repository, closed in `sdlc/issues/2026-09-21-a-second-backend-tried-through-the-systemone-adapter.md`. There a local open decision model behind a small shim answered the exact request bytes with no change here. It capped a request at sixteen questions and refused oversize text with 422. The decoder ignored its extra reply fields. ADR 0034 keeps `status` offline. `specification/backends.md` fixes the wire shape, the key, the address, retries, and the failure sentences. The loopback backend of tickets 0092 and 0117 supplies the generic, reset, refuse, and malformed arms. The 0086 branch at `09d81bc9` keeps `Engine::split` and `Engine::ask_chunks` and freezes the public inventory.
+- Starts from: The issue `sdlc/issues/closed/2026-09-24-a-backend-compliance-check.md`. `experiments/220-thinkthen-second-backend/` in the workspace outside this repository, closed in `sdlc/issues/closed/2026-09-21-a-second-backend-tried-through-the-systemone-adapter.md`. There a local open decision model behind a small shim answered the exact request bytes with no change here. It capped a request at sixteen questions and refused oversize text with 422. The decoder ignored its extra reply fields. ADR 0034 keeps `status` offline. `specification/backends.md` fixes the wire shape, the key, the address, retries, and the failure sentences. The loopback backend of tickets 0092 and 0117 supplies the generic, reset, refuse, and malformed arms. The 0086 branch at `09d81bc9` keeps `Engine::split` and `Engine::ask_chunks` and freezes the public inventory.
 - Keeps: Offline `status`. The key and address rules. The retry rule and its default. Every failure sentence. The decoder and its distribution tolerance. No cache, recording, or replay for a check. The existing arms' answers.
 - Changes: A new `check` command, the first that sends requests with no evidence from the user. Two new loopback arms. A new specification page and fixture.
 - Proof: The eight tests in "Acceptance", each with a planted bug that turns it red. `spec/check.md` runs the dry run and the refusal. Every test uses a loopback backend and a fake key. The gate ladder runs with the real key unset.

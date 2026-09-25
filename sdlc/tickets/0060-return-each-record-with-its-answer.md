@@ -43,7 +43,7 @@ Excluded: `filter`, `rank`, `find`, request construction, recording identity, ca
 
 ## Dependencies
 
-Ticket 0059, the A3 build-queue entry, `sdlc/planning/build-team-response-to-handoff-2026-09-21.md`, `sdlc/planning/go-ahead-for-the-build-team-2026-09-21.md`, and `sdlc/issues/2026-09-21-two-function-flows-lose-the-record-between-stages.md`.
+Ticket 0059, the A3 build-queue entry, `sdlc/planning/build-team-response-to-handoff-2026-09-21.md`, `sdlc/planning/go-ahead-for-the-build-team-2026-09-21.md`, and `sdlc/issues/closed/2026-09-21-two-function-flows-lose-the-record-between-stages.md`.
 
 ## Complexity
 

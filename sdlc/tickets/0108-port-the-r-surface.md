@@ -108,7 +108,7 @@ These retire:
 
 ## Error-index rows
 
-Source: `sdlc/issues/2026-09-23-surfaces-branch-error-index.md`. The index lists 13 R rows, and the port guide classes all 13 as binding. This ticket carries all 13. It also carries the R halves of twelve cross-surface rows and of two engine rows. R5-38 rides with R4-7 in the first table, as the port guide pairs them. It retires the R halves of five more rows with their reasons. Each re-proof runs against the real engine through the 0092 loopback backend unless marked as a unit test or a script step.
+Source: `sdlc/issues/closed/2026-09-23-surfaces-branch-error-index.md`. The index lists 13 R rows, and the port guide classes all 13 as binding. This ticket carries all 13. It also carries the R halves of twelve cross-surface rows and of two engine rows. R5-38 rides with R4-7 in the first table, as the port guide pairs them. It retires the R halves of five more rows with their reasons. Each re-proof runs against the real engine through the 0092 loopback backend unless marked as a unit test or a script step.
 
 "Counted" means the 0092 backend's `count` line. A bash parent starts the backend with `coproc`, exports `THINKTHEN_BASE_URL` with the arm's path, and reads `count` on the backend's standard input. `tests/with-backend.sh` runs one R file per backend process and compares the final count with the file's printed `expect count N` line. The record plants each bug below and shows its test turning red, then green once the bug is removed.
 

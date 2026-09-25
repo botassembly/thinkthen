@@ -540,7 +540,7 @@ export const FACTS = {
   cost: {
     headline: 'A thousand answers cost about a penny.',
     rows: [
-      ['1.2 cents for 1,000 short records', 'thinkthen sdlc/issues/2026-09-20-live-probe-findings-packing-tagging-status-and-cost.md'],
+      ['1.2 cents for 1,000 short records', 'thinkthen sdlc/issues/closed/2026-09-20-live-probe-findings-packing-tagging-status-and-cost.md'],
       ['3.6 cents to ask one question of 3,000 lines of a novel', 'the same page, "The cost of a real file"'],
       ['about 290 input tokens a short record, with about 256 of them fixed', 'the same page: 290.4 on average, from 277 to 301, over 3,000 records'],
       ['$0.042 per million input tokens', 'thinkthen sdlc/records/0011-the-live-probe.md'],
@@ -553,7 +553,7 @@ export const FACTS = {
       ['About 32,000 tokens of evidence in one request', 'thinkthen specification/records.md, "Evidence in one request"'],
       ['About 64,000 tokens in one whole request, the questions included', 'the same table, confirmed by one live request of 33,663 input tokens on 2026-09-19'],
       ['find reads 2 to 255 lines, or 2 to 254 with --none', 'thinkthen specification/find.md'],
-      ['The evidence crosses whole and is never split', 'thinkthen sdlc/issues/2026-09-21-size-cost-and-other-backends-what-the-manual-and-the-tests-must-carry.md'],
+      ['The evidence crosses whole and is never split', 'thinkthen sdlc/issues/2026-09-25-docs-how-tos-and-spec-claims-owed.md'],
       ['Evidence over the limit is refused with exit code 4', 'thinkthen specification/backends.md'],
     ],
   },

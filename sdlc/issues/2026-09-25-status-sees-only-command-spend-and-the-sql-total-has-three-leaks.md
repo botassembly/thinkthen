@@ -12,7 +12,7 @@ Found 2026-09-25 while drafting the talk's cost slide. Ian asked for these gaps 
 4. **Concurrent calls pass the total.** Each call reads what remains once, so one call per thread in flight, plus retries, can overshoot (ticket 0110 item 17).
 5. **With the cache off, a repeated row bills again.** A SQL row and a data-frame row are each an engine call. A volatile function re-runs in WHERE, SELECT, and joins. The cache is the only thing that makes a repeat free, and `--no-cache` or its setting turns that off.
 
-The command's own missing cap is already recorded in `2026-09-21-where-a-user-could-lose-trust-a-first-list.md`, item 1. Ian said then he may not care about it for the command. This page does not reopen it.
+The command's own missing cap is already recorded in `closed/2026-09-21-where-a-user-could-lose-trust-a-first-list.md`, item 1. Ian said then he may not care about it for the command. This page does not reopen it.
 
 ## Why it matters
 

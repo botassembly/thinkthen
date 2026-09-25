@@ -52,7 +52,7 @@ The six facade failure kinds are `usage`, `backend`, `local`, `cancelled`, `dead
 
 ### Error-index rows this ticket carries
 
-`sdlc/issues/2026-09-23-surfaces-branch-error-index.md`, as sorted by the port guide: R2-21 (a refused connection is not retried), R5-19 (no leftover send after a cancelled batch), and on every facade path the 0089 rule behind R5-4 and R6-15. The G1 rows marked `*` in the port guide wait for ticket 0097. The record names one planted bug per carried row and shows its test turning red: R2-21 marks `Refused` as retried; R5-19 lets a worker dispatch one more queued item after the cancel; G2 resends after a close that follows the body.
+`sdlc/issues/closed/2026-09-23-surfaces-branch-error-index.md`, as sorted by the port guide: R2-21 (a refused connection is not retried), R5-19 (no leftover send after a cancelled batch), and on every facade path the 0089 rule behind R5-4 and R6-15. The G1 rows marked `*` in the port guide wait for ticket 0097. The record names one planted bug per carried row and shows its test turning red: R2-21 marks `Refused` as retried; R5-19 lets a worker dispatch one more queued item after the cancel; G2 resends after a close that follows the body.
 
 ## No copied machinery
 

@@ -18,14 +18,14 @@ Decisions, each of which Ian can overturn:
 - Item 3 keeps the `recognize` and `relate` introductions that landed with 0080 and 0088. Both passed the 0088 reviews. This ticket pins them and writes no new sentences.
 - `relate` gets this whole-set exit sentence in long help, drawn from `specification/relate.md`: `A run that answers some relation questions and fails others prints what it has and exits 6. A run whose relation questions all fail prints nothing and exits 4.` An empty line or JSONL stream still succeeds with no output, as `specification/relate.md` says.
 - Public teaching copy says **not sure** and **broken**. `decide` long help replaces `the exit code is 0 for yes, 1 for no, and 3 for unresolved` with this teaching sentence: `The exit code is 0 for yes, 1 for no, 3 for not sure, and any other code when the run is broken or interrupted.` The README carries no four-outcome sentence on main, and this ticket adds none.
-- Exactly one sentence, in `specification/decide.md` beside the `null` answer, defines the formal term: `` `unresolved` is the formal name for a not sure answer. `` Other specification pages keep `unresolved` as exact contract language and need no edit. `failed` stays valid for one question a backend could not answer inside an otherwise usable result. It never names the whole broken outcome. `sdlc/issues/2026-09-21-the-help-first-lines-and-the-public-words.md` records the approved vocabulary.
+- Exactly one sentence, in `specification/decide.md` beside the `null` answer, defines the formal term: `` `unresolved` is the formal name for a not sure answer. `` Other specification pages keep `unresolved` as exact contract language and need no edit. `failed` stays valid for one question a backend could not answer inside an otherwise usable result. It never names the whole broken outcome. `sdlc/issues/closed/2026-09-21-the-help-first-lines-and-the-public-words.md` records the approved vocabulary.
 - Row 43 also fixes the crate description in `crates/thinkthen/Cargo.toml`, which says `Put a decider model in the shell`.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex (Astra) reviews as the other vendor under `sdlc/planning/one-line-plan-2026-09-24.md`.
 
 ## Outcome and authority
 
-Re-audit the 45 items in `sdlc/issues/2026-09-22-command-wording-and-help-fixes-for-0-1.md` against main. Exercise root help and short and long help for all ten functions: `decide`, `filter`, `rank`, `choose`, `find`, `score`, `tag`, `annotate`, `recognize`, and `relate`. Change only mismatches that survive in command wording, help, specification, diagnostics, vocabulary, or result documentation. Do not repeat a fix main already carries.
+Re-audit the 45 items in `sdlc/issues/closed/2026-09-22-command-wording-and-help-fixes-for-0-1.md` against main. Exercise root help and short and long help for all ten functions: `decide`, `filter`, `rank`, `choose`, `find`, `score`, `tag`, `annotate`, `recognize`, and `relate`. Change only mismatches that survive in command wording, help, specification, diagnostics, vocabulary, or result documentation. Do not repeat a fix main already carries.
 
 ## Required audit and disposition
 

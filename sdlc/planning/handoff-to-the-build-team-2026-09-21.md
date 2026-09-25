@@ -44,7 +44,7 @@ Open for the build team: how a long text is cut into pieces, the question count 
 
 ## 4. The shape changes that land before the bindings freeze
 
-The full table with sources is `sdlc/issues/2026-09-21-what-must-land-before-the-bindings-freeze.md`. Ian and the caller's team agreed these.
+The full table with sources is `sdlc/issues/closed/2026-09-21-what-must-land-before-the-bindings-freeze.md`. Ian and the caller's team agreed these.
 
 1. `meta.request`, the request digest, on every function's result. `annotate` has it and the single functions do not.
 2. A marker for a question that failed inside a request that otherwise succeeded. It is never `null`, because `null` means "not sure". A caller measured about 1 live reply in 15 refused.
@@ -103,8 +103,8 @@ Earlier the same day, from the limit probes and the second backend: `a-refused-r
 
 ## 7. What the other teams hold ready
 
-- **The surfaces rehearsal.** Worktree `thinkthen-surfaces` holds a contract, a stand-in engine, six libraries, three database extensions, and a checker. The real engine replaces the stand-in with one changed dependency. Its brief for the two new functions is `sdlc/issues/2026-09-21-the-recognize-brief-for-the-experiment-team.md`.
-- **The library team.** Its update is `sdlc/issues/2026-09-21-update-for-the-library-team-recognize-and-relate.md`.
+- **The surfaces rehearsal.** Worktree `thinkthen-surfaces` holds a contract, a stand-in engine, six libraries, three database extensions, and a checker. The real engine replaces the stand-in with one changed dependency. Its brief for the two new functions is `sdlc/issues/closed/2026-09-21-the-recognize-brief-for-the-experiment-team.md`.
+- **The library team.** Its update is `sdlc/issues/closed/2026-09-21-update-for-the-library-team-recognize-and-relate.md`.
 - **Polars.** Ian ruled that Python's data frame is Polars and that all scaling runs in Rust. The plan is `sdlc/planning/polars-plan.md`. What a user types is `sdlc/issues/2026-09-21-the-polars-shape-as-the-deck-shows-it.md`. It asks the engine for nothing new. It rides the same bulk call the lists use.
 - **The quality team.** Wave 2 starts when the rebuilt libraries pass their own cases.
 

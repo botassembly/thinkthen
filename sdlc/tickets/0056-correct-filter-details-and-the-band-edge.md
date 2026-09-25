@@ -34,7 +34,7 @@ Excluded: help defaults, exit-code prose outside the touched pages, diagnostics,
 
 ## Dependencies
 
-Ticket 0055, Ian's ruling in `sdlc/issues/2026-09-21-filter-details-must-still-filter.md`, and the threshold ruling in `sdlc/planning/build-queue-2026-09-21.md`. The open low-edge issue records the evidence that led to the queue ruling.
+Ticket 0055, Ian's ruling in `sdlc/issues/closed/2026-09-21-filter-details-must-still-filter.md`, and the threshold ruling in `sdlc/planning/build-queue-2026-09-21.md`. The open low-edge issue records the evidence that led to the queue ruling.
 
 ## Complexity
 

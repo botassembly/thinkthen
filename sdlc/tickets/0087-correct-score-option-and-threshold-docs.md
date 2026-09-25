@@ -59,7 +59,7 @@ Excluded: changing `transforms/sweep/sweep.jq` or any other transform; adding fi
 
 ## Dependencies
 
-The three source issues are `sdlc/issues/2026-09-23-score-spec-says-the-vendor-score-agrees-and-it-differs.md`, `sdlc/issues/2026-09-23-relate-call-math-efficiency-and-real-jobs.md`, and `sdlc/issues/2026-09-23-harvest-the-beatles-and-relate-runs-for-efficiency-thresholds-and-tuning.md`. The output meanings remain owned by `specification/result.md`, `sdlc/planning/recognize-design.md`, and `sdlc/planning/relate-design.md`. Issue `sdlc/issues/2026-09-23-show-what-changes-when-the-cut-moves.md` remains separate and authorizes no work here.
+The three source issues are `sdlc/issues/closed/2026-09-23-score-spec-says-the-vendor-score-agrees-and-it-differs.md`, `sdlc/issues/closed/2026-09-23-relate-call-math-efficiency-and-real-jobs.md`, and `sdlc/issues/closed/2026-09-23-harvest-the-beatles-and-relate-runs-for-efficiency-thresholds-and-tuning.md`. The output meanings remain owned by `specification/result.md`, `sdlc/planning/recognize-design.md`, and `sdlc/planning/relate-design.md`. Issue `sdlc/issues/closed/2026-09-23-show-what-changes-when-the-cut-moves.md` remains separate and authorizes no work here.
 
 ## Complexity
 

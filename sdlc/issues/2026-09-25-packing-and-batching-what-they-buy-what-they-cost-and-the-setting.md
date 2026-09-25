@@ -1,6 +1,6 @@
 # Packing and batching: what they buy, what they cost, and the setting
 
-Status: Open. The dedicated issue for packing and batching, on Ian's request of 2026-09-25. It replaces `2026-09-25-pack-rows-for-tables-and-frames-a-plan-to-measure-then-build.md`, renamed here.
+Status: Open. The dedicated issue for packing and batching, on Ian's request of 2026-09-25. It replaces the earlier plan `2026-09-25-pack-rows-for-tables-and-frames-a-plan-to-measure-then-build.md`, renamed here.
 
 ## In one paragraph
 
@@ -10,7 +10,7 @@ Today every row is its own request to Jev. Each request pays a fixed part near 2
 
 | Choice | What it buys | What it costs | Evidence |
 | --- | --- | --- | --- |
-| One row per request (today) | Each answer depends only on its row. Replay and the cache key are simple. | The fixed part on every row. About 20 rows a second at most. | `2026-09-21-one-state-per-request-caps-table-scale-classification.md` |
+| One row per request (today) | Each answer depends only on its row. Replay and the cache key are simple. | The fixed part on every row. About 20 rows a second at most. | `closed/2026-09-21-one-state-per-request-caps-table-scale-classification.md` |
 | Pack yes/no rows, up to 10 | 3.3 to 4.6 times fewer tokens. About ten times fewer requests. | About 3% of answers near the bar change with their neighbours, six times Jev's own noise. | Experiments 208 and 260 |
 | Pack more than 10 | A little more saving | Accuracy slips at 20 and collapses at 40. Late rows read worse. | Experiment 208 |
 | Pack pick-one rows | 2.3 times fewer tokens | 2 to 10 points of accuracy with today's wording | Experiment 260; rewording under test in 261 |
@@ -29,19 +29,19 @@ Packing is a configuration setting that every surface reads the same way, not a 
 ## What the documentation carries
 
 - A site page, "Packing and batching", in the how-to form of ADR 0011, with the trade-off table above in plain words, the setting and where to set it, and one worked example at `pack` 1 and 10 with its token counts.
-- The size-and-cost page named in `2026-09-21-size-cost-and-other-backends-what-the-manual-and-the-tests-must-carry.md` links to it.
+- The size-and-cost page named in `2026-09-25-docs-how-tos-and-spec-claims-owed.md` links to it.
 - The talk carries one slide on it, from the marketing repository.
 
 ## What is measured
 
-- One request per record is the rule on every surface (`specification/annotate.md`, `sdlc/planning/databases/README.md`). Each request pays a fixed part near 256 input tokens. At the documented 1,200 requests a minute that caps a table near 20 rows a second and near $1.08 per 100,000 short rows (`2026-09-21-one-state-per-request-caps-table-scale-classification.md`).
-- The endpoint accepts many rows in one request as a structured `state`: one `condition`, a `rows` list, and one `noul` question per row named `r0` to `rN` (`2026-09-22-wire-probe-can-one-request-carry-many-states.md`). A plain list `state` returns one silent answer and must never be sent.
+- One request per record is the rule on every surface (`specification/annotate.md`, `sdlc/planning/databases/README.md`). Each request pays a fixed part near 256 input tokens. At the documented 1,200 requests a minute that caps a table near 20 rows a second and near $1.08 per 100,000 short rows (`closed/2026-09-21-one-state-per-request-caps-table-scale-classification.md`).
+- The endpoint accepts many rows in one request as a structured `state`: one `condition`, a `rows` list, and one `noul` question per row named `r0` to `rN` (`closed/2026-09-22-wire-probe-can-one-request-carry-many-states.md`). A plain list `state` returns one silent answer and must never be sent.
 - Experiment 208 (`~/workspace/experiments/208-thinkthen-row-packing/RESULTS.md`), yes/no questions only:
   - 1,000 SMS rows at 10 per request: accuracy 0.968, equal to one per request, for 3.3 times fewer tokens and ten times fewer requests. The run took 5.8 seconds.
   - 500 BoolQ rows at 10 per request: 2.0 times fewer tokens, accuracy within half a point. BoolQ rows are five times longer than SMS rows and did not break sooner. Row count breaks packing, not row length.
   - At 20 rows accuracy slipped. At 40 recall fell from 0.941 to 0.434, and rows late in the list read worse.
-  - Regrouping the same rows at 10 per request moved 3.4% of answers across 0.5. A row's neighbours change its answer. The run did not measure plain run-to-run noise, and a separate measure puts it near 26% of repeats moving (`2026-09-21-the-same-request-answers-differently-twice-measured.md`).
-- The limits: about 32,000 tokens of text and about 64,000 for the whole request (`2026-09-21-size-cost-and-other-backends-what-the-manual-and-the-tests-must-carry.md`). Ticket 0079 splits requests under backend limits.
+  - Regrouping the same rows at 10 per request moved 3.4% of answers across 0.5. A row's neighbours change its answer. The run did not measure plain run-to-run noise, and a separate measure puts it near 26% of repeats moving (`2026-09-25-docs-how-tos-and-spec-claims-owed.md`).
+- The limits: about 32,000 tokens of text and about 64,000 for the whole request (`2026-09-25-docs-how-tos-and-spec-claims-owed.md`). Ticket 0079 splits requests under backend limits.
 - Every reply reports its billed `input_tokens`. No public tokenizer exists, and ticket 0080 bans guessing tokens from bytes in printed output.
 
 ## Proposed design

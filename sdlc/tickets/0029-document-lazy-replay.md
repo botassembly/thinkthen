@@ -14,7 +14,7 @@ The recording page says that replay reads only the digest-named entry it needs. 
 
 ## Current Facts
 
-Finding 2 in `sdlc/issues/2026-09-19-hands-on-test-pass-one.md` records the mismatch. `specification/recording.md` says any file under the replay folder that is not an entry causes exit 5. The implementation instead derives one entry name from the exchange digest and reads only that path. The hands-on test confirmed that a stray `notes.txt` beside a valid requested entry is ignored and replay succeeds.
+Finding 2 in `sdlc/issues/closed/2026-09-19-hands-on-test-pass-one.md` records the mismatch. `specification/recording.md` says any file under the replay folder that is not an entry causes exit 5. The implementation instead derives one entry name from the exchange digest and reads only that path. The hands-on test confirmed that a stray `notes.txt` beside a valid requested entry is ignored and replay succeeds.
 
 When that requested entry is damaged, replay already exits 5. Its diagnostic names the digest-derived entry and the JSON line and column without repeating the damaged text. Lazy reading is the intended behavior; the page is wrong.
 

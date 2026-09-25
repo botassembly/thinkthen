@@ -43,7 +43,7 @@ These retire under the ruling: `test_pandas_checks.py`, `bench_cost_pandas.py`, 
 
 ## Error-index rows
 
-Source: `sdlc/issues/2026-09-23-surfaces-branch-error-index.md`. Ticket 0105 deferred eleven Python rows and two row halves here. Ten rows and both halves are re-proved against the real engine through the 0092 backend, or as marked unit tests. One row retires. The record plants each bug below and shows its test turning red, then green once the bug is removed. A test that can crash the interpreter runs in a child process. It asserts the pinned `UsageError` sentence from the child's output and the child's exit code. "Counted" means the 0092 backend's `count` line.
+Source: `sdlc/issues/closed/2026-09-23-surfaces-branch-error-index.md`. Ticket 0105 deferred eleven Python rows and two row halves here. Ten rows and both halves are re-proved against the real engine through the 0092 backend, or as marked unit tests. One row retires. The record plants each bug below and shows its test turning red, then green once the bug is removed. A test that can crash the interpreter runs in a child process. It asserts the pinned `UsageError` sentence from the child's output and the child's exit code. "Counted" means the 0092 backend's `count` line.
 
 | Row | Status at tag | Re-proof here | Planted bug |
 |---|---|---|---|

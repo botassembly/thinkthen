@@ -54,4 +54,4 @@ engine.decide_many("Is this urgent?", notes, deadline: 30)
 1. Choices are strings. The conformance cases and the question file use strings, and `choose` returns the chosen string.
 2. A band is a Ruby `Range` or the file's `"lo:hi"` text.
 3. The fiber scheduler stays unsupported. Nothing tests it.
-4. The Mac build waits for the release ticket (`sdlc/issues/2026-09-24-the-ruby-mac-build-has-no-ticket.md`).
+4. The Mac build waits for the release ticket (`sdlc/issues/2026-09-25-release-and-install-for-0-1.md`).

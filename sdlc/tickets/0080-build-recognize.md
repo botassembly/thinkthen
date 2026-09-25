@@ -87,7 +87,7 @@ Production changes may touch at most eighteen Rust files. Total additions may no
 
 Ship the measured baseline. One maximal run of `IN` words is one candidate, and runs are disjoint. No overlap promise or resolver belongs in ticket 0080. This ruling explicitly overturns the earlier settled overlap line in `sdlc/planning/recognize-design.md` and supersedes earlier 0080 planning that requested overlap selection.
 
-Later Beatles Bench branch-function research found boundary errors, not overlap errors: `album` enters `the album Abbey Road`; `Don't` drops from `Don't Pass Me By`; long titles lose their middles; exact-match songs measured precision 0.23 and recall 0.15; overlap matching measured precision 1.00 and recall 0.54. This evidence is recorded for later research only and creates or queues no ticket. See `sdlc/issues/2026-09-23-harvest-the-beatles-and-relate-runs-for-efficiency-thresholds-and-tuning.md`.
+Later Beatles Bench branch-function research found boundary errors, not overlap errors: `album` enters `the album Abbey Road`; `Don't` drops from `Don't Pass Me By`; long titles lose their middles; exact-match songs measured precision 0.23 and recall 0.15; overlap matching measured precision 1.00 and recall 0.54. This evidence is recorded for later research only and creates or queues no ticket. See `sdlc/issues/closed/2026-09-23-harvest-the-beatles-and-relate-runs-for-efficiency-thresholds-and-tuning.md`.
 
 ## Acceptance
 
