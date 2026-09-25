@@ -115,6 +115,10 @@ if [ "${1:-}" = --registry ]; then
 	sh "$limit" 30 sh -c 'trap "" TERM; sleep 30 & echo $! >"$0"; wait' "$planted.term" &
 	outer=$! term=0 i=0
 	while [ ! -s "$planted.term" ] && [ "$i" -lt 50 ]; do sleep 0.1; i=$((i + 1)); done
+	if [ ! -s "$planted.term" ]; then
+		echo "surfaces: the TERM row's command never wrote its grandchild's pid" >&2
+		exit 1
+	fi
 	kill "$outer"
 	i=0
 	while kill -0 "$(cat "$planted.term")" 2>/dev/null && [ "$i" -lt 40 ]; do sleep 0.1; i=$((i + 1)); done

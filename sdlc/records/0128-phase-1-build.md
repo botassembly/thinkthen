@@ -142,3 +142,5 @@ The `surfaces --registry` row now runs a command that ignores TERM (`trap "" TER
 | time-limit without its three traps | `surfaces --registry` exit 1, with the same line |
 
 `surfaces --registry` ran 20 times in a row after the fix: 20 passed, 0 failed. `lint` exit 0. time-limit grows from 33 to 39 nonblank lines, and `surfaces` changes 10 more lines.
+
+The acceptance at `85cf78d0` asked for one more fix. If the TERM row's pid file never appeared, `kill -0 ""` failed and the row passed without testing anything. After its polling loop, the row now fails with "the TERM row's command never wrote its grandchild's pid". Plant: the command wrote to a path the row never reads, and `surfaces --registry` exits 1 with that line. After the restore, `surfaces --registry` and `lint` pass.
