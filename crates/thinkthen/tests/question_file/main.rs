@@ -4,8 +4,11 @@
 //! split over several test binaries would leave part of the harness unused in
 //! each one, and `rust-standards.md` lets no test file paste a suppression at
 //! its top.
+#![cfg(feature = "cli")]
 
 mod harness;
+#[path = "../../src/test_deadline/wait.rs"]
+mod wait;
 
 mod corpus;
 mod grammar;

@@ -1,0 +1,6 @@
+{"input":{"id":"r1","text":"record r1"},"value":true}
+{"input":{"id":"r2","text":"record r2"},"value":true}
+{"input":{"id":"r3","text":"record r3"},"value":false}
+{"input":{"id":"r4","text":"record r4"},"value":false}
+{"input":{"id":"r5","text":"record r5"},"value":false}
+{"input":{"id":"r6","text":"record r6"},"value":true}

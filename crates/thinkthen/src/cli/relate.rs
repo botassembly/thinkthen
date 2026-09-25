@@ -1,21 +1,17 @@
 use std::io::{Read, Write};
 use std::process::ExitCode;
-use std::time::Duration;
 
 use crate::args::RelateArguments;
-use crate::asking::{Asking, Folders};
-use crate::core::{AnswerOutcome, Backend, ModelName, RelationEntity, assemble_edges};
+use crate::asking::{self, Folders};
+use crate::core::{Backend, ModelName};
 use crate::edge::Environment;
+use crate::engine::facade;
 use crate::failure::Failure;
-use crate::http::Client;
-use crate::prepared_request::Answered;
 use crate::profile;
-use crate::recorder::Recorder;
 
 mod config;
 mod dry_run;
 mod input;
-mod plan;
 mod result;
 
 pub(crate) fn run(
@@ -39,7 +35,7 @@ pub(crate) fn run(
     if entities.is_empty() {
         return Ok(ExitCode::SUCCESS);
     }
-    let prepared = plan::prepare(
+    let prepared = facade::relations(
         &entities,
         &settled.spec,
         &backend,
@@ -61,30 +57,18 @@ pub(crate) fn run(
         dry_run::write(&mut writer, context, &prepared)?;
         return Ok(ExitCode::SUCCESS);
     }
-    let recorder = Recorder::of_private(
-        folders.record.as_deref(),
-        folders.replay.as_deref(),
-        folders.private_default,
-        folders.cache_answers,
-    )?;
-    let client = Client::new(
-        Duration::from_secs(arguments.common.timeout),
-        backend.is_secure(),
-    );
-    let asking = Asking {
-        backend: &backend,
-        common: &arguments.common,
-        environment,
-        recorder: &recorder,
-        client: &client,
-    };
-    let threshold = settled.spec.threshold.cut_value().unwrap_or(0.5);
-    let execution = execute(&asking, prepared, &entities, threshold)?;
-    if execution.answered == 0 && execution.failed > 0 {
-        return Err(Failure::Relate(crate::failure::relate::Error::Logical));
-    }
-    let partial = execution.failed > 0;
     let mismatch = profile::Mismatch::new(settled.spec.profile.as_ref(), selected_profile.as_ref());
+    let engine = asking::engine(
+        &arguments.common,
+        environment,
+        folders,
+        backend.clone(),
+        selected_profile,
+        None,
+    )?;
+    let threshold = settled.spec.threshold.cut_value().unwrap_or(0.5);
+    let execution = engine.relate(prepared, &entities, threshold, environment.cancel())?;
+    let partial = execution.failed > 0;
     let output = result::Output {
         details: arguments.common.details,
         framing: settled.framing,
@@ -100,83 +84,4 @@ pub(crate) fn run(
     } else {
         ExitCode::SUCCESS
     })
-}
-
-fn execute(
-    asking: &Asking<'_>,
-    prepared: Vec<plan::PreparedRelation>,
-    entities: &[RelationEntity],
-    threshold: f64,
-) -> Result<result::Execution, Failure> {
-    let mut execution = result::Execution {
-        replayed: true,
-        ..result::Execution::default()
-    };
-    for relation in prepared {
-        let mut mappings = relation.mappings.into_iter();
-        asking.chunks(relation.chunks, |answered| {
-            add_meta(&mut execution, &answered)?;
-            for outcome in answered.reply.outcomes() {
-                let logical = result::Logical {
-                    relation: relation.relation.clone(),
-                    mapping: mappings
-                        .next()
-                        .ok_or(Failure::Defect("a relation reply exceeds its question map"))?,
-                    outcome: outcome.clone(),
-                    request: answered.request.as_str().to_owned(),
-                };
-                add_logical(&mut execution, entities, logical, threshold);
-            }
-            Ok(())
-        })?;
-        if mappings.next().is_some() {
-            return Err(Failure::Defect(
-                "a relation reply did not cover its question map",
-            ));
-        }
-    }
-    Ok(execution)
-}
-
-/// Keep one logical answer and the edges the shared assembler draws from it.
-fn add_logical(
-    execution: &mut result::Execution,
-    entities: &[RelationEntity],
-    logical: result::Logical,
-    threshold: f64,
-) {
-    if let AnswerOutcome::Answered(answer) = &logical.outcome {
-        execution.answered += 1;
-        execution.edges.extend(assemble_edges(
-            entities,
-            &logical.relation,
-            std::slice::from_ref(&logical.mapping),
-            std::slice::from_ref(answer),
-            threshold,
-        ));
-    } else {
-        execution.failed += 1;
-    }
-    execution.logical.push(logical);
-}
-
-fn add_meta(execution: &mut result::Execution, answered: &Answered) -> Result<(), Failure> {
-    let model = answered.reply.model();
-    if execution.model.as_ref().is_some_and(|held| held != model) {
-        return Err(Failure::ModelsDiffer(None));
-    }
-    execution.model.get_or_insert_with(|| model.clone());
-    execution.usage = match (execution.usage, answered.reply.usage()) {
-        (Some(left), Some(right)) => Some(left.checked_plus(right).ok_or(Failure::UsageOverflow)?),
-        (None, held) | (held, None) => held,
-    };
-    execution.replayed &= answered.replayed;
-    execution.requests_sent = execution
-        .requests_sent
-        .checked_add(answered.requests_sent)
-        .ok_or(Failure::UsageOverflow)?;
-    execution
-        .requests
-        .push(answered.request.as_str().to_owned());
-    Ok(())
 }
