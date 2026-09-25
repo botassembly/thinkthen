@@ -1,6 +1,6 @@
 # 0107 build: the TypeScript surface over the public API
 
-Date: 2026-09-25. Branch `ticket/0107-port-typescript-surface`, from `62bbc52f`. Author: Claude. Code review has not run yet.
+Date: 2026-09-25. Branch `ticket/0107-port-typescript-surface`, from `62bbc52f`. Author: Claude. A fresh code review of `416652e0` returned findings, and the second commit answers them.
 
 ## What landed
 
@@ -16,12 +16,12 @@ Node 22.22.3 from `~/.cache/thinkthen-toolchains/node-v22.22.3-linux-x64`. The a
 
 ## Check result
 
-`flock -o /run/user/1000/thinkthen-heavy.lock sh libraries/typescript/check.sh 1` exits 1.
+`env -u THINKTHEN_API_KEY flock -o /run/user/1000/thinkthen-heavy.lock sh libraries/typescript/check.sh 1` exits 0 and prints `typescript: pass`.
 
-- Toolchain, root builds, `cargo fmt --check`, Clippy with `-D warnings`, deny, the deny plant, and the three Rust unit tests pass.
-- `node --test`: 23 tests, 22 pass, 1 fails. The failing test is "an abort settles a held batch at once, and the batch sends no more". The count reads 36 where 4 is expected. The cause is in the engine (finding 1).
+- `cargo fmt --check`, Clippy with `-D warnings`, and the three Rust unit tests run first, with no Node. Deny on the lock and the deny plant run next, then the toolchain check and the root builds. All pass.
+- `node --test`: 23 tests, 23 pass.
 - Conformance: 54 cases, 49 pass, 0 fail, 5 not run with reasons.
-- A copy of `check.sh` with the node suite removed ran the later steps, and each passed: the corruption loop, `tsc --strict`, the pack list, the license, the home path, and the flag, pin, guard, `unsafe`, and sentence steps.
+- The corruption loop, `tsc --strict`, the pack list, the license, the home path, and the flag, pin, guard, `unsafe`, and sentence steps pass.
 - `sh sdlc/scripts/surfaces --registry` passes. `python3 sdlc/scripts/policy.py` passes.
 
 Not run: the five cases `18-annotate-two-groups`, `18-find-second`, `19-find-none`, `25-defect-fault`, and `30-local-question-file`. The runner prints each reason.
@@ -39,6 +39,8 @@ Each plant was applied, its check was run, and the file was restored. Every row 
 | single abort, plant one | drop the abort listener | the call resolves after the release |
 | single abort, plant two | forget the threadsafe function in `detach()` | the child does not exit while the reply is held |
 | batch abort | `detach()` fires no token | count 37, not 4 |
+| R3-25 and R2-27 worker | join the worker thread before `call` returns | the throttle test times out on the held arm, and the drift test reads 3,898 ms |
+| R2-27 shapes | return a hand-built details object | the `details` equality with the command turns red |
 | UTF-16 | skip the conversion | case 41 fails |
 | R3-30 | skip one case silently | 53 of 54 |
 | R3-26 | the runner drops its failure assertion | the corruption step fails |
@@ -59,30 +61,34 @@ Each plant was applied, its check was run, and the file was restored. Every row 
 | settings seed | `Engine::builder()` in place of `from_env()` | folder A stays empty. The plant's sends went to the loopback listener only |
 | maxRequests | drop the mapping | the count turns red |
 
-The batch abort plant first stayed green. The child exited after the abort and took the batch with it. The test now keeps the child alive for 3 s with a timer, so a batch that keeps sending shows on the count. That change exposed finding 1.
+The batch abort plant first stayed green. The child exited after the abort and took the batch with it. The test now keeps the child alive for 3 s with a timer, so a batch that keeps sending shows on the count. The drift test first stayed green under the join plant, because its clock started after the blocking call returned. The clock now starts before the call.
 
 Not planted:
 
-- R4-14. Dropping `LICENSE` from `files` stays green, because npm always packs a `LICENSE` file. The pack check still pins `LICENSE` in the list.
-- R2-27 shapes (the tag's hand-built details object). The `details` equality test against the command covers the row.
-- R3-25 and R2-27 worker, the libuv plants (`AsyncTask`, and a synchronous door). Each needs a second door written only for the plant. The throttle and drift tests cover the rows.
+- R4-14. The pack check pins `LICENSE` in the list, and no plant can turn it red. npm packs a `LICENSE` file whether or not `files` names it.
 
 ## Findings
 
-1. **Engine: a cancelled batch keeps sending.** The token fires, and the promise rejects within 100 ms. The held requests still sit at the throttle. Once they are released, the engine sends the remaining records. A probe on the held arm, with the child kept alive, read these counts one second after the release: throttle 2 over 200 records sent 38, throttle 4 over 20 records sent all 20, and throttle 8 over 200 records sent 138. ADR 0017's rule says no new request starts after a cancel. The binding passes the token through `CallOptions::cancel` and keeps pulling the batch. The engine's `Stream::pull` then fires the call's flag. The failing test is kept, because it pins the ticket's line.
+1. **Retracted: a cancelled batch does not keep sending.** The first build of this record reported that a cancelled batch sent the rest of its records after the release. That run tested a stale addon. The plant harness restored each file with an older modification time, so `build-addon.sh` kept the planted build in which `detach()` fires no token. On a fresh build, the probe reads 2, 4, and 8 sends before and after the release at throttles 2, 4, and 8, and the batch abort test passes three runs of three. The engine needs no fix for this. A plant harness must touch each restored file, or cargo keeps the planted build.
 2. **Engine versus ticket: `maxRequests`.** A three-record `decide_many` under `maxRequests: 2` sends two records, then refuses. `EngineBuilder::max_requests` documents that streaming order. The ticket expects zero sent. The test pins 2.
 3. **API gap: `find` with `none`.** The public `find` takes no `none` candidate, so `18-find-second` and `19-find-none` cannot run. R2-27's "19-find-none resolves null" is not shown.
 4. **The throttle sentence.** The engine's sentence has no `thinkthen: ` prefix. The ticket quotes the command's spelling. The test pins the engine's text.
 5. **`usage()` is synchronous.** The ticket says it resolves. Each `Engine` counts its own calls.
-6. **Gate changes not made.** The ticket adds Clippy, deny, and the deny plant to `lint`. The port brief forbids changes to ladder scripts. `check.sh` runs all three, and `surfaces --registry` already runs deny on the lock.
+6. **Gate placement.** The ticket now follows the `libraries/rust` pattern. `check.sh` runs Clippy and deny, and `lint` reaches the binding through the policy check and `surfaces --registry`.
 7. **The deny plant.** It uses a one-crate manifest with a `file://` git dependency under a scratch `CARGO_HOME`, in place of a copy of the binding workspace. The copy would change the lock and could reach the registry index. The scratch home leaves nothing under `~/.cargo`. cargo-deny exits 8 on a sources failure, and the step pins 8 and `source-not-allowed`.
 
 ## Budgets
 
-Nonblank lines: production Rust 520 across three files, and `build.rs` 4. Package JavaScript and types 563: `index.js` 300, `index.d.ts` 233, `index.mjs` 22, and `loader.js` 8. Tests and helpers 758 across ten test files, and the runner `cases.mjs` 130. Scripts 116. Ratchets: Rust 524, `.js` 308, `.mjs` 740, `.ts` 272. Each equals its measured total.
+Nonblank lines: production Rust 539 across three files, and `build.rs` 4. Package JavaScript and types 563: `index.js` 300, `index.d.ts` 233, `index.mjs` 22, and `loader.js` 8. Tests and helpers 760 across ten test files, and the runner `cases.mjs` 130. Scripts 125. Ratchets: Rust 543, `.js` 308, `.mjs` 743, `.ts` 272. Each equals its measured total.
 
 ## Left
 
-- Code review by a fresh reviewer, including the new crates, the binding lock, deny's result, and the pack list.
-- A decision on finding 1 before the surface rung can pass.
-- The `lint` additions of finding 6, by the landing agent.
+- A fresh review of the second commit.
+
+## Review answers (second commit)
+
+- The `.mjs` and Rust ratchets equal their measured totals.
+- `check.sh` runs fmt, Clippy, and the Rust unit tests before any Node or cargo-deny step. A missing cargo-deny skips only the deny steps, and the check then ends with exit 77.
+- `engine()` runs through the one panic guard. `door::caught` holds the single `catch_unwind(`, and `guarded` uses it.
+- A kind refusal names the kind with an explicit word. The usage table pins "choose does not take a score question".
+- The ticket records the accepted departures: `maxRequests` sends 2, the throttle sentence has no prefix, `usage` is synchronous, R3-30 is a printed reason table, and `find` with `none` stays unproved under `sdlc/issues/2026-09-24-the-library-cannot-ask-find-none-or-per-question-parts.md`.

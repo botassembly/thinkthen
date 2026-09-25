@@ -66,16 +66,21 @@ type Answered = Result<String, Failure>;
 /// Run one body and write its envelope. The binding's one panic guard turns a
 /// panic into `defect`.
 pub(crate) fn guarded(body: impl FnOnce() -> Answered) -> String {
-    let answered = catch_unwind(AssertUnwindSafe(body)).unwrap_or_else(|_| {
+    match caught(body) {
+        Ok(raw) => format!("{{\"ok\":{raw}}}"),
+        Err(failure) => failure.envelope(),
+    }
+}
+
+/// The binding's one panic guard: a panic in `body` becomes `defect`, so no
+/// panic crosses into Node.
+pub(crate) fn caught<T>(body: impl FnOnce() -> Result<T, Failure>) -> Result<T, Failure> {
+    catch_unwind(AssertUnwindSafe(body)).unwrap_or_else(|_| {
         Err(Failure::of(
             ErrorKind::Defect,
             "defect: the Node binding panicked",
         ))
-    });
-    match answered {
-        Ok(raw) => format!("{{\"ok\":{raw}}}"),
-        Err(failure) => failure.envelope(),
-    }
+    })
 }
 
 /// One call as it crossed from JavaScript.
@@ -276,9 +281,22 @@ fn kind_of(op: &str, asked: LoadedQuestion) -> Result<LoadedQuestion, Failure> {
     if wanted {
         Ok(asked)
     } else {
-        Err(Failure::usage(
-            format!("{op} does not take a {kind:?} question").to_lowercase(),
-        ))
+        Err(Failure::usage(format!(
+            "{op} does not take a {} question",
+            kind_word(kind)
+        )))
+    }
+}
+
+/// The word a refusal uses for a question kind.
+const fn kind_word(kind: QuestionKind) -> &'static str {
+    match kind {
+        QuestionKind::Decide => "decide",
+        QuestionKind::Choose => "choose",
+        QuestionKind::Tag => "tag",
+        QuestionKind::Score => "score",
+        QuestionKind::Rank => "rank",
+        QuestionKind::Find => "find",
     }
 }
 
@@ -319,6 +337,10 @@ fn indexed(payload: &str) -> Result<Vec<Indexed>, Failure> {
 
 /// Build an engine from `EngineBuilder::from_env()` and the given options.
 pub(crate) fn engine(options: &str) -> Result<Engine, Failure> {
+    caught(|| built(options))
+}
+
+fn built(options: &str) -> Result<Engine, Failure> {
     let given: Map<String, Value> = serde_json::from_str(options)
         .map_err(|_| Failure::usage("new Engine takes one options object"))?;
     let mut builder = EngineBuilder::from_env()?;

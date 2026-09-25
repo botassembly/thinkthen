@@ -10,9 +10,39 @@ node_home="$HOME/.cache/thinkthen-toolchains/node-v22.22.3-linux-x64"
 step() { printf '== %s\n' "$*"; }
 fail() { echo "typescript: $*" >&2; exit 1; }
 
+step 'rust: format, lint, and unit tests with no Node'
+cargo fmt --check
+cargo clippy --quiet --locked --offline --all-targets -- -D warnings
+cargo test --quiet --lib --locked --offline
+
+step 'deny: the lock, then a git dependency meets the sources rule'
+plant=$(mktemp -d)
+trap 'rm -rf -- "$plant"' EXIT
+missing=
+if cargo deny --version >/dev/null 2>&1; then
+    cargo deny --offline --manifest-path Cargo.toml check --config "$repo/deny.toml" advisories bans licenses sources
+    # A file:// git source under a scratch CARGO_HOME: no network and no residue.
+    mkdir -p "$plant/dep/src" "$plant/copy/src"
+    printf '[package]\nname = "planted"\nversion = "0.0.1"\nedition = "2024"\nlicense = "MIT"\n' >"$plant/dep/Cargo.toml"
+    : >"$plant/dep/src/lib.rs"
+    : >"$plant/copy/src/lib.rs"
+    git -C "$plant/dep" init -q && git -C "$plant/dep" add -A
+    git -C "$plant/dep" -c user.name=plant -c user.email=plant@example.invalid commit -qm plant
+    printf '[package]\nname = "binding"\nversion = "0.0.1"\nedition = "2024"\nlicense = "MIT"\n[dependencies]\nplanted = { git = "file://%s/dep" }\n' "$plant" >"$plant/copy/Cargo.toml"
+    CARGO_HOME="$plant/home" cargo fetch --quiet --manifest-path "$plant/copy/Cargo.toml"
+    set +e
+    # cargo-deny exits with bit 8 set when the sources check fails.
+    CARGO_HOME="$plant/home" cargo deny --offline --manifest-path "$plant/copy/Cargo.toml" check --config "$repo/deny.toml" sources >"$plant/deny" 2>&1
+    code=$?
+    set -e
+    [ "$code" -eq 8 ] && grep -q source-not-allowed "$plant/deny" || fail "deny passed a git source (exit $code)"
+else
+    missing='cargo-deny'
+fi
+
 step 'toolchain'
-if [ ! -x "$node_home/bin/node" ] || ! cargo deny --version >/dev/null 2>&1; then
-    echo "typescript: not run; place Node with libraries/typescript/setup-toolchain.sh and install cargo-deny"
+if [ ! -x "$node_home/bin/node" ]; then
+    echo "typescript: not run; place Node with libraries/typescript/setup-toolchain.sh${missing:+ and install $missing}"
     exit 77
 fi
 PATH="$node_home/bin:$PATH"
@@ -22,31 +52,6 @@ step 'the backend and the command'
 (cd "$repo" && cargo build --quiet --locked --offline -p conformance-backend -p thinkthen)
 built="${CARGO_TARGET_DIR:-$repo/target}/debug"
 export THINKTHEN_TEST_BACKEND="$built/conformance-backend" THINKTHEN_TEST_COMMAND="$built/thinkthen"
-
-step 'rust: format, lint, deny, and unit tests with no Node'
-cargo fmt --check
-cargo clippy --quiet --locked --offline --all-targets -- -D warnings
-cargo deny --offline --manifest-path Cargo.toml check --config "$repo/deny.toml" advisories bans licenses sources
-cargo test --quiet --lib --locked --offline
-
-step 'the deny plant: a git dependency meets the sources rule'
-plant=$(mktemp -d)
-trap 'rm -rf -- "$plant"' EXIT
-# A file:// git source under a scratch CARGO_HOME: no network and no residue.
-mkdir -p "$plant/dep/src" "$plant/copy/src"
-printf '[package]\nname = "planted"\nversion = "0.0.1"\nedition = "2024"\nlicense = "MIT"\n' >"$plant/dep/Cargo.toml"
-: >"$plant/dep/src/lib.rs"
-: >"$plant/copy/src/lib.rs"
-git -C "$plant/dep" init -q && git -C "$plant/dep" add -A
-git -C "$plant/dep" -c user.name=plant -c user.email=plant@example.invalid commit -qm plant
-printf '[package]\nname = "binding"\nversion = "0.0.1"\nedition = "2024"\nlicense = "MIT"\n[dependencies]\nplanted = { git = "file://%s/dep" }\n' "$plant" >"$plant/copy/Cargo.toml"
-CARGO_HOME="$plant/home" cargo fetch --quiet --manifest-path "$plant/copy/Cargo.toml"
-set +e
-# cargo-deny exits with bit 8 set when the sources check fails.
-CARGO_HOME="$plant/home" cargo deny --offline --manifest-path "$plant/copy/Cargo.toml" check --config "$repo/deny.toml" sources >"$plant/deny" 2>&1
-code=$?
-set -e
-[ "$code" -eq 8 ] && grep -q source-not-allowed "$plant/deny" || fail "deny passed a git source (exit $code)"
 
 step 'package: npm ci and the addon'
 mkdir -p target/npm
@@ -97,4 +102,8 @@ node -e 'const d = require("./package.json").devDependencies; for (const [n, v] 
 for page in README.md index.d.ts; do
     grep -q 'No deadline is spelled null, left out, or -1.' "$page" || fail "$page lacks the deadline sentence"
 done
+if [ -n "$missing" ]; then
+    echo "typescript: not run; the steps above passed, and $missing is missing"
+    exit 77
+fi
 echo 'typescript: pass'

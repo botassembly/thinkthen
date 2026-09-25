@@ -79,6 +79,7 @@ const REFUSALS = [
   ],
   ["tt.rank({ decide: 'Refund?', threshold: 0.9 }, ['a', 'b'])", 'rank takes a decide question with no threshold'],
   ["tt.filter(tt.question({ decide: 'Refund?', threshold: [0.2, 0.8] }), ['a'])", 'filter does not take a banded question'],
+  ["tt.choose(tt.question({ score: 'How urgent?', levels: ['low', 'high'] }), 'x')", 'choose does not take a score question'],
   ["tt.decide_many('Refund?', ['a', 'b', '\\uD800c'])", 'record 2 holds a lone surrogate'],
   ["tt.decide_many('Refund?', ['a', 7])", 'record 1 is text'],
   ["tt.decide('   ', 'x')", "the question file's `decide`: a question is text, not white space"],

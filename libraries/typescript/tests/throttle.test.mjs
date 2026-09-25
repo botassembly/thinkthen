@@ -27,8 +27,9 @@ test('a running batch leaves the event loop free', async (t) => {
   const backend = await startBackend(t);
   const run = child(backend, `
     const records = Array.from({ length: 96 }, (_, at) => 'record ' + at);
-    const batch = tt.decide_many('Refund?', records);
+    // The clock starts before the call, so a door that blocks the JavaScript thread shows as drift.
     const began = performance.now();
+    const batch = tt.decide_many('Refund?', records);
     for (let tick = 0; tick < 30; tick += 1) await new Promise((done) => setTimeout(done, 10));
     const drift = performance.now() - began - 300;
     return { drift, answers: (await batch).length };`, { arm: 'arm/delay/100' });
