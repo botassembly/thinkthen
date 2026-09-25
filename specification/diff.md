@@ -50,7 +50,7 @@ Without a key value the effect is null. `gained` and `lost` count those effects.
 
 For counts `a` and `b`, with `n = a + b`: `p` is 1 when `n` is 0. Otherwise `p = min(1, 2 · Σ C(n, i) / 2ⁿ)` for `i` from 0 to `min(a, b)`. The port sums the terms in log space, and a unit test holds it to exact integer sums up to `n = 120` within a relative `1e-12`.
 
-**The prototype's narrow rule.** The prototype counted only wrong to right and right to wrong. Restoring it changes `discordant`, its unit test, the McNemar edge rows in `tests/diff.rs`, and the two `diff-choose` captures in one commit.
+**The prototype's narrow rule.** The prototype counted only wrong to right and right to wrong. Restoring it changes `discordant`, its unit test, the McNemar edge rows in `tests/diff.rs`, the two `diff-choose` captures, the McNemar block in `spec/diff.md`, and the fixtures README checksums and note in one commit.
 
 ## Output
 

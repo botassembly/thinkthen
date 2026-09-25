@@ -86,4 +86,4 @@ After merging origin/main at 0c38769e, with `THINKTHEN_API_KEY` unset. Each rung
 - Declining option 3: a null `mcnemar_p` when no test ran.
 - Declining option 5: exit 2 on differing digests, with an option to allow them.
 - Declining option 6: a `question_mismatch` member in the summary.
-- The wider McNemar rule. It counts a pair that moves between right and tied or not sure. Restoring the prototype's narrow rule reverses `discordant`, its unit test, the McNemar edge rows, and the two `diff-choose` captures.
+- The wider McNemar rule. It counts a pair that moves between right and tied or not sure. Restoring the prototype's narrow rule reverses `discordant`, its unit test, the McNemar edge rows, the two `diff-choose` captures, the McNemar block in `spec/diff.md`, and the fixtures README checksums and note.
