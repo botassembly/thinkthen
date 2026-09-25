@@ -6,7 +6,7 @@ opens: libraries/python sdlc/planning/libraries/python.md sdlc/planning/adr/0047
 
 # 0122: Support pandas columns and frames in the Python surface
 
-Status: ready once design review accepts it. It starts after ticket 0106 lands. Owner: Claude.
+Status: accepted 2026-09-25, signed by the queue owner (Claude) after the fourth review's ACCEPT at `8e2bbd63`. It starts after ticket 0106 lands. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it. The change widens a public surface, so the code reviewer names what it checked (repo `CLAUDE.md`).
 
@@ -123,7 +123,7 @@ Values are checked against the list form in the same child, or against fixed val
 
 - *One build.* 0106's `maturin develop --features probe` step stays unchanged. `pyproject.toml` sets `python-source = "."`. That step therefore places the abi3 extension inside `libraries/python/thinkthen/`, and the tests import the package from that folder. Nothing is installed into venv 2. `PYO3_PYTHON` stays on the main lane's venv, so pyo3 compiles once.
 - The pandas 2 lane is the last step of `check.sh`. It runs after `build-wheel.sh`, so every main-lane step has passed first.
-- It uses the same host Python the main lane found. Its venv lives beside the first under `~/.cache/thinkthen-toolchains/python/`, with its own cache key: the main key's input plus the pin file's name. The lane runs pytest with venv 2's python from `libraries/python/`, so it imports the same package folder and the same abi3 extension the main lane built.
+- It uses the same host Python the main lane found. Its venv lives beside the first under `~/.cache/thinkthen-toolchains/python/`, with its own cache key: the main key's input plus the pin file's name. The lane runs `python -m pytest` with venv 2's python from `libraries/python/`, so it imports the same package folder and the same abi3 extension the main lane built.
 - *Lane preconditions.* Before its tests, each lane checks one fact in one line of `check.sh` and stops with a named failure when it is false. The main lane checks that a pandas 3 `str` Series has `__arrow_c_stream__`. The pandas 2 lane checks that a pandas 2 Series lacks it. Both lanes also check that `thinkthen._thinkthen.__file__` lies inside `libraries/python/thinkthen/`, so each lane tests the extension this checkout built. These are pin checks and not tests.
 - The pandas 2 lane then runs `tests/test_pandas.py` and `tests/test_secrecy.py`.
 - A pin missing from uv's cache exits 77, and the rung reports "not run". A "not run" pandas 2 lane blocks landing. The landing record shows the pandas 2 lane's pass line with its pandas version, or the ticket does not land.
@@ -178,7 +178,7 @@ The rewritten rows of `test_inputs.py` and `test_door.py` replace the pandas ref
 
 ## The check it adds to the gate ladder
 
-No new rung. `libraries/python/check.sh` gains the pandas 2 lane and the two lane preconditions above. The main lane runs the new file with the rest of `tests/`. Every `cargo` and `maturin` step keeps `--locked` and `--offline`. The `surfaces` rung runs the script as before.
+No new rung. `libraries/python/check.sh` gains the pandas 2 lane and the lane preconditions above. The main lane runs the new file with the rest of `tests/`. Every `cargo` and `maturin` step keeps `--locked` and `--offline`. The `surfaces` rung runs the script as before.
 
 ## Pages
 
@@ -192,7 +192,7 @@ No new rung. `libraries/python/check.sh` gains the pandas 2 lane and the two lan
 
 Nonblank lines, counted as 0106 counts them.
 
-- Rust glue in `src/frame.rs`, `src/input.rs`, `src/engine.rs`, and `src/lib.rs`: at most 150 lines added. `PANDAS` and its refusal leave first, and the record names what they saved. The glue changes `refuse_container` and `is_column` to send a Series the package marked as pandas to the list reader, within this budget.
+- Rust glue in `src/frame.rs`, `src/input.rs`, `src/engine.rs`, and `src/lib.rs`: at most 150 lines added. `PANDAS` and its refusal leave first, and the record names what they saved. The glue changes `refuse_container` and `is_column` in `src/input.rs`, and `ask_column` in `src/frame.rs`, to send a Series the package marked as pandas to the list reader, within this budget.
 - `src/arrow/`: at most 40 lines added, for the `Cells` to Python values step. No `ffi.rs` file changes, and no `unsafe` is added.
 - Python package, `__init__.py` and `__init__.pyi`: at most 100 lines added.
 - Python tests: `tests/test_pandas.py` at most 500 lines. Edits to `test_inputs.py`, `test_door.py`, and `test_secrecy.py` at most 60 net lines.
@@ -253,5 +253,6 @@ Contract 3; state and timing 2; reach 2; proof 3; cost of error 3; total 13. Fin
 
 - Design review, 2026-09-25, at `fcf25242`: not accepted, with 2 high, 4 medium, and 4 low findings. It agreed with the dtypes, the refusals, the pandas-first check, and the rebuild without a pandas import. This version answers each finding: empty and all-null columns before any export, values by position on repeated labels, the `recognize` reading and its overturn line, categorical on the list reader, the pandas 2 lane as a landing condition, the `Exception`-only fallback, the one-build second lane, the test-gate trims, the non-`str` `on` and Series-without-`on=` rows, and the reason for the caller's name. It also records why pandas 3 uses the door. 
 - Re-review, 2026-09-25, at `8f5c2cb0`: not accepted, with 1 high, 2 medium, and 5 low findings. It confirmed the edge rows against pandas 3.0.6 and pyarrow 25.0.1 and confirmed 7 earlier findings answered. This version answers each: `recognize` on a pandas frame follows the ruling with a `names` column, the package makes the export call itself and hands Rust a one-shot holder, one `--profile dev` probe wheel serves both venvs, the pandas 2 lane runs last, an unhashable `on` has its row, the not-sure wording names NA and `None`, R1-6 and R2-11 are their edge rows, and the empty-frame dtype is pinned per version. 
-- Third review, 2026-09-25, at `dad3242f`: the design is sound, and every edge row matches pandas 3.0.6. It left three items. This version answers each: 0106's `maturin develop` step stays, and the pandas 2 lane runs from the same folder with a precondition on the extension's path. The frame checks run in the order hashable, one level, present, not repeated, no clash. An empty Series goes through the list reader, and Rust names its dtype. It also names the `refuse_container` and `is_column` change and the base `366220eb`. Re-review: pending.
+- Third review, 2026-09-25, at `dad3242f`: the design is sound, and every edge row matches pandas 3.0.6. It left three items. This version answers each: 0106's `maturin develop` step stays, and the pandas 2 lane runs from the same folder with a precondition on the extension's path. The frame checks run in the order hashable, one level, present, not repeated, no clash. An empty Series goes through the list reader, and Rust names its dtype. It also names the `refuse_container` and `is_column` change and the base `366220eb`.
+- Fourth review, 2026-09-25, at `8e2bbd63`: ACCEPT, with two wording notes. This version applies both: the budget note names `ask_column`, and the lane text says `python -m pytest` and "the lane preconditions above".
 - Code review: pending.
