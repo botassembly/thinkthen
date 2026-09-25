@@ -7,12 +7,13 @@
     reason = "the caller's file system is a DuckDB C API handle"
 )]
 
-use std::ffi::{CString, c_char};
+use std::ffi::CString;
 
 use libduckdb_sys as sys;
 
 use crate::engines::{Asked, Probe};
 use crate::errors::defect;
+use crate::ffi::owned_text;
 
 /// The most bytes one `@file` read takes: a question file is small, and a
 /// device such as `/dev/zero` never ends.
@@ -248,17 +249,4 @@ fn file_system(context: sys::duckdb_client_context) -> Option<sys::duckdb_file_s
     // SAFETY: a valid context.
     let system = unsafe { sys::duckdb_client_context_get_file_system(context) };
     (!system.is_null()).then_some(system)
-}
-
-/// Copy and free a string DuckDB allocated.
-fn owned_text(raw: *mut c_char) -> Option<String> {
-    if raw.is_null() {
-        return None;
-    }
-    // SAFETY: DuckDB returns a NUL-terminated string the caller frees.
-    unsafe {
-        let text = std::ffi::CStr::from_ptr(raw).to_string_lossy().into_owned();
-        sys::duckdb_free(raw.cast());
-        Some(text)
-    }
 }

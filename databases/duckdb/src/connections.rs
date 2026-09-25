@@ -139,6 +139,14 @@ static REAPER: AtomicBool = AtomicBool::new(false);
 static SLEEP_MS: AtomicU64 = AtomicU64::new(200);
 static CURSOR: AtomicUsize = AtomicUsize::new(0);
 static TICK: Mutex<()> = Mutex::new(());
+/// Set once the process begins exiting, so the reaper and the bridge stop
+/// touching connections the host tears down underneath them. `atexit`
+/// runs before static destruction, so the flag lands first.
+static SHUTDOWN: AtomicBool = AtomicBool::new(false);
+
+extern "C" fn stop_at_exit() {
+    SHUTDOWN.store(true, Ordering::SeqCst);
+}
 static POKE: Condvar = Condvar::new();
 
 /// How many entries one reaper pass reads, so a pass stays bounded.
@@ -186,15 +194,11 @@ fn attach_probe(connection: Conn) -> Result<Probe, String> {
 
 /// The kept connection of the caller's own database, as a counted guard.
 pub(crate) fn for_caller(files: &Files) -> Result<Kept, String> {
-    let (candidates, unprobed): (Vec<(Kept, Probe)>, bool) = {
-        let held = kept();
-        let candidates = held
-            .iter()
-            .filter(|entry| !entry.state.retired.load(Ordering::Acquire))
-            .filter_map(|entry| Some((entry.guard(), entry.probe.clone()?)))
-            .collect();
-        (candidates, held.iter().any(|entry| entry.probe.is_none()))
-    };
+    let candidates: Vec<(Kept, Probe)> = kept()
+        .iter()
+        .filter(|entry| !entry.state.retired.load(Ordering::Acquire))
+        .filter_map(|entry| Some((entry.guard(), entry.probe.clone()?)))
+        .collect();
     let mut hits: Vec<Kept> = candidates
         .into_iter()
         .filter(|(_, (probe, marker))| files.has_table(probe, marker))
@@ -205,11 +209,8 @@ pub(crate) fn for_caller(files: &Files) -> Result<Kept, String> {
         (Some(_), false) => Err(defect(
             "two loaded databases answered the caller's identity probe",
         )),
-        (None, _) if unprobed => Err(usage(
-            "no loaded database answers this connection's identity, and a loaded database could not attach its identity probe (a read-only database cannot carry one); relate runs on a writable database",
-        )),
-        (None, _) => Err(defect(
-            "the calling database's kept connection was released with its last caller; LOAD the extension again",
+        (None, _) => Err(usage(
+            "this connection's database answers no loaded identity probe, so relate cannot find its own connection; LOAD the extension again on a writable database, since a read-only database cannot carry a probe and a released one lost it",
         )),
     }
 }
@@ -217,13 +218,15 @@ pub(crate) fn for_caller(files: &Files) -> Result<Kept, String> {
 /// Interrupt every kept connection running a relate query. The SIGINT
 /// bridge thread calls this, never the handler.
 fn interrupt_busy() {
-    let busy: Vec<Conn> = kept()
-        .iter()
-        .filter(|entry| entry.state.busy.load(Ordering::Acquire))
-        .map(|entry| entry.connection)
-        .collect();
-    for connection in busy {
-        connection.interrupt();
+    if SHUTDOWN.load(Ordering::SeqCst) {
+        return;
+    }
+    // The registry stays locked across each interrupt, so the reaper cannot
+    // close a connection between the read and the interrupt.
+    for entry in kept().iter() {
+        if entry.state.busy.load(Ordering::Acquire) {
+            entry.connection.interrupt();
+        }
     }
 }
 
@@ -231,30 +234,37 @@ fn spawn_reaper() {
     if REAPER.swap(true, Ordering::SeqCst) {
         return;
     }
+    ffi::at_exit(stop_at_exit);
     let spawned = std::thread::Builder::new()
         .name("thinkthen-reaper".to_owned())
-        .spawn(|| {
-            loop {
-                let sleep = Duration::from_millis(SLEEP_MS.load(Ordering::Acquire));
-                let clock = TICK.lock().unwrap_or_else(PoisonError::into_inner);
-                drop(
-                    POKE.wait_timeout(clock, sleep)
-                        .unwrap_or_else(PoisonError::into_inner),
-                );
-                let next = if reap(false) > 0 {
-                    200
-                } else {
-                    SLEEP_MS
-                        .load(Ordering::Acquire)
-                        .saturating_mul(2)
-                        .min(2_000)
-                };
-                SLEEP_MS.store(next, Ordering::Release);
-            }
-        });
+        .spawn(|| while tick() {});
     if spawned.is_err() {
         REAPER.store(false, Ordering::SeqCst);
     }
+}
+
+/// One reaper wait and pass. False once the process is exiting, which
+/// ends the thread before any pass touches a closing database.
+fn tick() -> bool {
+    let sleep = Duration::from_millis(SLEEP_MS.load(Ordering::Acquire));
+    let clock = TICK.lock().unwrap_or_else(PoisonError::into_inner);
+    drop(
+        POKE.wait_timeout(clock, sleep)
+            .unwrap_or_else(PoisonError::into_inner),
+    );
+    if SHUTDOWN.load(Ordering::SeqCst) {
+        return false;
+    }
+    let next = if reap(false) > 0 {
+        200
+    } else {
+        SLEEP_MS
+            .load(Ordering::Acquire)
+            .saturating_mul(2)
+            .min(2_000)
+    };
+    SLEEP_MS.store(next, Ordering::Release);
+    true
 }
 
 /// One pass over a bounded slice of the registry. A database with no other
@@ -308,6 +318,18 @@ pub(crate) fn reap(force: bool) -> usize {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::atomic::Ordering;
+
+    /// Once `atexit` has run, the reaper's next tick ends its thread before
+    /// any pass. Dropping the flag check keeps the thread reaping.
+    #[test]
+    fn the_reaper_stops_once_the_process_exits() {
+        super::SLEEP_MS.store(1, Ordering::Release);
+        super::stop_at_exit();
+        assert!(!super::tick());
+        super::SHUTDOWN.store(false, Ordering::SeqCst);
+    }
+
     /// R5-26: identity names are 32 lowercase hex characters, and a
     /// thousand never repeat.
     #[test]

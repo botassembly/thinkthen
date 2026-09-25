@@ -90,21 +90,14 @@ unsafe extern "C" fn usage_scan(info: sys::duckdb_function_info, output: sys::du
 }
 
 pub(crate) fn register_usage(connection: sys::duckdb_connection) -> Result<(), String> {
-    // SAFETY: as in `register_scalar`.
-    unsafe {
-        let mut table = sys::duckdb_create_table_function();
-        sys::duckdb_table_function_set_name(table, c"thinkthen_usage".as_ptr());
-        sys::duckdb_table_function_set_bind(table, Some(usage_bind));
-        sys::duckdb_table_function_set_init(table, Some(usage_init));
-        sys::duckdb_table_function_set_function(table, Some(usage_scan));
-        let state = sys::duckdb_register_table_function(connection, table);
-        sys::duckdb_destroy_table_function(&raw mut table);
-        if state == sys::duckdb_state_DuckDBSuccess {
-            Ok(())
-        } else {
-            Err("thinkthen_usage did not register".to_owned())
-        }
-    }
+    crate::ffi::register_table(
+        connection,
+        c"thinkthen_usage",
+        &[],
+        usage_bind,
+        usage_init,
+        usage_scan,
+    )
 }
 
 // ---- thinkthen_warm(question, text) ----

@@ -128,7 +128,7 @@ fn read_rules(caller: &mut Caller, rules: Rules) -> Result<(Relate, bool), Strin
         Rules::Text(text) => text,
     };
     let (text, from_file_text) = match text.strip_prefix('@') {
-        Some(path) => (caller.file(path)?, true),
+        Some(path) => (caller.named_file(path, "rules file")?, true),
         None => (text, false),
     };
     let ask = Relate::from_json(&text).map_err(|error| {

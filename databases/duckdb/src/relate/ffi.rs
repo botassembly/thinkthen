@@ -6,7 +6,7 @@
     reason = "a table function is a DuckDB C API callback set"
 )]
 
-use std::ffi::{CStr, c_void};
+use std::ffi::c_void;
 
 use libduckdb_sys as sys;
 
@@ -14,7 +14,7 @@ use super::{Bound, COLUMNS, HOLDING, Row, Rules, SECONDS, bind, rows};
 use crate::errors::{defect, guarded};
 #[cfg(feature = "test-hooks")]
 use crate::ffi::Value;
-use crate::ffi::{Logical, Type, message, write};
+use crate::ffi::{Logical, Type, message, owned_text, register_table, write};
 use crate::questions::Files;
 
 /// One scan's rows, built on its first call, and how many it has sent.
@@ -26,18 +26,12 @@ struct Scan {
 
 /// A text parameter; NULL reads `None`.
 fn text(value: sys::duckdb_value) -> Option<String> {
-    // SAFETY: a live value; the string is freed once.
+    // SAFETY: a live value; `owned_text` frees the copy.
     unsafe {
         if value.is_null() || sys::duckdb_is_null_value(value) {
             return None;
         }
-        let raw = sys::duckdb_get_varchar(value);
-        if raw.is_null() {
-            return None;
-        }
-        let owned = CStr::from_ptr(raw).to_string_lossy().into_owned();
-        sys::duckdb_free(raw.cast());
-        Some(owned)
+        owned_text(sys::duckdb_get_varchar(value))
     }
 }
 
@@ -181,7 +175,7 @@ unsafe extern "C" fn relate_scan(info: sys::duckdb_function_info, output: sys::d
 
 /// Register `thinkthen_relate(query VARCHAR, rules ANY)` and its settings.
 pub(crate) fn register(connection: sys::duckdb_connection) -> Result<(), String> {
-    table(
+    register_table(
         connection,
         c"thinkthen_relate",
         &[Type::Text, Type::Any],
@@ -192,7 +186,7 @@ pub(crate) fn register(connection: sys::duckdb_connection) -> Result<(), String>
     crate::ffi::register_setting(connection, SECONDS, &Type::BigInt)?;
     crate::ffi::register_setting(connection, HOLDING, &Type::BigInt)?;
     #[cfg(feature = "test-hooks")]
-    table(
+    register_table(
         connection,
         c"thinkthen_test_hook_reap",
         &[],
@@ -201,35 +195,6 @@ pub(crate) fn register(connection: sys::duckdb_connection) -> Result<(), String>
         reap_scan,
     )?;
     Ok(())
-}
-
-fn table(
-    connection: sys::duckdb_connection,
-    name: &CStr,
-    parameters: &[Type],
-    on_bind: unsafe extern "C" fn(sys::duckdb_bind_info),
-    on_init: unsafe extern "C" fn(sys::duckdb_init_info),
-    on_scan: unsafe extern "C" fn(sys::duckdb_function_info, sys::duckdb_data_chunk),
-) -> Result<(), String> {
-    // SAFETY: each created object is copied on register, then destroyed once.
-    unsafe {
-        let mut table = sys::duckdb_create_table_function();
-        sys::duckdb_table_function_set_name(table, name.as_ptr());
-        for of in parameters {
-            let made = Logical::new(of);
-            sys::duckdb_table_function_add_parameter(table, made.raw());
-        }
-        sys::duckdb_table_function_set_bind(table, Some(on_bind));
-        sys::duckdb_table_function_set_init(table, Some(on_init));
-        sys::duckdb_table_function_set_function(table, Some(on_scan));
-        let state = sys::duckdb_register_table_function(connection, table);
-        sys::duckdb_destroy_table_function(&raw mut table);
-        if state == sys::duckdb_state_DuckDBSuccess {
-            Ok(())
-        } else {
-            Err(format!("{name:?} did not register"))
-        }
-    }
 }
 
 #[cfg(feature = "test-hooks")]

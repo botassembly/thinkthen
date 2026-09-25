@@ -50,8 +50,15 @@ impl Caller {
         &self.files
     }
 
-    /// One `@file` text, opened once per init through the caller's files.
+    /// One question file's text, opened once per init through the caller's
+    /// files.
     pub(crate) fn file(&mut self, path: &str) -> Result<String, String> {
+        self.named_file(path, "question file")
+    }
+
+    /// One `@file` text, named `what` in its refusals: a question file, or
+    /// relate's rules file.
+    pub(crate) fn named_file(&mut self, path: &str, what: &str) -> Result<String, String> {
         if let Some(text) = self.read.get(path) {
             return Ok(text.clone());
         }
@@ -59,22 +66,22 @@ impl Caller {
             Opened::Text(text) => text,
             Opened::Missing => {
                 return Err(local(&format!(
-                    "the question file {path} was not read: it does not exist or could not be opened"
+                    "the {what} {path} was not read: it does not exist or could not be opened"
                 )));
             }
             Opened::TooLarge => {
                 return Err(local(&format!(
-                    "the question file {path} was not read: it holds more than 1 MiB"
+                    "the {what} {path} was not read: it holds more than 1 MiB"
                 )));
             }
             Opened::NotText => {
                 return Err(local(&format!(
-                    "the question file {path} was not read: it is not UTF-8 text"
+                    "the {what} {path} was not read: it is not UTF-8 text"
                 )));
             }
             Opened::Refused => {
                 return Err(local(&format!(
-                    "the question file {path} was not read: this database's file settings refuse it"
+                    "the {what} {path} was not read: this database's file settings refuse it"
                 )));
             }
         };

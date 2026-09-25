@@ -88,26 +88,31 @@ def r3_7_statements_that_write_or_attach_refuse():
 def r2_6_a_nested_relate_refuses_at_once():
     with Backend() as backend:
         inner = "SELECT * FROM thinkthen_relate(''SELECT id, name, kind FROM t'', [''works_for=person:organization''])"
-        started = time.monotonic()
-        got = run([TABLE, f"SELECT * FROM thinkthen_relate('SELECT source, relation, ''person'' FROM ({inner})', {WORKS})"], backend.base(), timeout=30)
-        expect(said(got[1]).split(";")[0], "thinkthen usage: the relate query calls thinkthen_relate while its own query is running", "a nested relate")
-        expect(time.monotonic() - started < 10, True, "refused promptly")
+        got = run(
+            [TABLE, "SELECT epoch_ms(now())", f"SELECT * FROM thinkthen_relate('SELECT source, relation, ''person'' FROM ({inner})', {WORKS})", "SELECT epoch_ms(now())"],
+            backend.base(),
+            timeout=30,
+        )
+        expect(said(got[2]).split(";")[0], "thinkthen usage: the relate query calls thinkthen_relate while its own query is running", "a nested relate")
+        took = rows(got[3])[0][0] - rows(got[1])[0][0]
+        expect(took < 1000, True, f"refused in {took} ms")
 
 
 @case
 def r3_12_more_than_255_rows_refuses_under_the_cap():
     with Backend() as backend:
-        started = time.monotonic()
         got = run(
             ["CREATE TABLE big AS SELECT i AS id, 'n' || i AS name, 'thing' AS kind FROM range(8000000) t(i)",
-             "SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM big', ['near'])"],
+             "SELECT epoch_ms(now())",
+             "SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM big', ['near'])",
+             "SELECT epoch_ms(now())"],
             backend.base(),
             timeout=120,
         )
-        elapsed = time.monotonic() - started
-        expect(said(got[1]), "thinkthen usage: the relate query returned more than 255 rows, and relate reads at most 255; add a WHERE or a LIMIT", "eight million rows")
+        expect(said(got[2]), "thinkthen usage: the relate query returned more than 255 rows, and relate reads at most 255; add a WHERE or a LIMIT", "eight million rows")
         expect(backend.count(), 0, "counted sends")
-        expect(elapsed < 60, True, f"the refusal came in {elapsed:.1f}s")
+        took = rows(got[3])[0][0] - rows(got[1])[0][0]
+        expect(took < 2000, True, f"the refusal came in {took} ms")
 
 
 @case

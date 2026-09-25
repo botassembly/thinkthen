@@ -84,7 +84,7 @@ Each re-proof runs against the real engine through a loopback backend in the sto
 - 0110's secrecy test gains every relate error message.
 - Decision 5's cache-folder test on relate's path, and one relate that reads `throttle 8 is already active for this process; use throttle 8 or drop the throttle argument` with zero counted requests, after an earlier call in the same process built an engine with throttle 8 and the session set throttle 4.
 - A single held relate gets `cancelled` within 100 ms of a SIGINT sent once `count` reads 1. The count stays 1 after release.
-- `SET thinkthen_throttle = 8` reaches relate. With `THINKTHEN_BASE_URL` pointed at the test's loopback backend, a relate over 16 rows holds 8 counted requests there. A second relate over the same rows answers from the `THINKTHEN_CACHE` folder, and the loopback count for that run reads 0.
+- `SET thinkthen_throttle = 8` reaches relate. After a scalar in the same process built the engine with throttle 8, a relate under `SET thinkthen_throttle = 4` reads `throttle 8 is already active for this process; use throttle 8 or drop the throttle argument` with zero counted requests. A second relate over 16 rows answers from the `THINKTHEN_CACHE` folder, and the loopback count for that run reads 0. Amended 2026-09-25: this line first asked a 16-row relate to hold 8 counted requests. Main's engine sends one relation's request chunks one at a time, and one chunk holds every question when no backend profile splits it, so a relate holds 1 request in flight (`sdlc/issues/2026-09-25-relate-sends-one-chunk-at-a-time.md`). The coordinator approved the change as queue owner on 2026-09-25, and Ian can overturn it.
 - The queue-wait message keeps the tag's sentence, and `relate_wait_timer.py` pins it.
 
 ## The check
@@ -134,7 +134,7 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Keeps: One kept connection per database, the reaper, the guard that allows one read-only `SELECT`, and the queue-wait sentence.
 - Changes: Relate reads entity rows, honours 0110's settings and its one process-wide throttle, reads rules files through the caller's own file system, runs on a worker, and uses a signal pipe. Its hooks sit behind `test-hooks`.
 - Proof: The two relate conformance cases, `cancelled` within 100 ms, throttle 8 reaching relate, the cache-folder probe on relate's path, and a cache hit on the second run, and the relate panic reading `defect`.
-- Defers: Temp-table and open-transaction visibility, relate between new and old rows, links to a known entity table, and settings for warm. Experiment 218's volatile-function row-cap probe carries forward as a regression case.
+- Defers: Temp-table and open-transaction visibility, relate between new and old rows, links to a known entity table, and settings for warm. Deferred on 2026-09-25 with the coordinator's approval: R3-12's 200 MB peak-growth bound, R4-22's counting view (the backend's count after release stands in for it), and R4-4's read-only half (a read-only database cannot attach its probe, and relate there reads the no-probe usage sentence). Experiment 218's volatile-function row-cap probe carries forward as a regression case.
 
 ## Changes after experiment 253
 

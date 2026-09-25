@@ -129,8 +129,8 @@ say([freed, edges(a), edges(b), refused])
         )
         freed, a_edges, b_edges, refused = got[0]
         expect([freed, a_edges, b_edges], [0, 4, 11], "freed, A's edges, B's edges")
-        expect(refused.split("thinkthen ")[-1].split(" was not read")[0].split("file ")[0], "local: the question ", "the rules file with access off")
-        expect(refused.endswith("this database's file settings refuse it"), True, f"the refusal: {refused}")
+        said_text = refused.split("thinkthen ", 1)[1]
+        expect(said_text.replace(said_text.split(" ")[4], "PATH", 1), "local: the rules file PATH was not read: this database's file settings refuse it", "the rules file with access off")
 
 
 @case
@@ -148,7 +148,7 @@ say([len(probe), len(name), edges(a)])
         )
         count, length, forged = got[0]
         expect([count, length], [1, len("thinkthen_instance_") + 32], "one probe of 32 hex characters")
-        expect(forged.split(": ", 1)[1], "thinkthen defect: the calling database's kept connection was released with its last caller; LOAD the extension again", "the forged relate")
+        expect(forged.split(": ", 1)[1], "thinkthen usage: this connection's database answers no loaded identity probe, so relate cannot find its own connection; LOAD the extension again on a writable database, since a read-only database cannot carry a probe and a released one lost it", "the forged relate")
 
 
 @case

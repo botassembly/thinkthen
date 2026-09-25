@@ -239,3 +239,9 @@ impl Files {
         }
     }
 }
+
+/// Run `stop` when the process exits.
+pub(crate) fn at_exit(stop: extern "C" fn()) {
+    // SAFETY: `stop` only stores to an atomic.
+    unsafe { libc::atexit(stop) };
+}

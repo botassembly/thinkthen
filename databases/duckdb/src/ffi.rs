@@ -5,7 +5,7 @@
 //! into DuckDB.
 #![allow(unsafe_code, reason = "the DuckDB extension API is a C API")]
 
-use std::ffi::{CString, c_char};
+use std::ffi::{CStr, CString, c_char};
 
 use libduckdb_sys as sys;
 
@@ -364,4 +364,47 @@ fn register_all(connection: sys::duckdb_connection) -> Result<(), String> {
     register_usage(connection)?;
     register_warm(connection)?;
     crate::relate::ffi::register(connection)
+}
+
+/// Register one table function with its parameters and callbacks.
+pub(crate) fn register_table(
+    connection: sys::duckdb_connection,
+    name: &CStr,
+    parameters: &[Type],
+    on_bind: unsafe extern "C" fn(sys::duckdb_bind_info),
+    on_init: unsafe extern "C" fn(sys::duckdb_init_info),
+    on_scan: unsafe extern "C" fn(sys::duckdb_function_info, sys::duckdb_data_chunk),
+) -> Result<(), String> {
+    // SAFETY: each created object is copied on register, then destroyed once.
+    unsafe {
+        let mut table = sys::duckdb_create_table_function();
+        sys::duckdb_table_function_set_name(table, name.as_ptr());
+        for of in parameters {
+            let made = Logical::new(of);
+            sys::duckdb_table_function_add_parameter(table, made.raw());
+        }
+        sys::duckdb_table_function_set_bind(table, Some(on_bind));
+        sys::duckdb_table_function_set_init(table, Some(on_init));
+        sys::duckdb_table_function_set_function(table, Some(on_scan));
+        let state = sys::duckdb_register_table_function(connection, table);
+        sys::duckdb_destroy_table_function(&raw mut table);
+        if state == sys::duckdb_state_DuckDBSuccess {
+            Ok(())
+        } else {
+            Err(format!("{name:?} did not register"))
+        }
+    }
+}
+
+/// Copy and free a string DuckDB allocated.
+pub(crate) fn owned_text(raw: *mut c_char) -> Option<String> {
+    if raw.is_null() {
+        return None;
+    }
+    // SAFETY: DuckDB returns a NUL-terminated string the caller frees.
+    unsafe {
+        let text = std::ffi::CStr::from_ptr(raw).to_string_lossy().into_owned();
+        sys::duckdb_free(raw.cast());
+        Some(text)
+    }
 }
