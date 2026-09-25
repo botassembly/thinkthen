@@ -483,6 +483,40 @@ def check_bindings() -> None:
             fail("binding", f"the planted {label} is refused")
 
 
+
+# Ticket 0120: the Polars binding's deny file is the root file plus four named
+# license exceptions, and its polars and polars-core pins are equal.
+POLARS_EXCEPTIONS = [{"crate": "foldhash", "allow": ["Zlib"]}, {"crate": "slotmap", "allow": ["Zlib"]},
+                     {"crate": "xxhash-rust", "allow": ["BSL-1.0"]},
+                     {"crate": "ar_archive_writer", "allow": ["Apache-2.0 WITH LLVM-exception"]}]
+
+
+def polars_failures(deny: dict, manifest: dict) -> list[str]:
+    root, licenses = read_toml("deny.toml"), deny.get("licenses", {})
+    held = []
+    if (licenses.get("exceptions") != POLARS_EXCEPTIONS
+            or {**deny, "licenses": {**licenses, "exceptions": []}} != root):
+        held.append("libraries/polars/deny.toml is the root file plus its four license exceptions")
+    pins = [manifest.get(table, {}).get(name, {}).get("version")
+            for table, name in (("dependencies", "polars"), ("dev-dependencies", "polars-core"))]
+    if pins[0] is None or pins[0] != pins[1]:
+        held.append("libraries/polars pins polars and polars-core to one exact version")
+    return held
+
+
+def check_polars_binding() -> None:
+    if not (REPO / "libraries/polars").is_dir():
+        return
+    deny, manifest = read_toml("libraries/polars/deny.toml"), read_toml("libraries/polars/Cargo.toml")
+    for failure in polars_failures(deny, manifest):
+        fail("binding", failure)
+    exceptions = [*deny.get("licenses", {}).get("exceptions", []), {"crate": "planted", "allow": ["Zlib"]}]
+    fifth = {**deny, "licenses": {**deny.get("licenses", {}), "exceptions": exceptions}}
+    core = {**manifest.get("dev-dependencies", {}).get("polars-core", {}), "version": "=0.0.1"}
+    unequal = {**manifest, "dev-dependencies": {**manifest.get("dev-dependencies", {}), "polars-core": core}}
+    if not polars_failures(fifth, manifest) or not polars_failures(deny, unequal):
+        fail("binding", "the planted fifth license exception and unequal Polars pins are refused")
+
 CORE_ALLOWED_DEPENDENCIES = {"serde", "serde_json", "sha2", "thiserror"}
 CORE_PROHIBITED_PATHS = (
     ("std", "fs"),
@@ -1525,6 +1559,7 @@ def main() -> int:
     check_clippy_configs()
     check_consumer()
     check_bindings()
+    check_polars_binding()
     check_crate_roots()
     check_core_policy()
     check_catalog_policy()
