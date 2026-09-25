@@ -70,7 +70,7 @@ This ticket touches only `libraries/python` and the pages that describe it. It b
 
 8. **What stays refused.** The pandas refusal of 0105 and 0106 leaves. The constant `PANDAS`, its tests, and its pinned sentence go. These stay refused before any send:
    - A pyarrow `Table`, a `RecordBatchReader`, an object that exposes only `__dataframe__`, a Polars `LazyFrame`, and any other frame passed with `on=`. The sentence becomes "annotate with on= takes a Polars or pandas DataFrame; a list of str takes no on=". Only the words "or pandas" change.
-   - A pandas or Polars column passed to `filter`, `rank`, `find`, or `relate`. A pandas Series passed to `annotate` or `recognize` without `on=`, as a Polars Series is today. Any frame passed to these verbs, or to `annotate` without `on=`. Each gets the list-only sentence, which gains "or pandas" in the same way.
+   - A pandas or Polars column passed to `filter`, `rank`, `find`, or `relate`. A pandas Series passed to `annotate` or `recognize` without `on=`, as a Polars Series is today. Any frame passed to these verbs, or to `annotate` without `on=`. Each gets the list-only sentence. That sentence gains "or pandas" in the same way.
    - A pandas Series passed to `details`. It keeps 0106's sentence "details reads one str, not a column".
    - A pandas frame passed to a column verb. It keeps 0106's sentence "a data frame is not a column; pass df[\"name\"], or annotate with on=".
    - Any other pandas object (decision 1).
