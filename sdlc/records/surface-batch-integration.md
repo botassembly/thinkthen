@@ -131,3 +131,32 @@ Python (0105, 0106) is not in this branch. Its merge was not made in this sessio
 ## Landed
 
 Main at `80f808ea` merged as `83fe0311`. It added one issue file, so no rung reran. `lint` had passed at `b59902cc`. Main then fast-forwarded to the commit that adds this section, whose parent is `83fe0311`. Seven surfaces landed: C, Rust Polars, TypeScript, SQLite, Ruby, R, and PostgreSQL. Python and DuckDB follow in a second batch.
+
+## Python landed
+
+Ian ruled on 2026-09-25 that each ready surface lands without waiting for a batch (`sdlc/planning/one-line-plan-2026-09-25.md`). Python 0105 and 0106 then landed alone. DuckDB 0110 and 0118 are still being fixed.
+
+- Main at `07622d49` merged as `1389aa3e`. `ticket/0106-port-python-polars` at `366220eb`, which holds all of 0105, merged as `0cc74cbd`. The ADR 0047 Python sections and `sdlc/surfaces.txt` conflicted, and both sides were kept.
+- `69409b5b` adds `libraries/python` to `BINDING_DENY` with its one `target-lexicon` license exception, which Ian approved. It sets `libraries/python` landed and marks 0105 and 0106 landed. The 0105 asks for the `sources` deny call and the `file://` plant were already in the gate.
+- Plants in the real `libraries/python/deny.toml`: a second license exception turned red with "the root file plus its named licenses exceptions", and `yanked = "warn"` turned red with "the root file plus its named entries". The file was restored and touched.
+- The merge touched no workspace Rust, so `test` did not rerun. `lint` and `surfaces` each ran once under the heavy lock with the key unset at `69409b5b`, and both passed. All nine landed surfaces passed. Python ran 23 Rust unit tests and 46 Python tests, and its conformance was 50 pass, 0 fail, 4 not run, of 54.
+- Main at `c9a863fd` added only issue files. It merged as `8be229b2`, and no rung reran. Main then fast-forwarded to the commit that adds this section.
+
+## DuckDB landed
+
+DuckDB 0110 and 0118 landed under the same ruling as Python. With them, every surface in `sdlc/surfaces.txt` is landed.
+
+- Main at `1b66dbaf` merged as `bd640f72`. It touched no workspace Rust and no ladder script. `ticket/0118-duckdb-relate` at `b350556a`, which holds all of 0110 at `67cf3c8c`, merged cleanly as `a0288c76`.
+- `a9ae7e66` adds `databases/duckdb` to `BINDING_DENY` with its one `zlib-rs` Zlib license exception, which the coordinator approved as queue owner. It sets `databases/duckdb` landed and marks 0110 and 0118 landed. The same commit confirms the tools ratchet rises in both records: 0110 from 1288 to 1349, and 0118 from 1760 to 1821, for the 61-line fork test. The coordinator confirmed them as queue owner, and Ian can overturn that.
+- Plants in the real `databases/duckdb/deny.toml`: a second license exception turned red with "the root file plus its named licenses exceptions", and `yanked = "warn"` turned red with "the root file plus its named entries". The file was restored and touched.
+- No workspace Rust changed, so `test` did not rerun. `lint` and `surfaces` each ran once under the heavy lock with the key unset at `a9ae7e66`, and both passed. All ten landed surfaces passed. DuckDB passed 7 Rust unit tests and 77 check steps, and its conformance was 51 pass, 0 fail, 3 not run, of 54.
+- Main had not moved since the merge. Main then fast-forwarded to the commit that adds this section.
+
+## pandas landed
+
+Ticket 0122 landed after a fresh review's ACCEPT of fix commit `1ecdb4d5`.
+
+- Main at `82336e9a` merged as `780aad44`. `1ecdb4d5` merged cleanly as `e2264286`. It changed only `libraries/python` and sdlc pages, so `test` did not rerun.
+- `3060d27e` marks 0122 landed. Under the rule in `sdlc/issues/README.md`, it closes `2026-09-21-the-polars-shape-as-the-deck-shows-it.md` into `closed/`. The record names no other issue as settled. The environment issue stays open, because ticket 0127 owns it. The Polars clash issue stays open too. The site-samples issue also stays open: it names pandas, but its work belongs to a site ticket. The commit adds one deferred gap to the 0122 record: a metaclass that shadows `__mro__` with a non-tuple makes `top` panic on the stable Python interface.
+- `lint` and `surfaces` each ran once under the heavy lock with the key unset at `3060d27e`, and both passed. All ten surfaces passed. Python passed 23 Rust unit tests and 55 Python tests, with conformance 50 pass, 0 fail, 4 not run, of 54. The pandas 2 lane ran on pandas 2.3.3: 12 passed and 1 skipped. The skipped test is marked for pandas 3 only, because pandas 2 offers no Arrow export.
+- Main had not moved. Main then fast-forwarded to the commit that adds this section.

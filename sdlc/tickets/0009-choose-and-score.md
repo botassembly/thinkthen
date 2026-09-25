@@ -14,7 +14,7 @@ Status: landed
 
 ## Current Facts
 
-Tickets 0005 to 0007 landed the flat `decide`, the two variables, the live script, and the removal of profiles. The adapter translates the yes/no type alone. ADR 0009 item 2, accepted in ADR 0010, rules that a detailed result keeps the probability of every option or level and the vendor's `confidence`. `score` has no demo today. `sdlc/issues/2026-09-19-ideas-carried-from-the-design-captures.md` holds advice that belongs in the help of both verbs.
+Tickets 0005 to 0007 landed the flat `decide`, the two variables, the live script, and the removal of profiles. The adapter translates the yes/no type alone. ADR 0009 item 2, accepted in ADR 0010, rules that a detailed result keeps the probability of every option or level and the vendor's `confidence`. `score` has no demo today. `sdlc/issues/closed/2026-09-19-ideas-carried-from-the-design-captures.md` holds advice that belongs in the help of both verbs.
 
 ## Scope
 

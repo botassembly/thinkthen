@@ -17,6 +17,29 @@ from thinkthen import aio
 ok = await aio.decide("The command only reads files.", command)
 ```
 
+## As built (ticket 0105)
+
+The binding is `libraries/python`, the crate `thinkthen-python` over the public API (ADR 0047). `libraries/python/NOTES.md` records the port's decisions. The module functions read the environment's engine, and `tt.Engine` holds the ADR 0017 section 5 settings.
+
+```python
+import thinkthen as tt
+
+tt.decide("Is this a complaint?", text)
+refund = tt.question(decide="Does the customer ask for a refund?", threshold=(0.2, 0.8))
+tt.decide_many(refund, texts)
+
+engine = tt.Engine(throttle=8, cache=False)
+engine.decide_many(refund, texts)
+```
+
+Where the build differs from the goals below:
+
+- Ctrl-C comes from a worker thread, not the engine's poll. Every call runs on a detachable worker, and the calling thread checks signals and the caller's token every 50 ms. A stop raises `Cancelled` within one tick for a single send and for a batch. The tests hold the reply on the backend's held arm and measure under 100 ms.
+- `details` is its own function, and it returns the command's `--details` document as a `dict`. No verb takes `details=True`.
+- `thinkthen.aio` is not built. Ticket 0105 excludes async forms.
+- A pandas `Series` or `DataFrame` works in the same verbs and comes back as pandas, with the caller's index (ADR 0017, 2026-09-25 amendment, ticket 0122). A Polars `Series` or another Arrow column is read in place for `decide`, `decide_many`, `choose`, `score`, and `tag`, in one engine call (ticket 0106). `annotate` and `recognize` read a Polars `DataFrame` with `on=`. `filter`, `rank`, `find`, and `relate` stay on lists.
+- The wheel claims Python 3.10 through `abi3-py310`. The gate runs on 3.12 or later, because the test pins need it. Release wheels own a run on each claimed Python.
+
 ## Goals
 
 - One compiled module, and nothing heavy imported beside it.
@@ -35,7 +58,7 @@ ok = await aio.decide("The command only reads files.", command)
 - No pydantic, httpx, requests, or vendor SDK. Each costs import time and a resolver conflict.
 - No `__bool__` that raises under a single cut. A cut has two outcomes, and refusing the boolean throws away Python's best line.
 - No dict tree and no JSON text built in Python for the bare answer. The engine already holds the value.
-- No thread pool in Python. The lock serializes it, and the engine already runs requests at the width `jobs` names.
+- No thread pool in Python. The lock serializes it, and the engine already runs requests at the throttle `tt.Engine(throttle=)` names.
 - No pure-Python fallback. It drifts, and the digest must match the other surfaces.
 
 ## Where this language wastes time

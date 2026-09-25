@@ -14,7 +14,7 @@ Review route: a fresh read-only Claude session reviews this design and the final
 
 `thinkthen audit RESULTS KEY` grades saved `decide` and `choose` answers against an answer key. It prints agreement with a Wilson interval, both disagreement directions, AUC, calibration, a coverage curve, and a suggested cut tuned on one part and checked on the other. It sends no request and reads no key.
 
-Ian's ruling of 2026-09-24 (`sdlc/issues/2026-09-24-audit-and-diff-move-into-0-1.md`) moves audit into 0.1. It keeps the rest of the 2026-09-23 issue: the name, a subcommand beside `status` and `cache`, and the Beatles Bench prototype as the definition.
+Ian's ruling of 2026-09-24 (`sdlc/issues/closed/2026-09-24-audit-and-diff-move-into-0-1.md`) moves audit into 0.1. It keeps the rest of the 2026-09-23 issue: the name, a subcommand beside `status` and `cache`, and the Beatles Bench prototype as the definition.
 
 The definition is `scripts/tools/measure.py` in the private `botassembly/beatles-bench` repository at commit `be7cea2e4aa41097e7f629e35b62dadedeaca544`, with its `tests/test_measure.py` and `scripts/tools/README.md`. The prototype code did not change through `18c0dc8`. Where this page and the prototype disagree, the golden files decide. "Departures" lists every known difference.
 
@@ -254,7 +254,7 @@ No golden reaches these. Each is the agent's decision, and Ian can overturn it.
 
 ## Builder note: keep the formats open
 
-`sdlc/issues/2026-09-24-audit-and-diff-needs-for-graded-agent-runs.md` lists four needs for grading agent runs after 0.1. None enters 0.1, and nothing here changes a golden or an accepted input. Keep three things open.
+`sdlc/issues/closed/2026-09-24-audit-and-diff-needs-for-graded-agent-runs.md` lists four needs for grading agent runs after 0.1. None enters 0.1, and nothing here changes a golden or an accepted input. Keep three things open.
 
 - The key reader ignores members it does not use, beside `id`, `value`, and `part`. The result reader already ignores `meta` and other unused members. A test pins one extra member in a key line and one in a result line.
 - The duplicate identity (answer name, record id, text) lives in one core function, so a sample key can join it later.
@@ -291,6 +291,6 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 - Keeps: The port keeps the prototype's command grammar, math, output members, table words, and seeded split. The eight audit goldens and the three table captures decide any disagreement.
 - Changes: The port refuses bad numbers, duplicate JSON members, non-finite values, bad pointers, and out-of-range options. Its failures name only the input's role and a line number. "Departures" lists every change.
 - Proof: The eight goldens, the extra captures, and the three table captures match. Hand-checked core tests come from `test_measure.py`. Each planted bug in "Acceptance" turns a test red. A loopback listener counts zero requests, and a canary key never appears in output.
-- Defers: The agent-run grading needs in `sdlc/issues/2026-09-24-audit-and-diff-needs-for-graded-agent-runs.md`, reading a recording folder directly, a `schema` member, and other verbs wait until after 0.1. Naming the private repository waits for Ian's answer on the open item. Two known limits stay as the prototype has them. Binned calibration error is biased upward under resampling, so its bootstrap interval can exclude its own point value (`experiments/249-jev-answer-audit/README.md`, step 3). A tie at the top counts as `tied` apart, where experiment 249 scored it wrong.
+- Defers: The agent-run grading needs in `sdlc/issues/closed/2026-09-24-audit-and-diff-needs-for-graded-agent-runs.md`, reading a recording folder directly, a `schema` member, and other verbs wait until after 0.1. Naming the private repository waits for Ian's answer on the open item. Two known limits stay as the prototype has them. Binned calibration error is biased upward under resampling, so its bootstrap interval can exclude its own point value (`experiments/249-jev-answer-audit/README.md`, step 3). A tie at the top counts as `tied` apart, where experiment 249 scored it wrong.
 
 Amended 2026-09-24: the ADR 0017 amendment of that date on main renames the width setting to the throttle. This ticket names no width. Any public name or text it writes uses the throttle.

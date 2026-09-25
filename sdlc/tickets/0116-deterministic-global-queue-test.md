@@ -10,7 +10,7 @@ Status: landed. Owner: Claude. The review accepted it (`sdlc/records/0116-review
 
 ## Outcome and authority
 
-`annotate::scheduling::one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32` fails on a loaded machine (`sdlc/issues/2026-09-24-the-global-queue-concurrency-check-fails-under-load.md`). The listener holds each document request for 25 ms, and the test asserts that two overlapped. A loaded machine sends them further apart. This quick fix changes only test code.
+`annotate::scheduling::one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32` fails on a loaded machine (`sdlc/issues/closed/2026-09-24-the-global-queue-concurrency-check-fails-under-load.md`). The listener holds each document request for 25 ms, and the test asserts that two overlapped. A loaded machine sends them further apart. This quick fix changes only test code.
 
 ## Work
 

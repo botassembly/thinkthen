@@ -14,7 +14,7 @@ A cache or recording folder cannot silently become cold because the backend inte
 
 ## Current facts
 
-An entry name covers the adapter, resolved URL, and request bytes. The folder records none of that identity separately. A stopped run resumed with another address therefore misses every entry and pays for the whole run again. The incident in `sdlc/issues/2026-09-21-a-cache-resume-under-a-different-address-silently-re-bills-everything.md` sent twenty unintended requests this way. The same issue records the unclear replay-miss sentence.
+An entry name covers the adapter, resolved URL, and request bytes. The folder records none of that identity separately. A stopped run resumed with another address therefore misses every entry and pays for the whole run again. The incident in `sdlc/issues/closed/2026-09-21-a-cache-resume-under-a-different-address-silently-re-bills-everything.md` sent twenty unintended requests this way. The same issue records the unclear replay-miss sentence.
 
 Ticket 0061 made entry installation durable, ticket 0062 put the cache on by default, and ticket 0064 exposed sends after they happen. This ticket prevents the address mistake before a send. Ian can overturn the compatibility boundary for old folders.
 

@@ -29,7 +29,7 @@ Smallest fix: add `request` to the single-verb `meta` table, the same digest `an
 
 ### 2. Nothing bounds what a repeated caller spends
 
-Filed already at `2026-09-20-a-status-command-for-configuration-and-usage.md` and item 1 of `2026-09-21-where-a-user-could-lose-trust-a-first-list.md`. That page recommends a stateless `--max-requests N` and no ledger in 0.1, because the price argument suits one command. Ian said on 2026-09-21 that he may not care about a cap.
+Filed already at `closed/2026-09-20-a-status-command-for-configuration-and-usage.md` and item 1 of `closed/2026-09-21-where-a-user-could-lose-trust-a-first-list.md`. That page recommends a stateless `--max-requests N` and no ledger in 0.1, because the price argument suits one command. Ian said on 2026-09-21 that he may not care about a cap.
 
 A repeated caller is a different case, and the ruling of 2026-09-21 changed what it costs. Ian ruled that the cache and the configuration live in the XDG folders and that "never writes a file the user did not name" gains one stated exception for the tool's own XDG folders. The objection that a ledger needs a folder the user never chose is therefore gone.
 
@@ -47,9 +47,9 @@ Three parts of the item stand:
 
 - **It prints one request and never the rest.** Three records in, one request out, with nothing naming the number that was left.
 - **It prints no request count.** A caller cannot see the size of the job before it starts.
-- **It accepts a `--jobs` value the live run refuses**, which `2026-09-21-a-refused-request-hides-the-backends-reason.md` already records.
+- **It accepts a `--jobs` value the live run refuses**, which `closed/2026-09-21-a-refused-request-hides-the-backends-reason.md` already records.
 
-The count matters more than this page first said. `recognize` and `relate` both send many questions in one request, and both designs depend on a printed request count and pair count. `2026-09-20-a-status-command-for-configuration-and-usage.md` already asks for the count in one place. A caller that must bound its own spend needs it in the dry run.
+The count matters more than this page first said. `recognize` and `relate` both send many questions in one request, and both designs depend on a printed request count and pair count. `closed/2026-09-20-a-status-command-for-configuration-and-usage.md` already asks for the count in one place. A caller that must bound its own spend needs it in the dry run.
 
 Wave 1.5 reproduced this concretely: `--dry-run` accepts a JSONL file whose third record is invalid (exit 0) where the live run refuses at record 3 (exit 2). Found by experiment 218, wave 1.5.
 
@@ -67,7 +67,7 @@ A question set is one request, and today a failure ends the record. For a set wi
 
 What is needed is a marker of its own on that answer, plus a failure count in `meta`, with a transport or auth failure still ending the run. The rule that a failure is never a `null` holds and gets sharper: a failure is a third thing, distinct from yes, no, and not sure.
 
-This is more urgent than a robustness nicety. `recognize` and `relate` send many questions in one request, so one refused question inside a good request is their everyday case, and the recognize experiments found that one refused word loses the whole name. For the frequency, `2026-09-20-the-strict-probability-total-refused-two-live-replies-in-about-thirty.md` refused about two live replies in thirty, which is about one in fifteen.
+This is more urgent than a robustness nicety. `recognize` and `relate` send many questions in one request, so one refused question inside a good request is their everyday case, and the recognize experiments found that one refused word loses the whole name. For the frequency, `closed/2026-09-20-the-strict-probability-total-refused-two-live-replies-in-about-thirty.md` refused about two live replies in thirty, which is about one in fifteen.
 
 ## What this does not ask for
 
@@ -161,7 +161,7 @@ Measured stage output sizes, which are the evidence a gate would judge (136 outp
 
 The spread is 40 bytes to 1.4 MB, a range of about 36,000 to 1. One request at 1.4 MB is roughly 350,000 tokens, five times over the vendor's 64,000 limit, and a count-based ceiling lets that call through.
 
-So the ceiling needs two parts: a running count for the loop, and an input-size guard that refuses before the send. The second is the one that matters, and it is the pre-flight check `2026-09-21-size-cost-and-other-backends-what-the-manual-and-the-tests-must-carry.md` already asks for.
+So the ceiling needs two parts: a running count for the loop, and an input-size guard that refuses before the send. The second is the one that matters, and it is the pre-flight check `2026-09-25-docs-how-tos-and-spec-claims-owed.md` already asks for.
 
 This also settles a caller-side design rule. A gate must never pipe a raw stage output at a judge, because the p90 is 16 KB and the tail is 1.4 MB. The manifest has to select and bound, the way the `thruwire/foreman` experiment bounds a diff at 20,000 characters and each output tail at 12,000.
 
@@ -185,6 +185,6 @@ The whole record is already a separate field. In record mode, `--details` carrie
 
 The honest answer is none. Botassembly has never run a judgment. The b03 experiment found no `chose`, `loop_done`, `subflow_call`, or `fanout_done` event in 2,039 records, and every check in the 2,040 runs measured above is a checklist, a schema, or a gate script.
 
-The nearest real number is on the ThinkThen side, and it argues for the product side's position. `2026-09-20-the-strict-probability-total-refused-two-live-replies-in-about-thirty.md` refused about two live replies in thirty, about one in fifteen, and that is a whole-reply refusal. If one bad question kills the reply, a ten-question `recognize` request fails about one time in fifteen.
+The nearest real number is on the ThinkThen side, and it argues for the product side's position. `closed/2026-09-20-the-strict-probability-total-refused-two-live-replies-in-about-thirty.md` refused about two live replies in thirty, about one in fifteen, and that is a whole-reply refusal. If one bad question kills the reply, a ten-question `recognize` request fails about one time in fifteen.
 
 That is the everyday case, and it is why the marker for a failed question belongs before `recognize` and `relate` land and not after.

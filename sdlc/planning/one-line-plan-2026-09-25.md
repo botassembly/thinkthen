@@ -19,7 +19,7 @@ The frozen `surfaces-wave7` tag holds all nine surfaces, about 63,000 lines. Eac
 
 ## Ian's ruling on SQL spending, 2026-09-25
 
-In SQL each row is its own engine call, so `max_requests` caps nothing on a large query (`sdlc/issues/2026-09-25-sqlite-max-requests-caps-nothing-per-statement.md` on ticket 0109). Ian chose a cap per process. SQLite, DuckDB, and PostgreSQL each add a total setting (`thinkthen_max_requests_total`, spelled the host's way), unset by default. Before each engine call the extension takes the requests its engines in this process have sent, refuses as `usage` with zero sends once the total is spent, and otherwise passes the remaining budget as that call's `max_requests`. The cap then holds to within the call's retries. A forked child starts from zero, and each README says so.
+In SQL each row is its own engine call, so `max_requests` caps nothing on a large query (`sdlc/issues/closed/2026-09-25-sqlite-max-requests-caps-nothing-per-statement.md` on ticket 0109). Ian chose a cap per process. SQLite, DuckDB, and PostgreSQL each add a total setting (`thinkthen_max_requests_total`, spelled the host's way), unset by default. Before each engine call the extension takes the requests its engines in this process have sent, refuses as `usage` with zero sends once the total is spent, and otherwise passes the remaining budget as that call's `max_requests`. The cap then holds to within the call's retries. A forked child starts from zero, and each README says so.
 
 ## Ian's ruling on pandas, 2026-09-25
 
@@ -30,7 +30,7 @@ Ian ruled that pandas is supported fully in 0.1. This overturns the 2026-09-21 l
 - pandas 2 and pandas 3 both work. A pandas 2 object column crosses at list speed, and the page says so.
 - `import thinkthen` still imports neither pandas nor Polars.
 
-Claude offered a partial version with columns only and frames refused, and recommended against it. A pandas user's first try is a whole frame, and a bare list back invites the lost-index bug R3-19 found. Ticket 0122 carries the work. It starts after 0106 lands, and it touches only `libraries/python`. It reuses the 2026-09-21 checks in `sdlc/issues/2026-09-21-pandas-is-supported-only-when-the-library-team-proves-it.md` as its starting proof.
+Claude offered a partial version with columns only and frames refused, and recommended against it. A pandas user's first try is a whole frame, and a bare list back invites the lost-index bug R3-19 found. Ticket 0122 carries the work. It starts after 0106 lands, and it touches only `libraries/python`. It reuses the 2026-09-21 checks in `sdlc/issues/closed/2026-09-21-pandas-is-supported-only-when-the-library-team-proves-it.md` as its starting proof.
 
 ## Landed, 2026-09-25
 
@@ -39,3 +39,33 @@ Seven surfaces landed together on main at `eb3fae21`: C 0094, Rust Polars 0120, 
 ## Ian's ruling on landing, 2026-09-25
 
 Ian ruled: "You decide everything. Whatever's most efficient, you can merge whatever you want to merge. Whatever is ready, you do it." Claude lands each reviewed, checked surface as soon as it is ready and needs no batch. Python 0105 and 0106 land next, with `libraries/python/deny.toml` carrying the `target-lexicon` exception Ian approved the same day.
+
+## The 0.1 queue after the surfaces, 2026-09-25
+
+All ten surfaces are on main at `534b4eb5`. Claude works section A of `sdlc/planning/issue-backlog-2026-09-25.md` with one owner per ticket. Tickets that touch different files run in parallel, and their builds take turns under the heavy lock.
+
+- 0123: relate splits requests to fit the backend (backlog A3).
+- 0124: the answer cache's three fixes (A2).
+- 0125: audit is complete, and diff warns when nothing pairs (A6 and A4).
+- 0126: command wording, help, and the wrong doc claims (A7 and the first part of A8). It also states in the docs that `status` counts only command spend today (A5, the docs half).
+- 0127: test harness fixes before 0119 (A9). Test children get an allow-listed environment and never inherit the shell.
+- 0128: release and install (A10), with publishing through GitHub Actions under Ian's ruling.
+- 0129: warm takes the question file decide uses and ignores its not-sure range (`2026-09-25-warm-refuses-the-question-file-decide-uses.md`).
+
+After pandas 0122 lands: the Python Polars cells fix (A1), spend recorded by the libraries (A5), removing settings that do nothing, and Polars as an optional feature of `thinkthen`. They touch the Python code or every surface.
+
+Packing is in 0.1, following the marketing request and Ian's "everything is in 0.1". Its design ticket starts when experiment 261 reports. It adds pack as a setting on every surface, and a design record picks the default. The default stays at one row per request until that record rules. Ian can overturn this.
+
+0119 runs after 0127 lands. The release build runs last.
+
+## Ian's ruling on scope, 2026-09-25
+
+Ian ruled: "Yep, everything gets into 0.1." Claude reads this to cover section C of `sdlc/planning/issue-backlog-2026-09-25.md` too:
+- the public library API gaps, items 1 to 7
+- recognize and relate items 3 to 8
+- the nine later docs pages
+- test harness items 5 to 10
+- the five feature ideas
+- the site samples and pages
+
+Section A goes first. Section C follows in tickets that don't collide, before 0119 and the release build. Packing is in. Ian can narrow this reading.

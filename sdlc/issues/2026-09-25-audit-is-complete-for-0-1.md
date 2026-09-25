@@ -12,7 +12,7 @@ Ian wants `audit` right for 0.1. It grades every function type, scores by the me
 This overturns two earlier limits:
 
 - Ticket 0113 defers verbs other than `decide` and `choose` "until after 0.1".
-- `2026-09-24-audit-and-diff-needs-for-graded-agent-runs.md` holds graded scores for after 0.1.
+- `closed/2026-09-24-audit-and-diff-needs-for-graded-agent-runs.md` holds graded scores for after 0.1.
 
 Its other three needs stay after 0.1: cost per row, repeated samples, and run identity.
 
@@ -37,7 +37,7 @@ Today audit grades `decide` and `choose` and refuses any other verb at exit 2 ([
 | `decide` | yes or no | Done today | The yes/no cut |
 | `filter` | yes or no | As `decide`, from `decide --details` or a filter run's detailed rows. Kept rows alone cannot show misses | The cut |
 | `choose` | the right option | Done today | The cut to reach a target. Option weights are open, see below |
-| `find` | the right candidate, or `none` | As `choose`, `none` included. Blocked until `2026-09-25-find-details-keys-probabilities-by-generated-ids-it-never-maps.md` is fixed | The cut |
+| `find` | the right candidate, or `none` | As `choose`, `none` included. Blocked until `2026-09-25-docs-how-tos-and-spec-claims-owed.md` is fixed | The cut |
 | `tag` | the labels that apply | One group per label, graded as yes/no. The labels ride in one request, so their errors move together and are never pooled | One cut per label, or one shared cut |
 | `score` | the right level | Exact-level agreement and the mean distance in levels. A miss by one level is closer than a miss by two | The cuts between levels |
 | `rank` | the relevant records, or an order | Measures of order, such as how many relevant records reach the top N | None. `rank` takes no cut |
@@ -110,6 +110,6 @@ The filed recommendation was 1 first and 2 if users ask.
 
 ## Timing
 
-- Ticket 0113 (`ticket/0113-audit-command`) is reviewed and holds the prototype port for `decide` and `choose`. Whether it lands first and one follow-on ticket builds this issue, or 0113 grows, is the owner's call.
-- Either way, everything here ships in 0.1. The Beatles Bench goldens stay the definition of today's behavior. New behavior gets new goldens.
+- Tickets 0113 (audit) and 0114 (diff) landed on main with the prototype's `decide` and `choose` grading. A new ticket builds this issue on top of them.
+- Everything here ships in 0.1. The Beatles Bench goldens stay the definition of today's behavior. New behavior gets new goldens.
 - Ian can overturn any design point above. The ruling that audit is complete in 0.1 is his.

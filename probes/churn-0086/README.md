@@ -1,6 +1,6 @@
 # Engine churn, ticket 0086
 
-This probe carries G3 and R7-1 from `sdlc/issues/2026-09-23-surfaces-branch-error-index.md`. Through the C door, 32 threads over 70 engines, each engine with its own timeout, against a refused port, crashed the stand-in in 1 of 83 runs and in 2 of 104 runs. Both crashes were a SIGSEGV in a new thread's start (`sdlc/issues/2026-09-23-the-c-door-churn-still-crashes-in-a-new-threads-start.md` at tag `surfaces-wave7-final`).
+This probe carries G3 and R7-1 from `sdlc/issues/closed/2026-09-23-surfaces-branch-error-index.md`. Through the C door, 32 threads over 70 engines, each engine with its own timeout, against a refused port, crashed the stand-in in 1 of 83 runs and in 2 of 104 runs. Both crashes were a SIGSEGV in a new thread's start (`sdlc/issues/2026-09-23-the-c-door-churn-still-crashes-in-a-new-threads-start.md` at tag `surfaces-wave7-final`).
 
 `src/main.rs` runs that load through Rust: 32 threads share 70 engines and each thread makes 20,000 calls to a refused loopback port, 640,000 calls a run. One source drives two APIs. With the `standin` feature it drives the stand-in's Rust API at tag `surfaces-wave7-final`, where each engine gets its own transport timeout from 1,000 to 1,976 ms and no retry. Without it, it drives the public API of this checkout. The public API has no transport timeout, so each engine carries its own call deadline over the same 70 values instead. The run fails unless every call fails.
 

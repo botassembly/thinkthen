@@ -14,7 +14,7 @@ The recording contract says that a foreign-schema refusal may name the trusted f
 
 ## Current Facts
 
-Finding 3 in `sdlc/issues/2026-09-19-hands-on-test-pass-one.md` records the mismatch. `specification/recording.md` says the refusal names no schema. The binary exits 5 and says that this version reads `thinkthen.recording/1`, without repeating the entry's schema. The core error comment also incorrectly says that the message names no schema.
+Finding 3 in `sdlc/issues/closed/2026-09-19-hands-on-test-pass-one.md` records the mismatch. `specification/recording.md` says the refusal names no schema. The binary exits 5 and says that this version reads `thinkthen.recording/1`, without repeating the entry's schema. The core error comment also incorrectly says that the message names no schema.
 
 The core unit proof is complete: it pins the exact sentence and proves a hostile schema reaches neither display nor debug output. The shared secrecy integration sweep is incomplete. Its `VERBS` matrix covers `decide`, `choose`, and `score`, while `filter` and `rank` are now built. Its comment claims every command participates, and `rust-standards.md` requires a secrecy claim to cover every command and failure path.
 

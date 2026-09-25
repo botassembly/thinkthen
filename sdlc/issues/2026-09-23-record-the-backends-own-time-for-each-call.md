@@ -1,5 +1,7 @@
 # Record the backend's own time for each call
 
+Status: Open. Checked 2026-09-25: no backend time is recorded anywhere in `crates/` or `specification/`.
+
 Found in Beatles Bench, 2026-09-23. A benchmark needs to split each call's time into the model's work, the network, and our command. Today a run keeps none of it. The bench times the whole `thinkthen` process from outside, and those times were taken on a heavily loaded machine.
 
 ## What the backends send

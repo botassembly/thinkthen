@@ -10,7 +10,7 @@ Status: landed
 
 ## Outcome and authority
 
-Question files and annotate entries carry structured descriptions through the existing Rust parser, canonical digest, request encoder, and result path. Selected structured record evidence also remains JSON in the backend `state`. Ian authorized bounded tickets within the engine plan and explicitly settled levels, tag requests, and types in rulings 10–12 of `../issues/2026-09-21-the-question-file-cannot-carry-typesafes-structured-fields.md` at `90a544f`. Incoming main then added ruling 7 of `../issues/2026-09-22-what-the-vendors-founder-said-about-where-the-model-goes.md` and required the state half in this ticket. This ticket follows landed 0065/0068 and precedes private controls and recognition. ADR 0039 amends the settled question contract. Typed library builders stay with the library team.
+Question files and annotate entries carry structured descriptions through the existing Rust parser, canonical digest, request encoder, and result path. Selected structured record evidence also remains JSON in the backend `state`. Ian authorized bounded tickets within the engine plan and explicitly settled levels, tag requests, and types in rulings 10–12 of `../issues/closed/2026-09-21-the-question-file-cannot-carry-typesafes-structured-fields.md` at `90a544f`. Incoming main then added ruling 7 of `../issues/2026-09-22-what-the-vendors-founder-said-about-where-the-model-goes.md` and required the state half in this ticket. This ticket follows landed 0065/0068 and precedes private controls and recognition. ADR 0039 amends the settled question contract. Typed library builders stay with the library team.
 
 ## Design
 

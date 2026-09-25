@@ -360,6 +360,10 @@ BINDING_DENY = {
         {"crate": "xxhash-rust", "allow": ["BSL-1.0"]},
         {"crate": "ar_archive_writer", "allow": ["Apache-2.0 WITH LLVM-exception"]}])],
     "databases/sqlite": [FOLDHASH],
+    "databases/duckdb": [("licenses", "exceptions", [{"crate": "zlib-rs", "allow": ["Zlib"]}])],
+    # pyo3's build helper needs target-lexicon. Ian approved it on 2026-09-25 (ticket 0105).
+    "libraries/python": [("licenses", "exceptions", [
+        {"crate": "target-lexicon", "allow": ["Apache-2.0 WITH LLVM-exception"]}])],
     "libraries/r": [("advisories", "ignore", [{"id": "RUSTSEC-2024-0436"}])],
     "databases/postgresql": [FOLDHASH, ("advisories", "ignore", ["RUSTSEC-2021-0127"])],
 }

@@ -13,26 +13,26 @@
 - Recording files and folders were created group/world readable under a common umask — `sdlc/records/0004-record-and-replay-backend-exchanges.md`
 - Every read failure on a recording entry was reported as "no recording," hiding a corrupt file — `sdlc/records/0004-record-and-replay-backend-exchanges.md`
 - A failed rename left a temp file holding evidence behind on disk — `sdlc/records/0004-record-and-replay-backend-exchanges.md`
-- `sdlc/scripts/live` read `THINKTHEN_LIVE_LEDGER`, letting any caller redirect the spend limit to a throwaway file — `sdlc/issues/2026-09-19-review-leftovers-from-ticket-0006.md`
-- The demos script captured an empty `--replay` folder name from backticked prose and silently skipped the missing-folder guard — `sdlc/issues/2026-09-19-review-leftovers-from-ticket-0006.md`
-- A test harness file opened with `#![allow(dead_code)]`, a suppression the standards forbid — `sdlc/issues/2026-09-19-review-leftovers-from-ticket-0006.md`
+- `sdlc/scripts/live` read `THINKTHEN_LIVE_LEDGER`, letting any caller redirect the spend limit to a throwaway file — `sdlc/issues/closed/2026-09-19-review-leftovers-from-ticket-0006.md`
+- The demos script captured an empty `--replay` folder name from backticked prose and silently skipped the missing-folder guard — `sdlc/issues/closed/2026-09-19-review-leftovers-from-ticket-0006.md`
+- A test harness file opened with `#![allow(dead_code)]`, a suppression the standards forbid — `sdlc/issues/closed/2026-09-19-review-leftovers-from-ticket-0006.md`
 - A landed record reported the wrong ratchet number and demo count — `sdlc/records/0006-the-two-variables-the-live-script-and-the-first-green-demo.md` (Correction section)
-- `AGENTS.md` kept describing a key read from "its backend profile" after profiles were removed — `sdlc/issues/2026-09-19-agents-md-still-describes-profiles.md`
+- `AGENTS.md` kept describing a key read from "its backend profile" after profiles were removed — `sdlc/issues/closed/2026-09-19-agents-md-still-describes-profiles.md`
 - A "swept word" grep after removing profiles missed the bare words `profile` and `adapter`, leaving two stale sentences — `sdlc/records/0007-remove-profiles-and-the-configuration-surface.md`
-- A `jq` transform's `//` operator read `false` and a missing value alike, turning unresolved into "no" — `sdlc/records/0008-metric-recipes-over-live-decide-rows.md`, `sdlc/issues/2026-09-19-ideas-carried-from-the-design-captures.md`
-- Duplicate case ids were silently counted twice by four of five metric recipes — `sdlc/issues/2026-09-19-review-leftovers-from-ticket-0008.md`
+- A `jq` transform's `//` operator read `false` and a missing value alike, turning unresolved into "no" — `sdlc/records/0008-metric-recipes-over-live-decide-rows.md`, `sdlc/issues/closed/2026-09-19-ideas-carried-from-the-design-captures.md`
+- Duplicate case ids were silently counted twice by four of five metric recipes — `sdlc/issues/closed/2026-09-19-review-leftovers-from-ticket-0008.md`
 - A `jq` function parameter (`$name`) was evaluated once against the caller's input rather than per row, silently reporting zero coverage — `sdlc/records/0011-the-live-probe.md`
 - `select($old | has(.))` parsed and ran but was wrong, only failing at run time on real data — `sdlc/records/0008-metric-recipes-over-live-decide-rows.md`
-- A demo page printed a listing of `triage.sh` with no block asserting it, so it could rot silently — `sdlc/issues/2026-09-19-review-leftovers-from-ticket-0010.md`
-- A block under `set +e` let an earlier failure inside it pass unnoticed — `sdlc/issues/2026-09-19-review-leftovers-from-ticket-0010.md`
-- `probes/replay-check.sh` rotted silently; no rung ran it, so a schema drift went undetected until run by hand — `sdlc/issues/2026-09-19-replay-check-fails-on-meta-tool.md`
+- A demo page printed a listing of `triage.sh` with no block asserting it, so it could rot silently — `sdlc/issues/closed/2026-09-19-review-leftovers-from-ticket-0010.md`
+- A block under `set +e` let an earlier failure inside it pass unnoticed — `sdlc/issues/closed/2026-09-19-review-leftovers-from-ticket-0010.md`
+- `probes/replay-check.sh` rotted silently; no rung ran it, so a schema drift went undetected until run by hand — `sdlc/issues/closed/2026-09-19-replay-check-fails-on-meta-tool.md`
 - `specification/choose.md` stated "Reversing the option order changed none of fifty picks," disproven at a larger sample — `sdlc/planning/adr/0014-what-the-live-probe-changed.md`
 - `specification/score.md` and `rank.md` called rating "the weakest thing a decider model does," disproven by measurement — `sdlc/planning/adr/0014-what-the-live-probe-changed.md`
 - A base URL carrying a password would print on success and get written into a committed recording and plan — `sdlc/records/0006-the-two-variables-the-live-script-and-the-first-green-demo.md`
 - A base URL's trailing whitespace/newline (from `$(cat file)` or a `.env` line) was not trimmed before composing the address — `sdlc/records/0006-the-two-variables-the-live-script-and-the-first-green-demo.md`
 - Scheme matching was case-sensitive, wrongly refusing `HTTP://host/v1` — `sdlc/records/0006-the-two-variables-the-live-script-and-the-first-green-demo.md`
-- `unwrap_used` silently misses an unwrap whose error type is `Infallible` — `sdlc/issues/2026-09-18-two-lint-rules-do-not-hold-as-written.md`
-- `allow_attributes_without_reason` could not be `forbid`den workspace-wide as the standards claimed; clap's derive macro breaks under `forbid` — `sdlc/issues/2026-09-18-two-lint-rules-do-not-hold-as-written.md`
+- `unwrap_used` silently misses an unwrap whose error type is `Infallible` — `sdlc/issues/closed/2026-09-18-two-lint-rules-do-not-hold-as-written.md`
+- `allow_attributes_without_reason` could not be `forbid`den workspace-wide as the standards claimed; clap's derive macro breaks under `forbid` — `sdlc/issues/closed/2026-09-18-two-lint-rules-do-not-hold-as-written.md`
 - Demo pages used `--input FILE`, an unbuilt option, on every line, so a "green-in-spirit" page actually failed to parse — `sdlc/records/0005-reshape-decide-to-the-flat-surface.md`
 
 ## 2. Patterns

@@ -1,0 +1,4 @@
+target/
+dist/
+__pycache__/
+thinkthen/_thinkthen.abi3.so
