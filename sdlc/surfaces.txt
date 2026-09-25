@@ -10,4 +10,4 @@ libraries/ruby        landed
 libraries/r           landed
 databases/duckdb      planned
 databases/sqlite      landed
-databases/postgresql  planned
+databases/postgresql  landed

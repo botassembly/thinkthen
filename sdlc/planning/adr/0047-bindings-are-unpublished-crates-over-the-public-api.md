@@ -99,6 +99,20 @@ These rulings lived only in the tag's `NOTES.md` (R2-29). Ian can overturn each.
 - Every call that can send runs on a detachable worker. On an interrupt the calling thread returns at once, and the detached worker finishes the requests it already sent. That worker is the known exception to ADR 0017's rule that no thread outlives a call. It lives at most the 30-second request timeout and holds its throttle permits until then.
 - `rusqlite` brings `foldhash` 0.2.0 under the Zlib license. The root `deny.toml` does not allow Zlib and cannot, because its tree never uses it. `databases/sqlite/deny.toml` equals the root file plus that one exception. Zlib is permissive and has no copyleft term.
 
+## PostgreSQL (ticket 0111, 2026-09-25)
+
+The PostgreSQL binding follows the list above with these recorded differences. Ian can overturn each one.
+
+- Lints. The lint tables equal the root's except `unsafe_code = "deny"` and `unexpected_cfgs` at `deny` with the root's one `check-cfg` name. `pgrx::pg_module_magic!()` expands its own `allow(unexpected_cfgs)`, and a forbid refuses it. `src/bin/pgrx_embed.rs` carries `#![allow(unsafe_code, reason = "…")]`, because `cargo pgrx package` injects generated `unsafe extern` blocks into it. Every other `unsafe` line lives in `src/ffi.rs` (item 5).
+- Settings (decision 3). `thinkthen.throttle`, `max_requests`, `cache`, and `cache_bytes` are `Suset` settings, -1 or empty for unset. An unset setting calls no setter, so `EngineBuilder::from_env` keeps the environment's and the configuration file's values. A changed plan rebuilds the engine. The throttle holds for the whole process under 0077, so a rebuild passes it only while no throttle is active. `cache_bytes = 0` refuses with 22023.
+- Saved answers (decision 4). The tag's in-backend answer map retires. `thinkthen_warm` fills the engine's disk cache, and a later decide reads it.
+- Relate (decision 10). `thinkthen_relate` reads its query's rows through SPI and refuses the 256th row, a stricter cap than the unique-pair cap.
+- The key (decision 12). `thinkthen.api_key` is a `Userset` setting that is never read. A set value refuses the next call with 22023, and the value never reaches the log.
+- Deny. `databases/postgresql/deny.toml` is the root file plus an `ignore` for RUSTSEC-2021-0127 (`serde_cbor` under pgrx) and a Zlib exception for `foldhash`.
+- Counters. Each engine counts its own sends, so `thinkthen_usage()` adds the counters of every engine the backend built. The binding keeps one engine per settings plan and records it right after the build, so a cancelled call's sends still count.
+- The request total. Ian ruled on 2026-09-25 that every SQL surface caps requests per process (`sdlc/planning/one-line-plan-2026-09-25.md`). `thinkthen.max_requests_total` is a `Suset` setting, -1 for unset. Each call reads what remains once. None left refuses with 22023 and no send, and a batch sends only what remains before it refuses. A new backend starts from zero.
+- Recognize. `thinkthen_recognize` takes a kinds array or a version-one spec, `'@names.json'`. The spec form carries the kinds' meanings and thresholds that the shared cases need.
+
 ## Consequences
 
 - 0077's duplicate-image boundary follows item 5. Each loaded copy has its own cap, and each surface page says so.
