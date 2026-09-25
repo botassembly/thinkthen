@@ -3,10 +3,12 @@
 Ten verbs, ``decide_many``, ``details``, ``question``, and ``usage``. A call
 takes one ``str`` or a list, tuple, or other iterable of ``str``. ``None``
 means "not sure". ``decide``, ``choose``, ``score``, ``tag``, and
-``decide_many`` also take a Polars ``Series`` and give one back, and
-``annotate`` and ``recognize`` take a Polars ``DataFrame`` with ``on=``. The
-column crosses in place through the Arrow stream form, and the engine makes one
-call over it. This package never imports Polars. Every call reaches the real engine on its own worker
+``decide_many`` also take a Polars or pandas ``Series`` and give one back, and
+``annotate`` and ``recognize`` take a Polars or pandas ``DataFrame`` with
+``on=``. The engine makes one call over a column. A pandas answer keeps the
+caller's index and name, and a pandas frame gets new columns: one per question
+from ``annotate``, and ``names`` from ``recognize``. This package never imports
+Polars or pandas. Every call reaches the real engine on its own worker
 thread, so Ctrl-C stops it at once and raises ``Cancelled``, a subclass of
 both ``KeyboardInterrupt`` and ``ThinkThenError``.
 
@@ -110,6 +112,80 @@ def _rebuilt(value, answer):
     return answer
 
 
+_NULLS = "the column holds nulls; the engine needs text, so drop or fill them first"
+
+
+def _pandas(value):
+    """The pandas class a value is, by name, found through its type's method
+    resolution order so a subclass counts, or ``None``. It imports nothing."""
+    for kind in type(value).__mro__:
+        if kind.__module__.partition(".")[0] == "pandas":
+            return kind.__name__
+    return None
+
+
+class _Once:
+    """pandas' exported stream, handed over once and as it is."""
+
+    def __init__(self, capsule):
+        self._capsule = capsule
+
+    def __arrow_c_stream__(self, requested_schema=None):
+        capsule, self._capsule = self._capsule, None
+        if capsule is None or requested_schema is not None:
+            raise UsageError("a pandas column's stream is read once, as it is")
+        return capsule
+
+
+def _marked(series, kind):
+    """A pandas Series, marked with its reader before any export (decision 2):
+    the list reader when it is empty or categorical, lacks the stream, or its
+    export raises, and the Arrow door otherwise."""
+    if kind == "DataFrame":
+        raise UsageError('a data frame is not a column; pass df["name"], or annotate with on=')
+    if kind != "Series":
+        raise UsageError(f"thinkthen reads a pandas Series, not a pandas {kind}; "
+                         "pass a pandas Series")
+    if len(series) and series.hasnans:
+        raise UsageError(_NULLS)
+    if not len(series) or series.dtype.name == "category" \
+            or not hasattr(series, "__arrow_c_stream__"):
+        return _thinkthen._Pandas(series, True)
+    try:
+        capsule = series.__arrow_c_stream__()
+    except Exception:
+        return _thinkthen._Pandas(series, True)
+    return _thinkthen._Pandas(_Once(capsule), False)
+
+
+def _column(call, verb, asked, value, deadline, token):
+    """A column verb. A pandas Series gets the caller's Series back, with its
+    index and name, through its own class (decision 3)."""
+    kind = _pandas(value)
+    if kind is None:
+        return _rebuilt(value, call(verb, asked, value, deadline, token))
+    values, dtype = call(verb, asked, _marked(value, kind), deadline, token)
+    return type(value)(values, index=value.index, name=value.name, dtype=dtype)
+
+
+def _on(frame, on, new):
+    """``df[on]`` of a pandas frame, after decision 4's checks in order."""
+    try:
+        hash(on)
+    except TypeError:
+        raise UsageError('on= takes one column label, such as "body"') from None
+    if frame.columns.nlevels != 1:
+        raise UsageError("on= reads a frame whose column labels have one level")
+    if on not in frame.columns:
+        raise UsageError(f"the frame has no column named {on!r}")
+    if not isinstance(frame.columns.get_loc(on), int):
+        raise UsageError(f"the frame has more than one column named {on!r}")
+    for name in new:
+        if name in frame.columns:
+            raise UsageError(f"the frame already has a column named {name!r}; rename it first")
+    return frame[on]
+
+
 class _Stream:
     """A frame answer offered only as a stream, since Polars reads an object
     with ``__arrow_c_array__`` as one array."""
@@ -167,28 +243,28 @@ class Engine:
 
     def decide(self, question, text, *, deadline=None, token=None):
         """``True``, ``False``, or ``None`` when the rule says "not sure"."""
-        return _rebuilt(text, self._engine.ask("decide", _asked(question, "decide"), text,
-                                                deadline, token))
+        return _column(self._engine.ask, "decide", _asked(question, "decide"), text,
+                       deadline, token)
 
     def decide_many(self, question, records, *, deadline=None, token=None):
         """One ``decide`` answer per record, in input order."""
-        return _rebuilt(records, self._engine.many("decide_many", _asked(question, "decide_many"),
-                                                   records, deadline, token))
+        return _column(self._engine.many, "decide_many", _asked(question, "decide_many"),
+                       records, deadline, token)
 
     def choose(self, question, text, *, options=None, deadline=None, token=None):
         """The option picked, or ``None`` when the rule says "not sure"."""
-        return _rebuilt(text, self._engine.ask("choose", _asked(question, "choose", options=options),
-                                                text, deadline, token))
+        return _column(self._engine.ask, "choose", _asked(question, "choose", options=options),
+                       text, deadline, token)
 
     def score(self, question, text, *, levels=None, deadline=None, token=None):
         """The position on the question's levels, from 0 to K-1."""
-        return _rebuilt(text, self._engine.ask("score", _asked(question, "score", levels=levels),
-                                                text, deadline, token))
+        return _column(self._engine.ask, "score", _asked(question, "score", levels=levels),
+                       text, deadline, token)
 
     def tag(self, question, text, *, labels=None, deadline=None, token=None):
         """The labels that reach the cut."""
-        return _rebuilt(text, self._engine.ask("tag", _asked(question, "tag", labels=labels),
-                                                text, deadline, token))
+        return _column(self._engine.ask, "tag", _asked(question, "tag", labels=labels),
+                       text, deadline, token)
 
     def details(self, question, text, *, deadline=None, token=None):
         """The command's ``--details`` document, as a ``dict``."""
@@ -224,12 +300,22 @@ class Engine:
         ``questions`` is a question-set file path or the file's ``dict``.
         One ``dict`` comes back per record. A question the backend failed
         reads ``{"failed": {"kind": "backend", "cause": ...}}``. With ``on=``,
-        ``records`` is a Polars ``DataFrame``, and the frame comes back with
-        one new column per question. A failed question's column holds text.
+        ``records`` is a Polars or pandas ``DataFrame``, and the frame comes
+        back with one new column per question. A failed question's column
+        holds text. A pandas frame keeps its index, and a question named as
+        one of its columns is refused.
         """
         asked = _spec(_thinkthen._QuestionSet, questions)
         if on is None:
             return self._engine.annotate(asked, records, deadline, token)
+        if _pandas(records) == "DataFrame":
+            column = _on(records, on, asked._names())
+            answers = _thinkthen._annotate_column(self._engine, asked, _marked(column, "Series"),
+                                                  deadline, token)
+            out = records.assign()
+            for name, (values, dtype) in answers.items():
+                out[name] = type(column)(values, index=records.index, dtype=dtype)
+            return out
         return type(records)(_Stream(_thinkthen._annotate_frame(self._engine, asked, records,
                                                                 on, deadline, token)))
 
@@ -244,7 +330,9 @@ class Engine:
         count Python string positions, so ``text[e.start:e.end]`` is the
         name. With ``on=``, ``text`` is a Polars ``DataFrame``, and a frame
         comes back with one row per name: ``row`` (counted from 1), ``text``,
-        ``kind``, ``start``, ``end``, and ``strength``. Relations take one text.
+        ``kind``, ``start``, ``end``, and ``strength``. A pandas ``DataFrame``
+        comes back with a new ``names`` column: one list per row of ``dict``
+        with those fields but ``row``. Relations take one text.
         """
         if on is not None and relations is not None:
             raise UsageError("recognize with on= takes no relations; ask them of one text")
@@ -254,6 +342,11 @@ class Engine:
             named = kinds.items() if isinstance(kinds, dict) else [(k, None) for k in kinds or ()]
             spec = _thinkthen._Recognize._build(list(named), _rules(relations, either),
                                                threshold, relation_threshold)
+        if on is not None and _pandas(text) == "DataFrame":
+            column = _on(text, on, ["names"])
+            found = _thinkthen._recognize_column(self._engine, spec, _marked(column, "Series"),
+                                                 deadline, token)
+            return text.assign(names=type(column)(found, index=text.index, dtype="object"))
         if on is not None:
             return type(text)(_Stream(_thinkthen._recognize_frame(self._engine, spec, text, on,
                                                                   deadline, token)))

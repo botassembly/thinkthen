@@ -16,8 +16,9 @@ Deadline = Optional[float]
 Spec = Union[Path, Mapping[str, Any]]
 Asked = Union[str, "Question"]
 Pair = Union[tuple[str, str], Mapping[str, str], "Entity"]
-# A Polars Series or another Arrow column, and a Polars DataFrame. This
-# package never imports Polars, so the stub names neither.
+# A Polars or pandas Series or another Arrow column, and a Polars or pandas
+# DataFrame. A pandas Series comes back as the caller's Series, with its index
+# and name. This package imports neither library, so the stub names none.
 Column = Any
 Frame = Any
 

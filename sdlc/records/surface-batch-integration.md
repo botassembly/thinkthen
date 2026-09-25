@@ -151,3 +151,12 @@ DuckDB 0110 and 0118 landed under the same ruling as Python. With them, every su
 - Plants in the real `databases/duckdb/deny.toml`: a second license exception turned red with "the root file plus its named licenses exceptions", and `yanked = "warn"` turned red with "the root file plus its named entries". The file was restored and touched.
 - No workspace Rust changed, so `test` did not rerun. `lint` and `surfaces` each ran once under the heavy lock with the key unset at `a9ae7e66`, and both passed. All ten landed surfaces passed. DuckDB passed 7 Rust unit tests and 77 check steps, and its conformance was 51 pass, 0 fail, 3 not run, of 54.
 - Main had not moved since the merge. Main then fast-forwarded to the commit that adds this section.
+
+## pandas landed
+
+Ticket 0122 landed after a fresh review's ACCEPT of fix commit `1ecdb4d5`.
+
+- Main at `82336e9a` merged as `780aad44`. `1ecdb4d5` merged cleanly as `e2264286`. It changed only `libraries/python` and sdlc pages, so `test` did not rerun.
+- `3060d27e` marks 0122 landed. Under the rule in `sdlc/issues/README.md`, it closes `2026-09-21-the-polars-shape-as-the-deck-shows-it.md` into `closed/`. The record names no other issue as settled. The environment issue stays open, because ticket 0127 owns it. The Polars clash issue stays open too. The site-samples issue also stays open: it names pandas, but its work belongs to a site ticket. The commit adds one deferred gap to the 0122 record: a metaclass that shadows `__mro__` with a non-tuple makes `top` panic on the stable Python interface.
+- `lint` and `surfaces` each ran once under the heavy lock with the key unset at `3060d27e`, and both passed. All ten surfaces passed. Python passed 23 Rust unit tests and 55 Python tests, with conformance 50 pass, 0 fail, 4 not run, of 54. The pandas 2 lane ran on pandas 2.3.3: 12 passed and 1 skipped. The skipped test is marked for pandas 3 only, because pandas 2 offers no Arrow export.
+- Main had not moved. Main then fast-forwarded to the commit that adds this section.
