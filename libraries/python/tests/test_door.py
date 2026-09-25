@@ -10,10 +10,10 @@ import sys
 
 from conftest import child_env, run
 
-PANDAS = ("thinkthen does not read pandas objects: the Python data frame is Polars. "
-          "Pass a Polars Series or a list of str, such as series.tolist()")
 LISTS = ("filter, rank, find, and relate read a list of str, not a column, and annotate and "
-         "recognize read a column only from a Polars frame with on=. Pass column.to_list()")
+         "recognize read a column only from a Polars or pandas frame with on=. "
+         "Pass column.to_list()")
+FRAMES = "UsageError annotate with on= takes a Polars or pandas DataFrame; a list of str takes no on="
 SETUP = """
     import json, os, polars as pl, pyarrow as pa, thinkthen as tt
     engine = tt.Engine(cache=False)
@@ -59,15 +59,12 @@ def test_a_column_answers_as_its_list_does(backend, tmp_path):
 
 
 def test_what_the_door_refuses_sends_nothing(backend, tmp_path):
-    """Decisions 1, 4, 5, and 6: pandas is refused before the Arrow check,
-    other frames and list-only verbs are refused, and a null or a number
-    column is refused. Nothing reaches the backend."""
+    """Decisions 4, 5, and 6: frames that are neither Polars nor pandas and
+    list-only verbs are refused, and a null or a number column is refused.
+    Nothing reaches the backend."""
     printed = run(SETUP + """
-    import pandas
     frame = pl.DataFrame({"body": texts})
-    said(lambda: engine.decide(late, pandas.Series(texts)))
     said(lambda: engine.annotate(form, pa.table({"body": texts}), on="body"))
-    said(lambda: engine.annotate(form, pandas.DataFrame({"body": texts}), on="body"))
     said(lambda: engine.annotate(form, texts, on="body"))
     said(lambda: engine.filter(late, pl.Series(texts)))
     said(lambda: engine.relate(pl.Series(texts), relations={"r": ("a", "b")}))
@@ -79,10 +76,8 @@ def test_what_the_door_refuses_sends_nothing(backend, tmp_path):
     said(lambda: engine.recognize(frame, kinds=["x"], relations={"r": ("x", "x")}, on="body"))
     """, child_env(backend, tmp_path))
     assert printed.splitlines() == [
-        f"UsageError {PANDAS}",
-        "UsageError annotate with on= takes a Polars DataFrame; a list of str takes no on=",
-        f"UsageError {PANDAS}",
-        "UsageError annotate with on= takes a Polars DataFrame; a list of str takes no on=",
+        FRAMES,
+        FRAMES,
         f"UsageError {LISTS}",
         f"UsageError {LISTS}",
         "UsageError details reads one str, not a column",
@@ -143,12 +138,22 @@ def test_recognize_on_a_frame_equals_each_text_alone(backend, tmp_path):
     assert printed.split("]")[1].split() == ["True", "True"]
 
 
-def test_importing_the_package_leaves_polars_out():
-    """The wheel never imports Polars. Regression: an import at module top."""
-    done = subprocess.run([sys.executable, "-c",
-                           "import sys, thinkthen; print('polars' in sys.modules)"],
+def test_importing_the_package_leaves_polars_and_pandas_out(backend, tmp_path):
+    """The wheel never imports Polars or pandas. With pandas blocked, a list
+    and a Polars Series still answer. Regression: an import at module top,
+    inside a ``try`` or not."""
+    done = subprocess.run([sys.executable, "-c", "import sys, thinkthen; print("
+                           "'polars' in sys.modules, 'pandas' in sys.modules)"],
                           capture_output=True, text=True, check=True)
-    assert done.stdout.strip() == "False"
+    assert done.stdout.strip() == "False False"
+    printed = run("""
+    import sys
+    sys.modules["pandas"] = None
+    import polars as pl, thinkthen as tt
+    late = tt.question(decide="Is it late?")
+    print(tt.decide_many(late, ["a", "b"]), tt.decide_many(late, pl.Series(["a"])).to_list())
+    """, child_env(backend, tmp_path))
+    assert printed.strip() == "[True, True] [True]"
 
 
 def test_the_slide_sample_runs_as_drawn(backend, tmp_path):
