@@ -68,7 +68,7 @@ Main measured 61,972 nonblank lines at `f3176b5d`, after ticket 0124 landed. Thi
 
 | Part | Budget | Nonblank lines, net |
 | --- | --- | --- |
-| `engine/prepared_request.rs` | 30 | 28 |
+| `engine/prepared_request.rs` | 30 | 30 |
 | `core/backend.rs` | 12 | 12 |
 | The 400 reason: `http.rs` 27, `error.rs` 3, `failure.rs` 3, `failure/status.rs` 2, `convert.rs` 1, `public/error.rs` 1, `check.rs` 0 | 45 | 37 |
 | Wording: `args/command.rs` 7, `relate/config.rs` 2 | 12 | 9 |
