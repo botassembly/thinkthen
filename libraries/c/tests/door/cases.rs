@@ -360,6 +360,10 @@ fn refused<'a>(
             std::fs::write(&file, "not a folder").map_err(|error| error.to_string())?;
             script.ask("env", &["THINKTHEN_CACHE", &file.display().to_string()]);
             script.ask("decide", &[&generic, asked, urgent]);
+            // A good folder builds an engine, which clears the thread's slot.
+            let good = scratch("cases-good-cache").display().to_string();
+            script.ask("env", &["THINKTHEN_CACHE", &good]);
+            script.ask("nullcode", &[&generic, "-"]);
         }
         "23-cancelled-fault" => script.ask("cancelled", &[&generic, asked, urgent]),
         "24-deadline-fault" => script.ask("expired", &[&generic, asked, urgent]),
@@ -395,6 +399,12 @@ fn refused<'a>(
     .and_then(|at| i32::try_from(at + 1).ok())
     .ok_or("an unknown kind")?;
     let sends = matches!(id, "21-backend-fault");
+    // After 22's good build, a null engine's code is the usage code again.
+    let after: Vec<Reply> = if id == "22-local-fault" {
+        vec![(0, "1".to_owned())]
+    } else {
+        Vec::new()
+    };
     let before = backend.count();
     Ok(Box::new(move |got| {
         let (said, message) = got.first().ok_or("no reply")?;
@@ -403,6 +413,12 @@ fn refused<'a>(
         }
         if !sends && backend.count() != before {
             return Err("a refusal sent a request".to_owned());
+        }
+        let rest = got.get(1..).unwrap_or_default();
+        if rest != after.as_slice() {
+            return Err(format!(
+                "after the refusal came {rest:?}, expected {after:?}"
+            ));
         }
         Ok(())
     }))

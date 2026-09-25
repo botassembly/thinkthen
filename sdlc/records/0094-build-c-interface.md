@@ -67,8 +67,12 @@ The sizes after the review:
 - Production code in `src/` plus `build.rs`: 1,160 lines, or 1,097 without the unit test module in `failures.rs`.
 - Ratchets: `ratchet.json` holds 2,119, and `ratchet.c.json` holds 678.
 
+## Re-review, 2026-09-25
+
+The re-review of `135c7e0e` accepted it, with one finding: nothing tested the header's promise that a built engine clears the thread's slot. After `22-local-fault`, the cases test now points `THINKTHEN_CACHE` at a good folder, builds, and has a new driver row `nullcode` print `thinkthen_error_code(NULL)`. The row must print `1`. A planted bug that clears the slot only on failure makes it print `4` and turns the test red. As a small extra, a panic while `thinkthen_engine_new` builds now puts the defect kind in the slot, so an old failure does not stay behind. Production code is 1,099 lines without the unit test module. The ratchets rise to 2,137 Rust and 685 C lines.
+
 ## Not done
 
 - Churn (R7-1, G3): not run. `probes/c-churn/churn.c` is committed. The runner planned for it runs 8 at a time under the heavy lock. The tag's library build was queued and then stopped at the wrap-up request, so no count exists on either side. Ian ruled on 2026-09-24 that the churn probe is a one-time measurement. 0094 runs the C-door churn once to close R7-1, only when the load is low and under the heavy lock. It never runs in the ladder, `check.sh`, or a review.
 - The ladder has not run. The integration step runs it once for all surfaces.
-- Code review: findings 2 through 11 fixed as above; the re-review is pending.
+- Code review: ACCEPT. The batch integration and the churn run remain.

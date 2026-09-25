@@ -131,14 +131,16 @@ thread_local! {
     static UNBUILT: RefCell<Option<Last>> = const { RefCell::new(None) };
 }
 
-/// Keep the engine, or record why none came for the calling thread.
-pub(crate) fn built(result: Result<Engine, thinkthen::Error>) -> Option<Engine> {
-    let (engine, last) = match result {
-        Ok(engine) => (Some(engine), None),
-        Err(error) => (None, Some(Last::of(error.into()))),
+/// Build an engine and keep it, or record why none came for the calling
+/// thread; a panic while building records the defect kind.
+pub(crate) fn built(build: impl FnOnce() -> Result<Engine, thinkthen::Error>) -> Option<Engine> {
+    let (engine, last) = match catch_unwind(AssertUnwindSafe(build)) {
+        Ok(Ok(engine)) => (Some(engine), None),
+        Ok(Err(error)) => (None, Some(error.into())),
+        Err(_) => (None, Some(Failure::defect("a panic built no engine"))),
     };
     // After teardown the slot is gone, and a null engine reads no failure.
-    let _ = UNBUILT.try_with(|slot| slot.replace(last));
+    let _ = UNBUILT.try_with(|slot| slot.replace(last.map(Last::of)));
     engine
 }
 

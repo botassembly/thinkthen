@@ -14,6 +14,8 @@
  *   cancelled BASE QUESTION TEXT      -> thinkthen_decide_opts, fired token
  *   retryable BASE QUESTION TEXT      -> thinkthen_decide, then the code and
  *                                        thinkthen_error_retryable as "CODE RETRYABLE"
+ *   nullcode BASE X                   -> thinkthen_error_code(NULL), after
+ *                                        this base's engine builds
  *   many BASE QUESTION TEXT...        -> thinkthen_decide_many
  *   recognize BASE SPEC TEXT          -> thinkthen_recognize
  *   relate BASE SPEC RECORD...        -> thinkthen_relate
@@ -100,6 +102,11 @@ static void answer(thinkthen_engine *tt, const char *verb, size_t count) {
         char line[32];
         rc = thinkthen_decide(tt, fields[1], fields[2], lengths[2], &one);
         int used = snprintf(line, sizeof line, "%d %d", rc, thinkthen_error_retryable(tt));
+        said(THINKTHEN_OK, line, (size_t)used);
+        return;
+    } else if (strcmp(verb, "nullcode") == 0) {
+        char line[16];
+        int used = snprintf(line, sizeof line, "%d", thinkthen_error_code(NULL));
         said(THINKTHEN_OK, line, (size_t)used);
         return;
     } else if (strcmp(verb, "many") == 0) {

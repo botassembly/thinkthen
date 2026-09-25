@@ -6,7 +6,7 @@ opens: libraries/c probes/c-churn sdlc/planning/adr/0037-the-c-door-serves-every
 
 # 0094: Port the C interface
 
-Status: design accepted; built and in code review in the surface batch (sdlc/planning/one-line-plan-2026-09-25.md); waiting on the one-time churn run for R7-1 (see `sdlc/records/0094-build-c-interface.md`). Owner: Claude.
+Status: design accepted; code review ACCEPT (re-review of `135c7e0e`, its one finding fixed); waiting on the one-time churn run for R7-1 and the batch integration (sdlc/planning/one-line-plan-2026-09-25.md, `sdlc/records/0094-build-c-interface.md`). Owner: Claude.
 
 ## Outcome and authority
 

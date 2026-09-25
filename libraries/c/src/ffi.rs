@@ -159,7 +159,7 @@ macro_rules! plain {
 #[unsafe(no_mangle)]
 pub extern "C" fn thinkthen_engine_new() -> *mut Door {
     guard(None, std::ptr::null_mut(), || {
-        failures::built(Engine::from_env()).map_or(std::ptr::null_mut(), |engine| {
+        failures::built(Engine::from_env).map_or(std::ptr::null_mut(), |engine| {
             Box::into_raw(Box::new(Door(Held::new(engine))))
         })
     })
