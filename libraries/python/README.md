@@ -15,7 +15,7 @@ engine = tt.Engine(throttle=8, cache=False)
 engine.decide_many(refund, reviews)
 ```
 
-`None` means "not sure". A call reads one `str`, or a list, tuple, or other iterable of `str`, whole before its first request. A pandas object is refused, since the Python data frame is Polars. `examples.json` holds one checked example for each function.
+`None` means "not sure". A call reads one `str`, or a list, tuple, or other iterable of `str`, whole before its first request. `examples.json` holds one checked example for each function.
 
 `decide`, `decide_many`, `choose`, `score`, and `tag` also read a Polars `Series` or another Arrow column in place, with no copy, in one engine call. A `Series` gets a `Series` back, and any other column gets a list. `annotate` and `recognize` read a Polars `DataFrame` with `on=`, the name of the text column:
 
@@ -23,6 +23,14 @@ engine.decide_many(refund, reviews)
 df = tt.annotate("form.json", df, on="body")  # one new column per question
 names = tt.recognize(df, kinds=["product"], on="body")  # row, text, kind, start, end, strength
 ```
+
+A pandas `Series` works in the same five verbs and comes back as a pandas `Series` with the caller's index and name. `decide` and `decide_many` give `boolean`, `score` gives `Float64`, `choose` gives `string`, and `tag` gives `object` with one list of labels per row. "Not sure" is `pd.NA`, or `None` in `tag`. A pandas `DataFrame` with `on=` comes back from `annotate` with one new column per question, and from `recognize` with a new `names` column: one list per row of `dict` with `text`, `kind`, `start`, `end`, and `strength`. The index stays the caller's. A null in the text column, a repeated or missing `on` label, `MultiIndex` columns, and a question named as a column are refused before any request. The answer keeps the input's name, so rename it to add it as a column:
+
+```python
+df = df.join(tt.decide("Is it late?", df["body"]).rename("late"))
+```
+
+What is fast: a pandas 2 column crosses at list speed and still makes one engine call at the full throttle. A pandas 3 `str` or `string[pyarrow]` column crosses zero-copy. A categorical column crosses at list speed on both versions. `astype("string[pyarrow]")` makes a pandas 3 object column zero-copy, and it gives pandas 2 no fast path. The gate runs pandas 3.0.6 and 2.3.3. The oldest pandas the 2026-09-21 checks ran is 2.2.3. The package never imports pandas.
 
 `filter`, `rank`, `find`, and `relate` read lists only. The optional extra `thinkthen[polars]` names the tested Polars floor. The package never imports Polars itself. A warm Polars pool hangs a forked child, so start children with `spawn`.
 
@@ -32,4 +40,4 @@ Every verb takes `deadline`, in seconds from the call, and `token`, a `CancelTok
 
 Every call runs on its own worker thread. Ctrl-C or the caller's token stops the wait within 50 ms and raises `Cancelled`, a subclass of both `KeyboardInterrupt` and `ThinkThenError`. No new request starts after a stop, and a request already sent ends on its own. A signal handler's own error, such as `SystemExit`, passes through unchanged.
 
-`check.sh` is this folder's gate. It needs Python 3.12 or later, `uv`, and `maturin`, and it installs the pinned test packages offline from uv's cache. A missing piece reports "not run". `build-wheel.sh` builds the release wheel and checks its contents. `NOTES.md` records the port's decisions.
+`check.sh` is this folder's gate. It needs Python 3.12 or later, `uv`, and `maturin`, and it installs the pinned test packages offline from uv's cache. A missing piece reports "not run". Its last step runs the pandas tests and the secrecy test again under pandas 2.3.3 (`requirements-pandas2.txt`), over the same built extension. `build-wheel.sh` builds the release wheel and checks its contents. `NOTES.md` records the port's decisions.
