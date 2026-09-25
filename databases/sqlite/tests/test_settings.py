@@ -85,6 +85,41 @@ say(limit=run(db, "SELECT thinkthen_max_requests(2)"), clear=run(db, "SELECT thi
     expect(backend.close(), 3, "sends")
 
 
+SPENT = "thinkthen usage: this process has sent its total of {} requests (thinkthen_max_requests_total)"
+
+
+def test_the_request_total_holds_across_one_row_calls() -> None:
+    """Decision 17: a WHERE over 10 rows is 10 one-record calls, and a total of 3 stops the fourth."""
+    backend = Backend()
+    held = child("""
+db = connect()
+db.execute("CREATE TABLE t(body TEXT)")
+db.executemany("INSERT INTO t VALUES (?)", [(f"row {at}",) for at in range(10)])
+say(total=run(db, "SELECT thinkthen_max_requests_total(3)"), rows=run(db, "SELECT body FROM t WHERE thinkthen_decide('Is it red?', body)"),
+    next=run(db, "SELECT thinkthen_decide('Is it blue?', 'a blue door')"),
+    zero=run(db, "SELECT thinkthen_max_requests_total(0)"))
+""", environment(backend))
+    expect(held, {"total": [[3]], "rows": SPENT.format(3), "next": SPENT.format(3),
+                  "zero": "thinkthen usage: a request total is a whole number of 1 or more"}, "the calls")
+    expect(backend.close(), 3, "sends")
+
+
+def test_a_warm_flush_sends_only_the_remaining_total() -> None:
+    """Decision 17: with 100 of 103 left, a 150-row flush sends exactly 100."""
+    backend = Backend()
+    held = child("""
+db = connect()
+db.execute("SELECT thinkthen_max_requests_total(103)")
+spent = [run(db, f"SELECT thinkthen_decide('Is it red?', 'door {at}')") for at in range(3)]
+db.execute("CREATE TABLE t(body TEXT)")
+db.executemany("INSERT INTO t VALUES (?)", [(f"row {at}",) for at in range(150)])
+say(spent=spent, warm=run(db, "SELECT thinkthen_warm('Is it red?', body) FROM t"), next=run(db, "SELECT thinkthen_decide('Is it red?', 'door 0')"))
+""", environment(backend))
+    expect(held, {"spent": [[[1]]] * 3, "warm": "thinkthen usage: this engine answers at most 100 records in one call",
+                  "next": SPENT.format(103)}, "the calls: a spent total refuses even a cached answer")
+    expect(backend.close(), 103, "sends")
+
+
 def test_cache_names_a_folder_and_null_turns_it_off() -> None:
     backend = Backend()
     folder = environment(None)["SCRATCH"] + "/named"

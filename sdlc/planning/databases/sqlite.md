@@ -10,7 +10,7 @@ The port onto the public Rust API settles several points below. Where this secti
 - Every function and both table-valued functions are direct-only and volatile. No schema object in a database file can call them.
 - Two table-valued functions ship: `thinkthen_recognize(text, kinds)` and `thinkthen_relate(table, id, name, kind, rule, …)`. Relate reads rows from a named table (ADR 0047 item 9). It is the one function that opens the database, through a nested read-only SELECT.
 - Every call that can send runs on its own worker thread. The calling thread polls `sqlite3_is_interrupted` every 50 ms, so an interrupt returns at once. A detached worker is the known exception to ADR 0017's rule that no thread outlives a call.
-- The engine's disk cache holds the answers. `thinkthen_usage()` answers JSON totals. Four setting functions spell the engine settings: `thinkthen_throttle`, `thinkthen_max_requests`, `thinkthen_cache`, and `thinkthen_cache_bytes`. That answers open question 4.
+- The engine's disk cache holds the answers. `thinkthen_usage()` answers JSON totals. Five setting functions spell the engine settings: `thinkthen_throttle`, `thinkthen_max_requests`, `thinkthen_max_requests_total`, `thinkthen_cache`, and `thinkthen_cache_bytes`. That answers open question 4.
 - `thinkthen_warm` takes decide questions only and flushes every 256 rows. The question cache is the extension's own, keyed by argument text and bounded at 4,096. It replaces the auxiliary-data plan.
 - The file is `libthinkthen0.so`, loaded as `.load ./thinkthen` once copied to `thinkthen.so`.
 

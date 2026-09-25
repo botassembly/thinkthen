@@ -30,7 +30,18 @@ pub(crate) fn run<T: Send + 'static>(
     deadline: Option<i64>,
     work: impl FnOnce(&'static Engine, CallOptions<'_>) -> Result<T, Failure> + Send + 'static,
 ) -> Result<T, Failure> {
-    let engine = settings::engine()?;
+    run_many(db, deadline, 1, work)
+}
+
+/// As [`run`], for a call over `records` records, which the process
+/// request total may limit.
+pub(crate) fn run_many<T: Send + 'static>(
+    db: *mut sqlite3,
+    deadline: Option<i64>,
+    records: usize,
+    work: impl FnOnce(&'static Engine, CallOptions<'_>) -> Result<T, Failure> + Send + 'static,
+) -> Result<T, Failure> {
+    let engine = settings::engine_for(records)?;
     let token = CancelToken::new();
     let theirs = token.clone();
     let (answers, _detached) = spawn(move || {

@@ -1,9 +1,11 @@
-//! The one process engine and the four settings SQL gives it before it is
+//! The process engine and the five settings SQL gives it before it is
 //! built: `thinkthen_throttle`, `thinkthen_max_requests`, `thinkthen_cache`,
-//! and `thinkthen_cache_bytes` (ticket 0109 decision 2).
+//! and `thinkthen_cache_bytes` (ticket 0109 decision 2), and the process
+//! request total `thinkthen_max_requests_total` (decision 17).
 
+use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
+use std::sync::{LazyLock, Mutex, MutexGuard, OnceLock, PoisonError};
 
 use rusqlite::functions::Context;
 use rusqlite::types::ValueRef;
@@ -19,6 +21,7 @@ struct Stored {
     max_requests: Option<Option<usize>>,
     cache: Option<Option<PathBuf>>,
     cache_bytes: Option<u64>,
+    total: Option<u64>,
 }
 
 impl Stored {
@@ -46,6 +49,7 @@ static STORED: Mutex<Stored> = Mutex::new(Stored {
     max_requests: None,
     cache: None,
     cache_bytes: None,
+    total: None,
 });
 
 static ENGINE: OnceLock<Engine> = OnceLock::new();
@@ -68,9 +72,57 @@ pub(crate) fn engine() -> Result<&'static Engine, Failure> {
     Ok(ENGINE.get_or_init(|| built))
 }
 
-/// The engine when one is built, for `thinkthen_usage`, which builds none.
-pub(crate) fn built() -> Option<&'static Engine> {
-    ENGINE.get()
+/// Engines built with a smaller request limit, keyed by that limit. A key
+/// is a remaining total below one warm flush, so at most 255 exist.
+static LIMITED: LazyLock<Mutex<HashMap<usize, &'static Engine>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+
+fn limited() -> MutexGuard<'static, HashMap<usize, &'static Engine>> {
+    LIMITED.lock().unwrap_or_else(PoisonError::into_inner)
+}
+
+/// Every engine built in this process, for `thinkthen_usage`, which builds none.
+pub(crate) fn built() -> Vec<&'static Engine> {
+    ENGINE
+        .get()
+        .into_iter()
+        .chain(limited().values().copied())
+        .collect()
+}
+
+/// The engine for one call of `records` records under the process total
+/// (decision 17). The requests every engine here has sent are summed first.
+/// A spent total refuses before any send. Otherwise the call's limit is the
+/// smaller of the remaining total and `thinkthen_max_requests`, so the total
+/// holds to within one call's retries.
+pub(crate) fn engine_for(records: usize) -> Result<&'static Engine, Failure> {
+    let main = engine()?;
+    let (total, most) = {
+        let held = stored();
+        (held.total, held.max_requests.flatten())
+    };
+    let Some(total) = total else {
+        return Ok(main);
+    };
+    let sent: u64 = built().iter().map(|one| one.usage().requests_sent()).sum();
+    let remaining = usize::try_from(total.saturating_sub(sent)).unwrap_or(usize::MAX);
+    if remaining == 0 {
+        return Err(Failure::usage(format!(
+            "this process has sent its total of {total} requests (thinkthen_max_requests_total)"
+        )));
+    }
+    if remaining >= records || most.is_some_and(|most| most <= remaining) {
+        return Ok(main);
+    }
+    let mut engines = limited();
+    if let Some(engine) = engines.get(&remaining) {
+        return Ok(engine);
+    }
+    let builder = stored().apply(EngineBuilder::from_env()?)?;
+    let engine: &'static Engine =
+        Box::leak(Box::new(builder.max_requests(Some(remaining))?.build()?));
+    engines.insert(remaining, engine);
+    Ok(engine)
 }
 
 /// Check one setting against a fresh builder, then store it.
@@ -140,6 +192,24 @@ pub(crate) fn cache(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
         };
         set(|held| held.cache = Some(folder.clone().map(PathBuf::from)))?;
         Ok(folder)
+    })?)
+}
+
+/// `thinkthen_max_requests_total(n)`: the most requests this process may
+/// send; NULL is no total.
+pub(crate) fn max_requests_total(context: &Context<'_>) -> rusqlite::Result<Option<i64>> {
+    Ok(guard("thinkthen_max_requests_total", || {
+        let value = whole(context, "thinkthen_max_requests_total")?;
+        let total = value
+            .map(|value| {
+                u64::try_from(value)
+                    .ok()
+                    .filter(|total| *total > 0)
+                    .ok_or_else(|| Failure::usage("a request total is a whole number of 1 or more"))
+            })
+            .transpose()?;
+        set(|held| held.total = total)?;
+        Ok(value)
     })?)
 }
 

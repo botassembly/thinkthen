@@ -41,10 +41,11 @@ An error reads `thinkthen <kind>: <message>`, with ` (retryable)` after the kind
 
 The extension holds one engine for the process, shared by every connection. It builds on the first call that can send, from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, and `THINKTHEN_CACHE`, as the command reads them. SQL cannot name an address or a key. `thinkthen_usage()` does not build the engine. Before the first call every total reads 0.
 
-Four setting functions change the engine before it builds. Each returns its argument and sends nothing. A bad value raises `usage` at the setting call. A setting after the engine builds raises `usage`.
+Five setting functions change the engine before it builds. Each returns its argument and sends nothing. A bad value raises `usage` at the setting call. A setting after the engine builds raises `usage`.
 
 - `thinkthen_throttle(n)`: requests in flight at once, from 1 through 32. The default is 4.
-- `thinkthen_max_requests(n)`: the most records one engine call may answer. `NULL` means no limit. This is not a spending cap for a statement. Each scalar row is its own one-record call, and each warm flush is one call of up to 256 rows. A `WHERE thinkthen_decide(…)` over a million rows therefore passes any limit of 1 or more. The open question is `sdlc/issues/2026-09-25-sqlite-max-requests-caps-nothing-per-statement.md`.
+- `thinkthen_max_requests(n)`: the most records one engine call may answer. `NULL` means no limit. Each scalar row is its own one-record call, and each warm flush is one call of up to 256 rows, so this limit does not cap a statement's spending. Use the total below for that.
+- `thinkthen_max_requests_total(n)`: the most requests this process may send, summed over every call. It is unset by default, and `NULL` unsets it. Before each call the extension adds up the requests sent so far. Once the total is spent, every call raises `usage` and sends nothing, even a call the cache could answer. Otherwise the call may answer at most the remaining total. It holds to within one call's retries for the scalars and `thinkthen_warm`. A `thinkthen_recognize` or `thinkthen_relate` call counts as one record but may send several requests, so it can pass the total by that call's own requests as well. A forked child starts again from zero.
 - `thinkthen_cache(folder)`: the answer cache's folder. `NULL` turns the cache off.
 - `thinkthen_cache_bytes(n)`: the cache's size cap in bytes.
 

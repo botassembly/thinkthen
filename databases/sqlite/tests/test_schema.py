@@ -94,7 +94,7 @@ except sqlite3.Error as failure:
 
 
 def test_every_function_is_direct_only_and_volatile() -> None:
-    """Decision 12: twelve names, eighteen registrations, none deterministic."""
+    """Decision 12: thirteen names, nineteen registrations, none deterministic."""
     held = child("""
 db = connect()
 rows = db.execute("SELECT name, flags FROM pragma_function_list WHERE name LIKE 'thinkthen%'").fetchall()
@@ -103,7 +103,7 @@ say(names=len({name for name, _ in rows}), registrations=len(rows),
     direct=all(flags & 0x80000 for _, flags in rows), deterministic=[name for name, flags in rows if flags & 0x800],
     index=run(db, "CREATE INDEX x ON t(thinkthen_decide('Is it red?', body))"))
 """, environment(None))
-    expect(held, {"names": 12, "registrations": 18, "direct": True, "deterministic": [], "index": "unsafe use of thinkthen_decide()"}, "the list")
+    expect(held, {"names": 13, "registrations": 19, "direct": True, "deterministic": [], "index": "unsafe use of thinkthen_decide()"}, "the list")
 
 
 if __name__ == "__main__":

@@ -207,8 +207,8 @@ fn usage(context: &Context<'_>) -> rusqlite::Result<String> {
                 "thinkthen_usage takes no arguments; the counters are cumulative, so subtract two snapshots"
             }));
         }
-        let totals = settings::built().map(thinkthen::Engine::usage);
-        let read = |field: fn(&thinkthen::Counters) -> u64| totals.as_ref().map_or(0, field);
+        let totals: Vec<_> = settings::built().iter().map(|one| one.usage()).collect();
+        let read = |field: fn(&thinkthen::Counters) -> u64| totals.iter().map(field).sum::<u64>();
         Ok(format!(
             r#"{{"requests_sent":{},"cache_answers":{},"input_tokens":{},"output_tokens":{}}}"#,
             read(thinkthen::Counters::requests_sent),
@@ -284,12 +284,18 @@ fn flush(context: &Context<'_>, (held, texts): Flush) -> Result<i64, Failure> {
     if count == 0 {
         return Ok(0);
     }
-    worker::run(ffi::handle_of(context), None, move |engine, options| {
-        for row in engine.decide_many_with(plain(&held)?, texts, options) {
-            row?;
-        }
-        Ok(count)
-    })
+    let records = texts.len();
+    worker::run_many(
+        ffi::handle_of(context),
+        None,
+        records,
+        move |engine, options| {
+            for row in engine.decide_many_with(plain(&held)?, texts, options) {
+                row?;
+            }
+            Ok(count)
+        },
+    )
 }
 
 /// Warm's question: decide only, any other kind named to `thinkthen_decide`.
@@ -344,7 +350,7 @@ impl Aggregate<WarmState, i64> for Warm {
     }
 }
 
-/// Register the twelve names in eighteen arities, none deterministic.
+/// Register the thirteen names in nineteen arities, none deterministic.
 pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
     let volatile = FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DIRECTONLY;
     for arity in [2, 3] {
@@ -363,6 +369,12 @@ pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
         1,
         volatile,
         settings::max_requests,
+    )?;
+    connection.create_scalar_function(
+        "thinkthen_max_requests_total",
+        1,
+        volatile,
+        settings::max_requests_total,
     )?;
     connection.create_scalar_function("thinkthen_cache", 1, volatile, settings::cache)?;
     connection.create_scalar_function(
