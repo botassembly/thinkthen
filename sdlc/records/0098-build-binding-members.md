@@ -78,7 +78,7 @@ The ceiling rises from 0086's 60,351 to 61,153, an increase of 802 lines: 365 pr
 
 ## Ladder
 
-At `9c0fc2cb`, `install`, `lint`, `test`, and `spec` passed in order under the heavy lock on 2026-09-24. The code review's fix commit changed three `Debug` lines and added one test after that run. Its focused `public_members` run passed, and the ratchet reads 61,153 of 61,153. The whole ladder has not run on the fix commit.
+At `9c0fc2cb`, `install`, `lint`, `test`, and `spec` passed in order under the heavy lock on 2026-09-24. The code review's fix commit changed three `Debug` lines and added one test after that run. Its focused `public_members` run passed, and the ratchet reads 61,153 of 61,153. After 0086 landed, `fbc24669` merged main at `1b2e9df7`. Main changed no crate lines, so the ratchet stays 61,153. `install`, `lint`, `test`, and `spec` passed in order on `fbc24669` on 2026-09-24.
 
 ## Review
 

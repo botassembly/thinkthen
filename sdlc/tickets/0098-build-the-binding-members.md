@@ -6,7 +6,7 @@ opens: crates/thinkthen/src crates/thinkthen/tests sdlc/scripts sdlc/ratchet.jso
 
 # 0098: Build the binding members
 
-Status: built; code review accepted at round 2. The whole ladder passed at `9c0fc2cb`, before the Debug fix, and must rerun after merging main once 0086 lands. Owner: Claude.
+Status: built; code review accepted at round 2; main merged after 0086 landed, and the whole ladder passed at `fbc24669`. Ready to land. Owner: Claude.
 
 Split out of 0086 on 2026-09-24 so 0086 fits its budget (`sdlc/records/2026-09-24-spine-review-engine.md`, finding F7). It lands after 0086 and before 0093.
 
