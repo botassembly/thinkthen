@@ -134,6 +134,11 @@ impl QuestionSet {
     fn _load(py: Python<'_>, path: PathBuf) -> PyResult<Self> {
         loaded(py, thinkthen::QuestionSet::load(path)).map(Self)
     }
+
+    /// The question names, in set order, for a pandas frame's clash check.
+    fn _names(&self) -> Vec<String> {
+        self.0.members().map(|(name, _)| name.to_owned()).collect()
+    }
 }
 
 /// One relation rule from the keyword form: name, source, target, and

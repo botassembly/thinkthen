@@ -34,7 +34,7 @@ In nonblank lines added, net of removals:
 | `engine/mod.rs`, `public/error.rs`, `cli/failure/recording.rs` | 5 | -2 |
 | Tests | 170 | 150 |
 
-The ratchet rises from 61768 to 61992, a gain of 224 against the ticket's 280. The code, the check replies, and their test pins make up most of the growth. The builder deleted the public error's throttle copy and the engine test's two text pins first.
+The ratchet rises by 224 lines. It went from 61768 to 61992 on the branch, and from 61764 to 61988 after the merge of main against the ticket's 280. The code, the check replies, and their test pins make up most of the growth. The builder deleted the public error's throttle copy and the engine test's two text pins first.
 
 ## Plants
 

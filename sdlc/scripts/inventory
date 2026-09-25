@@ -199,7 +199,7 @@ def problems(listing: list[str], wanted: set[str]) -> list[str]:
 
 
 def main() -> int:
-    command = ["cargo", "+nightly", "public-api", "--package", "thinkthen", "--no-default-features", "-ss"]
+    command = ["cargo", "+nightly-2026-08-24", "public-api", "--package", "thinkthen", "--no-default-features", "-ss"]
     run = subprocess.run(command, cwd=REPO, capture_output=True, text=True, check=False)
     if run.returncode != 0:
         print(run.stderr, file=sys.stderr)

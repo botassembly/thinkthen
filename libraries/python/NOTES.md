@@ -32,8 +32,20 @@ Ticket 0106 ported the tag's `arrow.rs` into `src/arrow/` and the column and fra
 - `recognize(frame, on=)` calls `recognize_with` once per text in Rust. The deadline is resolved once, at call start, into an instant, and each inner call gets `deadline_at` of it. `max_requests` caps each inner call, not the loop.
 - The worker owns the imported batches and reads the strings in place (amendment change 3). It releases them attached to the interpreter, behind the exit gate in `src/arrow/gate.rs` (change 6). A release that finds exit under way leaks the batches on purpose, since a release then could freeze the process. The binding's own output keeps per-batch atomic shares, so any thread may release it.
 - The policy check admits `unsafe` only in files named `ffi.rs`. So the door's raw memory code sits in three such files: `src/arrow/ffi.rs` reads a producer, `src/arrow/out/ffi.rs` hands answers back, and `src/arrow/probe/ffi.rs` holds the probe build's lock-bound producer. The ticket had named one file per concern. The other five files hold no `unsafe`.
-- The tag's pandas probe and pandas advice are gone (the 2026-09-21 ruling). R3-19 retires with them.
+- The tag's pandas probe and pandas advice did not come across. Ticket 0122 replaced them with full pandas support, and R3-19 returned as its index proof.
 - Fork advice from experiment 228 stands: a warm Polars pool hangs a forked child, so start children with `spawn`, or fork before Polars runs.
+
+## pandas (ticket 0122)
+
+Ian ruled on 2026-09-25 that pandas is supported fully (ADR 0017's amendment). Ian can overturn each point.
+
+- The package names a pandas object by its type's method resolution order, so a subclass counts, and imports nothing. A `Series` is a column and a `DataFrame` is a frame. Any other pandas object is refused.
+- Before any export, a Series goes through four steps in order. An empty Series goes to 0105's list reader, which sends nothing. A Series with `hasnans` raises 0106's null sentence. A categorical Series goes to the list reader, since the door reads no dictionary. Otherwise the package calls `__arrow_c_stream__` itself: success hands 0106's door a one-shot holder, a missing method or an `Exception` from the export sends the Series to the list reader, and any other `BaseException` propagates. A door refusal is never retried as a list.
+- Why pandas 3 uses the door: it reads pandas' own buffers in place, it is the reader Polars already uses, and it gives the page a faster pandas 3 path to name. No wall-time gain is claimed. The throttle proof measures equal time on every route.
+- The package marks the Series, or the holder, with a private `_Pandas` value that names its reader. Rust builds the answer's `Cells` as for Polars and hands back the values and a dtype name. The package rebuilds through the caller's own class with the caller's index and name.
+- A frame checks, in order: a hashable `on`, one level of column labels, `on` present, `on` not repeated, and no new column named as an existing one. Only `df[on]` crosses. `annotate` returns `df.assign` with one column per question, and `recognize` returns it with a `names` column.
+- A one-question verb on a failing backend raises, as the list form does. Only a multi-question `annotate` widens a failed question's column to text.
+- The gate runs pandas 3.0.6 in the main lane and pandas 2.3.3 in a second venv over the same extension. The oldest version the 2026-09-21 checks ran is 2.2.3.
 
 ### Refused string-view shapes (R7-8)
 
@@ -58,8 +70,9 @@ Each line names the test that proves it. `check.sh` fails when a named test does
 Each engine call runs in a child Python with its own loopback backend and cache folder (amendment change 5). `tests/conftest.py` builds the child's environment: it copies the parent's, deletes `THINKTHEN_API_KEY`, then sets a fake key beside the loopback address (change 14). A pytest session check fails when the parent holds a key.
 
 - `test_surface.py`: the registration check, the question builder, the result shapes of both spellings, the relate input forms, and the fork test.
-- `test_inputs.py`: the pandas and Arrow refusals, whole-list reading, and the deadline rule.
-- `test_door.py`: column and list parity, the door's refusals with zero sends, frame round trips, recognize on a frame, `polars` left unimported, and the slide sample.
+- `test_inputs.py`: the Arrow refusals, whole-list reading, and the deadline rule.
+- `test_pandas.py`: pandas answers against the list form, the index table and R3-19, the edge table with zero sends, throttle equality on each route, and the pandas 3 address proof. It runs in both pandas lanes.
+- `test_door.py`: column and list parity, the door's refusals with zero sends, frame round trips, recognize on a frame, `polars` and `pandas` left unimported, and the slide sample.
 - `test_arrow_safety.py`: malformed columns against unreadable memory, releases on refusal, the door's output and moved children, and the address proof.
 - `test_release.py`: attached release after the caller leaves, and the exit-freeze test of change 6. `arrow_c.py` holds the hand-built producers.
 - `test_column_timing.py`: one deadline and one token per column, throttle equality, the in-flight count, and the recognize loop's one deadline.
