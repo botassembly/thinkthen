@@ -130,21 +130,21 @@ const STRUCTURED_TAG_ANSWERS: &str = concat!(
     r#""usage":{"input_tokens":3,"output_tokens":1}}"#,
 );
 
-fn structured_tag() -> (String, PathBuf, PathBuf) {
+fn structured_tag(prefix: &str) -> (String, PathBuf, PathBuf) {
     let question = file(
-        "structured-tag",
+        &format!("{prefix}structured-tag"),
         r#"{"tag":["Which topics?"],"labels":["billing","urgent"]}"#,
     );
     let limited =
         |name: &str, bytes: usize| profile(name, &format!(r#""max_request_bytes":{bytes}"#));
-    let exact = limited("edge-structured", STRUCTURED_TAG_BODY.len());
-    let under = limited("under-structured", STRUCTURED_TAG_BODY.len() - 1);
+    let exact = limited(&format!("{prefix}edge-structured"), STRUCTURED_TAG_BODY.len());
+    let under = limited(&format!("{prefix}under-structured"), STRUCTURED_TAG_BODY.len() - 1);
     (format!("@{}", question.to_string_lossy()), exact, under)
 }
 
 #[test]
 fn a_structured_dry_run_counts_its_complete_body_at_the_edge() {
-    let (question, exact, under) = structured_tag();
+    let (question, exact, under) = structured_tag("plan-");
     let base = ["tag", question.as_str(), "--model", "local-1"];
     let plan = |profile: &Path| {
         spawn(
@@ -171,7 +171,7 @@ fn a_structured_dry_run_counts_its_complete_body_at_the_edge() {
 
 #[test]
 fn a_structured_request_counts_its_complete_body_at_the_edge() {
-    let (question, exact, under) = structured_tag();
+    let (question, exact, under) = structured_tag("");
     let base = ["tag", question.as_str(), "--model", "local-1"];
     let send = |profile: &Path, listener: &Listener| {
         spawn(
