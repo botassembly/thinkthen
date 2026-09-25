@@ -212,6 +212,7 @@ Contract 2; state and timing 2; reach 2; proof 3; cost of error 2; total 11. Fin
 ## Review
 
 - Design review: `sdlc/records/2026-09-24-design-review-0120.md`. Five rounds of fresh read-only reviewers found 22 items, and every one is answered. The sixth round accepted it. The amendment after spike 257 took three more rounds, recorded in the same file, and was accepted at `3318a7ba`.
+- Build record: `sdlc/records/0120-build-rust-polars.md`. Its finding 1 changes decision 4: a failed row ends a choose, score, or tag series, because the engine refuses a one-question reply whose only answer failed.
 - Code review: pending.
 
 ## Spike finding, 2026-09-24 (spike 255)
