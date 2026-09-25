@@ -5,9 +5,11 @@
 
 use std::sync::OnceLock;
 
+mod annotated;
 mod batch;
 mod builders;
 mod bulk;
+mod choice;
 mod engine;
 mod error;
 mod options;
@@ -18,22 +20,24 @@ mod results;
 mod set;
 mod settings;
 
+pub use annotated::{Annotated, AnnotatedRecord, Failed, FailureCause, NamedAnnotation};
 pub use batch::Batch;
-pub use builders::{ChooseBuilder, DecideBuilder, ScoreBuilder, TagBuilder};
+pub use builders::{ChooseBuilder, DecideBuilder, LabelBuilder, ScoreBuilder, TagBuilder};
+pub use choice::Choice;
 pub use engine::{DecisionQuestion, DetailQuestion, Engine, Evidence};
 pub use error::{Error, ErrorDetail, ErrorKind};
 pub use options::{CallOptions, CancelToken};
 pub use question::{
-    BandedQuestion, Choice, ChooseQuestion, Description, DescriptionBuilder, LoadedQuestion,
-    Question, TagQuestion,
+    BandedQuestion, ChooseQuestion, Description, DescriptionBuilder, LoadedQuestion, Question,
+    QuestionKind, TagQuestion,
 };
 pub use recognize::{
     Kind, Recognize, RecognizeBuilder, Recognized, RecognizedEntity, Relation, RelationRule,
 };
 pub use relate::{Edge, Entity, Relate, RelateBuilder};
 pub use results::{
-    Annotated, AnnotatedRecord, Answer, Candidate, Counters, Details, Failed, FailureCause, Found,
-    Judgment, NamedAnnotation, NamedProbability, Probabilities, Ranked, Row, Usage,
+    Answer, Candidate, Counters, Details, Found, Judgment, NamedProbability, Probabilities, Ranked,
+    Row, Usage,
 };
 pub use set::{QuestionSet, QuestionSetBuilder};
 pub use settings::EngineBuilder;

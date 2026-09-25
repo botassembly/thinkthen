@@ -11,7 +11,10 @@ use crate::core::{
     self, Json, Meaning, ModelName, QuestionFile, QuestionText, Threshold, Typed, Verb, Withheld,
     json_line, resolve,
 };
-use crate::public::builders::{ChooseBuilder, DecideBuilder, Listing, ScoreBuilder, TagBuilder};
+use crate::public::builders::{
+    ChooseBuilder, DecideBuilder, LabelBuilder, Listing, ScoreBuilder, TagBuilder,
+};
+use crate::public::choice::Choice;
 use crate::public::error::Error;
 
 /// What a question asks and which calls accept it.
@@ -24,6 +27,47 @@ pub(crate) enum Kind {
     Score,
     Rank,
     Find,
+}
+
+impl Kind {
+    const fn public(self) -> QuestionKind {
+        match self {
+            Self::Decide | Self::Banded => QuestionKind::Decide,
+            Self::Choose => QuestionKind::Choose,
+            Self::Tag => QuestionKind::Tag,
+            Self::Score => QuestionKind::Score,
+            Self::Rank => QuestionKind::Rank,
+            Self::Find => QuestionKind::Find,
+        }
+    }
+}
+
+/// What a question asks. A banded question reads `Decide`.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum QuestionKind {
+    /// A yes or no question.
+    Decide,
+    /// A pick of one option.
+    Choose,
+    /// A test of each label on its own.
+    Tag,
+    /// A placement on named levels.
+    Score,
+    /// A question `rank` orders by.
+    Rank,
+    /// A question `find` selects with.
+    Find,
+}
+
+impl QuestionKind {
+    pub(super) const fn of(question: &core::Question) -> Self {
+        match question {
+            core::Question::Decide { .. } => Self::Decide,
+            core::Question::Choose { .. } => Self::Choose,
+            core::Question::Tag { .. } => Self::Tag,
+            core::Question::Score { .. } => Self::Score,
+        }
+    }
 }
 
 /// A label, an option, a level, or a yes or no meaning: plain text or one
@@ -91,11 +135,20 @@ impl Description {
     }
 }
 
-/// One description object, with members in call order.
-#[derive(Debug)]
+/// One description object, with members in call order. `Debug` counts the
+/// members and withholds what they say.
 pub struct DescriptionBuilder {
     members: Vec<(String, Json)>,
     examples: Option<usize>,
+}
+
+impl fmt::Debug for DescriptionBuilder {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("DescriptionBuilder")
+            .field("members", &self.members.len())
+            .finish_non_exhaustive()
+    }
 }
 
 impl DescriptionBuilder {
@@ -284,6 +337,30 @@ impl Question {
         Ok(TagBuilder(Listing::new(text)?, PhantomData))
     }
 
+    /// Start a `choose` question from options known only at run time.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Usage`] for blank text.
+    pub fn choose_labels(text: &str) -> Result<LabelBuilder, Error> {
+        LabelBuilder::new(text, Verb::Choose)
+    }
+
+    /// Start a `tag` question from labels known only at run time.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Usage`] for blank text.
+    pub fn tag_labels(text: &str) -> Result<LabelBuilder, Error> {
+        LabelBuilder::new(text, Verb::Tag)
+    }
+
+    /// What this question asks. A banded question reads `Decide`.
+    #[must_use]
+    pub fn kind(&self) -> QuestionKind {
+        self.kind.public()
+    }
+
     /// Start a placement on named levels, lowest first.
     ///
     /// # Errors
@@ -426,90 +503,4 @@ impl Question {
             kind,
         }
     }
-}
-
-/// A closed set of labels a typed question answers with. Write one with [`choices!`](crate::choices).
-pub trait Choice: Clone + Eq + Send + Sync + 'static {
-    /// The label this value sends.
-    fn label(&self) -> &'static str;
-    /// Every label, in declared order.
-    fn labels() -> &'static [&'static str];
-    /// The value a label names.
-    fn from_label(value: &str) -> Option<Self>;
-}
-
-/// Declare an enum of labels and its [`Choice`] implementation.
-///
-/// ```
-/// thinkthen::choices! {
-///     /// How a ticket is routed.
-///     pub enum Route { Billing => "billing", Outage => "outage" }
-/// }
-/// assert_eq!(Route::from_label("outage"), Some(Route::Outage));
-/// ```
-#[macro_export]
-macro_rules! choices {
-    ($(#[$meta:meta])* $vis:vis enum $name:ident { $($variant:ident => $label:literal),+ $(,)? }) => {
-        $(#[$meta])*
-        #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-        $vis enum $name { $(#[doc = $label] $variant),+ }
-
-        impl $name {
-            /// The label this value sends.
-            #[must_use]
-            $vis const fn label(&self) -> &'static str {
-                match self { $(Self::$variant => $label),+ }
-            }
-
-            /// Every label, in declared order.
-            #[must_use]
-            $vis const fn labels() -> &'static [&'static str] {
-                &[$($label),+]
-            }
-
-            /// The value a label names.
-            #[must_use]
-            $vis fn from_label(value: &str) -> ::core::option::Option<Self> {
-                #[deny(unreachable_patterns)]
-                match value {
-                    $($label => ::core::option::Option::Some(Self::$variant),)+
-                    _ => ::core::option::Option::None,
-                }
-            }
-        }
-
-        // A lint in another crate's macro is silent, so a duplicate label
-        // fails as a constant instead.
-        #[allow(clippy::indexing_slicing, reason = "each index stays below its checked length")]
-        const _: () = {
-            let labels: &[&str] = &[$($label),+];
-            let mut i = 0;
-            while i < labels.len() {
-                let mut j = i + 1;
-                while j < labels.len() {
-                    let (a, b) = (labels[i].as_bytes(), labels[j].as_bytes());
-                    let (mut same, mut k) = (a.len() == b.len(), 0);
-                    while same && k < a.len() {
-                        same = a[k] == b[k];
-                        k += 1;
-                    }
-                    assert!(!same, "choices! labels must differ");
-                    j += 1;
-                }
-                i += 1;
-            }
-        };
-
-        impl $crate::Choice for $name {
-            fn label(&self) -> &'static str {
-                $name::label(self)
-            }
-            fn labels() -> &'static [&'static str] {
-                $name::labels()
-            }
-            fn from_label(value: &str) -> ::core::option::Option<Self> {
-                $name::from_label(value)
-            }
-        }
-    };
 }

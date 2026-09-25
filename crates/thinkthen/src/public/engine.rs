@@ -6,9 +6,10 @@ use std::sync::Arc;
 
 use crate::core::{self, Value};
 use crate::engine::facade::{self, Settings};
+use crate::public::choice::Choice;
 use crate::public::error::Error;
 use crate::public::options::{CallOptions, Stop, guarded};
-use crate::public::question::{Choice, ChooseQuestion, Kind, Question, TagQuestion};
+use crate::public::question::{ChooseQuestion, Kind, Question, TagQuestion};
 use crate::public::results::{self, Answer, Counters, Details};
 use crate::public::settings::EngineBuilder;
 
@@ -300,7 +301,12 @@ impl Engine {
             "details",
         )?;
         let judged = self.judge(question, evidence, options)?;
-        Details::of(&judged, &question.core, question.threshold)
+        Details::of(
+            &judged,
+            &question.core,
+            question.threshold,
+            self.inner.backend(),
+        )
     }
 
     /// The facade engine that asks this question's model.

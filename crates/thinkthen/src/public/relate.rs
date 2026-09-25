@@ -1,6 +1,7 @@
 //! Relations between given entities.
 
 use std::fmt;
+use std::path::Path;
 
 use serde::Serialize;
 
@@ -10,6 +11,7 @@ use crate::public::engine::Engine;
 use crate::public::error::{Error, ErrorKind};
 use crate::public::options::{CallOptions, Stop};
 use crate::public::recognize::{RelationRule, add_rule, cut, model};
+use crate::public::results::Written;
 
 /// The most entities one `relate` call takes.
 const MOST_ENTITIES: usize = 255;
@@ -27,6 +29,34 @@ impl Relate {
             threshold: None,
             model: None,
         }
+    }
+
+    /// Read one version-one relate file. A `fields` pointer other than the
+    /// default `/name` and `/kind` is refused, because a library entity is
+    /// already a name and a kind.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Usage`] naming what the file breaks.
+    pub fn from_json(value: &str) -> Result<Self, Error> {
+        let spec = RelateSpec::parse(value).map_err(Error::refused)?;
+        if spec.name_field().as_str() != "/name" || spec.kind_field().as_str() != "/kind" {
+            return Err(Error::usage(
+                "a library relate reads each entity's name and kind, so `fields` keeps /name and /kind",
+            ));
+        }
+        Ok(Self(spec))
+    }
+
+    /// Read one relate file from disk.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Local`] when the file cannot be read or breaks a rule.
+    pub fn load(path: impl AsRef<Path>) -> Result<Self, Error> {
+        let text = std::fs::read_to_string(path)
+            .map_err(|_| Error::local("the relate file could not be read"))?;
+        Self::from_json(&text).map_err(|error| Error::local(error.detail().message()))
     }
 }
 
@@ -163,6 +193,7 @@ pub struct Edge {
     source: Entity,
     target: Entity,
     probability: f64,
+    json: Written,
 }
 
 impl Edge {
@@ -188,6 +219,12 @@ impl Edge {
     #[must_use]
     pub fn probability(&self) -> f64 {
         self.probability
+    }
+
+    /// This edge as one line of the bare `relate` output.
+    #[must_use]
+    pub fn to_json(&self) -> String {
+        self.json.text()
     }
 }
 
@@ -247,15 +284,18 @@ impl Engine {
                 ),
             ));
         }
-        Ok(execution
+        execution
             .edges
             .into_iter()
-            .map(|edge| Edge {
-                relation: edge.relation,
-                source: Entity::of(&edge.source),
-                target: Entity::of(&edge.target),
-                probability: edge.probability,
+            .map(|edge| {
+                Ok(Edge {
+                    json: Written::of(&edge)?,
+                    source: Entity::of(&edge.source),
+                    target: Entity::of(&edge.target),
+                    probability: edge.probability,
+                    relation: edge.relation,
+                })
             })
-            .collect())
+            .collect()
     }
 }
