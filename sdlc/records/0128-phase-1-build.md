@@ -103,3 +103,26 @@ No other test pinned the version.
 - README edits, until ticket 0126 lands.
 - The Rust test version edits, item 2's four tests and the fixture, until ticket 0119 lands. The edit script lives outside the repository. The dry bump proved it at 0.1.0.
 - The site's tap, "Coming with 0.1", and uninstall lines, until Phase 4 step 3.
+
+## Code review fixes
+
+The code review returned one medium and three low findings. All four are fixed. `main` was not merged again.
+
+1. **Medium: time-limit forwarded no signal.** A Ctrl-C or a TERM stopped time-limit and left the command's own process group running until the limit. time-limit now traps HUP, INT, and TERM. The trap sends TERM to the command's group, stops the watcher, removes the mark, and exits 129, 130, or 143. A nested time-limit receives the outer group's TERM and stops its own group the same way. The `surfaces --registry` table gains a row. It sends TERM to a time-limit whose command started a grandchild, and it requires exit 143 and no surviving grandchild.
+2. **Low: install.sh took any version and folder.** After it resolves the version, the script requires X.Y.Z in digits and dies with "not a release version: <value>; give X.Y.Z". It refuses an install folder holding a quote or a backslash, since both reach the receipt's JSON. `installer-test` gains two rows, a `--version ../../x` and a folder named `a"b`, now 36 cases under dash and bash.
+3. **Low: `versions --set` wrote a half-edited tree.** `--set` requires `\d+\.\d+\.\d+` and returns 2 otherwise. It builds every edit in memory and writes only after every pattern matched. The self-test gains `bad-set` (`--set 1.2`) and `lost-set` (a missing version line). Both require that no file changed.
+4. **Low: every Pages job held write.** The top level now grants `contents: read`. The build job, which runs `npm ci` with the npm cache, holds `contents: read` and `pages: read` for `configure-pages`. Only the deploy job holds `pages: write` and `id-token: write`, and it runs no npm.
+
+Plants, each red, then restored and touched:
+
+| Plant | Result |
+|---|---|
+| time-limit without its three traps | `surfaces --registry` exit 1: "a TERM to time-limit returned 143, or left a process alive" |
+| install.sh without the version check | `installer-test` 34/36: the `../../x` row fails under dash and bash |
+| install.sh without the folder check | `installer-test` 34/36: the `a"b` row fails under dash and bash |
+| `versions` without the X.Y.Z check | the self-test crashes with an `IndexError` on `--set 1.2`, so `lint` fails |
+| `versions` writing each file as it goes | self-test 10/11: `lost-set` fails |
+
+Growth, accepted by the coordinator for these fixes: time-limit 23 to 33 nonblank lines. `versions` 157 to 169. `install.sh` 176 to 185. `installer-test` 190 to 196. `surfaces` 13 more added lines and 1 changed. `pages.yml` 7 more changed lines.
+
+Checks after the fixes: `lint` exit 0, with "versions self-test: 11/11 cases hold", "installer-test: 36/36 cases hold under dash and bash", "workflows self-test: 14/14 cases hold", and the `surfaces --registry` pass line. No Rust file moved, so `test` did not rerun.

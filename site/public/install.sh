@@ -107,6 +107,15 @@ if [ "$VERSION" = latest ]; then
 	[ -n "$tag" ] || tag=$(latest_from_redirect)
 	VERSION=${tag#v}
 fi
+# The version and the folder reach a URL and the receipt, so each keeps a plain form.
+case $VERSION in
+*[!0-9.]* | .* | *. | *..* | *.*.*.*) die "not a release version: $VERSION; give X.Y.Z" ;;
+*.*.*) ;;
+*) die "not a release version: $VERSION; give X.Y.Z" ;;
+esac
+case $INSTALL_DIR in
+*\"* | *\\*) die "refusing an install folder with a quote or backslash: $INSTALL_DIR" ;;
+esac
 ASSET=thinkthen-$VERSION-$TARGET.tar.gz
 URL=$BASE/$REPO/releases/download/v$VERSION/$ASSET
 

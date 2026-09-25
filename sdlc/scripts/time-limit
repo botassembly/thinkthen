@@ -15,6 +15,16 @@ exec 3<&-
 perl -e 'sleep $ARGV[1]; kill 0, $ARGV[0] or exit; open my $f, ">", $ARGV[2]; kill "TERM", -$ARGV[0]; sleep 2; kill "KILL", -$ARGV[0]' \
 	"$child" "$limit" "$mark/timed-out" </dev/null >/dev/null 2>&1 &
 watcher=$!
+# A signal to time-limit stops the command's whole group, as a timeout does.
+stop() {
+	perl -e 'kill "TERM", -$ARGV[0]' "$child"
+	kill "$watcher" 2>/dev/null
+	rm -rf -- "$mark"
+	exit "$1"
+}
+trap 'stop 129' HUP
+trap 'stop 130' INT
+trap 'stop 143' TERM
 wait "$child"
 code=$?
 kill "$watcher" 2>/dev/null

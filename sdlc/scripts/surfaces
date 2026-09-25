@@ -59,7 +59,7 @@ registry() {
 if [ "${1:-}" = --registry ]; then
 	registry sdlc/surfaces.txt
 	planted=$(mktemp)
-	trap 'rm -f -- "$planted" "$planted.json" "$planted.pid"' EXIT
+	trap 'rm -f -- "$planted" "$planted.json" "$planted.pid" "$planted.term"' EXIT
 	{ cat sdlc/surfaces.txt; echo 'libraries/planted landed'; } >"$planted"
 	if registry "$planted" 2>/dev/null; then
 		echo 'surfaces: the registry check passed a landed surface with no check.sh' >&2
@@ -109,6 +109,18 @@ if [ "${1:-}" = --registry ]; then
 	sh "$limit" 1 sh -c 'sleep 30 & echo $! >"$0"; sleep 3' "$planted.pid" 2>/dev/null || slow=$?
 	if [ "$fast" -ne 3 ] || [ "$slow" -ne 124 ] || kill -0 "$(cat "$planted.pid")" 2>/dev/null; then
 		echo "surfaces: time-limit returned $fast and $slow, or left a process alive" >&2
+		exit 1
+	fi
+	# A TERM to time-limit reaches the command's children, and time-limit exits 143.
+	sh "$limit" 30 sh -c 'sleep 30 & echo $! >"$0"; wait' "$planted.term" &
+	outer=$! term=0 i=0
+	while [ ! -s "$planted.term" ] && [ "$i" -lt 50 ]; do sleep 0.1; i=$((i + 1)); done
+	kill "$outer"
+	wait "$outer" || term=$?
+	i=0
+	while kill -0 "$(cat "$planted.term")" 2>/dev/null && [ "$i" -lt 20 ]; do sleep 0.1; i=$((i + 1)); done
+	if [ "$term" -ne 143 ] || kill -0 "$(cat "$planted.term")" 2>/dev/null; then
+		echo "surfaces: a TERM to time-limit returned $term, or left a process alive" >&2
 		exit 1
 	fi
 	echo 'surfaces: the registry holds every binding, and each landed one has its check, ratchet, and deny'

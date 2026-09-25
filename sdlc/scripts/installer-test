@@ -106,11 +106,13 @@ def toolbox(root, jq=True, sha="sha256sum", uname=None):
     return tools
 
 
-def run(shell, port, root, args=(), on_path=False, **tools):
+def run(shell, port, root, args=(), on_path=False, folder=None, **tools):
     home = root / "home"
     path = str(toolbox(root, **tools)) + (f":{home}/.local/bin" if on_path else "")
     env = {"HOME": str(home), "PATH": path, "THINKTHEN_INSTALL_BASE": f"http://127.0.0.1:{port}",
            "THINKTHEN_INSTALL_API": f"http://127.0.0.1:{port}"}
+    if folder:
+        env["THINKTHEN_INSTALL_DIR"] = str(root / folder)
     done = subprocess.run([shell, str(REPO / "install.sh"), *args], env=env, capture_output=True, text=True, timeout=60)
     return done.returncode, done.stdout, done.stderr
 
@@ -163,6 +165,10 @@ def cases():
         ("another version inside", [release("0.1.0", reports="thinkthen 0.0.9")], "v0.1.0", {}, keep_old,
          lambda r: (1, f"Downloading {name}\nChecksum verified.\n",
                     "thinkthen install: asked for thinkthen 0.1.0, and the staged binary reports 'thinkthen 0.0.9'\n")),
+        ("a version that is not X.Y.Z", [one], "v0.1.0", {"args": ["--version", "../../x"]}, lambda r: None,
+         lambda r: (1, "", "thinkthen install: not a release version: ../../x; give X.Y.Z\n")),
+        ("a folder with a quote", [one], "v0.1.0", {"folder": 'a"b'}, lambda r: None,
+         lambda r: (1, "", f'thinkthen install: refusing an install folder with a quote or backslash: {r}/a"b\n')),
         ("another system", [one], "v0.1.0", {"uname": ("FreeBSD", "amd64")}, lambda r: None,
          lambda r: (1, "", "thinkthen install: no build for FreeBSD amd64; thinkthen ships Linux x86_64, "
                            "Linux aarch64, macOS x86_64, and macOS arm64\n")),

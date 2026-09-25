@@ -94,25 +94,31 @@ def check(root):
 
 
 def set_version(root, new):
-    """Write NEW into every place and every lock entry of a checked package."""
-    names = packages(root)
+    """Write NEW into every place and every lock entry of a checked package, or into none."""
+    names, texts = packages(root), {}
     for path, pattern, part in places(root):
-        file = root / path
-        text = file.read_text(encoding="utf-8")
+        text = texts.get(path) or (root / path).read_text(encoding="utf-8")
         hit = re.search(pattern, text)
-        file.write_text(text[:hit.start(1)] + part(new) + text[hit.end(1):], encoding="utf-8")
+        if hit is None:
+            return [f"versions: {path} has no version line the check can read; nothing was written"]
+        texts[path] = text[:hit.start(1)] + part(new) + text[hit.end(1):]
     entry = re.compile(r'(?m)^(name = "([^"]+)"\nversion = ")([^"]+)(")')
     for lock in locks(root):
-        file = root / lock
-        text = file.read_text(encoding="utf-8")
-        file.write_text(entry.sub(lambda m: m.group(1) + (new if m.group(2) in names else m.group(3)) + m.group(4), text),
-                        encoding="utf-8")
+        text = (root / lock).read_text(encoding="utf-8")
+        texts[lock] = entry.sub(lambda m: m.group(1) + (new if m.group(2) in names else m.group(3)) + m.group(4), text)
+    for path, text in texts.items():
+        (root / path).write_text(text, encoding="utf-8")
+    return []
 
 
 def run(root, argv):
     """The exit code and the lines one command prints."""
     if argv[:1] == ["--set"]:
-        set_version(root, argv[1])
+        if not re.fullmatch(r"\d+\.\d+\.\d+", argv[1]):
+            return 2, [f"versions: --set takes X.Y.Z in digits, not {argv[1]!r}; nothing was written"]
+        refused = set_version(root, argv[1])
+        if refused:
+            return 1, refused
         argv = []
     version, count, out = check(root)
     if argv[:1] == ["--tag"] and argv[1] != f"v{version}":
@@ -154,13 +160,19 @@ def self_test():
         ("bare-tag", lambda r: None, ["--tag", version],
          (1, [f"versions: tag {version} does not match version {version}; the tag must read v{version}"])),
         ("set", lambda r: None, ["--set", "9.8.7"], (0, [ok.replace(version, "9.8.7")])),
+        ("bad-set", lambda r: None, ["--set", "1.2"], (2, ["versions: --set takes X.Y.Z in digits, not '1.2'; nothing was written"])),
+        ("lost-set", lambda r: edit(r, "databases/postgresql/thinkthen.control", "default_version", "# version"), ["--set", "9.8.7"],
+         (1, ["versions: databases/postgresql/thinkthen.control has no version line the check can read; nothing was written"])),
     ]
     bad = 0
     for name, plant, argv, expected in cases:
         with tempfile.TemporaryDirectory() as tmp:
             root = fresh(tmp)
             plant(root)
+            before = {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
             got = run(root, argv)
+            if expected[0] and argv[:1] == ["--set"] and before != {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}:
+                got = (got, "a refused --set changed a file")
             if got != expected:
                 bad += 1
                 print(f"versions self-test {name}: expected {expected}, got {got}", file=sys.stderr)
