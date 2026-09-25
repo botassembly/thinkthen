@@ -21,7 +21,7 @@ use serde_json::value::RawValue;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use thinkthen::{
-    Annotated, Description, Details, Engine, Entity, Error, FailureCause, Judgment, Kind,
+    Annotated, Choice, Description, Details, Engine, Entity, Error, FailureCause, Judgment, Kind,
     LoadedQuestion, Probabilities, Question, QuestionSet, Recognize, Recognized, Relate,
     RelationRule,
 };
@@ -38,6 +38,8 @@ const SKIPPED: [&str; 4] = [
 pub(crate) type Checked<T = ()> = Result<T, String>;
 
 thinkthen::choices! { enum Team { Billing => "billing", Shipping => "shipping", Other => "other" } }
+thinkthen::choices! { enum Mark { Billing => "billing", Urgent => "urgent", Security => "security" } }
+thinkthen::choices! { enum Word { Refund => "the refund word", Maybe => "the maybe word" } }
 
 #[derive(Deserialize)]
 struct Written {
@@ -242,21 +244,22 @@ fn single(engine: &Engine, asked: &Question, text: &str, success: &Value, base: 
     same("bare", &judgment(details.value()), &expected["bare"])?;
     detailed(&details, expected)?;
     let typed = match details.value() {
-        Judgment::Decision(_) => Some(json!(decision(engine.decide(asked, text).map_err(said)?))),
-        Judgment::Score(_) => Some(json!(engine.score(asked, text).map_err(said)?)),
-        Judgment::Choice(_) => asked.clone().into_choose::<Team>().ok().map(|typed| {
-            json!(
-                engine
-                    .choose(&typed, text)
-                    .map(|pick| pick.map(|team| team.label()))
-                    .ok()
-            )
-        }),
-        Judgment::Tags(_) => None,
+        Judgment::Decision(_) => json!(decision(engine.decide(asked, text).map_err(said)?)),
+        Judgment::Score(_) => json!(engine.score(asked, text).map_err(said)?),
+        Judgment::Choice(_) => {
+            let typed = asked.clone().into_choose::<Team>().map_err(said)?;
+            let pick = engine.choose(&typed, text).map_err(said)?;
+            json!(pick.map(|team| team.label()))
+        }
+        Judgment::Tags(_) => match asked.clone().into_tag::<Mark>() {
+            Ok(typed) => tags(engine.tag(&typed, text).map_err(said)?),
+            Err(_) => {
+                let typed = asked.clone().into_tag::<Word>().map_err(said)?;
+                tags(engine.tag(&typed, text).map_err(said)?)
+            }
+        },
     };
-    if let Some(typed) = typed {
-        same("typed", &typed, &expected["bare"])?;
-    }
+    same("typed", &typed, &expected["bare"])?;
     let Some(counters) = success.get("counters") else {
         return Ok(());
     };
@@ -427,6 +430,11 @@ fn judgment(value: &Judgment) -> Value {
         Judgment::Score(score) => json!(score),
         Judgment::Tags(tags) => json!(tags),
     }
+}
+
+/// Typed tags as the shared cases spell them.
+fn tags<C: Choice>(picked: Vec<C>) -> Value {
+    json!(picked.iter().map(Choice::label).collect::<Vec<_>>())
 }
 
 /// A failure cause as the shared cases spell it.

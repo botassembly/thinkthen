@@ -1,4 +1,5 @@
 //! The compiled binary answers for its own identity.
+#![cfg(feature = "cli")]
 
 use std::process::Command;
 

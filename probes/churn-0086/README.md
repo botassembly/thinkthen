@@ -13,17 +13,17 @@ sh probes/churn-0086/run.sh tag /tmp/churn-tag
 sh probes/churn-0086/run.sh main
 ```
 
-This machine runs heavy work under one shared lock, so each batch of 8 ran as `flock LOCK timeout 1500 sh run.sh MODE ...` with `RUNS=8`. The lock was `/tmp/thinkthen-heavy.lock` for the first batches and `/run/user/1000/thinkthen-heavy.lock` after it moved. The main side was built from a `git archive` of commit e08276e6 on `ticket/0086-public-rust-api`, so edits in progress could not change the probed code.
+This machine runs heavy work under one shared lock. So each batch ran as `flock LOCK timeout 1500 sh run.sh MODE ...` with a small `RUNS`: 8 per batch at first, then 4 with `PARALLEL=4`. The lock was `/tmp/thinkthen-heavy.lock` for the first batches and `/run/user/1000/thinkthen-heavy.lock` after it moved. The main side was built from a `git archive` of a named commit on `ticket/0086-public-rust-api`, so edits in progress could not change the probed code.
 
 ## Results, 2026-09-24
+
+These counts are final. Ian ruled on 2026-09-24 that this churn is a one-time measurement. It does not run on every ticket or rerun, because it overloads the machine.
 
 | Side | Runs | Clean | SIGSEGV (139) | Abort (134) | Panic (101) |
 | --- | --- | --- | --- | --- | --- |
 | Stand-in Rust API, tag `surfaces-wave7-final` | 24 | 24 | 0 | 0 | 0 |
-| Public API, commit e08276e6 | 48 | 47 | 0 | 0 | 1 |
+| Public API, commits e08276e6 and 13445804 | 152 | 151 | 0 | 0 | 1 |
 
-One public run ended with status 101, a Rust panic on the probe's main thread, in the second batch at a load near 60 with the machine in swap. That batch sent each run's output to `/dev/null`, so the panic message is lost. `run.sh` now keeps the output of any run that does not end cleanly. The 32 later public runs kept output, and all ended cleanly. The public API returns an engine panic on the calling thread as `Error::Defect`, and the probe counts that as a failed call. So the panic most likely came from the probe's own code. Three causes fit. A scoped thread may have failed to start under memory pressure. Another agent's loopback server may have bound the freed port, so one call succeeded and the closing count failed. Or a panic escaped the public door, which would be a defect. The record cannot tell them apart. The next public batches with output kept will name it.
+The first 48 public runs were of commit e08276e6, 8 at a time. One batch of 8 took 4 min 55 s at 826% CPU and pushed the load to 120. One run in that batch ended with status 101, a panic on the probe's main thread, at a load near 60 with the machine in swap. Its output went to `/dev/null`. The 104 later runs were of commit 13445804, 4 at a time with `PARALLEL=4`. Each batch held the heavy lock and started at load 10 or below. All 104 ended cleanly, so no kept output names the panic. `sdlc/issues/2026-09-24-the-churn-probe-left-one-panic-unexplained.md` lists the causes that fit it. One cause is this probe's refused port: the probe binds a free port and drops it, so another process can claim it during a run.
 
-Neither side reached 300 runs. On a 16-core machine, one batch of 8 public-API runs took 4 min 55 s at 826% CPU and pushed the load to 120. A batch of 8 stand-in runs took about 3 min at 182% CPU. After each public batch, the load needed several minutes to fall back under 10. At that pace, 300 runs a side would hold the machine for about 6 hours on the public side and about 2 hours on the stand-in side.
-
-The stand-in's Rust API showed no crash at the tag. The probe did not reproduce the C door's crash, so G3 and R7-1 stay open for ticket 0094's C probe, and ticket 0086 claims no fix for them. The public API showed no SIGSEGV or abort. Its one panic is open until a kept output names it.
+The stand-in showed no crash in 24 runs, too few to rule out a crash that occurs about once in 100 runs. G3 and R7-1 stay open for ticket 0094's C probe, and ticket 0086 claims no fix for them.

@@ -7,7 +7,7 @@
 name = "rust-examples"
 version = "0.0.1"
 edition = "2024"
-rust-version = "1.93.1"
+rust-version = "1.95.0"
 description = "Runnable examples of every thinkthen function, from outside the crate"
 license = "MIT"
 publish = false

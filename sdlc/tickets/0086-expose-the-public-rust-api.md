@@ -6,7 +6,7 @@ opens: Cargo.toml Cargo.lock conformance/consumer probes sdlc/scripts/test crate
 
 # 0086: Expose the public Rust API
 
-Status: built; code review pending (`sdlc/records/0086-build-public-rust-api.md`). Owner: Claude.
+Status: landed on main 2026-09-24 after code review ACCEPT at `5102516f`; see `sdlc/records/0086-build-public-rust-api.md`. The churn run stopped at 152 public-API runs and 24 stand-in runs under Ian's one-time churn ruling, and Ian can overturn that shortfall. Owner: Claude.
 
 ## Outcome and authority
 
@@ -59,6 +59,15 @@ Excluded: C and every other language or database surface; the `surfaces` branch 
 Touch at most sixteen production Rust files and add at most 1,300 nonblank production Rust lines. Touch at most fourteen Rust test, fixture, and example files and add at most 1,900 nonblank lines there. The compile-fail table counts as one file. The consumer workspace counts by its real files: at most six Rust files and 600 nonblank lines, inside the totals above. Package and inventory enforcement may add at most 260 nonblank script or baseline lines. Documentation and manifests may touch at most six files and add at most 220 net nonblank lines. Keep every Rust file below the existing 500-nonblank-line ceiling.
 
 Add no runtime dependency. The one permitted dependency change is the compile-test development dependency already selected by the 0084 contract, if 0084 requires one; otherwise use the repository's direct compiler probes and add none. Any tool used for public inventory is pinned by the install rung and is not a crate runtime dependency. The ratchet increase equals the measured Rust increase. The implementation record names why each added block earns its lines and where duplicate facade, parser, and result conversion code was removed first.
+
+Re-scored 2026-09-24 after code review; the queue owner approved these measured numbers. Net nonblank lines against main:
+
+- Production Rust: 32 files and 4,329 lines, against 16 and 1,300. The 0084 inventory freezes about 60 types and 326 items, each with the docs the lints require. The 26 free-function pairs and the result getters alone exceed the old estimate. Review found no second parser, scheduler, or cache. The review cuts removed the duplicate refusal helpers, the unused `cache_bytes` field, and the throwaway set build. Its doc and comment fixes added some of those lines back.
+- Tests: 24 crate test files and 1,045 lines, plus the consumer's 6 Rust files and 1,091 lines, against 14 files and 1,900 lines together. Fourteen crate files gained only the one-line `cli` gate. The consumer carries every shared case, the G10 causes, and the real-fork proofs.
+- Scripts and baseline: 272 lines against 260. The inventory check is most of it.
+- A macro for the free-function pairs would save about 150 lines. It is refused, because it hides the public docs.
+
+Ian can overturn this re-score. The larger surface is the 0084 contract itself, so a smaller budget means a smaller 0084.
 
 Stop and re-score before crossing a budget, adding a normal dependency, exposing a name absent from 0084, changing the 0085 facade, weakening a control or panic guarantee, collecting an unbounded input, or touching another surface.
 

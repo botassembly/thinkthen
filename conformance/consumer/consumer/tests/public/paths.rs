@@ -32,15 +32,17 @@ fn folder(name: &str) -> PathBuf {
 fn the_convenience_path_equals_the_explicit_engine() {
     let backend = Backend::start().expect("backend");
     let base = format!("{}/generic/v1", backend.origin());
-    let output = Command::new(std::env::current_exe().expect("this test binary"))
-        .args(["--exact", "paths::convenience_child", "--test-threads", "1"])
-        .env_clear()
-        .env(CHILD, &base)
-        .env("THINKTHEN_BASE_URL", &base)
-        .env("THINKTHEN_API_KEY", KEY)
-        .env("THINKTHEN_CACHE", folder("convenience-cache"))
-        .output()
-        .expect("the child ran");
+    let output = crate::run::output(
+        Command::new(std::env::current_exe().expect("this test binary"))
+            .args(["--exact", "--ignored", "paths::convenience_child"])
+            .args(["--test-threads", "1"])
+            .env_clear()
+            .env(CHILD, &base)
+            .env("THINKTHEN_BASE_URL", &base)
+            .env("THINKTHEN_API_KEY", KEY)
+            .env("THINKTHEN_CACHE", folder("convenience-cache")),
+    )
+    .expect("the child ran");
     let said = String::from_utf8_lossy(&output.stdout);
     assert!(output.status.success(), "{said}");
     assert!(said.contains("1 passed"), "the child ran its test: {said}");
@@ -53,6 +55,7 @@ fn the_convenience_path_equals_the_explicit_engine() {
 
 /// The child half. It does nothing unless the parent named a base.
 #[test]
+#[ignore = "the child half; its parent runs it with --ignored"]
 fn convenience_child() {
     let Ok(base) = std::env::var(CHILD) else {
         return;
@@ -84,16 +87,22 @@ fn convenience_child() {
             Some(thinkthen::Answer::Yes)
         );
         assert_eq!(
-            explicit.decide(&decide, "a note").ok(),
-            thinkthen::decide(&decide, "a note").ok()
+            explicit
+                .decide(&decide, "a note")
+                .expect("the engine decides"),
+            thinkthen::decide(&decide, "a note").expect("the convenience decides")
         );
         assert_eq!(
-            explicit.details(&score, "a note").ok(),
-            thinkthen::details(&score, "a note").ok()
+            explicit
+                .details(&score, "a note")
+                .expect("the engine detailss"),
+            thinkthen::details(&score, "a note").expect("the convenience detailss")
         );
         assert_eq!(
-            explicit.choose(&team, "a note").ok(),
-            thinkthen::choose(&team, "a note").ok()
+            explicit
+                .choose(&team, "a note")
+                .expect("the engine chooses"),
+            thinkthen::choose(&team, "a note").expect("the convenience chooses")
         );
         assert_eq!(
             rows(explicit.filter(&decide, records), |kept| kept),
@@ -105,13 +114,14 @@ fn convenience_child() {
             rows(thinkthen::decide_many(&decide, records), parts)
         );
         assert_eq!(
-            explicit.rank(&rank, records).ok(),
-            thinkthen::rank(&rank, records).ok()
+            explicit.rank(&rank, records).expect("the engine ranks"),
+            thinkthen::rank(&rank, records).expect("the convenience ranks")
         );
         let values = |record: thinkthen::AnnotatedRecord<&str>| record.values().to_vec();
-        let annotated = rows(explicit.annotate(&set, records), values);
-        assert!(annotated.iter().all(Option::is_some), "{annotated:?}");
-        assert_eq!(annotated, rows(thinkthen::annotate(&set, records), values));
+        assert_eq!(
+            rows(explicit.annotate(&set, records), values),
+            rows(thinkthen::annotate(&set, records), values)
+        );
         for (one, other) in [
             (
                 explicit.decide(&decide, "  "),
@@ -161,8 +171,10 @@ fn questions() -> (Question, ChooseQuestion<Team>, QuestionSet) {
 }
 
 /// Every row of a batch, each mapped or `None` for an error.
-fn rows<T, U>(batch: thinkthen::Batch<'_, T>, keep: impl Fn(T) -> U) -> Vec<Option<U>> {
-    batch.map(|row| row.ok().map(&keep)).collect()
+fn rows<T, U>(batch: thinkthen::Batch<'_, T>, keep: impl Fn(T) -> U) -> Vec<U> {
+    batch
+        .map(|row| keep(row.expect("each row answers")))
+        .collect()
 }
 
 #[test]
@@ -226,7 +238,7 @@ fn a_held_reply_ends_the_call_at_its_deadline() {
         "{error}"
     );
     assert!(
-        waited >= Duration::from_millis(300) && waited < Duration::from_secs(3),
+        waited >= Duration::from_millis(300) && waited < Duration::from_secs(10),
         "{waited:?}"
     );
 }

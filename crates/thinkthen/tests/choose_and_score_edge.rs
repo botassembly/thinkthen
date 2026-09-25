@@ -1,4 +1,5 @@
 //! The two new verbs at the binary's own edge: usage, the plan, and the help.
+#![cfg(feature = "cli")]
 
 use std::io::{self, Write};
 use std::process::{Command, Output, Stdio};

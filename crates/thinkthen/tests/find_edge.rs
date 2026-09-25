@@ -1,4 +1,5 @@
 //! The public find boundary over free plans and committed recordings.
+#![cfg(feature = "cli")]
 
 use std::fs;
 use std::io;
