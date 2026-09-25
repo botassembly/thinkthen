@@ -49,31 +49,7 @@ impl PreparedRequests {
         let mut chunks = Vec::new();
         let mut consumed = 0;
         while consumed < plan.questions().len() {
-            let remaining = plan.questions().len() - consumed;
-            let fits = |count| {
-                candidate(plan, profile, consumed, count)
-                    .ok()
-                    .filter(|(_, body)| count == 1 || ceiling.is_none_or(|most| body.len() <= most))
-            };
-            let mut best = (1, candidate(plan, profile, consumed, 1)?);
-            let mut over = None;
-            while over.is_none() && best.0 < remaining {
-                let count = (best.0 * 2).min(remaining);
-                match fits(count) {
-                    Some(found) => best = (count, found),
-                    None => over = Some(count),
-                }
-            }
-            if let Some(mut over) = over {
-                while over - best.0 > 1 {
-                    let count = best.0 + (over - best.0) / 2;
-                    match fits(count) {
-                        Some(found) => best = (count, found),
-                        None => over = count,
-                    }
-                }
-            }
-            let (count, (chunk, body)) = best;
+            let (count, (chunk, body)) = longest(plan, profile, ceiling, consumed)?;
             let digest = Recorded::new(backend.url(), &body).digest();
             chunks.push(PreparedChunk {
                 plan: chunk,
@@ -152,13 +128,52 @@ fn relation_request<E: RelationEntityView>(
         .map_err(|_| Error::Defect("relation planned no questions"))
 }
 
+/// One chunk's plan and its checked encoded body.
+type Candidate = (Plan, Vec<u8>);
+
+/// The longest fitting chunk after `consumed`: its question count, plan, and body.
+///
+/// The count doubles from one up to the remainder, then the gap to the first
+/// count that does not fit halves. One question alone is taken or refused as
+/// the profile says.
+fn longest(
+    plan: &Plan,
+    profile: Option<&BackendProfile>,
+    ceiling: Option<usize>,
+    consumed: usize,
+) -> Result<(usize, Candidate), Error> {
+    let remaining = plan.questions().len() - consumed;
+    let fits = |count| {
+        candidate(plan, profile, consumed, count)
+            .ok()
+            .filter(|(_, body)| ceiling.is_none_or(|most| body.len() <= most))
+    };
+    let mut best = (1, candidate(plan, profile, consumed, 1)?);
+    let mut over = remaining + 1;
+    while best.0 < remaining && over == remaining + 1 {
+        let count = (best.0 * 2).min(remaining);
+        match fits(count) {
+            Some(found) => best = (count, found),
+            None => over = count,
+        }
+    }
+    while over <= remaining && over - best.0 > 1 {
+        let count = best.0 + (over - best.0) / 2;
+        match fits(count) {
+            Some(found) => best = (count, found),
+            None => over = count,
+        }
+    }
+    Ok(best)
+}
+
 /// The `count` questions after `consumed`, and their checked encoded body.
 fn candidate(
     plan: &Plan,
     profile: Option<&BackendProfile>,
     consumed: usize,
     count: usize,
-) -> Result<(Plan, Vec<u8>), Error> {
+) -> Result<Candidate, Error> {
     let questions = plan
         .questions()
         .iter()
