@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core/recording.rs crates/thinkthen/src/engine crates
 
 # 0124: Fix the answer cache's three faults
 
-Status: in progress. Built; four rungs green after merging `0c38769e`; code review pending (`sdlc/records/0124-build-answer-cache-fixes.md`). Owner: Claude.
+Status: landed 2026-09-25. Code review accepted it with one gap, now deferred below. Record: `sdlc/records/0124-build-answer-cache-fixes.md`. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -20,7 +20,7 @@ Three cache faults stop hurting a user.
 2. The default cache refuses a second backend address with a sentence about "the recording folder". After this ticket the refusal names the default cache, the address this run asked for, and the ways around it.
 3. `status` prints `cache_target_bytes` beside the cache size. That reads as a limit the tool keeps. After this ticket the words say the number is the size `cache prune` trims to.
 
-The ask is `sdlc/issues/2026-09-25-the-answer-cache-three-fixes.md`, item 2 of section A in `sdlc/planning/issue-backlog-2026-09-25.md`. Pruning by the alias loses user data, so it comes first. Ian ruled on 2026-09-25 that no setting may do nothing, and that `cache_bytes` leaves the library, ticket 0084, and every binding. A later ticket carries that out. This ticket keeps the command's `cache_bytes` configuration field, because it sets prune's default target and so does something.
+The ask is `sdlc/issues/closed/2026-09-25-the-answer-cache-three-fixes.md`, item 2 of section A in `sdlc/planning/issue-backlog-2026-09-25.md`. Pruning by the alias loses user data, so it comes first. Ian ruled on 2026-09-25 that no setting may do nothing, and that `cache_bytes` leaves the library, ticket 0084, and every binding. A later ticket carries that out. This ticket keeps the command's `cache_bytes` configuration field, because it sets prune's default target and so does something.
 
 ## Evidence
 
@@ -208,6 +208,7 @@ Stop, say so in the build record, and ask the coordinator before any of these:
 ## Deferred gaps
 
 - **A prune `--dry-run`, and a guard for a MODEL typo.** A typo removes every entry, as the upgrade prune does, because nothing tells the two apart. The help says so. A `--dry-run` that prints the count line without deleting would let a user check first. Both wait for a user who asks, since each adds a flag.
+- **An over-target line in `status`, or a run warning (issue item 2, options 3 and 4).** The rename and the help now say that nothing trims the cache. A warning would add a stderr line to every run, and it waits for a ruling.
 - **A status line for the binding.** `status` could print whether the default cache is bound to the current address. It cannot print the bound address, for decision 5's reason. The refusal now tells the user what they need. A later ticket can add the line if a user asks.
 - **Bind only at the first write, or one cache per address.** Options 2 and 3 of issue item 1 change ruled behavior. Decision 8 gives the paid-race reason against option 3. Option 2 changes the default cache layout. Either needs Ian.
 - **Renaming the configuration field `cache_bytes`.** Decision 9.
@@ -225,7 +226,7 @@ Stop, say so in the build record, and ask the coordinator before any of these:
 
 ## Issues it closes
 
-Landing closes `sdlc/issues/2026-09-25-the-answer-cache-three-fixes.md`. The lander writes its closing status line and moves it to `sdlc/issues/closed/` in the landing commit. The deferred gaps above stay recorded in this ticket. The typo gap is a real risk the help now names. It needs a flag, so it waits for a user who asks, and it gets no new issue.
+Landing closes `sdlc/issues/closed/2026-09-25-the-answer-cache-three-fixes.md`. The lander writes its closing status line and moves it to `sdlc/issues/closed/` in the landing commit. The deferred gaps above stay recorded in this ticket. The typo gap is a real risk the help now names. It needs a flag, so it waits for a user who asks, and it gets no new issue.
 
 ## Routing
 
