@@ -101,6 +101,8 @@ Measured on the tag with `grep -c .` over each file up to its test module: `conn
 - Documentation: the README's relate section, the planning page's relate section, and the second part of the ADR 0038 amendment, at most 180 net nonblank lines.
 - Ratchet: `databases/duckdb/ratchet.json` and `ratchet.py.json` each move `max` to the measured total. The record names what each block earns.
 
+Re-score: the coordinator approved eleven production files and ratchets of 3751 `src` and 1760 `tools` lines on 2026-09-25 as queue owner. Ian can overturn it. The reason is the review's `ffi.rs` split into one file per module and the shared registration helpers.
+
 Stop and re-score before crossing a budget, adding a dependency, touching `crates/thinkthen` or `conformance/`, or changing a 0110 decision.
 
 ## Exclusions
