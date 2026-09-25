@@ -1,6 +1,6 @@
 # Three next language problems: linking, coreference, decomposition
 
-Status: Backlog. Written 2026-09-21 by the product side from Ian's discussion with the recognize team. Nothing here holds up `recognize` or `relate`, and nothing here is authorized work. The team's own shelf with worked examples is `experiments/RECOGNIZE-BACKLOG.md`. This page is the product's record of what each idea is, what shape it would take, and whether it would be a new function. Ian's order: linking first, coreference second, decomposition last.
+Status: Closed on 2026-09-25 as reference. No work is owed. Backlog that authorizes nothing. Earlier status: Backlog. Written 2026-09-21 by the product side from Ian's discussion with the recognize team. Nothing here holds up `recognize` or `relate`, and nothing here is authorized work. The team's own shelf with worked examples is `experiments/RECOGNIZE-BACKLOG.md`. This page is the product's record of what each idea is, what shape it would take, and whether it would be a new function. Ian's order: linking first, coreference second, decomposition last.
 
 ## The pattern all three share
 

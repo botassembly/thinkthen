@@ -1,5 +1,7 @@
 # Surfaces branch: fourth review
 
+Status: Closed on 2026-09-25 as superseded. Its rows are in the error index and the port guide; the port tickets re-proved each row.
+
 Date: 2026-09-23. Source: external review of pushed tip `f942e06`. Companion to the three earlier reviews of 2026-09-22 and to the verification table appended to `2026-09-22-surfaces-branch-third-review-the-unheld-fixes.md` (`2b63c87`).
 
 Six reviewers worked on a frozen export of `f942e06`. They built offline, including AddressSanitizer builds of DuckDB and the stand-in. PostgreSQL ran in one throwaway container from the pinned digest with no network, removed after and verified gone. Nothing ran on a Mac. The full gate did not run. Live `relate` and `recognize` cannot be tested because the stand-in replays them.

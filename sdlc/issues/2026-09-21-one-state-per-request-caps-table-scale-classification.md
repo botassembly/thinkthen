@@ -1,6 +1,6 @@
 # One state per request caps table-scale classification
 
-Status: Open
+Status: Closed on 2026-09-25 as superseded. Answered by the wire probe; work continues in 2026-09-25-packing-and-batching-what-they-buy-what-they-cost-and-the-setting.md. Earlier status: Open
 
 MotherDuck shipped `prompt_jev()` on 2026-09-21 (the clipping is in Ian's notes) and reports 2,484 rows a second at $0.50 per 100,000 rows on AG News. Our recorded contract sends one evidence string per request — records never share a request (`specification/annotate.md:102`) — with a fixed floor near 256 billed input tokens per request (`2026-09-20-live-probe-findings...md:76-85`) at $0.042 a million tokens and a documented limit of 1,200 requests a minute (`specification/records.md:140-143`).
 

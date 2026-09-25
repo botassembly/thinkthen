@@ -1,6 +1,6 @@
 # A measurement tier for ThinkThen: audit and diff
 
-Status: Open
+Status: Closed on 2026-09-25 after a check against main. audit landed through 0113 (b8992d96) and diff through 0114 (27e5d034). Remaining scope: 2026-09-25-audit-is-complete-for-0-1.md. Earlier status: Open
 
 Ian asked on 2026-09-23, after the second eleventh-function sweep and the plain-English explanation: file audit and diff as one product-enhancement option to be judged. Both are utility capabilities, not judgment functions. Neither calls Jev. Neither touches the ten.
 

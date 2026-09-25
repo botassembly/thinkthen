@@ -1,6 +1,6 @@
 # A process that forks after its first call hangs, in Python and in Ruby
 
-Status: Open. Found in the library experiments. It belongs in the rewrite of ADR 0017 before any library ships.
+Status: Closed on 2026-09-25 after a check against main. Ticket 0096 landed fork recovery (merge 9527d661, sdlc/records/0096-land-fork-recovery.md). Earlier status: Open. Found in the library experiments. It belongs in the rewrite of ADR 0017 before any library ships.
 
 A survey read `experiments/205-thinkthen-libs/` in the workspace on 2026-09-20. Five of the six language experiments are finished, and C is not. The Python and Ruby builders each tested a fork after the first call, and both hung. The Python child hung past 30 seconds. The Ruby child hung forever against the wire, and looked fine against the null backend. A fork test that uses the null backend alone proves nothing. JavaScript has no fork in its model, and the R experiment reports no fork test.
 

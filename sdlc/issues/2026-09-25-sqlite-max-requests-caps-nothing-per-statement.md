@@ -1,6 +1,6 @@
 # SQLite: `thinkthen_max_requests` caps nothing per statement
 
-Status: Decided 2026-09-25. Ian chose option 3 in the exact form below, recorded in `sdlc/planning/one-line-plan-2026-09-25.md` on main at `f78421be`. Ticket 0109 decision 17 builds it for SQLite.
+Status: Closed on 2026-09-25 after a check against main. Built by ticket 0109 decision 17 (thinkthen_max_requests_total, 9034aaab, 62879b0f), on main via merge 902f6b65. Remaining leaks are in the status-spend issue. Earlier status: Decided 2026-09-25. Ian chose option 3 in the exact form below, recorded in `sdlc/planning/one-line-plan-2026-09-25.md` on main at `f78421be`. Ticket 0109 decision 17 builds it for SQLite.
 
 Filed 2026-09-25 by the ticket 0109 build, from its code review.
 

@@ -1,6 +1,6 @@
 # Libraries are ruled in, and every public name is `thinkthen`
 
-Status: Open
+Status: Closed on 2026-09-25 after a check against main. Ticket 0055 made the one thinkthen crate; ADR 0017 names all surfaces. Registry names are claimed. Earlier status: Open
 
 Ruled by Ian on 2026-09-20. ADR 0017 is marked proposed and says it waits for him. His words: "We're definitely doing that. I'm definitely doing Rust, Python, and JavaScript, and I want to own the NPM, crates, and PyPI records for all three." He also ruled on naming: "Everything should have the name ThinkThen. No thinkthen-core or something stupid like that. We should own that term."
 

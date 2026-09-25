@@ -1,6 +1,6 @@
 # audit and diff move into 0.1
 
-Status: Open. Ian's ruling, 2026-09-24.
+Status: Closed on 2026-09-25 after a check against main. 0113 audit (b8992d96, a42edf47) and 0114 diff (27e5d034, a9452daa) landed. Remaining scope: 2026-09-25-audit-is-complete-for-0-1.md. Earlier status: Open. Ian's ruling, 2026-09-24.
 
 Ian moves `thinkthen audit` and `thinkthen diff` from after 0.1 into 0.1. This overturns the timing in `2026-09-23-a-measurement-tier-for-thinkthen-audit-and-diff.md`. Everything else in that issue stands: both commands, their names, subcommands beside `status` and `cache`, and the Beatles Bench prototype as the definition.
 

@@ -1,5 +1,7 @@
 # Surfaces branch: third review — the fixes that did not hold, and the new defects
 
+Status: Closed on 2026-09-25 as superseded. The surfaces branch was never merged. Its rows live in the error index and the port guide; the surfaces landed per ticket.
+
 Date: 2026-09-22 (evening). Source: external review of tip `37240fd`, six reviewers, frozen copies, offline probes (SQLite hosts 3.45.1–3.53.2; postgres:16 throwaway container, removed after; Ruby 3.4 offline; R 4.3.3 scratch library; DuckDB CLI v1.5.5 and Python). Nothing ran on a Mac; the full gate could not run (network); live relate/recognize cannot run (stand-in replays only). Probes under lens1–lens6 and lens*r3 in the session scratchpad.
 
 The prior closing claim said every row was fixed with proof; about fifteen marked-done fixes do not hold, and the third wave introduced new crashes. Root causes this review exposes: proofs that cannot fail (a TypeScript conformance test asserting 11 of 84 cases; verb tests returning early without ENGINE_* set), a red lint rung at the tip, and closure notes written from lane reports rather than independent probes.

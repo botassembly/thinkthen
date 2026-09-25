@@ -1,6 +1,6 @@
 # Where a user could lose trust: a first list
 
-Status: Open
+Status: Closed on 2026-09-25 as reference. No work is owed. A ranked list that authorizes nothing. Its one undecided item, skipping a bad record, moved to the docs-and-how-tos issue. Earlier status: Open
 
 Ian asked on 2026-09-21 what else could erode a user's trust through quality or unexpected behavior, after the cache question in `2026-09-21-the-disk-cache-is-never-on-unless-the-user-names-a-folder.md`. This is the marketing side's list, ranked by how badly each one would hurt. It authorizes nothing. Each item names what was observed and what would answer it.
 

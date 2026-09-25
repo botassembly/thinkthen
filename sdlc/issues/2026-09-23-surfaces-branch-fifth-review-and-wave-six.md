@@ -1,5 +1,7 @@
 # Surfaces branch: the fifth review and the wave-6 fixes
 
+Status: Closed on 2026-09-25 as superseded. The branch was never merged; surfaces port per ticket. The C-door crash is tracked in the churn-probe issue.
+
 Date: 2026-09-23. Reviewed tip: 398d7bb (the dev team's wave 5). Fixed tip: 610a133 on branch `surfaces-wave6`. Companion page: `2026-09-23-surfaces-branch-error-index.md`, one row per defect across all rounds.
 
 ## Verdict

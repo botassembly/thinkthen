@@ -1,5 +1,7 @@
 # Merge trial as a build: the break list and the retarget question
 
+Status: Closed on 2026-09-25 as superseded. The branch merge never happened; the per-surface port replaced it.
+
 Date: 2026-09-22. Source: the library-team lane ran the trial merge in a throwaway copy of the surfaces worktree (`/tmp/thinkthen-merge-trial`, deleted after the run). Nothing in the real worktree was touched and nothing was pushed from the copy; the merge commit `1c45dcf` exists only in the deleted copy and is not a branch anywhere.
 
 ## The setup

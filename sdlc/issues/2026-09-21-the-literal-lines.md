@@ -1,6 +1,6 @@
 # The literal lines from the experiments
 
-Status: Open
+Status: Closed on 2026-09-25 as reference. No work is owed. Records the experiment bench lines as they ran; the ruled spellings shipped. Earlier status: Open
 
 The talk and the site copy these lines, so each is complete enough to paste: imports or setup included where the experiment's own file shows them. Every line ran as written in the experiment folders, against the loopback stub, and the source file is named under each. The question text is the refund question the benches used; the wording varies by language because the benches were written independently, and that is faithful to what ran.
 

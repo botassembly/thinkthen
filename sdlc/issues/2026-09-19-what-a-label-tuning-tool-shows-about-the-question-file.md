@@ -1,6 +1,6 @@
 # What a label-tuning tool shows about the question file
 
-Status: Reference. A survey. No work is owed.
+Status: Closed on 2026-09-25 as reference. No work is owed. A survey with no work owed. Earlier status: Reference. A survey. No work is owed.
 
 Found 2026-09-19. Ian pointed at an open-source tool, new that week, that tunes the wording of a question for the same hosted decider. It samples rows, asks a person to label the unsure ones, and has a second, generating model rewrite the wording until the labels score better. A survey agent read its source. Nothing here is built, and each item names where it would go.
 

@@ -1,6 +1,6 @@
 # `recognize` is the ninth function, and the deck needs one real output
 
-Status: Open
+Status: Closed on 2026-09-25 after a check against main. recognize built (sdlc/records/0080-build-recognize.md); the demo output landed. Earlier status: Open
 
 Ian ruled on 2026-09-21: "We're going to need a new function, `recognize`." This reverses his earlier word the same day that kept it out of the first release. The marketing side records what that ruling asks of the build team and of the recognize experiment. This page authorizes no build. The product shape is in `experiments/RECOGNIZE-PRODUCT-SPEC.md`.
 

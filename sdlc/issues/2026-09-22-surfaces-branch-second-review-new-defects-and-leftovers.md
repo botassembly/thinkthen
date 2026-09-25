@@ -1,5 +1,7 @@
 # Surfaces branch: second review — new defects and leftovers
 
+Status: Closed on 2026-09-25 as superseded. The surfaces branch was never merged. Its rows live in the error index, sorted by sdlc/planning/surfaces-port-guide.md; the port tickets re-proved them.
+
 Date: 2026-09-22. Source: external review of pushed tip `50c6327` (three conformance commits landed after the snapshot and got a light read; phase 3 was live in the worktree during review; phases 4–5 had not started). Companion to `2026-09-22-surfaces-branch-review-the-full-findings.md`. The reviewers probed offline copies and confirmed the first wave's headline fixes hold and its new tests catch the old bugs.
 
 ## Confirmed fixed and holding
