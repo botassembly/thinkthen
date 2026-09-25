@@ -1,6 +1,6 @@
 # Surface batch integration
 
-Status: step 3 of `sdlc/planning/one-line-plan-2026-09-25.md`, run 2026-09-25 by Claude on `ticket/surface-batch` from main at `88f41143`. One surface fails. The coordinator lands the branch after review. Python (0105, 0106) and DuckDB (0110, 0118) arrive later.
+Status: step 3 of `sdlc/planning/one-line-plan-2026-09-25.md`, run 2026-09-25 by Claude on `ticket/surface-batch` from main at `88f41143`. The one surface failure, in Ruby, is fixed on its branch and merged, and every landed surface's check now passes. The coordinator lands the branch after review. Python (0105, 0106) and DuckDB (0110, 0118) arrive later.
 
 ## Merges
 
@@ -15,6 +15,7 @@ Each branch head matched the head the coordinator named. Each merge is its own m
 | 0112 Ruby | `96fa3cf4` | `b0ee47e5` | `sdlc/surfaces.txt` |
 | 0108 R | `e3e34f6a` | `f0dbea55` | `sdlc/surfaces.txt`, the ADR 0047 sections |
 | 0111 PostgreSQL | `32bc44c7` | `ed621a7f` | `sdlc/surfaces.txt`, the ADR 0047 sections |
+| 0112 Ruby tick fix | `2e0ae18b` | `c799af6f` | none |
 
 No branch touched the root workspace members, `Cargo.lock`, `sdlc/ratchet.json`, or the planning pages of another surface. No surface file conflicted. ADR 0047 now holds the Polars amendment and the TypeScript, SQLite, PostgreSQL, Ruby, and R sections. The Ruby and R sections sit after "Consequences", where their branches put them. `sdlc/surfaces.txt` lists eight surfaces as landed. Python and DuckDB stay planned.
 
@@ -64,7 +65,7 @@ Each rung ran once, at a one-minute load between 2 and 9.
 | `lint` | pass. The policy, registry, eight binding deny runs with `sources`, the root deny, fmt, Clippy, docs, and the inventory all passed |
 | `test` | pass. 886 Rust tests passed and none failed, and the script suites passed |
 | `spec` | pass. 21 demos green, 0 red |
-| `surfaces` | FAIL. Seven surfaces pass, and Ruby fails |
+| `surfaces` | FAIL on the first run: seven surfaces passed and Ruby failed. After the Ruby fix, Ruby's `check.sh` alone passed |
 
 The root ratchet measures 61,721 and holds 61,721. No merge touched `crates` or `conformance`, so the ceiling stays unchanged.
 
@@ -76,13 +77,13 @@ The root ratchet measures 61,721 and holds 61,721. No merge touched `crates` or 
 | `libraries/polars` | pass | the integration tests and the README doctest |
 | `libraries/c` | pass | 2 unit and 6 door tests, the sanitizer row included |
 | `libraries/typescript` | pass | 23 of 23 node tests; conformance 49 pass, 0 fail, 5 not run, of 54 |
-| `libraries/ruby` | FAIL | `test_interrupt_single.rb`, below. `check.sh` stops at the first failed file, so the files after it did not run |
+| `libraries/ruby` | pass on the rerun | first run: FAIL in `test_interrupt_single.rb`, below. Rerun at `c799af6f`: all nine test files, 38 runs, 0 failures; conformance 49 pass, 0 fail, 5 not run, of 54 |
 | `libraries/r` | pass | conformance 46 pass, 0 fail, 8 not run, of 54; the tarball installed and answered |
 | `databases/sqlite` | pass | conformance 38 pass, 0 fail, 16 not run, of 54 |
 | `databases/postgresql` | pass | 51 steps passed, `twenty_thousand_warm_rows` among them; conformance 43 pass, 0 fail, 11 not run |
 
 ## Failures
 
-1. **Ruby, `TestInterruptSingle#test_a_raising_tick_stops_a_held_decide_at_once`.** Owner: ticket 0112. At `tests/test_interrupt_single.rb:13` the backend counted 0 held sends where the test expects 1. The test's tick raises on its second run, about 0.2 s after the watchdog starts, whatever the send has done. The call therefore stopped before its one request reached the backend. The other four tests in that file passed. A fixed tick count races the engine's first send, and the race is likely under load. The backend did not die: the same run's other held tests counted their sends. The fix belongs in the test, which should raise only after the backend sees the send. Not fixed here, by the rule that surfaces own their code.
+1. **Ruby, `TestInterruptSingle#test_a_raising_tick_stops_a_held_decide_at_once`.** Owner: ticket 0112. At `tests/test_interrupt_single.rb:13` the backend counted 0 held sends where the test expects 1. The test's tick raises on its second run, about 0.2 s after the watchdog starts, whatever the send has done. The call therefore stopped before its one request reached the backend. The other four tests in that file passed. A fixed tick count races the engine's first send, and the race is likely under load. The backend did not die: the same run's other held tests counted their sends. Fixed on `ticket/0112-port-ruby-surface` at `2e0ae18b`, at the coordinator's request. The child's tick now raises only after the parent's `backend.wait(1)` has counted the held send and the parent has told the child. No fixed delay remains. The fixed test passed 3 of 3 runs. Its plant made the watchdog swallow a tick's raise without firing the call's token. The test then turned red: the call stayed held, and the parent timed out waiting for the child's report. The restored file was touched. The fix merged into this branch at `c799af6f`. Ruby's `check.sh` then ran once under the heavy lock with the key unset, and it passed. Every test file ran, including the four after `test_interrupt_single.rb`.
 
 No failure came from a merge or from the gate commit.
