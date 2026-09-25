@@ -1,7 +1,7 @@
 """Checks over this binding's own files, run by check.sh.
 
-- R5-21: the SIGINT handler locks nothing, allocates nothing, and calls
-  nothing in `thinkthen`.
+- R5-21: the SIGINT handler and its bridge write lock nothing, allocate
+  nothing, and call nothing in `thinkthen`.
 - R4-16: no call to a C API function the bindings mark deprecated, and
   every logical type is made and destroyed by the one wrapper.
 - R2-31: one `catch_unwind` site in `src`.
@@ -47,7 +47,7 @@ def body(text: str, name: str) -> str:
 def handler() -> None:
     signal_ffi = (ROOT / "src" / "signal" / "ffi.rs").read_text()
     signal_rs = (ROOT / "src" / "signal.rs").read_text()
-    code = body(signal_ffi, "on_interrupt") + body(signal_rs, "on_signal")
+    code = body(signal_ffi, "on_interrupt") + body(signal_rs, "on_signal") + body(signal_ffi, "wake_bridge")
     for banned in ("lock", "Box", "Vec", "String", "format!", "to_owned", "thinkthen::", "Mutex", "alloc", "println", "eprintln"):
         if banned in code:
             fail(f"R5-21: the SIGINT handler holds `{banned}`")

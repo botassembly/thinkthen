@@ -42,6 +42,11 @@ impl Caller {
         }
     }
 
+    /// The caller's own client context and file system.
+    pub(crate) const fn files(&self) -> &Files {
+        &self.files
+    }
+
     /// One `@file` text, opened once per init through the caller's files.
     pub(crate) fn file(&mut self, path: &str) -> Result<String, String> {
         if let Some(text) = self.read.get(path) {
@@ -160,7 +165,7 @@ pub(crate) fn members(kind: Members, text: &str, list: &[String]) -> Result<Ques
 }
 
 /// A failure from a file's text reads `local`, per ticket 0095.
-fn from_file(error: &Error) -> String {
+pub(crate) fn from_file(error: &Error) -> String {
     if error.kind() == ErrorKind::Usage {
         local(error.detail().message())
     } else {

@@ -74,7 +74,7 @@ answer=$(env -i PATH="$PATH" HOME="$(mktemp -d)" XDG_CACHE_HOME="$(mktemp -d)" X
 }
 
 echo "== suites"
-for suite in verbs_suite settings_suite signal_suite conformance; do
+for suite in verbs_suite settings_suite signal_suite relate_suite databases_suite conformance; do
 	timeout 900 "$PY" "tools/$suite.py"
 done
 THINKTHEN_DUCKDB_CLI_PATH="$CLI" timeout 900 "$PY" tools/site_examples.py

@@ -4,10 +4,12 @@
 //! `ffi` holds every call into DuckDB's C API. The other modules are safe
 //! Rust over `thinkthen`'s public API.
 
+mod connections;
 mod engines;
 mod errors;
 mod ffi;
 mod questions;
+mod relate;
 mod scalars;
 mod signal;
 mod tables;

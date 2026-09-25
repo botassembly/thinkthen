@@ -25,6 +25,7 @@ pub(crate) enum Type {
     Double,
     BigInt,
     Text,
+    Any,
     List(&'static Type),
     Struct(&'static [(&'static str, Type)]),
 }
@@ -107,15 +108,45 @@ impl Files {
     /// The caller's handles from the scalar's init. A missing one is a
     /// defect: no file opens another way.
     fn of(info: sys::duckdb_init_info) -> Result<Self, String> {
-        let context = client_context(info)
-            .ok_or_else(|| defect("the scalar init got no client context from DuckDB"))?;
+        Self::held(client_context(info), "scalar init")
+    }
+
+    /// The caller's handles from a table function's bind (ticket 0118
+    /// decision 5), under the same rule.
+    pub(crate) fn of_bind(info: sys::duckdb_bind_info) -> Result<Self, String> {
+        let mut context: sys::duckdb_client_context = std::ptr::null_mut();
+        // SAFETY: DuckDB writes the out pointer or leaves it null.
+        unsafe { sys::duckdb_table_function_get_client_context(info, &raw mut context) };
+        Self::held((!context.is_null()).then_some(context), "relate bind")
+    }
+
+    fn held(context: Option<sys::duckdb_client_context>, what: &str) -> Result<Self, String> {
+        let context = context
+            .ok_or_else(|| defect(&format!("the {what} got no client context from DuckDB")))?;
         let Some(system) = file_system(context) else {
             let mut context = context;
             // SAFETY: the context came from DuckDB and is destroyed once.
             unsafe { sys::duckdb_destroy_client_context(&raw mut context) };
-            return Err(defect("the scalar init got no file system from DuckDB"));
+            return Err(defect(&format!(
+                "the {what} got no file system from DuckDB"
+            )));
         };
         Ok(Self { context, system })
+    }
+
+    /// The caller's client context, valid while these handles live.
+    pub(crate) const fn context(&self) -> sys::duckdb_client_context {
+        self.context
+    }
+
+    /// One whole-number setting; unset, NULL, or `RESET` reads `None`.
+    pub(crate) fn number(&self, name: &std::ffi::CStr) -> Option<i64> {
+        self.setting(name).and_then(|value| value.number)
+    }
+
+    /// One text setting under the same rule.
+    pub(crate) fn text(&self, name: &std::ffi::CStr) -> Option<String> {
+        self.setting(name).and_then(|value| value.text)
     }
 
     /// Read one question file through the caller's file system. An IO error
@@ -290,10 +321,16 @@ fn owned_text(raw: *mut c_char) -> Option<String> {
 
 /// A logical type, destroyed once when dropped. Every logical type this
 /// extension creates is made here (R4-16).
-struct Logical(sys::duckdb_logical_type);
+#[derive(Debug)]
+pub(crate) struct Logical(sys::duckdb_logical_type);
 
 impl Logical {
-    fn new(of: &Type) -> Self {
+    /// The raw type, valid while this wrapper lives.
+    pub(crate) const fn raw(&self) -> sys::duckdb_logical_type {
+        self.0
+    }
+
+    pub(crate) fn new(of: &Type) -> Self {
         // SAFETY: each parent copies its child types, and the children drop
         // after it is made.
         Self(unsafe {
@@ -306,6 +343,7 @@ impl Logical {
                     sys::duckdb_create_logical_type(sys::DUCKDB_TYPE_DUCKDB_TYPE_BIGINT)
                 }
                 Type::Text => sys::duckdb_create_logical_type(sys::DUCKDB_TYPE_DUCKDB_TYPE_VARCHAR),
+                Type::Any => sys::duckdb_create_logical_type(sys::DUCKDB_TYPE_DUCKDB_TYPE_ANY),
                 Type::List(child) => sys::duckdb_create_list_type(Self::new(child).0),
                 Type::Struct(fields) => {
                     let members: Vec<Self> =
@@ -402,7 +440,7 @@ fn read_column(vector: sys::duckdb_vector, of: &Type, rows: usize) -> Column {
 }
 
 /// Write one value at `row` of an output vector of type `of`.
-fn write(vector: sys::duckdb_vector, of: &Type, row: usize, value: &Value) {
+pub(crate) fn write(vector: sys::duckdb_vector, of: &Type, row: usize, value: &Value) {
     // SAFETY: each vector has room for `row`, and a list child is reserved
     // before it is written.
     unsafe {
@@ -468,7 +506,7 @@ fn write(vector: sys::duckdb_vector, of: &Type, row: usize, value: &Value) {
     }
 }
 
-fn message(text: &str) -> CString {
+pub(crate) fn message(text: &str) -> CString {
     CString::new(text.replace('\0', " ")).unwrap_or_default()
 }
 
@@ -603,7 +641,7 @@ fn register_scalar(
     }
 }
 
-fn register_setting(
+pub(crate) fn register_setting(
     connection: sys::duckdb_connection,
     name: &std::ffi::CStr,
     of: &Type,
@@ -920,6 +958,7 @@ pub(crate) unsafe extern "C" fn thinkthen_init_c_api(
             let registered = register_all(connection);
             sys::duckdb_disconnect(&raw mut connection);
             registered?;
+            crate::connections::register(*database)?;
         }
         signal::install();
         Ok(())
@@ -948,5 +987,6 @@ fn register_all(connection: sys::duckdb_connection) -> Result<(), String> {
         register_scalar(connection, scalar)?;
     }
     register_usage(connection)?;
-    register_warm(connection)
+    register_warm(connection)?;
+    crate::relate::ffi::register(connection)
 }

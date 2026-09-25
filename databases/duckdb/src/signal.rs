@@ -12,7 +12,7 @@ use std::time::Instant;
 
 mod ffi;
 
-pub(crate) use ffi::install;
+pub(crate) use ffi::{install, start_bridge};
 
 /// Every SIGINT the handler has seen in this process.
 static SIGNALS: AtomicU64 = AtomicU64::new(0);
