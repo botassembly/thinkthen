@@ -9,7 +9,8 @@ use std::path::PathBuf;
 
 use pyo3::prelude::*;
 use thinkthen::{
-    BandedQuestion, Description, Kind, LoadedQuestion, QuestionKind, RecognizedEntity, RelationRule,
+    BandedQuestion, DecisionQuestion, Description, DetailQuestion, Kind, LoadedQuestion,
+    QuestionKind, RecognizedEntity, RelationRule,
 };
 
 use crate::raised;
@@ -37,6 +38,27 @@ impl Asked {
             QuestionKind::Find => "find",
         }
     }
+
+    /// Either form, for a call that takes a cut or a band.
+    pub(crate) fn decision(&self) -> &dyn DecisionQuestion {
+        match self {
+            Self::Plain(question) => question,
+            Self::Banded(question) => question,
+        }
+    }
+
+    /// Either form, for `details`.
+    pub(crate) fn detail(&self) -> &dyn DetailQuestion {
+        match self {
+            Self::Plain(question) => question,
+            Self::Banded(question) => question,
+        }
+    }
+}
+
+/// An engine result as a Python result, with the engine's error raised.
+fn loaded<T>(py: Python<'_>, made: Result<T, thinkthen::Error>) -> PyResult<T> {
+    made.map_err(|error| raised(py, &error))
 }
 
 impl From<LoadedQuestion> for Asked {
@@ -58,17 +80,13 @@ impl Question {
     /// Question-file JSON the caller's arguments made. A broken rule is usage.
     #[staticmethod]
     fn _from_json(py: Python<'_>, text: &str) -> PyResult<Self> {
-        thinkthen::Question::from_json(text)
-            .map(|loaded| Self(loaded.into()))
-            .map_err(|error| raised(py, &error))
+        loaded(py, thinkthen::Question::from_json(text)).map(|made| Self(made.into()))
     }
 
     /// A question file. A broken rule is local.
     #[staticmethod]
     fn _load(py: Python<'_>, path: PathBuf) -> PyResult<Self> {
-        thinkthen::Question::load(path)
-            .map(|loaded| Self(loaded.into()))
-            .map_err(|error| raised(py, &error))
+        loaded(py, thinkthen::Question::load(path)).map(|made| Self(made.into()))
     }
 
     /// The question `rank` or `find` asks, from its text.
@@ -109,16 +127,12 @@ pub(crate) struct QuestionSet(pub(crate) thinkthen::QuestionSet);
 impl QuestionSet {
     #[staticmethod]
     fn _from_json(py: Python<'_>, text: &str) -> PyResult<Self> {
-        thinkthen::QuestionSet::from_json(text)
-            .map(Self)
-            .map_err(|error| raised(py, &error))
+        loaded(py, thinkthen::QuestionSet::from_json(text)).map(Self)
     }
 
     #[staticmethod]
     fn _load(py: Python<'_>, path: PathBuf) -> PyResult<Self> {
-        thinkthen::QuestionSet::load(path)
-            .map(Self)
-            .map_err(|error| raised(py, &error))
+        loaded(py, thinkthen::QuestionSet::load(path)).map(Self)
     }
 }
 
@@ -144,16 +158,12 @@ pub(crate) struct Recognize(pub(crate) thinkthen::Recognize);
 impl Recognize {
     #[staticmethod]
     fn _from_json(py: Python<'_>, text: &str) -> PyResult<Self> {
-        thinkthen::Recognize::from_json(text)
-            .map(Self)
-            .map_err(|error| raised(py, &error))
+        loaded(py, thinkthen::Recognize::from_json(text)).map(Self)
     }
 
     #[staticmethod]
     fn _load(py: Python<'_>, path: PathBuf) -> PyResult<Self> {
-        thinkthen::Recognize::load(path)
-            .map(Self)
-            .map_err(|error| raised(py, &error))
+        loaded(py, thinkthen::Recognize::load(path)).map(Self)
     }
 
     /// The keyword form: kinds with optional descriptions, rules, and the cuts.
@@ -198,16 +208,12 @@ pub(crate) struct Relate(pub(crate) thinkthen::Relate);
 impl Relate {
     #[staticmethod]
     fn _from_json(py: Python<'_>, text: &str) -> PyResult<Self> {
-        thinkthen::Relate::from_json(text)
-            .map(Self)
-            .map_err(|error| raised(py, &error))
+        loaded(py, thinkthen::Relate::from_json(text)).map(Self)
     }
 
     #[staticmethod]
     fn _load(py: Python<'_>, path: PathBuf) -> PyResult<Self> {
-        thinkthen::Relate::load(path)
-            .map(Self)
-            .map_err(|error| raised(py, &error))
+        loaded(py, thinkthen::Relate::load(path)).map(Self)
     }
 
     #[staticmethod]

@@ -13,7 +13,7 @@ use std::sync::Arc;
 use pyo3::prelude::*;
 use thinkthen::{Annotated, Answer, QuestionKind};
 
-use super::ffi::{Alias, ArrowSchema, Imported, bytes, record};
+use super::ffi::{Alias, ArrowSchema, Imported, copied, record};
 use super::memory::Readable;
 use super::out;
 use super::read::{self, Frame, UNREADABLE};
@@ -77,14 +77,13 @@ impl SchemaNode {
         }
         let source = record(memory, at).ok_or(UNREADABLE)?;
         let text = |at| -> Result<Option<CString>, String> {
-            Ok(read::c_text(&(), memory, at)?.map(|held| CString::new(held).unwrap_or_default()))
+            Ok(read::c_text(memory, at)?.map(|held| CString::new(held).unwrap_or_default()))
         };
         let count = usize::try_from(source.n_children).unwrap_or(0);
         let children = if count == 0 {
             Vec::new()
         } else {
-            let table = bytes(
-                &(),
+            let table = copied(
                 memory,
                 source.children.cast_const().cast(),
                 count * size_of::<usize>(),
@@ -127,9 +126,9 @@ pub(super) fn metadata(
     }
     let at = at.cast::<u8>();
     let length = |place: usize| -> Result<usize, &'static str> {
-        let word = bytes(&(), memory, at.wrapping_add(place), 4).ok_or(BAD_METADATA)?;
+        let word = copied(memory, at.wrapping_add(place), 4).ok_or(BAD_METADATA)?;
         let mut four = [0_u8; 4];
-        four.copy_from_slice(word);
+        four.copy_from_slice(&word);
         usize::try_from(i32::from_le_bytes(four)).map_err(|_| BAD_METADATA)
     };
     let pairs = length(0)?;
@@ -143,9 +142,7 @@ pub(super) fn metadata(
             return Err(BAD_METADATA);
         }
     }
-    Ok(Some(
-        bytes(&(), memory, at, end).ok_or(BAD_METADATA)?.to_vec(),
-    ))
+    Ok(Some(copied(memory, at, end).ok_or(BAD_METADATA)?))
 }
 
 /// One array node: this binding's own buffers, or one of the caller's.

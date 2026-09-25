@@ -9,13 +9,17 @@
 //! At import the module registers an `atexit` hook, `_exit_gate`. The hook
 //! sets `EXITING`, then waits, detached, for the write side of `GATE`, so it
 //! waits for every attached release already under way. It drops the write
-//! side at once. Each release takes the read side before it attaches, then
+//! side at once. Each release tries the read side before it attaches, then
 //! checks `EXITING`, and it attaches and releases while it still holds the
-//! read side. A release that finds `EXITING` set, or whose `try_attach` gives
-//! nothing, leaks the batches on purpose. Nothing here panics.
+//! read side. It never waits for the read side: a release on a thread that
+//! is attached could otherwise wait on the hook while the hook waits on it.
+//! Only the hook takes the write side, so a busy gate means the interpreter
+//! is exiting. A release that finds the gate busy or `EXITING` set, or whose
+//! `try_attach` gives nothing, leaks the batches on purpose. Nothing here
+//! panics.
 
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{PoisonError, RwLock};
+use std::sync::{PoisonError, RwLock, TryLockError};
 
 use pyo3::prelude::*;
 
@@ -32,8 +36,12 @@ pub(crate) fn _exit_gate(py: Python<'_>) {
 /// Run `release` attached to the interpreter behind the gate, or leak.
 pub(super) fn release(release: impl FnOnce()) {
     trace::line("wake");
-    let open = GATE.read().unwrap_or_else(PoisonError::into_inner);
-    let outcome = if EXITING.load(Ordering::SeqCst) {
+    let open = match GATE.try_read() {
+        Ok(open) => Some(open),
+        Err(TryLockError::Poisoned(open)) => Some(open.into_inner()),
+        Err(TryLockError::WouldBlock) => None,
+    };
+    let outcome = if open.is_none() || EXITING.load(Ordering::SeqCst) {
         "leaked"
     } else if Python::try_attach(|_py| release()).is_some() {
         "released"

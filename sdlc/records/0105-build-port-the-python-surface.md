@@ -1,12 +1,12 @@
 # 0105 build: port the Python surface
 
-Builder: Claude (Opus subagent), 2026-09-25, on `ticket/0105-port-python-surface` from `71717631`. Code review: pending. Ian can overturn every decision below.
+Builder: Claude (Opus subagent), 2026-09-25, on `ticket/0105-port-python-surface` from `71717631`. Code review: first review returned findings; fixed in the follow-up commit. Ian can overturn every decision below.
 
 ## Outcome
 
 `libraries/python` holds the crate `thinkthen-python` in its own Cargo workspace (ADR 0047). `import thinkthen as tt` has the ten verbs, `decide_many`, `details`, `question`, `usage`, the six exception classes, `CancelToken`, and `tt.Engine`. Every call reaches the real engine through the public `thinkthen` API on a detachable worker thread. `sdlc/surfaces.txt` lists the folder as landed.
 
-`check.sh 0` on beelink, with a loopback backend on the port: exit 0 in 33 s. It ran the flag check, the one-guard count, `cargo fmt --check`, Clippy with warnings denied, 4 Rust unit tests with libpython linked, 28 pytest tests, the shared cases (50 passed, 0 failed, 4 not run, of 54), 14 of 14 examples, and the release wheel's content check.
+`check.sh 0` on beelink, with a loopback backend on the port, after the review fixes: exit 0. It ran the flag check, the one-guard count, `cargo fmt --check`, Clippy with warnings denied, 4 Rust unit tests with libpython linked, 29 pytest tests, the shared cases (50 passed, 0 failed, 4 not run, of 54), 14 of 14 examples, and the release wheel's content check.
 
 ## Starts from, keeps, and changes
 
@@ -24,19 +24,21 @@ Builder: Claude (Opus subagent), 2026-09-25, on `ticket/0105-port-python-surface
 4. `tt.Engine` checks `throttle` itself before the builder (change 13). `cache=True` gives the default folder, `False` no cache, and any other value a folder.
 5. Serde JSON is not a dependency. The package composes question-file JSON in Python and parses `Details::to_json` with `json.loads`.
 
+After the first code review, `only()` checks the question's kind and then its cut, and `decide_many` sends plain and banded questions down one call through `Asked::decision()`. Every `_from_json` and `_load` shares one helper for the engine's refusal.
+
 ## Budgets
 
 | Budget | Limit | Measured |
 |---|---|---|
-| Production Rust, 5 files, each under 500 | 1,200 | 1,196 (engine.rs 425) |
-| Rust unit-test lines | 250 | 250 |
+| Production Rust, 5 files, each under 500 | 1,200 | 1,195 (engine.rs 421) |
+| Rust unit-test lines | 250 | 104 |
 | `__init__.py` and `__init__.pyi` | 460 | 353 |
 | Python test files and lines | 12 and 1,800 | 7 and 649 |
 | Conformance runner | 250 | 190 |
 | `check.sh` and `build-wheel.sh` | 220 | 106 |
 | Documentation, net | 260 | about 115 |
 
-`ratchet.json` sets `src` at 1,300 (production and unit tests). `ratchet.py.json` sets `thinkthen` and `tests` at 1,082. The root ceiling does not change. The tag's duplicate code went first: its 1,703-line `lib.rs`, its generator, and its spec readers do not come across. Each block earns its lines as follows: the kind table and guard (`lib.rs`), the worker and tick (`worker.rs`), whole-list reading and the refusals (`input.rs`), the question and result values (`asked.rs`), and the engine settings and verb shapes (`engine.rs`).
+`ratchet.json` sets `src` at 1,299 (production and unit tests). `ratchet.py.json` sets `thinkthen` and `tests` at 1,120. The secrecy test grew from 1,082 when the reviews asked it to cover every verb, the address credentials, and each whole sentence. The root ceiling does not change. The tag's duplicate code went first: its 1,703-line `lib.rs`, its generator, and its spec readers do not come across. Each block earns its lines as follows: the kind table and guard (`lib.rs`), the worker and tick (`worker.rs`), whole-list reading and the refusals (`input.rs`), the question and result values (`asked.rs`), and the engine settings and verb shapes (`engine.rs`).
 
 ## Error-index rows and plants
 
@@ -72,8 +74,13 @@ Each plant ran in a scratch copy of the worktree, rebuilt with `maturin develop`
 | Change 13 | throttle extracted straight into `u8` | RED, `test_bad_settings_are_usage_errors_that_send_nothing` |
 | Change 14 | helper passes the parent's environment | RED, `test_the_child_environment_holds_the_fake_key_beside_loopback` |
 | Change 14 | `unset` dropped, sentinel key set | RED, the pytest session check exits |
+| Change 13 | the binding builds on `thinkthen::Engine::builder()` in place of `EngineBuilder::from_env()` (`engine.rs`) | RED, `test_the_environment_seeds_every_unset_setting` |
+| Change 14 | every error message carries `THINKTHEN_API_KEY` | RED, both secrecy tests that raise |
+| Change 14 | every error message carries `THINKTHEN_BASE_URL` | RED, `test_credentials_in_the_environment_address_are_refused_unshown` |
 
-Not planted: the change 13 cache-seed plant ("the engine ignores `THINKTHEN_CACHE`") lives in `crates/thinkthen`, which this ticket must not touch. The test runs and passes.
+The change 13 cache-seed plant is a binding plant: it swaps the builder the binding calls. An earlier version of this record wrongly said it lived in `crates/thinkthen`.
+
+The secrecy test now runs every verb (`decide`, `decide_many`, `filter`, `rank`, `find`, `annotate`, `recognize`, and `relate`) against the refuse, 401, and 503 arms. A second child sets `THINKTHEN_BASE_URL` with `user:hidden-word@` and calls `tt.decide`. The test pins the whole sentence: "THINKTHEN_BASE_URL: a base address carries no user information". Nothing is sent.
 
 A control run of `cargo test` with no plant passed, so the Rust REDs are the plants.
 
@@ -93,12 +100,12 @@ One clean sandbox run before the second plant batch reported 1 failure in 21 tes
 - `max_requests=2` over three texts: `EngineBuilder::max_requests` documents that a streaming call sends the records under the limit and then refuses. `decide_many` sent 2. The zero-send test uses `rank`, which refuses before any request.
 - The Rust unit tests do not need `--test-threads 1`. Only one test starts a worker.
 - A bare `cargo test` does not link, because the default feature builds the extension module without libpython. ADR 0047 item 6 says a bare `cargo test` runs every Rust test. The Python section of ADR 0047 now records the exception.
-- `sdlc/scripts` is unchanged. The brief for this batch bars ladder-script changes, so the `sources` deny call and the `file://` plant in `lint` (amendment changes 1 and 9) are not built. `cargo deny ... advisories bans licenses sources` run by hand: sources ok.
+- `sdlc/scripts` and `deny.toml` are unchanged. The integration gate commit carries the binding's `sources` deny call, the `file://` plant in `lint` (amendment changes 1 and 9), as step 3 of `sdlc/planning/one-line-plan-2026-09-25.md` routes shared ladder work to the integration worktree. `cargo deny ... advisories bans licenses sources` run by hand: sources ok.
 
 ## Findings
 
-1. **Deny refuses pyo3's build dependency.** `target-lexicon 0.13.5`, a build dependency of `pyo3-build-config`, is licensed only `Apache-2.0 WITH LLVM-exception`. The root `deny.toml` does not allow it, so `surfaces --registry` fails on `libraries/python`: "licenses FAILED". Every pyo3 build carries it. A one-line crate exception fixes it: `exceptions = [{ crate = "target-lexicon", allow = ["Apache-2.0 WITH LLVM-exception"] }]`. Run in a scratch copy, that line passed the Python lock, the root lock (a warning for the unmatched exception), and the Rust binding's lock. The root file says a widened license list needs a record, so this build does not change it. Recommendation: accept the exception with the code review. The license is Apache-2.0 plus a linking exception that only widens use.
-2. **The engine prints a large deadline in full.** `deadline=1e300` raises a message with a 301-digit number. The test pins it. It is readable but long. The engine owns the sentence.
+1. **Deny refuses pyo3's build dependency.** `target-lexicon 0.13.5`, a build dependency of `pyo3-build-config`, is licensed only `Apache-2.0 WITH LLVM-exception`. The root `deny.toml` does not allow it, so `surfaces --registry` fails on `libraries/python`: "licenses FAILED". Every pyo3 build carries it. A one-line crate exception fixes it: `exceptions = [{ crate = "target-lexicon", allow = ["Apache-2.0 WITH LLVM-exception"] }]`. Run in a scratch copy, that line passed the Python lock, the root lock (a warning for the unmatched exception), and the Rust binding's lock. The root file says a widened license list needs a record, so this build does not change it. Recommendation: accept the exception. The license is Apache-2.0 plus a linking exception that only widens use. Ian approved it on 2026-09-25. It lives in `libraries/python/deny.toml`, the root file plus this one exception, so no other tree carries it. The landing adds `libraries/python` to the ladder's binding deny table.
+2. **The engine prints a large deadline in full.** `deadline=1e300` raises a message with a 301-digit number. The test pins it. The engine owns the sentence. Filed on main as `sdlc/issues/2026-09-25-a-huge-deadline-prints-hundreds-of-digits.md`, which names `test_deadlines_follow_adr_0041` in `tests/test_inputs.py` as the test to update.
 
 ## New dependencies for the code reviewer
 
@@ -109,4 +116,4 @@ The binding lock holds 70 packages. Beyond the root lock it adds `pyo3`, `pyo3-b
 - The Polars and Arrow door (0106).
 - The Python 3.10 floor stays untested in the gate. The test pins need 3.12.
 - Release wheels, manylinux tags, and uploads (queue item 4).
-- The `sources` deny call and its `file://` plant in `lint`, and the `target-lexicon` exception, wait for a ladder change.
+- The `sources` deny call and its `file://` plant in `lint` land in the integration gate commit. The landing adds `libraries/python` to the ladder's binding deny table for `libraries/python/deny.toml`.

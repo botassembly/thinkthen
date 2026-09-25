@@ -114,14 +114,17 @@ def test_what_the_door_hands_out_releases_and_keeps_moved_children(backend, tmp_
 
 
 def test_the_worker_reads_the_producers_own_buffers(backend, tmp_path):
-    """Change 3: ``_arrow_probe`` reads the buffer addresses on the worker,
-    from the batches it holds, and they equal the ones Polars hands out.
-    Regression: a copy of the texts before the hand-off moves them."""
+    """Change 3: ``_arrow_probe`` returns where each text the engine reads
+    starts, read on the worker. Each equals the Polars data buffer plus that
+    row's view offset. Regression: a copy of the texts moves them."""
     printed = run(SETUP + """
     series = pl.Series([f"a text long enough to leave the view {n}" for n in range(1000)])
     _, _, [batch] = pull(series.__arrow_c_stream__())
-    polars_sees = (batch.buffers[2], batch.buffers[1], batch.length)
+    views = ctypes.string_at(batch.buffers[1], 16 * (batch.offset + batch.length))
+    word = lambda row, at: int.from_bytes(
+        views[16 * (batch.offset + row) + at:][:4], "little")
+    polars_sees = [batch.buffers[2 + word(row, 8)] + word(row, 12) for row in range(batch.length)]
     batch.release(ctypes.byref(batch))
-    print(tt._thinkthen._arrow_probe(series) == polars_sees)
+    print(tt._thinkthen._arrow_probe(series) == polars_sees, len(polars_sees))
     """, child_env(backend, tmp_path))
-    assert printed.strip() == "True"
+    assert printed.strip() == "True 1000"

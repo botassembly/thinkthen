@@ -1,12 +1,12 @@
 # 0106 build: port the Python Polars data frame layer
 
-Builder: Claude (Opus subagent), 2026-09-25, on `ticket/0106-port-python-polars` from `0ab0458c`, with the finished 0105 branch merged first (`143104a2`). Code review: pending. Ian can overturn every decision below.
+Builder: Claude (Opus subagent), 2026-09-25, on `ticket/0106-port-python-polars` from `0ab0458c`, with the finished 0105 branch merged first (`143104a2`). Code review: the first review returned seven findings, fixed after the fixed 0105 branch merged in. Ian can overturn every decision below.
 
 ## Outcome
 
 `decide`, `decide_many`, `choose`, `score`, and `tag` read a Polars `Series` or another Arrow column in place, in one engine call on 0105's detachable worker. A `Series` gets a `Series` back, and any other column gets a list. `annotate` and `recognize` read a Polars `DataFrame` with `on=`. pandas stays refused, and every frame that is not Polars is refused before any send.
 
-`check.sh` on beelink, with a loopback backend on the port: exit 0. It ran the flag check, the one-guard count, `cargo fmt --check`, Clippy with warnings denied with and without the `probe` feature, 22 Rust unit tests with libpython linked, the `NOTES.md` test-name check, 45 pytest tests, the shared cases (50 passed, 0 failed, 4 not run, of 54, each typed, `decide_many`, and `annotate` case also over Polars), 14 of 14 examples, and the release wheel's content check. The first run after the port compiled had 9 failures. Seven were test mistakes. Two were real faults, fixed below.
+`check.sh` on beelink, with a loopback backend on the port, after the review fixes: exit 0. It ran the flag check, the one-guard count, `cargo fmt --check`, Clippy with warnings denied with and without the `probe` feature, 23 Rust unit tests with libpython linked, the `NOTES.md` test-name check, 46 pytest tests, the shared cases (50 passed, 0 failed, 4 not run, of 54, each typed, `decide_many`, and `annotate` case also over Polars), 14 of 14 examples, and the release wheel's content check. The first run after the port compiled had 9 failures. Seven were test mistakes. Two were real faults, fixed below.
 
 ## Starts from, keeps, and changes
 
@@ -22,22 +22,25 @@ Builder: Claude (Opus subagent), 2026-09-25, on `ticket/0106-port-python-polars`
 2. **Schema shares.** The moved-child test found that the tag's schema export freed a moved child schema's strings with its parent. Each schema node now carries a share of its tree, as each array node already did. This goes past the tag.
 3. **Frame answers as a stream only.** Polars reads any object with `__arrow_c_array__` as one array, and a pyclass cannot hide a method from `hasattr`. The package wraps a frame answer in `_Stream`, which offers `__arrow_c_stream__` alone.
 4. **The recognize loop.** `recognize(frame, on=)` resolves its deadline once into an instant on the calling thread and gives every inner call `deadline_at` of it. `max_requests` caps each text's call, not the loop.
-5. **Input checks in `input.rs`.** `is_column` and `polars_frame` sit beside `refuse_pandas`, where 0105 keeps every refusal. `engine.rs` shares its `Arg` and `Held` aliases with `frame.rs`.
-6. **Frames skip the gate.** A frame is Polars only, and Polars releases in pure Rust, so frame batches release directly. Column batches from any producer go through the gate.
+5. **The exit gate never waits.** A release tries the gate's read side and leaks when the exit hook holds or waits for the write side. A blocking read could deadlock: a release on a thread that holds the interpreter would wait on the hook, and the hook waits for that release. Only the hook takes the write side, so a busy gate means exit is under way.
+6. **Borrowed reads need an owner.** `ffi::bytes` borrows producer memory for as long as its owner lives. A read with no owner (a pointer table, a struct, a C string, a metadata blob) goes through `ffi::copied`, whose borrow ends inside the call. No caller holds a `'static` slice of producer memory.
+7. **One hand-out helper.** `hand_out` gives every array or schema node its share and release and moves the root out. `drop_share` ends every release. Arrays and schemas share both through a small `Node` trait, whose `Keep` type names the memory each tree shares. The frame writer's two-batch unit test lives in `ffi.rs`, the one module that can build an `Imported` with no producer.
+8. **Input checks in `input.rs`.** `is_column` and `polars_frame` sit beside `refuse_pandas`, where 0105 keeps every refusal. `engine.rs` shares its `Arg` and `Held` aliases with `frame.rs`.
+9. **Frames skip the gate.** A frame is Polars only, and Polars releases in pure Rust, so frame batches release directly. Column batches from any producer go through the gate.
 
 ## Budgets
 
 | Budget | Limit | Measured |
 |---|---|---|
-| `src/arrow/` production, files, each under 500 | 2,400 in 8 | 2,057 in 8 (write.rs 490) |
-| Glue: `frame.rs` and `lib.rs` edits | 250 | 249 (232 and 17) |
-| Rust unit tests | 800 | 710 |
+| `src/arrow/` production, files, each under 500 | 2,400 in 8 | 2,092 in 8 (write.rs 487) |
+| Glue: `frame.rs`, and the `lib.rs`, `input.rs`, and `engine.rs` edits | 250, re-scored to 291 | 291 (228, 17, 32, and 14) |
+| Rust unit tests | 800 | 777 |
 | `__init__.py` and `__init__.pyi` added | 120 | 66 |
 | Python tests, new files and lines | 10 and 1,700 | 5 new files, about 690 lines with the edits |
 | `check.sh` and `build-wheel.sh` added | 60 | 9 |
 | Documentation, net | 200 | 38 |
 
-The glue first measured 289. Folding the two `decide_many` arms through `&dyn DecisionQuestion`, a table helper for `recognize`, and moving the two input checks to `input.rs` brought it to 249. The input checks added 29 lines to `input.rs`. No committed state crossed a budget. `ratchet.json` rises from 1,300 to 4,344: the Arrow door, its unit tests, and the glue. `ratchet.py.json` rises from 1,082 to 1,796: the door's Python tests and the package's column paths. The root ceiling does not change. The tag's pandas probe, its pandas tests, and its benches did not come across.
+The glue first counted only `frame.rs` and `lib.rs`, at 249. The code review asked for an honest count. The column checks moved to `input.rs` add 32 lines, and the `engine.rs` column dispatch, the shared aliases, and the `pub(crate)` widenings add 14. The honest count is 291 against the ticket's 250. The queue owner approved a re-score of the glue budget to 291, the measured count, on 2026-09-25. Ian can overturn it. The checks stay in `input.rs`, beside 0105's refusals. `ratchet.json` rises from 1,299 to 4,441: the Arrow door, its unit tests, and the glue. `ratchet.py.json` rises from 1,120 to 1,842: the door's Python tests and the package's column paths. The root ceiling does not change. The tag's pandas probe, its pandas tests, and its benches did not come across.
 
 ## Error-index rows and plants
 
@@ -61,14 +64,22 @@ Each plant was written into the worktree, rebuilt with `maturin develop` under t
 | Coordinator rule | a relative deadline per text in the recognize loop | RED, `test_recognize_on_a_frame_spends_one_deadline` |
 | Change 6 | release without attaching | RED, `test_callers_that_leave_still_get_every_batch_released` (the child dies, signal 11, in the `ctypes` producer's release) |
 | Change 6 | remove the exit gate, keep `try_attach` | RED, `test_no_worker_freezes_at_exit` |
+| Zero copy | copy each text into a leaked `String` in `series` | RED, `test_the_worker_reads_the_producers_own_buffers` ("False 1000") |
+| Frame cut | each batch's new column starts at row 0 | RED, `each_batch_gets_its_own_rows_of_a_new_column` |
+| R1-24 Polars half | one `annotate_with` call, with its own options, per row | RED, `test_one_deadline_and_one_token_cover_a_column` (answered after 28.7 s) |
+| Throttle | one `decide_many_with` call per row | RED, `test_a_column_runs_at_the_lists_throttle` (24 s run) |
 
 R3-19 retires under the 2026-09-21 pandas ruling.
 
-Plants not run on their own: R1-24's per-row options, R4-23's calling-thread and joined-worker plants, and the per-row throttle plant. A column runs through 0105's one `run` call, whose plants 0105's record shows RED. The zero-copy plant as the ticket words it cannot turn the address test red: `_arrow_probe` reads the batches the worker holds, so it proves the worker holds the producer's own buffers, and a text copy made later would not move them.
+Plants not run on their own: R4-23's calling-thread and joined-worker plants. A column runs through 0105's one `run` call, whose plants 0105's record shows RED.
+
+`_arrow_probe` returns where each text the engine reads starts, read on the worker from the same `series` call the verbs use. The test compares each with the Polars data buffer plus that row's view offset. The zero-copy plant turns it red.
+
+The R1-24 test used to wait on the child when the plant let the call finish, so the plant hung. The child now prints `answered` when no deadline fires, and the test fails at once.
 
 ## Change 6: the exit freeze
 
-The test steps each child's busy wait toward the edge where the worker wakes as the script ends, 0.05 ms a run, since that edge moves with the machine. A fixed sweep of 0 to 8 ms put 38 of 1,000 runs in the window. The staircase puts about 17 in 100 there. The test runs the children on the oldest Python 3.12 or later found, here `/usr/bin/python3.12`, since the spike saw the freeze most there. The extension is abi3, so it loads there.
+The test steps each child's busy wait toward the edge where the worker wakes as the script ends, 0.05 ms a run, since that edge moves with the machine. A fixed sweep of 0 to 8 ms put 38 of 1,000 runs in the window. The staircase puts about 17 in 100 there. The test runs the children on the oldest Python 3.12 or later found, here `/usr/bin/python3.12`, since the spike saw the freeze most there. The extension is abi3, so it loads there. With no 3.12 or 3.13, it falls back to the test's own Python, and every assert names the Python it ran.
 
 | Build | Python | Runs | In the window | Frozen workers |
 |---|---|---|---|---|
@@ -80,7 +91,7 @@ The ticket's stop rule (0 frozen on the gate's Python) did not trigger. With the
 
 ## Findings
 
-- Polars 1.44.2 exports a chunked or sliced `DataFrame` as one batch, with any slice on the child columns. So the frame reader's multi-batch path serves no Polars frame today. The column path takes a multi-chunk pyarrow column, and R1-3 is proved there.
+- Polars 1.44.2 exports a chunked or sliced `DataFrame` as one batch, with any slice on the child columns. So the frame reader's multi-batch path serves no Polars frame today. The column path takes a multi-chunk pyarrow column, and R1-3 is proved there. The Rust unit test `each_batch_gets_its_own_rows_of_a_new_column` pins the frame writer's cut over a hand-built two-batch frame.
 - The conformance backend's generic arm answers every text alike. Row tests therefore prove which rows were read by send counts and cache hits, not by answers.
 - No engine or public API change was needed.
 

@@ -26,6 +26,8 @@ def test_one_deadline_and_one_token_cover_a_column(backend, tmp_path):
         engine.score(urgent, pl.Series(texts), deadline=1.0)
     except tt.DeadlineError:
         print("deadline", time.monotonic() - began, flush=True)
+    else:
+        print("answered", time.monotonic() - began, flush=True)
     sys.stdin.readline()
     token = tt.CancelToken()
     threading.Timer(0.5, lambda: (print("stop", flush=True), token.cancel())).start()
