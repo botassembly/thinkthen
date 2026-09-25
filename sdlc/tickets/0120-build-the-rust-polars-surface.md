@@ -6,7 +6,7 @@ opens: libraries/polars sdlc/planning/adr/0047-bindings-are-unpublished-crates-o
 
 # 0120: Build the Rust Polars surface
 
-Status: design accepted; porting in the surface batch (sdlc/planning/one-line-plan-2026-09-25.md). Owner: Claude.
+Status: built; code review ACCEPT at `bfc17052` (fresh re-review, 2026-09-25); waiting for the surface batch integration run (sdlc/planning/one-line-plan-2026-09-25.md). Owner: Claude.
 
 ## Outcome and authority
 
@@ -123,7 +123,7 @@ No new rung. `libraries/polars/check.sh` joins the surface registry (0093) as th
 
 - New to main: `polars` (0.55 line) and its tree, in the binding's lock only. `serde_json` with `raw_value` for lifting cells from `value_json`, at the root lock's version. `conformance-backend` as a path dev-dependency.
 - The binding lock must resolve `thinkthen`'s own dependencies to the root lock's versions (ADR 0047 item 1). If Polars forces another version, the builder stops and records the case.
-- deny runs with the root `deny.toml`. If the Polars tree carries a license outside the root list, the root file cannot take it, since its `unused-allowed-license = "deny"` would fail the root run. The builder then stops. The fix is a binding `deny.toml` that adds only the named licenses, with `policy.py` checking that difference. That fix needs a re-score.
+- (Re-scored 2026-09-25, see Review: deny now runs with `libraries/polars/deny.toml`.) deny runs with the root `deny.toml`. If the Polars tree carries a license outside the root list, the root file cannot take it, since its `unused-allowed-license = "deny"` would fail the root run. The builder then stops. The fix is a binding `deny.toml` that adds only the named licenses, with `policy.py` checking that difference. That fix needs a re-score.
 - The code reviewer checks each new dependency, the feature set, the lock, deny's result, and both pinned sha256 values, and the review record says so (repo `CLAUDE.md`).
 
 ## Budgets
@@ -187,7 +187,7 @@ The decision: 0120 targets the current Polars release, 0.55.x. It does not take 
    The chains come from the spike's deny logs at 0.55.2 (`logs/08-deny-try-03-polars-0.55.2-1.95-facade.log`) and 0.54.4 (`logs/08-deny-try-05-polars-0.54.4-1.93.1-devcore.log`), and the builder confirms them at 0.55.N. The root `deny.toml` admits only licenses that are permissive and carry no copyleft term, and it asks for a record behind any widening. Zlib, BSL-1.0, and Apache-2.0 WITH LLVM-exception each meet that test: each lets anyone use, change, and ship the code with a notice kept, and none requires shared source. The binding `deny.toml` states that sentence in its header comment, and the build record repeats it. Each exception names its crate and license, so a new crate under the same license still fails. The binding's deny call uses this file. `policy.py` parses both files and checks that their settings differ only by these four entries. Comments do not count, so the binding file keeps its own header and reasons. One planted fifth entry fails the check. The root `deny.toml` does not change. The earlier stop clause on a license outside the root list is answered by this item.
 5. **Budgets, re-scored.**
    - Scripts: `check.sh` at most 80 nonblank lines. The setup script leaves.
-   - Gate changes under `sdlc/scripts`: at most 30 nonblank lines. `policy.py` holds the deny-file check, the equal-pin check, and their plants. The registry gains one entry.
+   - Gate changes under `sdlc/scripts`: at most 30 nonblank lines (re-scored to 70 on 2026-09-25, see Review). `policy.py` holds the deny-file check, the equal-pin check, and their plants. The registry gains one entry.
    - The binding lock: at most 200 packages, measured at 0.55.N with the `polars-core` dev-dependency. The spike measured 163 at 0.55.2. The record gives the count.
    - The binding `deny.toml`: at most 90 nonblank lines. The root file measures 59, and the four entries with their reasons and the header sentence add the rest.
    - Production Rust, Rust tests, and documentation keep their budgets. The documentation budget now covers the four exception reasons in the README.
