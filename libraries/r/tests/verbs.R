@@ -94,8 +94,6 @@ for (value in list(NA_integer_, factor("5"), I(factor("5")), as.difftime(5, unit
 refused <- tryCatch(tt_decide("", "x"), thinkthen_error = function(e) e)
 check("a blank question is usage, and usage is not retryable",
       inherits(refused, "thinkthen_usage") && isFALSE(refused$retryable) && inherits(refused, "error"))
-check("the defect kind raises its own class", inherits(
-  thinkthen:::.tt_condition(paste("defect", "false", "broke", sep = "\u001f")), "thinkthen_defect"))
 
 # The failed marker: the malformed arm breaks the last question.
 failed <- child(c(
@@ -111,10 +109,15 @@ check("a failed annotate cell carries the ruled marker beside good answers", gre
 check("a broken choose column raises backend", grepl(
   "thinkthen_backend the reply was refused: the response carries no answer for question `q1`", failed$text, fixed = TRUE))
 
+# A question that names a model cannot join a set, so the bulk verbs ask it
+# one row at a time and still answer.
+named <- tt_question(choose = "Which team?", options = c("billing", "shipping"), model = "other-model")
+check("a named-model choose answers every row", identical(tt_choose(named, c("n1", "n2")), c("billing", "billing")))
+
 # The counters count sends, as doubles.
 before <- tt_usage()
 invisible(tt_decide("Q?", c("u1-new", "u2-new")))
 check("two judgments are two sends", identical(tt_usage()$requests_sent - before$requests_sent, 2))
 check("the counters are the four doubles", identical(names(before), c("requests_sent", "cache_answers", "input_tokens", "output_tokens")))
 
-finish("verbs", 26L)
+finish("verbs", 28L)

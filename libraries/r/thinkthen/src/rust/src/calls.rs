@@ -11,13 +11,13 @@ use std::any::Any;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, channel};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use extendr_api::prelude::*;
 use std::result::Result;
 use thinkthen::{
     Annotated, Answer, CallOptions, CancelToken, DecisionQuestion, Engine, Error, Evidence,
-    FailureCause, LoadedQuestion, Question, QuestionSet,
+    FailureCause, Judgment, LoadedQuestion, Question, QuestionSet,
 };
 
 use crate::{carry, defect, engine, interrupted, usage};
@@ -52,20 +52,40 @@ pub(crate) fn call<T: Send + 'static>(
     if pending() {
         return Err(interrupted());
     }
-    options(&CancelToken::new(), deadline).map_err(|error| carry(&error))?;
+    let due = due(deadline)?;
     let engine = engine()?;
     let token = CancelToken::new();
     let held = token.clone();
     on_worker(token, pending, move || {
-        let options = options(&held, deadline).map_err(|error| carry(&error))?;
+        let options = CallOptions::new().cancel(&held);
+        let options = due.map_or(options, |at| options.deadline_at(at));
         work(&engine, options).map_err(|error| carry(&error))
     })
 }
 
-/// The call's controls: its token, and its deadline in seconds.
-fn options(token: &CancelToken, deadline: Option<f64>) -> Result<CallOptions<'_>, Error> {
-    let options = CallOptions::new().cancel(token);
-    deadline.map_or(Ok(options), |seconds| options.deadline_seconds(seconds))
+/// The deadline as one instant, fixed before the call starts, so every
+/// engine call a verb makes shares it. The engine's `deadline_seconds`
+/// rules the number, and `-1` is none.
+fn due(deadline: Option<f64>) -> Crossed<Option<Instant>> {
+    let Some(seconds) = deadline else {
+        return Ok(None);
+    };
+    CallOptions::new()
+        .deadline_seconds(seconds)
+        .map_err(|error| carry(&error))?;
+    if seconds < 0.0 {
+        return Ok(None);
+    }
+    let late = || {
+        usage(&format!(
+            "a deadline of {seconds} seconds does not fit this clock"
+        ))
+    };
+    let budget = Duration::try_from_secs_f64(seconds).map_err(|_| late())?;
+    Instant::now()
+        .checked_add(budget)
+        .map(Some)
+        .ok_or_else(late)
 }
 
 /// Run `body` on a new thread and wait for it in ticks.
@@ -331,7 +351,8 @@ pub(crate) fn annotate(
 }
 
 /// `choose`, `score`, or `tag` over a column as one `annotate` of a
-/// one-question set (ticket 0095). A failed cell raises `backend`.
+/// one-question set (0095), or row by row for a question a set refuses.
+/// The engine refuses a broken one-question reply whole, so a failed cell is a defect.
 pub(crate) fn column(
     json: &str,
     texts: Vec<String>,
@@ -341,27 +362,46 @@ pub(crate) fn column(
     let LoadedQuestion::Question(asked) = question(json)? else {
         return Err(usage("only a decide question takes a band"));
     };
-    let set = QuestionSet::builder()
-        .question("value", asked)
+    let Ok(set) = QuestionSet::builder()
+        .question("value", asked.clone())
         .and_then(thinkthen::QuestionSetBuilder::build)
-        .map_err(|error| carry(&error))?;
+    else {
+        return one_by_one(asked, texts, deadline, pending);
+    };
     let rows = annotated(set, texts, deadline, pending)?;
-    let cells = rows
-        .iter()
-        .zip(1..)
-        .map(|(row, place): (&Vec<Annotated>, i32)| match row.first() {
-            Some(Annotated::Failed(failed)) => Err(crate::packed(
-                "backend",
-                false,
-                &format!(
-                    "the backend failed row {place}: {}",
-                    cause_word(failed.cause())
-                ),
-            )),
-            Some(value) => Ok(cell(value)),
-            None => Err(defect("an annotate record held no value")),
-        });
+    let cells = rows.iter().map(|row| match row.first() {
+        Some(Annotated::Failed(_)) => Err(defect("a one-question annotate held a failed cell")),
+        Some(value) => Ok(cell(value)),
+        None => Err(defect("an annotate record held no value")),
+    });
     Ok(List::from_values(cells.collect::<Crossed<Vec<Robj>>>()?))
+}
+
+/// One judgment a row, for a question no set can hold.
+fn one_by_one(
+    asked: Question,
+    texts: Vec<String>,
+    deadline: Option<f64>,
+    pending: Pending<'_>,
+) -> Crossed<List> {
+    let judged = call(deadline, pending, move |engine, options| {
+        texts
+            .iter()
+            .map(|text| {
+                engine
+                    .details_with(&asked, text, options)
+                    .map(|held| held.value().clone())
+            })
+            .collect::<Result<Vec<_>, _>>()
+    })?;
+    Ok(List::from_values(judged.iter().map(|value| -> Robj {
+        match value {
+            Judgment::Decision(answer) => code(*answer).into(),
+            Judgment::Choice(pick) => Nullable::from(pick.clone()).into(),
+            Judgment::Score(position) => (*position).into(),
+            Judgment::Tags(labels) => labels.clone().into(),
+        }
+    })))
 }
 
 /// The audit view of one judgment: the command's `--details` document.

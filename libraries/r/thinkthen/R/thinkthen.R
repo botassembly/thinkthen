@@ -346,7 +346,7 @@ tt_details <- function(question, evidence, threshold = NULL, deadline = NULL) {
 }
 
 # The counters of the engine in use, as doubles.
-tt_usage <- function() tt_usage_counters()
+tt_usage <- function() .tt_call(tt_usage_counters())
 
 # The engine settings (ADR 0017 section 5). NULL keeps what the environment
 # gives. The key stays on THINKTHEN_API_KEY alone.

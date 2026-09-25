@@ -36,49 +36,28 @@ fn relate_ask(spec: &Spec) -> Crossed<Relate> {
 /// because offsets count Unicode scalar values and `start` shifts to one-based.
 fn names(found: &Recognized) -> List {
     let entities = found.entities();
-    let name: Vec<&str> = entities.iter().map(|held| held.name()).collect();
-    let kind: Vec<&str> = entities.iter().map(|held| held.kind()).collect();
-    let start: Vec<f64> = entities
-        .iter()
-        .map(|held| place(held.start()) + 1.0)
-        .collect();
-    let end: Vec<f64> = entities.iter().map(|held| place(held.end())).collect();
-    let strength: Vec<f64> = entities.iter().map(|held| held.strength()).collect();
     let relations = found.relations().unwrap_or_default();
     let links = list!(
-        source = relations
-            .iter()
-            .map(|held| held.source().name())
-            .collect::<Vec<_>>(),
-        source_kind = relations
-            .iter()
-            .map(|held| held.source().kind())
-            .collect::<Vec<_>>(),
-        target = relations
-            .iter()
-            .map(|held| held.target().name())
-            .collect::<Vec<_>>(),
-        target_kind = relations
-            .iter()
-            .map(|held| held.target().kind())
-            .collect::<Vec<_>>(),
-        relation = relations
-            .iter()
-            .map(|held| held.relation())
-            .collect::<Vec<_>>(),
-        probability = relations
-            .iter()
-            .map(|held| held.probability())
-            .collect::<Vec<_>>()
+        source = each(relations, |held| held.source().name()),
+        source_kind = each(relations, |held| held.source().kind()),
+        target = each(relations, |held| held.target().name()),
+        target_kind = each(relations, |held| held.target().kind()),
+        relation = each(relations, |held| held.relation()),
+        probability = each(relations, |held| held.probability())
     );
     list!(
-        name = name,
-        kind = kind,
-        start = start,
-        end = end,
-        strength = strength,
+        name = each(entities, |held| held.name()),
+        kind = each(entities, |held| held.kind()),
+        start = each(entities, |held| place(held.start()) + 1.0),
+        end = each(entities, |held| place(held.end())),
+        strength = each(entities, |held| held.strength()),
         relations = links
     )
+}
+
+/// One column of R values from a list of items.
+fn each<'a, T, U>(items: &'a [T], value: impl Fn(&'a T) -> U) -> Vec<U> {
+    items.iter().map(value).collect()
 }
 
 /// An offset as R's number. Offsets fit a double exactly.
@@ -123,26 +102,11 @@ pub(crate) fn relate(
         engine.relate_with(&ask, entities, options)
     })?;
     Ok(list!(
-        source = edges
-            .iter()
-            .map(|edge| edge.source().name())
-            .collect::<Vec<_>>(),
-        target = edges
-            .iter()
-            .map(|edge| edge.target().name())
-            .collect::<Vec<_>>(),
-        relation = edges.iter().map(|edge| edge.relation()).collect::<Vec<_>>(),
-        probability = edges
-            .iter()
-            .map(|edge| edge.probability())
-            .collect::<Vec<_>>(),
-        source_kind = edges
-            .iter()
-            .map(|edge| edge.source().kind())
-            .collect::<Vec<_>>(),
-        target_kind = edges
-            .iter()
-            .map(|edge| edge.target().kind())
-            .collect::<Vec<_>>()
+        source = each(&edges, |edge| edge.source().name()),
+        target = each(&edges, |edge| edge.target().name()),
+        relation = each(&edges, |edge| edge.relation()),
+        probability = each(&edges, |edge| edge.probability()),
+        source_kind = each(&edges, |edge| edge.source().kind()),
+        target_kind = each(&edges, |edge| edge.target().kind())
     ))
 }

@@ -59,7 +59,7 @@ check("max_requests = 1L refuses rank and decide over two texts", sent == 1L &&
 # explicit throttle is accepted under 0077's rule.
 out <- run(c('invisible(tt_decide("Q?", "first on the default"))',
              'cat("accepted", is.null(tt_engine(throttle = 8L)), "\\n")'))
-check("tt_engine(throttle = 8L) after a default call is accepted", grepl("accepted TRUE", out, fixed = TRUE))
+check("tt_engine(throttle = 8L) after a default call is accepted", identical(out, "accepted TRUE "))
 
 # Secrecy: no output or condition message carries the key or URL credentials.
 out <- run(sprintf('print(tryCatch(tt_engine(base_url = "%s"), error = function(e) e))', sub("://", "://user:hunter2@", generic)))

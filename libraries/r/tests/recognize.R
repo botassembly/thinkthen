@@ -48,7 +48,14 @@ check("relate refuses NA names", identical(kind_of(tt_relate(data.frame(name = c
 # The 255 cap counts unique pairs: 256 names refuse before a send, and 300
 # rows over ten names answer.
 many <- sent_by(capped <- message_of(tt_relate(data.frame(name = paste0("n", 1:256), kind = "x"), "r")))
-check("256 unique entities are refused before a send", many == 0L && grepl("255", capped, fixed = TRUE))
+check("256 unique entities are refused before a send", many == 0L && identical(capped, "relate takes at most 255 entities"))
 check("300 rows over ten names answer", identical(nrow(tt_relate(data.frame(name = paste0("n", rep(1:10, 30)), kind = "x"), "r")), 90L))
 
-finish("recognize", 9L)
+# One deadline covers the whole column: three texts at 600 ms each under a
+# 1 s deadline end in the deadline kind with at most two sent.
+late <- NULL
+sent <- sent_by(late <- child(c('r <- tryCatch(tt_recognize(c("d1", "d2", "d3"), "person", deadline = 1), error = function(e) e)',
+                                'cat(class(r)[[1]], "\\n")'), env = paste0("THINKTHEN_BASE_URL=", arm("arm/delay/600/v1")))$text)
+check("recognize shares one deadline across its texts", identical(late, "thinkthen_deadline ") && sent <= 2L)
+cat("recognize under the deadline sent", sent, "\n")
+finish("recognize", 11L)

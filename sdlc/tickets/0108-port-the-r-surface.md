@@ -178,7 +178,7 @@ Each child runs under `timeout`, with its own backend and cache folder (decision
 - `tt_engine(throttle = 8L)` keeps the environment, proved through the cache folder as decision 18 states. Both runs count one send on the loopback backend.
 - A set `base_url` wins over the variable. With `THINKTHEN_BASE_URL` naming a refused loopback port, `tt_engine(base_url = <backend>)` counts 1 on the backend.
 - One refusal test per argument, each with a count of 0 and `thinkthen_usage`: `base_url = 5`, `model = ""`, `throttle = 0L` and `33L`, `max_requests = -1`, `cache = TRUE`, and `cache_bytes = -1`. A second `tt_engine(throttle = 4L)` after `throttle = 8L` raises it too.
-- `cache = FALSE` sends a repeated question twice. `max_requests = 1L` refuses a two-text `tt_decide` before its first request.
+- `cache = FALSE` sends a repeated question twice. `max_requests = 1L` over a two-text `tt_decide` sends one request and refuses at the second record, because the engine streams (amended 2026-09-25 after the build found the engine's rule; rank refuses before any request).
 - A relate frame with a repeated name and kind sends one entity for it, and each edge carries names and kinds. `igraph::graph_from_data_frame` accepts the result.
 - `tt_details` on a score question carries `answer.level`, and on a decide question it carries none.
 - The `model = ""` test pins `thinkthen_usage` with a count of 0 whether or not `EngineBuilder::model` refuses an empty string. If the builder accepts it, the R type check refuses it first.

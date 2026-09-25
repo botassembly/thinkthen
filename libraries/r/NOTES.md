@@ -23,7 +23,7 @@ Ticket 0108 ported the R surface from tag `surfaces-wave7-frozen-2026-09-24b` on
 - **`I()` over a number.** `deadline = I(5)` is 5 seconds. A classed deadline such as `factor` or `difftime` is `usage`, because R's own coercion reads a factor's code.
 - **Deadline numbers.** `NULL`, `-1`, and `-1L` mean no deadline. `0` is spent and raises `deadline` with no request. `NA`, `-2`, `Inf`, `NaN`, `1e300`, and `4294967296` are `usage`.
 - **Bulk choose, score, and tag.** A column crosses as one `annotate` of a one-question set (0095). This closes R2-23. At throttle 8 each verb holds 8 requests on the wire at once.
-- **A failed cell in those three verbs** raises `thinkthen_backend` naming the row and the cause. It never reads as `NA`. A one-question request whose answer is broken is refused whole by the engine, so the loopback backend cannot reach this path. The code stays for a multi-record partial failure.
+- **A failed cell in those three verbs** cannot happen. The engine refuses a one-question request whose answer is broken as a whole call, and R raises that call's kind. An unexpected failed cell raises `thinkthen_defect`.
 - **jsonlite stays.** It is the one import. Version 2.0.0 is the tested one. Its archive is pinned in `tools/pins.sha256`.
 - **relate takes a frame.** `tt_relate` takes `name` and `kind` columns and dedupes them in first-seen order (ADR 0047 item 9). The engine's 255 cap counts unique pairs.
 - **The ratchets.** `ratchet.json` counts the crate's Rust, and `ratchet.R.json` counts every `.R` file in this folder.
@@ -32,11 +32,11 @@ Ticket 0108 ported the R surface from tag `surfaces-wave7-frozen-2026-09-24b` on
 
 - **R3-3.** Main's question-set parser refuses a NUL in a member name before `carry` sees it. The refusal names the member with the NUL escaped, and the process lives. The Rust unit test on `carry` carries the plant.
 - **R2-5.** Main's duplicate-option message names no option: "the question file's `options`: a list holds each option once". The class check and the doubled-percent unit test stand.
-- **max_requests.** Rank holds its input and refuses before any request. A streaming `tt_decide` over two texts sends the first and refuses at the second. The ticket said the refusal comes before the first request.
+- **max_requests** counts the records of one engine call. Rank and find hold their input and refuse before any request. A streaming `tt_decide`, `tt_filter`, or bulk choose, score, or tag sends the records under the limit and refuses at the record past it, so `max_requests = 1L` over two texts sends one request. The ticket said the refusal comes before the first request, and its acceptance line now says this. `tt_recognize` runs one engine call a text, so the limit counts each text alone and never refuses a column. `tt_relate` is one call over its unique entities.
 - **A throttle after a default-engine verb** is accepted. The default engine selects no throttle, so 0077's rule allows a first explicit one.
-- **find.** `tt_find` asks with no none candidate. When nothing is selected, `place` and `unit` are `NA` and `probability` is `NA`. Cases 18 and 19 of `cases.json` ask with a none candidate, so they report not run.
-- **A one-question set refuses a question that names a model.** A built `tt_question(model = ...)` works with `tt_decide` and not with the three bulk verbs.
-- **recognize deadlines** restart for each text, because the engine runs one recognize call per text.
+- **find.** `tt_find` asks with no none candidate, because `Question::find` has no switch for one (`sdlc/issues/2026-09-24-the-library-cannot-ask-find-none-or-per-question-parts.md`). When nothing is selected, `place` and `unit` are `NA` and `probability` is `NA`. Cases 18 and 19 of `cases.json` ask with a none candidate, so they report not run.
+- **A question that names a model** cannot join a question set. `tt_choose`, `tt_score`, and `tt_tag` then ask it one row at a time through `details_with`, under the one deadline. `tests/verbs.R` proves a named-model choose answers.
+- **One deadline a call.** The Rust half fixes the deadline as one instant before the call starts, and every engine call a verb makes shares it. `tt_recognize` over three texts at 600 ms each under `deadline = 1` raises `thinkthen_deadline` after two sends.
 - **Interrupt parents** are R files run by `tests/with-backend.sh`, where the ticket planned bash `coproc` parents. R reads the backend's count through the same fifo, and one harness serves every test.
 - **Forked children** count from zero. A child forked after the parent's first call answers, reports one send, and the parent's counters stay where they were.
 
@@ -46,4 +46,5 @@ Ticket 0108 ported the R surface from tag `surfaces-wave7-frozen-2026-09-24b` on
 
 ## Engine findings
 
-- The `WidthActive` message still says "width" and "drop the width argument" after the rename to throttle.
+- The command prints the engine's internal `WidthActive` sentence, which still says width. R prints the public one, which says throttle. See `sdlc/issues/2026-09-25-the-engine-width-active-message-still-says-width.md`.
+- `Question::find` has no none candidate: `sdlc/issues/2026-09-24-the-library-cannot-ask-find-none-or-per-question-parts.md`, filed on main by ticket 0086.
