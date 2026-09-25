@@ -29,7 +29,7 @@ Budgets: 13 Ruby test files and 1,161 nonblank lines, the runner 196 of them. `t
 
 ## Plants
 
-Each plant was applied to the committed source, built when it touched Rust, and run against the named test alone. Git then restored the source and the build was redone.
+Each plant was applied to the committed source, built when it touched Rust, and run against the named test alone. Git then restored the source and the build was redone. Git's restore rewrites each file with a new modification time, so Cargo rebuilt after each one. As a further guard, the R4-2 plant was rerun after touching the sources and cleaning the crate. The planted library held `rb_thread_call_with_gvl` and the test stayed green on 3 of 3 runs. The restored library holds no such call. `check.sh` then passed again from a clean crate build.
 
 | Row | Plant | Result |
 | --- | --- | --- |
