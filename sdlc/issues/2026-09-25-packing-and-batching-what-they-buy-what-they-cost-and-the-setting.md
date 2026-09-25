@@ -102,3 +102,23 @@ The question: does rewording the per-row instruction remove the pick-one loss 26
 - Choice answers are noisy. W0 at width 1 sent the same bytes as 260's CA01 and flipped 8 of 77 top options. So a gap of a few items is noise, and no wording beats single-row beyond chance.
 
 What this means for the design: packed `choice` quotes each row's text into its own instruction (W3). Before the engine ships it, rerun W3 on a larger sample at widths 1 and 10, with a repeat to size the noise. Ian can overturn the choice of W3 and the size of that check.
+
+## Results, experiment 262
+
+Ran on 2026-09-25 under Ian's authorization, through `sdlc/scripts/live`. Model `jev-1.13.0`. Declared 310,000 tokens and billed 222,140 input tokens, 0.9 US cents. Every request answered 200 with every answer named and typed. The full record is `~/workspace/experiments/262-packed-choice-confirm/RESULTS.md`.
+
+The question: does W3 hold on all 200 `choose` items of 260's sample? Single-row ran twice: the 2026-09-23 answers (S0) and the same bodies sent again (S1). W3 ran at width 1, and at width 10 in two groupings. The preregistered rule: W3 at width 10 is no worse when both groupings score at least S0 minus the wider of the single-row spread and 3 points.
+
+| Arm | Right of 200 | Flips vs S0 | Tokens a question |
+| --- | --- | --- | --- |
+| S0, single-row | 141 | — | 373.6 |
+| S1, single-row again | 139 | 15 | 373.6 |
+| W3, width 1 | 132 | 38 | 404.1 |
+| W3, width 10, sample order | 146 | 47 | 166.5 |
+| W3, width 10, shuffled | 140 | 49 | 166.5 |
+
+- The single-row spread is 1 point, so the margin is 3 points and the bar is 0.675. Both width-10 groupings pass (0.730 and 0.700). W3 at width 10 is no worse than single-row in aggregate, at 2.2 times fewer tokens.
+- W3 at width 1 falls short (0.660, the same as 260's W0 at width 1). 261's match at width 1 held only on its two song-title templates. The loss sits in the trap and control categories.
+- Packing moves single answers. The width-10 arms flip about a quarter of items against S0, three times the 15 flips between the two single-row runs. The two groupings flip 33 items against each other. Fixes and breaks balance, so accuracy holds.
+
+What this means for the design: packed `choice` may use W3 at width 10 where aggregate accuracy matters. A lone row goes as a bare string, not as a width-1 pack. Before a packed answer feeds a per-item decision, per-item agreement needs its own bar. Ian can overturn the pass bar and the reading of the flips.
