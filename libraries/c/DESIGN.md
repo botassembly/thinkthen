@@ -117,7 +117,7 @@ A thread's entries leave every table when the thread exits (R3-24). The table re
 
 `thinkthen_error_code` returns the code of the calling thread's last failure on the engine, and `THINKTHEN_OK` before any. Success does not clear it. The failing call's own return value is always that call's code.
 
-Every exported symbol runs behind one guard. A panic from the engine or the door becomes the defect kind with the panic's text in the message. It never unwinds into the host. The failure path reaches thread-local storage only through `try_with`, so a call from an `atexit` handler after teardown still returns its code (R2-7). `tests/c/atexit.c` fails a call and frees the engine from an `atexit` handler and must exit 0.
+Every exported symbol runs behind one guard. A panic from the engine or the door becomes the defect kind with the panic's text in the message. It never unwinds into the host. The failure path reaches thread-local storage only through `try_with`, so a call from an `atexit` handler after teardown still returns its code (R2-7). `tests/c/atexit.c` fails once on one engine before exit, then fails on a second engine and frees both from an `atexit` handler, and must exit 0.
 
 ## 8. ABI stability
 
