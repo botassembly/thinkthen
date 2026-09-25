@@ -40,17 +40,21 @@ if ! cargo deny --version >/dev/null 2>&1; then
 fi
 
 # Rung 1's public API check reads rustdoc JSON, whose format moves with the
-# nightly, so the tool and the nightly are pinned together.
+# nightly, so the tool and the nightly are pinned together. The ladder names the
+# dated toolchain itself; sdlc/scripts/inventory calls the same name. That
+# toolchain's rustc reports the previous day's commit date, and the check reads
+# that date so a toolchain installed under the name but built otherwise fails.
 PUBLIC_API_VERSION=0.52.0
-PUBLIC_API_NIGHTLY=2026-08-23
+PUBLIC_API_TOOLCHAIN=nightly-2026-08-24
+PUBLIC_API_RUSTC_DATE=2026-08-23
 if ! cargo public-api --version 2>/dev/null | grep -qx "cargo-public-api $PUBLIC_API_VERSION"; then
 	printf 'install: rung 1 needs cargo public-api %s\n' "$PUBLIC_API_VERSION" >&2
 	printf 'install: cargo install --locked cargo-public-api@%s\n' "$PUBLIC_API_VERSION" >&2
 	exit 1
 fi
-if ! rustc +nightly --version 2>/dev/null | grep -q " $PUBLIC_API_NIGHTLY)\$"; then
-	printf 'install: rung 1 needs the nightly of %s for cargo public-api\n' "$PUBLIC_API_NIGHTLY" >&2
-	printf 'install: rustup toolchain install nightly-%s && rustup toolchain link nightly "$(rustc +nightly-%s --print sysroot)"\n' "$PUBLIC_API_NIGHTLY" "$PUBLIC_API_NIGHTLY" >&2
+if ! rustc "+$PUBLIC_API_TOOLCHAIN" --version 2>/dev/null | grep -q " $PUBLIC_API_RUSTC_DATE)\$"; then
+	printf 'install: rung 1 needs the toolchain %s for cargo public-api\n' "$PUBLIC_API_TOOLCHAIN" >&2
+	printf 'install: rustup toolchain install %s\n' "$PUBLIC_API_TOOLCHAIN" >&2
 	exit 1
 fi
 
