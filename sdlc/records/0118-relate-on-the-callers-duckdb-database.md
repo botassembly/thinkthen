@@ -27,7 +27,7 @@ Branch `ticket/0118-duckdb-relate`, built on ticket 0110's branch. Built on Beel
 
 ## Results
 
-- `check.sh` results are in the section below, filled at the branch head.
+- `check.sh` passes: fmt, clippy with `-D warnings`, the unit tests with the fork test, both builds, the source checks with R2-29, deny and its plant, the stock CLI call, every suite, conformance, the site examples, and the selftests. It prints 70 `ok` lines.
 - Ratchets: `src` rises from 2176 to 3652 non-blank Rust lines. The kept connections take 520, relate 736, the bridge and its fork test 196, and the rest of `ffi.rs` 34. `tools` rises from 1116 to 1583 non-blank Python lines, for the two relate suites and the relate cases added to the signal, secrecy, conformance, and source checks. The tag held 2,149 production lines for the same two modules. The duplicated SQL runners were folded into `harness.run` and one child script.
 - Conformance: 51 pass, 0 fail, 3 not run, 54 cases. The relate reason left the closed list.
 - R4-22: 20 runs of two and then four concurrent held queries, a relate among them, each stopped within 100 ms of one SIGINT.
