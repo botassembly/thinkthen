@@ -59,7 +59,7 @@ The engine stays a blocking client with scoped threads and no async runtime. ADR
 
 Every project above packs many rows into one request, and that is why they report thousands of rows in a few seconds. ThinkThen sends one request per record, and `specification/annotate.md` says records never share a request. Inside the vendor's documented rate limit that is about 980 short rows a minute and about 1.2 US cents per thousand. `pg-jev` reports 2,000 rows in 3.5 seconds for 1.2 US cents.
 
-Our own run on 2026-09-20 used the largest project's layout on the same 1,000 SMS messages as the accuracy round. `sdlc/issues/2026-09-20-packing-rows-into-one-request-measured.md` has the tables.
+Our own run on 2026-09-20 used the largest project's layout on the same 1,000 SMS messages as the accuracy round. `sdlc/issues/closed/2026-09-20-packing-rows-into-one-request-measured.md` has the tables.
 
 - At 10 rows per request the accuracy matched one row per request, 0.968, for 3.3 times fewer tokens and ten times fewer requests.
 - At 20 rows the accuracy fell to 0.941. At 40 rows the recall fell from 0.94 to 0.43, and the later rows in a request did worst. One public DuckDB extension defaults to 40.

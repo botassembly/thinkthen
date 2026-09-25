@@ -23,7 +23,7 @@ Ticket 0006 landed the two variables beside the older surface. The binary still 
 - The code. `--profile`, `--adapter`, and `--key-env` are removed and exit 2 when given. `--url` stays hidden, and `--model` stays with its default. The profile type, the adapter selection, and the rules that served them are deleted. `meta` holds `url`, `model`, `usage`, and `replayed`. The plan document holds no `profile`.
 - The request bytes do not change, so every pinned digest and the committed recording of demo 01 still hold. Demo 01 stays green.
 - `spec/` pages and fixtures follow.
-- Each point in `sdlc/issues/2026-09-19-review-leftovers-from-ticket-0006.md` is fixed, or the ticket's record says why it waits.
+- Each point in `sdlc/issues/closed/2026-09-19-review-leftovers-from-ticket-0006.md` is fixed, or the ticket's record says why it waits.
 
 Excluded: any new option, and `THINKTHEN_MODEL`. A feature enters when a demo cannot be written without it.
 

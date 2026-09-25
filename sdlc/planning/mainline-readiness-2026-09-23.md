@@ -63,7 +63,7 @@ Done means the actual Unix subprocess dies from SIGINT after completed output is
 
 ## Surfaces evidence and limits
 
-Main contains review documents about `surfaces`; it does not contain that branch. The [third review](../issues/2026-09-22-surfaces-branch-third-review-the-unheld-fixes.md) closes most tested findings at `f942e06` and names the remaining proof gaps. Stand-in passes do not prove real-engine integration.
+Main contains review documents about `surfaces`; it does not contain that branch. The [third review](../issues/closed/2026-09-22-surfaces-branch-third-review-the-unheld-fixes.md) closes most tested findings at `f942e06` and names the remaining proof gaps. Stand-in passes do not prove real-engine integration.
 
 This review does not rerun the surface runtime suites, macOS checks, website deployment, or live model quality tests. No paid call ran. GitHub Actions remains paused; local results supply current gate evidence.
 

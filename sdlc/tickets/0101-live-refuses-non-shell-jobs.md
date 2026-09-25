@@ -1,7 +1,7 @@
 ---
 flow: quick-fix
 priority: 95
-opens: sdlc/scripts/live sdlc/scripts/README.md sdlc/live-test sdlc/issues/2026-09-20-packing-rows-into-one-request-measured.md sdlc/records/0101-live-refuses-non-shell-jobs.md
+opens: sdlc/scripts/live sdlc/scripts/README.md sdlc/live-test sdlc/issues/closed/2026-09-20-packing-rows-into-one-request-measured.md sdlc/records/0101-live-refuses-non-shell-jobs.md
 ---
 
 # 0101: Refuse a non-shell live job before any charge
@@ -10,7 +10,7 @@ Status: landed 2026-09-24 through a merge of `ticket/0101-live-refuses-non-shell
 
 ## Problem
 
-`sdlc/scripts/live` hands every job to `/bin/sh`. It appends the `charge N` row first and checks nothing about the job's language. A Python job dies at once and keeps its whole reservation, because the ledger has no refund. `sdlc/issues/2026-09-20-packing-rows-into-one-request-measured.md`, section "A defect in the live launcher", records a lost 560,000-token reservation.
+`sdlc/scripts/live` hands every job to `/bin/sh`. It appends the `charge N` row first and checks nothing about the job's language. A Python job dies at once and keeps its whole reservation, because the ledger has no refund. `sdlc/issues/closed/2026-09-20-packing-rows-into-one-request-measured.md`, section "A defect in the live launcher", records a lost 560,000-token reservation.
 
 ## Fix
 

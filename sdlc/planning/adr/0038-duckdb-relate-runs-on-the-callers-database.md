@@ -27,7 +27,7 @@ From `databases/duckdb/NOTES.md` on branch `surfaces`:
 
 This boundary is exactly the one the C++ door would lift. Temporary-table and open-transaction visibility for relate is impossible through the stable C API; the C++ fork under the build team's consideration (the `duckdb-rs` bind-callback question) is what removes it. The lane recorded this as MERGE-NOTE material.
 
-The second review found further defects in this area — two in-memory databases both registering as "memory"; `ATTACH … USE other` counting the main database's table; a saved connection keeping a closed database file locked; relate holding any SQL and committing on its own; a nested relate hanging. Those are filed in `sdlc/issues/2026-09-22-surfaces-branch-second-review-new-defects-and-leftovers.md` and remain open.
+The second review found further defects in this area — two in-memory databases both registering as "memory"; `ATTACH … USE other` counting the main database's table; a saved connection keeping a closed database file locked; relate holding any SQL and committing on its own; a nested relate hanging. Those are filed in `sdlc/issues/closed/2026-09-22-surfaces-branch-second-review-new-defects-and-leftovers.md` and remain open.
 
 ## Proof
 

@@ -14,7 +14,7 @@ Status: landed
 
 ## Current Facts
 
-`report` left the plan, and recipes come first (ADR 0010). ADR 0012 proposes that a recipe is a folder: the question or question file, the `.jq` files, one short script with the pipeline line, and a page that is a how-to under ADR 0011. Only `decide` is built, and record mode is not. A shell loop over a case file with `decide --details` produces rows today. `sdlc/issues/2026-09-19-ideas-carried-from-the-design-captures.md` lists the rules a recipe must follow. Demo 13 is red and still written against the removed `report` command. Demo 14 grades several checks at once, so it waits for `annotate`.
+`report` left the plan, and recipes come first (ADR 0010). ADR 0012 proposes that a recipe is a folder: the question or question file, the `.jq` files, one short script with the pipeline line, and a page that is a how-to under ADR 0011. Only `decide` is built, and record mode is not. A shell loop over a case file with `decide --details` produces rows today. `sdlc/issues/closed/2026-09-19-ideas-carried-from-the-design-captures.md` lists the rules a recipe must follow. Demo 13 is red and still written against the removed `report` command. Demo 14 grades several checks at once, so it waits for `annotate`.
 
 ## Scope
 

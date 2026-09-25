@@ -35,7 +35,7 @@ Main is the spine (`sdlc/planning/one-line-plan-2026-09-24.md`), and each of the
 
 Ian ruled on 2026-09-24 that Rust Polars and Python Polars are both in 0.1 (`sdlc/planning/one-line-plan-2026-09-24.md`, afternoon rulings). That ruling overturns item 8's deferral of the Rust `Series` door. Ticket 0120 builds it as `thinkthen-polars` at `libraries/polars`, a binding like the others under items 1 to 7. Its `deny.toml` is the root file plus four named license exceptions, and `policy.py` checks that difference.
 
-10. **The Polars column table.** Both Polars doors, 0120 in Rust and 0106 in Python, write a frame's new columns by this table. The issue `sdlc/issues/2026-09-24-both-polars-doors-take-widened-cells-from-value-json.md` holds its history.
+10. **The Polars column table.** Both Polars doors, 0120 in Rust and 0106 in Python, write a frame's new columns by this table. The issue `sdlc/issues/2026-09-25-public-library-api-gaps.md` holds its history.
 
 | Question | Column | Widened cell when any row of that question failed |
 | --- | --- | --- |

@@ -19,7 +19,7 @@ The frozen `surfaces-wave7` tag holds all nine surfaces, about 63,000 lines. Eac
 
 ## Ian's ruling on SQL spending, 2026-09-25
 
-In SQL each row is its own engine call, so `max_requests` caps nothing on a large query (`sdlc/issues/2026-09-25-sqlite-max-requests-caps-nothing-per-statement.md` on ticket 0109). Ian chose a cap per process. SQLite, DuckDB, and PostgreSQL each add a total setting (`thinkthen_max_requests_total`, spelled the host's way), unset by default. Before each engine call the extension takes the requests its engines in this process have sent, refuses as `usage` with zero sends once the total is spent, and otherwise passes the remaining budget as that call's `max_requests`. The cap then holds to within the call's retries. A forked child starts from zero, and each README says so.
+In SQL each row is its own engine call, so `max_requests` caps nothing on a large query (`sdlc/issues/closed/2026-09-25-sqlite-max-requests-caps-nothing-per-statement.md` on ticket 0109). Ian chose a cap per process. SQLite, DuckDB, and PostgreSQL each add a total setting (`thinkthen_max_requests_total`, spelled the host's way), unset by default. Before each engine call the extension takes the requests its engines in this process have sent, refuses as `usage` with zero sends once the total is spent, and otherwise passes the remaining budget as that call's `max_requests`. The cap then holds to within the call's retries. A forked child starts from zero, and each README says so.
 
 ## Ian's ruling on pandas, 2026-09-25
 
@@ -30,7 +30,7 @@ Ian ruled that pandas is supported fully in 0.1. This overturns the 2026-09-21 l
 - pandas 2 and pandas 3 both work. A pandas 2 object column crosses at list speed, and the page says so.
 - `import thinkthen` still imports neither pandas nor Polars.
 
-Claude offered a partial version with columns only and frames refused, and recommended against it. A pandas user's first try is a whole frame, and a bare list back invites the lost-index bug R3-19 found. Ticket 0122 carries the work. It starts after 0106 lands, and it touches only `libraries/python`. It reuses the 2026-09-21 checks in `sdlc/issues/2026-09-21-pandas-is-supported-only-when-the-library-team-proves-it.md` as its starting proof.
+Claude offered a partial version with columns only and frames refused, and recommended against it. A pandas user's first try is a whole frame, and a bare list back invites the lost-index bug R3-19 found. Ticket 0122 carries the work. It starts after 0106 lands, and it touches only `libraries/python`. It reuses the 2026-09-21 checks in `sdlc/issues/closed/2026-09-21-pandas-is-supported-only-when-the-library-team-proves-it.md` as its starting proof.
 
 ## Landed, 2026-09-25
 

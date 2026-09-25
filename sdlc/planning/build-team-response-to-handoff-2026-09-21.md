@@ -1,6 +1,6 @@
 # Build-team response to the 2026-09-21 handoff
 
-Status: Approved by Ian on 2026-09-21. Ticket 0053 implements request identity before the one-crate move. The product-side additions are recorded in `../issues/2026-09-21-the-product-sides-reply-to-the-build-teams-response.md`.
+Status: Approved by Ian on 2026-09-21. Ticket 0053 implements request identity before the one-crate move. The product-side additions are recorded in `../issues/closed/2026-09-21-the-product-sides-reply-to-the-build-teams-response.md`.
 
 This response reviews `handoff-to-the-build-team-2026-09-21.md` against the current code, ADR 0017, the twenty-five conformance cases, the caller review, and the first quality wave. Ian can overturn every recommendation.
 

@@ -14,7 +14,7 @@ ADR 0017's required build-team review is complete and its findings are incorpora
 
 ## Current facts and decisions
 
-The accepted ADR requires a build-team review before the merge ticket. The review in `sdlc/issues/2026-09-21-build-review-of-adr-0017-before-the-one-crate-move.md` found that the named machinery is not independent today. The schedulers still own command output and failures, the request loop reads command state and credentials, the recorder depends on the cache lock, and the purity gate assumes two crates.
+The accepted ADR requires a build-team review before the merge ticket. The review in `sdlc/issues/closed/2026-09-21-build-review-of-adr-0017-before-the-one-crate-move.md` found that the named machinery is not independent today. The schedulers still own command output and failures, the request loop reads command state and credentials, the recorder depends on the cache lock, and the purity gate assumes two crates.
 
 The review also found one boundary that must stay in the command during step 1. The current scheduler detaches a command-owned input reader so a blocked standard-input read cannot hide completed answers or hang a closed-pipe exit. The engine cannot join that reader without changing behavior. Its own request workers can and must remain scoped.
 

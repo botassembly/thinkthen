@@ -52,7 +52,7 @@ The same happens the other way round. A default cache first used against the hos
 
 - `specification/recording.md`: "The first write-capable use of a new or empty folder binds it to the canonical backend interface and resolved endpoint address." A later mismatch fails at exit 5 before the tool reads a key. "The message tells the user to restore the backend settings or choose another folder." The page makes no exception for the default cache.
 - The same page: a writing mode creates its private temporary entry before it reads the key. That order explains why a run with no key still binds the folder.
-- Ticket 0065 added the binding to stop a silent re-bill after an address change (`2026-09-21-a-cache-resume-under-a-different-address-silently-re-bills-everything.md`). Ticket 0062 and ADR 0033 set up the default cache. None of them considers a user who points one default cache at a second backend.
+- Ticket 0065 added the binding to stop a silent re-bill after an address change (`closed/2026-09-21-a-cache-resume-under-a-different-address-silently-re-bills-everything.md`). Ticket 0062 and ADR 0033 set up the default cache. None of them considers a user who points one default cache at a second backend.
 
 The binding is ruled. The wording of the refusal for the default cache is not.
 
@@ -166,7 +166,7 @@ Offline, on a copy of a committed Beatles Bench recording.
 - `specification/recording.md`, "Pruning a cache": `--older-than` and `--answered-by-other-than MODEL` select a union. Prune validates that each response names a nonblank model. The page does not say whether MODEL is matched against the requested alias or the answering version.
 - `cache prune --help`: "Remove entries answered by any other model". The words are literally true.
 - `decide --help` shows `--model <NAME>` with `[default: jev-latest]`. The name a user sees and types is the alias.
-- The closed issue `2026-09-21-the-disk-cache-is-never-on-unless-the-user-names-a-folder.md` designed the selector to clear "what an older model said". Its example assumes the user knows the answering version.
+- The closed issue `closed/2026-09-21-the-disk-cache-is-never-on-unless-the-user-names-a-folder.md` designed the selector to clear "what an older model said". Its example assumes the user knows the answering version.
 
 ### Why it matters to a user
 

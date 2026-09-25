@@ -32,7 +32,7 @@ After Lane A:
 1. 0093 Rust examples as the first binding crate, with draft ADR 0047.
 2. 0094 the C interface (ADR 0037). It closes R7-1 (G3, the C-door churn crash) with the tag's committed churn probe. 0086 runs a Rust churn probe first and claims no fix.
 3. One ticket per remaining surface onto the public API: Python with Polars, TypeScript, DuckDB, Ruby, R, SQLite, PostgreSQL. Each brings its `check.sh`, tests, notes, and error-index rows, and follows ADR 0047's surface checklist.
-4. 0113 `thinkthen audit`. Ian's 2026-09-24 ruling (`sdlc/issues/2026-09-24-audit-and-diff-move-into-0-1.md`) puts both in 0.1, after the ten functions are done and before the release build. Both wait on 0086. audit lands before diff, and 0114 reuses 0113's code. Neither touches a binding, so either may build beside a surface ticket whose files it does not share.
+4. 0113 `thinkthen audit`. Ian's 2026-09-24 ruling (`sdlc/issues/closed/2026-09-24-audit-and-diff-move-into-0-1.md`) puts both in 0.1, after the ten functions are done and before the release build. Both wait on 0086. audit lands before diff, and 0114 reuses 0113's code. Neither touches a binding, so either may build beside a surface ticket whose files it does not share.
 5. 0114 `thinkthen diff`, after 0113 under the same ruling.
 6. New: release build and installers (archives, checksums, Homebrew line, download script; Ian's 2026-09-21 ruling). Nothing tickets this today. Its release checklist counts a surface check that reports "not run" as a failure (ticket 0111, decided 2026-09-24).
 

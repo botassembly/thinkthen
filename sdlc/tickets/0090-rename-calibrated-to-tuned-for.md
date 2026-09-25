@@ -10,7 +10,7 @@ Status: landed 2026-09-24 at `565f8b4f`; record `sdlc/records/0090-build-tuned-f
 
 ## Design and decisions
 
-Ian ruled on 2026-09-23 that `meta.profile_warning.calibrated` becomes `tuned_for`. The saved name identifies the backend profile under which a person tuned the threshold. It does not prove statistical calibration, so `calibrated` overclaims. This ticket lands the tool and specification half of item 44 in `sdlc/issues/2026-09-22-command-wording-and-help-fixes-for-0-1.md`. It splits from ticket 0082 after that ticket's design review, findings F3 through F7 in `sdlc/records/0082-design-review.md` on branch `ticket/0082-close-command-contract`.
+Ian ruled on 2026-09-23 that `meta.profile_warning.calibrated` becomes `tuned_for`. The saved name identifies the backend profile under which a person tuned the threshold. It does not prove statistical calibration, so `calibrated` overclaims. This ticket lands the tool and specification half of item 44 in `sdlc/issues/closed/2026-09-22-command-wording-and-help-fixes-for-0-1.md`. It splits from ticket 0082 after that ticket's design review, findings F3 through F7 in `sdlc/records/0082-design-review.md` on branch `ticket/0082-close-command-contract`.
 
 Decisions, each of which Ian can overturn:
 

@@ -14,7 +14,7 @@ A refused base address says which address rule failed without repeating the addr
 
 ## Current Facts
 
-The first hands-on test and the independent review of ticket 0019 found the same defect. `sdlc/issues/2026-09-19-hands-on-test-pass-one.md` and `sdlc/issues/2026-09-19-small-leftovers-from-the-security-ticket.md` hold the evidence.
+The first hands-on test and the independent review of ticket 0019 found the same defect. `sdlc/issues/closed/2026-09-19-hands-on-test-pass-one.md` and `sdlc/issues/closed/2026-09-19-small-leftovers-from-the-security-ticket.md` hold the evidence.
 
 On current main, an invalid scheme, user information, an empty port, a signed port, a port above 65535, a query, and a fragment all exit 2 with this sentence:
 

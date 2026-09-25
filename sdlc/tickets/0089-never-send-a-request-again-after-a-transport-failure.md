@@ -10,7 +10,7 @@ Status: landed on main at 29578528 after a fresh review accepted it (`sdlc/recor
 
 ## Outcome
 
-One command call sends a paid request at most once when the transport fails. A reset, an early close, a cut-short body, and a read timeout each fail after the first attempt at exit 4. A retried status (429, 500, 502, 503, 504, 529) keeps its retries. This closes `sdlc/issues/2026-09-23-the-command-sends-a-delivered-request-again-after-a-transport-failure.md` and puts main on the rule the surfaces branch adopted in `dd8a383` (error-index row R5-4). Queue item 2 of `sdlc/planning/one-line-plan-2026-09-24.md`.
+One command call sends a paid request at most once when the transport fails. A reset, an early close, a cut-short body, and a read timeout each fail after the first attempt at exit 4. A retried status (429, 500, 502, 503, 504, 529) keeps its retries. This closes `sdlc/issues/closed/2026-09-23-the-command-sends-a-delivered-request-again-after-a-transport-failure.md` and puts main on the rule the surfaces branch adopted in `dd8a383` (error-index row R5-4). Queue item 2 of `sdlc/planning/one-line-plan-2026-09-24.md`.
 
 ## Facts on main at 5f4fd32c
 

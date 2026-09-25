@@ -1,6 +1,6 @@
 # 0094: Build the C interface
 
-Status 2026-09-24: paused, not done. Ian asked for the work to wrap up, so the builder stopped at a clean point and pushed the work in progress to `ticket/0094-c-interface`. Nothing here is reviewed or landed.
+Status 2026-09-25: landed in the surface batch (`sdlc/records/surface-batch-integration.md`). The one-time churn run closed R7-1 on 2026-09-25; see "Churn run" below. The 2026-09-24 pause below is history.
 
 ## Done
 
@@ -73,6 +73,40 @@ The re-review of `135c7e0e` accepted it, with one finding: nothing tested the he
 
 ## Not done
 
-- Churn (R7-1, G3): not run. `probes/c-churn/churn.c` is committed. The runner planned for it runs 8 at a time under the heavy lock. The tag's library build was queued and then stopped at the wrap-up request, so no count exists on either side. Ian ruled on 2026-09-24 that the churn probe is a one-time measurement. 0094 runs the C-door churn once to close R7-1, only when the load is low and under the heavy lock. It never runs in the ladder, `check.sh`, or a review.
+- Churn (R7-1, G3): the tag-side count and the 300-run count were never taken. Ian's 2026-09-24 ruling replaced them with one C-door run. The run is below.
 - The ladder has not run. The integration step runs it once for all surfaces.
-- Code review: ACCEPT. The batch integration and the churn run remain.
+- Code review: ACCEPT. The batch integration landed the work, and the churn run is below.
+
+## Churn run, 2026-09-25
+
+Ian ruled on 2026-09-24 that the churn probe is a one-time measurement. It never runs in the ladder, `check.sh`, or a review. This run is that measurement. It ran once, on branch `ticket/0094-churn-probe` cut from main at `07622d49`.
+
+Setup:
+
+- The door library came from `cargo build --release --locked --offline --lib -j 4` in `libraries/c`. It was laid out as `libthinkthen.so` with the soname link, as `check.sh` does.
+- `probes/c-churn/churn.c` compiled unchanged with `cc -O1 -pthread` against `include/thinkthen.h`.
+- The run used `NT=32 ITERS=20000`, the probe's 70 engines, and the probe's refused address `http://127.0.0.1:9/v1`. That makes 640,000 decide calls, plus one final call.
+- It ran under `flock -o /run/user/1000/thinkthen-heavy.lock`, with the real key removed from the environment. The engine refuses a call with no key before it sends. So the probe's environment held a dummy loopback key, `sk-churn-loopback`, and a scratch `THINKTHEN_CACHE`. Port 9 refused every connection, and nothing left the machine.
+- A sampler read `/proc` every half second. It would have stopped the run by process id above a one-minute load of 10. It never fired.
+
+Result:
+
+| Measure | Value |
+|---|---|
+| Crashes | 0 of 1 run. Exit status 0, no signal, empty standard error |
+| Final line | `done rc=2 the backend refused the connection` |
+| Wall time | 128.2 s (user 33.3 s, system 114.1 s) |
+| Peak resident memory | 6,312 kB (`/usr/bin/time -v`) |
+| Sampled resident memory | 5,376 kB at start, 5,864 kB at 10 s, 5,884 to 5,892 kB from 40 s to 112 s. Growth after warm-up stayed under 30 kB |
+| Threads | 33 to 35 while the workers ran: 32 workers, the main thread, and short-lived resolver threads |
+| Open file descriptors | 67 to 70 while the workers ran, flat. 13 as the process ended |
+| One-minute load | 1.90 at start, peak 2.55 |
+
+Against the bar: the C door passed Ian's one-run bar with zero crashes, flat memory, and flat descriptor counts. R7-1 closes on that bar.
+
+Gaps kept in view:
+
+- The ticket's original bar asked for up to 300 tag-side runs with a crash, and 300 door runs, 8 at a time, at the load where the crash appeared (300 to 360). None of that ran. Ian's ruling put this machine's health first.
+- This run held the load near 2.5. It shows no leak and no crash under steady churn. It does not reproduce the heavy-load conditions of the tag crash.
+
+Ian can overturn this closure and ask for a heavy-load run on a machine that can take it.

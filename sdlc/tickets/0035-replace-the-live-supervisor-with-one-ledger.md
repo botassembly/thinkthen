@@ -14,7 +14,7 @@ The repository's paid-call door has one shared lock, one append-only ledger, dur
 
 ## Current Facts
 
-Ticket 0034 grew the cooperative $20 guard to 996 production-script lines and 1,634 raw Rust proof lines, 1,560 nonblank. The review in `sdlc/issues/2026-09-20-the-live-guard-grew-past-its-job.md` reproduced charged-but-failed writes, abandoned pending runs, misleading missing-setup errors, global worktree refusal, and retained process identities. Its tests require historical commits, run Linux assumptions from the product crate, and contain cleanup and assertion gaps. The current authority is active with no pending run at 476,000,000 allowed and 429,118 charged.
+Ticket 0034 grew the cooperative $20 guard to 996 production-script lines and 1,634 raw Rust proof lines, 1,560 nonblank. The review in `sdlc/issues/closed/2026-09-20-the-live-guard-grew-past-its-job.md` reproduced charged-but-failed writes, abandoned pending runs, misleading missing-setup errors, global worktree refusal, and retained process identities. Its tests require historical commits, run Linux assumptions from the product crate, and contain cleanup and assertion gaps. The current authority is active with no pending run at 476,000,000 allowed and 429,118 charged.
 
 ## Scope
 
