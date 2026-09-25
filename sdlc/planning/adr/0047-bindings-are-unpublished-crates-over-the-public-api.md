@@ -45,7 +45,7 @@ Ian ruled on 2026-09-24 that Rust Polars and Python Polars are both in 0.1 (`sdl
 | tag | `String` holding the JSON array text | the array text from `value_json` |
 | failed | | the marker from `value_json`, such as `{"failed":{"kind":"backend","cause":"missing_probability"}}` |
 
-A widened cell takes its text unchanged from `AnnotatedRecord::value_json`, the engine's one serializer. No door keeps its own table of failure causes. Ian can overturn the table.
+A column widens only when the same reply also holds a usable answer. The engine refuses a reply with no usable answer (`specification/annotate.md`), so a one-member set, a series call, or a request chunk whose only answer failed ends the call with a `Backend` error. A widened cell takes its text unchanged from `AnnotatedRecord::value_json`, the engine's one serializer. No door keeps its own table of failure causes. Ian can overturn the table.
 
 ## Why this is consistent with ADR 0017 and ADR 0037
 

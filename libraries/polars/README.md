@@ -44,7 +44,7 @@ Every method takes `CallOptions`. One deadline, cancel token, and interrupt chec
 
 In a frame, a decide column is `Boolean`, a choose column `String`, a score column `Float64`, and a tag column `String` holding the JSON array text, as the Python door writes it. When any row's answer to one question failed, that question's whole column becomes `String`. Each cell then holds the member's text from `AnnotatedRecord::value_json`, unchanged. A failed cell holds the engine's marker, such as `{"failed":{"kind":"backend","cause":"missing_probability"}}`. A choice keeps its plain label, and a not-sure or nothing-fits cell stays null. Your own columns come back unchanged.
 
-A failed row in a series call ends the call with the engine's `Backend` error. The engine refuses a reply whose every answer failed, and a series asks one question.
+A failed row in a series call ends the call with the engine's `Backend` error. The engine refuses a reply with no usable answer, and a series asks one question. A frame ends the same way when its set has one member, or when a request chunk's only answer failed.
 
 Labels known only at run time come from `Question::choose_labels`, `Question::tag_labels`, or `Question::from_json`. A typed `ChooseQuestion<C>` or `TagQuestion<C>` goes into a set through `QuestionSetBuilder::choose` or `tag`, and `annotate_frame` asks it.
 
