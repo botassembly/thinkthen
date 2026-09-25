@@ -26,6 +26,22 @@ Packing is a configuration setting that every surface reads the same way, not a 
 - **Which answer types it covers.** Yes/no first. Pick-one, score, and tag only after a packed width-1 request matches single-row accuracy for that type.
 - **The default** is for the ADR, from the evidence here.
 
+### Where each surface sets it
+
+No surface packs today. Every surface sends one request per row. The table proposes the name on each one. The ADR fixes the final names.
+
+| Surface | Today | Where `pack` goes |
+| --- | --- | --- |
+| Command | One request per line. `--throttle` sets how many run at once. | `--pack N` option, `pack` in the configuration file, `THINKTHEN_PACK` |
+| Question file | Holds the question, options, and threshold. | `"pack": 1` keeps a question unpacked everywhere |
+| Rust, Python, TypeScript, Ruby, C | One request per call. Batch calls run rows concurrently. | The engine builder, and a per-call override on batch calls |
+| Polars, pandas, R | One request per row of a column. | The engine builder, as for the library |
+| SQLite | One request per row. `thinkthen_warm` fills the cache. | A settings call, as the extension sets its other options |
+| DuckDB | Chunks of up to 2,048 rows, deduplicated, then one request per distinct text. | `SET thinkthen_pack = N` |
+| PostgreSQL | The array form takes many rows, then one request per row. | `SET thinkthen.pack = N` |
+
+A library gives the finest control: per engine and per call. The command and the databases take one value per run or session. The question file wins over all of them, so a question that packs badly can stay unpacked on every surface.
+
 ## What the documentation carries
 
 - A site page, "Packing and batching", in the how-to form of ADR 0011, with the trade-off table above in plain words, the setting and where to set it, and one worked example at `pack` 1 and 10 with its token counts.
