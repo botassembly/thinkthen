@@ -107,6 +107,7 @@ say(total=run(db, "SELECT thinkthen_max_requests_total(3)"), rows=run(db, "SELEC
 def test_a_warm_flush_sends_only_the_remaining_total() -> None:
     """Decision 17: with 100 of 103 left, a 150-row flush sends exactly 100."""
     backend = Backend()
+    env = environment(backend)
     held = child("""
 db = connect()
 db.execute("SELECT thinkthen_max_requests_total(103)")
@@ -114,10 +115,16 @@ spent = [run(db, f"SELECT thinkthen_decide('Is it red?', 'door {at}')") for at i
 db.execute("CREATE TABLE t(body TEXT)")
 db.executemany("INSERT INTO t VALUES (?)", [(f"row {at}",) for at in range(150)])
 say(spent=spent, warm=run(db, "SELECT thinkthen_warm('Is it red?', body) FROM t"), next=run(db, "SELECT thinkthen_decide('Is it red?', 'door 0')"))
-""", environment(backend))
-    expect(held, {"spent": [[[1]]] * 3, "warm": SPENT.format(103),
+""", env)
+    expect(held, {"spent": [[[1]]] * 3, "warm": "thinkthen usage: this warm pass stopped at the remaining total of 100 requests (thinkthen_max_requests_total)",
                   "next": SPENT.format(103)}, "the calls: a spent total refuses even a cached answer")
-    expect(backend.close(), 103, "sends")
+    expect(backend.count(), 103, "sends")
+    again = child("""
+db = connect()
+say(row=run(db, "SELECT thinkthen_decide('Is it red?', 'row 0')"))
+""", env)
+    expect(again, {"row": [[1]]}, "a judged row of the cut warm, with no total in a new process")
+    expect(backend.close(), 103, "sends: the judged part stayed in the cache")
 
 
 def test_cache_names_a_folder_and_null_turns_it_off() -> None:

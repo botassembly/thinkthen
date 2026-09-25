@@ -1,6 +1,6 @@
 # 0109 build: the SQLite surface on the public Rust API
 
-Built 2026-09-25 by Claude (Opus) on `ticket/0109-port-sqlite-surface`, from `9efb9abc`. It brings `databases/sqlite` over from tag `surfaces-wave7-frozen-2026-09-24b` and rebuilds it on the public `thinkthen` API. Code review: a fresh Claude session found the extension code sound, accepted the six departures, and returned ten findings. Findings 2 through 10 are fixed in the second commit. Finding 1, the registry's deny rule and its plant, belongs to the landing agent.
+Built 2026-09-25 by Claude (Opus) on `ticket/0109-port-sqlite-surface`, from `9efb9abc`. It brings `databases/sqlite` over from tag `surfaces-wave7-frozen-2026-09-24b` and rebuilds it on the public `thinkthen` API. Code review: ACCEPT after fixes. A fresh Claude session found the extension code sound, accepted the six departures, and returned ten findings. Findings 2 through 10 are fixed in the second commit. Finding 1, the registry's deny rule and its plant, belongs to the landing agent.
 
 ## What landed
 
@@ -66,10 +66,10 @@ Each plant was applied to the source, rebuilt, and run against its test. Every o
 | decision 17 | the total checked only at the engine build | a 10-row `WHERE` under a total of 3 answers every row |
 | decision 17 | the same plant | a 150-row warm flush with 100 remaining judges all 150 |
 
-After the code review of `9034aaab` the total moved to one `settings::remaining()` check and a cut warm flush. Both decision 17 plants were run again against that design, and both turned red.
-
 | R3-30 | the runner skips one case | the counts sum to 53 of 54 |
 | R5-32 | a mismatch reported as not run | the planted-failure test fails |
+
+After the code review of `9034aaab` the total moved to one `settings::remaining()` check and a cut warm flush. Both decision 17 plants were run again against that design, and both turned red.
 
 With the watcher planted, the single-call cancel test stays green. Only the fork tests catch it, so both stay.
 
@@ -85,7 +85,7 @@ With the watcher planted, the single-call cancel test stays green. Only the fork
 
 ## Budget
 
-- Production Rust: 1,449 nonblank lines in seven files, each under 500. Unit tests: 158. `ratchet.json` holds 1,607. Decision 17 added 61 lines for the total. The review fix shared one file-error rule between `question.rs` and `tables.rs`.
-- Python: 947 lines in eight test files and the helper. The runner and its planted-failure test: 225. `ratchet.py.json` holds 1,172. The review fixes added the file-kind sentences, the settings in the secrecy test, the thread-count poll, and the not-run report. `ratchet.sql.json` holds 18.
+- Production Rust: 1,448 nonblank lines in seven files, each under 500. Unit tests: 158. `ratchet.json` holds 1,606. Decision 17 added 60 lines for the total. The review fix shared one file-error rule between `question.rs` and `tables.rs`.
+- Python: 954 lines in eight test files and the helper. The runner and its planted-failure test: 225. `ratchet.py.json` holds 1,179. The review fixes added the file-kind sentences, the settings in the secrecy test, the thread-count poll, and the not-run report. `ratchet.sql.json` holds 18.
 - Scripts: 99 nonblank lines. Documentation: 89 nonblank lines added.
 - No change under `crates/thinkthen`, no backend arm, and no dependency beyond the ticket's list.

@@ -278,12 +278,13 @@ impl WarmState {
 }
 
 /// Judge one chunk on a worker, one send per text the cache lacks. Under a
-/// process request total the chunk is cut to what remains, and once that
-/// part is judged the call refuses with the total's sentence (decision 17).
+/// process request total the chunk is cut to as many rows as requests
+/// remain, and once that part is judged the call refuses (decision 17).
 fn flush(context: &Context<'_>, (held, mut texts): Flush) -> Result<i64, Failure> {
-    let left = settings::remaining()?;
-    let cut = left.is_some_and(|left| left < texts.len());
-    if let Some(left) = left {
+    // The cut counts rows. A cached row costs no request, so the refusal
+    // names the rows judged, not the requests spent.
+    let cut = settings::remaining()?.filter(|left| *left < texts.len());
+    if let Some(left) = cut {
         texts.truncate(left);
     }
     let count =
@@ -297,9 +298,11 @@ fn flush(context: &Context<'_>, (held, mut texts): Flush) -> Result<i64, Failure
         }
         Ok(count)
     })?;
-    match settings::total() {
-        Some(total) if cut => Err(settings::spent(total)),
-        _ => Ok(count),
+    match cut {
+        Some(left) => Err(Failure::usage(format!(
+            "this warm pass stopped at the remaining total of {left} requests (thinkthen_max_requests_total)"
+        ))),
+        None => Ok(count),
     }
 }
 

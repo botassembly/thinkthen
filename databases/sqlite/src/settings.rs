@@ -90,15 +90,10 @@ pub(crate) fn remaining() -> Result<Option<usize>, Failure> {
 }
 
 /// The refusal once the process request total is spent.
-pub(crate) fn spent(total: u64) -> Failure {
+fn spent(total: u64) -> Failure {
     Failure::usage(format!(
         "this process has sent its total of {total} requests (thinkthen_max_requests_total)"
     ))
-}
-
-/// The process request total, when one is set.
-pub(crate) fn total() -> Option<u64> {
-    stored().total
 }
 
 /// Check one setting against a fresh builder, then store it.
