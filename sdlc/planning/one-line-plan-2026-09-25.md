@@ -16,3 +16,26 @@ The frozen `surfaces-wave7` tag holds all nine surfaces, about 63,000 lines. Eac
 6. Land together. One landing agent merges the surfaces and owns the files every surface touches: the workspace members, `Cargo.lock`, the ratchet, `sdlc/surfaces.txt`, and the license exceptions.
 
 0094 runs its one C churn probe at low load and never again. 0119 waits until every surface lands.
+
+## Ian's ruling on SQL spending, 2026-09-25
+
+In SQL each row is its own engine call, so `max_requests` caps nothing on a large query (`sdlc/issues/2026-09-25-sqlite-max-requests-caps-nothing-per-statement.md` on ticket 0109). Ian chose a cap per process. SQLite, DuckDB, and PostgreSQL each add a total setting (`thinkthen_max_requests_total`, spelled the host's way), unset by default. Before each engine call the extension takes the requests its engines in this process have sent, refuses as `usage` with zero sends once the total is spent, and otherwise passes the remaining budget as that call's `max_requests`. The cap then holds to within the call's retries. A forked child starts from zero, and each README says so.
+
+## Ian's ruling on pandas, 2026-09-25
+
+Ian ruled that pandas is supported fully in 0.1. This overturns the 2026-09-21 line "pandas leaves the surface" in ADR 0017. Full support means four things:
+
+- A pandas column goes to `decide`, `choose`, `score`, and `tag`, and a pandas column with the caller's index comes back.
+- A pandas frame goes to `annotate` and `recognize` with `on=`, and the frame comes back with the new answer columns.
+- pandas 2 and pandas 3 both work. A pandas 2 object column crosses at list speed, and the page says so.
+- `import thinkthen` still imports neither pandas nor Polars.
+
+Claude offered a partial version with columns only and frames refused, and recommended against it. A pandas user's first try is a whole frame, and a bare list back invites the lost-index bug R3-19 found. Ticket 0122 carries the work. It starts after 0106 lands, and it touches only `libraries/python`. It reuses the 2026-09-21 checks in `sdlc/issues/2026-09-21-pandas-is-supported-only-when-the-library-team-proves-it.md` as its starting proof.
+
+## Landed, 2026-09-25
+
+Seven surfaces landed together on main at `eb3fae21`: C 0094, Rust Polars 0120, TypeScript 0107, SQLite 0109, Ruby 0112, R 0108, and PostgreSQL 0111. The full ladder passed once on the batch, and `sdlc/records/surface-batch-integration.md` holds the run. Claude landed these seven without waiting for Python and DuckDB, and Ian can overturn that. Python 0105 and 0106 are accepted and wait on Ian's word on the blocked merge. DuckDB 0110 and 0118 are still being fixed. Both follow as a second batch. 0094's one C churn probe is still owed.
+
+## Ian's ruling on landing, 2026-09-25
+
+Ian ruled: "You decide everything. Whatever's most efficient, you can merge whatever you want to merge. Whatever is ready, you do it." Claude lands each reviewed, checked surface as soon as it is ready and needs no batch. Python 0105 and 0106 land next, with `libraries/python/deny.toml` carrying the `target-lexicon` exception Ian approved the same day.

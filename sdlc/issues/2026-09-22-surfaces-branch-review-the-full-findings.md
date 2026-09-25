@@ -1,5 +1,7 @@
 # Surfaces branch review: the full findings
 
+Status: Closed on 2026-09-25 after a check against main. Waves 1 and 2 and closure 37240fd fixed it; the ports landed at eb3fae21. Python landed at a95474be; DuckDB is ticket 0110.
+
 Date: 2026-09-22. Source: an external code review of branch `surfaces` at `a42518a`, six reviewers, worst findings reproduced offline against the built libraries. This issue is the durable record; fixes land on `surfaces` and reference this file. The prior status claim "no open problems on our side" was inaccurate: the gates stayed green because suites used single rows or distinct texts, one driver cannot fail, and skipped suites still ended in "all landed checks green."
 
 ## Group 1 — Wrong answers returned with no error

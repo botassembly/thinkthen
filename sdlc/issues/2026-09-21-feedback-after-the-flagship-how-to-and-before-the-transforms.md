@@ -1,6 +1,6 @@
 # Feedback after the flagship how-to, and before the transforms
 
-Status: Open
+Status: Closed on 2026-09-25 after a check against main. Tickets 0042-0049 landed, including the cost.jq and compare.jq fixes. Earlier status: Open
 
 Ian asked the marketing side on 2026-09-21 to read ticket 0041's page and give feedback on the builder's next tickets: comparison, sweep, repeated trials, the monitor, the grouped sweep, and the check against human labels. This page authorizes nothing. The builder owns every call in it.
 

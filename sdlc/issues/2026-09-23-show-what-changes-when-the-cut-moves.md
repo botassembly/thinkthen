@@ -1,5 +1,7 @@
 # Show what changes when the cut moves, free from the cache
 
+Status: Closed on 2026-09-25 after a check against main. 0114 added diff --compare-threshold; 0113 audit prints the coverage curve.
+
 Ian's feature idea, 2026-09-23. A user tuning a threshold wants to see which answers flip between two cuts: what gets added and what gets removed going from 0.4 to 0.5. The cache holds every probability, so a rerun at a new cut sends nothing and costs nothing. Today the user reruns twice and diffs by hand, or writes a `jq` transform over `--details`.
 
 ## The ask

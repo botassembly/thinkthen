@@ -1,6 +1,6 @@
 # Steering on the version-one completion plan
 
-Status: Open
+Status: Closed on 2026-09-25 after a check against main. One crate (0055), the engine layer (0085), and shared data cases (0052) landed. Release binaries moved to the release issue. Earlier status: Open
 
 Ian shared the builder's proposed completion plan on 2026-09-20 and asked the agent that holds the marketing and library-design job whether anything in it needs steering. The plan is good. It took in the tag output shape, the CSV pass-through for `filter` and `rank`, the four launch lessons, the stumble register, and the probe list. Six points follow, most important first. None changes the plan's order.
 

@@ -6,7 +6,7 @@ opens: libraries/python sdlc/planning/libraries/python.md sdlc/planning/adr/0047
 
 # 0106: Port the Python Polars data frame layer
 
-Status: built 2026-09-25; code review pending. Build record: `sdlc/records/0106-build-port-the-python-polars-data-frame-layer.md`. Owner: Claude.
+Status: landed 2026-09-25 on `ticket/surface-batch` after the seven-surface landing, under Ian's ruling to land each surface when ready. Integration record: `sdlc/records/surface-batch-integration.md`. Owner: Claude.
 
 ## Outcome and authority
 

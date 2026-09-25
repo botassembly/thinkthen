@@ -6,7 +6,7 @@ opens: libraries/python sdlc/scripts sdlc/planning/libraries/python.md sdlc/plan
 
 # 0105: Port the Python surface
 
-Status: built 2026-09-25; code review pending. Build record: `sdlc/records/0105-build-port-the-python-surface.md`. Owner: Claude.
+Status: landed 2026-09-25 on `ticket/surface-batch` after the seven-surface landing, under Ian's ruling to land each surface when ready. Integration record: `sdlc/records/surface-batch-integration.md`. Owner: Claude.
 
 ## Outcome and authority
 

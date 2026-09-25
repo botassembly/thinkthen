@@ -1,6 +1,6 @@
 # What audit and diff would need to grade agent runs
 
-Status: Open. Tracked for after 0.1. Filed by Claude, the owner, on 2026-09-24.
+Status: Closed on 2026-09-25 as reference. No work is owed. A triage for after 0.1. Need 1 moved into 2026-09-25-audit-is-complete-for-0-1.md. Earlier status: Open. Tracked for after 0.1. Filed by Claude, the owner, on 2026-09-24. Need 1, graded scores, moved into 0.1 on 2026-09-25 by Ian's ruling in `2026-09-25-audit-is-complete-for-0-1.md`.
 
 botassembly wants to grade its agent runs with `thinkthen audit` and `thinkthen diff`. It would need four things beyond today's prototype. Ian's ruling holds: 0.1's audit and diff match the prototype measurement script and its goldens (`sdlc/issues/2026-09-24-audit-and-diff-move-into-0-1.md`). This issue adds nothing to 0.1. It records what ThinkThen already provides and checks that tickets 0113 and 0114 leave room to add each need later.
 

@@ -69,3 +69,28 @@ const dated = await Array.fromAsync(
 3. Does breaking out of a `for await` early cancel the Rust work? Measured cancellation semantics (205): abort stops mid-crossing and closes sockets; break stops at the chunk boundary. The engine's cancel promise (ADR 0017 section 2) adds: no new request starts, and sent requests finish.
 4. Answered: the platform binaries publish under the `@thinkthen` scope once claimed, beside `thinkthen`.
 5. Answered by 205, round two: the byte form ships as `filterBytes` beside the string form.
+
+## The call shape as built (ticket 0107)
+
+Ticket 0107 ported the surface onto the public Rust API in `crates/thinkthen`. The shape follows the ruling of 2026-09-21.
+
+- Each verb takes its question first, the text or the record array second, and one last object. That object holds the question's inputs (`options`, `levels`, `labels`, `top`, and the `recognize` and `relate` rules) beside `signal` and `deadlineMs`.
+- A list crosses into the engine once, as one JSON string, and the answer comes back as one JSON envelope.
+- Each call runs on its own worker thread, off the JavaScript thread and off the libuv pool. `decide_many` is the lever for volume, because each single call in flight holds one OS thread.
+- `new tt.Engine(options)` holds the engine settings of ADR 0017 section 5, and the module-level verbs use the engine the environment describes.
+- The async iterables, the stream form, and `filterBytes` above are not built. Ticket 0107 excludes them.
+
+## Differences from Python
+
+The Python surface is the reference. Each difference below is decided, and its reason is its line.
+
+1. **The error classes.** Python raises six classes under a `ThinkThenError` base. TypeScript raises one `ThinkThenError` with `kind` and `retryable`, the JavaScript habit. The six kind words are the same.
+2. **The cancel gesture.** Python takes a `CancelToken`, and TypeScript takes an `AbortSignal`. Both follow the engine's rule: no new request starts, and a sent request finishes. The TypeScript promise rejects at once and does not wait for the sent request.
+3. **The deadline unit.** Python takes seconds, and TypeScript takes `deadlineMs` in milliseconds, the unit of `Date.now()`. `-1`, `null`, and a missing key mean no deadline. `0` is spent. Any other value is a whole number up to 4294967295000, and anything else is a `usage` error that names the number.
+4. **The question value.** Python returns a Question object. TypeScript returns a frozen function that carries the spec, so no spread or `JSON.stringify` turns it back into text by accident. Calling it throws `usage`.
+5. **The `recognize` offsets.** Python counts code points. TypeScript converts them to UTF-16 units, so `text.slice(start, end)` is the name.
+6. **Blocking against async.** Python's verbs block the calling thread. TypeScript's verbs return promises, and each call runs on a worker thread of its own.
+7. **The column forms.** Python's verbs take Polars columns and frames. TypeScript has no column form, and a Node column form needs its own design.
+8. **The record text.** Both typed hosts refuse a record that is not a string. TypeScript also refuses a string with a lone surrogate and names its index, because Node-API would replace it silently.
+9. **Usage counters.** `usage()` returns the four counters synchronously. An `Engine` value counts its own calls, apart from the module-level engine.
+10. **The `find` none case.** Both return null when nothing is selected. The public `find` takes no `none` candidate, so the shared cases that name one do not run on either surface.

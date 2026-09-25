@@ -1,5 +1,7 @@
 # Harvest the Beatles and relate runs: efficiency, thresholds, and tuning
 
+Status: Closed on 2026-09-25 after a check against main. Threshold how-to (0087), audit (0113), and diff (0114) landed. The open default-cut and automatic-rewording questions moved to 2026-09-25-audit-is-complete-for-0-1.md.
+
 Ian asked on 2026-09-23 for a note to the build team. The team should mine our recorded Jev queries to make `recognize` and `relate` cheaper, and make thresholds and question tuning a first-class loop. Everything below is recorded and replays with no key.
 
 ## What to harvest

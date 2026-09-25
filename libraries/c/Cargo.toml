@@ -1,0 +1,58 @@
+# The C door (ticket 0094, ADR 0037, ADR 0047 item 6). It is its own workspace
+# with its own lock, and it reaches `thinkthen` only through the public API.
+# `sdlc/scripts/policy.py` holds every table below to the root copies.
+[workspace]
+
+[package]
+name = "thinkthen-c"
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.95.0"
+description = "The C door: one header, a shared and a static library, and every exported symbol"
+license = "MIT"
+publish = false
+
+[lib]
+# A distinct name keeps a second `libthinkthen.rlib` from colliding with the
+# dependency's. The release step names the files `libthinkthen.so` and
+# `libthinkthen.a`, and `build.rs` sets the soname.
+name = "thinkthen_c"
+crate-type = ["cdylib", "staticlib"]
+
+[dependencies]
+thinkthen = { path = "../../crates/thinkthen", default-features = false }
+serde_json = { version = "1.0.151", features = ["raw_value"] }
+
+[dev-dependencies]
+conformance-backend = { path = "../../conformance/backend" }
+sha2 = { version = "0.11", default-features = false }
+
+[profile.release]
+overflow-checks = true
+panic = "unwind"
+
+[lints.rust]
+missing_debug_implementations = "forbid"
+missing_docs = "warn"
+unexpected_cfgs = { level = "forbid", check-cfg = ["cfg(thinkthen_internal_doctest)"] }
+unreachable_pub = "forbid"
+unsafe_code = "deny"
+
+[lints.clippy]
+allow_attributes_without_reason = "deny"
+cognitive_complexity = "warn"
+dbg_macro = "deny"
+disallowed_macros = "allow"
+disallowed_methods = "allow"
+disallowed_types = "allow"
+excessive_nesting = "warn"
+expect_used = "deny"
+indexing_slicing = "deny"
+panic = "deny"
+print_stderr = "deny"
+print_stdout = "deny"
+todo = "deny"
+too_many_lines = "warn"
+unimplemented = "deny"
+unwrap_used = "deny"
+wildcard_imports = "warn"

@@ -1,6 +1,6 @@
 # One shape for nine surfaces, as the slides show it
 
-Status: Open. It feeds the ADR 0017 rewrite and the database ADR. It authorizes nothing.
+Status: Closed on 2026-09-25 as superseded. ADR 0017 adopted the picks; the surfaces landed at eb3fae21. Earlier status: Open. It feeds the ADR 0017 rewrite and the database ADR. It authorizes nothing.
 
 Ian asked on 2026-09-21 for one slide per language and one per database, drawn as the finished product, "because that'll help make sure that we're driving towards the right shape". He gave the marketing side the job of keeping the shape of the libraries good. The marketing repository holds the nine code samples in its ThinkThen deck folder, in `surfaces.md`. Writing one example through ten surfaces showed where the planning pages and the experiments disagree. This page picks one answer for each. Ian can overturn every pick.
 

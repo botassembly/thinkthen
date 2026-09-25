@@ -1,6 +1,6 @@
 # Wire probe: can one request carry many states?
 
-Status: Open
+Status: Closed on 2026-09-25 as reference. No work is owed. A finished paid probe. Packing work continues in 2026-09-25-packing-and-batching-what-they-buy-what-they-cost-and-the-setting.md. Earlier status: Open
 
 Answers `2026-09-21-one-state-per-request-caps-table-scale-classification` with one paid probe. Ian authorized the spend on 2026-09-22 at a one-dollar ceiling; the probe used about one hundredth of a cent of it.
 

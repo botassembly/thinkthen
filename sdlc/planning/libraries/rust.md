@@ -58,6 +58,10 @@ Rust is blocking (ADR 0017 pick 7). Plain calls return `Result`, no `.await` exi
 
 There is no binding tool. Separate binding crates call the public `thinkthen::*` surface after 0086; they cannot call `core` or `engine`. A shim inside the package may call private owners. The crate root holds typed builders, question types, and `choices!` with `Choice`. The dropped derive would require a proc-macro crate and second published name. This layer holds no threshold math, retry, request building, recording format, or second HTTP client.
 
+## Polars
+
+A Rust program that holds Polars data uses `thinkthen-polars` at `libraries/polars` (ticket 0120). It adds `decide_series`, `choose_series`, `score_series`, `tag_series`, and `annotate_frame` to the caller's own `Engine`. Each reads a text column in place and makes one engine call over the whole column, at the throttle, through the batch path a slice takes. The crate pins one Polars minor version, 0.55, and re-exports it. Its frame columns follow the Polars table in ADR 0047 item 10, shared with the Python door. `libraries/polars/README.md` is its user page.
+
 ## Tests only this surface needs
 
 - `--no-default-features` builds and resolves no command-line crate.

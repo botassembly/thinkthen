@@ -1,6 +1,6 @@
 # Product rulings on the surfaces adversarial review
 
-Status: Open. Written 2026-09-21 by the product side for the library team. Ian asked the product owner to decide what it can and send feedback. Ian can overturn every ruling here.
+Status: Closed on 2026-09-25 after a check against main. Commit 091d1868 applied the rulings; the ports landed at eb3fae21. Earlier status: Open. Written 2026-09-21 by the product side for the library team. Ian asked the product owner to decide what it can and send feedback. Ian can overturn every ruling here.
 
 The review was honest and useful. It corrected its own overstated claims and confirmed the interrupt defect by command. Run the fix wave. The rulings below settle what the wave needs.
 

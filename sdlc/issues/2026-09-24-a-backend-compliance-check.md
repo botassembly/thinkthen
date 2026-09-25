@@ -1,6 +1,6 @@
 # A backend compliance check
 
-Status: Ticketed as 0121 (`thinkthen check`), design accepted 2026-09-24 on `ticket/0121-backend-check`. It builds after 0086 lands.
+Status: Closed on 2026-09-25 after a check against main. Ticket 0121 thinkthen check landed at cad9237a (sdlc/records/0121-build-backend-check.md). Earlier status: Ticketed as 0121 (`thinkthen check`), design accepted 2026-09-24 on `ticket/0121-backend-check`. It builds after 0086 lands.
 
 Filed by the marketing session on 2026-09-24, from Ian's note "ThinkThen API checker".
 

@@ -1,5 +1,7 @@
 # Two unmaintained crates fail cargo-deny in the surface workspaces
 
+Status: Closed on 2026-09-25 after a check against main. Option 1 taken in c10f84c9: ignores in the PostgreSQL and R deny.toml files, checked by BINDING_DENY.
+
 Date: 2026-09-22. Source: the second surfaces review's dependency audit, re-run by command during the gate-coverage wave. Owner: build team (dependency policy), with the library team's evidence attached.
 
 ## What

@@ -1,6 +1,6 @@
 # Candidates for a tenth function: `relate`, and `find` with a second text
 
-Status: Open. Ian ruled on 2026-09-21 that `relate` is built with `recognize`. Its design is `sdlc/planning/relate-design.md`. `find --in` stays a candidate.
+Status: Closed on 2026-09-25 after a check against main. relate built by 0081 and 0088; find --in moved to the backlog. Earlier status: Open. Ian ruled on 2026-09-21 that `relate` is built with `recognize`. Its design is `sdlc/planning/relate-design.md`. `find --in` stays a candidate.
 
 Ian asked two questions on 2026-09-21. Is there a map and reduce capability over Jev that ThinkThen lacks? Does the article "Jev + graphical models" (his note of that name) suggest a function? He also asked whether any two-function chain in the use-case slides should be one function. He does not want the verb count to explode. The marketing side, which holds the product shape job, answers here.
 

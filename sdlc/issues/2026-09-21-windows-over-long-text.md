@@ -1,6 +1,6 @@
 # Windows over long text
 
-Status: Open
+Status: Closed on 2026-09-25 after a check against main. Ticket 0059 closed it as a refusal with a clear message (build-queue-2026-09-21.md A2). Earlier status: Open
 
 Ian asked on 2026-09-21 what a windowed reading of a long document should cost and look like: given a big chunk of text, the caller windows through it, and each window could carry some text before and some after as context. The record answers the numbers and leaves the shape open.
 

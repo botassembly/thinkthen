@@ -1,6 +1,6 @@
 # The loopback backend stalls each reply
 
-Status: Open. Found by ticket 0086's builder, 2026-09-24.
+Status: Closed on 2026-09-25 after a check against main. Quick Fix qf-loopback-nodelay merged at 365fc938 (sdlc/records/qf-loopback-nodelay.md). Earlier status: Open. Found by ticket 0086's builder, 2026-09-24.
 
 ## What happens
 

@@ -1,6 +1,6 @@
 # What a tool-search feature asks of `find` as a function
 
-Status: Open
+Status: Closed on 2026-09-25 after a check against main. The public API from 0086 answers all four asks (Found::candidates, Error::retryable, per-call deadlines from 0076). Earlier status: Open
 
 Ian pointed on 2026-09-21 at an open-source adapter for the Model Context Protocol that shipped a search over its tools the same day. A user describes a job in words, and the adapter names the right tool out of about a hundred. It calls the System One backend directly through the vendor's SDK, from a long-lived Node process. A read-only survey of its code shows what a real caller needs from the pick-one verbs as library functions. This page authorizes nothing. It feeds the ADR 0017 rewrite and step 2 of the engine plan.
 

@@ -1,5 +1,7 @@
 # Question wording helpers, proven on held-out data
 
+Status: Closed on 2026-09-25 as superseded. Held-out results rejected every helper. Cut tuning belongs to audit (2026-09-25-audit-is-complete-for-0-1.md).
+
 ## Problem
 
 Small changes in how a question is worded move a model's answers. Three are cheap and well known: state the task twice, add a few worked examples, and, for left-to-right chat models, put the options before the text. Today a user finds these by trial and error, and nothing tells them whether a change helped or only fit their test cases.

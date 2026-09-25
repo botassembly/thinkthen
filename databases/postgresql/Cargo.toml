@@ -1,0 +1,66 @@
+# The PostgreSQL surface (ticket 0111, ADR 0047). It is its own workspace
+# with its own lock, and it reaches `thinkthen` only through the public API.
+# `cargo pgrx package` names the extension after `thinkthen.control`, so
+# `CREATE EXTENSION thinkthen` loads `thinkthen.so` whatever the crate is named.
+[workspace]
+
+[package]
+name = "thinkthen-postgresql"
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.95.0"
+description = "The PostgreSQL extension: the thinkthen functions in SQL"
+license = "MIT"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[[bin]]
+name = "pgrx_embed_thinkthen_postgresql"
+path = "./src/bin/pgrx_embed.rs"
+
+[features]
+default = ["pg16"]
+pg16 = ["pgrx/pg16"]
+# R1-10: a test build adds `thinkthen_panic_probe()`. The shipped build lacks it.
+panic-probe = []
+
+[dependencies]
+thinkthen = { path = "../../crates/thinkthen", default-features = false }
+libc = "0.2"
+pgrx = "=0.17.0"
+serde_json = "1"
+
+[profile.release]
+overflow-checks = true
+panic = "unwind"
+
+# The root table, except two entries ADR 0047's PostgreSQL section records:
+# `unsafe_code` is denied, and `unexpected_cfgs` is denied, because
+# `pg_module_magic!` expands its own allow, which a forbid refuses.
+[lints.rust]
+missing_debug_implementations = "forbid"
+missing_docs = "warn"
+unexpected_cfgs = { level = "deny", check-cfg = ["cfg(thinkthen_internal_doctest)"] }
+unreachable_pub = "forbid"
+unsafe_code = "deny"
+
+[lints.clippy]
+allow_attributes_without_reason = "deny"
+cognitive_complexity = "warn"
+dbg_macro = "deny"
+disallowed_macros = "allow"
+disallowed_methods = "allow"
+disallowed_types = "allow"
+excessive_nesting = "warn"
+expect_used = "deny"
+indexing_slicing = "deny"
+panic = "deny"
+print_stderr = "deny"
+print_stdout = "deny"
+todo = "deny"
+too_many_lines = "warn"
+unimplemented = "deny"
+unwrap_used = "deny"
+wildcard_imports = "warn"

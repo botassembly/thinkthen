@@ -1,6 +1,6 @@
 # What must land before the bindings freeze
 
-Status: Open
+Status: Closed on 2026-09-25 after a check against main. The contract (0084) and public API (0086) landed; the bindings landed at eb3fae21. Earlier status: Open
 
 Written 2026-09-21 by the product side for Ian's plan with the build team. Nine surfaces will copy the core's shapes. A shape changed after that is nine changes and a broken caller. This page lists only the changes of that kind, each with its source. Everything else in `sdlc/issues/` can land later without breaking a caller.
 
