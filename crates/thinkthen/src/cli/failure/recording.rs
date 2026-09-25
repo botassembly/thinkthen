@@ -36,11 +36,19 @@ pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {
             5,
             "the recording directory is a file; choose another path or remove the file".to_owned(),
         ),
-        Failure::RecordingBackendMismatch => (
+        Failure::RecordingBackendMismatch(url, true) => (
             5,
-            "the recording folder belongs to another backend interface or address; \
-             restore its backend settings or choose another folder"
-                .to_owned(),
+            format!(
+                "the default cache is bound to a backend address other than `{url}`; \
+                 go back to that address, use --no-cache, or set THINKTHEN_CACHE to another folder"
+            ),
+        ),
+        Failure::RecordingBackendMismatch(url, false) => (
+            5,
+            format!(
+                "the recording folder is bound to a backend address other than `{url}`; \
+                 restore its backend settings or choose another folder"
+            ),
         ),
         Failure::RecordingFolderLegacy => (
             5,

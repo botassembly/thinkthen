@@ -1,6 +1,6 @@
 # The answer cache: three fixes
 
-Status: Open. This issue merges three cache issues filed on 2026-09-25 during the talk's claim check, so the cache work reads in one place:
+Status: Closed on 2026-09-25 by ticket 0124. Its Deferred gaps name what it left open: a prune `--dry-run`, a typo guard, and an over-target status line or warning. This issue merges three cache issues filed on 2026-09-25 during the talk's claim check, so the cache work reads in one place:
 
 - `2026-09-25-the-default-cache-binds-to-the-first-address-and-the-refusal-never-names-it`
 - `2026-09-25-cache-target-words-promise-a-limit-the-cache-never-applies-alone`
