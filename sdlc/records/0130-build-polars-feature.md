@@ -13,7 +13,7 @@ Date: 2026-09-25. Ticket: `sdlc/tickets/0130-polars-feature-in-thinkthen.md`. Ho
 
 - Production: 349 nonblank lines (frame.rs 202, column.rs 147). The budget was 355. The door was 399. The first draft came to 371. `single` then dropped its method-name argument and builds the name from the question kind.
 - Tests: 737 lines.
-- Ratchet: 61764 on main after the merge, 62855 on this branch, a rise of 1091. The budget was 1,125. The removed door and its crate held 1,152 lines, so the repository's Rust fell by 61. The number was measured after the merge, not merged by hand.
+- Ratchet: 61972 on main after the second merge, 63063 on this branch, a rise of 1091. The budget was 1,125. The removed door and its crate held 1,152 lines, so the repository's Rust fell by 61. The number was measured after the merge, not merged by hand.
 - Lock: 90 packages added, no existing version changed. Their `.crate` files come to 8.09 MB.
 
 ## Lane times

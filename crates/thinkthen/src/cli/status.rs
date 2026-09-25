@@ -43,7 +43,9 @@ struct Cache {
     path_source: &'static str,
     entries: Option<u64>,
     bytes: Option<u64>,
+    #[serde(rename = "prune_target_bytes")]
     target_bytes: u64,
+    #[serde(rename = "prune_target_source")]
     target_source: &'static str,
 }
 
@@ -224,11 +226,11 @@ fn write_human(status: &Status, mut writer: impl Write) -> Result<(), Failure> {
     optional_line(&mut writer, "cache_bytes", status.cache.bytes)?;
     edge::write_line(
         &mut writer,
-        &format!("cache_target_bytes {}", status.cache.target_bytes),
+        &format!("cache_prune_target_bytes {}", status.cache.target_bytes),
     )?;
     edge::write_line(
         &mut writer,
-        &format!("cache_target_source {}", status.cache.target_source),
+        &format!("cache_prune_target_source {}", status.cache.target_source),
     )?;
     edge::write_line(
         &mut writer,
