@@ -2,6 +2,18 @@
 
 Shared rules live in [README.md](README.md). This page holds only what is particular to SQLite. Nobody has shipped a judgment extension for SQLite.
 
+## As built (ticket 0109, 2026-09-25)
+
+The port onto the public Rust API settles several points below. Where this section and a later one differ, this section holds. `databases/sqlite/README.md` is the user's page, and `databases/sqlite/NOTES.md` holds the builder's findings.
+
+- The floor is SQLite 3.50.0, not 3.41. Below 3.50.0 a CHECK constraint in an untrusted database reaches a volatile function. The load refuses below the floor and names the host.
+- Every function and both table-valued functions are direct-only and volatile. No schema object in a database file can call them.
+- Two table-valued functions ship: `thinkthen_recognize(text, kinds)` and `thinkthen_relate(table, id, name, kind, rule, …)`. Relate reads rows from a named table (ADR 0047 item 9). It is the one function that opens the database, through a nested read-only SELECT.
+- Every call that can send runs on its own worker thread. The calling thread polls `sqlite3_is_interrupted` every 50 ms, so an interrupt returns at once. A detached worker is the known exception to ADR 0017's rule that no thread outlives a call.
+- The engine's disk cache holds the answers. `thinkthen_usage()` answers JSON totals. Five setting functions spell the engine settings: `thinkthen_throttle`, `thinkthen_max_requests`, `thinkthen_max_requests_total`, `thinkthen_cache`, and `thinkthen_cache_bytes`. That answers open question 4.
+- `thinkthen_warm` takes decide questions only and flushes every 256 rows. The question cache is the extension's own, keyed by argument text and bounded at 4,096. It replaces the auxiliary-data plan.
+- The file is `libthinkthen0.so`, loaded as `.load ./thinkthen` once copied to `thinkthen.so`.
+
 ## What really good looks like
 
 A user downloads one file, runs `.load`, and asks a question of a column.
@@ -11,7 +23,7 @@ A user downloads one file, runs `.load`, and asks a question of a column.
 
 SELECT thinkthen_decide('The message asks for a refund.', 'I want my money back');
 
--- Many rows: the warming pass hands the engine the whole column at full width,
+-- Many rows: the warming pass hands the engine the whole column at the full throttle,
 -- and the query that follows answers from the cache.
 SELECT thinkthen_warm('The message asks for a refund.', body) FROM messages;
 SELECT id, body FROM messages WHERE thinkthen_decide('The message asks for a refund.', body);
@@ -30,7 +42,7 @@ SELECT id, json_extract(a, '$.spam.value'), json_extract(a, '$.folder.value')
 ## Goals
 
 - One shared library per platform, downloaded from a GitHub release and loaded with `.load`. The entry-point rule: the file is `libthinkthen0.so` exporting `sqlite3_thinkthen_init`, the name SQLite's loader derives from the file's base (207).
-- **The bulk form is an aggregate that warms the cache.** `thinkthen_warm(question, text)` takes the rows SQLite already feeds it, runs them at the width `jobs` names, fills the engine's cache on disk, and returns the count. The default flush is 256 rows: it bounds memory, the width gate sets the speed, and it is the responsiveness lever, not the chunk bound of the interrupt story (207; the plan page's parked answer). The scalars then answer from the cache. An aggregate is the one bulk shape that reads nothing: SQLite does the scan, and the caller's own `WHERE` and `JOIN` pick the rows. The name and the meaning carry to the other two databases. A band on a warm question is never an error: the threshold does not enter the request, `warm` caches the reply, and the band applies when a query reads it (the plan page's parked answer).
+- **The bulk form is an aggregate that warms the cache.** `thinkthen_warm(question, text)` takes the rows SQLite already feeds it, runs them at the throttle `thinkthen_throttle` sets, fills the engine's cache on disk, and returns the count. The default flush is 256 rows: it bounds memory, the throttle sets the speed, and it is the responsiveness lever, not the chunk bound of the interrupt story (207; the plan page's parked answer). The scalars then answer from the cache. An aggregate is the one bulk shape that reads nothing: SQLite does the scan, and the caller's own `WHERE` and `JOIN` pick the rows. The name and the meaning carry to the other two databases. A band on a warm question is never an error: the threshold does not enter the request, `warm` caches the reply, and the band applies when a query reads it (the plan page's parked answer).
 - `thinkthen_score` answers the number — the specification's position from 0 to K−1 — and the nearest level's name rides in `thinkthen_details` (ADR 0017 pick 6). The JSON shapes stay with `tag` and `annotate`, which have no scalar to carry the level.
 - Equal pairs of question and text inside one warm pass are asked once.
 - A constant question is parsed once per statement. `sqlite3_set_auxdata` on the first argument holds the parsed value, and SQLite hands it back through `sqlite3_get_auxdata` while that argument keeps its value. `rusqlite` spells the pair `Context::set_aux` and `Context::get_aux`.
@@ -79,9 +91,9 @@ The file ships from a GitHub release first, the way `sqlite-vec` does. A pip pac
 ## Open questions for the ADR
 
 1. Does the aggregate cover enough, or does a `LIMIT` query need a bulk form that stops early? `pg-jev` reads ahead over a table, and the anti-goals forbid that here.
-2. Answered by the plan page's parked answer and 207's measurements: the aggregate flushes every 256 rows by default. It bounds memory, and the width gate sets the speed.
+2. Answered by the plan page's parked answer and 207's measurements: the aggregate flushes every 256 rows by default. It bounds memory, and the throttle sets the speed.
 3. Can a question be checked at plan time? SQLite gives a scalar function no plan-time hook. The first-row parse fails before any request at zero cost, as in DuckDB.
-4. Does `jobs` come from an environment variable, a `PRAGMA`, or an argument on `thinkthen_warm`?
+4. Answered by ticket 0109: the throttle comes from the setting function `thinkthen_throttle`.
 5. Is `thinkthen_usage()` a virtual table, or JSON text from a scalar that skips the module machinery? The experiments shipped a `thinkthen_reset()` as instrumentation; the product shape stays open.
 6. Answered by 207: 3.41.0 is the floor, for the interrupt poll and the visible symbols; the direct link sidesteps `rusqlite`'s 3.34 headers.
 7. Does the aggregate stay the only bulk form here? **The recommendation is yes, and the other two databases adopt the same name.** SQLite has no array type, so the array overloads PostgreSQL offers cannot be spelled here, and the aggregate is the only bulk shape all three databases share. ADR 0017 pick 10 ships `thinkthen_warm` on all three. Ian can overturn this and leave each database its own best form, at the price of a comparison that does not line up.

@@ -9,5 +9,5 @@ libraries/typescript  landed
 libraries/ruby        planned
 libraries/r           planned
 databases/duckdb      planned
-databases/sqlite      planned
+databases/sqlite      landed
 databases/postgresql  planned

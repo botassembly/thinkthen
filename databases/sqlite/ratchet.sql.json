@@ -1,0 +1,5 @@
+{
+  "directory": ["tests"],
+  "extension": ".sql",
+  "max": 18
+}
