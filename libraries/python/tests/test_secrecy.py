@@ -46,14 +46,20 @@ def test_the_fake_key_arrives_at_a_loopback_listener(backend, tmp_path):
 
 
 def test_no_message_or_repr_carries_the_key_or_address_credentials(backend, tmp_path):
-    """Change 14: every verb's failure on the refuse, 401, and 503 arms,
-    every other failure path's message and ``repr``, and the reprs of the
-    public values name neither the fake key nor URL credentials. Each
-    message is pinned whole, so a sentence that grows a secret fails."""
+    """Change 14: every verb's failure on the refuse, 401, and 503 arms, a
+    pandas Series to each column verb and a pandas frame to ``annotate`` and
+    ``recognize`` included (ticket 0122), every other failure path's message
+    and ``repr``, and the reprs of the public values name neither the fake
+    key nor URL credentials. Each message is pinned whole, so a sentence
+    that grows a secret fails."""
     printed = run(f"""
-        import thinkthen as tt
+        import pandas as pd, thinkthen as tt
         port = {backend.port}
         late = tt.question(decide="Is it late?")
+        team = tt.question(choose="Which team?", options=["billing", "shipping"])
+        urgent = tt.question(score="How urgent?", levels=["Routine.", "Soon."])
+        kinds = tt.question(tag="Which kinds?", labels=["bill", "ship"])
+        frame = pd.DataFrame({{"body": ["Ada is here"]}})
         form = {{"version": 1, "questions": {{"late": {{"decide": "Late?"}}}}}}
         token = tt.CancelToken()
         token.cancel()
@@ -68,6 +74,13 @@ def test_no_message_or_repr_carries_the_key_or_address_credentials(backend, tmp_
             lambda engine: engine.recognize("Ada is here", kinds=["person"]),
             lambda engine: engine.relate([("Ada", "person"), ("Bob", "person")],
                                          relations={{"knows": ("person", "person")}}),
+            lambda engine: engine.decide(late, pd.Series(["one"])),
+            lambda engine: engine.decide_many(late, pd.Series(["one", "two"])),
+            lambda engine: engine.choose(team, pd.Series(["one"])),
+            lambda engine: engine.score(urgent, pd.Series(["one"])),
+            lambda engine: engine.tag(kinds, pd.Series(["one"])),
+            lambda engine: engine.annotate(form, frame, on="body"),
+            lambda engine: engine.recognize(frame, kinds=["person"], on="body"),
         ]
         calls = [lambda: tt.Engine(base_url=f"http://user:hidden-word@127.0.0.1:{{port}}/generic/v1")]
         for arm in ("refuse", "status/401", "503"):
@@ -95,7 +108,7 @@ def test_no_message_or_repr_carries_the_key_or_address_credentials(backend, tmp_
     assert said == [
         "UsageError a base address carries no user information",
         *[f"BackendError the backend answered with status {status}"
-          for status in (422, 401, 503) for _ in range(8)],
+          for status in (422, 401, 503) for _ in range(15)],
         "UsageError evidence is text, not white space",
         "Cancelled the call was cancelled",
         "DeadlineError the deadline of 0 s passed before the call answered",

@@ -26,17 +26,27 @@ done
 command -v uv >/dev/null 2>&1 || not_run "no uv"
 command -v maturin >/dev/null 2>&1 || not_run "no maturin"
 
-# One venv per checkout, outside the product cache and the repository.
-key=$(printf '%s' "$here" | sha256sum | cut -c1-16)
-venv=${XDG_CACHE_HOME:-$HOME/.cache}/thinkthen-toolchains/python/$key
-if [ ! -x "$venv/bin/python" ]; then
+# One venv per checkout and pin file, outside the product cache and the
+# repository, keyed by the checkout and, past the first, the pin file's name.
+pinned() {
+	venv=${XDG_CACHE_HOME:-$HOME/.cache}/thinkthen-toolchains/python/$(printf '%s' "$here$2" |
+		sha256sum | cut -c1-16)
+	[ -x "$venv/bin/python" ] && return 0
 	if ! { uv venv --quiet --offline --python "$host" "$venv" &&
-		uv pip install --quiet --offline --require-hashes --python "$venv/bin/python" \
-			-r requirements-dev.txt; }; then
+		uv pip install --quiet --offline --require-hashes --python "$venv/bin/python" -r "$1"; }; then
 		rm -rf -- "$venv"
-		not_run "uv's cache lacks a pinned package; on a networked machine run \`uv pip install --require-hashes --python $host -r libraries/python/requirements-dev.txt\` into any venv once"
+		not_run "uv's cache lacks a pin of $1; on a networked machine run \`uv pip install --require-hashes --python $host -r libraries/python/$1\` into any venv once"
 	fi
-fi
+}
+# Each lane's one fact: whether its pandas exports the Arrow stream, and that
+# the extension it imports is the one this checkout built (ticket 0122).
+precondition() {
+	"$1" -c "import os, pandas as pd, thinkthen._thinkthen as ext
+assert hasattr(pd.Series(['a'], dtype='str'), '__arrow_c_stream__') is $2, 'pandas ' + pd.__version__
+assert os.path.dirname(ext.__file__) == os.path.abspath('thinkthen'), ext.__file__" ||
+		{ echo "libraries/python: the $3 lane's precondition failed" >&2; exit 1; }
+}
+pinned requirements-dev.txt ""
 python=$venv/bin/python
 (cd "$repo" && cargo build --quiet --locked --offline --package conformance-backend)
 
@@ -76,7 +86,8 @@ VIRTUAL_ENV=$venv maturin develop --quiet --locked --offline --features probe
 
 echo "== the Python tests, each engine call in a child on its own backend: the door,"
 echo "   the Arrow safety suite, the exit freeze, throttle equality, and the address proof"
-"$python" -m pytest -q -p no:cacheprovider tests/
+precondition "$python" True "pandas 3"
+"$python" -m pytest -q -p no:cacheprovider --tb=short tests/
 
 echo "== the shared cases and the examples, on the rung's backend"
 scratch=$(mktemp -d)
@@ -88,3 +99,9 @@ THINKTHEN_API_KEY=sk-fake-loopback-python-0105 "$python" tests/examples.py "$por
 
 echo "== the release wheel and its contents"
 sh build-wheel.sh
+
+echo "== the pandas 2 lane: the same extension, the pandas tests, and the secrecy test"
+pinned requirements-pandas2.txt requirements-pandas2.txt
+precondition "$venv/bin/python" False "pandas 2"
+"$venv/bin/python" -m pytest -q -p no:cacheprovider --tb=short tests/test_pandas.py tests/test_secrecy.py
+echo "pandas 2 lane passed on pandas $("$venv/bin/python" -c 'import pandas; print(pandas.__version__)')"

@@ -57,3 +57,15 @@ After pandas 0122 lands: the Python Polars cells fix (A1), spend recorded by the
 Packing is in 0.1, following the marketing request and Ian's "everything is in 0.1". Its design ticket starts when experiment 261 reports. It adds pack as a setting on every surface, and a design record picks the default. The default stays at one row per request until that record rules. Ian can overturn this.
 
 0119 runs after 0127 lands. The release build runs last.
+
+## Ian's ruling on scope, 2026-09-25
+
+Ian ruled: "Yep, everything gets into 0.1." Claude reads this to cover section C of `sdlc/planning/issue-backlog-2026-09-25.md` too:
+- the public library API gaps, items 1 to 7
+- recognize and relate items 3 to 8
+- the nine later docs pages
+- test harness items 5 to 10
+- the five feature ideas
+- the site samples and pages
+
+Section A goes first. Section C follows in tickets that don't collide, before 0119 and the release build. Packing is in. Ian can narrow this reading.

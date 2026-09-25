@@ -42,3 +42,17 @@ pub(crate) use write::{Arrow, Cells, Output, annotated, column, decided, table};
 
 /// The caller's frame with its new columns, from `write`.
 pub(crate) use write::frame as frame_out;
+
+/// One answer column as a pair: its Python values and the pandas dtype that
+/// holds them (ticket 0122). "Not sure" is `None`, which pandas reads as NA.
+pub(crate) fn pandas(py: pyo3::Python<'_>, cells: Cells) -> pyo3::PyResult<pyo3::Py<pyo3::PyAny>> {
+    use pyo3::IntoPyObject as _;
+    let (values, dtype) = match cells {
+        Cells::Bools(values) => (values.into_pyobject(py)?, "boolean"),
+        Cells::Numbers(values) => (values.into_pyobject(py)?, "Float64"),
+        Cells::Counts(values) => (values.into_pyobject(py)?, "Int64"),
+        Cells::Texts(values) => (values.into_pyobject(py)?, "string"),
+        Cells::Lists(values) => (values.into_pyobject(py)?, "object"),
+    };
+    Ok((values, dtype).into_pyobject(py)?.into_any().unbind())
+}
