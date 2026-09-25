@@ -6,7 +6,7 @@ opens: conformance/backend/src/listener.rs conformance/backend/tests conformance
 
 # 0127: Fix the test harness before the mutation audit
 
-Status: ready. Owner: Claude.
+Status: in progress. Owner: Claude. Accepted by the coordinator after two design reviews.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -59,7 +59,7 @@ A scan of `origin/main` at `c8ca9a65` found these children that inherit the whol
 | Ruby | `libraries/ruby/tests/backend.rb:50` starts the backend with no environment. `backend.rb:128` copies `ENV.to_h` less `THINKTHEN_*`. `tests/test_public_names.rb:18` passes no environment |
 | R | `libraries/r/tests/helper.R:57` and `interrupt.R:20` add names to the inherited environment. `conformance.R:28` runs `sha256sum` with it |
 
-`cli/conformance_tests/command.rs:192` removes steering names it finds with `vars_os()`, and `:240` lists them the same way in the child. The first loop goes, since the child now starts empty. The second reads `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` by name, the two names the probe exists to rule out.
+`cli/conformance_tests/command.rs:192` removes steering names it finds with `vars_os()`, and `:240` lists them the same way in the child. The first loop goes, since the child now starts empty. The child keeps its whole-environment scan, because reading its own environment is the probe's evidence. It asserts that the child holds no `THINKTHEN_*` name other than `THINKTHEN_TEST_FORM_CHILD`. The file is a lint exemption for that one reason.
 
 Each call site names what its child keeps. A child of the `thinkthen` binary keeps nothing. A toolchain child keeps the names its tool reads, such as `HOME`, `CARGO_HOME`, `RUSTUP_HOME`, `RUSTUP_TOOLCHAIN`, `CARGO_TARGET_DIR`, and `RUSTC_WRAPPER`. The SQLite children keep `LD_LIBRARY_PATH`, which `check.sh` sets to the pinned 3.50.0 host. A Python library child may keep `PYTHONPATH` or `VIRTUAL_ENV` if its import needs it. The build measures each list by running the site, and the record lists each one.
 
@@ -74,7 +74,7 @@ The check has two rules.
 | Language | A spawn is | It passes when |
 | --- | --- | --- |
 | Rust | `Command::new(` | `.env_clear()` appears in its statement, or in the later statements that begin with the name a `let` bound it to |
-| Python | `subprocess.run`, `Popen`, `call`, `check_call`, `check_output`, `asyncio.create_subprocess_exec` | its parentheses hold `env=` and not `env=None`. `os.system`, `os.popen`, `os.exec*`, and `os.spawn*` fail outright |
+| Python | `subprocess.run`, `subprocess.Popen`, `subprocess.call`, `check_call`, `check_output`, `asyncio.create_subprocess_exec` | its parentheses hold `env=` and not `env=None`. `os.system`, `os.popen`, `os.exec*`, and `os.spawn*` fail outright |
 | TypeScript | `spawn`, `spawnSync`, `exec`, `execSync`, `execFile`, `execFileSync`, `fork` in a file that names `child_process` | its parentheses hold `env:` and not `env: undefined` |
 | Ruby | `Open3.*`, `Process.spawn`, `spawn`, `system`, `IO.popen`, `exec` | its parentheses hold `unsetenv_others: true`. A backtick command and `%x` fail outright |
 | R | `system(`, `system2(` | its parentheses hold `clean_env(` |
@@ -86,14 +86,14 @@ The check has two rules.
 | Rust | `env::var(`, `env::var_os(` | `env::vars(`, `env::vars_os(` |
 | Python | `os.environ.get(`, `os.environ[`, `in os.environ`, `os.environ.pop(`, `os.environ.setdefault(`, `os.getenv(` | `dict(os.environ`, `os.environ.copy(`, `**os.environ`, `os.environ.items(`, `os.environ.update(`, `env=os.environ` |
 | TypeScript | `process.env.NAME`, `process.env[` | `...process.env`, `env: process.env`, `Object.keys(process.env)` |
-| Ruby | `ENV.fetch(`, `ENV[` | `ENV.to_h`, `ENV.dup`, `ENV.each`, `ENV.reject`, `ENV.key?` |
-| R | `Sys.getenv("NAME")` | `Sys.getenv()`, `Sys.getenv(names)` with a vector |
+| Ruby | `ENV.fetch(`, `ENV[`, `ENV.key?(` | `ENV.to_h`, `ENV.dup`, `ENV.each`, `ENV.reject` |
+| R | `Sys.getenv(` with any arguments except a `c(` vector, such as `Sys.getenv("NAME")`, `Sys.getenv("NAME", "default")`, or `Sys.getenv(name)` | `Sys.getenv()`, `Sys.getenv(c(`, `names(Sys.getenv())` |
 
-Test code is any file under a `tests/` folder, under `conformance/`, or under `databases/duckdb/tools/`, and any Rust file named `tests.rs` or ending in `_tests.rs`. The pandas surface's `pop` and `setdefault` calls name one variable each, so they pass beside the coordinator's three Python forms.
+Test code is any file under a `tests/` folder, a folder whose name ends in `_tests`, `conformance/`, or `databases/duckdb/tools/`, and any Rust file named `tests.rs` or ending in `_tests.rs`. `pop` and `setdefault` each name one variable, so they pass beside the coordinator's three Python forms. `databases/sqlite/tests/test_schema.py:110` calls `pop`, and `libraries/python/tests/conformance.py:234` calls `setdefault`.
 
 A failure reads `children: PATH:LINE: this child inherits the whole environment; build it with the LANGUAGE child helper`, or `children: PATH:LINE: test code reads the whole environment; read one name at a time`.
 
-The check catches the forms in its tables and nothing else. A spawn through another library, or a map reached through an alias, passes it. C sources and shell scripts are outside its scope.
+The check catches the forms in its tables and nothing else. A spawn through another library, or a map reached through an alias, passes it. An inline `#[cfg(test)]` module in a Rust source file is not test code to the whole-environment rule, so a read there passes it. C sources and shell scripts are outside its scope.
 
 Two tables sit at the top of the script. Each entry names a path, an owner, and a reason. The check fails on an entry whose path no longer holds a finding, so neither table can rot.
 
@@ -102,6 +102,7 @@ Two tables sit at the top of the script. Each entry names a path, an owner, and 
 | Excluded | `sdlc/scripts/` | The gate's own tools run `cargo`, `git`, and `node` in the developer's toolchain. `live` builds its own environment by design |
 | Excluded | `probes/`, `site/`, `databases/duckdb/vendor/`, `libraries/r/thinkthen/tools/` | Live measurements run by hand, the site build, vendored code, and the R package's install-time tools. None is a test |
 | Exempt | `libraries/typescript/tests/fork.test.mjs` | The `fork` runs inside a child the helper already built, so it inherits only the allow list |
+| Exempt | `crates/thinkthen/src/cli/conformance_tests/command.rs` | Its form child scans its own whole environment, and that reading is the probe's evidence |
 | Pending 0123 and 0126 | `crates/thinkthen/tests/relate_edge.rs` | Its one inheriting spawn runs `relate --help`. Relate and help text are both in flight |
 | Pending 0129 | `databases/postgresql/src/files.rs` | Its test module runs `mkfifo`. 0129 owns `databases/*/src` |
 | Pending 0129 | `databases/duckdb/tools/databases_suite.py`, `databases/duckdb/tools/source_checks.py` | `databases_suite.py:117` starts a Python child with no `env`, and `source_checks.py:59` and `:168` start `cargo` with none. 0129 owns both files |
@@ -110,7 +111,7 @@ The self-test builds one file per row of the edge-case table below in a scratch 
 
 ### The heavy rungs drop stray `THINKTHEN_*` names
 
-`sdlc/scripts/heavy-lock` is sourced by `install`, `test`, `spec`, and `surfaces`. Before it takes the lock, it unsets every exported name that starts with `THINKTHEN_` except its own `THINKTHEN_HEAVY_LOCK` and `THINKTHEN_HEAVY_LOCK_HELD`. It finds the names with `awk` over `ENVIRON` and prints nothing. The unset runs before the `exec flock` branch, so the re-run rung starts without them. It also covers a nested rung and a machine with no `flock`, where no `exec` happens. `sdlc/live-test` and each test already set every `THINKTHEN_*` value they use. `sdlc/scripts/README.md` gains one clause on the row for `heavy-lock`.
+`sdlc/scripts/heavy-lock` is sourced by `install`, `test`, `spec`, and `surfaces`. Before it takes the lock, it unsets every exported name that starts with `THINKTHEN_` except its own `THINKTHEN_HEAVY_LOCK` and `THINKTHEN_HEAVY_LOCK_HELD`, and `THINKTHEN_TOOLCHAINS` and `THINKTHEN_DUCKDB_CLI`. The last two are path overrides and hold no secret. It finds the names with `awk` over `ENVIRON` and prints nothing. The unset runs before the `exec flock` branch, so the re-run rung starts without them. It also covers a nested rung and a machine with no `flock`, where no `exec` happens. `sdlc/live-test` and each test already set every `THINKTHEN_*` value they use. `sdlc/scripts/README.md` gains one clause on the row for `heavy-lock` that names the four kept names.
 
 The runner-level allow list for secret-shaped names stays deferred. The landing commit files it as an issue in `sdlc/issues/`.
 
@@ -124,6 +125,7 @@ The runner-level allow list for secret-shaped names stays deferred. The landing 
 | Rust `run::output(Command::new(x).arg("--version"))` | Refused |
 | Rust `.env_clear().envs(std::env::vars())` in test code | Refused |
 | Rust `std::env::var_os("PATH")` in test code | Passes |
+| Rust `std::env::vars_os()` in `cli/conformance_tests/command.rs` | Passes as an exemption |
 | Python `subprocess.run(["x"], capture_output=True)` | Refused |
 | Python `subprocess.run(["x"], env=None)` | Refused |
 | Python `subprocess.run(["x"], env=child_env())` | Passes |
@@ -142,13 +144,17 @@ The runner-level allow list for secret-shaped names stays deferred. The landing 
 | R `system2("sha256sum", file, stdout = TRUE)` | Refused |
 | R `system2("env", c(clean_env(), shQuote("sha256sum"), shQuote(file)))` | Passes |
 | R `Sys.getenv()` in test code | Refused |
+| R `Sys.getenv(c("A", "B"))` and `names(Sys.getenv())` in test code | Refused |
 | R `Sys.getenv("TT_TESTS")` in test code | Passes |
+| R `Sys.getenv("TT_CASE", "")`, the default form, in test code | Passes |
+| R `Sys.getenv(name)`, the variable form, in test code | Passes |
+| Ruby `ENV.key?("HOME")` in test code | Passes |
 | An exclusion or pending path with no finding left | Refused as a stale entry |
 | Helper `keep` of `LD_LIBRARY_PATH` set in the parent | Kept |
 | Helper `keep` of a name the parent lacks | Left out, no error |
 | Helper `keep` of `THINKTHEN_BASE_URL`, `OPENAI_API_KEY`, `GITHUB_TOKEN`, `db_password`, or `AWS_SECRET_ACCESS_KEY` | Refused with the exact sentence |
 | Helper value `THINKTHEN_API_KEY="sk-fake"` | Set, since the test named it |
-| A rung sourced with `THINKTHEN_SENTINEL`, `THINKTHEN_HEAVY_LOCK`, and `THINKTHEN_HEAVY_LOCK_HELD` set | The sentinel is gone. Both lock names stay |
+| A rung sourced with `THINKTHEN_SENTINEL`, `THINKTHEN_HEAVY_LOCK`, `THINKTHEN_HEAVY_LOCK_HELD`, and `THINKTHEN_TOOLCHAINS` set | The sentinel is gone. The other three stay |
 
 ## Part 2: the shared loopback backend (items 2 and 4)
 
@@ -156,7 +162,7 @@ All of this lives in `conformance/backend/src/listener.rs`.
 
 1. **A stalled peek falls into the full read.** `peek_request` still peeks, so a reset can drop unread bytes. Today it falls back to `read_request(&mut BufReader::new(stream))` with `used` 0 when the peek fills its 32 KiB buffer. It now takes that same branch when `seen` has stayed the same for 2 seconds of polls. That read ends in one of two ways. A client that closed after half a request makes `read_request` meet end of file and return `None`, so the serving thread returns. A slow client finishes the request by reading, with `used` 0. No thread spins any more.
 2. **A reset of a request that was read answers loudly.** When `used` is 0, a `Canned::reset()` reply cannot drop unread bytes, and a close would look like a clean end. The listener answers the drift status 500 instead, the fail-loud reply the arms already use. The body and a standard error line read `the loopback listener cannot reset a request it had to read`. It does not panic, because a panic in a serving thread only closes the stream, and the client again sees a plain close.
-3. **A scripted listener counts, skips, and keeps its port.** `serve_script` counts every connection in `Counts::connections`. A connection that closes before a whole request, including one that sends zero bytes, takes no scripted reply. The listener skips it and accepts the next connection. Today it returns and closes the port. After the script runs out, the thread keeps accepting until the test process exits. It records each extra request and answers it with the drift status and `the script has no reply left for this connection`.
+3. **A scripted listener counts, skips, and keeps its port.** `serve_script` counts every connection in `Counts::connections`. A connection that closes before a whole request, including one that sends zero bytes, takes no scripted reply. The scripted stream also gets a 2-second read timeout, so a client that connects, sends nothing, and stays open is skipped too. A peek that times out ends that connection. The listener skips each such connection and accepts the next one. Today it returns and closes the port. After the script runs out, the thread keeps accepting until the test process exits. It records each extra request and answers it with the drift status and `the script has no reply left for this connection`.
 4. **A dropped `Listener` keeps its port.** The serving thread owns the socket, and dropping the `Listener` closes only its record channel. The thread ignores the closed channel. It keeps the port bound and answers every later connection with the drift status until the process exits. No other test in the same process can then bind that port while a client of this one may still connect. The answering listeners already hold their ports this way. One secrecy sweep opens about 520 scripted listeners, so one process holds about 520 idle threads and sockets. The build records the sweep's time before and after.
 5. **The secrecy sweep names what the listener saw.** The status assertion in `crates/thinkthen/tests/backend/secrecy.rs` prints the connection count and each recorded request's line and body length. It prints no body, since the body holds the evidence.
 
@@ -176,6 +182,7 @@ The existing `a_backend_that_answers_nothing_is_exit_four` in `crates/thinkthen/
 | A 40 KiB request | `reset` | The client reads a clean end of file | The client reads status 500 and the sentence |
 | A 1 KiB request | `reset` | The client sees a reset | The client sees a reset |
 | A second whole request | `ok` only | The connection is refused | The client reads status 500 and the sentence. `connections()` reads 2 |
+| Nothing, and stays open | `ok`, then a second client sends a whole request | The listener waits on the first connection forever. The second client waits too | After the 2-second read timeout the first connection is skipped. The second gets the 200 |
 | A whole request after the `Listener` is dropped | `ok`, already used | The connection is refused | The client reads status 500 and the sentence |
 
 ## Part 3: the secrecy sweep marks both relate entities (item 3)
@@ -221,6 +228,7 @@ Each is the agent's decision unless a line names the coordinator. Ian can overtu
 | `libraries/python/tests/test_secrecy.py` | Its environment test also asserts that a sentinel the parent sets does not reach the child, as the 0122 issue asks | Restore `dict(os.environ)` in `conftest.py` `child_env`. The sentinel reaches the child |
 | `conformance/backend/tests/listener.rs`: half request | The half-request row. The second client reads 200 within 10 seconds | Remove the stall rule. The second client times out |
 | `listener.rs`: zero-byte stray | The zero-byte row. The second client reads 200 | Return from `serve_script` on a closed connection. The second client is refused |
+| `listener.rs`: silent open client | The row for a client that sends nothing and stays open. The second client reads 200 within 10 seconds | Remove the read timeout. The second client times out |
 | `listener.rs`: large reset | The 40 KiB row. Status 500 and the whole sentence | Remove the `used == 0` branch. The client reads end of file |
 | `listener.rs`: script ended and dropped | The second-request row and the dropped row. Status 500, `connections()` 2, both request lines | Return from `serve_script` when the script ends. The connection is refused |
 | The secrecy sweep and `secrecy_relate.rs` | Every case passes with three markers | An `eprintln!` of the second entity's name in `cli/relate`, then of its kind. Each turns a secrecy test red. Neither plant is committed |
@@ -242,7 +250,7 @@ Each new test answers the four questions of `CLAUDE.md`.
 - `crates/thinkthen/src/test_deadline/child.rs`: at most 45 nonblank lines, its test included.
 - `conformance/children/`: at most 30 nonblank lines per helper and 120 for `test.sh` and the four checks it runs.
 - `conformance/backend/src/listener.rs`: at most 45 nonblank lines added.
-- `conformance/backend/tests/listener.rs`: at most 130 nonblank lines.
+- `conformance/backend/tests/listener.rs`: at most 150 nonblank lines.
 - `secrecy.rs` and `secrecy_relate.rs`: at most 30 nonblank lines changed.
 - Rust spawn sites: at most 50 nonblank lines changed in all.
 - Surface helpers and spawn sites, the pandas surface included: at most 110 nonblank lines changed in all. Each surface ratchet moves to its measured total, and the commit names each change.
@@ -281,6 +289,9 @@ These files overlap other in-flight tickets. Whichever ticket lands second merge
 | 0126, help text | This ticket opens named files under `crates/thinkthen/src/cli` and `crates/thinkthen/tests`, never whole folders. `tests/version.rs` is the likeliest meeting point. `relate_edge.rs` waits for 0126 | Whichever lands second merges |
 | 0129, `databases/*/src` | `databases/postgresql/src/files.rs`, `databases/duckdb/tools/databases_suite.py`, and `databases/duckdb/tools/source_checks.py` stay pending for 0129. This ticket plants in `databases/sqlite/src/ffi.rs` and restores it | 0129 clears its pending entries, or a Quick Fix does after it lands |
 | 0126 and 0129 | `databases/sqlite/README.md`. This ticket leaves it alone, and records the ruling in the `test_interrupt.py` docstring | None needed |
+| 0128, release and install | `tests/backend/exchange.rs:156`, `sdlc/scripts`, `libraries`, `databases`, and `tests/backend`. 0128's first phase is building now | Whichever lands second merges |
+| 0123 and 0124 | `engine/host_signal_tests.rs`, `engine/recorder/identity/tests.rs`, `cli/interrupt/tests.rs`, and `cli/conformance_tests/command.rs` | Whichever lands second merges |
+| 0129 | `databases/duckdb/tools/settings_suite.py` and `databases/sqlite/tests/test_values.py` | Whichever lands second merges |
 
 ## Routing
 
