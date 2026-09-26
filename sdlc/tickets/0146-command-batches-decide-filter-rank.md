@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core/batch.rs crates/thinkthen/src/core/question_fil
 
 # 0146: The command batches decide, filter and rank
 
-Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Claude. It builds only after tickets 0143, 0144 and 0145 land and after "S1 live run 1" runs on main.
+Status: ready for review. The coordinator accepted it on 2026-09-26 after a fresh read-only review, then revised it the same day for ADR 0053. A fresh read-only review must accept the revision before it builds. Owner: Claude. It builds only after tickets 0143, 0144 and 0145 land, after "S1 live run 1" runs on main, and with ADR 0053 on main.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -31,6 +31,7 @@ Ian's rulings of 2026-09-26 set the frame. Ian can overturn each.
 2. Ticket 0144 (B3) lands first. B4 calls its `Batcher`, `BatchRecord`, `Batch` and `Reading::batch_record`.
 3. Ticket 0145 (S1) lands first. B4 removes three entries from its `probes/speed/functions.jsonl`.
 4. "S1 live run 1" runs on a main commit after S1 lands and before B4's build starts. Its record under `probes/speed/runs/` is the baseline B4 is measured against. S1 decision 13 makes this B4's precondition.
+5. ADR 0053 is on main. Ticket 0158, which keeps a reply that failed a question out of the cache, lands before B4 lands. It does not block B4's build.
 
 ## What happens today
 
@@ -88,7 +89,7 @@ A bad `THINKTHEN_BATCH` is refused only on a stream of records. A run of one doc
 
 The batched path lives in one new file, `cli/asking/batched.rs`. `cli/asking.rs::run` sends `decide`, `filter` and `rank` over a stream there. Every other verb and every run on one document keep today's path.
 
-**Parsing moves to the reader.** The planner needs each record's value before a request can form. So the reader parses each record, builds its `BatchRecord` through `Reading::batch_record`, and pushes it into the `Batcher`. The reader keeps the open batch's parsed records and their arrived bytes beside the planner, because `filter` prints records as they arrived and `--details` prints `input`. When `push` adds batches to `closed`, the reader splits its held records by each batch's record count, `questions.len()`. An item holds the batch, its first record number, and its records. CSV and TSV runs take the same path from `TableRows` through `over_table`.
+**Parsing moves to the reader.** The planner needs each record's value before a request can form. So the reader parses each record, builds its `BatchRecord` through `Reading::batch_record`, and pushes it into the `Batcher`. The reader keeps the open batch's parsed records and their arrived bytes beside the planner, because `filter` prints records as they arrived and `--details` prints `input`. The member cap bounds the held records of the open batch. When `push` adds batches to `closed`, the reader splits its held records by each batch's record count, `questions.len()`. An item holds the batch, its first record number, and its records. CSV and TSV runs take the same path from `TableRows` through `over_table`.
 
 **The reader protocol.** Two threads sit on the command's side.
 
@@ -102,11 +103,11 @@ The batched path lives in one new file, `cli/asking/batched.rs`. `cli/asking.rs:
 
 **The pause.** ADR 0048 item 2's pause belongs to the edge, because the core reads no clock. `Batcher` gains `pause()`, which closes the open batch as the new `Closed::Pause` and returns it, or `None` when the batch is empty. The batch reader waits on the record channel with `recv_timeout` of 50 ms under the protocol's conditions, and a timeout calls `pause()`. The value is fixed and has no option.
 
-The pause is off only when the user typed `--cache`, `--record` or `--replay`, as ADR 0048 item 2 says. The rule reads those three flags from `Common`. It does not read `Folders::named`, which is also true for the default cache.
+The pause fires in every mode, by ADR 0053 item 1. A typed `--cache`, `--record` or `--replay` folder does not turn it off, and neither does the default cache or `THINKTHEN_CACHE`. A file or a pipe that never waits 50 ms forms the same batches every run, and a recording or cache answers them. A live pipe that pauses forms batches by its timing. A later run with other timing can cut a batch elsewhere. `--replay` then stops at exit 5 at that batch, and `--cache` and the default cache pay for it again.
 
-- The default cache, on when no folder is typed, keeps the pause on. A live pipe that pauses can then cut a batch where the last run did not. That batch misses the default cache and is paid again. A file or a pipe that never waits 50 ms forms the same batches every run, and the default cache answers them.
-- `THINKTHEN_CACHE` names the default cache's folder and turns that cache on. It is not a typed folder, so the pause stays on too.
-- `--no-cache` turns the default cache off and leaves the pause on.
+### The member cap
+
+`Batcher` gains the fixed cap `MEMBERS`, 4,096, by ADR 0053 item 2. After a content cut and the size, `push` closes the open batch as `Closed::Limit` when it holds 4,096 members, repeats included. A stream of a few distinct values then forms batches of at most 4,096 records, and the reader holds at most `--jobs` such batches.
 
 **A record the planner or the parser refuses.** B4 reads 0144's `push` at `95293ef4`. On a refusal, `closed` holds every batch that closed before it, and the refused record joins no batch. After a refusal the open batch is empty, so `finish()` returns `None`. The reader queues what `closed` holds, drops the refused record, and answers the next ask after the queue with the refusal as `Input::Failed`. A parse refusal happens before any push, so the reader calls `finish()`, queues the batch it returns, and answers the same way. The records before the refused one then print, and the run stops at the refused record with today's cause and exit code. `BatchError::Profile` becomes today's profile refusal. `BatchError::Defect` becomes `Failure::Defect`. B4 never passes a context, so the context errors cannot arise here.
 
@@ -183,7 +184,7 @@ Each rule below becomes true for `decide`, `filter` and `rank`. The builder dele
 
 | Page | Marker, by its opening words | What B4 does |
 | --- | --- | --- |
-| `records.md`, "Records never share model context" | item 1: "records of one batch share one request" | Records of one batch share one request on `decide`, `filter` and `rank`. A marker by item 7 stays for `choose`, `tag` and `score` |
+| `records.md`, "Records never share model context" | item 1: "records of one batch share one request" | Records of one batch share one request on `decide`, `filter` and `rank`. Add ADR 0053 item 5's statement: "Records in one batch share one request, so each record's text is evidence for every other record in that batch. A record that states a false claim can move its neighbours' answers. The tool cannot tell a planted claim from a true one. When records come from different people or sources, or when any source is untrusted, run with `--batch 1`. Each record is then its own request and sees no other record." A marker by item 7 stays for `choose`, `tag` and `score` |
 | `records.md`, "Order and requests", "One request normally carries one piece of evidence" | item 2: "by default each request fills with records" | Requests fill to the limit on the three verbs. A marker by item 7 stays for the other three |
 | `records.md`, the request table row "`decide`, `choose`, `tag`, `score`, `filter`, `rank` over N records" | item 2: "one for each batch" | The row splits. `decide`, `filter`, `rank`: one request a batch, N at `--batch 1`. `choose`, `tag`, `score`: N, with a marker by item 7 |
 | `records.md`, "A run that stops early prints one line" | item 6: "when a batch fails, the line names the range" | Built, with the template above. The item 10 marker for `--facts` stays |
@@ -198,7 +199,7 @@ Each rule below becomes true for `decide`, `filter` and `rank`. The builder dele
 
 After B4, `grep -rnE "Not built yet, by ADR 0048 item (1|2)[ :]" specification` returns nothing. The pattern catches `backends.md`'s "item 2 and 6:" and passes over items 10 and 11.
 
-`decide.md`, `filter.md` and `rank.md` each gain one sentence naming `--batch`. `settings.md` moves `batch` from "Settings on the way" into the table. Its library and SQL cells read `not on this surface` and name tickets B12a to B13e. The row also says the library's question file reader accepts a `decide` file's `batch` and ignores it until B12a. `question-file.schema.json` gains `batch` on the top-level `decide` file only. `settings.md` also adds `batch` to its list of precedence orders on record: `--batch`, then `THINKTHEN_BATCH`, then the question file's `batch`, then `max`, by ADR 0048 item 4.
+`decide.md`, `filter.md` and `rank.md` each gain these sentences: "By default a stream of records shares requests, filling each to the backend's limits. Batching changes answers, because a record's neighbours are in view. `--batch 1` asks one record a request and gives the answers the tool gave before batching." `decide.md` also gains, after its paragraph on planted claims: "Under batching a planted claim reaches every record in its batch. `--batch 1` keeps each record alone." `settings.md` moves `batch` from "Settings on the way" into the table. Its library and SQL cells read `not on this surface` and name tickets B12a to B13e. The row also says: "Until the libraries and SQL extensions batch, they ask one record a request, so their answers and cache entries match the command's only at `--batch 1`." The row also says the library's question file reader accepts a `decide` file's `batch` and ignores it until B12a. `question-file.schema.json` gains `batch` on the top-level `decide` file only. `settings.md` also adds `batch` to its list of precedence orders on record: `--batch`, then `THINKTHEN_BATCH`, then the question file's `batch`, then `max`, by ADR 0048 item 4.
 
 ### Demos, pages and tests recorded one record a request
 
@@ -223,7 +224,7 @@ Each is the agent's decision. Ian can overturn any of them.
 3. **The scheduler counts records by weight.** One small change keeps one scheduler. The stop line then names records, not batches.
 4. **An item carries an optional stop after its rows.** A partial reply prints its good rows and stops at the failed record. The alternative is a second scheduler.
 5. **The pause lives at the edge, with a 50 ms receive timeout that runs only while an ask is outstanding.** The core stays pure. `Batcher::pause()` is the only core addition for it. A timer that ran while every job was busy would cut small batches for no gain in latency, because nothing could send them.
-6. **The pause stays on under the default cache and `THINKTHEN_CACHE`.** ADR 0048 item 2 turns it off only for a folder the user names. The coordinator ruled this on 2026-09-26. The cost is a paid repeat for a live pipe that pauses at a different place. A file or a steady pipe gets the default cache's answers.
+6. **The pause fires in every mode.** ADR 0053 item 1 ruled it, because a loop that writes one record and waits must get its answer under a named folder too. The cost is a replay miss or a paid repeat when a live pipe pauses at a different place than it did when recorded. A file and a steady pipe form the same batches every run.
 7. **B4 builds the usage shares.** ADR 0048 gives the shares to B5. But from B4 on, rows come from batches. A row carrying the whole batch's usage would overstate every total a user sums. The share rule is short and already fixed. B5 keeps `meta.batch`, `--facts` and design test 6.
 8. **A multi-record failure prints one line. A batch of one keeps today's two.** ADR 0048 item 6 fixes the one-line form. `--batch 1` then keeps today's standard error byte for byte.
 9. **A partial reply's line names the record and not the cause.** A failed yes/no question carries a closed cause but no sentence. The line says the record got no usable answer. The exit code is 4, the backend-failure code.
@@ -233,6 +234,7 @@ Each is the agent's decision. Ian can overturn any of them.
 13. **B4 lands before the target is measured live.** B4 cannot make a live call. It proves the request count at the loopback. "B4 live run", below, measures the time on main after B4 lands.
 14. **`QuestionFile::parse_top` takes `batch` off the top of a `decide` file before parsing, in the core.** Every reader of a whole question file calls it, and `QuestionSet` does not. `Verb::Decide.keys()` also serves annotate entries, so adding the key there would let an annotate entry carry `batch` before B10 decides it. Taking the key off first keeps it out of the question digest by construction.
 15. **The reader queues closed batches and pulls records only for an outstanding ask, through a bounded channel.** Memory then stays bounded by `--jobs` batches and the channel's bound, as today's reader is bounded by `--jobs` records.
+16. **A batch closes at 4,096 members.** ADR 0053 item 2 ruled it. Without it a repeated value never closes a batch under `max`, and the reader's memory grows with the run.
 
 ## Edge cases
 
@@ -258,11 +260,13 @@ Each is the agent's decision. Ian can overturn any of them.
 | `--dry-run` over three lines, default | The plan of one batch of three records |
 | `--dry-run` over three lines, `--batch 1` | Today's plan of the first record |
 | Two equal lines in one batch | One question. Both rows print, each with its answer |
-| A live, unrecorded pipe that pauses with 3 records sent | A request of 3 records within 5 seconds |
-| The same pipe under `--cache DIR` | Nothing sent until the writer closes the pipe |
-| The same pipe with the default cache on and no typed folder | A request of 3 records within 5 seconds. The pause stays on |
-| The same pipe with `THINKTHEN_CACHE` set and no typed folder | The pause stays on |
-| The same pipe under `--record DIR` or `--replay DIR` | No pause cut |
+| A live pipe with no folder that pauses with 3 records sent | A request of 3 records within 5 seconds |
+| The same pipe under `--cache DIR` | A request of 3 records within 5 seconds. The pause fires in every mode |
+| The same pipe with the default cache on and no typed folder | A request of 3 records within 5 seconds |
+| The same pipe with `THINKTHEN_CACHE` set and no typed folder | A request of 3 records within 5 seconds |
+| The same pipe under `--record DIR` | A request of 3 records within 5 seconds |
+| A loop that writes one record and waits, under `--record DIR`, then the same loop under `--replay DIR` | Each answer arrives before the next record in both runs. The replay sends nothing |
+| 10,000 lines of 5 distinct values, none a content cut, default, `--no-cache` | 3 requests of 4,096, 4,096 and 1,808 members |
 | CSV or TSV rows through `over_table`, default | One batch. Each record is quoted as its compact JSON object. `filter` prints kept rows as compact JSON objects, as today |
 | A question file whose question text is a JSON object | Every batch holds one record in today's form. Today's requests and rows |
 | A batched row under `--details` | `question` is the user's question, unquoted. `meta.question_sha256` is today's |
@@ -298,7 +302,9 @@ Every test drives the compiled binary against the in-process loopback (`tests/ba
 | --- | --- | --- |
 | `order_holds_across_jobs`, design test 4 | 306 made-up lines at `--batch 10`. The loopback answers later batches faster, so replies arrive out of order. `--jobs 1` and `--jobs 8` print identical standard output and standard error. The loopback saw 31 requests, sized 30 of 10 and one of 6, and a peak of 8 in flight at `--jobs 8` | (a) Emit rows in reply order. (b) Close a size batch at N+1. (c) Bound the items in flight by records, not batches: the peak falls to 1 |
 | `replay_answers_every_batch`, design test 5 | Record 25 lines at `--batch 10` into a temporary folder through the loopback. Replay with the loopback stopped: identical output. Replay at `--batch 5`: exit 5 and the pinned one-line stop naming records 1 to 5. A `--cache DIR` run repeated sends nothing the second time | (a) Digest the plan, not the body, so replay misses. (b) Give the replay-miss stop line the batch number, not the record range |
-| `a_pause_sends_the_open_batch`, design test 7 | A real pipe carries 3 records from a writer that then holds the pipe open. The loopback receives one request of 3 records within 5 seconds. A second row runs the same pipe with `THINKTHEN_CACHE` naming a private folder and no typed folder, so the default cache is on, and receives the request within 5 seconds too. Under `--cache DIR` it receives nothing until the writer closes, then one request | (a) Never pause: no request arrives in 5 seconds. (b) Pause under a typed folder: a request arrives before close. (c) Turn the pause off by `Folders::named`: the default-cache row gets no request in 5 seconds |
+| `a_pause_sends_the_open_batch`, design test 7 | A real pipe carries 3 records from a writer that then holds the pipe open. The loopback receives one request of 3 records within 5 seconds in four rows: no folder, the default cache through `THINKTHEN_CACHE` naming a private folder, `--cache DIR`, and `--record DIR` | (a) Never pause: no request arrives in 5 seconds. (b) Turn the pause off under a typed folder: the `--cache DIR` row gets no request in 5 seconds. (c) Turn the pause off by `Folders::named`: the default-cache row gets no request in 5 seconds |
+| `an_answer_arrives_before_the_next_record_at_one_job_and_the_default`, existing in `tests/backend/scheduling.rs` | Two new rows: the same request-and-reply loop under `--record DIR`, then under `--replay DIR` from that folder. Each answer arrives before the next record. The replay row sends nothing | (a) Turn the pause off under a typed folder: the `--record` row times out |
+| `repeats_close_a_batch_at_the_member_cap`, new | 10,000 lines of 5 distinct values, none a content cut, `--no-cache`, loopback. The loopback sees 3 requests, and each body holds at most 5 questions | (a) No cap: 1 request. (b) Cap on distinct records, not members: 1 request |
 | `a_failed_batch_stops_at_its_first_record`, design test 8 | Loopback answers 503 to the second of three batches at `--batch 10`, `--jobs 1`, `--max-retries 0`. Standard output is exactly rows 1 to 10. Standard error is exactly the pinned 503 line from "Stop lines". Exit 4. A second row omits record 13's answer: rows 1 to 12 print, then the pinned partial line, exit 4. A third row runs the 503 at `--batch 1`: standard error is exactly today's two lines. A fourth row interrupts a batched run: standard error keeps today's two-line cancellation form | (a) Name the range from `finished`, off by one. (b) Fail the whole batch on a partial reply: only 10 rows print. (c) Use the one-line form for a batch of one. (d) Use the one-line form for a cancellation |
 | `the_batch_setting_follows_its_tiers` | An edge-case table over `--dry-run`, with no network. Each row gives the flag, `THINKTHEN_BATCH` and a question file's `batch`, and reads how many records the first batch plan holds over three lines. The refusal rows pin exit codes and whole sentences. Two rows run through the loopback with `--details`: a `decide` file with and without `"batch": 5` print the same `meta.question_sha256`, and an annotate question set whose entry holds `batch` is refused with today's sentence | (a) The file beats the environment. (b) `THINKTHEN_BATCH` is never read. (c) `0` parses as `max`. (d) `--batch` on one document is ignored. (e) `batch` joins `Verb::Decide.keys()`: the annotate row is accepted |
 | `each_row_carries_its_share` | Three records at `--batch 3` with `--details`, loopback usage of 100 input and 10 output tokens. Rows carry 34, 33, 33 and 4, 3, 3, and `requests_sent` 1, 0, 0. A backend reporting no usage gives rows with no `usage` | (a) Every row carries the whole batch's usage. (b) The remainder goes to the last record. (c) A missing usage becomes 0 |
@@ -309,7 +315,9 @@ The four questions:
 
 - **`order_holds_across_jobs`.** It protects ADR 0048 item 5: output keeps input order and `--jobs` counts batches. Out-of-order replies or a jobs bound in records fail it. B3 tests only the planner, and today's order tests send one record an item. No hook: the loopback's reply delay is an ordinary server choice.
 - **`replay_answers_every_batch`.** It protects replay and the cache over batches, which every recorded demo and every saved cache depends on. A digest over other bytes, or a stop line in batch numbers, fails it. No existing test replays a batch. No hook.
-- **`a_pause_sends_the_open_batch`.** It protects a live stream's latency and a recorded run's determinism, the two sides of the pause rule. A missing pause, a pause under a typed folder, or a pause turned off by the default cache fails it. Nothing tests timing of input today. No hook: it uses a real pipe.
+- **`a_pause_sends_the_open_batch`.** It protects a live stream's latency in every mode. A missing pause, or a pause turned off by a typed or default folder, fails it. Nothing tests timing of input today. No hook: it uses a real pipe.
+- **The new scheduling rows.** They protect the request-and-reply loop under a named folder, which the README recommends. A pause turned off by a folder fails them. The existing test runs with no folder only. No hook.
+- **`repeats_close_a_batch_at_the_member_cap`.** It protects ADR 0053 item 2 and `records.md`'s promise that the memory of a long run stays flat. A missing cap, or a cap that counts distinct records, fails it. The planner's tests pin no cap. No hook: the loopback counts requests.
 - **`a_failed_batch_stops_at_its_first_record`.** It protects ADR 0048 item 6: which rows print and what the stop line says. A range off by one, a whole-batch failure on a partial reply, or a changed `--batch 1` line fails it. Today's failure tests send one record a request. No hook.
 - **`the_batch_setting_follows_its_tiers`.** It protects ADR 0048 items 3 and 4, and the refusals. A swapped tier or a lax parser fails it. Nothing reads the setting today. No hook: `--dry-run` is the real boundary for what a run would send.
 - **`each_row_carries_its_share`.** It protects the truth of every row's usage once rows come from batches. Whole-batch usage on each row, or a 0 for a missing count, fails it. B5's test 6 later checks sums over recorded runs and `--facts`. This test checks one batch's split at the row. No hook.
@@ -321,7 +329,7 @@ Existing tests pinned to `--batch 1` keep proving what they proved before, one r
 
 Nonblank lines, measured with `grep -c .`. Net lines against main after 0143, 0144 and 0145 land.
 
-- `crates/thinkthen/src/core/batch.rs`: at most 30 net, for `Setting::parse`, `Closed::Pause` and `pause()`, less the `expect(dead_code)`.
+- `crates/thinkthen/src/core/batch.rs`: at most 38 net, for `Setting::parse`, `Closed::Pause`, `pause()` and the member cap, less the `expect(dead_code)`.
 - `crates/thinkthen/src/core/question_file.rs` and its folder: at most 25 net, for `parse_top`.
 - `crates/thinkthen/src/core/relate_file.rs`, `cli/audit/write.rs` and `public/question.rs`: at most 8 net together, one `parse_top` call each.
 - `crates/thinkthen/src/core/result.rs`: at most 20 net, for the even shares.
@@ -336,20 +344,20 @@ Nonblank lines, measured with `grep -c .`. Net lines against main after 0143, 01
 - `crates/thinkthen/src/cli/args.rs`: at most 20 net.
 - `crates/thinkthen/src/cli/edge.rs`, `judge.rs` and `asked.rs`: at most 35 net together.
 - `crates/thinkthen/src/cli/failure.rs` and its folder: at most 45 net.
-- Product code total: at most 545 net. The lines above sum to 539.
-- `crates/thinkthen/tests/backend/batching.rs` and its folder: at most 420.
+- Product code total: at most 553 net. The lines above sum to 547.
+- `crates/thinkthen/tests/backend/batching.rs` and its folder: at most 450.
 - Unit tests that build or name `Completed`, including `cli/conformance_tests/runner.rs`: at most 12 net.
-- Existing tests: at most 110 net for the `--batch 1` pins, sized for 20 to 32 files at a few lines each, most through a shared helper.
+- Existing tests: at most 110 net for the `--batch 1` pins, sized for 20 to 32 files at a few lines each, most through a shared helper. At most 20 net more in `tests/backend/scheduling.rs` for the two folder rows.
 - Pages under `specification/`: at most 40 net lines together. `spec/decide.md`: at most 10 net.
 - Demos: at most 30 changed lines, pins and dry-run expectations only.
-- `sdlc/ratchet.json` moves to the measured total, at most 1,087 above main after the three dependencies land: 545, 420, 12 and 110. The commit says what grew.
+- `sdlc/ratchet.json` moves to the measured total, at most 1,145 above main after the three dependencies land: 553, 450, 12, 110 and 20. The commit says what grew.
 - No dependency.
 - The `surfaces` rung runs, because the engine scheduler that the libraries share changes.
 
 ## Stop rules
 
 1. Stop before crossing any budget by more than a tenth, or before adding a dependency.
-2. Stop if 0143, 0144 or 0145 has not landed on main, or if no "S1 live run 1" record is on main.
+2. Stop if 0143, 0144 or 0145 has not landed on main, if no "S1 live run 1" record is on main, or if ADR 0053 is not on main. Before landing, stop if ticket 0158 has not landed.
 3. Stop if `--batch 1` changes one byte of any request, row, standard error line or exit code that today's build gives. The existing suite and the demos under their pins decide this. One difference is intended: at `--jobs` above 1, a malformed or refused record stops the run before any later record is sent. Today up to `--jobs - 1` later records may already be in flight. Output, standard error and the exit code stay the same.
 4. Stop if the design needs a second scheduler or a second row builder.
 5. Stop if more than 40 existing test files fail under the default before any pin, or if the pins pass their budget. Hand back the list. The first build step reports the real count either way.
@@ -372,7 +380,7 @@ Builder: Claude (Opus subagent) in the lane the coordinator names. Reviewer: a f
 
 ## Complexity
 
-Contract 2; state and timing 2; reach 2; proof 2; cost of error 2; total 10. Final level: 3. The risks are a `--batch 1` run that drifts from today, which voids every recording, rows printed out of order or stopped at the wrong record, and a pause that fires in a recorded run and moves every digest. The `--batch 1` pins, tests 4, 5, 7 and 8, and the demos guard each.
+Contract 2; state and timing 2; reach 2; proof 2; cost of error 2; total 10. Final level: 3. The risks are a `--batch 1` run that drifts from today, which voids every recording, rows printed out of order or stopped at the wrong record, a pause that fires while reading a file and moves every digest, and a pause that fails to fire under a folder and hangs a request-and-reply loop. The `--batch 1` pins, tests 4, 5, 7 and 8, the scheduling rows, and the demos guard each.
 
 ## Deferred gaps
 
@@ -383,12 +391,13 @@ Contract 2; state and timing 2; reach 2; proof 2; cost of error 2; total 10. Fin
 5. The accuracy cost of the default. Ticket B6.
 6. D1's page should say a batch carries each record twice, as ticket 0144's deferred gap 2 asks. B4 states it on `backends.md`, and D1 carries it to the page.
 7. The libraries still ask one record a request. A library run and a command run over the same records share cached answers only at `--batch 1`, until B12a.
-8. A slow disk or network file system that blocks a read for 50 ms can cut a live, unrecorded batch early. It changes no answer's meaning and only adds a request. Recorded runs never pause.
+8. A slow disk or network file system that blocks a read for 50 ms can cut a batch early, in every mode. It changes no answer's meaning. It adds a request, and under a folder a replay with other timing can miss that batch at exit 5.
 9. `choose`, `tag` and `score` keep their item 7 markers until B8 and B9.
 
 ## What Ian can overturn
 
-- Decision 6: the pause stays on under the default cache and `THINKTHEN_CACHE`. The coordinator ruled it.
+- Decision 6: the pause fires in every mode, by ADR 0053 item 1. The coordinator ruled it.
+- Decision 16: the member cap of 4,096, by ADR 0053 item 2. The coordinator ruled it.
 - Decision 7: B4 builds the usage shares, ahead of B5. The first ticket review confirmed it.
 - Decision 8: one line for a failed batch of two or more, today's two lines for a batch of one and for cancellation, input refusals and `RecordingStorage`.
 - Decision 9: the partial reply's line names the record, not the cause, at exit 4.
@@ -398,7 +407,7 @@ Contract 2; state and timing 2; reach 2; proof 2; cost of error 2; total 10. Fin
 - Decision 13: B4 lands before the live target run. The first ticket review confirmed it.
 - Decision 14: `batch` comes off the top of a `decide` file before parsing, so annotate entries still refuse it.
 - The intended difference under stop rule 3: a refused record stops later records from being sent.
-- The coordinator's order: B4 builds after 0143, 0144 and 0145 land and after "S1 live run 1".
+- The coordinator's order: B4 builds after 0143, 0144 and 0145 land, after "S1 live run 1", and with ADR 0053 on main. Ticket 0158 lands before B4 lands.
 
 ## Closes
 
@@ -406,8 +415,8 @@ No issue. `sdlc/issues/2026-09-26-batching-design.md` stays open until its last 
 
 ## Evidence
 
-- Starts from: The B4 row, sections 1 to 6, the edge cases and acceptance tests 4, 5, 7, 8 and 12 of `sdlc/issues/2026-09-26-batching-design.md`, and Ian's rulings 1, 3, 4 and 9 there. ADR 0048 items 1 to 7, 9 and 13, its ticket table, and its marker rule. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` section 7: 306 titles in one request answered in 0.30 to 0.39 s against 13.0 to 14.2 s one a request, and section 9: no content cut among the 306 titles. `specification/settings.md` from ticket 0140. Ticket 0144's planner and its deferred gaps 2 and 3, read from `ticket/0144-engine-plans-batches`. Ticket 0145's gate list and its decision 13, read from `ticket/0145-speed-test`. Ticket 0143's change to `engine/facade.rs`, read from `ticket/0143-relate-runs-at-once`. The code at `origin/main` `7850db3f`: `cli/asking.rs`, `cli/schedule.rs`, `cli/judge.rs`, `cli/failure.rs`, `engine/schedule.rs`, `engine/facade.rs` and `core/reply.rs`.
+- Starts from: The B4 row, sections 1 to 6, the edge cases and acceptance tests 4, 5, 7, 8 and 12 of `sdlc/issues/2026-09-26-batching-design.md`, and Ian's rulings 1, 3, 4 and 9 there. ADR 0048 items 1 to 7, 9 and 13, its ticket table, and its marker rule. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` section 7: 306 titles in one request answered in 0.30 to 0.39 s against 13.0 to 14.2 s one a request, and section 9: no content cut among the 306 titles. `specification/settings.md` from ticket 0140. Ticket 0144's planner and its deferred gaps 2 and 3, read from `ticket/0144-engine-plans-batches`. Ticket 0145's gate list and its decision 13, read from `ticket/0145-speed-test`. Ticket 0143's change to `engine/facade.rs`, read from `ticket/0143-relate-runs-at-once`. ADR 0053 items 1, 2, 4 and 5, and section 14 of the evidence record, from the batching review in `sdlc/issues/2026-09-26-batching-design-review-before-0146.md`. The code at `origin/main` `7850db3f`: `cli/asking.rs`, `cli/schedule.rs`, `cli/judge.rs`, `cli/failure.rs`, `engine/schedule.rs`, `engine/facade.rs` and `core/reply.rs`.
 - Keeps: Every request, row, standard error line and exit code at `--batch 1` and on a stream of one record. Every run on one document. `choose`, `tag`, `score`, `annotate`, `find`, `recognize` and `relate`. The scheduler's bound and order. Every recording, replayed under its pin. The libraries' behavior.
-- Changes: `decide`, `filter` and `rank` over a stream fill each request to the limit by default. `--batch`, `THINKTHEN_BATCH` and the question file's `batch` set it, in four tiers. `--jobs` counts batches. The pause sends a waiting live batch after 50 ms. A failed batch stops at its first record with a one-line range. Rows carry even usage shares. Dry run plans the first batch. The reader queues closed batches and pulls records only for an outstanding ask, through a bounded channel. `batch` comes off the top of a `decide` file before parsing, so annotate entries still refuse it. The item 1 and 2 markers leave the specification, and the settings table gains `batch`. S1's list loses three entries.
+- Changes: `decide`, `filter` and `rank` over a stream fill each request to the limit by default. `--batch`, `THINKTHEN_BATCH` and the question file's `batch` set it, in four tiers. `--jobs` counts batches. The pause sends a waiting live batch after 50 ms in every mode. A batch closes at 4,096 members. A failed batch stops at its first record with a one-line range. Rows carry even usage shares. Dry run plans the first batch. The reader queues closed batches and pulls records only for an outstanding ask, through a bounded channel. `batch` comes off the top of a `decide` file before parsing, so annotate entries still refuse it. The item 1 and 2 markers leave the specification, and the settings table gains `batch`. S1's list loses three entries.
 - Proof: The six new outside-in tests under "Proof", each with its plants. S1's gate with the three entries removed. The demo runner under the pins. The existing suite at `--batch 1` where pinned. The `install`, `lint`, `test`, `spec` and `surfaces` rungs.
 - Defers: `meta.batch` and `--facts` (B5). Calibration identity (B16). Re-recording pinned demos under the default. The live target run after landing. The accuracy cost (B6). D1's page. Library and SQL batching (B12a to B13e). A slow read cutting a live batch. The item 7 markers for the other verbs.
