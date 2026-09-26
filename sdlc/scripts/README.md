@@ -19,6 +19,7 @@ The repository gate and its hand-run support scripts.
 | `policy.py` | Holds accepted Rust policy tables for rung 1 |
 | `catalog.py` | Holds the shipped transform copies, the catalog table, and the source package byte-identical to `transforms/` for rung 1 |
 | `package` | Proves the one-package, no-default-feature, private behavioral-doctest harness, package-tree, release panic, and unpacked transform-catalog contracts |
+| `scratch.sh` | Sourced by each script that makes a scratch folder. `scratch_dir` makes a folder with `mktemp` and records it, and a script removes only a recorded folder (`sdlc/planning/worktrees.md` rule 11). `scratch_lint` fails rung 1 on a recursive `rm` in `sdlc/scripts/`, `libraries/*/check.sh`, or `databases/*/check.sh` outside this file and its two named exceptions |
 | `ratchet.mjs` | Enforces the Rust source ceiling in `sdlc/ratchet.json`, or in the config its one optional argument names |
 
 Build without the credential, then run a charged job:

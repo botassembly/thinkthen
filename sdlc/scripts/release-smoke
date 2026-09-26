@@ -7,6 +7,7 @@
 # block with no key: every line but its one curl line, whose download DIR supplies.
 set -eu
 . "$(dirname -- "$0")/verdict.sh"
+. "$(dirname -- "$0")/scratch.sh"
 . "$(dirname -- "$0")/installed.sh"
 [ $# -eq 1 ] && [ -d "$1" ] || { echo 'usage: release-smoke DIR' >&2; exit 2; }
 DIR=$(CDPATH='' cd -- "$1" && pwd)

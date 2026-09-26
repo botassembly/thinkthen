@@ -28,8 +28,8 @@ esac
 RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
 CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$HOME=/build"
 export RUSTFLAGS CFLAGS
-stage=$(mktemp -d)
-trap 'rm -rf -- "$stage"' EXIT
+. sdlc/scripts/scratch.sh
+scratch_dir stage
 
 # The build folder of the crate in $1, by the one rule every check reads.
 built() { echo "${CARGO_TARGET_DIR:-$REPO/$1/target}"; }
@@ -45,7 +45,8 @@ keep() {
 	cp -- "$1" "$OUT/"
 	(cd -- "$OUT" && sha256 "${1##*/}" >"${1##*/}.sha256")
 }
-fresh() { rm -rf -- "${stage:?}/$1" && mkdir -p -- "$stage/$1" && echo "$stage/$1"; }
+# fresh NAME: a new folder in the stage, with the mode a plain mkdir gives, which each archive root carries.
+fresh() { fresh=$(mktemp -d "$stage/$1.XXXXXX") && chmod 755 "$fresh" && echo "$fresh"; }
 
 part_command() {
 	if [ -n "$reuse" ]; then
@@ -123,8 +124,9 @@ part_duckdb() {
 }
 
 part_postgresql() {
-	sh databases/postgresql/package.sh ${reuse:+--reuse} "$(fresh postgresql)"
-	pack "thinkthen-postgresql16-$V-$TARGET.tar.gz" "$stage/postgresql"
+	folder=$(fresh postgresql)
+	sh databases/postgresql/package.sh ${reuse:+--reuse} "$folder"
+	pack "thinkthen-postgresql16-$V-$TARGET.tar.gz" "$folder"
 }
 
 part_python() {
@@ -151,7 +153,7 @@ part_first_run() {
 	folder=$(fresh first-run)/thinkthen-first-run
 	mkdir -p "$folder"
 	cp -R demos/27-test-with-no-network/report.txt demos/27-test-with-no-network/recording "$folder/"
-	pack thinkthen-first-run.tar.gz "$stage/first-run"
+	pack thinkthen-first-run.tar.gz "${folder%/*}"
 }
 
 [ $# -gt 0 ] || set -- command c sqlite duckdb postgresql python typescript ruby first-run

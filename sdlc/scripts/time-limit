@@ -4,7 +4,8 @@
 set -u
 limit=$1
 shift
-mark=$(mktemp -d)
+. "$(dirname -- "$0")/scratch.sh"
+scratch_dir mark
 child= watcher=
 # A signal to time-limit stops the command's whole group, as a timeout does: TERM, then
 # KILL 2 seconds later for anything that ignored it. The traps come first, so no signal
@@ -15,7 +16,6 @@ stop() {
 		perl -e 'kill "TERM", -$ARGV[0]; sleep 2; kill "KILL", -$ARGV[0]' "$child" </dev/null >/dev/null 2>&1 &
 		wait "$child"
 	fi
-	rm -rf -- "$mark"
 	exit "$1"
 }
 trap 'stop 129' HUP
@@ -35,5 +35,4 @@ wait "$child"
 code=$?
 kill "$watcher" 2>/dev/null
 [ ! -e "$mark/timed-out" ] || code=124
-rm -rf -- "$mark"
 exit "$code"

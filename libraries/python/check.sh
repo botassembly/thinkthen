@@ -7,6 +7,7 @@ set -eu
 cd -- "$(dirname -- "$0")"
 here=$(pwd)
 repo=$(cd ../.. && pwd)
+. "$repo/sdlc/scripts/scratch.sh"
 port=${1:?usage: check.sh PORT}
 
 not_run() {
@@ -108,8 +109,7 @@ precondition "$python" True "pandas 3"
 "$python" -m pytest -q -p no:cacheprovider --tb=short tests/
 
 echo "== the shared cases and the examples, on the rung's backend"
-scratch=$(mktemp -d)
-trap 'rm -rf -- "$scratch"' EXIT
+scratch_dir scratch
 THINKTHEN_API_KEY=sk-fake-loopback-python-0105 \
 	THINKTHEN_BASE_URL="http://127.0.0.1:$port/generic/v1" THINKTHEN_CACHE="$scratch/cache" \
 	"$python" tests/conformance.py "$port"

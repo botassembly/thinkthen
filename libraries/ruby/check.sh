@@ -7,6 +7,7 @@ set -eu
 cd -- "$(dirname -- "$0")"
 unset THINKTHEN_API_KEY
 repo=$(cd ../.. && pwd)
+. "$repo/sdlc/scripts/scratch.sh"
 # macOS has no `timeout` (ticket 0128).
 LIMIT=$repo/sdlc/scripts/time-limit
 
@@ -58,8 +59,7 @@ awk '/^(unsafe extern "C" )?fn (wait_for|wake)\(/ { held = 1 }
 # through surfaces --registry, and the pinned-Ruby guard lives below (R5-35).
 cargo deny --version >/dev/null 2>&1 || not_run "no cargo-deny; install it once, with the network"
 cargo deny --offline --manifest-path Cargo.toml check --config "$repo/deny.toml" advisories bans licenses sources
-plant=$(mktemp -d)
-trap 'rm -rf -- "$plant"' EXIT
+scratch_dir plant
 mkdir -p "$plant/dep/src" "$plant/copy/src"
 printf '[package]\nname = "planted"\nversion = "0.0.1"\nedition = "2024"\nlicense = "MIT"\n' >"$plant/dep/Cargo.toml"
 : >"$plant/dep/src/lib.rs"
