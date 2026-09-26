@@ -56,8 +56,10 @@ pub(crate) enum Command {
     ///
     /// `filter` asks one yes/no question of each record and prints the records
     /// that reach `--threshold` in input order. Line and JSONL records return
-    /// as they arrived; CSV and TSV records become compact JSON objects. It needs
-    /// a record framing and makes one paid request for every record.
+    /// as they arrived; CSV and TSV records become compact JSON objects. With no
+    /// framing flag it reads lines, or JSON Lines when a pointer is given by
+    /// --field or a question file's `on`. It makes one paid request for every
+    /// record.
     ///
     /// A single cut keeps or drops, and there is no third pile. A run that
     /// wants one asks `decide --details` and splits with `jq`:
@@ -82,7 +84,9 @@ pub(crate) enum Command {
     /// the whole set, so an endless stream is cut into windows upstream.
     /// `--top N` prints the first N of the order and saves no request.
     ///
-    /// `rank` orders and never selects. A floor is `filter` in front of it.
+    /// `rank` orders and never selects. A floor is `filter` in front of it. With
+    /// no framing flag it reads lines, or JSON Lines when a pointer is given by
+    /// --field or a question file's `on`.
     ///
     /// A record run exits 0 when it completes without a partial or whole-run
     /// failure. The printed values carry the individual answers.

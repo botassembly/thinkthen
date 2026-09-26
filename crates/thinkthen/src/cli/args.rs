@@ -77,7 +77,8 @@ pub(crate) struct Common {
     ///
     /// Give it more than once to send an object of the named parts, keyed by
     /// the last part of each pointer. On a command that accepts a single text,
-    /// no record framing reads the whole input as one JSON value. The pointer is the disclosure boundary:
+    /// no record framing reads the whole input as one JSON value. On `filter`
+    /// and `rank` it reads JSON Lines. The pointer is the disclosure boundary:
     /// only the pointed value leaves the machine.
     #[arg(long, value_name = "POINTER")]
     pub(crate) field: Vec<String>,

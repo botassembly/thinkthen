@@ -147,7 +147,6 @@ pub(crate) enum Failure {
     TopIsZero,
     QuietOverKept(&'static str),
     RawOverKept(&'static str),
-    NoFraming(&'static str),
     ReplayMiss(String),
     Entry(String, String),
     RecordingConflict(String),
@@ -256,10 +255,6 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
                 "--raw prints a bare label, and `{verb}` prints records; \
                  `choose --raw` prints a label"
             ),
-        ),
-        Failure::NoFraming(verb) => (
-            2,
-            format!("`{verb}` maps over a stream, so it takes --lines, --jsonl, --csv, or --tsv"),
         ),
         Failure::FindCount { none: true } => (2, "`find --none` takes 2 to 254 units".to_owned()),
         Failure::FindCount { none: false } => (2, "`find` takes 2 to 255 units".to_owned()),
