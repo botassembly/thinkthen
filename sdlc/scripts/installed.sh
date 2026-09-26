@@ -18,17 +18,24 @@ installed_cleanup() {
 }
 
 # installed_folder: set `folder` to a fresh folder from mktemp, which this run's exit removes.
+# It takes over the script's EXIT trap, and an interrupt exits so that trap runs. It stops the
+# script on a failed mktemp, and it refuses a path with whitespace or glob characters, the
+# current folder, and the root. So `installed_made` holds only safe paths.
 installed_folder() {
-	folder=$(cd "$(mktemp -d)" && pwd -P)
+	made=$(mktemp -d) || exit 1
+	[ -n "$made" ] && [ -d "$made" ] || { echo "installed.sh: mktemp made no folder" >&2; exit 1; }
+	folder=$(cd -- "$made" && pwd -P) || exit 1
+	case $folder in *[!A-Za-z0-9/._-]* | "$PWD" | /) echo "installed.sh: refusing $folder" >&2; exit 1 ;; esac
 	installed_made="$installed_made $folder"
 	trap 'exec 3>&-; installed_cleanup' EXIT
+	trap 'exit 130' INT TERM
 }
 
 # installed_scratch [INSIDE]: set `scratch` to a fresh folder. Inside the caller's own temporary
 # folder INSIDE, the caller's cleanup removes it. Otherwise this run's exit removes it.
 installed_scratch() {
 	if [ $# -eq 1 ]; then
-		scratch=$(mktemp -d "$1/installed.XXXXXX")
+		scratch=$(mktemp -d "$1/installed.XXXXXX") || exit 1
 		return
 	fi
 	installed_folder
