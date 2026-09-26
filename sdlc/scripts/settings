@@ -21,6 +21,7 @@ import tempfile
 REPO = pathlib.Path(__file__).resolve().parents[2]
 PAGE = REPO / "specification" / "settings.md"
 SCHEMA = REPO / "specification" / "question-file.schema.json"
+RECOGNIZE = REPO / "crates" / "thinkthen" / "src" / "core" / "recognize_file.rs"
 COLUMNS = [
     "Setting", "What it does", "Default", "Allowed values", "Command flag",
     "Environment variable", "Configuration file", "Question-file key", "Rust",
@@ -32,13 +33,15 @@ NOT_SETTINGS = {"--help", "--version"}
 # The one list of names only tests read: every name with this prefix.
 TEST_ONLY = "THINKTHEN_TEST_"
 # Question-file keys that hold the question itself or the file's format.
-NOT_KEYS = {"decide", "choose", "tag", "score", "relate", "version"}
+NOT_KEYS = {"decide", "choose", "tag", "score", "relate", "recognize", "version"}
 FENCE = re.compile(r"^\s*(```|~~~)")
 CELL = re.compile(r"(?<!\\)\|")
 TICKED = re.compile(r"`([^`]+)`")
 LONG = re.compile(r"--[a-z][a-z0-9-]*")
+ENV_NAME, KEY_NAME = re.compile(r"THINKTHEN_[A-Z0-9_]+"), re.compile(r"^[a-z_.]+$")
 OPTION = re.compile(r"^  (?:-\w, |    )(--[a-z][a-z0-9-]*)")
 COMMAND = re.compile(r"^  ([a-z][a-z-]*)\s")
+LISTED = re.compile(r"!\[((?:\s*\"[a-z_]+\",?)+)\s*\]\s*\.contains")
 NAMES = (re.compile(r"[\"'](THINKTHEN_[A-Z0-9_]+)[\"']"), re.compile(r"\benv\.(THINKTHEN_[A-Z0-9_]+)"))
 SOURCE = {".rs", ".py", ".pyi", ".ts", ".js", ".mjs", ".cjs", ".rb", ".R", ".r", ".c", ".h", ".sql"}
 
@@ -93,7 +96,7 @@ def help_flags():
                 section = line
             elif section == "Commands:" and (hit := COMMAND.match(line)) and hit.group(1) != "help":
                 todo.append([*words, hit.group(1)])
-            elif section == "Options:" and (hit := OPTION.match(line)):
+            elif section not in (None, "Commands:", "Arguments:") and (hit := OPTION.match(line)):
                 flags.add(hit.group(1))
     return flags - NOT_SETTINGS
 
@@ -118,8 +121,12 @@ def env_names():
 
 def schema_keys():
     defs = json.loads(SCHEMA.read_text(encoding="utf-8"))["$defs"]
-    keys = {key for name, entry in defs.items() if name in entry.get("properties", {}) for key in entry["properties"]}
-    return keys - NOT_KEYS
+    entries = [(name, entry["properties"]) for name, entry in defs.items() if name in entry.get("properties", {})]
+    keys = {k for _, props in entries for k in props} | {
+        f"{k}.{sub}" for _, props in entries for k, held in props.items() for sub in held.get("properties", {})}
+    # A recognize question file is read by hand, not by the schema: its top-level list, then its section's.
+    top, section = (re.findall(r'"([a-z_]+)"', held) for held in LISTED.findall(RECOGNIZE.read_text(encoding="utf-8"))[:2])
+    return (keys | set(top) | {f"recognize.{k}" for k in section}) - NOT_KEYS
 
 
 def both_ways(page, have, want, missing, stale):
@@ -132,7 +139,7 @@ def check(path, flags, names, keys):
     page = path.name
     found = table(prose(path.read_text(encoding="utf-8")))
     if found is None:
-        return [f"{page}: no table under ## Settings"]
+        return [f"{page}: no table under ## Settings"], 0
     header, rows = found
     out = []
     for i in range(max(len(header), len(COLUMNS))):
@@ -141,7 +148,7 @@ def check(path, flags, names, keys):
         if got != want:
             out.append(f"{page}: column {i + 1} is {got}, expected {want}")
     if out:
-        return out
+        return out, len(rows)
     seen = set()
     for row in rows:
         name = row[0] if row else ""
@@ -154,12 +161,11 @@ def check(path, flags, names, keys):
         seen.add(name)
     rows = [row for row in rows if len(row) == len(COLUMNS)]
     out += both_ways(page, ticked(rows, FLAG, LONG), flags, "is in the help and has no row", "is in a row and in no help")
-    env, key = re.compile(r"THINKTHEN_[A-Z0-9_]+"), re.compile(r"^[a-z_]+$")
-    out += both_ways(page, ticked(rows, ENV, env), names, "is read by product code and has no row",
+    out += both_ways(page, ticked(rows, ENV, ENV_NAME), names, "is read by product code and has no row",
                      "is in a row and read by no product code")
-    out += both_ways(page, ticked(rows, KEY, key), keys, "is a question-file key and has no row",
+    out += both_ways(page, ticked(rows, KEY, KEY_NAME), keys, "is a question-file key and has no row",
                      "is in a row and is no question-file key")
-    return out
+    return out, len(rows)
 
 
 def edit(text, column, old, new):
@@ -181,6 +187,8 @@ PLANTED = "| Planted | x | x | x | `--planted-setting` | `THINKTHEN_PLANTED` |" 
 
 def cases(text):
     after = text.index("\n", text.index("| --- |")) + 1
+    first = text[after:text.index("\n", after) + 1]
+    decoy = "## Settings\n\n```\n| Setting | Planted |\n| --- | --- |\n```\n"
     page = "settings.md: "
     return [
         ("a missing row", edit(text, FLAG, "`--jobs`", None), [page + "--jobs is in the help and has no row"]),
@@ -193,6 +201,8 @@ def cases(text):
         ("a missing variable", edit(text, ENV, "`THINKTHEN_CACHE`", ""),
          [page + "THINKTHEN_CACHE is read by product code and has no row"]),
         ("a missing key", edit(text, KEY, "`on`", ""), [page + "on is a question-file key and has no row"]),
+        ("a fenced decoy table", text.replace("## Settings\n", decoy, 1), []),
+        ("a repeated row", text[:after] + first + text[after:], [page + 'the setting "Threshold" has two rows']),
         ("the real page", text, []),
     ]
 
@@ -204,7 +214,7 @@ def self_test(flags, names, keys):
         with tempfile.TemporaryDirectory() as tmp:
             copy = pathlib.Path(tmp) / "settings.md"
             copy.write_text(body, encoding="utf-8")
-            actual = check(copy, flags, names, keys)
+            actual = check(copy, flags, names, keys)[0]
         if actual != expected:
             bad += 1
             print(f"settings self-test: {name}: expected {expected}, got {actual}", file=sys.stderr)
@@ -220,10 +230,9 @@ def main(argv):
     if argv[1:] == ["--self-test"]:
         return 1 if self_test(flags, names, keys) else 0
     path = pathlib.Path(argv[1]) if len(argv) > 1 else PAGE
-    found = check(path, flags, names, keys)
+    found, rows = check(path, flags, names, keys)
     for line in found:
         print(line, file=sys.stderr)
-    rows = len((table(prose(path.read_text(encoding="utf-8"))) or ([], []))[1])
     print(f"settings: {rows} rows, {len(flags)} flags, {len(names)} environment names, "
           f"{len(keys)} question-file keys, {len(found)} failures")
     return 1 if found else 0
