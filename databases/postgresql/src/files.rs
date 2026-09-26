@@ -241,6 +241,8 @@ mod tests {
 
     fn mkfifo(path: &Path) {
         let status = std::process::Command::new("mkfifo")
+            .env_clear()
+            .env("PATH", std::env::var_os("PATH").unwrap_or_default())
             .arg(path)
             .status()
             .expect("mkfifo runs");
