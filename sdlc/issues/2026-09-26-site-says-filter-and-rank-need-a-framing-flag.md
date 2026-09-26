@@ -2,6 +2,8 @@
 
 Status: Open. Filed 2026-09-26 by ticket 0137 for the website agent, who owns `site/`.
 
+Status: Fixed on the site preview branch `preview/beatles-bench-site` at 938e0040. Close this issue when the preview lands on main.
+
 ## What happens
 
 Ticket 0137 makes `filter` and `rank` read lines when no framing flag is given, and JSON Lines when a pointer is given. The site still says the flag is required.
