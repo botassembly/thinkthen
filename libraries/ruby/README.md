@@ -18,6 +18,12 @@ The module methods use one engine built on first use from the environment: `THIN
 
 A record that is not a `String` crosses as its JSON text. `nil`, invalid UTF-8, and a NUL byte refuse with `UsageError` naming the index, before any request. Every failure is a `ThinkThen::Error`. Its six kind classes are `UsageError`, `BackendError`, `LocalError`, `CancelledError`, `DeadlineError`, and `DefectError`, and each carries `kind` and `retryable`.
 
+## Run facts
+
+`details(question, text)` returns the command's `--details` line for one text as a `Hash`, schema `thinkthen.result/1`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.
+
+`usage` returns this engine's running totals of requests sent, cache answers and tokens.
+
 ## Stopping a call
 
 Every call runs on its own worker thread while the calling Ruby thread waits in 50 ms slices with the VM lock released. Ctrl-C raises `CancelledError` with the `Interrupt` as its cause. `Thread#raise`, `Thread#kill`, and a raising trap stop the call and pass through unchanged. `cancel:` takes a `ThinkThen::Cancel`, and `deadline:` takes seconds. Each stop returns within one slice. Requests already sent finish on the detached worker, and no new request starts. `with_tick { ... }` runs a block about ten times a second during the thread's calls, and a raise inside it stops the call with that error.

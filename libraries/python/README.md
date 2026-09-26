@@ -42,4 +42,10 @@ Every verb takes `deadline`, in seconds from the call, and `token`, a `CancelTok
 
 Every call runs on its own worker thread. Ctrl-C or the caller's token stops the wait within 50 ms and raises `Cancelled`, a subclass of both `KeyboardInterrupt` and `ThinkThenError`. No new request starts after a stop, and a request already sent ends on its own. A signal handler's own error, such as `SystemExit`, passes through unchanged.
 
+## Run facts
+
+`details(question, text)` returns the command's `--details` line for one text as a `dict`, schema `thinkthen.result/1`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.
+
+`usage()` returns this engine's running totals of requests sent, cache answers and tokens. A call over a column or a frame returns values only, so read its facts with `details` for one text and `usage()` for the totals.
+
 `check.sh` is this folder's gate. It needs Python 3.12 or later, `uv`, and `maturin`, and it installs the pinned test packages offline from uv's cache. A missing piece reports "not run". Its last step runs the pandas tests and the secrecy test again under pandas 2.3.3 (`requirements-pandas2.txt`), over the same built extension. `build-wheel.sh` builds the release wheel and checks its contents. `NOTES.md` records the port's decisions.

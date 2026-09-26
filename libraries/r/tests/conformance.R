@@ -63,6 +63,10 @@ run_case <- function(case, served) {
     same("question_sha256", row$meta$question_sha256, want$details$question_sha256)
     same("model", row$meta$model, want$details$model)
     same("requests", row$meta$requests, want$details$requests)
+    if (is.null(want$details$requests_sent)) return(invisible())  # run facts ride on single cases only
+    for (name in c("usage", "requests_sent", "cached")) same(name, row$meta[[name]], want$details[[name]])
+    same("confidence", row$answer$confidence, want$details$answer$confidence)
+    same("url", row$meta$url, served)
   }
   detailed <- function(question) {
     for (want in answers) {
@@ -79,18 +83,22 @@ run_case <- function(case, served) {
   switch(case$verb,
     decide = , choose = , score = , tag = {
       question <- thinkthen:::.tt_built(asked)
+      detailed(question)
+      got <- switch(case$verb, decide = tt_decide(question, evidence), choose = tt_choose(question, evidence),
+                    score = tt_score(question, evidence), tag = tt_tag(question, evidence))
+      for (want in answers) same("bare", bare(got[[want$exchange + 1L]]), want$bare)
       counters <- case$expect$success$counters
       if (!is.null(counters)) {
+        carried <<- tt_usage()$requests_sent
+        folder <- tempfile("counters")
+        dir.create(folder)
+        tt_engine(cache = folder)
         before <- tt_usage()
         for (i in seq_len(counters$calls)) tt_decide(question, evidence)
         after <- tt_usage()
         same("requests", after$requests_sent - before$requests_sent, counters$requests)
         same("cache answers", after$cache_answers - before$cache_answers, counters$cache_answers)
       }
-      got <- switch(case$verb, decide = tt_decide(question, evidence), choose = tt_choose(question, evidence),
-                    score = tt_score(question, evidence), tag = tt_tag(question, evidence))
-      for (want in answers) same("bare", bare(got[[want$exchange + 1L]]), want$bare)
-      detailed(question)
     },
     filter = {
       question <- thinkthen:::.tt_built(asked)
@@ -156,12 +164,13 @@ refused <- function(case) {
 }
 
 one <- Sys.getenv("TT_CASE")
+carried <- 0
 if (nzchar(one)) {
   case <- Filter(function(held) identical(held$id, one), document$cases)[[1]]
   said <- tryCatch({ run_case(case, paste0(Sys.getenv("THINKTHEN_BASE_URL"), "/systemone")); "pass" },
                    error = function(e) paste("fail:", conditionMessage(e)))
   cat("RESULT", said, "\n")
-  cat("SENT", tt_usage()$requests_sent, "\n")
+  cat("SENT", carried + tt_usage()$requests_sent, "\n")
   quit(save = "no")
 }
 

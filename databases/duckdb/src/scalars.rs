@@ -53,19 +53,6 @@ const TEXTS: Type = Type::List(&Type::Text);
 const TWO: &[Type] = &[Type::Text, Type::Text];
 const LISTED: &[Type] = &[Type::Text, Type::Text, TEXTS];
 
-/// `thinkthen_details`: one struct for every verb. A member the verb lacks
-/// reads NULL, never 0 (R3-11).
-const DETAILS: Type = Type::Struct(&[
-    ("probability", Type::Double),
-    ("answer", Type::Text),
-    ("value", Type::Text),
-    ("nearest", Type::Text),
-    ("model", Type::Text),
-    ("question_sha256", Type::Text),
-    ("requests_sent", Type::BigInt),
-    ("cached", Type::Bool),
-]);
-
 const RECOGNIZED: Type = Type::List(&Type::Struct(&[
     ("name", Type::Text),
     ("kind", Type::Text),
@@ -97,7 +84,7 @@ pub(crate) static SCALARS: [Scalar; 9] = [
     scalar("thinkthen_score", Verb::Score, LISTED, Type::Double, true),
     scalar("thinkthen_tag", Verb::Tag, LISTED, TEXTS, true),
     scalar("thinkthen_annotate", Verb::Annotate, TWO, Type::Text, true),
-    scalar("thinkthen_details", Verb::Details, TWO, DETAILS, true),
+    scalar("thinkthen_details", Verb::Details, TWO, Type::Text, true),
     scalar(
         "thinkthen_recognize",
         Verb::Recognize,

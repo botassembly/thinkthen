@@ -308,16 +308,25 @@ fn detailed(details: &Details, expected: &Value, base: &str) -> Checked {
         &wanted["question_sha256"],
     )?;
     same("requests", &json!(details.requests()), &wanted["requests"])?;
-    same("confidence", &json!(details.confidence()), &answer["confidence"])?;
+    same(
+        "confidence",
+        &json!(details.confidence()),
+        &answer["confidence"],
+    )?;
     let usage = details.usage().map(|usage| {
         json!({"input_tokens": usage.input_tokens(), "output_tokens": usage.output_tokens()})
     });
     same("usage", &json!(usage), &wanted["usage"])?;
-    same("requests_sent", &json!(details.requests_sent()), &wanted["requests_sent"])?;
+    same(
+        "requests_sent",
+        &json!(details.requests_sent()),
+        &wanted["requests_sent"],
+    )?;
     same("cached", &json!(details.cached()), &wanted["cached"])?;
     let served = json!(format!("{base}/systemone"));
     same("url", &json!(details.url()), &served)?;
-    let line: Value = serde_json::from_str(&details.to_json()).map_err(|error| error.to_string())?;
+    let line: Value =
+        serde_json::from_str(&details.to_json()).map_err(|error| error.to_string())?;
     same("line url", &line["meta"]["url"], &served)
 }
 

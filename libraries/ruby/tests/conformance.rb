@@ -70,17 +70,21 @@ def question(held) = T.question(**held.transform_keys(&:to_sym))
 
 def entity(one) = { "name" => one.name, "kind" => one.kind, "start" => one.start, "end" => one.end, "strength" => one.strength }
 
-def detailed(document, expected)
+def detailed(document, expected, base)
   wanted = expected["details"]
   answer = wanted["answer"]
   %w[probability probabilities level].each { |name| same(name, document["answer"][name], answer[name]) if answer.key?(name) }
-  %w[model question_sha256 requests].each { |name| same(name, document["meta"][name], wanted[name]) }
+  same("confidence", document["answer"].fetch("confidence", "absent"), answer.fetch("confidence", "absent"))
+  %w[model question_sha256 requests usage requests_sent cached].each do |name|
+    same(name, document["meta"].fetch(name, "absent"), wanted.fetch(name, "absent"))
+  end
+  same("url", document["meta"]["url"], "#{base}/systemone")
 end
 
 def single(engine, asked, text, success, base)
   expected = success["answers"][0]
   document = engine.details(asked, text)
-  detailed(document, expected)
+  detailed(document, expected, base)
   typed = case document["answer"]["kind"]
           when "yes_no" then engine.decide(asked, text)
           when "score" then engine.score(asked, text)
