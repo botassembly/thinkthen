@@ -61,7 +61,7 @@ Each is the ticket author's call unless marked. Ian can overturn any of them.
 
 | Input | Expected |
 | --- | --- |
-| `annotate` under the default cache, a reply missing its last answer, run twice | Both runs print the same failure marker and exit 6. The loopback sees 2 requests |
+| `annotate` under the default cache, a reply missing its last answer, run twice | Both runs print the same failure marker and exit 6. The backend sees 2 requests |
 | The same under `--cache DIR`, and under `--record DIR --replay DIR` on one folder | The same. The folder holds no entry for that digest |
 | The same under `--record DIR`, then `--replay DIR` | The replay prints the recorded failure marker and exits 6, with no request |
 | A reply that answers every question under the default cache, run twice | The second run sends nothing, as today |
