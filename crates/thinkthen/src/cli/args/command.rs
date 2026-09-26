@@ -212,7 +212,6 @@ pub(crate) enum Command {
     /// A run that answers some relation questions and fails others prints what
     /// it has and exits 6. A run whose relation questions all fail prints
     /// nothing and exits 4.
-    #[command(mut_arg("jobs", |arg| arg.hide(true)))]
     Relate(RelateArguments),
 
     /// Inspect and maintain answer-cache folders without sending a request.
