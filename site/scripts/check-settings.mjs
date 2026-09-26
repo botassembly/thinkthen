@@ -54,8 +54,44 @@ const main = page.slice(page.indexOf('<main'), page.indexOf('</main>'));
 const cited = text(main).match(/ADR\d+|[Tt]ickets?\d+|sdlc\/|Ian'sruling|Batchingdesign|Noreasonrecorded|Notbuiltyet|ontheway/);
 if (cited) problems.push(`the page cites a record a public reader cannot follow: "${cited[0]}"`);
 
+// No page types a default. A page reads a default through setting() in
+// src/lib/settings-table.mjs, so the typed number or number word after
+// "default is", "defaults to" or "default of" in the site's source is a value
+// the table no longer governs. An expression, such as {THROTTLE.default},
+// passes. A range such as "1 to 32" is not scanned: find's own bound of
+// "2 to 255" units shares the options range and is not a setting, so the scan
+// would flag it. The lookup guards ranges by failing on a missing setting.
+const WORDS = 'zero|one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|sixty|hundred';
+const TYPED = new RegExp(`\\bdefaults?\\s+(?:is|to|of)\\s+(?:<code>|\`)?(\\d[\\d,.]*\\d|\\d|${WORDS})\\b`, 'gi');
+const src = path.join(site, 'src');
+const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+  const p = path.join(dir, e.name);
+  return e.isDirectory() ? walk(p) : [p];
+});
+for (const file of walk(src).filter((f) => /\.(astro|mjs|md)$/.test(f) && !f.endsWith('settings-table.mjs'))) {
+  const lines = fs.readFileSync(file, 'utf8').split('\n');
+  lines.forEach((line, i) => {
+    for (const m of line.matchAll(TYPED)) {
+      problems.push(`${path.relative(site, file)}:${i + 1} types the default "${m[1]}". Read it with setting() from src/lib/settings-table.mjs`);
+    }
+  });
+}
+
+// A default the built site states must be one the table holds, whatever
+// wrote it: a page, a caption, or a sample.
+const held = new Set(rows.flatMap((r) => plain(`${r.default.value} ${r.default.note}`).match(/\d[\d,]*(?:\.\d+)?/g) || []));
+const STATED = /\bdefaults?\s+(?:is|to|of)\s+(\d[\d,]*(?:\.\d+)?)/gi;
+const walkHtml = (dir) => walk(dir).filter((f) => f.endsWith('.html'));
+for (const file of walkHtml(path.join(site, 'dist'))) {
+  const words = fs.readFileSync(file, 'utf8').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+  for (const m of words.matchAll(STATED)) {
+    const n = m[1].replace(/[.,]$/, '');
+    if (!held.has(n)) problems.push(`${path.relative(site, file)} says the default is ${n}, and no default in the table is ${n}`);
+  }
+}
+
 if (problems.length) {
   console.error(`check-settings: the Settings page and specification/settings.md disagree\n  ${problems.join('\n  ')}`);
   process.exit(1);
 }
-console.log(`check-settings: the page shows all ${rows.length} settings, as the table says, and cites no record`);
+console.log(`check-settings: the page shows all ${rows.length} settings, as the table says, and cites no record. No source types a default, and every default the site states is in the table`);

@@ -22,8 +22,10 @@ npm run build
 4. `scripts/smoke.mjs` runs every example against the command built from this commit and compares what it printed with the saved output.
 5. `astro build` writes `dist/`. It fails when a script has no caption or no saved output. The Settings page reads `../specification/settings.md`, and the build fails when that table's columns change.
 6. `scripts/emit-md.mjs` writes a Markdown twin of every page and `dist/llms.txt`.
-7. `scripts/check-settings.mjs` fails the build when the Settings page and `../specification/settings.md` disagree.
+7. `scripts/check-settings.mjs` fails the build when the Settings page and `../specification/settings.md` disagree. It also fails when a source file types a number after "default is", "defaults to" or "default of", and when a built page states a default the table does not hold.
 8. `scripts/check-links.mjs` fails the build on a broken internal link.
+
+A page reads a setting's default, range or allowed values with `setting('Name')` from `src/lib/settings-table.mjs`: `.default`, `.number`, `.range`, `.bounds`, `.allowed`, `.note`, `.defaultOn('decide')` and `.surface('Configuration file')`. A name the table does not hold fails the build at that call.
 
 `npm run dev` serves the site while you work. `npm run check` runs the sample check, the slide check, the smoke run, the settings check, and the link check on the last build.
 
