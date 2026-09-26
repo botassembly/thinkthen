@@ -32,3 +32,6 @@ polars = ["polars>=1.44.2,<2"]
 module-name = "thinkthen._thinkthen"
 python-source = "."
 features = ["extension-module"]
+
+[tool.maturin.sbom]
+rust = false
