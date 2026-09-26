@@ -1,6 +1,6 @@
 # A blank line stops a `--lines` run, and the spec does not say so
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, reports 01 (issue 2) and 11 (issue 1). Blocks 0.1: it is the default framing for `filter`, and the spec says nothing.
+Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, reports 01 (issue 2) and 11 (issue 1). Blocks 0.1: it is the default framing for `filter`, and the spec says nothing. Owner: ticket 0162 on `ticket/0162-a-record-stream-ends-cleanly`, ready for review.
 
 ## What happens
 

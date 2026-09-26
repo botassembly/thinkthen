@@ -1,6 +1,6 @@
 # `annotate`'s `on` re-parses selected text as JSON
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 03, finding 2-2. Blocks 0.1: the same set and flags pass some records and stop on others, depending on the data.
+Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 03, finding 2-2. Blocks 0.1: the same set and flags pass some records and stop on others, depending on the data. Owner: ticket 0161 on `ticket/0161-annotate-reads-what-it-names`, ready for review.
 
 ## What happens
 

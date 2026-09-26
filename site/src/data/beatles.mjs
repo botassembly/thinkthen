@@ -279,11 +279,11 @@ const ARTICLES = {
       "Search matches words. Jev knows facts. On the bench's 1,313 Beatles questions, Jev gets 67% right from memory. The best vector search gets 38%, and a random guess gets 31%. GLM-5.3 Flash, a large chat model, gets 96%.",
       "No song title below holds the name Paul McCartney. Search has nothing to match.",
     ],
-    source: record('what-jev-knows'),
+    source: [record('what-jev-knows'), { text: 'the recognize suite', href: 'https://github.com/botassembly/beatles-bench/blob/main/sdlc/records/0014-shipped-recognize-and-relate.md' }, { text: 'the recognize measure on harder sentences', href: 'https://github.com/botassembly/thinkthen/blob/main/sdlc/records/2026-09-26-batching-and-recognize-evidence.md' }],
     see: {
       '1-choose': "Jev picks d, I've Just Seen a Face, at 0.6.",
       '2-bar': "A bar of 0.7 turns the pick into not sure.",
-      '3-table': "The table shows the first measure for each function, best first. The best is `recognize` at 0.96. The worst is `tag` at 0.29, and its top pick scores 0.75.",
+      '3-table': "The table shows the first measure for each function, highest first. `recognize` tops it with 0.96 song precision, on 48 short sentences asked one at a time. On 100 harder hand-written sentences, the shipped `recognize` found 70.8% of the names, and 76.3% of the names it gave were right. The lowest is `tag` at 0.29, and its top pick scores 0.75.",
     },
     headings: { '2-bar': "Change the bar", '3-table': "Score every function" },
     lesson: "Paul sings I've Just Seen a Face alone. The pick is right. Jev knew it from memory at 0.6. A bar of 0.7 asks for more than Jev knows. Strict scores understate Jev where a question has more than one right answer. A song can have two lead singers. On `tag`, Jev names the whole set on 0.29 of songs, and its top pick is a true lead on 0.75.",

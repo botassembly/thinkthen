@@ -1,6 +1,6 @@
 # One bad cache entry breaks `status` and `cache prune`
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 08, finding 3. Blocks 0.1: prune is the only thing that bounds the cache.
+Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 08, finding 3. Blocks 0.1: prune is the only thing that bounds the cache. Owner: ticket 0163 on `ticket/0163-the-cache-folder-and-its-pages`, ready for review.
 
 ## What happens
 

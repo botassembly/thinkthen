@@ -1,4 +1,4 @@
-Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review.
+Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review. Item 1, the default model half: ticket 0159 on `ticket/0159-pin-the-default-model`. Item 3: ticket 0163 on `ticket/0163-the-cache-folder-and-its-pages`. Both are ready for review.
 
 # Architect review 08: the answer cache
 
