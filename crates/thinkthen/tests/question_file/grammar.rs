@@ -3,7 +3,7 @@
 use crate::harness::{REFUND, refused, written};
 
 /// Each refusal the question-file grammar makes: a name, a verb, a file, a code.
-pub(crate) const REFUSALS: [(&str, &str, &str, i32); 20] = [
+pub(crate) const REFUSALS: [(&str, &str, &str, i32); 21] = [
     (
         "two-verbs",
         "decide",
@@ -12,6 +12,7 @@ pub(crate) const REFUSALS: [(&str, &str, &str, i32); 20] = [
     ),
     ("no-verb", "decide", r#"{"text":"a"}"#, 5),
     ("unknown-key", "decide", r#"{"decide":"a","nope":1}"#, 5),
+    ("version-key", "decide", r#"{"version":1,"decide":"a"}"#, 5),
     (
         "key-not-for-verb",
         "choose",
@@ -86,10 +87,11 @@ pub(crate) const REFUSALS: [(&str, &str, &str, i32); 20] = [
     ("bad-pointer", "decide", r#"{"decide":"a","on":"body"}"#, 5),
 ];
 /// The sentence each refusal above prints, in the same order.
-const SAID: [&str; 20] = [
+const SAID: [&str; 21] = [
     "a question file holds one question, and this one holds `decide` and `choose`",
     "a question file holds one of `decide`, `choose`, `tag`, or `score`",
-    "a question file holds no key `nope`",
+    "a question file takes no key `nope`",
+    "a question file takes no key `version`; `version` belongs in a question set, a recognize file, or a relate file",
     "a `choose` question file takes no key `true`",
     "the question file's `threshold`: `choose` takes a single cut and never a band",
     "the question file's `threshold`: a single cut is above zero and at most one",
@@ -128,7 +130,7 @@ fn an_unknown_local_key_is_escaped_and_stays_on_one_line() {
     assert_eq!(
         refused(&["decide", &file, "--dry-run"]),
         (
-            r#"thinkthen: a question file holds no key `line\nbreak`
+            r#"thinkthen: a question file takes no key `line\nbreak`
 "#
             .to_owned(),
             Some(5)

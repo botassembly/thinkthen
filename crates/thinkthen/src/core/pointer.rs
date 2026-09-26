@@ -31,6 +31,9 @@ pub(crate) enum PointerError {
     /// A `~` is not followed by `0` or `1`.
     #[error("a pointer is RFC 6901, so `~` is followed by `0` or by `1`")]
     Escape,
+    /// The string holds a control character, which would reach a terminal.
+    #[error("a pointer is one line of printable text")]
+    Control,
 }
 
 /// One JSON Pointer, kept as the user wrote it and as the parts it names.
@@ -48,6 +51,9 @@ impl Pointer {
     /// Returns [`PointerError`] for every string RFC 6901 does not spell.
     pub(crate) fn new(text: impl Into<String>) -> Result<Self, PointerError> {
         let text = text.into();
+        if text.chars().any(char::is_control) {
+            return Err(PointerError::Control);
+        }
         if text.starts_with('#') {
             return Err(PointerError::Fragment);
         }
@@ -210,11 +216,12 @@ mod tests {
         vec(any::<char>(), 1..8)
             .prop_map(|characters| characters.into_iter().collect::<String>())
             .prop_filter(
-                "a name that is no index, no wildcard, and no sign",
+                "a name that is no index, no wildcard, no sign, and no control character",
                 |name| {
                     name.parse::<usize>().is_err()
                         && name.bytes().any(|byte| byte != b'*')
                         && !name.starts_with('-')
+                        && !name.chars().any(char::is_control)
                 },
             )
     }

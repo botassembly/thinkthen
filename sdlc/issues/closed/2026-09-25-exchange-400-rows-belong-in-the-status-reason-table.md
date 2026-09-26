@@ -1,6 +1,6 @@
 # The exchange 400 rows belong in the status reason table
 
-Status: Open. Waits for ticket 0127 to land.
+Status: Closed 2026-09-26 by ticket 0138.
 
 Kind: cleanup. Found in the code review of ticket 0123.
 

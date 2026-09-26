@@ -1,6 +1,10 @@
 //! Safe fixed messages for backend status codes.
 
-const PHRASES: [(u16, &str); 8] = [
+/// The phrase every retried server status ends with once its attempts run out.
+const RETRIED_OUT: &str =
+    "the backend failed after the allowed attempts; try again later or change --max-retries";
+
+const PHRASES: [(u16, &str); 12] = [
     (
         400,
         "the backend refused the request; check --model and the request size",
@@ -14,10 +18,11 @@ const PHRASES: [(u16, &str); 8] = [
         "the backend refused the request as malformed or too large",
     ),
     (429, "the backend's rate limit was reached"),
-    (
-        500,
-        "the backend failed after the allowed attempts; try again later or change --max-retries",
-    ),
+    (500, RETRIED_OUT),
+    (502, RETRIED_OUT),
+    (503, RETRIED_OUT),
+    (504, RETRIED_OUT),
+    (529, RETRIED_OUT),
 ];
 
 /// Status 400 whose body named `max_tokens_exceeded`, the one reason printed.
