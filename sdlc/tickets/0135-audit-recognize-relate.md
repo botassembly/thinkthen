@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core/measure crates/thinkthen/src/core/measure.rs cr
 
 # 0135: audit grades recognize and relate, and refuses a run with no label
 
-Status: in progress. Design review accepted on the second pass (fresh read-only Claude session). Owner: Claude.
+Status: built. Design review accepted on the second pass (fresh read-only Claude session). `core/measure/items.rs` crossed its budget by more than a tenth (208 against 170). The build record gives the numbers for re-scoring. Owner: Claude.
 
 Lane: thinkthen-lane-3
 
