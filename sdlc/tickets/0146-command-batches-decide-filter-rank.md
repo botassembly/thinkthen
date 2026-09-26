@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core/batch.rs crates/thinkthen/src/core/question_fil
 
 # 0146: The command batches decide, filter and rank
 
-Status: ready for review. The coordinator accepted it on 2026-09-26 after a fresh read-only review, then revised it the same day for ADR 0053. A fresh read-only review must accept the revision before it builds. Owner: Claude. It builds only after tickets 0143, 0144 and 0145 land, after "S1 live run 1" runs on main, and with ADR 0053 on main.
+Status: ready for review. The coordinator accepted it on 2026-09-26 after a fresh read-only review, then revised it the same day for ADR 0053. A fresh read-only review must accept the revision before it builds. Owner: Claude. It builds only after tickets 0143, 0144 and 0145 land, after "S1 live run 1" runs on main, and with ADR 0053 on main and ticket 0158 landed.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -31,7 +31,8 @@ Ian's rulings of 2026-09-26 set the frame. Ian can overturn each.
 2. Ticket 0144 (B3) lands first. B4 calls its `Batcher`, `BatchRecord`, `Batch` and `Reading::batch_record`.
 3. Ticket 0145 (S1) lands first. B4 removes three entries from its `probes/speed/functions.jsonl`.
 4. "S1 live run 1" runs on a main commit after S1 lands and before B4's build starts. Its record under `probes/speed/runs/` is the baseline B4 is measured against. S1 decision 13 makes this B4's precondition.
-5. ADR 0053 is on main. Ticket 0158, which keeps a reply that failed a question out of the cache, lands before B4 lands. It does not block B4's build.
+5. ADR 0053 is on main.
+6. Ticket 0158, which keeps a reply that failed a question out of the cache, lands before B4's build starts. The coordinator ruled this order on 2026-09-26. Ticket 0154 builds after B4 lands, as its decision 15 says.
 
 ## What happens today
 
@@ -357,12 +358,12 @@ Nonblank lines, measured with `grep -c .`. Net lines against main after 0143, 01
 ## Stop rules
 
 1. Stop before crossing any budget by more than a tenth, or before adding a dependency.
-2. Stop if 0143, 0144 or 0145 has not landed on main, if no "S1 live run 1" record is on main, or if ADR 0053 is not on main. Before landing, stop if ticket 0158 has not landed.
+2. Stop if 0143, 0144 or 0145 has not landed on main, if no "S1 live run 1" record is on main, if ADR 0053 is not on main, or if ticket 0158 has not landed on main.
 3. Stop if `--batch 1` changes one byte of any request, row, standard error line or exit code that today's build gives. The existing suite and the demos under their pins decide this. One difference is intended: at `--jobs` above 1, a malformed or refused record stops the run before any later record is sent. Today up to `--jobs - 1` later records may already be in flight. Output, standard error and the exit code stay the same.
 4. Stop if the design needs a second scheduler or a second row builder.
 5. Stop if more than 40 existing test files fail under the default before any pin, or if the pins pass their budget. Hand back the list. The first build step reports the real count either way.
 6. Stop if any plant stays green.
-7. Stop if the change needs a file in `sdlc/scripts/`, `site/`, or a file another in-flight ticket opens.
+7. Stop if the change needs a file in `sdlc/scripts/` or `site/`, or a file that another in-flight ticket opens and that this order does not settle. Ticket 0158 opens `specification/records.md`, `sdlc/ratchet.json` and `crates/thinkthen/tests/backend/main.rs`. It lands before B4 builds, so B4 builds on its lines. Ticket 0154 opens `cli/asking/batched.rs` and `core/batch.rs`. It builds after B4 lands, so it merges B4's lines.
 8. Stop if the build needs a live call. None is authorized here. Never run `sdlc/scripts/live`, S1's `job.sh`, or its live mode.
 9. Stop if a probe under `probes/NN-*` fails its replay under the default. Hand back which one.
 
@@ -407,7 +408,7 @@ Contract 2; state and timing 2; reach 2; proof 2; cost of error 2; total 10. Fin
 - Decision 13: B4 lands before the live target run. The first ticket review confirmed it.
 - Decision 14: `batch` comes off the top of a `decide` file before parsing, so annotate entries still refuse it.
 - The intended difference under stop rule 3: a refused record stops later records from being sent.
-- The coordinator's order: B4 builds after 0143, 0144 and 0145 land, after "S1 live run 1", and with ADR 0053 on main. Ticket 0158 lands before B4 lands.
+- The coordinator's order: B4 builds after 0143, 0144 and 0145 land, after "S1 live run 1", with ADR 0053 on main, and after ticket 0158 lands. Ticket 0154 builds after B4 lands.
 
 ## Closes
 
