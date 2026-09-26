@@ -49,11 +49,29 @@ The final run used the final code after the merge of `origin/main`. Every plant 
 
 The ticket budgeted 605 lines of growth. The build stopped at stop rule 1 with 913. The coordinator raised the budget from 605 to 930 after the reviews added the context refusals, the late-overflow check and the Selected split. Ian can overturn this.
 
-BUDGET
+Nonblank lines against `origin/main` at `7850db3f`.
+
+| File | Ticket budget | Measured |
+| --- | --- | --- |
+| `core/batch.rs` | 240 | 395 |
+| `core/batch/tests.rs` | 340 | 480 |
+| `core/records.rs` | 20 net | 413 to 448, +35 |
+| `core/mod.rs` and `core/backend.rs` | 5 | +2 |
+| `core/backend_profile.rs` and `engine/prepared_request.rs` | 0 | 0 |
+
+`sdlc/ratchet.json` moves from 67,758 to 68,670, up 912, within the 930 ruling. Splitting the two long tests for clippy added lines. Sharing the wire-name digit count in `batch.rs` and the test backends, the structured question and a context helper in the tests took the total back under 930. Before that the build merged the two plan encoders into one and held the open batch in one value.
 
 ## Ladder
 
-LADDER
+Run once each after the merge of `origin/main` at `7850db3f`, which brought ticket 0141.
+
+| Rung | Result |
+| --- | --- |
+| `lint` | exit 0; ratchet 68,670 of 68,670 |
+| `test` | exit 0; 950 passed, 0 failed across 36 test binaries |
+| `spec` | exit 0; demos 21 green, 0 red |
+
+`install` and `surfaces` did not run. No public library type, method or message changed. `origin/main` gained one documentation commit, `7443d69d`, after the ladder ran.
 
 ## Deferred gaps
 
