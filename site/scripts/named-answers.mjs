@@ -14,7 +14,8 @@
 //               direct     an assert, print, if, or while acts on a
 //                          ThinkThen call, a Bash until does, or a Bash
 //                          test, [, [[, echo, or printf reads the call's
-//                          output in place
+//                          output in place, through a $(...) that holds
+//                          the call
 //               unnamed    a SQL call has no alias
 //               generic    an answer or exit code takes a generic name
 //               bare-exit  Bash reads $? in case, test, if, while, [, or [[
@@ -141,6 +142,21 @@ function sql(text) {
   return found;
 }
 
+// The text inside each $(...), nested ones included.
+function substitutions(text) {
+  const found = [];
+  for (let at = text.indexOf('$('); at !== -1; at = text.indexOf('$(', at + 2)) {
+    let depth = 0;
+    let i = at + 1;
+    for (; i < text.length; i++) {
+      if (text[i] === '(') depth += 1;
+      else if (text[i] === ')' && --depth === 0) break;
+    }
+    found.push(text.slice(at + 2, i));
+  }
+  return found;
+}
+
 function bash(text) {
   const found = [];
   const call = CALL.bash;
@@ -181,7 +197,7 @@ function bash(text) {
       found.push({ line: at, rule: 'direct', message: 'a branch acts on a thinkthen call. Wrap the call in a function named for its meaning, or name the answer first.' });
     }
     if (/^\s*(test|\[\[?|echo|printf)\b/.test(line) && /\$\(/.test(line)) {
-      if (call.test(statement(lines, i, 'python'))) found.push({ line: at, rule: 'direct', message: 'an assert or print acts on a thinkthen call. Name the answer first.' });
+      if (substitutions(statement(lines, i, 'python')).some((inner) => call.test(inner))) found.push({ line: at, rule: 'direct', message: 'an assert or print acts on a thinkthen call. Name the answer first.' });
     }
   });
   return found;
