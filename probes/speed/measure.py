@@ -129,7 +129,7 @@ def check(bench):
     binary = ROOT / "target" / "debug" / "thinkthen"
     if os.environ.get("THINKTHEN_BASE_URL"):
         refuse("THINKTHEN_BASE_URL is set; the speed run measures the built-in address")
-    if git("status", "--porcelain"):
+    if git("status", "--porcelain", "--untracked-files=no"):
         refuse("the checkout has uncommitted changes; commit them so the run names its build")
     head = int(git("log", "-1", "--format=%ct", "--", *SOURCES))
     if not binary.exists() or binary.stat().st_mtime < head:
