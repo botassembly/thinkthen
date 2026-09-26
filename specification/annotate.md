@@ -10,7 +10,7 @@ thinkthen annotate FILE [--lines|--jsonl|--csv|--tsv] [--field POINTER] [--detai
 
 ## What it reads
 
-`FILE` is the saved question set. It holds several named questions, and each entry has the shape of a question file. `annotate` reads one document on standard input by default, and it reads records under `--lines`, `--jsonl`, `--csv`, or `--tsv`. `--input FILE` reads the evidence from a file. [records.md](records.md) gives the framing and the pointer rules.
+`FILE` is the saved question set. It holds several named questions, and each entry has the shape of a question file. `@FILE` names the same file, as a question file does on the other verbs. `annotate` reads one document on standard input by default, and it reads records under `--lines`, `--jsonl`, `--csv`, or `--tsv`. `--input FILE` reads the evidence from a file. [records.md](records.md) gives the framing and the pointer rules.
 
 ## The question set
 

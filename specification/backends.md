@@ -62,7 +62,7 @@ The adapter sends one `POST` with `Content-Type: application/json`. When a key i
 
 A retry happens after a status of 429, 500, 502, 503, 504, or 529. A transport failure is never sent again, because the backend may already hold the request and may bill it. The wait doubles from one second, and no wait follows the last attempt. No retry wait exceeds `--timeout`. A reply carrying a `Retry-After-Ms` header in whole milliseconds or a `Retry-After` header in the delta-seconds form waits the time it names instead, capped by both 60 seconds and `--timeout`. The milliseconds header is read first, because the backend sends the finer number there. The HTTP-date form of `Retry-After` is ignored, because reading it needs a clock and a date reader. Any other error status fails at once.
 
-A failure after the last retry is exit code 4. The message gives the status code and never the response body, because a backend can quote the evidence back in an error. A fixed phrase follows the code. On status 400 alone, the command reads at most 4 KiB of the body and only its `detail.error_type`. When that value is exactly `max_tokens_exceeded`, the message names it. Any other body, and any body it cannot read or parse, gives the plain 400 phrase. The library keeps `the backend answered with status 400`.
+A failure after the last retry is exit code 4. The message gives the status code and never the response body, because a backend can quote the evidence back in an error. A fixed phrase follows the code. On status 400 alone, the command reads at most 4 KiB of the body and only its `detail.error_type`. When that value is exactly `max_tokens_exceeded`, the message names it. Any other body, and any body it cannot read or parse, gives the plain 400 phrase. The library keeps `the backend answered with status 400`. The libraries and SQL surfaces print the bare status line for every status, with no phrase.
 
 | Status | Phrase |
 | --- | --- |
@@ -74,7 +74,7 @@ A failure after the last retry is exit code 4. The message gives the status code
 | 404 | nothing answers at this address |
 | 422 | the backend refused the request as malformed or too large |
 | 429 | the backend's rate limit was reached |
-| 500 after the allowed attempts | the backend failed after the allowed attempts; try again later or change `--max-retries` |
+| 500, 502, 503, 504, or 529 after the allowed attempts | the backend failed after the allowed attempts; try again later or change `--max-retries` |
 
 A connection failure is reduced from the HTTP client's structured error before it reaches the command. The command prints fixed guidance and never the client text, operating-system text, address, key, evidence, or response body. A timeout says to increase `--timeout` or try again. A missing host says to check `--url` and the network. Every transport failure, a refused connection included, fails after its first attempt. A refused connection says to check that the backend is running and that `--url` is correct. A connection that closes or resets before a reply, or cuts its reply short, says the backend may have received the request and that it was not sent again. Every other transport failure says to check `--url` and the network.
 

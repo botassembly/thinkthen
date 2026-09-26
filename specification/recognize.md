@@ -24,7 +24,7 @@ No name is a successful result: `{"entities":[]}`.
 
 ## Kinds
 
-Bare kinds keep the caller's exact names. `--kind KIND=DESCRIPTION` gives descriptions instead. Bare and described kinds do not mix. A run takes 1 through 20 distinct nonblank kinds.
+Bare kinds keep the caller's exact names. `--kind KIND=DESCRIPTION` gives descriptions instead. Bare and described kinds do not mix. A run takes 1 through 20 distinct nonblank kinds. A `--kind` with no `=` is refused at exit 2: ``--kind is KIND=DESCRIPTION, and this one holds no `=`; give a bare kind without --kind``.
 
 ## Relations
 

@@ -58,7 +58,7 @@ pub(crate) use crate::core::pointer::{Pointer, PointerError};
 pub(crate) use crate::core::question::{Labels, LabelsError, Question};
 pub(crate) use crate::core::question_file::{
     Cutting, QuestionFile, QuestionFileError, Resolved, Source, Sources, Typed, Verb, pointers,
-    resolve,
+    resolve, safe_key,
 };
 pub(crate) use crate::core::question_set::{QuestionSet, QuestionSetError, check_name};
 pub(crate) use crate::core::recognize::{

@@ -415,3 +415,28 @@ fn hostile_model_names_never_reach_the_diagnostic() {
         assert_eq!(listener.requests().len(), 2, "case {place}");
     }
 }
+
+#[test]
+fn a_question_set_named_with_at_is_the_same_file() {
+    let file = questions();
+    let plain = file.to_string_lossy().into_owned();
+    let plan = |named: &str| {
+        spawn(
+            &["annotate", named, "--dry-run"],
+            &[],
+            b"The service failed.",
+        )
+        .expect("the compiled binary runs")
+    };
+    let bare = plan(&plain);
+    let at = plan(&format!("@{plain}"));
+    assert_eq!((bare.status.code(), at.status.code()), (Some(0), Some(0)));
+    assert!(!bare.stdout.is_empty());
+    assert_eq!(at.stdout, bare.stdout);
+    let absent = plan("@absent-question-set.json");
+    assert_eq!(absent.status.code(), Some(5));
+    assert_eq!(
+        String::from_utf8_lossy(&absent.stderr),
+        "thinkthen: the question set could not be opened: No such file or directory (os error 2)\n"
+    );
+}
