@@ -71,6 +71,8 @@ The code review of `d100a394` returned one medium finding, five low and one nit.
 
 The script reached 207 nonblank lines with the fixes. Rewrapping the docstring and the column list and folding three comments brought it to 200, the budget, with no behavior removed.
 
+After merging `origin/main` at `596846f6`, which holds `7275b54a`, `lint` passed in 3 min 4 s. `spec` passed, with `settings self-test: 8/8 cases hold`, `settings: 39 rows, 49 flags, 3 environment names, 14 question-file keys, 0 failures`, and 21 demos green.
+
 ## Lane
 
 `worktrees/thinkthen-lane-3` measured 9.4 GB before the build and 9.4 GB after.
