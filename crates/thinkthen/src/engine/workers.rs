@@ -111,14 +111,13 @@ where
     E: From<Error>,
 {
     let (results, received) = channel();
-    let total = items.len();
     scoped(
         jobs,
         results,
         &|(place, item)| (place, work(item)),
         |feed| {
-            let (mut items, mut held) = (items.into_iter().enumerate(), BTreeMap::new());
-            let (mut next, mut sent, mut in_flight) = (0, 0, 0);
+            let mut items = items.into_iter().enumerate().peekable();
+            let (mut held, mut next, mut in_flight) = (BTreeMap::new(), 0, 0);
             let (mut failure, mut halted) = (None, false);
             loop {
                 while failure.is_none() {
@@ -129,7 +128,7 @@ where
                     }
                     next += 1;
                 }
-                if failure.is_none() && sent < total {
+                if failure.is_none() && items.peek().is_some() {
                     failure = cancel.stop().map(E::from);
                 }
                 halted |= failure.is_some();
@@ -137,9 +136,9 @@ where
                     let Some(item) = items.next() else { break };
                     feed.send(item)
                         .map_err(|_| Error::Defect("a request worker ended early"))?;
-                    (sent, in_flight) = (sent + 1, in_flight + 1);
+                    in_flight += 1;
                 }
-                if in_flight == 0 && (halted || sent == total) {
+                if in_flight == 0 && (halted || items.peek().is_none()) {
                     return failure.map_or(Ok(()), Err);
                 }
                 match received.recv_timeout(Cancel::poll()) {
