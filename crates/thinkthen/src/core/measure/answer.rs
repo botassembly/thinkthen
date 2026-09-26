@@ -140,6 +140,8 @@ pub(crate) struct Top {
     pub(crate) pick: String,
     /// True when two or more options hold it.
     pub(crate) tied: bool,
+    /// Every option that holds it, in member order.
+    pub(crate) holders: Vec<String>,
 }
 
 /// One record's answer to one question.

@@ -1,7 +1,7 @@
 Is it red?  (decide, 6 rows, 6 labeled, 0 failed, rule as run)
   agreement 0.667 (95% 0.300 to 0.903): 4 right, 2 wrong, 0 unresolved, 0 tied
   said yes, key no: 1   said no, key yes: 1   yes recall 0.667   mean p(yes) 0.525   AUC 0.778
-  calibration error 0.375 (95% 0.217 to 0.542); the interval resamples the records; it does not cover rerun noise, so compare two runs of the same records
+  calibration error 0.275 (95% 0.091 to 0.482); the interval resamples the records; it does not cover rerun noise, so compare two runs of the same records
   suggested cut 0.45 (most agreement on the tuning part; key split, tuned on 3, checked on 3 held out): held agreement 1.000 as run -> 1.000 at the cut, yes recall 1.000 -> 1.000
     cut  threshold  answered coverage accuracy
     0.5  0.5               6    1.000    0.667

@@ -6,7 +6,8 @@ use super::diff::{Discordant, discordant};
 use super::key::{Key, Outcome};
 use super::optimize::Measure;
 use super::{
-    SplitMix64, calibration_error, json_lines, mcnemar, places, python_float_text, rounded,
+    SplitMix64, calibration, calibration_error, json_lines, mcnemar, places, python_float_text,
+    rounded,
 };
 use crate::core::pointer::Pointer;
 
@@ -37,6 +38,7 @@ fn audit_text(results: &str, key: &str) -> Vec<audit::Row> {
         seed: 0,
         target: 0.9,
         optimize: Measure::Accuracy,
+        curve: false,
     };
     audit::audit(&answers, &key, &settings).expect("an audit")
 }
@@ -67,14 +69,27 @@ fn splitmix64_matches_the_published_outputs_and_draws_in_range() {
 
 #[test]
 fn calibration_error_closes_the_last_bin_at_one() {
-    assert!(near(calibration_error(&DECIDE), 0.375, 9));
+    let ones = |pairs: &[(f64, bool)]| -> Vec<(f64, f64)> {
+        pairs
+            .iter()
+            .map(|(p, t)| (*p, f64::from(u8::from(*t))))
+            .collect()
+    };
+    assert!(near(calibration_error(&ones(&DECIDE)), 0.375, 9));
     let choose = [(0.8, true), (0.7, false), (0.6, true), (0.5, false)];
-    assert!(near(calibration_error(&choose), 0.45, 9));
-    assert!(near(
-        calibration_error(&[(1.0, false), (0.0, false)]),
-        0.5,
-        9
-    ));
+    assert!(near(calibration_error(&ones(&choose)), 0.45, 9));
+    assert!(near(calibration_error(&[(1.0, 0.0), (0.0, 0.0)]), 0.5, 9));
+}
+
+/// One pair's shifted resamples sit one float step below its error, so the interval widens to hold it.
+#[test]
+fn the_calibration_interval_holds_the_error_of_one_pair() {
+    let calibration = calibration(&[(0.94, 1.0)], 0).expect("one pair");
+    let [low, high] = calibration.interval;
+    assert!(
+        low <= calibration.error && calibration.error <= high,
+        "{low} {high}"
+    );
 }
 
 #[test]

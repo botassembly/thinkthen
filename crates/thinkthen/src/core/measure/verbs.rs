@@ -85,13 +85,17 @@ pub(super) fn top(line: usize, value: &Json) -> Result<Top, MeasureError> {
     for (option, held) in members {
         let p = probability(line, held)?.as_f64();
         match &mut found {
-            Some(top) if p == top.top => top.tied = true,
+            Some(top) if p == top.top => {
+                top.tied = true;
+                top.holders.push(option.clone());
+            }
             Some(top) if p < top.top => {}
             _ => {
                 found = Some(Top {
                     top: p,
                     pick: option.clone(),
                     tied: false,
+                    holders: vec![option.clone()],
                 });
             }
         }

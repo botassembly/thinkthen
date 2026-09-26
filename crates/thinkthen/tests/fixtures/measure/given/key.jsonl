@@ -1,0 +1,16 @@
+{"id":"y1","value":"yes"}
+{"id":"y2","value":"yes"}
+{"id":"y3","value":"no"}
+{"id":"y4","value":"no"}
+{"id":"y5","value":"no"}
+{"id":"g1","value":"a"}
+{"id":"g2","value":"b"}
+{"id":"g3","value":"c"}
+{"id":"g4","value":"b"}
+{"id":"g5","value":"d"}
+{"id":"t1","value":["x"]}
+{"id":"t2","value":["x"]}
+{"id":"t3","value":["y"]}
+{"id":"t4","value":["x"]}
+{"id":"t5","value":["x","y"]}
+{"id":"t6","value":null}

@@ -7,9 +7,11 @@
 pub(crate) mod answer;
 pub(crate) mod audit;
 pub(crate) mod diff;
+pub(crate) mod group;
 pub(crate) mod key;
 pub(crate) mod levels;
 pub(crate) mod optimize;
+pub(crate) mod pairs;
 pub(crate) mod rows;
 pub(crate) mod splice;
 
@@ -62,6 +64,8 @@ pub(crate) enum MeasureError {
     BandOnChoose,
     /// A threshold was named over a `score` or `find` answer.
     NoRule,
+    /// A result line has no string or integer value at the `--by` pointer.
+    NoGroup(usize),
 }
 
 /// One numbered JSON line of an input.
@@ -192,18 +196,35 @@ pub(crate) fn python_sum(values: impl IntoIterator<Item = f64>) -> f64 {
     total
 }
 
-/// The binned calibration error: ten equal bins, the last closed at one.
-pub(crate) fn calibration_error(pairs: &[(f64, bool)]) -> f64 {
-    let mut gap = 0.0;
-    for bin in 0..BINS {
-        let low = bin as f64 / BINS as f64;
-        let high = (bin + 1) as f64 / BINS as f64;
-        let inside = |x: f64| (low <= x && x < high) || (bin == BINS - 1 && x == 1.0);
-        let held: Vec<&(f64, bool)> = pairs.iter().filter(|pair| inside(pair.0)).collect();
-        let trues = held.iter().filter(|pair| pair.1).count() as f64;
-        gap += (trues - python_sum(held.iter().map(|pair| pair.0))).abs();
-    }
-    gap / pairs.len() as f64
+/// One answer's confidence in what it said, and how right it was: 1, 0, or a tie's share.
+pub(crate) type Pair = (f64, f64);
+
+/// One of ten equal bins, the last closed at one, and the sum of its confidences.
+fn bin(pairs: &[Pair], bin: usize) -> (Bin, f64) {
+    let (low, high) = (bin as f64 / BINS as f64, (bin + 1) as f64 / BINS as f64);
+    let inside = |x: f64| (low <= x && x < high) || (bin == BINS - 1 && x == 1.0);
+    let held: Vec<&Pair> = pairs.iter().filter(|pair| inside(pair.0)).collect();
+    let (n, total) = (held.len(), python_sum(held.iter().map(|pair| pair.0)));
+    let right = python_sum(held.iter().map(|pair| pair.1));
+    let confidence = (n > 0).then(|| total / n as f64);
+    (
+        Bin {
+            low,
+            high,
+            n,
+            right,
+            confidence,
+        },
+        total,
+    )
+}
+
+/// The binned calibration error: the sum over bins of the gap between right and confidence, over every pair.
+pub(crate) fn calibration_error(pairs: &[Pair]) -> f64 {
+    let gaps = (0..BINS)
+        .map(|place| bin(pairs, place))
+        .map(|(held, total)| (held.right - total).abs());
+    gaps.sum::<f64>() / pairs.len() as f64
 }
 
 /// Linear interpolation between the order statistics of sorted values.
@@ -218,12 +239,22 @@ pub(crate) fn quantile(sorted: &[f64], q: f64) -> f64 {
     }
 }
 
+/// One calibration bin: its bounds, its answers, their summed right, and their mean confidence.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub(crate) struct Bin {
+    pub(crate) low: f64,
+    pub(crate) high: f64,
+    pub(crate) n: usize,
+    pub(crate) right: f64,
+    pub(crate) confidence: Option<f64>,
+}
+
 /// The calibration error and its bootstrap interval.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub(crate) struct Calibration {
     /// The error over every pair.
     pub(crate) error: f64,
-    /// The 2.5% and 97.5% quantiles of the resampled errors.
+    /// The 2.5% and 97.5% quantiles of the resampled errors, shifted by their bias.
     pub(crate) interval: [f64; 2],
     /// Always [`BINS`].
     pub(crate) bins: usize,
@@ -233,30 +264,44 @@ pub(crate) struct Calibration {
     pub(crate) seed: u64,
     /// Always [`NOTE`].
     pub(crate) note: &'static str,
+    /// Each bin's counts.
+    pub(crate) by_bin: Vec<Bin>,
 }
 
 /// The calibration of these pairs with a fresh generator at the seed.
-pub(crate) fn calibration(pairs: &[(f64, bool)], seed: u64) -> Option<Calibration> {
+///
+/// Binned error runs high, and a resample's runs higher still. Each resampled
+/// error drops by the mean resample minus the estimate, floored at 0, and the
+/// interval widens to hold the estimate.
+pub(crate) fn calibration(pairs: &[Pair], seed: u64) -> Option<Calibration> {
     if pairs.is_empty() {
         return None;
     }
     let mut generator = SplitMix64::new(seed);
     let mut errors: Vec<f64> = (0..DRAWS)
         .map(|_| {
-            let drawn: Vec<(f64, bool)> = (0..pairs.len())
+            let drawn: Vec<Pair> = (0..pairs.len())
                 .filter_map(|_| pairs.get(generator.index(pairs.len())).copied())
                 .collect();
             calibration_error(&drawn)
         })
         .collect();
     errors.sort_by(f64::total_cmp);
+    let error = calibration_error(pairs);
+    let bias = python_sum(errors.iter().copied()) / DRAWS as f64 - error;
+    let shifted: Vec<f64> = errors.iter().map(|value| (value - bias).max(0.0)).collect();
+    let by_bin = (0..BINS).map(|place| bin(pairs, place).0).collect();
     Some(Calibration {
-        error: calibration_error(pairs),
-        interval: [quantile(&errors, 0.025), quantile(&errors, 0.975)],
+        error,
+        interval: [
+            quantile(&shifted, 0.025).min(error),
+            quantile(&shifted, 0.975).max(error),
+        ],
         bins: BINS,
         draws: DRAWS,
         seed,
         note: NOTE,
+        by_bin,
     })
 }
 

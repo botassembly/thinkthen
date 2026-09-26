@@ -12,21 +12,21 @@ mod measure_support;
 #[path = "../src/test_deadline/wait.rs"]
 mod wait;
 
-use measure_support::{audit, found, member, ranked, replay, repository, with_ids};
+use measure_support::{audit, found, member, ranked, replay, repository, run, with_ids};
 
 /// Each hand fixture under `verbs/`, the row it checks, and each member's hand-computed value.
 /// `tests/fixtures/measure/README.md` shows the arithmetic.
 const ROWS: [&str; 13] = [
-    r#"tag 0 {"/group": "Which apply?", "/rows": 12, "/labeled": 10, "/right": 8, "/wrong": 2, "/precision": 0.833333, "/yes_recall": 0.833333, "/f1": 0.833333, "/interval": null, "/calibration": null, "/coverage": null, "/auc": null, "/mean_probability": null}"#,
-    r#"tag 1 {"/group": "Which apply?/x", "/labeled": 5, "/right": 4, "/false_no": 1, "/precision": 1.0, "/yes_recall": 0.75, "/f1": 0.857143}"#,
-    r#"tag 2 {"/group": "Which apply?/y", "/labeled": 5, "/right": 4, "/false_yes": 1, "/precision": 0.666667, "/yes_recall": 1.0, "/f1": 0.8}"#,
+    r#"tag 0 {"/group": "Which apply?", "/rows": 12, "/labeled": 10, "/right": 8, "/wrong": 2, "/precision": 0.833333, "/yes_recall": 0.833333, "/f1": 0.833333, "/interval": null, "/calibration": null, "/coverage": null, "/auc": null, "/mean_probability": null, "/suggested/crossed": null}"#,
+    r#"tag 1 {"/group": "Which apply?/x", "/labeled": 5, "/right": 4, "/false_no": 1, "/precision": 1.0, "/yes_recall": 0.75, "/f1": 0.857143, "/suggested/crossed/cuts": [0.4, 0.5]}"#,
+    r#"tag 2 {"/group": "Which apply?/y", "/labeled": 5, "/right": 4, "/false_yes": 1, "/precision": 0.666667, "/yes_recall": 1.0, "/f1": 0.8, "/suggested/crossed/cuts": [0.5, 0.61]}"#,
     r#"score 0 {"/right": 4, "/wrong": 2, "/mean_level_distance": 0.333333, "/disagreements": [{"key": "low", "said": "mid", "count": 1}, {"key": "mid", "said": "high", "count": 1}], "/suggested/cut": null, "/suggested/cuts": [0.71, 1.61], "/suggested/tune/at_cut/right": 6}"#,
     r#"rank 0 {"/verb": "rank", "/labeled": 6, "/unresolved": 6, "/r_precision": 0.5}"#,
     r#"rank 1 {"/labeled": 3, "/r_precision": 1.0}"#,
     r#"rank 2 {"/labeled": 2, "/r_precision": null}"#,
     r#"rank 3 {"/labeled": 0, "/r_precision": null}"#,
-    r#"rank 4 {"/labeled": 3, "/r_precision": 0.5, "/suggested": null}"#,
-    r#"find 0 {"/rows": 4, "/right": 2, "/wrong": 1, "/tied": 1, "/disagreements": [{"key": "u001", "said": "u003", "count": 1}], "/suggested": null}"#,
+    r#"rank 4 {"/labeled": 3, "/r_precision": 0.5, "/suggested": null, "/calibration": null}"#,
+    r#"find 0 {"/rows": 5, "/right": 3, "/wrong": 1, "/tied": 1, "/tied_holding_key": 1, "/tie_share": 0.5, "/disagreements": [{"key": "u001", "said": "u003", "count": 1}], "/suggested": null}"#,
     r#"annotate 0 {"/group": "urgent", "/right": 1, "/false_yes": 1, "/precision": 0.5}"#,
     r#"annotate 1 --optimize precision {"/verb": "choose", "/suggested": {"cut": null, "objective": "precision does not apply to choose", "split": "seeded", "seed": 0}}"#,
     r#"annotate 2 {"/group": "effort", "/verb": "score", "/right": 2, "/mean_level_distance": 0.333333}"#,
@@ -142,4 +142,39 @@ fn real_output_reads() {
         assert_eq!(found, expected.map(str::to_owned));
     }
     std::fs::remove_dir_all(&folder).expect("cleanup");
+}
+
+/// Help names audit, and a `--by` value that is neither a word nor a pointer gets the usage error.
+#[test]
+fn help_names_audit_and_says_what_it_never_does() {
+    const ROW: &str = "Grade saved answers against an answer key and suggest a bar.";
+    let text =
+        |arguments: &[&str]| String::from_utf8(run(arguments, b"").stdout).expect("UTF-8 help");
+    let root = text(&["--help"]);
+    assert!(
+        root.contains(&format!("\n  audit      {}\n", ROW.trim_end_matches('.'))),
+        "{root}"
+    );
+    assert!(text(&["audit", "-h"]).starts_with(&format!("{}\n\n", ROW.trim_end_matches('.'))));
+    let long = text(&["audit", "--help"]);
+    assert!(long.starts_with(&format!("{ROW}\n\n")), "{long}");
+    for sentence in [
+        "audit sends no request and reads no key.",
+        "To grade a recording, replay it with --details and pass the output:",
+    ] {
+        assert!(long.contains(sentence), "{sentence}");
+    }
+    let (_, _, stderr) = audit(
+        &[
+            "small/decide.jsonl",
+            "small/decide-key.jsonl",
+            "--by",
+            "colour",
+        ],
+        b"",
+    );
+    assert_eq!(
+        stderr,
+        "error: invalid value 'colour' for '--by <question|verb|POINTER>': --by takes question, verb, or a JSON pointer such as /category\n\nFor more information, try '--help'.\n"
+    );
 }

@@ -19,7 +19,7 @@ use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-use measure_support::{DIFF_GOLDENS, DIFF_TABLES, GOLDENS, TABLES, audit, fixtures, measure, run};
+use measure_support::{DIFF_GOLDENS, DIFF_TABLES, GOLDENS, TABLES, audit, fixtures, measure};
 
 /// A decide line whose record id and text are planted secrets.
 const YES: &str = "{\"input\":{\"id\":\"secret-id-5150\",\"text\":\"secret-text\"},\"value\":true,\"answer\":{\"probability\":0.9}}\n";
@@ -63,7 +63,7 @@ const UNGRADABLE: &str = "results line 1 holds an answer audit cannot grade; aud
 const TWICE: &str = "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":true,\"question\":{\"text\":\"secret-text\"}}\n{\"input\":{\"id\":\"secret-id-5150\"},\"value\":true,\"question\":{\"text\":\"other\"}}\n";
 
 /// Each refusal: the command line, standard input (`YES` where empty is not asked), the exit code, and the sentence.
-const REFUSALS: [(&str, &str, i32, &str); 43] = [
+const REFUSALS: [(&str, &str, i32, &str); 47] = [
     (
         "audit @secret-path @key.jsonl",
         "",
@@ -142,6 +142,30 @@ const REFUSALS: [(&str, &str, i32, &str); 43] = [
         YES,
         2,
         "--write grades by question; drop --by verb",
+    ),
+    (
+        "audit - @yes.jsonl --write @q.json --by /secret-value",
+        YES,
+        2,
+        "--write grades by question; drop the --by pointer",
+    ),
+    (
+        "audit - @yes.jsonl --by /secret-value~2",
+        YES,
+        2,
+        "--by takes question, verb, or a JSON pointer such as /category",
+    ),
+    (
+        "audit - @yes.jsonl --by /secret-value",
+        YES,
+        2,
+        "results line 1 has no string or integer value at the --by pointer",
+    ),
+    (
+        "audit - @yes.jsonl --curve --table",
+        YES,
+        2,
+        "--curve prints JSON lines; drop --table",
     ),
     (
         "audit - @yes.jsonl --write @secret-path",
@@ -353,27 +377,6 @@ fn each_failure_prints_one_line_that_names_no_record_id_value_or_path() {
         assert_eq!((code, stdout.as_str()), (2, ""), "{arguments:?}");
     }
     fs::remove_dir_all(&root).expect("cleanup");
-}
-
-#[test]
-fn help_names_audit_and_says_what_it_never_does() {
-    const ROW: &str = "Grade saved answers against an answer key and suggest a bar.";
-    let text =
-        |arguments: &[&str]| String::from_utf8(run(arguments, b"").stdout).expect("UTF-8 help");
-    let root = text(&["--help"]);
-    assert!(
-        root.contains(&format!("\n  audit      {}\n", ROW.trim_end_matches('.'))),
-        "{root}"
-    );
-    assert!(text(&["audit", "-h"]).starts_with(&format!("{}\n\n", ROW.trim_end_matches('.'))));
-    let long = text(&["audit", "--help"]);
-    assert!(long.starts_with(&format!("{ROW}\n\n")), "{long}");
-    for sentence in [
-        "audit sends no request and reads no key.",
-        "To grade a recording, replay it with --details and pass the output:",
-    ] {
-        assert!(long.contains(sentence), "{sentence}");
-    }
 }
 
 /// Every path under a folder with its size, so a change anywhere shows.

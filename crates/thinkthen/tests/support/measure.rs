@@ -251,23 +251,26 @@ pub(crate) fn member(line: &str, pointer: &str) -> String {
     row.pointer(pointer).expect("the member").to_string()
 }
 
-/// The members ticket 0125 added beside the ones the goldens hold.
-const ADDED_MEMBERS: [&str; 5] = [
+/// The members tickets 0125 and 0131 added beside the ones the goldens hold.
+const ADDED_MEMBERS: [&str; 7] = [
     "precision",
     "f1",
     "r_precision",
     "mean_level_distance",
     "steady",
+    "crossed",
+    "curve",
 ];
 
-/// The openings of the table lines ticket 0125 added.
-const ADDED_LINES: [&str; 6] = [
+/// The openings of the table lines tickets 0125 and 0131 added.
+const ADDED_LINES: [&str; 7] = [
     "  precision ",
     "  r-precision",
     "  mean level distance",
     "  suggested level cuts",
     "  steady:",
     "  at the suggested cut on the held part",
+    "  crossed:",
 ];
 
 /// Compact JSON lines without the added members, every other byte copied.

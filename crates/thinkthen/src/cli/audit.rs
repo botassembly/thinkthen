@@ -11,10 +11,11 @@ use std::path::{Path, PathBuf};
 
 use clap::{Args, ValueEnum};
 
-use crate::cli::measure::{Cause, Refusal, lines, rule, write};
+use crate::cli::measure::{BY, Cause, Refusal, lines, rule, write};
 use crate::core::Pointer;
 use crate::core::measure::answer::{self, Identity};
-use crate::core::measure::audit::{self as grade, By, Counts, Row, Settings, Suggested};
+use crate::core::measure::audit::{self as grade, By, Counts, Pooled, Row, Settings, Suggested};
+use crate::core::measure::group;
 use crate::core::measure::key::Key;
 use crate::core::measure::optimize::{Bar, Measure, Steady};
 use crate::core::measure::{places, python_float_text, rounded, rounded_line};
@@ -27,8 +28,13 @@ pub(crate) struct AuditArguments {
     results: PathBuf,
     /// The answer key as JSON lines, or - for standard input.
     key: PathBuf,
-    /// Group the answers by question or by verb.
-    #[arg(long, value_enum, default_value = "question")]
+    /// Group the answers by question, by verb, or a JSON pointer such as /category into each line's input.
+    #[arg(
+        long,
+        value_name = "question|verb|POINTER",
+        default_value = "question",
+        value_parser = group
+    )]
     by: Group,
     /// Rescore each answer from its saved probabilities under this cut or band.
     #[arg(long, value_name = "T|LOW:HIGH", allow_negative_numbers = true)]
@@ -53,15 +59,31 @@ pub(crate) struct AuditArguments {
     /// Write the steady bar into the question file or set the results came from.
     #[arg(long, value_name = "QUESTIONS")]
     write: Option<PathBuf>,
+    /// Add the coverage curve at every distinct confidence to each group.
+    #[arg(long)]
+    curve: bool,
+    /// Add one last line with the calibration of every verb pooled.
+    #[arg(long)]
+    pooled: bool,
     /// Print the results for a person instead of JSON lines.
     #[arg(long)]
     table: bool,
 }
 
-#[derive(Clone, Copy, Debug, ValueEnum)]
+#[derive(Clone, Debug)]
 enum Group {
     Question,
     Verb,
+    Field(String),
+}
+
+fn group(text: &str) -> Result<Group, String> {
+    match text {
+        "question" => Ok(Group::Question),
+        "verb" => Ok(Group::Verb),
+        _ if text.starts_with('/') => Ok(Group::Field(text.to_owned())),
+        _ => Err(BY.to_owned()),
+    }
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
@@ -81,7 +103,7 @@ fn target(text: &str) -> Result<f64, String> {
 
 /// Grade, write the bar `--write` names and report it, then write JSON lines or the table.
 pub(crate) fn run(arguments: &AuditArguments, writer: impl Write) -> Result<(), Failure> {
-    let (rows, report) = grade_all(arguments).map_err(Failure::Measure)?;
+    let (rows, pooled, report) = grade_all(arguments).map_err(Failure::Measure)?;
     write(std::io::stderr().lock(), &report)?;
     let mut text = String::new();
     for row in &rows {
@@ -92,10 +114,21 @@ pub(crate) fn run(arguments: &AuditArguments, writer: impl Write) -> Result<(), 
             text.push('\n');
         }
     }
+    if let Some(pooled) = &pooled {
+        if arguments.table {
+            text.push_str(&pooled_line(pooled));
+        } else {
+            text.push_str(&rounded_line(pooled).map_err(Failure::Render)?);
+        }
+        text.push('\n');
+    }
     write(writer, &text)
 }
 
-fn grade_all(arguments: &AuditArguments) -> Result<(Vec<Row>, String), Refusal> {
+/// The rows, the pooled line when asked, and the `--write` report.
+type Graded = (Vec<Row>, Option<Pooled>, String);
+
+fn grade_all(arguments: &AuditArguments) -> Result<Graded, Refusal> {
     let refusal = |role, cause| Refusal {
         command: "audit",
         role,
@@ -107,10 +140,17 @@ fn grade_all(arguments: &AuditArguments) -> Result<(Vec<Row>, String), Refusal> 
             (path == dash, Cause::WriteDash),
             (arguments.threshold.is_some(), Cause::WriteThreshold),
             (matches!(arguments.by, Group::Verb), Cause::WriteByVerb),
+            (
+                matches!(arguments.by, Group::Field(_)),
+                Cause::WriteByPointer,
+            ),
         ];
         if let Some((_, cause)) = refused.into_iter().find(|(beside, _)| *beside) {
             return Err(refusal("question", cause));
         }
+    }
+    if arguments.curve && arguments.table {
+        return Err(refusal("results", Cause::CurveTable));
     }
     if arguments.results == dash && arguments.key == dash {
         return Err(refusal("results", Cause::TwoStandardInputs));
@@ -124,11 +164,19 @@ fn grade_all(arguments: &AuditArguments) -> Result<(Vec<Row>, String), Refusal> 
     let answers = answer::read(&results, &pointer, Identity::Question)
         .map_err(|e| refusal("results", Cause::Measure(e)))?;
     let key = Key::read(&key_lines).map_err(|e| refusal("key", Cause::Measure(e)))?;
+    let by = match &arguments.by {
+        Group::Question => By::Question,
+        Group::Verb => By::Verb,
+        Group::Field(text) => {
+            let field = Pointer::new(text).map_err(|_| refusal("results", Cause::ByPointer))?;
+            By::Field(
+                group::values(&results, &field)
+                    .map_err(|e| refusal("results", Cause::Measure(e)))?,
+            )
+        }
+    };
     let settings = Settings {
-        by: match arguments.by {
-            Group::Question => By::Question,
-            Group::Verb => By::Verb,
-        },
+        by,
         rule,
         shown,
         seed: arguments.seed,
@@ -139,6 +187,7 @@ fn grade_all(arguments: &AuditArguments) -> Result<(Vec<Row>, String), Refusal> 
             Optimize::Recall => Measure::Recall,
             Optimize::F1 => Measure::F1,
         },
+        curve: arguments.curve,
     };
     let rows = grade::audit(&answers, &key, &settings)
         .map_err(|e| refusal("results", Cause::Measure(e)))?;
@@ -148,7 +197,12 @@ fn grade_all(arguments: &AuditArguments) -> Result<(Vec<Row>, String), Refusal> 
         }
         None => String::new(),
     };
-    Ok((rows, report))
+    let pooled = arguments
+        .pooled
+        .then(|| grade::pooled(&answers, &key, &settings))
+        .transpose()
+        .map_err(|e| refusal("results", Cause::Measure(e)))?;
+    Ok((rows, pooled, report))
 }
 
 /// A float as the table writes a number: three places, or `-` for none.
@@ -175,14 +229,15 @@ fn table(row: &Row, out: &mut String) {
         .interval
         .map_or([None, None], |[l, h]| [Some(l), Some(h)]);
     line(format!(
-        "  agreement {} (95% {} to {}): {} right, {} wrong, {} unresolved, {} tied",
+        "  agreement {} (95% {} to {}): {} right, {} wrong, {} unresolved, {} tied{}",
         three(row.agreement),
         three(low),
         three(high),
         row.right,
         row.wrong,
         row.unresolved,
-        row.tied
+        row.tied,
+        ties_line(row)
     ));
     if row.true_yes.is_some() {
         line(format!(
@@ -225,7 +280,7 @@ fn table(row: &Row, out: &mut String) {
     if let Some(suggested) = &row.suggested {
         line(suggested_line(row, suggested));
         if let Some(Some(steady)) = &suggested.steady {
-            line(steady_line(steady, suggested.seed));
+            line(steady_line(steady, suggested.seed) + &crossed_line(suggested));
         }
         if let (true, Some(held)) = (row.true_yes.is_some(), &suggested.held) {
             line(held_line(&held.at_cut));
@@ -247,6 +302,35 @@ fn table(row: &Row, out: &mut String) {
             three(point.accuracy)
         ));
     }
+}
+
+/// The ties line of a `choose` or `find` row with ties, after a line break, or nothing.
+fn ties_line(row: &Row) -> String {
+    let ties = row
+        .tied_holding_key
+        .zip(row.tie_share)
+        .filter(|_| row.tied > 0);
+    ties.map_or_else(String::new, |(holding, share)| {
+        format!(
+            "\n  ties holding the key: {holding} of {}, share {}",
+            row.tied,
+            three(Some(share))
+        )
+    })
+}
+
+/// The line of `suggested.crossed`, after a line break, or nothing.
+fn crossed_line(suggested: &Suggested) -> String {
+    let Some(Some(crossed)) = &suggested.crossed else {
+        return String::new();
+    };
+    let [first, second] = crossed.cuts.map(|cut| python_float_text(rounded(cut)));
+    format!(
+        "\n  crossed: cuts {first} and {second}, each checked on the other part: agreement {}, {} right of {} answered",
+        three(crossed.held.agreement),
+        crossed.held.right,
+        crossed.held.answered
+    )
 }
 
 /// The suggested cut's line, or the sentence that says no cut reaches the target.
@@ -340,5 +424,19 @@ fn steady_line(steady: &Steady, seed: Option<u64>) -> String {
         bracket(high),
         steady.better,
         steady.splits
+    )
+}
+
+/// The pooled line as the table writes it.
+fn pooled_line(pooled: &Pooled) -> String {
+    let [error, low, high] = pooled.calibration.as_ref().map_or([None; 3], |c| {
+        [Some(c.error), Some(c.interval[0]), Some(c.interval[1])]
+    });
+    format!(
+        "  every verb pooled: calibration error {} (95% {} to {}) over {} answers",
+        three(error),
+        three(low),
+        three(high),
+        pooled.answers
     )
 }
