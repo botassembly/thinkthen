@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine/http.rs crates/thinkthen/src/engine/mod.rs cr
 
 # 0142: The pool keeps up to `--jobs` connections
 
-Status: ready. Owner: Claude.
+Status: accepted 2026-09-26. The coordinator approved it after a fresh read-only review. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -41,7 +41,7 @@ The `Client` doc comment says the pool keeps an idle connection for each request
 
 Each is the agent's decision. Ian can overturn any of them.
 
-1. **The cap is the widest throttle, not the run's own width.** The pool cannot hold more connections than were in flight at once, so a cap of 32 behaves as a cap of `--jobs`. Passing the selected width into `Client::new` would change its signature and its ten callers, most of them tests, for no change in behavior.
+1. **The cap is the widest throttle, not the run's own width.** The pool cannot hold more connections than were in flight at once, so a cap of 32 behaves as a cap of `--jobs`. Passing the selected width into `Client::new` would change its signature and every caller, most of them tests, for no change in behavior.
 2. **Both limits are set.** The per-host limit alone leaves ureq's total limit of 10, which reopens connections above 10 jobs. Every client posts to one address, so the two limits are equal.
 3. **The idle age stays at ureq's 15 s default.** A run that pauses longer than 15 s between requests opens new connections. The issue does not ask for more, and a longer age keeps sockets open that a backend may already have closed.
 4. **No specification page changes.** `records.md` already states the behavior this ticket delivers. The code comes into line with it.
@@ -53,7 +53,7 @@ Each is the agent's decision. Ian can overturn any of them.
 | --- | --- | --- |
 | `--jobs 1` | 1 connection | 1 connection. Kept |
 | `--jobs 3` or fewer | Up to that many connections | Kept |
-| `--jobs` omitted, throttle 4 | Up to 4 connections, and more when all 4 sit idle at once | Up to 4 connections. Changed |
+| `--jobs` omitted, throttle 4 | 4, and a new one whenever all 4 sit idle at once | Up to 4 connections. Changed |
 | `--jobs 16` | 121 to 198 new secure connections over 306 requests, live | Up to 16 connections. Changed |
 | `--jobs 32` | Up to 231 new secure connections over 306 requests, live | Up to 32 connections. Changed |
 | A reply with an error status | The connection closes unread, and a retry opens a new one | Kept. `send` returns before it reads that body |
@@ -97,7 +97,7 @@ Nonblank lines, measured with `grep -c .` on the diff.
 2. Stop if any plant stays green in any of three runs.
 3. Stop if the fixed code opens more than `jobs` connections in any row, in any of three runs. That would mean a connection outlives its permit, and the design's premise is wrong.
 4. Stop if the command does not send the first round before standard input closes. The test's premise needs a streaming reader, and the failsafe turns that into a failure, not a hang.
-5. Stop if the change needs a file that 0139, 0140, 0141 or 0143 owns. `engine/http.rs` is the likely overlap with the B1 ticket for usage writes, which may touch `post_observed`'s accounting. This ticket touches only `Client::new` and the `Client` doc comment. The coordinator orders the two.
+5. Stop if the change needs a file that 0141 or 0143 owns. `engine/http.rs` overlaps with 0141, the usage writes, which may touch `post_observed`'s accounting. This ticket touches only `Client::new` and the `Client` doc comment there. Landing 0142 leaves `http.rs` at 500 nonblank lines, its ceiling, so 0141 must trim to fit. `engine/mod.rs` overlaps with 0143 if relate's throttle touches `Width` or `client_width`. This ticket touches only `Width`. The coordinator orders each pair.
 6. Stop if the build needs a live call. None is authorized here.
 
 ## Scope and exclusions
