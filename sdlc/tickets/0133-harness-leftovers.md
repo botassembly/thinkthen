@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 133
-opens: sdlc/scripts/heavy-lock sdlc/scripts/lint sdlc/scripts/README.md sdlc/scripts/children crates/thinkthen/src/cli/interrupt.rs crates/thinkthen/src/cli/interrupt/tests.rs crates/thinkthen/tests/backend/interrupt.rs crates/thinkthen/tests/relate_edge.rs crates/thinkthen/src/core/recording.rs databases/postgresql/src/files.rs databases/duckdb/tools/source_checks.py conformance/children/children.py sdlc/ratchet.json databases/postgresql/ratchet.json databases/duckdb/ratchet.py.json sdlc/records sdlc/tickets sdlc/issues
+opens: sdlc/scripts/allow-list sdlc/scripts/heavy-lock sdlc/scripts/lint sdlc/scripts/README.md sdlc/scripts/children crates/thinkthen/src/cli/interrupt.rs crates/thinkthen/src/cli/interrupt/tests.rs crates/thinkthen/tests/backend/interrupt.rs crates/thinkthen/tests/relate_edge.rs crates/thinkthen/src/core/recording.rs databases/postgresql/src/files.rs databases/duckdb/tools/source_checks.py conformance/children/children.py sdlc/ratchet.json databases/postgresql/ratchet.json databases/duckdb/ratchet.py.json sdlc/records sdlc/tickets sdlc/issues
 ---
 
 # 0133: Keep the rungs' environment to an allow list and clear three harness leftovers
