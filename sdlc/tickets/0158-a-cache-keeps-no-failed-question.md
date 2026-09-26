@@ -33,11 +33,13 @@ Read from `origin/main` `c490f082`.
 
 In `ask_prepared`, after a live reply decodes, the engine checks both. When the recorder caches and the reply failed a question, it cancels the permit in place of finishing it. It still returns the reply, so the run prints and exits exactly as today. Every other case finishes the permit as today. A cancelled permit releases the digest's lock, so a waiter on the same digest sends its own request, as it does after a failed owner today.
 
+**A partial entry reads as a miss under a cache.** The coordinator ruled this on 2026-09-26. An entry already in a folder can hold a reply that failed a question: one written before this ticket by a default cache, or one written by `--record` alone. When the recorder caches, `Recorder::prepare_cancelled` takes a check from `ask_prepared`, which decodes an existing entry against the plan and reports whether any question failed. A cache treats such an entry as it treats a damaged one today: it takes the digest's lock, checks again, sends, and replaces the entry atomically when the new reply answered every question. When the new reply fails a question too, the old entry stays and the next cached run asks again. `--replay` alone never runs the check. It replays a partial entry byte for byte, with the recorded failure markers and exit code. `--record` alone keeps today's rule for an existing entry.
+
 The engine is shared, so the libraries and SQL extensions follow the same rule under their caches. `relate` edges and `annotate` question entries follow it too.
 
 ### Pages
 
-- `records.md`, the cache paragraph: after "Each digest keeps the first complete response installed in the folder." add "A reply that failed a question is not complete. A cache does not install it, and the next run asks again. `--record` alone still writes it."
+- `records.md`, the cache paragraph: after "Each digest keeps the first complete response installed in the folder." add "A reply that failed a question is not complete. A cache does not install it, and the next run asks again. A cache also reads an entry that holds such a reply as a miss, and replaces it once a reply answers every question. `--record` alone still writes it, and `--replay` alone still replays it."
 - `recording.md`, line 84: after the first sentence add "A cache, typed or default, installs no partial reply, so a cached run asks again. ADR 0053 item 6 rules it."
 - `recording.md`, line 59, "Only an exchange that succeeded and decoded is recorded. A failure is never recorded.": after it add "A reply that failed a question beside a good answer counts as decoded. `--record` writes it. A cache does not install it."
 - `recording.md`, line 13, the row "Both, with the same `DIR`": its cell becomes "A cache. An entry that exists is replayed. A request that is absent goes to the backend, and its reply is recorded when it answered every question."
@@ -53,6 +55,7 @@ Each is the ticket author's call unless marked. Ian can overturn any of them.
 2. **`--record` alone still writes a partial reply.** A recording exists to replay a run as it happened, and `recording.md` line 84 promises that.
 3. **A first run's output does not change.** The fix touches only what the folder keeps. The same reply prints the same rows, markers and exit code. A cached rerun of a partial reply sends again, so its `meta.cached`, `meta.requests_sent` and `meta.usage` report a live request. That change is the point of the ticket.
 4. **The check lives in `ask_prepared`, the one place a live reply is installed.** No second write path exists.
+5. **A cache reads a partial entry as a miss, and `--replay` alone replays it.** The coordinator ruled it. It clears partial entries left in default caches before this ticket and in folders written by `--record` alone. A replay stays byte for byte.
 
 ## Edge cases
 
@@ -64,6 +67,10 @@ Each is the ticket author's call unless marked. Ian can overturn any of them.
 | A reply that answers every question under the default cache, run twice | The second run sends nothing, as today |
 | A reply that fails every question | A whole-reply decode error at exit 4, as today. No entry |
 | Two concurrent runs on one `--cache DIR` with the same partial reply | Each sends once. The folder holds no entry |
+| A folder holding a partial entry, run under `--cache DIR` against a backend that now answers every question | One request. The complete reply replaces the entry. A second cached run sends nothing |
+| A folder holding a partial entry, run under `--cache DIR` against a backend that still fails the question | One request each run. The old entry stays |
+| The same folder under `--replay DIR` alone | The recorded failure marker and exit 6, byte for byte. No request |
+| A default cache holding a partial entry written before this ticket | Read as a miss, as the `--cache DIR` rows say |
 
 ## Proof
 
@@ -84,10 +91,10 @@ The four questions:
 
 Nonblank lines, measured with `grep -c .`.
 
-- `crates/thinkthen/src/engine/request.rs`, `engine/recorder.rs` and `core/reply.rs`: at most 15 net together.
-- `crates/thinkthen/tests/backend/cache_partial.rs`: at most 90, new, and one `mod` line.
+- `crates/thinkthen/src/engine/request.rs`, `engine/recorder.rs` and `core/reply.rs`: at most 35 net together.
+- `crates/thinkthen/tests/backend/cache_partial.rs`: at most 150, new, and one `mod` line.
 - Pages under `specification/`: at most 8 net.
-- `sdlc/ratchet.json` moves to the measured total, at most 110 above main. The commit says what grew.
+- `sdlc/ratchet.json` moves to the measured total, at most 195 above main. The commit says what grew.
 - No dependency.
 - The `surfaces` rung runs, because the engine that the libraries share changes.
 
@@ -120,6 +127,7 @@ None.
 
 - Decision 1: a cache never installs a reply that failed a question.
 - Decision 2: `--record` alone still writes it.
+- Decision 5, the coordinator's: a cache reads a partial entry as a miss and replaces it, and `--replay` alone replays it.
 - The coordinator's order: this ticket lands before ticket 0146 lands.
 
 ## Closes
@@ -130,6 +138,6 @@ Finding 4 of `sdlc/issues/2026-09-26-batching-design-review-before-0146.md`.
 
 - Starts from: ADR 0053 item 6. Finding 4 of `sdlc/issues/2026-09-26-batching-design-review-before-0146.md`, reproduced in local experiment 273 with `annotate` and a hand-built cache entry. The code at `origin/main` `c490f082`: `engine/request.rs::ask_prepared`, `core/adapters/systemone/response.rs`, `core/reply.rs` and `engine/recorder.rs`. `specification/records.md`'s "first complete response" and `recording.md` line 84.
 - Keeps: Every complete reply cached as today. `--record` and `--replay` as today, partial replies included. A first run's output, standard error and exit code, and those of every `--record` and `--replay` run. A cached rerun of a partial reply changes by design: it asks again, so `meta.cached`, `meta.requests_sent`, `meta.usage` and the usage totals show a sent request.
-- Changes: A cache, typed or default, no longer installs a reply that failed a question. Page sentences in `records.md` and `recording.md`.
+- Changes: A cache, typed or default, no longer installs a reply that failed a question, and reads an existing entry that holds one as a miss. Page sentences in `records.md` and `recording.md`.
 - Proof: One outside-in test with three plants, and the `install`, `lint`, `test`, `spec` and `surfaces` rungs.
 - Defers: Nothing.
