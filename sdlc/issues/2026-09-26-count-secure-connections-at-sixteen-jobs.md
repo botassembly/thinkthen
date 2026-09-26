@@ -1,6 +1,6 @@
 # Count secure connections at sixteen jobs
 
-Filed 2026-09-26 by ticket 0145, the speed test.
+Status: Open. Filed 2026-09-26 by ticket 0145, the speed test.
 
 Ticket 0142 set the connection pool to keep up to `--jobs` connections. Its deferred gap 1 says no gate test counts secure handshakes, because the loopback listener speaks plain HTTP. It left the count to the S1 speed test's live part, or to an authorized run of experiment 268's harness.
 
