@@ -63,14 +63,18 @@ fn the_key_order_of_an_answers_object_carries_nothing() {
 
 #[test]
 fn an_unexpected_answer_name_refuses_the_whole_reply() {
-    let body = concat!(
-        r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.5},"#,
-        r#""q2":{"type":"noul","noul":0.1}}}"#,
-    );
-    assert_eq!(
-        decode(&urgency_plan(), body.as_bytes()),
-        Err(DecodeError::UnexpectedAnswer)
-    );
+    // Ticket 0132 reads the number from the name, so each spelling the number
+    // parser takes but `wire_name` never writes stays refused.
+    for name in ["q2", "q0", "q01", "q+1", "Q1", "q", "1"] {
+        let body = format!(
+            r#"{{"model":"jev-1.13.0","answers":{{"q1":{{"type":"noul","noul":0.5}},"{name}":{{"type":"noul","noul":0.1}}}}}}"#
+        );
+        assert_eq!(
+            decode(&urgency_plan(), body.as_bytes()),
+            Err(DecodeError::UnexpectedAnswer),
+            "{name}"
+        );
+    }
 }
 
 #[test]

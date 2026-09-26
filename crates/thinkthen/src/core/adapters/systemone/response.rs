@@ -93,11 +93,16 @@ fn decode_response(
             _ => 1,
         })
         .sum::<usize>();
-    if response
-        .answers
-        .keys()
-        .any(|name| !(0..wire_count).any(|place| wire_name(place) == *name))
-    {
+    // A name is expected when it is `q1` to `qN` written as `wire_name` writes
+    // it. Reading the number keeps the check linear in the answers.
+    let expected = |name: &String| {
+        name.strip_prefix('q')
+            .and_then(|number| number.parse::<usize>().ok())
+            .is_some_and(|number| {
+                (1..=wire_count).contains(&number) && wire_name(number - 1) == *name
+            })
+    };
+    if !response.answers.keys().all(expected) {
         return Err(DecodeError::UnexpectedAnswer);
     }
     let mut answers = Vec::with_capacity(plan.questions().len());
