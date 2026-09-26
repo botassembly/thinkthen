@@ -12,7 +12,7 @@ mod measure_support;
 #[path = "../src/test_deadline/wait.rs"]
 mod wait;
 
-use measure_support::{audit, found, member, ranked, replay, repository, with_ids};
+use measure_support::{audit, found, member, ranked, replay, repository, run, with_ids};
 
 /// Each hand fixture under `verbs/`, the row it checks, and each member's hand-computed value.
 /// `tests/fixtures/measure/README.md` shows the arithmetic.
@@ -142,4 +142,39 @@ fn real_output_reads() {
         assert_eq!(found, expected.map(str::to_owned));
     }
     std::fs::remove_dir_all(&folder).expect("cleanup");
+}
+
+/// Help names audit, and a `--by` value that is neither a word nor a pointer gets the usage error.
+#[test]
+fn help_names_audit_and_says_what_it_never_does() {
+    const ROW: &str = "Grade saved answers against an answer key and suggest a bar.";
+    let text =
+        |arguments: &[&str]| String::from_utf8(run(arguments, b"").stdout).expect("UTF-8 help");
+    let root = text(&["--help"]);
+    assert!(
+        root.contains(&format!("\n  audit      {}\n", ROW.trim_end_matches('.'))),
+        "{root}"
+    );
+    assert!(text(&["audit", "-h"]).starts_with(&format!("{}\n\n", ROW.trim_end_matches('.'))));
+    let long = text(&["audit", "--help"]);
+    assert!(long.starts_with(&format!("{ROW}\n\n")), "{long}");
+    for sentence in [
+        "audit sends no request and reads no key.",
+        "To grade a recording, replay it with --details and pass the output:",
+    ] {
+        assert!(long.contains(sentence), "{sentence}");
+    }
+    let (_, _, stderr) = audit(
+        &[
+            "small/decide.jsonl",
+            "small/decide-key.jsonl",
+            "--by",
+            "colour",
+        ],
+        b"",
+    );
+    assert_eq!(
+        stderr,
+        "error: invalid value 'colour' for '--by <question|verb|POINTER>': --by takes question, verb, or a JSON pointer such as /category\n\nFor more information, try '--help'.\n"
+    );
 }
