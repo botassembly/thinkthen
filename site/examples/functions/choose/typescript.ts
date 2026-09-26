@@ -7,7 +7,7 @@ const teams = {
   shipping: "Parcels and delivery.",
   account: "Logins and passwords.",
 };
-const owner = {
+const teamQuestion = {
   choose: question,
   options: teams,
   threshold: 0.9,
@@ -20,10 +20,10 @@ const texts = [
   "My parcel never came, and now " +
     "I cannot log in to track it.",
 ];
-const answers = await Promise.all(
-  texts.map((text) => tt.choose(owner, text)),
+const owners = await Promise.all(
+  texts.map((text) => tt.choose(teamQuestion, text)),
 );
-assert.deepEqual(answers, [
+assert.deepEqual(owners, [
   "billing",
   "shipping",
   "account",

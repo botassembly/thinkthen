@@ -620,7 +620,7 @@ export const TECHNIQUES = [
   {
     slug: 'if', title: 'Branch with if', label: 'if',
     goal: '`if` reads the exit code of `decide --quiet` directly.',
-    said: '`decide --quiet` prints nothing. Its exit code is the answer. `if` reads it directly.',
+    said: '`decide --quiet` prints nothing. Its exit code is the answer. The function `asks_for_refund` names what that code means, and `if` reads it directly.',
     see: { '1-if': 'The ticket asks for a refund. The if branch picks the refunds queue.' },
   },
   {
@@ -632,7 +632,7 @@ export const TECHNIQUES = [
   {
     slug: 'not-sure', title: 'Handle not sure', label: 'not sure',
     goal: 'A script reads three exit codes and sends not sure to a person.',
-    said: '`case $?` reads the three exit codes of `decide`: 0 for yes, 1 for no, and 3 for not sure.',
+    said: '`refund_code=$?` names the exit code of `decide`. `case` reads its three values: 0 for yes, 1 for no, and 3 for not sure.',
     see: { '1-route': 'The refund goes to refunds and the thanks gets a reply. The send-back line lands in the band 0.2:0.8 and goes to a person.' },
   },
   {

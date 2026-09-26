@@ -34,18 +34,18 @@ const char *spec =
     "\"name\": \"contradicts\", \"source\": \"*\", "
     "\"target\": \"*\", \"either\": true}]}, "
     "\"threshold\": 0.5}";
-char *edges;
-size_t edges_len;
+char *contradictions;
+size_t contradictions_len;
 int rc = thinkthen_relate(
     tt,
     spec,
     texts,
     lengths,
     8,
-    &edges,
-    &edges_len
+    &contradictions,
+    &contradictions_len
 );
 assert(rc == THINKTHEN_OK);
-assert(strstr(edges, "\"probability\":0.84"));
-assert(strstr(edges, "\"probability\":0.99"));
-thinkthen_free_string(edges);
+assert(strstr(contradictions, "\"probability\":0.84"));
+assert(strstr(contradictions, "\"probability\":0.99"));
+thinkthen_free_string(contradictions);

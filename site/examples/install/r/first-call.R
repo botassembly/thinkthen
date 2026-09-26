@@ -13,6 +13,10 @@ stopifnot(identical(
   c("billing", "shipping", "account")
 ))
 
-money <- tt_rank("Is this about money?", body, top = 1)
-stopifnot(identical(money$record, body[1]))
-stopifnot(identical(money$probability, 0.98))
+about_money <- tt_rank(
+  "Is this about money?",
+  body,
+  top = 1
+)
+stopifnot(identical(about_money$record, body[1]))
+stopifnot(identical(about_money$probability, 0.98))

@@ -6,7 +6,7 @@ teams = {
     "shipping": "Parcels and delivery.",
     "account": "Logins and passwords.",
 }
-owner = tt.question(
+team_question = tt.question(
     choose=question,
     options=teams,
     threshold=0.9,
@@ -21,5 +21,8 @@ texts = [
         "I cannot log in to track it."
     ),
 ]
-answers = [tt.choose(owner, text) for text in texts]
-assert answers == ["billing", "shipping", "account", None]
+owners = [
+    tt.choose(team_question, text)
+    for text in texts
+]
+assert owners == ["billing", "shipping", "account", None]

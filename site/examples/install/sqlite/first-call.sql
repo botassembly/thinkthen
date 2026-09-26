@@ -6,5 +6,5 @@ INSERT INTO messages VALUES
 SELECT id, thinkthen_tag(
     '{"tag": "Which labels fit this message?",
       "labels": ["praise", "bug", "billing"]}',
-    body)
+    body) AS fitting_labels
 FROM messages;

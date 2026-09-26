@@ -11,6 +11,6 @@ tickets = pl.DataFrame({
     ],
 })
 tickets = tickets.with_columns(
-    refund=tt.decide(refund, tickets["body"]),
+    is_refund=tt.decide(refund, tickets["body"]),
 )
-assert tickets["refund"].to_list() == [True, False, None]
+assert tickets["is_refund"].to_list() == [True, False, None]

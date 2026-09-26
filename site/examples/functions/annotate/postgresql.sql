@@ -1,4 +1,4 @@
-SELECT thinkthen_annotate('@form.json', body) AS form
+SELECT thinkthen_annotate('@form.json', body) AS triage
 FROM (VALUES
     ('CSV export fails. Steps: click Export.'),
     ('The login page spins and nobody can sign in.'),

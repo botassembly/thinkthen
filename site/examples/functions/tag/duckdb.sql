@@ -6,4 +6,4 @@ SELECT thinkthen_tag(
     'but export crashes the app, ' ||
     'and I was charged twice.',
     ['praise', 'bug', 'billing']
-) AS labels;
+) AS fitting_labels;

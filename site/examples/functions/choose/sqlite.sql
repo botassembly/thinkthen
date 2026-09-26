@@ -16,6 +16,6 @@ SELECT
           },
           "threshold": 0.9}',
         body
-    ),
+    ) AS team,
     body
 FROM t;

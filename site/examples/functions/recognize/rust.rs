@@ -22,9 +22,9 @@ let ask = Recognize::builder()
     .relation(works_for)?
     .relation(based_in)?
     .build()?;
-let found = tt.recognize(&ask, text)?;
+let facts = tt.recognize(&ask, text)?;
 
-let names: Vec<_> = found
+let names: Vec<_> = facts
     .entities()
     .iter()
     .map(|one| (one.name(), one.kind()))
@@ -36,7 +36,7 @@ let expected = [
 ];
 assert_eq!(names, expected);
 
-let links: Vec<_> = found
+let links: Vec<_> = facts
     .relations()
     .unwrap_or_default()
     .iter()

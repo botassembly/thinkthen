@@ -10,6 +10,6 @@ inbox = [
     "Reminder: your invoice is due in 30 days",
     "Please send the signed quote by 5 pm today",
 ]
-ranked = tt.rank(question, inbox)
-order = [one["index"] for one in ranked]
+by_urgency = tt.rank(question, inbox)
+order = [one["index"] for one in by_urgency]
 assert order == [1, 3, 2, 0]

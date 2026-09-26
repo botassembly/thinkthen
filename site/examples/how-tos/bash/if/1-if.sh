@@ -5,9 +5,12 @@ Please refund the duplicate.
 EOF
 )
 
-if printf '%s\n' "$ticket" |
-   thinkthen decide "$question" --quiet
-then
+asks_for_refund() {
+  printf '%s\n' "$1" |
+  thinkthen decide "$question" --quiet
+}
+
+if asks_for_refund "$ticket"; then
   queue="refunds"
 else
   queue="support"

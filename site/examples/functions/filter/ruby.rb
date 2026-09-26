@@ -7,5 +7,5 @@ reviews = [
   "Does this come in blue?",
   "The strap snapped on day two."
 ]
-kept = ThinkThen.filter(question, reviews)
-raise unless kept == [reviews[1], reviews[3]]
+complaints = ThinkThen.filter(question, reviews)
+raise unless complaints == [reviews[1], reviews[3]]

@@ -14,4 +14,4 @@ INSERT INTO rules VALUES
 SELECT * FROM thinkthen_relate(
     'SELECT id, body FROM rules',
     ARRAY['contradicts']
-);
+) AS contradiction;
