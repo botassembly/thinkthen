@@ -37,4 +37,4 @@ description: Use when writing or editing any page or code example on the ThinkTh
 - An article includes an example with `<!-- example: <page>/<name> -->` and a file with `<!-- file: <path> -->`.
 - Capture with `node scripts/smoke.mjs --update <page>/<name>` from `site/`. Read the new output, check every `test` value and the caption against it, then run `npm run build`.
 - Every call answers from a saved recording. Make no live call: it costs money. If a request has no recording, change the example to one a recording answers, or stop and ask the site's owner.
-- `npm run build` runs `check-samples`, the smoke run, the Astro build, the Markdown twins, the settings check, and the link check. The smoke run uses `target/release/thinkthen` from the same commit.
+- `npm run build` runs `check-samples`, the slide check, the smoke run, the Astro build, the Markdown twins, the settings check, and the link check. The smoke run uses `target/release/thinkthen` from the same commit.

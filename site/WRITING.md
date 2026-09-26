@@ -176,8 +176,9 @@ After a change to the command or to a script, run `node scripts/smoke.mjs --upda
 
 - The smoke run uses the command built from the same commit, `../target/release/thinkthen`. `cargo build --release` makes it. `THINKTHEN_BIN` names another build.
 - The Beatles Bench files come from the bench commit in `examples/beatles/BENCH`. `BEATLES_BENCH=path npm run pull-bench` copies the files the Beatles scripts read from a checkout at that commit.
+- The Beatles Bench slides come from the talk's deck. `DECK=path npm run export-slides` exports them from the deck's committed `slide.png` files, and stops unless the deck's `BENCH_AT` names the commit in `examples/beatles/BENCH`. The slide check fails when `src/data/slides.json` names another bench or an image differs from its record.
 - `jq` must be on the path.
 
 ### What runs on each change
 
-`npm run build` runs `check-samples`, then the smoke run, then the Astro build, the Markdown twins, the settings check, and the link check. `npm run check` runs `check-samples`, the smoke run, the settings check, and the link check on an existing build. The Pages workflow builds the command and then runs `npm run build`. Run `npm run check` before every commit that touches a page or an example.
+`npm run build` runs `check-samples`, then the slide check, then the smoke run, then the Astro build, the Markdown twins, the settings check, and the link check. `npm run check` runs `check-samples`, the slide check, the smoke run, the settings check, and the link check on an existing build. The Pages workflow builds the command and then runs `npm run build`. Run `npm run check` before every commit that touches a page or an example.
