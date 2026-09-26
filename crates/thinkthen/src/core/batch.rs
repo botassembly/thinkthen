@@ -117,10 +117,16 @@ pub(crate) struct Batcher {
     skeleton: usize,
     /// The bytes of `{"records":[]}`, or of the context.
     evidence: usize,
+    open: Open,
+}
+
+/// The open batch: its distinct records, each record's place among them, and
+/// running totals of the distinct records' batched shares.
+#[derive(Default)]
+struct Open {
     distinct: Vec<Joined>,
     seen: BTreeMap<String, usize>,
     members: Vec<usize>,
-    /// Running totals of the distinct records' batched shares.
     bytes: usize,
     lines: usize,
     wires: usize,
@@ -159,12 +165,7 @@ impl Batcher {
             context,
             skeleton: 0,
             evidence,
-            distinct: Vec::new(),
-            seen: BTreeMap::new(),
-            members: Vec::new(),
-            bytes: 0,
-            lines: 0,
-            wires: 0,
+            open: Open::default(),
         };
         if quotable {
             batcher.skeleton = batcher.skeleton()?;
@@ -182,21 +183,21 @@ impl Batcher {
             .first_chunk::<8>()
             .is_some_and(|head| u64::from_be_bytes(*head) % CUT == 0);
         let mut closed = Vec::new();
-        if let Some(&place) = self.seen.get(&line) {
-            self.members.push(place);
+        if let Some(&place) = self.open.seen.get(&line) {
+            self.open.members.push(place);
         } else {
             let joined = self.joined(record, line.len())?;
             if self.context.is_some() {
                 self.context_fits(joined.share, joined.wire)?;
             }
-            if !self.distinct.is_empty() && !self.fits(&joined) {
+            if !self.open.distinct.is_empty() && !self.fits(&joined) {
                 closed.push(self.close(Closed::Limit)?);
             }
             self.add(joined, line);
         }
         if cut {
             closed.push(self.close(Closed::Content)?);
-        } else if self.size == Some(self.members.len()) {
+        } else if self.size == Some(self.open.members.len()) {
             closed.push(self.close(Closed::Size)?);
         }
         Ok(closed)
@@ -204,34 +205,22 @@ impl Batcher {
 
     /// Close the open batch at the end of input, if it holds a record.
     pub(crate) fn finish(&mut self) -> Result<Option<Batch>, BatchError> {
-        (!self.members.is_empty())
+        (!self.open.members.is_empty())
             .then(|| self.close(Closed::End))
             .transpose()
     }
 
     /// Quote one record and measure its batched share from one encode.
     fn joined(&self, record: BatchRecord, line: usize) -> Result<Joined, BatchError> {
-        let Some(question) = self.quoted(&record.value)? else {
-            return Ok(Joined {
-                record,
-                question: None,
-                wire: 1,
-                share: 0,
-                line,
-            });
+        let question = self.quoted(&record.value)?;
+        let (wire, alone) = match &question {
+            Some(asked) => self.measured(&[(&record.value, asked)])?,
+            None => (1, self.skeleton),
         };
-        let wire = Plan::new(
-            record.evidence.clone(),
-            self.model(),
-            vec![question.clone()],
-        )
-        .map_err(|_| defect())?
-        .wire_question_count();
-        let alone = self.encoded(&[(&record.value, &question)])?.len();
         let share = alone.checked_sub(self.skeleton).ok_or_else(defect)?;
         Ok(Joined {
             record,
-            question: Some(question),
+            question,
             wire,
             share,
             line,
@@ -239,36 +228,36 @@ impl Batcher {
     }
 
     fn add(&mut self, joined: Joined, line: String) {
-        let (share, wire) = (joined.share, joined.wire);
-        self.bytes += share + self.join_bytes(wire);
-        self.lines += joined.line + usize::from(!self.distinct.is_empty());
-        self.wires += wire;
-        self.seen.insert(line, self.distinct.len());
-        self.members.push(self.distinct.len());
-        self.distinct.push(joined);
+        self.open.bytes += joined.share + self.join_bytes(joined.wire);
+        self.open.lines += joined.line + usize::from(!self.open.distinct.is_empty());
+        self.open.wires += joined.wire;
+        self.open.seen.insert(line, self.open.distinct.len());
+        self.open.members.push(self.open.distinct.len());
+        self.open.distinct.push(joined);
     }
 
     /// The bytes a record adds beside its share: its separators and the
     /// extra digits its wire names take past `q1`, `q2`, and so on.
     fn join_bytes(&self, wire: usize) -> usize {
-        if self.distinct.is_empty() {
-            return 0;
+        let names = (0..wire).map(|at| digits(self.open.wires + at + 1) - digits(at + 1));
+        if self.open.distinct.is_empty() {
+            0
+        } else {
+            self.separators() + names.sum::<usize>()
         }
-        let separators = if self.context.is_some() { 1 } else { 2 };
-        separators
-            + (0..wire)
-                .map(|at| digits(self.wires + at + 1) - digits(at + 1))
-                .sum::<usize>()
+    }
+
+    /// Two separators join a record, in the evidence list and the questions, or one beside a context.
+    fn separators(&self) -> usize {
+        if self.context.is_some() { 1 } else { 2 }
     }
 
     /// Whether the open batch and this record fit every limit in the batched form.
     fn fits(&self, joined: &Joined) -> bool {
-        let body = self.skeleton + self.bytes + joined.share + self.join_bytes(joined.wire);
-        let evidence = match self.context {
-            Some(_) => self.evidence,
-            None => self.evidence + self.lines + joined.line + 1,
-        };
-        self.over(body, evidence, self.wires + joined.wire)
+        let body = self.skeleton + self.open.bytes + joined.share + self.join_bytes(joined.wire);
+        let list = self.open.lines + joined.line + 1;
+        let evidence = self.evidence + if self.context.is_some() { 0 } else { list };
+        self.over(body, evidence, self.open.wires + joined.wire)
             .is_none()
     }
 
@@ -279,66 +268,62 @@ impl Batcher {
         evidence: usize,
         wires: usize,
     ) -> Option<(LimitKind, usize, usize)> {
-        let profile = self.profile.as_ref();
-        let request = profile
+        let held = self.profile.as_ref();
+        let request = held
             .and_then(|held| held.max_request_bytes)
             .or(self.backend.ceiling());
-        [
-            (
-                LimitKind::EvidenceBytes,
-                profile.and_then(|held| held.max_evidence_bytes),
-                evidence,
-            ),
+        let evidence_limit = held.and_then(|held| held.max_evidence_bytes);
+        let limits = [
+            (LimitKind::EvidenceBytes, evidence_limit, evidence),
             (LimitKind::RequestBytes, request, body),
             (
                 LimitKind::Questions,
-                profile.and_then(|held| held.max_questions),
+                held.and_then(|held| held.max_questions),
                 wires,
             ),
-        ]
-        .into_iter()
-        .find_map(|(kind, limit, actual)| {
-            limit
-                .filter(|&most| actual > most)
+        ];
+        limits.into_iter().find_map(|(kind, most, actual)| {
+            most.filter(|&most| actual > most)
                 .map(|most| (kind, most, actual))
         })
     }
 
     /// Refuse a context whose request with one such record, or none, passes a limit.
     fn context_fits(&self, share: usize, wire: usize) -> Result<(), BatchError> {
-        match self.over(self.skeleton + share, self.evidence, wire) {
-            Some((kind, limit, actual)) => Err(BatchError::ContextOverLimit {
-                kind,
-                limit,
-                actual,
-            }),
-            None => Ok(()),
-        }
+        self.over(self.skeleton + share, self.evidence, wire)
+            .map_or(Ok(()), |(kind, limit, actual)| {
+                Err(BatchError::ContextOverLimit {
+                    kind,
+                    limit,
+                    actual,
+                })
+            })
     }
 
     /// Encode the open batch once, check it, and start the next one.
     fn close(&mut self, closed: Closed) -> Result<Batch, BatchError> {
-        let distinct = std::mem::take(&mut self.distinct);
-        let members = std::mem::take(&mut self.members);
+        let Open {
+            distinct,
+            members,
+            bytes,
+            ..
+        } = std::mem::take(&mut self.open);
         let batched = self.context.is_some() || distinct.len() > 1;
-        let plan = match (batched, distinct.first()) {
-            (false, Some(only)) => Plan::new(
+        let pairs: Vec<_> = distinct
+            .iter()
+            .filter_map(|held| Some((&held.record.value, held.question.as_ref()?)))
+            .collect();
+        let plan = match distinct.first() {
+            Some(only) if !batched => Plan::new(
                 only.record.evidence.clone(),
                 self.model(),
                 vec![self.question.clone()],
-            ),
-            _ => Plan::new(
-                self.evidence_of(&distinct)?,
-                self.model(),
-                distinct
-                    .iter()
-                    .filter_map(|held| held.question.clone())
-                    .collect(),
-            ),
-        }
-        .map_err(|_| defect())?;
+            )
+            .map_err(|_| defect())?,
+            _ => self.plan(&pairs)?,
+        };
         let body = built_in::encode(&plan).map_err(|_| defect())?;
-        if batched && body.len() != self.skeleton + self.bytes {
+        if batched && body.len() != self.skeleton + bytes {
             return Err(BatchError::Defect(
                 "a batch's body differs from its counted bytes",
             ));
@@ -353,8 +338,6 @@ impl Batcher {
             .iter()
             .scan(0, |at, held| Some(std::mem::replace(at, *at + held.wire)))
             .collect();
-        (self.bytes, self.lines, self.wires) = (0, 0, 0);
-        self.seen.clear();
         Ok(Batch {
             digest: Exchange::new(self.backend.url(), &body).digest(),
             questions: members
@@ -367,65 +350,45 @@ impl Batcher {
         })
     }
 
-    /// The batched evidence: the context, or the distinct records' values.
-    fn evidence_of(&self, distinct: &[Joined]) -> Result<Evidence, BatchError> {
-        match &self.context {
-            Some(context) => Ok(context.clone()),
-            None => Evidence::structured(records(
-                distinct
-                    .iter()
-                    .map(|held| held.record.value.clone())
-                    .collect(),
-            ))
-            .map_err(|_| defect()),
-        }
-    }
-
-    /// The batched body of these records, encoded.
-    fn encoded(&self, held: &[(&Json, &Question)]) -> Result<Vec<u8>, BatchError> {
+    /// The batched plan of these records: the context or their values as evidence.
+    fn plan(&self, pairs: &[(&Json, &Question)]) -> Result<Plan, BatchError> {
+        let values = || records(pairs.iter().map(|(value, _)| (*value).clone()).collect());
         let evidence = match &self.context {
             Some(context) => context.clone(),
-            None => Evidence::structured(records(
-                held.iter().map(|(value, _)| (*value).clone()).collect(),
-            ))
-            .map_err(|_| defect())?,
+            None => Evidence::structured(values()).map_err(|_| defect())?,
         };
-        let questions = held
+        let questions = pairs
             .iter()
             .map(|(_, question)| (*question).clone())
             .collect();
-        let plan = Plan::new(evidence, self.model(), questions).map_err(|_| defect())?;
-        built_in::encode(&plan).map_err(|_| defect())
+        Plan::new(evidence, self.model(), questions).map_err(|_| defect())
     }
 
-    /// The batched body with no record: one probe record alone, less its
-    /// share, which two copies of it side by side reveal.
+    /// The wire questions and encoded bytes of the batched plan of these records.
+    fn measured(&self, pairs: &[(&Json, &Question)]) -> Result<(usize, usize), BatchError> {
+        let plan = self.plan(pairs)?;
+        let body = built_in::encode(&plan).map_err(|_| defect())?;
+        Ok((plan.wire_question_count(), body.len()))
+    }
+
+    /// The batched body with no record: a probe record alone, less its share,
+    /// which two copies of it side by side reveal.
     fn skeleton(&self) -> Result<usize, BatchError> {
         let probe = Json::String("0".to_owned());
-        let question = self.quoted(&probe)?.ok_or_else(defect)?;
-        let wire = Plan::new(
-            Evidence::new("0").map_err(|_| defect())?,
-            self.model(),
-            vec![question.clone()],
-        )
-        .map_err(|_| defect())?
-        .wire_question_count();
-        let one = self.encoded(&[(&probe, &question)])?.len();
-        let two = self
-            .encoded(&[(&probe, &question), (&probe, &question)])?
-            .len();
-        let separators = if self.context.is_some() { 1 } else { 2 };
+        let asked = self.quoted(&probe)?.ok_or_else(defect)?;
+        let (wire, one) = self.measured(&[(&probe, &asked)])?;
+        let (_, two) = self.measured(&[(&probe, &asked), (&probe, &asked)])?;
         let names: usize = (0..wire)
             .map(|at| digits(wire + at + 1) - digits(at + 1))
             .sum();
         let share = two
-            .checked_sub(one + separators + names)
+            .checked_sub(one + self.separators() + names)
             .ok_or_else(defect)?;
         one.checked_sub(share).ok_or_else(defect)
     }
 
-    /// The question with `The text is `, the record's JSON, and `. ` before its text.
-    /// `None` when the question is written as JSON and cannot be quoted.
+    /// The question with `The text is `, the record's JSON, and `. ` before its
+    /// text, or `None` for a question written as JSON.
     fn quoted(&self, value: &Json) -> Result<Option<Question>, BatchError> {
         let Some(asked) = &self.text else {
             return Ok(None);
