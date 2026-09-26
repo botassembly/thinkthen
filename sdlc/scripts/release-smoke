@@ -7,6 +7,7 @@
 # block with no key: every line but its one curl line, whose download DIR supplies.
 set -eu
 . "$(dirname -- "$0")/verdict.sh"
+. "$(dirname -- "$0")/installed.sh"
 [ $# -eq 1 ] && [ -d "$1" ] || { echo 'usage: release-smoke DIR' >&2; exit 2; }
 DIR=$(CDPATH='' cd -- "$1" && pwd)
 REPO=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
@@ -16,45 +17,39 @@ V=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1
 sha256() { if command -v sha256sum >/dev/null; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
 
 # The conformance loopback backend, as the surfaces rung starts it.
-cargo build --locked --quiet --package conformance-backend
-scratch=$(mktemp -d)
-mkfifo "$scratch/in"
-"${CARGO_TARGET_DIR:-target}/debug/conformance-backend" <"$scratch/in" >"$scratch/out" &
-exec 3>"$scratch/in"
-trap 'exec 3>&-; rm -rf -- "$scratch"' EXIT
-tries=0
-until [ -s "$scratch/out" ]; do
-	tries=$((tries + 1))
-	[ "$tries" -le 100 ] || { echo 'release-smoke: the loopback backend printed no port' >&2; exit 1; }
-	sleep 0.1
-done
-port=$(head -n 1 "$scratch/out")
-# The requests the backend has read so far.
-count() {
-	lines=$(wc -l <"$scratch/out")
-	echo count >&3
-	while [ "$(wc -l <"$scratch/out")" -le "$lines" ]; do sleep 0.05; done
-	tail -n 1 "$scratch/out"
+backend_start
+
+# Every library file, unpacked, holds neither the builder's home nor the PostgreSQL test probe. The
+# checks' own scans read their builds, and this one reads the files a user installs.
+scan() {
+	into=$(mktemp -d "$backend/scan.XXXXXX")
+	case $1 in
+	*.whl) python3 -m zipfile -e "$1" "$into" ;;
+	*.gem) tar -xOf "$1" data.tar.gz | tar -xzf - -C "$into" ;;
+	*) tar -xzf "$1" -C "$into" ;;
+	esac
+	found=$(grep -rlaF -e "$HOME" -e thinkthen_panic_probe "$into" | sed "s|^$into/||" | tr '\n' ' ')
+	[ -z "$found" ] || { echo "release-smoke: FAIL ${1##*/} (the builder's home or the test probe is in $found)"; return 1; }
 }
 
 # The command: its version line by path, then the first-run block with it first on PATH.
 command_check() {
-	prefix=$(mktemp -d "$scratch/command.XXXXXX")
+	prefix=$(mktemp -d "$backend/command.XXXXXX")
 	tar -xzf "$1" -C "$prefix"
 	[ "$("$prefix/thinkthen" --version)" = "thinkthen $V" ] ||
 		{ echo "release-smoke: $1 reports $("$prefix/thinkthen" --version)" >&2; return 1; }
 	[ -f "$DIR/thinkthen-first-run.tar.gz" ] || { echo 'release-smoke: DIR holds no thinkthen-first-run.tar.gz' >&2; return 1; }
 	awk '/^## First run$/ { held = 1; next } /^## / { held = 0 } held && /^```/ { if (inside) exit; inside = 1; next } inside' \
-		README.md >"$scratch/block"
-	[ "$(grep -c '^curl ' "$scratch/block")" = 1 ] ||
+		README.md >"$backend/block"
+	[ "$(grep -c '^curl ' "$backend/block")" = 1 ] ||
 		{ echo "release-smoke: README.md's First run block holds no one curl line" >&2; return 1; }
-	sed "s|^curl .*|cp '$DIR/thinkthen-first-run.tar.gz' .|" "$scratch/block" >"$prefix/block.sh"
+	sed "s|^curl .*|cp '$DIR/thinkthen-first-run.tar.gz' .|" "$backend/block" >"$prefix/block.sh"
 	mkdir "$prefix/home"
-	before=$(count)
+	before=$(backend_count)
 	answer=$(cd -- "$prefix/home" && env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL HOME="$prefix/home" \
 		XDG_CACHE_HOME="$prefix/home/.cache" PATH="$prefix:$PATH" sh -eu ../block.sh)
 	[ "$answer" = true ] || { echo "release-smoke: the first-run block printed '$answer', not true" >&2; return 1; }
-	[ "$(count)" = "$before" ] || { echo 'release-smoke: the first-run block reached the loopback backend' >&2; return 1; }
+	[ "$(backend_count)" = "$before" ] || { echo 'release-smoke: the first-run block reached the loopback backend' >&2; return 1; }
 }
 
 failed=0 seen=
@@ -68,6 +63,8 @@ for file in "$DIR"/*; do
 		failed=1
 		continue
 	fi
+	# The rung packs the command's debug build, so the scan reads the libraries alone.
+	case $name in thinkthen-"$V"-*.tar.gz) ;; *) scan "$file" || { failed=1; continue; } ;; esac
 	case $name in
 	thinkthen-first-run.tar.gz) seen="$seen first-run"; continue ;;
 	thinkthen-c-*.tar.gz) surface=libraries/c ;;
