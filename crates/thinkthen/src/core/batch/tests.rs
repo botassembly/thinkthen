@@ -164,7 +164,7 @@ fn each_batch_body_matches_its_fixture() {
     });
     let duplicate = ["Come Together", "Because", "Come Together"];
     let context = "Come Together appears on Abbey Road.\nBecause appears on Abbey Road.\n";
-    let cases: [(Question, Vec<BatchRecord>, Option<&str>, &str, Vec<usize>); 5] = [
+    let cases: [BodyCase<'_>; 5] = [
         (
             decide(SONG),
             three.map(text).into(),
@@ -274,6 +274,24 @@ fn batches_close_where_the_readme_says() {
     assert!(!kept.contains(&before[1]) && !kept.contains(&before[2]));
 }
 
+/// A body fixture's question, records, context, fixture, and each record's first question.
+type BodyCase<'a> = (
+    Question,
+    Vec<BatchRecord>,
+    Option<&'a str>,
+    &'a str,
+    Vec<usize>,
+);
+
+/// A limit case's backend, profile, question, records, and expected batches.
+type LimitCase = (
+    Backend,
+    Option<BackendProfile>,
+    Question,
+    Vec<BatchRecord>,
+    Vec<(usize, Closed)>,
+);
+
 /// Three records of `bytes` bytes each, from distinct letters.
 fn sized(bytes: usize) -> Vec<BatchRecord> {
     ["a", "b", "c"]
@@ -291,16 +309,9 @@ fn limits_close_batches_by_exact_bytes_and_the_ceiling() {
     };
     let body = compact(fixture!("batch-three")).len();
     let state = r#"{"records":["Come Together","Say \"hello\"\nthen leave","Because"]}"#.len();
-    let built_in = || backend(BUILT_IN, "jev-latest");
     let urgent = || text("Help! My payouts have been failing for 3 days.");
     let today = compact(fixture!("decide-urgent")).len();
-    let cases: [(
-        Backend,
-        Option<BackendProfile>,
-        Question,
-        Vec<BatchRecord>,
-        Vec<(usize, Closed)>,
-    ); 10] = [
+    let cases: [LimitCase; 5] = [
         (
             backend(LOOPBACK, "jev-latest"),
             profile(&format!(r#""max_request_bytes":{body}"#)),
@@ -336,6 +347,15 @@ fn limits_close_batches_by_exact_bytes_and_the_ceiling() {
             vec![urgent(), urgent(), urgent()],
             vec![(3, End)],
         ),
+    ];
+    check(cases);
+}
+
+#[test]
+fn the_ceiling_closes_batches_at_the_built_in_address_only() {
+    use Closed::{End, Limit};
+    let built_in = || backend(BUILT_IN, "jev-latest");
+    let cases: [LimitCase; 5] = [
         (
             built_in(),
             None,
@@ -372,6 +392,11 @@ fn limits_close_batches_by_exact_bytes_and_the_ceiling() {
             vec![(3, End)],
         ),
     ];
+    check(cases);
+}
+
+/// Plan each case at `Max` and compare its batches' sizes and reasons.
+fn check(cases: [LimitCase; 5]) {
     for (backend, profile, question, records, expected) in cases {
         assert_eq!(
             shape(&batches(backend, profile, question, Setting::Max, records)),
@@ -410,7 +435,7 @@ fn questions_copies_and_refusals_follow_the_batch_rules() {
     let alone = batches(
         loopback(),
         None,
-        structured.clone(),
+        structured,
         Setting::Max,
         ["x", "x", "y"].map(text).into(),
     );
@@ -448,6 +473,17 @@ fn questions_copies_and_refusals_follow_the_batch_rules() {
             r#"The text is {"b":2,"a":1}. Q"#
         ]
     );
+}
+
+#[test]
+fn a_context_is_refused_without_echoing_it() {
+    let loopback = || backend(LOOPBACK, "jev-latest");
+    let structured = Question::Decide {
+        text: QuestionText::structured(&Json::parse(r#"{"ask":"urgent?"}"#).expect("json"))
+            .expect("text"),
+        yes: None,
+        no: None,
+    };
     let context = |held: &str| Some(Evidence::new(held).expect("context"));
     let refused = Batcher::new(
         loopback(),
