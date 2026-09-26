@@ -10,8 +10,8 @@ use std::time::Duration;
 use ureq::Agent;
 
 use crate::core::{Json, Withheld};
-use crate::engine::Widths;
 use crate::engine::error::{Error, TransportKind};
+use crate::engine::{Width, Widths};
 
 /// The key one request carries. Diagnostics and `Debug` never expose it.
 pub(crate) struct Key(String);
@@ -52,9 +52,8 @@ const MAX_RETRY_WAIT: Duration = Duration::from_secs(60);
 
 /// One connection pool, built once and shared by every worker.
 ///
-/// A pool keeps a connection open between requests, so a run over many records
-/// pays for one handshake rather than one per record. `ureq` shares an agent
-/// across threads, so the workers hold one of these between them.
+/// It keeps an idle connection for each request the widest throttle allows, so
+/// a run pays for one handshake per job rather than one per record (ticket 0142).
 pub(crate) struct Client {
     agent: Agent,
     timeout: Duration,
@@ -81,7 +80,9 @@ impl Client {
         let mut config = Agent::config_builder()
             .timeout_global(Some(timeout))
             .http_status_as_error(false)
-            .max_redirects(0);
+            .max_redirects(0)
+            .max_idle_connections(Width::MOST.get())
+            .max_idle_connections_per_host(Width::MOST.get());
         if !secure {
             config = config.proxy(None);
         }

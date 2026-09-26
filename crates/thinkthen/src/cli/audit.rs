@@ -4,6 +4,7 @@
 //! request, and reads no setting. Only `--write` changes a file, through the
 //! `write` module. `sdlc/scripts/policy.py` holds it to that.
 
+mod table;
 mod write;
 
 use std::io::Write;
@@ -14,11 +15,12 @@ use clap::{Args, ValueEnum};
 use crate::cli::measure::{BY, Cause, Refusal, lines, rule, write};
 use crate::core::Pointer;
 use crate::core::measure::answer::{self, Identity};
-use crate::core::measure::audit::{self as grade, By, Counts, Pooled, Row, Settings, Suggested};
+use crate::core::measure::audit::{self as grade, By, Pooled, Row, Settings};
 use crate::core::measure::group;
+use crate::core::measure::items::Matching;
 use crate::core::measure::key::Key;
-use crate::core::measure::optimize::{Bar, Measure, Steady};
-use crate::core::measure::{places, python_float_text, rounded, rounded_line};
+use crate::core::measure::optimize::Measure;
+use crate::core::measure::rounded_line;
 use crate::failure::Failure;
 
 /// The command line of `audit`. Its help is on the `Audit` command.
@@ -59,6 +61,9 @@ pub(crate) struct AuditArguments {
     /// Write the steady bar into the question file or set the results came from.
     #[arg(long, value_name = "QUESTIONS")]
     write: Option<PathBuf>,
+    /// How a recognize name matches a key name: the same places and kind, or overlapping places and the same kind.
+    #[arg(long = "match", value_enum, default_value = "strict")]
+    matching: Match,
     /// Add the coverage curve at every distinct confidence to each group.
     #[arg(long)]
     curve: bool,
@@ -87,6 +92,12 @@ fn group(text: &str) -> Result<Group, String> {
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
+enum Match {
+    Strict,
+    Overlap,
+}
+
+#[derive(Clone, Copy, Debug, ValueEnum)]
 enum Optimize {
     Accuracy,
     Precision,
@@ -108,7 +119,7 @@ pub(crate) fn run(arguments: &AuditArguments, writer: impl Write) -> Result<(), 
     let mut text = String::new();
     for row in &rows {
         if arguments.table {
-            table(row, &mut text);
+            table::table(row, &mut text);
         } else {
             text.push_str(&rounded_line(row).map_err(Failure::Render)?);
             text.push('\n');
@@ -116,7 +127,7 @@ pub(crate) fn run(arguments: &AuditArguments, writer: impl Write) -> Result<(), 
     }
     if let Some(pooled) = &pooled {
         if arguments.table {
-            text.push_str(&pooled_line(pooled));
+            text.push_str(&table::pooled_line(pooled));
         } else {
             text.push_str(&rounded_line(pooled).map_err(Failure::Render)?);
         }
@@ -163,7 +174,11 @@ fn grade_all(arguments: &AuditArguments) -> Result<Graded, Refusal> {
     let key_lines = lines(&arguments.key).map_err(|cause| refusal("key", cause))?;
     let answers = answer::read(&results, &pointer, Identity::Question)
         .map_err(|e| refusal("results", Cause::Measure(e)))?;
-    let key = Key::read(&key_lines).map_err(|e| refusal("key", Cause::Measure(e)))?;
+    let mut key = Key::read(&key_lines).map_err(|e| refusal("key", Cause::Measure(e)))?;
+    key.1 = match arguments.matching {
+        Match::Strict => Matching::Strict,
+        Match::Overlap => Matching::Overlap,
+    };
     let by = match &arguments.by {
         Group::Question => By::Question,
         Group::Verb => By::Verb,
@@ -191,6 +206,12 @@ fn grade_all(arguments: &AuditArguments) -> Result<Graded, Refusal> {
     };
     let rows = grade::audit(&answers, &key, &settings)
         .map_err(|e| refusal("results", Cause::Measure(e)))?;
+    if !key_lines.is_empty()
+        && rows.iter().any(|row| row.rows > 0)
+        && rows.iter().all(|row| row.labeled == 0)
+    {
+        return Err(refusal("key", Cause::NoneLabeled));
+    }
     let report = match &arguments.write {
         Some(path) => {
             write::bars(path, &answers, &rows).map_err(|cause| refusal("question", cause))?
@@ -203,240 +224,4 @@ fn grade_all(arguments: &AuditArguments) -> Result<Graded, Refusal> {
         .transpose()
         .map_err(|e| refusal("results", Cause::Measure(e)))?;
     Ok((rows, pooled, report))
-}
-
-/// A float as the table writes a number: three places, or `-` for none.
-fn three(value: Option<f64>) -> String {
-    places(value.map(rounded), 3)
-}
-
-/// The prototype's table for one group, word for word.
-fn table(row: &Row, out: &mut String) {
-    let mut line = |text: String| {
-        out.push_str(&text);
-        out.push('\n');
-    };
-    let verb = row.verb.unwrap_or("None");
-    line(format!(
-        "{}  ({verb}, {} rows, {} labeled, {} failed, rule {})",
-        row.group,
-        row.rows,
-        row.labeled,
-        row.failed,
-        row.threshold.text()
-    ));
-    let [low, high] = row
-        .interval
-        .map_or([None, None], |[l, h]| [Some(l), Some(h)]);
-    line(format!(
-        "  agreement {} (95% {} to {}): {} right, {} wrong, {} unresolved, {} tied{}",
-        three(row.agreement),
-        three(low),
-        three(high),
-        row.right,
-        row.wrong,
-        row.unresolved,
-        row.tied,
-        ties_line(row)
-    ));
-    if row.true_yes.is_some() {
-        line(format!(
-            "  said yes, key no: {}   said no, key yes: {}   yes recall {}   mean p(yes) {}   AUC {}",
-            row.false_yes.unwrap_or_default(),
-            row.false_no.unwrap_or_default(),
-            three(row.yes_recall),
-            three(row.mean_probability),
-            three(row.auc)
-        ));
-        line(format!(
-            "  precision {}   f1 {}",
-            three(row.precision),
-            three(row.f1)
-        ));
-    } else if let Some(pairs) = row.disagreements.as_ref().filter(|pairs| !pairs.is_empty()) {
-        let pairs: Vec<String> = pairs
-            .iter()
-            .map(|d| format!("key {} said {} x{}", d.key, d.said, d.count))
-            .collect();
-        line(format!("  disagreements: {}", pairs.join(", ")));
-    }
-    let added = [
-        ("r-precision", row.r_precision),
-        ("mean level distance", row.mean_level_distance),
-    ];
-    for (name, value) in added.into_iter().filter(|(_, value)| value.is_some()) {
-        line(format!("  {name} {}", three(value)));
-    }
-    if let Some(calibration) = &row.calibration {
-        let [low, high] = calibration.interval;
-        line(format!(
-            "  calibration error {} (95% {} to {}); {}",
-            three(Some(calibration.error)),
-            three(Some(low)),
-            three(Some(high)),
-            calibration.note
-        ));
-    }
-    if let Some(suggested) = &row.suggested {
-        line(suggested_line(row, suggested));
-        if let Some(Some(steady)) = &suggested.steady {
-            line(steady_line(steady, suggested.seed) + &crossed_line(suggested));
-        }
-        if let (true, Some(held)) = (row.true_yes.is_some(), &suggested.held) {
-            line(held_line(&held.at_cut));
-        }
-    }
-    for (place, point) in row.coverage.iter().flatten().enumerate() {
-        if place == 0 {
-            line(format!(
-                "  {:>5}  {:<10} {:>8} {:>8} {:>8}",
-                "cut", "threshold", "answered", "coverage", "accuracy"
-            ));
-        }
-        line(format!(
-            "  {:>5}  {:<10} {:>8} {:>8} {:>8}",
-            python_float_text(rounded(point.cut)),
-            point.threshold.text(),
-            point.answered,
-            three(point.coverage),
-            three(point.accuracy)
-        ));
-    }
-}
-
-/// The ties line of a `choose` or `find` row with ties, after a line break, or nothing.
-fn ties_line(row: &Row) -> String {
-    let ties = row
-        .tied_holding_key
-        .zip(row.tie_share)
-        .filter(|_| row.tied > 0);
-    ties.map_or_else(String::new, |(holding, share)| {
-        format!(
-            "\n  ties holding the key: {holding} of {}, share {}",
-            row.tied,
-            three(Some(share))
-        )
-    })
-}
-
-/// The line of `suggested.crossed`, after a line break, or nothing.
-fn crossed_line(suggested: &Suggested) -> String {
-    let Some(Some(crossed)) = &suggested.crossed else {
-        return String::new();
-    };
-    let [first, second] = crossed.cuts.map(|cut| python_float_text(rounded(cut)));
-    format!(
-        "\n  crossed: cuts {first} and {second}, each checked on the other part: agreement {}, {} right of {} answered",
-        three(crossed.held.agreement),
-        crossed.held.right,
-        crossed.held.answered
-    )
-}
-
-/// The suggested cut's line, or the sentence that says no cut reaches the target.
-fn suggested_line(row: &Row, suggested: &Suggested) -> String {
-    if let (Some(cuts), Some(tune), Some(held)) = (suggested.cuts, &suggested.tune, &suggested.held)
-    {
-        return format!(
-            "  suggested level cuts {} ({}; {} split, tuned on {}, checked on {} held out): held exact levels {} as run -> {} at the cuts",
-            bar_text(Bar::Levels(cuts)),
-            suggested.objective,
-            suggested.split,
-            tune.n,
-            held.n,
-            held.at_run.right,
-            held.at_cut.right
-        );
-    }
-    let (Some(cut), Some(tune), Some(held)) = (suggested.cut, &suggested.tune, &suggested.held)
-    else {
-        // No steady count means the measure does not apply to this verb.
-        if suggested.steady.is_none() {
-            return format!("  suggested cut: none; {}", suggested.objective);
-        }
-        return format!("  suggested cut: none reaches {}", suggested.objective);
-    };
-    let extra = if row.true_yes.is_some() {
-        let [run, at] = [&held.at_run, &held.at_cut].map(|c| three(c.yes_recall));
-        format!(", yes recall {run} -> {at}")
-    } else {
-        let [run, at] = [&held.at_run, &held.at_cut].map(|c| three(c.coverage));
-        format!(", coverage {run} -> {at}")
-    };
-    format!(
-        "  suggested cut {} ({}; {} split, tuned on {}, checked on {} held out): held agreement {} as run -> {} at the cut{extra}",
-        python_float_text(rounded(cut)),
-        suggested.objective,
-        suggested.split,
-        tune.n,
-        held.n,
-        three(held.at_run.agreement),
-        three(held.at_cut.agreement)
-    )
-}
-
-/// The four measures at the suggested cut on the held part.
-fn held_line(at: &Counts) -> String {
-    format!(
-        "  at the suggested cut on the held part: accuracy {}, precision {}, recall {}, f1 {}",
-        three(Measure::Accuracy.of(at)),
-        three(at.precision),
-        three(at.yes_recall),
-        three(at.f1)
-    )
-}
-
-/// A bar as the table writes it: a cut, or level cuts joined by commas.
-fn bar_text(bar: Bar) -> String {
-    let hundredths = match bar {
-        Bar::Cut(k) => vec![k],
-        Bar::Levels(cuts) => cuts.hundredths().to_vec(),
-    };
-    let texts: Vec<String> = hundredths
-        .iter()
-        .map(|k| python_float_text(f64::from(*k) / 100.0))
-        .collect();
-    texts.join(", ")
-}
-
-/// How steady the bar stays, and the seed or the key split behind it.
-fn steady_line(steady: &Steady, seed: Option<u64>) -> String {
-    let count = |bar: Bar| {
-        steady
-            .counts
-            .iter()
-            .find(|tally| tally.cut == bar)
-            .map_or(0, |tally| tally.count)
-    };
-    let low = steady.counts.first().map_or(steady.cut, |tally| tally.cut);
-    let high = steady.counts.last().map_or(steady.cut, |tally| tally.cut);
-    let seed = seed.map_or_else(|| "key split".to_owned(), |seed| format!("seed {seed}"));
-    let bracket = |bar: Bar| match bar {
-        Bar::Cut(_) => bar_text(bar),
-        Bar::Levels(_) => format!("[{}]", bar_text(bar)),
-    };
-    format!(
-        "  steady: {} on {} of {} splits, range {} to {}; beat the run's rule on {} of {} held parts ({seed})",
-        bracket(steady.cut),
-        count(steady.cut),
-        steady.splits,
-        bracket(low),
-        bracket(high),
-        steady.better,
-        steady.splits
-    )
-}
-
-/// The pooled line as the table writes it.
-fn pooled_line(pooled: &Pooled) -> String {
-    let [error, low, high] = pooled.calibration.as_ref().map_or([None; 3], |c| {
-        [Some(c.error), Some(c.interval[0]), Some(c.interval[1])]
-    });
-    format!(
-        "  every verb pooled: calibration error {} (95% {} to {}) over {} answers",
-        three(error),
-        three(low),
-        three(high),
-        pooled.answers
-    )
 }

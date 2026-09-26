@@ -15,7 +15,7 @@ The closed schema is `thinkthen.backend-profile/1`. `name` uses lowercase letter
 
 The engine prepares the exact request once and checks the profile before replay, cache locking, key access, or transport. Grouped annotate prepares and checks every group for one record before any group starts. Dry runs perform the same checks before printing a plan.
 
-A single question file or a question set may name one top-level `profile`. That name identifies the backend used to tune its threshold. Nested questions in a set cannot name another. When the saved and selected names both exist and differ, the command prints one fixed warning and detailed output carries `meta.profile_warning` with `calibrated` and `running`. A missing name on either side warns nobody. Calibration identity enters the question or question-set digest. Selecting a run profile changes no request or recording digest.
+A single question file or a question set may name one top-level `profile`. That name identifies the backend used to tune its threshold. Nested questions in a set cannot name another. When the saved and selected names both exist and differ, the command prints one fixed warning and detailed output carries `meta.profile_warning` with `calibrated` and `running`. A missing name on either side warns nobody. Calibration identity enters the question or question-set digest. (Amended by ADR 0048, below.) Selecting a run profile changes no request or recording digest.
 
 The ordered output boundary prints the warning when it handles the first successful logical result, before it decides whether `filter` emits that record. A successful run warns even when `filter` rejects every record. A failure on logical record one prints no warning, even if a later parallel worker completed successfully. A dry run prints the warning immediately before its plan.
 
@@ -34,3 +34,7 @@ Ian ruled on 2026-09-23 that `meta.profile_warning.calibrated` becomes `tuned_fo
 ## Amendment, 2026-09-24: the width is called the throttle
 
 ADR 0017's amendment of 2026-09-24 renames the width to the throttle. A profile selects no throttle. Ian can overturn it.
+
+## Amendment, 2026-09-26: ADR 0048 batches records
+
+ADR 0048 adds the batch setting to calibration identity through the question file's `batch`. Unlike `profile`, `batch` stays out of the question and question-set digest, by Ian's ruling. Ian can overturn this.

@@ -12,7 +12,10 @@ use crate::core::measure::audit::{Kind, Row};
 use crate::core::measure::optimize::Bar;
 use crate::core::measure::rows::number;
 use crate::core::measure::splice::splice;
-use crate::core::{Json, QuestionFile, QuestionSet, Typed, question_sha256_with_profile, resolve};
+use crate::core::{
+    Json, QuestionFile, QuestionSet, RecognizeSpec, RelateSpec, Typed,
+    question_sha256_with_profile, recognize_sha256, resolve,
+};
 
 /// What `--write` does with one question's bar.
 enum Choice {
@@ -32,26 +35,39 @@ enum Choice {
 pub(super) fn bars(path: &Path, answers: &[Answer], rows: &[Row]) -> Result<String, Cause> {
     let bytes = std::fs::read(path).map_err(|_| Cause::Unreadable)?;
     let text = String::from_utf8(bytes).map_err(|_| Cause::NotQuestions)?;
-    let set = Json::parse(&text)
-        .map_err(|_| Cause::NotQuestions)?
-        .member("questions")
-        .is_some();
-    let digest = if set {
+    let json = Json::parse(&text).map_err(|_| Cause::NotQuestions)?;
+    let set = json.member("questions").is_some();
+    let digests: Vec<String> = if set {
         let parsed = QuestionSet::parse(&text).map_err(|_| Cause::NotQuestions)?;
-        parsed.sha256().ok()
+        parsed.sha256().ok().into_iter().collect()
+    } else if json.member("recognize").is_some() {
+        let spec = RecognizeSpec::parse(&text).map_err(|_| Cause::NotQuestions)?;
+        recognize_sha256(&spec).ok().into_iter().collect()
+    } else if json.member("relate").is_some() {
+        // A `--lines` run nulls the fields, so either digest names this file.
+        let spec = RelateSpec::parse(&text).map_err(|_| Cause::NotQuestions)?;
+        [false, true]
+            .into_iter()
+            .filter_map(|lines| spec.question(lines).sha256().ok())
+            .collect()
     } else {
         let file = QuestionFile::parse(&text).map_err(|_| Cause::NotQuestions)?;
         let resolved = resolve(file.verb(), None, Some(&file), &Typed::default())
             .map_err(|_| Cause::NotQuestions)?;
-        resolved.question().and_then(|question| {
+        let digest = resolved.question().and_then(|question| {
             question_sha256_with_profile(question, resolved.threshold(), resolved.profile()).ok()
-        })
+        });
+        digest.into_iter().collect()
     };
     let checked = answers
         .iter()
         .filter(|answer| !matches!(answer.verb, Verb::Rank | Verb::Find));
     for answer in checked {
-        if digest.is_none() || answer.digest != digest {
+        if !answer
+            .digest
+            .as_ref()
+            .is_some_and(|held| digests.contains(held))
+        {
             return Err(Cause::Digest(answer.line));
         }
     }

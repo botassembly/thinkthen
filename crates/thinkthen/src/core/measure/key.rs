@@ -4,6 +4,7 @@ use std::collections::BTreeMap;
 
 use crate::core::json::Json;
 use crate::core::measure::answer::{Answer, Said, Verb};
+use crate::core::measure::items::{self, Matching, What};
 use crate::core::measure::{MeasureError, record_id};
 
 /// The part of the split a key line names.
@@ -24,6 +25,8 @@ pub(crate) enum Want {
     No,
     /// The right option, level, or unit.
     Option(String),
+    /// The names or edges a `recognize` or `relate` answer should say, and how they match.
+    Items(Vec<What>, Matching),
 }
 
 impl Want {
@@ -33,6 +36,7 @@ impl Want {
             Self::Yes => "yes",
             Self::No => "no",
             Self::Option(option) => option,
+            Self::Items(..) => "items",
         }
     }
 }
@@ -74,9 +78,9 @@ struct Entry {
     part: Option<Part>,
 }
 
-/// Every key line by record id. Members other than `id`, `value`, and `part` are ignored.
+/// Every key line by record id, and how names match. Members other than `id`, `value`, and `part` are ignored.
 #[derive(Clone, Debug, Default, PartialEq)]
-pub(crate) struct Key(BTreeMap<String, Entry>);
+pub(crate) struct Key(BTreeMap<String, Entry>, pub(crate) Matching);
 
 impl Key {
     /// Read numbered key lines.
@@ -108,7 +112,7 @@ impl Key {
                 return Err(refused);
             }
         }
-        Ok(Self(key))
+        Ok(Self(key, Matching::default()))
     }
 
     /// The part the key gives a record, if any.
@@ -136,6 +140,10 @@ impl Key {
         let unknown = MeasureError::KeyUnknown(entry.line);
         Ok(match (answer.verb, value) {
             (_, Json::Null) => None,
+            (Verb::Recognize | Verb::Relate, _) => Some(Want::Items(
+                items::key(entry.line, answer.verb, value, &answer.options)?,
+                self.1,
+            )),
             (Verb::Tag, Json::Array(items)) => {
                 let mut listed = Vec::new();
                 for item in items {
