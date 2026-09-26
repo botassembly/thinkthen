@@ -32,9 +32,9 @@ Until that lands, the deck stays at eight functions everywhere. It changes to ni
 
 ## The question file on the overview slide
 
-Ian asked the same day whether the `@` form is a special function. The marketing ruling, his to overturn: it is not counted as a function, because it gives no answer. It gets a row of its own on the overview slide, named `@question`. The record is `repos/mktg/products/thinkthen/vocabulary.md`.
+Ian asked the same day whether the `@` form is a special function. The marketing ruling, his to overturn: it is not counted as a function, because it gives no answer. It gets a row of its own on the overview slide, named `@question`. The record is the marketing repository's `products/thinkthen/vocabulary.md`.
 
 ## What Ian can overturn
 
 All of it.
-2026-09-21: the recognize demo landed. Final object: /home/ian/workspace/experiments/222-recognize-demo/output.json (pretty version and verification in report.md beside it). Recording: /home/ian/workspace/experiments/222-recognize-demo/arms/demo/cache/. Real spend 0.021 cents, run through sdlc/scripts/live under caps 5000+3000.
+2026-09-21: the recognize demo landed. Final object: `experiments/222-recognize-demo/output.json` in the workspace (pretty version and verification in report.md beside it). Recording: `experiments/222-recognize-demo/arms/demo/cache/` in the workspace. Real spend 0.021 cents, run through sdlc/scripts/live under caps 5000+3000.

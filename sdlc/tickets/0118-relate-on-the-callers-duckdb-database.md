@@ -132,7 +132,7 @@ Contract 2; state and timing 4; reach 2; proof 3; cost of error 4; total 15. Fin
 
 Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk.md` asks every product ticket to name these five parts. This note changes no design.
 
-- Starts from: The tag `surfaces-wave7-frozen-2026-09-24b` holds `databases/duckdb/src/connections.rs` and `src/relate.rs` and 8 relate suites in `databases/duckdb/tools/`, under ADR 0038. `experiments/218-thinkthen-release-qa/wave2/PLAN.md` found that relate's global connection saw the wrong database and no temp tables, and that `random()` let the count query and the run query disagree past the row cap. `repos/jev-experiments`: none found.
+- Starts from: The tag `surfaces-wave7-frozen-2026-09-24b` holds `databases/duckdb/src/connections.rs` and `src/relate.rs` and 8 relate suites in `databases/duckdb/tools/`, under ADR 0038. `experiments/218-thinkthen-release-qa/wave2/PLAN.md` found that relate's global connection saw the wrong database and no temp tables, and that `random()` let the count query and the run query disagree past the row cap. A private experiment repository: none found.
 - Keeps: One kept connection per database, the reaper, the guard that allows one read-only `SELECT`, and the queue-wait sentence.
 - Changes: Relate reads entity rows, honours 0110's settings and its one process-wide throttle, reads rules files through the caller's own file system, runs on a worker, and uses a signal pipe. Its hooks sit behind `test-hooks`.
 - Proof: The two relate conformance cases, `cancelled` within 100 ms, throttle 8 reaching relate, the cache-folder probe on relate's path, and a cache hit on the second run, and the relate panic reading `defect`.
@@ -140,7 +140,7 @@ Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk
 
 ## Changes after experiment 253
 
-Experiment 253 on Beelink (`~/workspace/experiments/253-thinkthen-duckdb-sqlite-spike/REPORT.md`, local only) tested decision 7 and the settings path this ticket inherits. The accepted amendment of 2026-09-24 (`341220d0`) sat below the design as an appended section. On 2026-09-25 it was folded into the decisions above, and the appended sections left. Ian can overturn each change.
+Experiment 253 on Beelink (the workspace's `experiments/253-thinkthen-duckdb-sqlite-spike/REPORT.md`, local only) tested decision 7 and the settings path this ticket inherits. The accepted amendment of 2026-09-24 (`341220d0`) sat below the design as an appended section. On 2026-09-25 it was folded into the decisions above, and the appended sections left. Ian can overturn each change.
 
 - Decision 5: rules files and the cache-folder check go through the caller's own file system (D2). The copied four-setting rule and both 0110 fallbacks leave. R4-5 closes by design: the bind's handles come from the caller's bind info, the `ffi` wrappers return `Option`, and R4-3's close, reaper, and reconnect test proves it. The retire hook leaves.
 - Decision 5: the throttle is process-wide, and a different or out-of-range one reads main's `usage` sentence at the next relate (D1, D5). Main's `build` enforces it, so 0110's map carries the throttle in its key and keeps no cell.

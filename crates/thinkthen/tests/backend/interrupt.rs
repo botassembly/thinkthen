@@ -212,3 +212,31 @@ fn sigint_between_recognition_chunks_starts_no_later_chunk() {
     .expect("recognize stops");
     assert!(output.stdout.is_empty());
 }
+
+/// Ticket 0133: the carrier thread cannot spawn under `RLIMIT_NPROC`, the
+/// operating system's own limit. Root ignores the limit, so this fails as root.
+#[cfg(target_os = "linux")]
+#[test]
+fn a_carrier_that_cannot_spawn_is_a_defect_and_sends_nothing() {
+    let listener = Listener::answering(|_| Canned::ok(YES)).expect("listener");
+    let home = Path::new(env!("CARGO_TARGET_TMPDIR")).join("nproc-home");
+    let output = crate::child::command("prlimit", &[])
+        .args(["--nproc=1:", env!("CARGO_BIN_EXE_thinkthen")])
+        .args(["decide", "Is it accepted?", "--model", "local-1"])
+        .env("HOME", &home)
+        .env("THINKTHEN_API_KEY", "sk-test-value")
+        .env("THINKTHEN_BASE_URL", listener.base())
+        .stdin(Stdio::null())
+        .output()
+        .expect("prlimit runs");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let expected = "thinkthen: defect: SIGINT routing could not be activated\n";
+    let why = "RLIMIT_NPROC must bind this user; root ignores it";
+    assert_eq!(
+        (output.status.code(), stderr.as_ref()),
+        (Some(70), expected),
+        "{why}"
+    );
+    assert!(output.stdout.is_empty());
+    assert_eq!(listener.connections(), 0);
+}
