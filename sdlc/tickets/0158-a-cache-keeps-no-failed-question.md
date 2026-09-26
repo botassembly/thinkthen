@@ -29,7 +29,7 @@ Read from `origin/main` `c490f082`.
 
 ## Design
 
-`Recorder` gains `caches()`, true when it both records and replays, which is `--cache DIR`, `THINKTHEN_CACHE` or the default cache. `Reply` gains `failed_any()`, true when any outcome is `AnswerOutcome::Failed`.
+`Recorder` gains `caches()`, true when it both records and replays. That is `--cache DIR`, `--record DIR --replay DIR` on one folder, `THINKTHEN_CACHE` and the default cache. `recording.md` names the two options on one folder a cache, so they follow the cache rule. `Reply` gains `failed_any()`, true when any outcome is `AnswerOutcome::Failed`.
 
 In `ask_prepared`, after a live reply decodes, the engine checks both. When the recorder caches and the reply failed a question, it cancels the permit in place of finishing it. It still returns the reply, so the run prints and exits exactly as today. Every other case finishes the permit as today. A cancelled permit releases the digest's lock, so a waiter on the same digest sends its own request, as it does after a failed owner today.
 
@@ -41,6 +41,8 @@ The engine is shared, so the libraries and SQL extensions follow the same rule u
 - `recording.md`, line 84: after the first sentence add "A cache, typed or default, installs no partial reply, so a cached run asks again. ADR 0053 item 6 rules it."
 - `recording.md`, line 59, "Only an exchange that succeeded and decoded is recorded. A failure is never recorded.": after it add "A reply that failed a question beside a good answer counts as decoded. `--record` writes it. A cache does not install it."
 - `recording.md`, line 13, the row "Both, with the same `DIR`": its cell becomes "A cache. An entry that exists is replayed. A request that is absent goes to the backend, and its reply is recorded when it answered every question."
+- `records.md`, line 123, after "The same command run again replays those 399 and pays for the rest.": add "A record whose reply failed a question has no entry, so the resumed run asks for it again."
+- `recording.md`, line 42, after "Both options on one folder are also the resume for a record run.": add "A resumed run asks again for records whose reply failed a question, because a cache keeps no such reply."
 - `relate.md`, line 70, stays as it is. It speaks of record and replay, and a recorded partial reply still reproduces there.
 
 ## Decisions
@@ -57,7 +59,7 @@ Each is the ticket author's call unless marked. Ian can overturn any of them.
 | Input | Expected |
 | --- | --- |
 | `annotate` under the default cache, a reply missing its last answer, run twice | Both runs print the same failure marker and exit 6. The loopback sees 2 requests |
-| The same under `--cache DIR` | The same. The folder holds no entry for that digest |
+| The same under `--cache DIR`, and under `--record DIR --replay DIR` on one folder | The same. The folder holds no entry for that digest |
 | The same under `--record DIR`, then `--replay DIR` | The replay prints the recorded failure marker and exits 6, with no request |
 | A reply that answers every question under the default cache, run twice | The second run sends nothing, as today |
 | A reply that fails every question | A whole-reply decode error at exit 4, as today. No entry |
