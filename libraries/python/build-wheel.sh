@@ -1,14 +1,14 @@
 #!/bin/sh
 # Build the release wheel with every path under $HOME remapped, then check
 # what it holds: the stub, the py.typed marker, the MIT license, no builder
-# home path in any file, and no test-only hook. pyproject.toml turns off the
-# Rust SBOM, which names each path crate by its absolute folder (ticket 0128). Nothing is installed or published.
+# home path in any file, and no test-only hook. Nothing is installed or published.
+# pyproject.toml turns off the Rust SBOM, which names each path crate by its
+# absolute folder (ticket 0128).
 unset THINKTHEN_API_KEY
 set -eu
 cd -- "$(dirname -- "$0")"
-# release-pack takes the wheel from here (ticket 0128).
-out=target/wheels
-rm -rf -- "$out"
+out=$(mktemp -d)
+trap 'rm -rf -- "$out"' EXIT
 
 RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
 export RUSTFLAGS
@@ -40,3 +40,5 @@ if wrong:
     sys.exit(f"{wheel}: " + "; ".join(wrong))
 print(f"{wheel.rsplit('/', 1)[-1]}: stub, marker, license, no home path, no test hook")
 PY
+# release-pack takes the wheel from here (ticket 0128).
+mkdir -p target/wheels && cp -- "$out"/thinkthen-*.whl target/wheels/

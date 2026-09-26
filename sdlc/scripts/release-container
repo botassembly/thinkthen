@@ -15,10 +15,12 @@ IMAGE=quay.io/pypa/manylinux_2_28_x86_64@sha256:407f771c51a2c3e83ebe5a7970b4289e
 REPO=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 mkdir -p -- "$1/cache" "$2"
 WORK=$(CDPATH='' cd -- "$1" && pwd) OUT=$(CDPATH='' cd -- "$2" && pwd)
-rm -rf -- "$WORK/src" "$WORK/out" "$WORK/home"
-mkdir -p "$WORK/src" "$WORK/out" "$WORK/home/.cargo/registry"
-git -C "$REPO" archive HEAD | tar -x -C "$WORK/src"
-set -- --rm --user "$(id -u):$(id -g)" -v "$WORK:/work" -e HOME=/work/home
+# Each run builds in its own mktemp folder, mounted as /work, and removes it at exit.
+RUN=$(mktemp -d "$WORK/run.XXXXXX")
+trap 'rm -rf -- "$RUN"' EXIT
+mkdir -p "$RUN/src" "$RUN/out" "$RUN/home/.cargo/registry" "$RUN/cache"
+git -C "$REPO" archive HEAD | tar -x -C "$RUN/src"
+set -- --rm --user "$(id -u):$(id -g)" -v "$RUN:/work" -v "$WORK/cache:/work/cache" -e HOME=/work/home
 if [ -n "${RELEASE_CARGO_REGISTRY:-}" ]; then
 	set -- "$@" -v "$RELEASE_CARGO_REGISTRY:/work/home/.cargo/registry" -e CARGO_NET_OFFLINE=true
 fi
@@ -63,4 +65,4 @@ docker run "$@" "$IMAGE" sh -euc '
 	export PATH LIBCLANG_PATH BINDGEN_EXTRA_CLANG_ARGS PG_CONFIG
 	sh sdlc/scripts/release-pack x86_64-unknown-linux-gnu /work/out c sqlite duckdb postgresql python typescript
 '
-cp -- "$WORK"/out/* "$OUT/"
+cp -- "$RUN"/out/* "$OUT/"
