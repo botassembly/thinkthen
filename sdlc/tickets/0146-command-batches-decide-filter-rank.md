@@ -267,7 +267,7 @@ Each is the agent's decision. Ian can overturn any of them.
 | A malformed JSONL line at record 7, `--batch 1 --jobs 4` | The same output, standard error and exit code as today. Records 8 and later are never sent, where today up to three of them may be in flight. This is an intended difference |
 | A record over a profile's `max_evidence_bytes` alone | The records before it print. Today's profile refusal at that record |
 | 503 on the second batch after retries, `--batch 10` | Rows 1 to 10 print. One stop line naming records 11 to 20. Exit 4 |
-| A reply missing record 13's answer in batch 11 to 20 | Rows 1 to 12 print. The partial stop line. The reply failure's exit code |
+| A reply missing record 13's answer in batch 11 to 20 | Rows 1 to 12 print. The partial stop line. Exit 4 |
 | The same failure at `--batch 1` | Today's two lines |
 | `--replay` of a folder recorded at `--batch 10`, same settings | Every batch from disk, no network, identical output |
 | `--replay` of that folder at `--batch 5` | Exit 5 at record 1, naming records 1 to 5 |
