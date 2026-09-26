@@ -1,0 +1,1 @@
+{"version":1,"questions":{"upbeat":{"decide":"Does this title sound cheerful?","on":"/title"},"era":{"choose":"Which kind of album is this?","options":["studio","live","compilation"],"on":"/album"}}}
