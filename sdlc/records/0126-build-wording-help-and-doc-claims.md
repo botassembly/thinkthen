@@ -56,7 +56,7 @@ Each plant was applied alone, its test run, the file restored and touched. All e
 
 ## Ladder
 
-The final run was on the merge of main at `97129349`, which brought 0129 and the diff Quick Fix. Each rung ran once, and none was wrapped in the heavy lock: lint 0, install 0, test 0, and spec 0. The test rung ran all 32 test binaries, 370 of them in `backend`. The spec rung ran the pages and 21 green demos. The surfaces rung did not run. No surface changed, because the public throttle sentence reads as the surfaces already pin it.
+The final run was on the merge of main at `97129349`, which brought 0129 and the diff Quick Fix. Each rung ran once, and none was wrapped in the heavy lock: lint 0, install 0, test 0, and spec 0. The test rung ran all 32 test binaries, and `backend` passed in full. The spec rung ran the pages and 21 green demos. The surfaces rung did not run. No surface changed, because the public throttle sentence reads as the surfaces already pin it.
 
 Earlier runs found four problems, all fixed before the final run.
 
