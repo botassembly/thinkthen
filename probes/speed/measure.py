@@ -45,7 +45,7 @@ def run(binary, args, stdin, env, cwd):
     """One command in a private home: its requests and tokens from status, its wall time, lines and exit."""
     home = made_folder()
     try:
-        base = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": home}
+        base = {**plain(), "HOME": home}
         start = time.monotonic()
         done = subprocess.run([str(binary), *args, "--no-cache"], input=stdin, stdout=subprocess.PIPE,
                               stderr=subprocess.DEVNULL, env={**base, **env}, cwd=cwd)
@@ -115,15 +115,23 @@ def gate(path=HERE / "functions.jsonl"):
     return 1 if failures else 0
 
 
+def plain():
+    return {"PATH": os.environ.get("PATH", "/usr/bin:/bin")}
+
+
+def git(*args, cwd=ROOT):
+    return subprocess.run(["git", *args], cwd=cwd, stdout=subprocess.PIPE, env=plain(),
+                          check=True).stdout.decode().strip()
+
+
 def check(bench):
     """The live preconditions. Each refuses at exit 2 before any request."""
     binary = ROOT / "target" / "debug" / "thinkthen"
     if os.environ.get("THINKTHEN_BASE_URL"):
         refuse("THINKTHEN_BASE_URL is set; the speed run measures the built-in address")
-    if subprocess.run(["git", "status", "--porcelain"], cwd=ROOT, stdout=subprocess.PIPE, check=True).stdout:
+    if git("status", "--porcelain"):
         refuse("the checkout has uncommitted changes; commit them so the run names its build")
-    head = int(subprocess.run(["git", "log", "-1", "--format=%ct", "--", *SOURCES], cwd=ROOT, stdout=subprocess.PIPE,
-                              check=True).stdout)
+    head = int(git("log", "-1", "--format=%ct", "--", *SOURCES))
     if not binary.exists() or binary.stat().st_mtime < head:
         refuse("target/debug/thinkthen is missing or older than the last commit to its sources; build it first")
     songs = Path(bench) / "data" / "songs.tsv"
@@ -137,7 +145,7 @@ def check(bench):
 
 
 def helps(binary, verb, flag):
-    done = subprocess.run([str(binary), verb, "--help"], stdout=subprocess.PIPE, env={"PATH": os.environ.get("PATH", "/usr/bin:/bin")})
+    done = subprocess.run([str(binary), verb, "--help"], stdout=subprocess.PIPE, env=plain())
     return flag.encode() in done.stdout
 
 
@@ -151,7 +159,7 @@ def jsonl(rows):
 
 def catalog_text(bench):
     return subprocess.run([sys.executable, str(Path(bench) / "scripts/run/catalog.py")], stdout=subprocess.PIPE,
-                          check=True).stdout.decode()
+                          env=plain(), check=True).stdout.decode()
 
 
 def padded(source, size):
@@ -225,7 +233,9 @@ def measurements(bench, binary, titles, scratch):
 def plan(bench):
     if "THINKTHEN_API_KEY" in os.environ:
         refuse("THINKTHEN_API_KEY is set; plan sends nothing and needs no key")
-    subprocess.run(["cargo", "build", "--locked", "--quiet", "--package", "thinkthen"], cwd=ROOT, check=True)
+    toolchain = ("HOME", "CARGO_HOME", "RUSTUP_HOME", "RUSTUP_TOOLCHAIN", "RUSTC_WRAPPER", "SCCACHE_CONF")
+    env = {**plain(), **{k: os.environ[k] for k in toolchain if k in os.environ}}
+    subprocess.run(["cargo", "build", "--locked", "--quiet", "--package", "thinkthen"], cwd=ROOT, env=env, check=True)
     binary, titles = check(bench)
     scratch = made_folder()
     try:
@@ -243,9 +253,8 @@ def live(bench, name):
     out = HERE / "runs" / name
     if out.exists():
         refuse(f"{out.relative_to(ROOT)} already exists")
-    git = lambda *a, cwd=ROOT: subprocess.run(["git", *a], cwd=cwd, stdout=subprocess.PIPE, check=True).stdout.decode().strip()
     build = {"commit": git("rev-parse", "HEAD"), "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
-             "version": subprocess.run([str(binary), "--version"], stdout=subprocess.PIPE).stdout.decode().strip(),
+             "version": subprocess.run([str(binary), "--version"], stdout=subprocess.PIPE, env=plain()).stdout.decode().strip(),
              "profile": "debug", "bench_commit": git("rev-parse", "HEAD", cwd=bench),
              "bench_clean": not git("status", "--porcelain", cwd=bench), "processors": os.cpu_count(),
              "loadavg_start": Path("/proc/loadavg").read_text().strip()}
