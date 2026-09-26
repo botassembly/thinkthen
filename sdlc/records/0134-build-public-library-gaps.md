@@ -71,4 +71,4 @@ Run 2 rebuilt what main's merge changed: the interrupt handler, the recording co
 
 ## Stop rules
 
-Stop rule 1 fired for item 4. Removing `cache_bytes` changes `databases/postgresql/check.sh` lines 488 and 489, which the flaky-test Quick Fix owns. Item 4 goes back to the coordinator. No other stop rule fired.
+No stop rule fired. Item 4 goes to a later dead-settings ticket, because removing `cache_bytes` spans the public API, 0084, seven bindings, and `databases/postgresql/check.sh` lines 498 and 499, past this ticket's budget. The flaky-test Quick Fix that once owned that file landed as `a12afc58`.

@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/public/relate.rs crates/thinkthen/tests/public_membe
 
 # 0134: Withhold a relate entity's kind, and sort the public library gaps for 0.1
 
-Status: built, awaiting code review (`sdlc/records/0134-build-public-library-gaps.md`). Design accepted 2026-09-26 by a fresh read-only Claude review on its second pass. Owner: Claude.
+Status: landed 2026-09-26 (`sdlc/records/0134-build-public-library-gaps.md`). A fresh code review accepted the code; the lander fixed its three record findings. Owner: Claude.
 
 Lane: thinkthen-lane-2
 
@@ -18,7 +18,7 @@ The accepted design also took item 8 of `sdlc/issues/2026-09-25-public-library-a
 
 ## Outcome and authority
 
-A library user who formats a public `thinkthen::Entity` with `{:?}` sees neither its name nor its kind. Today the kind prints in clear (`sdlc/issues/2026-09-25-the-public-entity-debug-prints-its-kind.md`). The repo `CLAUDE.md` requires a secrecy test over every `Debug` line.
+A library user who formats a public `thinkthen::Entity` with `{:?}` sees neither its name nor its kind. Today the kind prints in clear (`sdlc/issues/closed/2026-09-25-the-public-entity-debug-prints-its-kind.md`). The repo `CLAUDE.md` requires a secrecy test over every `Debug` line.
 
 The coordinator assigned the entity issue and the API gaps issue to this ticket, and asked it to take what 0.1 needs and name a reason for each gap it defers.
 
@@ -72,7 +72,7 @@ The four questions. It protects the promise that a public `Debug` line prints no
 Items of `sdlc/issues/2026-09-25-public-library-api-gaps.md`, each left open in that issue:
 
 - **Item 8, Python Polars and the column table.** Ticket 0136 settles it. The issue marks it so.
-- **Item 4, `cache_bytes`, and the settings sweep.** Ian ruled that the setter must leave before 0.1. It is 0.1 work, but it changes `databases/postgresql/check.sh` lines 488 and 489, which the flaky-test Quick Fix owns (stop rule 1). It also spans the public API, 0084, and every binding with the setter: Python, Ruby, R, TypeScript, SQLite, DuckDB, and PostgreSQL. It gets its own ticket once the Quick Fix lands.
+- **Item 4, `cache_bytes`, and the settings sweep.** Ian ruled that the setter must leave before 0.1. It is 0.1 work. It spans the public API, 0084, and every binding with the setter: Python, Ruby, R, TypeScript, SQLite, DuckDB, and PostgreSQL, plus `databases/postgresql/check.sh` lines 498 and 499. That is past this ticket's budget, so a later dead-settings ticket takes it.
 - **Item 1, counters per engine or per process.** Backlog row A5 pairs it with the status issue's option 1, which builds on the place item 1 picks. Both go in one ticket, and that ticket is 0.1 work in section A.
 - **Item 2, a public inline rule parser; item 3, public error constructors; item 9, `LoadedQuestion` as a decision question.** Each adds to the public API without breaking it, so each can ship after 0.1. The backlog puts items 2 and 3 in section C. It does not place item 9.
 - **Item 5, find's none option and annotate parts.** Each needs a new spelling in 0084 and adds to the API. Section C.
@@ -82,12 +82,12 @@ Items of `sdlc/issues/2026-09-25-public-library-api-gaps.md`, each left open in 
 
 ## Closes
 
-- `sdlc/issues/2026-09-25-the-public-entity-debug-prints-its-kind.md`, moved to `closed/` at landing.
+- `sdlc/issues/closed/2026-09-25-the-public-entity-debug-prints-its-kind.md`, moved to `closed/` at landing.
 - The API gaps issue stays open. This branch marks its item 8 settled by 0136.
 
 ## What Ian can overturn
 
-- Item 4 deferred to its own ticket because of file ownership, although his ruling puts it in 0.1.
+- Item 4 deferred to a later dead-settings ticket for its size, although his ruling puts it in 0.1.
 - Item 8 left to 0136, on the coordinator's word.
 - The Python repr defect filed for a Quick Fix, not taken here.
 
@@ -97,7 +97,7 @@ Items of `sdlc/issues/2026-09-25-public-library-api-gaps.md`, each left open in 
 - Keeps: the public API and its frozen inventory, `Entity`'s accessors and refusals, and every surface.
 - Changes: `Entity`'s `Debug` withholds `kind`. The API gaps issue marks item 8 settled by 0136. A new issue files the Python repr defect.
 - Proof: the one test above with its plant, and the `install`, `lint`, `test`, `spec`, and `surfaces` rungs once each after a merge of `origin/main`.
-- Defers: API gaps items 1 to 7 and 9, item 4 for file ownership, item 8 to 0136, and the Python reprs to a Quick Fix.
+- Defers: API gaps items 1 to 7 and 9, item 4 to a later dead-settings ticket, item 8 to 0136, and the Python reprs to a Quick Fix.
 
 ## Complexity
 
