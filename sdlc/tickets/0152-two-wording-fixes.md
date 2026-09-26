@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/public/options.rs crates/thinkthen/tests/public_cont
 
 # 0152: A huge deadline prints a short number, and "not sure" replaces "unresolved"
 
-Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Claude.
+Status: in progress. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Part A is built in lane 2 and waits for its code review; its record is `sdlc/records/0152-build-part-a.md`. Part B waits for ticket 0146 to land. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and each part's final diff. Codex does not review this ticket unless Ian routes it.
 
