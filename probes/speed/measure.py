@@ -121,10 +121,10 @@ def check(bench):
         refuse("THINKTHEN_BASE_URL is set; the speed run measures the built-in address")
     if subprocess.run(["git", "status", "--porcelain"], cwd=ROOT, stdout=subprocess.PIPE, check=True).stdout:
         refuse("the checkout has uncommitted changes; commit them so the run names its build")
-    head = int(subprocess.run(["git", "log", "-1", "--format=%ct"], cwd=ROOT, stdout=subprocess.PIPE,
+    head = int(subprocess.run(["git", "log", "-1", "--format=%ct", "--", "crates", "Cargo.toml", "Cargo.lock"], cwd=ROOT, stdout=subprocess.PIPE,
                               check=True).stdout)
     if not binary.exists() or binary.stat().st_mtime < head:
-        refuse("target/debug/thinkthen is missing or older than HEAD; build it first")
+        refuse("target/debug/thinkthen is missing or older than the last commit to its sources; build it first")
     songs = Path(bench) / "data" / "songs.tsv"
     if not songs.exists():
         refuse(f"{songs} is missing")
