@@ -113,23 +113,35 @@ impl Engine {
             replayed: true,
             ..Execution::default()
         };
-        for relation in prepared {
-            let mut mappings = relation.mappings.into_iter();
-            self.ask_chunks(relation.chunks, cancel, |answered| {
-                add_meta(&mut execution, &answered)?;
-                add_outcomes(
-                    &mut execution,
-                    entities,
-                    (&relation.relation, &mut mappings),
-                    &answered,
-                    threshold,
-                )
-            })?;
-            if mappings.next().is_some() {
-                return Err(Error::Defect(
-                    "a relation reply did not cover its question map",
-                ));
-            }
+        let mut rules = Vec::with_capacity(prepared.len());
+        let (mut places, mut chunks) = (Vec::new(), Vec::new());
+        for (place, relation) in prepared.into_iter().enumerate() {
+            places.extend(relation.chunks.iter().map(|_| place));
+            chunks.extend(relation.chunks);
+            rules.push((relation.relation, relation.mappings.into_iter()));
+        }
+        let mut places = places.into_iter();
+        self.ask_chunks(chunks, cancel, |answered| {
+            let (rule, mappings) = places
+                .next()
+                .and_then(|place| rules.get_mut(place))
+                .ok_or(Error::Defect("a relation reply has no relation"))?;
+            add_meta(&mut execution, &answered)?;
+            add_outcomes(
+                &mut execution,
+                entities,
+                (rule, mappings),
+                &answered,
+                threshold,
+            )
+        })?;
+        if rules
+            .iter_mut()
+            .any(|(_, mappings)| mappings.next().is_some())
+        {
+            return Err(Error::Defect(
+                "a relation reply did not cover its question map",
+            ));
         }
         Ok(execution)
     }

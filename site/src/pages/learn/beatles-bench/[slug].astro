@@ -1,0 +1,47 @@
+---
+// Goal: teach one idea from the talk with one slide, one real run on Beatles
+// Bench, and the same run at another bar. Each page's own goal sits in
+// beatles.mjs.
+import BeatlesPage from '../../../layouts/BeatlesPage.astro';
+import Terminal from '../../../components/Terminal.astro';
+import Code from '../../../components/Code.astro';
+import { PAGES } from '../../../data/beatles.mjs';
+import { captioned, benchFile } from '../../../data/samples.mjs';
+import folders from '../../../../examples/beatles/folders.json';
+
+export function getStaticPaths() {
+  return PAGES.filter((p) => p.slug).map((page) => ({ params: { slug: page.slug }, props: { page } }));
+}
+
+const { page } = Astro.props;
+for (const field of ['goal', 'lesson', 'takeaway']) {
+  if (!page[field]) throw new Error(`beatles: ${page.slug} has no ${field}`);
+}
+const runs = captioned(`beatles/${page.slug}`, page.see);
+const inputs = (page.files || []).map((name) => benchFile(folders[page.slug], name));
+// Prose marks code with backticks.
+const parts = (text) => text.split('`').map((p, i) => ({ code: i % 2 === 1, text: p }));
+const [first, ...rest] = page.title.split(' ');
+---
+<BeatlesPage page={{ ...page, description: page.idea[0].replaceAll('`', '') }}>
+  <div class="eyebrow">Beatles Bench · {page.group}</div>
+  <h1>{page.command ? <><code>{first}</code> {rest.join(' ')}</> : page.title}</h1>
+  <figure class="slide">
+    <img src={page.slide} alt={`The talk's slide: ${page.title}`} width="1600" height={page.slug === 'backends' ? 720 : 900} loading="eager" />
+    {page.credit && <figcaption>{page.credit}</figcaption>}
+  </figure>
+  {page.idea.map((para) => <p>{parts(para).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>)}
+
+  {inputs.map((file) => <Code code={file.text} caption={`${file.name}, the question set`} />)}
+  {runs.map((run, i) => (
+    <Fragment>
+      {i === 0 && <h2>Run it</h2>}
+      {page.headings?.[run.name] && <h2>{page.headings[run.name]}</h2>}
+      <Terminal run={run} caption={run.see} />
+    </Fragment>
+  ))}
+
+  <h2>The lesson</h2>
+  <p>{parts(page.lesson).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>
+  <p class="refrain">{parts(page.takeaway).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>
+</BeatlesPage>

@@ -1,0 +1,20 @@
+{
+ "version": 1,
+ "relate": {
+  "relations": [
+   {
+    "name": "sung_by",
+    "source": "song",
+    "target": "person",
+    "reads": "has its lead vocal sung by"
+   },
+   {
+    "name": "appears_on",
+    "source": "song",
+    "target": "album",
+    "reads": "first appeared on the album"
+   }
+  ]
+ },
+ "threshold": 0.01
+}

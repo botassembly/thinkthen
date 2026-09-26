@@ -30,12 +30,21 @@ function lands(href) {
 }
 
 const broken = [];
+// A draft post builds only when THINKTHEN_DRAFTS=1 asks for it. A normal
+// build that holds one fails, so a draft cannot deploy by accident.
+const drafts = [];
 for (const file of html) {
   const body = fs.readFileSync(file, 'utf8');
   const from = '/' + path.relative(DIST, file).split(path.sep).join('/');
+  if (body.includes('data-draft')) drafts.push(from);
   for (const m of body.matchAll(/(?:href|src)="(\/[^"]*)"/g)) {
     if (!lands(m[1])) broken.push(`${from} -> ${m[1]}`);
   }
+}
+
+if (drafts.length && process.env.THINKTHEN_DRAFTS !== '1') {
+  console.error(`draft posts in a normal build: ${drafts.join(', ')}`);
+  process.exit(1);
 }
 
 if (broken.length) {

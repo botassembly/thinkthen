@@ -1,8 +1,0 @@
-{
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "rust",
-  "code": "use thinkthen::{Answer, Engine, Question};\nlet tt = Engine::from_env()?;\n\n// a plain ask for money back is Yes. A thank-you is No\nlet ask = \"Does the customer ask for a refund?\";\nfor text in [\"Please refund my order. It arrived broken.\",\n    \"Thanks for the quick help yesterday!\"] {\n    println!(\"{:?}: {text}\", tt.decide(ask, text)?);\n}",
-  "function": "decide",
-  "surface": "rust"
-}

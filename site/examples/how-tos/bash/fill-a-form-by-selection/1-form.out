@@ -1,0 +1,18 @@
+{
+  "id": "R-1",
+  "plan": "team",
+  "topic": "export",
+  "call": false
+}
+{
+  "id": "R-2",
+  "plan": "enterprise",
+  "topic": "billing",
+  "call": true
+}
+{
+  "id": "R-3",
+  "plan": "free",
+  "topic": "access",
+  "call": false
+}

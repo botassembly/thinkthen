@@ -1,0 +1,27 @@
+---
+// Goal: teach one shell form or one small job with ThinkThen, in one short
+// real run a reader can copy. Each page's own goal sits in catalog.mjs.
+import SidePage from '../../../../layouts/SidePage.astro';
+import Terminal from '../../../../components/Terminal.astro';
+import Code from '../../../../components/Code.astro';
+import { BASH } from '../../../../data/catalog.mjs';
+import { captioned, files } from '../../../../data/samples.mjs';
+
+export function getStaticPaths() {
+  return BASH.filter((p) => p.slug).map((page) => ({ params: { slug: page.slug }, props: { page } }));
+}
+
+const { page } = Astro.props;
+if (!page.goal) throw new Error(`bash: ${page.slug} has no goal`);
+const dir = `how-tos/bash/${page.slug}`;
+const runs = captioned(dir, page.see);
+const inputs = files(dir);
+const parts = (text) => text.split('`').map((p, i) => ({ code: i % 2 === 1, text: p }));
+---
+<SidePage pages={BASH} page={{ ...page, description: page.said.replaceAll('`', '') }} name="Bash techniques">
+  <div class="eyebrow">Bash · {page.group}</div>
+  <h1>{page.title}</h1>
+  <p class="lede">{parts(page.said).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>
+  {inputs.map((file) => <Code code={file.text} caption={`${file.name}, a file the script reads`} />)}
+  {runs.map((run) => <Terminal run={run} caption={run.see} />)}
+</SidePage>

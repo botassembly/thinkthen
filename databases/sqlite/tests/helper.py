@@ -25,7 +25,7 @@ sys.path.insert(0, str(ROOT.parents[1] / "conformance" / "children"))
 from children import child_env  # noqa: E402  the shared helper, ticket 0127
 # One build-folder rule, as check.sh reads it: CARGO_TARGET_DIR, or each workspace's own target.
 BUILT = pathlib.Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target"))
-LIB = BUILT / "release" / "libthinkthen0.so"
+LIB = pathlib.Path(os.environ.get("THINKTHEN_SQLITE_EXTENSION", BUILT / "release" / "libthinkthen0.so"))
 BACKEND = os.environ.get("THINKTHEN_BACKEND", str(pathlib.Path(os.environ.get("CARGO_TARGET_DIR", ROOT.parents[1] / "target")) / "debug" / "conformance-backend"))
 CLI = os.environ.get("THINKTHEN_SQLITE_CLI", str(pathlib.Path.home() / ".cache/thinkthen-toolchains/sqlite-3500000-host/sqlite3"))
 LOOPBACK_KEY = "sk-sqlite-loopback"

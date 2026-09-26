@@ -120,15 +120,15 @@ module TestBackend
   end
 
   # Each child's whole environment: PATH, the library path the pinned Ruby
-  # needs, the locale its JSON reads, and the fake key only beside a
-  # loopback address (ticket 0127).
+  # needs, the locale its JSON reads, an installed gem's folder (ticket
+  # 0128), and the fake key only beside a loopback address (ticket 0127).
   def self.env(base_url, root, extra = {})
     host = URI(base_url).host
     raise ArgumentError, "refusing a non-loopback backend address: #{host}" unless host == "127.0.0.1"
 
     %w[cache home xdg-cache xdg-config].each { |name| Dir.mkdir(File.join(root, name)) unless Dir.exist?(File.join(root, name)) }
     Children.env(
-      keep: %w[LD_LIBRARY_PATH LANG],
+      keep: %w[LD_LIBRARY_PATH LANG GEM_PATH],
       "THINKTHEN_BASE_URL" => base_url,
       "THINKTHEN_API_KEY" => FAKE_KEY,
       "THINKTHEN_CACHE" => File.join(root, "cache"),

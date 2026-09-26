@@ -1,0 +1,84 @@
+---
+// Goal: take a reader from the install line to a pipeline that sorts a
+// stream of messages, one idea per step, every run real.
+import Base from '../../layouts/Base.astro';
+import Terminal from '../../components/Terminal.astro';
+import Code from '../../components/Code.astro';
+import InstallLine from '../../components/InstallLine.astro';
+import { SURFACES, HOWTOS, FUNCTIONS, TUTORIAL_SEE, TUTORIAL_STREAM_SEE } from '../../data/catalog.mjs';
+import { captioned, files } from '../../data/samples.mjs';
+
+const shell = SURFACES.find((s) => s.slug === 'shell');
+const see = (name) => FUNCTIONS.find((f) => f.name === name).see;
+const decide = captioned('functions/decide', see('decide'));
+const run = (name) => decide.find((r) => r.name === name);
+
+const plain = run('3-one');
+const answer = run('4-details');
+const lines = { ...run('1-lines'), see: TUTORIAL_STREAM_SEE };
+const branch = run('2-case');
+const [band] = captioned('learn/tutorial', TUTORIAL_SEE);
+
+const [savedYes, savedUnsure] = captioned('functions/question-file', see('question-file'));
+const refundFile = files('functions/question-file')[0];
+
+const kept = captioned('functions/filter', see('filter'))[0];
+const sorted = captioned('functions/rank', see('rank'))[0];
+const triagePage = 'how-tos/triage-a-support-inbox';
+const triage = captioned(triagePage, HOWTOS.find((h) => h.slug === 'triage-a-support-inbox').see);
+const triageForm = files(triagePage)[0];
+---
+<Base title="Tutorial" description="From the install line to a pipeline that sorts a stream of messages.">
+  <h1>Tutorial</h1>
+  <p class="lede">From the install line to a pipeline that sorts a stream of messages. You ask one question, read the number behind the answer, set your own bar, and save the question to a file.</p>
+
+  <h2>1. Install it</h2>
+  <InstallLine line={shell.install[0][0]} caption="The download script" />
+  <InstallLine line={shell.install[1][0]} caption="Homebrew, an option on a Mac" />
+  <p>The <a href="/install/">install page</a> covers the key and every language and database.</p>
+
+  <h2>2. Ask one question</h2>
+  <p>Name the question, pipe the message in, and pass the question as an argument. <code>decide</code> prints a bare <code>true</code>, <code>false</code>, or <code>null</code>, and it sets the exit code to match. Without <code>--details</code>, one message always gets this bare answer.</p>
+  <Terminal run={plain} caption={plain.see} />
+  <p>The exit code is the answer. A script branches on it the way it branches on <code>test</code>.</p>
+
+  <h2>3. Look at the number</h2>
+  <p><code>true</code> hides a number. <code>--details</code> prints the whole result, and the model's probability sits under <code>answer</code>.</p>
+  <Terminal run={answer} caption={answer.see} />
+  <p>That number is the model's own. ThinkThen passes it through unchanged.</p>
+
+  <h2>4. Set a band</h2>
+  <p><code>--threshold</code> is your bar on the probability. One number is a cut, and the default is 0.5. Two numbers make a band: under the low bar is no, at or over the high bar is yes, and anything between is not sure.</p>
+  <Terminal run={band} caption={band.see} />
+  <p>The threshold never changes the probability. It changes what you call a yes.</p>
+
+  <h2>5. Branch on the answer</h2>
+  <p>A script reads the exit code and hands a person the calls it should not make alone.</p>
+  <Terminal run={branch} caption={branch.see} />
+
+  <h2>6. Save the question to a file</h2>
+  <p>A question worth tuning is worth keeping. A question file holds one question: the words, what a yes and a no mean, and the threshold.</p>
+  <Code code={refundFile.text} caption={`${refundFile.name}, the saved question`} />
+  <p>Write <code>@refund.json</code> in place of the question words.</p>
+  <Terminal run={savedYes} caption={savedYes.see} />
+  <Terminal run={savedUnsure} caption={savedUnsure.see} />
+
+  <h2>7. Judge a stream</h2>
+  <p><code>--lines</code> tells <code>decide</code> to judge each line as its own message. Each answer then prints as one JSON line with its input beside it. The input shows which answer belongs to which message. <code>jq .</code> spreads each line out to read.</p>
+  <Terminal run={lines} caption={lines.see} />
+  <p><code>filter</code> reads one record per line with no flag. It keeps the records where the answer is yes, byte for byte and in order.</p>
+  <Terminal run={kept} caption={kept.see} />
+  <p><code>rank</code> sorts the records by how likely the answer is yes.</p>
+  <Terminal run={sorted} caption={sorted.see} />
+  <p>Put them in a pipe and the second question reads only what the first kept. <a href="/how-tos/rank-the-inbound-leads/">See the leads how-to</a> for <code>filter</code>, <code>rank</code>, and <code>choose</code> in one pipeline.</p>
+
+  <h2>8. Ask many questions at once</h2>
+  <p><code>annotate</code> fills out a form for every record. The form is a question set: any mix of <code>decide</code>, <code>choose</code>, <code>score</code>, and <code>tag</code> questions in one file.</p>
+  <Code code={triageForm.text} caption={`${triageForm.name}, the question set`} />
+  {triage.map((step) => <Terminal run={step} caption={step.see} />)}
+  <p><code>filter</code> drops the thank-you note. Each message left comes back with one field per question.</p>
+
+  <p>ThinkThen answers. Your code acts.</p>
+
+  <p class="pagelinks"><a href="/learn/beatles-bench/">Next: Beatles Bench</a> · <a href="/how-tos/bash/">Learn the Bash techniques</a></p>
+</Base>

@@ -1,0 +1,40 @@
+{
+  "schema": "thinkthen.result/1",
+  "value": 2.0,
+  "question": {
+    "verb": "score",
+    "text": "How urgent is this?",
+    "levels": [
+      "Routine.",
+      "Soon.",
+      "Immediate."
+    ]
+  },
+  "answer": {
+    "kind": "score",
+    "level": "Immediate.",
+    "probabilities": {
+      "Routine.": 0.0,
+      "Soon.": 0.0,
+      "Immediate.": 1.0
+    },
+    "confidence": 1.0
+  },
+  "threshold": null,
+  "meta": {
+    "tool": "thinkthen 0.0.1",
+    "question_sha256": "4a5fb65b80f563b65f312f0321e1cc75019929839dff143a5ba51d3b7277c2fc",
+    "url": "https://api.typesafe.ai/v1/systemone",
+    "model": "jev-1.13.0",
+    "usage": {
+      "input_tokens": 308,
+      "output_tokens": 18
+    },
+    "requests_sent": 0,
+    "cached": true,
+    "requests": [
+      "cb873d9fd4afca3a1e1decdea3716abefcf2a70f434f4a46601f8e23f5e166c9"
+    ],
+    "failed_questions": 0
+  }
+}

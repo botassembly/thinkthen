@@ -1,47 +1,49 @@
 ---
-// One recorded run: what went in, the command, what came out, and the exit
-// code in its outcome colour. Nothing here is typed by hand; the fields come
-// from src/data/examples/.
+// One example: the script in one block, then what it printed in its own
+// block, closed by the exit code in its outcome colour. The run comes from
+// examples/ through src/data/samples.mjs. Nothing here is typed by hand.
 //
-// The word after the exit code comes from the function's own exits list.
-// `fn` names the function; without it, the function is read from the last
-// stage of the command. A pipeline that ends in another tool, such as jq,
-// gets no word, because that tool set the code. `word={false}` hides it.
-import { outcomeOf, exitWord } from '../data/catalog.mjs';
+// exitMark in catalog.mjs gives the word and the colour after the exit
+// code. Only a single answer gets a colour.
+import { exitMark } from '../data/catalog.mjs';
 
-const { run, caption = 'Recorded from the real command.', fn = null, word = true } = Astro.props;
+const { run, caption = null } = Astro.props;
 
+// Heredoc bodies are input. Every other line is the script.
 const lines = [];
-for (const file of run.also || []) {
-  lines.push({ cls: 'p', text: `$ cat ${file.name}` });
-  for (const l of file.text.split('\n')) lines.push({ cls: 'in', text: l });
+let until = null;
+for (const l of run.command.split('\n')) {
+  if (until) {
+    const end = l.trim() === until;
+    if (end) until = null;
+    lines.push({ cls: end ? 'cmd' : 'in', text: l });
+    continue;
+  }
+  const doc = /<<-?\s*'?(\w+)'?/.exec(l);
+  if (doc) until = doc[1];
+  lines.push({ cls: 'cmd', text: l });
 }
-if (run.input && run.inputFile) {
-  lines.push({ cls: 'p', text: `$ cat ${run.inputFile}` });
-  for (const l of run.input.split('\n')) lines.push({ cls: 'in', text: l });
-}
-run.command.split('\n').forEach((l, i) => {
-  lines.push({ cls: 'cmd', text: (i === 0 ? '$ ' : '') + l });
-});
-if (run.input && !run.inputFile) {
-  for (const l of run.input.split('\n')) lines.push({ cls: 'in', text: l });
-}
-if (run.output) for (const l of run.output.split('\n')) lines.push({ cls: 'out', text: l });
 
-const outcome = outcomeOf(run.exit);
-const said = word ? exitWord(run.command, run.exit, fn) : null;
-const copy = run.command;
+const exit = run.exit ?? 0;
+const mark = exitMark(run.command, exit);
+const output = run.output ? run.output.split('\n') : [];
 ---
-<div class="block">
-  <div class="caption">
-    <span class="status run">run</span>
-    <span class="grow">{caption}</span>
-    <button class="copy" type="button">Copy</button>
+<div class="example">
+  <div class="block">
+    <div class="caption">
+      <span class="grow">{caption && caption.split('`').map((part, i) => (i % 2 ? <code>{part}</code> : part))}</span>
+      <button class="copy" type="button" aria-label="Copy the script">Copy</button>
+    </div>
+    <pre data-copy={run.command}>{lines.map((l, i) => (
+      <Fragment><span class={l.cls}>{l.text}</span>{i < lines.length - 1 ? '\n' : ''}</Fragment>
+    ))}</pre>
   </div>
-  <pre data-copy={copy}>{lines.map((l, i) => (
-    <Fragment><span class={l.cls}>{l.text}</span>{i < lines.length - 1 ? '\n' : ''}</Fragment>
-  ))}</pre>
-  {run.exit !== null && run.exit !== undefined && (
-    <div class="caption"><span class={`exit ${outcome}`}>exit {run.exit}{said ? ` — ${said}` : ''}</span></div>
-  )}
+  <div class="block output">
+    {output.length > 0 && <div class="caption"><span class="grow">Output</span></div>}
+    {output.length > 0 && <pre>{output.join('\n')}</pre>}
+    <div class={output.length ? 'caption' : 'caption solo'}>
+      {output.length === 0 && <span class="grow">No output</span>}
+      <span class={`exit ${mark.cls}`}>exit {exit}{mark.word ? `: ${mark.word}` : ''}</span>
+    </div>
+  </div>
 </div>

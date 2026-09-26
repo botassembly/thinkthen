@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { childEnv as cleanEnv } from '../../../conformance/children/children.mjs';
 
 export const FAKE_KEY = 'fake-loopback-key';
-export const INDEX = fileURLToPath(new URL('../index.mjs', import.meta.url));
+export const INDEX = fileURLToPath(import.meta.resolve('thinkthen'));
 export const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
 /** Start the conformance backend and close it when the test ends. */
