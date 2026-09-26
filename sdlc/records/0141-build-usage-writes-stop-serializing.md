@@ -54,14 +54,14 @@ Nonblank lines against `origin/main` at `a14d959e`.
 
 | File | Ticket budget | Measured |
 | --- | --- | --- |
-| `crates/thinkthen/src` production | at most 60 added, 50 net | `usage.rs` 103 added, 56 removed, 448 to 495, +47 net. `cli/mod.rs` and `http.rs` 1 changed each. **Crosses the added budget** |
+| `crates/thinkthen/src` production | at most 60 added, 50 net | `usage.rs` 106 added, 56 removed, 448 to 498, +50 net, after the review fixes. It was 103 added and +47 net at review. `cli/mod.rs` and `http.rs` 1 changed each. **Crosses the added budget** |
 | New test and harness split | at most 80 added | 65 in `default_cache/usage.rs`, 12 added and 2 removed in the harness: 77 |
 | Existing unit tests | at most 15 changed | 11 |
 | Pages and ADR | one sentence, one comment, ADR at most 30 lines, the issue | one sentence, two comments, ADR 13 nonblank lines, the issue |
 
 The net budget holds, and the added budget does not. Replacing the atomics and the `persistent` flag rewrote the lines around them. The coordinator accepted the overrun: 103 added and 56 removed, net +47, within the 50 net budget. Most added lines replace removed ones, and merging the two Stage enums removes duplication. Ian can overturn this.
 
-`sdlc/ratchet.json` moves from 67,627 to 67,755, up 128: 47 in `usage.rs`, 75 in the new test and harness, and 6 in the unit tests. The builder looked for duplication in `usage.rs` first and merged the two `Stage` enums.
+`sdlc/ratchet.json` moves from 67,627 to 67,758, up 131: 50 in `usage.rs`, 75 in the new test and harness, and 6 in the unit tests. The builder looked for duplication in `usage.rs` first and merged the two `Stage` enums.
 
 ## Ladder
 

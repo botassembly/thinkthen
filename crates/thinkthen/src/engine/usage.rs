@@ -133,7 +133,6 @@ impl Counters {
         queue.unwrap_or_else(PoisonError::into_inner).totals
     }
 
-    /// Count in memory and queue the delta for the writer. Never touches a file.
     fn add(&self, delta: Counts) {
         let Ok(mut queue) = self.shared.queue.lock() else {
             return;

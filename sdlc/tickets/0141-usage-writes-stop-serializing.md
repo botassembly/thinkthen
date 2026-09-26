@@ -108,7 +108,7 @@ Nonblank lines, measured with `grep -c .` on the diff.
 - Tests: at most 80 added in `default_cache/usage.rs` and the harness split, and at most 15 changed across the existing unit tests.
 - Pages and the ADR: the one sentence in `recording.md`, the one doc comment, an ADR of at most 30 lines, and the website issue.
 - `sdlc/ratchet.json` moves to the measured total in the commit that adds the code. The commit says what grew. The builder looks for duplication to delete in `usage.rs` first.
-- Budget ruling, 2026-09-26: The coordinator accepted the overrun: 103 added and 56 removed, net +47, within the 50 net budget. Most added lines replace removed ones, and merging the two Stage enums removes duplication. Ian can overturn this.
+- Budget ruling, 2026-09-26: The coordinator accepted the overrun: 103 added and 56 removed, net +47, within the 50 net budget. Most added lines replace removed ones, and merging the two Stage enums removes duplication. Ian can overturn this. The review fixes then brought it to 106 added, net +50, still within the net budget.
 - No dependency. No public library type, method, or message changes, so the `surfaces` rung is not required.
 
 ## Stop rules
