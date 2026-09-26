@@ -55,7 +55,7 @@ docker run "$@" "$IMAGE" sh -euc '
 	tar -xJf "$cache/$node.tar.xz" -C /work/home
 	PATH=/work/home/.cargo/bin:/work/home/venv/bin:/work/home/$node/bin:/work/home/pgrx/bin:$PATH
 	CARGO_NET_OFFLINE=false cargo install --quiet --locked --no-default-features --root /work/home/pgrx cargo-pgrx --version 0.17.0
-	# bindgen reads the image gcc's own headers beside the wheel's libclang.
+	# bindgen reads the headers of the image gcc beside the libclang of the wheel.
 	LIBCLANG_PATH=/work/home/venv/lib/python3.10/site-packages/clang/native
 	BINDGEN_EXTRA_CLANG_ARGS="-I$(gcc -print-file-name=include)"
 	PG_CONFIG=/work/home/pg/usr/pgsql-16/bin/pg_config
