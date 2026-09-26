@@ -222,9 +222,17 @@ fn tt_rank_all(question: Robj, records: Robj, deadline: Robj) -> Crossed<List> {
 }
 
 #[extendr]
-fn tt_find_one(question: Robj, units: Robj, deadline: Robj) -> Crossed<List> {
+fn tt_find_one(question: Robj, units: Robj, none: Robj, deadline: Robj) -> Crossed<List> {
     let (text, texts) = asked(&question, &units, "the units")?;
-    calls::find(&text, texts, deadline_of(&deadline)?, &interrupt_pending)
+    // tt_find checks `none` is TRUE or FALSE before it crosses.
+    let none = none.as_bool() == Some(true);
+    calls::find(
+        &text,
+        none,
+        texts,
+        deadline_of(&deadline)?,
+        &interrupt_pending,
+    )
 }
 
 #[extendr]

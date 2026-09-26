@@ -1665,6 +1665,7 @@
     {
       "id": "18-annotate-two-groups",
       "verb": "annotate",
+      "record": {"summary": "Short note.", "body": "Please refund me."},
       "question_set": {
         "version": 1,
         "questions": {

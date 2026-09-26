@@ -13,6 +13,6 @@ The port notes of ticket 0107. The tag `surfaces-wave7-frozen-2026-09-24b` keeps
 - **Saw:** the whole cases file passed inline to a child hit `E2BIG`. The child now reads the file itself.
 - **Saw:** a cache folder holds a `.thinkthen-backend.json` marker and belongs to one backend address. An engine that points at a second backend uses `cache: false`.
 - **Saw:** `maxRequests: 2` on a three-record `decide_many` sends two records, then refuses. `EngineBuilder::max_requests` documents that streaming order. The ticket expected zero sent.
-- **Saw:** the public `find` has no `none` candidate, so cases `18-find-second` and `19-find-none` report "not run".
+- **Saw:** `find` takes `{ none: true }` since ticket 0150, so cases `18-find-second` and `19-find-none` run.
 - **Saw:** the engine's throttle sentence carries no `thinkthen: ` prefix. The command adds that prefix.
 - **Tried:** `ratchet.mjs` skips only `target`, so `npm ci --offline --prefix target/npm` holds `node_modules`, and `tsc` runs from there.
