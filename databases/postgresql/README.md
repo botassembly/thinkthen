@@ -14,7 +14,7 @@
 | `thinkthen_tag(question, evidence, labels text[])` | the labels that apply, as `text[]` |
 | `thinkthen_annotate(set, evidence)` | each question's value, as `jsonb` |
 | `thinkthen_details(question, evidence)` | the engine's detailed result, as `jsonb` |
-| `thinkthen_warm(question, evidence)` | an aggregate that judges each distinct pair once and fills the answer cache |
+| `thinkthen_warm(question, evidence)` | an aggregate that judges each distinct pair once and fills the answer cache. It takes a decide question only, and any other reads `thinkthen usage: thinkthen_warm takes a decide question; ask others with thinkthen_decide` before any request |
 | `thinkthen_recognize(body, kinds text[])` or `(body, spec)` | `(name, kind, start, end, strength)` rows |
 | `thinkthen_relations(body, spec)` | `(relation, source_name, source_kind, target_name, target_kind, probability)` rows |
 | `thinkthen_relate(query, rules text[])` or `(query, spec)` | `(relation, source, target, probability)` rows, with the query's ids |

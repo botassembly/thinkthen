@@ -124,6 +124,8 @@ pub(super) fn verb(
         Some("tag") if audit => Verb::Tag,
         Some("score") if audit => Verb::Score,
         Some("find") if audit => Verb::Find,
+        Some("recognize") if audit => Verb::Recognize,
+        Some("relate") if audit => Verb::Relate,
         Some(other) if !other.is_empty() => return Err(MeasureError::Ungradable(line)),
         _ if matches!(value, None | Some(Json::Null | Json::Bool(_))) => Verb::Decide,
         _ if audit && !matches!(value, Some(Json::String(_))) && !failed => {

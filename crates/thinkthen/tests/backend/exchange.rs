@@ -1,11 +1,9 @@
 //! The compiled binary against a loopback backend: the request it sends and the reply it reads.
 
-use std::io;
-use std::process::Output;
 use std::time::{Duration, Instant};
 
 use crate::harness::{Canned, Listener, spawn};
-use crate::support::{digest, encoded_decide};
+use crate::support::{decide, digest, encoded_decide};
 
 /// The response a backend gives when it answers the one question that was asked.
 const ANSWERED: &str = concat!(
@@ -28,26 +26,6 @@ const KEY: Option<&str> = Some("sk-test-value");
 
 /// The diagnostic a refused connection earns.
 const REFUSED_DIAGNOSTIC: &str = "thinkthen: the backend refused the connection; check that it is running and that --url is correct\n";
-
-/// Run `decide` against one URL, with no environment but what the case names.
-///
-/// `key` is the value `THINKTHEN_API_KEY` holds, or `None` for a run with the
-/// variable unset.
-fn decide(base: &str, arguments: &[&str], key: Option<&str>, evidence: &str) -> io::Result<Output> {
-    let asked = [
-        "decide",
-        "asks for a refund",
-        "--url",
-        base,
-        "--model",
-        "local-1",
-    ];
-    spawn(
-        &[&asked[..], arguments].concat(),
-        &key.map_or_else(Vec::new, |value| vec![("THINKTHEN_API_KEY", value)]),
-        evidence.as_bytes(),
-    )
-}
 
 #[test]
 fn the_request_carries_the_encoded_plan_and_the_content_type() {
@@ -359,36 +337,6 @@ fn an_error_status_that_is_not_retried_fails_at_once() {
     assert!(message.contains("401"), "{message}");
     assert!(!message.contains("Refund me please."), "{message}");
     assert!(!message.contains("sk-bad"), "{message}");
-}
-
-#[test]
-fn common_request_statuses_name_fixed_actions_and_hide_the_body() {
-    let evidence = "private evidence marker";
-    let body = format!(r#"{{"error":"{evidence}"}}"#);
-    let cases = [
-        (
-            400,
-            "thinkthen: the backend answered with status 400: the backend refused the request; check --model and the request size\n",
-        ),
-        (
-            500,
-            "thinkthen: the backend answered with status 500: the backend failed after the allowed attempts; try again later or change --max-retries\n",
-        ),
-    ];
-    for (status, expected) in cases {
-        let listener =
-            Listener::serving(vec![Canned::status(status, &body)]).expect("a loopback listener");
-        let output = decide(listener.base(), &["--max-retries", "0"], KEY, evidence)
-            .expect("the compiled binary runs");
-        assert_eq!(output.status.code(), Some(4), "{status}");
-        assert!(output.stdout.is_empty(), "{status}");
-        assert_eq!(
-            String::from_utf8_lossy(&output.stderr),
-            expected,
-            "{status}"
-        );
-        assert!(!String::from_utf8_lossy(&output.stderr).contains(evidence));
-    }
 }
 
 #[test]

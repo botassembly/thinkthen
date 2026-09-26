@@ -2,6 +2,7 @@
 
 use std::fs;
 use std::io::{Read, Write};
+use std::path::Path;
 use std::process::ExitCode;
 
 use crate::core::adapters::built_in;
@@ -33,7 +34,13 @@ pub(crate) fn run(
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     refuse_views(arguments)?;
-    let text = fs::read_to_string(&arguments.questions).map_err(Failure::OpenQuestionSet)?;
+    // `@FILE` names the same file, as the other verbs' question files do.
+    let path = arguments
+        .questions
+        .to_str()
+        .and_then(|typed| typed.strip_prefix('@'));
+    let text = fs::read_to_string(path.map_or(arguments.questions.as_path(), Path::new))
+        .map_err(Failure::OpenQuestionSet)?;
     let set = match QuestionSet::parse(&text) {
         Ok(set) => set,
         Err(_) if input_looks_like_set(arguments) => {

@@ -7,6 +7,7 @@ use std::collections::HashSet;
 use pgrx::pg_sys::FunctionCallInfo;
 use pgrx::prelude::*;
 use pgrx::{Aggregate, AggregateName};
+use thinkthen::{LoadedQuestion, QuestionKind};
 
 use crate::call::{self, Refusal};
 
@@ -144,6 +145,12 @@ impl Aggregate<Warm> for Warm {
             // The question resolves on the backend thread, so a bad file
             // names itself before any worker starts.
             let question = crate::question(Some(&question), "", None);
+            if matches!(&question, LoadedQuestion::Question(held) if held.kind() != QuestionKind::Decide)
+            {
+                call::raise(Refusal::usage(
+                    "thinkthen_warm takes a decide question; ask others with thinkthen_decide",
+                ));
+            }
             judged += evidence.len();
             crate::decide_distinct(question, evidence);
         }

@@ -1,6 +1,6 @@
 # The question file
 
-Status: **Settled** for version one, by ADR 0013 and Ian's ruling of 2026-09-19. ADR 0039 carries structured text and descriptions through it.
+Status: **Settled** for version one, by ADR 0013 and Ian's ruling of 2026-09-19, amended by ADR 0048. ADR 0039 carries structured text and descriptions through it.
 
 Every structural setting of a question has two homes. One is an option on the command line. The other is a key in a question file, under the same word. A question tuned once in a file is the question the test runs and the question the gate runs.
 
@@ -56,7 +56,7 @@ A question file holds exactly one question. The first key names the verb and car
 {"score": "TEXT", "levels": ["LOWEST", "HIGHEST"], "on": "POINTER", "model": "NAME", "profile": "NAME"}
 ```
 
-A file that holds none of `decide`, `choose`, `tag`, and `score` is refused, and so is a file that holds two of them. A key no question file has is refused by name. The diagnostic writes control characters in that local key with JSON escapes and stays on one line. A key another verb takes is refused by name and by the verb the file holds. Every key beyond the verb is optional where the command line makes it optional. Two members of one object that share a name are refused wherever they sit, because an order of two same-named members cannot be told from a mistake.
+A file that holds none of `decide`, `choose`, `tag`, and `score` is refused, and so is a file that holds two of them. A key no question file has is refused by name: ``a question file takes no key `K` ``. The key `version` adds where it belongs: ``a question file takes no key `version`; `version` belongs in a question set, a recognize file, or a relate file``. The diagnostic writes control characters in that local key with JSON escapes and stays on one line. A key another verb takes is refused by name and by the verb the file holds. Every key beyond the verb is optional where the command line makes it optional. Two members of one object that share a name are refused wherever they sit, because an order of two same-named members cannot be told from a mistake.
 
 The question text under the verb's key is a string, an object, or a list. A string that is empty or holds only white space is refused. An object or a list is the instruction the vendor asked for; the tool carries it and never rewrites it into a sentence. An empty object and an empty list are values, not absence. A null, a number, or a boolean is not question text. The same holds wherever this page says TEXT.
 
@@ -87,9 +87,10 @@ The schema is structural; agreement with it is not agreement with this page. The
 | The tags | The arguments after the question, or `--label LABEL=DESCRIPTION` | `labels` | None. `tag` requires 1 to 20 | Fewer than 1, more than 20, repeated, blank, not text, or holding a control character. A description that is a number or a boolean. An `--label` with no `=`. `--label` beside a list of labels |
 | The levels | The arguments after the question | `levels` | None. `score` requires 2 to 10, lowest first | Fewer than 2, more than 10, repeated, blank, not text, or holding a control character. A map description that is blank text, a number, or a boolean. A nonstring list entry |
 | The rule | `--threshold T` or `--threshold LOW:HIGH` | `threshold` | `0.5` for `decide`, `tag`, and `filter`, none for `choose`, `score`, and `rank` | A cut of 0 or above 1, a band whose low side is not below its high side, a band on `choose`, `tag`, and `filter`, and any threshold on `score` and on `rank` |
-| The evidence | `--field POINTER` | `on` | The whole record | Anything that is not RFC 6901 |
+| The evidence | `--field POINTER` | `on` | The whole record | Anything that is not RFC 6901, or that holds a control character: `a pointer is one line of printable text`. A refusal writes the pointer with JSON escapes |
 | The model | `--model NAME` | `model` | `jev-latest` | Empty or only white space |
 | The threshold's calibration identity | none | `profile` | absent | Anything outside lowercase letters, digits, hyphens, and underscores |
+| Not built yet, by ADR 0048 item 3: the batch setting | `--batch N` | `batch` | `max` | 0, a fraction, and any text but `max` |
 
 Nothing has a default where a guess would hide a mistake. `choose` with no options in either home is a usage error, and so is `score` with no levels.
 
@@ -98,6 +99,8 @@ Nothing has a default where a guess would hide a mistake. `choose` with no optio
 Ruled by Ian on 2026-09-19: **the command line, then the file, then the default.**
 
 A single value typed beside `@FILE` replaces the file's value. That covers `--threshold`, `--true`, `--false`, `--model`, and `--field`, which replaces `on`. `profile` is calibration identity and has no command-line override. `--profile FILE` selects the run profile instead.
+
+Not built yet, by ADR 0048 item 4 and 8: `--batch` replaces the file's `batch`. `batch` takes four tiers: the typed value, then the environment, then the file, then the default. Only a per-call value counts as typed. The environment tier holds `THINKTHEN_BATCH`, a library engine setting, and a SQL `SET`. The read-only configuration file holds no `batch` key. The file's `batch` names the setting its threshold was tuned at, as `profile` names the backend, and it stays out of the digest. A question set carries at most one top-level `batch`. Every other setting keeps the ruling above.
 
 A list typed beside `@FILE` replaces the file's whole list and never merges with it. That covers the options of `choose`, the labels of `tag`, and the levels of `score`. A typed list carries no descriptions, so replacing a described list drops every description the file held.
 

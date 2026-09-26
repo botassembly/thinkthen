@@ -147,7 +147,7 @@ impl fmt::Debug for Entity {
         formatter
             .debug_struct("Entity")
             .field("name", &Withheld(self.name.len()))
-            .field("kind", &self.kind)
+            .field("kind", &Withheld(self.kind.len()))
             .finish()
     }
 }
