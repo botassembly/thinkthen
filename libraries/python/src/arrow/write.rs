@@ -369,6 +369,9 @@ pub(crate) fn column(name: &str, cells: &Cells) -> Result<Output, String> {
     ))
 }
 
+/// The caller's column schemas and the frame's metadata.
+pub(crate) type Kept = (Vec<SchemaNode>, Option<Vec<u8>>);
+
 /// The caller's column schemas and frame metadata, copied before any send,
 /// so a schema the copy refuses or a question named as a column sends
 /// nothing (ticket 0136). Question names are `[a-z0-9_]`, so `'{name}'` reads
@@ -378,7 +381,7 @@ pub(crate) fn kept<'a>(
     memory: &Readable,
     read: &Frame<'_>,
     mut names: impl Iterator<Item = &'a str>,
-) -> Result<(Vec<SchemaNode>, Option<Vec<u8>>), String> {
+) -> Result<Kept, String> {
     let fields: Vec<SchemaNode> = read
         .schemas
         .iter()
@@ -403,7 +406,7 @@ pub(crate) fn kept<'a>(
 /// columns aliased batch by batch, and the new columns cut to match.
 pub(crate) fn frame(
     hold: &Arc<Imported>,
-    (mut fields, metadata): (Vec<SchemaNode>, Option<Vec<u8>>),
+    (mut fields, metadata): Kept,
     read: &Frame<'_>,
     columns: &[(String, Cells)],
 ) -> Result<Output, String> {

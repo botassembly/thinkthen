@@ -366,7 +366,6 @@ mod tests {
 
     use std::sync::Arc;
 
-    use super::super::memory::Readable;
     use super::super::read::{Batch, Frame};
     use super::super::write::{ArrayNode, Cells, Output, frame};
     use super::{ArrowArray, EMPTY_ARRAY, EMPTY_SCHEMA, Imported};
@@ -399,7 +398,6 @@ mod tests {
     /// gives the second batch the first batch's answers.
     #[test]
     fn each_batch_gets_its_own_rows_of_a_new_column() {
-        let memory = Readable::snapshot().expect("the memory map reads");
         let hold = Arc::new(Imported {
             stream: None,
             schema: EMPTY_SCHEMA,
@@ -422,7 +420,8 @@ mod tests {
             batches: vec![batch(0, 2), batch(4, 3)],
         };
         let answers = [("n".to_owned(), Cells::Counts(vec![10, 11, 12, 13, 14]))];
-        let Ok(Output::Frame(_, batches)) = frame(&hold, &memory, &read, &answers) else {
+        let Ok(Output::Frame(_, batches)) = frame(&hold, (Vec::new(), None), &read, &answers)
+        else {
             panic!("the frame is written");
         };
         let cuts: Vec<Vec<String>> = batches.iter().map(cuts).collect();
