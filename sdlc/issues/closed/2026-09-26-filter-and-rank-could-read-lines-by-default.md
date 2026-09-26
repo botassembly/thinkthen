@@ -1,6 +1,6 @@
 # filter and rank could read lines by default
 
-Status: Open. Filed 2026-09-26 by the marketing session after Ian asked why `--lines` appears in almost every example.
+Status: Closed 2026-09-26 by ticket 0137. Filed 2026-09-26 by the marketing session after Ian asked why `--lines` appears in almost every example.
 
 ## What happens
 

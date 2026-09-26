@@ -5,12 +5,12 @@ Status: **Settled** for version one, by ADR 0007.
 Prints the records in order of the probability of yes.
 
 ```text
-thinkthen rank QUESTION (--lines|--jsonl|--csv|--tsv) [--top N] [--field POINTER] [--details] [BACKEND]
+thinkthen rank QUESTION [--lines|--jsonl|--csv|--tsv] [--top N] [--field POINTER] [--details] [BACKEND]
 ```
 
 ## What it reads
 
-A stream of records. `rank` requires `--lines`, `--jsonl`, `--csv`, or `--tsv`. `--input FILE` reads a file instead of standard input. [records.md](records.md) gives the framing and the pointer rules.
+A stream of records. With no framing flag it reads lines, or JSON Lines when a pointer names part of each record. The pointer comes from `--field` or from a question file's `on`. `--lines`, `--jsonl`, `--csv`, or `--tsv` names the framing outright. `--input FILE` reads a file instead of standard input. [records.md](records.md) gives the framing and the pointer rules.
 
 `QUESTION` is one argument. The tool asks it of each record as a yes/no question. It is the question text, or `@` and the path of a question file holding one `decide` question, and `--true TEXT` and `--false TEXT` say what a yes and a no mean, exactly as they do on `decide`.
 
@@ -25,7 +25,7 @@ Each line or JSONL record as it arrived, and each CSV or TSV row as a compact JS
 | Option | Meaning | Default |
 | --- | --- | --- |
 | `--top N` | Prints the first `N` records of the order. It saves no requests, because every record is judged before anything is sorted | All records |
-| `--lines`, `--jsonl`, `--csv`, or `--tsv` | The framing. One of the four is required | None. Its absence is a usage error |
+| `--lines`, `--jsonl`, `--csv`, or `--tsv` | The framing | `--lines`, or `--jsonl` when a pointer is given |
 | `--field POINTER` | The part of each record the model sees | The whole record |
 | `--details` | Prints one result object for each record it prints | Off |
 | `--input FILE` | Reads the records from a file | Standard input |
@@ -34,7 +34,7 @@ Each line or JSONL record as it arrived, and each CSV or TSV row as a compact JS
 | Record options | `--jobs N`, `--record DIR`, `--replay DIR`, `--cache DIR`, as [records.md](records.md) and [recording.md](recording.md) give them | `--jobs 4` |
 | Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-latest` |
 
-`rank` takes no `--threshold`, no `--quiet`, and no `--raw`. Each is refused by name, and the message says which command carries it. A rule is refused in both homes, so a question file holding a `threshold` is refused too, at exit 5. A missing framing is a usage error.
+`rank` takes no `--threshold`, no `--quiet`, and no `--raw`. Each is refused by name, and the message says which command carries it. A rule is refused in both homes, so a question file holding a `threshold` is refused too, at exit 5.
 
 `--top N` takes a whole number of 1 or more. `--top 0` prints nothing and is a usage error.
 

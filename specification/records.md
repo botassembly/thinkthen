@@ -1,6 +1,6 @@
 # Records
 
-Status: **Settled** for version one, by ADR 0007 and ADR 0010.
+Status: **Settled** for version one, by ADR 0007 and ADR 0010, amended by ADR 0048.
 
 The default input is one text document. A record stream turns a command into a map over records. [channels.md](channels.md) governs the five channels, and [result.md](result.md) governs the shape of one result.
 
@@ -23,7 +23,7 @@ Under `--lines` and under `--jsonl` a carriage return before the line feed is st
 | Command | Framing |
 | --- | --- |
 | `decide`, `choose`, `tag`, `score` | One document by default. All four record flags are accepted |
-| `filter`, `rank` | One record flag is required. One document is not a stream |
+| `filter`, `rank` | Lines by default, or JSONL when a pointer is given. All four record flags are accepted. One document is not a stream |
 | `annotate` | One document by default. All four record flags are accepted |
 | `find` | Lines by default or JSONL. CSV and TSV are not options |
 | `relate` | One JSON array by default. Lines, JSONL, CSV, and TSV form one complete entity set |
@@ -45,7 +45,7 @@ A header or logical data row may hold at most 16 MiB of encoded bytes before its
 **The pointer is the disclosure boundary.** Only the pointed value leaves the machine. `--details` still carries the whole record in `input`.
 
 - `--field` with `--jsonl`, `--csv`, or `--tsv` reads the pointer in each record.
-- `--field` without a record framing reads the whole input as one JSON value and takes the pointer inside it. No separate JSON framing flag exists.
+- `--field` without a record framing reads the whole input as one JSON value and takes the pointer inside it. No separate JSON framing flag exists. On `filter` and `rank` it reads JSONL instead, and so does a question file's `on`.
 - `--field` with `--lines` is a usage error. A text line has no members.
 - A pointer that finds nothing is an input error for that record at exit 2, before any request for it.
 - `$.body`, `#/id`, a wildcard, and a negative index are refused with a message that names RFC 6901, because the tool never guesses a pointer language.
@@ -78,17 +78,17 @@ The request carries the evidence object as the `state` value itself, in the orde
 
 ## Order and requests
 
-Records never share model context, except that `find` deliberately sends its complete bounded set as one aggregate request. Default `decide`, `choose`, `tag`, and `score` output keeps each parsed record under `input` and its answer under `value`. Output keeps input order everywhere but `rank` and `find`. No record is dropped for being unresolved, except that `filter` prints only what it keeps and `find --none` prints nothing. `choose --raw` keeps printing plain labels for lines and JSONL. `filter` prints kept line and JSONL records as they arrived. CSV and TSV rows print as compact JSON objects in header order. Every output from CSV and TSV input is JSONL.
+Records never share model context, except that `find` deliberately sends its complete bounded set as one aggregate request. Not built yet, by ADR 0048 item 1: records of one batch share one request and see each other, and `--batch 1` keeps them apart. Default `decide`, `choose`, `tag`, and `score` output keeps each parsed record under `input` and its answer under `value`. Output keeps input order everywhere but `rank` and `find`. No record is dropped for being unresolved, except that `filter` prints only what it keeps and `find --none` prints nothing. `choose --raw` keeps printing plain labels for lines and JSONL. `filter` prints kept line and JSONL records as they arrived. CSV and TSV rows print as compact JSON objects in header order. Every output from CSV and TSV input is JSONL.
 
 ### How many requests each command makes
 
-Settled by ADR 0008, accepted in ADR 0010, with the `find` exception settled by ADR 0030. One request normally carries one piece of evidence and every question asked of it. `find` sends all of its units together because choosing the best unit requires comparison across the set.
+Settled by ADR 0008, accepted in ADR 0010, with the `find` exception settled by ADR 0030. One request normally carries one piece of evidence and every question asked of it. `find` sends all of its units together because choosing the best unit requires comparison across the set. Not built yet, by ADR 0048 item 2: by default each request fills with records up to the backend's limits, and N records make N requests only at `--batch 1`.
 
 | Command | Requests |
 | --- | --- |
 | `decide`, `choose`, `tag`, `score` on one document | 1 |
 | `annotate` on one document | 1 for each distinct `on` |
-| `decide`, `choose`, `tag`, `score`, `filter`, `rank` over N records | N |
+| `decide`, `choose`, `tag`, `score`, `filter`, `rank` over N records | N. Not built yet, by ADR 0048 item 2: one for each batch, and N at `--batch 1` |
 | `annotate` over N records | N times the number of distinct `on` sets |
 | `find` | 1 |
 | `relate` | The shared relation planner's exact request count for the complete set |
@@ -106,7 +106,7 @@ For `relate`, an empty line or JSONL stream and a header-only table are successf
 
 Settled by ADR 0008 item 5, accepted in ADR 0010. A run stops at the first failed record. Rows already printed stay printed, and the run ends with the code the failure earns: 4 for a backend failure, 5 for a local failure, 2 for a record the tool refused before sending it. No failure ever becomes `false`, `null`, a label, or a zero.
 
-A run that stops early prints one line on standard error with the record where it stopped and how many records it finished. When `--record`, `--replay`, or `--cache` made recordings relevant, the line also says how many finished records came from one. A run that finishes prints nothing there. Printed output after a failure is a prefix of the input. It is not a finished dataset.
+A run that stops early prints one line on standard error with the record where it stopped and how many records it finished. When `--record`, `--replay`, or `--cache` made recordings relevant, the line also says how many finished records came from one. A run that finishes prints nothing there. Not built yet, by ADR 0048 item 6: when a batch fails, the line names the range its request carried. Not built yet, by ADR 0048 item 10: `--facts` adds one `thinkthen.run/1` line at the end of any run. Printed output after a failure is a prefix of the input. It is not a finished dataset.
 
 An unresolved answer is never retried. In record mode the exit code reports the run, and no record's answer sets it. A completed run exits 0 unless `annotate` preserves one or more failed questions beside good answers and exits 6. Codes 7 and 8 stay reserved.
 
@@ -131,6 +131,8 @@ Each digest keeps the first complete response installed in the folder. Concurren
 The default can run past the vendor's documented 1,200 requests a minute on short records. Experiment 206 measured it from one machine, and `sdlc/issues/closed/2026-09-20-accuracy-round-on-three-public-sets-and-a-speed-rerun.md` records it. On three 200-record checks of short lines, a throttle of 4 sent 1,267, 1,319, and 1,272 requests a minute. On five checks, a throttle of 3 sent between 972 and 1,017. At a throttle of 3, 3,000 short lines took 183.6 seconds, or 980 a minute. The accuracy record reports that longer records answer more slowly and stay under the limit at 4. It gives no rate for them. The service refused nothing in those runs, or at about 4,300 a minute in an earlier run that `sdlc/issues/closed/2026-09-20-live-probe-findings-packing-tagging-status-and-cost.md` records. A run that must stay inside the documented limit on short records sets `--jobs 3`. `sdlc/issues/closed/2026-09-24-the-default-jobs-width-runs-past-the-documented-limit.md` records why the default stays at 4.
 
 Output order never depends on `jobs`. A run with any number prints the bytes that `--jobs 1` prints, on standard output and on standard error, whether it finished or stopped. The tool holds finished rows in a bounded buffer until the rows before them are written, and the buffer holds at most `jobs` rows, so the memory of a long run stays flat.
+
+Not built yet, by ADR 0048 item 5: `jobs` counts batches in flight. A batch is one request, so it still counts requests in flight. The buffer holds at most `jobs` batches of rows. `--jobs` changes no batch.
 
 One process opens one pool of connections and every worker posts through it, so a run over many records pays for one handshake rather than one for each record. A run opens up to one connection for each request in flight, so `--jobs N` opens up to N connections. Experiment 218 saw 30 to 35 open file descriptors at `--jobs 32` and 7 at `--jobs 4`. A backend or proxy that caps connections per client needs a lower `--jobs`.
 

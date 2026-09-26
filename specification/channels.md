@@ -1,6 +1,6 @@
 # Channels
 
-Status: **Settled** for version one, by ADR 0007.
+Status: **Settled** for version one, by ADR 0007, amended by ADR 0048.
 
 `thinkthen` is an ordinary Unix program. Every command obeys these rules. On SIGINT, it stops starting work, finishes and flushes work already started, then terminates with the normal signal status.
 
@@ -11,7 +11,7 @@ Status: **Settled** for version one, by ADR 0007.
 | Arguments | The command, its options, and the question. Never data |
 | Standard input | The evidence. Never instructions |
 | Standard output | Results, and nothing else. One bare JSON value, or one value per record |
-| Standard error | Diagnostics for a person. Never parsed by a script |
+| Standard error | Diagnostics for a person. Never parsed by a script. Not built yet, by ADR 0048 item 10: the one `--facts` line is for a script |
 | Exit code | The outcome class, from the table below |
 
 ## What the tool never does
@@ -29,7 +29,7 @@ An unknown option is a usage error. So is a repeated single-value option, and so
 
 Everyday options are `--threshold`, `--details`, `--quiet`, `--raw`, `--input FILE`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field POINTER`, `--options POINTER`, `--top N`, `--none`, and `--dry-run`. The list names every one. Each verb's page says which of them it takes.
 
-Advanced options appear in the long help alone: `--model`, `--timeout`, `--max-retries`, `--record DIR`, `--replay DIR`, `--cache DIR`, and `--jobs N`. `--url` and `--profile FILE` also appear in short help. They decide where evidence goes and whether a request is locally refused before it goes there.
+Advanced options appear in the long help alone: `--model`, `--timeout`, `--max-retries`, `--record DIR`, `--replay DIR`, `--cache DIR`, and `--jobs N`. `--url` and `--profile FILE` also appear in short help. They decide where evidence goes and whether a request is locally refused before it goes there. Not built yet, by ADR 0048 item 3, 10 and 11: `--batch N`, `--facts`, and `--context FILE` join the advanced options.
 
 ## Standard input
 
@@ -96,7 +96,7 @@ The plan is one compact JSON document on standard output with four fields that a
 
 The plan carries the evidence, because the evidence is what leaves the machine. A plan deserves the same care as the request itself. The plan never holds a key.
 
-In record mode `--dry-run` prints the plan for the first record and stops. It reads no further than that record, and the plan carries a fifth field, `input`, naming the framing and the pointers.
+In record mode `--dry-run` prints the plan for the first record and stops. It reads no further than that record, and the plan carries a fifth field, `input`, naming the framing and the pointers. When `filter` or `rank` took its framing by default, `input` also carries `"from":"default"`. Not built yet, by ADR 0048 item 13: it plans the first batch, reads until that batch closes, and never waits on a pause.
 
 ```json
 {"url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Payouts have failed for 3 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this report a payment failure?"}}}}

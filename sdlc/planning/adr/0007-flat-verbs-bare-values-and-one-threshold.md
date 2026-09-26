@@ -98,9 +98,9 @@ Codes 7 and 8 stay reserved. In record mode the exit code reports the run, and n
 
 ### Records
 
-The default input is one text document on standard input. `--input FILE` reads a file instead. `--lines` makes each line a text record. `--jsonl` makes each line a JSON record. `--field POINTER` is a JSON Pointer (RFC 6901) naming the part of each record the model sees. The rest of the record stays on the machine. `--field` without `--jsonl` reads the whole input as one JSON value. `--field` with `--lines` is a usage error. A pointer that finds nothing is an input error at exit 2 for that record, before any request for it.
+The default input is one text document on standard input. `--input FILE` reads a file instead. `--lines` makes each line a text record. `--jsonl` makes each line a JSON record. `--field POINTER` is a JSON Pointer (RFC 6901) naming the part of each record the model sees. The rest of the record stays on the machine. `--field` without `--jsonl` reads the whole input as one JSON value. (Amended 2026-09-26 for `filter` and `rank`, below.) `--field` with `--lines` is a usage error. A pointer that finds nothing is an input error at exit 2 for that record, before any request for it.
 
-`decide`, `choose`, and `score` accept `--lines` and `--jsonl` and then print one value per record in input order. `filter` and `rank` require one of the two. `annotate` reads one document by default and records under either flag. Each record is its own request, and records never share model context.
+`decide`, `choose`, and `score` accept `--lines` and `--jsonl` and then print one value per record in input order. `filter` and `rank` require one of the two. (Amended 2026-09-26, below.) `annotate` reads one document by default and records under either flag. Each record is its own request, and records never share model context. (Amended by ADR 0048, below.)
 
 A run stops at the first failed record. Rows already printed stay printed. An empty record stream succeeds with no output and no request. An empty document is a usage error. A rerun with `--record DIR --replay DIR` on one folder answers the finished records from disk and pays only for the rest.
 
@@ -150,7 +150,7 @@ Writing the specification pages found gaps in the text above. None changes a rul
 
 - The bare value of `score` is the backend's probability-weighted position on the levels, so `1.6` is a valid score on three levels.
 - Exit 2 covers a usage error and an input error. In record mode earlier records may already have been answered, and the failing record sent nothing.
-- `annotate` makes one request per record for each distinct `on`. Every other record command makes one request per record.
+- `annotate` makes one request per record for each distinct `on`. Every other record command makes one request per record. (Amended by ADR 0048, below.)
 - `--quiet` exists on `decide` and `choose` only. `--quiet` beside `--details` is a usage error. `--dry-run` on `report` or `config` is a usage error.
 - `segment` reads one document. `--lines` and `--jsonl` are usage errors on it.
 - `--input FILE` names a path. The earlier draft used the same word for a framing.
@@ -188,6 +188,15 @@ Building and reviewing ticket 0009 found more. None changes a ruling.
 - The vendor returns the probabilities of a choice keyed by option name in no fixed order, and the probabilities of a score keyed by the level's position as a string from "0". The adapter rebuilds both in the order the user gave.
 - `--raw` beside `--details` or `--quiet` is a usage error. `score` refuses `--threshold`, `--quiet`, and `--raw`. A `choose` with no cut prints `"threshold": null`.
 
+## Amendment, 2026-09-26: `filter` and `rank` read lines by default
+
+Ticket 0137 settles the issue that asked why `--lines` sits in almost every example. The queue owner ruled for it, and Ian can overturn it.
+
+- `filter` and `rank` read lines when no framing flag is given. One document is still no input for them, so no working command line changes.
+- On these two verbs a pointer with no framing flag reads JSON Lines. The pointer comes from `--field`, or from a question file's `on`. On every other verb `--field` with no flag still reads the whole input as one JSON value.
+- A plan whose framing the default chose carries `"from":"default"` inside `input`. An explicit flag prints `input` as before.
+- `--lines`, `--jsonl`, `--csv`, and `--tsv` work as before on both verbs.
+
 ## What this replaces
 
 - ADR 0003: the grammar `thinkthen decide VERB`. The rest of ADR 0003 stands.
@@ -200,3 +209,7 @@ Building and reviewing ticket 0009 found more. None changes a ruling.
 ## Consequences
 
 The specification and the demos are rewritten to this surface before any code changes, as ADR 0005 requires. The executable pages in `spec/` and the fixtures keep describing the landed code until a ticket changes both together. One rework ticket reshapes the landed `decide if`. The adapter, the HTTP edge, the failure table, recording, and replay stay as they are. The wire format does not change, because the landed adapter already sends the question as written.
+
+## Amendment, 2026-09-26: ADR 0048 batches records
+
+ADR 0048 makes records of one batch share one request, so they see each other. By default each request fills to the backend's limits. `--batch 1` sends one record a request, as line 103 and the clarification at line 153 say. By default `annotate` sends one request per batch for each distinct `on`, and every other record command one request per batch. Ian can overturn this.

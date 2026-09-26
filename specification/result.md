@@ -1,6 +1,6 @@
 # The result
 
-Status: **Settled** for the bare value, the object, the five answer kinds, the full distribution with `confidence`, and request identity. ADR 0010 accepted the original kinds, ADR 0030 accepted `find`, and the 2026-09-21 amendment to ADR 0017 accepted `meta.requests`.
+Status: **Settled** for the bare value, the object, the five answer kinds, the full distribution with `confidence`, and request identity. ADR 0010 accepted the original kinds, ADR 0030 accepted `find`, and the 2026-09-21 amendment to ADR 0017 accepted `meta.requests`. ADR 0048 amends `meta` for batches.
 
 One internal result model feeds both views. The view never changes the request or the answer. Every probability and token count in an example here is illustrative.
 
@@ -35,7 +35,7 @@ Every result is compact and sits on one line, so one answer is also one record f
 - `question` names the question kind and the text the model received. `filter` and `rank` ask a `decide` question, so their `question.verb` is `decide`.
 - `answer` is everything the backend said, in thinkthen's own words. No vendor field name appears in it.
 - `threshold` is a number for a single cut, the string `"LOW:HIGH"` for a band, and `null` when none applies. `decide` never prints `null` here, because a rule always exists and the default is the cut of one half. [threshold.md](threshold.md) gives the rule.
-- `meta` carries the run. `usage` may be absent when the backend reports none. `profile_warning` appears only for a calibration mismatch. The other fields are always present.
+- `meta` carries the run. `usage` may be absent when the backend reports none. `profile_warning` appears only for a calibration mismatch. The other fields are always present. Not built yet, by ADR 0048 item 9: `batch` and `context_sha256` may be absent too, and item 8's `batch_warning` appears only for a batch-setting mismatch.
 
 ## A detailed result keeps everything
 
@@ -99,12 +99,15 @@ ADR 0032 adds `meta.profile_warning` only when a saved calibration name and the 
 | `question_sha256` | The digest of the exact question the row answers, as [question-file.md](question-file.md) fixes it. The same question typed and read from a file gives one digest, and any override gives another |
 | `url` | The URL that answered |
 | `model` | The model that answered, as the backend reported it |
-| `usage` | The token counts the backend reported. Absent when the backend reports none |
-| `requests_sent` | The HTTP attempts that produced this result. A replay or cache hit reports zero. Each retry of a retried status adds one |
+| `usage` | The token counts the backend reported. Absent when the backend reports none. Not built yet, by ADR 0048 item 9: a batched row carries its even share of the batch's counts |
+| `requests_sent` | The HTTP attempts that produced this result. A replay or cache hit reports zero. Each retry of a retried status adds one. Not built yet, by ADR 0048 item 9: a batched row carries its share of the batch's attempts |
 | `cached` | `true` when the answer came entirely from stored exchanges — a recording or a cache — rather than a live backend |
 | `requests` | The recording digests of the logical requests that produced the result, in construction order. Retries add nothing, and equal logical requests keep separate positions |
 | `failed_questions` | The number of failed logical questions in this result. Always present, including zero |
 | `profile_warning` | The saved calibration profile and selected run profile when both exist and differ. Absent otherwise |
+| `batch` | Not built yet, by ADR 0048 item 9: the batch this row rode in, with `setting`, `records`, `position`, `closed`, and the batch's own `usage` and `requests_sent`. Absent for a batch of one record with no context |
+| `batch_warning` | Not built yet, by ADR 0048 item 8: the file's tuned batch setting and the running one when they differ, as `{"tuned_for":1,"running":"max"}`. Absent otherwise |
+| `context_sha256` | Not built yet, by ADR 0048 item 11: the SHA-256 of the `--context` file's bytes. Absent without a context |
 
 ## Record rows
 
