@@ -6,7 +6,9 @@ opens: crates/thinkthen/src/core/batch.rs crates/thinkthen/src/core/question_fil
 
 # 0146: The command batches decide, filter and rank
 
-Status: ready for review. The coordinator accepted it on 2026-09-26 after a fresh read-only review, then revised it the same day for ADR 0053. A fresh read-only review must accept the revision before it builds. Owner: Claude. It builds only after tickets 0143, 0144 and 0145 land, after "S1 live run 1" runs on main, and with ADR 0053 on main and ticket 0158 landed.
+Status: ready. The coordinator accepted it on 2026-09-26 after three fresh read-only reviews. Owner: Claude.
+
+Its build waits for ticket 0158 to land. It builds only after tickets 0143, 0144 and 0145 land, after "S1 live run 1" runs on main, and with ADR 0053 on main and ticket 0158 landed.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -29,7 +31,7 @@ Ian's rulings of 2026-09-26 set the frame. Ian can overturn each.
 
 1. Ticket 0143 (J1) lands first. B4 edits `engine/facade.rs`, which 0143 changes.
 2. Ticket 0144 (B3) lands first. B4 calls its `Batcher`, `BatchRecord`, `Batch` and `Reading::batch_record`.
-3. Ticket 0145 (S1) lands first. B4 removes three entries from its `probes/speed/functions.jsonl`.
+3. Ticket 0145 (S1) lands first. B4 removes the `list` field from the `decide`, `filter` and `rank` rows of `probes/speed/functions.jsonl`. The rows stay.
 4. "S1 live run 1" runs on a main commit after S1 lands and before B4's build starts. Its record under `probes/speed/runs/` is the baseline B4 is measured against. S1 decision 13 makes this B4's precondition.
 5. ADR 0053 is on main.
 6. Ticket 0158, which keeps a reply that failed a question out of the cache, lands before B4's build starts. The coordinator ruled this order on 2026-09-26. Ticket 0154 builds after B4 lands, as its decision 15 says.
@@ -210,6 +212,8 @@ A demo or page command that replays or caches a folder recorded one record a req
 
 **Existing tests.** The first build step turns the default on and runs the `test` rung once, before any pin. It counts the test files that fail and records the list. A realistic estimate is 20 to 32 files, from the 92 test files that name one of the three verbs and the ones among them that count requests or replay folders. A file whose subject is not batching gets `--batch 1`. Where the file builds its commands through one shared helper, such as `tests/backend/support.rs::decide` or a file's own `run` function, the pin goes in the helper once. Otherwise each command gets it. The build record gives the real count and every pin.
 
+In `tests/backend/scheduling.rs` the `--batch 1` pin goes only on `ordered_output_bounds_every_dispatched_row`. The shared `interactive` helper gets no pin. `an_answer_arrives_before_the_next_record_at_one_job_and_the_default` and its two new `--record` and `--replay` rows run at the default, so they guard the pause under batching.
+
 ### The design issue's B5 row
 
 B4 builds the shares, so the B5 row of `sdlc/issues/2026-09-26-batching-design.md` drops "Shares". It now reads "`meta.batch`, `--facts` and the `thinkthen.run/1` line". This ticket's commit makes that edit.
@@ -218,7 +222,7 @@ The same commit checks that the design issue no longer limits the pause to an un
 
 ### S1's list
 
-B4 removes the `decide`, `filter` and `rank` entries from `probes/speed/functions.jsonl` in the commit that makes them batch. S1's gate then requires at most one request for each of their 12-line workloads.
+B4 removes the `list` field from the `decide`, `filter` and `rank` rows of `probes/speed/functions.jsonl`. The rows stay, in the commit that makes them batch. S1's gate then requires at most one request for each of their 12-line workloads.
 
 ## Decisions
 
@@ -316,7 +320,7 @@ Every test drives the compiled binary against the in-process loopback (`tests/ba
 | `a_failed_batch_stops_at_its_first_record`, design test 8 | Loopback answers 503 to the second of three batches at `--batch 10`, `--jobs 1`, `--max-retries 0`. Standard output is exactly rows 1 to 10. Standard error is exactly the pinned 503 line from "Stop lines". Exit 4. A second row omits record 13's answer: rows 1 to 12 print, then the pinned partial line, exit 4. A third row runs the 503 at `--batch 1`: standard error is exactly today's two lines. A fourth row interrupts a batched run: standard error keeps today's two-line cancellation form | (a) Name the range from `finished`, off by one. (b) Fail the whole batch on a partial reply: only 10 rows print. (c) Use the one-line form for a batch of one. (d) Use the one-line form for a cancellation |
 | `the_batch_setting_follows_its_tiers` | An edge-case table over `--dry-run`, with no network. Each row gives the flag, `THINKTHEN_BATCH` and a question file's `batch`, and reads how many records the first batch plan holds over three lines. The refusal rows pin exit codes and whole sentences. Two rows run through the loopback with `--details`: a `decide` file with and without `"batch": 5` print the same `meta.question_sha256`, and an annotate question set whose entry holds `batch` is refused with today's sentence | (a) The file beats the environment. (b) `THINKTHEN_BATCH` is never read. (c) `0` parses as `max`. (d) `--batch` on one document is ignored. (e) `batch` joins `Verb::Decide.keys()`: the annotate row is accepted |
 | `each_row_carries_its_share` | Three records at `--batch 3` with `--details`, loopback usage of 100 input and 10 output tokens. Rows carry 34, 33, 33 and 4, 3, 3, and `requests_sent` 1, 0, 0. A backend reporting no usage gives rows with no `usage` | (a) Every row carries the whole batch's usage. (b) The remainder goes to the last record. (c) A missing usage becomes 0 |
-| S1's gate part, `crates/thinkthen/tests/speed.rs` | With the three entries removed, `decide`, `filter` and `rank` each send 1 request for 12 lines | (a) The default setting is `Records(1)`: the gate fails rule 3 for all three |
+| S1's gate part, `crates/thinkthen/tests/speed.rs` | With the `list` field removed from their rows, `decide`, `filter` and `rank` each send 1 request for 12 lines | (a) The default setting is `Records(1)`: the gate fails rule 3 for all three |
 | The demo runner, `crates/thinkthen/tests/demo_runner.rs` | Every green demo replays under its pins | (a) Quote the record in a batch of one: every pinned demo misses its recording |
 
 The four questions:
@@ -425,6 +429,6 @@ No issue. `sdlc/issues/2026-09-26-batching-design.md` stays open until its last 
 
 - Starts from: The B4 row, sections 1 to 6, the edge cases and acceptance tests 4, 5, 7, 8 and 12 of `sdlc/issues/2026-09-26-batching-design.md`, and Ian's rulings 1, 3, 4 and 9 there. ADR 0048 items 1 to 7, 9 and 13, its ticket table, and its marker rule. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` section 7: 306 titles in one request answered in 0.30 to 0.39 s against 13.0 to 14.2 s one a request, and section 9: no content cut among the 306 titles. `specification/settings.md` from ticket 0140. Ticket 0144's planner and its deferred gaps 2 and 3, read from `ticket/0144-engine-plans-batches`. Ticket 0145's gate list and its decision 13, read from `ticket/0145-speed-test`. Ticket 0143's change to `engine/facade.rs`, read from `ticket/0143-relate-runs-at-once`. ADR 0053 items 1, 2, 4 and 5, and section 14 of the evidence record, from the batching review in `sdlc/issues/2026-09-26-batching-design-review-before-0146.md`. The code at `origin/main` `7850db3f`: `cli/asking.rs`, `cli/schedule.rs`, `cli/judge.rs`, `cli/failure.rs`, `engine/schedule.rs`, `engine/facade.rs` and `core/reply.rs`.
 - Keeps: Every request, row, standard error line and exit code at `--batch 1` and on a stream of one record. Every run on one document. `choose`, `tag`, `score`, `annotate`, `find`, `recognize` and `relate`. The scheduler's bound and order. Every recording, replayed under its pin. The libraries' behavior.
-- Changes: `decide`, `filter` and `rank` over a stream fill each request to the limit by default. `--batch`, `THINKTHEN_BATCH` and the question file's `batch` set it, in four tiers. `--jobs` counts batches. The pause sends a waiting live batch after 50 ms in every mode. A batch closes at 4,096 members. A failed batch stops at its first record with a one-line range. Rows carry even usage shares. Dry run plans the first batch. The reader queues closed batches and pulls records only for an outstanding ask, through a bounded channel. `batch` comes off the top of a `decide` file before parsing, so annotate entries still refuse it. The item 1 and 2 markers leave the specification, and the settings table gains `batch`. S1's list loses three entries.
-- Proof: The six new outside-in tests under "Proof", each with its plants. S1's gate with the three entries removed. The demo runner under the pins. The existing suite at `--batch 1` where pinned. The `install`, `lint`, `test`, `spec` and `surfaces` rungs.
+- Changes: `decide`, `filter` and `rank` over a stream fill each request to the limit by default. `--batch`, `THINKTHEN_BATCH` and the question file's `batch` set it, in four tiers. `--jobs` counts batches. The pause sends a waiting live batch after 50 ms in every mode. A batch closes at 4,096 members. A failed batch stops at its first record with a one-line range. Rows carry even usage shares. Dry run plans the first batch. The reader queues closed batches and pulls records only for an outstanding ask, through a bounded channel. `batch` comes off the top of a `decide` file before parsing, so annotate entries still refuse it. The item 1 and 2 markers leave the specification, and the settings table gains `batch`. B4 removes the `list` field from the `decide`, `filter` and `rank` rows of `probes/speed/functions.jsonl`. The rows stay.
+- Proof: The six new outside-in tests under "Proof", each with its plants. S1's gate with the `list` field removed from the three rows. The demo runner under the pins. The existing suite at `--batch 1` where pinned. The `install`, `lint`, `test`, `spec` and `surfaces` rungs.
 - Defers: `meta.batch` and `--facts` (B5). Calibration identity (B16). Re-recording pinned demos under the default. The live target run after landing. The accuracy cost (B6). D1's page. Library and SQL batching (B12a to B13e). A slow read cutting a live batch. The item 7 markers for the other verbs.
