@@ -9,7 +9,7 @@ The repository gate and its hand-run support scripts.
 | `test` | Rung 2. Runs Rust tests and documentation tests, then `sdlc/live-test` on Linux |
 | `spec` | Rung 3. Runs executable specification pages, transforms, and green how-tos |
 | `surfaces` | Rung 4. Runs each landed surface's `check.sh` with one loopback backend's port and reports exit 77 as not run. `--registry` is the rung 1 check of `sdlc/surfaces.txt`, each binding ratchet, and each binding lock under `cargo deny` |
-| `heavy-lock` | Sourced by `install`, `test`, `spec`, and `surfaces`. Runs one heavy rung at a time under `flock`, and a nested rung skips the lock. First it unsets every `THINKTHEN_` name but `THINKTHEN_HEAVY_LOCK`, `THINKTHEN_HEAVY_LOCK_HELD`, and the path overrides `THINKTHEN_TOOLCHAINS` and `THINKTHEN_DUCKDB_CLI` (ticket 0127) |
+| `heavy-lock` | Sourced by `install`, `test`, `spec`, and `surfaces`. Runs one heavy rung at a time under `flock`, and a nested rung skips the lock. First it unsets every name but an allow list (ticket 0133): `PATH`, `HOME`, `PWD`, `LANG`, `LC_ALL`, `TMPDIR`, `XDG_RUNTIME_DIR`, `XDG_CACHE_HOME`, the toolchain names `CARGO_HOME`, `RUSTUP_HOME`, `RUSTUP_TOOLCHAIN`, `RUSTC_WRAPPER`, `SCCACHE_CONF`, and `R_LIBS_USER`, the two lock names, and the path overrides `THINKTHEN_TOOLCHAINS`, `THINKTHEN_DUCKDB_CLI`, and `SQLITE_AMALGAMATION`. `CARGO_TARGET_DIR` is dropped, so each heavy rung builds in the lane's own `target` folders |
 | `demos`, `demos-self-test` | Run green how-tos and prove the runner's refusals |
 | `pages`, `pages-self-test` | Keep the how-to lists, titles, states, and links aligned |
 | `tickets` | Fails rung 1 when a ticket numbered 0120 or higher lacks its five-part Evidence section. `--self-test` runs its planted cases first |

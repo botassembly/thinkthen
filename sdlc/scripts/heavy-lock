@@ -15,13 +15,16 @@
 # holds the lock. Killing that one process frees the lock while the rung runs on.
 
 #
-# Ticket 0127: a stray THINKTHEN_ name in the caller's shell never reaches a
-# rung. Every one is unset but the two lock names and two path overrides,
-# THINKTHEN_TOOLCHAINS and THINKTHEN_DUCKDB_CLI, which hold no secret. The
-# names are found without printing any value.
-for name in $(awk 'BEGIN { for (name in ENVIRON) if (name ~ /^THINKTHEN_/) print name }'); do
+# Ticket 0133: a rung and every child it starts see only the names below.
+# A developer's unrelated service key never reaches cargo, a test binary, or a
+# surface check. CARGO_TARGET_DIR is left off, so every heavy rung builds in the
+# lane's own target folders, the only place spec and the surface checks look.
+# The names are found without printing any value.
+for name in $(awk 'BEGIN { for (name in ENVIRON) print name }'); do
 	case $name in
-	THINKTHEN_HEAVY_LOCK | THINKTHEN_HEAVY_LOCK_HELD | THINKTHEN_TOOLCHAINS | THINKTHEN_DUCKDB_CLI) ;;
+	PATH | HOME | PWD | LANG | LC_ALL | TMPDIR | XDG_RUNTIME_DIR | XDG_CACHE_HOME) ;;
+	CARGO_HOME | RUSTUP_HOME | RUSTUP_TOOLCHAIN | RUSTC_WRAPPER | SCCACHE_CONF | R_LIBS_USER) ;;
+	THINKTHEN_HEAVY_LOCK | THINKTHEN_HEAVY_LOCK_HELD | THINKTHEN_TOOLCHAINS | THINKTHEN_DUCKDB_CLI | SQLITE_AMALGAMATION) ;;
 	*) unset "$name" ;;
 	esac
 done

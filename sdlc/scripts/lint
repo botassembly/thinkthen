@@ -20,13 +20,15 @@ python3 sdlc/scripts/tickets
 # the environment one name at a time.
 python3 sdlc/scripts/children --self-test
 python3 sdlc/scripts/children
-# Ticket 0127: the heavy lock unsets a stray THINKTHEN_ name and keeps its own.
-kept=$(env -i PATH="$PATH" THINKTHEN_SENTINEL=planted THINKTHEN_HEAVY_LOCK=/nonexistent/lock \
-    THINKTHEN_HEAVY_LOCK_HELD=/nonexistent/lock THINKTHEN_TOOLCHAINS=/nonexistent/tools \
-    THINKTHEN_DUCKDB_CLI=/nonexistent/duckdb \
-    sh -c '. sdlc/scripts/heavy-lock; echo "${THINKTHEN_SENTINEL-unset} $THINKTHEN_HEAVY_LOCK $THINKTHEN_HEAVY_LOCK_HELD $THINKTHEN_TOOLCHAINS $THINKTHEN_DUCKDB_CLI"')
-if [ "$kept" != "unset /nonexistent/lock /nonexistent/lock /nonexistent/tools /nonexistent/duckdb" ]; then
-    echo "lint: heavy-lock left a stray THINKTHEN_ name or dropped its own: $kept" >&2
+# Ticket 0133: a rung's child sees only the allow list in heavy-lock. A planted
+# key, a stray THINKTHEN_ name, a target folder, and a name no shell can hold
+# are gone. gawk adds its own AWKPATH and AWKLIBPATH, so they are left out.
+seen=$(env -i PATH="$PATH" HOME=/nonexistent/home FAKE_SERVICE_API_KEY=planted THINKTHEN_SENTINEL=planted \
+    CARGO_TARGET_DIR=/nonexistent/target FAKE.SERVICE_TOKEN=planted THINKTHEN_HEAVY_LOCK=/nonexistent/lock \
+    THINKTHEN_HEAVY_LOCK_HELD=/nonexistent/lock THINKTHEN_TOOLCHAINS=/nonexistent/tools THINKTHEN_DUCKDB_CLI=/nonexistent/duckdb \
+    sh -c '. sdlc/scripts/heavy-lock; exec awk "BEGIN { for (n in ENVIRON) if (n !~ /^AWK(LIB)?PATH\$/) print n }"' | sort | tr '\n' ' ')
+if [ "$seen" != "HOME PATH PWD THINKTHEN_DUCKDB_CLI THINKTHEN_HEAVY_LOCK THINKTHEN_HEAVY_LOCK_HELD THINKTHEN_TOOLCHAINS " ]; then
+    echo "lint: a heavy rung's child saw names beyond the allow list or lost one: $seen" >&2
     exit 1
 fi
 # Ticket 0128: one version everywhere, workflows run by hand from pinned code,

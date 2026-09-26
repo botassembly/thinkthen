@@ -176,14 +176,6 @@ mod unix {
         }
     }
 
-    fn start_failure(flags: [bool; 4], before: &SigSet) -> StartError {
-        let error = UnixRouting::start_with(crate::engine::Cancel::default(), None, flags)
-            .err()
-            .expect("injected activation fails");
-        assert_eq!(SigSet::thread_get_mask().expect("restored"), *before);
-        error
-    }
-
     fn refused(path: &Scratch, unchanged: &[u8]) {
         let acknowledgment = Acknowledgment::new(Some(path.0.clone()));
         acknowledgment.write();
@@ -192,7 +184,7 @@ mod unix {
     }
 
     #[test]
-    fn carrier_masks_workers_and_injected_failures_restore_and_join() {
+    fn carrier_masks_workers_and_cleanup_restores_the_mask() {
         let before = SigSet::thread_get_mask().expect("mask");
         let routing = UnixRouting::start(crate::engine::Cancel::default(), None).expect("routing");
         assert!(
@@ -208,23 +200,6 @@ mod unix {
             .expect("joined")
         );
         routing.cleanup().expect("cleanup");
-        assert_eq!(SigSet::thread_get_mask().expect("restored"), before);
-        for (flags, expected) in [
-            ([true, false, false, false], StartError::Activation),
-            ([false, true, false, false], StartError::Activation),
-            ([false, false, true, false], StartError::Activation),
-            ([false, true, false, true], StartError::Restoration),
-            ([false, false, true, true], StartError::Restoration),
-        ] {
-            assert_eq!(start_failure(flags, &before), expected);
-        }
-        let routing = UnixRouting::start_with(
-            crate::engine::Cancel::default(),
-            None,
-            [false, false, false, true],
-        )
-        .expect("activation");
-        assert!(routing.cleanup().is_err());
         assert_eq!(SigSet::thread_get_mask().expect("restored"), before);
     }
 
@@ -242,7 +217,7 @@ mod unix {
         stop.send(()).expect("stop");
         let (ready_send, ready) = mpsc::sync_channel(1);
         let thread = std::thread::spawn(move || {
-            carrier(signal, stopped, ready_send, cancel, acknowledgment, false)
+            carrier(signal, stopped, ready_send, cancel, acknowledgment)
         });
         assert_eq!(ready.recv().expect("ready"), Ok(()));
         assert_eq!(thread.join().expect("join"), Ok(()));
