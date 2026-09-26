@@ -1,43 +1,70 @@
 ---
 flow: build
 priority: 161
-opens: crates/thinkthen/src/cli/annotate.rs crates/thinkthen/src/cli/annotate/plan.rs crates/thinkthen/src/cli/annotate crates/thinkthen/src/core/plan_document.rs crates/thinkthen/tests/backend/annotate_on.rs crates/thinkthen/tests/backend/main.rs crates/thinkthen/tests/annotate_plan.rs specification/annotate.md spec/annotate.md spec/fixtures/annotate demos/16-triage-pipeline/README.md sdlc/issues sdlc/ratchet.json sdlc/records sdlc/tickets
+opens: crates/thinkthen/src/cli/annotate.rs crates/thinkthen/src/cli/annotate/plan.rs crates/thinkthen/src/cli/annotate crates/thinkthen/src/core/question_set.rs crates/thinkthen/src/core/records.rs crates/thinkthen/src/core/mod.rs crates/thinkthen/src/core/plan_document.rs crates/thinkthen/src/public/bulk.rs crates/thinkthen/src/cli/conformance_tests.rs crates/thinkthen/src/engine/facade_tests/annotate_order.rs crates/thinkthen/tests/backend/annotate_on.rs crates/thinkthen/tests/backend/main.rs crates/thinkthen/tests/annotate_plan.rs conformance/consumer/consumer/tests/public/parts.rs specification/annotate.md spec/annotate.md spec/fixtures/annotate demos/16-triage-pipeline/README.md sdlc/issues sdlc/ratchet.json sdlc/records sdlc/tickets
 ---
 
 # 0161: `annotate` reads what its set names, and its plan shows what it sends
 
-Status: ready for review. Written 2026-09-26 by Claude, the queue owner's planner. A fresh read-only review must accept it before it builds. Owner: Claude.
+Status: ready for review. Written 2026-09-26 by Claude, the queue owner's planner. Revised the same day after the first review. A fresh read-only review must accept it before it builds. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
 ## Outcome and authority
 
-A question set's `on` pointer reads inside the JSON value the record selected. It never re-reads a string as a JSON document. So a record's result no longer depends on whether a string happens to hold JSON. A set that points `on` into text is refused with a sentence that names the question. Every example on `specification/annotate.md` runs from a new executable page and exits as the page says. Under a backend profile, `--dry-run` prints the first request the run would really send and the number of requests each group makes.
+A question set's `on` pointer reads inside the JSON value the record selected. It never re-reads a string as a JSON document. So a record's result no longer depends on whether a string happens to hold JSON. The command and the libraries follow one rule, and each parses a record once. A set that points `on` into text is refused with a sentence that names the question. Every example on `specification/annotate.md` runs from a new executable page and exits as the page says. Under a backend profile, `--dry-run` prints the first request the run would really send and the number of requests each group makes.
 
 Three issues from local experiment 273, report 03, block 0.1 under the placement in `sdlc/planning/backlog-0-1-2026-09-26.md`. The spec-example issue asks that it and the `on` issue be fixed together. Ian can overturn each design choice.
 
 ## What happens today
 
-Read from `origin/main` `ebd28382`.
+Read from `origin/main` `e24f7324`, after ticket 0150 landed.
 
-- `cli/annotate.rs:299-300` builds a nested `Reading` over `base_evidence.as_text()?.as_bytes()` and parses it again as a JSON document. So a `/body` string holding JSON text is parsed and `on` sends part of it. A `/body` string of plain text stops the run at exit 2 with `the input is not valid JSON`, and the message names neither the question nor `on`. A `--lines` line that looks like JSON gets members, though `records.md` says a text line has none. Finding 2-2 ran all three (`sdlc/issues/2026-09-26-annotate-on-reparses-selected-text-as-json.md`).
+- `core/question_set.rs:293-309`, `QuestionSet::group_evidence`, holds the parts rule. For a group whose `on` is not the root, it writes the evidence it was given back to text with `record.as_text()` and parses that text again with `reading.record(text.as_bytes())`, under document framing. Four callers hand it an `Evidence`: the command's `plan_for` (`cli/annotate.rs:283-311`, the call at 293-299), the libraries' `annotated` (`public/bulk.rs:283-311`, the call at 294), the command's conformance runner (`cli/conformance_tests.rs:127`) and the facade order test (`engine/facade_tests/annotate_order.rs:37`).
+- In the command, a `/body` string holding JSON text is parsed, and `on` sends part of it. A `/body` string of plain text stops the run at exit 2 with `the input is not valid JSON`, and the message names neither the question nor `on`. A `--lines` line that looks like JSON gets members, though `records.md` says a text line has none. Finding 2-2 ran all three (`sdlc/issues/2026-09-26-annotate-on-reparses-selected-text-as-json.md`).
+- In the libraries, `public/set.rs` accepts a set whose members name parts, since 0150. Ticket 0150's decision 3 makes each library record JSON text. `public/bulk.rs` wraps that text as `Evidence`, and `group_evidence` parses it once more for each group that reads a part. A record that is not JSON text is refused with `the input is not valid JSON: the JSON at line 1 column 1 is not one` (`conformance/consumer/consumer/tests/public/parts.rs:114`).
 - `core/records.rs::annotation_record` reads a whole document as a JSON value when it parses and as text otherwise. So `annotate set.json < record.json` with a JSON object works today, and `annotate.md`, "What it prints", promises that an object document gains the answers.
-- `annotate.md` line 30 says `on` "is a JSON Pointer inside the evidence that `--field` selected", and "an object or a list travels as that JSON value".
+- `core/records.rs`: `Reading::evidence` cannot tell the builder what the base reading selected. The private `whole` (line 468) turns a whole JSON record into compact text, so its `Evidence` looks the same as a `--field` string that holds JSON. `Reading::batch_record` (line 417) returns that evidence beside the selected JSON value. It carries `expect(dead_code)` (line 415), reserved for ticket 0146.
+- `core/records.rs:46` and `:86`: `ReadingError::TextHasNoMembers` and `RecordError::TextHasNoMembers` carry no question name, and their sentence begins `--field:`. `cli/failure.rs` maps `Failure::Reading` and `Failure::Record` to exit 2 with the error's own sentence (lines 219 and 223). `Failure::Usage` holds only a `&'static str`.
+- `annotate.md` line 34 says `on` "is a JSON Pointer inside the evidence that `--field` selected", and "an object or a list travels as that JSON value".
 - `annotate.md` defines `triage.json`, whose `unresolved` question reads `"on": "/body"` (line 23). Its examples run the set on a text document (`< issue.txt`, line 81) and on `--jsonl --field /body` (line 85). Both exit 2 with `the input is not valid JSON`. `spec/` has no annotate page, so no rung runs them. Finding 2-1 ran them (`sdlc/issues/2026-09-26-annotate-spec-example-fails-on-its-own-inputs.md`).
-- `cli/annotate/plan.rs:58-62` calls `facade::split` for each group, discards the chunks, and prints `plans.first()`, the unsplit group. Under a profile that caps questions per request, the dry run shows one request holding every question. Finding 2-3 printed 1,500 questions under a profile of 100. Live, a 250-question set under a 100-question profile showed one request and sent 3 (`sdlc/issues/2026-09-26-annotate-dry-run-under-a-profile-prints-the-unsplit-request.md`). `annotate.md` line 94 says the dry run "prints the first request", and how-to 16 says it "shows the exact request".
+- `cli/annotate/plan.rs:58-62` calls `facade::split` for each group, discards the chunks, and prints `plans.first()`, the unsplit group. Under a profile that caps questions per request, the dry run shows one request holding every question. Finding 2-3 printed 1,500 questions under a profile of 100. Live, a 250-question set under a 100-question profile showed one request and sent 3 (`sdlc/issues/2026-09-26-annotate-dry-run-under-a-profile-prints-the-unsplit-request.md`). `annotate.md` line 94 says the dry run "prints the first request". Line 96 says "One record makes one request per distinct `on`, and the plan shows one request". How-to 16 says the dry run "shows the exact request".
 
 ## Design
 
 ### `on` reads the selected value
 
-`plan_for` applies each question's `on` pointers to the value that the base reading selected. It does not serialize and re-parse it. The base selection is one of these:
+`group_evidence` takes the record's evidence and its selected JSON value together, as a `BatchRecord`, and never parses text. Its signature becomes `group_evidence(&self, group: &[usize], record: &BatchRecord) -> Result<Evidence, PartError>`.
 
-- A JSON object or array: the whole JSONL record, a CSV or TSV row, a document that parsed as JSON, or an object or array that `--field` selected. `on` reads inside it by the `state` rule of `records.md`, as `annotate.md` line 30 says.
-- Text: a `--lines` line, a document that did not parse as JSON, or a string, number, boolean or `null` that `--field` selected. Text has no members.
+- A group that reads the root gets `record.evidence`, as today.
+- When `record.value` is an object or an array, the group's pointers select inside it by the `state` rule of `records.md`, as `annotate.md` line 34 says. `core/records.rs` gains `Reading::part(&self, value: &Json) -> Result<Evidence, RecordError>`. It runs the two JSON arms of `Reading::selected` over a value. `selected` calls the same helper for a JSON record, so the rule lives once.
+- Otherwise the value is text: a string, a number, a boolean or `null`. Text has no members. `group_evidence` returns `PartError::Record(RecordError::TextPart(name))`, where `name` is the first question of the group.
 
-A set with a question whose `on` is not the root, run under `--lines`, is refused before any input is read, at exit 2: ``question `NAME` reads `on`, and a --lines record is text with no members``. The same question over a record whose selection is text refuses that record at exit 2, before any request for it, with ``question `NAME` reads `on`, and this record's evidence is text with no members``. That follows `annotate.md`'s rule for an input error in one record. `annotate.md` line 30 gains: "A string is text, even when it holds JSON. `on` never parses it."
+`PartError::Render` goes, because `group_evidence` no longer writes text. Both callers drop its match arm.
 
-The change reuses the command's existing input and usage refusals, so `cli/failure.rs` does not change.
+The value comes from `Reading::batch_record`, which already returns the selection with its type kept. A `--lines` line, a document that did not parse, and a selected string all become `Json::String`. A whole JSON record keeps its value, not its compact text. A CSV or TSV row is an object. This ticket calls `batch_record` from the command, so it removes that function's `expect(dead_code)` in `core/records.rs`. The module mark on `core/batch.rs` stays, because the batcher is still unused. Ticket 0146 then calls `batch_record` from its reader as its design says, and finds no mark to remove in `core/records.rs`, a file it does not open.
+
+The two callers read each record once:
+
+- The command: `plan_for` builds `base.batch_record(record)?` in place of `base.evidence(record)?` and passes it to `group_evidence`. Nothing is parsed again. `batch_record` copies the selected value once for each group, and a set has few groups.
+- The libraries: `public/bulk.rs::annotated` reads the record text once with `Reading::new(Framing::Document, vec![])` and `annotation_record`, which is the command's rule for a whole document. It takes `batch_record(&record)?.value`. The record's `evidence` stays `evidence(text)?`, so a root group sends the text as the library sends it today. It builds one `BatchRecord` and passes it to every group. A record error maps to `Error::usage` with its own sentence, as `PartError::Record` does today.
+- `cli/conformance_tests.rs` and `engine/facade_tests/annotate_order.rs` build their `BatchRecord` the same way. `core/mod.rs` re-exports `BatchRecord` if the callers need it.
+
+### Refusals name the question
+
+`core/records.rs` gains two variants. Each holds the question name, which comes from the set file and never from a record.
+
+- `ReadingError::LinesPart(String)`, displayed as ``question `{0}` reads `on`, and a --lines record is text with no members``.
+- `RecordError::TextPart(String)`, displayed as ``question `{0}` reads `on`, and this record's evidence is text with no members``.
+
+`core/question_set.rs` gains `QuestionSet::first_part(&self) -> Option<&str>`, the name of the first question in file order whose `on` is not the root. `cli/annotate.rs::run` checks it right after `reading(...)` and before `edge::source`. Under `--lines` a set with such a question is refused through `Failure::Reading(ReadingError::LinesPart(name))`, before any input is read. A record whose selection is text is refused through `Failure::Record(RecordError::TextPart(name))`, before any request for it. That follows `annotate.md`'s rule for an input error in one record. Both pass through the existing arms at exit 2, so `cli/failure.rs` does not change.
+
+The whole standard error lines, for the set on `annotate.md`:
+
+- ``thinkthen: question `unresolved` reads `on`, and a --lines record is text with no members``
+- ``thinkthen: question `unresolved` reads `on`, and this record's evidence is text with no members``
+
+A library caller sees the second sentence alone, as `Usage`.
 
 ### The page's examples run
 
@@ -47,13 +74,22 @@ The change reuses the command's existing input and usage refusals, so `cli/failu
 - `thinkthen annotate triage.json --jsonl < issues.jsonl`, with no `--field`.
 - `thinkthen annotate triage.json --dry-run < issue.json`.
 
-A new executable page, `spec/annotate.md`, runs each example on the page. It replays hand-built `local-1` entries under `spec/fixtures/annotate/`, as `spec/relate.md` replays `spec/fixtures/relate-partial`. The page names `--model local-1 --no-cache --replay`, so no key or network is read. It also runs the `--lines` refusal and pins its sentence.
+A new executable page, `spec/annotate.md`, runs each example on the page. It replays hand-built `local-1` entries under `spec/fixtures/annotate/`, as `spec/relate.md` replays `spec/fixtures/relate-partial`. The page names `--model local-1 --no-cache --replay`, so no key or network is read. It also runs the `--lines` refusal and pins its whole line.
 
 ### The dry run prints the request it would send
 
 Under a profile, `--dry-run` prints the first chunk of the first group, which is the first request a live run sends. The plan object gains two members after `on`: `request_count`, the number of requests the first record makes, and `group_requests`, the number each group makes, in group order. Without a profile, or when every group fits, the plan prints the single request as today and adds the two counts. `recognize-plan` and `relate-plan` already name `request_count`, so the word matches.
 
-`annotate.md`, "`--dry-run`", states both members and says the printed request is the first chunk under a profile. How-to 16's "shows the exact request" then holds, and the how-to adds the two members to its example if it prints one.
+### Page edits
+
+`specification/annotate.md`:
+
+- Line 34 becomes: "`on` is a JSON Pointer inside the value that the record selected: the whole record, or what `--field` selected. A string is text, even when it holds JSON, and `on` never parses it. A text record or a selected string has no members, and a question that reads `on` in one is refused at exit 2 with a sentence naming the question." The rest of the paragraph stays.
+- Lines 81, 85 and 89: the three examples above.
+- Line 94: the dry run prints the first request a live run sends, which is the first chunk under a profile, and states `request_count` and `group_requests`.
+- Line 96 becomes: "One record makes at least one request per distinct `on`, and a profile can split a group into several. The plan prints one request: the first that the first record's first `on` set sends, taking the questions in file order. `request_count` and `group_requests` count the rest." The sentences after it stay.
+
+How-to 16's "shows the exact request" then holds. The how-to adds the two members to its example if it prints one.
 
 ## Decisions
 
@@ -64,34 +100,38 @@ Each is the ticket author's call unless marked. Ian can overturn any of them.
 3. **`--lines` with a non-root `on` is refused before reading.** Every line would fail, so the run should not start.
 4. **The spec examples change their input, not the set.**
 5. **The plan gains `request_count` and `group_requests`.**
+6. **One parse, through `batch_record`.** The value a batch quotes is the value `on` reads, so the one function serves both. It keeps the type that `Evidence` loses.
+7. **The libraries read a record as the command reads a document.** A library record that is not JSON text now gets the named text sentence instead of the parser's sentence. A root-only set over such text still answers from the whole text.
 
 ## Edge cases
 
 | Input | Expected |
 | --- | --- |
-| `--jsonl` record `{"body":"{\"x\":1}"}`, `--field /body`, a question with `on: /x` | Refused for that record at exit 2 with the text sentence. Today it sends `1` |
-| `--jsonl` record `{"body":"plain words"}`, `--field /body`, the same question | Refused at exit 2 with the text sentence. Today it says the input is not valid JSON |
+| `--jsonl` record `{"body":"{\"x\":1}"}`, `--field /body`, a question with `on: /x` | Refused for that record at exit 2 with the text line. Today it sends `1` |
+| `--jsonl` record `{"body":"plain words"}`, `--field /body`, the same question | Refused at exit 2 with the text line. Today it says the input is not valid JSON |
 | `--jsonl` record `{"body":{"x":1}}`, `--field /body`, `on: /x` | The question reads `1`, as today |
-| `--lines` with a line `{"x":1}` and a question with `on: /x` | Refused before reading at exit 2 with the `--lines` sentence |
+| `--lines` with a line `{"x":1}` and a question with `on: /x` | Refused before reading at exit 2 with the `--lines` line |
 | `--lines` with a set whose questions have no `on` | Runs as today |
 | A document `{"body":"text"}` with `on: /body` | The question reads `text` |
-| A plain-text document with `on: /body` | Refused at exit 2 with the text sentence |
+| A plain-text document with `on: /body` | Refused at exit 2 with the text line |
 | A 250-question set, a profile capping 100 questions a request, `--dry-run` | The printed request holds 100 questions. `request_count` is 3. `group_requests` is `[3]` |
 | A set with two `on` groups, no profile, `--dry-run` | The first group's request, `request_count` 2, `group_requests` `[1,1]` |
+| Library, the two-group set over `a private note` | `Usage`: ``question `summary` reads `on`, and this record's evidence is text with no members``. No request |
 
 ## Proof
 
 | Test | What it proves | Planted faults that turn it red |
 | --- | --- | --- |
-| `on_reads_the_selected_value`, new in `tests/backend/annotate_on.rs` | Edge rows 1 to 7. Each row pins standard output, the whole standard error line and the exit code, and counts the loopback's requests, so a refused record sends none | (a) Re-parse text again: rows 1 and 2 differ. (b) Refuse every non-root `on`: rows 3 and 6 fail. (c) Refuse `--lines` per record, after reading: row 4 counts requests or prints a row first |
+| `on_reads_the_selected_value`, new in `tests/backend/annotate_on.rs` | Edge rows 1 to 7. Each row pins standard output, the whole standard error line and the exit code, and counts the loopback's requests, so a refused record sends none | (a) Re-parse text again: rows 1 and 2 differ. (b) Refuse every non-root `on`: rows 3 and 6 fail. (c) Refuse `--lines` per record, after reading: row 4 counts requests or prints a row first. (g) Pass `Reading::evidence` to `group_evidence` and read its text: row 1 sends `1` |
 | `the_plan_shows_each_request`, new in `tests/annotate_plan.rs` | Edge rows 8 and 9 through `--dry-run`, pinning the question count of the printed request and both new members | (d) Print the unsplit group: row 8 holds 250 questions. (e) Count groups, not chunks: row 8's `request_count` is 1 |
+| `each_group_sees_its_part_and_a_bad_part_sends_nothing`, in the Rust consumer's `parts.rs` | Edge row 10 replaces its row that pins the parser's sentence. Its other rows and the secrecy check stay | (h) Keep the parser's refusal in `bulk.rs` before `group_evidence`: row 10 reads the old sentence |
 | `spec/annotate.md`, new, in the `spec` rung | Every example on `annotate.md` and the `--lines` refusal | (f) Put `--field /body` back in the JSONL example: the page exits 2 |
 
 The four questions:
 
-- **What behavior does it protect?** `on` reads inside JSON and never re-reads text, the page's examples, and a dry run that shows the sent request and its count.
+- **What behavior does it protect?** `on` reads inside JSON and never re-reads text, on the command and the libraries. The page's examples. A dry run that shows the sent request and its count.
 - **What credible regression fails it?** A return to re-parsing, a refusal that also blocks real JSON selections, and a plan that prints the unsplit group or counts groups.
-- **Why does no existing test catch it?** No test puts JSON text inside a string for `on`, no rung runs the page's examples, and no dry-run test uses a profile that splits.
+- **Why does no existing test catch it?** No test puts JSON text inside a string for `on`, no rung runs the page's examples, and no dry-run test uses a profile that splits. The library row pins today's parser sentence.
 - **Does it need a test-only hook?** No. The loopback counts requests, `--dry-run` is the real plan, and the page replays ordinary entries.
 
 ## Budgets
@@ -99,28 +139,32 @@ The four questions:
 Nonblank lines, measured with `grep -c .`.
 
 - `cli/annotate.rs` and `cli/annotate/`: at most 40 net.
+- `core/question_set.rs`: at most 15 net.
+- `core/records.rs`: at most 25 net. `core/mod.rs`: at most 2 net.
 - `core/plan_document.rs`: at most 15 net.
-- `tests/backend/annotate_on.rs`: at most 150, new, and one `mod` line. `tests/annotate_plan.rs`: at most 80, new.
+- `public/bulk.rs`: at most 10 net.
+- `cli/conformance_tests.rs` and `engine/facade_tests/annotate_order.rs`: at most 8 net together.
+- `tests/backend/annotate_on.rs`: at most 150, new, and one `mod` line. `tests/annotate_plan.rs`: at most 80, new. The consumer's `parts.rs`: at most 15 net.
 - `spec/annotate.md`: at most 90, new. `spec/fixtures/annotate/`: hand-built `local-1` entries only.
-- Pages: at most 15 net.
-- `sdlc/ratchet.json` moves to the measured total, at most 55 above main. The commit says what grew.
+- Pages: at most 20 net.
+- `sdlc/ratchet.json` moves to the measured total in the commit that needs it, and that commit defends the number as `ratchet.mjs` requires. The budgets above bound it.
 - No dependency. No paid call.
 
 ## Stop rules
 
 1. Stop before crossing any budget by more than a tenth, or before adding a dependency.
-2. Stop if the change needs `cli/failure.rs`, `public/`, or a file that ticket 0146 opens.
-3. Stop if a whole JSON document, a JSONL record or a CSV row loses its members under `on`.
+2. Stop if the change needs `cli/failure.rs`, `public/set.rs`, or `core/batch.rs`.
+3. Stop if a whole JSON document, a JSONL record, a CSV row or a library JSON record loses its members under `on`.
 4. Stop if any plant stays green.
 5. Stop if the build needs a live call. None is authorized. Never run `sdlc/scripts/live`.
 
 ## Build order
 
-It builds after tickets 0150 and 0159 land, because 0150 opens `cli/annotate.rs` and 0159 re-keys the fixtures. It may build beside ticket 0160. It lands before ticket 0146 builds, or after 0146 lands.
+It builds after tickets 0150 and 0159 land, because 0150 opens `cli/annotate.rs` and 0159 re-keys the fixtures. It may build beside ticket 0160. Ticket 0146 opens `public/bulk.rs`, `engine/facade_tests` and all of `crates/thinkthen/tests`, so the two never build at once: 0161 lands before 0146 builds, or builds after 0146 lands.
 
 ## Scope and exclusions
 
-Excluded: the mixed-model cache fix, library `on` handling (the libraries take a set through `public/set.rs`, which ticket 0150 holds), and `site/`.
+Excluded: the mixed-model cache fix, host maps and frame rows as library records (0150 decision 3 defers them), `on` on single questions and `recognize` (0150 decision 8), and `site/`.
 
 ## Routing
 
@@ -128,17 +172,18 @@ Builder: Claude (Opus subagent) in the lane the coordinator names. Reviewer: a f
 
 ## Complexity
 
-Contract 1; state and timing 0; reach 1; proof 1; cost of error 1; total 4. Final level: 2.
+Contract 2; state and timing 0; reach 2; proof 1; cost of error 1; total 6. Final level: 2. The risks are a JSON record that loses its members, which rows 3 and 6 and the consumer's existing rows guard, and a library sentence change, which row 10 pins.
 
 ## Deferred gaps
 
-- The libraries' annotate path. `public/set.rs` builds evidence without the command's nested reading. The builder checks whether it re-parses text too and files an issue if it does.
+- A binding test of the named text sentence. Each binding calls the Rust library, so the rule reaches it. At `e24f7324` no binding test pins the parser's sentence. `git grep` finds it only in the Rust consumer's `parts.rs` and in `records.md`. The Rust consumer's row is the one library proof.
 
 ## What Ian can overturn
 
 - Decision 1: `on` never parses a string.
 - Decision 3: a non-root `on` under `--lines` is refused before reading.
 - Decision 5: the two new plan members.
+- Decision 7: a library record that is not JSON text gets the named text sentence.
 
 ## Closes
 
@@ -146,8 +191,8 @@ Contract 1; state and timing 0; reach 1; proof 1; cost of error 1; total 4. Fina
 
 ## Evidence
 
-- Starts from: Local experiment 273, report 03 findings 2-1, 2-2 and 2-3, as the three issues record them. The code at `origin/main` `ebd28382`: `cli/annotate.rs:299-300`, `cli/annotate/plan.rs:58-62`, `core/records.rs::annotation_record`. `annotate.md` lines 23, 30, 81, 85 and 94.
-- Keeps: `on` over JSON records, rows and documents. Every run whose `on` reads JSON. The single-request plan bytes when nothing splits, beside the two new members.
-- Changes: `on` never re-parses text and refuses text with a named question. The page's examples. An executable annotate page. The dry run prints the first real chunk and the request counts.
-- Proof: Two outside-in tests and one executable page with six plants, and the `install`, `lint`, `test`, `spec` and `surfaces` rungs.
-- Defers: A check of the libraries' annotate path.
+- Starts from: Local experiment 273, report 03 findings 2-1, 2-2 and 2-3, as the three issues record them. The code at `origin/main` `e24f7324`: `core/question_set.rs:293-309`, `cli/annotate.rs:283-311`, `public/bulk.rs:283-311`, `cli/annotate/plan.rs:58-62`, `core/records.rs` lines 46, 86, 381, 415-426 and 468. `annotate.md` lines 23, 34, 81, 85, 94 and 96.
+- Keeps: `on` over JSON records, rows, documents and library JSON records. Every run whose `on` reads JSON. A library root group's text. The single-request plan bytes when nothing splits, beside the two new members.
+- Changes: `on` never re-parses text, and each record is read once. Text refusals name the question. The library's sentence for text that is not JSON. The page's examples. An executable annotate page. The dry run prints the first real chunk and the request counts.
+- Proof: Two outside-in command tests, the library edge rows and one executable page with eight plants, and the `install`, `lint`, `test`, `spec` and `surfaces` rungs.
+- Defers: A binding test of the named text sentence.
