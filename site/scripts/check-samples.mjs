@@ -212,7 +212,7 @@ function namedAnswers(label, text, ext) {
   lines.forEach((line, i) => {
     const at = `${label}:${i + 1}`;
     if ((assert.test(line) || PRINT.test(line) || /^\s*(if|while)\b/.test(line)) && call.test(statement(lines, i, ext))) {
-      found.push(`${at}: an assert or print acts on a ThinkThen call. Name the answer first, then assert on the name.`);
+      found.push(`${at}: an assert, print, or branch acts on a ThinkThen call. Name the answer first, then assert on the name.`);
     }
     const a = assign.exec(line);
     if (a && call.test(statement(lines, i, ext))) {
