@@ -24,6 +24,18 @@ Fixed by ticket 0126, landed 2026-09-25 from branch `ticket/0126-wording-help-an
 
 Fixed by ticket 0125, landed 2026-09-25 from branch `ticket/0125-audit-complete`.
 
+### 5. Three more spec numbers name no measuring record
+
+**Gap.** Found by experiment 218, wave 2, at main `20e9b8d4`. Item 3 fixed the README's 300 ms. The same rule catches three more:
+
+- `specification/annotate.md:106`: packed requests "used 20.8 times fewer billed input tokens", and billed input "fell from 915 tokens across three requests to 371". The page names no probe or record. `probes/annotate-0015/` may hold it.
+- `specification/threshold.md:43`: answers inside a band "flipping between identical runs 5% to 14% of the time", and outside it "0.5% to 2%". No record named. The same line calls the band "unresolved", which item 16 of the wording issue covers.
+- `demos/28-what-a-run-cost/README.md:53`: a case "still costs about 295 input tokens". The page replays its own recording, so the fix may be one clause that says so.
+
+**Fix.** Name the probe or record beside each number. Cut a number no record holds.
+
+Done when: each of the three lines names its record, or the number is gone.
+
 ## Pages owed for 0.1
 
 ### 5. A guessed verb, a CSV file, or a second path gets no hint
