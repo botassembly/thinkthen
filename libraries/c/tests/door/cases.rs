@@ -311,10 +311,13 @@ fn single(plain: &Reply, detailed: &Reply, expected: &Value, served: &str) -> Ch
     for (name, value) in wanted["answer"].as_object().into_iter().flatten() {
         same(name, &details["answer"][name], value)?;
     }
-    let (got, want) = (&details["answer"], &wanted["answer"]);
-    same("confidence", &got["confidence"], &want["confidence"])?;
+    // Indexing a missing key reads null, so an absent field reads as the word "absent".
+    let absent = json!("absent");
+    let at = |from: &Value, name| from.get(name).unwrap_or(&absent).clone();
+    let confidence = |from: &Value| at(&from["answer"], "confidence");
+    same("confidence", &confidence(&details), &confidence(wanted))?;
     for name in "model question_sha256 requests usage requests_sent cached".split(' ') {
-        same(name, &details["meta"][name], &wanted[name])?;
+        same(name, &at(&details["meta"], name), &at(wanted, name))?;
     }
     same("url", &details["meta"]["url"], &json!(served))
 }
