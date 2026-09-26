@@ -2,6 +2,7 @@
 #![cfg(feature = "cli")]
 
 use std::fs;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Output;
 
@@ -19,7 +20,7 @@ fn repository() -> PathBuf {
 }
 
 /// Run the gate over one list file against the generic arm.
-fn gate(backend: &Backend, list: &Path) -> Output {
+fn gate(backend: &Backend, list: &Path) -> io::Result<Output> {
     run::output(
         child::command("python3", &[])
             .arg(repository().join("probes/speed/measure.py"))
@@ -31,13 +32,11 @@ fn gate(backend: &Backend, list: &Path) -> Output {
                 format!("{}/generic/v1", backend.origin()),
             ),
     )
-    .expect("the gate runs")
 }
 
 /// The committed table with `from` replaced by `to` in one function's row, written under the target folder.
-fn planted(function: &str, from: &str, to: &str) -> PathBuf {
-    let table =
-        fs::read_to_string(repository().join("probes/speed/functions.jsonl")).expect("table");
+fn planted(function: &str, from: &str, to: &str) -> io::Result<PathBuf> {
+    let table = fs::read_to_string(repository().join("probes/speed/functions.jsonl"))?;
     let key = format!("{{\"function\":\"{function}\",");
     let mut out = String::new();
     for line in table.lines() {
@@ -50,14 +49,15 @@ fn planted(function: &str, from: &str, to: &str) -> PathBuf {
     }
     assert_ne!(out, table, "the plant for {function} changed nothing");
     let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("speed-{function}.jsonl"));
-    fs::write(&path, out).expect("planted table");
-    path
+    fs::write(&path, out)?;
+    Ok(path)
 }
 
 #[test]
 fn the_speed_gate_holds_and_names_each_fault() {
     let backend = Backend::start().expect("backend");
-    let committed = gate(&backend, &repository().join("probes/speed/functions.jsonl"));
+    let committed =
+        gate(&backend, &repository().join("probes/speed/functions.jsonl")).expect("the gate runs");
     let reported: usize = String::from_utf8_lossy(&committed.stdout)
         .lines()
         .map(|line| {
@@ -96,8 +96,8 @@ fn the_speed_gate_holds_and_names_each_fault() {
         ),
     ];
     for (list, sentence) in cases {
-        let output = gate(&backend, &list);
-        assert_eq!(output.status.code(), Some(1), "{}", list.display());
+        let output = gate(&backend, &list.expect("planted table")).expect("the gate runs");
+        assert_eq!(output.status.code(), Some(1), "{sentence}");
         assert_eq!(String::from_utf8_lossy(&output.stderr), sentence);
     }
 }
