@@ -20,13 +20,13 @@ const dryRun = run('install/backends', '1-dry-run');
   <h2>The default</h2>
   <table>
     <tr><th>Setting</th><th>Default</th><th>Set it with</th></tr>
-    <tr><td>Address</td><td><code>https://api.typesafe.ai/v1</code></td><td><code>--url BASE</code>, then <code>THINKTHEN_BASE_URL</code></td></tr>
+    <tr><td>Address</td><td><code>https://api.typesafe.ai/v1</code></td><td><code>--url BASE</code>, then <code>THINKTHEN_BASE_URL</code>, then <code>url</code> in the configuration file</td></tr>
     <tr><td>Model</td><td><code>jev-latest</code></td><td><code>--model NAME</code>, or <code>model</code> in a question file</td></tr>
   </table>
   <p><code>jev-latest</code> follows the vendor's newest model. Name a version to hold a run to one model.</p>
 
   <h2>The key</h2>
-  <p>The key comes from <code>{KEY_VARIABLE}</code> and from nowhere else. The command takes no flag and no file for it. A missing key exits 4. The message names the variable and never a value.</p>
+  <p>The command reads the key from <code>{KEY_VARIABLE}</code> and from nowhere else. It takes no flag and no file for it. The Rust library can also take it from <code>EngineBuilder::api_key</code>. A missing key exits 4. The message names the variable and never a value.</p>
   <p>The key goes only to the address you named. It never shows in a plan, a result, a saved answer, a log line, or an error.</p>
   <p>A plain <code>http://</code> address may reach only this machine. Any other <code>http://</code> host is a usage error before a request leaves. The key would otherwise cross the network in clear text. Under <code>http://</code> the tool also ignores every proxy variable.</p>
   <p>An address with a user name, a query, or a fragment is a usage error. The plan prints the address, and a saved answer keeps it.</p>

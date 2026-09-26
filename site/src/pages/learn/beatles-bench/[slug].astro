@@ -31,6 +31,7 @@ const [first, ...rest] = page.title.split(' ');
     {page.credit && <figcaption>{page.credit}</figcaption>}
   </figure>
   {page.idea.map((para) => <p>{parts(para).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>)}
+  {page.source && <p>The numbers come from <a href={page.source.href}>{page.source.text}</a>.</p>}
 
   {inputs.map((file) => <Code code={file.text} caption={`${file.name}, the question set`} />)}
   {runs.map((run, i) => (
