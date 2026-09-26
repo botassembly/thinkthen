@@ -46,15 +46,20 @@ Every plant ran, turned its check red, and was restored. Each restored file was 
 | `children` on the tree: `Command::new("sh").arg("-c").arg("true").status()` added to `tests/transform.rs` | Red. The check named that line |
 | `children` on the tree: `dict(os.environ)` restored in `libraries/python/tests/conftest.py` | Red. The check named that line |
 | Rust helper without `env_clear()` | Red. `a_child_sees_only_path_and_the_names_it_keeps` failed |
+| Rust helper without its secret-shaped check | Red. `a_secret_shaped_name_is_never_kept_in_any_case` failed for `db_password` |
 | Python helper starts from `dict(os.environ)` | Red. "children python: FAIL the child" |
 | TypeScript helper starts from `process.env` | Red. "children typescript: FAIL the child" |
 | Ruby helper starts from `ENV.to_h` | Red. "children ruby: FAIL the child" |
 | R helper without `-i` | Red. "children r: FAIL the child" |
 | `heavy-lock` without its unset loop | Red. "lint: heavy-lock left a stray THINKTHEN_ name or dropped its own" |
+| `heavy-lock` without `THINKTHEN_DUCKDB_CLI` in its kept names | Red. The lint probe read no value for it |
+| `children` on the tree: a new `spawnSync` added to the exempt `fork.test.mjs` | Red. The check named the new line. Before the review fix, the file's exemption hid it |
+| `children --self-test`: the TypeScript form back to a bare name only | Red. The `cp.spawn(` and `child_process.execSync(` case failed, 37/38 cases hold |
+| `children --self-test`: the Ruby form back to a parenthesis only | Red. The `system "ls"` case failed, 37/38 cases hold |
 | `test_secrecy.py`: `dict(os.environ)` restored in `conftest.py` `child_env` | Red. The child printed `True` for the planted `FAKE_SERVICE_API_KEY`, and the assert failed |
-| Listener: stall rule removed | Red. The half-request row timed out |
+| Listener: stall rule removed | Red. The half-request row timed out. After the review split the timeouts, the plant ran again and the row's client timed out again |
 | Listener: return on a closed connection | Red. The zero-byte row's second client saw a reset |
-| Listener: read timeout removed | Red. The silent row timed out |
+| Listener: read timeout removed | Red. The silent row timed out. After the review split the timeouts, the plant removed the 8-second idle timeout and the row's client timed out again |
 | Listener: `used == 0` branch removed | Red. The 40 KiB row read no header end |
 | Listener: return when the script ends | Red. The past-the-script row saw a reset |
 | `eprintln!` of the second entity's name in `cli/relate.rs` | Red in 3 tests: "the second entity is in a diagnostic" |
@@ -73,7 +78,10 @@ The secrecy tests ran three times each with main's listener and this branch's, i
 
 ## Choices made here
 
-- The Rust refusal test pins the sentence for `THINKTHEN_BASE_URL` with `#[should_panic]`, as the ticket says. A secret-shaped name reaches the same assert.
+- The Rust refusal tests pin the sentence with `#[should_panic]`, once for `THINKTHEN_BASE_URL` and once for the lowercase `db_password`.
+- The review split the listener's one 2-second timeout in two. A peek that sees no new bytes for 2 seconds still falls into the full read. A connection that sends nothing is dropped after 8 seconds, so a client the scheduler pauses under load keeps its reply. The listener tests wait 20 seconds for an answer.
+- EXEMPT and PENDING entries in the children check each name one file, one rule, and the exact lines they allow. A new finding in an exempt file fails. An entry whose line no longer holds its finding fails and asks for a fix. Those line numbers move when another ticket edits the file, and that ticket then updates the entry.
+- The children check now also finds a TypeScript spawn called through a module name, such as `cp.spawn(`, and a Ruby `system`, `spawn`, `exec`, or `Open3` call written without parentheses.
 - `child::CARGO` holds the nested cargo list once. Three sites share it.
 - The ticket's Excluded table listed `probes/` and `databases/duckdb/vendor/`. The check holds no entry for either, because neither holds a finding. An entry with no finding would fail the stale-entry check.
 - `test_interrupt.py` is the Part 4 test. Both plants turned it red, so no new test was needed.
@@ -82,24 +90,25 @@ The secrecy tests ran three times each with main's listener and this branch's, i
 
 | Part | Budget | Nonblank lines |
 | --- | --- | --- |
-| `sdlc/scripts/children` | 260 | 231 |
-| `test_deadline/child.rs` and its test | 45 | 45 |
+| `sdlc/scripts/children` | 260 | 271 after the review fixes |
+| `test_deadline/child.rs` and its test | 45 | 52 after the review fixes |
 | Each helper in `conformance/children/` | 30 | 15 to 19 |
 | `test.sh` and its four checks | 120 | 87 |
-| `listener.rs` added | 45 | 43 |
-| `tests/listener.rs` | 150 | 96 |
+| `listener.rs` added | 45 | 45 |
+| `tests/listener.rs` | 150 | 97 |
 | `secrecy.rs` and `secrecy_relate.rs` changed | 30 | 30 |
 | Rust spawn sites | 50 | 40 |
 | Surface spawn sites, pandas included | 110 | 104, the Part 4 docstring included |
 | `heavy-lock` added | 6 | 6 |
+| `lint` and `test` rungs added | 12 | `lint` 13, `test` 2. I read the budget as 12 lines for each rung. `lint` crossed it by one line when the review added the `THINKTHEN_DUCKDB_CLI` probe |
 | Part 4 docstring | 6 | 6 |
-| `sdlc/ratchet.json` rise | 280 | 184 |
+| `sdlc/ratchet.json` rise | 280 | 194 after the review fixes |
 
-The build first crossed three budgets: the Rust helper, `listener.rs`, and the secrecy files. It trimmed doc comments and folded repeated lists until each fit. The builder looked for duplication first in the spawn blocks of `tests/backend/harness/mod.rs` and `tests/support/measure.rs`, and in `serve_script` beside `serve_kept`. The harness spawns already clear the environment. `serve_script` and `serve_kept` now share the drift answer for an impossible reset.
+The coordinator's code review accepted the growth its five fixes needed: the children check, the Rust helper's test, and the `lint` rung went past their budgets. The build first crossed three budgets: the Rust helper, `listener.rs`, and the secrecy files. It trimmed doc comments and folded repeated lists until each fit. The builder looked for duplication first in the spawn blocks of `tests/backend/harness/mod.rs` and `tests/support/measure.rs`, and in `serve_script` beside `serve_kept`. The harness spawns already clear the environment. `serve_script` and `serve_kept` now share the drift answer for an impossible reset.
 
 ## Ratchets
 
-Each ceiling moved to its measured total after the last merge. Each rise is this build's own lines: `sdlc/ratchet.json` 63192 to 63376, `libraries/c` 2137 to 2139, `libraries/python` Python 2248 to 2253, `libraries/typescript` scripts 743 to 742, `libraries/ruby` Ruby 1526 to 1531, `libraries/r` R 1256 to 1266, `databases/duckdb` Python 1893 to 1894, `databases/sqlite` Python 1199 to 1209, `databases/postgresql` Python 243 to 249.
+Each ceiling moved to its measured total after the last merge. Each rise is this build's own lines: `sdlc/ratchet.json` 63192 to 63386, `libraries/c` 2137 to 2139, `libraries/python` Python 2248 to 2253, `libraries/typescript` scripts 743 to 742, `libraries/ruby` Ruby 1526 to 1531, `libraries/r` R 1256 to 1266, `databases/duckdb` Python 1893 to 1894, `databases/sqlite` Python 1199 to 1209, `databases/postgresql` Python 243 to 249.
 
 ## Ladder
 

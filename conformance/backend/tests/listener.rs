@@ -10,8 +10,9 @@ use conformance_backend::{Canned, Listener};
 
 type Tested = Result<(), Box<dyn Error>>;
 
-/// How long a client waits for any answer before the test fails.
-const PATIENCE: Duration = Duration::from_secs(10);
+/// How long a client waits for any answer before the test fails: past the
+/// listener's 8-second idle timeout, which the silent row waits out.
+const PATIENCE: Duration = Duration::from_secs(20);
 
 const UNRESETTABLE: &str = "the loopback listener cannot reset a request it had to read";
 const EXHAUSTED: &str = "the script has no reply left for this connection";

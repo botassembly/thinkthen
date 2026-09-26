@@ -12,9 +12,12 @@ use crate::arms::drift;
 /// The path the engine appends to every base.
 const ENDPOINT_PATH: &str = "systemone";
 
-/// How long a peek may see no new bytes before the request is read instead,
-/// and how long a scripted connection may send nothing.
+/// How long a peek may see no new bytes before the request is read instead.
 const STALL: Duration = Duration::from_secs(2);
+
+/// How long a scripted connection may send nothing before it is dropped. A
+/// client the scheduler pauses under load stays well inside it.
+const IDLE: Duration = Duration::from_secs(8);
 
 /// Why a reset reply answers the drift status instead of a reset.
 const UNRESETTABLE: &str = "the loopback listener cannot reset a request it had to read";
@@ -336,7 +339,7 @@ fn serve_script(
     for accepted in listener.incoming() {
         let Ok(stream) = accepted else { return };
         counts.connections.fetch_add(1, Ordering::SeqCst);
-        let _ = stream.set_read_timeout(Some(STALL));
+        let _ = stream.set_read_timeout(Some(IDLE));
         let Some((request, used)) = peek_request(&stream) else {
             continue;
         };

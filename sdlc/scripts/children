@@ -23,31 +23,36 @@ LANGUAGES = {".rs": "Rust", ".py": "Python", ".mjs": "TypeScript", ".js": "TypeS
              ".ts": "TypeScript", ".rb": "Ruby", ".R": "R"}
 COMMENT = {"Rust": "//", "TypeScript": "//", "Python": "#", "Ruby": "#", "R": "#"}
 
-# Each entry names a path prefix and why its findings do not count. An entry
-# whose path holds no finding fails, so neither table can rot.
+# EXCLUDED names a path prefix whose files are not tests, and why. EXEMPT and
+# PENDING name one file, one rule, and the exact lines they allow, and why. A
+# new finding in such a file still fails. An entry that allows nothing fails
+# too, so no table can rot.
 EXCLUDED = {
     "sdlc/scripts/": "the gate's own tools run cargo, git, and node in the developer's toolchain",
     "site/": "the site build is not a test",
     "libraries/r/thinkthen/tools/": "the R package's install-time tools are not tests",
 }
 EXEMPT = {
-    "libraries/typescript/tests/fork.test.mjs": "the fork runs inside a child the helper already built",
-    "crates/thinkthen/src/cli/conformance_tests/command.rs":
+    ("libraries/typescript/tests/fork.test.mjs", "inherits", (19,)):
+        "the fork runs inside a child the helper already built",
+    ("crates/thinkthen/src/cli/conformance_tests/command.rs", "reads", (237,)):
         "its form child scans its own whole environment, and that reading is the probe's evidence",
 }
 PENDING = {
-    "crates/thinkthen/tests/relate_edge.rs": "0123 and 0126 own relate and its help text",
-    "databases/postgresql/src/files.rs": "0129 owns databases/*/src",
-    "databases/duckdb/tools/databases_suite.py": "0129 owns this suite",
-    "databases/duckdb/tools/source_checks.py": "0129 owns these checks",
+    ("crates/thinkthen/tests/relate_edge.rs", "inherits", (14,)): "0123 and 0126 own relate and its help text",
+    ("databases/postgresql/src/files.rs", "inherits", (243,)): "0129 owns databases/*/src",
+    ("databases/duckdb/tools/databases_suite.py", "inherits", (117,)): "0129 owns this suite",
+    ("databases/duckdb/tools/source_checks.py", "inherits", (59, 167)): "0129 owns these checks",
 }
 TABLES = {"excluded": EXCLUDED, "exempt": EXEMPT, "pending": PENDING}
 
 SPAWNS = {
     "Rust": re.compile(r"Command::new\("),
     "Python": re.compile(r"\b(?:subprocess\.(?:run|Popen|call|check_call|check_output)|asyncio\.create_subprocess_exec)\s*\("),
-    "TypeScript": re.compile(r"(?<![\w.])(?:spawn|spawnSync|exec|execSync|execFile|execFileSync|fork)\s*\("),
-    "Ruby": re.compile(r"(?:\bOpen3\.\w+|\bProcess\.spawn|\bIO\.popen|(?<![\w.])(?:spawn|system|exec))\s*\("),
+    "TypeScript": re.compile(
+        r"(?:(?<![\w.])|(?<=[\w$]\.))(?:spawn|spawnSync|exec|execSync|execFile|execFileSync|fork)\s*\("),
+    "Ruby": re.compile(r"(?:\bOpen3\.\w+|\bProcess\.spawn|\bIO\.popen|(?<![\w.:])(?:spawn|system|exec))"
+                       r"(?=[ \t]*[(\"']|[ \t]+[\w\[@$:])"),
     "R": re.compile(r"(?<![\w.])system2?\s*\("),
 }
 PASSES = {
@@ -108,6 +113,20 @@ def extent(text, start, statement):
     return at
 
 
+def call_text(text, end):
+    """A call's arguments: its brackets, or without them the rest of the line
+    and each line after one that ends in a comma or a backslash."""
+    at = end
+    while at < len(text) and text[at] in " \t":
+        at += 1
+    if at < len(text) and text[at] == "(":
+        return text[at:extent(text, at, False)]
+    stop = text.find("\n", at)
+    while stop != -1 and text[:stop].rstrip().endswith((",", "\\")):
+        stop = text.find("\n", stop + 1)
+    return text[at:len(text) if stop == -1 else stop]
+
+
 def rust_window(text, start):
     """The spawn's statement, and the later statements on the name a `let` bound it to."""
     end = extent(text, start, True)
@@ -130,7 +149,7 @@ def single_name(language, text, at):
 
 
 def findings(path, text):
-    """Every sentence that says how one file breaks a rule."""
+    """Each (line, rule) at which one file breaks a rule."""
     language = LANGUAGES[pathlib.PurePath(path).suffix]
     text = uncommented(text, language)
     line = lambda at: text.count("\n", 0, at) + 1
@@ -140,16 +159,21 @@ def findings(path, text):
             if language == "Rust":
                 passed = ".env_clear()" in rust_window(text, hit.start())
             else:
-                passed = PASSES[language](text[hit.end() - 1:extent(text, hit.end() - 1, False)])
+                passed = PASSES[language](call_text(text, hit.end() - (text[hit.end() - 1] == "(")))
             if not passed:
-                out.append((line(hit.start()), INHERITS.format(language)))
+                out.append((line(hit.start()), "inherits"))
     for hit in OUTRIGHT.get(language, re.compile(r"$^")).finditer(text):
-        out.append((line(hit.start()), INHERITS.format(language)))
+        out.append((line(hit.start()), "inherits"))
     if is_test(path):
         for hit in WHOLE[language].finditer(text):
             if not single_name(language, text, hit.start()):
-                out.append((line(hit.start()), READS))
-    return [f"children: {path}:{number}: {why}" for number, why in sorted(set(out))]
+                out.append((line(hit.start()), "reads"))
+    return sorted(set(out))
+
+
+def said(path, number, rule):
+    language = LANGUAGES[pathlib.PurePath(path).suffix]
+    return f"children: {path}:{number}: {INHERITS.format(language) if rule == 'inherits' else READS}"
 
 
 def tracked(root):
@@ -166,14 +190,24 @@ def check(root, tables):
         if pathlib.PurePath(path).suffix not in LANGUAGES or not (root / path).is_file():
             continue
         found = findings(path, (root / path).read_text(encoding="utf-8", errors="replace"))
-        entry = next((prefix for table in tables.values() for prefix in table if path.startswith(prefix)), None)
-        if entry is None:
-            out += found
-        elif found:
-            used.add(entry)
+        prefix = next((prefix for prefix in tables.get("excluded", {}) if path.startswith(prefix)), None)
+        if prefix is not None:
+            used.update([prefix] if found else [])
+            continue
+        for number, rule in found:
+            entry = next((key for kind in ("exempt", "pending") for key in tables.get(kind, {})
+                          if key[:2] == (path, rule) and number in key[2]), None)
+            if entry is None:
+                out.append(said(path, number, rule))
+            else:
+                used.add((entry, number))
     for kind, table in tables.items():
-        out += [f"children: {prefix} is {kind} but holds no finding; remove the entry"
-                for prefix in table if prefix not in used]
+        for key in table:
+            if kind == "excluded" and key not in used:
+                out.append(f"children: {key} is excluded but holds no finding; remove the entry")
+            elif kind != "excluded" and any((key, number) not in used for number in key[2]):
+                out.append(f"children: {key[0]} is {kind} for {key[1]} at lines {list(key[2])}, "
+                           "but a line holds no such finding; fix the entry")
     return out
 
 
@@ -206,10 +240,16 @@ CASES = [
      [f"children: a.mjs:2: {INHERITS.format('TypeScript')}"]),
     ("a.mjs", "import { spawn } from 'node:child_process';\nspawn(bin, [], { env: childEnv() });\n", []),
     ("a.mjs", "const hit = /x/.exec(text);\n", []),
+    ("a.mjs", "import cp from 'node:child_process';\ncp.spawn(bin, []);\nchild_process.execSync(cmd);\n",
+     [f"children: a.mjs:2: {INHERITS.format('TypeScript')}", f"children: a.mjs:3: {INHERITS.format('TypeScript')}"]),
+    ("a.mjs", "import cp from 'node:child_process';\ncp.spawn(bin, [], { env: childEnv() });\n", []),
     ("tests/a.mjs", "const env = { ...process.env, X: '1' };\n", [f"children: tests/a.mjs:1: {READS}"]),
     ("tests/a.mjs", "const bin = process.env.THINKTHEN_TEST_BACKEND;\nconst v = process.env[name];\n", []),
     ("a.rb", 'Open3.capture3(env, ruby, "-e", s)\n', [f"children: a.rb:1: {INHERITS.format('Ruby')}"]),
     ("a.rb", 'Open3.capture3(env, ruby, "-e", s,\n               unsetenv_others: true)\n', []),
+    ("a.rb", 'system "ls"\nspawn(\'ls\')\nexec ruby, "-e", s\nOpen3.popen2 bin\n',
+     [f"children: a.rb:{n}: {INHERITS.format('Ruby')}" for n in (1, 2, 3, 4)]),
+    ("a.rb", 'system env, "ls",\n       unsetenv_others: true\nOpen3.popen2 env, bin, unsetenv_others: true\n', []),
     ("a.rb", "out = `ls`\nmore = %x(ls)\n",
      [f"children: a.rb:1: {INHERITS.format('Ruby')}", f"children: a.rb:2: {INHERITS.format('Ruby')}"]),
     ("tests/a.rb", "base = ENV.to_h\n", [f"children: tests/a.rb:1: {READS}"]),
@@ -238,9 +278,13 @@ def self_test():
             print(f"children self-test: {relative}: expected {expected}, got {actual}", file=sys.stderr)
     with tempfile.TemporaryDirectory() as tmp:
         root = pathlib.Path(tmp)
-        (root / "held.py").write_text('subprocess.run(["x"])\n', encoding="utf-8")
-        actual = check(root, {"pending": {"held.py": "a fixture", "gone/": "a fixture"}})
-    expected = ["children: gone/ is pending but holds no finding; remove the entry"]
+        (root / "held.py").write_text('subprocess.run(["x"])\nsubprocess.run(["y"])\n', encoding="utf-8")
+        actual = check(root, {"excluded": {"gone/": "a fixture"},
+                              "pending": {("held.py", "inherits", (1, 3)): "a fixture"}})
+    expected = ["children: held.py:2: this child inherits the whole environment; build it with the Python child helper",
+                "children: gone/ is excluded but holds no finding; remove the entry",
+                "children: held.py is pending for inherits at lines [1, 3], but a line holds no such finding; "
+                "fix the entry"]
     if actual != expected:
         bad += 1
         print(f"children self-test: tables: expected {expected}, got {actual}", file=sys.stderr)

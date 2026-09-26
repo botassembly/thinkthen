@@ -17,3 +17,11 @@ fn a_child_sees_only_path_and_the_names_it_keeps() {
 fn a_thinkthen_name_is_never_kept() {
     let _ = command("sh", &["THINKTHEN_BASE_URL"]);
 }
+
+#[test]
+#[should_panic(
+    expected = "a test child may not keep db_password from the parent: set a THINKTHEN_ value or a fake key explicitly"
+)]
+fn a_secret_shaped_name_is_never_kept_in_any_case() {
+    let _ = command("sh", &["db_password"]);
+}

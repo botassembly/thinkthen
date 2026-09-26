@@ -23,8 +23,9 @@ python3 sdlc/scripts/children
 # Ticket 0127: the heavy lock unsets a stray THINKTHEN_ name and keeps its own.
 kept=$(env -i PATH="$PATH" THINKTHEN_SENTINEL=planted THINKTHEN_HEAVY_LOCK=/nonexistent/lock \
     THINKTHEN_HEAVY_LOCK_HELD=/nonexistent/lock THINKTHEN_TOOLCHAINS=/nonexistent/tools \
-    sh -c '. sdlc/scripts/heavy-lock; echo "${THINKTHEN_SENTINEL-unset} $THINKTHEN_HEAVY_LOCK $THINKTHEN_HEAVY_LOCK_HELD $THINKTHEN_TOOLCHAINS"')
-if [ "$kept" != "unset /nonexistent/lock /nonexistent/lock /nonexistent/tools" ]; then
+    THINKTHEN_DUCKDB_CLI=/nonexistent/duckdb \
+    sh -c '. sdlc/scripts/heavy-lock; echo "${THINKTHEN_SENTINEL-unset} $THINKTHEN_HEAVY_LOCK $THINKTHEN_HEAVY_LOCK_HELD $THINKTHEN_TOOLCHAINS $THINKTHEN_DUCKDB_CLI"')
+if [ "$kept" != "unset /nonexistent/lock /nonexistent/lock /nonexistent/tools /nonexistent/duckdb" ]; then
     echo "lint: heavy-lock left a stray THINKTHEN_ name or dropped its own: $kept" >&2
     exit 1
 fi
