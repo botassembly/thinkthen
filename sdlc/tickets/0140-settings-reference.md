@@ -16,7 +16,7 @@ A user who wants to change how ThinkThen asks, answers, or runs opens one page, 
 
 This is ticket C1 of `sdlc/issues/2026-09-26-batching-design.md` (main at `9b667c09` or later), section "C1: the settings reference". Ian ruled on 2026-09-26 that every setting is explained in one place, ruling 11 of that design. `sdlc/issues/2026-09-26-recognize-design.md` points to this page from its "Defaults and what a caller can change" section and its ticket preamble. Ian can overturn the ruling.
 
-C1 needs no batching code. It builds and lands before ticket B0, the batching ADR, and before any recognize ticket. The rows it writes are the settings on main when it lands.
+C1 needs no batching code. It lands after ticket 0139, the batching ADR B0, as Ian's ticket order says: B0, then C1. B0 writes no code, so the wait costs nothing. The table rows are the settings on main when C1 lands. The settings B0 records but no code has yet arrive as "on the way" lines, per decision 1.
 
 ## What happens today
 
@@ -55,7 +55,7 @@ The library and SQL surfaces, as main has them at `d410ef4a`:
 - DuckDB: `SET thinkthen_throttle`, `thinkthen_max_requests`, `thinkthen_max_requests_total`, `thinkthen_cache`, `thinkthen_cache_bytes`, `thinkthen_relate_seconds` (default 60) and `thinkthen_relate_holding_rows` (default 1,000,000). A final deadline argument in milliseconds on each scalar but `recognize`. No address, key, model or cache-off setting.
 - PostgreSQL: the settings `thinkthen.deadline_ms`, `thinkthen.throttle`, `thinkthen.max_requests`, `thinkthen.max_requests_total`, `thinkthen.cache`, `thinkthen.cache_bytes` and `thinkthen.file_directory` (`databases/postgresql/src/call.rs:391-449`). `thinkthen.api_key` exists only so a set value is refused. No address, model or cache-off setting.
 - SQLite: the functions `thinkthen_throttle`, `thinkthen_max_requests`, `thinkthen_max_requests_total`, `thinkthen_cache` (NULL turns the cache off) and `thinkthen_cache_bytes`, called before the first call (`databases/sqlite/src/settings.rs:127-188`). An optional final deadline argument in milliseconds. No address, key or model setting.
-- `cache_bytes` checks its value and has no effect on every library and SQL surface, and the configuration file's `cache_bytes` is read only by `cache prune`'s default. The DuckDB README line 39 and the SQLite README lines 50 and 56 still say it caps the cache. Ian ruled on 2026-09-25 that no setting may do nothing. Ticket 0134 item 4 defers the removal to its own ticket, not yet written. The row says the setting has no effect until that ticket lands.
+- `cache_bytes` checks its value and has no effect on every library and SQL surface, and the configuration file's `cache_bytes` is read only by `cache prune`'s default. The DuckDB README line 39 and the SQLite README lines 50 and 56 still say it caps the cache. Ian ruled on 2026-09-25 that no setting may do nothing. Item 4 of `sdlc/issues/2026-09-25-public-library-api-gaps.md` records that ruling and the removal, which has no ticket yet. The row says the setting has no effect on those surfaces until the removal lands. The README lines are not in that issue, so the C1 build files them (see "The surface-gap issue").
 - `max_requests`, the process request total, the deadline and the two DuckDB relate settings have no command flag.
 
 ## Design
@@ -65,7 +65,7 @@ The library and SQL surfaces, as main has them at `d410ef4a`:
 `specification/settings.md` opens with three short prose parts, then the table, then two prose lists.
 
 1. **What counts as a setting.** A value a caller chooses that changes how the tool reads, asks, answers, stores, or reports. Every flag in the command's help is one. The question text, the records, and help itself are not.
-2. **Precedence.** One rule, in prose above the table: the typed value, then the environment, then the question file, then the configuration file, then the built-in default. A setting skips the tiers it has no home in. The typed value is the command flag or the library argument. The page states the two orders on record that the rule covers: ADR 0033's address order, flag then `THINKTHEN_BASE_URL` then the configuration `url` then the built-in address, and its model order, flag then the question file then the configuration `model` then `jev-latest`. It states the cache order: `--cache` or `--no-cache`, then `THINKTHEN_CACHE`, then the configuration `cache`, then the platform folder.
+2. **Precedence.** One rule, in prose above the table: the typed value, then the environment, then the question file, then the configuration file, then the built-in default. A setting skips the tiers it has no home in. Only a per-call value counts as typed: the command flag, or an argument on one library or SQL call, such as a question's `threshold` or a call's deadline. An engine-level library setting, such as `Engine(throttle=)` or `EngineBuilder::throttle`, and a SQL session setting, such as DuckDB's `SET thinkthen_throttle` or SQLite's `thinkthen_throttle(n)`, sit in the environment tier beside the `THINKTHEN_` variables. They are set once for a process or session, as a variable is. This follows the batching design's section 6, which puts the engine setting and the SQL `SET` in the environment tier. The page states the two orders on record that the rule covers: ADR 0033's address order, flag then `THINKTHEN_BASE_URL` then the configuration `url` then the built-in address, and its model order, flag then the question file then the configuration `model` then `jev-latest`. It states the cache order: `--cache` or `--no-cache`, then `THINKTHEN_CACHE`, then the configuration `cache`, then the platform folder.
 3. **How to read a cell.** A surface cell holds that surface's spelling in backticks. A cell reads exactly `not on this surface` where the setting does not reach that surface.
 
 The table has these columns, in this order:
@@ -97,7 +97,20 @@ The Default cell names the record that set the default, as a link. Where no reco
 Under the table:
 
 - **Defaults with no recorded reason.** One line for each gap in the row list below.
-- **Settings on the way.** One line for each setting a design adds, naming the ticket that brings it and the design section. Today: `batch` (`--batch`, `THINKTHEN_BATCH`), batching B4. `context` (`--context`), batching B7. `--facts`, batching B5, and library `facts`, B12a to B12f. `recognize --jobs`, recognize R4b. `relate --jobs`, batching J1. `keep` (`--word-keep`), `infixes` (`--word-infix`) and the other word lists, recognize R2. `boundary` (`--boundary`), recognize R3. `window` (`--window`) and the hard cap, recognize R4. `keep`, `infixes` and `boundary` on the library and SQL surfaces, recognize R6. The ticket that lands each one moves its line into the table in the same commit. The worked examples of `'s` possessives with `keep` and of hyphens with `infixes` come with R2, which brings those settings.
+- **Settings on the way.** One line for each setting a design adds and no code has yet. Each line says in one sentence what the setting does and its designed default, and cites the design section and the ticket that brings it. The ticket that lands the setting moves its line into the table in the same commit. The lines:
+  - `batch` (`--batch N`, `THINKTHEN_BATCH`, the question file's `batch`): the most records one request carries. Default `max`, as many as fit under the backend's limits; `--batch 1` sends one record a request. Batching design ruling 1, sections 2 and 6. Ticket B4.
+  - `context` (`--context FILE`): a reference text sent with every batch as shared evidence. Default none. Batching design section 1 and section 6. Ticket B7.
+  - `--facts`: prints one `thinkthen.run/1` summary line to standard error at the end of a run. Default off; library results carry `facts` on every call with no setting. Batching design ruling 7 and "Run facts". Tickets B5 and B12a to B12f.
+  - `relate --jobs`: how many of one relate's requests run at once. Designed default 4, the engine throttle. Batching design ticket J1.
+  - `recognize --jobs`: how many of one long text's pieces run at once. Designed default 4. Recognize design ticket R4b.
+  - `keep` (`--word-keep`): whole words that never split, so `McDonald's` keeps its `'s`. Default empty, so a possessive `'s` is peeled off a name. Recognize design section 2 and the friction list. Tickets R2 and R6.
+  - `infixes` (`--word-infix`): marks split out of a word between letters, so `--word-infix -` turns `London-based` into `London`. Default the two dashes `–` and `—`, so hyphens stay joined. Recognize design section 2. Tickets R2 and R6.
+  - The other word lists, `prefixes`, `suffixes` and `trim`: marks peeled from a word's edges and trimmed from a name's edges. Defaults in the recognize design section 2's table; question file only. Ticket R2.
+  - `boundary` (`--boundary confirm|run`): whether a run of name words whose kinds change is asked about as one name or several. Default `confirm`. Recognize design section 3. Tickets R3 and R6.
+  - `window` (`--window N`): how many neighbouring words on each side a piece of a long text carries. Default 200, from 0 to 5,000. Recognize design section 6. Ticket R4.
+  - The hard cap: the largest text `recognize` takes. Fixed at 600,000 bytes with no option; a longer text exits 2. Recognize design section 6. Ticket R4.
+
+  The worked examples of `'s` possessives with `keep` and of hyphens with `infixes` come with R2, which brings those settings. The builder checks each line against the designs on main at build time, and against ticket 0139's ADR once it lands.
 
 ### The rows
 
@@ -121,8 +134,8 @@ One row per setting. A row may name several flags when they are one setting, as 
 | Details | `--details` | Off. `result.md` |
 | Quiet, raw | `--quiet`, `--raw` | Off. `channels.md` |
 | Dry run | `--dry-run` | Off. `channels.md` |
-| Address | `--url`, `THINKTHEN_BASE_URL`, configuration `url` | The built-in address. ADR 0010 |
-| Key | `THINKTHEN_API_KEY` | None; required for a live call. ADR 0010, `backends.md` |
+| Address | `--url`, `THINKTHEN_BASE_URL`, configuration `url` | The built-in address. ADR 0010. Not on the SQL surfaces by tickets 0109 decision 2 and 0110 decision 5 |
+| Key | `THINKTHEN_API_KEY` | None; required for a live call. ADR 0010, `backends.md`. Environment only on every surface but Rust; the same SQL records |
 | Model | `--model`, `model`, configuration `model` | `jev-latest`. `backends.md:55`. No reason on record for the alias over a pinned version: gap. The open default-model issue in `issue-backlog-2026-09-25.md` section C holds it |
 | Backend profile | `--profile` | None. ADR 0032 |
 | Calibration identity | `profile` in the question file | Absent. ADR 0032, `question-file.md:91` |
@@ -137,7 +150,7 @@ One row per setting. A row may name several flags when they are one setting, as 
 | Key refusal | PostgreSQL `thinkthen.api_key` | Empty; a set value refuses the next call. The PostgreSQL README |
 | Answer cache | `--cache`, `--no-cache`, `THINKTHEN_CACHE`, configuration `cache` | On, in the platform folder. ADR 0033 |
 | Recording | `--record`, `--replay` | Off. `recording.md` |
-| Prune target | `cache prune --max-size`, configuration `cache_bytes` | 100,000,000 allocated bytes. ADR 0033 calls it a maintenance target and gives no reason for the number: gap |
+| Prune target | `cache prune --max-size`, configuration `cache_bytes`, library and SQL `cache_bytes` (no effect) | 100,000,000 allocated bytes. Ian ruled 100 MB on 2026-09-21, ADR 0017 section 5; about 25,000 answers at one 4 KB block each. ADR 0033 keeps it as a maintenance target |
 | Prune selectors | `--older-than`, `--answered-by-other-than` | None. ADR 0033 |
 | Audit settings | `audit --by`, `--threshold`, `--id`, `--seed`, `--target`, `--optimize`, `--write`, `--curve`, `--pooled`, `--table` | `audit.md:22-27`: `--by question`, `--id /id`, `--seed 0`, `--target 0.9`, `--optimize accuracy`. No reason on record for 0.9: gap |
 | Diff settings | `diff --key`, `--threshold`, `--compare-threshold`, `--id`, `--table` | `diff.md` |
@@ -160,6 +173,16 @@ It reads the table from the page: the first pipe table after the heading `## Set
 
 It prints `settings: N rows, F flags, E environment names, K question-file keys, 0 failures` and exits 0, or prints each failure sentence on standard error and exits 1.
 
+### The surface-gap issue
+
+Filling the rows shows settings some surfaces cannot reach. The C1 build files one new issue, `sdlc/issues/2026-09-26-settings-some-surfaces-cannot-reach.md`, and edits no existing issue. `sdlc/issues/2026-09-25-public-library-api-gaps.md` belongs to ticket 0134 while it is in flight. The new issue covers:
+
+- The timeout, retries and backend profile cannot be set on any library or SQL surface. `build` fixes them at 30 seconds, 2 retries and no profile (`public/settings.rs:233-238`). ADR 0017 section 5 lists the engine settings a host can reach and names none of the three. No record says the omission is deliberate, so the issue files it.
+- The model cannot be set as an engine setting on any SQL surface or in C. ADR 0017 section 5 gives the model as "the question, then the engine value". A SQL or C caller can still name it in the question JSON. The issue files the missing engine value.
+- The DuckDB README line 39 and the SQLite README lines 50 and 56 say `cache_bytes` caps the cache. It has no effect. The issue files the wrong claim and cites item 4 of `sdlc/issues/2026-09-25-public-library-api-gaps.md` for the removal itself.
+
+One gap is deliberate and the issue cites it and files nothing: SQL cannot name an address or a key. Ticket 0109 decision 2, ticket 0110 decision 5 and `databases/postgresql/README.md:94` rule that the address and key come from the environment on every SQL surface. The page's address and key rows cite the same records.
+
 ### How the page keeps up with the flags
 
 A ticket that adds or changes a setting updates its row in the same commit. `sdlc/tickets/README.md` gains that sentence. The check enforces it for the three things a machine can read: a new flag, a new product variable, or a new question-file key fails the `spec` rung until its row exists. A removed one fails until its row goes. The check cannot see a changed default, a changed allowed range, or a library or SQL spelling. Review holds those, and the "Deferred gaps" section says so.
@@ -172,7 +195,7 @@ Each is the owner's decision under Ian's ruling. Ian can overturn any of them.
 
 1. **Only settings on main get rows.** The design's C1 section asks for rows for every designed setting, each naming its ticket. A row for a flag that help does not show is a stale row, and the check must fail stale rows. So designed settings sit in a "Settings on the way" list under the table, each naming its ticket, and move into the table when their ticket lands. The table stays strictly true, and the check needs no exemption for planned rows.
 2. **A configuration-file column, seventh.** The design lists 12 surface columns and leaves out the read-only configuration file. ADR 0033 makes it a real tier for the address, the model, the cache and the prune target. Leaving it out would hide where `url` and `model` can come from. It sits between the environment and the question-file columns, and the precedence prose places it after the question file.
-3. **The precedence prose adds the configuration tier and drops ADR 0007's profile order.** The design says the profile's place comes from ADR 0007. ADR 0007's selection order of `--profile`, `THINKTHEN_PROFILE`, the file's `profile` and `jev` named a profile map that ADR 0010 and ticket 0007 removed. Today `--profile FILE` loads a backend profile and has no environment or file tier, per ADR 0032. The question file's `profile` is calibration identity, which is a different setting with its own row. The page states the orders the code follows. B0 states batch's place when it adds its row.
+3. **The precedence prose adds the configuration tier and drops ADR 0007's profile order.** The design says the profile's place comes from ADR 0007. ADR 0007's selection order of `--profile`, `THINKTHEN_PROFILE`, the file's `profile` and `jev` named a profile map that ADR 0010 and ticket 0007 removed. Today `--profile FILE` loads a backend profile and has no environment or file tier, per ADR 0032. The question file's `profile` is calibration identity, which is a different setting with its own row. The page states the orders the code follows. Ticket 0139, B0, is being revised to stop citing ADR 0007's profile order and to say that the batch, context and facts rows arrive as "on the way" lines. The build cites 0139's text once it says so, and stops if it does not.
 4. **Every flag in help is a setting, including output and question-part flags.** The design rules that every flag in help needs a row. So `--details`, `--true`, `--option` and the `audit` and `diff` flags get rows. The page's opening definition makes the rule plain. Help and version are the one exempt list.
 5. **The check runs in the `spec` rung, against the real help.** `lint` does not build the binary. Parsing clap's derive attributes in Python would drift from what the user sees. `spec` already builds `thinkthen` and puts it on `PATH`, so the check reads exactly the help a user reads.
 6. **The Default cell names its record, and gaps are listed.** Where no record gives a reason, the page says so in one list. This follows the workspace rule that a default needs a supported reason on record, and it makes the gaps easy to find.
@@ -235,6 +258,7 @@ No Rust test is added. The check is a gate script, and the rung that runs it is 
 - `sdlc/scripts/README.md`: one row for `settings`, and the `spec` row names it.
 - `sdlc/tickets/README.md`: the sentence "A ticket that adds or changes a setting updates its row in `specification/settings.md` in the same commit."
 - `sdlc/issues/2026-09-26-site-builds-its-settings-page-from-the-settings-table.md`: new, for the website owner.
+- `sdlc/issues/2026-09-26-settings-some-surfaces-cannot-reach.md`: new, the surface gaps.
 - No help text changes. No page other than these changes its rules.
 
 ## Budgets
@@ -245,14 +269,14 @@ Nonblank lines, measured with `grep -c .` on the diff.
 - `sdlc/scripts/settings`: at most 200 nonblank lines, self-test included.
 - `sdlc/scripts/spec`: at most 4 added.
 - `specification/README.md`, `sdlc/scripts/README.md`, `sdlc/tickets/README.md`: at most 6 changed together.
-- The site issue: at most 15.
+- The site issue: at most 15. The surface-gap issue: at most 25.
 - No Rust source changes, so `sdlc/ratchet.json` does not move. No dependency. No public surface changes, so the `surfaces` rung is not required.
 
 ## Stop rules
 
 1. Stop before crossing a budget or adding a dependency.
 2. Stop if any plant stays green.
-3. Stop if filling a row needs a code change, such as a setting that does nothing. Ian ruled on 2026-09-25 that no setting may do nothing. File the finding in `sdlc/issues/` and write the row as main has it. The library and SQL `cache_bytes` is the known case. Its removal already has an owner in ticket 0134 item 4, so the row says it has no effect on those surfaces and the builder files nothing new. Any other setting found with no effect gets an issue.
+3. Stop if filling a row needs a code change, such as a setting that does nothing. Ian ruled on 2026-09-25 that no setting may do nothing. File the finding in `sdlc/issues/` and write the row as main has it. The library and SQL `cache_bytes` is the known case. Its removal is item 4 of `sdlc/issues/2026-09-25-public-library-api-gaps.md`, so the row says it has no effect on those surfaces and cites that issue. Any other setting found with no effect gets an issue.
 4. Stop if the check cannot read a surface's help without a key, a network call or a backend.
 5. Stop if a page on main contradicts another about a setting's default in a way the builder cannot settle from the record. File it, cite both in the row, and hand back.
 6. Stop if the change needs a file another in-flight ticket owns. Tickets 0135 and 0138 change `cli/args/command.rs`. C1 merges `origin/main` before its final run and writes rows for the help main has then.
@@ -275,8 +299,9 @@ Contract 1; state and timing 0; reach 1; proof 1; cost of error 1; total 4. Fina
 - The check does not read Default or Allowed values against code. A changed default passes. Review holds it.
 - The check matches flag names, not command and flag pairs. A flag dropped from one command but kept on another passes.
 - The configuration file column is not checked against `config.rs`. The file has four fields and changes rarely.
-- Defaults with no reason on record stay gaps: the timeout of 30 seconds, two retries, the 0.5 cut and relation cut, the `jev-latest` model alias, `audit`'s 0.9 target, and the 100,000,000-byte prune target. The page lists them. Each needs a measurement or a ruling.
+- Defaults with no reason on record stay gaps: the timeout of 30 seconds, two retries, the 0.5 cut and relation cut, the `jev-latest` model alias, and `audit`'s 0.9 target. The page lists them. Each needs a measurement or a ruling.
 - The site's Settings page waits for the website owner, per the issue C1 files.
+- The surface gaps in `sdlc/issues/2026-09-26-settings-some-surfaces-cannot-reach.md` stay open for their owners. C1 changes no surface.
 
 ## What Ian can overturn
 
@@ -286,6 +311,7 @@ Contract 1; state and timing 0; reach 1; proof 1; cost of error 1; total 4. Fina
 - Decision 3: the precedence prose places the configuration file after the question file and drops ADR 0007's removed profile order.
 - Decision 4: output and question-part flags are settings and get rows.
 - Decision 5: the check runs in the `spec` rung.
+- The precedence split: only per-call values are typed, and engine-level library settings and SQL session settings sit in the environment tier, following the batching design's section 6.
 - Decision 8: the page is a reference, and the owning page stays the contract.
 
 ## Closes
@@ -296,6 +322,6 @@ No issue closes. The batching and recognize designs stay open until their last t
 
 - Starts from: Ian's ruling 11 and section "C1: the settings reference" of `sdlc/issues/2026-09-26-batching-design.md` at `9b667c09`. The settings sections of `sdlc/issues/2026-09-26-recognize-design.md`. The command's long help on main at `d410ef4a`, read command by command. The environment reads in `cli/edge.rs`, `public/settings.rs`, `core/backend.rs` and `config.rs`. `question-file.schema.json`. ADRs 0007, 0010, 0017, 0030, 0032, 0033, 0034 and 0041. `question-file.md`, `backends.md` and `records.md`. The library and database sources listed under "What happens today".
 - Keeps: Every setting, flag, default and help line. Every owning page stays the contract for its setting. Every rung's other checks.
-- Changes: A new reference page, `specification/settings.md`, with one fixed-column table of every setting on main. A new check, `sdlc/scripts/settings`, in the `spec` rung. The ticket rule that a setting change updates its row in the same commit. An issue for the website owner.
+- Changes: A new issue naming the settings some surfaces cannot reach. A new reference page, `specification/settings.md`, with one fixed-column table of every setting on main. A new check, `sdlc/scripts/settings`, in the `spec` rung. The ticket rule that a setting change updates its row in the same commit. An issue for the website owner.
 - Proof: The check's self-test plants (a) to (e) against the real binary, source and schema, each pinned to its whole sentence set, and case (f) passes on the real page. Each plant also runs once against the real `spec` rung and is recorded red.
 - Defers: Library and SQL cells, defaults and allowed values checked only by review. Flag matching by name alone. The configuration column unchecked. Defaults with no recorded reason. The site page. The batching and recognize rows, which their tickets add.
