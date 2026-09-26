@@ -257,6 +257,8 @@ The four questions, answered once for the shared cases and once for the rest:
 - **Why no existing test catches it, for model, request limit and cache off.** These three exist on Rust, Python, TypeScript, Ruby and R, and each of those surfaces tests them in its own settings test with its own inputs. C has none of the three, so no test reaches C. No test runs one input across every surface, so nothing shows the surfaces agree. By decision 9, the build deletes each library's own assertion of the same effect, and the shared case becomes the one test of each on each surface.
 - **Does it need a test-only hook.** No. Each test sets the public spelling, counts at the real loopback listener, and reads the real folder.
 
+By Ian's 2026-09-26 ruling that every setting is documented, `sdlc/scripts/settings` also checks the library and SQL cells both ways, with one plant each way, in about 40 lines. A cell reading `not on this surface` stays unchecked. If the direction from map to cell overruns, the builder files it as an issue.
+
 `cache_bytes` gets no test of its absence. The build records that `rg -i 'cache_?bytes'` over `crates/thinkthen/src/public`, `crates/thinkthen/tests`, `libraries` and `databases` finds nothing. The tests that passed it lose those lines.
 
 ## Pages, comments, and issues
