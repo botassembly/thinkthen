@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 137
-opens: crates/thinkthen/src/cli/asking.rs crates/thinkthen/src/cli/failure.rs crates/thinkthen/src/cli/failure/tests.rs crates/thinkthen/src/cli/args.rs crates/thinkthen/src/cli/args/command.rs crates/thinkthen/src/core/records.rs crates/thinkthen/tests/backend/keeping.rs crates/thinkthen/tests/backend/keeping crates/thinkthen/tests/backend/refused.rs specification/filter.md specification/rank.md specification/records.md specification/channels.md sdlc/planning/adr/0007-flat-verbs-bare-values-and-one-threshold.md sdlc/ratchet.json sdlc/records sdlc/tickets sdlc/issues
+opens: crates/thinkthen/src/cli/asking.rs crates/thinkthen/src/cli/judge.rs crates/thinkthen/src/cli/failure.rs crates/thinkthen/src/cli/failure/tests.rs crates/thinkthen/src/cli/args.rs crates/thinkthen/src/cli/args/command.rs crates/thinkthen/src/core/records.rs crates/thinkthen/tests/backend/keeping.rs crates/thinkthen/tests/backend/keeping crates/thinkthen/tests/backend/refused.rs specification/filter.md specification/rank.md specification/records.md specification/channels.md sdlc/planning/adr/0007-flat-verbs-bare-values-and-one-threshold.md sdlc/ratchet.json sdlc/records sdlc/tickets sdlc/issues
 ---
 
 # 0137: filter and rank read lines by default
@@ -27,9 +27,9 @@ The ask is `sdlc/issues/2026-09-26-filter-and-rank-could-read-lines-by-default.m
 
     thinkthen: `filter` maps over a stream, so it takes --lines, --jsonl, --csv, or --tsv
 
-It exits 2 and sends nothing. The same sentence prints when a pointer is given with no flag. `sdlc/issues/closed/2026-09-19-hands-on-test-pass-two.md` line 177 saw it for `filter 'Q' --field /b --input one.jsonl`. `crates/thinkthen/tests/backend/refused.rs:206-213` pins both sentences.
+It exits 2 and sends nothing. The same sentence prints when a pointer is given with no flag. `sdlc/issues/closed/2026-09-19-hands-on-test-pass-two.md` line 177 saw an earlier wording of it, `takes --lines or --jsonl`, for `filter 'Q' --field /b --input one.jsonl`. `crates/thinkthen/tests/backend/refused.rs:206-213` pins both sentences.
 
-The plan's `input` object is `ReadingPlan` in `crates/thinkthen/src/core/records.rs:253`. It holds `framing` and `field`, as `{"framing":"jsonl","field":["/body"]}`. It says nothing about where the framing came from. The top-level `from` object names the source of each question setting as `"file"`, `"command line"`, or `"default"`. It appears only when a question file was read.
+The plan's `input` object is `ReadingPlan` in `crates/thinkthen/src/core/records.rs:257`. It holds `framing` and `field`, as `{"framing":"jsonl","field":["/body"]}`. It says nothing about where the framing came from. The top-level `from` object names the source of each question setting as `"file"`, `"command line"`, or `"default"`. It appears when a question file was read, or when the model came from the configuration (`asking.rs:172-180`).
 
 ## Design
 
@@ -38,9 +38,9 @@ The plan's `input` object is `ReadingPlan` in `crates/thinkthen/src/core/records
 - JSON Lines when any pointer is settled, from `--field` or from the question file's `on`.
 - Lines otherwise.
 
-It marks the `Reading` as defaulted. Every other verb and every explicit flag goes through as today. The refusal at `asking.rs:152` and `Failure::NoFraming` go away, because nothing else raises it.
+It marks the `Reading` as defaulted. Every other verb and every explicit flag goes through as today. The refusal at `asking.rs:152` and `Failure::NoFraming` go away, because nothing else raises it. The doc comments on `filter` and `rank` in `cli/judge.rs:128` and `:159` list "a missing framing" among their failures, and that phrase goes.
 
-`Reading` gains one flag and one method, `by_default()`. `ReadingPlan` gains one member, `from`, written only when the flag is set. A defaulted plan's `input` reads:
+`Reading` gains one flag and one builder method, `by_default()`, which returns the `Reading` with the flag set. `ReadingPlan` gains one member, `from`, written only when the flag is set. A defaulted plan's `input` reads:
 
     {"framing":"lines","field":[],"from":"default"}
     {"framing":"jsonl","field":["/body"],"from":"default"}
@@ -55,7 +55,7 @@ Each is the agent's decision under the queue owner's ruling. Ian can overturn an
 2. **A settled pointer with no framing flag means JSON Lines.** The rule is: on `filter` and `rank`, a pointer from `--field` or from the question file's `on`, with no framing flag, reads JSON Lines. ADR 0007 already ties `--field` to JSON. On `decide`, `--field` with no flag reads the whole input as one JSON value. `filter` and `rank` cannot read one document, and a pointer beside `--lines` is a usage error. So JSON Lines is the only JSON framing left for them. The file's `on` counts, because the pass-two record says `on` acts as `--field` on both verbs, and one rule for both homes is what `question-file.md` promises. `decide`, `choose`, `tag`, `score`, and `annotate` keep reading one document.
 3. **The plan says `"from":"default"` inside `input`, only when the default chose.** The word is the one the top-level `from` object already uses for a default. An explicit flag adds nothing, because the user is looking at the command line. So every existing plan, page, and test stays byte for byte. The default is worth naming, because a pointer silently changes the framing from lines to JSON Lines.
 4. **The default is picked in `read_by`, at the command edge.** `Common::framing` serves `decide`, `annotate`, `relate`, and `recognize` too, and a clap default would give them the same framing. `read_by` already holds the settled pointers and the verb. It is one place, and `annotate.rs:184` keeps its own call.
-5. **ADR 0007 is amended in place.** Its Records section says "`filter` and `rank` require one of the two." That line stays, marked as amended, and a dated "Amendment, 2026-09-26" section states the new rule and its guards. The ADR's own header says a changed line takes a new ADR, and `AGENTS.md` says to amend an accepted ADR where the history matters. The queue owner chose the amendment. Ian can overturn it for a new ADR.
+5. **ADR 0007 is amended in place.** Its Records section holds two sentences this ticket makes false for `filter` and `rank`: "`--field` without `--jsonl` reads the whole input as one JSON value" and "`filter` and `rank` require one of the two." Both stay, each marked as amended, and a dated "Amendment, 2026-09-26" section states the new rule and its guards. The ADR's own header says a changed line takes a new ADR, and `AGENTS.md` says to amend an accepted ADR where the history matters. The queue owner chose the amendment. Ian can overturn it for a new ADR.
 6. **`find` keeps its rule.** `find --field /body` with no flag is a usage error today, because `find` defaults to lines. Bringing it in line is a separate change to a verb this ticket does not open. It is a deferred gap.
 
 ## Edge cases
@@ -75,6 +75,7 @@ Each is the agent's decision under the queue owner's ruling. Ian can overturn an
 | `V Q --jobs 8`, no flag | Exit 2 | Accepted, as under `--lines`. Changed |
 | `V Q --lines`, `--jsonl`, `--csv`, or `--tsv` | Works | Kept, and the plan has no `from` |
 | `V Q --lines --field /body` | Exit 2, `--field: a text line has no members, so --lines takes no pointer` | Kept |
+| `V @file` with `on`, and `--lines` | Exit 2, the same text-line sentence | Kept |
 | `V Q --quiet`, `--raw`, `rank --threshold`, `filter --top` | Refused by name | Kept |
 | `decide`, `choose`, `tag`, `score`, `annotate` with no flag | One document | Kept |
 | `decide Q --field /body` with no flag | One JSON document | Kept |
@@ -105,7 +106,8 @@ No unit test is added. `Reading::new` keeps its unit tests, and the new flag add
 - `specification/filter.md` and `rank.md`: the synopsis shows the framing flags as optional. "What it reads" and the options table state the default and the pointer rule. The "missing framing is a usage error" sentences go. The `--lines` example in `filter.md` drops the flag. The `--jsonl --field` examples stay.
 - `specification/records.md`: the framing table row for `filter` and `rank`, and the `--field` bullets, state the rule.
 - `specification/channels.md`: the record-mode plan paragraph says `input` carries `"from":"default"` when `filter` or `rank` took the default.
-- ADR 0007: the dated amendment of decision 5.
+- ADR 0007: the dated amendment of its Records section, marking both sentences decision 5 of this ticket names.
+- `cli/judge.rs`: the two doc comments drop "a missing framing".
 - Help: the `filter` and `rank` long help say what they read with no flag. The `--field` help says that on `filter` and `rank`, no framing flag reads JSON Lines.
 - No `spec/` page runs `filter` or `rank`, and no demo runs either without a flag. The build checks both again with `grep`. Every demo keeps its explicit flag, so none changes.
 
@@ -141,7 +143,7 @@ Contract 2; state and timing 0; reach 1; proof 1; cost of error 1; total 5. Fina
 
 ## Deferred gaps
 
-- `site/` carries `--lines` on `filter` and `rank` examples. They keep working. The website agent can drop the flag where the default covers it.
+- `site/` carries `--lines` on `filter` and `rank` examples. They keep working. `site/src/pages/reference.astro:33` also says "One framing flag is required … its absence is a usage error", which becomes false. The build files `sdlc/issues/2026-09-26-site-says-filter-and-rank-need-a-framing-flag.md` for the website agent, naming both.
 - The Beatles Bench scripts carry `--lines` on `filter` and `rank`. They keep working. The bench owner can drop the flag.
 - `find --field` with no flag stays a usage error. Reading JSON Lines there, as `filter` and `rank` now do, would make the three stream verbs agree.
 - The plan does not say where an explicit framing came from. No reader needs it, because the flag is on the command line.
