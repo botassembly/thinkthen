@@ -122,7 +122,7 @@ export function articleProblems(name, text) {
   let tag = null;
   let start = 0;
   lines.forEach((line, i) => {
-    const fence = /^```([^\s{]*)/.exec(line);
+    const fence = /^```\s*(\S*)/.exec(line);
     if (fence && tag === null) { tag = fence[1].toLowerCase() || 'text'; start = i + 1; return; }
     if (line.startsWith('```') && tag !== null) {
       const ext = Object.hasOwn(FENCE_EXT, tag) ? FENCE_EXT[tag] : '';
