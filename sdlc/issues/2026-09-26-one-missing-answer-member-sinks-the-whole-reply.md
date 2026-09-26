@@ -1,6 +1,6 @@
 # One missing answer member sinks the whole reply
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 05, finding 2.3. Blocks 0.1: the code breaks a written adapter promise.
+Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 05, finding 2.3. Blocks 0.1: the code breaks a written adapter promise. Owner: ticket 0160 on `ticket/0160-the-answer-contract-holds`, ready for review.
 
 ## What happens
 

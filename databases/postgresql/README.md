@@ -43,7 +43,7 @@ FROM tickets, thinkthen_annotate('@form.json', body) AS a ORDER BY urgency DESC;
 | Setting | Who sets it | Meaning |
 | --- | --- | --- |
 | `thinkthen.deadline_ms` | any role | the per-call budget in milliseconds. -1 means none, and 0 means already spent |
-| `thinkthen.throttle` | superuser | requests in flight at once, 0 to 32. -1 keeps the engine's value |
+| `thinkthen.throttle` | superuser | requests in flight at once, 1 to 32. -1 keeps the engine's value. PostgreSQL refuses any other value where it is set. The refusal reads `thinkthen usage: a throttle is a whole number from 1 through 32`. `SET` fails, and a configuration file's bad value draws the refusal as a warning and leaves -1 |
 | `thinkthen.max_requests` | superuser | the most records one call answers. -1 means no limit |
 | `thinkthen.max_requests_total` | superuser | the most requests one backend sends. -1 means no total |
 | `thinkthen.cache` | superuser | the answer cache folder. Empty keeps `THINKTHEN_CACHE` or the platform folder |

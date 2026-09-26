@@ -34,7 +34,8 @@ Ticket 0108 ported the R surface from tag `surfaces-wave7-frozen-2026-09-24b` on
 - **R2-5.** Main's duplicate-option message names no option: "the question file's `options`: a list holds each option once". The class check and the doubled-percent unit test stand.
 - **max_requests** counts the records of one engine call. Rank and find hold their input and refuse before any request. A streaming `tt_decide`, `tt_filter`, or bulk choose, score, or tag sends the records under the limit and refuses at the record past it, so `max_requests = 1L` over two texts sends one request. The ticket said the refusal comes before the first request, and its acceptance line now says this. `tt_recognize` runs one engine call a text, so the limit counts each text alone and never refuses a column. `tt_relate` is one call over its unique entities.
 - **A throttle after a default-engine verb** is accepted. The default engine selects no throttle, so 0077's rule allows a first explicit one.
-- **find.** `tt_find` asks with no none candidate, because `Question::find` has no switch for one (`sdlc/issues/2026-09-25-public-library-api-gaps.md`). When nothing is selected, `place` and `unit` are `NA` and `probability` is `NA`. Cases 18 and 19 of `cases.json` ask with a none candidate, so they report not run.
+- **find.** `tt_find(question, units, none = FALSE)` adds a none candidate when `none` is `TRUE`, through `Question::offering_none` (ticket 0150). A `none` other than one `TRUE` or `FALSE` raises `thinkthen_usage` before any request. When nothing is selected, `place` and `unit` are `NA` and `probability` is `NA`.
+- **Record parts.** A question set member with an `on` pointer reads that part of each `tt_annotate` cell, which holds the record as JSON text (ticket 0150).
 - **A question that names a model** cannot join a question set. `tt_choose`, `tt_score`, and `tt_tag` then ask it one row at a time through `details_with`, under the one deadline. `tests/verbs.R` proves a named-model choose answers. The fallback makes one engine call per row, so `max_requests` never refuses a named-model choose, score, or tag column. The rows go one at a time, not throttle-wide, and the "throttle 8 holds 8 on the wire" line does not apply on this path.
 - **One deadline a call.** The Rust half fixes the deadline as one instant before the call starts, and every engine call a verb makes shares it. `tt_recognize` over three texts at 600 ms each under `deadline = 1` raises `thinkthen_deadline` after two sends.
 - **Interrupt parents** are R files run by `tests/with-backend.sh`, where the ticket planned bash `coproc` parents. R reads the backend's count through the same fifo, and one harness serves every test.
@@ -42,9 +43,8 @@ Ticket 0108 ported the R surface from tag `surfaces-wave7-frozen-2026-09-24b` on
 
 ## Conformance
 
-`tests/conformance.R` runs every case of `conformance/cases.json` in its own child on the 0092 case arm. It recomputes each request digest for the URL the backend served. Eight cases report not run with their reason: three engine injection points (cases 20, 22, and 25), case 23 (R raises its own interrupt, and `tests/interrupt.R` proves the batch stop), case 30 (no decide question file in R), the two find cases, and the two-group annotate case (`tt_annotate` reads one column).
+`tests/conformance.R` runs every case of `conformance/cases.json` in its own child on the 0092 case arm. It recomputes each request digest for the URL the backend served. Five cases report not run with their reason: three engine injection points (cases 20, 22, and 25), case 23 (R raises its own interrupt, and `tests/interrupt.R` proves the batch stop), and case 30 (no decide question file in R).
 
 ## Engine findings
 
 - The command prints the engine's internal `WidthActive` sentence, which still says width. R prints the public one, which says throttle. See `sdlc/issues/2026-09-25-command-wording-and-help-fixes-before-0-1.md`.
-- `Question::find` has no none candidate: `sdlc/issues/2026-09-25-public-library-api-gaps.md`, filed on main by ticket 0086.

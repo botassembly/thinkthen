@@ -1,6 +1,6 @@
 # `check` and `score` get 422 on a null level description
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 06, finding I-3. Blocks 0.1: `check` fails against the reference backend, and a spec-legal question file is refused.
+Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 06, finding I-3. Blocks 0.1: `check` fails against the reference backend, and a spec-legal question file is refused. Owner: ticket 0160 on `ticket/0160-the-answer-contract-holds`, ready for review.
 
 ## What happens
 
