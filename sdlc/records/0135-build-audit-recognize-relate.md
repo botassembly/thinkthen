@@ -127,4 +127,4 @@ A `git stash` during the build failed on intent-to-add files. The `git stash pop
 
 ## Closes
 
-At landing, the lander closes `sdlc/issues/2026-09-25-audit-grades-recognize-and-relate.md` and `sdlc/issues/2026-09-25-audit-exits-0-when-no-answer-matches-the-key.md`.
+At landing, the lander closes `sdlc/issues/closed/2026-09-25-audit-grades-recognize-and-relate.md` and `sdlc/issues/closed/2026-09-25-audit-exits-0-when-no-answer-matches-the-key.md`.

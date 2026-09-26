@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core/measure crates/thinkthen/src/core/measure.rs cr
 
 # 0135: audit grades recognize and relate, and refuses a run with no label
 
-Status: built. Design review accepted on the second pass (fresh read-only Claude session). `core/measure/items.rs` crossed its budget by more than a tenth (208 against 170). Coordinator re-scored after reviewer trim list: production at most 350, `items.rs` at most 195. Coordinator re-scored the audit_sets.rs budget to 372: the review-requested order test earns its lines. The build record gives the measured numbers. Owner: Claude.
+Status: landed 2026-09-26. Code review accepted after two rounds of fixes. Design review accepted on the second pass (fresh read-only Claude session). `core/measure/items.rs` crossed its budget by more than a tenth (208 against 170). Coordinator re-scored after reviewer trim list: production at most 350, `items.rs` at most 195. Coordinator re-scored the audit_sets.rs budget to 372: the review-requested order test earns its lines. The build record gives the measured numbers. Owner: Claude.
 
 Lane: thinkthen-lane-3
 
@@ -16,7 +16,7 @@ Review route: a fresh read-only Claude session reviews this design and the final
 
 `thinkthen audit` grades saved `recognize --details` and `relate --details` lines against a key. It prints precision, recall, and F1 over names or edges, suggests a cut, shows how steady the cut is, and writes `threshold` through `--write` under 0125's digest and ReAnchor rules. audit also refuses a run in which no answer carries a label, and names `--id` in the sentence.
 
-Ian ruled on 2026-09-25 that audit grades every function type in 0.1 (`sdlc/issues/closed/2026-09-25-audit-is-complete-for-0-1.md`, section 1). Ticket 0125 split `recognize` and `relate` out into `sdlc/issues/2026-09-25-audit-grades-recognize-and-relate.md`. The second issue, `sdlc/issues/2026-09-25-audit-exits-0-when-no-answer-matches-the-key.md`, was filed from a benchmark's worked examples. Each design point below is the agent's decision, and Ian can overturn it.
+Ian ruled on 2026-09-25 that audit grades every function type in 0.1 (`sdlc/issues/closed/2026-09-25-audit-is-complete-for-0-1.md`, section 1). Ticket 0125 split `recognize` and `relate` out into `sdlc/issues/closed/2026-09-25-audit-grades-recognize-and-relate.md`. The second issue, `sdlc/issues/closed/2026-09-25-audit-exits-0-when-no-answer-matches-the-key.md`, was filed from a benchmark's worked examples. Each design point below is the agent's decision, and Ian can overturn it.
 
 ## What 0125 and 0131 already settle
 
@@ -196,8 +196,8 @@ Contract 2; state and timing 1; reach 1; proof 2; cost of error 2; total 8. Fina
 
 On landing, the lander closes both issues with a status line naming this ticket:
 
-- `sdlc/issues/2026-09-25-audit-grades-recognize-and-relate.md`
-- `sdlc/issues/2026-09-25-audit-exits-0-when-no-answer-matches-the-key.md`
+- `sdlc/issues/closed/2026-09-25-audit-grades-recognize-and-relate.md`
+- `sdlc/issues/closed/2026-09-25-audit-exits-0-when-no-answer-matches-the-key.md`
 
 ## What Ian can overturn
 
