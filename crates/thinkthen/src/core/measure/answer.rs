@@ -169,7 +169,7 @@ pub(crate) struct Answer {
     pub(crate) options: Vec<String>,
     /// The number a `score` answer printed.
     pub(crate) number: Option<f64>,
-    /// The digest of the question the line answers, from its `meta`.
+    /// The line's question digest: `meta.question_sha256`, or `meta.questions_sha256` on an `annotate` line.
     pub(crate) digest: Option<String>,
     /// True when the line ran under a band.
     pub(crate) band: bool,

@@ -1115,8 +1115,9 @@ def check_catalog_policy() -> None:
 
 
 # Tickets 0113 and 0114: audit and diff read the paths they are handed, or standard input, and
-# writes only standard output. It may open a file, and nothing else the catalog
-# refuses. A token check cannot prove which paths it opens; review checks that.
+# write standard output, and standard error for a failure. diff also writes its warnings on
+# standard error. Each may open a file, and nothing else the catalog refuses. A token check
+# cannot prove which paths it opens; review checks that.
 MEASURE = (
     "crates/thinkthen/src/cli/measure.rs",
     "crates/thinkthen/src/cli/audit.rs",

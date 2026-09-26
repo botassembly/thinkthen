@@ -330,10 +330,11 @@ pub(crate) unsafe extern "C" fn thinkthen_init_c_api(
             {
                 return Err(defect("the extension could not connect to its database"));
             }
-            let registered = register_all(connection);
+            let serial = crate::connections::next_serial();
+            let registered = register_all(connection, serial);
             sys::duckdb_disconnect(&raw mut connection);
             registered?;
-            crate::connections::register(*database)?;
+            crate::connections::register(*database, serial)?;
         }
         signal::install();
         Ok(())
@@ -352,7 +353,7 @@ pub(crate) unsafe extern "C" fn thinkthen_init_c_api(
     }
 }
 
-fn register_all(connection: sys::duckdb_connection) -> Result<(), String> {
+fn register_all(connection: sys::duckdb_connection, serial: u64) -> Result<(), String> {
     register_setting(connection, c"thinkthen_throttle", &Type::BigInt)?;
     register_setting(connection, c"thinkthen_max_requests", &Type::BigInt)?;
     register_setting(connection, c"thinkthen_cache", &Type::Text)?;
@@ -362,7 +363,7 @@ fn register_all(connection: sys::duckdb_connection) -> Result<(), String> {
         register_scalar(connection, scalar)?;
     }
     register_usage(connection)?;
-    register_warm(connection)?;
+    register_warm(connection, serial)?;
     crate::relate::ffi::register(connection)
 }
 

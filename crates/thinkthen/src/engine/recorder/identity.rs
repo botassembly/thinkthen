@@ -59,7 +59,8 @@ fn match_identity(
     writing: bool,
 ) -> Result<(), Error> {
     if found != expected {
-        return Err(Error::RecordingBackendMismatch);
+        // The recorder names this run's endpoint and folder kind.
+        return Err(Error::RecordingBackendMismatch(String::new(), false));
     }
     if writing {
         sync_directory(folder)
