@@ -180,7 +180,7 @@ Contract 3; state and timing 3; reach 2; proof 3; cost of error 3; total 14. Fin
 
 Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk.md` asks every product ticket to name these five parts. This note changes no design.
 
-- Starts from: The tag `surfaces-wave7-frozen-2026-09-24b` holds `libraries/typescript/index.js`, `index.mjs`, `index.d.ts`, `addon/src/lib.rs`, `package.json`, `build-addon.sh`, `check.sh`, and `DIVERGENCES.md`. Its tests sit in `libraries/typescript/tests/`, 13 tests, two fork helpers, and `form.json`. `experiments/205-thinkthen-libs/FINDINGS.md` measured 16 to 43 µs added per native call and suggested a bytes form for large batches. `repos/jev-experiments`: none found.
+- Starts from: The tag `surfaces-wave7-frozen-2026-09-24b` holds `libraries/typescript/index.js`, `index.mjs`, `index.d.ts`, `addon/src/lib.rs`, `package.json`, `build-addon.sh`, `check.sh`, and `DIVERGENCES.md`. Its tests sit in `libraries/typescript/tests/`, 13 tests, two fork helpers, and `form.json`. `experiments/205-thinkthen-libs/FINDINGS.md` measured 16 to 43 µs added per native call and suggested a bytes form for large batches. A private experiment repository: none found.
 - Keeps: The exported names, the roles of `CancelHandle`, `Op`, `guarded`, and `deadline_of`, and the assertions of the ported tests.
 - Changes: Calls go through one JSON door on a worker thread per call. `tt.Engine` holds settings, `find` returns `null`, and offsets count UTF-16 units. The stand-in cases and `DIVERGENCES.md` retire, as "What moves from the tag" lists.
 - Proof: Abort rejects within 100 ms for a single call and a batch with plants, a 300 ms deadline rejects by 450 ms, and the surrogate, settings, export-name, `unsafe`, and `file://` deny checks pass.
@@ -190,7 +190,7 @@ Amended 2026-09-24 and applied in place 2026-09-25: the ADR 0017 amendment of 20
 
 ## Spike finding (2026-09-24)
 
-Experiment 256 on beelink (`~/workspace/experiments/256-thinkthen-ts-ruby-r-spike/`, `REPORT.md`) prototyped this binding over `crates/thinkthen` at main `e7696ca8`, on the 0092 backend on loopback with a fake key. It changes three points of the plan. The builder can overturn none of them without a new measurement.
+Experiment 256 on beelink (the workspace's `experiments/256-thinkthen-ts-ruby-r-spike/`, `REPORT.md`) prototyped this binding over `crates/thinkthen` at main `e7696ca8`, on the 0092 backend on loopback with a fake key. It changes three points of the plan. The builder can overturn none of them without a new measurement.
 
 - **Release the threadsafe function on settle (gap in decisions 4 and 5).** The handle keeps a clone of the threadsafe function so `detach()` can abort it. After a normal settle that clone keeps Node alive indefinitely. `invoke` must call `handle.detach()` or a `release` once the envelope arrives. Add an acceptance line: a settled call lets Node exit within 500 ms. Plant: skip the release, and Node stays alive past 3 s. The spike's test observed both.
 - **Amendment change 2 premise.** Main's `engine/workers.rs::on_worker` runs every live attempt on an engine worker thread with the default stack, so the binding's worker does not host the TLS handshake. Measured with the engine's ureq 3.4.2 and rustls 0.23.45 on loopback: the handshake needs at most 192 KiB in debug and 48 KiB in release. The 2 MiB decision stands.

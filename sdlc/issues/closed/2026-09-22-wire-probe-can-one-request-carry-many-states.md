@@ -12,7 +12,7 @@ Does the System One endpoint accept multiple states (texts) in one request, at w
 
 Two launches through `sdlc/scripts/live`, which serializes paid work and precharges the declared maximum: a smoke launch of one control request at a declared 5,000 tokens, then eight requests at a declared 60,000. Every request went to `https://api.typesafe.ai/v1/systemone` with `model: jev-latest`, one at a time with half a second between calls. No burst was attempted, so the rate question is not tested by design. Every 200 reply named `jev-1.13.0`.
 
-The job, the exact request bodies, and the raw rows sit in `/home/ian/workspace/experiments/thinkthen-wire-probe-2026-09-22/` (`post.py`, `job.sh`, `out/run-smoke.jsonl`, `out/run-full.jsonl`). The harness read the key from the environment; it was never printed, logged, or written. No response header value was kept. A search of the job and the two rows files for `bearer` and `authorization` in any case finds only the two header-name strings in `post.py`, and no value anywhere.
+The job, the exact request bodies, and the raw rows sit in the workspace's `experiments/thinkthen-wire-probe-2026-09-22/` (`post.py`, `job.sh`, `out/run-smoke.jsonl`, `out/run-full.jsonl`). The harness read the key from the environment; it was never printed, logged, or written. No response header value was kept. A search of the job and the two rows files for `bearer` and `authorization` in any case finds only the two header-name strings in `post.py`, and no value anywhere.
 
 Three made-up classification texts: T1 (business), T2 (sport), T3 (business). The single-state question was "Is this text about business or finance?". The packed shapes asked one condition, "The text is about business or finance.", with one row question per state.
 

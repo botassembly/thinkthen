@@ -52,7 +52,7 @@ A library gives the finest control: per engine and per call. The command and the
 
 - One request per record is the rule on every surface (`specification/annotate.md`, `sdlc/planning/databases/README.md`). Each request pays a fixed part near 256 input tokens. At the documented 1,200 requests a minute that caps a table near 20 rows a second and near $1.08 per 100,000 short rows (`closed/2026-09-21-one-state-per-request-caps-table-scale-classification.md`).
 - The endpoint accepts many rows in one request as a structured `state`: one `condition`, a `rows` list, and one `noul` question per row named `r0` to `rN` (`closed/2026-09-22-wire-probe-can-one-request-carry-many-states.md`). A plain list `state` returns one silent answer and must never be sent.
-- Experiment 208 (`~/workspace/experiments/208-thinkthen-row-packing/RESULTS.md`), yes/no questions only:
+- Experiment 208 (the workspace's `experiments/208-thinkthen-row-packing/RESULTS.md`), yes/no questions only:
   - 1,000 SMS rows at 10 per request: accuracy 0.968, equal to one per request, for 3.3 times fewer tokens and ten times fewer requests. The run took 5.8 seconds.
   - 500 BoolQ rows at 10 per request: 2.0 times fewer tokens, accuracy within half a point. BoolQ rows are five times longer than SMS rows and did not break sooner. Row count breaks packing, not row length.
   - At 20 rows accuracy slipped. At 40 recall fell from 0.941 to 0.434, and rows late in the list read worse.
@@ -83,7 +83,7 @@ The cap of 10, the default width, and whether packing is worth an answer that de
 
 ## Results, experiment 260
 
-Ran on 2026-09-25 under Ian's authorization, through `sdlc/scripts/live`. Model `jev-1.13.0`. Declared 2,870,000 tokens and billed 1,785,631 input tokens, 7.5 US cents. Every request answered 200. No answer came back missing, misnamed, or the wrong count. The full record is `~/workspace/experiments/260-row-packing-shapes/RESULTS.md`, with the preregistration, bodies, and replies beside it.
+Ran on 2026-09-25 under Ian's authorization, through `sdlc/scripts/live`. Model `jev-1.13.0`. Declared 2,870,000 tokens and billed 1,785,631 input tokens, 7.5 US cents. Every request answered 200. No answer came back missing, misnamed, or the wrong count. The full record is the workspace's `experiments/260-row-packing-shapes/RESULTS.md`, with the preregistration, bodies, and replies beside it.
 
 - **Noise floor (experiment 1).** The same 1,000 SMS rows sent singly a second time crossed the 0.5 cut for 5 rows and moved none by more than 0.1. Regrouping at 10 per request crossed it for 34 (experiment 208). Jev's own noise is small. The neighbour effect is real, about six times the noise.
 - **Row shapes (experiment 3, closed book).** All 228 Beatles-only yes/no questions at 10 per request. Rows as `{"text"}` scored 0.693, named columns 0.702, one TSV table string 0.675, single-row 0.680. No gap is beyond chance. Packing cut tokens 4.1 times, and the table cut them 4.6 times.
@@ -102,7 +102,7 @@ Ian can overturn the reading of each point. Each rests on one day, one grouping 
 
 ## Results, experiment 261
 
-Ran on 2026-09-25 under Ian's authorization, through `sdlc/scripts/live`. Model `jev-1.13.0`. Declared 260,000 tokens and billed 162,822 input tokens, 0.7 US cents. Every request answered 200 with every answer named and typed. The full record is `~/workspace/experiments/261-packed-choice-wording/RESULTS.md`.
+Ran on 2026-09-25 under Ian's authorization, through `sdlc/scripts/live`. Model `jev-1.13.0`. Declared 260,000 tokens and billed 162,822 input tokens, 0.7 US cents. Every request answered 200 with every answer named and typed. The full record is the workspace's `experiments/261-packed-choice-wording/RESULTS.md`.
 
 The question: does rewording the per-row instruction remove the pick-one loss 260 found? Items: the two biggest Beatles `choose` templates in 260's sample, first album (56) and release month (21), 77 in all. Single-row got 56 of 77. Four wordings ran at one and ten rows a request:
 
@@ -121,7 +121,7 @@ What this means for the design: packed `choice` quotes each row's text into its 
 
 ## Results, experiment 262
 
-Ran on 2026-09-25 under Ian's authorization, through `sdlc/scripts/live`. Model `jev-1.13.0`. Declared 310,000 tokens and billed 222,140 input tokens, 0.9 US cents. Every request answered 200 with every answer named and typed. The full record is `~/workspace/experiments/262-packed-choice-confirm/RESULTS.md`.
+Ran on 2026-09-25 under Ian's authorization, through `sdlc/scripts/live`. Model `jev-1.13.0`. Declared 310,000 tokens and billed 222,140 input tokens, 0.9 US cents. Every request answered 200 with every answer named and typed. The full record is the workspace's `experiments/262-packed-choice-confirm/RESULTS.md`.
 
 The question: does W3 hold on all 200 `choose` items of 260's sample? Single-row ran twice: the 2026-09-23 answers (S0) and the same bodies sent again (S1). W3 ran at width 1, and at width 10 in two groupings. The preregistered rule: W3 at width 10 is no worse when both groupings score at least S0 minus the wider of the single-row spread and 3 points.
 
