@@ -1,6 +1,6 @@
 # Command wording and help fixes before 0.1
 
-Status: Open. Items 1 and 10 to 16 remain.
+Status: Open. Items 1 and 10 to 17 remain.
 
 Ian's ruling, 2026-09-25, on item 6: `check` shows the model, the provider, the URL, and all its outputs. When no model name is given, it prints "unspecified". It shows the model the user asked for and the model each reply names. Option 2, an optional model in every request, is not ruled.
 
@@ -48,7 +48,7 @@ Ticket 0123 fixed the relate half. Fixed by ticket 0126, landed 2026-09-25 from 
 
 Fixed by ticket 0126, landed 2026-09-25 from branch `ticket/0126-wording-help-and-doc-claims`.
 
-## Items 10 to 16: found by experiment 218, wave 2
+## Items 10 to 17: found by experiment 218, wave 2
 
 Each was checked at main `20e9b8d4` on 2026-09-25 with a fake key against a loopback backend. Seat: a person typing, unless the item says otherwise. Each harms a user by sending them the wrong way. None costs money on its own.
 
@@ -117,6 +117,14 @@ What the vocabulary says. The product vocabulary names the answer "not sure" and
 The fix. Say "not sure" in printed lines, docs, and page prose. The JSON keys are a contract, so rename them only with a ruling, or record that `unresolved` stays as a key name and say so in the vocabulary.
 
 Done when: printed lines and page prose say "not sure", and the key name is either renamed or recorded as kept.
+
+## 17. `recognize --kind PER` blames the kind count
+
+What the user sees. `thinkthen recognize --kind PER < text.txt` exits 2 with `thinkthen: recognize takes 1 to 20 distinct, nonblank kinds`. The user gave one kind, and it is not blank. `--kind` takes `KIND=DESCRIPTION`, and a bare kind goes as a positional argument. `--kind PER --kind ORG` prints the same line. `choose --option` and `tag --label` each name their missing `=` (`--option is LABEL=DESCRIPTION, and this one holds no `=``).
+
+The fix. Give `--kind` the same sentence: `--kind is KIND=DESCRIPTION, and this one holds no `=`; give a bare kind without --kind`.
+
+Done when: `--kind PER` refuses with that sentence at exit 2, and a refusal row pins it.
 
 ## Already fixed
 
