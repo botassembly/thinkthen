@@ -197,18 +197,15 @@ fn persistence_failure_warns_once_after_the_unchanged_judgment() {
 #[cfg(unix)]
 #[test]
 fn requests_go_out_while_another_process_holds_the_usage_lock() {
-    use std::os::unix::fs::{DirBuilderExt as _, OpenOptionsExt as _};
+    use std::os::unix::fs::{OpenOptionsExt as _, PermissionsExt as _};
     use std::time::{Duration, Instant};
 
     use crate::harness::{Gathering, finish, start};
 
     let root = folder("usage-lock-held");
     let usage_folder = root.join("thinkthen-usage");
-    fs::DirBuilder::new()
-        .recursive(true)
-        .mode(0o700)
-        .create(&usage_folder)
-        .expect("usage folder");
+    fs::create_dir_all(&usage_folder).expect("usage folder");
+    fs::set_permissions(&usage_folder, fs::Permissions::from_mode(0o700)).expect("private");
     let lock = fs::OpenOptions::new()
         .write(true)
         .create_new(true)
@@ -253,11 +250,7 @@ fn requests_go_out_while_another_process_holds_the_usage_lock() {
     drop(lock);
     let output = finish(child, "decide --jobs 16").expect("the command ends");
 
-    assert_eq!(
-        (count, peak),
-        (16, 16),
-        "requests in flight while the lock was held"
-    );
+    assert_eq!((count, peak), (16, 16), "in flight while the lock was held");
     assert!(!exited, "the command exited before its totals were written");
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(String::from_utf8_lossy(&output.stdout).lines().count(), 16);
