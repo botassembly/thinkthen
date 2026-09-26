@@ -19,7 +19,7 @@ use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Mutex, OnceLock, PoisonError};
 use std::time::{Duration, Instant};
 
 use conformance_backend::Backend;
@@ -81,7 +81,7 @@ fn archive() -> &'static Path {
 /// Three tests share `driver.c`, and a relink fails another test's launch.
 fn compile(source: &Path) -> PathBuf {
     static BUILT: Mutex<BTreeMap<PathBuf, PathBuf>> = Mutex::new(BTreeMap::new());
-    let mut built = BUILT.lock().expect("no compile panicked");
+    let mut built = BUILT.lock().unwrap_or_else(PoisonError::into_inner);
     if let Some(binary) = built.get(source) {
         return binary.clone();
     }
