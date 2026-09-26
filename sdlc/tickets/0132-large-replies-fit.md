@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 132
-opens: crates/thinkthen/src/engine/http.rs crates/thinkthen/src/engine/error.rs crates/thinkthen/src/cli/failure.rs crates/thinkthen/src/cli/failure/convert.rs crates/thinkthen/src/cli/check.rs crates/thinkthen/src/public/error.rs crates/thinkthen/tests/backend/resend.rs crates/thinkthen/tests/backend/relate.rs crates/thinkthen/tests/backend/recognize.rs specification/backends.md specification/relate.md specification/check.md sdlc/ratchet.json sdlc/records sdlc/tickets sdlc/issues
+opens: crates/thinkthen/src/engine/http.rs crates/thinkthen/src/engine/error.rs crates/thinkthen/src/cli/failure.rs crates/thinkthen/src/cli/failure/convert.rs crates/thinkthen/src/cli/check.rs crates/thinkthen/src/public/error.rs crates/thinkthen/tests/backend/resend.rs crates/thinkthen/tests/backend/relate.rs crates/thinkthen/tests/backend/recognize.rs crates/thinkthen/tests/backend/check.rs crates/thinkthen/tests/public_controls.rs specification/backends.md specification/relate.md specification/check.md sdlc/ratchet.json sdlc/records sdlc/tickets sdlc/issues
 ---
 
 # 0132: Keep every reply the planner can ask for
@@ -44,7 +44,7 @@ The read limit follows the request. An attempt reads at most
 
 and refuses a reply of more bytes than that. `send` already holds the request body, so the limit is one line where the body is read. It needs no plan, no question count, and no model of the reply's shape. The limit is a `u64`, and both the product and the sum saturate, so neither `8 ×` nor `N + 1` overflows on an enormous body. The doc comment above `MAX_RESPONSE_BYTES` (`http.rs:40-43`), which says a judgment answers in well under a kilobyte, is rewritten to state the rule.
 
-A body over the limit becomes a new engine failure, `Error::ReplyTooLarge(limit)`. It is a backend failure, it is never sent again, and it carries the limit in bytes. `ureq` reports it as `BodyExceedsLimit`. `ureq`'s reader fails once it has read the whole limit, even at the end of the body, so the code passes `limit + 1` to `ureq`. A reply of exactly the limit is kept, and one byte more is refused.
+A body over the limit becomes a new engine failure, `Error::ReplyTooLarge(limit)`. It is a backend failure, it is never sent again, and it carries the limit in bytes. `ureq` reports it as `BodyExceedsLimit`. `ureq`'s reader fails once it has read the whole limit, even at the end of the body, so the code passes `limit + 1` to `ureq`. A reply of exactly the limit is kept, and one byte more is refused. `ureq`'s error then carries `limit + 1`, so the read site in `send` builds `ReplyTooLarge` from the limit it worked out, never from `ureq`'s value, and the error never passes through `transport()`.
 
 The command prints, at exit 4:
 
@@ -94,11 +94,13 @@ Each command test counts requests at a loopback backend and pins the exact sente
 | `recognize::text_of_64000_bytes_keeps_its_reply`, in `tests/backend/recognize.rs` | The same backend, 64,000 bytes of repeated words and two kinds. Exit 0, a `{"entities":…}` object on standard output, empty standard error, and a count of 1 | The same two plants: exit 4 |
 | `resend::a_reply_past_the_bound_is_sent_once`, rewritten in `tests/backend/resend.rs` | A `decide` whose listener pads a valid reply with spaces to `N + 1` bytes. The test works out `N` from the request body the listener saw. Exit 4, the new sentence naming `N`, 1 request, and no key or evidence in any output | Map `BodyExceedsLimit` to `TransportKind::Other` again: the old sentence prints. Drop the limit: the padded reply is kept at exit 0 |
 | `resend::a_reply_of_exactly_the_bound_is_kept`, beside it | The same padding to exactly `N` bytes. Exit 0 with the answer, 1 request | Pass `N` to `ureq` in place of `N + 1`: the reply is refused |
+| `check::a_reply_over_its_limit_fails_its_probe_and_the_check_goes_on`, in `tests/backend/check.rs` | The first probe's listener pads its reply to `N + 1` bytes, and the later probes answer. The report pins `ok connection`, the first probe's `critical` line with the new sentence, the later probes' lines, the listener count of 4, and exit 4 | Route the new failure to the `connection` gate: the check stops and the later probes are `unchecked`. Leave it out of the match: the check aborts |
+| `public_controls::a_reply_over_its_limit_names_it`, in `tests/public_controls.rs` | The public `Engine` decides against a listener that pads its reply to `N + 1` bytes. The error kind is `Backend`, `retryable()` is false, the message is the new sentence, and the listener counts 1 | Map the new failure to the transport text in `public/error.rs`: the message differs. Mark it retryable: the listener counts 3 |
 
 The four questions for each new or changed test:
 
 - **What behavior does it protect?** The two relate and recognize rows protect the issue's two cases, at the sizes a user meets. The resend rows protect the guard: a limit exists, it follows the request, it is exact at the edge, and it has its own sentence.
-- **What credible regression fails it?** The plants above. The fixed limit is the code today. The resend rows pin the formula, whatever factor it holds. The relate and recognize rows pin a different contract: the factor fits the replies the planner's largest real plans earn. A later change that shrinks the factor and updates the resend formula with it stays green on the resend rows and turns these two red. That is the factor-0 plant. The transport mapping is what `transport()` does with any error it does not name. The off-by-one is `ureq`'s reader's own behavior.
+- **What credible regression fails it?** The plants above. The fixed limit is the code today. The resend rows pin the formula, whatever factor it holds. The relate and recognize rows pin a different contract: the factor fits the replies the planner's largest real plans earn. A later change that shrinks the factor below about 0.04, and updates the resend formula with it, stays green on the resend rows and turns these two red. That is the factor-0 plant. No row pins the factor against the worst honest shape, about 5 times. That is a deferred gap. The `check` row protects the check's grading rule, which is separate code. The public row protects the library's own sentence in `public/error.rs`, which no command test reaches. The transport mapping is what `transport()` does with any error it does not name. The off-by-one is `ureq`'s reader's own behavior.
 - **Why does no existing test catch it?** No test sends a relation or a recognition big enough to pass 1 MiB. The only reply-size test, `a_reply_past_the_bound_is_sent_once`, pins the "could not be reached" sentence, and this ticket rewrites it.
 - **Does it need a test-only hook?** No. Each test runs the compiled command against a loopback listener.
 
@@ -113,7 +115,7 @@ No unit test is added. The outside-in rows pin the sentence, the code, and the c
 Nonblank lines, measured with `grep -c .` on the diff.
 
 - `crates/thinkthen/src`: at most 30 added, net of lines removed.
-- Tests: at most 90 added across `tests/backend/relate.rs`, `recognize.rs`, and `resend.rs`.
+- Tests: at most 130 added across `tests/backend/relate.rs`, `recognize.rs`, `resend.rs`, `check.rs`, and `tests/public_controls.rs`.
 - Pages: at most 10 lines changed across `specification/backends.md`, `relate.md`, and `check.md`.
 - `sdlc/ratchet.json` rises to the measured total in the commit that adds the code. The commit says what grew. Before adding, the builder looks for duplication to delete in `http.rs` and in the transport arms of `cli/failure.rs` and `public/error.rs`.
 - No dependency. No new public type, method, or variant. The public API changes only in one new message text.
@@ -139,7 +141,7 @@ Contract 2; state and timing 1; reach 1; proof 1; cost of error 2; total 7. Fina
 
 ## Deferred gaps
 
-- The hosted backend's largest reply is worked out by hand from committed recordings, not measured live. A live probe of a large recognition would confirm the factor.
+- The hosted backend's largest reply is worked out by hand from committed recordings, not measured live. A live probe of a large recognition would confirm the factor. No test pins the factor against that worst shape. A row that sends a hosted-shape score reply at about 5 times a request over 1 MiB would need a plan of many score questions, and no command builds one today.
 - `recognize` at the built-in address sends one request for the whole text, however long. That also makes this ticket's limit loose there, as decision 1 says. Splitting it belongs to its own issue.
 - A backend profile that sets its own reply limit. No user has asked.
 - A script that retries on exit 4 still pays again after this failure. The sentence says the request was not sent again. A distinct exit code would change the exit-code contract, and no user has asked.
@@ -161,5 +163,5 @@ Contract 2; state and timing 1; reach 1; proof 1; cost of error 2; total 7. Fina
 - Starts from: The issue above, filed by experiment 218 wave 2, rows C2 and B3, at main `20e9b8d4`: `relate` fails over 180 names and `recognize` over 64,000 bytes, after one billed request each. `sdlc/issues/closed/2026-09-19-hands-on-test-pass-one.md`, which saw a body over 1 MiB fail at exit 4 naming the 1048576 limit. `sdlc/issues/closed/2026-09-21-transport-failure-messages-paste-the-http-clients-own-words.md`, whose fix replaced the client's words with fixed guidance and lost the size cause. Ticket 0123's `relation_ceiling`, which splits only relations at the built-in address. The measurements in "What is wrong today" at main `2544a8f8`, and the committed hosted recordings under `demos/` and `probes/`.
 - Keeps: The 1 MiB floor for every request. The guard against a body that never ends. No transport failure and no reply-size failure is sent again. Every other transport sentence and its exit code. The 4 KiB read of a 400 body. The planner, the splitter, every plan, request count, digest, and recording. The public API's types.
 - Changes: The read limit becomes 1 MiB plus 8 bytes per request byte, exact at its edge. A reply over it is `Error::ReplyTooLarge` with its own sentence naming the limit, at exit 4 in the command and `Backend` in the library. `thinkthen check` fails the probe and goes on. `specification/backends.md`, `relate.md`, and `check.md` say so. The resend test pins the new sentence.
-- Proof: The four rows under "Proof": relate at 180 names and recognize at 64,000 bytes against the conformance backend at exit 0 with one send each, and the reply at `N + 1` and at exactly `N` bytes. Each row has a planted fault that turns it red.
+- Proof: The six rows under "Proof": relate at 180 names and recognize at 64,000 bytes against the conformance backend at exit 0 with one send each, the reply at `N + 1` and at exactly `N` bytes, the check probe over its limit, and the library's sentence. Each row has a planted fault that turns it red.
 - Defers: A live measure of the hosted backend's largest reply. Splitting `recognize` at the built-in address. A profile-set reply limit. A distinct exit code for this failure.
