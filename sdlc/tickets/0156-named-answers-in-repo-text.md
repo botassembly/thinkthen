@@ -6,7 +6,7 @@ opens: sdlc/scripts/named-answers.mjs sdlc/scripts/lint demos/01-refund-gate/REA
 
 # 0156: The named-answers rule reaches the queue's own pages
 
-Status: ready for review. Owner: Claude. It builds only after the module changes under "Requests to the marketing lead" land on main, and after tickets 0151, 0152 Part B and 0153 land. "Build order" gives the rule.
+Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Claude. It builds only after the module changes under "Requests to the marketing lead" land on main, and after tickets 0151, 0152 Part B and 0153 land. "Build order" gives the rule.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -53,7 +53,7 @@ The fifteen problems, one row each:
 
 Rows 8, 9 and 12 are false positives. The module's Bash `direct` rule fires on a `test`, `[`, `[[`, `echo` or `printf` line that holds any `$(` when the whole statement holds a ThinkThen call. In these three lines the command substitution runs `jq` or `git`, and the `printf` feeds the call's input. No answer is read in place.
 
-Two more samples read an answer in place, and the module does not flag them today. `specification/choose.md:85` reads `case "$(thinkthen choose 'Which team owns this request?' ... --raw < message.txt)" in`, and `specification/score.md:77` reads `case "$(thinkthen choose 'How much disruption does this report?' ... --raw < ticket.txt)" in`. Request R2 asks the module to flag this form.
+Two more samples read an answer in place, and the module does not flag them today. `specification/choose.md:85` reads `case "$(thinkthen choose 'Which team owns this request?' ... --raw < message.txt)" in`, and `specification/score.md:77` reads `case "$(thinkthen choose 'How much disruption does this report?' ... --raw < ticket.txt)" in`. Request R2, which the marketing lead accepted, makes the module flag this form.
 
 Two help samples break the rule too. They sit in doc comments, which this check does not read. `crates/thinkthen/src/cli/args/command.rs:48` reads `case $? in` in the `decide` help. `command.rs:110` names the `choose` answer `pick`, which the module lists as generic, and its exit code `rc`. `specification/decide.md:72` says the help shows the `case` block. Fixing the page without the help would make the page misquote the help.
 
@@ -132,7 +132,7 @@ Each fix keeps the page's lesson and its commands. Only the names change.
 - **`specification/channels.md`, row 13.** The same form: `asks_for_refund() { thinkthen decide 'the customer asks for a refund' --quiet; }` on three lines, then `if asks_for_refund < message.txt; then`.
 - **`specification/decide.md`, row 14.** The same form, with `requests_refund` and `--threshold 0.1:0.9`.
 - **`specification/decide.md`, row 15, and the `decide` help.** The command line ends `&& refund_code=0 || refund_code=$?`, and the block reads `case $refund_code in`. This form also survives `set -e`, which the help's own warning asks for. The help's two lines at `command.rs:46` and `:48` change the same way, so the page still quotes the help. The prose at `decide.md:72` says "a `case` block on the named exit code".
-- **The `choose` help.** `command.rs:110` to `:114` names the answer `team` and the exit code `team_code`: `team=$(thinkthen choose ...) && team_code=0 || team_code=$?`, then `case $team_code in 0) ;; 3) team=not_sure ;; *) exit "$team_code" ;; esac`, then `case $team in ...`. `specification/choose.md:53` stays as it is. Its `$rc` sentence describes demo 02, not the help.
+- **The `choose` help.** `command.rs:110` to `:114` names the answer `team` and the exit code `team_code`: `team=$(thinkthen choose ...) && team_code=0 || team_code=$?`, then `case $team_code in 0) ;; 3) team=not_sure ;; *) exit "$team_code" ;; esac`, then `case $team in ...`.
 - **`spec/decide.md`, row 10.** `no_records_output=$(...)`, then `test -z "$no_records_output"`.
 - **`spec/decide.md`, row 11.** The block names the output and the exit code, and pins the exit code it captured, as `CLAUDE.md` asks of a block that catches a failure:
 
@@ -161,7 +161,7 @@ Each fix keeps the page's lesson and its commands. Only the names change.
   case $disruption in
   ```
 
-  These two rewrites stay whatever the marketing lead answers to R2.
+  These two rewrites happen either way, whatever R2 does.
 - **Rows 8, 9 and 12.** No change. The marketing lead accepted R1, and the build does not rewrite `demos/28:67`, `demos/41:12` or `spec/recognize.md:13`.
 
 ## Requests to the marketing lead
@@ -173,7 +173,7 @@ The marketing lead owns the module. This ticket edits no file under `site/`. The
   - pass: `printf '%s' "$(jq -r .body m.jsonl)" | thinkthen decide "$q"`
   - pass: `printf 'x' | thinkthen recognize --replay "$(git rev-parse --show-toplevel)/r"`
   - fail, unchanged: `echo "$(thinkthen decide "$q" < mail.txt)"`
-- **R2, `case` over a call.** The coordinator sends it. A `case` whose word is a `$(...)` holding a ThinkThen call becomes a `direct` problem. "What happens today" names the two pages. This ticket rewrites both whatever the answer, so the check does not depend on R2.
+- **R2, `case` over a call. Accepted.** It lands together with R0 and R1. A `case` whose word is a `$(...)` holding a ThinkThen call becomes a `direct` problem. "What happens today" names the two pages. This ticket rewrites both either way, so the check does not depend on R2.
 
 An observation, not a request: the generic list lacks `rc`, `status` and `code`, and the form `&& rc=0 || rc=$?` never reaches the generic check, since the name does not open the line. Nine demo lines use `rc` and five `spec/` lines use `code=$?`. Ian's ruling asks for a name of meaning. "Deferred gaps" carries it.
 
@@ -273,7 +273,7 @@ Every file this ticket edits, and the tickets in flight that open it:
 | `spec/decide.md` | 0146 | Batching lines |
 | `specification/channels.md` | 0146, 0147, 0152 Part B, 0153 | Batching, recognize, the word, and two hint sentences |
 | `specification/decide.md` | 0146, 0152 Part B, 0154 | Batching, the word, and the ceiling |
-| `specification/choose.md` | 0152 Part B | The word, on line 53. This ticket edits only the block at line 85 |
+| `specification/choose.md` | 0152 Part B | The word, at lines 19 to 76. This ticket edits only the block at line 85 |
 | `specification/score.md` | none | |
 | `crates/thinkthen/src/cli/args/command.rs` | 0153 | One sentence in the `choose` doc comment, beside the sample |
 | `databases/duckdb/README.md` | 0151 (built on its branch), 0148 (the folder) | The details line. Its branch leaves the three SQL lines as they are |
@@ -288,7 +288,7 @@ Order: 0156 builds after 0152 Part B lands, as the brief prefers, because Part B
 
 ## Routing
 
-Builder: Claude (Opus subagent), in the lane the coordinator names. Reviewer: a fresh read-only Claude session for design and for code. The coordinator relays R0, R1 and R2 to the marketing lead.
+Builder: Claude (Opus subagent), in the lane the coordinator names. Reviewer: a fresh read-only Claude session for design and for code. The coordinator relays R0 to the marketing lead.
 
 ## Complexity
 
@@ -324,6 +324,6 @@ Contract 1; state and timing 0; reach 2; proof 1; cost of error 1; total 5. Fina
 
 - Starts from: Ian's ruling of 2026-09-26 in the site issue. Site commit `648a965f`, which fixed `site/`. Module commit `e0a6150a` and its 46-row table test. `site/WRITING.md`'s paragraph on named answers, which allows a function named for its meaning. The survey on 2026-09-26 at `e0a6150a`: 194 code blocks in 77 pages, 15 problems, 3 of them false positives. The two help samples at `command.rs:48` and `:110`. The site's `filter/postgresql.sql` and `relate/duckdb.sql` for the SQL shapes. `specification/backends.md:51` for exit 2. The marketing lead's acceptance of R1.
 - Keeps: Every demo's and spec page's commands, inputs, recordings and assertions. Each page's lesson: `if` on an exit code in demo 01 and `channels.md`, the four-way `case` in `decide.md`. The PostgreSQL slide check's expected output. The module, byte for byte.
-- Changes: A lint step runs the site's rule over every code block under the five folders, with a self-test. Twelve lines across nine pages, and the two `case` samples in `choose.md` and `score.md`, name their answers. The PostgreSQL annotate alias becomes `triage`. The `decide` and `choose` help samples name their answer and exit code, and two spec sentences follow them. `check.sh` runs the new PostgreSQL statement.
+- Changes: A lint step runs the site's rule over every code block under the five folders, with a self-test. Twelve lines across nine pages, and the two `case` samples in `choose.md` and `score.md`, name their answers. The PostgreSQL annotate alias becomes `triage`. The `decide` and `choose` help samples name their answer and exit code, and one spec sentence, `specification/decide.md:72`, follows them. `check.sh` runs the new PostgreSQL statement.
 - Proof: The self-test's five folder plants and seven fence rows, with planted faults P1 to P6. P7's five real-page plants and P8's lint plant, recorded red. The `spec` rung over the rewritten pages, the `test` rung over the help, and the PostgreSQL surface check.
-- Defers: R2's module rule, which this ticket does not depend on. The `examples.json` fixtures, Rust doc comments, the root README and the other folders, `rc`-style exit-code names, untagged blocks, and single-letter aliases.
+- Defers: The `examples.json` fixtures, Rust doc comments, the root README and the other folders, `rc`-style exit-code names, untagged blocks, and single-letter aliases.
