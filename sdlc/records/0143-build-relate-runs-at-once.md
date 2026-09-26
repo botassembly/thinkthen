@@ -26,7 +26,7 @@ The ticket records both rulings in place.
 
 New, all against the compiled command or the public API over the loopback backend:
 
-- `crates/thinkthen/tests/backend/relate/at_once.rs`: `relate_requests_reach_the_throttle_and_no_further`, `split_relations_print_what_one_job_prints`, and `a_failed_chunk_stops_the_run_as_one_job_does`. Its third row has `bravo` answer first from model `other-1`, so the relate closure fails once `alpha` answers. The `--jobs 2` run matches the `--jobs 1` run's exit code 4, standard error, and standard output. It sent 3 requests to the one-job run's 2: `bravo`'s early reply freed a worker, and `charlie` went out before `alpha` answered. The review asked for exactly 2. No timing gives 2 at two jobs over six rules, because a worker is fed whenever a reply frees it and the closure runs only in chunk order. The row pins 3, which slow replies after `bravo` make exact.
+- `crates/thinkthen/tests/backend/relate/at_once.rs`: `relate_requests_reach_the_throttle_and_no_further`, `split_relations_print_what_one_job_prints`, and `a_failed_chunk_stops_the_run_as_one_job_does`. Its third row has `bravo` answer first from model `other-1`, so the relate closure fails once `alpha` answers. The `--jobs 2` run matches the `--jobs 1` run's exit code 4, standard error, and standard output. It sent 3 requests to the one-job run's 2: `bravo`'s early reply freed a worker, and `charlie` went out before `alpha` answered. The review asked for exactly 2. No timing gives 2 at two jobs over six rules, because a worker is fed whenever a reply frees it and the closure runs only in chunk order. The row pins 3, which slow replies after `bravo` make exact. The coordinator ruled on 2026-09-26 to keep 3: it proves that feeding continues while `alpha` is in flight, and that nothing is fed after the model error is seen in chunk order. A row that sent exactly 2 would prove less. Ian can overturn this ruling.
 - `crates/thinkthen/tests/public_controls.rs`: `a_host_interrupt_during_relate_chunks_sends_nothing_new`, with two rows. Six rules leave two relations unfed when the check fires. Four rules are all fed and held, so only the in-flight check can see the stop.
 - `crates/thinkthen/tests/relate_edge.rs`: the help test now pins the `--jobs` sentence.
 - `databases/duckdb/tools/relate_suite.py`: `the_throttle_reaches_a_relate`, which restores ticket 0118's count of 8 in flight.
@@ -72,7 +72,7 @@ Nonblank lines against `origin/main` at `7443d69d`, after the review fixes.
 | --- | --- | --- |
 | `crates/thinkthen/src` | at most 120 added, 90 net, after ruling 2 | 117 added, 33 removed, 84 net. `workers.rs` +68 −1, `facade/relate.rs` +29 −17, `facade.rs` +16 −6, the command side +4 −9 |
 | `relate/at_once.rs` | at most 200 added | 160 |
-| `public_controls.rs` | at most 35 added | 42 added, 1 removed. **Crosses by 7 lines, more than a tenth.** It was 36 before the review's second row. rustfmt lays the row loop out vertically, and the trims kept it at 42 |
+| `public_controls.rs` | at most 35 added | 42 added, 1 removed. **Crosses by 7 lines, more than a tenth.** It was 36 before the review's second row. rustfmt lays the row loop out vertically, and the trims kept it at 42. The coordinator accepted the 42 lines on 2026-09-26, because they are the second interrupt row the review asked for. Ian can overturn this ruling |
 | `interrupt.rs`, `refusals.rs`, `refusals/relate.rs`, `relate_edge.rs`, `annotate/splitting.rs` | at most 40 changed | 35 added, 17 removed. Within budget counted as added lines. Counted as added plus removed, it is 52 and crosses |
 | `relate.rs` | the `mod` line | 1 |
 | `relate_suite.py` | at most 30 added | 20 |
@@ -81,7 +81,7 @@ Nonblank lines against `origin/main` at `7443d69d`, after the review fixes.
 
 `facade.rs` holds 368 nonblank lines, under its 500 cap.
 
-`sdlc/ratchet.json` moves from main's 67,758 to 68,062, up 304. The review fixes added 26 of those lines. The builder looked for duplication first. `ordered` reuses `workers::scoped` and `Cancel::stop`, which the record and group schedulers use, so no scheduler was copied. The DuckDB Python ratchet moves from 1,896 to 1,916 for the throttle case, and the SQLite one from 1,209 to 1,213 for the throttle 1 setup and its reason.
+`sdlc/ratchet.json` moves from main's 67,758 to 68,062, up 304. The review fixes added 26 of those lines. Commit `e237fb36`'s message, which raised the ceiling from 68,036 to 68,063, miscounts what grew. It gives +10 in `public_controls.rs` and −3 in the relate loop. The right numbers are +19 in `relate/at_once.rs`, +7 in `public_controls.rs`, and +1 in the `ordered` doc, for 27. The relate loop's change is net zero. The next commit, `a2617cc0`, took one line back out of `public_controls.rs`, for 68,062. The history stays as pushed. The builder looked for duplication first. `ordered` reuses `workers::scoped` and `Cancel::stop`, which the record and group schedulers use, so no scheduler was copied. The DuckDB Python ratchet moves from 1,896 to 1,916 for the throttle case, and the SQLite one from 1,209 to 1,213 for the throttle 1 setup and its reason.
 
 ## Ladder
 

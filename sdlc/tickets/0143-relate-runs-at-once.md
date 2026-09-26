@@ -102,6 +102,8 @@ Every new Rust test runs the compiled command against a counted loopback listene
 | `relate_takes_jobs` in `tests/relate_edge.rs` | The existing help test flips: `relate --help` holds the whole `--jobs` sentence of the design, in place of its `!help.contains("--jobs")` assertion | (g) Restore the `mut_arg` that hides `--jobs`: the sentence is absent |
 | `the_throttle_reaches_a_relate` in `databases/duckdb/tools/relate_suite.py` | Ticket 0118's first acceptance line, restored. A child runs `SET thinkthen_throttle = 8` and a relate over 16 rows with nine bare rules `['r1', …, 'r9']` on the held arm. `backend.wait(8)` returns 8, and the count stays 8 while held. After release the query answers and the count reads 9. The child pattern is `signal_suite.py`'s | (a) again: `wait(8)` returns 1 |
 
+At code review the failed chunk test gained a third row, where `bravo` answers first from another model. At `--jobs 2` it sends 3 requests to the one-job run's 2, with the same exit code, standard error, and standard output. The coordinator ruled on 2026-09-26 to keep the count at 3: it proves that feeding continues while `alpha` is in flight, and that nothing is fed after the model error is seen in chunk order. Ian can overturn this ruling.
+
 One public Rust API test covers a host interrupt, in `crates/thinkthen/tests/public_controls.rs`, beside `a_stop_during_a_batch_or_a_cache_lock_wait_sends_nothing_new`, whose pattern it copies. The real boundary reaches it: `CallOptions::interrupt` is the public host check, and the loopback backend's held arm holds requests. No new hook is needed.
 
 | Test | Proof | Planted fault that turns it red |
@@ -138,7 +140,7 @@ No unit test is added. `ask_chunks` is reached only through real callers, and th
 Nonblank lines, measured with `grep -c .` on the diff.
 
 - `crates/thinkthen/src`: at most 120 added, doc and help lines included, and at most 90 net of lines removed. The coordinator re-scored this at build on 2026-09-26 from 70 added and 50 net, because `ordered` is new engine logic that rustfmt lays out vertically. Ian can overturn it. The code review still looks for cuts. `facade.rs` stays under 500 nonblank lines. The ordered feed may live in `engine/workers.rs` if that keeps `facade.rs` smaller.
-- Rust tests: at most 200 added in `relate/at_once.rs`, at most 35 added in `tests/public_controls.rs`, and at most 40 changed across `interrupt.rs`, `refusals.rs`, `refusals/relate.rs`, `relate_edge.rs`, and order fixes in other test files.
+- Rust tests: at most 200 added in `relate/at_once.rs`, at most 35 added in `tests/public_controls.rs`, and at most 40 changed across `interrupt.rs`, `refusals.rs`, `refusals/relate.rs`, `relate_edge.rs`, and order fixes in other test files. The coordinator ruled at code review on 2026-09-26 to accept 42 added lines in `tests/public_controls.rs`, because they are the second interrupt row the review asked for. Ian can overturn this ruling.
 - `databases/duckdb/tools/relate_suite.py`: at most 30 added.
 - Pages: at most 15 lines changed across `relate.md`, `records.md`, and `settings.md`.
 - `sdlc/ratchet.json` moves to the measured total in the commit that adds the code. The commit says what grew. The builder first looks for duplication to delete in `facade.rs`, `facade/relate.rs`, and `workers.rs`.
