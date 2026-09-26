@@ -87,7 +87,7 @@ fn help_names_diff_after_audit_and_says_what_it_never_does() {
         |arguments: &[&str]| String::from_utf8(run(arguments, b"").stdout).expect("UTF-8 help");
     let row = ROW.trim_end_matches('.');
     let root = text(&["--help"]);
-    assert!(root.contains(&format!("\n  audit      Grade saved decide and choose answers against an answer key\n  diff       {row}\n  help ")), "{root}");
+    assert!(root.contains(&format!("\n  audit      Grade saved answers against an answer key and suggest a bar\n  diff       {row}\n  help ")), "{root}");
     assert!(text(&["diff", "-h"]).starts_with(&format!("{row}\n\n")));
     let long = text(&["diff", "--help"]);
     assert!(long.starts_with(&format!("{ROW}\n\n")), "{long}");

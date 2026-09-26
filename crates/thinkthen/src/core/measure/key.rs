@@ -18,11 +18,11 @@ pub(crate) enum Part {
 /// The key's value for one answer.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum Want {
-    /// A `decide` key of yes.
+    /// A yes: a `decide` or `rank` key of yes, or a `tag` label the key lists.
     Yes,
-    /// A `decide` key of no.
+    /// A no.
     No,
-    /// The right `choose` option.
+    /// The right option, level, or unit.
     Option(String),
 }
 
@@ -120,7 +120,8 @@ impl Key {
     ///
     /// # Errors
     ///
-    /// Returns [`MeasureError::ChooseKey`] for a `choose` value that is not text.
+    /// Returns [`MeasureError::ChooseKey`] for a `choose` value that is not text, and
+    /// [`MeasureError::KeyUnknown`] for a label, level, or unit the answer does not hold.
     pub(crate) fn want(&self, answer: &Answer) -> Result<Option<Want>, MeasureError> {
         let Some(entry) = self.0.get(&answer.id) else {
             return Ok(None);
@@ -132,14 +133,38 @@ impl Key {
                 _ => return Ok(None),
             },
         };
+        let unknown = MeasureError::KeyUnknown(entry.line);
         Ok(match (answer.verb, value) {
-            (Verb::Decide, Json::Bool(true)) => Some(Want::Yes),
-            (Verb::Decide, Json::Bool(false)) => Some(Want::No),
-            (Verb::Decide, Json::String(text)) if text == "yes" => Some(Want::Yes),
-            (Verb::Decide, Json::String(text)) if text == "no" => Some(Want::No),
-            (Verb::Decide | Verb::Choose, Json::Null) | (Verb::Decide, _) => None,
+            (_, Json::Null) => None,
+            (Verb::Tag, Json::Array(items)) => {
+                let mut listed = Vec::new();
+                for item in items {
+                    let label = item
+                        .as_str()
+                        .filter(|label| answer.options.iter().any(|held| held == label));
+                    listed.push(label.ok_or(unknown)?);
+                }
+                let label = answer.label.as_deref().unwrap_or_default();
+                Some(if listed.contains(&label) {
+                    Want::Yes
+                } else {
+                    Want::No
+                })
+            }
+            (Verb::Tag, _) => None,
+            (Verb::Decide | Verb::Rank, Json::Bool(true)) => Some(Want::Yes),
+            (Verb::Decide | Verb::Rank, Json::Bool(false)) => Some(Want::No),
+            (Verb::Decide | Verb::Rank, Json::String(text)) if text == "yes" => Some(Want::Yes),
+            (Verb::Decide | Verb::Rank, Json::String(text)) if text == "no" => Some(Want::No),
+            (Verb::Decide | Verb::Rank, _) => None,
             (Verb::Choose, Json::String(option)) => Some(Want::Option(option.clone())),
             (Verb::Choose, _) => return Err(MeasureError::ChooseKey(entry.line)),
+            (Verb::Score | Verb::Find, Json::String(option))
+                if answer.options.iter().any(|held| held == option) =>
+            {
+                Some(Want::Option(option.clone()))
+            }
+            (Verb::Score | Verb::Find, _) => return Err(unknown),
         })
     }
 }

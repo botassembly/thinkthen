@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "threshold": 0.95,
+  "questions": {
+    "correct": {"decide": "Does the answer say the same thing as the reference answer to the question?", "on": ["/input", "/gold", "/output"]},
+    "grounded": {"decide": "Is every claim in the answer stated in the source text?", "on": ["/context", "/output"]},
+    "complete": {"decide": "Does the answer include every fact needed to answer the question as fully as the reference answer?", "on": ["/input", "/gold", "/output"]},
+    "failure_kind": {"choose": "Which description best fits the answer's main failure?", "options": ["none", "wrong_fact", "unsupported", "incomplete"], "on": ["/input", "/gold", "/output"]},
+    "severity": {"score": "How much does the answer's main failure change what the reader should do?", "levels": ["No change.", "A small correction is needed.", "The answer could cause the wrong action."], "on": ["/input", "/gold", "/output"]}
+  }
+}

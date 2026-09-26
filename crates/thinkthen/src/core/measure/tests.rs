@@ -4,6 +4,7 @@ use super::answer::{self, Identity, Rule, Shown};
 use super::audit::{self, By, Settings};
 use super::diff::{Discordant, discordant};
 use super::key::{Key, Outcome};
+use super::optimize::Measure;
 use super::{
     SplitMix64, calibration_error, json_lines, mcnemar, places, python_float_text, rounded,
 };
@@ -35,6 +36,7 @@ fn audit_text(results: &str, key: &str) -> Vec<audit::Row> {
         shown: Shown::AsRun,
         seed: 0,
         target: 0.9,
+        optimize: Measure::Accuracy,
     };
     audit::audit(&answers, &key, &settings).expect("an audit")
 }

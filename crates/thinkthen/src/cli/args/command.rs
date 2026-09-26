@@ -198,14 +198,21 @@ pub(crate) enum Command {
     /// List or print the built-in jq transforms without running them.
     Transform(crate::cli::transform::TransformArguments),
 
-    /// Grade saved decide and choose answers against an answer key.
+    /// Grade saved answers against an answer key and suggest a bar.
     ///
-    /// RESULTS holds the lines `decide` or `choose` printed, and KEY holds one
+    /// RESULTS holds the lines `decide`, `filter`, `choose`, `tag`, `score`,
+    /// `rank`, `find`, or `annotate` printed with --details, and KEY holds one
     /// JSON object per record: its id, the right value, and an optional part of
     /// tune or held. audit prints agreement with its 95% interval, both kinds of
-    /// disagreement, AUC, calibration, a coverage curve, and a suggested cut
-    /// tuned on one part and checked on the other. An answer inside a band is
-    /// not sure, and it counts apart from right and wrong.
+    /// disagreement, precision and f1, AUC, calibration, a coverage curve, and a
+    /// suggested bar tuned on one part and checked on the other. An answer
+    /// inside a band is not sure, and it counts apart from right and wrong.
+    ///
+    /// A key may give each record a part of tune or held; without parts audit
+    /// splits the records itself and shows how steady its bar is.
+    ///
+    /// --write changes one threshold in the file and prints the old value on
+    /// standard error.
     ///
     /// audit sends no request and reads no key.
     ///

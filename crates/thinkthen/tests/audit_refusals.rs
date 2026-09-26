@@ -25,7 +25,7 @@ use measure_support::{DIFF_GOLDENS, DIFF_TABLES, GOLDENS, TABLES, audit, fixture
 const YES: &str = "{\"input\":{\"id\":\"secret-id-5150\",\"text\":\"secret-text\"},\"value\":true,\"answer\":{\"probability\":0.9}}\n";
 
 /// The key files a refusal names as `@name`, with a planted key value.
-const FILES: [(&str, &str); 7] = [
+const FILES: [(&str, &str); 10] = [
     ("run.jsonl", YES),
     (
         "key.jsonl",
@@ -42,13 +42,28 @@ const FILES: [(&str, &str); 7] = [
         "mixed.jsonl",
         "{\"id\":\"secret-id-5150\",\"value\":true,\"part\":\"tune\"}\n{\"id\":\"b\",\"value\":true}\n",
     ),
+    (
+        "level.jsonl",
+        "{\"id\":\"secret-id-5150\",\"value\":\"a\"}\n",
+    ),
+    (
+        "q.json",
+        "{\"decide\": \"secret-text\", \"threshold\": 0.5}\n",
+    ),
+    ("notq.json", "{\"secret-text\": 1}\n"),
 ];
+
+/// A `score` line whose levels are `a` and `b`.
+const SCORE: &str = "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":1.2,\"question\":{\"verb\":\"score\",\"text\":\"secret-text\",\"levels\":[\"a\",\"b\"]}}\n";
+
+/// audit's sentence for a verb or a value it does not grade.
+const UNGRADABLE: &str = "results line 1 holds an answer audit cannot grade; audit grades decide, filter, choose, tag, score, rank, and find";
 
 /// One record twice under one answer, asked in two question texts.
 const TWICE: &str = "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":true,\"question\":{\"text\":\"secret-text\"}}\n{\"input\":{\"id\":\"secret-id-5150\"},\"value\":true,\"question\":{\"text\":\"other\"}}\n";
 
 /// Each refusal: the command line, standard input (`YES` where empty is not asked), the exit code, and the sentence.
-const REFUSALS: [(&str, &str, i32, &str); 33] = [
+const REFUSALS: [(&str, &str, i32, &str); 43] = [
     (
         "audit @secret-path @key.jsonl",
         "",
@@ -82,21 +97,81 @@ const REFUSALS: [(&str, &str, i32, &str); 33] = [
     ),
     (
         "audit - @key.jsonl",
-        "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":[],\"question\":{\"verb\":\"tag\",\"text\":\"secret-text\"}}\n",
+        "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":[],\"question\":{\"verb\":\"recognize\",\"text\":\"secret-text\"}}\n",
         2,
-        "results line 1 holds an answer audit cannot grade; audit grades decide and choose",
+        UNGRADABLE,
+    ),
+    (
+        "audit - @key.jsonl",
+        "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":[],\"question\":{\"verb\":\"relate\",\"text\":\"secret-text\"}}\n",
+        2,
+        UNGRADABLE,
+    ),
+    (
+        "audit - @key.jsonl",
+        "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":[\"secret-text\"]}\n",
+        2,
+        "results line 1 holds an answer without its question; save it with --details",
+    ),
+    (
+        "audit - @key.jsonl",
+        SCORE,
+        2,
+        "key line 1 names a level, label, or unit the question does not have",
+    ),
+    (
+        "audit - @level.jsonl --threshold 0.5",
+        SCORE,
+        2,
+        "score and find answers take no --threshold",
+    ),
+    (
+        "audit - @yes.jsonl --write -",
+        YES,
+        2,
+        "--write needs a file path",
+    ),
+    (
+        "audit - @yes.jsonl --write @q.json --threshold 0.5",
+        YES,
+        2,
+        "--write reads each answer as it ran; drop --threshold",
+    ),
+    (
+        "audit - @yes.jsonl --write @q.json --by verb",
+        YES,
+        2,
+        "--write grades by question; drop --by verb",
+    ),
+    (
+        "audit - @yes.jsonl --write @secret-path",
+        YES,
+        5,
+        "cannot read the question file",
+    ),
+    (
+        "audit - @yes.jsonl --write @notq.json",
+        YES,
+        5,
+        "--write names a file that is not a valid question file",
+    ),
+    (
+        "audit - @yes.jsonl --write @q.json",
+        YES,
+        2,
+        "results line 1 was not asked from the question file; --write needs --details lines from that file",
     ),
     (
         "audit - @key.jsonl",
         "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":true,\"question\":{\"verb\":\"choose\"}}\n",
         2,
-        "results line 1 holds an answer audit cannot grade; audit grades decide and choose",
+        UNGRADABLE,
     ),
     (
         "audit - @key.jsonl",
         "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":5,\"question\":{\"verb\":\"choose\"}}\n",
         2,
-        "results line 1 holds an answer audit cannot grade; audit grades decide and choose",
+        UNGRADABLE,
     ),
     (
         "audit - @key.jsonl",
@@ -221,7 +296,7 @@ const REFUSALS: [(&str, &str, i32, &str); 33] = [
     ),
     (
         "diff @run.jsonl -",
-        "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":[],\"question\":{\"verb\":\"tag\"}}\n",
+        "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":[],\"question\":{\"verb\":\"tag\",\"labels\":[\"secret-text\"]}}\n",
         2,
         "second run line 1 holds an answer diff cannot grade; diff grades decide and choose",
     ),
@@ -282,7 +357,7 @@ fn each_failure_prints_one_line_that_names_no_record_id_value_or_path() {
 
 #[test]
 fn help_names_audit_after_transform_and_says_what_it_never_does() {
-    const ROW: &str = "Grade saved decide and choose answers against an answer key.";
+    const ROW: &str = "Grade saved answers against an answer key and suggest a bar.";
     let text =
         |arguments: &[&str]| String::from_utf8(run(arguments, b"").stdout).expect("UTF-8 help");
     let root = text(&["--help"]);

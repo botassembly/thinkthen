@@ -8,6 +8,10 @@ pub(crate) mod answer;
 pub(crate) mod audit;
 pub(crate) mod diff;
 pub(crate) mod key;
+pub(crate) mod levels;
+pub(crate) mod optimize;
+pub(crate) mod rows;
+pub(crate) mod splice;
 
 use serde::Serialize;
 use serde_json::Number;
@@ -34,8 +38,10 @@ pub(crate) enum MeasureError {
     NotObject(usize),
     /// A result line has no string or integer id at the pointer.
     NoId(usize),
-    /// A line holds an answer of a verb other than `decide` and `choose`.
+    /// A line holds an answer of a verb the caller does not grade, or a malformed one.
     Ungradable(usize),
+    /// A line names no question verb, and its value is not one audit can read without it.
+    NoQuestion(usize),
     /// A probability is outside zero to one, or a distribution is empty.
     Probability(usize),
     /// One question holds one record twice.
@@ -44,6 +50,8 @@ pub(crate) enum MeasureError {
     KeyLine(usize),
     /// A key gives a `choose` answer a value that is not text.
     ChooseKey(usize),
+    /// A key names a label, level, or unit the answer does not hold.
+    KeyUnknown(usize),
     /// Some labeled records carry a part and others do not.
     MixedParts,
     /// One group holds `decide` and `choose` answers.
@@ -52,6 +60,8 @@ pub(crate) enum MeasureError {
     NeedsProbabilities,
     /// A band was named over a `choose` answer.
     BandOnChoose,
+    /// A threshold was named over a `score` or `find` answer.
+    NoRule,
 }
 
 /// One numbered JSON line of an input.

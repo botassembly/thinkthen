@@ -40,12 +40,27 @@ pub(crate) enum Cause {
     Rule(&'static str, ThresholdError),
     /// The core refused the input's contents.
     Measure(MeasureError),
+    /// `--write` names standard input.
+    WriteDash,
+    /// `--write` beside `--threshold`.
+    WriteThreshold,
+    /// `--write` beside `--by verb`.
+    WriteByVerb,
+    /// The file `--write` names is not a question file or set a run accepts.
+    NotQuestions,
+    /// A results line was not asked from the file `--write` names.
+    Digest(usize),
+    /// The file `--write` names could not be written.
+    Unwritable,
 }
 
 impl Refusal {
-    /// The exit code: 5 for an input that cannot be read, else 2.
+    /// The exit code: 5 for a file that cannot be read, used, or written, else 2.
     pub(crate) const fn code(&self) -> u8 {
-        if matches!(self.cause, Cause::Unreadable) {
+        if matches!(
+            self.cause,
+            Cause::Unreadable | Cause::NotQuestions | Cause::Unwritable
+        ) {
             5
         } else {
             2
@@ -70,6 +85,19 @@ impl fmt::Display for Refusal {
             Cause::Pointer => formatter.write_str("--id takes a JSON pointer such as /id or ''"),
             Cause::Rule(option, error) => write!(formatter, "{option}: {error}"),
             Cause::Measure(error) => said(formatter, command, role, *error),
+            Cause::WriteDash => formatter.write_str("--write needs a file path"),
+            Cause::WriteThreshold => {
+                formatter.write_str("--write reads each answer as it ran; drop --threshold")
+            }
+            Cause::WriteByVerb => formatter.write_str("--write grades by question; drop --by verb"),
+            Cause::NotQuestions => {
+                formatter.write_str("--write names a file that is not a valid question file")
+            }
+            Cause::Digest(line) => write!(
+                formatter,
+                "results line {line} was not asked from the question file; --write needs --details lines from that file"
+            ),
+            Cause::Unwritable => formatter.write_str("cannot write the question file"),
         }
     }
 }
@@ -88,10 +116,23 @@ fn said(
             formatter,
             "{role} line {line} has no string or integer id at the --id pointer"
         ),
+        MeasureError::Ungradable(line) if command == "audit" => write!(
+            formatter,
+            "{role} line {line} holds an answer audit cannot grade; audit grades decide, filter, choose, tag, score, rank, and find"
+        ),
         MeasureError::Ungradable(line) => write!(
             formatter,
             "{role} line {line} holds an answer {command} cannot grade; {command} grades decide and choose"
         ),
+        MeasureError::NoQuestion(line) => write!(
+            formatter,
+            "{role} line {line} holds an answer without its question; save it with --details"
+        ),
+        MeasureError::KeyUnknown(line) => write!(
+            formatter,
+            "key line {line} names a level, label, or unit the question does not have"
+        ),
+        MeasureError::NoRule => formatter.write_str("score and find answers take no --threshold"),
         MeasureError::Probability(line) => write!(
             formatter,
             "{role} line {line} holds a probability outside 0 to 1 or an empty distribution"
