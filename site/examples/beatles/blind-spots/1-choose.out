@@ -15,12 +15,12 @@
     "kind": "choice",
     "pick": "john",
     "probabilities": {
-      "john": 0.38,
-      "paul": 0.21,
-      "george": 0.13,
-      "ringo": 0.28
+      "john": 0.34,
+      "paul": 0.2,
+      "george": 0.14,
+      "ringo": 0.32
     },
-    "confidence": 0.17
+    "confidence": 0.11
   },
   "threshold": null,
   "meta": {

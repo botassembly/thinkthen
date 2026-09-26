@@ -48,7 +48,7 @@ const ARTICLES = {
     goal: "Jev reads a text and a question and returns a probability for every answer.",
     idea: [
       "Jev is the model behind ThinkThen, a System One model from TypeSafe. It reads a text and a question and returns a probability for every answer. It writes no text, and you train nothing.",
-      "A typical answer takes about a third of a second. Roger Bannister's mile set a standard for runners. Jev sets one for code.",
+      "Roger Bannister's mile set a standard for runners. Jev sets one for code.",
     ],
     credit: "Roger Bannister photo: 6 May 1954, public domain in the US, via Wikimedia Commons.",
     see: {
@@ -263,15 +263,15 @@ const ARTICLES = {
     label: "What Jev knows",
     goal: "Jev knows facts that no word in the text gives away, and search has nothing to match.",
     idea: [
-      "Search matches words. Jev knows facts. On the bench's Beatles questions, a random guess gets 31% right and vector search gets 38%. Jev gets 68% from memory. A large chat model gets 96%.",
+      "Search matches words. Jev knows facts. On the bench's Beatles questions, Jev gets more right from memory than vector search does. A large chat model gets more right still.",
       "No song title below holds the name Paul McCartney. Search has nothing to match.",
     ],
     see: {
-      '1-choose': "Jev picks d, I've Just Seen a Face, at 0.63.",
+      '1-choose': "Jev picks d, I've Just Seen a Face, at 0.6.",
       '2-bar': "A bar of 0.7 turns the pick into not sure.",
     },
     headings: { '2-bar': "Change the bar" },
-    lesson: "Paul sings I've Just Seen a Face alone. The pick is right. Jev knew it from memory at 0.63. A bar of 0.7 asks for more than Jev knows.",
+    lesson: "Paul sings I've Just Seen a Face alone. The pick is right. Jev knew it from memory at 0.6. A bar of 0.7 asks for more than Jev knows.",
     takeaway: "Jev answers from what it knows. The words in the text need not match.",
     link: REPO,
   },
@@ -281,11 +281,11 @@ const ARTICLES = {
     label: "Blind spots",
     goal: "Jev misses obscure facts, and a low probability is how it says so.",
     idea: [
-      "Jev's memory fades on obscure facts. It gets 74% right on the songs most viewed on Wikipedia and 51% on the least viewed. Tricky wording drops it from 67% to 48%. Two hops are hard. Asked whether two songs came out in the same month, Jev knew both dates 27 times. It chained them right 14 times.",
+      "Jev's memory fades on obscure facts. It gets more right on the songs most viewed on Wikipedia than on the least viewed. Tricky wording trips it. Two hops are hard. Jev can know the release dates of two songs and still miss whether they came out in the same month.",
       "Nothin' Shakin' is an obscure song, and George sings it.",
     ],
     see: {
-      '1-choose': "Jev leans to John at 0.38 and gives George 0.13.",
+      '1-choose': "Jev leans to John at 0.34, with Ringo close at 0.32. George gets 0.14.",
       '2-bar': "Under a bar of 0.5, the wrong pick becomes not sure.",
     },
     headings: { '2-bar': "Change the bar" },
@@ -300,7 +300,7 @@ const ARTICLES = {
     goal: "Putting the facts in the text fixes a sure miss that no bar can fix.",
     idea: [
       "Give Jev the facts in the text. Look up the record, put it in front of the question, and ask. We call it retrieval-augmented decisions.",
-      "On 196 questions Jev mostly missed, it got 39% right from memory and 95% with the song catalog in the text. Context costs input tokens.",
+      "On questions Jev mostly missed from memory, the song catalog in the text turned most answers right. Context costs input tokens. Here the call reads 291 input tokens from memory and 368 with the entry.",
     ],
     see: {
       '1-memory': "From memory, Jev is sure A Day in the Life is on Abbey Road.",

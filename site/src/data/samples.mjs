@@ -18,7 +18,7 @@ const text = (p) => raw[`/examples/${p}`];
 // The question files a Beatles Bench page reads, from the bench copy. Only
 // the JSON files at the top of each bench example folder load.
 const benchFiles = import.meta.glob(
-  '/examples/beatles/bench/examples/*/*.json',
+  '/examples/beatles/bench/functions/*/*.json',
   { query: '?raw', import: 'default', eager: true },
 );
 

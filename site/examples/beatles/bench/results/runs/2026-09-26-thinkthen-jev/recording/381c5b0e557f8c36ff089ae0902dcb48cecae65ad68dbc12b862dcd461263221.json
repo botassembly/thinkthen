@@ -3,5 +3,5 @@
   "adapter": "systemone",
   "url": "https://api.typesafe.ai/v1/systemone",
   "request": {"state":"Paul McCartney","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"The text names a member of the Beatles. Which of these songs by the Beatles has this member as its only lead singer?","criteria":{"a":"I'm a Loser","b":"Girl","c":"Sweet Little Sixteen","d":"I've Just Seen a Face"}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"d","confidence":0.51,"probabilities":{"c":0.23,"a":0.02,"b":0.12,"d":0.63}}},"usage":{"input_tokens":365,"output_tokens":46}}
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"d","confidence":0.47,"probabilities":{"d":0.6,"c":0.28,"a":0.02,"b":0.1}}},"usage":{"input_tokens":365,"output_tokens":46}}
 }

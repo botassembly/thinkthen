@@ -16,11 +16,11 @@
     "pick": "d",
     "probabilities": {
       "a": 0.02,
-      "b": 0.12,
-      "c": 0.23,
-      "d": 0.63
+      "b": 0.1,
+      "c": 0.28,
+      "d": 0.6
     },
-    "confidence": 0.51
+    "confidence": 0.47
   },
   "threshold": null,
   "meta": {
