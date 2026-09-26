@@ -1,0 +1,93 @@
+# 0123: Build "relate splits requests to fit the backend"
+
+Status: built and reviewed. Code review: ACCEPT. Owner: Claude.
+
+Branch `ticket/0123-relate-fits-the-backend`. Ticket `sdlc/tickets/0123-relate-fits-the-backend.md`, accepted at `023b9ae1`. Ian can overturn every choice this record marks as decided.
+
+## Result
+
+- `Backend::relation_ceiling` in `core/backend.rs` returns 96,000 when the resolved posting URL equals `https://api.typesafe.ai/v1/systemone` byte for byte, and nothing otherwise.
+- `SettledRelation::settle` passes that ceiling to `PreparedRequests::with_profile`, unless the profile names `max_request_bytes`. Every other caller passes `None`. The ceiling reaches `relate` and the relation step of `recognize`.
+- `PreparedRequests::with_profile` takes each chunk from a new `longest` function. It grows each chunk by doubling from one question, stopping at the remainder. It then halves the gap to the first count that does not fit. It keeps the longest fitting prefix and digests only that chunk. One question alone always passes the ceiling. When one question alone fails the profile, the splitter returns that error, as the old loop did. `ProfileLimit::permits_split` lost its last caller and was removed. Any failure now counts as "does not fit" during the search. The non-split limits (evidence bytes and options) belong to single questions, so the chunk stops before the failing question and the next chunk returns that question's own error. The old loop returned the same error with the same counts.
+- `engine/http.rs` reads a 400 body with `.limit(4096).read_to_vec()` and reads only `detail.error_type`. The exact value `max_tokens_exceeded` becomes `Error::TokenLimit`, which carries no data, has `Kind::Backend`, and is not retried. Every other body stays `Error::Status(400)`. The command prints the ticket's fixed sentence from `special_failure`, because `say` sits at clippy's 90-line limit. `public/error.rs` keeps `the backend answered with status 400`. `check` treats it as a probe row, as it does status 400.
+- `relate --either @FILE` prints its own refusal sentence. `relate --help` hides `--jobs` through `mut_arg` and carries the cost sentence.
+
+## Measurements
+
+All offline dry runs with no key. The main build was `origin/main` at `08a8e754`.
+
+| What | Number |
+| --- | --- |
+| The first request of the Beatles set at a loopback address with `max_questions` 142 (the 142 `appears_on` questions that passed live) | 126,820 bytes |
+| The ratio 65,423 input tokens over those bytes | 0.516 tokens a byte (stop rule: 0.60) |
+| 96,000 bytes at that ratio | about 49,500 tokens |
+| Beatles `appears_on` at a loopback address, main and this branch | one request, 161,252 bytes, digest `fd43d9c9…` on both |
+| Beatles plan at the built-in address, this branch | `sung_by` 81,943; `appears_on` 95,779 and 76,411 |
+| The deck's own run (`examples/graph.json`, `beatles.jsonl`), no profile, built-in address, by hand | 85,458; then 95,779 and 76,411 |
+| The deck's run with its `jev.json` (`max_questions` 64) | 36,800, 36,866, 33,771, 63,154, 63,220, 56,829 |
+| 40 line entities, `linked`, loopback, `max_request_bytes` 20,000, main and this branch | 19,938, 19,966, 19,923, 19,923, 19,923, 19,924, 16,660 |
+| 255 line entities, release, loopback, no profile | one request of 5,386,112 bytes, 0.16 s with `jq` |
+| 255 line entities, release, built-in address | 63 requests, largest 95,998 bytes, 0.62 s with `jq` |
+| 255 line entities, debug, loopback, no profile | 0.71 s (ticket limit: 10 s) |
+| 255 line entities, debug, built-in address | 3.69 s |
+
+No stop rule was crossed on these numbers.
+
+## Tests
+
+New file `tests/backend/relate/ceiling.rs`, six tests, all dry runs through the harness spawn. A new `tests/backend/status_reason.rs` holds the 400 body table. `tests/backend/exchange.rs` is unchanged from main. `tests/backend/refusals/relate.rs` gained the `--either @FILE` row. `tests/relate_edge.rs` pins the cost sentence and the absence of `--jobs`. The four questions are answered in the ticket's Acceptance section. None uses a test-only hook.
+
+## Planted faults
+
+Each fault was planted in the source, the named test ran, and the file was restored from Git and touched.
+
+| # | Planted fault | Test | Result |
+| --- | --- | --- | --- |
+| 1 | `relation_ceiling` returns nothing | `the_beatles_set_splits_at_the_hosted_address_and_nowhere_else` | red |
+| 2 | `relation_ceiling` returns the ceiling at every address | same | red |
+| 3 | The ceiling stays beside a profile's `max_request_bytes` | `a_profile_byte_limit_replaces_the_ceiling_and_other_limits_join_it` | red |
+| 4 | One question over the ceiling is refused | `one_question_over_the_ceiling_goes_alone_and_is_not_refused` | red |
+| 5 | Each chunk keeps one question fewer than the longest fit | `the_splitter_keeps_the_longest_fitting_prefix_the_old_loop_chose` | red |
+| 6 | Chunks grow one question at a time, the old loop's cost | `a_full_line_set_plans_inside_the_child_deadline` | red, killed at the 60 s child deadline |
+| 7 | The 400 body is never read | `a_400_names_only_the_known_reason_from_a_bounded_body` | red |
+| 8 | Any `error_type` counts | same | red |
+| 9 | The body is read up to the 1 MiB reply bound | same | red |
+| 10 | `--either @FILE` returns the grammar sentence | `no_refusal_on_any_command_writes_the_key_quotes_the_evidence_or_sends_anything` | red |
+| 11 | `mut_arg` dropped | `help_names_the_beta_complete_set_and_secrecy_contract` | red |
+| 12 | The cost sentence reworded | same | red |
+| 13 | `relation_ceiling` takes any base that starts with `https://api.typesafe.ai/` | `a_trailing_slash_keeps_the_ceiling_and_another_version_drops_it` | red: the `v2` row planned `[1, 2]` |
+| 14 | Address resolution keeps the base's trailing slashes | same | red: the slash row planned `[1, 1]`, because the address became `https://api.typesafe.ai/v1//systemone` |
+
+## A part budget crossed
+
+The ticket put the 400 rows in `tests/backend/exchange.rs` with a budget of 30 lines. The rows took 21 there, but `exchange.rs` then held 507 nonblank lines and the lint rung's 500-line file ceiling refused it. The rows moved to a new `tests/backend/status_reason.rs`, which spawns `decide` itself. That spawn and the file's header cost 39 lines more than the budget. The move also leaves `exchange.rs` as main has it, so ticket 0127 no longer shares that file. The total was 327 at code review. The review's two address rows added 12 lines and brought it to 339, under the ticket's 350. The coordinator decides whether to accept the shift. Ian can overturn it.
+
+The three 400 plants ran again against the new file after the move. Clippy's nesting rule then moved the chunk search into `longest`. Plants 4, 5, and 6 ran again against that code and turned red. Only doc comments changed after that run.
+
+## Lines and the ratchet
+
+Main measured 61,972 nonblank lines at `f3176b5d`, after ticket 0124 landed. This branch measures 62,311, so the ratchet rises by 339.
+
+| Part | Budget | Nonblank lines, net |
+| --- | --- | --- |
+| `engine/prepared_request.rs` | 30 | 30 |
+| `core/backend.rs` | 12 | 12 |
+| The 400 reason: `http.rs` 27, `error.rs` 3, `failure.rs` 3, `failure/status.rs` 2, `convert.rs` 1, `public/error.rs` 1, `check.rs` 0 | 45 | 37 |
+| Wording: `args/command.rs` 7, `relate/config.rs` 2 | 12 | 9 |
+| `tests/backend/relate/ceiling.rs` and its `mod` line | 200 | 170 |
+| `tests/backend/status_reason.rs` and its `mod` line, in place of `exchange.rs` | 30 | 60 |
+| `tests/backend/refusals/relate.rs` and `tests/relate_edge.rs` | 20 | 20 |
+| Other call sites (`facade.rs`, `facade/recognize.rs`, `backend_profile.rs`) | none | 1 |
+| Total | 350 | 339 |
+
+Where I looked for duplication first: the status phrases in `cli/failure/status.rs` hold one new constant and no copy. `core/backend_profile.rs` lost `permits_split`, and its new `limits_request_bytes` replaces it line for line. `checked_body` now serves both the single request and the splitter, which removed the old `prepare_chunk` copy of the encode-and-check lines. The relate test helpers in `tests/backend/relate.rs` send to a listener with a key, so the dry-run tests keep their own small `plan` helper.
+
+## Deferred gap
+
+No test sits on the exact 96,000-byte edge. The closest request is 95,998 bytes, so a `<` in place of `<=` in the splitter's fit check would stay green. A fixture of exactly 96,000 bytes costs more than it returns.
+
+## Rungs
+
+After merging `origin/main` at `b3884c43` (branch merge `85e661d6`), each rung ran once with `THINKTHEN_API_KEY` unset. `install`, `lint`, `test`, `spec`, and `surfaces` each exited 0. The ratchet was re-measured with `sdlc/scripts/ratchet.mjs` after the merge. No live or paid call ran.
+
+After code review, the two address rows of the ticket's edge table became the sixth test, with plants 13 and 14. `lint` and the backend tests ran again on that change without a merge of main.

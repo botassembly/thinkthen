@@ -1150,7 +1150,10 @@ MEASURE = (
     "crates/thinkthen/src/cli/measure.rs",
     "crates/thinkthen/src/cli/audit.rs",
     "crates/thinkthen/src/cli/diff.rs",
+    "crates/thinkthen/src/cli/audit/write.rs",
 )
+# Ticket 0125: `audit --write` writes the one file it names, and only here.
+MEASURE_WRITER = "crates/thinkthen/src/cli/audit/write.rs"
 MEASURE_COMMANDS = ("Audit", "Diff")
 MEASURE_BANNED_WORDS = CATALOG_BANNED_WORDS - {"fs", "File", "stdin", "Stdin"} | {"DirBuilder"}
 MEASURE_WRITES = {
@@ -1162,14 +1165,19 @@ MEASURE_CRATE_PATHS = {("crate", "core"), ("crate", "cli", "measure"), ("crate",
 ROUTER = "crates/thinkthen/src/cli/mod.rs"
 
 
-def measure_policy_failures(text: str) -> list[str]:
-    """Name every capability a measuring command reaches beyond reading its inputs."""
+def measure_policy_failures(text: str, writer: bool = False) -> list[str]:
+    """Name every capability a measuring command reaches beyond reading its inputs.
+
+    The writer may call `std::fs::write` by its full path, and nothing else that writes.
+    """
     held = set(catalog_policy_failures(text, MEASURE_BANNED_WORDS, MEASURE_CRATE_PATHS, set(),
                                        prefix=True))
     tokens = rust_tokens(text)
     for place in range(len(tokens) - 2):
         if tokens[place] in {"fs", "File"} and tokens[place + 1] == "::" \
                 and tokens[place + 2] in MEASURE_WRITES:
+            if writer and tokens[place - 2:place + 3] == ["std", "::", "fs", "::", "write"]:
+                continue
             held.add(f"writes through {tokens[place]}::{tokens[place + 2]}")
     for path, alias in rust_use_paths(tokens):
         if path[:2] == ("std", "fs") and (set(path[2:]) & MEASURE_WRITES or alias or "*" in path):
@@ -1196,7 +1204,8 @@ def route_failures(text: str) -> list[str]:
 
 def check_measure_policy() -> None:
     for relative in MEASURE:
-        held = measure_policy_failures((REPO / relative).read_text(encoding="utf-8"))
+        held = measure_policy_failures((REPO / relative).read_text(encoding="utf-8"),
+                                       relative == MEASURE_WRITER)
         if held:
             fail("measure", f"{relative} {held}")
     for held in route_failures((REPO / ROUTER).read_text(encoding="utf-8")):
@@ -1238,6 +1247,18 @@ def check_measure_policy() -> None:
     for control in controls:
         if measure_policy_failures(control):
             fail("measure", f"the measure control {control!r} stays allowed")
+    writer_plants = (
+        "std::fs::rename(a, b)",
+        "std::fs::OpenOptions::new()",
+        "std::fs::File::create(path)",
+        "use std::fs::write; write(path, text)",
+        "fs::write(path, text)",
+    )
+    for plant in writer_plants:
+        if not measure_policy_failures(plant, writer=True):
+            fail("measure", f"the planted writer violation {plant!r} is refused")
+    if measure_policy_failures("std::fs::write(path, text)", writer=True):
+        fail("measure", "the writer's one std::fs::write stays allowed")
     audit, diff = "if let Some(Command::Audit(a)) = c {}", "if let Some(Command::Diff(a)) = c {}"
     read = "let e = Environment::read();"
     if route_failures(audit + read + diff) != ["Diff returns after Environment::read"] \

@@ -71,6 +71,7 @@ mod secrecy_find;
 )]
 mod secrecy_relate;
 mod state;
+mod status_reason;
 mod streaming;
 mod support;
 mod table;

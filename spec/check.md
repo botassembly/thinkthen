@@ -2,7 +2,7 @@
 
 `thinkthen check` sends four fixed requests to a backend you name and reports whether it works with this tool. [specification/check.md](../specification/check.md) is the contract. Each block unsets the key and the address first, so neither block can reach a network.
 
-A dry run prints the address, the model, and the four request bodies. It reads no key and sends nothing, so a loopback address with nothing behind it is enough. The bodies match the fixture byte for byte.
+A dry run prints the address, the provider, the model asked for, the model sent, and the four request bodies. It reads no key and sends nothing, so a loopback address with nothing behind it is enough. The bodies match the fixture byte for byte.
 
 ```bash
 set -euo pipefail
@@ -11,10 +11,12 @@ unset XDG_CONFIG_HOME XDG_CACHE_HOME THINKTHEN_API_KEY THINKTHEN_BASE_URL
 fixture="$(git rev-parse --show-toplevel)/specification/fixtures/check/requests.jsonl"
 thinkthen check --url http://127.0.0.1:9/v1 --dry-run > "$HOME/plan.txt"
 sed -n 1p "$HOME/plan.txt" | mustmatch "url http://127.0.0.1:9/v1/systemone"
-sed -n 2p "$HOME/plan.txt" | mustmatch "model jev-latest"
+sed -n 2p "$HOME/plan.txt" | mustmatch "provider systemone"
+sed -n 3p "$HOME/plan.txt" | mustmatch "model asked unspecified"
+sed -n 4p "$HOME/plan.txt" | mustmatch "model sent jev-latest"
 awk '/^request /{print $2}' "$HOME/plan.txt" | paste -sd' ' - | mustmatch "noul choice score mixed"
 sed -n 's/^request [a-z]* //p' "$HOME/plan.txt" | diff - "$fixture"
-wc -l < "$HOME/plan.txt" | mustmatch "6"
+wc -l < "$HOME/plan.txt" | mustmatch "8"
 sed -n '/^```json$/,/^```$/p' "$(dirname "$fixture")/../../check.md" | sed '1d;$d' | diff - "$fixture"
 ```
 

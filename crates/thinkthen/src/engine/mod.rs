@@ -263,7 +263,7 @@ impl fmt::Display for WidthActive {
         let active = self.0.get();
         write!(
             formatter,
-            "width {active} is already active for this process; use width {active} or drop the width argument"
+            "throttle {active} is already active for this process; use throttle {active} or drop the throttle argument"
         )
     }
 }

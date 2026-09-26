@@ -3,14 +3,21 @@
 //! The command sends each probe through the production engine and hands the
 //! outcome here. `specification/check.md` fixes the rows and the sentences.
 
-use crate::core::adapters::built_in::{wire_name, wire_type};
+use serde::Serialize;
+
+use crate::core::adapters::built_in::{self, wire_name, wire_type};
+use crate::core::answer::Answer;
 use crate::core::json::Json;
 use crate::core::plan::Plan;
 use crate::core::question::Question;
 use crate::core::question_set::QuestionSet;
 use crate::core::render::json_line;
 use crate::core::reply::{AnswerOutcome, FailedValue, Reply};
+use crate::core::result::Usage;
 use crate::core::text::{Evidence, ModelName};
+
+/// The wire interface the check speaks, which the report names as the provider.
+pub(crate) const PROVIDER: &str = built_in::NAME;
 
 const TEXT: &str = "The parcel arrived on Tuesday and the box was intact.";
 const OBJECT: &str = r#"{"note":"The parcel arrived on Tuesday.","box":"intact"}"#;
@@ -62,6 +69,38 @@ pub(crate) fn probes(model: &ModelName) -> Option<Vec<Probe>> {
         Some(Probe { name, plan })
     };
     PROBES.iter().map(probe).collect()
+}
+
+/// One decoded reply as the report prints it.
+#[derive(Serialize)]
+struct Said<'a> {
+    model: &'a ModelName,
+    answers: Vec<Outcome<'a>>,
+    usage: Option<Usage>,
+}
+
+/// One logical answer, or the failure marker a result prints for it.
+#[derive(Serialize)]
+#[serde(untagged)]
+enum Outcome<'a> {
+    Answered(&'a Answer),
+    Failed(FailedValue),
+}
+
+/// The `reply PROBE JSON` line: the model the reply names, each logical
+/// answer in plan order, and the usage. It prints what the decoder kept and
+/// never the raw bytes, and the JSON writer escapes every control character.
+pub(crate) fn reply_line(probe: &Probe, reply: &Reply) -> Option<String> {
+    let answers = reply.outcomes().iter().map(|outcome| match outcome {
+        AnswerOutcome::Answered(answer) => Outcome::Answered(answer),
+        AnswerOutcome::Failed(failure) => Outcome::Failed(FailedValue::new(*failure)),
+    });
+    let said = Said {
+        model: reply.model(),
+        answers: answers.collect(),
+        usage: reply.usage(),
+    };
+    Some(format!("reply {} {}", probe.name, json_line(&said).ok()?))
 }
 
 /// One finding: whether it is critical, and its sentence.

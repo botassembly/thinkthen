@@ -6,7 +6,7 @@ use std::process::ExitCode;
 use serde::Serialize;
 
 use crate::core::{
-    Backend, BackendProfile, Plan, Reading, RecognizeSpec, json_line, kind_questions,
+    Backend, BackendProfile, KEY_VAR, Plan, Reading, RecognizeSpec, json_line, kind_questions,
     recognition_questions, tokenize,
 };
 use crate::edge;
@@ -14,17 +14,30 @@ use crate::engine::facade;
 use crate::failure::Failure;
 
 #[derive(Debug, Serialize)]
-struct DryRun {
+struct DryRun<'a> {
+    schema: &'static str,
+    url: &'a str,
+    model: &'a str,
+    key_env: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     from: Option<From>,
-    tokens: usize,
+    words: usize,
     detection_questions: usize,
     kind_questions: usize,
-    requests: usize,
+    request_count: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
     relation_pairs_upper_bound: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     relation_requests_upper_bound: Option<usize>,
+    requests: Vec<Request>,
+}
+
+/// One exact split request, as the relate plan prints it.
+#[derive(Debug, Serialize)]
+struct Request {
+    digest: String,
+    bytes: usize,
+    body_utf8: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -50,8 +63,23 @@ pub(super) fn run(
         .map_err(|error| Failure::record(error, reading.streams()))?;
     let text = reading.evidence(&record)?.as_text()?.into_owned();
     let tokens = tokenize(&text);
+    let from = from_file.then_some(From { question: "file" });
+    let mut report = DryRun {
+        schema: "thinkthen.recognize-plan/1",
+        url: backend.url().as_str(),
+        model: backend.model().as_str(),
+        key_env: KEY_VAR,
+        from,
+        words: 0,
+        detection_questions: 0,
+        kind_questions: 0,
+        request_count: 0,
+        relation_pairs_upper_bound: relation_upper_bound(spec, 0),
+        relation_requests_upper_bound: relation_upper_bound(spec, 0),
+        requests: Vec::new(),
+    };
     if tokens.is_empty() {
-        write_empty(spec, from_file, writer)?;
+        write(writer, &report)?;
         return Ok(ExitCode::SUCCESS);
     }
     let mut questions = recognition_questions(&tokens)
@@ -64,40 +92,23 @@ pub(super) fn run(
         .map_err(|_| Failure::Defect("record evidence became blank"))?;
     let plan = Plan::new(evidence, backend.model().clone(), questions)
         .map_err(|_| Failure::Defect("recognize dry run planned no questions"))?;
-    let requests = facade::split(backend, profile, &plan)?.len();
-    let relation_pairs_upper_bound = relation_upper_bound(spec, tokens.len());
-    write(
-        writer,
-        DryRun {
-            from: from_file.then_some(From { question: "file" }),
-            tokens: tokens.len(),
-            detection_questions: tokens.len(),
-            kind_questions: kind_question_count,
-            requests,
-            relation_pairs_upper_bound,
-            relation_requests_upper_bound: relation_pairs_upper_bound,
-        },
-    )?;
+    let chunks = facade::split(backend, profile, &plan)?;
+    for chunk in &chunks {
+        report.requests.push(Request {
+            digest: chunk.request.digest.as_str().to_owned(),
+            bytes: chunk.request.body.len(),
+            body_utf8: String::from_utf8(chunk.request.body.clone())
+                .map_err(|_| Failure::Defect("an encoded request is not UTF-8"))?,
+        });
+    }
+    report.words = tokens.len();
+    report.detection_questions = tokens.len();
+    report.kind_questions = kind_question_count;
+    report.request_count = chunks.len();
+    report.relation_pairs_upper_bound = relation_upper_bound(spec, tokens.len());
+    report.relation_requests_upper_bound = report.relation_pairs_upper_bound;
+    write(writer, &report)?;
     Ok(ExitCode::SUCCESS)
-}
-
-fn write_empty(
-    spec: &RecognizeSpec,
-    from_file: bool,
-    writer: &mut dyn Write,
-) -> Result<(), Failure> {
-    write(
-        writer,
-        DryRun {
-            from: from_file.then_some(From { question: "file" }),
-            tokens: 0,
-            detection_questions: 0,
-            kind_questions: 0,
-            requests: 0,
-            relation_pairs_upper_bound: (!spec.relations.is_empty()).then_some(0),
-            relation_requests_upper_bound: (!spec.relations.is_empty()).then_some(0),
-        },
-    )
 }
 
 fn relation_upper_bound(spec: &RecognizeSpec, tokens: usize) -> Option<usize> {
@@ -109,6 +120,6 @@ fn relation_upper_bound(spec: &RecognizeSpec, tokens: usize) -> Option<usize> {
     })
 }
 
-fn write(writer: &mut dyn Write, report: DryRun) -> Result<(), Failure> {
-    edge::write_line(writer, &json_line(&report)?).map(|_| ())
+fn write(writer: &mut dyn Write, report: &DryRun<'_>) -> Result<(), Failure> {
+    edge::write_line(writer, &json_line(report)?).map(|_| ())
 }

@@ -2,6 +2,8 @@
 
 Written 2026-09-19 by a reading agent at Ian's request, after he learned that `decide` never sent the vendor's texts for what true and false mean. `wheel:` names the vendor's published Python client, version 0.7.0, read and never installed. `docs:` names a saved copy of the vendor's documentation. Ticket 0017 closes the gaps, and `ten-use-cases.md` sits beside this page.
 
+History note, 2026-09-25, by ticket 0126: rows 31, 32, 38, and 66 and items 1 to 5 of the gaps list describe the binary of 2026-09-19 and no longer hold. Ticket 0017 sends `criteria.true` and `criteria.false` from `--true` and `--false`, and it sends one description per option from `--option LABEL=DESCRIPTION`. Those close items 1 and 3. `annotate` is built, and one request carries several questions, which closes item 2. Commit `b0cba964` reads `Retry-After`, and ticket 0064 bounds that wait by `--timeout`. That closes item 4. Several `--field` pointers send one JSON object as `state`, which closes item 5. Item 6 stays open, because the binary has no `models` command. Each was checked against the binary on 2026-09-25. The other rows stand as written.
+
 Read-only audit. No file in the tool's repository was changed, no request was made to the vendor, and no key or `.env` value was read or printed.
 
 The paths below were written before ticket 0020 moved the adapter. `crates/thinkthen-core/src/systemone.rs` and `systemone/` now sit under `crates/thinkthen-core/src/adapters/`, and the default model moved from `backend.rs` into the adapter's own module. Line numbers were a snapshot of the day and have drifted since.

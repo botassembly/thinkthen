@@ -115,7 +115,7 @@ Under `--dry-run`, a run that used a file prints a `from` object before the requ
 
 A run with no question file prints no `from` object, because every setting came from the one place the user is looking at.
 
-`recognize --dry-run` prints a count report rather than a request plan. Its file-backed report carries `{"from":{"question":"file"}}` to identify the source of the complete recognize question.
+`recognize --dry-run` prints the `thinkthen.recognize-plan/1` request plan. Its file-backed plan carries `{"from":{"question":"file"}}` to identify the source of the complete recognize question.
 
 ## The digest of a question
 
@@ -134,7 +134,7 @@ The canonical form is one JSON object on one line. Another implementation follow
 5. **A number is written in the shortest form that reads back as the same 64-bit float.** A cut of one half is `0.5`. A band is not a number: it is the string `"LOW:HIGH"`, with each side written by the same shortest form, so `0.20:0.80` and `0.2:0.8` both give `"0.2:0.8"` and one digest. The same rule holds for a number inside a structured value.
 6. **The options and tag labels are maps from each label to its description, in the order the user gave.** A label with no description takes `null`. A list of labels and a map of the same labels to `null` are therefore one question and one digest, and two runs whose descriptions differ are two digests. The levels of `score` keep the form the file held: a list of names, or a map from each name to its description, in the order the user gave. A list and a map of the same names are two questions, because the map says the descriptions ride the wire.
 7. **A structured value keeps the order of its members.** An object the file wrote is written member for member in the file's order, and two orders are two questions. White space between tokens changes nothing: two files that parse to the same value give one digest.
-8. **The threshold rides with the question.** A cut tuned on labeled cases belongs to the question it was tuned for, so `--threshold` changes the digest. The default cut and the same cut typed out are one rule and one digest.
+8. **The threshold rides with the question.** A cut tuned on labeled cases belongs to the question it was tuned for, so `--threshold` changes the digest. The default cut and the same cut typed out are one rule and one digest. `audit --write` puts a tuned cut into the file, and the digest moves with it.
 
 Four worked examples, pinned in the tests:
 

@@ -375,7 +375,7 @@ pub(crate) fn split(
     profile: Option<&BackendProfile>,
     plan: &Plan,
 ) -> Result<Vec<Chunk>, Error> {
-    Ok(PreparedRequests::with_profile(backend, plan, profile)?.into_chunks())
+    Ok(PreparedRequests::with_profile(backend, plan, profile, None)?.into_chunks())
 }
 
 /// The one answer a one-question reply carries.

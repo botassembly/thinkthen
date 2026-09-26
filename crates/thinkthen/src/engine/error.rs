@@ -40,6 +40,8 @@ pub(crate) enum Kind {
 pub(crate) enum Error {
     Transport(TransportKind),
     Status(u16),
+    /// Status 400 whose body named `max_tokens_exceeded`. It keeps no body byte.
+    TokenLimit,
     Reply(DecodeError),
     ReplayMiss(String),
     Entry(String, String),
@@ -102,6 +104,7 @@ impl Error {
         match self {
             Self::Transport(_)
             | Self::Status(_)
+            | Self::TokenLimit
             | Self::Reply(_)
             | Self::ModelsDiffer(_)
             | Self::UsageOverflow

@@ -127,6 +127,8 @@ pub(crate) enum Failure {
     Transport(TransportKind),
     /// The backend answered with a status that is not a success.
     Status(u16),
+    /// The backend answered status 400 and named `max_tokens_exceeded`.
+    TokenLimit,
     /// The adapter refused what the backend answered.
     Reply(DecodeError),
     /// The two recording options named two different folders.
@@ -312,6 +314,7 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
         return Some(message);
     }
     Some(match failure {
+        Failure::TokenLimit => (4, status::TOKEN_LIMIT.to_owned()),
         Failure::OpenProfile { path, error } => (
             5,
             format!(

@@ -60,6 +60,7 @@ impl From<EngineError> for Failure {
         match error {
             EngineError::Transport(message) => Self::Transport(message),
             EngineError::Status(status) => Self::Status(status),
+            EngineError::TokenLimit => Self::TokenLimit,
             EngineError::Reply(error) => Self::Reply(error),
             EngineError::ReplayMiss(name) => Self::ReplayMiss(name),
             EngineError::Entry(name, message) => Self::Entry(name, message),

@@ -29,6 +29,13 @@ if [ "$kept" != "unset /nonexistent/lock /nonexistent/lock /nonexistent/tools /n
     echo "lint: heavy-lock left a stray THINKTHEN_ name or dropped its own: $kept" >&2
     exit 1
 fi
+# Ticket 0128: one version everywhere, workflows run by hand from pinned code,
+# and the download script's edge table against a loopback fake of GitHub.
+python3 sdlc/scripts/versions --self-test
+python3 sdlc/scripts/versions
+python3 sdlc/scripts/workflows --self-test
+python3 sdlc/scripts/workflows
+python3 sdlc/scripts/installer-test
 # Ticket 0104: a stale crate longer than the fresh one must not reach `tar`.
 mkdir -p target/package
 head -c 4194304 /dev/urandom \

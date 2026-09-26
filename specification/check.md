@@ -2,7 +2,7 @@
 
 Status: **Settled** by ticket 0121.
 
-`thinkthen check` answers one question: does the backend at an address you name work with this tool? It sends four fixed requests to `BASE/systemone`, one after another. Each finding is critical or a warning. The check exits 0 only when nothing is critical, so a script or a list of backends can trust the exit code.
+`thinkthen check` answers one question: does the backend at an address you name work with this tool? It sends four fixed requests to `BASE/systemone`, one after another. Each finding is critical or a warning. The check exits 0 only when nothing is critical, so a script or a list of backends can trust the exit code. The report opens with the address, the provider, and the models, and it prints each decoded reply.
 
 Each request is built by the production question grammar and written by the production encoder. The engine sends it with the production transport, retry rule, and key rule. The production decoder reads the reply. A critical finding therefore means what a real run would meet, and it carries the sentence a real run would print.
 
@@ -13,7 +13,7 @@ thinkthen check [--url BASE] [--model NAME] [--timeout SECONDS] [--dry-run]
 ```
 
 - The address comes from `--url`, then `THINKTHEN_BASE_URL`, then the configuration file's `url`. The rules of [backends.md](backends.md) apply unchanged. The built-in default address is refused, because the check would otherwise spend requests at the hosted service when you named nothing. The refusal exits 2 before the key is read and sends nothing. Its whole standard error line reads `thinkthen: check needs an address you name: give --url, set THINKTHEN_BASE_URL, or set url in the configuration file`.
-- `--model` resolves as every command resolves it: the option, then the configuration file's `model`, then `jev-latest`.
+- `--model` resolves as every command resolves it: the option, then the configuration file's `model`, then `jev-latest`. `model asked` prints the option or the file's value, or `unspecified` when neither names one. `model sent` prints the resolved value, which every request carries.
 - The key comes only from `THINKTHEN_API_KEY`. An unset or blank key exits 4 with the sentence every command prints, before any request. A keyless local server still needs some key set.
 - `--timeout` works as it does everywhere. `--max-retries` keeps its default of 2 and is not accepted. Four probes send at most twelve attempts.
 - The check reads no standard input and no cache, recording, replay, or profile. `--cache`, `--no-cache`, `--record`, `--replay`, and `--profile` are unknown options and exit 2.
@@ -57,7 +57,7 @@ The report has eight rows, always in this order: `connection`, `key`, `endpoint`
 
 A transport failure or status 401, 402, 403, or 404 stops the check, because every later request would meet it too. Any other failure belongs to its probe, and the check goes on. The first probe decides `connection`, `key`, and `endpoint`. A reply of any status marks `connection` ok, and any status but 401 to 404 also marks `key` and `endpoint` ok. After a stop, every row not yet decided prints `unchecked`. So a 404 at the first probe prints `ok connection`, `unchecked key`, and `critical endpoint`. `usage` is ok when every decoded reply carried it, and unchecked when no reply was decoded.
 
-A finding never quotes a reply. It names a question by its wire name and nothing the backend sent back. The check does not compare the model a reply names with the model sent, because an alias such as `jev-latest` answering as a version is normal.
+A finding never quotes a reply. It names a question by its wire name and nothing the backend sent back. The check does not compare the model a reply names with the model sent, because an alias such as `jev-latest` answering as a version is normal. A reply line prints the decoded reply as JSON and never its raw bytes. It names the model that reply names.
 
 ## Output and exit codes
 
@@ -65,7 +65,13 @@ A full pass prints exactly these lines, with the resolved address and model:
 
 ```text
 url http://127.0.0.1:PORT/arm/full/v1/systemone
-model jev-latest
+provider systemone
+model asked unspecified
+model sent jev-latest
+reply noul {"model":"jev-latest","answers":[{"kind":"yes_no","probability":0.9}],"usage":{"input_tokens":1,"output_tokens":1}}
+reply choice {"model":"jev-latest","answers":[{"kind":"choice","pick":"Monday","probabilities":{"Monday":0.9,"Tuesday":0.05,"Wednesday":0.05},"confidence":0.9}],"usage":{"input_tokens":1,"output_tokens":1}}
+reply score {"model":"jev-latest","answers":[{"kind":"score","level":"fair","probabilities":{"fair":0.9,"good":0.05,"excellent":0.05},"confidence":0.9}],"usage":{"input_tokens":1,"output_tokens":1}}
+reply mixed {"model":"jev-latest","answers":[{"kind":"yes_no","probability":0.9},{"kind":"choice","pick":"Monday","probabilities":{"Monday":0.9,"Tuesday":0.1},"confidence":0.9},{"kind":"score","level":"poor","probabilities":{"poor":0.9,"good":0.1},"confidence":0.9},{"kind":"tag","probabilities":{"on_time":0.9,"damaged":0.9}}],"usage":{"input_tokens":1,"output_tokens":1}}
 ok connection
 ok key
 ok endpoint
@@ -77,6 +83,19 @@ ok usage
 critical 0, warning 0
 ```
 
+`provider` names the wire interface the tool speaks, `systemone`. It does not name who runs the server, because the tool knows nothing about that.
+
+Each `reply PROBE JSON` line holds one decoded reply: `model` is the model that reply names, `answers` lists each logical answer in plan order as a result prints `answer`, and `usage` is the reply's token counts or `null`. A failed logical question prints the failure marker a result prints. The JSON writer escapes every control character in a model name.
+
+| Probe outcome | Reply line | Finding row |
+| --- | --- | --- |
+| Decoded, every answer good | yes | `ok` or a warning |
+| Decoded, one logical question failed | yes, with that answer as a failure | `critical` |
+| The decoder refused the reply | no | `critical` |
+| An error status or a transport failure | no | `critical` |
+| Not reached after a stop | no | `unchecked` |
+| The reply names another model than the one sent | yes, with the reply's model | no finding |
+
 The last line counts the finding lines. The report prints once, after the last probe. On SIGINT the check prints no report and follows the interrupt rule of [channels.md](channels.md).
 
 | Exit | When |
@@ -87,7 +106,7 @@ The last line counts the finding lines. The report prints once, after the last p
 | 5 | Standard output could not be written |
 | 70 | A defect |
 
-`--dry-run` prints the `url` and `model` lines, then one `request PROBE BODY` line per probe. The bodies come from the same split the live check sends. It reads no key, sends nothing, and exits 0.
+`--dry-run` prints the `url`, `provider`, `model asked`, and `model sent` lines, then one `request PROBE BODY` line per probe. It prints no reply line. The bodies come from the same split the live check sends. It reads no key, sends nothing, and exits 0.
 
 ## What the check cannot see
 

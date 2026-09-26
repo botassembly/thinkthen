@@ -5,27 +5,50 @@ use std::collections::BTreeSet;
 use serde::{Serialize, Serializer};
 
 use crate::core::json::Json;
+use crate::core::measure::levels::{LevelCuts, level_at};
 use crate::core::measure::{MeasureError, python_float_text, record_id, rounded};
 use crate::core::pointer::Pointer;
 use crate::core::probability::Probability;
 use crate::core::threshold::{Outcome as Judged, Threshold};
 
-/// The two verbs audit grades.
+#[path = "verbs.rs"]
+mod verbs;
+
+use verbs::{names, probability, top, verb};
+
+/// The verbs audit grades. diff reads only `decide` and `choose`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Verb {
-    /// A yes or no answer.
+    /// A yes or no answer, from `decide` or `filter`.
     Decide,
     /// One option out of a list.
     Choose,
+    /// One label of a `tag` answer, read as yes or no.
+    Tag,
+    /// A place on named levels.
+    Score,
+    /// The best unit of one input, or `none`.
+    Find,
+    /// A ranked `decide` row, which makes no selection.
+    Rank,
 }
 
 impl Verb {
-    /// The verb's name as a result line writes it.
+    /// The verb's name as a result line or a row writes it.
     pub(crate) const fn name(self) -> &'static str {
         match self {
             Self::Decide => "decide",
             Self::Choose => "choose",
+            Self::Tag => "tag",
+            Self::Score => "score",
+            Self::Find => "find",
+            Self::Rank => "rank",
         }
+    }
+
+    /// True for a verb whose answer reads as yes or no.
+    pub(crate) const fn yes_no(self) -> bool {
+        matches!(self, Self::Decide | Self::Tag | Self::Rank)
     }
 }
 
@@ -36,6 +59,8 @@ pub(crate) enum Rule {
     AsRun,
     /// A cut or a band applied to the saved probabilities.
     Threshold(Threshold),
+    /// Level cuts over a `score` number.
+    Levels(LevelCuts),
 }
 
 /// A rule as the output prints it: `"as run"`, a cut as a number, or a band as text.
@@ -70,11 +95,11 @@ impl Shown {
 /// What one answer says under a rule. An option named `tied` stays an option.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum Said<'a> {
-    /// A `decide` yes.
+    /// A yes.
     Yes,
-    /// A `decide` no.
+    /// A no.
     No,
-    /// A `choose` option.
+    /// An option, a level, or a unit.
     Option(&'a str),
     /// No answer under the rule: a band's middle, a missed cut, or a null value.
     Unresolved,
@@ -95,16 +120,18 @@ impl Said<'_> {
     }
 }
 
-/// Which answers count as one record twice.
+/// Which answers count as one record twice, which also names the caller.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Identity {
-    /// One answer name, record id, and question text: one question in `audit`.
+    /// One answer name, record id, question text, and label: one question in `audit`,
+    /// which reads every verb it grades.
     Question,
-    /// One answer name and record id: one answer in a `diff` run.
+    /// One answer name and record id: one answer in a `diff` run, which reads
+    /// `decide` and `choose` alone.
     Answer,
 }
 
-/// The top of a `choose` distribution.
+/// The top of a distribution.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Top {
     /// The largest probability.
@@ -126,18 +153,26 @@ pub(crate) struct Answer {
     pub(crate) name: Option<String>,
     /// The question text, when the line carries it.
     pub(crate) text: Option<String>,
-    /// The line's question digest: `meta.question_sha256`, or `meta.questions_sha256` on an `annotate` line.
-    pub(crate) digest: Option<String>,
+    /// The label a `tag` answer stands for.
+    pub(crate) label: Option<String>,
     /// The verb, named by the line or read from its value.
     pub(crate) verb: Verb,
     /// True when the answer failed and leaves every measure.
     pub(crate) failed: bool,
     /// The printed value: a boolean, an option, or nothing.
     value: Option<Printed>,
-    /// `p(yes)` for `decide`.
+    /// `p(yes)` for a yes/no answer.
     pub(crate) probability: Option<Probability>,
-    /// The distribution's top for `choose`.
+    /// The distribution's top for `choose` and `find`.
     pub(crate) top: Option<Top>,
+    /// The labels, levels, or units the answer could name.
+    pub(crate) options: Vec<String>,
+    /// The number a `score` answer printed.
+    pub(crate) number: Option<f64>,
+    /// The line's question digest: `meta.question_sha256`, or `meta.questions_sha256` on an `annotate` line.
+    pub(crate) digest: Option<String>,
+    /// True when the line ran under a band.
+    pub(crate) band: bool,
 }
 
 /// A printed value audit can read.
@@ -145,14 +180,16 @@ pub(crate) struct Answer {
 enum Printed {
     Bool(bool),
     Option(String),
+    /// A `find` answer that selected a unit.
+    Found,
 }
 
 /// Read every answer that numbered result lines hold, with the record id at the pointer.
 ///
 /// # Errors
 ///
-/// Returns [`MeasureError`] for a line without an id, another verb, a
-/// probability that is not one, or a record repeated under the identity.
+/// Returns [`MeasureError`] for a line without an id, a verb the caller does
+/// not grade, a probability that is not one, or a record repeated under the identity.
 pub(crate) fn read(
     lines: &[(usize, Json)],
     id: &Pointer,
@@ -161,35 +198,59 @@ pub(crate) fn read(
     let mut read = Vec::new();
     for (line, row) in lines {
         let found = row.member("input").and_then(|input| id.resolve(input));
-        let record = found.and_then(record_id).ok_or(MeasureError::NoId(*line))?;
-        read.extend(answers(*line, &record, row)?);
+        let record = match found.and_then(record_id) {
+            Some(record) => record,
+            None if identity == Identity::Question
+                && row.member("input").is_none()
+                && verb_named(row) == Some("find") =>
+            {
+                line.to_string()
+            }
+            None => return Err(MeasureError::NoId(*line)),
+        };
+        read.extend(answers(*line, &record, row, identity)?);
     }
     refuse_repeats(&read, identity)?;
     Ok(read)
 }
 
+fn verb_named(entry: &Json) -> Option<&str> {
+    entry
+        .member("question")
+        .and_then(|held| held.member("verb"))
+        .and_then(Json::as_str)
+}
+
 /// Read every answer one result line holds: the line itself, or each member of its `answers`.
-fn answers(line: usize, id: &str, row: &Json) -> Result<Vec<Answer>, MeasureError> {
-    let digest = |key| {
-        row.member("meta")
-            .and_then(|meta| meta.member(key))
-            .and_then(Json::as_str)
+fn answers(
+    line: usize,
+    id: &str,
+    row: &Json,
+    identity: Identity,
+) -> Result<Vec<Answer>, MeasureError> {
+    let named = if row.member("answers").is_some() {
+        "questions_sha256"
+    } else {
+        "question_sha256"
+    };
+    let digest = row
+        .member("meta")
+        .and_then(|meta| meta.member(named))
+        .and_then(Json::as_str)
+        .map(str::to_owned);
+    let read = |name: Option<&str>, entry: &Json| {
+        Answer::read(line, id, name, entry, identity, digest.clone())
     };
     match row.member("answers") {
-        Some(Json::Object(members)) => members
-            .iter()
-            .map(|(name, entry)| {
-                Answer::read(line, id, Some(name), digest("questions_sha256"), entry)
-            })
-            .collect(),
+        Some(Json::Object(members)) => {
+            let mut all = Vec::new();
+            for (name, entry) in members {
+                all.extend(read(Some(name), entry)?);
+            }
+            Ok(all)
+        }
         Some(_) => Err(MeasureError::Ungradable(line)),
-        None => Ok(vec![Answer::read(
-            line,
-            id,
-            None,
-            digest("question_sha256"),
-            row,
-        )?]),
+        None => read(None, row),
     }
 }
 
@@ -205,7 +266,7 @@ fn refuse_repeats(answers: &[Answer], identity: Identity) -> Result<(), MeasureE
             Identity::Question => answer.text.as_ref(),
             Identity::Answer => None,
         };
-        if !seen.insert((&answer.name, &answer.id, text)) {
+        if !seen.insert((&answer.name, &answer.id, text, &answer.label)) {
             return Err(MeasureError::Repeated(answer.line));
         }
     }
@@ -213,80 +274,114 @@ fn refuse_repeats(answers: &[Answer], identity: Identity) -> Result<(), MeasureE
 }
 
 impl Answer {
+    /// Every answer one entry holds: one, or one per label of a `tag` answer.
     fn read(
         line: usize,
         id: &str,
         name: Option<&str>,
-        digest: Option<&str>,
         entry: &Json,
-    ) -> Result<Self, MeasureError> {
+        identity: Identity,
+        digest: Option<String>,
+    ) -> Result<Vec<Self>, MeasureError> {
         let value = entry.member("value");
         let failed = entry.member("failure").is_some()
             || value.and_then(|held| held.member("failed")).is_some()
             || (entry.member("answer").is_none() && value.is_none());
         let question = entry.member("question");
-        let verb = match question
-            .and_then(|held| held.member("verb"))
-            .and_then(Json::as_str)
-        {
-            Some("decide") => Verb::Decide,
-            Some("choose") => Verb::Choose,
-            Some(other) if !other.is_empty() => return Err(MeasureError::Ungradable(line)),
-            _ if matches!(value, None | Some(Json::Null | Json::Bool(_))) => Verb::Decide,
-            _ => Verb::Choose,
-        };
-        let printed = match value {
-            Some(Json::Bool(_)) if verb == Verb::Choose && !failed => {
-                return Err(MeasureError::Ungradable(line));
-            }
-            Some(Json::Bool(held)) => Some(Printed::Bool(*held)),
-            Some(Json::String(text)) => Some(Printed::Option(text.clone())),
-            None | Some(Json::Null) => None,
-            Some(_) if failed || verb == Verb::Decide => None,
-            Some(_) => return Err(MeasureError::Ungradable(line)),
-        };
+        let audit = identity == Identity::Question;
+        let verb = verb(line, entry, audit, failed)?;
         let answer = entry.member("answer");
-        let probability = answer
-            .and_then(|held| held.member("probability"))
-            .filter(|held| **held != Json::Null)
-            .map(|held| probability(line, held))
-            .transpose()?;
-        let top = answer
+        let distribution = answer
             .and_then(|held| held.member("probabilities"))
-            .filter(|held| **held != Json::Null)
-            .map(|held| top(line, held))
-            .transpose()?;
-        Ok(Self {
+            .filter(|held| **held != Json::Null);
+        let mut read = Self {
             line,
             id: id.to_owned(),
             name: name.map(str::to_owned),
-            digest: digest.map(str::to_owned),
             text: question
                 .and_then(|held| held.member("text"))
                 .and_then(Json::as_str)
                 .map(str::to_owned),
+            label: None,
             verb,
             failed,
-            value: printed,
-            probability,
-            top,
-        })
+            value: None,
+            probability: None,
+            top: None,
+            options: Vec::new(),
+            number: None,
+            digest,
+            band: matches!(entry.member("threshold"), Some(Json::String(_))),
+        };
+        match verb {
+            Verb::Tag if !failed => return read.labels(question, value, distribution),
+            Verb::Score if !failed => {
+                read.options = names(question.and_then(|held| held.member("levels")))
+                    .filter(|levels| levels.len() >= 2)
+                    .ok_or(MeasureError::Ungradable(line))?;
+                read.number = match value {
+                    Some(Json::Number(number)) => number.as_f64(),
+                    _ => None,
+                };
+            }
+            Verb::Find if !failed => {
+                read.top = distribution.map(|held| top(line, held)).transpose()?;
+                read.options = distribution
+                    .and_then(|held| match held {
+                        Json::Object(members) => {
+                            Some(members.iter().map(|(unit, _)| unit.clone()).collect())
+                        }
+                        _ => None,
+                    })
+                    .unwrap_or_default();
+                if !matches!(value, None | Some(Json::Null)) {
+                    read.value = Some(Printed::Found);
+                }
+            }
+            Verb::Tag | Verb::Score | Verb::Find => {}
+            Verb::Decide | Verb::Choose | Verb::Rank => {
+                read.value = match value {
+                    Some(Json::Bool(_)) if verb == Verb::Choose && !failed => {
+                        return Err(MeasureError::Ungradable(line));
+                    }
+                    Some(Json::Bool(held)) => Some(Printed::Bool(*held)),
+                    Some(Json::String(text)) => Some(Printed::Option(text.clone())),
+                    None | Some(Json::Null) => None,
+                    Some(_) if failed || verb != Verb::Choose => None,
+                    Some(_) => return Err(MeasureError::Ungradable(line)),
+                };
+                read.probability = answer
+                    .and_then(|held| held.member("probability"))
+                    .filter(|held| **held != Json::Null)
+                    .map(|held| probability(line, held))
+                    .transpose()?;
+                read.top = distribution.map(|held| top(line, held)).transpose()?;
+            }
+        }
+        Ok(vec![read])
     }
 
-    /// True when the answer saved the probabilities a rule reads.
+    /// True when the answer saved what a rule reads.
     pub(crate) const fn has_probability(&self) -> bool {
         match self.verb {
-            Verb::Decide => self.probability.is_some(),
-            Verb::Choose => self.top.is_some(),
+            Verb::Decide | Verb::Tag | Verb::Rank => self.probability.is_some(),
+            Verb::Choose | Verb::Find => self.top.is_some(),
+            Verb::Score => self.number.is_some(),
         }
     }
 
-    /// `p(yes)` for `decide`, or the top probability for `choose`.
+    /// `p(yes)` for a yes/no answer, or the top probability for a pick.
     pub(crate) fn confidence(&self) -> Option<f64> {
         match self.verb {
-            Verb::Decide => self.probability.map(Probability::as_f64),
-            Verb::Choose => self.top.as_ref().map(|top| top.top),
+            Verb::Decide | Verb::Tag | Verb::Rank => self.probability.map(Probability::as_f64),
+            Verb::Choose | Verb::Find => self.top.as_ref().map(|top| top.top),
+            Verb::Score => None,
         }
+    }
+
+    /// The zero-based place of a level name among this answer's levels.
+    pub(crate) fn level(&self, name: &str) -> Option<usize> {
+        self.options.iter().position(|level| level == name)
     }
 
     /// What this answer says under the rule.
@@ -294,74 +389,60 @@ impl Answer {
     /// # Errors
     ///
     /// Returns [`MeasureError`] for a rule over an answer without
-    /// probabilities, or a band over an untied `choose` answer.
+    /// probabilities, a band over an untied `choose` answer, or a threshold
+    /// over a `score` or `find` answer.
     pub(crate) fn said(&self, rule: Rule) -> Result<Said<'_>, MeasureError> {
+        if matches!(rule, Rule::Threshold(_)) && matches!(self.verb, Verb::Score | Verb::Find) {
+            return Err(MeasureError::NoRule);
+        }
         if rule != Rule::AsRun && !self.has_probability() {
             return Err(MeasureError::NeedsProbabilities);
         }
-        if self.verb == Verb::Decide {
-            return Ok(match rule {
-                Rule::AsRun => match self.value {
-                    Some(Printed::Bool(true)) => Said::Yes,
-                    Some(Printed::Bool(false)) => Said::No,
-                    _ => Said::Unresolved,
-                },
+        match self.verb {
+            Verb::Decide | Verb::Tag | Verb::Rank => Ok(match rule {
                 Rule::Threshold(threshold) => match self.probability.map(|p| threshold.judge(p)) {
                     Some(Judged::Yes) => Said::Yes,
                     Some(Judged::No) => Said::No,
                     _ => Said::Unresolved,
                 },
-            });
-        }
-        if self.top.as_ref().is_some_and(|top| top.tied) {
-            return Ok(Said::Tied);
-        }
-        match rule {
-            Rule::AsRun => Ok(match &self.value {
-                Some(Printed::Option(option)) => Said::Option(option),
-                _ => Said::Unresolved,
+                Rule::AsRun | Rule::Levels(_) => match self.value {
+                    Some(Printed::Bool(true)) => Said::Yes,
+                    Some(Printed::Bool(false)) => Said::No,
+                    _ => Said::Unresolved,
+                },
             }),
-            Rule::Threshold(threshold) => {
-                let Some(cut) = threshold.cut_value() else {
-                    return Err(MeasureError::BandOnChoose);
+            Verb::Score => {
+                let cuts = match rule {
+                    Rule::Levels(cuts) => cuts,
+                    _ => LevelCuts::midpoints(self.options.len()),
                 };
-                Ok(match &self.top {
-                    Some(top) if top.top >= cut => Said::Option(&top.pick),
+                Ok(self
+                    .number
+                    .and_then(|number| self.options.get(level_at(number, &cuts)))
+                    .map_or(Said::Unresolved, |level| Said::Option(level)))
+            }
+            Verb::Find => Ok(match (&self.top, &self.value) {
+                (None, _) => Said::Unresolved,
+                (Some(top), Some(Printed::Found)) => Said::Option(&top.pick),
+                (Some(top), _) if top.tied => Said::Tied,
+                (Some(top), _) => Said::Option(&top.pick),
+            }),
+            Verb::Choose => {
+                if self.top.as_ref().is_some_and(|top| top.tied) {
+                    return Ok(Said::Tied);
+                }
+                let cut = match rule {
+                    Rule::Threshold(threshold) => {
+                        Some(threshold.cut_value().ok_or(MeasureError::BandOnChoose)?)
+                    }
+                    Rule::AsRun | Rule::Levels(_) => None,
+                };
+                Ok(match (cut, &self.value, &self.top) {
+                    (None, Some(Printed::Option(option)), _) => Said::Option(option),
+                    (Some(cut), _, Some(top)) if top.top >= cut => Said::Option(&top.pick),
                     _ => Said::Unresolved,
                 })
             }
         }
     }
-}
-
-fn probability(line: usize, value: &Json) -> Result<Probability, MeasureError> {
-    let Json::Number(number) = value else {
-        return Err(MeasureError::Probability(line));
-    };
-    number
-        .as_f64()
-        .and_then(|held| Probability::new(held).ok())
-        .ok_or(MeasureError::Probability(line))
-}
-
-fn top(line: usize, value: &Json) -> Result<Top, MeasureError> {
-    let Json::Object(members) = value else {
-        return Err(MeasureError::Probability(line));
-    };
-    let mut found: Option<Top> = None;
-    for (option, held) in members {
-        let p = probability(line, held)?.as_f64();
-        match &mut found {
-            Some(top) if p == top.top => top.tied = true,
-            Some(top) if p < top.top => {}
-            _ => {
-                found = Some(Top {
-                    top: p,
-                    pick: option.clone(),
-                    tied: false,
-                });
-            }
-        }
-    }
-    found.ok_or(MeasureError::Probability(line))
 }
