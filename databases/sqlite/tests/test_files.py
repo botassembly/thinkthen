@@ -85,5 +85,24 @@ say(warm=warm, decided=decided, first=first, second=second)
     expect(backend.close(), 3, "sends: model B asked again, and the renamed set read its cached answer")
 
 
+def test_warm_takes_the_banded_file_decide_uses() -> None:
+    """Ticket 0129: warm takes decide's banded file, and decide then reads the cache."""
+    backend = Backend()
+    folder = pathlib.Path(tempfile.mkdtemp(prefix="thinkthen-door-"))
+    banded = {"decide": "Is it red?", "true": "Red paint.", "false": "Any other colour.", "model": "judge-b", "threshold": "0.85:0.95"}
+    (folder / "banded.json").write_text(json.dumps(banded))
+    held = child(f"""
+db = connect()
+db.execute("CREATE TABLE t(body TEXT)")
+db.executemany("INSERT INTO t VALUES (?)", [("a red door",), ("a blue door",), ("a red door",)])
+warm = run(db, "SELECT thinkthen_warm('@{folder / 'banded.json'}', body) FROM t")
+decided = run(db, "SELECT thinkthen_decide('@{folder / 'banded.json'}', body) FROM t")
+inline = run(db, "SELECT thinkthen_warm(?, body) FROM t", ({json.dumps(banded)!r},))
+say(warm=warm, decided=decided, inline=inline)
+""", environment(backend))
+    expect(held, {"warm": [[2]], "decided": [[None], [None], [None]], "inline": [[2]]}, "the answers")
+    expect(backend.close(), 2, "sends: warm asks each distinct text once, and decide and the inline warm read the cache")
+
+
 if __name__ == "__main__":
     sys.exit(main(globals()))

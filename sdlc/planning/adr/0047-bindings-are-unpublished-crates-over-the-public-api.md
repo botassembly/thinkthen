@@ -33,7 +33,7 @@ Main is the spine (`sdlc/planning/one-line-plan-2026-09-24.md`), and each of the
 
 ## Amended 2026-09-25: the Rust Polars door and the Polars column table
 
-Ian ruled on 2026-09-24 that Rust Polars and Python Polars are both in 0.1 (`sdlc/planning/one-line-plan-2026-09-24.md`, afternoon rulings). That ruling overturns item 8's deferral of the Rust `Series` door. Ticket 0120 builds it as `thinkthen-polars` at `libraries/polars`, a binding like the others under items 1 to 7. Its `deny.toml` is the root file plus four named license exceptions, and `policy.py` checks that difference.
+Ian ruled on 2026-09-24 that Rust Polars and Python Polars are both in 0.1 (`sdlc/planning/one-line-plan-2026-09-24.md`, afternoon rulings). That ruling overturns item 8's deferral of the Rust `Series` door. Ticket 0120 builds it as `thinkthen-polars` at `libraries/polars`, a binding like the others under items 1 to 7. Its `deny.toml` is the root file plus four named license exceptions, and `policy.py` checks that difference. Ticket 0130 later moved the door into `thinkthen` (below).
 
 10. **The Polars column table.** Both Polars doors, 0120 in Rust and 0106 in Python, write a frame's new columns by this table. The issue `sdlc/issues/2026-09-25-public-library-api-gaps.md` holds its history.
 
@@ -46,6 +46,14 @@ Ian ruled on 2026-09-24 that Rust Polars and Python Polars are both in 0.1 (`sdl
 | failed | | the marker from `value_json`, such as `{"failed":{"kind":"backend","cause":"missing_probability"}}` |
 
 A column widens only when the same reply also holds a usable answer. The engine refuses a reply with no usable answer (`specification/annotate.md`), so a one-member set, a series call, or a request chunk whose only answer failed ends the call with a `Backend` error. A widened cell takes its text unchanged from `AnnotatedRecord::value_json`, the engine's one serializer. No door keeps its own table of failure causes. Ian can overturn the table.
+
+## Amended 2026-09-25: the Rust Polars door is a feature of `thinkthen`
+
+Ian ruled on 2026-09-25 that no separate Rust Polars crate exists (ruling 4 in `sdlc/planning/issue-backlog-2026-09-25.md`). Ticket 0130 moves the door into `thinkthen` behind the optional `polars` feature, off by default. It is no longer a binding under items 1 to 7. Ian can overturn this reading.
+
+- The door sits in `crates/thinkthen/src/public/frame.rs` and returns `thinkthen::Error`. With the feature on, the crate root gains `PolarsEngine` and a re-export of `polars`.
+- Its line in `sdlc/surfaces.txt` reads `feature`. The folder `libraries/polars` holds only `check.sh` and `README.md`. That check is the one lane that compiles Polars, and no rung passes `--all-features`.
+- The root `deny.toml` holds the four license exceptions, and the root ratchet counts the door's Rust. Item 10's table does not change.
 
 ## Why this is consistent with ADR 0017 and ADR 0037
 
@@ -97,7 +105,7 @@ These rulings lived only in the tag's `NOTES.md` (R2-29). Ian can overturn each.
 - `thinkthen_max_requests(n)` caps each engine call, not a statement, because each scalar row is a one-record call. Ian ruled on 2026-09-25 (`sdlc/planning/one-line-plan-2026-09-25.md`) for a process total, `thinkthen_max_requests_total(n)`, unset by default. Before each call the extension reads the requests its engine has sent. A spent total refuses as `usage` with no send. Otherwise a warm flush is cut to the remaining total, judged, and then refused. It holds to within one call's retries for the scalars and `thinkthen_warm`. A `thinkthen_recognize` or `thinkthen_relate` call counts as one record but may send several requests, so it can pass the total by that call's own requests as well. Calls running at the same time can each spend what remains, so the total can be exceeded by one call per thread in flight, plus retries. A forked child starts from zero.
 - `thinkthen_relate` reads entities from a named table's id, name, and kind columns (item 9).
 - Every call that can send runs on a detachable worker. On an interrupt the calling thread returns at once, and the detached worker finishes the requests it already sent. That worker is the known exception to ADR 0017's rule that no thread outlives a call. It lives at most the 30-second request timeout and holds its throttle permits until then.
-- `rusqlite` brings `foldhash` 0.2.0 under the Zlib license. The root `deny.toml` does not allow Zlib and cannot, because its tree never uses it. `databases/sqlite/deny.toml` equals the root file plus that one exception. Zlib is permissive and has no copyleft term.
+- `rusqlite` brings `foldhash` 0.2.0 under the Zlib license. Until ticket 0130 the root `deny.toml` could not name it, because its tree never used it. Since ticket 0130 the root `deny.toml` holds that exception, and SQLite uses the root file. Zlib is permissive and has no copyleft term.
 
 ## PostgreSQL (ticket 0111, 2026-09-25)
 
@@ -108,7 +116,7 @@ The PostgreSQL binding follows the list above with these recorded differences. I
 - Saved answers (decision 4). The tag's in-backend answer map retires. `thinkthen_warm` fills the engine's disk cache, and a later decide reads it.
 - Relate (decision 10). `thinkthen_relate` reads its query's rows through SPI and refuses the 256th row, a stricter cap than the unique-pair cap.
 - The key (decision 12). `thinkthen.api_key` is a `Userset` setting that is never read. A set value refuses the next call with 22023, and the value never reaches the log.
-- Deny. `databases/postgresql/deny.toml` is the root file plus an `ignore` for RUSTSEC-2021-0127 (`serde_cbor` under pgrx) and a Zlib exception for `foldhash`.
+- Deny. `databases/postgresql/deny.toml` is the root file plus an `ignore` for RUSTSEC-2021-0127 (`serde_cbor` under pgrx). Its Zlib exception for `foldhash` is now a root entry (ticket 0130).
 - Counters. Each engine counts its own sends, so `thinkthen_usage()` adds the counters of every engine the backend built. The binding keeps one engine per settings plan and records it right after the build, so a cancelled call's sends still count.
 - The request total. Ian ruled on 2026-09-25 that every SQL surface caps requests per process (`sdlc/planning/one-line-plan-2026-09-25.md`). `thinkthen.max_requests_total` is a `Suset` setting, -1 for unset. Each call reads what remains once. None left refuses with 22023 and no send, and a batch sends only what remains before it refuses. A new backend starts from zero.
 - Recognize. `thinkthen_recognize` takes a kinds array or a version-one spec, `'@names.json'`. The spec form carries the kinds' meanings and thresholds that the shared cases need.

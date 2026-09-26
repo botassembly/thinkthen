@@ -148,7 +148,7 @@ say([len(probe), len(name), edges(a)])
         )
         count, length, forged = got[0]
         expect([count, length], [1, len("thinkthen_instance_") + 32], "one probe of 32 hex characters")
-        expect(forged.split(": ", 1)[1], "thinkthen usage: this connection's database answers no loaded identity probe, so relate cannot find its own connection; LOAD the extension again on a writable database, since a read-only database cannot carry a probe and a released one lost it", "the forged relate")
+        expect(forged.split(": ", 1)[1], "thinkthen usage: this connection's database answers no loaded identity probe, so relate cannot find its own connection; reopen the database writable and LOAD the extension, since a read-only database cannot carry a probe and a released one lost it", "the forged relate")
 
 
 @case
@@ -224,6 +224,50 @@ say(answered)
             timeout=600,
         )
         expect(got, [200], "rounds answered")
+
+
+@case
+def warm_inside_a_relate_query_refuses_and_never_hangs():
+    """Ticket 0129 decision 4: relate holds the gate its nested warm would wait on."""
+    with Backend() as backend:
+        got = script(
+            """
+open(sys.argv[2] + "/q.json", "w").write('{"decide": "Is it a refund?"}')
+a = db(); staff(a, 2)
+query = f"SELECT id, name, kind FROM t, (SELECT thinkthen_warm(''@{sys.argv[2]}/q.json'', name) AS w FROM t) WHERE w > 0"
+try:
+    a.execute(f"SELECT count(*) FROM thinkthen_relate('{query}', ['works_for=person:organization'])").fetchall(); said = "answered"
+except Exception as error:
+    said = str(error).split("\\n")[0]
+say(said)
+""",
+            backend.base(),
+            timeout=60,
+        )
+        expect(got[0].split("thinkthen usage: ", 1)[-1], "thinkthen_warm cannot read '@file' while a relate query runs on this database; run it before or after the relate, or pass the file's JSON text", "the nested warm")
+        expect(backend.count(), 0, "counted sends")
+
+
+@case
+def warm_after_a_release_names_a_fix_that_works():
+    """Ticket 0129 decision 6: a released kept connection reads no '@file'."""
+    with Backend() as backend:
+        got = script(
+            """
+open(sys.argv[2] + "/q.json", "w").write('{"decide": "Is it a refund?"}')
+a = db()
+a.execute("SELECT * FROM thinkthen_test_hook_reap()").fetchall()
+try:
+    said = a.execute(f"SELECT thinkthen_warm('@{sys.argv[2]}/q.json', 'refund now')").fetchone()[0]
+except Exception as error:
+    said = str(error).split("\\n")[0]
+say(said)
+""",
+            backend.base(),
+            extension=HOOKS,
+        )
+        expect(got[0].split(": ", 1)[-1], "thinkthen usage: thinkthen_warm cannot read '@file' here, because this database's kept connection was released when its last connection closed; reopen the database and LOAD the extension, or pass the file's JSON text", "the released warm")
+        expect(backend.count(), 0, "counted sends")
 
 
 if __name__ == "__main__":

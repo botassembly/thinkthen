@@ -2,13 +2,11 @@
 
 use std::collections::BTreeMap;
 
+use crate::public::{Annotated, AnnotatedRecord, Answer, Error, NamedAnnotation, QuestionKind};
 use polars::prelude::{
     DataType, IntoSeries, ListBuilderTrait, ListStringChunkedBuilder, NamedFrom, Series,
 };
 use serde_json::value::RawValue;
-use thinkthen::{Annotated, AnnotatedRecord, Answer, QuestionKind};
-
-use crate::Error;
 
 /// Where a column goes. A tag column in a frame holds the JSON array text,
 /// as the Python door writes it. A tag series is a `List(String)`.
@@ -23,7 +21,7 @@ pub(crate) enum Shape {
 /// refuses before any request.
 pub(crate) fn texts(column: &Series) -> Result<impl Iterator<Item = &str> + '_, Error> {
     let refused = || {
-        Error::Usage(format!(
+        Error::usage(format!(
             "the column {} is {}, not text",
             column.name(),
             column.dtype()
@@ -34,7 +32,7 @@ pub(crate) fn texts(column: &Series) -> Result<impl Iterator<Item = &str> + '_, 
     }
     let strings = column.str().map_err(|_| refused())?;
     if strings.null_count() > 0 {
-        return Err(Error::Usage(
+        return Err(Error::usage(
             "the column holds nulls; the engine needs text, and NA rows are the caller's to drop"
                 .to_owned(),
         ));
@@ -69,8 +67,8 @@ pub(crate) fn answered(
             record
                 .values()
                 .get(place)
-                .map(thinkthen::NamedAnnotation::value)
-                .ok_or_else(|| Error::Defect(format!("a record has no member {name}")))
+                .map(NamedAnnotation::value)
+                .ok_or_else(|| Error::defect(&format!("a record has no member {name}")))
         })
         .collect::<Result<Vec<_>, _>>()?;
     if values
@@ -84,7 +82,7 @@ pub(crate) fn answered(
             .collect::<Result<Vec<_>, _>>()?;
         return Ok(Series::new(name.into(), cells));
     }
-    let mismatch = || Error::Defect(format!("the member {name} answered another kind"));
+    let mismatch = || Error::defect(&format!("the member {name} answered another kind"));
     let series = match (kind, shape) {
         (QuestionKind::Decide, _) => {
             let cells = values.iter().map(|value| match value {
@@ -150,8 +148,8 @@ fn widened(
 fn member(name: &str, record: &AnnotatedRecord<&str>) -> Result<Box<RawValue>, Error> {
     let json = record.value_json();
     let mut members: BTreeMap<String, Box<RawValue>> = serde_json::from_str(&json)
-        .map_err(|error| Error::Defect(format!("the record's JSON did not parse: {error}")))?;
+        .map_err(|error| Error::defect(&format!("the record's JSON did not parse: {error}")))?;
     members
         .remove(name)
-        .ok_or_else(|| Error::Defect(format!("the record's JSON has no member {name}")))
+        .ok_or_else(|| Error::defect(&format!("the record's JSON has no member {name}")))
 }

@@ -13,13 +13,13 @@ use std::collections::BTreeMap;
 
 use conformance_backend::Backend;
 use serde_json::value::RawValue;
+use thinkthen::PolarsEngine;
+use thinkthen::polars::prelude::{AnyValue, DataFrame, IntoColumn, Series};
 use thinkthen::{
     Answer, CallOptions, Engine, Judgment, LoadedQuestion, Question, QuestionKind, QuestionSet,
 };
-use thinkthen_polars::PolarsEngine;
-use thinkthen_polars::polars::prelude::{AnyValue, DataFrame, IntoColumn, Series};
 
-const CASES: &str = include_str!("../../../conformance/cases.json");
+const CASES: &str = include_str!("../../../../conformance/cases.json");
 
 const RUN: &[&str] = &[
     "01-decide-yes-captured",

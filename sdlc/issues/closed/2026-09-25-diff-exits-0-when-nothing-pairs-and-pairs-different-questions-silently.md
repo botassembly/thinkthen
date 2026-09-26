@@ -1,6 +1,6 @@
 # diff exits 0 when nothing pairs, and pairs different questions silently
 
-Status: Open
+Status: Closed by Quick Fix qf-diff-warnings. It built options 2 and 4. Options 1, 3, 5, and 6 are declined for now. Options 1 and 5 would change the exit contract. Options 3 and 6 would move the goldens and repeat what the warnings say. Ian can overturn each. The record is `sdlc/records/qf-diff-warnings.md`.
 
 Filed on 2026-09-25 from experiment 259, a check of the ThinkThen talk's slide claims. The build under test was thinkthen 0.0.1 at e70bddab. Main was at 365fc938, and no command code changed between them. No key was used, and no request left the machine.
 

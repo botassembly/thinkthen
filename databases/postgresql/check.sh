@@ -372,6 +372,16 @@ warm_then_decide_sends_nothing() {
 	same "$(bcount)" 2000
 }
 check warm_then_decide_sends_nothing
+# Ticket 0129: warm takes the banded file decide uses, and decide then reads the cache.
+warm_takes_the_banded_file_decide_uses() {
+	fresh generic
+	pairs="FROM generate_series(1, 20) g"
+	same "$(q -c "SELECT thinkthen_warm('@refund.json', 'refund ' || g) $pairs")" 20
+	same "$(bcount)" 20
+	same "$(q -c "SELECT count(*) $pairs WHERE thinkthen_decide('@refund.json', 'refund ' || g)")" 20
+	same "$(bcount)" 20
+}
+check warm_takes_the_banded_file_decide_uses
 another_model_sends_again() {
 	fresh generic
 	q -c "SELECT count(*) FROM generate_series(1, 50) g WHERE thinkthen_decide('{\"decide\":\"Is it red?\",\"model\":\"judge-a\"}', 'item ' || g)" \

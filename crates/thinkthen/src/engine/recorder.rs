@@ -139,7 +139,15 @@ impl Recorder {
         }
         let opened = cache_lock::shared_folder_cancelled(folder, cancel).map_err(storage)??;
         if !self.checked.load(Ordering::Acquire) {
-            identity::check(folder, &exchange.backend_identity(), self.recording)?;
+            identity::check(folder, &exchange.backend_identity(), self.recording).map_err(
+                |error| match error {
+                    Error::RecordingBackendMismatch(..) => Error::RecordingBackendMismatch(
+                        exchange.url().as_str().to_owned(),
+                        self.private_default,
+                    ),
+                    other => other,
+                },
+            )?;
             self.checked.store(true, Ordering::Release);
         }
         Ok(Some(opened))

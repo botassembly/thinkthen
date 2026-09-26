@@ -186,7 +186,7 @@ fn a_folder_of_another_backend_refuses_each_call() {
     for call in ["first", "second"] {
         let refused = ask(&other, call, &cancel);
         assert!(
-            matches!(refused, Err(Error::RecordingBackendMismatch)),
+            matches!(refused, Err(Error::RecordingBackendMismatch(..))),
             "{call}: {refused:?}"
         );
     }

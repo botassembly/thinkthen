@@ -55,7 +55,7 @@ python3 tools/source_checks.py
 cargo deny --locked --offline --manifest-path Cargo.toml check --config deny.toml advisories bans licenses sources
 planted=$(mktemp)
 trap 'rm -f -- "$planted"' EXIT
-sed 's/^exceptions = \[{ crate = "zlib-rs".*/exceptions = []/' deny.toml >"$planted"
+sed '/{ crate = "zlib-rs"/d' deny.toml >"$planted"
 set +e
 cargo deny --locked --offline --manifest-path Cargo.toml check --config "$planted" licenses >"$planted.out" 2>&1
 code=$?

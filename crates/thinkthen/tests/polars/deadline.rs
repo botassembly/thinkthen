@@ -13,9 +13,9 @@ mod common;
 use std::time::{Duration, Instant};
 
 use conformance_backend::Backend;
+use thinkthen::PolarsEngine;
+use thinkthen::polars::prelude::{NamedFrom, Series};
 use thinkthen::{CallOptions, ErrorKind, Question};
-use thinkthen_polars::PolarsEngine;
-use thinkthen_polars::polars::prelude::{NamedFrom, Series};
 
 #[test]
 fn a_deadline_stops_a_score_column_mid_batch() {
