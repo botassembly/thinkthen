@@ -26,7 +26,8 @@ case $TARGET in
 esac
 # A built file never names the builder's home, as each surface check requires.
 RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
-export RUSTFLAGS
+CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$HOME=/build"
+export RUSTFLAGS CFLAGS
 stage=$(mktemp -d)
 trap 'rm -rf -- "$stage"' EXIT
 
