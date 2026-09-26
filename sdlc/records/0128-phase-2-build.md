@@ -1,6 +1,6 @@
 # 0128 Phase 2 build: pack and smoke on Linux
 
-Builder: Claude (Opus subagent), 2026-09-26, on `ticket/0128-phase-2-pack-and-smoke` in lane `worktrees/thinkthen-lane-1`, from `origin/main` at `f43bfe91`. `origin/main` at `d410ef4a`, which holds ticket 0137 and the design fixes, merged cleanly at `13712cdd`. `origin/main` at `0ec897e1`, which holds tickets 0134 and 0139, merged cleanly at `98499261`. After the code review, `origin/main` merged cleanly three more times: `b43fcd8a` (tickets 0135 and 0142) at `a70d806c`, `851f96fc` at `d989b866`, and `7850db3f` (ticket 0141) at `145e298a`, the head of the final run. This build took no outward step: no publish, no tag, no release, and no workflow dispatch. Ian can overturn every decision below.
+Builder: Claude (Opus subagent), 2026-09-26, on `ticket/0128-phase-2-pack-and-smoke` in lane `worktrees/thinkthen-lane-1`, from `origin/main` at `f43bfe91`. `origin/main` at `d410ef4a`, which holds ticket 0137 and the design fixes, merged cleanly at `13712cdd`. `origin/main` at `0ec897e1`, which holds tickets 0134 and 0139, merged cleanly at `98499261`. After the code review, `origin/main` merged cleanly four more times: `b43fcd8a` (tickets 0135 and 0142) at `a70d806c`, `851f96fc` at `d989b866`, `7850db3f` (ticket 0141) at `145e298a`, and `7443d69d` at `98f6fa44`. The final run went over `7cd8acda`, with `origin/main` still at `7443d69d`. This build took no outward step: no publish, no tag, no release, and no workflow dispatch. Ian can overturn every decision below.
 
 ## Outcome
 
@@ -32,7 +32,7 @@ Every Linux `x86_64` release file packs, installs into a fresh prefix, and passe
     - DuckDB's installed mode points `THINKTHEN_CONFORMANCE_CASES` at a copy of the shared cases without the one internal-invariant case. A release file carries no test hook, so the full check alone runs that case. `conformance.py` and its ratchet stay as on `main`.
     - PostgreSQL's `runtime_install` takes a module folder and an extension folder. `check.sh` and `package.sh` share one rule: `PG_CONFIG`, else `/usr/bin/pg_config`, and `${CARGO_TARGET_DIR:-target}/release/thinkthen-pg16`. Both read the module and extension folders from `pg_config`. The normal check copies the shipped build to that folder's `-shipped` twin, which `package.sh --reuse` stages. Installed mode runs `examples`, `slide_sample`, `recognize_and_relate_as_drawn`, `conformance`, and `the_fake_key_stays_in_the_environment`.
     - `build-wheel.sh` builds in a mktemp folder, as on `main`, and copies the wheel to `target/wheels`. The TypeScript check writes its real `npm pack` to `target/pack` in place of the dry run.
-   `sdlc/scripts/installed.sh` holds the shared lines. It sits beside `verdict.sh`. `installed_tests` makes the test copy, `installed_unpack` unpacks the file, and `backend_start` starts the loopback backend for `surfaces` and `release-smoke`. Each folder it deletes is one it made with `mktemp` in the same run, and `installed_remove` refuses any other path. Ruby's copy sits inside the check's own plant folder, which the check's existing cleanup removes.
+   `sdlc/scripts/installed.sh` holds the shared lines. It sits beside `verdict.sh`. `installed_tests` makes the test copy, `installed_unpack` unpacks the file, and `backend_start` starts the loopback backend for `surfaces` and `release-smoke`. Each folder it deletes is one it made with `mktemp` in the same run, and `installed_remove` refuses any other path. `installed_folder` stops the script when `mktemp` fails. It refuses a folder whose path holds whitespace or a glob character, the current folder, or the root, so the list of made folders holds only safe paths. It takes over the script's EXIT trap, and an interrupt or TERM exits so that trap runs. Ruby's copy sits inside the check's own plant folder, which the check's existing cleanup removes.
 4. **The rung.** `surfaces` records each surface that did not run. When every surface passed, it runs `release-pack --reuse` for the host's target into a mktemp folder and then `release-smoke`, and prints `surfaces: pass release smoke`. When a surface did not run, it prints `surfaces: not run release smoke (<surface> did not run)`. `--release` has already failed that surface. `surfaces` and `release-smoke` both source `verdict.sh`, and neither calls the other. `release-smoke` builds the loopback backend online, as `surfaces` always has.
 5. **The shipped-file scan.** `release-smoke` unpacks every library file and fails it when any file inside holds the builder's `$HOME` or `thinkthen_panic_probe`. The checks' own `shipped_lacks_probe` and `no_home_in_library` read their builds, and this scan reads what a user installs. The rung packs the command's debug build, so the scan skips the command archive. Its first run found three real leaks, each fixed in the build:
     - The Python wheel's CycloneDX SBOM named each path crate by its absolute folder. `pyproject.toml` turns the Rust SBOM off, and `build-wheel.sh` now checks every file in the wheel for the home path.
@@ -78,35 +78,35 @@ Each plant ran, went red, and was restored.
 | The first-run sample without its recording | smoke exit 1: "the first-run block printed '', not true" |
 | The README block without `--replay`, run with a fake key and the loopback address | smoke exit 1: "the first-run block reached the loopback backend" |
 | `SQLITE_AMALGAMATION` names a missing folder, so the SQLite check exits 77 | smoke exit 1: "FAIL databases/sqlite … (not run)" |
-| `installed_remove` and `installed_tests` get the lane path, with `rm` replaced by a recorder | The guard refused the lane and a path under it with exit 1. `installed_tests "$lane" libraries/typescript` removed only its own mktemp folder at exit |
+| `installed_remove` and `installed_tests` get the lane path, with `rm` replaced by a recorder, against `8f735b81` and again against `0228f809` | The guard refused the lane and a path under it with exit 1. `installed_tests "$lane" libraries/typescript` removed only its own mktemp folder at exit. `scratch` pointed at the lane was refused |
+| `installed_folder` with `TMPDIR=/nonexistent`, run from the lane with `rm` replaced by a recorder | Before `0228f809`: `folder` became the lane, and the exit trap recorded `rm -rf` of the lane. After: exit 1 at `mktemp`, and no removal recorded. `installed_tests` gave the same result |
+| `installed_folder` with `TMPDIR` a folder whose name holds a space | exit 1: "installed.sh: refusing …/with space/tmp.…", and no removal recorded |
 | A `thinkthen_panic_probe` function appended to the packed PostgreSQL SQL file | smoke exit 1: "FAIL thinkthen-postgresql16-… (the builder's home or the test probe is in extension/thinkthen--0.0.1.sql)" |
 | The builder's home appended to the packed C `libthinkthen.so` | smoke exit 1: "FAIL thinkthen-c-… (the builder's home or the test probe is in lib/libthinkthen.so)" |
 | The wheel built with the Rust SBOM on | `build-wheel.sh` exit 1: "thinkthen-0.0.1.dist-info/sboms/thinkthen-python.cyclonedx.json name the builder's home" |
 | The gem built by `build.sh` without the remap | 25 home paths in `lib/thinkthen/thinkthen.so`, and 0 with it |
 
-The guard plant ran before any script called the helper. Before each commit, a search of the diff found no plant text.
+The guard plants ran before any script called the helper. The `TMPDIR` plants passed before the next `surfaces` or `release-smoke` run. Before each commit, a search of the diff found no plant text.
 
 ## Rungs
 
-The final run went over `145e298a`, once each, with `THINKTHEN_API_KEY` unset.
+The final run went over `7cd8acda`, once each, with `THINKTHEN_API_KEY` unset. Each rung took the heavy lock itself.
 
 | Rung | Result | Time |
 | --- | --- | --- |
-| `install` | exit 0 | 9 s |
-| `lint` | exit 0 | 159 s |
-| `test` | exit 0 | 126 s |
-| `spec` | exit 0 | 138 s |
-| `surfaces` | exit 0: all ten surfaces pass, then the release smoke passes all nine files | 769 s |
+| `install` | exit 0, most of it waiting for another lane's heavy lock | 291 s |
+| `lint` | exit 0 | 94 s |
+| `test` | exit 0 | 102 s |
+| `spec` | exit 0 | 22 s |
+| `surfaces` | exit 0: all ten surfaces pass, then the release smoke passes all nine files | 501 s |
 
 In the smoke, DuckDB's installed conformance ran 53 cases, and the PostgreSQL installed run passed 5 of 5 steps. The command's check ran `--version` and the README's first-run block, which printed `true` with the loopback count unchanged.
 
 Earlier runs:
 - `13712cdd`: `lint` failed, because comments in TypeScript's `backend.mjs` put `ratchet.mjs.json` at 743 against 742. Commit `2e52a2d0` removed them.
-- `98499261`: all five passed. This was the hand-back head `ade15093` before the code review.
+- `98499261`: all five passed. This was the hand-back head `ade15093` before the first code review.
 - `a70d806c`: `surfaces` failed. The new scan found the builder's home in the C archive's `libthinkthen.a` and `libthinkthen.so`, which led to the C remap.
-- `d989b866`: all five passed. `origin/main` then gained ticket 0141, so the ladder ran again on `145e298a`.
-
-After the final run, `origin/main` gained `7443d69d`, which changes two `sdlc/issues` pages only. It merged cleanly, and the ladder did not run again.
+- `d989b866` and `145e298a`: all five passed. `145e298a` was the second hand-back. Its re-review found the failed-`mktemp` hole in `installed_folder`.
 
 ## Budgets
 
@@ -117,8 +117,8 @@ Nonblank lines.
 | `sdlc/scripts/release-pack` | 180 | 152 |
 | `databases/postgresql/package.sh` | 70 | 33 |
 | `sdlc/scripts/release-smoke` | 150 | 94 |
-| The installed-file mode, each `check.sh` | 20 added | Against `origin/main`: C +19 −2, SQLite +17 −2, DuckDB +23 −7, Python +17, TypeScript +20 −1, Ruby +19, PostgreSQL +19 −7, `runtime.sh` +4 −3. DuckDB is over; see decision 7 |
-| The installed-file mode, total | 180 | 138 added, 22 removed, 116 net. The shared helper `installed.sh` adds 72 |
+| The installed-file mode, each `check.sh` | 20 added | Against `origin/main`: C +28 −11, SQLite +17 −2, DuckDB +23 −7, Python +17, TypeScript +20 −1, Ruby +19, PostgreSQL +23 −11, `runtime.sh` +4 −3. C, DuckDB, and PostgreSQL are over; see decision 7 |
+| The installed-file mode, total | 180 | 151 added, 35 removed, 116 net. The shared helper `installed.sh` adds 79 |
 | The container build scripts | 80 | 68 |
 | The `surfaces` rung | +3 minutes warm | The pack takes seconds, and the smoke took 42 seconds over nine files |
 
@@ -134,7 +134,7 @@ Ian can overturn each one.
 4. **The container shares the current user's crate registry.** It builds offline from the locks already fetched, and the release workflow fetches first. cargo-pgrx is the one fetch, and it builds without OpenSSL.
 5. **PGDG's `postgresql16` and `postgresql16-libs` RPMs join `-devel` and `-server`.** `pg_config` lives in `postgresql16`, and the ticket's table now says so.
 6. **The wheel ships no Rust SBOM.** maturin's CycloneDX SBOM names each path crate by its absolute folder, and this build found no maturin 1.15.0 setting that remaps it. An SBOM without build paths can return in a later ticket.
-7. **DuckDB's check adds 23 lines, over its 20.** Its stock-CLI step moves into a function that both modes call. Copying the step would add more lines.
+7. **Three checks add more than 20 lines.** DuckDB adds 23, because its stock-CLI step moves into a function that both modes call. Copying the step would add more. C adds 28 and PostgreSQL 23, because their build lines sit indented inside `[ -n "${THINKTHEN_ARTIFACT:-}" ] || { … }` blocks, as the re-review asked. Net, each adds 17, 16, and 12 lines.
 8. **Build outputs refresh without a delete.** Every script this phase adds deletes only a folder it made with `mktemp`, per rule 11 of `sdlc/planning/worktrees.md`. `build-wheel.sh`, the TypeScript pack, and PostgreSQL's shipped tree copy over their `target/` outputs in place.
 
 ## Lane 1 deleted during the review fixes
