@@ -53,7 +53,9 @@ Every plant ran, turned its check red, and was restored. Each restored file was 
 | R helper without `-i` | Red. "children r: FAIL the child" |
 | `heavy-lock` without its unset loop | Red. "lint: heavy-lock left a stray THINKTHEN_ name or dropped its own" |
 | `heavy-lock` without `THINKTHEN_DUCKDB_CLI` in its kept names | Red. The lint probe read no value for it |
-| `children` on the tree: a new `spawnSync` added to the exempt `fork.test.mjs` | Red. The check named the new line. Before the review fix, the file's exemption hid it |
+| `children` on the tree: a new `spawnSync` added to the exempt `fork.test.mjs` | Red. The check named the new line. Before the review fix, the file's exemption hid it. It went red again after entries moved from line numbers to line text |
+| `children` on the tree: the pinned `fork(` line copied to the end of `fork.test.mjs` | Red. The check named both copies and reported the exemption matched nothing |
+| `children` on the tree: two unrelated lines added above the pinned `fork(` line | Green, as meant. `children: 0 findings` |
 | `children --self-test`: the TypeScript form back to a bare name only | Red. The `cp.spawn(` and `child_process.execSync(` case failed, 37/38 cases hold |
 | `children --self-test`: the Ruby form back to a parenthesis only | Red. The `system "ls"` case failed, 37/38 cases hold |
 | `test_secrecy.py`: `dict(os.environ)` restored in `conftest.py` `child_env` | Red. The child printed `True` for the planted `FAKE_SERVICE_API_KEY`, and the assert failed |
@@ -80,7 +82,7 @@ The secrecy tests ran three times each with main's listener and this branch's, i
 
 - The Rust refusal tests pin the sentence with `#[should_panic]`, once for `THINKTHEN_BASE_URL` and once for the lowercase `db_password`.
 - The review split the listener's one 2-second timeout in two. A peek that sees no new bytes for 2 seconds still falls into the full read. A connection that sends nothing is dropped after 8 seconds, so a client the scheduler pauses under load keeps its reply. The listener tests wait 20 seconds for an answer.
-- EXEMPT and PENDING entries in the children check each name one file, one rule, and the exact lines they allow. A new finding in an exempt file fails. An entry whose line no longer holds its finding fails and asks for a fix. Those line numbers move when another ticket edits the file, and that ticket then updates the entry.
+- EXEMPT and PENDING entries in the children check each name one file, one rule, one line's stripped text, and how many lines of the file hold that text. A new finding in an exempt file fails. A copy of the pinned line changes the count, so both copies fail and the entry reports it matches nothing. An edit elsewhere in the file moves nothing, so another ticket's unrelated edit keeps the check green. A ticket that rewrites a pinned line itself updates its entry, and the stale-entry check says so.
 - The children check now also finds a TypeScript spawn called through a module name, such as `cp.spawn(`, and a Ruby `system`, `spawn`, `exec`, or `Open3` call written without parentheses.
 - `child::CARGO` holds the nested cargo list once. Three sites share it.
 - The ticket's Excluded table listed `probes/` and `databases/duckdb/vendor/`. The check holds no entry for either, because neither holds a finding. An entry with no finding would fail the stale-entry check.
@@ -90,7 +92,7 @@ The secrecy tests ran three times each with main's listener and this branch's, i
 
 | Part | Budget | Nonblank lines |
 | --- | --- | --- |
-| `sdlc/scripts/children` | 260 | 271 after the review fixes |
+| `sdlc/scripts/children` | 260 | 281 after the review fixes |
 | `test_deadline/child.rs` and its test | 45 | 52 after the review fixes |
 | Each helper in `conformance/children/` | 30 | 15 to 19 |
 | `test.sh` and its four checks | 120 | 87 |
@@ -104,7 +106,7 @@ The secrecy tests ran three times each with main's listener and this branch's, i
 | Part 4 docstring | 6 | 6 |
 | `sdlc/ratchet.json` rise | 280 | 194 after the review fixes |
 
-The coordinator's code review accepted the growth its five fixes needed: the children check, the Rust helper's test, and the `lint` rung went past their budgets. The build first crossed three budgets: the Rust helper, `listener.rs`, and the secrecy files. It trimmed doc comments and folded repeated lists until each fit. The builder looked for duplication first in the spawn blocks of `tests/backend/harness/mod.rs` and `tests/support/measure.rs`, and in `serve_script` beside `serve_kept`. The harness spawns already clear the environment. `serve_script` and `serve_kept` now share the drift answer for an impossible reset.
+Coordinator ruling, 2026-09-25: the children script (271 of 260), child.rs with its test (52 of 45), and the lint rung (13 of 12) run over budget because the code review asked for the added self-tests, the second refusal test, and the DuckDB probe. Accepted. The re-check then moved the entries from line numbers to line text, and the children script now holds 281 of 260 nonblank lines. child.rs with its test stays at 52, and the lint rung stays at 13. The build first crossed three budgets: the Rust helper, `listener.rs`, and the secrecy files. It trimmed doc comments and folded repeated lists until each fit. The builder looked for duplication first in the spawn blocks of `tests/backend/harness/mod.rs` and `tests/support/measure.rs`, and in `serve_script` beside `serve_kept`. The harness spawns already clear the environment. `serve_script` and `serve_kept` now share the drift answer for an impossible reset.
 
 ## Ratchets
 

@@ -24,25 +24,33 @@ LANGUAGES = {".rs": "Rust", ".py": "Python", ".mjs": "TypeScript", ".js": "TypeS
 COMMENT = {"Rust": "//", "TypeScript": "//", "Python": "#", "Ruby": "#", "R": "#"}
 
 # EXCLUDED names a path prefix whose files are not tests, and why. EXEMPT and
-# PENDING name one file, one rule, and the exact lines they allow, and why. A
-# new finding in such a file still fails. An entry that allows nothing fails
-# too, so no table can rot.
+# PENDING name one file, one rule, one line's stripped text, and how many lines
+# of the file hold that text, and why. A new finding in such a file still
+# fails, and so does a copy of the pinned line. An edit elsewhere in the file
+# moves nothing. An entry that allows nothing fails too, so no table can rot.
 EXCLUDED = {
     "sdlc/scripts/": "the gate's own tools run cargo, git, and node in the developer's toolchain",
     "site/": "the site build is not a test",
     "libraries/r/thinkthen/tools/": "the R package's install-time tools are not tests",
 }
 EXEMPT = {
-    ("libraries/typescript/tests/fork.test.mjs", "inherits", (19,)):
+    ("libraries/typescript/tests/fork.test.mjs", "inherits",
+     "const forked = fork(${script('fork_child.mjs')}, { execArgv: [] });", 1):
         "the fork runs inside a child the helper already built",
-    ("crates/thinkthen/src/cli/conformance_tests/command.rs", "reads", (237,)):
+    ("crates/thinkthen/src/cli/conformance_tests/command.rs", "reads", "let seen = std::env::vars_os()", 1):
         "its form child scans its own whole environment, and that reading is the probe's evidence",
 }
 PENDING = {
-    ("crates/thinkthen/tests/relate_edge.rs", "inherits", (14,)): "0123 and 0126 own relate and its help text",
-    ("databases/postgresql/src/files.rs", "inherits", (243,)): "0129 owns databases/*/src",
-    ("databases/duckdb/tools/databases_suite.py", "inherits", (117,)): "0129 owns this suite",
-    ("databases/duckdb/tools/source_checks.py", "inherits", (59, 167)): "0129 owns these checks",
+    ("crates/thinkthen/tests/relate_edge.rs", "inherits",
+     'run::output(Command::new(env!("CARGO_BIN_EXE_thinkthen")).args(["relate", "--help"]))', 1):
+        "0123 and 0126 own relate and its help text",
+    ("databases/postgresql/src/files.rs", "inherits", 'let status = std::process::Command::new("mkfifo")', 1):
+        "0129 owns databases/*/src",
+    ("databases/duckdb/tools/databases_suite.py", "inherits",
+     'freed = subprocess.run([sys.executable, "-c", f"import duckdb; duckdb.connect({path!r}).close()"]).returncode', 1):
+        "0129 owns this suite",
+    ("databases/duckdb/tools/source_checks.py", "inherits", "subprocess.run(", 1): "0129 owns these checks",
+    ("databases/duckdb/tools/source_checks.py", "inherits", "tree = subprocess.run(", 1): "0129 owns these checks",
 }
 TABLES = {"excluded": EXCLUDED, "exempt": EXEMPT, "pending": PENDING}
 
@@ -189,25 +197,26 @@ def check(root, tables):
     for path in tracked(root):
         if pathlib.PurePath(path).suffix not in LANGUAGES or not (root / path).is_file():
             continue
-        found = findings(path, (root / path).read_text(encoding="utf-8", errors="replace"))
+        text = (root / path).read_text(encoding="utf-8", errors="replace")
+        found = findings(path, text)
+        lines = [line.strip() for line in text.split("\n")]
         prefix = next((prefix for prefix in tables.get("excluded", {}) if path.startswith(prefix)), None)
         if prefix is not None:
             used.update([prefix] if found else [])
             continue
         for number, rule in found:
-            entry = next((key for kind in ("exempt", "pending") for key in tables.get(kind, {})
-                          if key[:2] == (path, rule) and number in key[2]), None)
-            if entry is None:
-                out.append(said(path, number, rule))
+            pinned = (path, rule, lines[number - 1], lines.count(lines[number - 1]))
+            if any(pinned in tables.get(kind, {}) for kind in ("exempt", "pending")):
+                used.add(pinned)
             else:
-                used.add((entry, number))
+                out.append(said(path, number, rule))
     for kind, table in tables.items():
         for key in table:
             if kind == "excluded" and key not in used:
                 out.append(f"children: {key} is excluded but holds no finding; remove the entry")
-            elif kind != "excluded" and any((key, number) not in used for number in key[2]):
-                out.append(f"children: {key[0]} is {kind} for {key[1]} at lines {list(key[2])}, "
-                           "but a line holds no such finding; fix the entry")
+            elif kind != "excluded" and key not in used:
+                out.append(f"children: {key[0]} is {kind} for {key[1]} at `{key[2]}` held {key[3]} "
+                           "time(s), but no such finding matches; fix the entry")
     return out
 
 
@@ -278,13 +287,14 @@ def self_test():
             print(f"children self-test: {relative}: expected {expected}, got {actual}", file=sys.stderr)
     with tempfile.TemporaryDirectory() as tmp:
         root = pathlib.Path(tmp)
-        (root / "held.py").write_text('subprocess.run(["x"])\nsubprocess.run(["y"])\n', encoding="utf-8")
+        (root / "held.py").write_text('x = 1\nsubprocess.run(["x"])\nsubprocess.run(["y"])\n', encoding="utf-8")
         actual = check(root, {"excluded": {"gone/": "a fixture"},
-                              "pending": {("held.py", "inherits", (1, 3)): "a fixture"}})
-    expected = ["children: held.py:2: this child inherits the whole environment; build it with the Python child helper",
+                              "pending": {("held.py", "inherits", 'subprocess.run(["x"])', 1): "a fixture",
+                                          ("held.py", "inherits", 'subprocess.run(["z"])', 1): "a fixture"}})
+    expected = ["children: held.py:3: this child inherits the whole environment; build it with the Python child helper",
                 "children: gone/ is excluded but holds no finding; remove the entry",
-                "children: held.py is pending for inherits at lines [1, 3], but a line holds no such finding; "
-                "fix the entry"]
+                "children: held.py is pending for inherits at `subprocess.run([\"z\"])` held 1 time(s), "
+                "but no such finding matches; fix the entry"]
     if actual != expected:
         bad += 1
         print(f"children self-test: tables: expected {expected}, got {actual}", file=sys.stderr)
