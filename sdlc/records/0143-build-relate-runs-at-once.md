@@ -83,11 +83,23 @@ Nonblank lines against `origin/main` at `7850db3f`.
 
 ## Ladder
 
-LADDER
+The first run at `d448aa30` found four failures. Lint: the DuckDB Python ratchet. Test: `different_models_across_chunks_keep_the_safe_failure`, which read canned replies in arrival order. Surfaces: the SQLite relate interrupt test counted 2 sends where it wanted 1, and the Polars rung's clippy found `ordered` nested too deep. The fixes are under Tests and Budgets above.
+
+After the fixes and the merge of `origin/main` at `7850db3f`, each rung ran once at `ed250b46`, called directly.
+
+| Rung | Result |
+| --- | --- |
+| `install` | exit 0, 5 s |
+| `lint` | exit 0, 167 s; ratchet 68,036 of 68,036 |
+| `test` | exit 0, 151 s; 947 passed, 0 failed across 36 test binaries |
+| `spec` | exit 0, 162 s; demos 21 green, 0 red |
+| `surfaces` | exit 0, 1,266 s; Rust, C, Python, TypeScript, Ruby, R, DuckDB, SQLite, PostgreSQL, and Polars pass |
+
+`origin/main` later gained `7443d69d`, which files two issues and touches no code.
 
 ## Lane size
 
-The lane measured 9.7G before the build and LANESIZE after it.
+The lane measured 9.7G before the build and 11G after it.
 
 ## Deferred gaps
 
