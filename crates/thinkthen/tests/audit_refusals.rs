@@ -63,7 +63,7 @@ const UNGRADABLE: &str = "results line 1 holds an answer audit cannot grade; aud
 const TWICE: &str = "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":true,\"question\":{\"text\":\"secret-text\"}}\n{\"input\":{\"id\":\"secret-id-5150\"},\"value\":true,\"question\":{\"text\":\"other\"}}\n";
 
 /// Each refusal: the command line, standard input (`YES` where empty is not asked), the exit code, and the sentence.
-const REFUSALS: [(&str, &str, i32, &str); 43] = [
+const REFUSALS: [(&str, &str, i32, &str); 47] = [
     (
         "audit @secret-path @key.jsonl",
         "",
@@ -142,6 +142,30 @@ const REFUSALS: [(&str, &str, i32, &str); 43] = [
         YES,
         2,
         "--write grades by question; drop --by verb",
+    ),
+    (
+        "audit - @yes.jsonl --write @q.json --by /secret-value",
+        YES,
+        2,
+        "--write grades by question; drop the --by pointer",
+    ),
+    (
+        "audit - @yes.jsonl --by /secret-value~2",
+        YES,
+        2,
+        "--by takes question, verb, or a JSON pointer such as /category",
+    ),
+    (
+        "audit - @yes.jsonl --by /secret-value",
+        YES,
+        2,
+        "results line 1 has no string or integer value at the --by pointer",
+    ),
+    (
+        "audit - @yes.jsonl --curve --table",
+        YES,
+        2,
+        "--curve prints JSON lines; drop --table",
     ),
     (
         "audit - @yes.jsonl --write @secret-path",
@@ -352,6 +376,19 @@ fn each_failure_prints_one_line_that_names_no_record_id_value_or_path() {
         let (code, stdout, _) = audit(&arguments, b"");
         assert_eq!((code, stdout.as_str()), (2, ""), "{arguments:?}");
     }
+    let (_, _, stderr) = audit(
+        &[
+            "small/decide.jsonl",
+            "small/decide-key.jsonl",
+            "--by",
+            "colour",
+        ],
+        b"",
+    );
+    assert_eq!(
+        stderr,
+        "error: invalid value 'colour' for '--by <question|verb|POINTER>': --by takes question, verb, or a JSON pointer such as /category\n\nFor more information, try '--help'.\n"
+    );
     fs::remove_dir_all(&root).expect("cleanup");
 }
 

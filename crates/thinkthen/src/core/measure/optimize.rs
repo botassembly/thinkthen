@@ -7,10 +7,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use serde::{Serialize, Serializer};
 
 use crate::core::measure::answer::{Rule, Verb};
-use crate::core::measure::audit::{Checked, Counts, Settings, Suggested};
+use crate::core::measure::audit::{Checked, Counts, Crossed, Settings, Suggested};
 use crate::core::measure::key::{Key, Part};
 use crate::core::measure::levels::{LevelCuts, search};
-use crate::core::measure::rows::{Graded, count, cut, share};
+use crate::core::measure::rows::{Graded, added, count, cut, share};
 use crate::core::measure::{MeasureError, SplitMix64, python_float_text, shuffle};
 
 /// How many seeded splits `steady` reads.
@@ -163,6 +163,7 @@ pub(crate) fn suggest(
     key: &Key,
     settings: &Settings,
     verb: Option<Verb>,
+    cross: bool,
 ) -> Result<Option<Suggested>, MeasureError> {
     let Some(verb) = verb else {
         return Ok(None);
@@ -182,11 +183,13 @@ pub(crate) fn suggest(
         tune: None,
         held: None,
         steady: None,
+        crossed: None,
     };
     if !applies {
         suggested.objective = format!("{} does not apply to {}", measure.name(), verb.name());
         return Ok(Some(suggested));
     }
+    suggested.crossed = Some(None);
     let mut splits = vec![tune_ids];
     if how == "seeded" {
         for step in 1..SPLITS {
@@ -212,6 +215,19 @@ pub(crate) fn suggest(
         }
         suggested.tune = Some(checked(&tune_part)?);
         suggested.held = Some(checked(&held_part)?);
+    }
+    if let (true, Some(Some(Bar::Cut(first)))) = (cross, tuned.first())
+        && let Some(Bar::Cut(second)) = tune(&held_part, verb, settings)?
+    {
+        let [first, second] = [Bar::Cut(*first), Bar::Cut(second)];
+        suggested.crossed = Some(Some(Crossed {
+            cuts: [first, second].map(|bar| bar.value().unwrap_or_default()),
+            held: added(
+                &count(&held_part, first.rule())?,
+                &count(&tune_part, second.rule())?,
+                verb.yes_no(),
+            ),
+        }));
     }
     let mut tallies: BTreeMap<Bar, usize> = BTreeMap::new();
     for bar in tuned.into_iter().flatten() {

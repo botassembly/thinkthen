@@ -8,6 +8,7 @@ use crate::core::measure::answer::{Answer, Rule, Said, Shown, Verb};
 use crate::core::measure::audit::{Counts, Disagreement, Kind, Point, Row, Settings};
 use crate::core::measure::key::{Key, Outcome, Want, outcome};
 use crate::core::measure::optimize::suggest;
+use crate::core::measure::pairs::{curve, pairs, pairs_verb, tie_share};
 use crate::core::measure::{MeasureError, auc, calibration, python_float_text, python_sum, wilson};
 use crate::core::threshold::Threshold;
 
@@ -51,6 +52,8 @@ pub(crate) fn row(
         Vec::new()
     };
     let direction = |value: usize| yes_no.then_some(value);
+    let ties = matches!(verb, Some(Verb::Choose | Verb::Find));
+    let shares: Vec<f64> = labeled.iter().map(|(a, want)| tie_share(a, want)).collect();
     let mut row = Row {
         group,
         verb: verb.map(Verb::name),
@@ -63,6 +66,8 @@ pub(crate) fn row(
         wrong: counts.wrong,
         unresolved: counts.unresolved,
         tied: counts.tied,
+        tied_holding_key: ties.then(|| shares.iter().filter(|held| **held > 0.0).count()),
+        tie_share: ties.then(|| python_sum(shares.iter().copied())),
         agreement: counts.agreement,
         interval: wilson(counts.right, counts.answered).filter(|_| !pooled),
         true_yes: direction(counts.true_yes),
@@ -89,31 +94,24 @@ pub(crate) fn row(
         },
         calibration: None,
         coverage: None,
+        curve: None,
         suggested: None,
         kind,
         name: ok.first().and_then(|answer| answer.name.clone()),
         band: ok.iter().any(|answer| answer.band),
     };
     if probabilities && !pooled {
-        let pairs: Vec<(f64, bool)> = if yes_no {
-            yes_pairs
-        } else {
-            labeled
-                .iter()
-                .filter_map(|(a, want)| a.top.as_ref().map(|top| (top, want)))
-                .filter(|(top, _)| !top.tied)
-                .map(|(top, want)| (top.top, top.pick == want.text()))
-                .collect()
-        };
-        if verb != Some(Verb::Score) {
+        if verb.is_some_and(pairs_verb) {
+            let pairs = pairs(&labeled)?;
             row.calibration = calibration(&pairs, settings.seed);
+            row.curve = settings.curve.then(|| curve(&pairs));
         }
         if verb != Some(Verb::Score) && verb != Some(Verb::Find) {
             row.coverage = Some(coverage(&labeled, yes_no)?);
         }
     }
     if probabilities && !matches!(verb, Some(Verb::Rank | Verb::Find)) {
-        row.suggested = suggest(&labeled, key, settings, verb)?;
+        row.suggested = suggest(&labeled, key, settings, verb, !pooled)?;
     }
     Ok(row)
 }
@@ -145,16 +143,42 @@ pub(crate) fn count(items: &[Graded<'_>], rule: Rule) -> Result<Counts, MeasureE
             _ => {}
         }
     }
+    measures(
+        &mut counts,
+        items.first().is_some_and(|(a, _)| a.verb.yes_no()),
+    );
+    Ok(counts)
+}
+
+/// Two counts over separate answers, added, with every measure taken from the sums.
+pub(crate) fn added(a: &Counts, b: &Counts, yes_no: bool) -> Counts {
+    let mut sum = Counts {
+        n: a.n + b.n,
+        right: a.right + b.right,
+        wrong: a.wrong + b.wrong,
+        unresolved: a.unresolved + b.unresolved,
+        tied: a.tied + b.tied,
+        true_yes: a.true_yes + b.true_yes,
+        false_yes: a.false_yes + b.false_yes,
+        true_no: a.true_no + b.true_no,
+        false_no: a.false_no + b.false_no,
+        ..Counts::default()
+    };
+    measures(&mut sum, yes_no);
+    sum
+}
+
+/// The measures a count object derives from its counts.
+fn measures(counts: &mut Counts, yes_no: bool) {
     counts.answered = counts.right + counts.wrong;
     counts.agreement = share(counts.right, counts.answered);
     counts.coverage = share(counts.answered, counts.n);
-    if items.first().is_some_and(|(a, _)| a.verb.yes_no()) {
+    if yes_no {
         let (hit, false_yes, false_no) = (counts.true_yes, counts.false_yes, counts.false_no);
         counts.yes_recall = share(hit, hit + false_no);
         counts.precision = share(hit, hit + false_yes);
         counts.f1 = share(2 * hit, 2 * hit + false_yes + false_no);
     }
-    Ok(counts)
 }
 
 /// A part over a whole, or null over nothing.
