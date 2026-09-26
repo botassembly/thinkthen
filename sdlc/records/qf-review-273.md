@@ -38,12 +38,12 @@ The four questions. It protects the rule that a bad throttle is refused where it
 
 ## Checks
 
-With `THINKTHEN_API_KEY` unset, at `97cabd87` unless noted. `sdlc/scripts/live` did not run, and no paid call was made.
+With `THINKTHEN_API_KEY` unset. `sdlc/scripts/live` did not run, and no paid call was made. The rungs ran at `8a985e0a`, with the second-pass issue fix uncommitted in the worktree. That fix touched only the issue page.
 
 - `lint` with the private-names list: exit 0.
-- `test`: exit 0 at `d1835925`, 956 passed, 0 failed, 13 ignored across 37 result lines, `live-test: all cases passed`. Later commits changed only `check.sh`, pages, and records.
-- `spec`: exit 0 at `d1835925`, `demos: 21 green, 0 red`.
-- `databases/postgresql/check.sh`: exit 0, `postgresql: 53 passed, 0 failed`, conformance 43 passed, 0 failed, 11 not run.
+- `test`: exit 0, 956 passed, 0 failed, 13 ignored across 37 result lines, `live-test: all cases passed`.
+- `spec`: exit 0, `demos: 21 green, 0 red`.
+- `databases/postgresql/check.sh` at `97cabd87`: exit 0, `postgresql: 53 passed, 0 failed`, conformance 43 passed, 0 failed, 11 not run. Later commits changed only records and issues.
 
 ## Deferred
 

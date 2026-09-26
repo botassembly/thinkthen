@@ -12,3 +12,7 @@ Three findings to fix and one wording nit. The reviewer found the check sound. T
 4. Nit: the README row could read as "set with that text". Fixed: the row splits the refusal into its own sentence.
 
 The author ran the full PostgreSQL check after the fixes. It passed 53 of 53.
+
+## Second pass, commits 97cabd87 and 8a985e0a
+
+ACCEPT once one fix lands. The committed issue said `a_changed_limit_rebuilds` passes on any output. Command substitution drops the trailing newline, so its needle is `3`, and the step passes on any output that holds a 3. Fixed in the issue. One optional nit stays: the ADR 0004 amendment says "only" just before it names the default base.
