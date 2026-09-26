@@ -94,7 +94,7 @@ const ASSERT = {
   '.rs': /^\s*(debug_)?assert(_eq|_ne)?!\(/,
   '.c': /^\s*assert\(/,
 };
-const SQL_WORDS = new Set(['from', 'where', 'order', 'group', 'is', 'and', 'or', 'not', 'in', 'desc', 'asc', 'limit', 'on', 'join', 'union', 'having', 'select', 'with']);
+const SQL_WORDS = new Set(['from', 'where', 'order', 'group', 'is', 'and', 'or', 'not', 'in', 'desc', 'asc', 'limit', 'on', 'join', 'union', 'having', 'select', 'with', 'case', 'when', 'then', 'else', 'end']);
 
 // Blank out string literals, so brackets and words inside them do not count.
 function unquote(text, ext) {
@@ -171,6 +171,12 @@ function namedAnswers(label, text, ext) {
       if (doc) until = doc[1];
       lines.push(line.replace(/'[^']*'/g, "''"));
     }
+    // A Bash command runs on while a line ends in a pipe or a backslash.
+    const piped = (i) => {
+      let j = i;
+      while (j + 1 < lines.length && /(\||\\)\s*$/.test(lines[j])) j += 1;
+      return lines.slice(i, j + 1).join('\n');
+    };
     lines.forEach((line, i) => {
       const at = `${label}:${i + 1}`;
       const capture = /^\s*([A-Za-z_]\w*)=\$\(/.exec(line);
@@ -190,6 +196,9 @@ function namedAnswers(label, text, ext) {
       if (/^\s*(case|test|if|while|\[)\b.*\$\?/.test(line) || /^\s*\[\[?\s.*\$\?/.test(line)) {
         found.push(`${at}: reads $? directly. Name the exit code first, such as refund_code=$?.`);
       }
+      if (/^\s*(if|while|until)\s/.test(line) && !/^\s*while\s+read\b/.test(line) && call.test(piped(i))) {
+        found.push(`${at}: a branch acts on a thinkthen call. Wrap the call in a function named for its meaning, or name the answer first.`);
+      }
       if (/^\s*(test|\[\[?|echo|printf)\b/.test(line) && /\$\(/.test(line)) {
         const span = statement(lines, i, '.py');
         if (call.test(span)) found.push(`${at}: an assert or print acts on a thinkthen call. Name the answer first.`);
@@ -202,7 +211,7 @@ function namedAnswers(label, text, ext) {
   const assert = ASSERT[ext];
   lines.forEach((line, i) => {
     const at = `${label}:${i + 1}`;
-    if ((assert.test(line) || PRINT.test(line)) && call.test(statement(lines, i, ext))) {
+    if ((assert.test(line) || PRINT.test(line) || /^\s*(if|while)\b/.test(line)) && call.test(statement(lines, i, ext))) {
       found.push(`${at}: an assert or print acts on a ThinkThen call. Name the answer first, then assert on the name.`);
     }
     const a = assign.exec(line);
@@ -276,7 +285,7 @@ for (const name of fs.readdirSync(articles).filter((n) => n.endsWith('.md'))) {
         if (COMMENT[ext]?.test(l)) problems.push(`src/articles/${name}:${start + j + 1}: a comment in a code block`);
         if (LIBRARY.has(ext) && PRINT.test(l)) problems.push(`src/articles/${name}:${start + j + 1}: a print. Assert the answer instead.`);
       });
-      problems.push(...namedAnswers(`src/articles/${name}:${start}+`, block.join('\n'), ext));
+      problems.push(...namedAnswers(`src/articles/${name}`, block.join('\n'), ext).map((p) => p.replace(/:(\d+):/, (_, n) => `:${start + Number(n)}:`)));
       lang = null;
     }
   });
