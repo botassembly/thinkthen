@@ -17,7 +17,7 @@ const dflt = (name) => lower(setting(name).default);
 const cutOn = (fn) => setting('Threshold').defaultOn(fn);
 const noCut = (fn) => (cutOn(fn) === 'none' ? 'n/a' : cutOn(fn));
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-const frameOn = (fn) => setting('Framing').defaultOn(fn);
+const frameOn = (fn, rest) => setting('Framing').defaultOn(fn, { rest });
 const CUT = setting('Threshold').bounds;
 const count = (name, noun) => `${setting(name).range.min} to ${setting(name).range.max} ${noun}`;
 const THROTTLE = setting('Throttle');
@@ -48,7 +48,7 @@ const FRAMING = [
 ];
 
 const FRAMING_BY_FN = [
-  ['decide, choose, tag, score, annotate', `${cap(frameOn('decide'))} by default. All four framing flags are accepted.`],
+  ['decide, choose, tag, score, annotate', `${cap(frameOn('decide', true))} by default. All four framing flags are accepted.`],
   ['filter, rank', `${cap(frameOn('filter'))} by default, or JSON Lines when a pointer is given. All four framing flags are accepted. One document is not a stream.`],
   ['find', `--${frameOn('find')} by default, or --jsonl. CSV and TSV are refused as unexpected arguments.`],
 ];

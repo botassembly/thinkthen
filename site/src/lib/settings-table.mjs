@@ -252,17 +252,18 @@ export function setting(name) {
       return { min: m[1], max: m[2] };
     },
     // The default for one function, from a value written as
-    // "0.5 on `decide`, `tag`; none on `choose`". A clause that names no
-    // function, such as "One document" in "One document; lines on `find`",
-    // holds for every function the other clauses leave out.
-    defaultOn(fn) {
+    // "0.5 on `decide`, `tag`; none on `choose`". A caller that passes
+    // { rest: true } also takes a clause that names no function, such as "One
+    // document" in "One document; lines on `find`", for a function the other
+    // clauses leave out. Without it a function the value does not name fails.
+    defaultOn(fn, { rest: takeRest = false } = {}) {
       let rest = null;
       for (const clause of row.default.value.split(/;\s*/)) {
         const m = /^(.+?) on (`.+)$/.exec(clause);
         if (!m) rest = plain(clause);
         else if ([...m[2].matchAll(/`([^`]+)`/g)].some((c) => c[1] === fn)) return plain(m[1]);
       }
-      return rest ?? fail(`the default "${value}" names no value for ${fn}`);
+      return (takeRest && rest) || fail(`the default "${value}" names no value for ${fn}`);
     },
   };
 }
