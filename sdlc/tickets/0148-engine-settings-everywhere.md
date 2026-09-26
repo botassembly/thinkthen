@@ -1,12 +1,12 @@
 ---
 flow: build
 priority: 148
-opens: crates/thinkthen/src/public/settings.rs crates/thinkthen/src/public/engine.rs crates/thinkthen/src/public/relate.rs crates/thinkthen/src/public/frame.rs crates/thinkthen/tests/settings_cases.rs conformance/settings.json conformance/README.md conformance/consumer libraries/python libraries/typescript libraries/ruby libraries/r libraries/c libraries/rust/README.md libraries/polars/README.md databases/duckdb databases/sqlite databases/postgresql specification/settings.md sdlc/planning/adr/0017-libraries-over-one-bound-core.md sdlc/planning/adr/0037-the-c-door-serves-every-language-that-can-call-c.md sdlc/tickets/0084-freeze-the-public-rust-contract.md sdlc/ratchet.json sdlc/records sdlc/tickets sdlc/issues
+opens: crates/thinkthen/src/public/settings.rs crates/thinkthen/src/public/engine.rs crates/thinkthen/src/public/relate.rs crates/thinkthen/src/public/frame.rs crates/thinkthen/tests/settings_cases.rs crates/thinkthen/tests/public_env.rs conformance/settings.json conformance/README.md conformance/consumer libraries/python libraries/typescript libraries/ruby libraries/r libraries/c libraries/rust/README.md libraries/polars/README.md databases/duckdb databases/sqlite databases/postgresql specification/settings.md sdlc/planning/adr/0017-libraries-over-one-bound-core.md sdlc/planning/adr/0037-the-c-door-serves-every-language-that-can-call-c.md sdlc/tickets/0084-freeze-the-public-rust-contract.md sdlc/ratchet.json sdlc/records sdlc/tickets sdlc/issues
 ---
 
 # 0148: Every library gets the command's engine settings
 
-Status: ready. Owner: Claude.
+Status: ready. Owner: Claude. It builds after ticket 0146 lands, by the coordinator's ruling of 2026-09-26.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -50,9 +50,9 @@ The engine below the builder already takes every one of these. `Settings` in `cr
 - `no_cache` may stand beside either, as `--no-cache` may.
 - `cache_at` beside either is `Error::Usage` at `build`: `a cache folder is record and replay on one folder, so it stands beside neither`. This is the command's `--cache` refusal in library words.
 - `record` and `replay` naming two folders is `Error::Usage` at `build`: `record and replay name two different folders, and one engine keeps one`.
-- `record` and `replay` naming one folder is a cache over that folder, as the command's pair is.
+- `record` and `replay` naming one folder replay an entry the folder holds and record the rest, as the command's pair does.
 
-The storage these build is the command's `Folders` value, field for field: `private_default` false, and `cache_answers` false for a recording, true for a cache folder.
+The storage these build is the command's `Folders` value, field for field. `private_default` is false for every named folder. `cache_answers` is false whenever `record` or `replay` is set, including the same-folder pair, as `cli/asking/folders.rs:30-35` sets it and `recording.md` line 24 says: explicit replay and an explicit record and replay pair count no cache answers. Only `cache_at` sets it true.
 
 The public `Engine` keeps the profile it was built with, beside `most`. `relate` passes it to `facade::relations` in place of `None`. Every other call already reaches the profile through the facade engine.
 
@@ -78,13 +78,24 @@ Each binding starts from `EngineBuilder::from_env()`, as today, and calls one se
 - TypeScript takes the options object it already takes. `timeoutSeconds` says its unit in its name, because a JavaScript reader expects milliseconds. The `EngineOptions` interface in `index.d.ts` gains each key.
 - Ruby takes keywords. It passes them to the native side as one options hash in place of today's seven positional arguments.
 - R takes arguments on `tt_engine`. `named()` lists the new ones, and names each folder as `<folder>` as it does the cache.
-- C gains one symbol: `thinkthen_engine *thinkthen_engine_new_with(const char *settings_json)`. The argument is one JSON object with the keys in the table, spelled as the command's flags are. A null pointer or `{}` builds what `thinkthen_engine_new` builds. A refusal returns null, and the calling thread's error slot names it, as a failed `thinkthen_engine_new` does today. `thinkthen_engine_new` becomes a call of the new symbol with `{}`. The C door already speaks JSON for requests, so a JSON settings object adds one symbol and no struct layout.
+- C gains one symbol: `thinkthen_engine *thinkthen_engine_new_with(const char *settings_json)`. The argument is one JSON object whose keys are the Rust builder's setter names, as the table shows. A null pointer or `{}` builds what `thinkthen_engine_new` builds. A refusal returns null, and the calling thread's error slot names it, as a failed `thinkthen_engine_new` does today. `thinkthen_engine_new` becomes a call of the new symbol with `{}`. The C door already speaks JSON for requests, so a JSON settings object adds one symbol and no struct layout.
+
+The C settings object follows these rules. Each refusal returns null with `THINKTHEN_EUSAGE` in the thread's slot unless the builder names another kind.
+
+- The text is UTF-8. Bytes that are not UTF-8 are refused before any parse.
+- The text is one JSON object. Any other JSON value, or text that is not JSON, is refused.
+- A key given twice is refused. The parser rejects duplicates and does not keep the last value.
+- The keys are the ten in the table and no others. `"api_key"` is an unknown key and is refused, because ADR 0017 section 5 keeps the key in `THINKTHEN_API_KEY` on every surface but Rust.
+- `base_url`, `model`, `record`, `replay` and `profile` take a string.
+- `cache` takes `false` or a folder string. `true` is refused. The environment's cache is the absence of the key.
+- `throttle`, `timeout`, `max_retries` and `max_requests` take a whole JSON number with no fraction and no sign, in the range of the setter's type. `8.0`, `-1` and `1e2` are refused. The builder then applies its own range, so `throttle` 33 and `timeout` 0 carry the builder's sentences.
+- `max_requests` also takes `null`, which means no limit, as `EngineBuilder::max_requests(None)` does. Every other key refuses `null`.
 - The key stays in `THINKTHEN_API_KEY` alone on every surface but Rust, by ADR 0017 section 5.
 - The Rust Polars door and the Python Polars and pandas doors take the engine of their language. They need no change.
 
 ### The shared settings cases
 
-`conformance/settings.json`, schema `thinkthen.settings-cases/1`, holds one case for each setting this ticket carries. Each case names its setting by the command's flag name, a loopback arm, and one or more steps. A step gives the settings, the verb, the question, the text or records, the expected bare value, detail field or error kind, and the loopback count after the step. `$FOLDER` stands for one fresh folder the runner makes for the case. A profile is given as its JSON object. A library runner writes it to a file and passes the path.
+`conformance/settings.json`, schema `thinkthen.settings-cases/1`, holds one case for each setting this ticket carries. Each case names its setting by the Rust builder's setter name, a loopback arm, and one or more steps. A step gives the settings, the verb, the question, the text or records, the expected bare value, detail field or error kind, and the loopback count after the step. `$FOLDER` stands for one fresh folder the runner makes for the case. A profile is given as its JSON object. A library runner writes it to a file and passes the path.
 
 | Case | Arm | Steps and expectation |
 | --- | --- | --- |
@@ -97,7 +108,7 @@ Each binding starts from `EngineBuilder::from_env()`, as today, and calls one se
 | `max-requests-refuses-past-the-limit` | `/generic/v1` | `max_requests` 2, `decide_many` over 3 records: error `usage`, count 2 |
 | `cache-off-sends-again` | `/generic/v1` | `cache` false, decide twice: count 2. The runner points `THINKTHEN_CACHE` at a fresh folder first, so a dropped setting would answer the second call from the cache |
 
-Each runner maps a flag name to its host's spelling. That map is the surface's column of the table above, so a wrong cell fails a case. The generic arm already echoes the request's model, and the delay and 503 arms already exist. The loopback backend needs no change.
+Each runner maps a setter name to its host's spelling. The command's runner maps it to the flag. That map is the surface's column of the table above, so a wrong cell fails a case. The generic arm already echoes the request's model, and the delay and 503 arms already exist. The loopback backend needs no change.
 
 - The command runs every case but `max-requests-refuses-past-the-limit`, which has no flag. Its runner is the new `crates/thinkthen/tests/settings_cases.rs`. It runs the compiled command with `--timeout`, `--max-retries`, `--profile`, `--model`, `--record`, `--replay`, `--cache` and `--no-cache`.
 - Rust runs every case from `conformance/consumer/consumer/tests/public/settings.rs`, a new module of the existing public test binary.
@@ -110,12 +121,12 @@ The throttle has no case here. A throttle case needs an in-flight count on the h
 
 The setter, its doc, and every caller go. On each surface the spelling goes with it:
 
-- Rust: `EngineBuilder::cache_bytes`, and the doctest in `crates/thinkthen/src/public/frame.rs:33`.
+- Rust: `EngineBuilder::cache_bytes`, the doctest in `crates/thinkthen/src/public/frame.rs:33`, and the `seed().cache_bytes(0)` row of `crates/thinkthen/tests/public_env.rs:212` with its expected line.
 - Python: the keyword, `CACHE_BYTES`, the `.pyi` line and the README word.
 - TypeScript: `cacheBytes` in `door.rs`, `index.d.ts`, the README and `settings.test.mjs`.
 - Ruby: the keyword, the native argument and the README word.
 - R: the argument, the Rust field and its `named()` entry.
-- DuckDB: `SET thinkthen_cache_bytes`, its `Asked` field and README line 39.
+- DuckDB: `SET thinkthen_cache_bytes`, its `Asked` field, README line 39, and the zero step in `databases/duckdb/tools/settings_suite.py:91`.
 - SQLite: `thinkthen_cache_bytes(n)`, its settings field, README lines 50 and 56, and its two tests.
 - PostgreSQL: `thinkthen.cache_bytes`, `CACHE_BYTES_ZERO`, the `Plan` field, README line 44, the unit tests and the `check.sh` step.
 
@@ -166,7 +177,7 @@ Each is the agent's decision. Ian can overturn any of them.
 6. **The libraries take a profile as a path, as `--profile` does.** SQL takes JSON text in ticket 0149.
 7. **Precedence follows the settings page.** An engine setting sits in the environment tier and overrides the variable it was seeded from. Timeout, retries, profile, record and replay have no other tier, so the engine value wins or the default holds. The model is the one exception. A question's `model` outranks the engine's model, by ADR 0017 section 5 and the builder's doc: "Name this model when a question names none". The settings page's model line gains the engine tier below the question file. Changing the code to follow the tier rule instead would break every library caller who sets a model on a question.
 8. **C gets a JSON settings constructor.** DESIGN section 8 makes a new symbol a minor bump. No C version has shipped, and 0.1 is itself a minor bump over 0.0.1. The DESIGN table grows to 20 symbols, and its deferred "checked throttle constructor" is done. ADR 0037 gains a dated amendment.
-9. **One shared case per setting, run by every surface.** The case file names settings by flag, and each runner's map is its column of the settings table. Where a library's own test asserts the same effect of `max_requests` or `cache` false, the build deletes that assertion in the same commit and names it in the record. The shared case replaces it, so the contract is tested once on each surface.
+9. **One shared case per setting, run by every surface.** The case file names settings by the Rust setter name, and each runner's map is its column of the settings table. Where a library's own test asserts the same effect of `model`, `max_requests` or `cache` false, the build deletes that assertion in the same commit and names it in the record. The shared case replaces it, so the contract is tested once on each surface.
 10. **The calibration `profile` gap is filed, not fixed.** Its fix needs two files ticket 0146 holds.
 11. **ADR 0017 section 5 and ticket 0084 gain dated amendments.** Section 5's table gains timeout, retries, profile, record and replay, and loses the cache cap row for libraries and SQL. Ticket 0084's frozen inventory drops `cache_bytes` and adds the five setters. No release has shipped, so no user breaks.
 
@@ -190,7 +201,7 @@ The Rust rows run in `conformance/consumer/consumer/tests/public/settings.rs` as
 | `replay(F)` where `F` does not exist | The same miss. `F` is not created |
 | `replay(F)` where `F` belongs to another address | `Local`, the recording-folder mismatch sentence. No request |
 | `record(F)` where `F` is a file | `Local` at `build`, `the recording folder names a file` |
-| `record(F)` and `replay(F)` | A cache over `F`: one request, then none |
+| `record(F)` and `replay(F)` | One request, then none. The engine's `cache_answers` counter stays 0 |
 | `record(F)` and `replay(G)` | `Usage` at `build`, `record and replay name two different folders, and one engine keeps one` |
 | `cache_at(F)` and `replay(F)` | `Usage` at `build`, `a cache folder is record and replay on one folder, so it stands beside neither` |
 | `no_cache()` and `replay(F)` | Replays `F` |
@@ -204,11 +215,17 @@ The binding rows run in each surface's own settings test.
 | Python `timeout=True`, `timeout=1.5`, `max_retries=-1` | `UsageError`, nothing sent |
 | Python `replay=pathlib.Path(F)` | Replays `F` |
 | TypeScript `{ timeoutSeconds: '30' }`, `{ maxRetries: 1.5 }` | `ThinkThenError` of kind `usage` |
-| TypeScript `{ cacheBytes: 1 }` | `usage`, `new Engine takes no option cacheBytes` |
 | Ruby `timeout: "30"`, `replay: 7` | `UsageError` |
 | R `timeout = 2.5`, `replay = NA` | The usage error naming the argument |
 | C `thinkthen_engine_new_with(NULL)` and `("{}")` | The environment's engine, as `thinkthen_engine_new` |
 | C `"[]"`, `"{\"timeout\":\"30\"}"`, `"{\"nope\":1}"`, text that is not JSON | Null. `thinkthen_error_code(NULL)` is `THINKTHEN_EUSAGE`, and the message names the key or the shape |
+| C `"{\"api_key\":\"k\"}"` | Null, `THINKTHEN_EUSAGE`, the unknown-key sentence. This row guards ADR 0017 section 5 |
+| C `"{\"cache\":true}"` | Null, `THINKTHEN_EUSAGE` |
+| C `"{\"max_requests\":null}"` | An engine with no request limit |
+| C `"{\"model\":null}"` | Null, `THINKTHEN_EUSAGE` |
+| C `"{\"timeout\":1,\"timeout\":2}"` | Null, `THINKTHEN_EUSAGE`, naming the repeated key |
+| C bytes that are not UTF-8 | Null, `THINKTHEN_EUSAGE` |
+| C `"{\"throttle\":8.0}"`, `"{\"max_retries\":-1}"` | Null, `THINKTHEN_EUSAGE` |
 | C `"{\"throttle\":8}"` after another engine took throttle 4 | Null, with the throttle sentence |
 
 ## Proof
@@ -227,7 +244,7 @@ Every test runs against the loopback backend in `conformance/backend` or a local
 | `the_builder_follows_the_command_folder_rules`, Rust | The first edge table | (a) Let `cache_at` stand beside `replay`: no refusal. (b) Keep the default cache under `replay`: `C` gains an entry. (c) Create a missing replay folder: `F` exists after the miss |
 | `relate_follows_the_engine_profile`, Rust | The library's `relate` and the command's `relate --profile` over the same entities and profile file give the same loopback count, or the same error kind with a count of 0 | (a) Pass `None` again at `public/relate.rs:270`: the counts differ |
 | `a_strict_replay_reads_no_key`, Rust | A child process with `THINKTHEN_API_KEY` unset replays a hit from `F`, then misses. The hit answers, the miss is `Local`, and the loopback counts 0 | (a) Read the key at `build` for any engine with a folder: the child fails with the no-key usage error |
-| The C settings table, `libraries/c/tests/door` | The C rows of the second edge table, and a held-arm run of `decide_many` over 8 records under `{"throttle":2}` that holds exactly 2 in flight | (a) Ignore `"throttle"`: the arm holds 4. (b) Accept an unknown key: the `nope` row builds an engine |
+| The C settings table, `libraries/c/tests/door` | The C rows of the second edge table, and a held-arm run of `decide_many` over 8 records under `{"throttle":2}` that holds exactly 2 in flight | (a) Ignore `"throttle"`: the arm holds 4. (b) Accept an unknown key: the `nope` and `api_key` rows build an engine. (c) Keep the last of two equal keys: the repeated-key row builds an engine |
 | The binding edge rows, Python, TypeScript, Ruby and R | Each surface's rows of the second edge table, in its existing settings test | (a) Drop the host type check for `timeout`: `True` or `1.5` builds an engine |
 
 The existing check `the_library_carries_its_soname_and_exactly_the_header_symbols` in `libraries/c/tests/door/main.rs` compares the header with the exported symbols. It covers the new symbol once the header declares it, and needs no change.
@@ -236,10 +253,11 @@ The four questions, answered once for the shared cases and once for the rest:
 
 - **What they protect.** Each engine setting reaches the engine on every library with the command's effect. A strict replay sends nothing and reads no key on a miss. The builder refuses the command's folder conflicts. `relate` obeys the profile.
 - **What regression fails them.** A binding that drops or mis-maps a setting, most likely `replay` mapped onto the cache, which sends on every miss. A builder that ignores a value it stored. A binding that trusts a host value of the wrong type.
-- **Why no existing test catches it.** None of these settings exists on a library today, and no shared case sets any engine setting (equivalence page section 5, "What they miss"). The command's own tests prove its flags and never reach a binding.
+- **Why no existing test catches it.** For timeout, retries, profile, record and replay: none of these settings exists on a library today, and no shared case sets any engine setting (equivalence page section 5, "What they miss"). The command's own tests prove its flags and never reach a binding.
+- **Why no existing test catches it, for model, request limit and cache off.** These three exist on Rust, Python, TypeScript, Ruby and R, and each of those surfaces tests them in its own settings test with its own inputs. C has none of the three, so no test reaches C. No test runs one input across every surface, so nothing shows the surfaces agree. By decision 9, the build deletes each library's own assertion of the same effect, and the shared case becomes the one test of each on each surface.
 - **Does it need a test-only hook.** No. Each test sets the public spelling, counts at the real loopback listener, and reads the real folder.
 
-`cache_bytes` gets no test of its absence. The build records that `rg -i 'cache_?bytes'` over `crates/thinkthen/src/public`, `libraries` and `databases` finds nothing. The tests that passed it lose those lines.
+`cache_bytes` gets no test of its absence. The build records that `rg -i 'cache_?bytes'` over `crates/thinkthen/src/public`, `crates/thinkthen/tests`, `libraries` and `databases` finds nothing. The tests that passed it lose those lines.
 
 ## Pages, comments, and issues
 
@@ -259,14 +277,15 @@ The four questions, answered once for the shared cases and once for the rest:
 
 Nonblank lines, measured with `grep -c .` on the diff.
 
-- `crates/thinkthen/src`: at most 90 added and at most 60 net, doc lines included.
+- `crates/thinkthen/src`: at most 120 added and at most 60 net, doc lines included.
 - Library production code, headers and type files, across Python, TypeScript, Ruby, R and C: at most 280 added.
 - Database production code: net negative. Nothing added but the README line on the retired PostgreSQL setting.
 - `conformance/settings.json`: at most 140 lines.
-- Settings runners and the Rust edge table: at most 70 added on each of the seven surfaces, 450 in all.
+- Settings runners: at most 70 added on each of the seven surfaces.
+- The Rust edge work: `the_builder_follows_the_command_folder_rules`, `relate_follows_the_engine_profile`, `a_strict_replay_reads_no_key`, and the child process the cache-off case needs: at most 150 added.
 - Binding edge rows and the C door test: at most 120 added in all.
 - Pages: at most 20 changed rows in `settings.md`, at most 6 lines for each README, at most 25 for the ADR 0017 amendment, at most 15 each for ADR 0037, ticket 0084 and `DESIGN.md`, at most 10 for `conformance/README.md`, and one issue of at most 25.
-- `sdlc/ratchet.json` moves to the measured total in the commit that adds the code. The commit says what grew. The builder looks first for duplicated settings code across the bindings to delete.
+- `sdlc/ratchet.json` moves to the measured total in the commit that adds the code. After 0146 lands, the build merges `origin/main` and measures again, so the ceiling holds both tickets' lines and neither one's number is kept by hand. The commit says what grew. The builder looks first for duplicated settings code across the bindings to delete.
 - No dependency. The public surface widens, so the `surfaces` rung runs.
 
 ## Stop rules
@@ -274,7 +293,7 @@ Nonblank lines, measured with `grep -c .` on the diff.
 1. Stop before crossing a budget or adding a dependency.
 2. Stop if any plant stays green.
 3. Stop if the design needs a change in `crates/thinkthen/src/engine`. The facade already takes every setting, and a need to change it means this design is wrong.
-4. Stop before editing any file ticket 0146 opens: `public/question.rs`, `public/results.rs`, `public/batch.rs`, `public/bulk.rs`, `engine/facade.rs`, `cli/`, any existing file under `crates/thinkthen/tests`, or any specification page but `settings.md`. The new file `crates/thinkthen/tests/settings_cases.rs` touches none of 0146's lines. In `settings.md`, touch only the rows and the one precedence line named above. If 0146 lands first, merge its `batch` row and precedence line, and do not rewrite them.
+4. Stop if ticket 0146 has not landed on main when the build starts. Merge `origin/main` first. Then stop before editing any file 0146 changed but `public_env.rs`, `settings.md` and `sdlc/ratchet.json`: `public/question.rs`, `public/results.rs`, `public/batch.rs`, `public/bulk.rs`, `engine/facade.rs`, `cli/`, any other existing file under `crates/thinkthen/tests`, or any specification page but `settings.md`. In `public_env.rs`, remove only the `cache_bytes` row and its expected line. The new file `crates/thinkthen/tests/settings_cases.rs` uses `crates/thinkthen/tests/support` as it is and adds nothing there. In `settings.md`, touch only the rows and the one precedence line named above. If 0146 lands first, merge its `batch` row and precedence line, and do not rewrite them.
 5. Stop if the sweep finds a setting with no effect beyond `cache_bytes` and the calibration `profile`. Report it for a ruling on scope.
 6. Stop if a case in `conformance/settings.json` behaves differently on the command and on Rust. That is an equivalence bug, and it needs its own decision.
 7. Stop if the timeout case takes more than 5 seconds on any surface, or flakes once in three runs. Report the arm's timing. Do not lengthen the delay to pass.
@@ -295,10 +314,11 @@ Contract 2; state and timing 0; reach 2; proof 1; cost of error 2; total 7. Fina
 ## Deferred gaps
 
 - Ticket 0149, the SQL settings, with the rules above.
+- The build waits for ticket 0146 to land, by the coordinator's ruling. 0146 opens `crates/thinkthen/tests`, and this ticket edits `public_env.rs` there.
 - The throttle's shared case, with E11's `concurrency` case kind.
 - A library's calibration `profile`: the digest and `profile_warning`. Filed as an issue. A running profile on a library enforces limits and gives no calibration warning until that fix.
 - Dry run on a library. The command's `--dry-run` has no library spelling, and no user has asked.
-- Duplicate throttle and cache tests on each surface that E11's settings cases would replace.
+- Each surface's own throttle test, which E11's `concurrency` case would replace. The duplicate `model`, `max_requests` and cache-off assertions leave in this ticket, by decision 9.
 - Environment variables for timeout, retries or the profile on C. The JSON constructor covers C, and the command reads none.
 
 ## What Ian can overturn
@@ -327,4 +347,4 @@ Ticket 0149 closes the first two issues.
 - Keeps: Every command flag, request, output byte and exit code. Every existing library setting and its spelling. The builder's environment seed. The throttle rule of ADR 0017's 2026-09-24 amendment. The key in `THINKTHEN_API_KEY` alone on every surface but Rust. The address and key rulings for SQL. The configuration file's `cache_bytes` as the prune target. The Polars and pandas doors unchanged. Every engine module.
 - Changes: `EngineBuilder` gains `timeout`, `max_retries`, `profile`, `record` and `replay`, and loses `cache_bytes`. `build` applies the command's folder rules. `relate` obeys the engine's profile. Python, TypeScript, Ruby and R gain the five settings. C gains `thinkthen_engine_new_with` with every engine setting. `cache_bytes` leaves every binding and SQL surface. `conformance/settings.json` holds one case for each of eight settings, run by the command and six libraries. `settings.md`, ADR 0017, ADR 0037, ticket 0084, the C DESIGN and ten READMEs follow. An issue files the calibration `profile` gap.
 - Proof: The eight shared settings cases on the command, Rust, Python, TypeScript, Ruby, R and C, each with planted mis-mappings, the replay-onto-cache plant first. The Rust folder-rule table, the relate profile test against the command, and a no-key strict replay in a child process. The C settings table with a held-arm throttle count. The binding type rows. A grep for `cache_bytes` recorded in the build record.
-- Defers: The SQL settings, in ticket 0149 with its rules fixed here. The throttle's shared case, with E11. The calibration `profile` fix, after 0146. A library dry run. Duplicate per-surface tests for E11. C environment variables for the new settings.
+- Defers: The SQL settings, in ticket 0149 with its rules fixed here. The throttle's shared case, with E11. The calibration `profile` fix, after 0146. A library dry run. Per-surface throttle tests for E11. C environment variables for the new settings.
