@@ -229,7 +229,6 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         ),
         Failure::Transport(kind) => (4, transport_message(*kind).to_owned()),
         Failure::Status(status) => (4, status::said(*status)),
-        Failure::ReplyTooLarge(limit) => (4, reply_too_large(*limit)),
         Failure::Reply(error) => (4, format!("the reply was refused: {error}")),
         Failure::ReplayMiss(_)
         | Failure::Entry(_, _)
@@ -318,6 +317,7 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
     }
     Some(match failure {
         Failure::TokenLimit => (4, status::TOKEN_LIMIT.to_owned()),
+        Failure::ReplyTooLarge(limit) => (4, reply_too_large(*limit)),
         Failure::OpenProfile { path, error } => (
             5,
             format!(
