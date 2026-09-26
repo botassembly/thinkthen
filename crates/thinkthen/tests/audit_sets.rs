@@ -350,6 +350,7 @@ fn refusals() {
         "other.jsonl",
         "{\"id\":\"secret-other\",\"value\":true}\n",
     );
+    let unlabeled = "no answer has a label in the key; check that --id points at the key's ids and that its values fit the verb";
     let set_cut =
         "recognize and relate take a single --threshold at or above the cut they ran with";
     let cases: [(&[&str], &str); 4] = [
@@ -359,10 +360,7 @@ fn refusals() {
             &["-", &bad],
             "key line 1 gives recognize or relate a value unlike the command's own",
         ),
-        (
-            &["-", &other],
-            "no answer has a label in the key; check that --id points at the key's ids and that its values fit the verb",
-        ),
+        (&["-", &other], unlabeled),
     ];
     for (arguments, sentence) in cases {
         let (code, stdout, stderr) = audit(arguments, secret.as_bytes());
@@ -379,8 +377,10 @@ fn refusals() {
     let question = "{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"calls\",\"source\":\"*\",\"target\":\"*\"}]},\"threshold\":0.01}\n";
     let file = write(&folder, "lines.json", question);
     let (code, _, stderr) = audit(&["-", &other, "--write", &file], secret.as_bytes());
-    let refused = "thinkthen: audit: no answer has a label in the key; check that --id points at the key's ids and that its values fit the verb\n";
-    assert_eq!((code, stderr.as_str()), (2, refused));
+    assert_eq!(
+        (code, stderr),
+        (2, format!("thinkthen: audit: {unlabeled}\n"))
+    );
     assert_eq!(fs::read_to_string(&file).expect("the file"), question);
     // A key that labels one of two questions grades the one and exits 0.
     let two = "{\"input\":{\"id\":\"r1\"},\"value\":true,\"question\":{\"text\":\"A?\"}}\n{\"input\":{\"id\":\"r2\"},\"value\":true,\"question\":{\"text\":\"B?\"}}\n";

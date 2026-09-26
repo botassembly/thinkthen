@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core/measure crates/thinkthen/src/core/measure.rs cr
 
 # 0135: audit grades recognize and relate, and refuses a run with no label
 
-Status: built. Design review accepted on the second pass (fresh read-only Claude session). `core/measure/items.rs` crossed its budget by more than a tenth (208 against 170). Coordinator re-scored after reviewer trim list: production at most 350, `items.rs` at most 195. The build record gives the measured numbers. Owner: Claude.
+Status: built. Design review accepted on the second pass (fresh read-only Claude session). `core/measure/items.rs` crossed its budget by more than a tenth (208 against 170). Coordinator re-scored after reviewer trim list: production at most 350, `items.rs` at most 195. Coordinator re-scored the audit_sets.rs budget to 372: the review-requested order test earns its lines. The build record gives the measured numbers. Owner: Claude.
 
 Lane: thinkthen-lane-3
 
