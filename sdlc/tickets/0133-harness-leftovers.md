@@ -6,7 +6,7 @@ opens: sdlc/scripts/heavy-lock sdlc/scripts/lint sdlc/scripts/README.md sdlc/scr
 
 # 0133: Keep the rungs' environment to an allow list and clear three harness leftovers
 
-Status: in progress. Design accepted by the second fresh review on 2026-09-26. Owner: Claude.
+Status: in progress. Design accepted by the second fresh review on 2026-09-26. Built, and the ladder passed (`sdlc/records/0133-build-harness-leftovers.md`). Code review is next. One deviation: `lint` also unsets `CARGO_TARGET_DIR`, and the record says why. Owner: Claude.
 
 Lane: thinkthen-lane-1
 
