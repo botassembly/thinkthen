@@ -427,7 +427,7 @@ export const SURFACES = [
     unsureWord: 'None',
     install: [['pip install thinkthen[polars]', null]],
     particular: [
-      'A whole column goes to the engine in one call.',
+      '`decide`, `choose`, `score`, and `tag` send a whole column to the engine in one call.',
       '`on=` names the column the questions read.',
     ],
   },

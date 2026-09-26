@@ -8,9 +8,12 @@
 // The examples live in examples/beatles/<slug>/. Each runs in the Beatles
 // Bench folder examples/beatles/folders.json names for its page, and answers
 // from a saved recording. `see` gives the caption for each example and
-// `headings` the heading above it. Prose marks code with backticks.
+// `headings` the heading above it. `source` links the bench record behind a
+// number in the prose. Prose marks code with backticks.
 
 export const REPO = 'https://github.com/botassembly/beatles-bench';
+const RESULTS = { text: "the bench's results", href: `${REPO}#results` };
+const FULL = { text: "the bench's full results", href: `${REPO}/blob/main/reports/results.md` };
 const tree = (name) => `${REPO}/tree/main/functions/${name}`;
 
 export const GROUPS = [
@@ -54,6 +57,7 @@ const ARTICLES = {
       "Roger Bannister's mile set a standard for runners. On Beatles Bench, Jev's median answer took 0.21 seconds, and a thousand answers cost 0.015 dollars.",
     ],
     credit: `Roger Bannister photo: 6 May 1954, public domain in the US, via Wikimedia Commons. ${FACES}`,
+    source: RESULTS,
     see: {
       '1-choose': "Jev gives Ringo 0.84.",
       '2-bar': "A bar of 0.9 asks for more than 0.84. The answer is not sure.",
@@ -271,6 +275,7 @@ const ARTICLES = {
       "Search matches words. Jev knows facts. On the bench's 1,313 Beatles questions, Jev gets about two in three right from memory. The best vector search gets 38%, and a random guess gets 31%. GLM-5.3 Flash, a large chat model, gets 96%.",
       "No song title below holds the name Paul McCartney. Search has nothing to match.",
     ],
+    source: RESULTS,
     see: {
       '1-choose': "Jev picks d, I've Just Seen a Face, at 0.6.",
       '2-bar': "A bar of 0.7 turns the pick into not sure.",
@@ -288,8 +293,9 @@ const ARTICLES = {
     goal: "Jev misses obscure facts, and a low probability is how it says so.",
     idea: [
       "Jev's memory fades on obscure facts. It gets 73% of the questions about the most viewed quarter of songs on Wikipedia right, and 49% about the least viewed. Tricky wording trips it. It gets 70% of the plain control questions and 50% of the word traps. Two hops are hard. On 26 questions, Jev knew the month a song came out and the month of an event. It still missed 13 when asked whether the two fell in the same month.",
-      "The slide shows an earlier run, so its numbers differ from the ones here. Nothin' Shakin' is an obscure song, and George sings it. The slide puts John at 0.38. The example below asks again and puts John at 0.34.",
+      "Nothin' Shakin' is an obscure song, and George sings it. The slide comes from an earlier run and puts John at 0.38. The example below puts John at 0.34.",
     ],
+    source: FULL,
     see: {
       '1-choose': "Jev leans to John at 0.34. Ringo is close at 0.32. George gets 0.14.",
       '2-bar': "Under a bar of 0.5, the wrong pick becomes not sure.",
@@ -308,6 +314,7 @@ const ARTICLES = {
       "Give Jev the facts in the text. Look up the record, put it in front of the question, and ask. We call it retrieval-augmented decisions.",
       "The bench drew 196 questions, mostly from Jev's misses. From memory, Jev got 68 right. With the song catalog in the text, it got 184. Context costs input tokens. Here the call reads 291 input tokens from memory and 368 with the entry.",
     ],
+    source: RESULTS,
     see: {
       '1-memory': "From memory, Jev is sure A Day in the Life is on Abbey Road.",
       '2-context': "With the catalog entry, the answer is no at 0.04.",
