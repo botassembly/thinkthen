@@ -125,7 +125,7 @@ export function articleProblems(name, text) {
     const fence = /^```([^\s{]*)/.exec(line);
     if (fence && tag === null) { tag = fence[1].toLowerCase() || 'text'; start = i + 1; return; }
     if (line.startsWith('```') && tag !== null) {
-      const ext = FENCE_EXT[tag] || '';
+      const ext = Object.hasOwn(FENCE_EXT, tag) ? FENCE_EXT[tag] : '';
       const block = lines.slice(start, i);
       block.forEach((l, j) => {
         if ([...l].length > WIDTH && !EXEMPT.some((e) => e.test(l, ext === '.json' ? 'x.json' : `x${ext}`))) {
@@ -185,4 +185,4 @@ function main() {
 }
 
 // The table test imports articleProblems. Only a direct run checks the site.
-if (process.argv[1] && path.resolve(process.argv[1]) === here) main();
+if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(here)) main();
