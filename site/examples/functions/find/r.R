@@ -7,5 +7,5 @@ policy <- c(
   "Shipping is free on orders over $50.",
   "Gift cards cannot be exchanged for cash."
 )
-found <- tt_find(question, policy)
-stopifnot(identical(found$unit, policy[2]))
+refund_deadline <- tt_find(question, policy)
+stopifnot(identical(refund_deadline$unit, policy[2]))

@@ -7,5 +7,6 @@ WITH t(body) AS (VALUES
 SELECT thinkthen_score(
     '{"score": "How urgent is this?",
       "levels": ["Routine.", "Soon.", "Immediate."]}',
-    body), body
+    body) AS urgency,
+    body
 FROM t;

@@ -7,5 +7,5 @@ message = (
     "but export crashes the app, "
     "and I was charged twice."
 )
-tags = tt.tag(question, message, labels=labels)
-assert tags == ["praise", "bug", "billing"]
+fitting_labels = tt.tag(question, message, labels=labels)
+assert fitting_labels == ["praise", "bug", "billing"]

@@ -12,16 +12,16 @@ rules = [
   "Use the company travel portal for all bookings."
 ]
 entities = rules.map { |rule| [rule, "rule"] }
-edges = ThinkThen.relate(
+contradictions = ThinkThen.relate(
   entities,
   relations: ["contradicts"],
   either: ["contradicts"],
   threshold: 0.5
 )
-found = edges.map do |edge|
+pairs = contradictions.map do |edge|
   [edge.source.name, edge.target.name, edge.probability]
 end
-raise unless found == [
+raise unless pairs == [
   [rules[0], rules[3], 0.84],
   [rules[1], rules[5], 0.99]
 ]

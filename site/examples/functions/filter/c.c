@@ -14,6 +14,6 @@ const char *filter =
 const char *expected =
     "[\"The zipper broke the first time I used it.\","
     "\"The strap snapped on day two.\"]";
-char *kept = thinkthen_call(tt, filter);
-assert(kept && strcmp(kept, expected) == 0);
-thinkthen_free_string(kept);
+char *complaints = thinkthen_call(tt, filter);
+assert(complaints && strcmp(complaints, expected) == 0);
+thinkthen_free_string(complaints);

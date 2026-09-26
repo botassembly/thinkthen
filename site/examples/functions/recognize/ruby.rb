@@ -7,14 +7,14 @@ relations = {
   works_for: ["person", "organization"],
   based_in: ["organization", "place"]
 }
-found = ThinkThen.recognize(text, kinds:, relations:)
-names = found.entities.map { |one| [one.name, one.kind] }
+facts = ThinkThen.recognize(text, kinds:, relations:)
+names = facts.entities.map { |one| [one.name, one.kind] }
 raise unless names == [
   ["Maria Chen", "person"],
   ["Northwind Freight", "organization"],
   ["Chicago", "place"]
 ]
-links = found.relations.map do |one|
+links = facts.relations.map do |one|
   [one.relation, one.source.name, one.target.name]
 end
 raise unless links == [

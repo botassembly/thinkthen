@@ -14,17 +14,17 @@ rules = [
     "Use the company travel portal for all bookings.",
 ]
 entities = [(rule, "rule") for rule in rules]
-edges = tt.relate(
+contradictions = tt.relate(
     entities,
     relations={"contradicts": ("rule", "rule")},
     either=["contradicts"],
     threshold=0.5,
 )
-found = [
+pairs = [
     (edge.source.name, edge.target.name, edge.probability)
-    for edge in edges
+    for edge in contradictions
 ]
-assert found == [
+assert pairs == [
     (rules[0], rules[3], 0.84),
     (rules[1], rules[5], 0.99),
 ]

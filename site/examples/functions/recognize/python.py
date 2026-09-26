@@ -9,12 +9,12 @@ relations = {
     "works_for": ("person", "organization"),
     "based_in": ("organization", "place"),
 }
-found = tt.recognize(
+facts = tt.recognize(
     text,
     kinds=kinds,
     relations=relations,
 )
-names = [(one.name, one.kind) for one in found.entities]
+names = [(one.name, one.kind) for one in facts.entities]
 assert names == [
     ("Maria Chen", "person"),
     ("Northwind Freight", "organization"),
@@ -22,7 +22,7 @@ assert names == [
 ]
 links = [
     (one.relation, one.source.name, one.target.name)
-    for one in found.relations
+    for one in facts.relations
 ]
 assert links == [
     ("works_for", "Maria Chen", "Northwind Freight"),

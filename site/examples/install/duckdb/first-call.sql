@@ -7,7 +7,15 @@ CREATE TABLE tickets AS SELECT * FROM (VALUES
     (4, 'I was billed twice for one order.')
 ) t(id, body);
 
+WITH judged AS (
+    SELECT
+        id,
+        body,
+        thinkthen_decide('Is this a complaint?', body)
+            AS is_complaint
+    FROM tickets
+)
 SELECT id, thinkthen_choose('Which team owns this?',
     body, ['billing', 'shipping', 'account']) AS team
-FROM tickets
-WHERE thinkthen_decide('Is this a complaint?', body);
+FROM judged
+WHERE is_complaint;

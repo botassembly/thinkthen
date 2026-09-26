@@ -10,7 +10,8 @@ while read -r message; do
   thinkthen decide "$question" \
     --quiet \
     --threshold 0.2:0.8
-  case $? in
+  refund_code=$?
+  case $refund_code in
     0) echo "refund: $message" ;;
     1) echo "reply: $message" ;;
     3) echo "a person: $message" ;;

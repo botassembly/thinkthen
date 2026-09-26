@@ -7,7 +7,7 @@ texts = [
   "Can you send the signed contract by Friday?",
   "Nobody can log in to the site right now."
 ]
-scores = texts.map do |text|
+urgency = texts.map do |text|
   ThinkThen.score(question, text, levels:)
 end
-raise unless scores == [0.06, 0.99, 2.0]
+raise unless urgency == [0.06, 0.99, 2.0]

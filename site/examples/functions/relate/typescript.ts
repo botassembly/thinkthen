@@ -13,17 +13,17 @@ const rules = [
   "Use the company travel portal for all bookings.",
 ];
 const entities = rules.map((rule) => [rule, "rule"]);
-const edges = await tt.relate(entities, {
+const contradictions = await tt.relate(entities, {
   relations: ["contradicts"],
   either: ["contradicts"],
   threshold: 0.5,
 });
-const found = edges.map((edge) => [
+const pairs = contradictions.map((edge) => [
   edge.source.name,
   edge.target.name,
   edge.probability,
 ]);
-assert.deepEqual(found, [
+assert.deepEqual(pairs, [
   [rules[0], rules[3], 0.84],
   [rules[1], rules[5], 0.99],
 ]);
