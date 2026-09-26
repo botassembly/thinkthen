@@ -1,6 +1,6 @@
 # recognize loses possessive and side-by-side names
 
-Status: Open. Filed 2026-09-26 from workspace experiment 265, a hand-written test of 30 plain English sentences run three times against `jev-latest` (`jev-1.13.0`). The recognize code tested is byte-identical to main `0f255579`.
+Status: Held by Ian. Do not start. Ian wants a full edge-case set and a general redesign before any fix, not a one-off. The redesign lands in this issue first. Filed 2026-09-26 from workspace experiment 265, a hand-written test of 30 plain English sentences run three times against `jev-latest` (`jev-1.13.0`). The recognize code tested is byte-identical to main `0f255579`.
 
 ## Summary
 
