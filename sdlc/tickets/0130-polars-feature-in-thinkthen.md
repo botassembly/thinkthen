@@ -29,7 +29,7 @@ No. It gets its own ticket. Backlog item A1 is item 8 of `sdlc/issues/2026-09-25
 - It is a live bug at the top of the backlog. It should not wait for a dependency review of the root lock and a new license exception list.
 - This ticket keeps the Rust door's column text byte for byte. ADR 0047 item 10, the table both doors follow, does not change. So A1 can build beside this ticket, and its test can pin the table's text without building the Rust door.
 
-The issue `sdlc/issues/2026-09-25-a-polars-frame-sends-before-a-question-name-clash-fails.md` is also Python Polars, in the same `frame.rs`. It fits A1's ticket better than this one. That grouping is the coordinator's call.
+The issue `sdlc/issues/closed/2026-09-25-a-polars-frame-sends-before-a-question-name-clash-fails.md` is also Python Polars, in the same `frame.rs`. It fits A1's ticket better than this one. That grouping is the coordinator's call.
 
 ## Design
 
