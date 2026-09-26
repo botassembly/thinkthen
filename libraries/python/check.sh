@@ -53,13 +53,11 @@ python=$venv/bin/python
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	# The installed-file mode (ticket 0128): the wheel in a fresh venv, and the shared cases and
 	# examples from a copy of tests/, with no repository copy on the import path.
-	scratch=$(cd "$(mktemp -d)" && pwd -P)
-	trap 'rm -rf -- "$scratch"' EXIT
+	. "$repo/sdlc/scripts/installed.sh"
+	installed_tests "$repo" libraries/python
 	uv venv --quiet --offline --python "$host" "$scratch/venv"
 	uv pip install --quiet --offline --require-hashes --python "$scratch/venv/bin/python" -r requirements-dev.txt
 	uv pip install --quiet --offline --no-deps --python "$scratch/venv/bin/python" "$THINKTHEN_ARTIFACT"
-	mkdir -p "$scratch/libraries/python" "$scratch/conformance" && cp -R tests examples.json "$scratch/libraries/python/"
-	cp -R "$repo/conformance/cases.json" "$repo/conformance/children" "$scratch/conformance/"
 	cd "$scratch/libraries/python"
 	unset PYTHONPATH
 	"$scratch/venv/bin/python" -c 'import sys, thinkthen; sys.exit(not thinkthen.__file__.startswith(sys.argv[1]))' "$scratch/venv/" ||

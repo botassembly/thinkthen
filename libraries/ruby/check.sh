@@ -107,11 +107,10 @@ export RUBY PATH LIBCLANG_PATH LD_LIBRARY_PATH THINKTHEN_TEST_BACKEND
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   # The installed-file mode (ticket 0128): the gem in a fresh gem folder, and the shared cases
   # and examples from a copy of tests/, with no repository lib/ on the load path.
-  scratch=$(cd "$(mktemp -d)" && pwd -P)
-  trap 'rm -rf -- "$plant" "$scratch"' EXIT
+  # The copy sits inside the check's own plant folder, which its cleanup removes.
+  . "$repo/sdlc/scripts/installed.sh"
+  installed_tests "$repo" libraries/ruby "$plant"
   "$prefix/bin/gem" install --local --silent --no-document --install-dir "$scratch/gems" "$THINKTHEN_ARTIFACT"
-  mkdir -p "$scratch/libraries/ruby" "$scratch/conformance" && cp -R tests examples.json "$scratch/libraries/ruby/"
-  cp -R "$repo/conformance/cases.json" "$repo/conformance/children" "$scratch/conformance/"
   cd "$scratch/libraries/ruby"
   export GEM_PATH="$scratch/gems"
   unset RUBYLIB

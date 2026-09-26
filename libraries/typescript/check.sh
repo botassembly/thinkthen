@@ -16,11 +16,10 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     # The installed-file mode (ticket 0128): the tarball in a fresh project, and the shared
     # cases and examples from a copy of tests/, which import the package by its name.
     [ -x "$node_home/bin/node" ] || { echo 'typescript: not run; place Node with libraries/typescript/setup-toolchain.sh'; exit 77; }
-    PATH="$node_home/bin:$PATH" scratch=$(cd "$(mktemp -d)" && pwd -P)
-    trap 'rm -rf -- "$scratch"' EXIT
+    PATH=$node_home/bin:$PATH
+    . "$repo/sdlc/scripts/installed.sh"
+    installed_tests "$repo" libraries/typescript
     project=$scratch/libraries/typescript
-    mkdir -p "$project" "$scratch/conformance" && cp -R tests examples.json "$project/"
-    cp -R "$repo/conformance/cases.json" "$repo/conformance/children" "$scratch/conformance/"
     echo '{"private": true}' >"$project/package.json"
     (cd "$project" && npm install --offline --no-audit --no-fund --silent "$THINKTHEN_ARTIFACT")
     resolved=$(cd "$project/tests" && node --input-type=module -e 'console.log(import.meta.resolve("thinkthen"))')

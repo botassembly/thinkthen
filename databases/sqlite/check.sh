@@ -29,10 +29,9 @@ step() { echo "== sqlite: $1"; }
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	# The installed-file mode (ticket 0128): the shared cases and the examples load the
 	# library unpacked from the release archive, by its path.
-	unpacked=$(mktemp -d)
-	trap 'rm -rf -- "$unpacked"' EXIT
-	tar -xzf "$THINKTHEN_ARTIFACT" -C "$unpacked"
-	THINKTHEN_SQLITE_EXTENSION=$(echo "$unpacked"/libthinkthen0.*)
+	. ../../sdlc/scripts/installed.sh
+	installed_unpack
+	THINKTHEN_SQLITE_EXTENSION=$(echo "$scratch"/libthinkthen0.*)
 	[ -f "$THINKTHEN_SQLITE_EXTENSION" ] || { echo "FAIL     the archive holds no libthinkthen0 library" >&2; exit 1; }
 	export THINKTHEN_SQLITE_EXTENSION
 	for test in tests/examples.py tests/conformance.py; do
