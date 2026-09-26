@@ -1,8 +1,9 @@
 ---
 import '../styles/site.css';
-import { TAGLINE, NOINDEX } from '../data/catalog.mjs';
+import { TAGLINE, NOINDEX, REPO } from '../data/catalog.mjs';
 
-const { title, description = 'Simple functions that give your software the judgment to handle whatever comes its way. Call them from your scripts, your programs, and your queries.' } = Astro.props;
+// `repo` is the one GitHub link a page carries, at its bottom.
+const { title, description = 'Simple functions that give your software the judgment to handle whatever comes its way. Call them from your scripts, your programs, and your queries.', repo = REPO } = Astro.props;
 const full = title === 'ThinkThen' ? 'ThinkThen: code that knows what you mean' : `${title} — ThinkThen`;
 const here = Astro.url.pathname;
 const mdHref = here === '/' ? '/index.md' : here.replace(/\/$/, '') + '.md';
@@ -73,7 +74,7 @@ const nav = [
   </div>
 </header>
 
-<main><div class="wrap"><slot /></div></main>
+<main><div class="wrap"><slot /><p class="repo-link">On GitHub: <a href={repo}>{repo.replace('https://', '')}</a></p></div></main>
 
 <footer class="bottom">
   <div class="wrap">

@@ -15,7 +15,6 @@ const runs = captioned(`beatles/${page.slug}`, page.see);
 // Prose marks code with backticks.
 const parts = (text) => text.split('`').map((p, i) => ({ code: i % 2 === 1, text: p }));
 const [first, ...rest] = page.title.split(' ');
-const shown = page.link.replace('https://', '');
 ---
 <BeatlesPage page={{ ...page, description: page.idea[0].replaceAll('`', '') }}>
   <div class="eyebrow">Beatles Bench · {page.group}</div>
@@ -38,5 +37,4 @@ const shown = page.link.replace('https://', '');
   <p>{parts(page.lesson).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>
   <p class="refrain">You control the bar. The number is the number.</p>
 
-  <p class="bench-link">Run it yourself: <a href={page.link}>{shown}</a></p>
 </BeatlesPage>

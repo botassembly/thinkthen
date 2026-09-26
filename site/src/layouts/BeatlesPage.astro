@@ -1,8 +1,8 @@
 ---
 // One page of the Beatles Bench section under Learn, in talk order.
 import SidePage from './SidePage.astro';
-import { PAGES } from '../data/beatles.mjs';
+import { PAGES, REPO } from '../data/beatles.mjs';
 
 const { page } = Astro.props;
 ---
-<SidePage pages={PAGES} page={page} name="Beatles Bench pages"><slot /></SidePage>
+<SidePage pages={PAGES} page={page} name="Beatles Bench pages" repo={page.link || REPO}><slot /></SidePage>

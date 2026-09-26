@@ -11,6 +11,8 @@ export const NOINDEX = true;
 
 export const KEY_VARIABLE = 'THINKTHEN_API_KEY';
 
+export const REPO = 'https://github.com/botassembly/thinkthen';
+
 // The four outcomes. One color each, everywhere a number or an answer shows.
 export const OUTCOMES = [
   { key: 'yes', code: 0, label: 'yes', prints: 'true' },

@@ -1,6 +1,6 @@
 ---
-// Goal: say in one screen what ThinkThen does, show one real call in the
-// reader's language, and point to the functions, the bench, and the jobs.
+// Goal: show in one screen what ThinkThen does, with one real call in the
+// reader's language.
 import Base from '../layouts/Base.astro';
 import Terminal from '../components/Terminal.astro';
 import Code from '../components/Code.astro';
@@ -24,11 +24,7 @@ const sixHowtos = HOWTOS.slice(0, 6);
 ---
 <Base title="ThinkThen">
   <h1>Code that knows what you mean.</h1>
-  <p class="lede">Simple functions that give your software the judgment to handle whatever comes its way. Hand one a message, ask "Is this a complaint?", and get back yes, no, or not sure.</p>
-
-  <p>Your software already branches on an exit code, a pattern, or a column. Now it can branch on a decision about meaning, in one line. No regex that breaks by Friday. No chat model wrapped in a prompt, a parser, a retry loop, and a bill.</p>
-
-  <p><code>decide</code> is an if that understands. <code>filter</code> is a grep that understands. <code>rank</code> is a sort that understands. The rest are listed below. Every answer comes with a probability, and you set the bar. Anything in the middle comes back as not sure, and your software sends it to a person. In Bash the exit code is 0 for yes, 1 for no, and 3 for not sure.</p>
+  <p class="lede">Simple functions that give your software judgment. Hand one a message, ask "Is this a complaint?", and get back yes, no, or not sure.</p>
 
   <div class="tabbed" data-fallback="Bash">
     <div class="tabs" role="tablist">
@@ -50,6 +46,8 @@ const sixHowtos = HOWTOS.slice(0, 6);
   </div>
   <p class="pagelinks"><a href="/install/">Every language, database, and backend</a></p>
 
+  <p><code>decide</code> is an if that understands. <code>filter</code> is a grep that understands. <code>rank</code> is a sort that understands. Every answer carries a probability, and you set the bar. Anything in the middle comes back as not sure. A person reads those.</p>
+
   <h2>The ten functions</h2>
   <div class="grid">
     {CODE_FUNCTIONS.map((fn) => (
@@ -62,7 +60,7 @@ const sixHowtos = HOWTOS.slice(0, 6);
   <p class="pagelinks"><a href="/functions/question-file/">Save a question as a file</a></p>
 
   <h2>Learn it on the Beatles</h2>
-  <p>Jev makes the decisions. It is a System One model from TypeSafe. It answers in one step, writes no text, and needs no training. <a href="/learn/beatles-bench/">Beatles Bench</a> shows it answering questions about 306 Beatles songs. Every answer there is known ahead of time. Each page takes one slide from the talk and one command. Or start with the <a href="/learn/tutorial/">tutorial</a>.</p>
+  <p><a href="/learn/beatles-bench/">Beatles Bench</a> asks questions about Beatles songs. Every answer there is known ahead of time. Each page takes one slide from the talk and one command. New to ThinkThen? Start with the <a href="/learn/tutorial/">tutorial</a>.</p>
 
   <h2>Jobs your software can take on</h2>
   <div class="grid">

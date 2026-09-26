@@ -7,7 +7,7 @@
 // and a group. The first page may have no group. `name` labels the list.
 import Base from './Base.astro';
 
-const { pages, page, name } = Astro.props;
+const { pages, page, name, repo } = Astro.props;
 const at = pages.findIndex((p) => p.route === page.route);
 if (at < 0) throw new Error(`side page: ${page.route} is not in the ${name} list`);
 const prev = pages[at - 1];
@@ -19,7 +19,7 @@ for (const p of pages) {
   else groups.push([p.group || null, [p]]);
 }
 ---
-<Base title={page.title.replace(/\.$/, '')} description={page.description || page.title}>
+<Base title={page.title.replace(/\.$/, '')} description={page.description || page.title} repo={repo}>
   <div class="bench">
     <aside class="bench-side" aria-label={name}>
       {groups.map(([group, list]) => (
