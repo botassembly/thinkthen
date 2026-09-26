@@ -51,6 +51,8 @@ const CASES = [
   ['direct', 'bash', 'fail', '[ "$(thinkthen decide "$q" < m.txt)" = yes ]', [[1, 'direct']]],
   ['direct', 'bash', 'fail', '[[ $(thinkthen decide "$q" < m.txt) == yes ]]', [[1, 'direct']]],
   ['direct', 'bash', 'pass', '[ "$(jq -r .id m.json)" = C-01 ]', []],
+  ['direct', 'bash', 'fail', 'case "$(thinkthen choose "$q" billing shipping --raw < m.txt)" in\n  billing) route billing ;;\nesac', [[1, 'direct']]],
+  ['direct', 'bash', 'pass', 'team=$(thinkthen choose "$q" billing shipping --raw < m.txt)\ncase "$team" in\n  billing) route billing ;;\nesac', []],
   ['generic', 'bash', 'pass', 'is_spam=$(thinkthen decide "$q" < mail.txt)', []],
   ['generic', 'bash', 'fail', 'answer=$(thinkthen decide "$q" < mail.txt)', [[1, 'generic']]],
   ['generic', 'bash', 'pass', 'thinkthen decide "$q" < mail.txt\nrefund_code=$?', []],
