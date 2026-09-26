@@ -11,8 +11,21 @@ use crate::core::json::{Json, JsonError};
 use crate::core::pointer::Pointer;
 use crate::core::question::Question;
 use crate::core::question_file::{QuestionFile, QuestionFileError, Typed, Verb, resolve};
+use crate::core::records::{Framing, Reading, ReadingError, RecordError};
 use crate::core::render::{RenderError, json_line};
+use crate::core::text::Evidence;
 use crate::core::threshold::{Threshold, ThresholdError};
+
+/// Why one group's part of a record could not be read.
+#[derive(Debug)]
+pub(crate) enum PartError {
+    /// The group's pointers could not form a reading; a parsed set checked them.
+    Reading(ReadingError),
+    /// A structured record could not be written as text.
+    Render(RenderError),
+    /// The record is not JSON, or holds nothing at a pointer.
+    Record(RecordError),
+}
 
 /// Why a question set was refused.
 #[derive(Clone, Error, PartialEq)]
@@ -273,6 +286,26 @@ impl QuestionSet {
             }
         }
         groups.into_iter().map(|(_, places)| places).collect()
+    }
+
+    /// The evidence one group sees: the record itself when the group reads
+    /// the root, or else the parts its pointers select from the record as JSON.
+    pub(crate) fn group_evidence(
+        &self,
+        group: &[usize],
+        record: &Evidence,
+    ) -> Result<Evidence, PartError> {
+        let on = group
+            .first()
+            .and_then(|place| self.questions.get(*place))
+            .map_or(&[][..], |first| first.on.as_slice());
+        if matches!(on, [root] if root.as_str().is_empty()) {
+            return Ok(record.clone());
+        }
+        let reading = Reading::new(Framing::Document, on.to_vec()).map_err(PartError::Reading)?;
+        let text = record.as_text().map_err(PartError::Render)?;
+        let part = reading.record(text.as_bytes()).map_err(PartError::Record)?;
+        reading.evidence(&part).map_err(PartError::Record)
     }
 
     /// Digest the resolved behavior, independent of its path and whitespace.

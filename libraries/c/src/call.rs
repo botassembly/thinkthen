@@ -144,7 +144,7 @@ fn answer(engine: &Engine, request: &Request, options: CallOptions<'_>) -> Resul
             write(&json!(kept?))
         }
         "rank" => {
-            let asked = Question::rank(&alone(request)?)?;
+            let asked = Question::rank(&alone(&request.verb, &request.question)?)?;
             let records = member(request, "records", |raw| {
                 serde_json::from_str::<Vec<String>>(raw)
             })?;
@@ -154,7 +154,13 @@ fn answer(engine: &Engine, request: &Request, options: CallOptions<'_>) -> Resul
             ))
         }
         "find" => {
-            let asked = Question::find(&alone(request)?)?;
+            let mut question = request.question.clone();
+            let none = question.remove("none").map_or(Ok(false), |raw| {
+                serde_json::from_str::<bool>(raw.get())
+                    .map_err(|_| Failure::usage("find takes `none` as true or false"))
+            })?;
+            let asked = Question::find(&alone(&request.verb, &question)?)?;
+            let asked = if none { asked.offering_none()? } else { asked };
             let units = member(request, "units", |raw| {
                 serde_json::from_str::<Vec<String>>(raw)
             })?;
@@ -199,10 +205,9 @@ fn annotate(
 }
 
 /// The question text of `rank` or `find`, which read no other key.
-fn alone(request: &Request) -> Result<String, Failure> {
-    let verb = &request.verb;
-    match request.question.get(verb) {
-        Some(text) if request.question.len() == 1 => serde_json::from_str::<String>(text.get())
+fn alone(verb: &str, question: &Members) -> Result<String, Failure> {
+    match question.get(verb) {
+        Some(text) if question.len() == 1 => serde_json::from_str::<String>(text.get())
             .map_err(|_| Failure::usage(format!("{verb} takes its question as a string"))),
         _ => Err(Failure::usage(format!(
             "{verb} takes its question text alone"

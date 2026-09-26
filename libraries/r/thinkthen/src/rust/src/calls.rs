@@ -235,11 +235,20 @@ pub(crate) fn rank(
 /// `find` over units: the selected place and its probability, or `NULL`s.
 pub(crate) fn find(
     text: &str,
+    none: bool,
     texts: Vec<String>,
     deadline: Option<f64>,
     pending: Pending<'_>,
 ) -> Crossed<List> {
-    let asked = Question::find(text).map_err(|error| carry(&error))?;
+    let asked = Question::find(text)
+        .and_then(|asked| {
+            if none {
+                asked.offering_none()
+            } else {
+                Ok(asked)
+            }
+        })
+        .map_err(|error| carry(&error))?;
     let found = call(deadline, pending, move |engine, options| {
         engine.find_with(&asked, placed(texts), options)
     })?;

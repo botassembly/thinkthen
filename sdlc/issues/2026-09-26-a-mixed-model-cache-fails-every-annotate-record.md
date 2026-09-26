@@ -1,6 +1,6 @@
 # A mixed-model cache fails every `annotate` record
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 03, finding 2-5. Placement waits on question 1 in the 0.1 backlog, the default-model pin. The message fix can land in 0.1 on its own.
+Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 03, finding 2-5. Placement waits on question 1 in the 0.1 backlog, the default-model pin. The message fix can land in 0.1 on its own. Owner for the message fix: ticket 0159 on `ticket/0159-pin-the-default-model`, ready for review. The cache fix still waits.
 
 ## What happens
 

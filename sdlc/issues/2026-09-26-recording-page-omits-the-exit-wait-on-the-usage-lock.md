@@ -1,6 +1,6 @@
 # The recording page omits the exit wait on the usage lock
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 07, finding I2. The wait is an accepted cost under ADR 0049 item 3. Only the missing sentence is owed. Blocks 0.1 under goal 4.
+Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 07, finding I2. The wait is an accepted cost under ADR 0049 item 3. Only the missing sentence is owed. Blocks 0.1 under goal 4. Owner: ticket 0163 on `ticket/0163-the-cache-folder-and-its-pages`, ready for review.
 
 ## What happens
 

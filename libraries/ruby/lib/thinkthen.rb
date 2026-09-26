@@ -130,9 +130,12 @@ module ThinkThen
       top ? ranked.first(top) : ranked
     end
 
-    def find(question, units, cancel: nil, deadline: nil)
+    # none: true offers a none candidate, as find --none does, so nothing may fit.
+    def find(question, units, none: false, cancel: nil, deadline: nil)
+      raise UsageError.new("none is true or false", "usage") unless [true, false].include?(none)
+
       list = units.to_a
-      place, probability = crossing("find", ThinkThen.__send__(:question_text, question), ThinkThen.__send__(:texts, list), cancel, deadline)
+      place, probability = crossing(none ? "find_none" : "find", ThinkThen.__send__(:question_text, question), ThinkThen.__send__(:texts, list), cancel, deadline)
       Found.new(place, place.nil? ? nil : list[place], probability)
     end
 
@@ -164,7 +167,8 @@ module ThinkThen
       JSON.parse(json)
     end
 
-    # One Hash per record, named by the set's questions. With `on:`, each
+    # One Hash per record, named by the set's questions. A set member whose
+    # `on` names a part reads it from each record as JSON text. With `on:`, each
     # record is a Hash, its `on` value is the evidence, and the answers
     # join its own keys. A question landing on any record's key refuses
     # before any request.
