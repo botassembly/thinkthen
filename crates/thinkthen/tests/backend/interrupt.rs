@@ -82,8 +82,18 @@ fn held(
     input: &[u8],
     reply: impl Fn() -> Canned + Send + Sync + 'static,
 ) -> io::Result<Output> {
+    held_at(1, arguments, input, reply)
+}
+
+/// Hold `count` requests, send SIGINT, then release them all.
+fn held_at(
+    count: usize,
+    arguments: &[&str],
+    input: &[u8],
+    reply: impl Fn() -> Canned + Send + Sync + 'static,
+) -> io::Result<Output> {
     let acknowledgment = Acknowledgment::new();
-    let release = Arc::new(Barrier::new(2));
+    let release = Arc::new(Barrier::new(count + 1));
     let backend_release = Arc::clone(&release);
     let (events_send, events) = channel();
     let listener = Listener::answering_with_events(
@@ -92,10 +102,12 @@ fn held(
     )?;
     let fixed = ["--url", listener.base(), "--model", "local-1"];
     let child = spawn(&[arguments, &fixed].concat(), input, &acknowledgment)?;
-    assert!(matches!(
-        events.recv_timeout(Duration::from_secs(5)),
-        Ok(Observed::Request)
-    ));
+    for _ in 0..count {
+        assert!(matches!(
+            events.recv_timeout(Duration::from_secs(5)),
+            Ok(Observed::Request)
+        ));
+    }
     assert!(
         crate::child::command("kill", &[])
             .args(["-INT", &child.id().to_string()])
@@ -112,7 +124,7 @@ fn held(
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
-    assert_eq!(listener.requests().len(), 1);
+    assert_eq!(listener.requests().len(), count);
     Ok(output)
 }
 
@@ -191,6 +203,8 @@ fn sigint_during_retry_wait_makes_exactly_one_request() {
     assert!(output.stderr.is_empty());
 }
 
+/// Ticket 0143: a split text holds up to the default width of 4 in flight.
+/// The text makes more than 4 chunks, and none starts after the signal.
 #[test]
 fn sigint_between_recognition_chunks_starts_no_later_chunk() {
     let profile = Path::new(env!("CARGO_TARGET_TMPDIR")).join("recognize-interrupt-profile.json");
@@ -199,14 +213,16 @@ fn sigint_between_recognition_chunks_starts_no_later_chunk() {
         r#"{"schema":"thinkthen.backend-profile/1","name":"one","max_questions":1}"#,
     )
     .expect("profile");
-    let output = held(
+    // The text asks 14 requests of one question each.
+    let output = held_at(
+        4,
         &[
             "recognize",
             "--profile",
             &profile.to_string_lossy(),
             "--no-cache",
         ],
-        b"Ada Acme",
+        b"Ada met Bob at Acme in Paris",
         || Canned::ok(RECOGNIZED),
     )
     .expect("recognize stops");
