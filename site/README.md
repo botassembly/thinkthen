@@ -27,6 +27,8 @@ npm run build
 
 A page reads a setting's default, range or allowed values with `setting('Name')` from `src/lib/settings-table.mjs`: `.default`, `.number`, `.range`, `.bounds`, `.allowed`, `.note`, `.defaultOn('decide')` and `.surface('Configuration file')`. A name the table does not hold fails the build at that call.
 
+`npm run dev` serves the site while you work. `npm run check` runs the sample check, the slide check, the smoke run, the settings check, and the link check on the last build.
+
 ## Writing a page
 
 Read `WRITING.md` first. It holds the page rules, the code rules, and how an example is added, recorded, and refreshed.
