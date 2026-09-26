@@ -6,7 +6,7 @@ opens: crates/thinkthen/tests/speed.rs probes/speed probes/README.md sdlc/ratche
 
 # 0145: The speed test
 
-Status: ready for review. The first ticket review's findings and the coordinator's rulings of 2026-09-26 are applied. Owner: Claude. Lane: `worktrees/thinkthen-lane-2`. It builds only after tickets 0143 and 0144 have landed on main.
+Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Claude. Lane: `worktrees/thinkthen-lane-2`. It builds only after tickets 0143 and 0144 have landed on main.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
