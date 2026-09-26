@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/cli/asking.rs crates/thinkthen/src/cli/judge.rs crat
 
 # 0137: filter and rank read lines by default
 
-Status: ready. Owner: Claude.
+Status: in progress. Design accepted by the second fresh review on 2026-09-26, after one round of findings. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -106,7 +106,7 @@ No unit test is added. `Reading::new` keeps its unit tests, and the new flag add
 - `specification/filter.md` and `rank.md`: the synopsis shows the framing flags as optional. "What it reads" and the options table state the default and the pointer rule. The "missing framing is a usage error" sentences go. The `--lines` example in `filter.md` drops the flag. The `--jsonl --field` examples stay.
 - `specification/records.md`: the framing table row for `filter` and `rank`, and the `--field` bullets, state the rule.
 - `specification/channels.md`: the record-mode plan paragraph says `input` carries `"from":"default"` when `filter` or `rank` took the default.
-- ADR 0007: the dated amendment of its Records section, marking both sentences decision 5 of this ticket names.
+- ADR 0007: the dated amendment of its Records section, marking the two sentences named in decision 5 as amended, for `filter` and `rank` only.
 - `cli/judge.rs`: the two doc comments drop "a missing framing".
 - Help: the `filter` and `rank` long help say what they read with no flag. The `--field` help says that on `filter` and `rank`, no framing flag reads JSON Lines.
 - No `spec/` page runs `filter` or `rank`, and no demo runs either without a flag. The build checks both again with `grep`. Every demo keeps its explicit flag, so none changes.
@@ -115,7 +115,7 @@ No unit test is added. `Reading::new` keeps its unit tests, and the new flag add
 
 Nonblank lines, measured with `grep -c .` on the diff.
 
-- `crates/thinkthen/src`: at most 25 added, and at most 15 net of lines removed.
+- `crates/thinkthen/src`: at most 35 added, doc and help lines included, and at most 20 net of lines removed.
 - Tests: at most 110 added in `keeping/default_framing.rs` and `keeping.rs`. The removed refusal rows come off.
 - Pages and the ADR: at most 40 lines changed across the four specification pages and ADR 0007.
 - `sdlc/ratchet.json` moves to the measured total in the commit that adds the code. The commit says what grew. The builder looks for duplication to delete first in `asking.rs` and `records.rs`.
