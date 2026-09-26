@@ -1,6 +1,6 @@
 # What the vendor's founder said about where the model goes, and what the engine should do about it
 
-Status: open. Filed 2026-09-22 by the product side from the Latent Space interview with the vendor's CEO (2026-09-21, transcript in the vault). Rulings below are the product side's. Ian can overturn any of them. The architect decides the order inside the 0.1 lane.
+Status: open. Filed 2026-09-22 by the product side from the Latent Space interview with the vendor's CEO (2026-09-21, transcript in the vault). Rulings below are the product side's. Ian can overturn any of them. The architect decides the order inside the 0.1 lane. Ian approved the default-model pin on 2026-09-26. Owner for rulings 2 and 8: ticket 0159 on `ticket/0159-pin-the-default-model`, ready for review.
 
 ## What he said that touches the engine
 

@@ -1,6 +1,6 @@
 # Whoever can write a named cache or recording folder decides the answers
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 12, finding 2.2. The documentation half blocks 0.1. The warning on writable folders does not.
+Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 12, finding 2.2. The documentation half blocks 0.1. The warning on writable folders does not. Owner for the documentation half: ticket 0163 on `ticket/0163-the-cache-folder-and-its-pages`, ready for review.
 
 ## What happens
 

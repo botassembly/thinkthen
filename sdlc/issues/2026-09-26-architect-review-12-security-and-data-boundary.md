@@ -30,6 +30,8 @@ What an integrator hits. A security reviewer reading the decisions believes an o
 
 Direction. Amend ADR 0004's status to name ADR 0010 as superseding the key rule.
 
+Fixed by Quick Fix qf-review-273 in commit `d1835925`, from branch `ticket/qf-review-273`. ADR 0004's status line names ADR 0010, and its amendment of 2026-09-26 states the current rule. The record is `sdlc/records/qf-review-273.md`.
+
 ## Severity 3 titles
 
 - No private TLS roots, and a certificate failure reads as a network failure. The TLS stack uses bundled `webpki-roots` and ignores `SSL_CERT_FILE`.

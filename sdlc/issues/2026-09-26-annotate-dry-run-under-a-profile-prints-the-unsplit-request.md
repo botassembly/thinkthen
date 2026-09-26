@@ -1,6 +1,6 @@
 # `annotate --dry-run` under a profile prints the unsplit request
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 03, finding 2-3. Blocks 0.1 under goal 4: a reviewer approves a request the tool never sends.
+Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 03, finding 2-3. Blocks 0.1 under goal 4: a reviewer approves a request the tool never sends. Owner: ticket 0161 on `ticket/0161-annotate-reads-what-it-names`, ready for review.
 
 ## What happens
 

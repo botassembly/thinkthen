@@ -285,10 +285,16 @@ class Engine:
                    for index, record, probability in ranked]
         return ordered if top is None else ordered[:top]
 
-    def find(self, question, units, *, deadline=None, token=None):
+    def find(self, question, units, *, none=False, deadline=None, token=None):
         """The unit that answers the question best, as ``{"index", "unit",
-        "probability"}``, or ``None`` when nothing fits."""
-        found = self._engine.order("find", _ordering(question, "find"), units, deadline, token)
+        "probability"}``, or ``None`` when nothing fits. ``none=True`` offers
+        a none candidate, as ``find --none`` does."""
+        if not isinstance(none, bool):
+            raise UsageError("none is True or False")
+        asked = _ordering(question, "find")
+        if none:
+            asked = asked._offering_none()
+        found = self._engine.order("find", asked, units, deadline, token)
         if not found:
             return None
         [(index, unit, probability)] = found
@@ -298,7 +304,8 @@ class Engine:
         """Ask every question in a named set of every record.
 
         ``questions`` is a question-set file path or the file's ``dict``.
-        One ``dict`` comes back per record. A question the backend failed
+        A member whose ``on`` names a part reads it from each record as JSON
+        text. One ``dict`` comes back per record. A question the backend failed
         reads ``{"failed": {"kind": "backend", "cause": ...}}``. With ``on=``,
         ``records`` is a Polars or pandas ``DataFrame``, and the frame comes
         back with one new column per question. A failed question's column
@@ -415,8 +422,8 @@ def rank(question, records, *, top=None, deadline=None, token=None):
     return _engine().rank(question, records, top=top, deadline=deadline, token=token)
 
 
-def find(question, units, *, deadline=None, token=None):
-    return _engine().find(question, units, deadline=deadline, token=token)
+def find(question, units, *, none=False, deadline=None, token=None):
+    return _engine().find(question, units, none=none, deadline=deadline, token=token)
 
 
 def annotate(questions, records, *, on=None, deadline=None, token=None):

@@ -208,9 +208,10 @@ tt_rank <- function(question, records, top = NULL, deadline = NULL) {
   if (!is.null(top)) utils::head(held, top) else held
 }
 
-tt_find <- function(question, units, deadline = NULL) {
+tt_find <- function(question, units, none = FALSE, deadline = NULL) {
   units <- as.character(units)
-  found <- .tt_call(tt_find_one(.tt_text(question), units, deadline))
+  if (!is.logical(none) || length(none) != 1L || is.na(none)) .tt_usage("none is TRUE or FALSE")
+  found <- .tt_call(tt_find_one(.tt_text(question), units, none, deadline))
   place <- if (is.null(found$place)) NA_integer_ else as.integer(found$place)
   list(place = place, unit = if (is.na(place)) NA_character_ else units[[place]],
        probability = if (is.null(found$probability)) NA_real_ else found$probability)
