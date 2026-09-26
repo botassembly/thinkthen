@@ -38,7 +38,7 @@ Over the 306 Beatles titles, today's filter sent 306 requests in 13.0 to 14.2 s 
 
 ## Amendment, 2026-09-26: ADR 0051 sets a request size everywhere and halves a refused batch once
 
-ADR 0051, through ticket 0154, amends items 2, 5, 6 and 9. The request size is a setting, `--max-request-bytes` or `THINKTHEN_MAX_REQUEST_BYTES`, with a default of 96,000 bytes at every address, not only the built-in one. A profile's `max_request_bytes` lowers it and no longer raises it. A batch of two or more records that the backend refuses as too large, by status 413 or status 400 naming `max_tokens_exceeded`, is split into two halves and each half is sent once. A replay asks those halves when the whole batch has no entry. A row a half answers carries `"split":true` in `meta.batch`. Every other status keeps item 6's rule. Ian can overturn each change.
+ADR 0051, through ticket 0154, amends items 2, 5, 6 and 9. The request size is a setting, `--max-request-bytes` or `THINKTHEN_MAX_REQUEST_BYTES`, with a default of 96,000 bytes at every address, not only the built-in one. A profile's `max_request_bytes` lowers it and no longer raises it. A batch of two or more records that the backend refuses as too large, by status 413 or status 400 naming `max_tokens_exceeded`, is split into two halves and each half is sent once. A replay asks those halves when the whole batch has no entry. Once B5 builds `meta.batch`, a row a half answers carries `"split":true` there. Until then the rows' per-request counts and digests record a split. Every other status keeps item 6's rule. Ian can overturn each change.
 
 ## What this amends
 
