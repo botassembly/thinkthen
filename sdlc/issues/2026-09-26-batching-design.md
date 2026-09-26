@@ -133,7 +133,7 @@ The user types the first command and gets 44 to 46 titles in under half a second
 | --- | --- |
 | That batching exists | Designed away. It is on by default for every stream |
 | How many records to batch | Designed away. Each request fills to the backend's limits |
-| That a live stream could wait for a full batch | Designed away. A live, unrecorded batch sends after a 50 ms pause in input |
+| That a live stream could wait for a full batch | Designed away. A live batch sends after a 50 ms pause in input, in every mode |
 | How to share a reference text | One option, `--context FILE` |
 | How to get today's exact answers | One flag, `--batch 1` |
 | That old recordings and caches answer only under `--batch 1` | Kept. A batch is a new request. Resending costs cents, and `--batch 1` replays old folders |
@@ -178,7 +178,7 @@ The batch setting is `max` by default, or the whole number `N` that `--batch N` 
 | Size | The setting is a number `N`, and the batch holds `N` records |
 | Member cap | The batch holds 4,096 members, repeats included (ADR 0053 item 2) |
 | Profile limit | The next record would put the request over `max_questions`, `max_evidence_bytes` or `max_request_bytes`. At the built-in address the 96,000-byte ceiling stands in for `max_request_bytes` |
-| Pause | A live, unrecorded run has waited 50 ms with no new record |
+| Pause | A live run has waited 50 ms with no new record, in every mode |
 | End of input | Always |
 
 The content hash is the SHA-256 of the record's evidence in compact JSON, the same bytes its question quotes. Its first 8 bytes, read as a big-endian unsigned integer, give the value taken mod 4,096. A context does not change the rule. At `N` of 1 every record closes its batch, so `--batch 1` sends today's requests.
@@ -324,7 +324,7 @@ The fields are `records`, `requests_sent`, `cache_answers`, `input_tokens`, `out
 | Question file `"batch": 1` and no other setting | One record a request |
 | Question file `"batch": 1` with `tt.Engine(batch=10)` | At most 10 a request. The engine setting sits in the environment tier. The warning shows in `meta.batch_warning` |
 | `--batch 10` with `--jobs 1` | Same output bytes as `--jobs 8` |
-| A live, unrecorded stream that pauses | The open batch sends after 50 ms |
+| A live stream that pauses, with or without a folder | The open batch sends after 50 ms |
 | A stream that pauses under `--cache DIR`, `--record DIR` or `--replay DIR` | The open batch sends after 50 ms, as in a live run |
 | 10,000 records of 5 distinct values, none a content cut | Three batches of 4,096, 4,096 and 1,808 members |
 | `--replay` with another `--batch` than the recording | Exit 5 at the first missing batch |
