@@ -14,7 +14,7 @@ description: Use when writing or editing any page or code example on the ThinkTh
 - Plain sentences: subject, verb, object. No dash glosses, no trailing clauses, no clefts.
 - No status words: planned, drawn, preview, coming soon, or "Plan for 0.1".
 - Teach the idea, not the repository's files.
-- A number in the prose shows in an example on the same page.
+- A number in the prose shows in an example on the same page, or it links the record that measured it.
 - Colour: green yes, amber not sure, red no, grey broken. Values stay in ink. Only marks carry colour.
 - Install: the download script first (`curl -fsSL https://thinkthen.dev/install.sh | sh`), then Homebrew as an option on a Mac.
 - Name no private project and no home path. The repository is public.
@@ -37,4 +37,4 @@ description: Use when writing or editing any page or code example on the ThinkTh
 - An article includes an example with `<!-- example: <page>/<name> -->` and a file with `<!-- file: <path> -->`.
 - Capture with `node scripts/smoke.mjs --update <page>/<name>` from `site/`. Read the new output, check every `test` value and the caption against it, then run `npm run build`.
 - Every call answers from a saved recording. Make no live call: it costs money. If a request has no recording, change the example to one a recording answers, or stop and ask the site's owner.
-- `npm run build` runs `check-samples`, the smoke run, the Astro build, the Markdown twins, the settings check, and the link check. The smoke run uses `target/release/thinkthen` from the same commit.
+- `npm run build` runs `check-samples`, the slide check, the smoke run, the Astro build, the Markdown twins, the settings check, and the link check. The smoke run uses `target/release/thinkthen` from the same commit.
