@@ -48,4 +48,3 @@ Ticket 0108 ported the R surface from tag `surfaces-wave7-frozen-2026-09-24b` on
 ## Engine findings
 
 - The command prints the engine's internal `WidthActive` sentence, which still says width. R prints the public one, which says throttle. See `sdlc/issues/2026-09-25-command-wording-and-help-fixes-before-0-1.md`.
-- `Question::find` has no none candidate: `sdlc/issues/2026-09-25-public-library-api-gaps.md`, filed on main by ticket 0086.
