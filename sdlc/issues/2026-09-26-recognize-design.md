@@ -2,7 +2,7 @@
 
 Status: Sent by Ian to the main builder on 2026-09-26. Review findings and Ian's rulings of 2026-09-26 applied.
 
-Filed 2026-09-26. This design replaces two issues, now in `closed/`: `2026-09-26-recognize-loses-possessive-and-side-by-side-names.md` and `2026-09-26-recognize-relations-report-edges-the-text-does-not-state.md`. Its evidence comes from workspace experiments 265, 267, 268, 270 and 271. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` copies every table this design cites. Batching of many texts follows `2026-09-26-batching-design.md`, and the two documents share one set of batch rules. Ian's rulings of 2026-09-26 are listed in that design. Two reach this one: long texts use a bounded window of evidence, and the steps below are stated plainly. Ian can overturn each.
+Filed 2026-09-26. This design replaces two issues, now in `closed/`: `2026-09-26-recognize-loses-possessive-and-side-by-side-names.md` and `2026-09-26-recognize-relations-report-edges-the-text-does-not-state.md`. Its evidence comes from workspace experiments 265, 267, 268, 270 and 271. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` copies every table this design cites. Batching of many texts follows `2026-09-26-batching-design.md`, and the two documents share one set of batch rules. Ian's rulings of 2026-09-26 are listed in that design. Several reach this one: long texts use a bounded window of evidence, the steps below are stated plainly, library results carry `facts` on every call, batching puts speed first, batching ticket C1 builds the settings page, and batching ticket S1 measures speed. Ian can overturn each.
 
 ## What recognize is for
 
@@ -106,7 +106,7 @@ A user filing documents needs the cost of a full page up front. A long text spli
 | Text | Words after the rules | Words a request | Word requests | Time, estimated | Input tokens, at most | Cost |
 | --- | --- | --- | --- | --- | --- | --- |
 | 60-word paragraph | about 64 | 64, the whole text | 1, plus 1 `confirm` request when needed | about 0.5 s, 0.7 s with `confirm` | about 19,600 | about $0.0008 |
-| 1,000-word document | about 1,060 | 80 | 14, then the `confirm` requests | about 2.5 s | about 338,000 | about $0.014 |
+| 1,000-word document | about 1,060 | 80 | 14, then the `confirm` requests | about 2 s, plus the `confirm` rounds | about 338,000 | about $0.014 |
 | 10,000-word document | about 10,600 | 80 | 133, then the `confirm` requests | about 17 s, plus the `confirm` rounds | about 3,370,000 | about $0.14 |
 | The hard cap, 600,000 bytes, about 100,000 words | about 106,000 | 80 | 1,325, then the `confirm` requests | about 2.8 minutes, plus the `confirm` rounds | about 33,700,000 | about $1.42 |
 
@@ -116,7 +116,7 @@ Section 13 of the evidence record shows the working. A request costs about 300 i
 - 10,000 words: 10,600 ÷ 80 gives 133 requests. 133 × 1,452 + 10,600 × 300 = 3,373,116 tokens.
 - The cap: 106,000 ÷ 80 gives 1,325 requests. 1,325 × 1,452 + 106,000 × 300 = 33,723,900 tokens.
 
-The first and last pieces carry a window on one side only, so these figures are upper bounds. Experiment 270 used five bare kinds. The walkthrough uses three, which shortens each kind question by about 30 bytes, so these figures run slightly high. Time assumes 4 requests in flight, each round about half a second by experiment 271: 4 rounds for 14 requests, 34 for 133, and 332 for 1,325. The `confirm` requests carry a few questions and one window each, and the token and cost figures leave them out. Relations add at least one request for each concrete relation rule. Ticket R8 records one live run of a 1,000-word document and reports its requests, time and tokens.
+The first and last pieces carry a window on one side only, so these figures are upper bounds. Experiment 270 used five bare kinds. The walkthrough uses three. That shortens each kind question by about 30 bytes, so these figures run slightly high. Time assumes 4 requests in flight, each round about half a second by experiment 271: 4 rounds for 14 requests, 34 for 133, and 332 for 1,325. The `confirm` requests carry a few questions and one window each, and the token and cost figures leave them out. Relations add at least one request for each concrete relation rule. Ticket R8 records one live run of a 1,000-word document and reports its requests, time and tokens.
 
 ### Friction list
 
@@ -234,7 +234,7 @@ Rules for a split text:
 
 Under `--lines`, `--jsonl`, `--csv` or `--tsv`, `recognize` batches texts by the rules in `2026-09-26-batching-design.md`. A batch fills to the limit: it closes at the 96,000-byte ceiling, a profile limit, a content cut, `--batch N`, a pause or the end. At about 1,150 bytes a word, a request holds about 80 words, so about ten sentences of eight words. The evidence is `{"records":[T1,…,TN]}`, the same object the batching design uses. Each word question begins `In record K of the list.` and then gives today's window. A batch of one text sends today's exact request. The `confirm` questions of a whole batch ride in one request after the word answers return.
 
-Batching short texts saves little money. Experiment 270 billed about 2,665 input tokens a sentence, and the fixed part of a request is about 250, by experiment 271. It saves requests and time. At 10 texts a request, the vendor's 1,200 requests a minute stop limiting a run. Batching changes answers. Ian ruled that speed wins, so batching is on by default. Ticket R7 measures and reports the cost on the 100-sentence key, and the recognize page states it.
+Batching short texts saves little money. Experiment 270 billed about 2,665 input tokens a sentence, and the fixed part of a request is about 250, by experiment 271. It saves requests and time. At 10 texts a request, the vendor's documented 1,200 requests a minute stop limiting a run, by `specification/records.md` `jobs`. Batching changes answers. Ian ruled that speed wins, so batching is on by default. Ticket R7 measures and reports the cost on the 100-sentence key, and the recognize page states it.
 
 Relations stay per text. Each text's relation state carries its own names, so two texts cannot share a relation request.
 
@@ -254,7 +254,7 @@ Relations stay per text. Each text's relation state carries its own names, so tw
 | Relation cut | `0.5` | `--relation-threshold` | `relation_threshold` | `relation_threshold=` | `relation_threshold` key |
 | Window of neighbouring words on each side of a piece | 200, from 0 to 5,000 | `--window N` | `recognize.window` | `window=` | `window` key |
 | Hard cap on one text | 600,000 bytes | none | none | none | none |
-| Requests in flight for one text | 4 | `--jobs N` | none | the engine's throttle | the extension's throttle |
+| Requests in flight for one text | 4, set by `--jobs`, 1 to 32 | `--jobs N` | none | the engine's throttle | the extension's throttle |
 | Texts a request | as many as fit, as the batching design fixes | `--batch N` or `THINKTHEN_BATCH` | `batch` | `batch=` | `SET thinkthen_batch` |
 
 Word rules, boundary and window enter the question digest. Different rules never share a cache entry. `--batch` does not enter the question digest, and it changes request digests.
@@ -392,13 +392,23 @@ Any ticket that adds or changes a setting updates that setting's row in `specifi
 
 ## Open items Ian can overturn
 
-1. Every default: the word lists, `confirm` over `run`, the 0.5 cuts, and hyphens joined.
-2. The new relation wordings, and the bar of test 7.
-3. The targets of test 6, and test 9 reporting in place of gating.
-4. Leaving out `begin` and the split with no question.
-5. Batching texts for `recognize` by default, filling to the limit.
-6. The shared evidence name `records` for texts.
-7. The window of 200 words on each side, its range of 0 to 5,000, and the hard cap of 600,000 bytes with no option.
-8. Only `keep`, `infixes` and `boundary` reaching surfaces beyond the question file.
-9. `--field` with no framing flag reading one document on `recognize`, unlike `filter` and `rank`.
-10. The relation step keeping the whole text as evidence for now.
+Ian's rulings. Ian can overturn each.
+
+1. Relations in `recognize` mean the text states them.
+2. `recognize --jobs` for one document, default 4.
+3. Long texts split into pieces with a bounded window, under a hard cap.
+4. Test 9 reporting in place of gating, because speed wins.
+
+The author's calls. Ian can overturn each.
+
+5. The window default of 200 words on each side, and its range of 0 to 5,000.
+6. The hard cap of 600,000 bytes, with no option.
+7. Batching texts for `recognize` by default, filling to the limit.
+8. Every word default: the word lists, `confirm` over `run`, the 0.5 cuts, and hyphens joined.
+9. The new relation wordings, and the bar of test 7.
+10. The targets of test 6.
+11. Leaving out `begin` and the split with no question.
+12. The shared evidence name `records` for texts.
+13. Only `keep`, `infixes` and `boundary` reaching surfaces beyond the question file.
+14. `--field` with no framing flag reading one document on `recognize`, unlike `filter` and `rank`.
+15. The relation step keeping the whole text as evidence for now.

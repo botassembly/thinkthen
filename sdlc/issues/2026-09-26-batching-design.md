@@ -9,14 +9,14 @@ Filed 2026-09-26. This design replaces `2026-09-25-packing-and-batching-what-the
 Ian ruled on these points after he sent the design. Ian can overturn each one.
 
 1. **Batching is automatic and maximal.** By default each request carries as many records as fit under the backend profile's limits. The goal is the fewest requests. No small fixed default such as 10 exists. `--batch N` asks for at most N records a request. `--batch 1` gives today's requests back. Section 2 states the rule.
-2. **Content cuts stay.** An inserted record moves only nearby cuts. The cuts now fall inside fill-to-limit batches. Section 2 states the rule exactly.
+2. **Content cuts stay.** A cut depends only on its own record, so an insert moves no cut. The cuts now fall inside fill-to-limit batches. Section 2 states the rule and what an insert re-sends.
 3. **Speed wins over accuracy.** The default fills to the limit, although a full request without a context scored 276 to 278 right of 306. Today's filter scored 285, and 10 records a request scored 283 to 287. Ticket B4 lands the default. Test 9 measures and reports the accuracy cost and gates nothing. Ticket D1's page states that cost with its record.
-4. **The speed target.** `filter` over the 306 songs finishes in under half a second at the default throttle, on a named build, measured live. The throttle keeps its default of 4 requests in flight. Batching is the speed lever, and the throttle is not.
+4. **The speed target.** `filter` over the 306 songs finishes in under half a second at the default throttle, on a named build, measured live. The throttle keeps its default of 4 requests in flight, set by `--jobs`, 1 to 32. Batching is the speed lever, and the throttle is not.
 5. **A speed test, ticket S1.** It measures requests, wall time and tokens for every function and every Beatles Bench job, batched and unbatched. It fails any function that sends one request per item where a fuller request fits.
 6. **A documentation page, ticket D1.** One page explains batching and each backend's limits. Every number names its record and build.
 7. **Run facts.** Library results carry `facts` on every call, with no setting and no second call. `--facts` controls only what the command line prints.
 8. **Recognize on long texts uses a window.** `2026-09-26-recognize-design.md` section 6 gives the rule.
-9. **Ticket order.** B0 comes first, then C1. The two speed defects, B1 and B2, and relate's `--jobs`, J1, follow. The engine, S1 and the rest come after them.
+9. **Ticket order.** B0 comes first, then C1. The two speed defects, B1 and B2, and relate's `--jobs`, J1, follow. The engine B3, then S1, then B4 and the rest come after them.
 10. **Recognize's steps, stated plainly.** One request finds and labels the names, with two questions per word. `confirm` adds a request only when touching names need separating. Relations add requests. The recognize design states this where it explains requests.
 11. **Every setting is explained in one place.** Ticket C1 writes `specification/settings.md` right after B0. Any ticket that adds or changes a setting updates its row in the same commit.
 
@@ -56,7 +56,7 @@ Come Together
 …
 ```
 
-`catalog.txt` holds one line per song with its facts. The request fills the same way, so the catalog and all 306 titles go in one request of 62,748 bytes.
+`catalog.txt` holds one line per song with its facts. The request fills the same way, so the catalog and all 306 titles go in one request of 62,748 bytes, by section 9 of the evidence record.
 
 Sizing batching or turning it off:
 
@@ -179,11 +179,16 @@ The batch setting is `max` by default, or the whole number `N` that `--batch N` 
 
 The content hash is the SHA-256 of the record's evidence in compact JSON, the same bytes its question quotes. Its first 8 bytes, read as a big-endian unsigned integer, give the value taken mod 4,096. A context does not change the rule. At `N` of 1 every record closes its batch, so `--batch 1` sends today's requests.
 
-**What an insert moves.** Content cuts split the input into stretches that depend only on the records. Batches fill from the start of each stretch. An inserted, removed or changed record changes the batch that holds it and the later batches of its stretch. Batches before it keep their bytes. Every batch after the next content cut keeps its bytes. On average a stretch holds 4,096 records, so an insert re-sends about half a stretch.
+**What an insert moves.** A content cut depends only on its own record. Cuts split the input into stretches, and batches fill from the start of each stretch. An insert moves no existing cut. The cases:
+- An inserted, removed or changed record that is not a cut changes the batch that holds it and every later batch of its stretch. Batches before it keep their bytes. Every batch after the next cut keeps its bytes.
+- Cut positions are memoryless. The next cut after any record lies on average 4,096 records ahead. So an insert re-sends about 4,096 records on average, a full stretch.
+- A list shorter than a few thousand records usually holds no cut. There an insert re-sends every batch after it.
+- An inserted record that is a cut splits its stretch in two. The batches after it re-form up to the next cut.
+- A removed cut merges two stretches. A changed record that becomes or stops being a cut does the same. The batches from the merged or split point re-form up to the next cut.
 
 **Why fill to the limit.** Ian ruled that speed wins over accuracy and that batches fill to the limit. On 306 songs one full request answered in 0.30 to 0.39 s for 11,913 input tokens. Today's filter took 13.0 to 14.2 s for 88,933. The same request scored 276 to 278 right against today's 285, and its false yeses rose from 16 or 17 to 27 to 29. Experiment 208 found a larger cost on longer records: 1,000 SMS messages at 40 a request scored 0.882 accuracy and 0.434 recall, against 0.968 and 0.941 one a request. Test 9 measures the tool's own cost, and ticket D1's page states it.
 
-**Why 4,096.** A content cut costs at most one partly filled batch. The plain body over the 306 titles holds about 181 bytes a title, by section 9 of the evidence record. A request at the ceiling then holds about 529 short titles. One cut in 4,096 records therefore adds at most one request to about 8 full ones. A table of 100,000 short titles takes about 189 full requests and about 24 partial ones. At 4 in flight and about half a second a request, that run takes about half a minute. No title of the 306 falls on a cut at 4,096, so the list goes in one request. At 1,024 the 72nd title would cut it into two requests.
+**Why 4,096.** A content cut costs at most one partly filled batch. The plain body over the 306 titles holds about 181 bytes a title, by section 9 of the evidence record. A request at the ceiling then holds about 529 short titles. One cut in 4,096 records therefore adds at most one request to about 8 full ones. A table of 100,000 short titles takes about 189 full requests and about 24 partial ones. At 4 in flight and an estimated half a second a request, that run takes an estimated half a minute. No title of the 306 falls on a cut at 4,096, so the list goes in one request. At 1,024 the 72nd title would cut it into two requests.
 
 **Why 96,000 bytes.** The ceiling already exists in `specification/backends.md`. It holds under the token limit at the worst measured rate of 0.516 tokens a byte. It needs no tokenizer. Record text measured 0.40 tokens a byte in experiment 268. Ticket B6 measures the rate on batched record text again. A record whose batch of one already passes the ceiling goes alone as today's request.
 
@@ -221,8 +226,8 @@ Every function that can batch does so by default. Its measured accuracy cost is 
 | --- | --- | --- |
 | `decide`, `filter`, `rank` over records | One yes/no question per record | Fill to the limit, from B4. Measured in 208, 260 and 271 |
 | `choose` over records | One pick-one question per record, options as today | Fill to the limit, from B8. Measured at 10 in 262. Test 11 measures it at the default |
-| `tag` over records | One yes/no question per record and label | Fill to the limit, from B9, which measures it |
-| `score` over records | One levels question per record | Fill to the limit, from B9, which measures it |
+| `tag` over records | One yes/no question per record and label | Fill to the limit, from B9. B9 measures it |
+| `score` over records | One levels question per record | Fill to the limit, from B9. B9 measures it |
 | `annotate` over records | The records of one `on` group share a request, each question quoting its record | Fill to the limit, from B10 |
 | `find` | Already sends its whole set in one request | Unchanged |
 | `recognize` over many short texts | As `2026-09-26-recognize-design.md` section 7 gives it | Fill to the limit, from recognize R7 |
@@ -334,7 +339,7 @@ Tests 1 to 8 and 13 need no network. They use recordings and a loopback backend.
 
 1. **Batch of one.** Every existing fixture under `specification/fixtures/systemone/` encodes byte for byte under `--batch 1` and under a stream of one record.
 2. **Batch body.** New fixtures pin one plain batch of three records, one context batch, one pick-one batch, one CSV batch and one batch with a duplicate record.
-3. **Grouping.** A 25-line fixture holds two lines whose content hash is 0 mod 4,096. Its README names them and works out every batch by hand with `sha256sum`, at the default under a profile whose `max_questions` is 8, and at `--batch 5`. Records of 40,000 bytes close batches at the ceiling. The same fixture with one line inserted changes only the batches the README names: the insert's batch and the later batches of its stretch.
+3. **Grouping.** A 25-line fixture holds two lines whose content hash is 0 mod 4,096. Its README names them and works out every batch by hand with `sha256sum`, at the default under a profile whose `max_questions` is 8, and at `--batch 5`. Records of 40,000 bytes close batches at the ceiling. The same fixture with one line inserted changes only the batches the README names: the insert's batch and the later batches of its stretch. A second insert adds a line whose hash is itself 0 mod 4,096. It splits its stretch, and the README names the batches that re-form up to the next cut.
 4. **Order and jobs.** A recorded 306-line `filter` at `--batch 10` prints identical bytes at `--jobs 1` and `--jobs 8`, on standard output and standard error, without `--facts`. With `--facts`, the two standard error lines match once `seconds` is removed.
 5. **Replay.** A recorded run replays with no network under the same settings. Under another `--batch` it exits 5 and names the first missing batch.
 6. **Shares.** For every batch in a recorded run, the rows' shares of input tokens, output tokens and requests sent sum to the batch. The `--facts` totals equal the sum over live replies. A replayed run's facts carry no token fields.
@@ -357,10 +362,10 @@ Any ticket that adds or changes a setting updates that setting's row in `specifi
 | # | Outcome | Scope | Proof | Depends on | ADR |
 | --- | --- | --- | --- | --- | --- |
 | B0 | Ian's rulings recorded | One ADR: the batch shape, fill to the limit with content cuts at 0 mod 4,096, `--batch N` and `max`, shares, `--facts`, library `facts` on every call, `--context`, `meta.context_sha256`, the question file's `batch` and its precedence, the batch setting as calibration identity, and speed ahead of accuracy. It lands before recognize R0. It amends ADR 0007 line 103, "each record is its own request, and records never share model context". It amends ADR 0008's request table and its sentence "Two pieces of evidence never share a request", as ADR 0010 accepted them, and ADR 0010's `--jobs` as requests in flight. It amends ADR 0040's "Records … are never combined" and ADR 0032's rule that calibration identity enters the question digest. It amends the `roadmap.md` rows that keep `--context FILE` and packing out for isolation, `records.md` "Order and requests" and `jobs`, `result.md` `meta`, `channels.md`, `question-file.md` precedence and its schema, and `backends.md` | ADR accepted; pages updated | none | This is the ADR |
-| C1 | Every setting is explained in one place | A new `specification/settings.md`, described below. It needs no batching code | Its lint check with both planted failures | B0 | no |
+| C1 | Every setting is explained in one place | A new `specification/settings.md`, described below. It needs no batching code | Its lint check with all three planted failures | B0 | no |
 | B1 | Usage writes stop serializing requests | Per `2026-09-26-usage-file-writes-serialize-requests-in-flight.md` | That issue's timing at `--jobs 16` | none | no |
 | B2 | The pool keeps up to `--jobs` connections | Per `2026-09-26-connection-pool-reopens-connections-above-three-jobs.md` | New connections at `--jobs 16` stay near the job count | none | no |
-| J1 | `relate` and split requests run at once | One text's split requests and one relate's relations run under the engine's throttle. `relate` takes `--jobs`. Closes `2026-09-25-relate-sends-one-chunk-at-a-time.md`. It comes early because relate is the furthest from fast today | Ticket 0118's loopback count reaches the throttle | none | Needs an amendment to `relate.md`, which says the command sends its requests in order and refuses `--jobs` |
+| J1 | `relate` and split requests run at once | One text's split requests and one relate's relations run under the engine's throttle. `relate` takes `--jobs`. Closes `2026-09-25-relate-sends-one-chunk-at-a-time.md`. It comes early because relate is the furthest from fast today | Ticket 0118's loopback count reaches the throttle | none | Needs an amendment. `relate.md` says the command sends its requests in order and refuses `--jobs`. Amend it |
 | B3 | The engine plans batches | Fill to the limit, content cuts, size, profile limits, ceiling, quote prefix, evidence object, duplicates, batch of one, digests. No surface change | Tests 1, 2 and 3 | B0 | covered by B0 |
 | S1 | The speed test | Described below | Its gate part passes with its list of functions still to batch; its live part reports on a named build | B1, B2, J1, B3 | no |
 | B4 | The command batches `decide`, `filter` and `rank`, filling to the limit by default | `--batch`, `THINKTHEN_BATCH`, the question file's `batch`, precedence, jobs over batches, order, pause, failure line, record, replay, cache, dry run. It removes `decide`, `filter` and `rank` from S1's list | Tests 4, 5, 7 and 8; S1's gate part | B3, S1 | covered by B0 |
@@ -393,7 +398,7 @@ Ian ruled on 2026-09-26 that every setting is explained in one place. C1 builds 
 
 - One precedence rule at the top, in prose above the table: the typed value, then the environment, then the question file, then the default. The profile's place in that order comes from ADR 0007.
 - One table with fixed columns, in this order: setting, what it does, default, allowed values, then one column per surface. The surface columns are the command flag, the environment variable, the question-file key, Rust, Python, TypeScript, Ruby, R, C, DuckDB, PostgreSQL and SQLite. Prose stays outside the table. The website generates its Settings page from the table at build time.
-- One row per setting. The rows cover today's settings: the threshold, the `--jobs` throttle with its default of 4, the timeout, retries, the cache and recording folders, the profile and the backend address, and the key's environment variable. They cover every setting these designs add: `batch`, `context` and `facts`, and recognize's `keep`, `infixes`, `boundary`, `window` and hard cap. Worked examples under the table show `'s` possessives with `keep` and hyphens with `infixes`.
+- One row per setting. The rows cover today's settings: the threshold, the throttle with its default of 4, set by `--jobs`, 1 to 32, the timeout, retries, the cache and recording folders, the profile and the backend address, and the key's environment variable. They cover every setting these designs add: `batch`, `context` and `facts`, and recognize's `keep`, `infixes`, `boundary`, `window` and hard cap. Worked examples under the table show `'s` possessives with `keep` and hyphens with `infixes`.
 - A cell reads "not on this surface" where the setting does not apply. A row for a setting that a design adds names the ticket that brings it.
 - A lint check keeps the page complete, and runs from a rung. It checks the column headers and their order. Every command flag in the help needs a row. Every `THINKTHEN_` environment name the product code reads needs a row. Names only tests read, such as `THINKTHEN_TEST_*`, sit on one named list in the check. A row for a setting that no longer exists fails. The check plants three failures: a missing row, a stale row and a moved column.
 
@@ -420,15 +425,23 @@ Ian ruled on 2026-09-26 that one page explains batching. D1 writes it in `specif
 
 ## Open items Ian can overturn
 
-1. Fill to the limit by default, with `--batch N` as an upper bound and `max` as the default's spelling.
-2. The content cut on SHA-256 mod 4,096, inside fill-to-limit batches.
+Ian's rulings. Ian can overturn each.
+
+1. Fill to the limit by default, with `--batch N` as an upper bound.
+2. Content cuts inside fill-to-limit batches.
 3. Speed ahead of accuracy: test 9 reports and gates nothing.
-4. The 50 ms pause, its lack of an option, and its absence under a recording folder.
-5. `--batch 1` sending today's unquoted request. Experiment 271 found the quote alone gained 5 to 7 right. A later change could quote at one record too, at the cost of every old recording.
-6. Even shares of tokens across a batch, in place of shares by record size.
-7. `--facts` as the command's one option for run facts, with silence by default. Library results carry `facts` on every call.
-8. `tag`, `score`, `annotate` and `recognize` batching by default, with their cost measured and reported.
-9. Leaving the evidence of plain batches in an object, where experiment 271 sent a plain list of lines.
-10. DuckDB's vector edges still close batches where the command does not. Recordings therefore match across the command and DuckDB only at `--batch 1` until that is solved.
-11. The batch part of calibration identity staying out of the question digest, unlike `profile`.
-12. The ticket order: B0, C1, B1, B2, J1, B3, S1, then the rest.
+4. `--facts` as the command's one option for run facts, with silence by default. Library results carry `facts` on every call.
+5. The batch part of calibration identity staying out of the question digest, unlike `profile`.
+6. The ticket order: B0, C1, B1, B2, J1, B3, S1, B4, then the rest.
+
+The author's calls. Ian can overturn each.
+
+7. `max` as the spelling of the default.
+8. The cut at SHA-256 mod 4,096.
+9. `tag`, `score`, `annotate` and `recognize` batching by default, with their cost measured and reported.
+10. The 50 ms pause, its lack of an option, and its absence under a recording folder.
+11. `--batch 1` sending today's unquoted request. Experiment 271 found the quote alone gained 5 to 7 right. A later change could quote at one record too, at the cost of every old recording.
+12. Even shares of tokens across a batch, in place of shares by record size.
+13. Leaving the evidence of plain batches in an object, where experiment 271 sent a plain list of lines.
+14. DuckDB's vector edges still close batches where the command does not. Recordings therefore match across the command and DuckDB only at `--batch 1` until that is solved.
+15. Recognize's 600,000-byte hard cap and its 200-word window default, from `2026-09-26-recognize-design.md`.
