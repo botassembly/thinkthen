@@ -14,7 +14,7 @@ description: Use when writing or editing any page or code example on the ThinkTh
 - Plain sentences: subject, verb, object. No dash glosses, no trailing clauses, no clefts.
 - No status words: planned, drawn, preview, coming soon, or "Plan for 0.1".
 - Teach the idea, not the repository's files.
-- A number in the prose shows in an example on the same page.
+- A number in the prose shows in an example on the same page, or it links the record that measured it.
 - Colour: green yes, amber not sure, red no, grey broken. Values stay in ink. Only marks carry colour.
 - Install: the download script first (`curl -fsSL https://thinkthen.dev/install.sh | sh`), then Homebrew as an option on a Mac.
 - Name no private project and no home path. The repository is public.
