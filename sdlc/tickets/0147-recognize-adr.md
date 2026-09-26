@@ -6,7 +6,7 @@ opens: sdlc/planning/adr/0050-recognize-reads-words-confirms-runs-and-windows-lo
 
 # 0147: Record the recognize rulings in one ADR
 
-Status: ready. Owner: Claude.
+Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
