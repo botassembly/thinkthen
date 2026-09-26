@@ -18,6 +18,7 @@ EVIDENCE = "The text names a song by the Beatles that appears on the album Abbey
 SIZES = (8000, 24000, 40000, 56000)
 PRICE = 0.042  # dollars a million input tokens, as recorded in the batching evidence record
 CAP = 1_800_000
+SOURCES = ("crates/thinkthen/src", "crates/thinkthen/Cargo.toml", "Cargo.toml", "Cargo.lock")  # what the binary is built from
 MADE = set()
 
 
@@ -121,7 +122,7 @@ def check(bench):
         refuse("THINKTHEN_BASE_URL is set; the speed run measures the built-in address")
     if subprocess.run(["git", "status", "--porcelain"], cwd=ROOT, stdout=subprocess.PIPE, check=True).stdout:
         refuse("the checkout has uncommitted changes; commit them so the run names its build")
-    head = int(subprocess.run(["git", "log", "-1", "--format=%ct", "--", "crates", "Cargo.toml", "Cargo.lock"], cwd=ROOT, stdout=subprocess.PIPE,
+    head = int(subprocess.run(["git", "log", "-1", "--format=%ct", "--", *SOURCES], cwd=ROOT, stdout=subprocess.PIPE,
                               check=True).stdout)
     if not binary.exists() or binary.stat().st_mtime < head:
         refuse("target/debug/thinkthen is missing or older than the last commit to its sources; build it first")
