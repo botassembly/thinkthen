@@ -39,7 +39,7 @@ These rules go into `sdlc/planning/worktrees.md` and the builder brief.
 3. A builder commits and pushes work in progress to its own ticket branch after each fix. A lost lane then loses nothing. The landing merge keeps the history; nothing is squashed.
 4. No worktree or lane is removed while `git status --porcelain` shows anything, or while the branch has commits that are neither on origin nor merged into main. `git worktree remove --force` is used only after both checks pass, to clear ignored build output.
 
-The issue `sdlc/issues/2026-09-26-scripts-can-delete-paths-they-did-not-create.md` proposes a lint check for rule 1.
+The issue `sdlc/issues/closed/2026-09-26-scripts-can-delete-paths-they-did-not-create.md` proposes a lint check for rule 1.
 
 ## Found on the way
 
