@@ -6,7 +6,8 @@
 # one source: rustup-init and the channel rust-toolchain.toml names, the image's CPython
 # 3.10 with maturin and PyPI's libclang wheel, the nodejs.org Node 22 tarball, the PGDG EL8
 # PostgreSQL 16 RPMs unpacked as this user, cargo-pgrx 0.17.0, and the image's gcc.
-# RELEASE_CARGO_REGISTRY names a crate registry folder to mount read-only and build offline.
+# RELEASE_CARGO_REGISTRY names this user's crate registry to share, and the release files
+# then build offline. cargo-pgrx, a tool outside every lock here, still fetches.
 set -eu
 [ $# -eq 2 ] || { echo 'usage: release-container WORK OUT' >&2; exit 2; }
 IMAGE=quay.io/pypa/manylinux_2_28_x86_64@sha256:407f771c51a2c3e83ebe5a7970b4289ead3a6db21d9b9c089168775cad11d328
@@ -18,7 +19,7 @@ mkdir -p "$WORK/src" "$WORK/out" "$WORK/home/.cargo/registry"
 git -C "$REPO" archive HEAD | tar -x -C "$WORK/src"
 set -- --rm --user "$(id -u):$(id -g)" -v "$WORK:/work" -e HOME=/work/home
 if [ -n "${RELEASE_CARGO_REGISTRY:-}" ]; then
-	set -- "$@" -v "$RELEASE_CARGO_REGISTRY:/work/home/.cargo/registry:ro" -e CARGO_NET_OFFLINE=true
+	set -- "$@" -v "$RELEASE_CARGO_REGISTRY:/work/home/.cargo/registry" -e CARGO_NET_OFFLINE=true
 fi
 docker run "$@" "$IMAGE" sh -euc '
 	cache=/work/cache
@@ -52,7 +53,7 @@ docker run "$@" "$IMAGE" sh -euc '
 	/work/home/venv/bin/pip install --quiet --no-index --no-deps "$cache/$maturin" "$cache/$libclang"
 	tar -xJf "$cache/$node.tar.xz" -C /work/home
 	PATH=/work/home/.cargo/bin:/work/home/venv/bin:/work/home/$node/bin:/work/home/pgrx/bin:$PATH
-	cargo install --quiet --locked --root /work/home/pgrx cargo-pgrx --version 0.17.0
+	CARGO_NET_OFFLINE=false cargo install --quiet --locked --root /work/home/pgrx cargo-pgrx --version 0.17.0
 	# bindgen reads the image gcc's own headers beside the wheel's libclang.
 	LIBCLANG_PATH=/work/home/venv/lib/python3.10/site-packages/clang/native
 	BINDGEN_EXTRA_CLANG_ARGS="-I$(gcc -print-file-name=include)"
