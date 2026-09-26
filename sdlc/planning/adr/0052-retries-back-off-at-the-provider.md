@@ -33,7 +33,7 @@ No command option limits requests. The library's request limit, `max_requests`, 
    - When the total runs out in the middle of a request, the retry is not sent. The request fails with the retried status that asked for the retry, and the call raises the surface's spent-total refusal after the rows it finished. Ticket 0149, which carries the SQL settings, moves the total's check to the engine's send gate so that this holds within a call. Until then the total is checked between calls, and one call's retries can pass it.
 9. **Retries are counted apart.** `requests_sent` keeps its meaning: every send, first sends and retries alike. A new count, `retries`, reports the sends that were retries, so first sends are `requests_sent` less `retries`. It joins the usage totals: the engine's counters, the monthly usage file, and `thinkthen status` as `month_retries` and `total_retries`. It joins the run facts of ADR 0048 item 10, which ticket B5 builds. A usage file written before this ADR has no `retries` field and reads as 0. A row's `meta.requests_sent` does not change, and rows gain no field.
 10. **Batches.** A batch is one request, by ADR 0048 item 5. A retried status on one batch closes the gate for every batch to that address. A batch's retry resends the whole batch, by ADR 0048 item 6, and counts against that batch's own retries. `--jobs N` still means N batches in flight, and at most N sends at once. The halves of ADR 0051 are two requests with their own retry counts, and a too-large refusal leaves the gate open.
-11. **Libraries and SQL.** An engine is shared across calls, and the gate is shared wider: by every engine and call in the process that posts to the same URL. Two engines at two addresses never wait on each other. The library's `Counters` gains `retries()` in the library settings follow-up named by ticket 0154, beside `max_request_bytes`. Until then the engine counts retries and no binding reads them.
+11. **Libraries and SQL.** An engine is shared across calls, and the gate is shared wider: by every engine and call in the process that posts to the same URL. Two engines at two addresses never wait on each other. The library's `Counters` gains `retries()` in ticket 0157, the library settings follow-up, beside `max_request_bytes`. Until then the engine counts retries and no binding reads them.
 12. **What stays.** The retried statuses, the headers read, the 60-second cap, the doubling from one second, and the rule that a transport failure is never sent again.
 
 ## Why a shared gate and not a smaller throttle
@@ -73,6 +73,6 @@ The ticket author's calls:
 8. The gate keyed by the exact posting URL, item 2.
 9. A spent request closing the gate too, item 3.
 10. A wait capped by the waiter's own `--timeout` and 60 seconds, then a send, item 5.
-11. The mid-request budget check left to ticket 0149, item 8.
-12. `retries()` on the library `Counters` left to the library settings follow-up, item 11.
+11. The mid-request budget check left to ticket 0149, which must carry item 8.
+12. `retries()` on the library `Counters` left to ticket 0157, item 11.
 13. Old usage files reading as 0 retries under the same `thinkthen.usage/1` schema, as ticket 0124 changed `thinkthen.status/1` in place before a release.

@@ -6,7 +6,7 @@ opens: sdlc/planning/adr/0052-retries-back-off-at-the-provider.md sdlc/planning/
 
 # 0155: Retries back off at the provider and count apart
 
-Status: ready for review. Owner: Claude. It carries ADR 0052. It builds only after tickets 0146 and 0148 land on main, and before ticket 0154 and the batching design's B5.
+Status: ready for review. Owner: Claude. It carries ADR 0052. It builds only after tickets 0146 and 0148 land on main, and before ticket 0154 and the batching design's B5, by the coordinator's ruling of 2026-09-26.
 
 Review route: a fresh read-only Claude session reviews this design, ADR 0052, and later the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -60,7 +60,7 @@ A replay or cache answer never reaches `post_observed`, so it never waits.
 
 `Counts` gains `retries: u64` with `#[serde(default)]`, so a usage file written before this ticket reads as 0 retries. `Counters` gains `retry_sent()`. `post_observed`'s hook tells the counters whether the attempt is a retry, and the counters add one to `requests_sent` for every attempt and one to `retries` for a retry. `thinkthen status` prints `month_retries` and `total_retries` after `month_requests_sent` and `total_requests_sent`, in text and in `thinkthen.status/1`. A row's `meta.requests_sent` and `HttpAnswer::requests_sent` do not change.
 
-The run facts do not exist yet. ADR 0052 item 9 adds `retries` to ADR 0048 item 10, and B5 builds it. The library's `Counters::retries()` joins the library settings follow-up that ticket 0154 names.
+The run facts do not exist yet. ADR 0052 item 9 adds `retries` to ADR 0048 item 10, and B5 builds it. The library's `Counters::retries()` joins ticket 0157, the library settings follow-up.
 
 ### Request budgets
 
@@ -88,18 +88,18 @@ Each is the ticket author's call unless marked. Ian can overturn any of them.
 8. **Old usage files read as 0 retries under the same schema name.** No release has shipped. Ticket 0124 changed `thinkthen.status/1` in place for the same reason. An older binary refuses a file this build writes, and prints its one persistence warning.
 9. **The mid-request budget check goes to ticket 0149.** It needs the SQL total inside the engine, which is SQL settings work. The rule is fixed here.
 10. **Rows gain no `retries` field.** The ruling names the usage totals and run facts. A row's share of retries can join `meta` later if a user asks.
-11. **Build after 0146 and 0148, before 0154 and B5.** The section "Order and shared files" gives the reasons.
+11. **Build after 0146 and 0148, before 0154 and B5.** The coordinator ruled this order on 2026-09-26. The section "Order and shared files" gives the reasons.
 
 ## Order and shared files
 
-Recommended order: 0146, then 0148, then 0155, then B5, then 0154.
+Order, ruled by the coordinator on 2026-09-26: 0146, then 0148, then 0155, then 0154, then B5.
 
 | Ticket | Shared files | Why the order |
 | --- | --- | --- |
 | 0146 | `cli/args.rs`, `crates/thinkthen/tests`, `backends.md`, `settings.md` | 0146 opens `cli/args.rs` and the whole test folder. 0155 changes one default line there and the tests that count the default's sends. 0155 waits for it |
 | 0148 | `public/settings.rs`, `settings.md`, `databases/sqlite`, the library test folders, ADR 0017 | 0148 exposes `max_retries` on every library with the command's default and opens `databases/sqlite`. 0155 changes that default to 3 and the SQLite test that counts 3 sends. Its shared case "max-retries-zero-sends-once" sets 0 and does not change. 0155 waits for it |
-| 0154 | `cli/args.rs`, `backends.md`, `settings.md`, ADR 0048 | Different lines: 0154 adds `--max-request-bytes` and the request-size row, and edits ADR 0048 items 2, 5, 6 and 9. 0155 changes the retries default and row, and marks item 10. 0154 waits for B5, so 0155 goes first, and 0154 merges it |
-| B5 | ADR 0048 item 10, `result_json.rs` | B5 builds the run facts. With 0155 on main first, B5 builds `retries` with the other facts, and 0155 touches no run-facts code |
+| 0154 | `cli/args.rs`, `backends.md`, `settings.md`, ADR 0048 | Different lines: 0154 adds `--max-request-bytes` and the request-size row, and edits ADR 0048 items 2, 5, 6 and 9. 0155 changes the retries default and row, and marks item 10. 0155 lands first, and 0154 merges it |
+| B5 | ADR 0048 item 10, `result_json.rs` | B5 builds the run facts. B5 builds after 0155 and 0154, so it builds `retries` with the other facts, and 0155 touches no run-facts code |
 | 0149 | the SQL surfaces | 0149 builds ADR 0052 item 8's check inside a request. 0155 changes no SQL product code |
 
 0155 does not touch `engine/facade.rs`, `engine/schedule.rs`, `public/results.rs` or any `cli/asking` file.
@@ -181,7 +181,7 @@ Nonblank lines, measured with `grep -c .`. Net lines against main after tickets 
 
 ## Scope and exclusions
 
-Excluded: an adaptive throttle, by Ian's ruling. The request total's check inside a request, which ticket 0149 builds. `retries()` on the library `Counters` and each binding, which the library settings follow-up named by ticket 0154 carries. The run facts, which B5 builds. A `retries` field on rows. The HTTP-date form of `Retry-After`. `site/`.
+Excluded: an adaptive throttle, by Ian's ruling. The request total's check inside a request, which ticket 0149 builds. `retries()` on the library `Counters` and each binding, which ticket 0157 carries. The run facts, which B5 builds. A `retries` field on rows. The HTTP-date form of `Retry-After`. `site/`.
 
 ## Routing
 
@@ -193,8 +193,8 @@ Contract 2; state and timing 2; reach 2; proof 2; cost of error 1; total 9. Fina
 
 ## Deferred gaps
 
-1. Ticket 0149 builds ADR 0052 item 8: the SQL request total checked at each send, so a retry that finds it spent is not sent.
-2. The library settings follow-up gives `Counters::retries()` to Rust and every binding, beside ticket 0154's `max_request_bytes`.
+1. Ticket 0149 builds ADR 0052 item 8: the SQL request total checked at each send, so a retry that finds it spent is not sent. Ticket 0149 must carry ADR 0052 item 8 in its scope and proof.
+2. Ticket 0157, the library settings follow-up, gives `Counters::retries()` to Rust and every binding, beside ticket 0154's `max_request_bytes`.
 3. B5 builds `retries` in the `thinkthen.run/1` facts.
 4. A row carries no share of retries.
 5. The gate reads no HTTP-date `Retry-After`, as today.
@@ -210,7 +210,7 @@ Contract 2; state and timing 2; reach 2; proof 2; cost of error 1; total 9. Fina
 - Decision 8: old usage files read as 0 retries under the same schema name.
 - Decision 9: the mid-request budget check left to ticket 0149.
 - Decision 10: no `retries` field on rows.
-- Decision 11: the build order 0146, 0148, 0155, B5, 0154.
+- Decision 11, the coordinator's: the build order 0146, 0148, 0155, 0154, B5.
 
 ## Closes
 
@@ -222,4 +222,4 @@ No issue. No issue was filed for these rulings, and this ticket and ADR 0052 rec
 - Keeps: The retried statuses, the headers read, the 60-second cap, the doubling from one second, and no resend after a transport failure. The throttle's number and what it counts. Replay and cache answers that never wait. Every row's `meta.requests_sent`. The library's `max_requests`. Every SQL product file.
 - Changes: `--max-retries` and the engine default become 3. A process-wide backoff gate for each posting URL, closed by a retried status and waited on before every live attempt. A `retries` count in the engine counters, the usage file and `thinkthen status`. ADR 0052, and four specification pages.
 - Proof: Three new loopback and public-API tests, one amended unit test, and the existing tests that count the default's sends, each with its plants, under "Proof".
-- Defers: The SQL total checked at each send (0149). `retries()` on the libraries (the library settings follow-up). `retries` in the run facts (B5). A row share of retries. The HTTP-date header. ADR 0017's marker after 0148.
+- Defers: The SQL total checked at each send (0149). `retries()` on the libraries (ticket 0157). `retries` in the run facts (B5). A row share of retries. The HTTP-date header. ADR 0017's marker after 0148.
