@@ -1,6 +1,6 @@
 # 0134 build: withhold the relate entity's kind
 
-Builder: Claude (Opus subagent), 2026-09-26, on `ticket/0134-public-library-gaps` in lane `thinkthen-lane-2`. The ticket was accepted on its second review pass by a fresh read-only Claude session. `origin/main` was merged after ticket 0136 landed (`152c6477`), and the final ladder ran on the merge head `defd34a1`. Ian can overturn every decision below.
+Builder: Claude (Opus subagent), 2026-09-26, on `ticket/0134-public-library-gaps` in lane `thinkthen-lane-2`. The ticket was accepted on its second review pass by a fresh read-only Claude session. `origin/main` was merged after ticket 0136 landed (`152c6477`), and the ladder ran on that merge head `defd34a1`. Main then moved (ticket 0133 and others), so `origin/main` was merged again and the ladder ran a second time on `74f1bd6b`. After that run, ticket 0137 reached main. The branch does not carry it, and the lander merges it. Ian can overturn every decision below.
 
 ## Outcome
 
@@ -30,27 +30,30 @@ A change to a public type's `Debug` output asks for a second review under the re
 
 ## Ladder
 
-The final run, once each rung, on `defd34a1` after the merge. Each rung started when the heavy lock was free, so no time below includes a wait for another builder.
+Each rung ran once per run, directly, never wrapped in `flock`. Each rung started when the heavy lock was free, so no time below includes a wait for another builder.
 
-| Rung | Result | Wall time |
+| Rung | Run 1 on `defd34a1` | Run 2 on `74f1bd6b` |
 | --- | --- | --- |
-| `install` | pass | 1 s |
-| `lint` | pass | 105 s |
-| `test` | pass | 123 s |
-| `spec` | pass, demos 21 green and 0 red | 22 s |
-| `surfaces` | pass on all ten surfaces | 884 s |
+| `install` | pass, 1 s | pass, 1 s |
+| `lint` | pass, 105 s | pass, 160 s |
+| `test` | pass, 123 s | pass, 128 s |
+| `spec` | pass, demos 21 green and 0 red, 22 s | pass, demos 21 green and 0 red, 19 s |
+| `surfaces` | pass on all ten surfaces, 884 s | pass on all ten surfaces, 581 s |
+| Total | 1,135 s | 889 s |
+
+Run 2 rebuilt what main's merge changed: the interrupt handler, the recording code, and the PostgreSQL and DuckDB bindings among them.
 
 ## Lane trial
 
 - The lane started cold: 29 MB, no `target` folder.
 - The withdrawn item 8 work built the Python extension, the Rust Polars lane, and the `public_members` test in the lane, so the lane was 1.6 GB before any rung ran.
 - An earlier ladder run on the item 8 code, stopped by the scope change, took `install` 0 s and `lint` 250 s from that partly warm lane. It was stopped before `test`.
-- The lane measured 2.9 GB before the final run and 9.3 GB after it.
-- The final run above is the only full ladder. It ran on a lane warmed by the earlier `lint` and by the development builds, not a cold lane. It is not a clean cold-versus-warm pair.
+- The lane measured 2.9 GB before run 1 and 9.3 GB after it. It measured 9.3 GB after run 2.
+- Run 1 is the first full ladder in this lane. It ran on a lane warmed by the stopped `lint` and the development builds, so it is not a clean cold run. Run 2 is the warm run, 246 s faster in total.
 
 ## Ratchet
 
-`node sdlc/scripts/ratchet.mjs` reads `crates + conformance 66568/66568`. Main before this ticket measured 66,557. The rise of 11 is the entity test. The entity fix changes one line and adds none. The Python ceilings are unchanged from main.
+`node sdlc/scripts/ratchet.mjs` reads `crates + conformance 66547/66547` on `74f1bd6b`. Main at that merge measured 66,536. The rise of 11 is the entity test. The entity fix changes one line and adds none. The Python ceilings are unchanged from main.
 
 ## Line counts against the budget
 
