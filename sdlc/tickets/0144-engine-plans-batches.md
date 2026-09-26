@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 144
-opens: crates/thinkthen/src/core/batch.rs crates/thinkthen/src/core/batch crates/thinkthen/src/core/mod.rs crates/thinkthen/src/core/records.rs crates/thinkthen/src/core/backend.rs crates/thinkthen/src/engine/prepared_request.rs specification/fixtures/systemone specification/fixtures/batching sdlc/ratchet.json sdlc/records sdlc/tickets
+opens: crates/thinkthen/src/core/batch.rs crates/thinkthen/src/core/batch crates/thinkthen/src/core/mod.rs crates/thinkthen/src/core/records.rs crates/thinkthen/src/core/backend.rs crates/thinkthen/src/core/backend_profile.rs crates/thinkthen/src/engine/prepared_request.rs specification/fixtures/systemone specification/fixtures/batching sdlc/ratchet.json sdlc/records sdlc/tickets
 ---
 
 # 0144: The engine plans batches
@@ -171,6 +171,10 @@ Nonblank lines, measured with `grep -c .`.
 - `specification/fixtures/systemone/`: five one-line fixtures, and at most 15 lines added to its README.
 - `specification/fixtures/batching/`: `grouping.txt` of 25 lines and a README of at most 90 nonblank lines.
 - `sdlc/ratchet.json` moves to the measured total, at most 605 above today. That is 240, 340, 3 and 2 for the first four Rust budgets, plus 20 for the `core/records.rs` helper. The commit says what grew.
+
+**Budget ruling, 2026-09-26.** The coordinator raised the budget from 605 to 930 after the reviews added the context refusals, the late-overflow check and the Selected split. Ian can overturn this. The build had measured these nonblank lines when it stopped at stop rule 1: `core/batch.rs` 398 against 240, `core/batch/tests.rs` 478 against 340, `core/records.rs` 39 net against 20, and 2 across `core/mod.rs` and `core/backend.rs`. That made 913 lines of growth. The file ceilings above give way to the 930 total. The fresh code review still looks for duplication and dead code to cut.
+
+**Deviation.** `core/backend_profile.rs` makes `max_evidence_bytes`, `max_request_bytes` and `max_questions` `pub(crate)`, so the batcher can test a limit before it encodes a batch. It adds no line. The design did not list the file.
 - No dependency. `sha2` is already a core dependency. No public library type, method or message changes, so the `surfaces` rung is not required.
 
 ## Stop rules
