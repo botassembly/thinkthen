@@ -110,7 +110,7 @@ export const FUNCTIONS = [
     requests: 'One request for one piece of evidence. One request for each record in a stream.',
     args: 'QUESTION or @FILE, then OPTION...',
     options: [
-      ['--threshold T', 'The bar the winning option must reach. One number only. A band is a usage error. There is no default.'],
+      ['--threshold T', `The bar the winning option must reach. One number only. A band is a usage error. ${cutOn('choose') === 'none' ? 'There is no default' : `The default is ${cutOn('choose')}`}.`],
       ['--option LABEL=DESCRIPTION', 'One option and what it means. It may repeat, and it replaces the positional options.'],
       ['--options POINTER', 'Takes the options from each record. It needs --jsonl.'],
       ['--raw', 'Prints the label without quotation marks.'],
@@ -226,7 +226,7 @@ export const FUNCTIONS = [
     args: 'QUESTION',
     options: [
       ['--none', 'Lets it answer that nothing fits. It then prints nothing and exits 3.'],
-      ['--lines, --jsonl', 'How the lines are framed. --lines is the default. CSV and TSV are refused.'],
+      ['--lines, --jsonl', `How the lines are framed. --${setting('Framing').defaultOn('find')} is the default. CSV and TSV are refused.`],
       ['--field POINTER', 'Names the part of each record to read.'],
       ['--details', 'Prints the whole result, with a probability for every line.'],
       ['--input FILE', 'Reads the evidence from a file instead of standard input.'],

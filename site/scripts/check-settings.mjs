@@ -55,13 +55,15 @@ const cited = text(main).match(/ADR\d+|[Tt]ickets?\d+|sdlc\/|Ian'sruling|Batchin
 if (cited) problems.push(`the page cites a record a public reader cannot follow: "${cited[0]}"`);
 
 // No page types a default. A page reads a default through setting() in
-// src/lib/settings-table.mjs, so the typed number or number word after
-// "default is", "defaults to" or "default of" in the site's source is a value
-// the table no longer governs. An expression, such as {THROTTLE.default},
-// passes. A range such as "1 to 32" is not scanned: find's own bound of
-// "2 to 255" units shares the options range and is not a setting, so the scan
-// would flag it. The lookup guards ranges by failing on a missing setting.
-const WORDS = 'zero|one|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|sixty|hundred';
+// src/lib/settings-table.mjs. This scan catches one form only: a typed number
+// or number word right after "default is", "defaults to" or "default of" in
+// the site's source. An expression, such as {THROTTLE.default}, passes. It
+// misses "0.5 by default", a typed word default such as a model name, and a
+// typed range. A range scan would flag find's own bound of "2 to 255" units,
+// which shares the options range and is not a setting. Review and the lookup,
+// which fails on a missing setting, hold the rest. "one" is left out of the
+// words, since "the default is one document" is a framing, not a count.
+const WORDS = 'zero|two|three|four|five|six|seven|eight|nine|ten|twenty|thirty|sixty|hundred';
 const TYPED = new RegExp(`\\bdefaults?\\s+(?:is|to|of)\\s+(?:<code>|\`)?(\\d[\\d,.]*\\d|\\d|${WORDS})\\b`, 'gi');
 const src = path.join(site, 'src');
 const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
@@ -78,8 +80,10 @@ for (const file of walk(src).filter((f) => /\.(astro|mjs|md)$/.test(f) && !f.end
 }
 
 // A default the built site states must be one the table holds, whatever
-// wrote it: a page, a caption, or a sample.
-const held = new Set(rows.flatMap((r) => plain(`${r.default.value} ${r.default.note}`).match(/\d[\d,]*(?:\.\d+)?/g) || []));
+// wrote it: a page, a caption, or a sample. The check is coarse. It knows the
+// numbers in the table's Default values, not which setting a sentence means,
+// so a right number said of the wrong setting passes.
+const held = new Set(rows.flatMap((r) => plain(r.default.value).match(/\d[\d,]*(?:\.\d+)?/g) || []));
 const STATED = /\bdefaults?\s+(?:is|to|of)\s+(\d[\d,]*(?:\.\d+)?)/gi;
 const walkHtml = (dir) => walk(dir).filter((f) => f.endsWith('.html'));
 for (const file of walkHtml(path.join(site, 'dist'))) {

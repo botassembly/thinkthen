@@ -211,7 +211,7 @@ function specPath() {
 }
 
 let table = null;
-const NUMBER = /\d[\d,]*(?:\.\d+)?/;
+const NUMBER = /^\d[\d,]*(?:\.\d+)?/;
 
 export function setting(name) {
   table ??= parseSettings(fs.readFileSync(specPath(), 'utf8')).rows;
@@ -236,9 +236,15 @@ export function setting(name) {
       if (row.on[s] === ABSENT) fail(`the table says ${s} is ${ABSENT}`);
       return plain(row.on[s]);
     },
-    // The first number in the default, as written: "30", "100,000,000".
+    // The number the default starts with, as written: "30", "100,000,000".
+    // A default that starts with words, such as "None; ...", fails.
     get number() {
       return (NUMBER.exec(value) || fail(`the default "${value}" holds no number`))[0];
+    },
+    // The ends of allowed values written "above LOW and at most HIGH".
+    get bounds() {
+      const m = /\babove (\d[\d.]*) and at most (\d[\d.]*)/.exec(plain(row.allowed)) || fail(`the allowed values "${plain(row.allowed)}" are not "above LOW and at most HIGH"`);
+      return { above: m[1], atMost: m[2] };
     },
     // The range in the allowed values, "LOW to HIGH ...".
     get range() {
@@ -246,13 +252,17 @@ export function setting(name) {
       return { min: m[1], max: m[2] };
     },
     // The default for one function, from a value written as
-    // "0.5 on `decide`, `tag`; none on `choose`".
+    // "0.5 on `decide`, `tag`; none on `choose`". A clause that names no
+    // function, such as "One document" in "One document; lines on `find`",
+    // holds for every function the other clauses leave out.
     defaultOn(fn) {
+      let rest = null;
       for (const clause of row.default.value.split(/;\s*/)) {
-        const m = /^(.+?) on (.+)$/.exec(clause);
-        if (m && [...m[2].matchAll(/`([^`]+)`/g)].some((c) => c[1] === fn)) return plain(m[1]);
+        const m = /^(.+?) on (`.+)$/.exec(clause);
+        if (!m) rest = plain(clause);
+        else if ([...m[2].matchAll(/`([^`]+)`/g)].some((c) => c[1] === fn)) return plain(m[1]);
       }
-      return fail(`the default "${value}" names no value for ${fn}`);
+      return rest ?? fail(`the default "${value}" names no value for ${fn}`);
     },
   };
 }
