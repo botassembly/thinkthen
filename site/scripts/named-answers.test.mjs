@@ -88,6 +88,7 @@ const ARTICLES = [
   ['python fence', `\`\`\`python\n${bad}\n\`\`\``, 1],
   ['skipped fences', ['text', 'json', 'console', 'output', ''].map((t) => `\`\`\`${t}\n${bad}\n\`\`\``).join('\n'), 0],
   ['mistyped fence', `\`\`\`pyhton\n${bad}\n\`\`\``, 1, /pyhton is not a kind check-samples knows/],
+  ['c++ fence', `\`\`\`c++\n${bad}\n\`\`\``, 1, /c\+\+ is not a kind/],
   ['inherited name', `\`\`\`constructor\n${bad}\n\`\`\``, 1, /constructor is not a kind/],
 ];
 

@@ -85,7 +85,7 @@ function namedAnswers(label, text, kind, language, offset = 0) {
   try {
     return namedAnswerProblems(text, language).map((p) => `${label}:${offset + p.line}: ${p.message}`);
   } catch (error) {
-    if (!(error instanceof TypeError)) throw error;
+    if (!(error instanceof TypeError) || !error.message.startsWith('unknown language ')) throw error;
     return [`${label}:${offset + 1}: ${kind} is not a kind check-samples knows. ${error.message} Kinds that hold no ThinkThen call: ${[...NO_CALL].join(', ')}.`];
   }
 }
@@ -122,7 +122,7 @@ export function articleProblems(name, text) {
   let tag = null;
   let start = 0;
   lines.forEach((line, i) => {
-    const fence = /^```(\w*)/.exec(line);
+    const fence = /^```([^\s{]*)/.exec(line);
     if (fence && tag === null) { tag = fence[1].toLowerCase() || 'text'; start = i + 1; return; }
     if (line.startsWith('```') && tag !== null) {
       const ext = FENCE_EXT[tag] || '';
