@@ -8,6 +8,7 @@ pub(crate) mod answer;
 pub(crate) mod audit;
 pub(crate) mod diff;
 pub(crate) mod group;
+pub(crate) mod items;
 pub(crate) mod key;
 pub(crate) mod levels;
 pub(crate) mod optimize;
@@ -66,6 +67,10 @@ pub(crate) enum MeasureError {
     NoRule,
     /// A result line has no string or integer value at the `--by` pointer.
     NoGroup(usize),
+    /// A band, or a cut below a line's run cut, over a `recognize` or `relate` answer.
+    SetCut,
+    /// A key gives a `recognize` or `relate` answer a value unlike the command's own.
+    KeyItems(usize),
 }
 
 /// One numbered JSON line of an input.

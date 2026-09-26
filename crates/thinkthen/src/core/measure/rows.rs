@@ -6,6 +6,7 @@ use std::collections::BTreeMap;
 
 use crate::core::measure::answer::{Answer, Rule, Said, Shown, Verb};
 use crate::core::measure::audit::{Counts, Disagreement, Kind, Point, Row, Settings};
+use crate::core::measure::items::tally;
 use crate::core::measure::key::{Key, Outcome, Want, outcome};
 use crate::core::measure::optimize::suggest;
 use crate::core::measure::pairs::{curve, pairs, tie_share};
@@ -41,6 +42,7 @@ pub(crate) fn row(
         .collect::<Result<_, MeasureError>>()?;
     let counts = count(&labeled, settings.rule)?;
     let yes_no = verb.is_some_and(Verb::yes_no);
+    let set = verb.is_some_and(Verb::set);
     let pooled = kind == Kind::Pooled;
     let probabilities = !labeled.is_empty() && labeled.iter().all(|(a, _)| a.has_probability());
     let yes_pairs: Vec<(f64, bool)> = if yes_no && probabilities {
@@ -51,7 +53,7 @@ pub(crate) fn row(
     } else {
         Vec::new()
     };
-    let direction = |value: usize| yes_no.then_some(value);
+    let direction = |value: usize| (yes_no || set).then_some(value);
     let ties = matches!(verb, Some(Verb::Choose | Verb::Find));
     let shares: Vec<f64> = labeled.iter().map(|(a, want)| tie_share(a, want)).collect();
     let mut row = Row {
@@ -69,10 +71,10 @@ pub(crate) fn row(
         tied_holding_key: ties.then(|| shares.iter().filter(|held| **held > 0.0).count()),
         tie_share: ties.then(|| python_sum(shares.iter().copied())),
         agreement: counts.agreement,
-        interval: wilson(counts.right, counts.answered).filter(|_| !pooled),
+        interval: wilson(counts.right, counts.answered).filter(|_| !pooled && !set),
         true_yes: direction(counts.true_yes),
         false_yes: direction(counts.false_yes),
-        true_no: direction(counts.true_no),
+        true_no: yes_no.then_some(counts.true_no),
         false_no: direction(counts.false_no),
         yes_recall: counts.yes_recall,
         precision: counts.precision,
@@ -87,7 +89,7 @@ pub(crate) fn row(
             .then(|| mean_level_distance(&labeled, settings.rule))
             .transpose()?
             .flatten(),
-        disagreements: if yes_no {
+        disagreements: if yes_no || set {
             None
         } else {
             Some(disagreements(&labeled, settings.rule)?)
@@ -100,7 +102,7 @@ pub(crate) fn row(
         name: ok.first().and_then(|answer| answer.name.clone()),
         band: ok.iter().any(|answer| answer.band),
     };
-    if probabilities && !pooled {
+    if probabilities && !pooled && !set {
         if !matches!(verb, Some(Verb::Rank | Verb::Score)) {
             let pairs = pairs(&labeled)?;
             row.calibration = calibration(&pairs, settings.seed);
@@ -127,6 +129,14 @@ pub(crate) fn count(items: &[Graded<'_>], rule: Rule) -> Result<Counts, MeasureE
         ..Counts::default()
     };
     for (answer, want) in items {
+        if let (Some(said), Want::Items(key, matching)) = (&answer.items, want) {
+            let [hit, extra, missed] = tally(said, key, *matching, rule)?;
+            (counts.true_yes, counts.right) = (counts.true_yes + hit, counts.right + hit);
+            counts.false_yes += extra;
+            counts.false_no += missed;
+            counts.wrong += extra + missed;
+            continue;
+        }
         let said = answer.said(rule)?;
         let graded = outcome(&said, want);
         match graded {
@@ -143,15 +153,12 @@ pub(crate) fn count(items: &[Graded<'_>], rule: Rule) -> Result<Counts, MeasureE
             _ => {}
         }
     }
-    measures(
-        &mut counts,
-        items.first().is_some_and(|(a, _)| a.verb.yes_no()),
-    );
+    measures(&mut counts, items.first().map(|(a, _)| a.verb));
     Ok(counts)
 }
 
 /// Two counts over separate answers, added, with every measure taken from the sums.
-pub(crate) fn added(a: &Counts, b: &Counts, yes_no: bool) -> Counts {
+pub(crate) fn added(a: &Counts, b: &Counts, verb: Option<Verb>) -> Counts {
     let mut sum = Counts {
         n: a.n + b.n,
         right: a.right + b.right,
@@ -164,16 +171,18 @@ pub(crate) fn added(a: &Counts, b: &Counts, yes_no: bool) -> Counts {
         false_no: a.false_no + b.false_no,
         ..Counts::default()
     };
-    measures(&mut sum, yes_no);
+    measures(&mut sum, verb);
     sum
 }
 
-/// The measures a count object derives from its counts.
-fn measures(counts: &mut Counts, yes_no: bool) {
+/// The measures a count object derives from its counts. A `recognize` or
+/// `relate` count has no true no, so it has no agreement or coverage.
+fn measures(counts: &mut Counts, verb: Option<Verb>) {
+    let set = verb.is_some_and(Verb::set);
     counts.answered = counts.right + counts.wrong;
-    counts.agreement = share(counts.right, counts.answered);
-    counts.coverage = share(counts.answered, counts.n);
-    if yes_no {
+    counts.agreement = share(counts.right, counts.answered).filter(|_| !set);
+    counts.coverage = share(counts.answered, counts.n).filter(|_| !set);
+    if set || verb.is_some_and(Verb::yes_no) {
         let (hit, false_yes, false_no) = (counts.true_yes, counts.false_yes, counts.false_no);
         counts.yes_recall = share(hit, hit + false_no);
         counts.precision = share(hit, hit + false_yes);

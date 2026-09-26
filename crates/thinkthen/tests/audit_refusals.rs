@@ -57,7 +57,7 @@ const FILES: [(&str, &str); 10] = [
 const SCORE: &str = "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":1.2,\"question\":{\"verb\":\"score\",\"text\":\"secret-text\",\"levels\":[\"a\",\"b\"]}}\n";
 
 /// audit's sentence for a verb or a value it does not grade.
-const UNGRADABLE: &str = "results line 1 holds an answer audit cannot grade; audit grades decide, filter, choose, tag, score, rank, and find";
+const UNGRADABLE: &str = "results line 1 holds an answer audit cannot grade; audit grades decide, filter, choose, tag, score, rank, find, recognize, and relate";
 
 /// One record twice under one answer, asked in two question texts.
 const TWICE: &str = "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":true,\"question\":{\"text\":\"secret-text\"}}\n{\"input\":{\"id\":\"secret-id-5150\"},\"value\":true,\"question\":{\"text\":\"other\"}}\n";

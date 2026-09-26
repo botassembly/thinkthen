@@ -71,7 +71,7 @@ fn each_wire_fault_arm_yields_its_kind_and_sentence() {
         (
             "503",
             3,
-            "thinkthen: the backend answered with status 503\n",
+            "thinkthen: the backend answered with status 503: the backend failed after the allowed attempts; try again later or change --max-retries\n",
         ),
         (
             "refuse",

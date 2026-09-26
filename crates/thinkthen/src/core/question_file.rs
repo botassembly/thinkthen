@@ -139,7 +139,7 @@ pub(crate) enum QuestionFileError {
     #[error("a question file holds one question, and this one holds `{0}` and `{1}`")]
     TwoVerbs(&'static str, &'static str),
     /// The file holds a key no question file has.
-    #[error("a question file holds no key `{}`", safe_key(.0))]
+    #[error("a question file takes no key `{}`{}", safe_key(.0), elsewhere(.0))]
     UnknownKey(String),
     /// The file holds a key another verb takes.
     #[error("a `{verb}` question file takes no key `{key}`")]
@@ -212,7 +212,7 @@ pub(crate) enum QuestionFileError {
         error: LabelsError,
     },
     /// A pointer is not a JSON Pointer.
-    #[error("{}`{typed}`: {error}", pointed(*.origin, .key))]
+    #[error("{}`{}`: {error}", pointed(*.origin, .key), safe_key(.typed))]
     Pointer {
         /// Where the pointer came from.
         origin: Source,
@@ -225,7 +225,16 @@ pub(crate) enum QuestionFileError {
     },
 }
 
-fn safe_key(key: &str) -> String {
+/// Where `version` belongs, for a user who copied it from another file.
+fn elsewhere(key: &str) -> &'static str {
+    if key == "version" {
+        "; `version` belongs in a question set, a recognize file, or a relate file"
+    } else {
+        ""
+    }
+}
+
+pub(crate) fn safe_key(key: &str) -> String {
     let encoded = serde_json::to_string(key).unwrap_or_else(|_| "\"<unprintable>\"".to_owned());
     encoded
         .strip_prefix('"')

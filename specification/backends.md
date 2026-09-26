@@ -1,6 +1,6 @@
 # Backends
 
-Status: **Settled** for the wire shape, the key, the address, the request, the `systemone` adapter, and every adapter row.
+Status: **Settled**, amended by ADR 0048, for the wire shape, the key, the address, the request, the `systemone` adapter, and every adapter row.
 
 `thinkthen` speaks one wire shape, System One, by ruling 1 of ADR 0010. Another model is reached by a server that presents that shape at another address. Every token count and probability in an example here is illustrative.
 
@@ -18,7 +18,9 @@ Recognition keeps the complete source text in every request and splits only its 
 
 The engine encodes, digests, and checks every request chunk before reading a recording or cache entry, reading the key, or opening a connection. An ordered multi-question plan takes the longest next contiguous prefix that fits both exact request bytes and expanded questions, then repeats until all questions belong to a chunk. The splitter finds that prefix by doubling the chunk from one question up to the remainder, then halving the gap. Evidence is repeated unchanged. A plan that fits keeps its exact body and digest. Evidence, one-question request, and choice-option overflows fail before any request because splitting them would change meaning.
 
-A relation plan at the built-in address also splits under a built-in ceiling of 96,000 request bytes. The hosted backend refuses a request over 65,536 input tokens with status 400. On 2026-09-24, 142 relate `appears_on` questions over the Beatles set passed at 65,423 input tokens, and 143 failed. That 142-question request encodes to 126,820 bytes, so relate's JSON runs 0.516 input tokens a byte. 96,000 bytes then comes to about 49,500 tokens. The ceiling reaches `relate` and the relation step of `recognize`. It applies when the resolved posting URL equals `https://api.typesafe.ai/v1/systemone` byte for byte. A chunk of two or more questions stays at most 96,000 bytes. One question alone always passes it, so the ceiling splits and never refuses. It never turns a choice into yes/no questions. A profile's `max_request_bytes` replaces it, and a profile's other limits apply beside it. Every other plan and every other address has no ceiling. Ticket 0123 set it.
+A relation plan at the built-in address also splits under a built-in ceiling of 96,000 request bytes. The hosted backend refuses a request over 65,536 input tokens with status 400. On 2026-09-24, 142 relate `appears_on` questions over the Beatles set passed at 65,423 input tokens, and 143 failed. That 142-question request encodes to 126,820 bytes, so relate's JSON runs 0.516 input tokens a byte. 96,000 bytes then comes to about 49,500 tokens. The ceiling reaches `relate` and the relation step of `recognize`. It applies when the resolved posting URL equals `https://api.typesafe.ai/v1/systemone` byte for byte. A chunk of two or more questions stays at most 96,000 bytes. One question alone always passes it, so the ceiling splits and never refuses. It never turns a choice into yes/no questions. A profile's `max_request_bytes` replaces it, and a profile's other limits apply beside it. Every other plan and every other address has no ceiling. Ticket 0123 set it. Not built yet, by ADR 0048 item 2: a batched record plan at the built-in address also closes its batch at the ceiling.
+
+Not built yet, by ADR 0048 item 2 and 6: a profile's limits close batches at every address. A retried status resends the whole batch as one request, and a batch is never split and resent. A backend that refuses a batch as too large fails it at exit 4.
 
 `annotate` checks every chunk of every group for one record before starting any group. Dry runs perform the same checks before printing a plan. Profiles apply equally to live calls, replay, cache, and recording. The profile estimates no tokens. A backend whose published limit is only tokens needs a tokenizer or a verified byte ceiling before its file can enforce the limit. `--url`, `THINKTHEN_BASE_URL`, the configuration file's `url`, and `--model` still select the backend. A profile contains none of them.
 
@@ -62,7 +64,7 @@ The adapter sends one `POST` with `Content-Type: application/json`. When a key i
 
 A retry happens after a status of 429, 500, 502, 503, 504, or 529. A transport failure is never sent again, because the backend may already hold the request and may bill it. The wait doubles from one second, and no wait follows the last attempt. No retry wait exceeds `--timeout`. A reply carrying a `Retry-After-Ms` header in whole milliseconds or a `Retry-After` header in the delta-seconds form waits the time it names instead, capped by both 60 seconds and `--timeout`. The milliseconds header is read first, because the backend sends the finer number there. The HTTP-date form of `Retry-After` is ignored, because reading it needs a clock and a date reader. Any other error status fails at once.
 
-A failure after the last retry is exit code 4. The message gives the status code and never the response body, because a backend can quote the evidence back in an error. A fixed phrase follows the code. On status 400 alone, the command reads at most 4 KiB of the body and only its `detail.error_type`. When that value is exactly `max_tokens_exceeded`, the message names it. Any other body, and any body it cannot read or parse, gives the plain 400 phrase. The library keeps `the backend answered with status 400`.
+A failure after the last retry is exit code 4. The message gives the status code and never the response body, because a backend can quote the evidence back in an error. A fixed phrase follows the code. On status 400 alone, the command reads at most 4 KiB of the body and only its `detail.error_type`. When that value is exactly `max_tokens_exceeded`, the message names it. Any other body, and any body it cannot read or parse, gives the plain 400 phrase. The library keeps `the backend answered with status 400`. The libraries and SQL surfaces print the bare status line for every status, with no phrase.
 
 | Status | Phrase |
 | --- | --- |
@@ -74,7 +76,7 @@ A failure after the last retry is exit code 4. The message gives the status code
 | 404 | nothing answers at this address |
 | 422 | the backend refused the request as malformed or too large |
 | 429 | the backend's rate limit was reached |
-| 500 after the allowed attempts | the backend failed after the allowed attempts; try again later or change `--max-retries` |
+| 500, 502, 503, 504, or 529 after the allowed attempts | the backend failed after the allowed attempts; try again later or change `--max-retries` |
 
 A connection failure is reduced from the HTTP client's structured error before it reaches the command. The command prints fixed guidance and never the client text, operating-system text, address, key, evidence, or response body. A timeout says to increase `--timeout` or try again. A missing host says to check `--url` and the network. Every transport failure, a refused connection included, fails after its first attempt. A refused connection says to check that the backend is running and that `--url` is correct. A connection that closes or resets before a reply, or cuts its reply short, says the backend may have received the request and that it was not sent again. Every other transport failure says to check `--url` and the network.
 

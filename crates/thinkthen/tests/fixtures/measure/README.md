@@ -183,6 +183,30 @@ Ticket 0131 recaptured every `audit` file above, and `replay/audit.jsonl`, from 
 - `crossed.jsonl`: the tuning part holds p 0.2 (no), 0.4, 0.6, and 0.8 (yes). Accuracy is 4 of 4 from 0.21 to 0.4, and the tie rule nearest 50 picks 0.4. The held part holds 0.3 (yes), 0.45 (no), 0.55 (yes), and 0.7 (no), where the best cuts give 2 of 4 and 0.5 is nearest 50. The held part at 0.4 gets only 0.55 right. The tuning part at 0.5 gets 0.4 wrong. That is 4 right of 8. Under `--optimize f1` the held part tunes 0.3, with f1 2/3. The tuning part at 0.3 gets all four right, so 5 of 8 in all.
 - `by.jsonl`: six lines whose inputs carry `category` and `a/b`. `/category` gives `lead` with two `decide` and one `choose` answer, `tail` with two `decide`, and `3` with one `choose`.
 
+### Ticket 0135 fixtures
+
+`sets/` holds hand fixtures for `recognize` and `relate` grading. Every value below is worked by hand.
+
+`names.jsonl` holds seven `recognize --details` record lines run at 0.3, with kinds PER, ORG, and LOC. `names-key.jsonl` keys each. Places are `start-end`, end exclusive.
+
+| Id | Said (kind, places, strength) | Key | `strict` | `overlap` |
+| --- | --- | --- | --- | --- |
+| a | PER 0-5 0.9, ORG 10-20 0.4 | PER 0-5, ORG 10-20 | 2 matched | 2 matched |
+| b | PER 0-6 0.8, LOC 30-35 0.35 | PER 0-5, LOC 35-40 | 2 extra, 2 missed | PER matched; LOC 30-35 only touches 35-40: 1 extra, 1 missed |
+| c | ORG 0-8 0.95 | LOC 0-8, PER 12-15 | 1 extra, 2 missed | the same: the kinds differ |
+| d | none | PER 0-4 | 1 missed | the same |
+| e | PER 0-3 0.7, PER 4-8 0.6 | PER 0-8 | 2 extra, 1 missed | 0.7 takes PER 0-8; 0.6 is extra |
+| f | PER 0-10 0.5 | PER 0-4, PER 6-10 | 1 extra, 2 missed | takes PER 0-4, the first in key order; PER 6-10 missed |
+| g | PER 0-3 0.4, PER 2-9 0.9 | PER 0-4, PER 5-9 | 2 extra, 2 missed | 0.9 goes first and takes PER 0-4; 0.4 overlaps only PER 0-4 and is extra; PER 5-9 missed |
+
+Ten names are said and twelve keyed. `strict` matches 2, so 8 are extra and 10 missed: precision 2/10 = 0.2, recall 2/12 = 0.166667, f1 4/(4 + 8 + 10) = 0.181818. `overlap` matches 6 (a 2, b 1, e 1, f 1, g 1), so 4 are extra and 6 missed: precision 0.6, recall 0.5, f1 12/22 = 0.545455. Taken in output order, g's 0.4 would take PER 0-4 and 0.9 would take PER 5-9, for 7 matched.
+
+`edges.jsonl` holds three `relate --details` lines with no `input`, so their ids are 1, 2, and 3. Each ran at 0.6 with a directed `calls` and an `either` `peers`. Line 1 says `calls a→b` 0.9, `calls c→a` 0.7, and `peers b→c` 0.8, keyed `calls a→b`, `calls a→c`, and `peers c→b`: `calls a→b` matches, `calls c→a` is extra and `calls a→c` missed, since `calls` has a direction, and `peers` matches in reverse. Line 2 says `calls a→b` 0.65, keyed the same. Line 3 has `meta.failed_questions` 1, so it fails and its key line counts nowhere. As run: 3 matched, 1 extra, 1 missed, f1 6/8 = 0.75. Every key line is `part: "tune"`. By cut: 0.6 to 0.65 keep everything (0.75); 0.66 to 0.7 lose line 2's match (4/7); 0.71 to 0.8 also lose the extra (4/6); 0.81 to 0.9 also lose `peers` (2/5). The cut is 0.6. Grid cuts below 0.6 would read 0.75 too, and 0.5 is nearer 0.5.
+
+`cut.jsonl` holds two `recognize` lines run at 0.3, both tuned. r1 says one right name at 0.9. r2 says one right name at 0.46 and three extra at 0.47, 0.48, and 0.49. F1 is 4/7 from 0.3 to 0.46, 2/6, 2/5, and 2/4 at 0.47 to 0.49, 2/3 from 0.5 to 0.9, and 0 above. The cut is 0.5. Matches over records is 2/2 from 0.3 to 0.46 and picks 0.46, the nearest to 0.5.
+
+The hand-written `--lines` relate line in `audit_sets` carries `f2c4e88c6a7b11bd98a7fed97bcc8412f0e6ca7da0b45b0c9bb2014cd41da3fc`, from `printf '%s' '{"verb":"relate","fields":null,"relations":[{"name":"calls","source":"*","target":"*","reads":"calls","either":false}],"threshold":0.01}' | sha256sum`. It also holds a `value` and a `question` with `threshold` and `relations`, so it reaches the digest check.
+
 `audit::every_fixture_keeps_its_checksum` fails on a missing, extra, or changed file.
 
 | File | SHA-256 |
@@ -237,6 +261,12 @@ Ticket 0131 recaptured every `audit` file above, and `replay/audit.jsonl`, from 
 | `golden/table/diff-decide-nokey.txt` | `82edef392a2ddee9528a931453abd42c57d99a5c67a98e2984ffcc6e8be9f9c1` |
 | `replay/audit.jsonl` | `d0a1e138ae38922f55363f2f4d446d61580013657dcc4049f69ad1f211e08e8e` |
 | `replay/key.jsonl` | `6469595eef17159ed9563de7b84bdc4396249fb2bb8a704397e5cc31c0619042` |
+| `sets/cut-key.jsonl` | `eb4ae5c67d4accc03efcdacbd4d4918c9479d803165f1f1e3985f94943bdd7ca` |
+| `sets/cut.jsonl` | `5238ba287efe3605ce1238b110214505685459c553bfed73b9223ca89a86ec9a` |
+| `sets/edges-key.jsonl` | `f45486609c9923d9549fe032d9b58d58a0b9517b76f718e51ea369f145ee7b58` |
+| `sets/edges.jsonl` | `ccaa648abd1ec49a8ae0355f5df81d36de5667686c6deaf5b82a7135afcdfe1c` |
+| `sets/names-key.jsonl` | `382523d51f5aa82757ca75bab931a6f3fb450ecbf07e7bb2e90c2f2698edffac` |
+| `sets/names.jsonl` | `20e6a04fb06cffae4b4ac0ec65664dce5263a000aba3798de9b2939771f107ee` |
 | `small/annotate-key.jsonl` | `fcaebb1e268c468d697e6bc6852c4b5aab5198e544552711d7d5c1b27e523b26` |
 | `small/annotate.jsonl` | `c827c6ca44198b10c0561b49d930d85f74bdba88549169e1cc187e2320c24270` |
 | `small/choose-b.jsonl` | `b227bc45a7fbcb64db89352bda57d0da5eb53a9b9df01f2332c956dc844d8d51` |

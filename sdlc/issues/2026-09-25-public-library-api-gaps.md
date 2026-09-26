@@ -82,6 +82,8 @@ Done when: Python and TypeScript accept a typed description and a typed annotate
 
 ## 8. Python Polars does not follow the ADR 0047 column table
 
+Settled on 2026-09-26 by ticket 0136.
+
 What happens today. Ticket 0106 landed the Python Polars door on main with its own frame writer. `widened` in `libraries/python/src/arrow/write.rs:335` to `354` builds each widened cell itself. A score uses Rust's `f64` display, so 1.0 becomes `1`. The failed marker comes from a hand-built string and the binding's own cause table (`libraries/python/src/engine.rs:55` to `64`). An unwidened tag column is a list column (`libraries/python/src/arrow/write.rs:386`), and `annotate` over a frame uses it (`libraries/python/src/frame.rs:159`). The Rust Polars door takes every widened cell from `value_json` (`crates/thinkthen/src/public/frame/column.rs:132` to `155`, ticket 0130) and writes a frame's tag column as JSON array text (`crates/thinkthen/src/public/frame/column.rs:120` to `126`). The two doors write different text for the same frame. The Python conformance check parses widened cells with `json.loads` (`libraries/python/tests/conformance.py:120`), so it cannot see the number text difference.
 
 What the record says. ADR 0047 item 10 sets one table for both doors. Score widens to "the number text from `value_json`". Tag is "`String` holding the JSON array text". A failed cell is "the marker from `value_json`". "A widened cell takes its text unchanged from `AnnotatedRecord::value_json`, the engine's one serializer. No door keeps its own table of failure causes. Ian can overturn the table." A column widens only when the same reply also holds a usable answer, so a single failed answer ends the call with a `Backend` error.

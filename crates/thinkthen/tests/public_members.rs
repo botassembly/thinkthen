@@ -271,3 +271,15 @@ fn shown<T: std::fmt::Debug>(built: Result<T, thinkthen::Error>) -> [String; 2] 
     let built = built.expect("builder");
     [format!("{built:?}"), format!("{built:#?}")]
 }
+
+/// A relate entity's name and kind are the caller's text, so both are withheld.
+#[test]
+fn a_relate_entitys_debug_line_withholds_its_name_and_kind() {
+    assert_eq!(
+        shown(thinkthen::Entity::new("sentinel-name", "sentinel-kind-x")),
+        [
+            "Entity { name: <13 bytes withheld>, kind: <15 bytes withheld> }",
+            "Entity {\n    name: <13 bytes withheld>,\n    kind: <15 bytes withheld>,\n}",
+        ]
+    );
+}

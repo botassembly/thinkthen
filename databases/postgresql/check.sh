@@ -238,6 +238,8 @@ bad_files_name_themselves() {
 		"SELECT thinkthen_warm('@broken.json', body) FROM tickets"; do
 		has "$(q -c "$call")" "thinkthen local: the question file '@broken.json' does not parse: "
 	done
+	has "$(q -c "SELECT thinkthen_warm('{\"choose\":\"Which?\",\"options\":[\"a\",\"b\"]}', body) FROM tickets")" \
+		"thinkthen usage: thinkthen_warm takes a decide question; ask others with thinkthen_decide (retryable: no)"
 	same "$(bcount)" 0
 }
 check bad_files_name_themselves

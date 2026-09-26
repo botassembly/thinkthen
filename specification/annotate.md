@@ -1,6 +1,6 @@
 # `annotate`
 
-Status: **Settled** for the file grammar, the output, and several pointers on `on`. ADR 0010 accepted the pointers and struck structured question values from version one; ADR 0039 amends that exclusion.
+Status: **Settled** for the file grammar, the output, and several pointers on `on`. ADR 0010 accepted the pointers and struck structured question values from version one; ADR 0039 amends that exclusion. ADR 0048 amends the requests for batches.
 
 Asks a saved question set about each record and adds one field per question.
 
@@ -10,7 +10,7 @@ thinkthen annotate FILE [--lines|--jsonl|--csv|--tsv] [--field POINTER] [--detai
 
 ## What it reads
 
-`FILE` is the saved question set. It holds several named questions, and each entry has the shape of a question file. `annotate` reads one document on standard input by default, and it reads records under `--lines`, `--jsonl`, `--csv`, or `--tsv`. `--input FILE` reads the evidence from a file. [records.md](records.md) gives the framing and the pointer rules.
+`FILE` is the saved question set. It holds several named questions, and each entry has the shape of a question file. `@FILE` names the same file, as a question file does on the other verbs. `annotate` reads one document on standard input by default, and it reads records under `--lines`, `--jsonl`, `--csv`, or `--tsv`. `--input FILE` reads the evidence from a file. [records.md](records.md) gives the framing and the pointer rules.
 
 ## The question set
 
@@ -105,7 +105,7 @@ One record makes one request per distinct `on`, and the plan shows one request. 
 
 One record makes one logical request group for each distinct `on`. Every question with the same evidence rides in that group. An explicit backend profile splits a group into the fewest contiguous requests that satisfy its exact request-byte and expanded-question limits. Every chunk repeats the same evidence, and the model sees no answer from another chunk. Without a profile, or when the group fits, the historical single request stays byte for byte unchanged. The project measured forty clear yes-or-no questions over 120 cases. Packed requests changed no answer and used 20.8 times fewer billed input tokens than separate requests. A second measurement packed one decision, one choice, and one score. The values stayed the same, and billed input fell from 915 tokens across three requests to 371 in one request. Neither measurement found a lower question-count limit.
 
-Records never share a request. A question never sees another question's answer. Work that depends on an earlier answer is a second command.
+Records never share a request. Not built yet, by ADR 0048 item 7: the records of one `on` group share a batch's request, and `--batch 1` keeps them apart. A question never sees another question's answer. Work that depends on an earlier answer is a second command.
 
 `--details` reports `meta.usage` as the checked sum over the record's requests only when every reply reports usage. `meta.requests` lists every chunk's recording digest in question-set group and chunk order. `meta.requests_sent` sums actual sends, including retries. `meta.cached` is true only when every chunk replayed. Each answer also carries the digest of the chunk that produced it. Every chunk must report the same model. [result.md](result.md) gives the shape.
 

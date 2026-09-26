@@ -5,6 +5,7 @@ use std::collections::BTreeSet;
 use serde::{Serialize, Serializer};
 
 use crate::core::json::Json;
+use crate::core::measure::items::{self, Items};
 use crate::core::measure::levels::{LevelCuts, level_at};
 use crate::core::measure::{MeasureError, python_float_text, record_id, rounded};
 use crate::core::pointer::Pointer;
@@ -31,6 +32,10 @@ pub(crate) enum Verb {
     Find,
     /// A ranked `decide` row, which makes no selection.
     Rank,
+    /// The names in one text.
+    Recognize,
+    /// The edges among one entity set.
+    Relate,
 }
 
 impl Verb {
@@ -43,12 +48,19 @@ impl Verb {
             Self::Score => "score",
             Self::Find => "find",
             Self::Rank => "rank",
+            Self::Recognize => "recognize",
+            Self::Relate => "relate",
         }
     }
 
     /// True for a verb whose answer reads as yes or no.
     pub(crate) const fn yes_no(self) -> bool {
         matches!(self, Self::Decide | Self::Tag | Self::Rank)
+    }
+
+    /// True for a verb graded by matching the items it said against the key's items.
+    pub(crate) const fn set(self) -> bool {
+        matches!(self, Self::Recognize | Self::Relate)
     }
 }
 
@@ -175,6 +187,8 @@ pub(crate) struct Answer {
     pub(crate) digest: Option<String>,
     /// True when the line ran under a band.
     pub(crate) band: bool,
+    /// What a `recognize` or `relate` answer said, and the cut it ran with.
+    pub(crate) items: Option<Items>,
 }
 
 /// A printed value audit can read.
@@ -204,7 +218,7 @@ pub(crate) fn read(
             Some(record) => record,
             None if identity == Identity::Question
                 && row.member("input").is_none()
-                && verb_named(row) == Some("find") =>
+                && matches!(verb_named(row), Some("find" | "recognize" | "relate")) =>
             {
                 line.to_string()
             }
@@ -314,6 +328,7 @@ impl Answer {
             number: None,
             digest,
             band: matches!(entry.member("threshold"), Some(Json::String(_))),
+            items: None,
         };
         match verb {
             Verb::Tag if !failed => return read.labels(question, value, distribution),
@@ -340,7 +355,11 @@ impl Answer {
                     read.value = Some(Printed::Found);
                 }
             }
-            Verb::Tag | Verb::Score | Verb::Find => {}
+            Verb::Recognize | Verb::Relate if !failed => {
+                let (said, names, partial) = items::read(line, verb, entry)?;
+                (read.items, read.options, read.failed) = (Some(said), names, partial);
+            }
+            Verb::Tag | Verb::Score | Verb::Find | Verb::Recognize | Verb::Relate => {}
             Verb::Decide | Verb::Choose | Verb::Rank => {
                 read.value = match value {
                     Some(Json::Bool(_)) if verb == Verb::Choose && !failed => {
@@ -369,6 +388,7 @@ impl Answer {
             Verb::Decide | Verb::Tag | Verb::Rank => self.probability.is_some(),
             Verb::Choose | Verb::Find => self.top.is_some(),
             Verb::Score => self.number.is_some(),
+            Verb::Recognize | Verb::Relate => self.items.is_some(),
         }
     }
 
@@ -377,7 +397,7 @@ impl Answer {
         match self.verb {
             Verb::Decide | Verb::Tag | Verb::Rank => self.probability.map(Probability::as_f64),
             Verb::Choose | Verb::Find => self.top.as_ref().map(|top| top.top),
-            Verb::Score => None,
+            Verb::Score | Verb::Recognize | Verb::Relate => None,
         }
     }
 
@@ -401,6 +421,7 @@ impl Answer {
             return Err(MeasureError::NeedsProbabilities);
         }
         match self.verb {
+            Verb::Recognize | Verb::Relate => Ok(Said::Unresolved),
             Verb::Decide | Verb::Tag | Verb::Rank => Ok(match rule {
                 Rule::Threshold(threshold) => match self.probability.map(|p| threshold.judge(p)) {
                     Some(Judged::Yes) => Said::Yes,
