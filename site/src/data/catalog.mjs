@@ -476,7 +476,7 @@ export const SURFACES = [
     lang: 'c', tab: 'Rust',
     blurb: 'One header over a shared or a static library. Bind ThinkThen to any language that can call C.',
     unsureWord: 'an outcome of THINKTHEN_UNSURE',
-    install: [['thinkthen.h + libthinkthen', 'The release archive holds the header, the shared library, and the static library.']],
+    install: [['thinkthen.h + libthinkthen', 'Each release ships the header, the shared library, and the static library.']],
     particular: [
       'Every call returns 0 or an error kind.',
       'The answer lands in a struct: the outcome and its probability.',

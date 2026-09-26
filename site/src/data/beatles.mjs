@@ -275,7 +275,7 @@ const ARTICLES = {
       "Search matches words. Jev knows facts. On the bench's 1,313 Beatles questions, Jev gets about two in three right from memory. The best vector search gets 38%, and a random guess gets 31%. GLM-5.3 Flash, a large chat model, gets 96%.",
       "No song title below holds the name Paul McCartney. Search has nothing to match.",
     ],
-    source: RESULTS,
+    source: FULL,
     see: {
       '1-choose': "Jev picks d, I've Just Seen a Face, at 0.6.",
       '2-bar': "A bar of 0.7 turns the pick into not sure.",
@@ -292,8 +292,8 @@ const ARTICLES = {
     label: "Blind spots",
     goal: "Jev misses obscure facts, and a low probability is how it says so.",
     idea: [
-      "Jev's memory fades on obscure facts. It gets 73% of the questions about the most viewed quarter of songs on Wikipedia right, and 49% about the least viewed. Tricky wording trips it. It gets 70% of the plain control questions and 50% of the word traps. Two hops are hard. On 26 questions, Jev knew the month a song came out and the month of an event. It still missed 13 when asked whether the two fell in the same month.",
-      "Nothin' Shakin' is an obscure song, and George sings it. The slide comes from an earlier run and puts John at 0.38. The example below puts John at 0.34.",
+      "Jev's memory fades on obscure facts. It gets 73% of the questions about the most viewed quarter of songs on Wikipedia right, and 49% about the least viewed. Tricky wording trips it. It gets 70% of the plain control questions and 50% of the word traps. Two hops are hard. One kind of question chains a song's first album to that album's year. On 41 of them, Jev knew both facts on their own. It got the chained question right on only 18.",
+      "The slide's numbers come from an earlier run. Nothin' Shakin' is an obscure song, and George sings it. The slide puts John at 0.38. The example below puts John at 0.34.",
     ],
     source: FULL,
     see: {
