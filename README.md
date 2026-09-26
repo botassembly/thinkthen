@@ -29,7 +29,7 @@ The answer cache is on by default. Cache entries contain the complete request an
 ## What it is not for
 
 - **A loop that needs many decisions a second.** Each decision waits on a network round trip to a model, and a shell tool adds a process start to each one. A pipeline of separate processes pays both for every decision. Record mode through a `coproc` serves a steady loop from one long-lived process, and that is the ceiling.
-- **A call from inside a program written in another language.** Records, recordings, transforms, and exit codes buy a program nothing, because the program already holds its data. A Rust program uses the library below. The other languages wait on their own tickets, and `specification/roadmap.md` holds them.
+- **A call from inside a program written in another language.** Records, recordings, transforms, and exit codes buy a program nothing, because the program already holds its data. A Rust program uses the library below. Python, TypeScript, Ruby, R, C, and Polars have libraries under `libraries/`. DuckDB, PostgreSQL, and SQLite have extensions under `databases/`.
 
 `sdlc/planning/ten-use-cases.md` measured both against ten real uses.
 
