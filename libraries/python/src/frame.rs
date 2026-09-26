@@ -4,19 +4,16 @@
 //! column, reads it in place, and releases it (amendment changes 1, 3, and 6).
 //! A pandas answer comes back as Python values and a dtype name (ticket 0122).
 
-use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use serde_json::value::RawValue;
 use thinkthen::{
-    Annotated, AnnotatedRecord, Answer, CallOptions, Error, QuestionKind, QuestionSet,
-    RecognizedEntity,
+    Annotated, Answer, CallOptions, Error, QuestionKind, QuestionSet, RecognizedEntity,
 };
 
-use crate::arrow::{self, Arrow, Cells, Imported, Readable, Tags};
+use crate::arrow::{self, Arrow, Cells, Imported, Readable};
 use crate::asked::{Asked, Recognize};
 use crate::engine::{Arg, Engine, Held, annotated, answer};
 use crate::input::{Pandas, controls, listed, polars_frame, top};
@@ -99,7 +96,7 @@ where
 /// What a column call gives back.
 enum Answers {
     Decided(Vec<Answer>),
-    Annotated(QuestionKind, Vec<(Annotated, String)>),
+    Annotated(QuestionKind, Vec<Annotated>),
 }
 
 /// `decide`, `choose`, `score`, or `tag` over a column. A Polars `Series`
@@ -133,14 +130,13 @@ pub(crate) fn ask_column(
     let done = over_texts(py, controls, source, move |texts, options| {
         let texts = texts.iter().copied();
         if let (Some(set), Asked::Plain(question)) = (&set, &asked) {
-            let rows = engine
+            let values = engine
                 .annotate_with(set, texts, options)
-                .collect::<Result<Vec<_>, _>>()?;
-            let name = set.members().next().ok_or(NO_VALUE)?.0;
-            let values = rows
-                .iter()
-                .map(|row| member(row, 0, name))
-                .collect::<Result<_, _>>()?;
+                .map(|record| {
+                    record.map(|one| one.values().first().map(|named| named.value().clone()))
+                })
+                .collect::<Result<Option<Vec<_>>, _>>()?
+                .ok_or("the engine answered a record with no value")?;
             return Ok(Answers::Annotated(question.kind(), values));
         }
         let rows = engine.decide_many_with(asked.decision(), texts, options);
@@ -154,14 +150,16 @@ pub(crate) fn ask_column(
             Answers::Decided(values) => values.into_iter().map(|one| answer(py, one)).collect(),
             Answers::Annotated(_, values) => values
                 .into_iter()
-                .map(|(one, _)| annotated(py, one))
+                .map(|one| annotated(py, one))
                 .collect::<PyResult<_>>()?,
         };
         return Ok(values.into_pyobject(py)?.unbind());
     }
     let cells = match done {
         Answers::Decided(values) => arrow::decided(&values),
-        Answers::Annotated(kind, values) => arrow::annotated(kind, Tags::Lists, &values),
+        Answers::Annotated(kind, values) => {
+            arrow::annotated(kind, &values.iter().collect::<Vec<_>>())
+        }
     };
     if pandas {
         return arrow::pandas(py, cells);
@@ -190,7 +188,7 @@ pub(crate) fn _annotate_frame(
         on_worker(py, controls, held, move |held, options| {
             let (hold, memory) = (Arc::new(held), Readable::snapshot()?);
             let read = arrow::frame(&hold, &on, &memory)?;
-            let columns = answered(&engine, &set, &read.texts, options, Tags::Text)?;
+            let columns = answered(&engine, &set, &read.texts, options)?;
             Ok(arrow::frame_out(&hold, &memory, &read, &columns)?)
         })
         .map(Arrow::new)
@@ -203,36 +201,20 @@ fn answered(
     set: &QuestionSet,
     texts: &[&str],
     options: CallOptions<'_>,
-    tags: Tags,
 ) -> Result<Vec<(String, Cells)>, Stop> {
     let rows = engine
         .annotate_with(set, texts.iter().copied(), options)
         .collect::<Result<Vec<_>, _>>()?;
     let mut columns = Vec::new();
     for (place, (name, kind)) in set.members().enumerate() {
-        let values = rows
+        let values: Option<Vec<&Annotated>> = rows
             .iter()
-            .map(|row| member(row, place, name))
-            .collect::<Result<Vec<_>, _>>()?;
-        columns.push((name.to_owned(), arrow::annotated(kind, tags, &values)));
+            .map(|row| row.values().get(place).map(|one| one.value()))
+            .collect();
+        let values = values.ok_or("the engine answered a record with no value")?;
+        columns.push((name.to_owned(), arrow::annotated(kind, &values)));
     }
     Ok(columns)
-}
-
-const NO_VALUE: &str = "the engine answered a record with no value";
-
-/// One member's value, beside its raw text in the record's `value_json`, the
-/// engine's one serializer (ADR 0047 item 10).
-fn member(
-    row: &AnnotatedRecord<&str>,
-    place: usize,
-    name: &str,
-) -> Result<(Annotated, String), Stop> {
-    let value = row.values().get(place).ok_or(NO_VALUE)?.value().clone();
-    let mut raws: BTreeMap<String, Box<RawValue>> = serde_json::from_str(&row.value_json())
-        .map_err(|_| "the engine's record JSON did not parse")?;
-    let text = raws.remove(name).ok_or(NO_VALUE)?;
-    Ok((value, text.get().to_owned()))
 }
 
 /// `annotate(set, df, on=)` over a pandas frame's marked `on` column: each
@@ -252,7 +234,7 @@ pub(crate) fn _annotate_column<'py>(
         let (engine, set) = (engine.get().0.clone(), questions.get().0.clone());
         let source = Source::read(series)?.0;
         let columns = over_texts(py, controls, source, move |texts, options| {
-            answered(&engine, &set, texts, options, Tags::Lists)
+            answered(&engine, &set, texts, options)
         })?;
         let named = PyDict::new(py);
         for (name, cells) in columns {
