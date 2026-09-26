@@ -5,6 +5,7 @@ use std::fs;
 use crate::args::{Common, RecognizeArguments};
 use crate::core::{Description, RecognizeConfigError, RecognizeKinds, RecognizeSpec, RelationRule};
 use crate::failure::Failure;
+use crate::failure::recognize::Error;
 use crate::table::Kind as TableKind;
 
 pub(super) fn settle(arguments: &RecognizeArguments) -> Result<RecognizeSpec, Failure> {
@@ -65,7 +66,7 @@ fn command_kinds(arguments: &RecognizeArguments) -> Result<RecognizeKinds, Failu
             .map(|entry| {
                 let (name, description) = entry
                     .split_once('=')
-                    .ok_or_else(|| error(false, RecognizeConfigError::Kinds))?;
+                    .ok_or(Failure::Recognize(Error::KindWithoutSign))?;
                 Ok((name.to_owned(), Some(Description::text(description))))
             })
             .collect();

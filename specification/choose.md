@@ -48,7 +48,7 @@ thinkthen choose 'Which team owns this request?' \
 
 ## Options from the record
 
-Settled by ADR 0009 item 4, accepted in ADR 0010. `--options POINTER` names a list of labels, or a map from label to description, inside each record. Every rule above holds for the labels a record supplies, and a record that breaks one is exit 2 for that record before any request for it. A record whose candidate list differs from the next record's needs it. `--options` and positional options together are a usage error. `--options` requires `--jsonl`, because a pointer needs a JSON record to point into. A line of text holds no pointer, so `--options` under `--lines` is a usage error, and so is `--options` on one document.
+Settled by ADR 0009 item 4, accepted in ADR 0010. `--options POINTER` names a list of labels, or a map from label to description, inside each record. Every rule above holds for the labels a record supplies, and a record that breaks one is exit 2 for that record before any request for it. A record whose candidate list differs from the next record's needs it. `--options` and positional options together are a usage error. `--options` requires `--jsonl`, because a pointer needs a JSON record to point into. A pointer holding a control character is refused as `--field` is, and the refusal writes it with JSON escapes. A line of text holds no pointer, so `--options` under `--lines` is a usage error, and so is `--options` on one document.
 
 ```sh
 thinkthen choose 'Which of these codes fits the note?' --jsonl --field /note --options /codes < notes.jsonl

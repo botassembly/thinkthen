@@ -261,6 +261,9 @@ pub(crate) enum Command {
     /// with its McNemar test prints last. With --key, each change says whether
     /// it gained or lost a right answer. An answer inside a band is not sure.
     ///
+    /// diff pairs answers by record id and answer name only. It compares
+    /// question digests only when both runs saved --details.
+    ///
     /// diff sends no request and reads no key.
     ///
     /// thinkthen diff runs/before.jsonl runs/after.jsonl --key key.jsonl --table

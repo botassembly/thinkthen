@@ -109,6 +109,8 @@ fn help_names_diff_and_says_what_it_never_does() {
         "Two cuts on one run cost nothing.",
         "The probabilities are already saved.",
         "An answer inside a band is not sure.",
+        "diff pairs answers by record id and answer name only.",
+        "It compares question digests only when both runs saved --details.",
     ] {
         assert!(long.contains(sentence), "{sentence}");
     }

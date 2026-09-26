@@ -153,7 +153,7 @@ def r2_22_warm_judges_one_question_per_group():
             backend.base(),
         )
         expect(said(got[0]), "thinkthen usage: thinkthen_warm judges one question per group, and this group carries more than one", "two questions")
-        expect(said(got[1]), "thinkthen usage: decide_many does not take a choose question", "warm and a choose file")
+        expect(said(got[1]), "thinkthen usage: thinkthen_warm takes a decide question; ask others with thinkthen_decide", "warm and a choose file")
         expect(backend.count(), 0, "counted sends")
         warmed = run(["SELECT thinkthen_warm('Is it a refund?', x) FROM (VALUES ('a'), ('b'), ('a')) t(x)"], backend.base())
         expect(column(warmed[0]), [2], "warm counts distinct texts")

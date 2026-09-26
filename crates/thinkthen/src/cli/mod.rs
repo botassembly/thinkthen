@@ -31,10 +31,11 @@ mod conformance_tests;
 use std::io::{self, Write};
 use std::process::ExitCode;
 
-use crate::cli::args::{Cli, Command};
+use crate::cli::args::{Cli, Command, Common};
+use crate::cli::asking::Folders;
 use crate::cli::edge::Environment;
 use crate::cli::failure::Failure;
-use crate::core::version_line;
+use crate::core::{safe_key, version_line};
 use clap::Parser as _;
 
 /// Parse the process inputs, run one command, and report its exit code.
@@ -84,7 +85,7 @@ pub fn entry() -> ExitCode {
     let result = run(&cli, &environment, stdout.lock());
     let code = match result {
         Ok(code) => code,
-        Err(failure) => failure::report(&failure, stderr.lock()),
+        Err(failure) => failure::report(&told(failure, &cli, &environment), stderr.lock()),
     };
     if environment.usage().finish() {
         let mut writer = stderr.lock();
@@ -133,5 +134,58 @@ fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitC
             "the catalog, audit, and diff return before setup",
         )),
         None => Err(Failure::Defect("no command and no version was parsed")),
+    }
+}
+
+/// The default cache's own storage sentence (ticket 0138).
+const DEFAULT_CACHE_STORAGE: &str = "the default cache folder could not be read or written; check its permissions and free space, use --no-cache, or set THINKTHEN_CACHE to another folder";
+
+/// Say a failure in the words this run's own command line calls for: a
+/// storage failure in the platform default cache names that cache, and a
+/// refused pointer is echoed with JSON escapes.
+fn told(failure: Failure, cli: &Cli, environment: &Environment) -> Failure {
+    let storage = match &failure {
+        Failure::RecordingStorage => true,
+        Failure::Stopped { cause, .. } => matches!(cause.as_ref(), Failure::RecordingStorage),
+        Failure::Pointer(option, typed, error) => {
+            return Failure::Pointer(option, safe_key(typed), *error);
+        }
+        _ => false,
+    };
+    let default = || {
+        cli.command
+            .as_ref()
+            .is_some_and(|command| in_default_cache(command, environment))
+    };
+    if storage && default() {
+        Failure::Configuration(DEFAULT_CACHE_STORAGE)
+    } else {
+        failure
+    }
+}
+
+/// Whether a record command's folders are the platform default cache. A
+/// command line `Folders` refuses keeps its own failure.
+fn in_default_cache(command: &Command, environment: &Environment) -> bool {
+    let default = |common: &Common| {
+        Folders::of(common, environment).is_ok_and(|folders| folders.private_default)
+    };
+    match command {
+        Command::Decide(arguments) => default(&arguments.common),
+        Command::Choose(arguments) => default(&arguments.common),
+        Command::Tag(arguments) => default(&arguments.common),
+        Command::Score(arguments) => default(&arguments.common),
+        Command::Filter(arguments) => default(&arguments.common),
+        Command::Rank(arguments) => default(&arguments.common),
+        Command::Find(arguments) => default(&arguments.common.as_common()),
+        Command::Annotate(arguments) => default(&arguments.common),
+        Command::Recognize(arguments) => default(&arguments.common),
+        Command::Relate(arguments) => default(&arguments.common),
+        Command::Cache(_)
+        | Command::Status(_)
+        | Command::Check(_)
+        | Command::Transform(_)
+        | Command::Audit(_)
+        | Command::Diff(_) => false,
     }
 }

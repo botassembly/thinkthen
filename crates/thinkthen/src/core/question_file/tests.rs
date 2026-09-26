@@ -101,7 +101,7 @@ fn an_unknown_key_is_json_escaped_inside_one_diagnostic_line() {
     let error = refused(r#"{"decide":"a","line\nbreak":1}"#);
     assert_eq!(
         error.to_string(),
-        r#"a question file holds no key `line\nbreak`"#
+        r#"a question file takes no key `line\nbreak`"#
     );
     assert_eq!(error.to_string().lines().count(), 1);
 }

@@ -25,6 +25,8 @@ mod cache_prune_locking;
 mod check;
 mod choosing;
 mod default_cache;
+#[cfg(target_os = "linux")]
+mod default_cache_storage;
 mod distribution_total;
 mod exchange;
 mod find;
@@ -41,6 +43,7 @@ mod loopback_arms;
 )]
 mod loopback_cases;
 mod parallel;
+mod pointer_echo;
 mod profile;
 mod public_json;
 #[rustfmt::skip]
