@@ -50,7 +50,7 @@ A failed detection, kind, or relation question fails that input. It prints no pa
 
 `--dry-run` needs no key and sends nothing. It prints one compact `thinkthen.recognize-plan/1` object for the first record. Keys appear in this order: `schema`, `url`, `model`, `key_env`, optional `from`, `words`, `detection_questions`, `kind_questions`, `request_count`, the optional relation bounds, and `requests`.
 
-`words` counts words as the tokenizer above splits them. The text splits at white space, and each trailing `.`, `!`, `?`, `,`, `:`, or `;` of a piece counts as its own word. `Ada met Acme.` is four words: `Ada`, `met`, `Acme`, and `.`. It is not a model token count. `request_count` is the exact recognition request count. `requests` lists each of those requests in send order, with its recording `digest`, UTF-8 `bytes`, and exact `body_utf8`, as `relate --dry-run` lists its own. An empty text prints `"request_count":0` and `"requests":[]`.
+`words` counts words as the tokenizer above splits them. `Ada met Acme.` is four words: `Ada`, `met`, `Acme`, and `.`. It is not a model token count. `request_count` is the exact recognition request count. `requests` lists each of those requests in send order, with its recording `digest`, UTF-8 `bytes`, and exact `body_utf8`, as `relate --dry-run` lists its own. An empty text prints `"request_count":0` and `"requests":[]`.
 
 ```json
 {"schema":"thinkthen.recognize-plan/1","url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","words":4,"detection_questions":4,"kind_questions":4,"request_count":1,"requests":[{"digest":"…","bytes":1234,"body_utf8":"…"}]}
