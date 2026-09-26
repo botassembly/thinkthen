@@ -10,7 +10,7 @@ Ian ruled on these points after he sent the design. Ian can overturn each one.
 
 1. **Batching is automatic and maximal.** By default each request carries as many records as fit under the backend profile's limits. The goal is the fewest requests. No small fixed default such as 10 exists. `--batch N` asks for at most N records a request. `--batch 1` gives today's requests back. Section 2 states the rule.
 2. **Content cuts stay.** A cut depends only on its own record, so an insert moves no cut. The cuts now fall inside fill-to-limit batches. Section 2 states the rule and what an insert re-sends.
-3. **Speed wins over accuracy.** The default fills to the limit, although a full request without a context scored 276 to 278 right of 306. Today's filter scored 285, and 10 records a request scored 283 to 287. Ticket B4 lands the default. Test 9 measures and reports the accuracy cost and gates nothing. Ticket D1's page states that cost with its record.
+3. **Speed wins over accuracy.** The default fills to the limit, although a full request in the tool's own form scored 272 to 274 right of 306 with 32 to 34 false yeses (evidence section 14). Today's filter scored 285 with 16 or 17, and 10 records a request scored 283 to 287. ADR 0053 item 4 records the correction. Ticket B4 lands the default. Test 9 measures and reports the accuracy cost and gates nothing. Ticket D1's page states that cost with its record.
 4. **The speed target.** `filter` over the 306 songs finishes in under half a second at the default throttle, on a named build, measured live. The throttle keeps its default of 4 requests in flight, set by `--jobs`, 1 to 32. Batching is the speed lever, and the throttle is not.
 5. **A speed test, ticket S1.** It measures requests, wall time and tokens for every function and every Beatles Bench job, batched and unbatched. It fails any function that sends one request per item where a fuller request fits.
 6. **A documentation page, ticket D1.** One page explains batching and each backend's limits. Every number names its record and build.
@@ -118,9 +118,12 @@ A user has `songs.txt`, 306 Beatles titles, and wants the ones on Abbey Road. Th
 | `--batch 1`, today's requests | 306 | 13.0 to 14.2 s | 88,933 | $0.0037 | 285 | 29 to 31 | 16 to 17 |
 | `--batch 10` | 31 | 1.3 to 1.7 s | 19,656 | $0.0008 | 283 to 287 | 35 to 39 | 18 to 22 |
 | Default, all 306 in one request | 1 | 0.30 to 0.39 s | 11,913 | $0.0005 | 276 to 278 | 44 to 46 | 27 to 29 |
+| Default, the tool's own form, measured by a review | 1 | 0.25 to 0.27 s | 13,185 | $0.0006 | 272 to 274 | 50 to 52 | 32 to 34 |
 | `--context catalog.txt` | 1 | 0.36 s | 22,091 | $0.0009 | 299 to 302 | 17 to 19 | 2 to 3 |
 
 Experiment 271 measured every row, three runs each, at filter's cut of 0.7 and 4 requests in flight. The first row ran through today's `thinkthen filter`. The other rows used a Python client with experiment 271's own question wording. Its tens ran in alphabetical order. On this list the section 2 rule forms the same 31 batches at `--batch 10`, because no title's hash is a content cut. Cost uses the recorded input price of $0.042 a million tokens. Output tokens are free under the vendor's price list. Ticket S1 measures the tool's own wording and time again, on a named build.
+
+The tool's own form row comes from evidence section 14. It sent the planner's exact body through `annotate`, three runs, because the command could not batch yet. It is the figure to quote for the default until test 9 runs.
 
 The user types the first command and gets 44 to 46 titles in under half a second. Today they get 29 to 31 in 14 seconds. The full request made the filter more generous. It missed 1 Abbey Road song where today misses 4 or 5, and it kept 27 to 29 songs from other albums where today keeps 16 or 17. Ian ruled that speed wins, so the default accepts that cost, and the page states it. A user who wants today's answers types `--batch 1`. The same user adds `--context catalog.txt` and gets 17 to 19 titles in a third of a second. Only 2 or 3 of them are wrong.
 
@@ -134,7 +137,7 @@ The user types the first command and gets 44 to 46 titles in under half a second
 | How to share a reference text | One option, `--context FILE` |
 | How to get today's exact answers | One flag, `--batch 1` |
 | That old recordings and caches answer only under `--batch 1` | Kept. A batch is a new request. Resending costs cents, and `--batch 1` replays old folders |
-| That a record's answer can change with its neighbours | Kept, as Ian ruled. Test 9 measures the change, and ticket D1's page states it |
+| That a record's answer can change with its neighbours, and that one record can steer them | Kept, as Ian ruled. `--batch 1` keeps records apart. Test 9 measures the change and a planted claim, and ticket D1's page states both |
 | That a threshold tuned at one batch setting may not fit another | Kept. The run warns when the settings differ, and so do `audit` and `diff` |
 | That `filter` and `rank` need `--lines` | Designed away by ticket 0137, from `2026-09-26-filter-and-rank-could-read-lines-by-default.md` |
 | That speed stalls above 3 jobs | Designed away by tickets B1 and B2, the two filed speed defects |
@@ -173,6 +176,7 @@ The batch setting is `max` by default, or the whole number `N` that `--batch N` 
 | --- | --- |
 | Content cut | The record's content hash is 0 mod 4,096 |
 | Size | The setting is a number `N`, and the batch holds `N` records |
+| Member cap | The batch holds 4,096 members, repeats included (ADR 0053 item 2) |
 | Profile limit | The next record would put the request over `max_questions`, `max_evidence_bytes` or `max_request_bytes`. At the built-in address the 96,000-byte ceiling stands in for `max_request_bytes` |
 | Pause | A live, unrecorded run has waited 50 ms with no new record |
 | End of input | Always |
@@ -190,20 +194,20 @@ The content hash is the SHA-256 of the record's evidence in compact JSON, the sa
 
 **Why 4,096.** A content cut costs at most one partly filled batch. The plain body over the 306 titles holds about 181 bytes a title, by section 9 of the evidence record. A request at the ceiling then holds about 529 short titles. One cut in 4,096 records therefore adds at most one request to about 8 full ones. A table of 100,000 short titles takes about 189 full requests and about 24 partial ones. At 4 in flight and an estimated half a second a request, that run takes an estimated half a minute. No title of the 306 falls on a cut at 4,096, so the list goes in one request. At 1,024 the 72nd title would cut it into two requests.
 
-**Why 96,000 bytes.** The ceiling already exists in `specification/backends.md`. It holds under the token limit at the worst measured rate of 0.516 tokens a byte. It needs no tokenizer. Record text measured 0.40 tokens a byte in experiment 268. Ticket B6 measures the rate on batched record text again. A record whose batch of one already passes the ceiling goes alone as today's request.
+**Why 96,000 bytes.** The ceiling already exists in `specification/backends.md`. It holds under the token limit at relate's measured 0.516 tokens a byte. Dense text runs higher. A hex record measured 0.895 tokens a byte and an identifier list 0.908, and a batch of two dense records under the ceiling was refused (evidence section 14). ADR 0051's one halving rescues that case. It needs no tokenizer. Record text measured 0.40 tokens a byte in experiment 268. Ticket B6 measures the rate on batched record text again. A record whose batch of one already passes the ceiling goes alone as today's request.
 
 **Other addresses.** An address other than the built-in one has no byte ceiling, as `specification/backends.md` fixes. There a batch closes at a content cut, the size, a pause, the end of input, or a limit from `--profile FILE`. A backend that refuses a batch as too large fails it at exit 4. The caller then sets `max_request_bytes` in a profile, or `--batch 1`.
 
 **Replies.** Ticket 0132's reply limit, 1 MiB plus 8 bytes per request byte, fits a batch. A reply runs about 105 bytes a question, and each quoted question adds more than that to the request.
 
-**Why 50 ms.** Experiment 268 measured Jev's own time near 60 ms and a median round trip near 140 ms. A 50 ms wait adds about a third of one round trip to a live record. The pause rule fires only when the reader is waiting for input. It is off whenever `--cache`, `--record` or `--replay` names a folder, so a recorded run's batches depend only on the records and settings. A file or a fast pipe never pauses either. The value is fixed and has no option.
+**Why 50 ms.** Experiment 268 measured Jev's own time near 60 ms and a median round trip near 140 ms. A 50 ms wait adds about a third of one round trip to a live record. The pause rule fires only when the reader is waiting for input. It fires in every mode, by ADR 0053 item 1, so a loop that writes one record and waits gets its answer under a named folder too. A file or a fast pipe never pauses. A live pipe recorded under a folder forms batches by its timing, and a replay with other timing can miss a batch at exit 5. The value is fixed and has no option.
 
 ### 3. Order, jobs, cache and replay
 
 - **Order.** Output keeps input order, as today. A batch's rows print when its reply arrives and every earlier row has printed.
 - **Jobs.** `--jobs N` means N batches in flight. It takes 1 to 32, and the default stays 4, as `specification/records.md` fixes. The output buffer holds at most N batches of rows. The throttle is not the speed lever. A full batch is.
 - **Cache key.** The cache key is the batch's request digest, the same digest rule as today. A record's answer depends on its neighbours, so a per-record key would serve an answer made beside other records.
-- **Replay.** The same records under the same settings form the same batches and the same digests, because a recorded run never pauses. `--replay` then answers every batch from disk. An inserted, removed or changed record changes the batches section 2 names. `--cache` pays only for those batches. `--replay` stops at the first missing batch at exit 5.
+- **Replay.** The same records under the same settings form the same batches and the same digests, because a file never pauses. `--replay` then answers every batch from disk. An inserted, removed or changed record changes the batches section 2 names. `--cache` pays only for those batches. `--replay` stops at the first missing batch at exit 5.
 - **Settings that change batches.** `--batch`, `--context`, the question, the pointers, a profile's limits and the records themselves. `--jobs` changes no batch.
 
 ### 4. Failure
@@ -261,7 +265,7 @@ The SQL and frame surfaces batch the rows one call receives: a DuckDB vector of 
 A threshold tuned at one batch setting may not fit another, because batching shifts probabilities. Experiment 271's false yeses rose from 16 or 17 to 27 to 29 with all 306 titles in one request. The batch setting therefore joins the threshold's calibration identity under ADR 0032.
 
 - The question file's `batch` names the setting its threshold was tuned at, as its `profile` names the backend.
-- A run whose batch setting differs from the file's `batch` carries `meta.batch_warning` as `{"tuned_for":1,"running":"max"}`. It prints `threshold tuned at batch 1 is running at batch max` once on standard error, as ADR 0032's profile warning does. A file with no `batch` warns nobody.
+- A run whose batch setting differs from the file's `batch` carries `meta.batch_warning` as `{"tuned_for":1,"running":"max"}`. It prints `threshold tuned at batch 1 is running at batch max` once on standard error, as ADR 0032's profile warning does. A file with a `threshold` and no `batch` counts as tuned at batch 1, by ADR 0053 item 3. A file with neither warns nobody.
 - `audit --write` writes the graded runs' batch setting into the file's `batch` beside the threshold.
 - `audit` and `diff` print one warning line on standard error when the runs they compare carry different batch settings. `diff` then prints at most three warning lines.
 
@@ -321,7 +325,8 @@ The fields are `records`, `requests_sent`, `cache_answers`, `input_tokens`, `out
 | Question file `"batch": 1` with `tt.Engine(batch=10)` | At most 10 a request. The engine setting sits in the environment tier. The warning shows in `meta.batch_warning` |
 | `--batch 10` with `--jobs 1` | Same output bytes as `--jobs 8` |
 | A live, unrecorded stream that pauses | The open batch sends after 50 ms |
-| A stream that pauses under `--cache DIR` | No pause cut. The batch waits for a content cut, the size, a limit or the end |
+| A stream that pauses under `--cache DIR`, `--record DIR` or `--replay DIR` | The open batch sends after 50 ms, as in a live run |
+| 10,000 records of 5 distinct values, none a content cut | Three batches of 4,096, 4,096 and 1,808 members |
 | `--replay` with another `--batch` than the recording | Exit 5 at the first missing batch |
 | An old folder recorded one record a request | Replays under `--batch 1`. Under the default, `--replay` stops at exit 5 and `--cache` pays again |
 | One batch fails | The run stops at its first record. Earlier rows stay printed. The stop line names the range |
@@ -343,9 +348,9 @@ Tests 1 to 8 and 13 need no network. They use recordings and a loopback backend.
 4. **Order and jobs.** A recorded 306-line `filter` at `--batch 10` prints identical bytes at `--jobs 1` and `--jobs 8`, on standard output and standard error, without `--facts`. With `--facts`, the two standard error lines match once `seconds` is removed.
 5. **Replay.** A recorded run replays with no network under the same settings. Under another `--batch` it exits 5 and names the first missing batch.
 6. **Shares.** For every batch in a recorded run, the rows' shares of input tokens, output tokens and requests sent sum to the batch. The `--facts` totals equal the sum over live replies. A replayed run's facts carry no token fields.
-7. **Pause.** A real pipe carries 3 records from a writer that then stops and holds the pipe open. The loopback backend receives a first request of 3 records within 5 seconds. The same pipe under `--cache DIR` sends nothing until the writer closes the pipe.
+7. **Pause.** A real pipe carries 3 records from a writer that then stops and holds the pipe open. The loopback backend receives a first request of 3 records within 5 seconds. The same pipe under `--cache DIR` and under `--record DIR` sends the same request within 5 seconds.
 8. **Failure.** A loopback backend answers 503 to the second batch's request after the retries. The run stops at that batch's first record, with every earlier row printed and exit 4.
-9. **Accuracy cost, recorded live.** Run `decide --lines --details` with experiment 271's key and filter's question at a cut of 0.7 over the 306 songs. `decide` prints every record, so `audit` sees every answer. Make three runs at `--batch 1`, three at `--batch 10`, three at the default, and one at the default over each of two shuffled orders with fixed seeds. The ticket reports, for each setting, right answers, false yeses, misses, and the mean calibration error from `thinkthen audit`. It reports the answers that cross the cut between the two shuffled runs, and their mean absolute change in probability. It gates nothing. Ticket D1's page states the cost with this record. For comparison, experiment 271 scored 285 at one a request, 283 to 287 at 10, and 276 to 278 in one request. Its false yeses were 16 to 17, 18 to 22 and 27 to 29. Its calibration error over saved replies was 0.185 to 0.194 at one a request, a quoted form, and 0.065 to 0.080 in one request. Repeats of the same bytes crossed 2 to 6 answers with a mean change near 0.02. Experiment 208's regrouped tens crossed 3.4% of answers with a mean move of 0.047.
+9. **Accuracy cost, recorded live.** Run `decide --lines --details` with experiment 271's key and filter's question at a cut of 0.7 over the 306 songs. `decide` prints every record, so `audit` sees every answer. Make three runs at `--batch 1`, three at `--batch 10`, three at the default, and one at the default over each of two shuffled orders with fixed seeds. The ticket reports, for each setting, right answers, false yeses, misses, and the mean calibration error from `thinkthen audit`. It reports the answers that cross the cut between the two shuffled runs, and their mean absolute change in probability. It gates nothing. Ticket D1's page states the cost with this record. For comparison, experiment 271 scored 285 at one a request, 283 to 287 at 10, and 276 to 278 in one request. Its false yeses were 16 to 17, 18 to 22 and 27 to 29. Its calibration error over saved replies was 0.185 to 0.194 at one a request, a quoted form, and 0.065 to 0.080 in one request. Repeats of the same bytes crossed 2 to 6 answers with a mean change near 0.02. Experiment 208's regrouped tens crossed 3.4% of answers with a mean move of 0.047. The test reports against two baselines: today's filter and experiment 271's quoted control A1, 290 to 292 right. One more arm adds one planted false claim at the end of the 306 titles at the default, and reports how many other answers crossed the cut.
 10. **Accuracy, context.** The same songs with the catalog as `--context`: one request, and at least 297 right in each of three repeats. Experiment 271 scored 299 to 302.
 11. **Pick-one.** Experiment 262's 200 `choose` items at the default and at `--batch 10`. The ticket reports both scores against experiment 262's bar of 135 of 200. It gates nothing.
 12. **Speed.** Ticket S1 owns the speed target: `filter` over the 306 songs in under half a second at the default throttle, on a named build, measured live.
@@ -372,7 +377,7 @@ Any ticket that adds or changes a setting updates that setting's row in `specifi
 | B5 | Run facts stay true under batches | Shares, `meta.batch`, `--facts` and the `thinkthen.run/1` line | Test 6 | B4 | covered by B0 |
 | B16 | The batch setting is calibration identity | `meta.batch_warning` and its line, the `audit` and `diff` warnings, `audit --write` writing `batch` | Test 13 | B5 | covered by B0 |
 | B6 | The accuracy cost is measured and reported | One authorized live run with the tool's own wording, and the token rate on batched record text. The ticket reports the cost. It does not change the default | Test 9 | B1, B2, B5, B16 | no |
-| B7 | Shared context | `--context FILE` for `decide`, `filter` and `rank`; exit 2 for a context over the ceiling; `meta.context_sha256` | Tests 2 and 10 | B4 | covered by B0 |
+| B7 | Shared context | `--context FILE` for `decide`, `filter` and `rank`; exit 2 for a context over the ceiling; `meta.context_sha256`. B7 picks the late-overflow policy of ticket 0144's deferred gap 5 and rewrites ADR 0048 item 11 to match | Tests 2 and 10 | B4 | covered by B0 |
 | B8 | `choose` batches | The pick-one question per record, and `--context` for `choose`. It removes `choose` from S1's list | Test 11, plus one recorded context run reported in the ticket | B4, B7 | covered by B0 |
 | B9 | `tag` and `score` batch | One authorized run per type on a labeled set of at least 200 items, at `--batch 1` and the default. The ticket reports the cost. It removes `tag` and `score` from S1's list | Recorded runs and the report in the ticket | B4 | covered by B0 |
 | B10 | `annotate` batches per `on` group | Every group, filling to the limit. It removes `annotate` over records from S1's list | A recorded question set of yes/no and pick-one questions | B8, B9 | covered by B0 |
@@ -421,6 +426,8 @@ Ian ruled on 2026-09-26 that one page explains batching. D1 writes it in `specif
 - It gives each backend's limits from its profile: `max_questions`, `max_evidence_bytes` and `max_request_bytes`, and the 96,000-byte ceiling at the built-in address.
 - It says how a batch splits when it would pass them, and what an insert moves.
 - It states the accuracy cost from test 9 and the speed from S1. Every number names its record and build.
+- It states the trust model of ADR 0053 item 5: records of one batch are evidence for each other, and `--batch 1` keeps them apart.
+- It says dense text can pass the token limit under 96,000 bytes, and that one halving follows.
 - Its examples leave out `--lines` only after ticket 0137 lands.
 - The website agent owns `site/`. D1 files an issue for the website owner to add the site page. D1 does not edit `site/`.
 
@@ -440,7 +447,7 @@ The author's calls. Ian can overturn each.
 7. `max` as the spelling of the default.
 8. The cut at SHA-256 mod 4,096.
 9. `tag`, `score`, `annotate` and `recognize` batching by default, with their cost measured and reported.
-10. The 50 ms pause, its lack of an option, and its absence under a recording folder.
+10. The 50 ms pause and its lack of an option. ADR 0053 item 1 withdrew its absence under a recording folder.
 11. `--batch 1` sending today's unquoted request. Experiment 271 found the quote alone gained 5 to 7 right. A later change could quote at one record too, at the cost of every old recording.
 12. Even shares of tokens across a batch, in place of shares by record size.
 13. Leaving the evidence of plain batches in an object, where experiment 271 sent a plain list of lines.
