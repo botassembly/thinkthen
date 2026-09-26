@@ -38,7 +38,7 @@ Every option of `report` is Draft until demo 13 (pick a threshold) and a new dem
 
 ## How many requests each command makes
 
-One request carries one piece of evidence and every question asked of it. The backend answers the questions of one request independently. Two pieces of evidence never share a request, because records must not see each other and a check must not see a field outside its `on`.
+One request carries one piece of evidence and every question asked of it. The backend answers the questions of one request independently. Two pieces of evidence never share a request, because records must not see each other and a check must not see a field outside its `on`. (Amended by ADR 0048, below.)
 
 | Command | Requests | Why |
 | --- | --- | --- |
@@ -49,8 +49,12 @@ One request carries one piece of evidence and every question asked of it. The ba
 | `segment` | 1 | One evidence, one question per gap. ADR 0009 drops the windowed form |
 | `report`, `config`, `--dry-run`, `--replay` | 0 | |
 
-Every request inside one command is independent of every other, so a command is one round, and the round runs in parallel up to the `jobs` setting with output order kept. The vendor's rate limit is the real ceiling. No version-one command needs an earlier answer to form a later request. The held verbs `reduce`, `state`, and `patch` do, and that is one more reason they are held.
+Every request inside one command is independent of every other, so a command is one round, and the round runs in parallel up to the `jobs` setting with output order kept. The vendor's rate limit is the real ceiling. (Amended by ADR 0048, below.) No version-one command needs an earlier answer to form a later request. The held verbs `reduce`, `state`, and `patch` do, and that is one more reason they are held.
 
 ## Consequences
 
 `annotate.md`, `report.md`, `records.md`, and `result.md` change. Demo 14 is added. The roadmap entry for comparison across runs narrows to history. Slice 9 and slice 10 of the plan carry the work.
+
+## Amendment, 2026-09-26: ADR 0048 batches records
+
+ADR 0048 lets records that share a batch share a request. A question still never sees a field outside its `on`. The request table's "N" rows count batches, and they read N only at `--batch 1`. A command stays one round, run in parallel up to `jobs` batches. Ian can overturn this.

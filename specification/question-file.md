@@ -1,6 +1,6 @@
 # The question file
 
-Status: **Settled** for version one, by ADR 0013 and Ian's ruling of 2026-09-19. ADR 0039 carries structured text and descriptions through it.
+Status: **Settled** for version one, by ADR 0013 and Ian's ruling of 2026-09-19, amended by ADR 0048. ADR 0039 carries structured text and descriptions through it.
 
 Every structural setting of a question has two homes. One is an option on the command line. The other is a key in a question file, under the same word. A question tuned once in a file is the question the test runs and the question the gate runs.
 
@@ -90,6 +90,7 @@ The schema is structural; agreement with it is not agreement with this page. The
 | The evidence | `--field POINTER` | `on` | The whole record | Anything that is not RFC 6901 |
 | The model | `--model NAME` | `model` | `jev-latest` | Empty or only white space |
 | The threshold's calibration identity | none | `profile` | absent | Anything outside lowercase letters, digits, hyphens, and underscores |
+| Not built yet, by ADR 0048 item 3: the batch setting | `--batch N` | `batch` | `max` | 0, a fraction, and any text but `max` |
 
 Nothing has a default where a guess would hide a mistake. `choose` with no options in either home is a usage error, and so is `score` with no levels.
 
@@ -98,6 +99,8 @@ Nothing has a default where a guess would hide a mistake. `choose` with no optio
 Ruled by Ian on 2026-09-19: **the command line, then the file, then the default.**
 
 A single value typed beside `@FILE` replaces the file's value. That covers `--threshold`, `--true`, `--false`, `--model`, and `--field`, which replaces `on`. `profile` is calibration identity and has no command-line override. `--profile FILE` selects the run profile instead.
+
+Not built yet, by ADR 0048 item 4 and 8: `--batch` replaces the file's `batch`. `batch` takes four tiers: the typed value, then the environment, then the file, then the default. Only a per-call value counts as typed. The environment tier holds `THINKTHEN_BATCH`, a library engine setting, and a SQL `SET`. The read-only configuration file holds no `batch` key. The file's `batch` names the setting its threshold was tuned at, as `profile` names the backend, and it stays out of the digest. A question set carries at most one top-level `batch`. Every other setting keeps the ruling above.
 
 A list typed beside `@FILE` replaces the file's whole list and never merges with it. That covers the options of `choose`, the labels of `tag`, and the levels of `score`. A typed list carries no descriptions, so replacing a described list drops every description the file held.
 
