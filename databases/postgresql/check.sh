@@ -526,11 +526,11 @@ throttle_setting_range() {
 	fresh generic "thinkthen.throttle = 0"
 	out=$(q -c "SELECT thinkthen_decide('$Q', 'from the file')")
 	has "$out" "WARNING:  $THROTTLE_RANGE"
-	has "$out" "$(printf '\nt')"
+	same "$(tail -n1 <<<"$out")" t
 	for value in 0 33 -2; do
 		out=$(q -c '\set VERBOSITY verbose' -c "LOAD 'thinkthen'" -c "SET thinkthen.throttle = $value" -c "SELECT thinkthen_decide('$Q', 'set $value')")
 		has "$out" "ERROR:  22023: $THROTTLE_RANGE"
-		has "$out" "$(printf '\nt')"
+		same "$(tail -n1 <<<"$out")" t
 	done
 	same "$(bcount)" 4
 }

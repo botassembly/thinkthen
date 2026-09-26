@@ -1,6 +1,6 @@
 # ADR 0004: A backend is a URL and a pure adapter
 
-- Status: Accepted. ADR 0007 renames `--backend` to `--profile` and drops the five backend environment variables. ADR 0010 removes the four-value profile and replaces the key rule. The key no longer drops when the address changes. It goes only to the address the user named, as the amendment below states. The adapter rules stand.
+- Status: Accepted. ADR 0007 renames `--backend` to `--profile` and drops the five backend environment variables. ADR 0010 removes the four-value profile and replaces the key rule. The key no longer drops when the address changes. It goes only to the address the user named, or to the default base when the user names none, as the amendment below states. The adapter rules stand.
 - Date: 2026-09-18
 
 An agent decision that carries out Ian's ruling in ADR 0003. Ian can overturn it cheaply while the code is small.
@@ -31,4 +31,4 @@ A vendor with an unusual shape waits for the subprocess adapter or serves one of
 
 ## Amendment, 2026-09-26: the key goes only to the address the user named
 
-ADR 0010 replaced the rule "A key never crosses hosts." The key comes from `THINKTHEN_API_KEY` alone, and no option names another variable. It goes only to the address the user named with `--url`, `THINKTHEN_BASE_URL`, or the configuration file's `url`. Naming the address is the user's own act, so a changed address keeps the key. `specification/backends.md` holds the rule. Its loopback limit on plain `http://` keeps the key off the network in clear text. The profile paragraph above is history too. A profile under ADR 0032 holds a name and local limits, and never an address, an adapter, or a key. Local experiment 273, report 12, found the stale status line.
+ADR 0010 replaced the rule "A key never crosses hosts." The key comes from `THINKTHEN_API_KEY` alone, and no option names another variable. It goes only to the address the user named with `--url`, `THINKTHEN_BASE_URL`, or the configuration file's `url`. When the user names none, it goes to the default base in `specification/backends.md`. Naming the address is the user's own act, so a changed address keeps the key. `specification/backends.md` holds the rule. Its loopback limit on plain `http://` keeps the key off the network in clear text. The profile paragraph above is history too. A profile under ADR 0032 holds a name and local limits, and never an address, an adapter, or a key. Local experiment 273, report 12, found the stale status line.

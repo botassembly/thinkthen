@@ -22,6 +22,8 @@ What an integrator hits. An administrator sets `thinkthen.throttle = 0`. The set
 
 Direction. Set the setting's minimum to 1 and fix the README row.
 
+Fixed by Quick Fix qf-review-273 in commit `417cbde5`, from branch `ticket/qf-review-273`. A check on the setting refuses any value other than -1 and 1 through 32 where it is set, with the engine's sentence. The minimum did not move to 1, because -1 stays the unset value that leaves the engine's throttle. `SET` fails, and a configuration file's bad value draws a warning and leaves -1. SQLite has no such hole, because `thinkthen_throttle(0)` refuses at the setter call. DuckDB has no check step for an extension setting, so its `SET` succeeds and the next call refuses, as `databases/duckdb/README.md` says. The record is `sdlc/records/qf-review-273.md`.
+
 ## 3. DuckDB's `thinkthen_warm` ignores session settings (severity 3, carried here for two reviews)
 
 Reviews 04 (I8) and 08 (issue 13) both found this. `04-work/p12.sql`: warm sent 10 requests under a total of 2. `04-work/p13.sql`: with `SET thinkthen_cache`, warm and then decide sent 20 requests for 10 texts. `databases/duckdb/README.md:40` and `:64` mention the bypass in the fine print. The budget control and the "warm first" pattern do not combine, so a caller pays twice or runs past the budget. `2026-09-25-status-sees-only-command-spend-and-the-sql-total-has-three-leaks.md` item 2 already covers part of this. Direction: refuse warm when a session cache or total is set, or give warm its settings as arguments.
