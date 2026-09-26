@@ -1,17 +1,26 @@
 //! `filter` and `rank` with no framing flag: lines, or JSON Lines under a pointer.
 
 use std::io;
+use std::process::Output;
 
-use super::{BY_BODY, QUESTION, RECORDS, by_body, code, over, printed, said};
+use super::{BY_BODY, QUESTION, RECORDS, by_body, code, printed, said};
 use crate::harness::{Listener, spawn};
 
 /// Three text lines, each earning its own probability from [`BY_BODY`].
 const LINES: &str =
     "The payout failed again.\nThanks for the quick fix.\nThe card was refused at checkout.\n";
 
-/// The `state` of each request the listener read, in the order it read them.
-fn states(listener: &Listener) -> Vec<String> {
-    listener
+/// Run a command line at one listener, with a key set so any leak would show.
+fn ask(line: &[&str], base: &str, input: &str) -> io::Result<Output> {
+    let at = ["--url", base, "--model", "local-1"];
+    let key = [("THINKTHEN_API_KEY", "sk-test-value")];
+    spawn(&[line, &at[..]].concat(), &key, input.as_bytes())
+}
+
+/// The `state` of every request the listener read, sorted, because requests
+/// run in parallel and arrive in any order.
+fn sent(listener: &Listener) -> Vec<String> {
+    let mut states: Vec<String> = listener
         .requests()
         .iter()
         .map(|request| {
@@ -19,30 +28,21 @@ fn states(listener: &Listener) -> Vec<String> {
                 serde_json::from_slice(&request.body).expect("a JSON request body");
             body["state"].as_str().expect("a text state").to_owned()
         })
-        .collect()
+        .collect();
+    states.sort();
+    states
 }
 
 #[test]
 fn filter_and_rank_read_lines_when_no_framing_is_named() -> io::Result<()> {
-    let cases = [
-        (
-            "filter",
-            "The payout failed again.\nThe card was refused at checkout.\n",
-        ),
-        (
-            "rank",
-            "The payout failed again.\nThe card was refused at checkout.\nThanks for the quick fix.\n",
-        ),
-    ];
-    for (verb, wanted) in cases {
+    let kept = "The payout failed again.\nThe card was refused at checkout.\n";
+    let ordered = format!("{kept}Thanks for the quick fix.\n");
+    for (verb, wanted) in [("filter", kept), ("rank", ordered.as_str())] {
         let listener = by_body(BY_BODY)?;
-        let output = over(verb, listener.base(), &[], LINES)?;
+        let output = ask(&[verb, QUESTION], listener.base(), LINES)?;
         assert_eq!(code(&output), 0, "{verb}: {}", said(&output));
-        // Requests run in parallel, so they arrive in any order.
-        let mut sent = states(&listener);
-        sent.sort();
         assert_eq!(
-            sent,
+            sent(&listener),
             [
                 "Thanks for the quick fix.",
                 "The card was refused at checkout.",
@@ -69,23 +69,7 @@ fn a_pointer_with_no_framing_reads_json_lines() -> io::Result<()> {
     ];
     for row in rows {
         let listener = by_body(BY_BODY)?;
-        let arguments = [
-            row,
-            &[
-                "--url",
-                listener.base(),
-                "--model",
-                "local-1",
-                "--jobs",
-                "1",
-            ],
-        ]
-        .concat();
-        let output = spawn(
-            &arguments,
-            &[("THINKTHEN_API_KEY", "sk-test-value")],
-            RECORDS.as_bytes(),
-        )?;
+        let output = ask(row, listener.base(), RECORDS)?;
         assert_eq!(code(&output), 0, "{row:?}: {}", said(&output));
         assert_eq!(said(&output), "", "{row:?}");
         assert_eq!(
@@ -98,11 +82,11 @@ fn a_pointer_with_no_framing_reads_json_lines() -> io::Result<()> {
             "{row:?}"
         );
         assert_eq!(
-            states(&listener),
+            sent(&listener),
             [
-                "The payout failed again.",
                 "Thanks for the quick fix.",
                 "The card was refused at checkout.",
+                "The payout failed again.",
                 "The refund never arrived.",
             ],
             "{row:?}: each request sends the body alone"
@@ -115,48 +99,27 @@ fn a_pointer_with_no_framing_reads_json_lines() -> io::Result<()> {
 fn the_plan_names_a_framing_the_default_chose() -> io::Result<()> {
     let listener = by_body(BY_BODY)?;
     let base = listener.base();
-    let request = |state: &str| {
+    let plan = |input: &str| {
         format!(
-            r#""request":{{"state":"{state}","model":"local-1","questions":{{"q1":{{"type":"noul","instructions":"{QUESTION}"}}}}}}}}"#
-        )
+            r#"{{"url":"{base}/systemone","model":"local-1","key_env":"THINKTHEN_API_KEY","input":{input},"request":{{"state":"The payout failed again.","model":"local-1","questions":{{"q1":{{"type":"noul","instructions":"{QUESTION}"}}}}}}}}"#
+        ) + "\n"
     };
     let cases = [
         (
-            "filter",
-            &[][..],
+            &["filter", QUESTION, "--dry-run"][..],
             LINES,
-            format!(
-                r#"{{"url":"{base}/systemone","model":"local-1","key_env":"THINKTHEN_API_KEY","input":{{"framing":"lines","field":[],"from":"default"}},{}"#,
-                request("The payout failed again.")
-            ),
+            plan(r#"{"framing":"lines","field":[],"from":"default"}"#),
         ),
         (
-            "rank",
-            &["--field", "/body"][..],
+            &["rank", QUESTION, "--field", "/body", "--dry-run"][..],
             RECORDS,
-            format!(
-                r#"{{"url":"{base}/systemone","model":"local-1","key_env":"THINKTHEN_API_KEY","input":{{"framing":"jsonl","field":["/body"],"from":"default"}},{}"#,
-                request("The payout failed again.")
-            ),
+            plan(r#"{"framing":"jsonl","field":["/body"],"from":"default"}"#),
         ),
     ];
-    for (verb, extra, input, wanted) in cases {
-        let arguments = [
-            &[
-                verb,
-                QUESTION,
-                "--dry-run",
-                "--url",
-                base,
-                "--model",
-                "local-1",
-            ][..],
-            extra,
-        ]
-        .concat();
-        let output = spawn(&arguments, &[], input.as_bytes())?;
-        assert_eq!(code(&output), 0, "{verb}: {}", said(&output));
-        assert_eq!(printed(&output), format!("{wanted}\n"), "{verb}");
+    for (line, input, wanted) in cases {
+        let output = ask(line, base, input)?;
+        assert_eq!(code(&output), 0, "{line:?}: {}", said(&output));
+        assert_eq!(printed(&output), wanted, "{line:?}");
     }
     assert_eq!(listener.connections(), 0, "a plan opens no connection");
     Ok(())

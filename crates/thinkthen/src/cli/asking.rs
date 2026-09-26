@@ -248,9 +248,7 @@ fn over_table(
 }
 
 /// Read the framing the command line asked for, over the settled pointers.
-///
-/// `filter` and `rank` read no single document, so with no framing flag they
-/// read lines, or JSON Lines when a pointer names part of each record.
+/// With no flag, `filter` and `rank` read lines, or JSON Lines under a pointer.
 fn read_by(common: &Common, settled: &Resolved, keeping: Keeping) -> Result<Reading, Failure> {
     let on = settled.on().to_vec();
     let asked = common.framing();
