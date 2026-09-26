@@ -214,6 +214,8 @@ A demo or page command that replays or caches a folder recorded one record a req
 
 B4 builds the shares, so the B5 row of `sdlc/issues/2026-09-26-batching-design.md` drops "Shares". It now reads "`meta.batch`, `--facts` and the `thinkthen.run/1` line". This ticket's commit makes that edit.
 
+The same commit checks that the design issue no longer limits the pause to an unrecorded run, by ADR 0053 item 1. The friction row reads "Designed away. A live batch sends after a 50 ms pause in input, in every mode". The close-rule row reads "| Pause | A live run has waited 50 ms with no new record, in every mode |". The edge row reads "| A live stream that pauses, with or without a folder | The open batch sends after 50 ms |". A coordinator commit on main made these three edits on 2026-09-26. If a merge brings the old wording back, this commit restores it.
+
 ### S1's list
 
 B4 removes the `decide`, `filter` and `rank` entries from `probes/speed/functions.jsonl` in the commit that makes them batch. S1's gate then requires at most one request for each of their 12-line workloads.
