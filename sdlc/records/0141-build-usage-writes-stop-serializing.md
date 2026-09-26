@@ -1,6 +1,6 @@
 # 0141: Build usage writes stop serializing requests
 
-Status: built 2026-09-26 in lane `worktrees/thinkthen-lane-2`, awaiting code review. Owner: Claude.
+Status: built 2026-09-26 in lane `worktrees/thinkthen-lane-2`. The code review's fixes are in. Owner: Claude.
 
 Branch `ticket/0141-usage-writes-stop-serializing`. The ticket is `sdlc/tickets/0141-usage-writes-stop-serializing.md`. A fresh read-only design review accepted it on 2026-09-26. The change raises the ceiling and moves a Settled guarantee, so a second agent reviews the code and names what it checked. Ian can overturn every decision the ticket lists.
 
@@ -65,12 +65,12 @@ The net budget holds, and the added budget does not. Replacing the atomics and t
 
 ## Ladder
 
-`install`, `lint` and `test` ran once each after the merge of `origin/main` at `7275b54a`. Ticket 0140 then landed. Its merge changed no crate file, and it added a settings check to `spec`. So `spec` ran once more after that merge.
+After the review fixes and the merge of `origin/main` at `b43fcd8a`, each rung ran once. The three plants ran again on this code, and each turned the test red as in the table above.
 
 | Rung | Result |
 | --- | --- |
-| `install` | exit 0 |
-| `lint` | exit 0; ratchet 67,755 of 67,755 |
+| `install` | exit 0, run before the review fixes |
+| `lint` | exit 0; ratchet 67,758 of 67,758 |
 | `test` | exit 0; 943 passed, 0 failed across 36 test binaries |
 | `spec` | exit 0; demos 21 green, 0 red; settings 0 failures |
 
