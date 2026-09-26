@@ -1,6 +1,6 @@
 # Test harness and review leftovers
 
-Status: Open. Ticket 0127 settles items 2, 3, and 10. It lands the item 4 fix. Item 4's sweep passed 50 runs of 50 at normal load, recorded in `sdlc/records/0127-build-test-harness-fixes.md`. Its proof at high load is still owed. Ticket 0133 settles items 6, 11, 12, and 13 on 2026-09-26. Ticket 0138 settles item 5 on 2026-09-26.
+Status: Open. Ticket 0127 settles items 2, 3, and 10. It lands the item 4 fix. Item 4's sweep passed 50 runs of 50 at normal load, recorded in `sdlc/records/0127-build-test-harness-fixes.md`. Its proof at high load is still owed. Ticket 0133 settles items 6, 11, 12, and 13 on 2026-09-26. Ticket 0138 settles item 5 on 2026-09-26. Quick Fix qf-h1-h3-h6 settles items 7, 8, and 9 on 2026-09-26.
 
 Ian's ruling, 2026-09-25, on item 10: nobody asks the rusqlite maintainers for a fix. Keep the hand-extended API table and add a test.
 
@@ -32,7 +32,6 @@ Done when: `grep -rn TcpListener crates` finds only `engine/http.rs`, `public_ba
 
 Settled by ticket 0127. `conformance/backend/tests/listener.rs` pins both edges.
 
-
 Kind: real test gap.
 
 Found by the 0089 code review (`sdlc/records/0089-code-review.md`, FU3). The code now lives in `conformance/backend/src/listener.rs`. No test hits either edge.
@@ -48,7 +47,6 @@ Done when: a backend test sends half a request and closes, and a test resets a 3
 
 Settled by ticket 0127. The sweep marks the second entity's name and kind.
 
-
 Kind: real test gap.
 
 Found by the final review of ticket 0088 (`sdlc/records/0088-review-final.md`, F2). `evidence` in `crates/thinkthen/tests/backend/secrecy.rs:62` builds every relate input from the marker entity and a plain `Acme` of kind `record` (lines 66, 70, 72, 73, 74). `nothing_leaked` (`secrecy.rs:143`) looks only for `EVIDENCE`. `secrecy_relate.rs:26` does the same with `Ada`. A relate command that prints the second entity's name or kind passes every secrecy test. A planted `eprintln!` of `Acme` passed all five secrecy tests at 0088.
@@ -60,7 +58,6 @@ Done when: a planted print of the second entity's name or kind fails the secrecy
 ## 4. The secrecy relate case fails under load
 
 Fix landed by ticket 0127. The scripted listener keeps its port and counts connections, and the sweep's failure names what the listener saw.
-
 
 Kind: flaky test.
 
@@ -94,38 +91,19 @@ Done when: the variant is gone, or a comment at `recording.rs:45` says why it st
 
 ## 7. The demos script cuts a `--replay` folder name at a space
 
-Kind: cleanup.
-
-`sdlc/scripts/demos:113` pulls the folder with `s/.*--replay \([^ \`]*\).*/\1/p`. A folder named `my recording` is checked as `my`. No demo uses a space today.
-
-Fix: fail when a demo's recording folder name holds white space.
-
-Done when: a fixture page with a spaced folder name makes `sdlc/scripts/demos` fail with a message that names it.
+Settled by Quick Fix qf-h1-h3-h6 on 2026-09-26. `sdlc/scripts/demos` refuses a `--replay` folder name with any character outside letters, digits, and `. _ / -`, and names the text. `demos-self-test` case `replay-spaced` pins it.
 
 ## 8. Demo 27 copies `triage.sh` into a block nothing checks
 
-Kind: cleanup.
-
-`demos/27-test-with-no-network/README.md:22` shows `triage.sh` in a `sh` block. The demos script runs only `bash` blocks (`sdlc/scripts/demos:159`). The copy matches the script today. Nothing notices when the script changes.
-
-Fix: print the committed file in a `bash` block the gate runs, and pin its output.
-
-Done when: an edit to `triage.sh` alone turns the demo red.
+Settled by Quick Fix qf-h1-h3-h6 on 2026-09-26. A `bash` block prints `triage.sh` from `set -eu` down and pins every line, so an edit to the script alone turns the demo red.
 
 ## 9. A `set +e` demo block can hide an earlier failure
 
-Kind: real test gap.
-
-Demo blocks start with `set +e` at `demos/19-no-or-could-not-ask/README.md:10`, `:37`, `:81` and `demos/27-test-with-no-network/README.md:76`, `:85`. Only the block's last assertion is checked, so an earlier command can fail unseen. `sdlc/scripts/demos` refuses a block that asserts nothing (`:212`). It has no rule for `set +e`.
-
-Fix: refuse a `set +e` block that neither prints nor pins each exit code it runs past.
-
-Done when: a fixture page with an unchecked command under `set +e` makes `sdlc/scripts/demos` fail.
+Settled by Quick Fix qf-h1-h3-h6 on 2026-09-26. `sdlc/scripts/demos` refuses `set +e` in any demo `bash` block, and `demos-self-test` case `set-e-off` pins it. Demos 19 and 27 keep `set -e` and capture each code with `&& rc=0 || rc=$?`. The pages under `spec/` still use `set +e` and sit outside this check.
 
 ## 10. rusqlite's loadable bindings stop at SQLite 3.34
 
 Settled by ticket 0127. `databases/sqlite/tests/test_interrupt.py` records Ian's ruling and fails on a wrong tail count.
-
 
 Kind: cleanup. The ruling is Ian's.
 
