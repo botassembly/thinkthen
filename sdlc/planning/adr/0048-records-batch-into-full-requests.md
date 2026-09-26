@@ -97,7 +97,7 @@ The design author's calls:
 7. `max` as the spelling of the default.
 8. The cut at SHA-256 mod 4,096.
 9. `tag`, `score`, `annotate` and `recognize` batching by default, with their cost measured and reported.
-10. The 50 ms pause, its lack of an option, and its absence under a recording folder.
+10. The 50 ms pause, its lack of an option, and its absence under a recording folder. ADR 0053 item 1 withdrew that absence, so the pause fires in every mode.
 11. `--batch 1` sending today's unquoted request.
 12. Even shares of tokens across a batch.
 13. The evidence of plain batches in an object.
