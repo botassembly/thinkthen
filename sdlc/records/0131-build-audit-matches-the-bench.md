@@ -81,7 +81,13 @@ The build commit `411cb67a` raised the ceiling from 65,607 to 66,211 and says wh
 
 ## Rungs
 
-RUNGS
+Each rung ran directly on the branch at `9a4dc0a3`, merged with `origin/main` at `2c4fc294`. A later merge of `origin/main` at `3f7b51ac` brought one issue file and no code.
+
+- `install`: exit 0.
+- `lint`: exit 0. The first run found `tests/audit_refusals.rs` past 500 lines, then clippy's table-length and type limits. Both are fixed above.
+- `test`: exit 0. The first run failed in `demo_runner`: the `--curve` help said "row", a word the help check refuses. It now says "group".
+- `spec`: exit 0, 51 page blocks passed, and 21 demos green. The first run failed the pooled block, because `mustmatch` read the expected JSON arrays as JSON. The block now prints text.
+- `surfaces`: exit 1. Every surface passed except `libraries/c`, which failed on both runs in `door::cases::a_retried_status_is_retryable_and_a_refused_key_is_not` with `Text file busy`. `sdlc/issues/2026-09-25-two-gate-failures-in-a-root-container.md` item 2 records this launch race. The C surface does not reach audit. The `--by`, `--curve`, and `--pooled` help lines are the public surface this ticket changed, and `test` checks them.
 
 ## Defers
 
