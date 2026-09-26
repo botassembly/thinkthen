@@ -52,11 +52,12 @@ runtime_open() {
 
 BIN=.runtime/tree/usr/lib/postgresql/16/bin
 
-# Copy the extracted tree, install the packaged files, and make a cluster.
+# Copy the extracted tree, install the module from $1 and the extension files from $2,
+# and make a cluster.
 runtime_install() {
 	rm -rf .runtime/tree && mkdir -p .runtime/tree && cp -a "$EXTRACTED/." .runtime/tree/
-	cp "$1"/usr/share/postgresql/16/extension/thinkthen* .runtime/tree/usr/share/postgresql/16/extension/
-	cp "$1"/usr/lib/postgresql/16/lib/thinkthen.so .runtime/tree/usr/lib/postgresql/16/lib/
+	cp "$2"/thinkthen* .runtime/tree/usr/share/postgresql/16/extension/
+	cp "$1"/thinkthen.* .runtime/tree/usr/lib/postgresql/16/lib/
 	BIN=$(pwd)/.runtime/tree/usr/lib/postgresql/16/bin
 	sh "$LIMIT" 60 "$BIN/initdb" -D "$DATA" --auth=trust -U postgres >"$RUN/initdb.log" 2>&1
 	printf "listen_addresses = ''\nunix_socket_directories = '%s'\n" "$SOCK" >>"$DATA/postgresql.conf"

@@ -4,7 +4,8 @@
 # The container runs as the calling user on its own copy of the commit in WORK, and never
 # on this checkout. WORK/cache keeps the pinned downloads between runs. Each toolchain has
 # one source: rustup-init and the channel rust-toolchain.toml names, the image's CPython
-# 3.10 with maturin, the nodejs.org Node 22 tarball, and the image's gcc.
+# 3.10 with maturin and PyPI's libclang wheel, the nodejs.org Node 22 tarball, the PGDG EL8
+# PostgreSQL 16 RPMs unpacked as this user, cargo-pgrx 0.17.0, and the image's gcc.
 # RELEASE_CARGO_REGISTRY names a crate registry folder to mount read-only and build offline.
 set -eu
 [ $# -eq 2 ] || { echo 'usage: release-container WORK OUT' >&2; exit 2; }
@@ -30,16 +31,33 @@ docker run "$@" "$IMAGE" sh -euc '
 	node=node-v22.22.3-linux-x64
 	fetch "$node.tar.xz" "https://nodejs.org/dist/v22.22.3/$node.tar.xz" \
 		"$(cut -d" " -f1 /work/src/libraries/typescript/node.sha256)"
+	libclang=libclang-18.1.1-py2.py3-none-manylinux2010_x86_64.whl
+	fetch "$libclang" "https://files.pythonhosted.org/packages/py2.py3/l/libclang/$libclang" \
+		c533091d8a3bbf7460a00cb6c1a71da93bffe148f172c7d03b1c31fbf8aa2a0b
+	mkdir -p /work/home/pg
+	for rpm in 299c44fbae190bcf462bc98ceaca719771af2f03bf4822a188c9f39065712674:postgresql16 \
+		85414ad9e7cf7dc50e6d7b1fefb706351166164de3bf6f102fae6796b973692b:postgresql16-libs \
+		13df7b9f5373777bf7d0d30b7bcd8cdee2c50fe2a128be42a802a64fa7eeabf4:postgresql16-devel \
+		6f68ccd50fdfe92e636bd45bd798b62750a633adfb1cc2a251d133573a67bafc:postgresql16-server; do
+		file=${rpm#*:}-16.15-1PGDG.rhel8.10.x86_64.rpm
+		fetch "$file" "https://download.postgresql.org/pub/repos/yum/16/redhat/rhel-8-x86_64/$file" "${rpm%%:*}"
+		cp "$cache/$file" /work/home/ && (cd /work/home && rpm2archive "$file" && tar -xzf "$file.tgz" -C pg)
+	done
 	chmod +x "$cache/rustup-init"
 	"$cache/rustup-init" -y --quiet --no-modify-path --profile minimal --default-toolchain none
 	cd /work/src
 	/work/home/.cargo/bin/rustup toolchain install --no-self-update --profile minimal \
 		"$(sed -n "s/^channel = \"\(.*\)\"$/\1/p" rust-toolchain.toml)"
 	/opt/python/cp310-cp310/bin/python -m venv /work/home/venv
-	/work/home/venv/bin/pip install --quiet --no-index --no-deps "$cache/$maturin"
+	/work/home/venv/bin/pip install --quiet --no-index --no-deps "$cache/$maturin" "$cache/$libclang"
 	tar -xJf "$cache/$node.tar.xz" -C /work/home
-	PATH=/work/home/.cargo/bin:/work/home/venv/bin:/work/home/$node/bin:$PATH
-	export PATH
-	sh sdlc/scripts/release-pack x86_64-unknown-linux-gnu /work/out c sqlite duckdb python typescript
+	PATH=/work/home/.cargo/bin:/work/home/venv/bin:/work/home/$node/bin:/work/home/pgrx/bin:$PATH
+	cargo install --quiet --locked --root /work/home/pgrx cargo-pgrx --version 0.17.0
+	# bindgen reads the image gcc's own headers beside the wheel's libclang.
+	LIBCLANG_PATH=/work/home/venv/lib/python3.10/site-packages/clang/native
+	BINDGEN_EXTRA_CLANG_ARGS="-I$(gcc -print-file-name=include)"
+	PG_CONFIG=/work/home/pg/usr/pgsql-16/bin/pg_config
+	export PATH LIBCLANG_PATH BINDGEN_EXTRA_CLANG_ARGS PG_CONFIG
+	sh sdlc/scripts/release-pack x86_64-unknown-linux-gnu /work/out c sqlite duckdb postgresql python typescript
 '
 cp -- "$WORK"/out/* "$OUT/"
