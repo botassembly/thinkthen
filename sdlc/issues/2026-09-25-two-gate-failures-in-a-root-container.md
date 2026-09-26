@@ -2,7 +2,7 @@
 
 Status: Open
 
-Filed on 2026-09-25 from Quick Fix `qf-install-nightly-and-root-test` (see its record). A root cloud container with 4 cores found both. Neither fails on the Beelink as uid 1000. Neither touches a key or the live ledger.
+Filed on 2026-09-25 from Quick Fix `qf-install-nightly-and-root-test` (see its record). A root cloud container with 4 cores found both. Neither failed on the Beelink as uid 1000 at first. On 2026-09-25 the C failure (item 2) also hit the Beelink as uid 1000, in the surfaces rung at the landing of ticket 0130, and passed on the rung before it. Neither touches a key or the live ledger.
 
 ## 1. `sdlc/live-test` passes a write it expects to fail, as root
 

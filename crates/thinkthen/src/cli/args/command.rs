@@ -199,9 +199,16 @@ pub(crate) enum Command {
     /// set and sees every other entity admitted by a rule. Inline rules use
     /// NAME=SOURCE_KIND:TARGET_KIND. A bare NAME means NAME=*:*.
     ///
+    /// A run makes paid requests. A relation between two kinds asks one
+    /// question for every entity of the larger kind, or of the source kind when
+    /// the counts are equal. A same-kind relation asks one yes-or-no question
+    /// for every pair, in both directions unless --either. --dry-run prints the
+    /// questions and requests and sends nothing.
+    ///
     /// A run that answers some relation questions and fails others prints what
     /// it has and exits 6. A run whose relation questions all fail prints
     /// nothing and exits 4.
+    #[command(mut_arg("jobs", |arg| arg.hide(true)))]
     Relate(RelateArguments),
 
     /// Inspect and maintain answer-cache folders without sending a request.

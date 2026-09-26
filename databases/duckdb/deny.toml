@@ -43,11 +43,29 @@ allow = [
     "Unlicense",
 ]
 # A crate offering `Apache-2.0 WITH LLVM-exception` beside plain Apache-2.0 or
-# MIT is taken on one of those, so no exception is needed and none is allowed.
-# ADR 0047: the DuckDB binding's one license exception. `zlib-rs` comes
-# through `flate2` and `zip` in `libduckdb-sys`'s build dependencies and runs
-# only at build time. `check.sh` compares this file with the root copy.
-exceptions = [{ crate = "zlib-rs", allow = ["Zlib"] }]
+# MIT is taken on one of those, so no exception is needed for it.
+#
+# The `polars` feature (tickets 0120 and 0130) brings four crates under
+# licenses the list above does not hold. Each is permissive and carries no
+# copyleft term: it lets anyone use, change, and ship the code with a notice
+# kept, and none requires shared source. Each exception names its crate, so a
+# new crate under the same license still fails.
+exceptions = [
+    # Zlib: the default hasher of hashbrown 0.17, which polars-arrow and
+    # polars-compute use.
+    { crate = "foldhash", allow = ["Zlib"] },
+    # Zlib: reached through polars-async under polars-core, and through polars-utils.
+    { crate = "slotmap", allow = ["Zlib"] },
+    # BSL-1.0: a direct dependency of polars-core.
+    { crate = "xxhash-rust", allow = ["BSL-1.0"] },
+    # Apache-2.0 WITH LLVM-exception, with no plain Apache-2.0 offered: a build
+    # dependency of psm under stacker under polars-utils. It runs at build time only.
+    { crate = "ar_archive_writer", allow = ["Apache-2.0 WITH LLVM-exception"] },
+    # ADR 0047: the DuckDB binding's one license exception. `zlib-rs` comes
+    # through `flate2` and `zip` in `libduckdb-sys`'s build dependencies and
+    # runs only at build time. `check.sh` compares this file with the root copy.
+    { crate = "zlib-rs", allow = ["Zlib"] },
+]
 confidence-threshold = 0.9
 unused-allowed-license = "deny"
 

@@ -24,4 +24,14 @@ fn help_names_the_beta_complete_set_and_secrecy_contract() {
     ] {
         assert!(help.contains(required), "{required}\n{help}");
     }
+    assert!(
+        help.contains(concat!(
+            "\n\nA run makes paid requests. A relation between two kinds asks one question for every ",
+            "entity of the larger kind, or of the source kind when the counts are equal. A same-kind ",
+            "relation asks one yes-or-no question for every pair, in both directions unless --either. ",
+            "--dry-run prints the questions and requests and sends nothing.\n\n",
+        )),
+        "{help}"
+    );
+    assert!(!help.contains("--jobs"), "{help}");
 }

@@ -108,7 +108,7 @@ fn send(
         Error::Transport(_) => Some("connection"),
         Error::Status(401..=403) => Some("key"),
         Error::Status(404) => Some("endpoint"),
-        Error::Status(_) | Error::Reply(_) => None,
+        Error::Status(_) | Error::TokenLimit | Error::Reply(_) => None,
         _ => return Err(error.into()),
     };
     let sentence = sentence(&Failure::from(error));

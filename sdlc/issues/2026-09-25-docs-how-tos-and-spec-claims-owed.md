@@ -10,29 +10,19 @@ Fix these first. A reader who trusts them is misled today.
 
 ### 1. The spec and ADR 0010 say a repeated request returns the same answer
 
-**Gap.** `specification/recording.md:78` says: "The first live answers on 2026-09-19 returned the same probability for two identical requests. ADR 0010 holds the measurement." ADR 0010 line 50 says: "The same request returns the same number, so a repeated trial means something only when the candidate's output changes." Experiment 212 sent 100 messages twice. Sixty-three probabilities differed, by up to 0.08, and four answers flipped at 0.5. Experiment 259 found 178 of 681 repeated digests in the Beatles Bench recordings with different answers, all from `jev-1.13.0`, with gaps up to 0.09. A re-record into a used folder then stops at exit 5 with `the entry ... already records a different response` (`crates/thinkthen/src/cli/failure/recording.rs:28`). That message does not say the backend changed its answer. The `--record` help (`crates/thinkthen/src/cli/args.rs:114-117`) does not warn that a used folder can stop. `specification/threshold.md:43` gives flip rates but not the size of the movement, and no gate page says why its band is as wide as it is.
-
-**Fix.** Add a dated amendment to ADR 0010 that keeps the 2026-09-19 measurement as history, cites experiments 212 and 259, and withdraws the sentence. Replace `recording.md:78` with the measured play: most differences 0.01, up to about 0.08 to 0.09 on one model version. Reword the conflict message for its common cause, for example: the backend answered this request differently from the saved entry; record into a fresh folder, or use `--cache` to keep the saved answer. Add one line to the `--record` help that a used folder can stop at a conflict. Add the 0.08 figure to `threshold.md` and say on the band pages that a band narrower than about 0.1 each side of a cut does not hold a flip out. The stop itself stays, because the spec decides it.
-
-Done when: no spec, ADR, or page claims repeat answers match, and the conflict message and `--record` help name the fresh-folder and `--cache` routes.
+Fixed by ticket 0126, landed 2026-09-25 from branch `ticket/0126-wording-help-and-doc-claims`.
 
 ### 2. The interface audit says three sent fields never reach the wire
 
-**Gap.** `sdlc/planning/interface-audit.md` was last changed on 2026-09-19 (`b4e7d03f`). Rows 31 and 32 say `criteria.true` and `criteria.false` are never sent and no `--true` or `--false` exists. Row 38 says option descriptions are thrown away. Row 66 and line 87 say `Retry-After` is ignored. The binary now sends all three, and `crates/thinkthen/src/engine/http.rs` reads the retry headers. A check on 2026-09-20 lost a round to this page.
-
-**Fix.** Mark each landed row with the ticket that landed it, or add a dated line at the top that names the landed rows and says the rest stand.
-
-Done when: every row of the audit matches the current binary or carries a dated note that says it is history.
+Fixed by ticket 0126, landed 2026-09-25 from branch `ticket/0126-wording-help-and-doc-claims`.
 
 ### 3. Two printed numbers name no measuring record
 
-**Gap.** `README.md:31` says "One measured call took over 300 ms". `sdlc/planning/ten-use-cases.md:14` repeats it. No probe or record under `probes/` or `sdlc/records/` holds that measurement. The repository rule is that a printed number names the record that measured it.
-
-**Fix.** Find the run that measured it and cite it. If none exists, cite another recorded latency or cut the number and keep the sentence about a process start.
-
-Done when: `grep -rn "300 ms" README.md sdlc/planning/ten-use-cases.md` returns only lines that name a record, or nothing.
+Fixed by ticket 0126, landed 2026-09-25 from branch `ticket/0126-wording-help-and-doc-claims`.
 
 ### 4. `find --details` keys probabilities by ids the spec never explains
+
+Ticket 0125 owns this item.
 
 **Gap.** The core builds each unit id as `format!("u{:03}", place + 1)` (`crates/thinkthen/src/core/find.rs:172-174`). `specification/find.md:41` says only "the selected generated unit id". `specification/result.md:83` shows `u001` and `u002` with no mapping. `thinkthen find --help` says `--details` prints "the full result object". Only ADR 0030 line 10 states the rule. A user on 2026-09-25 had to rebuild the map from input order, and their own ids `u01` to `u10` looked almost the same as `u001` to `u010`.
 

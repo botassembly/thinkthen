@@ -33,7 +33,7 @@ env -u R_LIBS_USER -u THINKTHEN_API_KEY \
     THINKTHEN_CACHE="$dir/cache" THINKTHEN_BASE_URL="$base" THINKTHEN_API_KEY=tt-test-not-a-key \
     TT_BACKEND_ORIGIN="http://127.0.0.1:$port" TT_BACKEND_IN="$dir/in" TT_BACKEND_OUT="$dir/out" \
     TT_TESTS="$(cd "$(dirname "$0")" && pwd)" \
-    timeout 600 Rscript "$file" >"$dir/log" 2>&1 3>&-
+    sh "$(cd "$(dirname "$0")/../../.." && pwd)/sdlc/scripts/time-limit" 600 Rscript "$file" >"$dir/log" 2>&1 3>&-
 code=$?
 set -e
 cat -- "$dir/log"

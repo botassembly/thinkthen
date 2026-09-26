@@ -11,6 +11,7 @@ use serde_json::Value;
 
 use crate::harness::{Canned, Listener, finish, spawn};
 
+mod ceiling;
 mod details;
 
 pub(super) fn run(listener: &Listener, options: &[&str], input: &[u8]) -> Output {

@@ -8,6 +8,11 @@
 # accepts, and every binding folder is a landed surface.
 set -eu
 
+# `surfaces --release` counts a check that reports "not run" as a failure (ticket 0128).
+. "$(dirname -- "$0")/verdict.sh"
+mode=plain
+[ "${1:-}" != --release ] || { mode=release; shift; }
+
 if [ "${1:-}" != --registry ]; then
 	# One heavy rung at a time on this machine. See heavy-lock.
 	. "$(dirname -- "$0")/heavy-lock"
@@ -20,6 +25,12 @@ landed() {
 	awk '!/^#/ && $2 == "landed" { print $1 }' "$1"
 }
 
+# A `feature` line is a Cargo feature of `thinkthen` (ticket 0130). Its check
+# runs with the landed ones, and the root ratchet and deny cover its code.
+feature() {
+	awk '!/^#/ && $2 == "feature" { print $1 }' "$1"
+}
+
 # A binding's manifest sits in its folder, or in the crate folder a third field names.
 manifest() {
 	awk -v at="$2" '!/^#/ && $1 == at { print $1 "/" (NF == 3 ? $3 "/" : "") "Cargo.toml" }' "$1"
@@ -27,8 +38,8 @@ manifest() {
 
 registry() {
 	status=0
-	if awk '!/^#/ && NF && (NF < 2 || NF > 3 || ($2 != "landed" && $2 != "planned") || $3 ~ /^\/|(^|\/)\.\.(\/|$)/) { bad = 1 } END { exit !bad }' "$1"; then
-		printf 'surfaces: %s holds a line other than a folder, landed or planned, and a crate folder inside it\n' "$1" >&2
+	if awk '!/^#/ && NF && (NF < 2 || NF > 3 || ($2 != "landed" && $2 != "planned" && $2 != "feature") || ($2 == "feature" && NF != 2) || $3 ~ /^\/|(^|\/)\.\.(\/|$)/) { bad = 1 } END { exit !bad }' "$1"; then
+		printf 'surfaces: %s holds a line other than a folder, landed, planned, or feature, and a crate folder inside it\n' "$1" >&2
 		status=1
 	fi
 	for surface in $(landed "$1"); do
@@ -41,9 +52,15 @@ registry() {
 			status=1
 		fi
 	done
+	for surface in $(feature "$1"); do
+		if [ ! -f "$surface/check.sh" ] || [ -n "$(git ls-files -co --exclude-standard -- "$surface" | grep -v -e '/check\.sh$' -e '/README\.md$')" ]; then
+			printf 'surfaces: %s is a feature and holds more than its check.sh and README.md\n' "$surface" >&2
+			status=1
+		fi
+	done
 	for folder in libraries/*/ databases/*/; do
 		[ -d "$folder" ] || continue
-		if ! landed "$1" | grep -qx "${folder%/}"; then
+		if ! { landed "$1"; feature "$1"; } | grep -qx "${folder%/}"; then
 			printf 'surfaces: %s is not a landed surface in %s\n' "${folder%/}" "$1" >&2
 			status=1
 		fi
@@ -54,7 +71,7 @@ registry() {
 if [ "${1:-}" = --registry ]; then
 	registry sdlc/surfaces.txt
 	planted=$(mktemp)
-	trap 'rm -f -- "$planted" "$planted.json"' EXIT
+	trap 'rm -f -- "$planted" "$planted.json" "$planted.pid" "$planted.term"' EXIT
 	{ cat sdlc/surfaces.txt; echo 'libraries/planted landed'; } >"$planted"
 	if registry "$planted" 2>/dev/null; then
 		echo 'surfaces: the registry check passed a landed surface with no check.sh' >&2
@@ -69,6 +86,12 @@ if [ "${1:-}" = --registry ]; then
 	sed 's|^\(libraries/r  *landed\) .*|\1  ../rust|' sdlc/surfaces.txt >"$planted"
 	if registry "$planted" 2>/dev/null; then
 		echo 'surfaces: the registry check passed a crate folder outside its binding' >&2
+		exit 1
+	fi
+	# A feature folder holds no code of its own. The Rust examples' folder does.
+	sed 's|^libraries/rust  *landed$|libraries/rust feature|' sdlc/surfaces.txt >"$planted"
+	if registry "$planted" 2>/dev/null; then
+		echo 'surfaces: the registry check passed a feature folder that holds a Cargo.toml' >&2
 		exit 1
 	fi
 	for surface in $(landed sdlc/surfaces.txt); do
@@ -88,6 +111,44 @@ if [ "${1:-}" = --registry ]; then
 		cargo deny --offline --manifest-path "$(manifest sdlc/surfaces.txt "$surface")" check --config "$deny" \
 			advisories bans licenses sources
 	done
+	# The release rule over 0, 77, and 1 in both modes, with the exact lines.
+	got=$(for m in plain release; do for c in 0 77 1; do if verdict "$m" planted "$c"; then echo '-> 0'; else echo '-> 1'; fi; done; done)
+	pass='surfaces: pass planted' fail='surfaces: FAIL planted (exit 1)'
+	want=$(printf '%s\n' "$pass" '-> 0' 'surfaces: not run planted (no host toolchain)' '-> 0' "$fail" '-> 1' \
+		"$pass" '-> 0' 'surfaces: FAIL planted (not run)' '-> 1' "$fail" '-> 1')
+	if [ "$got" != "$want" ]; then
+		printf 'surfaces: the release rule printed\n%s\n' "$got" >&2
+		exit 1
+	fi
+	# time-limit returns the command's code, or 124 with nothing it started left alive.
+	limit=$(dirname -- "$0")/time-limit
+	fast=0 slow=0
+	sh "$limit" 5 sh -c 'exit 3' || fast=$?
+	sh "$limit" 1 sh -c 'sleep 30 & echo $! >"$0"; sleep 3' "$planted.pid" 2>/dev/null || slow=$?
+	if [ "$fast" -ne 3 ] || [ "$slow" -ne 124 ] || kill -0 "$(cat "$planted.pid")" 2>/dev/null; then
+		echo "surfaces: time-limit returned $fast and $slow, or left a process alive" >&2
+		exit 1
+	fi
+	# A TERM to time-limit reaches the command's children, even one that ignores TERM, and exits 143.
+	sh "$limit" 30 sh -c 'trap "" TERM; sleep 30 & echo $! >"$0"; wait' "$planted.term" &
+	outer=$! term=0 i=0
+	while [ ! -s "$planted.term" ] && [ "$i" -lt 50 ]; do sleep 0.1; i=$((i + 1)); done
+	if [ ! -s "$planted.term" ]; then
+		echo "surfaces: the TERM row's command never wrote its grandchild's pid" >&2
+		exit 1
+	fi
+	kill "$outer"
+	i=0
+	while kill -0 "$(cat "$planted.term")" 2>/dev/null && [ "$i" -lt 40 ]; do sleep 0.1; i=$((i + 1)); done
+	if kill -0 "$(cat "$planted.term")" 2>/dev/null; then
+		echo "surfaces: a TERM to time-limit left a process alive after 4 seconds" >&2
+		exit 1
+	fi
+	wait "$outer" || term=$?
+	if [ "$term" -ne 143 ]; then
+		echo "surfaces: a TERM to time-limit returned $term" >&2
+		exit 1
+	fi
 	echo 'surfaces: the registry holds every binding, and each landed one has its check, ratchet, and deny'
 	exit 0
 fi
@@ -108,16 +169,12 @@ done
 port=$(head -n 1 "$fifo.port")
 
 failed=0
-for surface in $(landed sdlc/surfaces.txt); do
+for surface in $(landed sdlc/surfaces.txt) $(feature sdlc/surfaces.txt); do
 	set +e
 	# A daemon a check starts must not hold the backend's input open.
 	sh "$surface/check.sh" "$port" 3>&-
 	code=$?
 	set -e
-	case $code in
-	0) echo "surfaces: pass $surface" ;;
-	77) echo "surfaces: not run $surface (no host toolchain)" ;;
-	*) echo "surfaces: FAIL $surface (exit $code)"; failed=1 ;;
-	esac
+	verdict "$mode" "$surface" "$code" || failed=1
 done
 exit "$failed"

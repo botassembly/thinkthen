@@ -7,6 +7,8 @@ set -eu
 cd -- "$(dirname -- "$0")"
 unset THINKTHEN_API_KEY
 repo=$(cd ../.. && pwd)
+# macOS has no `timeout` (ticket 0128).
+LIMIT=$repo/sdlc/scripts/time-limit
 
 fail() { echo "check ruby: $*" >&2; exit 1; }
 not_run() { echo "check ruby: not run: $*"; exit 77; }
@@ -107,10 +109,10 @@ cargo fmt --check
 cargo clippy --locked --offline --all-targets --quiet -- -D warnings
 cargo test --locked --offline --quiet --lib
 for test in tests/test_*.rb; do
-  timeout 120 "$RUBY" -I lib "$test" || fail "$test failed"
+  sh "$LIMIT" 120 "$RUBY" -I lib "$test" || fail "$test failed"
 done
-timeout 120 "$RUBY" -I lib tests/conformance.rb || fail "the conformance runner failed"
-timeout 120 "$RUBY" -I lib tests/examples.rb || fail "an example failed"
+sh "$LIMIT" 120 "$RUBY" -I lib tests/conformance.rb || fail "the conformance runner failed"
+sh "$LIMIT" 120 "$RUBY" -I lib tests/examples.rb || fail "an example failed"
 "$RUBY" -rrubygems/package -I lib -rthinkthen/version -e '
   spec = Gem::Package.new(Dir["thinkthen-*.gem"].fetch(0)).spec
   version = File.read("../../crates/thinkthen/Cargo.toml")[/^version = "([^"]+)"/, 1]
@@ -121,5 +123,5 @@ timeout 120 "$RUBY" -I lib tests/examples.rb || fail "an example failed"
   abort "ThinkThen::VERSION is #{ThinkThen::VERSION}, the engine is #{version}" unless ThinkThen::VERSION == version
   abort "the gem holds #{spec.files.sort}" unless spec.files.sort == files.sort
 ' || fail "the gem check failed"
-timeout 120 "$RUBY" -I lib tests/slide_sample.rb || fail "the slide sample failed"
+sh "$LIMIT" 120 "$RUBY" -I lib tests/slide_sample.rb || fail "the slide sample failed"
 echo "check ruby: pass"

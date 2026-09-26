@@ -5,8 +5,24 @@ build-backend = "maturin"
 [project]
 name = "thinkthen"
 version = "0.0.1"
+description = "Semantic judgments over text for Python, through the thinkthen engine"
+readme = "README.md"
 license = { text = "MIT" }
+authors = [{ name = "Ian Maurer" }]
 requires-python = ">=3.10"
+keywords = ["classification", "llm", "text", "judgment"]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Rust",
+]
+
+[project.urls]
+Homepage = "https://thinkthen.dev"
+Repository = "https://github.com/botassembly/thinkthen"
+Issues = "https://github.com/botassembly/thinkthen/issues"
 
 [project.optional-dependencies]
 # 1.44.2 is the tested pin, and it exports the Series Arrow stream the door reads.

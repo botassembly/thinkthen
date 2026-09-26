@@ -1,6 +1,6 @@
 # status sees only command spend, and the SQL request total has three leaks
 
-Status: Open
+Status: Open. Option 3, the docs half, landed in ticket 0126 on 2026-09-25. Option 1 stays open as a ticket.
 
 Found 2026-09-25 while drafting the talk's cost slide. Ian asked for these gaps to be filed. Each fact below names its source.
 

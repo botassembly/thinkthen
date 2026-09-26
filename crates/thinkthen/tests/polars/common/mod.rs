@@ -10,8 +10,8 @@
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use thinkthen::polars::prelude::{NamedFrom, Series};
 use thinkthen::{Engine, EngineBuilder};
-use thinkthen_polars::polars::prelude::{NamedFrom, Series};
 
 /// The fake key `check.sh` sets.
 pub(crate) const FAKE_KEY: &str = "sk-polars-loopback";

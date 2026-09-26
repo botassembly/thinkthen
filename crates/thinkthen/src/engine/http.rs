@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use ureq::Agent;
 
-use crate::core::Withheld;
+use crate::core::{Json, Withheld};
 use crate::engine::Widths;
 use crate::engine::error::{Error, TransportKind};
 
@@ -254,10 +254,12 @@ fn send(agent: &Agent, exchange: &Exchange<'_>, limit: Duration) -> Result<Vec<u
                 .and_then(|value| value.to_str().ok())
         };
         let asked = honored(header("retry-after-ms"), header("retry-after"));
-        return Err(Attempt {
-            failure: Error::Status(status),
-            asked,
-        });
+        let failure = if status == 400 && names_token_limit(&mut response) {
+            Error::TokenLimit
+        } else {
+            Error::Status(status)
+        };
+        return Err(Attempt { failure, asked });
     }
     response
         .body_mut()
@@ -266,6 +268,33 @@ fn send(agent: &Agent, exchange: &Exchange<'_>, limit: Duration) -> Result<Vec<u
         .read_to_vec()
         .map_err(|error| Attempt::from(Error::Transport(transport(&error))))
 }
+
+/// Whether a 400 reply's body names `max_tokens_exceeded` as its
+/// `detail.error_type`. The body is read up to 4 KiB and never kept: an
+/// unreadable, longer, or other body answers no, and the caller keeps status 400.
+fn names_token_limit(response: &mut ureq::http::Response<ureq::Body>) -> bool {
+    let Ok(body) = response
+        .body_mut()
+        .with_config()
+        .limit(BODY_REASON_BYTES)
+        .read_to_vec()
+    else {
+        return false;
+    };
+    let Ok(text) = std::str::from_utf8(&body) else {
+        return false;
+    };
+    Json::parse(text).ok().is_some_and(|value| {
+        value
+            .member("detail")
+            .and_then(|detail| detail.member("error_type"))
+            .and_then(Json::as_str)
+            == Some("max_tokens_exceeded")
+    })
+}
+
+/// How much of a 400 reply's body is read for its reason.
+const BODY_REASON_BYTES: u64 = 4096;
 
 /// Reduce an HTTP-library error to the safe class the command contract knows.
 fn transport(error: &ureq::Error) -> TransportKind {

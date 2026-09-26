@@ -86,4 +86,22 @@ check("the tarball install answers", isTRUE(tt_decide("Is this a complaint?", "I
 finish("tarball", 1L)
 EOF
 R_LIBS="$scratch/lib:$libs" bash tests/with-backend.sh "$backend" "$scratch/answer.R"
+
+echo "== r: outside the repository, against the packed crate with no network (ticket 0128)"
+# R-universe builds this package's folder alone. The copy has no repository
+# around it, so the published shape asks crates.io for the engine. A private
+# CARGO_HOME's [patch.crates-io] points that at `cargo package`'s copy of the
+# crate, wherever R builds, and CARGO_NET_OFFLINE refuses any fetch.
+mkdir -p "$scratch/outside" "$scratch/home" "$scratch/crate" "$scratch/outside-lib"
+ln -s "${CARGO_HOME:-$HOME/.cargo}/registry" "$scratch/home/registry"
+(cd "$root" && CARGO_TARGET_DIR="$scratch/target" cargo package --locked --offline --no-verify --allow-dirty --quiet --package thinkthen)
+tar -xzf "$scratch"/target/package/thinkthen-*.crate -C "$scratch/crate" --strip-components=1
+cp -R "$scratch/tree/libraries/r/thinkthen" "$scratch/outside/thinkthen"
+printf '[patch.crates-io]\nthinkthen = { path = "%s" }\n' "$scratch/crate" >"$scratch/home/config.toml"
+(cd "$scratch/outside" && RUSTUP_TOOLCHAIN=$pinned CARGO_HOME="$scratch/home" CARGO_TARGET_DIR="$scratch/outside-target" CARGO_NET_OFFLINE=true \
+  R CMD INSTALL -l "$scratch/outside-lib" thinkthen >"$scratch/outside.log" 2>&1) ||
+  { cat "$scratch/outside.log" >&2; exit 1; }
+grep -q '^thinkthen = { version = "=' "$scratch/outside/thinkthen/src/rust/Cargo.toml" ||
+  { echo "the outside build kept the path dependency" >&2; exit 1; }
+R_LIBS="$scratch/outside-lib:$libs" bash tests/with-backend.sh "$backend" "$scratch/answer.R"
 echo "r: check passed"

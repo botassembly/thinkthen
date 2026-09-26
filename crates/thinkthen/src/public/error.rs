@@ -180,6 +180,7 @@ fn message(error: &EngineError) -> String {
     let fixed = match error {
         EngineError::Transport(kind) => transport(*kind),
         EngineError::Status(status) => return format!("the backend answered with status {status}"),
+        EngineError::TokenLimit => "the backend answered with status 400",
         EngineError::Reply(decode) => return format!("the reply was refused: {decode}"),
         EngineError::ReplayMiss(_) => "the replay folder holds no reply for this request",
         EngineError::Entry(..) | EngineError::CacheEntry => {
