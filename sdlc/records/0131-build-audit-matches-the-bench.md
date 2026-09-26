@@ -111,7 +111,7 @@ Each rung ran directly on the branch at `9a4dc0a3`, merged with `origin/main` at
 Each rung ran directly on the branch at `cd90cbaa`, merged with `origin/main`. The merge brought issue files only.
 
 - `lint`, `test`, and `spec`: exit 0. `spec` ran 51 page blocks and 21 demos green.
-- `surfaces`: exit 1 on both runs, each on a known flake outside audit. The first run failed `libraries/polars` in `a_series_runs_at_the_throttle_as_a_slice_does` on a timing gap of 8 percent under load, while `libraries/c` passed. The second run passed polars and failed `libraries/c` with `Text file busy`, the launch race a separate Quick Fix is fixing. Every other surface passed both times.
+- `surfaces`: exit 1 on both runs, each on a known flake outside audit. The first run failed `libraries/polars` in `a_series_runs_at_the_throttle_as_a_slice_does` on a timing gap of 8 percent under load, while `libraries/c` passed. The second run passed polars and failed `libraries/c` in `door::cases::every_applicable_shared_case_passes_through_the_door`. It failed at the same launch of a just-built program, `tests/door/main.rs:131`, with `Permission denied` in place of `Text file busy`. The separate Quick Fix owns that launch path. Every other surface passed both times.
 
 ## Defers
 
