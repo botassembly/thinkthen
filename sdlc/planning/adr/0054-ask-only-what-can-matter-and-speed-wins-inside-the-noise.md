@@ -26,7 +26,7 @@ Ian's ruling of 2026-09-26: "Our choices need to be the most efficient thing. Fi
 ## Consequences
 
 - Batching stays the default under ADR 0048 and ADR 0053. Its answer shifts are the noise that every run has, and it sends the 306 titles in one request.
-- Ticket 0147's item 4, `none` in the kind question, waits for experiment 274. If labelled detection matches it within the noise, item 4 becomes labelled detection.
+- Ticket 0147's item 4, `none` in the kind question, ships. Local experiment 274 measured labelled detection as the cheaper alternative, and its loss was beyond the noise on bare kinds. The record above gives the figures.
 - Ticket 0147's item 5, a yes-or-no question for each pair, asks only about pairs a relation rule allows.
 - An audit of all ten functions against this ADR files an issue for each place that asks more than can matter or keeps an unmeasured default.
 - Review checks new tickets against items 1 to 5.

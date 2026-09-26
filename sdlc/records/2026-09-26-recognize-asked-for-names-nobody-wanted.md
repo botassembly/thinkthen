@@ -36,3 +36,13 @@ Wrong-kind names never reach the relation step, so relations get cheaper and cle
 4. Pay for accuracy only when the gap is real and matters. When a method is worse by clearly more than the noise, on something users rely on, the loss is measured and stated plainly, and a setting such as `--batch 1` gives the slower method. A slow path never becomes the default for a gain nobody could detect.
 
 The rule: do not ask what can be ruled out, prefer the fastest method unless its loss is larger than the noise, and measure before choosing.
+
+## What the measurement showed
+
+Local experiment 274 measured the two repairs on the 100-sentence key and a sample of the Beatles Bench, with 2.9 million tokens of authorized live calls. Run-to-run noise was about 1.5 F1 points.
+
+- Today's build scored 27 to 32 F1 at one kind. About 120 wrong-kind names a run reached the relation step.
+- The `none` repair scored 62 to 76 at one kind, with 5 or 6 wrong-kind names a run. At five kinds it matched today, 72.5 against 72.6. At one kind it costs 382 input tokens a word against 215.
+- Putting the caller's kinds into the detection question halved that cost at one kind. It matched the `none` repair within noise on `person`, `place` and a described `work`. It lost 16 points on a bare `work` and 13 on Beatles `person`, beyond the noise, and it passed fragments of other names as names. Adding the restriction to the fixed list changed nothing, because the model ignored it.
+
+So the `none` repair ships under ADR 0054 item 4: the cheaper method's loss is beyond the noise. Labelled detection is the measured alternative. It stays open for one kind when every kind carries a description, which Ian can choose.
