@@ -5,10 +5,10 @@
 use std::sync::{Arc, Mutex};
 
 use conformance_backend::{Backend, Canned, Listener};
-use serde_json::Value;
-use thinkthen::{Error, ErrorKind, Question, QuestionSet};
+use serde_json::{Value, json};
+use thinkthen::{Engine, Error, ErrorKind, Question, QuestionSet};
 
-use crate::cases::engine;
+use crate::cases::{Checked, at, engine, said, same};
 
 const TWO_GROUPS: &str = r#"{"version":1,"questions":{"summary":{"decide":"Is this concise?","on":"/summary"},"body":{"decide":"Does this ask for a refund?","on":"/body"}}}"#;
 const NOTE: &str = "a private note";
@@ -132,4 +132,27 @@ fn each_group_sees_its_part_and_a_bad_part_sends_nothing() {
         states(mixed, record).expect("answered"),
         [Value::from(record), Value::from("Refund me.")]
     );
+}
+
+/// A find over the case's units, with its none candidate when asked.
+pub(crate) fn found(engine: &Engine, asked: &Value, success: &Value) -> Checked {
+    let mut question = Question::find(asked["find"].as_str().unwrap_or_default()).map_err(said)?;
+    if asked["none"] == json!(true) {
+        question = question.offering_none().map_err(said)?;
+    }
+    let units: Vec<&str> = asked["units"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .collect();
+    let found = engine.find(&question, units.clone()).map_err(said)?;
+    let rows = found.candidates().iter().map(|candidate| {
+        let index = candidate.input().and_then(|unit| at(&units, unit));
+        json!({"index": index, "probability": candidate.probability()})
+    });
+    let operation = &success["operation"];
+    same("candidates", &rows.collect(), &operation["probabilities"])?;
+    let selected = found.selected().and_then(|unit| at(&units, unit));
+    same("selected", &json!(selected), &operation["selected"])
 }

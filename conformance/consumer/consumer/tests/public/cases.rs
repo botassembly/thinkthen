@@ -173,7 +173,7 @@ fn check(backend: &Backend, case: &Value, verbatim: &Verbatim) -> Checked {
             let records = record.as_deref().map_or(texts, |whole| vec![whole]);
             annotated(&engine, &raw(&verbatim.question_set), &records, &success)
         }
-        ("find", _) => found(&engine, &case["question"], &success),
+        ("find", _) => crate::parts::found(&engine, &case["question"], &success),
         ("rank", _) => {
             let asked = Question::rank(case["question"]["decide"].as_str().unwrap_or_default());
             let ranked = engine
@@ -359,29 +359,6 @@ fn annotated(engine: &Engine, set: &str, texts: &[&str], success: &Value) -> Che
     )
 }
 
-/// A find over the case's units, with its none candidate when asked.
-fn found(engine: &Engine, asked: &Value, success: &Value) -> Checked {
-    let mut question = Question::find(asked["find"].as_str().unwrap_or_default()).map_err(said)?;
-    if asked["none"] == json!(true) {
-        question = question.offering_none().map_err(said)?;
-    }
-    let units: Vec<&str> = asked["units"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .filter_map(Value::as_str)
-        .collect();
-    let found = engine.find(&question, units.clone()).map_err(said)?;
-    let rows = found.candidates().iter().map(|candidate| {
-        let index = candidate.input().and_then(|unit| at(&units, unit));
-        json!({"index": index, "probability": candidate.probability()})
-    });
-    let operation = &success["operation"];
-    same("candidates", &rows.collect(), &operation["probabilities"])?;
-    let selected = found.selected().and_then(|unit| at(&units, unit));
-    same("selected", &json!(selected), &operation["selected"])
-}
-
 fn related(engine: &Engine, question: &str, case: &Value, success: &Value) -> Checked {
     let asked: Asked = serde_json::from_str(question).map_err(|error| error.to_string())?;
     let mut builder = Relate::builder();
@@ -491,7 +468,7 @@ fn cause(cause: FailureCause) -> String {
 }
 
 /// The input index a returned borrowed text came from.
-fn at(texts: &[&str], text: &str) -> Option<usize> {
+pub(crate) fn at(texts: &[&str], text: &str) -> Option<usize> {
     texts
         .iter()
         .position(|one| std::ptr::eq(one.as_ptr(), text.as_ptr()))

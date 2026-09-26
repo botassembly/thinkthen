@@ -2,7 +2,7 @@
 
 use conformance_backend::Backend as Loopback;
 
-use crate::core::{BackendProfile, Evidence, ModelName, Plan, QuestionSet};
+use crate::core::{BackendProfile, Evidence, Plan, QuestionSet};
 use crate::engine::Cancel;
 use crate::engine::error::{Error, Kind};
 use crate::engine::facade::{Engine, Settings};
@@ -28,13 +28,14 @@ fn a_later_group_over_the_profile_sends_nothing() {
     .expect("set");
     let record =
         Evidence::new(r#"{"summary":"Short note.","body":"Please refund me."}"#).expect("record");
+    let model = engine.backend().model().clone();
     let plan = |places: &[usize]| {
         let questions = places
             .iter()
             .map(|place| set.questions()[*place].question().clone());
         Ok(Plan::new(
             set.group_evidence(places, &record).expect("a part"),
-            ModelName::new("jev-latest").expect("model"),
+            model.clone(),
             questions.collect(),
         )
         .expect("plan"))
