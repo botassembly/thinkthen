@@ -20,6 +20,6 @@ const char *expected =
     "\"Reminder: your invoice is due in 30 days\","
     "\"Newsletter: our autumn catalog is here. "
     "No reply needed.\"]";
-char *ranked = thinkthen_call(tt, rank);
-assert(ranked && strcmp(ranked, expected) == 0);
-thinkthen_free_string(ranked);
+char *by_urgency = thinkthen_call(tt, rank);
+assert(by_urgency && strcmp(by_urgency, expected) == 0);
+thinkthen_free_string(by_urgency);

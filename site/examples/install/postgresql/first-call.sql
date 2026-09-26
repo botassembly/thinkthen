@@ -4,5 +4,12 @@ INSERT INTO tickets VALUES
     (2, 'Thanks for the quick help yesterday!'),
     (3, 'I want to send this back.');
 
-SELECT id, body FROM tickets
-WHERE thinkthen_decide('@refund.json', body) IS NULL;
+WITH judged AS (
+    SELECT
+        id,
+        body,
+        thinkthen_decide('@refund.json', body) AS is_refund
+    FROM tickets
+)
+SELECT id, body FROM judged
+WHERE is_refund IS NULL;

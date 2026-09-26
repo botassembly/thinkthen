@@ -26,6 +26,7 @@ description: Use when writing or editing any page or code example on the ThinkTh
 - No line over 60 characters. One option per line with a trailing backslash. One array item per line. Python uses bracket indenting. Other languages use their own line breaks and string joining.
 - Show `--details` whole: `| head -n 1 | jq .` for a stream, `| jq .` for one document. Never cut it with a `jq` filter.
 - Output goes in its own block. JSON is pretty-printed with `jq .`.
+- Name each answer for its meaning before you use it: `is_spam = ...`, then `assert is_spam`. Never assert on the call, and never name an answer `result` or `answer`. Bash uses `is_spam=$(...)` or `refund_code=$?`. SQL uses an alias such as `AS is_refund`.
 - Assert, never print. Bash: `test "$x" = "..."`. Python `assert`, TypeScript `node:assert/strict`, Ruby `raise unless`, R `stopifnot(identical(...))`, Rust `assert_eq!`, C `assert()`. SQL shows the query and its output.
 - No comments in code. The caption says what to look at.
 

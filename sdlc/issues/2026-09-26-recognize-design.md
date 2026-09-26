@@ -72,7 +72,7 @@ import thinkthen as tt
 
 names = tt.recognize("George Harrison's song Something appears on Abbey Road.", kinds=["person", "work"])
 names[0]
-# Entity(name='George Harrison', kind='person', start=0, end=15, strength=0.97)
+# Entity(name=<15 bytes withheld>, kind=<6 bytes withheld>, start=0, end=15, strength=0.97)
 names.facts
 # Facts(records=1, requests_sent=1, cache_answers=0, input_tokens=3350, output_tokens=790, seconds=0.21, model='jev-1.13.0')
 ```

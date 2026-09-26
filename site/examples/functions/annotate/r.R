@@ -5,10 +5,10 @@ reports <- data.frame(body = c(
   "The login page spins and nobody can sign in.",
   "The Pay button on the billing page is too blue."
 ))
-forms <- tt_annotate("form.json", reports, on = "body")
-stopifnot(identical(forms$steps, c(TRUE, FALSE, FALSE)))
+triage <- tt_annotate("form.json", reports, on = "body")
+stopifnot(identical(triage$steps, c(TRUE, FALSE, FALSE)))
 stopifnot(identical(
-  forms$area,
+  triage$area,
   c("export", "login", "billing")
 ))
-stopifnot(identical(forms$impact, c(1.94, 2.0, 0.06)))
+stopifnot(identical(triage$impact, c(1.94, 2.0, 0.06)))

@@ -110,7 +110,7 @@ const ARTICLES = {
     },
     headings: { '2-bar': "Change the bar" },
     lesson: "Penny Lane and Octopus's Garden are psychedelic at 0.5 and lose the label at 0.7. The bench has no answer key for tag.",
-    takeaway: "The right bar depends on what you do with the labels.",
+    takeaway: "A higher bar keeps fewer labels.",
     link: tree('tag'),
   },
 
@@ -274,7 +274,7 @@ const ARTICLES = {
     see: {
       '1-choose': "Jev picks d, I've Just Seen a Face, at 0.6.",
       '2-bar': "A bar of 0.7 turns the pick into not sure.",
-      '3-table': "Each function shows its first main measure, best first. The best is `recognize` at 0.96. The worst is `tag` at 0.29, and its top pick scores 0.75.",
+      '3-table': "The table shows the first measure for each function, best first. The best is `recognize` at 0.96. The worst is `tag` at 0.29, and its top pick scores 0.75.",
     },
     headings: { '2-bar': "Change the bar", '3-table': "Score every function" },
     lesson: "Paul sings I've Just Seen a Face alone. The pick is right. Jev knew it from memory at 0.6. A bar of 0.7 asks for more than Jev knows. Strict scores understate Jev where a question has more than one right answer. A song can have two lead singers. On `tag`, Jev names the whole set on 0.29 of songs, and its top pick is a true lead on 0.75.",
@@ -324,7 +324,7 @@ const ARTICLES = {
     goal: "Any server with Jev's interface can answer, and a bar must be tuned again on the new model.",
     idea: [
       "Any server with the same interface as Jev can answer. Name it with `--url`.",
-      "`thinkthen check` sends a few fixed requests to prove a server works. With `--dry-run`, it prints its plan and sends nothing.",
+      "`thinkthen check` sends a few fixed requests to check that a server works. With `--dry-run`, it prints its plan and sends nothing.",
     ],
     see: {
       '1-check': "The check names the address and the model it would ask.",

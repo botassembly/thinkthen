@@ -9,11 +9,11 @@ const relations = {
   works_for: ["person", "organization"],
   based_in: ["organization", "place"],
 };
-const found = await tt.recognize(text, {
+const facts = await tt.recognize(text, {
   kinds,
   relations,
 });
-const names = found.entities.map((one) => [
+const names = facts.entities.map((one) => [
   one.name,
   one.kind,
 ]);
@@ -22,7 +22,7 @@ assert.deepEqual(names, [
   ["Northwind Freight", "organization"],
   ["Chicago", "place"],
 ]);
-const links = found.relations.map((one) => [
+const links = facts.relations.map((one) => [
   one.relation,
   one.source.name,
   one.target.name,

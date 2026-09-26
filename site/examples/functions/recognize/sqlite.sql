@@ -5,15 +5,15 @@ INSERT INTO tickets VALUES (
     'a company in Chicago.'
 );
 
-SELECT t.id, n.text, n.kind
+SELECT t.id, entity.text, entity.kind
 FROM
     tickets t,
     thinkthen_recognize(
         t.body,
         'person,organization,place'
-    ) n;
+    ) entity;
 
 SELECT *
 FROM
     tickets t,
-    thinkthen_relations(t.body, '@names.json');
+    thinkthen_relations(t.body, '@names.json') AS link;

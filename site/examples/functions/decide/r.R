@@ -5,5 +5,5 @@ texts <- c(
   "Please refund my order. It arrived broken.",
   "Thanks for the quick help yesterday!"
 )
-answers <- tt_decide(question, texts)
-stopifnot(identical(answers, c(TRUE, FALSE)))
+is_refund <- tt_decide(question, texts)
+stopifnot(identical(is_refund, c(TRUE, FALSE)))

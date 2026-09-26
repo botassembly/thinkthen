@@ -13,6 +13,9 @@ const char *find =
     "\"Gift cards cannot be exchanged for cash.\"]}";
 const char *expected =
     "\"Refunds are issued within 30 days of purchase.\"";
-char *found = thinkthen_call(tt, find);
-assert(found && strcmp(found, expected) == 0);
-thinkthen_free_string(found);
+char *refund_deadline = thinkthen_call(tt, find);
+assert(
+    refund_deadline
+    && strcmp(refund_deadline, expected) == 0
+);
+thinkthen_free_string(refund_deadline);

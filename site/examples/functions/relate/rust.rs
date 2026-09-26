@@ -24,9 +24,9 @@ let entities = rules
     .iter()
     .map(|rule| Entity::new(rule, "rule"))
     .collect::<Result<Vec<_>, _>>()?;
-let edges = tt.relate(&ask, entities)?;
+let contradictions = tt.relate(&ask, entities)?;
 
-let found: Vec<_> = edges
+let pairs: Vec<_> = contradictions
     .iter()
     .map(|edge| {
         let source = edge.source().name();
@@ -38,4 +38,4 @@ let expected = [
     (rules[0], rules[3], 0.84),
     (rules[1], rules[5], 0.99),
 ];
-assert_eq!(found, expected);
+assert_eq!(pairs, expected);
