@@ -1,8 +1,0 @@
-{
-  "status": "drawn",
-  "source": "deck recognize-surfaces.md",
-  "lang": "r",
-  "code": "rules <- c(\"Book economy class for every flight under six hours.\",\n  \"Submit receipts within 30 days of the trip.\",\n  \"Hotel stays are capped at 200 dollars a night.\",\n  \"Employees may book business class on any flight.\",\n  \"Rental cars need a manager's approval.\",\n  \"Receipts may be submitted at any time, with no deadline.\",\n  \"Meals are reimbursed up to 60 dollars a day.\",\n  \"Use the company travel portal for all bookings.\")\ntt_relate(rules, either = \"contradicts\", threshold = 0.5)\n#   name        source target probability\n# 1 contradicts      1      4        0.84\n# 2 contradicts      2      6        0.99",
-  "function": "relate",
-  "surface": "r"
-}

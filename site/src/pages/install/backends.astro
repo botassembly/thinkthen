@@ -1,0 +1,43 @@
+---
+// Goal: say where every question goes by default, how the key stays safe,
+// and how to point ThinkThen at another backend.
+import Base from '../../layouts/Base.astro';
+import Terminal from '../../components/Terminal.astro';
+import { KEY_VARIABLE } from '../../data/catalog.mjs';
+import { run } from '../../data/samples.mjs';
+import { setting } from '../../lib/settings-table.mjs';
+
+// The address stays typed here: settings.md gives its default only as "the
+// built-in address".
+const model = setting('Model').default;
+
+const dryRun = run('install/backends', '1-dry-run');
+---
+<Base title="Backends" description="Where every question goes by default, how the key stays safe, and how to point ThinkThen at another backend.">
+  <h1>Backends</h1>
+  <p class="lede">A backend is an address and a model. By default, ThinkThen sends every question to Jev, a System One model from TypeSafe.</p>
+
+  <h2>See the plan first</h2>
+  <p><code>--dry-run</code> prints what a command would send, and stops. It reads no key and sends nothing.</p>
+  <Terminal run={dryRun} caption="The plan names the address, the model, and the variable a key would come from. It holds no key." />
+  <p>The plan holds the evidence. Treat a plan with the same care as the request itself.</p>
+
+  <h2>The default</h2>
+  <table>
+    <tr><th>Setting</th><th>Default</th><th>Set it with</th></tr>
+    <tr><td>Address</td><td><code>https://api.typesafe.ai/v1</code></td><td><code>--url BASE</code>, then <code>THINKTHEN_BASE_URL</code>, then <code>url</code> in the configuration file</td></tr>
+    <tr><td>Model</td><td><code set:text={model} /></td><td><code>--model NAME</code>, or <code>model</code> in a question file</td></tr>
+  </table>
+  <p><code set:text={model} /> follows the vendor's newest model. Name a version to hold a run to one model.</p>
+
+  <h2>The key</h2>
+  <p>The command reads the key from <code>{KEY_VARIABLE}</code> and from nowhere else. It takes no flag and no file for it. The Rust library can also take it from <code>EngineBuilder::api_key</code>. A missing key exits 4. The message names the variable and never a value.</p>
+  <p>The key goes only to the address you named. It never shows in a plan, a result, a saved answer, a log line, or an error.</p>
+  <p>A plain <code>http://</code> address may reach only this machine. Any other <code>http://</code> host is a usage error before a request leaves. The key would otherwise cross the network in clear text. Under <code>http://</code> the tool also ignores every proxy variable.</p>
+  <p>An address with a user name, a query, or a fragment is a usage error. The plan prints the address, and a saved answer keeps it.</p>
+
+  <h2>Another backend</h2>
+  <p>Any server with the same interface can answer. Name it with <code>--url</code> or <code>THINKTHEN_BASE_URL</code>. <a href="/learn/beatles-bench/backends/">Bring your own backend</a> shows how to check one, and why it needs a new bar.</p>
+
+  <p class="pagelinks"><a href="/install/settings/">Every setting and its default</a> · <a href="/reference/">Saved answers and usage counts</a> · <a href="/trust/">Test it before you trust it</a></p>
+</Base>

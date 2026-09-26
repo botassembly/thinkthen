@@ -17,8 +17,8 @@ fi
 unset THINKTHEN_API_KEY
 export THINKTHEN_API_KEY=sk-polars-loopback
 export THINKTHEN_BASE_URL=http://127.0.0.1:9/v1
-scratch=$(mktemp -d)
-trap 'rm -rf -- "$scratch"' EXIT
+. sdlc/scripts/scratch.sh
+scratch_dir scratch
 export XDG_CACHE_HOME="$scratch/cache" XDG_CONFIG_HOME="$scratch/config" THINKTHEN_CACHE="$scratch/thinkthen"
 
 # Its own target folder keeps these builds from evicting the other rungs'.

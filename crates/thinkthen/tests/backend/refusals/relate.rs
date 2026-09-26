@@ -119,9 +119,6 @@ pub(super) fn own_sentence(verb: &str, row: &str) -> Option<&'static str> {
         }
         ("relate", "a pointer beside lines") => "--lines takes neither --field nor --kind-field",
         ("relate", "two pointers ending in one name") => "--field takes one pointer on `relate`",
-        ("relate", "jobs on one document") => {
-            "`relate` sends its requests in order, so it takes no --jobs"
-        }
         _ => return None,
     })
 }

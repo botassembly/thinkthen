@@ -12,6 +12,7 @@ plants a wrong answer through it.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -53,14 +54,30 @@ def evidence(case: dict) -> list[str]:
     return [exchange["evidence"] for exchange in case["exchanges"]]
 
 
+FIELDS = ("model", "question_sha256", "requests", "usage", "requests_sent", "cached")
+CANONICAL = "https://api.typesafe.ai/v1/systemone"
+
+
+def digest(url: str, request: str) -> str:
+    return hashlib.sha256(f"systemone\n{url}\n{request}".encode()).hexdigest()
+
+
 def single(case: dict, base: str) -> list:
-    """decide, choose, tag, and score: the value `thinkthen_details` reads."""
+    """decide, choose, tag, and score: the whole line `thinkthen_details` returns."""
     question = quoted(json.dumps(case["question"]))
-    table = values(evidence(case))
-    got = run([f"SELECT (thinkthen_details({question}, x)).value FROM {table} ORDER BY i"], base)
-    answers = [json.loads(value) for (value,) in rows(got[0])]
-    words = {"yes": True, "no": False, "unsure": None}
-    return [words.get(answer, answer) if isinstance(answer, str) else answer for answer in answers]
+    got = run([f"SELECT thinkthen_details({question}, x) FROM {values(evidence(case))} ORDER BY i"], base)
+    lines = [json.loads(line) for (line,) in rows(got[0])]
+    return [{"bare": line["value"], "answer": line["answer"], "url": line["meta"]["url"]} | {name: line["meta"].get(name, "absent") for name in FIELDS} for line in lines]
+
+
+def single_wanted(case: dict, base: str) -> list:
+    served = base + "/systemone"
+    renamed = {digest(CANONICAL, one["request"]): digest(served, one["request"]) for one in case["exchanges"]}
+    wanted = []
+    for answer in case["expect"]["success"]["answers"]:
+        details = answer["details"] | {"requests": [renamed[held] for held in answer["details"]["requests"]]}
+        wanted.append({"bare": answer["bare"], "answer": details["answer"], "url": served} | {name: details.get(name, "absent") for name in FIELDS})
+    return wanted
 
 
 def decide(case: dict, base: str) -> list:
@@ -199,9 +216,7 @@ def check(case: dict) -> str | None:
         base = backend.base(f"case/{case['id']}")
         success = case["expect"]["success"]
         kind = success["kind"]
-        if "counters" in success:
-            got, wanted = counters(case, base), success["counters"]
-        elif kind == "relate":
+        if kind == "relate":
             got, wanted = related(case, base), expected(case)[0]
         elif kind == "recognize":
             got, wanted = relations(case, base), relations_wanted(case)
@@ -214,7 +229,11 @@ def check(case: dict) -> str | None:
         elif kind == "decide_many":
             got, wanted = decide(case, base), expected(case)
         elif kind == "single":
-            got, wanted = single(case, base), expected(case)
+            pairs = zip(single(case, base), single_wanted(case, base), strict=True)
+            why = next((f"{name}: wanted {one[name]!r}, got {other[name]!r}" for other, one in pairs for name in one if one[name] != other[name]), None)
+            if why or "counters" not in success:
+                return why
+            got, wanted = counters(case, base), success["counters"]  # last, on a cache folder of their own
         else:
             raise LookupError(f"no runner for the kind {kind!r}")
         return None if got == wanted else f"wanted {wanted!r}, got {got!r}"

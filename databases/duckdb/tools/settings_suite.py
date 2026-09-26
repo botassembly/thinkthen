@@ -106,7 +106,7 @@ def cache_folder_shape():
 @case
 def settings_keep_the_environments_seeding():
     with Backend() as backend, tempfile.TemporaryDirectory() as cache:
-        details = "SELECT (thinkthen_details('Is it a refund?', 'refund now')).cached"
+        details = "SELECT CAST(thinkthen_details('Is it a refund?', 'refund now') ->> '$.meta.cached' AS BOOLEAN)"
         first = run([details], backend.base(), extra={"THINKTHEN_CACHE": cache})
         expect(rows(first[0]), [[False]], "the first run asks")
         sent = backend.count()

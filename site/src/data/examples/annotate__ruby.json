@@ -1,8 +1,0 @@
-{
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "ruby",
-  "code": "require \"thinkthen\"\n\n# the form, built in place. Each area is one report's:\n# export, login, and billing\nform = ThinkThen.set(\n  steps: { decide: \"Does the report give steps to reproduce?\" },\n  area: { choose: \"Which part of the app is this?\",\n          options: [\"export\", \"login\", \"billing\"] },\n  impact: { score: \"How much does this block the user?\",\n            levels: [\"None.\", \"Slows them.\", \"Blocks work.\"] })\nreports = [\"CSV export fails. Steps: click Export.\",\n  \"The login page spins and nobody can sign in.\",\n  \"The Pay button on the billing page is too blue.\"]\nThinkThen.annotate(form, reports).each { |one| p one }",
-  "function": "annotate",
-  "surface": "ruby"
-}

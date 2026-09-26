@@ -27,12 +27,37 @@ PORT=${1:?check.sh takes the loopback port}
 # Shared rule 6: no suite sees a real key or a remote address.
 unset THINKTHEN_API_KEY THINKTHEN_BASE_URL THINKTHEN_CACHE
 REPO=$(cd -- ../.. && pwd)
+. "$REPO/sdlc/scripts/scratch.sh"
 export THINKTHEN_BACKEND_BIN="${CARGO_TARGET_DIR:-$REPO/target}/debug/conformance-backend"
 [ -x "$THINKTHEN_BACKEND_BIN" ] || {
 	echo "check: the loopback backend is not built; run cargo build --package conformance-backend at the repository root" >&2
 	exit 1
 }
 export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
+stock_cli() {
+	echo "== the stock CLI loads the extension"
+	scratch_dir home && scratch_dir cache && scratch_dir config
+	answer=$(env -i PATH="$PATH" HOME="$home" XDG_CACHE_HOME="$cache" XDG_CONFIG_HOME="$config" \
+		THINKTHEN_API_KEY=sk-loopback-duckdb-check THINKTHEN_BASE_URL="http://127.0.0.1:$PORT/generic/v1" \
+		sh "$LIMIT" 60 "$CLI" -unsigned -noheader -list -c "LOAD '${THINKTHEN_DUCKDB_EXTENSION:-build/thinkthen.duckdb_extension}'; SELECT thinkthen_decide('Is it a refund?', 'refund now');")
+	[ "$answer" = true ] || {
+		echo "check: the stock CLI read '$answer', not true" >&2
+		exit 1
+	}
+}
+if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+	# The installed-file mode (ticket 0128): the stock CLI and the shared cases load the
+	# extension unpacked from the release archive, by its path.
+	# A release file carries no test hook, so the full check alone runs the one hook case.
+	. "$REPO/sdlc/scripts/installed.sh"
+	installed_unpack
+	export THINKTHEN_DUCKDB_EXTENSION="$scratch/thinkthen.duckdb_extension" THINKTHEN_CONFORMANCE_CASES="$scratch/cases.json"
+	jq '.cases |= map(select(.operation.injection != "internal_invariant_failure"))' "$REPO/conformance/cases.json" >"$THINKTHEN_CONFORMANCE_CASES"
+	stock_cli
+	sh "$LIMIT" 900 "$PY" tools/conformance.py
+	echo "check: databases/duckdb passes, installed"
+	exit 0
+fi
 
 echo "== build, lint, and unit tests"
 cargo fmt --check
@@ -53,8 +78,8 @@ package target/hooks/release/libthinkthen_duckdb.so build/hooks/thinkthen.duckdb
 echo "== source checks and deny"
 python3 tools/source_checks.py
 cargo deny --locked --offline --manifest-path Cargo.toml check --config deny.toml advisories bans licenses sources
-planted=$(mktemp)
-trap 'rm -f -- "$planted"' EXIT
+scratch_dir deny
+planted=$deny/deny.toml
 sed '/{ crate = "zlib-rs"/d' deny.toml >"$planted"
 set +e
 cargo deny --locked --offline --manifest-path Cargo.toml check --config "$planted" licenses >"$planted.out" 2>&1
@@ -66,14 +91,7 @@ set -e
 }
 rm -f -- "$planted.out"
 
-echo "== the stock CLI loads the extension"
-answer=$(env -i PATH="$PATH" HOME="$(mktemp -d)" XDG_CACHE_HOME="$(mktemp -d)" XDG_CONFIG_HOME="$(mktemp -d)" \
-	THINKTHEN_API_KEY=sk-loopback-duckdb-check THINKTHEN_BASE_URL="http://127.0.0.1:$PORT/generic/v1" \
-	sh "$LIMIT" 60 "$CLI" -unsigned -noheader -list -c "LOAD 'build/thinkthen.duckdb_extension'; SELECT thinkthen_decide('Is it a refund?', 'refund now');")
-[ "$answer" = true ] || {
-	echo "check: the stock CLI read '$answer', not true" >&2
-	exit 1
-}
+stock_cli
 
 echo "== suites"
 for suite in verbs_suite settings_suite signal_suite relate_suite databases_suite conformance; do

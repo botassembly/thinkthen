@@ -1,6 +1,6 @@
 # Measure fixtures
 
-These files define `thinkthen audit` and `thinkthen diff`. The source is a prototype measurement script at commit `be7cea2e4aa41097e7f629e35b62dadedeaca544`. Its three files had these SHA-256 values at that commit:
+These files define `thinkthen audit` and `thinkthen diff`. The source is a prototype measurement script. Its history was removed on 2026-09-26, so no commit holds it now. These SHA-256 values of its three files, with the golden files below, are the record:
 
 | Prototype file | SHA-256 |
 | --- | --- |
@@ -8,11 +8,11 @@ These files define `thinkthen audit` and `thinkthen diff`. The source is a proto
 | `tests/test_measure.py` | `d64f2d9088c4f6237c0d2a2a8faf06dc51f92cd4674dab20b2a4f7231c01fa4e` |
 | `scripts/tools/README.md` | `fae695523a16d1f2921ee9c73358c36e1613b58ee6acc9d720c6bc6e1d9e7fc7` |
 
-`small/`, `249/`, and the fourteen files directly under `golden/` are byte-for-byte copies of the prototype's `tests/fixtures/audit/` at that commit. Two depart. Quick Fix qf-diff-warnings renamed the meta key in `small/annotate.jsonl` to `questions_sha256`, the key a real `annotate` line carries. The small fixtures share the placeholder digest `00`. It also recaptured `golden/diff-choose.jsonl`, the second departure, and `golden/table/diff-choose.txt` from `thinkthen diff` under the wider McNemar rule. Their McNemar p moved from 1.0 to 0.5. `249/` holds `thinkthen decide --details` lines replayed from an earlier experiment's recordings with every key unset: 272 yes/no questions about Beatles songs.
+`small/`, `249/`, and the fourteen files directly under `golden/` are byte-for-byte copies of the prototype's `tests/fixtures/audit/` at those checksums. Two depart. Quick Fix qf-diff-warnings renamed the meta key in `small/annotate.jsonl` to `questions_sha256`, the key a real `annotate` line carries. The small fixtures share the placeholder digest `00`. It also recaptured `golden/diff-choose.jsonl`, the second departure, and `golden/table/diff-choose.txt` from `thinkthen diff` under the wider McNemar rule. Their McNemar p moved from 1.0 to 0.5. `249/` holds `thinkthen decide --details` lines replayed from an earlier experiment's recordings with every key unset: 272 yes/no questions about Beatles songs.
 
 Three inputs are derived from `small/`. `decide-reversed.jsonl` holds the lines of `decide.jsonl` in reverse. `decide-key-noparts.jsonl` holds the key without `part`. `decide-key-odd.jsonl` holds the key without `part` and without `r6`.
 
-The files under `golden/extra/`, `golden/table/`, and `replay/audit.jsonl` were captured from the prototype script at that commit, read with `git show` into a scratch file and run under Python 3.12.3 from this folder. `replay/key.jsonl` holds the labels of `transforms/rows/cases.jsonl`. `replay/audit.jsonl` grades the replay of `transforms/rows/recording` described in `specification/audit.md`.
+The files under `golden/extra/`, `golden/table/`, and `replay/audit.jsonl` were captured by running the prototype script with those checksums under Python 3.12.3 from this folder. `replay/key.jsonl` holds the labels of `transforms/rows/cases.jsonl`. `replay/audit.jsonl` grades the replay of `transforms/rows/recording` described in `specification/audit.md`.
 
 | Output | Command line (from this folder) | Test |
 | --- | --- | --- |

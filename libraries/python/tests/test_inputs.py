@@ -77,7 +77,7 @@ def test_deadlines_follow_adr_0041(backend, tmp_path):
     assert printed.splitlines() == 4 * [spelled] + [
         f"UsageError a deadline of -2 seconds {budget}",
         f"UsageError a deadline of 4294967296 seconds {budget}",
-        f"UsageError a deadline of {10**300} seconds {budget}",
+        f"UsageError a deadline of 1e300 seconds {budget}",
         f"UsageError a deadline of inf seconds {budget}",
         f"UsageError a deadline of NaN seconds {budget}",
         "DeadlineError the deadline of 0 s passed before the call answered",

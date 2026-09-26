@@ -77,13 +77,15 @@ fn spawn(arguments: &[&str], input: &[u8], acknowledgment: &Acknowledgment) -> i
     Ok(child)
 }
 
+/// Hold `count` requests, send SIGINT, then release them all.
 fn held(
+    count: usize,
     arguments: &[&str],
     input: &[u8],
     reply: impl Fn() -> Canned + Send + Sync + 'static,
 ) -> io::Result<Output> {
     let acknowledgment = Acknowledgment::new();
-    let release = Arc::new(Barrier::new(2));
+    let release = Arc::new(Barrier::new(count + 1));
     let backend_release = Arc::clone(&release);
     let (events_send, events) = channel();
     let listener = Listener::answering_with_events(
@@ -92,10 +94,12 @@ fn held(
     )?;
     let fixed = ["--url", listener.base(), "--model", "local-1"];
     let child = spawn(&[arguments, &fixed].concat(), input, &acknowledgment)?;
-    assert!(matches!(
-        events.recv_timeout(Duration::from_secs(5)),
-        Ok(Observed::Request)
-    ));
+    for _ in 0..count {
+        assert!(matches!(
+            events.recv_timeout(Duration::from_secs(5)),
+            Ok(Observed::Request)
+        ));
+    }
     assert!(
         crate::child::command("kill", &[])
             .args(["-INT", &child.id().to_string()])
@@ -112,7 +116,7 @@ fn held(
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
     );
-    assert_eq!(listener.requests().len(), 1);
+    assert_eq!(listener.requests().len(), count);
     Ok(output)
 }
 
@@ -123,6 +127,7 @@ fn record_finishes_the_started_row_stops_before_another_and_completes_cache() {
     let _removed = fs::remove_dir_all(&cache);
     let cache_name = cache.to_string_lossy();
     let output = held(
+        1,
         &[
             "decide",
             "Is it accepted?",
@@ -173,7 +178,7 @@ fn sent_single_decide_and_aggregate_commands_flush_before_sigint_status() {
         ),
     ];
     for (answer, command, input, expected) in cases {
-        let output = held(&command, input, move || Canned::ok(answer)).expect("interrupt run");
+        let output = held(1, &command, input, move || Canned::ok(answer)).expect("interrupt run");
         assert_eq!(String::from_utf8_lossy(&output.stdout), expected);
         assert!(output.stderr.is_empty());
     }
@@ -182,6 +187,7 @@ fn sent_single_decide_and_aggregate_commands_flush_before_sigint_status() {
 #[test]
 fn sigint_during_retry_wait_makes_exactly_one_request() {
     let output = held(
+        1,
         &["decide", "Is it accepted?", "--max-retries", "2"],
         b"evidence",
         || Canned::status(500, "retry"),
@@ -191,6 +197,8 @@ fn sigint_during_retry_wait_makes_exactly_one_request() {
     assert!(output.stderr.is_empty());
 }
 
+/// Ticket 0143: a split text holds up to the default width of 4 in flight.
+/// The text makes 14 one-question chunks, and none starts after the signal.
 #[test]
 fn sigint_between_recognition_chunks_starts_no_later_chunk() {
     let profile = Path::new(env!("CARGO_TARGET_TMPDIR")).join("recognize-interrupt-profile.json");
@@ -200,13 +208,14 @@ fn sigint_between_recognition_chunks_starts_no_later_chunk() {
     )
     .expect("profile");
     let output = held(
+        4,
         &[
             "recognize",
             "--profile",
             &profile.to_string_lossy(),
             "--no-cache",
         ],
-        b"Ada Acme",
+        b"Ada met Bob at Acme in Paris",
         || Canned::ok(RECOGNIZED),
     )
     .expect("recognize stops");

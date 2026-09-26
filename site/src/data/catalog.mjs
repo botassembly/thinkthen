@@ -1,9 +1,8 @@
 // The names, the order, and the one line for every function and surface.
 //
-// The one line for each function is the help text's first line, copied from
-// `products/thinkthen/vocabulary.md`. The option lists come from
-// `repos/thinkthen/specification/`. Nothing here is an example: examples live
-// in `src/data/examples/` and are pulled by `scripts/pull-examples.mjs`.
+// The one line for each function is the first line of its help text. The
+// option lists come from specification/. The examples live in examples/, and
+// scripts/smoke.mjs runs them.
 
 export const TAGLINE = 'ThinkThen: code that knows what you mean';
 
@@ -11,6 +10,9 @@ export const TAGLINE = 'ThinkThen: code that knows what you mean';
 export const NOINDEX = true;
 
 export const KEY_VARIABLE = 'THINKTHEN_API_KEY';
+
+export { REPO } from './repo.mjs';
+import { setting } from '../lib/settings-table.mjs';
 
 // The four outcomes. One color each, everywhere a number or an answer shows.
 export const OUTCOMES = [
@@ -28,12 +30,16 @@ export function outcomeOf(exit) {
 }
 
 // The backend and cache options every shipped function takes, from
-// specification/backends.md and specification/recording.md.
+// specification/backends.md and specification/recording.md. Each default and
+// range comes from specification/settings.md through setting().
+const THROTTLE = setting('Throttle');
+const cutOn = (fn) => setting('Threshold').defaultOn(fn);
+
 const BACKEND_OPTIONS = [
-  ['--model NAME', 'The model the request carries. Name a version to pin a run. The default is jev-latest.'],
+  ['--model NAME', `The model the request carries. Name a version to pin a run. The default is ${setting('Model').default}.`],
   ['--url BASE', 'The backend base address. It outranks THINKTHEN_BASE_URL.'],
-  ['--timeout SECONDS', 'How long one attempt may take. The default is 30.'],
-  ['--max-retries N', 'How many times a retried status is sent again. A transport failure is never sent again. The default is 2.'],
+  ['--timeout SECONDS', `How long one attempt may take. The default is ${setting('Timeout').number}.`],
+  ['--max-retries N', `How many times a retried status is sent again. A transport failure is never sent again. The default is ${setting('Retries').default}.`],
   ['--record DIR', 'Calls the backend and saves each exchange in DIR.'],
   ['--replay DIR', 'Answers from DIR alone, with no key and no network.'],
   ['--cache DIR', 'Answers from DIR when it can and saves new exchanges there.'],
@@ -45,9 +51,9 @@ const COMMON_OPTIONS = [
   ['--details', 'Prints the whole result in place of the bare value: the probabilities, the question, and the run.'],
   ['--input FILE', 'Reads the evidence from a file instead of standard input.'],
   ['--dry-run', 'Prints the plan and sends nothing. It needs no key.'],
-  ['--lines, --jsonl, --csv, --tsv', 'Says how a stream of records is framed. Pick one.'],
+  ['--lines, --jsonl, --csv, --tsv', 'Says how a stream of records is framed. Pick at most one.'],
   ['--field POINTER', 'Names the part of each record to judge, as a JSON Pointer. It may repeat.'],
-  ['--jobs N', 'How many requests run at once, from 1 to 32. The default is 4. It works on a stream of records. annotate also takes it on one document.'],
+  ['--jobs N', `How many requests run at once, from ${THROTTLE.range.min} to ${THROTTLE.range.max}. The default is ${THROTTLE.default}. It works on a stream of records. annotate also takes it on one document.`],
   ...BACKEND_OPTIONS,
 ];
 
@@ -67,6 +73,7 @@ export const COMMON_EXITS = [
 export const FUNCTIONS = [
   {
     name: 'decide',
+    goal: 'decide answers one yes or no question with true, false, or null, and the exit code carries the answer.',
     primitive: 'Yes or no',
     line: 'Answer one yes or no question about the evidence.',
     takes: 'one question and one piece of evidence',
@@ -75,7 +82,7 @@ export const FUNCTIONS = [
     requests: 'One request for one piece of evidence. One request for each record in a stream.',
     args: 'QUESTION or @FILE',
     options: [
-      ['--threshold T or LOW:HIGH', 'The bar the probability of yes must reach. One number is a cut. Two numbers are a band, and the middle is not sure. The default is 0.5.'],
+      ['--threshold T or LOW:HIGH', `The bar the probability of yes must reach. One number is a cut. Two numbers are a band, and the middle is not sure. The default is ${cutOn('decide')}.`],
       ['--true TEXT', 'What a yes means, in the words the model reads.'],
       ['--false TEXT', 'What a no means.'],
       ['--quiet', 'Prints nothing. The exit code carries the answer.'],
@@ -83,19 +90,27 @@ export const FUNCTIONS = [
     ],
     exits: [[0, 'yes'], [1, 'no'], [3, 'not sure'], ...COMMON_EXITS],
     unsure: 'The probability landed inside the band. The tool prints null and exits 3.',
-    howtos: ['screen-studies-for-a-review', 'join-two-tables-by-meaning', 'group-alerts-into-incidents', 'screen-a-post-before-it-goes-up', 'check-an-expense-against-the-policy', 'split-a-scanned-packet-into-documents'],
+    howtos: ['screen-studies-for-a-review', 'group-alerts-into-incidents', 'screen-a-post-before-it-goes-up', 'check-an-expense-against-the-policy', 'split-a-scanned-packet-into-documents'],
+    see: {
+      '1-lines': "The refund request answers true and the thank-you note false. \"I want to send this back.\" could mean an exchange or money back. It lands inside the band 0.2:0.8 as null.",
+      '2-case': "The send-back line lands in the band. decide exits 3, and the case sends it to a person. The script then exits 0.",
+      '3-one': "The ticket asks for a refund. decide prints true and exits 0.",
+      '4-details': "The details put yes at 0.99 for this ticket.",
+      '5-means': "Under these words, a cancellation is not money back. decide says false and exits 1.",
+    },
   },
   {
     name: 'choose',
+    goal: 'choose picks one option from your list, or says not sure when no option clears the bar.',
     primitive: 'Pick one',
     line: 'Pick one option from your list.',
-    takes: 'one question, one piece of evidence, and 2 to 255 options',
+    takes: `one question, one piece of evidence, and ${setting('Options').range.min} to ${setting('Options').range.max} options`,
     gives: 'one of your options, or null',
     toPerson: true,
     requests: 'One request for one piece of evidence. One request for each record in a stream.',
     args: 'QUESTION or @FILE, then OPTION...',
     options: [
-      ['--threshold T', 'The bar the winning option must reach. One number only. A band is a usage error. There is no default.'],
+      ['--threshold T', `The bar the winning option must reach. One number only. A band is a usage error. ${cutOn('choose') === 'none' ? 'There is no default' : `The default is ${cutOn('choose')}`}.`],
       ['--option LABEL=DESCRIPTION', 'One option and what it means. It may repeat, and it replaces the positional options.'],
       ['--options POINTER', 'Takes the options from each record. It needs --jsonl.'],
       ['--raw', 'Prints the label without quotation marks.'],
@@ -105,29 +120,39 @@ export const FUNCTIONS = [
     exits: [[0, 'an option came back'], [3, 'not sure'], ...COMMON_EXITS],
     unsure: 'No option reached the threshold. The tool prints null and exits 3. choose never exits 1.',
     howtos: ['rank-the-inbound-leads', 'split-a-scanned-packet-into-documents'],
+    see: {
+      '1-lines': "Each of the first three messages names one team: billing, shipping, and account. The fourth names a parcel and a login. No team reaches 0.9, and it comes back null.",
+    },
   },
   {
     name: 'tag',
+    goal: 'tag returns every label that clears the bar, each judged on its own.',
     primitive: 'Yes or no, per label',
     line: 'Name every label that fits.',
-    takes: 'one question, one piece of evidence, and 1 to 20 labels',
+    takes: `one question, one piece of evidence, and ${setting('Labels').range.min} to ${setting('Labels').range.max} labels`,
     gives: 'the labels that fit, as a list',
     requests: 'Every label rides in one request. One request for one piece of evidence, whatever the label count.',
     args: 'QUESTION or @FILE, then LABEL...',
     options: [
-      ['--threshold T', 'The bar every label must reach on its own. The default is 0.5. A band is refused.'],
+      ['--threshold T', `The bar every label must reach on its own. The default is ${cutOn('tag')}. A band is refused.`],
       ['--label LABEL=DESCRIPTION', 'A label and what it means. It may repeat, and it replaces the positional labels.'],
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'A label under the bar is left out. An empty list is a good answer and exits 0.',
     howtos: ['code-open-ended-survey-answers'],
+    see: {
+      '1-one': "The message praises the dashboard, reports a crash, and names a double charge. It gets praise, bug, and billing.",
+      '2-details': "praise, bug, and billing each clear 0.5.",
+      '3-labels': "At 0.9, each line gets the one label its description fits.",
+    },
   },
   {
     name: 'score',
+    goal: 'score places text on a scale you name, and it orders a queue rather than gating one.',
     primitive: 'Place on a scale',
     line: 'Place the evidence on a scale you name.',
-    takes: 'one question, one piece of evidence, and 2 to 10 levels, least first',
+    takes: `one question, one piece of evidence, and ${setting('Levels').range.min} to ${setting('Levels').range.max} levels, least first`,
     gives: 'a number along your levels. The first level is 0',
     requests: 'One request for one piece of evidence. One request for each record in a stream.',
     args: 'QUESTION or @FILE, then LEVEL...',
@@ -137,33 +162,45 @@ export const FUNCTIONS = [
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'score has no threshold and no not-sure answer. It always lands somewhere on the scale. It orders a queue a person reads. Do not use it as a gate.',
     howtos: ['code-open-ended-survey-answers'],
+    see: {
+      '1-one': "The outage scores 2.0, and 2 is Immediate on this scale.",
+      '2-details': "The details put all of the weight on Immediate.",
+      '3-lines': "The address change lands near 0, the Friday deadline near 1, and the login outage at 2.",
+    },
   },
   {
     name: 'filter',
+    goal: 'filter keeps the records where the answer is yes, unchanged and in order.',
     primitive: 'Yes or no, per record',
     line: 'Keep the records where the answer is yes.',
     takes: 'one yes-or-no question and many records',
     gives: 'the records that pass, byte for byte, in the order they went in',
     requests: 'One request for each record.',
-    args: 'QUESTION or @FILE. One of --lines, --jsonl, --csv, or --tsv is required.',
+    args: 'QUESTION or @FILE. It reads one record per line. A pointer from --field or a question file makes it read JSON Lines.',
     options: [
-      ['--threshold T', 'The bar a record must reach. The default is 0.5. A band is a usage error.'],
+      ['--threshold T', `The bar a record must reach. The default is ${cutOn('filter')}. A band is a usage error.`],
       ['--true TEXT', 'What a yes means, in the words the model reads.'],
       ['--false TEXT', 'What a no means.'],
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'No record sets the exit code. A record under the bar is dropped.',
-    howtos: ['triage-a-support-inbox', 'rank-the-inbound-leads'],
+    howtos: ['triage-a-support-inbox', 'join-two-tables-by-meaning', 'rank-the-inbound-leads'],
+    see: {
+      '1-lines': "filter keeps the two complaints: the broken zipper and the snapped strap.",
+      '2-means': "The zipper, the color, and the strap are about the item. They stay, and the early delivery drops out.",
+      '3-csv': "Only R-2 complains, and it comes back as one JSON object, id and all.",
+    },
   },
   {
     name: 'rank',
+    goal: 'rank sorts every record by how likely the answer is yes, and drops none.',
     primitive: 'Yes or no, per record',
     line: 'Sort records by how likely the answer is yes.',
     takes: 'one yes-or-no question and many records',
     gives: 'every record again, most likely first',
     requests: 'One request for each record. --top trims the printed list and saves nothing.',
-    args: 'QUESTION or @FILE. One of --lines, --jsonl, --csv, or --tsv is required.',
+    args: 'QUESTION or @FILE. It reads one record per line. A pointer from --field or a question file makes it read JSON Lines.',
     options: [
       ['--top N', 'Prints the first N records of the order. Every record is still judged.'],
       ['--true TEXT', 'What a yes means, in the words the model reads.'],
@@ -171,11 +208,16 @@ export const FUNCTIONS = [
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
-    unsure: 'rank takes no threshold, so nothing is dropped and nothing is not sure. The sort happens on this machine.',
+    unsure: 'rank takes no threshold. It drops nothing, and nothing is not sure. The sort happens on this machine.',
     howtos: ['rank-the-inbound-leads'],
+    see: {
+      '1-lines': "The outage comes first and the quote due today second. The bill due in a month comes third, and the newsletter that needs no reply comes last.",
+      '2-jsonl': "The checkout crash stops customers from buying. `--top 1` prints it alone, id and all.",
+    },
   },
   {
     name: 'find',
+    goal: 'find reads all the lines together and returns the one that answers the question, or none.',
     primitive: 'Pick one, over the lines of the evidence',
     line: 'Pick the one line that best answers a question.',
     takes: 'a question and 2 to 255 lines or records, or 2 to 254 with --none',
@@ -184,7 +226,7 @@ export const FUNCTIONS = [
     args: 'QUESTION',
     options: [
       ['--none', 'Lets it answer that nothing fits. It then prints nothing and exits 3.'],
-      ['--lines, --jsonl', 'How the lines are framed. --lines is the default. CSV and TSV are refused.'],
+      ['--lines, --jsonl', `How the lines are framed. --${setting('Framing').defaultOn('find')} is the default. CSV and TSV are refused.`],
       ['--field POINTER', 'Names the part of each record to read.'],
       ['--details', 'Prints the whole result, with a probability for every line.'],
       ['--input FILE', 'Reads the evidence from a file instead of standard input.'],
@@ -192,15 +234,22 @@ export const FUNCTIONS = [
       ...BACKEND_OPTIONS,
     ],
     exits: [[0, 'a line came back'], [3, 'nothing fits, under --none'], ...COMMON_EXITS],
-    unsure: 'Without --none, find must pick a line, and it will pick a wrong one. --none is how it says nothing fits. A document past the backend’s token limit is refused, and the command exits 4.',
+    unsure: 'Without --none, find must pick a line. When nothing fits, the line it picks is wrong. --none lets it say nothing fits.',
     howtos: ['group-alerts-into-incidents', 'check-an-expense-against-the-policy'],
+    see: {
+      '1-find': "find prints the line with the 30 day refund deadline.",
+      '2-details': "The second line holds all of the weight.",
+      '3-none': "No line says how to cancel. find prints nothing and exits 3.",
+      '4-jsonl': "Q1 holds the reset steps, and the whole record comes back.",
+    },
   },
   {
     name: 'annotate',
+    goal: 'annotate answers a saved set of questions for every record and adds one field per question.',
     primitive: 'Every kind of answer, many at once',
     line: 'Fill out a form for every record.',
-    takes: 'a saved set of questions and your records',
-    gives: 'each record with one answer per question',
+    takes: 'a saved set of questions and your JSON',
+    gives: 'the same JSON with one field added per question. Nested fields ride through unchanged',
     requests: 'It sends one request for each record and each part the questions read.',
     toPerson: true,
     args: 'FILE, the saved question set',
@@ -208,44 +257,71 @@ export const FUNCTIONS = [
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'every question was answered'], [6, 'the run finished with failed questions'], ...COMMON_EXITS.map(([code, what]) => [code, code === 5 ? 'the question set could not be read' : what])],
-    unsure: 'Each question carries its own threshold, so a question set mixes cuts and bands. A question the backend could not answer is marked failed, counted, and never turned into null. The questions and the evidence together can pass the backend’s token limit for one request. The backend refuses it, and the command exits 4.',
+    unsure: 'Each question carries its own threshold. One question set can mix cuts and bands. A question the backend could not answer is marked failed and counted. It never turns into null.',
     howtos: ['triage-a-support-inbox'],
+    see: {
+      '0-json': "One JSON document goes in. The same document comes back with three answers added: steps, area, and impact. The nested report rides through unchanged.",
+      '1-jsonl': "Each report keeps its id and lands in its own area: login, billing, and export. The two with steps say true, and the blue button blocks nothing.",
+    },
   },
   {
     name: 'recognize',
+    goal: 'recognize finds the names in a text, gives each a kind from your list, and keeps those that clear the bar.',
     primitive: 'Pick one, per word',
     line: 'Find every name in the evidence and say what kind it is.',
     takes: 'the evidence and the kinds of name you allow',
     gives: 'each name, its kind, where it sits, and a strength',
-    requests: 'The specification does not yet carry recognize, so the request count is not settled.',
-    args: 'Not settled. The command has no recognize yet.',
-    status: 'preview',
-    options: [],
-    exits: [],
-    unsure: 'The model only picks from options, so a name that is not in the evidence cannot come back. Three thresholds are yours to set. The number on a name is its strength. We compute it, and it claims nothing about chance. Relations are a preview too.',
+    requests: 'It asks one question about every word, and one more about its kind when you allow two or more kinds. --dry-run prints the exact requests for the first record.',
+    args: 'KIND..., or one @FILE question file',
+    options: [
+      ['--kind KIND=DESCRIPTION', 'One kind and what it means.'],
+      ['--threshold T', `Keeps names whose strength reaches this cut. The default is ${cutOn('recognize')}.`],
+      ['--relation NAME=SOURCE:TARGET', 'Also links the names it finds.'],
+      ['--relation-threshold T', `Keeps relation edges whose probability reaches this cut. The default is ${setting('Relation threshold').number}.`],
+      ...COMMON_OPTIONS,
+    ],
+    exits: [[0, 'the run finished'], ...COMMON_EXITS],
+    unsure: 'The model only picks from options. A name that is not in the evidence cannot come back. The number on a name is its strength. ThinkThen computes it, and it is not a probability. Your threshold decides which names you keep.',
     howtos: [],
+    how: {
+      steps: [
+        'One call asks two questions of every word. Is it part of a name? And which of your kinds is it? Both questions go out together.',
+        'Each run of words in a name becomes one name. Its kind is the kind most of its words picked. Its strength is its weakest word\'s answer to the first question times the average answer for that kind.',
+        'With `--relation`, more calls follow. They ask how the names connect.',
+      ],
+      script: '1-details',
+    },
+    see: {
+      '1-details': 'This sentence cost one call. `requests` lists one request, and `usage` counts 8092 tokens in. Under `answer.tokens`, each word carries `detection_probability`, its answer to the first question. A word above 0.5 is part of a name. `kind_probabilities` answers the second question, in the order person, song, album, place. Ringo and Starr both answer 1.0, so they join into one name. Both pick person, so the name is a person. The word "wrote" answers 0.0 and joins no name. `--threshold 0.5` then keeps the names with a strength of 0.5 or more. `--dry-run` prints the call count before you send anything.',
+    },
   },
   {
     name: 'relate',
+    goal: 'relate links records that clash, repeat, or rely on each other, one edge per pair with a probability.',
     primitive: 'Yes or no, or a direction, per pair of records',
     line: 'Find records that clash, repeat, or rely on each other.',
-    lede: 'Find the rules in a policy that contradict each other. You give it a set of records and the relations you allow. You get back one edge for each related pair, with a probability. An edge is a link between two records. Here <code>contradicts</code> links two rules that cannot both be followed.',
+    lede: 'You give it a set of records and the relations you allow. You get back one edge for each related pair, with a probability. An edge links two records. The samples below find the rules in a travel policy that contradict each other.',
     takes: 'a set of records and the relations you allow',
     gives: 'one edge for each related pair, with a probability',
-    requests: 'The specification does not yet carry relate, so the request count is not settled.',
-    args: 'Not settled. The command has no relate yet.',
-    status: 'preview',
-    options: [],
-    exits: [],
-    unsure: 'A relation has a direction, or it is marked as reading the same both ways. The number on an edge is a probability. relate is a preview.',
+    requests: 'It reads the whole set at once, up to 255 records. --dry-run prints every request it would send.',
+    args: 'RELATION... as NAME=SOURCE_KIND:TARGET_KIND or a bare NAME, or one @FILE',
+    options: [
+      ['--either', 'Treats every relation as reading the same both ways.'],
+      ['--threshold T', `Keeps edges whose probability reaches this cut. The default is ${cutOn('relate')}.`],
+      ['--kind-field POINTER', 'Reads each record\'s kind from this pointer.'],
+      ...COMMON_OPTIONS,
+    ],
+    exits: [[0, 'the run finished'], [6, 'the run finished with failed questions'], ...COMMON_EXITS],
+    unsure: 'A relation has a direction, or it reads the same both ways. The number on an edge is a probability. Your threshold decides which edges you keep.',
     howtos: [],
   },
   {
     name: 'question-file',
     title: '@question',
+    goal: 'A question file saves one question with its threshold, and every place that reads it asks the same question.',
     primitive: 'Not a function',
     line: 'A saved question every function accepts.',
-    lede: 'Save one question in a JSON file. Pass it as <code>@FILE</code> to decide, choose, tag, score, filter, or rank. The hook, the test, and the pipeline then ask the same question.',
+    lede: 'Save one question in a JSON file. Pass it as <code>@FILE</code> to decide, choose, tag, score, filter, or rank. Every place that reads the file then asks the same question.',
     requests: 'None of its own. The function that reads it sends the requests.',
     args: '@FILE in place of the question words, on decide, choose, tag, score, filter, and rank.',
     options: [
@@ -258,98 +334,121 @@ export const FUNCTIONS = [
       ['model, profile', 'The model to ask and the calibration profile to apply.'],
     ],
     exits: [[5, 'the file could not be read, is not one JSON object, or breaks a rule'], [2, 'the command names the wrong verb for the file']],
-    unsure: 'A band in the file sends the answers it is not sure of to a person. Tune it once, and the hook, the test, and the pipeline all run the same question.',
+    unsure: 'A band in the file sends the not-sure answers to a person.',
     howtos: [],
+    see: {
+      '1-yes': "The saved question answers true for a plain request for money back.",
+      '2-unsure': "Sending it back could mean an exchange or money back. The band in the file calls it not sure: null and exit 3.",
+    },
     notAFunction: true,
   },
 ];
 
-// The last stage of a shell command, split on pipes outside quotes.
-function lastStage(command) {
+// The function whose exit code a script ends with. The last command of
+// the script counts, with heredoc bodies and `test` asserts set aside. A
+// script that ends in a block, or in another tool such as jq, gives null,
+// because that block or tool set the code.
+export function lastFunction(script) {
+  const lines = [];
+  let until = null;
+  for (const line of script.split('\n')) {
+    if (until) { if (line.trim() === until) until = null; continue; }
+    const doc = /<<-?\s*'?(\w+)'?/.exec(line);
+    if (doc) until = doc[1];
+    if (/^\s*test\s/.test(line) || !line.trim()) continue;
+    lines.push(line);
+  }
+  // Join the lines a trailing backslash or pipe continues.
+  const commands = [];
+  for (const line of lines) {
+    const prev = commands.at(-1);
+    if (prev !== undefined && /(\\|\|)\s*$/.test(prev)) commands[commands.length - 1] = prev.replace(/\\\s*$/, ' ') + ' ' + line.trim();
+    else commands.push(line.trim());
+  }
+  const last = commands.at(-1) || '';
   let quote = null;
   let start = 0;
-  for (let i = 0; i < command.length; i++) {
-    const c = command[i];
+  for (let i = 0; i < last.length; i++) {
+    const c = last[i];
     if (quote) { if (c === quote) quote = null; continue; }
     if (c === "'" || c === '"') quote = c;
-    else if (c === '|' && command[i + 1] !== '|' && command[i - 1] !== '|') start = i + 1;
+    else if (c === '|' && last[i + 1] !== '|' && last[i - 1] !== '|') start = i + 1;
   }
-  return command.slice(start).trim();
+  const found = /^thinkthen\s+([a-z-]+)/.exec(last.slice(start).trim());
+  return found ? found[1] : null;
 }
 
-// The word printed after an exit code: the function's own meaning for it.
-// null when the function is unknown or the command ends in another tool.
-export function exitWord(command, exit, fn = null) {
-  let name = fn;
-  if (!name) {
-    const found = /^thinkthen\s+([a-z-]+)/.exec(lastStage(command || ''));
-    name = found && found[1];
-  }
+// The mark after a script's output: its exit code, a word, and a colour.
+// The word is the function's own meaning for the code. Green, red, and
+// amber go only to a single answer: yes, no, or not sure. A record run, a
+// finished run, and a script that ends in another tool stay plain.
+export function exitMark(script, exit) {
+  const name = lastFunction(script || '');
   const entry = FUNCTIONS.find((f) => f.name === name);
-  const row = entry && entry.exits.find(([code]) => code === exit);
-  return row ? row[1] : null;
+  const records = /--(lines|jsonl|csv|tsv)\b/.test(script || '');
+  if (!entry) return { word: null, cls: exit === 0 ? 'plain' : outcomeOf(exit) };
+  if (records && exit === 0) return { word: 'the run finished', cls: 'plain' };
+  const row = entry.exits.find(([code]) => code === exit);
+  const word = row ? row[1] : null;
+  const answer = exit !== 0 || !['the run finished', 'every question was answered'].includes(word);
+  return { word, cls: answer ? outcomeOf(exit) : 'plain' };
 }
 
 export const CODE_FUNCTIONS = FUNCTIONS.filter((f) => !f.notAFunction);
 
-// One status vocabulary for every badge: planned, comes with 0.1, ships
-// first, not run yet, preview. An example cell may still say "drawn" in data.
-// A surface's release names the version it comes with; Polars has none yet.
-// A badge's class: the status word with spaces turned into dashes.
-export const statusClass = (status) => status.replace(/ /g, '-');
 
 export const SURFACES = [
   {
-    slug: 'shell', name: 'Bash', deckHeading: null, status: 'ships first', release: 'ships first',
+    slug: 'shell', name: 'Bash', deckHeading: null,
     lang: 'bash', tab: 'Bash',
     blurb: 'Pipe text in, read the answer out, and branch on the exit code.',
     unsureWord: 'null, and exit code 3',
     install: [
-      ['brew install genomoncology/thinkthen/thinkthen', 'Homebrew tap. Coming with 0.1.'],
-      ['curl -fsSL https://thinkthen.dev/install.sh | sh', 'Download script. Coming with 0.1.'],
+      ['curl -fsSL https://thinkthen.dev/install.sh | sh', 'Download script.'],
+      ['brew install botassembly/thinkthen/thinkthen', 'Homebrew, an option on a Mac.'],
     ],
     particular: [
-      'Standard in carries the evidence. Standard out carries the answer, and nothing else.',
-      'The exit code is the answer for a single piece of evidence, so `if` and `case` read it directly.',
-      'Requests run four wide by default and up to 32 with --jobs.',
-      '--dry-run prints the plan and needs no key.',
+      'Standard input carries the evidence. Standard output carries the answer and nothing else.',
+      'On one piece of evidence, the exit code is the answer. `if` and `case` read it directly.',
+      '`--jobs` sets how many requests run at once.',
+      '`--dry-run` prints the plan and needs no key.',
     ],
   },
   {
-    slug: 'python', name: 'Python', deckHeading: 'Python', status: 'planned', release: '0.1',
+    slug: 'python', name: 'Python', deckHeading: 'Python',
     lang: 'python', tab: 'Python',
     blurb: 'Pass a string or a list, and get `True`, `False`, or `None` back. Build a question once and reuse it.',
     unsureWord: 'None',
     install: [['pip install thinkthen', null], ['uv add thinkthen', null]],
     particular: [
-      'A list goes in and a list comes out. It crosses into the engine once and runs 32 wide.',
-      'A question built with tt.question() carries its own threshold, so one object serves the hook, the test, and the pipeline.',
+      'A list goes in and a list comes out. The list crosses into the engine once.',
+      '`tt.question()` builds a question that carries its own threshold. Reuse it wherever you ask.',
     ],
   },
   {
-    slug: 'polars', name: 'Polars', deckHeading: 'Polars', status: 'planned', release: null,
+    slug: 'polars', name: 'Polars', deckHeading: 'Polars',
     lang: 'python', tab: 'Python',
     blurb: 'A Polars frame goes in, and it comes back with one new column for each question.',
     unsureWord: 'None',
     install: [['pip install thinkthen[polars]', null]],
     particular: [
-      'Rust reads the column where it sits. There is no copy and no Python loop.',
-      'Hand over a whole frame with on= and it comes back with one new column for each question in the form.',
+      '`decide`, `choose`, `score`, and `tag` send a whole column to the engine in one call.',
+      '`on=` names the column the questions read.',
     ],
   },
   {
-    slug: 'typescript', name: 'TypeScript', deckHeading: 'TypeScript', status: 'planned', release: '0.1',
+    slug: 'typescript', name: 'TypeScript', deckHeading: 'TypeScript',
     lang: 'ts', tab: 'TypeScript',
     blurb: 'Ten async functions. Pass one options object and await the answer.',
     unsureWord: 'null',
     install: [['npm install thinkthen', null], ['pnpm add thinkthen', null], ['bun add thinkthen', null]],
     particular: [
-      'An AbortSignal cancels a batch and stops its bill.',
+      'An AbortSignal cancels the call, and the promise rejects at once.',
       'Every call returns a promise. An array crosses once.',
     ],
   },
   {
-    slug: 'ruby', name: 'Ruby', deckHeading: 'Ruby', status: 'planned', release: '0.1',
+    slug: 'ruby', name: 'Ruby', deckHeading: 'Ruby',
     lang: 'ruby', tab: 'Ruby',
     blurb: 'Ten module methods. Any Enumerable goes in.',
     unsureWord: 'nil',
@@ -357,66 +456,64 @@ export const SURFACES = [
     particular: ['Any Enumerable crosses to the engine once.'],
   },
   {
-    slug: 'r', name: 'R', deckHeading: 'R', status: 'planned', release: '0.1',
+    slug: 'r', name: 'R', deckHeading: 'R',
     lang: 'r', tab: 'R',
     blurb: 'Ten `tt_` functions that work inside dplyr.',
     unsureWord: 'NA',
     install: [['install.packages("thinkthen")', null]],
     particular: [
       'A column goes in and a column comes out.',
-      'filter() drops the NA rows, so a not-sure answer leaves the pipeline on its own.',
+      'dplyr\'s `filter()` drops NA rows. A not-sure answer leaves the pipeline on its own.',
     ],
   },
   {
-    slug: 'rust', name: 'Rust', deckHeading: 'Rust', status: 'planned', release: '0.1',
+    slug: 'rust', name: 'Rust', deckHeading: 'Rust',
     lang: 'rust', tab: 'Rust',
     blurb: 'Call the engine directly. The compiler makes you handle not sure.',
     unsureWord: 'Answer::Unsure',
     install: [['cargo add thinkthen', null]],
     particular: [
-      'Answer::Unsure is an arm the compiler makes you handle.',
       'Calls block. No async runtime comes with it.',
     ],
   },
   {
-    slug: 'c', name: 'C', deckHeading: 'C', status: 'planned', release: '0.1',
+    slug: 'c', name: 'C', deckHeading: 'C',
     lang: 'c', tab: 'Rust',
-    blurb: 'One header and one library. Bind ThinkThen to any language.',
+    blurb: 'One header over a shared or a static library. Bind ThinkThen to any language that can call C.',
     unsureWord: 'an outcome of THINKTHEN_UNSURE',
-    install: [['thinkthen.h + libthinkthen', 'One archive per platform, with the header, both libraries, and a .pc file.']],
+    install: [['thinkthen.h + libthinkthen', 'Each release ships the header, the shared library, and the static library.']],
     particular: [
-      'Every call returns 0 or one of six error kinds.',
+      'Every call returns 0 or an error kind.',
       'The answer lands in a struct: the outcome and its probability.',
     ],
   },
   {
-    slug: 'duckdb', name: 'DuckDB', deckHeading: 'DuckDB', status: 'planned', release: '0.1',
+    slug: 'duckdb', name: 'DuckDB', deckHeading: 'DuckDB',
     lang: 'sql', tab: 'SQL',
     blurb: 'Ask a question in WHERE, SELECT, or ORDER BY.',
     unsureWord: 'NULL',
-    install: [['duckdb -unsigned', 'The build loads unsigned today. The query loads the extension file first.']],
+    install: [['duckdb -unsigned', 'DuckDB loads the extension unsigned. The query loads the extension file first.']],
     particular: ['A whole column chunk crosses at once.'],
   },
   {
-    slug: 'sqlite', name: 'SQLite', deckHeading: 'SQLite', status: 'planned', release: '0.1',
+    slug: 'sqlite', name: 'SQLite', deckHeading: 'SQLite',
     lang: 'sql', tab: 'SQL',
     blurb: 'One warm pass answers the whole table. Every later query reads the saved answers.',
     unsureWord: 'NULL',
     install: [['.load ./thinkthen', null]],
     particular: [
-      'SQLite asks row by row, so thinkthen_warm judges the table in one pass, 32 requests at a time.',
-      'Every query after that reads the saved answers at no further cost.',
+      'SQLite calls a function one row at a time. `thinkthen_warm` answers the whole table in one pass first.',
     ],
   },
   {
-    slug: 'postgresql', name: 'PostgreSQL', deckHeading: 'PostgreSQL', status: 'planned', release: '0.1',
+    slug: 'postgresql', name: 'PostgreSQL', deckHeading: 'PostgreSQL',
     lang: 'sql', tab: 'SQL',
     blurb: 'One extension. Ask questions in any query.',
     unsureWord: 'NULL',
     install: [['CREATE EXTENSION thinkthen;', null]],
     particular: [
-      'A question file carries a band, so the not-sure rows are the ones a person should read.',
-      'pg_cancel_backend and statement_timeout stop a query and its bill.',
+      'A question file carries a band. The not-sure rows come back NULL, and a person reads them.',
+      'pg_cancel_backend and statement_timeout stop a call. A request already sent still completes and is billed.',
     ],
   },
 ];
@@ -430,131 +527,191 @@ export const TAB_SURFACE = {
   Ruby: 'ruby', R: 'r', Rust: 'rust', SQL: 'duckdb',
 };
 
+// Captions for the tutorial's own examples, keyed by script name.
+export const TUTORIAL_SEE = {
+  '1-band': "\"I want to send this back.\" could mean an exchange or money back. It lands inside the band 0.2:0.8. decide prints null and exits 3.",
+};
+
+// The tutorial's caption for functions/decide/1-lines in its stream step.
+export const TUTORIAL_STREAM_SEE = "Each answer sits beside its message. The send-back line is the null from step 4.";
+
+// Captions for the Settings page's examples, keyed by script name.
+export const SETTINGS_SEE = {
+  '1-environment': 'THINKTHEN_BASE_URL names the address. The plan shows the request going there.',
+  '2-flag': 'The same variable is set, and --url names another address. The flag wins.',
+};
+
+// The business how-tos. Each page runs the scripts in
+// examples/how-tos/<slug>/, and `see` says what to look for in each.
 export const HOWTOS = [
   {
     slug: 'triage-a-support-inbox', title: 'Triage a support inbox', reader: 'for support teams',
+    goal: 'Two commands in a pipe keep the messages that need a reply and label each by kind and urgency.',
     said: 'Keep the messages that need a reply, and label each by kind and urgency. `filter` keeps them. `annotate` labels them.',
-    functions: ['filter', 'annotate'], input: 'inbox.txt', forms: ['inbox-form.json'], runs: ['01-inbox'],
-    see: { '01-inbox': 'Three messages need a reply, each beside its kind and its urgency from 0 to 2. The order needed tonight sits near 2, Immediate. The thank-you note drops out.' },
+    functions: ['filter', 'annotate'],
+    see: { '1-inbox': 'Three messages need a reply, each beside its kind and its urgency from 0 to 2. The order needed tonight sits near 2, Immediate. The thank-you note drops out.' },
   },
   {
     slug: 'screen-studies-for-a-review', title: 'Screen studies for a review', reader: 'for researchers',
+    goal: 'A band sorts the clear studies in or out and hands a person the ones too thin to judge.',
     said: 'Sort the clear studies in or out, and hand a person the ones that give too little to judge. `decide` with a band does both.',
-    functions: ['decide'], input: 'studies.txt', runs: ['03-studies'],
-    see: { '03-studies': 'The survey with a result is true and the opinion essay is false. The bare title gives too little to judge, so it comes back null for a person.' },
+    functions: ['decide'],
+    see: { '1-studies': 'The survey with a result is true and the opinion essay is false. The bare title gives too little to judge. Inside the band 0.1:0.9, it comes back null for a person.' },
   },
   {
     slug: 'code-open-ended-survey-answers', title: 'Sort survey answers by mood and problem', reader: 'for survey and market researchers',
+    goal: 'score finds the unhappy answers and tag names what went wrong in each.',
     said: 'Place every answer between unhappy and happy, then name what went wrong. `score` places them. `tag` names the problem.',
-    functions: ['score', 'tag'], input: 'answers.txt', runs: ['04-answers'],
-    see: { '04-answers': 'Three answers are unhappy. Each prints beside its tag: price, bugs, and speed.' },
+    functions: ['score', 'tag'],
+    see: { '1-answers': 'Three answers are unhappy. Each prints beside its tag: price, bugs, and speed. The happy answer drops out.' },
   },
   {
     slug: 'join-two-tables-by-meaning', title: 'Join two tables by meaning', reader: 'for data analysts',
-    said: 'Match each ticket to the incident it describes, even when the words differ. `decide` judges each pair.',
-    functions: ['decide'], input: 'tickets.txt', runs: ['05-join'],
-    also: {
-      file: 'incidents.txt',
-      text: 'INC-1 payment gateway returns 500\nINC-2 nightly export queue backed up',
-      note: '`jq` pairs every ticket with every incident. The first command reads those pairs from `pairs.txt`.',
-    },
-    see: { '05-join': 'Of the four pairs, the two that match come back: the card failure with the payment gateway, and the late export with the export queue.' },
+    goal: 'filter joins two tables on meaning when no key and no shared word links them.',
+    said: 'Match each ticket to the incident it describes, even when the words differ. The loop pairs every ticket with every incident. `filter` keeps the pairs that match.',
+    functions: ['filter'],
+    see: { '1-join': 'Of the four pairs, the two that match come back: the card failure with the payment gateway, and the late export with the export queue.' },
   },
   {
     slug: 'group-alerts-into-incidents', title: 'Group alerts into incidents', reader: 'for on-call engineers',
+    goal: 'find picks the open incident a new alert belongs to, or none, and decide confirms the match.',
     said: 'Tell whether a new alert belongs to an open incident. `find` picks the incident, or none. `decide` confirms the match.',
-    functions: ['find', 'decide'], input: 'incidents-open.txt', runs: ['06-alert', '06-alert-none'],
-    given: '`$alert` holds the new alert. The first run sets it to "Card charges fail with 500 at checkout" and the second to "Disk is full on the backup server".',
+    functions: ['find', 'decide'],
     see: {
-      '06-alert': 'The card failure matches INC-1. find prints it, and decide confirms it with true.',
-      '06-alert-none': 'No open incident covers a full disk. find prints nothing and exits 3, so decide never runs.',
+      '1-match': 'find picks INC-1 for the card failure, and decide confirms the match with true.',
+      '2-none': 'No open incident covers a full disk. find prints nothing, and decide never runs.',
     },
   },
   {
     slug: 'rank-the-inbound-leads', title: 'Rank the inbound leads', reader: 'for sales teams',
+    goal: 'Three functions in one pipe drop the noise, order the leads, and route each to a team.',
     said: 'Drop the noise, put the buyer ready to pay first, and send each to the right sales team. `filter`, `rank`, and `choose` do it in one pipeline.',
-    functions: ['filter', 'rank', 'choose'], input: 'leads.txt', runs: ['07-leads'],
-    see: { '07-leads': 'The unsubscribe and the compliment on the talk drop out. Neither asks to buy. The team of six buying today comes first and goes to smb. The 200 seats next quarter go to enterprise.' },
+    functions: ['filter', 'rank', 'choose'],
+    see: { '1-leads': 'The unsubscribe and the compliment on the talk drop out. Neither asks to buy. The team of six buying today comes first and goes to smb. The 200 seats next quarter go to enterprise.' },
   },
   {
     slug: 'screen-a-post-before-it-goes-up', title: 'Screen a post before it goes up', reader: 'for community moderators',
+    goal: 'One narrow decide question per rule judges a post against each rule on its own.',
     said: 'Judge a post against each rule on its own. `decide` asks one narrow question per rule.',
-    functions: ['decide'], input: 'post.txt', runs: ['08-insult', '08-spam'],
+    functions: ['decide'],
     see: {
-      '08-insult': 'The post calls the author an idiot, so decide says true and exits 0.',
-      '08-spam': 'The post is not spam, so decide says false and exits 1.',
+      '1-insult': 'The post calls the author an idiot. decide says true and exits 0.',
+      '2-spam': 'The post is not spam. decide says false and exits 1.',
     },
   },
   {
     slug: 'check-an-expense-against-the-policy', title: 'Check an expense against the policy', reader: 'for finance staff',
+    goal: 'find pulls the policy rule that covers an expense, and decide says whether the expense fits it.',
     said: 'Check an expense against your policy. `find` pulls the rule. `decide` says whether the expense fits.',
-    functions: ['find', 'decide'], input: 'policy.txt', runs: ['09-expense'],
-    given: '`$expense` holds the expense: Client dinner, $60 a head.',
-    see: { '09-expense': 'The rule find pulled prints beside the answer. The $60 dinner fits the $75 meal rule.' },
+    functions: ['find', 'decide'],
+    see: { '1-expense': 'The rule find pulled prints beside the answer. The $60 dinner fits the $75 meal rule.' },
   },
   {
     slug: 'split-a-scanned-packet-into-documents', title: 'Split a scanned packet into documents', reader: 'for back-office staff',
+    goal: 'choose names each page and decide marks where a new document starts.',
     said: 'Split a stack of scanned pages into documents. `choose` says what kind each page is. `decide` marks where a new document starts.',
-    functions: ['choose', 'decide'], input: 'pages.txt', runs: ['11-kinds', '11-gaps'],
+    functions: ['choose', 'decide'],
     see: {
-      '11-kinds': 'Three invoice pages and one notice.',
-      '11-gaps': 'The two pages of Invoice 7 stay together. A new document starts at Invoice 8 and at the notice.',
+      '1-kinds': 'Three invoice pages and one notice.',
+      '2-gaps': 'awk pairs each page with the one before it. The two pages of Invoice 7 stay together. A new document starts at Invoice 8 and at the notice.',
     },
   },
 ];
 
-// The shell recipes. Each one is a recorded run from the deck's recipes/run.sh.
-// `files` names the inputs the page shows, and `see` says what to look for.
+// The Bash techniques and recipes under /how-tos/bash/. Each page runs the
+// scripts in examples/how-tos/bash/<slug>/. A technique teaches one shell
+// form. A recipe does one job with the tools you already have.
+export const TECHNIQUES = [
+  {
+    slug: 'if', title: 'Branch with if', label: 'if',
+    goal: '`if` reads the exit code of `decide --quiet` directly.',
+    said: '`decide --quiet` prints nothing. Its exit code is the answer. The function `asks_for_refund` names what that code means, and `if` reads it directly.',
+    see: { '1-if': 'The ticket asks for a refund. The if branch picks the refunds queue.' },
+  },
+  {
+    slug: 'case', title: 'Route with case', label: 'case',
+    goal: '`case` routes on the bare label `choose --raw` prints.',
+    said: '`choose --raw` prints the bare label. `case` sends each label to its own queue.',
+    see: { '1-case': 'The password message belongs to account. The queue is identity.' },
+  },
+  {
+    slug: 'not-sure', title: 'Handle not sure', label: 'not sure',
+    goal: 'A script reads three exit codes and sends not sure to a person.',
+    said: '`refund_code=$?` names the exit code of `decide`. `case` reads its three values: 0 for yes, 1 for no, and 3 for not sure.',
+    see: { '1-route': 'The refund goes to refunds and the thanks gets a reply. The send-back line lands in the band 0.2:0.8 and goes to a person.' },
+  },
+  {
+    slug: 'threshold-band', title: 'Set a cut or a band', label: 'cut or band',
+    goal: 'One number is a cut, and two numbers make a band with a not-sure middle.',
+    said: 'One number is a cut. Two numbers are a band, and the middle comes back as null.',
+    see: {
+      '1-cut': 'At a cut of 0.5, the send-back line counts as a refund.',
+      '2-band': 'With a band from 0.2 to 0.8, the same line comes back null for a person.',
+    },
+  },
+  {
+    slug: 'while-read', title: 'Loop over lines', label: 'while read',
+    goal: '`while read` acts on the answer for each line.',
+    said: '`while read` hands each line to `decide` on its own. The loop acts on each answer.',
+    see: { '1-loop': 'The two complaints open a case. The thanks and the question about blue do not.' },
+  },
+  {
+    slug: 'pipeline', title: 'Chain questions with pipes', label: 'pipes',
+    goal: 'Two filters in a pipe keep the records that pass both questions.',
+    said: 'Two filters in a row keep the records that pass both questions.',
+    see: { '1-and': 'The first filter keeps what is about the item. The second keeps the complaints among them. The question about blue is not a complaint. It drops out.' },
+  },
+  {
+    slug: 'batches', title: 'Ask many files at once', label: 'xargs',
+    goal: '`xargs -P` asks one question of many files in parallel.',
+    said: 'A function asks one question of one file. `xargs -P 4` runs it on four files at a time.',
+    see: { '1-xargs': 'Two tickets ask for money back: T-1 and T-3.' },
+  },
+  {
+    slug: 'ci-gate', title: 'Fail a build', label: 'CI gate',
+    goal: 'A filter in a check script fails the build when a line matches.',
+    said: '`filter` finds the lines that hedge. The script exits 1 when it finds any, and the build fails.',
+    see: {
+      '1-pass': 'No line hedges. The check prints nothing and passes.',
+      '2-fail': 'One line hedges. The check prints it and exits 1.',
+    },
+  },
+];
+
 export const RECIPES = [
   {
-    slug: 'label-a-json-file', title: 'Label a JSON file and keep its ids',
-    said: 'Label every ticket in a JSON array by kind and urgency. `--field /body` sends only the body, so the id and the date ride through. Run it again and the saved answers come back at no further cost.',
-    files: ['tickets.json', 'triage.json'], runs: ['tickets', 'tickets-again'],
+    slug: 'label-a-json-file', title: 'Label a JSON file and keep its ids', label: 'Label a JSON file',
+    goal: 'annotate labels a JSON array and keeps every other field, and a second run costs nothing.',
+    said: 'Label every ticket in a JSON array by kind and urgency. `--field /body` sends only the body. The id and the date ride through. Run it again, and the saved answers come back at no cost.',
     see: {
-      tickets: 'Each ticket keeps its id and date, and gains a kind and an urgency from 0 to 2. The double bill in September is billing.',
-      'tickets-again': 'The same command again. Every answer comes from the saved answers, and no request is sent.',
+      '1-label': 'Each ticket keeps its id and date, and gains a kind and an urgency from 0 to 2. The double bill in September is billing.',
+      '2-again': 'The same command again, with the first ticket in full. `cached` is true and `requests_sent` is 0.',
     },
   },
   {
-    slug: 'review-a-diff-by-what-it-does', title: 'Review a diff by what it does',
+    slug: 'review-a-diff-by-what-it-does', title: 'Review a diff by what it does', label: 'Review a diff',
+    goal: 'decide separates the hunks of a diff that change behavior from those that do not.',
     said: '`jq` cuts a unified diff into hunks. `decide` asks of each hunk whether it changes what the code does, and the file and hunk header ride through.',
-    files: ['change.diff', 'hunks.jq'], runs: ['diff'],
-    see: { diff: 'Two hunks change what the code does: the refund limit and the rounded tax. The comment and the rename do not.' },
+    see: { '1-diff': 'Two hunks change what the code does: the refund limit and the rounded tax. The comment and the rename do not.' },
   },
   {
-    slug: 'lint-prose-for-hedging', title: 'Lint prose for hedging',
+    slug: 'lint-prose-for-hedging', title: 'Lint prose for hedging', label: 'Lint prose',
+    goal: 'filter finds the hedging lines in a draft and keeps their line numbers.',
     said: '`jq` numbers the lines. `filter` keeps the lines that hedge, and each comes back as it went in, line number and all.',
-    files: ['draft.txt'], runs: ['lint'],
-    see: { lint: 'The two hedging lines come back with their line numbers.' },
+    see: { '1-lint': 'The two hedging lines come back with their line numbers.' },
   },
   {
-    slug: 'fill-a-form-by-selection', title: 'Fill a form by selection',
+    slug: 'fill-a-form-by-selection', title: 'Fill a form by selection', label: 'Fill a form',
+    goal: 'annotate fills a form with picks from your own lists, and no field holds model-written text.',
     said: 'Every field is a pick from a list you wrote, or true or false. No character in the form comes from a model.',
-    files: ['requests.jsonl', 'form.json'], runs: ['form'],
-    see: { form: 'Each request gets a plan, a topic, and whether to call back, all from the lists in form.json.' },
+    see: { '1-form': 'Each request gets a plan, a topic, and whether to call back, all from the lists in the form.' },
   },
 ];
 
-// Measured facts. Every one names the run it came from.
-export const FACTS = {
-  cost: {
-    headline: 'A thousand answers cost about a penny.',
-    rows: [
-      ['1.2 cents for 1,000 short records', 'thinkthen sdlc/issues/closed/2026-09-20-live-probe-findings-packing-tagging-status-and-cost.md'],
-      ['3.6 cents to ask one question of 3,000 lines of a novel', 'the same page, "The cost of a real file"'],
-      ['about 290 input tokens a short record, with about 256 of them fixed', 'the same page: 290.4 on average, from 277 to 301, over 3,000 records'],
-      ['$0.042 per million input tokens', 'thinkthen sdlc/records/0011-the-live-probe.md'],
-      ['Jev 1.13 answered every case', 'the same findings page'],
-    ],
-  },
-  size: {
-    headline: 'How big the evidence can be.',
-    rows: [
-      ['About 32,000 tokens of evidence in one request', 'thinkthen specification/records.md, "Evidence in one request"'],
-      ['About 64,000 tokens in one whole request, the questions included', 'the same table, confirmed by one live request of 33,663 input tokens on 2026-09-19'],
-      ['find reads 2 to 255 lines, or 2 to 254 with --none', 'thinkthen specification/find.md'],
-      ['The evidence crosses whole and is never split', 'thinkthen sdlc/issues/2026-09-25-docs-how-tos-and-spec-claims-owed.md'],
-      ['Evidence over the limit is refused with exit code 4', 'thinkthen specification/backends.md'],
-    ],
-  },
-};
+// The Bash section in side-list order. Its first page is the section's index.
+export const BASH_FIRST = { slug: '', title: 'Bash techniques', label: 'Bash techniques', route: '/how-tos/bash/', group: null };
+export const BASH = [
+  BASH_FIRST,
+  ...TECHNIQUES.map((t) => ({ ...t, group: 'Techniques', route: `/how-tos/bash/${t.slug}/` })),
+  ...RECIPES.map((r) => ({ ...r, group: 'Recipes', route: `/how-tos/bash/${r.slug}/` })),
+];

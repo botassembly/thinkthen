@@ -1,0 +1,135 @@
+---
+// Goal: show every setting, its default, the values it takes, and how to set it on each surface.
+import Base from '../../layouts/Base.astro';
+import Terminal from '../../components/Terminal.astro';
+import { REPO, SETTINGS_SEE } from '../../data/catalog.mjs';
+import { captioned } from '../../data/samples.mjs';
+import { parseSettings, inlineHtml, blocksHtml, plain, SURFACE_GROUPS, SURFACES, ABSENT } from '../../lib/settings-table.mjs';
+import table from '../../../../specification/settings.md?raw';
+
+// Every row, default, and surface below comes from specification/settings.md
+// at build time. scripts/check-settings.mjs reads the built page against it.
+const { whatCounts, precedence, howToRead, rows } = parseSettings(table);
+const examples = captioned('install/settings', SETTINGS_SEE);
+const specUrl = `${REPO}/blob/main/specification/settings.md`;
+
+// A table cell may end without a full stop. The page adds one.
+const stop = (s) => (/[.!?]$/.test(s) ? s : `${s}.`);
+const present = (row) => SURFACES.filter((s) => row.on[s] !== ABSENT);
+
+// The page shows no table, so it leaves out the sentences about cells.
+const readNotes = howToRead.flatMap((b) => (b.kind === 'p' ? [b.text] : []))
+  .flatMap((t) => t.split(/(?<=\.)\s+/))
+  .filter((t) => !/\bcells?\b/.test(t));
+
+// A note about the libraries or SQL keeps its card in view when the reader
+// picks one of those surfaces.
+const LANGUAGES = SURFACE_GROUPS.find(([g]) => g === 'Languages')[1];
+const DATABASES = SURFACE_GROUPS.find(([g]) => g === 'Databases')[1];
+const noted = (row) => [
+  ...(/\blibrar/i.test(row.default.note) ? LANGUAGES : []),
+  ...(/\bSQL\b/.test(row.default.note) ? DATABASES : []),
+];
+
+// The find box reads the words a reader would type, not the field labels.
+const findText = (row) => plain([
+  row.name, row.does, row.default.value, row.default.note, row.allowed,
+  ...present(row).map((s) => row.on[s]),
+].join(' ')).toLowerCase();
+---
+<Base title="Settings" description="Every ThinkThen setting: what it does, its default, the values it allows, and how to set it from the command line, each language, and each database.">
+  <h1>Settings</h1>
+  <p class="lede">This page lists every setting ThinkThen takes, with its default, the values it allows, and how to set it on each surface.</p>
+  <p>The page comes from the <a href={specUrl}>settings table</a> in the product's specification.</p>
+
+  <h2>What counts as a setting</h2>
+  <Fragment set:html={blocksHtml(whatCounts)} />
+
+  <h2>Which value wins</h2>
+  <Fragment set:html={blocksHtml(precedence)} />
+  {examples.map((r) => <Terminal run={r} caption={r.see} />)}
+
+  <h2 id="every-setting">Every setting</h2>
+  <p>Each setting below lists only the surfaces it reaches, with the spelling each one uses.</p>
+  <p set:html={inlineHtml(readNotes.join(' '))}></p>
+
+  <div class="settings-filter" data-settings-filter hidden>
+    <label>Find a setting <input type="search" data-settings-find placeholder="a name, a flag, a word" /></label>
+    <label>Surface <select data-settings-surface>
+      <option value="">Every surface</option>
+      {SURFACE_GROUPS.map(([group, list]) => (
+        <optgroup label={group}>{list.map((s) => <option value={s}>{s}</option>)}</optgroup>
+      ))}
+    </select></label>
+  </div>
+
+  <ul class="settings-index">{rows.map((r) => <li data-for={r.id}><a href={`#${r.id}`}>{r.name}</a></li>)}</ul>
+
+  <div class="settings">
+    {rows.map((r) => (
+      <section class="setting" id={r.id} data-surfaces={[...present(r), ...noted(r)].join('|')} data-find={findText(r)}>
+        <h3><a href={`#${r.id}`}>{r.name}</a></h3>
+        <p set:html={inlineHtml(stop(r.does))}></p>
+        <dl class="kv">
+          <div><dt>Default</dt><dd set:html={inlineHtml(r.default.value)}></dd></div>
+          {r.default.note && <div><dt>Note</dt><dd set:html={inlineHtml(r.default.note)}></dd></div>}
+          <div><dt>Allowed values</dt><dd set:html={inlineHtml(r.allowed)}></dd></div>
+          {present(r).map((s) => (
+            <div data-surface={s}><dt>{s}</dt><dd set:html={inlineHtml(r.on[s])}></dd></div>
+          ))}
+        </dl>
+      </section>
+    ))}
+  </div>
+  <p class="settings-none" data-settings-none hidden>No setting matches.</p>
+
+  <p class="pagelinks"><a href="/install/backends/">Backends</a> · <a href="/reference/">Reference</a></p>
+
+<script is:inline>
+  (function () {
+    var box = document.querySelector('[data-settings-filter]');
+    if (!box) return;
+    box.hidden = false;
+    var find = box.querySelector('[data-settings-find]');
+    var surface = box.querySelector('[data-settings-surface]');
+    var none = document.querySelector('[data-settings-none]');
+    var cards = Array.prototype.slice.call(document.querySelectorAll('.setting[data-surfaces]'));
+    var links = Array.prototype.slice.call(document.querySelectorAll('.settings-index li[data-for]'));
+    // Each word must appear. Words a question adds, such as "default" or
+    // "how", do not count against a setting.
+    var SKIP = ['a', 'an', 'the', 'how', 'do', 'i', 'to', 'set', 'change', 'what', 'is', 'default', 'defaults'];
+    // A card fits when it holds every word. When none holds them all, the
+    // cards that hold the most words show, best first.
+    var list = cards[0] ? cards[0].parentNode : null;
+    function apply() {
+      var words = find.value.toLowerCase().split(/\s+/).filter(function (w) { return w && SKIP.indexOf(w) < 0; });
+      var s = surface.value;
+      var hits = cards.map(function (card) {
+        var on = card.dataset.surfaces.split('|');
+        var text = card.dataset.find;
+        var n = words.filter(function (w) { return text.indexOf(w) >= 0; }).length;
+        return { card: card, n: (!s || on.indexOf(s) >= 0) ? n : -1 };
+      });
+      var best = Math.max.apply(null, hits.map(function (h) { return h.n; }).concat([-1]));
+      var need = words.length && best < words.length ? Math.max(best, 1) : words.length;
+      var shown = {};
+      var count = 0;
+      hits.forEach(function (h) {
+        var fits = h.n >= 0 && h.n >= need;
+        h.card.hidden = !fits;
+        if (fits) { shown[h.card.id] = true; count += 1; }
+        h.card.querySelectorAll('[data-surface]').forEach(function (row) {
+          row.hidden = !!s && row.dataset.surface !== s;
+        });
+      });
+      hits.slice().sort(function (x, y) { return y.n - x.n; }).forEach(function (h) {
+        if (words.length) list.appendChild(h.card);
+      });
+      if (!words.length) cards.forEach(function (c) { list.appendChild(c); });
+      links.forEach(function (li) { li.hidden = !shown[li.dataset.for]; });
+      none.hidden = count > 0;
+    }
+    find.addEventListener('input', apply);
+    surface.addEventListener('change', apply);
+  })();
+  </script></Base>

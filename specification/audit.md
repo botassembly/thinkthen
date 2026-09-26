@@ -4,7 +4,7 @@ Status: **Settled** by ticket 0113, amended by tickets 0125 and 0135.
 
 `thinkthen audit RESULTS KEY` grades saved answers against an answer key and suggests a bar. It reads `decide`, `filter`, `choose`, `tag`, `score`, `rank`, `find`, `annotate`, `recognize`, and `relate` results. It prints agreement with a Wilson interval, both disagreement directions, precision and f1, AUC, calibration, a coverage curve, and a suggested bar tuned on one part and checked on the other. It shows how steady that bar is across twenty splits. With `--write` it puts a steady bar into the question file the results came from. It sends no request and reads no API key.
 
-The definition is the prototype measurement script at commit `be7cea2e`, with its tests and README. `crates/thinkthen/tests/fixtures/measure/README.md` gives the file checksums. Where this page and the prototype disagree, the golden files in that folder decide. "Departures" lists every known difference.
+The definition is a prototype measurement script, with its tests and README. The script's history was removed, so no commit holds it now. `crates/thinkthen/tests/fixtures/measure/README.md` gives the file checksums, and they are the record. Where this page and the prototype disagree, the golden files in that folder decide. "Departures" lists every known difference.
 
 ```sh
 thinkthen decide 'Is it red?' --jsonl --details --replay runs/red < records.jsonl | thinkthen audit - key.jsonl

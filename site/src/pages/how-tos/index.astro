@@ -1,10 +1,12 @@
 ---
+// Goal: let a reader find the job they have, or the shell form they want
+// to learn.
 import Base from '../../layouts/Base.astro';
-import { HOWTOS } from '../../data/catalog.mjs';
+import { HOWTOS, TECHNIQUES } from '../../data/catalog.mjs';
 ---
-<Base title="How-tos" description="Real jobs done with ThinkThen, each shown with a recorded run.">
+<Base title="How-tos" description="Business jobs done with ThinkThen, each shown with a real run.">
   <h1>How-tos</h1>
-  <p class="lede">Pick your job. ThinkThen reads each line and answers a question about it. Each page shows what went in, the commands, and what came out.</p>
+  <p class="lede">Pick your job. Each page shows the commands and what came out.</p>
 
   <table>
     <tr><th>How-to</th><th>Who it is for</th><th>Functions</th></tr>
@@ -17,5 +19,11 @@ import { HOWTOS } from '../../data/catalog.mjs';
     ))}
   </table>
 
-  <p class="pagelinks"><a href="/functions/">See every function</a> · <a href="/trust/">Test it before you trust it</a></p>
+  <h2><a href="/how-tos/bash/">Bash techniques</a></h2>
+  <p>One shell form a page, and recipes for small jobs.</p>
+  <div class="grid">
+    {TECHNIQUES.map((t) => (
+      <a class="tile" href={`/how-tos/bash/${t.slug}/`}><b>{t.title}</b><span>{t.label}</span></a>
+    ))}
+  </div>
 </Base>

@@ -6,8 +6,8 @@
 set -eu
 here=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 target=${SQLITE_AMALGAMATION:-$HOME/.cache/thinkthen-toolchains/sqlite-amalgamation-3500000}
-work=$(mktemp -d)
-trap 'rm -rf -- "$work"' EXIT
+. "$here/../../sdlc/scripts/scratch.sh"
+scratch_dir work
 if [ $# -ge 1 ]; then
 	from=$1
 else

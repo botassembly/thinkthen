@@ -7,6 +7,7 @@ set -eu
 cd -- "$(dirname -- "$0")"
 here=$(pwd)
 repo=$(cd ../.. && pwd)
+. "$repo/sdlc/scripts/scratch.sh"
 port=${1:?usage: check.sh PORT}
 
 not_run() {
@@ -50,6 +51,24 @@ pinned requirements-dev.txt ""
 python=$venv/bin/python
 (cd "$repo" && cargo build --quiet --locked --offline --package conformance-backend)
 
+if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+	# The installed-file mode (ticket 0128): the wheel in a fresh venv, and the shared cases and
+	# examples from a copy of tests/, with no repository copy on the import path.
+	. "$repo/sdlc/scripts/installed.sh"
+	installed_tests "$repo" libraries/python
+	uv venv --quiet --offline --python "$host" "$scratch/venv"
+	uv pip install --quiet --offline --require-hashes --python "$scratch/venv/bin/python" -r requirements-dev.txt
+	uv pip install --quiet --offline --no-deps --python "$scratch/venv/bin/python" "$THINKTHEN_ARTIFACT"
+	cd "$scratch/libraries/python"
+	unset PYTHONPATH
+	"$scratch/venv/bin/python" -c 'import sys, thinkthen; sys.exit(not thinkthen.__file__.startswith(sys.argv[1]))' "$scratch/venv/" ||
+		{ echo "libraries/python: thinkthen loaded from outside the fresh venv" >&2; exit 1; }
+	THINKTHEN_API_KEY=sk-fake-loopback-python-0105 THINKTHEN_BASE_URL="http://127.0.0.1:$port/generic/v1" \
+		THINKTHEN_CACHE="$scratch/cache" "$scratch/venv/bin/python" tests/conformance.py "$port"
+	THINKTHEN_API_KEY=sk-fake-loopback-python-0105 "$scratch/venv/bin/python" tests/examples.py "$port"
+	exit 0
+fi
+
 # Cargo embeds source paths in panic locations. The remap keeps the builder's
 # home out of every built extension, as in build-wheel.sh.
 RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
@@ -90,8 +109,7 @@ precondition "$python" True "pandas 3"
 "$python" -m pytest -q -p no:cacheprovider --tb=short tests/
 
 echo "== the shared cases and the examples, on the rung's backend"
-scratch=$(mktemp -d)
-trap 'rm -rf -- "$scratch"' EXIT
+scratch_dir scratch
 THINKTHEN_API_KEY=sk-fake-loopback-python-0105 \
 	THINKTHEN_BASE_URL="http://127.0.0.1:$port/generic/v1" THINKTHEN_CACHE="$scratch/cache" \
 	"$python" tests/conformance.py "$port"

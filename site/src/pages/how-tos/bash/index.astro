@@ -1,0 +1,28 @@
+---
+// Goal: show that ThinkThen reads like shell, and list the techniques and
+// recipes that teach it one form at a time.
+import SidePage from '../../../layouts/SidePage.astro';
+import { BASH, BASH_FIRST, TECHNIQUES, RECIPES } from '../../../data/catalog.mjs';
+
+const plain = (text) => text.replaceAll('`', '');
+const first = (text) => `${plain(text).split('. ')[0].replace(/\.$/, '')}.`;
+---
+<SidePage pages={BASH} page={{ ...BASH_FIRST, description: 'ThinkThen in the shell: if, case, loops, pipes, and exit codes.' }} name="Bash techniques">
+  <div class="eyebrow">How-tos</div>
+  <h1>Bash techniques</h1>
+  <p class="lede">A ThinkThen function is a shell command. It reads standard input, prints an answer, and sets an exit code. Each page here teaches one shell form with one real run.</p>
+
+  <h2>Techniques</h2>
+  <div class="grid">
+    {TECHNIQUES.map((t) => (
+      <a class="tile" href={`/how-tos/bash/${t.slug}/`}><b>{t.title}</b><span>{first(t.said)}</span></a>
+    ))}
+  </div>
+
+  <h2>Recipes</h2>
+  <div class="grid">
+    {RECIPES.map((r) => (
+      <a class="tile" href={`/how-tos/bash/${r.slug}/`}><b>{r.title}</b><span>{first(r.said)}</span></a>
+    ))}
+  </div>
+</SidePage>

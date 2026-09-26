@@ -154,27 +154,29 @@ if [ "${1:-}" = --registry ]; then
 fi
 
 registry sdlc/surfaces.txt
-cargo build --locked --quiet --package conformance-backend
-fifo=$(mktemp -u)
-mkfifo "$fifo"
-"${CARGO_TARGET_DIR:-target}/debug/conformance-backend" <"$fifo" >"$fifo.port" &
-exec 3>"$fifo"
-trap 'exec 3>&-; rm -f -- "$fifo" "$fifo.port"' EXIT
-tries=0
-until [ -s "$fifo.port" ]; do
-	tries=$((tries + 1))
-	[ "$tries" -le 100 ] || { echo 'surfaces: the loopback backend printed no port' >&2; exit 1; }
-	sleep 0.1
-done
-port=$(head -n 1 "$fifo.port")
+. "$(dirname -- "$0")/scratch.sh"
+. "$(dirname -- "$0")/installed.sh"
+backend_start
 
-failed=0
+failed=0 skipped=
 for surface in $(landed sdlc/surfaces.txt) $(feature sdlc/surfaces.txt); do
 	set +e
 	# A daemon a check starts must not hold the backend's input open.
 	sh "$surface/check.sh" "$port" 3>&-
 	code=$?
 	set -e
+	[ "$code" -ne 77 ] || skipped="$skipped $surface"
 	verdict "$mode" "$surface" "$code" || failed=1
 done
-exit "$failed"
+[ "$failed" -eq 0 ] || exit 1
+# The host's release files, packed from the builds above and each smoked from its install
+# (ticket 0128). A surface that did not run built nothing to pack. --release failed it above.
+if [ -n "$skipped" ]; then
+	echo "surfaces: not run release smoke (${skipped# } did not run)"
+	exit 0
+fi
+scratch_dir packed
+code=0
+{ sh sdlc/scripts/release-pack --reuse "$(rustc -vV | sed -n 's/^host: //p')" "$packed" &&
+	sh sdlc/scripts/release-smoke "$packed"; } 3>&- || code=$?
+verdict "$mode" "release smoke" "$code"

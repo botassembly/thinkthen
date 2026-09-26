@@ -1,8 +1,0 @@
-{
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "c",
-  "code": "#include <stdio.h>\n#include <string.h>\n#include <thinkthen.h>\n\nthinkthen_engine *tt = thinkthen_engine_new();\n\n/* place 1 gives the refund deadline */\nconst char *find = \"{\\\"find\\\": \\\"Which line gives the refund deadline?\\\", \"\n    \"\\\"units\\\": [\\\"Returns need the original receipt.\\\", \"\n    \"\\\"Refunds are issued within 30 days of purchase.\\\", \"\n    \"\\\"Shipping is free on orders over $50.\\\", \"\n    \"\\\"Gift cards cannot be exchanged for cash.\\\"]}\";\nchar *found = thinkthen_call(tt, find);\nputs(found ? found : thinkthen_error_message(tt));\nthinkthen_free_string(found);",
-  "function": "find",
-  "surface": "c"
-}

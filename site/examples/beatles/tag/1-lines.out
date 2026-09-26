@@ -1,0 +1,22 @@
+{
+  "input": "Yesterday",
+  "value": [
+    "love song",
+    "sad"
+  ]
+}
+{
+  "input": "Penny Lane",
+  "value": [
+    "psychedelic",
+    "about a place"
+  ]
+}
+{
+  "input": "Octopus's Garden",
+  "value": [
+    "psychedelic",
+    "about a place",
+    "about the sea"
+  ]
+}

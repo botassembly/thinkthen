@@ -1,0 +1,28 @@
+---
+// Goal: introduce Beatles Bench as a place where every answer is known, and
+// show how to get it.
+import BeatlesPage from '../../../layouts/BeatlesPage.astro';
+import Code from '../../../components/Code.astro';
+import { FIRST, REPO } from '../../../data/beatles.mjs';
+
+const get = `git clone ${REPO}
+cd beatles-bench
+./run.sh`;
+---
+<BeatlesPage page={{ ...FIRST, description: 'The talk "Analyzing the Beatles using Jev" as short pages: one slide, one idea, and one command each.' }}>
+  <div class="eyebrow">Learn</div>
+  <h1>Beatles Bench</h1>
+  <p class="lede">Beatles Bench is the playground for the talk "Analyzing the Beatles using Jev". These pages follow the talk, one slide at a time.</p>
+  <figure class="slide">
+    <img src="/learn/beatles-bench/beatles-bench.webp" alt="The talk's slide: Beatles Bench is our playground." width="1600" height="900" loading="eager" />
+  </figure>
+
+  <p>The bench asks Jev questions about Beatles songs. A script set the right answer to each scored question ahead of time, from Wikipedia and Wikidata. The bench shows ThinkThen at work and shows where it goes wrong.</p>
+  <p>Each page shows one idea and one command, then the same command at another bar. Every command answers from a saved recording. You need no key, and nothing leaves your machine.</p>
+
+  <h2>Get the bench</h2>
+  <p>Clone it and replay every answer:</p>
+  <Code code={get} />
+  <p>The repository holds the songs, the questions and their right answers, and a saved recording of every answer. Each function has its own folder with a script to run it. The data is CC BY-SA 4.0.</p>
+  <p>It is not an official benchmark. Please don't tune a model on it. The bench's author also builds ThinkThen.</p>
+</BeatlesPage>

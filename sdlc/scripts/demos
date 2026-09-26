@@ -109,12 +109,21 @@ for page in */README.md; do
 	# A green page replays a recording. A folder it names and does not hold
 	# would send the page to a backend, so the run stops here instead.
 	# A page names the folder in its blocks and in its prose, where a backtick
-	# closes the name, so a backtick ends the name here too.
-	sed -n 's/.*--replay \([^ `]*\).*/\1/p' "$page" | sort -u | while IFS= read -r named; do
+	# closes the name, so a backtick ends the name here too. A quote, an escape,
+	# or a variable would hide the rest of the name from this check, so a folder
+	# name holds only plain path characters.
+	sed -n 's/.*--replay \([^`]*\).*/\1/p' "$page" | sort -u | while IFS= read -r rest; do
+		named=${rest%% *}
 		if [ -z "$named" ]; then
 			printf 'demos: %s writes --replay with no folder name after it\n' "$page" >&2
 			exit 1
 		fi
+		case $named in
+		*[!A-Za-z0-9._/-]*)
+			printf 'demos: %s writes --replay %s, and a folder name holds only letters, digits, and . _ / -\n' "$page" "$rest" >&2
+			exit 1
+			;;
+		esac
 		if [ ! -d "$folder/$named" ]; then
 			printf 'demos: %s is green, and it names no folder %s\n' "$page" "$named" >&2
 			exit 1
@@ -180,6 +189,12 @@ for page in */README.md; do
 		}
 		fenced {
 			if (index($0, "mustmatch")) asserts = 1
+			# Under set +e a command can fail unseen before the one the block
+			# pins. Issue 2026-09-25 item 9: keep set -e and capture each code.
+			if (kind == "bash" && $0 ~ /^[ \t]*set[ \t]+(\+[a-z]*e|\+o[ \t]+errexit)/) {
+				printf "demos: %s turns set -e off on line %d; capture each code with `&& rc=0 || rc=$?`\n", page, NR > "/dev/stderr"
+				broken = 1
+			}
 			buffer[++held] = $0
 			next
 		}

@@ -1,0 +1,21 @@
+---
+// Goal: carry one article.
+import Base from '../../layouts/Base.astro';
+import { POSTS } from '../../data/posts.mjs';
+
+export function getStaticPaths() {
+  return POSTS.map((post) => ({ params: { slug: post.slug }, props: { post } }));
+}
+
+const { post } = Astro.props;
+const { Content } = post;
+---
+<Base title={post.title} description={post.blurb}>
+  {post.draft && <div class="note" data-draft><span class="status preview">draft</span> A draft for Ian to review. A normal build leaves this post out.</div>}
+  <div class="eyebrow">{post.author} · {post.date}</div>
+  <article class="prose">
+    <h1>{post.title}</h1>
+    <Content />
+  </article>
+  <p class="pagelinks"><a href="/blog/">Read the blog</a> · <a href="/trust/">Test it before you trust it</a></p>
+</Base>

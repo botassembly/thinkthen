@@ -132,7 +132,7 @@ Contract 1; state and timing 1; reach 0; proof 1; cost of error 0; total 3. Fina
 
 ## Evidence
 
-- Starts from: The issue above, filed 2026-09-26 from workspace experiment 268 (`~/workspace/experiments/268-filter-timing`), which counted 121 to 198 new secure connections of 306 requests at `--jobs 16`, up to 231 at `--jobs 32`, and 7 to 13 at `--jobs 4`, with 60 to 90 ms a handshake at the median. The B2 row of `sdlc/issues/2026-09-26-batching-design.md`. Experiment 218's descriptor counts in `records.md`. ureq 3.4.2's `config.rs` and `pool.rs`. `http.rs` and `parallel.rs` at `origin/main` `d410ef4a`.
+- Starts from: The issue above, filed 2026-09-26 from workspace experiment 268, which counted 121 to 198 new secure connections of 306 requests at `--jobs 16`, up to 231 at `--jobs 32`, and 7 to 13 at `--jobs 4`, with 60 to 90 ms a handshake at the median. The B2 row of `sdlc/issues/2026-09-26-batching-design.md`. Experiment 218's descriptor counts in `records.md`. ureq 3.4.2's `config.rs` and `pool.rs`. `http.rs` and `parallel.rs` at `origin/main` `d410ef4a`.
 - Keeps: The throttle and its range, 1 to 32 with a default of 4. Output order and bytes at every `--jobs`. The timeout, retries, redirects and proxy handling. The 15 s idle age. Every existing test except the one connection test this ticket replaces.
 - Changes: `Client::new` sets ureq's total and per-host idle limits to the widest throttle. `Width` names its widest value as `MOST` for the pool and `Width::new`. The connection test counts exact connections at 1, 4, 16 and 32 jobs over two rounds.
 - Proof: The outside-in table test under "Proof", counting accepted connections at a loopback listener at `--jobs 16` and `--jobs 32`. Plants (a), (b) and (c) each turn a row red.

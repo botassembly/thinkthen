@@ -1,8 +1,0 @@
-{
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "ts",
-  "code": "import * as tt from \"thinkthen\";\n\n// a plain ask for money back is true. A thank-you is false\nconst ask = \"Does the customer ask for a refund?\";\nconsole.log(await tt.decide(ask,\n    \"Please refund my order. It arrived broken.\"));\nconsole.log(await tt.decide(ask,\n    \"Thanks for the quick help yesterday!\"));",
-  "function": "decide",
-  "surface": "typescript"
-}

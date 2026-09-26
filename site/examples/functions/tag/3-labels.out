@@ -1,0 +1,18 @@
+{
+  "input": "The export button crashes the app.",
+  "value": [
+    "bug"
+  ]
+}
+{
+  "input": "Great support, thank you!",
+  "value": [
+    "praise"
+  ]
+}
+{
+  "input": "Please add a dark mode.",
+  "value": [
+    "request"
+  ]
+}

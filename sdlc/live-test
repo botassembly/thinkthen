@@ -4,9 +4,9 @@ set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 LIVE=$ROOT/sdlc/scripts/live
-TMP=${TMPDIR:-/tmp}/thinkthen-live-test.$$
-trap 'chmod -R u+w "$TMP" 2>/dev/null || true; rm -rf "$TMP"' EXIT HUP INT TERM
-mkdir -m 700 "$TMP"
+. "$ROOT/sdlc/scripts/scratch.sh"
+scratch_dir TMP
+trap 'chmod -R u+w "$TMP" 2>/dev/null || true; scratch_clean' EXIT
 
 fail() {
 	printf 'live-test: %s\n' "$*" >&2

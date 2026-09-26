@@ -25,8 +25,8 @@ runtime_ready() {
 	actual=$(sha256sum "$PACKAGE" | cut -d' ' -f1)
 	[ "$actual" = "$PINNED" ] || not_run "the server package's SHA256 $actual is not the pinned $PINNED"
 	if [ ! -x "$EXTRACTED/usr/lib/postgresql/16/bin/postgres" ]; then
-		rm -rf "$EXTRACTED.partial"
-		dpkg-deb -x "$PACKAGE" "$EXTRACTED.partial" && mv "$EXTRACTED.partial" "$EXTRACTED"
+		scratch_dir partial "$EXTRACTED.XXXXXX"
+		dpkg-deb -x "$PACKAGE" "$partial" && mv "$partial" "$EXTRACTED"
 	fi
 	header=$(/usr/bin/pg_config --version | sed -n 's/.*(Ubuntu \(.*\)).*/\1/p')
 	server=$("$EXTRACTED/usr/lib/postgresql/16/bin/postgres" -V | sed -n 's/.*(Ubuntu \(.*\)).*/\1/p')
@@ -35,15 +35,17 @@ runtime_ready() {
 	fi
 }
 
-# Stop and remove whatever a killed run left behind, then open a new run folder.
+# Stop and remove whatever a killed run left behind, then open a new run folder. The old folder
+# is removed only when its name is this TMPDIR's tt-pg. and six letters or digits, as mktemp makes.
 runtime_open() {
 	mkdir -p .runtime
 	if [ -s .runtime/last-run ]; then
 		old=$(cat .runtime/last-run)
 		[ -f "$old/data/postmaster.pid" ] && "$BIN/pg_ctl" -D "$old/data" -m immediate stop >/dev/null 2>&1
-		rm -rf -- "$old"
+		rest=${old#"$(cd -- "${TMPDIR:-/tmp}" && pwd -P)/tt-pg."}
+		case $rest in "$old" | *[!A-Za-z0-9]*) echo "runtime.sh: refused to remove $old" >&2 ;; ??????) rm -rf -- "$old" ;; esac
 	fi
-	RUN=$(mktemp -d "${TMPDIR:-/tmp}/tt-pg.XXXXXX")
+	scratch_dir RUN "${TMPDIR:-/tmp}/tt-pg.XXXXXX"
 	chmod 700 "$RUN"
 	echo "$RUN" >.runtime/last-run
 	DATA=$RUN/data SOCK=$RUN/sock LOG=$RUN/server.log SCRATCH=$RUN/home
@@ -52,11 +54,12 @@ runtime_open() {
 
 BIN=.runtime/tree/usr/lib/postgresql/16/bin
 
-# Copy the extracted tree, install the packaged files, and make a cluster.
+# Copy the extracted tree, install the module from $1 and the extension files from $2,
+# and make a cluster.
 runtime_install() {
 	rm -rf .runtime/tree && mkdir -p .runtime/tree && cp -a "$EXTRACTED/." .runtime/tree/
-	cp "$1"/usr/share/postgresql/16/extension/thinkthen* .runtime/tree/usr/share/postgresql/16/extension/
-	cp "$1"/usr/lib/postgresql/16/lib/thinkthen.so .runtime/tree/usr/lib/postgresql/16/lib/
+	cp "$2"/thinkthen* .runtime/tree/usr/share/postgresql/16/extension/
+	cp "$1"/thinkthen.* .runtime/tree/usr/lib/postgresql/16/lib/
 	BIN=$(pwd)/.runtime/tree/usr/lib/postgresql/16/bin
 	sh "$LIMIT" 60 "$BIN/initdb" -D "$DATA" --auth=trust -U postgres >"$RUN/initdb.log" 2>&1
 	printf "listen_addresses = ''\nunix_socket_directories = '%s'\n" "$SOCK" >>"$DATA/postgresql.conf"

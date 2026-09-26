@@ -1,7 +1,6 @@
 # thinkthen.dev
 
-The site lives in this folder of the thinkthen repository, so the code and the site go public together (Ian, 2026-09-22). The Pages workflow at `.github/workflows/pages.yml` builds from here on a push to `main` that touches `site/`.
-
+The site lives in this folder of the thinkthen repository, so the code and the site go public together (Ian, 2026-09-22). The Pages workflow at `.github/workflows/pages.yml` builds from here when someone runs it by hand.
 
 The site for ThinkThen. Astro, static output, served by GitHub Pages at `thinkthen.dev`.
 
@@ -10,45 +9,63 @@ Tagline on every page: **ThinkThen: code that knows what you mean.**
 ## Build it
 
 ```
+cargo build --release
 npm install
 npm run build
 ```
 
-`npm run build` does four things in order:
+`npm run build` does eight things in order:
 
 1. `scripts/write-version.mjs` writes `public/version.json` with the commit it is building.
-2. `astro build` writes `dist/`. It fails if any function-and-surface cell is missing or carries no status.
-3. `scripts/emit-md.mjs` writes a Markdown twin of every page and `dist/llms.txt`.
-4. `scripts/check-links.mjs` fails the build on a broken internal link.
+2. `scripts/check-samples.mjs` checks the rules in `WRITING.md` that a script can see: line length, asserts, whole details, no comments, and a goal on every page.
+3. `scripts/check-slides.mjs` checks that the Beatles Bench slides come from a deck that quotes the pinned bench.
+4. `scripts/smoke.mjs` runs every example against the command built from this commit and compares what it printed with the saved output.
+5. `astro build` writes `dist/`. It fails when a script has no caption or no saved output. The Settings page reads `../specification/settings.md`, and the build fails when that table's columns change.
+6. `scripts/emit-md.mjs` writes a Markdown twin of every page and `dist/llms.txt`.
+7. `scripts/check-settings.mjs` fails the build when the Settings page and `../specification/settings.md` disagree. It also fails when a source file types a number after "default is", "defaults to" or "default of", and when a built page states a default the table does not hold.
+8. `scripts/check-links.mjs` fails the build on a broken internal link.
 
-`npm run dev` serves the site while you work.
+A page reads a setting's default, range or allowed values with `setting('Name')` from `src/lib/settings-table.mjs`: `.default`, `.number`, `.range`, `.bounds`, `.allowed`, `.note`, `.defaultOn('decide')` and `.surface('Configuration file')`. A name the table does not hold fails the build at that call.
+
+`npm run dev` serves the site while you work. `npm run check` runs the sample check, the slide check, the smoke run, the settings check, and the link check on the last build.
+
+## Writing a page
+
+Read `WRITING.md` first. It holds the page rules, the code rules, and how an example is added, recorded, and refreshed.
+
+## The menu
+
+Five entries: Install, Functions, How-tos, Learn, and Blog. Trust, Reference, and What it will not do sit in the footer and on the Learn page. Moved pages keep their old address through the redirects in `astro.config.mjs`.
 
 ## Where the examples come from
 
-Every code sample on this site is pulled from somewhere else. Nothing is typed into a page by hand, so a page cannot drift from the code.
+Every command and code sample on the site is a file under `examples/`. `src/data/samples.mjs` reads them for the pages, and `src/lib/remark-examples.mjs` puts them into the articles. The smoke run replays every script from a saved recording, with no key and no network. `WRITING.md` gives the layout, the skip list, and the refresh steps.
+
+The names, the order, the captions, the one line for each function, and the option tables live in `src/data/catalog.mjs`.
+
+## Where the Beatles Bench pages come from
+
+The pages under `/learn/beatles-bench/` follow the talk "Analyzing the Beatles using Jev". `src/data/beatles.mjs` holds each page's words. The slides sit in `public/learn/beatles-bench/`. The scripts sit in `examples/beatles/`, and `examples/beatles/bench/` holds the files they read from the bench commit in `examples/beatles/BENCH`. To copy those files again from a checkout at that commit:
 
 ```
-npm run pull
+BEATLES_BENCH=path/to/beatles-bench npm run pull-bench
 ```
 
-`scripts/pull-examples.mjs` reads the deck at
-`repos/mktg/decks/2026-09-21-thinkthen-semantic-commands` (override with `THINKTHEN_DECK`) and writes one file per function-and-surface cell into `src/data/examples/`. Those files are committed, so a build never reaches outside this repository.
+The slides come from the talk's deck, which quotes one bench commit. The deck's own build renders and commits each `slide.png`. `src/data/slides.json` names the deck slide behind each image, the deck commit, the bench the deck quotes, and each image's SHA-256. To export them again from the deck's committed `slide.png` files:
 
-Each cell carries a status:
+```
+DECK=path/to/deck npm run export-slides
+```
 
-| Status | What it means | Where it comes from |
-| --- | --- | --- |
-| `run` | The command really printed this. | The command from the deck's `examples/run.sh`, the output from `examples/out/*.txt`, and the exit code from the last line of that file. |
-| `drawn` | Nobody has run this. It is the shape the library is being built to. | The deck's `surfaces.md` and `recognize-surfaces.md`. Every drawn sample is labelled "drawn, not run" on the page. |
-| `planned` | Nothing is written for this cell yet. | The page says so in place of code. |
+The export stops unless the deck's `BENCH_AT` names the bench in `examples/beatles/BENCH`. It trusts the deck's build to have rendered the slides after that pin moved. `scripts/check-slides.mjs` runs in the build. It fails when the recorded bench differs from `examples/beatles/BENCH`, or when an image differs from its recorded SHA-256. Move the pin and the build fails until the slides are exported again.
 
-The how-to pages work the same way: the commands come from the deck's `usecases/run.sh` and the output from `usecases/out/`.
+## The Bash techniques
 
-`src/data/examples.mjs` checks every cell at build time. A missing file, an unknown status, a `run` cell with no example, or a `drawn` cell with no code all fail the build.
+`/how-tos/bash/` teaches the shell forms: `if`, `case`, exit codes, bands, loops, pipes, `xargs`, and a CI gate. The shell recipes sit beside them. `TECHNIQUES` and `RECIPES` in `src/data/catalog.mjs` list the pages, and `examples/how-tos/bash/` holds their scripts.
 
-The names, the order, the one line for each function, and the option tables live in `src/data/catalog.mjs`. The one line for each function is the help text's first line, copied from the vocabulary page.
+## Drafts
 
-The first article is copied byte for byte into `src/articles/code-that-understands.md` from `repos/mktg/content/thinkthen/drafts/01-code-that-understands/article.md`. Edit it there and copy it again.
+A blog post in `src/articles/` with `draft: true` builds under `npm run dev`, or when `THINKTHEN_DRAFTS=1` is set for a build. A normal build leaves it out.
 
 ## The deploy proof
 
@@ -85,14 +102,13 @@ Phosphor, from the site plan. Four outcomes, four colours, everywhere an answer 
 | "no", exit 1 | `#ff5d5d` | `#c62828` |
 | "broken", other exits | `#7d8a83` | `#6b746f` |
 
-Dark follows the system and is the default. The Theme button in the header overrides it and the choice is kept for the visit.
+Dark follows the system and is the default. The sun and moon button in the header overrides it, and the choice is kept for the visit.
 
 ## The language choice
 
-The tabs on the home page and the cross-view on every function page share one choice, kept in `localStorage` under `tt-lang`. Pick Ruby once and every code block on every page reads Ruby, falling back to Bash where nothing is written yet. Plain JavaScript, no framework on the client.
+The tabs on the home page and the cross-view on every function page share one choice, kept in `localStorage` under `tt-lang`. Pick Ruby once and every code block on every page reads Ruby, falling back to Bash where a surface has no sample. Plain JavaScript, no framework on the client.
 
 ## What is not here yet
 
-- `/install.sh`. The download script is not built. The install page shows the line and marks it "coming with 0.1".
-- Pages for Excel, Google Sheets, pandas, and any serve mode. None of them has run.
-- A tutorial page, a backends page, a generated reference, and a refusals page. They come after the first version.
+- A pandas page, and a page for any serve mode.
+- Replay for the library and database samples. They are listed in `examples/SKIP` until each library can answer from a recording.

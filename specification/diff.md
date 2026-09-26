@@ -4,7 +4,7 @@ Status: **Settled** by ticket 0114.
 
 `thinkthen diff A [B]` compares two runs over the same records, or two cuts on one run. It lists each answer that changed, says which way it moved, and runs the exact McNemar test. It sends no request and reads no API key.
 
-The definition is the `diff` half of the prototype measurement script at commit `be7cea2e`. `crates/thinkthen/tests/fixtures/measure/README.md` gives the file checksums. Where this page and the prototype disagree, the golden files in that folder decide. diff shares its readers, rule text, and failure rows with [audit](audit.md).
+The definition is the `diff` half of a prototype measurement script. The script's history was removed, so no commit holds it now. `crates/thinkthen/tests/fixtures/measure/README.md` gives the file checksums, and they are the record. Where this page and the prototype disagree, the golden files in that folder decide. diff shares its readers, rule text, and failure rows with [audit](audit.md).
 
 ```sh
 thinkthen diff runs/before.jsonl runs/after.jsonl --key key.jsonl --table

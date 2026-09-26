@@ -8,7 +8,7 @@ This issue merges nine issues. They were `2026-09-25-command-wording-and-help-fi
 
 ## 1. A huge deadline prints hundreds of digits
 
-Left open by ticket 0138. The sentence is built in `crates/thinkthen/src/public/options.rs`, which ticket 0134 had open.
+Fixed by ticket 0152 Part A, from branch `ticket/0152-two-wording-fixes`. A deadline past 20 characters now prints in exponent form, so `1e300` refuses in 92 characters. Left open by ticket 0138 before that.
 
 What the user sees. `CallOptions::deadline_seconds` refuses a budget past 4,294,967,295 seconds. Its sentence formats the raw `f64` with `{value}` (`crates/thinkthen/src/public/options.rs:129`). Rust's `Display` for `f64` never uses an exponent. A deadline of `1e300` prints a 301-digit number. The milliseconds sentence at `options.rs:156` has the same shape. Every surface that passes a user's deadline through prints the same sentence. The Python test pins the long form: `libraries/python/tests/test_inputs.py:84` expects `f"UsageError a deadline of {10**300} seconds {budget}"`.
 

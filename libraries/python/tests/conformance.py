@@ -74,20 +74,22 @@ def asked(case):
     return tt.question(**{PARTS.get(name, name): value for name, value in case["question"].items()})
 
 
-def detailed(details, expected):
+def detailed(details, expected, base):
     wanted = expected["details"]
     for field in ("probability", "probabilities", "level"):
         if field in wanted["answer"]:
             same(field, details["answer"].get(field), wanted["answer"][field])
-    for field in ("model", "question_sha256", "requests"):
-        same(field, details["meta"][field], wanted[field])
+    same("confidence", details["answer"].get("confidence", "absent"), wanted["answer"].get("confidence", "absent"))
+    for field in ("model", "question_sha256", "requests", "usage", "requests_sent", "cached"):
+        same(field, details["meta"].get(field, "absent"), wanted.get(field, "absent"))
+    same("url", details["meta"]["url"], base + "/systemone")
 
 
 def single(engine, question, text, success, base):
     expected = success["answers"][0]
     details = engine.details(question, text)
     same("bare", details["value"], expected["bare"])
-    detailed(details, expected)
+    detailed(details, expected, base)
     typed = getattr(engine, question.kind)(question, text)
     same("typed", typed, expected["bare"])
     same("column", getattr(engine, question.kind)(question, pl.Series([text])).to_list(),

@@ -12,7 +12,7 @@ A loadable DuckDB v1.5.5 extension that puts the `thinkthen` engine behind SQL. 
 | `thinkthen_score(question, text, levels)` | `DOUBLE`, the position from 0 for the first level |
 | `thinkthen_tag(question, text, labels)` | `VARCHAR[]` |
 | `thinkthen_annotate(set, text)` | `VARCHAR`, the record's values as JSON |
-| `thinkthen_details(question, text)` | a struct: `probability`, `answer`, `value`, `nearest`, `model`, `question_sha256`, `requests_sent`, `cached` |
+| `thinkthen_details(question, text)` | the command's `--details` line, as JSON text |
 | `thinkthen_recognize(text, kinds)` | a list of `(name, kind, start, end, strength)` |
 | `thinkthen_relations(text, file)` | a list of `(relation, source, source_kind, target, target_kind, probability)` |
 | `thinkthen_relate(query, rules)` | a table of `(relation, source, target, probability)`, one row per edge between the query's ids |
@@ -21,13 +21,19 @@ A loadable DuckDB v1.5.5 extension that puts the `thinkthen` engine behind SQL. 
 
 `WHERE`, `ORDER BY`, and `LIMIT` are the filter, rank, and find verbs. Every scalar except `thinkthen_recognize` also takes a last `BIGINT` deadline in milliseconds. A `NULL` in any argument gives a `NULL` row. A failure is an error whose text starts `thinkthen <kind>: `, with one of the six kinds, and never reads as `NULL`.
 
-A question is plain text, `'@path.json'`, or the question file's JSON. Choose, score, and tag take plain text and put their members in the list. `thinkthen_annotate` takes a question set file or its JSON. A member a verb lacks reads `NULL` in `thinkthen_details`, never 0. `start` and `end` count code points, as DuckDB's string indexing does.
+A question is plain text, `'@path.json'`, or the question file's JSON. Choose, score, and tag take plain text and put their members in the list. `thinkthen_annotate` takes a question set file or its JSON. `start` and `end` count code points, as DuckDB's string indexing does.
 
 ```sql
 LOAD 'build/thinkthen.duckdb_extension';
 SELECT id FROM tickets WHERE thinkthen_decide('Does the writer ask for a refund?', body);
 SELECT id, thinkthen_choose('Which team owns this?', body, ['billing', 'shipping']) FROM tickets;
 ```
+
+## Run facts
+
+`thinkthen_details(question, text)` returns the command's `--details` line for one text as JSON text, schema `thinkthen.result/1`. Read a member with DuckDB's JSON functions, such as `thinkthen_details(q, t) ->> '$.meta.usage.input_tokens'`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.
+
+`thinkthen_usage()` returns this process's running totals of requests sent, cache answers and tokens.
 
 ## Settings
 

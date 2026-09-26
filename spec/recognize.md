@@ -13,6 +13,15 @@ The forty-case harvest fixture includes this recorded sentence. The replay needs
 printf 'Maria Chen joined Northwind Freight in Chicago last spring.' | env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL thinkthen recognize --url https://api.typesafe.ai/v1 --replay "$(git rev-parse --show-toplevel)/crates/thinkthen/tests/fixtures/recognize-225/C01" --kind "PER=Part of a person's name." --kind 'ORG=Part of the name of an organization: a company, band, team, agency, government body, or media outlet.' --kind 'LOC=Part of the name of a place: a country, region, city, or geographic feature.' --kind 'MISC=Part of another named entity: a nationality, an event, a product, or the name of a creative work.' | jq -c '[.entities[] | {name,kind}]' | mustmatch '[{"name":"Maria Chen","kind":"PER"},{"name":"Northwind Freight","kind":"ORG"},{"name":"Chicago","kind":"LOC"}]'
 ```
 
+An empty or blank text refuses the dry run as it refuses a live run. It prints no plan.
+
+```bash
+for text in '' ' '; do
+  printf '%s' "$text" | { env -u THINKTHEN_API_KEY thinkthen recognize --dry-run 2>&1 && echo 'exit 0' || echo "exit $?"; } | mustmatch 'thinkthen: the evidence is empty or blank
+exit 2'
+done
+```
+
 Relations are beta. A malformed rule is a usage error before any key is read.
 
 ```bash

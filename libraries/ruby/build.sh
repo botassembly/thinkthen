@@ -3,6 +3,10 @@
 # exported as RUBY. Every cargo call runs --locked --offline.
 set -eu
 cd -- "$(dirname -- "$0")"
+# Cargo embeds source paths in panic locations. The remap keeps the builder's
+# home out of the gem's extension, as in the other bindings (ticket 0128).
+RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
+export RUSTFLAGS
 cargo build --release --locked --offline
 target=${CARGO_TARGET_DIR:-target}/release
 # The library file's name follows the host: lib<name>.so, lib<name>.dylib.

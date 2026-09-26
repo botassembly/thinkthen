@@ -16,7 +16,9 @@ use std::thread::{self, ThreadId};
 use std::time::{Duration, Instant};
 
 use conformance_backend::{Backend, Canned, Listener};
-use thinkthen::{Answer, CallOptions, CancelToken, Engine, Error, ErrorKind, Question};
+use thinkthen::{
+    Answer, CallOptions, CancelToken, Engine, Entity, Error, ErrorKind, Question, Relate,
+};
 
 const DECIDED: &str = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":3,"output_tokens":1}}"#;
 const MOST: &str = "4294967295 seconds";
@@ -90,6 +92,19 @@ fn deadline_numbers_follow_the_host_table_and_the_last_call_wins() {
         let result = none.deadline_seconds(value);
         assert_eq!(kind(&result), Some(ErrorKind::Usage), "{value}");
         assert_eq!(message(result), refused(&value.to_string(), "seconds"));
+    }
+    // A number longer than 20 characters prints in exponent form.
+    for (value, written) in [
+        (1e300, "1e300"),
+        (-1e-300, "-1e-300"),
+        (f64::MAX, "1.7976931348623157e308"),
+        (1e19, "10000000000000000000"),
+        (1e20, "1e20"),
+    ] {
+        assert_eq!(
+            message(none.deadline_seconds(value)),
+            refused(written, "seconds")
+        );
     }
     for value in [-2, i64::MIN, 4_294_967_295_001, i64::MAX] {
         let result = none.deadline_millis(value);
@@ -296,6 +311,46 @@ fn a_check_runs_before_a_held_send_and_never_during_it() {
         call.join().expect("call")
     });
     assert_eq!(answer.ok(), Some(Answer::Yes));
+}
+
+/// Ticket 0143: one-request relations fill the throttle of 4. A host check
+/// that fires while 4 are held feeds no fifth, and the 4 finish. With 4
+/// rules every relation is already fed, and the check still cancels.
+#[test]
+fn a_host_interrupt_during_relate_chunks_sends_nothing_new() {
+    let _serial = serial();
+    let entities = ["gateway", "billing"].map(|name| Entity::new(name, "service").expect("entity"));
+    for count in [6, 4] {
+        let backend = Backend::start().expect("backend");
+        let held = engine(&format!("{}/arm/held/v1", backend.origin()));
+        let rules: Vec<_> = (1..=count)
+            .map(|n| format!(r#"{{"name":"r{n}","source":"service","target":"service"}}"#))
+            .collect();
+        let ask = Relate::from_json(&format!(
+            r#"{{"version":1,"relate":{{"relations":[{}]}}}}"#,
+            rules.join(",")
+        ))
+        .expect("relate file");
+        let runs = Runs::default();
+        let check = || {
+            runs.record(backend.count());
+            backend.count() == 4
+        };
+        let result = thread::scope(|scope| {
+            scope.spawn(|| {
+                backend.wait(4);
+                thread::sleep(Duration::from_millis(400));
+                backend.release();
+            });
+            held.relate_with(&ask, entities.clone(), CallOptions::new().interrupt(&check))
+        });
+        assert!(
+            runs.all_on(thread::current().id()),
+            "a check ran on a worker"
+        );
+        assert_eq!(kind(&result), Some(ErrorKind::Cancelled), "{count} rules");
+        assert_eq!(backend.count(), 4, "{count} rules: nothing new was sent");
+    }
 }
 
 #[test]

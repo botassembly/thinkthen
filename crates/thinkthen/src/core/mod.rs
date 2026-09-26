@@ -13,6 +13,7 @@ pub(crate) mod adapters;
 mod answer;
 mod backend;
 mod backend_profile;
+pub(crate) mod batch;
 pub(crate) mod check;
 mod digest;
 mod find;
