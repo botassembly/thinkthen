@@ -21,10 +21,10 @@ EXT_VERSION=$(sed -n "s/^default_version = '\(.*\)'$/\1/p" thinkthen.control)
 BACKEND=${CARGO_TARGET_DIR:-$REPO/target}/debug/conformance-backend
 
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
-echo "== build"
-cargo fmt --check
-cargo clippy --locked --offline --all-targets -- -D warnings
-cargo test --locked --offline --lib
+	echo "== build"
+	cargo fmt --check
+	cargo clippy --locked --offline --all-targets -- -D warnings
+	cargo test --locked --offline --lib
 }
 (cd "$REPO" && cargo build --locked --offline --quiet --package conformance-backend)
 export RUSTFLAGS="--remap-path-prefix=$HOME=/build"
@@ -87,10 +87,10 @@ echo "== package"
 	STEPS=${STEPS:-examples slide_sample recognize_and_relate_as_drawn conformance the_fake_key_stays_in_the_environment}
 }
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
-./pgrx-package-locked.sh --pg-config "$PG_CONFIG" >/dev/null
-mkdir -p "$SHIPPED" && cp -a "$EXT/." "$SHIPPED/"
-./pgrx-package-locked.sh --pg-config "$PG_CONFIG" --features panic-probe >/dev/null
-runtime_install "$EXT$("$PG_CONFIG" --pkglibdir)" "$EXT$("$PG_CONFIG" --sharedir)/extension"
+	./pgrx-package-locked.sh --pg-config "$PG_CONFIG" >/dev/null
+	mkdir -p "$SHIPPED" && cp -a "$EXT/." "$SHIPPED/"
+	./pgrx-package-locked.sh --pg-config "$PG_CONFIG" --features panic-probe >/dev/null
+	runtime_install "$EXT$("$PG_CONFIG" --pkglibdir)" "$EXT$("$PG_CONFIG" --sharedir)/extension"
 }
 cp fixtures/*.json "$DATA/"
 fresh generic
