@@ -196,7 +196,7 @@ function bash(text) {
     if (/^\s*(if|while|until)\s/.test(line) && !/^\s*while\s+read\b/.test(line) && call.test(piped(i))) {
       found.push({ line: at, rule: 'direct', message: 'a branch acts on a thinkthen call. Wrap the call in a function named for its meaning, or name the answer first.' });
     }
-    if (/^\s*(test|\[\[?|echo|printf)\b/.test(line) && /\$\(/.test(line)) {
+    if (/^\s*(?:(?:test|echo|printf)\b|\[\[?\s)/.test(line) && /\$\(/.test(line)) {
       if (substitutions(statement(lines, i, 'python')).some((inner) => call.test(inner))) found.push({ line: at, rule: 'direct', message: 'an assert or print acts on a thinkthen call. Name the answer first.' });
     }
   });
