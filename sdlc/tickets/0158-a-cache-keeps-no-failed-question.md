@@ -109,7 +109,11 @@ Nonblank lines, measured with `grep -c .`.
 ## Stop rules
 
 1. Stop before crossing any budget by more than a tenth, or before adding a dependency.
-2. Stop if the change needs a file that ticket 0146, 0154 or 0155 opens.
+2. Stop if the change needs a file outside this ticket's opens that ticket 0146, 0154 or 0155 opens. None of those tickets opens `engine/request.rs`, `engine/recorder.rs` or `core/reply.rs`. The expected merge points are these files, which this ticket shares with them:
+   - Ticket 0146: `specification/records.md`, `crates/thinkthen/tests` (so `tests/backend/main.rs` and the new `cache_partial.rs`), `sdlc/issues`, `sdlc/ratchet.json`, `sdlc/records` and `sdlc/tickets`. Ticket 0146 lands after this ticket and merges these.
+   - Ticket 0154: `specification/records.md`, `sdlc/ratchet.json`, `sdlc/records` and `sdlc/tickets`.
+   - Ticket 0155: `specification/recording.md`, `tests/backend/main.rs`, `sdlc/ratchet.json`, `sdlc/records` and `sdlc/tickets`. Ticket 0155 also opens `engine/deadline_tests.rs`, which this ticket leaves untouched.
+   Each merge point is a page sentence, one `mod` line or the ratchet total. Whichever ticket lands second rebases and remeasures the ratchet.
 3. Stop if `--record` alone stops writing a partial reply.
 4. Stop if a first run's standard output, standard error or exit code changes, or if any run's does under `--record` alone or `--replay` alone. A cached rerun of a reply that failed a question changes by design: it sends again, so its rows carry `meta.cached` false, a fresh `meta.requests_sent` and `meta.usage`, and `status` counts one more request and no cache answer.
 5. Stop if any plant stays green.
