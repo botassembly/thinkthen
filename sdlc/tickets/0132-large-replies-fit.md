@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine/http.rs crates/thinkthen/src/engine/error.rs 
 
 # 0132: Keep every reply the planner can ask for
 
-Status: ready. Owner: Claude.
+Status: in progress. Design accepted by the third fresh review on 2026-09-25, after two rounds of findings. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -95,7 +95,7 @@ Each command test counts requests at a loopback backend and pins the exact sente
 | `resend::a_reply_past_the_bound_is_sent_once`, rewritten in `tests/backend/resend.rs` | A `decide` whose listener pads a valid reply with spaces to `N + 1` bytes. The test works out `N` from the request body the listener saw. Exit 4, the new sentence naming `N`, 1 request, and no key or evidence in any output | Map `BodyExceedsLimit` to `TransportKind::Other` again: the old sentence prints. Drop the limit: the padded reply is kept at exit 0 |
 | `resend::a_reply_of_exactly_the_bound_is_kept`, beside it | The same padding to exactly `N` bytes. Exit 0 with the answer, 1 request | Pass `N` to `ureq` in place of `N + 1`: the reply is refused |
 | `check::a_reply_over_its_limit_fails_its_probe_and_the_check_goes_on`, in `tests/backend/check.rs` | The first probe's listener pads its reply to `N + 1` bytes, and the later probes answer. The report pins `ok connection`, the first probe's `critical` line with the new sentence, the later probes' lines, the listener count of 4, and exit 4 | Route the new failure to the `connection` gate: the check stops and the later probes are `unchecked`. Leave it out of the match: the check aborts |
-| `public_controls::a_reply_over_its_limit_names_it`, in `tests/public_controls.rs` | The public `Engine` decides against a listener that pads its reply to `N + 1` bytes. The error kind is `Backend`, `retryable()` is false, the message is the new sentence, and the listener counts 1 | Map the new failure to the transport text in `public/error.rs`: the message differs. Mark it retryable: the listener counts 3 |
+| `public_controls::a_reply_over_its_limit_names_it`, in `tests/public_controls.rs` | The public `Engine` decides against a listener that pads its reply to `N + 1` bytes. The error kind is `Backend`, `retryable()` is false, the message is the new sentence, and the listener counts 1 | Map the new failure to the transport text in `public/error.rs`: the message differs. Mark it retryable in `engine/error.rs`: the listener counts 3 |
 
 The four questions for each new or changed test:
 

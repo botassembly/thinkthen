@@ -10,7 +10,7 @@ use crate::core::{
     ReadingError, RecordError, RenderError, Source,
 };
 
-use crate::engine::error::TransportKind;
+use crate::engine::error::{TransportKind, reply_too_large};
 use crate::table;
 
 mod convert;
@@ -129,6 +129,8 @@ pub(crate) enum Failure {
     Status(u16),
     /// The backend answered status 400 and named `max_tokens_exceeded`.
     TokenLimit,
+    /// The reply passed its request's limit of this many bytes and was not kept.
+    ReplyTooLarge(u64),
     /// The adapter refused what the backend answered.
     Reply(DecodeError),
     /// The two recording options named two different folders.
@@ -227,6 +229,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         ),
         Failure::Transport(kind) => (4, transport_message(*kind).to_owned()),
         Failure::Status(status) => (4, status::said(*status)),
+        Failure::ReplyTooLarge(limit) => (4, reply_too_large(*limit)),
         Failure::Reply(error) => (4, format!("the reply was refused: {error}")),
         Failure::ReplayMiss(_)
         | Failure::Entry(_, _)

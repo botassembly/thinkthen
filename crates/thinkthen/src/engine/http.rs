@@ -37,12 +37,22 @@ impl fmt::Debug for Key {
     }
 }
 
-/// The most of one response body an attempt reads before it gives up.
-///
-/// A judgment answers in well under a kilobyte, so a megabyte is generous by a
-/// thousandfold. The bound is here so a server that never stops writing cannot
-/// fill this process's memory.
+/// The reply bytes every request may earn, whatever its size.
 const MAX_RESPONSE_BYTES: u64 = 1024 * 1024;
+
+/// The reply bytes each request byte adds to the floor.
+///
+/// A reply echoes the names and texts its request sent. The worst honest
+/// shape, a score question with one-character levels, runs about five times
+/// its request (ticket 0132). The bound stops a backend that never stops
+/// writing.
+const REPLY_BYTES_PER_REQUEST_BYTE: u64 = 8;
+
+/// The most reply bytes one request may earn.
+fn reply_limit(request: &[u8]) -> u64 {
+    let request = u64::try_from(request.len()).unwrap_or(u64::MAX);
+    MAX_RESPONSE_BYTES.saturating_add(REPLY_BYTES_PER_REQUEST_BYTE.saturating_mul(request))
+}
 
 /// The longest a `Retry-After` header moves the wait to.
 ///
@@ -261,12 +271,18 @@ fn send(agent: &Agent, exchange: &Exchange<'_>, limit: Duration) -> Result<Vec<u
         };
         return Err(Attempt { failure, asked });
     }
+    // `ureq` refuses the read after its limit even at the body's end, so a
+    // reply of exactly `most` bytes needs one byte more.
+    let most = reply_limit(exchange.body);
     response
         .body_mut()
         .with_config()
-        .limit(MAX_RESPONSE_BYTES)
+        .limit(most.saturating_add(1))
         .read_to_vec()
-        .map_err(|error| Attempt::from(Error::Transport(transport(&error))))
+        .map_err(|error| match error {
+            ureq::Error::BodyExceedsLimit(_) => Attempt::from(Error::ReplyTooLarge(most)),
+            error => Attempt::from(Error::Transport(transport(&error))),
+        })
 }
 
 /// Whether a 400 reply's body names `max_tokens_exceeded` as its
