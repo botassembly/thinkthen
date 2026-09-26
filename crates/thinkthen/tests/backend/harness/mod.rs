@@ -4,7 +4,7 @@
 //! same one. Spawning stays here, because only this package's own tests can
 //! name the compiled `thinkthen` binary.
 use std::io::{self, Write};
-use std::process::{Command, Output, Stdio};
+use std::process::{Child, Command, Output, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Condvar, Mutex, PoisonError};
 use std::time::Duration;
@@ -43,6 +43,17 @@ pub(crate) fn spawn(
     environment: &[(&str, &str)],
     evidence: &[u8],
 ) -> io::Result<Output> {
+    let child = start(arguments, environment, evidence)?;
+    finish(child, &format!("thinkthen {}", arguments.join(" ")))
+}
+
+/// Start the compiled binary as `spawn` does, feed it the evidence, and hand
+/// back the running child.
+pub(crate) fn start(
+    arguments: &[&str],
+    environment: &[(&str, &str)],
+    evidence: &[u8],
+) -> io::Result<Child> {
     static SPAWNS: AtomicUsize = AtomicUsize::new(0);
     let home = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
         "spawn-home-{}-{}",
@@ -68,7 +79,7 @@ pub(crate) fn spawn(
         .ok_or_else(|| io::Error::other("no pipe to standard input"))?;
     let _ = input.write_all(evidence);
     drop(input);
-    finish(child, &format!("thinkthen {}", arguments.join(" ")))
+    Ok(child)
 }
 
 /// Holds each of the first `wanted` requests until all of them are in flight.

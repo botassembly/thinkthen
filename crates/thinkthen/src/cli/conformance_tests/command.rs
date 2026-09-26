@@ -429,6 +429,7 @@ pub(super) fn counters(case: &Case, expected: &Counters) {
         .expect("counted call");
     }
     server.join().expect("loopback server");
+    process.finish();
     let after = usage::read(&totals, &month_now())
         .expect("totals after")
         .total;

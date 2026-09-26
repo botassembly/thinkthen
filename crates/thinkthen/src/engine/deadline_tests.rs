@@ -207,8 +207,8 @@ fn a_spent_deadline_opens_no_connection_and_observes_no_attempt() {
     assert!(matches!(listener.accept(), Err(error) if error.kind() == ErrorKind::WouldBlock));
 }
 
-/// Slow request accounting, such as another process holding the usage lock,
-/// outlasts the budget; the attempt must not go out afterwards.
+/// Slow work in the hook before the attempt outlasts the budget; the attempt
+/// must not go out afterwards.
 #[test]
 fn accounting_that_outlasts_the_budget_sends_nothing() {
     let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
