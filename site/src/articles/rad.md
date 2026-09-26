@@ -28,7 +28,7 @@ Put the song's catalog entry in front of the question and ask again. The entry n
 
 The bench asked the same way at scale. It took questions Jev had mostly missed and asked each one twice. The first time, Jev answered from memory. The second time, the whole song catalog sat in front of the question, one line per song, with its singer, writers, length, and release date. The catalog turned most of the misses right.
 
-The catalog broke one answer. Jev read "The Ballad of John and Yoko" and said two Beatles share the lead. The line says Lennon. The title names two people. That may have fooled it.
+The catalog broke an answer on "The Ballad of John and Yoko". Jev read the title and said two Beatles share the lead. The line says Lennon. The title names two people. That may have fooled it.
 
 ## What it costs
 

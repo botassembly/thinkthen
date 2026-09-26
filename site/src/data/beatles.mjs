@@ -285,7 +285,7 @@ const ARTICLES = {
       "Nothin' Shakin' is an obscure song, and George sings it.",
     ],
     see: {
-      '1-choose': "Jev leans to John at 0.34, with Ringo close at 0.32. George gets 0.14.",
+      '1-choose': "Jev leans to John at 0.34. Ringo is close at 0.32. George gets 0.14.",
       '2-bar': "Under a bar of 0.5, the wrong pick becomes not sure.",
     },
     headings: { '2-bar': "Change the bar" },
