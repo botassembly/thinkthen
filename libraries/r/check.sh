@@ -11,8 +11,8 @@ cd -- "$(dirname -- "$0")"
 here=$PWD
 root=$(cd ../.. && pwd)
 rust=thinkthen/src/rust
-scratch=$(mktemp -d)
-trap 'rm -rf -- "$scratch"' EXIT
+. "$root/sdlc/scripts/scratch.sh"
+scratch_dir scratch
 not_run() { echo "not run: $1" >&2; exit 77; }
 
 echo "== r: the host tools"

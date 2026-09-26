@@ -43,7 +43,7 @@ runtime_open() {
 		[ -f "$old/data/postmaster.pid" ] && "$BIN/pg_ctl" -D "$old/data" -m immediate stop >/dev/null 2>&1
 		rm -rf -- "$old"
 	fi
-	RUN=$(mktemp -d "${TMPDIR:-/tmp}/tt-pg.XXXXXX")
+	scratch_dir RUN "${TMPDIR:-/tmp}/tt-pg.XXXXXX"
 	chmod 700 "$RUN"
 	echo "$RUN" >.runtime/last-run
 	DATA=$RUN/data SOCK=$RUN/sock LOG=$RUN/server.log SCRATCH=$RUN/home

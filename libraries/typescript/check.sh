@@ -6,6 +6,7 @@ set -eu
 cd -- "$(dirname -- "$0")"
 unset THINKTHEN_API_KEY
 repo=$(cd ../.. && pwd)
+. "$repo/sdlc/scripts/scratch.sh"
 # macOS has no `timeout` (ticket 0128).
 LIMIT=$repo/sdlc/scripts/time-limit
 node_home="$HOME/.cache/thinkthen-toolchains/node-v22.22.3-linux-x64"
@@ -36,8 +37,7 @@ cargo clippy --quiet --locked --offline --all-targets -- -D warnings
 cargo test --quiet --lib --locked --offline
 
 step 'deny: the lock, then a git dependency meets the sources rule'
-plant=$(mktemp -d)
-trap 'rm -rf -- "$plant"' EXIT
+scratch_dir plant
 missing=
 if cargo deny --version >/dev/null 2>&1; then
     cargo deny --offline --manifest-path Cargo.toml check --config "$repo/deny.toml" advisories bans licenses sources

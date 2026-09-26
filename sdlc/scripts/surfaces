@@ -154,6 +154,7 @@ if [ "${1:-}" = --registry ]; then
 fi
 
 registry sdlc/surfaces.txt
+. "$(dirname -- "$0")/scratch.sh"
 . "$(dirname -- "$0")/installed.sh"
 backend_start
 
@@ -174,8 +175,7 @@ if [ -n "$skipped" ]; then
 	echo "surfaces: not run release smoke (${skipped# } did not run)"
 	exit 0
 fi
-installed_folder
-packed=$folder
+scratch_dir packed
 code=0
 { sh sdlc/scripts/release-pack --reuse "$(rustc -vV | sed -n 's/^host: //p')" "$packed" &&
 	sh sdlc/scripts/release-smoke "$packed"; } 3>&- || code=$?
