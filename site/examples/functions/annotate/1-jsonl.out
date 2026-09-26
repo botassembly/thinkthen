@@ -1,0 +1,21 @@
+{
+  "id": "B-7",
+  "body": "Steps: click Log in. Nobody gets in.",
+  "steps": true,
+  "area": "login",
+  "impact": 1.98
+}
+{
+  "id": "B-8",
+  "body": "The Pay button on billing is too blue.",
+  "steps": false,
+  "area": "billing",
+  "impact": 0.09
+}
+{
+  "id": "B-9",
+  "body": "Steps: click Export. It is very slow.",
+  "steps": true,
+  "area": "export",
+  "impact": 1.04
+}

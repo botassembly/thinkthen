@@ -1,0 +1,57 @@
+---
+// A page in a section with a side list: the list of the section's pages in
+// order and in groups, the page, and Previous and Next. On a phone the list
+// folds into a menu above the page. Beatles Bench and Bash techniques use it.
+//
+// `pages` is the section in order. Each page has a route, a title, a label,
+// and a group. The first page may have no group. `name` labels the list.
+import Base from './Base.astro';
+
+const { pages, page, name, repo } = Astro.props;
+const at = pages.findIndex((p) => p.route === page.route);
+if (at < 0) throw new Error(`side page: ${page.route} is not in the ${name} list`);
+const prev = pages[at - 1];
+const next = pages[at + 1];
+const groups = [];
+for (const p of pages) {
+  const last = groups.at(-1);
+  if (last && last[0] === (p.group || null)) last[1].push(p);
+  else groups.push([p.group || null, [p]]);
+}
+---
+<Base title={page.title.replace(/\.$/, '')} description={page.description || page.title} repo={repo}>
+  <div class="bench">
+    <aside class="bench-side" aria-label={name}>
+      {groups.map(([group, list]) => (
+        <div class="bench-group">
+          {group && <div class="bench-group-name">{group}</div>}
+          <ul>
+            {list.map((p) => (
+              <li><a href={p.route} aria-current={p.route === page.route ? 'page' : undefined} class={p.command ? 'cmd' : undefined}>{p.label}</a></li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </aside>
+    <div class="bench-main">
+      <details class="bench-menu">
+        <summary>{name}</summary>
+        {groups.map(([group, list]) => (
+          <div class="bench-group">
+            {group && <div class="bench-group-name">{group}</div>}
+            <ul>
+              {list.map((p) => (
+                <li><a href={p.route} aria-current={p.route === page.route ? 'page' : undefined} class={p.command ? 'cmd' : undefined}>{p.label}</a></li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </details>
+      <slot />
+      <nav class="bench-pager" aria-label="Previous and next">
+        {prev ? <a href={prev.route} class="prev"><span>Previous</span>{prev.title}</a> : <span />}
+        {next ? <a href={next.route} class="next"><span>Next</span>{next.title}</a> : <span />}
+      </nav>
+    </div>
+  </div>
+</Base>

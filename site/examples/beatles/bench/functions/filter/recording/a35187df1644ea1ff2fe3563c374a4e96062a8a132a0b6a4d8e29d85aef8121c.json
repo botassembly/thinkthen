@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Octopus's Garden","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The text is the title of a song by the Beatles. It appears on the album Abbey Road."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.75}},"usage":{"input_tokens":291,"output_tokens":21}}
+}

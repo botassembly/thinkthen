@@ -1,0 +1,12 @@
+{
+  "input": "Survey of 900 remote workers: output rose 4%.",
+  "value": true
+}
+{
+  "input": "Opinion essay on open-plan offices.",
+  "value": false
+}
+{
+  "input": "Title only: Remote work and output.",
+  "value": null
+}

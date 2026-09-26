@@ -31,7 +31,11 @@ jobs:
           cache-dependency-path: site/package-lock.json
       - run: npm ci
         working-directory: site
-      # Fails on a missing example, a cell with no status, or a broken link.
+      # The smoke run replays every example against the command built from
+      # this commit. The runner image carries Rust and jq.
+      - run: cargo build --release --locked --bin thinkthen
+      # Fails on a broken example rule, an example whose output changed, a
+      # missing caption, or a broken link.
       - run: npm run build
         working-directory: site
       - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5

@@ -1,0 +1,27 @@
+[
+  {
+    "id": "T-101",
+    "created": "2026-09-20",
+    "body": "The login page rejects my new password after a reset."
+  },
+  {
+    "id": "T-102",
+    "created": "2026-09-21",
+    "body": "The export button does nothing in Safari."
+  },
+  {
+    "id": "T-103",
+    "created": "2026-09-21",
+    "body": "How do I add a second admin?"
+  },
+  {
+    "id": "T-104",
+    "created": "2026-09-22",
+    "body": "The site has been down for our whole team since 9am."
+  },
+  {
+    "id": "T-105",
+    "created": "2026-09-22",
+    "body": "I was billed twice in September."
+  }
+]

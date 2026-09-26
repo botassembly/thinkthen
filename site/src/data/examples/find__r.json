@@ -1,8 +1,0 @@
-{
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "r",
-  "code": "library(thinkthen)\n\n# the one line that gives the refund deadline\npolicy <- c(\"Returns need the original receipt.\",\n  \"Refunds are issued within 30 days of purchase.\",\n  \"Shipping is free on orders over $50.\",\n  \"Gift cards cannot be exchanged for cash.\")\ntt_find(\"Which line gives the refund deadline?\", policy)$unit",
-  "function": "find",
-  "surface": "r"
-}

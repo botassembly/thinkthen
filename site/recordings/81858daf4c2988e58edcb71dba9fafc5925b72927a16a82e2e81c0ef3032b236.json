@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Export finished hours late again.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which team owns this?","criteria":{"billing":null,"platform":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"platform","confidence":0.54,"probabilities":{"platform":0.77,"billing":0.23}}},"usage":{"input_tokens":293,"output_tokens":32}}
+}
