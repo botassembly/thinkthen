@@ -43,7 +43,7 @@ const EXITS = [
   [3, 'unsure', 'A single piece of evidence under decide or choose is not sure. Under find --none, nothing fits.'],
   [4, 'broken', 'The backend failed, or sent a reply the adapter refused. Also a missing or empty key, and evidence past the token limit.'],
   [5, 'broken', 'A local failure: a file or a saved answer. Also an unreadable question file, a band in a question file for choose, tag, or filter, and a threshold in a rank question file.'],
-  [6, 'broken', 'annotate only. The run read all its input, and one or more questions failed. It prints no diagnostic. The result marks each failed question.'],
+  [6, 'broken', 'annotate or relate only. The run read all its input, and one or more questions failed. It prints no diagnostic. The result marks each failed question.'],
   [70, 'broken', 'A defect in the tool.'],
 ];
 
@@ -143,8 +143,8 @@ const COUNTS = [
       <tr><td><code>{flag}</code></td><td>{takes}</td><td>{does}</td><td><code>{dflt}</code></td></tr>
     ))}
   </table>
-  <p><code>--jobs N</code> sets the throttle. The throttle is the most requests in flight at once. The flag is not global. It runs from 1 to 32, defaults to 4, and it belongs to record mode. <code>annotate</code> also accepts it on one document. Every other function refuses it outside record mode.</p>
-  <p>On short records, the default of 4 can pass the vendor's rate limit. Set <code>--jobs 3</code> to stay under it.</p>
+  <p><code>--jobs N</code> sets the throttle. The throttle is the most requests in flight at once. The flag is not global. It runs from 1 to 32, defaults to 4, and it belongs to record mode. <code>annotate</code> also accepts it on one document, and <code>relate</code> on its one set of names. Every other function refuses it outside record mode.</p>
+  <p>The hosted service allows 1,200 requests a minute. On short records, the default of 4 can pass that limit. Set <code>--jobs 3</code> to stay under it.</p>
   <p>Function-only flags: <code>--threshold</code>, <code>--true TEXT</code> and <code>--false TEXT</code> (<code>decide</code>, <code>filter</code>, <code>rank</code>), <code>--quiet</code> (<code>decide</code> and <code>choose</code>, one document only, and a usage error beside <code>--details</code>), <code>--raw</code> (<code>choose</code> only, refused under CSV and TSV), <code>--option LABEL=DESCRIPTION</code>, <code>--label LABEL=DESCRIPTION</code>, <code>--options POINTER</code> (<code>choose</code>, and it needs <code>--jsonl</code>), <code>--top N</code> (<code>rank</code>, a whole number of 1 or more), <code>--none</code> (<code>find</code>).</p>
 
   <h2>Framing a stream</h2>
@@ -176,7 +176,7 @@ const COUNTS = [
   <p>A record is capped at 16 MiB of encoded bytes. <code>find</code> reads at most 16 MiB of input in all. Invalid UTF-8 in a record is exit 5. An empty document is a usage error. An empty line or JSONL stream exits 0 with no output and no request.</p>
 
   <h2>Limits</h2>
-  <p>One whole request carries at most about 64,000 tokens, the questions included. The evidence in one request must fit in about 32,000 tokens. Both numbers are the model vendor's, from its published model card. They belong to the backend and not to the tool.</p>
+  <p>One whole request carries at most about 64,000 tokens, the questions included. The evidence in one request must fit in about 32,000 tokens. The vendor published both numbers on 2026-09-19 for its hosted service. They belong to the backend and not to the tool.</p>
   <p>Evidence past the token limit is refused and the command exits 4. Under <code>annotate</code> the questions and the evidence count together. A long question set can pass the limit on evidence that fits on its own. Fewer questions per file is the answer.</p>
 
   <h2>What one row looks like</h2>
@@ -261,7 +261,7 @@ const COUNTS = [
     <li>It may set <code>url</code>, <code>model</code>, <code>cache</code>, and a positive <code>cache_bytes</code>. Any other field is refused.</li>
     <li>The default is the cache on. <code>cache_bytes</code> defaults to 100,000,000 allocated bytes. It is the size <code>cache prune</code> trims to. <code>status</code> shows it as <code>cache_prune_target_bytes</code>.</li>
   </ul>
-  <p>Precedence everywhere: the command line, then the question file, then the default. A typed value replaces the file's value. A typed list replaces the file's whole list and never merges.</p>
+  <p>A typed list replaces a question file's whole list and never merges. The <a href="/install/settings/">settings page</a> gives the order in which values win.</p>
 
   <h2>Question files</h2>
   <p>A question file holds one saved question. Write <code>@FILE</code> in place of the question words. A question set for <code>annotate</code> holds many questions. The <a href="/functions/question-file/">question file page</a> carries the keys and the exit codes.</p>

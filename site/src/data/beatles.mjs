@@ -51,7 +51,7 @@ const ARTICLES = {
     goal: "Jev reads a text and a question and returns a probability for every answer.",
     idea: [
       "Jev is the model behind ThinkThen, a System One model from TypeSafe. It reads a text and a question and returns a probability for every answer. It writes no text, and you train nothing.",
-      "Roger Bannister's mile set a standard for runners. Jev sets one for code.",
+      "Roger Bannister's mile set a standard for runners. On Beatles Bench, Jev's median answer took 0.21 seconds, and a thousand answers cost 0.015 dollars.",
     ],
     credit: `Roger Bannister photo: 6 May 1954, public domain in the US, via Wikimedia Commons. ${FACES}`,
     see: {
@@ -164,7 +164,7 @@ const ARTICLES = {
 
   find: {
     title: "find picks one from many.",
-    goal: "find always names one line, and its probability says how much to trust the pick.",
+    goal: "Without `--none`, find names one line, and its probability says how much to trust the pick.",
     idea: [
       "`find` reads every line together and picks the one that answers the question. Each line sees the others. An answer can depend on the whole set.",
     ],
@@ -174,7 +174,7 @@ const ARTICLES = {
     },
     headings: { '2-details': "Read the number" },
     lesson: "Love Me Do came out first, and the pick is right at 0.63. Please Please Me comes next at 0.27.",
-    takeaway: "find always names a line. Read its probability before you trust it.",
+    takeaway: "Without `--none`, find names a line. Read its probability before you trust it.",
     link: tree('find'),
   },
 
@@ -268,7 +268,7 @@ const ARTICLES = {
     label: "What Jev knows",
     goal: "Jev knows facts that no word in the text gives away, and search has nothing to match.",
     idea: [
-      "Search matches words. Jev knows facts. On the bench's Beatles questions, Jev gets more right from memory than vector search does. A large chat model gets more right still.",
+      "Search matches words. Jev knows facts. On the bench's 1,313 Beatles questions, Jev gets about two in three right from memory. The best vector search gets 38%, and a random guess gets 31%. GLM-5.3 Flash, a large chat model, gets 96%.",
       "No song title below holds the name Paul McCartney. Search has nothing to match.",
     ],
     see: {
@@ -287,8 +287,8 @@ const ARTICLES = {
     label: "Blind spots",
     goal: "Jev misses obscure facts, and a low probability is how it says so.",
     idea: [
-      "Jev's memory fades on obscure facts. It gets more right on the songs most viewed on Wikipedia than on the least viewed. Tricky wording trips it. Two hops are hard. Jev can know the release dates of two songs and still miss whether they came out in the same month.",
-      "Nothin' Shakin' is an obscure song, and George sings it. The slide shows the bench run. The example below asks again, and its numbers differ a little.",
+      "Jev's memory fades on obscure facts. It gets 73% of the questions about the most viewed quarter of songs on Wikipedia right, and 49% about the least viewed. Tricky wording trips it. It gets 70% of the plain control questions and 50% of the word traps. Two hops are hard. On 26 questions, Jev knew the month a song came out and the month of an event. It still missed 13 when asked whether the two fell in the same month.",
+      "The slide shows an earlier run, so its numbers differ from the ones here. Nothin' Shakin' is an obscure song, and George sings it. The slide puts John at 0.38. The example below asks again and puts John at 0.34.",
     ],
     see: {
       '1-choose': "Jev leans to John at 0.34. Ringo is close at 0.32. George gets 0.14.",
@@ -306,7 +306,7 @@ const ARTICLES = {
     goal: "Putting the facts in the text fixes a sure miss that no bar can fix.",
     idea: [
       "Give Jev the facts in the text. Look up the record, put it in front of the question, and ask. We call it retrieval-augmented decisions.",
-      "On questions Jev mostly missed from memory, the song catalog in the text turned most answers right. Context costs input tokens. Here the call reads 291 input tokens from memory and 368 with the entry.",
+      "The bench drew 196 questions, mostly from Jev's misses. From memory, Jev got 68 right. With the song catalog in the text, it got 184. Context costs input tokens. Here the call reads 291 input tokens from memory and 368 with the entry.",
     ],
     see: {
       '1-memory': "From memory, Jev is sure A Day in the Life is on Abbey Road.",
@@ -324,7 +324,7 @@ const ARTICLES = {
     goal: "Any server with Jev's interface can answer, and a bar must be tuned again on the new model.",
     idea: [
       "Any server with the same interface as Jev can answer. Name it with `--url`.",
-      "`thinkthen check` sends a few fixed requests to check that a server works. With `--dry-run`, it prints its plan and sends nothing.",
+      "`thinkthen check` sends four fixed requests to check that a server works. With `--dry-run`, it prints its plan and sends nothing.",
     ],
     see: {
       '1-check': "The check names the address and the model it would ask.",

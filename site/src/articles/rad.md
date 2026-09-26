@@ -5,7 +5,7 @@ author: Ian Maurer
 date: "2026-09-25"
 draft: true
 goal: "Show that putting the facts in the text turns a model's wrong answers into right ones."
-blurb: "Your data sits in no model's memory. Put the facts in the text, then ask the model to decide. On Beatles questions Jev missed from memory, the song catalog turned most answers right."
+blurb: "Your data sits in no model's memory. Put the facts in the text, then ask the model to decide. On 196 Beatles questions, drawn mostly from Jev's misses, the song catalog raised the right answers from 68 to 184."
 ---
 
 Your own data sits in no model's memory. Your customers, your contracts, your patients: no model read them. So hand the model the facts in the text, and then ask it to decide. I call that retrieval-augmented decisions, or RAD.
@@ -14,7 +14,7 @@ The idea borrows from retrieval-augmented generation, or RAG. RAG finds the righ
 
 ## What Jev knows from memory
 
-We built Beatles Bench to find out what Jev knows. Jev is TypeSafe's small, fast model. Every answer on the bench comes from Wikipedia and Wikidata. From memory, Jev gets more of the Beatles questions right than vector search does. A big chat model gets more right, and it takes far longer to answer.
+We built Beatles Bench to find out what Jev knows. Jev is TypeSafe's model. A script set every right answer on the bench from Wikipedia and Wikidata. From memory, Jev gets 67% of the 1,313 Beatles questions right. The best vector search gets 38%. GLM-5.3 Flash, a large chat model, gets 96%. Its median answer takes 8.24 seconds, and Jev's takes 0.21. The [full results](https://github.com/botassembly/beatles-bench/blob/main/reports/results.md) give each run.
 
 Jev knows the famous facts. It misses the fine ones: a year, a first album, which of two songs runs longer. Ask it whether A Day in the Life is on Abbey Road. Jev says yes at 0.94. That is wrong.
 
@@ -26,15 +26,13 @@ Put the song's catalog entry in front of the question and ask again. The entry n
 
 <!-- example: beatles/rad/2-context -->
 
-The bench asked the same way at scale. It took questions Jev had mostly missed and asked each one twice. The first time, Jev answered from memory. The second time, the whole song catalog sat in front of the question, one line per song, with its singer, writers, length, and release date. The catalog turned most of the misses right.
+The bench asked the same way at scale. It drew 196 questions, mostly from Jev's misses, and asked each one twice. The first time, Jev answered from memory. The second time, the whole song catalog sat in front of the question, one line per song, with its singer, writers, length, and release date. From memory, Jev got 68 right. With the catalog, it got 184, in the [run of 2026-09-26](https://github.com/botassembly/beatles-bench#results).
 
-The catalog broke an answer on "The Ballad of John and Yoko". Jev read the title and said two Beatles share the lead. The line says Lennon. The title names two people. That may have fooled it.
+The catalog broke an answer on "The Ballad of John and Yoko". Asked whether two Beatles share the lead, Jev said no from memory, and that is right. With the catalog, it said yes at 0.82. The line says Lennon. The title names two people. That may have fooled it.
 
 ## What it costs
 
-Context costs input tokens. From memory, the call above reads 291 input tokens. With the one entry, it reads 368. The whole catalog costs far more.
-
-You rarely need the whole catalog. Send the one entry the question is about.
+Context costs input tokens. From memory, the call above reads 291 input tokens. With the one entry, it reads 368. The whole catalog of 306 songs took a median of 12,214 input tokens a call. Send the one entry the question is about.
 
 ## What I don't know
 

@@ -427,7 +427,7 @@ export const SURFACES = [
     unsureWord: 'None',
     install: [['pip install thinkthen[polars]', null]],
     particular: [
-      'Rust reads the column where it sits. There is no copy and no Python loop.',
+      'A whole column goes to the engine in one call.',
       '`on=` names the column the questions read.',
     ],
   },
@@ -438,7 +438,7 @@ export const SURFACES = [
     unsureWord: 'null',
     install: [['npm install thinkthen', null], ['pnpm add thinkthen', null], ['bun add thinkthen', null]],
     particular: [
-      'An AbortSignal cancels a batch and stops its bill.',
+      'An AbortSignal cancels the call, and the promise rejects at once.',
       'Every call returns a promise. An array crosses once.',
     ],
   },
@@ -474,9 +474,9 @@ export const SURFACES = [
   {
     slug: 'c', name: 'C', deckHeading: 'C',
     lang: 'c', tab: 'Rust',
-    blurb: 'One header and one library. Bind ThinkThen to any language.',
+    blurb: 'One header over a shared or a static library. Bind ThinkThen to any language that can call C.',
     unsureWord: 'an outcome of THINKTHEN_UNSURE',
-    install: [['thinkthen.h + libthinkthen', 'One archive per platform, with the header, both libraries, and a .pc file.']],
+    install: [['thinkthen.h + libthinkthen', 'The release archive holds the header, the shared library, and the static library.']],
     particular: [
       'Every call returns 0 or an error kind.',
       'The answer lands in a struct: the outcome and its probability.',
@@ -508,7 +508,7 @@ export const SURFACES = [
     install: [['CREATE EXTENSION thinkthen;', null]],
     particular: [
       'A question file carries a band. The not-sure rows come back NULL, and a person reads them.',
-      'pg_cancel_backend and statement_timeout stop a query and its bill.',
+      'pg_cancel_backend and statement_timeout stop a call within 50 ms. A request already sent still completes and is billed.',
     ],
   },
 ];
