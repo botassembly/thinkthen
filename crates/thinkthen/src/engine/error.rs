@@ -42,6 +42,8 @@ pub(crate) enum Error {
     Status(u16),
     /// Status 400 whose body named `max_tokens_exceeded`. It keeps no body byte.
     TokenLimit,
+    /// The reply passed its request's limit of this many bytes and was not kept.
+    ReplyTooLarge(u64),
     Reply(DecodeError),
     ReplayMiss(String),
     Entry(String, String),
@@ -105,6 +107,7 @@ impl Error {
             Self::Transport(_)
             | Self::Status(_)
             | Self::TokenLimit
+            | Self::ReplyTooLarge(_)
             | Self::Reply(_)
             | Self::ModelsDiffer(_)
             | Self::UsageOverflow
@@ -152,6 +155,13 @@ impl Kind {
             Self::Defect => "defect",
         }
     }
+}
+
+/// The sentence a reply past its request's limit earns, in the command and the library.
+pub(crate) fn reply_too_large(limit: u64) -> String {
+    format!(
+        "the backend's reply passed this request's limit of {limit} bytes, so the answer was not kept; the request was not sent again"
+    )
 }
 
 impl From<DecodeError> for Error {

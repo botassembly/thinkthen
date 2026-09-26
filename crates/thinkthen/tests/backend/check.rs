@@ -347,3 +347,40 @@ fn the_report_names_the_model_asked_the_model_sent_and_the_model_each_reply_name
     ];
     assert_eq!(models(&output), (header.map(str::to_owned).to_vec(), other));
 }
+
+/// Ticket 0132: a reply over its limit fails its probe, and the check goes on.
+#[test]
+fn a_reply_over_its_limit_fails_its_probe_and_the_check_goes_on() {
+    let limits = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let seen = std::sync::Arc::clone(&limits);
+    let listener = Listener::answering(move |body| {
+        let limit = crate::resend::limit(body);
+        seen.lock()
+            .expect("limits")
+            .push(crate::resend::past(limit));
+        crate::resend::padded(r#"{"model":"jev-latest","answers":{}}"#, limit + 1)
+    })
+    .expect("listener");
+    let output = check(&["--url", listener.base()], &[("THINKTHEN_API_KEY", KEY)]);
+    let said = limits.lock().expect("limits").clone();
+    assert_eq!(
+        said.len(),
+        4,
+        "{}{}",
+        text(&output.stdout),
+        text(&output.stderr)
+    );
+    let report = format!(
+        "url {}/systemone\nprovider systemone\nmodel asked unspecified\nmodel sent jev-latest\n\
+        ok connection\nok key\nok endpoint\n\
+        critical noul: {}\ncritical choice: {}\ncritical score: {}\ncritical mixed: {}\n\
+        unchecked usage\ncritical 4, warning 0\n",
+        listener.base(),
+        said[0],
+        said[1],
+        said[2],
+        said[3]
+    );
+    assert_eq!(text(&output.stdout), report);
+    assert_eq!(output.status.code(), Some(4));
+}
