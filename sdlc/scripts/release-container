@@ -16,8 +16,8 @@ REPO=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 mkdir -p -- "$1/cache" "$2"
 WORK=$(CDPATH='' cd -- "$1" && pwd) OUT=$(CDPATH='' cd -- "$2" && pwd)
 # Each run builds in its own mktemp folder, mounted as /work, and removes it at exit.
-RUN=$(mktemp -d "$WORK/run.XXXXXX")
-trap 'rm -rf -- "$RUN"' EXIT
+. "$REPO/sdlc/scripts/scratch.sh"
+scratch_dir RUN "$WORK/run.XXXXXX"
 mkdir -p "$RUN/src" "$RUN/out" "$RUN/home/.cargo/registry" "$RUN/cache"
 git -C "$REPO" archive HEAD | tar -x -C "$RUN/src"
 set -- --rm --user "$(id -u):$(id -g)" -v "$RUN:/work" -v "$WORK/cache:/work/cache" -e HOME=/work/home
