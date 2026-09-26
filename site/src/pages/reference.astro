@@ -3,23 +3,40 @@
 // writing a pipeline.
 import Base from '../layouts/Base.astro';
 import { CODE_FUNCTIONS } from '../data/catalog.mjs';
+import { setting } from '../lib/settings-table.mjs';
 
 // Every row on this page comes from specification/. Nothing
 // here is an example. The runs live on the function pages and the tutorial.
+// Every default, range and allowed value comes from
+// specification/settings.md through setting(). The address stays typed:
+// the table gives its default only as "the built-in address", and its
+// allowed values name "the backend rule", which a reader cannot follow.
+const lower = (s) => s.charAt(0).toLowerCase() + s.slice(1);
+const takes = (name) => lower(setting(name).allowed);
+const dflt = (name) => lower(setting(name).default);
+const cutOn = (fn) => setting('Threshold').defaultOn(fn);
+const noCut = (fn) => (cutOn(fn) === 'none' ? 'n/a' : cutOn(fn));
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+const frameOn = (fn, rest) => setting('Framing').defaultOn(fn, { rest });
+const CUT = setting('Threshold').bounds;
+const count = (name, noun) => `${setting(name).range.min} to ${setting(name).range.max} ${noun}`;
+const THROTTLE = setting('Throttle');
+const PRUNE = setting('Prune target');
+const pruneKey = PRUNE.surface('Configuration file');
 
 const GLOBAL = [
-  ['--details', 'none', 'Prints the whole result object in place of the bare value.', 'off'],
-  ['--dry-run', 'none', 'Prints the plan and sends nothing. It reads no key. In record mode it prints the plan for the first record and stops.', 'off'],
+  ['--details', 'none', 'Prints the whole result object in place of the bare value.', dflt('Details')],
+  ['--dry-run', 'none', 'Prints the plan and sends nothing. It reads no key. In record mode it prints the plan for the first record and stops.', dflt('Dry run')],
   ['--url BASE', 'an address', 'The backend base address. The tool posts to BASE/systemone. It outranks THINKTHEN_BASE_URL.', 'https://api.typesafe.ai/v1'],
-  ['--model NAME', 'a name', 'The model the request carries. This is how a run is pinned to one version.', 'jev-latest'],
-  ['--timeout SECONDS', 'a whole number above 0', 'Covers one attempt, connect to last byte. 0 is a usage error.', '30'],
-  ['--max-retries N', 'a whole number', 'How many times a retried status is sent again. A transport failure is never sent again.', '2'],
-  ['--record DIR', 'a folder', 'Calls the backend and writes each exchange into DIR. The folder is created when absent.', 'off'],
-  ['--replay DIR', 'a folder', 'Answers from DIR alone. No connection and no key. A missing entry is exit 5.', 'off'],
-  ['--cache DIR', 'a folder', 'Exactly --record DIR --replay DIR. Beside either of those it is a usage error.', 'off'],
-  ['--no-cache', 'none', 'Turns off the platform cache for one run, both lookup and writing. It never turns off usage counting.', 'the cache is on'],
-  ['--profile FILE', 'a JSON file', 'Applies local byte and question limits before a request leaves, and names the profile in use. It selects neither address nor model.', 'none'],
-  ['--input FILE', 'a path', 'Reads the evidence from a file instead of standard input. It names a path. It never names a framing.', 'standard input'],
+  ['--model NAME', takes('Model'), 'The model the request carries. This is how a run is pinned to one version.', setting('Model').default],
+  ['--timeout SECONDS', takes('Timeout'), 'Covers one attempt, connect to last byte. 0 is a usage error.', setting('Timeout').number],
+  ['--max-retries N', takes('Retries'), 'How many times a retried status is sent again. A transport failure is never sent again.', setting('Retries').default],
+  ['--record DIR', takes('Recording'), 'Calls the backend and writes each exchange into DIR. The folder is created when absent.', dflt('Recording')],
+  ['--replay DIR', takes('Recording'), 'Answers from DIR alone. No connection and no key. A missing entry is exit 5.', dflt('Recording')],
+  ['--cache DIR', takes('Recording'), 'Exactly --record DIR --replay DIR. Beside either of those it is a usage error.', dflt('Recording')],
+  ['--no-cache', 'none', 'Turns off the platform cache for one run, both lookup and writing. It never turns off usage counting.', dflt('Answer cache')],
+  ['--profile FILE', takes('Backend profile'), 'Applies local byte and question limits before a request leaves, and names the profile in use. It selects neither address nor model.', dflt('Backend profile')],
+  ['--input FILE', takes('Input file'), 'Reads the evidence from a file instead of standard input. It names a path. It never names a framing.', dflt('Input file')],
 ];
 
 const FRAMING = [
@@ -31,9 +48,9 @@ const FRAMING = [
 ];
 
 const FRAMING_BY_FN = [
-  ['decide, choose, tag, score, annotate', 'One document by default. All four framing flags are accepted.'],
-  ['filter, rank', 'Lines by default, or JSON Lines when a pointer is given. All four framing flags are accepted. One document is not a stream.'],
-  ['find', '--lines by default, or --jsonl. CSV and TSV are refused as unexpected arguments.'],
+  ['decide, choose, tag, score, annotate', `${cap(frameOn('decide', true))} by default. All four framing flags are accepted.`],
+  ['filter, rank', `${cap(frameOn('filter'))} by default, or JSON Lines when a pointer is given. All four framing flags are accepted. One document is not a stream.`],
+  ['find', `--${frameOn('find')} by default, or --jsonl. CSV and TSV are refused as unexpected arguments.`],
 ];
 
 const EXITS = [
@@ -43,14 +60,14 @@ const EXITS = [
   [3, 'unsure', 'A single piece of evidence under decide or choose is not sure. Under find --none, nothing fits.'],
   [4, 'broken', 'The backend failed, or sent a reply the adapter refused. Also a missing or empty key, and evidence past the token limit.'],
   [5, 'broken', 'A local failure: a file or a saved answer. Also an unreadable question file, a band in a question file for choose, tag, or filter, and a threshold in a rank question file.'],
-  [6, 'broken', 'annotate only. The run read all its input, and one or more questions failed. It prints no diagnostic. The result marks each failed question.'],
+  [6, 'broken', 'annotate or relate only. The run read all its input, and one or more questions failed. It prints no diagnostic. annotate marks each failed question in its result. relate prints only the edges that succeeded.'],
   [70, 'broken', 'A defect in the tool.'],
 ];
 
 const ENVS = [
-  ['THINKTHEN_API_KEY', 'The key. No option names another variable. Absent or empty is exit 4, and an empty variable counts as absent.', 'none; a live call needs it'],
+  ['THINKTHEN_API_KEY', 'The key. No option names another variable. Absent or empty is exit 4, and an empty variable counts as absent.', dflt('Key')],
   ['THINKTHEN_BASE_URL', 'The base address. --url outranks it. Empty counts as absent.', 'https://api.typesafe.ai/v1'],
-  ['THINKTHEN_CACHE', 'Selects another folder for the platform cache. It never moves the usage folder.', 'the platform cache path'],
+  ['THINKTHEN_CACHE', 'Selects another folder for the platform cache. It never moves the usage folder.', dflt('Answer cache')],
   ['XDG_CACHE_HOME', 'The root for the cache and the usage folder. It counts only when absolute.', '$HOME/.cache on Linux'],
   ['XDG_CONFIG_HOME', 'The root for config.json. It counts only when absolute.', '$HOME/.config on Linux'],
   ['HOME', 'The fallback root for the cache, the usage totals, and the configuration. It counts only when absolute.', 'none'],
@@ -90,12 +107,12 @@ const BARE = [
 ];
 
 const COUNTS = [
-  ['decide', 'none', 'A cut or a band. decide is the one function that takes both.', '0.5'],
-  ['choose', '2 to 255 options', 'A cut only. A band is a usage error.', 'none; the winning label comes back'],
-  ['tag', '1 to 20 labels', 'A cut only, applied to each label on its own. A band is refused.', '0.5'],
-  ['score', '2 to 10 levels, lowest first', 'None. score has no threshold.', 'n/a'],
-  ['filter', 'none', 'A cut only. A band is exit 2 from the command line and exit 5 from a question file.', '0.5'],
-  ['rank', 'none', 'None. A threshold is refused in both homes.', 'n/a'],
+  ['decide', 'none', 'A cut or a band. decide is the one function that takes both.', cutOn('decide')],
+  ['choose', count('Options', 'options'), 'A cut only. A band is a usage error.', `${cutOn('choose')}; the winning label comes back`],
+  ['tag', count('Labels', 'labels'), 'A cut only, applied to each label on its own. A band is refused.', cutOn('tag')],
+  ['score', `${count('Levels', 'levels')}, lowest first`, 'None. score has no threshold.', noCut('score')],
+  ['filter', 'none', 'A cut only. A band is exit 2 from the command line and exit 5 from a question file.', cutOn('filter')],
+  ['rank', 'none', 'None. A threshold is refused in both homes.', noCut('rank')],
   ['find', '2 to 255 units, or 2 to 254 with --none', 'None.', 'n/a'],
   ['annotate', 'a question set file', 'Each question carries its own. A top-level threshold applies to every decide question that names none.', 'per question'],
 ];
@@ -128,11 +145,11 @@ const COUNTS = [
   <p>With p as the probability of yes:</p>
   <table>
     <tr><th>Form</th><th>Accepted</th><th>Yes</th><th>No</th><th>Not sure</th></tr>
-    <tr><td>none given</td><td></td><td>p ≥ 0.5</td><td>p &lt; 0.5</td><td>never</td></tr>
-    <tr><td><code>--threshold T</code></td><td>0 &lt; T ≤ 1</td><td>p ≥ T</td><td>p &lt; T</td><td>never</td></tr>
-    <tr><td><code>--threshold LOW:HIGH</code></td><td>0 ≤ LOW &lt; HIGH ≤ 1</td><td>p ≥ HIGH</td><td>p &lt; LOW</td><td>LOW ≤ p &lt; HIGH</td></tr>
+    <tr><td>none given</td><td></td><td>p ≥ {cutOn('decide')}</td><td>p &lt; {cutOn('decide')}</td><td>never</td></tr>
+    <tr><td><code>--threshold T</code></td><td>{CUT.above} &lt; T ≤ {CUT.atMost}</td><td>p ≥ T</td><td>p &lt; T</td><td>never</td></tr>
+    <tr><td><code>--threshold LOW:HIGH</code></td><td>{CUT.above} ≤ LOW &lt; HIGH ≤ {CUT.atMost}</td><td>p ≥ HIGH</td><td>p &lt; LOW</td><td>LOW ≤ p &lt; HIGH</td></tr>
   </table>
-  <p>The high side is inclusive. A probability exactly at <code>LOW</code> is not sure. A cut of 0 is refused. A band low of 0 is accepted. <code>--threshold 0.5</code> and no threshold name the same rule. A percent such as <code>90</code>, a reversed band, an empty side, and a number that is not finite are all usage errors before any request.</p>
+  <p>The high side is inclusive. A probability exactly at <code>LOW</code> is not sure. A cut of 0 is refused. A band low of 0 is accepted. <code>--threshold {cutOn('decide')}</code> and no threshold name the same rule. A percent such as <code>90</code>, a reversed band, an empty side, and a number that is not finite are all usage errors before any request.</p>
   <p>The cut applies to the probability of yes on <code>decide</code> and on each record under <code>filter</code>, to the winning option's probability on <code>choose</code>, and to each label on its own under <code>tag</code>.</p>
 
   <h2>Global flags</h2>
@@ -143,9 +160,9 @@ const COUNTS = [
       <tr><td><code>{flag}</code></td><td>{takes}</td><td>{does}</td><td><code>{dflt}</code></td></tr>
     ))}
   </table>
-  <p><code>--jobs N</code> sets the throttle. The throttle is the most requests in flight at once. The flag is not global. It runs from 1 to 32, defaults to 4, and it belongs to record mode. <code>annotate</code> also accepts it on one document. Every other function refuses it outside record mode.</p>
-  <p>On short records, the default of 4 can pass the vendor's rate limit. Set <code>--jobs 3</code> to stay under it.</p>
-  <p>Function-only flags: <code>--threshold</code>, <code>--true TEXT</code> and <code>--false TEXT</code> (<code>decide</code>, <code>filter</code>, <code>rank</code>), <code>--quiet</code> (<code>decide</code> and <code>choose</code>, one document only, and a usage error beside <code>--details</code>), <code>--raw</code> (<code>choose</code> only, refused under CSV and TSV), <code>--option LABEL=DESCRIPTION</code>, <code>--label LABEL=DESCRIPTION</code>, <code>--options POINTER</code> (<code>choose</code>, and it needs <code>--jsonl</code>), <code>--top N</code> (<code>rank</code>, a whole number of 1 or more), <code>--none</code> (<code>find</code>).</p>
+  <p><code>--jobs N</code> sets the throttle. The throttle is the most requests in flight at once. The flag is not global. It runs from {THROTTLE.range.min} to {THROTTLE.range.max}, defaults to {THROTTLE.default}, and it belongs to record mode. <code>annotate</code> also accepts it on one document, and <code>relate</code> on its one set of names. Every other function refuses it outside record mode.</p>
+  <p>The vendor documents a limit of 1,200 requests a minute. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/records.md">records specification</a> holds the measured rates. On short records, the default of {THROTTLE.default} can pass that limit. Set <code>--jobs 3</code> to stay under it.</p>
+  <p>Function-only flags: <code>--threshold</code>, <code>--true TEXT</code> and <code>--false TEXT</code> (<code>decide</code>, <code>filter</code>, <code>rank</code>), <code>--quiet</code> (<code>decide</code> and <code>choose</code>, one document only, and a usage error beside <code>--details</code>), <code>--raw</code> (<code>choose</code> only, refused under CSV and TSV), <code>--option LABEL=DESCRIPTION</code>, <code>--label LABEL=DESCRIPTION</code>, <code>--options POINTER</code> (<code>choose</code>, and it needs <code>--jsonl</code>), <code>--top N</code> (<code>rank</code>, {takes('Top')}), <code>--none</code> (<code>find</code>).</p>
 
   <h2>Framing a stream</h2>
   <p>The four framing flags are mutually exclusive. The tool never guesses a framing from a filename.</p>
@@ -176,7 +193,7 @@ const COUNTS = [
   <p>A record is capped at 16 MiB of encoded bytes. <code>find</code> reads at most 16 MiB of input in all. Invalid UTF-8 in a record is exit 5. An empty document is a usage error. An empty line or JSONL stream exits 0 with no output and no request.</p>
 
   <h2>Limits</h2>
-  <p>One whole request carries at most about 64,000 tokens, the questions included. The evidence in one request must fit in about 32,000 tokens. Both numbers are the model vendor's, from its published model card. They belong to the backend and not to the tool.</p>
+  <p>One whole request carries at most about 64,000 tokens, the questions included. The evidence in one request must fit in about 32,000 tokens. The vendor published both numbers on 2026-09-19 for its hosted service. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/records.md">records specification</a> lists them. They belong to the backend and not to the tool.</p>
   <p>Evidence past the token limit is refused and the command exits 4. Under <code>annotate</code> the questions and the evidence count together. A long question set can pass the limit on evidence that fits on its own. Fewer questions per file is the answer.</p>
 
   <h2>What one row looks like</h2>
@@ -238,7 +255,7 @@ const COUNTS = [
   </table>
 
   <h2>The cache</h2>
-  <p>The cache is on by default. Ask the same question of the same evidence again and the tool reads the saved answer instead of sending a request.</p>
+  <p>The cache is {dflt('Answer cache').split(',')[0]} by default. Ask the same question of the same evidence again and the tool reads the saved answer instead of sending a request.</p>
   <ul>
     <li>One exchange per file, named <code>DIGEST.json</code>, schema <code>thinkthen.recording/1</code>, five fields in order: <code>schema</code>, <code>adapter</code>, <code>url</code>, <code>request</code>, <code>response</code>.</li>
     <li><code>DIGEST</code> is the SHA-256, in lowercase hex, of the adapter name, a newline, the address, a newline, and the request body exactly as the adapter encoded it. The same command finds the same entry.</li>
@@ -258,10 +275,10 @@ const COUNTS = [
   <ul>
     <li>Path: <code>$XDG_CONFIG_HOME/thinkthen/config.json</code>, then <code>$HOME/.config/thinkthen/config.json</code> on Linux and <code>$HOME/Library/Application Support/thinkthen/config.json</code> on macOS.</li>
     <li>Format: one JSON object with <code>"schema": "thinkthen.config/1"</code>.</li>
-    <li>It may set <code>url</code>, <code>model</code>, <code>cache</code>, and a positive <code>cache_bytes</code>. Any other field is refused.</li>
-    <li>The default is the cache on. <code>cache_bytes</code> defaults to 100,000,000 allocated bytes. It is the size <code>cache prune</code> trims to. <code>status</code> shows it as <code>cache_prune_target_bytes</code>.</li>
+    <li>It may set <code>url</code>, <code>model</code>, <code>cache</code>, and a positive <code>{pruneKey}</code>. Any other field is refused.</li>
+    <li>The default is the cache on. <code>{pruneKey}</code> defaults to {PRUNE.number} allocated bytes. It is the size <code>cache prune</code> trims to. <code>status</code> shows it as <code>cache_prune_target_bytes</code>.</li>
   </ul>
-  <p>Precedence everywhere: the command line, then the question file, then the default. A typed value replaces the file's value. A typed list replaces the file's whole list and never merges.</p>
+  <p>A typed list replaces a question file's whole list and never merges. The <a href="/install/settings/">settings page</a> gives the order in which values win.</p>
 
   <h2>Question files</h2>
   <p>A question file holds one saved question. Write <code>@FILE</code> in place of the question words. A question set for <code>annotate</code> holds many questions. The <a href="/functions/question-file/">question file page</a> carries the keys and the exit codes.</p>

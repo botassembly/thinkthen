@@ -32,6 +32,12 @@ SELECT id, a->>'team', (a->>'urgency')::float AS urgency
 FROM tickets, thinkthen_annotate('@form.json', body) AS a ORDER BY urgency DESC;
 ```
 
+## Run facts
+
+`thinkthen_details(question, evidence)` returns the command's `--details` line for one text as `jsonb`, schema `thinkthen.result/1`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.
+
+`thinkthen_usage()` returns this backend process's running totals of requests sent, cache answers and tokens.
+
 ## Settings
 
 | Setting | Who sets it | Meaning |

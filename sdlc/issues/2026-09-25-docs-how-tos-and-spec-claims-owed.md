@@ -1,6 +1,6 @@
 # Docs, how-tos, and spec claims owed
 
-Status: Open.
+Status: Open. Quick Fix qf-h1-h3-h6 settles claims 5 and 6, page 19, and the decision half of page 10.
 
 This issue merges the open documentation work from twelve older issues: `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, the how-to and verb-hint parts of `2026-09-25-release-and-install-for-0-1.md`, item 8 of the closed `closed/2026-09-21-where-a-user-could-lose-trust-a-first-list.md`, and the one remaining row of `2026-09-25-docs-how-tos-and-spec-claims-owed.md`. They belong together because each asks for words a user reads: a spec sentence, a help line, a message, or a page. Each item was checked against `demos/`, `specification/`, `README.md`, `site/`, and the planning pages on 2026-09-25 at main `44de5c8b`. Work that already landed is listed at the end. ADR 0018 fixes the `demos/` list, so a new page either amends that list or joins the site how-tos.
 
@@ -26,23 +26,11 @@ Fixed by ticket 0125, landed 2026-09-25 from branch `ticket/0125-audit-complete`
 
 ### 5. Three more spec numbers name no measuring record
 
-**Gap.** Found by experiment 218, wave 2, at main `20e9b8d4`. Item 3 fixed the README's 300 ms. The same rule catches three more:
-
-- `specification/annotate.md:106`: packed requests "used 20.8 times fewer billed input tokens", and billed input "fell from 915 tokens across three requests to 371". The page names no probe or record. `probes/annotate-0015/` may hold it.
-- `specification/threshold.md:43`: answers inside a band "flipping between identical runs 5% to 14% of the time", and outside it "0.5% to 2%". No record named. The same line calls the band "unresolved", which item 16 of the wording issue covers.
-- `demos/28-what-a-run-cost/README.md:53`: a case "still costs about 295 input tokens". The page replays its own recording, so the fix may be one clause that says so.
-
-**Fix.** Name the probe or record beside each number. Cut a number no record holds.
-
-Done when: each of the three lines names its record, or the number is gone.
+Fixed by Quick Fix qf-h1-h3-h6, 2026-09-26. `annotate.md` names the closed live-probe issue for 20.8 and `probes/annotate-0015/mixed-summary.json` for 915 and 371. `threshold.md` names section 5 of `sdlc/planning/design-study.md`. Demo 28 says the block above it measured 294.6 tokens a case. The word "unresolved" on `threshold.md` stays with item 16 of the wording issue.
 
 ### 6. recognize says an empty text dry run prints zero requests
 
-**Gap.** Found by experiment 218, wave 2, at main `3f7b51ac`. `specification/recognize.md:53` says "An empty text prints `"request_count":0` and `"requests":[]`". Ticket 0126 set the same rule. The command refuses instead: `printf '' | thinkthen recognize --kind 'PER=a person' --dry-run` exits 2 with `thinkthen: the evidence is empty or blank`, and a text of one space does the same. The live run refuses empty text the same way, so dry run and live agree. No test pins the zero-request plan. A script author who reads the page expects exit 0.
-
-**Fix.** Decide which is right. The refusal matches every other verb, so the likely fix is the page: drop the sentence, or say an empty text refuses at exit 2 as a live run does.
-
-Done when: the page and the command agree, and a dry-run test pins the empty-text row.
+Fixed by Quick Fix qf-h1-h3-h6, 2026-09-26. The page now says an empty or blank text exits 2 as a live run does. `spec/recognize.md` pins both texts under `--dry-run`.
 
 ## Pages owed for 0.1
 
@@ -88,11 +76,13 @@ Done when: one green page or site recipe splits a document into paragraphs and j
 
 ### 10. Skipping a bad record has no decision
 
-**Gap.** Item 8 of the closed trust list: one malformed line ends a long run, and a user will ask to skip it, write it to a side file, and go on. `specification/records.md:107` and `demos/12-keep-going/` say plainly what happens today, and `--cache` is the resume. `specification/roadmap.md:28` holds `--on-error continue` until "a demo over a large file where one bad record must not end the run". ADR 0008 item 5 keeps it on the roadmap. No record accepts or rejects the skip, and no page shows how to pre-check a file.
+The decision half is fixed by Quick Fix qf-h1-h3-h6, 2026-09-26. The roadmap row keeps `--on-error continue` on hold, dated, and says Ian can overturn it.
 
-**Fix.** The owner records the decision in the roadmap row. The recommendation: keep the hold, and add one step to `demos/12-keep-going/` or a site recipe that splits bad JSON lines to a side file with `jq -R 'fromjson? // empty'` before the run. Ian can overturn this and ask for `--on-error continue` in 0.1.
+Still owed: one page that shows how to set bad records aside before a run. The Quick Fix tried a step 5 in `demos/12-keep-going/`, and ADR 0016 refused it: the page reached 132 lines, 985 words, seven asserting blocks, and five steps. The page can be a site recipe for marketing or a new demo that amends ADR 0018's list. This `jq` split worked on `queue.jsonl` with a malformed line planted, and it sent only the good records to `decide`:
 
-Done when: the roadmap row names the decision and its date, and one page shows how to set bad records aside before a run.
+`jq -Rr 'def ok: (try fromjson catch null) | type == "object" and (.body | type) == "string"; select(ok | not)' queue.jsonl` prints the aside lines, and `select(ok)` prints the rest.
+
+Done when: one page shows how to set bad records aside before a run.
 
 ## Pages that can follow 0.1
 
@@ -162,11 +152,7 @@ Done when: `profiles/` holds one measured profile that names its record, and the
 
 ### 19. Two held flags need a written answer
 
-**Gap.** `specification/roadmap.md:25` holds `filter --invert` and tells users to word the question the other way. The 2026-09-20 survey found that a reworded question is a different measurement with a different threshold. Keeping records below a mark differs from keeping records above the mark of the opposite question. Outlier ranking and "more like these" want reference text beside the question. `--context` is held, and no page says whether `--true` and `--false` are the right home.
-
-**Fix.** Add the survey's argument to the `--invert` row and either keep the hold with a reason or admit the flag. Show the detour on a page: `decide --details` and `jq 'select(.answer.probability < 0.5)'`. Write one page that settles where reference text goes.
-
-Done when: the roadmap row answers the survey's argument, and one page shows where reference text goes.
+Fixed by Quick Fix qf-h1-h3-h6, 2026-09-26. The `--invert` row answers the survey: a reworded question is a different measurement, so the hold stands and `decide --details` with `jq` keeps the other side of the same question. The third example in `specification/filter.md` shows that detour. ADR 0048 item 11 settles where reference text goes: `--context FILE`, which the batching tickets build.
 
 ## Already done
 

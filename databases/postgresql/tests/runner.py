@@ -17,6 +17,7 @@ import os
 import pathlib
 import subprocess
 import sys
+import tempfile
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance" / "children"))
 from children import child_env  # noqa: E402  the shared helper, ticket 0127
@@ -100,15 +101,18 @@ def same(what, got, want):
         raise Failed(f"{what}: got {json.dumps(got)}, expected {json.dumps(want)}")
 
 
-def digest(url, request):
-    return hashlib.sha256(b"systemone\n" + url.encode() + b"\n" + request.encode()).hexdigest()
+def digest(address, request):
+    return hashlib.sha256(b"systemone\n" + address.encode() + b"\n" + request.encode()).hexdigest()
+
+
+def url(case):
+    return f"http://127.0.0.1:{os.environ['BPORT']}/case/{case['id']}/v1/systemone"
 
 
 def served(case):
-    url = f"http://127.0.0.1:{os.environ['BPORT']}/case/{case['id']}/v1/systemone"
     renamed = {}
     for exchange in case.get("exchanges", []):
-        renamed[digest(CANONICAL, exchange["request"])] = digest(url, exchange["request"])
+        renamed[digest(CANONICAL, exchange["request"])] = digest(url(case), exchange["request"])
     return renamed
 
 
@@ -128,8 +132,9 @@ def detailed(got, want):
     same(key, answer.get(key), wanted[key])
     if "level" in wanted:
         same("level", answer.get("level"), wanted["level"])
-    for key in ("model", "question_sha256", "requests"):
-        same(key, got["meta"].get(key), want["details"][key])
+    same("confidence", answer.get("confidence", "absent"), wanted.get("confidence", "absent"))
+    for key in ("model", "question_sha256", "requests", "usage", "requests_sent", "cached"):
+        same(key, got["meta"].get(key, "absent"), want["details"].get(key, "absent"))
 
 
 TYPED = {
@@ -151,19 +156,21 @@ def typed(verb, text):
 def single(case, success):
     want = success["answers"][0]
     question, evidence = lit(json.dumps(case["question"])), lit(case["exchanges"][0]["evidence"])
-    counters = success.get("counters")
-    if counters:  # first, while the case's cache folder is empty
-        usage = "SELECT requests_sent || ' ' || cache_answers FROM thinkthen_usage()"
-        calls = [f"SELECT 1 FROM thinkthen_details({question}, {evidence})"] * counters["calls"]
-        lines = psql(usage, *calls, usage).splitlines()
-        (sent0, cached0), (sent1, cached1) = map(int, lines[0].split()), map(int, lines[-1].split())
-        moved = {"calls": counters["calls"], "requests": sent1 - sent0, "cache_answers": cached1 - cached0}
-        same("counters", moved, counters)
     got = json.loads(psql(f"SELECT thinkthen_details({question}, {evidence})"))
     same("bare", got["value"], want["bare"])
     detailed(got, want)
+    same("url", got["meta"]["url"], url(case))
     bare = psql("SELECT " + TYPED[case["verb"]].format(q=question, e=evidence))
     same("typed", typed(case["verb"], bare), want["bare"])
+    counters = success.get("counters")
+    if counters:  # last, on an empty cache folder of their own
+        usage = "SELECT requests_sent || ' ' || cache_answers FROM thinkthen_usage()"
+        calls = [f"SELECT 1 FROM thinkthen_details({question}, {evidence})"] * counters["calls"]
+        with tempfile.TemporaryDirectory() as folder:
+            lines = psql(f"SET thinkthen.cache = {lit(folder)}", usage, *calls, usage).splitlines()
+        (sent0, cached0), (sent1, cached1) = map(int, lines[0].split()), map(int, lines[-1].split())
+        moved = {"calls": counters["calls"], "requests": sent1 - sent0, "cache_answers": cached1 - cached0}
+        same("counters", moved, counters)
 
 
 def many(case, success):

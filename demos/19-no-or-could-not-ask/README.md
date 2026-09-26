@@ -7,12 +7,11 @@ Verbs: `decide`
 Use this when something proposes a shell command and a script has to decide whether to run it. A no, an unclear answer, and a judge that could not be reached are three different things, and an `if` puts all three in the `else`. `case` keeps them apart, and only yes runs anything.
 
 ```bash
-set +e
-set -uo pipefail
+set -euo pipefail
 for proposed in proposed/list.txt proposed/fetch.txt proposed/wipe.txt; do
   thinkthen decide 'Does this command only read, and leave every file and every setting on the machine unchanged?' \
-    --threshold 0.1:0.8 --quiet --replay recording/ <"$proposed" 2>/dev/null
-  case $? in
+    --threshold 0.1:0.8 --quiet --replay recording/ <"$proposed" 2>/dev/null && rc=0 || rc=$?
+  case $rc in
     0) printf 'run\n' ;;
     1) printf 'hold: it changes something\n' ;;
     3) printf 'hold: unclear, ask a person\n' ;;
@@ -34,12 +33,10 @@ hold: it changes something"
 `--replay` answers from the folder alone. A question the folder never held is a local failure, exit 5, and it reaches the same `*` branch exit 4 does. A failure is never an answer about the command.
 
 ```bash
-set +e
-set -uo pipefail
+set -euo pipefail
 
 thinkthen decide 'Is this command reversible?' \
-  --threshold 0.1:0.8 --quiet --replay recording/ <proposed/wipe.txt 2>/dev/null
-code=$?
+  --threshold 0.1:0.8 --quiet --replay recording/ <proposed/wipe.txt 2>/dev/null && code=0 || code=$?
 case $code in
   0) printf 'run\n' ;;
   1|3) printf 'hold\n' ;;
@@ -78,8 +75,7 @@ The reversed wording, "Is this command dangerous?", makes no the permitting answ
 - **`set -e` ends the script on a no.** A bare `thinkthen decide` exits 1 on a no and 3 on an unresolved answer, and `set -o pipefail` carries the code out of a pipeline. The script below ends at the no, prints nothing, and leaves exit 1 behind.
 
 ```bash
-set +e
-set -uo pipefail
+set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
@@ -90,14 +86,14 @@ thinkthen decide 'Does this command only read, and leave every file and every se
 printf 'run\n'
 SCRIPT
 
-said=$(bash "$work/gate.sh" 2>/dev/null)
-printf 'rc=%s said=[%s]\n' "$?" "$said" | mustmatch "rc=1 said=[]"
+said=$(bash "$work/gate.sh" 2>/dev/null) && rc=0 || rc=$?
+printf 'rc=%s said=[%s]\n' "$rc" "$said" | mustmatch "rc=1 said=[]"
 ```
 
 Put the command in an `if`, a `case`, or a `&& rc=0 || rc=$?` list instead.
 
 - **Exit 1 and exit 4 both fail an `if`.** Exit 1 is a no about the evidence, while exit 4 and exit 5 say nothing about the command at all. Exit 2 is a usage error with no request sent, and exit 70 is a defect in the tool. Treat every code but 0 as a refusal.
-- **`case $?` reads the last command.** Put nothing between it and the `case`, not even a `printf`.
+- **`rc=$?` reads the last command.** Put nothing between the command and `|| rc=$?`.
 - **A failure message goes to standard error.** The blocks above send it to `/dev/null` to keep the output clean. A real gate lets it through, because it names what went wrong.
 - **Nothing here runs a command.** `thinkthen` moved an exit code, and the shell that reads it only prints.
 

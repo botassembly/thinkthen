@@ -14,6 +14,16 @@ use crate::public::error::Error;
 /// The largest budget a deadline takes: 4,294,967,295 seconds (ADR 0041).
 const MOST_SECONDS: u64 = 4_294_967_295;
 
+/// A number plain up to 20 characters, the width of `u64::MAX`, else as `1e300`.
+fn shown(value: f64) -> String {
+    let plain = value.to_string();
+    if plain.len() <= 20 {
+        plain
+    } else {
+        format!("{value:e}")
+    }
+}
+
 /// A cancel flag a caller may set from any thread.
 ///
 /// Every clone shares one flag. A call that observes it sends nothing new,
@@ -126,7 +136,8 @@ impl<'a> CallOptions<'a> {
         }
         let refused = || {
             Error::usage(format!(
-                "a deadline of {value} seconds is not -1, 0, or a positive budget of at most {MOST_SECONDS} seconds"
+                "a deadline of {} seconds is not -1, 0, or a positive budget of at most {MOST_SECONDS} seconds",
+                shown(value)
             ))
         };
         if !value.is_finite() || value < 0.0 {

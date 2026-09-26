@@ -8,10 +8,17 @@
 // The examples live in examples/beatles/<slug>/. Each runs in the Beatles
 // Bench folder examples/beatles/folders.json names for its page, and answers
 // from a saved recording. `see` gives the caption for each example and
-// `headings` the heading above it. Prose marks code with backticks.
+// `headings` the heading above it. `source` links the bench record behind a
+// number in the prose. Prose marks code with backticks.
+//
+// Links into the bench use paths on bench main. The bench history may be
+// squashed at launch, and a pinned commit would then stop resolving
+// (sdlc/issues/2026-09-26-the-beatles-bench-section-keeps-its-own-copy.md).
 
 export const REPO = 'https://github.com/botassembly/beatles-bench';
-const tree = (name) => `${REPO}/tree/main/functions/${name}`;
+const tree = (name) => `${REPO}/tree/main/examples/${name}`;
+// The bench folder that names a slide's numbers and their sources.
+const record = (name) => ({ text: `the bench's record for this slide`, href: tree(name) });
 
 export const GROUPS = [
   ['Start', ['strings', 'jev']],
@@ -51,9 +58,10 @@ const ARTICLES = {
     goal: "Jev reads a text and a question and returns a probability for every answer.",
     idea: [
       "Jev is the model behind ThinkThen, a System One model from TypeSafe. It reads a text and a question and returns a probability for every answer. It writes no text, and you train nothing.",
-      "Roger Bannister's mile set a standard for runners. Jev sets one for code.",
+      "Roger Bannister's mile set a standard for runners. On Beatles Bench, Jev's median answer took 0.21 seconds, and a thousand answers cost 0.015 dollars.",
     ],
     credit: `Roger Bannister photo: 6 May 1954, public domain in the US, via Wikimedia Commons. ${FACES}`,
+    source: record('jev'),
     see: {
       '1-choose': "Jev gives Ringo 0.84.",
       '2-bar': "A bar of 0.9 asks for more than 0.84. The answer is not sure.",
@@ -164,7 +172,7 @@ const ARTICLES = {
 
   find: {
     title: "find picks one from many.",
-    goal: "find always names one line, and its probability says how much to trust the pick.",
+    goal: "Without `--none`, find names one line, and its probability says how much to trust the pick.",
     idea: [
       "`find` reads every line together and picks the one that answers the question. Each line sees the others. An answer can depend on the whole set.",
     ],
@@ -174,7 +182,7 @@ const ARTICLES = {
     },
     headings: { '2-details': "Read the number" },
     lesson: "Love Me Do came out first, and the pick is right at 0.63. Please Please Me comes next at 0.27.",
-    takeaway: "find always names a line. Read its probability before you trust it.",
+    takeaway: "Without `--none`, find names a line. Read its probability before you trust it.",
     link: tree('find'),
   },
 
@@ -268,9 +276,10 @@ const ARTICLES = {
     label: "What Jev knows",
     goal: "Jev knows facts that no word in the text gives away, and search has nothing to match.",
     idea: [
-      "Search matches words. Jev knows facts. On the bench's Beatles questions, Jev gets more right from memory than vector search does. A large chat model gets more right still.",
+      "Search matches words. Jev knows facts. On the bench's 1,313 Beatles questions, Jev gets 67% right from memory. The best vector search gets 38%, and a random guess gets 31%. GLM-5.3 Flash, a large chat model, gets 96%.",
       "No song title below holds the name Paul McCartney. Search has nothing to match.",
     ],
+    source: record('what-jev-knows'),
     see: {
       '1-choose': "Jev picks d, I've Just Seen a Face, at 0.6.",
       '2-bar': "A bar of 0.7 turns the pick into not sure.",
@@ -287,9 +296,10 @@ const ARTICLES = {
     label: "Blind spots",
     goal: "Jev misses obscure facts, and a low probability is how it says so.",
     idea: [
-      "Jev's memory fades on obscure facts. It gets more right on the songs most viewed on Wikipedia than on the least viewed. Tricky wording trips it. Two hops are hard. Jev can know the release dates of two songs and still miss whether they came out in the same month.",
-      "Nothin' Shakin' is an obscure song, and George sings it. The slide shows the bench run. The example below asks again, and its numbers differ a little.",
+      "Jev's memory fades on obscure facts. It gets 73% of the questions about the most viewed quarter of songs on Wikipedia right, and 49% about the least viewed. Tricky wording trips it. It gets 70% of the plain control questions and 50% of the word traps. Two hops are hard. One kind of question asks whether a song came out the same month as another event. On 26 of them, Jev knew both facts on their own. It got the chained question right on only 13.",
+      "Nothin' Shakin' is an obscure song, and George sings it. Jev puts John at 0.34.",
     ],
+    source: record('catches'),
     see: {
       '1-choose': "Jev leans to John at 0.34. Ringo is close at 0.32. George gets 0.14.",
       '2-bar': "Under a bar of 0.5, the wrong pick becomes not sure.",
@@ -306,8 +316,9 @@ const ARTICLES = {
     goal: "Putting the facts in the text fixes a sure miss that no bar can fix.",
     idea: [
       "Give Jev the facts in the text. Look up the record, put it in front of the question, and ask. We call it retrieval-augmented decisions.",
-      "On questions Jev mostly missed from memory, the song catalog in the text turned most answers right. Context costs input tokens. Here the call reads 291 input tokens from memory and 368 with the entry.",
+      "The bench drew 196 questions, mostly from Jev's misses. From memory, Jev got 68 right. With the song catalog in the text, it got 184. Context costs input tokens. Here the call reads 291 input tokens from memory and 368 with the entry.",
     ],
+    source: record('open-book'),
     see: {
       '1-memory': "From memory, Jev is sure A Day in the Life is on Abbey Road.",
       '2-context': "With the catalog entry, the answer is no at 0.04.",
@@ -324,11 +335,12 @@ const ARTICLES = {
     goal: "Any server with Jev's interface can answer, and a bar must be tuned again on the new model.",
     idea: [
       "Any server with the same interface as Jev can answer. Name it with `--url`.",
-      "`thinkthen check` sends a few fixed requests to check that a server works. With `--dry-run`, it prints its plan and sends nothing.",
+      "`thinkthen check` sends four fixed requests to check that a server works. With `--dry-run`, it prints its plan and sends nothing.",
     ],
     see: {
       '1-check': "The check names the address and the model it would ask.",
     },
+    source: { text: 'the check specification', href: 'https://github.com/botassembly/thinkthen/blob/main/specification/check.md' },
     lesson: "A bar tuned on one model does not carry to another. Run `audit` again on your labeled records before you trust a new backend.",
     takeaway: "A new model needs its own bar.",
     link: REPO,

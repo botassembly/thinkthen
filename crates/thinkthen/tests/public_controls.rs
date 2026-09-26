@@ -93,6 +93,19 @@ fn deadline_numbers_follow_the_host_table_and_the_last_call_wins() {
         assert_eq!(kind(&result), Some(ErrorKind::Usage), "{value}");
         assert_eq!(message(result), refused(&value.to_string(), "seconds"));
     }
+    // A number longer than 20 characters prints in exponent form.
+    for (value, written) in [
+        (1e300, "1e300"),
+        (-1e-300, "-1e-300"),
+        (f64::MAX, "1.7976931348623157e308"),
+        (1e19, "10000000000000000000"),
+        (1e20, "1e20"),
+    ] {
+        assert_eq!(
+            message(none.deadline_seconds(value)),
+            refused(written, "seconds")
+        );
+    }
     for value in [-2, i64::MIN, 4_294_967_295_001, i64::MAX] {
         let result = none.deadline_millis(value);
         assert_eq!(kind(&result), Some(ErrorKind::Usage), "{value}");

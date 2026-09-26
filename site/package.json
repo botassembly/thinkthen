@@ -5,13 +5,14 @@
   "type": "module",
   "scripts": {
     "version-json": "node scripts/write-version.mjs",
-    "samples": "node scripts/check-samples.mjs",
+    "samples": "node scripts/named-answers.test.mjs && node scripts/check-samples.mjs",
     "smoke": "node scripts/smoke.mjs",
-    "build": "node scripts/write-version.mjs && node scripts/check-samples.mjs && node scripts/smoke.mjs && astro build && node scripts/emit-md.mjs && node scripts/check-settings.mjs && node scripts/check-links.mjs",
+    "build": "node scripts/write-version.mjs && node scripts/named-answers.test.mjs && node scripts/check-samples.mjs && node scripts/check-slides.mjs && node scripts/smoke.mjs && astro build && node scripts/emit-md.mjs && node scripts/check-settings.mjs && node scripts/check-links.mjs",
     "dev": "astro dev",
     "preview": "astro preview",
-    "check": "node scripts/check-samples.mjs && node scripts/smoke.mjs && node scripts/check-settings.mjs && node scripts/check-links.mjs",
-    "pull-bench": "node scripts/pull-bench.mjs"
+    "check": "node scripts/named-answers.test.mjs && node scripts/check-samples.mjs && node scripts/check-slides.mjs && node scripts/smoke.mjs && node scripts/check-settings.mjs && node scripts/check-links.mjs",
+    "pull-bench": "node scripts/pull-bench.mjs",
+    "export-slides": "node scripts/export-slides.mjs"
   },
   "dependencies": {
     "astro": "^5.14.1"

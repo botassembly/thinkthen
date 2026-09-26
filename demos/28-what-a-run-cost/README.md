@@ -50,7 +50,7 @@ jq -n --argjson usd_per_million_input 0.042 -f ../../transforms/cost/cost.jq \
   | mustmatch '{"tokens_per_case":294.6,"usd_per_100k_cases":1.237}'
 ```
 
-The messages in this case file run about twenty-five words, and a case still costs about 295 input tokens. The question and the wire shape are most of it, so a short message is not a cheap one, and doubling the length of the evidence does not double the bill.
+The messages in this case file run about twenty-five words. The block above measured 294.6 input tokens a case from `run-a.jsonl`. The question and the wire shape are most of it, so a short message is not a cheap one, and doubling the length of the evidence does not double the bill.
 
 ## A replayed row spent nothing
 

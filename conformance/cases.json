@@ -54,6 +54,12 @@
                   "probability": 0.99
                 },
                 "model": "jev-1.13.0",
+                "usage": {
+                  "input_tokens": 331,
+                  "output_tokens": 21
+                },
+                "requests_sent": 1,
+                "cached": false,
                 "question_sha256": "ef16533e8bf1fb5e4d35e95dc520b50729bbe78fe5d522eec2860c59c5b55c55",
                 "requests": [
                   "e8b7d68fe0567786d9905df174191873ff0876e0c56efc008ff7a07a4de45d3e"
@@ -107,6 +113,12 @@
                   "probability": 0.12
                 },
                 "model": "jev-latest",
+                "usage": {
+                  "input_tokens": 10,
+                  "output_tokens": 2
+                },
+                "requests_sent": 1,
+                "cached": false,
                 "question_sha256": "bae9964d34cd83033e692fd6f193bb1556d1c02d8bfb7f46633087561cbd2072",
                 "requests": [
                   "bbe29d955331951bd5a2185cf40d00fe6597c3aa974f3bcd6c535965ae1713c6"
@@ -160,6 +172,12 @@
                   "probability": 0.2
                 },
                 "model": "jev-latest",
+                "usage": {
+                  "input_tokens": 10,
+                  "output_tokens": 2
+                },
+                "requests_sent": 1,
+                "cached": false,
                 "question_sha256": "140d9dec19d7747dbc4cf3dc254dfb0e4b0eac5c0cd5426506eb0eb20789f3c3",
                 "requests": [
                   "bbe29d955331951bd5a2185cf40d00fe6597c3aa974f3bcd6c535965ae1713c6"
@@ -213,6 +231,12 @@
                   "probability": 0.8
                 },
                 "model": "jev-latest",
+                "usage": {
+                  "input_tokens": 10,
+                  "output_tokens": 2
+                },
+                "requests_sent": 1,
+                "cached": false,
                 "question_sha256": "140d9dec19d7747dbc4cf3dc254dfb0e4b0eac5c0cd5426506eb0eb20789f3c3",
                 "requests": [
                   "bbe29d955331951bd5a2185cf40d00fe6597c3aa974f3bcd6c535965ae1713c6"
@@ -268,6 +292,12 @@
                   "probability": 0.8
                 },
                 "model": "jev-latest",
+                "usage": {
+                  "input_tokens": 10,
+                  "output_tokens": 2
+                },
+                "requests_sent": 1,
+                "cached": false,
                 "question_sha256": "174ad0d7d96341bb9138854becc2a12fc74c7e6c24c76bf539c9b9b3c40bba95",
                 "requests": [
                   "ca294e1512c7552d5adba5f58d3e2c2c953a3c60c301b9502f3c53a5727d8a4e"
@@ -302,6 +332,7 @@
             "answers": {
               "q1": {
                 "type": "choice",
+                "confidence": 0.82,
                 "probabilities": {
                   "billing": 0.7,
                   "shipping": 0.2,
@@ -328,6 +359,7 @@
                 "answer": {
                   "kind": "choice",
                   "pick": "billing",
+                  "confidence": 0.82,
                   "probabilities": {
                     "billing": 0.7,
                     "shipping": 0.2,
@@ -335,6 +367,12 @@
                   }
                 },
                 "model": "jev-latest",
+                "usage": {
+                  "input_tokens": 10,
+                  "output_tokens": 2
+                },
+                "requests_sent": 1,
+                "cached": false,
                 "question_sha256": "39c6f9aaef9d3ec73970ec633a2e9523f1284cfa48653d3a471d031ecd6b7272",
                 "requests": [
                   "7324ede2d2b45971037b0d077970c9b2174f5a78a64d5af9cc7f7fcb46a53396"
@@ -402,6 +440,12 @@
                   }
                 },
                 "model": "jev-latest",
+                "usage": {
+                  "input_tokens": 10,
+                  "output_tokens": 2
+                },
+                "requests_sent": 1,
+                "cached": false,
                 "question_sha256": "42c99fda96d45979fc05396dbde3aea9b7b9abc467539f41c3346a721781e168",
                 "requests": [
                   "7324ede2d2b45971037b0d077970c9b2174f5a78a64d5af9cc7f7fcb46a53396"
@@ -469,6 +513,12 @@
                   }
                 },
                 "model": "jev-latest",
+                "usage": {
+                  "input_tokens": 10,
+                  "output_tokens": 2
+                },
+                "requests_sent": 1,
+                "cached": false,
                 "question_sha256": "fbf4692ef04c35c991711a75f585e670b3aefa39014eb42d557b399b401a7aab",
                 "requests": [
                   "7324ede2d2b45971037b0d077970c9b2174f5a78a64d5af9cc7f7fcb46a53396"
@@ -542,6 +592,12 @@
                   }
                 },
                 "model": "jev-latest",
+                "usage": {
+                  "input_tokens": 10,
+                  "output_tokens": 2
+                },
+                "requests_sent": 1,
+                "cached": false,
                 "question_sha256": "e324ee002c0e0bc1154b32b6a606f8903852f51b597e743e1512fc883e08c299",
                 "requests": [
                   "955fda95f45e3fdf6c40b82c731252d5795c83a86d3ebbb19e4ed2677dc231f8"
@@ -612,6 +668,12 @@
                   }
                 },
                 "model": "jev-latest",
+                "usage": {
+                  "input_tokens": 10,
+                  "output_tokens": 2
+                },
+                "requests_sent": 1,
+                "cached": false,
                 "question_sha256": "e324ee002c0e0bc1154b32b6a606f8903852f51b597e743e1512fc883e08c299",
                 "requests": [
                   "955fda95f45e3fdf6c40b82c731252d5795c83a86d3ebbb19e4ed2677dc231f8"
@@ -645,6 +707,7 @@
             "answers": {
               "q1": {
                 "type": "score",
+                "confidence": 0.74,
                 "probabilities": {
                   "0": 0.2,
                   "1": 0.6,
@@ -671,6 +734,7 @@
                 "answer": {
                   "kind": "score",
                   "level": "medium",
+                  "confidence": 0.74,
                   "probabilities": {
                     "low": 0.2,
                     "medium": 0.6,
@@ -678,6 +742,12 @@
                   }
                 },
                 "model": "jev-latest",
+                "usage": {
+                  "input_tokens": 10,
+                  "output_tokens": 2
+                },
+                "requests_sent": 1,
+                "cached": false,
                 "question_sha256": "a3d5a2fd4692aa7d687be18d8cb439f3297eb29e08c35837b524be21d73bee49",
                 "requests": [
                   "096ea040181c31eb05e9170408486ed3a63186692b9795cc32208a9b2668ff21"
@@ -717,10 +787,6 @@
                   "2": 0.7
                 }
               }
-            },
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
             }
           }
         }
@@ -744,6 +810,8 @@
                   }
                 },
                 "model": "jev-latest",
+                "requests_sent": 1,
+                "cached": false,
                 "question_sha256": "a3d5a2fd4692aa7d687be18d8cb439f3297eb29e08c35837b524be21d73bee49",
                 "requests": [
                   "096ea040181c31eb05e9170408486ed3a63186692b9795cc32208a9b2668ff21"
@@ -2678,6 +2746,12 @@
                   }
                 },
                 "model": "jev-latest",
+                "usage": {
+                  "input_tokens": 11,
+                  "output_tokens": 3
+                },
+                "requests_sent": 1,
+                "cached": false,
                 "question_sha256": "3a95e00d98cc509b71ac6c2b673f4cf0e87cc5a89cc0faa89f589f0e2a6d6623",
                 "requests": [
                   "5833970d6f68292d26f111ad51c28bca057f117fe426b47dd89756ccdcb4be8f"
@@ -2747,6 +2821,12 @@
                   }
                 },
                 "model": "jev-latest",
+                "usage": {
+                  "input_tokens": 18,
+                  "output_tokens": 4
+                },
+                "requests_sent": 1,
+                "cached": false,
                 "question_sha256": "d17cf2b3c253fabd1d4c6f8e87feb550bd30bc66b301ed63e06282c68caec0ec",
                 "requests": [
                   "fd9735eaeffbd1467a9c708127f81bb30b4e0873888c042dca2d4d4a25bde72a"
@@ -3431,6 +3511,12 @@
                   "probability": 0.97
                 },
                 "model": "jev-latest",
+                "usage": {
+                  "input_tokens": 10,
+                  "output_tokens": 2
+                },
+                "requests_sent": 1,
+                "cached": false,
                 "question_sha256": "63e13688fe4a206a50ba6821999be29937a88c59687337067d85cf854df9ebb3",
                 "requests": [
                   "550bdeef6e84b166b83d116cb30cd4745fb1fd77f98e546477349de3f41e2c27"
