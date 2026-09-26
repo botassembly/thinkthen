@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/cli/hint.rs crates/thinkthen/src/cli/mod.rs crates/t
 
 # 0153: Hints for a guessed verb, a table fed to `--jsonl`, and a second argument
 
-Status: ready. It waits for a fresh read-only design review. It builds only after ticket 0146 lands on main. Owner: Claude.
+Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. It builds only after ticket 0146 lands on main. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
