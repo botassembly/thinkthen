@@ -24,11 +24,10 @@ from children import child_env  # noqa: E402  the shared helper, ticket 0127
 
 CASES = pathlib.Path(__file__).resolve().parents[3] / "conformance" / "cases.json"
 CANONICAL = "https://api.typesafe.ai/v1/systemone"
-SQL_VERBS = "not run: SQL spells filter, rank, and find with WHERE and ORDER BY"
+SQL_VERBS = "not run: SQL spells filter and rank with WHERE and ORDER BY"
 NOT_RUN = {
     "23-cancelled-fault": "not run: SQL has no token; the R1-22 and R2-24 tests cover cancel",
     "25-defect-fault": "not run: no outside boundary reaches a defect; the panic-probe test covers XX000",
-    "18-annotate-two-groups": "not run: a SQL call's evidence is one whole text, and this case reads parts through `on`",
 }
 # The arm and server setting of each fault case; every other case runs on its own case arm.
 FAULTS = {
@@ -53,7 +52,9 @@ def load(path):
 def skipped(case):
     if case["id"] in NOT_RUN:
         return NOT_RUN[case["id"]]
-    if case["verb"] in ("filter", "rank", "find"):
+    if case["verb"] == "find":
+        return "not run: no SQL find function yet"
+    if case["verb"] in ("filter", "rank"):
         return SQL_VERBS
     return None
 
@@ -184,7 +185,7 @@ def annotated(case, success):
     question_set = lit(json.dumps(case["question_set"]))
     failed = 0
     for want in success["answers"]:
-        evidence = case["exchanges"][want["exchange"]]["evidence"]
+        evidence = json.dumps(case["record"]) if "record" in case else case["exchanges"][want["exchange"]]["evidence"]
         record = json.loads(psql(f"SELECT thinkthen_annotate({question_set}, {lit(evidence)})"))
         got = record.get(want["name"])
         failed += isinstance(got, dict) and "failed" in got

@@ -233,9 +233,11 @@ char *thinkthen_call(const thinkthen_engine *engine, const char *request_json);
  * key forms the question object, in the question file's own grammar, so
  * `{"choose": "Which team?", "options": ["billing", "other"],
  * "evidence": "..."}` asks one choose question. `filter` asks its text as
- * a decide question; `rank` and `find` take their text alone; `annotate`
- * carries the question set; `recognize` and `relate` carry `version` and
- * their section beside the verb.
+ * a decide question; `rank` takes its text alone; `find` takes its text
+ * and `"none": true` to offer a none candidate, so it may answer `null`;
+ * `annotate` carries the question set, and a member's `on` reads that
+ * part of each record as JSON text; `recognize` and `relate` carry
+ * `version` and their section beside the verb.
  *
  * The answer is the bare value the command prints: `true`, `false`, or
  * `null` for decide; a label or `null` for choose; a number for score; an

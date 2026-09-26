@@ -1,4 +1,4 @@
-Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review.
+Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review. Findings 1 and 2: ticket 0160 on `ticket/0160-the-answer-contract-holds`. Finding 2.1 for single question files: ticket 0159 on `ticket/0159-pin-the-default-model`. Both are ready for review.
 
 # Architect review 05: the question and answer contract
 

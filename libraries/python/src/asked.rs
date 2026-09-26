@@ -13,7 +13,7 @@ use thinkthen::{
     QuestionKind, RecognizedEntity, RelationRule,
 };
 
-use crate::raised;
+use crate::{raised, usage};
 
 /// A question under one cut, or a `decide` question under a band.
 #[derive(Clone, Debug, PartialEq)]
@@ -99,6 +99,18 @@ impl Question {
         };
         made.map(|question| Self(Asked::Plain(question)))
             .map_err(|error| raised(py, &error))
+    }
+
+    /// This find question with a `none` candidate beside the units.
+    fn _offering_none(&self, py: Python<'_>) -> PyResult<Self> {
+        match &self.0 {
+            Asked::Plain(question) => question
+                .clone()
+                .offering_none()
+                .map(|question| Self(Asked::Plain(question)))
+                .map_err(|error| raised(py, &error)),
+            Asked::Banded(_) => Err(usage(py, "only a find question offers none")),
+        }
     }
 
     /// What the question asks: `decide`, `choose`, `tag`, `score`, `rank`, or `find`.

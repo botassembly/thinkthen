@@ -25,7 +25,7 @@ tt_filter_places <- function(question, records, deadline) .Call(wrap__tt_filter_
 
 tt_rank_all <- function(question, records, deadline) .Call(wrap__tt_rank_all, question, records, deadline)
 
-tt_find_one <- function(question, units, deadline) .Call(wrap__tt_find_one, question, units, deadline)
+tt_find_one <- function(question, units, none, deadline) .Call(wrap__tt_find_one, question, units, none, deadline)
 
 tt_annotate_file <- function(path, records, taken, deadline) .Call(wrap__tt_annotate_file, path, records, taken, deadline)
 
