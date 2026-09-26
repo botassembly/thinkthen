@@ -20,15 +20,17 @@ LIMIT=$REPO/sdlc/scripts/time-limit
 EXT_VERSION=$(sed -n "s/^default_version = '\(.*\)'$/\1/p" thinkthen.control)
 BACKEND=${CARGO_TARGET_DIR:-$REPO/target}/debug/conformance-backend
 
-if [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
-	echo "== build"
-	cargo fmt --check
-	cargo clippy --locked --offline --all-targets -- -D warnings
-	cargo test --locked --offline --lib
-fi
+[ -n "${THINKTHEN_ARTIFACT:-}" ] || {
+echo "== build"
+cargo fmt --check
+cargo clippy --locked --offline --all-targets -- -D warnings
+cargo test --locked --offline --lib
+}
 (cd "$REPO" && cargo build --locked --offline --quiet --package conformance-backend)
 export RUSTFLAGS="--remap-path-prefix=$HOME=/build"
-EXT=target/release/thinkthen-pg16
+# package.sh reads the same pg_config and target folder (ticket 0128).
+PG_CONFIG=${PG_CONFIG:-/usr/bin/pg_config}
+EXT=${CARGO_TARGET_DIR:-target}/release/thinkthen-pg16
 # The shipped build, which `package.sh --reuse` packs (ticket 0128).
 SHIPPED=$EXT-shipped
 
@@ -77,28 +79,29 @@ timed() {
 victim() { q -c "SELECT pid FROM pg_stat_activity WHERE query LIKE '%thinkthen_%' AND pid <> pg_backend_pid() LIMIT 1"; }
 
 echo "== package"
-if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+[ -z "${THINKTHEN_ARTIFACT:-}" ] || {
 	# The installed-file mode (ticket 0128): the server loads the files unpacked from the
 	# release archive, and runs the drawn SQL, the examples, and the shared cases.
 	mkdir "$RUN/artifact" && tar -xzf "$THINKTHEN_ARTIFACT" -C "$RUN/artifact"
 	runtime_install "$RUN/artifact/lib" "$RUN/artifact/extension"
 	STEPS=${STEPS:-examples slide_sample recognize_and_relate_as_drawn conformance the_fake_key_stays_in_the_environment}
-else
-	./pgrx-package-locked.sh --pg-config /usr/bin/pg_config >/dev/null
-	rm -rf "$SHIPPED" && cp -a "$EXT" "$SHIPPED"
-	./pgrx-package-locked.sh --pg-config /usr/bin/pg_config --features panic-probe >/dev/null
-	runtime_install "$EXT/usr/lib/postgresql/16/lib" "$EXT/usr/share/postgresql/16/extension"
-fi
+}
+[ -n "${THINKTHEN_ARTIFACT:-}" ] || {
+./pgrx-package-locked.sh --pg-config "$PG_CONFIG" >/dev/null
+mkdir -p "$SHIPPED" && cp -a "$EXT/." "$SHIPPED/"
+./pgrx-package-locked.sh --pg-config "$PG_CONFIG" --features panic-probe >/dev/null
+runtime_install "$EXT$("$PG_CONFIG" --pkglibdir)" "$EXT$("$PG_CONFIG" --sharedir)/extension"
+}
 cp fixtures/*.json "$DATA/"
 fresh generic
 qs -v ON_ERROR_STOP=1 -c "CREATE EXTENSION thinkthen" -f fixtures/tickets.sql -f fixtures/alerts.sql -f fixtures/inbox.sql >/dev/null
 
 echo "== the tree and the scripts"
 shipped_lacks_probe() {
-	same "$(grep -c thinkthen_panic_probe "$SHIPPED"/usr/share/postgresql/16/extension/thinkthen--$EXT_VERSION.sql || true)" 0
+	same "$(grep -c thinkthen_panic_probe "$SHIPPED$("$PG_CONFIG" --sharedir)/extension/thinkthen--$EXT_VERSION.sql" || true)" 0
 }
 check shipped_lacks_probe
-no_home_in_library() { same "$(grep -ac -- "$HOME" "$SHIPPED/usr/lib/postgresql/16/lib/thinkthen.so" || true)" 0; }
+no_home_in_library() { same "$(grep -ac -- "$HOME" "$SHIPPED$("$PG_CONFIG" --pkglibdir)/thinkthen.so" || true)" 0; }
 check no_home_in_library
 no_catch_unwind() { same "$(grep -rc catch_unwind src | awk -F: '{s += $2} END {print s}')" 0; }
 check no_catch_unwind

@@ -3,7 +3,7 @@
 # lib/ holds the loadable module and extension/ holds the control file and the SQL. A user
 # copies them into `pg_config --pkglibdir` and `pg_config --sharedir`/extension.
 # Without --reuse it packages the shipped build through the locked pgrx wrapper against
-# PG_CONFIG, or the pg_config on PATH. With --reuse it builds nothing and stages the shipped
+# PG_CONFIG, or /usr/bin/pg_config. With --reuse it builds nothing and stages the shipped
 # tree check.sh kept. pgrx lays the tree out under pg_config's own folders, so this reads
 # them from pg_config and names no host's paths or library suffix.
 set -eu
@@ -13,15 +13,16 @@ reuse=
 mkdir -p -- "$1"
 out=$(CDPATH='' cd -- "$1" && pwd)
 cd -- "$(dirname -- "$0")"
-PG_CONFIG=${PG_CONFIG:-$(command -v pg_config)}
-built=${CARGO_TARGET_DIR:-target}/release
+# check.sh reads the same pg_config and target folder.
+PG_CONFIG=${PG_CONFIG:-/usr/bin/pg_config}
+EXT=${CARGO_TARGET_DIR:-target}/release/thinkthen-pg16
 if [ -n "$reuse" ]; then
-	tree=$built/thinkthen-pg16-shipped
+	tree=$EXT-shipped
 else
 	# The builder's home stays out of the module, as in check.sh.
 	RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build" \
 		./pgrx-package-locked.sh --pg-config "$PG_CONFIG" >/dev/null
-	tree=$built/thinkthen-pg16
+	tree=$EXT
 fi
 [ -d "$tree" ] || { echo "package.sh: no packaged tree at $tree; run check.sh or package.sh without --reuse" >&2; exit 1; }
 set -- "$tree$("$PG_CONFIG" --pkglibdir)"/thinkthen.*
