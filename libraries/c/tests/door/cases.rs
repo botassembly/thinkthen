@@ -275,7 +275,6 @@ fn one_answer<'a>(
     let served = format!("{base}/systemone");
     Box::new(move |got| {
         single(&got[1], &got[0], &expected, &served)?;
-        let next = if decide { 3 } else { 2 };
         if decide {
             let rows = judged(&got[2])?;
             let (outcome, probability) = rows.first().copied().ok_or("no judgment")?;
@@ -284,10 +283,8 @@ fn one_answer<'a>(
             same("probability", &json!(probability), yes)?;
         }
         if let Some(counters) = &counters {
-            let before = parsed(&got[next])?;
-            let after = parsed(
-                &got[next + usize::try_from(calls).map_err(|error| error.to_string())? + 1],
-            )?;
+            let before = parsed(&got[2 + usize::from(decide)])?;
+            let after = parsed(got.last().ok_or("no usage reply")?)?;
             let moved = |name: &str| {
                 after[name]
                     .as_u64()
@@ -314,19 +311,9 @@ fn single(plain: &Reply, detailed: &Reply, expected: &Value, served: &str) -> Ch
     for (name, value) in wanted["answer"].as_object().into_iter().flatten() {
         same(name, &details["answer"][name], value)?;
     }
-    same(
-        "confidence",
-        &details["answer"]["confidence"],
-        &wanted["answer"]["confidence"],
-    )?;
-    for name in [
-        "model",
-        "question_sha256",
-        "requests",
-        "usage",
-        "requests_sent",
-        "cached",
-    ] {
+    let (got, want) = (&details["answer"], &wanted["answer"]);
+    same("confidence", &got["confidence"], &want["confidence"])?;
+    for name in "model question_sha256 requests usage requests_sent cached".split(' ') {
         same(name, &details["meta"][name], &wanted[name])?;
     }
     same("url", &details["meta"]["url"], &json!(served))
