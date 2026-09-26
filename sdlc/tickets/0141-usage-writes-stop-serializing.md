@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 141
-opens: crates/thinkthen/src/engine/usage.rs crates/thinkthen/src/engine/usage/tests.rs crates/thinkthen/src/cli/mod.rs crates/thinkthen/src/engine/facade/fork_tests.rs crates/thinkthen/src/cli/conformance_tests/command.rs crates/thinkthen/src/cli/schedule/width_tests.rs crates/thinkthen/tests/backend/default_cache/usage.rs crates/thinkthen/tests/backend/harness/mod.rs specification/recording.md sdlc/planning/adr sdlc/ratchet.json sdlc/records sdlc/tickets sdlc/issues
+opens: crates/thinkthen/src/engine/usage.rs crates/thinkthen/src/engine/usage/tests.rs crates/thinkthen/src/cli/mod.rs crates/thinkthen/src/engine/facade/fork_tests.rs crates/thinkthen/src/cli/conformance_tests/command.rs crates/thinkthen/src/cli/schedule/width_tests.rs crates/thinkthen/src/engine/deadline_tests.rs crates/thinkthen/tests/backend/default_cache/usage.rs crates/thinkthen/tests/backend/harness/mod.rs specification/recording.md sdlc/planning/adr sdlc/ratchet.json sdlc/records sdlc/tickets sdlc/issues
 ---
 
 # 0141: Usage writes stop serializing requests
@@ -46,18 +46,19 @@ Each is the agent's decision. Ian can overturn any of them.
 
 1. **A writer thread takes the disk off the request path.** Every alternative that keeps a durable write before each send still stops every request while another process holds `.lock`. The issue asks that counting not limit requests in flight, so the write moves behind them.
 2. **The precharge guarantee goes.** A crash can now lose the requests and tokens counted since the last finished write. `recording.md:26` said a crash "can undercount tokens or overcount one precharged request". It becomes: "A crash can undercount the requests and tokens counted after the last write that finished." The totals are best effort and "not a provider bill" already. The paid-call authority is the live ledger under `sdlc/scripts/live`, and that ledger keeps its own durable precharge under ADR 0022. So no spending guard rests on this file.
-3. **The change takes a new ADR.** `specification/README.md` says a Settled section changes only by a new ADR, and `recording.md` is Settled. The ADR takes the next free number at build time. It amends `recording.md:26` and records that ticket 0063's precharge rule is retired. The batching design marked B1 "no ADR". That row was written before this design showed the crash sentence had to change.
+3. **The change takes a new ADR, number 0049.** `specification/README.md` says a Settled section changes only by a new ADR, and `recording.md` is Settled. Ticket 0139 takes 0048 and lands first. If the numbers change at build time, the ADR takes the next free one. It amends two sentences by name. One is `recording.md:26`. The other is ADR 0034's "A crash can leave a conservative overcount of one request or an undercount of later tokens", which becomes the same sentence as the new `recording.md:26`. The ADR records that ticket 0063's precharge rule is retired. ADR 0034 already says "The totals enforce no budget", so no guard rests on the precharge. The batching design marked B1 "no ADR". That row was written before this design showed the crash sentence had to change.
 4. **Group commit was considered and set aside.** In a group commit, each worker waits for one shared write that carries its delta. It keeps the precharge. It still stalls every request while another process holds the lock, adds a disk round trip before each send, and has no count-based proof. Only a wall-clock race could show it.
-5. **Each delta keeps the month it was counted in.** A run that crosses midnight UTC at a month's end writes each count to the month `add` saw. Merging by month keeps that exact.
-6. **`finish()` waits without a bound.** A process that holds `.lock` forever makes this command wait at its end. Today the same process makes it wait at its first request. The wait moves, and no new hang appears.
-7. **The existing fault hook follows the writer.** `usage/tests.rs` injects a failure at each `update()` stage through the thread-local `FAILURE`. The writer thread copies its starter's `FAILURE` when it starts, under `cfg(test)` alone. No real boundary can fail the file sync, the rename, or the folder sync on demand. This moves an existing hook. It adds none.
+5. **A writer thread, not one write at `finish()`.** One write at the end needs no thread and no join in `Drop`, so it is simpler. It has two costs. `thinkthen status` shows nothing of a long run until the run ends, and a kill loses the whole run's counts. The writer thread keeps both close to today's behavior. The queue owner ruled for the writer thread on these two grounds. Ian can overturn the ruling.
+6. **Each delta keeps the month it was counted in.** A run that crosses midnight UTC at a month's end writes each count to the month `add` saw. Merging by month keeps that exact.
+7. **`finish()` waits without a bound.** A process that holds `.lock` forever makes this command wait at its end. Today the same process makes it wait at its first request. The wait moves, and no new hang appears.
+8. **The existing fault hook follows the writer.** `usage/tests.rs` injects a failure at each `update()` stage through the thread-local `FAILURE`. The writer thread copies its starter's `FAILURE` when it starts, under `cfg(test)` alone. No real boundary can fail the file sync, the rename, or the folder sync on demand. This moves an existing hook. It adds none.
 
 ## Edge cases
 
 | Case | Expected behavior |
 | --- | --- |
 | Another process holds `.lock` for the whole run | Every request goes out, up to `--jobs` in flight. The command prints its results, then waits at `finish()`. The totals land when the lock is let go |
-| `.lock` is never let go | The command waits at its end. Today it waits at its first request. Decision 6 |
+| `.lock` is never let go | The command waits at its end. Today it waits at its first request. Decision 7 |
 | Two `thinkthen` processes run at once | Each has its own writer. Each write is a read-add-replace under `.lock`, so the month total is the sum of both |
 | The usage folder has an unsafe mode | The first write fails. One warning prints after the unchanged results. Exit code unchanged |
 | A write fails part way | Persistence stops for the process. One warning. Later counts stay in memory |
@@ -68,6 +69,7 @@ Each is the agent's decision. Ian can overturn any of them.
 | `--jobs 1` | The same totals and output bytes as today |
 | A checked addition would overflow | Refused. Persistence stops with the one warning, as today |
 | The process is killed | Counts not yet written are lost. Decision 2 |
+| Ctrl-C while `finish()` waits on a held lock | The first press is ignored, and the second kills the process, as today while a worker waits on the lock. Counts not yet written are lost |
 
 ## Proof
 
@@ -86,11 +88,17 @@ The four questions:
 - **Why no existing test catches it.** Today's queue only slows a run, and it never changes a result. So every test passes on today's code. `parallel.rs` checks peaks at 4 jobs or fewer with no contended lock. The usage tests check totals and never check concurrency.
 - **Does it need a test-only hook.** No. It holds the real `.lock` through the real `flock`, as a second `thinkthen` process would, and counts at the real listener.
 
-Existing tests kept as they are: `two_processes_update_one_month_without_losing_a_cache_answer` proves totals across processes. `persistence_failure_warns_once_after_the_unchanged_judgment` proves the warning. `concurrent_updates_keep_every_count_in_one_monthly_aggregate` and `every_update_stage_warns_once_and_disables_later_persistence` keep their assertions. They call `finish()` before they read the folder. The unit tests in `facade/fork_tests.rs`, `cli/conformance_tests/command.rs`, and `cli/schedule/width_tests.rs` read durable totals while their counters live, so each calls `finish()` first.
+Existing tests kept as they are: `two_processes_update_one_month_without_losing_a_cache_answer` proves totals across processes. `persistence_failure_warns_once_after_the_unchanged_judgment` proves the warning. `concurrent_updates_keep_every_count_in_one_monthly_aggregate` and `every_update_stage_warns_once_and_disables_later_persistence` keep their assertions. They call `finish()` before they read the folder. The unit tests in `cli/conformance_tests/command.rs` and `cli/schedule/width_tests.rs` read durable totals while their counters live, so each calls `finish()` first. `facade/fork_tests.rs` has no handle on the child's counters. It drops the engine before it reads the saved totals, and `Drop` finishes the writer.
 
 No new unit test is added.
 
 The build record also reports a loopback timing that gates nothing. It runs 306 records at `--jobs 16` against a listener that answers after 140 ms, before and after the change, on a named build. A number on a page names that record.
+
+## Pages, comments, and issues
+
+- `specification/recording.md:26` and the new ADR 0049, as decision 3 says.
+- The doc comment on `accounting_that_outlasts_the_budget_sends_nothing` in `crates/thinkthen/src/engine/deadline_tests.rs:210` names "another process holding the usage lock" as slow accounting. After this ticket the lock never delays a send. The comment says instead that the test stands for any slow work before the attempt.
+- `site/src/pages/backends.astro:48` says "A crash can undercount tokens or overcount one request that was already charged." `site/` belongs to the website agent. The build files `sdlc/issues/2026-09-26-site-states-the-retired-usage-crash-guarantee.md`, naming that line and the new sentence, and does not edit `site/`.
 
 ## Budgets
 
@@ -98,7 +106,7 @@ Nonblank lines, measured with `grep -c .` on the diff.
 
 - `crates/thinkthen/src` production code: at most 60 added and at most 50 net, doc lines included.
 - Tests: at most 80 added in `default_cache/usage.rs` and the harness split, and at most 15 changed across the existing unit tests.
-- Pages and the ADR: the one sentence in `recording.md`, and an ADR of at most 30 lines.
+- Pages and the ADR: the one sentence in `recording.md`, the one doc comment, an ADR of at most 30 lines, and the website issue.
 - `sdlc/ratchet.json` moves to the measured total in the commit that adds the code. The commit says what grew. The builder looks for duplication to delete in `usage.rs` first.
 - No dependency. No public library type, method, or message changes, so the `surfaces` rung is not required.
 
@@ -121,20 +129,23 @@ Builder: Claude (Opus subagent). Reviewer: a fresh read-only Claude session for 
 
 ## Complexity
 
-Contract 1; state and timing 2; reach 1; proof 1; cost of error 1; total 6. Final level: 2. The risk is a lost count at exit or a hang at `finish()`. Plants (b) and (c) guard the first. Decision 6 bounds the second to today's behavior.
+Contract 1; state and timing 2; reach 1; proof 1; cost of error 1; total 6. Final level: 2. The risk is a lost count at exit or a hang at `finish()`. Plants (b) and (c) guard the first. Decision 7 bounds the second to today's behavior.
 
 ## Deferred gaps
 
 - `finish()` has no time bound. A bounded wait would print the warning and exit, but it needs a timeout nobody has asked for.
 - The writer still syncs the file and the folder on every write. The coalescing makes that cheap under load, so fewer syncs gain nothing today.
+- The comment at `crates/thinkthen/src/engine/http.rs:127` says accounting may wait on the usage lock. After this ticket it cannot. Ticket 0142 owns that file. Whichever of 0141 and 0142 lands second fixes the comment.
+- `site/src/pages/backends.astro:48` keeps the retired guarantee until the website agent acts on the issue this build files.
 - A fork while the writer holds `.lock` leaves a copy of that open lock in the child until the child closes it. Today a worker mid-update has the same exposure. The facade never touches the inherited counters.
 - The speed target of the batching design (306 titles in under half a second) needs B2 and batching. This ticket removes one of the two filed limits.
 
 ## What Ian can overturn
 
+- Decision 5: the queue owner's ruling for a writer thread over one write at `finish()`.
 - Decision 2: dropping the precharge guarantee. The alternative is group commit (decision 4). It keeps the guarantee and still stalls every request while another process holds the lock.
-- Decision 3: a new ADR in place of an amendment to the batching design's B1 row.
-- Decision 6: an unbounded wait at the end in place of a timeout.
+- Decision 3: a new ADR, amending `recording.md` and ADR 0034, in place of the batching design's "no ADR" for B1.
+- Decision 7: an unbounded wait at the end in place of a timeout.
 
 ## Closes
 
@@ -144,6 +155,6 @@ Contract 1; state and timing 2; reach 1; proof 1; cost of error 1; total 6. Fina
 
 - Starts from: The issue above, filed from workspace experiment 268. At `--jobs 16`, 6 to 9 requests were in flight. A 100-title run made 200 usage updates and 400 flushes, at a median of 11.4 ms each, 4.4 s in all. A 306-title run took 6.6 to 7.2 s with the usage file on disk and 3.5 to 4.0 s with it in memory. Ticket 0063's precharge rule, `recording.md:22-26`, and the code named in "What happens today" at `origin/main` `b2d03a6f`.
 - Keeps: The usage folder, its modes, its `.lock`, and its file format. Cross-process totals that sum exactly. The one warning after unchanged results, and the exit meaning. `thinkthen status` output. Memory-only counters on every library and SQL surface. Every `update()` stage check.
-- Changes: `add` never waits on the disk. One writer thread per process writes coalesced deltas by month. `finish()` replaces `warning()` and waits for the writer. A crash can now undercount requests as well as tokens. A new ADR amends `recording.md:26` and retires ticket 0063's precharge.
+- Changes: `add` never waits on the disk. One writer thread per process writes coalesced deltas by month. `finish()` replaces `warning()` and waits for the writer. A crash can now undercount requests as well as tokens. ADR 0049 amends `recording.md:26` and ADR 0034's crash sentence, and retires ticket 0063's precharge. The deadline test's doc comment drops the usage lock. An issue asks the website agent to fix `backends.astro:48`.
 - Proof: `requests_go_out_while_another_process_holds_the_usage_lock`. It counts 16 requests and a peak of 16 at the loopback listener while the test process holds `.lock`, then checks exact totals through `status --json`. Plants (a) today's synchronous write, (b) a dropped delta, and (c) an exit before the write each turn it red. The child must still be running while the lock is held. A loopback timing in the build record reports the speed and gates nothing.
-- Defers: A time bound on `finish()`. Fewer syncs a write. The inherited lock after a fork. The batching speed target, which needs B2 and batching.
+- Defers: The `http.rs:127` comment, owned by 0142. The website sentence. A time bound on `finish()`. Fewer syncs a write. The inherited lock after a fork. The batching speed target, which needs B2 and batching.
