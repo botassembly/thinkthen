@@ -1,13 +1,10 @@
 #!/usr/bin/env python3
-"""Keep `specification/settings.md` true to the help, the code, and the schema.
+"""Keep `specification/settings.md` true to the help, the code, and the question-file keys (ticket 0140).
 
-Ticket 0140, after Ian's ruling of 2026-09-26 that every setting is explained
-in one place. The table under `## Settings` has fixed columns. Every long flag
-in any command's help, every `THINKTHEN_` name product code reads, and every
-question-file key in the schema needs a row, and a row naming none of them
-fails. It reads the `thinkthen` on PATH, so the `spec` rung runs it after its
-build. Usage: settings [PAGE]. --self-test plants each fault into a copy of the
-real page, runs the whole check, and pins every sentence.
+The table under `## Settings` has fixed columns. Every long flag in any command's help, every `THINKTHEN_` name
+product code reads, and every question-file key needs a row, and a row naming none of them fails. It reads the
+`thinkthen` on PATH, so the `spec` rung runs it after its build. Usage: settings [PAGE]. --self-test plants each
+fault into a copy of the real page, runs the whole check, and pins every sentence.
 """
 
 import json
@@ -22,17 +19,14 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 PAGE = REPO / "specification" / "settings.md"
 SCHEMA = REPO / "specification" / "question-file.schema.json"
 RECOGNIZE = REPO / "crates" / "thinkthen" / "src" / "core" / "recognize_file.rs"
-COLUMNS = [
-    "Setting", "What it does", "Default", "Allowed values", "Command flag",
-    "Environment variable", "Configuration file", "Question-file key", "Rust",
-    "Python", "TypeScript", "Ruby", "R", "C", "DuckDB", "PostgreSQL", "SQLite",
-]
+COLUMNS = ["Setting", "What it does", "Default", "Allowed values", "Command flag", "Environment variable",
+           "Configuration file", "Question-file key", "Rust", "Python", "TypeScript", "Ruby", "R", "C", "DuckDB",
+           "PostgreSQL", "SQLite"]
 FLAG, ENV, KEY = COLUMNS.index("Command flag"), COLUMNS.index("Environment variable"), COLUMNS.index("Question-file key")
-# The one list of help flags that are not settings.
+# The named lists: help flags that are not settings, names only tests read (by prefix), and keys
+# that hold the question itself or the file's format.
 NOT_SETTINGS = {"--help", "--version"}
-# The one list of names only tests read: every name with this prefix.
 TEST_ONLY = "THINKTHEN_TEST_"
-# Question-file keys that hold the question itself or the file's format.
 NOT_KEYS = {"decide", "choose", "tag", "score", "relate", "recognize", "version"}
 FENCE = re.compile(r"^\s*(```|~~~)")
 CELL = re.compile(r"(?<!\\)\|")
