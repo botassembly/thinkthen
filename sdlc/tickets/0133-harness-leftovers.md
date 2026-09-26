@@ -26,9 +26,9 @@ The authority is the coordinator's brief for 0133 and the backlog `sdlc/planning
 - A probe on 2026-09-26 ran a built `thinkthen status` under `prlimit --nproc=1:` as uid 1000. It exited 70 with `thinkthen: defect: SIGINT routing could not be activated`. The same command without the limit exited 0. The carrier thread is the first thread the command starts, so the real thread-spawn failure reaches the handler's error path.
 - The rung scripts and surface checks read these names from the caller: `PATH`, `HOME`, `LANG`, `XDG_RUNTIME_DIR` for the lock path, `XDG_CACHE_HOME` for the Python toolchain cache, `SQLITE_AMALGAMATION`, `THINKTHEN_TOOLCHAINS`, `THINKTHEN_DUCKDB_CLI`, and the two lock names. `rustup` and `cargo` read `CARGO_HOME`, `RUSTUP_HOME`, `RUSTUP_TOOLCHAIN`, and `RUSTC_WRAPPER`. `libraries/r/check.sh` runs `Rscript`. `Rscript` reads `R_LIBS_USER` for a custom library folder. The Beelink's shell exports `SCCACHE_CONF`, and `sccache` reads it for its settings. Both hold a path and no secret. A grep of every `.sh` file under the rung's reach found no other caller name that a rung needs.
 
-## Part 1: the heavy rungs keep an allow list (the heavy-rungs issue, and item 12)
+## Part 1: the rungs keep an allow list (the heavy-rungs issue, and item 12)
 
-`heavy-lock` already walks the exported names with `awk` over `ENVIRON`. It prints nothing. Today it unsets each `THINKTHEN_` name but four. After this ticket it unsets every name except the allow list:
+`heavy-lock` already walks the exported names with `awk` over `ENVIRON`. It prints nothing. Today it unsets each `THINKTHEN_` name but four. After this ticket that loop lives in a new file, `sdlc/scripts/allow-list`, and unsets every name except the allow list. `heavy-lock` sources it. `lint` sources it right after `set -eu`, before any other step. The code review moved the loop there, since `lint` runs `cargo` builds and tests too:
 
 | Group | Names |
 | --- | --- |
@@ -45,13 +45,13 @@ The unset still runs before the `exec flock` branch, so the re-run rung starts c
 
 No shell variable can hold a name such as `FAKE.SERVICE_TOKEN`. Under `dash` such a name never reaches the loop. `dash` does not pass it on either. The `lint` row pins that. On a machine whose `/bin/sh` passes such a name on, the row fails and names it.
 
-`sdlc/scripts/README.md` rewrites the `heavy-lock` row to name the allow list and the reason `CARGO_TARGET_DIR` is absent. The header comment in `heavy-lock` says the same in two sentences.
+`sdlc/scripts/README.md` gains an `allow-list` row that names the list and the reason `CARGO_TARGET_DIR` is absent. The `heavy-lock` row says it sources `allow-list`. The header comment in `allow-list` says the same.
 
 ### The check
 
-The `lint` rung's 0127 row becomes one row that sources `heavy-lock` under `env -i`. It sets `PATH` from the caller as today, the lock as held, the kept `THINKTHEN_` names, `HOME`, `FAKE_SERVICE_API_KEY=planted`, `THINKTHEN_SENTINEL=planted`, `CARGO_TARGET_DIR=/nonexistent/target`, and `FAKE.SERVICE_TOKEN=planted`. After the source, it `exec`s `awk` to print every name the child sees, sorted on one line. `gawk` adds `AWKPATH` and `AWKLIBPATH` to its own `ENVIRON`, so the row leaves those two out. `mawk` adds none. The row pins that whole line. The rule drops a name whatever its value, so the absolute `CARGO_TARGET_DIR` plant covers a relative one too. It prints the planted names only, since the child starts from `env -i`, and never the developer's environment.
+The `lint` rung's 0127 row becomes one row that sources `heavy-lock` under `env -i`. It sets `PATH` from the caller as today and plants every other allowed name with a `/nonexistent` value, the lock as held. Beside them it plants `FAKE_SERVICE_API_KEY=planted`, `THINKTHEN_SENTINEL=planted`, `CARGO_TARGET_DIR=/nonexistent/CARGO_TARGET_DIR`, and `FAKE.SERVICE_TOKEN=planted`. After the source, it `exec`s `awk` to print every name the child sees, sorted on one line under `LC_ALL=C`. `gawk` adds `AWKPATH` and `AWKLIBPATH` to its own `ENVIRON`, so the row leaves those two out. `mawk` adds none. The row pins that whole line against the full allow list. It also reads the names out of `allow-list` itself and pins them against the same line. A name added to `allow-list`, planted or not, then fails the row, and so does a name removed. The rule drops a name whatever its value, so the absolute `CARGO_TARGET_DIR` plant covers a relative one too. It prints the planted names only, since the child starts from `env -i`, and never the developer's environment.
 
-A rung's children inherit exactly what the sourced `heavy-lock` leaves exported. The row's `awk` child is such a child, so it stands in for the issue's test inside a heavy rung. The build also runs the full ladder with a planted key. During that run, a probe beside the ladder reads `/proc/PID/environ` of a running test binary by name only and records whether `FAKE_SERVICE_API_KEY` is there.
+A rung's children inherit exactly what the sourced `allow-list` leaves exported. The row's `awk` child is such a child, so it stands in for the issue's test inside a heavy rung. The build also runs the full ladder with a planted key. During that run, a probe beside the ladder reads `/proc/PID/environ` of a running test binary by name only and records whether `FAKE_SERVICE_API_KEY` is there.
 
 ### Edge cases
 
@@ -113,7 +113,7 @@ Ticket 0132 does not open `tests/backend/interrupt.rs`. Its branch at `7bf3d4fd`
 Each is the agent's decision. Ian can overturn any of them.
 
 1. The rung keeps an allow list. A deny pattern would miss the next service's secret. 0127 gave the same reason for its helpers.
-2. The allow list lives in `heavy-lock`, the one file every heavy rung already sources, as an extension of the 0127 loop. No new script.
+2. Overturned by the coordinator after code review. The allow list lives in its own file, `sdlc/scripts/allow-list`, so `heavy-lock` and `lint` share one copy.
 3. The rung drops `CARGO_TARGET_DIR`. Honoring it needs the target folder resolved in ten surface checks, one of them owned by an in-flight Quick Fix. Dropping it gives each lane its own build folders, as the lane rule wants.
 4. Overturned by the coordinator after code review. The allow list moved into `sdlc/scripts/allow-list`, and `heavy-lock` and `lint` both source it. `lint` runs `cargo` builds and tests too.
 5. The spawn failure is proved at the real boundary with `prlimit`. The three `pthread_sigmask` paths lose their test, because no boundary reaches them. Their code stays.
@@ -125,7 +125,7 @@ Each is the agent's decision. Ian can overturn any of them.
 
 | Test | Proof | Planted fault that turns it red |
 | --- | --- | --- |
-| The `heavy-lock` row in `lint` | The child's whole sorted name line is `HOME PATH PWD THINKTHEN_DUCKDB_CLI THINKTHEN_HEAVY_LOCK THINKTHEN_HEAVY_LOCK_HELD THINKTHEN_TOOLCHAINS` | P1: put `FAKE_SERVICE_API_KEY` on the allow list. The row names it. P2: put `CARGO_TARGET_DIR` on the allow list. The row names it |
+| The allow-list row in `lint` | The child's whole sorted name line, and the names `allow-list` holds, both equal the 19 allowed names | P1: put `FAKE_SERVICE_API_KEY` on the allow list. P2: put `CARGO_TARGET_DIR` on the allow list. P7: take `R_LIBS_USER` off. P8: add an unplanted `FAKE_NEW_NAME`. Each fails the row, which names both lines |
 | The full ladder on the Beelink | `install`, `lint`, `test`, `spec`, and `surfaces` pass when started with `FAKE_SERVICE_API_KEY=fake-not-a-key` and an absolute `CARGO_TARGET_DIR` under the scratch folder. That folder stays empty | None. This is the toolchain proof the issue asks for on each machine that runs rungs. The Beelink is the only one |
 | `interrupt.rs`: the spawn failure | Exit 70, the whole sentence, empty output, zero connections | P3: map a spawn failure to `StartError::Restoration`. The sentence differs. P4: `expect` the spawn. The command panics with exit 101 |
 | `children` on the tree | Exit 0 and `children: 0 findings`, with `PENDING` empty | P5: drop the new `.env_clear()` from `relate_edge.rs`. The check names the line. P6: drop `env=` from one `source_checks.py` call. The check names it |
@@ -143,8 +143,8 @@ The four questions, for each new or changed test:
 
 In nonblank lines.
 
-- `heavy-lock`: at most 10 added.
-- `lint`: at most 6 added over the row it replaces.
+- `allow-list` and `heavy-lock`: at most 16 added. The coordinator re-scored lint to 12 net and allow-list plus heavy-lock to 16, because both review findings required the extra lines.
+- `lint`: at most 14 net added over the row it replaces: the 12 of that re-score, plus two for the second review's check that reads the names out of `allow-list`.
 - `interrupt.rs` and `interrupt/tests.rs`: fewer lines than today, together.
 - `tests/backend/interrupt.rs`: at most 30 added.
 - The spawn sites, `children`, and `children.py`: at most 18 changed in all.

@@ -1,6 +1,8 @@
 #!/bin/sh
 # Rung 1: the accepted policies, the size ceiling, formatting, clippy, and docs.
 set -eu
+# Ticket 0133: every step and child sees only the names in allow-list.
+. "$(dirname -- "$0")/allow-list"
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
@@ -20,9 +22,9 @@ python3 sdlc/scripts/tickets
 # the environment one name at a time.
 python3 sdlc/scripts/children --self-test
 python3 sdlc/scripts/children
-# Ticket 0133: a rung's child sees only the allow list. Every allowed name is
-# planted beside a key, a stray THINKTHEN_ name, a target folder, and a name no
-# shell can hold. gawk adds its own AWKPATH and AWKLIBPATH, so they are left out.
+# Ticket 0133: a rung's child and allow-list itself both hold exactly the pinned
+# names. Each is planted beside a key, a stray THINKTHEN_ name, a target folder,
+# and a name no shell can hold. gawk's own AWKPATH and AWKLIBPATH are left out.
 seen=$(env -i PATH="$PATH" HOME=/nonexistent/HOME LANG=/nonexistent/LANG LC_ALL=/nonexistent/LC_ALL \
     TMPDIR=/nonexistent/TMPDIR XDG_RUNTIME_DIR=/nonexistent/XDG_RUNTIME_DIR XDG_CACHE_HOME=/nonexistent/XDG_CACHE_HOME \
     CARGO_HOME=/nonexistent/CARGO_HOME RUSTUP_HOME=/nonexistent/RUSTUP_HOME RUSTUP_TOOLCHAIN=/nonexistent/RUSTUP_TOOLCHAIN \
@@ -35,12 +37,12 @@ seen=$(env -i PATH="$PATH" HOME=/nonexistent/HOME LANG=/nonexistent/LANG LC_ALL=
     sdlc/scripts/lint | LC_ALL=C sort | tr '\n' ' ')
 allowed="CARGO_HOME HOME LANG LC_ALL PATH PWD RUSTC_WRAPPER RUSTUP_HOME RUSTUP_TOOLCHAIN R_LIBS_USER SCCACHE_CONF SQLITE_AMALGAMATION"
 allowed="$allowed THINKTHEN_DUCKDB_CLI THINKTHEN_HEAVY_LOCK THINKTHEN_HEAVY_LOCK_HELD THINKTHEN_TOOLCHAINS TMPDIR XDG_CACHE_HOME XDG_RUNTIME_DIR "
-if [ "$seen" != "$allowed" ]; then
-    echo "lint: a rung's child did not see exactly the allow list: $seen" >&2
+listed=$(sed -n 's/^[[:space:]]*\([A-Z_ |]*\)) ;;$/\1/p' sdlc/scripts/allow-list | tr -d ' ' | tr '|' '\n' |
+    LC_ALL=C sort | tr '\n' ' ')
+if [ "$seen" != "$allowed" ] || [ "$listed" != "$allowed" ]; then
+    printf 'lint: allow-list names %s\nand a rung child saw %s\n' "$listed" "$seen" >&2
     exit 1
 fi
-# Lint's own cargo, build scripts, and test binaries get the same list.
-. sdlc/scripts/allow-list
 # Ticket 0128: one version everywhere, workflows run by hand from pinned code,
 # and the download script's edge table against a loopback fake of GitHub.
 python3 sdlc/scripts/versions --self-test
