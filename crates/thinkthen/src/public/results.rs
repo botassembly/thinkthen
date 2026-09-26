@@ -469,7 +469,8 @@ impl<T> Candidate<T> {
     }
 }
 
-/// Every `find` candidate in input order and the one selected.
+/// Every `find` candidate in input order, the `none` candidate last when
+/// the question offers it, and the one selected.
 #[derive(Clone, PartialEq)]
 pub struct Found<T> {
     candidates: Vec<Candidate<T>>,
@@ -507,7 +508,8 @@ impl<T> Found<T> {
         self.candidates.get(self.selected?)?.input()
     }
 
-    /// Every candidate, in input order.
+    /// Every candidate, in input order, with the `none` candidate last when
+    /// the question offers it.
     #[must_use]
     pub fn candidates(&self) -> &[Candidate<T>] {
         &self.candidates
