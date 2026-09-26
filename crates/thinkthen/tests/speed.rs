@@ -58,9 +58,6 @@ fn planted(function: &str, from: &str, to: &str) -> PathBuf {
 fn the_speed_gate_holds_and_names_each_fault() {
     let backend = Backend::start().expect("backend");
     let committed = gate(&backend, &repository().join("probes/speed/functions.jsonl"));
-    let stderr = String::from_utf8_lossy(&committed.stderr);
-    assert_eq!(committed.status.code(), Some(0), "{stderr}");
-    assert_eq!(stderr, "");
     let reported: usize = String::from_utf8_lossy(&committed.stdout)
         .lines()
         .map(|line| {
@@ -75,6 +72,9 @@ fn the_speed_gate_holds_and_names_each_fault() {
         backend.count(),
         "status must count what the socket read"
     );
+    let stderr = String::from_utf8_lossy(&committed.stderr);
+    assert_eq!(committed.status.code(), Some(0), "{stderr}");
+    assert_eq!(stderr, "");
 
     let listed = r#","list":{"ticket":"B4","number":null}"#;
     let cases = [

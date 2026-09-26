@@ -232,7 +232,7 @@ def plan(bench):
         total = 0
         for m, arm, repeat, label, args, _, _, records, estimate in measurements(bench, binary, titles, scratch):
             total += estimate
-            print(f"{m}\t{arm}\t{repeat}\t{records}\t{estimate}\t{shlex.join(args)}")
+            print(f"{m}\t{arm}\t{repeat}\t{label}\t{records}\t{estimate}\t{shlex.join(args)}")
         print(f"estimated input tokens\t{total}")
     finally:
         remove(scratch)
