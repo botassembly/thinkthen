@@ -7,10 +7,10 @@
     "version-json": "node scripts/write-version.mjs",
     "samples": "node scripts/check-samples.mjs",
     "smoke": "node scripts/smoke.mjs",
-    "build": "node scripts/write-version.mjs && node scripts/check-samples.mjs && node scripts/smoke.mjs && astro build && node scripts/emit-md.mjs && node scripts/check-links.mjs",
+    "build": "node scripts/write-version.mjs && node scripts/check-samples.mjs && node scripts/smoke.mjs && astro build && node scripts/emit-md.mjs && node scripts/check-settings.mjs && node scripts/check-links.mjs",
     "dev": "astro dev",
     "preview": "astro preview",
-    "check": "node scripts/check-samples.mjs && node scripts/smoke.mjs && node scripts/check-links.mjs",
+    "check": "node scripts/check-samples.mjs && node scripts/smoke.mjs && node scripts/check-settings.mjs && node scripts/check-links.mjs",
     "pull-bench": "node scripts/pull-bench.mjs"
   },
   "dependencies": {

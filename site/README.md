@@ -14,16 +14,17 @@ npm install
 npm run build
 ```
 
-`npm run build` does six things in order:
+`npm run build` does seven things in order:
 
 1. `scripts/write-version.mjs` writes `public/version.json` with the commit it is building.
 2. `scripts/check-samples.mjs` checks the rules in `WRITING.md` that a script can see: line length, asserts, whole details, no comments, and a goal on every page.
 3. `scripts/smoke.mjs` runs every example against the command built from this commit and compares what it printed with the saved output.
-4. `astro build` writes `dist/`. It fails when a script has no caption or no saved output.
+4. `astro build` writes `dist/`. It fails when a script has no caption or no saved output. The Settings page reads `../specification/settings.md`, and the build fails when that table's columns change.
 5. `scripts/emit-md.mjs` writes a Markdown twin of every page and `dist/llms.txt`.
-6. `scripts/check-links.mjs` fails the build on a broken internal link.
+6. `scripts/check-settings.mjs` fails the build when the Settings page and `../specification/settings.md` disagree.
+7. `scripts/check-links.mjs` fails the build on a broken internal link.
 
-`npm run dev` serves the site while you work. `npm run check` runs the sample check, the smoke run, and the link check on the last build.
+`npm run dev` serves the site while you work. `npm run check` runs the sample check, the smoke run, the settings check, and the link check on the last build.
 
 ## Writing a page
 

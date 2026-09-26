@@ -9,8 +9,9 @@ import path from 'node:path';
 const DIST = path.join(process.cwd(), 'dist');
 const VOID = new Set(['br', 'img', 'meta', 'link', 'input', 'hr', 'source', 'area', 'col']);
 const SKIP = new Set(['button', 'script', 'style', 'svg']);
-// The Beatles Bench side list and phone menu repeat on every page.
-const SKIP_CLASS = ['bench-side', 'bench-menu'];
+// The Beatles Bench side list and phone menu repeat on every page. The
+// Settings page's find box and its no-match line work only in a browser.
+const SKIP_CLASS = ['bench-side', 'bench-menu', 'settings-filter', 'settings-none'];
 
 // ------------------------------------------------------------------ the tree
 
@@ -146,6 +147,19 @@ function blocks(node, out) {
         for (const r of rows.slice(1)) lines.push('| ' + pad(r).join(' | ') + ' |');
         out.push(lines.join('\n'));
       }
+      continue;
+    }
+    if (kid.tag === 'dl') {
+      const rows = [];
+      const walk = (n) => {
+        for (const k of n.kids || []) {
+          if (k.tag === 'dt') rows.push('- **' + tidy(inline(k)) + '**:');
+          else if (k.tag === 'dd' && rows.length) rows[rows.length - 1] += ' ' + tidy(inline(k));
+          else walk(k);
+        }
+      };
+      walk(kid);
+      if (rows.length) out.push(rows.join('\n'));
       continue;
     }
     if (kid.tag === 'div' && cls.includes('note')) {

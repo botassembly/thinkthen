@@ -176,4 +176,4 @@ After a change to the command or to a script, run `node scripts/smoke.mjs --upda
 
 ### What runs on each change
 
-`npm run build` runs `check-samples`, then the smoke run, then the Astro build, the Markdown twins, and the link check. `npm run check` runs `check-samples`, the smoke run, and the link check on an existing build. The Pages workflow builds the command and then runs `npm run build`. Run `npm run check` before every commit that touches a page or an example.
+`npm run build` runs `check-samples`, then the smoke run, then the Astro build, the Markdown twins, the settings check, and the link check. `npm run check` runs `check-samples`, the smoke run, the settings check, and the link check on an existing build. The Pages workflow builds the command and then runs `npm run build`. Run `npm run check` before every commit that touches a page or an example.

@@ -322,3 +322,38 @@ ol.talk code { font-size: .95em; }
 
 
 p code, li code { white-space: nowrap; }
+
+/* --------------------------------------------------------------- settings */
+
+.settings-filter { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; margin: 1rem 0; font-size: .9rem; color: var(--muted); }
+.settings-filter[hidden] { display: none; }
+.settings-filter label { display: flex; flex-direction: column; gap: .25rem; flex: 1 1 14rem; min-width: 0; }
+.settings-filter input, .settings-filter select {
+  font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line);
+  border-radius: 6px; padding: .4rem .55rem; width: 100%;
+}
+.settings-index { display: flex; flex-wrap: wrap; gap: .15rem 1rem; list-style: none; padding: 0; margin: 0 0 1.2rem; font-size: .88rem; }
+.settings-index li[hidden] { display: none; }
+.setting { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: .2rem 1rem .4rem; margin: 0 0 1rem; scroll-margin-top: 1rem; }
+.setting[hidden] { display: none; }
+.setting h3 { margin: .7rem 0 .3rem; }
+.setting h3 a { color: var(--ink); text-decoration: none; }
+.setting h3 a:hover { color: var(--think); }
+.setting > p { margin: .2rem 0 .6rem; }
+.setting dl.kv { margin: 0 0 .4rem; font-size: .93rem; }
+.setting dl.kv > div { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 0 .9rem; padding: .4rem 0; border-bottom: 1px solid var(--line); }
+.setting dl.kv > div:last-child { border-bottom: 0; }
+.setting dl.kv > div[hidden] { display: none; }
+.setting dl.kv dt { color: var(--muted); font-weight: 600; font-size: .85rem; }
+.setting dl.kv dd { margin: 0; overflow-wrap: anywhere; }
+.setting dd code { background: var(--ground); border: 1px solid var(--line); border-radius: 4px; padding: .05em .3em; }
+.setting dl.kv > div.source dt, .setting dl.kv > div.source dd { color: var(--muted); font-size: .85rem; font-weight: 400; }
+.setting.upcoming { border-style: dashed; }
+.setting p.soon {
+  display: inline-block; font-family: var(--mono); font-size: .72rem; letter-spacing: .06em;
+  text-transform: uppercase; border: 1px solid var(--line); border-radius: 999px;
+  padding: .05rem .5rem; color: var(--muted); margin: 0 0 .4rem;
+}
+@media (max-width: 34rem) {
+  .setting dl.kv > div { grid-template-columns: 1fr; }
+}

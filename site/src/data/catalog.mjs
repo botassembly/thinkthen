@@ -530,6 +530,12 @@ export const TUTORIAL_SEE = {
 // The tutorial's caption for functions/decide/1-lines in its stream step.
 export const TUTORIAL_STREAM_SEE = "Each answer sits beside its message. The send-back line is the null from step 4.";
 
+// Captions for the Settings page's examples, keyed by script name.
+export const SETTINGS_SEE = {
+  '1-environment': 'THINKTHEN_BASE_URL names the address. The plan shows the request going there.',
+  '2-flag': 'The same variable is set, and --url names another address. The flag wins.',
+};
+
 // The business how-tos. Each page runs the scripts in
 // examples/how-tos/<slug>/, and `see` says what to look for in each.
 export const HOWTOS = [
