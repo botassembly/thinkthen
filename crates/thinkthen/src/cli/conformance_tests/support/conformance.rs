@@ -44,6 +44,8 @@ pub(super) struct Case {
     pub(super) verb: String,
     pub(super) question: Option<Box<RawValue>>,
     pub(super) question_set: Option<Box<RawValue>>,
+    /// The one record an annotate case asks, when its set reads parts of it.
+    pub(super) record: Option<Box<RawValue>>,
     pub(super) question_form: Option<QuestionForm>,
     pub(super) text: Option<String>,
     pub(super) evidence: Option<String>,
@@ -93,6 +95,9 @@ impl Case {
             (Some(success), None) => self.validate_success(success)?,
             (None, Some(_)) => self.validate_fault()?,
             _ => return Err(format!("{} has more or less than one outcome", self.id)),
+        }
+        if self.record.is_some() && self.verb != "annotate" {
+            return Err(format!("{} names a record outside annotate", self.id));
         }
         if self.verb == "annotate" {
             if self.question_set.is_none() || self.question.is_some() {

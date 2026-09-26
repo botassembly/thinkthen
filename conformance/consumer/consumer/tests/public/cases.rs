@@ -2,14 +2,9 @@
 //!
 //! Each success case runs on its own case arm. Expected request digests were
 //! recorded against the canonical URL, so each is recomputed for the URL the
-//! backend served. Four cases do not apply to the library:
-//!
-//! - `18-find-second` and `19-find-none` set `none: true`, and 0084's
-//!   `Question::find` has no switch for the none option.
-//! - `18-annotate-two-groups` reads parts of a record through `on`, and a
-//!   library call's evidence is one whole text.
-//! - `25-defect-fault` injects an internal invariant failure, which no outside
-//!   boundary reaches. The crate's own panic-door test covers the defect kind.
+//! backend served. One case does not apply to the library:
+//! `25-defect-fault` injects an internal invariant failure, which no outside
+//! boundary reaches. The crate's own panic-door test covers the defect kind.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -28,12 +23,7 @@ use thinkthen::{
 
 const CASES: &str = include_str!("../../../../cases.json");
 const CANONICAL: &str = "https://api.typesafe.ai/v1/systemone";
-const SKIPPED: [&str; 4] = [
-    "18-find-second",
-    "19-find-none",
-    "18-annotate-two-groups",
-    "25-defect-fault",
-];
+const SKIPPED: [&str; 1] = ["25-defect-fault"];
 
 pub(crate) type Checked<T = ()> = Result<T, String>;
 
@@ -178,7 +168,12 @@ fn check(backend: &Backend, case: &Value, verbatim: &Verbatim) -> Checked {
             )
         }
         ("relate", _) => related(&engine, &question, case, &success),
-        ("annotate", _) => annotated(&engine, &raw(&verbatim.question_set), &texts, &success),
+        ("annotate", _) => {
+            let record = case.get("record").map(Value::to_string);
+            let records = record.as_deref().map_or(texts, |whole| vec![whole]);
+            annotated(&engine, &raw(&verbatim.question_set), &records, &success)
+        }
+        ("find", _) => found(&engine, &case["question"], &success),
         ("rank", _) => {
             let asked = Question::rank(case["question"]["decide"].as_str().unwrap_or_default());
             let ranked = engine
@@ -336,8 +331,8 @@ fn annotated(engine: &Engine, set: &str, texts: &[&str], success: &Value) -> Che
     let records = records.map_err(said)?;
     let mut failed = 0;
     for expected in success["answers"].as_array().into_iter().flatten() {
-        let record = &records[usize::try_from(expected["exchange"].as_u64().unwrap_or_default())
-            .unwrap_or_default()];
+        let exchange = usize::try_from(expected["exchange"].as_u64().unwrap_or_default());
+        let record = &records[exchange.unwrap_or_default().min(records.len().saturating_sub(1))];
         let named = record
             .values()
             .iter()
@@ -360,6 +355,29 @@ fn annotated(engine: &Engine, set: &str, texts: &[&str], success: &Value) -> Che
         &json!(failed),
         success.get("failed_questions").unwrap_or(&json!(0)),
     )
+}
+
+/// A find over the case's units, with its none candidate when asked.
+fn found(engine: &Engine, asked: &Value, success: &Value) -> Checked {
+    let mut question = Question::find(asked["find"].as_str().unwrap_or_default()).map_err(said)?;
+    if asked["none"] == json!(true) {
+        question = question.offering_none().map_err(said)?;
+    }
+    let units: Vec<&str> = asked["units"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .collect();
+    let found = engine.find(&question, units.clone()).map_err(said)?;
+    let rows = found.candidates().iter().map(|candidate| {
+        let index = candidate.input().and_then(|unit| at(&units, unit));
+        json!({"index": index, "probability": candidate.probability()})
+    });
+    let operation = &success["operation"];
+    same("candidates", &rows.collect(), &operation["probabilities"])?;
+    let selected = found.selected().and_then(|unit| at(&units, unit));
+    same("selected", &json!(selected), &operation["selected"])
 }
 
 fn related(engine: &Engine, question: &str, case: &Value, success: &Value) -> Checked {

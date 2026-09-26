@@ -479,16 +479,19 @@ pub struct Found<T> {
 withheld_debug!(Found<T> { selected });
 
 impl<T> Found<T> {
-    pub(crate) fn new(units: Vec<T>, found: &facade::Found) -> Result<Self, Error> {
+    /// Pair each unit, and the `none` candidate last when asked, with its probability.
+    pub(crate) fn new(units: Vec<T>, none: bool, found: &facade::Found) -> Result<Self, Error> {
         let probabilities = found.selection.probabilities();
-        if probabilities.len() != units.len() {
+        if probabilities.len() != units.len() + usize::from(none) {
             return Err(Error::defect("a find answer did not cover its units"));
         }
         let candidates = units
             .into_iter()
+            .map(Some)
+            .chain(none.then_some(None))
             .zip(probabilities)
             .map(|(input, (_, probability))| Candidate {
-                input: Some(input),
+                input,
                 probability: *probability,
             })
             .collect();

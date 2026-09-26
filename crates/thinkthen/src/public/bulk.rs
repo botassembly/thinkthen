@@ -155,7 +155,8 @@ impl Engine {
         I: IntoIterator,
         I::Item: Evidence,
     {
-        only(question, &[Kind::Find], "find")?;
+        only(question, &[Kind::Find, Kind::FindNone], "find")?;
+        let none = question.kind == Kind::FindNone;
         let units: Vec<I::Item> = self.within_limit(units)?.collect();
         let texts = units
             .iter()
@@ -169,12 +170,18 @@ impl Engine {
             text.clone(),
             &texts,
             engine.backend().model().clone(),
-            false,
+            none,
         )
-        .map_err(|_| Error::usage("find takes 2 to 255 units"))?;
+        .map_err(|_| {
+            Error::usage(if none {
+                "a find question offering none takes 2 to 254 units"
+            } else {
+                "find takes 2 to 255 units"
+            })
+        })?;
         let stop = Stop::begin(options)?;
         let found = stop.run(|cancel| engine.find(&find, cancel).map_err(Error::from))?;
-        Found::new(units, &found)
+        Found::new(units, none, &found)
     }
 
     /// Each record with every value of the set, lazily, in input order. A
@@ -282,13 +289,29 @@ fn annotated(
     cancel: &crate::engine::Cancel<'_>,
 ) -> Result<Completed<Values>, Error> {
     let evidence = evidence(text)?;
+    let parts = set
+        .groups()
+        .into_iter()
+        .map(|places| Ok((set.group_evidence(&places, &evidence)?, places)))
+        .collect::<Result<Vec<_>, core::PartError>>()
+        .map_err(|error| match error {
+            core::PartError::Record(error) => Error::usage(error.to_string()),
+            core::PartError::Reading(_) | core::PartError::Render(_) => {
+                Error::defect("a checked question set could not read its parts")
+            }
+        })?;
     let model = engine.backend().model();
     let plan = |places: &[usize]| {
+        let part = parts
+            .iter()
+            .find(|(_, held)| held == places)
+            .map(|(part, _)| part.clone())
+            .ok_or(crate::engine::error::Error::Defect("an annotate group has no part"))?;
         let questions = places
             .iter()
             .filter_map(|place| set.questions().get(*place));
         Plan::new(
-            evidence.clone(),
+            part,
             model.clone(),
             questions.map(|named| named.question().clone()).collect(),
         )
