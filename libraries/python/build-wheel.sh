@@ -1,7 +1,8 @@
 #!/bin/sh
 # Build the release wheel with every path under $HOME remapped, then check
 # what it holds: the stub, the py.typed marker, the MIT license, no builder
-# home path, and no test-only hook. Nothing is installed or published.
+# home path in any file, and no test-only hook. pyproject.toml turns off the
+# Rust SBOM, which names each path crate by its absolute folder (ticket 0128). Nothing is installed or published.
 unset THINKTHEN_API_KEY
 set -eu
 cd -- "$(dirname -- "$0")"
@@ -22,15 +23,16 @@ with zipfile.ZipFile(wheel) as held:
     names = held.namelist()
     metadata = next(held.read(n) for n in names if n.endswith(".dist-info/METADATA"))
     extensions = [held.read(n) for n in names if n.endswith(".so")]
+    homed = [n for n in names if home in held.read(n)]
 wrong = [f"it lacks {need}" for need in ("thinkthen/__init__.pyi", "thinkthen/py.typed")
          if need not in names]
 if b"License: MIT" not in metadata:
     wrong.append("its METADATA lacks License: MIT")
 if len(extensions) != 1:
     wrong.append(f"it holds {len(extensions)} extensions, not 1")
+if homed:
+    wrong.append(f"{', '.join(homed)} name the builder's home")
 for extension in extensions:
-    if home in extension:
-        wrong.append("its extension names the builder's home")
     for hook in (b"_live_workers", b"_arrow_probe", b"_raw_producer", b"_probe_trace"):
         if hook in extension:
             wrong.append(f"its extension carries the test hook {hook.decode()}")
