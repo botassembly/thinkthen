@@ -1,6 +1,6 @@
 # Usage file writes serialize the requests in flight
 
-Status: Open. Filed 2026-09-26 from workspace experiment 268, a timing study of `filter` over 306 short titles against `jev-latest`.
+Status: Closed 2026-09-26 by ticket 0141.
 
 ## What happens
 

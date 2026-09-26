@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine/usage.rs crates/thinkthen/src/engine/usage/te
 
 # 0141: Usage writes stop serializing requests
 
-Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Claude. This is ticket B1 of `sdlc/issues/2026-09-26-batching-design.md`.
+Status: landed 2026-09-26. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -14,7 +14,7 @@ Review route: a fresh read-only Claude session reviews this design and the final
 
 A user runs `thinkthen filter Q --jobs 16 < titles.txt` and gets 16 requests in flight. Today the usage file sets the pace. Every request waits its turn to rewrite that file and force it to disk, twice. Experiment 268 measured about half of a 7-second run spent in that queue.
 
-The ask is `sdlc/issues/2026-09-26-usage-file-writes-serialize-requests-in-flight.md`: usage counting should not limit how many requests run at once, and the monthly totals stay correct across processes. The batching design's B1 row names the proof as that issue's timing at `--jobs 16`. Ian's ruling 9 of 2026-09-26 puts B1 right after B0 and C1. B1 depends on neither.
+The ask is `sdlc/issues/closed/2026-09-26-usage-file-writes-serialize-requests-in-flight.md`: usage counting should not limit how many requests run at once, and the monthly totals stay correct across processes. The batching design's B1 row names the proof as that issue's timing at `--jobs 16`. Ian's ruling 9 of 2026-09-26 puts B1 right after B0 and C1. B1 depends on neither.
 
 The totals stay what `specification/recording.md` says they are: count-only, in the private usage folder beside the platform cache, under the same `.lock`, in the same `thinkthen.usage/1` file per month.
 
