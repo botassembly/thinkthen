@@ -374,6 +374,14 @@ fn refusals() {
         );
         assert!(!stderr.contains("secret"), "{stderr}");
     }
+    // The refusal comes before --write reads the question file. A write first
+    // would refuse this line for lacking the file's digest.
+    let question = "{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"calls\",\"source\":\"*\",\"target\":\"*\"}]},\"threshold\":0.01}\n";
+    let file = write(&folder, "lines.json", question);
+    let (code, _, stderr) = audit(&["-", &other, "--write", &file], secret.as_bytes());
+    let refused = "thinkthen: audit: no answer has a label in the key; check that --id points at the key's ids and that its values fit the verb\n";
+    assert_eq!((code, stderr.as_str()), (2, refused));
+    assert_eq!(fs::read_to_string(&file).expect("the file"), question);
     // A key that labels one of two questions grades the one and exits 0.
     let two = "{\"input\":{\"id\":\"r1\"},\"value\":true,\"question\":{\"text\":\"A?\"}}\n{\"input\":{\"id\":\"r2\"},\"value\":true,\"question\":{\"text\":\"B?\"}}\n";
     let one = write(&folder, "one.jsonl", "{\"id\":\"r1\",\"value\":true}\n");

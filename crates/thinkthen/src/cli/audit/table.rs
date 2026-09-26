@@ -65,7 +65,7 @@ pub(super) fn table(row: &Row, out: &mut String) {
         ));
     }
     if let Some(suggested) = &row.suggested {
-        line(suggested_line(row, suggested));
+        line(suggested_line(row, suggested, set));
         if let Some(Some(steady)) = &suggested.steady {
             line(steady_line(steady, suggested.seed) + &crossed_line(suggested, set));
         }
@@ -141,22 +141,21 @@ fn crossed_line(suggested: &Suggested, set: bool) -> String {
         return String::new();
     };
     let [first, second] = crossed.cuts.map(|cut| python_float_text(rounded(cut)));
-    if set {
-        let f1 = three(crossed.held.f1);
-        return format!(
-            "\n  crossed: cuts {first} and {second}, each checked on the other part: f1 {f1}"
-        );
-    }
-    format!(
-        "\n  crossed: cuts {first} and {second}, each checked on the other part: agreement {}, {} right of {} answered",
-        three(crossed.held.agreement),
-        crossed.held.right,
-        crossed.held.answered
-    )
+    let held = &crossed.held;
+    let tail = if set {
+        format!("f1 {}", three(held.f1))
+    } else {
+        let agreement = three(held.agreement);
+        format!(
+            "agreement {agreement}, {} right of {} answered",
+            held.right, held.answered
+        )
+    };
+    format!("\n  crossed: cuts {first} and {second}, each checked on the other part: {tail}")
 }
 
 /// The suggested cut's line, or the sentence that says no cut reaches the target.
-fn suggested_line(row: &Row, suggested: &Suggested) -> String {
+fn suggested_line(row: &Row, suggested: &Suggested, set: bool) -> String {
     if let (Some(cuts), Some(tune), Some(held)) = (suggested.cuts, &suggested.tune, &suggested.held)
     {
         return format!(
@@ -178,18 +177,14 @@ fn suggested_line(row: &Row, suggested: &Suggested) -> String {
         }
         return format!("  suggested cut: none reaches {}", suggested.objective);
     };
-    if matches!(row.verb, Some("recognize" | "relate")) {
-        let [run, at] = [&held.at_run, &held.at_cut].map(|c| three(c.f1));
-        return format!(
-            "  suggested cut {} ({}; {} split, tuned on {}, checked on {} held out): held f1 {run} as run -> {at} at the cut",
-            python_float_text(rounded(cut)),
-            suggested.objective,
-            suggested.split,
-            tune.n,
-            held.n
-        );
-    }
-    let extra = if row.true_yes.is_some() {
+    let (name, [run, at]) = if set {
+        ("f1", [held.at_run.f1, held.at_cut.f1])
+    } else {
+        ("agreement", [held.at_run.agreement, held.at_cut.agreement])
+    };
+    let extra = if set {
+        String::new()
+    } else if row.true_yes.is_some() {
         let [run, at] = [&held.at_run, &held.at_cut].map(|c| three(c.yes_recall));
         format!(", yes recall {run} -> {at}")
     } else {
@@ -197,30 +192,26 @@ fn suggested_line(row: &Row, suggested: &Suggested) -> String {
         format!(", coverage {run} -> {at}")
     };
     format!(
-        "  suggested cut {} ({}; {} split, tuned on {}, checked on {} held out): held agreement {} as run -> {} at the cut{extra}",
+        "  suggested cut {} ({}; {} split, tuned on {}, checked on {} held out): held {name} {} as run -> {} at the cut{extra}",
         python_float_text(rounded(cut)),
         suggested.objective,
         suggested.split,
         tune.n,
         held.n,
-        three(held.at_run.agreement),
-        three(held.at_cut.agreement)
+        three(run),
+        three(at)
     )
 }
 
 /// The four measures at the suggested cut on the held part.
 fn held_line(at: &Counts, set: bool) -> String {
-    if set {
-        return format!(
-            "  at the suggested cut on the held part: precision {}, recall {}, f1 {}",
-            three(at.precision),
-            three(at.yes_recall),
-            three(at.f1)
-        );
-    }
+    let accuracy = if set {
+        String::new()
+    } else {
+        format!("accuracy {}, ", three(Measure::Accuracy.of(at)))
+    };
     format!(
-        "  at the suggested cut on the held part: accuracy {}, precision {}, recall {}, f1 {}",
-        three(Measure::Accuracy.of(at)),
+        "  at the suggested cut on the held part: {accuracy}precision {}, recall {}, f1 {}",
         three(at.precision),
         three(at.yes_recall),
         three(at.f1)

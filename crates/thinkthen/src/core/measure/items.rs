@@ -60,10 +60,14 @@ pub(crate) fn read(
     let question = entry.member("question").ok_or(ungradable)?;
     let cut = number(question.member("threshold")).ok_or(ungradable)?;
     let relate = verb == Verb::Relate;
-    let (names, either): (Option<Vec<String>>, Vec<&Json>) =
+    let (names, either): (Vec<String>, Vec<&Json>) =
         match question.member(if relate { "relations" } else { "kinds" }) {
             Some(Json::Array(rules)) if relate => (
-                rules.iter().map(|rule| text(rule.member("name"))).collect(),
+                rules
+                    .iter()
+                    .map(|rule| text(rule.member("name")))
+                    .collect::<Option<_>>()
+                    .ok_or(ungradable)?,
                 rules
                     .iter()
                     .filter(|rule| rule.member("either") == Some(&Json::Bool(true)))
@@ -71,20 +75,15 @@ pub(crate) fn read(
                     .collect(),
             ),
             Some(Json::Object(kinds)) if !relate => (
-                Some(kinds.iter().map(|(kind, _)| kind.clone()).collect()),
+                kinds.iter().map(|(kind, _)| kind.clone()).collect(),
                 Vec::new(),
             ),
             _ => return Err(ungradable),
         };
-    let value = entry.member("value");
-    let said = if relate {
-        value
-    } else {
-        value.and_then(|held| held.member("entities"))
-    };
-    let Some(Json::Array(said)) = said else {
-        return Err(ungradable);
-    };
+    let said = entry
+        .member("value")
+        .and_then(|value| list(verb, value))
+        .ok_or(ungradable)?;
     let mut items = Vec::new();
     for held in said {
         let what = what(verb, held).ok_or(ungradable)?;
@@ -99,12 +98,21 @@ pub(crate) fn read(
     let lost = entry
         .member("meta")
         .and_then(|meta| number(meta.member("failed_questions")));
-    let items = Items { said: items, cut };
-    Ok((
-        items,
-        names.ok_or(ungradable)?,
-        lost.is_some_and(|lost| lost > 0.0),
-    ))
+    let partial = lost.is_some_and(|lost| lost > 0.0);
+    Ok((Items { said: items, cut }, names, partial))
+}
+
+/// The list of names or edges in a command's value.
+fn list(verb: Verb, value: &Json) -> Option<&Vec<Json>> {
+    let list = if verb == Verb::Relate {
+        Some(value)
+    } else {
+        value.member("entities")
+    };
+    match list? {
+        Json::Array(list) => Some(list),
+        _ => None,
+    }
 }
 
 fn text(value: Option<&Json>) -> Option<String> {
@@ -144,15 +152,9 @@ pub(crate) fn key(
     value: &Json,
     names: &[String],
 ) -> Result<Vec<What>, MeasureError> {
-    let list = if verb == Verb::Relate {
-        Some(value)
-    } else {
-        value.member("entities")
-    };
-    let Some(Json::Array(list)) = list else {
-        return Err(MeasureError::KeyItems(line));
-    };
-    list.iter()
+    list(verb, value)
+        .ok_or(MeasureError::KeyItems(line))?
+        .iter()
         .map(|held| {
             let what = what(verb, held).ok_or(MeasureError::KeyItems(line))?;
             let (What::Name(named, ..) | What::Edge(named, _)) = &what;
@@ -187,16 +189,13 @@ pub(crate) fn tally(
     let mut open = vec![true; key.len()];
     let [mut hit, mut extra] = [0, 0];
     for item in items.said.iter().filter(|item| item.1 >= floor) {
-        let found = key
-            .iter()
-            .zip(open.iter_mut())
-            .find(|(want, open)| **open && matches(item, want, matching));
-        match found {
-            Some((_, open)) => {
-                *open = false;
-                hit += 1;
-            }
-            None => extra += 1,
+        let mut found = key.iter().zip(open.iter_mut());
+        if let Some((_, open)) = found.find(|(want, open)| **open && matches(item, want, matching))
+        {
+            *open = false;
+            hit += 1;
+        } else {
+            extra += 1;
         }
     }
     Ok([hit, extra, key.len() - hit])

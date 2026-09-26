@@ -62,8 +62,8 @@ pub(crate) struct AuditArguments {
     #[arg(long, value_name = "QUESTIONS")]
     write: Option<PathBuf>,
     /// How a recognize name matches a key name: the same places and kind, or overlapping places and the same kind.
-    #[arg(long = "match", value_enum, default_value = "strict")]
-    matching: Match,
+    #[arg(long = "match", value_parser = ["strict", "overlap"], default_value = "strict")]
+    matching: String,
     /// Add the coverage curve at every distinct confidence to each group.
     #[arg(long)]
     curve: bool,
@@ -89,12 +89,6 @@ fn group(text: &str) -> Result<Group, String> {
         _ if text.starts_with('/') => Ok(Group::Field(text.to_owned())),
         _ => Err(BY.to_owned()),
     }
-}
-
-#[derive(Clone, Copy, Debug, ValueEnum)]
-enum Match {
-    Strict,
-    Overlap,
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
@@ -175,10 +169,9 @@ fn grade_all(arguments: &AuditArguments) -> Result<Graded, Refusal> {
     let answers = answer::read(&results, &pointer, Identity::Question)
         .map_err(|e| refusal("results", Cause::Measure(e)))?;
     let mut key = Key::read(&key_lines).map_err(|e| refusal("key", Cause::Measure(e)))?;
-    key.1 = match arguments.matching {
-        Match::Strict => Matching::Strict,
-        Match::Overlap => Matching::Overlap,
-    };
+    if arguments.matching == "overlap" {
+        key.1 = Matching::Overlap;
+    }
     let by = match &arguments.by {
         Group::Question => By::Question,
         Group::Verb => By::Verb,
