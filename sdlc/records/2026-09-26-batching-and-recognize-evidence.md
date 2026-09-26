@@ -2,7 +2,7 @@
 
 Filed 2026-09-26. This record copies the measurements that `sdlc/issues/2026-09-26-batching-design.md` and `sdlc/issues/2026-09-26-recognize-design.md` cite. Each table names the workspace experiment that measured it. The experiments stay unpushed in the workspace, so this record is the repository's copy. One model answered every paid call: `jev-1.13.0` behind `jev-latest`. Cost uses the recorded input price of $0.042 a million input tokens. Output tokens are free under the vendor's price list.
 
-Sections 9, 10 and 13 hold arithmetic done for the designs over saved replies and dry runs. No new call was made for them.
+Sections 8, 9 and 13 hold arithmetic done for the designs over saved replies, dry runs and saved inputs. No new call was made for them.
 
 ## 1. Experiment 208: rows packed into one request, 2026-09-20
 
@@ -81,18 +81,24 @@ Both width-10 groupings pass the bar.
 
 ## 6. Experiment 268: filter timing, 306 short titles
 
-Per-request time by the size of the record, 40 records a size, excluding each run's first request:
+Step 5 sent one request at a time, `--jobs 1`, with each title carrying 0 to 70 catalog lines as context. Each size ran 40 records a run, twice, and size 0 ran four times. Each run's first request opened a new connection and is left out. That leaves 78 requests a size and 156 at size 0. Server time is the service's own time, read from the `x-envoy-upstream-service-time` reply header.
 
-| Catalog lines in the record | Median record bytes | Median input tokens | Server time, median | Round trip, median | Round trip, 90th percentile |
-| --- | --- | --- | --- | --- | --- |
-| 0 | 18 | 293 | 58 ms | 143 ms | 179 ms |
-| 2 | 214 | 370 | 57 ms | 135 ms | 182 ms |
-| 7 | 678 | 554 | 61 ms | 151 ms | 187 ms |
-| 23 | 2,150 | 1,145 | 62 ms | 135 ms | 163 ms |
-| 27 | 2,518 | 1,290 | 59 ms | 140 ms | 170 ms |
-| 70 | 6,476 | 2,878 | 69 ms | 149 ms | 191 ms |
+| Catalog lines in the record | Median record bytes | Median input tokens | Context tokens over size 0 | Requests | Server time, median | Round trip, median | Round trip, 90th percentile |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 0 | 18 | 293 | 0 | 156 | 58 ms | 143 ms | 179 ms |
+| 2 | 214 | 370 | 77 | 78 | 57 ms | 135 ms | 182 ms |
+| 7 | 678 | 554 | 261 | 78 | 61 ms | 151 ms | 187 ms |
+| 23 | 2,150 | 1,145 | 852 | 78 | 61.5 ms | 135 ms | 163 ms |
+| 27 | 2,518 | 1,290 | 997 | 78 | 59 ms | 140 ms | 170 ms |
+| 70 | 6,476 | 2,878 | 2,585 | 78 | 69 ms | 149 ms | 191 ms |
 
-The fitted slope is 0.7 ms a thousand input tokens. The record text added (2,871.75 − 293.2) ÷ (6,476 − 18) = 0.40 input tokens a byte. That text is catalog lines with names and dates. It is the only measured rate for plain record text, and the designs use it for evidence.
+Server time stayed at 57 to 61.5 ms up to about 1,000 context tokens and reached 69 ms at 2,585. A least-squares fit gives 0.4 ms a thousand input tokens for the service and 0.7 ms for the whole request.
+
+One larger data point exists. Experiment 271 sent the whole 306-song catalog as context in one request, 22,091 input tokens, and it answered in 0.36 s in each of three runs, by section 7. It is one point, not a slope, and it times a whole request of 306 questions.
+
+The limit: nothing above 2,585 context tokens was measured one request at a time. A catalog of tens of thousands of tokens is unmeasured. A filled request at the 96,000-byte ceiling can carry that much. Ticket S1 in the batching design measures context time at the sizes a filled request really carries, up to the ceiling. No page or slide claims a context-time figure until S1 has measured it.
+
+The record text added (2,871.75 − 293.2) ÷ (6,476 − 18) = 0.40 input tokens a byte. That text is catalog lines with names and dates. It is the only measured rate for plain record text, and the designs use it for evidence.
 
 ## 7. Experiment 271: 306 songs in one request, 2026-09-26
 
@@ -147,16 +153,20 @@ Answers that crossed 0.7, and the mean absolute change in probability, over the 
 
 271 ran one grouping, so it has no shuffled-order pair. 208's regrouped tens crossed 3.4% of answers with a mean move of 0.047.
 
-## 9. Content-cut batches over the 306 titles
+## 9. Content cuts over the 306 titles
 
-The batching design closes a batch after a record whose content hash is 0 mod N, or at 2N records. Simulated over experiment 268's `songs.txt` in its alphabetical order:
+The batching design fills each batch to the request limit. It closes a batch early after a record whose content hash is 0 mod 4,096. The content hash is the SHA-256 of the record in compact JSON, first 8 bytes, big-endian. Simulated over experiment 268's `songs.txt` in its alphabetical order, with bodies built in the design's section 1 shape and `jev-latest` as the model:
 
-| N | Batches | Smallest | Largest | Closed at 2N |
-| --- | --- | --- | --- | --- |
-| 10 | 34 | 1 | 20 | 4 |
-| 100 | 5 | 14 | 152 | 0 |
+| Form | Body bytes | Titles on a content cut | Batches |
+| --- | --- | --- | --- |
+| Titles as evidence | 55,490 | none | 1 |
+| Catalog as context, from experiment 271's B306 request | 62,748 | none | 1 |
 
-A title inserted after the 100th line changed 1 batch of the 34. Fixed tens would change every batch after the insert.
+Both bodies sit under the 96,000-byte ceiling. The plain body holds 55,490 ÷ 306 = 181 bytes a title, so a request at the ceiling holds about 96,000 ÷ 181 = 529 short titles. At mod 1,024 the 72nd title would fall on a cut, and the list would form 2 batches. Experiment 271's own bodies held 52,417 bytes for A306 and 78,358 for B306. B306's catalog, its evidence, held 28,462 bytes.
+
+At `--batch 10` no title falls on a cut, so the list forms fixed runs of 10: 31 batches, the grouping experiment 271 measured.
+
+The earlier rule, a cut at 0 mod 10 and a cap of 20, formed 34 batches of 1 to 20 records. A title inserted after the 100th line changed 1 batch of the 34.
 
 ## 10. Experiment 265: plain sentences, recognize and relations
 
@@ -210,21 +220,27 @@ A cut tuned on one half moved test-half recall and precision by at most 2.5 poin
 
 Today's 100 cases bill 266,502 input tokens a run over 772 words: 2,665 tokens a case and 345.2 a word. The 345 already holds each case's fixed part and its sentence as evidence, spread over 7.72 words.
 
-A least-squares fit over the 100 cases, input tokens against words, gives about 315 tokens a request and 304 a word. Adding the sentence's bytes as a second term gives 305 a request and 298 a word. The designs use 300 a request for the fixed part and 300 a word for its two questions, and add the text as evidence at 0.40 tokens a byte, by section 6.
+A least-squares fit over the 100 cases, input tokens against words, gives about 315 tokens a request and 304 a word. Adding the sentence's bytes as a second term gives 305 a request and 298 a word. The designs use 300 a request for the fixed part and 300 a word for its two questions, and add the evidence at 0.40 tokens a byte, by section 6.
 
-The 100 dry-run bodies hold 889,901 bytes for 772 words: 1,153 bytes a word, with each case's 40-byte sentence inside. A fit gives 74 bytes a request and about 1,150 a word once the word's own bytes in its snippets are counted. A request then holds (96,000 − text bytes) ÷ 1,150 words.
+The 100 dry-run bodies hold 889,901 bytes for 772 words: 1,153 bytes a word, with each case's sentence inside. A fit gives 74 bytes a request and about 1,150 a word once the word's own bytes in its snippets are counted.
 
 Each kind question listed the five kinds in 82 bytes. Three kinds shorten each word's kind question by about 30 bytes. The token effect is unmeasured, so three-kind figures below run slightly high.
 
-The designs plan a text at about 6 bytes a word and 6% more words under the new rules. Word rows:
+**The window.** No experiment measured a bounded window of evidence. Experiment 270's key sentences run 1 to 14 words and 4 to 74 bytes, 37.8 bytes on average. Every measured case therefore falls wholly inside a window of 14 or more words on each side, and its answers carry over unchanged. The recognize design sets a stated default of 200 words on each side of a piece, configurable. At 6 bytes a word that window adds at most 2,400 bytes, about 960 tokens, to a request of about 25,000.
 
-| Text | Words after the rules | Text bytes | Words a request | Word requests | Input tokens | Cost |
+**Words a request with the window.** A piece of P words carries at most (P + 400) × 6 bytes of evidence. A request holds P words when 1,150 × P + (P + 400) × 6 + 74 ≤ 96,000. P = 80 gives 92,000 + 2,880 + 74 = 94,954 bytes. P = 81 gives 96,110, over the ceiling. So a request holds 80 words, and its evidence is at most 2,880 bytes, or 1,152 tokens at 0.40 a byte. A text shorter than the window is its own evidence.
+
+The designs plan a text at about 6 bytes a word and 6% more words under the new rules. Each request then costs at most 300 + 1,152 = 1,452 tokens beside its words. Word rows:
+
+| Text | Words after the rules | Text bytes | Words a request | Word requests | Input tokens, at most | Cost |
 | --- | --- | --- | --- | --- | --- | --- |
-| 60 words | 64 | about 360 | 64 | 1 | 300 + 144 + 64 × 300 = 19,644 | $0.0008 |
-| 1,000 words | 1,060 | about 6,000 | 77 | 14 | 14 × (300 + 2,400) + 1,060 × 300 = 355,800 | $0.015 |
-| 8,000 words | 8,480 | about 48,000 | 41 | 207 | 207 × (300 + 19,200) + 8,480 × 300 = 6,580,500 | $0.28 |
-| 10,000 words | 10,600 | about 60,000 | 31 | 342 | 342 × (300 + 24,000) + 10,600 × 300 = 11,490,600 | $0.48 |
+| 60 words | 64 | about 360 | 64, the whole text | 1 | 300 + 144 + 64 × 300 = 19,644 | $0.0008 |
+| 1,000 words | 1,060 | about 6,000 | 80 | 14 | 14 × 1,452 + 1,060 × 300 = 338,328 | $0.014 |
+| 10,000 words | 10,600 | about 60,000 | 80 | 133 | 133 × 1,452 + 10,600 × 300 = 3,373,116 | $0.14 |
+| The hard cap, 600,000 bytes | 106,000 | 600,000 | 80 | 1,325 | 1,325 × 1,452 + 106,000 × 300 = 33,723,900 | $1.42 |
 
-(96,000 − 6,000) ÷ 1,150 gives 78 words. The designs plan on 77 to leave room for the request's frame and longer words. (96,000 − 48,000) ÷ 1,150 gives 41, and (96,000 − 60,000) ÷ 1,150 gives 31. `confirm` requests add a few questions and one more copy of the text each, and the rows leave them out. Ten times the text costs 32 times the tokens, because every request carries the whole text.
+The 60-word text fits one request: 64 × 1,150 + 360 + 74 = 74,034 bytes. 1,060 ÷ 80 = 13.25 gives 14 requests. 10,600 ÷ 80 = 132.5 gives 133. The first and last pieces carry a window on one side only, so the rows are upper bounds. `confirm` requests add a few questions and one window each, and the rows leave them out. Ten times the text now costs about 10 times the tokens.
 
-Section 7's requests of 21,871 and 41,787 input tokens answered in 0.52 and 0.63 s. At 4 requests in flight, 14 word requests take 4 rounds.
+Under the earlier whole-text rule every request carried the whole text. The same working gave 77 words a request, 14 requests and 355,800 tokens for 1,000 words, and 31 words a request, 342 requests and 11,490,600 tokens, $0.48, for 10,000 words.
+
+Section 7's requests of 21,871 and 41,787 input tokens answered in 0.52 and 0.63 s. A full word request carries about 25,000. At 4 requests in flight, 14 word requests take 4 rounds, 133 take 34, and 1,325 take 332.
