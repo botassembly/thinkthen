@@ -135,3 +135,20 @@ def test_credentials_in_the_environment_address_are_refused_unshown(backend, tmp
     assert printed.strip() == ("UsageError THINKTHEN_BASE_URL: a base address carries "
                                "no user information")
     assert backend.count() == 0
+
+
+def test_entity_and_edge_reprs_withhold_names_and_kinds(backend, tmp_path):
+    """A name and a kind are the caller's text, so an ``Entity`` repr and an
+    ``Edge`` repr count their bytes, as the Rust ``Entity``'s ``Debug`` does.
+    The relation prints, as the Rust ``Edge``'s ``Debug`` prints it."""
+    printed = run("""
+        import thinkthen as tt
+        pair = [("MARK-Ada", "MARK-kind"), ("MARK-Bo", "MARK-kind")]
+        print(repr(tt.Entity("MARK-Ada", "MARK-kind")))
+        print(repr(tt.relate(pair, relations={"knows": ("MARK-kind", "MARK-kind")})[0]))
+    """, child_env(backend, tmp_path))
+    assert printed.splitlines() == [
+        "Entity(name=<8 bytes withheld>, kind=<9 bytes withheld>)",
+        'Edge(relation="knows", source=Entity(name=<8 bytes withheld>, kind=<9 bytes withheld>), '
+        "target=Entity(name=<7 bytes withheld>, kind=<9 bytes withheld>), probability=0.9)",
+    ]
