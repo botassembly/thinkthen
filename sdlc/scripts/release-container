@@ -59,6 +59,7 @@ docker run "$@" "$IMAGE" sh -euc '
 	LIBCLANG_PATH=/work/home/venv/lib/python3.10/site-packages/clang/native
 	BINDGEN_EXTRA_CLANG_ARGS="-I$(gcc -print-file-name=include)"
 	PG_CONFIG=/work/home/pg/usr/pgsql-16/bin/pg_config
+	mkdir -p /work/home/.pgrx
 	export PATH LIBCLANG_PATH BINDGEN_EXTRA_CLANG_ARGS PG_CONFIG
 	sh sdlc/scripts/release-pack x86_64-unknown-linux-gnu /work/out c sqlite duckdb postgresql python typescript
 '
