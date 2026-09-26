@@ -33,6 +33,29 @@ export THINKTHEN_BACKEND_BIN="${CARGO_TARGET_DIR:-$REPO/target}/debug/conformanc
 	exit 1
 }
 export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
+stock_cli() {
+	echo "== the stock CLI loads the extension"
+	answer=$(env -i PATH="$PATH" HOME="$(mktemp -d)" XDG_CACHE_HOME="$(mktemp -d)" XDG_CONFIG_HOME="$(mktemp -d)" \
+		THINKTHEN_API_KEY=sk-loopback-duckdb-check THINKTHEN_BASE_URL="http://127.0.0.1:$PORT/generic/v1" \
+		sh "$LIMIT" 60 "$CLI" -unsigned -noheader -list -c "LOAD '${THINKTHEN_DUCKDB_EXTENSION:-build/thinkthen.duckdb_extension}'; SELECT thinkthen_decide('Is it a refund?', 'refund now');")
+	[ "$answer" = true ] || {
+		echo "check: the stock CLI read '$answer', not true" >&2
+		exit 1
+	}
+}
+if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+	# The installed-file mode (ticket 0128): the stock CLI and the shared cases load the
+	# extension unpacked from the release archive, by its path.
+	# A release file carries no test hook, so the full check alone runs the one hook case.
+	. "$REPO/sdlc/scripts/installed.sh"
+	installed_unpack
+	export THINKTHEN_DUCKDB_EXTENSION="$scratch/thinkthen.duckdb_extension" THINKTHEN_CONFORMANCE_CASES="$scratch/cases.json"
+	jq '.cases |= map(select(.operation.injection != "internal_invariant_failure"))' "$REPO/conformance/cases.json" >"$THINKTHEN_CONFORMANCE_CASES"
+	stock_cli
+	sh "$LIMIT" 900 "$PY" tools/conformance.py
+	echo "check: databases/duckdb passes, installed"
+	exit 0
+fi
 
 echo "== build, lint, and unit tests"
 cargo fmt --check
@@ -66,14 +89,7 @@ set -e
 }
 rm -f -- "$planted.out"
 
-echo "== the stock CLI loads the extension"
-answer=$(env -i PATH="$PATH" HOME="$(mktemp -d)" XDG_CACHE_HOME="$(mktemp -d)" XDG_CONFIG_HOME="$(mktemp -d)" \
-	THINKTHEN_API_KEY=sk-loopback-duckdb-check THINKTHEN_BASE_URL="http://127.0.0.1:$PORT/generic/v1" \
-	sh "$LIMIT" 60 "$CLI" -unsigned -noheader -list -c "LOAD 'build/thinkthen.duckdb_extension'; SELECT thinkthen_decide('Is it a refund?', 'refund now');")
-[ "$answer" = true ] || {
-	echo "check: the stock CLI read '$answer', not true" >&2
-	exit 1
-}
+stock_cli
 
 echo "== suites"
 for suite in verbs_suite settings_suite signal_suite relate_suite databases_suite conformance; do
