@@ -106,6 +106,13 @@ Each rung ran directly on the branch at `9a4dc0a3`, merged with `origin/main` at
 2. The widening has its edge test, above.
 3. The `--by` sentence lives in one constant in `cli/measure.rs`.
 
+## Rungs after code review
+
+Each rung ran directly on the branch at `cd90cbaa`, merged with `origin/main`. The merge brought issue files only.
+
+- `lint`, `test`, and `spec`: exit 0. `spec` ran 51 page blocks and 21 demos green.
+- `surfaces`: exit 1 on both runs, each on a known flake outside audit. The first run failed `libraries/polars` in `a_series_runs_at_the_throttle_as_a_slice_does` on a timing gap of 8 percent under load, while `libraries/c` passed. The second run passed polars and failed `libraries/c` with `Text file busy`, the launch race a separate Quick Fix is fixing. Every other surface passed both times.
+
 ## Defers
 
 - The lander closes the five issues this ticket names.
