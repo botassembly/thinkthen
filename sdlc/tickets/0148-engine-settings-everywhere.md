@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/public/settings.rs crates/thinkthen/src/public/engin
 
 # 0148: Every library gets the command's engine settings
 
-Status: ready. Owner: Claude. It builds after ticket 0146 lands, by the coordinator's ruling of 2026-09-26.
+Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Claude. It builds after ticket 0146 lands, by the coordinator's ruling of 2026-09-26.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -293,7 +293,7 @@ Nonblank lines, measured with `grep -c .` on the diff.
 1. Stop before crossing a budget or adding a dependency.
 2. Stop if any plant stays green.
 3. Stop if the design needs a change in `crates/thinkthen/src/engine`. The facade already takes every setting, and a need to change it means this design is wrong.
-4. Stop if ticket 0146 has not landed on main when the build starts. Merge `origin/main` first. Then stop before editing any file 0146 changed but `public_env.rs`, `settings.md` and `sdlc/ratchet.json`: `public/question.rs`, `public/results.rs`, `public/batch.rs`, `public/bulk.rs`, `engine/facade.rs`, `cli/`, any other existing file under `crates/thinkthen/tests`, or any specification page but `settings.md`. In `public_env.rs`, remove only the `cache_bytes` row and its expected line. The new file `crates/thinkthen/tests/settings_cases.rs` uses `crates/thinkthen/tests/support` as it is and adds nothing there. In `settings.md`, touch only the rows and the one precedence line named above. If 0146 lands first, merge its `batch` row and precedence line, and do not rewrite them.
+4. Stop if ticket 0146 has not landed on main when the build starts. Merge `origin/main` first. Then stop before editing any file 0146 changed but `public_env.rs`, `settings.md` and `sdlc/ratchet.json`: `public/question.rs`, `public/results.rs`, `public/batch.rs`, `public/bulk.rs`, `engine/facade.rs`, `cli/`, any other existing file under `crates/thinkthen/tests`, or any specification page but `settings.md`. In `public_env.rs`, remove only the `cache_bytes` row and its expected line. The new file `crates/thinkthen/tests/settings_cases.rs` uses `crates/thinkthen/tests/support` as it is and adds nothing there. In `settings.md`, touch only the rows and the one precedence line named above. After 0146 lands, merge its `batch` row and precedence line, and do not rewrite them.
 5. Stop if the sweep finds a setting with no effect beyond `cache_bytes` and the calibration `profile`. Report it for a ruling on scope.
 6. Stop if a case in `conformance/settings.json` behaves differently on the command and on Rust. That is an equivalence bug, and it needs its own decision.
 7. Stop if the timeout case takes more than 5 seconds on any surface, or flakes once in three runs. Report the arm's timing. Do not lengthen the delay to pass.
