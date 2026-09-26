@@ -84,7 +84,16 @@ Run once each after the merge, directly, with the rungs taking the heavy lock th
 
 The first ladder after the merge passed install in 513 s, most of it waiting on the heavy lock. Its lint failed in 230 s on clippy's 90-line cap. The fix is commit `b33d03b3`, and the table above is the full rerun on it.
 
-Lane size after the ladder: 9.2G by `du -sh`.
+After the code review fixes, the trims, and a second merge of `origin/main`, the rungs ran again on commit `78242c20`:
+
+| Rung | Result | Wall time |
+|---|---|---|
+| lint | pass | 145 s |
+| test | pass | 642 s |
+| spec | pass | 25 s |
+| surfaces | pass | 637 s |
+
+Lane size after the ladder: 9.2G by `du -sh`, and 9.3G after the rerun.
 
 ## Incident
 
