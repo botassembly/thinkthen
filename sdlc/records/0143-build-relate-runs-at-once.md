@@ -97,13 +97,17 @@ After the fixes and the merge of `origin/main` at `7850db3f`, each rung ran once
 | `spec` | exit 0, 162 s; demos 21 green, 0 red |
 | `surfaces` | exit 0, 1,266 s; Rust, C, Python, TypeScript, Ruby, R, DuckDB, SQLite, PostgreSQL, and Polars pass |
 
-After the review fixes and the merge of `origin/main` at `7443d69d`, `lint`, `test`, and `spec` ran once more. No surface file changed, so `surfaces` did not rerun.
+After the review fixes and the merge of `origin/main` at `ce7975b5`, which carries ticket 0128 Phase 2, `lint`, `test`, and `spec` ran once more at `bbed5a17`. The merge was clean and left every ratchet at its measured total. No surface file changed, so `surfaces` did not rerun.
 
-REVIEWLADDER
+| Rung | Result |
+| --- | --- |
+| `lint` | exit 0, 105 s; ratchet 68,062 of 68,062 |
+| `test` | exit 0, 117 s; 947 passed, 0 failed across 36 test binaries |
+| `spec` | exit 0, 14 s; demos 21 green, 0 red |
 
 ## Lane size
 
-The lane measured 9.7G before the build and 11G after it.
+The lane measured 9.7G before the build and 11G after it, and 11G after the review fixes.
 
 ## Deferred gaps
 
