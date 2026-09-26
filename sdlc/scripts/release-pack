@@ -45,7 +45,8 @@ keep() {
 	cp -- "$1" "$OUT/"
 	(cd -- "$OUT" && sha256 "${1##*/}" >"${1##*/}.sha256")
 }
-fresh() { mktemp -d "$stage/$1.XXXXXX"; }
+# fresh NAME: a new folder in the stage, with the mode a plain mkdir gives, which each archive root carries.
+fresh() { fresh=$(mktemp -d "$stage/$1.XXXXXX") && chmod 755 "$fresh" && echo "$fresh"; }
 
 part_command() {
 	if [ -n "$reuse" ]; then
@@ -123,8 +124,9 @@ part_duckdb() {
 }
 
 part_postgresql() {
-	sh databases/postgresql/package.sh ${reuse:+--reuse} "$(fresh postgresql)"
-	pack "thinkthen-postgresql16-$V-$TARGET.tar.gz" "$stage/postgresql"
+	folder=$(fresh postgresql)
+	sh databases/postgresql/package.sh ${reuse:+--reuse} "$folder"
+	pack "thinkthen-postgresql16-$V-$TARGET.tar.gz" "$folder"
 }
 
 part_python() {

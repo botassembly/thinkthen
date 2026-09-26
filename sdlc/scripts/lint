@@ -7,9 +7,13 @@ set -eu
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
-# Worktrees.md rule 11: a recursive rm goes through scratch.sh, which refuses the checkout.
+# Worktrees.md rule 11: a recursive rm goes through scratch.sh. Each guard refuses its plant.
 scratch_lint
-(rm() { exit 3; }; ! scratch_remove "$REPO" 2>/dev/null) || { echo 'lint: scratch_remove did not refuse the checkout' >&2; exit 1; }
+scratch_dir planted
+printf '%s -f -r -- "$x"\n' rm >"$planted/check.sh"
+! scratch_lint "$planted/check.sh" 2>/dev/null || { echo 'lint: scratch_lint passed a planted rm' >&2; exit 1; }
+(scratch_made="$REPO/x
+"; rm() { exit 3; }; ! scratch_remove "$REPO" 2>/dev/null) || { echo 'lint: scratch_remove did not refuse the checkout' >&2; exit 1; }
 
 # This repository goes public, so no tracked path or file may name a private
 # project. The names cannot live here, so THINKTHEN_PRIVATE_NAMES points at a

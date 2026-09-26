@@ -35,13 +35,15 @@ runtime_ready() {
 	fi
 }
 
-# Stop and remove whatever a killed run left behind, then open a new run folder.
+# Stop and remove whatever a killed run left behind, then open a new run folder. The old folder
+# is removed only when its name is this TMPDIR's tt-pg. and six letters or digits, as mktemp makes.
 runtime_open() {
 	mkdir -p .runtime
 	if [ -s .runtime/last-run ]; then
 		old=$(cat .runtime/last-run)
 		[ -f "$old/data/postmaster.pid" ] && "$BIN/pg_ctl" -D "$old/data" -m immediate stop >/dev/null 2>&1
-		rm -rf -- "$old"
+		rest=${old#"$(cd -- "${TMPDIR:-/tmp}" && pwd -P)/tt-pg."}
+		case $rest in "$old" | *[!A-Za-z0-9]*) echo "runtime.sh: refused to remove $old" >&2 ;; ??????) rm -rf -- "$old" ;; esac
 	fi
 	scratch_dir RUN "${TMPDIR:-/tmp}/tt-pg.XXXXXX"
 	chmod 700 "$RUN"

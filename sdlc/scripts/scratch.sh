@@ -33,12 +33,13 @@ scratch_clean() {
 	printf '%s' "$scratch_made" | while IFS= read -r made; do scratch_remove "$made"; done
 }
 
-# scratch_lint: fail on a recursive rm in the scripts outside this file. The exceptions are the
-# demos check's literal build folder, and the Python check's failed toolchain venv, a cache
-# folder its own line names from a fixed prefix and a hash.
+# scratch_lint [FILE...]: fail on a recursive rm in FILE, or in the scripts, outside this file.
+# The exceptions are the demos check's literal build folder, and the Python check's failed
+# toolchain venv, a cache folder its own line names from a fixed prefix and a hash.
 scratch_lint() {
-	scratch_found=$(grep -sHE '(^|[^[:alnum:]_])rm[[:space:]]+-[[:alpha:]]*[rR]' sdlc/scripts/* libraries/*/check.sh \
-		databases/*/check.sh | grep -v '^sdlc/scripts/scratch\.sh:' | sed 's/:[[:space:]]*/:/' | grep -v -x -F \
+	[ $# -gt 0 ] || set -- sdlc/scripts/* libraries/*/check.sh databases/*/check.sh
+	scratch_found=$(grep -sHE '(^|[^[:alnum:]_])rm([[:space:]]+-[^[:space:]]*)*[[:space:]]+-([[:alpha:]]*[rR]|-recursive)' "$@" |
+		grep -v '^sdlc/scripts/scratch\.sh:' | sed 's/:[[:space:]]*/:/' | grep -v -x -F \
 		-e 'sdlc/scripts/demos-self-test:rm -rf -- "$REPO/$ROOT"' -e 'libraries/python/check.sh:rm -rf -- "$venv"') || return 0
 	printf 'lint: a recursive rm outside sdlc/scripts/scratch.sh (worktrees.md rule 11):\n%s\n' "$scratch_found" >&2
 	return 1
