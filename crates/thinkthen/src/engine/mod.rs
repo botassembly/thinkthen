@@ -238,11 +238,14 @@ impl Width {
     /// The width every call follows until an explicit width is selected.
     pub(crate) const FALLBACK: Self = Self(4);
 
+    /// The widest throttle, which also sizes the connection pool.
+    pub(crate) const MOST: Self = Self(32);
+
     /// Accept 1 through 32. Width 0 would block every caller forever.
     pub(crate) fn new(value: u64) -> Result<Self, error::Error> {
         u8::try_from(value)
             .ok()
-            .filter(|width| (1..=32).contains(width))
+            .filter(|width| (1..=Self::MOST.0).contains(width))
             .map(Self)
             .ok_or(error::Error::Usage(
                 "a width is a whole number from 1 through 32",
