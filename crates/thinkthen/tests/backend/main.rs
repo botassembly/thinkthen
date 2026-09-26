@@ -25,7 +25,7 @@ mod cache_prune_locking;
 mod check;
 mod choosing;
 mod default_cache;
-#[cfg(unix)]
+#[cfg(target_os = "linux")]
 mod default_cache_storage;
 mod distribution_total;
 mod exchange;

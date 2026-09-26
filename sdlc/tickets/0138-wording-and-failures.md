@@ -205,6 +205,8 @@ Contract 2; state and timing 1; reach 3; proof 2; cost of error 1; total 9. Fina
 8. `the record holds nothing at` echoes a quotation mark or backslash as typed. It lives in `core/records.rs`, which 0137 owns.
 9. The library and SQL surfaces keep the bare status line after the retries. Their errors come from `public/error.rs`, which 0134 owns.
 10. `told` escapes `Failure::Pointer` at the command edge. When 0137 lands, the escape can move into the variant's own format in `cli/failure.rs`.
+11. `in_default_cache` in `cli/mod.rs` repeats the ten-arm command match of `Command::input`. Once 0135 and 0137 land, both can share one `Command` accessor in `cli/args/command.rs`.
+12. No test pins the escape of a quotation mark or backslash in a pointer echo. P11 and P12 use control characters. A row would cost the test budget's last lines.
 
 ## What Ian can overturn
 
