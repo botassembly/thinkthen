@@ -3,7 +3,7 @@
 - Status: Accepted 2026-09-26 by Ian's ruling. Ian can overturn it
 - Date: 2026-09-26
 
-This ADR states the rule that every function, planner and default follows when cost and accuracy pull apart. It came from a mistake in `recognize`, described below.
+This ADR states the rule that every function, planner and default follows when cost and accuracy pull apart. It came from a mistake in `recognize`, described below and in `sdlc/records/2026-09-26-recognize-asked-for-names-nobody-wanted.md`.
 
 ## Context
 
