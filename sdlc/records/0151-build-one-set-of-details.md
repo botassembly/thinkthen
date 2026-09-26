@@ -79,5 +79,5 @@ After the fixes, `lint`, `test` and `spec` each exit 0, and the DuckDB, R, C and
 
 ## Left for landing and later
 
-- The lander files the site issue and marks asks 5 and 6 of `sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md` settled.
+- The lander filed `sdlc/issues/2026-09-26-site-run-facts-after-0151.md` and marked asks 5 and 6 of the run-facts issue settled.
 - The ticket's deferred gaps 1 to 5 stand.
