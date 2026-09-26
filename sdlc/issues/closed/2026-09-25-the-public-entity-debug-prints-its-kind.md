@@ -1,6 +1,6 @@
 # The public `Entity` Debug prints its kind
 
-Status: Open.
+Status: Closed 2026-09-26 by ticket 0134.
 
 Filed on 2026-09-25 by ticket 0127, found while it marked the second relate entity's kind in the secrecy sweep. No key was used, and no request left the machine.
 

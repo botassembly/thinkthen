@@ -1,6 +1,6 @@
 # audit exits 0 when no answer matches the key
 
-Status: Open.
+Status: Closed 2026-09-26 by ticket 0135.
 
 Filed on 2026-09-25 while writing the Beatles Bench worked-example pages (bench ticket 0010). The build under test was thinkthen 0.0.1 at 02dc0b96. No audit code changed on main since then. No key was used, and no request left the machine.
 

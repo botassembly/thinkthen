@@ -24,7 +24,6 @@ The rule for entry is ADR 0005: a feature enters when a demo cannot be written w
 | `--from FILE` for `choose` options | On one document the shell already reads a list into the arguments with command substitution. In record mode `--options POINTER` reads the list from the record | A demo whose candidate list is neither in the record nor available to the shell |
 | `--invert` on `filter` | Every demo that wanted the other side wrote the question the other way round | A demo where the question cannot be inverted in words |
 | `--output FILE`, publishing on success | It would write a file, and it would add a second success path beside the exit code | A demo that must not leave a half-written file behind on a failure |
-| `--context FILE` | One verb carrying extra evidence alone would split the grammar. A user concatenates the context into standard input | A demo where the context has to stay separate from the evidence in the request |
 | `--on-error continue` | It needs an error row shape, a failure count on standard error, and an exit code of its own. Stopping at the first failure needs none of those | A demo over a large file where one bad record must not end the run |
 | A request cap | Demo 05 wanted a budget and found it the wrong shape, because a per-file loop spends across processes rather than within a run | A budget that holds across processes. That is a different tool |
 | A `required` mark in the `annotate` file | The file holds questions and nothing else. A required mark is policy | A demo where a missing answer must fail the record |
@@ -32,7 +31,6 @@ The rule for entry is ADR 0005: a feature enters when a demo cannot be written w
 | History across many runs | A comparison of two saved runs keeps nothing. A trend over many runs needs a store, and the tool holds no state | A store that lives outside this tool and reads the saved runs |
 | A threshold on `score` | `jq -e '. >= 2'` after the command cuts on the number in one line, and the help shows it | A demo where the cut has to travel inside a saved question file |
 | A flag that repeats a run for trials | A shell loop does it, and a transform averages within a case before it scores | A demo where the trials have to share one recording folder in one run |
-| Packing many records into one request | Each record is sent once either way, so packing saves no tokens. It saves round trips, and those already run in parallel. It costs isolation, and accuracy falls as the evidence fills with unrelated content | Nothing measured so far |
 | A two-pass `find` beyond 255 units | One request holds 255 units. A second pass over the winners would need a merge rule and a second measurement | A job whose candidate set cannot be cut to 255 upstream |
 | `config set` | An editor changes a JSON file. A writer would be the first thing in this tool that writes a file the user did not name | A demand strong enough to change that rule |
 | A subprocess adapter | It is the escape hatch for a vendor whose shape is not System One. Dynamic plugin libraries stay refused | A vendor worth supporting that no small server can put behind the System One shape |
@@ -41,6 +39,8 @@ The rule for entry is ADR 0005: a feature enters when a demo cannot be written w
 | A library over the core | It is the honest answer to calling the judge from inside a program written in another language, which is use cases 1, 2, 7, and 8 in `sdlc/planning/ten-use-cases.md`. It is a second product, not an option on this one | Version one shipping, and a decision on which language the first binding serves |
 | A `models` listing | The vendor's `GET /v1/models` lists the models with a name, a description, and a release date. A listing reads no evidence and judges nothing, so it earns none of the surface this tool spends on judging | A demo that cannot pin a model without asking the backend which ones exist |
 | A `serve` command or a daemon | Declined by `sdlc/planning/ten-use-cases.md`. A process that waits for work is a service, and this tool is a command that ends. Record mode through a `coproc` already serves a loop from one long-lived process, and a how-to shows it | Nothing. A service is a different program |
+
+ADR 0048 brought two held rows in: `--context FILE`, and packing many records into one request as batching. The batching tickets build them.
 
 ## Held by ADR 0010
 

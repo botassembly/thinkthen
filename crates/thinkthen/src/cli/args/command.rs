@@ -229,12 +229,14 @@ pub(crate) enum Command {
     /// Grade saved answers against an answer key and suggest a bar.
     ///
     /// RESULTS holds the lines `decide`, `filter`, `choose`, `tag`, `score`,
-    /// `rank`, `find`, or `annotate` printed with --details, and KEY holds one
+    /// `rank`, `find`, `annotate`, `recognize`, or `relate` printed with
+    /// --details, and KEY holds one
     /// JSON object per record: its id, the right value, and an optional part of
     /// tune or held. audit prints agreement with its 95% interval, both kinds of
     /// disagreement, precision and f1, AUC, calibration, a coverage curve, and a
     /// suggested bar tuned on one part and checked on the other. An answer
     /// inside a band is not sure, and it counts apart from right and wrong.
+    /// recognize names and relate edges get precision, recall, and f1.
     ///
     /// A key may give each record a part of tune or held; without parts audit
     /// splits the records itself and shows how steady its bar is.

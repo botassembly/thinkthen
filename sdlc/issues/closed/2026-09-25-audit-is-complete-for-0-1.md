@@ -1,6 +1,6 @@
 # audit is complete for 0.1
 
-Status: Closed on 2026-09-25 by ticket 0125. `recognize` and `relate` grading moved to `sdlc/issues/2026-09-25-audit-grades-recognize-and-relate.md`, which stays open.
+Status: Closed on 2026-09-25 by ticket 0125. `recognize` and `relate` grading moved to `sdlc/issues/closed/2026-09-25-audit-grades-recognize-and-relate.md`, which stays open.
 
 Ian wants `audit` right for 0.1. It grades every function type, scores by the measure the user picks, shows how steady its suggested bar is, and hands that bar back to the question file. This issue merges four issues filed on 2026-09-25, and their evidence is kept below:
 

@@ -9,7 +9,7 @@ An agent proposal. Ian asked for the design to be checked against the first vend
 
 - **`rank` is right as it stands.** The vendor's reranking recipe asks one yes/no question per candidate, runs the calls at once, and sorts by the probability. No recipe for pairwise ranking exists anywhere in the pages.
 - **Many questions over one piece of evidence belong in one request.** The vendor measured thirteen questions over one long article: the same answers, 12 times cheaper, and 10 times faster than thirteen calls. The evidence is billed once per request. `annotate` already works this way.
-- **One request per record is right for `filter`, `rank`, and `annotate`.** Packing many records into one request saves nothing on tokens, because each record is sent once either way. It saves round trips, and those already run in parallel. It costs isolation, and the pages warn that accuracy falls as the evidence fills with unrelated content.
+- **One request per record is right for `filter`, `rank`, and `annotate`.** Packing many records into one request saves nothing on tokens, because each record is sent once either way. It saves round trips, and those already run in parallel. It costs isolation, and the pages warn that accuracy falls as the evidence fills with unrelated content. (Superseded by ADR 0048.)
 - **A band over one answer is the vendor's only remedy for unstable answers.** The pages advise against asking a question together with its negation. The tool asks each question once.
 - **The parallel setting.** The vendor's own code uses 4 to 12 workers and says the public endpoint limits above about eight. The published limits are 1,200 requests a minute, about 32,000 tokens of evidence, and 64,000 tokens a request. A default of 4 for `jobs` stands.
 
