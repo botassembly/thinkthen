@@ -522,13 +522,16 @@ export const TAB_SURFACE = {
   Ruby: 'ruby', R: 'r', Rust: 'rust', SQL: 'duckdb',
 };
 
-// The business how-tos. Each page runs the scripts in
-// examples/how-tos/<slug>/, and `see` says what to look for in each.
 // Captions for the tutorial's own examples, keyed by script name.
 export const TUTORIAL_SEE = {
   '1-band': "\"I want to send this back.\" could mean an exchange or money back. It lands inside the band 0.2:0.8. decide prints null and exits 3.",
 };
 
+// The tutorial's caption for functions/decide/1-lines in its stream step.
+export const TUTORIAL_STREAM_SEE = "Each answer sits beside its message. The send-back line is the null from step 4.";
+
+// The business how-tos. Each page runs the scripts in
+// examples/how-tos/<slug>/, and `see` says what to look for in each.
 export const HOWTOS = [
   {
     slug: 'triage-a-support-inbox', title: 'Triage a support inbox', reader: 'for support teams',

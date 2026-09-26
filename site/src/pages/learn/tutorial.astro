@@ -5,7 +5,7 @@ import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
 import Code from '../../components/Code.astro';
 import InstallLine from '../../components/InstallLine.astro';
-import { SURFACES, HOWTOS, FUNCTIONS, TUTORIAL_SEE } from '../../data/catalog.mjs';
+import { SURFACES, HOWTOS, FUNCTIONS, TUTORIAL_SEE, TUTORIAL_STREAM_SEE } from '../../data/catalog.mjs';
 import { captioned, files } from '../../data/samples.mjs';
 
 const shell = SURFACES.find((s) => s.slug === 'shell');
@@ -15,7 +15,7 @@ const run = (name) => decide.find((r) => r.name === name);
 
 const plain = run('3-one');
 const answer = run('4-details');
-const lines = run('1-lines');
+const lines = { ...run('1-lines'), see: TUTORIAL_STREAM_SEE };
 const branch = run('2-case');
 const [band] = captioned('learn/tutorial', TUTORIAL_SEE);
 
@@ -38,7 +38,7 @@ const triageForm = files(triagePage)[0];
   <p>The <a href="/install/">install page</a> covers the key and every language and database.</p>
 
   <h2>2. Ask one question</h2>
-  <p>Name the question, pipe the message in, and pass the question as an argument. <code>decide</code> prints a bare <code>true</code>, <code>false</code>, or <code>null</code>, and it sets the exit code to match. One message always gets this bare answer and its exit code.</p>
+  <p>Name the question, pipe the message in, and pass the question as an argument. <code>decide</code> prints a bare <code>true</code>, <code>false</code>, or <code>null</code>, and it sets the exit code to match. Without <code>--details</code>, one message always gets this bare answer.</p>
   <Terminal run={plain} caption={plain.see} />
   <p>The exit code is the answer. A script branches on it the way it branches on <code>test</code>.</p>
 
@@ -64,7 +64,7 @@ const triageForm = files(triagePage)[0];
   <Terminal run={savedUnsure} caption={savedUnsure.see} />
 
   <h2>7. Judge a stream</h2>
-  <p><code>--lines</code> tells <code>decide</code> to judge each line as its own message. With many records, each answer prints as one JSON line with its input beside it. The input shows which answer belongs to which message. <code>jq .</code> spreads each line out to read.</p>
+  <p><code>--lines</code> tells <code>decide</code> to judge each line as its own message. Each answer then prints as one JSON line with its input beside it. The input shows which answer belongs to which message. <code>jq .</code> spreads each line out to read.</p>
   <Terminal run={lines} caption={lines.see} />
   <p><code>filter</code> reads one record per line with no flag. It keeps the records where the answer is yes, byte for byte and in order.</p>
   <Terminal run={kept} caption={kept.see} />
