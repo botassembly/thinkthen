@@ -1,6 +1,6 @@
 # The PostgreSQL warm-rows timing check fails on a busy machine
 
-Status: Open
+Status: Closed on 2026-09-25 by Quick Fix `qf-flaky-gate-tests` (record `sdlc/records/qf-flaky-gate-tests.md`).
 
 Filed on 2026-09-25 at the landing of ticket 0130. `databases/postgresql` check `twenty_thousand_warm_rows` failed once in the surfaces rung with `took 31733 ms, over 30000 ms`. The Beelink's one-minute load was about 6, with other builders' rungs queued on the heavy lock. The same commit passed that check on the next surfaces run. Ticket 0130 does not touch PostgreSQL.
 

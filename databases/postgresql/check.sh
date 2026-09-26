@@ -389,10 +389,20 @@ another_model_sends_again() {
 	same "$(bcount)" 100
 }
 check another_model_sends_again
+# The warm pass sends each row once, and a second pass sends nothing. A
+# cached row costs a file read, so the second pass takes at most half of
+# the first. Both passes slow together on a busy machine, and the ratio holds.
 twenty_thousand_warm_rows() {
 	fresh generic "thinkthen.throttle = 32"
-	ms=$(QTIMEOUT=60 timed "SELECT thinkthen_warm('$Q', 'order ' || g) INTO n FROM generate_series(1, 20000) g")
-	within "$ms" 30000
+	warm="SELECT thinkthen_warm('$Q', 'order ' || g) INTO n FROM generate_series(1, 20000) g"
+	cold=$(QTIMEOUT=180 timed "$warm")
+	same "$(bcount)" 20000
+	cached=$(QTIMEOUT=180 timed "$warm")
+	same "$(bcount)" 20000
+	[ -n "$cold" ]
+	[ -n "$cached" ]
+	echo "         warm passes: cold $cold ms, cached $cached ms"
+	[ $((cached * 2)) -le "$cold" ] || { echo "the cached pass took $cached ms, over half of the cold pass's $cold ms" >&2; return 1; }
 	has "$(q -c "SELECT thinkthen_warm('$Q', 'order ' || g) FROM generate_series(1, 20001) g")" \
 		"thinkthen usage: thinkthen_warm takes at most 20,000 rows per call (retryable: no)"
 }
