@@ -26,8 +26,8 @@ The ticket records both rulings in place.
 
 New, all against the compiled command or the public API over the loopback backend:
 
-- `crates/thinkthen/tests/backend/relate/at_once.rs`: `relate_requests_reach_the_throttle_and_no_further`, `split_relations_print_what_one_job_prints`, and `a_failed_chunk_stops_the_run_as_one_job_does`.
-- `crates/thinkthen/tests/public_controls.rs`: `a_host_interrupt_during_relate_chunks_sends_nothing_new`.
+- `crates/thinkthen/tests/backend/relate/at_once.rs`: `relate_requests_reach_the_throttle_and_no_further`, `split_relations_print_what_one_job_prints`, and `a_failed_chunk_stops_the_run_as_one_job_does`. Its third row has `bravo` answer first from model `other-1`, so the relate closure fails once `alpha` answers. The `--jobs 2` run matches the `--jobs 1` run's exit code 4, standard error, and standard output. It sent 3 requests to the one-job run's 2: `bravo`'s early reply freed a worker, and `charlie` went out before `alpha` answered. The review asked for exactly 2. No timing gives 2 at two jobs over six rules, because a worker is fed whenever a reply frees it and the closure runs only in chunk order. The row pins 3, which slow replies after `bravo` make exact.
+- `crates/thinkthen/tests/public_controls.rs`: `a_host_interrupt_during_relate_chunks_sends_nothing_new`, with two rows. Six rules leave two relations unfed when the check fires. Four rules are all fed and held, so only the in-flight check can see the stop.
 - `crates/thinkthen/tests/relate_edge.rs`: the help test now pins the `--jobs` sentence.
 - `databases/duckdb/tools/relate_suite.py`: `the_throttle_reaches_a_relate`, which restores ticket 0118's count of 8 in flight.
 
@@ -43,7 +43,7 @@ The refusal rows changed as the ticket says: `jobs on one document` lists the ve
 
 ## Plants
 
-Each plant edited source, ran its test under the heavy lock, and restored the file with `git checkout` and `touch`. Plants (a) to (j) ran on the final source after the last merge of `origin/main`. Plant (i3) ran again after the last change to `interrupt.rs`. The script and logs sit in the session scratchpad under `t0143/`, outside the repository. A grep of the diff for plant text found none.
+The code review at `de3fb9f6` found the design sound and asked for the fixes that plants (k) and (l) cover. Plants (j), (k), (l), and (i3) ran again on the fixed code. Each plant edited source, ran its test under the heavy lock, and restored the file with `git checkout` and `touch`. Plants (a) to (j) ran on the final source after the last merge of `origin/main`. Plant (i3) ran again after the last change to `interrupt.rs`. The script and logs sit in the session scratchpad under `t0143/`, outside the repository. A grep of the diff for plant text found none.
 
 | Plant | Test | Result |
 | --- | --- | --- |
@@ -60,17 +60,19 @@ Each plant edited source, ran its test under the heavy lock, and restored the fi
 | (i) keep feeding after `cancel.stop()` sees a stop | recognize SIGINT test | Green, as ruling 1 records |
 | (i2) plant (i) and the send path's flag check removed | same | Green: evidence for ruling 1 |
 | (i3) always send inline | same | Red: the fourth held request never arrives |
-| (j) poll through `poll_between_sends` in place of `cancel.stop()` | `a_host_interrupt_during_relate_chunks_sends_nothing_new` | Red: the call finished, not `Cancelled` |
+| (j) poll through `poll_between_sends` in place of `cancel.stop()` | `a_host_interrupt_during_relate_chunks_sends_nothing_new` | Red. With the count asserted first, the six-rule row read 6 requests and a finished call. The ticket predicted 6. The earlier runs asserted the result kind first, so they reported a finished call and never showed the count. In one run the six-rule row passed and the four-rule row failed, so the six-rule row alone is timing-dependent under this plant |
+| (k) `failure = None` in place of `each(result).err()` | `a_failed_chunk_stops_the_run_as_one_job_does`, third row | Red: exit 70 with the Defect "a relation reply did not cover its question map", not exit 4 |
+| (l) check the stop only while items are left to feed, the code before the review | `a_host_interrupt_during_relate_chunks_sends_nothing_new`, four-rule row | Red: the call finished, not `Cancelled`. The same row was red on the code before the fix |
 
 ## Budgets
 
-Nonblank lines against `origin/main` at `7850db3f`.
+Nonblank lines against `origin/main` at `7443d69d`, after the review fixes.
 
 | Area | Ticket budget | Measured |
 | --- | --- | --- |
-| `crates/thinkthen/src` | at most 120 added, 90 net, after ruling 2 | 116 added, 33 removed, 83 net. `workers.rs` +67 −1, `facade/relate.rs` +29 −17, `facade.rs` +16 −6, the command side +4 −9 |
-| `relate/at_once.rs` | at most 200 added | 141 |
-| `public_controls.rs` | at most 35 added | 36 added, 1 removed. **Crosses by one line**, within a tenth |
+| `crates/thinkthen/src` | at most 120 added, 90 net, after ruling 2 | 117 added, 33 removed, 84 net. `workers.rs` +68 −1, `facade/relate.rs` +29 −17, `facade.rs` +16 −6, the command side +4 −9 |
+| `relate/at_once.rs` | at most 200 added | 160 |
+| `public_controls.rs` | at most 35 added | 42 added, 1 removed. **Crosses by 7 lines, more than a tenth.** It was 36 before the review's second row. rustfmt lays the row loop out vertically, and the trims kept it at 42 |
 | `interrupt.rs`, `refusals.rs`, `refusals/relate.rs`, `relate_edge.rs`, `annotate/splitting.rs` | at most 40 changed | 35 added, 17 removed. Within budget counted as added lines. Counted as added plus removed, it is 52 and crosses |
 | `relate.rs` | the `mod` line | 1 |
 | `relate_suite.py` | at most 30 added | 20 |
@@ -79,7 +81,7 @@ Nonblank lines against `origin/main` at `7850db3f`.
 
 `facade.rs` holds 368 nonblank lines, under its 500 cap.
 
-`sdlc/ratchet.json` moves from main's 67,758 to 68,036, up 278. The builder looked for duplication first. `ordered` reuses `workers::scoped` and `Cancel::stop`, which the record and group schedulers use, so no scheduler was copied. The DuckDB Python ratchet moves from 1,896 to 1,916 for the throttle case, and the SQLite one from 1,209 to 1,213 for the throttle 1 setup and its reason.
+`sdlc/ratchet.json` moves from main's 67,758 to 68,062, up 304. The review fixes added 26 of those lines. The builder looked for duplication first. `ordered` reuses `workers::scoped` and `Cancel::stop`, which the record and group schedulers use, so no scheduler was copied. The DuckDB Python ratchet moves from 1,896 to 1,916 for the throttle case, and the SQLite one from 1,209 to 1,213 for the throttle 1 setup and its reason.
 
 ## Ladder
 
@@ -95,7 +97,9 @@ After the fixes and the merge of `origin/main` at `7850db3f`, each rung ran once
 | `spec` | exit 0, 162 s; demos 21 green, 0 red |
 | `surfaces` | exit 0, 1,266 s; Rust, C, Python, TypeScript, Ruby, R, DuckDB, SQLite, PostgreSQL, and Polars pass |
 
-`origin/main` later gained `7443d69d`, which files two issues and touches no code.
+After the review fixes and the merge of `origin/main` at `7443d69d`, `lint`, `test`, and `spec` ran once more. No surface file changed, so `surfaces` did not rerun.
+
+REVIEWLADDER
 
 ## Lane size
 

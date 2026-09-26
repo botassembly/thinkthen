@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 143
-opens: crates/thinkthen/src/engine/facade.rs crates/thinkthen/src/engine/facade/relate.rs crates/thinkthen/src/engine/workers.rs crates/thinkthen/src/cli/relate.rs crates/thinkthen/src/cli/relate/config.rs crates/thinkthen/src/cli/args.rs crates/thinkthen/src/cli/args/command.rs crates/thinkthen/tests/backend/relate.rs crates/thinkthen/tests/backend/relate crates/thinkthen/tests/backend/interrupt.rs crates/thinkthen/tests/backend/refusals.rs crates/thinkthen/tests/backend/refusals/relate.rs crates/thinkthen/tests/relate_edge.rs crates/thinkthen/tests/public_controls.rs databases/duckdb/tools/relate_suite.py specification/relate.md specification/records.md specification/settings.md sdlc/ratchet.json sdlc/records sdlc/tickets sdlc/issues
+opens: crates/thinkthen/src/engine/facade.rs crates/thinkthen/src/engine/facade/relate.rs crates/thinkthen/src/engine/workers.rs crates/thinkthen/src/cli/relate.rs crates/thinkthen/src/cli/relate/config.rs crates/thinkthen/src/cli/args.rs crates/thinkthen/src/cli/args/command.rs crates/thinkthen/tests/backend/relate.rs crates/thinkthen/tests/backend/relate crates/thinkthen/tests/backend/interrupt.rs crates/thinkthen/tests/backend/refusals.rs crates/thinkthen/tests/backend/refusals/relate.rs crates/thinkthen/tests/relate_edge.rs crates/thinkthen/tests/public_controls.rs crates/thinkthen/tests/backend/annotate/splitting.rs databases/duckdb/tools/relate_suite.py databases/duckdb/ratchet.py.json databases/sqlite/tests/test_interrupt.py databases/sqlite/ratchet.py.json specification/relate.md specification/records.md specification/settings.md sdlc/ratchet.json sdlc/records sdlc/tickets sdlc/issues
 ---
 
 # 0143: relate and split requests run at once
