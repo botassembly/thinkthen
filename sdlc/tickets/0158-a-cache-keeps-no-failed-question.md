@@ -39,6 +39,9 @@ The engine is shared, so the libraries and SQL extensions follow the same rule u
 
 - `records.md`, the cache paragraph: after "Each digest keeps the first complete response installed in the folder." add "A reply that failed a question is not complete. A cache does not install it, and the next run asks again. `--record` alone still writes it."
 - `recording.md`, line 84: after the first sentence add "A cache, typed or default, installs no partial reply, so a cached run asks again. ADR 0053 item 6 rules it."
+- `recording.md`, line 59, "Only an exchange that succeeded and decoded is recorded. A failure is never recorded.": after it add "A reply that failed a question beside a good answer counts as decoded. `--record` writes it. A cache does not install it."
+- `recording.md`, line 13, the row "Both, with the same `DIR`": its cell becomes "A cache. An entry that exists is replayed. A request that is absent goes to the backend, and its reply is recorded when it answered every question."
+- `relate.md`, line 70, stays as it is. It speaks of record and replay, and a recorded partial reply still reproduces there.
 
 ## Decisions
 
@@ -81,7 +84,7 @@ Nonblank lines, measured with `grep -c .`.
 
 - `crates/thinkthen/src/engine/request.rs`, `engine/recorder.rs` and `core/reply.rs`: at most 15 net together.
 - `crates/thinkthen/tests/backend/cache_partial.rs`: at most 90, new, and one `mod` line.
-- Pages under `specification/`: at most 4 net.
+- Pages under `specification/`: at most 8 net.
 - `sdlc/ratchet.json` moves to the measured total, at most 110 above main. The commit says what grew.
 - No dependency.
 - The `surfaces` rung runs, because the engine that the libraries share changes.
@@ -125,6 +128,6 @@ Finding 4 of `sdlc/issues/2026-09-26-batching-design-review-before-0146.md`.
 
 - Starts from: ADR 0053 item 6. Finding 4 of `sdlc/issues/2026-09-26-batching-design-review-before-0146.md`, reproduced in local experiment 273 with `annotate` and a hand-built cache entry. The code at `origin/main` `c490f082`: `engine/request.rs::ask_prepared`, `core/adapters/systemone/response.rs`, `core/reply.rs` and `engine/recorder.rs`. `specification/records.md`'s "first complete response" and `recording.md` line 84.
 - Keeps: Every complete reply cached as today. `--record` and `--replay` as today, partial replies included. Every run's output, standard error and exit code.
-- Changes: A cache, typed or default, no longer installs a reply that failed a question. Two page sentences.
+- Changes: A cache, typed or default, no longer installs a reply that failed a question. Page sentences in `records.md` and `recording.md`.
 - Proof: One outside-in test with three plants, and the `install`, `lint`, `test`, `spec` and `surfaces` rungs.
 - Defers: Nothing.
