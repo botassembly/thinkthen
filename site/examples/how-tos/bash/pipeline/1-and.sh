@@ -10,7 +10,6 @@ Does this come in blue?
 The strap snapped on day two.
 EOF
 thinkthen filter "$about_the_item" \
-  --lines \
   --true "$item_means" \
   --false "$other_means" |
-thinkthen filter "$complaint" --lines
+thinkthen filter "$complaint"

@@ -32,7 +32,7 @@ const FRAMING = [
 
 const FRAMING_BY_FN = [
   ['decide, choose, tag, score, annotate', 'One document by default. All four framing flags are accepted.'],
-  ['filter, rank', 'One framing flag is required. One document is not a stream, and its absence is a usage error.'],
+  ['filter, rank', 'Lines by default, or JSON Lines when a pointer is given. All four framing flags are accepted. One document is not a stream.'],
   ['find', '--lines by default, or --jsonl. CSV and TSV are refused as unexpected arguments.'],
 ];
 
@@ -163,6 +163,7 @@ const COUNTS = [
   <ul>
     <li>Under <code>--jsonl</code>, <code>--csv</code>, or <code>--tsv</code> it reads the pointer in each record.</li>
     <li>With no framing flag it reads the whole input as one JSON value and takes the pointer inside it. There is no separate JSON framing flag.</li>
+    <li>On <code>filter</code> and <code>rank</code>, a pointer with no framing flag reads JSON Lines instead. A question file's <code>on</code> does the same.</li>
     <li>Under <code>--lines</code> it is a usage error. A text line has no members.</li>
     <li>It may repeat. Several pointers build an evidence object, each member keyed by the last part of its pointer. Two members that would share one key are a usage error.</li>
     <li>A pointer that finds nothing is an input error for that record, exit 2, before any request for it.</li>

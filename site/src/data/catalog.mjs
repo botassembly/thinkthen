@@ -171,7 +171,7 @@ export const FUNCTIONS = [
     takes: 'one yes-or-no question and many records',
     gives: 'the records that pass, byte for byte, in the order they went in',
     requests: 'One request for each record.',
-    args: 'QUESTION or @FILE. One of --lines, --jsonl, --csv, or --tsv is required.',
+    args: 'QUESTION or @FILE. It reads one record per line. A pointer from --field or a question file makes it read JSON Lines.',
     options: [
       ['--threshold T', 'The bar a record must reach. The default is 0.5. A band is a usage error.'],
       ['--true TEXT', 'What a yes means, in the words the model reads.'],
@@ -195,7 +195,7 @@ export const FUNCTIONS = [
     takes: 'one yes-or-no question and many records',
     gives: 'every record again, most likely first',
     requests: 'One request for each record. --top trims the printed list and saves nothing.',
-    args: 'QUESTION or @FILE. One of --lines, --jsonl, --csv, or --tsv is required.',
+    args: 'QUESTION or @FILE. It reads one record per line. A pointer from --field or a question file makes it read JSON Lines.',
     options: [
       ['--top N', 'Prints the first N records of the order. Every record is still judged.'],
       ['--true TEXT', 'What a yes means, in the words the model reads.'],
@@ -524,6 +524,11 @@ export const TAB_SURFACE = {
 
 // The business how-tos. Each page runs the scripts in
 // examples/how-tos/<slug>/, and `see` says what to look for in each.
+// Captions for the tutorial's own examples, keyed by script name.
+export const TUTORIAL_SEE = {
+  '1-band': "\"I want to send this back.\" could mean an exchange or money back. It lands inside the band 0.2:0.8. decide prints null and exits 3.",
+};
+
 export const HOWTOS = [
   {
     slug: 'triage-a-support-inbox', title: 'Triage a support inbox', reader: 'for support teams',

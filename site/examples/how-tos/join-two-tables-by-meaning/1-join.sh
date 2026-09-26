@@ -10,4 +10,4 @@ while read -r ticket; do
   printf '%s / %s\n' "$ticket" "$gateway"
   printf '%s / %s\n' "$ticket" "$export_queue"
 done |
-thinkthen filter "$question" --lines
+thinkthen filter "$question"

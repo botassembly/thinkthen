@@ -6,8 +6,7 @@ Failed rows go to a separate file.
 Each row keeps its id.
 EOF
 
-thinkthen filter "$question" --lines \
-  < notes.txt > hedges.txt
+thinkthen filter "$question" < notes.txt > hedges.txt
 
 if [ -s hedges.txt ]; then
   echo "These lines hedge:"

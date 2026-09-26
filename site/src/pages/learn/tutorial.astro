@@ -5,7 +5,7 @@ import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
 import Code from '../../components/Code.astro';
 import InstallLine from '../../components/InstallLine.astro';
-import { SURFACES, HOWTOS, FUNCTIONS } from '../../data/catalog.mjs';
+import { SURFACES, HOWTOS, FUNCTIONS, TUTORIAL_SEE } from '../../data/catalog.mjs';
 import { captioned, files } from '../../data/samples.mjs';
 
 const shell = SURFACES.find((s) => s.slug === 'shell');
@@ -17,6 +17,7 @@ const plain = run('3-one');
 const answer = run('4-details');
 const lines = run('1-lines');
 const branch = run('2-case');
+const [band] = captioned('learn/tutorial', TUTORIAL_SEE);
 
 const [savedYes, savedUnsure] = captioned('functions/question-file', see('question-file'));
 const refundFile = files('functions/question-file')[0];
@@ -37,7 +38,7 @@ const triageForm = files(triagePage)[0];
   <p>The <a href="/install/">install page</a> covers the key and every language and database.</p>
 
   <h2>2. Ask one question</h2>
-  <p>Name the question, pipe the message in, and pass the question as an argument. <code>decide</code> prints <code>true</code>, <code>false</code>, or <code>null</code>, and it sets the exit code to match.</p>
+  <p>Name the question, pipe the message in, and pass the question as an argument. <code>decide</code> prints a bare <code>true</code>, <code>false</code>, or <code>null</code>, and it sets the exit code to match. One message always gets this bare answer and its exit code.</p>
   <Terminal run={plain} caption={plain.see} />
   <p>The exit code is the answer. A script branches on it the way it branches on <code>test</code>.</p>
 
@@ -48,11 +49,11 @@ const triageForm = files(triagePage)[0];
 
   <h2>4. Set a band</h2>
   <p><code>--threshold</code> is your bar on the probability. One number is a cut, and the default is 0.5. Two numbers make a band: under the low bar is no, over the high bar is yes, and anything between is not sure.</p>
-  <Terminal run={lines} caption={lines.see} />
+  <Terminal run={band} caption={band.see} />
   <p>The threshold never changes the probability. It changes what you call a yes.</p>
 
   <h2>5. Branch on the answer</h2>
-  <p>Not sure prints <code>null</code> and exits 3. A script reads the exit code and hands a person the calls it should not make alone.</p>
+  <p>A script reads the exit code and hands a person the calls it should not make alone.</p>
   <Terminal run={branch} caption={branch.see} />
 
   <h2>6. Save the question to a file</h2>
@@ -63,7 +64,9 @@ const triageForm = files(triagePage)[0];
   <Terminal run={savedUnsure} caption={savedUnsure.see} />
 
   <h2>7. Judge a stream</h2>
-  <p>One of <code>--lines</code>, <code>--jsonl</code>, <code>--csv</code>, or <code>--tsv</code> says how the records are framed. <code>filter</code> keeps the records where the answer is yes, byte for byte and in order.</p>
+  <p><code>--lines</code> tells <code>decide</code> to judge each line as its own message. With many records, each answer prints as one JSON line with its input beside it. The input shows which answer belongs to which message. <code>jq .</code> spreads each line out to read.</p>
+  <Terminal run={lines} caption={lines.see} />
+  <p><code>filter</code> reads one record per line with no flag. It keeps the records where the answer is yes, byte for byte and in order.</p>
   <Terminal run={kept} caption={kept.see} />
   <p><code>rank</code> sorts the records by how likely the answer is yes.</p>
   <Terminal run={sorted} caption={sorted.see} />

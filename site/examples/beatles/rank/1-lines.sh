@@ -17,5 +17,4 @@ Can't Buy Me Love
 Good Night
 EOF
 thinkthen rank "$question" \
-  --lines \
   --replay recording
