@@ -14,15 +14,18 @@ npm install
 npm run build
 ```
 
-`npm run build` does five things in order:
+`npm run build` does four things in order:
 
 1. `scripts/write-version.mjs` writes `public/version.json` with the commit it is building.
-2. `scripts/check-bench.mjs` fails the build when a pulled Beatles Bench file differs from its manifest.
-3. `astro build` writes `dist/`. It fails if any function-and-surface cell is missing or carries no status.
-4. `scripts/emit-md.mjs` writes a Markdown twin of every page and `dist/llms.txt`.
-5. `scripts/check-links.mjs` fails the build on a broken internal link.
+2. `astro build` writes `dist/`. It fails if any function-and-surface cell is missing, or a Beatles Bench step has no recorded run.
+3. `scripts/emit-md.mjs` writes a Markdown twin of every page and `dist/llms.txt`.
+4. `scripts/check-links.mjs` fails the build on a broken internal link.
 
-`npm run dev` serves the site while you work. `npm run check` runs the bench check and the link check on the last build.
+`npm run dev` serves the site while you work. `npm run check` runs the link check on the last build.
+
+## The menu
+
+Five entries: Install, Functions, How-tos, Learn, and Blog. Trust, Reference, and What it will not do sit in the footer and on the Learn page. Moved pages keep their old address through the redirects in `astro.config.mjs`.
 
 ## Where the examples come from
 
@@ -32,16 +35,15 @@ Every code sample on this site is pulled from somewhere else. Nothing is typed i
 npm run pull
 ```
 
-`scripts/pull-examples.mjs` reads the deck at
-`repos/mktg/decks/2026-09-21-thinkthen-semantic-commands` (override with `THINKTHEN_DECK`) and writes one file per function-and-surface cell into `src/data/examples/`. Those files are committed, so a build never reaches outside this repository.
+`scripts/pull-examples.mjs` reads the deck folder named by `THINKTHEN_DECK` and writes one file per function-and-surface cell into `src/data/examples/`. Those files are committed, so a build never reaches outside this repository.
 
-Each cell carries a status:
+Each cell carries a status. The status stays in the data. No page shows it, because the site goes up after 0.1 (Ian, 2026-09-26).
 
 | Status | What it means | Where it comes from |
 | --- | --- | --- |
 | `run` | The command really printed this. | The command from the deck's `examples/run.sh`, the output from `examples/out/*.txt`, and the exit code from the last line of that file. |
-| `drawn` | Nobody has run this. It is the shape the library is being built to. | The deck's `surfaces.md` and `recognize-surfaces.md`. Every drawn sample is labelled "drawn, not run" on the page. |
-| `planned` | Nothing is written for this cell yet. | The page says so in place of code. |
+| `drawn` | A library sample taken from the deck. | The deck's `surfaces.md` and `recognize-surfaces.md`. |
+| `planned` | Nothing is written for this cell yet. | The page says it has no sample. |
 
 The how-to pages work the same way: the commands come from the deck's `usecases/run.sh` and the output from `usecases/out/`.
 
@@ -49,25 +51,19 @@ The how-to pages work the same way: the commands come from the deck's `usecases/
 
 The names, the order, the one line for each function, and the option tables live in `src/data/catalog.mjs`. The one line for each function is the help text's first line, copied from the vocabulary page.
 
-The first article is copied byte for byte into `src/articles/code-that-understands.md` from `repos/mktg/content/thinkthen/drafts/01-code-that-understands/article.md`. Edit it there and copy it again.
+The first article lives in `src/articles/code-that-understands.md`.
 
 ## Where the Beatles Bench pages come from
 
-The bench repository owns every page under `/beatles-bench/` but one. Its `docs/README.md` lists the pages in order, and its tests run every command on them against committed answers. The site runs none of them.
+The pages under `/learn/beatles-bench/` follow the talk "Analyzing the Beatles using Jev". `src/data/beatles.mjs` holds each page's words and its commands. The slides sit in `public/learn/beatles-bench/`.
+
+Every command answers from a recording saved in Beatles Bench. This command runs each one in a copy of a bench checkout, with no key, and checks what it prints against `src/data/beatles/runs.json`:
 
 ```
-BEATLES_BENCH=path/to/beatles-bench npm run pull-bench
+BEATLES_BENCH=path/to/beatles-bench npm run beatles-replay
 ```
 
-`scripts/pull-bench.mjs` refuses a checkout at any commit other than `src/data/bench/PIN`, or one with local changes. It copies each listed page into `src/pages/beatles-bench/` and each image into `public/beatles-bench/img/`. It turns links between pages into site routes and other links into GitHub links at the pin. It writes `src/data/bench/pages.json` and a manifest of hashes. To move to a new bench commit, write its hash to `PIN` and pull again.
-
-`src/data/bench.mjs` names each page's group and label for the side list. `src/lib/remark-bench.mjs` sets each command beside the output the bench tests check.
-
-The one page the site writes is `every-language.astro`. Its Bash command and output sit in `src/data/bench/every-language.json`. This command replays it from the bench with no key and checks the output:
-
-```
-BEATLES_BENCH=path/to/beatles-bench npm run bench-replay
-```
+Add `-- --write` to record the output again. `THINKTHEN_BIN` names the command to run. The page shows the recorded output, so no output is typed by hand.
 
 ## Drafts
 
@@ -116,6 +112,5 @@ The tabs on the home page and the cross-view on every function page share one ch
 
 ## What is not here yet
 
-- `/install.sh`. The download script is not built. The install page shows the line and marks it "coming with 0.1".
-- Pages for Excel, Google Sheets, pandas, and any serve mode. None of them has run.
-- A tutorial page, a backends page, a generated reference, and a refusals page. They come after the first version.
+- A pandas page, and a page for any serve mode.
+- Library samples pulled from each library's landed examples in place of the deck.

@@ -1,12 +1,14 @@
 ---
-// The same call on every surface, as tabs. A surface that does not carry the
-// function yet shows its status in place of code.
+// The same call on every surface, as tabs. A surface with no sample says so,
+// and a function with a Beatles Bench page points there.
 import Terminal from './Terminal.astro';
 import Code from './Code.astro';
 import { SURFACES } from '../data/catalog.mjs';
 import { cell } from '../data/examples.mjs';
+import { beatlesPageFor } from '../data/beatles.mjs';
 
 const { fn, first = 1 } = Astro.props;
+const bench = beatlesPageFor(fn);
 
 const alias = (slug) => ({
   shell: 'Bash', python: 'Python', polars: 'Python', typescript: 'TypeScript',
@@ -33,21 +35,14 @@ const tabs = SURFACES.map((s) => ({
       {t.data.status === 'run' && t.data.runs.slice(0, first).map((run) => (
         <Terminal run={run} />
       ))}
-      {t.data.status === 'drawn' && !t.data.printed && (
-        <Code code={t.data.code} caption={`${t.surface.name} ${t.surface.release ? `comes with ${t.surface.release}` : 'is planned'}. The call will read like this.`} />
-      )}
+      {t.data.status === 'drawn' && <Code code={t.data.code} />}
       {t.data.status === 'drawn' && t.data.printed && (
-        <>
-          <Code code={t.data.code} caption={`${t.surface.name} ${t.surface.release ? `comes with ${t.surface.release}` : 'is planned'}. The calls read like this.`} />
-          <Terminal run={{ command: t.data.printed.command, output: t.data.printed.output, exit: null }} caption={`Recorded from the branch build. ${t.data.printed.see}`} word={false} />
-        </>
+        <Terminal run={{ command: t.data.printed.command, output: t.data.printed.output, exit: null }} caption={t.data.printed.see} word={false} />
       )}
-      {(t.data.status === 'planned' || t.data.status === 'preview') && (
-        <div class="note">
-          <span class={`status ${t.data.status}`}>{t.data.status}</span>{' '}
-          No <code>{fn}</code> example for {t.surface.name} yet.
-          {t.surface.slug !== 'shell' && <> See the <a href={`/${t.surface.slug}/`}>{t.surface.name} page</a>.</>}
-        </div>
+      {t.data.status !== 'run' && t.data.status !== 'drawn' && (
+        <p class="note">{bench && t.slug === 'shell'
+          ? <>See <code>{fn}</code> run on <a href={bench.route}>Beatles Bench</a>.</>
+          : <>No <code>{fn}</code> sample for {t.surface.name} yet.</>}</p>
       )}
     </div>
   ))}

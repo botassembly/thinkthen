@@ -217,12 +217,17 @@ export const FUNCTIONS = [
     line: 'Find every name in the evidence and say what kind it is.',
     takes: 'the evidence and the kinds of name you allow',
     gives: 'each name, its kind, where it sits, and a strength',
-    requests: 'The specification does not yet carry recognize, so the request count is not settled.',
-    args: 'Not settled. The command has no recognize yet.',
-    status: 'preview',
-    options: [],
-    exits: [],
-    unsure: 'The model only picks from options, so a name that is not in the evidence cannot come back. Three thresholds are yours to set. The number on a name is its strength. We compute it, and it claims nothing about chance. Relations are a preview too.',
+    requests: 'It asks one question about every word, and one more about its kind when you allow two or more kinds. --dry-run prints the exact requests for the first record.',
+    args: 'KIND..., or one @FILE question file',
+    options: [
+      ['--kind KIND=DESCRIPTION', 'One kind and what it means.'],
+      ['--threshold T', 'Keeps names whose strength reaches this cut. The default is 0.5.'],
+      ['--relation NAME=SOURCE:TARGET', 'Also links the names it finds. This part is in beta.'],
+      ['--relation-threshold T', 'Keeps relation edges whose probability reaches this cut. The default is 0.5.'],
+      ...COMMON_OPTIONS,
+    ],
+    exits: [[0, 'the run finished'], ...COMMON_EXITS],
+    unsure: 'The model only picks from options, so a name that is not in the evidence cannot come back. The number on a name is its strength. We compute it, and it claims nothing about chance. Your threshold decides which names you keep.',
     howtos: [],
   },
   {
@@ -232,12 +237,16 @@ export const FUNCTIONS = [
     lede: 'Find the rules in a policy that contradict each other. You give it a set of records and the relations you allow. You get back one edge for each related pair, with a probability. An edge is a link between two records. Here <code>contradicts</code> links two rules that cannot both be followed.',
     takes: 'a set of records and the relations you allow',
     gives: 'one edge for each related pair, with a probability',
-    requests: 'The specification does not yet carry relate, so the request count is not settled.',
-    args: 'Not settled. The command has no relate yet.',
-    status: 'preview',
-    options: [],
-    exits: [],
-    unsure: 'A relation has a direction, or it is marked as reading the same both ways. The number on an edge is a probability. relate is a preview.',
+    requests: 'It reads the whole set at once, up to 255 records. --dry-run prints every request it would send.',
+    args: 'RELATION... as NAME=SOURCE_KIND:TARGET_KIND or a bare NAME, or one @FILE',
+    options: [
+      ['--either', 'Treats every relation as reading the same both ways.'],
+      ['--threshold T', 'Keeps edges whose probability reaches this cut. The default is 0.5.'],
+      ['--kind-field POINTER', 'Reads each record\'s kind from this pointer.'],
+      ...COMMON_OPTIONS,
+    ],
+    exits: [[0, 'the run finished'], [6, 'the run finished with failed questions'], ...COMMON_EXITS],
+    unsure: 'A relation has a direction, or it reads the same both ways. The number on an edge is a probability. Your threshold decides which edges you keep.',
     howtos: [],
   },
   {
@@ -292,21 +301,16 @@ export function exitWord(command, exit, fn = null) {
 
 export const CODE_FUNCTIONS = FUNCTIONS.filter((f) => !f.notAFunction);
 
-// One status vocabulary for every badge: planned, comes with 0.1, ships
-// first, not run yet, preview. An example cell may still say "drawn" in data.
-// A surface's release names the version it comes with; Polars has none yet.
-// A badge's class: the status word with spaces turned into dashes.
-export const statusClass = (status) => status.replace(/ /g, '-');
 
 export const SURFACES = [
   {
-    slug: 'shell', name: 'Bash', deckHeading: null, status: 'ships first', release: 'ships first',
+    slug: 'shell', name: 'Bash', deckHeading: null,
     lang: 'bash', tab: 'Bash',
     blurb: 'Pipe text in, read the answer out, and branch on the exit code.',
     unsureWord: 'null, and exit code 3',
     install: [
-      ['brew install genomoncology/thinkthen/thinkthen', 'Homebrew tap. Coming with 0.1.'],
-      ['curl -fsSL https://thinkthen.dev/install.sh | sh', 'Download script. Coming with 0.1.'],
+      ['brew install genomoncology/thinkthen/thinkthen', 'Homebrew tap.'],
+      ['curl -fsSL https://thinkthen.dev/install.sh | sh', 'Download script.'],
     ],
     particular: [
       'Standard in carries the evidence. Standard out carries the answer, and nothing else.',
@@ -316,7 +320,7 @@ export const SURFACES = [
     ],
   },
   {
-    slug: 'python', name: 'Python', deckHeading: 'Python', status: 'planned', release: '0.1',
+    slug: 'python', name: 'Python', deckHeading: 'Python',
     lang: 'python', tab: 'Python',
     blurb: 'Pass a string or a list, and get `True`, `False`, or `None` back. Build a question once and reuse it.',
     unsureWord: 'None',
@@ -327,7 +331,7 @@ export const SURFACES = [
     ],
   },
   {
-    slug: 'polars', name: 'Polars', deckHeading: 'Polars', status: 'planned', release: null,
+    slug: 'polars', name: 'Polars', deckHeading: 'Polars',
     lang: 'python', tab: 'Python',
     blurb: 'A Polars frame goes in, and it comes back with one new column for each question.',
     unsureWord: 'None',
@@ -338,7 +342,7 @@ export const SURFACES = [
     ],
   },
   {
-    slug: 'typescript', name: 'TypeScript', deckHeading: 'TypeScript', status: 'planned', release: '0.1',
+    slug: 'typescript', name: 'TypeScript', deckHeading: 'TypeScript',
     lang: 'ts', tab: 'TypeScript',
     blurb: 'Ten async functions. Pass one options object and await the answer.',
     unsureWord: 'null',
@@ -349,7 +353,7 @@ export const SURFACES = [
     ],
   },
   {
-    slug: 'ruby', name: 'Ruby', deckHeading: 'Ruby', status: 'planned', release: '0.1',
+    slug: 'ruby', name: 'Ruby', deckHeading: 'Ruby',
     lang: 'ruby', tab: 'Ruby',
     blurb: 'Ten module methods. Any Enumerable goes in.',
     unsureWord: 'nil',
@@ -357,7 +361,7 @@ export const SURFACES = [
     particular: ['Any Enumerable crosses to the engine once.'],
   },
   {
-    slug: 'r', name: 'R', deckHeading: 'R', status: 'planned', release: '0.1',
+    slug: 'r', name: 'R', deckHeading: 'R',
     lang: 'r', tab: 'R',
     blurb: 'Ten `tt_` functions that work inside dplyr.',
     unsureWord: 'NA',
@@ -368,7 +372,7 @@ export const SURFACES = [
     ],
   },
   {
-    slug: 'rust', name: 'Rust', deckHeading: 'Rust', status: 'planned', release: '0.1',
+    slug: 'rust', name: 'Rust', deckHeading: 'Rust',
     lang: 'rust', tab: 'Rust',
     blurb: 'Call the engine directly. The compiler makes you handle not sure.',
     unsureWord: 'Answer::Unsure',
@@ -379,7 +383,7 @@ export const SURFACES = [
     ],
   },
   {
-    slug: 'c', name: 'C', deckHeading: 'C', status: 'planned', release: '0.1',
+    slug: 'c', name: 'C', deckHeading: 'C',
     lang: 'c', tab: 'Rust',
     blurb: 'One header and one library. Bind ThinkThen to any language.',
     unsureWord: 'an outcome of THINKTHEN_UNSURE',
@@ -390,7 +394,7 @@ export const SURFACES = [
     ],
   },
   {
-    slug: 'duckdb', name: 'DuckDB', deckHeading: 'DuckDB', status: 'planned', release: '0.1',
+    slug: 'duckdb', name: 'DuckDB', deckHeading: 'DuckDB',
     lang: 'sql', tab: 'SQL',
     blurb: 'Ask a question in WHERE, SELECT, or ORDER BY.',
     unsureWord: 'NULL',
@@ -398,7 +402,7 @@ export const SURFACES = [
     particular: ['A whole column chunk crosses at once.'],
   },
   {
-    slug: 'sqlite', name: 'SQLite', deckHeading: 'SQLite', status: 'planned', release: '0.1',
+    slug: 'sqlite', name: 'SQLite', deckHeading: 'SQLite',
     lang: 'sql', tab: 'SQL',
     blurb: 'One warm pass answers the whole table. Every later query reads the saved answers.',
     unsureWord: 'NULL',
@@ -409,7 +413,7 @@ export const SURFACES = [
     ],
   },
   {
-    slug: 'postgresql', name: 'PostgreSQL', deckHeading: 'PostgreSQL', status: 'planned', release: '0.1',
+    slug: 'postgresql', name: 'PostgreSQL', deckHeading: 'PostgreSQL',
     lang: 'sql', tab: 'SQL',
     blurb: 'One extension. Ask questions in any query.',
     unsureWord: 'NULL',

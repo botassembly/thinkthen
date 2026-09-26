@@ -170,11 +170,11 @@ Here's what I'd want to know before I trusted it.
 
 **It writes nothing, remembers nothing, and runs nothing.** It won't summarize, rewrite, redact, or take an action on its own answer. A judgment goes back to your code, and your rules decide what happens next.
 
-## What ships and what has not shipped
+## What ships
 
-The command ships as a single binary. `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, and `annotate` are shipped. `recognize` and `relate` are built and not yet shipped. Relations found inside a text are marked a preview. They are the weak part.
+The command ships as a single binary with all ten functions.
 
-The first release is numbered 0.1. The command, every library, and every database extension carry that one number. They all carry the same Rust engine. One engine means a question file means the same thing on every surface. Libraries in Python, TypeScript, Ruby, R, Rust, and C are drawn and not shipped. C opens the door to every other language. A Polars column is meant to cross into the engine once, without a copy. Extensions for DuckDB, SQLite, and PostgreSQL follow the libraries. In those extensions, a question reads like any other condition in a `WHERE` clause.
+The first release is numbered 0.1. The command, every library, and every database extension carry that one number. They all carry the same Rust engine. One engine means a question file means the same thing on every surface. Libraries in Python, TypeScript, Ruby, R, Rust, and C call the same engine. C opens the door to every other language. Extensions for DuckDB, SQLite, and PostgreSQL do the same. In those extensions, a question reads like any other condition in a `WHERE` clause.
 
 Your code could always match text. Now it can answer a bounded question about the evidence you hand it, from a fixed set of answers you wrote down. That is a narrow thing. It is also the thing I kept training a model to do.
 
@@ -184,7 +184,7 @@ You can find ThinkThen at [thinkthen.dev](https://thinkthen.dev).
 
 Every number above has a record in the repository. Each link is a path in [github.com/botassembly/thinkthen](https://github.com/botassembly/thinkthen).
 
-- The price of $0.042 per million input tokens: [sdlc/records/0011-the-live-probe.md](https://github.com/botassembly/thinkthen/blob/main/sdlc/records/0011-the-live-probe.md). Output is free by the vendor's own published price list, not by our measurement.
+- The price of $0.042 per million input tokens: [sdlc/records/0011-the-live-probe.md](https://github.com/botassembly/thinkthen/blob/main/sdlc/records/0011-the-live-probe.md). The vendor's published price list makes output free. We did not measure it.
 - What a probability does not mean, including the 0.98 approvals against 23 percent human refusals: [specification/result.md](https://github.com/botassembly/thinkthen/blob/main/specification/result.md).
 - How a threshold and a band are chosen: [specification/threshold.md](https://github.com/botassembly/thinkthen/blob/main/specification/threshold.md).
 - The 3.6 cents for 3,000 lines and the 1.2 cents per thousand short records: [sdlc/issues/closed/2026-09-20-live-probe-findings-packing-tagging-status-and-cost.md](https://github.com/botassembly/thinkthen/blob/main/sdlc/issues/closed/2026-09-20-live-probe-findings-packing-tagging-status-and-cost.md).

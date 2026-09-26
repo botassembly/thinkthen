@@ -11,16 +11,10 @@ const social = 'Simple functions that give your software the judgment to handle 
 const cardImage = new URL('/brand/thinkthen-card.png', Astro.site).href;
 const pageUrl = new URL(here, Astro.site).href;
 const nav = [
-  ['/functions/', 'Functions'],
-  ['/surfaces/', 'Languages'],
-  ['/how-tos/', 'How-tos'],
-  ['/beatles-bench/', 'Beatles Bench'],
-  ['/recipes/', 'Recipes'],
-  ['/tutorial/', 'Tutorial'],
-  ['/reference/', 'Reference'],
-  ['/backends/', 'Backends'],
   ['/install/', 'Install'],
-  ['/trust/', 'Trust'],
+  ['/functions/', 'Functions'],
+  ['/how-tos/', 'How-tos'],
+  ['/learn/', 'Learn'],
   ['/blog/', 'Blog'],
 ];
 ---
@@ -81,6 +75,7 @@ const nav = [
 <footer class="bottom">
   <div class="wrap">
     <span>{TAGLINE}</span>
+    <span><a href="/trust/">Trust</a> · <a href="/reference/">Reference</a> · <a href="/refusals/">What it will not do</a></span>
     <span><a href="/version.json">Build proof</a> · <a href="/llms.txt">llms.txt</a> · <a href={mdHref}>This page as Markdown</a></span>
   </div>
 </footer>

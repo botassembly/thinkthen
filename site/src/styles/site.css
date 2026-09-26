@@ -101,14 +101,9 @@ header.top .on-light { display: none; }
 
 header.top nav { display: flex; gap: .95rem; flex-wrap: wrap; font-size: .92rem; }
 
-/* Eleven entries fit beside the wordmark only on a wide screen. Below that
-   the nav takes its own row and the Theme button stays beside the wordmark. */
-@media (max-width: 70rem) {
-  header.top .wrap { gap: .8rem; }
-  header.top nav { gap: .7rem; font-size: .86rem; flex: 1 1 0; min-width: 0; }
-  header.top .spacer { display: none; }
-}
-@media (max-width: 60rem) {
+/* On a phone the nav takes its own row and the Theme button stays beside the
+   wordmark. */
+@media (max-width: 40rem) {
   header.top .wrap { gap: .5rem 1rem; padding-top: .55rem; padding-bottom: .55rem; min-height: 0; }
   header.top nav { order: 3; flex: 1 0 100%; }
 }
@@ -193,12 +188,13 @@ pre {
 .block { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin: 0 0 1.2rem; }
 .block .caption {
   padding: .4rem .8rem; border-bottom: 1px solid var(--line);
-  color: var(--muted); font-size: .8rem; display: flex; gap: .6rem; align-items: center; flex-wrap: wrap;
+  color: var(--muted); font-size: .8rem; display: flex; gap: .6rem; align-items: center;
 }
 /* The exit row closes a block. It is ruled off the code above it, not off the
    border below it. */
 .block .caption:last-child { border-bottom: 0; border-top: 1px solid var(--line); }
-.block .caption .grow { flex: 1 1 auto; }
+.block .caption .grow { flex: 1 1 0; min-width: 0; }
+.block .caption .copy { flex: none; align-self: flex-start; }
 pre .p { color: var(--muted); }
 pre .q { color: var(--think); }
 pre .out { color: var(--then); }
@@ -283,30 +279,16 @@ button.copy:hover { color: var(--ink); border-color: var(--think); }
 .slide { margin: 0 0 1.4rem; }
 .slide img { display: block; width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line); }
 
-.bench-prose h2 { margin-top: 2rem; }
-.bench-prose img { max-width: 100%; height: auto; }
-
-/* A command and the output the bench tests check under it. The command is
-   ink on the card. The output sits on the ground, values in ink. Only the
-   marks carry colour. */
-.bench-run pre.cmd { color: var(--ink); }
-.bench-run pre.out { background: var(--ground); color: var(--ink); border-top: 1px solid var(--line); }
-/* One record per line. A long record scrolls inside the pane. */
-.bench-run pre.out { white-space: pre; overflow-wrap: normal; }
-.bench-run pre.out:first-child { border-top: 0; }
-.bench-run .mark.ok { color: var(--then); }
-.bench-run .mark.bad { color: var(--no); }
-.bench-run .mark.unsure { color: var(--think); }
-
-details.more { border: 1px solid var(--line); border-radius: 10px; padding: .55rem .9rem; margin: 1.2rem 0; background: var(--card); }
-details.more summary { cursor: pointer; color: var(--muted); font-size: .92rem; }
-details.more[open] summary { margin-bottom: .7rem; }
-details.more .block { background: var(--ground); }
+.slide figcaption { color: var(--muted); font-size: .78rem; margin-top: .35rem; }
+.refrain { font-weight: 600; }
+.bench-link { margin-top: 1.6rem; font-size: .92rem; overflow-wrap: anywhere; }
+ol.talk code { font-size: .95em; }
 
 .bench-pager { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; margin: 2.6rem 0 1rem; }
 .bench-pager a { display: block; border: 1px solid var(--line); border-radius: 10px; padding: .65rem .9rem; text-decoration: none; color: var(--ink); background: var(--card); font-size: .92rem; }
 .bench-pager a:hover { border-color: var(--think); color: var(--ink); }
 .bench-pager a span { display: block; color: var(--muted); font-size: .78rem; }
 .bench-pager .next { text-align: right; }
-.bench-credit { color: var(--muted); font-size: .84rem; }
 
+
+p code, li code { white-space: nowrap; }

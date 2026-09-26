@@ -1,0 +1,38 @@
+---
+import BeatlesPage from '../../../layouts/BeatlesPage.astro';
+import Terminal from '../../../components/Terminal.astro';
+import { PAGES, runOf } from '../../../data/beatles.mjs';
+
+export function getStaticPaths() {
+  return PAGES.filter((p) => p.slug).map((page) => ({ params: { slug: page.slug }, props: { page } }));
+}
+
+const { page } = Astro.props;
+// Prose marks code with backticks.
+const parts = (text) => text.split('`').map((p, i) => ({ code: i % 2 === 1, text: p }));
+const [first, ...rest] = page.title.split(' ');
+const shown = page.link.replace('https://', '');
+---
+<BeatlesPage page={{ ...page, description: page.idea[0].replaceAll('`', '') }}>
+  <div class="eyebrow">Beatles Bench · {page.group}</div>
+  <h1>{page.command ? <><code>{first}</code> {rest.join(' ')}</> : page.title}</h1>
+  <figure class="slide">
+    <img src={page.slide} alt={`The talk's slide: ${page.title}`} width="1600" height={page.slug === 'backends' ? 720 : 900} loading="eager" />
+    {page.credit && <figcaption>{page.credit}</figcaption>}
+  </figure>
+  {page.idea.map((para) => <p>{parts(para).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>)}
+
+  {page.steps.map((step, i) => (
+    <Fragment>
+      {i === 0 && <h2>Run it</h2>}
+      {step.heading && <h2>{step.heading}</h2>}
+      <Terminal run={runOf(page.slug, i)} caption={step.see} />
+    </Fragment>
+  ))}
+
+  <h2>The lesson</h2>
+  <p>{parts(page.lesson).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>
+  <p class="refrain">You control the bar. The number is the number.</p>
+
+  <p class="bench-link">Run it yourself: <a href={page.link}>{shown}</a></p>
+</BeatlesPage>

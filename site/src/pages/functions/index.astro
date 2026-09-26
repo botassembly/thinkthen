@@ -15,7 +15,7 @@ const questionFile = FUNCTIONS.find((f) => f.notAFunction);
     <tr><th>Function</th><th>What it does</th><th>Kind of answer</th></tr>
     {CODE_FUNCTIONS.map((fn) => (
       <tr>
-        <td><a href={`/functions/${fn.name}/`}><code>{fn.name}</code></a>{fn.status === 'preview' && <> <span class="status preview">preview</span></>}</td>
+        <td><a href={`/functions/${fn.name}/`}><code>{fn.name}</code></a></td>
         <td>{fn.line}</td>
         <td>{fn.primitive}</td>
       </tr>
@@ -29,5 +29,4 @@ const questionFile = FUNCTIONS.find((f) => f.notAFunction);
 
   <p>A question file is a saved question. <code>decide</code>, <code>choose</code>, <code>tag</code>, <code>score</code>, <code>filter</code>, and <code>rank</code> accept one. It gives no answer of its own.</p>
 
-  <p class="pagelinks"><a href="/surfaces/">Call it from your language</a> · <a href="/how-tos/">See the how-tos</a></p>
 </Base>

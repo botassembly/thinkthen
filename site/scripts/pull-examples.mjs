@@ -18,8 +18,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { FUNCTIONS, SURFACES, HOWTOS, RECIPES } from '../src/data/catalog.mjs';
 
-const DECK = process.env.THINKTHEN_DECK
-  || '/home/ian/workspace/repos/mktg/decks/2026-09-21-thinkthen-semantic-commands';
+const DECK = process.env.THINKTHEN_DECK;
+if (!DECK) {
+  console.error('pull-examples: set THINKTHEN_DECK to the deck folder that holds the runs.');
+  process.exit(2);
+}
 const OUT = path.join(process.cwd(), 'src', 'data', 'examples');
 
 const read = (p) => fs.readFileSync(p, 'utf8');

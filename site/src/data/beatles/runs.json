@@ -1,0 +1,185 @@
+{
+ "bench": "c1b926102dfe1f374bbf24edfbdc498d6f58571e",
+ "runs": {
+  "strings/0": {
+   "command": "printf '%s\\n' \"Octopus's Garden\" 'Hey Jude' 'Penny Lane' | grep -i 'abbey road'",
+   "output": "",
+   "exit": 1
+  },
+  "strings/1": {
+   "command": "printf '%s\\n' \"Octopus's Garden\" 'Hey Jude' 'Penny Lane' |\n  thinkthen decide 'The text is the title of a song by the Beatles. It appears on the album Abbey Road.' \\\n    --lines --details --replay recording | jq -c '{song: .input, answer: .value, yes: .answer.probability}'",
+   "output": "{\"song\":\"Octopus's Garden\",\"answer\":true,\"yes\":0.75}\n{\"song\":\"Hey Jude\",\"answer\":false,\"yes\":0.29}\n{\"song\":\"Penny Lane\",\"answer\":false,\"yes\":0.43}",
+   "exit": 0
+  },
+  "strings/2": {
+   "command": "printf '%s\\n' \"Octopus's Garden\" 'Hey Jude' 'Penny Lane' |\n  thinkthen decide 'The text is the title of a song by the Beatles. It appears on the album Abbey Road.' \\\n    --lines --details --threshold 0.3:0.7 --replay recording | jq -c '{song: .input, answer: .value, yes: .answer.probability}'",
+   "output": "{\"song\":\"Octopus's Garden\",\"answer\":true,\"yes\":0.75}\n{\"song\":\"Hey Jude\",\"answer\":false,\"yes\":0.29}\n{\"song\":\"Penny Lane\",\"answer\":null,\"yes\":0.43}",
+   "exit": 0
+  },
+  "jev/0": {
+   "command": "printf '%s' \"Octopus's Garden\" |\n  thinkthen choose 'The text is the title of a song by the Beatles. Who sings the lead vocal on it?' \\\n    John Paul George Ringo 'John and Paul duet' --details --replay recording |\n  jq -c '.answer.probabilities'",
+   "output": "{\"John\":0.01,\"Paul\":0.02,\"George\":0.13,\"Ringo\":0.84,\"John and Paul duet\":0.0}",
+   "exit": 0
+  },
+  "jev/1": {
+   "command": "printf '%s' \"Octopus's Garden\" |\n  thinkthen choose 'The text is the title of a song by the Beatles. Who sings the lead vocal on it?' \\\n    John Paul George Ringo 'John and Paul duet' --threshold 0.9 --replay recording",
+   "output": "null",
+   "exit": 3
+  },
+  "decide/0": {
+   "command": "printf '%s\\n' 'She Loves You' 'Michelle' 'Yesterday' 'Taxman' |\n  thinkthen decide 'The text is the title of a song by the Beatles. It is a love song.' \\\n    --lines --details --replay recording | jq -c '{song: .input, answer: .value, yes: .answer.probability}'",
+   "output": "{\"song\":\"She Loves You\",\"answer\":true,\"yes\":0.96}\n{\"song\":\"Michelle\",\"answer\":true,\"yes\":0.73}\n{\"song\":\"Yesterday\",\"answer\":true,\"yes\":0.56}\n{\"song\":\"Taxman\",\"answer\":false,\"yes\":0.05}",
+   "exit": 0
+  },
+  "decide/1": {
+   "command": "printf '%s\\n' 'She Loves You' 'Michelle' 'Yesterday' 'Taxman' |\n  thinkthen decide 'The text is the title of a song by the Beatles. It is a love song.' \\\n    --lines --details --threshold 0.3:0.7 --replay recording | jq -c '{song: .input, answer: .value, yes: .answer.probability}'",
+   "output": "{\"song\":\"She Loves You\",\"answer\":true,\"yes\":0.96}\n{\"song\":\"Michelle\",\"answer\":true,\"yes\":0.73}\n{\"song\":\"Yesterday\",\"answer\":null,\"yes\":0.56}\n{\"song\":\"Taxman\",\"answer\":false,\"yes\":0.05}",
+   "exit": 0
+  },
+  "choose/0": {
+   "command": "printf '%s\\n' 'Come Together' 'Yesterday' 'Something' \"Octopus's Garden\" 'She Loves You' |\n  thinkthen choose 'The text is the title of a song by the Beatles. Who sings the lead vocal on it?' \\\n    John Paul George Ringo 'John and Paul duet' --lines --replay recording",
+   "output": "{\"input\":\"Come Together\",\"value\":\"John\"}\n{\"input\":\"Yesterday\",\"value\":\"Paul\"}\n{\"input\":\"Something\",\"value\":\"George\"}\n{\"input\":\"Octopus's Garden\",\"value\":\"Ringo\"}\n{\"input\":\"She Loves You\",\"value\":\"John\"}",
+   "exit": 0
+  },
+  "choose/1": {
+   "command": "printf '%s\\n' 'Come Together' 'Yesterday' 'Something' \"Octopus's Garden\" 'She Loves You' |\n  thinkthen choose 'The text is the title of a song by the Beatles. Who sings the lead vocal on it?' \\\n    John Paul George Ringo 'John and Paul duet' --lines --threshold 0.5 --replay recording",
+   "output": "{\"input\":\"Come Together\",\"value\":\"John\"}\n{\"input\":\"Yesterday\",\"value\":\"Paul\"}\n{\"input\":\"Something\",\"value\":\"George\"}\n{\"input\":\"Octopus's Garden\",\"value\":\"Ringo\"}\n{\"input\":\"She Loves You\",\"value\":null}",
+   "exit": 0
+  },
+  "tag/0": {
+   "command": "printf '%s\\n' Michelle Yesterday 'Eleanor Rigby' 'Penny Lane' \"Octopus's Garden\" 'Lucy in the Sky with Diamonds' |\n  thinkthen tag 'The text is the title of a song by the Beatles. Which of these describe it?' \\\n    'love song' sad psychedelic 'about a place' 'about the sea' --lines --replay recording",
+   "output": "{\"input\":\"Michelle\",\"value\":[\"love song\"]}\n{\"input\":\"Yesterday\",\"value\":[\"love song\",\"sad\"]}\n{\"input\":\"Eleanor Rigby\",\"value\":[\"sad\"]}\n{\"input\":\"Penny Lane\",\"value\":[\"psychedelic\",\"about a place\"]}\n{\"input\":\"Octopus's Garden\",\"value\":[\"psychedelic\",\"about a place\",\"about the sea\"]}\n{\"input\":\"Lucy in the Sky with Diamonds\",\"value\":[\"psychedelic\"]}",
+   "exit": 0
+  },
+  "tag/1": {
+   "command": "printf '%s\\n' Michelle Yesterday 'Eleanor Rigby' 'Penny Lane' \"Octopus's Garden\" 'Lucy in the Sky with Diamonds' |\n  thinkthen tag 'The text is the title of a song by the Beatles. Which of these describe it?' \\\n    'love song' sad psychedelic 'about a place' 'about the sea' --lines --threshold 0.7 --replay recording",
+   "output": "{\"input\":\"Michelle\",\"value\":[\"love song\"]}\n{\"input\":\"Yesterday\",\"value\":[\"love song\",\"sad\"]}\n{\"input\":\"Eleanor Rigby\",\"value\":[\"sad\"]}\n{\"input\":\"Penny Lane\",\"value\":[\"about a place\"]}\n{\"input\":\"Octopus's Garden\",\"value\":[\"about a place\",\"about the sea\"]}\n{\"input\":\"Lucy in the Sky with Diamonds\",\"value\":[\"psychedelic\"]}",
+   "exit": 0
+  },
+  "score/0": {
+   "command": "printf '%s\\n' 'Her Majesty' Yesterday \"Octopus's Garden\" Something 'Come Together' 'A Day in the Life' 'Hey Jude' 'Revolution 9' |\n  thinkthen score 'The text is the title of a song by the Beatles. How long is the recording?' \\\n    'about 0 minutes' 'about 1 minute' 'about 2 minutes' 'about 3 minutes' 'about 4 minutes' \\\n    'about 5 minutes' 'about 6 minutes' 'about 7 minutes' 'about 8 minutes' 'about 9 minutes' \\\n    --lines --replay recording",
+   "output": "{\"input\":\"Her Majesty\",\"value\":0.67}\n{\"input\":\"Yesterday\",\"value\":2.12}\n{\"input\":\"Octopus's Garden\",\"value\":3.17}\n{\"input\":\"Something\",\"value\":3.81}\n{\"input\":\"Come Together\",\"value\":4.34}\n{\"input\":\"A Day in the Life\",\"value\":4.868686868687}\n{\"input\":\"Hey Jude\",\"value\":7.07}\n{\"input\":\"Revolution 9\",\"value\":7.27}",
+   "exit": 0
+  },
+  "score/1": {
+   "command": "printf '%s\\n' 'Her Majesty' Yesterday \"Octopus's Garden\" Something 'Come Together' 'A Day in the Life' 'Hey Jude' 'Revolution 9' |\n  thinkthen score 'The text is the title of a song by the Beatles. How long is the recording?' \\\n    'about 0 minutes' 'about 1 minute' 'about 2 minutes' 'about 3 minutes' 'about 4 minutes' \\\n    'about 5 minutes' 'about 6 minutes' 'about 7 minutes' 'about 8 minutes' 'about 9 minutes' \\\n    --lines --replay recording | jq -c 'select(.value >= 5)'",
+   "output": "{\"input\":\"Hey Jude\",\"value\":7.07}\n{\"input\":\"Revolution 9\",\"value\":7.27}",
+   "exit": 0
+  },
+  "filter/0": {
+   "command": "printf '%s\\n' \"Octopus's Garden\" 'Yellow Submarine' 'Something' 'Here Comes the Sun' 'Yesterday' 'Come Together' \\\n    'Hey Jude' 'Penny Lane' 'A Day in the Life' 'Her Majesty' 'Let It Be' \"Maxwell's Silver Hammer\" |\n  thinkthen filter 'The text is the title of a song by the Beatles. It appears on the album Abbey Road.' \\\n    --threshold 0.7 --lines --replay recording",
+   "output": "Octopus's Garden\nSomething\nHere Comes the Sun\nCome Together\nA Day in the Life\nHer Majesty\nMaxwell's Silver Hammer",
+   "exit": 0
+  },
+  "filter/1": {
+   "command": "printf '%s\\n' \"Octopus's Garden\" 'Yellow Submarine' 'Something' 'Here Comes the Sun' 'Yesterday' 'Come Together' \\\n    'Hey Jude' 'Penny Lane' 'A Day in the Life' 'Her Majesty' 'Let It Be' \"Maxwell's Silver Hammer\" |\n  thinkthen filter 'The text is the title of a song by the Beatles. It appears on the album Abbey Road.' \\\n    --threshold 0.9 --lines --replay recording",
+   "output": "Here Comes the Sun\nCome Together\nA Day in the Life\nHer Majesty\nMaxwell's Silver Hammer",
+   "exit": 0
+  },
+  "rank/0": {
+   "command": "printf '%s\\n' Something 'Hey Jude' Blackbird 'Help!' \"Octopus's Garden\" 'She Loves You' Piggies Yesterday \\\n    'Penny Lane' 'Her Majesty' \"Can't Buy Me Love\" 'Good Night' |\n  thinkthen rank \"The text is the title of a song by the Beatles. It is one of the Beatles' biggest hits.\" \\\n    --lines --replay recording",
+   "output": "Hey Jude\nHelp!\nShe Loves You\nYesterday\nCan't Buy Me Love\nPenny Lane\nSomething\nBlackbird\nPiggies\nOctopus's Garden\nGood Night\nHer Majesty",
+   "exit": 0
+  },
+  "rank/1": {
+   "command": "printf '%s\\n' Something 'Hey Jude' Blackbird 'Help!' \"Octopus's Garden\" 'She Loves You' Piggies Yesterday \\\n    'Penny Lane' 'Her Majesty' \"Can't Buy Me Love\" 'Good Night' |\n  thinkthen rank \"The text is the title of a song by the Beatles. It is one of the Beatles' biggest hits.\" \\\n    --lines --top 5 --replay recording",
+   "output": "Hey Jude\nHelp!\nShe Loves You\nYesterday\nCan't Buy Me Love",
+   "exit": 0
+  },
+  "find/0": {
+   "command": "printf '%s\\n' 'She Loves You' 'I Saw Her Standing There' 'From Me to You' 'All My Loving' 'Love Me Do' \\\n    'I Want to Hold Your Hand' 'Please Please Me' \"Can't Buy Me Love\" \"A Hard Day's Night\" 'I Feel Fine' |\n  thinkthen find 'These are songs by the Beatles. Which one did they release first?' --replay recording",
+   "output": "Love Me Do",
+   "exit": 0
+  },
+  "find/1": {
+   "command": "printf '%s\\n' 'She Loves You' 'I Saw Her Standing There' 'From Me to You' 'All My Loving' 'Love Me Do' \\\n    'I Want to Hold Your Hand' 'Please Please Me' \"Can't Buy Me Love\" \"A Hard Day's Night\" 'I Feel Fine' |\n  thinkthen find 'These are songs by the Beatles. Which one did they release first?' --details --replay recording |\n  jq -c '.answer.probabilities'",
+   "output": "{\"u001\":0.01,\"u002\":0.01,\"u003\":0.08,\"u004\":0.0,\"u005\":0.63,\"u006\":0.0,\"u007\":0.27,\"u008\":0.0,\"u009\":0.0,\"u010\":0.0}",
+   "exit": 0
+  },
+  "annotate/0": {
+   "command": "printf '%s\\n' Blackbird \"Octopus's Garden\" |\n  thinkthen annotate annotate-cold-card.json --lines --replay recording",
+   "output": "{\"input\":\"Blackbird\",\"value\":{\"singer\":\"Paul\",\"album\":\"White Album\",\"year\":\"1968\"}}\n{\"input\":\"Octopus's Garden\",\"value\":{\"singer\":\"Ringo\",\"album\":null,\"year\":null}}",
+   "exit": 0
+  },
+  "annotate/1": {
+   "command": "jq '.questions[].threshold = 0.5' annotate-cold-card.json > card-0.5.json\nprintf '%s\\n' Blackbird \"Octopus's Garden\" |\n  thinkthen annotate card-0.5.json --lines --replay recording",
+   "output": "{\"input\":\"Blackbird\",\"value\":{\"singer\":\"Paul\",\"album\":\"White Album\",\"year\":\"1968\"}}\n{\"input\":\"Octopus's Garden\",\"value\":{\"singer\":\"Ringo\",\"album\":\"White Album\",\"year\":\"1968\"}}",
+   "exit": 0
+  },
+  "recognize/0": {
+   "command": "printf '%s' \"Ringo Starr wrote Octopus's Garden on a boat off Sardinia, and the band recorded it at Abbey Road Studios for the album Abbey Road.\" |\n  thinkthen recognize person song album place --threshold 0.01 --replay recording |\n  jq -c '.entities[] | {name, kind, strength}'",
+   "output": "{\"name\":\"Ringo Starr\",\"kind\":\"person\",\"strength\":1.0}\n{\"name\":\"Octopus's Garden\",\"kind\":\"song\",\"strength\":0.99}\n{\"name\":\"Sardinia\",\"kind\":\"place\",\"strength\":0.98}\n{\"name\":\"Abbey Road Studios\",\"kind\":\"place\",\"strength\":0.9735}\n{\"name\":\"Abbey Road\",\"kind\":\"album\",\"strength\":0.9504}",
+   "exit": 0
+  },
+  "recognize/1": {
+   "command": "printf '%s' \"Ringo Starr wrote Octopus's Garden on a boat off Sardinia, and the band recorded it at Abbey Road Studios for the album Abbey Road.\" |\n  thinkthen recognize person song album place --threshold 0.98 --replay recording |\n  jq -c '.entities[] | {name, kind, strength}'",
+   "output": "{\"name\":\"Ringo Starr\",\"kind\":\"person\",\"strength\":1.0}\n{\"name\":\"Octopus's Garden\",\"kind\":\"song\",\"strength\":0.99}\n{\"name\":\"Sardinia\",\"kind\":\"place\",\"strength\":0.98}",
+   "exit": 0
+  },
+  "relate/0": {
+   "command": "jq -c '.records[]' relate-cold.jsonl |\n  thinkthen relate @relate.json --jsonl --threshold 0.5 --replay recording |\n  jq -c '[.relation, .source.name, .target.name, .probability]'",
+   "output": "[\"sung_by\",\"Octopus's Garden\",\"Ringo Starr\",0.97]\n[\"sung_by\",\"Something\",\"George Harrison\",0.81]\n[\"sung_by\",\"Come Together\",\"John Lennon\",0.89]\n[\"sung_by\",\"Here Comes the Sun\",\"George Harrison\",0.93]\n[\"sung_by\",\"Yesterday\",\"Paul McCartney\",0.93]\n[\"sung_by\",\"Eleanor Rigby\",\"Paul McCartney\",0.81]\n[\"sung_by\",\"Taxman\",\"George Harrison\",0.8]\n[\"appears_on\",\"Octopus's Garden\",\"Revolver\",0.73]\n[\"appears_on\",\"Something\",\"Abbey Road\",1.0]\n[\"appears_on\",\"Come Together\",\"Abbey Road\",1.0]\n[\"appears_on\",\"Here Comes the Sun\",\"Abbey Road\",1.0]\n[\"appears_on\",\"Yesterday\",\"Help!\",0.56]\n[\"appears_on\",\"Eleanor Rigby\",\"Revolver\",0.99]\n[\"appears_on\",\"Taxman\",\"Revolver\",0.96]",
+   "exit": 0
+  },
+  "relate/1": {
+   "command": "jq -c '.records[]' relate-cold.jsonl |\n  thinkthen relate @relate.json --jsonl --threshold 0.8 --replay recording |\n  jq -c '[.relation, .source.name, .target.name, .probability]'",
+   "output": "[\"sung_by\",\"Octopus's Garden\",\"Ringo Starr\",0.97]\n[\"sung_by\",\"Something\",\"George Harrison\",0.81]\n[\"sung_by\",\"Come Together\",\"John Lennon\",0.89]\n[\"sung_by\",\"Here Comes the Sun\",\"George Harrison\",0.93]\n[\"sung_by\",\"Yesterday\",\"Paul McCartney\",0.93]\n[\"sung_by\",\"Eleanor Rigby\",\"Paul McCartney\",0.81]\n[\"sung_by\",\"Taxman\",\"George Harrison\",0.8]\n[\"appears_on\",\"Something\",\"Abbey Road\",1.0]\n[\"appears_on\",\"Come Together\",\"Abbey Road\",1.0]\n[\"appears_on\",\"Here Comes the Sun\",\"Abbey Road\",1.0]\n[\"appears_on\",\"Eleanor Rigby\",\"Revolver\",0.99]\n[\"appears_on\",\"Taxman\",\"Revolver\",0.96]",
+   "exit": 0
+  },
+  "audit/0": {
+   "command": "thinkthen audit rows.jsonl key.jsonl --id /input |\n  jq -c '{right, wrong_yes: .false_yes, missed_yes: .false_no, suggested_bar: .suggested.cut}'",
+   "output": "{\"right\":50,\"wrong_yes\":20,\"missed_yes\":0,\"suggested_bar\":0.78}",
+   "exit": 0
+  },
+  "audit/1": {
+   "command": "thinkthen audit rows.jsonl key.jsonl --id /input --threshold 0.78 |\n  jq -c '{right, wrong_yes: .false_yes, missed_yes: .false_no, suggested_bar: .suggested.cut}'",
+   "output": "{\"right\":66,\"wrong_yes\":4,\"missed_yes\":0,\"suggested_bar\":0.78}",
+   "exit": 0
+  },
+  "diff/0": {
+   "command": "jq -c '.input = {id: (.input.input | split(\"\\nText: \") | last)}' ../11-audit/rows.jsonl > a.jsonl\njq -c '.input = {id: (.input.input | split(\"\\nText: \") | last)}' ../11-audit/rows-context.jsonl > b.jsonl\nthinkthen diff a.jsonl b.jsonl --threshold 0.5 --key ../11-audit/key.jsonl |\n  tail -1 | jq -c '.summary | {changed, right_a, right_b, lost}'",
+   "output": "thinkthen: diff: warning: the question digest differs in 70 of 70 paired answers. A different question, threshold, or profile gives a different digest.\n{\"changed\":20,\"right_a\":50,\"right_b\":70,\"lost\":0}",
+   "exit": 0
+  },
+  "diff/1": {
+   "command": "thinkthen diff a.jsonl b.jsonl --threshold 0.2:0.8 --key ../11-audit/key.jsonl |\n  tail -1 | jq -c '.summary | {changed, right_a, right_b, lost}'",
+   "output": "thinkthen: diff: warning: the question digest differs in 70 of 70 paired answers. A different question, threshold, or profile gives a different digest.\n{\"changed\":48,\"right_a\":20,\"right_b\":68,\"lost\":0}",
+   "exit": 0
+  },
+  "what-jev-knows/0": {
+   "command": "printf '%s' 'Paul McCartney' |\n  thinkthen choose 'The text names a member of the Beatles. Which of these songs by the Beatles has this member as its only lead singer?' \\\n    --option \"a=I'm a Loser\" --option 'b=Girl' --option 'c=Sweet Little Sixteen' --option \"d=I've Just Seen a Face\" \\\n    --details --replay recording | jq -c '.answer.probabilities'",
+   "output": "{\"a\":0.02,\"b\":0.12,\"c\":0.23,\"d\":0.63}",
+   "exit": 0
+  },
+  "what-jev-knows/1": {
+   "command": "printf '%s' 'Paul McCartney' |\n  thinkthen choose 'The text names a member of the Beatles. Which of these songs by the Beatles has this member as its only lead singer?' \\\n    --option \"a=I'm a Loser\" --option 'b=Girl' --option 'c=Sweet Little Sixteen' --option \"d=I've Just Seen a Face\" \\\n    --threshold 0.7 --replay recording",
+   "output": "null",
+   "exit": 3
+  },
+  "blind-spots/0": {
+   "command": "printf '%s' \"Nothin' Shakin'\" |\n  thinkthen choose 'The text is the title of a song by the Beatles. Who sings the lead vocal on it?' \\\n    --option 'john=John Lennon' --option 'paul=Paul McCartney' \\\n    --option 'george=George Harrison' --option 'ringo=Ringo Starr' \\\n    --details --replay recording | jq -c '.answer.probabilities'",
+   "output": "{\"john\":0.38,\"paul\":0.21,\"george\":0.13,\"ringo\":0.28}",
+   "exit": 0
+  },
+  "blind-spots/1": {
+   "command": "printf '%s' \"Nothin' Shakin'\" |\n  thinkthen choose 'The text is the title of a song by the Beatles. Who sings the lead vocal on it?' \\\n    --option 'john=John Lennon' --option 'paul=Paul McCartney' \\\n    --option 'george=George Harrison' --option 'ringo=Ringo Starr' \\\n    --threshold 0.5 --replay recording",
+   "output": "null",
+   "exit": 3
+  },
+  "rad/0": {
+   "command": "printf '%s' 'A Day in the Life' |\n  thinkthen decide 'The text is the title of a song by the Beatles. It appears on the album Abbey Road.' \\\n    --details --replay recording | jq -c '{answer: .value, yes: .answer.probability}'",
+   "output": "{\"answer\":true,\"yes\":0.94}",
+   "exit": 0
+  },
+  "rad/1": {
+   "command": "printf '%s' \"Catalog:\nSgt. Pepper's Lonely Hearts Club Band (1967-05-26)\nA Day in the Life (lead: Lennon; written: Lennon–McCartney; 5:38; released 1967-05-26; first album: Sgt. Pepper's Lonely Hearts Club Band)\nText: A Day in the Life\" |\n  thinkthen decide 'The text gives a catalog entry and then names a song by the Beatles. It appears on the album Abbey Road.' \\\n    --details --replay recording | jq -c '{answer: .value, yes: .answer.probability}'",
+   "output": "{\"answer\":false,\"yes\":0.04}",
+   "exit": 0
+  },
+  "backends/0": {
+   "command": "thinkthen check --dry-run --url https://your-server/v1 | head -4",
+   "output": "url https://your-server/v1/systemone\nprovider systemone\nmodel asked unspecified\nmodel sent jev-latest",
+   "exit": 0
+  }
+ }
+}

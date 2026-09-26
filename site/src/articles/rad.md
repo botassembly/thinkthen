@@ -35,4 +35,4 @@ You rarely need the whole catalog. Send the one entry the question is about, and
 
 This is one bench on one subject. I build ThinkThen, so weigh my Jev numbers with that in mind. The bench is public. Every answer on its pages replays from a saved recording for free. Run it yourself, and tell me where RAD breaks.
 
-The [RAD page](/beatles-bench/rad/) has every command and every number.
+The [RAD page](/learn/beatles-bench/rad/) runs one of these questions both ways.

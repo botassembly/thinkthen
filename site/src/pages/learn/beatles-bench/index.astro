@@ -1,0 +1,28 @@
+---
+import BeatlesPage from '../../../layouts/BeatlesPage.astro';
+import Code from '../../../components/Code.astro';
+import { FIRST, REPO } from '../../../data/beatles.mjs';
+
+const get = `git clone ${REPO}
+cd beatles-bench
+./run.sh`;
+---
+<BeatlesPage page={{ ...FIRST, description: 'The talk "Analyzing the Beatles using Jev" as short pages: one slide, one idea, and one command each.' }}>
+  <div class="eyebrow">Learn</div>
+  <h1>Beatles Bench</h1>
+  <p class="lede">Beatles Bench is the playground for the talk "Analyzing the Beatles using Jev". These pages follow the talk, one slide at a time.</p>
+  <figure class="slide">
+    <img src="/learn/beatles-bench/beatles-bench.webp" alt="The talk's slide: Beatles Bench is our playground." width="1600" height="900" loading="eager" />
+  </figure>
+  <Fragment set:html={'<!-- The talk video goes here once it exists. -->'} />
+
+  <p>The bench holds 306 Beatles songs and 1,501 questions about them. The facts come from Wikipedia and Wikidata. Every answer is known ahead of time. That makes the bench a good place to watch ThinkThen work and to see where it goes wrong.</p>
+  <p>Each page shows one idea and one command, then the same command at another bar. Every command answers from a saved recording. You need no key, and nothing leaves your machine.</p>
+
+  <h2>Get the bench</h2>
+  <p>The bench is open source. Clone it and replay every answer:</p>
+  <Code code={get} />
+  <p>It is not an official benchmark. Please don't benchmax it. The bench's author also builds ThinkThen. Its data is CC BY-SA 4.0, from Wikipedia and Wikidata.</p>
+
+  <p class="bench-link">The repository: <a href={REPO}>{REPO.replace('https://', '')}</a></p>
+</BeatlesPage>

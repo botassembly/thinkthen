@@ -1,10 +1,12 @@
 ---
 import Base from '../../layouts/Base.astro';
-import { HOWTOS } from '../../data/catalog.mjs';
+import { HOWTOS, RECIPES } from '../../data/catalog.mjs';
+
+const plain = (text) => text.replaceAll('`', '');
 ---
-<Base title="How-tos" description="Real jobs done with ThinkThen, each shown with a recorded run.">
+<Base title="How-tos" description="Business jobs done with ThinkThen, each shown with a recorded run.">
   <h1>How-tos</h1>
-  <p class="lede">Pick your job. ThinkThen reads each line and answers a question about it. Each page shows what went in, the commands, and what came out.</p>
+  <p class="lede">Pick your job. Each page shows what went in, the commands, and what came out.</p>
 
   <table>
     <tr><th>How-to</th><th>Who it is for</th><th>Functions</th></tr>
@@ -17,5 +19,11 @@ import { HOWTOS } from '../../data/catalog.mjs';
     ))}
   </table>
 
-  <p class="pagelinks"><a href="/functions/">See every function</a> · <a href="/trust/">Test it before you trust it</a></p>
+  <h2>Shell recipes</h2>
+  <p>The tools you already have, piped into ThinkThen.</p>
+  <div class="grid">
+    {RECIPES.map((r) => (
+      <a class="tile" href={`/how-tos/${r.slug}/`}><b>{r.title}</b><span>{plain(r.said).split('. ')[0]}.</span></a>
+    ))}
+  </div>
 </Base>

@@ -9,7 +9,7 @@
 // gets no word, because that tool set the code. `word={false}` hides it.
 import { outcomeOf, exitWord } from '../data/catalog.mjs';
 
-const { run, caption = 'Recorded from the real command.', fn = null, word = true } = Astro.props;
+const { run, caption = null, fn = null, word = true } = Astro.props;
 
 const lines = [];
 for (const file of run.also || []) {
@@ -20,9 +20,18 @@ if (run.input && run.inputFile) {
   lines.push({ cls: 'p', text: `$ cat ${run.inputFile}` });
   for (const l of run.input.split('\n')) lines.push({ cls: 'in', text: l });
 }
-run.command.split('\n').forEach((l, i) => {
-  lines.push({ cls: 'cmd', text: (i === 0 ? '$ ' : '') + l });
-});
+// A line starts a new command unless it continues one: after a trailing
+// backslash or pipe, inside an open quote, indented, or closing a block.
+let quote = null;
+let more = false;
+for (const l of run.command.split('\n')) {
+  const cont = quote || more || /^\s/.test(l) || /^(esac|done|fi)\b/.test(l);
+  lines.push({ cls: 'cmd', text: (cont ? '' : '$ ') + l });
+  for (const c of l.replace(/\\./g, '')) {
+    if (quote ? c === quote : c === '"' || c === "'") quote = quote ? null : c;
+  }
+  more = /(\\|\|)\s*$/.test(l);
+}
 if (run.input && !run.inputFile) {
   for (const l of run.input.split('\n')) lines.push({ cls: 'in', text: l });
 }
@@ -34,14 +43,13 @@ const copy = run.command;
 ---
 <div class="block">
   <div class="caption">
-    <span class="status run">run</span>
-    <span class="grow">{caption}</span>
+    <span class="grow">{caption && caption.split('`').map((part, i) => (i % 2 ? <code>{part}</code> : part))}</span>
     <button class="copy" type="button">Copy</button>
   </div>
   <pre data-copy={copy}>{lines.map((l, i) => (
     <Fragment><span class={l.cls}>{l.text}</span>{i < lines.length - 1 ? '\n' : ''}</Fragment>
   ))}</pre>
   {run.exit !== null && run.exit !== undefined && (
-    <div class="caption"><span class={`exit ${outcome}`}>exit {run.exit}{said ? ` — ${said}` : ''}</span></div>
+    <div class="caption"><span class={`exit ${outcome}`}>exit {run.exit}{said ? `: ${said}` : ''}</span></div>
   )}
 </div>

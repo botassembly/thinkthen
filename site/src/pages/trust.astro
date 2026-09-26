@@ -24,7 +24,7 @@ const lines = cell('decide', 'shell').runs.find((r) => r.name === 'decide-lines'
   <h2>The threshold is yours</h2>
   <p>The model reports a probability. Your threshold turns it into an answer, and nothing else does. One number is a cut. Two numbers are a band, and the middle is not sure.</p>
   <p>Three messages under one band:</p>
-  <Terminal run={lines} caption="Recorded from the real command. The refund request is yes and the thank-you is no. The send-back line could mean an exchange or money back, so its 0.54 lands in the band as null." />
+  <Terminal run={lines} caption="The refund request is yes and the thank-you is no. The send-back line could mean an exchange or money back, so its 0.54 lands in the band as null." />
   <p>You choose the threshold. The model never does.</p>
   <p><code>jev-latest</code> follows the vendor’s newest model. Pin a run by naming a version, and check your labeled cases again when you change it.</p>
 
