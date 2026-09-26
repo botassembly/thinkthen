@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine/http.rs crates/thinkthen/src/engine/mod.rs cr
 
 # 0142: The pool keeps up to `--jobs` connections
 
-Status: accepted 2026-09-26. The coordinator approved it after a fresh read-only review. Owner: Claude.
+Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
