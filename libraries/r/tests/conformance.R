@@ -63,7 +63,7 @@ run_case <- function(case, served) {
     same("question_sha256", row$meta$question_sha256, want$details$question_sha256)
     same("model", row$meta$model, want$details$model)
     same("requests", row$meta$requests, want$details$requests)
-    if (is.null(want$details$requests_sent)) return(invisible())  # run facts ride on single cases only
+    if (case$expect$success$kind != "single") return(invisible())  # run facts ride on single cases only
     for (name in c("usage", "requests_sent", "cached")) same(name, row$meta[[name]], want$details[[name]])
     same("confidence", row$answer$confidence, want$details$answer$confidence)
     same("url", row$meta$url, served)
