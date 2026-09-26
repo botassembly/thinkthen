@@ -51,7 +51,7 @@ Nonblank lines, net against `origin/main`.
 | `index.d.ts`, `types.test.ts` | 1, at most 3 | 1, 2 |
 | Each README | at most 8 | 3 |
 
-Ratchets: `sdlc/ratchet.json` rises from 69,192 to 69,226 for the two accessors and the consumer's checks. DuckDB's Rust ceiling falls from 3,835 to 3,787, and its Python from 1,916 to 1,908. The binding ceilings rise as follows: C 2,147 to 2,154, Python 2,316 to 2,318, R 1,283 to 1,292, Ruby 1,531 to 1,535, SQLite 1,213 to 1,214, PostgreSQL 249 to 254, TypeScript `.mjs` 742 to 744 and `.ts` 272 to 275.
+Ratchets: `sdlc/ratchet.json` rises from 69,192 to 69,226 for the two accessors and the consumer's checks. DuckDB's Rust ceiling falls from 3,835 to 3,787, and its Python from 1,916 to 1,908. The binding ceilings rise as follows: C 2,147 to 2,154, Python 2,316 to 2,318, R 1,283 to 1,293, Ruby 1,531 to 1,535, SQLite 1,213 to 1,214, PostgreSQL 249 to 254, TypeScript `.mjs` 742 to 744 and `.ts` 272 to 275.
 
 ## Ladder
 
@@ -67,15 +67,15 @@ Run after merging `origin/main` at `7eb041cc`.
 
 ## Code review fixes
 
-The first code review returned five findings. Each fix is its own commit.
+The first code review returned five findings, and its re-review added the R absent reader. Each fix is its own commit.
 
 - DuckDB's runner checks case 40's details before its counters. A planted usage of 11 in case 40 turns it red.
 - R guards its run-fact checks on the `single` kind, not on the expectation.
-- C reads a missing field as "absent", so an absent `confidence` or `usage` no longer matches null. A planted `"confidence": null` in case 07 turns it red.
+- C and R read a missing field as "absent", so an absent `confidence` or `usage` no longer matches null. A planted `"confidence": null` in case 07 turns C red. A planted `"usage": null` in case 12 turns R red.
 - PostgreSQL builds its served address in one `url(case)` helper.
 - `conformance/README.md` names the command runner's exception from decision 7.
 
-After the fixes, `lint`, `test` and `spec` each exit 0.
+After the fixes, `lint`, `test` and `spec` each exit 0, and the DuckDB, R, C and PostgreSQL `check.sh` runs pass.
 
 ## Left for landing and later
 
