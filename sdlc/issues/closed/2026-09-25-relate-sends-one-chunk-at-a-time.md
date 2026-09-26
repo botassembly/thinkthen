@@ -1,6 +1,6 @@
 # Relate sends one chunk at a time
 
-Status: Open
+Status: Closed 2026-09-26 by ticket 0143.
 
 Ticket 0118 asked a DuckDB relate over 16 rows, under throttle 8, to hold 8 counted requests on a loopback backend. It holds 1. The DuckDB surface is not the cause. Main's engine sends relate's requests one after another.
 

@@ -115,4 +115,4 @@ The ticket's gaps stand. `recognize` over one text still refuses `--jobs`, and t
 
 ## Closes
 
-- `sdlc/issues/2026-09-25-relate-sends-one-chunk-at-a-time.md`. The lander moves it to `closed/` in the landing commit.
+- `sdlc/issues/closed/2026-09-25-relate-sends-one-chunk-at-a-time.md`. The lander moves it to `closed/` in the landing commit.

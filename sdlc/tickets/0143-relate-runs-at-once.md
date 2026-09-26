@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine/facade.rs crates/thinkthen/src/engine/facade/
 
 # 0143: relate and split requests run at once
 
-Status: built (`sdlc/records/0143-build-relate-runs-at-once.md`). The coordinator accepted the design on 2026-09-26 after a fresh read-only review. Owner: Claude.
+Status: landed 2026-09-26 (`sdlc/records/0143-build-relate-runs-at-once.md`). Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -185,7 +185,7 @@ Contract 1; state and timing 2; reach 2; proof 1; cost of error 1; total 7. Fina
 
 ## Closes
 
-- `sdlc/issues/2026-09-25-relate-sends-one-chunk-at-a-time.md`. The lander moves it to `closed/` in the landing commit.
+- `sdlc/issues/closed/2026-09-25-relate-sends-one-chunk-at-a-time.md`. The lander moves it to `closed/` in the landing commit.
 
 ## Evidence
 
