@@ -1,40 +1,46 @@
 # A Zig consumer works through C, but no supported package exists
 
-Status: experiment complete. The queue owner decides whether to open a product ticket. Ian authorized the feasibility experiment and routed its work to Sol Medium. He did not authorize a release commitment. He can overturn the recommendation below.
+Status: the local package experiment is complete, with a verified native cancellation blocker. The queue owner decides the product integration ticket and release. Ian authorized the expanded Linux engineering and testing, not publication. He can overturn the thin wrapper and explicit native-archive recommendation.
 
 ## Gap
 
-The ideal state makes the C interface the route to additional languages. A Zig caller can already use that interface, but the repository supplies no supported Zig module, installation contract or caller gate. A user must supply the linking and ownership code.
+The ideal state makes the C interface the route to additional languages. Experiment 273 now supplies the Zig implementation, package metadata, examples, documentation, tests and local archive rehearsal. The repository still needs reviewed integration, a native cancellation repair and final-release verification before offering supported Zig use.
 
-## Evidence
+## Final evidence
 
-Beelink experiment `experiments/273-thinkthen-zig-c-interface/` tested Zig 0.15.2 on Linux x86_64 against an unchanged export of landed main `873b04abdeca56bcfc5fcc15b99665b7c32ee116`. It built the real C library offline under the heavy lock. No ThinkThen source changes or tool upgrades were required. Experiment 205 supplied earlier stand-in lessons. The new result uses the landed interface from ticket 0094 and ADR 0037.
+Beelink experiment `experiments/273-thinkthen-zig-c-interface/stage2/` uses Zig 0.15.2 on Linux x86_64 with glibc. Its immutable source is landed main `e0a6150a0325d92b93ac8f4e504ffbfc3792fba9`; the parent verified all 4,761 exported blobs. No ThinkThen implementation, C header or compiler upgrade was needed. The local native archive uses a release build with remapped builder paths, not the first stage's debug library.
 
-The direct example is 14 formatted Zig lines. The thin wrapper is 81. It imports `thinkthen.h`, calls typed scalar and bulk decisions, copies JSON and errors into Zig-owned memory, frees C strings through C, and rejects interior NUL in C-string arguments. Counted evidence retains UTF-8 and NUL bytes.
+The six-file `package/` exports a real Zig module. It wraps typed scalar/bulk decisions, recognize, relate and the generic JSON door for all ten functions. Rust retains judgment, grammar and scheduling. Zig owns copies of results and error metadata. The package rejects interior NUL in C strings and preserves counted evidence bytes. Its documentation covers blocking calls, thread-safe allocators, engine/token lifetime, one-shot cancellation and the known native limitation.
 
-The parent repeated the checks. The independent loopback fixture received exactly ten POST requests with the expected input multiset. Distinct bulk answers stayed in input order while barriers forced reverse reply completion. Exact saved error bytes survived a subsequent same-thread failure. Empty bulk, uncertainty, a non-retryable backend failure, malformed input, zero and invalid deadlines, a pre-fired cancellation token and Zig allocator cleanup also passed. Faulty wrapper copies that reversed results or changed an earlier error message failed at the intended assertions. A fresh read-only review accepted the corrected bounded prototype.
+The worker and parent separately completed the final gate. Parent evidence is `logs/gate-20260926T212430Z/`: 47 outer subprocess receipts and nine child receipts per isolated consumer matched expected outcomes. Two shared and two static-C consumers each accepted 48 independently counted requests across example, verb/ownership matrix, allocation failures, simultaneous callers, held deadlines, cancellation and fresh-token recovery. Actual shared loading used the supplied archive. Static mode had no ThinkThen shared dependency; it is not a fully static executable. Each consumer had a fresh cache, an unrelated path containing spaces, a real archive dependency, and a private network/filesystem namespace without Rust, Cargo, repository source or previous build outputs.
 
-Evidence remains local and unpushed:
+The gate verifies hashes, archive members, source/member byte equality, C layout, version macros and native identity evidence. Planted stale archives, bad header versions, private bytes, source-tree fallback and sanitizer misuse failed at their intended checks. Planted timeout/interruption descendants stopped while an unrelated control survived. Two fresh read-only reviews ran. The second found no additional experiment-side blocker after the approved corrections. The parent accepts the bounded handoff, not release readiness.
 
-- `FINDINGS.md`: verified result, limits, code example and work packages.
-- `REVIEW.md`: independent acceptance and its scope.
-- `logs/check-20260926T190427480588Z/`: positive checks and exact commands.
-- `attempts/plants-20260926T190520418374Z/`: faulty copies, failed checks and receipts.
-- `inputs/manifest.json`: source and header identity.
+## Native blocker
 
-The fixture used synthetic inputs, an explicit numeric loopback destination and a canary key in an allow-listed environment. No paid inference ran. Packet-level egress capture was not performed.
+A scalar C call can return success after its cancellation token fires during an accepted, held HTTP request. All four parent consumers reproduced it. Three independent Python ctypes trials also reproduced it without Zig. Held bulk cancellation, held deadlines and fresh-token recovery passed.
 
-## Recommendation
+[The existing cancellation issue](2026-09-26-cancelled-c-scalar-call-can-return-success.md) owns repair. The wrapper does not hide the fault. The gate explicitly reports `FINDING` and exits 1. Matching expected subprocess exits does not make this an all-pass contract.
 
-Keep Zig 0.15.2 for the next step. If Zig support belongs in the product, open a small additive package ticket:
+## Handoff and remaining work
 
-1. Define allocator, error, question and cancellation ownership in a consumer-facing API. Keep judgment rules and scheduling in Rust.
-2. Add Zig build and package metadata, a consumer example, licensing, header/library compatibility checks and release-artifact discovery.
-3. Prove clean installation without Rust, then add the selected platform and compiler combinations to an offline caller gate.
-4. Test in-flight cancellation, simultaneous callers, thread-local error capture, failed bulk, allocation and JSON failures, and C allocation cleanup.
+Local, unpushed deliverables:
 
-The C interface has an environment-based constructor and no public throttle setter. Any additional constructor or setting requires its own C-interface decision.
+- `stage2/package/`: the six source-package files.
+- `stage2/fixtures/` and `stage2/gate.sh`: the implemented Linux tests and offline gate.
+- `stage2/artifacts/manifest.json`: source pin, compiler versions, archive/header/library hashes, contents, exports and dependencies.
+- `stage2/HANDOFF.md`: exact proposed product destinations and path adaptations.
+- `stage2/CASE-LEDGER.md`, `FINDINGS.md`, `REVIEW.md`, and `reviews/`: coverage, parent verification, limits and independent reviews.
+- `stage2/parent-verification/`: parent source checks, gate launch evidence and unchanged-source hashes.
 
-Only Linux x86_64 shared linkage with Zig 0.15.2 was measured. Static linkage, macOS, Windows, all nineteen C symbols, all ten functions through JSON, performance and live-model quality remain unproved. The prototype establishes interoperability. It does not establish production readiness.
+The integration ticket should copy `package/` to `libraries/zig/`, place the named tests beside it, adapt the gate to the repository's artifact/tool/scratch paths and attach it to the offline surface rung. It should add source-archive release packaging, public API/install documentation and specification registry entries. The release owner must decide distribution and compatibility policy, rebuild from the final release commit and rerun the gate. Do not publish the experiment's rehearsal binaries. After repairing native cancellation, replace the rehearsal's exact known-failure expectation with the strict contract and a genuinely passing gate.
 
-JVM and Go remain future experiments. Both must account for the C interface's same-native-thread error retrieval when their runtimes schedule calls. No experiment number was claimed for either.
+Keep Zig 0.15.2 for this measured target. Start with a thin optional source package and a separately supplied matching native archive. The current shared mode embeds the supplied library path and requires rebuilding if it moves. A relocatable installation policy or automatic download is a separate product choice. The C constructor remains environment-based and has no public throttle setter.
+
+## Limits and earlier evidence
+
+An earlier intermediate static run accepted 33 rather than 34 requests without identifying the missing request. The final gate checks the input multiset; all eight final worker/parent consumers passed their count checks. The original shortfall remains unexplained. Zig allocation checks and C-caller AddressSanitizer checks passed, including a deliberate misuse. Native Rust allocations were not instrumented, and Valgrind was unavailable. The C API exposes no runtime binary ABI identity. Exhaustive diagnostic secrecy, other targets, other Zig versions, performance and live-model quality remain unproved. Synthetic loopback replies do not measure model accuracy. No paid inference ran.
+
+The first-stage proof remains intact at the experiment root. It tested source `873b04abdeca56bcfc5fcc15b99665b7c32ee116` with a 14-line direct example, an 81-line wrapper, ten independently counted requests and deliberately faulty ordering/message-lifetime copies. Its `FINDINGS.md`, `REVIEW.md` and `HARVEST.md` describe that narrower result. Experiment 205 supplied earlier stand-in lessons; ADR 0037 and ticket 0094 establish the landed C interface.
+
+JVM and Go remain future experiments. Both must account for same-native-thread C error retrieval when their runtimes schedule calls. No experiment number was claimed for either.
