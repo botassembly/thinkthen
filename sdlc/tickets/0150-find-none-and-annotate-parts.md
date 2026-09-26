@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/public/question.rs crates/thinkthen/src/public/bulk.
 
 # 0150: Find's none option and annotate over record parts
 
-Status: ready for review. Owner: Claude. It builds after ticket 0151 lands, and it lands before ticket 0146's build starts. See "Overlap with tickets in flight".
+Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Claude. It builds after ticket 0151 lands, and it lands before ticket 0146's build starts. See "Overlap with tickets in flight".
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
