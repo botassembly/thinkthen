@@ -81,3 +81,15 @@ code=$?
 set -e
 test "$code" -eq 2
 ```
+
+`relate` and `recognize` rows grade by precision, recall, and F1 over edges or names. Run with a low cut so audit sees every candidate. Demo 45 at 0.01 says one edge the key holds and one it does not.
+
+```bash
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)/demos/45-map-relationships"
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+echo '{"id":1,"value":[{"relation":"calls","source":{"name":"gateway","kind":"service"},"target":{"name":"billing","kind":"service"}}]}' > "$work/key.jsonl"
+env -u THINKTHEN_API_KEY thinkthen relate @relations.json --threshold 0.01 --url https://api.typesafe.ai/v1 --details --replay recording < entities.json \
+  | thinkthen audit - "$work/key.jsonl" --table | sed -n 2p | mustmatch "  matched 1, extra 1, missed 0: precision 0.500   recall 1.000   f1 0.667"
+```

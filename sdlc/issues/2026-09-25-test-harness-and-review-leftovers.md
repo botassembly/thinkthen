@@ -1,6 +1,6 @@
 # Test harness and review leftovers
 
-Status: Open. Ticket 0127 settles items 2, 3, and 10. It lands the item 4 fix. Item 4's sweep passed 50 runs of 50 at normal load, recorded in `sdlc/records/0127-build-test-harness-fixes.md`. Its proof at high load is still owed. Ticket 0133 settles items 6, 11, 12, and 13 on 2026-09-26. Ticket 0138 owns item 5.
+Status: Open. Ticket 0127 settles items 2, 3, and 10. It lands the item 4 fix. Item 4's sweep passed 50 runs of 50 at normal load, recorded in `sdlc/records/0127-build-test-harness-fixes.md`. Its proof at high load is still owed. Ticket 0133 settles items 6, 11, 12, and 13 on 2026-09-26. Ticket 0138 settles item 5 on 2026-09-26.
 
 Ian's ruling, 2026-09-25, on item 10: nobody asks the rusqlite maintainers for a fix. Keep the hand-extended API table and add a test.
 

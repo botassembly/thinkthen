@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/cli/failure/status.rs crates/thinkthen/src/cli/failu
 
 # 0138: Command wording fixes, the retried statuses' next step, and pointers that never echo a control character
 
-Status: built. Design review accepted on the second pass (fresh read-only Claude session). Code review accepted. Record: `sdlc/records/0138-build-wording-and-failures.md`. Owner: Claude.
+Status: landed 2026-09-26. Design review accepted on the second pass (fresh read-only Claude session). Code review accepted. Record: `sdlc/records/0138-build-wording-and-failures.md`. Owner: Claude.
 
 Lane: thinkthen-lane-4
 
@@ -19,7 +19,7 @@ A user who meets any of six refusals reads a sentence that matches what happened
 The authority is the coordinator's brief for 0138 and the backlog `sdlc/planning/issue-backlog-2026-09-25.md`, section A row 7. The ticket takes three issues:
 
 1. `sdlc/issues/2026-09-25-command-wording-and-help-fixes-before-0-1.md`: every open item the ownership rules below allow.
-2. `sdlc/issues/2026-09-25-exchange-400-rows-belong-in-the-status-reason-table.md`. Ticket 0127 has landed, so it is unblocked.
+2. `sdlc/issues/closed/2026-09-25-exchange-400-rows-belong-in-the-status-reason-table.md`. Ticket 0127 has landed, so it is unblocked.
 3. Item 5 of `sdlc/issues/2026-09-25-test-harness-and-review-leftovers.md`. Ticket 0133 owns that file. This ticket does not edit it. The coordinator marks item 5 at landing.
 
 Other in-flight tickets own some files. 0133 owns the rung scripts, `heavy-lock`, the children check, `cli/interrupt.rs`, and the harness issue file. 0134 owns the public library API and every `crates/thinkthen/src/public/*.rs`. 0135 owns audit, `core/measure`, and `cli/audit.rs`. 0137 owns the `filter` and `rank` framing and `specification/filter.md`, `rank.md`, and `records.md`. This ticket edits none of those. 0137's stop rule 4 stops it if another branch changes `cli/asking.rs`, `core/records.rs`, or `cli/failure.rs`, so this ticket leaves all three alone. It edits two kinds of file that 0137 or 0135 also list: `cli/args/command.rs`, in the `diff` help alone, and the ratchet files. Each edit sits in a hunk those tickets do not change. The coordinator orders the landings.
@@ -218,7 +218,7 @@ Contract 2; state and timing 1; reach 3; proof 2; cost of error 1; total 9. Fina
 
 ## Closes
 
-- `sdlc/issues/2026-09-25-exchange-400-rows-belong-in-the-status-reason-table.md`. The lander moves it to `closed/` with a status line naming this ticket.
+- `sdlc/issues/closed/2026-09-25-exchange-400-rows-belong-in-the-status-reason-table.md`. The lander moves it to `closed/` with a status line naming this ticket.
 - `sdlc/issues/2026-09-25-command-wording-and-help-fixes-before-0-1.md`: items 10 to 15 and 17 marked fixed by this ticket, items 2 to 9 marked with their commits. It stays open for items 1 and 16. This ticket edits it.
 - Item 5 of `sdlc/issues/2026-09-25-test-harness-and-review-leftovers.md`. 0133 owns that file, so the coordinator marks it at landing.
 

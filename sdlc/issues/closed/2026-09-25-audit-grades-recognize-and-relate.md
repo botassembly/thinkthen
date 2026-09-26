@@ -1,6 +1,6 @@
 # audit grades recognize and relate
 
-Status: Open. Part of Ian's 0.1 ruling in `2026-09-25-audit-is-complete-for-0-1.md`, section 1. Split out of ticket 0125 on the design review of 2026-09-25. It needs its own 0.1 ticket.
+Status: Closed 2026-09-26 by ticket 0135. Part of Ian's 0.1 ruling in `2026-09-25-audit-is-complete-for-0-1.md`, section 1. Split out of ticket 0125 on the design review of 2026-09-25. It needs its own 0.1 ticket.
 
 ## What is missing
 

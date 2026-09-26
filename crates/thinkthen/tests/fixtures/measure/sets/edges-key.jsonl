@@ -1,0 +1,3 @@
+{"id":1,"value":[{"relation":"calls","source":{"name":"a","kind":"service"},"target":{"name":"b","kind":"service"}},{"relation":"calls","source":{"name":"a","kind":"service"},"target":{"name":"c","kind":"service"}},{"relation":"peers","source":{"name":"c","kind":"service"},"target":{"name":"b","kind":"service"}}],"part":"tune"}
+{"id":2,"value":[{"relation":"calls","source":{"name":"a","kind":"service"},"target":{"name":"b","kind":"service"}}],"part":"tune"}
+{"id":3,"value":[{"relation":"calls","source":{"name":"a","kind":"service"},"target":{"name":"b","kind":"service"}}],"part":"tune"}
