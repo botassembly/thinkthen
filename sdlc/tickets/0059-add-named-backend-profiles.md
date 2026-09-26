@@ -24,6 +24,8 @@ ADR 0010 removed the old configuration profiles because they repeated address, m
 {"schema":"thinkthen.backend-profile/1","name":"jev","max_evidence_bytes":120000,"max_request_bytes":250000,"max_questions":64}
 ```
 
+Correction, 2026-09-25: no record gives a source for this example's byte numbers, and a 161,252-byte relate request was refused. Ticket 0123 measured the hosted cap and set a built-in relation ceiling of 96,000 request bytes. See `sdlc/issues/2026-09-25-recognize-and-relate-scale-and-shape.md`, item 1.
+
 The name uses lowercase letters, digits, hyphens, and underscores and is nonempty. The three positive integer limits are optional independently; at least one is required. Bytes mean UTF-8 evidence bytes and exact encoded request bytes. The tool does not estimate vendor tokens. A backend whose only known limit is in tokens needs a tokenizer or a verified byte ceiling before a profile can enforce that limit. The repository ships documented example profiles only when evidence supports their byte values; it invents no Jev ceiling from token measurements.
 
 Single question files and question sets may hold one top-level `profile: NAME`. Every threshold in a set shares that calibration identity. A named question nested under `questions` cannot carry its own profile, and the parser refuses one. The top-level name enters the question or question-set canonical digest and changes no request byte. A mismatch exists only when both the saved question and the run name profiles and the names differ. A missing name on either side produces no warning. Typed questions carry no calibration name. Command-line threshold overrides do not erase the saved calibration identity.

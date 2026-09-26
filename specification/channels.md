@@ -110,4 +110,6 @@ A run that read a question file carries one more field, `from`, between `input` 
 
 `annotate --dry-run` also checks the saved file, and its `input` object names each question's pointers. [annotate.md](annotate.md) gives both.
 
+`recognize --dry-run` reports its counts and every exact split request for the first record under `thinkthen.recognize-plan/1`. [recognize.md](recognize.md) fixes that schema.
+
 `relate --dry-run` reports the complete entity set, expanded relations, method and fallback choices, and every exact split request under `thinkthen.relate-plan/1`. It sends nothing and makes no token or price claim. [relate.md](relate.md) fixes that schema.

@@ -10,11 +10,35 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use conformance_backend::Backend;
 
-use crate::harness::spawn;
+use crate::harness::{Canned, Listener, spawn};
 
 const KEY: &str = "sk-check-0121";
 
 const PASS: &str = "ok connection\nok key\nok endpoint\nok noul\nok choice\nok score\nok mixed\nok usage\ncritical 0, warning 0\n";
+
+/// The four decoded replies of `/arm/full/v1`, each answer by the arm's fixed rule.
+const FULL_REPLIES: &str = concat!(
+    r#"reply noul {"model":"jev-latest","answers":[{"kind":"yes_no","probability":0.9}],"usage":{"input_tokens":1,"output_tokens":1}}"#,
+    "\n",
+    r#"reply choice {"model":"jev-latest","answers":[{"kind":"choice","pick":"Monday","probabilities":{"Monday":0.9,"Tuesday":0.05,"Wednesday":0.05},"confidence":0.9}],"usage":{"input_tokens":1,"output_tokens":1}}"#,
+    "\n",
+    r#"reply score {"model":"jev-latest","answers":[{"kind":"score","level":"fair","probabilities":{"fair":0.9,"good":0.05,"excellent":0.05},"confidence":0.9}],"usage":{"input_tokens":1,"output_tokens":1}}"#,
+    "\n",
+    r#"reply mixed {"model":"jev-latest","answers":[{"kind":"yes_no","probability":0.9},{"kind":"choice","pick":"Monday","probabilities":{"Monday":0.9,"Tuesday":0.1},"confidence":0.9},{"kind":"score","level":"poor","probabilities":{"poor":0.9,"good":0.1},"confidence":0.9},{"kind":"tag","probabilities":{"on_time":0.9,"damaged":0.9}}],"usage":{"input_tokens":1,"output_tokens":1}}"#,
+    "\n",
+);
+
+/// The generic arm's replies carry no confidence and no usage.
+const GENERIC_REPLIES: &str = concat!(
+    r#"reply noul {"model":"jev-latest","answers":[{"kind":"yes_no","probability":0.9}],"usage":null}"#,
+    "\n",
+    r#"reply choice {"model":"jev-latest","answers":[{"kind":"choice","pick":"Monday","probabilities":{"Monday":0.9,"Tuesday":0.05,"Wednesday":0.05}}],"usage":null}"#,
+    "\n",
+    r#"reply score {"model":"jev-latest","answers":[{"kind":"score","level":"fair","probabilities":{"fair":0.9,"good":0.05,"excellent":0.05}}],"usage":null}"#,
+    "\n",
+    r#"reply mixed {"model":"jev-latest","answers":[{"kind":"yes_no","probability":0.9},{"kind":"choice","pick":"Monday","probabilities":{"Monday":0.9,"Tuesday":0.1}},{"kind":"score","level":"poor","probabilities":{"poor":0.9,"good":0.1}},{"kind":"tag","probabilities":{"on_time":0.9,"damaged":0.9}}],"usage":null}"#,
+    "\n",
+);
 
 const REFUSED: &str = "the backend answered with status 422: the backend refused the request as malformed or too large";
 
@@ -59,10 +83,10 @@ fn at(backend: &Backend, path: &str) -> Output {
     check(&["--url", url.as_str()], &[("THINKTHEN_API_KEY", KEY)])
 }
 
-/// The report's two opening lines for one arm at the default model.
+/// The report's four opening lines for one arm when no model is named.
 fn head(backend: &Backend, path: &str) -> String {
     format!(
-        "url {}{path}/systemone\nmodel jev-latest\n",
+        "url {}{path}/systemone\nprovider systemone\nmodel asked unspecified\nmodel sent jev-latest\n",
         backend.origin()
     )
 }
@@ -75,7 +99,10 @@ fn text(bytes: &[u8]) -> String {
 fn a_backend_that_carries_every_field_passes_on_four_requests() {
     let backend = Backend::start().expect("backend");
     let output = at(&backend, "/arm/full/v1");
-    assert_eq!(text(&output.stdout), head(&backend, "/arm/full/v1") + PASS);
+    assert_eq!(
+        text(&output.stdout),
+        head(&backend, "/arm/full/v1") + FULL_REPLIES + PASS
+    );
     assert_eq!(text(&output.stderr), "");
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(backend.count(), 4);
@@ -92,7 +119,10 @@ fn missing_confidence_and_token_counts_warn_and_keep_exit_zero() {
         warning mixed: the answer to question `q3` carries no confidence\n\
         warning usage: a reply carries no token counts, so results and usage totals leave them out\n\
         critical 0, warning 5\n";
-    assert_eq!(text(&output.stdout), head(&backend, "/generic/v1") + report);
+    assert_eq!(
+        text(&output.stdout),
+        head(&backend, "/generic/v1") + GENERIC_REPLIES + report
+    );
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(backend.count(), 4);
 }
@@ -104,13 +134,16 @@ fn a_missing_answer_is_critical_in_every_probe_and_names_the_tag_range() {
     let output = at(&backend, path);
     let refused = "the reply was refused: the response carries no answer for question `q1`";
     let report = format!(
-        "ok connection\nok key\nok endpoint\n\
+        "{}\n\
+        ok connection\nok key\nok endpoint\n\
         critical noul: {refused}\ncritical choice: {refused}\ncritical score: {refused}\n\
         warning mixed: the answer to question `q2` carries no confidence\n\
         warning mixed: the answer to question `q3` carries no confidence\n\
         critical mixed: the answer to questions `q4` to `q5` failed as `missing_answer`\n\
         warning usage: a reply carries no token counts, so results and usage totals leave them out\n\
-        critical 4, warning 3\n"
+        critical 4, warning 3\n",
+        // Only the mixed reply decodes. Its tag answer carries the failure marker.
+        r#"reply mixed {"model":"jev-latest","answers":[{"kind":"yes_no","probability":0.9},{"kind":"choice","pick":"Monday","probabilities":{"Monday":0.9,"Tuesday":0.1}},{"kind":"score","level":"poor","probabilities":{"poor":0.9,"good":0.1}},{"failed":{"kind":"backend","cause":"missing_answer"}}],"usage":null}"#
     );
     assert_eq!(text(&output.stdout), head(&backend, path) + &report);
     assert_eq!(output.status.code(), Some(4));
@@ -189,7 +222,10 @@ fn the_check_sends_only_to_the_address_the_user_named() {
         ("THINKTHEN_BASE_URL", base.as_str()),
     ];
     let output = check(&["--url", url.as_str()], &environment);
-    assert_eq!(text(&output.stdout), head(&named, "/arm/full/v1") + PASS);
+    assert_eq!(
+        text(&output.stdout),
+        head(&named, "/arm/full/v1") + FULL_REPLIES + PASS
+    );
     assert_eq!((named.count(), beside.count()), (4, 0));
 
     // No key is set, so a regression that reached the built-in address still sends nothing.
@@ -240,4 +276,74 @@ fn a_dry_run_prints_the_four_fixed_bodies_and_sends_nothing() {
         assert_eq!(output.status.code(), Some(0));
     }
     assert_eq!(backend.count(), 0);
+}
+
+/// One canned reply per probe, each naming `other-1` whatever model was sent.
+fn other_model() -> Listener {
+    let answers = [
+        r#""q1":{"type":"noul","noul":0.9}"#,
+        r#""q1":{"type":"choice","probabilities":{"Monday":0.1,"Tuesday":0.8,"Wednesday":0.1}}"#,
+        r#""q1":{"type":"score","probabilities":{"0":0.1,"1":0.1,"2":0.8}}"#,
+        r#""q1":{"type":"noul","noul":0.9},"q2":{"type":"choice","probabilities":{"Monday":0.2,"Tuesday":0.8}},"q3":{"type":"score","probabilities":{"0":0.3,"1":0.7}},"q4":{"type":"noul","noul":0.8},"q5":{"type":"noul","noul":0.1}"#,
+    ];
+    let canned =
+        answers.map(|said| Canned::ok(&format!(r#"{{"model":"other-1","answers":{{{said}}}}}"#)));
+    Listener::serving(canned.into()).expect("listener")
+}
+
+/// The header lines and the model each reply line names.
+fn models(output: &Output) -> (Vec<String>, Vec<String>) {
+    let printed = text(&output.stdout);
+    let header = printed.lines().skip(1).take(3).map(str::to_owned).collect();
+    let replies = printed
+        .lines()
+        .filter_map(|line| line.strip_prefix("reply "));
+    let named = replies.map(|line| {
+        let json = line.split_once(' ').expect("a probe name").1;
+        let said: serde_json::Value = serde_json::from_str(json).expect("reply JSON");
+        let model = said.get("model").and_then(serde_json::Value::as_str);
+        model.expect("a model").to_owned()
+    });
+    (header, named.collect())
+}
+
+#[test]
+fn the_report_names_the_model_asked_the_model_sent_and_the_model_each_reply_names() {
+    let other = ["other-1"; 4].map(str::to_owned).to_vec();
+    let listener = other_model();
+    let output = check(
+        &["--url", listener.base(), "--model", "local-1"],
+        &[("THINKTHEN_API_KEY", KEY)],
+    );
+    let header = [
+        "provider systemone",
+        "model asked local-1",
+        "model sent local-1",
+    ];
+    assert_eq!(
+        models(&output),
+        (header.map(str::to_owned).to_vec(), other.clone())
+    );
+    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stdout));
+
+    let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("check-config-{}", std::process::id()));
+    fs::create_dir_all(root.join("thinkthen")).expect("configuration directory");
+    fs::write(
+        root.join("thinkthen/config.json"),
+        r#"{"schema":"thinkthen.config/1","model":"configured-1"}"#,
+    )
+    .expect("configuration");
+    let listener = other_model();
+    let environment = [
+        ("THINKTHEN_API_KEY", KEY),
+        ("XDG_CONFIG_HOME", root.to_str().expect("root")),
+    ];
+    let output = check(&["--url", listener.base()], &environment);
+    let header = [
+        "provider systemone",
+        "model asked configured-1",
+        "model sent configured-1",
+    ];
+    assert_eq!(models(&output), (header.map(str::to_owned).to_vec(), other));
 }

@@ -21,12 +21,12 @@ These are fixes a user would hit, or work Ian ruled into 0.1.
 | --- | --- | --- | --- |
 | 1 | `2026-09-25-public-library-api-gaps.md`, item 8 only | 1 | A live bug on main. Python Polars builds its own cells against ADR 0047 item 10. A widened score of 1.0 prints as `1`. |
 | 2 | `closed/2026-09-25-the-answer-cache-three-fixes.md` (closed by 0124) | 3 | Pruning by the model alias deletes every entry, which loses user data. |
-| 3 | `2026-09-25-recognize-and-relate-scale-and-shape.md`, items 1 and 2 | 2 | relate sends requests Jev refuses, over about 65,536 input tokens. The splitter fix shares the same loop. |
+| 3 | `2026-09-25-recognize-and-relate-scale-and-shape.md`, items 1 and 2 (fixed by 0123) | 2 | relate sends requests Jev refuses, over about 65,536 input tokens. The splitter fix shares the same loop. |
 | 4 | Closed by Quick Fix qf-diff-warnings: `closed/2026-09-25-diff-exits-0-when-nothing-pairs-and-pairs-different-questions-silently.md` | 1 | diff reports success on a comparison that compared nothing. |
-| 5 | `2026-09-25-status-sees-only-command-spend-and-the-sql-total-has-three-leaks.md` | 1 | Spend totals miss library and SQL calls. It shares a root cause with API gaps item 1. Build them together. |
-| 6 | `2026-09-25-audit-is-complete-for-0-1.md` | 4 parts | Ian's ruling: audit grades every function type, scores by the user's measure, shows how steady its bar is, and hands the bar back. |
-| 7 | `2026-09-25-command-wording-and-help-fixes-before-0-1.md` | 9 | Small wording and help fixes. One Quick Fix batch could take most of them. |
-| 8 | `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, sections "Spec or doc claims that are wrong" and "Pages owed for 0.1" | 4 + 6 | Four doc lines claim what the code does not do. Fix those first. |
+| 5 | `2026-09-25-status-sees-only-command-spend-and-the-sql-total-has-three-leaks.md` (0126 landed the docs half; option 1 open) | 1 | Spend totals miss library and SQL calls. It shares a root cause with API gaps item 1. Build them together. |
+| 6 | `closed/2026-09-25-audit-is-complete-for-0-1.md` (closed by 0125) | 4 parts | Ian's ruling: audit grades every function type, scores by the user's measure, shows how steady its bar is, and hands the bar back. |
+| 7 | `2026-09-25-command-wording-and-help-fixes-before-0-1.md` (0123 and 0126 fixed all but item 1) | 9 | Small wording and help fixes. One Quick Fix batch could take most of them. |
+| 8 | `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, sections "Spec or doc claims that are wrong" and "Pages owed for 0.1" (0126 fixed claims 1 to 3; 0125 fixed claim 4) | 4 + 6 | Four doc lines claim what the code does not do. Fix those first. |
 | 9 | `2026-09-25-test-harness-and-review-leftovers.md`, items 2 to 4 | 3 | Land before ticket 0119, because the mutation audit keeps the secrecy tests and uses the shared backend. |
 | 10 | `2026-09-25-release-and-install-for-0-1.md` | 15 | No release ticket exists. This is the largest 0.1 gap. It needs Ian's rulings below. |
 | 11 | `2026-09-25-site-samples-and-pages-after-the-surfaces-land.md` | 7 | Items 1 to 4 and 7 can go now. Item 5 waits for DuckDB (0110) and pandas (0122). Item 6 waits for Beatles Bench ticket 0006. |

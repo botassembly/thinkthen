@@ -113,7 +113,9 @@ pub(crate) struct Common {
 
     /// Call the backend, then write the exchange into DIR. DIR is created when absent.
     ///
-    /// An explicit recording folder suppresses the platform default cache.
+    /// An explicit recording folder suppresses the platform default cache. A
+    /// folder that already holds an answer stops at exit 5 when the backend
+    /// answers that request differently.
     #[arg(long, value_name = "DIR", hide_short_help = true)]
     pub(crate) record: Option<PathBuf>,
 
@@ -153,6 +155,8 @@ pub(crate) struct Common {
     ///
     /// It acts in record mode and on `annotate`, where a single text can make
     /// several grouped requests. Output follows the order the command defines.
+    /// A run opens up to one connection for each request in flight, so --jobs N
+    /// opens up to N connections.
     #[arg(
         long,
         value_name = "N",

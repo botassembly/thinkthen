@@ -11,7 +11,7 @@ Written 2026-09-19. Ian brought a list of ten uses of the decider model that was
 
 | # | Use case | Fit | Command | The honest limit |
 | --- | --- | --- | --- | --- |
-| 1 | Real-time loops, ten decisions a second | None | | One measured call took over 300 ms. No client over HTTP reaches that rate, and a shell tool adds a process start. This use belongs to a library |
+| 1 | Real-time loops, ten decisions a second | None | | Each decision waits on a network round trip to a model, and a shell tool adds a process start to each one. This use belongs to a library |
 | 2 | Picking the next action in a multi-step run | Good when the agent is a shell script | `choose`, with `--options POINTER` when the candidates change per step | Most agents are written in Python or TypeScript, and they want a library call |
 | 3 | Gating a tool call as safe or unsafe | Strong | `decide` with a band, and the exit code is the gate | The same limit as 2 when the caller is a program |
 | 4 | Routing a request to a cheap or a strong model | Good | `choose easy hard`, or `score` on difficulty | The vendor routes on `confidence`, and the tool cuts on the winning probability. ADR 0014 item 2 holds that question open |

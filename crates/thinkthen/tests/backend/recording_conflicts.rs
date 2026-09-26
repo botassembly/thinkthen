@@ -28,7 +28,7 @@ const PADDED_FALSE: &str = concat!(
     r#""usage":{"input_tokens":10,"output_tokens":2}}"#,
     "\t ",
 );
-const CONFLICT: &str = "already records a different response";
+const CONFLICT: &str = "differently from the saved response";
 
 fn folder(name: &str) -> PathBuf {
     let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
@@ -173,7 +173,14 @@ fn whitespace_padded_responses_with_different_values_conflict() {
 
     let output = decide(listener.base(), &folder, &[], EVIDENCE).expect("the binary runs");
     assert_eq!(output.status.code(), Some(5));
-    assert!(String::from_utf8_lossy(&output.stderr).contains(CONFLICT));
+    let name = path.file_name().expect("a file name").to_string_lossy();
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        format!(
+            "thinkthen: the backend answered the request in entry `{name}` differently from the saved response; \
+             record into a fresh folder, or use --cache DIR to answer from the saved entries\n"
+        )
+    );
     assert_eq!(fs::read(path).expect("the entry is readable"), before);
     assert!(
         temporary_names(&folder)

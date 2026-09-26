@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core/measure crates/thinkthen/src/core/measure.rs cr
 
 # 0125: Complete audit
 
-Status: ready. Owner: Claude.
+Status: landed 2026-09-25 (`sdlc/records/0125-build-audit-complete.md`). Code review accepted after two rounds of fixes. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it. The first design review returned findings on 2026-09-25, and this page is rewritten whole after it.
 
@@ -14,7 +14,7 @@ Review route: a fresh read-only Claude session reviews this design and the final
 
 A user grades saved answers of any judgment function against a key. The user picks the measure that fits the cost of each mistake. audit shows how steady its suggested bar is across many splits. With `--write`, audit puts a steady bar into the question file the answers came from, so the next run uses it and nobody copies a number by hand.
 
-Ian ruled this into 0.1 on 2026-09-25 in `sdlc/issues/2026-09-25-audit-is-complete-for-0-1.md`. That ruling overturns ticket 0113's "other verbs after 0.1" and the closed issue `2026-09-24-audit-and-diff-needs-for-graded-agent-runs.md` on graded scores. The backlog of 2026-09-25 gives the dev team the `tag` key rule and the `rank` order measure. Every other design point below is the agent's decision, and Ian can overturn it.
+Ian ruled this into 0.1 on 2026-09-25 in `sdlc/issues/closed/2026-09-25-audit-is-complete-for-0-1.md`. That ruling overturns ticket 0113's "other verbs after 0.1" and the closed issue `2026-09-24-audit-and-diff-needs-for-graded-agent-runs.md` on graded scores. The backlog of 2026-09-25 gives the dev team the `tag` key rule and the `rank` order measure. Every other design point below is the agent's decision, and Ian can overturn it.
 
 This ticket also states the `uNNN` unit id rule for `find`, item 4 of `sdlc/issues/2026-09-25-docs-how-tos-and-spec-claims-owed.md`. A `find` key names units by that id, so audit needs the rule written first.
 
@@ -337,7 +337,7 @@ Contract 3; state and timing 1; reach 2; proof 2; cost of error 2; total 10. Fin
 
 ## Closes
 
-On landing, the lander closes `sdlc/issues/2026-09-25-audit-is-complete-for-0-1.md`, with a status line that names this ticket and the follow-up issue for `recognize` and `relate`. It marks item 4 of `sdlc/issues/2026-09-25-docs-how-tos-and-spec-claims-owed.md` done, and that issue stays open for its other items. `sdlc/issues/2026-09-25-audit-grades-recognize-and-relate.md` stays open. The diff issue closes with the Quick Fix.
+On landing, the lander closes `sdlc/issues/closed/2026-09-25-audit-is-complete-for-0-1.md`, with a status line that names this ticket and the follow-up issue for `recognize` and `relate`. It marks item 4 of `sdlc/issues/2026-09-25-docs-how-tos-and-spec-claims-owed.md` done, and that issue stays open for its other items. `sdlc/issues/2026-09-25-audit-grades-recognize-and-relate.md` stays open. The diff issue closes with the Quick Fix.
 
 ## What Ian can overturn
 
@@ -350,7 +350,7 @@ On landing, the lander closes `sdlc/issues/2026-09-25-audit-is-complete-for-0-1.
 
 ## Evidence
 
-- Starts from: Ian's ruling in `sdlc/issues/2026-09-25-audit-is-complete-for-0-1.md`, whose section 2 gives the four picks on the Abbey Road rows. Tickets 0113 and 0114 and their records `sdlc/records/0113-build-audit-command.md` and `0114-build-diff-command.md`, which built audit and diff on the prototype's math and goldens. Workspace experiment 259: U04 checked the accuracy and recall picks on a 0.05 grid, and U06 with `audit-cuts-200-seeds.txt` measured each seed's cut with the landed binary. The Beatles Bench example `examples/11-audit`, whose slide worked the four bars out by hand. A workspace report of 2026-09-25 on DSPy 3.4's ReAnchor: tune only bars, maximize the user's measure, and keep the current bar unless another scores strictly better across splits. Workspace experiment 249, which shows a tuned cut moving held-out yes recall from 0.31 to 0.61.
+- Starts from: Ian's ruling in `sdlc/issues/closed/2026-09-25-audit-is-complete-for-0-1.md`, whose section 2 gives the four picks on the Abbey Road rows. Tickets 0113 and 0114 and their records `sdlc/records/0113-build-audit-command.md` and `0114-build-diff-command.md`, which built audit and diff on the prototype's math and goldens. Workspace experiment 259: U04 checked the accuracy and recall picks on a 0.05 grid, and U06 with `audit-cuts-200-seeds.txt` measured each seed's cut with the landed binary. The Beatles Bench example `examples/11-audit`, whose slide worked the four bars out by hand. A workspace report of 2026-09-25 on DSPy 3.4's ReAnchor: tune only bars, maximize the user's measure, and keep the current bar unless another scores strictly better across splits. Workspace experiment 249, which shows a tuned cut moving held-out yes recall from 0.31 to 0.61.
 - Keeps: Every 0113 output member, its order, and its value. Every golden and table capture, byte for byte, once the named additions are removed. The key format and `part`. The seeded split at `--seed`. diff's output and every diff failure sentence. Every audit failure row except the "cannot grade" sentence. audit sends nothing and reads no key or setting.
 - Changes: Four more verbs. `--optimize` and two new measures on every row. `steady` on every suggestion. `--write` and the first file audit writes. Two audit "cannot grade" sentences and the audit help summary. The `find` unit id rule on two pages.
 - Proof: The tests in "Proof", each with a planted fault that turns it red. The hand values come from experiment 259, the issue, and hand-graded fixtures, not from the code under test. `spec/audit.md` runs the picks and a write round trip.

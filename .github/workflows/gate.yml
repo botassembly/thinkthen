@@ -74,6 +74,17 @@ jobs:
             cargo install --locked --force "cargo-deny@$DENY_VERSION"
           fi
 
+      # The install rung requires these and never installs them. The pins come from sdlc/scripts/install.
+      - name: Install cargo-public-api, its nightly, and PyYAML at the rung's pins
+        run: |
+          set -eu
+          pin() { sed -n "s/^$1=//p" sdlc/scripts/install; }
+          rustup toolchain install "$(pin PUBLIC_API_TOOLCHAIN)" --profile minimal
+          if [ "$(cargo public-api --version 2>/dev/null || true)" != "cargo-public-api $(pin PUBLIC_API_VERSION)" ]; then
+            cargo install --locked --force "cargo-public-api@$(pin PUBLIC_API_VERSION)"
+          fi
+          python3 -m pip install --user --break-system-packages "PyYAML==$(pin PYYAML_VERSION)"
+
       - name: Rung 0, install
         run: sdlc/scripts/install
 

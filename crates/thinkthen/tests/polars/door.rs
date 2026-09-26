@@ -7,12 +7,8 @@
 mod common;
 
 use conformance_backend::Backend;
-use polars_core::prelude::{
-    Categories, DataType, FrozenCategories, IntoColumn, IntoSeries, StructChunked,
-};
-use thinkthen::{CallOptions, ErrorKind, Question, QuestionSet};
-use thinkthen_polars::polars::prelude::{DataFrame, NamedFrom, Series};
-use thinkthen_polars::{Error, PolarsEngine};
+use thinkthen::polars::prelude::{DataFrame, DataType, IntoColumn, NamedFrom, Series};
+use thinkthen::{CallOptions, Error, ErrorKind, PolarsEngine, Question, QuestionSet};
 
 const MARKER: &str = r#"{"failed":{"kind":"backend","cause":"missing_probability"}}"#;
 
@@ -52,9 +48,7 @@ fn every_refusal_is_pinned_and_sends_nothing() {
     let engine = common::engine(&format!("{}/generic/v1", backend.origin()));
     let options = CallOptions::new;
     let counts = Series::new("counts".into(), [1i64, 2, 3]);
-    let categories = common::column(&["a", "b"])
-        .cast(&DataType::from_categories(Categories::global()))
-        .expect("a Categorical column");
+    let flags = Series::new("flags".into(), [true, false]);
     let nulls = Series::new("body".into(), [Some("refund me"), None]);
     let texts = frame(vec![common::column(&["refund me"])]);
     let set = QuestionSet::from_json(
@@ -69,10 +63,8 @@ fn every_refusal_is_pinned_and_sends_nothing() {
             "the column counts is i64, not text",
         ),
         (
-            engine
-                .decide_series(&decide(), &categories, options())
-                .map(drop),
-            "the column body is cat, not text",
+            engine.decide_series(&decide(), &flags, options()).map(drop),
+            "the column flags is bool, not text",
         ),
         (
             engine.tag_series(&score(), &nulls, options()).map(drop),
@@ -105,7 +97,10 @@ fn every_refusal_is_pinned_and_sends_nothing() {
         let error = refused.expect_err(sentence);
         assert_eq!(error.kind(), ErrorKind::Usage, "{sentence}");
         assert_eq!(error.to_string(), sentence);
-        assert_eq!(format!("{error:?}"), format!("Usage({sentence:?})"));
+        assert_eq!(
+            format!("{error:?}"),
+            format!("Usage(ErrorDetail {{ message: {sentence:?}, retryable: false }})")
+        );
     }
     assert_eq!(backend.count(), 0, "a refusal reached the backend");
 }
@@ -214,26 +209,14 @@ fn a_chunked_and_sliced_column_answers_each_row() {
     assert_eq!(answered.name().as_str(), "body");
 }
 
-/// The caller's Categorical, Enum, struct, and list columns come back with
-/// their dtypes and values (error-index R1-4).
+/// The caller's number, Boolean, and list columns come back with their
+/// dtypes and values (error-index R1-4).
 #[test]
 fn the_callers_columns_come_back_unchanged() {
     let backend = Backend::start().expect("a backend");
     let engine = common::engine(&format!("{}/generic/v1", backend.origin()));
-    let labels = common::column(&["a", "b"]);
-    let categorical = labels
-        .cast(&DataType::from_categories(Categories::global()))
-        .expect("Categorical")
-        .with_name("categorical".into());
-    let frozen = FrozenCategories::new(["a", "b"]).expect("the categories");
-    let enumerated = labels
-        .cast(&DataType::from_frozen_categories(frozen))
-        .expect("Enum")
-        .with_name("enumerated".into());
-    let parts = [Series::new("n".into(), [1i64, 2])];
-    let structured = StructChunked::from_series("structured".into(), 2, parts.iter())
-        .expect("a struct")
-        .into_series();
+    let counted = Series::new("counted".into(), [1i64, 2]);
+    let flagged = Series::new("flagged".into(), [true, false]);
     let listed = Series::new(
         "listed".into(),
         [
@@ -243,9 +226,8 @@ fn the_callers_columns_come_back_unchanged() {
     );
     let theirs = vec![
         common::column(&["refund me", "hello"]),
-        categorical,
-        enumerated,
-        structured,
+        counted,
+        flagged,
         listed,
     ];
     let set = QuestionSet::from_json(

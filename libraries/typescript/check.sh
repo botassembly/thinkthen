@@ -6,6 +6,8 @@ set -eu
 cd -- "$(dirname -- "$0")"
 unset THINKTHEN_API_KEY
 repo=$(cd ../.. && pwd)
+# macOS has no `timeout` (ticket 0128).
+LIMIT=$repo/sdlc/scripts/time-limit
 node_home="$HOME/.cache/thinkthen-toolchains/node-v22.22.3-linux-x64"
 step() { printf '== %s\n' "$*"; }
 fail() { echo "typescript: $*" >&2; exit 1; }
@@ -60,7 +62,7 @@ npm ci --offline --no-audit --no-fund --silent --prefix target/npm
 sh build-addon.sh
 
 step 'node tests'
-timeout 300 node --test --test-timeout=30000 tests/*.test.mjs
+sh "$LIMIT" 300 node --test --test-timeout=30000 tests/*.test.mjs
 
 step 'the conformance runner fails a corrupted case and names it'
 for id in 12-score-upper 17-annotate-mixed 27-decide-many; do
@@ -71,7 +73,7 @@ for id in 12-score-upper 17-annotate-mixed 27-decide-many; do
         fs.writeFileSync(process.argv[3], JSON.stringify(file));
     ' "$repo/conformance/cases.json" "$id" "$plant/cases.json"
     set +e
-    THINKTHEN_TEST_CASES="$plant/cases.json" timeout 300 node --test tests/conformance.test.mjs >"$plant/run" 2>&1
+    THINKTHEN_TEST_CASES="$plant/cases.json" sh "$LIMIT" 300 node --test tests/conformance.test.mjs >"$plant/run" 2>&1
     code=$?
     set -e
     [ "$code" -ne 0 ] && grep -q "fail $id" "$plant/run" || fail "a corrupted $id passed (exit $code)"
@@ -80,12 +82,18 @@ done
 step 'types'
 target/npm/node_modules/.bin/tsc --noEmit --strict --module node16 --moduleResolution node16 --target es2022 tests/types.test.ts
 
+step 'the loader refuses a platform it does not ship, with the pinned sentence'
+refused=$(node -e 'Object.defineProperty(process, "platform", { value: "win32" }); try { require("./loader.js") } catch (e) { console.log(e.message) }')
+[ "$refused" = "thinkthen: no native addon for win32-$(node -p process.arch); this package ships linux-x64, linux-arm64, darwin-x64, and darwin-arm64" ] ||
+    fail "the loader said: $refused"
+
 step 'the pack list, the license, and no home path'
+addon="thinkthen-$(node -p 'process.platform + "-" + process.arch').node"
 npm pack --dry-run --json --offline 2>/dev/null >"$plant/pack"
 packed=$(node -e 'console.log(JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"))[0].files.map((f) => f.path).sort().join(" "))' "$plant/pack")
-[ "$packed" = 'LICENSE README.md index.d.ts index.js index.mjs loader.js package.json thinkthen.node' ] || fail "npm pack lists $packed"
+[ "$packed" = "LICENSE README.md index.d.ts index.js index.mjs loader.js package.json $addon" ] || fail "npm pack lists $packed"
 [ "$(node -p 'require("./package.json").license')" = MIT ] || fail 'package.json names no MIT license'
-[ "$(grep -c -- "$HOME" thinkthen.node || true)" = 0 ] || fail "thinkthen.node names $HOME"
+[ "$(grep -c -- "$HOME" "$addon" || true)" = 0 ] || fail "$addon names $HOME"
 
 step 'flags, pins, one guard, no unsafe, and the pinned sentence'
 if grep -hE '^[^#]*cargo (build|test|clippy)' check.sh build-addon.sh | grep -vE -- '--locked.*--offline|--offline.*--locked'; then

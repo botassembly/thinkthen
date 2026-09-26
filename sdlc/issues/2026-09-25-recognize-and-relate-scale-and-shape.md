@@ -4,36 +4,15 @@ Status: Open.
 
 This issue merges seven files: `2026-09-25-recognize-and-relate-scale-and-shape.md`, `2026-09-25-recognize-and-relate-scale-and-shape.md`, `2026-09-25-recognize-and-relate-scale-and-shape.md`, `2026-09-25-recognize-and-relate-scale-and-shape.md`, `2026-09-25-recognize-and-relate-scale-and-shape.md`, `2026-09-25-recognize-and-relate-scale-and-shape.md`, and one leftover from the deleted `closed/2026-09-23-relate-call-math-efficiency-and-real-jobs.md`. Each item was checked against main at `71ea0a84`, the two specifications, `sdlc/planning/relate-design.md`, and the tickets. They belong together because they share one engine path. The relation planner and the request splitter serve both commands. Every open item is about how that path grows with the input, or how its output and its fixed wording read to a user. Ian can overturn any fix below.
 
-Items 1 and 2 block 0.1 users or ride with a blocker. Items 3 through 8 are later features or documentation.
+Ticket 0123 fixed items 1 and 2. Items 3 through 8 are later features or documentation.
 
 ## 1. relate sends a request over Jev's input token limit
 
-Blocks 0.1. The backend refuses the request.
-
-What happens today. The Beatles run (`thinkthen relate @graph.json --jsonl --kind-field /kind --field /name`, 184 songs, 13 albums, 4 people, no `--profile`) plans two requests. Request 1 (`sung_by`, 85,458 bytes, 184 questions) answers. Request 2 (`appears_on`, 161,252 bytes, 184 questions, 14 options each) comes back 400 with body `{"detail":{"error_type":"max_tokens_exceeded"}}`. The tool prints only "the backend refused the request; check --model and the request size" (`crates/thinkthen/src/cli/failure/status.rs:6`). Eight live calls on 2026-09-24 found the cap. 142 album questions passed at 65,423 input tokens and 143 failed. The cap fits 65,536 input tokens. Bytes, question count, and option count are not the limit. `PreparedRequests::with_profile` in `crates/thinkthen/src/engine/prepared_request.rs` splits only on a profile limit. With no profile, every question goes in one request. The ticket 0059 example profile for Jev (`max_request_bytes` 250,000, `max_evidence_bytes` 120,000, `max_questions` 64) names no source for its byte numbers. Only its `max_questions` would split request 2.
-
-What the design says. `specification/backends.md` says a profile estimates no tokens, and a backend whose limit is only tokens needs a tokenizer or a verified byte ceiling. `relate-design.md` routes all splitting through the one 0079 splitter. Ticket 0082 item 26 chose a fixed phrase for status 400 and forbids printing the body, because a body can quote the evidence back. The vendor docs still say "around 32,000 tokens". Experiment 260 found packed accuracy falls from 0.92 near 2,000 tokens a request to 0.79 near 27,000 (`2026-09-25-packing-and-batching-what-they-buy-what-they-cost-and-the-setting.md`).
-
-The fix.
-
-- Give the default backend a built-in request ceiling that the splitter enforces with no `--profile`. Base it on a measured byte ceiling under the 65,536-token cap, with margin. The Beatles runs measured about 0.53 input tokens a byte. Record the source in the profile and in `backends.md`. A user profile still overrides it.
-- Weigh a lower ceiling for accuracy against experiment 260 before picking the number. Record the choice.
-- On status 400, read only `detail.error_type` from the body. Print it when it matches a closed list of known values such as `max_tokens_exceeded`. Print nothing else from the body. This keeps the ticket 0082 secrecy rule.
-- Correct the ticket 0059 Jev example to the measured limit and name this issue as its source.
-
-Done when: the Beatles dry run with no profile plans `appears_on` in requests under the measured ceiling, and a replayed 400 with `max_tokens_exceeded` prints that word.
+Fixed by ticket 0123, landed 2026-09-25 from branch `ticket/0123-relate-fits-the-backend`.
 
 ## 2. Planning a full entity set encodes every request prefix
 
-Not a crash or a refusal. Land it with item 1, because both change the same loop, and item 1 makes more chunks.
-
-What happens today. The splitter loop in `crates/thinkthen/src/engine/prepared_request.rs` (`for count in 1..=remaining`) encodes and preflights every prefix length. Planning cost grows with the square of the question count. A same-kind directed rule over n entities asks n(n-1) questions, so planning grows with the fourth power of n. The ticket 0088 final review (`sdlc/records/0088-review-final.md`, F1) measured a release dry run at 0.47 s for 40 entities and 7.65 s for 80. A debug build took 81 s for 80. 255 entities extrapolate to about 13 minutes of CPU before the first send. A regressed 256th-entity refusal would hang its test instead of failing it.
-
-What the design says. `relate-design.md` requires one shared splitter. It sets no time bound.
-
-The fix. Try the whole remainder first and take it when it passes. When it fails on a limit that permits a split, binary-search the largest passing count. Limits only tighten as a chunk grows, so the search is sound.
-
-Done when: a release dry run over 255 line entities finishes in under a second, and a test pins the chunk boundaries the old loop chose.
+Fixed by ticket 0123, landed 2026-09-25 from branch `ticket/0123-relate-fits-the-backend`.
 
 ## 3. A both-ways edge prints a direction it does not have
 

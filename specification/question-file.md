@@ -115,7 +115,7 @@ Under `--dry-run`, a run that used a file prints a `from` object before the requ
 
 A run with no question file prints no `from` object, because every setting came from the one place the user is looking at.
 
-`recognize --dry-run` prints a count report rather than a request plan. Its file-backed report carries `{"from":{"question":"file"}}` to identify the source of the complete recognize question.
+`recognize --dry-run` prints the `thinkthen.recognize-plan/1` request plan. Its file-backed plan carries `{"from":{"question":"file"}}` to identify the source of the complete recognize question.
 
 ## The digest of a question
 

@@ -4,7 +4,7 @@ Status: **Settled** for the wire shape, the key, the address, the request, the `
 
 `thinkthen` speaks one wire shape, System One, by ruling 1 of ADR 0010. Another model is reached by a server that presents that shape at another address. Every token count and probability in an example here is illustrative.
 
-A backend is an address and a model. `THINKTHEN_BASE_URL` names the address, `THINKTHEN_API_KEY` holds the key, and `--model` names the model. An explicit profile may add a stable name and local limits. It never selects either value.
+A backend is an address and a model. `THINKTHEN_BASE_URL` or the configuration file's `url` names the address, `THINKTHEN_API_KEY` holds the key, and `--model` names the model. An explicit profile may add a stable name and local limits. It never selects either value.
 
 ## Explicit profiles and local preflight
 
@@ -16,9 +16,11 @@ Evidence bytes are the UTF-8 bytes after field extraction and JSON normalization
 
 Recognition keeps the complete source text in every request and splits only its questions through the shared request splitter. `max_questions` and `max_request_bytes` can create several logical requests without changing offsets or assembly. A beta cross-kind relation choice that exceeds `max_options` or cannot fit alone under `max_request_bytes` changes that whole relation to yes/no pairs. `max_evidence_bytes` never causes that fallback.
 
-The engine encodes, digests, and checks every request chunk before reading a recording or cache entry, reading the key, or opening a connection. An ordered multi-question plan takes the longest next contiguous prefix that fits both exact request bytes and expanded questions, then repeats until all questions belong to a chunk. Evidence is repeated unchanged. A plan that fits keeps its exact body and digest. Evidence, one-question request, and choice-option overflows fail before any request because splitting them would change meaning.
+The engine encodes, digests, and checks every request chunk before reading a recording or cache entry, reading the key, or opening a connection. An ordered multi-question plan takes the longest next contiguous prefix that fits both exact request bytes and expanded questions, then repeats until all questions belong to a chunk. The splitter finds that prefix by doubling the chunk from one question up to the remainder, then halving the gap. Evidence is repeated unchanged. A plan that fits keeps its exact body and digest. Evidence, one-question request, and choice-option overflows fail before any request because splitting them would change meaning.
 
-`annotate` checks every chunk of every group for one record before starting any group. Dry runs perform the same checks before printing a plan. Profiles apply equally to live calls, replay, cache, and recording. The profile estimates no tokens. A backend whose published limit is only tokens needs a tokenizer or a verified byte ceiling before its file can enforce the limit. `--url`, `THINKTHEN_BASE_URL`, and `--model` still select the backend. A profile contains none of them.
+A relation plan at the built-in address also splits under a built-in ceiling of 96,000 request bytes. The hosted backend refuses a request over 65,536 input tokens with status 400. On 2026-09-24, 142 relate `appears_on` questions over the Beatles set passed at 65,423 input tokens, and 143 failed. That 142-question request encodes to 126,820 bytes, so relate's JSON runs 0.516 input tokens a byte. 96,000 bytes then comes to about 49,500 tokens. The ceiling reaches `relate` and the relation step of `recognize`. It applies when the resolved posting URL equals `https://api.typesafe.ai/v1/systemone` byte for byte. A chunk of two or more questions stays at most 96,000 bytes. One question alone always passes it, so the ceiling splits and never refuses. It never turns a choice into yes/no questions. A profile's `max_request_bytes` replaces it, and a profile's other limits apply beside it. Every other plan and every other address has no ceiling. Ticket 0123 set it.
+
+`annotate` checks every chunk of every group for one record before starting any group. Dry runs perform the same checks before printing a plan. Profiles apply equally to live calls, replay, cache, and recording. The profile estimates no tokens. A backend whose published limit is only tokens needs a tokenizer or a verified byte ceiling before its file can enforce the limit. `--url`, `THINKTHEN_BASE_URL`, the configuration file's `url`, and `--model` still select the backend. A profile contains none of them.
 
 ## The key
 
@@ -34,7 +36,7 @@ The key is read from `THINKTHEN_API_KEY`. No option names another variable.
 
 Settled by ADR 0010.
 
-The address comes from `--url`, then `THINKTHEN_BASE_URL`, then the default base `https://api.typesafe.ai/v1`. The tool posts to `BASE/systemone`. A base with a trailing slash is accepted. A base that is not an `http` or `https` address is a usage error before any request. An empty variable counts as absent.
+The address comes from `--url`, then `THINKTHEN_BASE_URL`, then the configuration file's `url`, then the default base `https://api.typesafe.ai/v1`. The tool posts to `BASE/systemone`. A base with a trailing slash is accepted. A base that is not an `http` or `https` address is a usage error before any request. An empty variable counts as absent.
 
 A base under plain `http://` reaches `localhost`, `127.0.0.1`, and `[::1]` and no other host. Any other host under `http://` is a usage error before any request, and the message says that the key would cross the network in clear text. No option overrides it. The rule reads the text of the host and resolves no name, so `localhost.`, `127.1`, `0.0.0.0`, and `[::ffff:127.0.0.1]` are all refused. A backend on another machine is reached over `https://`, or over a tunnel whose near end is loopback. The clear-text restriction allows every host under `https://`.
 
@@ -60,11 +62,12 @@ The adapter sends one `POST` with `Content-Type: application/json`. When a key i
 
 A retry happens after a status of 429, 500, 502, 503, 504, or 529. A transport failure is never sent again, because the backend may already hold the request and may bill it. The wait doubles from one second, and no wait follows the last attempt. No retry wait exceeds `--timeout`. A reply carrying a `Retry-After-Ms` header in whole milliseconds or a `Retry-After` header in the delta-seconds form waits the time it names instead, capped by both 60 seconds and `--timeout`. The milliseconds header is read first, because the backend sends the finer number there. The HTTP-date form of `Retry-After` is ignored, because reading it needs a clock and a date reader. Any other error status fails at once.
 
-A failure after the last retry is exit code 4. The message gives the status code and never the response body, because a backend can quote the evidence back in an error. A fixed phrase follows the code.
+A failure after the last retry is exit code 4. The message gives the status code and never the response body, because a backend can quote the evidence back in an error. A fixed phrase follows the code. On status 400 alone, the command reads at most 4 KiB of the body and only its `detail.error_type`. When that value is exactly `max_tokens_exceeded`, the message names it. Any other body, and any body it cannot read or parse, gives the plain 400 phrase. The library keeps `the backend answered with status 400`.
 
 | Status | Phrase |
 | --- | --- |
 | 400 | the backend refused the request; check `--model` and the request size |
+| 400, body naming `max_tokens_exceeded` | the request has more input tokens than the backend takes; shorten the text or set a lower max_request_bytes with `--profile`. The status reads `400 (max_tokens_exceeded)` |
 | 401 | the key was refused |
 | 402 | the account has no credit |
 | 403 | the key may not use this model or address |

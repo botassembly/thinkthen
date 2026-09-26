@@ -383,6 +383,10 @@ Package proof runs `cargo check`, `test`, and `package` with `--locked -p thinkt
 
 Amended 2026-09-24: the ADR 0017 amendment of that date renames the width to the throttle. `EngineBuilder::width` above is `EngineBuilder::throttle`, and an omitted width is an omitted throttle. 0086 builds that name.
 
+## Amended 2026-09-25 (ticket 0130)
+
+The optional `polars` feature adds two root names, `PolarsEngine` and the re-exported `polars` crate, only when it is on. The frozen inventory is built with `--no-default-features`, and it does not change. Ian can overturn this.
+
 ## Review
 
 - Design review: `sdlc/records/2026-09-24-spine-review-contract.md` rejected, then `2026-09-24-rereview-contract.md` accepted after fixes.

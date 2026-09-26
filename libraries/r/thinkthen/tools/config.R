@@ -11,6 +11,10 @@
 # tarball. The repository shape keeps the builder's own CARGO_HOME and
 # regenerates the wrappers.
 .tarball_shape <- dir.exists("src/rust/vendor/registry")
+# The published shape (ticket 0128): R-universe builds this folder alone, with
+# no vendored crates and no repository around it. The engine then comes from
+# crates.io at this package's exact version, and cargo may fetch.
+.published_shape <- !.tarball_shape && !file.exists("../../../crates/thinkthen/Cargo.toml")
 
 if (.tarball_shape) {
   .cargo_export <- "export CARGO_HOME=$(CURDIR)/rust/.cargo && "
@@ -31,6 +35,19 @@ if (.tarball_shape) {
     ),
     "src/rust/.cargo/config.toml"
   )
+} else if (.published_shape) {
+  .cargo_export <- ""
+  .doc <- ""
+  .version <- read.dcf("DESCRIPTION", fields = "Version")[[1]]
+  .manifest <- readLines("src/rust/Cargo.toml")
+  .engine <- grepl("^thinkthen = \\{ path = ", .manifest)
+  if (sum(.engine) != 1) stop("src/rust/Cargo.toml must name the thinkthen path dependency once")
+  .manifest[.engine] <- sprintf('thinkthen = { version = "=%s", default-features = false }', .version)
+  writeLines(.manifest, "src/rust/Cargo.toml")
+  # The lock gains the registry entry and keeps every other pin.
+  if (system2("cargo", c("update", "--package", "thinkthen", "--manifest-path", "src/rust/Cargo.toml")) != 0) {
+    stop("cargo could not resolve thinkthen ", .version, " from crates.io")
+  }
 } else {
   .cargo_export <- ""
   .doc <- paste(
@@ -52,7 +69,7 @@ configure_file(
   "src/Makevars",
   list(
     LIBDIR = "release",
-    CRAN_FLAGS = "--locked --offline",
+    CRAN_FLAGS = if (.published_shape) "--locked" else "--locked --offline",
     CARGO_EXPORT = .cargo_export,
     DOC = .doc,
     PROFILE = "--release",

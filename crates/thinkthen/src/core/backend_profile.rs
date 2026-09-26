@@ -99,6 +99,11 @@ impl BackendProfile {
         &self.name
     }
 
+    /// Whether this profile names its own request-byte limit.
+    pub(crate) const fn limits_request_bytes(&self) -> bool {
+        self.max_request_bytes.is_some()
+    }
+
     /// Check the exact production values behind one encoded request: the
     /// evidence in its compact text form, and the body as encoded.
     pub(crate) fn check(
@@ -230,11 +235,6 @@ pub(crate) struct ProfileLimit {
 }
 
 impl ProfileLimit {
-    /// Whether another contiguous request can satisfy this kind of limit.
-    pub(crate) const fn permits_split(&self) -> bool {
-        matches!(self.kind, LimitKind::RequestBytes | LimitKind::Questions)
-    }
-
     pub(crate) const fn permits_relation_fallback(&self) -> bool {
         matches!(self.kind, LimitKind::RequestBytes | LimitKind::Options)
     }

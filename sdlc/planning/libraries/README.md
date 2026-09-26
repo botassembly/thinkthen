@@ -35,7 +35,7 @@ ADR 0017 is still Proposed. Its item 3 says the host language owns everything th
 
 ## Where the time goes
 
-One measured judgment took over 300 ms, and nearly all of it is the network. A shim's own cost is microseconds. The order of work follows the size of the win.
+Nearly all of a judgment's time is the network. A shim's own cost is microseconds. The order of work follows the size of the win.
 
 1. **Keep the connection open.** A new secure connection costs a large share of a judgment. The engine holds one pool for the life of the process. This is the largest gain a library has over the command. The command pays for a new process and a new connection on every call.
 2. **Run many requests at once inside Rust.** A record verb hands its records to the engine, and the engine runs them at the width `--jobs` names. The host language's lock is released while Rust waits.

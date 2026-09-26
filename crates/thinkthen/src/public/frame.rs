@@ -1,23 +1,44 @@
-#![doc = include_str!("../README.md")]
-
-mod column;
-mod error;
-
-pub use error::Error;
-pub use polars;
-pub use thinkthen;
+//! The Rust Polars door, behind the `polars` feature (ticket 0130).
 
 use polars::prelude::{Column, DataFrame, NamedFrom, Series};
-use thinkthen::{
-    Answer, CallOptions, DecisionQuestion, Engine, Question, QuestionKind, QuestionSet,
+
+use super::{
+    Answer, CallOptions, DecisionQuestion, Engine, Error, Question, QuestionKind, QuestionSet,
 };
+
+mod column;
 
 use column::{Shape, answered, kind_word, texts};
 
 /// The one member name of the set a single-question column asks.
 const MEMBER: &str = "answer";
 
-/// The Series and frame door, implemented for [`thinkthen::Engine`].
+/// The Series and frame door, implemented for [`Engine`]. It needs the
+/// `polars` feature, and takes the Polars version [`crate::polars`] names.
+///
+/// Each method reads a text column in place and makes one engine call over
+/// the whole column, at the throttle, with answers in input order.
+///
+/// ```no_run
+/// use thinkthen::polars::prelude::{NamedFrom, Series};
+/// use thinkthen::{CallOptions, EngineBuilder, PolarsEngine, Question};
+///
+/// fn main() -> Result<(), thinkthen::Error> {
+///     let engine = EngineBuilder::from_env()?
+///         .base_url("http://127.0.0.1:8080/v1")?
+///         .model("your-model")?
+///         .throttle(8)?
+///         .max_requests(Some(10_000))?
+///         .cache_at("answers")?
+///         .cache_bytes(1 << 30)?
+///         .build()?;
+///     let notes = Series::new("note".into(), ["Please refund my order.", "Thanks, all good."]);
+///     let refund = Question::decide("Does the writer ask for a refund?")?.cut();
+///     let asked = engine.decide_series(&refund, &notes, CallOptions::new())?;
+///     assert_eq!(asked.len(), 2);
+///     Ok(())
+/// }
+/// ```
 pub trait PolarsEngine {
     /// Decide every text of the column: a `Boolean` series under the
     /// column's name, with a null where a band left the answer not sure.
@@ -25,7 +46,7 @@ pub trait PolarsEngine {
     /// # Errors
     ///
     /// [`Error::Usage`] for a column that is not text or holds a null, and
-    /// [`Error::Engine`] for anything the engine refuses. A failed row ends
+    /// the engine's error for anything the engine refuses. A failed row ends
     /// the call with the engine's error.
     fn decide_series<Q: DecisionQuestion + ?Sized>(
         &self,
@@ -116,14 +137,7 @@ impl PolarsEngine for Engine {
         texts: &Series,
         options: CallOptions<'_>,
     ) -> Result<Series, Error> {
-        single(
-            self,
-            "choose_series",
-            QuestionKind::Choose,
-            question,
-            texts,
-            options,
-        )
+        single(self, QuestionKind::Choose, question, texts, options)
     }
 
     fn score_series(
@@ -132,14 +146,7 @@ impl PolarsEngine for Engine {
         texts: &Series,
         options: CallOptions<'_>,
     ) -> Result<Series, Error> {
-        single(
-            self,
-            "score_series",
-            QuestionKind::Score,
-            question,
-            texts,
-            options,
-        )
+        single(self, QuestionKind::Score, question, texts, options)
     }
 
     fn tag_series(
@@ -148,14 +155,7 @@ impl PolarsEngine for Engine {
         texts: &Series,
         options: CallOptions<'_>,
     ) -> Result<Series, Error> {
-        single(
-            self,
-            "tag_series",
-            QuestionKind::Tag,
-            question,
-            texts,
-            options,
-        )
+        single(self, QuestionKind::Tag, question, texts, options)
     }
 
     fn annotate_frame(
@@ -167,10 +167,10 @@ impl PolarsEngine for Engine {
     ) -> Result<DataFrame, Error> {
         let held = frame
             .column(on)
-            .map_err(|_| Error::Usage(format!("the frame holds no column {on}")))?;
+            .map_err(|_| Error::usage(format!("the frame holds no column {on}")))?;
         for (name, _) in questions.members() {
             if frame.column(name).is_ok() {
-                return Err(Error::Usage(format!(
+                return Err(Error::usage(format!(
                     "the frame already holds a column named {name}"
                 )));
             }
@@ -188,23 +188,22 @@ impl PolarsEngine for Engine {
             .collect::<Result<Vec<Column>, Error>>()?;
         frame
             .hstack(&columns)
-            .map_err(|error| Error::Defect(format!("the frame refused a new column: {error}")))
+            .map_err(|error| Error::defect(&format!("the frame refused a new column: {error}")))
     }
 }
 
 /// One choose, score, or tag column through a one-question set.
 fn single(
     engine: &Engine,
-    method: &str,
     wanted: QuestionKind,
     question: &Question,
     texts: &Series,
     options: CallOptions<'_>,
 ) -> Result<Series, Error> {
     if question.kind() != wanted {
-        return Err(Error::Usage(format!(
-            "{method} needs a {} question, and this one is a {} question",
-            kind_word(wanted),
+        let word = kind_word(wanted);
+        return Err(Error::usage(format!(
+            "{word}_series needs a {word} question, and this one is a {} question",
             kind_word(question.kind())
         )));
     }

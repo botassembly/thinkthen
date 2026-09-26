@@ -76,8 +76,32 @@ fn malformed_and_dry_runs_open_no_connection() {
     assert_eq!(report["relation_pairs_upper_bound"], 36);
     assert_eq!(report["relation_requests_upper_bound"], 36);
     let one = spawn(&["recognize", "person", "--dry-run", "--url", listener.base(), "--no-cache"], &[], b"Ada met Acme.").expect("one-kind dry run");
-    assert_eq!(String::from_utf8(one.stdout).unwrap(), "{\"tokens\":4,\"detection_questions\":4,\"kind_questions\":0,\"requests\":1}\n");
+    let one: Value = serde_json::from_slice(&one.stdout).expect("one-kind JSON");
+    let counts = ["words", "detection_questions", "kind_questions", "request_count"].map(|key| one[key].clone());
+    assert_eq!(counts, [4, 4, 0, 1].map(Value::from));
     assert_eq!(listener.connections(), 0);
+}
+
+/// A dry run prints the digests and bodies a live run of the same text sends.
+#[test]
+fn the_dry_run_prints_the_requests_a_live_run_sends() {
+    let listener = Listener::answering(automatic).expect("listener");
+    let dry = run(&listener, &["person", "organization", "--dry-run"], b"Ada met Acme.");
+    let plan: Value = serde_json::from_slice(&dry.stdout).expect("dry-run JSON");
+    let head = ["schema", "url", "model", "key_env", "words", "request_count"].map(|key| plan[key].clone());
+    let url = format!("{}/systemone", listener.base());
+    assert_eq!(head, serde_json::json!(["thinkthen.recognize-plan/1", url, "local-1", "THINKTHEN_API_KEY", 4, 1]).as_array().unwrap().as_slice());
+    assert_eq!(listener.connections(), 0);
+    let live = run(&listener, &["person", "organization", "--details"], b"Ada met Acme.");
+    assert_eq!(live.status.code(), Some(0), "{}", String::from_utf8_lossy(&live.stderr));
+    let result: Value = serde_json::from_slice(&live.stdout).expect("result JSON");
+    let planned = plan["requests"].as_array().expect("a request list");
+    let digests: Vec<Value> = planned.iter().map(|request| request["digest"].clone()).collect();
+    assert_eq!(Value::from(digests), result["meta"]["requests"]);
+    let sent: Vec<Value> = listener.requests().iter().map(|request| Value::from(String::from_utf8_lossy(&request.body))).collect();
+    let bodies: Vec<Value> = planned.iter().map(|request| request["body_utf8"].clone()).collect();
+    assert_eq!(bodies, sent);
+    assert_eq!(planned[0]["bytes"], Value::from(sent[0].as_str().map_or(0, str::len)));
 }
 
 #[test]

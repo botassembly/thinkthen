@@ -5,6 +5,8 @@
 set -eu
 HERE=$(cd -- "$(dirname -- "$0")" && pwd)
 cd -- "$HERE"
+# macOS has no `timeout` (ticket 0128).
+LIMIT=$HERE/../../sdlc/scripts/time-limit
 . "$HERE/tools/version.env"
 TOOLS=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/duckdb/$DUCKDB_VERSION
 CLI=${THINKTHEN_DUCKDB_CLI:-$TOOLS/duckdb}
@@ -53,7 +55,7 @@ python3 tools/source_checks.py
 cargo deny --locked --offline --manifest-path Cargo.toml check --config deny.toml advisories bans licenses sources
 planted=$(mktemp)
 trap 'rm -f -- "$planted"' EXIT
-sed 's/^exceptions = \[{ crate = "zlib-rs".*/exceptions = []/' deny.toml >"$planted"
+sed '/{ crate = "zlib-rs"/d' deny.toml >"$planted"
 set +e
 cargo deny --locked --offline --manifest-path Cargo.toml check --config "$planted" licenses >"$planted.out" 2>&1
 code=$?
@@ -67,7 +69,7 @@ rm -f -- "$planted.out"
 echo "== the stock CLI loads the extension"
 answer=$(env -i PATH="$PATH" HOME="$(mktemp -d)" XDG_CACHE_HOME="$(mktemp -d)" XDG_CONFIG_HOME="$(mktemp -d)" \
 	THINKTHEN_API_KEY=sk-loopback-duckdb-check THINKTHEN_BASE_URL="http://127.0.0.1:$PORT/generic/v1" \
-	timeout 60 "$CLI" -unsigned -noheader -list -c "LOAD 'build/thinkthen.duckdb_extension'; SELECT thinkthen_decide('Is it a refund?', 'refund now');")
+	sh "$LIMIT" 60 "$CLI" -unsigned -noheader -list -c "LOAD 'build/thinkthen.duckdb_extension'; SELECT thinkthen_decide('Is it a refund?', 'refund now');")
 [ "$answer" = true ] || {
 	echo "check: the stock CLI read '$answer', not true" >&2
 	exit 1
@@ -75,8 +77,8 @@ answer=$(env -i PATH="$PATH" HOME="$(mktemp -d)" XDG_CACHE_HOME="$(mktemp -d)" X
 
 echo "== suites"
 for suite in verbs_suite settings_suite signal_suite relate_suite databases_suite conformance; do
-	timeout 900 "$PY" "tools/$suite.py"
+	sh "$LIMIT" 900 "$PY" "tools/$suite.py"
 done
-THINKTHEN_DUCKDB_CLI_PATH="$CLI" timeout 900 "$PY" tools/site_examples.py
+THINKTHEN_DUCKDB_CLI_PATH="$CLI" sh "$LIMIT" 900 "$PY" tools/site_examples.py
 sh tools/selftests.sh "$PY"
 echo "check: databases/duckdb passes"

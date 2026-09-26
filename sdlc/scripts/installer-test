@@ -1,0 +1,232 @@
+#!/usr/bin/env python3
+"""The download script's edge table, run under dash and bash (ticket 0128).
+
+A loopback HTTP server stands in for GitHub: the /releases/latest redirect, the
+API's release list, the archives, and their checksums. THINKTHEN_INSTALL_BASE
+and THINKTHEN_INSTALL_API point `install.sh` at it, since the real boundary is
+GitHub over HTTPS and no gate touches the network. Each archive holds a fake
+`thinkthen` that prints a version. Every case runs with a fresh HOME and a PATH
+that holds only the tools named below, and pins the whole output and exit code.
+"""
+
+import hashlib
+import http.server
+import io
+import json
+import os
+import pathlib
+import shutil
+import subprocess
+import sys
+import tarfile
+import tempfile
+import threading
+
+REPO = pathlib.Path(__file__).resolve().parents[2]
+TOOLS = "awk cat chmod cp curl gzip head mkdir mktemp mv perl rm sed sync tar uname".split()
+MACHINE = {"x86_64": "x86_64-unknown-linux-musl", "aarch64": "aarch64-unknown-linux-musl"}
+TARGET = MACHINE.get(os.uname().machine, "")
+STATE = {}
+
+
+def archive(reports):
+    """A release archive whose one file is a fake thinkthen that reports REPORTS."""
+    script = f"#!/bin/sh\necho '{reports}'\n".encode()
+    buffer = io.BytesIO()
+    with tarfile.open(fileobj=buffer, mode="w:gz") as tar:
+        info = tarfile.TarInfo("thinkthen")
+        info.size, info.mode = len(script), 0o755
+        tar.addfile(info, io.BytesIO(script))
+    return buffer.getvalue()
+
+
+def release(version, checksum="good", reports=None, uploaded=True):
+    """One release's files, keyed by path under the server root."""
+    name = f"thinkthen-{version}-{TARGET}.tar.gz"
+    body = archive(reports or f"thinkthen {version}")
+    digest = hashlib.sha256(body).hexdigest()
+    sums = {"good": f"{digest}  {name}\n", "bare": f"{digest}\n", "wrong": f"{'0' * 64}  {name}\n",
+            "two": f"{digest}  {name}\n{digest}  {name}\n", "missing": None}[checksum]
+    files = {f"/botassembly/thinkthen/releases/download/v{version}/{name}": body} if uploaded else {}
+    if uploaded and sums is not None:
+        files[f"/botassembly/thinkthen/releases/download/v{version}/{name}.sha256"] = sums.encode()
+    return {"tag_name": f"v{version}", "draft": False, "prerelease": False,
+            "assets": [{"name": name}] if uploaded else []}, files
+
+
+class Fake(http.server.BaseHTTPRequestHandler):
+    def log_message(self, *args):
+        pass
+
+    def answer(self, body):
+        if self.path == "/botassembly/thinkthen/releases/latest":
+            self.send_response(302)
+            self.send_header("Location", f"/botassembly/thinkthen/releases/tag/{STATE['latest']}")
+            self.end_headers()
+            return
+        if self.path.startswith("/botassembly/thinkthen/releases/tag/"):
+            data = b"release page"
+        elif self.path == "/repos/botassembly/thinkthen/releases" and STATE["api"]:
+            data = json.dumps(STATE["list"]).encode()
+        elif self.path in STATE["files"]:
+            data = STATE["files"][self.path]
+        else:
+            self.send_response(404 if self.path != "/repos/botassembly/thinkthen/releases" else 500)
+            self.end_headers()
+            return
+        self.send_response(200)
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        if body:
+            self.wfile.write(data)
+
+    def do_GET(self):
+        self.answer(True)
+
+    def do_HEAD(self):
+        self.answer(False)
+
+
+def serve(releases, latest, api=True):
+    STATE.update(list=[r for r, _ in releases], files={}, latest=latest, api=api)
+    for _, files in releases:
+        STATE["files"].update(files)
+
+
+def toolbox(root, jq=True, sha="sha256sum", uname=None):
+    """A folder holding links to exactly the tools a case allows."""
+    tools = root / "tools"
+    tools.mkdir()
+    for tool in TOOLS + ["dash", "bash", "sh", sha] + (["jq"] if jq else []):
+        if tool != "uname" or uname is None:
+            os.symlink(shutil.which(tool), tools / tool)
+    if uname:
+        (tools / "uname").write_text(f"#!/bin/sh\nif [ \"$1\" = -s ]; then echo {uname[0]}; else echo {uname[1]}; fi\n")
+        (tools / "uname").chmod(0o755)
+    return tools
+
+
+def run(shell, port, root, args=(), on_path=False, folder=None, **tools):
+    home = root / "home"
+    path = str(toolbox(root, **tools)) + (f":{home}/.local/bin" if on_path else "")
+    env = {"HOME": str(home), "PATH": path, "THINKTHEN_INSTALL_BASE": f"http://127.0.0.1:{port}",
+           "THINKTHEN_INSTALL_API": f"http://127.0.0.1:{port}"}
+    if folder:
+        env["THINKTHEN_INSTALL_DIR"] = str(root / folder)
+    done = subprocess.run([shell, str(REPO / "install.sh"), *args], env=env, capture_output=True, text=True, timeout=60)
+    return done.returncode, done.stdout, done.stderr
+
+
+def installed(root):
+    return root / "home/.local/bin"
+
+
+def ok(version, root, path_line=True):
+    out = (f"Downloading thinkthen-{version}-{TARGET}.tar.gz\nChecksum verified.\n"
+           f"Installed thinkthen {version} to {installed(root)}/thinkthen\n")
+    if path_line:
+        out += f'Add thinkthen to PATH:\n  export PATH="{installed(root)}:$PATH"\n'
+    return (0, out, "")
+
+
+def refused(version, why):
+    return (1, f"Downloading thinkthen-{version}-{TARGET}.tar.gz\n", f"thinkthen install: {why}\n")
+
+
+OLD = "#!/bin/sh\necho 'thinkthen 0.0.9'\n"
+
+
+def keep_old(root):
+    """An earlier install the refusals must leave alone."""
+    installed(root).mkdir(parents=True)
+    (installed(root) / "thinkthen").write_text(OLD)
+
+
+def cases():
+    one, two_empty = release("0.1.0"), release("0.2.0", uploaded=False)
+    name = f"thinkthen-0.1.0-{TARGET}.tar.gz"
+    return [
+        ("latest skips a release with no archive", [one, two_empty], "v0.2.0", {}, lambda r: None,
+         lambda r: ok("0.1.0", r)),
+        ("no jq takes the redirect", [one], "v0.1.0", {"jq": False}, lambda r: None, lambda r: ok("0.1.0", r)),
+        ("an API error takes the redirect", [one], "v0.1.0", {"api": False}, lambda r: None, lambda r: ok("0.1.0", r)),
+        ("an asked version", [release("0.2.0"), one], "v0.2.0", {"args": ["--version", "v0.1.0"]}, lambda r: None,
+         lambda r: ok("0.1.0", r)),
+        ("a bare hash", [release("0.1.0", checksum="bare")], "v0.1.0", {}, lambda r: None, lambda r: ok("0.1.0", r)),
+        ("shasum alone", [one], "v0.1.0", {"sha": "shasum"}, lambda r: None, lambda r: ok("0.1.0", r)),
+        ("already on PATH", [one], "v0.1.0", {"on_path": True}, lambda r: None, lambda r: ok("0.1.0", r, False)),
+        ("no checksum file", [release("0.1.0", checksum="missing")], "v0.1.0", {}, keep_old,
+         lambda r: (1, f"Downloading {name}\n", "curl: (22) The requested URL returned error: 404\n"
+                    "thinkthen install: could not download the checksum; refusing an unverified install\n")),
+        ("a wrong checksum", [release("0.1.0", checksum="wrong")], "v0.1.0", {}, keep_old,
+         lambda r: refused("0.1.0", f"the checksum of {name} does not match; refusing to install")),
+        ("two checksum records", [release("0.1.0", checksum="two")], "v0.1.0", {}, keep_old,
+         lambda r: refused("0.1.0", f"the checksum file for {name} is not one valid record; refusing an unverified install")),
+        ("another version inside", [release("0.1.0", reports="thinkthen 0.0.9")], "v0.1.0", {}, keep_old,
+         lambda r: (1, f"Downloading {name}\nChecksum verified.\n",
+                    "thinkthen install: asked for thinkthen 0.1.0, and the staged binary reports 'thinkthen 0.0.9'\n")),
+        ("a version that is not X.Y.Z", [one], "v0.1.0", {"args": ["--version", "../../x"]}, lambda r: None,
+         lambda r: (1, "", "thinkthen install: not a release version: ../../x; give X.Y.Z\n")),
+        ("a folder with a quote", [one], "v0.1.0", {"folder": 'a"b'}, lambda r: None,
+         lambda r: (1, "", f'thinkthen install: refusing an install folder with a quote or backslash: {r}/a"b\n')),
+        ("another system", [one], "v0.1.0", {"uname": ("FreeBSD", "amd64")}, lambda r: None,
+         lambda r: (1, "", "thinkthen install: no build for FreeBSD amd64; thinkthen ships Linux x86_64, "
+                           "Linux aarch64, macOS x86_64, and macOS arm64\n")),
+        ("a symlinked folder", [one], "v0.1.0", {}, lambda r: (r / "home/.local").mkdir(parents=True) or
+         (r / "elsewhere").mkdir() or os.symlink(r / "elsewhere", installed(r)),
+         lambda r: (1, f"Downloading {name}\nChecksum verified.\n",
+                    f"thinkthen install: refusing a symbolic-link install folder: {installed(r)}\n")),
+        ("a symlinked binary", [one], "v0.1.0", {}, lambda r: installed(r).mkdir(parents=True) or
+         os.symlink("/bin/true", installed(r) / "thinkthen"),
+         lambda r: (1, f"Downloading {name}\nChecksum verified.\n",
+                    "thinkthen install: refusing a symbolic-link binary or receipt\n")),
+        ("a pending receipt for another binary", [one], "v0.1.0", {}, lambda r: keep_old(r) or
+         (installed(r) / "thinkthen.install.json").write_text(
+             f'{{\n  "state": "pending",\n  "executable_path": "{installed(r)}/thinkthen",\n'
+             f'  "old_sha256": "{"1" * 64}",\n  "new_sha256": "{"2" * 64}"\n}}\n'),
+         lambda r: (1, f"Downloading {name}\nChecksum verified.\n",
+                    "thinkthen install: the pending receipt does not match the installed binary; refusing to continue\n")),
+        ("a pending receipt that matches", [one], "v0.1.0", {}, lambda r: keep_old(r) or
+         (installed(r) / "thinkthen.install.json").write_text(
+             f'{{\n  "state": "pending",\n  "executable_path": "{installed(r)}/thinkthen",\n'
+             f'  "old_sha256": "{hashlib.sha256(OLD.encode()).hexdigest()}",\n  "new_sha256": "{"2" * 64}"\n}}\n'),
+         lambda r: ok("0.1.0", r)),
+    ]
+
+
+def after(root, expected):
+    """Success leaves only the binary and an installed receipt. A refusal leaves the old binary."""
+    home = root / "home"
+    if expected[0] == 0:
+        files = sorted(str(p.relative_to(home)) for p in home.rglob("*") if p.is_file())
+        receipt = (installed(root) / "thinkthen.install.json").read_text()
+        return files == [".local/bin/thinkthen", ".local/bin/thinkthen.install.json"] and '"state": "installed"' in receipt
+    old = installed(root) / "thinkthen"
+    return not old.is_file() or old.is_symlink() or old.read_text() == OLD
+
+
+def main():
+    if not TARGET:
+        print(f"installer-test: no case table for machine {os.uname().machine}", file=sys.stderr)
+        return 1
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Fake)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    bad = total = 0
+    for shell in ("dash", "bash"):
+        for name, releases, latest, options, setup, expect in cases():
+            total += 1
+            serve(releases, latest, options.pop("api", True))
+            with tempfile.TemporaryDirectory() as tmp:
+                root = pathlib.Path(tmp)
+                setup(root)
+                got = run(shell, server.server_port, root, options.pop("args", ()), **options)
+                if got != expect(root) or not after(root, expect(root)):
+                    bad += 1
+                    print(f"installer-test {shell} {name}: expected {expect(root)}, got {got}", file=sys.stderr)
+    server.shutdown()
+    print(f"installer-test: {total - bad}/{total} cases hold under dash and bash")
+    return 1 if bad else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

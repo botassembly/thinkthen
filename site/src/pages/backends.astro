@@ -46,7 +46,7 @@ import { PAGE_RUNS } from '../data/examples.mjs';
     <li><code>THINKTHEN_CACHE</code> never moves the folder, and <code>--no-cache</code> never turns the counting off.</li>
   </ul>
   <p>Counting is best effort. A crash can undercount tokens or overcount one request that was already charged. They count what this machine saw. Your provider’s bill is the real cost.</p>
-  <p><code>thinkthen status</code> reads them back. It is read-only and opens no connection.</p>
+  <p><code>thinkthen status</code> reads them back. It is read-only and opens no connection. It counts only what the command sends. A library, SQL extension, or data frame keeps its counts in memory for its own process, and <code>status</code> never sees them.</p>
 
   <h2><code>--dry-run</code></h2>
   <p><code>--dry-run</code> prints what the command would send and then stops. It calls no backend, it reads no key, and it sends nothing. <code>--record</code> or <code>--replay</code> beside it is a usage error.</p>

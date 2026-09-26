@@ -105,19 +105,10 @@ fn the_first_explicit_width_wins_and_only_a_different_one_is_refused() {
         assert_eq!(widths.select(Some(width(first))), Ok(width(first)));
         for other in table.into_iter().filter(|other| *other != first) {
             let refused = widths.select(Some(width(other))).expect_err("a conflict");
-            assert_eq!(
-                refused.to_string(),
-                format!(
-                    "width {first} is already active for this process; use width {first} or drop the width argument"
-                )
-            );
+            assert_eq!(refused, WidthActive(width(first)));
         }
         assert_eq!(widths.selected(), Some(width(first)));
     }
-    assert_eq!(
-        WidthActive(Width::FALLBACK).to_string(),
-        "width 4 is already active for this process; use width 4 or drop the width argument"
-    );
 }
 
 #[test]

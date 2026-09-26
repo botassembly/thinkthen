@@ -7,6 +7,8 @@ set -eu
 unset THINKTHEN_API_KEY
 here=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 cd -- "$here"
+# macOS has no `timeout` (ticket 0128).
+LIMIT=$here/../../sdlc/scripts/time-limit
 source=${SQLITE_AMALGAMATION:-$HOME/.cache/thinkthen-toolchains/sqlite-amalgamation-3500000}
 
 not_run() {
@@ -54,7 +56,7 @@ export LD_LIBRARY_PATH="$host${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 failed=""
 for test in tests/test_*.py tests/examples.py tests/conformance.py; do
 	step "$test"
-	timeout 300 python3 "$test" || failed="$failed $test"
+	sh "$LIMIT" 300 python3 "$test" || failed="$failed $test"
 done
 [ -z "$failed" ] || { echo "FAIL     databases/sqlite:$failed" >&2; exit 1; }
 echo "pass     databases/sqlite"

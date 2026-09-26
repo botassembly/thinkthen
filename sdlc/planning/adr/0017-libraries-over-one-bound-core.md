@@ -11,7 +11,7 @@ The 2026-09-19 draft bound the pure core into each language and left the sending
 
 ### 1. Three layers in one crate
 
-One crate named `thinkthen` holds three layers. Nothing named `thinkthen-core` or `thinkthen-cli` is ever published. The pure core remains a module path inside the crate, and the purity lint holds over that path as it does today. The command sits behind a default `cli` feature, so a library user never compiles the argument parser.
+One crate named `thinkthen` holds three layers. Nothing named `thinkthen-core` or `thinkthen-cli` is ever published. The pure core remains a module path inside the crate, and the purity lint holds over that path as it does today. The command sits behind a default `cli` feature, so a library user never compiles the argument parser. Amended 2026-09-25 (ticket 0130, under Ian's ruling of that day): a second optional feature, `polars`, off by default, carries the Rust Polars door, so only a user who asks for it compiles Polars.
 
 | Layer | Holds | May touch |
 | --- | --- | --- |
@@ -203,6 +203,8 @@ Ian ruled that the command catches SIGINT cooperatively, stops starting requests
 ## Amendment, 2026-09-24: one width for the process
 
 Ticket 0077 settles the width row of section 5. The row reads as though every engine value defaults its own width to 4. Ian ruled otherwise. One process has one width, and every live attempt from every engine, command path, and convenience call passes one attempt gate. An engine built with no width selects nothing and follows the process width, which is 4 until an explicit width is selected. The first engine built with an explicit width selects it. A later engine with the same width is accepted. A later engine with a different width fails with a usage error before any request: `width 4 is already active for this process; use width 4 or drop the width argument`. The command's `--jobs N` is an explicit width, and an omitted `--jobs` is none. A permit covers one attempt and never a retry wait, decoding, recording, or output. A cached or replayed answer takes none. The width is 1 through 32. One cap covers one loaded copy of the library; ADR 0047 holds the duplicate-copy question. Ian can overturn the fallback, the range, and the sentence.
+
+Amended 2026-09-25 by ticket 0126: the command and the engine now say throttle. The sentence reads `throttle 4 is already active for this process; use throttle 4 or drop the throttle argument`.
 
 ## Proposed amendment, 2026-09-23: ten judgment functions
 

@@ -28,7 +28,7 @@ The digest check reuses `Answer.digest`, read inside `Answer::read`, as the coor
 
 ## Proof
 
-Each test below ran green on the final code. Each plant was applied alone, its test run, the file restored byte for byte, and its modification time touched. `scratchpad/t0125/plants.py` outside the repository holds the plants. A grep of the diff for each plant's text found none.
+Each test below ran green on the final code. Each plant was applied alone, its test run, the file restored byte for byte, and its modification time touched. A script outside the repository holds the plants. A grep of the diff for each plant's text found none.
 
 | Test and plant | Result | Note |
 |---|---|---|
