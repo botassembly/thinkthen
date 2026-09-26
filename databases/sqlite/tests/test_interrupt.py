@@ -4,6 +4,13 @@
 Each held test sends its interrupt only once the backend's count reads the
 stated number, and arms a release 2 s after the signal, so a planted run
 fails on its assertion instead of waiting out the request timeout.
+
+These tests also guard the hand-extended API table in `src/ffi.rs`. The
+rusqlite loadable bindings end at SQLite 3.34, so `ApiRoutines` adds the
+tail pointers up to `is_interrupted`, which 3.41 added. Ian ruled on
+2026-09-25 to keep that table and ask no upstream fix. Ticket 0127 planted a
+tail of 12 and of 14 in place of 13: each held test here then read
+`interrupted` in place of the cancelled sentence, and each plant failed.
 """
 
 from __future__ import annotations

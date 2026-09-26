@@ -21,6 +21,8 @@ cargo test --locked --offline --manifest-path conformance/consumer/Cargo.toml \
 sh specification/fixtures/question-file/self-test
 sh probes/probability-total-0038/self-test
 sh probes/find-0040/self-test
+# Ticket 0127: each non-Rust child helper against planted sentinels.
+sh conformance/children/test.sh
 sh transforms/compare/test.sh
 sh transforms/cost/test.sh
 sh transforms/monitor/test.sh

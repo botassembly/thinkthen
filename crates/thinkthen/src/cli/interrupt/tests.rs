@@ -261,7 +261,7 @@ mod unix {
 
     fn sigint(process: u32) {
         assert!(
-            Command::new("kill")
+            crate::test_deadline::child::command("kill", &[])
                 .args(["-INT", &process.to_string()])
                 .status()
                 .expect("kill")
@@ -271,6 +271,7 @@ mod unix {
 
     fn child(variable: &str, value: &str) -> (Child, BufReader<ChildStdout>) {
         let mut child = Command::new(std::env::current_exe().expect("test binary"))
+            .env_clear()
             .args([
                 "--exact",
                 "cli::interrupt::tests::unix::sigint_child",

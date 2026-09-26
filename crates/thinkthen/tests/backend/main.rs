@@ -6,6 +6,8 @@
 //! suppression at its top.
 #![cfg(feature = "cli")]
 
+#[path = "../../src/test_deadline/child.rs"]
+mod child;
 mod harness;
 
 mod address;

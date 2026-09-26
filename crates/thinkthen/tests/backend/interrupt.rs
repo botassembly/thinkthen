@@ -97,7 +97,7 @@ fn held(
         Ok(Observed::Request)
     ));
     assert!(
-        Command::new("kill")
+        crate::child::command("kill", &[])
             .args(["-INT", &child.id().to_string()])
             .status()?
             .success()

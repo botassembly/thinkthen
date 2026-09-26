@@ -14,6 +14,18 @@
 # server, then cannot hold the lock after the rung exits. The `flock` process
 # holds the lock. Killing that one process frees the lock while the rung runs on.
 
+#
+# Ticket 0127: a stray THINKTHEN_ name in the caller's shell never reaches a
+# rung. Every one is unset but the two lock names and two path overrides,
+# THINKTHEN_TOOLCHAINS and THINKTHEN_DUCKDB_CLI, which hold no secret. The
+# names are found without printing any value.
+for name in $(awk 'BEGIN { for (name in ENVIRON) if (name ~ /^THINKTHEN_/) print name }'); do
+	case $name in
+	THINKTHEN_HEAVY_LOCK | THINKTHEN_HEAVY_LOCK_HELD | THINKTHEN_TOOLCHAINS | THINKTHEN_DUCKDB_CLI) ;;
+	*) unset "$name" ;;
+	esac
+done
+
 heavy_lock=${THINKTHEN_HEAVY_LOCK:-${XDG_RUNTIME_DIR:-/tmp}/thinkthen-heavy.lock}
 if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$heavy_lock" ]; then
 	if ! command -v flock >/dev/null 2>&1; then

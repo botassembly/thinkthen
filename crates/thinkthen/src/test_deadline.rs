@@ -2,6 +2,9 @@
 
 use std::time::{Duration, Instant};
 
+pub(crate) mod child;
+#[cfg(test)]
+mod child_tests;
 mod run;
 mod wait;
 

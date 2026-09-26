@@ -16,6 +16,8 @@ use std::time::{Duration, Instant};
 
 use sha2::{Digest as _, Sha256};
 
+#[path = "../src/test_deadline/child.rs"]
+mod child;
 #[path = "../src/test_deadline/run.rs"]
 mod run;
 #[path = "../src/test_deadline/wait.rs"]
@@ -315,7 +317,7 @@ fn the_catalog_reads_no_setting_input_or_file_and_sends_and_runs_nothing() {
     }
     for (name, _, _) in MEMBERS {
         for decoy in [name.to_owned(), format!("{name}.jq")] {
-            let made = Command::new("mkfifo")
+            let made = child::command("mkfifo", &[])
                 .arg(root.join("decoys").join(decoy))
                 .status();
             assert!(made.expect("mkfifo runs").success());

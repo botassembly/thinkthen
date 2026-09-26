@@ -13,6 +13,7 @@ require "rbconfig"
 require "timeout"
 require "tmpdir"
 require "uri"
+require_relative "../../../conformance/children/children"
 
 module TestBackend
   BIN = ENV.fetch("THINKTHEN_TEST_BACKEND")
@@ -47,7 +48,7 @@ module TestBackend
     attr_reader :port
 
     def initialize
-      @in, @out, @thread = Open3.popen2(BIN)
+      @in, @out, @thread = Open3.popen2(Children.env, BIN, unsetenv_others: true)
       @port = Integer(@out.gets)
     end
 
@@ -118,22 +119,24 @@ module TestBackend
     end
   end
 
-  # Each child's environment: the parent's minus every THINKTHEN_ variable,
-  # with the fake key only beside a loopback address.
+  # Each child's whole environment: PATH, the library path the pinned Ruby
+  # needs, the locale its JSON reads, and the fake key only beside a
+  # loopback address (ticket 0127).
   def self.env(base_url, root, extra = {})
     host = URI(base_url).host
     raise ArgumentError, "refusing a non-loopback backend address: #{host}" unless host == "127.0.0.1"
 
     %w[cache home xdg-cache xdg-config].each { |name| Dir.mkdir(File.join(root, name)) unless Dir.exist?(File.join(root, name)) }
-    base = ENV.to_h.reject { |name, _| name.start_with?("THINKTHEN_") }
-    base.merge(
+    Children.env(
+      keep: %w[LD_LIBRARY_PATH LANG],
       "THINKTHEN_BASE_URL" => base_url,
       "THINKTHEN_API_KEY" => FAKE_KEY,
       "THINKTHEN_CACHE" => File.join(root, "cache"),
       "HOME" => File.join(root, "home"),
       "XDG_CACHE_HOME" => File.join(root, "xdg-cache"),
-      "XDG_CONFIG_HOME" => File.join(root, "xdg-config")
-    ).merge(extra)
+      "XDG_CONFIG_HOME" => File.join(root, "xdg-config"),
+      **extra
+    )
   end
 
   # Start a backend and a child on one arm, yield both, and clean up.

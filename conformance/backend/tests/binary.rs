@@ -36,6 +36,7 @@ type Answer = Option<(String, String)>;
 
 fn start() -> Result<Started, Box<dyn Error>> {
     let mut child = Command::new(env!("CARGO_BIN_EXE_conformance-backend"))
+        .env_clear()
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

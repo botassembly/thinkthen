@@ -8,7 +8,7 @@ backend's answers need not be known here.
 import subprocess
 import sys
 
-from conftest import child_env, run
+from conftest import child_env, clean_env, run
 
 LISTS = ("filter, rank, find, and relate read a list of str, not a column, and annotate and "
          "recognize read a column only from a Polars or pandas frame with on=. "
@@ -144,7 +144,7 @@ def test_importing_the_package_leaves_polars_and_pandas_out(backend, tmp_path):
     inside a ``try`` or not."""
     done = subprocess.run([sys.executable, "-c", "import sys, thinkthen; print("
                            "'polars' in sys.modules, 'pandas' in sys.modules)"],
-                          capture_output=True, text=True, check=True)
+                          capture_output=True, text=True, check=True, env=clean_env())
     assert done.stdout.strip() == "False False"
     printed = run("""
     import sys

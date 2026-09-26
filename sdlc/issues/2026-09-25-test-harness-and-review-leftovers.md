@@ -1,6 +1,6 @@
 # Test harness and review leftovers
 
-Status: Open.
+Status: Open. Ticket 0127 settles items 2, 3, and 10. It lands the item 4 fix. Item 4's sweep passed 50 runs of 50 at normal load, recorded in `sdlc/records/0127-build-test-harness-fixes.md`. Its proof at high load is still owed.
 
 Ian's ruling, 2026-09-25, on item 10: nobody asks the rusqlite maintainers for a fix. Keep the hand-extended API table and add a test.
 
@@ -30,6 +30,9 @@ Done when: `grep -rn TcpListener crates` finds only `engine/http.rs`, `public_ba
 
 ## 2. The loopback reset reply has two silent edges
 
+Settled by ticket 0127. `conformance/backend/tests/listener.rs` pins both edges.
+
+
 Kind: real test gap.
 
 Found by the 0089 code review (`sdlc/records/0089-code-review.md`, FU3). The code now lives in `conformance/backend/src/listener.rs`. No test hits either edge.
@@ -43,6 +46,9 @@ Done when: a backend test sends half a request and closes, and a test resets a 3
 
 ## 3. The secrecy sweep marks only the first entity
 
+Settled by ticket 0127. The sweep marks the second entity's name and kind.
+
+
 Kind: real test gap.
 
 Found by the final review of ticket 0088 (`sdlc/records/0088-review-final.md`, F2). `evidence` in `crates/thinkthen/tests/backend/secrecy.rs:62` builds every relate input from the marker entity and a plain `Acme` of kind `record` (lines 66, 70, 72, 73, 74). `nothing_leaked` (`secrecy.rs:143`) looks only for `EVIDENCE`. `secrecy_relate.rs:26` does the same with `Ada`. A relate command that prints the second entity's name or kind passes every secrecy test. A planted `eprintln!` of `Acme` passed all five secrecy tests at 0088.
@@ -52,6 +58,9 @@ Fix: give the second entity its own marker name and a marked kind. Make `nothing
 Done when: a planted print of the second entity's name or kind fails the secrecy tests.
 
 ## 4. The secrecy relate case fails under load
+
+Fix landed by ticket 0127. The scripted listener keeps its port and counts connections, and the sweep's failure names what the listener saw.
+
 
 Kind: flaky test.
 
@@ -114,6 +123,9 @@ Fix: refuse a `set +e` block that neither prints nor pins each exit code it runs
 Done when: a fixture page with an unchecked command under `set +e` makes `sdlc/scripts/demos` fail.
 
 ## 10. rusqlite's loadable bindings stop at SQLite 3.34
+
+Settled by ticket 0127. `databases/sqlite/tests/test_interrupt.py` records Ian's ruling and fails on a wrong tail count.
+
 
 Kind: cleanup. The ruling is Ian's.
 

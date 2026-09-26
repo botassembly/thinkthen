@@ -230,6 +230,7 @@ fn a_long_address_still_writes_one_private_fixed_marker() {
 fn paused_child(folder: &Path, ready: &Path, stage: &str) -> Command {
     let mut command = Command::new(std::env::current_exe().expect("test executable"));
     command
+        .env_clear()
         .args([
             "--ignored",
             "--exact",

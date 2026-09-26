@@ -16,8 +16,8 @@ spawn <- function(code, env = held) {
   cache <- tempfile("cache-")
   dir.create(cache)
   writeLines(c("library(thinkthen)", code), file)
-  vars <- shQuote(c(paste0("THINKTHEN_CACHE=", cache), env))
-  pid <- system(paste("env", paste(vars, collapse = " "), shQuote(file.path(R.home("bin"), "Rscript")),
+  pid <- system(paste("env", paste(clean_env(inherited, child_values(cache, env)), collapse = " "),
+                      shQuote(file.path(R.home("bin"), "Rscript")),
                       shQuote(file), ">", shQuote(out), "2>&1 </dev/null & echo $!"), intern = TRUE)
   list(pid = as.integer(pid), out = out)
 }

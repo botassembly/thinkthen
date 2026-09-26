@@ -221,7 +221,7 @@ fn route(cases: &Cases, gate: &Arc<Gate>, request: &Recorded) -> Canned {
 }
 
 /// Answer with the drift status and say why on standard error.
-fn drift(why: &str) -> Canned {
+pub(crate) fn drift(why: &str) -> Canned {
     let _ = writeln!(io::stderr(), "conformance-backend: {why}");
     Canned::status(DRIFT, why)
 }

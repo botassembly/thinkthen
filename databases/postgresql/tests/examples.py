@@ -13,6 +13,9 @@ import pathlib
 import subprocess
 import sys
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance" / "children"))
+from children import child_env  # noqa: E402  the shared helper, ticket 0127
+
 FILE = pathlib.Path(__file__).resolve().parents[1] / "examples.json"
 
 
@@ -20,7 +23,8 @@ def psql(socket: str, statements: list[str]) -> str:
     command = ["psql", "-X", "-q", "-At", "-h", socket, "-U", "postgres", "-d", "postgres"]
     for statement in statements:
         command += ["-c", statement]
-    done = subprocess.run(command, capture_output=True, text=True, timeout=30, check=False)
+    done = subprocess.run(command, capture_output=True, text=True, timeout=30, check=False,
+                          env=child_env())
     return (done.stdout + done.stderr).strip()
 
 
