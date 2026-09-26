@@ -29,11 +29,6 @@ PARTS = {"true": "true_", "false": "false_"}
 
 def not_run(case):
     """Why the library cannot run this case, or ``None``."""
-    if case.get("question", {}).get("none"):
-        return "the library's find has no switch for the none option"
-    questions = (case.get("question_set") or {}).get("questions", {}).values()
-    if any(question.get("on") for question in questions):
-        return "a library call reads each record whole and takes no on"
     if case["expect"].get("error", {}).get("kind") == "defect":
         return "no outside boundary reaches an internal invariant failure"
     return None
@@ -111,7 +106,7 @@ def annotated(engine, case, texts, success):
     records = engine.annotate(case["question_set"], texts)
     failed = 0
     for expected in success["answers"]:
-        value = records[expected["exchange"]][expected["name"]]
+        value = records[min(expected["exchange"], len(records) - 1)][expected["name"]]
         failed += isinstance(value, dict) and "failed" in value
         same("bare", value, expected["bare"])
     same("failed", failed, success.get("failed_questions", 0))
@@ -155,7 +150,17 @@ def succeeded(port, case):
                   for edge in edges]
         return same("result", result, success["answers"][0]["bare"])
     if verb == "annotate":
-        return annotated(engine, case, texts, success)
+        records = [json.dumps(case["record"])] if "record" in case else texts
+        return annotated(engine, case, records, success)
+    if verb == "find":
+        spec = case["question"]
+        found = engine.find(spec["find"], spec["units"], none=spec["none"])
+        operation = success["operation"]
+        picked = [row for row in operation["probabilities"] if row["index"] == operation["selected"]]
+        want = None if operation["selected"] is None else {
+            "index": operation["selected"], "unit": spec["units"][operation["selected"]],
+            "probability": picked[0]["probability"]}
+        return same("found", found, want)
     if verb == "rank":
         ranked = engine.rank(case["question"]["decide"], texts)
         rows = [{"index": row["index"], "probability": row["probability"]} for row in ranked]

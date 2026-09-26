@@ -213,7 +213,8 @@ fn run(engine: &Engine, call: &Call, options: CallOptions<'_>) -> Answered {
                 .collect();
             Value::from(rows).to_string()
         }
-        "find" => found(engine, spec, text, options)?,
+        "find" => found(engine, Question::find(spec)?, text, options)?,
+        "find_none" => found(engine, Question::find(spec)?.offering_none()?, text, options)?,
         "annotate" => annotated(engine, spec, text, options)?,
         "details" => engine
             .details_with(detail(&question(spec)?), text, options)?
@@ -227,8 +228,8 @@ fn run(engine: &Engine, call: &Call, options: CallOptions<'_>) -> Answered {
 }
 
 /// The selected unit's index and probability, or `null` when none was selected.
-fn found(engine: &Engine, spec: &str, text: &str, options: CallOptions<'_>) -> Answered {
-    let found = engine.find_with(&Question::find(spec)?, indexed(text)?, options)?;
+fn found(engine: &Engine, asked: Question, text: &str, options: CallOptions<'_>) -> Answered {
+    let found = engine.find_with(&asked, indexed(text)?, options)?;
     let picked = found.candidates().iter().find_map(|candidate| {
         let unit = candidate.input()?;
         (found.selected().map(|held| held.0) == Some(unit.0))
