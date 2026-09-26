@@ -134,7 +134,7 @@ The surfaces are built over `contract/` and the stand-in engine, so none of this
 3. **`recognize` and `relate` on all nine surfaces** against the forty recorded cases, including the database shape for relations that the team's own finding says can run.
 4. **The Polars Series door, then pandas through the same door**, as experiment 228 ruled. Buffer-address equality is the proof of no copy.
 5. **Cancel and deadline on every surface**, each with the fast-backend test that caught the poll bug: Ctrl-C in Python and R, `AbortSignal`, `pg_cancel_backend`, `statement_timeout`, DuckDB's interrupt.
-6. **One examples file per surface, keyed by function, run by that surface's tests.** The site's function pages and surface pages draw every tab from these files (`repos/mktg/products/thinkthen/site.md`), so an example nobody runs cannot reach the site. This is the library team's largest gift to the launch.
+6. **One examples file per surface, keyed by function, run by that surface's tests.** The site's function pages and surface pages draw every tab from these files (the marketing repository's `products/thinkthen/site.md`), so an example nobody runs cannot reach the site. This is the library team's largest gift to the launch.
 7. **Packaging rehearsals, local only.** Build the wheel, the npm package, the gem, the R package, the crate, the C archive, and the three extensions, and install each from the local file on a clean machine or container. Record the install line that worked. `yellow.local` is the build host. Nothing is uploaded.
 8. **The two known blockers.** Find the road around `the-scalar-bind-surface-is-unusable-on-duckdbs-stable-c-api` and `rusqlites-loadable-headers-stop-at-sqlite-3-34`, or record that none exists.
 

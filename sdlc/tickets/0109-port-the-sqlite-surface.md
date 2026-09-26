@@ -180,7 +180,7 @@ Contract 2; state and timing 3; reach 2; proof 3; cost of error 3; total 13. Fin
 
 Builder note, 2026-09-24. Workspace decision `2026-09-24-experiments-reduce-risk.md` asks every product ticket to name these five parts. This note changes no design.
 
-- Starts from: The tag `surfaces-wave7-frozen-2026-09-24b` holds `databases/sqlite/src/lib.rs`, `Cargo.toml`, `README.md`, `examples.json`, and `check.sh`, with 12 files in `tests/` and 3 in `tools/`. `experiments/207-thinkthen-db/FINDINGS.md` found that rusqlite's headers stop at SQLite 3.34, set 256-row chunks, and measured cancel landing 106 ms after the interrupt. `experiments/218-thinkthen-release-qa/wave2/PLAN.md` found that `@q.json` served stale answers after the file changed and that functions were marked safe for untrusted files. `repos/jev-experiments`: none found.
+- Starts from: The tag `surfaces-wave7-frozen-2026-09-24b` holds `databases/sqlite/src/lib.rs`, `Cargo.toml`, `README.md`, `examples.json`, and `check.sh`, with 12 files in `tests/` and 3 in `tools/`. `experiments/207-thinkthen-db/FINDINGS.md` found that rusqlite's headers stop at SQLite 3.34, set 256-row chunks, and measured cancel landing 106 ms after the interrupt. `experiments/218-thinkthen-release-qa/wave2/PLAN.md` found that `@q.json` served stale answers after the file changed and that functions were marked safe for untrusted files. A private experiment repository: none found.
 - Keeps: The eight functions, the two table-valued functions, the `sqlite3_thinkthen_init` entry point, the direct-only and non-deterministic flags, the error codes, and `slide.sql`.
 - Changes: Four setting functions, the engine's disk cache in place of the saved map, a worker per call, relate over entities, a `foldhash` deny exception, and the SQLite 3.50.0 toolchain.
 - Proof: The settings tests with plants, the cancel case, the function list of 12 names and 18 registrations, one exported symbol, the deny plant, and the relate id-mapping test.
@@ -190,7 +190,7 @@ Amended 2026-09-24 and applied in place 2026-09-25: the ADR 0017 amendment of 20
 
 ## Spike finding, 2026-09-24
 
-Experiment 253 on Beelink (`~/workspace/experiments/253-thinkthen-duckdb-sqlite-spike/`, local only) built a spike extension over main at `a2e5f1fa`. Raw logs sit in its `logs/` folder. No finding contradicts an accepted decision.
+Experiment 253 on Beelink (the workspace's `experiments/253-thinkthen-duckdb-sqlite-spike/`, local only) built a spike extension over main at `a2e5f1fa`. Raw logs sit in its `logs/` folder. No finding contradicts an accepted decision.
 
 - **Build: passed.** A `cdylib` over main's `thinkthen` (default features off) and `rusqlite` 0.40.2 with `loadable_extension` built offline with `--locked`. It exports exactly `sqlite3_thinkthen_init`, with the engine linked (6.4 MB) and without it. It loads in the 3.50.0 CLI and in Python through `LD_LIBRARY_PATH`. The stock 3.45.1 library refuses it with the floor sentence. The root deny rejects only `foldhash` 0.2.0 (Zlib), and the one exception passes. The lock holds `hashbrown` 0.16.1 and 0.17.1.
 - **Naming.** Ian's 2026-09-24 ruling names the width setting the throttle. `thinkthen_width(n)` becomes `thinkthen_throttle(n)`. The spike's `thinkthen_throttle` returned its argument. It refused 0 and 33 with main's range sentence of that day, which main now words `a throttle is a whole number from 1 through 32`, and refused every setting call after the engine build. `SQLITE_DIRECTONLY` refused a settings call in a CHECK constraint and in a view.

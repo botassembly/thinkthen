@@ -1,6 +1,6 @@
 # The sdlc history names private repositories
 
-Status: Open
+Status: Open. Quick Fix qf-private-names (`sdlc/records/qf-private-names.md`) cleared every file outside `site/` and added the lint guard. Four lines in `site/` remain for the website agent: `site/README.md` lines 35 and 51, `site/scripts/pull-examples.mjs` line 22, and `site/src/pages/blog/code-that-understands.astro` line 3. Close this when they go. Git history still holds the names. The launch step decides whether that matters, and nothing here rewrites history.
 
 Filed on 2026-09-25 by the coordinator. Ticket 0126's builder found two planning pages that name a private caller's repository and its paths. A sweep of main then found 34 files that name one of three private repositories or their paths. Most are "Starts from" lines in the surface-port tickets, paths into the private marketing repository in closed issues, and a private experiment repository in `how-to-portfolio-study.md`. This repository goes public, and the workspace rule says a public repository never names a private project.
 
@@ -45,4 +45,4 @@ This issue names no private project. The coordinator's sweep list sits outside t
 
 A Quick Fix before the repository goes public replaces each name with a generic consumer, such as "a private experiment repository", "the marketing deck", or "a private caller". Where a path matters as evidence, it says what the path held. Dated records keep their meaning, and only the name changes. Done when a sweep for the private repository names on this machine finds nothing in `git grep`.
 
-A check inside this repository cannot hold the names it bans without naming them. So the sweep runs from the workspace, not from a rung.
+A check inside this repository cannot hold the names it bans without naming them. So `sdlc/scripts/lint` reads them from a list outside the repository, named by `THINKTHEN_PRIVATE_NAMES`, and skips the check when the variable is unset.
