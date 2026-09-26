@@ -90,14 +90,14 @@ fn only_entry(folder: &str) -> io::Result<PathBuf> {
 }
 
 /// Replace an entry's response line, keep its request line, and give back the
-/// old line and the new bytes.
-fn set_response(entry: &Path, to: impl FnOnce(&str) -> String) -> io::Result<(String, Vec<u8>)> {
+/// old line and the new text.
+fn set_response(entry: &Path, to: impl FnOnce(&str) -> String) -> io::Result<(String, String)> {
     let text = fs::read_to_string(entry)?;
     let old = text.lines().find(|kept| kept.starts_with(RESPONSE));
     let old = old.ok_or_else(|| io::Error::other("no response line"))?;
     let written = text.replacen(old, &to(old), 1);
     fs::write(entry, &written)?;
-    Ok((old.to_owned(), written.into_bytes()))
+    Ok((old.to_owned(), written))
 }
 
 #[test]
@@ -138,7 +138,7 @@ fn a_cache_reads_a_partial_entry_as_a_miss() -> io::Result<()> {
     let (partial, planted) = set_response(&entry, |old| old.replacen("0.9", "0.8", 1))?;
     for sent in [2, 3] {
         runs.annotate(ARM, &["--cache", &armed], FAILED, sent)?;
-        assert_eq!(fs::read(&entry)?, planted, "the old entry stays");
+        assert_eq!(fs::read_to_string(&entry)?, planted, "the old entry stays");
     }
     runs.annotate(ARM, &["--replay", &armed], FAILED, 3)?;
 
@@ -160,6 +160,6 @@ fn a_cache_reads_a_partial_entry_as_a_miss() -> io::Result<()> {
     let answers = format!("{RESPONSE}{{\"model\":\"jev-latest\",\"answers\":{{}}}}");
     let (_, planted) = set_response(&entry, |_| answers)?;
     runs.decide(GENERIC, &["--cache", &broken], REFUSED, 8)?;
-    assert_eq!(fs::read(&entry)?, planted, "an undecodable entry stays");
+    assert_eq!(fs::read_to_string(&entry)?, planted, "the entry stays");
     Ok(())
 }
