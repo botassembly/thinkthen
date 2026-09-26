@@ -1,6 +1,6 @@
 # No requests-per-minute pacer
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 07, finding I1. The `records.md` wording fix blocks 0.1 under goal 4. The pacer does not block 0.1.
+Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 07, finding I1. The `records.md` wording fix blocks 0.1 under goal 4. The pacer does not block 0.1. Owner for the wording fix: ticket 0162 on `ticket/0162-a-record-stream-ends-cleanly`, ready for review.
 
 ## What happens
 

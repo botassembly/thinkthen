@@ -73,6 +73,7 @@ const REFUSALS = [
   ["tt.decide('Refund?', 'x', { urgent: true })", 'options.urgent is not a decide key'],
   ["tt.choose('Which team?', 'x', { labels: ['a'] })", 'options.labels is not a choose key'],
   ["tt.rank('Urgent?', ['a', 'b'], { top: 0 })", 'options.top is a positive whole number'],
+  ["tt.find('Which?', ['a', 'b'], { none: 'yes' })", 'options.none is true or false'],
   [
     "tt.score({ score: 'How urgent?', levels: ['low', 'high'] }, 'x', { levels: ['a', 'b'] })",
     'score: a question value carries its own levels; the last object holds call options and top',

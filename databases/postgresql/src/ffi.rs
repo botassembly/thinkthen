@@ -1,14 +1,14 @@
 //! Every `unsafe` line of the extension: PostgreSQL's interrupt flags, the
-//! signal mask a worker starts under, the file privilege check, and the
-//! descriptor opens behind the named-file gate.
+//! signal mask a worker starts under, the file privilege check, the
+//! descriptor opens behind the named-file gate, and the throttle's check.
 
 use std::ffi::c_int;
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::thread::JoinHandle;
 
-use pgrx::check_for_interrupts;
 use pgrx::pg_sys;
+use pgrx::{GucContext, GucFlags, GucRegistry, GucSetting, check_for_interrupts, pg_guard};
 
 // PostgreSQL's interrupt flags, read only. PostgreSQL raises the error; the
 // wait reads these to tell a cancel from any other pending interrupt.
@@ -65,6 +65,47 @@ pub(crate) fn spawn_masked(
         libc::pthread_sigmask(libc::SIG_SETMASK, &raw const before, std::ptr::null_mut());
     }
     spawned
+}
+
+/// Register `thinkthen.throttle` with a check, so PostgreSQL refuses a bad
+/// value where it is set: `SET`, `ALTER ROLE`, or a configuration file.
+/// The check alone judges the range, so every bad value reads one sentence.
+pub(crate) fn define_throttle(setting: &'static GucSetting<i32>) {
+    // SAFETY: the check is guarded, and the setting lives for the process.
+    unsafe {
+        GucRegistry::define_int_guc_with_hooks(
+            c"thinkthen.throttle",
+            c"requests in flight at once, 1 through 32; -1 leaves the engine default",
+            c"",
+            setting,
+            i32::MIN,
+            i32::MAX,
+            GucContext::Suset,
+            GucFlags::default(),
+            Some(check_throttle),
+            None,
+            None,
+        );
+    }
+}
+
+#[pg_guard]
+unsafe extern "C-unwind" fn check_throttle(
+    value: *mut c_int,
+    _extra: *mut *mut std::ffi::c_void,
+    _source: pg_sys::GucSource::Type,
+) -> bool {
+    // SAFETY: PostgreSQL passes the proposed value, live for this call.
+    let Some(refusal) = crate::call::throttle_refusal(unsafe { *value }) else {
+        return true;
+    };
+    let text = std::ffi::CString::new(refusal).unwrap_or_default();
+    // SAFETY: PostgreSQL clears the message before each check and reads it
+    // right after; `pstrdup` copies it into the current memory context.
+    unsafe {
+        pg_sys::GUC_check_errmsg_string = pg_sys::pstrdup(text.as_ptr());
+    }
+    false
 }
 
 /// Whether the current role may read server files by PostgreSQL's own rule:

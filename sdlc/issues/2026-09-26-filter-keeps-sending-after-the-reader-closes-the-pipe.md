@@ -1,6 +1,6 @@
 # `filter` keeps sending after the reader closes the pipe
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 01, issue 1. Blocks 0.1: the spec makes a promise the command breaks, and the break costs paid requests.
+Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 01, issue 1. Blocks 0.1: the spec makes a promise the command breaks, and the break costs paid requests. Owner: ticket 0162 on `ticket/0162-a-record-stream-ends-cleanly`, ready for review.
 
 ## What happens
 

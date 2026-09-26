@@ -10,9 +10,6 @@ const CANONICAL = 'https://api.typesafe.ai/v1/systemone';
 
 /** Cases this surface cannot express, each with its reason. */
 const NOT_RUN = {
-  '18-annotate-two-groups': 'its set reads record parts through `on`, and a library record is one whole text',
-  '18-find-second': 'the public find takes no `none` candidate',
-  '19-find-none': 'the public find takes no `none` candidate',
   '25-defect-fault': 'no input makes the engine panic; the Rust unit test covers the binding guard',
   '30-local-question-file': 'this surface reads a question file only as an annotate set',
 };
@@ -92,10 +89,18 @@ async function check(tt, one, origin, folder) {
       return same('ranking', ranked.map(({ index, probability }) => ({ index, probability })), success.operation.ranking);
     }
     case 'annotate': {
-      const rows = await engine.annotate(one.question_set, texts);
-      const expected = texts.map(() => ({}));
-      for (const answer of success.answers) expected[answer.exchange][answer.name] = answer.bare;
+      const records = one.record ? [JSON.stringify(one.record)] : texts;
+      const rows = await engine.annotate(one.question_set, records);
+      const expected = records.map(() => ({}));
+      for (const answer of success.answers) expected[one.record ? 0 : answer.exchange][answer.name] = answer.bare;
       return same('rows', rows, expected);
+    }
+    case 'find': {
+      const { find, none, units: listed } = one.question;
+      const found = await engine.find(find, listed, { none });
+      const { selected, probabilities } = success.operation;
+      const picked = probabilities.find((row) => row.index === selected);
+      return same('found', found, selected === null ? null : { index: selected, unit: listed[selected], probability: picked.probability });
     }
     case 'recognize': {
       const { kinds, relations } = one.question.recognize;
