@@ -34,7 +34,7 @@ In nonblank lines added, net of removals:
 | `engine/mod.rs`, `public/error.rs`, `cli/failure/recording.rs` | 5 | -2 |
 | Tests | 170 | 150 |
 
-The ratchet rises by 224 lines. It went from 61768 to 61992 on the branch. After the merge of main at `f3176b5d`, which brought 0122 and 0124, it went from 61972 to 62196. Moving the help sentence test into `tests/version.rs` saved one line. Replacing an index in `tests/backend/check.rs` for clippy added one back, so the branch stood at 62196 after the merge of `3a86d814`. Main then fell to 61971 with 0129, and the final figure is 62195, measured after the merge of `6acf7d80`. The ticket allowed 280. The code, the check replies, and their test pins make up most of the growth. The builder deleted the public error's throttle copy and the engine test's two text pins first.
+The ratchet rises by 224 lines. It went from 61768 to 61992 on the branch. After the merge of main at `f3176b5d`, which brought 0122 and 0124, it went from 61972 to 62196. Moving the help sentence test into `tests/version.rs` saved one line. Replacing an index in `tests/backend/check.rs` for clippy added one back, so the branch stood at 62196 after the merge of `3a86d814`. Main then fell to 61971 with 0129, and the branch stood at 62195 after the merge of `6acf7d80`. Main rose to 62101 with the diff Quick Fix, and the final figure is 62325, measured after the merge of `97129349`. The ticket allowed 280. The code, the check replies, and their test pins make up most of the growth. The builder deleted the public error's throttle copy and the engine test's two text pins first.
 
 ## Plants
 
@@ -56,7 +56,7 @@ Each plant was applied alone, its test run, the file restored and touched. All e
 
 ## Ladder
 
-The final run was on merge `78d50824`, after main's `6acf7d80` brought 0129. Each rung ran once, and none was wrapped in the heavy lock: lint 0, install 0, test 0, and spec 0. The test rung ran all 32 test binaries, 370 of them in `backend`. The spec rung ran the pages and 21 green demos. The surfaces rung did not run. No surface changed, because the public throttle sentence reads as the surfaces already pin it.
+The final run was on the merge of main at `97129349`, which brought 0129 and the diff Quick Fix. Each rung ran once, and none was wrapped in the heavy lock: lint 0, install 0, test 0, and spec 0. The test rung ran all 32 test binaries, 370 of them in `backend`. The spec rung ran the pages and 21 green demos. The surfaces rung did not run. No surface changed, because the public throttle sentence reads as the surfaces already pin it.
 
 Earlier runs found four problems, all fixed before the final run.
 

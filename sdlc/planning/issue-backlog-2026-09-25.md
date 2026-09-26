@@ -22,7 +22,7 @@ These are fixes a user would hit, or work Ian ruled into 0.1.
 | 1 | `2026-09-25-public-library-api-gaps.md`, item 8 only | 1 | A live bug on main. Python Polars builds its own cells against ADR 0047 item 10. A widened score of 1.0 prints as `1`. |
 | 2 | `closed/2026-09-25-the-answer-cache-three-fixes.md` (closed by 0124) | 3 | Pruning by the model alias deletes every entry, which loses user data. |
 | 3 | `2026-09-25-recognize-and-relate-scale-and-shape.md`, items 1 and 2 | 2 | relate sends requests Jev refuses, over about 65,536 input tokens. The splitter fix shares the same loop. |
-| 4 | `2026-09-25-diff-exits-0-when-nothing-pairs-and-pairs-different-questions-silently.md` | 1 | diff reports success on a comparison that compared nothing. |
+| 4 | Closed by Quick Fix qf-diff-warnings: `closed/2026-09-25-diff-exits-0-when-nothing-pairs-and-pairs-different-questions-silently.md` | 1 | diff reports success on a comparison that compared nothing. |
 | 5 | `2026-09-25-status-sees-only-command-spend-and-the-sql-total-has-three-leaks.md` | 1 | Spend totals miss library and SQL calls. It shares a root cause with API gaps item 1. Build them together. |
 | 6 | `2026-09-25-audit-is-complete-for-0-1.md` | 4 parts | Ian's ruling: audit grades every function type, scores by the user's measure, shows how steady its bar is, and hands the bar back. |
 | 7 | `2026-09-25-command-wording-and-help-fixes-before-0-1.md` | 9 | Small wording and help fixes. One Quick Fix batch could take most of them. |
