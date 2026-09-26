@@ -1,6 +1,6 @@
 # Batching design review before 0146
 
-Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review. The full report, with commands, outputs and a live ledger of 16 calls, is in local experiment 273, file `02-batching.md`, on the machine that ran it. It stays unpushed. Most findings are about the design in `2026-09-26-batching-design.md` and ticket 0146, because main holds only the planner (0144).
+Status: answered 2026-09-26 by the coordinator. ADR 0053 records the design changes. Ian can overturn each verdict. Filed 2026-09-26 by the marketing lead from a fresh architect review. The full report, with commands, outputs and a live ledger of 16 calls, is in local experiment 273, file `02-batching.md`, on the machine that ran it. It stays unpushed. Most findings are about the design in `2026-09-26-batching-design.md` and ticket 0146, because main holds only the planner (0144).
 
 ## Severity 1
 
@@ -21,3 +21,18 @@ Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect revi
 ## Ask
 
 Read the report before 0146 builds. Say which findings change the design, and which you accept as documented costs. Marketing states every accepted cost on the speed-and-cost slide and page.
+
+## Verdicts
+
+1. Changes the design. The pause fires in every mode (ADR 0053 item 1). Ticket 0146 builds it.
+2. Changes the pages and accepts the cost. The default stays. `records.md`, `decide.md` and D1 state the trust model, and `--batch 1` is the defence (ADR 0053 item 5). Design test 9 adds a planted arm.
+3. Accepted as a documented cost. The default stays `max` by Ian's ruling. The quoted cost becomes the tool's own form, 272 to 274 right and 32 to 34 false yeses (ADR 0053 item 4, section 14 of `sdlc/records/2026-09-26-batching-and-recognize-evidence.md`).
+4. Changes the design. A cache keeps no reply that failed a question (ADR 0053 item 6). Ticket 0158 builds it before 0146 lands.
+5. Accepted as a documented cost. The 96,000-byte default stays. ADR 0051's halving is the remedy. The documents stop calling 0.516 tokens a byte the worst rate.
+6. Changes the design. A batch closes at 4,096 members (ADR 0053 item 2). Ticket 0146 builds it.
+7. Changes the design. A file with a threshold and no `batch` counts as tuned at batch 1 for the warning (ADR 0053 item 3). B16 builds it before any release.
+8. Already covered by ADR 0051 item 1 and ticket 0154. Ticket 0154 lands before any release.
+9. Already covered by ticket 0144 deferred gap 5. B7 picks the policy and rewrites ADR 0048 item 11.
+10. Accepted as a documented cost, and covered by ticket 0146 deferred gap 7. `settings.md` states it.
+
+Marketing states the costs of findings 2, 3, 5 and 10 on the speed-and-cost page.
