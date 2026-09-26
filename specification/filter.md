@@ -5,14 +5,14 @@ Status: **Settled** for version one, by ADR 0007.
 Keeps the records whose evidence reaches the mark.
 
 ```text
-thinkthen filter QUESTION (--lines|--jsonl|--csv|--tsv) [--threshold T] [--field POINTER] [--details] [BACKEND]
+thinkthen filter QUESTION [--lines|--jsonl|--csv|--tsv] [--threshold T] [--field POINTER] [--details] [BACKEND]
 ```
 
 `QUESTION` is the question text, or `@` and the path of a question file holding one `decide` question. [question-file.md](question-file.md) gives the grammar and the precedence, and `--true TEXT` and `--false TEXT` say what a yes and a no mean, exactly as they do on `decide`.
 
 ## What it reads
 
-A stream of records. `filter` requires `--lines`, `--jsonl`, `--csv`, or `--tsv`, because one document is not a stream. `--input FILE` reads a file instead of standard input. [records.md](records.md) gives the framing, the pointer rules, and the order.
+A stream of records. With no framing flag it reads lines, or JSON Lines when a pointer names part of each record. The pointer comes from `--field` or from a question file's `on`. `--lines`, `--jsonl`, `--csv`, or `--tsv` names the framing outright. `--input FILE` reads a file instead of standard input. [records.md](records.md) gives the framing, the pointer rules, and the order.
 
 `QUESTION` is one argument. It states a fact that is true or false of each record.
 
@@ -27,7 +27,7 @@ Each kept line or JSONL record prints as it arrived, in input order. A kept CSV 
 | Option | Meaning | Default |
 | --- | --- | --- |
 | `--threshold T` | A single cut on the probability of yes. The band form is a usage error. See [threshold.md](threshold.md) | `0.5` |
-| `--lines`, `--jsonl`, `--csv`, or `--tsv` | The framing. One of the four is required | None. Its absence is a usage error |
+| `--lines`, `--jsonl`, `--csv`, or `--tsv` | The framing | `--lines`, or `--jsonl` when a pointer is given |
 | `--field POINTER` | The part of each record the model sees. See [records.md](records.md) | The whole record |
 | `--details` | Prints one result object per kept record in place of the kept records | Off |
 | `--input FILE` | Reads the records from a file | Standard input |
@@ -36,7 +36,7 @@ Each kept line or JSONL record prints as it arrived, in input order. A kept CSV 
 | Record options | `--jobs N`, `--record DIR`, `--replay DIR`, `--cache DIR`, as [records.md](records.md) and [recording.md](recording.md) give them | `--jobs 4` |
 | Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-latest` |
 
-`filter` takes no `--quiet`, no `--raw`, and no `--top`. Each is refused by name. `--top` belongs to `rank`, because `filter` keeps records and has no order to cut. A missing framing is a usage error, because one document is not a stream.
+`filter` takes no `--quiet`, no `--raw`, and no `--top`. Each is refused by name. `--top` belongs to `rank`, because `filter` keeps records and has no order to cut.
 
 A band is refused wherever it came from. A band typed on the command line is a usage error at exit 2, and a band a question file holds is a local failure at exit 5, which is the rule [question-file.md](question-file.md) already fixes for every value.
 
@@ -55,7 +55,7 @@ thinkthen filter 'This describes a reproducible bug.' --jsonl --field /body < is
 ```
 
 ```sh
-thinkthen filter 'This mentions an unresolved action.' --lines --threshold 0.9 < notes.txt
+thinkthen filter 'This mentions an unresolved action.' --threshold 0.9 < notes.txt
 ```
 
 ```sh

@@ -1,0 +1,128 @@
+//! `filter` and `rank` with no framing flag: lines, or JSON Lines under a pointer.
+
+use std::io;
+use std::process::Output;
+
+use super::{BY_BODY, QUESTION, RECORDS, by_body, code, printed, said};
+use crate::harness::{Listener, spawn};
+
+/// Three text lines, each earning its own probability from [`BY_BODY`].
+const LINES: &str =
+    "The payout failed again.\nThanks for the quick fix.\nThe card was refused at checkout.\n";
+
+/// Run a command line at one listener, with a key set so any leak would show.
+fn ask(line: &[&str], base: &str, input: &str) -> io::Result<Output> {
+    let at = ["--url", base, "--model", "local-1"];
+    let key = [("THINKTHEN_API_KEY", "sk-test-value")];
+    spawn(&[line, &at[..]].concat(), &key, input.as_bytes())
+}
+
+/// The `state` of every request the listener read, sorted, because requests
+/// run in parallel and arrive in any order.
+fn sent(listener: &Listener) -> Vec<String> {
+    let mut states: Vec<String> = listener
+        .requests()
+        .iter()
+        // A body with no text state reads as empty and fails the comparison.
+        .map(|request| {
+            serde_json::from_slice::<serde_json::Value>(&request.body)
+                .ok()
+                .and_then(|body| Some(body.get("state")?.as_str()?.to_owned()))
+                .unwrap_or_default()
+        })
+        .collect();
+    states.sort();
+    states
+}
+
+#[test]
+fn filter_and_rank_read_lines_when_no_framing_is_named() -> io::Result<()> {
+    let kept = "The payout failed again.\nThe card was refused at checkout.\n";
+    let ordered = format!("{kept}Thanks for the quick fix.\n");
+    for (verb, wanted) in [("filter", kept), ("rank", ordered.as_str())] {
+        let listener = by_body(BY_BODY)?;
+        let output = ask(&[verb, QUESTION], listener.base(), LINES)?;
+        assert_eq!(code(&output), 0, "{verb}: {}", said(&output));
+        assert_eq!(
+            sent(&listener),
+            [
+                "Thanks for the quick fix.",
+                "The card was refused at checkout.",
+                "The payout failed again.",
+            ],
+            "{verb}: one request per line"
+        );
+        assert_eq!(said(&output), "", "{verb}");
+        assert_eq!(printed(&output), wanted, "{verb}");
+    }
+    Ok(())
+}
+
+#[test]
+fn a_pointer_with_no_framing_reads_json_lines() -> io::Result<()> {
+    let folder = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("default-framing");
+    std::fs::create_dir_all(&folder)?;
+    let file = folder.join("on-body.json");
+    std::fs::write(&file, format!(r#"{{"decide":"{QUESTION}","on":"/body"}}"#))?;
+    let asked = format!("@{}", file.display());
+    let rows: [&[&str]; 2] = [
+        &["filter", QUESTION, "--field", "/body"],
+        &["filter", &asked],
+    ];
+    for row in rows {
+        let listener = by_body(BY_BODY)?;
+        let output = ask(row, listener.base(), RECORDS)?;
+        assert_eq!(code(&output), 0, "{row:?}: {}", said(&output));
+        assert_eq!(said(&output), "", "{row:?}");
+        assert_eq!(
+            printed(&output),
+            concat!(
+                "{\"id\":\"R-1\",\"body\":\"The payout failed again.\"}\n",
+                "{\"id\":\"R-3\",\"body\":\"The card was refused at checkout.\"}\n",
+                "{\"id\":\"R-4\",\"body\":\"The refund never arrived.\"}\n",
+            ),
+            "{row:?}"
+        );
+        assert_eq!(
+            sent(&listener),
+            [
+                "Thanks for the quick fix.",
+                "The card was refused at checkout.",
+                "The payout failed again.",
+                "The refund never arrived.",
+            ],
+            "{row:?}: each request sends the body alone"
+        );
+    }
+    Ok(())
+}
+
+#[test]
+fn the_plan_names_a_framing_the_default_chose() -> io::Result<()> {
+    let listener = by_body(BY_BODY)?;
+    let base = listener.base();
+    let plan = |input: &str| {
+        format!(
+            r#"{{"url":"{base}/systemone","model":"local-1","key_env":"THINKTHEN_API_KEY","input":{input},"request":{{"state":"The payout failed again.","model":"local-1","questions":{{"q1":{{"type":"noul","instructions":"{QUESTION}"}}}}}}}}"#
+        ) + "\n"
+    };
+    let cases = [
+        (
+            &["filter", QUESTION, "--dry-run"][..],
+            LINES,
+            plan(r#"{"framing":"lines","field":[],"from":"default"}"#),
+        ),
+        (
+            &["rank", QUESTION, "--field", "/body", "--dry-run"][..],
+            RECORDS,
+            plan(r#"{"framing":"jsonl","field":["/body"],"from":"default"}"#),
+        ),
+    ];
+    for (line, input, wanted) in cases {
+        let output = ask(line, base, input)?;
+        assert_eq!(code(&output), 0, "{line:?}: {}", said(&output));
+        assert_eq!(printed(&output), wanted, "{line:?}");
+    }
+    assert_eq!(listener.connections(), 0, "a plan opens no connection");
+    Ok(())
+}
