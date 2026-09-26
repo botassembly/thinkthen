@@ -69,7 +69,7 @@ Status line: accepted 2026-09-26 on Ian's rulings, built by the batching tickets
    12. Speed ahead of accuracy: the default fills to the limit. Test 9 measures and reports the cost and gates nothing (rulings 1 and 3). The speed target and its owner, ticket S1 (ruling 4).
    13. `--dry-run` plans the first batch and never waits on a pause.
 3. **What this amends.** The table under "What happens today", with the amendment each line gets.
-4. **Which ticket builds each item.** One row per decision item naming the design's ticket label: B3 for items 1 and 2, B4 for 3 to 6 and 13, B5 for 9 and 10's command line, B16 for 8, B7 for 11, B8 to B10 and R7 for item 7's rows, B12a to B13e for the libraries and SQL surfaces. A later ticket's "covered by B0" row then points at one item.
+4. **Which ticket builds each item.** One row per decision item naming the design's ticket label: B3 for items 1 and 2, B4 for 3 to 6 and 13, B5 for 9 and 10's command line, B16 for 8, B7 for 11, B8 to B10 and R7 for item 7's rows, B10 for the question set's `batch` under item 4, B12a to B13e for the libraries and SQL surfaces. A later ticket's "covered by B0" row then points at one item.
 5. **What recognize R0 may rely on.** The list under "What R0 may rely on" below.
 6. **What Ian can overturn.** The design's fifteen "Open items", in its order, plus this ticket's decisions 3, 4 and 6.
 
@@ -79,28 +79,32 @@ The ADR copies each rule. It does not re-argue it. The design issue stays the ar
 
 Accepted ADRs keep their text. Each named line gains the marker `(Amended by ADR 0048, below.)`, and the ADR gains one section `## Amendment, 2026-09-26: ADR 0048 batches records` of at most four sentences. This is the form ADR 0007 already uses at line 103 for ticket 0137.
 
-Settled pages keep today's sentence and gain the new rule after it, in one form: `From batching ticket B4, by ADR 0048: …`. The page stays true today, and the reader sees what changes and when. The ticket that builds the rule deletes the old sentence and the prefix in the same commit. Each page's status line adds `amended by ADR 0048`.
+Settled pages keep today's sentence and gain the new rule after it, in one fixed form: `Not built yet, by ADR 0048 item N: …`. N is the ADR's decision item. The page stays true today. The reader sees what changes and finds the rule in one place. The ticket that builds item N deletes the old sentence and the marker in the same commit, and the ADR's item table names that ticket. `grep -rn "Not built yet, by ADR 0048" specification` lists every leftover. The last batching ticket to land requires that grep to come back empty. Each page's status line adds `amended by ADR 0048`.
 
 | Page | Line | Amendment |
 | --- | --- | --- |
 | `roadmap.md` | 27, 35 | Both rows leave the held table. One sentence under the table says ADR 0048 brought in `--context FILE` and batching |
 | `records.md` | 3 | Status adds ADR 0048 |
-| `records.md` | 81 | From B4: records of one batch share one request, as ADR 0048 item 1 gives |
-| `records.md` | 85, 91 | From B4: the default fills each request to the limit. N records make N requests only at `--batch 1`. The table row gains that condition |
-| `records.md` | 109 | From B4: a batch failure names the range. From B5: `--facts` prints one line on a finished run |
-| `records.md` | new paragraph after 133 | From B4: `jobs` counts batches in flight, and the buffer holds at most `jobs` batches of rows. Line 129 does not change, because ticket J1 edits it |
-| `result.md` | 3, 38 | Status adds ADR 0048. Line 38 names the three fields that can be absent |
-| `result.md` | table after 108 | Rows for `batch`, `batch_warning` and `context_sha256`, each marked with its building ticket. The `usage` and `requests_sent` rows say a batched row carries its share |
-| `channels.md` | 3, 14 | Status adds ADR 0048. Standard error gains one exception: the `--facts` line is for a script |
-| `channels.md` | 32 | `--batch N`, `--context FILE` and `--facts` join the advanced options, marked with their tickets |
-| `channels.md` | 99 | From B4: record-mode `--dry-run` plans the first batch |
+| `records.md` | 81 | Item 1: records of one batch share one request |
+| `records.md` | 85, 91 | Item 2: the default fills each request to the limit. N records make N requests only at `--batch 1`. The table row gains that condition |
+| `records.md` | 109 | Item 6: a batch failure names the range. Item 10: `--facts` prints one line on a finished run |
+| `records.md` | new paragraph after 133 | Item 5: `jobs` counts batches in flight, and the buffer holds at most `jobs` batches of rows. Line 129 does not change, because ticket J1 edits it |
+| `result.md` | 3, 38 | Status adds ADR 0048. Item 9: line 38 names the three fields that can be absent |
+| `result.md` | table after 108 | Item 9: rows for `batch`, `batch_warning` and `context_sha256`. The `usage` and `requests_sent` rows say a batched row carries its share |
+| `channels.md` | 3, 14 | Status adds ADR 0048. Item 10: standard error gains one exception, the `--facts` line, which is for a script |
+| `channels.md` | 32 | Items 3, 10 and 11: `--batch N`, `--facts` and `--context FILE` join the advanced options |
+| `channels.md` | 99 | Item 13: record-mode `--dry-run` plans the first batch |
 | `question-file.md` | 3 | Status adds ADR 0048 |
-| `question-file.md` | new row after 92 | The batch setting: `--batch N`, key `batch`, default `max`, refusals `0`, a fraction, and any text but `max` |
-| `question-file.md` | new paragraph after 100 | `batch` takes four tiers, the typed value, then the environment tier, then the file, then the default. It names the setting the threshold was tuned at, as `profile` names the backend. It stays out of the digest. Line 98's ruling stands for every other setting |
-| `backends.md` | 3, 21 | Status adds ADR 0048. Line 21's last sentence gains: from B3, a batched record plan at the built-in address also closes at the ceiling |
-| `backends.md` | new paragraph after 21 | From B4: profile limits close batches, a retried status resends the whole batch, and a batch is never split and resent |
+| `question-file.md` | new row after 92 | Item 3: the batch setting, `--batch N`, key `batch`, default `max`, refusals `0`, a fraction, and any text but `max` |
+| `question-file.md` | new paragraph after 100 | Items 4 and 8: `--batch` replaces the file's `batch`, as the single values on line 100 replace theirs. `batch` takes four tiers: the typed value, then the environment tier, then the file, then the default. It names the setting the threshold was tuned at, as `profile` names the backend. It stays out of the digest. A question set carries at most one top-level `batch`, as it carries one `profile`. Line 98's ruling stands for every other setting |
+| `backends.md` | 3, 21 | Status adds ADR 0048. Item 2: line 21's last sentence gains that a batched record plan at the built-in address also closes at the ceiling |
+| `backends.md` | new paragraph after 21 | Items 2 and 6: profile limits close batches, a retried status resends the whole batch, and a batch is never split and resent |
 
 The design issue section 6 says B0 adds `batch` to `question-file.schema.json`. Decision 4 moves that to the building tickets.
+
+Section 6 also says B0 adds `--batch` to line 100's list. B0 does not edit line 100, because that line lists overrides the command accepts today, and `--batch` does not exist yet. The new paragraph after it carries `--batch` under the marker. The ticket that builds item 4 moves `--batch` into line 100's list when it deletes the marker.
+
+**`batch` on an `annotate` question set.** A set takes one top-level `batch`, assigned to ticket B10. The design's section 7 says the file's `batch` "names the setting its threshold was tuned at, as its `profile` names the backend". ADR 0032 line 18 lets a question set name one top-level `profile`, and nested questions cannot name another. `batch` follows the same rule. B10 batches `annotate` per `on` group (design section 5 and the B10 row), so B10 adds the set key with its parser and schema, as decision 4 gives.
 
 ### What R0 may rely on
 
@@ -122,8 +126,8 @@ Each is the owner's call under Ian's rulings. Ian can overturn any of them.
 
 1. **One ADR, 0048, for every batching rule.** The design row asks for one. Later tickets each cite an item, so no second batching ADR is needed until the run-facts spelling (B12a).
 2. **Accepted ADRs are amended by marker and a dated section.** `CLAUDE.md` says to amend an accepted ADR only where history matters. The marker keeps the old sentence readable beside its replacement.
-3. **Pages keep today's sentence and add the rule with its building ticket.** The other choice rewrites the pages to the new rule now. That makes the Settled contract false until B4 lands, and a reader cannot tell. The prefix costs one phrase per passage and goes when the rule is built.
-4. **The schema waits for the ticket that parses `batch`.** `specification/fixtures/question-file/README.md` holds the parser and `question-file.schema.json` to one verdict over `corpus.json`. A schema that accepts `batch` while the parser refuses it breaks that agreement, and a corpus case would turn the parser test red. B4 adds `batch` to the `decide` entry with its parser code and corpus cases. B8 adds it to `choose`, and B9 to `tag` and `score`.
+3. **Pages keep today's sentence and add the rule under one fixed marker, `Not built yet, by ADR 0048 item N: …`.** The marker points at the ADR item and not at a design ticket label, so it stays right when tickets are renumbered or split. One fixed phrase lets one `grep` list every leftover. The other choice rewrites the pages to the new rule now. That makes the Settled contract false until the rules are built, and a reader cannot tell.
+4. **The schema waits for the ticket that parses `batch`.** `specification/fixtures/question-file/README.md` holds the parser and `question-file.schema.json` to one verdict over `corpus.json`. A schema that accepts `batch` while the parser refuses it breaks that agreement, and a corpus case would turn the parser test red. B4 adds `batch` to the `decide` entry with its parser code and corpus cases. B8 adds it to `choose`, B9 to `tag` and `score`, and B10 to the `annotate` question set.
 5. **`records.md` line 129 does not change.** Ticket J1 amends the `jobs` paragraph for `relate`. B0 adds its own paragraph after line 133, so the two tickets touch different lines.
 6. **`--batch`, `--context` and `--facts` are advanced options.** Batching is automatic, so a new user needs none of them. They go in the long help with `--jobs`. Short help stays as it is.
 7. **B0 closes no issue.** The batching design stays open until its last ticket lands. B0 does not edit the design issue, which the other in-flight batching tickets also cite.
@@ -140,7 +144,8 @@ Each is the owner's call under Ian's rulings. Ian can overturn any of them.
 | An ADR number another branch takes first | Stop rule 5 |
 | A number in the ADR | It names its section of the evidence record or its experiment |
 | A rule the design states and Ian's rulings do not cover | The ADR copies it and lists it among the author's calls Ian can overturn |
-| A page sentence the building ticket forgets to delete | The ADR's ticket table names the prefix each ticket removes. The ticket reviewer checks it |
+| A page sentence the building ticket forgets to delete | `grep -rn "Not built yet, by ADR 0048" specification` lists it. The ADR's item table names the ticket that removes each marker. The last batching ticket requires the grep to come back empty |
+| `batch` on an `annotate` question set | One top-level key, as `profile` is. Ticket B10 builds it. See "`batch` on an `annotate` question set" above |
 
 ## Proof
 
@@ -148,22 +153,22 @@ B0 adds no test. It changes no behavior, so a new test would check prose. The bu
 
 The proof is the review plus the checks that already guard these pages:
 
-- The reviewer reads the ADR against the design's sections and rulings, item by item. The reviewer reads each amended line in the diff against the amendment table above, and confirms every changed page keeps today's sentence beside the prefixed rule.
+- The reviewer reads the ADR against the design's sections and rulings, item by item. The reviewer reads each amended line in the diff against the amendment table above, and confirms every changed page keeps today's sentence beside the marked rule.
+- `grep -rn "Not built yet, by ADR 0048" specification` lists one hit for each marked passage in the amendment table, and no other. The reviewer checks each hit names the right item.
+- The reviewer confirms the diff touches only the files in `opens`. Nothing under `crates`, `libraries`, `databases`, `conformance`, `spec`, `site`, `demos`, or `specification/fixtures` changes, and `question-file.schema.json` does not change. This is a review item, not a plant.
 - `sdlc/scripts/lint`: the ticket format check, the private-name check, and the rest of the rung.
 - `contract_pages_name_the_tuned_for_key_and_never_the_old_one`, run alone as `flock -o /run/user/1000/thinkthen-heavy.lock env -u THINKTHEN_API_KEY cargo test -p thinkthen --test backend contract_pages_name_the_tuned_for_key`.
-- `sdlc/scripts/spec`, to show no executable page reads an amended sentence.
-- `git diff --stat origin/main` names only the files in `opens`. Nothing under `crates`, `libraries`, `databases`, `conformance`, `spec`, `site`, `demos`, or `specification/fixtures` changes, and `question-file.schema.json` does not change.
+- `grep -rnF -e "never share model context" -e "its own request" -e "Never parsed by a script" -e "has no ceiling" -e "prints nothing there" -e "plan for the first record" -e "the command line, then the file, then the default" spec` comes back empty, before and after the build. No executable page quotes an amended sentence, so none can turn red. `sdlc/scripts/spec` is not run, because it never reads `specification/`.
 
 | Guard | Planted fault that turns it red |
 | --- | --- |
 | The contract-page test | (a) Write a second `{"tuned_for":NAME,"running":NAME}` into the new `batch_warning` row. (b) Write the row's key as `"calibrated"` |
-| The ticket check | (c) Drop the `- Defers:` item from this ticket's Evidence section |
-| The file-scope check | (d) Add `batch` to the `decide` entry of `question-file.schema.json`. The `git diff --stat` line names it |
+| The ticket check | (c) Drop the `- Defers:` item from this ticket's Evidence section. This plant tests the ticket file, not the ADR or the pages |
 
 The four questions, for the guards B0 relies on and adds nothing to:
 
-- **What behavior does each protect?** The contract-page test protects the one warning shape on `result.md`, which the new `batch_warning` row sits beside. The ticket check protects this ticket's Evidence section. The scope check protects decision 4 and "writes no code".
-- **What credible regression fails it?** Copying the profile warning's shape for the batch warning, or naming it with the old key. A ticket missing an Evidence part. A builder adding the schema key early.
+- **What behavior does each protect?** The contract-page test protects the one warning shape on `result.md`, which the new `batch_warning` row sits beside. The ticket check protects this ticket file's Evidence section.
+- **What credible regression fails it?** Copying the profile warning's shape for the batch warning, or naming it with the old key. A ticket missing an Evidence part.
 - **Why does no existing test catch it?** Each is an existing guard. B0 adds nothing a new test would reach.
 - **Does it need a test-only hook?** No.
 
@@ -202,7 +207,8 @@ Contract 2; state and timing 0; reach 2; proof 0; cost of error 1; total 5. Fina
 
 - `question-file.schema.json` gains `batch` in B4, B8 and B9 (decision 4).
 - `specification/settings.md` gains the `batch`, `context` and `facts` rows in C1.
-- The prefixed sentences stay on the pages until their building tickets land.
+- The marked sentences stay on the pages until the tickets that build their items land. The last batching ticket empties the grep.
+- `batch` on an `annotate` question set waits for B10.
 - The library `facts` spelling on a bare-value call waits for the run-facts ADR in B12a.
 - SQL per-call facts stay deferred by `sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md`.
 - The context-time figure stays unclaimed until S1 measures it.
@@ -210,7 +216,8 @@ Contract 2; state and timing 0; reach 2; proof 0; cost of error 1; total 5. Fina
 ## What Ian can overturn
 
 - Every ruling and author's call the ADR copies. The design's "Open items" list names fifteen.
-- Decision 3: prefixed sentences in place of rewriting the pages now.
+- Decision 3: marked sentences in place of rewriting the pages now.
+- A question set taking one top-level `batch`, built by B10, in place of no `batch` on sets.
 - Decision 4: the schema waiting for its parser.
 - Decision 6: the three options in long help only.
 
@@ -221,7 +228,7 @@ None. `sdlc/issues/2026-09-26-batching-design.md` stays open until its last tick
 ## Evidence
 
 - Starts from: Ian's rulings 1 to 11 and the B0 row in `sdlc/issues/2026-09-26-batching-design.md` at `9b667c09`. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` sections 1 to 9, from experiments 208, 260, 261, 262, 268 and 271 and the 2026-09-22 wire probe. The closed packing issue `2026-09-25-packing-and-batching-what-they-buy-what-they-cost-and-the-setting.md`. The recognize design's R0 row. The page lines in "What happens today" at `origin/main` `d410ef4a`.
-- Keeps: Every behavior, help line, fixture, schema and test. Every accepted ADR sentence, marked and not deleted. Every Settled page's current sentence, beside its prefixed replacement. The question digest's canonical form.
+- Keeps: Every behavior, help line, fixture, schema and test. Every accepted ADR sentence, marked and not deleted. Every Settled page's current sentence, beside its marked replacement. The question digest's canonical form.
 - Changes: A new ADR 0048 holds the batching rulings. ADRs 0007, 0008, 0010, 0032 and 0040 carry markers and dated amendment sections. `roadmap.md` drops two held rows. `records.md`, `result.md`, `channels.md`, `question-file.md` and `backends.md` state each new rule beside today's, with its building ticket.
-- Proof: The item-by-item review against the design and the amendment table. `lint`, the contract-page test on `result.md`, `spec`, and the scope check, with plants (a) to (d) each turning one red.
-- Defers: The schema key to B4, B8 and B9. The settings rows to C1. The library `facts` spelling to B12a. SQL per-call facts. Removing each prefix to its building ticket.
+- Proof: The item-by-item review against the design and the amendment table. The marker grep and the `spec/` grep. `lint` and the contract-page test on `result.md`, with plants (a) to (c) each turning one red. Plant (c) tests this ticket file.
+- Defers: The schema key to B4, B8, B9 and B10. The settings rows to C1. The library `facts` spelling to B12a. SQL per-call facts. Removing each marker to the ticket that builds its item.
