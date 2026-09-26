@@ -1,5 +1,4 @@
-//! The names a `recognize` line said and the edges a `relate` line said, the
-//! key's items, and the greedy match that grades one against the other.
+//! Said and keyed `recognize` names and `relate` edges, and the greedy match between them.
 
 use crate::core::json::Json;
 use crate::core::measure::MeasureError;
@@ -48,9 +47,8 @@ fn number(value: Option<&Json>) -> Option<f64> {
 ///
 /// # Errors
 ///
-/// Returns [`MeasureError::Ungradable`] for a line without its run cut, its
-/// kinds or relations, or a value of the command's shape, and
-/// [`MeasureError::Probability`] for a score outside 0 to 1.
+/// [`MeasureError::Ungradable`] for a line without its run cut, kinds or relations, or a
+/// value of the command's shape; [`MeasureError::Probability`] for a score outside 0 to 1.
 pub(crate) fn read(
     line: usize,
     verb: Verb,
@@ -95,23 +93,18 @@ pub(crate) fn read(
         items.push((what, score, loose));
     }
     items.sort_by(|a, b| b.1.total_cmp(&a.1));
-    let lost = entry
-        .member("meta")
-        .and_then(|meta| number(meta.member("failed_questions")));
+    let meta = entry.member("meta");
+    let lost = number(meta.and_then(|meta| meta.member("failed_questions")));
     let partial = lost.is_some_and(|lost| lost > 0.0);
     Ok((Items { said: items, cut }, names, partial))
 }
 
-/// The list of names or edges in a command's value.
+/// The list of edges a `relate` value is, or of names under a `recognize` value's `entities`.
 fn list(verb: Verb, value: &Json) -> Option<&Vec<Json>> {
-    let list = if verb == Verb::Relate {
-        Some(value)
-    } else {
-        value.member("entities")
-    };
-    match list? {
-        Json::Array(list) => Some(list),
-        _ => None,
+    match (verb, value) {
+        (Verb::Relate, Json::Array(list)) => Some(list),
+        (Verb::Relate, _) => None,
+        _ => list(Verb::Relate, value.member("entities")?),
     }
 }
 
@@ -122,11 +115,8 @@ fn text(value: Option<&Json>) -> Option<String> {
 /// A name or an edge read from one object of the command's value; other members are ignored.
 fn what(verb: Verb, held: &Json) -> Option<What> {
     if verb == Verb::Relate {
-        let end = |side: Option<&Json>| {
-            let side = side?;
-            Some((text(side.member("name"))?, text(side.member("kind"))?))
-        };
-        let ends = [end(held.member("source"))?, end(held.member("target"))?];
+        let end = |side: &Json| Some((text(side.member("name"))?, text(side.member("kind"))?));
+        let ends = [end(held.member("source")?)?, end(held.member("target")?)?];
         return Some(What::Edge(text(held.member("relation"))?, ends));
     }
     let place = |name: &str| match held.member(name)? {
@@ -158,11 +148,8 @@ pub(crate) fn key(
         .map(|held| {
             let what = what(verb, held).ok_or(MeasureError::KeyItems(line))?;
             let (What::Name(named, ..) | What::Edge(named, _)) = &what;
-            if names.contains(named) {
-                Ok(what)
-            } else {
-                Err(MeasureError::KeyUnknown(line))
-            }
+            let known = names.contains(named);
+            known.then_some(what).ok_or(MeasureError::KeyUnknown(line))
         })
         .collect()
 }

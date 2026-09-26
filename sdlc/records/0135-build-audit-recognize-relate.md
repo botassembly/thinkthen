@@ -14,15 +14,15 @@ audit now exits 2 when a nonempty key labels no answer in the whole run. The ref
 
 - `core/measure/items.rs` reads the said items, reads the key's items, and runs the greedy match.
 - `answer.rs`, `verbs.rs`, `key.rs`, `rows.rs`, and `optimize.rs` each gained a set-verb branch on the 0125 and 0131 paths. No measure code was copied.
-- `cli/audit/table.rs` holds the table code moved out of `cli/audit.rs`, plus the four set-row lines. The move keeps `cli/audit.rs` at 214 lines and `table.rs` at 275.
+- `cli/audit/table.rs` holds the table code moved out of `cli/audit.rs`, plus the four set-row lines. The move keeps `cli/audit.rs` at 208 lines and `table.rs` at 263.
 - `cli/audit/write.rs` checks each answer's digest against the file's digests: `recognize_sha256` for a recognize file, and both the lines and non-lines digests for a relate file.
 
 ## Deviations from the ticket
 
-1. **`items.rs` crossed its budget by more than a tenth.** It measures 208 against 170. The first cut was 242, trimmed to 208. The read, key, and match for two value shapes need about this much. The stop rule fired and is recorded here. The whole production budget stays inside its tenth, so the builder went on. The coordinator re-scores it at landing.
-2. **Production measures 368 against 340.** That is 8.2% over, inside the tenth. The first lint run failed clippy's 90-line cap on `optimize::suggest` and `table::table`. Two helpers fixed it and added 6 lines.
-3. **`tests/audit_sets.rs` measures 364 against 360.** That is 1% over.
-4. **Plant 2 went red through a panic.** A key name matching twice makes `key.len() - hit` overflow. The test still fails, so the plant counts as RED.
+1. **`items.rs` crossed its budget by more than a tenth.** The first cut was 242, trimmed to 208 against 170. The stop rule fired and was recorded here. The builder went on because the whole production budget stayed inside its tenth. Coordinator re-scored after reviewer trim list: production Rust at most 350, `core/measure/items.rs` at most 195. After the trim list, `items.rs` measures 193 and production 338.
+2. **The first lint run failed clippy's 90-line cap** on `optimize::suggest` and `table::table`. Two helpers fixed it without an allow.
+3. **`tests/audit_sets.rs` measures 372 against 360.** That is 3% over. Code review asked for the eight added lines that pin the no-label refusal before `--write`.
+4. **Plant 2 went red through a panic.** A key name matching twice makes `key.len() - hit` overflow. The test still fails, so the plant counts as RED. The overflow plant broke the `hit <= key.len()` invariant, which holds by construction on real input, so no guard is needed.
 
 ## Proof
 
@@ -47,6 +47,7 @@ Each test ran green on the final code. Each plant was applied alone, its test ru
 | `refusals`: drop the no-label check | RED |
 | `refusals`: let a band through | RED |
 | refusal sweep: the old verb list | RED |
+| `refusals`: check for a label after `write::bars` | RED |
 
 No existing test expected exit 0 from a run with a nonempty key and no label. No golden or table capture byte changed.
 
@@ -56,9 +57,9 @@ Nonblank lines against `origin/main`.
 
 | Budget | Limit | Measured |
 |---|---|---|
-| Production Rust, new and changed | 340 | 368 |
-| `core/measure/items.rs` | 170 | 208, stop rule, see deviation 1 |
-| `tests/audit_sets.rs` | 360 | 364 |
+| Production Rust, new and changed | 350, re-scored | 338 |
+| `core/measure/items.rs` | 195, re-scored | 193 |
+| `tests/audit_sets.rs` | 360 | 372 |
 | `tests/audit_refusals.rs` and `tests/support/measure.rs` changed | 10 | 1 |
 | `specification/audit.md` added | 60 | 26 |
 | `spec/audit.md` added | 15 | 10 |
@@ -67,7 +68,7 @@ Nonblank lines against `origin/main`.
 
 ## Ratchet
 
-The build commit raised the ceiling from 66404 to 67130. After the merge of `origin/main`, the ceiling is 67283: main's 66557 plus this ticket's 726. The lint fix raised it to 67289. `node sdlc/scripts/ratchet.mjs` reads 67289/67289.
+The build commit raised the ceiling from 66404 to 67130. After the merge of `origin/main`, the ceiling is 67283: main's 66557 plus this ticket's 726. The lint fix raised it to 67289. The code review fixes and trims lowered it to 67280. After a second merge of `origin/main`, whose ceiling had fallen to 66536, and the last `items.rs` trims, the ceiling is 67246: main's 66536 plus this ticket's 710. `node sdlc/scripts/ratchet.mjs` reads 67246/67246.
 
 ## Ladder
 
