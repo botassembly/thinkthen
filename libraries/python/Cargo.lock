@@ -423,6 +423,7 @@ name = "thinkthen-python"
 version = "0.0.1"
 dependencies = [
  "pyo3",
+ "serde_json",
  "thinkthen",
 ]
 

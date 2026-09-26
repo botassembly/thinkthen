@@ -4,11 +4,13 @@
 //! column, reads it in place, and releases it (amendment changes 1, 3, and 6).
 //! A pandas answer comes back as Python values and a dtype name (ticket 0122).
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
+use serde_json::value::RawValue;
 use thinkthen::{
     Annotated, Answer, CallOptions, Error, QuestionKind, QuestionSet, RecognizedEntity,
 };
@@ -188,23 +190,32 @@ pub(crate) fn _annotate_frame(
         on_worker(py, controls, held, move |held, options| {
             let (hold, memory) = (Arc::new(held), Readable::snapshot()?);
             let read = arrow::frame(&hold, &on, &memory)?;
-            let columns = answered(&engine, &set, &read.texts, options)?;
-            Ok(arrow::frame_out(&hold, &memory, &read, &columns)?)
+            let kept = arrow::kept(&hold, &memory, &read, set.members().map(|(name, _)| name))?;
+            let columns = answered(&engine, &set, &read.texts, options, true)?;
+            Ok(arrow::frame_out(&hold, kept, &read, &columns)?)
         })
         .map(Arrow::new)
     })
 }
 
-/// One answer column per question of the set, in set order.
+/// One answer column per question of the set, in set order. A failed
+/// question's column, and with `tag_text` a tag column, holds each answer's
+/// text from `value_json`, as the Rust door writes it (ADR 0047 item 10).
 fn answered(
     engine: &thinkthen::Engine,
     set: &QuestionSet,
     texts: &[&str],
     options: CallOptions<'_>,
+    tag_text: bool,
 ) -> Result<Vec<(String, Cells)>, Stop> {
     let rows = engine
         .annotate_with(set, texts.iter().copied(), options)
         .collect::<Result<Vec<_>, _>>()?;
+    let json = rows
+        .iter()
+        .map(|row| serde_json::from_str::<Members>(&row.value_json()))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| format!("the engine wrote a record the door cannot read: {error}"))?;
     let mut columns = Vec::new();
     for (place, (name, kind)) in set.members().enumerate() {
         let values: Option<Vec<&Annotated>> = rows
@@ -212,10 +223,32 @@ fn answered(
             .map(|row| row.values().get(place).map(|one| one.value()))
             .collect();
         let values = values.ok_or("the engine answered a record with no value")?;
-        columns.push((name.to_owned(), arrow::annotated(kind, &values)));
+        let failed = values.iter().any(|one| matches!(one, Annotated::Failed(_)));
+        let cells = if failed || (tag_text && kind == QuestionKind::Tag) {
+            let text = |(value, members): (&&Annotated, &Members)| match value {
+                Annotated::Choice(label) => Ok(label.clone()),
+                _ => members
+                    .get(name)
+                    .map(|raw| (raw.get() != "null").then(|| raw.get().to_owned()))
+                    .ok_or(format!("the engine's record has no member {name}")),
+            };
+            Cells::Texts(
+                values
+                    .iter()
+                    .zip(&json)
+                    .map(text)
+                    .collect::<Result<_, _>>()?,
+            )
+        } else {
+            arrow::annotated(kind, &values)
+        };
+        columns.push((name.to_owned(), cells));
     }
     Ok(columns)
 }
+
+/// One record's members as the engine wrote them, raw JSON text by name.
+type Members = BTreeMap<String, Box<RawValue>>;
 
 /// `annotate(set, df, on=)` over a pandas frame's marked `on` column: each
 /// question's name to its values and dtype name, in set order (ticket 0122).
@@ -234,7 +267,7 @@ pub(crate) fn _annotate_column<'py>(
         let (engine, set) = (engine.get().0.clone(), questions.get().0.clone());
         let source = Source::read(series)?.0;
         let columns = over_texts(py, controls, source, move |texts, options| {
-            answered(&engine, &set, texts, options)
+            answered(&engine, &set, texts, options, false)
         })?;
         let named = PyDict::new(py);
         for (name, cells) in columns {

@@ -8,7 +8,7 @@ backend's answers need not be known here.
 import subprocess
 import sys
 
-from conftest import child_env, clean_env, run
+from conftest import FAKE, child_env, clean_env, run
 
 LISTS = ("filter, rank, find, and relate read a list of str, not a column, and annotate and "
          "recognize read a column only from a Polars or pandas frame with on=. "
@@ -61,7 +61,8 @@ def test_a_column_answers_as_its_list_does(backend, tmp_path):
 def test_what_the_door_refuses_sends_nothing(backend, tmp_path):
     """Decisions 4, 5, and 6: frames that are neither Polars nor pandas and
     list-only verbs are refused, and a null or a number column is refused.
-    Nothing reaches the backend."""
+    Ticket 0136: a question named as a column, after a missing ``on``, and a
+    column nested past 64 levels are refused too. Nothing reaches the backend."""
     printed = run(SETUP + """
     frame = pl.DataFrame({"body": texts})
     said(lambda: engine.annotate(form, pa.table({"body": texts}), on="body"))
@@ -73,6 +74,13 @@ def test_what_the_door_refuses_sends_nothing(backend, tmp_path):
     said(lambda: engine.decide(late, pl.Series([1, 2])))
     said(lambda: engine.decide(late, frame))
     said(lambda: engine.annotate(form, frame, on="missing"))
+    clash = pl.DataFrame({"body": texts, "late": texts})
+    said(lambda: engine.annotate(form, clash, on="body"))
+    said(lambda: engine.annotate(form, clash, on="missing"))
+    deep = pl.Series("deep", [1])
+    for _ in range(70):
+        deep = deep.implode()
+    said(lambda: engine.annotate(form, pl.DataFrame({"body": texts[:1], "deep": deep}), on="body"))
     said(lambda: engine.recognize(frame, kinds=["x"], relations={"r": ("x", "x")}, on="body"))
     """, child_env(backend, tmp_path))
     assert printed.splitlines() == [
@@ -85,6 +93,9 @@ def test_what_the_door_refuses_sends_nothing(backend, tmp_path):
         "UsageError the column's Arrow format is 'l', not text",
         "UsageError a data frame is not a column; pass df[\"name\"], or annotate with on=",
         "UsageError the frame has no column named 'missing'",
+        "UsageError the frame already has a column named 'late'; rename it first",
+        "UsageError the frame has no column named 'missing'",
+        "UsageError a column's schema nests deeper than 64 levels",
         "UsageError recognize with on= takes no relations; ask them of one text",
     ]
     assert backend.count() == 0
@@ -122,6 +133,45 @@ def test_annotate_on_a_frame_keeps_every_row_and_column(backend, tmp_path):
     # The backend answers every text alike. The list call cached every row's
     # text, so a frame call that reads its own rows sends nothing.
     assert printed.splitlines() == ["3"] + 2 * [f"{columns} True True True 0"]
+
+
+def test_a_frame_writes_cells_as_value_json_holds():
+    """Ticket 0136, ADR 0047 item 10: widened and tag cells hold ``value_json``'s
+    text, as in Rust. The listener mixes a failed and an answered ``urgent``.
+    Regression: a score of 1.0 widened as ``1``, or a tag column left a list."""
+    printed = run("""
+    import http.server, json, threading, polars as pl, thinkthen as tt
+    seen = []
+    class Listener(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            asked = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            seen.append(asked["state"])
+            level = {"a": {"0": 0.25, "1": 0.5, "2": 0.25}, "b": {"1": 0.5, "2": 0.5}}
+            answers = {name: {"type": "score", "probabilities": level[asked["state"]]}
+                       if one["type"] == "score" else
+                       {"type": "noul", "noul": 0.1 if '"ship"' in one["instructions"] else 0.9}
+                       for name, one in asked["questions"].items()}
+            body = json.dumps({"model": asked["model"], "answers": answers}).encode()
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        def log_message(self, *_):
+            pass
+    server = http.server.HTTPServer(("127.0.0.1", 0), Listener)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    engine = tt.Engine(base_url=f"http://127.0.0.1:{server.server_port}/v1", cache=False)
+    form = {"version": 1, "questions": {"late": {"decide": "Late?"},
+            "urgent": {"score": "How urgent?", "levels": ["Routine.", "Soon.", "Now."]},
+            "kinds": {"tag": "Which kinds?", "labels": ["bill", "ship"]}}}
+    got = engine.annotate(form, pl.DataFrame({"body": ["a", "b"]}), on="body")
+    print(got.schema, got["urgent"].to_list(), got["kinds"].to_list(), len(seen), sep="\\n")
+    """, clean_env(THINKTHEN_API_KEY=FAKE))
+    marker = '{"failed":{"kind":"backend","cause":"missing_probability"}}'
+    assert printed.splitlines() == [
+        "Schema({'body': String, 'late': Boolean, 'urgent': String, 'kinds': String})",
+        str(["1.0", marker]),
+        str(['["bill"]', '["bill"]']), "2"]
 
 
 def test_recognize_on_a_frame_equals_each_text_alone(backend, tmp_path):

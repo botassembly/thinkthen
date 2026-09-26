@@ -38,7 +38,7 @@ pub(crate) use memory::Readable;
 #[cfg(feature = "probe")]
 pub(crate) use probe::_raw_producer;
 pub(crate) use read::{frame, series};
-pub(crate) use write::{Arrow, Cells, Output, annotated, column, decided, table};
+pub(crate) use write::{Arrow, Cells, Output, annotated, column, decided, kept, table};
 
 /// The caller's frame with its new columns, from `write`.
 pub(crate) use write::frame as frame_out;
