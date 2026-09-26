@@ -88,7 +88,7 @@ Two list items were tried and dropped, because they added lines under the count 
 
 ## Ratchet
 
-The build commit `411cb67a` raised the ceiling from 65,607 to 66,211 and says what grew and where the builder looked for duplication. The trim removed 7 lines. The merge of `origin/main` brought main's ceiling of 65,801. The help test's move added 1 line, its doc comment. The clippy fix added 20: two helper functions and two named types. The review fixes and the trim moved the total to MEASURED, and the ceiling equals it after the merge of `origin/main`.
+The build commit `411cb67a` raised the ceiling from 65,607 to 66,211 and says what grew and where the builder looked for duplication. The trim removed 7 lines. The merge of `origin/main` brought main's ceiling of 65,801. The help test's move added 1 line, its doc comment. The clippy fix added 20: two helper functions and two named types. The review fixes and the trim moved the total to 66,404, and the ceiling equals it after the merge of `origin/main`.
 
 ## Rungs
 
