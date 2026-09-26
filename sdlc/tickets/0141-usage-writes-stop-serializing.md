@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine/usage.rs crates/thinkthen/src/engine/usage/te
 
 # 0141: Usage writes stop serializing requests
 
-Status: ready. Owner: Claude. This is ticket B1 of `sdlc/issues/2026-09-26-batching-design.md`.
+Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Claude. This is ticket B1 of `sdlc/issues/2026-09-26-batching-design.md`.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -69,7 +69,7 @@ Each is the agent's decision. Ian can overturn any of them.
 | `--jobs 1` | The same totals and output bytes as today |
 | A checked addition would overflow | Refused. Persistence stops with the one warning, as today |
 | The process is killed | Counts not yet written are lost. Decision 2 |
-| Ctrl-C while `finish()` waits on a held lock | The first press is ignored, and the second kills the process, as today while a worker waits on the lock. Counts not yet written are lost |
+| Ctrl-C while `finish()` waits on a held lock | The first press cancels the run, but `finish()` keeps waiting on the lock. The second press kills the process by SIGINT, as today while a worker waits on the lock. Counts not yet written are lost |
 
 ## Proof
 
@@ -133,9 +133,10 @@ Contract 1; state and timing 2; reach 1; proof 1; cost of error 1; total 6. Fina
 
 ## Deferred gaps
 
+- `finish()` could stop waiting when the run's cancel flag fires, so the first Ctrl-C would end the wait. It is not taken here.
 - `finish()` has no time bound. A bounded wait would print the warning and exit, but it needs a timeout nobody has asked for.
 - The writer still syncs the file and the folder on every write. The coalescing makes that cheap under load, so fewer syncs gain nothing today.
-- The comment at `crates/thinkthen/src/engine/http.rs:127` says accounting may wait on the usage lock. After this ticket it cannot. Ticket 0142 owns that file. Whichever of 0141 and 0142 lands second fixes the comment.
+- The comment at `crates/thinkthen/src/engine/http.rs:127` says accounting may wait on the usage lock. After this ticket it cannot. Ticket 0142 owns that file and lands first. This build fixes the comment after it.
 - `site/src/pages/backends.astro:48` keeps the retired guarantee until the website agent acts on the issue this build files.
 - A fork while the writer holds `.lock` leaves a copy of that open lock in the child until the child closes it. Today a worker mid-update has the same exposure. The facade never touches the inherited counters.
 - The speed target of the batching design (306 titles in under half a second) needs B2 and batching. This ticket removes one of the two filed limits.
