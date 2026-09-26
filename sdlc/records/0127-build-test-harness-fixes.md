@@ -2,7 +2,7 @@
 
 Status: built; ladder results below; ready for the coordinator to land. Owner: Claude.
 
-Branch `ticket/0127-test-harness-fixes`. The build merged `origin/main` at `3a86d814` before its final ladder. No key was used, and no request left the machine. Ian can overturn every choice this record marks as decided.
+Branch `ticket/0127-test-harness-fixes`. The build merged `origin/main` at `97129349`, after ticket 0129 landed, before its final ladder. No key was used, and no request left the machine. Ian can overturn every choice this record marks as decided.
 
 ## Result
 
@@ -99,11 +99,11 @@ The build first crossed three budgets: the Rust helper, `listener.rs`, and the s
 
 ## Ratchets
 
-Each ceiling moved to its measured total after the merge: `sdlc/ratchet.json` 61972 to 62156, `libraries/c` 2137 to 2139, `libraries/python` Python 2248 to 2253, `libraries/typescript` scripts 743 to 742, `libraries/ruby` Ruby 1526 to 1531, `libraries/r` R 1256 to 1266, `databases/duckdb` Python 1821 to 1822, `databases/sqlite` Python 1179 to 1189, `databases/postgresql` Python 243 to 249.
+Each ceiling moved to its measured total after the last merge. Each rise is this build's own lines: `sdlc/ratchet.json` 62101 to 62285, `libraries/c` 2137 to 2139, `libraries/python` Python 2248 to 2253, `libraries/typescript` scripts 743 to 742, `libraries/ruby` Ruby 1526 to 1531, `libraries/r` R 1256 to 1266, `databases/duckdb` Python 1894 to 1895, `databases/sqlite` Python 1199 to 1209, `databases/postgresql` Python 243 to 249.
 
 ## Ladder
 
-The final ladder ran after the merge of `origin/main` at `3a86d814`, each rung once and none wrapped in `flock`, with `THINKTHEN_API_KEY` unset.
+The final ladder ran after the merge of `origin/main` at `97129349`, each rung once and none wrapped in `flock`, with `THINKTHEN_API_KEY` unset.
 
 | Rung | Result |
 | --- | --- |
@@ -111,9 +111,9 @@ The final ladder ran after the merge of `origin/main` at `3a86d814`, each rung o
 | `lint` | exit 0: `children self-test: 34/34 cases hold`, `children: 0 findings` |
 | `test` | exit 0: each of the four helper checks printed `ok` |
 | `spec` | exit 0 |
-| `surfaces` | first run exit 1, then exit 0 after three fixes. Every surface passed on the second run |
+| `surfaces` | exit 0: all ten surfaces passed |
 
-The first `surfaces` run found three faults this build made. The C door test's `mod child` sat out of `rustfmt` order. The DuckDB harness passed the fake key twice to `clean_env`, once from `extra`. The Ruby conformance child lacked `LANG` and read `cases.json` as US-ASCII. The fixes touch only those three test files and one ratchet, and `lint` ran again after them with exit 0.
+An earlier ladder, after the merge at `3a86d814`, found three faults this build made in `surfaces`. The C door test's `mod child` sat out of `rustfmt` order. The DuckDB harness passed the fake key twice to `clean_env`, once from `extra`. The Ruby conformance child lacked `LANG` and read `cases.json` as US-ASCII. Commit `65740be7` fixed all three.
 
 ## Issues
 
