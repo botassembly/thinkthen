@@ -36,6 +36,14 @@ Fixed by ticket 0125, landed 2026-09-25 from branch `ticket/0125-audit-complete`
 
 Done when: each of the three lines names its record, or the number is gone.
 
+### 6. recognize says an empty text dry run prints zero requests
+
+**Gap.** Found by experiment 218, wave 2, at main `3f7b51ac`. `specification/recognize.md:53` says "An empty text prints `"request_count":0` and `"requests":[]`". Ticket 0126 set the same rule. The command refuses instead: `printf '' | thinkthen recognize --kind 'PER=a person' --dry-run` exits 2 with `thinkthen: the evidence is empty or blank`, and a text of one space does the same. The live run refuses empty text the same way, so dry run and live agree. No test pins the zero-request plan. A script author who reads the page expects exit 0.
+
+**Fix.** Decide which is right. The refusal matches every other verb, so the likely fix is the page: drop the sentence, or say an empty text refuses at exit 2 as a live run does.
+
+Done when: the page and the command agree, and a dry-run test pins the empty-text row.
+
 ## Pages owed for 0.1
 
 ### 5. A guessed verb, a CSV file, or a second path gets no hint
