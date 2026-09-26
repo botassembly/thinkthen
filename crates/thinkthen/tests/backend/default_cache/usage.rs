@@ -215,7 +215,8 @@ fn requests_go_out_while_another_process_holds_the_usage_lock() {
         .mode(0o600)
         .open(usage_folder.join(".lock"))
         .expect("usage lock");
-    lock.lock().expect("the lock, held as a second process would");
+    lock.lock()
+        .expect("the lock, held as a second process would");
     let gathering = Gathering::new(16);
     let listener = Listener::answering(move |_| {
         gathering.hold();
@@ -225,7 +226,9 @@ fn requests_go_out_while_another_process_holds_the_usage_lock() {
         ))
     })
     .expect("listener");
-    let records: String = (1..=16).map(|place| format!("{{\"body\":\"record {place}\"}}\n")).collect();
+    let records: String = (1..=16)
+        .map(|place| format!("{{\"body\":\"record {place}\"}}\n"))
+        .collect();
     let environment = [
         ("THINKTHEN_BASE_URL", listener.base()),
         ("THINKTHEN_API_KEY", "secret-key"),
@@ -233,7 +236,8 @@ fn requests_go_out_while_another_process_holds_the_usage_lock() {
     ];
     let arguments = ["decide", "asks for a refund", "--jsonl", "--field", "/body"];
     let arguments = [&arguments[..], &["--jobs", "16", "--no-cache"]].concat();
-    let mut child = start(&arguments, &environment, records.as_bytes()).expect("the command starts");
+    let mut child =
+        start(&arguments, &environment, records.as_bytes()).expect("the command starts");
 
     let arrived = Instant::now() + Duration::from_secs(10);
     while listener.count() < 16 && Instant::now() < arrived {
@@ -249,7 +253,11 @@ fn requests_go_out_while_another_process_holds_the_usage_lock() {
     drop(lock);
     let output = finish(child, "decide --jobs 16").expect("the command ends");
 
-    assert_eq!((count, peak), (16, 16), "requests in flight while the lock was held");
+    assert_eq!(
+        (count, peak),
+        (16, 16),
+        "requests in flight while the lock was held"
+    );
     assert!(!exited, "the command exited before its totals were written");
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(String::from_utf8_lossy(&output.stdout).lines().count(), 16);

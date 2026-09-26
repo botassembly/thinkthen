@@ -118,20 +118,18 @@ impl Counters {
     /// Wait until every delta counted so far is written, then say whether
     /// persistence failed. Waits as long as another process holds the lock.
     pub(crate) fn finish(&self) -> bool {
-        let busy =
-            |queue: &mut Queue| queue.writer.is_some() && (queue.writing || !queue.pending.is_empty());
+        let busy = |queue: &mut Queue| {
+            queue.writer.is_some() && (queue.writing || !queue.pending.is_empty())
+        };
         let queue = self.shared.queue.lock();
         let settled = queue.and_then(|queue| self.shared.changed.wait_while(queue, busy));
         settled.map_or(true, |queue| queue.failed)
     }
 
     /// The process totals so far. Reading them sends and writes nothing.
-    #[allow(
-        dead_code,
-        reason = "the command reads durable totals; ticket 0086 exposes this snapshot"
-    )]
     pub(crate) fn snapshot(&self) -> Counts {
-        self.shared.queue.lock().map(|queue| queue.totals).unwrap_or_default()
+        let queue = self.shared.queue.lock();
+        queue.map(|queue| queue.totals).unwrap_or_default()
     }
 
     /// Count in memory and queue the delta for the writer. Never touches a file.
@@ -183,15 +181,17 @@ impl Drop for Counters {
 fn write_behind(path: &Path, shared: &Shared, carried: impl FnOnce()) {
     carried();
     let mut queue = shared.queue.lock();
+    let idle = |held: &mut Queue| held.pending.is_empty() && !held.closing;
+    let write = |(month, sum): &(String, Counts)| update(path, month, *sum).is_ok();
     while let Ok(mut held) = queue {
-        held = match shared.changed.wait_while(held, |held| held.pending.is_empty() && !held.closing) {
+        held = match shared.changed.wait_while(held, idle) {
             Ok(held) if !held.pending.is_empty() => held,
             _ => return,
         };
         let taken = std::mem::take(&mut held.pending);
         held.writing = true;
         drop(held);
-        let written = taken.iter().all(|(month, delta)| update(path, month, *delta).is_ok());
+        let written = taken.iter().all(write);
         queue = shared.queue.lock().map(|mut held| {
             held.writing = false;
             held.failed |= !written;
