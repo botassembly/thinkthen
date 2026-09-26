@@ -516,60 +516,69 @@ export const TAB_SURFACE = {
 export const HOWTOS = [
   {
     slug: 'triage-a-support-inbox', title: 'Triage a support inbox', reader: 'for support teams',
+    goal: 'Two commands in a pipe keep the messages that need a reply and label each by kind and urgency.',
     said: 'Keep the messages that need a reply, and label each by kind and urgency. `filter` keeps them. `annotate` labels them.',
     functions: ['filter', 'annotate'],
     see: { '1-inbox': 'Three messages need a reply, each beside its kind and its urgency from 0 to 2. The order needed tonight sits near 2, Immediate. The thank-you note drops out.' },
   },
   {
     slug: 'screen-studies-for-a-review', title: 'Screen studies for a review', reader: 'for researchers',
+    goal: 'A band sorts the clear studies in or out and hands a person the ones too thin to judge.',
     said: 'Sort the clear studies in or out, and hand a person the ones that give too little to judge. `decide` with a band does both.',
     functions: ['decide'],
-    see: { '1-studies': 'The survey with a result is true and the opinion essay is false. The bare title gives too little to judge, so it comes back null for a person.' },
+    see: { '1-studies': 'The survey with a result is true and the opinion essay is false. The bare title gives too little to judge. Inside the band 0.1:0.9, it comes back null for a person.' },
   },
   {
     slug: 'code-open-ended-survey-answers', title: 'Sort survey answers by mood and problem', reader: 'for survey and market researchers',
+    goal: 'score finds the unhappy answers and tag names what went wrong in each.',
     said: 'Place every answer between unhappy and happy, then name what went wrong. `score` places them. `tag` names the problem.',
     functions: ['score', 'tag'],
     see: { '1-answers': 'Three answers are unhappy. Each prints beside its tag: price, bugs, and speed. The happy answer drops out.' },
   },
   {
     slug: 'join-two-tables-by-meaning', title: 'Join two tables by meaning', reader: 'for data analysts',
+    goal: 'filter joins two tables on meaning when no key and no shared word links them.',
     said: 'Match each ticket to the incident it describes, even when the words differ. The loop pairs every ticket with every incident. `filter` keeps the pairs that match.',
     functions: ['filter'],
     see: { '1-join': 'Of the four pairs, the two that match come back: the card failure with the payment gateway, and the late export with the export queue.' },
   },
   {
     slug: 'group-alerts-into-incidents', title: 'Group alerts into incidents', reader: 'for on-call engineers',
+    goal: 'find picks the open incident a new alert belongs to, or none, and decide confirms the match.',
     said: 'Tell whether a new alert belongs to an open incident. `find` picks the incident, or none. `decide` confirms the match.',
     functions: ['find', 'decide'],
     see: {
       '1-match': 'find picks INC-1 for the card failure, and decide confirms the match with true.',
-      '2-none': 'No open incident covers a full disk. find prints nothing, so decide never runs.',
+      '2-none': 'No open incident covers a full disk. find prints nothing, and decide never runs.',
     },
   },
   {
     slug: 'rank-the-inbound-leads', title: 'Rank the inbound leads', reader: 'for sales teams',
+    goal: 'Three functions in one pipe drop the noise, order the leads, and route each to a team.',
     said: 'Drop the noise, put the buyer ready to pay first, and send each to the right sales team. `filter`, `rank`, and `choose` do it in one pipeline.',
     functions: ['filter', 'rank', 'choose'],
     see: { '1-leads': 'The unsubscribe and the compliment on the talk drop out. Neither asks to buy. The team of six buying today comes first and goes to smb. The 200 seats next quarter go to enterprise.' },
   },
   {
     slug: 'screen-a-post-before-it-goes-up', title: 'Screen a post before it goes up', reader: 'for community moderators',
+    goal: 'One narrow decide question per rule judges a post against each rule on its own.',
     said: 'Judge a post against each rule on its own. `decide` asks one narrow question per rule.',
     functions: ['decide'],
     see: {
-      '1-insult': 'The post calls the author an idiot, so decide says true and exits 0.',
-      '2-spam': 'The post is not spam, so decide says false and exits 1.',
+      '1-insult': 'The post calls the author an idiot. decide says true and exits 0.',
+      '2-spam': 'The post is not spam. decide says false and exits 1.',
     },
   },
   {
     slug: 'check-an-expense-against-the-policy', title: 'Check an expense against the policy', reader: 'for finance staff',
+    goal: 'find pulls the policy rule that covers an expense, and decide says whether the expense fits it.',
     said: 'Check an expense against your policy. `find` pulls the rule. `decide` says whether the expense fits.',
     functions: ['find', 'decide'],
     see: { '1-expense': 'The rule find pulled prints beside the answer. The $60 dinner fits the $75 meal rule.' },
   },
   {
     slug: 'split-a-scanned-packet-into-documents', title: 'Split a scanned packet into documents', reader: 'for back-office staff',
+    goal: 'choose names each page and decide marks where a new document starts.',
     said: 'Split a stack of scanned pages into documents. `choose` says what kind each page is. `decide` marks where a new document starts.',
     functions: ['choose', 'decide'],
     see: {
@@ -585,21 +594,25 @@ export const HOWTOS = [
 export const TECHNIQUES = [
   {
     slug: 'if', title: 'Branch with if', label: 'if',
-    said: '`decide --quiet` prints nothing. Its exit code is the answer, so `if` reads it directly.',
-    see: { '1-if': 'The ticket asks for a refund, so the if branch picks the refunds queue.' },
+    goal: '`if` reads the exit code of `decide --quiet` directly.',
+    said: '`decide --quiet` prints nothing. Its exit code is the answer. `if` reads it directly.',
+    see: { '1-if': 'The ticket asks for a refund. The if branch picks the refunds queue.' },
   },
   {
     slug: 'case', title: 'Route with case', label: 'case',
+    goal: '`case` routes on the bare label `choose --raw` prints.',
     said: '`choose --raw` prints the bare label. `case` sends each label to its own queue.',
-    see: { '1-case': 'The password message belongs to account, so the queue is identity.' },
+    see: { '1-case': 'The password message belongs to account. The queue is identity.' },
   },
   {
     slug: 'not-sure', title: 'Handle not sure', label: 'not sure',
+    goal: 'A script reads three exit codes and sends not sure to a person.',
     said: '`case $?` reads the three exit codes of `decide`: 0 for yes, 1 for no, and 3 for not sure.',
-    see: { '1-route': 'The refund goes to refunds and the thanks gets a reply. The send-back line lands in the band and goes to a person.' },
+    see: { '1-route': 'The refund goes to refunds and the thanks gets a reply. The send-back line lands in the band 0.2:0.8 and goes to a person.' },
   },
   {
     slug: 'threshold-band', title: 'Set a cut or a band', label: 'cut or band',
+    goal: 'One number is a cut, and two numbers make a band with a not-sure middle.',
     said: 'One number is a cut. Two numbers are a band, and the middle comes back as null.',
     see: {
       '1-cut': 'At a cut of 0.5, the send-back line counts as a refund.',
@@ -608,24 +621,28 @@ export const TECHNIQUES = [
   },
   {
     slug: 'while-read', title: 'Loop over lines', label: 'while read',
+    goal: '`while read` acts on the answer for each line.',
     said: '`while read` hands each line to `decide` on its own. The loop acts on each answer.',
     see: { '1-loop': 'The two complaints open a case. The thanks and the question about blue do not.' },
   },
   {
     slug: 'pipeline', title: 'Chain questions with pipes', label: 'pipes',
+    goal: 'Two filters in a pipe keep the records that pass both questions.',
     said: 'Two filters in a row keep the records that pass both questions.',
-    see: { '1-and': 'The first filter keeps what is about the item. The second keeps the complaints among them. The question about blue is not a complaint, so it drops out.' },
+    see: { '1-and': 'The first filter keeps what is about the item. The second keeps the complaints among them. The question about blue is not a complaint. It drops out.' },
   },
   {
     slug: 'batches', title: 'Ask many files at once', label: 'xargs',
+    goal: '`xargs -P` asks one question of many files in parallel.',
     said: 'A function asks one question of one file. `xargs -P 4` runs it on four files at a time.',
     see: { '1-xargs': 'Two tickets ask for money back: T-1 and T-3.' },
   },
   {
     slug: 'ci-gate', title: 'Fail a build', label: 'CI gate',
+    goal: 'A filter in a check script fails the build when a line matches.',
     said: '`filter` finds the lines that hedge. The script exits 1 when it finds any, and the build fails.',
     see: {
-      '1-pass': 'No line hedges, so the check prints nothing and passes.',
+      '1-pass': 'No line hedges. The check prints nothing and passes.',
       '2-fail': 'One line hedges. The check prints it and exits 1.',
     },
   },
@@ -634,24 +651,28 @@ export const TECHNIQUES = [
 export const RECIPES = [
   {
     slug: 'label-a-json-file', title: 'Label a JSON file and keep its ids', label: 'Label a JSON file',
-    said: 'Label every ticket in a JSON array by kind and urgency. `--field /body` sends only the body, so the id and the date ride through. Run it again and the saved answers come back at no further cost.',
+    goal: 'annotate labels a JSON array and keeps every other field, and a second run costs nothing.',
+    said: 'Label every ticket in a JSON array by kind and urgency. `--field /body` sends only the body. The id and the date ride through. Run it again, and the saved answers come back at no cost.',
     see: {
       '1-label': 'Each ticket keeps its id and date, and gains a kind and an urgency from 0 to 2. The double bill in September is billing.',
-      '2-again': 'The same command again, with the details of the first ticket. The answers come from the saved answers, and no request is sent.',
+      '2-again': 'The same command again, with the first ticket in full. `cached` is true and `requests_sent` is 0.',
     },
   },
   {
     slug: 'review-a-diff-by-what-it-does', title: 'Review a diff by what it does', label: 'Review a diff',
+    goal: 'decide separates the hunks of a diff that change behavior from those that do not.',
     said: '`jq` cuts a unified diff into hunks. `decide` asks of each hunk whether it changes what the code does, and the file and hunk header ride through.',
     see: { '1-diff': 'Two hunks change what the code does: the refund limit and the rounded tax. The comment and the rename do not.' },
   },
   {
     slug: 'lint-prose-for-hedging', title: 'Lint prose for hedging', label: 'Lint prose',
+    goal: 'filter finds the hedging lines in a draft and keeps their line numbers.',
     said: '`jq` numbers the lines. `filter` keeps the lines that hedge, and each comes back as it went in, line number and all.',
     see: { '1-lint': 'The two hedging lines come back with their line numbers.' },
   },
   {
     slug: 'fill-a-form-by-selection', title: 'Fill a form by selection', label: 'Fill a form',
+    goal: 'annotate fills a form with picks from your own lists, and no field holds model-written text.',
     said: 'Every field is a pick from a list you wrote, or true or false. No character in the form comes from a model.',
     see: { '1-form': 'Each request gets a plan, a topic, and whether to call back, all from the lists in the form.' },
   },

@@ -1,6 +1,6 @@
 ---
 // Goal: teach one shell form or one small job with ThinkThen, in one short
-// real run a reader can copy.
+// real run a reader can copy. Each page's own goal sits in catalog.mjs.
 import SidePage from '../../../../layouts/SidePage.astro';
 import Terminal from '../../../../components/Terminal.astro';
 import Code from '../../../../components/Code.astro';
@@ -12,6 +12,7 @@ export function getStaticPaths() {
 }
 
 const { page } = Astro.props;
+if (!page.goal) throw new Error(`bash: ${page.slug} has no goal`);
 const dir = `how-tos/bash/${page.slug}`;
 const runs = captioned(dir, page.see);
 const inputs = files(dir);

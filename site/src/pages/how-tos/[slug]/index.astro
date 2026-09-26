@@ -1,6 +1,6 @@
 ---
-// Goal: show one business job done end to end with real runs, so a reader
-// can copy the commands and point them at their own data.
+// Goal: show one business job done end to end with real runs a reader can
+// copy. Each how-to's own goal sits in catalog.mjs.
 import Base from '../../../layouts/Base.astro';
 import Terminal from '../../../components/Terminal.astro';
 import Code from '../../../components/Code.astro';
@@ -20,10 +20,7 @@ const inputs = files(page);
 // meta description drops the marks.
 const parts = (text) => text.split('`').map((p, i) => ({ code: i % 2 === 1, text: p }));
 const plain = (text) => text.replaceAll('`', '');
-
-// Only a function with exit 3 can answer not sure. The closing sentence
-// promises it only when one of the how-to's functions can.
-const unsure = howto.functions.some((n) => FUNCTIONS.find((f) => f.name === n).exits.some(([code]) => code === 3));
+if (!howto.goal) throw new Error(`how-tos: ${howto.slug} has no goal`);
 ---
 <Base title={howto.title} description={plain(howto.said)}>
   <div class="eyebrow">{howto.reader}</div>
@@ -40,6 +37,4 @@ const unsure = howto.functions.some((n) => FUNCTIONS.find((f) => f.name === n).e
       return <a class="tile" href={`/functions/${fn.name}/`}><b>{fn.name}</b><span>{fn.line}</span></a>;
     })}
   </div>
-
-  <p>Copy the commands and point them at your own data.{unsure && ' Anything in the band comes back as not sure for a person to check.'}</p>
 </Base>
