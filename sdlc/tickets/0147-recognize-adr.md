@@ -16,7 +16,7 @@ Ian's recognize rulings of 2026-09-26 become one accepted ADR, and the Settled p
 
 The authority is `sdlc/issues/2026-09-26-recognize-design.md`, which Ian sent to the main builder on 2026-09-26 with the review findings and his rulings applied. This is its ticket R0. The R0 row lists the scope: word rules, `confirm` as the default, stated relations, pieces and windows for long texts, the hard cap, `recognize --jobs` for one document, and the recognize batch shape. The row says R0 lands after batching B0. B0 landed as ticket 0139, ADR 0048. Ian can overturn each ruling, as the design's "Open items" list says.
 
-Ian's goal is a first-class name recognizer, and speed wins over accuracy. R0 writes no code. It changes no behavior, help text, fixture, schema or digest. `recognize` behaves exactly as today after it lands.
+Ian's goal is a first-class name recognizer, and speed wins over accuracy. R0 writes no code. It changes no behavior, help text, fixture, schema or digest. `recognize` behaves the same after it lands.
 
 ## What happens today
 
@@ -71,20 +71,22 @@ Status line: accepted 2026-09-26 on Ian's rulings, through ticket 0147, built by
    6. Pieces and windows: the ceiling or a profile's limits fill a piece, a window of up to 200 words each side, `--window N` from 0 to 5,000, the evidence as a byte range of the original text, names forming after every request, a failed request failing the text, offsets unchanged, and one piece at an address with no ceiling and no profile. The known risk of a far clue (section 6).
    7. The hard cap: 600,000 bytes, exit 2 before any request at every address, no option, the message naming size and limit and echoing no text. In record mode it refuses that record, as a record over 16 MiB is refused (section 6).
    8. `recognize --jobs N` on one document, 1 to 32, default 4. Ticket 0143 already runs the pieces at once, and only the flag is missing (section 6, "Concurrency").
-   9. The recognize batch shape: ADR 0048 items 2 to 6 and 13 apply. Evidence `{"records":[T1,…,TN]}`, the word-question prefix `In record K of the list. `, no quote prefix, a batch of one sending today's bytes, a text too big for a batch of one going alone and splitting by item 6, a batch's `confirm` questions in one request after its word answers, relations per text, batching on by default, design test 9 reporting and gating nothing. `recognize` keeps one document as its default input, and `--field` with no framing flag reads one JSON document (section 7 and "Many short texts, one per line").
+   9. The recognize batch shape: ADR 0048 items 2 to 6 and 13 apply. Evidence `{"records":[T1,…,TN]}`, the word-question prefix `In record K of the list. `, no quote prefix, a batch of one sending today's bytes, a text too big for a batch of one going alone and splitting by item 6, and until R4 lands going alone as one request with the whole text, a batch's `confirm` questions in one request after its word answers, relations per text, batching on by default, design test 9 reporting and gating nothing. `recognize` keeps one document as its default input, and `--field` with no framing flag reads one JSON document (section 7 and "Many short texts, one per line").
    10. Question identity: the new canonical order, `words` holding the five lists in order, every recognize digest changing, `audit --write` refusing old runs with its existing sentence, and `batch` and `jobs` staying out of the digest ("Defaults and what a caller can change").
    11. Output: bare output unchanged, `question.words`, `question.boundary`, `question.window`, `answer.confirm`, and `meta.batch` and `--facts` by ADR 0048 items 9 and 10 ("Output and run facts").
-   12. Dry run: `request_count` counts the requests formed before any answer, `confirm_questions_upper_bound` after it, each split request naming its evidence offsets, and the first batch under a framing flag ("Output and run facts").
+   12. Dry run: `request_count` counts the requests formed before any answer, `confirm_questions_upper_bound` after it, at 0 with one kind or under `run` and otherwise floor((W + 1) / 3) for each text, summed over a batch's texts, each split request naming its evidence offsets, and the first batch under a framing flag ("Output and run facts").
    13. Secrecy: no new failure line echoes a text, list entry, name or key, and the `Debug` rules ("Secrecy").
 3. **What this amends.** The table under "What happens today", with the amendment each line gets.
-4. **Which ticket builds each item.** One row per item, naming the design's labels. R2, R3 and R4 build items 2, 3 and 6 on the command and question file. R6 carries `keep`, `infixes`, `boundary` and `window` to the libraries and SQL. R5 builds item 5. R4 builds item 7. R4b builds item 8 and depends on R0 alone. R7 builds item 9 after batching B4 and B5. Items 10 to 13 split across R2, R3, R4 and R7 by the key or path each adds.
-5. **What Ian can overturn.** The design's fifteen "Open items", in its order, plus this ticket's decisions 3 to 7.
+4. **Which ticket builds each item.** One row per item, naming the design's labels. R2, R3 and R4 build items 2, 3 and 6 on the command and question file. R6 carries `keep`, `infixes`, `boundary` and `window` to the libraries and SQL. R5 builds item 5 and removes the `relate.md` marker. R4 builds item 7. R4b builds item 8 and depends on R0 alone. R7 builds item 9 after batching B4 and B5. Items 10 to 13 split across R2, R3, R4 and R7 by the key or path each adds.
+5. **What Ian can overturn.** The design's fifteen "Open items", in its order, plus ticket 0147's calls: decisions 3 to 7, item 7's record-mode refusal, and item 9's too-big text going alone, as one whole-text request until R4 lands. The status line says Ian can overturn each item and every rule the ADR copies.
 
 The ADR copies each rule. It does not re-argue it. The design issue stays the argument, and the evidence record stays the measurement.
 
 ### The amendments
 
 Accepted ADRs keep their text. Each named ADR line gains a marker, and ADR 0040 gains one section `## Amendment, 2026-09-26: ADR 0050 windows recognize texts` of at most four sentences. Settled pages keep today's sentence and gain the new rule after it as `Not built yet, by ADR 0050 item N: …`, the form ADR 0048 set. Each page's status line adds `amended by ADR 0050`. The ticket that builds item N deletes the old sentence and the marker in the same commit.
+
+Build rule: place each amendment by the sentence the table under "What happens today" quotes, not by its line number. Merge `origin/main` before editing and re-read every line number, because ticket 0146 may land first and move lines.
 
 | Where | Line | Amendment |
 | --- | --- | --- |
@@ -111,7 +113,7 @@ Accepted ADRs keep their text. Each named ADR line gains a marker, and ADR 0040 
 | `records.md` | 3 | Status adds ADR 0050 |
 | `records.md` | 129 | Item 8: `recognize` also accepts `--jobs` for one text, whose pieces are distinct requests |
 | `relate.md` | 3 | Status adds ADR 0050 |
-| `relate.md` | new paragraph after 5 | `relate` sends no text, so its answers come from what the model knows of the world. Item 5: a `recognize` relation means the text states it, and `relate` keeps its wording |
+| `relate.md` | new paragraph after 5 | One sentence outside the marker, because it is true today: `relate` sends no text, so its answers come from what the model knows of the world. Then the marker, item 5: a `recognize` relation means the text states it, and `relate` keeps its wording. R5 removes the marker |
 | `backends.md` | 3 | Status adds ADR 0050 |
 | `backends.md` | 17 | Item 6: word and `confirm` requests carry a piece's words and window, and the built-in ceiling splits them. Relation requests keep the complete text |
 | `audit.md` | 3 | Status adds ADR 0050 |
@@ -129,7 +131,7 @@ Each is the owner's call under Ian's rulings. Ian can overturn any of them.
 3. **The recognize settings stay under "Settings on the way" and are not table rows.** `sdlc/scripts/settings` fails a table row whose flag is in no command's help, and `--word-keep`, `--word-infix`, `--boundary` and `--window` are in none yet. Plant (a) proves it. `settings.md` line 85 already rules that the ticket that lands a setting moves its line into the table. R0 adds the ADR item to each line. A table row marked not built would need the check to learn an exception, which weakens it.
 4. **R4b depends on R0 alone.** Ticket 0143 already sends a split text's pieces at once, and a profile splits a text today. The ADR's ticket table says so. R4b's proof, a loopback count reaching the job count on a split text, works with a `max_questions` profile before R4 lands. The design issue's R4b row is left as Ian sent it, and the ADR governs.
 5. **R6 carries `window` to the libraries and SQL.** The design's settings table gives `window=` and a `window` key on every surface, and no ticket row builds them. R6 already carries the other recognize settings there.
-6. **The design's open details get one spelling each.** A batch's `confirm` request carries the batch's evidence object, and each question takes its record's `In record K of the list. ` prefix, as the word questions do. `confirm_questions_upper_bound` follows `request_count` in the plan's key order. It is 0 with one kind, and otherwise the most runs of two or more words the text's words can hold. R4 names the two evidence-offset keys of a split request, because the design leaves them open.
+6. **The design's open details get one spelling each.** A batch's `confirm` request carries the batch's evidence object, and each question takes its record's `In record K of the list. ` prefix, as the word questions do. `confirm_questions_upper_bound` follows `request_count` in the plan's key order. It is 0 with one kind or under `run`. Otherwise it is floor((W + 1) / 3) for each text, where W is the text's word count under the effective rules. That is the most runs of two or more words, each separated by another word, that W words can hold. It counts per text, not per piece, because a run belongs to one piece, and a batch sums it over its texts. A table test in R3 can pin it: W of 1, 2, 4 and 5 give 0, 1, 1 and 2. R4 names the two evidence-offset keys of a split request, because the design leaves them open.
 7. **Each canonical key enters the digest with the ticket that builds it.** The order is fixed now. R2 adds `words`, R3 `boundary`, R4 `window`. The digests change more than once before 0.1, and no release ships between those tickets.
 8. **The design issue stays open and unedited.** It closes when its last ticket lands.
 9. **R0 edits no line ticket 0146 edits.** Ticket 0146, B4, opens `records.md`, `backends.md`, `channels.md`, `question-file.md`, `result.md` and `settings.md`. It changes the ADR 0048 markers at `channels.md` 32 and 99, `records.md` 81, 85, 91, 109 and 135, `backends.md` near 21, `result.md` 102 and 103, the `question-file.md` settings table and precedence paragraph, and `settings.md` 87. R0 inserts its `channels.md` paragraph after the blank line 33, not on line 32, and leaves `settings.md` 85 and 87 alone.
@@ -142,7 +144,7 @@ Each is the owner's call under Ian's rulings. Ian can overturn any of them.
 | `settings.md` table | Untouched. The recognize lines stay under "Settings on the way", by decision 3 |
 | `question-file.schema.json` and `recognize_file.rs` key lists | Untouched. `sdlc/scripts/settings` reads both, and R2 adds the keys with their parser |
 | The design issue | Untouched, by decision 8 |
-| A rule the design states and Ian's rulings do not cover | The ADR copies it and lists it among the author's calls |
+| A rule the design states and Ian's rulings do not cover | The ADR copies it. The ADR's status line says Ian can overturn each item and every rule it copies, and the rule appears among the design author's calls or ticket 0147's calls |
 | A number in the ADR | It names its evidence section or experiment |
 | A marked sentence a building ticket forgets to delete | The grep lists it. The ADR's ticket table names the ticket that removes it |
 | `recognize.md` line 7 or 21, which several items change | One marker paragraph after each line names every item that reaches it |
@@ -226,6 +228,8 @@ Contract 2; state and timing 0; reach 2; proof 0; cost of error 1; total 5. Fina
 - Decision 5: R6 carrying `window`.
 - Decision 6: the spellings of the batched `confirm` request and the dry-run bound.
 - Decision 7: each digest key entering with its building ticket.
+- ADR item 7: a text over the cap in record mode refuses that record.
+- ADR item 9: a text too big for a batch of one goes alone, as one whole-text request until R4 lands. R7 keeps its dependencies.
 
 ## Closes
 
