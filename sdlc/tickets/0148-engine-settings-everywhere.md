@@ -18,7 +18,7 @@ Ian's goal 3 for 0.1: every language library matches the command wherever it can
 
 This ticket merges row E1 of `sdlc/planning/library-equivalence-2026-09-26.md` with tickets L1, L2 and L3 of `sdlc/planning/backlog-0-1-2026-09-26.md`.
 
-**The split.** One ticket over all eleven surfaces is too large. This ticket carries the engine, Rust, Python, TypeScript, Ruby, R and C. It also removes `cache_bytes` from all three SQL surfaces, because the Rust setter they call goes away. A follow-on ticket carries the new settings to DuckDB, SQLite and PostgreSQL. It needs its own number from the coordinator. The section "The SQL follow-on" fixes its rules, so that ticket starts from settled decisions.
+**The split.** One ticket over all eleven surfaces is too large. This ticket carries the engine, Rust, Python, TypeScript, Ruby, R and C. It also removes `cache_bytes` from all three SQL surfaces, because the Rust setter they call goes away. Ticket 0149 carries the new settings to DuckDB, SQLite and PostgreSQL. The section "Ticket 0149, the SQL settings" fixes its rules, so that ticket starts from settled decisions.
 
 ## What happens today
 
@@ -102,7 +102,7 @@ Each runner maps a flag name to its host's spelling. That map is the surface's c
 - The command runs every case but `max-requests-refuses-past-the-limit`, which has no flag. Its runner is the new `crates/thinkthen/tests/settings_cases.rs`. It runs the compiled command with `--timeout`, `--max-retries`, `--profile`, `--model`, `--record`, `--replay`, `--cache` and `--no-cache`.
 - Rust runs every case from `conformance/consumer/consumer/tests/public/settings.rs`, a new module of the existing public test binary.
 - Python, TypeScript, Ruby, R and C each run every case from their conformance runner, beside the cases of `cases.json`.
-- The SQL runners do not read the file until the follow-on.
+- The SQL runners do not read the file until ticket 0149.
 
 The throttle has no case here. A throttle case needs an in-flight count on the held arm, which is the `concurrency` case kind that row E11 of the equivalence page proposes. C's throttle is proved by the C door test below until then.
 
@@ -131,19 +131,19 @@ Ian's ruling asks for a sweep of every setting for the same fault. The design pa
 
 The fix lives in `public/question.rs` and `public/results.rs`, which ticket 0146 holds open. This ticket files it as an issue in its landing commit and does not fix it. The build repeats the sweep on the final diff and records the list it checked.
 
-### The SQL follow-on
+### Ticket 0149, the SQL settings
 
-These rules bind the follow-on ticket. Ian can overturn each.
+These rules bind ticket 0149. Ian can overturn each.
 
 - **The address and the key stay out of SQL.** Tickets 0109 decision 2 and 0110 decision 5 rule this, and `databases/postgresql/README.md` line 94 states it. SQL text lands in logs, query history and plans. The equivalence page's "cannot close" section records this as a ruling, and it notes that an address alone would be safe to set. Ian can overturn it.
 - Each SQL surface gains `model`, `timeout`, `max_retries`, `profile`, `record` and `replay`, spelled as it spells its throttle: `SET thinkthen_timeout` in DuckDB, `thinkthen.timeout` in PostgreSQL, and `thinkthen_timeout(n)` in SQLite. The timeout is whole seconds. PostgreSQL registers it with the unit `s`.
-- The profile is JSON text in SQL, not a path, so that no new file rule enters any SQL surface. The follow-on adds `EngineBuilder::profile_json` for it.
+- The profile is JSON text in SQL, not a path, so that no new file rule enters any SQL surface. Ticket 0149 adds `EngineBuilder::profile_json` for it.
 - A record or replay folder follows that surface's rule for a cache folder: DuckDB's absolute path and its probe through the caller's file system, PostgreSQL's superuser setting, and SQLite's plain path.
 - DuckDB and PostgreSQL turn the cache off with the value `off`. A cache folder set from SQL is an absolute path, so the word cannot name a folder. SQLite keeps `thinkthen_cache(NULL)`.
 - SQLite's `thinkthen_warm`, `thinkthen_recognize` and `thinkthen_relate` take a last deadline argument in milliseconds, as its scalars do.
 - Each SQL runner runs `conformance/settings.json` but for the throttle cases it cannot express.
 
-That ticket then closes the two issues this one settles for the libraries.
+Ticket 0149 then closes the two issues this one settles for the libraries.
 
 ### How this makes B12a smaller
 
@@ -163,7 +163,7 @@ Each is the agent's decision. Ian can overturn any of them.
 3. **The builder applies the command's folder rules.** A binding passes each value through, and the builder refuses a conflict at `build`. Every surface then refuses the same pairs with the same sentence, and the rule lives in one place. The existing three cache setters keep their last-one-wins order.
 4. **Defaults are the command's.** Timeout 30 seconds, 2 retries, no profile, no recording folder. No environment variable or configuration key is added for them, because the command reads none. The defaults' missing reasons stay listed on the settings page.
 5. **The timeout is whole seconds on every surface but Rust.** That is what `--timeout` takes. Rust takes a `Duration`, its own time type, and refuses zero. TypeScript names the unit, `timeoutSeconds`.
-6. **The libraries take a profile as a path, as `--profile` does.** SQL takes JSON text in the follow-on.
+6. **The libraries take a profile as a path, as `--profile` does.** SQL takes JSON text in ticket 0149.
 7. **Precedence follows the settings page.** An engine setting sits in the environment tier and overrides the variable it was seeded from. Timeout, retries, profile, record and replay have no other tier, so the engine value wins or the default holds. The model is the one exception. A question's `model` outranks the engine's model, by ADR 0017 section 5 and the builder's doc: "Name this model when a question names none". The settings page's model line gains the engine tier below the question file. Changing the code to follow the tier rule instead would break every library caller who sets a model on a question.
 8. **C gets a JSON settings constructor.** DESIGN section 8 makes a new symbol a minor bump. No C version has shipped, and 0.1 is itself a minor bump over 0.0.1. The DESIGN table grows to 20 symbols, and its deferred "checked throttle constructor" is done. ADR 0037 gains a dated amendment.
 9. **One shared case per setting, run by every surface.** The case file names settings by flag, and each runner's map is its column of the settings table. Where a library's own test asserts the same effect of `max_requests` or `cache` false, the build deletes that assertion in the same commit and names it in the record. The shared case replaces it, so the contract is tested once on each surface.
@@ -243,7 +243,7 @@ The four questions, answered once for the shared cases and once for the rest:
 
 ## Pages, comments, and issues
 
-- `specification/settings.md`: the rows for Address, Model, Backend profile, Timeout, Retries, Throttle, Request limit, Answer cache, Recording and Prune target. Each library cell gains its spelling from the design table. The SQL cells of the new settings keep `not on this surface` and name the follow-on. The Prune target row loses its library and SQL cells, and its Default cell loses the "no effect" note. The precedence section's model line gains the engine tier, by decision 7. The Timeout and Retries Default cells drop "Fixed at 30 on the libraries and SQL" and say "Fixed on SQL until the follow-on".
+- `specification/settings.md`: the rows for Address, Model, Backend profile, Timeout, Retries, Throttle, Request limit, Answer cache, Recording and Prune target. Each library cell gains its spelling from the design table. The SQL cells of the new settings keep `not on this surface` and name ticket 0149. The Prune target row loses its library and SQL cells, and its Default cell loses the "no effect" note. The precedence section's model line gains the engine tier, by decision 7. The Timeout and Retries Default cells drop "Fixed at 30 on the libraries and SQL" and say "Fixed on SQL until ticket 0149".
 - ADR 0017: a dated amendment to section 5, by decision 11.
 - ADR 0037: a dated amendment for `thinkthen_engine_new_with`.
 - Ticket 0084: a dated amendment to the frozen inventory.
@@ -251,8 +251,8 @@ The four questions, answered once for the shared cases and once for the rest:
 - The READMEs of Rust, Polars, Python, TypeScript, Ruby, R and C name the new settings in one sentence each. The DuckDB, SQLite and PostgreSQL READMEs lose their `cache_bytes` lines.
 - `conformance/README.md` gains one paragraph for `settings.json`.
 - A new issue, `sdlc/issues/2026-09-26-the-library-drops-a-question-files-calibration-profile.md`, from the sweep.
-- `2026-09-26-settings-some-surfaces-cannot-reach.md`: the lander marks items 1 and 2 settled for the libraries and C, and item 3 settled. The SQL part stays open for the follow-on.
-- `2026-09-26-libraries-cannot-replay-a-recording-strictly.md`: the lander marks it settled for the libraries. The SQL part stays open for the follow-on.
+- `2026-09-26-settings-some-surfaces-cannot-reach.md`: the lander marks items 1 and 2 settled for the libraries and C, and item 3 settled. The SQL part stays open for ticket 0149.
+- `2026-09-26-libraries-cannot-replay-a-recording-strictly.md`: the lander marks it settled for the libraries. The SQL part stays open for ticket 0149.
 - `2026-09-25-public-library-api-gaps.md`: the lander marks item 4 settled by this ticket, as item 8 is marked.
 
 ## Budgets
@@ -282,7 +282,7 @@ Nonblank lines, measured with `grep -c .` on the diff.
 
 ## Scope and exclusions
 
-Excluded: the SQL settings, which the follow-on carries. `batch` and `context`, which B12a to B13e carry. The throttle's shared case, which E11 carries. The calibration `profile` fix, filed as an issue. Run facts, usage per process and streaming. `site/`, which the marketing lead owns. The replay issue came from the site, and this ticket lets its language examples run offline. The site schedules that change.
+Excluded: the SQL settings, which ticket 0149 carries. `batch` and `context`, which B12a to B13e carry. The throttle's shared case, which E11 carries. The calibration `profile` fix, filed as an issue. Run facts, usage per process and streaming. `site/`, which the marketing lead owns. The replay issue came from the site, and this ticket lets its language examples run offline. The site schedules that change.
 
 ## Routing
 
@@ -294,7 +294,7 @@ Contract 2; state and timing 0; reach 2; proof 1; cost of error 2; total 7. Fina
 
 ## Deferred gaps
 
-- The SQL follow-on, with the rules above. It needs a ticket number.
+- Ticket 0149, the SQL settings, with the rules above.
 - The throttle's shared case, with E11's `concurrency` case kind.
 - A library's calibration `profile`: the digest and `profile_warning`. Filed as an issue. A running profile on a library enforces limits and gives no calibration warning until that fix.
 - Dry run on a library. The command's `--dry-run` has no library spelling, and no user has asked.
@@ -303,13 +303,13 @@ Contract 2; state and timing 0; reach 2; proof 1; cost of error 2; total 7. Fina
 
 ## What Ian can overturn
 
-- Decision 1: the split into a library ticket and a SQL follow-on.
+- Decision 1: the split into a library ticket and ticket 0149 for SQL.
 - Decision 2: strict replay as `replay` alone, with no separate switch.
 - Decision 5: whole seconds for the timeout, and `timeoutSeconds` in TypeScript.
 - Decision 7: the engine model below the question's model, as an exception to the tier rule.
 - Decision 8: a JSON settings constructor for C in place of one symbol per setting.
 - The SQL rulings carried forward: the address and the key stay out of SQL by tickets 0109 and 0110. The equivalence page notes an address setting alone would be safe.
-- The SQL follow-on's `off` word for a cache and its JSON-text profile.
+- Ticket 0149's `off` word for a cache and its JSON-text profile.
 
 ## Closes
 
@@ -319,7 +319,7 @@ This ticket closes no issue whole. It settles:
 - `sdlc/issues/2026-09-26-libraries-cannot-replay-a-recording-strictly.md`, for the libraries and C.
 - `sdlc/issues/2026-09-25-public-library-api-gaps.md`, item 4.
 
-The SQL follow-on closes the first two issues.
+Ticket 0149 closes the first two issues.
 
 ## Evidence
 
@@ -327,4 +327,4 @@ The SQL follow-on closes the first two issues.
 - Keeps: Every command flag, request, output byte and exit code. Every existing library setting and its spelling. The builder's environment seed. The throttle rule of ADR 0017's 2026-09-24 amendment. The key in `THINKTHEN_API_KEY` alone on every surface but Rust. The address and key rulings for SQL. The configuration file's `cache_bytes` as the prune target. The Polars and pandas doors unchanged. Every engine module.
 - Changes: `EngineBuilder` gains `timeout`, `max_retries`, `profile`, `record` and `replay`, and loses `cache_bytes`. `build` applies the command's folder rules. `relate` obeys the engine's profile. Python, TypeScript, Ruby and R gain the five settings. C gains `thinkthen_engine_new_with` with every engine setting. `cache_bytes` leaves every binding and SQL surface. `conformance/settings.json` holds one case for each of eight settings, run by the command and six libraries. `settings.md`, ADR 0017, ADR 0037, ticket 0084, the C DESIGN and ten READMEs follow. An issue files the calibration `profile` gap.
 - Proof: The eight shared settings cases on the command, Rust, Python, TypeScript, Ruby, R and C, each with planted mis-mappings, the replay-onto-cache plant first. The Rust folder-rule table, the relate profile test against the command, and a no-key strict replay in a child process. The C settings table with a held-arm throttle count. The binding type rows. A grep for `cache_bytes` recorded in the build record.
-- Defers: The SQL settings, in a follow-on with its rules fixed here. The throttle's shared case, with E11. The calibration `profile` fix, after 0146. A library dry run. Duplicate per-surface tests for E11. C environment variables for the new settings.
+- Defers: The SQL settings, in ticket 0149 with its rules fixed here. The throttle's shared case, with E11. The calibration `profile` fix, after 0146. A library dry run. Duplicate per-surface tests for E11. C environment variables for the new settings.
