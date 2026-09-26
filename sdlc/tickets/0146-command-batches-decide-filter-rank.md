@@ -108,7 +108,7 @@ The pause fires in every mode, by ADR 0053 item 1. A typed `--cache`, `--record`
 
 ### The member cap
 
-`Batcher` gains the fixed cap `MEMBERS`, 4,096, by ADR 0053 item 2. After a content cut and the size, `push` closes the open batch as `Closed::Limit` when it holds 4,096 members, repeats included. A stream of a few distinct values then forms batches of at most 4,096 records, and the reader holds at most `--jobs` such batches.
+`Batcher` gains the fixed cap `MEMBERS`, 4,096, by ADR 0053 item 2. After a content cut and the size, `push` closes the open batch as `Closed::Limit` when it holds 4,096 members, repeats included. A stream of a few distinct values then forms batches of at most 4,096 records. A run then holds at most `--jobs` batches in flight, one queued batch, the open batch, and the channel's read-ahead.
 
 **A record the planner or the parser refuses.** B4 reads 0144's `push` at `95293ef4`. On a refusal, `closed` holds every batch that closed before it, and the refused record joins no batch. After a refusal the open batch is empty, so `finish()` returns `None`. The reader queues what `closed` holds, drops the refused record, and answers the next ask after the queue with the refusal as `Input::Failed`. A parse refusal happens before any push, so the reader calls `finish()`, queues the batch it returns, and answers the same way. The records before the refused one then print, and the run stops at the refused record with today's cause and exit code. `BatchError::Profile` becomes today's profile refusal. `BatchError::Defect` becomes `Failure::Defect`. B4 never passes a context, so the context errors cannot arise here.
 
