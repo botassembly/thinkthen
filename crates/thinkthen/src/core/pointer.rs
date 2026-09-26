@@ -216,11 +216,12 @@ mod tests {
         vec(any::<char>(), 1..8)
             .prop_map(|characters| characters.into_iter().collect::<String>())
             .prop_filter(
-                "a name that is no index, no wildcard, and no sign",
+                "a name that is no index, no wildcard, no sign, and no control character",
                 |name| {
                     name.parse::<usize>().is_err()
                         && name.bytes().any(|byte| byte != b'*')
                         && !name.starts_with('-')
+                        && !name.chars().any(char::is_control)
                 },
             )
     }
