@@ -2,29 +2,32 @@
 
 Status: built 2026-09-26, awaiting a fresh code review. It lands after 0141 and 0143. Owner: Claude.
 
-Branch `ticket/0144-engine-plans-batches`, in lane `worktrees/thinkthen-lane-3`. The ticket is `sdlc/tickets/0144-engine-plans-batches.md`. A fresh read-only design review accepted it on 2026-09-26 after two rounds of findings. The change raises the ceiling, so a second agent reviews the code and names what it checked. Ian can overturn every decision the ticket lists.
+Branch `ticket/0144-engine-plans-batches`, in lane `worktrees/thinkthen-lane-3`. The ticket is `sdlc/tickets/0144-engine-plans-batches.md`. A fresh read-only design review accepted it on 2026-09-26 in its third round. The change raises the ceiling, so a second agent reviews the code and names what it checked. Ian can overturn every decision the ticket lists.
 
 ## Result
 
-- `core/batch.rs` holds the pure `Batcher`. `push` takes a `BatchRecord` and returns the batches that closed. `finish` closes the last one. A batch closes after a content cut, after `N` records, before a record that would pass a limit, or at the end. Each `Batch` holds its plan, body, digest, each record's first wire question, and its close reason.
+- `core/batch.rs` holds the pure `Batcher`. `push` takes a `BatchRecord` and adds the batches that closed to the caller's list. A batch that closed before a refusal stays in that list. `finish` closes the last one. A batch closes after a content cut, after `N` records, before a record that would pass a limit, or at the end. Each `Batch` holds its plan, body, digest, each record's first wire question, and its close reason.
 - Without a context, a batch of one distinct record, alone or with copies, sends today's request. Every other batch quotes each distinct record once and lists it once in `{"records":[…]}`, or beside a context.
-- The batcher counts each record's batched share from one encode of that record alone. It finds the empty batch's size from a probe record encoded once and twice. It encodes each batch once at close and compares the body with the count. Planning is linear in the input bytes.
-- `Batcher::new` refuses a question written as JSON beside a context, and a context over a limit before any record. `push` refuses a later record whose batch of one with the context passes a limit. Neither error holds text.
+- The batcher counts each record's batched share from one encode of that record alone. It finds the empty batch's size from a probe record encoded once and twice. It encodes each batch once at close and compares the body and the evidence with their counts. Planning is linear in the input bytes.
+- `Batcher::new` refuses a question written as JSON beside a context, and a context over a limit before any record. `push` refuses a later record whose batch of one with the context passes a limit. It refuses a record that fails the profile alone on that record's own push, and the next record starts a new batch. No error holds text.
 - `Reading::selected` in `core/records.rs` holds the match `Reading::evidence` had. `Reading::evidence` and the new `Reading::batch_record` both build on it, so a whole CSV, TSV or JSONL record quotes as its object.
 - `Backend::relation_ceiling` is now `Backend::ceiling`. Its one caller in `engine/prepared_request.rs` follows.
+- Deviation: the ticket named two sizes per record, its batched share and its single form. The batcher counts one size per record, its batched share. The profile check covers the single form when the record starts a batch and again at close.
 - Deviation: `core/backend_profile.rs` makes `max_evidence_bytes`, `max_request_bytes` and `max_questions` `pub(crate)`, so the batcher tests a limit before it encodes. It adds no line.
-- Fixtures: five `batch-*.request.json` files and a README section under `specification/fixtures/systemone/`, and `grouping.txt` with a hand-worked README under `specification/fixtures/batching/`. A Python script in the session scratchpad, `t0144/fixtures.py`, drafted the five bodies from ADR 0048 item 1 and shares no code with the planner. `jq` parses each body. The README's hashes come from `printf` and `sha256sum`.
+- Fixtures: five `batch-*.request.json` files and a README section under `specification/fixtures/systemone/`, and `grouping.txt` with a hand-worked README under `specification/fixtures/batching/`. A Python script in the session scratchpad, `t0144/fixtures.py`, drafted the five bodies from ADR 0048 item 1 and shares no code with the planner. `jq` parses each body. The README's hashes come from `printf` and `sha256sum`. The fixture and plant scripts lived in the session scratchpad. The repo does not keep them.
 - No specification rule, surface or marker changes.
 
 ## Tests
 
-Seven table tests in `core/batch/tests.rs`: design test 1 (`a_batch_of_one_is_todays_request`), design test 2 (`each_batch_body_matches_its_fixture`), design test 3 (`batches_close_where_the_readme_says`), and the edge-case rows in `limits_close_batches_by_exact_bytes_and_the_ceiling`, `the_ceiling_closes_batches_at_the_built_in_address_only`, `questions_copies_and_refusals_follow_the_batch_rules` and `a_context_is_refused_without_echoing_it`.
+Eight table tests in `core/batch/tests.rs`: design test 1 (`a_batch_of_one_is_todays_request`), design test 2 (`each_batch_body_matches_its_fixture`), design test 3 (`batches_close_where_the_readme_says`), and the edge-case rows in `limits_close_batches_by_exact_bytes_and_the_ceiling`, `the_ceiling_closes_batches_at_the_built_in_address_only`, `questions_copies_and_refusals_follow_the_batch_rules`, `a_record_over_the_profile_alone_is_refused_on_its_own_push` and `a_context_is_refused_without_echoing_it`.
+
+The code review added these rows: one record over `max_evidence_bytes` alone, a choice over `max_options`, a refused record after a closed batch, twelve records at `max_request_bytes` 817 and 816, which cross `q10`, no records, a context at `--batch 1`, and a context over the ceiling in `Batcher::new`. Their values are worked by hand. Twelve one-letter records under `decide("Q")` make an 817-byte body: a 60-byte skeleton, 36 bytes of records and 11 commas, 12 questions of 57 bytes, 15 name digits and 11 commas.
 
 ## Plants
 
 `t0144/plants.py` in the session scratchpad applied each plant, ran `cargo test --lib core::batch` under the heavy lock, and restored the file from a backup it made with `mktemp`, then touched it. It removed only those backups. A grep of the diff for plant text found none.
 
-The final run used the final code after the merge of `origin/main`. Every plant turned red. The ticket's plants map to T1a to T1c, T2a to T2f and T3a to T3g.
+The code review round reran every plant on its code before the merge. All 21 turned red. The ticket's plants map to T1a to T1c, T2a to T2f and T3a to T3g. R1 to R5 come from the code review.
 
 | Plant | Result | Tests that failed |
 | --- | --- | --- |
@@ -44,6 +47,11 @@ The final run used the final code after the merge of `origin/main`. Every plant 
 | T3e: ceiling ignored | Red | `the_ceiling_closes_batches_at_the_built_in_address_only` |
 | T3f: batches fill across a cut | Red | `batches_close_where_the_readme_says` |
 | T3g: copies checked in the batched form | Red | `limits_close_batches_by_exact_bytes_and_the_ceiling` |
+| R1: profile check deleted | Red | `a_record_over_the_profile_alone_is_refused_on_its_own_push` |
+| R2: `names()` returns 0 | Red | `limits_close_batches_by_exact_bytes_and_the_ceiling` |
+| R3: evidence count misses the separator | Red | five tests, through the evidence check at close |
+| R4: a refusal drops the closed batches | Red | `a_record_over_the_profile_alone_is_refused_on_its_own_push` |
+| R5: an oversized record passes its own push | Red | `a_record_over_the_profile_alone_is_refused_on_its_own_push` |
 
 ## Budget
 
@@ -60,6 +68,8 @@ Nonblank lines against `origin/main` at `7850db3f`.
 | `core/backend_profile.rs` and `engine/prepared_request.rs` | 0 | 0 |
 
 `sdlc/ratchet.json` moves from 67,758 to 68,670, up 912, within the 930 ruling. Splitting the two long tests for clippy added lines. Sharing the wire-name digit count in `batch.rs` and the test backends, the structured question and a context helper in the tests took the total back under 930. Before that the build merged the two plan encoders into one and held the open batch in one value.
+
+The code review round stopped at 1,031 lines of growth, over the 930 ruling, before the merge and the ladder. The coordinator decides the budget.
 
 ## Ladder
 
