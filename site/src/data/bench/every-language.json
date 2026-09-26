@@ -1,0 +1,6 @@
+{
+  "pin": "48ac3f252c6161bb9518416a41b4c8a2d82a9434",
+  "runsIn": "examples/05-filter",
+  "command": "printf '%s\\n' \"Octopus's Garden\" 'Hey Jude' 'Penny Lane' |\n  thinkthen decide 'The text is the title of a song by the Beatles. It appears on the album Abbey Road.' \\\n    --lines --details --threshold 0.3:0.7 --replay recording |\n  jq -c '{song: .input, value, yes: .answer.probability}'",
+  "output": "{\"song\":\"Octopus's Garden\",\"value\":true,\"yes\":0.75}\n{\"song\":\"Hey Jude\",\"value\":false,\"yes\":0.29}\n{\"song\":\"Penny Lane\",\"value\":null,\"yes\":0.43}\n"
+}

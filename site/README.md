@@ -14,14 +14,15 @@ npm install
 npm run build
 ```
 
-`npm run build` does four things in order:
+`npm run build` does five things in order:
 
 1. `scripts/write-version.mjs` writes `public/version.json` with the commit it is building.
-2. `astro build` writes `dist/`. It fails if any function-and-surface cell is missing or carries no status.
-3. `scripts/emit-md.mjs` writes a Markdown twin of every page and `dist/llms.txt`.
-4. `scripts/check-links.mjs` fails the build on a broken internal link.
+2. `scripts/check-bench.mjs` fails the build when a pulled Beatles Bench file differs from its manifest.
+3. `astro build` writes `dist/`. It fails if any function-and-surface cell is missing or carries no status.
+4. `scripts/emit-md.mjs` writes a Markdown twin of every page and `dist/llms.txt`.
+5. `scripts/check-links.mjs` fails the build on a broken internal link.
 
-`npm run dev` serves the site while you work.
+`npm run dev` serves the site while you work. `npm run check` runs the bench check and the link check on the last build.
 
 ## Where the examples come from
 
@@ -49,6 +50,28 @@ The how-to pages work the same way: the commands come from the deck's `usecases/
 The names, the order, the one line for each function, and the option tables live in `src/data/catalog.mjs`. The one line for each function is the help text's first line, copied from the vocabulary page.
 
 The first article is copied byte for byte into `src/articles/code-that-understands.md` from `repos/mktg/content/thinkthen/drafts/01-code-that-understands/article.md`. Edit it there and copy it again.
+
+## Where the Beatles Bench pages come from
+
+The bench repository owns every page under `/beatles-bench/` but one. Its `docs/README.md` lists the pages in order, and its tests run every command on them against committed answers. The site runs none of them.
+
+```
+BEATLES_BENCH=path/to/beatles-bench npm run pull-bench
+```
+
+`scripts/pull-bench.mjs` refuses a checkout at any commit other than `src/data/bench/PIN`, or one with local changes. It copies each listed page into `src/pages/beatles-bench/` and each image into `public/beatles-bench/img/`. It turns links between pages into site routes and other links into GitHub links at the pin. It writes `src/data/bench/pages.json` and a manifest of hashes. To move to a new bench commit, write its hash to `PIN` and pull again.
+
+`src/data/bench.mjs` names each page's group and label for the side list. `src/lib/remark-bench.mjs` sets each command beside the output the bench tests check.
+
+The one page the site writes is `every-language.astro`. Its Bash command and output sit in `src/data/bench/every-language.json`. This command replays it from the bench with no key and checks the output:
+
+```
+BEATLES_BENCH=path/to/beatles-bench npm run bench-replay
+```
+
+## Drafts
+
+A blog post in `src/articles/` with `draft: true` builds under `npm run dev`, or when `THINKTHEN_DRAFTS=1` is set for a build. A normal build leaves it out.
 
 ## The deploy proof
 

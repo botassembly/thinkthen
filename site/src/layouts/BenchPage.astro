@@ -1,0 +1,76 @@
+---
+// One page of the Beatles Bench section. A pulled page passes its front
+// matter. every-language passes the same fields as props.
+import Base from './Base.astro';
+import { PAGES, PIN } from '../data/bench.mjs';
+import { FUNCTIONS } from '../data/catalog.mjs';
+
+const fm = Astro.props.frontmatter || Astro.props;
+const { title, tagline = null, slide = null, source = null, runsIn = null } = fm;
+const here = Astro.url.pathname.replace(/index\.html$/, '');
+const at = PAGES.findIndex((p) => p.route === here);
+if (at < 0) throw new Error(`bench: ${here} is not in the section's list`);
+const page = PAGES[at];
+const prev = PAGES[at - 1];
+const next = PAGES[at + 1];
+const groups = [...new Set(PAGES.map((p) => p.group))].map((g) => [g, PAGES.filter((p) => p.group === g)]);
+
+// "decide answers yes, no, or not sure." sets the command in code.
+const names = new Set(FUNCTIONS.map((f) => f.name).concat(['audit', 'diff']));
+const [first, ...rest] = (tagline || '').split(' ');
+const codeFirst = tagline && names.has(first);
+const pinShort = PIN.slice(0, 8);
+---
+<Base title={title} description={tagline || title}>
+  <div class="bench">
+    <aside class="bench-side" aria-label="Beatles Bench pages">
+      {groups.map(([group, list]) => (
+        <div class="bench-group">
+          <div class="bench-group-name">{group}</div>
+          <ul>
+            {list.map((p) => (
+              <li><a href={p.route} aria-current={p.route === here ? 'page' : undefined} class={p.command ? 'cmd' : undefined}>{p.label}</a></li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </aside>
+    <div class="bench-main">
+      <details class="bench-menu">
+        <summary>Beatles Bench: all {PAGES.length} pages</summary>
+        {groups.map(([group, list]) => (
+          <div class="bench-group">
+            <div class="bench-group-name">{group}</div>
+            <ul>
+              {list.map((p) => (
+                <li><a href={p.route} aria-current={p.route === here ? 'page' : undefined} class={p.command ? 'cmd' : undefined}>{p.label}</a></li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </details>
+      <div class="eyebrow">Beatles Bench · {page.group}</div>
+      <h1>{title}</h1>
+      {tagline && <p class="lede">{codeFirst ? <><code>{first}</code> {rest.join(' ')}</> : tagline}</p>}
+      {slide && (
+        <figure class="slide">
+          <img src={slide} alt={tagline || title} width="2000" height="1125" loading={at < 2 ? 'eager' : 'lazy'} />
+        </figure>
+      )}
+      {runsIn && (
+        <p class="note">Every command here runs in <code>{runsIn}</code> of a bench checkout, and every answer comes from a saved recording. <a href="/beatles-bench/run-it-for-free/">How to run the bench for free</a> gets you one.</p>
+      )}
+      <div class="prose bench-prose"><slot /></div>
+      <nav class="bench-pager" aria-label="Previous and next">
+        {prev ? <a href={prev.route} class="prev"><span>Previous</span>{prev.title}</a> : <span />}
+        {next ? <a href={next.route} class="next"><span>Next</span>{next.title}</a> : <span />}
+      </nav>
+      <p class="bench-credit">
+        {source
+          ? <>This page comes from <a href={source}>Beatles Bench at {pinShort}</a>.</>
+          : <>This page is written for the site. Its answers come from Beatles Bench at {pinShort}.</>}
+        {' '}The bench's data and questions are CC BY-SA 4.0, from Wikipedia and Wikidata.
+      </p>
+    </div>
+  </div>
+</Base>

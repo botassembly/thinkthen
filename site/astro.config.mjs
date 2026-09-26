@@ -1,4 +1,5 @@
 import { defineConfig } from 'astro/config';
+import remarkBench from './src/lib/remark-bench.mjs';
 
 export default defineConfig({
   site: 'https://thinkthen.dev',
@@ -10,6 +11,8 @@ export default defineConfig({
   // light page never carries a dark slab. `wrap` keeps a long line inside the
   // pane.
   markdown: {
+    // The Beatles Bench pages set each command beside its output.
+    remarkPlugins: [remarkBench],
     shikiConfig: {
       themes: { light: 'github-light', dark: 'github-dark' },
       defaultColor: 'light',

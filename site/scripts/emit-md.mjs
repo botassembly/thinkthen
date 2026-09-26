@@ -9,6 +9,9 @@ import path from 'node:path';
 const DIST = path.join(process.cwd(), 'dist');
 const VOID = new Set(['br', 'img', 'meta', 'link', 'input', 'hr', 'source', 'area', 'col']);
 const SKIP = new Set(['button', 'script', 'style', 'svg']);
+// The Beatles Bench side list and phone menu repeat on every page. A command's
+// "$ " prompt would break a copied command.
+const SKIP_CLASS = ['bench-side', 'bench-menu', 'p'];
 
 // ------------------------------------------------------------------ the tree
 
@@ -69,6 +72,7 @@ function find(node, test) {
 // ------------------------------------------------------------------- render
 
 const classOf = (n) => (n.attrs?.class || '').split(/\s+/);
+const skipped = (n) => classOf(n).some((c) => SKIP_CLASS.includes(c));
 
 function inline(node) {
   if (node.tag === '#text') return node.text.replace(/\s+/g, ' ');
@@ -90,7 +94,7 @@ function inline(node) {
 // Text exactly as it stands, for a code block.
 function raw(node) {
   if (node.tag === '#text') return node.text;
-  if (SKIP.has(node.tag)) return '';
+  if (SKIP.has(node.tag) || skipped(node)) return '';
   return (node.kids || []).map(raw).join('');
 }
 
@@ -101,7 +105,7 @@ function tidy(s) {
 function blocks(node, out) {
   for (const kid of node.kids || []) {
     if (kid.tag === '#text') continue;
-    if (SKIP.has(kid.tag)) continue;
+    if (SKIP.has(kid.tag) || skipped(kid)) continue;
     const cls = classOf(kid);
 
     if (cls.includes('tabs')) continue;

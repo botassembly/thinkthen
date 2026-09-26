@@ -6,10 +6,12 @@
   "scripts": {
     "pull": "node scripts/pull-examples.mjs",
     "version-json": "node scripts/write-version.mjs",
-    "build": "node scripts/write-version.mjs && astro build && node scripts/emit-md.mjs && node scripts/check-links.mjs",
+    "build": "node scripts/write-version.mjs && node scripts/check-bench.mjs && astro build && node scripts/emit-md.mjs && node scripts/check-links.mjs",
     "dev": "astro dev",
     "preview": "astro preview",
-    "check": "node scripts/check-links.mjs"
+    "check": "node scripts/check-bench.mjs && node scripts/check-links.mjs",
+    "pull-bench": "node scripts/pull-bench.mjs",
+    "bench-replay": "node scripts/bench-replay.mjs"
   },
   "dependencies": {
     "astro": "^5.14.1"

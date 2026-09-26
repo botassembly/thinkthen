@@ -4,6 +4,7 @@ import Terminal from '../../../components/Terminal.astro';
 import CrossView from '../../../components/CrossView.astro';
 import { FACTS, FUNCTIONS, HOWTOS, SURFACES } from '../../../data/catalog.mjs';
 import { cell } from '../../../data/examples.mjs';
+import { benchPageFor } from '../../../data/bench.mjs';
 
 export function getStaticPaths() {
   return FUNCTIONS.map((fn) => ({ params: { name: fn.name }, props: { fn } }));
@@ -26,6 +27,8 @@ const shipped = !preview && !fn.notAFunction;
 const line = fn.line.charAt(0).toLowerCase() + fn.line.slice(1);
 // The first cost row is the live probe's price for 1,000 short records.
 const [probe] = FACTS.cost.rows[0];
+// The same function on Beatles Bench, where every answer is known.
+const bench = benchPageFor(fn.name);
 ---
 <Base title={title} description={fn.line}>
   <div class="eyebrow">{fn.notAFunction ? 'a saved question' : fn.primitive}</div>
@@ -37,6 +40,10 @@ const [probe] = FACTS.cost.rows[0];
   )}
   {preview && (
     <div class="note"><span class="status preview">preview</span> The command has no <code>{fn.name}</code> yet. The samples below show the design. None has run.</div>
+  )}
+
+  {bench && (
+    <p>The worked example asks <code>{fn.name}</code> about Beatles songs, where every answer is known. It shows how Jev answers, where it goes wrong, and whether context helps. <a href={bench.route}>Read the worked example on Beatles Bench</a>.</p>
   )}
 
   {first && (
