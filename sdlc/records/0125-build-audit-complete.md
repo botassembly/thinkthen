@@ -115,5 +115,5 @@ The code review accepted the math, the splice, the merge, and the pure core. It 
 ## Defers
 
 - The in-place write can leave a short file if the process dies between truncate and write. The ticket accepts this.
-- `recognize` and `relate` stay refused. `sdlc/issues/2026-09-25-audit-grades-recognize-and-relate.md` carries them.
+- `recognize` and `relate` stay refused. `sdlc/issues/closed/2026-09-25-audit-grades-recognize-and-relate.md` carries them.
 - The five bench issues on main go to ticket 0131.

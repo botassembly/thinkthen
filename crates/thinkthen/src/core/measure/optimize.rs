@@ -50,6 +50,15 @@ impl Measure {
         }
     }
 
+    /// The measure a verb tunes: `accuracy` tunes F1 where no answer is a true no.
+    pub(crate) fn tuned(self, verb: Verb) -> Self {
+        if verb.set() && self == Self::Accuracy {
+            Self::F1
+        } else {
+            self
+        }
+    }
+
     /// True when cut `k` wins a tie on the measure against cut `held`.
     fn prefers(self, k: u32, held: u32) -> bool {
         match self {
@@ -153,6 +162,14 @@ fn parts<'a>(items: &[Graded<'a>], tune: &BTreeSet<String>) -> Parts<'a> {
         .partition(|(a, _)| tune.contains(&a.id))
 }
 
+/// A saved line holds nothing below its run cut, so no bar goes below the highest one.
+fn floor(items: &[Graded<'_>]) -> f64 {
+    items
+        .iter()
+        .filter_map(|(a, _)| a.items.as_ref().map(|said| said.cut))
+        .fold(0.0, f64::max)
+}
+
 /// The suggested bar for one row, tuned on split 0 and counted over every split.
 ///
 /// # Errors
@@ -172,8 +189,9 @@ pub(crate) fn suggest(
     if tune_ids.is_empty() {
         return Ok(None);
     }
-    let measure = settings.optimize;
-    let applies = verb.yes_no() || measure == Measure::Accuracy;
+    let measure = settings.optimize.tuned(verb);
+    let applies = verb.yes_no() || verb.set() || measure == Measure::Accuracy;
+    let floor = floor(items);
     let mut suggested = Suggested {
         cut: None,
         cuts: None,
@@ -198,7 +216,7 @@ pub(crate) fn suggest(
     }
     let tuned = splits
         .iter()
-        .map(|tune_ids| tune(&parts(items, tune_ids).0, verb, settings))
+        .map(|tune_ids| tune(&parts(items, tune_ids).0, verb, settings, floor))
         .collect::<Result<Vec<_>, _>>()?;
     let (tune_part, held_part) = parts(items, splits.first().unwrap_or(&BTreeSet::new()));
     if let Some(Some(bar)) = tuned.first() {
@@ -217,14 +235,14 @@ pub(crate) fn suggest(
         suggested.held = Some(checked(&held_part)?);
     }
     if let (true, Some(Some(Bar::Cut(first)))) = (cross, tuned.first())
-        && let Some(Bar::Cut(second)) = tune(&held_part, verb, settings)?
+        && let Some(Bar::Cut(second)) = tune(&held_part, verb, settings, floor)?
     {
         suggested.crossed = Some(Some(Crossed {
             cuts: [*first, second].map(|k| f64::from(k) / 100.0),
             held: added(
                 &count(&held_part, Rule::Threshold(cut(*first)))?,
                 &count(&tune_part, Rule::Threshold(cut(second)))?,
-                verb.yes_no(),
+                Some(verb),
             ),
         }));
     }
@@ -264,7 +282,12 @@ fn objective(verb: Verb, measure: Measure, target: f64) -> String {
 }
 
 /// The bar one tuning part picks, or none.
-fn tune(part: &[Graded<'_>], verb: Verb, settings: &Settings) -> Result<Option<Bar>, MeasureError> {
+fn tune(
+    part: &[Graded<'_>],
+    verb: Verb,
+    settings: &Settings,
+    floor: f64,
+) -> Result<Option<Bar>, MeasureError> {
     if part.is_empty() {
         return Ok(None);
     }
@@ -284,9 +307,9 @@ fn tune(part: &[Graded<'_>], verb: Verb, settings: &Settings) -> Result<Option<B
             Ok(None)
         }
         _ => {
-            let measure = settings.optimize;
+            let measure = settings.optimize.tuned(verb);
             let mut best: Option<(f64, u32)> = None;
-            for k in 1..=99 {
+            for k in (1..=99).filter(|k| f64::from(*k) / 100.0 >= floor) {
                 let Some(score) = measure.of(&count(part, Rule::Threshold(cut(k)))?) else {
                     continue;
                 };
@@ -321,7 +344,7 @@ fn beats(
             }
         }
         _ => {
-            let measure = settings.optimize;
+            let measure = settings.optimize.tuned(verb);
             let theirs = measure.of(&at_run);
             measure
                 .of(&at_bar)

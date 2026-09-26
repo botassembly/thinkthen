@@ -3,7 +3,7 @@
 
 use std::collections::BTreeSet;
 
-use thinkthen::{ErrorKind, LoadedQuestion, Question};
+use thinkthen::{ErrorKind, LoadedQuestion, Question, QuestionKind};
 
 use crate::errors::{prefix, usage};
 use crate::questions::{from_file, inline, read_named};
@@ -24,6 +24,10 @@ pub(crate) fn usage_rows() -> Vec<(&'static str, i64)> {
         .map(|(name, count)| (name, i64::try_from(count).unwrap_or(i64::MAX)))
         .collect()
 }
+
+/// Warm asks decide questions only, as on SQLite (ticket 0138).
+const WARM_DECIDE: &str =
+    "thinkthen_warm takes a decide question; ask others with thinkthen_decide";
 
 /// One warm group: the question its first row bound and its distinct texts.
 #[derive(Debug, Default)]
@@ -77,6 +81,10 @@ impl Warm {
             Some(path) => kept_file(serial, path, &invoke)?,
             None => inline(&question)?,
         };
+        if matches!(&question, LoadedQuestion::Question(held) if held.kind() != QuestionKind::Decide)
+        {
+            return Err(usage(WARM_DECIDE));
+        }
         let engine = engines::from_env()?;
         worker::run(&invoke, move |token| {
             decided(&engine, &question, texts, token, None, false).map(drop)

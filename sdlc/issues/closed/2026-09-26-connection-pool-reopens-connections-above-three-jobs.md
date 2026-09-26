@@ -1,6 +1,6 @@
 # The connection pool reopens connections above three jobs
 
-Status: Open. Filed 2026-09-26 from workspace experiment 268.
+Status: Closed 2026-09-26 by ticket 0142. Filed 2026-09-26 from workspace experiment 268.
 
 ## What happens
 

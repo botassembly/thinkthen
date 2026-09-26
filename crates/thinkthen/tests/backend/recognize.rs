@@ -129,6 +129,17 @@ fn local_validation_matrix_never_sends() {
 }
 
 #[test]
+fn a_kind_without_a_sign_names_the_sign() {
+    for options in [vec!["--kind", "PER"], vec!["--kind", "PER", "--kind", "ORG"]] {
+        let listener = Listener::answering(automatic).expect("listener");
+        let output = run(&listener, &options, b"Ada met Acme.");
+        assert_eq!(String::from_utf8_lossy(&output.stderr), "thinkthen: --kind is KIND=DESCRIPTION, and this one holds no `=`; give a bare kind without --kind\n", "{options:?}");
+        assert_eq!(output.status.code(), Some(2), "{options:?}");
+        assert_eq!(listener.connections(), 0, "{options:?}");
+    }
+}
+
+#[test]
 fn relations_are_self_contained_and_absent_without_a_rule() {
     let listener = Listener::serving(vec![Canned::ok(ANSWERED), Canned::ok(RELATED), Canned::ok(ANSWERED)]).expect("listener");
     let output = run(&listener, &["--relation", "works_for=person:organization"], b"Ada met Acme.");

@@ -1,8 +1,8 @@
 # Audit
 
-Status: **Settled** by ticket 0113, amended by ticket 0125.
+Status: **Settled** by ticket 0113, amended by tickets 0125 and 0135.
 
-`thinkthen audit RESULTS KEY` grades saved answers against an answer key and suggests a bar. It reads `decide`, `filter`, `choose`, `tag`, `score`, `rank`, `find`, and `annotate` results. It prints agreement with a Wilson interval, both disagreement directions, precision and f1, AUC, calibration, a coverage curve, and a suggested bar tuned on one part and checked on the other. It shows how steady that bar is across twenty splits. With `--write` it puts a steady bar into the question file the results came from. It sends no request and reads no API key.
+`thinkthen audit RESULTS KEY` grades saved answers against an answer key and suggests a bar. It reads `decide`, `filter`, `choose`, `tag`, `score`, `rank`, `find`, `annotate`, `recognize`, and `relate` results. It prints agreement with a Wilson interval, both disagreement directions, precision and f1, AUC, calibration, a coverage curve, and a suggested bar tuned on one part and checked on the other. It shows how steady that bar is across twenty splits. With `--write` it puts a steady bar into the question file the results came from. It sends no request and reads no API key.
 
 The definition is the prototype measurement script at commit `be7cea2e`, with its tests and README. `crates/thinkthen/tests/fixtures/measure/README.md` gives the file checksums. Where this page and the prototype disagree, the golden files in that folder decide. "Departures" lists every known difference.
 
@@ -15,7 +15,8 @@ thinkthen audit results.jsonl key.jsonl --threshold 0.4 --table
 
 ```text
 thinkthen audit RESULTS KEY [--by question|verb|POINTER] [--threshold RULE] [--id POINTER] [--seed N] [--target A]
-                            [--optimize accuracy|precision|recall|f1] [--write QUESTIONS] [--curve] [--pooled] [--table]
+                            [--optimize accuracy|precision|recall|f1] [--match strict|overlap] [--write QUESTIONS]
+                            [--curve] [--pooled] [--table]
 ```
 
 - `RESULTS` holds saved result lines, and `KEY` holds a JSONL answer key. Either may be `-` for standard input, and not both.
@@ -25,6 +26,7 @@ thinkthen audit RESULTS KEY [--by question|verb|POINTER] [--threshold RULE] [--i
 - `--seed N` is an unsigned 64-bit integer, default 0. It seeds the split and the bootstrap.
 - `--target A` is the agreement a `choose` suggested cut must reach, default 0.9, from 0 to 1.
 - `--optimize M` names the measure a yes/no suggested cut maximizes: `accuracy` (the default), `precision`, `recall`, or `f1`.
+- `--match M` names how a `recognize` name matches a key name: `strict` (the default) or `overlap`. See "Names and edges".
 - `--write QUESTIONS` names the question file or question set the results came from. audit writes the steady bar into it. See "Writing the bar".
 - `--curve` fills each row's `curve`, and the pooled line's. See "Curve".
 - `--pooled` prints one more line after the rows. See "The pooled line".
@@ -43,14 +45,15 @@ Each input is read whole. Lines split on newline. A blank line is skipped and st
 **One graded answer** comes from an entry `E`. `E` is the line itself, or one member of its `answers` object, taken in member order under its member name.
 
 - `E` failed when it has a `failure` member, when `E.value` is an object with a `failed` member, or when it has neither `answer` nor `value`. A failed answer counts in `failed` and leaves every measure.
-- The verb is `E.question.verb` when that is a nonempty string. A `decide` entry whose `threshold` and `value` are both null is a `rank` answer. Without a verb, the entry is `decide` when `E.value` is a boolean, null, or absent, and `choose` when it is text. Any other value without a verb is refused with the `--details` sentence. `recognize`, `relate`, and any other verb are refused.
+- The verb is `E.question.verb` when that is a nonempty string. A `decide` entry whose `threshold` and `value` are both null is a `rank` answer. Without a verb, the entry is `decide` when `E.value` is a boolean, null, or absent, and `choose` when it is text. Any other value without a verb is refused with the `--details` sentence. Any other verb is refused.
 - A `tag` entry becomes one yes/no answer per label, in the order of `E.answer.probabilities`, else `E.question.labels`. A label is yes as run when `E.value` lists it, and its `p` is its probability.
 - A `score` entry reads its levels from `E.question.levels` and its number from `E.value`.
-- A `find` entry's distribution covers the unit ids and `none`. As run, a text value says `E.answer.pick`. A null value says the top, or `"tied"` when the top is tied. A `find` line with no `input` takes its one-based line number as its record id. `find` names units `u001`, `u002`, and on, as [find.md](find.md) says.
+- A `find` entry's distribution covers the unit ids and `none`. As run, a text value says `E.answer.pick`. A null value says the top, or `"tied"` when the top is tied. A `find`, `recognize`, or `relate` line with no `input` takes its one-based line number as its record id. `find` names units `u001`, `u002`, and on, as [find.md](find.md) says.
+- A `recognize` entry reads its names from `E.value.entities`, each with `kind`, `start`, `end`, and `strength`, and its kinds from the member names of `E.question.kinds`. A `relate` entry reads its edges from `E.value`, each with `relation`, `source` and `target` as `{name, kind}`, and `probability`, and its relations from `E.question.relations`. Both read their run cut from `E.question.threshold`. A line without its run cut, its kinds or relations, or a value of that shape cannot be graded. A `relate` line whose `meta.failed_questions` is above 0 lost the edges of those questions, so it counts as failed.
 - The text is `E.question.text`, or null.
 - `p` is `E.answer.probability`, or null. The distribution is `E.answer.probabilities`, or null. Its top is its largest value. Its pick is the first member, in member order, equal to the top. It is tied when two or more members equal the top.
 
-**The key** is JSONL. Each line is an object with `id` (string or integer), `value`, and an optional `part` of `"tune"` or `"held"`. A `decide` value of `true` or `"yes"` is yes, and `false` or `"no"` is no. Any other `decide` value leaves the record unlabeled. A `choose` value is the right option's text. A `tag` value lists the labels that apply, and a label missing from the list is no. A `score` value names the right level. A `find` value is a unit id or `none`. A `rank` value is yes or no, as for `decide`. A `tag`, `score`, or `find` value naming a label, level, or unit the answer does not have is refused. For an `annotate` answer the key's `value` is an object, and its member under the answer name is the value. A record missing from the key, or a null value, is unlabeled. Unlabeled answers count in `unlabeled` and leave every measure.
+**The key** is JSONL. Each line is an object with `id` (string or integer), `value`, and an optional `part` of `"tune"` or `"held"`. A `decide` value of `true` or `"yes"` is yes, and `false` or `"no"` is no. Any other `decide` value leaves the record unlabeled. A `choose` value is the right option's text. A `tag` value lists the labels that apply, and a label missing from the list is no. A `score` value names the right level. A `find` value is a unit id or `none`. A `recognize` or `relate` value takes the command's own value shape: `{"entities": [{kind, start, end}, ...]}` or `[{relation, source: {name, kind}, target: {name, kind}}, ...]`, other members ignored. A corrected saved `value` is therefore a key. An empty list is labeled. A kind or relation the line's question lacks is refused, and so is any other shape. A `rank` value is yes or no, as for `decide`. A `tag`, `score`, or `find` value naming a label, level, or unit the answer does not have is refused. For an `annotate` answer the key's `value` is an object, and its member under the answer name is the value. A record missing from the key, or a null value, is unlabeled. Unlabeled answers count in `unlabeled` and leave every measure.
 
 **Duplicates.** audit refuses the same answer name, record id, question text, and label twice.
 
@@ -125,9 +128,22 @@ Yes/no covers `decide`, `filter`, and each `tag` label. `score` and `rank` pair 
 
 **A `tag` question** prints its pooled row, named for the question, then one row per label, named `GROUP/LABEL`. Under `--by verb` it prints the pooled row alone. The labels ride in one request, so their errors move together. The pooled row therefore prints `interval`, `mean_probability`, `auc`, `calibration`, and `coverage` as null. It keeps the pooled counts and measures and tunes one shared cut, and its split keeps each record's labels on one side.
 
+## Names and edges
+
+`recognize` and `relate` say a set of items per record, so audit grades them as the named-entity and relation-extraction literature does: precision, recall, and F1 over items, pooled over every record of the group.
+
+- **Names.** Under `--match strict` a said name matches a key name with the same `start`, `end`, and `kind`, as in the CoNLL-2003 shared task (Tjong Kim Sang and De Meulder, 2003). Under `--match overlap` the kinds are equal and the places overlap: `said.start < key.end` and `key.start < said.end`. This is the "type" mode of SemEval-2013 Task 9 (Segura-Bedmar et al., 2013) and MUC's TYPE credit. Touching names do not overlap. The text is not compared. `start` and `end` are the Unicode scalar offsets `recognize` prints, as [recognize.md](recognize.md) defines them.
+- **Edges.** An edge matches when `relation` and both endpoints' `name` and `kind` are equal, the strict setting of Taillé et al. (2020). An edge of a relation the line's question marks `either` also matches with its endpoints swapped, since [relate.md](relate.md) gives such a relation no direction.
+- **One match each.** Said items are taken by strength or probability, high to low, ties in output order. Each takes the first unmatched key item, in key order, that it matches. The items a cut keeps are a prefix of that order, so the matches do not move as the cut moves.
+- **Counts.** `true_yes` and `right` count matches, `false_yes` extra said items, and `false_no` missed key items. `wrong` is extra plus missed. `yes_recall`, `precision`, and `f1` follow "The math". A count object's `n` counts labeled records, `true_no` stays 0, and its `agreement` and `coverage` are null. The row's `true_no`, `agreement`, `interval`, `mean_probability`, `auc`, `disagreements`, `calibration`, `coverage`, and `curve` are null. Neither command has a true no, and strength is not a probability.
+- **The cut.** `--optimize accuracy` tunes `f1` for these rows, since matches over matches, extra, and missed rise and fall with F1. The objective reads `most f1 on the tuning part`. A saved line holds nothing below the cut it ran with, so the grid skips every cut below the highest run cut in the row. `--threshold` takes a single cut at or above each line's run cut.
+- **Run with a low cut.** To tune across the whole range, run with a low cut such as `--threshold 0.01`. Neither command takes 0. For `--write`, put that low cut in the question file itself, because the digest covers the threshold. After a write the file holds the tuned cut, and a later re-tune below it needs the file lowered again first.
+
+`recognize`'s beta relations are not graded.
+
 ## Output
 
-One JSON object per group per line, in the order of each group's first answer. The group name is the answer name, else the question text, else the verb, and an empty name falls through. Each row prints `group`, `verb`, `rows` (unfailed answers), `failed`, `labeled`, `unlabeled`, `threshold`, `right`, `wrong`, `unresolved`, `tied`, `tied_holding_key`, `tie_share`, `agreement`, `interval`, `true_yes`, `false_yes`, `true_no`, `false_no`, `yes_recall`, `precision`, `f1`, `mean_probability`, `auc`, `r_precision`, `mean_level_distance`, `disagreements`, `calibration`, `coverage`, `curve`, and `suggested`. `suggested` ends with `crossed`. The four directions, `yes_recall`, `precision`, and `f1` are null for `choose`, `score`, and `find`. `r_precision` is null except for `rank`, and `mean_level_distance` except for `score`. The last five need labeled answers that all carry probabilities, and are null otherwise. A group whose answers all failed prints `verb: null`.
+One JSON object per group per line, in the order of each group's first answer. The group name is the answer name, else the question text, else the verb, and an empty name falls through. Each row prints `group`, `verb`, `rows` (unfailed answers), `failed`, `labeled`, `unlabeled`, `threshold`, `right`, `wrong`, `unresolved`, `tied`, `tied_holding_key`, `tie_share`, `agreement`, `interval`, `true_yes`, `false_yes`, `true_no`, `false_no`, `yes_recall`, `precision`, `f1`, `mean_probability`, `auc`, `r_precision`, `mean_level_distance`, `disagreements`, `calibration`, `coverage`, `curve`, and `suggested`. `suggested` ends with `crossed`. The four directions, `yes_recall`, `precision`, and `f1` are null for `choose`, `score`, and `find`. "Names and edges" gives the members of `recognize` and `relate` rows. `r_precision` is null except for `rank`, and `mean_level_distance` except for `score`. The last five need labeled answers that all carry probabilities, and are null otherwise. A group whose answers all failed prints `verb: null`.
 
 Every float rounds to six places. `threshold` prints `"as run"`, a cut as a number, or a band exactly as typed. An empty RESULTS prints nothing. A reader of this output ignores members it does not know, because a later version may add them.
 
@@ -142,9 +158,11 @@ Every float rounds to six places. `threshold` prints `"as run"`, a cut as a numb
 - `  every verb pooled: calibration error E (95% L to H) over N answers`, as the last line, with `--pooled`.
 - `  at the suggested cut on the held part: accuracy A, precision P, recall R, f1 F`, for yes/no rows.
 
+A `recognize` or `relate` row prints `  matched M, extra X, missed Y: precision P   recall R   f1 F` in place of the agreement line and the yes/no lines. Its suggested line ends `held f1 A as run -> B at the cut`, its crossed line ends `f1 F`, and its held line reads `  at the suggested cut on the held part: precision P, recall R, f1 F`.
+
 ## Writing the bar
 
-`--write QUESTIONS` reads the question file or question set, a set when it holds `questions`. It resolves the file with no command-line value and takes its question digest. Every graded line must carry that digest in `meta.question_sha256`, or `meta.questions_sha256` for a set. The digest covers the threshold, so a run with `--threshold` typed beside `@FILE` fails. `rank` and `find` lines skip the check, since they write nothing.
+`--write QUESTIONS` reads the question file or question set, a set when it holds `questions`. It resolves the file with no command-line value and takes its question digest. Every graded line must carry that digest in `meta.question_sha256`, or `meta.questions_sha256` for a set. A file that holds `recognize` or `relate` is that command's question file, and its bar is the top-level `threshold`. audit takes the digest that command prints. A `relate` run under `--lines` nulls the fields, so a `relate` line may carry either of the file's two digests. The digest covers the threshold, so a run with `--threshold` typed beside `@FILE` fails. `rank` and `find` lines skip the check, since they write nothing.
 
 audit follows ReAnchor's rule: keep the current bar unless another scores strictly better. It writes `steady.cut` only when `better` is more than half of `splits`. A `tag` question takes its pooled row's cut. A set member's cut goes to `questions.NAME.threshold`. The value prints in its shortest form, such as `0.42` or `1`. A present member's value bytes change, and every other byte stays. An absent member goes after the object's last member, with the separator copied from before that member's key and its key and colon spacing copied too. When a bar changes, audit writes the whole file once, in place. It prints one standard error line per bar, `TARGET` being `the question` or `question NAME`, and exits 0:
 
@@ -170,9 +188,12 @@ A failure prints nothing on standard output and one line on standard error. The 
 | No usable id | 2 | `thinkthen: audit: results line N has no string or integer id at the --id pointer` |
 | `--id` is not a pointer | 2 | `thinkthen: audit: --id takes a JSON pointer such as /id or ''` |
 | A value without its question verb that audit cannot read | 2 | `thinkthen: audit: results line N holds an answer without its question; save it with --details` |
-| Another verb, a malformed `answers`, or a `choose` value that is not text | 2 | `thinkthen: audit: results line N holds an answer audit cannot grade; audit grades decide, filter, choose, tag, score, rank, and find` |
-| A key value naming a level, label, or unit the answer lacks | 2 | `thinkthen: audit: key line N names a level, label, or unit the question does not have` |
+| Another verb, a malformed `answers`, a `choose` value that is not text, or a `recognize` or `relate` line without its run cut or value shape | 2 | `thinkthen: audit: results line N holds an answer audit cannot grade; audit grades decide, filter, choose, tag, score, rank, find, recognize, and relate` |
+| A key value naming a level, label, unit, kind, or relation the answer lacks | 2 | `thinkthen: audit: key line N names a level, label, or unit the question does not have` |
 | `--threshold` over `score` or `find` | 2 | `thinkthen: audit: score and find answers take no --threshold` |
+| A band, or a cut below a line's run cut, over `recognize` or `relate` | 2 | `thinkthen: audit: recognize and relate take a single --threshold at or above the cut they ran with` |
+| A `recognize` or `relate` key value of another shape | 2 | `thinkthen: audit: key line N gives recognize or relate a value unlike the command's own` |
+| The key has lines, some answer did not fail, and no answer is labeled | 2 | `thinkthen: audit: no answer has a label in the key; check that --id points at the key's ids and that its values fit the verb` |
 | A bad probability or empty distribution | 2 | `thinkthen: audit: results line N holds a probability outside 0 to 1 or an empty distribution` |
 | A repeated record | 2 | `thinkthen: audit: results line N repeats a record for one question` |
 | A bad key line | 2 | `thinkthen: audit: key line N needs a new id, a value, and a part of tune or held when present` |

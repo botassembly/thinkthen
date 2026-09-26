@@ -229,12 +229,14 @@ pub(crate) enum Command {
     /// Grade saved answers against an answer key and suggest a bar.
     ///
     /// RESULTS holds the lines `decide`, `filter`, `choose`, `tag`, `score`,
-    /// `rank`, `find`, or `annotate` printed with --details, and KEY holds one
+    /// `rank`, `find`, `annotate`, `recognize`, or `relate` printed with
+    /// --details, and KEY holds one
     /// JSON object per record: its id, the right value, and an optional part of
     /// tune or held. audit prints agreement with its 95% interval, both kinds of
     /// disagreement, precision and f1, AUC, calibration, a coverage curve, and a
     /// suggested bar tuned on one part and checked on the other. An answer
     /// inside a band is not sure, and it counts apart from right and wrong.
+    /// recognize names and relate edges get precision, recall, and f1.
     ///
     /// A key may give each record a part of tune or held; without parts audit
     /// splits the records itself and shows how steady its bar is.
@@ -258,6 +260,9 @@ pub(crate) enum Command {
     /// are already saved. Each changed answer prints on one line, and a summary
     /// with its McNemar test prints last. With --key, each change says whether
     /// it gained or lost a right answer. An answer inside a band is not sure.
+    ///
+    /// diff pairs answers by record id and answer name only. It compares
+    /// question digests only when both runs saved --details.
     ///
     /// diff sends no request and reads no key.
     ///
