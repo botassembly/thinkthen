@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine/facade.rs crates/thinkthen/src/engine/facade/
 
 # 0143: relate and split requests run at once
 
-Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Claude.
+Status: built (`sdlc/records/0143-build-relate-runs-at-once.md`). The coordinator accepted the design on 2026-09-26 after a fresh read-only review. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -112,7 +112,7 @@ The first test also proves `--jobs` is accepted: plant (h), restoring the `confi
 
 Existing tests that change:
 
-- `sigint_between_recognition_chunks_starts_no_later_chunk` in `tests/backend/interrupt.rs` pins one request in flight at the signal. After this ticket a split `recognize` text holds up to 4. The test keeps its claim: it uses a text whose `max_questions` 1 profile gives more than 4 chunks. `held` gains the number of requests to wait for, 1 for every other row. The test waits for 4, signals, releases, and asserts exactly 4 requests. Plant (i): feed chunks after a stop is seen, and the count passes 4.
+- `sigint_between_recognition_chunks_starts_no_later_chunk` in `tests/backend/interrupt.rs` pins one request in flight at the signal. After this ticket a split `recognize` text holds up to 4. The test keeps its claim: it uses a text whose `max_questions` 1 profile gives more than 4 chunks. `held` gains the number of requests to wait for, 1 for every other row. The test waits for 4, signals, releases, and asserts exactly 4 requests. Plant (i): send the chunks one at a time, and the 4 requests never arrive. Amended at build by the coordinator's ruling of 2026-09-26, which Ian can overturn. The first plant (i) fed chunks after a stop was seen, and it stayed green. For SIGINT, the feed loop's stop check is a second guard behind the send path's own check of the shared flag, so no plant on that check alone can turn this test red. The check exists for host interrupts, and plant (j) proves that path.
 - The shared refusal row `jobs on one document` in `tests/backend/refusals.rs` stops applying to `relate`, and relate's own sentence for it in `refusals/relate.rs` goes. The shared row still covers every other verb.
 - Any test that reads `listener.requests()` in arrival order for a split `relate`, `recognize`, or `annotate` run compares them sorted, or passes `--jobs 1` where the verb takes it. The builder lists each one in the record.
 
@@ -137,7 +137,7 @@ No unit test is added. `ask_chunks` is reached only through real callers, and th
 
 Nonblank lines, measured with `grep -c .` on the diff.
 
-- `crates/thinkthen/src`: at most 70 added, doc and help lines included, and at most 50 net of lines removed. `facade.rs` stays under 500 nonblank lines. The ordered feed may live in `engine/workers.rs` if that keeps `facade.rs` smaller.
+- `crates/thinkthen/src`: at most 120 added, doc and help lines included, and at most 90 net of lines removed. The coordinator re-scored this at build on 2026-09-26 from 70 added and 50 net, because `ordered` is new engine logic that rustfmt lays out vertically. Ian can overturn it. The code review still looks for cuts. `facade.rs` stays under 500 nonblank lines. The ordered feed may live in `engine/workers.rs` if that keeps `facade.rs` smaller.
 - Rust tests: at most 200 added in `relate/at_once.rs`, at most 35 added in `tests/public_controls.rs`, and at most 40 changed across `interrupt.rs`, `refusals.rs`, `refusals/relate.rs`, `relate_edge.rs`, and order fixes in other test files.
 - `databases/duckdb/tools/relate_suite.py`: at most 30 added.
 - Pages: at most 15 lines changed across `relate.md`, `records.md`, and `settings.md`.
