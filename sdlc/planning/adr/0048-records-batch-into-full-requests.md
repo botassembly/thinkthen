@@ -3,7 +3,7 @@
 - Status: Accepted 2026-09-26 on Ian's batching rulings of that day, through ticket 0139. The batching tickets named below build it. Ian can overturn each item
 - Date: 2026-09-26
 
-This ADR records the rulings in `sdlc/issues/2026-09-26-batching-design.md`. That issue holds the argument. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` holds the measurements, and "evidence section N" below means its section N. It amends ADRs 0007, 0008, 0010, 0032 and 0040. Changing an item below takes a new ADR.
+This ADR records the rulings in `sdlc/issues/2026-09-26-batching-design.md`. That issue holds the argument. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` holds the measurements, and "evidence section N" below means its section N. It amends ADRs 0007, 0008, 0010, 0032 and 0040, and supersedes ADR 0009's one-request-per-record point. Changing an item below takes a new ADR.
 
 ## Context
 
@@ -41,12 +41,14 @@ Over the 306 Beatles titles, today's filter sent 306 requests in 13.0 to 14.2 s 
 | Where | What changes |
 | --- | --- |
 | ADR 0007 line 103 | Records of one batch share one request and see each other |
+| ADR 0007 line 153 | The clarification of one request per record counts batches |
+| ADR 0009 line 12 | One request per record is superseded |
 | ADR 0008 lines 41 to 52 | Two records share a request when they share a batch. The request table counts batches |
 | ADR 0010 line 34 | `--jobs N` counts batches in flight, each one request |
 | ADR 0032 line 18 | The batch part of calibration identity stays out of the digest |
 | ADR 0040 lines 20 and 24 | Records combine into batches. Batched record plans at the built-in address close at the ceiling. This ADR is the packing ADR line 24 names |
 | `specification/roadmap.md` | `--context FILE` and packing leave the held table |
-| `records.md`, `result.md`, `channels.md`, `question-file.md`, `backends.md` | Each new rule stands beside today's sentence as `Not built yet, by ADR 0048 item N: …`. The ticket that builds item N deletes the old sentence and the marker. `grep -rn "Not built yet, by ADR 0048" specification` lists the leftovers, and the last batching ticket requires it to come back empty |
+| `records.md`, `result.md`, `channels.md`, `question-file.md`, `backends.md`, `annotate.md` | Each new rule stands beside today's sentence as `Not built yet, by ADR 0048 item N: …`. The ticket that builds item N deletes the old sentence and the marker. `grep -rn "Not built yet, by ADR 0048" specification` lists the leftovers, and the last batching ticket requires it to come back empty |
 
 ## Which ticket builds each item
 

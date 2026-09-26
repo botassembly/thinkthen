@@ -150,7 +150,7 @@ Writing the specification pages found gaps in the text above. None changes a rul
 
 - The bare value of `score` is the backend's probability-weighted position on the levels, so `1.6` is a valid score on three levels.
 - Exit 2 covers a usage error and an input error. In record mode earlier records may already have been answered, and the failing record sent nothing.
-- `annotate` makes one request per record for each distinct `on`. Every other record command makes one request per record.
+- `annotate` makes one request per record for each distinct `on`. Every other record command makes one request per record. (Amended by ADR 0048, below.)
 - `--quiet` exists on `decide` and `choose` only. `--quiet` beside `--details` is a usage error. `--dry-run` on `report` or `config` is a usage error.
 - `segment` reads one document. `--lines` and `--jsonl` are usage errors on it.
 - `--input FILE` names a path. The earlier draft used the same word for a framing.
@@ -212,4 +212,4 @@ The specification and the demos are rewritten to this surface before any code ch
 
 ## Amendment, 2026-09-26: ADR 0048 batches records
 
-ADR 0048 makes records of one batch share one request, so they see each other. By default each request fills to the backend's limits. `--batch 1` sends one record a request, as line 103 says. Ian can overturn this.
+ADR 0048 makes records of one batch share one request, so they see each other. By default each request fills to the backend's limits. `--batch 1` sends one record a request, as line 103 and the clarification at line 153 say. By default `annotate` sends one request per batch for each distinct `on`, and every other record command one request per batch. Ian can overturn this.

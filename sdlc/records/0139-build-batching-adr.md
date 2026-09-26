@@ -9,7 +9,8 @@ Branch `ticket/0139-batching-adr`, in `worktrees/thinkthen-0139`. B0 writes docu
 - `sdlc/planning/adr/0048-records-batch-into-full-requests.md` records Ian's batching rulings in 13 numbered items, with the amendment table, the item-to-ticket table, what recognize R0 may rely on, and 19 points Ian can overturn.
 - ADRs 0007, 0008, 0010, 0032 and 0040 keep their text. Each named line carries `(Amended by ADR 0048, below.)`, and each ADR ends with one dated amendment section.
 - `specification/roadmap.md` drops the held rows for `--context FILE` and packing, and says ADR 0048 brought them in.
-- `records.md`, `result.md`, `channels.md`, `question-file.md` and `backends.md` keep today's sentences. Each new rule stands beside its sentence as `Not built yet, by ADR 0048 item N: …`. Their status lines name ADR 0048.
+- `records.md`, `result.md`, `channels.md`, `question-file.md`, `backends.md` and `annotate.md` keep today's sentences. Each new rule stands beside its sentence as `Not built yet, by ADR 0048 item N: …`. Their status lines name ADR 0048.
+- ADR 0009's one-request-per-record point carries `(Superseded by ADR 0048.)`.
 - No code, test, fixture, schema, help text or ratchet changed.
 
 ## Checks
@@ -19,9 +20,13 @@ Branch `ticket/0139-batching-adr`, in `worktrees/thinkthen-0139`. B0 writes docu
 | `sdlc/scripts/lint` | exit 0 |
 | `sdlc/scripts/tickets` | 0 evidence failures |
 | `contract_pages_name_the_tuned_for_key_and_never_the_old_one` | 1 passed |
-| `grep -rn "Not built yet, by ADR 0048" specification` | 18 lines, one for each marked passage in the ticket's amendment table |
+| `grep -rn "Not built yet, by ADR 0048" specification` | 19 lines, one for each marked passage in the ticket's amendment table |
 | The `spec/` grep for seven amended sentences | no match, exit 1 |
 | Files changed | only files the ticket's `opens` names. The schema is unchanged |
+
+## Code review fixes
+
+The code review at `d5c9740b` found ADR 0048 faithful and complete and returned six findings. The fixes: a marker on `annotate.md` line 108 and its status line; ADR 0007 line 153 marked and its amendment extended; the `batch` row's marker moved to the first cell of `question-file.md`; the `channels.md` dry-run marker moved after the `from` sentence; ADR 0010's amendment says `records.md` keeps the range; ADR 0009 line 12 marked superseded. The checks above ran again after the fixes.
 
 ## Plants
 

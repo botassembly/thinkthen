@@ -90,7 +90,7 @@ The schema is structural; agreement with it is not agreement with this page. The
 | The evidence | `--field POINTER` | `on` | The whole record | Anything that is not RFC 6901 |
 | The model | `--model NAME` | `model` | `jev-latest` | Empty or only white space |
 | The threshold's calibration identity | none | `profile` | absent | Anything outside lowercase letters, digits, hyphens, and underscores |
-| The batch setting | `--batch N` | `batch` | `max` | Not built yet, by ADR 0048 item 3: 0, a fraction, and any text but `max` |
+| Not built yet, by ADR 0048 item 3: the batch setting | `--batch N` | `batch` | `max` | 0, a fraction, and any text but `max` |
 
 Nothing has a default where a guess would hide a mistake. `choose` with no options in either home is a usage error, and so is `score` with no levels.
 

@@ -75,4 +75,4 @@ A repeated trial therefore shows the service's own play as well as any change in
 
 ## Amendment, 2026-09-26: ADR 0048 batches records
 
-Under ADR 0048 a request carries a batch of records, so `--jobs N` also sets how many batches are in flight. The range of 1 to 32 and the default of 4 stay. Ian can overturn this.
+Under ADR 0048 a request carries a batch of records, so `--jobs N` also sets how many batches are in flight. The default of 4 stays, and `records.md` keeps the range of 1 to 32. Ian can overturn this.

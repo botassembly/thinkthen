@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 139
-opens: sdlc/planning/adr/0048-records-batch-into-full-requests.md sdlc/planning/adr/0007-flat-verbs-bare-values-and-one-threshold.md sdlc/planning/adr/0008-an-eval-is-annotate-plus-report.md sdlc/planning/adr/0010-one-wire-shape-two-variables-and-a-smaller-version-one.md sdlc/planning/adr/0032-explicit-backend-profiles-carry-limits-and-calibration.md sdlc/planning/adr/0040-split-requests-under-backend-limits.md specification/roadmap.md specification/records.md specification/result.md specification/channels.md specification/question-file.md specification/backends.md sdlc/records sdlc/tickets
+opens: sdlc/planning/adr/0048-records-batch-into-full-requests.md sdlc/planning/adr/0007-flat-verbs-bare-values-and-one-threshold.md sdlc/planning/adr/0008-an-eval-is-annotate-plus-report.md sdlc/planning/adr/0010-one-wire-shape-two-variables-and-a-smaller-version-one.md sdlc/planning/adr/0032-explicit-backend-profiles-carry-limits-and-calibration.md sdlc/planning/adr/0040-split-requests-under-backend-limits.md sdlc/planning/adr/0009-what-the-vendors-how-to-pages-change.md specification/roadmap.md specification/annotate.md specification/records.md specification/result.md specification/channels.md specification/question-file.md specification/backends.md sdlc/records sdlc/tickets
 ---
 
 # 0139: Record the batching rulings in one ADR
@@ -98,6 +98,7 @@ Settled pages keep today's sentence and gain the new rule after it, in one fixed
 | `question-file.md` | new row after 92 | Item 3: the batch setting, `--batch N`, key `batch`, default `max`, refusals `0`, a fraction, and any text but `max` |
 | `question-file.md` | new paragraph after 100 | Items 4 and 8: `--batch` replaces the file's `batch`, as the single values on line 100 replace theirs. `batch` takes four tiers: the typed value, then the environment, then the file, then the default. Only a per-call value counts as typed. The read-only configuration file (ADR 0033) holds no `batch` key. It names the setting the threshold was tuned at, as `profile` names the backend. It stays out of the digest. A question set carries at most one top-level `batch`, as it carries one `profile`. Line 98's ruling stands for every other setting |
 | `backends.md` | 3, 21 | Status adds ADR 0048. Item 2: line 21's last sentence gains that a batched record plan at the built-in address also closes at the ceiling |
+| `annotate.md` | 3, 108 | Status adds ADR 0048. Item 7: the records of one `on` group share a batch's request, and `--batch 1` keeps them apart. Added after code review |
 | `backends.md` | new paragraph after 21 | Items 2 and 6: profile limits close batches, a retried status resends the whole batch, and a batch is never split and resent |
 
 The design issue section 6 says B0 adds `batch` to `question-file.schema.json`. Decision 4 moves that to the building tickets.
