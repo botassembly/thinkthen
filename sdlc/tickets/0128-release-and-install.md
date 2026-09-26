@@ -6,7 +6,7 @@ opens: install.sh site/public/install.sh site/src/data/catalog.mjs site/src/page
 
 # 0128: Release and install for 0.1
 
-Status: ready. Owner: Claude. Four phases, each its own build, review, and landing. No phase starts before the coordinator accepts this ticket. Phase 1 builds after ticket 0119 lands.
+Status: Phase 1 landed 2026-09-25 (`sdlc/records/0128-phase-1-build.md`), with its Rust test version edits held until ticket 0119 lands. Phases 2 to 4 are open, and each starts on the coordinator's go-ahead. Owner: Claude. Four phases, each its own build, review, and landing.
 
 Review route: a fresh read-only Claude session reviews this design and each phase's final diff. Codex does not review this ticket unless Ian routes it.
 
