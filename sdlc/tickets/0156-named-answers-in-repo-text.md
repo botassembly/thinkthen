@@ -14,7 +14,7 @@ Review route: a fresh read-only Claude session reviews this design and the final
 
 Every code block in the pages the queue owns stores each ThinkThen answer under a name for its meaning before it uses it, as the site's samples now do. A lint step holds the rule. It imports the site's rule module and keeps no copy of it.
 
-Ian ruled on 2026-09-26 that every code sample names its answer. `sdlc/issues/2026-09-26-site-samples-assert-on-unnamed-answers.md` records the ruling. The marketing lead fixed `site/` at `648a965f`. It then moved the rule into `site/scripts/named-answers.mjs` at `e0a6150a`, and that file's contract names "the builder's lint rung" as its second reader. `sdlc/planning/backlog-0-1-2026-09-26.md` lists the ruling's reach over `demos/` and the library READMEs as question 4 for Ian. The coordinator's brief of 2026-09-26 authorizes this ticket to extend the rule to the repository text the queue owner owns. If Ian has not ruled on question 4, this ticket waits on his answer.
+Ian ruled on 2026-09-26 that every code sample names its answer. `sdlc/issues/2026-09-26-site-samples-assert-on-unnamed-answers.md` records the ruling. The marketing lead fixed `site/` at `648a965f`. It then moved the rule into `site/scripts/named-answers.mjs` at `e0a6150a`, and that file's contract names "the builder's lint rung" as its second reader. The authority for this ticket is the coordinator's ruling of 2026-09-26. Under it, the named-answers rule reaches `demos/`, the library and database READMEs, `specification/` and `spec/`. Ian can overturn it. Ian later ruled "make sure all config documented" and gave the coordinator the full queue, and he has not ruled against this reach. The ruling answers question 4 of `sdlc/planning/backlog-0-1-2026-09-26.md`, which asked whether the code-sample ruling reaches `demos/` and the library READMEs.
 
 ## What happens today
 
@@ -146,7 +146,7 @@ Each fix keeps the page's lesson and its commands. Only the names change.
   - DuckDB: `SELECT id FROM (SELECT id, thinkthen_decide('Does the writer ask for a refund?', body) AS asks_refund FROM tickets) WHERE asks_refund;` on three lines. `thinkthen_choose(...) AS team`. `thinkthen_relate(...) AS works_for`, as the site's relate sample aliases its table.
   - PostgreSQL: `SELECT id FROM (SELECT id, thinkthen_decide('@refund.json', body) AS asks_refund FROM tickets) AS judged WHERE asks_refund IS NULL;` on three lines. PostgreSQL before 16 needs the subquery alias. `check.sh`'s `slide_sample` runs the same statement, so the README's claim that the sample runs as drawn stays true. Its expected output does not change. The sentence before the block says `check.sh` runs it, in place of "The slide sample", because the deck lives in another repository.
   - SQLite: `SELECT id, body FROM (SELECT id, body, thinkthen_decide('Is this a complaint?', body) AS is_complaint FROM reviews) WHERE is_complaint;` on three lines.
-- **Rows 8, 9 and 12.** No change, once request R1 lands. If the coordinator rules that the build goes ahead without R1, the fallback rewrites each line so no `$(` shares the line with the pipe into the call. Demo 28 pipes `printf '%s' "$example" | jq -j '.body'` into the call. Demo 41 pipes `jq -j 'select(.id == "C-01") | .body' claims.jsonl` into it. `jq -j` prints no newline, and neither C-01 body ends in one (checked with `od -c` in the survey), so the bytes sent match the recordings. `spec/recognize.md` names the recording first: `recording="$(git rev-parse --show-toplevel)/crates/thinkthen/tests/fixtures/recognize-225/C01"`, then `--replay "$recording"`.
+- **Rows 8, 9 and 12.** No change, once request R1 lands. If the marketing lead declines R1, the build goes ahead without it, and the fallback rewrites each line so no `$(` shares the line with the pipe into the call. Demo 28 pipes `printf '%s' "$example" | jq -j '.body'` into the call. Demo 41 pipes `jq -j 'select(.id == "C-01") | .body' claims.jsonl` into it. `jq -j` prints no newline, and neither C-01 body ends in one (checked with `od -c` in the survey), so the bytes sent match the recordings. `spec/recognize.md` names the recording first: `recording="$(git rev-parse --show-toplevel)/crates/thinkthen/tests/fixtures/recognize-225/C01"`, then `--replay "$recording"`.
 
 ## Requests to the marketing lead
 
@@ -171,7 +171,7 @@ The agent decided each of these within the coordinator's brief. Ian can overturn
 5. **No exception mechanism.** After the fixes and R1, no block needs one. A block that shows output or data takes a skip tag. A per-block marker would be a second way to skip, and none is needed.
 6. **A function or a named exit code, never a bare call in `if`.** Where the exit code is the lesson, the page keeps it and names it, as the ruling says. A function keeps `if` as the lesson of demo 01 and `channels.md`. `refund_code` keeps the four-way `case` of `decide.md`.
 7. **The help samples change with the pages.** `specification/decide.md` quotes the help's `case` block, and `choose.md` names the help's `$rc`. Changing the pages alone would break those quotes. The help reaches more readers than any page, and the ruling covers it. The check does not read doc comments. "Deferred gaps" carries that.
-8. **Wait for R1 instead of rewriting correct lines.** The three lines are right under the ruling. Rewriting them to dodge a false positive would hide the module bug from the site too. The fallback stands ready if the coordinator rules otherwise.
+8. **Wait for R1 instead of rewriting correct lines.** The three lines are right under the ruling. Rewriting them to dodge a false positive would hide the module bug from the site too. The fallback applies only if the marketing lead declines R1.
 9. **SQL filters read the alias from a subquery.** PostgreSQL cannot read a select alias in `WHERE`. DuckDB and SQLite can, but a select list that keeps the alias beside a `WHERE` on it may call the function twice. One subquery form serves all three and matches the site.
 10. **The check pins its own unknown-tag sentence.** It probes the module with empty code and never prints the module's error. A reworded throw on the site then cannot break the lint rung.
 
@@ -233,7 +233,7 @@ Nonblank lines, counted with `grep -c .` over the diff.
 ## Stop rules
 
 1. Stop before starting if R0 has not landed on main.
-2. Stop before starting if R1 has not landed on main, unless the coordinator rules the fallback.
+2. Stop before starting if R1 has not landed on main, unless the marketing lead has declined it. A decline starts the fallback under "The fixes".
 3. Stop before starting if 0151, 0152 Part B or 0153 has not landed, or if a later ticket opens a file this one needs. "Build order" names them.
 4. Stop if the survey on the merged main finds a problem outside the table in a page another unlanded ticket opens. Fix a new problem elsewhere in the same style, and list it in the record.
 5. Stop before editing any file under `site/`.
@@ -288,7 +288,7 @@ Contract 1; state and timing 0; reach 2; proof 1; cost of error 1; total 5. Fina
 
 ## What Ian can overturn
 
-- The reach itself, backlog question 4.
+- The reach itself: the coordinator's ruling of 2026-09-26, which answers backlog question 4.
 - Decision 1: the lint rung.
 - Decision 2: every `.md` under the five folders, and none elsewhere.
 - Decisions 3 and 4: skip untagged blocks and four tags, and fail every other tag the module refuses.
