@@ -2,7 +2,7 @@
 
 Status: built; ladder results below; ready for the coordinator to land. Owner: Claude.
 
-Branch `ticket/0127-test-harness-fixes`. The build merged `origin/main` at `97129349`, after ticket 0129 landed, before its final ladder. No key was used, and no request left the machine. Ian can overturn every choice this record marks as decided.
+Branch `ticket/0127-test-harness-fixes`. The build merged `origin/main` at `cd4b5051`, after tickets 0129 and 0130 landed, before its final ladder. No key was used, and no request left the machine. Ian can overturn every choice this record marks as decided.
 
 ## Result
 
@@ -99,11 +99,11 @@ The build first crossed three budgets: the Rust helper, `listener.rs`, and the s
 
 ## Ratchets
 
-Each ceiling moved to its measured total after the last merge. Each rise is this build's own lines: `sdlc/ratchet.json` 62101 to 62285, `libraries/c` 2137 to 2139, `libraries/python` Python 2248 to 2253, `libraries/typescript` scripts 743 to 742, `libraries/ruby` Ruby 1526 to 1531, `libraries/r` R 1256 to 1266, `databases/duckdb` Python 1894 to 1895, `databases/sqlite` Python 1199 to 1209, `databases/postgresql` Python 243 to 249.
+Each ceiling moved to its measured total after the last merge. Each rise is this build's own lines: `sdlc/ratchet.json` 63192 to 63376, `libraries/c` 2137 to 2139, `libraries/python` Python 2248 to 2253, `libraries/typescript` scripts 743 to 742, `libraries/ruby` Ruby 1526 to 1531, `libraries/r` R 1256 to 1266, `databases/duckdb` Python 1893 to 1894, `databases/sqlite` Python 1199 to 1209, `databases/postgresql` Python 243 to 249.
 
 ## Ladder
 
-The final ladder ran after the merge of `origin/main` at `97129349`, each rung once and none wrapped in `flock`, with `THINKTHEN_API_KEY` unset.
+The final ladder ran after the merge of `origin/main` at `cd4b5051`, each rung once and none wrapped in `flock`, with `THINKTHEN_API_KEY` unset.
 
 | Rung | Result |
 | --- | --- |
