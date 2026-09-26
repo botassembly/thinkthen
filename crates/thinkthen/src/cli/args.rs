@@ -154,8 +154,9 @@ pub(crate) struct Common {
 
     /// How many requests are in flight at once, from 1 to 32. [default: 4]
     ///
-    /// It acts in record mode and on `annotate`, where a single text can make
-    /// several grouped requests. Output follows the order the command defines.
+    /// It acts in record mode, on `annotate`, where a single text can make
+    /// several grouped requests, and on `relate`, where each relation makes its
+    /// own requests. Output follows the order the command defines.
     /// A run opens up to one connection for each request in flight, so --jobs N
     /// opens up to N connections.
     #[arg(

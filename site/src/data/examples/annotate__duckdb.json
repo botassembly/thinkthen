@@ -1,8 +1,0 @@
-{
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "sql",
-  "code": "LOAD './thinkthen.duckdb_extension';\n\n-- one filled form per report: export, login, and billing\nSELECT thinkthen_annotate('@form.json', body) AS form\nFROM (VALUES\n    ('CSV export fails. Steps: click Export.'),\n    ('The login page spins and nobody can sign in.'),\n    ('The Pay button on the billing page is too blue.')) t(body);",
-  "function": "annotate",
-  "surface": "duckdb"
-}

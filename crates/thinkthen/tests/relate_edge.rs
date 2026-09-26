@@ -36,5 +36,12 @@ fn help_names_the_beta_complete_set_and_secrecy_contract() {
         )),
         "{help}"
     );
-    assert!(!help.contains("--jobs"), "{help}");
+    assert!(
+        help.contains(concat!(
+            "It acts in record mode, on `annotate`, where a single text can make several grouped ",
+            "requests, and on `relate`, where each relation makes its own requests. Output follows ",
+            "the order the command defines.",
+        )),
+        "{help}"
+    );
 }

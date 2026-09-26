@@ -253,7 +253,10 @@ impl Engine {
         })
     }
 
-    /// Send chunks prepared earlier, in order, and hand each reply on.
+    /// Send chunks prepared earlier and hand each reply on in chunk order.
+    ///
+    /// Up to the engine's width go out at once. The first failure in chunk
+    /// order returns, as a send one at a time would return it.
     pub(crate) fn ask_chunks<E: From<Error>>(
         &self,
         chunks: Vec<Chunk>,
@@ -261,18 +264,25 @@ impl Engine {
         mut each: impl FnMut(Answered) -> Result<(), E>,
     ) -> Result<(), E> {
         let state = self.state(cancel)?;
-        for chunk in chunks {
-            each(request::ask_sent(
+        let send = |chunk: Chunk| {
+            request::ask_sent(
                 &self.backend,
                 &chunk.plan,
                 chunk.request,
                 &state.recorder,
                 cancel,
                 self.transport(&state),
-                || (self.key)().map_err(E::from),
-            )?)?;
+                || (self.key)(),
+            )
+        };
+        let jobs = state.width.min(chunks.len());
+        if jobs < 2 {
+            for chunk in chunks {
+                each(send(chunk)?)?;
+            }
+            return Ok(());
         }
-        Ok(())
+        crate::engine::workers::ordered(jobs, chunks, cancel, &send, each)
     }
 
     /// Answer framed inputs over this engine's width and emit them in input order.

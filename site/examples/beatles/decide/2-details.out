@@ -1,0 +1,30 @@
+{
+  "schema": "thinkthen.result/1",
+  "value": true,
+  "input": "Yesterday",
+  "question": {
+    "verb": "decide",
+    "text": "The text is the title of a song by the Beatles. It is a love song."
+  },
+  "answer": {
+    "kind": "yes_no",
+    "probability": 0.56
+  },
+  "threshold": 0.5,
+  "meta": {
+    "tool": "thinkthen 0.0.1",
+    "question_sha256": "34c67483d67bb9238aa47011e6c5e353ddd410d2bc1c07aeebeb5f6df653ca8f",
+    "url": "https://api.typesafe.ai/v1/systemone",
+    "model": "jev-1.13.0",
+    "usage": {
+      "input_tokens": 285,
+      "output_tokens": 21
+    },
+    "requests_sent": 0,
+    "cached": true,
+    "requests": [
+      "70cb51f097a0d80294ffa1fd8f41f9bb3e4b51a1a858616ea757c9ea47d78e4f"
+    ],
+    "failed_questions": 0
+  }
+}

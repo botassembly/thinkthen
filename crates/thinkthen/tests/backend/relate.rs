@@ -11,6 +11,7 @@ use serde_json::Value;
 
 use crate::harness::{Canned, Listener, finish, spawn};
 
+mod at_once;
 mod ceiling;
 mod details;
 

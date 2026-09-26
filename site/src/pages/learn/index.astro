@@ -1,0 +1,25 @@
+---
+// Goal: point a new reader to the tutorial and to Beatles Bench.
+import Base from '../../layouts/Base.astro';
+import { PAGES } from '../../data/beatles.mjs';
+
+const talk = PAGES.slice(1);
+---
+<Base title="Learn" description="The tutorial, the Beatles Bench talk as pages, and how to test ThinkThen before you trust it.">
+  <h1>Learn</h1>
+  <p class="lede">Start with the tutorial. Then watch ThinkThen answer questions about Beatles songs.</p>
+
+  <div class="grid">
+    <a class="tile" href="/learn/tutorial/"><b>Tutorial</b><span>From the install line to a pipeline that sorts a stream of messages.</span></a>
+    <a class="tile" href="/learn/beatles-bench/"><b>Beatles Bench</b><span>The talk as {talk.length} short pages. Each shows one slide, one command, and what a different bar changes.</span></a>
+    <a class="tile" href="/trust/"><b>Test it before you trust it</b><span>Outcomes, thresholds, saved answers, and checking a question against your own records.</span></a>
+  </div>
+
+  <h2>Beatles Bench</h2>
+  <ol class="talk">
+    {talk.map((p) => <li><a href={p.route}>{p.command ? <><code>{p.title.split(' ')[0]}</code> {p.title.split(' ').slice(1).join(' ')}</> : p.title}</a></li>)}
+  </ol>
+
+  <h2>Reference</h2>
+  <p>The <a href="/reference/">reference</a> lists every flag, exit code, and output field. <a href="/refusals/">What it will not do</a> lists every line the tool will not cross.</p>
+</Base>

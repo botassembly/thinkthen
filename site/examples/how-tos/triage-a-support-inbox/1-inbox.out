@@ -1,0 +1,21 @@
+{
+  "input": "Please fix the wrong amount on my invoice.",
+  "value": {
+    "kind": "billing",
+    "urgency": 0.58
+  }
+}
+{
+  "input": "Order never arrived and the party is tonight.",
+  "value": {
+    "kind": "delivery",
+    "urgency": 1.96
+  }
+}
+{
+  "input": "Do you ship to Canada?",
+  "value": {
+    "kind": "question",
+    "urgency": 0.01
+  }
+}

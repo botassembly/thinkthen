@@ -1,8 +1,0 @@
-{
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "python",
-  "code": "import polars as pl\nimport thinkthen as tt\n\n# build a question once. The band's middle is null,\n# \"not sure\": true, false, and null for the send-back line\nrefund = tt.question(decide=\"Does the customer ask for a refund?\",\n    threshold=(0.2, 0.8))\ndf = pl.DataFrame({\"body\": [\n    \"Please refund my order. It arrived broken.\",\n    \"Thanks for the quick help yesterday!\",\n    \"I want to send this back.\"]})\nprint(df.with_columns(refund=tt.decide(refund, df[\"body\"])))",
-  "function": "question-file",
-  "surface": "polars"
-}
