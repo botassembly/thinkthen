@@ -297,6 +297,7 @@ Contract 1; state and timing 0; reach 1; proof 1; cost of error 1; total 4. Fina
 
 - The check does not read the library or SQL cells against code. A renamed Python keyword or DuckDB `SET` passes. Review holds it until each surface's conformance cases can name their settings. The batching tickets B12a to B13e add shared conformance cases per setting, which could feed the check later.
 - The check does not read Default or Allowed values against code. A changed default passes. Review holds it.
+- The check reads question-file keys from the schema one level deep and from the two key lists in `core/recognize_file.rs`. A relation rule's own members, such as `either`, are not checked.
 - The check matches flag names, not command and flag pairs. A flag dropped from one command but kept on another passes.
 - The configuration file column is not checked against `config.rs`. The file has four fields and changes rarely.
 - Defaults with no reason on record stay gaps: the timeout of 30 seconds, two retries, the 0.5 cut and relation cut, the `jev-latest` model alias, and `audit`'s 0.9 target. The page lists them. Each needs a measurement or a ruling.

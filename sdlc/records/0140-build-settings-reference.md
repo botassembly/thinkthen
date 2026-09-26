@@ -57,6 +57,20 @@ Run once each after merging `origin/main` at `4741a31e`:
 
 No Rust source changed, so `sdlc/ratchet.json` did not move. No dependency.
 
+## Code review fixes
+
+The code review of `d100a394` returned one medium finding, five low and one nit. All are fixed:
+
+1. The recognize question file's `relation_threshold`, `recognize.kinds` and `recognize.relations`, and the relate file's `relate.fields` and `relate.relations`, now fill the Question-file key cells. The check now reads the schema one level deep and the two key lists `core/recognize_file.rs` checks a recognize file against. Before the cells were filled, the new check failed the real page with five sentences, one per missing key, so it catches the gap the reviewer found. A rule's own `either` is not checked, and the page and the ticket's deferred gaps say so.
+2. Flags are read from every help section but `Commands:` and `Arguments:`.
+3. Python's `on=` row names `annotate` as well as `recognize`.
+4. Each "on the way" line names the library and SQL surfaces it reaches and their tickets, and the word-list line adds `defaults`.
+5. The surface-gap issue adds `databases/postgresql/README.md` line 44.
+6. The self-test adds a fenced decoy table under `## Settings`, pinned to no failure, and a repeated row, pinned to `settings.md: the setting "Threshold" has two rows`. It now holds 8 cases.
+7. `check` returns the row count, and the key and variable patterns sit with the other constants.
+
+The script reached 207 nonblank lines with the fixes. Rewrapping the docstring and the column list and folding three comments brought it to 200, the budget, with no behavior removed.
+
 ## Lane
 
 `worktrees/thinkthen-lane-3` measured 9.4 GB before the build and 9.4 GB after.
