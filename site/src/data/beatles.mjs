@@ -269,9 +269,10 @@ const ARTICLES = {
     see: {
       '1-choose': "Jev picks d, I've Just Seen a Face, at 0.6.",
       '2-bar': "A bar of 0.7 turns the pick into not sure.",
+      '3-table': "Each function shows its first main measure, best first. The best is `recognize` at 0.96. The worst is `tag` at 0.29, and its top pick scores 0.75.",
     },
-    headings: { '2-bar': "Change the bar" },
-    lesson: "Paul sings I've Just Seen a Face alone. The pick is right. Jev knew it from memory at 0.6. A bar of 0.7 asks for more than Jev knows.",
+    headings: { '2-bar': "Change the bar", '3-table': "Score every function" },
+    lesson: "Paul sings I've Just Seen a Face alone. The pick is right. Jev knew it from memory at 0.6. A bar of 0.7 asks for more than Jev knows. Strict scores understate Jev where a question has more than one right answer. A song can have two lead singers. On `tag`, Jev names the whole set on 0.29 of songs, and its top pick is a true lead on 0.75.",
     takeaway: "Jev answers from what it knows. The words in the text need not match.",
     link: REPO,
   },
