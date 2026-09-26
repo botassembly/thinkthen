@@ -32,7 +32,7 @@ The catalog broke an answer on "The Ballad of John and Yoko". Asked whether two 
 
 ## What it costs
 
-Context costs input tokens. From memory, the call above reads 291 input tokens. With the one entry, it reads 368. The whole catalog of 306 songs took a median of 12,214 input tokens a call in [that run](https://github.com/botassembly/beatles-bench/tree/main/results/runs/2026-09-26-thinkthen-jev-open-book). Send the one entry the question is about.
+Context costs input tokens. From memory, the call above reads 291 input tokens. With the one entry, it reads 368. In the [open-book report](https://github.com/botassembly/beatles-bench/blob/main/reports/open-book.md), the whole catalog of 306 songs took a median of 12,214 input tokens a call. Send the one entry the question is about.
 
 ## What I don't know
 
