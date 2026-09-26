@@ -27,6 +27,7 @@ PORT=${1:?check.sh takes the loopback port}
 # Shared rule 6: no suite sees a real key or a remote address.
 unset THINKTHEN_API_KEY THINKTHEN_BASE_URL THINKTHEN_CACHE
 REPO=$(cd -- ../.. && pwd)
+. "$REPO/sdlc/scripts/scratch.sh"
 export THINKTHEN_BACKEND_BIN="${CARGO_TARGET_DIR:-$REPO/target}/debug/conformance-backend"
 [ -x "$THINKTHEN_BACKEND_BIN" ] || {
 	echo "check: the loopback backend is not built; run cargo build --package conformance-backend at the repository root" >&2
@@ -35,7 +36,8 @@ export THINKTHEN_BACKEND_BIN="${CARGO_TARGET_DIR:-$REPO/target}/debug/conformanc
 export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
 stock_cli() {
 	echo "== the stock CLI loads the extension"
-	answer=$(env -i PATH="$PATH" HOME="$(mktemp -d)" XDG_CACHE_HOME="$(mktemp -d)" XDG_CONFIG_HOME="$(mktemp -d)" \
+	scratch_dir home && scratch_dir cache && scratch_dir config
+	answer=$(env -i PATH="$PATH" HOME="$home" XDG_CACHE_HOME="$cache" XDG_CONFIG_HOME="$config" \
 		THINKTHEN_API_KEY=sk-loopback-duckdb-check THINKTHEN_BASE_URL="http://127.0.0.1:$PORT/generic/v1" \
 		sh "$LIMIT" 60 "$CLI" -unsigned -noheader -list -c "LOAD '${THINKTHEN_DUCKDB_EXTENSION:-build/thinkthen.duckdb_extension}'; SELECT thinkthen_decide('Is it a refund?', 'refund now');")
 	[ "$answer" = true ] || {
@@ -47,7 +49,6 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	# The installed-file mode (ticket 0128): the stock CLI and the shared cases load the
 	# extension unpacked from the release archive, by its path.
 	# A release file carries no test hook, so the full check alone runs the one hook case.
-	. "$REPO/sdlc/scripts/scratch.sh"
 	. "$REPO/sdlc/scripts/installed.sh"
 	installed_unpack
 	export THINKTHEN_DUCKDB_EXTENSION="$scratch/thinkthen.duckdb_extension" THINKTHEN_CONFORMANCE_CASES="$scratch/cases.json"
@@ -77,8 +78,8 @@ package target/hooks/release/libthinkthen_duckdb.so build/hooks/thinkthen.duckdb
 echo "== source checks and deny"
 python3 tools/source_checks.py
 cargo deny --locked --offline --manifest-path Cargo.toml check --config deny.toml advisories bans licenses sources
-planted=$(mktemp)
-trap 'rm -f -- "$planted"' EXIT
+scratch_dir deny
+planted=$deny/deny.toml
 sed '/{ crate = "zlib-rs"/d' deny.toml >"$planted"
 set +e
 cargo deny --locked --offline --manifest-path Cargo.toml check --config "$planted" licenses >"$planted.out" 2>&1

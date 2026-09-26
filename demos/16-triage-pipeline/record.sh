@@ -3,8 +3,8 @@ set -eu
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
-work=$(mktemp -d)
-trap 'rm -rf -- "$work"' EXIT HUP INT TERM
+. "$REPO/sdlc/scripts/scratch.sh"
+scratch_dir work
 output=$work/output
 
 demos/16-triage-pipeline/triage "$output" \

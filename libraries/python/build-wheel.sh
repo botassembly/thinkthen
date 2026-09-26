@@ -7,8 +7,8 @@
 unset THINKTHEN_API_KEY
 set -eu
 cd -- "$(dirname -- "$0")"
-out=$(mktemp -d)
-trap 'rm -rf -- "$out"' EXIT
+. ../../sdlc/scripts/scratch.sh
+scratch_dir out
 
 RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
 export RUSTFLAGS

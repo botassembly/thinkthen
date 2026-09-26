@@ -2,8 +2,8 @@
 set -eu
 
 HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-work=$(mktemp -d)
-trap 'rm -rf -- "$work"' EXIT HUP INT TERM
+. "$HERE/../../sdlc/scripts/scratch.sh"
+scratch_dir work
 
 "$HERE/triage" "$work/output" "$@"
 jq -s -r 'sort_by(.input.id)[]

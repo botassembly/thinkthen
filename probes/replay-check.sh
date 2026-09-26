@@ -23,8 +23,8 @@ repo=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 cargo build --locked --quiet --manifest-path "$repo/Cargo.toml" --package thinkthen
 PATH="$repo/target/debug:$PATH"
 export PATH
-scratch=$(mktemp -d)
-trap 'rm -rf -- "$scratch"' EXIT
+. "$repo/sdlc/scripts/scratch.sh"
+scratch_dir scratch
 
 unset THINKTHEN_API_KEY THINKTHEN_BASE_URL
 

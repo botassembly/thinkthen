@@ -2,8 +2,8 @@
 set -eu
 cd -- "$(dirname -- "$0")"
 
-work=$(mktemp -d)
-trap 'rm -rf -- "$work"' EXIT
+. ../../sdlc/scripts/scratch.sh
+scratch_dir work
 
 jq -n -f sweep.jq ../rows/runs/run-a.jsonl > "$work/decision.json"
 cmp decision-expected.json "$work/decision.json"

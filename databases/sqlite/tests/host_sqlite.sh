@@ -11,8 +11,8 @@ if [ -x "$host/sqlite3" ] && [ -f "$host/libsqlite3.so.0" ] && [ "$(cat -- "$hos
 	echo "$host"
 	exit 0
 fi
-building=$(mktemp -d)
-trap 'rm -rf -- "$building"' EXIT
+. "$(dirname -- "$0")/../../../sdlc/scripts/scratch.sh"
+scratch_dir building
 cc -O2 -fPIC -shared -o "$building/libsqlite3.so.0" "$source/sqlite3.c" -lpthread -ldl -lm
 cc -O2 -I"$source" -o "$building/sqlite3" "$source/shell.c" "$source/sqlite3.c" -lpthread -ldl -lm
 printf '%s\n' "$stamp" >"$building/SOURCE.sha256"

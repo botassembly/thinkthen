@@ -2,8 +2,8 @@
 set -eu
 cd -- "$(dirname -- "$0")"
 
-work=$(mktemp -d)
-trap 'rm -rf -- "$work"' EXIT
+. ../../sdlc/scripts/scratch.sh
+scratch_dir work
 
 yes_row='def row($id;$label;$probability;$threshold;$replayed;$value):
   {schema:"thinkthen.result/1",input:{id:$id,label:$label,body:"fixture"},value:$value,

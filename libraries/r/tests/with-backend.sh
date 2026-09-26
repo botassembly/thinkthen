@@ -11,8 +11,9 @@
 # `expect count N` line.
 set -euo pipefail
 backend=$1 file=$2
-dir=$(mktemp -d)
-trap 'exec 3>&- 2>/dev/null || true; rm -rf -- "$dir"' EXIT
+. "$(dirname "$0")/../../../sdlc/scripts/scratch.sh"
+scratch_dir dir
+trap 'exec 3>&- 2>/dev/null || true; scratch_clean' EXIT
 mkfifo "$dir/in"
 "$backend" <"$dir/in" >"$dir/out" &
 served=$!

@@ -2,8 +2,8 @@
 set -eu
 cd -- "$(dirname -- "$0")"
 
-work=$(mktemp -d)
-trap 'rm -rf -- "$work"' EXIT HUP INT TERM
+. ../../sdlc/scripts/scratch.sh
+scratch_dir work
 
 jq -n -c '
   def row($id; $action; $reviewed):
