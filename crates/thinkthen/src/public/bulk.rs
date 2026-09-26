@@ -127,11 +127,13 @@ impl Engine {
     }
 
     /// Select the one unit that best answers the question, from 2 to 255.
+    /// A question from [`Question::offering_none`] takes 2 to 254 units and
+    /// may select none.
     ///
     /// # Errors
     ///
     /// As [`Engine::decide`], and [`Error::Usage`] for another kind of
-    /// question or a unit count outside 2 to 255.
+    /// question or a unit count outside its range.
     pub fn find<I>(&self, question: &Question, units: I) -> Result<Found<I::Item>, Error>
     where
         I: IntoIterator,
@@ -180,6 +182,8 @@ impl Engine {
     }
 
     /// Each record with every value of the set, lazily, in input order. A
+    /// member with an `on` pointer reads that part of the record's JSON text,
+    /// and a record missing a part is refused before its first request. A
     /// question the backend failed reads [`Annotated::Failed`](crate::Annotated::Failed).
     pub fn annotate<'a, I>(
         &'a self,
