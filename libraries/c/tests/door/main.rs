@@ -15,10 +15,11 @@ mod cases;
 #[path = "../../../../crates/thinkthen/src/test_deadline/child.rs"]
 mod child;
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
-use std::sync::OnceLock;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Mutex, OnceLock, PoisonError};
 use std::time::{Duration, Instant};
 
 use conformance_backend::Backend;
@@ -76,15 +77,21 @@ fn archive() -> &'static Path {
     })
 }
 
-/// Compile one C program against the archive, under AddressSanitizer.
+/// Compile one C program against the archive, under AddressSanitizer, once.
+/// Three tests share `driver.c`, and a relink fails another test's launch.
 fn compile(source: &Path) -> PathBuf {
+    static BUILT: Mutex<BTreeMap<PathBuf, PathBuf>> = Mutex::new(BTreeMap::new());
+    let mut built = BUILT.lock().unwrap_or_else(PoisonError::into_inner);
+    if let Some(binary) = built.get(source) {
+        return binary.clone();
+    }
     let name = source
         .file_stem()
         .and_then(|stem| stem.to_str())
         .expect("a name");
     let binary = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("c-{name}"));
     let folder = archive();
-    let built = child::command("cc", &[])
+    let linked = child::command("cc", &[])
         .args([
             "-std=c11",
             "-D_GNU_SOURCE",
@@ -106,10 +113,11 @@ fn compile(source: &Path) -> PathBuf {
         .output()
         .expect("cc ran");
     assert!(
-        built.status.success(),
+        linked.status.success(),
         "{name}: {}",
-        String::from_utf8_lossy(&built.stderr)
+        String::from_utf8_lossy(&linked.stderr)
     );
+    built.insert(source.to_owned(), binary.clone());
     binary
 }
 

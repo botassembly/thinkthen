@@ -1,6 +1,6 @@
 //! The one public error: six kinds, a safe message, and the retry signal.
 
-use crate::engine::error::{Error as EngineError, Kind, TransportKind};
+use crate::engine::error::{Error as EngineError, Kind, TransportKind, reply_too_large};
 
 /// What stopped a call, as one of six stable kinds.
 ///
@@ -181,6 +181,7 @@ fn message(error: &EngineError) -> String {
         EngineError::Transport(kind) => transport(*kind),
         EngineError::Status(status) => return format!("the backend answered with status {status}"),
         EngineError::TokenLimit => "the backend answered with status 400",
+        EngineError::ReplyTooLarge(limit) => return reply_too_large(*limit),
         EngineError::Reply(decode) => return format!("the reply was refused: {decode}"),
         EngineError::ReplayMiss(_) => "the replay folder holds no reply for this request",
         EngineError::Entry(..) | EngineError::CacheEntry => {

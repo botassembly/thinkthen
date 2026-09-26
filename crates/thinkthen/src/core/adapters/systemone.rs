@@ -147,6 +147,16 @@ pub(crate) fn wire_name(place: usize) -> String {
     format!("q{}", place + 1)
 }
 
+/// The place a wire name spells, read back as `wire_name` writes it, if any.
+pub(crate) fn wire_place(name: &str) -> Option<usize> {
+    let place = name
+        .strip_prefix('q')?
+        .parse::<usize>()
+        .ok()?
+        .checked_sub(1)?;
+    (wire_name(place) == name).then_some(place)
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     use super::diagnostic_model;

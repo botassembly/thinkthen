@@ -50,6 +50,7 @@ The report has eight rows, always in this order: `connection`, `key`, `endpoint`
 | `endpoint` | critical | The first probe meets status 404 | `the backend answered with status 404: nothing answers at this address` |
 | probe | critical | Any other error status after the allowed attempts | The status sentence every command prints |
 | probe | critical | The decoder refuses the whole reply | `the reply was refused: ` and the decoder's sentence |
+| probe | critical | The reply passes its request's limit | The reply-limit sentence every command prints |
 | probe | critical | The reply fails one logical question and keeps another | ``the answer to questions `qA` to `qB` failed as `CAUSE` ``. A one-wire question reads ``the answer to question `qA` failed as `CAUSE` ``. The range is the wire questions that logical question covers. CAUSE is the failure cause a result names |
 | probe | critical | A later probe meets a transport failure or status 401 to 404 | The same sentence as the first-probe rows |
 | probe | warning | A `choice` or `score` answer carries no `confidence` | ``the answer to question `qN` carries no confidence`` |
