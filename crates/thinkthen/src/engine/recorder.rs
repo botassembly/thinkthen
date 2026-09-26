@@ -111,6 +111,11 @@ impl Recorder {
         self.cache_answers
     }
 
+    /// Whether the folder is read back as it is written, as by every cache.
+    pub(crate) const fn caches(&self) -> bool {
+        self.recording && self.replaying
+    }
+
     pub(crate) const fn reported(&self) -> bool {
         self.folder.is_some() && !self.private_default
     }
@@ -163,11 +168,23 @@ impl Recorder {
         self.prepare_cancelled(exchange, digest, &crate::engine::Cancel::default())
     }
 
+    #[cfg(test)]
     pub(crate) fn prepare_cancelled(
         &self,
         exchange: &Exchange<'_>,
         digest: &Digest,
         cancel: &crate::engine::Cancel,
+    ) -> Result<PreparedRecording, Error> {
+        self.prepare_checked(exchange, digest, cancel, &|_| true)
+    }
+
+    /// Prepare as `prepare_cancelled` does, reading an entry `complete` refuses as damaged.
+    pub(crate) fn prepare_checked(
+        &self,
+        exchange: &Exchange<'_>,
+        digest: &Digest,
+        cancel: &crate::engine::Cancel,
+        complete: &dyn Fn(&[u8]) -> bool,
     ) -> Result<PreparedRecording, Error> {
         let Some(folder) = self.folder.as_ref() else {
             return Ok(PreparedRecording::Live(WritePermit {
@@ -175,10 +192,9 @@ impl Recorder {
                 _gate: None,
             }));
         };
-        let name = digest.file_name();
-        let gate = self.gate(exchange, &name, cancel)?;
+        let gate = self.gate(exchange, &digest.file_name(), cancel)?;
         Ok(
-            match self.prepare_in(folder, name, exchange, digest, cancel)? {
+            match self.prepare_in(folder, exchange, digest, cancel, complete)? {
                 PreparedRecording::Live(permit) => PreparedRecording::Live(permit.under(gate)),
                 replay @ PreparedRecording::Replay(_) => replay,
             },
@@ -189,17 +205,23 @@ impl Recorder {
     fn prepare_in(
         &self,
         folder: &Path,
-        name: String,
         exchange: &Exchange<'_>,
         digest: &Digest,
         cancel: &crate::engine::Cancel,
+        complete: &dyn Fn(&[u8]) -> bool,
     ) -> Result<PreparedRecording, Error> {
+        let name = digest.file_name();
         let entry = folder.join(&name);
         let first = existing(&entry, exchange)?;
 
         if !self.recording {
             return replay_only(first, name);
         }
+        let checked = |found: Existing| match found {
+            Existing::Valid(response) if !complete(&response) => Existing::Damaged(String::new()),
+            found => found,
+        };
+        let first = checked(first);
         if self.replaying
             && let Existing::Valid(response) = first
         {
@@ -212,7 +234,7 @@ impl Recorder {
             Existing::Missing | Existing::Damaged(_) => {
                 let lock = cache_lock::acquire_cancelled(folder, digest.as_str(), cancel)
                     .map_err(storage)??;
-                match existing(&entry, exchange)? {
+                match checked(existing(&entry, exchange)?) {
                     Existing::Valid(response) if self.replaying => {
                         remove_lock(lock)?;
                         Ok(PreparedRecording::Replay(response))
