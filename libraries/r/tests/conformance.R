@@ -64,8 +64,9 @@ run_case <- function(case, served) {
     same("model", row$meta$model, want$details$model)
     same("requests", row$meta$requests, want$details$requests)
     if (case$expect$success$kind != "single") return(invisible())  # run facts ride on single cases only
-    for (name in c("usage", "requests_sent", "cached")) same(name, row$meta[[name]], want$details[[name]])
-    same("confidence", row$answer$confidence, want$details$answer$confidence)
+    field <- function(from, name) if (name %in% names(from)) from[[name]] else "absent"  # NULL is JSON null too
+    for (name in c("usage", "requests_sent", "cached")) same(name, field(row$meta, name), field(want$details, name))
+    same("confidence", field(row$answer, "confidence"), field(want$details$answer, "confidence"))
     same("url", row$meta$url, served)
   }
   detailed <- function(question) {
