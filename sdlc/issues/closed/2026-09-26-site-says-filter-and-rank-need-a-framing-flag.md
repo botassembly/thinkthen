@@ -1,8 +1,6 @@
 # The site says filter and rank need a framing flag
 
-Status: Open. Filed 2026-09-26 by ticket 0137 for the website agent, who owns `site/`.
-
-Status: Fixed on the site preview branch `preview/beatles-bench-site` at 938e0040. Close this issue when the preview lands on main.
+Status: Closed 2026-09-26 by the site landing. The reference and the tutorial say filter and rank read lines by default, and no filter or rank example passes `--lines`.
 
 ## What happens
 

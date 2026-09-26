@@ -1,6 +1,6 @@
 # The site states the retired usage crash guarantee
 
-Status: Open. Filed 2026-09-26 by ticket 0141 for the website agent.
+Status: Closed 2026-09-26 by the site landing. The backends page no longer makes a crash claim, and no page states one.
 
 ## What happens
 

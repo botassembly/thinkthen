@@ -1,6 +1,6 @@
 # Site decide examples call decide inside a print
 
-Status: Open
+Status: Closed 2026-09-26 by the site landing. The Rust, C, and Polars decide samples bind the answer and assert it. No sample calls a print.
 
 Found 2026-09-25 while a talk deck copied site examples line for line. The deck shows whole lines of each example and drops lines it does not need. Its owner asked for code with no print lines.
 

@@ -1,6 +1,6 @@
 # The site pull names a private deck folder
 
-Status: Open.
+Status: Closed 2026-09-26 by the site landing. `site/scripts/pull-examples.mjs` is gone, and the README and the blog page name no private folder. `sdlc/scripts/lint` with the private-name list finds no name.
 
 Filed on 2026-09-25 from a read of `site/` on main at 20e9b8d4.
 

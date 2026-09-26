@@ -1,6 +1,6 @@
 # The site builds its Settings page from the settings table
 
-Status: open. Filed 2026-09-26 by ticket 0140 for the website owner, who owns `site/`.
+Status: Closed 2026-09-26 by the site landing. `/install/settings/` reads `specification/settings.md` at build time, and `site/scripts/check-settings.mjs` fails the build when the page and the table disagree. The page leaves out the settings on the way and the record citations, which a public reader cannot use.
 
 Ian ruled on 2026-09-26 that every setting is explained in one place. `specification/settings.md` now holds that table. The batching design's C1 section says the website generates its Settings page from the table at build time.
 
