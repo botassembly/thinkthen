@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 158
-opens: crates/thinkthen/src/engine/request.rs crates/thinkthen/src/engine/recorder.rs crates/thinkthen/src/core/reply.rs crates/thinkthen/tests/backend/cache_partial.rs crates/thinkthen/tests/backend/main.rs specification/records.md specification/recording.md sdlc/ratchet.json sdlc/records sdlc/tickets
+opens: crates/thinkthen/src/engine/request.rs crates/thinkthen/src/engine/recorder.rs crates/thinkthen/src/core/reply.rs crates/thinkthen/tests/backend/cache_partial.rs crates/thinkthen/tests/backend/main.rs specification/records.md specification/recording.md sdlc/ratchet.json sdlc/records sdlc/tickets sdlc/issues
 ---
 
 # 0158: A cache keeps no reply that failed a question
@@ -39,12 +39,17 @@ The engine is shared, so the libraries and SQL extensions follow the same rule u
 
 ### Pages
 
-- `records.md`, the cache paragraph: after "Each digest keeps the first complete response installed in the folder." add "A reply that failed a question is not complete. A cache does not install it, and the next run asks again. A cache also reads an entry that holds such a reply as a miss, and replaces it once a reply answers every question. `--record` alone still writes it, and `--replay` alone still replays it."
-- `recording.md`, line 84: after the first sentence add "A cache, typed or default, installs no partial reply, so a cached run asks again. ADR 0053 item 6 rules it."
-- `recording.md`, line 59, "Only an exchange that succeeded and decoded is recorded. A failure is never recorded.": after it add "A reply that failed a question beside a good answer counts as decoded. `--record` writes it. A cache does not install it."
-- `recording.md`, line 13, the row "Both, with the same `DIR`": its cell becomes "A cache. An entry that exists is replayed. A request that is absent goes to the backend, and its reply is recorded when it answered every question."
-- `records.md`, line 123, after "The same command run again replays those 399 and pays for the rest.": add "A record whose reply failed a question has no entry, so the resumed run asks for it again."
+Every page sentence below follows both halves of the rule: a cache installs no partial reply, and a cache reads a partial entry as a miss.
+
+- `recording.md`, line 13, the row "Both, with the same `DIR`": its cell becomes "A cache. An entry that exists is replayed, unless it holds a reply that failed a question. Such an entry counts as a miss. A request that is absent or missed goes to the backend, and its reply is recorded when it answered every question."
+- `recording.md`, line 59: replace "Only an exchange that succeeded and decoded is recorded. A failure is never recorded." with "A reply that fails as a whole is never recorded. That covers a transport failure, a refused or failed status, and a reply that does not decode or fails every question. A reply that fails some questions beside a good answer decodes. `--record` alone writes it, so `--replay` reproduces it. A cache does not install it."
+- `recording.md`, line 64: "After a reply succeeds and decodes, the tool writes and syncs the complete entry." becomes "After a reply succeeds and decodes, the tool writes and syncs the complete entry. Under a cache it writes nothing for a reply that failed a question." "It replaces a damaged final name atomically while it owns that digest's lock." becomes "It replaces a damaged final name atomically while it owns that digest's lock. Under a cache it replaces a final name that holds a partial reply the same way."
+- `recording.md`, line 66: after "A successful answer through `--record` or `--cache` replaces a damaged entry atomically, and a later replay reads the repair." add "A complete answer through a cache also replaces a partial entry atomically. `--record` alone and `--replay` alone leave a partial entry as it is."
+- `recording.md`, line 68: "A missing or damaged entry takes an exclusive operating-system lock for its digest, then checks the entry again." becomes "A missing or damaged entry, and under a cache an entry that holds a partial reply, takes an exclusive operating-system lock for its digest, then checks the entry again."
+- `recording.md`, line 84: after the first sentence add "A cache, typed or default, installs no partial reply and reads a partial entry as a miss, so a cached run asks again. ADR 0053 item 6 and its amendment rule it. To retry a failed question, run the same command again under a cache. For a folder written by `--record` alone, run it again with `--cache` on that folder."
 - `recording.md`, line 42, after "Both options on one folder are also the resume for a record run.": add "A resumed run asks again for records whose reply failed a question, because a cache keeps no such reply."
+- `records.md`, line 123, after "The same command run again replays those 399 and pays for the rest.": add "A record whose reply failed a question has no entry, so the resumed run asks for it again."
+- `records.md`, line 125: after "Each digest keeps the first complete response installed in the folder." add "A reply that failed a question is not complete. A cache does not install it, and reads an entry that holds one as a miss." "The owner checks again, sends only if the entry remains absent, and installs the complete response." becomes "The owner checks again, sends unless a complete entry now exists, and installs the response only when it is complete."
 - `relate.md`, line 70, stays as it is. It speaks of record and replay, and a recorded partial reply still reproduces there.
 
 ## Decisions
@@ -136,6 +141,8 @@ None.
 ## Closes
 
 Finding 4 of `sdlc/issues/2026-09-26-batching-design-review-before-0146.md`.
+
+`sdlc/issues/2026-09-26-recording-page-says-a-failure-is-never-recorded.md`. The line 59 rewrite says which failures are never recorded and that a partial reply is. The line 84 sentences say how a user retries a failed question. The build moves the issue to `closed/`.
 
 ## Evidence
 
