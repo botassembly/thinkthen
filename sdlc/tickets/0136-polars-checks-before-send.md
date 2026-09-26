@@ -6,7 +6,7 @@ opens: libraries/python/src/frame.rs libraries/python/src/arrow/write.rs librari
 
 # 0136: Polars frames refuse before sending and write cells as the Rust door does
 
-Status: in progress. Design accepted after two reviews (the second found only nits, fixed here). Owner: Claude.
+Status: built (`sdlc/records/0136-build-polars-checks-before-send.md`). Design and code reviews accepted. Ready to land. Owner: Claude.
 
 Lane: thinkthen-lane-4
 
