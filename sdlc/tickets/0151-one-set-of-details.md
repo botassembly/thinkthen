@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 151
-opens: crates/thinkthen/src/public/results.rs conformance/cases.json conformance/README.md conformance/consumer/consumer/tests/public/cases.rs libraries/typescript/index.d.ts libraries/typescript/tests/types.test.ts libraries/typescript/tests/cases.mjs libraries/typescript/README.md libraries/python/tests/conformance.py libraries/python/README.md libraries/ruby/tests/conformance.rb libraries/ruby/README.md libraries/r/tests/conformance.R libraries/r/README.md libraries/c/tests/door/cases.rs libraries/c/README.md libraries/rust/README.md libraries/polars/README.md databases/duckdb/src/scalars.rs databases/duckdb/src/scalars/calls.rs databases/duckdb/tools/conformance.py databases/duckdb/tools/verbs_suite.py databases/duckdb/tools/settings_suite.py databases/duckdb/README.md databases/duckdb/ratchet.json databases/sqlite/tests/conformance.py databases/sqlite/README.md databases/postgresql/tests/runner.py databases/postgresql/README.md sdlc/tickets/0084-freeze-the-public-rust-contract.md sdlc/ratchet.json sdlc/records sdlc/tickets sdlc/issues
+opens: crates/thinkthen/src/public/results.rs conformance/cases.json conformance/README.md conformance/consumer/consumer/tests/public/cases.rs libraries/typescript/index.d.ts libraries/typescript/tests/types.test.ts libraries/typescript/tests/cases.mjs libraries/typescript/README.md libraries/python/tests/conformance.py libraries/python/README.md libraries/ruby/tests/conformance.rb libraries/ruby/README.md libraries/r/tests/conformance.R libraries/r/README.md libraries/c/tests/door/cases.rs libraries/c/README.md libraries/rust/README.md libraries/polars/README.md databases/duckdb/src/scalars.rs databases/duckdb/src/scalars/calls.rs databases/duckdb/tools/conformance.py databases/duckdb/tools/verbs_suite.py databases/duckdb/tools/settings_suite.py databases/duckdb/README.md databases/duckdb/NOTES.md databases/duckdb/ratchet.json databases/sqlite/tests/conformance.py databases/sqlite/README.md databases/postgresql/tests/runner.py databases/postgresql/README.md sdlc/tickets/0084-freeze-the-public-rust-contract.md sdlc/ratchet.json sdlc/records sdlc/tickets sdlc/issues
 ---
 
 # 0151: One set of details on every surface
@@ -28,6 +28,11 @@ The backlog orders L5 before B12a, the Rust library's batching ticket, so that B
 - The TypeScript `Details` type declares `meta.url` but not `answer.confidence` (`libraries/typescript/index.d.ts:74-98`). The line carries both at run time.
 - `conformance/cases.json` checks four details fields: `answer`, `model`, `question_sha256` and `requests`. Every reply in it carries `usage`. No reply carries `confidence`.
 - The runners check those four fields in two ways. TypeScript, R, SQLite and C compare the expected `answer` whole or member by member, so a new member in the expected answer is checked with no code change. Rust, Python, Ruby and PostgreSQL check a fixed list of answer members. DuckDB's runner reads only `.value` (`databases/duckdb/tools/conformance.py:56-64`).
+- Three runners make a details call that is not the text's first send.
+  - C runs case 40's counters first on the case's own cache folder, then the bare call, then details (`libraries/c/tests/door/cases.rs:252-266`). Its details call reads `cached: true` and `requests_sent: 0`.
+  - R runs the counters and the bare call before `tt_details`, in one child with one cache (`libraries/r/tests/conformance.R:79-90`). Its details call reads the same.
+  - PostgreSQL runs case 40's counters through `thinkthen_details` on the case's own cache folder, then makes its checked details call on that cache (`databases/postgresql/tests/runner.py:155-163`).
+  - The Rust consumer, Python, TypeScript, Ruby and DuckDB run the counters on a cache folder of their own.
 - The command's in-process runner compares the whole decoded answer (`crates/thinkthen/src/cli/conformance_tests/outcomes/outcomes.rs:22-30`). It replays, so it sees `requests_sent` 0.
 - The Rust, Python and Polars READMEs never mention `details` or `usage`.
 
@@ -70,6 +75,8 @@ Every `single` answer's `details` in `cases.json` gains three fields:
 - `requests_sent`: 1.
 - `cached`: `false`.
 
+Each new key goes before an existing key, so the key before it already ends in a comma and no existing line changes. `usage`, `requests_sent` and `cached` go right after `"model"` in `details`. `confidence` goes right before `"probabilities"` in the reply and in the expected answer.
+
 Two replies gain a `confidence`, and their expected answers carry it: `06-choose-billing` gets 0.82, and `11-score-middle` gets 0.74. The reply of `12-score-upper` loses its `usage`, and its expected details carry none. No case is added, so `case_count` stays 54 and no skip list changes.
 
 Every runner that reads details checks five things for each `single` case:
@@ -77,13 +84,21 @@ Every runner that reads details checks five things for each `single` case:
 - `answer.confidence` equals the expected value, or both are absent.
 - `meta.usage` equals the expected value, or both are absent.
 - `meta.requests_sent` and `meta.cached` equal the expected values.
-- `meta.url` equals the address the runner served, `BASE/systemone`.
+- `meta.url` equals the address the runner served, `BASE/systemone`. The Rust consumer checks both `url()` and `to_json()`'s `meta.url`.
 
-The nine runners are the Rust consumer, C, Python, TypeScript, Ruby, R, SQLite, PostgreSQL and DuckDB. `conformance/README.md` gains one paragraph for these fields and the url rule.
+Every such runner also keeps checking `answer`, `model`, `question_sha256` and `requests`. The nine runners are the Rust consumer, C, Python, TypeScript, Ruby, R, SQLite, PostgreSQL and DuckDB.
+
+DuckDB's runner gains every check, the four old fields included. It renames each expected request digest from the canonical address to the served one, as the PostgreSQL runner's `served` and `swap` do.
+
+Three runners change their order so that the details call is the text's first send (decision 6):
+
+- C makes the details call before the bare call. Case 40's counters run on a cache folder of their own.
+- R calls `tt_details` before the bare verb. Case 40's counters run on a cache folder of their own.
+- PostgreSQL runs case 40's counters on a cache folder of their own. `conformance/README.md` gains one paragraph for these fields and the url rule.
 
 ### READMEs
 
-Each of the ten surface READMEs gains one short paragraph, "Run facts". It says:
+Nine surface READMEs gain one short paragraph, "Run facts": Rust, Python, TypeScript, Ruby, R, C, DuckDB, SQLite and PostgreSQL. It says:
 
 - the details call returns the `thinkthen.result/1` line;
 - `model`, `usage`, every probability and `confidence` come from the backend's reply;
@@ -92,7 +107,9 @@ Each of the ten surface READMEs gains one short paragraph, "Run facts". It says:
 - the usage call returns this process's running totals;
 - no call reports cost or time yet.
 
-The Polars README and the Python frames paragraph say a frame call returns values only, and point to the details and usage calls.
+The Polars README carries only one pointer: a frame call returns values only, so a reader uses the details and usage calls. The Python README's frames paragraph says the same.
+
+DuckDB's docs lose the struct. `README.md` line 15, the struct row, names the line instead. Line 24's sentence "A member a verb lacks reads `NULL` in `thinkthen_details`, never 0" goes, since the line omits an absent member. `NOTES.md` line 15, on `thinkthen_details(...).value`, goes too, and line 14's struct sentence stays for the other struct results.
 
 ## Decisions
 
@@ -104,7 +121,7 @@ The Polars README and the Python frames paragraph say a frame call returns value
 6. **The details call is the text's first send.** Each runner makes its details call on an engine with no cache, or on a fresh cache folder before any other call for that text. So `requests_sent` is 1 and `cached` is `false`. A runner that breaks this gets its order or cache setting fixed, in this ticket.
 7. **The command's runner keeps its checks.** It replays in process, so `requests_sent` is 0 by construction there, and its file `cli/conformance_tests/runner.rs` belongs to ticket 0146. It already compares the whole answer, so it checks `confidence` on cases 06 and 11 with no edit. The command's `meta` fields stay pinned by its own spec pages.
 8. **An absent field stays absent.** No surface writes `null` or 0 for a missing `usage` or `confidence`. Case 07 (a choice with no confidence) and case 12 (a reply with no usage) prove it.
-9. **The site part goes to the marketing lead.** The lander files one issue in the marketing repository: show one raw HTTP exchange with its `usage`, say where run facts come from on each language page, and correct "ten `tt_` functions" for R. This repository's issue marks ask 6 settled for the READMEs and names that issue for the site.
+9. **The site part goes to the marketing lead.** The lander files one issue in this repository's `sdlc/issues/` for the marketing lead, who owns `site/`. It asks to show one raw HTTP exchange with its `usage`, to say where run facts come from on each language page, and to correct 'ten `tt_` functions' for R (`site/src/data/catalog.mjs:456`). The run-facts issue marks ask 6 settled for the READMEs and names the site issue for the site.
 
 ## Edge cases
 
@@ -114,7 +131,7 @@ The Polars README and the Python frames paragraph say a frame call returns value
 | A score reply with `confidence` 0.74 (case 11) | `answer.confidence` is 0.74. Rust `confidence()` is `Some(0.74)` |
 | A choice reply with no `confidence` (case 07) | No `confidence` key. Rust `confidence()` is `None`. TypeScript reads `undefined` |
 | A yes/no or tag reply (cases 01 to 05, 09, 10, 33) | No `confidence` key |
-| A reply with `usage` (every single case but 12) | `meta.usage` equals the reply's two counts |
+| A reply with `usage` (every other single case) | `meta.usage` equals the reply's two counts |
 | A reply with no `usage` (case 12) | No `meta.usage` key. Rust `usage()` is `None` |
 | The first send of a text | `requests_sent` 1, `cached` `false` |
 | A banded question (cases 03, 04) | The line carries the band as `"LOW:HIGH"`, on DuckDB too |
@@ -128,7 +145,7 @@ Every test runs against the loopback backend in `conformance/backend`. None send
 
 | Test | What it runs | Planted fault that turns it red |
 | --- | --- | --- |
-| 1. The shared cases, on nine runners | Every `single` case on the Rust consumer, C, Python, TypeScript, Ruby, R, SQLite, PostgreSQL and DuckDB, with the five checks above | (a) A copy of `cases.json` where case 01 expects 332 input tokens, 02 expects `requests_sent` 2, 04 expects `cached` `true`, 06 expects `confidence` 0.81, 07 expects `confidence` 0.5, and 12 expects a `usage`. Every runner names all six cases, or each change runs alone where a runner stops at its first failure. (b) The core line writer drops `/systemone` from `meta.url`: every runner fails on `url` |
+| 1. The shared cases, on nine runners | Every `single` case on the Rust consumer, C, Python, TypeScript, Ruby, R, SQLite, PostgreSQL and DuckDB, with the five checks above | (a) A copy of `cases.json` where case 01 expects 332 input tokens, 02 expects `requests_sent` 2, 04 expects `cached` `true`, 06 expects `confidence` 0.81, 07 expects `confidence` 0.5, and 12 expects a `usage`. Every runner names all six cases, or each change runs alone where a runner stops at its first failure. (b) The core line writer drops `/systemone` from `meta.url`: every runner fails on `url`, the Rust consumer through its `to_json()` check |
 | 2. DuckDB gives the whole line | Test 1's DuckDB rows, and the rewritten `verbs_suite.py` probability row | (c) `details_row` strips `meta.usage` from the line: case 01 fails. (d) `details_row` returns the old eight-member struct: every single case fails |
 | 3. Rust's typed view | Test 1's Rust consumer rows, which read `confidence()` and `url()` | (e) `confidence()` returns `None`: case 06 fails. (f) `url()` returns the model name: every single case fails |
 | 4. TypeScript's declared type | `tsc --noEmit --strict` over `tests/types.test.ts`, which assigns `audit.answer.confidence` to `number \| undefined` and `audit.meta.url` to `string` | (g) `confidence?` leaves `index.d.ts`: the compile fails |
@@ -145,15 +162,15 @@ The four questions:
 Nonblank lines, measured with `grep -c .`.
 
 - `crates/thinkthen/src/public/results.rs`: at most 16 net.
-- `conformance/cases.json`: at most 100 added and 4 removed.
+- `conformance/cases.json`: at most 100 added and at most 8 removed.
 - `conformance/consumer/consumer/tests/public/cases.rs`: at most 20 net.
-- Each other runner: at most 12 net.
+- Each other runner: at most 12 net. That holds for C, R and PostgreSQL with their reordering: each moves existing lines and adds one cache folder for the counters.
 - `databases/duckdb/src`: net negative.
-- `databases/duckdb/tools`: at most 5 net.
+- `databases/duckdb/tools`: at most 30 added to `conformance.py` for the digest renaming and the seven field checks. Removing `r3_11` takes 22 nonblank lines out of `verbs_suite.py`. Net across the folder: at most 10.
 - `libraries/typescript/index.d.ts`: 1. `tests/types.test.ts`: at most 3.
-- Each README: at most 8. `conformance/README.md`: at most 6.
+- Each README: at most 8. The Polars README: at most 2. `databases/duckdb/NOTES.md`: at most 2 changed. `conformance/README.md`: at most 6.
 - Ticket 0084's block: 2.
-- The record: at most 80. The run-facts issue: at most 4 changed lines. The marketing issue: at most 20.
+- The record: at most 80. The run-facts issue: at most 4 changed lines. The site issue: at most 20.
 - `sdlc/ratchet.json` and `databases/duckdb/ratchet.json` move to the measured totals. The commit says what grew.
 - No dependency. No setting, so `specification/settings.md` does not change.
 
@@ -174,8 +191,8 @@ The coordinator can overturn this order.
 
 - **Ticket 0146** (the command batches) opens `public/results.rs`. This ticket adds two fields and two accessors there. 0146 changes at most 3 lines there, for a batched row's usage share. It also opens `crates/thinkthen/tests` and `specification/result.md`, which this ticket leaves alone. The shared files `sdlc/ratchet.json`, `sdlc/records`, `sdlc/tickets` and `sdlc/issues` merge as usual.
 - **Ticket 0148** (engine settings everywhere) opens `conformance/consumer`, `conformance/README.md`, the whole `libraries/typescript`, `libraries/python`, `libraries/ruby`, `libraries/r` and `libraries/c` folders, `libraries/rust/README.md`, `libraries/polars/README.md`, the three database folders, and ticket 0084. This ticket edits files in each of those. The runners (`cases.rs`, `conformance.py`, `conformance.rb`, `conformance.R`, `cases.mjs`, C's `cases.rs`, the SQL runners) and every README are the closest overlap, because 0148 adds its settings runner beside each and a sentence to each README. `databases/duckdb/tools/settings_suite.py` is edited by both: 0148 removes the `cache_bytes` step at line 91, and this ticket changes line 109. 0148 adds `conformance/settings.json` and does not touch `cases.json`.
-- **Order:** this ticket builds now and lands first. 0146 waits for Ian's paid "S1 live run 1", and 0148 waits for 0146. This ticket depends on neither. Both already merge `origin/main` before they build, so they pick up this change. B12a builds after this ticket, as the backlog asks.
-- **Tickets 0147 and 0150.** 0147 (the recognize ADR) opens pages only, and none overlaps. 0150 (L4, find's none option and annotate parts) had no ticket on its branch when this was written. It will likely edit `cases.json` and the runners' skip lists. Whichever lands second merges.
+- **Order:** this ticket builds now and lands first. 0150 follows it, then 0146, then 0148. 0150's ticket text still says it builds after 0146 and 0148, and the coordinator's order replaces that. 0146 waits for Ian's paid "S1 live run 1", and 0148 waits for 0146. This ticket depends on neither. Both already merge `origin/main` before they build, so they pick up this change. B12a builds after this ticket, as the backlog asks.
+- **Tickets 0147 and 0150.** 0147 (the recognize ADR) opens pages only, and none overlaps. 0150 (L4, find's none option and annotate parts) now has its ticket. By the coordinator's order it builds after this ticket, merges this ticket first, and lands before 0146's build starts. It shares these files with this ticket: `public/results.rs`, `conformance/cases.json`, `conformance/README.md`, `conformance/consumer/consumer/tests/public/cases.rs`, the Python, TypeScript, Ruby, R and C runners and READMEs (0150 opens those whole folders), `databases/duckdb/tools/conformance.py`, `databases/duckdb/NOTES.md`, `databases/sqlite/tests/conformance.py`, `databases/postgresql/tests/runner.py`, and ticket 0084.
 
 ## Scope and exclusions
 
@@ -203,16 +220,16 @@ Contract 2; state and timing 0; reach 2; proof 1; cost of error 1; total 6. Fina
 - Decision 2: the type is `VARCHAR`.
 - Decision 7: the command's runner keeps its four checks.
 - Decision 9: the site part goes to the marketing lead as an issue.
-- The build order: this ticket before 0146 and 0148.
+- The build order: this ticket before 0150, 0146 and 0148.
 
 ## Closes
 
-No issue closes. The lander marks asks 5 and 6 of `sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md` settled by this ticket in its status line, and names the marketing issue for the site part of ask 6. Asks 1 to 4 stay open for B5, B12a to B12f and the cost and time work.
+No issue closes. The lander marks asks 5 and 6 of `sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md` settled by this ticket in its status line, and names the site issue for the site part of ask 6. Asks 1 to 4 stay open for B5, B12a to B12f and the cost and time work.
 
 ## Evidence
 
 - Starts from: `sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md`, gaps 3, 4, 7 and 8 and asks 5 and 6, from the audit at `cc51986b`. `sdlc/planning/library-equivalence-2026-09-26.md`, notes R2 and R4, proposal E6, section 3 on SQL facts, and section 5 on what the cases miss, from the audit at `eba3a72a`. Backlog row L5. The code at `origin/main` `a2fe448d`: `public/results.rs:170-300`, `databases/duckdb/src/scalars.rs:56-100`, `src/scalars/calls.rs:91-140`, `libraries/typescript/index.d.ts:74-98`, every runner's details check, and `cli/conformance_tests/outcomes/outcomes.rs`. Tickets 0146 and 0148, read from their branches. No experiment ran. The line already carries every field, so no live evidence is needed.
 - Keeps: The `thinkthen.result/1` line and every surface that passes it through. Every bare value, digest and request. The command's output. DuckDB's other functions. The existing details accessors in Rust.
-- Changes: DuckDB's `thinkthen_details` returns the line as text. Rust `Details` gains `confidence()` and `url()`. TypeScript's `Details.answer` gains `confidence`. `cases.json` expects `usage`, `requests_sent` and `cached` on every single case, `confidence` on two, and no `usage` on one. Nine runners check them and `meta.url`. Ten READMEs and `conformance/README.md` say where the facts come from.
+- Changes: DuckDB's `thinkthen_details` returns the line as text. Rust `Details` gains `confidence()` and `url()`. TypeScript's `Details.answer` gains `confidence`. `cases.json` expects `usage`, `requests_sent` and `cached` on every single case, `confidence` on two, and no `usage` on one. Nine runners check them and `meta.url`, and C, R and PostgreSQL make the details call the text's first send. Nine READMEs, the Polars pointer, DuckDB's `NOTES.md` and `conformance/README.md` say where the facts come from.
 - Proof: Tests 1 to 4 under "Proof", with plants (a) to (g).
 - Defers: The command runner's meta checks. Cached and retried details in the shared cases. `failed_questions`, `tool` and `profile_warning`. The site part of ask 6. Frame details.
