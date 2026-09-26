@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/public/relate.rs crates/thinkthen/tests/public_membe
 
 # 0134: Withhold a relate entity's kind, and sort the public library gaps for 0.1
 
-Status: in progress. Design accepted 2026-09-26 by a fresh read-only Claude review on its second pass. Owner: Claude.
+Status: built, awaiting code review (`sdlc/records/0134-build-public-library-gaps.md`). Design accepted 2026-09-26 by a fresh read-only Claude review on its second pass. Owner: Claude.
 
 Lane: thinkthen-lane-2
 
