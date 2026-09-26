@@ -9,6 +9,6 @@
 
 The engine owns private process counters for HTTP attempts, validated live input and output tokens, and eligible answer-cache hits. The command persists those counts in UTC monthly `thinkthen.usage/1` aggregates under the platform sibling `thinkthen-usage`. One permanent lock and atomic replacement make each update constant cost and safe across processes. Strict readers validate recognized files, private modes, opened-object identity, checked sums, and the cache folder gate.
 
-Persistence is observational. A missing platform path is silent. The first persistence failure disables later attempts in that process and prints one warning after ordered judgment results. It never changes a judgment or exit meaning. A crash can leave a conservative overcount of one request or an undercount of later tokens. The totals enforce no budget and claim no provider billing authority.
+Persistence is observational. A missing platform path is silent. The first persistence failure disables later attempts in that process and prints one warning after ordered judgment results. It never changes a judgment or exit meaning. A crash can leave a conservative overcount of one request or an undercount of later tokens. The totals enforce no budget and claim no provider billing authority. (Amended by ADR 0049.)
 
 Ian can overturn the public field names, UTC period, sibling path, explicit-replay exclusion, and warning policy. The ruled count categories, count-only storage, no budget, and offline status stand.

@@ -54,6 +54,7 @@ fn concurrent_updates_keep_every_count_in_one_monthly_aggregate() {
     for worker in workers {
         worker.join().expect("counter worker");
     }
+    counters.finish();
     let totals = read(&folder, &month_now()).expect("usage reads");
     assert_eq!(totals.month.requests_sent, 40);
     assert_eq!(totals.total.requests_sent, 40);
@@ -201,11 +202,12 @@ fn every_update_stage_warns_once_and_disables_later_persistence() {
         let counters = Counters::new(Some(folder.clone()));
         FAILURE.with(|failure| failure.set(Some(stage)));
         counters.request_sent();
-        assert!(counters.warning(), "{stage:?}");
+        assert!(counters.finish(), "{stage:?}");
         let after_failure = read(&folder, "2026-09")
             .map(|totals| totals.month.requests_sent)
             .unwrap_or(0);
         counters.request_sent();
+        counters.finish();
         let after_disabled = read(&folder, "2026-09")
             .map(|totals| totals.month.requests_sent)
             .unwrap_or(0);
