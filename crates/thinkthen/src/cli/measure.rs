@@ -25,6 +25,9 @@ pub(crate) struct Refusal {
     pub(crate) cause: Cause,
 }
 
+/// The sentence a `--by` value that is neither a word nor a pointer gets.
+pub(crate) const BY: &str = "--by takes question, verb, or a JSON pointer such as /category";
+
 /// What a measuring command refused.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Cause {
@@ -46,6 +49,12 @@ pub(crate) enum Cause {
     WriteThreshold,
     /// `--write` beside `--by verb`.
     WriteByVerb,
+    /// `--write` beside a `--by` pointer.
+    WriteByPointer,
+    /// `--by` starts with `/` and is not a JSON pointer.
+    ByPointer,
+    /// `--curve` beside `--table`.
+    CurveTable,
     /// The file `--write` names is not a question file or set a run accepts.
     NotQuestions,
     /// A results line was not asked from the file `--write` names.
@@ -90,6 +99,11 @@ impl fmt::Display for Refusal {
                 formatter.write_str("--write reads each answer as it ran; drop --threshold")
             }
             Cause::WriteByVerb => formatter.write_str("--write grades by question; drop --by verb"),
+            Cause::WriteByPointer => {
+                formatter.write_str("--write grades by question; drop the --by pointer")
+            }
+            Cause::ByPointer => formatter.write_str(BY),
+            Cause::CurveTable => formatter.write_str("--curve prints JSON lines; drop --table"),
             Cause::NotQuestions => {
                 formatter.write_str("--write names a file that is not a valid question file")
             }
@@ -112,6 +126,10 @@ fn said(
         MeasureError::NotObject(line) => {
             write!(formatter, "{role} line {line} is not a JSON object")
         }
+        MeasureError::NoGroup(line) => write!(
+            formatter,
+            "{role} line {line} has no string or integer value at the --by pointer"
+        ),
         MeasureError::NoId(line) => write!(
             formatter,
             "{role} line {line} has no string or integer id at the --id pointer"

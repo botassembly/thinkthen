@@ -1,7 +1,8 @@
 Which colour?  (choose, 5 rows, 5 labeled, 0 failed, rule as run)
   agreement 0.500 (95% 0.150 to 0.850): 2 right, 2 wrong, 0 unresolved, 1 tied
+  ties holding the key: 1 of 1, share 0.500
   disagreements: key blue said green x1, key green said red x1
-  calibration error 0.450 (95% 0.275 to 0.650); the interval resamples the records; it does not cover rerun noise, so compare two runs of the same records
+  calibration error 0.380 (95% 0.183 to 0.563); the interval resamples the records; it does not cover rerun noise, so compare two runs of the same records
   suggested cut 0.71 (lowest cut with agreement >= 0.9; key split, tuned on 3, checked on 2 held out): held agreement 0.500 as run -> - at the cut, coverage 1.000 -> 0.000
     cut  threshold  answered coverage accuracy
    0.05  0.05              4    0.800    0.500

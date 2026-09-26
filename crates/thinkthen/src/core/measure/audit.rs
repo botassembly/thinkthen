@@ -1,20 +1,28 @@
 //! One audit row per group: agreement, both directions, AUC, calibration,
 //! coverage, and a suggested cut tuned on one part and checked on the other.
 
+use std::collections::BTreeMap;
+
 use serde::Serialize;
 
 use crate::core::measure::answer::{Answer, Rule, Shown, Verb};
 use crate::core::measure::key::Key;
 use crate::core::measure::levels::LevelCuts;
 use crate::core::measure::optimize::{Measure, Steady};
-use crate::core::measure::rows::row;
-use crate::core::measure::{Calibration, MeasureError};
+use crate::core::measure::pairs::{Step, curve, pairs};
+use crate::core::measure::rows::{Graded, row};
+use crate::core::measure::{Calibration, MeasureError, calibration};
 
-/// One group per answer name, else question text, else verb; or one per verb.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+/// A group's name, and its verb when `--by POINTER` splits a value by verb.
+type Name = (String, Option<Verb>);
+
+/// One group per answer name, else question text, else verb; per verb; or per record field value and verb.
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum By {
     Question,
     Verb,
+    /// The value `--by POINTER` read from each result line, by line number.
+    Field(BTreeMap<usize, String>),
 }
 
 /// What one audit run was asked.
@@ -26,6 +34,8 @@ pub(crate) struct Settings {
     pub(crate) seed: u64,
     pub(crate) target: f64,
     pub(crate) optimize: Measure,
+    /// True when `--curve` asks for the curve at every confidence.
+    pub(crate) curve: bool,
 }
 
 /// Which answers of a question a row pools.
@@ -103,6 +113,27 @@ pub(crate) struct Suggested {
     /// Absent where the measure does not apply, else null or the count.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) steady: Option<Option<Steady>>,
+    /// Each part scored at the bar the other part tuned; absent where the measure does not apply.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) crossed: Option<Option<Crossed>>,
+}
+
+/// Two-fold cross-validation over the split: every record held out once.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub(crate) struct Crossed {
+    /// The bars tuned on the tuning part and on the held part.
+    pub(crate) cuts: [f64; 2],
+    /// The held part at the first bar plus the tuning part at the second.
+    pub(crate) held: Counts,
+}
+
+/// The calibration of every answer that pairs, across every verb and group.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub(crate) struct Pooled {
+    pub(crate) pooled: &'static str,
+    pub(crate) answers: usize,
+    pub(crate) calibration: Option<Calibration>,
+    pub(crate) curve: Option<Vec<Step>>,
 }
 
 /// One printed audit row.
@@ -119,6 +150,8 @@ pub(crate) struct Row {
     pub(crate) wrong: usize,
     pub(crate) unresolved: usize,
     pub(crate) tied: usize,
+    pub(crate) tied_holding_key: Option<usize>,
+    pub(crate) tie_share: Option<f64>,
     pub(crate) agreement: Option<f64>,
     pub(crate) interval: Option<[f64; 2]>,
     pub(crate) true_yes: Option<usize>,
@@ -135,6 +168,7 @@ pub(crate) struct Row {
     pub(crate) disagreements: Option<Vec<Disagreement>>,
     pub(crate) calibration: Option<Calibration>,
     pub(crate) coverage: Option<Vec<Point>>,
+    pub(crate) curve: Option<Vec<Step>>,
     pub(crate) suggested: Option<Suggested>,
     /// Which answers of the question the row pools.
     #[serde(skip)]
@@ -161,16 +195,23 @@ pub(crate) fn audit(
     key: &Key,
     settings: &Settings,
 ) -> Result<Vec<Row>, MeasureError> {
-    let mut groups: Vec<(String, Vec<&Answer>)> = Vec::new();
+    let mut groups: Vec<(Name, Vec<&Answer>)> = Vec::new();
     for answer in answers {
-        let name = match settings.by {
-            By::Verb => answer.verb.name().to_owned(),
-            By::Question => [&answer.name, &answer.text]
-                .into_iter()
-                .flatten()
-                .find(|name| !name.is_empty())
-                .cloned()
-                .unwrap_or_else(|| answer.verb.name().to_owned()),
+        let name = match &settings.by {
+            By::Verb => (answer.verb.name().to_owned(), None),
+            By::Field(values) => (
+                values.get(&answer.line).cloned().unwrap_or_default(),
+                Some(answer.verb),
+            ),
+            By::Question => (
+                [&answer.name, &answer.text]
+                    .into_iter()
+                    .flatten()
+                    .find(|name| !name.is_empty())
+                    .cloned()
+                    .unwrap_or_else(|| answer.verb.name().to_owned()),
+                None,
+            ),
         };
         match groups.iter_mut().find(|(held, _)| *held == name) {
             Some((_, members)) => members.push(answer),
@@ -178,7 +219,7 @@ pub(crate) fn audit(
         }
     }
     let mut rows = Vec::new();
-    for (name, members) in groups {
+    for ((name, _), members) in groups {
         let labels = members
             .iter()
             .find(|answer| answer.verb == Verb::Tag && !answer.failed)
@@ -188,7 +229,7 @@ pub(crate) fn audit(
             continue;
         };
         rows.push(row(name.clone(), Kind::Pooled, &members, key, settings)?);
-        if settings.by == By::Verb {
+        if settings.by != By::Question {
             continue;
         }
         for label in labels {
@@ -207,4 +248,29 @@ pub(crate) fn audit(
         }
     }
     Ok(rows)
+}
+
+/// The pooled line: every unfailed, labeled answer of a verb that pairs, `tag` labels aside.
+pub(crate) fn pooled(
+    answers: &[Answer],
+    key: &Key,
+    settings: &Settings,
+) -> Result<Pooled, MeasureError> {
+    let mut labeled: Vec<Graded<'_>> = Vec::new();
+    for answer in answers {
+        if !answer.failed
+            && matches!(answer.verb, Verb::Decide | Verb::Choose | Verb::Find)
+            && let Some(want) = key.want(answer)?
+        {
+            labeled.push((answer, want));
+        }
+    }
+    let every = !labeled.is_empty() && labeled.iter().all(|(a, _)| a.has_probability());
+    let pairs = if every { pairs(&labeled)? } else { Vec::new() };
+    Ok(Pooled {
+        pooled: "every verb",
+        answers: labeled.len(),
+        calibration: calibration(&pairs, settings.seed),
+        curve: (every && settings.curve).then(|| curve(&pairs)),
+    })
 }

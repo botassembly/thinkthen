@@ -43,7 +43,101 @@ The files under `golden/extra/`, `golden/table/`, and `replay/audit.jsonl` were 
 | `golden/table/diff-decide-nokey.txt` | `diff small/decide.jsonl small/decide-b.jsonl --table` | `diff::tables_match_byte_for_byte` |
 | `golden/table/diff-choose.txt` | `diff small/choose.jsonl small/choose-b.jsonl --key small/choose-key.jsonl --table` | `diff::tables_match_byte_for_byte` |
 
-Ticket 0125 added members and table lines beside the old ones. `audit::old_goldens_hold` removes `precision`, `f1`, `r_precision`, `mean_level_distance`, and `steady`, and the table lines those members print, before it compares. Every other byte must match.
+Ticket 0125 added members and table lines beside the old ones. `audit::old_goldens_hold` removes `precision`, `f1`, `r_precision`, `mean_level_distance`, and `steady`, and the table lines those members print, before it compares. Ticket 0131 adds `crossed` and `curve` and the `crossed` line to that list. Every other byte must match.
+
+Ticket 0131 recaptured every `audit` file above, and `replay/audit.jsonl`, from the prototype with this patch. The patch pairs each answer with its confidence in the answer given, counts a tie at its share, shifts the interval by the bootstrap bias, and prints `by_bin`, the two tie members, and the ties table line. Only `calibration`, the tie members, and the ties line changed.
+
+```diff
+--- measure.py
++++ measure.py, patched
+@@ -95,7 +95,7 @@
+     for i in range(BINS):
+         lo, hi = i / BINS, (i + 1) / BINS
+         sel = [(p, t) for p, t in pairs if lo <= p < hi or (i == BINS - 1 and p == 1.0)]
+-        gap += abs(sum(1 for _, t in sel if t) - sum(p for p, _ in sel))
++        gap += abs(sum(t for _, t in sel) - sum(p for p, _ in sel))
+     return gap / len(pairs)
+ 
+ 
+@@ -112,8 +112,14 @@
+     rng = SplitMix64(seed)
+     n = len(pairs)
+     values = sorted(ece([pairs[rng.index(n)] for _ in range(n)]) for _ in range(DRAWS))
+-    return {"error": ece(pairs), "interval": [quantile(values, 0.025), quantile(values, 0.975)], "bins": BINS,
+-            "draws": DRAWS, "seed": seed, "note": NOTE}
++    est = ece(pairs)
++    bias = sum(values) / len(values) - est
++    shifted = sorted(max(0.0, v - bias) for v in values)
++    bins = [[(c, t) for c, t in pairs if i / BINS <= c < (i + 1) / BINS or (i == BINS - 1 and c == 1.0)] for i in range(BINS)]
++    return {"error": est, "interval": [min(quantile(shifted, 0.025), est), max(quantile(shifted, 0.975), est)],
++            "bins": BINS, "draws": DRAWS, "seed": seed, "note": NOTE,
++            "by_bin": [{"low": i / BINS, "high": (i + 1) / BINS, "n": len(b), "right": sum((t for _, t in b), 0.0),
++                        "confidence": sum(c for c, _ in b) / len(b) if b else None} for i, b in enumerate(bins)]}
+ 
+ 
+ # ---------- input ----------
+@@ -182,11 +188,11 @@
+         answer = entry.get("answer") or {}
+         self.p = answer.get("probability")  # p(yes) for decide
+         self.probs = answer.get("probabilities")  # choose
+-        self.tied = False
++        self.tied, self.holders = False, []
+         if self.probs:
+             top = max(self.probs.values())
+             winners = [k for k, v in self.probs.items() if v == top]
+-            self.top, self.pick, self.tied = top, winners[0], len(winners) > 1
++            self.top, self.pick, self.tied, self.holders = top, winners[0], len(winners) > 1, winners
+ 
+     def has_probability(self):
+         return self.p is not None if self.verb == "decide" else self.probs is not None
+@@ -362,6 +368,8 @@
+              "labeled": len(labeled), "unlabeled": len(ok) - len(labeled),
+              "threshold": AS_RUN if rule is None else rule,
+              "right": c["right"], "wrong": c["wrong"], "unresolved": c["unresolved"], "tied": c["tied"],
++             "tied_holding_key": None if decide else sum(1 for it in labeled if share(it, key) > 0),
++             "tie_share": None if decide else sum((share(it, key) for it in labeled), 0.0),
+              "agreement": c["agreement"], "interval": wilson(c["right"], c["answered"])}
+         for k in ("true_yes", "false_yes", "true_no", "false_no", "yes_recall"):
+             g[k] = c[k] if decide else None
+@@ -370,7 +378,7 @@
+         g["auc"] = auc(pairs_yes) if pairs_yes else None
+         g["disagreements"] = None if decide else disagreements(labeled, key, rule)
+         if probs:
+-            pairs = pairs_yes if decide else [(it.top, it.pick == truth(it, key)) for it in labeled if not it.tied]
++            pairs = [given(it, key) for it in labeled]
+             g["calibration"] = calibration(pairs, seed)
+             g["coverage"] = coverage_curve(labeled, key)
+             g["suggested"] = suggest(labeled, key, rule, seed, target)
+@@ -380,6 +388,19 @@
+     return out
+ 
+ 
++def share(it, key):
++    return 1 / len(it.holders) if it.tied and truth(it, key) in it.holders else 0.0
++
++
++def given(it, key):
++    """The confidence in the answer given as run, and 1, 0, or a tie's share."""
++    said, want = it.said(None), truth(it, key)
++    right = 1.0 if outcome(said, want) == "right" else share(it, key)
++    if it.verb == "choose":
++        return it.top, right
++    return (it.p if said == "yes" else 1 - it.p if said == "no" else max(it.p, 1 - it.p)), right
++
++
+ def disagreements(items, key, rule):
+     n = {}
+     for it in items:
+@@ -476,6 +497,8 @@
+         iv = g["interval"] or [None, None]
+         out.append(f"  agreement {fmt(g['agreement'])} (95% {fmt(iv[0])} to {fmt(iv[1])}): {g['right']} right, "
+                    f"{g['wrong']} wrong, {g['unresolved']} unresolved, {g['tied']} tied")
++        if g["tie_share"] is not None and g["tied"]:
++            out.append(f"  ties holding the key: {g['tied_holding_key']} of {g['tied']}, share {fmt(g['tie_share'])}")
+         if g["verb"] == "decide":
+             out.append(f"  said yes, key no: {g['false_yes']}   said no, key yes: {g['false_no']}   "
+                        f"yes recall {fmt(g['yes_recall'])}   mean p(yes) {fmt(g['mean_probability'])}   AUC {fmt(g['auc'])}")
+```
 
 ### Ticket 0125 fixtures
 
@@ -74,10 +168,20 @@ Ticket 0125 added members and table lines beside the old ones. `audit::old_golde
 - `tag.jsonl`: labels `x` and `y`, six records. The key lists the labels that apply, and `t6` is null. Label `x`: said yes on t1, t2, t5 and no on t3, t4; the key says yes on t1, t2, t4, t5. That is 4 right, one false no, precision 3/3, recall 3/4, f1 6/7. Label `y`: said yes on t2, t3, t5; the key says yes on t3, t5. That is 4 right, one false yes, precision 2/3, recall 2/2, f1 4/5. The pooled row holds 12 answers, 10 labeled, 8 right, precision 5/6, recall 5/6, f1 10/12.
 - `score.jsonl`: levels low, mid, high, every key line in the tuning part. At the midpoint cuts 0.5 and 1.5, s2 (0.7, keyed low) and s5 (1.6, keyed mid) are wrong: 4 right, mean level distance 2/6. The first cut rises to 0.71, the nearest place above 0.7 and at most 0.9. The second rises to 1.61, the nearest place above 1.6 and at most 1.9. Then all six are right, and no move gets more.
 - `rank.jsonl`: five questions, one per edge row of the ticket's R-precision table. R counts the labeled relevant rows present: 2 (rows at p 0.9 and 0.7, with 0.8 between: 0.5), 1 (`m4` to `m7` are keyed yes but absent: 1.0), 0 (null), 0 (null), and 2 with a tie at p 0.7, where the earlier `p2`, keyed no, takes the second place: 0.5.
-- `find.jsonl`: four lines with no `input`, so the ids are the line numbers. Line 1 picks `u002`, right. Line 2 prints null with `none` on top, right. Line 3 prints null with `u001` and `none` tied, so it is tied. Line 4 picks `u003` where the key says `u001`, wrong.
+- `find.jsonl`: five lines with no `input`, so the ids are the line numbers. Line 1 picks `u002`, right. Line 2 prints null with `none` on top, right. Line 3 prints null with `u001` and `none` tied, so it is tied. The key says `u001`, one of the two, so ticket 0131 gives it a share of 0.5. Line 5 ties `u001` and `u002` and prints `u001`, the first unit, as `find` does for a tie among real units. The key says `u001`, so it is right and earns no share, and `tied_holding_key` stays 1. Line 4 picks `u003` where the key says `u001`, wrong.
 - `annotate.jsonl`: three records with a `decide`, a `choose`, and a `score` member. `urgent`: a1 right, a2 a false no, a3 a false yes. `effort`: levels small and large at the cut 0.5, so a3 at 0.6 reads large where the key says small.
 
 `write/` holds the question files and keys for `audit_write`. `decide.json` is the payment question of `transforms/rows` with CRLF line ends, an escaped `threshold` key, and a threshold of 0.9. `key.jsonl` is `replay/key.jsonl` with `C-12` keyed no and a part on every line: `C-15` and `C-29` held, the rest tuned. The tuning part holds `C-12` keyed no at p 0.58 and `C-39` keyed yes at p 0.81, and every other record sits outside that range, so the bar is the lowest cut above 0.58: 0.59. On the held part, 0.59 gets `C-15` (no, p 0.51) and `C-29` (yes, p 0.79) right. Both 0.5 and 0.9 get one of them wrong. `set.json` is `demos/14-grade-a-batch/checks.json` with its threshold set to 0.95. `set-key.jsonl` keys only `correct`, from the cases' `human_correct`, with `E-05` held. The tuning part puts `correct` at p 0.98, 0.62, and 0.94 for yes and 0.02, 0.02, and 0.53 for no, so the bar is 0.54. It gets `E-05` (yes, p 0.94) right where 0.95 does not. `score.json` and `rank.json` hold the questions of demos 17 and 06.
+
+### Ticket 0131 fixtures
+
+`given/` holds hand fixtures for the tie share, the calibration pairs, the curve, `crossed`, and `--by POINTER`. `given/key.jsonl` keys `yesno.jsonl`, `choose.jsonl`, and `verbs/tag.jsonl`.
+
+- `yesno.jsonl`: five `decide` answers. The pairs are y1 said yes at 0.9, right; y2 said no at 0.1, key yes, so 0.9 and wrong; y3 said yes at 0.5, key no, wrong; y4 said no at 0.6 under a bar of 0.7, so 0.4 and right; y5 said no at 0.35, so 0.65 and right. The bins give 0.4 (one pair, right 1), 0.5 (0.5, right 0), 0.6 (0.65, right 1), and 0.9 (two pairs, right 1): `|1 − 0.4| + |0 − 0.5| + |1 − 0.65| + |1 − 1.8|` is 2.25, over 5 is 0.45. The curve is `{0.9, 2, 1}`, `{0.65, 3, 2}`, `{0.5, 4, 2}`, `{0.4, 5, 3}`.
+- `choose.jsonl`: g1 picks `a` at 0.6, right. g2 picks `a` at 0.6, key `b`, wrong. g3 ties `a` and `b` at 0.45, key `c`, share 0. g4 ties `a` and `b` at 0.4, key `b`, share 0.5. g5 ties all four at 0.25, key `d`, share 0.25. So `tied` 3, `tied_holding_key` 2, `tie_share` 0.75. The bins hold 0.2 (n 1, right 0.25, confidence 0.25), 0.4 (n 2, right 0.5, confidence 0.425), and 0.6 (n 2, right 1, confidence 0.6). The error is `(0 + 0.35 + 0.2) / 5`, 0.11. The curve is `{0.6, 2, 1}`, `{0.45, 3, 1}`, `{0.4, 4, 1.5}`, `{0.25, 5, 1.75}`.
+- Both, with `verbs/tag.jsonl` beside them and `--pooled`, give 10 answers: the tag labels stay out. The bins give 0, 0.25, 0.5, 0.15, and 0.8 over 10, which is 0.17.
+- `crossed.jsonl`: the tuning part holds p 0.2 (no), 0.4, 0.6, and 0.8 (yes). Accuracy is 4 of 4 from 0.21 to 0.4, and the tie rule nearest 50 picks 0.4. The held part holds 0.3 (yes), 0.45 (no), 0.55 (yes), and 0.7 (no), where the best cuts give 2 of 4 and 0.5 is nearest 50. The held part at 0.4 gets only 0.55 right. The tuning part at 0.5 gets 0.4 wrong. That is 4 right of 8. Under `--optimize f1` the held part tunes 0.3, with f1 2/3. The tuning part at 0.3 gets all four right, so 5 of 8 in all.
+- `by.jsonl`: six lines whose inputs carry `category` and `a/b`. `/category` gives `lead` with two `decide` and one `choose` answer, `tail` with two `decide`, and `3` with one `choose`.
 
 `audit::every_fixture_keeps_its_checksum` fails on a missing, extra, or changed file.
 
@@ -98,33 +202,40 @@ Ticket 0125 added members and table lines beside the old ones. `audit::old_golde
 | `better/decide.jsonl` | `07082f6c1c542f5e70f21e579df3f824280c4dd59e8b015f439e1e72b41aedd8` |
 | `better/tie-key.jsonl` | `8b47ff1106e77c8fd4c00802006c2fe9ca449e4e9e94b00e65bf6b04ad8898b0` |
 | `better/tie.jsonl` | `d74c6d3b93823583fc02fcd2b9ba3be5ef11a98e7ab5bfa32c495d492cdf0386` |
-| `golden/audit-249-seed.jsonl` | `2e1ee2e57e9ba1fdace275a7aee4848d810e9d432feb3ac5ba1106d2780a8af8` |
-| `golden/audit-249.jsonl` | `d7521a7c81976318f9e49d038a2dee035b77d8caf126513d645ca7ee31348e6f` |
-| `golden/audit-annotate.jsonl` | `7e4e080af466ee8c1504ad01a54b3a46c4630056ebbd80de7ae04e344fcc10d2` |
-| `golden/audit-choose.jsonl` | `55b7e1aa01c8f7ac5d8c2c3252391033ab6056eb29519c0c5bf2034580aa59be` |
-| `golden/audit-decide-0.4.jsonl` | `1df25db52752f6591ec74c052609e696a368a0bd729b2ea98296bf1da2d14593` |
-| `golden/audit-decide-band.jsonl` | `95a814d04e51515256e305f61a10858c3f0371a39127aac3ebd554b29e01efdc` |
-| `golden/audit-decide-bare.jsonl` | `bd64e19970c3cafcb5f301810f9256cf7da941beebcd32b9896b70f310134de8` |
-| `golden/audit-decide.jsonl` | `7f14cfb18393671db70eb08a8cdc8ed31bbe7bc14d55c89bf02fb2a90339f8dd` |
+| `given/by-key.jsonl` | `2380d356e8c93b6136ddc594557cf62ad369c95818f8becc432d3721ed96cb5e` |
+| `given/by.jsonl` | `8d9094499bf640f84258a1d0495c4e934e5a231023e7789a493357055ab1b2b8` |
+| `given/choose.jsonl` | `6cc988a7406d39ea0f40fe11cd2c7ba8e609258be4e8750a63393703d8c0dbd1` |
+| `given/crossed-key.jsonl` | `a530ed13dc777260b3e5612ec9437d695b46e5921ab5f4ffc052fd8c16aa4e8c` |
+| `given/crossed.jsonl` | `b42e456bb619f9d5eccc35954770603f4b7d0a8c63a67e9af2df7e86fcc43020` |
+| `given/key.jsonl` | `8b56e25deac98b1f208f662a4ecb223ca08a11283977e7bb40ab049f7f97d8e5` |
+| `given/yesno.jsonl` | `ddabfebfc1d7ef71d45593e4c7d27e92ec971c7ea4bf901b757ac9567b84a94b` |
+| `golden/audit-249-seed.jsonl` | `73d9def49b9dfe2bcf47f9bedad4c2328c5dd93929dc39503728a88e7fca5f70` |
+| `golden/audit-249.jsonl` | `7b40c727fe9450e84a71c36c6dd93bab1971250cc0fd39d46cb4c90bc1d2ed62` |
+| `golden/audit-annotate.jsonl` | `5ec5f3aa346ff09737125b2b84661c08837f620d2fce8f55a95bc15aea551e26` |
+| `golden/audit-choose.jsonl` | `4c52c78749a4412c14f713a94b5e583adf0fc2fcac8818687d51ad5be5043625` |
+| `golden/audit-decide-0.4.jsonl` | `b4cae90f891fc6937a9cbc2050a7747e068326b8b34e8d4c22204bdc83a30cda` |
+| `golden/audit-decide-band.jsonl` | `6017904ac849ab831ca582f3720ae144fa0a16b512a9e1d16fd486db007713a2` |
+| `golden/audit-decide-bare.jsonl` | `c0cdc94d99aaba8e814ff5afa8b58e577f19375c03ed3faa19ea7b08f5b60179` |
+| `golden/audit-decide.jsonl` | `ae5ad8f6e13aa58c15185a674d0a733d21cc4999991d2bd675c78f62b0bed6bf` |
 | `golden/diff-249-cuts.jsonl` | `76dfffe53438500267a548456deea5fdfc454ab05fec0a0e284ba52208475dd3` |
 | `golden/diff-249-soft.jsonl` | `69b1c96922b4c0c5bdc40ab919e0023eb08bac4b10baafd20d3af61b5f53ea44` |
 | `golden/diff-choose.jsonl` | `fd677ab15a786ceaae633b89ddb46badbc36a953f721ef0d4d16e13c1600e44f` |
 | `golden/diff-decide-cuts.jsonl` | `ae00a2514257d35c36658c3c63abe2c92e9dbc711950bdcef7864f891d081682` |
 | `golden/diff-decide-nokey.jsonl` | `ad99f8572fa59ab30168859f119114892656e0e61efbe0e633cba5c93727a284` |
 | `golden/diff-decide-wordings.jsonl` | `593398f0617796069712dcbad935a0b181ed57e1a78c362e41fcaf15c0ccc3f5` |
-| `golden/extra/audit-249-question-seed-7.jsonl` | `c65d036e65d60803ef4da3ae87c3037ddb4ef8ea3853d6ba85f04600aabb05bb` |
-| `golden/extra/audit-choose-target-1.jsonl` | `1a7c2316601e6d5ce2a6b92c2e1c4d16ce56432ecda3e34fbda7ef284a893cda` |
-| `golden/extra/audit-decide-odd.jsonl` | `f4cf6493b4e0620bedff38628ade3b48e1c2fba91c35934c5a6d9ad6e4a930ac` |
-| `golden/extra/audit-decide-reversed.jsonl` | `376ce4dbd96c6d1619ee7ff340e54510785c528a2f5560ef83c027a726704282` |
+| `golden/extra/audit-249-question-seed-7.jsonl` | `4e7f367dc12253c0c6397ee8e1066c3a2543614f3cabdbf39531708663321b54` |
+| `golden/extra/audit-choose-target-1.jsonl` | `9a2ab92c655ab9aa3029d8c0bb7d55ec8e0a4cb0609c065d0adfeb460310b717` |
+| `golden/extra/audit-decide-odd.jsonl` | `d700950a309b244a8403871ec10c54f76dd27466e6cef515bcb44241ab0c9654` |
+| `golden/extra/audit-decide-reversed.jsonl` | `b89c70a5f8203bb5d7534f36f0760d091c44cd94428665e051a4a446a2949500` |
 | `golden/extra/diff-249-cuts-nokey.jsonl` | `1fc7ba84a3a666004872ea0e619c5451f64daa67a6bda1aefa9540a398a44458` |
 | `golden/extra/diff-annotate.jsonl` | `ab7ac6f3064bfea00a0ca9d075183f1f1c33947e507584c9206a27f52d51514a` |
-| `golden/table/audit-annotate.txt` | `64c8acad1ccf1dafe3aad01fb5e0cf8f96e7dbde83a9769e2d2bde767713822a` |
-| `golden/table/audit-choose.txt` | `acc4564c3a8e66acad7734311e66810c586f8444a86b67b3a33fcfd179d890c0` |
-| `golden/table/audit-decide.txt` | `6a79b6e1a273539233a5b61df3b6ff4a9bd354504d347a79d05ff5b0beaf2513` |
+| `golden/table/audit-annotate.txt` | `1a6729b3aa5f9c0b8e0462235cd05deb42661ccca81c44888f8b3b05918c74a1` |
+| `golden/table/audit-choose.txt` | `5f81c2893de087d4dc50dc4b0372614ad99a7b5768f69495118070f88997770e` |
+| `golden/table/audit-decide.txt` | `bc3bf0c7acaf5635fb9ed3492eb235d535f37cc34b12dc8737e16c9ea2cd4b1d` |
 | `golden/table/diff-choose.txt` | `7f1a11677eba121025ab46b1ad5ffdd6ec09e3cb4ac0d0519960b5ba7301c186` |
 | `golden/table/diff-decide-cuts.txt` | `c56e94bc2e3c09c525e7ef8fc3e2190a5af4216c5d91d769c4176cfea06536c8` |
 | `golden/table/diff-decide-nokey.txt` | `82edef392a2ddee9528a931453abd42c57d99a5c67a98e2984ffcc6e8be9f9c1` |
-| `replay/audit.jsonl` | `54901b07eec7e0569ff8492deb1822058d62e61b4830e0a26bc78c7a68b4d953` |
+| `replay/audit.jsonl` | `d0a1e138ae38922f55363f2f4d446d61580013657dcc4049f69ad1f211e08e8e` |
 | `replay/key.jsonl` | `6469595eef17159ed9563de7b84bdc4396249fb2bb8a704397e5cc31c0619042` |
 | `small/annotate-key.jsonl` | `fcaebb1e268c468d697e6bc6852c4b5aab5198e544552711d7d5c1b27e523b26` |
 | `small/annotate.jsonl` | `c827c6ca44198b10c0561b49d930d85f74bdba88549169e1cc187e2320c24270` |
@@ -141,8 +252,8 @@ Ticket 0125 added members and table lines beside the old ones. `audit::old_golde
 | `small/decide.jsonl` | `fd6546d99ca631ec96569e432a8ec6d40889c312a445728be9a678196b0a06c6` |
 | `verbs/annotate-key.jsonl` | `d39de81ae6d31ba4f2dc748c259d689a0e9ccb538d744f3a4221d1403454b63f` |
 | `verbs/annotate.jsonl` | `6ad41b300b9de9c2fc680b32da7627ee6f5d7bb0c9eaa7fe17d7e641a5ca8704` |
-| `verbs/find-key.jsonl` | `f095553f48b4ef6189015071b3f8e74185d71a7ae4c4aa399e7173a425cf6562` |
-| `verbs/find.jsonl` | `bb64e67ef52bd4f3aafaa22f7ea102209145e7585fd668db7b62e67c3d373ffe` |
+| `verbs/find-key.jsonl` | `9aacc7cfeb2ae55030779e536b09b739f170efdc44df7e962948069615057128` |
+| `verbs/find.jsonl` | `15a956b7f23c1e7f21046ae6a06b949e14fb44c4679bc53cc02cfe9eacf37e9b` |
 | `verbs/rank-key.jsonl` | `c45b0db08b0b382c6f28c96a35f76f2a9b600ddae3009cc50910f519854cb8f4` |
 | `verbs/rank.jsonl` | `a47981836cdd181ae6905a1adac191c63adf90d6936e43d54e6c3b402dd2d64d` |
 | `verbs/score-key.jsonl` | `be01ccf4a2ec3478c4628cce5a07f73b263251497db8c467d585d1ded7b92c37` |

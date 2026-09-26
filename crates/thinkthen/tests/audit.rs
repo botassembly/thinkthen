@@ -72,7 +72,7 @@ fn every_fixture_keeps_its_checksum() {
     }
     found.sort();
     assert_eq!(found, listed);
-    assert_eq!(listed.len(), 72);
+    assert_eq!(listed.len(), 79);
 }
 
 #[test]
@@ -161,8 +161,8 @@ fn each_question_draws_its_own_bootstrap_and_the_held_out_half_reads_as_reported
             "/calibration/interval",
         )
     };
-    assert_eq!(interval(&both), "[0.049765,0.164636]");
-    assert_eq!(interval(&second), "[0.049765,0.164636]");
+    assert_eq!(interval(&both), "[0.017405,0.12316]");
+    assert_eq!(interval(&second), "[0.017405,0.12316]");
 
     let held: String = fixture("249/key.jsonl")
         .lines()
@@ -196,7 +196,7 @@ fn each_question_draws_its_own_bootstrap_and_the_held_out_half_reads_as_reported
         "/calibration/error",
     ]
     .map(read);
-    assert_eq!(numbers, ["0.630", "0.311", "0.397", "0.725", "0.092"]);
+    assert_eq!(numbers, ["0.630", "0.311", "0.397", "0.725", "0.086"]);
 }
 
 /// The Abbey Road rows, keyed with every record in the tuning part.
@@ -291,4 +291,202 @@ fn better_reads_steady_cut() {
 fn better_for_choose() {
     assert_eq!(steady_better("choose-reach", "0.9"), ["0.61", "17"]);
     assert_eq!(steady_better("choose-more", "0.8"), ["0.01", "20"]);
+}
+
+/// The yes/no and `choose` answers of `given/`, graded by hand in the fixture README.
+const YES_NO: [&str; 2] = ["given/yesno.jsonl", "given/key.jsonl"];
+const CHOSEN: [&str; 2] = ["given/choose.jsonl", "given/key.jsonl"];
+
+/// A table line equal to this, or the whole table.
+fn has_line(table: &str, line: &str) {
+    assert!(table.lines().any(|held| held == line), "{table}");
+}
+
+/// A tie that holds the key earns one over the tied options.
+#[test]
+fn tie_share() {
+    let (code, stdout, _) = audit(&CHOSEN, b"");
+    assert_eq!(code, 0);
+    let pointers = [
+        "/tied",
+        "/tied_holding_key",
+        "/tie_share",
+        "/right",
+        "/wrong",
+    ];
+    assert_eq!(members(&stdout, pointers), ["3", "2", "0.75", "1", "1"]);
+    let (_, table, _) = audit(&[&CHOSEN[..], &["--table"]].concat(), b"");
+    has_line(&table, "  ties holding the key: 2 of 3, share 0.750");
+}
+
+/// Calibration pairs each answer's confidence in the answer it gave.
+#[test]
+fn calibration_pairs_the_answer_given() {
+    let calibration = |arguments: &[&str]| {
+        let (code, stdout, _) = audit(arguments, b"");
+        assert_eq!(code, 0);
+        members(&stdout, ["/calibration/error", "/calibration/interval"])
+    };
+    assert_eq!(calibration(&YES_NO), ["0.45", "[0.22419,0.71444]"]);
+    assert_eq!(calibration(&CHOSEN), ["0.11", "[0.0,0.33641]"]);
+    let (_, stdout, _) = audit(&CHOSEN, b"");
+    let bins: Vec<String> =
+        serde_json::from_str::<serde_json::Value>(&member(&stdout, "/calibration/by_bin"))
+            .expect("bins")
+            .as_array()
+            .expect("a list")
+            .iter()
+            .filter(|bin| bin["n"] != 0)
+            .map(|bin| {
+                ["low", "n", "right", "confidence"]
+                    .map(|name| bin[name].to_string())
+                    .join(" ")
+            })
+            .collect();
+    assert_eq!(
+        bins,
+        ["0.2 1 0.25 0.25", "0.4 2 0.5 0.425", "0.6 2 1.0 0.6"]
+    );
+}
+
+/// `--pooled` adds one last line over every paired verb and leaves the rows alone.
+#[test]
+fn pooled() {
+    let input = [
+        fixture("given/yesno.jsonl"),
+        fixture("given/choose.jsonl"),
+        fixture("verbs/tag.jsonl"),
+    ]
+    .concat();
+    let run = |extra: &[&str]| {
+        let (code, stdout, stderr) = audit(
+            &[&["-", "given/key.jsonl"][..], extra].concat(),
+            input.as_bytes(),
+        );
+        assert_eq!((code, stderr.as_str()), (0, ""));
+        stdout
+    };
+    let (rows, pooled) = (run(&[]), run(&["--pooled"]));
+    let (before, last) = pooled.trim_end().rsplit_once('\n').expect("a last line");
+    assert_eq!(format!("{before}\n"), rows);
+    let pointers = [
+        "/pooled",
+        "/answers",
+        "/calibration/error",
+        "/calibration/interval",
+    ];
+    assert_eq!(
+        members(last, pointers),
+        ["\"every verb\"", "10", "0.17", "[0.0,0.40036]"]
+    );
+    has_line(
+        &run(&["--pooled", "--table"]),
+        "  every verb pooled: calibration error 0.170 (95% 0.000 to 0.400) over 10 answers",
+    );
+}
+
+/// Each part is scored at the bar the other part tuned.
+#[test]
+fn crossed() {
+    let crossed = |arguments: &[&str]| {
+        let (code, stdout, _) = audit(arguments, b"");
+        assert_eq!(code, 0);
+        let pointers = [
+            "/suggested/crossed/cuts",
+            "/suggested/crossed/held/right",
+            "/suggested/crossed/held/agreement",
+        ];
+        members(&stdout, pointers)
+    };
+    let hand = ["given/crossed.jsonl", "given/crossed-key.jsonl"];
+    assert_eq!(crossed(&hand), ["[0.4,0.5]", "4", "0.5"]);
+    assert_eq!(
+        crossed(&[&hand[..], &["--optimize", "f1"]].concat()),
+        ["[0.4,0.3]", "5", "0.625"]
+    );
+    let abbey = [
+        "abbey/rows.jsonl",
+        "abbey/key.jsonl",
+        "--id",
+        "/input",
+        "--seed",
+        "0",
+    ];
+    assert_eq!(crossed(&abbey), ["[0.85,0.73]", "65", "0.928571"]);
+    let (_, table, _) = audit(&[&hand[..], &["--table"]].concat(), b"");
+    has_line(
+        &table,
+        "  crossed: cuts 0.4 and 0.5, each checked on the other part: agreement 0.500, 4 right of 8 answered",
+    );
+}
+
+/// `--curve` lists the kept answers and their summed right at each confidence.
+#[test]
+fn curve() {
+    let curve = |arguments: &[&str]| {
+        let (code, stdout, _) = audit(&[arguments, &["--curve"]].concat(), b"");
+        assert_eq!(code, 0);
+        member(&stdout, "/curve")
+    };
+    let steps = |points: [(f64, usize, f64); 4]| {
+        let listed: Vec<String> = points
+            .iter()
+            .map(|(cut, kept, right)| {
+                format!("{{\"cut\":{cut},\"kept\":{kept},\"right\":{right:?}}}")
+            })
+            .collect();
+        compact(&format!("[{}]", listed.join(",")))
+    };
+    assert_eq!(
+        curve(&CHOSEN),
+        steps([
+            (0.6, 2, 1.0),
+            (0.45, 3, 1.0),
+            (0.4, 4, 1.5),
+            (0.25, 5, 1.75)
+        ])
+    );
+    assert_eq!(
+        curve(&YES_NO),
+        steps([(0.9, 2, 1.0), (0.65, 3, 2.0), (0.5, 4, 2.0), (0.4, 5, 3.0)])
+    );
+    let (_, stdout, _) = audit(&CHOSEN, b"");
+    assert_eq!(member(&stdout, "/curve"), "null");
+}
+
+/// `--by POINTER` groups by a field of each input, then by verb, in first-seen order.
+#[test]
+fn by_pointer() {
+    let rows = |pointer: &str| -> Vec<String> {
+        let (code, stdout, stderr) = audit(
+            &["given/by.jsonl", "given/by-key.jsonl", "--by", pointer],
+            b"",
+        );
+        assert_eq!((code, stderr.as_str()), (0, ""), "{pointer}");
+        stdout
+            .lines()
+            .map(|line| members(line, ["/group", "/verb", "/rows", "/right", "/wrong"]).join(" "))
+            .collect()
+    };
+    assert_eq!(
+        rows("/category"),
+        [
+            "\"lead\" \"decide\" 2 1 1",
+            "\"lead\" \"choose\" 1 1 0",
+            "\"tail\" \"decide\" 2 1 1",
+            "\"3\" \"choose\" 1 0 1",
+        ]
+    );
+    let groups: Vec<String> = rows("/a~1b")
+        .iter()
+        .map(|row| row.split(' ').take(3).collect::<Vec<_>>().join(" "))
+        .collect();
+    assert_eq!(
+        groups,
+        [
+            "\"x\" \"decide\" 1",
+            "\"x\" \"choose\" 2",
+            "\"y\" \"decide\" 3"
+        ]
+    );
 }

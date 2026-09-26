@@ -24,6 +24,26 @@ test -z "$(thinkthen audit small/choose.jsonl small/choose-key.jsonl --threshold
 thinkthen audit small/choose.jsonl small/choose-key.jsonl --threshold 0.4:0.6 2>&1 >/dev/null | mustmatch "thinkthen: audit: choose takes a single cut; a band applies to decide"
 ```
 
+A tie that holds the key earns one over the tied options. Two of these three ties hold the key, one among two options and one among four.
+
+```bash
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)/crates/thinkthen/tests/fixtures/measure"
+thinkthen audit given/choose.jsonl given/key.jsonl --table | grep ties | mustmatch "  ties holding the key: 2 of 3, share 0.750"
+```
+
+`--by` takes a JSON pointer into each input and splits each value by verb. `--pooled` adds one calibration line over every verb.
+
+```bash
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)/crates/thinkthen/tests/fixtures/measure"
+thinkthen audit given/by.jsonl given/by-key.jsonl --by /category --pooled | jq -r '"\(.group) \(.verb) \(.pooled) \(.answers)"' | mustmatch "lead decide null null
+lead choose null null
+tail decide null null
+3 choose null null
+null null every verb 6"
+```
+
 Each `--optimize` measure picks its own bar. On the Abbey Road rows, with every record in the tuning part, accuracy picks 0.85, precision 0.95, recall 0.75, and f1 0.73.
 
 ```bash
