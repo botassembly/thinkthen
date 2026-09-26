@@ -162,6 +162,14 @@ fn parts<'a>(items: &[Graded<'a>], tune: &BTreeSet<String>) -> Parts<'a> {
         .partition(|(a, _)| tune.contains(&a.id))
 }
 
+/// A saved line holds nothing below its run cut, so no bar goes below the highest one.
+fn floor(items: &[Graded<'_>]) -> f64 {
+    items
+        .iter()
+        .filter_map(|(a, _)| a.items.as_ref().map(|said| said.cut))
+        .fold(0.0, f64::max)
+}
+
 /// The suggested bar for one row, tuned on split 0 and counted over every split.
 ///
 /// # Errors
@@ -183,11 +191,7 @@ pub(crate) fn suggest(
     }
     let measure = settings.optimize.tuned(verb);
     let applies = verb.yes_no() || verb.set() || measure == Measure::Accuracy;
-    // A saved line holds nothing below its run cut, so no bar goes below the highest one.
-    let floor = items
-        .iter()
-        .filter_map(|(a, _)| a.items.as_ref().map(|said| said.cut))
-        .fold(0.0, f64::max);
+    let floor = floor(items);
     let mut suggested = Suggested {
         cut: None,
         cuts: None,

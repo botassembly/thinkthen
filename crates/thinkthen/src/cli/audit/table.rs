@@ -25,32 +25,7 @@ pub(super) fn table(row: &Row, out: &mut String) {
         row.threshold.text()
     ));
     let set = matches!(row.verb, Some("recognize" | "relate"));
-    let [low, high] = row
-        .interval
-        .map_or([None, None], |[l, h]| [Some(l), Some(h)]);
-    if set {
-        line(format!(
-            "  matched {}, extra {}, missed {}: precision {}   recall {}   f1 {}",
-            row.right,
-            row.false_yes.unwrap_or_default(),
-            row.false_no.unwrap_or_default(),
-            three(row.precision),
-            three(row.yes_recall),
-            three(row.f1)
-        ));
-    } else {
-        line(format!(
-            "  agreement {} (95% {} to {}): {} right, {} wrong, {} unresolved, {} tied{}",
-            three(row.agreement),
-            three(low),
-            three(high),
-            row.right,
-            row.wrong,
-            row.unresolved,
-            row.tied,
-            ties_line(row)
-        ));
-    }
+    line(summary_line(row, set));
     if row.true_yes.is_some() && !set {
         line(format!(
             "  said yes, key no: {}   said no, key yes: {}   yes recall {}   mean p(yes) {}   AUC {}",
@@ -114,6 +89,35 @@ pub(super) fn table(row: &Row, out: &mut String) {
             three(point.accuracy)
         ));
     }
+}
+
+/// The first counts line: matched, extra, and missed for names and edges, or agreement for the rest.
+fn summary_line(row: &Row, set: bool) -> String {
+    let [low, high] = row
+        .interval
+        .map_or([None, None], |[l, h]| [Some(l), Some(h)]);
+    if set {
+        return format!(
+            "  matched {}, extra {}, missed {}: precision {}   recall {}   f1 {}",
+            row.right,
+            row.false_yes.unwrap_or_default(),
+            row.false_no.unwrap_or_default(),
+            three(row.precision),
+            three(row.yes_recall),
+            three(row.f1)
+        );
+    }
+    format!(
+        "  agreement {} (95% {} to {}): {} right, {} wrong, {} unresolved, {} tied{}",
+        three(row.agreement),
+        three(low),
+        three(high),
+        row.right,
+        row.wrong,
+        row.unresolved,
+        row.tied,
+        ties_line(row)
+    )
 }
 
 /// The ties line of a `choose` or `find` row with ties, after a line break, or nothing.
