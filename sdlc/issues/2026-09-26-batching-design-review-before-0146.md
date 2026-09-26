@@ -1,6 +1,6 @@
 # Batching design review before 0146
 
-Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review. The full report, with commands, outputs and a live ledger of 16 calls, is on this machine at `~/workspace/experiments/273-architect-review/02-batching.md`. Most findings are about the design in `2026-09-26-batching-design.md` and ticket 0146, because main holds only the planner (0144).
+Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review. The full report, with commands, outputs and a live ledger of 16 calls, is in local experiment 273, file `02-batching.md`, on the machine that ran it. It stays unpushed. Most findings are about the design in `2026-09-26-batching-design.md` and ticket 0146, because main holds only the planner (0144).
 
 ## Severity 1
 
