@@ -114,12 +114,12 @@ impl Engine {
             ..Execution::default()
         };
         let mut rules = Vec::with_capacity(prepared.len());
-        let mut chunks = Vec::new();
+        let (mut places, mut chunks) = (Vec::new(), Vec::new());
         for (place, relation) in prepared.into_iter().enumerate() {
-            chunks.extend(relation.chunks.into_iter().map(|chunk| (place, chunk)));
+            places.extend(relation.chunks.iter().map(|_| place));
+            chunks.extend(relation.chunks);
             rules.push((relation.relation, relation.mappings.into_iter()));
         }
-        let (places, chunks): (Vec<_>, Vec<_>) = chunks.into_iter().unzip();
         let mut places = places.into_iter();
         self.ask_chunks(chunks, cancel, |answered| {
             let (rule, mappings) = places
