@@ -112,7 +112,9 @@ fn failing(jobs: &str, fail: fn(&str) -> Canned) -> (Output, usize) {
 }
 
 fn ok() -> Canned {
-    Canned::ok(r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.9}}}"#)
+    Canned::ok(
+        r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.9}}}"#,
+    )
 }
 
 fn first_fails_at_once(name: &str) -> Canned {

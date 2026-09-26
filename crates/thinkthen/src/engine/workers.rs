@@ -112,45 +112,50 @@ where
 {
     let (results, received) = channel();
     let total = items.len();
-    scoped(jobs, results, &|(place, item)| (place, work(item)), |feed| {
-        let (mut items, mut held) = (items.into_iter().enumerate(), BTreeMap::new());
-        let (mut next, mut sent, mut in_flight) = (0, 0, 0);
-        let (mut failure, mut halted) = (None, false);
-        loop {
-            while failure.is_none() {
-                match held.remove(&next) {
-                    Some(Ok(result)) => failure = each(result).err(),
-                    Some(Err(error)) => failure = Some(E::from(error)),
-                    None => break,
+    scoped(
+        jobs,
+        results,
+        &|(place, item)| (place, work(item)),
+        |feed| {
+            let (mut items, mut held) = (items.into_iter().enumerate(), BTreeMap::new());
+            let (mut next, mut sent, mut in_flight) = (0, 0, 0);
+            let (mut failure, mut halted) = (None, false);
+            loop {
+                while failure.is_none() {
+                    match held.remove(&next) {
+                        Some(Ok(result)) => failure = each(result).err(),
+                        Some(Err(error)) => failure = Some(E::from(error)),
+                        None => break,
+                    }
+                    next += 1;
                 }
-                next += 1;
-            }
-            if failure.is_none() && sent < total {
-                failure = cancel.stop().map(E::from);
-            }
-            halted |= failure.is_some();
-            while !halted && in_flight < jobs {
-                let Some(item) = items.next() else { break };
-                feed.send(item)
-                    .map_err(|_| Error::Defect("a request worker ended early"))?;
-                (sent, in_flight) = (sent + 1, in_flight + 1);
-            }
-            if in_flight == 0 && (halted || sent == total) {
-                return failure.map_or(Ok(()), Err);
-            }
-            match received.recv_timeout(Cancel::poll()) {
-                Ok((place, result)) => {
-                    in_flight -= 1;
-                    halted |= result.is_err();
-                    held.insert(place, result);
+                if failure.is_none() && sent < total {
+                    failure = cancel.stop().map(E::from);
                 }
-                Err(RecvTimeoutError::Timeout) => {}
-                Err(RecvTimeoutError::Disconnected) => {
-                    return Err(Error::Defect("the request workers ended early").into());
+                halted |= failure.is_some();
+                while !halted && in_flight < jobs {
+                    let Some(item) = items.next() else { break };
+                    feed.send(item)
+                        .map_err(|_| Error::Defect("a request worker ended early"))?;
+                    (sent, in_flight) = (sent + 1, in_flight + 1);
+                }
+                if in_flight == 0 && (halted || sent == total) {
+                    return failure.map_or(Ok(()), Err);
+                }
+                match received.recv_timeout(Cancel::poll()) {
+                    Ok((place, result)) => {
+                        in_flight -= 1;
+                        halted |= result.is_err();
+                        held.insert(place, result);
+                    }
+                    Err(RecvTimeoutError::Timeout) => {}
+                    Err(RecvTimeoutError::Disconnected) => {
+                        return Err(Error::Defect("the request workers ended early").into());
+                    }
                 }
             }
-        }
-    })
+        },
+    )
 }
 
 fn worker<W, R>(queue: &Mutex<Receiver<W>>, results: &Sender<R>, work: &(impl Fn(W) -> R + Sync)) {

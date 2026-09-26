@@ -127,9 +127,18 @@ impl Engine {
                 .and_then(|place| rules.get_mut(place))
                 .ok_or(Error::Defect("a relation reply has no relation"))?;
             add_meta(&mut execution, &answered)?;
-            add_outcomes(&mut execution, entities, (rule, mappings), &answered, threshold)
+            add_outcomes(
+                &mut execution,
+                entities,
+                (rule, mappings),
+                &answered,
+                threshold,
+            )
         })?;
-        if rules.iter_mut().any(|(_, mappings)| mappings.next().is_some()) {
+        if rules
+            .iter_mut()
+            .any(|(_, mappings)| mappings.next().is_some())
+        {
             return Err(Error::Defect(
                 "a relation reply did not cover its question map",
             ));
