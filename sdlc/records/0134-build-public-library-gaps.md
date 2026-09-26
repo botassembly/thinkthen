@@ -67,7 +67,7 @@ Run 2 rebuilt what main's merge changed: the interrupt handler, the recording co
 
 - The entity issue closes at landing. The lander moves it to `closed/`.
 - The API gaps issue stays open. Item 8 is marked settled by 0136. Items 1 to 7 and 9 stay open with the reasons in the ticket.
-- New: `sdlc/issues/2026-09-26-python-entity-and-edge-reprs-print-caller-text.md`. Python's `Entity` and `Edge` reprs print name and kind in clear.
+- New: `sdlc/issues/closed/2026-09-26-python-entity-and-edge-reprs-print-caller-text.md`. Python's `Entity` and `Edge` reprs print name and kind in clear.
 
 ## Stop rules
 

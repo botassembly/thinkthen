@@ -265,8 +265,13 @@ impl Entity {
         }
     }
 
+    /// Withholds the name and kind, as the Rust `Entity`'s `Debug` does.
     fn __repr__(&self) -> String {
-        format!("Entity(name={:?}, kind={:?})", self.name, self.kind)
+        format!(
+            "Entity(name=<{} bytes withheld>, kind=<{} bytes withheld>)",
+            self.name.len(),
+            self.kind.len()
+        )
     }
 }
 
