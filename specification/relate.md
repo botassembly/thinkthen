@@ -59,7 +59,7 @@ A plan at the built-in address splits each relation under the built-in ceiling o
 
 `answer.questions` preserves every logical question. A successful choice entry carries relation identity, `method:"choice"`, public direction, asker role and entity, all entity candidates plus `none`, probabilities, inclusive `accepted` markers, the pre-threshold `pick`, and request digest. A successful H entry carries the same identity, `method:"yes_no"`, source, target, probability, accepted marker, and request digest. Failed entries preserve those identities and carry `failure`, but omit probability, accepted, and pick.
 
-`meta.failed_questions` is always present. One or more valid logical answers beside one or more recoverable failed answers prints the complete buffered result and exits 6. Bare output prints only successful edges and exits 6. If no valid logical answer remains, the command prints nothing and exits 4. Transport, status, replay, local, output, cancellation, and defect failures never become partial success.
+`meta.failed_questions` is always present. One or more valid logical answers beside one or more recoverable failed answers prints the complete buffered result and exits 6. Bare output prints only successful edges and exits 6. If no valid logical answer remains, the command prints nothing and exits 4. Transport, status, reply size, replay, local, output, cancellation, and defect failures never become partial success.
 
 ## Question identity
 

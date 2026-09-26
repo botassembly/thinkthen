@@ -37,12 +37,11 @@ impl fmt::Debug for Key {
     }
 }
 
-/// The most of one response body an attempt reads before it gives up.
-///
-/// A judgment answers in well under a kilobyte, so a megabyte is generous by a
-/// thousandfold. The bound is here so a server that never stops writing cannot
-/// fill this process's memory.
+/// The reply bytes every request may earn, whatever its size.
 const MAX_RESPONSE_BYTES: u64 = 1024 * 1024;
+
+/// Reply bytes per request byte. The worst honest reply runs about 5 reply bytes per request byte (ticket 0132).
+const REPLY_BYTES_PER_REQUEST_BYTE: u64 = 8;
 
 /// The longest a `Retry-After` header moves the wait to.
 ///
@@ -261,12 +260,18 @@ fn send(agent: &Agent, exchange: &Exchange<'_>, limit: Duration) -> Result<Vec<u
         };
         return Err(Attempt { failure, asked });
     }
+    let sent = u64::try_from(exchange.body.len()).unwrap_or(u64::MAX);
+    let most = MAX_RESPONSE_BYTES.saturating_add(REPLY_BYTES_PER_REQUEST_BYTE.saturating_mul(sent));
+    // `ureq` refuses a body of exactly its limit, so it gets one byte more.
     response
         .body_mut()
         .with_config()
-        .limit(MAX_RESPONSE_BYTES)
+        .limit(most.saturating_add(1))
         .read_to_vec()
-        .map_err(|error| Attempt::from(Error::Transport(transport(&error))))
+        .map_err(|error| match error {
+            ureq::Error::BodyExceedsLimit(_) => Attempt::from(Error::ReplyTooLarge(most)),
+            error => Attempt::from(Error::Transport(transport(&error))),
+        })
 }
 
 /// Whether a 400 reply's body names `max_tokens_exceeded` as its

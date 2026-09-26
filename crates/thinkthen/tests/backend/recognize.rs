@@ -421,3 +421,21 @@ fn all_forty_harvest_cases_replay_without_a_key_or_network() {
         assert!(fs::read_dir(replay).unwrap().filter_map(Result::ok).all(|entry| !fs::read_to_string(entry.path()).unwrap().contains("secret-value")));
     }
 }
+
+/// Ticket 0132: 64,000 bytes of text, whose one loopback reply passes 1 MiB, keep it.
+#[test]
+fn text_of_64000_bytes_keeps_its_reply() {
+    let backend = conformance_backend::Backend::start().expect("backend");
+    let base = format!("{}/generic/v1", backend.origin());
+    let text = format!("{}.", &"word ".repeat(12_800)[..63_999]);
+    let arguments = ["recognize", "--kind", "P=a", "--kind", "O=b", "--url", &base, "--no-cache"];
+    let output = spawn(&arguments, &[("THINKTHEN_API_KEY", "secret-value")], text.as_bytes())
+        .expect("command");
+    assert_eq!(String::from_utf8_lossy(&output.stderr), "");
+    assert_eq!(output.status.code(), Some(0));
+    let expected = format!(
+        r#"{{"entities":[{{"name":"{text}","kind":"P","start":0,"end":64000,"strength":0.81}}]}}"#
+    );
+    assert_eq!(String::from_utf8_lossy(&output.stdout), expected + "\n");
+    assert_eq!(backend.count(), 1);
+}

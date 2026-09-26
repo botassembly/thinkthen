@@ -7,6 +7,8 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Output;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 use crate::harness::{Canned, Listener, spawn};
@@ -30,9 +32,23 @@ const CLOSED: &str = "thinkthen: the backend closed the connection before a repl
 /// The diagnostic a stall past the attempt timeout earns.
 const TIMED_OUT: &str = "thinkthen: the backend timed out; increase --timeout or try again\n";
 
-/// The diagnostic a reply body past the one-megabyte bound earns.
-const UNREACHED: &str =
-    "thinkthen: the backend could not be reached; check --url and the network\n";
+/// The most reply bytes one request may earn: 1 MiB, plus 8 for each request byte.
+pub(crate) fn limit(request: &[u8]) -> usize {
+    1_048_576 + 8 * request.len()
+}
+
+/// A backend reply padded with spaces to exactly `size` bytes, which still decodes.
+pub(crate) fn padded(reply: &str, size: usize) -> Canned {
+    let (head, tail) = reply.split_at(reply.len() - 1);
+    Canned::ok(&format!("{head}{}{tail}", " ".repeat(size - reply.len())))
+}
+
+/// The sentence a reply past its limit earns.
+pub(crate) fn past(limit: usize) -> String {
+    format!(
+        "the backend's reply passed this request's limit of {limit} bytes, so the answer was not kept; the request was not sent again"
+    )
+}
 
 /// Run `decide` against the listener with the key and any extra environment.
 fn decide(
@@ -124,13 +140,32 @@ fn a_body_cut_short_is_sent_once() {
 
 #[test]
 fn a_reply_past_the_bound_is_sent_once() {
-    let padding = "a".repeat(2 * 1024 * 1024);
-    let body = ANSWERED.replace(r#""usage""#, &format!(r#""padding":"{padding}","usage""#));
-    let listener = failing(|| Canned::ok(&body)).expect("a loopback listener");
+    let sent = Arc::new(AtomicUsize::new(0));
+    let seen = Arc::clone(&sent);
+    let listener = Listener::answering(move |body| {
+        seen.store(limit(body), Ordering::SeqCst);
+        padded(ANSWERED, limit(body) + 1)
+    })
+    .expect("a loopback listener");
 
     let output = decide(&listener, &[], &[], EVIDENCE).expect("the compiled binary runs");
 
-    failed_once(&listener, &output, UNREACHED);
+    let said = format!("thinkthen: {}\n", past(sent.load(Ordering::SeqCst)));
+    failed_once(&listener, &output, &said);
+}
+
+#[test]
+fn a_reply_of_exactly_the_bound_is_kept() {
+    let listener =
+        Listener::answering(|body| padded(ANSWERED, limit(body))).expect("a loopback listener");
+
+    let output =
+        decide(&listener, &["--no-cache"], &[], EVIDENCE).expect("the compiled binary runs");
+
+    assert_eq!(listener.requests().len(), 1);
+    assert_eq!(String::from_utf8_lossy(&output.stderr), "");
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "true\n");
 }
 
 #[test]

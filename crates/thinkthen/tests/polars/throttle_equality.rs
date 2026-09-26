@@ -11,7 +11,7 @@
 mod common;
 
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use conformance_backend::Backend;
 use thinkthen::PolarsEngine;
@@ -56,21 +56,19 @@ fn a_series_runs_at_the_throttle_as_a_slice_does() {
         .expect("a question")
         .cut();
 
-    // Wall time and count on the delay arm, 200 / 8 x 0.1 s = 2.5 s each.
-    let timed = |call: &Call<'_>| {
+    // Answers and counts on the delay arm, where replies finish out of order.
+    let answered = |call: &Call<'_>| {
         let backend = Backend::start().expect("a backend");
         let engine = engine(&format!("{}/arm/delay/100/v1", backend.origin()));
-        let started = Instant::now();
-        let answers = call(&engine);
-        (answers, started.elapsed(), backend.count())
+        (call(&engine), backend.count())
     };
-    let (from_series, series_time, series_count) = timed(&|engine| {
+    let (from_series, series_count) = answered(&|engine| {
         let answered = engine
             .decide_series(&question, &series, CallOptions::new())
             .expect("the series call");
         answered.bool().expect("a Boolean series").iter().collect()
     });
-    let (from_slice, slice_time, slice_count) = timed(&|engine| {
+    let (from_slice, slice_count) = answered(&|engine| {
         engine
             .decide_many_with(&question, refs.iter().copied(), CallOptions::new())
             .map(|row| {
@@ -81,27 +79,19 @@ fn a_series_runs_at_the_throttle_as_a_slice_does() {
     });
     assert_eq!((series_count, slice_count), (TEXTS, TEXTS));
     assert_eq!(from_series, from_slice);
-    let (short, long) = if series_time < slice_time {
-        (series_time, slice_time)
-    } else {
-        (slice_time, series_time)
-    };
-    assert!(
-        long.as_secs_f64() <= short.as_secs_f64() * 1.05,
-        "series {series_time:?} and slice {slice_time:?} differ by more than 5 percent"
-    );
-    // The floor is 2.5 s. The engine measured about 4 s here on 2026-09-25
-    // (record 0120), and one request at a time would take 20 s.
-    assert!(
-        (2.5..6.0).contains(&series_time.as_secs_f64()),
-        "the series took {series_time:?}"
-    );
 
     // Exactly the throttle in flight, and still the throttle 300 ms later.
+    // The held arm counts sends, so a busy machine cannot fail it.
+    let slice = held_in_flight(|engine| {
+        let _answered: Vec<_> = engine
+            .decide_many_with(&question, refs.iter().copied(), CallOptions::new())
+            .collect();
+    });
+    assert_eq!(slice, (8, 8), "the slice in flight on the held arm");
     let decide = held_in_flight(|engine| {
         let _answered = engine.decide_series(&question, &series, CallOptions::new());
     });
-    assert_eq!(decide, (8, 8), "decide_series in flight on the held arm");
+    assert_eq!(decide, slice, "decide_series in flight on the held arm");
     let score = Question::score("How urgent is this?")
         .and_then(|builder| builder.level("low", None))
         .and_then(|builder| builder.level("high", None))
