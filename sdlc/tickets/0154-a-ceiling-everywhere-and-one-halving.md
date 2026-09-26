@@ -26,7 +26,7 @@ Read from `origin/main` `6fbebfdf` and the branch of ticket 0146 at `6cdbe075`.
 
 - `core/backend.rs::Backend::ceiling` returns `Some(96_000)` only when the posting URL, less `/systemone` and one trailing slash, equals the built-in base. Two callers read it. `core/batch.rs::Batcher::over` uses it as the request limit when no profile sets one. `engine/prepared_request.rs::SettledRelation::settle` splits relation plans under it when no profile limits request bytes.
 - `specification/backends.md`, "Explicit profiles and local preflight", says: "A profile's `max_request_bytes` replaces it" and "Every other plan and every other address has no ceiling."
-- A profile's `max_request_bytes` is a limit the backend enforces. A plan splits under it, and a request that cannot split under it, one question or one record, exits 2. The ceiling splits and never refuses: one question or one record alone goes as one request.
+- A profile's `max_request_bytes` is a limit the backend enforces. A plan splits under it, and a request that cannot split under it, one question or one record, exits 2. The ceiling splits and refuses in one case only: one question or one record alone goes as one request, but `core/batch.rs::Batcher::context_fits` (line 309) refuses at exit 2 a shared context whose request with one record passes it, by ADR 0048 item 11. Today that case exists only at the built-in address.
 - No flag or environment variable sets a request size. `specification/settings.md` has a row for the backend profile and none for a request size.
 - The recording folder's identity hashes the URL alone (`core/recording.rs:115`), so a value carried beside the URL does not change it.
 - `engine/http.rs` reads a status 400 body up to 4 KiB. When `detail.error_type` is exactly `max_tokens_exceeded`, the error is `Error::TokenLimit`. Every other failed status is `Error::Status(code)`. Neither 400 nor 413 is retried.
@@ -60,16 +60,16 @@ On one document the flag is accepted. One record or one question always goes alo
 
 **How it reaches the planners.** `Backend` gains the resolved request size, set by a new `Backend::with_request_size(n)` after `Backend::resolve`. `Backend::ceiling` returns it for every address. Both callers keep reading `backend.ceiling()`. The URL match moves into a new `Backend::is_built_in`, which only the warning reads. The library builder does not call `with_request_size`, so `Backend::resolve` defaults to 96,000 there.
 
-**How it combines with a profile.** A request holds at most the smaller of the request size and the profile's `max_request_bytes`. The profile keeps its meaning: a request that cannot split under the profile's limit is refused. One record or one question over the request size alone still goes alone. `Batcher::over` and `SettledRelation::settle` take the smaller of the two in place of `profile.or(ceiling)`, and keep the profile's refusal separate. A profile can therefore lower the size and no longer raise it.
+**How it combines with a profile.** A request holds at most the smaller of the request size and the profile's `max_request_bytes`. The profile keeps its meaning: a request that cannot split under the profile's limit is refused. One record or one question over the request size alone still goes alone. A shared context whose request with one record passes the size is refused at exit 2, as ADR 0048 item 11 says and `Batcher::context_fits` does. That refusal now reaches every address, at 96,000 bytes by default, where today it reaches only the built-in address. B7 builds `--context` and inherits that reach: a caller with a larger context raises the setting. B7's ticket must name the flag in its refusal. `Batcher::over` and `SettledRelation::settle` take the smaller of the two in place of `profile.or(ceiling)`, and keep the profile's refusal separate. A profile can therefore lower the size and no longer raise it.
 
 **Sizing it for a larger model.** ADR 0051 item 3 gives the rule, and `settings.md` repeats it with a worked example. Divide the input-token limit by 0.516 tokens a byte and keep a quarter back. A 500,000-token context gives `--max-request-bytes 726000`. A 1,000,000-token context gives about 1,453,000.
 
 ### The warning above 96,000 at the built-in address
 
-When the backend is the built-in one and the request size is above 96,000, the command prints one line on standard error:
+When the backend is the built-in one and the request size is above 96,000, the command prints one line on standard error, with the size in place of 200000:
 
 ```text
-thinkthen: warning: max_request_bytes 200000 is above the built-in address's ceiling of 96000; that backend refuses a request over 65536 input tokens
+thinkthen: warning: max_request_bytes 200000 is above the default of 96000; the built-in backend refuses a request over 65536 input tokens
 ```
 
 It prints once a run, after the backend resolves and before any request or plan prints. So it prints under `--dry-run` too and never reads a key. The run goes on.
@@ -92,11 +92,11 @@ The libraries get the same setting in ticket 0157, the library settings follow-u
 
 ### What counts as too large
 
-`engine/error.rs` gains `Error::too_large()`, true for `Error::TokenLimit` and `Error::Status(413)`, at every address. Nothing else counts. `cli/failure/status.rs` gains the 413 phrase `the backend refused the request as too large; set a lower --max-request-bytes`, and the `max_tokens_exceeded` sentence ends `shorten the text or set a lower --max-request-bytes`.
+`engine/error.rs` gains `Error::too_large()`, true for `Error::TokenLimit` and `Error::Status(413)`, at every address. Nothing else counts. `cli/failure/status.rs` gains the 413 phrase `the backend refused the request as too large; shorten the text, or set a lower --max-request-bytes or max_request_bytes with --profile`, and the `max_tokens_exceeded` sentence ends `shorten the text, or set a lower --max-request-bytes or max_request_bytes with --profile`. The phrase is fixed per status and cannot know the verb or the batch size, so it names every fix. Shortening the text is the only fix for a lone record or question, including at `--batch 1`. The flag fixes a batch or a relation plan on the five verbs that take it. The profile fixes `choose`, `tag`, `score`, `annotate` and `find`, which have no flag.
 
 ### One halving
 
-`core/batch.rs` gains a pure function `halves`. It takes the batcher's backend, profile, question and context, and the batch's records as `BatchRecord`s. It feeds the first ⌈n/2⌉ records to a fresh `Batcher` with the setting `max`, then the rest to another, and calls `finish()` on each. Each half therefore forms by ADR 0048 item 1. A half is a subset of a batch that fit, so it fits and closes once. A second batch from either half is a `BatchError::Defect`.
+`core/batch.rs` gains a pure function `halves`. It takes the batcher's backend, profile, question and context, and the batch's records as `BatchRecord`s. Here n counts the batch's members, one for each input record the batch answers, repeats included, and not its distinct texts. It feeds the first ⌈n/2⌉ members to a fresh `Batcher` with the setting `max`, then the rest to another. For each half it collects every batch that `push` returns as `closed` and the one `finish()` returns. A half whose last record is a content cut closes through `push`, and its `finish()` returns none. Each half therefore forms by ADR 0048 item 1. A half is a subset of a batch that fit, and only its last record can be a cut, so it closes once. Anything other than exactly one batch for a half is a `BatchError::Defect`.
 
 The worker in `cli/asking/batched.rs` asks the whole batch as ticket 0146 builds it. When the ask fails with `too_large()` and the batch holds two or more records, the worker rebuilds the records' `BatchRecord`s through `Reading::batch_record`, calls `halves`, and asks the first half, then the second. The halves run inside the item's place, so `--jobs N` still bounds requests in flight at N.
 
@@ -146,7 +146,7 @@ Each is the ticket author's call unless marked. Ian can overturn any of them.
 11. **A replay asks the halves when the whole batch has no entry.** This keeps replay deterministic with no new recording entry. A refusal is never written, so a replay cannot tell a refused batch from a missing one. Asking the halves in both cases gives the live run's rows.
 12. **The refused request's attempts count in the first half.** Rows then still sum to the run, as ADR 0048 item 9 requires.
 13. **`split` marks every row a half answers, even a half of one record, once B5 builds `meta.batch`.** Without that, a batch of two split into two single records would lose its mark. Until B5 the per-request counts and digests record the split.
-14. **The too-large phrases name `--max-request-bytes`.** The setting is now the direct fix, and a profile can no longer raise the size.
+14. **The too-large phrases name every fix: shorter text, `--max-request-bytes`, and a profile's `max_request_bytes`.** One phrase serves every verb and every batch size. A lone record or question needs shorter text, a batch or relation plan needs the flag, and a verb with no flag needs the profile.
 15. **Build after tickets 0146 and 0155, before B5.** The coordinator ruled the fallback on 2026-09-26. The order is 0146, 0148, 0155, 0154, B5.
 
 ## Order against ticket 0146
@@ -157,14 +157,14 @@ Ruled by the coordinator on 2026-09-26: the order is 0146, 0148, 0155, 0154, the
 - **After 0146 and B5.** The mark would land here. The cost is a wait for B5, which has no ticket yet, while a default batch at another address still has no ceiling.
 - **Fold into 0146 before it starts.** 0146 and its pages would be written once, with no second pass over `batched.rs`, `args.rs` or `backends.md`. The cost is larger. 0146 is accepted and would need a second review. Its product budget of 545 lines would grow by about 225, and its test budget of 420 by about 440, on a level-3 ticket. Tickets 0148, 0150 and 0153 wait on 0146 and would wait longer. The mark would still wait for B5, because 0146 excludes `meta.batch`.
 
-Overlap with 0146's files: `core/batch.rs`, `cli/args.rs`, `cli/edge.rs`, `cli/asking.rs`, `cli/asking/batched.rs`, `cli/failure.rs`, `result_json.rs`, `core/result.rs`, `crates/thinkthen/tests`, `backends.md`, `records.md`, `result.md`, `settings.md`, `decide.md`, `filter.md`, `rank.md`, `sdlc/issues`. The overlap is safe only because 0154 builds after 0146 lands. This ticket's Phase 1 commit touches none of them. It adds ADR 0051 and markers in ADR 0048, which no in-flight ticket opens.
+Overlap with 0146's files: `core/batch.rs`, `cli/args.rs`, `cli/edge.rs`, `cli/asking.rs`, `cli/asking/batched.rs`, `cli/failure.rs`, `cli/failure/status.rs`, `result_json.rs`, `core/result.rs`, `crates/thinkthen/tests`, `backends.md`, `records.md`, `result.md`, `settings.md`, `decide.md`, `filter.md`, `rank.md`, `sdlc/issues`. The overlap is safe only because 0154 builds after 0146 lands. This ticket's Phase 1 commits touch none of them. They add ADR 0051 and markers in ADR 0048. Ticket 0155 also opens ADR 0048, for item 10's marker, on a different line, and lands first.
 
 Overlap with other tickets:
 
-- Ticket 0147 opens ADR 0040 and `backends.md`, and its ADR 0050 names one recognize piece "at an address with no ceiling and no profile". After 0154 that case no longer exists. 0154 edits ADR 0040 only after 0147 lands, and leaves `backends.md` line 17 to 0147. 0147 also opens `recognize.md` and `relate.md`. 0154 adds one sentence to each after 0147 lands.
+- Ticket 0147 opens ADR 0040, `backends.md`, `records.md`, `result.md` and `settings.md`, and its ADR 0050 names one recognize piece "at an address with no ceiling and no profile". After 0154 that case no longer exists. 0154 edits ADR 0040 only after 0147 lands, and leaves `backends.md` line 17 to 0147. 0147 also opens `recognize.md` and `relate.md`. 0154 edits all six pages only after 0147 lands.
 - Ticket 0148 opens `settings.md`. 0154 adds a new row and touches the profile row after 0148 lands.
 - Ticket 0153 opens `cli/args.rs`. Both build after 0146. Whichever builds second merges the other's `args.rs` lines.
-- Ticket 0155, retries and backoff, opens `cli/args.rs`, `backends.md`, `settings.md` and ADR 0048 item 10. The two tickets touch different lines of each. 0155 lands before 0154, and 0154 merges it.
+- Ticket 0155, retries and backoff, opens `cli/args.rs`, `crates/thinkthen/tests`, `tests/backend/main.rs`, `backends.md`, `settings.md` and ADR 0048 item 10. The two tickets touch different lines of each. 0155 lands before 0154, and 0154 merges it.
 
 ## Edge cases
 
@@ -195,10 +195,12 @@ Overlap with other tickets:
 | The same with 400 naming `max_tokens_exceeded` | The same |
 | The same with 422 | 1 request. Exit 4. 0146's one-line stop naming records 1 to 5 with the 422 phrase |
 | The same with plain 400 | 1 request. Exit 4. The plain 400 phrase |
-| First half still refused | 2 requests. No rows. `thinkthen: stopped at record 1; the request for records 1 to 3 failed: the backend answered with status 413: the backend refused the request as too large; set a lower --max-request-bytes; 0 records finished`. Exit 4 |
+| First half still refused | 2 requests. No rows. `thinkthen: stopped at record 1; the request for records 1 to 3 failed: the backend answered with status 413: the backend refused the request as too large; shorten the text, or set a lower --max-request-bytes or max_request_bytes with --profile; 0 records finished`. Exit 4 |
 | Second half still refused | 3 requests. Rows 1 to 3. The same line naming records 4 to 5, `3 records finished`. Exit 4 |
 | Batch of 2 refused | 3 requests. Each half's body equals today's single-record request, byte for byte |
-| Batch of 1 refused, `--batch 1` | 1 request. Today's two lines. Exit 4 |
+| Batch of 1 refused with 413, `--batch 1` | 1 request. Today's two lines, whose status line now carries the new 413 phrase in place of the bare status. Exit 4 |
+| `choose` over one question refused with 413 | 1 request. Today's lines with the new 413 phrase, which names the profile for a verb with no flag. Exit 4 |
+| Batch of 5 whose fifth record is a content cut, from design test 3's 25-line fixture, refused with 413, halves fit | 3 requests of 5, 3 and 2 records. Rows 1 to 5. Exit 0. The second half closes through `push`, not `finish()` |
 | 413 with `--max-retries 2` | Not retried. The counts above hold |
 | A 503 on a half | Retried as today. Exhausted retries stop at the half's first record |
 | An interrupt after the refusal | No half starts. Today's cancellation lines |
@@ -218,10 +220,10 @@ Every test drives the compiled binary against the in-process loopback (`tests/ba
 | --- | --- | --- |
 | `the_request_size_closes_batches_at_every_address`, new in `tests/backend/batching/ceiling.rs` | The first thirteen edge rows through the loopback or `--dry-run`. Each row pins the request count, the records a request, each body's size against its limit, or the whole refusal sentence and exit code. The `--batch 1` row compares bodies by digest with the digests main prints before the change | (a) `ceiling()` keeps the built-in match: the nothing-set row sends 1 request. (b) The profile still replaces the size: the profile-of-200,000 row sends 1. (c) The larger of the two wins: the 50,000-and-200,000 row sends 1. (d) The variable beats the flag: the both-set row sends 1. (e) `0` parses: the refusal row sends. (f) The profile's refusal is dropped with the merge: the 100,000-byte line under a 50,000 profile goes alone |
 | `a_request_size_over_the_ceiling_warns_at_the_built_in_address`, new in the same file | The five warning rows, through `decide --dry-run` and `relate --dry-run`. Each pins the whole standard error | (a) Warn at every address: the loopback row is red. (b) Warn at 96,000 or more: the 96,000 row is red. (c) Compare the URL as text: the trailing-slash row is red. (d) Warn only on `decide`: the `relate` row is red |
-| `a_batch_refused_as_too_large_goes_again_in_halves`, new in `tests/backend/batching/too_large.rs` | The refusal rows of the edge table, at `--jobs 1`. Each row pins the loopback's request count and records a request, whole standard output, whole standard error and exit code. The `--details` row pins `requests_sent` and `meta.requests` | (a) No halving: the 413 row exits 4. (b) Halve again: the first-half row sends 4 requests. (c) Halve on 422: the 422 row sends 3. (d) Send the second half after the first fails: the first-half row sends 3. (e) The first half takes ⌊n/2⌋: the 413 row sees 5, 2 and 3. (f) Drop the refused attempt from the shares: rows 1 to 3 carry 1, 0, 0. (g) Quote a lone record in a half: the batch-of-2 row's bodies differ from today's |
+| `a_batch_refused_as_too_large_goes_again_in_halves`, new in `tests/backend/batching/too_large.rs` | The refusal rows of the edge table, at `--jobs 1`. Each row pins the loopback's request count and records a request, whole standard output, whole standard error and exit code. The `--details` row pins `requests_sent` and `meta.requests` | (a) No halving: the 413 row exits 4. (b) Halve again: the first-half row sends 4 requests. (c) Halve on 422: the 422 row sends 3. (d) Send the second half after the first fails: the first-half row sends 3. (e) The first half takes ⌊n/2⌋: the 413 row sees 5, 2 and 3. (f) Drop the refused attempt from the shares: rows 1 to 3 carry 1, 0, 0. (g) Quote a lone record in a half: the batch-of-2 row's bodies differ from today's. (h) `halves` reads only `finish()`: the content-cut row fails with a defect. (i) Count distinct texts in place of members: a batch with a repeated record halves at the wrong place |
 | `a_split_run_replays_and_caches`, new in the same file | The replay and cache rows of the edge table. It records a split run into a private temporary folder, stops the loopback, and replays | (a) Replay does not ask the halves: the split replay exits 5 at record 1. (b) A miss on both names the first half: the `--batch 4` row names records 1 to 2. (c) The halves skip the cache: the second cached run sends 3 requests |
 | `the_beatles_set_splits_at_every_address`, rewritten from `the_beatles_set_splits_at_the_hosted_address_and_nowhere_else` in `tests/backend/relate/ceiling.rs` | The relate rows of the edge table, by `--dry-run`. `a_profile_byte_limit_replaces_the_ceiling_and_other_limits_join_it` becomes `a_profile_byte_limit_lowers_the_size_and_other_limits_join_it`: the 200,000 profile row moves to `--max-request-bytes 200000`, and a 50,000 profile row shows the profile lowering it. `one_question_over_the_ceiling_goes_alone_and_is_not_refused` gains the same result at loopback. `a_full_line_set_plans_inside_the_child_deadline` keeps its one-request speed case under `--max-request-bytes 6000000`. The trailing-slash test moves into the warning test | (a) `SettledRelation::settle` keeps a built-in-only ceiling: loopback counts read 1 and 1. (b) `settle` lets a profile replace the size: the 200,000 profile row in the rewritten profile test gives 1 and 1 |
-| `a_status_names_its_fixed_action_and_only_the_known_reason`, one new row and one changed row in `tests/backend/status_reason.rs` | Status 413 and the `max_tokens_exceeded` body print their pinned phrases | (a) Drop the 413 phrase: the bare status prints. (b) Keep the old `max_tokens_exceeded` ending: that row is red |
+| `a_status_names_its_fixed_action_and_only_the_known_reason`, three new rows and one changed row in `tests/backend/status_reason.rs` | Status 413 and the `max_tokens_exceeded` body print their pinned phrases. One 413 row runs at `--batch 1`, and one runs on `choose` | (a) Drop the 413 phrase: the bare status prints. (b) Keep the old `max_tokens_exceeded` ending: that row is red. (c) Drop the profile advice: the `choose` row names only a flag `choose` refuses |
 
 `core/batch/tests.rs::the_ceiling_closes_batches_at_the_built_in_address_only` loses its loopback row and its profile-raises row, and is renamed `the_ceiling_closes_batches_and_a_profile_lowers_it`. Its other rows stay. The command-level test above owns the every-address rule and the precedence, so one contract is tested at one layer.
 
@@ -260,12 +262,12 @@ Nonblank lines, measured with `grep -c .`. Net lines against main after tickets 
 
 1. Stop before crossing any budget by more than a tenth, or before adding a dependency.
 2. Stop if ticket 0146 or 0155 has not landed on main.
-3. Stop if `--batch 1` changes one byte of any request, row, standard error line or exit code. A batch of one never splits.
+3. Stop if `--batch 1` changes one byte of any request, row, standard error line or exit code, except the two too-large phrases. Edge row "Batch of 1 refused with 413" carries the new 413 phrase, and the `max_tokens_exceeded` line takes its new ending. A batch of one never splits.
 4. Stop if a committed recording, demo, probe replay or spec page changes under the new default. None is expected. Hand back which one.
 5. Stop if the halving needs a recording format change, a new entry kind, a second scheduler, or a change to what `--jobs` counts.
 6. Stop if the request size changes the recording folder's identity.
 7. Stop if any plant stays green.
-8. Stop if the change needs a file that ticket 0147, 0148 or 0155 still opens and has not landed. ADR 0040, `backends.md` line 17, `relate.md` and `recognize.md` wait for 0147. `settings.md` waits for 0148.
+8. Stop if the change needs a file that ticket 0146, 0147, 0148 or 0155 still opens and has not landed. ADR 0040, `backends.md`, `records.md`, `result.md`, `settings.md`, `relate.md` and `recognize.md` wait for 0147. `settings.md` also waits for 0148. `cli/failure/status.rs` and every file in 0146's overlap list wait for 0146. `crates/thinkthen/tests`, `tests/backend/main.rs` and ADR 0048 wait for 0155.
 9. Stop if the build needs a live call. None is authorized. Never run `sdlc/scripts/live`.
 
 ## Scope and exclusions
@@ -288,8 +290,10 @@ Contract 2; state and timing 1; reach 2; proof 2; cost of error 1; total 8. Fina
 4. A relation chunk refused as too large still fails at exit 4. The default size makes that rare.
 5. The libraries batch from B12a. B12a reuses `halves` and ADR 0051's rules, and its ticket names that.
 6. B6 measures the token rate on batched record text. If it shows 96,000 bytes too loose for the hosted backend, a new ADR changes the default.
-7. ADR 0040's marker, and the `relate.md` and `recognize.md` sentences, land after ticket 0147.
+7. ADR 0040's marker, and the edits to `backends.md`, `records.md`, `result.md`, `settings.md`, `relate.md` and `recognize.md`, land after ticket 0147.
 8. The flag joins `choose`, `tag`, `score` and `annotate` with B8, B9 and B10.
+9. B5 builds `meta.batch.split`, by ADR 0051 item 10.
+10. B7 builds `--context`, whose refusal of a context too large for one record now reaches every address at the request size. B7's refusal names `--max-request-bytes`.
 
 ## What Ian can overturn
 
@@ -306,7 +310,7 @@ Contract 2; state and timing 1; reach 2; proof 2; cost of error 1; total 8. Fina
 - Decision 11: a replay asks the halves when the whole batch has no entry, including the intended `--batch 20` over `--batch 10` case.
 - Decision 12: the refused attempts count in the first half.
 - Decision 13: `split` on every row a half answers, built by B5.
-- Decision 14: the too-large phrases name `--max-request-bytes`.
+- Decision 14: the too-large phrases name shorter text, `--max-request-bytes` and a profile's `max_request_bytes`.
 - Decision 15, the coordinator's: the order 0146, 0148, 0155, 0154, B5, not folded into 0146.
 
 ## Closes
@@ -317,6 +321,6 @@ No issue. The build adds pointers to ADR 0051 in `sdlc/issues/2026-09-26-batchin
 
 - Starts from: The rulings of 2026-09-26: the coordinator's on the default everywhere and the halving, and Ian's on the setting. ADR 0048 items 2, 5, 6 and 9, and sections 2 and 4 of `sdlc/issues/2026-09-26-batching-design.md`, which argue for failing a refused batch and for never splitting one. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` section 7, where the hosted backend refused 2,448 and 8,000 questions with 400 `max_tokens_exceeded` and took 7,000 short ones, and section 9's 181 bytes a title. Ticket 0123's measurement of 0.516 input tokens a byte for relate's JSON, and experiment 268's 0.40 for record text. The code at `origin/main` `6fbebfdf`: `core/backend.rs`, `core/batch.rs`, `core/recording.rs`, `engine/prepared_request.rs`, `engine/http.rs`, `engine/request.rs`, `cli/profile.rs`, `cli/edge.rs`, `cli/failure/status.rs`. Ticket 0146 at `6cdbe075`, and ticket 0148 at `d1afe98a` for the library settings table and its stop rule 3. A size scan of every committed recording file found none over 90,000 bytes.
 - Keeps: Every request at the built-in address with no size set. Every `--batch 1` request, row, stop line and exit code. A profile's refusals. The retry rule and ADR 0048 item 6 for every status but a too-large refusal. The recording format and the folder identity. The throttle's meaning. Ticket 0146's stop lines and replay-miss range.
-- Changes: The request size as a setting, `--max-request-bytes` then `THINKTHEN_MAX_REQUEST_BYTES` then 96,000, applied at every address. A profile's `max_request_bytes` lowers it and no longer raises it. A warning above 96,000 at the built-in address. One halving of a batch refused by 413 or 400 `max_tokens_exceeded`, with replay asking the halves. A 413 phrase and a new `max_tokens_exceeded` ending. `meta.batch.split`. ADR 0051, markers in ADR 0048, and ten specification pages.
+- Changes: The request size as a setting, `--max-request-bytes` then `THINKTHEN_MAX_REQUEST_BYTES` then 96,000, applied at every address. A profile's `max_request_bytes` lowers it and no longer raises it. A warning above 96,000 at the built-in address. One halving of a batch refused by 413 or 400 `max_tokens_exceeded`, with replay asking the halves. A 413 phrase and a new `max_tokens_exceeded` ending. A context refusal at every address. ADR 0051, markers in ADR 0048, and ten specification pages.
 - Proof: Four new loopback and dry-run tests and three amended ones, each with its plants, under "Proof".
-- Defers: The setting on the libraries and SQL, billing of a refused request, the cached rerun's repeated refusal, relation chunk halving, library halving at B12a, B6's token rate, ADR 0040's marker after ticket 0147, and the flag on the verbs that batch later.
+- Defers: The setting on the libraries and SQL, billing of a refused request, the cached rerun's repeated refusal, relation chunk halving, library halving at B12a, B6's token rate, ADR 0040's marker after ticket 0147, the flag on the verbs that batch later, `meta.batch.split` in B5, and the context refusal's wider reach in B7.
