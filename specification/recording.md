@@ -23,7 +23,7 @@ Usage lives at `$XDG_CACHE_HOME/thinkthen-usage`, then `$HOME/.cache/thinkthen-u
 
 Every HTTP attempt counts immediately before it is sent, including a retry or failed attempt. Validated provider token counts count once for each successful live response, including a response whose answer is later refused. Replayed response bytes add no tokens. A decoded hit in the platform cache, `THINKTHEN_CACHE`, or `--cache` counts as a cache answer. Explicit replay and an explicit record/replay pair do not. Packed `annotate` groups count as their actual exchanges.
 
-Usage persistence is best effort. Its first failure disables later updates in that process and prints one fixed warning after ordered results. It never changes a judgment, output order, or exit meaning. A crash can undercount tokens or overcount one precharged request. These totals describe local observations and are not a provider bill.
+Usage persistence is best effort. Its first failure disables later updates in that process and prints one fixed warning after ordered results. It never changes a judgment, output order, or exit meaning. Counting never holds back a request. A crash can undercount the requests and tokens counted after the last write that finished. These totals describe local observations and are not a provider bill.
 
 An XDG home or `HOME` participates in these paths only when it is absolute. A relative or blank home is unusable and never resolves below the working directory.
 

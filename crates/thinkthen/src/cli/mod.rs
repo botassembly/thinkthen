@@ -86,7 +86,7 @@ pub fn entry() -> ExitCode {
         Ok(code) => code,
         Err(failure) => failure::report(&failure, stderr.lock()),
     };
-    if environment.usage().warning() {
+    if environment.usage().finish() {
         let mut writer = stderr.lock();
         let _unwritten = writeln!(writer, "thinkthen: usage counters could not be updated; check the usage folder permissions and free space")
             .and_then(|()| writer.flush());

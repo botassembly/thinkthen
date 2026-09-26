@@ -157,13 +157,14 @@ fn busy_parent_child() {
         (2, 1),
         "the child counts only its own request"
     );
+    // Dropping the engine finishes the child's writer.
+    drop((parent, engine));
+    counters.finish();
     let durable = usage::read(&usage_path, &usage::month_now()).expect("usage totals");
     assert_eq!(
         durable.total.requests_sent, 3,
         "each request is counted once"
     );
-
-    drop((parent, engine));
     let (owned, exclusive) = channel();
     let locked = folder.clone();
     thread::spawn(move || owned.send(cache_lock::exclusive_folder(&locked).is_ok()));
