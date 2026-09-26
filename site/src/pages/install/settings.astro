@@ -9,7 +9,7 @@ import table from '../../../../specification/settings.md?raw';
 
 // Every row, default, and surface below comes from specification/settings.md
 // at build time. scripts/check-settings.mjs reads the built page against it.
-const { whatCounts, precedence, howToRead, rows, onTheWay } = parseSettings(table);
+const { whatCounts, precedence, howToRead, rows } = parseSettings(table);
 const examples = captioned('install/settings', SETTINGS_SEE);
 const specUrl = `${REPO}/blob/main/specification/settings.md`;
 
@@ -77,28 +77,11 @@ const findText = (row) => plain([
           {present(r).map((s) => (
             <div data-surface={s}><dt>{s}</dt><dd set:html={inlineHtml(r.on[s])}></dd></div>
           ))}
-          {r.default.source && <div class="source"><dt>Source</dt><dd set:html={inlineHtml(r.default.source)}></dd></div>}
         </dl>
       </section>
     ))}
   </div>
   <p class="settings-none" data-settings-none hidden>No setting matches.</p>
-
-  <h2 id="on-the-way">Settings on the way</h2>
-  <p>Each of these has a design and no code yet. None works in this release. The default shown is the one the design names.</p>
-  <div class="settings">
-    {onTheWay.map((u) => (
-      <section class="setting upcoming">
-        <h3 set:html={inlineHtml(u.name)}></h3>
-        <p class="soon">Not built yet</p>
-        <p set:html={inlineHtml(u.text)}></p>
-        <dl class="kv">
-          {u.designed && <div><dt>Designed default</dt><dd set:html={inlineHtml(u.designed)}></dd></div>}
-          {u.source && <div class="source"><dt>Source</dt><dd set:html={inlineHtml(u.source)}></dd></div>}
-        </dl>
-      </section>
-    ))}
-  </div>
 
   <p class="pagelinks"><a href="/install/backends/">Backends</a> · <a href="/reference/">Reference</a></p>
 

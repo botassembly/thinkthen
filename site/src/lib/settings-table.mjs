@@ -126,31 +126,22 @@ export function splitDefault(cell) {
   return out;
 }
 
-// A sentence in a "Settings on the way" line that says where the design is
-// written, rather than what the setting does.
-const SOURCE_SENTENCE = /^(Tickets? |Ticket [A-Z0-9]|Batching design|Recognize design)|\bdesign ticket\b/;
-const DESIGNED = /^The designed default is (.+)\.$/;
+// The page shows the prose, not where each rule is written. A sentence that
+// only cites a record goes, and so does a trailing clause that cites an ADR.
+const CITE_SENTENCE = /^(ADR \d+\.|The batching design\b|Tickets? \d|Ian's ruling)/;
+const CITE_CLAUSE = /,\s*(by|as) ADR \d+( states)?(?=[.,])/g;
 
-function sentences(text) {
-  return text.split(/(?<=\.)\s+(?=[A-Z`'])/).map((s) => s.trim()).filter(Boolean);
+function uncited(text) {
+  return text.split(/(?<=\.)\s+(?=[A-Z`'])/)
+    .filter((s) => !CITE_SENTENCE.test(s.trim()))
+    .join(' ')
+    .replace(CITE_CLAUSE, '');
 }
 
-function upcoming(item) {
-  const colon = item.indexOf(': ');
-  if (colon < 0) throw new Error(`settings.md: a "Settings on the way" line has no "name: " part: ${item.slice(0, 60)}`);
-  const name = item.slice(0, colon).trim();
-  const body = item.slice(colon + 2).trim();
-  const said = [];
-  const source = [];
-  let designed = null;
-  for (const s of sentences(body)) {
-    const d = DESIGNED.exec(s);
-    if (d && designed === null) designed = d[1];
-    else if (SOURCE_SENTENCE.test(s)) source.push(s);
-    else said.push(s);
-  }
-  const text = said.join(' ');
-  return { name, text: text.charAt(0).toUpperCase() + text.slice(1), designed, source: source.join(' ') };
+function uncitedBlocks(blocks) {
+  return blocks.map((b) => (b.kind === 'p'
+    ? { kind: 'p', text: uncited(b.text) }
+    : { kind: 'ul', items: b.items.map(uncited) }));
 }
 
 export function parseSettings(text) {
@@ -184,18 +175,11 @@ export function parseSettings(text) {
     ids.add(r.id);
   }
 
-  const onTheWay = blocksOf(parts.get('Settings on the way'))
-    .filter((b) => b.kind === 'ul')
-    .flatMap((b) => b.items)
-    .map(upcoming);
-  if (!onTheWay.length) throw new Error('settings.md: "Settings on the way" lists nothing');
-
   return {
     whatCounts: blocksOf(parts.get('What counts as a setting')),
-    precedence: blocksOf(parts.get('Precedence')),
+    precedence: uncitedBlocks(blocksOf(parts.get('Precedence'))),
     howToRead: blocksOf(parts.get('How to read a cell')),
     rows,
-    onTheWay,
   };
 }
 
