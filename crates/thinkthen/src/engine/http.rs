@@ -40,12 +40,8 @@ impl fmt::Debug for Key {
 /// The reply bytes every request may earn, whatever its size.
 const MAX_RESPONSE_BYTES: u64 = 1024 * 1024;
 
-/// The reply bytes each request byte adds to the floor.
-///
-/// A reply echoes the names and texts its request sent. The worst honest
-/// shape, a score question with one-character levels, runs about five times
-/// its request (ticket 0132). The bound stops a backend that never stops
-/// writing.
+/// The reply bytes each request byte adds: the worst honest reply runs about
+/// five times its request (ticket 0132), and the bound stops an endless one.
 const REPLY_BYTES_PER_REQUEST_BYTE: u64 = 8;
 
 /// The most reply bytes one request may earn.
@@ -271,8 +267,7 @@ fn send(agent: &Agent, exchange: &Exchange<'_>, limit: Duration) -> Result<Vec<u
         };
         return Err(Attempt { failure, asked });
     }
-    // `ureq` refuses the read after its limit even at the body's end, so a
-    // reply of exactly `most` bytes needs one byte more.
+    // `ureq` refuses a body of exactly its limit, so it gets one byte more.
     let most = reply_limit(exchange.body);
     response
         .body_mut()

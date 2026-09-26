@@ -351,28 +351,36 @@ fn the_report_names_the_model_asked_the_model_sent_and_the_model_each_reply_name
 /// Ticket 0132: a reply over its limit fails its probe, and the check goes on.
 #[test]
 fn a_reply_over_its_limit_fails_its_probe_and_the_check_goes_on() {
-    let reply = r#"{"model":"jev-latest","answers":{}}"#;
+    let limits = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let seen = std::sync::Arc::clone(&limits);
     let listener = Listener::answering(move |body| {
-        crate::resend::padded(reply, crate::resend::limit(body) + 1)
+        let limit = crate::resend::limit(body);
+        seen.lock()
+            .expect("limits")
+            .push(crate::resend::past(limit));
+        crate::resend::padded(r#"{"model":"jev-latest","answers":{}}"#, limit + 1)
     })
     .expect("listener");
     let output = check(&["--url", listener.base()], &[("THINKTHEN_API_KEY", KEY)]);
-    let requests = listener.requests();
-    let past = |probe: usize| crate::resend::past(crate::resend::limit(&requests[probe].body));
+    let said = limits.lock().expect("limits").clone();
+    assert_eq!(
+        said.len(),
+        4,
+        "{}{}",
+        text(&output.stdout),
+        text(&output.stderr)
+    );
     let report = format!(
-        "ok connection\nok key\nok endpoint\n\
+        "url {}/systemone\nprovider systemone\nmodel asked unspecified\nmodel sent jev-latest\n\
+        ok connection\nok key\nok endpoint\n\
         critical noul: {}\ncritical choice: {}\ncritical score: {}\ncritical mixed: {}\n\
         unchecked usage\ncritical 4, warning 0\n",
-        past(0),
-        past(1),
-        past(2),
-        past(3)
+        listener.base(),
+        said[0],
+        said[1],
+        said[2],
+        said[3]
     );
-    assert!(
-        text(&output.stdout).ends_with(&report),
-        "{}",
-        text(&output.stdout)
-    );
+    assert_eq!(text(&output.stdout), report);
     assert_eq!(output.status.code(), Some(4));
-    assert_eq!(requests.len(), 4);
 }
