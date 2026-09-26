@@ -101,15 +101,18 @@ def same(what, got, want):
         raise Failed(f"{what}: got {json.dumps(got)}, expected {json.dumps(want)}")
 
 
-def digest(url, request):
-    return hashlib.sha256(b"systemone\n" + url.encode() + b"\n" + request.encode()).hexdigest()
+def digest(address, request):
+    return hashlib.sha256(b"systemone\n" + address.encode() + b"\n" + request.encode()).hexdigest()
+
+
+def url(case):
+    return f"http://127.0.0.1:{os.environ['BPORT']}/case/{case['id']}/v1/systemone"
 
 
 def served(case):
-    url = f"http://127.0.0.1:{os.environ['BPORT']}/case/{case['id']}/v1/systemone"
     renamed = {}
     for exchange in case.get("exchanges", []):
-        renamed[digest(CANONICAL, exchange["request"])] = digest(url, exchange["request"])
+        renamed[digest(CANONICAL, exchange["request"])] = digest(url(case), exchange["request"])
     return renamed
 
 
@@ -156,7 +159,7 @@ def single(case, success):
     got = json.loads(psql(f"SELECT thinkthen_details({question}, {evidence})"))
     same("bare", got["value"], want["bare"])
     detailed(got, want)
-    same("url", got["meta"]["url"], f"http://127.0.0.1:{os.environ['BPORT']}/case/{case['id']}/v1/systemone")
+    same("url", got["meta"]["url"], url(case))
     bare = psql("SELECT " + TYPED[case["verb"]].format(q=question, e=evidence))
     same("typed", typed(case["verb"], bare), want["bare"])
     counters = success.get("counters")
