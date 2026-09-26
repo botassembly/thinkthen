@@ -49,7 +49,7 @@ Each is the ticket author's call unless marked. Ian can overturn any of them.
 
 1. **A cache never installs a reply that failed a question.** ADR 0053 item 6 ruled it. The coordinator ruled it.
 2. **`--record` alone still writes a partial reply.** A recording exists to replay a run as it happened, and `recording.md` line 84 promises that.
-3. **The run's output does not change.** The fix touches only what the folder keeps. The same reply prints the same rows, markers and exit code.
+3. **A first run's output does not change.** The fix touches only what the folder keeps. The same reply prints the same rows, markers and exit code. A cached rerun of a partial reply sends again, so its `meta.cached`, `meta.requests_sent` and `meta.usage` report a live request. That change is the point of the ticket.
 4. **The check lives in `ask_prepared`, the one place a live reply is installed.** No second write path exists.
 
 ## Edge cases
@@ -94,7 +94,7 @@ Nonblank lines, measured with `grep -c .`.
 1. Stop before crossing any budget by more than a tenth, or before adding a dependency.
 2. Stop if the change needs a file that ticket 0146, 0154 or 0155 opens.
 3. Stop if `--record` alone stops writing a partial reply.
-4. Stop if any run's standard output, standard error or exit code changes.
+4. Stop if a first run's standard output, standard error or exit code changes, or if any `--record` or `--replay` run's does. A cached rerun of a reply that failed a question changes by design: it sends again, so its rows carry `meta.cached` false, a fresh `meta.requests_sent` and `meta.usage`, and `status` counts one more request and no cache answer.
 5. Stop if any plant stays green.
 6. Stop if the build needs a live call. None is authorized. Never run `sdlc/scripts/live`.
 
@@ -127,7 +127,7 @@ Finding 4 of `sdlc/issues/2026-09-26-batching-design-review-before-0146.md`.
 ## Evidence
 
 - Starts from: ADR 0053 item 6. Finding 4 of `sdlc/issues/2026-09-26-batching-design-review-before-0146.md`, reproduced in local experiment 273 with `annotate` and a hand-built cache entry. The code at `origin/main` `c490f082`: `engine/request.rs::ask_prepared`, `core/adapters/systemone/response.rs`, `core/reply.rs` and `engine/recorder.rs`. `specification/records.md`'s "first complete response" and `recording.md` line 84.
-- Keeps: Every complete reply cached as today. `--record` and `--replay` as today, partial replies included. Every run's output, standard error and exit code.
+- Keeps: Every complete reply cached as today. `--record` and `--replay` as today, partial replies included. A first run's output, standard error and exit code, and those of every `--record` and `--replay` run. A cached rerun of a partial reply changes by design: it asks again, so `meta.cached`, `meta.requests_sent`, `meta.usage` and the usage totals show a sent request.
 - Changes: A cache, typed or default, no longer installs a reply that failed a question. Page sentences in `records.md` and `recording.md`.
 - Proof: One outside-in test with three plants, and the `install`, `lint`, `test`, `spec` and `surfaces` rungs.
 - Defers: Nothing.
