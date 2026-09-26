@@ -98,6 +98,8 @@ fn deadline_numbers_follow_the_host_table_and_the_last_call_wins() {
         (1e300, "1e300"),
         (-1e-300, "-1e-300"),
         (f64::MAX, "1.7976931348623157e308"),
+        (1e19, "10000000000000000000"),
+        (1e20, "1e20"),
     ] {
         assert_eq!(
             message(none.deadline_seconds(value)),
