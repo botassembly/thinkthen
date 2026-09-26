@@ -92,6 +92,13 @@ pub(crate) const UNSET: i32 = -1;
 /// The refusal for a zero cache cap (decision 3).
 pub(crate) const CACHE_BYTES_ZERO: &str = "thinkthen.cache_bytes must be -1 or at least 1";
 
+/// The throttle's refusal where it is set, in the engine's own sentence, or
+/// `None` for -1 (unset) and 1 through 32 (Ian's range).
+pub(crate) fn throttle_refusal(value: i32) -> Option<String> {
+    (value != UNSET && !(1..=32).contains(&value))
+        .then(|| Refusal::usage("a throttle is a whole number from 1 through 32").text())
+}
+
 /// The setter calls the four engine settings ask for. An unset setting
 /// calls nothing, so the value `EngineBuilder::from_env` seeded stands.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -103,8 +110,8 @@ pub(crate) struct Plan {
 }
 
 impl Plan {
-    /// Read the four raw values. PostgreSQL's range checks already hold
-    /// throttle to -1..=32 and the others to -1 or more.
+    /// Read the four raw values. The throttle's check already holds it to
+    /// -1 or 1..=32, and PostgreSQL's range checks hold the others to -1 or more.
     pub(crate) fn of(
         throttle: i32,
         max_requests: i32,
@@ -395,14 +402,7 @@ pub(crate) fn register() {
         GucContext::Userset,
         GucFlags::default(),
     );
-    int(
-        c"thinkthen.throttle",
-        c"requests in flight at once; -1 leaves the engine default",
-        &THROTTLE,
-        32,
-        GucContext::Suset,
-        GucFlags::default(),
-    );
+    ffi::define_throttle(&THROTTLE);
     int(
         c"thinkthen.max_requests_total",
         c"most requests one backend sends; -1 means no total",
