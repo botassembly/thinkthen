@@ -40,13 +40,17 @@ pub(crate) enum Kind {
 pub(crate) enum Error {
     Transport(TransportKind),
     Status(u16),
+    /// Status 400 whose body named `max_tokens_exceeded`. It keeps no body byte.
+    TokenLimit,
     Reply(DecodeError),
     ReplayMiss(String),
     Entry(String, String),
     RecordingConflict(String),
     RecordingStorage,
     RecordingPathIsFile,
-    RecordingBackendMismatch,
+    /// The folder is bound to another backend: this run's endpoint URL, and
+    /// whether the folder is the platform default cache.
+    RecordingBackendMismatch(String, bool),
     RecordingFolderLegacy,
     DefaultCachePrivate,
     CacheEntry,
@@ -100,6 +104,7 @@ impl Error {
         match self {
             Self::Transport(_)
             | Self::Status(_)
+            | Self::TokenLimit
             | Self::Reply(_)
             | Self::ModelsDiffer(_)
             | Self::UsageOverflow
@@ -109,7 +114,7 @@ impl Error {
             | Self::RecordingConflict(_)
             | Self::RecordingStorage
             | Self::RecordingPathIsFile
-            | Self::RecordingBackendMismatch
+            | Self::RecordingBackendMismatch(..)
             | Self::RecordingFolderLegacy
             | Self::DefaultCachePrivate => Kind::Local,
             Self::CacheEntry => Kind::Local,

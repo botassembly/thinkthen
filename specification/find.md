@@ -40,6 +40,8 @@ The chosen unit follows the shared preservation rules in [records.md](records.md
 
 `--details` prints the object in [result.md](result.md). Its question verb and answer kind are `find`. The answer holds the selected generated unit id or `none` and every probability in input order. The value holds the original selected unit or `null`, and the threshold is `null`.
 
+The generated unit id is `u` and the unit's one-based input position, zero-padded to three digits. The first unit is `u001`, and the 255th is `u255`. An answer key for `audit` names units by these ids.
+
 ## Options
 
 | Option | Meaning | Default |

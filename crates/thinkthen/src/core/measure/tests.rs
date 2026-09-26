@@ -4,6 +4,7 @@ use super::answer::{self, Identity, Rule, Shown};
 use super::audit::{self, By, Settings};
 use super::diff::{Discordant, discordant};
 use super::key::{Key, Outcome};
+use super::optimize::Measure;
 use super::{
     SplitMix64, calibration_error, json_lines, mcnemar, places, python_float_text, rounded,
 };
@@ -35,6 +36,7 @@ fn audit_text(results: &str, key: &str) -> Vec<audit::Row> {
         shown: Shown::AsRun,
         seed: 0,
         target: 0.9,
+        optimize: Measure::Accuracy,
     };
     audit::audit(&answers, &key, &settings).expect("an audit")
 }
@@ -147,14 +149,14 @@ fn mcnemar_matches_exact_integer_sums_to_120_and_the_pinned_values() {
 }
 
 #[test]
-fn discordant_counts_only_wrong_to_right_and_right_to_wrong() {
+fn discordant_counts_every_pair_that_becomes_right_or_stops_being_right() {
     use Outcome::{Right, Tied, Unresolved, Wrong};
     let every = [Right, Wrong, Unresolved, Tied];
     for a in every {
         for b in every {
             let expected = match (a, b) {
-                (Wrong, Right) => Some(Discordant::OtherToRight),
-                (Right, Wrong) => Some(Discordant::RightToOther),
+                (Wrong | Unresolved | Tied, Right) => Some(Discordant::OtherToRight),
+                (Right, Wrong | Unresolved | Tied) => Some(Discordant::RightToOther),
                 _ => None,
             };
             assert_eq!(discordant(a, b), expected, "{a:?} -> {b:?}");

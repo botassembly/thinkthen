@@ -3,7 +3,7 @@
 use super::{Refusal, only};
 
 /// The complete-set refusals only `relate` has, each before any send.
-pub(super) const RELATE: [Refusal; 9] = [
+pub(super) const RELATE: [Refusal; 10] = [
     Refusal {
         evidence: r#"[{"name":"marker-evidence-7b3ac5","kind":"record"},{"name":"marker-evidence-7b3ac5","kind":"record"}]"#,
         ..only(
@@ -94,6 +94,16 @@ pub(super) const RELATE: [Refusal; 9] = [
             &["relate"],
             &[],
             "relate takes inline relation rules or one @FILE, never both",
+            2,
+        )
+    },
+    Refusal {
+        operands: Some(&["@question.json"]),
+        ..only(
+            "either beside a question file",
+            &["relate"],
+            &["--either"],
+            "`--either` applies only to inline relation rules; a question file sets either on each relation",
             2,
         )
     },

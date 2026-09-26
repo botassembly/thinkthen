@@ -8,8 +8,13 @@ Gem::Specification.new do |spec|
   spec.version = manifest[/^version = "([^"]+)"/, 1]
   spec.summary = "The thinkthen surface for Ruby"
   spec.description = "The ten thinkthen verbs over the thinkthen engine."
-  spec.authors = ["thinkthen"]
-  spec.homepage = "https://example.invalid/thinkthen"
+  spec.authors = ["Ian Maurer"]
+  spec.homepage = "https://thinkthen.dev"
+  spec.metadata = {
+    "source_code_uri" => "https://github.com/botassembly/thinkthen",
+    "changelog_uri" => "https://github.com/botassembly/thinkthen/blob/main/CHANGELOG.md",
+    "bug_tracker_uri" => "https://github.com/botassembly/thinkthen/issues"
+  }
   spec.license = "MIT"
   # A platform gem: it carries the extension built on this host, under the
   # name this host's Ruby loads.

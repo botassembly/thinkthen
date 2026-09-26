@@ -30,16 +30,22 @@ ALLOWED_LICENSES = {
 # quietly cover a crate that lands later. All three are permissive and carry no
 # copyleft term, and there is no HTTPS in Rust without them. A crate listed here
 # that stops needing its exception fails the check, so the list cannot rot.
+# The `polars` feature adds four more, as the root deny.toml records (ticket 0130).
 LICENSE_EXCEPTIONS = {
     "ring": {"ISC"},
     "rustls-webpki": {"ISC"},
     "untrusted": {"ISC"},
     "subtle": {"BSD-3-Clause"},
     "webpki-roots": {"CDLA-Permissive-2.0"},
+    # Ticket 0130: the `polars` feature's tree, as the root deny.toml admits it.
+    "foldhash": {"Zlib"},
+    "slotmap": {"Zlib"},
+    "xxhash-rust": {"BSL-1.0"},
+    "ar_archive_writer": {"Apache-2.0 WITH LLVM-exception"},
 }
 ACCEPTED_DEPENDENCIES = {
     "thinkthen": {
-        "arc-swap", "clap", "csv-core", "serde", "serde_json", "sha2", "signal-hook",
+        "arc-swap", "clap", "csv-core", "polars", "serde", "serde_json", "sha2", "signal-hook",
         "thiserror", "ureq",
     },
     "conformance-backend": {"serde", "serde_json"},
@@ -292,21 +298,48 @@ def check_crates() -> None:
         "features": ["pthread", "signal"],
     }:
         fail("dependencies", "tests add only the pthread feature to nix")
+    binary = manifest.get("bin", [])
+    if len(binary) != 1 or binary[0].get("required-features") != ["cli"]:
+        fail("workspace", "the binary requires the cli feature")
+    for failure in feature_failures(manifest):
+        fail("dependencies", failure)
+    for plant in (
+        {"default": ["cli", "polars"]},
+        {"polars": ["dep:polars", "dep:clap"]},
+    ):
+        if not feature_failures({**manifest, "features": {**manifest.get("features", {}), **plant}}):
+            fail("dependencies", f"the planted features {plant} are refused")
+    dependencies = manifest.get("dependencies", {})
+    for plant in (
+        {**dependencies, "polars": {**dependencies.get("polars", {}), "optional": False}},
+        {**dependencies, "polars": {**dependencies.get("polars", {}), "default-features": True}},
+    ):
+        if not feature_failures({**manifest, "dependencies": plant}):
+            fail("dependencies", "a planted Polars that is not optional, or keeps its defaults, is refused")
+    if not feature_failures({**manifest, "dev-dependencies": {**manifest.get("dev-dependencies", {}), "polars-core": "0.55.2"}}):
+        fail("dependencies", "a planted polars-core dev-dependency is refused")
+
+
+def feature_failures(manifest: dict) -> list[str]:
+    """Ticket 0130: `thinkthen` compiles no Polars by default."""
+    held = []
+    target = manifest.get("target", {}).get("cfg(unix)", {}).get("dependencies", {})
     optional = {
         dependency for dependency, specification in
         (manifest.get("dependencies", {}) | target).items()
         if isinstance(specification, dict) and specification.get("optional") is True
     }
-    if optional != {"clap", "csv-core", "signal-hook"}:
-        fail("dependencies", "exactly the command dependencies are optional")
-    binary = manifest.get("bin", [])
-    if len(binary) != 1 or binary[0].get("required-features") != ["cli"]:
-        fail("workspace", "the binary requires the cli feature")
-    features = manifest.get("features", {})
-    if features.get("default") != ["cli"] or set(features.get("cli", [])) != {
-        "dep:clap", "dep:csv-core", "dep:signal-hook",
+    if optional != {"clap", "csv-core", "signal-hook", "polars"}:
+        held.append("exactly the command dependencies and polars are optional")
+    if manifest.get("features") != {
+        "default": ["cli"], "cli": ["dep:clap", "dep:csv-core", "dep:signal-hook"], "polars": ["dep:polars"],
     }:
-        fail("dependencies", "the default cli feature selects only command dependencies")
+        held.append("the default cli feature selects only command dependencies, and polars only Polars")
+    if manifest.get("dependencies", {}).get("polars", {}).get("default-features") is not False:
+        held.append("polars has its default features off")
+    if set(manifest.get("dev-dependencies", {})) != ACCEPTED_DEV_DEPENDENCIES["thinkthen"]:
+        held.append("thinkthen declares the accepted development dependency set")
+    return held
 
 
 def check_clippy_configs() -> None:
@@ -342,30 +375,15 @@ def check_consumer() -> None:
 # ADR 0047: each binding under `libraries` or `databases` is its own workspace
 # over the public API. Its plants copy the first binding, the Rust examples.
 BINDING_PLANT_BASE = "libraries/rust"
-# Polars asks for getrandom 0.2 with its `js` feature on WebAssembly targets
-# (polars-0.55.2 Cargo.toml, `old_getrandom`), so the lock's getrandom 0.2.17,
-# under ring in thinkthen's tree, gains these wasm-only packages. Exactly
-# these, and only for this binding.
-BINDING_WASM_ONLY = {"libraries/polars": {
-    ("bumpalo", "3.20.3"), ("futures-core", "0.3.34"), ("futures-task", "0.3.34"), ("futures-util", "0.3.34"),
-    ("js-sys", "0.3.105"), ("pin-project-lite", "0.2.17"), ("rustversion", "1.0.23"), ("slab", "0.4.12"),
-    ("wasm-bindgen", "0.2.128"), ("wasm-bindgen-macro", "0.2.128"),
-    ("wasm-bindgen-macro-support", "0.2.128"), ("wasm-bindgen-shared", "0.2.128")}}
 # A binding's deny.toml is the root file plus its named entries, each reason
 # aside. A binding holds a deny.toml only where this table names it.
-FOLDHASH = ("licenses", "exceptions", [{"crate": "foldhash", "allow": ["Zlib"]}])
 BINDING_DENY = {
-    "libraries/polars": [("licenses", "exceptions", [
-        {"crate": "foldhash", "allow": ["Zlib"]}, {"crate": "slotmap", "allow": ["Zlib"]},
-        {"crate": "xxhash-rust", "allow": ["BSL-1.0"]},
-        {"crate": "ar_archive_writer", "allow": ["Apache-2.0 WITH LLVM-exception"]}])],
-    "databases/sqlite": [FOLDHASH],
     "databases/duckdb": [("licenses", "exceptions", [{"crate": "zlib-rs", "allow": ["Zlib"]}])],
     # pyo3's build helper needs target-lexicon. Ian approved it on 2026-09-25 (ticket 0105).
     "libraries/python": [("licenses", "exceptions", [
         {"crate": "target-lexicon", "allow": ["Apache-2.0 WITH LLVM-exception"]}])],
     "libraries/r": [("advisories", "ignore", [{"id": "RUSTSEC-2024-0436"}])],
-    "databases/postgresql": [FOLDHASH, ("advisories", "ignore", ["RUSTSEC-2021-0127"])],
+    "databases/postgresql": [("advisories", "ignore", ["RUSTSEC-2021-0127"])],
 }
 # pgrx's generated code needs `unexpected_cfgs` below forbid (ticket 0111).
 BINDING_LINTS = {"databases/postgresql": {"unexpected_cfgs": {
@@ -396,6 +414,13 @@ def binding_crates() -> dict[str, str]:
     lines = (REPO / "sdlc/surfaces.txt").read_text(encoding="utf-8").splitlines()
     return {fields[0]: f"{fields[0]}/{fields[2]}" for fields in map(str.split, lines)
             if len(fields) == 3 and not fields[0].startswith("#")}
+
+
+def feature_folders() -> set[str]:
+    """Ticket 0130: a `feature` line is a Cargo feature of `thinkthen` and holds no crate."""
+    lines = (REPO / "sdlc/surfaces.txt").read_text(encoding="utf-8").splitlines()
+    return {fields[0] for fields in map(str.split, lines)
+            if len(fields) == 2 and fields[1] == "feature" and not fields[0].startswith("#")}
 
 
 def crate_failures(crates: dict[str, str]) -> list[str]:
@@ -506,7 +531,7 @@ def binding_failures(name: str, files: dict[str, str], crate: str = "") -> list[
     if manifest.get("profile", {}).get("release") != ACCEPTED_RELEASE_PROFILE:
         held.append(f"{name} copies the root release profile")
     ours, theirs = lock_tree(lock), lock_tree(tomllib.loads((REPO / "Cargo.lock").read_text(encoding="utf-8")))
-    drift = ours - theirs - BINDING_WASM_ONLY.get(name, set())
+    drift = ours - theirs
     if not ours or drift:
         held.append(f"{name}/Cargo.lock resolves thinkthen's tree to the root lock's versions: "
                     f"{sorted(drift) or 'thinkthen is absent'}")
@@ -553,6 +578,8 @@ def check_bindings() -> None:
     for folder in sorted(path for path in [*REPO.glob("libraries/*"), *REPO.glob("databases/*")] if path.is_dir()):
         name = folder.relative_to(REPO).as_posix()
         crate = crates.get(name, name)
+        if name in feature_folders():
+            continue
         if not (REPO / crate / "Cargo.toml").is_file():
             fail("binding", f"{name} holds a Cargo.toml, or its surfaces.txt line names its crate folder")
             continue
@@ -582,30 +609,31 @@ def check_bindings() -> None:
             fail("binding", f"the planted {label} is refused")
 
 
-# Ticket 0120: the Polars binding's polars and polars-core pins are equal.
-def polars_failures(manifest: dict) -> list[str]:
-    pins = [manifest.get(table, {}).get(name, {}).get("version")
-            for table, name in (("dependencies", "polars"), ("dev-dependencies", "polars-core"))]
-    if pins[0] is None or pins[0] != pins[1]:
-        return ["libraries/polars pins polars and polars-core to one exact version"]
-    return []
+# Ticket 0130: the Rust Polars door is the `polars` feature of `thinkthen`. Its
+# tests keep R2-28's scan, and no rung builds every feature.
+POLARS_TESTS = "crates/thinkthen/tests/polars"
+RUNGS = ("install", "lint", "test", "spec", "surfaces", "package")
 
 
-def check_polars_binding() -> None:
-    if not (REPO / "libraries/polars").is_dir():
-        return
-    manifest = read_toml("libraries/polars/Cargo.toml")
-    for failure in polars_failures(manifest):
-        fail("binding", failure)
-    core = {**manifest.get("dev-dependencies", {}).get("polars-core", {}), "version": "=0.0.1"}
-    unequal = {**manifest, "dev-dependencies": {**manifest.get("dev-dependencies", {}), "polars-core": core}}
-    if not polars_failures(unequal):
-        fail("binding", "unequal Polars pins are refused")
-    files = binding_files("libraries/polars", "libraries/polars")
-    lock = files.get("Cargo.lock", "").replace(' "futures-util",\n "wasm-bindgen",\n', ' "futures-util",\n "planted",\n "wasm-bindgen",\n', 1)
-    lock += '\n[[package]]\nname = "planted"\nversion = "0.0.1"\n'
-    if not any("planted" in failure for failure in binding_failures("libraries/polars", {**files, "Cargo.lock": lock})):
-        fail("binding", "a thirteenth new package in the Polars lock is refused")
+def check_polars_feature() -> None:
+    tests = sorted((REPO / POLARS_TESTS).rglob("*.rs"))
+    if not tests:
+        fail("polars", f"{POLARS_TESTS} holds the Polars door's tests")
+    for path in tests:
+        relative = path.relative_to(REPO).as_posix()
+        for failure in binding_test_failures(relative, rust_tokens(path.read_text(encoding="utf-8"))):
+            fail("polars", failure)
+    if not binding_test_failures("planted.rs", rust_tokens("#[test]\n#[ignore]\nfn planted() {}\n")):
+        fail("polars", "an ignored Polars test is refused")
+    for rung in RUNGS:
+        if rung_failures(rung, (REPO / "sdlc/scripts" / rung).read_text(encoding="utf-8")):
+            fail("polars", f"sdlc/scripts/{rung} builds with every feature, and Polars belongs to its lane")
+    if not rung_failures("test", "cargo test --locked --workspace --all-targets --all-features\n"):
+        fail("polars", "a planted --all-features in a rung is refused")
+
+
+def rung_failures(rung: str, text: str) -> list[str]:
+    return [f"{rung} passes --all-features"] if "--all-features" in text else []
 
 
 # Ticket 0111 item 15: nothing widens the PostgreSQL crate's check-cfg, and no
@@ -1115,13 +1143,17 @@ def check_catalog_policy() -> None:
 
 
 # Tickets 0113 and 0114: audit and diff read the paths they are handed, or standard input, and
-# writes only standard output. It may open a file, and nothing else the catalog
-# refuses. A token check cannot prove which paths it opens; review checks that.
+# write standard output, and standard error for a failure. diff also writes its warnings on
+# standard error. Each may open a file, and nothing else the catalog refuses. A token check
+# cannot prove which paths it opens; review checks that.
 MEASURE = (
     "crates/thinkthen/src/cli/measure.rs",
     "crates/thinkthen/src/cli/audit.rs",
     "crates/thinkthen/src/cli/diff.rs",
+    "crates/thinkthen/src/cli/audit/write.rs",
 )
+# Ticket 0125: `audit --write` writes the one file it names, and only here.
+MEASURE_WRITER = "crates/thinkthen/src/cli/audit/write.rs"
 MEASURE_COMMANDS = ("Audit", "Diff")
 MEASURE_BANNED_WORDS = CATALOG_BANNED_WORDS - {"fs", "File", "stdin", "Stdin"} | {"DirBuilder"}
 MEASURE_WRITES = {
@@ -1133,14 +1165,19 @@ MEASURE_CRATE_PATHS = {("crate", "core"), ("crate", "cli", "measure"), ("crate",
 ROUTER = "crates/thinkthen/src/cli/mod.rs"
 
 
-def measure_policy_failures(text: str) -> list[str]:
-    """Name every capability a measuring command reaches beyond reading its inputs."""
+def measure_policy_failures(text: str, writer: bool = False) -> list[str]:
+    """Name every capability a measuring command reaches beyond reading its inputs.
+
+    The writer may call `std::fs::write` by its full path, and nothing else that writes.
+    """
     held = set(catalog_policy_failures(text, MEASURE_BANNED_WORDS, MEASURE_CRATE_PATHS, set(),
                                        prefix=True))
     tokens = rust_tokens(text)
     for place in range(len(tokens) - 2):
         if tokens[place] in {"fs", "File"} and tokens[place + 1] == "::" \
                 and tokens[place + 2] in MEASURE_WRITES:
+            if writer and tokens[place - 2:place + 3] == ["std", "::", "fs", "::", "write"]:
+                continue
             held.add(f"writes through {tokens[place]}::{tokens[place + 2]}")
     for path, alias in rust_use_paths(tokens):
         if path[:2] == ("std", "fs") and (set(path[2:]) & MEASURE_WRITES or alias or "*" in path):
@@ -1167,7 +1204,8 @@ def route_failures(text: str) -> list[str]:
 
 def check_measure_policy() -> None:
     for relative in MEASURE:
-        held = measure_policy_failures((REPO / relative).read_text(encoding="utf-8"))
+        held = measure_policy_failures((REPO / relative).read_text(encoding="utf-8"),
+                                       relative == MEASURE_WRITER)
         if held:
             fail("measure", f"{relative} {held}")
     for held in route_failures((REPO / ROUTER).read_text(encoding="utf-8")):
@@ -1209,6 +1247,18 @@ def check_measure_policy() -> None:
     for control in controls:
         if measure_policy_failures(control):
             fail("measure", f"the measure control {control!r} stays allowed")
+    writer_plants = (
+        "std::fs::rename(a, b)",
+        "std::fs::OpenOptions::new()",
+        "std::fs::File::create(path)",
+        "use std::fs::write; write(path, text)",
+        "fs::write(path, text)",
+    )
+    for plant in writer_plants:
+        if not measure_policy_failures(plant, writer=True):
+            fail("measure", f"the planted writer violation {plant!r} is refused")
+    if measure_policy_failures("std::fs::write(path, text)", writer=True):
+        fail("measure", "the writer's one std::fs::write stays allowed")
     audit, diff = "if let Some(Command::Audit(a)) = c {}", "if let Some(Command::Diff(a)) = c {}"
     read = "let e = Environment::read();"
     if route_failures(audit + read + diff) != ["Diff returns after Environment::read"] \
@@ -1509,8 +1559,9 @@ def license_allowed(expression: str, allowed: set[str] = frozenset()) -> bool:
             position += 1
             if position == len(tokens) or tokens[position] in {"AND", "OR", "WITH", "(", ")"}:
                 return None
+            # Only an allowance that names the whole `WITH` form admits it.
+            offered = f"{name} WITH {tokens[position]}" in allowed
             position += 1
-            offered = False
         return offered
 
     def conjunction() -> bool | None:
@@ -1571,11 +1622,14 @@ def check_license_grammar() -> None:
     for expression, expected in ((("Apache-2.0 AND ISC"), True), ("ISC AND MIT", True)):
         if license_allowed(expression, {"ISC"}) is not expected:
             fail("dependencies", f"the SPDX reader answers {expected} for {expression!r} with ISC")
+    llvm = "Apache-2.0 WITH LLVM-exception"
+    if not license_allowed(llvm, {llvm}) or license_allowed(llvm, {"LLVM-exception"}):
+        fail("dependencies", f"the SPDX reader admits {llvm!r} only by its whole form")
 
 
 def check_dependencies() -> None:
     result = subprocess.run(
-        ["cargo", "metadata", "--locked", "--format-version", "1"],
+        ["cargo", "metadata", "--locked", "--all-features", "--format-version", "1"],
         cwd=REPO, check=False, capture_output=True, text=True,
     )
     if result.returncode != 0:
@@ -1698,7 +1752,7 @@ def main() -> int:
     check_clippy_configs()
     check_consumer()
     check_bindings()
-    check_polars_binding()
+    check_polars_feature()
     check_postgresql_binding()
     check_crate_roots()
     check_core_policy()

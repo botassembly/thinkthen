@@ -10,14 +10,21 @@ use super::{
 };
 
 /// The verbs the tool answers to.
+///
+/// Help lists the ten functions in enum order, then clap's own `help`, which
+/// clap numbers 999, then the admin commands, numbered from 1000.
 #[derive(Debug, Subcommand)]
 pub(crate) enum Command {
     /// Report resolved local settings, cache size, and local usage counts.
+    #[command(display_order = 1002)]
     Status(StatusArguments),
 
     /// Check that a backend you name works with this tool, over four fixed requests.
     ///
     /// It exits 0 only when no finding is critical. Every request is real spend.
+    /// The report names the model asked for, the model sent, and the model each
+    /// reply names.
+    #[command(display_order = 1003)]
     Check(CheckArguments),
 
     /// Answer one yes or no question about a text. A record run exits 0 when
@@ -177,6 +184,11 @@ pub(crate) enum Command {
     /// Relations are beta. `--threshold` gates computed name strength;
     /// `--relation-threshold` gates a relation's model probability.
     ///
+    /// Each record makes paid requests: a detection question for every word, a
+    /// kind question for every word when two or more kinds are given, and
+    /// relation questions when rules are given. --dry-run prints the exact
+    /// requests for the first record.
+    ///
     /// A record run exits 0 when it completes without a partial or whole-run
     /// failure. The printed values carry the individual answers.
     Recognize(RecognizeArguments),
@@ -187,31 +199,51 @@ pub(crate) enum Command {
     /// set and sees every other entity admitted by a rule. Inline rules use
     /// NAME=SOURCE_KIND:TARGET_KIND. A bare NAME means NAME=*:*.
     ///
+    /// A run makes paid requests. A relation between two kinds asks one
+    /// question for every entity of the larger kind, or of the source kind when
+    /// the counts are equal. A same-kind relation asks one yes-or-no question
+    /// for every pair, in both directions unless --either. --dry-run prints the
+    /// questions and requests and sends nothing.
+    ///
     /// A run that answers some relation questions and fails others prints what
     /// it has and exits 6. A run whose relation questions all fail prints
     /// nothing and exits 4.
+    #[command(mut_arg("jobs", |arg| arg.hide(true)))]
     Relate(RelateArguments),
 
     /// Inspect and maintain answer-cache folders without sending a request.
+    ///
+    /// The cache never trims itself. It grows until you run cache prune, and
+    /// it holds the judged text until then.
+    #[command(display_order = 1004)]
     Cache(CacheArguments),
 
     /// List or print the built-in jq transforms without running them.
+    #[command(display_order = 1005)]
     Transform(crate::cli::transform::TransformArguments),
 
-    /// Grade saved decide and choose answers against an answer key.
+    /// Grade saved answers against an answer key and suggest a bar.
     ///
-    /// RESULTS holds the lines `decide` or `choose` printed, and KEY holds one
+    /// RESULTS holds the lines `decide`, `filter`, `choose`, `tag`, `score`,
+    /// `rank`, `find`, or `annotate` printed with --details, and KEY holds one
     /// JSON object per record: its id, the right value, and an optional part of
     /// tune or held. audit prints agreement with its 95% interval, both kinds of
-    /// disagreement, AUC, calibration, a coverage curve, and a suggested cut
-    /// tuned on one part and checked on the other. An answer inside a band is
-    /// not sure, and it counts apart from right and wrong.
+    /// disagreement, precision and f1, AUC, calibration, a coverage curve, and a
+    /// suggested bar tuned on one part and checked on the other. An answer
+    /// inside a band is not sure, and it counts apart from right and wrong.
+    ///
+    /// A key may give each record a part of tune or held; without parts audit
+    /// splits the records itself and shows how steady its bar is.
+    ///
+    /// --write changes one threshold in the file and prints the old value on
+    /// standard error.
     ///
     /// audit sends no request and reads no key.
     ///
     /// To grade a recording, replay it with --details and pass the output:
     ///
     /// thinkthen decide 'Is it red?' --jsonl --details --replay runs/red < records.jsonl | thinkthen audit - key.jsonl
+    #[command(display_order = 1000)]
     Audit(crate::cli::audit::AuditArguments),
 
     /// Show which saved answers changed between two runs or two cuts.
@@ -226,6 +258,7 @@ pub(crate) enum Command {
     /// diff sends no request and reads no key.
     ///
     /// thinkthen diff runs/before.jsonl runs/after.jsonl --key key.jsonl --table
+    #[command(display_order = 1001)]
     Diff(crate::cli::diff::DiffArguments),
 }
 
@@ -237,7 +270,7 @@ pub(crate) struct CacheArguments {
 
 #[derive(Debug, Subcommand)]
 pub(crate) enum CacheCommand {
-    /// Remove selected entries, then the oldest entries above the size target.
+    /// Remove selected entries, then the oldest entries until the folder fits the size target.
     Prune(PruneArguments),
 }
 
@@ -245,13 +278,16 @@ pub(crate) enum CacheCommand {
 pub(crate) struct PruneArguments {
     /// The cache or recording folder to maintain.
     pub(crate) directory: PathBuf,
-    /// Keep recognized entries at or below this many allocated bytes.
+    /// Trim to this many allocated bytes. Without it, the configuration's
+    /// cache_bytes applies, or 100000000.
     #[arg(long, value_name = "BYTES")]
     pub(crate) max_size: Option<String>,
     /// Remove entries strictly older than a duration such as 30d or 12h.
     #[arg(long, value_name = "Nd|Nh|Nm|Ns")]
     pub(crate) older_than: Option<String>,
-    /// Remove entries answered by any other model.
+    /// Remove entries whose reply names another model. Give the version that
+    /// answered, as a result's meta.model shows it, not the alias passed to
+    /// --model. A name no reply carries removes every entry.
     #[arg(long, value_name = "MODEL")]
     pub(crate) answered_by_other_than: Option<String>,
 }

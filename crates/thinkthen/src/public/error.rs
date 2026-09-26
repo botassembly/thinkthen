@@ -180,6 +180,7 @@ fn message(error: &EngineError) -> String {
     let fixed = match error {
         EngineError::Transport(kind) => transport(*kind),
         EngineError::Status(status) => return format!("the backend answered with status {status}"),
+        EngineError::TokenLimit => "the backend answered with status 400",
         EngineError::Reply(decode) => return format!("the reply was refused: {decode}"),
         EngineError::ReplayMiss(_) => "the replay folder holds no reply for this request",
         EngineError::Entry(..) | EngineError::CacheEntry => {
@@ -190,7 +191,7 @@ fn message(error: &EngineError) -> String {
         }
         EngineError::RecordingStorage => "the recording folder could not be written",
         EngineError::RecordingPathIsFile => "the recording folder names a file",
-        EngineError::RecordingBackendMismatch => {
+        EngineError::RecordingBackendMismatch(..) => {
             "the recording folder belongs to another backend address"
         }
         EngineError::RecordingFolderLegacy => "the recording folder uses a retired layout",
@@ -213,12 +214,7 @@ fn message(error: &EngineError) -> String {
         EngineError::NoKey(variable) => {
             return format!("no key is set; set {variable} or call EngineBuilder::api_key");
         }
-        EngineError::WidthActive(active) => {
-            let active = active.0.get();
-            return format!(
-                "throttle {active} is already active for this process; use throttle {active} or drop the throttle argument"
-            );
-        }
+        EngineError::WidthActive(active) => return active.to_string(),
         EngineError::ModelsDiffer(_) => {
             "the backend returned different model versions for one call; pin the model and use a cache"
         }

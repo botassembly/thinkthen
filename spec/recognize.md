@@ -1,9 +1,10 @@
 # Find names in text
 
-`recognize` asks detection and kind questions for every token. Its dry run sends nothing and reports exact recognition counts.
+`recognize` asks detection and kind questions for every word. A trailing `.`, `!`, `?`, `,`, `:`, or `;` counts as its own word, so `Ada met Acme.` is four words. Its dry run sends nothing. It reports the exact counts and every request it would send, with its digest, size in bytes, and body.
 
 ```bash
-printf 'Ada met Acme.' | env -u THINKTHEN_API_KEY thinkthen recognize --dry-run | mustmatch like '{"tokens":4,"detection_questions":4,"kind_questions":4,"requests":1}'
+printf 'Ada met Acme.' | env -u THINKTHEN_API_KEY thinkthen recognize --dry-run | jq -c '{schema, words, detection_questions, kind_questions, request_count, sent: (.requests | length)}' | mustmatch like '{"schema":"thinkthen.recognize-plan/1","words":4,"detection_questions":4,"kind_questions":4,"request_count":1,"sent":1}'
+printf 'Ada met Acme.' | env -u THINKTHEN_API_KEY thinkthen recognize --dry-run | jq -r '.requests[0].body_utf8 | fromjson | .state' | mustmatch like 'Ada met Acme.'
 ```
 
 The forty-case harvest fixture includes this recorded sentence. The replay needs no key or network, and caller kinds come back unchanged.

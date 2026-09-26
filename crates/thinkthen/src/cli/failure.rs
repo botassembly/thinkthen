@@ -127,6 +127,8 @@ pub(crate) enum Failure {
     Transport(TransportKind),
     /// The backend answered with a status that is not a success.
     Status(u16),
+    /// The backend answered status 400 and named `max_tokens_exceeded`.
+    TokenLimit,
     /// The adapter refused what the backend answered.
     Reply(DecodeError),
     /// The two recording options named two different folders.
@@ -149,7 +151,8 @@ pub(crate) enum Failure {
     RecordingConflict(String),
     RecordingStorage,
     RecordingPathIsFile,
-    RecordingBackendMismatch,
+    /// This run's endpoint URL, and whether the folder is the default cache.
+    RecordingBackendMismatch(String, bool),
     RecordingFolderLegacy,
     DefaultCacheUnavailable,
     DefaultCachePrivate,
@@ -230,7 +233,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         | Failure::RecordingConflict(_)
         | Failure::RecordingStorage
         | Failure::RecordingPathIsFile
-        | Failure::RecordingBackendMismatch
+        | Failure::RecordingBackendMismatch(..)
         | Failure::RecordingFolderLegacy => (
             70,
             "defect: a recording failure was not reported".to_owned(),
@@ -311,6 +314,7 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
         return Some(message);
     }
     Some(match failure {
+        Failure::TokenLimit => (4, status::TOKEN_LIMIT.to_owned()),
         Failure::OpenProfile { path, error } => (
             5,
             format!(

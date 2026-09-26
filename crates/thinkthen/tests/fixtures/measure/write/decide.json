@@ -1,0 +1,5 @@
+{
+  "decide": "Does the message report a payment failure?",
+  "\u0074hreshold": 0.9,
+  "on": ["/body"]
+}

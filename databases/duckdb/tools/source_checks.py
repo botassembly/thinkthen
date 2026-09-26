@@ -112,10 +112,9 @@ def vendored() -> None:
 def deny() -> None:
     root = (REPO / "deny.toml").read_text()
     ours = (ROOT / "deny.toml").read_text()
-    start = ours.find("# ADR 0047: the DuckDB binding")
-    end = ours.find("\n", ours.find("exceptions = [{", start)) if start >= 0 else -1
-    exception = ours[start:end] if end > start else ""
-    if not exception or ours.replace(exception, "exceptions = []", 1) != root:
+    start = ours.find("    # ADR 0047: the DuckDB binding")
+    end = ours.find("\n", ours.find('{ crate = "zlib-rs"', start)) + 1 if start >= 0 else 0
+    if end <= start or ours[:start] + ours[end:] != root:
         fail("R5-25: deny.toml is not the root copy with the one DuckDB exception")
 
 
@@ -133,7 +132,7 @@ RULINGS = {
     "file access": "`@file` opens through that file system, so the caller's own settings decide each read.",
     "the engine settings": "The first throttle wins for the process, as main's `build` rules.",
     "volatile scalars": "Every scalar registers as volatile, so the planner never folds a constant call into a send.",
-    "warm": "The aggregate has no client context, so `thinkthen_warm` refuses `@file` and runs on the engine the environment describes.",
+    "warm": "**The aggregate reads `@file` through the kept connection of the database that registered it, under that database's gate, and runs on the engine the environment describes.**",
     "licenses": "One exception remains: `zlib-rs` (Zlib), a build-time dependency of `libduckdb-sys`.",
     "relate from rows": "**The relate query returns `id, name, kind` or `id, name`, rows with the same name and kind become one entity, and each edge returns one row per pair of their ids.**",
     "the row cap": "**Relate reads at most 255 rows, under `LIMIT 256`, and more is `usage`.**",

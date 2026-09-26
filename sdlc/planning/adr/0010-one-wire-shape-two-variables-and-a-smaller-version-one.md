@@ -63,3 +63,12 @@ What ADR 0010 held is the second adapter and the option that selects one. Both r
 - Every new setting enters the neutral plan under the tool's own word. The texts for what true and false mean are `--true` and `--false` in the plan, and the `systemone` adapter alone knows they travel as `criteria`.
 - The libraries that the design study proposes keep the same seam, and no library depends on one vendor's client outside its default adapter.
 
+
+## Amendment, 2026-09-25, by ticket 0126: a repeated request can return another number
+
+"The first live answers" above stays as the record of 2026-09-19. Its sentence "The same request returns the same number" is withdrawn. Two later measurements show the service moves.
+
+- Experiment 212 sent 100 messages twice, minutes apart, all answered by `jev-1.13.0`. 63 of the 100 probabilities moved. Among those that moved, the mean move was 0.02 and the largest 0.08. The fifty borderline messages, 0.33 to 0.67, moved by up to 0.08. The fifty others, 0.02 to 0.96, moved by at most 0.03. Four answers flipped at 0.5, and each sat between 0.43 and 0.51. Its limits: one question, one set, one hundred messages, and one day. Half the sample was picked because it was borderline, so 63 of 100 overstates an ordinary file.
+- Experiment 259 read the recordings of a benchmark. 681 request digests appear in more than one recording, and 178 of them hold different answers. Every one came from `jev-1.13.0`, and the largest gap was 0.09.
+
+A repeated trial therefore shows the service's own play as well as any change in the candidate. A re-record into a used folder stops at exit 5 when the service answers a saved request differently, even with no model change. `specification/recording.md` and `specification/threshold.md` carry the measured play.

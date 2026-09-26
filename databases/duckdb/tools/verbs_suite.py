@@ -142,23 +142,34 @@ def r2_10_deadlines():
 
 @case
 def r2_22_warm_judges_one_question_per_group():
-    with Backend() as backend:
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        choose = Path(folder) / "choose.json"
+        choose.write_text('{"choose": "Which colour?", "options": ["red", "blue"]}')
         got = run(
             [
                 "SELECT thinkthen_warm(q, x) FROM (VALUES ('Is it a refund?', 'a'), ('Is it late?', 'b')) t(q, x)",
-                "SELECT thinkthen_warm('@q.json', 'a')",
+                f"SELECT thinkthen_warm('@{choose}', 'a')",
             ],
             backend.base(),
         )
         expect(said(got[0]), "thinkthen usage: thinkthen_warm judges one question per group, and this group carries more than one", "two questions")
-        expect(
-            said(got[1]),
-            "thinkthen usage: thinkthen_warm reads no '@file' question; pass the file's text from DuckDB's read_text, which applies this database's file settings",
-            "warm and @file",
-        )
+        expect(said(got[1]), "thinkthen usage: decide_many does not take a choose question", "warm and a choose file")
         expect(backend.count(), 0, "counted sends")
         warmed = run(["SELECT thinkthen_warm('Is it a refund?', x) FROM (VALUES ('a'), ('b'), ('a')) t(x)"], backend.base())
         expect(column(warmed[0]), [2], "warm counts distinct texts")
+
+
+@case
+def r2_22_warm_takes_the_banded_file_decide_uses():
+    """Ticket 0129: warm takes decide's banded file, and decide then reads the cache."""
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        banded = Path(folder) / "banded.json"
+        banded.write_text(json.dumps({"decide": "Is it red?", "true": "Red paint.", "false": "Any other colour.", "model": "judge-b", "threshold": "0.85:0.95"}))
+        texts = "(VALUES ('a red door'), ('a blue door'), ('a red door')) t(x)"
+        got = run([f"SELECT thinkthen_warm('@{banded}', x) FROM {texts}", f"SELECT thinkthen_decide('@{banded}', x) FROM {texts}"], backend.base())
+        expect(column(got[0]), [2], "warm counts distinct texts")
+        expect(column(got[1]), [None, None, None], "decide reads unsure under the band")
+        expect(backend.count(), 2, "counted sends: decide reads what warm filled")
 
 
 @case
