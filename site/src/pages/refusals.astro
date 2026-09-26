@@ -1,7 +1,6 @@
 ---
 // Goal: say plainly what ThinkThen will not do, so a reader knows its limits.
 import Base from '../layouts/Base.astro';
-import { KEY_VARIABLE } from '../data/catalog.mjs';
 ---
 <Base title="What it will not do" description="ThinkThen answers questions about text and does nothing else. Every line the tool will not cross.">
   <h1>What it will not do</h1>
@@ -19,18 +18,10 @@ import { KEY_VARIABLE } from '../data/catalog.mjs';
   </ul>
 
   <h2>It never leaks the key</h2>
-  <ul>
-    <li>The key is read from <code>{KEY_VARIABLE}</code>. No option names another variable, and no flag and no file carries a key.</li>
-    <li>The key never appears in a plan, a result, a saved answer, a log line, or an error. An error about a missing key names the variable and never a value.</li>
-    <li>The key goes only to the address you named.</li>
-    <li>Saved answers hold request bodies and responses, never headers, so no key can reach one.</li>
-    <li>An address under plain <code>http://</code> reaches only the loopback host. Any other <code>http://</code> host is a usage error before a request leaves, because the key would cross the network in clear text. No option overrides it.</li>
-    <li><code>--dry-run</code> prints the address, the model, and the name of the variable a key would come from. It reads no key and it sends nothing, so a script can prove the key stayed home.</li>
-    <li><code>thinkthen status</code> is read-only and opens no connection. It reports whether a key is present and never its value.</li>
-  </ul>
+  <p>The key goes only to the address you named. It never shows in a plan, a result, a saved answer, a log line, or an error. The <a href="/install/backends/">backends page</a> gives the rules.</p>
 
   <h2>It promises no accuracy</h2>
-  <p>A number belongs to the test that measured it and never to the tool. Act on the number you measured on your own labeled records. The <a href="/trust/">trust page</a> walks through that.</p>
+  <p>A number belongs to the test that measured it and never to the tool. Act on the number you measured on your own labeled records. The <a href="/trust/">trust page</a> shows how.</p>
   <p>It judges evidence. It never judges a person.</p>
 
   <p class="pagelinks"><a href="/trust/">Test it before you trust it</a> · <a href="/install/backends/">See the backends</a></p>
