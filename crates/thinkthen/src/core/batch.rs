@@ -239,11 +239,10 @@ impl Batcher {
     /// The bytes a record adds beside its share: its separators and the
     /// extra digits its wire names take past `q1`, `q2`, and so on.
     fn join_bytes(&self, wire: usize) -> usize {
-        let names = (0..wire).map(|at| digits(self.open.wires + at + 1) - digits(at + 1));
         if self.open.distinct.is_empty() {
             0
         } else {
-            self.separators() + names.sum::<usize>()
+            self.separators() + names(self.open.wires, wire)
         }
     }
 
@@ -378,11 +377,8 @@ impl Batcher {
         let asked = self.quoted(&probe)?.ok_or_else(defect)?;
         let (wire, one) = self.measured(&[(&probe, &asked)])?;
         let (_, two) = self.measured(&[(&probe, &asked), (&probe, &asked)])?;
-        let names: usize = (0..wire)
-            .map(|at| digits(wire + at + 1) - digits(at + 1))
-            .sum();
         let share = two
-            .checked_sub(one + self.separators() + names)
+            .checked_sub(one + self.separators() + names(wire, wire))
             .ok_or_else(defect)?;
         one.checked_sub(share).ok_or_else(defect)
     }
@@ -420,9 +416,10 @@ fn text(question: &mut Question) -> &mut QuestionText {
     }
 }
 
-/// The decimal digits of a count.
-fn digits(count: usize) -> usize {
-    count.to_string().len()
+/// The extra digits `wire` names take from `q{from + 1}` on, past `q1` on.
+fn names(from: usize, wire: usize) -> usize {
+    let digits = |count: usize| count.to_string().len();
+    (1..=wire).map(|at| digits(from + at) - digits(at)).sum()
 }
 
 fn defect() -> BatchError {

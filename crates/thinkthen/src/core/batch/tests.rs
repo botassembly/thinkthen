@@ -57,6 +57,20 @@ fn text(record: &str) -> BatchRecord {
     }
 }
 
+fn loopback() -> Backend {
+    backend(LOOPBACK, "jev-latest")
+}
+
+/// A question written as JSON, which cannot take the quote prefix.
+fn structured() -> Question {
+    let text = Json::parse(r#"{"ask":"urgent?"}"#).expect("json");
+    Question::Decide {
+        text: QuestionText::structured(&text).expect("text"),
+        yes: None,
+        no: None,
+    }
+}
+
 fn records(count: usize) -> Setting {
     Setting::Records(NonZeroUsize::new(count).expect("positive"))
 }
@@ -142,7 +156,6 @@ fn a_batch_of_one_is_todays_request() {
 
 #[test]
 fn each_batch_body_matches_its_fixture() {
-    let backend = backend(LOOPBACK, "jev-latest");
     let three = ["Come Together", "Say \"hello\"\nthen leave", "Because"];
     let mails = ["My card was charged twice.", "The parcel never arrived."];
     let choose = Question::Choose {
@@ -198,7 +211,7 @@ fn each_batch_body_matches_its_fixture() {
     for (question, records, context, fixture, questions) in cases {
         let context = context.map(|held| Evidence::new(held).expect("context"));
         let batcher =
-            Batcher::new(backend.clone(), None, question, Setting::Max, context).expect("batcher");
+            Batcher::new(loopback(), None, question, Setting::Max, context).expect("batcher");
         let found = run(batcher, records).expect("batches");
         let [batch] = found.as_slice() else {
             panic!("one batch, not {}", found.len())
@@ -228,7 +241,6 @@ fn grouping(insert: Option<(usize, &str)>) -> Vec<BatchRecord> {
 #[test]
 fn batches_close_where_the_readme_says() {
     use Closed::{Content, End, Limit, Size};
-    let loopback = || backend(LOOPBACK, "jev-latest");
     let eight = || profile(r#""max_questions":8"#);
     let plan =
         |setting, insert| batches(loopback(), eight(), decide(SONG), setting, grouping(insert));
@@ -313,35 +325,35 @@ fn limits_close_batches_by_exact_bytes_and_the_ceiling() {
     let today = compact(fixture!("decide-urgent")).len();
     let cases: [LimitCase; 5] = [
         (
-            backend(LOOPBACK, "jev-latest"),
+            loopback(),
             profile(&format!(r#""max_request_bytes":{body}"#)),
             decide(SONG),
             three(),
             vec![(3, End)],
         ),
         (
-            backend(LOOPBACK, "jev-latest"),
+            loopback(),
             profile(&format!(r#""max_request_bytes":{}"#, body - 1)),
             decide(SONG),
             three(),
             vec![(2, Limit), (1, End)],
         ),
         (
-            backend(LOOPBACK, "jev-latest"),
+            loopback(),
             profile(&format!(r#""max_evidence_bytes":{state}"#)),
             decide(SONG),
             three(),
             vec![(3, End)],
         ),
         (
-            backend(LOOPBACK, "jev-latest"),
+            loopback(),
             profile(&format!(r#""max_evidence_bytes":{}"#, state - 1)),
             decide(SONG),
             three(),
             vec![(2, Limit), (1, End)],
         ),
         (
-            backend(LOOPBACK, "jev-latest"),
+            loopback(),
             profile(&format!(r#""max_request_bytes":{today}"#)),
             decide("Does this convey urgency?"),
             vec![urgent(), urgent(), urgent()],
@@ -385,7 +397,7 @@ fn the_ceiling_closes_batches_at_the_built_in_address_only() {
             vec![(2, Limit), (1, End)],
         ),
         (
-            backend(LOOPBACK, "jev-latest"),
+            loopback(),
             None,
             decide(SONG),
             sized(40_000),
@@ -408,7 +420,6 @@ fn check(cases: [LimitCase; 5]) {
 #[test]
 fn questions_copies_and_refusals_follow_the_batch_rules() {
     use Closed::{End, Limit, Size};
-    let loopback = || backend(LOOPBACK, "jev-latest");
     let tag = Question::Tag {
         text: QuestionText::new("Which topics?").expect("text"),
         labels: Labels::tags(["a", "b", "c"].map(|label| (label.to_owned(), None)).into())
@@ -426,12 +437,7 @@ fn questions_copies_and_refusals_follow_the_batch_rules() {
         tags.first().map(|batch| batch.questions.clone()),
         Some(vec![0, 3])
     );
-    let structured = Question::Decide {
-        text: QuestionText::structured(&Json::parse(r#"{"ask":"urgent?"}"#).expect("json"))
-            .expect("text"),
-        yes: None,
-        no: None,
-    };
+    let structured = structured();
     let alone = batches(
         loopback(),
         None,
@@ -477,58 +483,25 @@ fn questions_copies_and_refusals_follow_the_batch_rules() {
 
 #[test]
 fn a_context_is_refused_without_echoing_it() {
-    let loopback = || backend(LOOPBACK, "jev-latest");
-    let structured = Question::Decide {
-        text: QuestionText::structured(&Json::parse(r#"{"ask":"urgent?"}"#).expect("json"))
-            .expect("text"),
-        yes: None,
-        no: None,
+    let beside = |profile, question| {
+        let context = Evidence::new("secret context").expect("context");
+        Batcher::new(loopback(), profile, question, Setting::Max, Some(context))
     };
-    let context = |held: &str| Some(Evidence::new(held).expect("context"));
-    let refused = Batcher::new(
-        loopback(),
-        None,
-        structured,
-        Setting::Max,
-        context("secret context"),
-    )
-    .err();
+    let refused = beside(None, structured()).err();
     assert_eq!(refused, Some(BatchError::StructuredQuestionWithContext));
-    let small = profile(r#""max_evidence_bytes":5"#);
-    let refused = Batcher::new(
-        loopback(),
-        small,
-        decide("Q"),
-        Setting::Max,
-        context("secret context"),
-    )
-    .err();
-    assert_eq!(
-        refused,
-        Some(BatchError::ContextOverLimit {
-            kind: LimitKind::EvidenceBytes,
-            limit: 5,
-            actual: 14
-        })
-    );
-    let late = profile(r#""max_request_bytes":200"#);
-    let batcher = Batcher::new(
-        loopback(),
-        late,
-        decide("Q"),
-        Setting::Max,
-        context("secret context"),
-    )
-    .expect("batcher");
+    let refused = beside(profile(r#""max_evidence_bytes":5"#), decide("Q")).err();
+    let over = BatchError::ContextOverLimit {
+        kind: LimitKind::EvidenceBytes,
+        limit: 5,
+        actual: 14,
+    };
+    assert_eq!(refused, Some(over));
+    let batcher = beside(profile(r#""max_request_bytes":200"#), decide("Q")).expect("batcher");
     let error =
         run(batcher, vec![text("short"), text(&"secret ".repeat(40))]).expect_err("late overflow");
-    assert!(matches!(
-        error,
-        BatchError::ContextOverLimit {
-            kind: LimitKind::RequestBytes,
-            limit: 200,
-            ..
-        }
-    ));
+    let limit = (LimitKind::RequestBytes, 200);
+    assert!(
+        matches!(error, BatchError::ContextOverLimit { kind, limit: most, .. } if (kind, most) == limit)
+    );
     assert!(!format!("{error:?} {error}").contains("secret"));
 }
