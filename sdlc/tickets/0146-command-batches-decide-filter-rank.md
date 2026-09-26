@@ -335,7 +335,7 @@ Existing tests pinned to `--batch 1` keep proving what they proved before, one r
 
 ## Budgets
 
-Nonblank lines, measured with `grep -c .`. Net lines against main after 0143, 0144 and 0145 land.
+Nonblank lines, measured with `grep -c .`. Net lines against main after 0143, 0144, 0145 and 0158 land.
 
 - `crates/thinkthen/src/core/batch.rs`: at most 38 net, for `Setting::parse`, `Closed::Pause`, `pause()` and the member cap, less the `expect(dead_code)`.
 - `crates/thinkthen/src/core/question_file.rs` and its folder: at most 25 net, for `parse_top`.
@@ -358,7 +358,7 @@ Nonblank lines, measured with `grep -c .`. Net lines against main after 0143, 01
 - Existing tests: at most 110 net for the `--batch 1` pins, sized for 20 to 32 files at a few lines each, most through a shared helper. At most 20 net more in `tests/backend/scheduling.rs` for the two folder rows.
 - Pages under `specification/`: at most 46 net lines together. `spec/decide.md`: at most 10 net.
 - Demos: at most 30 changed lines, pins and dry-run expectations only.
-- `sdlc/ratchet.json` moves to the measured total, at most 1,175 above main after the three dependencies land: 553, 480, 12, 110 and 20. The commit says what grew.
+- `sdlc/ratchet.json` moves to the measured total, at most 1,175 above main after 0143, 0144, 0145 and 0158 land: 553, 480, 12, 110 and 20. The commit says what grew.
 - No dependency.
 - The `surfaces` rung runs, because the engine scheduler that the libraries share changes.
 
