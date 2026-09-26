@@ -369,7 +369,7 @@ Any ticket that adds or changes a setting updates that setting's row in `specifi
 | B3 | The engine plans batches | Fill to the limit, content cuts, size, profile limits, ceiling, quote prefix, evidence object, duplicates, batch of one, digests. No surface change | Tests 1, 2 and 3 | B0 | covered by B0 |
 | S1 | The speed test | Described below | Its gate part passes with its list of functions still to batch; its live part reports on a named build | B1, B2, J1, B3 | no |
 | B4 | The command batches `decide`, `filter` and `rank`, filling to the limit by default | `--batch`, `THINKTHEN_BATCH`, the question file's `batch`, precedence, jobs over batches, order, pause, failure line, record, replay, cache, dry run. It removes `decide`, `filter` and `rank` from S1's list | Tests 4, 5, 7 and 8; S1's gate part | B3, S1 | covered by B0 |
-| B5 | Run facts stay true under batches | Shares, `meta.batch`, `--facts` and the `thinkthen.run/1` line | Test 6 | B4 | covered by B0 |
+| B5 | Run facts stay true under batches | `meta.batch`, `--facts` and the `thinkthen.run/1` line. Ticket 0146 (B4) builds the shares | Test 6 | B4 | covered by B0 |
 | B16 | The batch setting is calibration identity | `meta.batch_warning` and its line, the `audit` and `diff` warnings, `audit --write` writing `batch` | Test 13 | B5 | covered by B0 |
 | B6 | The accuracy cost is measured and reported | One authorized live run with the tool's own wording, and the token rate on batched record text. The ticket reports the cost. It does not change the default | Test 9 | B1, B2, B5, B16 | no |
 | B7 | Shared context | `--context FILE` for `decide`, `filter` and `rank`; exit 2 for a context over the ceiling; `meta.context_sha256` | Tests 2 and 10 | B4 | covered by B0 |
