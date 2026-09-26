@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/cli/failure/status.rs crates/thinkthen/src/cli/failu
 
 # 0138: Command wording fixes, the retried statuses' next step, and pointers that never echo a control character
 
-Status: in progress. Design review accepted on the second pass (fresh read-only Claude session). Owner: Claude.
+Status: built. Design review accepted on the second pass (fresh read-only Claude session). Code review accepted. Record: `sdlc/records/0138-build-wording-and-failures.md`. Owner: Claude.
 
 Lane: thinkthen-lane-4
 
