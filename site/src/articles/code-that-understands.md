@@ -1,10 +1,6 @@
-# Code that knows what you mean
+<!-- Goal: show that a model which answers bounded questions lets ordinary code act on meaning, and show where it breaks. -->
 
-<!--
-Alternate titles:
-1. The semantic `if`
-2. The classifier you would have trained
--->
+# Code that knows what you mean
 
 Every program I have written can match text. None of them can read it. `grep` finds the word "refund". It misses the customer who wants their money back and never says the word. For most of my career, I had to train a model to cross that gap.
 
@@ -18,29 +14,13 @@ I built ThinkThen around that interface. It is one binary. You pipe in the evide
 
 ## `decide`
 
-Here's a support ticket:
+Here's a support ticket, and here's the whole idea:
 
-```
-I renewed once this morning, but my card shows two charges.
-Please refund the duplicate.
-```
+<!-- example: functions/decide/3-one -->
 
-And here's the whole idea:
+The command returns exit code 0. The word "refund" appears in that ticket. `grep` would have caught this one. Now ask the same question and show the whole result:
 
-```
-$ thinkthen decide 'Does the customer ask for a refund?' < ticket.txt
-true
-```
-
-The command returns exit code 0. The word "refund" appears in that ticket. `grep` would have caught this one. Now ask the same question and show the numbers:
-
-```
-$ thinkthen decide --details 'Does the customer ask for a refund?' < ticket.txt | jq .answer
-{
-  "kind": "yes_no",
-  "probability": 0.99
-}
-```
+<!-- example: functions/decide/4-details -->
 
 ThinkThen passes the model's 0.99 through untouched. Every answer carries a probability.
 
@@ -48,46 +28,19 @@ Be careful what you read into that number. The probability describes the evidenc
 
 ## The threshold and the middle
 
-Some messages are plain and some are not. Here are three:
+Some messages are plain and some are not. Here are three. The first asks for money back. The second does not. The third could mean an exchange or money back. Ask the same question of each line, with a band from 0.2 to 0.8:
 
-```
-$ cat messages.txt
-Please refund my order. It arrived broken.
-Thanks for the quick help yesterday!
-I want to send this back.
-```
+<!-- example: functions/decide/1-lines -->
 
-The first asks for money back. The second does not. The third could mean an exchange or money back. Ask the same question of each line, with a band from 0.2 to 0.8:
+The refund request clears the high bar, so the answer is yes. The thank-you falls under the low bar, so the answer is no. The send-back line lands inside the band, so the answer is not sure. You set the band against your own labeled cases. It holds for one model. A threshold doesn't carry from one model to another.
 
-```
-$ thinkthen decide --lines --details --threshold 0.2:0.8 \
-    'Does the customer ask for a refund?' < messages.txt \
-    | jq -r '"\(.value)  \(.answer.probability)  \(.input)"'
-true  0.99  Please refund my order. It arrived broken.
-false  0.01  Thanks for the quick help yesterday!
-null  0.54  I want to send this back.
-```
+You can save the question and its band in a file, `refund.json`:
 
-The refund request lands at 0.99, over the high bar, so the answer is yes. The thank-you lands at 0.01, under the low bar, so the answer is no. The send-back line lands at 0.54, inside the band, so the answer is not sure. You set the band against your own labeled cases. It holds for one model. A threshold doesn't carry from one model to another.
+<!-- file: functions/question-file/files/refund.json -->
 
-You can save the question and its band in a file:
+Then ask it of the send-back line:
 
-```json
-{
-  "decide": "Does the customer ask for a refund?",
-  "true": "The customer asks for money back.",
-  "false": "Anything else, such as a cancellation or thanks.",
-  "threshold": "0.2:0.8"
-}
-```
-
-`vague.txt` holds the send-back line alone:
-
-```
-$ thinkthen decide @refund.json < vague.txt; echo "exit $?"
-null
-exit 3
-```
+<!-- example: functions/question-file/2-unsure -->
 
 Yes maps to exit code 0. No maps to exit code 1. Not sure maps to exit code 3 and prints `null`. Your script branches on three outcomes without parsing anything. A person reviews the uncertain middle.
 
@@ -101,56 +54,17 @@ The model answers three kinds of question: yes or no, one of a list, and a place
 
 You can pipe the record-oriented functions into each other:
 
-```
-$ cat leads.txt
-We need 200 seats next quarter. Please send a quote.
-Please remove me from this list.
-Our team of six wants to buy today. How do we pay?
-Loved your talk at the conference last week.
-
-$ thinkthen filter 'Is this a buying inquiry?' --lines < leads.txt \
-    | thinkthen rank 'Is this buyer ready to pay now?' --lines \
-    | thinkthen choose 'Which team should take this?' enterprise smb --lines \
-    | jq -r '"\(.value)  \(.input)"'
-smb  Our team of six wants to buy today. How do we pay?
-enterprise  We need 200 seats next quarter. Please send a quote.
-```
+<!-- example: how-tos/rank-the-inbound-leads/1-leads -->
 
 The pipeline returns the original lines, each beside its team. It doesn't rewrite them.
 
-I reach for `annotate` most. A question set contains any mix of `decide`, `choose`, `score`, and `tag` questions in one file. `annotate` answers the question set for every record. Here is a question set with one yes or no, one pick, and one scale:
+I reach for `annotate` most. A question set contains any mix of `decide`, `choose`, `score`, and `tag` questions in one file. `annotate` answers the question set for every record. Here is a question set with one yes or no, one pick, and one scale, saved as `form.json`:
 
-```
-$ cat form.json
-{
-  "version": 1,
-  "questions": {
-    "steps": {
-      "decide": "Does the report give steps to reproduce?"},
-    "area": {
-      "choose": "Which part of the app is this?",
-      "options": ["export", "login", "billing"]},
-    "impact": {
-      "score": "How much does this block the user?",
-      "levels": ["None.", "Slows them.", "Blocks work."]}
-  }
-}
-```
+<!-- file: functions/annotate/files/form.json -->
 
-Three bug reports go in as JSONL, one for each area on the form. Each record keeps its id and gains the three answers. `jq` leaves the body out, so each line fits:
+Three bug reports go in as JSONL, one for each area on the form. Each record keeps its id and gains the three answers:
 
-```
-$ cat reports.jsonl
-{"id": "B-7", "body": "Steps: click Log in. Nobody gets in."}
-{"id": "B-8", "body": "The Pay button on billing is too blue."}
-{"id": "B-9", "body": "Steps: click Export. It is very slow."}
-
-$ thinkthen annotate form.json --jsonl --field /body --jobs 8 < reports.jsonl \
-    | jq -r 'del(.body) | tojson'
-{"id":"B-7","steps":true,"area":"login","impact":1.98}
-{"id":"B-8","steps":false,"area":"billing","impact":0.09}
-{"id":"B-9","steps":true,"area":"export","impact":1.04}
-```
+<!-- example: functions/annotate/1-jsonl -->
 
 ThinkThen answers the three questions about each report in one request.
 

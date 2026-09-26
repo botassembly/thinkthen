@@ -1,12 +1,12 @@
 ---
+// Goal: let a reader find the job they have, or the shell form they want
+// to learn.
 import Base from '../../layouts/Base.astro';
-import { HOWTOS, RECIPES } from '../../data/catalog.mjs';
-
-const plain = (text) => text.replaceAll('`', '');
+import { HOWTOS, TECHNIQUES } from '../../data/catalog.mjs';
 ---
-<Base title="How-tos" description="Business jobs done with ThinkThen, each shown with a recorded run.">
+<Base title="How-tos" description="Business jobs done with ThinkThen, each shown with a real run.">
   <h1>How-tos</h1>
-  <p class="lede">Pick your job. Each page shows what went in, the commands, and what came out.</p>
+  <p class="lede">Pick your job. Each page shows the commands and what came out.</p>
 
   <table>
     <tr><th>How-to</th><th>Who it is for</th><th>Functions</th></tr>
@@ -19,11 +19,11 @@ const plain = (text) => text.replaceAll('`', '');
     ))}
   </table>
 
-  <h2>Shell recipes</h2>
-  <p>The tools you already have, piped into ThinkThen.</p>
+  <h2><a href="/how-tos/bash/">Bash techniques</a></h2>
+  <p>ThinkThen is a shell command. These pages teach it one shell form at a time, with recipes for small jobs.</p>
   <div class="grid">
-    {RECIPES.map((r) => (
-      <a class="tile" href={`/how-tos/${r.slug}/`}><b>{r.title}</b><span>{plain(r.said).split('. ')[0]}.</span></a>
+    {TECHNIQUES.map((t) => (
+      <a class="tile" href={`/how-tos/bash/${t.slug}/`}><b>{t.title}</b><span>{t.label}</span></a>
     ))}
   </div>
 </Base>

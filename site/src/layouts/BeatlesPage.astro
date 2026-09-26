@@ -1,49 +1,8 @@
 ---
-// One page of the Beatles Bench section under Learn: a side list of the
-// section in talk order, the page, and Previous and Next.
-import Base from './Base.astro';
+// One page of the Beatles Bench section under Learn, in talk order.
+import SidePage from './SidePage.astro';
 import { PAGES } from '../data/beatles.mjs';
 
 const { page } = Astro.props;
-const at = PAGES.findIndex((p) => p.route === page.route);
-if (at < 0) throw new Error(`beatles: ${page.route} is not in the section's list`);
-const prev = PAGES[at - 1];
-const next = PAGES[at + 1];
-const groups = [[null, [PAGES[0]]], ...[...new Set(PAGES.slice(1).map((p) => p.group))].map((g) => [g, PAGES.filter((p) => p.group === g)])];
 ---
-<Base title={page.title.replace(/\.$/, '')} description={page.description || page.title}>
-  <div class="bench">
-    <aside class="bench-side" aria-label="Beatles Bench pages">
-      {groups.map(([group, list]) => (
-        <div class="bench-group">
-          {group && <div class="bench-group-name">{group}</div>}
-          <ul>
-            {list.map((p) => (
-              <li><a href={p.route} aria-current={p.route === page.route ? 'page' : undefined} class={p.command ? 'cmd' : undefined}>{p.label}</a></li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </aside>
-    <div class="bench-main">
-      <details class="bench-menu">
-        <summary>Beatles Bench pages</summary>
-        {groups.map(([group, list]) => (
-          <div class="bench-group">
-            {group && <div class="bench-group-name">{group}</div>}
-            <ul>
-              {list.map((p) => (
-                <li><a href={p.route} aria-current={p.route === page.route ? 'page' : undefined} class={p.command ? 'cmd' : undefined}>{p.label}</a></li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </details>
-      <slot />
-      <nav class="bench-pager" aria-label="Previous and next">
-        {prev ? <a href={prev.route} class="prev"><span>Previous</span>{prev.title}</a> : <span />}
-        {next ? <a href={next.route} class="next"><span>Next</span>{next.title}</a> : <span />}
-      </nav>
-    </div>
-  </div>
-</Base>
+<SidePage pages={PAGES} page={page} name="Beatles Bench pages"><slot /></SidePage>

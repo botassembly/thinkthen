@@ -1,8 +1,0 @@
-{
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "sql",
-  "code": ".load ./thinkthen\n\n-- 1 for the refund, 0 for the thank-you\nWITH t(body) AS (VALUES\n    ('Please refund my order. It arrived broken.'),\n    ('Thanks for the quick help yesterday!'))\nSELECT thinkthen_decide('Does the customer ask for a refund?', body), body\nFROM t;",
-  "function": "decide",
-  "surface": "sqlite"
-}

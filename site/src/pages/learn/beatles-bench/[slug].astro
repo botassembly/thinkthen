@@ -1,13 +1,17 @@
 ---
+// Goal: teach one idea from the talk with one slide, one real run on Beatles
+// Bench, and the same run at another bar.
 import BeatlesPage from '../../../layouts/BeatlesPage.astro';
 import Terminal from '../../../components/Terminal.astro';
-import { PAGES, runOf } from '../../../data/beatles.mjs';
+import { PAGES } from '../../../data/beatles.mjs';
+import { captioned } from '../../../data/samples.mjs';
 
 export function getStaticPaths() {
   return PAGES.filter((p) => p.slug).map((page) => ({ params: { slug: page.slug }, props: { page } }));
 }
 
 const { page } = Astro.props;
+const runs = captioned(`beatles/${page.slug}`, page.see);
 // Prose marks code with backticks.
 const parts = (text) => text.split('`').map((p, i) => ({ code: i % 2 === 1, text: p }));
 const [first, ...rest] = page.title.split(' ');
@@ -22,11 +26,11 @@ const shown = page.link.replace('https://', '');
   </figure>
   {page.idea.map((para) => <p>{parts(para).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>)}
 
-  {page.steps.map((step, i) => (
+  {runs.map((run, i) => (
     <Fragment>
       {i === 0 && <h2>Run it</h2>}
-      {step.heading && <h2>{step.heading}</h2>}
-      <Terminal run={runOf(page.slug, i)} caption={step.see} />
+      {page.headings?.[run.name] && <h2>{page.headings[run.name]}</h2>}
+      <Terminal run={run} caption={run.see} />
     </Fragment>
   ))}
 

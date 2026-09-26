@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"INC-1 checkout returns 500 at payment\n","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Is this the same failure as: Card charges fail with 500 at checkout"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.8}},"usage":{"input_tokens":295,"output_tokens":21}}
+}

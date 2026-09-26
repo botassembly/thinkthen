@@ -1,0 +1,5 @@
+The export runs every night at two.
+It might possibly be worth considering a retry.
+Failed rows go to a separate file.
+We think this should probably work for most users.
+Each row keeps its id.

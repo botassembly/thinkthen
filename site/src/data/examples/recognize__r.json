@@ -1,8 +1,0 @@
-{
-  "status": "drawn",
-  "source": "deck recognize-surfaces.md",
-  "lang": "r",
-  "code": "tickets <- tibble(id = 1,\n  body = \"Maria Chen joined Northwind Freight, a company in Chicago.\")\n# one row in, one row out per name\ntickets |>\n  mutate(names = tt_recognize(body,\n    kinds = c(\"person\", \"organization\", \"place\"),\n    relations = list(works_for = c(\"person\", \"organization\"),\n                     based_in = c(\"organization\", \"place\")))) |>\n  tidyr::unnest(names)\n#   id text              kind         relations\n# 1  1 Maria Chen        person       works_for 1 → 2\n# 2  1 Northwind Freight organization based_in 2 → 3\n# 3  1 Chicago           place",
-  "function": "recognize",
-  "surface": "r"
-}

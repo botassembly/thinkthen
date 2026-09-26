@@ -1,0 +1,30 @@
+{
+  "id": "T-101",
+  "created": "2026-09-20",
+  "kind": "bug",
+  "urgency": 1.16
+}
+{
+  "id": "T-102",
+  "created": "2026-09-21",
+  "kind": "bug",
+  "urgency": 0.88
+}
+{
+  "id": "T-103",
+  "created": "2026-09-21",
+  "kind": "question",
+  "urgency": 0.01
+}
+{
+  "id": "T-104",
+  "created": "2026-09-22",
+  "kind": "bug",
+  "urgency": 1.99
+}
+{
+  "id": "T-105",
+  "created": "2026-09-22",
+  "kind": "billing",
+  "urgency": 0.77
+}

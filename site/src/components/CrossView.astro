@@ -1,14 +1,20 @@
 ---
-// The same call on every surface, as tabs. A surface with no sample says so,
-// and a function with a Beatles Bench page points there.
+// The same call on every surface, as tabs. Bash shows the function page's
+// first example. Every other surface shows its library sample, and a
+// database sample shows what the database printed. A surface with no sample
+// says so.
 import Terminal from './Terminal.astro';
 import Code from './Code.astro';
-import { SURFACES } from '../data/catalog.mjs';
-import { cell } from '../data/examples.mjs';
+import { SURFACES, FUNCTIONS } from '../data/catalog.mjs';
+import { captioned, sample } from '../data/samples.mjs';
 import { beatlesPageFor } from '../data/beatles.mjs';
 
-const { fn, first = 1 } = Astro.props;
+// `above` says the page already shows the Bash example, so the Bash tab
+// points up to it and does not repeat it.
+const { fn, above = false } = Astro.props;
 const bench = beatlesPageFor(fn);
+const entry = FUNCTIONS.find((f) => f.name === fn);
+const shell = captioned(`functions/${fn}`, entry.see, true)[0] || null;
 
 const alias = (slug) => ({
   shell: 'Bash', python: 'Python', polars: 'Python', typescript: 'TypeScript',
@@ -21,7 +27,7 @@ const tabs = SURFACES.map((s) => ({
   label: s.name,
   alias: alias(s.slug),
   surface: s,
-  data: cell(fn, s.slug),
+  code: s.slug === 'shell' ? null : sample(fn, s.slug),
 }));
 ---
 <div class="tabbed" data-fallback="Bash">
@@ -32,18 +38,16 @@ const tabs = SURFACES.map((s) => ({
   </div>
   {tabs.map((t) => (
     <div class="cell" data-lang={t.label} hidden={t.label !== 'Bash'}>
-      {t.data.status === 'run' && t.data.runs.slice(0, first).map((run) => (
-        <Terminal run={run} />
-      ))}
-      {t.data.status === 'drawn' && <Code code={t.data.code} />}
-      {t.data.status === 'drawn' && t.data.printed && (
-        <Terminal run={{ command: t.data.printed.command, output: t.data.printed.output, exit: null }} caption={t.data.printed.see} word={false} />
-      )}
-      {t.data.status !== 'run' && t.data.status !== 'drawn' && (
-        <p class="note">{bench && t.slug === 'shell'
+      {t.slug === 'shell' && shell && above && <p class="note">The Bash example opens this page.</p>}
+      {t.slug === 'shell' && shell && !above && <Terminal run={shell} />}
+      {t.slug === 'shell' && !shell && (
+        <p class="note">{bench
           ? <>See <code>{fn}</code> run on <a href={bench.route}>Beatles Bench</a>.</>
-          : <>No <code>{fn}</code> sample for {t.surface.name} yet.</>}</p>
+          : <>No Bash example for <code>{fn}</code>.</>}</p>
       )}
+      {t.code && <Code code={t.code.code} />}
+      {t.code?.output && <Code code={t.code.output} caption={`What ${t.surface.name} printed`} copy={false} />}
+      {t.slug !== 'shell' && !t.code && <p class="note">No {t.surface.name} sample for <code>{fn}</code>.</p>}
     </div>
   ))}
 </div>

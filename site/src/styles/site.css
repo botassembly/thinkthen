@@ -101,7 +101,7 @@ header.top .on-light { display: none; }
 
 header.top nav { display: flex; gap: .95rem; flex-wrap: wrap; font-size: .92rem; }
 
-/* On a phone the nav takes its own row and the Theme button stays beside the
+/* On a phone the nav takes its own row and the theme button stays beside the
    wordmark. */
 @media (max-width: 40rem) {
   header.top .wrap { gap: .5rem 1rem; padding-top: .55rem; padding-bottom: .55rem; min-height: 0; }
@@ -111,11 +111,30 @@ header.top nav a { color: var(--ink); text-decoration: none; }
 header.top nav a:hover, header.top nav a[aria-current="page"] { color: var(--think); }
 header.top .spacer { flex: 1 1 auto; }
 
+/* The theme button shows the sun on a dark page and the moon on a light
+   one: the theme a click moves to. */
 button.theme {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2.1rem; height: 2.1rem; padding: 0;
   background: none; border: 1px solid var(--line); color: var(--muted);
-  border-radius: 6px; padding: .2rem .55rem; font: inherit; font-size: .82rem; cursor: pointer;
+  border-radius: 999px; cursor: pointer;
 }
-button.theme:hover { color: var(--ink); }
+button.theme:hover { color: var(--ink); border-color: var(--think); }
+button.theme svg { display: block; }
+button.theme .moon { display: none; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) button.theme .sun { display: none; }
+  :root:not([data-theme="dark"]) button.theme .moon { display: block; }
+}
+:root[data-theme="light"] button.theme .sun { display: none; }
+:root[data-theme="light"] button.theme .moon { display: block; }
+:root[data-theme="dark"] button.theme .sun { display: block; }
+:root[data-theme="dark"] button.theme .moon { display: none; }
+
+/* Every control shows where the keyboard is. */
+button:focus-visible, a:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--think); outline-offset: 2px;
+}
 
 footer.bottom {
   border-top: 1px solid var(--line); margin-top: 3.5rem; padding: 1.4rem 0 2.5rem;
@@ -197,9 +216,17 @@ pre {
 .block .caption .copy { flex: none; align-self: flex-start; }
 pre .p { color: var(--muted); }
 pre .q { color: var(--think); }
-pre .out { color: var(--then); }
 pre .in { color: var(--muted); }
 pre .cm { color: var(--muted); font-style: italic; }
+
+/* An example: the script, then its output in a block of its own. Output
+   stays in the ink colour. Only the exit code carries a colour. */
+.example { margin: 0 0 1.4rem; }
+.example .block { margin: 0 0 .5rem; }
+.example .block:last-child { margin-bottom: 0; }
+.block.output .caption:first-child { font-family: var(--mono); font-size: .74rem; letter-spacing: .04em; }
+.block .caption.solo { border-top: 0; }
+.exit-row { margin: -.6rem 0 1.2rem; }
 
 /* The article's code panes. Shiki writes both themes on every token and the
    page theme picks one. The pane wears the same card and border as every
@@ -217,6 +244,9 @@ pre.astro-code { background-color: var(--card) !important; border: 1px solid var
 .exit.no { color: var(--no); }
 .exit.unsure { color: var(--think); }
 .exit.broken { color: var(--broken); }
+.exit.plain { color: var(--muted); }
+.legend { font-size: .8rem; color: var(--muted); }
+.legend .exit { margin-right: .6rem; }
 
 button.copy {
   background: none; border: 1px solid var(--line); color: var(--muted);

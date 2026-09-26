@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "questions": {
+    "kind": {
+      "choose": "What kind of message is this?",
+      "options": [
+        "billing",
+        "delivery",
+        "question"
+      ]
+    },
+    "urgency": {
+      "score": "How urgent is this?",
+      "levels": [
+        "Routine.",
+        "Soon.",
+        "Immediate."
+      ]
+    }
+  }
+}

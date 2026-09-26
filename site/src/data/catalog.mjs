@@ -1,9 +1,8 @@
 // The names, the order, and the one line for every function and surface.
 //
-// The one line for each function is the help text's first line, copied from
-// `products/thinkthen/vocabulary.md`. The option lists come from
-// `repos/thinkthen/specification/`. Nothing here is an example: examples live
-// in `src/data/examples/` and are pulled by `scripts/pull-examples.mjs`.
+// The one line for each function is the first line of its help text. The
+// option lists come from specification/. The examples live in examples/, and
+// scripts/smoke.mjs runs them.
 
 export const TAGLINE = 'ThinkThen: code that knows what you mean';
 
@@ -83,7 +82,14 @@ export const FUNCTIONS = [
     ],
     exits: [[0, 'yes'], [1, 'no'], [3, 'not sure'], ...COMMON_EXITS],
     unsure: 'The probability landed inside the band. The tool prints null and exits 3.',
-    howtos: ['screen-studies-for-a-review', 'join-two-tables-by-meaning', 'group-alerts-into-incidents', 'screen-a-post-before-it-goes-up', 'check-an-expense-against-the-policy', 'split-a-scanned-packet-into-documents'],
+    howtos: ['screen-studies-for-a-review', 'group-alerts-into-incidents', 'screen-a-post-before-it-goes-up', 'check-an-expense-against-the-policy', 'split-a-scanned-packet-into-documents'],
+    see: {
+      '1-lines': "The refund request answers true and the thank-you note false. \"I want to send this back.\" could mean an exchange or money back, so it lands inside the band as null.",
+      '2-case': "Sending it back could mean an exchange or money back. decide exits 3, and the case sends it to a person. The script then exits 0.",
+      '3-one': "The ticket asks for a refund, so decide prints true and exits 0.",
+      '4-details': "The details put yes at 0.99 for this ticket.",
+      '5-means': "A cancellation is not money back under these words, so decide says false and exits 1.",
+    },
   },
   {
     name: 'choose',
@@ -105,6 +111,9 @@ export const FUNCTIONS = [
     exits: [[0, 'an option came back'], [3, 'not sure'], ...COMMON_EXITS],
     unsure: 'No option reached the threshold. The tool prints null and exits 3. choose never exits 1.',
     howtos: ['rank-the-inbound-leads', 'split-a-scanned-packet-into-documents'],
+    see: {
+      '1-lines': "Each of the first three messages names one team: billing, shipping, and account. The fourth names a parcel and a login, so no team reaches 0.9 and it comes back null.",
+    },
   },
   {
     name: 'tag',
@@ -122,6 +131,11 @@ export const FUNCTIONS = [
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'A label under the bar is left out. An empty list is a good answer and exits 0.',
     howtos: ['code-open-ended-survey-answers'],
+    see: {
+      '1-one': "The message praises the dashboard, reports a crash, and names a double charge, so it gets praise, bug, and billing.",
+      '2-details': "praise, bug, and billing each clear 0.5.",
+      '3-labels': "Each line gets the one label its description fits.",
+    },
   },
   {
     name: 'score',
@@ -137,6 +151,11 @@ export const FUNCTIONS = [
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'score has no threshold and no not-sure answer. It always lands somewhere on the scale. It orders a queue a person reads. Do not use it as a gate.',
     howtos: ['code-open-ended-survey-answers'],
+    see: {
+      '1-one': "The outage scores 2.0, and 2 is Immediate on this scale.",
+      '2-details': "The details put all of the weight on Immediate.",
+      '3-lines': "The address change lands near 0, the Friday deadline near 1, and the login outage at 2.",
+    },
   },
   {
     name: 'filter',
@@ -154,7 +173,12 @@ export const FUNCTIONS = [
     ],
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'No record sets the exit code. A record under the bar is dropped.',
-    howtos: ['triage-a-support-inbox', 'rank-the-inbound-leads'],
+    howtos: ['triage-a-support-inbox', 'join-two-tables-by-meaning', 'rank-the-inbound-leads'],
+    see: {
+      '1-lines': "filter keeps the two complaints: the broken zipper and the snapped strap.",
+      '2-means': "The zipper, the color, and the strap are about the item, so they stay. The early delivery drops out.",
+      '3-csv': "Only R-2 complains, and it comes back as one JSON object, id and all.",
+    },
   },
   {
     name: 'rank',
@@ -173,6 +197,10 @@ export const FUNCTIONS = [
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'rank takes no threshold, so nothing is dropped and nothing is not sure. The sort happens on this machine.',
     howtos: ['rank-the-inbound-leads'],
+    see: {
+      '1-lines': "The outage comes first and the quote due today second. The bill due in a month comes third, and the newsletter that needs no reply comes last.",
+      '2-jsonl': "The checkout crash stops customers from buying, so B-2 comes back first, id and all.",
+    },
   },
   {
     name: 'find',
@@ -194,13 +222,19 @@ export const FUNCTIONS = [
     exits: [[0, 'a line came back'], [3, 'nothing fits, under --none'], ...COMMON_EXITS],
     unsure: 'Without --none, find must pick a line, and it will pick a wrong one. --none is how it says nothing fits. A document past the backend’s token limit is refused, and the command exits 4.',
     howtos: ['group-alerts-into-incidents', 'check-an-expense-against-the-policy'],
+    see: {
+      '1-find': "find prints the line with the 30 day refund deadline.",
+      '2-details': "The second line holds all of the weight.",
+      '3-none': "No line says how to cancel, so find prints nothing and exits 3.",
+      '4-jsonl': "Q1 holds the reset steps, and the whole record comes back.",
+    },
   },
   {
     name: 'annotate',
     primitive: 'Every kind of answer, many at once',
     line: 'Fill out a form for every record.',
-    takes: 'a saved set of questions and your records',
-    gives: 'each record with one answer per question',
+    takes: 'a saved set of questions and your JSON',
+    gives: 'the same JSON with one field added per question. Nested fields ride through unchanged',
     requests: 'It sends one request for each record and each part the questions read.',
     toPerson: true,
     args: 'FILE, the saved question set',
@@ -210,6 +244,10 @@ export const FUNCTIONS = [
     exits: [[0, 'every question was answered'], [6, 'the run finished with failed questions'], ...COMMON_EXITS.map(([code, what]) => [code, code === 5 ? 'the question set could not be read' : what])],
     unsure: 'Each question carries its own threshold, so a question set mixes cuts and bands. A question the backend could not answer is marked failed, counted, and never turned into null. The questions and the evidence together can pass the backend’s token limit for one request. The backend refuses it, and the command exits 4.',
     howtos: ['triage-a-support-inbox'],
+    see: {
+      '0-json': "One JSON document goes in. The same document comes back with three answers added: steps, area, and impact. The nested report rides through unchanged.",
+      '1-jsonl': "Each report keeps its id and lands in its own area: login, billing, and export. The two with steps say true, and the blue button blocks nothing.",
+    },
   },
   {
     name: 'recognize',
@@ -269,34 +307,62 @@ export const FUNCTIONS = [
     exits: [[5, 'the file could not be read, is not one JSON object, or breaks a rule'], [2, 'the command names the wrong verb for the file']],
     unsure: 'A band in the file sends the answers it is not sure of to a person. Tune it once, and the hook, the test, and the pipeline all run the same question.',
     howtos: [],
+    see: {
+      '1-yes': "The saved question answers true for a plain request for money back.",
+      '2-unsure': "Sending it back could mean an exchange or money back, so the saved question prints null and exits 3.",
+    },
     notAFunction: true,
   },
 ];
 
-// The last stage of a shell command, split on pipes outside quotes.
-function lastStage(command) {
+// The function whose exit code a script ends with. The last command of
+// the script counts, with heredoc bodies and `test` asserts set aside. A
+// script that ends in a block, or in another tool such as jq, gives null,
+// because that block or tool set the code.
+export function lastFunction(script) {
+  const lines = [];
+  let until = null;
+  for (const line of script.split('\n')) {
+    if (until) { if (line.trim() === until) until = null; continue; }
+    const doc = /<<-?\s*'?(\w+)'?/.exec(line);
+    if (doc) until = doc[1];
+    if (/^\s*test\s/.test(line) || !line.trim()) continue;
+    lines.push(line);
+  }
+  // Join the lines a trailing backslash or pipe continues.
+  const commands = [];
+  for (const line of lines) {
+    const prev = commands.at(-1);
+    if (prev !== undefined && /(\\|\|)\s*$/.test(prev)) commands[commands.length - 1] = prev.replace(/\\\s*$/, ' ') + ' ' + line.trim();
+    else commands.push(line.trim());
+  }
+  const last = commands.at(-1) || '';
   let quote = null;
   let start = 0;
-  for (let i = 0; i < command.length; i++) {
-    const c = command[i];
+  for (let i = 0; i < last.length; i++) {
+    const c = last[i];
     if (quote) { if (c === quote) quote = null; continue; }
     if (c === "'" || c === '"') quote = c;
-    else if (c === '|' && command[i + 1] !== '|' && command[i - 1] !== '|') start = i + 1;
+    else if (c === '|' && last[i + 1] !== '|' && last[i - 1] !== '|') start = i + 1;
   }
-  return command.slice(start).trim();
+  const found = /^thinkthen\s+([a-z-]+)/.exec(last.slice(start).trim());
+  return found ? found[1] : null;
 }
 
-// The word printed after an exit code: the function's own meaning for it.
-// null when the function is unknown or the command ends in another tool.
-export function exitWord(command, exit, fn = null) {
-  let name = fn;
-  if (!name) {
-    const found = /^thinkthen\s+([a-z-]+)/.exec(lastStage(command || ''));
-    name = found && found[1];
-  }
+// The mark after a script's output: its exit code, a word, and a colour.
+// The word is the function's own meaning for the code. Green, red, and
+// amber go only to a single answer: yes, no, or not sure. A record run, a
+// finished run, and a script that ends in another tool stay plain.
+export function exitMark(script, exit) {
+  const name = lastFunction(script || '');
   const entry = FUNCTIONS.find((f) => f.name === name);
-  const row = entry && entry.exits.find(([code]) => code === exit);
-  return row ? row[1] : null;
+  const records = /--(lines|jsonl|csv|tsv)\b/.test(script || '');
+  if (!entry) return { word: null, cls: exit === 0 ? 'plain' : outcomeOf(exit) };
+  if (records && exit === 0) return { word: 'the run finished', cls: 'plain' };
+  const row = entry.exits.find(([code]) => code === exit);
+  const word = row ? row[1] : null;
+  const answer = exit !== 0 || !['the run finished', 'every question was answered'].includes(word);
+  return { word, cls: answer ? outcomeOf(exit) : 'plain' };
 }
 
 export const CODE_FUNCTIONS = FUNCTIONS.filter((f) => !f.notAFunction);
@@ -309,8 +375,8 @@ export const SURFACES = [
     blurb: 'Pipe text in, read the answer out, and branch on the exit code.',
     unsureWord: 'null, and exit code 3',
     install: [
-      ['brew install genomoncology/thinkthen/thinkthen', 'Homebrew tap.'],
       ['curl -fsSL https://thinkthen.dev/install.sh | sh', 'Download script.'],
+      ['brew install botassembly/thinkthen/thinkthen', 'Homebrew, an option on a Mac.'],
     ],
     particular: [
       'Standard in carries the evidence. Standard out carries the answer, and nothing else.',
@@ -398,7 +464,7 @@ export const SURFACES = [
     lang: 'sql', tab: 'SQL',
     blurb: 'Ask a question in WHERE, SELECT, or ORDER BY.',
     unsureWord: 'NULL',
-    install: [['duckdb -unsigned', 'The build loads unsigned today. The query loads the extension file first.']],
+    install: [['duckdb -unsigned', 'DuckDB loads the extension unsigned. The query loads the extension file first.']],
     particular: ['A whole column chunk crosses at once.'],
   },
   {
@@ -434,109 +500,158 @@ export const TAB_SURFACE = {
   Ruby: 'ruby', R: 'r', Rust: 'rust', SQL: 'duckdb',
 };
 
+// The business how-tos. Each page runs the scripts in
+// examples/how-tos/<slug>/, and `see` says what to look for in each.
 export const HOWTOS = [
   {
     slug: 'triage-a-support-inbox', title: 'Triage a support inbox', reader: 'for support teams',
     said: 'Keep the messages that need a reply, and label each by kind and urgency. `filter` keeps them. `annotate` labels them.',
-    functions: ['filter', 'annotate'], input: 'inbox.txt', forms: ['inbox-form.json'], runs: ['01-inbox'],
-    see: { '01-inbox': 'Three messages need a reply, each beside its kind and its urgency from 0 to 2. The order needed tonight sits near 2, Immediate. The thank-you note drops out.' },
+    functions: ['filter', 'annotate'],
+    see: { '1-inbox': 'Three messages need a reply, each beside its kind and its urgency from 0 to 2. The order needed tonight sits near 2, Immediate. The thank-you note drops out.' },
   },
   {
     slug: 'screen-studies-for-a-review', title: 'Screen studies for a review', reader: 'for researchers',
     said: 'Sort the clear studies in or out, and hand a person the ones that give too little to judge. `decide` with a band does both.',
-    functions: ['decide'], input: 'studies.txt', runs: ['03-studies'],
-    see: { '03-studies': 'The survey with a result is true and the opinion essay is false. The bare title gives too little to judge, so it comes back null for a person.' },
+    functions: ['decide'],
+    see: { '1-studies': 'The survey with a result is true and the opinion essay is false. The bare title gives too little to judge, so it comes back null for a person.' },
   },
   {
     slug: 'code-open-ended-survey-answers', title: 'Sort survey answers by mood and problem', reader: 'for survey and market researchers',
     said: 'Place every answer between unhappy and happy, then name what went wrong. `score` places them. `tag` names the problem.',
-    functions: ['score', 'tag'], input: 'answers.txt', runs: ['04-answers'],
-    see: { '04-answers': 'Three answers are unhappy. Each prints beside its tag: price, bugs, and speed.' },
+    functions: ['score', 'tag'],
+    see: { '1-answers': 'Three answers are unhappy. Each prints beside its tag: price, bugs, and speed. The happy answer drops out.' },
   },
   {
     slug: 'join-two-tables-by-meaning', title: 'Join two tables by meaning', reader: 'for data analysts',
-    said: 'Match each ticket to the incident it describes, even when the words differ. `decide` judges each pair.',
-    functions: ['decide'], input: 'tickets.txt', runs: ['05-join'],
-    also: {
-      file: 'incidents.txt',
-      text: 'INC-1 payment gateway returns 500\nINC-2 nightly export queue backed up',
-      note: '`jq` pairs every ticket with every incident. The first command reads those pairs from `pairs.txt`.',
-    },
-    see: { '05-join': 'Of the four pairs, the two that match come back: the card failure with the payment gateway, and the late export with the export queue.' },
+    said: 'Match each ticket to the incident it describes, even when the words differ. The loop pairs every ticket with every incident. `filter` keeps the pairs that match.',
+    functions: ['filter'],
+    see: { '1-join': 'Of the four pairs, the two that match come back: the card failure with the payment gateway, and the late export with the export queue.' },
   },
   {
     slug: 'group-alerts-into-incidents', title: 'Group alerts into incidents', reader: 'for on-call engineers',
     said: 'Tell whether a new alert belongs to an open incident. `find` picks the incident, or none. `decide` confirms the match.',
-    functions: ['find', 'decide'], input: 'incidents-open.txt', runs: ['06-alert', '06-alert-none'],
-    given: '`$alert` holds the new alert. The first run sets it to "Card charges fail with 500 at checkout" and the second to "Disk is full on the backup server".',
+    functions: ['find', 'decide'],
     see: {
-      '06-alert': 'The card failure matches INC-1. find prints it, and decide confirms it with true.',
-      '06-alert-none': 'No open incident covers a full disk. find prints nothing and exits 3, so decide never runs.',
+      '1-match': 'find picks INC-1 for the card failure, and decide confirms the match with true.',
+      '2-none': 'No open incident covers a full disk. find prints nothing, so decide never runs.',
     },
   },
   {
     slug: 'rank-the-inbound-leads', title: 'Rank the inbound leads', reader: 'for sales teams',
     said: 'Drop the noise, put the buyer ready to pay first, and send each to the right sales team. `filter`, `rank`, and `choose` do it in one pipeline.',
-    functions: ['filter', 'rank', 'choose'], input: 'leads.txt', runs: ['07-leads'],
-    see: { '07-leads': 'The unsubscribe and the compliment on the talk drop out. Neither asks to buy. The team of six buying today comes first and goes to smb. The 200 seats next quarter go to enterprise.' },
+    functions: ['filter', 'rank', 'choose'],
+    see: { '1-leads': 'The unsubscribe and the compliment on the talk drop out. Neither asks to buy. The team of six buying today comes first and goes to smb. The 200 seats next quarter go to enterprise.' },
   },
   {
     slug: 'screen-a-post-before-it-goes-up', title: 'Screen a post before it goes up', reader: 'for community moderators',
     said: 'Judge a post against each rule on its own. `decide` asks one narrow question per rule.',
-    functions: ['decide'], input: 'post.txt', runs: ['08-insult', '08-spam'],
+    functions: ['decide'],
     see: {
-      '08-insult': 'The post calls the author an idiot, so decide says true and exits 0.',
-      '08-spam': 'The post is not spam, so decide says false and exits 1.',
+      '1-insult': 'The post calls the author an idiot, so decide says true and exits 0.',
+      '2-spam': 'The post is not spam, so decide says false and exits 1.',
     },
   },
   {
     slug: 'check-an-expense-against-the-policy', title: 'Check an expense against the policy', reader: 'for finance staff',
     said: 'Check an expense against your policy. `find` pulls the rule. `decide` says whether the expense fits.',
-    functions: ['find', 'decide'], input: 'policy.txt', runs: ['09-expense'],
-    given: '`$expense` holds the expense: Client dinner, $60 a head.',
-    see: { '09-expense': 'The rule find pulled prints beside the answer. The $60 dinner fits the $75 meal rule.' },
+    functions: ['find', 'decide'],
+    see: { '1-expense': 'The rule find pulled prints beside the answer. The $60 dinner fits the $75 meal rule.' },
   },
   {
     slug: 'split-a-scanned-packet-into-documents', title: 'Split a scanned packet into documents', reader: 'for back-office staff',
     said: 'Split a stack of scanned pages into documents. `choose` says what kind each page is. `decide` marks where a new document starts.',
-    functions: ['choose', 'decide'], input: 'pages.txt', runs: ['11-kinds', '11-gaps'],
+    functions: ['choose', 'decide'],
     see: {
-      '11-kinds': 'Three invoice pages and one notice.',
-      '11-gaps': 'The two pages of Invoice 7 stay together. A new document starts at Invoice 8 and at the notice.',
+      '1-kinds': 'Three invoice pages and one notice.',
+      '2-gaps': 'awk pairs each page with the one before it. The two pages of Invoice 7 stay together. A new document starts at Invoice 8 and at the notice.',
     },
   },
 ];
 
-// The shell recipes. Each one is a recorded run from the deck's recipes/run.sh.
-// `files` names the inputs the page shows, and `see` says what to look for.
-export const RECIPES = [
+// The Bash techniques and recipes under /how-tos/bash/. Each page runs the
+// scripts in examples/how-tos/bash/<slug>/. A technique teaches one shell
+// form. A recipe does one job with the tools you already have.
+export const TECHNIQUES = [
   {
-    slug: 'label-a-json-file', title: 'Label a JSON file and keep its ids',
-    said: 'Label every ticket in a JSON array by kind and urgency. `--field /body` sends only the body, so the id and the date ride through. Run it again and the saved answers come back at no further cost.',
-    files: ['tickets.json', 'triage.json'], runs: ['tickets', 'tickets-again'],
+    slug: 'if', title: 'Branch with if', label: 'if',
+    said: '`decide --quiet` prints nothing. Its exit code is the answer, so `if` reads it directly.',
+    see: { '1-if': 'The ticket asks for a refund, so the if branch picks the refunds queue.' },
+  },
+  {
+    slug: 'case', title: 'Route with case', label: 'case',
+    said: '`choose --raw` prints the bare label. `case` sends each label to its own queue.',
+    see: { '1-case': 'The password message belongs to account, so the queue is identity.' },
+  },
+  {
+    slug: 'not-sure', title: 'Handle not sure', label: 'not sure',
+    said: '`case $?` reads the three exit codes of `decide`: 0 for yes, 1 for no, and 3 for not sure.',
+    see: { '1-route': 'The refund goes to refunds and the thanks gets a reply. The send-back line lands in the band and goes to a person.' },
+  },
+  {
+    slug: 'threshold-band', title: 'Set a cut or a band', label: 'cut or band',
+    said: 'One number is a cut. Two numbers are a band, and the middle comes back as null.',
     see: {
-      tickets: 'Each ticket keeps its id and date, and gains a kind and an urgency from 0 to 2. The double bill in September is billing.',
-      'tickets-again': 'The same command again. Every answer comes from the saved answers, and no request is sent.',
+      '1-cut': 'At a cut of 0.5, the send-back line counts as a refund.',
+      '2-band': 'With a band from 0.2 to 0.8, the same line comes back null for a person.',
     },
   },
   {
-    slug: 'review-a-diff-by-what-it-does', title: 'Review a diff by what it does',
+    slug: 'while-read', title: 'Loop over lines', label: 'while read',
+    said: '`while read` hands each line to `decide` on its own. The loop acts on each answer.',
+    see: { '1-loop': 'The two complaints open a case. The thanks and the question about blue do not.' },
+  },
+  {
+    slug: 'pipeline', title: 'Chain questions with pipes', label: 'pipes',
+    said: 'Two filters in a row keep the records that pass both questions.',
+    see: { '1-and': 'The first filter keeps what is about the item. The second keeps the complaints among them. The question about blue is not a complaint, so it drops out.' },
+  },
+  {
+    slug: 'batches', title: 'Ask many files at once', label: 'xargs',
+    said: 'A function asks one question of one file. `xargs -P 4` runs it on four files at a time.',
+    see: { '1-xargs': 'Two tickets ask for money back: T-1 and T-3.' },
+  },
+  {
+    slug: 'ci-gate', title: 'Fail a build', label: 'CI gate',
+    said: '`filter` finds the lines that hedge. The script exits 1 when it finds any, and the build fails.',
+    see: {
+      '1-pass': 'No line hedges, so the check prints nothing and passes.',
+      '2-fail': 'One line hedges. The check prints it and exits 1.',
+    },
+  },
+];
+
+export const RECIPES = [
+  {
+    slug: 'label-a-json-file', title: 'Label a JSON file and keep its ids', label: 'Label a JSON file',
+    said: 'Label every ticket in a JSON array by kind and urgency. `--field /body` sends only the body, so the id and the date ride through. Run it again and the saved answers come back at no further cost.',
+    see: {
+      '1-label': 'Each ticket keeps its id and date, and gains a kind and an urgency from 0 to 2. The double bill in September is billing.',
+      '2-again': 'The same command again, with the details of the first ticket. The answers come from the saved answers, and no request is sent.',
+    },
+  },
+  {
+    slug: 'review-a-diff-by-what-it-does', title: 'Review a diff by what it does', label: 'Review a diff',
     said: '`jq` cuts a unified diff into hunks. `decide` asks of each hunk whether it changes what the code does, and the file and hunk header ride through.',
-    files: ['change.diff', 'hunks.jq'], runs: ['diff'],
-    see: { diff: 'Two hunks change what the code does: the refund limit and the rounded tax. The comment and the rename do not.' },
+    see: { '1-diff': 'Two hunks change what the code does: the refund limit and the rounded tax. The comment and the rename do not.' },
   },
   {
-    slug: 'lint-prose-for-hedging', title: 'Lint prose for hedging',
+    slug: 'lint-prose-for-hedging', title: 'Lint prose for hedging', label: 'Lint prose',
     said: '`jq` numbers the lines. `filter` keeps the lines that hedge, and each comes back as it went in, line number and all.',
-    files: ['draft.txt'], runs: ['lint'],
-    see: { lint: 'The two hedging lines come back with their line numbers.' },
+    see: { '1-lint': 'The two hedging lines come back with their line numbers.' },
   },
   {
-    slug: 'fill-a-form-by-selection', title: 'Fill a form by selection',
+    slug: 'fill-a-form-by-selection', title: 'Fill a form by selection', label: 'Fill a form',
     said: 'Every field is a pick from a list you wrote, or true or false. No character in the form comes from a model.',
-    files: ['requests.jsonl', 'form.json'], runs: ['form'],
-    see: { form: 'Each request gets a plan, a topic, and whether to call back, all from the lists in form.json.' },
+    see: { '1-form': 'Each request gets a plan, a topic, and whether to call back, all from the lists in the form.' },
   },
+];
+
+// The Bash section in side-list order. Its first page is the section's index.
+export const BASH_FIRST = { slug: '', title: 'Bash techniques', label: 'Bash techniques', route: '/how-tos/bash/', group: null };
+export const BASH = [
+  BASH_FIRST,
+  ...TECHNIQUES.map((t) => ({ ...t, group: 'Techniques', route: `/how-tos/bash/${t.slug}/` })),
+  ...RECIPES.map((r) => ({ ...r, group: 'Recipes', route: `/how-tos/bash/${r.slug}/` })),
 ];
 
 // Measured facts. Every one names the run it came from.

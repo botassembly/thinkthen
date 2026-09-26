@@ -1,8 +1,12 @@
 ---
+// Goal: say where every question goes by default, how the key is kept
+// safe, and how to point ThinkThen at another backend.
 import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
 import { KEY_VARIABLE } from '../../data/catalog.mjs';
-import { PAGE_RUNS } from '../../data/examples.mjs';
+import { run } from '../../data/samples.mjs';
+
+const dryRun = run('install/backends', '1-dry-run');
 ---
 <Base title="Backends" description="The default vendor and model, where the key goes, the cache, what the tool counts, and the second backend.">
   <h1>Backends</h1>
@@ -50,8 +54,8 @@ import { PAGE_RUNS } from '../../data/examples.mjs';
 
   <h2><code>--dry-run</code></h2>
   <p><code>--dry-run</code> prints what the command would send and then stops. It calls no backend, it reads no key, and it sends nothing. <code>--record</code> or <code>--replay</code> beside it is a usage error.</p>
-  <Terminal run={PAGE_RUNS['dry-run']} caption="The plan names the address, the model, and the variable a key would come from, and it holds no key." />
-  <p>The plan is one compact JSON document with four fields: <code>url</code>, <code>model</code>, <code>key_env</code>, and <code>request</code>. <code>request</code> is the body the adapter would send, as a JSON value and never as a string. <code>key_env</code> names the variable a key would be read from. A script can use it to prove the key stayed home. The plan never holds the value.</p>
+  <Terminal run={dryRun} caption="The plan names the address, the model, and the variable a key would come from, and it holds no key." />
+  <p>The plan is one JSON document with four fields. <code>jq .</code> prints it pretty above. The fields are <code>url</code>, <code>model</code>, <code>key_env</code>, and <code>request</code>. <code>request</code> is the body the adapter would send, as a JSON value and never as a string. <code>key_env</code> names the variable a key would be read from. A script can use it to prove the key stayed home. The plan never holds the value.</p>
   <p>The plan does carry the evidence, because the evidence would leave the machine. A plan deserves the same care as the request itself.</p>
   <p>In record mode the plan gains an <code>input</code> field describing the framing and the pointers, and it prints for the first record only. A run that read a question file adds a <code>from</code> object naming each setting's source: the file, the command line, or the default.</p>
 

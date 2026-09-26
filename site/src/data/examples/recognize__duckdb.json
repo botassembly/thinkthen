@@ -1,8 +1,0 @@
-{
-  "status": "drawn",
-  "source": "deck recognize-surfaces.md",
-  "lang": "sql",
-  "code": "-- DuckDB: a list of structs, and unnest() makes rows\nCREATE TABLE tickets AS FROM (VALUES\n    (1, 'Maria Chen joined Northwind Freight, a company in Chicago.')) t(id, body);\nSELECT id, unnest(thinkthen_recognize(body,\n    ['person', 'organization', 'place'])) AS name FROM tickets;\n-- 1 | Maria Chen | person\n-- 1 | Northwind Freight | organization\n-- 1 | Chicago | place\nSELECT * FROM thinkthen_relations((SELECT body FROM tickets), '@names.json');\n-- works_for | 1 | 2\n-- based_in | 2 | 3",
-  "function": "recognize",
-  "surface": "duckdb"
-}

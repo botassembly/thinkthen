@@ -1,10 +1,12 @@
 ---
+// Goal: say in one screen what ThinkThen does, show one real call in the
+// reader's language, and point to the functions, the bench, and the jobs.
 import Base from '../layouts/Base.astro';
 import Terminal from '../components/Terminal.astro';
 import Code from '../components/Code.astro';
 import InstallLine from '../components/InstallLine.astro';
-import { CODE_FUNCTIONS, SURFACES, HOWTOS } from '../data/catalog.mjs';
-import { cell, SURFACE_SAMPLES } from '../data/examples.mjs';
+import { CODE_FUNCTIONS, SURFACES, HOWTOS, FUNCTIONS } from '../data/catalog.mjs';
+import { captioned, firstCall } from '../data/samples.mjs';
 
 const tabs = [
   { label: 'Bash', alias: 'Bash', surface: 'shell' },
@@ -16,7 +18,7 @@ const tabs = [
   { label: 'SQL', alias: 'SQL', surface: 'duckdb' },
 ];
 
-const bash = [cell('filter', 'shell').runs[0]];
+const bash = captioned('functions/filter', FUNCTIONS.find((f) => f.name === 'filter').see)[0];
 const surfaceOf = (slug) => SURFACES.find((s) => s.slug === slug);
 const sixHowtos = HOWTOS.slice(0, 6);
 ---
@@ -35,12 +37,13 @@ const sixHowtos = HOWTOS.slice(0, 6);
       ))}
     </div>
     <div class="cell" data-lang="Bash">
-      {bash.map((run) => <Terminal run={run} caption="filter keeps the two complaints." />)}
+      <Terminal run={bash} caption={bash.see} />
       <InstallLine line={surfaceOf('shell').install[0][0]} caption="Install the command" />
+      <InstallLine line={surfaceOf('shell').install[1][0]} caption="Or with Homebrew, an option on a Mac" />
     </div>
     {tabs.slice(1).map((t) => (
       <div class="cell" data-lang={t.label} hidden>
-        <Code code={SURFACE_SAMPLES[t.surface].code} />
+        <Code code={firstCall(t.surface).code} />
         <InstallLine line={surfaceOf(t.surface).install[0][0]} caption={`Install it for ${surfaceOf(t.surface).name}`} />
       </div>
     ))}

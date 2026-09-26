@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Do you ship to Canada?","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this need a reply?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.89}},"usage":{"input_tokens":278,"output_tokens":21}}
+}

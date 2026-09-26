@@ -157,7 +157,7 @@ function blocks(node, out) {
         .filter((k) => k.tag !== '#text' && !SKIP.has(k.tag))
         .map((k) => tidy(inline(k)))
         .filter(Boolean);
-      if (parts.length) out.push('*' + parts.join(' \u2014 ') + '*');
+      if (parts.length) out.push('*' + parts.join('. ') + '*');
       continue;
     }
     if (kid.tag === 'div' && (cls.includes('tile') || cls.includes('fact') || cls.includes('outcome'))) {

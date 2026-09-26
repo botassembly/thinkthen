@@ -1,0 +1,42 @@
+{
+  "schema": "thinkthen.result/1",
+  "value": "john",
+  "question": {
+    "verb": "choose",
+    "text": "The text is the title of a song by the Beatles. Who sings the lead vocal on it?",
+    "options": [
+      "john",
+      "paul",
+      "george",
+      "ringo"
+    ]
+  },
+  "answer": {
+    "kind": "choice",
+    "pick": "john",
+    "probabilities": {
+      "john": 0.38,
+      "paul": 0.21,
+      "george": 0.13,
+      "ringo": 0.28
+    },
+    "confidence": 0.17
+  },
+  "threshold": null,
+  "meta": {
+    "tool": "thinkthen 0.0.1",
+    "question_sha256": "b5ae82757275400e42285b805a4b1f82a75397a3922afbbb5fd919f300aac130",
+    "url": "https://api.typesafe.ai/v1/systemone",
+    "model": "jev-1.13.0",
+    "usage": {
+      "input_tokens": 361,
+      "output_tokens": 49
+    },
+    "requests_sent": 0,
+    "cached": true,
+    "requests": [
+      "c448cb0c22f31aeab4a5d42154b83163f51370f49d44d4ab3dd67ee79028a950"
+    ],
+    "failed_questions": 0
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Does this come in blue?","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Is this about the item itself?","criteria":{"true":"Its build, size, color, or parts.","false":"Delivery, price, or service."}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.94}},"usage":{"input_tokens":312,"output_tokens":21}}
+}

@@ -1,9 +1,12 @@
 ---
+// Goal: show what one function takes and gives, with its simplest real run
+// first, ahead of any prose, and each option taught once.
 import Base from '../../../layouts/Base.astro';
 import Terminal from '../../../components/Terminal.astro';
+import Code from '../../../components/Code.astro';
 import CrossView from '../../../components/CrossView.astro';
 import { FUNCTIONS, HOWTOS } from '../../../data/catalog.mjs';
-import { cell } from '../../../data/examples.mjs';
+import { captioned, files } from '../../../data/samples.mjs';
 import { beatlesPageFor } from '../../../data/beatles.mjs';
 
 export function getStaticPaths() {
@@ -11,8 +14,9 @@ export function getStaticPaths() {
 }
 
 const { fn } = Astro.props;
-const shell = cell(fn.name, 'shell');
-const runs = shell.status === 'run' ? shell.runs : [];
+const page = `functions/${fn.name}`;
+const runs = captioned(page, fn.see, true);
+const inputs = files(page);
 const first = runs[0];
 const rest = runs.slice(1);
 const howtos = HOWTOS.filter((h) => fn.howtos.includes(h.slug));
@@ -24,17 +28,14 @@ const bench = beatlesPageFor(fn.name);
 <Base title={title} description={fn.line}>
   <div class="eyebrow">{fn.notAFunction ? 'a saved question' : fn.primitive}</div>
   <h1><code>{title}</code>: {line}</h1>
+  {inputs.map((file) => <Code code={file.text} caption={`${file.name}, a file the examples read`} />)}
+  {first && <Terminal run={first} caption={first.see} />}
   {fn.lede ? (
     <p class="lede" set:html={fn.lede} />
   ) : (
-    <p class="lede">You give it {fn.takes}. You get back {fn.gives}.{!fn.notAFunction && <> Every answer carries a probability, and <code>--details</code> prints it.</>}</p>
+    <p class="lede">You give it {fn.takes}. You get back {fn.gives}.{!fn.notAFunction && fn.name !== 'recognize' && <> Every answer carries a probability, and <code>--details</code> prints it.</>}</p>
   )}
-  {first && (
-    <>
-      <h2>The simplest example</h2>
-      <Terminal run={first} caption={first.see} />
-    </>
-  )}
+  {!first && bench && <p>See <code>{fn.name}</code> run on Beatles Bench: <a href={bench.route}>{bench.title}</a></p>}
 
   <h2>When it is not sure, and when it fails</h2>
   <p>{fn.unsure}</p>
@@ -49,7 +50,7 @@ const bench = beatlesPageFor(fn.name);
   {fn.toPerson && <p>Send the not-sure answers to a person.</p>}
 
   <h2>Call it from your language</h2>
-  <CrossView fn={fn.name} />
+  <CrossView fn={fn.name} above={Boolean(first)} />
 
   <h2>The options</h2>
   <p>It takes <code>{fn.args}</code>{fn.args.endsWith('.') ? '' : '.'}</p>
@@ -78,5 +79,5 @@ const bench = beatlesPageFor(fn.name);
     </>
   )}
 
-  {bench && <p>Watch <code>{fn.name}</code> answer questions about Beatles songs: <a href={bench.route}>{bench.title}</a></p>}
+  {first && bench && <p>Watch <code>{fn.name}</code> answer questions about Beatles songs: <a href={bench.route}>{bench.title}</a></p>}
 </Base>

@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The export runs every night at two.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this sentence hedge?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.04}},"usage":{"input_tokens":279,"output_tokens":21}}
+}

@@ -1,8 +1,0 @@
-{
-  "status": "drawn",
-  "source": "deck recognize-surfaces.md",
-  "lang": "ts",
-  "code": "const text = \"Maria Chen joined Northwind Freight, a company in Chicago.\";\nconst found = await tt.recognize(text, {\n  kinds: [\"person\", \"organization\", \"place\"],\n  relations: { works_for: [\"person\", \"organization\"],\n               based_in: [\"organization\", \"place\"] },\n});\n// 1 Maria Chen, a person; 2 Northwind Freight, an\n// organization; 3 Chicago, a place\nfor (const name of found.entities) console.log(name.id, name.text, name.kind);\n// works_for 1 → 2, and based_in 2 → 3\nfor (const link of found.relations) console.log(link.name, link.source, link.target);",
-  "function": "recognize",
-  "surface": "typescript"
-}

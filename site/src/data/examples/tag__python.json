@@ -1,8 +1,0 @@
-{
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "python",
-  "code": "import thinkthen as tt\n\n# praise, a bug, and a double charge in one message\nprint(tt.tag(\"Which labels fit this message?\",\n    \"Love the new dashboard, but export crashes the app, \"\n    \"and I was charged twice.\",\n    labels=[\"praise\", \"bug\", \"billing\"]))",
-  "function": "tag",
-  "surface": "python"
-}

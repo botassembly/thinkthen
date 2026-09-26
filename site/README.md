@@ -1,7 +1,6 @@
 # thinkthen.dev
 
-The site lives in this folder of the thinkthen repository, so the code and the site go public together (Ian, 2026-09-22). The Pages workflow at `.github/workflows/pages.yml` builds from here on a push to `main` that touches `site/`.
-
+The site lives in this folder of the thinkthen repository, so the code and the site go public together (Ian, 2026-09-22). The Pages workflow at `.github/workflows/pages.yml` builds from here when someone runs it by hand.
 
 The site for ThinkThen. Astro, static output, served by GitHub Pages at `thinkthen.dev`.
 
@@ -10,18 +9,25 @@ Tagline on every page: **ThinkThen: code that knows what you mean.**
 ## Build it
 
 ```
+cargo build --release
 npm install
 npm run build
 ```
 
-`npm run build` does four things in order:
+`npm run build` does six things in order:
 
 1. `scripts/write-version.mjs` writes `public/version.json` with the commit it is building.
-2. `astro build` writes `dist/`. It fails if any function-and-surface cell is missing, or a Beatles Bench step has no recorded run.
-3. `scripts/emit-md.mjs` writes a Markdown twin of every page and `dist/llms.txt`.
-4. `scripts/check-links.mjs` fails the build on a broken internal link.
+2. `scripts/check-samples.mjs` checks the rules in `WRITING.md` that a script can see: line length, asserts, whole details, no comments, and a goal on every page.
+3. `scripts/smoke.mjs` runs every example against the command built from this commit and compares what it printed with the saved output.
+4. `astro build` writes `dist/`. It fails when a script has no caption or no saved output.
+5. `scripts/emit-md.mjs` writes a Markdown twin of every page and `dist/llms.txt`.
+6. `scripts/check-links.mjs` fails the build on a broken internal link.
 
-`npm run dev` serves the site while you work. `npm run check` runs the link check on the last build.
+`npm run dev` serves the site while you work. `npm run check` runs the sample check, the smoke run, and the link check on the last build.
+
+## Writing a page
+
+Read `WRITING.md` first. It holds the page rules, the code rules, and how an example is added, recorded, and refreshed.
 
 ## The menu
 
@@ -29,41 +35,21 @@ Five entries: Install, Functions, How-tos, Learn, and Blog. Trust, Reference, an
 
 ## Where the examples come from
 
-Every code sample on this site is pulled from somewhere else. Nothing is typed into a page by hand, so a page cannot drift from the code.
+Every command and code sample on the site is a file under `examples/`. `src/data/samples.mjs` reads them for the pages, and `src/lib/remark-examples.mjs` puts them into the articles. The smoke run replays every script from a saved recording, with no key and no network. `WRITING.md` gives the layout, the skip list, and the refresh steps.
 
-```
-npm run pull
-```
-
-`scripts/pull-examples.mjs` reads the deck folder named by `THINKTHEN_DECK` and writes one file per function-and-surface cell into `src/data/examples/`. Those files are committed, so a build never reaches outside this repository.
-
-Each cell carries a status. The status stays in the data. No page shows it, because the site goes up after 0.1 (Ian, 2026-09-26).
-
-| Status | What it means | Where it comes from |
-| --- | --- | --- |
-| `run` | The command really printed this. | The command from the deck's `examples/run.sh`, the output from `examples/out/*.txt`, and the exit code from the last line of that file. |
-| `drawn` | A library sample taken from the deck. | The deck's `surfaces.md` and `recognize-surfaces.md`. |
-| `planned` | Nothing is written for this cell yet. | The page says it has no sample. |
-
-The how-to pages work the same way: the commands come from the deck's `usecases/run.sh` and the output from `usecases/out/`.
-
-`src/data/examples.mjs` checks every cell at build time. A missing file, an unknown status, a `run` cell with no example, or a `drawn` cell with no code all fail the build.
-
-The names, the order, the one line for each function, and the option tables live in `src/data/catalog.mjs`. The one line for each function is the help text's first line, copied from the vocabulary page.
-
-The first article lives in `src/articles/code-that-understands.md`.
+The names, the order, the captions, the one line for each function, and the option tables live in `src/data/catalog.mjs`.
 
 ## Where the Beatles Bench pages come from
 
-The pages under `/learn/beatles-bench/` follow the talk "Analyzing the Beatles using Jev". `src/data/beatles.mjs` holds each page's words and its commands. The slides sit in `public/learn/beatles-bench/`.
-
-Every command answers from a recording saved in Beatles Bench. This command runs each one in a copy of a bench checkout, with no key, and checks what it prints against `src/data/beatles/runs.json`:
+The pages under `/learn/beatles-bench/` follow the talk "Analyzing the Beatles using Jev". `src/data/beatles.mjs` holds each page's words. The slides sit in `public/learn/beatles-bench/`. The scripts sit in `examples/beatles/`, and `examples/beatles/bench/` holds the files they read from the bench commit in `examples/beatles/BENCH`. To copy those files again from a checkout at that commit:
 
 ```
-BEATLES_BENCH=path/to/beatles-bench npm run beatles-replay
+BEATLES_BENCH=path/to/beatles-bench npm run pull-bench
 ```
 
-Add `-- --write` to record the output again. `THINKTHEN_BIN` names the command to run. The page shows the recorded output, so no output is typed by hand.
+## The Bash techniques
+
+`/how-tos/bash/` teaches the shell forms: `if`, `case`, exit codes, bands, loops, pipes, `xargs`, and a CI gate. The shell recipes sit beside them. `TECHNIQUES` and `RECIPES` in `src/data/catalog.mjs` list the pages, and `examples/how-tos/bash/` holds their scripts.
 
 ## Drafts
 
@@ -104,13 +90,13 @@ Phosphor, from the site plan. Four outcomes, four colours, everywhere an answer 
 | "no", exit 1 | `#ff5d5d` | `#c62828` |
 | "broken", other exits | `#7d8a83` | `#6b746f` |
 
-Dark follows the system and is the default. The Theme button in the header overrides it and the choice is kept for the visit.
+Dark follows the system and is the default. The sun and moon button in the header overrides it, and the choice is kept for the visit.
 
 ## The language choice
 
-The tabs on the home page and the cross-view on every function page share one choice, kept in `localStorage` under `tt-lang`. Pick Ruby once and every code block on every page reads Ruby, falling back to Bash where nothing is written yet. Plain JavaScript, no framework on the client.
+The tabs on the home page and the cross-view on every function page share one choice, kept in `localStorage` under `tt-lang`. Pick Ruby once and every code block on every page reads Ruby, falling back to Bash where a surface has no sample. Plain JavaScript, no framework on the client.
 
 ## What is not here yet
 
 - A pandas page, and a page for any serve mode.
-- Library samples pulled from each library's landed examples in place of the deck.
+- Replay for the library and database samples. They are listed in `examples/SKIP` until each library can answer from a recording.

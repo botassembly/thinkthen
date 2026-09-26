@@ -4,6 +4,7 @@ slug: rad
 author: Ian Maurer
 date: "2026-09-25"
 draft: true
+goal: "Show that putting the facts in the text turns a model's wrong answers into right ones."
 blurb: "Your data sits in no model's memory. Put the facts in the text, then ask the model to decide. On 196 Beatles questions, that moved Jev from 39% to 95%."
 ---
 
@@ -13,7 +14,7 @@ The idea borrows from retrieval-augmented generation, or RAG. RAG finds the righ
 
 ## What Jev knows from memory
 
-We built Beatles Bench to find out what Jev knows. Jev is our small, fast model. The bench holds 306 songs and 1,501 questions, and every answer comes from Wikipedia and Wikidata. From memory, Jev gets 68% of the Beatles questions right. Vector search gets 38%. A big chat model gets 96%, and it takes about 8 seconds an answer.
+We built Beatles Bench to find out what Jev knows. Jev is TypeSafe's small, fast model. The bench holds 306 songs and 1,501 questions, and every answer comes from Wikipedia and Wikidata. From memory, Jev gets 68% of the Beatles questions right. Vector search gets 38%. A big chat model gets 96%, and it takes about 8 seconds an answer.
 
 Jev knows the famous facts. It misses the fine ones: a year, a first album, which of two songs runs longer. Ask it whether Hold Me Tight runs longer than Ticket to Ride, and it picks Hold Me Tight at 0.68. That is wrong.
 

@@ -1,0 +1,42 @@
+{
+  "schema": "thinkthen.result/1",
+  "value": "d",
+  "question": {
+    "verb": "choose",
+    "text": "The text names a member of the Beatles. Which of these songs by the Beatles has this member as its only lead singer?",
+    "options": [
+      "a",
+      "b",
+      "c",
+      "d"
+    ]
+  },
+  "answer": {
+    "kind": "choice",
+    "pick": "d",
+    "probabilities": {
+      "a": 0.02,
+      "b": 0.12,
+      "c": 0.23,
+      "d": 0.63
+    },
+    "confidence": 0.51
+  },
+  "threshold": null,
+  "meta": {
+    "tool": "thinkthen 0.0.1",
+    "question_sha256": "a083db2cce42ca3c58f707217e6de576f23774bcde861f63f9a880bf19cd6a34",
+    "url": "https://api.typesafe.ai/v1/systemone",
+    "model": "jev-1.13.0",
+    "usage": {
+      "input_tokens": 365,
+      "output_tokens": 46
+    },
+    "requests_sent": 0,
+    "cached": true,
+    "requests": [
+      "381c5b0e557f8c36ff089ae0902dcb48cecae65ad68dbc12b862dcd461263221"
+    ],
+    "failed_questions": 0
+  }
+}

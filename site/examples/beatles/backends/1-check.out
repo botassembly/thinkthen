@@ -1,0 +1,4 @@
+url https://your-server/v1/systemone
+provider systemone
+model asked unspecified
+model sent jev-latest

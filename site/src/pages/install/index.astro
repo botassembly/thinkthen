@@ -1,4 +1,5 @@
 ---
+// Goal: give the install line for every surface, command line first.
 import Base from '../../layouts/Base.astro';
 import InstallLine from '../../components/InstallLine.astro';
 import { SURFACES, KEY_VARIABLE } from '../../data/catalog.mjs';
@@ -17,8 +18,8 @@ const tables = [['Languages', 'Language', languages], ['Databases', 'Database', 
   <p class="lede">ThinkThen runs from the command line, from seven languages and libraries, and from three databases. Every one asks the same ten questions.</p>
 
   <h2><a href="/install/shell/">The command line</a></h2>
-  <InstallLine line={shell.install[0][0]} caption="Homebrew" />
-  <InstallLine line={shell.install[1][0]} caption="Download script" />
+  <InstallLine line={shell.install[0][0]} caption="The download script" />
+  <InstallLine line={shell.install[1][0]} caption="Homebrew, an option on a Mac" />
   <p>Set <code>{KEY_VARIABLE}</code> in the environment. No flag and no file carries a key. <code>--dry-run</code> shows what a command would send and needs no key.</p>
 
   {tables.map(([heading, what, list]) => (

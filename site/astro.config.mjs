@@ -1,4 +1,5 @@
 import { defineConfig } from 'astro/config';
+import remarkExamples from './src/lib/remark-examples.mjs';
 
 export default defineConfig({
   site: 'https://thinkthen.dev',
@@ -10,7 +11,10 @@ export default defineConfig({
     '/surfaces': '/install/',
     '/backends': '/install/backends/',
     '/tutorial': '/learn/tutorial/',
-    '/recipes': '/how-tos/',
+    '/recipes': '/how-tos/bash/',
+    // The shell recipes moved into the Bash techniques section.
+    ...Object.fromEntries(['label-a-json-file', 'review-a-diff-by-what-it-does', 'lint-prose-for-hedging', 'fill-a-form-by-selection']
+      .map((slug) => [`/how-tos/${slug}`, `/how-tos/bash/${slug}/`])),
     ...Object.fromEntries(['shell', 'python', 'polars', 'typescript', 'ruby', 'r', 'rust', 'c', 'duckdb', 'sqlite', 'postgresql']
       .map((slug) => [`/${slug}`, `/install/${slug}/`])),
     // The earlier preview kept the bench pages at /beatles-bench/.
@@ -26,6 +30,7 @@ export default defineConfig({
   // light page never carries a dark slab. `wrap` keeps a long line inside the
   // pane.
   markdown: {
+    remarkPlugins: [remarkExamples],
     shikiConfig: {
       themes: { light: 'github-light', dark: 'github-dark' },
       defaultColor: 'light',

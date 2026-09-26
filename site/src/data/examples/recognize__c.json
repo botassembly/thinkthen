@@ -1,8 +1,0 @@
-{
-  "status": "drawn",
-  "source": "deck recognize-surfaces.md",
-  "lang": "c",
-  "code": "const char *text = \"Maria Chen joined Northwind Freight, a company in Chicago.\";\nconst char *spec = \"{\\\"kinds\\\": [\\\"person\\\", \\\"organization\\\", \\\"place\\\"], \"\n    \"\\\"relations\\\": {\\\"works_for\\\": [\\\"person\\\", \\\"organization\\\"], \"\n    \"\\\"based_in\\\": [\\\"organization\\\", \\\"place\\\"]}}\";\nchar *out; size_t out_len;\nif (thinkthen_recognize(tt, spec, text, strlen(text), &out, &out_len) == THINKTHEN_OK)\n    puts(out);\nthinkthen_free_string(out);\n/* entities: 1 Maria Chen (person), 2 Northwind Freight\n   (organization), 3 Chicago (place). relations:\n   works_for 1 → 2, based_in 2 → 3 */",
-  "function": "recognize",
-  "surface": "c"
-}

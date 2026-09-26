@@ -1,55 +1,53 @@
 ---
+// Goal: take a reader from the install line to a pipeline that sorts a
+// stream of messages, one idea per step, every run real.
 import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
 import Code from '../../components/Code.astro';
 import InstallLine from '../../components/InstallLine.astro';
-import { SURFACES, KEY_VARIABLE, HOWTOS } from '../../data/catalog.mjs';
-import { cell, HOWTO_RUNS } from '../../data/examples.mjs';
+import { SURFACES, KEY_VARIABLE, HOWTOS, FUNCTIONS } from '../../data/catalog.mjs';
+import { captioned, files } from '../../data/samples.mjs';
 
 const shell = SURFACES.find((s) => s.slug === 'shell');
-const decide = cell('decide', 'shell').runs;
+const see = (name) => FUNCTIONS.find((f) => f.name === name).see;
+const decide = captioned('functions/decide', see('decide'));
 const run = (name) => decide.find((r) => r.name === name);
 
-const plain = run('decide');
-const answer = run('decide-answer');
-const lines = run('decide-lines');
-const branch = run('decide-case');
+const plain = run('3-one');
+const answer = run('4-details');
+const lines = run('1-lines');
+const branch = run('2-case');
 
-const saved = cell('question-file', 'shell').runs;
-const savedYes = saved.find((r) => r.name === 'question-yes');
-const savedUnsure = saved.find((r) => r.name === 'question-unsure');
+const [savedYes, savedUnsure] = captioned('functions/question-file', see('question-file'));
+const refundFile = files('functions/question-file')[0];
 
-const kept = cell('filter', 'shell').runs.find((r) => r.name === 'filter');
-const sorted = cell('rank', 'shell').runs.find((r) => r.name === 'rank');
-const triage = HOWTO_RUNS['triage-a-support-inbox'];
-
-// The question file and the form come from the recorded runs, so the page
-// shows the bytes the runs read.
-const refundFile = savedYes.also.find((f) => f.name === 'refund.json').text;
-const triageForm = triage.forms[0];
+const kept = captioned('functions/filter', see('filter'))[0];
+const sorted = captioned('functions/rank', see('rank'))[0];
+const triagePage = 'how-tos/triage-a-support-inbox';
+const triage = captioned(triagePage, HOWTOS.find((h) => h.slug === 'triage-a-support-inbox').see);
+const triageForm = files(triagePage)[0];
 ---
 <Base title="Tutorial" description="From the install line to a pipeline that sorts a stream of messages.">
   <h1>Tutorial</h1>
   <p class="lede">This tutorial takes you from installing ThinkThen to a pipeline that sorts a stream of messages. You ask one question, read the number behind the answer, set your own bar, and save the question to a file.</p>
 
   <h2>1. Install it</h2>
-  <InstallLine line={shell.install[0][0]} caption="Homebrew" />
-  <InstallLine line={shell.install[1][0]} caption="Download script" />
+  <InstallLine line={shell.install[0][0]} caption="The download script" />
+  <InstallLine line={shell.install[1][0]} caption="Homebrew, an option on a Mac" />
   <p>Set <code>{KEY_VARIABLE}</code> in the environment. No flag and no file carries a key. Ask for a key before you start. While you wait, <code>--dry-run</code> shows what would be sent. It needs no key. The <a href="/install/">install page</a> carries every other surface.</p>
 
   <h2>2. Ask one question</h2>
-  <p>Pipe the message in and put the question in the arguments. <code>decide</code> prints <code>true</code>, <code>false</code>, or <code>null</code>, and it sets the exit code to match.</p>
-  <Terminal run={plain} caption="decide prints true and exits 0." />
+  <p>Name the question, pipe the message in, and pass the question as an argument. <code>decide</code> prints <code>true</code>, <code>false</code>, or <code>null</code>, and it sets the exit code to match.</p>
+  <Terminal run={plain} caption={plain.see} />
   <p>The exit code is the answer. A script branches on it the way it branches on <code>test</code>.</p>
 
   <h2>3. Look at the number</h2>
-  <p><code>true</code> hides a number. <code>--details</code> prints the whole result, and the model's probability sits under <code>.answer</code>.</p>
-  <Terminal run={answer} caption="The model puts yes at 0.99." />
+  <p><code>true</code> hides a number. <code>--details</code> prints the whole result, and the model's probability sits under <code>answer</code>.</p>
+  <Terminal run={answer} caption={answer.see} />
   <p>That number is the model's own. The tool passes it through and computes nothing.</p>
 
   <h2>4. Set a band</h2>
   <p><code>--threshold</code> is your bar on the probability. One number is a cut, and the default is 0.5. Two numbers make a band: under the low bar is no, over the high bar is yes, and anything between is not sure.</p>
-  <p>Three messages go in, one per line. A plain refund request is yes. A thank-you is no. "I want to send this back." could mean an exchange or money back. It lands in the band.</p>
   <Terminal run={lines} caption={lines.see} />
   <p>The threshold is an input. The model never chooses it, and it never changes the probability. It changes what you call a yes.</p>
 
@@ -59,11 +57,10 @@ const triageForm = triage.forms[0];
 
   <h2>6. Save the question to a file</h2>
   <p>A question worth tuning is worth keeping. A question file holds one question: the words, what a yes and a no mean, and the threshold.</p>
-  <Code code={refundFile} caption="refund.json, the file the two runs below read." copy={true} />
-  <p>Write <code>@refund.json</code> in place of the question words. A clear message passes.</p>
-  <Terminal run={savedYes} caption="The clear message answers yes." />
-  <p>The send-back message could mean an exchange or money back. It lands inside the band and goes to a person.</p>
-  <Terminal run={savedUnsure} caption="The send-back message prints null and exits 3." />
+  <Code code={refundFile.text} caption={`${refundFile.name}, the saved question`} />
+  <p>Write <code>@refund.json</code> in place of the question words.</p>
+  <Terminal run={savedYes} caption={savedYes.see} />
+  <Terminal run={savedUnsure} caption={savedUnsure.see} />
   <p>Tune the file once. Your git hook, your test, and your pipeline then ask the same question.</p>
 
   <h2>7. Judge a stream</h2>
@@ -75,12 +72,8 @@ const triageForm = triage.forms[0];
 
   <h2>8. Ask many questions at once</h2>
   <p><code>annotate</code> fills out a form for every record. The form is a question set: any mix of <code>decide</code>, <code>choose</code>, <code>score</code>, and <code>tag</code> questions in one file, under <code>"version": 1</code>.</p>
-  <Code code={triageForm.text} caption={`${triageForm.name}, the question set the run below fills out.`} copy={true} />
-  <div class="block">
-    <div class="caption"><span class="grow">{triage.inputFile}, the file the pipeline reads.</span></div>
-    <pre>{triage.input}</pre>
-  </div>
-  {triage.steps.map((step) => <Terminal run={step} caption={HOWTOS.find((h) => h.slug === 'triage-a-support-inbox').see[step.name]} />)}
+  <Code code={triageForm.text} caption={`${triageForm.name}, the question set`} />
+  {triage.map((step) => <Terminal run={step} caption={step.see} />)}
   <p>One message left the pipeline at the <code>filter</code>. Three records reached the form. Each record comes back with one field per question.</p>
 
   <h2>What you have now</h2>
@@ -93,5 +86,5 @@ const triageForm = triage.forms[0];
   </ul>
   <p>ThinkThen answers. Your code acts. It never runs a command and it never writes a file you did not name.</p>
 
-  <p class="pagelinks"><a href="/learn/beatles-bench/">Next: Beatles Bench</a> · <a href="/how-tos/">Try a how-to</a></p>
+  <p class="pagelinks"><a href="/learn/beatles-bench/">Next: Beatles Bench</a> · <a href="/how-tos/bash/">Learn the Bash techniques</a></p>
 </Base>

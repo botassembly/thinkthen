@@ -1,8 +1,0 @@
-{
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "sql",
-  "code": "LOAD './thinkthen.duckdb_extension';\n\n-- praise, a bug, and a double charge in one message\nSELECT thinkthen_tag('Which labels fit this message?',\n    'Love the new dashboard, but export crashes the app, '\n    || 'and I was charged twice.',\n    ['praise', 'bug', 'billing']) AS labels;",
-  "function": "tag",
-  "surface": "duckdb"
-}

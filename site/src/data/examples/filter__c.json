@@ -1,8 +1,0 @@
-{
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "c",
-  "code": "#include <stdio.h>\n#include <string.h>\n#include <thinkthen.h>\n\nthinkthen_engine *tt = thinkthen_engine_new();\n\n/* filter answers with the places it kept: 1 and 3,\n   the zipper and the strap */\nconst char *filter = \"{\\\"decide\\\": \\\"Is this a complaint?\\\", \"\n    \"\\\"records\\\": [\\\"Arrived a day early. Thank you!\\\", \"\n    \"\\\"The zipper broke the first time I used it.\\\", \"\n    \"\\\"Does this come in blue?\\\", \"\n    \"\\\"The strap snapped on day two.\\\"]}\";\nchar *kept = thinkthen_call(tt, filter);\nputs(kept ? kept : thinkthen_error_message(tt));\nthinkthen_free_string(kept);",
-  "function": "filter",
-  "surface": "c"
-}
