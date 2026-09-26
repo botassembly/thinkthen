@@ -106,7 +106,7 @@ def annotated(engine, case, texts, success):
     records = engine.annotate(case["question_set"], texts)
     failed = 0
     for expected in success["answers"]:
-        value = records[min(expected["exchange"], len(records) - 1)][expected["name"]]
+        value = records[0 if "record" in case else expected["exchange"]][expected["name"]]
         failed += isinstance(value, dict) and "failed" in value
         same("bare", value, expected["bare"])
     same("failed", failed, success.get("failed_questions", 0))

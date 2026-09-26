@@ -122,7 +122,7 @@ run_case <- function(case, served) {
       frame <- data.frame(input = records, stringsAsFactors = FALSE)
       got <- tt_annotate(file, frame, on = "input")
       for (want in answers) {
-        cell <- got[[want$name]][[min(want$exchange + 1L, length(records))]]
+        cell <- got[[want$name]][[if (is.null(case$record)) want$exchange + 1L else 1L]]
         same(want$name, if (is.list(cell)) cell else bare(cell), want$bare)
       }
     },

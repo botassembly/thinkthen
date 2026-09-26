@@ -100,14 +100,14 @@ def single(engine, asked, text, success, base)
   end
 end
 
-def annotated(engine, set, texts, success)
+def annotated(engine, set, texts, success, one)
   records = Dir.mktmpdir do |folder|
     File.write(File.join(folder, "set.json"), JSON.generate(set))
     engine.annotate(T.set(File.join(folder, "set.json")), texts)
   end
   failed = 0
   success["answers"].each do |expected|
-    value = records[[expected["exchange"], records.size - 1].min].fetch(expected["name"].to_sym)
+    value = records[one ? 0 : expected["exchange"]].fetch(expected["name"].to_sym)
     failed += 1 if value.is_a?(Hash) && value.key?("failed")
     same("bare #{expected['name']}", value, expected["bare"])
   end
@@ -143,7 +143,8 @@ def check(one)
     same("result", edges.map { |e| { "relation" => e.relation, "source" => pair.(e.source), "target" => pair.(e.target), "probability" => e.probability } },
          success["answers"][0]["bare"])
   in ["annotate", _]
-    annotated(engine, one["question_set"], one.key?("record") ? [JSON.generate(one["record"])] : texts, success)
+    whole = one.key?("record")
+    annotated(engine, one["question_set"], whole ? [JSON.generate(one["record"])] : texts, success, whole)
   in ["find", _]
     found = engine.find(held["find"], held["units"], none: held["none"])
     selected = success["operation"]["selected"]

@@ -164,7 +164,7 @@ def check(case: dict, backend: Backend) -> None:
         results = asked([["SELECT thinkthen_annotate(?, ?)", [questions, text]] for text in sent], env)
         records = [json.loads(result[0][0]) for result in results]
         for one in answers:
-            same(one["name"], records[min(one["exchange"], len(records) - 1)][one["name"]], one["bare"])
+            same(one["name"], records[0 if "record" in case else one["exchange"]][one["name"]], one["bare"])
         failed = sum(isinstance(value, dict) and "failed" in value for record in records for value in record.values())
         same("failed", failed, success.get("failed_questions", 0))
     elif kind == "recognize":

@@ -171,7 +171,8 @@ fn check(backend: &Backend, case: &Value, verbatim: &Verbatim) -> Checked {
         ("annotate", _) => {
             let record = case.get("record").map(Value::to_string);
             let records = record.as_deref().map_or(texts, |whole| vec![whole]);
-            annotated(&engine, &raw(&verbatim.question_set), &records, &success)
+            let set = raw(&verbatim.question_set);
+            annotated(&engine, &set, &records, &success, record.is_some())
         }
         ("find", _) => crate::parts::found(&engine, &case["question"], &success),
         ("rank", _) => {
@@ -325,16 +326,15 @@ fn detailed(details: &Details, expected: &Value, base: &str) -> Checked {
     same("line url", &line["meta"]["url"], &served)
 }
 
-fn annotated(engine: &Engine, set: &str, texts: &[&str], success: &Value) -> Checked {
+/// With `one`, the case names one record, and every answer reads it.
+fn annotated(engine: &Engine, set: &str, texts: &[&str], success: &Value, one: bool) -> Checked {
     let set = QuestionSet::from_json(set).map_err(said)?;
     let records: Result<Vec<_>, _> = engine.annotate(&set, texts.to_vec()).collect();
     let records = records.map_err(said)?;
     let mut failed = 0;
     for expected in success["answers"].as_array().into_iter().flatten() {
         let exchange = usize::try_from(expected["exchange"].as_u64().unwrap_or_default());
-        let record = &records[exchange
-            .unwrap_or_default()
-            .min(records.len().saturating_sub(1))];
+        let record = &records[if one { 0 } else { exchange.unwrap_or_default() }];
         let named = record
             .values()
             .iter()
