@@ -73,15 +73,15 @@ The code review round stopped at 1,031 lines of growth, over the 930 ruling, bef
 
 ## Ladder
 
-Run once each after the merge of `origin/main` at `7850db3f`, which brought ticket 0141.
+Run once each after the code review round and the merge of `origin/main` at `f7f820ee`, which brought ticket 0128 Phase 2.
 
 | Rung | Result |
 | --- | --- |
-| `lint` | exit 0; ratchet 68,670 of 68,670 |
-| `test` | exit 0; 950 passed, 0 failed across 36 test binaries |
+| `lint` | exit 0; ratchet 68,793 of 68,793 |
+| `test` | exit 0; 951 passed, 0 failed across 36 test binaries |
 | `spec` | exit 0; demos 21 green, 0 red |
 
-`install` and `surfaces` did not run. No public library type, method or message changed. `origin/main` gained one documentation commit, `7443d69d`, after the ladder ran.
+An earlier lint run failed on the 500-line file ceiling for `core/batch/tests.rs`. The refusal tests then moved to `core/batch/tests/refusals.rs`. The 21 plants ran before that move. The move changed no test body. `install` and `surfaces` did not run. No public library type, method or message changed.
 
 ## Deferred gaps
 
