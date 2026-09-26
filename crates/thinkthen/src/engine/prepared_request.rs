@@ -82,7 +82,7 @@ impl SettledRelation {
         planned: RelationPlan,
     ) -> Result<Self, Error> {
         let ceiling = backend
-            .relation_ceiling()
+            .ceiling()
             .filter(|_| profile.is_none_or(|profile| !profile.limits_request_bytes()));
         let plan = relation_request(backend, source, entities, &planned)?;
         match PreparedRequests::with_profile(backend, &plan, profile, ceiling) {

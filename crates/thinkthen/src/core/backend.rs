@@ -104,11 +104,12 @@ impl Backend {
         &self.model
     }
 
-    /// The request-byte ceiling a relation plan splits under: 96,000 at the
-    /// built-in address, and none elsewhere. The hosted backend refuses over
-    /// 65,536 input tokens, and relate's JSON runs 0.516 a byte (ticket 0123).
+    /// The request-byte ceiling a relation plan splits under and a batch
+    /// closes at: 96,000 at the built-in address, and none elsewhere. The
+    /// hosted backend refuses over 65,536 input tokens, and relate's JSON runs
+    /// 0.516 a byte (ticket 0123).
     #[must_use]
-    pub(crate) fn relation_ceiling(&self) -> Option<usize> {
+    pub(crate) fn ceiling(&self) -> Option<usize> {
         let base = self
             .url
             .as_str()

@@ -64,7 +64,7 @@ pub(crate) fn run(
         folders,
         backend.clone(),
         selected_profile,
-        None,
+        arguments.common.jobs,
     )?;
     let threshold = settled.spec.threshold.cut_value().unwrap_or(0.5);
     let execution = engine.relate(prepared, &entities, threshold, environment.cancel())?;

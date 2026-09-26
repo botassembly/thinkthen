@@ -8,6 +8,7 @@ use serde::ser::SerializeMap;
 use serde::{Serialize, Serializer};
 use thiserror::Error;
 
+use crate::core::batch::BatchRecord;
 use crate::core::json::{Json, JsonError};
 use crate::core::pointer::Pointer;
 use crate::core::question::{Labels, LabelsError};
@@ -404,22 +405,60 @@ impl Reading {
     /// Returns [`RecordError`] when a pointer finds nothing, when the evidence
     /// is blank, and when it cannot be written as JSON.
     pub(crate) fn evidence(&self, record: &Record) -> Result<Evidence, RecordError> {
-        let value = match (&record.0, self.fields.as_slice()) {
-            (Held::Text(text), []) => return Ok(Evidence::new(text.as_str())?),
+        self.selected(record)?.evidence()
+    }
+
+    /// Build the record a batch reads: today's evidence, and the value a batch
+    /// quotes. A whole JSON record keeps its own value, not its compact text.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "ticket B4 puts batches on the command")
+    )]
+    pub(crate) fn batch_record(&self, record: &Record) -> Result<BatchRecord, RecordError> {
+        let selected = self.selected(record)?;
+        let value = match &selected {
+            Selected::Text(text) => Json::String((*text).to_owned()),
+            Selected::Whole(value) => (*value).clone(),
+            Selected::Chosen(value) => value.clone(),
+        };
+        let evidence = selected.evidence()?;
+        Ok(BatchRecord { evidence, value })
+    }
+
+    /// What this reading selects from one record.
+    fn selected<'a>(&self, record: &'a Record) -> Result<Selected<'a>, RecordError> {
+        Ok(match (&record.0, self.fields.as_slice()) {
+            (Held::Text(text), []) => Selected::Text(text),
             (Held::Text(_), _) => return Err(RecordError::TextHasNoMembers),
-            (Held::Json(value), []) => return whole(value),
-            (Held::Json(value), [pointer]) => found(pointer, value)?.clone(),
-            (Held::Json(value), pointers) => Json::Object(
+            (Held::Json(value), []) => Selected::Whole(value),
+            (Held::Json(value), [pointer]) => Selected::Chosen(found(pointer, value)?.clone()),
+            (Held::Json(value), pointers) => Selected::Chosen(Json::Object(
                 pointers
                     .iter()
                     .map(|pointer| Ok((pointer.key().to_owned(), found(pointer, value)?.clone())))
                     .collect::<Result<Vec<_>, RecordError>>()?,
-            ),
-        };
-        match value {
-            Json::Array(_) | Json::Object(_) => Ok(Evidence::structured(value)?),
-            Json::String(text) => Ok(Evidence::new(text)?),
-            scalar => Ok(Evidence::new(json_line(&scalar)?)?),
+            )),
+        })
+    }
+}
+
+/// What a reading selects: a whole text, a whole JSON record, or a selection.
+enum Selected<'a> {
+    Text(&'a str),
+    Whole(&'a Json),
+    Chosen(Json),
+}
+
+impl Selected<'_> {
+    fn evidence(self) -> Result<Evidence, RecordError> {
+        match self {
+            Self::Text(text) => Ok(Evidence::new(text)?),
+            Self::Whole(value) => whole(value),
+            Self::Chosen(value @ (Json::Array(_) | Json::Object(_))) => {
+                Ok(Evidence::structured(value)?)
+            }
+            Self::Chosen(Json::String(text)) => Ok(Evidence::new(text)?),
+            Self::Chosen(scalar) => Ok(Evidence::new(json_line(&scalar)?)?),
         }
     }
 }
