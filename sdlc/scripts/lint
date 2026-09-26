@@ -7,28 +7,51 @@ set -eu
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
 
-# This repository goes public, so no tracked file may name a private project.
-# The names cannot live here, so THINKTHEN_PRIVATE_NAMES points at a list
-# outside the repository: one fixed string per line, matched ignoring case.
-# A hit prints only its file and line, never the name.
+# This repository goes public, so no tracked path or file may name a private
+# project. The names cannot live here, so THINKTHEN_PRIVATE_NAMES points at a
+# list outside the repository: one fixed string per line, matched ignoring
+# case. No variable holds a name, so `sh -x` never prints one. A path hit
+# prints only its number in `git ls-files`. With no path hit, a file hit
+# prints its path and line number.
 if [ -z "${THINKTHEN_PRIVATE_NAMES:-}" ]; then
     echo "private names: skipped, THINKTHEN_PRIVATE_NAMES is unset"
 else
-    names=$(realpath -- "$THINKTHEN_PRIVATE_NAMES")
-    case $names in "$REPO"/*)
+    list=$(realpath -- "$THINKTHEN_PRIVATE_NAMES")
+    case $list in "$REPO"/*)
         echo "lint: THINKTHEN_PRIVATE_NAMES must point outside the repository" >&2
         exit 1 ;;
     esac
-    patterns=$(grep -v '^[[:space:]]*$' "$names") || {
+    grep -q -v '^[[:space:]]*$' "$list" || {
         echo "lint: THINKTHEN_PRIVATE_NAMES holds no name" >&2
         exit 1
     }
-    hits=$(printf '%s\n' "$patterns" | git grep -n -I -i -F -f - | cut -d: -f1,2)
-    if [ -n "$hits" ]; then
-        printf 'lint: a tracked file names a private project at\n%s\n' "$hits" >&2
+    found=$(mktemp -d)
+    git ls-files >"$found/paths"
+    status=0
+    grep -v '^[[:space:]]*$' "$list" | grep -n -i -F -f - "$found/paths" >"$found/path-hits" || status=$?
+    if [ "$status" -gt 1 ]; then
+        echo "lint: the private-name path check failed (grep exit $status)" >&2
+        rm -rf -- "$found"
+        exit 1
+    elif [ -s "$found/path-hits" ]; then
+        printf 'lint: %s tracked paths name a private project, numbers in git ls-files: %s\n' \
+            "$(wc -l <"$found/path-hits" | tr -d ' ')" "$(cut -d: -f1 "$found/path-hits" | paste -sd ' ' -)" >&2
+        rm -rf -- "$found"
         exit 1
     fi
-    echo "private names: $(printf '%s\n' "$patterns" | wc -l | tr -d ' ') checked, none found"
+    status=0
+    grep -v '^[[:space:]]*$' "$list" | git grep -n -I -i -F -f - >"$found/file-hits" || status=$?
+    if [ "$status" -gt 1 ]; then
+        echo "lint: the private-name file check failed (git grep exit $status)" >&2
+        rm -rf -- "$found"
+        exit 1
+    elif [ -s "$found/file-hits" ]; then
+        printf 'lint: a tracked file names a private project at\n%s\n' "$(cut -d: -f1,2 "$found/file-hits")" >&2
+        rm -rf -- "$found"
+        exit 1
+    fi
+    rm -rf -- "$found"
+    echo "private names: $(grep -c -v '^[[:space:]]*$' "$list") checked in paths and files, none found"
 fi
 
 # The workspace caps an agents file at 5,000 characters. CLAUDE.md links to AGENTS.md.

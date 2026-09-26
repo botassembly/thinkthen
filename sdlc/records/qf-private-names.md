@@ -15,10 +15,28 @@ The builder built a list of private names outside the repository. It holds every
 - Each mention now reads as a generic description: "the marketing repository", "a private experiment repository", "a private caller", "the workspace's `experiments/` folder", or "the workspace's decisions folder". A path that matters as evidence keeps its part inside that repository or folder. Worktree links in one review record now point at the file relative to the record.
 - One mention was the ordinary word for hidden files in an R packaging comment. It now says "hidden files", so the guard passes.
 - No file was deleted. No file exists only to describe a private project.
-- `sdlc/scripts/lint` gains a first check. When `THINKTHEN_PRIVATE_NAMES` names a file, lint reads one fixed string per line and fails on any tracked file that contains one, ignoring case. It prints only the file and line of each hit. It refuses a list inside the repository and a list with no name. When the variable is unset, it prints that the check was skipped.
+- `sdlc/scripts/lint` gains a first check. When `THINKTHEN_PRIVATE_NAMES` names a file, lint reads one fixed string per line, ignoring blank lines and case. It fails on any tracked path that holds a name and prints only the count and each path's number in `git ls-files`. It then fails on any tracked file whose text holds a name and prints only the file and line. No shell variable holds a name, so `sh -x lint` prints none. The list goes straight from `grep` into `git grep -f -`. A `grep` or `git grep` exit above 1 fails the check. It refuses a list inside the repository and a list with no name. When the variable is unset, it prints that the check was skipped. On this machine the list sits at `~/.config/thinkthen/private-names.txt`.
 - `sdlc/scripts/allow-list` lets `THINKTHEN_PRIVATE_NAMES` through, since lint sources it first. The variable holds a path and no secret. Lint's pinned allow-list row and its planted child both gain the name, and `sdlc/scripts/README.md` says so.
 
+## Ruling: Beatles Bench may be named
+
+The review flagged Beatles Bench, the two-word bench project. Ian ruled on 2026-09-26 that it goes public with ThinkThen, so this repository may name it. It is not in the private-name list. The workspace `repos/README.md` says it stays private until Ian makes it public. That line does not block naming it here, because this ruling is Ian making it public alongside ThinkThen. Ian can overturn this ruling.
+
+## Review fixes
+
+The first code review found five points. Point 1 is the ruling above. The rest are fixed:
+
+2. The guard checked file text only. It now checks tracked paths too, and a path hit prints no path text.
+3. `sh -x lint` traced a variable that held every name. No variable holds a name now.
+4. When `git grep` exited 128, the pipeline status came from `cut`, and the check passed. The check now reads `git grep`'s own status and fails above 1.
+5. `sdlc/records/0088-review-codex.md` linked a file that no longer exists. That reference is now plain text, with a note naming the commit that moved the code and the file that holds it now.
+
 ## Checks
+
+- Plants live in the builder's scratch folder, outside the repository. Each ran against the lint guard's own lines:
+  - Plant 2: a scratch repository tracks a file whose path holds a planted name. The new guard exits 1 with "1 tracked paths name a private project, numbers in git ls-files: 1", and its output holds no planted text. The old guard passed it.
+  - Plant 4: a `git` shim exits 128 on `grep`. The new guard exits 1 with "the private-name file check failed (git grep exit 128)". The old guard passed it.
+  - Plant 3: `sh -x` over the guard with the real list. The new trace holds no project name on any line. The old trace held one on 56 lines. The trace still shows the list's own path and the repository path, as every lint trace does.
 
 - The guard, run alone against the real list, fails with the four `site/` lines and exits 1. With a list of absent strings, it passes. With a blank list, a list inside the repository, or a planted upper-case string that exists in lower case, it fails as intended. Unset, it prints the skip line and passes.
 - After the fix, the real list finds zero hits outside `site/`.
