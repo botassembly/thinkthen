@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine/http.rs crates/thinkthen/src/engine/error.rs 
 
 # 0132: Keep every reply the planner can ask for
 
-Status: built (`sdlc/records/0132-build-large-replies-fit.md`); code review pending. Design accepted by the third fresh review on 2026-09-25, after two rounds of findings. Owner: Claude.
+Status: landed 2026-09-26 (`sdlc/records/0132-build-large-replies-fit.md`). Code review accepted with three low findings, fixed at landing. The quadratic-decoder plant staying green is an accepted gap. Design accepted by the third fresh review on 2026-09-25, after two rounds of findings. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -14,7 +14,7 @@ Review route: a fresh read-only Claude session reviews this design and the final
 
 A user runs `relate` over 180 line names, or `recognize` over 64,000 bytes of text, and gets the answer the backend sent. The tool never pays for a reply and then throws it away as a network failure. A reply that is still too long, from a broken or hostile backend, fails with its own sentence. That sentence names the limit and says the answer was not kept.
 
-The ask is `sdlc/issues/2026-09-25-a-reply-over-1-mib-is-thrown-away-and-called-unreachable.md`. The coordinator assigned it on 2026-09-25 with this outcome:
+The ask is `sdlc/issues/closed/2026-09-25-a-reply-over-1-mib-is-thrown-away-and-called-unreachable.md`. The coordinator assigned it on 2026-09-25 with this outcome:
 
 - (a) The planner keeps every request's expected reply under a known bound. It splits requests, or it derives the read limit from the plan if that is simpler and still bounded.
 - (b) A reply that still passes the limit gets its own failure and sentence, never the "could not be reached" sentence.
@@ -94,7 +94,7 @@ Each command test counts requests at a loopback backend and pins the exact sente
 | `recognize::text_of_64000_bytes_keeps_its_reply`, in `tests/backend/recognize.rs` | The same backend, 64,000 bytes of repeated words and two kinds. Exit 0, a `{"entities":…}` object on standard output, empty standard error, and a count of 1 | The same two plants: exit 4 |
 | `resend::a_reply_past_the_bound_is_sent_once`, rewritten in `tests/backend/resend.rs` | A `decide` whose listener pads a valid reply with spaces to `N + 1` bytes. The test works out `N` from the request body the listener saw. Exit 4, the new sentence naming `N`, 1 request, and no key or evidence in any output | Map `BodyExceedsLimit` to `TransportKind::Other` again: the old sentence prints. Drop the limit: the padded reply is kept at exit 0 |
 | `resend::a_reply_of_exactly_the_bound_is_kept`, beside it | The same padding to exactly `N` bytes. Exit 0 with the answer, 1 request | Pass `N` to `ureq` in place of `N + 1`: the reply is refused |
-| `check::a_reply_over_its_limit_fails_its_probe_and_the_check_goes_on`, in `tests/backend/check.rs` | The first probe's listener pads its reply to `N + 1` bytes, and the later probes answer. The report pins `ok connection`, the first probe's `critical` line with the new sentence, the later probes' lines, the listener count of 4, and exit 4 | Route the new failure to the `connection` gate: the check stops and the later probes are `unchecked`. Leave it out of the match: the check aborts |
+| `check::a_reply_over_its_limit_fails_its_probe_and_the_check_goes_on`, in `tests/backend/check.rs` | Every probe's listener pads its reply to `N + 1` bytes. The report pins `ok connection`, each probe's `critical` line with the new sentence, the listener count of 4, and exit 4 | Route the new failure to the `connection` gate: the check stops and the later probes are `unchecked`. Leave it out of the match: the check aborts |
 | `public_controls::a_reply_over_its_limit_names_it`, in `tests/public_controls.rs` | The public `Engine` decides against a listener that pads its reply to `N + 1` bytes. The error kind is `Backend`, `retryable()` is false, the message is the new sentence, and the listener counts 1 | Map the new failure to the transport text in `public/error.rs`: the message differs. Mark it retryable in `engine/error.rs`: the listener counts 3 |
 
 The four questions for each new or changed test:
@@ -156,7 +156,7 @@ Contract 2; state and timing 1; reach 1; proof 1; cost of error 2; total 7. Fina
 
 ## Closes
 
-- `sdlc/issues/2026-09-25-a-reply-over-1-mib-is-thrown-away-and-called-unreachable.md`. The lander moves it to `closed/` in the landing commit.
+- `sdlc/issues/closed/2026-09-25-a-reply-over-1-mib-is-thrown-away-and-called-unreachable.md`. The lander moves it to `closed/` in the landing commit.
 
 ## Evidence
 

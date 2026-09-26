@@ -1,6 +1,6 @@
 # A reply over 1 MiB is thrown away and called unreachable
 
-Status: Open
+Status: Closed on 2026-09-26 by ticket 0132.
 
 Filed on 2026-09-25 by experiment 218, wave 2, rows C2 and B3. Checked at main `20e9b8d4` against the repository's loopback backend with a fake key. No request left the machine. Seat: a person typing, and a script in a loop.
 

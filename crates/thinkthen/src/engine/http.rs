@@ -40,7 +40,7 @@ impl fmt::Debug for Key {
 /// The reply bytes every request may earn, whatever its size.
 const MAX_RESPONSE_BYTES: u64 = 1024 * 1024;
 
-/// Reply bytes per request byte. The worst honest reply runs about 5 (ticket 0132).
+/// Reply bytes per request byte. The worst honest reply runs about 5 reply bytes per request byte (ticket 0132).
 const REPLY_BYTES_PER_REQUEST_BYTE: u64 = 8;
 
 /// The longest a `Retry-After` header moves the wait to.
