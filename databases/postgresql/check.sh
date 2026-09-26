@@ -519,6 +519,22 @@ zero_cache_cap_refuses() {
 	same "$(bcount)" 0
 }
 check zero_cache_cap_refuses
+# A throttle outside 1 through 32 is refused where it is set, and calls keep
+# working. A configuration file's 0 once broke every call.
+THROTTLE_RANGE="thinkthen usage: a throttle is a whole number from 1 through 32 (retryable: no)"
+throttle_setting_range() {
+	fresh generic "thinkthen.throttle = 0"
+	out=$(q -c "SELECT thinkthen_decide('$Q', 'from the file')")
+	has "$out" "WARNING:  $THROTTLE_RANGE"
+	has "$out" "$(printf '\nt')"
+	for value in 0 33 -2; do
+		out=$(q -c '\set VERBOSITY verbose' -c "LOAD 'thinkthen'" -c "SET thinkthen.throttle = $value" -c "SELECT thinkthen_decide('$Q', 'set $value')")
+		has "$out" "ERROR:  22023: $THROTTLE_RANGE"
+		has "$out" "$(printf '\nt')"
+	done
+	same "$(bcount)" 4
+}
+check throttle_setting_range
 
 # Ian's ruling of 2026-09-25: the backend's total holds across row calls.
 the_total_holds_across_rows() {
