@@ -12,9 +12,17 @@ installed_remove() {
 	return 1
 }
 
-# installed_mktemp: print a fresh folder from mktemp. Call it as `x=$(installed_mktemp)` and then
-# `installed_made="$installed_made $x"`, since a command substitution cannot record it.
-installed_mktemp() { (cd "$(mktemp -d)" && pwd -P); }
+# installed_cleanup: remove every folder these functions made in this run.
+installed_cleanup() {
+	for made in $installed_made; do installed_remove "$made"; done
+}
+
+# installed_folder: set `folder` to a fresh folder from mktemp, which this run's exit removes.
+installed_folder() {
+	folder=$(cd "$(mktemp -d)" && pwd -P)
+	installed_made="$installed_made $folder"
+	trap 'exec 3>&-; installed_cleanup' EXIT
+}
 
 # installed_scratch [INSIDE]: set `scratch` to a fresh folder. Inside the caller's own temporary
 # folder INSIDE, the caller's cleanup removes it. Otherwise this run's exit removes it.
@@ -23,9 +31,8 @@ installed_scratch() {
 		scratch=$(mktemp -d "$1/installed.XXXXXX")
 		return
 	fi
-	scratch=$(installed_mktemp)
-	installed_made="$installed_made $scratch"
-	trap 'installed_remove "$scratch"' EXIT
+	installed_folder
+	scratch=$folder
 }
 
 # installed_unpack: a fresh `scratch` folder holding THINKTHEN_ARTIFACT unpacked.
@@ -50,12 +57,11 @@ installed_tests() {
 # folder, and stops it on exit.
 backend_start() {
 	cargo build --locked --quiet --package conformance-backend
-	backend=$(installed_mktemp)
-	installed_made="$installed_made $backend"
+	installed_folder
+	backend=$folder
 	mkfifo "$backend/in"
 	"${CARGO_TARGET_DIR:-target}/debug/conformance-backend" <"$backend/in" >"$backend/out" &
 	exec 3>"$backend/in"
-	trap 'exec 3>&-; installed_remove "$backend"' EXIT
 	tries=0
 	until [ -s "$backend/out" ]; do
 		tries=$((tries + 1))
