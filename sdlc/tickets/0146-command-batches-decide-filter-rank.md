@@ -190,6 +190,8 @@ Each rule below becomes true for `decide`, `filter` and `rank`. The builder dele
 | `records.md`, the request table row "`decide`, `choose`, `tag`, `score`, `filter`, `rank` over N records" | item 2: "one for each batch" | The row splits. `decide`, `filter`, `rank`: one request a batch, N at `--batch 1`. `choose`, `tag`, `score`: N, with a marker by item 7 |
 | `records.md`, "A run that stops early prints one line" | item 6: "when a batch fails, the line names the range" | Built, with the template above. The item 10 marker for `--facts` stays |
 | `records.md`, `jobs` | item 5: "`jobs` counts batches in flight" | Built |
+| `records.md`, "Order and requests", after the item 2 sentence | none, new text by ADR 0053 items 1 and 2 | Add: "A live run sends the open batch after 50 ms with no new record, in every mode, with or without a folder. A file or a fast pipe never pauses, so it forms the same batches every run. A live pipe forms batches by its timing, so a replay fed with other timing can miss a batch and stop at exit 5 naming its range, and a cache pays for the batches that moved. A batch also closes at 4,096 records, repeats included, so a stream of a few repeated values never holds more than 4,096 records in one batch." |
+| `records.md`, "Resume", the sentence "A first run that stops at record 400 leaves 399 entries. The same command run again replays those 399 and pays for the rest." | none, corrected for batches | Replace it with: "At `--batch 1`, a first run that stops at record 400 leaves 399 entries, and the same command run again replays those 399 and pays for the rest. Under batching, `decide`, `filter` and `rank` leave one entry for each batch that finished. A rerun replays those batches and pays again from the first record of the batch that failed." |
 | `backends.md`, "A relation plan at the built-in address also splits" | item 2: "a batched record plan at the built-in address also closes its batch at the ceiling" | Built. It adds: a batch carries each record twice, in the evidence and in its quoted question, so a record over about 48,000 bytes goes alone |
 | `backends.md` | item 2 and 6: "a profile's limits close batches at every address" | Built |
 | `channels.md`, "Advanced options appear in the long help alone" | item 3, 10 and 11: "`--batch N`, `--facts`, and `--context FILE` join" | `--batch N` joins the advanced options. The marker stays for `--facts` and `--context` |
@@ -349,7 +351,7 @@ Nonblank lines, measured with `grep -c .`. Net lines against main after 0143, 01
 - `crates/thinkthen/tests/backend/batching.rs` and its folder: at most 450.
 - Unit tests that build or name `Completed`, including `cli/conformance_tests/runner.rs`: at most 12 net.
 - Existing tests: at most 110 net for the `--batch 1` pins, sized for 20 to 32 files at a few lines each, most through a shared helper. At most 20 net more in `tests/backend/scheduling.rs` for the two folder rows.
-- Pages under `specification/`: at most 40 net lines together. `spec/decide.md`: at most 10 net.
+- Pages under `specification/`: at most 46 net lines together. `spec/decide.md`: at most 10 net.
 - Demos: at most 30 changed lines, pins and dry-run expectations only.
 - `sdlc/ratchet.json` moves to the measured total, at most 1,145 above main after the three dependencies land: 553, 450, 12, 110 and 20. The commit says what grew.
 - No dependency.
