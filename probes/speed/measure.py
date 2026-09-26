@@ -256,7 +256,7 @@ def live(bench, name):
     build = {"commit": git("rev-parse", "HEAD"), "binary_sha256": hashlib.sha256(binary.read_bytes()).hexdigest(),
              "version": subprocess.run([str(binary), "--version"], stdout=subprocess.PIPE, env=plain()).stdout.decode().strip(),
              "profile": "debug", "bench_commit": git("rev-parse", "HEAD", cwd=bench),
-             "bench_clean": not git("status", "--porcelain", cwd=bench), "processors": os.cpu_count(),
+             "bench_clean": not git("status", "--porcelain", "--untracked-files=no", cwd=bench), "processors": os.cpu_count(),
              "loadavg_start": Path("/proc/loadavg").read_text().strip()}
     out.mkdir(parents=True)
     env = {"THINKTHEN_API_KEY": os.environ.get("THINKTHEN_API_KEY", "")}
