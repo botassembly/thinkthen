@@ -1,0 +1,7 @@
+{"id":"a","value":{"entities":[{"kind":"PER","start":0,"end":5},{"kind":"ORG","start":10,"end":20}]}}
+{"id":"b","value":{"entities":[{"kind":"PER","start":0,"end":5},{"kind":"LOC","start":35,"end":40}]}}
+{"id":"c","value":{"entities":[{"kind":"LOC","start":0,"end":8},{"kind":"PER","start":12,"end":15}]}}
+{"id":"d","value":{"entities":[{"kind":"PER","start":0,"end":4}]}}
+{"id":"e","value":{"entities":[{"kind":"PER","start":0,"end":8}]}}
+{"id":"f","value":{"entities":[{"kind":"PER","start":0,"end":4},{"kind":"PER","start":6,"end":10}]}}
+{"id":"g","value":{"entities":[{"kind":"PER","start":0,"end":4},{"kind":"PER","start":5,"end":9}]}}

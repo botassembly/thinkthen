@@ -22,7 +22,7 @@ This ticket also states the `uNNN` unit id rule for `find`, item 4 of `sdlc/issu
 
 **diff** leaves this ticket. The diff issue (`2026-09-25-diff-exits-0-when-nothing-pairs-and-pairs-different-questions-silently.md`) becomes a Quick Fix of options 2 and 4, which the queue owner dispatches. The backlog puts diff ahead of audit, and it needs about thirty lines. The Quick Fix edits `cli/diff.rs` and `core/measure/diff.rs`, and this ticket leaves both alone. Both touch `core/measure/answer.rs`. Whichever lands second merges.
 
-**recognize and relate** leave this ticket too, on the design review's finding. Their audit needs its own answers: how names match, what a row cut at the run's cut can show, and how relation edges grade. `sdlc/issues/2026-09-25-audit-grades-recognize-and-relate.md` carries them. This branch adds that issue, it lands with 0125, and it gets its own 0.1 ticket later. Until then audit refuses a `recognize` or `relate` answer with the "cannot grade" sentence below.
+**recognize and relate** leave this ticket too, on the design review's finding. Their audit needs its own answers: how names match, what a row cut at the run's cut can show, and how relation edges grade. `sdlc/issues/closed/2026-09-25-audit-grades-recognize-and-relate.md` carries them. This branch adds that issue, it lands with 0125, and it gets its own 0.1 ticket later. Until then audit refuses a `recognize` or `relate` answer with the "cannot grade" sentence below.
 
 ## Design
 
@@ -337,7 +337,7 @@ Contract 3; state and timing 1; reach 2; proof 2; cost of error 2; total 10. Fin
 
 ## Closes
 
-On landing, the lander closes `sdlc/issues/closed/2026-09-25-audit-is-complete-for-0-1.md`, with a status line that names this ticket and the follow-up issue for `recognize` and `relate`. It marks item 4 of `sdlc/issues/2026-09-25-docs-how-tos-and-spec-claims-owed.md` done, and that issue stays open for its other items. `sdlc/issues/2026-09-25-audit-grades-recognize-and-relate.md` stays open. The diff issue closes with the Quick Fix.
+On landing, the lander closes `sdlc/issues/closed/2026-09-25-audit-is-complete-for-0-1.md`, with a status line that names this ticket and the follow-up issue for `recognize` and `relate`. It marks item 4 of `sdlc/issues/2026-09-25-docs-how-tos-and-spec-claims-owed.md` done, and that issue stays open for its other items. `sdlc/issues/closed/2026-09-25-audit-grades-recognize-and-relate.md` stays open. The diff issue closes with the Quick Fix.
 
 ## What Ian can overturn
 
@@ -354,4 +354,4 @@ On landing, the lander closes `sdlc/issues/closed/2026-09-25-audit-is-complete-f
 - Keeps: Every 0113 output member, its order, and its value. Every golden and table capture, byte for byte, once the named additions are removed. The key format and `part`. The seeded split at `--seed`. diff's output and every diff failure sentence. Every audit failure row except the "cannot grade" sentence. audit sends nothing and reads no key or setting.
 - Changes: Four more verbs. `--optimize` and two new measures on every row. `steady` on every suggestion. `--write` and the first file audit writes. Two audit "cannot grade" sentences and the audit help summary. The `find` unit id rule on two pages.
 - Proof: The tests in "Proof", each with a planted fault that turns it red. The hand values come from experiment 259, the issue, and hand-graded fixtures, not from the code under test. `spec/audit.md` runs the picks and a write round trip.
-- Defers: diff, as a Quick Fix. audit of `recognize` and `relate`, in `sdlc/issues/2026-09-25-audit-grades-recognize-and-relate.md`. `--all`. Per-label `tag` cuts in a file. `choose` option weights. Level cuts in a `score` file, kept out by ADR 0010 unless Ian overturns it. A crash-safe write. A warning when no answer matches the key (experiment 259, D14). Cost per row, repeated samples, and run identity.
+- Defers: diff, as a Quick Fix. audit of `recognize` and `relate`, in `sdlc/issues/closed/2026-09-25-audit-grades-recognize-and-relate.md`. `--all`. Per-label `tag` cuts in a file. `choose` option weights. Level cuts in a `score` file, kept out by ADR 0010 unless Ian overturns it. A crash-safe write. A warning when no answer matches the key (experiment 259, D14). Cost per row, repeated samples, and run identity.

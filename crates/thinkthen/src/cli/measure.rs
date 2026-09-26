@@ -61,6 +61,8 @@ pub(crate) enum Cause {
     Digest(usize),
     /// The file `--write` names could not be written.
     Unwritable,
+    /// The key has lines, and no answer that did not fail has a label in it.
+    NoneLabeled,
 }
 
 impl Refusal {
@@ -112,6 +114,9 @@ impl fmt::Display for Refusal {
                 "results line {line} was not asked from the question file; --write needs --details lines from that file"
             ),
             Cause::Unwritable => formatter.write_str("cannot write the question file"),
+            Cause::NoneLabeled => formatter.write_str(
+                "no answer has a label in the key; check that --id points at the key's ids and that its values fit the verb",
+            ),
         }
     }
 }
@@ -136,7 +141,7 @@ fn said(
         ),
         MeasureError::Ungradable(line) if command == "audit" => write!(
             formatter,
-            "{role} line {line} holds an answer audit cannot grade; audit grades decide, filter, choose, tag, score, rank, and find"
+            "{role} line {line} holds an answer audit cannot grade; audit grades decide, filter, choose, tag, score, rank, find, recognize, and relate"
         ),
         MeasureError::Ungradable(line) => write!(
             formatter,
@@ -184,6 +189,13 @@ fn said(
         }
         MeasureError::NeedsProbabilities => formatter
             .write_str("--threshold needs probabilities; rerun the question with --details"),
+        MeasureError::SetCut => formatter.write_str(
+            "recognize and relate take a single --threshold at or above the cut they ran with",
+        ),
+        MeasureError::KeyItems(line) => write!(
+            formatter,
+            "key line {line} gives recognize or relate a value unlike the command's own"
+        ),
         MeasureError::BandOnChoose => {
             formatter.write_str("choose takes a single cut; a band applies to decide")
         }
