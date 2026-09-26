@@ -1,6 +1,6 @@
 # Quick Fix qf-ticket-evidence: tickets from 0120 on name their evidence in five parts
 
-Status: landed. It carries out workspace decision `2026-09-24-experiments-reduce-risk.md` in the dotfiles repo. That decision asks each product ticket to name its evidence, retained behavior, deliberate changes, current proof, and deferred gaps. A fresh read-only Opus review is in `sdlc/records/qf-ticket-evidence-review.md`.
+Status: landed. It carries out workspace decision `2026-09-24-experiments-reduce-risk.md` in the workspace's decisions folder. That decision asks each product ticket to name its evidence, retained behavior, deliberate changes, current proof, and deferred gaps. A fresh read-only Opus review is in `sdlc/records/qf-ticket-evidence-review.md`.
 
 ## Result
 

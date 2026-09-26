@@ -158,7 +158,7 @@ The planner never knows a function costs money. Every database page carries that
 
 ## What the deck shows
 
-`repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/surfaces.md` is the acceptance test for the libraries and extensions. It gains a section with the `recognize` call on every surface, and one new slide, "Names become rows", with pattern 1 in DuckDB.
+The marketing repository's `decks/2026-09-21-thinkthen-semantic-commands/surfaces.md` is the acceptance test for the libraries and extensions. It gains a section with the `recognize` call on every surface, and one new slide, "Names become rows", with pattern 1 in DuckDB.
 
 ## What is open for the build team
 

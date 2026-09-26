@@ -39,19 +39,11 @@ EXEMPT = {
         "the fork runs inside a child the helper already built",
     ("crates/thinkthen/src/cli/conformance_tests/command.rs", "reads", "let seen = std::env::vars_os()", 1):
         "its form child scans its own whole environment, and that reading is the probe's evidence",
-}
-PENDING = {
-    ("crates/thinkthen/tests/relate_edge.rs", "inherits",
-     'run::output(Command::new(env!("CARGO_BIN_EXE_thinkthen")).args(["relate", "--help"]))', 1):
-        "0123 and 0126 own relate and its help text",
-    ("databases/postgresql/src/files.rs", "inherits", 'let status = std::process::Command::new("mkfifo")', 1):
-        "0129 owns databases/*/src",
     ("databases/duckdb/tools/databases_suite.py", "inherits",
      'freed = subprocess.run([sys.executable, "-c", f"import duckdb; duckdb.connect({path!r}).close()"]).returncode', 1):
-        "0129 owns this suite",
-    ("databases/duckdb/tools/source_checks.py", "inherits", "subprocess.run(", 1): "0129 owns these checks",
-    ("databases/duckdb/tools/source_checks.py", "inherits", "tree = subprocess.run(", 1): "0129 owns these checks",
+        "it runs inside a script whose process the helper already built",
 }
+PENDING = {}
 TABLES = {"excluded": EXCLUDED, "exempt": EXEMPT, "pending": PENDING}
 
 SPAWNS = {

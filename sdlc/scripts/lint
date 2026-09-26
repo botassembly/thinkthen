@@ -1,9 +1,58 @@
 #!/bin/sh
 # Rung 1: the accepted policies, the size ceiling, formatting, clippy, and docs.
 set -eu
+# Ticket 0133: every step and child sees only the names in allow-list.
+. "$(dirname -- "$0")/allow-list"
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
+
+# This repository goes public, so no tracked path or file may name a private
+# project. The names cannot live here, so THINKTHEN_PRIVATE_NAMES points at a
+# list outside the repository: one fixed string per line, matched ignoring
+# case. No variable holds a name, so `sh -x` never prints one. A path hit
+# prints only its number in `git ls-files`. With no path hit, a file hit
+# prints its path and line number.
+if [ -z "${THINKTHEN_PRIVATE_NAMES:-}" ]; then
+    echo "private names: skipped, THINKTHEN_PRIVATE_NAMES is unset"
+else
+    list=$(realpath -- "$THINKTHEN_PRIVATE_NAMES")
+    case $list in "$REPO"/*)
+        echo "lint: THINKTHEN_PRIVATE_NAMES must point outside the repository" >&2
+        exit 1 ;;
+    esac
+    grep -q -v '^[[:space:]]*$' "$list" || {
+        echo "lint: THINKTHEN_PRIVATE_NAMES holds no name" >&2
+        exit 1
+    }
+    found=$(mktemp -d)
+    git ls-files >"$found/paths"
+    status=0
+    grep -v '^[[:space:]]*$' "$list" | grep -n -i -F -f - "$found/paths" >"$found/path-hits" || status=$?
+    if [ "$status" -gt 1 ]; then
+        echo "lint: the private-name path check failed (grep exit $status)" >&2
+        rm -rf -- "$found"
+        exit 1
+    elif [ -s "$found/path-hits" ]; then
+        printf 'lint: %s tracked paths name a private project, numbers in git ls-files: %s\n' \
+            "$(wc -l <"$found/path-hits" | tr -d ' ')" "$(cut -d: -f1 "$found/path-hits" | paste -sd ' ' -)" >&2
+        rm -rf -- "$found"
+        exit 1
+    fi
+    status=0
+    grep -v '^[[:space:]]*$' "$list" | git grep -n -I -i -F -f - >"$found/file-hits" || status=$?
+    if [ "$status" -gt 1 ]; then
+        echo "lint: the private-name file check failed (git grep exit $status)" >&2
+        rm -rf -- "$found"
+        exit 1
+    elif [ -s "$found/file-hits" ]; then
+        printf 'lint: a tracked file names a private project at\n%s\n' "$(cut -d: -f1,2 "$found/file-hits")" >&2
+        rm -rf -- "$found"
+        exit 1
+    fi
+    rm -rf -- "$found"
+    echo "private names: $(grep -c -v '^[[:space:]]*$' "$list") checked in paths and files, none found"
+fi
 
 # The workspace caps an agents file at 5,000 characters. CLAUDE.md links to AGENTS.md.
 python3 -c '
@@ -20,13 +69,25 @@ python3 sdlc/scripts/tickets
 # the environment one name at a time.
 python3 sdlc/scripts/children --self-test
 python3 sdlc/scripts/children
-# Ticket 0127: the heavy lock unsets a stray THINKTHEN_ name and keeps its own.
-kept=$(env -i PATH="$PATH" THINKTHEN_SENTINEL=planted THINKTHEN_HEAVY_LOCK=/nonexistent/lock \
-    THINKTHEN_HEAVY_LOCK_HELD=/nonexistent/lock THINKTHEN_TOOLCHAINS=/nonexistent/tools \
-    THINKTHEN_DUCKDB_CLI=/nonexistent/duckdb \
-    sh -c '. sdlc/scripts/heavy-lock; echo "${THINKTHEN_SENTINEL-unset} $THINKTHEN_HEAVY_LOCK $THINKTHEN_HEAVY_LOCK_HELD $THINKTHEN_TOOLCHAINS $THINKTHEN_DUCKDB_CLI"')
-if [ "$kept" != "unset /nonexistent/lock /nonexistent/lock /nonexistent/tools /nonexistent/duckdb" ]; then
-    echo "lint: heavy-lock left a stray THINKTHEN_ name or dropped its own: $kept" >&2
+# Ticket 0133: a rung's child and allow-list itself both hold exactly the pinned
+# names. Each is planted beside a key, a stray THINKTHEN_ name, a target folder,
+# and a name no shell can hold. gawk's own AWKPATH and AWKLIBPATH are left out.
+seen=$(env -i PATH="$PATH" HOME=/nonexistent/HOME LANG=/nonexistent/LANG LC_ALL=/nonexistent/LC_ALL \
+    TMPDIR=/nonexistent/TMPDIR XDG_RUNTIME_DIR=/nonexistent/XDG_RUNTIME_DIR XDG_CACHE_HOME=/nonexistent/XDG_CACHE_HOME \
+    CARGO_HOME=/nonexistent/CARGO_HOME RUSTUP_HOME=/nonexistent/RUSTUP_HOME RUSTUP_TOOLCHAIN=/nonexistent/RUSTUP_TOOLCHAIN \
+    RUSTC_WRAPPER=/nonexistent/RUSTC_WRAPPER SCCACHE_CONF=/nonexistent/SCCACHE_CONF R_LIBS_USER=/nonexistent/R_LIBS_USER \
+    THINKTHEN_HEAVY_LOCK=/nonexistent/lock THINKTHEN_HEAVY_LOCK_HELD=/nonexistent/lock \
+    THINKTHEN_TOOLCHAINS=/nonexistent/THINKTHEN_TOOLCHAINS THINKTHEN_DUCKDB_CLI=/nonexistent/THINKTHEN_DUCKDB_CLI \
+    SQLITE_AMALGAMATION=/nonexistent/SQLITE_AMALGAMATION THINKTHEN_PRIVATE_NAMES=/nonexistent/THINKTHEN_PRIVATE_NAMES FAKE_SERVICE_API_KEY=planted THINKTHEN_SENTINEL=planted \
+    CARGO_TARGET_DIR=/nonexistent/CARGO_TARGET_DIR FAKE.SERVICE_TOKEN=planted \
+    sh -c '. sdlc/scripts/heavy-lock; exec awk "BEGIN { for (n in ENVIRON) if (n !~ /^AWK(LIB)?PATH\$/) print n }"' \
+    sdlc/scripts/lint | LC_ALL=C sort | tr '\n' ' ')
+allowed="CARGO_HOME HOME LANG LC_ALL PATH PWD RUSTC_WRAPPER RUSTUP_HOME RUSTUP_TOOLCHAIN R_LIBS_USER SCCACHE_CONF SQLITE_AMALGAMATION"
+allowed="$allowed THINKTHEN_DUCKDB_CLI THINKTHEN_HEAVY_LOCK THINKTHEN_HEAVY_LOCK_HELD THINKTHEN_PRIVATE_NAMES THINKTHEN_TOOLCHAINS TMPDIR XDG_CACHE_HOME XDG_RUNTIME_DIR "
+listed=$(sed -n 's/^[[:space:]]*\([A-Z_ |]*\)) ;;$/\1/p' sdlc/scripts/allow-list | tr -d ' ' | tr '|' '\n' |
+    LC_ALL=C sort | tr '\n' ' ')
+if [ "$seen" != "$allowed" ] || [ "$listed" != "$allowed" ]; then
+    printf 'lint: allow-list names %s\nand a rung child saw %s\n' "$listed" "$seen" >&2
     exit 1
 fi
 # Ticket 0128: one version everywhere, workflows run by hand from pinned code,

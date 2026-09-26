@@ -101,7 +101,7 @@ The 0.1 release locks the public API first, so names, bounds, and documentation 
 
 ### The vocabulary check
 
-1. One word per concept, everywhere: code, help, errors, manuals, docstrings, and the site. The ruled public words are the single source (`mktg/products/thinkthen/vocabulary.md` and the manual); a vocabulary lint reads that list and fails on a banned word in shipped files. Ruled so far: the judged thing is `evidence`; the object a program holds is the `engine`, never `connection`; a question file's threshold carries `tuned_for` (ruled 2026-09-23 over `calibrated`, which claims a proof of probability correctness nobody made); `annotate` keeps its name (`structure` promises extraction, which is `recognize`'s job).
+1. One word per concept, everywhere: code, help, errors, manuals, docstrings, and the site. The ruled public words are the single source (the marketing repository's `products/thinkthen/vocabulary.md` and the manual); a vocabulary lint reads that list and fails on a banned word in shipped files. Ruled so far: the judged thing is `evidence`; the object a program holds is the `engine`, never `connection`; a question file's threshold carries `tuned_for` (ruled 2026-09-23 over `calibrated`, which claims a proof of probability correctness nobody made); `annotate` keeps its name (`structure` promises extraction, which is `recognize`'s job).
 2. Names say what the thing does, never how it is built: no implementation words, no internal jokes, no abbreviations a newcomer must learn.
 3. Functions are verbs, values are nouns, booleans read as predicates (`is_`, `has_`, `allow_`); a bare adjective that could mean either polarity is a finding.
 

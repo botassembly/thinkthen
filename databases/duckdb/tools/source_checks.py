@@ -27,6 +27,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 REPO = ROOT.parent.parent
+sys.path.insert(0, str(REPO / "conformance" / "children"))
+from children import CARGO, child_env  # noqa: E402  the shared helper, ticket 0127
 FAILED: list[str] = []
 
 
@@ -58,7 +60,7 @@ def deprecated() -> None:
     meta = json.loads(
         subprocess.run(
             ["cargo", "metadata", "--offline", "--locked", "--format-version", "1"],
-            cwd=ROOT, check=True, capture_output=True, text=True, stdin=subprocess.DEVNULL,
+            cwd=ROOT, check=True, capture_output=True, text=True, stdin=subprocess.DEVNULL, env=child_env(CARGO),
         ).stdout
     )
     crate = next(package for package in meta["packages"] if package["name"] == "libduckdb-sys")
@@ -166,7 +168,7 @@ def shipped() -> None:
             fail(f"decision 14: the shipped extension holds {marker.decode()}")
     tree = subprocess.run(
         ["cargo", "tree", "--offline", "--locked", "-e", "features", "-i", "thinkthen-duckdb"],
-        cwd=ROOT, check=True, capture_output=True, text=True, stdin=subprocess.DEVNULL,
+        cwd=ROOT, check=True, capture_output=True, text=True, stdin=subprocess.DEVNULL, env=child_env(CARGO),
     ).stdout
     if "test-hooks" in tree:
         fail("decision 14: the shipped build enables test-hooks")

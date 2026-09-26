@@ -1,6 +1,6 @@
 # recognize relations report edges the text does not state
 
-Status: Open. Filed 2026-09-26 from workspace experiment 265, a hand-written test of 30 plain English sentences against `jev-latest` (`jev-1.13.0`). The relation code tested is byte-identical to main `0f255579`. Relations are beta.
+Status: Closed on 2026-09-26. Replaced by `../2026-09-26-recognize-design.md`.
 
 ## What happens
 

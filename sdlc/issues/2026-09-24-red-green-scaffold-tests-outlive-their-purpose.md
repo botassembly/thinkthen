@@ -1,6 +1,6 @@
 # Red-green scaffold tests outlive their purpose
 
-Status: Open. Steps 1 and 2 landed, and ticket 0119 holds steps 3 and 4. Filed from the workspace on Ian's request. The workspace rule is decision `2026-09-24-tests-earn-their-place.md` in the dotfiles repo.
+Status: Open. Steps 1 and 2 landed, and ticket 0119 holds steps 3 and 4. Filed from the workspace on Ian's request. The workspace rule is decision `2026-09-24-tests-earn-their-place.md` in the workspace's decisions folder.
 
 `AGENTS.md` asks for red-green development and says nothing about the red-green tests afterward. Each one pins a step while the code is written. After green, many guard nothing that a stronger test misses, and they break on behavior-preserving refactors. The OpenClaw project deleted about 400,000 lines of such tests with little change in coverage, using its `test-audit` skill (https://github.com/openclaw/openclaw/tree/main/.agents/skills/test-audit).
 

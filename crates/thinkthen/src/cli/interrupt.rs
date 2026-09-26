@@ -172,57 +172,31 @@ struct UnixRouting {
     stop: std::sync::mpsc::Sender<()>,
     carrier: std::thread::JoinHandle<Result<(), ()>>,
     original: nix::sys::signal::SigSet,
-    restore_fails: bool,
 }
 
 #[cfg(unix)]
 impl UnixRouting {
     fn start(cancel: Cancel<'static>, path: Option<PathBuf>) -> Result<Self, StartError> {
-        Self::start_with(cancel, path, [false; 4])
-    }
-
-    fn start_with(
-        cancel: Cancel<'static>,
-        path: Option<PathBuf>,
-        failures: [bool; 4],
-    ) -> Result<Self, StartError> {
         use std::sync::mpsc;
 
-        let [block_fails, spawn_fails, readiness_fails, restore_fails] = failures;
         let signal = sigint_set();
-        if block_fails {
-            return Err(StartError::Activation);
-        }
         let original = signal
             .thread_swap_mask(nix::sys::signal::SigmaskHow::SIG_BLOCK)
             .map_err(|_error| StartError::Activation)?;
         let (stop, stopped) = mpsc::channel();
         let (ready_send, ready) = mpsc::sync_channel(1);
         let acknowledgment = Acknowledgment::new(path);
-        let carrier_acknowledgment = acknowledgment.clone();
-        if spawn_fails {
-            return Err(start_error(&original, restore_fails));
-        }
         let carrier = match std::thread::Builder::new()
             .name("thinkthen-sigint".to_owned())
-            .spawn(move || {
-                carrier(
-                    signal,
-                    stopped,
-                    ready_send,
-                    cancel,
-                    carrier_acknowledgment,
-                    readiness_fails,
-                )
-            }) {
+            .spawn(move || carrier(signal, stopped, ready_send, cancel, acknowledgment))
+        {
             Ok(carrier) => carrier,
-            Err(_error) => return Err(start_error(&original, restore_fails)),
+            Err(_error) => return Err(start_error(&original)),
         };
         let routing = Self {
             stop,
             carrier,
             original,
-            restore_fails,
         };
         match ready.recv() {
             Ok(Ok(())) => Ok(routing),
@@ -233,7 +207,7 @@ impl UnixRouting {
     fn abort(self) -> StartError {
         let _stopping = self.stop.send(());
         let _joined = self.carrier.join();
-        start_error(&self.original, self.restore_fails)
+        start_error(&self.original)
     }
 
     fn cleanup(self) -> Result<(), ()> {
@@ -243,14 +217,14 @@ impl UnixRouting {
             .join()
             .map_err(|_panic| ())
             .and_then(|result| result);
-        let restored = restore(&self.original, self.restore_fails);
+        let restored = restore(&self.original);
         stopped.and(joined).and(restored)
     }
 }
 
 #[cfg(unix)]
-fn start_error(original: &nix::sys::signal::SigSet, restore_fails: bool) -> StartError {
-    if restore(original, restore_fails).is_err() {
+fn start_error(original: &nix::sys::signal::SigSet) -> StartError {
+    if restore(original).is_err() {
         StartError::Restoration
     } else {
         StartError::Activation
@@ -258,13 +232,11 @@ fn start_error(original: &nix::sys::signal::SigSet, restore_fails: bool) -> Star
 }
 
 #[cfg(unix)]
-fn restore(original: &nix::sys::signal::SigSet, injected_failure: bool) -> Result<(), ()> {
-    let restored = original.thread_set_mask().map_err(|_error| ());
-    if injected_failure { Err(()) } else { restored }
+fn restore(original: &nix::sys::signal::SigSet) -> Result<(), ()> {
+    original.thread_set_mask().map_err(|_error| ())
 }
 
 #[cfg(unix)]
-#[derive(Clone)]
 struct Acknowledgment {
     path: Option<PathBuf>,
     failed: Arc<AtomicBool>,
@@ -313,13 +285,11 @@ fn carrier(
     ready: std::sync::mpsc::SyncSender<Result<(), ()>>,
     cancel: Cancel<'static>,
     acknowledgment: Acknowledgment,
-    readiness_fails: bool,
 ) -> Result<(), ()> {
     use std::sync::mpsc::RecvTimeoutError;
 
     let unblocked = signal.thread_unblock().map_err(|_error| ());
-    let announced = if readiness_fails { Err(()) } else { unblocked };
-    ready.send(announced).map_err(|_error| ())?;
+    ready.send(unblocked).map_err(|_error| ())?;
     unblocked?;
     let mut acknowledged = false;
     loop {
