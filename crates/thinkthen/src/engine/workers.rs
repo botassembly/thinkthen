@@ -103,7 +103,7 @@ pub(crate) fn ordered<W, R, E>(
     items: Vec<W>,
     cancel: &Cancel<'_>,
     work: &(impl Fn(W) -> Result<R, Error> + Sync),
-    mut each: impl FnMut(R) -> Result<(), E>,
+    each: impl FnMut(R) -> Result<(), E>,
 ) -> Result<(), E>
 where
     W: Send,
@@ -115,46 +115,59 @@ where
         jobs,
         results,
         &|(place, item)| (place, work(item)),
-        |feed| {
-            let mut items = items.into_iter().enumerate().peekable();
-            let (mut held, mut next, mut in_flight) = (BTreeMap::new(), 0, 0);
-            let (mut failure, mut halted) = (None, false);
-            loop {
-                while failure.is_none() {
-                    match held.remove(&next) {
-                        Some(Ok(result)) => failure = each(result).err(),
-                        Some(Err(error)) => failure = Some(E::from(error)),
-                        None => break,
-                    }
-                    next += 1;
-                }
-                if failure.is_none() && items.peek().is_some() {
-                    failure = cancel.stop().map(E::from);
-                }
-                halted |= failure.is_some();
-                while !halted && in_flight < jobs {
-                    let Some(item) = items.next() else { break };
-                    feed.send(item)
-                        .map_err(|_| Error::Defect("a request worker ended early"))?;
-                    in_flight += 1;
-                }
-                if in_flight == 0 && (halted || items.peek().is_none()) {
-                    return failure.map_or(Ok(()), Err);
-                }
-                match received.recv_timeout(Cancel::poll()) {
-                    Ok((place, result)) => {
-                        in_flight -= 1;
-                        halted |= result.is_err();
-                        held.insert(place, result);
-                    }
-                    Err(RecvTimeoutError::Timeout) => {}
-                    Err(RecvTimeoutError::Disconnected) => {
-                        return Err(Error::Defect("the request workers ended early").into());
-                    }
-                }
-            }
-        },
+        |feed| feed_in_order(jobs, items, cancel, &feed, &received, each),
     )
+}
+
+/// The feed and hand-on loop of [`ordered`], run on the calling thread.
+fn feed_in_order<W, R, E>(
+    jobs: usize,
+    items: Vec<W>,
+    cancel: &Cancel<'_>,
+    feed: &SyncSender<(usize, W)>,
+    received: &Receiver<(usize, Result<R, Error>)>,
+    mut each: impl FnMut(R) -> Result<(), E>,
+) -> Result<(), E>
+where
+    E: From<Error>,
+{
+    let mut items = items.into_iter().enumerate().peekable();
+    let (mut held, mut next, mut in_flight) = (BTreeMap::new(), 0, 0);
+    let (mut failure, mut halted) = (None, false);
+    loop {
+        while failure.is_none() {
+            match held.remove(&next) {
+                Some(Ok(result)) => failure = each(result).err(),
+                Some(Err(error)) => failure = Some(E::from(error)),
+                None => break,
+            }
+            next += 1;
+        }
+        if failure.is_none() && items.peek().is_some() {
+            failure = cancel.stop().map(E::from);
+        }
+        halted |= failure.is_some();
+        while !halted && in_flight < jobs {
+            let Some(item) = items.next() else { break };
+            feed.send(item)
+                .map_err(|_| Error::Defect("a request worker ended early"))?;
+            in_flight += 1;
+        }
+        if in_flight == 0 && (halted || items.peek().is_none()) {
+            return failure.map_or(Ok(()), Err);
+        }
+        match received.recv_timeout(Cancel::poll()) {
+            Ok((place, result)) => {
+                in_flight -= 1;
+                halted |= result.is_err();
+                held.insert(place, result);
+            }
+            Err(RecvTimeoutError::Timeout) => {}
+            Err(RecvTimeoutError::Disconnected) => {
+                return Err(Error::Defect("the request workers ended early").into());
+            }
+        }
+    }
 }
 
 fn worker<W, R>(queue: &Mutex<Receiver<W>>, results: &Sender<R>, work: &(impl Fn(W) -> R + Sync)) {
