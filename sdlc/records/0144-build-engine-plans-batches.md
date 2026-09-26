@@ -19,7 +19,7 @@ Branch `ticket/0144-engine-plans-batches`, in lane `worktrees/thinkthen-lane-3`.
 
 ## Tests
 
-Eight table tests in `core/batch/tests.rs`: design test 1 (`a_batch_of_one_is_todays_request`), design test 2 (`each_batch_body_matches_its_fixture`), design test 3 (`batches_close_where_the_readme_says`), and the edge-case rows in `limits_close_batches_by_exact_bytes_and_the_ceiling`, `the_ceiling_closes_batches_at_the_built_in_address_only`, `questions_copies_and_refusals_follow_the_batch_rules`, `a_record_over_the_profile_alone_is_refused_on_its_own_push` and `a_context_is_refused_without_echoing_it`.
+Eight table tests in `core/batch/tests.rs` and `core/batch/tests/refusals.rs`: design test 1 (`a_batch_of_one_is_todays_request`), design test 2 (`each_batch_body_matches_its_fixture`), design test 3 (`batches_close_where_the_readme_says`), and the edge-case rows in `limits_close_batches_by_exact_bytes_and_the_ceiling`, `the_ceiling_closes_batches_at_the_built_in_address_only`, `questions_copies_and_refusals_follow_the_batch_rules`, `a_record_over_the_profile_alone_is_refused_on_its_own_push` and `a_context_is_refused_without_echoing_it`.
 
 The code review added these rows: one record over `max_evidence_bytes` alone, a choice over `max_options`, a refused record after a closed batch, twelve records at `max_request_bytes` 817 and 816, which cross `q10`, no records, a context at `--batch 1`, and a context over the ceiling in `Batcher::new`. Their values are worked by hand. Twelve one-letter records under `decide("Q")` make an 817-byte body: a 60-byte skeleton, 36 bytes of records and 11 commas, 12 questions of 57 bytes, 15 name digits and 11 commas.
 
@@ -67,7 +67,7 @@ Nonblank lines against `origin/main` at `7850db3f`.
 | `core/mod.rs` and `core/backend.rs` | 5 | +2 |
 | `core/backend_profile.rs` and `engine/prepared_request.rs` | 0 | 0 |
 
-`sdlc/ratchet.json` moved from 67,758 to 68,670, up 912, within the 930 ruling. After the code review round it moves to 68,789, up 1,031, within the 1,035 ruling. Splitting the two long tests for clippy added lines. Sharing the wire-name digit count in `batch.rs` and the test backends, the structured question and a context helper in the tests took the total back under 930. Before that the build merged the two plan encoders into one and held the open batch in one value.
+`sdlc/ratchet.json` moved from 67,758 to 68,670, up 912, within the 930 ruling. After the code review round it moves to 68,793, up 1,035, at the 1,035 ruling. The lint's 500-line file ceiling moved the two refusal tests and their helper to `core/batch/tests/refusals.rs`. The move cost four lines, net of dropping two lines there. Splitting the two long tests for clippy added lines. Sharing the wire-name digit count in `batch.rs` and the test backends, the structured question and a context helper in the tests took the total back under 930. Before that the build merged the two plan encoders into one and held the open batch in one value.
 
 The code review round stopped at 1,031 lines of growth, over the 930 ruling, before the merge and the ladder. The coordinator raised the ceiling from 930 to 1,035 after the code review added the refusal, wire-digit and evidence-count tests, and the push fix. Ian can overturn this.
 
