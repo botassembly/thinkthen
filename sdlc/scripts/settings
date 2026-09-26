@@ -18,7 +18,7 @@ import tempfile
 REPO = pathlib.Path(__file__).resolve().parents[2]
 PAGE = REPO / "specification" / "settings.md"
 SCHEMA = REPO / "specification" / "question-file.schema.json"
-RECOGNIZE = REPO / "crates" / "thinkthen" / "src" / "core" / "recognize_file.rs"
+RECOGNIZE = REPO / "crates/thinkthen/src/core/recognize_file.rs"  # its two key lists: the file, then `recognize`
 COLUMNS = ["Setting", "What it does", "Default", "Allowed values", "Command flag", "Environment variable",
            "Configuration file", "Question-file key", "Rust", "Python", "TypeScript", "Ruby", "R", "C", "DuckDB",
            "PostgreSQL", "SQLite"]
@@ -118,7 +118,6 @@ def schema_keys():
     entries = [(name, entry["properties"]) for name, entry in defs.items() if name in entry.get("properties", {})]
     keys = {k for _, props in entries for k in props} | {
         f"{k}.{sub}" for _, props in entries for k, held in props.items() for sub in held.get("properties", {})}
-    # A recognize question file is read by hand, not by the schema: its top-level list, then its section's.
     top, section = (re.findall(r'"([a-z_]+)"', held) for held in LISTED.findall(RECOGNIZE.read_text(encoding="utf-8"))[:2])
     return (keys | set(top) | {f"recognize.{k}" for k in section}) - NOT_KEYS
 
