@@ -6,7 +6,8 @@ use super::diff::{Discordant, discordant};
 use super::key::{Key, Outcome};
 use super::optimize::Measure;
 use super::{
-    SplitMix64, calibration_error, json_lines, mcnemar, places, python_float_text, rounded,
+    SplitMix64, calibration, calibration_error, json_lines, mcnemar, places, python_float_text,
+    rounded,
 };
 use crate::core::pointer::Pointer;
 
@@ -78,6 +79,17 @@ fn calibration_error_closes_the_last_bin_at_one() {
     let choose = [(0.8, true), (0.7, false), (0.6, true), (0.5, false)];
     assert!(near(calibration_error(&ones(&choose)), 0.45, 9));
     assert!(near(calibration_error(&[(1.0, 0.0), (0.0, 0.0)]), 0.5, 9));
+}
+
+/// One pair's shifted resamples sit one float step below its error, so the interval widens to hold it.
+#[test]
+fn the_calibration_interval_holds_the_error_of_one_pair() {
+    let calibration = calibration(&[(0.94, 1.0)], 0).expect("one pair");
+    let [low, high] = calibration.interval;
+    assert!(
+        low <= calibration.error && calibration.error <= high,
+        "{low} {high}"
+    );
 }
 
 #[test]

@@ -16,62 +16,53 @@ pub(crate) struct Step {
     pub(crate) right: f64,
 }
 
-/// True for a verb whose answers pair: `rank` gives no answer, and `score` reads levels.
-pub(crate) const fn pairs_verb(verb: Verb) -> bool {
-    matches!(verb, Verb::Decide | Verb::Tag | Verb::Choose | Verb::Find)
-}
-
-/// The share a tie earns: one over the tied options when the key is one of them, else 0.
+/// The share a tie earns: one over the tied options when the answer said tied and the key is one of them, else 0.
 pub(crate) fn tie_share(answer: &Answer, want: &Want) -> f64 {
     answer
         .top
         .as_ref()
-        .filter(|top| top.tied && top.holders.iter().any(|held| held == want.text()))
+        .filter(|top| {
+            matches!(answer.said(Rule::AsRun), Ok(Said::Tied))
+                && top.holders.iter().any(|held| held == want.text())
+        })
         .map_or(0.0, |top| 1.0 / top.holders.len() as f64)
 }
 
-/// One answer's pair: its confidence in the answer it gave, and 1, 0, or a tie's share.
+/// One answer's pair: its confidence in the answer it gave, and 1, 0, or a tie's
+/// share. `rank` and `score` give no answer to pair.
 ///
 /// # Errors
 ///
 /// Returns [`MeasureError`] when the answer cannot be read as run.
 fn pair(answer: &Answer, want: &Want) -> Result<Option<Pair>, MeasureError> {
+    if matches!(answer.verb, Verb::Rank | Verb::Score) {
+        return Ok(None);
+    }
     let said = answer.said(Rule::AsRun)?;
     let right = match outcome(&said, want) {
         Outcome::Right => 1.0,
         Outcome::Tied => tie_share(answer, want),
         Outcome::Wrong | Outcome::Unresolved => 0.0,
     };
-    Ok(match answer.verb {
-        Verb::Decide | Verb::Tag => answer.probability.map(|p| {
-            let p = p.as_f64();
-            let confidence = match said {
-                Said::Yes => p,
-                Said::No => 1.0 - p,
-                _ => p.max(1.0 - p),
-            };
-            (confidence, right)
-        }),
-        Verb::Choose | Verb::Find => answer.top.as_ref().map(|top| (top.top, right)),
-        Verb::Rank | Verb::Score => None,
-    })
+    Ok(answer
+        .confidence()
+        .map(|p| match (answer.verb.yes_no(), said) {
+            (true, Said::No) => (1.0 - p, right),
+            (true, Said::Unresolved) => (p.max(1.0 - p), right),
+            _ => (p, right),
+        }))
 }
 
-/// The pairs of every labeled answer whose verb pairs, in order.
+/// The pairs of every labeled answer that pairs, in order.
 ///
 /// # Errors
 ///
 /// Returns [`MeasureError`] when an answer cannot be read as run.
 pub(crate) fn pairs(items: &[Graded<'_>]) -> Result<Vec<Pair>, MeasureError> {
-    let mut out = Vec::new();
-    for (answer, want) in items {
-        if pairs_verb(answer.verb)
-            && let Some(pair) = pair(answer, want)?
-        {
-            out.push(pair);
-        }
-    }
-    Ok(out)
+    items
+        .iter()
+        .filter_map(|(answer, want)| pair(answer, want).transpose())
+        .collect()
 }
 
 /// The curve at every distinct confidence, from the highest down.

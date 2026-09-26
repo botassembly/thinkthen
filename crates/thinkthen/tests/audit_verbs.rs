@@ -26,7 +26,7 @@ const ROWS: [&str; 13] = [
     r#"rank 2 {"/labeled": 2, "/r_precision": null}"#,
     r#"rank 3 {"/labeled": 0, "/r_precision": null}"#,
     r#"rank 4 {"/labeled": 3, "/r_precision": 0.5, "/suggested": null, "/calibration": null}"#,
-    r#"find 0 {"/rows": 4, "/right": 2, "/wrong": 1, "/tied": 1, "/tied_holding_key": 1, "/tie_share": 0.5, "/disagreements": [{"key": "u001", "said": "u003", "count": 1}], "/suggested": null}"#,
+    r#"find 0 {"/rows": 5, "/right": 3, "/wrong": 1, "/tied": 1, "/tied_holding_key": 1, "/tie_share": 0.5, "/disagreements": [{"key": "u001", "said": "u003", "count": 1}], "/suggested": null}"#,
     r#"annotate 0 {"/group": "urgent", "/right": 1, "/false_yes": 1, "/precision": 0.5}"#,
     r#"annotate 1 --optimize precision {"/verb": "choose", "/suggested": {"cut": null, "objective": "precision does not apply to choose", "split": "seeded", "seed": 0}}"#,
     r#"annotate 2 {"/group": "effort", "/verb": "score", "/right": 2, "/mean_level_distance": 0.333333}"#,

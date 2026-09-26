@@ -11,7 +11,7 @@ use std::path::{Path, PathBuf};
 
 use clap::{Args, ValueEnum};
 
-use crate::cli::measure::{Cause, Refusal, lines, rule, write};
+use crate::cli::measure::{BY, Cause, Refusal, lines, rule, write};
 use crate::core::Pointer;
 use crate::core::measure::answer::{self, Identity};
 use crate::core::measure::audit::{self as grade, By, Counts, Pooled, Row, Settings, Suggested};
@@ -82,7 +82,7 @@ fn group(text: &str) -> Result<Group, String> {
         "question" => Ok(Group::Question),
         "verb" => Ok(Group::Verb),
         _ if text.starts_with('/') => Ok(Group::Field(text.to_owned())),
-        _ => Err("--by takes question, verb, or a JSON pointer such as /category".to_owned()),
+        _ => Err(BY.to_owned()),
     }
 }
 
@@ -229,18 +229,16 @@ fn table(row: &Row, out: &mut String) {
         .interval
         .map_or([None, None], |[l, h]| [Some(l), Some(h)]);
     line(format!(
-        "  agreement {} (95% {} to {}): {} right, {} wrong, {} unresolved, {} tied",
+        "  agreement {} (95% {} to {}): {} right, {} wrong, {} unresolved, {} tied{}",
         three(row.agreement),
         three(low),
         three(high),
         row.right,
         row.wrong,
         row.unresolved,
-        row.tied
+        row.tied,
+        ties_line(row)
     ));
-    if let Some(text) = ties_line(row) {
-        line(text);
-    }
     if row.true_yes.is_some() {
         line(format!(
             "  said yes, key no: {}   said no, key yes: {}   yes recall {}   mean p(yes) {}   AUC {}",
@@ -279,12 +277,14 @@ fn table(row: &Row, out: &mut String) {
             calibration.note
         ));
     }
-    for text in row
-        .suggested
-        .iter()
-        .flat_map(|suggested| suggested_lines(row, suggested))
-    {
-        line(text);
+    if let Some(suggested) = &row.suggested {
+        line(suggested_line(row, suggested));
+        if let Some(Some(steady)) = &suggested.steady {
+            line(steady_line(steady, suggested.seed) + &crossed_line(suggested));
+        }
+        if let (true, Some(held)) = (row.true_yes.is_some(), &suggested.held) {
+            line(held_line(&held.at_cut));
+        }
     }
     for (place, point) in row.coverage.iter().flatten().enumerate() {
         if place == 0 {
@@ -304,38 +304,33 @@ fn table(row: &Row, out: &mut String) {
     }
 }
 
-/// The ties line of a `choose` or `find` row with ties.
-fn ties_line(row: &Row) -> Option<String> {
-    let (holding, share) = row
+/// The ties line of a `choose` or `find` row with ties, after a line break, or nothing.
+fn ties_line(row: &Row) -> String {
+    let ties = row
         .tied_holding_key
         .zip(row.tie_share)
-        .filter(|_| row.tied > 0)?;
-    Some(format!(
-        "  ties holding the key: {holding} of {}, share {}",
-        row.tied,
-        three(Some(share))
-    ))
+        .filter(|_| row.tied > 0);
+    ties.map_or_else(String::new, |(holding, share)| {
+        format!(
+            "\n  ties holding the key: {holding} of {}, share {}",
+            row.tied,
+            three(Some(share))
+        )
+    })
 }
 
-/// The suggested cut's line, then the steady, crossed, and held-part lines that apply.
-fn suggested_lines(row: &Row, suggested: &Suggested) -> Vec<String> {
-    let mut lines = vec![suggested_line(row, suggested)];
-    if let Some(Some(steady)) = &suggested.steady {
-        lines.push(steady_line(steady, suggested.seed));
-    }
-    if let Some(Some(crossed)) = &suggested.crossed {
-        let [first, second] = crossed.cuts.map(|cut| python_float_text(rounded(cut)));
-        lines.push(format!(
-            "  crossed: cuts {first} and {second}, each checked on the other part: agreement {}, {} right of {} answered",
-            three(crossed.held.agreement),
-            crossed.held.right,
-            crossed.held.answered
-        ));
-    }
-    if let (true, Some(held)) = (row.true_yes.is_some(), &suggested.held) {
-        lines.push(held_line(&held.at_cut));
-    }
-    lines
+/// The line of `suggested.crossed`, after a line break, or nothing.
+fn crossed_line(suggested: &Suggested) -> String {
+    let Some(Some(crossed)) = &suggested.crossed else {
+        return String::new();
+    };
+    let [first, second] = crossed.cuts.map(|cut| python_float_text(rounded(cut)));
+    format!(
+        "\n  crossed: cuts {first} and {second}, each checked on the other part: agreement {}, {} right of {} answered",
+        three(crossed.held.agreement),
+        crossed.held.right,
+        crossed.held.answered
+    )
 }
 
 /// The suggested cut's line, or the sentence that says no cut reaches the target.

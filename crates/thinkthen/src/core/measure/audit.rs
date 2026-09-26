@@ -16,8 +16,7 @@ use crate::core::measure::{Calibration, MeasureError, calibration};
 /// A group's name, and its verb when `--by POINTER` splits a value by verb.
 type Name = (String, Option<Verb>);
 
-/// One group per answer name, else question text, else verb; one per verb;
-/// or one per value of a record field and verb.
+/// One group per answer name, else question text, else verb; per verb; or per record field value and verb.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) enum By {
     Question,
@@ -252,10 +251,6 @@ pub(crate) fn audit(
 }
 
 /// The pooled line: every unfailed, labeled answer of a verb that pairs, `tag` labels aside.
-///
-/// # Errors
-///
-/// Returns [`MeasureError`] for a key value or an answer audit cannot read.
 pub(crate) fn pooled(
     answers: &[Answer],
     key: &Key,

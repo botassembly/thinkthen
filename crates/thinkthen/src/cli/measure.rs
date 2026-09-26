@@ -25,6 +25,9 @@ pub(crate) struct Refusal {
     pub(crate) cause: Cause,
 }
 
+/// The sentence a `--by` value that is neither a word nor a pointer gets.
+pub(crate) const BY: &str = "--by takes question, verb, or a JSON pointer such as /category";
+
 /// What a measuring command refused.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Cause {
@@ -99,8 +102,7 @@ impl fmt::Display for Refusal {
             Cause::WriteByPointer => {
                 formatter.write_str("--write grades by question; drop the --by pointer")
             }
-            Cause::ByPointer => formatter
-                .write_str("--by takes question, verb, or a JSON pointer such as /category"),
+            Cause::ByPointer => formatter.write_str(BY),
             Cause::CurveTable => formatter.write_str("--curve prints JSON lines; drop --table"),
             Cause::NotQuestions => {
                 formatter.write_str("--write names a file that is not a valid question file")

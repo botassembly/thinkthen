@@ -76,7 +76,7 @@ interval = [max(0, centre − half), min(1, centre + half)], or null when n = 0
 
 **Mean and AUC** (yes/no verbs, probabilities on every labeled answer). `mean_probability` is the mean of `p`. With `P` the `p` of answers keyed yes and `N` those keyed no, AUC is null when either is empty, else `(Σ over x in P, y in N of [x > y] + ½[x = y]) / (|P|·|N|)`.
 
-**Tie share** (`choose` and `find`). A tie at the top among `k` options earns `1/k` when the key is one of them, and 0 otherwise. `tied_holding_key` counts the ties that hold the key, and `tie_share` sums their shares. Both count under every rule, and both are null for other verbs. `tied` and `right` keep their meaning.
+**Tie share** (`choose` and `find`). An answer that reads as tied among `k` options at the top earns `1/k` when the key is one of them, and 0 otherwise. A `find` tie among real units prints the first unit, so it reads as that unit and earns no share. `tied_holding_key` counts the ties that hold the key, and `tie_share` sums their shares. Both count under every rule, and both are null for other verbs. `tied` and `right` keep their meaning.
 
 **Calibration pairs** (probabilities on every labeled answer). Each pair is the answer's confidence in the answer it gave as run, under the question's own bar, and how right that answer was. `--threshold` does not move the pairs.
 

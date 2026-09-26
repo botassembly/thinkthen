@@ -219,12 +219,11 @@ pub(crate) fn suggest(
     if let (true, Some(Some(Bar::Cut(first)))) = (cross, tuned.first())
         && let Some(Bar::Cut(second)) = tune(&held_part, verb, settings)?
     {
-        let [first, second] = [Bar::Cut(*first), Bar::Cut(second)];
         suggested.crossed = Some(Some(Crossed {
-            cuts: [first, second].map(|bar| bar.value().unwrap_or_default()),
+            cuts: [*first, second].map(|k| f64::from(k) / 100.0),
             held: added(
-                &count(&held_part, first.rule())?,
-                &count(&tune_part, second.rule())?,
+                &count(&held_part, Rule::Threshold(cut(*first)))?,
+                &count(&tune_part, Rule::Threshold(cut(second)))?,
                 verb.yes_no(),
             ),
         }));

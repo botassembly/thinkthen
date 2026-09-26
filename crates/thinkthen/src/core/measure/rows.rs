@@ -8,7 +8,7 @@ use crate::core::measure::answer::{Answer, Rule, Said, Shown, Verb};
 use crate::core::measure::audit::{Counts, Disagreement, Kind, Point, Row, Settings};
 use crate::core::measure::key::{Key, Outcome, Want, outcome};
 use crate::core::measure::optimize::suggest;
-use crate::core::measure::pairs::{curve, pairs, pairs_verb, tie_share};
+use crate::core::measure::pairs::{curve, pairs, tie_share};
 use crate::core::measure::{MeasureError, auc, calibration, python_float_text, python_sum, wilson};
 use crate::core::threshold::Threshold;
 
@@ -101,7 +101,7 @@ pub(crate) fn row(
         band: ok.iter().any(|answer| answer.band),
     };
     if probabilities && !pooled {
-        if verb.is_some_and(pairs_verb) {
+        if !matches!(verb, Some(Verb::Rank | Verb::Score)) {
             let pairs = pairs(&labeled)?;
             row.calibration = calibration(&pairs, settings.seed);
             row.curve = settings.curve.then(|| curve(&pairs));

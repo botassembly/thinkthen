@@ -199,28 +199,32 @@ pub(crate) fn python_sum(values: impl IntoIterator<Item = f64>) -> f64 {
 /// One answer's confidence in what it said, and how right it was: 1, 0, or a tie's share.
 pub(crate) type Pair = (f64, f64);
 
-/// The pairs inside one bin: ten equal bins, the last closed at one.
-fn in_bin(pairs: &[Pair], bin: usize) -> Vec<Pair> {
-    let low = bin as f64 / BINS as f64;
-    let high = (bin + 1) as f64 / BINS as f64;
+/// One of ten equal bins, the last closed at one, and the sum of its confidences.
+fn bin(pairs: &[Pair], bin: usize) -> (Bin, f64) {
+    let (low, high) = (bin as f64 / BINS as f64, (bin + 1) as f64 / BINS as f64);
     let inside = |x: f64| (low <= x && x < high) || (bin == BINS - 1 && x == 1.0);
-    pairs
-        .iter()
-        .copied()
-        .filter(|pair| inside(pair.0))
-        .collect()
+    let held: Vec<&Pair> = pairs.iter().filter(|pair| inside(pair.0)).collect();
+    let (n, total) = (held.len(), python_sum(held.iter().map(|pair| pair.0)));
+    let right = python_sum(held.iter().map(|pair| pair.1));
+    let confidence = (n > 0).then(|| total / n as f64);
+    (
+        Bin {
+            low,
+            high,
+            n,
+            right,
+            confidence,
+        },
+        total,
+    )
 }
 
 /// The binned calibration error: the sum over bins of the gap between right and confidence, over every pair.
 pub(crate) fn calibration_error(pairs: &[Pair]) -> f64 {
-    let mut gap = 0.0;
-    for bin in 0..BINS {
-        let held = in_bin(pairs, bin);
-        gap += (python_sum(held.iter().map(|pair| pair.1))
-            - python_sum(held.iter().map(|pair| pair.0)))
-        .abs();
-    }
-    gap / pairs.len() as f64
+    let gaps = (0..BINS)
+        .map(|place| bin(pairs, place))
+        .map(|(held, total)| (held.right - total).abs());
+    gaps.sum::<f64>() / pairs.len() as f64
 }
 
 /// Linear interpolation between the order statistics of sorted values.
@@ -286,19 +290,7 @@ pub(crate) fn calibration(pairs: &[Pair], seed: u64) -> Option<Calibration> {
     let error = calibration_error(pairs);
     let bias = python_sum(errors.iter().copied()) / DRAWS as f64 - error;
     let shifted: Vec<f64> = errors.iter().map(|value| (value - bias).max(0.0)).collect();
-    let by_bin = (0..BINS)
-        .map(|bin| {
-            let held = in_bin(pairs, bin);
-            Bin {
-                low: bin as f64 / BINS as f64,
-                high: (bin + 1) as f64 / BINS as f64,
-                n: held.len(),
-                right: python_sum(held.iter().map(|pair| pair.1)),
-                confidence: (!held.is_empty())
-                    .then(|| python_sum(held.iter().map(|pair| pair.0)) / held.len() as f64),
-            }
-        })
-        .collect();
+    let by_bin = (0..BINS).map(|place| bin(pairs, place).0).collect();
     Some(Calibration {
         error,
         interval: [
