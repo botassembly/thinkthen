@@ -59,7 +59,7 @@ pub(crate) struct AuditArguments {
     /// Write the steady bar into the question file or set the results came from.
     #[arg(long, value_name = "QUESTIONS")]
     write: Option<PathBuf>,
-    /// Add each row's coverage curve at every distinct confidence.
+    /// Add the coverage curve at every distinct confidence to each group.
     #[arg(long)]
     curve: bool,
     /// Add one last line with the calibration of every verb pooled.

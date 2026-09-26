@@ -37,11 +37,11 @@ thinkthen audit given/choose.jsonl given/key.jsonl --table | grep ties | mustmat
 ```bash
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)/crates/thinkthen/tests/fixtures/measure"
-thinkthen audit given/by.jsonl given/by-key.jsonl --by /category --pooled | jq -c '[.group, .verb, .pooled, .answers]' | mustmatch '["lead","decide",null,null]
-["lead","choose",null,null]
-["tail","decide",null,null]
-["3","choose",null,null]
-[null,null,"every verb",6]'
+thinkthen audit given/by.jsonl given/by-key.jsonl --by /category --pooled | jq -r '"\(.group) \(.verb) \(.pooled) \(.answers)"' | mustmatch "lead decide null null
+lead choose null null
+tail decide null null
+3 choose null null
+null null every verb 6"
 ```
 
 Each `--optimize` measure picks its own bar. On the Abbey Road rows, with every record in the tuning part, accuracy picks 0.85, precision 0.95, recall 0.75, and f1 0.73.
