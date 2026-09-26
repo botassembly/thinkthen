@@ -2,8 +2,9 @@
 
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read as _, Seek as _, SeekFrom, Write as _};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::{Arc, Condvar, Mutex, PoisonError};
 use std::thread::{self, JoinHandle};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -129,7 +130,7 @@ impl Counters {
     /// The process totals so far. Reading them sends and writes nothing.
     pub(crate) fn snapshot(&self) -> Counts {
         let queue = self.shared.queue.lock();
-        queue.map(|queue| queue.totals).unwrap_or_default()
+        queue.unwrap_or_else(PoisonError::into_inner).totals
     }
 
     /// Count in memory and queue the delta for the writer. Never touches a file.
@@ -150,14 +151,16 @@ impl Counters {
                 Some(())
             }
         };
-        if totals.is_none() || queued.is_none() || queue.failed {
+        if queue.writer.is_none() && !queue.failed {
+            let (path, shared, carried) = (path.to_path_buf(), Arc::clone(&self.shared), carried());
+            let writer =
+                thread::Builder::new().spawn(move || write_behind(&path, &shared, carried));
+            queue.writer = writer.ok();
+        }
+        if totals.is_none() || queued.is_none() || queue.failed || queue.writer.is_none() {
             queue.failed = true;
             queue.pending.clear();
             return;
-        }
-        if queue.writer.is_none() {
-            let (path, shared, carried) = (path.to_path_buf(), Arc::clone(&self.shared), carried());
-            queue.writer = Some(thread::spawn(move || write_behind(&path, &shared, carried)));
         }
         self.shared.changed.notify_all();
     }
@@ -191,7 +194,8 @@ fn write_behind(path: &Path, shared: &Shared, carried: impl FnOnce()) {
         let taken = std::mem::take(&mut held.pending);
         held.writing = true;
         drop(held);
-        let written = taken.iter().all(write);
+        // A write that unwinds counts as failed, so `finish()` never waits on it.
+        let written = catch_unwind(AssertUnwindSafe(|| taken.iter().all(write))).unwrap_or(false);
         queue = shared.queue.lock().map(|mut held| {
             held.writing = false;
             held.failed |= !written;
