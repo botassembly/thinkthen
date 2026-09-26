@@ -10,12 +10,21 @@ Branch `ticket/0141-usage-writes-stop-serializing`. The ticket is `sdlc/tickets/
 - `write_behind` takes everything pending, writes each month with the unchanged `update()`, and sleeps until more arrives. The first failure stops all later writes.
 - `finish()` replaces `warning()`. It waits for the writer, then says whether a write failed. `cli/mod.rs` calls it where it called `warning()`. `Drop` writes what is pending and joins the writer.
 - The process totals moved from four atomics into the queue. This keeps the file under its 500-line cap. The ticket expected the atomics to stay. A request now takes one short uncontended mutex for its count, with no file access under it.
-- The two `Stage` enums became one. The `FAILURE` test hook follows the writer thread through `carried()`, under `cfg(test)` alone. The `dead_code` allowance on `snapshot` went, because `facade.rs` now calls it.
+- The two `Stage` enums became one. The `FAILURE` test hook follows the writer thread through `carried()`, under `cfg(test)` alone. The `dead_code` allowance on `snapshot` went, because `facade.rs` already calls it outside tests.
 - `specification/recording.md` says counting never holds back a request, and gives the new crash sentence. ADR 0049 records the change and amends ADR 0034's crash sentence by name.
 - The comments at `engine/http.rs:128` and on `accounting_that_outlasts_the_budget_sends_nothing` no longer name the usage lock. `http.rs` stays at 500 nonblank lines.
 - `sdlc/issues/2026-09-26-site-states-the-retired-usage-crash-guarantee.md` asks the website agent to fix `site/src/pages/backends.astro:48`.
 - The harness `spawn` split into `start`, which returns the running child, and `spawn`.
 - No setting was added or changed.
+
+## Code review fixes
+
+The code review at `83272ab8` found the design sound and asked for these fixes.
+
+- The writer starts through `thread::Builder::spawn`. If the thread cannot start, persistence fails with the one warning, and nothing is queued.
+- `snapshot` reads through a poisoned lock, so it never reports zeros.
+- A write that unwinds counts as a failed write. `catch_unwind` around the write does what the asked-for drop guard would do: it clears `writing` and sets `failed`, so `finish()` never waits forever. It fits in two lines, and the file stays under its 500-line cap. The crate already uses `catch_unwind` in `public/options.rs` and `engine/mod.rs`.
+- ADR 0034's crash sentence ends "(Amended by ADR 0049.)".
 
 ## Plants
 
@@ -50,7 +59,7 @@ Nonblank lines against `origin/main` at `a14d959e`.
 | Existing unit tests | at most 15 changed | 11 |
 | Pages and ADR | one sentence, one comment, ADR at most 30 lines, the issue | one sentence, two comments, ADR 13 nonblank lines, the issue |
 
-The net budget holds, and the added budget does not. Replacing the atomics and the `persistent` flag rewrote the lines around them, so most of the 103 added lines replace removed ones. Stop rule 1 applies: the coordinator rules on it before landing.
+The net budget holds, and the added budget does not. Replacing the atomics and the `persistent` flag rewrote the lines around them. The coordinator accepted the overrun: 103 added and 56 removed, net +47, within the 50 net budget. Most added lines replace removed ones, and merging the two Stage enums removes duplication. Ian can overturn this.
 
 `sdlc/ratchet.json` moves from 67,627 to 67,755, up 128: 47 in `usage.rs`, 75 in the new test and harness, and 6 in the unit tests. The builder looked for duplication in `usage.rs` first and merged the two `Stage` enums.
 
