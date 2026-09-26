@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 152
-opens: crates/thinkthen/src/public/options.rs crates/thinkthen/tests/public_controls.rs libraries/python/tests/test_inputs.py crates/thinkthen/src/core/measure/answer.rs crates/thinkthen/src/core/measure/audit.rs crates/thinkthen/src/core/measure/rows.rs crates/thinkthen/src/cli/audit/table.rs crates/thinkthen/src/public/annotated.rs crates/thinkthen/src/public/engine.rs crates/thinkthen/src/public/results.rs crates/thinkthen/transforms crates/thinkthen/tests/audit_verbs.rs crates/thinkthen/tests/diff.rs crates/thinkthen/tests/version.rs crates/thinkthen/tests/support/measure.rs crates/thinkthen/tests/fixtures/measure/README.md transforms specification/decide.md specification/choose.md specification/channels.md specification/threshold.md specification/find.md specification/filter.md specification/records.md specification/result.md specification/annotate.md specification/audit.md specification/diff.md specification/README.md spec/audit.md demos/README.md demos/FINDINGS.md demos/01-refund-gate/README.md demos/02-route-a-ticket/README.md demos/13-pick-a-threshold/README.md demos/16-triage-pipeline/README.md demos/16-triage-pipeline/self-test demos/19-no-or-could-not-ask/README.md demos/25-check-the-judge/README.md demos/41-tune-a-question-file/README.md conformance/README.md libraries/c/include/thinkthen.h libraries/rust/examples/choose.rs sdlc/scripts/demos sdlc/scripts/demos-self-test sdlc/planning/adr/0017-libraries-over-one-bound-core.md sdlc/records sdlc/tickets sdlc/issues/2026-09-25-command-wording-and-help-fixes-before-0-1.md
+opens: crates/thinkthen/src/public/options.rs crates/thinkthen/tests/public_controls.rs libraries/python/tests/test_inputs.py crates/thinkthen/src/core/measure/answer.rs crates/thinkthen/src/core/measure/audit.rs crates/thinkthen/src/core/measure/rows.rs crates/thinkthen/src/cli/audit/table.rs crates/thinkthen/src/public/annotated.rs crates/thinkthen/src/public/engine.rs crates/thinkthen/src/public/results.rs crates/thinkthen/transforms crates/thinkthen/tests/audit.rs crates/thinkthen/tests/audit_verbs.rs crates/thinkthen/tests/diff.rs crates/thinkthen/tests/version.rs crates/thinkthen/tests/support/measure.rs crates/thinkthen/tests/fixtures/measure/README.md transforms transforms/counts/example.sh transforms/rows/record.sh specification/decide.md specification/choose.md specification/channels.md specification/threshold.md specification/find.md specification/filter.md specification/records.md specification/result.md specification/annotate.md specification/audit.md specification/diff.md specification/README.md spec/audit.md demos/README.md demos/FINDINGS.md demos/01-refund-gate/README.md demos/02-route-a-ticket/README.md demos/13-pick-a-threshold/README.md demos/16-triage-pipeline/README.md demos/16-triage-pipeline/self-test demos/19-no-or-could-not-ask/README.md demos/25-check-the-judge/README.md demos/41-tune-a-question-file/README.md conformance/README.md conformance/record-values.json libraries/c/include/thinkthen.h libraries/rust/examples/choose.rs sdlc/scripts/demos sdlc/scripts/demos-self-test sdlc/planning/adr/0017-libraries-over-one-bound-core.md sdlc/ratchet.json sdlc/records sdlc/tickets sdlc/issues/2026-09-25-command-wording-and-help-fixes-before-0-1.md
 ---
 
 # 0152: A huge deadline prints a short number, and "not sure" replaces "unresolved"
@@ -12,7 +12,7 @@ Review route: a fresh read-only Claude session reviews this design and each part
 
 ## Outcome and authority
 
-A user who passes a deadline of `1e300` reads a refusal of about 90 characters. Today the sentence holds a 301-digit number. A user who reads a printed line, a page, a help-adjacent doc, or a built-in transform meets "not sure" for the answer inside a band. A program that reads `audit`, `diff`, or a transform meets one machine word, `unsure`. That word already names the answer in the Rust library (`Answer::Unsure`), the C header (`THINKTHEN_UNSURE`), DuckDB's answer text, the conformance case names, and the site's catalog. No verb's output or exit code changes.
+A user who passes a deadline of `1e300` reads a refusal of about 90 characters. Today the sentence holds a 301-digit number. A user who reads the `audit` table, a `specification/` page, a demo page, `transforms/README.md`, `conformance/README.md`, the C header, the public Rust docs, the Rust example, or a built-in transform meets "not sure" for the answer inside a band. A program that reads `audit`, `diff`, or a transform meets one machine word, `unsure`. That word already names the answer in the Rust library (`Answer::Unsure`), the C header (`THINKTHEN_UNSURE`), DuckDB's answer text, the site's catalog, and every conformance case name but one. That one, `null-and-unresolved` in `conformance/record-values.json`, becomes `null-and-unsure` here. No verb's output or exit code changes.
 
 The authority is row H2 of `sdlc/planning/backlog-0-1-2026-09-26.md`, goal 4 (honest docs), and the coordinator's brief for 0152. The ticket settles the last two items, 1 and 16, of `sdlc/issues/2026-09-25-command-wording-and-help-fixes-before-0-1.md`. Ticket 0138 left both open because other tickets held their files then. Those tickets (0134, 0135, 0137) have landed.
 
@@ -58,15 +58,16 @@ Every surface that passes a seconds deadline to `deadline_seconds` prints the sa
 
 1. The `audit` row member `unresolved` becomes `unsure`. The field of `Row` in `core/measure/audit.rs` takes the new name, and `rows.rs` and `cli/audit/table.rs` follow it. The internal count field and the `Outcome` and `Said` variant names stay.
 2. `Said::text` in `core/measure/answer.rs` returns `"unsure"` for the no-answer state. That token reaches `audit` disagreements and `diff`'s `from`, `to`, and `moves`, in JSON and in the `diff` table.
-3. The built-in transforms rename the key and value. In each of `band`, `calibration`, `compare`, `counts`, `score`, `sweep`, and `triage`, the key `unresolved` becomes `unsure` and `accuracy_unresolved` becomes `accuracy_unsure`. Sweep's internal `unique_unresolved` and `right_unresolved` become `unique_unsure` and `right_unsure`. `compare`'s flip names read `no to unsure` and `unsure to yes`. `triage`'s reason reads `unsure`. `crates/thinkthen/transforms/*.jq` and `transforms/*/*.jq` stay identical copies. Their tests and expected files (`transforms/compare/test.sh`, `transforms/sweep/test.sh`, `transforms/sweep/decision-expected.json`, `transforms/sweep/decision-empty-expected.json`, `transforms/triage/cases.jsonl`, `transforms/triage/expected.jsonl`) take the new names.
+3. The built-in transforms rename the key and value. In each of `band`, `calibration`, `compare`, `counts`, `score`, `sweep`, and `triage`, the key `unresolved` becomes `unsure` and `accuracy_unresolved` becomes `accuracy_unsure`. Sweep's internal `unique_unresolved` and `right_unresolved` become `unique_unsure` and `right_unsure`. `compare`'s flip names read `no to unsure` and `unsure to yes`. `triage`'s reason reads `unsure`. `crates/thinkthen/transforms/*.jq` and `transforms/*/*.jq` stay identical copies. The comments in `transforms/counts/example.sh` (line 2) and `transforms/rows/record.sh` (line 28) say not sure. Their tests and expected files (`transforms/compare/test.sh`, `transforms/sweep/test.sh`, `transforms/sweep/decision-expected.json`, `transforms/sweep/decision-empty-expected.json`, `transforms/triage/cases.jsonl`, `transforms/triage/expected.jsonl`) take the new names.
 
 #### The printed and page words
 
 - The `audit` table's count line reads `N right, N wrong, N not sure, N tied`. It is a sentence for a person, so it takes the vocabulary word. The `diff` table's `FROM -> TO` columns print answer tokens, the same tokens as the JSON, so a move reads `unsure -> yes`. An option name sits in the same column, so the column cannot print a phrase with a space and stay readable.
 - Pages say "not sure" in prose and `unsure` where they name the member, the token, or a key. That covers the twelve `specification/` pages in the frontmatter, `spec/audit.md`, `transforms/README.md`, the transform comments, `conformance/README.md`, the C header comment, the Rust example `libraries/rust/examples/choose.rs`, the public rustdoc in `public/annotated.rs`, `public/engine.rs`, and `public/results.rs`, and the demo pages and `demos/FINDINGS.md`. `thinkthen transform show` prints each transform's comments, so those comments count as printed lines.
 - `specification/decide.md` replaces the definition sentence with: `` `unsure` is the machine name for a not sure answer, in `audit`, `diff`, and the built-in transforms. ``
-- `specification/audit.md` and `diff.md` drop the sentence that the table keeps the prototype's word. They say the port renames `unresolved` to `unsure`, and the audit table's count line says not sure. The state-name rule at `audit.md:240` names `unsure` and `tied`.
+- `specification/audit.md` and `diff.md` drop the sentence that the table keeps the prototype's word. They say the port prints `unsure` where the prototype printed its older word for a not sure answer, and the audit table's count line says not sure. The state-name rule at `audit.md:240` stays true to the prototype: the prototype reads an option spelled with its older word, or `tied`, as that state, and the port keeps each one an option. The page describes that option without writing the older word.
 - Two examples use "unresolved" in its plain sense, a failure still open. The `annotate.md` and `result.md` example question `unresolved` becomes `open`, asking "Is this still open?". `filter.md`'s example evidence reads "This mentions an open action." `specification/` then holds no "unresolved" at all, which the zero-hit check needs.
+- The conformance case `null-and-unresolved` in `conformance/record-values.json` becomes `null-and-unsure`. No surface names the case id, by a search of every tracked file.
 - Demo 02's shell variable reads `label=not_sure`, as `choose --help` already teaches with `pick=not_sure`.
 - ADR 0017 gains an amendment dated at the build. Item 4 keeps "unsure" as the machine word. The specification now uses it too, and pages say "not sure". It notes that this reverses the item's "the specification keeps unresolved" clause.
 
@@ -78,7 +79,7 @@ The fixtures under `tests/fixtures/measure/golden/` stay byte copies of the prot
 - in an `audit` table, ` unresolved, ` becomes ` not sure, `;
 - in a `diff` table, the word `unresolved` becomes `unsure`.
 
-`audit::old_goldens_hold` and `diff::goldens_match` compare against the ported fixture. `tests/fixtures/measure/README.md` records the rename beside the members ticket 0125 added. No `diff` table golden holds the word today, so the third rule guards the next capture.
+Four tests compare against the ported fixture: `audit::old_goldens_hold`, the test in `audit.rs` that compares with `golden/audit-decide.jsonl` (about line 91), the replay test in `audit.rs` that compares with `replay/audit.jsonl` (about lines 124 to 140), and `diff::goldens_match`. `replay/audit.jsonl` holds the prototype's spelling too. `tests/fixtures/measure/README.md` records the rename beside the members ticket 0125 added. No `diff` table golden holds the word today, so the third rule guards the next capture.
 
 #### The checks that keep the old word out
 
@@ -87,13 +88,15 @@ The fixtures under `tests/fixtures/measure/golden/` stay byte copies of the prot
 
 ## Decisions
 
-1. **Rename the machine word to `unsure` now.** The alternative keeps `unresolved` as the key and records it in the vocabulary. The issue offers both. Before 0.1 no outside program reads `audit`, `diff`, or a transform, so a rename costs only this repository's files, and Part B already opens most of them for the prose. After 0.1 the same rename breaks callers and needs a versioned member or a deprecation period. The public API, the C header, DuckDB, the conformance names, and the site already say `unsure`. Keeping `unresolved` would leave two machine words for one answer. `not_sure` was the other candidate. It matches the vocabulary's spoken words, but no shipped interface uses it, and ADR 0017 item 4 already ruled `unsure`.
+1. **Rename the machine word to `unsure` now.** The alternative keeps `unresolved` as the key and records it in the vocabulary. The issue offers both. Before 0.1 no outside program reads `audit`, `diff`, or a transform, so a rename costs only this repository's files, and Part B already opens most of them for the prose. After 0.1 the same rename breaks callers and needs a versioned member or a deprecation period. The public API, the C header, DuckDB, the site, and every conformance case name but one already say `unsure`. Keeping `unresolved` would leave two machine words for one answer. `not_sure` was the other candidate. It matches the vocabulary's spoken words, but no shipped interface uses it, and ADR 0017 item 4 already ruled `unsure`.
+
+   Authority: backlog row H2 says this ticket records whether the key `unresolved` stays, so the ticket makes the choice. Ian accepted ADR 0017 on 2026-09-21 with "We can always fix it." The amendment to its item 4 follows that acceptance. The lander reports the amendment in the daily status as a choice Ian can overturn.
 2. **The `audit` count line says "not sure", and the `diff` table prints `unsure`.** The count line is a sentence. The `diff` column holds tokens beside option names.
 3. **Keep the prototype fixtures as byte copies and port them in the test.** A recapture would break their recorded checksums and their tie to the prototype. The test already strips members the port added, so one more documented rewrite follows the same rule.
 4. **Print a deadline over 20 characters in exponent form.** The issue offered this or naming only the cap. The exponent form keeps the user's own number in the sentence. The 20-character bound keeps every ordinary number plain.
 5. **Keep internal identifiers.** `Outcome::Unresolved`, `Said::Unresolved`, internal comments, and test names reach no user. Renaming them would touch core files ticket 0146 edits and add churn with no reader.
 6. **Build in two parts.** Part A shares no page with 0146 and ships at once. Part B waits for 0146, because 0146's stop rule 7 halts it if another in-flight ticket opens a file it needs.
-7. **Rename the two plain-sense examples.** A zero-hit check on `specification/` is simpler to hold than a list of allowed sentences.
+7. **Hold `specification/` at zero hits.** Rename the two plain-sense examples, and describe the prototype's spelling as its older word for a not sure answer. An absolute zero-hit check is simpler to hold than a list of allowed sentences.
 
 ## Edge cases
 
@@ -182,13 +185,13 @@ Nonblank lines, measured with `grep -c .` against `origin/main` at each part's m
 Ticket 0146 (`ticket/0146-command-batches-decide-filter-rank`) opens `cli/`, several specification pages, `demos`, the whole `crates/thinkthen/tests` folder, and `sdlc/issues`. This ticket shares these files with it:
 
 - Part A: `crates/thinkthen/tests/public_controls.rs`, inside 0146's `crates/thinkthen/tests`. 0146 names no change there, because its pins go on command runs and this test calls the library. `sdlc/issues/2026-09-25-command-wording-and-help-fixes-before-0-1.md`, inside 0146's `sdlc/issues`. 0146 does not edit that issue.
-- Part B: `specification/decide.md`, `filter.md`, `records.md`, `result.md`, and `channels.md`. `spec/audit.md`. Under `demos/`: `README.md`, `FINDINGS.md`, and the pages and script of demos 01, 02, 13, 16, 19, 25, and 41. Under `crates/thinkthen/tests`: `audit_verbs.rs`, `diff.rs`, `version.rs`, `support/measure.rs`, and `fixtures/measure/README.md`. `crates/thinkthen/src/public/results.rs`. The wording issue file.
-- Both: `sdlc/records` and `sdlc/tickets`, which every ticket shares with new files only.
+- Part B: `specification/decide.md`, `filter.md`, `records.md`, `result.md`, and `channels.md`. `spec/audit.md`. Under `demos/`: `README.md`, `FINDINGS.md`, and the pages and script of demos 01, 02, 13, 16, 19, 25, and 41. Under `crates/thinkthen/tests`: `audit.rs`, `audit_verbs.rs`, `diff.rs`, `version.rs`, `support/measure.rs`, and `fixtures/measure/README.md`. `crates/thinkthen/src/public/results.rs`. The wording issue file.
+- Both: `sdlc/ratchet.json`, if the source total grows. `sdlc/records` and `sdlc/tickets`, which every ticket shares with new files only.
 
 ### Files shared with other tickets in flight
 
 - 0147 (`ticket/0147-recognize-adr`, ready) opens `specification/audit.md`, `channels.md`, `records.md`, and `result.md`. Part B shares all four.
-- 0148 (`ticket/0148-engine-settings-everywhere`, ready, builds after 0146) opens `libraries/python`, `libraries/c`, `crates/thinkthen/src/public/engine.rs`, `conformance/README.md`, and ADR 0017. Part A shares `libraries/python/tests/test_inputs.py`. Part B shares `public/engine.rs`, `libraries/c/include/thinkthen.h`, `conformance/README.md`, and ADR 0017.
+- 0148 (`ticket/0148-engine-settings-everywhere`, ready, builds after 0146) opens `libraries/python`, `libraries/c`, `crates/thinkthen/src/public/engine.rs`, `conformance/README.md`, ADR 0017, and `sdlc/ratchet.json`. Part A shares `libraries/python/tests/test_inputs.py`. Part B shares `public/engine.rs`, `libraries/c/include/thinkthen.h`, `conformance/README.md`, and ADR 0017. Either part shares `sdlc/ratchet.json` if its source total grows.
 
 ### The order
 
@@ -200,11 +203,13 @@ Ticket 0146 (`ticket/0146-command-batches-decide-filter-rank`) opens `cli/`, sev
 
 `site/` holds no "unresolved" today. The site's catalog already keys the answer `unsure` and labels it "not sure". The site reads `specification/settings.md` raw, and this ticket leaves that page alone. No `site/` file needs the change.
 
-Two marketing-owned places outside this repository show the old words. The coordinator passes them to marketing and edits neither:
+Beatles Bench belongs to marketing, and two of its pages print the old lines. Nobody in this repository edits them. In Part B's landing commit, the lander files one issue in this repository's `sdlc/issues/` on main. The issue names:
 
-- Beatles Bench, `functions/audit/README.md`, prints the `audit` table line `0 unresolved`. After Part B, `audit` prints `0 not sure`.
-- Beatles Bench, `functions/diff/README.md` line 44, prints `unresolved -> no 44`. After Part B, `diff` prints `unsure -> no 44`.
-- The product vocabulary (`products/thinkthen/vocabulary.md` in the marketing repository) can add `unsure` as the machine word for "not sure". It needs no other change.
+- `functions/audit/README.md`, whose `audit` table line says `0 unresolved`. After Part B, `audit` prints `0 not sure` there.
+- `functions/diff/README.md` line 44, which says `unresolved -> no 44`. After Part B, `diff` prints `unsure -> no 44` there.
+- The vocabulary note: the product vocabulary can add `unsure` as the machine word for "not sure". It needs no other change.
+
+The lander then tells the marketing lead about the issue.
 
 ## Scope and exclusions
 
@@ -225,7 +230,7 @@ Contract 2; state and timing 0; reach 3; proof 2; cost of error 1; total 8. Fina
 3. `sdlc/` history keeps the word: records, tickets, closed issues, planning pages, and ADRs other than 0017.
 4. The sweep transform's `resolved`, `right_resolved`, and `accuracy_resolved` keep their names. `audit` calls the same count `answered`. Aligning them is a separate choice.
 5. The prototype's own output still says `unresolved`. The test ports it.
-6. Beatles Bench and the product vocabulary belong to marketing. "Marketing's files" lists them.
+6. Beatles Bench's two pages and the vocabulary note belong to marketing. The lander files the issue and tells the marketing lead, as "Marketing's files" says.
 7. Question-file tests that name a question `unresolved` (`tests/backend/annotate.rs`, `core/question_set/tests.rs`) keep it. There it is a question name.
 
 ## What Ian can overturn
@@ -239,4 +244,4 @@ Contract 2; state and timing 0; reach 3; proof 2; cost of error 1; total 8. Fina
 ## Closes
 
 - Part A marks item 1 of `sdlc/issues/2026-09-25-command-wording-and-help-fixes-before-0-1.md` fixed by this ticket.
-- Part B marks item 16 fixed. That closes the issue. The lander writes the closing status line and moves the file to `sdlc/issues/closed/` in Part B's landing commit.
+- Part B marks item 16 fixed. That closes the issue. The lander writes the closing status line and moves the file to `sdlc/issues/closed/` in Part B's landing commit. The same commit files the marketing issue that "Marketing's files" describes.
