@@ -74,18 +74,21 @@ Each is the ticket author's call unless marked. Ian can overturn any of them.
 
 ## Proof
 
-The test drives the compiled binary against the conformance backend's `/arm/malformed/missing_answer/v1` or the in-process loopback, and counts requests.
+One route serves every row. The test starts the conformance backend with `conformance_backend::Backend::start()`, as `tests/backend/loopback_arms.rs` does. `/arm/malformed/missing_answer/v1` fails the last question of a reply and answers the rest, and `/generic/v1` answers every question. `annotate` asks that file's two-question set, so a missing last answer is a partial reply. `decide` asks one question, so the same arm fails every question. `backend.count()` counts requests. The default-cache rows set `XDG_CACHE_HOME` and `HOME` to a private temporary folder, as `tests/backend/default_cache.rs` does, so no row touches the user's cache.
 
 | Test | What it proves | Planted faults that turn it red |
 | --- | --- | --- |
-| `a_cache_keeps_no_failed_question`, new in `tests/backend/cache_partial.rs` | The first four edge rows. Each pins standard output, exit code and the backend's request count. The `--cache DIR` row also pins that the folder holds no entry file for the digest | (a) Install every decoded reply: the second cached run sends nothing. (b) Skip the write under `--record` too: the replay row exits 5. (c) Skip the write for every reply: the complete-reply row sends twice |
+| `a_cache_keeps_no_failed_question`, new in `tests/backend/cache_partial.rs` | Edge rows 1 to 5. Each pins standard output, exit code and `backend.count()`. The `--cache DIR` row also pins that the folder holds no entry file for the digest, and it runs once more as `--record DIR --replay DIR` on one folder. Row 5 runs `decide` twice under `--cache DIR` against the missing-answer arm: exit 4 both times, 2 requests, no entry | (a) Install every decoded reply: the second cached run sends nothing. (b) Skip the write under `--record` too: the replay row exits 5. (c) Skip the write for every reply: the complete-reply row sends twice. (d) Leave `caches()` false for two options on one folder: that run's second pass sends nothing |
+| `a_cache_reads_a_partial_entry_as_a_miss`, new in the same file | Edge rows 7 to 10. A partial entry is made two ways. The first records the missing-answer arm under `--record DIR`. The second records `/generic/v1` under `--record DIR`, then rewrites that entry's `response` line to the missing-answer arm's reply for the same request, keeping the request line. A cached run against `/generic/v1` sends 1 request and replaces the entry, and a second sends none. A cached run against the arm sends 1 each time and keeps the entry's bytes. `--replay DIR` alone prints the failure marker, exits 6 and sends none. The default-cache row plants the rewritten entry under the private `XDG_CACHE_HOME` | (e) Replay a partial entry under a cache: the rewritten-entry row sends nothing. (f) Run the check under `--replay` alone: the replay row exits 5 or sends. (g) Replace the entry with a reply that also failed: the arm row's entry bytes change |
+
+Edge row 6, two concurrent runs, rests on the existing `tests/backend/cache_locking.rs::backend_and_decode_failures_release_the_digest_lock`. Its decode-failure case shows that an owner that cancels its permit releases the digest's lock, and that the waiter then sends its own request. This ticket's partial reply takes that same cancel path, so the row needs no new test. The same test pins, for an undecodable reply, the path edge row 5 takes: a decode error cancels the permit and writes no entry. No existing test sends a reply that fails every question through a cache, so row 5 joins the new test.
 
 The four questions:
 
-- **What behavior does it protect?** `records.md`'s "first complete response" under the cache, and `recording.md` line 84 under `--record`.
-- **What credible regression fails it?** Installing a partial reply, or dropping the recorded one.
-- **Why does no existing test catch it?** No test sends a partial reply twice through a cache today.
-- **Does it need a test-only hook?** No. The loopback's reply is an ordinary reply, and the folder is a real folder.
+- **What behavior does it protect?** `records.md`'s "first complete response" under every cache, the miss rule for partial entries, and `recording.md` line 84 under `--record` and `--replay`.
+- **What credible regression fails it?** Installing a partial reply, replaying a partial entry from a cache, dropping the recorded one, or checking under `--replay` alone.
+- **Why does no existing test catch it?** No test sends a partial reply twice through a cache, or reads a partial entry through one, today.
+- **Does it need a test-only hook?** No. The conformance backend's arms are ordinary replies, the rewritten entry is an ordinary file in a real folder, and `XDG_CACHE_HOME` is where the default cache really lives.
 
 ## Budgets
 
@@ -139,5 +142,5 @@ Finding 4 of `sdlc/issues/2026-09-26-batching-design-review-before-0146.md`.
 - Starts from: ADR 0053 item 6. Finding 4 of `sdlc/issues/2026-09-26-batching-design-review-before-0146.md`, reproduced in local experiment 273 with `annotate` and a hand-built cache entry. The code at `origin/main` `c490f082`: `engine/request.rs::ask_prepared`, `core/adapters/systemone/response.rs`, `core/reply.rs` and `engine/recorder.rs`. `specification/records.md`'s "first complete response" and `recording.md` line 84.
 - Keeps: Every complete reply cached as today. `--record` and `--replay` as today, partial replies included. A first run's output, standard error and exit code, and those of every `--record` and `--replay` run. A cached rerun of a partial reply changes by design: it asks again, so `meta.cached`, `meta.requests_sent`, `meta.usage` and the usage totals show a sent request.
 - Changes: A cache, typed or default, no longer installs a reply that failed a question, and reads an existing entry that holds one as a miss. Page sentences in `records.md` and `recording.md`.
-- Proof: One outside-in test with three plants, and the `install`, `lint`, `test`, `spec` and `surfaces` rungs.
+- Proof: Two outside-in tests with seven plants, the existing cache-locking test for concurrent runs, and the `install`, `lint`, `test`, `spec` and `surfaces` rungs.
 - Defers: Nothing.
