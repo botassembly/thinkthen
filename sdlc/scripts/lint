@@ -4,6 +4,8 @@ set -eu
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
+# Ticket 0133: like the heavy rungs, lint builds in this lane's own target.
+unset CARGO_TARGET_DIR
 
 # The workspace caps an agents file at 5,000 characters. CLAUDE.md links to AGENTS.md.
 python3 -c '
