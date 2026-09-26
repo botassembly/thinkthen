@@ -21,6 +21,11 @@ cargo build --locked --quiet --package thinkthen
 PATH="$REPO/target/debug:$PATH"
 export PATH
 
+# Ticket 0140: every flag in the help, product THINKTHEN_ variable, and
+# question-file key has a row in specification/settings.md, and no row is stale.
+python3 sdlc/scripts/settings --self-test
+python3 sdlc/scripts/settings
+
 mustmatch test spec
 
 # The transform page proves the edges its `jq` files claim, and `compare.jq`
