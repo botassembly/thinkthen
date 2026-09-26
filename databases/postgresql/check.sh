@@ -11,6 +11,7 @@ set -euo pipefail
 unset THINKTHEN_API_KEY RUSTFLAGS CARGO_ENCODED_RUSTFLAGS
 cd "$(dirname "$0")"
 [ "$(uname -s)" = Linux ] || { echo "not run: check.sh runs on Linux only (uname: $(uname -s))"; exit 77; }
+. ../../sdlc/scripts/scratch.sh
 . ./runtime.sh
 runtime_ready
 REPO=$(cd ../.. && pwd)
@@ -38,7 +39,8 @@ runtime_open
 cleanup() {
 	[ ! -f "$DATA/postmaster.pid" ] || "$BIN/pg_ctl" -D "$DATA" -m immediate stop >/dev/null 2>&1 || true
 	[ -z "${BPID:-}" ] || backend_stop
-	rm -rf -- "$RUN" .runtime/last-run
+	scratch_clean
+	rm -f .runtime/last-run
 }
 trap cleanup EXIT INT TERM
 

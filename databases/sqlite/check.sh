@@ -29,6 +29,7 @@ step() { echo "== sqlite: $1"; }
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	# The installed-file mode (ticket 0128): the shared cases and the examples load the
 	# library unpacked from the release archive, by its path.
+	. ../../sdlc/scripts/scratch.sh
 	. ../../sdlc/scripts/installed.sh
 	installed_unpack
 	THINKTHEN_SQLITE_EXTENSION=$(echo "$scratch"/libthinkthen0.*)

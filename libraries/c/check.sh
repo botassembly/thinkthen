@@ -4,8 +4,8 @@ set -eu
 cd -- "$(dirname -- "$0")"
 
 command -v cc >/dev/null 2>&1 || { echo 'libraries/c: no C compiler' >&2; exit 77; }
-cache=$(mktemp -d)
-trap 'rm -rf -- "$cache"' EXIT
+. ../../sdlc/scripts/scratch.sh
+scratch_dir cache
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	# The installed-file mode (ticket 0128): the slide builds from the unpacked archive alone,
 	# found through its own pkg-config file.

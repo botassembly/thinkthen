@@ -74,18 +74,18 @@ test -z "$unexpected" \
 # folder after the unpacked source is gone.
 crate="target/package/thinkthen-$(sed -n 's/^version = "\([^"]*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -1).crate"
 python3 sdlc/scripts/catalog.py --crate "$crate"
-isolated=$(mktemp -d)
-trap 'rm -rf -- "$isolated"' EXIT
-mkdir "$isolated/source" "$isolated/empty" "$isolated/out"
-tar -xzf "$crate" -C "$isolated/source" --strip-components=1
+. sdlc/scripts/scratch.sh
+scratch_dir isolated && scratch_dir source && scratch_dir built
+mkdir "$isolated/empty" "$isolated/out"
+tar -xzf "$crate" -C "$source" --strip-components=1
 RUSTUP_TOOLCHAIN=$(sed -n 's/^channel = "\([^"]*\)"$/\1/p' rust-toolchain.toml) \
-CARGO_TARGET_DIR="$isolated/target" \
-    cargo build --quiet --locked --offline --manifest-path "$isolated/source/Cargo.toml" --lib --no-default-features
+CARGO_TARGET_DIR="$built" \
+    cargo build --quiet --locked --offline --manifest-path "$source/Cargo.toml" --lib --no-default-features
 RUSTUP_TOOLCHAIN=$(sed -n 's/^channel = "\([^"]*\)"$/\1/p' rust-toolchain.toml) \
-CARGO_TARGET_DIR="$isolated/target" \
-    cargo build --quiet --locked --offline --manifest-path "$isolated/source/Cargo.toml" --bin thinkthen
-cp "$isolated/target/debug/thinkthen" "$isolated/thinkthen"
-rm -rf -- "$isolated/source" "$isolated/target"
+CARGO_TARGET_DIR="$built" \
+    cargo build --quiet --locked --offline --manifest-path "$source/Cargo.toml" --bin thinkthen
+cp "$built/debug/thinkthen" "$isolated/thinkthen"
+scratch_remove "$source" && scratch_remove "$built"
 names='band calibration compare cost counts monitor score sweep triage trials'
 (
 	cd -- "$isolated/empty"

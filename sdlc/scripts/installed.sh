@@ -1,45 +1,9 @@
 # The lines the installed-file mode of each check.sh, release-smoke, and surfaces share (ticket 0128).
-# These functions delete only a folder they made with mktemp in this run (worktrees.md rule 11).
-installed_made=
+# The caller sources scratch.sh first, which makes and removes every folder here.
 
-# installed_remove PATH: remove PATH when it is a folder these functions made in this run,
-# and refuse anything else with exit 1.
-installed_remove() {
-	for made in $installed_made; do
-		[ "$1" != "$made" ] || { rm -rf -- "$1"; return 0; }
-	done
-	echo "installed.sh: refused to remove $1, which this run did not make with mktemp" >&2
-	return 1
-}
-
-# installed_cleanup: remove every folder these functions made in this run.
-installed_cleanup() {
-	for made in $installed_made; do installed_remove "$made"; done
-}
-
-# installed_folder: set `folder` to a fresh folder from mktemp, which this run's exit removes.
-# It takes over the script's EXIT trap, and an interrupt exits so that trap runs. It stops the
-# script on a failed mktemp, and it refuses a path with whitespace or glob characters, the
-# current folder, and the root. So `installed_made` holds only safe paths.
-installed_folder() {
-	made=$(mktemp -d) || exit 1
-	[ -n "$made" ] && [ -d "$made" ] || { echo "installed.sh: mktemp made no folder" >&2; exit 1; }
-	folder=$(cd -- "$made" && pwd -P) || exit 1
-	case $folder in *[!A-Za-z0-9/._-]* | "$PWD" | /) echo "installed.sh: refusing $folder" >&2; exit 1 ;; esac
-	installed_made="$installed_made $folder"
-	trap 'exec 3>&-; installed_cleanup' EXIT
-	trap 'exit 130' INT TERM
-}
-
-# installed_scratch [INSIDE]: set `scratch` to a fresh folder. Inside the caller's own temporary
-# folder INSIDE, the caller's cleanup removes it. Otherwise this run's exit removes it.
+# installed_scratch [INSIDE]: set `scratch` to a fresh folder, inside INSIDE when given.
 installed_scratch() {
-	if [ $# -eq 1 ]; then
-		scratch=$(mktemp -d "$1/installed.XXXXXX") || exit 1
-		return
-	fi
-	installed_folder
-	scratch=$folder
+	scratch_dir scratch ${1:+"$1/installed.XXXXXX"}
 }
 
 # installed_unpack: a fresh `scratch` folder holding THINKTHEN_ARTIFACT unpacked.
@@ -64,8 +28,8 @@ installed_tests() {
 # folder, and stops it on exit.
 backend_start() {
 	cargo build --locked --quiet --package conformance-backend
-	installed_folder
-	backend=$folder
+	scratch_dir backend
+	trap 'exec 3>&-; scratch_clean' EXIT
 	mkfifo "$backend/in"
 	"${CARGO_TARGET_DIR:-target}/debug/conformance-backend" <"$backend/in" >"$backend/out" &
 	exec 3>"$backend/in"

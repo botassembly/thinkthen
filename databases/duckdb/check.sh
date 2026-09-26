@@ -47,6 +47,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	# The installed-file mode (ticket 0128): the stock CLI and the shared cases load the
 	# extension unpacked from the release archive, by its path.
 	# A release file carries no test hook, so the full check alone runs the one hook case.
+	. "$REPO/sdlc/scripts/scratch.sh"
 	. "$REPO/sdlc/scripts/installed.sh"
 	installed_unpack
 	export THINKTHEN_DUCKDB_EXTENSION="$scratch/thinkthen.duckdb_extension" THINKTHEN_CONFORMANCE_CASES="$scratch/cases.json"
