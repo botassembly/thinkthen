@@ -91,7 +91,15 @@ The build commit raised the ceiling from 61,768 to 63,631: production code adds 
 
 ## Rungs
 
-RUNGS_TEXT
+The rungs ran on the merged branch without an outside lock.
+
+- `install`: exit 0.
+- `lint`: exit 0.
+- `test`: the first run failed in `demo_runner`. The new `find --details` help said "unit", a word the help check refuses. The sentence now says "line or record". The second run passed, exit 0.
+- `spec`: exit 0, with `spec/audit.md` at 4 passed and 21 demos green.
+- `surfaces`: not run. No library surface or public Rust item changed.
+
+A release build graded `249/control.jsonl` (272 rows) in 0.02 seconds with the seeded key and with the part key. The stop line is one second.
 
 ## Defers
 

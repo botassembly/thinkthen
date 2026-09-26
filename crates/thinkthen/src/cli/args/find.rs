@@ -26,8 +26,8 @@ pub(crate) struct FindArguments {
 #[derive(Args, Debug)]
 pub(crate) struct FindCommon {
     /// Print the full result object in place of the original selected line or record.
-    /// The result names each unit by its one-based place, zero-padded to three
-    /// digits: u001 is the first and u255 the 255th.
+    /// The result names each line or record by its one-based place, zero-padded
+    /// to three digits: u001 is the first and u255 the 255th.
     #[arg(long)]
     pub(crate) details: bool,
     /// Read the lines or records from FILE instead of standard input.
