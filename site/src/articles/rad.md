@@ -8,9 +8,9 @@ goal: "Show that putting the facts in the text turns a model's wrong answers int
 blurb: "Your data sits in no model's memory. Put the facts in the text, then ask the model to decide. On 196 Beatles questions, that moved Jev from 39% to 95%."
 ---
 
-Your own data sits in no model's memory. Your customers, your contracts, your patients: no model read them. So hand the model the facts in the text, and then ask it to decide. I call that retrieval-augmented decisions. RAD for short. Please use the name.
+Your own data sits in no model's memory. Your customers, your contracts, your patients: no model read them. So hand the model the facts in the text, and then ask it to decide. I call that retrieval-augmented decisions, or RAD.
 
-The idea borrows from retrieval-augmented generation, or RAG. RAG finds the right documents and hands them to a chat model to write an answer. RAD hands the documents to a model that returns a decision and a probability. It writes no prose. Your code has nothing to parse.
+The idea borrows from retrieval-augmented generation, or RAG. RAG finds the right documents and hands them to a chat model to write an answer. RAD hands the documents to a model that returns a decision and a probability. Your code has nothing to parse.
 
 ## What Jev knows from memory
 
@@ -34,6 +34,6 @@ You rarely need the whole catalog. Send the one entry the question is about, and
 
 ## What I don't know
 
-This is one bench on one subject. I build ThinkThen, so weigh my Jev numbers with that in mind. The bench is public. Every answer on its pages replays from a saved recording for free. Run it yourself, and tell me where RAD breaks.
+This is one bench on one subject. I build ThinkThen. Weigh my Jev numbers with that in mind. The bench is public. Every answer on its pages replays from a saved recording for free. Run it yourself, and tell me where RAD breaks.
 
 The [RAD page](/learn/beatles-bench/rad/) runs one of these questions both ways.

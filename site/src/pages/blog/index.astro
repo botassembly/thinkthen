@@ -7,7 +7,7 @@ const posts = [
   {
     href: '/blog/code-that-understands/',
     title: 'Code that knows what you mean',
-    blurb: 'Every program I have written can match text. None of them can read it. What changed, what it costs, and where it breaks.',
+    blurb: 'Every program I have written can match text. None of them can read it. What changed, and where it breaks.',
   },
   ...POSTS.map((p) => ({ href: p.href, title: p.draft ? `${p.title} (draft)` : p.title, blurb: p.blurb })),
 ];
