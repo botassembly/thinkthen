@@ -5,7 +5,7 @@ author: Ian Maurer
 date: "2026-09-25"
 draft: true
 goal: "Show that putting the facts in the text turns a model's wrong answers into right ones."
-blurb: "Your data sits in no model's memory. Put the facts in the text, then ask the model to decide. On 196 Beatles questions, drawn mostly from Jev's misses, the song catalog raised the right answers from 68 to 184."
+blurb: "Your data sits in no model's memory. Put the facts in the text, then ask the model to decide. Beatles Bench shows what the facts fix."
 ---
 
 Your own data sits in no model's memory. Your customers, your contracts, your patients: no model read them. So hand the model the facts in the text, and then ask it to decide. I call that retrieval-augmented decisions, or RAD.
