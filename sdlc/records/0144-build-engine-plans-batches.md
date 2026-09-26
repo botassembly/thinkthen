@@ -67,7 +67,7 @@ Nonblank lines against `origin/main` at `7850db3f`.
 | `core/mod.rs` and `core/backend.rs` | 5 | +2 |
 | `core/backend_profile.rs` and `engine/prepared_request.rs` | 0 | 0 |
 
-`sdlc/ratchet.json` moves from 67,758 to 68,670, up 912, within the 930 ruling. Splitting the two long tests for clippy added lines. Sharing the wire-name digit count in `batch.rs` and the test backends, the structured question and a context helper in the tests took the total back under 930. Before that the build merged the two plan encoders into one and held the open batch in one value.
+`sdlc/ratchet.json` moved from 67,758 to 68,670, up 912, within the 930 ruling. After the code review round it moves to 68,789, up 1,031, within the 1,035 ruling. Splitting the two long tests for clippy added lines. Sharing the wire-name digit count in `batch.rs` and the test backends, the structured question and a context helper in the tests took the total back under 930. Before that the build merged the two plan encoders into one and held the open batch in one value.
 
 The code review round stopped at 1,031 lines of growth, over the 930 ruling, before the merge and the ladder. The coordinator raised the ceiling from 930 to 1,035 after the code review added the refusal, wire-digit and evidence-count tests, and the push fix. Ian can overturn this.
 
