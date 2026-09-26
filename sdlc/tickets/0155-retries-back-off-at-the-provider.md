@@ -6,7 +6,7 @@ opens: sdlc/planning/adr/0052-retries-back-off-at-the-provider.md sdlc/planning/
 
 # 0155: Retries back off at the provider and count apart
 
-Status: ready for review. Owner: Claude. It carries ADR 0052. It builds only after tickets 0146 and 0148 land on main, and before ticket 0154 and the batching design's B5, by the coordinator's ruling of 2026-09-26.
+Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Claude. It carries ADR 0052. It builds only after tickets 0146 and 0148 land on main, and before ticket 0154 and the batching design's B5, by the coordinator's ruling of 2026-09-26.
 
 Review route: a fresh read-only Claude session reviews this design, ADR 0052, and later the final diff. Codex does not review this ticket unless Ian routes it.
 

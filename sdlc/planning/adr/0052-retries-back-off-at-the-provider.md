@@ -1,6 +1,6 @@
 # ADR 0052: Retries back off at the provider
 
-- Status: Proposed through ticket 0155. Ian ruled the default of 3, the provider-level backoff, the fixed throttle and separately counted retries on 2026-09-26. It becomes Accepted when the fresh ticket review accepts ticket 0155. Ian can overturn each item
+- Status: Accepted 2026-09-26 through ticket 0155, after a fresh read-only ticket review. Ian ruled the default of 3, the provider-level backoff, the fixed throttle and separately counted retries on 2026-09-26. Ian can overturn each item
 - Date: 2026-09-26
 
 This ADR amends the retry rule of `specification/backends.md`, "The request", the usage counts of ADR 0034, and ADR 0048 item 10's run facts. Ticket 0155 builds every item but the part of item 8 that ticket 0149 builds.
