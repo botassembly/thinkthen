@@ -306,19 +306,18 @@ fn a_check_runs_before_a_held_send_and_never_during_it() {
 #[test]
 fn a_host_interrupt_during_relate_chunks_sends_nothing_new() {
     let _serial = serial();
+    let entities = ["gateway", "billing"].map(|name| Entity::new(name, "service").expect("entity"));
     for count in [6, 4] {
         let backend = Backend::start().expect("backend");
         let held = engine(&format!("{}/arm/held/v1", backend.origin()));
-        let rules = (1..=count)
-            .map(|rule| format!(r#"{{"name":"r{rule}","source":"service","target":"service"}}"#))
-            .collect::<Vec<_>>()
-            .join(",");
+        let rules: Vec<_> = (1..=count)
+            .map(|n| format!(r#"{{"name":"r{n}","source":"service","target":"service"}}"#))
+            .collect();
         let ask = Relate::from_json(&format!(
-            r#"{{"version":1,"relate":{{"relations":[{rules}]}}}}"#
+            r#"{{"version":1,"relate":{{"relations":[{}]}}}}"#,
+            rules.join(",")
         ))
         .expect("relate file");
-        let entities =
-            ["gateway", "billing"].map(|name| Entity::new(name, "service").expect("entity"));
         let runs = Runs::default();
         let check = || {
             runs.record(backend.count());
@@ -330,11 +329,11 @@ fn a_host_interrupt_during_relate_chunks_sends_nothing_new() {
                 thread::sleep(Duration::from_millis(400));
                 backend.release();
             });
-            held.relate_with(&ask, entities, CallOptions::new().interrupt(&check))
+            held.relate_with(&ask, entities.clone(), CallOptions::new().interrupt(&check))
         });
         assert!(
             runs.all_on(thread::current().id()),
-            "the check ran on a worker"
+            "a check ran on a worker"
         );
         assert_eq!(kind(&result), Some(ErrorKind::Cancelled), "{count} rules");
         assert_eq!(backend.count(), 4, "{count} rules: nothing new was sent");
