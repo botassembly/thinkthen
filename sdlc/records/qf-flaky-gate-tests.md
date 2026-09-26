@@ -1,6 +1,6 @@
 # Quick Fix qf-flaky-gate-tests: three gate tests that failed on a busy machine
 
-Status: built; the surfaces rung is owed because the disk filled. It awaits review and landing. It closes item 2 of `sdlc/issues/2026-09-25-two-gate-failures-in-a-root-container.md` and both of `sdlc/issues/closed/2026-09-25-postgresql-warm-rows-timing-fails-on-a-busy-machine.md` and `sdlc/issues/closed/2026-09-25-polars-throttle-equality-fails-on-a-busy-machine.md`. Item 1 of the first issue stays open.
+Status: built and reviewed on 2026-09-26. The surfaces rung passed on the final head that day. It awaits landing. It closes item 2 of `sdlc/issues/2026-09-25-two-gate-failures-in-a-root-container.md` and both of `sdlc/issues/closed/2026-09-25-postgresql-warm-rows-timing-fails-on-a-busy-machine.md` and `sdlc/issues/closed/2026-09-25-polars-throttle-equality-fails-on-a-busy-machine.md`. Item 1 of the first issue stays open.
 
 ## Result
 
@@ -10,7 +10,7 @@ The cause was a shared output path. Three tests compile `tests/c/driver.c` to th
 
 The usual explanation does not apply here. A forked child can inherit a write descriptor only from the test process. The write descriptor lives in `ld`, a grandchild process, and it closes before `cc` returns.
 
-`compile` in `libraries/c/tests/door/main.rs` now keeps a map from source to binary behind a `Mutex`. The first caller links the binary while holding the lock. Every later caller gets the same path back. Each binary is written once, before any test launches it.
+`compile` in `libraries/c/tests/door/main.rs` now keeps a map from source to binary behind a `Mutex`. The first caller links the binary while holding the lock. Every later caller gets the same path back. Each binary is written once, before any test launches it. A failed compile poisons the lock, and the next caller takes the map anyway with `PoisonError::into_inner`. Each later test then reports its own result.
 
 A bounded retry on `ETXTBSY` was rejected. It misses `EACCES` and `ENOENT`, and it can launch a binary the linker has only half written.
 
@@ -69,20 +69,24 @@ Each run was a separate `cargo test` or `check.sh` process. Cargo commands ran u
 | Polars throttle | 3 | 3.6 to 8.3 | 3 pass |
 | PostgreSQL warm rows | 1 | 3.9 to 6.9 | pass, 12.4 s and 2.4 s |
 
-The pinned C run started at a load of 11.4 from other builders. No Polars or PostgreSQL run caught a load of 10. A run under generated load was refused by this machine's permission rules, so the Polars and PostgreSQL loaded rows reach a load of 8 at most. The Polars test no longer reads the clock. The PostgreSQL ratio has more than twice its bound of headroom.
+The pinned C run started at a load of 11.4 from other builders. No Polars or PostgreSQL run caught a load of 10. A run under generated load was refused by this machine's permission rules, so the Polars and PostgreSQL loaded rows reach a load of 8 at most. On 2026-09-26 a watch waited 30 minutes after the final surfaces run for other builders to raise the load to 10. The one-minute load peaked near 6, so no loaded run happened. The Polars test no longer reads the clock. The PostgreSQL ratio has more than twice its bound of headroom.
 
 ## Ratchet
 
-- Root `sdlc/ratchet.json`: lowered from 65801 to 65791. The Polars test lost its clock checks.
-- `libraries/c/ratchet.json`: raised from 2139 to 2147. The map, its lock, the early return, the insert, and one comment line add 8 lines. I looked in `tests/door` for code to remove first. The three `driver.c` compile calls stay, because each test must work when run alone.
+- Root `sdlc/ratchet.json`: the Polars test lost 10 lines of clock checks. The ceiling fell from 65801 to 65791, and after merging main at `91b72caa` it lands at 66394, main's 66404 less those 10 lines.
+- `libraries/c/ratchet.json`: raised from 2139 to 2147, accepted in review. The poison change kept it at 2147. The map, its lock, the early return, the insert, and one comment line add 8 lines. I looked in `tests/door` for code to remove first. The three `driver.c` compile calls stay, because each test must work when run alone.
 - `databases/postgresql/ratchet.json` counts `src` only and stays at 1808.
 
 ## Checks
 
-The ladder ran once on the branch after merging `origin/main` at `2544a8f8`, with `THINKTHEN_API_KEY` unset. `sdlc/scripts/live` did not run.
+`THINKTHEN_API_KEY` was unset for every rung. `sdlc/scripts/live` did not run.
 
-- `install`: exit 0.
+The first run, after merging `origin/main` at `2544a8f8` on 2026-09-25:
+
+- `install`, `lint`, `test`, and `spec`: exit 0. `test` ended with `live-test: all cases passed`, and `spec` with `demos: 21 green, 0 red`.
+- `surfaces`: exit 1. The Beelink's disk filled during the rung, and every surface after Rust and C failed with `No space left on device`.
+
+The final run, on 2026-09-26, at head `2cc71371` after merging `origin/main` at `91b72caa`:
+
 - `lint`: exit 0.
-- `test`: exit 0, ending with `live-test: all cases passed`.
-- `spec`: exit 0, `demos: 21 green, 0 red`.
-- `surfaces`: exit 1. `libraries/rust` and `libraries/c` passed. Every later surface failed with `No space left on device`: the Beelink's root file system reached 100 percent, with 7.2 MB free, during the rung. This fix's worktree holds 6.3 GB of build output. The Polars and PostgreSQL checks did not run in this rung, and `surfaces` must run again once the disk has room.
+- `surfaces`: exit 0. Every surface passed. `libraries/c` passed, `a_series_runs_at_the_throttle_as_a_slice_does` passed in `libraries/polars`, and `twenty_thousand_warm_rows` passed in `databases/postgresql` with a first pass of 12,009 ms and a second of 2,586 ms.

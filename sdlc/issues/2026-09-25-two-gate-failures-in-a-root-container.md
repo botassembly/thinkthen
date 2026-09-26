@@ -12,7 +12,7 @@ Fix: block the write in a way root cannot ignore, as the Quick Fix did for the c
 
 ## 2. The C surface fails with `Text file busy`
 
-Status: Closed on 2026-09-25 by Quick Fix `qf-flaky-gate-tests` (record `sdlc/records/qf-flaky-gate-tests.md`). Item 1 stays open.
+Status: Closed on 2026-09-26 by Quick Fix `qf-flaky-gate-tests` (record `sdlc/records/qf-flaky-gate-tests.md`). Item 1 stays open.
 
 `sdlc/scripts/surfaces` failed the C surface on both runs. Two tests hit `ETXTBSY` when they launched a program they had just built, at `libraries/c/tests/door/main.rs:129`. A parallel test that still holds the new file open for writing causes this: a fork in another thread inherits the write descriptor before `exec`. It is a known Linux race, and a 4-core machine sees it more often.
 

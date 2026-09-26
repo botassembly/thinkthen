@@ -1,6 +1,6 @@
 # The Polars throttle-equality check fails on a busy machine
 
-Status: Closed on 2026-09-25 by Quick Fix `qf-flaky-gate-tests` (record `sdlc/records/qf-flaky-gate-tests.md`).
+Status: Closed on 2026-09-26 by Quick Fix `qf-flaky-gate-tests` (record `sdlc/records/qf-flaky-gate-tests.md`).
 
 Filed on 2026-09-25 at the landing of ticket 0128 Phase 1. `crates/thinkthen/tests/polars/throttle_equality.rs:89`, `a_series_runs_at_the_throttle_as_a_slice_does`, failed in the surfaces rung: `series 3.212053481s and slice 3.054558941s differ by more than 5 percent`. Other builders' rungs were queued on the heavy lock. The same test passed in the surfaces runs just before on the same code. It also failed once in a cloud container, as ticket 0128's record notes. Ticket 0128 does not touch Polars.
 
