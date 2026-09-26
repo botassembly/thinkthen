@@ -1,6 +1,6 @@
 # Command wording and help fixes before 0.1
 
-Status: Open. Items 1 and 10 to 15 remain.
+Status: Open. Items 1 and 10 to 16 remain.
 
 Ian's ruling, 2026-09-25, on item 6: `check` shows the model, the provider, the URL, and all its outputs. When no model name is given, it prints "unspecified". It shows the model the user asked for and the model each reply names. Option 2, an optional model in every request, is not ruled.
 
@@ -48,7 +48,7 @@ Ticket 0123 fixed the relate half. Fixed by ticket 0126, landed 2026-09-25 from 
 
 Fixed by ticket 0126, landed 2026-09-25 from branch `ticket/0126-wording-help-and-doc-claims`.
 
-## Items 10 to 15: found by experiment 218, wave 2
+## Items 10 to 16: found by experiment 218, wave 2
 
 Each was checked at main `20e9b8d4` on 2026-09-25 with a fake key against a loopback backend. Seat: a person typing, unless the item says otherwise. Each harms a user by sending them the wrong way. None costs money on its own.
 
@@ -107,6 +107,16 @@ What the user sees. With no `--cache`, `--record`, or `THINKTHEN_CACHE`, and a r
 The fix. Use the default cache wording when the folder is the platform default, and name `--no-cache` and `THINKTHEN_CACHE` as the ways around it.
 
 Done when: the default cache gets its own sentence, and a command test pins both.
+
+## 16. "unresolved" still names the not-sure answer
+
+What the user sees. `thinkthen audit` prints `agreement ... N right, N wrong, N unresolved, N tied` (`crates/thinkthen/src/cli/audit.rs:178`). The threshold and band transforms emit `"unresolved"` as a key and as a value (`transforms/band/band.jq:31`). The public Rust docs say a pick is `None` "when unresolved". Demo pages 01, 13, 16, 25, and 41 use the word in prose. 55 files in pages, transforms, and source carry it.
+
+What the vocabulary says. The product vocabulary names the answer "not sure" and lists "unresolved" among the words not to use. Its table on the words for numbers overrides older lines. The help text itself is clean: the vocabulary check over every `--help` found no banned word.
+
+The fix. Say "not sure" in printed lines, docs, and page prose. The JSON keys are a contract, so rename them only with a ruling, or record that `unresolved` stays as a key name and say so in the vocabulary.
+
+Done when: printed lines and page prose say "not sure", and the key name is either renamed or recorded as kept.
 
 ## Already fixed
 
