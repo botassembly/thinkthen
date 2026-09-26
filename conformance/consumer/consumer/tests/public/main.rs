@@ -15,6 +15,12 @@ mod cases;
     reason = "a loopback fixture that fails should stop this proof"
 )]
 mod paths;
+#[allow(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    reason = "a loopback fixture that fails should stop this proof"
+)]
+mod parts;
 #[path = "../../../../../crates/thinkthen/src/test_deadline/run.rs"]
 mod run;
 #[path = "../../../../../crates/thinkthen/src/test_deadline/wait.rs"]
