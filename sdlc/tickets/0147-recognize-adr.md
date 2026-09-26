@@ -6,7 +6,7 @@ opens: sdlc/planning/adr/0050-recognize-reads-words-confirms-runs-and-windows-lo
 
 # 0147: Record the recognize rulings in one ADR
 
-Status: ready for review. The coordinator accepted an earlier version on 2026-09-26. This version answers the two severity 1 findings of architect review 10 and the eleven findings of the re-review, records Ian's ruling of 2026-09-26 on both, and adds his ruling of 2026-09-26 that no kinds means every name with the kind `ENTITY`. Experiment 276 may still change item 4, so no review starts until the coordinator says so. A fresh read-only reviewer re-accepts it before it is built. Owner: Claude.
+Status: ready for review. The coordinator accepted an earlier version on 2026-09-26. This version answers the two severity 1 findings of architect review 10 and the eleven findings of the re-review, records Ian's ruling of 2026-09-26 on both, and adds his ruling of 2026-09-26 that no kinds means every name with the kind `ENTITY`, and his ruling of 2026-09-26 that a relation rule with no kind limits means any kind to any kind. Experiment 276 may still change item 4, so no review starts until the coordinator says so. A fresh read-only reviewer re-accepts it before it is built. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -25,7 +25,9 @@ Each sets aside one of Ian's earlier rulings. The coordinator asked Ian, and on 
 
 Items 4 and 5 and decisions 10 and 11 are therefore accepted by Ian's ruling of 2026-09-26. ADR 0054, accepted the same day, held item 4 until local experiment 274 measured labelled detection against it. The experiment kept item 4, and decision 10 gives its numbers. ADR 0054 also requires item 5 to ask only about pairs a relation rule allows.
 
-Ian also ruled on 2026-09-26: "No labels doesn't mean three defaults." He refined it the same day: with no kinds given, each name gets the kind `ENTITY`. That ruling is ADR item 15 and decision 13. It sets aside the ordered defaults `person`, `organization` and `place` in `specification/recognize.md` line 5, and it replaces the 2026-09-21 clause "A caller who wants names without kinds gives one kind". R2 builds item 4, and R5 builds item 5. Until each is built, `recognize.md` and `relate.md` state its limit plainly.
+Ian also ruled on 2026-09-26: "No labels doesn't mean three defaults." He refined it the same day: with no kinds given, each name gets the kind `ENTITY`. That ruling is ADR item 15 and decision 13. It sets aside the ordered defaults `person`, `organization` and `place` in `specification/recognize.md` line 5, and it replaces the 2026-09-21 clause "A caller who wants names without kinds gives one kind".
+
+Ian ruled on relation rules the same day: "any rels without any label limits (head, tail) such as PERSON:ORG are assumed *:* ... also *:ORG and PERSON:* should work too." He added: "assumed star:star, any any or ANY:ANY if asterisk doesn't work." That ruling is ADR item 16 and decision 14. R2 builds item 4, and R5 builds item 5. Until each is built, `recognize.md` and `relate.md` state its limit plainly.
 
 Ian's goal is a first-class name recognizer, and speed wins over accuracy. Batching fills each request. R0 writes no code. It changes no behavior, help text, fixture, schema or digest. `recognize` and `relate` behave the same after it lands.
 
@@ -45,6 +47,7 @@ The pages and records below state what the rulings change. Each line is at `orig
 | `sdlc/planning/recognize-design.md` | 186 | The 2026-09-23 ruling ships the maximal-run baseline |
 | `sdlc/planning/relate-design.md` | 60 | "`method` is `choice` or `yes_no`. `fallback` is null, `max_options`, or `max_request_bytes`." |
 | `sdlc/planning/relate-design.md` | 72 to 74 | "Current final hybrid planner — authoritative. This is the only current method ruling." |
+| `sdlc/planning/relate-design.md` | 32 | "Every relation contains exactly `name`, `source`, and `target`" in a relate file |
 | `sdlc/planning/relate-design.md` | 86 | Different-kind relations ask a choice from the larger side, and "Every non-`none` option at or above the cut becomes an edge" |
 | `sdlc/planning/relate-design.md` | 90 to 94 | "Exact option and backend-profile fallback": a choice over 255 options or over a profile's limit falls back to yes/no pairs |
 | `sdlc/planning/relate-design.md` | 130 to 150 | "Ruled Option A detailed result": choice entries, and "Several real candidates may be accepted" |
@@ -53,17 +56,18 @@ The pages and records below state what the rulings change. Each line is at `orig
 | `specification/recognize.md` | 7 | "One kind is assigned locally with probability one." "Long text keeps its complete source context" |
 | `specification/recognize.md` | 21 | Today's splitter and the maximal-run rule |
 | `specification/recognize.md` | 27 | A run takes 1 through 20 distinct nonblank kinds, with no reserved kind name |
-| `specification/recognize.md` | 31 | A relation keeps an edge at its model probability, with no statement about the text |
+| `specification/recognize.md` | 31 | `--relation NAME=SOURCE:TARGET` is the only command-line form. A bare `knows` has no `=` and exits 2, and `spec/recognize.md` pins `works_for=person` at exit 2. A side of `*` already expands to the kinds present. A relation keeps an edge at its model probability, with no statement about the text |
 | `specification/recognize.md` | 39 | Different-kind relations use one choice per member of the larger side, and "Every option at or above the cut becomes an edge" |
 | `specification/recognize.md` | 45, 47 | `--details` fields, and a failed question failing its input |
 | `specification/recognize.md` | 53 | "`request_count` is the exact recognition request count" |
-| `specification/question-file.md` | 9 | "Recognition policy has no command or file keys." |
+| `specification/question-file.md` | 9 | "Recognition policy has no command or file keys." Each `recognize.relations` entry carries `name`, `source` and `target`, and `*` is the only any-kind spelling |
 | `specification/question-file.md` | 133 | The recognize canonical order: `verb`, `kinds`, optional `relations`, `threshold`, `relation_threshold`, optional `profile` |
 | `specification/result.md` | 42 | `relate --details` keeps "each choice or yes/no relation question, including its asker or endpoints, candidates, … pre-threshold pick" |
 | `specification/result.md` | 44 | `recognize --details` carries no word rules and no `answer.confirm` |
 | `specification/channels.md` | 32 | The option lists name no recognize option |
 | `specification/channels.md` | 113 | `recognize --dry-run` plans "the first record" |
 | `specification/records.md` | 129 | "Another command refuses it outside record mode", so `recognize` on one text refuses `--jobs` |
+| `specification/relate.md` | 14 | Bare `NAME` already means `NAME=*:*`, and a side of `*` already expands. No `ANY` spelling exists |
 | `specification/relate.md` | 5 | Nothing says where `relate`'s answers come from |
 | `specification/relate.md` | 46 | "Different-kind relations use a choice from the larger side to the smaller side plus `none`" |
 | `specification/relate.md` | 60 | `answer.questions` holds choice entries with candidates and a `pick` |
@@ -124,10 +128,11 @@ Status line: accepted 2026-09-26 on Ian's rulings, including his ruling of 2026-
    12. Output: bare output unchanged, `question.words`, `question.boundary`, `question.window`, `answer.confirm`, and `meta.batch` and `--facts` by ADR 0048 items 9 and 10 ("Output and run facts"). By item 4, `none` appears among each word's kind probabilities in `answer.tokens`. By item 5, every `relate --details` question entry is a yes/no entry.
    13. Dry run: `request_count` counts the requests formed before any answer, `confirm_questions_upper_bound` after it, and each split request names its evidence offsets. The bound is 0 under `run`. Otherwise it is floor((W + 1) / 3) for each text, summed over a batch's texts. By item 4 that holds at any kind count. The first batch under a framing flag ("Output and run facts").
    14. Secrecy: no new failure line echoes a text, list entry, name or key, and the `Debug` rules ("Secrecy").
-   15. **Accepted by Ian's ruling of 2026-09-26.** No kinds means every name. With no kinds, `recognize` asks only the detection question, with no kind question, and every name it finds gets the kind `ENTITY`. The ordered defaults `person`, `organization` and `place` go. A name's `strength` is its lowest detection probability, because no kind probability exists. `confirm` never asks, because no run can change kind, and `confirm_questions_upper_bound` is 0. `answer.tokens` carries detection probabilities only, and the dry run shows `kind_questions` of 0. `ENTITY` is reserved as `none` is: a caller kind equal to `ENTITY` in any ASCII case exits 2 on the command line and 5 in a file, and the message echoes no text. In a question file, an absent `recognize.kinds` means no kinds, and the canonical question carries `"kinds":[]`. With no kinds, a relation rule may name only `ENTITY` or `*` on each side, and `*` expands to `ENTITY`. Any other kind in a rule exits 2 on the command line and 5 in a file, before any request. It sets aside the ordered defaults and replaces the 2026-09-21 clause "A caller who wants names without kinds gives one kind". Experiment 276 measures detection-only F1, and the bar waits for it (decision 13).
+   15. **Accepted by Ian's ruling of 2026-09-26.** No kinds means every name. With no kinds, `recognize` asks only the detection question, with no kind question, and every name it finds gets the kind `ENTITY`. The ordered defaults `person`, `organization` and `place` go. A name's `strength` is its lowest detection probability, because no kind probability exists. `confirm` never asks, because no run can change kind, and `confirm_questions_upper_bound` is 0. `answer.tokens` carries detection probabilities only, and the dry run shows `kind_questions` of 0. `ENTITY` is reserved as `none` is: a caller kind equal to `ENTITY` in any ASCII case exits 2 on the command line and 5 in a file, and the message echoes no text. In a question file, an absent `recognize.kinds` means no kinds, and the canonical question carries `"kinds":[]`. With no kinds, the run's only kind is `ENTITY`, so `*` and `ANY` expand to `ENTITY` and a bare `knows` asks `ENTITY` to `ENTITY` pairs, by item 16. It sets aside the ordered defaults and replaces the 2026-09-21 clause "A caller who wants names without kinds gives one kind". Experiment 276 measures detection-only F1, and the bar waits for it (decision 13).
+   16. **Accepted by Ian's ruling of 2026-09-26.** A relation rule with no kind limits means any kind to any kind. On `recognize` and `relate`, the command-line rule `knows` with no `=` means `knows=*:*`. Either side may be `*` or `ANY`, so `*:ORG`, `PERSON:*`, `ANY:ORG`, `PERSON:ANY`, `ANY:ANY` and `*:*` all work. `ANY` is an exact alias of `*` on a rule side, and the canonical question writes `*`, so the two spellings share a digest. `ANY` is reserved as a kind, as `none` and `ENTITY` are: a `recognize` kind or a `relate` entity kind equal to `ANY` in any ASCII case exits 2 on the command line and 5 in a file. In a question file or relate file, an absent `source` or `target` means `*` for that side. `NAME=KIND` with one side and no `:` stays malformed at exit 2, because it does not say which side it limits. By ADR 0054 item 1, `*` and `ANY` expand only to the kinds of the names the run kept, in first-seen order, so a declined `none` name never expands a wildcard, and pairs are asked only where some rule allows them. A concrete kind that is not among the run's kinds still exits 2, as today. With no kinds that means only `ENTITY`, `*` and `ANY` are valid sides. Page examples use `ANY`, because an unquoted `*` meets the shell's file-name expansion (decision 14).
 3. **What this amends.** The table under "What happens today", with the amendment each line gets.
-4. **Which ticket builds each item.** One row per item, naming the design's labels. R2 builds items 2, 4 and 15. R3 and R4 build items 3 and 7 on the command and question file. R6 carries `keep`, `infixes`, `boundary` and `window` to the libraries and SQL, and adds one conformance case per surface for the refusals of items 4 and 15 and for no kinds on every surface. R5 builds items 5 and 6 in `recognize` and `relate`, and removes both pages' markers. R4 builds item 8. R4b builds item 9 and depends on R0 alone. R7 builds item 10 after batching B4 and B5. Items 11 to 14 split across R2, R3, R4, R5 and R7 by the key or path each adds.
-5. **What Ian can overturn.** The design's fifteen "Open items", in its order, plus ticket 0147's calls: decisions 3 to 7 and 12, item 8's record-mode refusal, and item 10's too-big text going alone, as one whole-text request until R4 lands. Items 4, 5 and 15 rest on his rulings of 2026-09-26. He can also choose labelled detection at one kind when every kind carries a description. Local experiment 274 found it within the noise on `person`, `place` and a described `work`. Descriptions on other kinds are unmeasured. The status line says Ian can overturn each item and every rule the ADR copies.
+4. **Which ticket builds each item.** One row per item, naming the design's labels. R2 builds items 2, 4 and 15. R3 and R4 build items 3 and 7 on the command and question file. R6 carries `keep`, `infixes`, `boundary` and `window` to the libraries and SQL, and adds one conformance case per surface for the refusals of items 4, 15 and 16, for no kinds, and for bare and `ANY` rules on every surface. R5 builds items 5, 6 and 16 in `recognize` and `relate`, and removes both pages' markers. R4 builds item 8. R4b builds item 9 and depends on R0 alone. R7 builds item 10 after batching B4 and B5. Items 11 to 14 split across R2, R3, R4, R5 and R7 by the key or path each adds.
+5. **What Ian can overturn.** The design's fifteen "Open items", in its order, plus ticket 0147's calls: decisions 3 to 7 and 12, item 8's record-mode refusal, and item 10's too-big text going alone, as one whole-text request until R4 lands. Items 4, 5 and 15 rest on his rulings of 2026-09-26. Items 15 and 16 rest on his rulings of 2026-09-26 too. He can also choose labelled detection at one kind when every kind carries a description. Local experiment 274 found it within the noise on `person`, `place` and a described `work`. Descriptions on other kinds are unmeasured. The status line says Ian can overturn each item and every rule the ADR copies.
 
 The ADR copies each rule. It does not re-argue it. The design issue stays the argument for Ian's rulings, this ticket stays the argument for items 4 and 5, and the evidence record stays the measurement.
 
@@ -149,7 +154,7 @@ The design already has R2 re-record harvest cases C06 and C16 and replay the res
 
 ### The two new tests
 
-The design numbers its tests 1 to 11. The ADR adds three, for items 4, 5 and 15.
+The design numbers its tests 1 to 11. The ADR adds four, for items 4, 5, 15 and 16.
 
 12. **One kind declines. Loopback in R2, and one recorded live run in R3.** R2's loopback test sends a one-kind run whose recorded kind answer for one name's words is `none`, and checks that the name does not print. The same test refuses kinds `none` and `NONE` at exit 2, and a listener counts zero requests. R3's run takes the key under `recognize person` with every other default, at R3's build, beside test 6. `audit --match strict` grades it against the key filtered to `person` names with `jq`. A printed name of any other kind is not in the filtered key, so it counts against precision. The bar is F1 of at least 60, the low end of local experiment 274's 62 to 76 at one kind, less its noise. The filter is a `jq` step, not a scoring helper.
     - What behavior does it protect? A run with one kind prints only names of that kind.
@@ -167,6 +172,11 @@ The design numbers its tests 1 to 11. The ADR adds three, for items 4, 5 and 15.
     - What credible regression fails it? Restoring the three defaults, or asking a kind question with no kinds.
     - Why does no existing test catch it? `spec/recognize.md` pins 4 kind questions for no kinds today, the opposite rule. R2 changes that page.
     - Does it need a test-only hook? No. It drives the real command at a loopback address.
+15. **Rules with no kind limits. Dry run and loopback in R5.** On `recognize person organization`, the dry runs of `--relation knows`, `--relation 'knows=*:*'` and `--relation knows=ANY:ANY` print the same plan and question digest. `--relation works_for=ANY:organization` plans only `person` to `organization` and `organization` to `organization` pairs among the kinds present, and `--relation 'works_for=*:organization'` plans the same. A loopback run whose kind answers decline one name as `none` asks no pair question naming it. With no kinds, `--relation knows` plans `ENTITY` to `ENTITY` pairs. `--relation works_for=person` still exits 2, and so does the kind `any`, with a listener counting zero requests. A question file with no `source` plans as `"source":"*"`. `relate` gives the same plans for `knows`, `knows=ANY:ANY` and `knows=*:*`.
+    - What behavior does it protect? A caller who names no kinds on a rule, or spells a wildcard `ANY`, gets the pairs of every kept kind and no others.
+    - What credible regression fails it? A parser that refuses a bare rule on `recognize`, treats `ANY` as a concrete kind, or expands `*` to a declined name's kind or to kinds no name has.
+    - Why does no existing test catch it? `spec/recognize.md` pins only the malformed `works_for=person`. No test covers a bare `recognize` rule or `ANY`.
+    - Does it need a test-only hook? No. It uses the real command's dry run and a loopback listener.
 
 Test 5 compares names under a run's kinds. By item 4, a name dropped as `none` is a loss only when its key kind is among the run's kinds. The builder filters the key to the run's kinds with `jq` before `audit` grades it.
 
@@ -189,6 +199,7 @@ Build rule: place each amendment by the sentence the table under "What happens t
 | `sdlc/planning/recognize-design.md` | 186 | A trailing marker: kept as `boundary: run` by ADR 0050 item 3, and `confirm` is the default |
 | `sdlc/planning/relate-design.md` | 60 | A trailing marker: by ADR 0050 item 5, `method` is always `yes_no` and `fallback` always null |
 | `sdlc/planning/relate-design.md` | 72 to 74 | A marker under the heading: Ian's ruling of 2026-09-26 replaces this hybrid planner with ADR 0050 item 5, yes/no pairs for every concrete relation |
+| `sdlc/planning/relate-design.md` | 32 | A trailing marker: by ADR 0050 item 16, `source` and `target` are optional and an absent side means `*` |
 | `sdlc/planning/relate-design.md` | 86 | A trailing marker naming ADR 0050 item 5 |
 | `sdlc/planning/relate-design.md` | 90 | A marker under the heading: under ADR 0050 item 5, relations reach no option ceiling |
 | `sdlc/planning/relate-design.md` | 150 | A trailing marker: under ADR 0050 item 5, choice entries no longer occur |
@@ -197,14 +208,15 @@ Build rule: place each amendment by the sentence the table under "What happens t
 | `recognize.md` | new paragraph after 5 | Item 15: with no kinds, every name gets the kind `ENTITY`, and only the detection question is asked |
 | `recognize.md` | new paragraph after 7 | `Until ADR 0050 item 4 is built, one kind gives every detected name that kind, whatever the name is.` Then the marker for item 4, and the markers for items 7, 8 and 9, pieces with windows, the hard cap, and `--jobs N` on one text |
 | `recognize.md` | new paragraph after 21 | Items 2 and 3: the five word lists with `--word-keep` and `--word-infix`, and `--boundary confirm` as the default with `run` keeping the rule above |
-| `recognize.md` | new paragraph after 27 | Items 4 and 15: a kind equal to `none` or `ENTITY` in any case is refused, and a run takes 0 through 20 kinds |
-| `recognize.md` | new paragraph after 31 | Item 6: a relation means the text states it. Item 15: with no kinds, a rule names only `ENTITY` or `*` |
+| `recognize.md` | new paragraph after 27 | Items 4, 15 and 16: a kind equal to `none`, `ENTITY` or `ANY` in any case is refused, and a run takes 0 through 20 kinds |
+| `recognize.md` | new paragraph after 31 | Item 6: a relation means the text states it. Item 16: `--relation knows` means `knows=*:*`, either side may be `*` or `ANY`, and a wildcard expands only to the kinds the run kept. The page's examples use `ANY` |
+| `recognize.md` | 39 | Item 16: a wildcard expands to the kinds of the names the run kept, never to a declined name's kind |
 | `recognize.md` | new paragraph after 39 | `Until ADR 0050 item 5 is built, a different-kind relation keeps at most one edge per asking name at the default cut, because a choice's probabilities total one. The side that asks depends on how many names of each kind the text holds, so an unrelated name can change which edges come back.` Then the marker for item 5 |
 | `recognize.md` | new paragraph after 45 | Items 10 and 12: record modes fill each request, `--batch 1` sends one text a request and keeps texts from being evidence for each other, and the new `--details` fields |
 | `recognize.md` | 47 | Items 3 and 7: a failed `confirm` question or split request fails the whole text |
 | `recognize.md` | new paragraph after 53 | Item 13: the new `request_count` rule, `confirm_questions_upper_bound`, and `words` under the effective rules |
 | `question-file.md` | 3 | Status adds ADR 0050 |
-| `question-file.md` | new paragraph after 9 | Items 2, 3 and 7: `recognize.words`, `recognize.boundary` and `recognize.window`. The ban lifts for these keys only. Item 15: `recognize.kinds` becomes optional, and its absence means no kinds. Items 4 and 15: a kind equal to `none` or `ENTITY` equal to `none` is refused at exit 5 |
+| `question-file.md` | new paragraph after 9 | Items 2, 3 and 7: `recognize.words`, `recognize.boundary` and `recognize.window`. The ban lifts for these keys only. Item 16: an entry's `source` and `target` become optional, an absent side means `*`, and `ANY` is an alias of `*`. Item 15: `recognize.kinds` becomes optional, and its absence means no kinds. Items 4, 15 and 16: a kind equal to `none`, `ENTITY` or `ANY` equal to `none` is refused at exit 5 |
 | `question-file.md` | new indented line under 133 | Item 11: the new recognize order, and every recognize digest changes. Item 15: no kinds writes `"kinds":[]` |
 | `result.md` | 3 | Status adds ADR 0050 |
 | `result.md` | 42 | Item 5: every `relate --details` entry is a yes/no entry |
@@ -215,6 +227,7 @@ Build rule: place each amendment by the sentence the table under "What happens t
 | `records.md` | 3 | Status adds ADR 0050 |
 | `records.md` | 129 | Item 9: `recognize` also accepts `--jobs` for one text, whose pieces are distinct requests |
 | `relate.md` | 3 | Status adds ADR 0050 |
+| `relate.md` | 14 | Item 16: `ANY` is an alias of `*` on either side, an entity kind equal to `ANY` is refused, and in a relate file an absent `source` or `target` means `*`. The examples use `ANY` |
 | `relate.md` | new paragraph after 5 | One sentence outside the marker, because it is true today: `relate` sends no text, so its answers come from what the model knows of the world. Then the marker, item 6: a `recognize` relation means the text states it, and `relate` keeps its wording. R5 removes the marker |
 | `relate.md` | new paragraph after 46 | `Until ADR 0050 item 5 is built, a different-kind relation keeps at most one edge per asking entity at the default cut, because a choice's probabilities total one. The side that asks depends on how many entities of each kind the set holds, so an unrelated entity can change which edges come back.` Then the marker for item 5: one yes/no question per pair, at most 400 a request, `method` always `yes_no` and `fallback` always null |
 | `relate.md` | 60 | Item 5: choice entries no longer occur |
@@ -228,7 +241,7 @@ Build rule: place each amendment by the sentence the table under "What happens t
 
 ## Decisions
 
-Each is the owner's call under Ian's rulings, except decisions 10, 11 and 13, which rest on Ian's rulings of 2026-09-26. Ian can overturn any of them.
+Each is the owner's call under Ian's rulings, except decisions 10, 11, 13 and 14, which rest on Ian's rulings of 2026-09-26. Ian can overturn any of them.
 
 1. **One ADR, 0050, for every recognize rule.** The R0 row asks for one. Later tickets each cite an item.
 2. **Markers and amendments take ADR 0048's form.** Pages keep today's sentence beside `Not built yet, by ADR 0050 item N: …`, and accepted ADRs gain a marker and a dated section. One fixed phrase lets one `grep` list every leftover. A page stays true today.
@@ -267,11 +280,18 @@ Each is the owner's call under Ian's rulings, except decisions 10, 11 and 13, wh
 13. **Accepted by Ian's ruling of 2026-09-26: no kinds means every name, kind `ENTITY`.** Ian ruled: "No labels doesn't mean three defaults." He then set the spelling: each name gets the kind `ENTITY`. The output keeps its shape, so every entity still carries a `kind` string, and `relate` reads `recognize` output with no change.
     - Cost. Only the detection question goes out, so a run with no kinds costs about what one kind costs on main today, 215 input tokens a word by local experiment 274. The three defaults cost a kind question on every word.
     - `ENTITY` is reserved in any ASCII case, as `none` is, so a caller's own kind never collides with it. The refusal lives in the core check, and R6's conformance cases pin it on every surface.
-    - Relations. My call: with no kinds, a rule names only `ENTITY` or `*` on each side, and `*` expands to `ENTITY`. A rule naming any other kind names a kind no name can have, so it exits 2 on the command line and 5 in a file, before any request. `knows=ENTITY:ENTITY` asks same-kind pairs by item 5. Ian can overturn this.
+    - Relations. Item 16 replaces the special rule this decision first set, which allowed only `ENTITY` or `*` on a side with no kinds. With no kinds the run's only kind is `ENTITY`, so `*` and `ANY` expand to it, and a bare `knows` asks `ENTITY` to `ENTITY` pairs by item 5. A rule naming another concrete kind still exits 2, by the rule that already refuses a kind the run does not have. The behavior for such a rule is unchanged, and it now follows from the general rule. Ian can overturn that refusal and have such a rule ask nothing instead.
     - The question file. An absent `recognize.kinds` means no kinds. An empty list stays refused, so no kinds has one spelling. The canonical question writes `"kinds":[]`, so its key order holds.
     - What changes for callers. Every run with no kinds changes: it prints `ENTITY` where it printed `person`, `organization` or `place`, and it asks fewer questions. `spec/recognize.md` pins 4 kind questions for `Ada met Acme.` today, and R2 changes it to 0. The `settings.md` Kinds row changes with R2. R2's changelog line names the change. The libraries' and SQL surfaces' default kinds change with R6.
     - The bar. Experiment 276 measures detection-only F1. Until it reports, test 14 has no recorded bar, and the deferred gaps name it.
     - Rejected: an absent `kind`, because every consumer of the output and `relate`'s input read a kind string. `null`, because `null` means "not sure" in the result contract.
+14. **Accepted by Ian's ruling of 2026-09-26: a rule with no kind limits means any kind to any kind, and `ANY` spells `*`.** Ian ruled that a rule such as `knows` means `*:*`, that `*:ORG` and `PERSON:*` work, and that `ANY:ANY` works where the asterisk does not.
+    - What changes today. On `recognize`, `--relation knows` exits 2 today, because the parser needs `=` and `:`. It becomes `knows=*:*`. `relate` already reads a bare `NAME` as `NAME=*:*`. One-sided wildcards already work on both commands, because the planner expands each side on its own, so `*:ORG` and `PERSON:*` change nothing. `ANY` is new on both. A file entry with no `source` or `target` is refused today and becomes `*` for that side.
+    - Why `ANY`. An unquoted `*` on the command line meets the shell's file-name expansion. In a folder with files, `--relation knows=*:ORG` reaches the tool with file names in it and exits 2 as malformed, or plans a kind that happens to match a file name. `ANY` never expands. The pages show `ANY`, and `*` stays for quoted use and question files.
+    - `ANY` is exact on a rule side, and the canonical question writes `*`, so `ANY` and `*` give the same digest and cache entries. `ANY` is reserved as a kind in any ASCII case, on `recognize` kinds and on `relate` entity kinds, so it can never also be a concrete kind. A rule side `any` in lower case names a kind the run cannot have, so it exits 2.
+    - Why `NAME=KIND` stays malformed. One side with no `:` does not say whether it limits the source or the target. Guessing would ask the wrong pairs silently.
+    - ADR 0054. A wildcard expands only to the kinds of names the run kept, so a declined name never adds a kind, and a rule never asks about a kind no name has. Item 5 then asks one pair question for each allowed pair.
+    - Cost. A bare rule on a text with many kinds asks every pair of kept names across every kind pair, in both directions. That is the most a rule can ask, and the dry run's `relation_pairs_upper_bound` shows it before any spend. The question ceiling of item 5 splits it.
 
 ## Edge cases
 
@@ -289,7 +309,14 @@ Each is the owner's call under Ian's rulings, except decisions 10, 11 and 13, wh
 | The word "decision model" | It never appears. `the_specification_defines_unresolved_once_and_keeps_the_closed_wording` bans it on every specification page |
 | A caller gives no kinds | By item 15, every name gets `ENTITY` and no kind question goes out |
 | A caller passes the kind `ENTITY` or `entity` | By item 15, exit 2 with zero sends |
-| No kinds and `--relation works_for=person:organization` | By item 15, exit 2 with zero sends |
+| No kinds and `--relation works_for=person:organization` | Exit 2 with zero sends, because `person` is not among the run's kinds, by item 16's general rule |
+| No kinds and `--relation knows` | By items 15 and 16, `ENTITY` to `ENTITY` pairs |
+| `--relation knows` with two or more kinds | By item 16, the same plan as `knows=*:*` over the kinds the run kept |
+| `--relation knows=ANY:ORG` | By item 16, the same plan and digest as `'knows=*:ORG'` |
+| `--relation knows=*:ORG` unquoted, in a folder with files | The shell expands `*` before the tool runs. The rule arrives with file names and exits 2 as malformed, or names a kind no name has and exits 2. The pages show `ANY` so this does not happen. The tool cannot see the expansion |
+| `--relation works_for=person` | Stays malformed, exit 2 |
+| A kind or `relate` entity kind `ANY`, `any` or `Any` | By item 16, exit 2 on the command line and 5 in a file, zero sends |
+| A rule whose `*` would reach a name declined as `none` | The name is gone before the relation step, so its kind is not expanded and no pair names it |
 | A caller already uses a kind named `none`, `None` or `NONE` | By item 4, R2 refuses it. The ADR says so, and R2's changelog line names it |
 | Twenty kinds under a profile with `max_options` 20 | By item 4, exit 2 before any request, naming 21 options and the limit |
 | A same-kind relation | Item 5 keeps its pair questions and wording in `relate`. `recognize` gains the stated-text wording by item 6 |
@@ -327,10 +354,10 @@ The four questions, for the guards R0 relies on and adds nothing to:
 
 Nonblank lines, measured with `grep -c .` on the diff.
 
-- ADR 0050: at most 180 nonblank lines.
+- ADR 0050: at most 200 nonblank lines.
 - ADR 0040: at most 8 added or changed lines.
 - Ticket 0080, `recognize-design.md` and `relate-design.md`: at most 10 changed lines in all.
-- The nine specification pages: at most 80 added or changed lines in all.
+- The nine specification pages: at most 90 added or changed lines in all.
 - The build record: at most 40 nonblank lines.
 - Nothing else changes. No code, test, fixture, schema, ratchet or dependency. The `surfaces` rung is not required.
 
@@ -381,9 +408,10 @@ Contract 3; state and timing 0; reach 2; proof 0; cost of error 1; total 6. Fina
 - Decision 12: the two issues for the marketing lead.
 - ADR item 8: a text over the cap in record mode refuses that record.
 - ADR item 10: a text too big for a batch of one goes alone, as one whole-text request until R4 lands. R7 keeps its dependencies.
-- Decisions 10, 11 and 13 and ADR items 4, 5 and 15, which rest on his rulings of 2026-09-26 and which he can still overturn.
+- Decisions 10, 11, 13 and 14 and ADR items 4, 5, 15 and 16, which rest on his rulings of 2026-09-26 and which he can still overturn.
 - Labelled detection at one kind when every kind carries a description, in place of item 4's kind question there. Local experiment 274 found it within the noise on `person`, `place` and a described `work`. Descriptions on other kinds are unmeasured.
-- Decision 13 and ADR item 15: the spelling `ENTITY`, its reservation, and relation rules with no kinds naming only `ENTITY` or `*`.
+- Decision 13 and ADR item 15: the spelling `ENTITY` and its reservation.
+- Decision 14 and ADR item 16: `ANY` as the alias, its reservation, `NAME=KIND` staying malformed, and a concrete kind outside the run's kinds exiting 2 rather than asking nothing.
 
 ## Closes
 
@@ -391,8 +419,8 @@ None. `sdlc/issues/2026-09-26-recognize-design.md` stays open until its last tic
 
 ## Evidence
 
-- Starts from: Ian's rulings and the R0 row in `sdlc/issues/2026-09-26-recognize-design.md`, sent 2026-09-26. Items 1 and 2 of `sdlc/issues/2026-09-26-architect-review-10-recognize-and-relate.md`, from local experiment 273, report 10, the re-review of this ticket, Ian's rulings of 2026-09-26 on items 4, 5 and 15, ADR 0054, and local experiment 274. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` sections 2, 7 and 10 to 13, from experiments 260, 265, 267, 270 and 271. Ticket 0139 and ADR 0048, which set the form, and ADR 0053, which amends it. Tickets 0143 and 0144 on main, and tickets 0145 and 0146 read from their branches, for the R4b and R7 check. The page lines in "What happens today" at `origin/main` `c490f082`. This ticket's offline replay and dry runs of main's binary at that commit, which sent nothing.
+- Starts from: Ian's rulings and the R0 row in `sdlc/issues/2026-09-26-recognize-design.md`, sent 2026-09-26. Items 1 and 2 of `sdlc/issues/2026-09-26-architect-review-10-recognize-and-relate.md`, from local experiment 273, report 10, the re-review of this ticket, Ian's rulings of 2026-09-26 on items 4, 5, 15 and 16, ADR 0054, and local experiment 274. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` sections 2, 7 and 10 to 13, from experiments 260, 265, 267, 270 and 271. Ticket 0139 and ADR 0048, which set the form, and ADR 0053, which amends it. Tickets 0143 and 0144 on main, and tickets 0145 and 0146 read from their branches, for the R4b and R7 check. The page lines in "What happens today" at `origin/main` `c490f082`. This ticket's offline replay and dry runs of main's binary at that commit, which sent nothing.
 - Keeps: Every behavior, help line, fixture, schema, digest and test. Every accepted ADR sentence, marked and not deleted. Every Settled page's current sentence, beside its marked replacement. The `settings.md` table.
-- Changes: A new ADR 0050 holds the recognize rulings, including three items that rest on Ian's rulings of 2026-09-26: no kinds means every name with the kind `ENTITY`, kinds decline through `none`, and every relation asks yes/no pairs under a question ceiling. ADR 0040, ticket 0080, the 2026-09-21 and 2026-09-23 rulings and the relate design carry markers, and ADR 0040 gains a dated amendment section. Nine specification pages state each new rule beside today's, under the marker, and state the one-kind and one-edge limits plainly. The `settings.md` recognize lines cite their ADR items.
+- Changes: A new ADR 0050 holds the recognize rulings, including four items that rest on Ian's rulings of 2026-09-26: a rule with no kind limits means any kind to any kind with `ANY` spelling `*`, no kinds means every name with the kind `ENTITY`, kinds decline through `none`, and every relation asks yes/no pairs under a question ceiling. ADR 0040, ticket 0080, the 2026-09-21 and 2026-09-23 rulings and the relate design carry markers, and ADR 0040 gains a dated amendment section. Nine specification pages state each new rule beside today's, under the marker, and state the one-kind and one-edge limits plainly. The `settings.md` recognize lines cite their ADR items.
 - Proof: The item-by-item review against the design, the rulings, decisions 10 and 11 and the amendment table. The marker grep, the limit grep and the `spec/` grep. `lint`, the settings check and the specification wording test, with plants (a) to (c) each turning one red.
 - Defers: The table rows to R2, R3, R4, R4b and R6. The schema and key lists to R2 to R4. The evidence-offset key names to R4. Removing each marker and limit sentence to the ticket that builds its item. Windowed relations. Standalone `relate` precision under pairs. The site recordings, to the marketing lead.
