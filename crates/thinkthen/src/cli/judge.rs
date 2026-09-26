@@ -125,8 +125,7 @@ pub(crate) fn decide(
 /// # Errors
 ///
 /// Returns [`Failure`] for a band in either home, for a view that prints no
-/// record, for a missing framing, and for every outcome `channels.md` gives a
-/// code above 3.
+/// record, and for every outcome `channels.md` gives a code above 3.
 pub(crate) fn filter(
     arguments: &FilterArguments,
     environment: &Environment,
@@ -156,8 +155,7 @@ pub(crate) fn filter(
 /// # Errors
 ///
 /// Returns [`Failure`] for a rule in either home, for a view that prints no
-/// record, for a missing framing, and for every outcome `channels.md` gives a
-/// code above 3.
+/// record, and for every outcome `channels.md` gives a code above 3.
 pub(crate) fn rank(
     arguments: &RankArguments,
     environment: &Environment,

@@ -7,7 +7,7 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 use crate::core::{
-    Backend, BackendProfile, Evidence, Outcome, Plan, PlanDocument, Pointer, Question,
+    Backend, BackendProfile, Evidence, Framing, Outcome, Plan, PlanDocument, Pointer, Question,
     QuestionText, Reading, Record, RecordValue, Resolved, Sources, Threshold, Value, json_line,
 };
 
@@ -148,10 +148,7 @@ pub(crate) fn run(
     )?;
     let profile = profile::read(common)?;
     let mismatch = Mismatch::new(settled.profile(), profile.as_ref());
-    let reading = read_by(common, settled)?;
-    if keeping.streams_only() && !reading.streams() {
-        return Err(Failure::NoFraming(keeping.verb()));
-    }
+    let reading = read_by(common, settled, keeping)?;
     if view.quiet && reading.streams() {
         return Err(Failure::QuietOverRecords);
     }
@@ -251,8 +248,19 @@ fn over_table(
 }
 
 /// Read the framing the command line asked for, over the settled pointers.
-fn read_by(common: &Common, settled: &Resolved) -> Result<Reading, Failure> {
-    Ok(Reading::new(common.framing(), settled.on().to_vec())?)
+/// With no flag, `filter` and `rank` read lines, or JSON Lines under a pointer.
+fn read_by(common: &Common, settled: &Resolved, keeping: Keeping) -> Result<Reading, Failure> {
+    let on = settled.on().to_vec();
+    let asked = common.framing();
+    if asked != Framing::Document || !keeping.streams_only() {
+        return Ok(Reading::new(asked, on)?);
+    }
+    let framing = if on.is_empty() {
+        Framing::Lines
+    } else {
+        Framing::Jsonl
+    };
+    Ok(Reading::new(framing, on)?.by_default())
 }
 
 fn table_kind(common: &Common) -> Option<TableKind> {
