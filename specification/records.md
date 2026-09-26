@@ -23,7 +23,7 @@ Under `--lines` and under `--jsonl` a carriage return before the line feed is st
 | Command | Framing |
 | --- | --- |
 | `decide`, `choose`, `tag`, `score` | One document by default. All four record flags are accepted |
-| `filter`, `rank` | One record flag is required. One document is not a stream |
+| `filter`, `rank` | Lines by default, or JSONL when a pointer is given. All four record flags are accepted. One document is not a stream |
 | `annotate` | One document by default. All four record flags are accepted |
 | `find` | Lines by default or JSONL. CSV and TSV are not options |
 | `relate` | One JSON array by default. Lines, JSONL, CSV, and TSV form one complete entity set |
@@ -45,7 +45,7 @@ A header or logical data row may hold at most 16 MiB of encoded bytes before its
 **The pointer is the disclosure boundary.** Only the pointed value leaves the machine. `--details` still carries the whole record in `input`.
 
 - `--field` with `--jsonl`, `--csv`, or `--tsv` reads the pointer in each record.
-- `--field` without a record framing reads the whole input as one JSON value and takes the pointer inside it. No separate JSON framing flag exists.
+- `--field` without a record framing reads the whole input as one JSON value and takes the pointer inside it. No separate JSON framing flag exists. On `filter` and `rank` it reads JSONL instead, and so does a question file's `on`.
 - `--field` with `--lines` is a usage error. A text line has no members.
 - A pointer that finds nothing is an input error for that record at exit 2, before any request for it.
 - `$.body`, `#/id`, a wildcard, and a negative index are refused with a message that names RFC 6901, because the tool never guesses a pointer language.

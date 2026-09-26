@@ -5,6 +5,8 @@ use std::process::Output;
 
 use crate::harness::{Canned, Listener, spawn};
 
+mod default_framing;
+
 /// The question both commands ask of each record.
 const QUESTION: &str = "Does this report a payment failure?";
 
