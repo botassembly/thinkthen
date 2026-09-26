@@ -3,12 +3,8 @@
 //! Each case runs in its own `tests/c/driver.c` process, through the JSON door
 //! and, where one fits, a typed function. Expected request digests were
 //! recorded against the canonical URL, so each is recomputed for the URL the
-//! backend served. Five cases do not apply to the door:
+//! backend served. Two cases do not apply to the door:
 //!
-//! - `18-find-second` and `19-find-none` set `none: true`, and the `find` verb
-//!   takes its question text alone.
-//! - `18-annotate-two-groups` reads parts of a record through `on`, and a
-//!   record at the door is one whole text.
 //! - `25-defect-fault` injects an internal invariant failure, which no outside
 //!   boundary reaches. The panic test in `src/failures.rs` covers the kind.
 //! - `30-local-question-file` loads a question file, and the door reads none.
@@ -25,13 +21,7 @@ use crate::{compile, crate_dir, run, scratch, text};
 
 const CASES: &str = include_str!("../../../../conformance/cases.json");
 const CANONICAL: &str = "https://api.typesafe.ai/v1/systemone";
-const SKIPPED: [&str; 5] = [
-    "18-find-second",
-    "19-find-none",
-    "18-annotate-two-groups",
-    "25-defect-fault",
-    "30-local-question-file",
-];
+const SKIPPED: [&str; 2] = ["25-defect-fault", "30-local-question-file"];
 
 type Checked<T = ()> = Result<T, String>;
 pub(crate) type Members = BTreeMap<String, Box<RawValue>>;
@@ -146,9 +136,23 @@ fn plan<'a>(backend: &'a Backend, case: &Members, script: &mut Script) -> Checke
         ("relate", _) => related(script, &base, case, question, &success),
         ("annotate", _) => {
             let set = case.get("question_set").map_or("{}", |raw| raw.get());
+            let whole = case.get("record").map(|record| json!([record.get()]).to_string());
+            let records = whole.as_deref().unwrap_or(&records);
             let request = format!(r#"{{"annotate":{set},"records":{records}}}"#);
             script.ask("call", &[&base, &request]);
-            Ok(Box::new(move |got| annotated(&parsed(&got[0])?, &success)))
+            let one = whole.is_some();
+            Ok(Box::new(move |got| {
+                annotated(&parsed(&got[0])?, &success, one)
+            }))
+        }
+        ("find", _) => {
+            script.ask("call", &[&base, question]);
+            let units: Vec<String> = serde_json::from_str::<Value>(question)
+                .ok()
+                .and_then(|asked| serde_json::from_value(asked["units"].clone()).ok())
+                .unwrap_or_default();
+            let want = picked(&units, &success["operation"]["selected"]);
+            Ok(Box::new(move |got| same("find", &parsed(&got[0])?, &want)))
         }
         ("rank", _) => {
             let asked =
@@ -323,11 +327,15 @@ fn single(plain: &Reply, detailed: &Reply, expected: &Value, served: &str) -> Ch
 }
 
 /// Each expected annotate value against its record's value object.
-fn annotated(rows: &Value, success: &Value) -> Checked {
+fn annotated(rows: &Value, success: &Value, one: bool) -> Checked {
     for expected in success["answers"].as_array().into_iter().flatten() {
-        let record = expected["exchange"]
-            .as_u64()
-            .and_then(|at| usize::try_from(at).ok());
+        let record = if one {
+            Some(0)
+        } else {
+            expected["exchange"]
+                .as_u64()
+                .and_then(|at| usize::try_from(at).ok())
+        };
         let row = record
             .and_then(|at| rows.get(at))
             .ok_or("a record is missing")?;
