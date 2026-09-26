@@ -26,7 +26,7 @@ const dryRun = run('install/backends', '1-dry-run');
   <p><code>jev-latest</code> follows the vendor's newest model. Name a version to hold a run to one model.</p>
 
   <h2>The key</h2>
-  <p>The key comes from <code>{KEY_VARIABLE}</code> and from nowhere else. No flag and no file carries one. A missing key exits 4. The message names the variable and never a value.</p>
+  <p>The key comes from <code>{KEY_VARIABLE}</code> and from nowhere else. The command takes no flag and no file for it. A missing key exits 4. The message names the variable and never a value.</p>
   <p>The key goes only to the address you named. It never shows in a plan, a result, a saved answer, a log line, or an error.</p>
   <p>A plain <code>http://</code> address may reach only this machine. Any other <code>http://</code> host is a usage error before a request leaves. The key would otherwise cross the network in clear text. Under <code>http://</code> the tool also ignores every proxy variable.</p>
   <p>An address with a user name, a query, or a fragment is a usage error. The plan prints the address, and a saved answer keeps it.</p>

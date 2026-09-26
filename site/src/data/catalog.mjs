@@ -46,7 +46,7 @@ const COMMON_OPTIONS = [
   ['--details', 'Prints the whole result in place of the bare value: the probabilities, the question, and the run.'],
   ['--input FILE', 'Reads the evidence from a file instead of standard input.'],
   ['--dry-run', 'Prints the plan and sends nothing. It needs no key.'],
-  ['--lines, --jsonl, --csv, --tsv', 'Says how a stream of records is framed. Pick one.'],
+  ['--lines, --jsonl, --csv, --tsv', 'Says how a stream of records is framed. Pick at most one.'],
   ['--field POINTER', 'Names the part of each record to judge, as a JSON Pointer. It may repeat.'],
   ['--jobs N', 'How many requests run at once, from 1 to 32. The default is 4. It works on a stream of records. annotate also takes it on one document.'],
   ...BACKEND_OPTIONS,

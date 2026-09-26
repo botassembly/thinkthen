@@ -21,6 +21,9 @@ export const GROUPS = [
   ['Backends', ['backends']],
 ];
 
+// The choose, relate, and Jev slides show four faces cropped from one photo.
+const FACES = "The four faces: United Press International photo of the Beatles in New York, 7 February 1964, via the Library of Congress and Wikimedia Commons. Public domain in the US.";
+
 const ARTICLES = {
   strings: {
     title: "Code sees strings, not meaning.",
@@ -50,7 +53,7 @@ const ARTICLES = {
       "Jev is the model behind ThinkThen, a System One model from TypeSafe. It reads a text and a question and returns a probability for every answer. It writes no text, and you train nothing.",
       "Roger Bannister's mile set a standard for runners. Jev sets one for code.",
     ],
-    credit: "Roger Bannister photo: 6 May 1954, public domain in the US, via Wikimedia Commons.",
+    credit: `Roger Bannister photo: 6 May 1954, public domain in the US, via Wikimedia Commons. ${FACES}`,
     see: {
       '1-choose': "Jev gives Ringo 0.84.",
       '2-bar': "A bar of 0.9 asks for more than 0.84. The answer is not sure.",
@@ -80,6 +83,7 @@ const ARTICLES = {
 
   choose: {
     title: "choose selects one option.",
+    credit: FACES,
     goal: "A bar on choose turns a weak pick into not sure and leaves the strong picks alone.",
     idea: [
       "`choose` is a switch statement that reads. You list the options, and Jev puts a probability on each. The top option is the pick.",
@@ -121,7 +125,7 @@ const ARTICLES = {
       '2-cut': "Your code keeps the songs at 5 minutes or more.",
     },
     headings: { '2-cut': "Set the bar" },
-    lesson: "`score` has no threshold. A Day in the Life runs over five minutes. Jev scores it 4.87, and a bar of 5 leaves it out.",
+    lesson: "`score` has no threshold. A Day in the Life runs over five minutes. Jev scores it 4.868686868687, and a bar of 5 leaves it out.",
     takeaway: "A score is a position. Your code draws the line.",
     link: tree('score'),
   },
@@ -209,6 +213,7 @@ const ARTICLES = {
 
   relate: {
     title: "relate links names into a graph.",
+    credit: FACES,
     goal: "relate returns each link with a probability, and a higher bar removes wrong and right links alike.",
     idea: [
       "`relate` takes a set of names and the relations you care about, and finds each link. Here the names are songs, singers, and albums. The file names two relations: sung by and appears on. Each output line is one edge with its probability.",
@@ -283,7 +288,7 @@ const ARTICLES = {
     goal: "Jev misses obscure facts, and a low probability is how it says so.",
     idea: [
       "Jev's memory fades on obscure facts. It gets more right on the songs most viewed on Wikipedia than on the least viewed. Tricky wording trips it. Two hops are hard. Jev can know the release dates of two songs and still miss whether they came out in the same month.",
-      "Nothin' Shakin' is an obscure song, and George sings it.",
+      "Nothin' Shakin' is an obscure song, and George sings it. The slide shows the bench run. The example below asks again, and its numbers differ a little.",
     ],
     see: {
       '1-choose': "Jev leans to John at 0.34. Ringo is close at 0.32. George gets 0.14.",

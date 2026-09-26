@@ -48,7 +48,7 @@ const triageForm = files(triagePage)[0];
   <p>That number is the model's own. ThinkThen passes it through unchanged.</p>
 
   <h2>4. Set a band</h2>
-  <p><code>--threshold</code> is your bar on the probability. One number is a cut, and the default is 0.5. Two numbers make a band: under the low bar is no, over the high bar is yes, and anything between is not sure.</p>
+  <p><code>--threshold</code> is your bar on the probability. One number is a cut, and the default is 0.5. Two numbers make a band: under the low bar is no, at or over the high bar is yes, and anything between is not sure.</p>
   <Terminal run={band} caption={band.see} />
   <p>The threshold never changes the probability. It changes what you call a yes.</p>
 
