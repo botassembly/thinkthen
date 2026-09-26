@@ -4,8 +4,8 @@ set -eu
 
 probe=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 repo=$(CDPATH= cd -- "$probe/../.." && pwd)
-scratch=$(mktemp -d)
-trap 'rm -rf -- "$scratch"' EXIT HUP INT TERM
+. "$repo/sdlc/scripts/scratch.sh"
+scratch_dir scratch
 unset THINKTHEN_API_KEY THINKTHEN_BASE_URL
 export PYTHONDONTWRITEBYTECODE=1
 

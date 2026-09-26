@@ -9,8 +9,8 @@ PY=$1
 HERE=$(cd -- "$(dirname -- "$0")" && pwd)
 ROOT=$(dirname -- "$HERE")
 REPO=$(cd -- "$ROOT/../.." && pwd)
-work=$(mktemp -d)
-trap 'rm -rf -- "$work"' EXIT
+. "$REPO/sdlc/scripts/scratch.sh"
+scratch_dir work
 fail() {
 	echo "FAIL selftests: $1" >&2
 	exit 1
