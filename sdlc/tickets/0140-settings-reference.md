@@ -6,7 +6,7 @@ opens: specification/settings.md specification/README.md sdlc/scripts/settings s
 
 # 0140: every setting is explained in one place
 
-Status: in progress. Built in `thinkthen-lane-3`; record `sdlc/records/0140-build-settings-reference.md`; code review pending. The coordinator accepted the design on 2026-09-26 after a fresh read-only review. Owner: Claude.
+Status: landed 2026-09-26 (`sdlc/records/0140-build-settings-reference.md`). A fresh code review accepted it after one round of fixes. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
