@@ -34,7 +34,6 @@ NOT_RUN = {
 def reason(case: dict) -> str | None:
     if case["verb"] == "find":
         return NOT_RUN[case["verb"]]
-    # check.sh's installed-file mode sets the hooks build to nothing (ticket 0128).
     if case.get("operation", {}).get("injection") == "internal_invariant_failure" and os.environ.get("THINKTHEN_DUCKDB_HOOKS") == "":
         return NOT_RUN["hooks"]
     members = case.get("question_set", {}).get("questions", {}).values()

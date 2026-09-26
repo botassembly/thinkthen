@@ -12,7 +12,6 @@ import { fileURLToPath } from 'node:url';
 import { childEnv as cleanEnv } from '../../../conformance/children/children.mjs';
 
 export const FAKE_KEY = 'fake-loopback-key';
-// The package by its name: this checkout through its own exports, or an installed copy (ticket 0128).
 export const INDEX = fileURLToPath(import.meta.resolve('thinkthen'));
 export const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
