@@ -58,17 +58,16 @@ pub(super) fn bars(path: &Path, answers: &[Answer], rows: &[Row]) -> Result<Stri
     let mut new = text.clone();
     let mut report = String::new();
     for row in rows.iter().filter(|row| row.kind != Kind::Label) {
-        let target = match (&row.name, set) {
-            (Some(name), true) => format!("question {name}"),
-            _ => "the question".to_owned(),
+        let (target, place) = match (&row.name, set) {
+            (Some(name), true) => (
+                format!("question {name}"),
+                vec!["questions", name.as_str(), "threshold"],
+            ),
+            _ => ("the question".to_owned(), vec!["threshold"]),
         };
         let line = match decide(row) {
             Choice::Keep(reason) => reason.replace("TARGET", &target),
             Choice::Write(value) => {
-                let place: Vec<&str> = match (&row.name, set) {
-                    (Some(name), true) => vec!["questions", name, "threshold"],
-                    _ => vec!["threshold"],
-                };
                 let (spliced, old) = splice(&new, &place, &value).ok_or(Cause::NotQuestions)?;
                 new = spliced;
                 let old = old.unwrap_or_else(|| "absent".to_owned());

@@ -16,7 +16,7 @@ use measure_support::{audit, found, member, ranked, replay, repository, with_ids
 
 /// Each hand fixture under `verbs/`, the row it checks, and each member's hand-computed value.
 /// `tests/fixtures/measure/README.md` shows the arithmetic.
-const ROWS: [&str; 12] = [
+const ROWS: [&str; 13] = [
     r#"tag 0 {"/group": "Which apply?", "/rows": 12, "/labeled": 10, "/right": 8, "/wrong": 2, "/precision": 0.833333, "/yes_recall": 0.833333, "/f1": 0.833333, "/interval": null, "/calibration": null, "/coverage": null, "/auc": null, "/mean_probability": null}"#,
     r#"tag 1 {"/group": "Which apply?/x", "/labeled": 5, "/right": 4, "/false_no": 1, "/precision": 1.0, "/yes_recall": 0.75, "/f1": 0.857143}"#,
     r#"tag 2 {"/group": "Which apply?/y", "/labeled": 5, "/right": 4, "/false_yes": 1, "/precision": 0.666667, "/yes_recall": 1.0, "/f1": 0.8}"#,
@@ -28,6 +28,7 @@ const ROWS: [&str; 12] = [
     r#"rank 4 {"/labeled": 3, "/r_precision": 0.5, "/suggested": null}"#,
     r#"find 0 {"/rows": 4, "/right": 2, "/wrong": 1, "/tied": 1, "/disagreements": [{"key": "u001", "said": "u003", "count": 1}], "/suggested": null}"#,
     r#"annotate 0 {"/group": "urgent", "/right": 1, "/false_yes": 1, "/precision": 0.5}"#,
+    r#"annotate 1 --optimize precision {"/verb": "choose", "/suggested": {"cut": null, "objective": "precision does not apply to choose", "split": "seeded", "seed": 0}}"#,
     r#"annotate 2 {"/group": "effort", "/verb": "score", "/right": 2, "/mean_level_distance": 0.333333}"#,
 ];
 
@@ -36,9 +37,18 @@ const ROWS: [&str; 12] = [
 fn each_verb_grades() {
     for case in ROWS {
         let (name, rest) = case.split_once(' ').expect("a name");
-        let (place, expected) = rest.split_once(' ').expect("a place");
-        let results = format!("verbs/{name}.jsonl");
-        let (code, stdout, stderr) = audit(&[&results, &format!("verbs/{name}-key.jsonl")], b"");
+        let (place, rest) = rest.split_once(' ').expect("a place");
+        let (options, expected) = rest.split_at(rest.find('{').expect("the expected members"));
+        let (results, key) = (
+            format!("verbs/{name}.jsonl"),
+            format!("verbs/{name}-key.jsonl"),
+        );
+        let arguments = [
+            &[results.as_str(), &key][..],
+            &options.split_whitespace().collect::<Vec<_>>(),
+        ]
+        .concat();
+        let (code, stdout, stderr) = audit(&arguments, b"");
         assert_eq!((code, stderr.as_str()), (0, ""), "{name}");
         let row = stdout
             .lines()
@@ -54,6 +64,10 @@ fn each_verb_grades() {
             );
         }
     }
+    let arguments = "verbs/annotate.jsonl verbs/annotate-key.jsonl --optimize precision --table";
+    let (_, table, _) = audit(&arguments.split(' ').collect::<Vec<_>>(), b"");
+    let line = "  suggested cut: none; precision does not apply to choose";
+    assert!(table.lines().any(|held| held == line), "{table}");
 }
 
 /// Real saved `tag`, `score`, `find`, and `rank` output reads as the verb it is.

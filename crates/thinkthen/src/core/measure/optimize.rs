@@ -96,7 +96,7 @@ impl Bar {
 impl Serialize for Bar {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self {
-            Self::Cut(k) => serializer.serialize_f64(f64::from(*k) / 100.0),
+            Self::Cut(_) => self.value().serialize(serializer),
             Self::Levels(cuts) => cuts.serialize(serializer),
         }
     }

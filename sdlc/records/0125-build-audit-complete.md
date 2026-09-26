@@ -54,6 +54,8 @@ Each test below ran green on the final code. Each plant was applied alone, its t
 | secrecy sweep: the digest refusal names the path | RED |  |
 | writes_one_value: a sibling temporary file | RED |  |
 | splice table: the scanner skips string escapes | RED |  |
+| each_verb_grades: the does-not-apply objective reworded | RED | added after code review |
+| each_verb_grades: choose tunes under any measure | RED | added after code review |
 
 Four plants needed a second run.
 
@@ -100,6 +102,15 @@ The rungs ran on the merged branch without an outside lock.
 - `surfaces`: not run. No library surface or public Rust item changed.
 
 A release build graded `249/control.jsonl` (272 rows) in 0.02 seconds with the seeded key and with the part key. The stop line is one second.
+
+## Code review fixes
+
+The code review accepted the math, the splice, the merge, and the pure core. It asked for four fixes, made in one commit.
+
+1. The ticket and the recognize-and-relate issue named workspace paths. They now say "workspace experiment 259" and the like.
+2. Decision 4 had no test. `each_verb_grades` gains an annotate `choose` row under `--optimize precision`. It pins the whole suggested object, with no `steady`, and the table line `suggested cut: none; precision does not apply to choose`. Two plants turn it red: a reworded objective, and `choose` tuned under any measure.
+3. `cli/audit.rs` says in a comment that a missing steady count means the measure does not apply.
+4. `write.rs` matches the row name and the set once. `Bar` serializes a cut through `value()`. `bar_text` writes a cut and level cuts through one path.
 
 ## Defers
 

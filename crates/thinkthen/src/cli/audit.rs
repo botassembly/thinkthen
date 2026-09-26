@@ -266,6 +266,7 @@ fn suggested_line(row: &Row, suggested: &Suggested) -> String {
     }
     let (Some(cut), Some(tune), Some(held)) = (suggested.cut, &suggested.tune, &suggested.held)
     else {
+        // No steady count means the measure does not apply to this verb.
         if suggested.steady.is_none() {
             return format!("  suggested cut: none; {}", suggested.objective);
         }
@@ -303,18 +304,15 @@ fn held_line(at: &Counts) -> String {
 
 /// A bar as the table writes it: a cut, or level cuts joined by commas.
 fn bar_text(bar: Bar) -> String {
-    match bar {
-        Bar::Cut(_) => bar
-            .value()
-            .map(|cut| python_float_text(rounded(cut)))
-            .unwrap_or_default(),
-        Bar::Levels(cuts) => cuts
-            .hundredths()
-            .iter()
-            .map(|cut| python_float_text(f64::from(*cut) / 100.0))
-            .collect::<Vec<_>>()
-            .join(", "),
-    }
+    let hundredths = match bar {
+        Bar::Cut(k) => vec![k],
+        Bar::Levels(cuts) => cuts.hundredths().to_vec(),
+    };
+    let texts: Vec<String> = hundredths
+        .iter()
+        .map(|k| python_float_text(f64::from(*k) / 100.0))
+        .collect();
+    texts.join(", ")
 }
 
 /// How steady the bar stays, and the seed or the key split behind it.
