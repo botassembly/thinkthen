@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/cli/failure/status.rs crates/thinkthen/src/cli/failu
 
 # 0138: Command wording fixes, the retried statuses' next step, and pointers that never echo a control character
 
-Status: in progress. Owner: Claude.
+Status: in progress. Design review accepted on the second pass (fresh read-only Claude session). Owner: Claude.
 
 Lane: thinkthen-lane-4
 
@@ -52,7 +52,7 @@ Checked at `origin/main` `3b6954d6` on 2026-09-26, by reading the source and run
 
 ### Status 502, 503, 504, and 529 (item 11)
 
-`cli/failure/status.rs` gives 502, 503, 504, and 529 the 500 phrase, held once as a constant: `the backend failed after the allowed attempts; try again later or change --max-retries`. These are the retried statuses of `engine/error.rs` `RETRIED`, less 429, which keeps its rate-limit phrase. `check` prints the same line, because it reads the same table. The PHRASES table grows from 8 to 12 rows. The table in `specification/backends.md` names the four statuses on its 500 row. The library and SQL surfaces keep their own bare status line, as `backends.md` already says. `databases/sqlite/tests/test_deadline.py` pins that line for 503, and it does not change.
+`cli/failure/status.rs` gives 502, 503, 504, and 529 the 500 phrase, held once as a constant: `the backend failed after the allowed attempts; try again later or change --max-retries`. These are the retried statuses of `engine/error.rs` `RETRIED`, less 429, which keeps its rate-limit phrase. `check` prints the same line, because it reads the same table. The PHRASES table grows from 8 to 12 rows. The table in `specification/backends.md` names the four statuses on its 500 row. The library and SQL surfaces keep their own bare status line, and the page gains a sentence that says so. `databases/sqlite/tests/test_deadline.py` pins that line for 503, and it does not change.
 
 ### One status table (issue 2)
 
@@ -78,7 +78,7 @@ DuckDB's `Warm::finish` and PostgreSQL's warm `finalize` refuse a question that 
 
 The default cache folder gets its own sentence at exit 5: `the default cache folder could not be read or written; check its permissions and free space, use --no-cache, or set THINKTHEN_CACHE to another folder`.
 
-`cli/mod.rs` `entry` passes each failure of `run` through one new function, `told`, before it reports it. `told` rewrites a `RecordingStorage` failure to `Failure::Configuration` with that sentence when the command's folders are the platform default cache. The test for the default is `Folders::of(..).private_default`. Ticket 0124 already splits the backend mismatch sentence by that flag. `Configuration` is the existing variant that prints a fixed local sentence at exit 5, so `cli/failure.rs` does not change. A stopped run whose cause is `RecordingStorage` prints only the storage sentence today (`stopped` in `cli/failure.rs`). `told` rewrites that whole stopped run to the same `Configuration` failure, so the output stays one line at exit 5.
+`cli/mod.rs` `entry` passes each failure of `run` through one new function, `told`, before it reports it. `told` rewrites a `RecordingStorage` failure to `Failure::Configuration` with that sentence when the command's folders are the platform default cache. The test for the default is `Folders::of(..).private_default`. When `Folders::of` fails, as with `TwoFolders`, `told` keeps the original failure. Ticket 0124 already splits the backend mismatch sentence by that flag. `Configuration` is the existing variant that prints a fixed local sentence at exit 5, so `cli/failure.rs` does not change. A stopped run whose cause is `RecordingStorage` prints only the storage sentence today (`stopped` in `cli/failure.rs`). `told` rewrites that whole stopped run to the same `Configuration` failure, so the output stays one line at exit 5.
 
 `told` needs the command's shared options. `cli/mod.rs` gains a private `common` function, one match over the ten record commands, beside `entry`. `Command` in `cli/args/command.rs` gains no accessor, because 0135 and 0137 both list that file.
 
@@ -224,6 +224,6 @@ Contract 2; state and timing 1; reach 3; proof 2; cost of error 1; total 9. Fina
 
 - Starts from: The wording issue's items, checked against `origin/main` `3b6954d6` by reading the source and running the built command. Experiment 218 wave 2, which found items 10 to 17 with a fake key against a loopback backend. The 400-rows issue from the 0123 code review. Harness item 5. SQLite's warm sentence and its test. Ticket 0124's split of the backend mismatch sentence by `private_default`. The `--option` and `--label` sentences. The label control-character check in `core/question.rs`.
 - Keeps: Every exit code. The 400, 422, 429, and 418 sentences. The recording-folder sentence for a named folder and for the file-size claim. The stopped-run rule that prints only the storage sentence. The engine and public API error variants, and the library surfaces' bare status line. Warm on a banded decide file. The `$.body` pointer refusal and every other pointer reason. `cli/failure.rs`, `cli/asking.rs`, and `core/records.rs`.
-- Changes: Seven refusal sentences, two help sentences, `@FILE` in annotate, a pointer control-character refusal, JSON escapes in both pointer refusal sentences, and one status table in place of two. The pointer refusal and the question-file sentences reach every surface that reads a question file, and a search found no surface test that pins them.
+- Changes: Six refusal sentences, two help sentences, `@FILE` in annotate, a pointer control-character refusal, JSON escapes in both pointer refusal sentences, and one status table in place of two. The pointer refusal and the question-file sentences reach every surface that reads a question file, and a search found no surface test that pins them.
 - Proof: The twelve plants in "Proof", each turning its test red, over the status table, the diff help, annotate, the question-file grammar, DuckDB, PostgreSQL, the default cache, recognize, and the pointer refusals.
 - Defers: Items 1 and 16, the question set's unknown-key wording, the mixed-kinds sentence, the 429 phrase, the duplicate unit test in `cli/failure/tests.rs`, the annotate help, the quote echo in `core/records.rs`, the surfaces' bare status line, and moving the pointer escape into `cli/failure.rs`.
