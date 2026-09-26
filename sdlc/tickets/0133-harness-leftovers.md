@@ -6,7 +6,7 @@ opens: sdlc/scripts/allow-list sdlc/scripts/heavy-lock sdlc/scripts/lint sdlc/sc
 
 # 0133: Keep the rungs' environment to an allow list and clear three harness leftovers
 
-Status: in progress. Design accepted by the second fresh review on 2026-09-26. Built, and the ladder passed (`sdlc/records/0133-build-harness-leftovers.md`). Code review returned two findings, both fixed: `lint` now sources the same allow list, and the row plants every allowed name. The record gives the deviations. Owner: Claude.
+Status: landed 2026-09-26 (`sdlc/records/0133-build-harness-leftovers.md`). Design accepted by the second fresh review. Code review took two passes; every finding was fixed. First pass: `lint` now sources the same allow list, and the row plants every allowed name. The record gives the deviations. Owner: Claude.
 
 Lane: thinkthen-lane-1
 
@@ -16,7 +16,7 @@ Review route: a fresh read-only Claude session reviews this design and the final
 
 A heavy rung and every process it starts see only the environment names the ladder needs. A developer's unrelated service key never reaches `cargo`, a test binary, or a surface check. A shared `CARGO_TARGET_DIR` no longer turns three surfaces red. The release binary holds no switch that fails the Ctrl-C handler on purpose. The children check holds no pending entry for a landed ticket.
 
-The authority is the coordinator's brief for 0133 and the backlog `sdlc/planning/issue-backlog-2026-09-25.md`. The ticket settles `sdlc/issues/2026-09-25-the-heavy-rungs-still-pass-secret-shaped-names-to-cargo.md` whole. It settles items 6, 11, 12, and 13 of `sdlc/issues/2026-09-25-test-harness-and-review-leftovers.md`. This is the lane trial's first ticket under `sdlc/planning/worktrees.md`. Its build record gives each rung's wall time and the lane's `du -sh` afterward.
+The authority is the coordinator's brief for 0133 and the backlog `sdlc/planning/issue-backlog-2026-09-25.md`. The ticket settles `sdlc/issues/closed/2026-09-25-the-heavy-rungs-still-pass-secret-shaped-names-to-cargo.md` whole. It settles items 6, 11, 12, and 13 of `sdlc/issues/2026-09-25-test-harness-and-review-leftovers.md`. This is the lane trial's first ticket under `sdlc/planning/worktrees.md`. Its build record gives each rung's wall time and the lane's `du -sh` afterward.
 
 ## Prior evidence
 
@@ -194,6 +194,6 @@ The first fresh review on 2026-09-26 found nine minor findings and no blocking o
 
 ## Issues this closes
 
-- `sdlc/issues/2026-09-25-the-heavy-rungs-still-pass-secret-shaped-names-to-cargo.md`. It moves to `closed/` in the landing commit.
+- `sdlc/issues/closed/2026-09-25-the-heavy-rungs-still-pass-secret-shaped-names-to-cargo.md`. It moves to `closed/` in the landing commit.
 - Items 6, 11, 12, and 13 of `sdlc/issues/2026-09-25-test-harness-and-review-leftovers.md`. The landing commit moves them to "Already fixed" with this ticket's number. The issue stays open for items 1, 4, 5, 7, 8, and 9.
 - The landing commit adds the spawn-failure test to `sdlc/issues/2026-09-25-two-gate-failures-in-a-root-container.md` as a third root failure.
