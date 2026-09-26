@@ -163,7 +163,7 @@ Nonblank lines, measured with `grep -c .`.
 - `crates/thinkthen/src/engine/prepared_request.rs`: the one renamed call. No net lines.
 - `specification/fixtures/systemone/`: five one-line fixtures, and at most 15 lines added to its README.
 - `specification/fixtures/batching/`: `grouping.txt` of 25 lines and a README of at most 90 nonblank lines.
-- `sdlc/ratchet.json` moves to the measured total, at most 605 above today. That is the 585 lines of the Rust budgets above plus 20 for the `core/records.rs` helper. The commit says what grew.
+- `sdlc/ratchet.json` moves to the measured total, at most 605 above today. That is 240, 340, 3 and 2 for the first four Rust budgets, plus 20 for the `core/records.rs` helper. The commit says what grew.
 - No dependency. `sha2` is already a core dependency. No public library type, method or message changes, so the `surfaces` rung is not required.
 
 ## Stop rules
