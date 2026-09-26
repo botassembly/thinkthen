@@ -1,6 +1,6 @@
 # A worked-examples section on the site, pulled from Beatles Bench
 
-Status: Open.
+Status: Open. Revised on 2026-09-26 by `2026-09-26-the-beatles-bench-section-keeps-its-own-copy.md`: the site keeps its own copy of the pages and needs no bench pin.
 
 Filed on 2026-09-25 by bench ticket 0010, on Ian's request of that day. Ian asked for a section of about 15 pages on the ThinkThen docs site. Each page names the two or three files a reader needs, gives the command that runs them, and shows why Jev got one answer right and another wrong. The pages now live in the Beatles Bench repository. The site change is this issue.
 
