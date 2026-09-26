@@ -7,7 +7,6 @@
 //! so a Polars `Enum` or a field's own keys ride through (R4-15).
 
 use std::ffi::{CString, c_char};
-use std::fmt::Write as _;
 use std::sync::Arc;
 
 use pyo3::prelude::*;
@@ -305,23 +304,6 @@ impl Cells {
     }
 }
 
-/// A text as a JSON string.
-fn quoted(text: &str) -> String {
-    let mut out = String::from("\"");
-    for one in text.chars() {
-        match one {
-            '"' => out.push_str("\\\""),
-            '\\' => out.push_str("\\\\"),
-            one if u32::from(one) < 0x20 => {
-                let _ = write!(out, "\\u{:04x}", u32::from(one));
-            }
-            one => out.push(one),
-        }
-    }
-    out.push('"');
-    out
-}
-
 const fn answer(value: Answer) -> Option<bool> {
     match value {
         Answer::Yes => Some(true),
@@ -330,40 +312,15 @@ const fn answer(value: Answer) -> Option<bool> {
     }
 }
 
-/// One cell of a widened column: every answer as text, and a failed
-/// question as the ruled marker's JSON (decision 6).
-fn widened(value: &Annotated) -> Option<String> {
-    match value {
-        Annotated::Decision(held) => answer(*held).map(|yes| yes.to_string()),
-        Annotated::Choice(pick) => pick.clone(),
-        Annotated::Score(position) => Some(position.to_string()),
-        Annotated::Tags(labels) => Some(format!(
-            "[{}]",
-            labels
-                .iter()
-                .map(|one| quoted(one))
-                .collect::<Vec<_>>()
-                .join(",")
-        )),
-        Annotated::Failed(failed) => Some(format!(
-            "{{\"failed\":{{\"kind\":{},\"cause\":{}}}}}",
-            quoted(failed.kind().name()),
-            quoted(crate::engine::cause(failed.cause()))
-        )),
-    }
-}
-
 /// A `decide` column's answers: `None` is "not sure".
 pub(crate) fn decided(values: &[Answer]) -> Cells {
     Cells::Bools(values.iter().map(|one| answer(*one)).collect())
 }
 
-/// One question's answers across the records. A failed question widens its
-/// whole column to text.
+/// One question's answers across the records, in the kind's own column. A
+/// failed answer never reaches here: a one-question call ends with the
+/// engine's error, and `frame::answered` widens a failed question's column.
 pub(crate) fn annotated(kind: QuestionKind, values: &[&Annotated]) -> Cells {
-    if values.iter().any(|one| matches!(one, Annotated::Failed(_))) {
-        return Cells::Texts(values.iter().map(|one| widened(one)).collect());
-    }
     match kind {
         QuestionKind::Decide => Cells::Bools(
             values
@@ -392,7 +349,15 @@ pub(crate) fn annotated(kind: QuestionKind, values: &[&Annotated]) -> Cells {
                 })
                 .collect(),
         ),
-        _ => Cells::Texts(values.iter().map(|one| widened(one)).collect()),
+        _ => Cells::Texts(
+            values
+                .iter()
+                .map(|one| match one {
+                    Annotated::Choice(pick) => pick.clone(),
+                    _ => None,
+                })
+                .collect(),
+        ),
     }
 }
 
@@ -404,22 +369,51 @@ pub(crate) fn column(name: &str, cells: &Cells) -> Result<Output, String> {
     ))
 }
 
+/// The caller's column schemas and the frame's metadata.
+pub(crate) type Kept = (Vec<SchemaNode>, Option<Vec<u8>>);
+
+/// The caller's column schemas and frame metadata, copied before any send,
+/// so a schema the copy refuses or a question named as a column sends
+/// nothing (ticket 0136). Question names are `[a-z0-9_]`, so `'{name}'` reads
+/// as Python's `repr`, as in the pandas sentence.
+pub(crate) fn kept<'a>(
+    hold: &Imported,
+    memory: &Readable,
+    read: &Frame<'_>,
+    mut names: impl Iterator<Item = &'a str>,
+) -> Result<Kept, String> {
+    let fields: Vec<SchemaNode> = read
+        .schemas
+        .iter()
+        .map(|at| SchemaNode::copy(memory, *at, 0))
+        .collect::<Result<_, _>>()?;
+    let held = |name: &str| {
+        (fields.iter()).any(|one| {
+            one.name
+                .as_ref()
+                .is_some_and(|at| at.as_bytes() == name.as_bytes())
+        })
+    };
+    if let Some(name) = names.find(|name| held(name)) {
+        return Err(format!(
+            "the frame already has a column named '{name}'; rename it first"
+        ));
+    }
+    Ok((fields, metadata(memory, hold.schema.metadata)?))
+}
+
 /// The caller's frame with one new column per question: the caller's
 /// columns aliased batch by batch, and the new columns cut to match.
 pub(crate) fn frame(
     hold: &Arc<Imported>,
-    memory: &Readable,
+    (mut fields, metadata): Kept,
     read: &Frame<'_>,
     columns: &[(String, Cells)],
 ) -> Result<Output, String> {
-    let mut fields = Vec::with_capacity(read.schemas.len() + columns.len());
-    for at in &read.schemas {
-        fields.push(SchemaNode::copy(memory, *at, 0)?);
-    }
     for (name, cells) in columns {
         fields.push(cells.schema(name)?);
     }
-    let schema = SchemaNode::frame(fields, metadata(memory, hold.schema.metadata)?)?;
+    let schema = SchemaNode::frame(fields, metadata)?;
     let mut batches = Vec::with_capacity(read.batches.len());
     let mut base = 0;
     for batch in &read.batches {

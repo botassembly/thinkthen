@@ -302,8 +302,8 @@ class Engine:
         reads ``{"failed": {"kind": "backend", "cause": ...}}``. With ``on=``,
         ``records`` is a Polars or pandas ``DataFrame``, and the frame comes
         back with one new column per question. A failed question's column
-        holds text. A pandas frame keeps its index, and a question named as
-        one of its columns is refused.
+        holds each answer's text, as does a Polars frame's tag column. A pandas
+        frame keeps its index. A question named as a column is refused first.
         """
         asked = _spec(_thinkthen._QuestionSet, questions)
         if on is None:
