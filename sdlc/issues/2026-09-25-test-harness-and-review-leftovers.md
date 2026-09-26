@@ -143,6 +143,26 @@ Recommendation: keep the hand extension and add a test that loads the extension 
 
 Done when: Ian rules, and the choice is recorded in `databases/sqlite` or an ADR.
 
+## 11. The interrupt handler ships a failure switch in the release binary
+
+Kind: cleanup. Found by experiment 218, wave 2, at main `20e9b8d4`.
+
+`crates/thinkthen/src/cli/interrupt.rs:181` calls `Self::start_with(cancel, path, [false; 4])`. `start_with` takes `failures: [bool; 4]`, which it unpacks as block, spawn, readiness, and restore failures, and `restore` at `:261` takes an `injected_failure` flag. Only tests pass `true`. The switches compile into every release build. The engine's own `Injection` sits behind `#[cfg(test)]`, so the command breaks a rule the engine keeps: no test fixture in product code. A later edit that passes a wrong array would fail a user's Ctrl-C silently.
+
+Fix: move the four switches behind `#[cfg(test)]`, or test the failures at the real boundary and drop the switches.
+
+Done when: a release build of `interrupt.rs` holds no failure switch, and the interrupt tests still cover the four failure paths or name the boundary that does.
+
+## 12. Three surface checks break under an absolute `CARGO_TARGET_DIR`
+
+Kind: cleanup. Found by experiment 218, wave 2, at main `8391153d`.
+
+With `CARGO_TARGET_DIR` set to an absolute folder, the `surfaces` rung fails Ruby, DuckDB, and PostgreSQL for path reasons alone. `libraries/ruby/check.sh:98` builds `$repo/${CARGO_TARGET_DIR:-target}/debug/conformance-backend`, which doubles an absolute path. `databases/duckdb/check.sh:50` packages `target/release/libthinkthen_duckdb.so`, and `databases/postgresql/check.sh:29` reads `target/release/thinkthen-pg16`. Both ignore the variable while cargo builds elsewhere. The same rung with the variable unset passes all three. A contributor with a shared target folder sees three red surfaces and no product fault.
+
+Fix: resolve the target folder once, from `cargo metadata --format-version 1 --no-deps` or from the variable when it is absolute, and use it in all three scripts.
+
+Done when: the `surfaces` rung passes with `CARGO_TARGET_DIR` unset, relative, and absolute.
+
 ## Already fixed
 
 - rusqlite's second trap, the workspace feature clash with `load_extension`: ADR 0047 gives each binding its own workspace. The root `Cargo.toml:4` to `:6` excludes `databases`.
