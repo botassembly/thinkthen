@@ -1,6 +1,6 @@
 # A Polars frame sends before a question name clash fails
 
-Status: Open
+Status: Closed on 2026-09-26 by ticket 0136.
 
 Filed on 2026-09-25 from the pandas build (ticket 0122, which named this check in its Defers). No key was used, and no request left the machine.
 
