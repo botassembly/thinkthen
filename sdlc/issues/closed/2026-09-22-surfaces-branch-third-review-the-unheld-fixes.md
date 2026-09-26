@@ -60,7 +60,7 @@ DuckDB: nested relate errors; relate refuses DELETE/INSERT/CREATE; file access r
 - Strict-lint claim false: no [lints] in DuckDB, Ruby, TS addon, wire stub; R pins 1.80 not 1.93.1; clippy without -D warnings; cargo deny on 1 of 13 lockfiles.
 - Hermeticity overstated: duckdb unpinned + git+https in the DuckDB build; Ruby container apt-get and cargo without --offline; no check.sh uses --locked; Python pins lack hashes.
 - Bare cargo test passes via early returns: 15 verb tests "ok" without ENGINE_*; helper does not recognize THINKTHEN_NULL.
-- Build hygiene: TS .node carries 138 /home/ian strings; npm pack ships any lying-around test build (fake failure included); Ruby gate leaves the test build; sdlc/ names the private repo in 2 files, /home/ian in 2, /Users/ian in 1; the checker skips sdlc/ entirely and crashes outside a git checkout.
+- Build hygiene: TS .node carries 138 home-folder strings; npm pack ships any lying-around test build (fake failure included); Ruby gate leaves the test build; sdlc/ names the private repo in 2 files, a Linux home-folder path in 2, a macOS home-folder path in 1; the checker skips sdlc/ entirely and crashes outside a git checkout.
 - Mac: experimental scripts hard-code .so, GNU sed -i, timeout, ss; TS addon lacks build.rs; gem knows only .so; Ruby container mounts host ~/.rustup (cannot work from a Mac); committed evidence partly hand-written and built from c3616dc, not the tip.
 - Records: HANDOFF says 927 green at 01a6a81 vs closure's 929 at tip; closure note dated 2026-09-23 (UTC rollover — should carry the local date); MERGE-NOTE-INPUT says 72 cases; two records share number 0069; most rulings are records, not ADRs; the Ruby "survives the collector" proof never observes a collection.
 - Duplication/packaging: DuckDB keeps its own panic guard and two panic-to-text copies (contract owns both); DuckDB version pin in ~10 places; package.sh hard-codes x86_64; suites need gitignored null-cut.json; SQLite packaging text says floor 3.41 and libsqlite3 linking; R install runs a debug build and cannot install offline; gem claims Ruby ≥3.1 but builds for 3.4 only.
@@ -101,7 +101,7 @@ Probes re-run by the independent verifier against the tip after the fix waves (H
 | ratchet green at tip | PASS (after verifier correction 1) | lint exit 0 |
 | clippy -D / lints | PASS | `lint-workspaces: every landed workspace is clean` |
 | `--locked` everywhere | PASS (after correction 2) | 9 of 9 |
-| .so / .node home paths | PASS | `strings` both: 0 `/home/ian` |
+| .so / .node home paths | PASS | `strings` both: 0 home-folder paths |
 | checker outside git | PASS (after correction 3) | exit 2 with message, <1 s |
 | bare cargo test under THINKTHEN_NULL | PASS (after correction 4) | green; verb suite 15 passed |
 

@@ -8,7 +8,7 @@ Ticket 0120 builds Rust Polars on `polars` 0.55. That release does not build on 
 
 ## Evidence
 
-Spike 257 at `~/workspace/experiments/257-thinkthen-rust-polars-spike/` copied main and changed only the channel in `rust-toolchain.toml` to 1.95 (`scripts/bump-1.95.sh`). Under rustc 1.95.0 (`59807616e`), deny, format, clippy, docs, tests, and doc tests passed (`logs/07-bump-*.log`). The spike left `rust-version` at 1.93.1 and did not run `install`, `spec`, or the demos.
+Spike 257 at the workspace's `experiments/257-thinkthen-rust-polars-spike/` copied main and changed only the channel in `rust-toolchain.toml` to 1.95 (`scripts/bump-1.95.sh`). Under rustc 1.95.0 (`59807616e`), deny, format, clippy, docs, tests, and doc tests passed (`logs/07-bump-*.log`). The spike left `rust-version` at 1.93.1 and did not run `install`, `spec`, or the demos.
 
 ## Change
 

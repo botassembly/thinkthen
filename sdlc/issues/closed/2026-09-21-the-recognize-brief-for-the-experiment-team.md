@@ -18,7 +18,7 @@ Build a stand-in command that matches the design page exactly, so the build team
 
 ## For the surfaces experiment
 
-`repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/recognize-surfaces.md` is the acceptance test. Each call there runs as written against the stand-in engine, on all nine surfaces.
+The marketing repository's `decks/2026-09-21-thinkthen-semantic-commands/recognize-surfaces.md` is the acceptance test. Each call there runs as written against the stand-in engine, on all nine surfaces.
 
 1. **Databases first.** DuckDB returns a list of structs. SQLite is a table-valued function. PostgreSQL is a set-returning function used with `LATERAL`. Prove the "names become rows" pattern on each: build a `mentions` table, then join it to an ordinary table by equality, and show the join sends no request.
 2. **The join cost, measured on the stand-in.** Count the requests for `JOIN ... ON thinkthen_decide(...)` at 10 by 10, 100 by 100, and 1,000 by 1,000 rows. Then count them again with an ordinary condition beside the meaning condition. Report, for each engine, whether the cheap condition ran first, and the subquery that forces it when it did not. The manual needs this table.

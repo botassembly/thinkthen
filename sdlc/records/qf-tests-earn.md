@@ -1,6 +1,6 @@
 # Quick Fix qf-tests-earn: red-green tests are scaffolding, and new tests pass a four-question gate
 
-Status: landed. It carries out steps 1 and 2 of `sdlc/issues/2026-09-24-red-green-scaffold-tests-outlive-their-purpose.md`. The workspace rule is decision `2026-09-24-tests-earn-their-place.md` in the dotfiles repo. A fresh read-only Opus review is in `sdlc/records/qf-tests-earn-review.md`.
+Status: landed. It carries out steps 1 and 2 of `sdlc/issues/2026-09-24-red-green-scaffold-tests-outlive-their-purpose.md`. The workspace rule is decision `2026-09-24-tests-earn-their-place.md` in the workspace's decisions folder. A fresh read-only Opus review is in `sdlc/records/qf-tests-earn-review.md`.
 
 ## Result
 

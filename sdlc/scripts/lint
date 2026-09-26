@@ -7,6 +7,30 @@ set -eu
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
 
+# This repository goes public, so no tracked file may name a private project.
+# The names cannot live here, so THINKTHEN_PRIVATE_NAMES points at a list
+# outside the repository: one fixed string per line, matched ignoring case.
+# A hit prints only its file and line, never the name.
+if [ -z "${THINKTHEN_PRIVATE_NAMES:-}" ]; then
+    echo "private names: skipped, THINKTHEN_PRIVATE_NAMES is unset"
+else
+    names=$(realpath -- "$THINKTHEN_PRIVATE_NAMES")
+    case $names in "$REPO"/*)
+        echo "lint: THINKTHEN_PRIVATE_NAMES must point outside the repository" >&2
+        exit 1 ;;
+    esac
+    patterns=$(grep -v '^[[:space:]]*$' "$names") || {
+        echo "lint: THINKTHEN_PRIVATE_NAMES holds no name" >&2
+        exit 1
+    }
+    hits=$(printf '%s\n' "$patterns" | git grep -n -I -i -F -f - | cut -d: -f1,2)
+    if [ -n "$hits" ]; then
+        printf 'lint: a tracked file names a private project at\n%s\n' "$hits" >&2
+        exit 1
+    fi
+    echo "private names: $(printf '%s\n' "$patterns" | wc -l | tr -d ' ') checked, none found"
+fi
+
 # The workspace caps an agents file at 5,000 characters. CLAUDE.md links to AGENTS.md.
 python3 -c '
 import sys
@@ -31,12 +55,12 @@ seen=$(env -i PATH="$PATH" HOME=/nonexistent/HOME LANG=/nonexistent/LANG LC_ALL=
     RUSTC_WRAPPER=/nonexistent/RUSTC_WRAPPER SCCACHE_CONF=/nonexistent/SCCACHE_CONF R_LIBS_USER=/nonexistent/R_LIBS_USER \
     THINKTHEN_HEAVY_LOCK=/nonexistent/lock THINKTHEN_HEAVY_LOCK_HELD=/nonexistent/lock \
     THINKTHEN_TOOLCHAINS=/nonexistent/THINKTHEN_TOOLCHAINS THINKTHEN_DUCKDB_CLI=/nonexistent/THINKTHEN_DUCKDB_CLI \
-    SQLITE_AMALGAMATION=/nonexistent/SQLITE_AMALGAMATION FAKE_SERVICE_API_KEY=planted THINKTHEN_SENTINEL=planted \
+    SQLITE_AMALGAMATION=/nonexistent/SQLITE_AMALGAMATION THINKTHEN_PRIVATE_NAMES=/nonexistent/THINKTHEN_PRIVATE_NAMES FAKE_SERVICE_API_KEY=planted THINKTHEN_SENTINEL=planted \
     CARGO_TARGET_DIR=/nonexistent/CARGO_TARGET_DIR FAKE.SERVICE_TOKEN=planted \
     sh -c '. sdlc/scripts/heavy-lock; exec awk "BEGIN { for (n in ENVIRON) if (n !~ /^AWK(LIB)?PATH\$/) print n }"' \
     sdlc/scripts/lint | LC_ALL=C sort | tr '\n' ' ')
 allowed="CARGO_HOME HOME LANG LC_ALL PATH PWD RUSTC_WRAPPER RUSTUP_HOME RUSTUP_TOOLCHAIN R_LIBS_USER SCCACHE_CONF SQLITE_AMALGAMATION"
-allowed="$allowed THINKTHEN_DUCKDB_CLI THINKTHEN_HEAVY_LOCK THINKTHEN_HEAVY_LOCK_HELD THINKTHEN_TOOLCHAINS TMPDIR XDG_CACHE_HOME XDG_RUNTIME_DIR "
+allowed="$allowed THINKTHEN_DUCKDB_CLI THINKTHEN_HEAVY_LOCK THINKTHEN_HEAVY_LOCK_HELD THINKTHEN_PRIVATE_NAMES THINKTHEN_TOOLCHAINS TMPDIR XDG_CACHE_HOME XDG_RUNTIME_DIR "
 listed=$(sed -n 's/^[[:space:]]*\([A-Z_ |]*\)) ;;$/\1/p' sdlc/scripts/allow-list | tr -d ' ' | tr '|' '\n' |
     LC_ALL=C sort | tr '\n' ' ')
 if [ "$seen" != "$allowed" ] || [ "$listed" != "$allowed" ]; then
