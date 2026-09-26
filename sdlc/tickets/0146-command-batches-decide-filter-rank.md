@@ -238,7 +238,7 @@ Each is the agent's decision. Ian can overturn any of them.
 12. **Demo and page commands that replay pin `--batch 1`.** Re-recording them under the default needs a paid run. The pin keeps every recording valid until an authorized run records them again.
 13. **B4 lands before the target is measured live.** B4 cannot make a live call. It proves the request count at the loopback. "B4 live run", below, measures the time on main after B4 lands.
 14. **`QuestionFile::parse_top` takes `batch` off the top of a `decide` file before parsing, in the core.** Every reader of a whole question file calls it, and `QuestionSet` does not. `Verb::Decide.keys()` also serves annotate entries, so adding the key there would let an annotate entry carry `batch` before B10 decides it. Taking the key off first keeps it out of the question digest by construction.
-15. **The reader queues closed batches and pulls records only for an outstanding ask, through a bounded channel.** Memory then stays bounded by `--jobs` batches and the channel's bound, as today's reader is bounded by `--jobs` records.
+15. **The reader queues closed batches and pulls records only for an outstanding ask, through a bounded channel.** A run then holds at most `--jobs` batches in flight, one queued batch, the open batch, and the channel's read-ahead, as today's reader is bounded by `--jobs` records. The member cap bounds each batch at 4,096 records.
 16. **A batch closes at 4,096 members.** ADR 0053 item 2 ruled it. Without it a repeated value never closes a batch under `max`, and the reader's memory grows with the run.
 
 ## Edge cases
