@@ -1,6 +1,6 @@
 # Settings table gaps a site reader hits
 
-Status: open. Filed 2026-09-26 by the marketing lead.
+Status: open. Filed 2026-09-26 by the marketing lead. Item 8 added 2026-09-26 by the queue owner from local experiment 273, reports 06 (I-5) and 08 (4), for backlog ticket H4.
 
 The site's Settings page (`/install/settings/`) reads `specification/settings.md` at build time. Building it from table `a14d959e` showed these gaps. Each one leaves a user unable to answer a plain question from the page.
 
@@ -13,6 +13,7 @@ The site's Settings page (`/install/settings/`) reads `specification/settings.md
 5. **Settings on the way.** "The hard cap" has no option, so it is not a setting. The `window` designed default mixes in its allowed range. The `prefixes/suffixes/trim/defaults` item points at a design table the reader cannot see. The items have no fixed format, so the site finds "The designed default is" and "Tickets" by pattern.
 6. **Deadline and cancel.** "A positive time" gives no unit, and the unit differs by surface.
 7. **Audit bar.** One row packs five flags. Its allowed values do not line up one to one with the flags.
+8. **The configuration file's `cache` is wrong on the page.** Row 63, "Answer cache", gives the allowed values as "A folder, or off" and lists the configuration file's `cache` in the same row. Line 19 says the file's `cache` sits in the folder order. The code takes only true or false (`crates/thinkthen/src/config.rs:36`, `cache: Option<bool>`). A file with `{"cache": "/some/folder"}` stops every command at exit 5, `status` included, with `the configuration file is not valid closed JSON`. The message names no field. H4 corrects the row and line 19 to say the file turns the default cache on or off. The closed-JSON refusal should name the field, which is a code change H4 can carry or hand to a Quick Fix. Verified on main by reading `config.rs:36` and `settings.md`. The exit 5 runs come from the reports.
 
 ## Proposed fix
 
