@@ -5,8 +5,9 @@
 unset THINKTHEN_API_KEY
 set -eu
 cd -- "$(dirname -- "$0")"
-out=$(mktemp -d)
-trap 'rm -rf -- "$out"' EXIT
+# release-pack takes the wheel from here (ticket 0128).
+out=target/wheels
+rm -rf -- "$out"
 
 RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
 export RUSTFLAGS

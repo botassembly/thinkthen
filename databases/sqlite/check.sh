@@ -21,8 +21,27 @@ python3 -c 'import sys; sys.exit(sys.version_info < (3, 10))' 2>/dev/null || not
 	not_run "no SQLite 3.50.0 amalgamation with the pinned hashes in $source"
 cargo fetch --locked --offline --quiet 2>/dev/null || not_run "the cargo cache lacks a locked crate"
 host=$(SQLITE_AMALGAMATION=$source sh tests/host_sqlite.sh)
+export THINKTHEN_SQLITE_CLI="$host/sqlite3"
+export LD_LIBRARY_PATH="$host${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
 step() { echo "== sqlite: $1"; }
+
+if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+	# The installed-file mode (ticket 0128): the shared cases and the examples load the
+	# library unpacked from the release archive, by its path.
+	unpacked=$(mktemp -d)
+	trap 'rm -rf -- "$unpacked"' EXIT
+	tar -xzf "$THINKTHEN_ARTIFACT" -C "$unpacked"
+	THINKTHEN_SQLITE_EXTENSION=$(echo "$unpacked"/libthinkthen0.*)
+	[ -f "$THINKTHEN_SQLITE_EXTENSION" ] || { echo "FAIL     the archive holds no libthinkthen0 library" >&2; exit 1; }
+	export THINKTHEN_SQLITE_EXTENSION
+	for test in tests/examples.py tests/conformance.py; do
+		step "$test, installed"
+		sh "$LIMIT" 300 python3 "$test"
+	done
+	echo "pass     databases/sqlite, installed"
+	exit 0
+fi
 
 step "every cargo call passes --locked and --offline"
 if grep -nE '^[^#]*cargo (build|test|clippy|fetch|run|check|doc)' check.sh | grep -vE -- '--locked.*--offline|--offline.*--locked'; then
@@ -50,8 +69,6 @@ guards=$(grep -rn 'catch_unwind(' src | wc -l)
 
 step "the loopback backend"
 cargo build --locked --offline --quiet --manifest-path ../../Cargo.toml --package conformance-backend
-export THINKTHEN_SQLITE_CLI="$host/sqlite3"
-export LD_LIBRARY_PATH="$host${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
 failed=""
 for test in tests/test_*.py tests/examples.py tests/conformance.py; do

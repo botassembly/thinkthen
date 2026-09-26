@@ -104,6 +104,27 @@ LD_LIBRARY_PATH=$prefix/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
 THINKTHEN_TEST_BACKEND=$backend
 export RUBY PATH LIBCLANG_PATH LD_LIBRARY_PATH THINKTHEN_TEST_BACKEND
 
+if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+  # The installed-file mode (ticket 0128): the gem in a fresh gem folder, and the shared cases
+  # and examples from a copy of tests/, with no repository lib/ on the load path.
+  scratch=$(cd "$(mktemp -d)" && pwd -P)
+  trap 'rm -rf -- "$plant" "$scratch"' EXIT
+  "$prefix/bin/gem" install --local --silent --no-document --install-dir "$scratch/gems" "$THINKTHEN_ARTIFACT"
+  mkdir -p "$scratch/libraries/ruby" "$scratch/conformance" && cp -R tests examples.json "$scratch/libraries/ruby/"
+  cp -R "$repo/conformance/cases.json" "$repo/conformance/children" "$scratch/conformance/"
+  cd "$scratch/libraries/ruby"
+  export GEM_PATH="$scratch/gems"
+  unset RUBYLIB
+  "$RUBY" -I lib -e 'require "thinkthen"; ours = $LOADED_FEATURES.grep(%r{/lib/thinkthen(\.rb|/)})
+    abort "thinkthen loaded #{ours}" unless ours.any? && ours.all? { |path| path.start_with?(ARGV[0]) }' "$scratch/gems/gems/" ||
+    fail "thinkthen loaded from outside the gem folder"
+  for test in tests/conformance.rb tests/examples.rb; do
+    sh "$LIMIT" 120 "$RUBY" -I lib "$test" || fail "$test failed, installed"
+  done
+  echo "check ruby: pass, installed"
+  exit 0
+fi
+
 ./build.sh
 cargo fmt --check
 cargo clippy --locked --offline --all-targets --quiet -- -D warnings

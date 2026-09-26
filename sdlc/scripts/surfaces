@@ -168,13 +168,26 @@ until [ -s "$fifo.port" ]; do
 done
 port=$(head -n 1 "$fifo.port")
 
-failed=0
+failed=0 skipped=0
 for surface in $(landed sdlc/surfaces.txt) $(feature sdlc/surfaces.txt); do
 	set +e
 	# A daemon a check starts must not hold the backend's input open.
 	sh "$surface/check.sh" "$port" 3>&-
 	code=$?
 	set -e
+	[ "$code" -ne 77 ] || skipped=1
 	verdict "$mode" "$surface" "$code" || failed=1
 done
-exit "$failed"
+[ "$failed" -eq 0 ] || exit 1
+# The host's release files, packed from the builds above and each smoked from its install
+# (ticket 0128). A surface that did not run built nothing to pack.
+if [ "$skipped" -eq 1 ]; then
+	verdict "$mode" "release smoke" 77
+	exit
+fi
+packed=${CARGO_TARGET_DIR:-target}/release-pack
+rm -rf -- "$packed"
+code=0
+{ sh sdlc/scripts/release-pack --reuse "$(rustc -vV | sed -n 's/^host: //p')" "$packed" &&
+	sh sdlc/scripts/release-smoke "$packed"; } 3>&- || code=$?
+verdict "$mode" "release smoke" "$code"

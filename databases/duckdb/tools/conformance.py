@@ -27,12 +27,16 @@ CASES = Path(os.environ.get("THINKTHEN_CONFORMANCE_CASES", ROOT.parent.parent / 
 NOT_RUN = {
     "find": "SQL finds with ORDER BY and LIMIT over decide, so the find wire question never goes out",
     "on": "main's public API refuses `on` in a library question set, so SQL passes each record whole",
+    "hooks": "a release file carries no test hook, so no outside boundary reaches an internal invariant failure",
 }
 
 
 def reason(case: dict) -> str | None:
     if case["verb"] == "find":
         return NOT_RUN[case["verb"]]
+    # check.sh's installed-file mode sets the hooks build to nothing (ticket 0128).
+    if case.get("operation", {}).get("injection") == "internal_invariant_failure" and os.environ.get("THINKTHEN_DUCKDB_HOOKS") == "":
+        return NOT_RUN["hooks"]
     members = case.get("question_set", {}).get("questions", {}).values()
     return NOT_RUN["on"] if any("on" in member for member in members) else None
 
