@@ -1,6 +1,6 @@
 # 0123: Build "relate splits requests to fit the backend"
 
-Status: built; awaiting code review. Owner: Claude.
+Status: built and reviewed. Code review: ACCEPT. Owner: Claude.
 
 Branch `ticket/0123-relate-fits-the-backend`. Ticket `sdlc/tickets/0123-relate-fits-the-backend.md`, accepted at `023b9ae1`. Ian can overturn every choice this record marks as decided.
 
@@ -35,7 +35,7 @@ No stop rule was crossed on these numbers.
 
 ## Tests
 
-New file `tests/backend/relate/ceiling.rs`, five tests, all dry runs through the harness spawn. A new `tests/backend/status_reason.rs` holds the 400 body table. `tests/backend/exchange.rs` is unchanged from main. `tests/backend/refusals/relate.rs` gained the `--either @FILE` row. `tests/relate_edge.rs` pins the cost sentence and the absence of `--jobs`. The four questions are answered in the ticket's Acceptance section. None uses a test-only hook.
+New file `tests/backend/relate/ceiling.rs`, six tests, all dry runs through the harness spawn. A new `tests/backend/status_reason.rs` holds the 400 body table. `tests/backend/exchange.rs` is unchanged from main. `tests/backend/refusals/relate.rs` gained the `--either @FILE` row. `tests/relate_edge.rs` pins the cost sentence and the absence of `--jobs`. The four questions are answered in the ticket's Acceptance section. None uses a test-only hook.
 
 ## Planted faults
 
@@ -55,16 +55,18 @@ Each fault was planted in the source, the named test ran, and the file was resto
 | 10 | `--either @FILE` returns the grammar sentence | `no_refusal_on_any_command_writes_the_key_quotes_the_evidence_or_sends_anything` | red |
 | 11 | `mut_arg` dropped | `help_names_the_beta_complete_set_and_secrecy_contract` | red |
 | 12 | The cost sentence reworded | same | red |
+| 13 | `relation_ceiling` takes any base that starts with `https://api.typesafe.ai/` | `a_trailing_slash_keeps_the_ceiling_and_another_version_drops_it` | red: the `v2` row planned `[1, 2]` |
+| 14 | Address resolution keeps the base's trailing slashes | same | red: the slash row planned `[1, 1]`, because the address became `https://api.typesafe.ai/v1//systemone` |
 
 ## A part budget crossed
 
-The ticket put the 400 rows in `tests/backend/exchange.rs` with a budget of 30 lines. The rows took 21 there, but `exchange.rs` then held 507 nonblank lines and the lint rung's 500-line file ceiling refused it. The rows moved to a new `tests/backend/status_reason.rs`, which spawns `decide` itself. That spawn and the file's header cost 39 lines more than the budget. The move also leaves `exchange.rs` as main has it, so ticket 0127 no longer shares that file. The total stays at 327, under the ticket's 350. The coordinator decides whether to accept the shift. Ian can overturn it.
+The ticket put the 400 rows in `tests/backend/exchange.rs` with a budget of 30 lines. The rows took 21 there, but `exchange.rs` then held 507 nonblank lines and the lint rung's 500-line file ceiling refused it. The rows moved to a new `tests/backend/status_reason.rs`, which spawns `decide` itself. That spawn and the file's header cost 39 lines more than the budget. The move also leaves `exchange.rs` as main has it, so ticket 0127 no longer shares that file. The total was 327 at code review. The review's two address rows added 12 lines and brought it to 339, under the ticket's 350. The coordinator decides whether to accept the shift. Ian can overturn it.
 
 The three 400 plants ran again against the new file after the move. Clippy's nesting rule then moved the chunk search into `longest`. Plants 4, 5, and 6 ran again against that code and turned red. Only doc comments changed after that run.
 
 ## Lines and the ratchet
 
-Main measured 61,972 nonblank lines at `f3176b5d`, after ticket 0124 landed. This branch measures 62,299, so the ratchet rises by 327.
+Main measured 61,972 nonblank lines at `f3176b5d`, after ticket 0124 landed. This branch measures 62,311, so the ratchet rises by 339.
 
 | Part | Budget | Nonblank lines, net |
 | --- | --- | --- |
@@ -72,14 +74,20 @@ Main measured 61,972 nonblank lines at `f3176b5d`, after ticket 0124 landed. Thi
 | `core/backend.rs` | 12 | 12 |
 | The 400 reason: `http.rs` 27, `error.rs` 3, `failure.rs` 3, `failure/status.rs` 2, `convert.rs` 1, `public/error.rs` 1, `check.rs` 0 | 45 | 37 |
 | Wording: `args/command.rs` 7, `relate/config.rs` 2 | 12 | 9 |
-| `tests/backend/relate/ceiling.rs` and its `mod` line | 200 | 158 |
+| `tests/backend/relate/ceiling.rs` and its `mod` line | 200 | 170 |
 | `tests/backend/status_reason.rs` and its `mod` line, in place of `exchange.rs` | 30 | 60 |
 | `tests/backend/refusals/relate.rs` and `tests/relate_edge.rs` | 20 | 20 |
 | Other call sites (`facade.rs`, `facade/recognize.rs`, `backend_profile.rs`) | none | 1 |
-| Total | 350 | 327 |
+| Total | 350 | 339 |
 
 Where I looked for duplication first: the status phrases in `cli/failure/status.rs` hold one new constant and no copy. `core/backend_profile.rs` lost `permits_split`, and its new `limits_request_bytes` replaces it line for line. `checked_body` now serves both the single request and the splitter, which removed the old `prepare_chunk` copy of the encode-and-check lines. The relate test helpers in `tests/backend/relate.rs` send to a listener with a key, so the dry-run tests keep their own small `plan` helper.
+
+## Deferred gap
+
+No test sits on the exact 96,000-byte edge. The closest request is 95,998 bytes, so a `<` in place of `<=` in the splitter's fit check would stay green. A fixture of exactly 96,000 bytes costs more than it returns.
 
 ## Rungs
 
 After merging `origin/main` at `b3884c43` (branch merge `85e661d6`), each rung ran once with `THINKTHEN_API_KEY` unset. `install`, `lint`, `test`, `spec`, and `surfaces` each exited 0. The ratchet was re-measured with `sdlc/scripts/ratchet.mjs` after the merge. No live or paid call ran.
+
+After code review, the two address rows of the ticket's edge table became the sixth test, with plants 13 and 14. `lint` and the backend tests ran again on that change without a merge of main.

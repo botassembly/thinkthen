@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core/backend.rs crates/thinkthen/src/engine crates/t
 
 # 0123: Relate splits requests to fit the backend
 
-Status: ready. Owner: Claude.
+Status: landed 2026-09-25. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -174,7 +174,7 @@ Contract 2; state and timing 1; reach 2; proof 2; cost of error 2; total 9. Fina
 - Keeps: Every relation plan that fits the ceiling, every plan at another address, and every plan that is not a relation plan keep their exact bodies and digests. The longest-prefix rule of ADR 0040. Every profile limit and refusal sentence. The relation fallback rule. The 400 sentence for every body but one. Exit codes. The public library's messages. The `--jobs` refusal on relate.
 - Changes: A built-in 96,000-byte split ceiling for relation plans at the built-in address, whose split plans get new digests. A splitter that grows chunks by doubling and binary search. A named `max_tokens_exceeded` sentence on status 400. A new `--either @FILE` sentence. relate help hides `--jobs` and gains a cost sentence.
 - Proof: The tests in "Acceptance", each with a planted fault that turns it red. The hand-run Beatles dry run and the release timing in the build record. The `install`, `lint`, `test`, `spec`, and `surfaces` rungs. Every test uses a dry run or a loopback backend with a fake key.
-- Defers: A ceiling for recognize text questions, `annotate`, `find`, the asking verbs, and the library's `facade::split`, under the packing ADR. Naming the reason in the public library and the surfaces. Splitting again after a `max_tokens_exceeded` refusal. Learning each backend's bytes-per-token ratio from its replies. An accuracy-sized request, which the packing ADR owns. A local check of the per-text limit near 32,000 tokens. Ceilings for other backends, which profiles state. Items 3 to 8 of the scale-and-shape issue.
+- Defers: A ceiling for recognize text questions, `annotate`, `find`, the asking verbs, and the library's `facade::split`, under the packing ADR. Naming the reason in the public library and the surfaces. Splitting again after a `max_tokens_exceeded` refusal. Learning each backend's bytes-per-token ratio from its replies. An accuracy-sized request, which the packing ADR owns. A local check of the per-text limit near 32,000 tokens. Ceilings for other backends, which profiles state. Items 3 to 8 of the scale-and-shape issue. No test sits on the exact 96,000-byte edge. The closest request is 95,998 bytes, so a `<` in place of `<=` in the splitter's fit check would stay green. A fixture of exactly 96,000 bytes costs more than it returns.
 
 ## What Ian can overturn
 

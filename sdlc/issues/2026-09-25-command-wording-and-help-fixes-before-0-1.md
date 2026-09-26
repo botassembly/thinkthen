@@ -36,27 +36,11 @@ Done when: `thinkthen --help` lists the ten functions, then `help`, then the adm
 
 ## 3. `relate --either` with a question file names the wrong cause
 
-What the user sees. `relate --either @q.json` exits 2, which is right. The refusal comes from `crates/thinkthen/src/cli/relate/config.rs:45-47`. It returns `RelateConfigError::Relation`, whose text is `a relate relation is NAME=SOURCE_KIND:TARGET_KIND, or a bare NAME` (`crates/thinkthen/src/core/relate_file.rs:72`). The file holds its own rules, so the grammar sentence names the wrong cause. The final review of ticket 0088 found this (`sdlc/records/0088-review-final.md`, finding F4).
-
-Reproduction:
-
-    $ printf 'Ada\n' | thinkthen relate --either @q.json --lines --dry-run --url http://127.0.0.1:9/v1 --model local-1 --no-cache
-
-What the spec says. `--either` treats every inline relation as unordered (`crates/thinkthen/src/cli/args/relate.rs:11`). A question file sets `either` per relation.
-
-The fix. Give this case its own sentence, such as "`--either` applies only to inline relation rules; a question file sets either on each relation". Add a row to the relate refusal table that pins it.
-
-Done when: `relate --either @FILE` exits 2 with the new sentence, and a refusal table row pins it.
+Fixed by ticket 0123, landed 2026-09-25 from branch `ticket/0123-relate-fits-the-backend`.
 
 ## 4. relate help lists `--jobs`, and relate refuses it
 
-What the user sees. `RelateArguments` flattens the shared `Common` options (`crates/thinkthen/src/cli/args/relate.rs:23-24`). So `thinkthen relate --help` lists `--jobs` with "How many requests are in flight at once, from 1 to 32. [default: 4]" (`crates/thinkthen/src/cli/args.rs:152`). A run given `--jobs` exits 2 with "`relate` sends its requests in order, so it takes no --jobs" (`crates/thinkthen/src/cli/relate/config.rs:27-29`). Ticket 0082's code review observed both (`sdlc/records/0082-code-review.md`, follow-up F2).
-
-What the spec says. `specification/relate.md:24`: "The command sends its requests in order and refuses `--jobs` at exit 2."
-
-The fix. Hide `--jobs` from `relate` help, or give `relate` its own option set without it, as `find` has (`crates/thinkthen/src/cli/args/find.rs`). Either change touches the parsed surface, so it needs its own ticket.
-
-Done when: `thinkthen relate --help` does not list `--jobs`, and the refusal still exits 2.
+Fixed by ticket 0123, landed 2026-09-25 from branch `ticket/0123-relate-fits-the-backend`.
 
 ## 5. The engine's WidthActive message still says width
 
@@ -96,15 +80,17 @@ Recommendation: option 1. It keeps one meaning for `--dry-run` across commands a
 
 Done when: `recognize --dry-run` prints each request with its bytes, the count field reads `words`, and both spec pages match.
 
-## 8. recognize and relate help carry no cost sentence
+## 8. recognize help carries no cost sentence
 
-What the user sees. `filter` help says it "makes one paid request for every record" (`crates/thinkthen/src/cli/args/command.rs:53`). The `recognize` help (`command.rs:176-182`) and the `relate` help (`command.rs:184-193`) say nothing about how many requests a run makes. Recognize asks two questions of every word, so it costs the most per word of input.
+Ticket 0123 fixed the relate half. The relate help names its paid requests, and `tests/relate_edge.rs` pins the sentence.
 
-What the ruling says. Ticket 0082's acceptance asked both help pages to keep "their beta warning, cut description, and cost disclosure". Neither page had a cost sentence before or after 0082 (`sdlc/records/0082-code-review.md`, follow-up F5).
+What the user sees. `filter` help says it "makes one paid request for every record" (`crates/thinkthen/src/cli/args/command.rs`). The `recognize` help says nothing about how many requests a run makes. Recognize asks two questions of every word, so it costs the most per word of input.
 
-The fix. Write one sentence for each from `specification/recognize.md` and `specification/relate.md`. Name the paid requests a run makes and point to `--dry-run` for the count. Pin both sentences in the help tests.
+What the ruling says. Ticket 0082's acceptance asked the help pages to keep "their beta warning, cut description, and cost disclosure". The recognize page had no cost sentence before or after 0082 (`sdlc/records/0082-code-review.md`, follow-up F5).
 
-Done when: both help pages carry a pinned sentence that names the paid requests.
+The fix. Write one sentence from `specification/recognize.md`. Name the paid requests a run makes and point to `--dry-run` for the count. Pin the sentence in the help tests.
+
+Done when: the recognize help carries a pinned sentence that names the paid requests.
 
 ## 9. `--jobs N` opens one connection per request in flight
 

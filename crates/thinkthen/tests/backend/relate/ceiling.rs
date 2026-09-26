@@ -83,6 +83,19 @@ fn the_beatles_set_splits_at_the_hosted_address_and_nowhere_else() {
 }
 
 #[test]
+fn a_trailing_slash_keeps_the_ceiling_and_another_version_drops_it() {
+    let input = beatles();
+    let cases = [
+        ("https://api.typesafe.ai/v1/", [1, 2]),
+        ("https://api.typesafe.ai/v2", [1, 1]),
+    ];
+    for (base, expected) in cases {
+        let run = plan(&[BEATLES[0], BEATLES[1], "--url", base], &input);
+        assert_eq!(counts(&run), expected, "{base}");
+    }
+}
+
+#[test]
 fn a_profile_byte_limit_replaces_the_ceiling_and_other_limits_join_it() {
     let input = beatles();
     let wide = profile("wide", r#""max_request_bytes":200000"#);
