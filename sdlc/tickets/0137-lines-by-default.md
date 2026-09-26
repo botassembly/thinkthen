@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/cli/asking.rs crates/thinkthen/src/cli/judge.rs crat
 
 # 0137: filter and rank read lines by default
 
-Status: built (`sdlc/records/0137-build-lines-by-default.md`); ready for code review. Design accepted by the second fresh review on 2026-09-26, after one round of findings. Owner: Claude.
+Status: landed 2026-09-26 (`sdlc/records/0137-build-lines-by-default.md`). The fresh code review found one low help-text finding, fixed before landing. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -14,7 +14,7 @@ Review route: a fresh read-only Claude session reviews this design and the final
 
 A user types `thinkthen filter 'This mentions a refund.' < notes.txt` and gets the kept lines. Today that command stops with a usage error, so nearly every `filter` and `rank` example carries `--lines`.
 
-The ask is `sdlc/issues/2026-09-26-filter-and-rank-could-read-lines-by-default.md`. The queue owner ruled on 2026-09-26 for its Option 1, with two guards. Ian can overturn the ruling.
+The ask is `sdlc/issues/closed/2026-09-26-filter-and-rank-could-read-lines-by-default.md`. The queue owner ruled on 2026-09-26 for its Option 1, with two guards. Ian can overturn the ruling.
 
 - `filter` and `rank` read `--lines` when no framing flag is given.
 - A pointer with no framing flag means `--jsonl` on these two verbs.
@@ -158,7 +158,7 @@ Contract 2; state and timing 0; reach 1; proof 1; cost of error 1; total 5. Fina
 
 ## Closes
 
-- `sdlc/issues/2026-09-26-filter-and-rank-could-read-lines-by-default.md`. The lander moves it to `closed/` in the landing commit.
+- `sdlc/issues/closed/2026-09-26-filter-and-rank-could-read-lines-by-default.md`. The lander moves it to `closed/` in the landing commit.
 
 ## Evidence
 
