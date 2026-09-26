@@ -6,7 +6,7 @@ opens: conformance/backend/src/listener.rs conformance/backend/tests conformance
 
 # 0127: Fix the test harness before the mutation audit
 
-Status: in progress. Owner: Claude. Accepted by the coordinator after two design reviews.
+Status: landed 2026-09-25 (`sdlc/records/0127-build-test-harness-fixes.md`). Accepted by the coordinator after two design reviews, and code review accepted after two rounds of fixes. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
