@@ -51,7 +51,7 @@ $ thinkthen recognize person work --lines < sentences.txt
 {"input":"On Revolver Paul McCartney sang Eleanor Rigby.","value":{"entities":[…]}}
 ```
 
-Once ticket R7 lands, the tool sends up to 10 texts in one request by the batching design's rules. No flag is needed. `--batch 1` sends one text a request, as today.
+`recognize` keeps `--lines` here. Its default input is one document, because a pasted paragraph is one text and should not split at each line. Once ticket R7 lands, the tool sends up to 10 texts in one request by the batching design's rules. No flag is needed. `--batch 1` sends one text a request, as today.
 
 Every call takes `--details` for probabilities and run facts, as today.
 
@@ -87,11 +87,20 @@ SELECT id, unnest(thinkthen_recognize(body, ['person', 'work'])) AS name FROM no
 
 Each name is a row of `(name, kind, start, end, strength)`, as today. DuckDB hands the extension up to 2,048 rows at once, and the extension batches them as the batching design fixes.
 
-### Walkthrough: a first user and one paragraph
+### Walkthrough: a paragraph and a document
 
 A user pastes a 60-word paragraph about the Beatles into `thinkthen recognize person work place`. The tool splits the text into about 64 words and asks two questions about each word in one request. The request carries about 22,000 input tokens. Experiment 270 billed 345 input tokens a word. At the recorded input price of $0.042 a million tokens, the paragraph costs about $0.0009. Output tokens are free under the vendor's price list. When a run of name words changes kind, a second request asks whether it is one name or several. Experiment 271 answered a request of 1,224 questions in 0.63 s, so both round trips together should take about half a second. The first acceptance run measures this time.
 
 The user sees one line of names. `--details` adds every word's probabilities and the run facts.
+
+A user filing documents needs the cost of a full page up front:
+
+| Text | Words after the rules | Requests | Time, estimated | Input tokens | Cost |
+| --- | --- | --- | --- | --- | --- |
+| 60-word paragraph | about 64 | 1, plus 1 `confirm` request when needed | about 0.5 s | about 22,000 | about $0.0009 |
+| 1,000-word document | about 1,060 | about 14 word requests, then 1 `confirm` request | about 2.5 s | about 385,000 | about $0.016 |
+
+The rows use experiment 270's 345 input tokens and 1,160 request bytes a word, and experiment 267's 6% more words under the new rules. Each request also carries the whole text as evidence, about 6,000 bytes and 1,400 tokens for 1,000 words. One request then holds about 77 words under the 96,000-byte ceiling. Time assumes ticket R4's concurrent sends at the default 4 in flight: four rounds of word requests and one `confirm` round. Each request carries about 28,000 input tokens. Experiment 271 answered requests of 21,871 and 41,787 input tokens in 0.52 and 0.63 s, so each round should take about half a second. Cost uses the recorded input price of $0.042 a million tokens. Output tokens are free. Ticket R4 records one live run of a 1,000-word document and reports its requests, time and tokens. Relations add at least one request for each concrete relation rule.
 
 ### Friction list
 
@@ -266,7 +275,7 @@ In order. "Needs ADR" marks a ticket that changes a Settled specification page.
 | R1 | The keys live in the repo with a scorer | The 100-case fixture; experiment 265's 30 sentences and its stated-edge key as `specification/fixtures/recognize/relations-30.jsonl`; a test helper that scores exact offsets and labels | Test 1's count of 141 under today's splitter | none | no |
 | R2 | Default word rules on the command and question file | Splitter, trim, five settings, limits, digest, `--details` and `--dry-run` fields | Tests 1, 2, 3 and 5 | R0, R1 | covered by R0 |
 | R3 | `confirm` boundary | Confirm question, one request per text, `--boundary`, `answer.confirm`; one authorized live recording of the key | Tests 4 and 6 | R2 | covered by R0 |
-| R4 | Long texts split | Built-in ceiling reaches word questions. One text's split requests run at once under the throttle | Test 8 | R0; batching B11 for the concurrent send | covered by R0 |
+| R4 | Long texts split | Built-in ceiling reaches word questions. One text's split requests run at once under the throttle | Test 8, plus one authorized live run of a 1,000-word document, about $0.016, with its time reported | R0; batching B11 for the concurrent send | covered by R0 |
 | R5 | Relations mean the text states them | Two question wordings, `recognize.md` and one sentence in `relate.md` | Test 7. If it fails, the ticket stops and reports the scores to Ian | R0 | covered by R0 |
 | R6 | Word rules and boundary on every library and SQL surface | Rust builder, Python, TypeScript, Ruby, R, C, DuckDB, PostgreSQL and SQLite; the conformance cases; `.facts` on recognize results | One shared conformance case per setting passes on every surface | R2, R3; batching B12 for `.facts` | no |
 | R7 | Many short texts batch | Batch evidence, question prefix and batched `confirm` for recognize on the command, libraries and SQL. One authorized live measurement. If test 9 fails, recognize stays at one text a request and the ticket reports to Ian | Test 9 | R3; batching B4, B5 and B13 | covered by R0 |

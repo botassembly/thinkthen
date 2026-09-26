@@ -16,10 +16,12 @@ Ian has ruled that batching is on by default. Batching changes answers, because 
 
 ### Command line
 
+Every example shows what a user types after the tickets land. Ticket B14 makes `filter` and `rank` read one record a line by default.
+
 The simplest call needs no flag:
 
 ```sh
-$ thinkthen filter 'The text is the title of a song by the Beatles. It appears on the album Abbey Road.' --lines --threshold 0.7 < songs.txt
+$ thinkthen filter 'The text is the title of a song by the Beatles. It appears on the album Abbey Road.' --threshold 0.7 < songs.txt
 Because
 Carry That Weight
 Come Together
@@ -31,7 +33,7 @@ The tool sends the 306 titles 10 to a request, 31 requests, 4 at a time.
 A shared reference text, sent once:
 
 ```sh
-$ thinkthen filter 'It appears on the album Abbey Road.' --lines --threshold 0.7 --context catalog.txt < songs.txt
+$ thinkthen filter 'It appears on the album Abbey Road.' --threshold 0.7 --context catalog.txt < songs.txt
 Because
 Carry That Weight
 Come Together
@@ -43,14 +45,14 @@ Come Together
 Turning batching off or sizing it:
 
 ```sh
-$ thinkthen filter '…' --lines --batch 1 < songs.txt     # one record a request, today's exact requests
-$ thinkthen filter '…' --lines --batch 100 < songs.txt   # up to 100 records a request
+$ thinkthen filter '…' --batch 1 < songs.txt     # one record a request, today's exact requests
+$ thinkthen filter '…' --batch 100 < songs.txt   # up to 100 records a request
 ```
 
 Run facts with `--details`: each kept record prints its full result, and one summary line goes to standard error at the end.
 
 ```sh
-$ thinkthen filter '…' --lines --threshold 0.7 --details < songs.txt > kept.jsonl
+$ thinkthen filter '…' --threshold 0.7 --details < songs.txt > kept.jsonl
 {"schema":"thinkthen.run/1","records":306,"requests_sent":31,"cached_requests":0,"input_tokens":19656,"output_tokens":5356,"seconds":1.4,"model":"jev-1.13.0"}
 ```
 
@@ -59,19 +61,21 @@ $ thinkthen filter '…' --lines --threshold 0.7 --details < songs.txt > kept.js
 ```python
 import thinkthen as tt
 
-on_abbey_road = tt.question(decide="The text is the title of a song by the Beatles. It appears on the album Abbey Road.", threshold=0.7)
-kept = tt.filter(on_abbey_road, songs)
+kept = tt.filter("The text is the title of a song by the Beatles. It appears on the album Abbey Road.", songs)
 kept[:3]
 # ['Because', 'Carry That Weight', 'Come Together']
 kept.facts
 # Facts(records=306, requests_sent=31, cached_requests=0, input_tokens=19656, output_tokens=5356, seconds=1.4, model='jev-1.13.0')
 
-kept = tt.filter(tt.question(decide="It appears on the album Abbey Road.", threshold=0.7), songs, context=catalog)
-kept = tt.filter(on_abbey_road, songs, batch=1)
+kept = tt.filter("It appears on the album Abbey Road.", songs, context=catalog)   # a reference text, sent once
+kept = tt.filter("It appears on the album Abbey Road.", songs, batch=1)          # one record a request
+
+on_abbey_road = tt.question(decide="It appears on the album Abbey Road.", threshold=0.7)   # a stricter bar
+kept = tt.filter(on_abbey_road, songs, context=catalog)
 engine = tt.Engine(batch=1)
 ```
 
-A verb over many records returns a list, as today. The list carries `.facts`, the run facts that `2026-09-26-every-surface-should-give-back-run-facts.md` asks for. `recognize` carries the same `Facts` fields. The other libraries take `batch` and `context` under their own spelling and return the same shape.
+A plain string is the question, as today. It uses the default cut of 0.5, so it keeps more titles than the 0.7 walkthrough below. Its output lines are illustrative. A verb over many records returns a list, as today. The list carries `.facts`, the run facts that `2026-09-26-every-surface-should-give-back-run-facts.md` asks for. `recognize` carries the same `Facts` fields. The other libraries take `batch` and `context` under their own spelling and return the same shape.
 
 ### DuckDB
 
@@ -112,7 +116,7 @@ The user types the first command and gets 35 to 39 titles in under 2 seconds. To
 | How to get today's exact answers | One flag, `--batch 1` |
 | That old recordings and caches answer only under `--batch 1` | Kept. A batch is a new request. Resending costs cents, and `--batch 1` replays old folders |
 | That a record's answer can change with its neighbours | Kept, as Ian ruled. The page states the measured trade |
-| That `filter` and `rank` need `--lines` | Designed away by ticket B14, from `2026-09-26-filter-and-rank-could-read-lines-by-default.md` |
+| That `filter` and `rank` need `--lines` | Designed away by ticket B14, from `2026-09-26-filter-and-rank-could-read-lines-by-default.md`. The examples above already leave it out |
 | That speed stalls above 3 jobs | Designed away by tickets B1 and B2, the two filed speed defects |
 
 ## The design
@@ -199,14 +203,14 @@ A reply that answers some questions and not others fails only the records with m
 | --- | --- | --- |
 | Command | `--batch N`, 1 to 1,000 | `--context FILE` |
 | Environment | `THINKTHEN_BATCH` | none |
-| Question file | `"batch": N` sets a ceiling | none |
+| Question file | `"batch": N` | none |
 | Python, TypeScript, Ruby, R, C, Rust | Engine setting and a per-call `batch` | Per-call `context` |
 | Polars and pandas columns | As the library | As the library |
 | DuckDB | `SET thinkthen_batch = N` | A final `context` argument on each scalar |
 | PostgreSQL | `SET thinkthen.batch = N` | A final `context` argument |
 | SQLite | The settings call the extension already has | A final `context` argument |
 
-The effective size is the caller's setting, capped by the question file's `batch`. A request cap such as the SQL extensions' request total counts a batch as one request. A question that batches badly carries `"batch": 1` and stays unbatched on every surface. The context is evidence. It leaves the machine, and it enters the request digest but not the question digest.
+A typed value wins. `--batch` on the command and `batch=` on one call replace the question file's `batch`, as `specification/question-file.md` line 100 rules for typed single values. Ticket B0 adds `--batch` to that line's list. The file's `batch` in turn replaces `THINKTHEN_BATCH` and the engine setting. A question that batches badly carries `"batch": 1` and stays unbatched until a caller types another size. A request cap such as the SQL extensions' request total counts a batch as one request. The context is evidence. It leaves the machine, and it enters the request digest but not the question digest.
 
 The SQL and frame surfaces batch the rows one call receives: a DuckDB vector of up to 2,048 rows, a PostgreSQL array, a data-frame column, or SQLite's `thinkthen_warm`. Rows with equal evidence are asked once, as DuckDB does today. Batches form in first-seen order within the call. A plain SQLite scalar receives one row at a time and cannot batch. DuckDB's parallel scan can hand rows over in another grouping. Exact replay then needs a fixed row order, such as `SET threads = 1`.
 
@@ -243,7 +247,9 @@ The row above is the first of a 10-record batch that billed 624 input and 175 ou
 | `--batch 1 --context catalog.txt` | Each request carries the context and one quoted record |
 | `--batch 50 --context catalog.txt` | At most 50 records a request |
 | `--batch 0` or `--batch 1001` | Usage error at exit 2 |
-| Question file `"batch": 1` with `--batch 10` | One record a request |
+| Question file `"batch": 1` with `--batch 10` | Up to 10 records a request. The typed flag wins |
+| Question file `"batch": 1` and no flag | One record a request |
+| Question file `"batch": 1` with `tt.Engine(batch=10)` | One record a request. The file beats the engine setting. A per-call `batch=10` beats the file |
 | `--batch 10` with `--jobs 1` | Same output bytes as `--jobs 8` |
 | A live stream that pauses | The open batch sends after 50 ms |
 | `--replay` with another `--batch` than the recording | Exit 5 at the first missing batch |
@@ -280,11 +286,11 @@ In order. "Needs ADR" marks a ticket that changes a Settled specification page.
 
 | # | Outcome | Scope | Proof | Depends on | ADR |
 | --- | --- | --- | --- | --- | --- |
-| B0 | Ian's ruling recorded | One ADR: batching on by default, the batch shape, sizes, shares, the run line on standard error, `--context`, the question file ceiling, `relate --jobs`, and `filter` and `rank` reading lines by default. It lands before recognize R0. It amends `records.md` "Order and requests" and `jobs`, `result.md` `meta`, `channels.md`, `question-file.md`, `backends.md` and `relate.md` | ADR accepted; pages updated | none | This is the ADR |
+| B0 | Ian's ruling recorded | One ADR: batching on by default, the batch shape, sizes, shares, the run line on standard error, `--context`, the question file's `batch`, `relate --jobs`, and `filter` and `rank` reading lines by default. It lands before recognize R0. It amends `records.md` "Order and requests" and `jobs`, `result.md` `meta`, `channels.md`, `question-file.md`, `backends.md` and `relate.md` | ADR accepted; pages updated | none | This is the ADR |
 | B1 | Usage writes stop serializing requests | Per `2026-09-26-usage-file-writes-serialize-requests-in-flight.md` | That issue's timing at `--jobs 16` | none | no |
 | B2 | The pool keeps up to `--jobs` connections | Per `2026-09-26-connection-pool-reopens-connections-above-three-jobs.md` | New connections at `--jobs 16` stay near the job count | none | no |
 | B3 | The engine plans batches | Grouping, quote prefix, evidence object, duplicates, byte ceiling, batch of one, digests. No surface change | Tests 1, 2 and 3 | B0 | covered by B0 |
-| B4 | The command batches `decide`, `filter` and `rank` | `--batch`, `THINKTHEN_BATCH`, question file ceiling, jobs over batches, order, pause, failure line, record, replay, cache, dry run | Tests 4, 5, 7 and 8 | B3 | covered by B0 |
+| B4 | The command batches `decide`, `filter` and `rank` | `--batch`, `THINKTHEN_BATCH`, the question file's `batch`, jobs over batches, order, pause, failure line, record, replay, cache, dry run | Tests 4, 5, 7 and 8 | B3 | covered by B0 |
 | B5 | Run facts stay true under batches | Shares, `meta.batch`, the `thinkthen.run/1` line | Test 6 | B4 | covered by B0 |
 | B6 | The default is measured with the tool's own wording | One authorized live run. If test 9 or 12 fails, the ticket stops and reports to Ian. The default stays until he rules | Tests 9 and 12 | B1, B2, B5 | no |
 | B7 | Shared context | `--context FILE` for `decide`, `filter` and `rank`; no record limit with a context | Tests 2 and 10 | B4 | covered by B0 |
