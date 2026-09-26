@@ -219,8 +219,10 @@ const REFUSALS: [Refusal; 32] = [
         "--cache is --record and --replay on one folder",
         2,
     ),
-    every(
+    // `relate` takes --jobs over its one entity set (ticket 0143).
+    only(
         "jobs on one document",
+        &["decide", "choose", "tag", "score", "recognize"],
         &["--jobs", "2"],
         "--jobs bounds the requests in flight",
         2,
