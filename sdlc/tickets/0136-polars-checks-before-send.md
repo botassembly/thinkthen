@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 136
-opens: libraries/python/src/frame.rs libraries/python/src/arrow/write.rs libraries/python/src/arrow/mod.rs libraries/python/Cargo.toml libraries/python/Cargo.lock libraries/python/thinkthen/__init__.py libraries/python/tests/test_door.py libraries/python/README.md libraries/python/NOTES.md libraries/python/ratchet.json libraries/python/ratchet.py.json sdlc/records sdlc/tickets sdlc/issues
+opens: libraries/python/src/frame.rs libraries/python/src/arrow/write.rs libraries/python/src/arrow/ffi.rs libraries/python/src/arrow/mod.rs libraries/python/Cargo.toml libraries/python/Cargo.lock libraries/python/thinkthen/__init__.py libraries/python/tests/test_door.py libraries/python/README.md libraries/python/NOTES.md libraries/python/ratchet.json libraries/python/ratchet.py.json sdlc/records sdlc/tickets sdlc/issues
 ---
 
 # 0136: Polars frames refuse before sending and write cells as the Rust door does
