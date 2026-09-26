@@ -34,7 +34,8 @@ pub(crate) enum Ask {
     DecideMany(LoadedQuestion, Vec<String>),
     Filter(LoadedQuestion, Vec<String>),
     Rank(String, Vec<String>),
-    Find(String, Vec<String>),
+    /// The question text, whether it offers none, and the units.
+    Find(String, bool, Vec<String>),
     Annotate(QuestionSet, Vec<String>),
     Recognize(Recognize, String),
     Relate(Relate, Vec<Entity>),
@@ -47,7 +48,7 @@ impl Ask {
             Self::DecideMany(_, records)
             | Self::Filter(_, records)
             | Self::Rank(_, records)
-            | Self::Find(_, records)
+            | Self::Find(_, _, records)
             | Self::Annotate(_, records) => Some(records.len()),
             // The engine does not cap relate's entities by the record limit.
             Self::Decide(..)
@@ -177,8 +178,10 @@ pub(crate) fn run(
                 .map(|ranked| (ranked.input().0, ranked.probability()))
                 .collect(),
         ),
-        Ask::Find(text, units) => {
-            let found = engine.find_with(&Question::find(&text)?, texts(units), options)?;
+        Ask::Find(text, none, units) => {
+            let asked = Question::find(&text)?;
+            let asked = if none { asked.offering_none()? } else { asked };
+            let found = engine.find_with(&asked, texts(units), options)?;
             Output::Found(found.selected().and_then(|Text(place, _)| {
                 let candidate = found.candidates().get(*place)?;
                 Some((*place, candidate.probability()))
