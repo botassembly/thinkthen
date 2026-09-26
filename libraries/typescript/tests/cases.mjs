@@ -73,6 +73,8 @@ async function check(tt, one, origin, folder) {
       same('question_sha256', details.meta.question_sha256, expected.question_sha256);
       same('model', details.meta.model, expected.model);
       same('requests', details.meta.requests, expected.requests.map((held) => renamed.get(held)));
+      for (const name of ['usage', 'requests_sent', 'cached']) same(name, details.meta[name], expected[name]);
+      same('url', details.meta.url, served);
       if (success.counters) {
         const cached = new tt.Engine({ baseUrl: base, cache: join(folder, one.id) });
         for (let call = 0; call < success.counters.calls; call += 1) await cached.decide(one.question, texts[0]);
