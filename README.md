@@ -14,6 +14,19 @@ The first prints `true`, `false`, or `null`, and its exit code works in a shell 
 
 Those commands are the design. `specification/` is the contract, and code follows it. `annotate` reads a saved question set when several questions belong on the same input.
 
+## First run
+
+The sample needs no key. It holds one bug report and the recorded answer to one question about it, and `--replay` reads that answer with no network.
+
+```sh
+curl -fsSLO https://github.com/botassembly/thinkthen/releases/latest/download/thinkthen-first-run.tar.gz
+tar -xzf thinkthen-first-run.tar.gz
+thinkthen decide 'Does this report say what the person did before the problem appeared?' \
+  --replay thinkthen-first-run/recording < thinkthen-first-run/report.txt
+```
+
+It prints `true`. `demos/27-test-with-no-network` shows how a test replays a recording.
+
 ## What it will and will not do
 
 - The shell sequences programs. `jq` reshapes data. `thinkthen` judges meaning and does nothing else.

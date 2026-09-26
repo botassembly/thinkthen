@@ -133,6 +133,7 @@ fn generic(body: &[u8]) -> String {
 }
 
 fn requests_counted(environment: &Environment) -> u64 {
+    environment.usage().finish();
     let path = environment.usage_path().expect("a usage folder");
     crate::engine::usage::read(path, &crate::engine::usage::month_now())
         .expect("usage totals")

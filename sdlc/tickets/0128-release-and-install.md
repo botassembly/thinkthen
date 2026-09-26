@@ -6,7 +6,7 @@ opens: install.sh site/public/install.sh site/src/data/catalog.mjs site/src/page
 
 # 0128: Release and install for 0.1
 
-Status: Phase 1 landed 2026-09-25 (`sdlc/records/0128-phase-1-build.md`), with its Rust test version edits held until ticket 0119 lands. Phases 2 to 4 are open, and each starts on the coordinator's go-ahead. Owner: Claude. Four phases, each its own build, review, and landing.
+Status: Phase 1 landed 2026-09-25 (`sdlc/records/0128-phase-1-build.md`), with its Rust test version edits held until ticket 0119 lands. Phase 2 landed 2026-09-26 (`sdlc/records/0128-phase-2-build.md`) after two code reviews. Phases 3 and 4 are open, and each starts on the coordinator's go-ahead. Owner: Claude. Four phases, each its own build, review, and landing.
 
 Review route: a fresh read-only Claude session reviews this design and each phase's final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -110,7 +110,7 @@ Everything here runs on the Linux gate host through the ladder, plus one local p
     | Python | The image's `/opt/python/cp310-cp310`, with `maturin` at a pinned version |
     | Node headers | The `nodejs.org` tarball for Node 22 at a pinned version, checked by sha256 |
     | C, SQLite, DuckDB | The image's `gcc`. The SQLite amalgamation from `databases/sqlite/amalgamation.sha256`. The DuckDB C API headers from `databases/duckdb/vendor` |
-    | PostgreSQL 16 | The PGDG EL8 `postgresql16-devel` and `postgresql16-server` RPMs, pinned by sha256, and `cargo-pgrx` 0.17.0 with `--locked` |
+    | PostgreSQL 16 | The PGDG EL8 `postgresql16`, `postgresql16-libs`, `postgresql16-devel`, and `postgresql16-server` RPMs, pinned by sha256 and unpacked with `rpm2archive` as the calling user. `pg_config` sits in `postgresql16`. `cargo-pgrx` 0.17.0 with `--locked`. bindgen's libclang from PyPI's `libclang` 18.1.1 wheel, pinned by sha256, with the image gcc's own headers |
     | Ruby | Not this container. The Ruby gem builds in the `rb-sys-dock` image for rb-sys 0.9.130, pinned by digest, with Ruby 3.4 |
 
    R needs no container, because R-universe builds it. The `aarch64` half of the container proof runs first in the Phase 3 rehearsal.
@@ -380,3 +380,7 @@ Every decision above. The ones most worth his look: no PyPI source distribution 
 - Design review 1, 2026-09-25: findings, not ACCEPT. The coordinator ruled the four phases, the runner as the macOS proof of record, release dispatched from the tag, the tag ruleset, and three more items for Ian. This rewrite answers every finding. It adds the dry bump, `versions --set`, and the version-free tests; the full list of version places; the R rewrite, lock, and `OS_type`; one time-limit helper; the CI guards; publish metadata; the packed-crate smoke and the partial-publish rule; the loopback installer test and the `shasum` row; packing from the rung's builds; each container toolchain's source; the smoke runners and the import-path rule; and `gate.yml`'s public API tool and nightly.
 - Design review 2, 2026-09-25: the release-safety design is sound. This version answers the eleven items. The smoke and `surfaces` share `verdict` and neither calls the other. The M5 runs only `brew install`, `--version`, and the first-run block. Phase 3 splits at landing `release.yml` on main, with the `RELEASE_ARMED` guard. The version check finds every lock entry through `lock_versions`. It adds the five time-limit calls, the overlap table with 0130, the rehearsal's cost, the npm addon names and refusal sentence, the Quick Fix either-order rule and the PyYAML check, and holds the tap and site lines until Phase 4 step 3.
 - Ian's rulings, 2026-09-25: Ian Maurer is the only author in `CITATION.cff` and the gemspec. The Code of Conduct names him as its only contact, and conduct reports go to GitHub issues. No other community files or channels. One package per language, plus the download script, and no per-platform npm packages. Visibility and going live are his calls, so the go-public recommendation and the cost estimate left his list. His one-time setup steps moved into "Ian's setup list".
+- The queue owner's rulings on Phase 2, 2026-09-26. Ian can overturn each one.
+  1. Phase 2 edits `databases/postgresql/check.sh`, which ticket 0138 also opens. The two changes sit in separate parts of the file. Whichever ticket lands second merges the other.
+  2. The manylinux_2_28 image holds no libclang, which pgrx needs. PyPI's `libclang` wheel supplies it, pinned by sha256 and installed as the calling user. It keeps the glibc 2.28 floor, and nothing runs as root. The pinned-source table names it.
+  3. The Ruby gem's `rb-sys-dock` build waits for Phase 3. Phase 2 pulls no image but manylinux_2_28.

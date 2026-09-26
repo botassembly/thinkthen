@@ -12,6 +12,24 @@ node_home="$HOME/.cache/thinkthen-toolchains/node-v22.22.3-linux-x64"
 step() { printf '== %s\n' "$*"; }
 fail() { echo "typescript: $*" >&2; exit 1; }
 
+if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+    # The installed-file mode (ticket 0128): the tarball in a fresh project, and the shared
+    # cases and examples from a copy of tests/, which import the package by its name.
+    [ -x "$node_home/bin/node" ] || { echo 'typescript: not run; place Node with libraries/typescript/setup-toolchain.sh'; exit 77; }
+    PATH=$node_home/bin:$PATH
+    . "$repo/sdlc/scripts/installed.sh"
+    installed_tests "$repo" libraries/typescript
+    project=$scratch/libraries/typescript
+    echo '{"private": true}' >"$project/package.json"
+    (cd "$project" && npm install --offline --no-audit --no-fund --silent "$THINKTHEN_ARTIFACT")
+    resolved=$(cd "$project/tests" && node --input-type=module -e 'console.log(import.meta.resolve("thinkthen"))')
+    case $resolved in "file://$project/node_modules/thinkthen/"*) ;; *) fail "thinkthen resolved to $resolved, outside the fresh project" ;; esac
+    export THINKTHEN_TEST_BACKEND="${CARGO_TARGET_DIR:-$repo/target}/debug/conformance-backend"
+    (cd "$project" && sh "$LIMIT" 300 node --test --test-timeout=30000 tests/conformance.test.mjs tests/examples.test.mjs)
+    echo 'typescript: pass, installed'
+    exit 0
+fi
+
 step 'rust: format, lint, and unit tests with no Node'
 cargo fmt --check
 cargo clippy --quiet --locked --offline --all-targets -- -D warnings
@@ -89,7 +107,9 @@ refused=$(node -e 'Object.defineProperty(process, "platform", { value: "win32" }
 
 step 'the pack list, the license, and no home path'
 addon="thinkthen-$(node -p 'process.platform + "-" + process.arch').node"
-npm pack --dry-run --json --offline 2>/dev/null >"$plant/pack"
+# release-pack takes the tarball from target/pack (ticket 0128).
+mkdir -p target/pack
+npm pack --json --offline --pack-destination target/pack 2>/dev/null >"$plant/pack"
 packed=$(node -e 'console.log(JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"))[0].files.map((f) => f.path).sort().join(" "))' "$plant/pack")
 [ "$packed" = "LICENSE README.md index.d.ts index.js index.mjs loader.js package.json $addon" ] || fail "npm pack lists $packed"
 [ "$(node -p 'require("./package.json").license')" = MIT ] || fail 'package.json names no MIT license'
