@@ -126,6 +126,8 @@ pub(crate) struct Answer {
     pub(crate) name: Option<String>,
     /// The question text, when the line carries it.
     pub(crate) text: Option<String>,
+    /// The line's question digest: `meta.question_sha256`, or `meta.questions_sha256` on an `annotate` line.
+    pub(crate) digest: Option<String>,
     /// The verb, named by the line or read from its value.
     pub(crate) verb: Verb,
     /// True when the answer failed and leaves every measure.
@@ -168,13 +170,26 @@ pub(crate) fn read(
 
 /// Read every answer one result line holds: the line itself, or each member of its `answers`.
 fn answers(line: usize, id: &str, row: &Json) -> Result<Vec<Answer>, MeasureError> {
+    let digest = |key| {
+        row.member("meta")
+            .and_then(|meta| meta.member(key))
+            .and_then(Json::as_str)
+    };
     match row.member("answers") {
         Some(Json::Object(members)) => members
             .iter()
-            .map(|(name, entry)| Answer::read(line, id, Some(name), entry))
+            .map(|(name, entry)| {
+                Answer::read(line, id, Some(name), digest("questions_sha256"), entry)
+            })
             .collect(),
         Some(_) => Err(MeasureError::Ungradable(line)),
-        None => Ok(vec![Answer::read(line, id, None, row)?]),
+        None => Ok(vec![Answer::read(
+            line,
+            id,
+            None,
+            digest("question_sha256"),
+            row,
+        )?]),
     }
 }
 
@@ -198,7 +213,13 @@ fn refuse_repeats(answers: &[Answer], identity: Identity) -> Result<(), MeasureE
 }
 
 impl Answer {
-    fn read(line: usize, id: &str, name: Option<&str>, entry: &Json) -> Result<Self, MeasureError> {
+    fn read(
+        line: usize,
+        id: &str,
+        name: Option<&str>,
+        digest: Option<&str>,
+        entry: &Json,
+    ) -> Result<Self, MeasureError> {
         let value = entry.member("value");
         let failed = entry.member("failure").is_some()
             || value.and_then(|held| held.member("failed")).is_some()
@@ -239,6 +260,7 @@ impl Answer {
             line,
             id: id.to_owned(),
             name: name.map(str::to_owned),
+            digest: digest.map(str::to_owned),
             text: question
                 .and_then(|held| held.member("text"))
                 .and_then(Json::as_str)

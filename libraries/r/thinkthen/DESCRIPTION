@@ -9,6 +9,9 @@ Description: The eight verbs (decide, choose, score, tag, filter, rank,
     "not sure". A bulk call crosses into the engine once and runs at the
     engine's throttle. Errors carry one of six kinds and a retry signal.
 License: MIT + file LICENSE
+URL: https://thinkthen.dev, https://github.com/botassembly/thinkthen
+BugReports: https://github.com/botassembly/thinkthen/issues
+OS_type: unix
 Encoding: UTF-8
 Depends:
     R (>= 4.2)

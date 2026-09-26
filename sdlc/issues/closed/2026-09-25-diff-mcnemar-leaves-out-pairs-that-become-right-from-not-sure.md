@@ -1,6 +1,6 @@
 # diff's McNemar leaves out pairs that become right from a not-sure answer
 
-Status: Open. Moved here on 2026-09-25 from Beatles Bench `sdlc/issues/2026-09-24-diff-mcnemar-leaves-out-pairs-that-become-right-from-not-sure.md`. That file is closed and points here.
+Status: Closed by Quick Fix qf-diff-warnings. It took option 1: a pair counts when it is right on one side and not right on the other. The `diff-choose` golden and its table moved from p 1.0 to p 0.5. Ian can overturn it. The record is `sdlc/records/qf-diff-warnings.md`.
 
 ## Why it moved
 

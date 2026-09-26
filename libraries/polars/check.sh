@@ -1,13 +1,15 @@
 #!/bin/sh
-# The Rust Polars surface (ticket 0120). The surface rung passes its loopback
-# port as $1. The tests start their own backends, so this check does not use it.
+# The Rust Polars lane (tickets 0120 and 0130): the `polars` feature of
+# `thinkthen`, the one lane that compiles Polars. The surface rung passes its
+# loopback port as $1. The tests start their own backends, so this check does
+# not use it. It runs from the repository root, where the manifest is.
 set -eu
-cd -- "$(dirname -- "$0")"
+cd -- "$(dirname -- "$0")/../.."
 
-# The probe: every crate the lock names must already be in cargo's cache.
+# The probe: every crate the root lock names must already be in cargo's cache.
 if ! cargo fetch --locked --offline >/dev/null 2>&1; then
 	echo 'polars: not run; the crate cache lacks the locked crates.' >&2
-	echo 'polars: on a networked machine, run: cargo fetch --locked --manifest-path libraries/polars/Cargo.toml' >&2
+	echo 'polars: on a networked machine, run: cargo fetch --locked' >&2
 	exit 77
 fi
 
@@ -19,6 +21,12 @@ scratch=$(mktemp -d)
 trap 'rm -rf -- "$scratch"' EXIT
 export XDG_CACHE_HOME="$scratch/cache" XDG_CONFIG_HOME="$scratch/config" THINKTHEN_CACHE="$scratch/thinkthen"
 
-cargo fmt --check
-cargo clippy --locked --offline --all-targets -- -D warnings
-cargo test --locked --offline
+# Its own target folder keeps these builds from evicting the other rungs'.
+# One flag set serves every step, the doctest's included.
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-target}/polars"
+export RUSTFLAGS='--cfg thinkthen_internal_doctest' RUSTDOCFLAGS='--cfg thinkthen_internal_doctest'
+set -- --locked --offline --package thinkthen --features polars
+cargo clippy "$@" --lib --bins --test 'polars_*' -- -D warnings
+cargo clippy "$@" --no-default-features --lib -- -D warnings
+cargo test "$@" --test 'polars_*'
+cargo test "$@" --doc PolarsEngine

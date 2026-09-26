@@ -14,6 +14,10 @@ cd "$(dirname "$0")"
 . ./runtime.sh
 runtime_ready
 REPO=$(cd ../.. && pwd)
+# macOS has no `timeout` (ticket 0128). runtime.sh uses it too.
+LIMIT=$REPO/sdlc/scripts/time-limit
+# The extension version names its SQL files (ticket 0128).
+EXT_VERSION=$(sed -n "s/^default_version = '\(.*\)'$/\1/p" thinkthen.control)
 BACKEND=${CARGO_TARGET_DIR:-$REPO/target}/debug/conformance-backend
 
 echo "== build"
@@ -79,7 +83,7 @@ qs -v ON_ERROR_STOP=1 -c "CREATE EXTENSION thinkthen" -f fixtures/tickets.sql -f
 
 echo "== the tree and the scripts"
 shipped_lacks_probe() {
-	same "$(grep -c thinkthen_panic_probe "$RUN"/shipped/usr/share/postgresql/16/extension/thinkthen--0.0.1.sql || true)" 0
+	same "$(grep -c thinkthen_panic_probe "$RUN"/shipped/usr/share/postgresql/16/extension/thinkthen--$EXT_VERSION.sql || true)" 0
 }
 check shipped_lacks_probe
 no_home_in_library() { same "$(grep -ac -- "$HOME" "$RUN/shipped/usr/lib/postgresql/16/lib/thinkthen.so" || true)" 0; }
@@ -107,7 +111,7 @@ darwin_reports_not_run() {
 	set +e
 	# A missing toolchain folder stops a run that passes the kernel check
 	# at "not run", before it builds, sweeps, or starts a server.
-	out=$(PATH="$RUN/shim:$PATH" THINKTHEN_TOOLCHAINS="$RUN/none" timeout 60 bash ./check.sh 2>&1)
+	out=$(PATH="$RUN/shim:$PATH" THINKTHEN_TOOLCHAINS="$RUN/none" sh "$LIMIT" 60 bash ./check.sh 2>&1)
 	code=$?
 	set -e
 	same "$code" 77
@@ -368,6 +372,16 @@ warm_then_decide_sends_nothing() {
 	same "$(bcount)" 2000
 }
 check warm_then_decide_sends_nothing
+# Ticket 0129: warm takes the banded file decide uses, and decide then reads the cache.
+warm_takes_the_banded_file_decide_uses() {
+	fresh generic
+	pairs="FROM generate_series(1, 20) g"
+	same "$(q -c "SELECT thinkthen_warm('@refund.json', 'refund ' || g) $pairs")" 20
+	same "$(bcount)" 20
+	same "$(q -c "SELECT count(*) $pairs WHERE thinkthen_decide('@refund.json', 'refund ' || g)")" 20
+	same "$(bcount)" 20
+}
+check warm_takes_the_banded_file_decide_uses
 another_model_sends_again() {
 	fresh generic
 	q -c "SELECT count(*) FROM generate_series(1, 50) g WHERE thinkthen_decide('{\"decide\":\"Is it red?\",\"model\":\"judge-a\"}', 'item ' || g)" \
@@ -567,9 +581,9 @@ check a_panic_is_an_error
 echo "== the update path"
 an_update_cannot_grant_public() {
 	printf 'CREATE FUNCTION thinkthen_rehearsal_probe(x integer) RETURNS integer LANGUAGE sql AS %s;\n' "'SELECT \$1'" \
-		>.runtime/tree/usr/share/postgresql/16/extension/thinkthen--0.0.1--0.0.2.sql
+		>.runtime/tree/usr/share/postgresql/16/extension/thinkthen--$EXT_VERSION--$EXT_VERSION-probe.sql
 	fresh generic
-	q -c "ALTER EXTENSION thinkthen UPDATE TO '0.0.2'" >/dev/null
+	q -c "ALTER EXTENSION thinkthen UPDATE TO '$EXT_VERSION-probe'" >/dev/null
 	same "$(q -c "SELECT has_function_privilege('public', 'thinkthen_rehearsal_probe(integer)', 'EXECUTE')")" f
 	same "$(extension_owned "AND has_function_privilege('public', p.oid, 'EXECUTE')")" 0
 }

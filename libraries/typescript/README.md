@@ -32,4 +32,4 @@ A failure rejects with one `ThinkThenError` class. Its `kind` is `usage`, `backe
 
 ## Build and check
 
-`setup-toolchain.sh` places the pinned Node under `~/.cache/thinkthen-toolchains/` once, on a networked machine. `build-addon.sh` builds `thinkthen.node` offline. `check.sh` is this surface's entry in the surface rung, `sdlc/scripts/surfaces`. It runs offline against loopback backends only and reports "not run" when the toolchain is missing.
+`setup-toolchain.sh` places the pinned Node under `~/.cache/thinkthen-toolchains/` once, on a networked machine. `build-addon.sh` builds `thinkthen-<platform>-<arch>.node` offline, the name `loader.js` picks. `check.sh` is this surface's entry in the surface rung, `sdlc/scripts/surfaces`. It runs offline against loopback backends only and reports "not run" when the toolchain is missing.

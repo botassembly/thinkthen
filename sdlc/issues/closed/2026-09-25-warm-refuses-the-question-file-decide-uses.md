@@ -1,6 +1,6 @@
 # warm refuses the question file that decide uses
 
-Status: Open
+Status: Closed on 2026-09-25 by ticket 0129.
 
 Found 2026-09-25 by the code review of the talk's SQL slide. The slide asks a banded decide question from a file, `'@abbey.json'`, whose JSON holds `"threshold": "0.3:0.7"`.
 

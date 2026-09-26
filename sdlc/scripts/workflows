@@ -1,0 +1,224 @@
+#!/usr/bin/env python3
+"""Every workflow runs only by hand and runs only reviewed code (ticket 0128).
+
+Ian ruled that no push starts a workflow and that releases publish only through a
+run he starts and approves. PyYAML's safe loader reads each workflow, and each
+broken rule prints one line. The rules sit beside the code that checks them, and
+ticket 0128's "The workflow check" table lists them. Usage: workflows [--self-test]
+"""
+
+import pathlib
+import re
+import sys
+import tempfile
+
+import yaml
+
+REPO = pathlib.Path(__file__).resolve().parents[2]
+PINNED = re.compile(r"^[\w.-]+/[\w./-]+@[0-9a-f]{40}$")
+DIGEST = re.compile(r"@sha256:[0-9a-f]{64}")
+EXPANDED = re.compile(r"\$\{\{\s*(inputs\.|github\.event\.)")
+UNPINNED = [
+    (re.compile(r"pip3? install[^\n]*\bmaturin\b(?!==)"), "installs maturin with no version"),
+    (re.compile(r"npm (?:install|i) (?:-g|--global) npm(?!@\d)"), "installs npm with no version"),
+    (re.compile(r"gem update --system(?! \d)"), "updates gem with no version"),
+    (re.compile(r"gem install[^\n]*\brubygems-update\b(?! -v)"), "installs gem with no version"),
+]
+RESOLVED = "${{ needs.resolve.outputs.sha }}"
+
+
+def steps(doc):
+    for name, job in (doc.get("jobs") or {}).items():
+        for step in job.get("steps") or []:
+            yield name, job, step
+
+
+def images(node, key=None):
+    """Every value under a key named `container` or `image`, at any depth."""
+    if isinstance(node, dict):
+        for k, v in node.items():
+            yield from images(v, k)
+    elif isinstance(node, list):
+        for v in node:
+            yield from images(v, key)
+    elif key in ("container", "image") and isinstance(node, str):
+        yield node
+
+
+def every(name, doc, text):
+    out = []
+    triggers = doc.get("on", doc.get(True))
+    triggers = [triggers] if isinstance(triggers, str) else list(triggers or [])
+    for trigger in triggers:
+        if trigger != "workflow_dispatch":
+            out.append(f"{name}: starts on `{trigger}`; only workflow_dispatch may start a workflow")
+    for job, _, step in steps(doc):
+        uses = step.get("uses")
+        if uses and not uses.startswith("./") and not PINNED.match(uses):
+            out.append(f"{name}: job {job} uses {uses}, which is not pinned to a commit")
+        run = step.get("run") or ""
+        if EXPANDED.search(run):
+            out.append(f"{name}: job {job} expands an input or event value inside run; pass it through env")
+        for command in re.findall(r"docker run(?:[^\n]*\\\n)*[^\n]*", run):
+            if not DIGEST.search(command) and "${{ matrix." not in command:
+                out.append(f"{name}: job {job} runs an image with no digest")
+    for image in images(doc.get("jobs") or {}):
+        if not DIGEST.search(image) and not image.startswith("${{"):
+            out.append(f"{name}: image {image} carries no digest")
+    if name == "gate.yml":
+        runs = "\n".join(step.get("run") or "" for _, _, step in steps(doc))
+        for tool in ("cargo-public-api", "PUBLIC_API_TOOLCHAIN"):
+            if tool not in runs or "sdlc/scripts/install" not in runs:
+                out.append(f"{name}: no step installs {tool} from the pins in sdlc/scripts/install")
+    return out
+
+
+def release(name, doc):
+    out = []
+    if doc.get("permissions") != {}:
+        out.append(f"{name}: top-level permissions must be {{}}")
+    for job, spec in (doc.get("jobs") or {}).items():
+        permissions = spec.get("permissions") or {}
+        text = yaml.safe_dump(spec)
+        if permissions.get("contents") == "write" and job not in ("draft", "publish"):
+            out.append(f"{name}: job {job} holds contents: write; only draft and publish may")
+        secret = re.search(r"secrets\.(?!GITHUB_TOKEN\b)", text)
+        environment = spec.get("environment")
+        environment = environment.get("name") if isinstance(environment, dict) else environment
+        if (permissions.get("id-token") == "write" or secret) and environment != "release":
+            out.append(f"{name}: job {job} holds id-token or a secret outside environment release")
+        if environment == "release" and "vars.RELEASE_ARMED == 'true'" not in str(spec.get("if", "")):
+            out.append(f"{name}: job {job} runs in environment release without the RELEASE_ARMED condition")
+    for job, spec, step in steps(doc):
+        uses = step.get("uses") or ""
+        if "cache" in uses or "cache" in (step.get("with") or {}):
+            out.append(f"{name}: job {job} uses a cache")
+        if uses.startswith("actions/checkout@"):
+            ref = (step.get("with") or {}).get("ref")
+            if ref != RESOLVED and not (job == "resolve" and ref == "${{ github.sha }}"):
+                out.append(f"{name}: job {job} checks out {ref}, not the resolved SHA")
+        for pattern, why in UNPINNED:
+            if pattern.search(step.get("run") or ""):
+                out.append(f"{name}: job {job} {why}")
+    return out
+
+
+def check(folder):
+    out = []
+    for path in sorted(folder.glob("*.y*ml")):
+        text = path.read_text(encoding="utf-8")
+        doc = yaml.safe_load(text) or {}
+        out += every(path.name, doc, text)
+        if path.name == "release.yml":
+            out += release(path.name, doc)
+    return out
+
+
+# A release workflow that keeps every rule. Each self-test case breaks one.
+RELEASE = """
+name: release
+on:
+  workflow_dispatch:
+    inputs:
+      mode: {type: choice, options: [rehearse, release]}
+permissions: {}
+jobs:
+  resolve:
+    runs-on: ubuntu-24.04
+    permissions: {contents: read}
+    outputs: {sha: "${{ steps.sha.outputs.sha }}"}
+    env: {MODE: "${{ inputs.mode }}"}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with: {ref: "${{ github.sha }}"}
+      - id: sha
+        run: echo "sha=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+  build:
+    needs: resolve
+    runs-on: ubuntu-24.04
+    permissions: {contents: read}
+    container: quay.io/pypa/manylinux_2_28_x86_64@sha256:0000000000000000000000000000000000000000000000000000000000000000
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with: {ref: "${{ needs.resolve.outputs.sha }}"}
+      - run: python3 -m pip install maturin==1.9.6
+  draft:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions: {contents: write}
+    steps:
+      - run: gh release create "$TAG" --draft
+        env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}
+  pypi:
+    needs: draft
+    if: inputs.mode == 'release' && vars.RELEASE_ARMED == 'true'
+    runs-on: ubuntu-24.04
+    environment: release
+    permissions: {id-token: write}
+    steps:
+      - run: echo publish
+"""
+
+
+def self_test():
+    real = check(REPO / ".github/workflows")
+    cases = [
+        ("real", None, None, []),
+        ("release-ok", "release.yml", lambda t: t, []),
+        ("push", "pages.yml", lambda t: t.replace("  workflow_dispatch:", "  push:\n  workflow_dispatch:"),
+         ["pages.yml: starts on `push`; only workflow_dispatch may start a workflow"]),
+        ("tag-pin", "pages.yml", lambda t: re.sub(r"actions/checkout@[0-9a-f]{40}", "actions/checkout@v4", t),
+         ["pages.yml: job build uses actions/checkout@v4, which is not pinned to a commit"]),
+        ("image", "release.yml", lambda t: re.sub(r"@sha256:0+", "", t),
+         ["release.yml: image quay.io/pypa/manylinux_2_28_x86_64 carries no digest"]),
+        ("expand", "release.yml", lambda t: t.replace('echo publish', 'echo "${{ inputs.mode }}"'),
+         ["release.yml: job pypi expands an input or event value inside run; pass it through env"]),
+        ("gate-tools", "gate.yml", lambda t: t.replace("cargo-public-api", "cargo-other"),
+         ["gate.yml: no step installs cargo-public-api from the pins in sdlc/scripts/install"]),
+        ("cache", "release.yml", lambda t: t.replace("      - run: python3 -m pip install maturin==1.9.6",
+                                                      "      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25\n"
+                                                      "      - run: python3 -m pip install maturin==1.9.6"),
+         ["release.yml: job build uses a cache"]),
+        ("write", "release.yml", lambda t: t.replace("    permissions: {contents: read}\n    container",
+                                                      "    permissions: {contents: write}\n    container"),
+         ["release.yml: job build holds contents: write; only draft and publish may"]),
+        ("environment", "release.yml", lambda t: t.replace("    environment: release\n", ""),
+         ["release.yml: job pypi holds id-token or a secret outside environment release"]),
+        ("armed", "release.yml", lambda t: t.replace(" && vars.RELEASE_ARMED == 'true'", ""),
+         ["release.yml: job pypi runs in environment release without the RELEASE_ARMED condition"]),
+        ("checkout", "release.yml", lambda t: t.replace('{ref: "${{ needs.resolve.outputs.sha }}"}', '{ref: main}'),
+         ["release.yml: job build checks out main, not the resolved SHA"]),
+        ("top", "release.yml", lambda t: t.replace("permissions: {}\n", "permissions: {contents: read}\n"),
+         ["release.yml: top-level permissions must be {}"]),
+        ("maturin", "release.yml", lambda t: t.replace("maturin==1.9.6", "maturin"),
+         ["release.yml: job build installs maturin with no version"]),
+    ]
+    bad = 0
+    for name, file, plant, expected in cases:
+        if file is None:
+            got = real
+        else:
+            with tempfile.TemporaryDirectory() as tmp:
+                folder = pathlib.Path(tmp)
+                for path in (REPO / ".github/workflows").glob("*.y*ml"):
+                    (folder / path.name).write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
+                source = RELEASE if file == "release.yml" and not (folder / file).exists() else (folder / file).read_text()
+                (folder / file).write_text(plant(source), encoding="utf-8")
+                got = check(folder)
+        if got != expected:
+            bad += 1
+            print(f"workflows self-test {name}: expected {expected}, got {got}", file=sys.stderr)
+    print(f"workflows self-test: {len(cases) - bad}/{len(cases)} cases hold")
+    return 1 if bad else 0
+
+
+def main(argv):
+    if argv == ["--self-test"]:
+        return self_test()
+    out = check(REPO / ".github/workflows")
+    print("\n".join(out) if out else "workflows: every workflow runs by hand from pinned code", file=sys.stderr if out else sys.stdout)
+    return 1 if out else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

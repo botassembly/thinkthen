@@ -11,7 +11,7 @@ The 2026-09-19 draft bound the pure core into each language and left the sending
 
 ### 1. Three layers in one crate
 
-One crate named `thinkthen` holds three layers. Nothing named `thinkthen-core` or `thinkthen-cli` is ever published. The pure core remains a module path inside the crate, and the purity lint holds over that path as it does today. The command sits behind a default `cli` feature, so a library user never compiles the argument parser.
+One crate named `thinkthen` holds three layers. Nothing named `thinkthen-core` or `thinkthen-cli` is ever published. The pure core remains a module path inside the crate, and the purity lint holds over that path as it does today. The command sits behind a default `cli` feature, so a library user never compiles the argument parser. Amended 2026-09-25 (ticket 0130, under Ian's ruling of that day): a second optional feature, `polars`, off by default, carries the Rust Polars door, so only a user who asks for it compiles Polars.
 
 | Layer | Holds | May touch |
 | --- | --- | --- |

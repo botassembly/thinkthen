@@ -25,7 +25,7 @@ The extension needs SQLite 3.50.0 or newer. Below 3.50.0 a CHECK constraint in a
 | `thinkthen_recognize(text, kinds)` | a table of `name, kind, start, end, strength` |
 | `thinkthen_relate(table, id, name, kind, rule, …)` | a table of `relation, source, target, probability` |
 
-A question is plain text for a decide question, JSON text starting with `{`, or `'@name'` for a question file. A question set for `thinkthen_annotate` takes the same three forms. A banded decide question goes to `thinkthen_decide` and `thinkthen_details` only. `thinkthen_warm` takes decide questions only.
+A question is plain text for a decide question, JSON text starting with `{`, or `'@name'` for a question file. A question set for `thinkthen_annotate` takes the same three forms. A banded decide question goes to `thinkthen_decide`, `thinkthen_details`, and `thinkthen_warm` only. `thinkthen_warm` takes decide questions only, and ignores a band, so it fills the answers decide reads with the same question.
 
 A NULL text answers NULL and sends nothing. A BLOB, a number, text holding a NUL byte, or text that is not UTF-8 raises `usage` before any send.
 
@@ -66,4 +66,4 @@ Answers go to the engine's disk cache and outlive the process. A warm pass fills
 
 `setup.sh` puts the SQLite 3.50.0 amalgamation under `~/.cache/thinkthen-toolchains/` once. It copies from a folder you name, or fetches the zip from sqlite.org, and checks the two hashes in `amalgamation.sha256`. `tests/host_sqlite.sh` builds the host library and CLI from it. `check.sh` never fetches. Without the toolchain it reports "not run" and exits 77.
 
-`check.sh` runs the formatter, Clippy, and the unit tests, builds the release library with the home path remapped, and checks one exported symbol and one panic guard. It then runs each Python test under `timeout 300`. Every test child starts its own loopback backend and its own cache, configuration, and usage folders, with the caller's key removed. `tests/conformance.py` runs every shared case in its own child and reports each as pass, FAIL, or not run with its reason.
+`check.sh` runs the formatter, Clippy, and the unit tests, builds the release library with the home path remapped, and checks one exported symbol and one panic guard. It then runs each Python test under a 300-second limit from `sdlc/scripts/time-limit`. Every test child starts its own loopback backend and its own cache, configuration, and usage folders, with the caller's key removed. `tests/conformance.py` runs every shared case in its own child and reports each as pass, FAIL, or not run with its reason.

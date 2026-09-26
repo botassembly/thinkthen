@@ -62,29 +62,7 @@ impl Caller {
         if let Some(text) = self.read.get(path) {
             return Ok(text.clone());
         }
-        let text = match self.files.read(path) {
-            Opened::Text(text) => text,
-            Opened::Missing => {
-                return Err(local(&format!(
-                    "the {what} {path} was not read: it does not exist or could not be opened"
-                )));
-            }
-            Opened::TooLarge => {
-                return Err(local(&format!(
-                    "the {what} {path} was not read: it holds more than 1 MiB"
-                )));
-            }
-            Opened::NotText => {
-                return Err(local(&format!(
-                    "the {what} {path} was not read: it is not UTF-8 text"
-                )));
-            }
-            Opened::Refused => {
-                return Err(local(&format!(
-                    "the {what} {path} was not read: this database's file settings refuse it"
-                )));
-            }
-        };
+        let text = read_named(&self.files, path, what)?;
         self.read.insert(path.to_owned(), text.clone());
         Ok(text)
     }
@@ -123,6 +101,18 @@ impl Caller {
             Recognize::from_json(argument).map_err(|error| failure(&error))
         }
     }
+}
+
+/// One `@file` text read through `files`, named `what` in its refusals.
+pub(crate) fn read_named(files: &Files, path: &str, what: &str) -> Result<String, String> {
+    let why = match files.read(path) {
+        Opened::Text(text) => return Ok(text),
+        Opened::Missing => "it does not exist or could not be opened",
+        Opened::TooLarge => "it holds more than 1 MiB",
+        Opened::NotText => "it is not UTF-8 text",
+        Opened::Refused => "this database's file settings refuse it",
+    };
+    Err(local(&format!("the {what} {path} was not read: {why}")))
 }
 
 /// A question written in the call: JSON, or plain text as a decide under

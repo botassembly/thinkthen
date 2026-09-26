@@ -58,7 +58,7 @@ runtime_install() {
 	cp "$1"/usr/share/postgresql/16/extension/thinkthen* .runtime/tree/usr/share/postgresql/16/extension/
 	cp "$1"/usr/lib/postgresql/16/lib/thinkthen.so .runtime/tree/usr/lib/postgresql/16/lib/
 	BIN=$(pwd)/.runtime/tree/usr/lib/postgresql/16/bin
-	timeout 60 "$BIN/initdb" -D "$DATA" --auth=trust -U postgres >"$RUN/initdb.log" 2>&1
+	sh "$LIMIT" 60 "$BIN/initdb" -D "$DATA" --auth=trust -U postgres >"$RUN/initdb.log" 2>&1
 	printf "listen_addresses = ''\nunix_socket_directories = '%s'\n" "$SOCK" >>"$DATA/postgresql.conf"
 	cp "$DATA/postgresql.conf" "$RUN/postgresql.conf.base"
 }
@@ -80,14 +80,14 @@ pg_start() {
 	[ "$(url_host "$url")" = 127.0.0.1 ] || { echo "refused: $url is not loopback" >&2; return 2; }
 	env -u THINKTHEN_API_KEY THINKTHEN_API_KEY=$FAKE_KEY THINKTHEN_BASE_URL="$url" THINKTHEN_CACHE="$cache" \
 		HOME="$SCRATCH" XDG_CACHE_HOME="$SCRATCH/.cache" XDG_CONFIG_HOME="$SCRATCH/.config" \
-		timeout 30 "$BIN/pg_ctl" -D "$DATA" -l "$LOG" -w -t 10 start >/dev/null || return 1
+		sh "$LIMIT" 30 "$BIN/pg_ctl" -D "$DATA" -l "$LOG" -w -t 10 start >/dev/null || return 1
 	key=$(tr '\0' '\n' <"/proc/$(head -1 "$DATA/postmaster.pid")/environ" | sed -n 's/^THINKTHEN_API_KEY=//p')
 	[ "$key" = "$FAKE_KEY" ] || { echo "the postmaster's key is not the loopback fake" >&2; return 1; }
 }
 
 pg_stop() {
 	[ -f "$DATA/postmaster.pid" ] || return 0
-	timeout 30 "$BIN/pg_ctl" -D "$DATA" -m fast -w stop >/dev/null 2>&1
+	sh "$LIMIT" 30 "$BIN/pg_ctl" -D "$DATA" -m fast -w stop >/dev/null 2>&1
 }
 
 # psql as a role (PGUSER_AS, postgres by default), one statement per -c.
@@ -95,7 +95,7 @@ pg_stop() {
 # Every output also lands in psql.all, which the check reads for the fake key.
 qs() {
 	local out code
-	out=$(timeout "${QTIMEOUT:-30}" psql -X -q -At -h "$SOCK" -U "${PGUSER_AS:-postgres}" -d postgres "$@" 2>&1)
+	out=$(sh "$LIMIT" "${QTIMEOUT:-30}" psql -X -q -At -h "$SOCK" -U "${PGUSER_AS:-postgres}" -d postgres "$@" 2>&1)
 	code=$?
 	printf '%s\n' "$out" | tee -a "$RUN/psql.all"
 	return "$code"
