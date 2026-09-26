@@ -32,7 +32,7 @@ const [first, ...rest] = page.title.split(' ');
   </figure>
   {page.idea.map((para) => <p>{parts(para).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>)}
 
-  {inputs.map((file) => <Code code={file.text} caption={`${file.name}, the file the commands read`} />)}
+  {inputs.map((file) => <Code code={file.text} caption={`${file.name}, the question set`} />)}
   {runs.map((run, i) => (
     <Fragment>
       {i === 0 && <h2>Run it</h2>}

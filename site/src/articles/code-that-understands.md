@@ -64,7 +64,7 @@ Three bug reports go in, one per line. Each keeps its id and gains the three ans
 
 Here's what I'd want to know before I trusted it.
 
-**Measure accuracy on your own data.** The number that matters comes from your own labeled cases. `thinkthen audit` grades saved answers against your labels at every threshold, and it sends no request.
+**Measure accuracy on your own data.** The number that matters comes from your own labeled cases. `thinkthen audit` grades saved answers against your labels.
 
 **Planted facts move the answer.** Text that orders the model to answer yes barely moves the probability. A planted false claim about the case can move it a lot. The tool reads a planted claim and a true one the same way. Both look like evidence to it. Use a band and send the middle to a person.
 

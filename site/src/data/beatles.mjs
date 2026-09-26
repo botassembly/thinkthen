@@ -183,7 +183,7 @@ const ARTICLES = {
     files: ["annotate-cold-card.json"],
     see: {
       '1-card': "At 0.8, Octopus's Garden leaves the album and the year not sure.",
-      '2-bar': "At 0.5, every field fills.",
+      '2-bar': "`jq` sets every bar to 0.5. At 0.5, every field fills.",
     },
     headings: { '2-bar': "Change the bar" },
     lesson: "At 0.5, Octopus's Garden gains White Album and 1968. Both are wrong. The song came out on Abbey Road in 1969.",
@@ -243,7 +243,7 @@ const ARTICLES = {
 
   diff: {
     title: "diff shows what changed.",
-    goal: "diff lists the answers that changed between two runs and says which changes fixed a mistake.",
+    goal: "diff counts the answers that changed between two runs, and how many turned right or wrong.",
     idea: [
       "Ask the same question twice and `diff` lists every answer that changed. With an answer key, it says whether each change fixed a mistake or made one.",
       "Here the first run asks about 70 song titles from memory. The second gives Jev each song's catalog entry too. The `jq` lines key both runs by song title. The warning is right: the two runs asked different questions.",
@@ -254,7 +254,7 @@ const ARTICLES = {
     },
     headings: { '2-band': "Change the bar" },
     lesson: "The band reads the middle as not sure. From memory, only 20 answers clear it and are right. With context, 68 do, and none went wrong.",
-    takeaway: "diff shows which answers a change fixed and which it broke.",
+    takeaway: "diff counts what a change fixed and what it broke.",
     link: tree('diff'),
   },
 

@@ -5,7 +5,7 @@ import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
 import Code from '../../components/Code.astro';
 import InstallLine from '../../components/InstallLine.astro';
-import { SURFACES, KEY_VARIABLE, HOWTOS, FUNCTIONS } from '../../data/catalog.mjs';
+import { SURFACES, HOWTOS, FUNCTIONS } from '../../data/catalog.mjs';
 import { captioned, files } from '../../data/samples.mjs';
 
 const shell = SURFACES.find((s) => s.slug === 'shell');
@@ -34,7 +34,7 @@ const triageForm = files(triagePage)[0];
   <h2>1. Install it</h2>
   <InstallLine line={shell.install[0][0]} caption="The download script" />
   <InstallLine line={shell.install[1][0]} caption="Homebrew, an option on a Mac" />
-  <p>Set <code>{KEY_VARIABLE}</code> in the environment. <code>--dry-run</code> shows what a command would send and needs no key. The <a href="/install/">install page</a> covers every language and database.</p>
+  <p>The <a href="/install/">install page</a> covers the key and every language and database.</p>
 
   <h2>2. Ask one question</h2>
   <p>Name the question, pipe the message in, and pass the question as an argument. <code>decide</code> prints <code>true</code>, <code>false</code>, or <code>null</code>, and it sets the exit code to match.</p>

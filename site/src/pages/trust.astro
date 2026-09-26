@@ -16,9 +16,9 @@ const audit = run('beatles/audit', '1-default');
   <p class="lede">Every answer comes with the model's probability. You set the bar, and you count the misses on your own records.</p>
 
   <h2>Grade it on your own records</h2>
-  <p>Take records you have already labeled. Run the question over them with <code>--details</code> and save the answers. Put your labels in a key file, one per record. <code>thinkthen audit</code> grades the saved answers against the key at every bar and suggests the bar that gets the most right. It sends no request.</p>
+  <p>Take records you have already labeled. Run the question over them with <code>--details</code> and save the answers. Put your labels in a key file, one per record. <code>thinkthen audit</code> grades the saved answers against the key.</p>
   <Terminal run={audit} caption={`Jev was asked whether each song is on Abbey Road. ${auditPage.see['1-default']}`} />
-  <p><a href={auditPage.route}>{auditPage.title}</a> runs the same records at the suggested bar.</p>
+  <p>The <a href={auditPage.route}>audit page</a> runs the same records at the suggested bar.</p>
   <p>Only a number from your own records tells you how it does on your work.</p>
 
   <h2>The threshold is yours</h2>

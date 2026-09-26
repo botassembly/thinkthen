@@ -144,7 +144,7 @@ const COUNTS = [
     ))}
   </table>
   <p><code>--jobs N</code> sets the throttle. The throttle is the most requests in flight at once. The flag is not global. It runs from 1 to 32, defaults to 4, and it belongs to record mode. <code>annotate</code> also accepts it on one document. Every other function refuses it outside record mode.</p>
-  <p>The vendor documents a limit of 1,200 requests a minute. On short records, the default of 4 can pass it. Set <code>--jobs 3</code> to stay under it.</p>
+  <p>On short records, the default of 4 can pass the vendor's rate limit. Set <code>--jobs 3</code> to stay under it.</p>
   <p>Function-only flags: <code>--threshold</code>, <code>--true TEXT</code> and <code>--false TEXT</code> (<code>decide</code>, <code>filter</code>, <code>rank</code>), <code>--quiet</code> (<code>decide</code> and <code>choose</code>, one document only, and a usage error beside <code>--details</code>), <code>--raw</code> (<code>choose</code> only, refused under CSV and TSV), <code>--option LABEL=DESCRIPTION</code>, <code>--label LABEL=DESCRIPTION</code>, <code>--options POINTER</code> (<code>choose</code>, and it needs <code>--jsonl</code>), <code>--top N</code> (<code>rank</code>, a whole number of 1 or more), <code>--none</code> (<code>find</code>).</p>
 
   <h2>Framing a stream</h2>
