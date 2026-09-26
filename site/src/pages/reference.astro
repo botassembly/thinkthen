@@ -144,7 +144,7 @@ const COUNTS = [
     ))}
   </table>
   <p><code>--jobs N</code> sets the throttle. The throttle is the most requests in flight at once. The flag is not global. It runs from 1 to 32, defaults to 4, and it belongs to record mode. <code>annotate</code> also accepts it on one document, and <code>relate</code> on its one set of names. Every other function refuses it outside record mode.</p>
-  <p>The vendor documents a limit of 1,200 requests a minute. On short records, the default of 4 can pass that limit. Set <code>--jobs 3</code> to stay under it.</p>
+  <p>The vendor documents a limit of 1,200 requests a minute. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/records.md">records specification</a> holds the measured rates. On short records, the default of 4 can pass that limit. Set <code>--jobs 3</code> to stay under it.</p>
   <p>Function-only flags: <code>--threshold</code>, <code>--true TEXT</code> and <code>--false TEXT</code> (<code>decide</code>, <code>filter</code>, <code>rank</code>), <code>--quiet</code> (<code>decide</code> and <code>choose</code>, one document only, and a usage error beside <code>--details</code>), <code>--raw</code> (<code>choose</code> only, refused under CSV and TSV), <code>--option LABEL=DESCRIPTION</code>, <code>--label LABEL=DESCRIPTION</code>, <code>--options POINTER</code> (<code>choose</code>, and it needs <code>--jsonl</code>), <code>--top N</code> (<code>rank</code>, a whole number of 1 or more), <code>--none</code> (<code>find</code>).</p>
 
   <h2>Framing a stream</h2>
@@ -176,7 +176,7 @@ const COUNTS = [
   <p>A record is capped at 16 MiB of encoded bytes. <code>find</code> reads at most 16 MiB of input in all. Invalid UTF-8 in a record is exit 5. An empty document is a usage error. An empty line or JSONL stream exits 0 with no output and no request.</p>
 
   <h2>Limits</h2>
-  <p>One whole request carries at most about 64,000 tokens, the questions included. The evidence in one request must fit in about 32,000 tokens. The vendor published both numbers on 2026-09-19 for its hosted service. They belong to the backend and not to the tool.</p>
+  <p>One whole request carries at most about 64,000 tokens, the questions included. The evidence in one request must fit in about 32,000 tokens. The vendor published both numbers on 2026-09-19 for its hosted service. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/records.md">records specification</a> lists them. They belong to the backend and not to the tool.</p>
   <p>Evidence past the token limit is refused and the command exits 4. Under <code>annotate</code> the questions and the evidence count together. A long question set can pass the limit on evidence that fits on its own. Fewer questions per file is the answer.</p>
 
   <h2>What one row looks like</h2>

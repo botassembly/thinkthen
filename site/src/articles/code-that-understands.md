@@ -68,7 +68,7 @@ Here's what I'd want to know before I trusted it.
 
 **Planted facts move the answer.** A live run judged twenty made-up messages, once clean and once with hostile text added. A command aimed at the model moved the probability of yes by 0.04 or less, in seventeen wordings. A false claim planted about the case moved it by as much as 0.57. The [decide specification](https://github.com/botassembly/thinkthen/blob/main/specification/decide.md) records the run. The tool reads a planted claim and a true one the same way. Both look like evidence to it. Use a band and send the middle to a person.
 
-**`tag` scores lowest on Beatles Bench.** A song can have two lead singers, and `tag` must name every one to score. It names the whole set on 0.29 of songs. Its top label is a true lead on 0.75. The [bench page](/learn/beatles-bench/what-jev-knows/) scores every function. Use `tag` for a queue a person reads. Don't use it as a gate.
+**`tag` has the lowest strict score on Beatles Bench.** A song can have two lead singers, and `tag` must name every one to score. It names the whole set on 0.29 of songs. Its top label is a true lead on 0.75. The [bench page](/learn/beatles-bench/what-jev-knows/) shows the table of every function. Use `tag` for a queue a person reads. Don't use it as a gate.
 
 **The tool speaks one interface.** It sends TypeSafe's System One requests. Any server with that interface can answer at another address, and some of its answers will differ. A threshold tuned on one model doesn't carry to another.
 

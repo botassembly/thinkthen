@@ -508,7 +508,7 @@ export const SURFACES = [
     install: [['CREATE EXTENSION thinkthen;', null]],
     particular: [
       'A question file carries a band. The not-sure rows come back NULL, and a person reads them.',
-      'pg_cancel_backend and statement_timeout stop a call within 50 ms. A request already sent still completes and is billed.',
+      'pg_cancel_backend and statement_timeout stop a call. A request already sent still completes and is billed.',
     ],
   },
 ];
