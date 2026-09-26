@@ -164,7 +164,7 @@ Overlap with other tickets:
 - Ticket 0147 opens ADR 0040 and `backends.md`, and its ADR 0050 names one recognize piece "at an address with no ceiling and no profile". After 0154 that case no longer exists. 0154 edits ADR 0040 only after 0147 lands, and leaves `backends.md` line 17 to 0147. 0147 also opens `recognize.md` and `relate.md`. 0154 adds one sentence to each after 0147 lands.
 - Ticket 0148 opens `settings.md`. 0154 adds a new row and touches the profile row after 0148 lands.
 - Ticket 0153 opens `cli/args.rs`. Both build after 0146. Whichever builds second merges the other's `args.rs` lines.
-- Ticket 0155, retries and backoff, opens `engine/http.rs`, `cli/args.rs`, `backends.md` and `settings.md`. 0154 does not edit `engine/http.rs`. The two tickets touch different rows of the same pages. 0155's ticket sets the order between them.
+- Ticket 0155, retries and backoff, opens `cli/args.rs`, `backends.md`, `settings.md` and ADR 0048 item 10. The two tickets touch different lines of each. 0155 builds after 0146 and 0148 and before B5, so it lands before 0154, and 0154 merges it.
 
 ## Edge cases
 
@@ -283,7 +283,7 @@ Contract 2; state and timing 1; reach 2; proof 2; cost of error 1; total 8. Fina
 
 ## Deferred gaps
 
-1. The request-size follow-up: `EngineBuilder::max_request_bytes`, `THINKTHEN_MAX_REQUEST_BYTES` in `from_env`, one row in ticket 0148's binding table per surface, one case in `conformance/settings.json`, and the SQL spellings by ticket 0149's rules. It builds after 0148 and 0149. Until then the libraries apply 96,000 at every address.
+1. The library settings follow-up: `EngineBuilder::max_request_bytes`, `THINKTHEN_MAX_REQUEST_BYTES` in `from_env`, one row in ticket 0148's binding table per surface, one case in `conformance/settings.json`, and the SQL spellings by ticket 0149's rules. It also carries ticket 0155's `Counters::retries()` to Rust and every binding. It builds after 0148 and 0149. Until then the libraries apply 96,000 at every address.
 2. Whether the hosted backend bills a refused request is unmeasured. ADR 0051 counts the refused attempt and claims no cost.
 3. A cached rerun resends the refused whole batch once before its halves answer from the cache. A recorded refusal could skip that request. It waits until a run shows that the cost matters.
 4. A relation chunk refused as too large still fails at exit 4. The default size makes that rare.
