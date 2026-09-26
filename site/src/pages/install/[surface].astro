@@ -1,12 +1,11 @@
 ---
-// Goal: show one surface's install line, a first call, and how each
-// function reads there.
+// Goal: show one surface's install line and a first call, and say what is
+// different there.
 import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
 import Code from '../../components/Code.astro';
-import { SURFACES, CODE_FUNCTIONS, FUNCTIONS, KEY_VARIABLE } from '../../data/catalog.mjs';
-import { captioned, firstCall, sample } from '../../data/samples.mjs';
-import { beatlesPageFor } from '../../data/beatles.mjs';
+import { SURFACES, FUNCTIONS, KEY_VARIABLE } from '../../data/catalog.mjs';
+import { captioned, firstCall } from '../../data/samples.mjs';
 
 export function getStaticPaths() {
   return SURFACES.map((s) => ({ params: { surface: s.slug }, props: { surface: s } }));
@@ -16,30 +15,17 @@ const { surface } = Astro.props;
 const shell = surface.slug === 'shell';
 const notes = surface.install.some(([, note]) => note);
 const first = shell ? null : firstCall(surface.slug);
-const questionFile = FUNCTIONS.find((f) => f.notAFunction);
-// On the command line, each function shows its first example, or points to
-// its Beatles Bench page. Elsewhere it shows its library sample.
-const sections = [...CODE_FUNCTIONS, questionFile].map((fn) => {
-  if (shell) {
-    const run = captioned(`functions/${fn.name}`, fn.see, true)[0];
-    if (run) return { fn, kind: 'run', run };
-    return beatlesPageFor(fn.name) ? { fn, kind: 'bench' } : { fn, kind: null };
-  }
-  const found = sample(fn.name, surface.slug);
-  if (!found) return { fn, kind: null };
-  return { fn, kind: 'code', code: found };
-});
-const carried = sections.filter((s) => s.kind);
-const missing = sections.filter((s) => !s.kind);
 const decideOne = shell ? captioned('functions/decide', FUNCTIONS[0].see).find((r) => r.name === '3-one') : null;
 const headline = shell
   ? `A ${surface.name} command that answers questions about text`
   : `${surface.name} functions that answer questions about text`;
+// Copy marks code with backticks.
+const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, part }));
 ---
 <Base title={surface.name} description={surface.blurb.replace(/`/g, '')}>
   <div class="eyebrow"><a href="/install/">Install</a></div>
   <h1>{headline}</h1>
-  <p class="lede">{surface.blurb.split('`').map((part, i) => (i % 2 ? <code>{part}</code> : part))}</p>
+  <p class="lede">{parts(surface.blurb).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
 
   <h2>Install</h2>
   <table>
@@ -48,7 +34,7 @@ const headline = shell
       <tr><td><code>{line}</code></td>{notes && <td>{note || ''}</td>}</tr>
     ))}
   </table>
-  <p>Set <code>{KEY_VARIABLE}</code> in the environment. ThinkThen never reads a key from a file or a flag.</p>
+  <p>Set <code>{KEY_VARIABLE}</code> in the environment.</p>
 
   <h2>A first call</h2>
   {first ? (
@@ -59,24 +45,8 @@ const headline = shell
   ) : (
     <Terminal run={decideOne} caption={decideOne.see} />
   )}
-  <p>Not sure comes back as <code>{surface.unsureWord}</code>. Branch on it and send those cases to a person.</p>
-
-  <h2>Each function in {surface.name}</h2>
-  {carried.map((s) => (
-    <section>
-      <h3><a href={`/functions/${s.fn.name}/`}><code>{s.fn.title || s.fn.name}</code></a>: {s.fn.line.charAt(0).toLowerCase() + s.fn.line.slice(1)}</h3>
-      {s.kind === 'bench' && <p>See it run on <a href={beatlesPageFor(s.fn.name).route}>Beatles Bench</a>.</p>}
-      {s.kind === 'run' && <Terminal run={s.run} caption={s.run.see} />}
-      {s.kind === 'code' && <Code code={s.code.code} />}
-      {s.kind === 'code' && s.code.output && <Code code={s.code.output} caption={`What ${surface.name} printed`} copy={false} />}
-    </section>
-  ))}
-  {missing.length > 0 && (
-    <p>No {surface.name} sample for {missing.map(({ fn }, i) => (
-      <>{i > 0 ? ', ' : ''}<a href={`/functions/${fn.name}/`}><code>{fn.title || fn.name}</code></a></>
-    ))}.</p>
-  )}
+  <p>Not sure comes back as <code>{surface.unsureWord}</code>. Branch on it and send those cases to a person. Each <a href="/functions/">function page</a> shows its {surface.name} call.</p>
 
   <h2>What is different in {surface.name}</h2>
-  <ul>{surface.particular.map((p) => <li>{p}</li>)}</ul>
+  <ul>{surface.particular.map((p) => <li>{parts(p).map((x) => x.code ? <code>{x.part}</code> : x.part)}</li>)}</ul>
 </Base>

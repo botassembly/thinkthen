@@ -381,10 +381,10 @@ export const SURFACES = [
       ['brew install botassembly/thinkthen/thinkthen', 'Homebrew, an option on a Mac.'],
     ],
     particular: [
-      'Standard in carries the evidence. Standard out carries the answer, and nothing else.',
-      'The exit code is the answer for a single piece of evidence, so `if` and `case` read it directly.',
-      'Requests run four wide by default and up to 32 with --jobs.',
-      '--dry-run prints the plan and needs no key.',
+      'Standard input carries the evidence. Standard output carries the answer and nothing else.',
+      'On one piece of evidence, the exit code is the answer. `if` and `case` read it directly.',
+      '`--jobs` sets how many requests run at once.',
+      '`--dry-run` prints the plan and needs no key.',
     ],
   },
   {
@@ -394,8 +394,8 @@ export const SURFACES = [
     unsureWord: 'None',
     install: [['pip install thinkthen', null], ['uv add thinkthen', null]],
     particular: [
-      'A list goes in and a list comes out. It crosses into the engine once and runs 32 wide.',
-      'A question built with tt.question() carries its own threshold, so one object serves the hook, the test, and the pipeline.',
+      'A list goes in and a list comes out. The list crosses into the engine once.',
+      '`tt.question()` builds a question that carries its own threshold. Reuse it wherever you ask.',
     ],
   },
   {
@@ -406,7 +406,7 @@ export const SURFACES = [
     install: [['pip install thinkthen[polars]', null]],
     particular: [
       'Rust reads the column where it sits. There is no copy and no Python loop.',
-      'Hand over a whole frame with on= and it comes back with one new column for each question in the form.',
+      '`on=` names the column the questions read.',
     ],
   },
   {
@@ -436,7 +436,7 @@ export const SURFACES = [
     install: [['install.packages("thinkthen")', null]],
     particular: [
       'A column goes in and a column comes out.',
-      'filter() drops the NA rows, so a not-sure answer leaves the pipeline on its own.',
+      'dplyr\'s `filter()` drops NA rows. A not-sure answer leaves the pipeline on its own.',
     ],
   },
   {
@@ -446,7 +446,6 @@ export const SURFACES = [
     unsureWord: 'Answer::Unsure',
     install: [['cargo add thinkthen', null]],
     particular: [
-      'Answer::Unsure is an arm the compiler makes you handle.',
       'Calls block. No async runtime comes with it.',
     ],
   },
@@ -457,7 +456,7 @@ export const SURFACES = [
     unsureWord: 'an outcome of THINKTHEN_UNSURE',
     install: [['thinkthen.h + libthinkthen', 'One archive per platform, with the header, both libraries, and a .pc file.']],
     particular: [
-      'Every call returns 0 or one of six error kinds.',
+      'Every call returns 0 or an error kind.',
       'The answer lands in a struct: the outcome and its probability.',
     ],
   },
@@ -476,8 +475,7 @@ export const SURFACES = [
     unsureWord: 'NULL',
     install: [['.load ./thinkthen', null]],
     particular: [
-      'SQLite asks row by row, so thinkthen_warm judges the table in one pass, 32 requests at a time.',
-      'Every query after that reads the saved answers at no further cost.',
+      'SQLite calls a function one row at a time. `thinkthen_warm` answers the whole table in one pass first.',
     ],
   },
   {
@@ -487,7 +485,7 @@ export const SURFACES = [
     unsureWord: 'NULL',
     install: [['CREATE EXTENSION thinkthen;', null]],
     particular: [
-      'A question file carries a band, so the not-sure rows are the ones a person should read.',
+      'A question file carries a band. The not-sure rows come back NULL, and a person reads them.',
       'pg_cancel_backend and statement_timeout stop a query and its bill.',
     ],
   },

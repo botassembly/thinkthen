@@ -15,12 +15,12 @@ const tables = [['Languages', 'Language', languages], ['Databases', 'Database', 
 ---
 <Base title="Install" description="Install ThinkThen for the command line, each language, and each database, and point it at a backend.">
   <h1>Install</h1>
-  <p class="lede">ThinkThen runs from the command line, from seven languages and libraries, and from three databases. Every one asks the same ten questions.</p>
+  <p class="lede">ThinkThen runs from the command line, from your language, and from your database.</p>
 
   <h2><a href="/install/shell/">The command line</a></h2>
   <InstallLine line={shell.install[0][0]} caption="The download script" />
   <InstallLine line={shell.install[1][0]} caption="Homebrew, an option on a Mac" />
-  <p>Set <code>{KEY_VARIABLE}</code> in the environment. No flag and no file carries a key. <code>--dry-run</code> shows what a command would send and needs no key.</p>
+  <p>Set <code>{KEY_VARIABLE}</code> in the environment. <code>--dry-run</code> needs no key.</p>
 
   {tables.map(([heading, what, list]) => (
     <Fragment>
@@ -39,5 +39,5 @@ const tables = [['Languages', 'Language', languages], ['Databases', 'Database', 
   ))}
 
   <h2><a href="/install/backends/">Backends</a></h2>
-  <p>ThinkThen asks Jev, a model from TypeSafe, by default. Point it at any server with the same interface with <code>--url</code> or <code>THINKTHEN_BASE_URL</code>. The <a href="/install/backends/">backends page</a> covers the model, the key, saved answers, and usage counts.</p>
+  <p>ThinkThen asks Jev, a model from TypeSafe. The <a href="/install/backends/">backends page</a> says how to point it at another server.</p>
 </Base>
