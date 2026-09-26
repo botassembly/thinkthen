@@ -47,7 +47,7 @@ printf '%s\n' '[source.crates-io]' 'replace-with = "vendored-sources"' '' \
   '[source.vendored-sources]' 'directory = "vendor/registry"' >"$PKG/src/rust/.cargo/config.toml"
 test -f "$PKG/R/extendr-wrappers.R"
 
-# Packed straight from the stage: R CMD build strips dotfiles that cargo's
+# Packed straight from the stage: R CMD build strips hidden files that cargo's
 # vendored checksums name.
 version=$(sed -n 's/^Version: *//p' "$PKG/DESCRIPTION")
 tarball="$OUT/thinkthen_$version.tar.gz"

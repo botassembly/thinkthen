@@ -35,7 +35,7 @@ Every surface and every function reads as a finished part of ThinkThen 0.1. A pa
 
 ### The fix
 
-Drop the `status` and `release` fields from `SURFACES` in `catalog.mjs`, and drop `preview` from recognize and relate. Remove the badge, caption, and gate lines above. Delete lines that exist only to stage something, such as "Not here yet" and "No sample yet". Keep `run` as the only cell status once item 5 lands, and make `pull-examples.mjs` fail on a missing cell in place of writing `planned` or `preview`. The mktg repo's `scripts/check-no-staging.py` patterns can become a site check.
+Drop the `status` and `release` fields from `SURFACES` in `catalog.mjs`, and drop `preview` from recognize and relate. Remove the badge, caption, and gate lines above. Delete lines that exist only to stage something, such as "Not here yet" and "No sample yet". Keep `run` as the only cell status once item 5 lands, and make `pull-examples.mjs` fail on a missing cell in place of writing `planned` or `preview`. The marketing repository's `scripts/check-no-staging.py` patterns can become a site check.
 
 Done when: no built page shows preview, planned, beta, ships first, not run yet, at launch, works today, comes with a release, or not shipped, and a site check fails on any of them.
 
@@ -164,7 +164,7 @@ Items 1, 2, 3, 4, and 7 can go now. Item 5 can repoint the pull script now for e
 
 ## Already fixed
 
-- The deck-side sample mismatches in the 2026-09-22 branch-API issue: Rust's `decide` chain, `Recognize::kinds`, the false key comment, undefined Rust, Ruby, Python, and TypeScript variables, the PostgreSQL `@form.json` spelling, the C free call and unchecked `rc`, the DuckDB subquery and `INSTALL` lines. mktg `6394261` fixed them in the deck, and site `741816f` pulled them in.
+- The deck-side sample mismatches in the 2026-09-22 branch-API issue: Rust's `decide` chain, `Recognize::kinds`, the false key comment, undefined Rust, Ruby, Python, and TypeScript variables, the PostgreSQL `@form.json` spelling, the C free call and unchecked `rc`, the DuckDB subquery and `INSTALL` lines. Marketing commit `6394261` fixed them in the deck, and site `741816f` pulled them in.
 - The stand-in engine that sent no key. No `standin/` directory remains on main. Every landed surface binds the engine through the 0086 public API.
 - No live capture of `choose`, `score`, `tag`, and `annotate`. Experiment 231 captured each one, and every landed surface's check now runs its examples file against the loopback backend.
 - The stale Python and TypeScript slide tests. `libraries/python/tests/slide_sample.py` and `libraries/typescript/tests/slide.test.mjs` no longer exist. `examples.py` and `examples.test.mjs` replaced them.

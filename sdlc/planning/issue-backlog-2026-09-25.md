@@ -8,7 +8,7 @@ Written 2026-09-25 by Claude from the workspace, on Ian's request. It is for the
 - 40 were already done, replaced by later work, or reference pages. Each now carries a closing status line that names the ticket, commit, or later issue (c7cb79e2 and this commit).
 - Every closed issue moved to `sdlc/issues/closed/`. That is 139 files. Links outside `sdlc/records/` were rewritten. Sealed records keep their old paths.
 - The 66 open issues became 22. Seven merged issues replace 51 old files, and each item in them was checked again against main.
-- The marketing copy leftovers ("buckets" and an unsourced 3.6 cents) moved to the mktg repo as `sdlc/issues/2026-09-25-thinkthen-copy-leftovers-from-the-issue-sweep.md`.
+- The marketing copy leftovers ("buckets" and an unsourced 3.6 cents) moved to the marketing repository as `sdlc/issues/2026-09-25-thinkthen-copy-leftovers-from-the-issue-sweep.md`.
 - `sdlc/issues/README.md` now sets the rule: landing a ticket closes the issues it settles, in the landing commit. Most of the 40 stale files came from landings that never touched their issues.
 
 ## The 22 open issues, in order

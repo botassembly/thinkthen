@@ -8,7 +8,7 @@ Ian told the library team about `recognize` on 2026-09-21. He has since ruled th
 
 1. `sdlc/planning/recognize-design.md`: the command, the relation rule, the output object, and the call on all nine surfaces.
 2. `sdlc/planning/relate-design.md`: the same for `relate`.
-3. `repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/recognize-surfaces.md`: every call written out in each language and each database. This page is the acceptance test. Each call must run as written.
+3. The marketing repository's `decks/2026-09-21-thinkthen-semantic-commands/recognize-surfaces.md`: every call written out in each language and each database. This page is the acceptance test. Each call must run as written.
 4. The real outputs to test against: `experiments/222-recognize-demo/output.json`, `experiments/225-relate-demo/edges-0.5.jsonl`, and `experiments/226-graph-demo/arm/run.jsonl`.
 
 ## What is the same as the other eight
@@ -44,7 +44,7 @@ The surfaces team is cleared to start. The job is **two functions, `recognize` a
 Read in this order:
 
 1. `sdlc/planning/recognize-design.md` and `sdlc/planning/relate-design.md`. They rule what a user types and what comes back. Each now ends with a rulings section dated 2026-09-21.
-2. `repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/recognize-surfaces.md`. Every call written out for both functions. It is the acceptance test.
+2. The marketing repository's `decks/2026-09-21-thinkthen-semantic-commands/recognize-surfaces.md`. Every call written out for both functions. It is the acceptance test.
 3. `experiments/225-recognize-harvest-package/cases/`. Forty recorded cases in the ruled shape, and the `relate` set beside them. The stand-in answers from these. They become conformance cases for both functions.
 4. `sdlc/planning/build-team-response-to-handoff-2026-09-21.md`, section on public shapes. Follow its result shapes: the `requests` list, the failed marker, and the record that comes back with its answer.
 

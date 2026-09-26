@@ -10,9 +10,12 @@ mod wait;
 
 #[test]
 fn help_names_the_beta_complete_set_and_secrecy_contract() {
-    let output =
-        run::output(Command::new(env!("CARGO_BIN_EXE_thinkthen")).args(["relate", "--help"]))
-            .expect("binary runs");
+    let output = run::output(
+        Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+            .env_clear()
+            .args(["relate", "--help"]),
+    )
+    .expect("binary runs");
     assert_eq!(output.status.code(), Some(0));
     let help = String::from_utf8_lossy(&output.stdout);
     for required in [
