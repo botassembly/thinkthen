@@ -23,13 +23,14 @@ fn a_default_cache_that_fails_names_the_default_cache() {
     let listener =
         Listener::answering(|_| Canned::status(500, "unused")).expect("a loopback listener");
     let base = listener.base().to_owned();
-    let cases: [(&[&str], (&str, &str), &str); 3] = [
-        (&[], ("XDG_CACHE_HOME", root_text), DEFAULT),
-        (&["--jsonl"], ("XDG_CACHE_HOME", root_text), DEFAULT),
-        (&[], ("THINKTHEN_CACHE", named_text), NAMED),
+    let cases = [
+        (vec![], ("XDG_CACHE_HOME", root_text), DEFAULT),
+        (vec!["--jsonl"], ("XDG_CACHE_HOME", root_text), DEFAULT),
+        (vec![], ("THINKTHEN_CACHE", named_text), NAMED),
     ];
     for (options, folder, expected) in cases {
-        let arguments = [&["decide", "asks for a refund", "--url", &base], options].concat();
+        let mut arguments = vec!["decide", "asks for a refund", "--url", &base];
+        arguments.extend(&options);
         let output = spawn(
             &arguments,
             &[("THINKTHEN_API_KEY", "sk-test-value"), folder],
