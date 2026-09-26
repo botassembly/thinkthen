@@ -49,6 +49,10 @@ fn three_questions(name: &str) -> PathBuf {
     )
 }
 
+/// Canned replies follow arrival order. Tests that serve one reply per chunk
+/// send one chunk at a time so each chunk meets its own reply.
+const ONE_JOB: &[&str] = &["--jobs", "1"];
+
 fn run(
     set: &Path,
     profile: &Path,
@@ -117,7 +121,7 @@ fn exact_limits_keep_the_historical_body_and_one_unit_over_splits_longest_prefix
         &questions,
         &split,
         &split_listener,
-        &[],
+        ONE_JOB,
         &[("THINKTHEN_API_KEY", "key")],
     );
     assert_eq!(
@@ -160,7 +164,7 @@ fn question_and_option_limits_split_or_refuse_before_any_send() {
         &questions,
         &two,
         &listener,
-        &[],
+        ONE_JOB,
         &[("THINKTHEN_API_KEY", "key")],
     );
     assert_eq!(output.status.code(), Some(0));
@@ -318,7 +322,7 @@ fn partial_failures_keep_their_chunk_digest_and_missing_usage_removes_the_total(
         &questions,
         &two,
         &listener,
-        &[],
+        ONE_JOB,
         &[("THINKTHEN_API_KEY", "key")],
     );
     assert_eq!(output.status.code(), Some(6));
@@ -349,7 +353,7 @@ fn different_models_across_chunks_keep_the_safe_failure() {
         &questions,
         &two,
         &listener,
-        &[],
+        ONE_JOB,
         &[("THINKTHEN_API_KEY", "key")],
     );
     assert_eq!(output.status.code(), Some(4));
