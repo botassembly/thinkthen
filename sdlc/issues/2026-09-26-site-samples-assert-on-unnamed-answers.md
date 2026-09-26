@@ -1,6 +1,6 @@
 # Site samples assert on unnamed answers
 
-Status: Open.
+Status: Closed on branch `site/named-answers-deslop`. Every library and SQL sample names each answer, and `site/scripts/check-samples.mjs` holds the rule.
 
 Found 2026-09-26 while a talk deck brought its library panes in line with a new rule from Ian. Evidence below was read on main at `22f50ab0`.
 
@@ -31,3 +31,7 @@ Store each answer under a name for its meaning, then assert on that name. For th
 - Polars: `asks_refund = tt.decide(question, tickets["body"])`, then `assert asks_refund.to_list() == [True, False]`.
 
 A check in the site build can hold the rule. The deck's check fails on an assert or print whose statement holds a ThinkThen call, on a call whose answer goes into no variable, and on a generic answer name.
+
+## Resolution
+
+Every library sample stores each answer under a name for its meaning and asserts on that name. The refund answers are named `is_refund`, after Ian's `is_spam`. Each SQL call carries an alias, and a filter or sort reads the alias. The Bash scripts that use an answer name it first: `refund_code=$?` before `case`, and a function such as `asks_for_refund` before `if`. A Bash transcript that shows the command's own output keeps its form, because its output block is the lesson. `site/WRITING.md` records the rule. `check-samples` fails an assert or print on a call, a SQL call with no alias, a bare `$?` in `case` or `test`, and a generic answer name.

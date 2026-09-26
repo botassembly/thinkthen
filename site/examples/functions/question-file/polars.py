@@ -10,7 +10,6 @@ tickets = pl.DataFrame({
         "I want to send this back.",
     ],
 })
-tickets = tickets.with_columns(
-    is_refund=tt.decide(refund, tickets["body"]),
-)
+is_refund = tt.decide(refund, tickets["body"])
+tickets = tickets.with_columns(is_refund=is_refund)
 assert tickets["is_refund"].to_list() == [True, False, None]
