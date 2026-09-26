@@ -6,7 +6,7 @@ opens: specification/score.md sdlc/planning/handoff-to-the-architect-2026-09-21.
 
 # 0087: Correct score, option-limit, and threshold documentation
 
-Status: accepted
+Status: landed (`37746b36`, record `sdlc/records/0087-correct-score-option-and-threshold-docs.md`). Owner: Claude.
 
 ## Outcome and authority
 

@@ -7,6 +7,6 @@ SELECT
     thinkthen_decide(
         'Does the customer ask for a refund?',
         body
-    ),
+    ) AS is_refund,
     body
 FROM t;

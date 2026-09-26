@@ -130,6 +130,8 @@ export function splitDefault(cell) {
 // only cites a record goes, and so does a trailing clause that cites an ADR.
 const CITE_SENTENCE = /^(ADR \d+\.|The batching design\b|Tickets? \d|Ian's ruling)/;
 const CITE_CLAUSE = /,\s*(by|as) ADR \d+( states)?(?=[.,])/g;
+// A setting's meaning drops a record cited in brackets, such as "(ticket 0143)".
+const CITE_BRACKET = /\s*\((?:ADR|tickets?) \d+(?:(?:,| and) \d+)*\)/g;
 
 function uncited(text) {
   return text.split(/(?<=\.)\s+(?=[A-Z`'])/)
@@ -163,7 +165,7 @@ export function parseSettings(text) {
     return {
       name,
       id: slug(name),
-      does,
+      does: does.replace(CITE_BRACKET, ''),
       default: splitDefault(dflt),
       allowed,
       on: Object.fromEntries(SURFACES.map((s, j) => [s, surfaces[j]])),

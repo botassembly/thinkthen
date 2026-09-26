@@ -30,7 +30,7 @@ Some messages are plain and some are not. Here are three. The first asks for mon
 
 <!-- example: functions/decide/1-lines -->
 
-The refund request clears the high bar and answers yes. The thank-you falls under the low bar and answers no. The send-back line lands inside the band and answers not sure. Set the band against your own labeled cases.
+The refund request clears the high bar and answers yes. The thank-you falls under the low bar and answers no. The send-back line lands inside the band and answers not sure.
 
 You can save the question and its band in a file, `refund.json`:
 
@@ -72,10 +72,10 @@ Here's what I'd want to know before I trusted it.
 
 **The tool supports one vendor.** One address selects the backend. Another System One model can answer the same requests, and some of its answers will differ. A threshold tuned on one model doesn't carry to another.
 
-**It writes nothing, remembers nothing, and runs nothing.** It won't summarize, rewrite, redact, or take an action on its own answer. A judgment goes back to your code, and your rules decide what happens next.
+**It writes no text, holds no conversation, and runs nothing.** It won't summarize, rewrite, redact, or take an action on its own answer. A judgment goes back to your code, and your rules decide what happens next.
 
 ## What ships
 
-The command ships as a single binary with all ten functions. Libraries for Python, TypeScript, Ruby, R, Rust, and C call the same Rust engine. Extensions for DuckDB, SQLite, and PostgreSQL do the same. One engine means a question file means the same thing everywhere. In a database, a question reads like any other condition in a `WHERE` clause.
+The command ships as a single binary with all ten functions. Libraries for Python, TypeScript, Ruby, R, Rust, and C call the same Rust engine. Extensions for DuckDB, SQLite, and PostgreSQL do the same. One engine reads a question file the same way everywhere. In a database, a question reads like any other condition in a `WHERE` clause.
 
 Your code could always match text. Now it can answer a bounded question about the evidence you hand it, from a fixed set of answers you wrote down. That is a narrow thing. It is also the thing I kept training a model to do.

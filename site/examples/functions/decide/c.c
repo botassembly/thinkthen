@@ -8,13 +8,13 @@ const char *question =
     "Does the customer ask for a refund?";
 const char *text =
     "Please refund my order. It arrived broken.";
-thinkthen_answer answer;
+thinkthen_answer is_refund;
 int rc = thinkthen_decide(
     tt,
     question,
     text,
     strlen(text),
-    &answer
+    &is_refund
 );
 assert(rc == THINKTHEN_OK);
-assert(answer.outcome == THINKTHEN_YES);
+assert(is_refund.outcome == THINKTHEN_YES);

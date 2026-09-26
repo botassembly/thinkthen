@@ -159,7 +159,7 @@ const COUNTS = [
   </table>
 
   <h3><code>--field POINTER</code></h3>
-  <p>A JSON Pointer, RFC 6901. It names the part of each record the model sees, and it is the disclosure boundary: only the pointed value leaves the machine. Under <code>--details</code> the whole record still comes back in <code>input</code>.</p>
+  <p>A JSON Pointer, RFC 6901. It names the part of each record the model sees. Only the pointed value leaves the machine. Under <code>--details</code> the whole record still comes back in <code>input</code>.</p>
   <ul>
     <li>Under <code>--jsonl</code>, <code>--csv</code>, or <code>--tsv</code> it reads the pointer in each record.</li>
     <li>With no framing flag it reads the whole input as one JSON value and takes the pointer inside it. There is no separate JSON framing flag.</li>
@@ -208,7 +208,7 @@ const COUNTS = [
       <tr><td><code>{kind}</code></td><td><code>{from}</code></td><td><code>{shape}</code></td><td>{note}</td></tr>
     ))}
   </table>
-  <p>Every number in <code>probabilities</code> is the model's own, passed through unchanged. The tool computes one number only, the position <code>score</code> prints, and it is the average of the level probabilities.</p>
+  <p>Every number in <code>probabilities</code> is the model's own, passed through unchanged. The tool computes one number only: the position <code>score</code> prints. It is the average of the level probabilities.</p>
 
   <h3><code>meta</code></h3>
   <table>

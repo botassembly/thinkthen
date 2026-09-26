@@ -94,7 +94,7 @@ Each plant ran alone under the heavy lock on the branch after `28f49ea3`, and wa
 - The public API ran 152 times, and 151 ended cleanly. None ended in SIGSEGV or an abort.
   - The first 48 ran 8 at a time and pushed the load to 120. One of them ended with exit 101, a panic on the probe's main thread, at a load near 60 with the machine in swap. Its output was not kept.
   - After code review, 104 more runs of commit 13445804 ran 4 at a time. Each batch held the heavy lock and started at load 10 or below. All 104 ended cleanly, so no panic output exists to name the cause.
-- `sdlc/issues/2026-09-24-the-churn-probe-left-one-panic-unexplained.md` carries the unexplained 101 and the dropped runs. It also carries the probe's port weakness: the probe makes a refused port by binding one and freeing it, and another process can claim that port during a run.
+- `sdlc/issues/closed/2026-09-24-the-churn-probe-left-one-panic-unexplained.md` carries the unexplained 101 and the dropped runs. It also carries the probe's port weakness: the probe makes a refused port by binding one and freeing it, and another process can claim that port during a run.
 
 ## What the ticket did not foresee
 

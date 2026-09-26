@@ -109,16 +109,20 @@ Library examples assert the answer. They never print it. Pick the form below for
 | Language | Form |
 | --- | --- |
 | Bash | `test "$team" = "account"` |
-| Python | `assert tt.decide(question, text) is True` |
-| TypeScript | `assert.equal(await tt.decide(question, text), true);` after `import assert from "node:assert/strict";` |
-| Ruby | `raise unless ThinkThen.decide(question, text) == true` |
-| R | `stopifnot(identical(tt_decide(question, text), TRUE))` |
-| Rust | `assert_eq!(tt.decide(&question, text)?, Answer::Yes);` |
-| C | `assert(answer.outcome == THINKTHEN_YES);` after `#include <assert.h>` |
+| Python | `assert is_refund` |
+| TypeScript | `assert.equal(isRefund, true);` after `import assert from "node:assert/strict";` |
+| Ruby | `raise unless is_refund == true` |
+| R | `stopifnot(identical(is_refund, TRUE))` |
+| Rust | `assert_eq!(is_refund, Answer::Yes);` |
+| C | `assert(is_refund.outcome == THINKTHEN_YES);` after `#include <assert.h>` |
 
 Ruby has no built-in assert, so `raise unless` stands in for one. SQL has no assert. A SQL example shows the query and then what the database printed.
 
 A Bash example that captures an answer in a variable ends with its `test` lines. The smoke run fails when a `test` line fails. The check fails a library sample that calls `print(`, `console.log(`, `puts`, `println!`, `printf(`, or `cat(`.
+
+### Name each answer
+
+Store each ThinkThen answer in a variable named for its meaning, then assert on that name (Ian, 2026-09-26). Write `is_spam = engine.decide(question, message)`, then `assert is_spam`, `assert not is_spam`, or `assert is_spam is None` for not sure. Take the name from the question, such as `is_refund`, `owners`, or `urgency`, and never `result` or `answer`. Bash captures with `is_spam=$(...)` and tests `"$is_spam"`. Where the exit code is the lesson, Bash names it first with `refund_code=$?`, or wraps the call in a function named for its meaning, such as `asks_for_refund`. SQL gives each call an alias, such as `AS is_refund`, and filters or sorts on that alias. A Bash transcript whose output block shows the command's own answer needs no variable. `check-samples` fails an assert, print, `if`, or `while` that acts on a call, a SQL call with no alias, a bare `$?` in `case` or `test`, and a generic name.
 
 ### No comments
 

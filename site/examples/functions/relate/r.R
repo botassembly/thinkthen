@@ -14,11 +14,14 @@ rules <- c(
   "Use the company travel portal for all bookings."
 )
 entities <- data.frame(name = rules, kind = "rule")
-edges <- tt_relate(
+contradictions <- tt_relate(
   entities,
   either = "contradicts",
   threshold = 0.5
 )
-stopifnot(identical(edges$source, rules[c(1, 2)]))
-stopifnot(identical(edges$target, rules[c(4, 6)]))
-stopifnot(identical(edges$probability, c(0.84, 0.99)))
+stopifnot(identical(contradictions$source, rules[c(1, 2)]))
+stopifnot(identical(contradictions$target, rules[c(4, 6)]))
+stopifnot(identical(
+  contradictions$probability,
+  c(0.84, 0.99)
+))

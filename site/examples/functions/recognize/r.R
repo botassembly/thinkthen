@@ -9,13 +9,13 @@ rules <- c(
   "works_for=person:organization",
   "based_in=organization:place"
 )
-found <- tt_recognize(text, kinds, relations = rules)[[1]]
+facts <- tt_recognize(text, kinds, relations = rules)[[1]]
 stopifnot(identical(
-  found$name,
+  facts$name,
   c("Maria Chen", "Northwind Freight", "Chicago")
 ))
-stopifnot(identical(found$kind, kinds))
-links <- attr(found, "relations")
+stopifnot(identical(facts$kind, kinds))
+links <- attr(facts, "relations")
 stopifnot(identical(
   links$relation,
   c("works_for", "based_in")

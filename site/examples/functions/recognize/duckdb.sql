@@ -8,10 +8,10 @@ SELECT
     unnest(thinkthen_recognize(
         body,
         ['person', 'organization', 'place']
-    )) AS name
+    )) AS entity
 FROM tickets;
 
 SELECT * FROM thinkthen_relations(
     (SELECT body FROM tickets),
     '@names.json'
-);
+) AS link;

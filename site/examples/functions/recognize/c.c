@@ -17,20 +17,20 @@ const char *spec =
     "{\"name\": \"based_in\", "
     "\"source\": \"organization\", "
     "\"target\": \"place\"}]}}";
-char *found;
-size_t found_len;
+char *facts;
+size_t facts_len;
 int rc = thinkthen_recognize(
     tt,
     spec,
     text,
     strlen(text),
-    &found,
-    &found_len
+    &facts,
+    &facts_len
 );
 assert(rc == THINKTHEN_OK);
-assert(strstr(found, "\"Maria Chen\""));
-assert(strstr(found, "\"Northwind Freight\""));
-assert(strstr(found, "\"Chicago\""));
-assert(strstr(found, "\"works_for\""));
-assert(strstr(found, "\"based_in\""));
-thinkthen_free_string(found);
+assert(strstr(facts, "\"Maria Chen\""));
+assert(strstr(facts, "\"Northwind Freight\""));
+assert(strstr(facts, "\"Chicago\""));
+assert(strstr(facts, "\"works_for\""));
+assert(strstr(facts, "\"based_in\""));
+thinkthen_free_string(facts);
