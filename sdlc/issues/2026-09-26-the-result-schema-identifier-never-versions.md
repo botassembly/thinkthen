@@ -1,6 +1,6 @@
 # The result schema identifier never versions
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 05, finding 2.4. Blocks 0.1: the compatibility rule must exist before the first release, because consumers pin to it from that day.
+Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 05, finding 2.4. Blocks 0.1: the compatibility rule must exist before the first release, because consumers pin to it from that day. Owner: ticket 0160 on `ticket/0160-the-answer-contract-holds`, ready for review.
 
 ## What happens
 

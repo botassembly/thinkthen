@@ -1,6 +1,6 @@
 # The `annotate` spec example fails on its own inputs
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 03, finding 2-1. Blocks 0.1 under goal 4, honest docs.
+Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 03, finding 2-1. Blocks 0.1 under goal 4, honest docs. Owner: ticket 0161 on `ticket/0161-annotate-reads-what-it-names`, ready for review.
 
 ## What happens
 

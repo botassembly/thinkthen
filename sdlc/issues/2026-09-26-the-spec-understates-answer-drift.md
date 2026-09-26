@@ -1,6 +1,6 @@
 # The spec understates how far a repeated request moves
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 09, finding 3. Blocks 0.1 under goal 4, honest docs.
+Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 09, finding 3. Blocks 0.1 under goal 4, honest docs. Owner: ticket 0163 on `ticket/0163-the-cache-folder-and-its-pages`, ready for review.
 
 ## What happens
 
