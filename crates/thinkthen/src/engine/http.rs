@@ -40,15 +40,8 @@ impl fmt::Debug for Key {
 /// The reply bytes every request may earn, whatever its size.
 const MAX_RESPONSE_BYTES: u64 = 1024 * 1024;
 
-/// The reply bytes each request byte adds: the worst honest reply runs about
-/// five times its request (ticket 0132), and the bound stops an endless one.
+/// Reply bytes per request byte. The worst honest reply runs about 5 (ticket 0132).
 const REPLY_BYTES_PER_REQUEST_BYTE: u64 = 8;
-
-/// The most reply bytes one request may earn.
-fn reply_limit(request: &[u8]) -> u64 {
-    let request = u64::try_from(request.len()).unwrap_or(u64::MAX);
-    MAX_RESPONSE_BYTES.saturating_add(REPLY_BYTES_PER_REQUEST_BYTE.saturating_mul(request))
-}
 
 /// The longest a `Retry-After` header moves the wait to.
 ///
@@ -267,8 +260,9 @@ fn send(agent: &Agent, exchange: &Exchange<'_>, limit: Duration) -> Result<Vec<u
         };
         return Err(Attempt { failure, asked });
     }
+    let sent = u64::try_from(exchange.body.len()).unwrap_or(u64::MAX);
+    let most = MAX_RESPONSE_BYTES.saturating_add(REPLY_BYTES_PER_REQUEST_BYTE.saturating_mul(sent));
     // `ureq` refuses a body of exactly its limit, so it gets one byte more.
-    let most = reply_limit(exchange.body);
     response
         .body_mut()
         .with_config()
