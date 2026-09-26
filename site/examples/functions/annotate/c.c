@@ -19,6 +19,6 @@ const char *expected =
     "[{\"steps\":true,\"area\":\"export\"},"
     "{\"steps\":false,\"area\":\"login\"},"
     "{\"steps\":false,\"area\":\"billing\"}]";
-char *forms = thinkthen_call(tt, annotate);
-assert(forms && strcmp(forms, expected) == 0);
-thinkthen_free_string(forms);
+char *triage = thinkthen_call(tt, annotate);
+assert(triage && strcmp(triage, expected) == 0);
+thinkthen_free_string(triage);

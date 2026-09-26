@@ -8,7 +8,8 @@ let reports = [
     "The Pay button on the billing page is too blue.",
 ];
 let areas = ["export", "login", "billing"];
-for (form, area) in tt.annotate(&set, reports).zip(areas) {
-    let pick = form?.values()[1].value().clone();
-    assert_eq!(pick, Annotated::Choice(Some(area.into())));
+let triage = tt.annotate(&set, reports);
+for (form, want) in triage.zip(areas) {
+    let area = form?.values()[1].value().clone();
+    assert_eq!(area, Annotated::Choice(Some(want.into())));
 }

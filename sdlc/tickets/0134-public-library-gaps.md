@@ -78,7 +78,7 @@ Items of `sdlc/issues/2026-09-25-public-library-api-gaps.md`, each left open in 
 - **Item 5, find's none option and annotate parts.** Each needs a new spelling in 0084 and adds to the API. Section C.
 - **Item 6, the engine reuse test and a library `warm`.** The product reading of 2026-09-22 set it low. A library `warm` is a new method, and the counting test needs every surface's harness.
 - **Item 7, typed descriptions and annotate forms outside Rust.** A cross-surface design over Python and TypeScript with a digest test. Section C.
-- **Python's own `Entity` and `Edge` reprs.** `libraries/python/src/asked.rs:268` prints `Entity(name=…, kind=…)` in clear, and `:301` does the same for `Edge`. This is the entity issue's defect on the Python surface, and the Rust fix does not reach it. The build files it as `sdlc/issues/2026-09-26-python-entity-and-edge-reprs-print-caller-text.md` for its own Quick Fix.
+- **Python's own `Entity` and `Edge` reprs.** `libraries/python/src/asked.rs:268` prints `Entity(name=…, kind=…)` in clear, and `:301` does the same for `Edge`. This is the entity issue's defect on the Python surface, and the Rust fix does not reach it. The build files it as `sdlc/issues/closed/2026-09-26-python-entity-and-edge-reprs-print-caller-text.md` for its own Quick Fix.
 
 ## Closes
 

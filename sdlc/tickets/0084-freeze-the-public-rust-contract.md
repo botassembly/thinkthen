@@ -258,6 +258,8 @@ impl Details {
     pub fn requests_sent(&self) -> u64;
     pub fn cached(&self) -> bool;
     pub fn usage(&self) -> Option<&Usage>;
+    pub fn confidence(&self) -> Option<f64>;
+    pub fn url(&self) -> &str;
     pub fn failed_questions(&self) -> usize;
 }
 pub struct Row<T, V> { /* private */ }

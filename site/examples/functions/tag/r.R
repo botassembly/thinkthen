@@ -7,5 +7,8 @@ message <- paste0(
   "but export crashes the app, ",
   "and I was charged twice."
 )
-tags <- tt_tag(question, message, labels)[[1]]
-stopifnot(identical(tags, c("praise", "bug", "billing")))
+fitting_labels <- tt_tag(question, message, labels)[[1]]
+stopifnot(identical(
+  fitting_labels,
+  c("praise", "bug", "billing")
+))

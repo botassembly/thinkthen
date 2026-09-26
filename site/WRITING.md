@@ -13,7 +13,7 @@ Follow these rules when you write or edit any page or code example on this site.
 - Write no status words. A page never says planned, drawn, preview, coming soon, or "Plan for 0.1". The site goes up after the release it describes.
 - Teach the idea. Do not walk the reader through repository files, JSONL files, pins, or run folders.
 - Name the threshold in the command and in the prose. Show one band per page.
-- A number in the prose must show in an example on the same page.
+- A number in the prose shows in an example on the same page, or it links the record that measured it.
 - Page prose carries no interval, calibration error, AUC, or p value.
 - A page names no private project and no home path. This repository is public.
 
@@ -109,16 +109,20 @@ Library examples assert the answer. They never print it. Pick the form below for
 | Language | Form |
 | --- | --- |
 | Bash | `test "$team" = "account"` |
-| Python | `assert tt.decide(question, text) is True` |
-| TypeScript | `assert.equal(await tt.decide(question, text), true);` after `import assert from "node:assert/strict";` |
-| Ruby | `raise unless ThinkThen.decide(question, text) == true` |
-| R | `stopifnot(identical(tt_decide(question, text), TRUE))` |
-| Rust | `assert_eq!(tt.decide(&question, text)?, Answer::Yes);` |
-| C | `assert(answer.outcome == THINKTHEN_YES);` after `#include <assert.h>` |
+| Python | `assert is_refund` |
+| TypeScript | `assert.equal(isRefund, true);` after `import assert from "node:assert/strict";` |
+| Ruby | `raise unless is_refund == true` |
+| R | `stopifnot(identical(is_refund, TRUE))` |
+| Rust | `assert_eq!(is_refund, Answer::Yes);` |
+| C | `assert(is_refund.outcome == THINKTHEN_YES);` after `#include <assert.h>` |
 
 Ruby has no built-in assert, so `raise unless` stands in for one. SQL has no assert. A SQL example shows the query and then what the database printed.
 
 A Bash example that captures an answer in a variable ends with its `test` lines. The smoke run fails when a `test` line fails. The check fails a library sample that calls `print(`, `console.log(`, `puts`, `println!`, `printf(`, or `cat(`.
+
+### Name each answer
+
+Store each ThinkThen answer in a variable named for its meaning, then assert on that name (Ian, 2026-09-26). Write `is_spam = engine.decide(question, message)`, then `assert is_spam`, `assert not is_spam`, or `assert is_spam is None` for not sure. Take the name from the question, such as `is_refund`, `owners`, or `urgency`, and never `result` or `answer`. Bash captures with `is_spam=$(...)` and tests `"$is_spam"`. Where the exit code is the lesson, Bash names it first with `refund_code=$?`, or wraps the call in a function named for its meaning, such as `asks_for_refund`. SQL gives each call an alias, such as `AS is_refund`, and filters or sorts on that alias. A Bash transcript whose output block shows the command's own answer needs no variable. `check-samples` fails an assert, print, `if`, or `while` that acts on a call, a SQL call with no alias, a bare `$?` in `case` or `test`, and a generic name. The rule lives in `scripts/named-answers.mjs`. The builder's lint rung imports it too. Its table test runs in the build. Each example file and each fence tag must name a code language or a kind in the `NO_CALL` list in `check-samples`, such as `json`, `text`, `console`, or `output`. A mistyped fence tag fails the build.
 
 ### No comments
 
@@ -172,8 +176,9 @@ After a change to the command or to a script, run `node scripts/smoke.mjs --upda
 
 - The smoke run uses the command built from the same commit, `../target/release/thinkthen`. `cargo build --release` makes it. `THINKTHEN_BIN` names another build.
 - The Beatles Bench files come from the bench commit in `examples/beatles/BENCH`. `BEATLES_BENCH=path npm run pull-bench` copies the files the Beatles scripts read from a checkout at that commit.
+- The Beatles Bench slides come from the talk's deck. `DECK=path npm run export-slides` exports them from the deck's committed `slide.png` files, and stops unless the deck's `BENCH_AT` names the commit in `examples/beatles/BENCH`. The slide check fails when `src/data/slides.json` names another bench or an image differs from its record.
 - `jq` must be on the path.
 
 ### What runs on each change
 
-`npm run build` runs `check-samples`, then the smoke run, then the Astro build, the Markdown twins, the settings check, and the link check. `npm run check` runs `check-samples`, the smoke run, the settings check, and the link check on an existing build. The Pages workflow builds the command and then runs `npm run build`. Run `npm run check` before every commit that touches a page or an example.
+`npm run build` runs `check-samples`, then the slide check, then the smoke run, then the Astro build, the Markdown twins, the settings check, and the link check. `npm run check` runs `check-samples`, the slide check, the smoke run, the settings check, and the link check on an existing build. The Pages workflow builds the command and then runs `npm run build`. Run `npm run check` before every commit that touches a page or an example.

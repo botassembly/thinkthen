@@ -9,7 +9,7 @@ let reviews = [
     "Does this come in blue?",
     "The strap snapped on day two.",
 ];
-let kept = tt
+let complaints = tt
     .filter(&complaint, reviews)
     .collect::<Result<Vec<_>, _>>()?;
-assert_eq!(kept, [reviews[1], reviews[3]]);
+assert_eq!(complaints, [reviews[1], reviews[3]]);

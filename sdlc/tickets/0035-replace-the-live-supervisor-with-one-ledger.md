@@ -6,7 +6,7 @@ opens: sdlc/scripts sdlc/live-tokens .github/workflows sdlc/planning sdlc/ratche
 
 # 0035: Replace the live supervisor with one ledger
 
-Status: done
+Status: landed. Owner: Claude.
 
 ## Outcome
 

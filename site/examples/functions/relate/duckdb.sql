@@ -14,4 +14,4 @@ CREATE TABLE rules AS FROM (VALUES
 SELECT * FROM thinkthen_relate(
     'SELECT id, body FROM rules',
     ['{"either": ["contradicts"]}']
-);
+) AS contradiction;

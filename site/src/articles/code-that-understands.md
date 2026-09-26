@@ -6,7 +6,7 @@ Every program I have written can match text. None of them can read it. `grep` fi
 
 We tried that with clinical notes around 2019. Labeling carried the whole cost. The model was stale on the day it shipped. Every new question made us start over. Nobody was happy.
 
-This month, TypeSafe shipped a model called Jev. It answers a bounded question about the evidence you hand it: yes or no, one of a list, or a place on a scale. It needs no training data and no labels. It returns an answer and a probability. It never writes a sentence, and your code has nothing to parse. It is cheap enough to call from a loop.
+TypeSafe makes a model called Jev. It answers a bounded question about the evidence you hand it: yes or no, one of a list, or a place on a scale. It needs no training data and no labels. It returns an answer and a probability. It never writes a sentence, and your code has nothing to parse. On [Beatles Bench](https://github.com/botassembly/beatles-bench), a thousand answers cost 0.015 dollars.
 
 I built ThinkThen around that interface. It is one binary. You pipe in the evidence and pass one question as an argument. ThinkThen prints a bare answer and sets an exit code.
 
@@ -30,7 +30,7 @@ Some messages are plain and some are not. Here are three. The first asks for mon
 
 <!-- example: functions/decide/1-lines -->
 
-The refund request clears the high bar and answers yes. The thank-you falls under the low bar and answers no. The send-back line lands inside the band and answers not sure. Set the band against your own labeled cases.
+The refund request clears the high bar and answers yes. The thank-you falls under the low bar and answers no. The send-back line lands inside the band and answers not sure.
 
 You can save the question and its band in a file, `refund.json`:
 
@@ -66,16 +66,16 @@ Here's what I'd want to know before I trusted it.
 
 **Measure accuracy on your own data.** The number that matters comes from your own labeled cases. `thinkthen audit` grades saved answers against your labels.
 
-**Planted facts move the answer.** Text that orders the model to answer yes barely moves the probability. A planted false claim about the case can move it a lot. The tool reads a planted claim and a true one the same way. Both look like evidence to it. Use a band and send the middle to a person.
+**Planted facts move the answer.** A live run judged twenty made-up messages, once clean and once with hostile text added. A command aimed at the model moved the probability of yes by 0.04 or less, in seventeen wordings. A false claim planted about the case moved it by as much as 0.57. The [decide specification](https://github.com/botassembly/thinkthen/blob/main/specification/decide.md) records the run. The tool reads a planted claim and a true one the same way. Both look like evidence to it. Use a band and send the middle to a person.
 
-**`score` is the weakest function.** One number hides the shape of the answer. The order holds better than the exact level. Use `score` for a queue a person reads. Don't use it as a gate.
+**`tag` has the lowest strict score on Beatles Bench.** A song can have two lead singers, and `tag` must name every one to score. It names the whole set on 0.29 of songs. Its top label is a true lead on 0.75. The [bench page](/learn/beatles-bench/what-jev-knows/) shows the table of every function. Use `tag` for a queue a person reads. Don't use it as a gate.
 
-**The tool supports one vendor.** One address selects the backend. Another System One model can answer the same requests, and some of its answers will differ. A threshold tuned on one model doesn't carry to another.
+**The tool speaks one interface.** It sends TypeSafe's System One requests. Any server with that interface can answer at another address, and some of its answers will differ. A threshold tuned on one model doesn't carry to another.
 
-**It writes nothing, remembers nothing, and runs nothing.** It won't summarize, rewrite, redact, or take an action on its own answer. A judgment goes back to your code, and your rules decide what happens next.
+**It writes no text, holds no conversation, and runs nothing.** It won't summarize, rewrite, redact, or take an action on its own answer. A judgment goes back to your code, and your rules decide what happens next.
 
 ## What ships
 
-The command ships as a single binary with all ten functions. Libraries for Python, TypeScript, Ruby, R, Rust, and C call the same Rust engine. Extensions for DuckDB, SQLite, and PostgreSQL do the same. One engine means a question file means the same thing everywhere. In a database, a question reads like any other condition in a `WHERE` clause.
+The command ships as a single binary with all ten functions. Libraries for Python, TypeScript, Ruby, R, Rust, and C call the same Rust engine. Extensions for DuckDB, SQLite, and PostgreSQL do the same. One engine reads a question file the same way everywhere. In a database, a question reads like any other condition in a `WHERE` clause.
 
 Your code could always match text. Now it can answer a bounded question about the evidence you hand it, from a fixed set of answers you wrote down. That is a narrow thing. It is also the thing I kept training a model to do.

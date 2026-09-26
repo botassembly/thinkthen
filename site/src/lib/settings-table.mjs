@@ -5,8 +5,9 @@
 // The table's 17 columns are fixed. sdlc/scripts/settings fails the product's
 // spec rung when one moves, and parseSettings fails the site build.
 
+import fs from 'node:fs';
 import path from 'node:path';
-import { REPO } from '../data/catalog.mjs';
+import { REPO } from '../data/repo.mjs';
 
 export const COLUMNS = [
   'Setting', 'What it does', 'Default', 'Allowed values',
@@ -130,6 +131,8 @@ export function splitDefault(cell) {
 // only cites a record goes, and so does a trailing clause that cites an ADR.
 const CITE_SENTENCE = /^(ADR \d+\.|The batching design\b|Tickets? \d|Ian's ruling)/;
 const CITE_CLAUSE = /,\s*(by|as) ADR \d+( states)?(?=[.,])/g;
+// A setting's meaning drops a record cited in brackets, such as "(ticket 0143)".
+const CITE_BRACKET = /\s*\((?:ADR|tickets?) \d+(?:(?:,| and) \d+)*\)/g;
 
 function uncited(text) {
   return text.split(/(?<=\.)\s+(?=[A-Z`'])/)
@@ -143,6 +146,10 @@ function uncitedBlocks(blocks) {
     ? { kind: 'p', text: uncited(b.text) }
     : { kind: 'ul', items: b.items.map(uncited) }));
 }
+
+// Ian's ruling 5 of 2026-09-25: no setting may do nothing. A surface the
+// table marks "no effect" is left off the site, and so is a note that says so.
+const NO_EFFECT = /\bno effect\b/;
 
 export function parseSettings(text) {
   const parts = sections(text);
@@ -160,13 +167,14 @@ export function parseSettings(text) {
     }
     const [name, does, dflt, allowed, ...surfaces] = cells;
     if (!name) throw new Error(`settings.md: table row ${i + 1} has no setting name`);
+    const def = splitDefault(dflt);
     return {
       name,
       id: slug(name),
-      does,
-      default: splitDefault(dflt),
+      does: does.replace(CITE_BRACKET, ''),
+      default: { ...def, note: def.note.split(/(?<=\.)\s+/).filter((n) => !NO_EFFECT.test(n)).join(' ') },
       allowed,
-      on: Object.fromEntries(SURFACES.map((s, j) => [s, surfaces[j]])),
+      on: Object.fromEntries(SURFACES.map((s, j) => [s, NO_EFFECT.test(surfaces[j]) ? ABSENT : surfaces[j]])),
     };
   });
   const ids = new Set();
@@ -180,6 +188,83 @@ export function parseSettings(text) {
     precedence: uncitedBlocks(blocksOf(parts.get('Precedence'))),
     howToRead: blocksOf(parts.get('How to read a cell')),
     rows,
+  };
+}
+
+// ------------------------------------------------------------ lookup
+
+// A page that names a setting's default, range or allowed values reads it
+// here, so no page types a value the table holds. setting('Retries').default
+// is the table's Default value as a reader sees it. A name the table does not
+// hold fails the build and names the page's call, so a rename or a removal
+// breaks loudly in place of printing a stale value.
+//
+// The build runs from site/, and a bundled page has no stable path of its
+// own, so the lookup finds specification/settings.md from the working
+// folder up.
+function specPath() {
+  for (let dir = process.cwd(); ; dir = path.dirname(dir)) {
+    const file = path.join(dir, 'specification', 'settings.md');
+    if (fs.existsSync(file)) return file;
+    if (path.dirname(dir) === dir) throw new Error(`settings lookup: no specification/settings.md above ${process.cwd()}`);
+  }
+}
+
+let table = null;
+const NUMBER = /^\d[\d,]*(?:\.\d+)?/;
+
+export function setting(name) {
+  table ??= parseSettings(fs.readFileSync(specPath(), 'utf8')).rows;
+  const row = table.find((r) => r.name === name);
+  if (!row) {
+    throw new Error(`settings lookup: specification/settings.md has no setting "${name}". A page asks for it through setting('${name}'). Change that call to follow the table.\n  the table holds: ${table.map((r) => r.name).join(', ')}`);
+  }
+  const fail = (what) => { throw new Error(`settings lookup: ${name}: ${what}`); };
+  const value = plain(row.default.value);
+  return {
+    name: row.name,
+    href: `/install/settings/#${row.id}`,
+    // The Default value, such as "2", "30 seconds" or "Off".
+    default: value,
+    // The note that goes with the default, such as a fixed value on the libraries.
+    note: plain(row.default.note),
+    // The Allowed values, such as "1 to 32".
+    allowed: plain(row.allowed),
+    // One surface's spelling, such as setting('Prune target').surface('Configuration file').
+    surface(s) {
+      if (!(s in row.on)) fail(`no surface "${s}"`);
+      if (row.on[s] === ABSENT) fail(`the table says ${s} is ${ABSENT}`);
+      return plain(row.on[s]);
+    },
+    // The number the default starts with, as written: "30", "100,000,000".
+    // A default that starts with words, such as "None; ...", fails.
+    get number() {
+      return (NUMBER.exec(value) || fail(`the default "${value}" holds no number`))[0];
+    },
+    // The ends of allowed values written "above LOW and at most HIGH".
+    get bounds() {
+      const m = /\babove (\d[\d.]*) and at most (\d[\d.]*)/.exec(plain(row.allowed)) || fail(`the allowed values "${plain(row.allowed)}" are not "above LOW and at most HIGH"`);
+      return { above: m[1], atMost: m[2] };
+    },
+    // The range in the allowed values, "LOW to HIGH ...".
+    get range() {
+      const m = /^(\d[\d,]*) to (\d[\d,]*)\b/.exec(plain(row.allowed)) || fail(`the allowed values "${plain(row.allowed)}" are not "LOW to HIGH"`);
+      return { min: m[1], max: m[2] };
+    },
+    // The default for one function, from a value written as
+    // "0.5 on `decide`, `tag`; none on `choose`". A caller that passes
+    // { rest: true } also takes a clause that names no function, such as "One
+    // document" in "One document; lines on `find`", for a function the other
+    // clauses leave out. Without it a function the value does not name fails.
+    defaultOn(fn, { rest: takeRest = false } = {}) {
+      let rest = null;
+      for (const clause of row.default.value.split(/;\s*/)) {
+        const m = /^(.+?) on (`.+)$/.exec(clause);
+        if (!m) rest = plain(clause);
+        else if ([...m[2].matchAll(/`([^`]+)`/g)].some((c) => c[1] === fn)) return plain(m[1]);
+      }
+      return (takeRest && rest) || fail(`the default "${value}" names no value for ${fn}`);
+    },
   };
 }
 

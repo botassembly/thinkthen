@@ -6,7 +6,7 @@ opens: sdlc/planning/adr
 
 # 0099: Port the branch ADRs to main
 
-Status: design accepted 2026-09-24 after re-review. Owner: Claude.
+Status: landed (`c1bf5b84`, record `sdlc/records/0099-build-port-branch-adrs.md`). Owner: Claude.
 
 ## Outcome and authority
 

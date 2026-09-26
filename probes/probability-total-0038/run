@@ -13,8 +13,8 @@ live) extra= ;;
 	;;
 esac
 
-scratch=$(mktemp -d)
-trap 'rm -rf -- "$scratch"' EXIT HUP INT TERM
+. "$probe/../../sdlc/scripts/scratch.sh"
+scratch_dir scratch
 measurements=$scratch/measurements.jsonl
 : >"$measurements"
 accepted=0

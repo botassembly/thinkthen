@@ -12,8 +12,8 @@ let inbox = [
     "Reminder: your invoice is due in 30 days",
     "Please send the signed quote by 5 pm today",
 ];
-let ranked = tt.rank(&urgent, inbox)?;
-let order: Vec<&str> = ranked
+let by_urgency = tt.rank(&urgent, inbox)?;
+let order: Vec<&str> = by_urgency
     .iter()
     .map(|one| *one.input())
     .collect();

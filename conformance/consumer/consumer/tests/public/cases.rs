@@ -209,7 +209,7 @@ fn loaded(
             let answer = engine.decide(&banded, texts[0]).map_err(said)?;
             let bare = &success["answers"][0]["bare"];
             same("decide", &json!(decision(answer)), bare)?;
-            return detailed(&details, &success["answers"][0]);
+            return detailed(&details, &success["answers"][0], base);
         }
     };
     match kind {
@@ -242,7 +242,7 @@ fn single(engine: &Engine, asked: &Question, text: &str, success: &Value, base: 
     let expected = &success["answers"][0];
     let details = engine.details(asked, text).map_err(said)?;
     same("bare", &judgment(details.value()), &expected["bare"])?;
-    detailed(&details, expected)?;
+    detailed(&details, expected, base)?;
     let typed = match details.value() {
         Judgment::Decision(_) => json!(decision(engine.decide(asked, text).map_err(said)?)),
         Judgment::Score(_) => json!(engine.score(asked, text).map_err(said)?),
@@ -284,7 +284,7 @@ fn single(engine: &Engine, asked: &Question, text: &str, success: &Value, base: 
     same("counters", &moved, counters)
 }
 
-fn detailed(details: &Details, expected: &Value) -> Checked {
+fn detailed(details: &Details, expected: &Value, base: &str) -> Checked {
     let wanted = &expected["details"];
     let answer = &wanted["answer"];
     let probabilities = match details.probabilities() {
@@ -307,7 +307,27 @@ fn detailed(details: &Details, expected: &Value) -> Checked {
         &json!(details.question_sha256()),
         &wanted["question_sha256"],
     )?;
-    same("requests", &json!(details.requests()), &wanted["requests"])
+    same("requests", &json!(details.requests()), &wanted["requests"])?;
+    same(
+        "confidence",
+        &json!(details.confidence()),
+        &answer["confidence"],
+    )?;
+    let usage = details.usage().map(|usage| {
+        json!({"input_tokens": usage.input_tokens(), "output_tokens": usage.output_tokens()})
+    });
+    same("usage", &json!(usage), &wanted["usage"])?;
+    same(
+        "requests_sent",
+        &json!(details.requests_sent()),
+        &wanted["requests_sent"],
+    )?;
+    same("cached", &json!(details.cached()), &wanted["cached"])?;
+    let served = json!(format!("{base}/systemone"));
+    same("url", &json!(details.url()), &served)?;
+    let line: Value =
+        serde_json::from_str(&details.to_json()).map_err(|error| error.to_string())?;
+    same("line url", &line["meta"]["url"], &served)
 }
 
 fn annotated(engine: &Engine, set: &str, texts: &[&str], success: &Value) -> Checked {

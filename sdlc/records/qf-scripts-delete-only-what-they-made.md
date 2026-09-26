@@ -1,6 +1,6 @@
 # Quick Fix qf-scripts-delete-only-what-they-made: one guarded helper removes every scratch folder
 
-Status: built in lane 1 on 2026-09-26, reviewed, not landed. It carries out rule 11 of `sdlc/planning/worktrees.md` and the issue `sdlc/issues/2026-09-26-scripts-can-delete-paths-they-did-not-create.md`. The coordinator lands it. Ian can overturn the helper's name, the two exceptions, and the stale-folder choice below.
+Status: built in lane 1 on 2026-09-26, reviewed, not landed. It carries out rule 11 of `sdlc/planning/worktrees.md` and the issue `sdlc/issues/closed/2026-09-26-scripts-can-delete-paths-they-did-not-create.md`. The coordinator lands it. Ian can overturn the helper's name, the two exceptions, and the stale-folder choice below.
 
 ## Result
 

@@ -18,8 +18,8 @@ if [ -e "$ROOT/.git" ]; then
   echo "make-tarball: run this inside a git archive tree, not a checkout" >&2
   exit 1
 fi
-STAGE=$(mktemp -d)
-trap 'rm -rf -- "$STAGE"' EXIT
+. "$ROOT/sdlc/scripts/scratch.sh"
+scratch_dir STAGE
 PKG="$STAGE/thinkthen"
 cp -R "$ROOT/libraries/r/thinkthen" "$PKG"
 rm -rf -- "$PKG/src/rust/.cargo" "$PKG/src/rust/target"

@@ -179,6 +179,8 @@ pub struct Details {
     requests_sent: u64,
     cached: bool,
     usage: Option<Usage>,
+    confidence: Option<f64>,
+    url: String,
     json: Written,
 }
 
@@ -229,6 +231,8 @@ impl Details {
             requests_sent: judged.answered.requests_sent,
             cached: judged.answered.replayed,
             usage: reply.usage().map(usage),
+            confidence: answer.confidence().map(|held| held.as_f64()),
+            url: backend.url().as_str().to_owned(),
             json: Written(json),
         })
     }
@@ -291,6 +295,18 @@ impl Details {
     #[must_use]
     pub fn usage(&self) -> Option<&Usage> {
         self.usage.as_ref()
+    }
+
+    /// The backend's own confidence in a choice or score, when it sent one.
+    #[must_use]
+    pub fn confidence(&self) -> Option<f64> {
+        self.confidence
+    }
+
+    /// The address that answered.
+    #[must_use]
+    pub fn url(&self) -> &str {
+        &self.url
     }
 
     /// Questions that failed inside the result. A single judgment has none.

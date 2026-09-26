@@ -1,6 +1,6 @@
 # The churn probe left one panic unexplained
 
-Status: Open. Found by ticket 0086's build and code review, 2026-09-24. Owner: ticket 0094, whose C probe carries G3 and R7-1.
+Status: Closed 2026-09-26 by the coordinator on the evidence in `sdlc/planning/backlog-0-1-2026-09-26.md` section 3.
 
 ## What happens
 

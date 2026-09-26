@@ -16,4 +16,4 @@ SELECT * FROM thinkthen_relate(
     'id',
     'body',
     'either:contradicts'
-);
+) AS contradiction;

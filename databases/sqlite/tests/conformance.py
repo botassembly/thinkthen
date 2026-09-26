@@ -144,8 +144,9 @@ def check(case: dict, backend: Backend) -> None:
         expected = answers[0]
         same("value", details["value"], expected["bare"])
         same("answer", details["answer"], expected["details"]["answer"])
-        for name in ("model", "question_sha256", "requests"):
-            same(name, details["meta"][name], expected["details"][name])
+        for name in ("model", "question_sha256", "requests", "usage", "requests_sent", "cached"):
+            same(name, details["meta"].get(name, "absent"), expected["details"].get(name, "absent"))
+        same("url", details["meta"]["url"], served)
         typed = {1: True, 0: False}.get(typed, typed) if verb == "decide" else typed
         same("typed", json.loads(typed) if verb == "tag" else typed, expected["bare"])
         if "counters" in success:

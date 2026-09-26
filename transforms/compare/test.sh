@@ -2,8 +2,8 @@
 set -eu
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-work=$(mktemp -d)
-trap 'rm -rf -- "$work"' EXIT
+. "$REPO/sdlc/scripts/scratch.sh"
+scratch_dir work
 
 row() {
 	id=$1 value=$2 answer=$3

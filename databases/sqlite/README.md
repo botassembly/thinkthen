@@ -37,6 +37,12 @@ The deadline is milliseconds under ADR 0041. `-1` means none. `0` is already spe
 
 An error reads `thinkthen <kind>: <message>`, with ` (retryable)` after the kind when a retry could succeed. `cancelled` is `SQLITE_INTERRUPT`, `usage` is `SQLITE_CONSTRAINT`, `local` is `SQLITE_CANTOPEN`, and every other kind is `SQLITE_ERROR`.
 
+## Run facts
+
+`thinkthen_details(question, text)` returns the command's `--details` line for one text, schema `thinkthen.result/1`. Read a member with `json_extract`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.
+
+`thinkthen_usage()` returns this process's running totals of requests sent, cache answers and tokens.
+
 ## The engine and its settings
 
 The extension holds one engine for the process, shared by every connection. It builds on the first call that can send, from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, and `THINKTHEN_CACHE`, as the command reads them. SQL cannot name an address or a key. `thinkthen_usage()` does not build the engine. Before the first call every total reads 0.

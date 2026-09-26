@@ -249,32 +249,42 @@ fn one_answer<'a>(
 ) -> Judge<'a> {
     let evidence = json!(first).to_string();
     let bare_request = with(question, "evidence", &evidence);
-    // The counters come first, while the cache is still empty.
+    // Details come first, so they are the text's first send.
+    script.ask("call", &[base, &with(&bare_request, "details", "true")]);
+    script.ask("call", &[base, &bare_request]);
+    let decide = verb == "decide";
+    if decide {
+        script.ask("decide", &[base, question, first]);
+    }
+    // The counters run last, on an empty cache folder of their own.
     let counters = success.get("counters").cloned();
     let calls = counters
         .as_ref()
         .and_then(|counters| counters["calls"].as_u64())
         .unwrap_or_default();
     if counters.is_some() {
+        let folder = scratch("counters").display().to_string();
+        script.ask("env", &["THINKTHEN_CACHE", &folder]);
         script.ask("call", &[base, r#"{"usage":true}"#]);
         for _ in 0..calls {
             script.ask("call", &[base, &bare_request]);
         }
         script.ask("call", &[base, r#"{"usage":true}"#]);
     }
-    script.ask("call", &[base, &bare_request]);
-    script.ask("call", &[base, &with(&bare_request, "details", "true")]);
-    let decide = verb == "decide";
-    if decide {
-        script.ask("decide", &[base, question, first]);
-    }
     let expected = success["answers"][0].clone();
+    let served = format!("{base}/systemone");
     Box::new(move |got| {
-        let mut next = 0;
+        single(&got[1], &got[0], &expected, &served)?;
+        if decide {
+            let rows = judged(&got[2])?;
+            let (outcome, probability) = rows.first().copied().ok_or("no judgment")?;
+            same("decide", &bare(outcome), &expected["bare"])?;
+            let yes = &expected["details"]["answer"]["probability"];
+            same("probability", &json!(probability), yes)?;
+        }
         if let Some(counters) = &counters {
-            let before = parsed(&got[0])?;
-            next = usize::try_from(calls).map_err(|error| error.to_string())? + 2;
-            let after = parsed(&got[next - 1])?;
+            let before = parsed(&got[2 + usize::from(decide)])?;
+            let after = parsed(got.last().ok_or("no usage reply")?)?;
             let moved = |name: &str| {
                 after[name]
                     .as_u64()
@@ -288,20 +298,12 @@ fn one_answer<'a>(
             });
             same("counters", &seen, counters)?;
         }
-        single(&got[next], &got[next + 1], &expected)?;
-        if decide {
-            let rows = judged(&got[next + 2])?;
-            let (outcome, probability) = rows.first().copied().ok_or("no judgment")?;
-            same("decide", &bare(outcome), &expected["bare"])?;
-            let yes = &expected["details"]["answer"]["probability"];
-            same("probability", &json!(probability), yes)?;
-        }
         Ok(())
     })
 }
 
 /// A single judgment's bare reply and its `details` reply.
-fn single(plain: &Reply, detailed: &Reply, expected: &Value) -> Checked {
+fn single(plain: &Reply, detailed: &Reply, expected: &Value, served: &str) -> Checked {
     same("bare", &parsed(plain)?, &expected["bare"])?;
     let details = parsed(detailed)?;
     let wanted = &expected["details"];
@@ -309,10 +311,15 @@ fn single(plain: &Reply, detailed: &Reply, expected: &Value) -> Checked {
     for (name, value) in wanted["answer"].as_object().into_iter().flatten() {
         same(name, &details["answer"][name], value)?;
     }
-    for name in ["model", "question_sha256", "requests"] {
-        same(name, &details["meta"][name], &wanted[name])?;
+    // Indexing a missing key reads null, so an absent field reads as the word "absent".
+    let absent = json!("absent");
+    let at = |from: &Value, name| from.get(name).unwrap_or(&absent).clone();
+    let confidence = |from: &Value| at(&from["answer"], "confidence");
+    same("confidence", &confidence(&details), &confidence(wanted))?;
+    for name in "model question_sha256 requests usage requests_sent cached".split(' ') {
+        same(name, &at(&details["meta"], name), &at(wanted, name))?;
     }
-    Ok(())
+    same("url", &details["meta"]["url"], &json!(served))
 }
 
 /// Each expected annotate value against its record's value object.

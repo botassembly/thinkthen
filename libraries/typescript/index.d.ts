@@ -82,6 +82,7 @@ export interface Details {
     probabilities?: Record<string, number>;
     pick?: string | null;
     level?: string;
+    confidence?: number;
   };
   threshold?: number | string;
   meta: {

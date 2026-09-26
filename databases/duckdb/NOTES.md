@@ -12,7 +12,6 @@ The tag's `NOTES.md` stays at tag `surfaces-wave7-frozen-2026-09-24b` as history
 
 - The binding depends on `libduckdb-sys` alone. The `duckdb` crate's scalar trait registers no init callback, and every function already goes through the raw C API, so the wrapper and its `arrow` and `hashlink` trees leave. The deny exceptions for `foldhash` and `tiny-keccak` leave with them. Only `zlib-rs` remains, and the deny plant removes that exception.
 - A struct result writes every member. A member the verb lacks is `NULL`.
-- `thinkthen_details(...).value` is the judgment as JSON text: `"yes"`, `"no"`, or `"unsure"` for decide, the pick or `null` for choose, the position for score, and the label list for tag.
 - A `NULL` member inside a list argument makes that row `NULL`.
 - An `@file` that is not UTF-8 reads `thinkthen local: the question file PATH was not read: it is not UTF-8 text`.
 - A member verb whose one answer failed reads `thinkthen backend: the backend's answer could not be read: CAUSE`, with the cause in plain words.

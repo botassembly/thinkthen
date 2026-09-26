@@ -8,7 +8,6 @@ tickets = pl.DataFrame({
         "Thanks for the quick help yesterday!",
     ],
 })
-tickets = tickets.with_columns(
-    refund=tt.decide(question, tickets["body"]),
-)
-assert tickets["refund"].to_list() == [True, False]
+is_refund = tt.decide(question, tickets["body"])
+tickets = tickets.with_columns(is_refund=is_refund)
+assert tickets["is_refund"].to_list() == [True, False]

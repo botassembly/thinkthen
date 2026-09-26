@@ -6,7 +6,7 @@ teams = {
   "shipping" => "Parcels and delivery.",
   "account" => "Logins and passwords."
 }
-owner = ThinkThen.question(
+team_question = ThinkThen.question(
   choose: question,
   options: teams,
   threshold: 0.9
@@ -19,8 +19,10 @@ texts = [
   "My parcel never came, and now " \
     "I cannot log in to track it."
 ]
-answers = texts.map { |text| ThinkThen.choose(owner, text) }
-raise unless answers == [
+owners = texts.map do |text|
+  ThinkThen.choose(team_question, text)
+end
+raise unless owners == [
   "billing",
   "shipping",
   "account",

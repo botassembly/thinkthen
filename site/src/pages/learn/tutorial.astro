@@ -7,6 +7,7 @@ import Code from '../../components/Code.astro';
 import InstallLine from '../../components/InstallLine.astro';
 import { SURFACES, HOWTOS, FUNCTIONS, TUTORIAL_SEE, TUTORIAL_STREAM_SEE } from '../../data/catalog.mjs';
 import { captioned, files } from '../../data/samples.mjs';
+import { setting } from '../../lib/settings-table.mjs';
 
 const shell = SURFACES.find((s) => s.slug === 'shell');
 const see = (name) => FUNCTIONS.find((f) => f.name === name).see;
@@ -38,7 +39,7 @@ const triageForm = files(triagePage)[0];
   <p>The <a href="/install/">install page</a> covers the key and every language and database.</p>
 
   <h2>2. Ask one question</h2>
-  <p>Name the question, pipe the message in, and pass the question as an argument. <code>decide</code> prints a bare <code>true</code>, <code>false</code>, or <code>null</code>, and it sets the exit code to match. Without <code>--details</code>, one message always gets this bare answer.</p>
+  <p>Name the question, pipe the message in, and pass the question as an argument. <code>decide</code> prints a bare <code>true</code>, <code>false</code>, or <code>null</code>, and it sets the exit code to match. Without <code>--details</code> or <code>--quiet</code>, one message gets this bare answer.</p>
   <Terminal run={plain} caption={plain.see} />
   <p>The exit code is the answer. A script branches on it the way it branches on <code>test</code>.</p>
 
@@ -48,7 +49,7 @@ const triageForm = files(triagePage)[0];
   <p>That number is the model's own. ThinkThen passes it through unchanged.</p>
 
   <h2>4. Set a band</h2>
-  <p><code>--threshold</code> is your bar on the probability. One number is a cut, and the default is 0.5. Two numbers make a band: under the low bar is no, at or over the high bar is yes, and anything between is not sure.</p>
+  <p><code>--threshold</code> is your bar on the probability. One number is a cut, and the default is {setting('Threshold').defaultOn('decide')}. Two numbers make a band: under the low bar is no, at or over the high bar is yes, and anything between is not sure.</p>
   <Terminal run={band} caption={band.see} />
   <p>The threshold never changes the probability. It changes what you call a yes.</p>
 
@@ -57,7 +58,7 @@ const triageForm = files(triagePage)[0];
   <Terminal run={branch} caption={branch.see} />
 
   <h2>6. Save the question to a file</h2>
-  <p>A question worth tuning is worth keeping. A question file holds one question: the words, what a yes and a no mean, and the threshold.</p>
+  <p>A question file holds one question: the words, what a yes and a no mean, and the threshold.</p>
   <Code code={refundFile.text} caption={`${refundFile.name}, the saved question`} />
   <p>Write <code>@refund.json</code> in place of the question words.</p>
   <Terminal run={savedYes} caption={savedYes.see} />

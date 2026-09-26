@@ -20,6 +20,6 @@ let message = concat!(
     "but export crashes the app, ",
     "and I was charged twice.",
 );
-let tags = tt.tag(&labels, message)?;
+let fitting_labels = tt.tag(&labels, message)?;
 let expected = [Label::Praise, Label::Bug, Label::Billing];
-assert_eq!(tags, expected);
+assert_eq!(fitting_labels, expected);

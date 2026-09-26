@@ -25,8 +25,8 @@ runtime_ready() {
 	actual=$(sha256sum "$PACKAGE" | cut -d' ' -f1)
 	[ "$actual" = "$PINNED" ] || not_run "the server package's SHA256 $actual is not the pinned $PINNED"
 	if [ ! -x "$EXTRACTED/usr/lib/postgresql/16/bin/postgres" ]; then
-		rm -rf "$EXTRACTED.partial"
-		dpkg-deb -x "$PACKAGE" "$EXTRACTED.partial" && mv "$EXTRACTED.partial" "$EXTRACTED"
+		scratch_dir partial "$EXTRACTED.XXXXXX"
+		dpkg-deb -x "$PACKAGE" "$partial" && mv "$partial" "$EXTRACTED"
 	fi
 	header=$(/usr/bin/pg_config --version | sed -n 's/.*(Ubuntu \(.*\)).*/\1/p')
 	server=$("$EXTRACTED/usr/lib/postgresql/16/bin/postgres" -V | sed -n 's/.*(Ubuntu \(.*\)).*/\1/p')
