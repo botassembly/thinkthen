@@ -1,6 +1,6 @@
 # What a procedure runtime asks of the judgment
 
-Status: Open
+Status: Closed 2026-09-26 by the coordinator on the evidence in `sdlc/planning/backlog-0-1-2026-09-26.md` section 3.
 
 Observed 2026-09-21 at `9fd4dcf`. Ian asked a steering agent to read this tool, an owned procedure runtime, and the `thruwire/foreman` experiment, and to name every gap that stands between the tool as it ships and a caller that must justify each judgment inside a sealed record. This page is that answer. It files an ask and authorizes nothing.
 
