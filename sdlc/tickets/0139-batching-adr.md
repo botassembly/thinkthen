@@ -6,7 +6,7 @@ opens: sdlc/planning/adr/0048-records-batch-into-full-requests.md sdlc/planning/
 
 # 0139: Record the batching rulings in one ADR
 
-Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Claude.
+Status: landed 2026-09-26 (`sdlc/records/0139-build-batching-adr.md`). A fresh code review accepted it after one round of fixes. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
