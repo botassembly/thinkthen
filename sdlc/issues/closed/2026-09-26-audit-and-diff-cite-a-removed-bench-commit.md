@@ -1,6 +1,8 @@
 # Audit and diff cite a removed Beatles Bench commit
 
-Status: open. Filed 2026-09-26 by the marketing lead.
+Status: Closed 2026-09-26 by Quick Fix qf-h1-h3-h6.
+
+Filed 2026-09-26 by the marketing lead.
 
 ## Problem
 
