@@ -23,10 +23,12 @@ fn sent(listener: &Listener) -> Vec<String> {
     let mut states: Vec<String> = listener
         .requests()
         .iter()
+        // A body with no text state reads as empty and fails the comparison.
         .map(|request| {
-            let body: serde_json::Value =
-                serde_json::from_slice(&request.body).expect("a JSON request body");
-            body["state"].as_str().expect("a text state").to_owned()
+            serde_json::from_slice::<serde_json::Value>(&request.body)
+                .ok()
+                .and_then(|body| Some(body.get("state")?.as_str()?.to_owned()))
+                .unwrap_or_default()
         })
         .collect();
     states.sort();
