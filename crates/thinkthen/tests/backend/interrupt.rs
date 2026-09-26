@@ -77,16 +77,8 @@ fn spawn(arguments: &[&str], input: &[u8], acknowledgment: &Acknowledgment) -> i
     Ok(child)
 }
 
-fn held(
-    arguments: &[&str],
-    input: &[u8],
-    reply: impl Fn() -> Canned + Send + Sync + 'static,
-) -> io::Result<Output> {
-    held_at(1, arguments, input, reply)
-}
-
 /// Hold `count` requests, send SIGINT, then release them all.
-fn held_at(
+fn held(
     count: usize,
     arguments: &[&str],
     input: &[u8],
@@ -135,6 +127,7 @@ fn record_finishes_the_started_row_stops_before_another_and_completes_cache() {
     let _removed = fs::remove_dir_all(&cache);
     let cache_name = cache.to_string_lossy();
     let output = held(
+        1,
         &[
             "decide",
             "Is it accepted?",
@@ -185,7 +178,7 @@ fn sent_single_decide_and_aggregate_commands_flush_before_sigint_status() {
         ),
     ];
     for (answer, command, input, expected) in cases {
-        let output = held(&command, input, move || Canned::ok(answer)).expect("interrupt run");
+        let output = held(1, &command, input, move || Canned::ok(answer)).expect("interrupt run");
         assert_eq!(String::from_utf8_lossy(&output.stdout), expected);
         assert!(output.stderr.is_empty());
     }
@@ -194,6 +187,7 @@ fn sent_single_decide_and_aggregate_commands_flush_before_sigint_status() {
 #[test]
 fn sigint_during_retry_wait_makes_exactly_one_request() {
     let output = held(
+        1,
         &["decide", "Is it accepted?", "--max-retries", "2"],
         b"evidence",
         || Canned::status(500, "retry"),
@@ -204,7 +198,7 @@ fn sigint_during_retry_wait_makes_exactly_one_request() {
 }
 
 /// Ticket 0143: a split text holds up to the default width of 4 in flight.
-/// The text makes more than 4 chunks, and none starts after the signal.
+/// The text makes 14 one-question chunks, and none starts after the signal.
 #[test]
 fn sigint_between_recognition_chunks_starts_no_later_chunk() {
     let profile = Path::new(env!("CARGO_TARGET_TMPDIR")).join("recognize-interrupt-profile.json");
@@ -213,8 +207,7 @@ fn sigint_between_recognition_chunks_starts_no_later_chunk() {
         r#"{"schema":"thinkthen.backend-profile/1","name":"one","max_questions":1}"#,
     )
     .expect("profile");
-    // The text asks 14 requests of one question each.
-    let output = held_at(
+    let output = held(
         4,
         &[
             "recognize",
