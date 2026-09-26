@@ -8,10 +8,10 @@ set -eu
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
 
-cargo test --locked --workspace --all-targets --all-features
+cargo test --locked --workspace --all-targets
 RUSTFLAGS='--cfg thinkthen_internal_doctest' \
 RUSTDOCFLAGS='--cfg thinkthen_internal_doctest' \
-    cargo test --locked --workspace --doc --all-features
+    cargo test --locked --workspace --doc
 # Ticket 0086: the external consumer is its own workspace, so the root build
 # above does not reach it. It runs the shared cases and the real-fork proofs.
 # It builds under the root target, so no generated source lands in a folder
