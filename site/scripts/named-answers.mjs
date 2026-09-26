@@ -24,8 +24,11 @@
 // order, and several may share a line.
 //
 // Accepted languages: bash, sh, python, typescript, ts, ruby, r, rust, c,
-// and sql. sh is bash, and ts is typescript. An unknown language returns
-// an empty array. Such text holds no ThinkThen call form this rule knows.
+// and sql. sh is bash, and ts is typescript. An unknown language throws a
+// TypeError. Its message names the bad language and lists the accepted
+// names. A name that every JavaScript object inherits, such as constructor
+// or __proto__, is unknown too. A caller skips text that holds no
+// ThinkThen call, such as JSON or program output, before it calls.
 //
 // Generic names, compared without case: result, results, answer, answers,
 // output, outputs, out, res, ret, response, responses, value, values,
@@ -212,9 +215,11 @@ function library(text, lang) {
 
 export function namedAnswerProblems(code, language) {
   const key = String(language).toLowerCase();
-  const lang = Object.hasOwn(LANGUAGE, key) ? LANGUAGE[key] : null;
+  if (!Object.hasOwn(LANGUAGE, key)) {
+    throw new TypeError(`unknown language ${JSON.stringify(String(language))}. Accepted names: ${Object.keys(LANGUAGE).join(', ')}.`);
+  }
+  const lang = LANGUAGE[key];
   if (lang === 'sql') return sql(code);
   if (lang === 'bash') return bash(code);
-  if (lang) return library(code, lang);
-  return [];
+  return library(code, lang);
 }

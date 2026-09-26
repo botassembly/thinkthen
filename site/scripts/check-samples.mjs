@@ -13,12 +13,16 @@
 //     acts on a ThinkThen call, a SQL call carries an alias, a Bash script
 //     names an exit code before it reads it, and no answer takes a generic
 //     name such as `result` or `answer`.
+//   - Every example file and every fence tag is a code language or a kind
+//     in NO_CALL. A mistyped fence tag fails.
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { namedAnswerProblems } from './named-answers.mjs';
 
-const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const here = fileURLToPath(import.meta.url);
+const site = path.resolve(path.dirname(here), '..');
 const root = path.join(site, 'examples');
 const bench = path.join(root, 'beatles', 'bench');
 const WIDTH = 60;
@@ -63,11 +67,27 @@ const LIBRARY = new Set(['.py', '.rb', '.R', '.ts', '.rs', '.c']);
 // Named answers (Ian, 2026-09-26). An example keeps each ThinkThen answer
 // in a variable named for its meaning, then asserts on that name. The rule
 // lives in named-answers.mjs, which the builder's lint rung shares.
-const LANGUAGE = { '.sh': 'bash', '.py': 'python', '.ts': 'typescript', '.rb': 'ruby', '.R': 'r', '.rs': 'rust', '.c': 'c', '.sql': 'sql' };
+//
+// NO_CALL lists the kinds that hold no ThinkThen call: file extensions in
+// the examples and fence tags in the articles. The check skips them. Every
+// other kind goes to namedAnswerProblems, which throws on a language it
+// does not accept. That throw fails the build, so a mistyped fence tag or
+// a new kind of file never passes unread.
+export const NO_CALL = new Set([
+  '.json', '.out', '.txt', '.exit', '.diff', '.jq',
+  'text', 'json', 'console', 'output',
+]);
+const FILE_LANGUAGE = { '.sh': 'bash', '.py': 'python', '.ts': 'typescript', '.rb': 'ruby', '.R': 'r', '.rs': 'rust', '.c': 'c', '.sql': 'sql' };
+const FENCE_EXT = { bash: '.sh', sh: '.sh', python: '.py', ts: '.ts', typescript: '.ts', ruby: '.rb', r: '.R', rust: '.rs', c: '.c', sql: '.sql', json: '.json' };
 
-function namedAnswers(label, text, ext, offset = 0) {
-  if (!LANGUAGE[ext]) return [];
-  return namedAnswerProblems(text, LANGUAGE[ext]).map((p) => `${label}:${offset + p.line}: ${p.message}`);
+function namedAnswers(label, text, kind, language, offset = 0) {
+  if (NO_CALL.has(kind)) return [];
+  try {
+    return namedAnswerProblems(text, language).map((p) => `${label}:${offset + p.line}: ${p.message}`);
+  } catch (error) {
+    if (!(error instanceof TypeError)) throw error;
+    return [`${label}:${offset + 1}: ${kind} is not a kind check-samples knows. ${error.message} Kinds that hold no ThinkThen call: ${[...NO_CALL].join(', ')}.`];
+  }
 }
 
 function walk(dir) {
@@ -78,78 +98,91 @@ function walk(dir) {
   });
 }
 
-const problems = [];
 const used = new Map(EXEMPT.map((e) => [e.name, 0]));
 
 function checkLines(label, rel, lines, ext) {
+  const found = [];
   lines.forEach((line, i) => {
     const at = `${label}:${i + 1}`;
     if ([...line].length > WIDTH) {
       const exempt = EXEMPT.find((e) => e.test(line, rel));
       if (exempt) used.set(exempt.name, used.get(exempt.name) + 1);
-      else problems.push(`${at}: ${[...line].length} characters, over ${WIDTH}`);
+      else found.push(`${at}: ${[...line].length} characters, over ${WIDTH}`);
     }
-    if (COMMENT[ext]?.test(line)) problems.push(`${at}: a comment. The sentence above the block says it.`);
-    if (LIBRARY.has(ext) && PRINT.test(line)) problems.push(`${at}: a print. Assert the answer instead.`);
+    if (COMMENT[ext]?.test(line)) found.push(`${at}: a comment. The sentence above the block says it.`);
+    if (LIBRARY.has(ext) && PRINT.test(line)) found.push(`${at}: a print. Assert the answer instead.`);
   });
+  return found;
 }
 
-for (const file of walk(root)) {
-  const rel = path.relative(root, file);
-  if (['SKIP', 'beatles/BENCH', 'beatles/folders.json'].includes(rel)) continue;
-  const ext = path.extname(file);
-  const text = fs.readFileSync(file, 'utf8').replace(/\n+$/, '');
-  checkLines(`examples/${rel}`, rel, text.split('\n'), ext);
-  problems.push(...namedAnswers(`examples/${rel}`, text, ext));
-  if (ext === '.sh' && /--details\b/.test(text)) {
-    const last = text.split('\n').at(-1).trim();
-    if (last !== 'jq .') problems.push(`examples/${rel}: asks for --details and does not end in jq . Show the details whole.`);
-  }
-}
-
-// The code blocks in the articles follow the same rules.
-const articles = path.join(site, 'src', 'articles');
-for (const name of fs.readdirSync(articles).filter((n) => n.endsWith('.md'))) {
-  const lines = fs.readFileSync(path.join(articles, name), 'utf8').split('\n');
-  let lang = null;
+// The code blocks in an article follow the same rules as the examples.
+export function articleProblems(name, text) {
+  const found = [];
+  const lines = text.split('\n');
+  let tag = null;
   let start = 0;
   lines.forEach((line, i) => {
     const fence = /^```(\w*)/.exec(line);
-    if (fence && lang === null) { lang = fence[1] || 'text'; start = i + 1; return; }
-    if (line.startsWith('```') && lang !== null) {
-      const ext = { bash: '.sh', sh: '.sh', python: '.py', ts: '.ts', typescript: '.ts', sql: '.sql', json: '.json' }[lang] || '';
+    if (fence && tag === null) { tag = fence[1].toLowerCase() || 'text'; start = i + 1; return; }
+    if (line.startsWith('```') && tag !== null) {
+      const ext = FENCE_EXT[tag] || '';
       const block = lines.slice(start, i);
       block.forEach((l, j) => {
         if ([...l].length > WIDTH && !EXEMPT.some((e) => e.test(l, ext === '.json' ? 'x.json' : `x${ext}`))) {
-          problems.push(`src/articles/${name}:${start + j + 1}: ${[...l].length} characters, over ${WIDTH}`);
+          found.push(`src/articles/${name}:${start + j + 1}: ${[...l].length} characters, over ${WIDTH}`);
         }
-        if (COMMENT[ext]?.test(l)) problems.push(`src/articles/${name}:${start + j + 1}: a comment in a code block`);
-        if (LIBRARY.has(ext) && PRINT.test(l)) problems.push(`src/articles/${name}:${start + j + 1}: a print. Assert the answer instead.`);
+        if (COMMENT[ext]?.test(l)) found.push(`src/articles/${name}:${start + j + 1}: a comment in a code block`);
+        if (LIBRARY.has(ext) && PRINT.test(l)) found.push(`src/articles/${name}:${start + j + 1}: a print. Assert the answer instead.`);
       });
-      problems.push(...namedAnswers(`src/articles/${name}`, block.join('\n'), ext, start));
-      lang = null;
+      found.push(...namedAnswers(`src/articles/${name}`, block.join('\n'), tag, tag, start));
+      tag = null;
     }
   });
+  return found;
 }
 
-// Every page says what it must communicate, before anything else.
-function astroPages(dir) {
-  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
-    const p = path.join(dir, e.name);
-    return e.isDirectory() ? astroPages(p) : p.endsWith('.astro') ? [p] : [];
-  });
-}
-for (const file of astroPages(path.join(site, 'src', 'pages'))) {
-  const second = fs.readFileSync(file, 'utf8').split('\n')[1] || '';
-  if (!second.startsWith('// Goal: ')) problems.push(`${path.relative(site, file)}: no goal. Start the front matter with // Goal: and one sentence.`);
-}
-for (const name of fs.readdirSync(articles).filter((n) => n.endsWith('.md'))) {
-  const text = fs.readFileSync(path.join(articles, name), 'utf8');
-  if (!/^(---\n(?:.*\n)*?goal: .+\n|<!-- Goal: .+ -->\n)/.test(text)) problems.push(`src/articles/${name}: no goal. Add a goal: field or start with <!-- Goal: -->.`);
+function main() {
+  const problems = [];
+  for (const file of walk(root)) {
+    const rel = path.relative(root, file);
+    if (['SKIP', 'beatles/BENCH', 'beatles/folders.json'].includes(rel)) continue;
+    const ext = path.extname(file);
+    const text = fs.readFileSync(file, 'utf8').replace(/\n+$/, '');
+    problems.push(...checkLines(`examples/${rel}`, rel, text.split('\n'), ext));
+    problems.push(...namedAnswers(`examples/${rel}`, text, ext || '(no extension)', FILE_LANGUAGE[ext] ?? ext));
+    if (ext === '.sh' && /--details\b/.test(text)) {
+      const last = text.split('\n').at(-1).trim();
+      if (last !== 'jq .') problems.push(`examples/${rel}: asks for --details and does not end in jq . Show the details whole.`);
+    }
+  }
+
+  const articles = path.join(site, 'src', 'articles');
+  for (const name of fs.readdirSync(articles).filter((n) => n.endsWith('.md'))) {
+    problems.push(...articleProblems(name, fs.readFileSync(path.join(articles, name), 'utf8')));
+  }
+
+  // Every page says what it must communicate, before anything else.
+  function astroPages(dir) {
+    return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const p = path.join(dir, e.name);
+      return e.isDirectory() ? astroPages(p) : p.endsWith('.astro') ? [p] : [];
+    });
+  }
+  for (const file of astroPages(path.join(site, 'src', 'pages'))) {
+    const second = fs.readFileSync(file, 'utf8').split('\n')[1] || '';
+    if (!second.startsWith('// Goal: ')) problems.push(`${path.relative(site, file)}: no goal. Start the front matter with // Goal: and one sentence.`);
+  }
+  for (const name of fs.readdirSync(articles).filter((n) => n.endsWith('.md'))) {
+    const text = fs.readFileSync(path.join(articles, name), 'utf8');
+    if (!/^(---\n(?:.*\n)*?goal: .+\n|<!-- Goal: .+ -->\n)/.test(text)) problems.push(`src/articles/${name}: no goal. Add a goal: field or start with <!-- Goal: -->.`);
+  }
+
+  if (problems.length) {
+    console.error(`check-samples: ${problems.length} problems\n  ${problems.join('\n  ')}`);
+    process.exit(1);
+  }
+  console.log(`check-samples: every example keeps the rules. Exempt long lines: ${[...used].map(([n, c]) => `${c} ${n}`).join(', ')}.`);
 }
 
-if (problems.length) {
-  console.error(`check-samples: ${problems.length} problems\n  ${problems.join('\n  ')}`);
-  process.exit(1);
-}
-console.log(`check-samples: every example keeps the rules. Exempt long lines: ${[...used].map(([n, c]) => `${c} ${n}`).join(', ')}.`);
+// The table test imports articleProblems. Only a direct run checks the site.
+if (process.argv[1] && path.resolve(process.argv[1]) === here) main();
