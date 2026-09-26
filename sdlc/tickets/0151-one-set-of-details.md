@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/public/results.rs conformance/cases.json conformance
 
 # 0151: One set of details on every surface
 
-Status: ready for review. Owner: Claude.
+Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -191,7 +191,7 @@ The coordinator can overturn this order.
 
 - **Ticket 0146** (the command batches) opens `public/results.rs`. This ticket adds two fields and two accessors there. 0146 changes at most 3 lines there, for a batched row's usage share. It also opens `crates/thinkthen/tests` and `specification/result.md`, which this ticket leaves alone. The shared files `sdlc/ratchet.json`, `sdlc/records`, `sdlc/tickets` and `sdlc/issues` merge as usual.
 - **Ticket 0148** (engine settings everywhere) opens `conformance/consumer`, `conformance/README.md`, the whole `libraries/typescript`, `libraries/python`, `libraries/ruby`, `libraries/r` and `libraries/c` folders, `libraries/rust/README.md`, `libraries/polars/README.md`, the three database folders, and ticket 0084. This ticket edits files in each of those. The runners (`cases.rs`, `conformance.py`, `conformance.rb`, `conformance.R`, `cases.mjs`, C's `cases.rs`, the SQL runners) and every README are the closest overlap, because 0148 adds its settings runner beside each and a sentence to each README. `databases/duckdb/tools/settings_suite.py` is edited by both: 0148 removes the `cache_bytes` step at line 91, and this ticket changes line 109. 0148 adds `conformance/settings.json` and does not touch `cases.json`.
-- **Order:** this ticket builds now and lands first. 0150 follows it, then 0146, then 0148. 0150's ticket text still says it builds after 0146 and 0148, and the coordinator's order replaces that. 0146 waits for Ian's paid "S1 live run 1", and 0148 waits for 0146. This ticket depends on neither. Both already merge `origin/main` before they build, so they pick up this change. B12a builds after this ticket, as the backlog asks.
+- **Order:** this ticket builds now and lands first. 0150 follows it, then 0146, then 0148. 0146 waits for Ian's paid "S1 live run 1", and 0148 waits for 0146. This ticket depends on neither. Both already merge `origin/main` before they build, so they pick up this change. B12a builds after this ticket, as the backlog asks.
 - **Tickets 0147 and 0150.** 0147 (the recognize ADR) opens pages only, and none overlaps. 0150 (L4, find's none option and annotate parts) now has its ticket. By the coordinator's order it builds after this ticket, merges this ticket first, and lands before 0146's build starts. It shares these files with this ticket: `public/results.rs`, `conformance/cases.json`, `conformance/README.md`, `conformance/consumer/consumer/tests/public/cases.rs`, the Python, TypeScript, Ruby, R and C runners and READMEs (0150 opens those whole folders), `databases/duckdb/tools/conformance.py`, `databases/duckdb/NOTES.md`, `databases/sqlite/tests/conformance.py`, `databases/postgresql/tests/runner.py`, and ticket 0084.
 
 ## Scope and exclusions
