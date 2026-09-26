@@ -39,8 +39,9 @@ This is ticket J1 of `sdlc/issues/2026-09-26-batching-design.md`. Its row reads:
 - **Many chunks.** It runs `workers::scoped` with `min(width, chunks)` workers, where `width` is the engine's `State::width`. The body on the calling thread feeds one chunk to each free worker, in chunk order. It never queues more chunks than there are free workers. It holds each reply by its chunk number and hands the replies to the closure in chunk order, as soon as every earlier chunk has answered.
 - **Failure.** When a send fails, or the closure returns an error, the body feeds no further chunk. It waits for the chunks in flight, hands on in order every reply before the first failure, and returns the first failure in chunk order. Every chunk before a failed chunk was fed earlier, so this is the error the in-order run returns. Chunks after it that were already in flight finish, and their replies are recorded and counted as any sent request is.
 - **Stop.** While it waits for replies, the body polls the call's stop, as `workers::on_worker` does today. A stop feeds no further chunk. The chunks in flight finish, and the call returns the stop.
+- **Nesting.** `annotate`'s `answer_group` and `recognize`'s `execute` in record mode already run on engine workers. There `ask_chunks` starts its own inner workers, as decision 8 rules.
 
-`Engine::relate` gathers every relation's chunks into one list, in relation order and then chunk order, beside the index of the relation each chunk belongs to. It makes one `ask_chunks` call over the list. The closure finds the chunk's relation by that index and takes the next mappings from that relation's iterator, as it does now. After the call, each relation's iterator must be empty, as now. So `edges`, `logical`, and `requests` fill in the same order as today.
+`Engine::relate` gathers every relation's chunks into one list, in relation order and then chunk order, beside the index of the relation each chunk belongs to. It makes one `ask_chunks` call over the list. The closure finds the chunk's relation by that index and takes the next mappings from that relation's iterator, as it does now. Each relation's iterator must be empty at the end, as now. That check now runs after every relation has answered, not before the next relation starts. It raises the same Defect. So `edges`, `logical`, and `requests` fill in the same order as today.
 
 The command side:
 
@@ -57,16 +58,20 @@ Each is the agent's decision under the J1 row. Ian can overturn any of them.
 2. **Relate makes one `ask_chunks` call over every relation's chunks.** It needs no second scheduler. A relate with eight one-request rules then holds eight requests in flight, which is the 0118 count.
 3. **Replies are handed on in chunk order, not arrival order.** Every caller builds its result in that order. So the output bytes, the `--details` request list, and the model check stay what the in-order run gives.
 4. **The first failure in chunk order wins, and no chunk starts after a failure is seen.** The message and exit code match the `--jobs 1` run. The cost is up to `width - 1` requests in flight that finish after the failure. They may be billed and recorded, as a retried request may be today. The design states it on `relate.md` and `records.md`.
-5. **The width is the engine's.** `relate --jobs N` selects it, as on other commands. A library relate follows its engine's throttle. `recognize` over one text still refuses `--jobs`, and its split requests follow the process width, 4 unless another call selected one. Letting `recognize` take `--jobs` for one text is a deferred gap, not this ticket.
+5. **The width is the engine's.** `relate --jobs N` selects it, as on other commands. A library relate follows its engine's throttle. `recognize` over one text still refuses `--jobs` in this ticket, and its split requests follow the process width, 4 unless another call selected one. Ian ruled that `recognize` accepts `--jobs` for one document (`sdlc/issues/2026-09-26-recognize-design.md:231`). Ticket R4b of that design owns the flag and depends on this ticket.
 6. **`--jobs` enters no plan and no digest.** A `--dry-run` plan and every request body are unchanged.
 7. **The in-flight chunk budget is the worker count, not a queue.** Feeding one chunk per free worker keeps a failed run's extra requests to those already in flight. A queue filled up front would send chunks after a failure.
+8. **Nested workers are allowed.** The coordinator ruled this on 2026-09-26, the design reviewer's option b, because speed wins. One long text inside a small record run would otherwise go one chunk at a time. No new pool is built.
+    - **Thread bound.** The record and group schedulers run at most `width` outer workers. Each outer worker's `ask_chunks` starts at most `width` inner workers. So a run holds at most `width × width` inner workers beside its `width` outer ones: 16 at the default 4, and 1,024 at `--jobs 32`. The bound is reached only when every record in flight splits into at least `width` chunks. An inner worker waits on the permit's condition variable, and spends no processor time while it waits.
+    - **Requests stay within `--jobs`.** Every live attempt takes its own permit from the process `Widths` in `engine/http.rs` before it posts, and gives it back when the attempt ends. An outer worker waiting on its inner workers holds no permit, because it posts nothing itself. So at most `--jobs` requests are on the wire, however deep the nesting.
+    - **Cancellation.** `Cancel::checked` runs the host check only on its calling thread, so an outer or inner worker never runs it. Workers learn of a stop through the shared stop flag, the `fired` `Arc<AtomicBool>` that every clone of a call's `Cancel` shares. This is the mechanism the record workers already use. The outermost calling thread runs the host check in its scheduler loop through `cancel.stop()`, and a true check fires the flag. The command's SIGINT handler sets the same flag, registered through `signal_hook::flag::register` on `Cancel::flag` (`cli/interrupt.rs:327`), and a library cancel sets it through `public/options.rs:218`. An inner `ask_chunks` body reads the flag through `cancel.stop()` between feeds, feeds no further chunk, and waits for its chunks in flight. An inner worker blocked on a permit sees it through `Widths::acquire`, which checks `stop_or_remaining` every 50 ms and returns `Cancelled`. So no chunk starts after the flag fires, at any depth.
 
 ## Edge cases
 
 | Case | Today | After |
 | --- | --- | --- |
 | One relation that fits one request | One request | One request, sent on the calling path with no new worker. Kept |
-| Eight one-request rules, `--jobs 4` | One request at a time | Up to 4 in flight, 8 in all. Output bytes equal the `--jobs 1` run's. Changed |
+| Eight one-request rules, `--jobs 3` | One request at a time | Up to 3 in flight, 8 in all. Output bytes equal the `--jobs 1` run's. Changed |
 | One relation split into 6 chunks by `--profile` `max_questions`, `--jobs 4` | One at a time | Up to 4 in flight. Output and `--details` equal the `--jobs 1` run's. Changed |
 | Replies that arrive in reverse order | n/a, one at a time | Edges, `logical`, and the request list keep relation and chunk order. Changed timing, same bytes |
 | A chunk that fails at the backend, `--max-retries 0` | The run stops at it and sends no later chunk | Same standard error and exit code as `--jobs 1`. No chunk starts after the failure is seen. Chunks already in flight finish. Changed request count |
@@ -81,7 +86,8 @@ Each is the agent's decision under the J1 row. Ian can overturn any of them.
 | `--replay` missing one chunk | Exit 5 at that chunk | Exit 5 with the same message. Chunks in flight answer from disk. Kept |
 | SIGINT while chunks are in flight | The one in flight finishes, none starts after | Those in flight finish, none starts after. The command dies by SIGINT with no output. Kept |
 | `recognize` over one text split by a profile | One at a time | Up to the process width, 4. `--jobs` stays refused. Changed |
-| `annotate` over one text, a group split by a profile | One at a time within the group | Up to `--jobs` within the group, and groups as today. Changed |
+| `annotate` over one text, a group split by a profile | One at a time within the group | Each group's chunks start inner workers under the group scheduler's outer worker, per decision 8. Up to `--jobs` requests in flight across all groups, since every attempt takes a permit. Changed |
+| `recognize` or `annotate` over records, where a record splits | Each record's chunks one at a time on its worker | Nested inner workers, per decision 8: at most `width × width` inner workers, 1,024 at `--jobs 32`, and at most `--jobs` requests in flight. SIGINT fires the shared stop flag, and no inner chunk starts after it. Changed |
 | `check` | Four one-chunk calls | Kept |
 
 ## Proof
@@ -90,7 +96,7 @@ Every new Rust test runs the compiled command against a counted loopback listene
 
 | Test | Proof | Planted fault that turns it red |
 | --- | --- | --- |
-| `relate_requests_reach_the_throttle_and_no_further` | `relate --lines` over three names with nine bare rules `r1` to `r9`, `--jobs 4`. Each reply waits in a `Gathering` of 4. Exit 0. The listener read 9 requests, and `listener.peak()` is exactly 4 | (a) Loop over the relations with one `ask_chunks` call each: the peak is 1. (b) Drop the permit `acquire` in `engine/http.rs`, so the workers send past the width: the peak rises above 4 |
+| `relate_requests_reach_the_throttle_and_no_further` | `relate --lines` over three names with nine bare rules `r1` to `r9`, `--jobs 3`. Each reply waits in a `Gathering` of 3. Exit 0. The listener read 9 requests, and `listener.peak()` is exactly 3. The width is 3, not the default 4, so the test also proves `--jobs` reaches the engine | (a) Loop over the relations with one `ask_chunks` call each: the peak is 1. (b) `cli/relate.rs` still passes `None` as the width: the engine runs at the default 4, and the peak is 4 |
 | `split_relations_print_what_one_job_prints` | Two rules over the fixture of `relate/ceiling.rs` under a `max_questions` profile that splits each into 3 chunks. Replies wait longer for earlier requests, so they arrive in reverse order. The run at `--jobs 4` and the run at `--jobs 1` print the same standard output, bare and under `--details`, and the same empty standard error. The `--jobs 4` peak is above 1 | (c) Hand each reply on in arrival order: the edges and the request list reorder. (d) Keep the old loop: the peak is 1 |
 | `a_failed_chunk_stops_the_run_as_one_job_does` | Six chunks at `--jobs 2`, `--max-retries 0`. Chunk 1 answers 500 at once. Chunk 2 answers after 300 ms. The run exits with the `--jobs 1` run's code and standard error, and the listener read exactly 2 requests. A second row fails chunk 2 at once with 503 and chunk 1 after 100 ms with 500. It prints the 500 message, as `--jobs 1` does | (e) Queue every chunk up front: 3 or more requests. (f) Return the first failure to arrive: the 503 message |
 | `relate_takes_jobs` in `tests/relate_edge.rs` | The existing help test flips: `relate --help` holds the whole `--jobs` sentence of the design, in place of its `!help.contains("--jobs")` assertion | (g) Restore the `mut_arg` that hides `--jobs`: the sentence is absent |
@@ -106,7 +112,7 @@ Existing tests that change:
 
 The four questions for each new test:
 
-- **`relate_requests_reach_the_throttle_and_no_further`.** It protects the J1 outcome: a relate's requests go together, up to `--jobs` and never past it. A relate loop that sends one relation at a time fails it, as does a bound that ignores the width. No test counts relate's requests in flight. It needs no hook.
+- **`relate_requests_reach_the_throttle_and_no_further`.** It protects the J1 outcome: a relate's requests go together, up to `--jobs` and never past it. A relate loop that sends one relation at a time fails it, as does a command that never hands `--jobs` to the engine. No test counts relate's requests in flight. It needs no hook.
 - **`split_relations_print_what_one_job_prints`.** It protects decision 3, the order of output and details. Handing replies on as they arrive fails it. No test runs a split relate with replies out of order. It needs no hook.
 - **`a_failed_chunk_stops_the_run_as_one_job_does`.** It protects decisions 4 and 7: the in-order message and no send after a seen failure. A queue filled up front, or the first failure to arrive, fails it. No test fails a chunk of a split relate. It needs no hook.
 - **`the_throttle_reaches_a_relate`.** It protects the proof the J1 row names, on the surface whose count first showed the defect. The old relate loop fails it. The Rust tests reach the command, not the DuckDB binding's engine map. It needs no hook: the held arm is the loopback backend's.
@@ -139,10 +145,11 @@ Nonblank lines, measured with `grep -c .` on the diff.
 4. Stop if any `spec/` page, green demo, or surface suite turns red other than those named above.
 5. Stop before editing a file that ticket 0135 owns, other than the one `mut_arg` line in `cli/args/command.rs`. If 0135 has not landed when the build starts, the coordinator orders the two. Ticket 0138 also opens `cli/args/command.rs`, `tests/backend/recognize.rs`, and `tests/backend/annotate.rs`. If an order fix needs one of those two test files while 0138 is in flight, stop and ask the coordinator.
 6. Stop if a stop or failure leaves a worker running after `ask_chunks` returns.
+7. Stop if an interrupt or a failure in a record run leaves an inner worker sending after the flag fires. Stop if a nested run holds more than `--jobs` requests in flight.
 
 ## Scope and exclusions
 
-Excluded: batching records into one request, which B3 and B4 own. The pool and usage fixes of B1 and B2. `recognize` taking `--jobs` for one text. `annotate` running one text's groups at once from the library, where `Engine::annotate` still loops over groups. The audit grading of `recognize` and `relate`, which ticket 0135 owns. `site/`, which the website agent owns.
+Excluded: batching records into one request, which B3 and B4 own. The pool and usage fixes of B1 and B2. `recognize` taking `--jobs` for one text, which R4b owns. `annotate` running one text's groups at once from the library, where `Engine::annotate` still loops over groups. The audit grading of `recognize` and `relate`, which ticket 0135 owns. `site/`, which the website agent owns.
 
 ## Routing
 
@@ -154,7 +161,7 @@ Contract 1; state and timing 2; reach 2; proof 1; cost of error 1; total 7. Fina
 
 ## Deferred gaps
 
-- `recognize` over one text refuses `--jobs`, and the refusal says a single text sends one request. A split text sends several. Letting it take `--jobs` would make it match `annotate` and `relate`.
+- `recognize` over one text refuses `--jobs`, and the refusal says a single text sends one request. A split text sends several. Ian's ruling at `sdlc/issues/2026-09-26-recognize-design.md:231` gives it the flag, and ticket R4b owns that work.
 - The library `Engine::annotate` answers one text's groups one after another. The command's group scheduler already runs them at once.
 - A failed run may send and bill up to `width - 1` requests after the one that failed. Cancelling requests in flight would need a stop that reaches a socket read.
 - Ticket 0118's amended acceptance line stays as landed. This ticket's record names the restored count.
@@ -162,9 +169,9 @@ Contract 1; state and timing 2; reach 2; proof 1; cost of error 1; total 7. Fina
 ## What Ian can overturn
 
 - The J1 row and its place in ruling 9's order.
+- Decision 8: nested workers, the coordinator's ruling, with up to `width × width` inner workers.
 - Decision 1: the change reaches `recognize` and `annotate` split requests, not relate alone.
 - Decision 4: a failed run may bill requests already in flight.
-- Decision 5: `recognize` over one text keeps refusing `--jobs`.
 - The amendment of `relate.md` in place, which the J1 row asks for.
 
 ## Closes
@@ -177,4 +184,4 @@ Contract 1; state and timing 2; reach 2; proof 1; cost of error 1; total 7. Fina
 - Keeps: One-chunk calls, `check`, and every relation that fits one request send exactly as today. Output, `--details`, standard error, exit codes, digests, plans, and recordings of a finished run. The first failure in chunk order. The model check. SIGINT's rule that no request starts after the signal. `recognize`'s `--jobs` refusal for one text.
 - Changes: `ask_chunks` sends a call's chunks at once under the engine's width and hands replies on in chunk order. Relate sends every relation's chunks in one call. `relate` takes `--jobs` and shows it in help. `relate.md`, `records.md`, and the `--jobs` help say so. A failed run may finish requests already in flight.
 - Proof: The four new tests under "Proof", with plants (a) to (h), and the rewritten recognize interrupt test with plant (i). The DuckDB case restores 0118's count of 8 in flight.
-- Defers: `recognize --jobs` for one text. The library `annotate` group loop. Cancelling requests in flight after a failure. The `site/` relate page.
+- Defers: `recognize --jobs` for one text, which R4b owns. The library `annotate` group loop. Cancelling requests in flight after a failure. The `site/` relate page.
