@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core/measure crates/thinkthen/src/core/measure.rs cr
 
 # 0131: Make audit give the numbers a benchmark needs
 
-Status: ready. Owner: Claude.
+Status: landed 2026-09-26 (`sdlc/records/0131-build-audit-matches-the-bench.md`). Code review accepted on two passes; production Rust re-scored to 425 by the coordinator. No open proof gap. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it. The first design review returned findings on 2026-09-25, and this page is rewritten whole after it.
 
@@ -292,11 +292,11 @@ Contract 2; state and timing 1; reach 1; proof 2; cost of error 2; total 8. Fina
 
 This commit adds a line to each of the five issues. The line names Ian's ruling at `82336e9a` and this ticket. On landing, the lander closes the five issues, with a status line naming this ticket:
 
-- `sdlc/issues/2026-09-25-audit-gives-no-share-to-a-tie-that-holds-the-right-answer.md`
-- `sdlc/issues/2026-09-25-audit-tunes-its-cut-on-one-half-and-never-swaps.md`. The line says audit keeps the grid, and 0125's `steady` answers the spread and not the swap.
-- `sdlc/issues/2026-09-25-audit-calibration-differs-from-the-benchs-ece-and-its-interval.md`
-- `sdlc/issues/2026-09-25-audit-reports-coverage-at-one-rule-not-along-every-confidence.md`
-- `sdlc/issues/2026-09-25-audit-cannot-group-by-a-record-field.md`
+- `sdlc/issues/closed/2026-09-25-audit-gives-no-share-to-a-tie-that-holds-the-right-answer.md`
+- `sdlc/issues/closed/2026-09-25-audit-tunes-its-cut-on-one-half-and-never-swaps.md`. The line says audit keeps the grid, and 0125's `steady` answers the spread and not the swap.
+- `sdlc/issues/closed/2026-09-25-audit-calibration-differs-from-the-benchs-ece-and-its-interval.md`
+- `sdlc/issues/closed/2026-09-25-audit-reports-coverage-at-one-rule-not-along-every-confidence.md`
+- `sdlc/issues/closed/2026-09-25-audit-cannot-group-by-a-record-field.md`
 
 ## What Ian can overturn
 
