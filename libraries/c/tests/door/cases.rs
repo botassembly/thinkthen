@@ -134,19 +134,7 @@ fn plan<'a>(backend: &'a Backend, case: &Members, script: &mut Script) -> Checke
     match (verb.as_str(), success["kind"].as_str().unwrap_or_default()) {
         ("recognize", _) => Ok(recognized(script, &base, case, question, &success)),
         ("relate", _) => related(script, &base, case, question, &success),
-        ("annotate", _) => {
-            let set = case.get("question_set").map_or("{}", |raw| raw.get());
-            let whole = case
-                .get("record")
-                .map(|record| json!([record.get()]).to_string());
-            let records = whole.as_deref().unwrap_or(&records);
-            let request = format!(r#"{{"annotate":{set},"records":{records}}}"#);
-            script.ask("call", &[&base, &request]);
-            let one = whole.is_some();
-            Ok(Box::new(move |got| {
-                annotated(&parsed(&got[0])?, &success, one)
-            }))
-        }
+        ("annotate", _) => Ok(annotating(script, &base, case, &records, success)),
         ("find", _) => {
             script.ask("call", &[&base, question]);
             let units: Vec<String> = serde_json::from_str::<Value>(question)
@@ -200,6 +188,25 @@ fn plan<'a>(backend: &'a Backend, case: &Members, script: &mut Script) -> Checke
         }
         _ => Ok(one_answer(script, &base, &verb, question, &first, &success)),
     }
+}
+
+/// Annotate the case's record, when it names one, or its evidence texts.
+fn annotating<'a>(
+    script: &mut Script,
+    base: &str,
+    case: &Members,
+    records: &str,
+    success: Value,
+) -> Judge<'a> {
+    let set = case.get("question_set").map_or("{}", |raw| raw.get());
+    let whole = case
+        .get("record")
+        .map(|record| json!([record.get()]).to_string());
+    let records = whole.as_deref().unwrap_or(records);
+    let request = format!(r#"{{"annotate":{set},"records":{records}}}"#);
+    script.ask("call", &[base, &request]);
+    let one = whole.is_some();
+    Box::new(move |got| annotated(&parsed(&got[0])?, &success, one))
 }
 
 /// Recognize through the JSON door and the typed door.
