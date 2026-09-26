@@ -86,7 +86,7 @@ fn compact(fixture: &str) -> Vec<u8> {
 fn run(mut batcher: Batcher, records: Vec<BatchRecord>) -> Result<Vec<Batch>, BatchError> {
     let mut batches = Vec::new();
     for record in records {
-        batches.extend(batcher.push(record)?);
+        batcher.push(record, &mut batches)?;
     }
     batches.extend(batcher.finish()?);
     Ok(batches)
@@ -323,7 +323,12 @@ fn limits_close_batches_by_exact_bytes_and_the_ceiling() {
     let state = r#"{"records":["Come Together","Say \"hello\"\nthen leave","Because"]}"#.len();
     let urgent = || text("Help! My payouts have been failing for 3 days.");
     let today = compact(fixture!("decide-urgent")).len();
-    let cases: [LimitCase; 5] = [
+    let twelve = || {
+        ('a'..='l')
+            .map(|letter| text(&letter.to_string()))
+            .collect()
+    };
+    let cases: [LimitCase; 7] = [
         (
             loopback(),
             profile(&format!(r#""max_request_bytes":{body}"#)),
@@ -358,6 +363,20 @@ fn limits_close_batches_by_exact_bytes_and_the_ceiling() {
             decide("Does this convey urgency?"),
             vec![urgent(), urgent(), urgent()],
             vec![(3, End)],
+        ),
+        (
+            loopback(),
+            profile(r#""max_request_bytes":817"#),
+            decide("Q"),
+            twelve(),
+            vec![(12, End)],
+        ),
+        (
+            loopback(),
+            profile(r#""max_request_bytes":816"#),
+            decide("Q"),
+            twelve(),
+            vec![(11, Limit), (1, End)],
         ),
     ];
     check(cases);
@@ -408,7 +427,7 @@ fn the_ceiling_closes_batches_at_the_built_in_address_only() {
 }
 
 /// Plan each case at `Max` and compare its batches' sizes and reasons.
-fn check(cases: [LimitCase; 5]) {
+fn check<const N: usize>(cases: [LimitCase; N]) {
     for (backend, profile, question, records, expected) in cases {
         assert_eq!(
             shape(&batches(backend, profile, question, Setting::Max, records)),
@@ -446,6 +465,18 @@ fn questions_copies_and_refusals_follow_the_batch_rules() {
         ["x", "x", "y"].map(text).into(),
     );
     assert_eq!(shape(&alone), [(1, Size), (1, Size), (1, Size)]);
+    assert!(batches(loopback(), None, decide("Q"), Setting::Max, Vec::new()).is_empty());
+    let context = Evidence::new("shared context").expect("context");
+    let batcher = Batcher::new(
+        loopback(),
+        None,
+        decide("Q"),
+        records(1),
+        Some(context.clone()),
+    );
+    let each = run(batcher.expect("batcher"), ["x", "y"].map(text).into()).expect("batches");
+    assert_eq!(shape(&each), [(1, Size), (1, Size)]);
+    assert!(each.iter().all(|batch| batch.plan.evidence() == &context));
     let reading =
         Reading::new(Framing::Jsonl, vec![Pointer::new("/n").expect("pointer")]).expect("reading");
     let objects = [
@@ -481,6 +512,61 @@ fn questions_copies_and_refusals_follow_the_batch_rules() {
     );
 }
 
+/// The batches a batcher closes before its first refusal, and that refusal.
+fn refusal(batcher: &mut Batcher, records: Vec<BatchRecord>) -> (Vec<(usize, Closed)>, BatchError) {
+    let mut closed = Vec::new();
+    let error = records
+        .into_iter()
+        .find_map(|record| batcher.push(record, &mut closed).err())
+        .expect("a refusal");
+    (shape(&closed), error)
+}
+
+#[test]
+fn a_record_over_the_profile_alone_is_refused_on_its_own_push() {
+    let urgent = || text("Help! My payouts have been failing for 3 days.");
+    let refused = |limits: &str, question, records| {
+        let mut batcher = Batcher::new(loopback(), profile(limits), question, Setting::Max, None)
+            .expect("batcher");
+        let (closed, error) = refusal(&mut batcher, records);
+        let BatchError::Profile(over) = error else {
+            panic!("a profile refusal")
+        };
+        let next = batcher.push(text("b"), &mut Vec::new()).is_ok();
+        (closed, (over.kind, over.limit, over.actual), next)
+    };
+    let choose = team_plan().questions().first().cloned().expect("choose");
+    let cases = [
+        (
+            r#""max_evidence_bytes":10"#,
+            decide("Q"),
+            vec![urgent()],
+            vec![],
+            (LimitKind::EvidenceBytes, 10, 46),
+            true,
+        ),
+        (
+            r#""max_options":3"#,
+            choose,
+            vec![text("x")],
+            vec![],
+            (LimitKind::Options, 3, 4),
+            false,
+        ),
+        (
+            r#""max_evidence_bytes":10"#,
+            decide("Q"),
+            vec![text("a"), urgent()],
+            vec![(1, Closed::Limit)],
+            (LimitKind::EvidenceBytes, 10, 46),
+            true,
+        ),
+    ];
+    for (limits, question, records, closed, over, next) in cases {
+        assert_eq!(refused(limits, question, records), (closed, over, next));
+    }
+}
+
 #[test]
 fn a_context_is_refused_without_echoing_it() {
     let beside = |profile, question| {
@@ -494,6 +580,15 @@ fn a_context_is_refused_without_echoing_it() {
         kind: LimitKind::EvidenceBytes,
         limit: 5,
         actual: 14,
+    };
+    assert_eq!(refused, Some(over));
+    let huge = Evidence::new("x".repeat(100_000)).expect("context");
+    let built_in = backend(BUILT_IN, "jev-latest");
+    let refused = Batcher::new(built_in, None, decide("Q"), Setting::Max, Some(huge)).err();
+    let over = BatchError::ContextOverLimit {
+        kind: LimitKind::RequestBytes,
+        limit: 96_000,
+        actual: 100_048,
     };
     assert_eq!(refused, Some(over));
     let batcher = beside(profile(r#""max_request_bytes":200"#), decide("Q")).expect("batcher");
