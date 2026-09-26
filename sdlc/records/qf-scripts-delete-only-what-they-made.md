@@ -55,7 +55,7 @@ Each rung ran once on `1e210bd9` with `THINKTHEN_API_KEY` unset. The rungs took 
 | `spec` | 0 | `demos: 21 green, 0 red` |
 | `surfaces` | 0 | all 10 surfaces pass, 8 release files pass their installed checks, `surfaces: pass release smoke`, 499 s |
 
-The surfaces run exercised the changed cleanups in every library check, `release-pack`, `release-smoke`, `time-limit`, and the PostgreSQL runtime. The first `lint` and `test` also ran on `5aa39c56` before the review fixes, and both exited 0.
+The surfaces run exercised the changed cleanups in every library check, `release-pack`, `release-smoke`, `time-limit`, and the PostgreSQL runtime. The first `lint` and `test` also ran on `5aa39c56` before the review fixes, and both exited 0. The last merge of `origin/main` brought changes under `site/` only. `lint` ran again on that merge and exited 0.
 
 `sdlc/scripts/live` did not run.
 
