@@ -45,6 +45,7 @@ Ian ruled on 2026-09-25 that pandas is supported fully (ADR 0017's amendment). I
 - The package marks the Series, or the holder, with a private `_Pandas` value that names its reader. Rust builds the answer's `Cells` as for Polars and hands back the values and a dtype name. The package rebuilds through the caller's own class with the caller's index and name.
 - A frame checks, in order: a hashable `on`, one level of column labels, `on` present, `on` not repeated, and no new column named as an existing one. Only `df[on]` crosses. `annotate` returns `df.assign` with one column per question, and `recognize` returns it with a `names` column.
 - A one-question verb on a failing backend raises, as the list form does. Only a multi-question `annotate` widens a failed question's column to text.
+- Ticket 0134: a widened cell, and a tag cell in a Polars frame, is the member's text from the engine's `value_json`, as the Rust door writes it. A pandas frame and every Series keep one list per tag row. Proved by `test_a_frame_writes_the_column_table`.
 - The gate runs pandas 3.0.6 in the main lane and pandas 2.3.3 in a second venv over the same extension. The oldest version the 2026-09-21 checks ran is 2.2.3.
 
 ### Refused string-view shapes (R7-8)

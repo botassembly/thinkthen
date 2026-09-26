@@ -6,7 +6,8 @@
 
 mod common;
 
-use conformance_backend::Backend;
+use conformance_backend::{Backend, Canned, Listener};
+use serde_json::json;
 use thinkthen::polars::prelude::{DataFrame, DataType, IntoColumn, NamedFrom, Series};
 use thinkthen::{CallOptions, Error, ErrorKind, PolarsEngine, Question, QuestionSet};
 
@@ -288,4 +289,65 @@ fn an_empty_column_answers_empty() {
         assert_eq!((series.len(), series.dtype()), (0, &dtype));
     }
     assert_eq!(backend.count(), 0);
+}
+
+/// Ticket 0134's listener: drop each question the record names, answer the rest.
+fn replied(body: &[u8]) -> Canned {
+    let asked: serde_json::Value = serde_json::from_slice(body).expect("a request");
+    let state = asked["state"].as_str().expect("the state");
+    let mut answers = serde_json::Map::new();
+    for (key, question) in asked["questions"].as_object().expect("the questions") {
+        let said = question["instructions"].as_str().expect("instructions");
+        if state
+            .split(' ')
+            .any(|word| word.ends_with('?') && said.starts_with(word))
+        {
+            continue;
+        }
+        let answer = match question["type"].as_str() {
+            Some("score") => json!({"type": "score", "probabilities": {"0": 0, "1": 1, "2": 0}}),
+            Some("choice") => {
+                json!({"type": "choice", "probabilities": {"billing": 0.9, "other": 0.1}})
+            }
+            _ if state.contains("unsure") => json!({"type": "noul", "noul": 0.5}),
+            _ if said.contains("\"ship\"") => json!({"type": "noul", "noul": 0.1}),
+            _ => json!({"type": "noul", "noul": 0.95}),
+        };
+        answers.insert(key.clone(), answer);
+    }
+    Canned::ok(&json!({"model": asked["model"], "answers": answers}).to_string())
+}
+
+/// ADR 0047 item 10: each widened cell is the engine's `value_json` text. The
+/// Python `test_a_frame_writes_the_column_table` pins the same literals.
+#[test]
+fn a_widened_frame_holds_the_engines_text() {
+    let listener = Listener::answering(replied).expect("a listener");
+    let engine = common::engine(listener.base());
+    let set = QuestionSet::from_json(
+        r#"{"version": 1, "questions": {"late": {"decide": "Late?", "threshold": "0.1:0.9"},
+            "urgency": {"score": "Urgent?", "levels": ["Low.", "Mid.", "High."]},
+            "kinds": {"tag": "Kinds?", "labels": ["bill", "ship"], "threshold": 0.5},
+            "team": {"choose": "Team?", "options": ["billing", "other"]}}}"#,
+    )
+    .expect("the set");
+    let rows = [
+        "all answered",
+        "omit Late? Urgent?",
+        "unsure omit Kinds? Team?",
+    ];
+    let texts = frame(vec![common::column(&rows)]);
+    let out = engine
+        .annotate_frame(&set, &texts, "body", CallOptions::new())
+        .expect("the frame");
+    let marker = r#"{"failed":{"kind":"backend","cause":"missing_answer"}}"#;
+    let pinned = json!({
+        "late": ["true", marker, null],
+        "urgency": ["1.0", marker, "1.0"],
+        "kinds": [r#"["bill"]"#, r#"["bill"]"#, marker],
+        "team": ["billing", "billing", marker],
+    });
+    for (name, cells_of) in pinned.as_object().expect("the table") {
+        assert_eq!(json!(cells(&out, name)), *cells_of, "{name}");
+    }
 }

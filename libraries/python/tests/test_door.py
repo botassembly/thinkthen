@@ -5,6 +5,7 @@ compare the column form with the list form over the same texts, so the
 backend's answers need not be known here.
 """
 
+import json
 import subprocess
 import sys
 
@@ -173,3 +174,56 @@ def test_the_slide_sample_runs_as_drawn(backend, tmp_path):
     """, child_env(backend, tmp_path))
     assert printed.strip() == ("['body', 'wants_refund', 'team', 'urgency'] "
                                "[String, Boolean, String, Float64]")
+
+
+# Ticket 0134's listener: drop each question the record names, answer the rest.
+TABLE = """
+    import http.server, json, threading, polars as pl, thinkthen as tt
+    class Listener(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            asked = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            state, answers = asked["state"], {}
+            for key, question in asked["questions"].items():
+                said = question["instructions"]
+                if any(said.startswith(word) for word in state.split() if word.endswith("?")):
+                    continue
+                if question["type"] == "score":
+                    answers[key] = {"type": "score", "probabilities": {"0": 0, "1": 1, "2": 0}}
+                elif question["type"] == "choice":
+                    answers[key] = {"type": "choice",
+                                    "probabilities": {"billing": 0.9, "other": 0.1}}
+                else:
+                    yes = 0.5 if "unsure" in state else 0.1 if '"ship"' in said else 0.95
+                    answers[key] = {"type": "noul", "noul": yes}
+            body = json.dumps({"model": asked["model"], "answers": answers}).encode()
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(body)
+    server = http.server.HTTPServer(("127.0.0.1", 0), Listener)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    engine = tt.Engine(base_url=f"http://127.0.0.1:{server.server_port}/v1", cache=False)
+    form = {"version": 1, "questions": {"late": {"decide": "Late?", "threshold": "0.1:0.9"},
+        "urgency": {"score": "Urgent?", "levels": ["Low.", "Mid.", "High."]},
+        "kinds": {"tag": "Kinds?", "labels": ["bill", "ship"], "threshold": 0.5},
+        "team": {"choose": "Team?", "options": ["billing", "other"]}}}
+    rows = ["all answered", "omit Late? Urgent?", "unsure omit Kinds? Team?"]
+"""
+
+
+def test_a_frame_writes_the_column_table(backend, tmp_path):
+    """ADR 0047 item 10: each widened cell and frame tag cell is the engine's
+    ``value_json`` text, as exact strings, with the Rust door test's literals.
+    Regression: the door's own score text reads ``1``, or a tag is a list."""
+    printed = run(TABLE + """
+    got = engine.annotate(form, pl.DataFrame({"body": rows}), on="body")
+    print(json.dumps(got.drop("body").to_dicts()))
+    whole = engine.annotate(form, pl.DataFrame({"body": rows[:1]}), on="body")
+    print(whole.dtypes, whole.drop("body").rows())
+    """, child_env(backend, tmp_path))
+    marker = '{"failed":{"kind":"backend","cause":"missing_answer"}}'
+    widened, whole = printed.splitlines()
+    assert json.loads(widened) == [
+        {"late": "true", "urgency": "1.0", "kinds": '["bill"]', "team": "billing"},
+        {"late": marker, "urgency": marker, "kinds": '["bill"]', "team": "billing"},
+        {"late": None, "urgency": "1.0", "kinds": marker, "team": marker}]
+    assert whole == "[String, Boolean, Float64, String, String] [(True, 1.0, '[\"bill\"]', 'billing')]"

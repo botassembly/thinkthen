@@ -7,7 +7,6 @@
 //! so a Polars `Enum` or a field's own keys ride through (R4-15).
 
 use std::ffi::{CString, c_char};
-use std::fmt::Write as _;
 use std::sync::Arc;
 
 use pyo3::prelude::*;
@@ -305,23 +304,6 @@ impl Cells {
     }
 }
 
-/// A text as a JSON string.
-fn quoted(text: &str) -> String {
-    let mut out = String::from("\"");
-    for one in text.chars() {
-        match one {
-            '"' => out.push_str("\\\""),
-            '\\' => out.push_str("\\\\"),
-            one if u32::from(one) < 0x20 => {
-                let _ = write!(out, "\\u{:04x}", u32::from(one));
-            }
-            one => out.push(one),
-        }
-    }
-    out.push('"');
-    out
-}
-
 const fn answer(value: Answer) -> Option<bool> {
     match value {
         Answer::Yes => Some(true),
@@ -330,27 +312,22 @@ const fn answer(value: Answer) -> Option<bool> {
     }
 }
 
-/// One cell of a widened column: every answer as text, and a failed
-/// question as the ruled marker's JSON (decision 6).
-fn widened(value: &Annotated) -> Option<String> {
-    match value {
-        Annotated::Decision(held) => answer(*held).map(|yes| yes.to_string()),
-        Annotated::Choice(pick) => pick.clone(),
-        Annotated::Score(position) => Some(position.to_string()),
-        Annotated::Tags(labels) => Some(format!(
-            "[{}]",
-            labels
-                .iter()
-                .map(|one| quoted(one))
-                .collect::<Vec<_>>()
-                .join(",")
-        )),
-        Annotated::Failed(failed) => Some(format!(
-            "{{\"failed\":{{\"kind\":{},\"cause\":{}}}}}",
-            quoted(failed.kind().name()),
-            quoted(crate::engine::cause(failed.cause()))
-        )),
+/// One cell of text: the member's raw text from the engine's `value_json`,
+/// except that a choice holds its plain label and a raw `null` (not sure,
+/// nothing fits) is a null cell (ADR 0047 item 10).
+fn text((value, raw): &(Annotated, String)) -> Option<String> {
+    if let Annotated::Choice(pick) = value {
+        return pick.clone();
     }
+    (raw != "null").then(|| raw.clone())
+}
+
+/// Where a tag column goes: one list per row, or the JSON array text a
+/// Polars frame holds (ADR 0047 item 10).
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum Tags {
+    Lists,
+    Text,
 }
 
 /// A `decide` column's answers: `None` is "not sure".
@@ -358,41 +335,46 @@ pub(crate) fn decided(values: &[Answer]) -> Cells {
     Cells::Bools(values.iter().map(|one| answer(*one)).collect())
 }
 
-/// One question's answers across the records. A failed question widens its
-/// whole column to text.
-pub(crate) fn annotated(kind: QuestionKind, values: &[&Annotated]) -> Cells {
-    if values.iter().any(|one| matches!(one, Annotated::Failed(_))) {
-        return Cells::Texts(values.iter().map(|one| widened(one)).collect());
+/// One question's answers across the records, each beside its raw text in
+/// the record's `value_json`. A failed question widens its whole column to
+/// text.
+pub(crate) fn annotated(kind: QuestionKind, tags: Tags, values: &[(Annotated, String)]) -> Cells {
+    let texts = || Cells::Texts(values.iter().map(text).collect());
+    if values
+        .iter()
+        .any(|(one, _)| matches!(one, Annotated::Failed(_)))
+    {
+        return texts();
     }
-    match kind {
-        QuestionKind::Decide => Cells::Bools(
+    match (kind, tags) {
+        (QuestionKind::Decide, _) => Cells::Bools(
             values
                 .iter()
-                .map(|one| match one {
+                .map(|(one, _)| match one {
                     Annotated::Decision(held) => answer(*held),
                     _ => None,
                 })
                 .collect(),
         ),
-        QuestionKind::Score => Cells::Numbers(
+        (QuestionKind::Score, _) => Cells::Numbers(
             values
                 .iter()
-                .map(|one| match one {
+                .map(|(one, _)| match one {
                     Annotated::Score(position) => Some(*position),
                     _ => None,
                 })
                 .collect(),
         ),
-        QuestionKind::Tag => Cells::Lists(
+        (QuestionKind::Tag, Tags::Lists) => Cells::Lists(
             values
                 .iter()
-                .map(|one| match one {
+                .map(|(one, _)| match one {
                     Annotated::Tags(labels) => Some(labels.clone()),
                     _ => None,
                 })
                 .collect(),
         ),
-        _ => Cells::Texts(values.iter().map(|one| widened(one)).collect()),
+        _ => texts(),
     }
 }
 

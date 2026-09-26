@@ -24,6 +24,8 @@ df = tt.annotate("form.json", df, on="body")  # one new column per question
 names = tt.recognize(df, kinds=["product"], on="body")  # row, text, kind, start, end, strength
 ```
 
+In a Polars frame, a `tag` column is `String` holding the JSON array text, such as `["bill"]`. A question the backend failed turns its column into text, each cell as the engine writes it (ADR 0047 item 10).
+
 A pandas `Series` works in the same five verbs and comes back as a pandas `Series` with the caller's index and name. `decide` and `decide_many` give `boolean`, `score` gives `Float64`, `choose` gives `string`, and `tag` gives `object` with one list of labels per row. "Not sure" is `pd.NA`, or `None` in `tag`. A pandas `DataFrame` with `on=` comes back from `annotate` with one new column per question, and from `recognize` with a new `names` column: one list per row of `dict` with `text`, `kind`, `start`, `end`, and `strength`. The index stays the caller's. A null in the text column, a repeated or missing `on` label, `MultiIndex` columns, and a question named as a column are refused before any request. The answer keeps the input's name, so rename it to add it as a column:
 
 ```python
