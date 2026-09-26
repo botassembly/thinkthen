@@ -6,7 +6,7 @@ opens: sdlc/scripts/heavy-lock sdlc/scripts/lint sdlc/scripts/README.md sdlc/scr
 
 # 0133: Keep the rungs' environment to an allow list and clear three harness leftovers
 
-Status: ready. Owner: Claude.
+Status: in progress. Design accepted by the second fresh review on 2026-09-26. Owner: Claude.
 
 Lane: thinkthen-lane-1
 
@@ -49,9 +49,9 @@ No shell variable can hold a name such as `FAKE.SERVICE_TOKEN`. Under `dash` suc
 
 ### The check
 
-The `lint` rung's 0127 row becomes one row that sources `heavy-lock` under `env -i`. It sets the lock as held, the kept `THINKTHEN_` names, `HOME`, `FAKE_SERVICE_API_KEY=planted`, `THINKTHEN_SENTINEL=planted`, `CARGO_TARGET_DIR=/nonexistent/target`, and `FAKE.SERVICE_TOKEN=planted`. After the source, it `exec`s `awk` to print every name the child sees, sorted on one line. `gawk` adds `AWKPATH` and `AWKLIBPATH` to its own `ENVIRON`, so the row leaves those two out. `mawk` adds none. The row pins that whole line. The rule drops a name whatever its value, so the absolute `CARGO_TARGET_DIR` plant covers a relative one too. It prints the planted names only, since the child starts from `env -i`, and never the developer's environment.
+The `lint` rung's 0127 row becomes one row that sources `heavy-lock` under `env -i`. It sets `PATH` from the caller as today, the lock as held, the kept `THINKTHEN_` names, `HOME`, `FAKE_SERVICE_API_KEY=planted`, `THINKTHEN_SENTINEL=planted`, `CARGO_TARGET_DIR=/nonexistent/target`, and `FAKE.SERVICE_TOKEN=planted`. After the source, it `exec`s `awk` to print every name the child sees, sorted on one line. `gawk` adds `AWKPATH` and `AWKLIBPATH` to its own `ENVIRON`, so the row leaves those two out. `mawk` adds none. The row pins that whole line. The rule drops a name whatever its value, so the absolute `CARGO_TARGET_DIR` plant covers a relative one too. It prints the planted names only, since the child starts from `env -i`, and never the developer's environment.
 
-#A rung's children inherit exactly what the sourced `heavy-lock` leaves exported. The row's `awk` child is such a child, so it stands in for the issue's test inside a heavy rung. The build also runs the full ladder with a planted key. During that run, a probe beside the ladder reads `/proc/PID/environ` of a running test binary by name only and records whether `FAKE_SERVICE_API_KEY` is there.
+A rung's children inherit exactly what the sourced `heavy-lock` leaves exported. The row's `awk` child is such a child, so it stands in for the issue's test inside a heavy rung. The build also runs the full ladder with a planted key. During that run, a probe beside the ladder reads `/proc/PID/environ` of a running test binary by name only and records whether `FAKE_SERVICE_API_KEY` is there.
 
 ### Edge cases
 
@@ -117,7 +117,7 @@ Each is the agent's decision. Ian can overturn any of them.
 3. The rung drops `CARGO_TARGET_DIR`. Honoring it needs the target folder resolved in ten surface checks, one of them owned by an in-flight Quick Fix. Dropping it gives each lane its own build folders, as the lane rule wants.
 4. `lint` is not a heavy rung and keeps the caller's environment. The issue names the heavy rungs.
 5. The spawn failure is proved at the real boundary with `prlimit`. The three `pthread_sigmask` paths lose their test, because no boundary reaches them. Their code stays.
-6. The new interrupt test fails as root rather than skipping. A skip reads as a pass.
+6. The new interrupt test fails as root. A skip would read as a pass.
 7. The DuckDB suite's inner spawn becomes an exemption with a reason. Its parent is already clean, so an allow list there adds nothing.
 8. `Unwritable` stays, with the reason written at the variant.
 
@@ -186,11 +186,11 @@ Contract 1; state and timing 1; reach 2; proof 2; cost of error 2; total 8. Fina
 
 ## What Ian can overturn
 
-Each numbered decision above. The allow list's contents. Dropping `CARGO_TARGET_DIR` in place of honoring it. Losing the tests for the three unreachable `pthread_sigmask` paths. The new test failing as root.
+Each numbered decision above. The allow list's contents. Dropping `CARGO_TARGET_DIR`. Losing the tests for the three unreachable `pthread_sigmask` paths. The new test failing as root.
 
 ## Review
 
-The first fresh review on 2026-09-26 found nine minor findings and no blocking one. This page answers each.
+The first fresh review on 2026-09-26 found nine minor findings and no blocking one. This page answers each. The second fresh review found three minor findings, answered here, and said no further review is needed.
 
 ## Issues this closes
 
