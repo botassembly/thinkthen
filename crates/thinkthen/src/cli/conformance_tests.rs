@@ -120,6 +120,15 @@ fn annotate(case: &Case, place: usize, exchange: &Exchange) -> Result<Asked, Str
         .get(place % set.groups().len().max(1))
         .cloned()
         .ok_or_else(|| format!("{} has no annotate group {place}", case.id))?;
+    let evidence = match &case.record {
+        Some(record) => Evidence::new(record.get())
+            .map_err(|error| error.to_string())
+            .and_then(|whole| {
+                set.group_evidence(&group, &whole)
+                    .map_err(|error| format!("{} record: {error:?}", case.id))
+            })?,
+        None => Evidence::new(&exchange.evidence).map_err(|error| error.to_string())?,
+    };
     for question_place in group {
         let named = set
             .questions()
@@ -134,7 +143,7 @@ fn annotate(case: &Case, place: usize, exchange: &Exchange) -> Result<Asked, Str
         );
     }
     let plan = Plan::new(
-        Evidence::new(&exchange.evidence).map_err(|error| error.to_string())?,
+        evidence,
         ModelName::new("jev-latest").map_err(|error| error.to_string())?,
         questions,
     )

@@ -6,7 +6,9 @@ use std::path::Path;
 use std::process::ExitCode;
 
 use crate::core::adapters::built_in;
-use crate::core::{Backend, Framing, ModelName, Plan, Pointer, QuestionSet, Reading, Record};
+use crate::core::{
+    Backend, Framing, ModelName, PartError, Plan, Pointer, QuestionSet, Reading, Record,
+};
 
 use crate::args::{AnnotateArguments, Common};
 use crate::asking::{self, Folders};
@@ -285,21 +287,16 @@ fn plan_for(
     base: &Reading,
     record: &Record,
 ) -> Result<Plan, Failure> {
-    let first_place = group
-        .first()
-        .ok_or(Failure::Defect("an annotate group is empty"))?;
-    let first = set
-        .questions()
-        .get(*first_place)
-        .ok_or(Failure::Defect("a group points outside its set"))?;
-    let base_evidence = base.evidence(record)?;
-    let evidence = if matches!(first.on(), [root] if root.as_str().is_empty()) {
-        base_evidence
-    } else {
-        let nested = Reading::new(Framing::Document, first.on().to_vec())?;
-        let record = nested.record(base_evidence.as_text()?.as_bytes())?;
-        nested.evidence(&record)?
-    };
+    if group.is_empty() {
+        return Err(Failure::Defect("an annotate group is empty"));
+    }
+    let evidence =
+        set.group_evidence(group, &base.evidence(record)?)
+            .map_err(|error| match error {
+                PartError::Reading(error) => Failure::from(error),
+                PartError::Render(error) => Failure::from(error),
+                PartError::Record(error) => Failure::from(error),
+            })?;
     let questions = group
         .iter()
         .map(|place| {

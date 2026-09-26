@@ -93,4 +93,4 @@ The Python surface is the reference. Each difference below is decided, and its r
 7. **The column forms.** Python's verbs take Polars columns and frames. TypeScript has no column form, and a Node column form needs its own design.
 8. **The record text.** Both typed hosts refuse a record that is not a string. TypeScript also refuses a string with a lone surrogate and names its index, because Node-API would replace it silently.
 9. **Usage counters.** `usage()` returns the four counters synchronously. An `Engine` value counts its own calls, apart from the module-level engine.
-10. **The `find` none case.** Both return null when nothing is selected. The public `find` takes no `none` candidate, so the shared cases that name one do not run on either surface.
+10. **The `find` none case.** Both return null when nothing is selected. Both take a `none` switch since ticket 0150, so the shared cases that name one run on both surfaces.

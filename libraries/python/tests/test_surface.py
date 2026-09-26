@@ -48,7 +48,8 @@ def test_wrong_questions_are_usage_errors_that_name_the_verb(backend, tmp_path):
         import thinkthen as tt
         score = tt.question(score="How bad?", levels=["low", "high"])
         for call in (lambda: tt.decide(42, "x"), lambda: tt.decide({"bad": 1}, "x"),
-                     lambda: tt.choose(score, "x"), lambda: tt.score(score, "x", levels=["a"])):
+                     lambda: tt.choose(score, "x"), lambda: tt.score(score, "x", levels=["a"]),
+                     lambda: tt.find("Which?", ["a", "b"], none="yes")):
             try:
                 call()
             except tt.UsageError as error:
@@ -61,6 +62,7 @@ def test_wrong_questions_are_usage_errors_that_name_the_verb(backend, tmp_path):
         "usage False decide takes a question text or tt.question(), not a dict",
         "usage False choose does not take a score question",
         "score takes levels only beside a question text",
+        "usage False none is True or False",
     ]
     assert backend.count() == 0
 
