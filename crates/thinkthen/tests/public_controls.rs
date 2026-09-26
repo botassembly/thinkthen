@@ -300,38 +300,45 @@ fn a_check_runs_before_a_held_send_and_never_during_it() {
     assert_eq!(answer.ok(), Some(Answer::Yes));
 }
 
-/// Ticket 0143: six one-request relations fill the throttle of 4. A host
-/// check that fires while 4 are held feeds no fifth, and the 4 finish.
+/// Ticket 0143: one-request relations fill the throttle of 4. A host check
+/// that fires while 4 are held feeds no fifth, and the 4 finish. With 4
+/// rules every relation is already fed, and the check still cancels.
 #[test]
 fn a_host_interrupt_during_relate_chunks_sends_nothing_new() {
     let _serial = serial();
-    let backend = Backend::start().expect("backend");
-    let held = engine(&format!("{}/arm/held/v1", backend.origin()));
-    let rules = (1..=6)
-        .map(|rule| format!(r#"{{"name":"r{rule}","source":"service","target":"service"}}"#))
-        .collect::<Vec<_>>()
-        .join(",");
-    let ask = Relate::from_json(&format!(
-        r#"{{"version":1,"relate":{{"relations":[{rules}]}}}}"#
-    ))
-    .expect("relate file");
-    let entities = ["gateway", "billing"].map(|name| Entity::new(name, "service").expect("entity"));
-    let runs = Runs::default();
-    let check = || runs.record(backend.count()) >= 1 && backend.count() == 4;
-    let result = thread::scope(|scope| {
-        scope.spawn(|| {
-            backend.wait(4);
-            thread::sleep(Duration::from_millis(400));
-            backend.release();
+    for count in [6, 4] {
+        let backend = Backend::start().expect("backend");
+        let held = engine(&format!("{}/arm/held/v1", backend.origin()));
+        let rules = (1..=count)
+            .map(|rule| format!(r#"{{"name":"r{rule}","source":"service","target":"service"}}"#))
+            .collect::<Vec<_>>()
+            .join(",");
+        let ask = Relate::from_json(&format!(
+            r#"{{"version":1,"relate":{{"relations":[{rules}]}}}}"#
+        ))
+        .expect("relate file");
+        let entities =
+            ["gateway", "billing"].map(|name| Entity::new(name, "service").expect("entity"));
+        let runs = Runs::default();
+        let check = || {
+            runs.record(backend.count());
+            backend.count() == 4
+        };
+        let result = thread::scope(|scope| {
+            scope.spawn(|| {
+                backend.wait(4);
+                thread::sleep(Duration::from_millis(400));
+                backend.release();
+            });
+            held.relate_with(&ask, entities, CallOptions::new().interrupt(&check))
         });
-        held.relate_with(&ask, entities, CallOptions::new().interrupt(&check))
-    });
-    assert!(
-        runs.all_on(thread::current().id()),
-        "the check ran on a worker"
-    );
-    assert_eq!(kind(&result), Some(ErrorKind::Cancelled));
-    assert_eq!(backend.count(), 4, "nothing new was sent");
+        assert!(
+            runs.all_on(thread::current().id()),
+            "the check ran on a worker"
+        );
+        assert_eq!(kind(&result), Some(ErrorKind::Cancelled), "{count} rules");
+        assert_eq!(backend.count(), 4, "{count} rules: nothing new was sent");
+    }
 }
 
 #[test]

@@ -97,7 +97,8 @@ where
 /// It feeds one item to each free worker, never more. A failed item, a
 /// failure of `each`, or a stop feeds nothing further. The items in flight
 /// finish, and the first failure in item order returns. The stop runs its
-/// host check here, between feeds, since this may be the calling thread.
+/// host check here, between feeds and while items are in flight, since this
+/// may be the calling thread.
 pub(crate) fn ordered<W, R, E>(
     jobs: usize,
     items: Vec<W>,
@@ -128,7 +129,7 @@ where
                     }
                     next += 1;
                 }
-                if failure.is_none() && items.peek().is_some() {
+                if failure.is_none() && !halted && (in_flight > 0 || items.peek().is_some()) {
                     failure = cancel.stop().map(E::from);
                 }
                 halted |= failure.is_some();
