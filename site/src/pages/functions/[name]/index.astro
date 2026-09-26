@@ -1,48 +1,53 @@
 ---
+// Goal: show what one function takes and gives, with its simplest real run
+// first, ahead of any prose. Each function's own goal sits in catalog.mjs.
 import Base from '../../../layouts/Base.astro';
 import Terminal from '../../../components/Terminal.astro';
+import Code from '../../../components/Code.astro';
 import CrossView from '../../../components/CrossView.astro';
-import { FACTS, FUNCTIONS, HOWTOS, SURFACES } from '../../../data/catalog.mjs';
-import { cell } from '../../../data/examples.mjs';
+import { FUNCTIONS, HOWTOS } from '../../../data/catalog.mjs';
+import { captioned, files } from '../../../data/samples.mjs';
+import { beatlesPageFor } from '../../../data/beatles.mjs';
 
 export function getStaticPaths() {
   return FUNCTIONS.map((fn) => ({ params: { name: fn.name }, props: { fn } }));
 }
 
 const { fn } = Astro.props;
-const shell = cell(fn.name, 'shell');
-const runs = shell.status === 'run' ? shell.runs : [];
+if (!fn.goal) throw new Error(`functions: ${fn.name} has no goal`);
+const page = `functions/${fn.name}`;
+const all = captioned(page, fn.see, true);
+// A function that explains how it works shows one of its scripts there.
+const how = fn.how && all.find((r) => r.name === fn.how.script);
+if (fn.how && !how) throw new Error(`functions: ${fn.name} explains itself with ${fn.how.script}, and no script has that name`);
+const runs = all.filter((r) => r !== how);
+const inputs = files(page);
 const first = runs[0];
 const rest = runs.slice(1);
+const ticks = (text) => text.split('`').map((part, i) => (i % 2 ? `<code>${part}</code>` : part)).join('');
 const howtos = HOWTOS.filter((h) => fn.howtos.includes(h.slug));
 const title = fn.title || fn.name;
-const preview = fn.status === 'preview';
-// A library with no release named is planned. Polars is the one today.
-const unnamed = SURFACES.filter((s) => s.slug !== 'shell' && !s.release).map((s) => s.name);
-const libraries = unnamed.length
-  ? `${unnamed.join(', ')} ${unnamed.length === 1 ? 'is' : 'are'} planned. The other libraries come with 0.1.`
-  : 'The libraries come with 0.1.';
-const shipped = !preview && !fn.notAFunction;
 const line = fn.line.charAt(0).toLowerCase() + fn.line.slice(1);
-// The first cost row is the live probe's price for 1,000 short records.
-const [probe] = FACTS.cost.rows[0];
+// The same function on Beatles Bench, where every answer is known.
+const bench = beatlesPageFor(fn.name);
 ---
 <Base title={title} description={fn.line}>
   <div class="eyebrow">{fn.notAFunction ? 'a saved question' : fn.primitive}</div>
   <h1><code>{title}</code>: {line}</h1>
+  {inputs.map((file) => <Code code={file.text} caption={`${file.name}, a file the examples read`} />)}
+  {first && <Terminal run={first} caption={first.see} />}
   {fn.lede ? (
     <p class="lede" set:html={fn.lede} />
   ) : (
-    <p class="lede">You give it {fn.takes}. You get back {fn.gives}.{shipped && <> Every answer carries a probability, and <code>--details</code> prints it.</>}</p>
+    <p class="lede">You give it {fn.takes}. You get back {fn.gives}.{!fn.notAFunction && fn.name !== 'recognize' && <> Every answer carries a probability, and <code>--details</code> prints it.</>}</p>
   )}
-  {preview && (
-    <div class="note"><span class="status preview">preview</span> The command has no <code>{fn.name}</code> yet. The samples below show the design. None has run.</div>
-  )}
+  {!first && bench && <p>See <code>{fn.name}</code> run on Beatles Bench: <a href={bench.route}>{bench.title}</a></p>}
 
-  {first && (
+  {how && (
     <>
-      <h2>The simplest example</h2>
-      <Terminal run={first} caption={`Recorded from the real command. ${first.see}`} />
+      <h2>How it works</h2>
+      {fn.how.steps.map((step) => <p set:html={ticks(step)} />)}
+      <Terminal run={how} caption={how.see} />
     </>
   )}
 
@@ -59,45 +64,34 @@ const [probe] = FACTS.cost.rows[0];
   {fn.toPerson && <p>Send the not-sure answers to a person.</p>}
 
   <h2>Call it from your language</h2>
-  <p>{!preview && 'The Bash command works today. '}{libraries} Their samples show how the calls will read.</p>
-  <CrossView fn={fn.name} />
+  <CrossView fn={fn.name} above={Boolean(first)} />
 
   <h2>The options</h2>
-  {fn.options.length === 0 ? (
-    <p>The specification does not carry <code>{fn.name}</code> yet, so its options are not settled.</p>
-  ) : (
-    <>
-      <p>It takes <code>{fn.args}</code>{fn.args.endsWith('.') ? '' : '.'}</p>
-      <table>
-        <tr><th>Option</th><th>What it does</th></tr>
-        {fn.options.map(([opt, what]) => (
-          <tr><td><code>{opt}</code></td><td>{what}</td></tr>
-        ))}
-      </table>
-    </>
-  )}
+  <p>It takes <code>{fn.args}</code>{fn.args.endsWith('.') ? '' : '.'}</p>
+  <table>
+    <tr><th>Option</th><th>What it does</th></tr>
+    {fn.options.map(([opt, what]) => (
+      <tr><td><code>{opt}</code></td><td>{what}</td></tr>
+    ))}
+  </table>
 
   {rest.length > 0 && (
     <>
-      <h3>Each option, taught once</h3>
-      {rest.map((run) => <Terminal run={run} caption={`Recorded from the real command. ${run.see}`} />)}
+      <h3>The options at work</h3>
+      {rest.map((run) => <Terminal run={run} caption={run.see} />)}
     </>
   )}
 
-  <h2>What it costs</h2>
-  <p>About a penny buys a thousand answers on short records. The live probe on 2026-09-20 measured {probe}.</p>
-  <p>{fn.requests}</p>
-
-  <h2>Jobs that use <code>{title}</code></h2>
-  {howtos.length === 0 ? (
-    <p>No how-to uses <code>{title}</code> yet.</p>
-  ) : (
-    <div class="grid">
-      {howtos.map((h) => (
-        <a class="tile" href={`/how-tos/${h.slug}/`}><b>{h.title}</b><span>{h.reader}</span></a>
-      ))}
-    </div>
+  {howtos.length > 0 && (
+    <>
+      <h2>Jobs that use <code>{title}</code></h2>
+      <div class="grid">
+        {howtos.map((h) => (
+          <a class="tile" href={`/how-tos/${h.slug}/`}><b>{h.title}</b><span>{h.reader}</span></a>
+        ))}
+      </div>
+    </>
   )}
 
-  <p class="pagelinks"><a href="/functions/">See every function</a> · <a href="/shell/">Use it from Bash</a> · <a href="/trust/">Test it before you trust it</a></p>
+  {first && bench && <p>Watch <code>{fn.name}</code> answer questions about Beatles songs: <a href={bench.route}>{bench.title}</a></p>}
 </Base>

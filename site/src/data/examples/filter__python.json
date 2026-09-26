@@ -1,8 +1,0 @@
-{
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "python",
-  "code": "import thinkthen as tt\n\n# keep the complaints: the zipper and the strap\nreviews = [\"Arrived a day early. Thank you!\",\n    \"The zipper broke the first time I used it.\",\n    \"Does this come in blue?\",\n    \"The strap snapped on day two.\"]\nprint(tt.filter(\"Is this a complaint?\", reviews))",
-  "function": "filter",
-  "surface": "python"
-}

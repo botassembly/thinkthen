@@ -1,14 +1,11 @@
 ---
-// A drawn code sample. Its badge says "not run yet" wherever it appears,
-// because no library ships yet. "drawn" stays in the data and the class.
-const { code, status = 'drawn', caption = null, copy = true } = Astro.props;
-const label = status === 'drawn' ? 'not run yet' : status;
+// A code sample with a copy button.
+const { code, caption = null, copy = true } = Astro.props;
 const lines = code.split('\n');
 const comment = /^\s*(#|\/\/|--|\/\*|\*)/;
 ---
 <div class="block">
   <div class="caption">
-    <span class={`status ${status}`}>{label}</span>
     <span class="grow">{caption}</span>
     {copy && <button class="copy" type="button">Copy</button>}
   </div>

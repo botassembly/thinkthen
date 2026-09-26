@@ -99,22 +99,42 @@ header.top .on-light { display: none; }
 :root[data-theme="dark"] header.top .on-dark { display: block; }
 :root[data-theme="dark"] header.top .on-light { display: none; }
 
-/* On a phone the nav takes its own row and the Theme button stays beside the
+header.top nav { display: flex; gap: .95rem; flex-wrap: wrap; font-size: .92rem; }
+
+/* On a phone the nav takes its own row and the theme button stays beside the
    wordmark. */
-@media (max-width: 46rem) {
+@media (max-width: 40rem) {
   header.top .wrap { gap: .5rem 1rem; padding-top: .55rem; padding-bottom: .55rem; min-height: 0; }
   header.top nav { order: 3; flex: 1 0 100%; }
 }
-header.top nav { display: flex; gap: .95rem; flex-wrap: wrap; font-size: .92rem; }
 header.top nav a { color: var(--ink); text-decoration: none; }
 header.top nav a:hover, header.top nav a[aria-current="page"] { color: var(--think); }
 header.top .spacer { flex: 1 1 auto; }
 
+/* The theme button shows the sun on a dark page and the moon on a light
+   one: the theme a click moves to. */
 button.theme {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2.1rem; height: 2.1rem; padding: 0;
   background: none; border: 1px solid var(--line); color: var(--muted);
-  border-radius: 6px; padding: .2rem .55rem; font: inherit; font-size: .82rem; cursor: pointer;
+  border-radius: 999px; cursor: pointer;
 }
-button.theme:hover { color: var(--ink); }
+button.theme:hover { color: var(--ink); border-color: var(--think); }
+button.theme svg { display: block; }
+button.theme .moon { display: none; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) button.theme .sun { display: none; }
+  :root:not([data-theme="dark"]) button.theme .moon { display: block; }
+}
+:root[data-theme="light"] button.theme .sun { display: none; }
+:root[data-theme="light"] button.theme .moon { display: block; }
+:root[data-theme="dark"] button.theme .sun { display: block; }
+:root[data-theme="dark"] button.theme .moon { display: none; }
+
+/* Every control shows where the keyboard is. */
+button:focus-visible, a:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--think); outline-offset: 2px;
+}
 
 footer.bottom {
   border-top: 1px solid var(--line); margin-top: 3.5rem; padding: 1.4rem 0 2.5rem;
@@ -140,11 +160,7 @@ main .wrap > p, main .wrap > ul, main .wrap > ol, .note, .prose p, .prose ul, .p
   text-transform: uppercase; border: 1px solid currentColor; border-radius: 999px;
   padding: .08rem .5rem; vertical-align: .12em;
 }
-.status.shipped, .status.ships-first { color: var(--then); }
 .status.preview { color: var(--think); }
-.status.planned { color: var(--broken); }
-.status.drawn { color: var(--think); }
-.status.run { color: var(--then); }
 
 .note {
   border-left: 3px solid var(--think); background: var(--card);
@@ -187,17 +203,26 @@ pre {
 .block { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin: 0 0 1.2rem; }
 .block .caption {
   padding: .4rem .8rem; border-bottom: 1px solid var(--line);
-  color: var(--muted); font-size: .8rem; display: flex; gap: .6rem; align-items: center; flex-wrap: wrap;
+  color: var(--muted); font-size: .8rem; display: flex; gap: .6rem; align-items: center;
 }
 /* The exit row closes a block. It is ruled off the code above it, not off the
    border below it. */
 .block .caption:last-child { border-bottom: 0; border-top: 1px solid var(--line); }
-.block .caption .grow { flex: 1 1 auto; }
+.block .caption .grow { flex: 1 1 0; min-width: 0; }
+.block .caption .copy { flex: none; align-self: flex-start; }
 pre .p { color: var(--muted); }
 pre .q { color: var(--think); }
-pre .out { color: var(--then); }
 pre .in { color: var(--muted); }
 pre .cm { color: var(--muted); font-style: italic; }
+
+/* An example: the script, then its output in a block of its own. Output
+   stays in the ink colour. Only the exit code carries a colour. */
+.example { margin: 0 0 1.4rem; }
+.example .block { margin: 0 0 .5rem; }
+.example .block:last-child { margin-bottom: 0; }
+.block.output .caption:first-child { font-family: var(--mono); font-size: .74rem; letter-spacing: .04em; }
+.block .caption.solo { border-top: 0; }
+.exit-row { margin: -.6rem 0 1.2rem; }
 
 /* The article's code panes. Shiki writes both themes on every token and the
    page theme picks one. The pane wears the same card and border as every
@@ -215,6 +240,9 @@ pre.astro-code { background-color: var(--card) !important; border: 1px solid var
 .exit.no { color: var(--no); }
 .exit.unsure { color: var(--think); }
 .exit.broken { color: var(--broken); }
+.exit.plain { color: var(--muted); }
+.legend { font-size: .8rem; color: var(--muted); }
+.legend .exit { margin-right: .6rem; }
 
 button.copy {
   background: none; border: 1px solid var(--line); color: var(--muted);
@@ -246,3 +274,75 @@ button.copy:hover { color: var(--ink); border-color: var(--think); }
 .outcome span { color: var(--muted); font-size: .86rem; }
 
 .pagelinks { display: flex; gap: .8rem; flex-wrap: wrap; font-size: .9rem; margin: .6rem 0 1.4rem; }
+
+/* ---------------------------------------------------------- Beatles Bench */
+
+/* A side list of the section's pages beside the page. Below 60rem the list
+   folds into a menu above the title. */
+.bench { display: grid; grid-template-columns: 12.5rem minmax(0, 1fr); gap: 2.2rem; }
+.bench-side { position: sticky; top: 1rem; align-self: start; max-height: calc(100vh - 2rem); overflow-y: auto; font-size: .88rem; padding-top: .3rem; }
+.bench-group { margin: 0 0 1rem; }
+.bench-group-name { font-family: var(--mono); font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 .3rem; }
+.bench-group ul { list-style: none; margin: 0; padding: 0; }
+.bench-group li { margin: 0; }
+.bench-group a { display: block; padding: .18rem .5rem; border-left: 2px solid transparent; color: var(--ink); text-decoration: none; line-height: 1.35; }
+.bench-group a.cmd { font-family: var(--mono); font-size: .84rem; }
+.bench-group a:hover { color: var(--think); }
+.bench-group a[aria-current="page"] { border-left-color: var(--think); color: var(--think); }
+.bench-menu { display: none; }
+
+@media (max-width: 60rem) {
+  .bench { display: block; }
+  .bench-side { display: none; }
+  .bench-menu { display: block; border: 1px solid var(--line); border-radius: 10px; background: var(--card); padding: .5rem .8rem; margin: 0 0 1.4rem; font-size: .9rem; }
+  .bench-menu summary { cursor: pointer; color: var(--muted); }
+  .bench-menu[open] summary { margin-bottom: .6rem; }
+  .bench-menu .bench-group { display: inline-block; vertical-align: top; min-width: 12rem; margin-right: 1rem; }
+}
+
+.bench-main h1 { font-size: clamp(1.7rem, 4vw, 2.4rem); }
+.bench-main .lede { margin-bottom: 1.2rem; }
+.slide { margin: 0 0 1.4rem; }
+.slide img { display: block; width: 100%; height: auto; border-radius: 10px; border: 1px solid var(--line); }
+
+.slide figcaption { color: var(--muted); font-size: .78rem; margin-top: .35rem; }
+.refrain { font-weight: 600; }
+.repo-link { margin-top: 2rem; font-size: .92rem; overflow-wrap: anywhere; }
+ol.talk code { font-size: .95em; }
+
+.bench-pager { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; margin: 2.6rem 0 1rem; }
+.bench-pager a { display: block; border: 1px solid var(--line); border-radius: 10px; padding: .65rem .9rem; text-decoration: none; color: var(--ink); background: var(--card); font-size: .92rem; }
+.bench-pager a:hover { border-color: var(--think); color: var(--ink); }
+.bench-pager a span { display: block; color: var(--muted); font-size: .78rem; }
+.bench-pager .next { text-align: right; }
+
+
+p code, li code { white-space: nowrap; }
+
+/* --------------------------------------------------------------- settings */
+
+.settings-filter { display: flex; flex-wrap: wrap; gap: .6rem 1.2rem; margin: 1rem 0; font-size: .9rem; color: var(--muted); }
+.settings-filter[hidden] { display: none; }
+.settings-filter label { display: flex; flex-direction: column; gap: .25rem; flex: 1 1 14rem; min-width: 0; }
+.settings-filter input, .settings-filter select {
+  font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--line);
+  border-radius: 6px; padding: .4rem .55rem; width: 100%;
+}
+.settings-index { display: flex; flex-wrap: wrap; gap: .15rem 1rem; list-style: none; padding: 0; margin: 0 0 1.2rem; font-size: .88rem; }
+.settings-index li[hidden] { display: none; }
+.setting { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: .2rem 1rem .4rem; margin: 0 0 1rem; scroll-margin-top: 1rem; }
+.setting[hidden] { display: none; }
+.setting h3 { margin: .7rem 0 .3rem; }
+.setting h3 a { color: var(--ink); text-decoration: none; }
+.setting h3 a:hover { color: var(--think); }
+.setting > p { margin: .2rem 0 .6rem; }
+.setting dl.kv { margin: 0 0 .4rem; font-size: .93rem; }
+.setting dl.kv > div { display: grid; grid-template-columns: 11rem minmax(0, 1fr); gap: 0 .9rem; padding: .4rem 0; border-bottom: 1px solid var(--line); }
+.setting dl.kv > div:last-child { border-bottom: 0; }
+.setting dl.kv > div[hidden] { display: none; }
+.setting dl.kv dt { color: var(--muted); font-weight: 600; font-size: .85rem; }
+.setting dl.kv dd { margin: 0; overflow-wrap: anywhere; }
+.setting dd code { background: var(--ground); border: 1px solid var(--line); border-radius: 4px; padding: .05em .3em; }
+@media (max-width: 34rem) {
+  .setting dl.kv > div { grid-template-columns: 1fr; }
+}

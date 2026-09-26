@@ -1,0 +1,21 @@
+diff --git a/billing.py b/billing.py
+--- a/billing.py
++++ b/billing.py
+@@ -3,2 +3,2 @@ def late_fee(days):
+-    # charge a fee after 30 days
++    # Charge a fee after 30 days.
+     if days > 30:
+@@ -8,2 +8,2 @@ def refund(amount, limit):
+-    if amount > limit:
++    if amount >= limit:
+         return False
+@@ -14,3 +14,3 @@ def total(items):
+-    t = 0
+-    for i in items: t += i.price
+-    return t
++    subtotal = 0
++    for item in items: subtotal += item.price
++    return subtotal
+@@ -20,1 +20,1 @@ def tax(amount):
+-    return amount * 0.07
++    return round(amount * 0.07, 2)

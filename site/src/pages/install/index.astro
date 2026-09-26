@@ -1,0 +1,46 @@
+---
+// Goal: give the install line for every surface, command line first.
+import Base from '../../layouts/Base.astro';
+import InstallLine from '../../components/InstallLine.astro';
+import { SURFACES, KEY_VARIABLE } from '../../data/catalog.mjs';
+
+const shell = SURFACES.find((s) => s.slug === 'shell');
+const DATABASES = new Set(['duckdb', 'sqlite', 'postgresql']);
+const languages = SURFACES.filter((s) => s.slug !== 'shell' && !DATABASES.has(s.slug));
+const databases = SURFACES.filter((s) => DATABASES.has(s.slug));
+// The rows are mapped, not written out one by one. An expression inside a
+// <code> element written straight into a table makes the Astro compiler emit
+// a stray <code> after the table, and the rest of the page turns monospace.
+const tables = [['Languages', 'Language', languages], ['Databases', 'Database', databases]];
+---
+<Base title="Install" description="Install ThinkThen for the command line, each language, and each database, and point it at a backend.">
+  <h1>Install</h1>
+  <p class="lede">ThinkThen runs from the command line, from your language, and from your database.</p>
+
+  <h2><a href="/install/shell/">The command line</a></h2>
+  <InstallLine line={shell.install[0][0]} caption="The download script" />
+  <InstallLine line={shell.install[1][0]} caption="Homebrew, an option on a Mac" />
+  <p>Set <code>{KEY_VARIABLE}</code> in the environment. <code>--dry-run</code> needs no key.</p>
+
+  {tables.map(([heading, what, list]) => (
+    <Fragment>
+      <h2>{heading}</h2>
+      <table>
+        <tr><th>{what}</th><th>Install</th><th>Not sure comes back as</th></tr>
+        {list.map((s) => (
+          <tr>
+            <td><a href={`/install/${s.slug}/`}>{s.name}</a></td>
+            <td><code>{s.install[0][0]}</code></td>
+            <td><code>{s.unsureWord}</code></td>
+          </tr>
+        ))}
+      </table>
+    </Fragment>
+  ))}
+
+  <h2><a href="/install/settings/">Settings</a></h2>
+  <p>The <a href="/install/settings/">settings page</a> lists every setting, its default, and how to set it on each surface.</p>
+
+  <h2><a href="/install/backends/">Backends</a></h2>
+  <p>ThinkThen asks Jev, a model from TypeSafe. The <a href="/install/backends/">backends page</a> says how to point it at another server.</p>
+</Base>

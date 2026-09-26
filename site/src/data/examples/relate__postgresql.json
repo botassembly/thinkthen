@@ -1,8 +1,0 @@
-{
-  "status": "drawn",
-  "source": "deck recognize-surfaces.md",
-  "lang": "sql",
-  "code": "-- PostgreSQL: set-returning\nCREATE TABLE rules (id int, body text);\nINSERT INTO rules VALUES\n    (1, 'Book economy class for every flight under six hours.'),\n    (2, 'Submit receipts within 30 days of the trip.'),\n    (3, 'Hotel stays are capped at 200 dollars a night.'),\n    (4, 'Employees may book business class on any flight.'),\n    (5, 'Rental cars need a manager''s approval.'),\n    (6, 'Receipts may be submitted at any time, with no deadline.'),\n    (7, 'Meals are reimbursed up to 60 dollars a day.'),\n    (8, 'Use the company travel portal for all bookings.');\nSELECT * FROM thinkthen_relate('SELECT id, body FROM rules', ARRAY['contradicts']);\n--  contradicts | 1 | 4 | 0.84\n--  contradicts | 2 | 6 | 0.99",
-  "function": "relate",
-  "surface": "postgresql"
-}

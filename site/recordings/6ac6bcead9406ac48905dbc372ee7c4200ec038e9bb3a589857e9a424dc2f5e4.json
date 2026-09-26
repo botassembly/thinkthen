@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Notice to all customers: payment terms change on May 1.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"What kind of page is this?","criteria":{"invoice":null,"notice":null,"other":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"notice","confidence":1.0,"probabilities":{"invoice":0.0,"other":0.0,"notice":1.0}}},"usage":{"input_tokens":308,"output_tokens":39}}
+}

@@ -1,0 +1,7 @@
+thinkthen: diff: warning: the question digest differs in 70 of 70 paired answers. A different question, threshold, or profile gives a different digest.
+{
+  "changed": 20,
+  "right_a": 50,
+  "right_b": 70,
+  "lost": 0
+}
