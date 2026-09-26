@@ -35,7 +35,9 @@ One new core module, `core/batch.rs`, holds the planner. It is pure. It reads no
 - `evidence`: today's `Evidence`, which the batch-of-one form sends unchanged.
 - `value`: the JSON value the batch quotes, lists in the evidence object, hashes for the content cut, and compares for copies. For a whole JSONL, CSV or TSV record it is the record's own value, an object, as the design's section 1 asks. For a pointer selection it is the selected value. For a text record, such as a line, it is that text as a JSON string.
 
-Today `Reading::evidence` (`core/records.rs:410`) turns a whole JSON record into `Evidence` text of its compact line. Quoting that evidence would quote a CSV row as a string. So B4 builds each `BatchRecord` through a new `Reading::batch_record(&Record)` in `core/records.rs`. It returns today's `Evidence` from `Reading::evidence` beside the value above. The pointer lookup is shared with `evidence`, not copied.
+Today `Reading::evidence` (`core/records.rs:410`) turns a whole JSON record into `Evidence` text of its compact line. Quoting that evidence would quote a CSV row as a string. So B4 builds each `BatchRecord` through a new `Reading::batch_record(&Record)` in `core/records.rs`. `BatchRecord` lives in `core/batch.rs`, and `core/records.rs` imports it.
+
+The match in `Reading::evidence` (`core/records.rs` lines 407 to 422) moves into a private `Reading::selected(&Record) -> Result<Selected, RecordError>`. `Selected` holds what the match found: the whole text, the whole JSON value, or the selection. `evidence` converts it to `Evidence` exactly as it does today. `batch_record` calls `selected` once and builds both the evidence and the value from it. The existing tests in `core/records/tests.rs` guard `evidence` through the move.
 
 **Stream.** `Batcher::push(BatchRecord)` returns the batches that closed, zero, one or two. `Batcher::finish()` closes the open batch at the end of input. B4 adds the pause as one more close. Records join the open batch in input order.
 
@@ -60,16 +62,20 @@ A record that is both a cut and the Nth record closes as `content`. A push can c
 
 **Two sizes per record, without quadratic work.** A batch of `k` records must not be encoded `k` times. Each record keeps two sizes, each from one encode of that record alone:
 
-- Its single form: today's body length, evidence bytes and wire questions. These apply while the open batch holds one distinct record, alone or with its copies.
+- Its single form: today's body length, evidence bytes and wire questions. Without a context, these apply while the open batch holds one distinct record, alone or with its copies.
 - Its batched share: its bytes in the evidence object and in its quoted question, plus its separator and the extra digits its wire names need. The batcher keeps running totals of these. The limit test uses them once a second distinct record would join.
 
-When a batch closes, the batcher encodes the form the batch actually sends, once. A batch of one distinct record sends the single form. Any other batch sends the batched form. The batcher compares the encoded lengths with the count for that form. A mismatch is a defect, `BatchError::Defect`, which a test would catch. Planning is linear in the input bytes.
+A context batch has one form, the quoted form, even for one record. It is sized by the batched totals from its first record. The single form never applies to it.
+
+When a batch closes, the batcher encodes the form the batch actually sends, once. Without a context, a batch of one distinct record sends the single form. Any other batch, and every context batch, sends the batched form. The batcher compares the encoded lengths with the count for that form. A mismatch is a defect, `BatchError::Defect`, which a test would catch. Planning is linear in the input bytes.
 
 **Profile check.** The batcher calls `BackendProfile::check` directly on each encoded body, with the compact evidence text, as `engine/prepared_request.rs` does today. `prepared_request.rs` changes only by the renamed ceiling call.
 
-**Profile failures.** A record whose single form fails the profile gets today's refusal, `BatchError::Profile(ProfileLimit)`. That covers evidence over `max_evidence_bytes`, a `tag` over `max_questions`, and a choice over `max_options`. The ceiling never refuses a batch of one, so a record whose own request passes 96,000 bytes goes alone as today's request.
+**Profile failures.** Without a context, a record whose single form fails the profile gets today's refusal, `BatchError::Profile(ProfileLimit)`. That covers evidence over `max_evidence_bytes`, a `tag` over `max_questions`, and a choice over `max_options`. The ceiling never refuses a batch of one, so a record whose own request passes 96,000 bytes goes alone as today's request.
 
-**Context refusals.** `Batcher::new` checks the context alone, before any record. It refuses with `BatchError::StructuredQuestionWithContext` when the question text is a JSON object or list. It refuses with `BatchError::ContextOverLimit { limit, actual }` when the context passes `max_evidence_bytes`, or when the request of the context and the question with no record passes `max_request_bytes` or the ceiling. Neither variant holds text. B7 turns both into exit 2. A later record whose own batch of one with the context passes a limit is deferred gap 5.
+**Context refusals.** `Batcher::new` checks the context alone, before any record. It refuses with `BatchError::StructuredQuestionWithContext` when the question text is a JSON object or list. It refuses with `BatchError::ContextOverLimit { limit, actual }` when the context passes `max_evidence_bytes`, or when the request of the context and the question with no record passes `max_request_bytes` or the ceiling. Neither variant holds text. B7 turns both into exit 2.
+
+A later record whose own batch of one with the context passes a limit makes `push` return `BatchError::ContextOverLimit { limit, actual }`, with no text. B3 builds that refusal. B7 only chooses the policy, deferred gap 5.
 
 **The batch.** Each closed batch holds its `Plan`, its body, its digest from `Exchange::new(url, body).digest()`, the index of each record's first wire question in input order, and its close reason: `Content`, `Size`, `Limit` or `End`. B4 adds `Pause`. B4 maps a reply's answers back to records through the index. `Batch` and `BatchError` have hand-written `Debug` that prints counts, the digest and the reason, and never record, context or body bytes.
 
@@ -116,10 +122,11 @@ Each is the agent's decision. Ian can overturn any of them.
 | Two records whose `value` differs only in key order | Not equal. Two questions |
 | A record on a content cut | Its batch closes after it, `Content` |
 | A cut that is also the Nth record | Closed `Content` |
-| Profile `max_request_bytes` equal to the byte length of `batch-three.request.json`, over its three records | The three share one batch |
+| Profile `max_request_bytes` equal to the byte length of `batch-three.request.json` without a trailing newline, over its three records | The three share one batch |
 | The same limit less one byte | The batch closes at two, `Limit` |
-| Profile `max_evidence_bytes` equal to the compact length of that fixture's `state` member, then less one | The same two outcomes |
-| A batch of one distinct record with copies, under a limit its batched form would pass | Sent in today's form, checked against today's size |
+| Profile `max_evidence_bytes` equal to the compact length of that fixture's `state` member, without a trailing newline, then less one | The same two outcomes |
+| Three copies of the `decide-urgent` record, profile `max_request_bytes` equal to that fixture's compact length without a trailing newline. That limit is at or above today's body and below the batched form | One batch, sent in today's form, closed `End` |
+| A context, and a later record whose batch of one with the context passes a limit | `push` returns `BatchError::ContextOverLimit`, naming the limit and size only |
 | Built-in address, no profile, records of 20,000 bytes | Two a batch, closed `Limit` |
 | Built-in address, records of 40,000 bytes | One a batch, today's request. Each record's bytes appear twice, in the evidence and in its quote, so two pass 96,000 |
 | Built-in address, one record of 100,000 bytes | Sent alone as today's request. The ceiling never refuses a batch of one |
@@ -141,7 +148,7 @@ All three tests are table-driven unit tests beside the pure planner in `core/bat
 | --- | --- | --- |
 | `a_batch_of_one_is_todays_request`, design test 1 | For each of the four request fixtures under `specification/fixtures/systemone/`, the record and question go through the planner at `Records(1)` and at `Max` as a stream of one record. Each run gives one batch. Its body equals the fixture's compact bytes, read through the order-keeping `Json` tree and written compact. Its digest equals `Exchange::new(url, compact_bytes).digest()` over those same compact bytes. `find-two` counts too, since its body is byte-pinned and holds escapes | (a) Drop the batch-of-one branch, so one record goes in the batched form. (b) Quote the question at a batch of one. (c) Digest the plan rather than the body |
 | `each_batch_body_matches_its_fixture`, design test 2 | Five new byte-pinned fixtures, one compact line each: `batch-three` (three plain records, one holding a quote mark and a newline), `batch-context`, `batch-choose`, `batch-csv` (whole CSV records built through `Reading::batch_record`, so they quote as objects) and `batch-duplicate`. The builder writes each body by hand from ADR 0048 item 1 and checks it with `jq -c`. The README gives one worked question | (a) Drop the `. ` after the quote. (b) Write the quote with the record's text instead of its JSON. (f) Quote a whole CSV record from its `evidence` text instead of its `value`. (c) Send the records as a plain list. (d) Ask a duplicate twice. (e) Put a context batch's records in the evidence too |
-| `batches_close_where_the_readme_says`, design test 3 | `specification/fixtures/batching/grouping.txt` holds 25 lines. Two of them are content cuts. `specification/fixtures/batching/README.md` lists each line's first 16 hex digits from `printf '"%s"' LINE \| sha256sum`. A cut is a line whose 14th to 16th hex digits read `000`. The `printf` rule holds only for lines that need no JSON escapes, so every fixture line is plain ASCII without quote marks or backslashes. The README works out every batch by hand, and the test holds the ranges and close reasons as literals: at `Max` under a profile with `max_questions` 8, and at `Records(5)`. It names a third cut line for inserting. Rows insert a plain line and then the cut line, and assert which batch digests change and which stay. More rows cover the exact-limit rows, which take their limits from `batch-three.request.json`'s byte length and its `state` member's compact length, and the 20,000-byte, 40,000-byte and 100,000-byte cases from the edge table | (a) Read the 8 bytes little-endian. (b) Hash the record's text without its JSON quotes. (c) Close a cut batch before its record. (d) Compare a limit with `<` where `<=` belongs. (e) Ignore the ceiling. (f) Let batches fill across a cut. (g) Check a batch of one distinct record with copies against its batched size |
+| `batches_close_where_the_readme_says`, design test 3 | `specification/fixtures/batching/grouping.txt` holds 25 lines. Two of them are content cuts. `specification/fixtures/batching/README.md` lists each line's first 16 hex digits from `printf '"%s"' LINE \| sha256sum`. A cut is a line whose 14th to 16th hex digits read `000`. The `printf` rule holds only for lines that need no JSON escapes, so every fixture line is plain ASCII without quote marks or backslashes. The README works out every batch by hand, and the test holds the ranges and close reasons as literals: at `Max` under a profile with `max_questions` 8, and at `Records(5)`. It names a third cut line for inserting. Rows insert a plain line and then the cut line, and assert which batch digests change and which stay. More rows cover the exact-limit rows, which take their limits from `batch-three.request.json`'s byte length and its `state` member's compact length, and the 20,000-byte, 40,000-byte and 100,000-byte cases from the edge table | (a) Read the 8 bytes little-endian. (b) Hash the record's text without its JSON quotes. (c) Close a cut batch before its record. (d) Compare a limit with `<` where `<=` belongs. (e) Ignore the ceiling. (f) Let batches fill across a cut. (g) Check a batch of one distinct record with copies against its batched size: the three-copies row wrongly refuses with `BatchError::Profile` |
 
 The edge-case table's other rows sit in the same three tests as rows. The `Debug` row asserts that no record text appears in a batch's or an error's `Debug`, over the escape fixture's records.
 
@@ -159,7 +166,7 @@ Nonblank lines, measured with `grep -c .`.
 - `crates/thinkthen/src/core/batch/tests.rs`: at most 340.
 - `crates/thinkthen/src/core/mod.rs`: at most 3 net added.
 - `crates/thinkthen/src/core/backend.rs`: at most 2 net added, for the rename and its doc.
-- `crates/thinkthen/src/core/records.rs`: at most 20 net added, for `Reading::batch_record` and the pointer lookup it shares with `Reading::evidence`. The file stays under 500.
+- `crates/thinkthen/src/core/records.rs`: at most 20 net added, for `Reading::selected`, `Selected` and `Reading::batch_record`, with `evidence` rebuilt on `selected`. The file stays under 500.
 - `crates/thinkthen/src/engine/prepared_request.rs`: the one renamed call. No net lines.
 - `specification/fixtures/systemone/`: five one-line fixtures, and at most 15 lines added to its README.
 - `specification/fixtures/batching/`: `grouping.txt` of 25 lines and a README of at most 90 nonblank lines.
@@ -171,7 +178,7 @@ Nonblank lines, measured with `grep -c .`.
 1. Stop before crossing a budget or adding a dependency.
 2. Stop if a batch of one differs from any request fixture by one byte.
 3. Stop if the running byte count disagrees with an encoded body in any row.
-4. Stop if a batch of one distinct record, alone or with copies, is checked or refused by its batched size rather than today's size.
+4. Stop if a batch of one distinct record without a context, alone or with copies, is checked or refused by its batched size rather than today's size.
 5. Stop if the planner needs to encode a whole open batch for each record it adds.
 6. Stop if any plant stays green.
 7. Stop if the change needs a file another in-flight ticket owns: `engine/usage.rs` and `cli/mod.rs` (0141), `engine/facade.rs`, `engine/facade/relate.rs`, `engine/workers.rs` and `cli/relate` (0143), or the release scripts and surface checks (0128).
@@ -196,7 +203,7 @@ Contract 2; state and timing 0; reach 1; proof 1; cost of error 2; total 6. Fina
 2. The design's test 3 says records of 40,000 bytes close batches at the ceiling. They do, but each goes alone, because each record's bytes appear twice. The ticket adds 20,000-byte records to show two sharing a batch. D1's page should say a batch carries each record twice.
 3. Demo recordings under B4's default. The demos under `demos/` were recorded one record a request. Under the default `max`, a demo over several records misses its recording. B4 must pass `--batch 1` in those demos or record them again.
 4. Reply splitting per record, including duplicates, belongs to B4 with the failure rule of ADR 0048 item 6.
-5. A late overflow with a context. `Batcher::new` checks the context with no record. A record whose own batch of one with the context passes a limit is found only when it arrives, after earlier batches may have gone. ADR 0048 item 11 asks for exit 2 before any request. B7 decides whether to check the first record before any request or to fail that record alone.
+5. The policy for a late overflow with a context. `Batcher::new` checks the context with no record. A record whose own batch of one with the context passes a limit is found only when it arrives, after earlier batches may have gone. B3's `push` then returns `BatchError::ContextOverLimit { limit, actual }`. ADR 0048 item 11 asks for exit 2 before any request. B7 chooses the policy: check the first record before any request, or fail at that record.
 
 ## What Ian can overturn
 
