@@ -44,7 +44,7 @@ The row's `FAKE.SERVICE_TOKEN` plant never reached the `awk` child under `dash`,
 
 Each ladder run started every rung as `env -u THINKTHEN_API_KEY FAKE_SERVICE_API_KEY=fake-not-a-key CARGO_TARGET_DIR=<scratch>/abs-target sdlc/scripts/RUNG`. A probe beside the ladder read `/proc/PID/environ` of each running lane test binary every two seconds. It counted only whether each of the two names was there, and it printed no value.
 
-Run 3 took 176 samples. The first 59 came while `lint` ran, and each held the key, since `lint` keeps the caller's names. The other 117 came while `test`, `spec`, and `surfaces` ran. None held the key or `CARGO_TARGET_DIR`. Run 2 stopped after `lint`, and its 59 samples all held the key. The scratch target folder held only a `.rustc_info.json` from 06:54. Run 1's `lint` wrote it before the fix. Nothing wrote there after the fix.
+Run 4 took 173 samples. The 75 taken during `lint` held the key. The 98 taken during `test`, `spec`, and `surfaces` held neither name. Run 3 took 176 samples. The first 59 came while `lint` ran, and each held the key, since `lint` keeps the caller's names. The other 117 came while `test`, `spec`, and `surfaces` ran. None held the key or `CARGO_TARGET_DIR`. Run 2 stopped after `lint`, and its 59 samples all held the key. The scratch target folder held only a `.rustc_info.json` from 06:54. Run 1's `lint` wrote it before the fix. Nothing wrote there after the fix.
 
 The relative `CARGO_TARGET_DIR` case was not run as a ladder. The rule drops the name whatever its value, and the `lint` row pins the drop.
 
@@ -57,12 +57,13 @@ The lane started cold at 29 MB, with no build folders. Before the ladder, one `c
 | 1, at `813db497` | pass, 6 s | fail, 175 s: the package catalog, see Deviation | not run | not run | not run |
 | 2, at `73fcc72d` | pass, 2 s | fail, 158 s: the ratchet had to fall 21 lines | not run | not run | not run |
 | 3, at `79929045` | pass, 11 s | pass, 126 s | pass, 161 s | pass, 27 s | pass, 1,041 s: all ten surfaces |
+| 4, at `99bd86a9`, after merging main with 0132 landed | pass, 794 s | pass, 185 s | pass, 157 s | pass, 515 s | pass, 665 s: all ten surfaces |
 
-Run 3's wall time totals 1,366 seconds, about 23 minutes. Its times include waits for the heavy lock behind other builders. The `surfaces` rung printed that it waited. `du -sh` of the lane after run 3 reads 9.2 GB.
+Run 3's wall time totals 1,366 seconds, about 23 minutes. Run 4's totals 2,316 seconds, about 39 minutes. In both runs every heavy rung printed that it waited for the heavy lock behind other builders. So these times measure a busy machine, not the lane alone. Run 4's `install` spent most of its 794 seconds waiting. Run 4's `surfaces` rebuilt only what the merge changed and took 665 seconds, against 1,041 in run 3. `du -sh` of the lane reads 9.2 GB after run 3 and after run 4.
 
 ## Ratchet
 
-`node sdlc/scripts/ratchet.mjs` reads `crates + conformance 66373/66373`, down 21 from 66394. The PostgreSQL Rust ceiling rose 2 to 1810, and the DuckDB Python ceiling rose 2 to 1896. Commit `79929045` says why.
+`node sdlc/scripts/ratchet.mjs` reads `crates + conformance 66373/66373` before the merge, down 21 from 66394. After merging main with 0132's 163 lines, it reads `66536/66536`, main's 66557 less 21. The PostgreSQL Rust ceiling rose 2 to 1810, and the DuckDB Python ceiling rose 2 to 1896. Commit `79929045` says why.
 
 ## Budgets
 
