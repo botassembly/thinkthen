@@ -1,45 +1,103 @@
 ---
 flow: build
 priority: 163
-opens: crates/thinkthen/src/engine/cache_prune.rs crates/thinkthen/src/engine/error.rs crates/thinkthen/src/cli/status.rs crates/thinkthen/src/cli/cache.rs crates/thinkthen/tests/cache_bad_entry.rs crates/thinkthen/tests/status.rs specification/recording.md specification/threshold.md specification/settings.md sdlc/planning/adr/0010-one-wire-shape-two-variables-and-a-smaller-version-one.md SECURITY.md libraries/c/README.md libraries/polars/README.md libraries/python/README.md libraries/r/README.md libraries/ruby/README.md libraries/rust/README.md libraries/typescript/README.md databases/duckdb/README.md databases/postgresql/README.md databases/sqlite/README.md sdlc/issues sdlc/ratchet.json sdlc/records sdlc/tickets
+opens: crates/thinkthen/src/engine/cache_prune.rs crates/thinkthen/src/engine/error.rs crates/thinkthen/src/cli/status.rs crates/thinkthen/src/cli/cache.rs crates/thinkthen/tests/backend/default_cache.rs crates/thinkthen/tests/status.rs specification/recording.md specification/threshold.md specification/settings.md sdlc/planning/adr/0010-one-wire-shape-two-variables-and-a-smaller-version-one.md SECURITY.md libraries/c/README.md libraries/polars/README.md libraries/python/README.md libraries/r/README.md libraries/ruby/README.md libraries/rust/README.md libraries/typescript/README.md databases/duckdb/README.md databases/postgresql/README.md databases/sqlite/README.md sdlc/issues sdlc/ratchet.json sdlc/records sdlc/tickets
 ---
 
 # 0163: The cache folder survives a bad entry, and the pages say what it holds
 
-Status: ready for review. Written 2026-09-26 by Claude, the queue owner's planner. A fresh read-only review must accept it before it builds. Owner: Claude.
+Status: ready for review. Written 2026-09-26 by Claude, the queue owner's planner. Revised 2026-09-26 after the first review. A fresh read-only review must accept it before it builds. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
 ## Outcome and authority
 
-One malformed or foreign entry no longer stops `cache prune` or `status` for a whole folder. Both carry on and name the bad entry by its file name. Every library and database README, the settings table and `SECURITY.md` say that the answer cache is on by default and that each entry holds the judged text. `specification/recording.md` and `SECURITY.md` say that whoever can write a cache or recording folder decides the answers read from it. `recording.md` and `threshold.md` state answer drift as a measurement over the recordings on disk shows it. `recording.md` says that a command's exit waits for the usage lock. `recording.md`'s two sentences on recorded failures agree, as ticket 0158 leaves them.
+One malformed or foreign entry no longer stops `cache prune` or `status` for a whole folder. Prune carries on and names each bad entry by its file name. `status` carries on and reports how many bad entries it found. Every library and database README, the settings table and `SECURITY.md` say that the answer cache is on by default and that each entry holds the judged text. Each README says how to turn the cache off, or says that its surface has no off switch and how to move the folder. `specification/recording.md` and `SECURITY.md` say that whoever can write a cache or recording folder decides the answers read from it. `recording.md` and `threshold.md` state answer drift as a measurement over the recordings on disk shows it. `recording.md` says that a command's exit waits for the usage lock.
 
-Six issues from local experiment 273 block 0.1 by the placement in `sdlc/planning/backlog-0-1-2026-09-26.md`. The folder-writers issue blocks 0.1 only for its documentation half. The recording-failure issue owes only its sentence, and ticket 0158 rewrites line 59, so this ticket leaves that line to 0158. Ian can overturn each design choice.
+Five issues from local experiment 273 block 0.1 by the placement in `sdlc/planning/backlog-0-1-2026-09-26.md`. The folder-writers issue blocks 0.1 only for its documentation half. The sixth issue in the backlog row, the "never recorded" sentence, is ticket 0158's. Commit `c09e9551` on 0158's branch rewrites `recording.md` line 84 and closes that issue, so this ticket leaves it alone. Ian can overturn each design choice.
 
 ## What happens today
 
-Read from `origin/main` `ebd28382`.
+Read from `origin/main` `8084d38a`.
 
-- `engine/cache_prune.rs:200-240`, `scan`, returns `Error::CacheEntry` at the first digest-named entry that is not a regular file, changes identity while read, fails to parse, or carries the wrong name. Both callers, `inspect` at line 66 and `run_at` at line 92, pass it up. `cli/status.rs:123-128` calls `inspect` and maps any error to `Failure::StatusState`, so `status` fails whole. `recording.md` line 94 says "A scan refusal deletes nothing". The messages name no file. Report 08, finding 3 (`sdlc/issues/2026-09-26-one-bad-cache-entry-breaks-status-and-prune.md`).
+- `engine/cache_prune.rs:200-240`, `scan`, returns `Error::CacheEntry` at the first digest-named entry that is not a regular file, changes identity while read, fails to parse, or carries the wrong name. A digest-named file that vanishes or cannot be opened fails the whole scan as a storage error at line 208 or 212. Both callers, `inspect` at line 66 and `run_at` at line 92, pass the error up. `cli/status.rs:123-129` calls `inspect` and maps any error to `Failure::StatusState`, so `status` fails whole. `recording.md` line 94 says "A scan refusal deletes nothing". The messages name no file. Report 08, finding 3 (`sdlc/issues/2026-09-26-one-bad-cache-entry-breaks-status-and-prune.md`).
 - No `libraries/*/README.md` or `databases/*/README.md` says that a cache entry holds the judged text. `README.md` line 38 says it for the command. The settings table's "Answer cache" row (line 63) gives the default and not the contents. In PostgreSQL the folder belongs to the server's operating-system user, and every role that can call the functions shares it. Report 12, finding 2.1 (`sdlc/issues/2026-09-26-surfaces-write-judged-text-to-disk-without-saying-so.md`).
+- Three surfaces cannot turn the cache off. DuckDB's `SET thinkthen_cache` only moves the folder, because `databases/duckdb/src/engines.rs:129` calls `cache_at` and nothing calls `no_cache`. PostgreSQL's `thinkthen.cache` only moves it. An empty value keeps `THINKTHEN_CACHE` or the platform folder (`databases/postgresql/src/call.rs:127` and `:147`, `databases/postgresql/README.md` line 49). The C library reads only `THINKTHEN_CACHE`, and `settings.md` line 63 marks its cell "not on this surface".
 - `engine/recorder.rs:137` checks folder privacy only for the platform default. Entries carry no integrity check. Report 12, finding 2.2, changed `"noul": 0.93` to `0.01` in one entry, and the next run printed `false` with `requests_sent: 0`. `recording.md` line 62 treats every entry field as untrusted text for printing and says nothing about answers (`sdlc/issues/2026-09-26-folder-writers-decide-the-answers.md`).
 - `recording.md` line 78 and `threshold.md` line 45 say borderline answers moved "by up to 0.08" and that experiment 259 saw gaps "up to 0.09". ADR 0010's amendment of 2026-09-25 holds the same numbers. Report 09, finding 3, counted the Beatles Bench recordings, all answered by `jev-1.13.0`: 4,075 of 5,290 repeated digests differed, 263 by more than 0.1, and the largest gap was 0.45. One digest replays as 0.21, 0.25 and 0.66 for one label, so it crosses the default cut of 0.5 (`sdlc/issues/2026-09-26-the-spec-understates-answer-drift.md`).
 - `recording.md` line 26 says "Counting never holds back a request." `engine/usage.rs:263` takes the usage lock with `File::lock`, which has no timeout, and the command's exit waits for the usage writer. ADR 0049 item 3 accepts the wait. Report 07, finding I2, held the lock for 12 seconds, and `decide` printed `true` at once and exited after 11.73 seconds (`sdlc/issues/2026-09-26-recording-page-omits-the-exit-wait-on-the-usage-lock.md`).
-- `recording.md` line 59 says "A failure is never recorded", and line 84 says a recorded partial reply replays with exit 6. Ticket 0158 adds a sentence after line 59 and one after line 84 (`sdlc/issues/2026-09-26-recording-page-says-a-failure-is-never-recorded.md`).
 
 ## Design
 
-### A bad entry is skipped and named
+### A bad entry is skipped
 
-`scan` no longer stops at a bad entry. It sets the entry aside and keeps going. A bad entry is a digest-named object that is not a regular file, changes identity while read, fails to parse, names another schema, or carries a name that does not match its digest. `scan` returns the good entries and the names of the bad ones, sorted. The file name matched the digest pattern, so it is 64 hex characters and `.json`, and printing it prints no entry text.
+`scan` no longer stops at a bad entry. It sets the entry aside and keeps going. A bad entry is a digest-named object that meets any of these:
 
-- `cache prune` never deletes, follows or opens a bad entry again. It trims the good entries as today. It prints the success line, then one standard error line per bad entry: ``thinkthen: cache prune: left `NAME` in place; it is not a valid entry``. It exits 0. A bad entry's bytes do not count toward the target.
-- `status` counts good entries as today and adds `cache_bad_entries N`, and `status --json` adds `cache.bad_entries`. It no longer fails when an entry is bad. It still fails for an unreadable folder, as today.
-- `recording.md` line 94's "A scan refusal deletes nothing" becomes the rule above, and the `status` paragraph names the new field. The addition keeps `thinkthen.status/1`, by the rule ticket 0160 writes for results.
+- It is not a regular file. A symlink or a directory counts.
+- It fails to open for a reason other than not found, such as permission denied.
+- It changes identity while read, or a read of it fails.
+- It fails to parse.
+- It names another schema or adapter.
+- Its response names no nonblank model (`Entry::inspected` returns `MissingModel`, `core/recording.rs:212`; `recording.md` line 94).
+- Its name does not match its digest.
+
+A digest-named file that is not found at `symlink_metadata`, at `open`, or at the final `symlink_metadata` vanished after `read_dir` listed it. `scan` skips it as not an entry and neither counts nor names it. One file therefore never fails the whole folder. A failure of `read_dir` itself, of the folder checks in `inspect`, or of the folder lock still fails the command as today.
+
+`scan` returns the good entries and the names of the bad ones, sorted by name. The name matched the digest pattern, so it is 64 lowercase hex characters and `.json`, and printing it prints no entry text.
+
+### What prune prints
+
+Prune never deletes, follows or opens a bad entry again. It applies the alias rule, the selectors and the target to good entries only, as today. A bad entry's bytes count toward no total.
+
+On success prune writes this whole line to standard output, where both counts after the semicolon cover good entries only:
+
+```text
+removed N entries and B bytes; N entries and B bytes remain
+```
+
+It then writes one whole line to standard error for each bad entry, in name order:
+
+```text
+thinkthen: cache prune: left `NAME` in place; it is not a valid entry
+```
+
+It exits 0. The alias refusal at exit 2 and a later filesystem failure print as today and name no bad entry.
+
+### What status prints
+
+`status` reports a count of bad entries and names none. It no longer fails when an entry is bad.
+
+- The human output prints `cache_bad_entries N` on the line right after `cache_bytes`. When there is no cache to inspect, it prints `cache_bad_entries unavailable`, as `cache_entries` does today.
+- `status --json` adds `cache.bad_entries` right after `cache.bytes`. It is a whole number, or `null` when there is no cache to inspect.
+- A folder that does not exist yet reports `cache_bad_entries 0`, as it reports `cache_entries 0`.
+- The addition keeps `thinkthen.status/1`, by the rule ticket 0160 writes for results.
+
+### The recording page states the rule
+
+`recording.md` line 94 becomes: "Prune validates every digest-named object before it deletes one. The name must match the digest recomputed from the fixed adapter, stored URL, and exact request bytes, and the response must name a nonblank model. A digest-named object that is not a regular file, cannot be opened or read, does not parse, or fails either check is a bad entry. Prune and `status` never follow, open again or delete a bad entry. Prune leaves it in place and names it on standard error with ``thinkthen: cache prune: left `NAME` in place; it is not a valid entry``, and `status` counts it as `cache_bad_entries`. A digest-named file that disappears while prune or `status` reads the folder is not an entry. Unknown names, locks, and dot-prefixed temporary files are ignored. A later filesystem failure can leave an oldest prefix deleted and prints no success line." Line 92's sentence on the printed line adds: "Both counts after the semicolon cover valid entries only." The `status` sentence on line 96 adds: "It reports bad entries as a separate count."
 
 ### Every surface says where judged text goes
 
-Each library and database README gains one paragraph under its cache setting: "The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. Turn it off with SETTING." SETTING is that surface's own spelling from `specification/settings.md`. `databases/postgresql/README.md` adds: "The folder belongs to the server's operating-system user. Every role that can call these functions shares it, so row text leaves the database's own access control, row-level security included. Set `thinkthen.cache` to an empty folder per database, or turn the cache off, when roles must not share answers." The settings table's "Answer cache" row says "Each entry holds the judged text" in its "What it does" cell. `SECURITY.md` gains one paragraph that names the cache and its contents, and the trust rule below.
+Each library and database README gains one paragraph under its cache setting. It opens with: "The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries." The last sentence is exact for each surface:
+
+| README | Last sentence |
+| --- | --- |
+| `libraries/rust` | "Turn it off with `EngineBuilder::no_cache`." |
+| `libraries/python` | "Turn it off with `tt.Engine(cache=False)`." |
+| `libraries/typescript` | "Turn it off with `new tt.Engine({ cache: false })`." |
+| `libraries/ruby` | "Turn it off with `ThinkThen::Engine.new(cache: false)`." |
+| `libraries/r` | "Turn it off with `tt_engine(cache = FALSE)`." |
+| `libraries/polars` | "The column calls use your own `thinkthen::Engine`, so turn it off with `EngineBuilder::no_cache` when you build that engine." |
+| `libraries/c` | "There is no off switch on this surface. Set `THINKTHEN_CACHE` before `thinkthen_engine_new` runs to move the folder." |
+| `databases/sqlite` | "Turn it off with `thinkthen_cache(NULL)`." |
+| `databases/duckdb` | "There is no off switch on this surface. `SET thinkthen_cache = '/absolute/folder'` moves the folder, and `THINKTHEN_CACHE` moves the folder `thinkthen_warm` uses." |
+| `databases/postgresql` | "There is no off switch on this surface. `thinkthen.cache` moves the folder, and an empty value keeps `THINKTHEN_CACHE` or the platform folder." |
+
+The Polars row differs from the coordinator's ruling on purpose. The Polars door adds a trait to the caller's own `thinkthen::Engine` (`libraries/polars/README.md` line 9), and that engine's builder has `no_cache`. The settings table has no Polars column, so the switch is the Rust one.
+
+`databases/postgresql/README.md` adds: "The folder belongs to the server's operating-system user. Every role whose calls resolve to the same folder shares its answers, so row text leaves the database's own access control, row-level security included. When roles must not share answers, give each its own folder with `ALTER ROLE ... SET thinkthen.cache`."
+
+The settings table's "Answer cache" row says "Each entry holds the judged text" in its "What it does" cell. `SECURITY.md` gains one paragraph that names the cache and its contents, and the trust rule below.
 
 ### Whoever writes a folder decides its answers
 
@@ -47,69 +105,83 @@ Each library and database README gains one paragraph under its cache setting: "T
 
 ### Drift is a measurement
 
-The builder measures drift over two recording sets with no network: every tracked `thinkthen.recording/1` entry in this repository, and the Beatles Bench recordings at the commit `site/examples/beatles/BENCH` names. A digest counts as repeated when two entries in different folders hold it. For each set, the record counts repeated digests, those whose replies differ, those that differ by more than 0.1, the largest gap, and how many cross the default cut of 0.5. The record keeps the short script it ran.
+The builder measures drift over two recording sets with no network.
 
-- `recording.md` line 78 keeps experiment 212's sentence, replaces the experiment 259 sentence with the new counts and names the record, and adds: "A borderline answer can cross the cut from one call to the next. The not-sure band in [threshold.md](threshold.md) marks where a second look pays."
-- `threshold.md` line 45 cites the same record in place of experiment 259's 0.09.
-- ADR 0010 gains a dated amendment that points to the record. The 2026-09-25 amendment stays as history.
+- The repository set is every tracked `thinkthen.recording/1` entry outside `site/`, read after ticket 0159 lands. 0159 re-keys these entries onto the pinned model, and the measurement runs over the re-keyed entries. The re-key renames entries and leaves every reply unchanged, but it can bring two entries under one digest that differed before. `site/` is excluded because its Beatles recordings copy the second set and its re-key belongs to the marketing lead.
+- The second set is the Beatles Bench recordings. They live in the separate Beatles Bench Git repository, which `site/scripts/pull-bench.mjs` reads from a local clone. The builder reads that repository at the commit `site/examples/beatles/BENCH` names, with `git archive` or `git show` at that commit. It does not check out, fetch or change the clone.
+
+A digest counts as repeated when two entries in different folders hold it. For each set, the record counts repeated digests, those whose replies differ, those that differ by more than 0.1, the largest gap, and how many cross the default cut of 0.5. The numbers go into `sdlc/records/0163-answer-drift.md`. That record names the Beatles Bench commit, the repository commit it read, and keeps the short script it ran.
+
+- `recording.md` line 78 keeps experiment 212's sentence, replaces the experiment 259 sentence with the new counts, and cites `sdlc/records/0163-answer-drift.md`. It adds: "A borderline answer can cross the cut from one call to the next. The not-sure band in [threshold.md](threshold.md) marks where a second look pays."
+- `threshold.md` line 45 cites `sdlc/records/0163-answer-drift.md` in place of experiment 259's 0.09.
+- ADR 0010 gains a dated amendment that points to `sdlc/records/0163-answer-drift.md`. The 2026-09-25 amendment stays as history.
 
 ### The exit waits for the usage lock
 
 `recording.md` line 26, after "Counting never holds back a request", adds: "The command's exit waits for its usage write, and that write waits as long as another process holds the usage lock. ADR 0049 item 3 accepts the wait."
 
-### The two recorded-failure sentences agree
-
-After ticket 0158 lands, the builder reads `recording.md` lines 59 and 84 as 0158 left them. When they agree and say how a user asks a failed question again, the issue closes with 0158's commit and this ticket changes nothing there. When they do not agree, this ticket edits line 84's paragraph and leaves line 59 as 0158 wrote it.
-
 ## Decisions
 
 Each is the ticket author's call unless marked. Ian can overturn any of them.
 
-1. **Prune and status skip a bad entry and name it.** They do not move it aside, because moving is a write the user did not ask for.
+1. **Prune and status skip a bad entry.** They do not move it aside, because moving is a write the user did not ask for. Prune names each one. `status` counts them.
 2. **Prune exits 0 when it skipped an entry.** It trimmed what it could, and a nightly job should not fail while the cache grows. The standard error lines name each skipped entry.
-3. **The SQL defaults stay as they are.** The cache stays on for the three SQL extensions, and each README says what that means. Turning it off by default on three surfaces is a larger change, and the issue keeps it as a later choice.
+3. **The SQL defaults stay as they are, and no off switch is added.** The cache stays on for the three SQL extensions. Two of them, DuckDB and PostgreSQL, cannot turn it off today, and neither can the C library. The coordinator ruled that this ticket adds no switch. Each README says what the cache holds and how to move it. Ticket 0149 carries `off` for DuckDB and PostgreSQL.
 4. **The trust rule is documentation only.** The writable-folder warning waits, by the issue's own placement.
 5. **Drift is measured over the recordings already on disk.** No paid call.
+6. **A vanished file is not an entry, and an unopenable one is bad.** A file that `read_dir` listed and that is gone at open raced with a writer or another prune. A file that is there and cannot be opened is one the user must look at.
 
 ## Edge cases
 
+Every prune row runs with `--max-size 1` unless it names other options. "Good" means an entry the Rust recorder wrote.
+
 | Input | Expected |
 | --- | --- |
-| A folder with 3 valid entries and one digest-named file of invalid JSON, `cache prune --max-size 0` | 3 removed. The bad file stays. One standard error line names it. Exit 0 |
+| A current entry, an old-model entry, and a digest-named file of invalid JSON holding a private marker. Prune runs with `--answered-by-other-than jev-1.13.0` and no `--max-size` | The old entry is removed. The current entry and the bad file stay. The alias check reads only good entries. Standard output is the whole success line. Standard error is exactly one bad-entry line naming the file. No output carries the marker. Exit 0 |
+| One good entry and a bad entry whose name does not match its digest | The good entry is removed. The bad one stays. Standard output is `removed 1 entries and B bytes; 0 entries and 0 bytes remain`. Standard error is exactly one bad-entry line. Exit 0 |
+| The same with an entry whose response names a blank model | The same |
+| The same with a digest-named directory | The same |
 | The same with an entry naming `thinkthen.recording/2` | The same |
-| The same with a digest-named symlink | It is not followed or removed, and it is named. Exit 0 |
-| An entry whose name does not match its digest | Named and left |
-| `status` over that folder | `cache_entries 3`, `cache_bad_entries 1`. Exit 0 |
-| `status --json` over it | `cache.bad_entries` is 1 |
-| A folder with no bad entry | Output as today, with `cache_bad_entries 0` in `status` |
-| An unreadable folder | `status` and `prune` fail as today |
-| `--answered-by-other-than` over a folder with a bad entry | The alias check reads only good entries |
+| The same with a digest-named file of mode `0000`, on Unix | The same, and the file keeps its mode |
+| The same with a digest-named symlink to a file outside the folder | The symlink stays and is named. The target keeps its bytes. Exit 0 |
+| `status` with `THINKTHEN_CACHE` naming the folder in any row above, before prune | `cache_entries 1` and `cache_bad_entries 1`. Exit 0 |
+| `status --json` over a platform cache holding only a digest-named symlink | Exit 0. `cache.entries` is 0 and `cache.bad_entries` is 1. No output carries the target's bytes |
+| `status` over a folder with no bad entry | Output as today, with `cache_bad_entries 0` after `cache_bytes` |
+| `status` with no absolute home | `cache.bad_entries` is `null` |
+| A digest-named file that vanishes between `read_dir` and open | Skipped as not an entry. Neither counted nor named |
 
 ## Proof
 
+No new test file. Four existing tests pin today's whole-folder refusal, and all four go red under this design. Each turns into edge rows above. The two exact-shape pins in `tests/status.rs` gain the new field.
+
 | Test | What it proves | Planted faults that turn it red |
 | --- | --- | --- |
-| `a_bad_entry_is_named_and_left`, new in `tests/cache_bad_entry.rs` | Edge rows 1 to 4 and 9. Each row builds a real folder, runs the binary, and pins standard output, each standard error line, the exit code and the files left | (a) Stop at the bad entry as today: row 1 exits nonzero and removes nothing. (b) Delete the bad entry: row 1's file is gone. (c) Follow the symlink: row 3 reads its target |
-| `status_counts_a_bad_entry`, same file | Edge rows 5 to 8 | (d) Fail status as today: row 5 exits nonzero. (e) Count the bad entry as good: row 5 prints `cache_entries 4` |
+| `tests/backend/default_cache.rs:197`, `prune_model_selection_and_scan_before_delete_hold`, renamed to `prune_selects_by_model_and_names_a_bad_entry` | Row 1 | (a) Stop at the bad entry as today: exit 5 and the old entry stays. (b) Delete the bad entry: the file is gone. (c) Let the alias check read the bad entry: its outcome changes |
+| `tests/backend/default_cache.rs:349`, `prune_refuses_digest_mismatch_blank_model_and_nonregular_entries_before_deletion`, renamed to `prune_leaves_and_names_each_kind_of_bad_entry` | Rows 2 to 6 and row 8. It gains the other-schema and mode `0000` cases and a `status` run before prune | (a) again. (d) Fail the whole scan when one file cannot be opened: the mode `0000` case exits 5. (e) Count a bad entry as good: `status` prints `cache_entries 2`. (f) Count a bad entry's bytes: the remaining bytes are not 0 |
+| `tests/backend/default_cache.rs:401`, `prune_refuses_a_digest_shaped_symlink_without_following_it`, renamed to `prune_names_a_digest_shaped_symlink_without_following_it` | Row 7 | (g) Follow the symlink: the target is read or removed |
+| `tests/status.rs:174`, `an_unsafe_cache_entry_uses_the_status_failure_without_leaking_local_bytes`, renamed to `an_unsafe_cache_entry_is_counted_without_leaking_local_bytes` | Row 9 | (h) Fail status as today: exit 5 |
+| `tests/status.rs:22` and `:67`, the exact-shape pins | Rows 10 and 11. The JSON pin at line 53 and the human pin gain the new field in place | (i) Omit the field or print it in another place: the whole-output pin differs. (j) Print 0 in place of `null` with no cache: line 67's pin differs |
+
+Row 12 has no test. A race between `read_dir` and open needs a test-only hook to plant, so review checks the not-found match in `scan` by reading it.
 
 The page changes carry no test of their own. `mustmatch` pages already hold the `status` output that changes, and they update with it. Each new number names its record.
 
-The four questions:
+The four questions, for the changed tests:
 
 - **What behavior does it protect?** Prune as the one bound on the cache, and `status` as a read-only report, with one bad file present.
-- **What credible regression fails it?** A scan that stops at the first bad file again, a prune that deletes or follows a file it could not read, and a bad file counted as good.
-- **Why does no existing test catch it?** No prune test plants a bad entry. `tests/status.rs::an_unsafe_cache_entry_uses_the_status_failure_without_leaking_local_bytes` pins today's whole-status failure on a symlink entry. This ticket changes that rule, so that test changes to pin exit 0, `cache_bad_entries 1` and the untouched target, and it keeps its check that no local bytes leak.
-- **Does it need a test-only hook?** No. The folder, the files and the symlink are real.
+- **What credible regression fails it?** A scan that stops at the first bad file again, a prune that deletes or follows a file it could not read, a bad file counted as good, and one unopenable file failing the whole folder.
+- **Why does no existing test catch it?** Existing tests do catch the change. `default_cache.rs:197`, `:349` and `:401` and `status.rs:174` plant bad entries and pin the whole-folder refusal, so all four go red. This ticket rewrites them to pin the new rule rather than adding a new file. No existing test plants another schema or an unopenable file, so those become new rows in the `:349` table.
+- **Does it need a test-only hook?** No. The folders, files, modes and symlinks are real.
 
 ## Budgets
 
 Nonblank lines, measured with `grep -c .`.
 
-- `engine/cache_prune.rs` and `engine/error.rs`: at most 35 net together.
-- `cli/status.rs` and `cli/cache.rs`: at most 15 net together.
-- `tests/cache_bad_entry.rs`: at most 170, new. `tests/status.rs`: at most 5 net.
-- Pages, READMEs, `SECURITY.md` and the ADR amendment: at most 60 net.
-- `sdlc/ratchet.json` moves to the measured total, at most 50 above main. The commit says what grew.
+- `engine/cache_prune.rs` and `engine/error.rs`: at most 40 net together.
+- `cli/status.rs` and `cli/cache.rs`: at most 20 net together.
+- `tests/backend/default_cache.rs`: at most 45 net. `tests/status.rs`: at most 10 net.
+- Pages, READMEs, `SECURITY.md` and the ADR amendment: at most 75 net.
+- `sdlc/ratchet.json` moves to the measured total, at most 60 above main. The commit says what grew.
 - No dependency. No paid call.
 
 ## Stop rules
@@ -117,18 +189,18 @@ Nonblank lines, measured with `grep -c .`.
 1. Stop before crossing any budget by more than a tenth, or before adding a dependency.
 2. Stop if prune would delete, open again or follow an entry it set aside.
 3. Stop if a printed line would carry anything from inside an entry.
-4. Stop if the drift measurement needs a network call, or if the Beatles Bench recordings at the named commit cannot be read without one. Record what was measured and report.
+4. Stop if the drift measurement needs a network call, or if the local Beatles Bench clone lacks the commit `site/examples/beatles/BENCH` names. Record what was measured and report.
 5. Stop if any plant stays green.
-6. Stop if ticket 0148, 0155 or 0158 has not landed.
+6. Stop if ticket 0148, 0155, 0158 or 0159 has not landed.
 7. Never run `sdlc/scripts/live`.
 
 ## Build order
 
-It builds after tickets 0148, 0155 and 0158 land. 0148 opens every library and database README, 0155 opens `cli/status.rs`, `recording.md` and the database READMEs, and 0158 rewrites `recording.md` line 59. It merges with ticket H4 on the settings table's "Answer cache" row, in the order the coordinator sets. It may build beside ticket 0162.
+It builds after tickets 0148, 0155, 0158 and 0159 land. 0148 opens every library and database README, 0155 opens `cli/status.rs`, `recording.md` and the database READMEs, and 0158 rewrites `recording.md` lines 59 and 84. 0159 re-keys every recording a gate replays, and its stop rule 7 forbids another build beside it (backlog line 72). It merges with ticket H4 on the settings table's "Answer cache" row, in the order the coordinator sets. It may build beside ticket 0162.
 
 ## Scope and exclusions
 
-Excluded: a warning or refusal for a writable folder, an integrity check on entries, turning the SQL caches off by default, an expiry setting, the dot-prefixed partials that review 11 found, and `site/`.
+Excluded: a new off switch on any surface, a warning or refusal for a writable folder, an integrity check on entries, turning the SQL caches off by default, an expiry setting, the dot-prefixed partials that review 11 found, the "never recorded" sentence, and `site/`.
 
 ## Routing
 
@@ -136,28 +208,31 @@ Builder: Claude (Opus subagent) in the lane the coordinator names. Reviewer: a f
 
 ## Complexity
 
-Contract 1; state and timing 1; reach 2; proof 1; cost of error 2; total 7. Final level: 2. The risk is a prune that touches a file it could not trust, which rows 1 and 3 guard.
+Contract 1; state and timing 1; reach 2; proof 1; cost of error 2; total 7. Final level: 2. The risk is a prune that touches a file it could not trust, which rows 1, 6 and 7 guard.
 
 ## Deferred gaps
 
 - The writable-folder warning and a keyed check on entries. `sdlc/issues/2026-09-26-folder-writers-decide-the-answers.md` keeps them.
+- No off switch on DuckDB, PostgreSQL or C. Ticket 0149 carries `off` for DuckDB and PostgreSQL, as `sdlc/issues/2026-09-26-follow-on-tickets-0149-and-0157-carry.md` lists. The C library's switch has no owner yet. `sdlc/issues/2026-09-26-surfaces-write-judged-text-to-disk-without-saying-so.md` keeps it.
 - Turning the cache off by default for the SQL extensions, and an expiry setting. `sdlc/issues/2026-09-26-surfaces-write-judged-text-to-disk-without-saying-so.md` keeps them.
 - `Engine::builder()` ignoring the configuration file's `cache: false`, in the severity 3 roll-up.
+- A test for a file that vanishes during the scan. It needs a test-only hook.
 
 ## What Ian can overturn
 
 - Decision 2: prune exits 0 when it skipped an entry.
-- Decision 3: the SQL caches stay on by default for 0.1.
+- Decision 3: the SQL caches stay on by default for 0.1, and no surface gains an off switch here. This is the coordinator's ruling.
 - Decision 4: the folder trust rule ships as documentation only.
+- Decision 6: an unopenable file is a bad entry, and a vanished one is not an entry.
 
 ## Closes
 
-`sdlc/issues/2026-09-26-one-bad-cache-entry-breaks-status-and-prune.md`, `sdlc/issues/2026-09-26-the-spec-understates-answer-drift.md`, `sdlc/issues/2026-09-26-recording-page-omits-the-exit-wait-on-the-usage-lock.md`, and `sdlc/issues/2026-09-26-recording-page-says-a-failure-is-never-recorded.md`. The documentation items of `sdlc/issues/2026-09-26-surfaces-write-judged-text-to-disk-without-saying-so.md` and `sdlc/issues/2026-09-26-folder-writers-decide-the-answers.md`, which then keep only their deferred items. Item 3 of `sdlc/issues/2026-09-26-architect-review-08-cache.md`.
+`sdlc/issues/2026-09-26-one-bad-cache-entry-breaks-status-and-prune.md`, `sdlc/issues/2026-09-26-the-spec-understates-answer-drift.md` and `sdlc/issues/2026-09-26-recording-page-omits-the-exit-wait-on-the-usage-lock.md`. The documentation items of `sdlc/issues/2026-09-26-surfaces-write-judged-text-to-disk-without-saying-so.md` and `sdlc/issues/2026-09-26-folder-writers-decide-the-answers.md`, which then keep only their deferred items. Item 3 of `sdlc/issues/2026-09-26-architect-review-08-cache.md`. Ticket 0158 closes `sdlc/issues/2026-09-26-recording-page-says-a-failure-is-never-recorded.md`.
 
 ## Evidence
 
-- Starts from: Local experiment 273, report 08 finding 3, report 12 findings 2.1 and 2.2, report 09 finding 3, report 07 finding I2, and reports 03, 06, 08 and 11 on the recorded failure, as the six issues record them. The code at `origin/main` `ebd28382`: `cache_prune.rs:66`, `:92` and `:200-240`, `cli/status.rs:123-128`, `recorder.rs:137`, `usage.rs:263`. `recording.md` lines 26, 59, 62, 78, 84 and 94, `threshold.md` line 45, ADR 0010's 2026-09-25 amendment, ADR 0049 item 3, and `README.md` line 38.
-- Keeps: Prune's order, target and alias rule over good entries. `status` over a folder with no bad entry, beside the new count. Every default. Every entry's bytes.
-- Changes: Prune and `status` skip and name a bad entry. `status` counts bad entries. Pages name what the cache holds, who decides its answers, the measured drift, and the exit wait.
-- Proof: Two outside-in tests with five plants, an offline drift record, and the `install`, `lint`, `test`, `spec` and `surfaces` rungs.
-- Defers: The writable-folder warning, an entry integrity check, SQL cache defaults, an expiry setting, and the builder's `cache: false` gap.
+- Starts from: Local experiment 273, report 08 finding 3, report 12 findings 2.1 and 2.2, report 09 finding 3, and report 07 finding I2, as the five issues record them. The code at `origin/main` `8084d38a`: `cache_prune.rs:66`, `:92`, `:200-240`, `:208` and `:212`, `core/recording.rs:212`, `cli/status.rs:123-129`, `recorder.rs:137`, `usage.rs:263`, `databases/duckdb/src/engines.rs:129`, and `databases/postgresql/src/call.rs:127` and `:147`. The tests `default_cache.rs:197`, `:349` and `:401` and `status.rs:22`, `:67` and `:174`. `recording.md` lines 26, 62, 78, 92, 94 and 96, `threshold.md` line 45, `settings.md` line 63, ADR 0010's 2026-09-25 amendment, ADR 0049 item 3, and `README.md` line 38. Ticket 0158's commit `c09e9551` and ticket 0159's re-key.
+- Keeps: Prune's order, target and alias rule over good entries. The success line's wording. `status` over a folder with no bad entry, beside the new count. The whole-command failure for an unreadable folder, a symlinked folder or a lock failure. Every default. Every entry's bytes.
+- Changes: Prune skips and names a bad entry. `status` counts bad entries. One unopenable file no longer fails the folder. Pages name what the cache holds, how to turn it off or move it, who decides its answers, the measured drift, and the exit wait.
+- Proof: Four existing tests rewritten to pin the new rule and two shape pins extended, with ten plants, an offline drift record in `sdlc/records/0163-answer-drift.md`, and the `install`, `lint`, `test`, `spec` and `surfaces` rungs.
+- Defers: The writable-folder warning, an entry integrity check, an off switch on DuckDB, PostgreSQL and C, SQL cache defaults, an expiry setting, the builder's `cache: false` gap, and a test for a vanished file.
