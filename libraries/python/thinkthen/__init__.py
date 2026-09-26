@@ -289,6 +289,8 @@ class Engine:
         """The unit that answers the question best, as ``{"index", "unit",
         "probability"}``, or ``None`` when nothing fits. ``none=True`` offers
         a none candidate, as ``find --none`` does."""
+        if not isinstance(none, bool):
+            raise UsageError("none is True or False")
         asked = _ordering(question, "find")
         if none:
             asked = asked._offering_none()

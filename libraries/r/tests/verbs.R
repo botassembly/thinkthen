@@ -32,6 +32,8 @@ check("rank top", identical(nrow(tt_rank("Is this urgent?", c("r1", "r2"), top =
 found <- tt_find("Which line asks for money?", c("u1", "u2"))
 check("find is place, unit, probability", identical(found, list(place = 1L, unit = "u1", probability = 0.9)))
 check("find needs two units", identical(kind_of(tt_find("Q?", "one")), "usage"))
+check("a none other than TRUE or FALSE is refused before any request", sent_by(check("the none sentence",
+  identical(message_of(tt_find("Q?", c("u1", "u2"), none = NA)), "none is TRUE or FALSE"))) == 0)
 
 # details: the command's --details document.
 details <- tt_details(tt_question(score = "How urgent?", levels = levels3), "urgent now")
