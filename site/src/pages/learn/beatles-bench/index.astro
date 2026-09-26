@@ -18,12 +18,12 @@ cd beatles-bench
   </figure>
   <Fragment set:html={'<!-- The talk video goes here once it exists. -->'} />
 
-  <p>The bench holds 306 Beatles songs and 1,501 questions about them. The facts come from Wikipedia and Wikidata. Every answer is known ahead of time. That makes the bench a good place to watch ThinkThen work and to see where it goes wrong.</p>
+  <p>The bench asks Jev questions about Beatles songs. The facts come from Wikipedia and Wikidata, and every answer is known ahead of time. The bench shows ThinkThen at work and shows where it goes wrong.</p>
   <p>Each page shows one idea and one command, then the same command at another bar. Every command answers from a saved recording. You need no key, and nothing leaves your machine.</p>
 
   <h2>Get the bench</h2>
-  <p>The bench is open source. Clone it and replay every answer:</p>
+  <p>Clone it and replay every answer:</p>
   <Code code={get} />
-  <p>It is not an official benchmark. Please don't benchmax it. The bench's author also builds ThinkThen. Its data is CC BY-SA 4.0, from Wikipedia and Wikidata.</p>
-
+  <p>The repository holds the songs, the questions and their right answers, and a saved recording of every answer. Each function has its own folder with a script to run it. The data is CC BY-SA 4.0.</p>
+  <p>It is not an official benchmark. Please don't tune a model on it. The bench's author also builds ThinkThen.</p>
 </BeatlesPage>

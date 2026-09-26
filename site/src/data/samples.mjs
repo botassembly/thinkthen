@@ -15,6 +15,20 @@ const raw = import.meta.glob(
 
 const text = (p) => raw[`/examples/${p}`];
 
+// The question files a Beatles Bench page reads, from the bench copy. Only
+// the JSON files at the top of each bench example folder load.
+const benchFiles = import.meta.glob(
+  '/examples/beatles/bench/examples/*/*.json',
+  { query: '?raw', import: 'default', eager: true },
+);
+
+// One file from the bench folder a Beatles page runs in.
+export function benchFile(folder, name) {
+  const found = benchFiles[`/examples/beatles/bench/${folder}/${name}`];
+  if (found === undefined) throw new Error(`samples: the bench has no ${folder}/${name}`);
+  return { name, text: found.replace(/\n+$/, '') };
+}
+
 // The scripts of one page, in name order, each with its output and exit.
 // A page with no script fails the build unless `optional` is set.
 export function runs(page, optional = false) {

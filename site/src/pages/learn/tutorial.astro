@@ -29,12 +29,12 @@ const triageForm = files(triagePage)[0];
 ---
 <Base title="Tutorial" description="From the install line to a pipeline that sorts a stream of messages.">
   <h1>Tutorial</h1>
-  <p class="lede">This tutorial takes you from installing ThinkThen to a pipeline that sorts a stream of messages. You ask one question, read the number behind the answer, set your own bar, and save the question to a file.</p>
+  <p class="lede">From the install line to a pipeline that sorts a stream of messages. You ask one question, read the number behind the answer, set your own bar, and save the question to a file.</p>
 
   <h2>1. Install it</h2>
   <InstallLine line={shell.install[0][0]} caption="The download script" />
   <InstallLine line={shell.install[1][0]} caption="Homebrew, an option on a Mac" />
-  <p>Set <code>{KEY_VARIABLE}</code> in the environment. No flag and no file carries a key. Ask for a key before you start. While you wait, <code>--dry-run</code> shows what would be sent. It needs no key. The <a href="/install/">install page</a> carries every other surface.</p>
+  <p>Set <code>{KEY_VARIABLE}</code> in the environment. <code>--dry-run</code> shows what a command would send and needs no key. The <a href="/install/">install page</a> covers every language and database.</p>
 
   <h2>2. Ask one question</h2>
   <p>Name the question, pipe the message in, and pass the question as an argument. <code>decide</code> prints <code>true</code>, <code>false</code>, or <code>null</code>, and it sets the exit code to match.</p>
@@ -44,12 +44,12 @@ const triageForm = files(triagePage)[0];
   <h2>3. Look at the number</h2>
   <p><code>true</code> hides a number. <code>--details</code> prints the whole result, and the model's probability sits under <code>answer</code>.</p>
   <Terminal run={answer} caption={answer.see} />
-  <p>That number is the model's own. The tool passes it through and computes nothing.</p>
+  <p>That number is the model's own. ThinkThen passes it through unchanged.</p>
 
   <h2>4. Set a band</h2>
   <p><code>--threshold</code> is your bar on the probability. One number is a cut, and the default is 0.5. Two numbers make a band: under the low bar is no, over the high bar is yes, and anything between is not sure.</p>
   <Terminal run={lines} caption={lines.see} />
-  <p>The threshold is an input. The model never chooses it, and it never changes the probability. It changes what you call a yes.</p>
+  <p>The threshold never changes the probability. It changes what you call a yes.</p>
 
   <h2>5. Branch on the answer</h2>
   <p>Not sure prints <code>null</code> and exits 3. A script reads the exit code and hands a person the calls it should not make alone.</p>
@@ -61,7 +61,6 @@ const triageForm = files(triagePage)[0];
   <p>Write <code>@refund.json</code> in place of the question words.</p>
   <Terminal run={savedYes} caption={savedYes.see} />
   <Terminal run={savedUnsure} caption={savedUnsure.see} />
-  <p>Tune the file once. Your git hook, your test, and your pipeline then ask the same question.</p>
 
   <h2>7. Judge a stream</h2>
   <p>One of <code>--lines</code>, <code>--jsonl</code>, <code>--csv</code>, or <code>--tsv</code> says how the records are framed. <code>filter</code> keeps the records where the answer is yes, byte for byte and in order.</p>
@@ -71,20 +70,12 @@ const triageForm = files(triagePage)[0];
   <p>Put them in a pipe and the second question reads only what the first kept. <a href="/how-tos/rank-the-inbound-leads/">See the leads how-to</a> for <code>filter</code>, <code>rank</code>, and <code>choose</code> in one pipeline.</p>
 
   <h2>8. Ask many questions at once</h2>
-  <p><code>annotate</code> fills out a form for every record. The form is a question set: any mix of <code>decide</code>, <code>choose</code>, <code>score</code>, and <code>tag</code> questions in one file, under <code>"version": 1</code>.</p>
+  <p><code>annotate</code> fills out a form for every record. The form is a question set: any mix of <code>decide</code>, <code>choose</code>, <code>score</code>, and <code>tag</code> questions in one file.</p>
   <Code code={triageForm.text} caption={`${triageForm.name}, the question set`} />
   {triage.map((step) => <Terminal run={step} caption={step.see} />)}
-  <p>One message left the pipeline at the <code>filter</code>. Three records reached the form. Each record comes back with one field per question.</p>
+  <p><code>filter</code> drops the thank-you note. Each message left comes back with one field per question.</p>
 
-  <h2>What you have now</h2>
-  <ul>
-    <li>One question you can branch on: exit 0 for yes, 1 for no, 3 for not sure.</li>
-    <li>The probability behind it, under <code>--details</code>.</li>
-    <li>A bar you set, and a band that sends the middle to a person.</li>
-    <li>A question saved to a file, shared by every place that asks it.</li>
-    <li>A pipeline that judges a stream and hands each record back with its answers.</li>
-  </ul>
-  <p>ThinkThen answers. Your code acts. It never runs a command and it never writes a file you did not name.</p>
+  <p>ThinkThen answers. Your code acts.</p>
 
   <p class="pagelinks"><a href="/learn/beatles-bench/">Next: Beatles Bench</a> · <a href="/how-tos/bash/">Learn the Bash techniques</a></p>
 </Base>

@@ -12,7 +12,7 @@
   "recognize": "examples/09-recognize",
   "relate": "examples/10-relate",
   "audit": "examples/11-audit",
-  "diff": "examples/12-diff",
+  "diff": "examples/11-audit",
   "what-jev-knows": "results/runs/2026-09-25-thinkthen-jev",
   "blind-spots": "results/runs/2026-09-25-thinkthen-jev",
   "rad": "examples/01-decide",
