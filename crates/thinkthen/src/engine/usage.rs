@@ -2,9 +2,10 @@
 
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read as _, Seek as _, SeekFrom, Write as _};
+use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
-use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::{Arc, Condvar, Mutex, PoisonError};
+use std::thread::{self, JoinHandle};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde::{Deserialize, Serialize};
@@ -55,26 +56,35 @@ impl Counts {
 
 #[derive(Debug, Default)]
 pub(crate) struct Counters {
-    requests_sent: AtomicU64,
-    input_tokens: AtomicU64,
-    output_tokens: AtomicU64,
-    cache_answers: AtomicU64,
     path: Option<PathBuf>,
-    /// Held across one durable update. `false` once an update has failed.
-    persistent: Mutex<bool>,
-    warned: AtomicBool,
+    shared: Arc<Shared>,
+}
+
+/// What the requests hand the one writer thread, so no request waits on a file.
+#[derive(Debug, Default)]
+struct Shared {
+    queue: Mutex<Queue>,
+    changed: Condvar,
+}
+
+#[derive(Debug, Default)]
+struct Queue {
+    /// The process totals, which the command, library, and SQL surfaces read.
+    totals: Counts,
+    /// Deltas not yet written, one sum for each month they were counted in.
+    pending: Vec<(String, Counts)>,
+    writing: bool,
+    /// Set by the first failure. Nothing is written after it.
+    failed: bool,
+    closing: bool,
+    writer: Option<JoinHandle<()>>,
 }
 
 impl Counters {
     pub(crate) fn new(path: Option<PathBuf>) -> Self {
         Self {
-            requests_sent: AtomicU64::new(0),
-            input_tokens: AtomicU64::new(0),
-            output_tokens: AtomicU64::new(0),
-            cache_answers: AtomicU64::new(0),
             path,
-            persistent: Mutex::new(true),
-            warned: AtomicBool::new(false),
+            shared: Arc::default(),
         }
     }
 
@@ -106,50 +116,95 @@ impl Counters {
         });
     }
 
-    pub(crate) fn warning(&self) -> bool {
-        self.warned.load(Ordering::Relaxed)
+    /// Wait until every delta counted so far is written, then say whether
+    /// persistence failed. Waits as long as another process holds the lock.
+    pub(crate) fn finish(&self) -> bool {
+        let busy = |queue: &mut Queue| {
+            queue.writer.is_some() && (queue.writing || !queue.pending.is_empty())
+        };
+        let queue = self.shared.queue.lock();
+        let settled = queue.and_then(|queue| self.shared.changed.wait_while(queue, busy));
+        settled.map_or(true, |queue| queue.failed)
     }
 
     /// The process totals so far. Reading them sends and writes nothing.
-    #[allow(
-        dead_code,
-        reason = "the command reads durable totals; ticket 0086 exposes this snapshot"
-    )]
     pub(crate) fn snapshot(&self) -> Counts {
-        Counts {
-            requests_sent: self.requests_sent.load(Ordering::Relaxed),
-            input_tokens: self.input_tokens.load(Ordering::Relaxed),
-            output_tokens: self.output_tokens.load(Ordering::Relaxed),
-            cache_answers: self.cache_answers.load(Ordering::Relaxed),
-            ..Counts::default()
-        }
+        let queue = self.shared.queue.lock();
+        queue.unwrap_or_else(PoisonError::into_inner).totals
     }
 
     fn add(&self, delta: Counts) {
-        let process_ok = checked_atomic_add(&self.requests_sent, delta.requests_sent)
-            && checked_atomic_add(&self.input_tokens, delta.input_tokens)
-            && checked_atomic_add(&self.output_tokens, delta.output_tokens)
-            && checked_atomic_add(&self.cache_answers, delta.cache_answers);
-        let Ok(mut writing) = self.persistent.lock() else {
-            self.warned.store(true, Ordering::Relaxed);
+        let Ok(mut queue) = self.shared.queue.lock() else {
             return;
         };
-        let Some(path) = self.path.as_deref().filter(|_| *writing) else {
+        let totals = queue.totals.checked_add(delta);
+        queue.totals = totals.unwrap_or(queue.totals);
+        let Some(path) = self.path.as_deref() else {
             return;
         };
-        if !process_ok || update(path, &month_now(), delta).is_err() {
-            *writing = false;
-            self.warned.store(true, Ordering::Relaxed);
+        let month = month_now();
+        let queued = match queue.pending.last_mut() {
+            Some((last, sum)) if *last == month => sum.checked_add(delta).map(|next| *sum = next),
+            _ => {
+                queue.pending.push((month, delta));
+                Some(())
+            }
+        };
+        if queue.writer.is_none() && !queue.failed {
+            let (path, shared, carried) = (path.to_path_buf(), Arc::clone(&self.shared), carried());
+            let writer =
+                thread::Builder::new().spawn(move || write_behind(&path, &shared, carried));
+            queue.writer = writer.ok();
+        }
+        if totals.is_none() || queued.is_none() || queue.failed || queue.writer.is_none() {
+            queue.failed = true;
+            queue.pending.clear();
+            return;
+        }
+        self.shared.changed.notify_all();
+    }
+}
+
+impl Drop for Counters {
+    /// Write what is pending, then stop the writer.
+    fn drop(&mut self) {
+        let writer = self.shared.queue.lock().ok().and_then(|mut queue| {
+            queue.closing = true;
+            queue.writer.take()
+        });
+        self.shared.changed.notify_all();
+        if let Some(writer) = writer {
+            let _stopped = writer.join();
         }
     }
 }
 
-fn checked_atomic_add(value: &AtomicU64, delta: u64) -> bool {
-    value
-        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |old| {
-            old.checked_add(delta)
-        })
-        .is_ok()
+/// The writer thread: each pass writes everything that piled up since the last.
+fn write_behind(path: &Path, shared: &Shared, carried: impl FnOnce()) {
+    carried();
+    let mut queue = shared.queue.lock();
+    let idle = |held: &mut Queue| held.pending.is_empty() && !held.closing;
+    let write = |(month, sum): &(String, Counts)| update(path, month, *sum).is_ok();
+    while let Ok(mut held) = queue {
+        held = match shared.changed.wait_while(held, idle) {
+            Ok(held) if !held.pending.is_empty() => held,
+            _ => return,
+        };
+        let taken = std::mem::take(&mut held.pending);
+        held.writing = true;
+        drop(held);
+        // A write that unwinds counts as failed, so `finish()` never waits on it.
+        let written = catch_unwind(AssertUnwindSafe(|| taken.iter().all(write))).unwrap_or(false);
+        queue = shared.queue.lock().map(|mut held| {
+            held.writing = false;
+            held.failed |= !written;
+            if held.failed {
+                held.pending.clear();
+            }
+            shared.changed.notify_all();
+            held
+        });
+    }
 }
 
 #[derive(Debug)]
@@ -243,20 +298,7 @@ fn update(path: &Path, month: &str, delta: Counts) -> io::Result<()> {
     directory.sync_all()
 }
 
-#[cfg(test)]
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum Stage {
-    Setup,
-    Lock,
-    Validation,
-    Write,
-    FileSync,
-    Rename,
-    DirectorySync,
-}
-
-#[cfg(not(test))]
-#[derive(Clone, Copy)]
 enum Stage {
     Setup,
     Lock,
@@ -287,6 +329,18 @@ fn maybe_fail(stage: Stage) -> io::Result<()> {
 #[cfg(not(test))]
 const fn maybe_fail(_stage: Stage) -> io::Result<()> {
     Ok(())
+}
+
+/// A test's injected failure, carried from the thread that starts the writer.
+#[cfg(test)]
+fn carried() -> impl FnOnce() {
+    let stage = FAILURE.with(std::cell::Cell::take);
+    move || FAILURE.with(|failure| failure.set(stage))
+}
+
+#[cfg(not(test))]
+const fn carried() -> impl FnOnce() {
+    || ()
 }
 
 #[cfg(test)]
