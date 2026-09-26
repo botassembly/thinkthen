@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core/batch.rs crates/thinkthen/src/core/question_fil
 
 # 0146: The command batches decide, filter and rank
 
-Status: ready for re-review. The first ticket review, at `cbb63b9d`, returned 1 high, 5 medium and 6 low findings. This revision adopts them under the coordinator's rulings of 2026-09-26. Owner: Claude. Lane: named by the coordinator at build time. It builds only after tickets 0143, 0144 and 0145 have landed on main, and after "S1 live run 1" has run on main.
+Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Claude. It builds only after tickets 0143, 0144 and 0145 land and after "S1 live run 1" runs on main.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
