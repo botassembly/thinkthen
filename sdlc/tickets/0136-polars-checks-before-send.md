@@ -6,7 +6,7 @@ opens: libraries/python/src/frame.rs libraries/python/src/arrow/write.rs librari
 
 # 0136: Polars frames refuse before sending and write cells as the Rust door does
 
-Status: built (`sdlc/records/0136-build-polars-checks-before-send.md`). Design and code reviews accepted. Ready to land. Owner: Claude.
+Status: landed 2026-09-26 (`sdlc/records/0136-build-polars-checks-before-send.md`). Design and code reviews accepted. Owner: Claude.
 
 Lane: thinkthen-lane-4
 
@@ -16,7 +16,7 @@ Review route: a fresh read-only Claude session reviews this design and the final
 
 A Python Polars user who calls `tt.annotate(set, frame, on="body")` on a frame that already has a column named as a question gets the pandas refusal before any request goes out. Today every row is sent first. Then Polars raises its own `DuplicateError`. A frame with a column nested more than 64 levels deep is refused before any request too. Today it is refused after every row is sent. The same user gets widened cells and a frame's tag column with the text the Rust Polars door writes, taken from the engine's `value_json`. Today the Python door builds that text itself, so a widened score of 1.0 reads `1`.
 
-The authority is the coordinator's brief for 0136 and the backlog `sdlc/planning/issue-backlog-2026-09-25.md`, section A row 1 ("A1": `2026-09-25-public-library-api-gaps.md`, item 8 only). The ticket settles `sdlc/issues/2026-09-25-a-polars-frame-sends-before-a-question-name-clash-fails.md` and item 8 of `sdlc/issues/2026-09-25-public-library-api-gaps.md`. ADR 0047 item 10 (the Polars column table) is the contract for item 8. The coordinator's rule for this ticket: a failure the code can find before sending refuses before any request goes out, on the Python Polars and Rust Polars surfaces where it matters.
+The authority is the coordinator's brief for 0136 and the backlog `sdlc/planning/issue-backlog-2026-09-25.md`, section A row 1 ("A1": `2026-09-25-public-library-api-gaps.md`, item 8 only). The ticket settles `sdlc/issues/closed/2026-09-25-a-polars-frame-sends-before-a-question-name-clash-fails.md` and item 8 of `sdlc/issues/2026-09-25-public-library-api-gaps.md`. ADR 0047 item 10 (the Polars column table) is the contract for item 8. The coordinator's rule for this ticket: a failure the code can find before sending refuses before any request goes out, on the Python Polars and Rust Polars surfaces where it matters.
 
 ## What is wrong today
 
@@ -153,7 +153,7 @@ Contract 2; state and timing 1; reach 2; proof 2; cost of error 2; total 9. Fina
 
 ## Closes
 
-- `sdlc/issues/2026-09-25-a-polars-frame-sends-before-a-question-name-clash-fails.md`. The lander moves it to `closed/` with a status line naming this ticket.
+- `sdlc/issues/closed/2026-09-25-a-polars-frame-sends-before-a-question-name-clash-fails.md`. The lander moves it to `closed/` with a status line naming this ticket.
 - Item 8 of `sdlc/issues/2026-09-25-public-library-api-gaps.md`. The issue stays open for its other items. Ticket 0134 has that file open, so the lander marks item 8 settled by 0136 in whichever landing comes second.
 
 ## Evidence

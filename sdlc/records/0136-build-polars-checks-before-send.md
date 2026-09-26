@@ -88,5 +88,5 @@ As the ticket lists them. The list form's failed marker keeps the binding's caus
 
 ## Closes, at landing
 
-- `sdlc/issues/2026-09-25-a-polars-frame-sends-before-a-question-name-clash-fails.md`: the lander moves it to `closed/`.
+- `sdlc/issues/closed/2026-09-25-a-polars-frame-sends-before-a-question-name-clash-fails.md`: the lander moves it to `closed/`.
 - Item 8 of `sdlc/issues/2026-09-25-public-library-api-gaps.md`: the lander marks it settled. Ticket 0134 has that file open.
