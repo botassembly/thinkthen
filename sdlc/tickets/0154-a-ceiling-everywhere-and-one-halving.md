@@ -6,7 +6,7 @@ opens: sdlc/planning/adr/0051-every-address-has-a-ceiling-and-a-refused-batch-ha
 
 # 0154: The request size is a setting with a default everywhere, and a refused batch halves once
 
-Status: ready for review. Owner: Claude. It carries ADR 0051. It builds only after tickets 0146 (B4) and 0155 land on main, and before the batching design's ticket B5, by the coordinator's ruling of 2026-09-26.
+Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Claude. It carries ADR 0051. It builds only after tickets 0146 (B4) and 0155 land on main, and before the batching design's ticket B5, by the coordinator's ruling of 2026-09-26.
 
 Review route: a fresh read-only Claude session reviews this design, ADR 0051, and later the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -197,6 +197,7 @@ Overlap with other tickets:
 | The same with plain 400 | 1 request. Exit 4. The plain 400 phrase |
 | First half still refused | 2 requests. No rows. `thinkthen: stopped at record 1; the request for records 1 to 3 failed: the backend answered with status 413: the backend refused the request as too large; shorten the text, or set a lower --max-request-bytes or max_request_bytes with --profile; 0 records finished`. Exit 4 |
 | Second half still refused | 3 requests. Rows 1 to 3. The same line naming records 4 to 5, `3 records finished`. Exit 4 |
+| Batch of 5 whose record 2 repeats record 1, refused with 413, halves fit | 3 requests of 5, 3 and 2 records. The first half holds records 1 to 3, and its body asks 2 distinct texts. The second half holds records 4 and 5. Rows 1 to 5. Exit 0 |
 | Batch of 2 refused | 3 requests. Each half's body equals today's single-record request, byte for byte |
 | Batch of 1 refused with 413, `--batch 1` | 1 request. Today's two lines, whose status line now carries the new 413 phrase in place of the bare status. Exit 4 |
 | `choose` over one question refused with 413 | 1 request. Today's lines with the new 413 phrase, which names the profile for a verb with no flag. Exit 4 |

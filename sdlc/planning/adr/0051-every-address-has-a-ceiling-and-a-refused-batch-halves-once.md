@@ -1,6 +1,6 @@
 # ADR 0051: Every address has a ceiling, and a refused batch halves once
 
-- Status: Proposed through ticket 0154. The coordinator ruled the ceiling and the halving on 2026-09-26, and Ian ruled the request-size setting that day. It becomes Accepted when the fresh ticket review accepts ticket 0154. Ian can overturn each item
+- Status: Accepted 2026-09-26 through ticket 0154, after a fresh read-only ticket review. The coordinator ruled the ceiling and the halving on 2026-09-26, and Ian ruled the request-size setting that day. Ian can overturn each item
 - Date: 2026-09-26
 
 This ADR amends ADR 0048 items 2, 5, 6, 9 and 11, and the ADR 0040 amendment of ticket 0123. ADR 0048 says that changing one of its items takes a new ADR. This is that ADR. Ticket 0154 builds every item but the `split` member of item 10, which B5 builds with `meta.batch`.
