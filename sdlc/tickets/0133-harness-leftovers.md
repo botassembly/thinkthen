@@ -6,7 +6,7 @@ opens: sdlc/scripts/allow-list sdlc/scripts/heavy-lock sdlc/scripts/lint sdlc/sc
 
 # 0133: Keep the rungs' environment to an allow list and clear three harness leftovers
 
-Status: in progress. Design accepted by the second fresh review on 2026-09-26. Built, and the ladder passed (`sdlc/records/0133-build-harness-leftovers.md`). Code review is next. One deviation: `lint` also unsets `CARGO_TARGET_DIR`, and the record says why. Owner: Claude.
+Status: in progress. Design accepted by the second fresh review on 2026-09-26. Built, and the ladder passed (`sdlc/records/0133-build-harness-leftovers.md`). Code review returned two findings, both fixed: `lint` now sources the same allow list, and the row plants every allowed name. The record gives the deviations. Owner: Claude.
 
 Lane: thinkthen-lane-1
 
@@ -115,7 +115,7 @@ Each is the agent's decision. Ian can overturn any of them.
 1. The rung keeps an allow list. A deny pattern would miss the next service's secret. 0127 gave the same reason for its helpers.
 2. The allow list lives in `heavy-lock`, the one file every heavy rung already sources, as an extension of the 0127 loop. No new script.
 3. The rung drops `CARGO_TARGET_DIR`. Honoring it needs the target folder resolved in ten surface checks, one of them owned by an in-flight Quick Fix. Dropping it gives each lane its own build folders, as the lane rule wants.
-4. `lint` is not a heavy rung and keeps the caller's environment. The issue names the heavy rungs.
+4. Overturned by the coordinator after code review. The allow list moved into `sdlc/scripts/allow-list`, and `heavy-lock` and `lint` both source it. `lint` runs `cargo` builds and tests too.
 5. The spawn failure is proved at the real boundary with `prlimit`. The three `pthread_sigmask` paths lose their test, because no boundary reaches them. Their code stays.
 6. The new interrupt test fails as root. A skip would read as a pass.
 7. The DuckDB suite's inner spawn becomes an exemption with a reason. Its parent is already clean, so an allow list there adds nothing.
@@ -170,7 +170,7 @@ Excluded, from the harness issue:
 - Item 5, a command behavior change. Its echo sits in `cli/failure.rs`, and 0132 opens that file.
 - Items 7, 8, and 9, the demo standard. They touch `sdlc/scripts/demos`, its self-test, and demo pages 19 and 27. They fit one Quick Fix together.
 
-Also excluded: any `check.sh`, any live or paid call, and the `lint` rung's own environment.
+Also excluded: any `check.sh`, and any live or paid call.
 
 ## Complexity
 
@@ -182,7 +182,7 @@ Contract 1; state and timing 1; reach 2; proof 2; cost of error 2; total 8. Fina
 - Keeps: Every rung's steps and every test's meaning. The lock and its two names. The 0127 helpers and the children rules. The interrupt handler's behavior and its defect sentences. `EntryError` as it is.
 - Changes: A heavy rung keeps only the allow list, and `CARGO_TARGET_DIR` is dropped. The interrupt handler loses three test-only parameters, and one outside-in test reaches the spawn failure. Four spawn sites build their environment, one moves to `EXEMPT`, and `PENDING` empties. One doc note in `recording.rs`.
 - Proof: The Proof table. Each new or changed test has a planted fault that turns it red, and the full ladder runs once with a planted key and an absolute target folder.
-- Defers: The `lint` rung's environment. A machine whose `/bin/sh` passes an unsettable name on. The GitHub gate. It runs only by hand. A by-hand `check.sh` run with an absolute `CARGO_TARGET_DIR` still breaks Ruby, DuckDB, and PostgreSQL, and only the rung is fixed. Tests for the three `pthread_sigmask` failure paths. No boundary reaches them. Items 1, 4, 5, 7, 8, and 9 of the harness issue.
+- Defers: A machine whose `/bin/sh` passes an unsettable name on. The GitHub gate. It runs only by hand. A by-hand `check.sh` run with an absolute `CARGO_TARGET_DIR` still breaks Ruby, DuckDB, and PostgreSQL, and only the rung is fixed. Tests for the three `pthread_sigmask` failure paths. No boundary reaches them. Items 1, 4, 5, 7, 8, and 9 of the harness issue.
 
 ## What Ian can overturn
 

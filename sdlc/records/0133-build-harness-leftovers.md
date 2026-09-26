@@ -4,15 +4,17 @@ Built 2026-09-26 by Claude in `worktrees/thinkthen-lane-1` on `ticket/0133-harne
 
 ## Outcome
 
-A heavy rung and every process it starts now see only the allow list in `sdlc/scripts/heavy-lock`. A planted `FAKE_SERVICE_API_KEY` never reached a test binary that `test`, `spec`, or `surfaces` started. With an absolute `CARGO_TARGET_DIR` in the caller's shell, every surface passed, and nothing was built in the named folder. The interrupt handler has no failure switch, and a spawn failure is proved at the operating system's own limit. The children check's `PENDING` table is empty.
+Every rung but `install`'s tool checks, and every process a rung starts, now sees only the allow list in `sdlc/scripts/allow-list`. `heavy-lock` and `lint` both source it. A planted `FAKE_SERVICE_API_KEY` never reached a test binary that `lint`, `test`, `spec`, or `surfaces` started, after the code review fix. With an absolute `CARGO_TARGET_DIR` in the caller's shell, every surface passed, and nothing was built in the named folder. The interrupt handler has no failure switch, and a spawn failure is proved at the operating system's own limit. The children check's `PENDING` table is empty.
 
 ## Where the code lives
 
 | File | Change |
 | --- | --- |
-| `sdlc/scripts/heavy-lock` | The 0127 loop now unsets every name but the allow list |
-| `sdlc/scripts/lint` | The 0127 row became the allow-list row. `lint` also unsets `CARGO_TARGET_DIR` |
-| `sdlc/scripts/README.md` | The `heavy-lock` row names the list |
+| `sdlc/scripts/allow-list` | New. The 0127 loop, now unsetting every name but the allow list |
+| `sdlc/scripts/heavy-lock` | Sources `allow-list` |
+| `sdlc/scripts/lint` | The 0127 row became the allow-list row, which plants every allowed name. `lint` then sources `allow-list` |
+| `sdlc/scripts/README.md` | A new `allow-list` row names the list |
+| `sdlc/issues/2026-09-25-two-gate-failures-in-a-root-container.md` | Item 3: the new interrupt test fails as root |
 | `crates/thinkthen/src/cli/interrupt.rs` | `start_with`, `readiness_fails`, and `injected_failure` are gone |
 | `crates/thinkthen/src/cli/interrupt/tests.rs` | The switch rows are gone. The success path stays |
 | `crates/thinkthen/tests/backend/interrupt.rs` | `a_carrier_that_cannot_spawn_is_a_defect_and_sends_nothing` |
@@ -21,9 +23,13 @@ A heavy rung and every process it starts now see only the allow list in `sdlc/sc
 | `sdlc/scripts/children` | `PENDING` is empty. The DuckDB suite's inner spawn is `EXEMPT` |
 | `crates/thinkthen/src/core/recording.rs` | Two doc lines say why `Unwritable` stays |
 
-## Deviation from the ticket
+## Deviations from the ticket
 
-Decision 4 kept the `lint` rung's environment whole. The first ladder run started with an absolute `CARGO_TARGET_DIR`, and `lint` failed. `sdlc/scripts/package` builds the crate package into the named folder, and `catalog.py` then looked in `target/package` and found no file. `lint` now unsets `CARGO_TARGET_DIR` in two lines, as the heavy rungs drop it. `lint` still keeps every other name. The probe below shows that `lint`'s test binaries still see a planted key. That gap stays deferred.
+Decision 4 kept the `lint` rung's environment whole. The first ladder run started with an absolute `CARGO_TARGET_DIR`, and `lint` failed. `sdlc/scripts/package` builds the crate package into the named folder, and `catalog.py` then looked in `target/package` and found no file. The first fix unset `CARGO_TARGET_DIR` in `lint` alone.
+
+The code review then found that `lint` still ran `cargo` builds, tests, `clippy`, and `doc` under the caller's whole environment. The run 2 and run 3 probes showed a planted key in `lint`'s test binaries. The coordinator ruled the gap fixed now. The loop moved from `heavy-lock` into `sdlc/scripts/allow-list`. `heavy-lock` and `lint` both source it, and `lint` sources it right after the allow-list row. That replaced the two-line unset. `lint`'s other tools need only `PATH` and `HOME` from the list. Decision 4 is overturned.
+
+The review also asked the row to plant every allowed name with a `/nonexistent` value and pin the whole sorted line. It now does, and it sorts under `LC_ALL=C` so the order holds in any locale.
 
 ## Proof
 
@@ -33,6 +39,8 @@ Each plant ran once, went red, and was restored from a copy. Each restored file 
 | --- | --- | --- |
 | P1: `FAKE_SERVICE_API_KEY` on the allow list | The `lint` allow-list row | `lint: a heavy rung's child saw names beyond the allow list or lost one: FAKE_SERVICE_API_KEY HOME PATH PWD THINKTHEN_DUCKDB_CLI THINKTHEN_HEAVY_LOCK THINKTHEN_HEAVY_LOCK_HELD THINKTHEN_TOOLCHAINS` |
 | P2: `CARGO_TARGET_DIR` on the allow list | The same row | The same sentence with `CARGO_TARGET_DIR` first |
+| P1 and P2 again after the review, in `allow-list` | The rewritten row | `lint: a rung's child did not see exactly the allow list: CARGO_HOME FAKE_SERVICE_API_KEY HOME ...`, then the same with `CARGO_TARGET_DIR` |
+| P7: `R_LIBS_USER` off the allow list | The rewritten row | The whole line with `R_LIBS_USER` missing |
 | P3: a spawn failure maps to `StartError::Restoration` | The spawn-failure test | `left: (Some(70), "thinkthen: defect: SIGINT routing could not be restored\n")` |
 | P4: a spawn failure panics | The spawn-failure test | `left: (Some(101), "...panicked at crates/thinkthen/src/cli/interrupt.rs:194:27:\nplanted Resource temporarily unavailable (os error 11)...")`. The error is `EAGAIN` from the real `RLIMIT_NPROC` |
 | P5: no `.env_clear()` in `relate_edge.rs` | `children` | `children: crates/thinkthen/tests/relate_edge.rs:14: this child inherits the whole environment; build it with the Rust child helper` |
@@ -44,7 +52,7 @@ The row's `FAKE.SERVICE_TOKEN` plant never reached the `awk` child under `dash`,
 
 Each ladder run started every rung as `env -u THINKTHEN_API_KEY FAKE_SERVICE_API_KEY=fake-not-a-key CARGO_TARGET_DIR=<scratch>/abs-target sdlc/scripts/RUNG`. A probe beside the ladder read `/proc/PID/environ` of each running lane test binary every two seconds. It counted only whether each of the two names was there, and it printed no value.
 
-Run 4 took 173 samples. The 75 taken during `lint` held the key. The 98 taken during `test`, `spec`, and `surfaces` held neither name. Run 3 took 176 samples. The first 59 came while `lint` ran, and each held the key, since `lint` keeps the caller's names. The other 117 came while `test`, `spec`, and `surfaces` ran. None held the key or `CARGO_TARGET_DIR`. Run 2 stopped after `lint`, and its 59 samples all held the key. The scratch target folder held only a `.rustc_info.json` from 06:54. Run 1's `lint` wrote it before the fix. Nothing wrote there after the fix.
+Run 4 took 173 samples. The 75 taken during `lint` held the key. The 98 taken during `test`, `spec`, and `surfaces` held neither name. After the code review fix, run 5 took 50 samples: 15 while `lint` ran and 35 while `test` and `surfaces` ran. None held the key or `CARGO_TARGET_DIR`. Run 6 took 47 samples across `lint`, `test`, and `surfaces`, and none held either name. Run 3 took 176 samples. The first 59 came while `lint` ran, and each held the key, since `lint` keeps the caller's names. The other 117 came while `test`, `spec`, and `surfaces` ran. None held the key or `CARGO_TARGET_DIR`. Run 2 stopped after `lint`, and its 59 samples all held the key. The scratch target folder held only a `.rustc_info.json` from 06:54. Run 1's `lint` wrote it before the fix. Nothing wrote there after the fix.
 
 The relative `CARGO_TARGET_DIR` case was not run as a ladder. The rule drops the name whatever its value, and the `lint` row pins the drop.
 
@@ -58,8 +66,10 @@ The lane started cold at 29 MB, with no build folders. Before the ladder, one `c
 | 2, at `73fcc72d` | pass, 2 s | fail, 158 s: the ratchet had to fall 21 lines | not run | not run | not run |
 | 3, at `79929045` | pass, 11 s | pass, 126 s | pass, 161 s | pass, 27 s | pass, 1,041 s: all ten surfaces |
 | 4, at `99bd86a9`, after merging main with 0132 landed | pass, 794 s | pass, 185 s | pass, 157 s | pass, 515 s | pass, 665 s: all ten surfaces |
+| 5, at `e3c69efd`, the code review fix | not run | pass, 112 s | pass, 355 s | not run | pass, 483 s: all ten surfaces |
+| 6, at `c11f7089`, after merging main with 0136 landed | not run | pass, 101 s | pass, 118 s | not run | pass, 498 s: all ten surfaces |
 
-Run 3's wall time totals 1,366 seconds, about 23 minutes. Run 4's totals 2,316 seconds, about 39 minutes. In both runs every heavy rung printed that it waited for the heavy lock behind other builders. So these times measure a busy machine, not the lane alone. Run 4's `install` spent most of its 794 seconds waiting. Run 4's `surfaces` rebuilt only what the merge changed and took 665 seconds, against 1,041 in run 3. `du -sh` of the lane reads 9.2 GB after run 3 and after run 4.
+Run 3's wall time totals 1,366 seconds, about 23 minutes. Run 4's totals 2,316 seconds, about 39 minutes. In both runs every heavy rung printed that it waited for the heavy lock behind other builders. So these times measure a busy machine, not the lane alone. Run 4's `install` spent most of its 794 seconds waiting. Run 4's `surfaces` rebuilt only what the merge changed and took 665 seconds, against 1,041 in run 3. `du -sh` of the lane reads 9.2 GB after run 3 and after run 4, and 9.3 GB after runs 5 and 6.
 
 ## Ratchet
 
@@ -71,8 +81,8 @@ In nonblank lines.
 
 | Budget | Limit | Measured |
 | --- | --- | --- |
-| `heavy-lock` | 10 added | 9 added, 6 removed |
-| `lint` over the replaced row | 6 added | 4 net: 11 added, 7 removed |
+| `lint` over the replaced row | 6 added | 12 net: 19 added, 7 removed. The review asked the row to plant every allowed name, which took 8 more lines |
+| `allow-list` and `heavy-lock` together | 10 added | 16 added, 10 removed: the loop moved, and the new file carries its own header |
 | `interrupt.rs` and `interrupt/tests.rs` | fewer than today | 12 added, 65 removed |
 | `tests/backend/interrupt.rs` | 30 added | 27 added |
 | Spawn sites, `children`, `children.py` | 18 changed | 16 added, 15 removed. Three of the added lines in `relate_edge.rs` are `rustfmt` rewrapping one call |
@@ -81,9 +91,8 @@ In nonblank lines.
 
 ## Defers
 
-- `lint`'s test binaries still inherit the caller's names, the planted key included. `lint` runs `cargo test` from `sdlc/scripts/package`.
 - A machine whose `/bin/sh` passes an unsettable name on. The GitHub gate. This build did not run it.
 - A by-hand `check.sh` run with an absolute `CARGO_TARGET_DIR`.
 - Tests for the three `pthread_sigmask` failure paths.
-- The spawn-failure test fails as root. The landing adds it to the root-container issue.
+- The spawn-failure test fails as root. Item 3 of the root-container issue records it.
 - Items 1, 4, 5, 7, 8, and 9 of the harness issue.
