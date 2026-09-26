@@ -24,8 +24,7 @@ from helper import ROOT, Backend, child, environment
 CANONICAL = "https://api.typesafe.ai/v1/systemone"
 NOT_RUN = {
     "rank": "no SQL form",
-    "find": "no SQL form",
-    "on": "no SQL form: a SQL call reads one whole text, so a question cannot name a part with `on`",
+    "find": "no SQL find function yet",
     "relations": "no SQL form: thinkthen_recognize takes no relations, and thinkthen_relate reads rows",
     "defect": "no SQL form: no outside boundary reaches an internal invariant failure",
 }
@@ -38,8 +37,6 @@ def form(case: dict) -> str | None:
     """The NOT_RUN key for a case with no SQL spelling, or None."""
     if case["verb"] in ("rank", "find"):
         return case["verb"]
-    if any("on" in one for one in case.get("question_set", {}).get("questions", {}).values()):
-        return "on"
     if "relations" in case.get("question", {}).get("recognize", {}):
         return "relations"
     if case["expect"].get("error", {}).get("kind") == "defect":
@@ -163,10 +160,11 @@ def check(case: dict, backend: Backend) -> None:
         same("bare", [{1: True, 0: False}.get(row[0]) for row in results[1]], [one["bare"] for one in answers])
     elif kind == "annotate":
         questions = json.dumps(case["question_set"])
-        results = asked([["SELECT thinkthen_annotate(?, ?)", [questions, text]] for text in texts], env)
+        sent = [json.dumps(case["record"])] if "record" in case else texts
+        results = asked([["SELECT thinkthen_annotate(?, ?)", [questions, text]] for text in sent], env)
         records = [json.loads(result[0][0]) for result in results]
         for one in answers:
-            same(one["name"], records[one["exchange"]][one["name"]], one["bare"])
+            same(one["name"], records[min(one["exchange"], len(records) - 1)][one["name"]], one["bare"])
         failed = sum(isinstance(value, dict) and "failed" in value for record in records for value in record.values())
         same("failed", failed, success.get("failed_questions", 0))
     elif kind == "recognize":
