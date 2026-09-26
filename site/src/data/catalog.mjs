@@ -278,6 +278,17 @@ export const FUNCTIONS = [
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'The model only picks from options. A name that is not in the evidence cannot come back. The number on a name is its strength. ThinkThen computes it, and it is not a probability. Your threshold decides which names you keep.',
     howtos: [],
+    how: {
+      steps: [
+        'One call asks two questions of every word. Is it part of a name? And which of your kinds is it? Both questions go out together.',
+        'Each run of words in a name becomes one name. Its kind is the kind most of its words picked. Its strength is its weakest word\'s answer to the first question times the average answer for that kind.',
+        'With `--relation`, more calls follow. They ask how the names connect.',
+      ],
+      script: '1-details',
+    },
+    see: {
+      '1-details': 'This sentence cost one call. `requests` lists one request, and `usage` counts 8092 tokens in. Under `answer.tokens`, each word carries `detection_probability`, its answer to the first question. A word above 0.5 is part of a name. `kind_probabilities` answers the second question, in the order person, song, album, place. Ringo and Starr both answer 1.0, so they join into one name. Both pick person, so the name is a person. The word "wrote" answers 0.0 and joins no name. `--threshold 0.5` then keeps the names with a strength of 0.5 or more. `--dry-run` prints the call count before you send anything.',
+    },
   },
   {
     name: 'relate',

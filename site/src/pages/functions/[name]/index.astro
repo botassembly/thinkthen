@@ -16,10 +16,15 @@ export function getStaticPaths() {
 const { fn } = Astro.props;
 if (!fn.goal) throw new Error(`functions: ${fn.name} has no goal`);
 const page = `functions/${fn.name}`;
-const runs = captioned(page, fn.see, true);
+const all = captioned(page, fn.see, true);
+// A function that explains how it works shows one of its scripts there.
+const how = fn.how && all.find((r) => r.name === fn.how.script);
+if (fn.how && !how) throw new Error(`functions: ${fn.name} explains itself with ${fn.how.script}, and no script has that name`);
+const runs = all.filter((r) => r !== how);
 const inputs = files(page);
 const first = runs[0];
 const rest = runs.slice(1);
+const ticks = (text) => text.split('`').map((part, i) => (i % 2 ? `<code>${part}</code>` : part)).join('');
 const howtos = HOWTOS.filter((h) => fn.howtos.includes(h.slug));
 const title = fn.title || fn.name;
 const line = fn.line.charAt(0).toLowerCase() + fn.line.slice(1);
@@ -37,6 +42,14 @@ const bench = beatlesPageFor(fn.name);
     <p class="lede">You give it {fn.takes}. You get back {fn.gives}.{!fn.notAFunction && fn.name !== 'recognize' && <> Every answer carries a probability, and <code>--details</code> prints it.</>}</p>
   )}
   {!first && bench && <p>See <code>{fn.name}</code> run on Beatles Bench: <a href={bench.route}>{bench.title}</a></p>}
+
+  {how && (
+    <>
+      <h2>How it works</h2>
+      {fn.how.steps.map((step) => <p set:html={ticks(step)} />)}
+      <Terminal run={how} caption={how.see} />
+    </>
+  )}
 
   <h2>When it is not sure, and when it fails</h2>
   <p>{fn.unsure}</p>
