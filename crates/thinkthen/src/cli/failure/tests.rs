@@ -301,7 +301,6 @@ fn no_diagnostic_holds_the_key_or_the_evidence() {
         },
         Failure::QuietOverKept("filter"),
         Failure::RawOverKept("rank"),
-        Failure::NoFraming("filter"),
         Failure::TopIsZero,
         Failure::FindCount { none: false },
         Failure::FindCount { none: true },

@@ -18,7 +18,7 @@ Ian can overturn every decision below except his two rulings.
 
 ## Does Python Polars need Rust Polars?
 
-No. Ticket 0106 (design accepted on `origin/ticket/0106-port-python-polars`) reads a Polars column through the Arrow C stream capsule, `__arrow_c_stream__`. Its Arrow layer uses only the standard library and pyo3. It adds no Rust dependency. It builds on neither `pyo3-polars` nor the `polars` crate, and the wheel never imports Polars. Experiment 213 measured that door at 12 to 14 ns a record, reading the producer's own buffers (`~/workspace/experiments/228-polars-experiments/NOTES.md`).
+No. Ticket 0106 (design accepted on `origin/ticket/0106-port-python-polars`) reads a Polars column through the Arrow C stream capsule, `__arrow_c_stream__`. Its Arrow layer uses only the standard library and pyo3. It adds no Rust dependency. It builds on neither `pyo3-polars` nor the `polars` crate, and the wheel never imports Polars. Experiment 213 measured that door at 12 to 14 ns a record, reading the producer's own buffers (the workspace's `experiments/228-polars-experiments/NOTES.md`).
 
 Rust Polars needs nothing from Python Polars either. It calls the `polars` crate's own Rust types and holds no pointer code.
 
@@ -84,7 +84,7 @@ What each door keeps is host conversion. Python reads Arrow C buffers through `u
 
 ## Evidence
 
-- Starts from: spike 255's plan, whose risk 5 covers this ticket's toolchain, and tag `surfaces-wave7-frozen-2026-09-24b` (`9df8bae9`), `libraries/rust/src/polars.rs` (the feature-gated Series door over the stand-in, with its `decide_column`, `choose_column`, `score_column`, `tag_column`, and `annotate_frame`) and `libraries/rust/tests/polars_door.rs` (eight tests). They passed under the stand-in's null backend with Rust 1.95 in the freeze run (`sdlc/records/surfaces-freeze-2026-09-24.md` at that tag: Rust, 39 tests). Experiments 213 to 216 (`~/workspace/experiments/228-polars-experiments/NOTES.md`) measured the throttle gate (then called the width gate) through a column, the fork with a warm Polars pool, and the Polars 0.55 toolchain need.
+- Starts from: spike 255's plan, whose risk 5 covers this ticket's toolchain, and tag `surfaces-wave7-frozen-2026-09-24b` (`9df8bae9`), `libraries/rust/src/polars.rs` (the feature-gated Series door over the stand-in, with its `decide_column`, `choose_column`, `score_column`, `tag_column`, and `annotate_frame`) and `libraries/rust/tests/polars_door.rs` (eight tests). They passed under the stand-in's null backend with Rust 1.95 in the freeze run (`sdlc/records/surfaces-freeze-2026-09-24.md` at that tag: Rust, 39 tests). Experiments 213 to 216 (the workspace's `experiments/228-polars-experiments/NOTES.md`) measured the throttle gate (then called the width gate) through a column, the fork with a warm Polars pool, and the Polars 0.55 toolchain need.
 - Keeps: one crossing per column through the batch path, answers in input order, null as "not sure" in a decide column, the null-row and non-text refusals, the caller's frame columns unchanged, and the widening of a failed question's column to text.
 - Changes: the door leaves the stand-in for the public `thinkthen` API in its own crate. `choose`, `score`, and `tag` over a column become one `annotate_with` call. At the tag they made one engine call per row, the same defect as index rows R1-24 and R4-23 in Python. Every method takes `CallOptions`. The tag's methods took none. The caller's engine value replaces the tag's inherent methods on a stand-in engine. Frame tag columns become JSON text to match the Python door. At the tag the Rust frame wrote `List(String)`. Tests leave `ENGINE_NULL` for the loopback backend.
 - Proof: the acceptance tests below, each with its planted bug, run by `libraries/polars/check.sh` in the `surfaces` rung. The equality of a Series call with a slice call at throttle 8, in wall time and in requests in flight, is the proof Ian named for Python Polars on 2026-09-21. This ticket applies it to Rust.
@@ -147,9 +147,9 @@ After 0086 (the public API with `EngineBuilder::from_env` and `throttle`), 0098 
 
 ## The spike before the build
 
-Spike 255 (`~/workspace/experiments/255-thinkthen-python-polars-spike/PLAN.md`) already names this ticket among the decisions it can change. Its risk 5 measures the toolchain floor of Polars 0.55 and asks whether Python Polars should build on `pyo3-polars`. It has no report yet. Its answer settles decision 7's toolchain. If 255 moves 0106 onto `pyo3-polars`, the two doors then share one `polars` version and one toolchain pin, and this ticket's pins follow 0106's.
+Spike 255 (the workspace's `experiments/255-thinkthen-python-polars-spike/PLAN.md`) already names this ticket among the decisions it can change. Its risk 5 measures the toolchain floor of Polars 0.55 and asks whether Python Polars should build on `pyo3-polars`. It has no report yet. Its answer settles decision 7's toolchain. If 255 moves 0106 onto `pyo3-polars`, the two doors then share one `polars` version and one toolchain pin, and this ticket's pins follow 0106's.
 
-Spike 257, in its own folder under `~/workspace/experiments/`, answers only what 255 does not. It builds a scratch crate on `thinkthen` at main with `polars` 0.55 and default features off.
+Spike 257, in its own folder under the workspace's `experiments/`, answers only what 255 does not. It builds a scratch crate on `thinkthen` at main with `polars` 0.55 and default features off.
 
 1. Which features do the five methods need, and how many packages does the lock then hold? Does that set turn on serde_json's `preserve_order`? If it does, the sorted-map plant of the failed-marker test needs another form.
 2. Does deny pass with the root `deny.toml`?
@@ -160,7 +160,7 @@ The two spikes can change decisions 1, 7, and 8 and the lock budget. The ticket 
 
 ## Spike finding, 2026-09-24 (spike 257)
 
-Spike 257 ran on beelink in `~/workspace/experiments/257-thinkthen-rust-polars-spike/`, with its plan, scripts, and raw logs there. The tool refused a `REPORT.md` file in that folder, so this note is the report. A scratch crate on `thinkthen` at main (`ffcd7c91`, path, default features off) made every Polars call the five methods need, with a fake answer in place of the engine. It did not call the engine, because 0086 has not landed. No paid backend ran: a fake key and a closed loopback port only. Spike 255 had no Polars result when this ran.
+Spike 257 ran on beelink in the workspace's `experiments/257-thinkthen-rust-polars-spike/`, with its plan, scripts, and raw logs there. The tool refused a `REPORT.md` file in that folder, so this note is the report. A scratch crate on `thinkthen` at main (`ffcd7c91`, path, default features off) made every Polars call the five methods need, with a fake answer in place of the engine. It did not call the engine, because 0086 has not landed. No paid backend ran: a fake key and a closed loopback port only. Spike 255 had no Polars result when this ran.
 
 **This finding changes the accepted design, and the ticket needs a re-score before the build.** It changes decisions 7 and 8, adds a dev-dependency, and needs a binding `deny.toml`.
 
@@ -218,7 +218,7 @@ Contract 2; state and timing 2; reach 2; proof 3; cost of error 2; total 11. Fin
 
 ## Spike finding, 2026-09-24 (spike 255)
 
-Spike 255 answered its risk 5 in `~/workspace/experiments/255-thinkthen-python-polars-spike/`. The full note is in ticket 0106 on its branch. What matters here:
+Spike 255 answered its risk 5 in the workspace's `experiments/255-thinkthen-python-polars-spike/`. The full note is in ticket 0106 on its branch. What matters here:
 
 1. **0106 stays off the `polars` crate.** Python Polars reads the same zero-copy buffer through the public `__arrow_c_stream__` capsule as through pyo3-polars. The spike keeps 0106's Arrow stream door. "The two doors share no Polars crate" holds.
 2. **Decision 7 holds.** pyo3-polars 0.28.0 with polars 0.55.2 stops on Rust 1.93.1, because `sysinfo` 0.39 needs 1.95. It builds on 1.95. This matches spike 257. pyo3 0.29.2 builds and runs on 1.95 too, so the repo-wide move costs the Python surface nothing.

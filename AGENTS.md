@@ -10,8 +10,9 @@ Read `README.md`, `specification/README.md`, and `sdlc/planning/rust-standards.m
 - `sdlc/ratchet.json` holds the source size ceiling, equal to the measured total. A commit that raises it says what grew, why it earns its lines, and where you looked for duplication to delete first.
 - A second agent reviews any change that raises the ceiling, widens a public surface, or adds a dependency, and names what it checked.
 - A ticket that turns a demo green writes its page in ADR 0011's how-to form, and `sdlc/scripts/demos` checks it.
-- Commit each whole change and push it at once. Commit messages are imperative and active.
-- Never add agent attribution to a commit or pull request: no trailer, co-author line, or "generated with".
+- Commit each whole change and push it at once.
+- Never add agent attribution to a commit or pull request.
+- Use a lane per `sdlc/planning/worktrees.md`. The lander frees it.
 
 ## The pure core
 

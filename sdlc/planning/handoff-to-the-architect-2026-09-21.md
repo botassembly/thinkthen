@@ -69,7 +69,7 @@ Tracks 7 to 10 do not start from nothing. The `surfaces` branch already holds al
 
 ## Experiments worth knowing
 
-All under `/home/ian/workspace/experiments/`. 205 (libraries) and 207 (databases): the first rehearsals and zero-copy proofs. 206: accuracy and calibration tables. 211: the blocking engine and its width numbers. 218: release quality waves. 220: a second, open backend. 225 and 227: the recognize harvest and the name-number comparison. 226: the relation graph demo. 228: Polars, with the verdict to ship the column form first. 229-thinkthen-spreadsheets: Excel and Google Sheets, both paused by Ian. 230: splitting a packet of pages by composing `choose` and `decide`, the proof that a split function is not needed.
+All under the workspace's `experiments/` folder. 205 (libraries) and 207 (databases): the first rehearsals and zero-copy proofs. 206: accuracy and calibration tables. 211: the blocking engine and its width numbers. 218: release quality waves. 220: a second, open backend. 225 and 227: the recognize harvest and the name-number comparison. 226: the relation graph demo. 228: Polars, with the verdict to ship the column form first. 229-thinkthen-spreadsheets: Excel and Google Sheets, both paused by Ian. 230: splitting a packet of pages by composing `choose` and `decide`, the proof that a split function is not needed.
 
 ## Rulings that are settled. Do not reopen them without Ian.
 
@@ -93,9 +93,9 @@ All under `/home/ian/workspace/experiments/`. 205 (libraries) and 207 (databases
 
 ## What marketing needs from the build
 
-The product side keeps owning the deck, the site, and the words (`repos/mktg/products/thinkthen/`, with `vocabulary.md` as the word list). It needs five things from you, and it will ask for nothing else without filing an issue here:
+The product side keeps owning the deck, the site, and the words (the marketing repository's `products/thinkthen/`, with `vocabulary.md` as the word list). It needs five things from you, and it will ask for nothing else without filing an issue here:
 
-1. **One examples file per surface, keyed by function, run by that surface's tests.** Every tab on every site page is drawn from these (`repos/mktg/products/thinkthen/site.md`).
+1. **One examples file per surface, keyed by function, run by that surface's tests.** Every tab on every site page is drawn from these (the marketing repository's `products/thinkthen/site.md`).
 2. **The record-with-answer row (A3).** Two deck slides wait on it.
 3. **The field `meta.replayed` renamed to `meta.cached`** before the shapes freeze. Ian dislikes the word. The `--replay` flag keeps its name.
 4. **The real install lines**, the day they work.

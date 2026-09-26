@@ -250,6 +250,7 @@ impl Serialize for AnnotatedRecord {
 pub(crate) struct Reading {
     framing: Framing,
     fields: Vec<Pointer>,
+    by_default: bool,
 }
 
 /// The `input` field a plan carries in record mode.
@@ -257,6 +258,8 @@ pub(crate) struct Reading {
 pub(crate) struct ReadingPlan<'a> {
     framing: Framing,
     field: &'a [Pointer],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    from: Option<&'static str>,
 }
 
 impl Reading {
@@ -279,7 +282,18 @@ impl Reading {
                 return Err(ReadingError::KeyClash(pointer.key().to_owned()));
             }
         }
-        Ok(Self { framing, fields })
+        Ok(Self {
+            framing,
+            fields,
+            by_default: false,
+        })
+    }
+
+    /// Mark the framing as the default's choice, which the plan names.
+    #[must_use]
+    pub(crate) const fn by_default(mut self) -> Self {
+        self.by_default = true;
+        self
     }
 
     /// True when the input is a stream of records rather than one document.
@@ -293,6 +307,7 @@ impl Reading {
         ReadingPlan {
             framing: self.framing,
             field: &self.fields,
+            from: self.by_default.then_some("default"),
         }
     }
 

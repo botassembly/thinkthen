@@ -1,6 +1,6 @@
 # The heavy rungs still pass secret-shaped names to cargo and its tests
 
-Status: Open.
+Status: Closed on 2026-09-26 by ticket 0133.
 
 Filed on 2026-09-25 by ticket 0127, as its ticket said the landing would. No key was used, and no request left the machine.
 

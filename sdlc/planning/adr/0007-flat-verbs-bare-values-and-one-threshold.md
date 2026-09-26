@@ -98,9 +98,9 @@ Codes 7 and 8 stay reserved. In record mode the exit code reports the run, and n
 
 ### Records
 
-The default input is one text document on standard input. `--input FILE` reads a file instead. `--lines` makes each line a text record. `--jsonl` makes each line a JSON record. `--field POINTER` is a JSON Pointer (RFC 6901) naming the part of each record the model sees. The rest of the record stays on the machine. `--field` without `--jsonl` reads the whole input as one JSON value. `--field` with `--lines` is a usage error. A pointer that finds nothing is an input error at exit 2 for that record, before any request for it.
+The default input is one text document on standard input. `--input FILE` reads a file instead. `--lines` makes each line a text record. `--jsonl` makes each line a JSON record. `--field POINTER` is a JSON Pointer (RFC 6901) naming the part of each record the model sees. The rest of the record stays on the machine. `--field` without `--jsonl` reads the whole input as one JSON value. (Amended 2026-09-26 for `filter` and `rank`, below.) `--field` with `--lines` is a usage error. A pointer that finds nothing is an input error at exit 2 for that record, before any request for it.
 
-`decide`, `choose`, and `score` accept `--lines` and `--jsonl` and then print one value per record in input order. `filter` and `rank` require one of the two. `annotate` reads one document by default and records under either flag. Each record is its own request, and records never share model context.
+`decide`, `choose`, and `score` accept `--lines` and `--jsonl` and then print one value per record in input order. `filter` and `rank` require one of the two. (Amended 2026-09-26, below.) `annotate` reads one document by default and records under either flag. Each record is its own request, and records never share model context.
 
 A run stops at the first failed record. Rows already printed stay printed. An empty record stream succeeds with no output and no request. An empty document is a usage error. A rerun with `--record DIR --replay DIR` on one folder answers the finished records from disk and pays only for the rest.
 
@@ -187,6 +187,15 @@ Building and reviewing ticket 0009 found more. None changes a ruling.
 - The tool computes the bare value of `score` itself: the sum of each level's probability times its position, from the probabilities the backend returned. It never reads the vendor's own score field. The first live answer showed why: the vendor printed 1.86 beside probabilities that sum to 1.87. A number that agrees with the printed probabilities is the one a user can check. The sum is rounded at twelve decimals, because float addition printed `1.9000000000000001`. Ian can overturn this cheaply.
 - The vendor returns the probabilities of a choice keyed by option name in no fixed order, and the probabilities of a score keyed by the level's position as a string from "0". The adapter rebuilds both in the order the user gave.
 - `--raw` beside `--details` or `--quiet` is a usage error. `score` refuses `--threshold`, `--quiet`, and `--raw`. A `choose` with no cut prints `"threshold": null`.
+
+## Amendment, 2026-09-26: `filter` and `rank` read lines by default
+
+Ticket 0137 settles the issue that asked why `--lines` sits in almost every example. The queue owner ruled for it, and Ian can overturn it.
+
+- `filter` and `rank` read lines when no framing flag is given. One document is still no input for them, so no working command line changes.
+- On these two verbs a pointer with no framing flag reads JSON Lines. The pointer comes from `--field`, or from a question file's `on`. On every other verb `--field` with no flag still reads the whole input as one JSON value.
+- A plan whose framing the default chose carries `"from":"default"` inside `input`. An explicit flag prints `input` as before.
+- `--lines`, `--jsonl`, `--csv`, and `--tsv` work as before on both verbs.
 
 ## What this replaces
 

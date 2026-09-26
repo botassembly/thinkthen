@@ -29,7 +29,7 @@ No. It gets its own ticket. Backlog item A1 is item 8 of `sdlc/issues/2026-09-25
 - It is a live bug at the top of the backlog. It should not wait for a dependency review of the root lock and a new license exception list.
 - This ticket keeps the Rust door's column text byte for byte. ADR 0047 item 10, the table both doors follow, does not change. So A1 can build beside this ticket, and its test can pin the table's text without building the Rust door.
 
-The issue `sdlc/issues/2026-09-25-a-polars-frame-sends-before-a-question-name-clash-fails.md` is also Python Polars, in the same `frame.rs`. It fits A1's ticket better than this one. That grouping is the coordinator's call.
+The issue `sdlc/issues/closed/2026-09-25-a-polars-frame-sends-before-a-question-name-clash-fails.md` is also Python Polars, in the same `frame.rs`. It fits A1's ticket better than this one. That grouping is the coordinator's call.
 
 ## Design
 
@@ -204,7 +204,7 @@ The rule: whichever ticket lands second merges the other's changes.
 
 ## Evidence
 
-- Starts from: ticket 0120 and its build record `sdlc/records/0120-build-rust-polars.md`: the landed door, its eight test plants, a lock of 163 packages, and the finding that only Polars' wasm target adds packages under `getrandom` 0.2. Spike 257 (`~/workspace/experiments/257-thinkthen-rust-polars-spike/`): the four license exceptions and their chains, the facade needing no Polars feature, only the R1-4 test needing `polars-core`'s dtype features, and a 59 s cold build at `-j 4`. Ian's ruling 4 of 2026-09-25 and 0128's decision 15. `policy.py`'s `deny_failures`, which lets a binding leave out a root entry its tree never meets.
+- Starts from: ticket 0120 and its build record `sdlc/records/0120-build-rust-polars.md`: the landed door, its eight test plants, a lock of 163 packages, and the finding that only Polars' wasm target adds packages under `getrandom` 0.2. Spike 257 (the workspace's `experiments/257-thinkthen-rust-polars-spike/`): the four license exceptions and their chains, the facade needing no Polars feature, only the R1-4 test needing `polars-core`'s dtype features, and a 59 s cold build at `-j 4`. Ian's ruling 4 of 2026-09-25 and 0128's decision 15. `policy.py`'s `deny_failures`, which lets a binding leave out a root entry its tree never meets.
 - Keeps: the five methods and their signatures, each refusal sentence, the column table of ADR 0047 item 10, one engine call per column at the throttle, the caller's `CallOptions` passed whole, Polars 0.55.2 in the lock, the lane's not-run probe, the fake-key guard, and every 0120 test with its plant. The public API with the feature off. The root toolchain.
 - Changes: the door lives in `thinkthen` behind `polars` and returns `thinkthen::Error`. Its tests run from `crates/thinkthen/tests/polars/` in the lane and nowhere else. The R1-4 and refusal tests use `Int64` and `Boolean` in place of `Categorical`. The requirement is a caret, `0.55.2`. The root lock and root `deny.toml` take the Polars tree and its four exceptions. `test` and `lint` drop `--all-features`. The registry gains the `feature` state. SQLite's `deny.toml` and the binding's own lock, `deny.toml`, ratchet, and `policy.py` checks go.
 - Proof: the fourteen rows above, each with its plant, and the lane, `lint`, `test`, and `surfaces` rungs run once each after a merge of `origin/main`. The record gives the lock count, the root ratchet change, and the before and after times.

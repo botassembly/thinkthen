@@ -41,6 +41,8 @@ pub(crate) enum EntryError {
     /// The entry could not be written as JSON.
     ///
     /// The message names no cause, for the reason [`Self::Malformed`] gives.
+    /// An entry of strings and raw JSON always writes, so this never fires.
+    /// It stays because removing it needs an `expect`, which the crate denies.
     #[error("the entry could not be written as JSON")]
     Unwritable,
     /// A cache entry cannot support model-based maintenance.

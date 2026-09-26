@@ -10,7 +10,7 @@ use crate::core::{
     ReadingError, RecordError, RenderError, Source,
 };
 
-use crate::engine::error::TransportKind;
+use crate::engine::error::{TransportKind, reply_too_large};
 use crate::table;
 
 mod convert;
@@ -129,6 +129,8 @@ pub(crate) enum Failure {
     Status(u16),
     /// The backend answered status 400 and named `max_tokens_exceeded`.
     TokenLimit,
+    /// The reply passed its request's limit of this many bytes and was not kept.
+    ReplyTooLarge(u64),
     /// The adapter refused what the backend answered.
     Reply(DecodeError),
     /// The two recording options named two different folders.
@@ -145,7 +147,6 @@ pub(crate) enum Failure {
     TopIsZero,
     QuietOverKept(&'static str),
     RawOverKept(&'static str),
-    NoFraming(&'static str),
     ReplayMiss(String),
     Entry(String, String),
     RecordingConflict(String),
@@ -255,10 +256,6 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
                  `choose --raw` prints a label"
             ),
         ),
-        Failure::NoFraming(verb) => (
-            2,
-            format!("`{verb}` maps over a stream, so it takes --lines, --jsonl, --csv, or --tsv"),
-        ),
         Failure::FindCount { none: true } => (2, "`find --none` takes 2 to 254 units".to_owned()),
         Failure::FindCount { none: false } => (2, "`find` takes 2 to 255 units".to_owned()),
         Failure::FindTooLarge => (2, "`find` reads at most 16 MiB across all units".to_owned()),
@@ -315,6 +312,7 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
     }
     Some(match failure {
         Failure::TokenLimit => (4, status::TOKEN_LIMIT.to_owned()),
+        Failure::ReplyTooLarge(limit) => (4, reply_too_large(*limit)),
         Failure::OpenProfile { path, error } => (
             5,
             format!(

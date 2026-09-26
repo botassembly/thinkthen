@@ -34,7 +34,7 @@ B may run beside C where a change sits in the pure core. The build team knows th
 | `experiments/RECOGNIZE-PRODUCT-SPEC.md` | The method, final: three passes, each a pick-one question. The confidence formula, the dials, the measured limits |
 | `experiments/THINKTHEN-RECOGNIZE-MASTER-REPORT.md` | The record of sixteen experiments, every number confirmed on a full corpus or marked |
 | `experiments/222-recognize-demo/`, `225-relate-demo/`, `226-graph-demo/` | Real outputs with recordings, ready to become fixtures |
-| `repos/mktg/decks/2026-09-21-thinkthen-semantic-commands/recognize-surfaces.md` | The acceptance test for the libraries and extensions: every call written out |
+| the marketing repository's `decks/2026-09-21-thinkthen-semantic-commands/recognize-surfaces.md` | The acceptance test for the libraries and extensions: every call written out |
 
 Four things the design pages rule that the method page does not: the output carries the user's kind word and never a code, a relation rule says `from`, `to`, and `either`, word positions show only under `--details`, and `--dry-run` prints the request count and the pair count. One engine path asks the pairs for both functions.
 

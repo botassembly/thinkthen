@@ -2,7 +2,7 @@ FINDINGS
 
 # Review of ThinkThen Quick Fix 0100 at 664f07ed
 
-Reviewer: fresh read-only Claude session. Worktree `/home/ian/workspace/worktrees/thinkthen-0100`, branch `ticket/0100-manual-gate-and-closed-issues`.
+Reviewer: fresh read-only Claude session. Worktree `worktrees/thinkthen-0100` in the workspace, branch `ticket/0100-manual-gate-and-closed-issues`.
 
 ## Finding 1: the open default-width question points at a ticket that does not carry it
 

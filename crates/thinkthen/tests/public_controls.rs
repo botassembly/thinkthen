@@ -444,3 +444,26 @@ fn counters_and_cache_answers_match_the_real_attempts() {
     assert_eq!((usage.requests_sent(), usage.cache_answers()), (1, 1));
     let _gone = std::fs::remove_dir_all(&folder);
 }
+
+/// Ticket 0132: a reply over 1 MiB plus 8 bytes per request byte is refused by name, once.
+#[test]
+fn a_reply_over_its_limit_names_it() {
+    let _serial = serial();
+    let listener = Listener::answering(|body| {
+        let size = 1_048_576 + 8 * body.len() + 1;
+        let (head, tail) = DECIDED.split_at(DECIDED.len() - 1);
+        Canned::ok(&format!("{head}{}{tail}", " ".repeat(size - DECIDED.len())))
+    })
+    .expect("listener");
+    let result = engine(listener.base()).decide(&question(), "Refund me.");
+    let limit = 1_048_576 + 8 * listener.requests()[0].body.len();
+    assert_eq!(kind(&result), Some(ErrorKind::Backend));
+    assert_eq!(result.as_ref().err().map(Error::retryable), Some(false));
+    assert_eq!(
+        message(result),
+        format!(
+            "the backend's reply passed this request's limit of {limit} bytes, so the answer was not kept; the request was not sent again"
+        )
+    );
+    assert_eq!(listener.count(), 1);
+}

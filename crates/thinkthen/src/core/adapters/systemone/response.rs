@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use serde::Deserialize;
 
-use crate::core::adapters::systemone::{DecodeError, wire_name};
+use crate::core::adapters::systemone::{DecodeError, wire_name, wire_place};
 use crate::core::answer::{Answer, Distribution, DistributionError};
 use crate::core::plan::Plan;
 use crate::core::probability::Probability;
@@ -96,7 +96,7 @@ fn decode_response(
     if response
         .answers
         .keys()
-        .any(|name| !(0..wire_count).any(|place| wire_name(place) == *name))
+        .any(|name| wire_place(name).is_none_or(|place| place >= wire_count))
     {
         return Err(DecodeError::UnexpectedAnswer);
     }
