@@ -7,12 +7,13 @@ The repository gate and its hand-run support scripts.
 | `install` | Rung 0. Checks the gate tools, fetches the locked dependency closure, and fetches the advisory database |
 | `lint` | Rung 1. Runs the private-name check when `THINKTHEN_PRIVATE_NAMES` names a list outside the repository, then policy, page, size, agents-file size, dependency, format, Clippy, and documentation checks |
 | `test` | Rung 2. Runs Rust tests and documentation tests, then `sdlc/live-test` on Linux |
-| `spec` | Rung 3. Runs executable specification pages, transforms, and green how-tos |
+| `spec` | Rung 3. Builds the binary, runs the `settings` check, then executable specification pages, transforms, and green how-tos |
 | `surfaces` | Rung 4. Runs each landed surface's `check.sh` with one loopback backend's port and reports exit 77 as not run. `--registry` is the rung 1 check of `sdlc/surfaces.txt`, each binding ratchet, and each binding lock under `cargo deny` |
 | `allow-list` | Sourced by `heavy-lock` and `lint` (ticket 0133). Unsets every name but `PATH`, `HOME`, `PWD`, `LANG`, `LC_ALL`, `TMPDIR`, `XDG_RUNTIME_DIR`, `XDG_CACHE_HOME`, the toolchain names `CARGO_HOME`, `RUSTUP_HOME`, `RUSTUP_TOOLCHAIN`, `RUSTC_WRAPPER`, `SCCACHE_CONF`, and `R_LIBS_USER`, the two lock names, the path overrides `THINKTHEN_TOOLCHAINS`, `THINKTHEN_DUCKDB_CLI`, and `SQLITE_AMALGAMATION`, and `THINKTHEN_PRIVATE_NAMES`, the path to the private-name list that `lint` reads. `CARGO_TARGET_DIR` is dropped, so each rung that sources it builds in the lane's own `target` folders |
 | `heavy-lock` | Sourced by `install`, `test`, `spec`, and `surfaces`. Runs one heavy rung at a time under `flock`, and a nested rung skips the lock. First it sources `allow-list` |
 | `demos`, `demos-self-test` | Run green how-tos and prove the runner's refusals |
 | `pages`, `pages-self-test` | Keep the how-to lists, titles, states, and links aligned |
+| `settings`, run by `spec` | Fails rung 3 when `specification/settings.md` lacks a row for a flag in any command's help, a product `THINKTHEN_` variable, or a question-file key, names one that no longer exists, or moves a column (ticket 0140). `--self-test` plants each fault into a copy of the page first |
 | `tickets` | Fails rung 1 when a ticket numbered 0120 or higher lacks its five-part Evidence section. `--self-test` runs its planted cases first |
 | `live` | The hand-run paid-call door. It initializes, reads, locks, validates, and appends the shared ledger, then replaces itself with one charged job |
 | `policy.py` | Holds accepted Rust policy tables for rung 1 |
