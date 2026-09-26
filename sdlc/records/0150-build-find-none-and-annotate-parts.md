@@ -10,7 +10,7 @@ Branch `ticket/0150-find-none-and-annotate-parts`, in lane `worktrees/thinkthen-
 - `Engine::find_with` passes the flag to `core::Find::new`. A none question takes 2 to 254 units and refuses outside that with `a find question offering none takes 2 to 254 units`. `Found` carries the none candidate last.
 - `QuestionSet::from_json` accepts a member's `on`. `core::QuestionSet::group_evidence` reads each group's part, and the command's `plan_for` and the public `annotated` both call it. The command's inline reading and the library's refusal of `on` are gone.
 - The public `annotated` reads every group's part before it asks. The engine's `annotate` prepares every group before it sends. A record missing a part sends nothing.
-- C takes `"none": true` on find. Python and Ruby take `none=`/`none:`, TypeScript takes `{ none: true }`, and R takes `none = TRUE`. Each surface already passed a set with `on` through unchanged.
+- C takes `"none": true` on find. Python and Ruby take `none=`/`none:`, TypeScript takes `{ none: true }`, and R takes `none = TRUE`. Each binding refuses a `none` that is not a boolean before any request, and its existing usage test pins the sentence: C `find takes `none` as true or false` (`tests/c/nulls.c`), Python `none is True or False` (`test_surface.py`), TypeScript `options.none is true or false` (`verbs.test.mjs`), Ruby `none is true or false` (`test_surface.rb`), and R `none is TRUE or FALSE` (`tests/verbs.R`). Each surface already passed a set with `on` through unchanged.
 - `18-annotate-two-groups` names its record in `conformance/cases.json`. The command runner builds each group's evidence from it.
 - The three cases leave the not-run lists on the Rust consumer, C, Python, TypeScript, Ruby and R. The annotate case leaves them on the Rust Polars door, DuckDB, SQLite and PostgreSQL. The SQL surfaces keep both find cases with the reason "no SQL find function yet".
 - Ticket 0084 gains a dated amendment and lists `offering_none`. `conformance/README.md` describes `record`. The notes that said a surface could not do this now say it can.
@@ -30,6 +30,7 @@ Each plant edited one committed file, ran the named check, and restored and touc
 | (g) | The record's text goes into the refusal | Red: the secrecy check in `parts.rs` fails |
 | (h) | The library uses the plain count sentence for a none question | Red: the sentence check in `parts.rs` fails |
 | (i) | 0084 left unamended | Red: `inventory` names `fn Question::offering_none` as not in the contract |
+| (k) | Python drops its boolean check on `none` | Red: `test_wrong_questions_are_usage_errors_that_name_the_verb` fails |
 | (j) | A record error maps to a backend error | Red: the bad-part row fails |
 
 ## Deviations
@@ -53,9 +54,18 @@ Each plant edited one committed file, ran the named check, and restored and touc
 - **A DuckDB signal test failed once.** `r1_21_the_next_query_answers_after_a_stop` failed in round 26 with a cancelled query. It passed on the next run. This change touches no cancel path.
 - **The library shares an open command issue.** `sdlc/issues/2026-09-26-annotate-on-reparses-selected-text-as-json.md` says `on` parses a selected string again as JSON. `group_evidence` keeps that rule, so the library now behaves the same. A fix to `group_evidence` fixes both.
 
+## Code review fixes
+
+The code review accepted with four findings, all fixed:
+
+1. Python refuses a `none` that is not a boolean. Each binding's usage test pins its sentence, as the Result section lists.
+2. The stale line on find's none left `libraries/r/NOTES.md`.
+3. The consumer, Python, Ruby, SQLite and R runners take record 0 when the case names a record, and the exchange index otherwise, as C and TypeScript do. The clamp is gone.
+4. `Found` and `Found::candidates` say the none candidate comes last.
+
 ## Ratchet
 
-`sdlc/ratchet.json` rose from 69249 to 69530, 281 lines. Product code grew 66 net, and tests grew 215. I deleted the command's inline part reading and the library's refusal of `on` first. I looked for another part reader in `core`, `cli` and `public` and found none. Each binding's ceilings rose by its keyword and runner branch. The DuckDB and SQLite Python ceilings fell, because their runners shrank.
+`sdlc/ratchet.json` rose from 69249 to 69530, 281 lines, and to 69532 with the review fixes' two doc lines in `results.rs`. Product code grew 66 net, and tests grew 215. I deleted the command's inline part reading and the library's refusal of `on` first. I looked for another part reader in `core`, `cli` and `public` and found none. Each binding's ceilings rose by its keyword and runner branch. The DuckDB and SQLite Python ceilings fell, because their runners shrank.
 
 ## Ladder
 
