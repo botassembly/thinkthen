@@ -133,6 +133,18 @@ fn second_fails_first(name: &str) -> Canned {
     }
 }
 
+/// Bravo answers first, from another model, so the closure fails once
+/// alpha answers. Charlie went out when bravo's reply freed a worker.
+fn a_later_model_differs(name: &str) -> Canned {
+    match name {
+        "alpha" => ok().after(300),
+        "bravo" => Canned::ok(
+            r#"{"model":"other-1","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.9}}}"#,
+        ),
+        _ => ok().after(600),
+    }
+}
+
 #[test]
 fn a_failed_chunk_stops_the_run_as_one_job_does() {
     let (one, sent_one) = failing("1", first_fails_at_once);
@@ -153,4 +165,13 @@ fn a_failed_chunk_stops_the_run_as_one_job_does() {
         (one.status.code(), said(&one), &one.stdout)
     );
     assert_eq!(sent_two, 2);
+
+    let (one, sent_one) = failing("1", a_later_model_differs);
+    let (two, sent_two) = failing("2", a_later_model_differs);
+    assert_eq!(one.status.code(), Some(4), "{}", said(&one));
+    assert_eq!(
+        (two.status.code(), said(&two), &two.stdout),
+        (one.status.code(), said(&one), &one.stdout)
+    );
+    assert_eq!((sent_one, sent_two), (2, 3));
 }
