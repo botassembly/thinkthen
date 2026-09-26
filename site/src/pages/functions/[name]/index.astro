@@ -1,6 +1,6 @@
 ---
 // Goal: show what one function takes and gives, with its simplest real run
-// first, ahead of any prose, and each option taught once.
+// first, ahead of any prose. Each function's own goal sits in catalog.mjs.
 import Base from '../../../layouts/Base.astro';
 import Terminal from '../../../components/Terminal.astro';
 import Code from '../../../components/Code.astro';
@@ -14,6 +14,7 @@ export function getStaticPaths() {
 }
 
 const { fn } = Astro.props;
+if (!fn.goal) throw new Error(`functions: ${fn.name} has no goal`);
 const page = `functions/${fn.name}`;
 const runs = captioned(page, fn.see, true);
 const inputs = files(page);
@@ -63,7 +64,7 @@ const bench = beatlesPageFor(fn.name);
 
   {rest.length > 0 && (
     <>
-      <h3>Each option, taught once</h3>
+      <h3>The options at work</h3>
       {rest.map((run) => <Terminal run={run} caption={run.see} />)}
     </>
   )}
