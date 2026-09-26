@@ -40,8 +40,10 @@ scratch_clean() {
 # a hash; PostgreSQL's killed run folder, after its name guard, and its literal .runtime/tree; the
 # R tarball's copied .cargo and target, inside its own scratch folder; install.sh, which runs from
 # a pipe and cannot source this file, and must equal site/public/install.sh; and demo 16's triage,
-# a standalone script the page shows, which removes the output folder it made with mkdir.
+# a standalone script the page shows, which removes the output folder it made with mkdir. The R
+# package's Makevars.in clean rules ship in its tarball, so they stay outside the scan.
 scratch_lint() {
+	git rev-parse --git-dir >/dev/null || return 1
 	[ $# -gt 0 ] || set -- sdlc/scripts/* sdlc/live-test install.sh $({ git ls-files -- 'libraries/*.sh' \
 		'databases/*.sh' 'transforms/*.sh' 'probes/*.sh' 'demos/*.sh'; git grep -l '^#!/' -- libraries databases \
 		transforms probes demos ':!*.md'; } | sort -u)
