@@ -1,8 +1,10 @@
 # Every surface should give back what Jev tells us about each run
 
-Status: Draft, 2026-09-26. Not filed. Audit of ThinkThen main at `cc51986b`, read-only, no paid calls.
+Status: Held by Ian. Do not start until Ian sends it.
 
-Ian's expectation: the command gives the full run facts when asked with `--details`, and every library gives them on every call. The facts are input tokens, output tokens, cost, speed, request counts, and the full detail: probabilities, request IDs or digests, and model.
+Filed 2026-09-26 from an audit of ThinkThen main at `cc51986b`, read-only, with no paid calls.
+
+Ian's expectation: the command gives the full run facts when asked, and every library gives them on every call. The facts are input tokens, output tokens, cost, speed, request counts, and the full detail: probabilities, request IDs or digests, and model.
 
 ## What Jev sends back
 
@@ -94,13 +96,25 @@ The body carries no timing, no request ID, and no price. Jev puts its request ID
 Outcomes, not a design. Each item names what Ian can overturn.
 
 1. **Every library call gives back its run facts without a second call, on every verb.** The facts are model, input and output tokens, requests sent, cached, request digests, and every probability with `confidence`. They cover bulk verbs, frames, and SQL calls per row. This amends ADR 0017 section 6. The amendment needs an ADR, because it changes the return shape on ten surfaces. The trade-off: a bare value keeps the `if tt.decide(...)` form short, and a result object makes every call carry more. The ADR picks the spelling. Ian can overturn the "every call" part and keep details opt-in, with details reaching every verb.
-2. **The command's `--details` covers every verb and every request a run sent.** That includes records `filter` drops and records `rank --top` leaves off. A run can report its total tokens and requests sent without `status`.
+2. **The command reports every request a run sent when asked.** That includes records `filter` drops and records `rank --top` leaves off. A run can report its total tokens and requests sent without `status`. Ian ruled that a finished run stays silent on standard error by default, as `specification/records.md` line 109 says. So the totals print only under `--facts`, as "Agreement with the batching design" below fixes. `--details` keeps its per-row lines on every verb.
 3. **Every surface reports speed.** For each request, report the wall time, the server time, and Jev's request ID, as the 2026-09-23 issue and Ian's ruling ask. This issue asks only that the result reach every surface, not only `--details`.
 4. **A run can report its cost.** Cost is tokens times a price the user supplies. The price comes from configuration, never a guess. With no price set, the run shows tokens and no money. A decision records the price source and whether output tokens are priced. Today's transform prices input tokens only. The vendor's output price is not recorded in the repo.
 5. **One set of run facts, one set of names, on every surface.** DuckDB's details match the others. The typed views in TypeScript and Rust expose `confidence` and `url`. The conformance cases check `usage`, `requests_sent`, `cached`, and `confidence`, so drift fails a gate.
 6. **Each surface's README and the site say where run facts come from.** The site shows one raw HTTP exchange with its `usage`.
 
+## Agreement with the batching design
+
+`2026-09-26-batching-design.md`, "Output and run facts", fixes the run facts' shape and names. This issue and that design agree on these points. Ian can overturn each.
+
+- **One option.** The name is `facts` on every surface. The command takes `--facts` and writes one `thinkthen.run/1` line to standard error at the end of the run. Without it, a finished run prints nothing there. A library result over many records carries `.facts`, or the surface's own spelling.
+- **One set of names.** The fields are `records`, `requests_sent`, `cache_answers`, `input_tokens`, `output_tokens`, `seconds` and `model`. They match `thinkthen status`, the library counters, and the per-row `meta.requests_sent` and `meta.cached`.
+- **Tokens.** `input_tokens` and `output_tokens` sum live replies, as `status` does. A field the backend did not report stays absent. It is never written as 0.
+- **Time.** `seconds` is wall time. It never enters a byte-identity check.
+- **Single calls.** A single call's facts have the same fields with `records` of 1. The ADR from item 1 picks how a bare-value call returns them.
+- **SQL.** Per-call facts in SQL are deferred below. SQL keeps `thinkthen_details` and `thinkthen_usage()`.
+
 ## Deferred
 
 - Persisting library spend for `status` stays with the 2026-09-25 issue.
 - Keeping header fields in recordings stays with the 2026-09-23 issue, which keeps them beside the entry and not inside it.
+- **SQL run facts.** A per-call or per-query facts shape for DuckDB, PostgreSQL and SQLite waits for its own design. A scalar returns one value a row, so the facts need another function or a details column. Gap 3's repair of DuckDB's details struct is not deferred.
