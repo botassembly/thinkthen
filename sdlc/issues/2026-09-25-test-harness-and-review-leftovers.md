@@ -163,6 +163,16 @@ Fix: resolve the target folder once, from `cargo metadata --format-version 1 --n
 
 Done when: the `surfaces` rung passes with `CARGO_TARGET_DIR` unset, relative, and absolute.
 
+## 13. The children check keeps pending entries for landed tickets
+
+Kind: cleanup. Found by experiment 218, wave 2, at main `3f7b51ac`.
+
+`sdlc/scripts/children` holds five `PENDING` entries. One names tickets 0123 and 0126 (`crates/thinkthen/tests/relate_edge.rs`, a spawn of `relate --help`). Four name ticket 0129 (`databases/postgresql/src/files.rs`, `databases/duckdb/tools/databases_suite.py`, and two in `databases/duckdb/tools/source_checks.py`). All three tickets have landed. Every named line is still there, so each child still inherits the whole environment, and the check stays green. Ticket 0127 line 290 said "0129 clears its pending entries, or a Quick Fix does after it lands." Neither happened. A pending entry with no open owner hides the leak the check exists to catch.
+
+Fix: give each of the five spawns an allow-listed environment through its language's child helper, and delete the entries. Or move an entry to `EXEMPT` with a reason that still holds.
+
+Done when: `PENDING` names no landed ticket, and `children` stays green.
+
 ## Already fixed
 
 - rusqlite's second trap, the workspace feature clash with `load_extension`: ADR 0047 gives each binding its own workspace. The root `Cargo.toml:4` to `:6` excludes `databases`.
