@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core/batch.rs crates/thinkthen/src/core/batch crates
 
 # 0144: The engine plans batches
 
-Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Claude. Lane: `worktrees/thinkthen-lane-3`.
+Status: landed 2026-09-26 (`sdlc/records/0144-build-engine-plans-batches.md`). Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
