@@ -28,11 +28,11 @@ Put the song's catalog entry in front of the question and ask again. The entry n
 
 The bench asked the same way at scale. It drew 196 questions, mostly from Jev's misses, and asked each one twice. The first time, Jev answered from memory. The second time, the whole song catalog sat in front of the question, one line per song, with its singer, writers, length, and release date. From memory, Jev got 68 right. With the catalog, it got 184, in the [run of 2026-09-26](https://github.com/botassembly/beatles-bench#results).
 
-The catalog broke an answer on "The Ballad of John and Yoko". Asked whether two Beatles share the lead, Jev said no from memory, and that is right. With the catalog, it said yes at 0.82. The line says Lennon. The title names two people. That may have fooled it.
+The catalog broke an answer on "The Ballad of John and Yoko". Asked whether two Beatles share the lead, Jev said no from memory, and that is right. With the catalog, it said yes at 0.82, in the [open-book run](https://github.com/botassembly/beatles-bench/tree/main/results/runs/2026-09-26-thinkthen-jev-open-book). The line says Lennon. The title names two people. That may have fooled it.
 
 ## What it costs
 
-Context costs input tokens. From memory, the call above reads 291 input tokens. With the one entry, it reads 368. The whole catalog of 306 songs took a median of 12,214 input tokens a call. Send the one entry the question is about.
+Context costs input tokens. From memory, the call above reads 291 input tokens. With the one entry, it reads 368. The whole catalog of 306 songs took a median of 12,214 input tokens a call in [that run](https://github.com/botassembly/beatles-bench/tree/main/results/runs/2026-09-26-thinkthen-jev-open-book). Send the one entry the question is about.
 
 ## What I don't know
 

@@ -336,6 +336,7 @@ const ARTICLES = {
     see: {
       '1-check': "The check names the address and the model it would ask.",
     },
+    source: { text: 'the check specification', href: 'https://github.com/botassembly/thinkthen/blob/main/specification/check.md' },
     lesson: "A bar tuned on one model does not carry to another. Run `audit` again on your labeled records before you trust a new backend.",
     takeaway: "A new model needs its own bar.",
     link: REPO,
