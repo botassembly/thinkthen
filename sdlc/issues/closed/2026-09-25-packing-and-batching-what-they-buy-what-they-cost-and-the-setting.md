@@ -1,6 +1,6 @@
 # Packing and batching: what they buy, what they cost, and the setting
 
-Status: Open. The dedicated issue for packing and batching, on Ian's request of 2026-09-25. It replaces the earlier plan `2026-09-25-pack-rows-for-tables-and-frames-a-plan-to-measure-then-build.md`, renamed here.
+Status: Closed on 2026-09-26. Replaced by `../2026-09-26-batching-design.md`.
 
 ## In one paragraph
 

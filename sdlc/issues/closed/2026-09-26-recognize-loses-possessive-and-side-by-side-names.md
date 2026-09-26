@@ -1,6 +1,6 @@
 # recognize: configurable word rules and name boundaries
 
-Status: Held by Ian. Do not start until Ian sends it. Filed 2026-09-26 from workspace experiments 265, 267 and 270. This body replaces the first filing and keeps its experiment 265 evidence and strength item.
+Status: Closed on 2026-09-26. Replaced by `../2026-09-26-recognize-design.md`.
 
 ## Summary
 
