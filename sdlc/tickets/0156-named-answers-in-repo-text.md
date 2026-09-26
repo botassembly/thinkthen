@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 156
-opens: sdlc/scripts/named-answers.mjs sdlc/scripts/lint demos/01-refund-gate/README.md spec/decide.md specification/channels.md specification/decide.md specification/choose.md crates/thinkthen/src/cli/args/command.rs databases/duckdb/README.md databases/postgresql/README.md databases/postgresql/check.sh databases/sqlite/README.md sdlc/records sdlc/tickets sdlc/issues
+opens: sdlc/scripts/named-answers.mjs sdlc/scripts/lint demos/01-refund-gate/README.md spec/decide.md specification/channels.md specification/decide.md specification/choose.md specification/score.md crates/thinkthen/src/cli/args/command.rs databases/duckdb/README.md databases/postgresql/README.md databases/postgresql/check.sh databases/sqlite/README.md sdlc/planning/backlog-0-1-2026-09-26.md sdlc/records sdlc/tickets sdlc/issues
 ---
 
 # 0156: The named-answers rule reaches the queue's own pages
@@ -14,7 +14,7 @@ Review route: a fresh read-only Claude session reviews this design and the final
 
 Every code block in the pages the queue owns stores each ThinkThen answer under a name for its meaning before it uses it, as the site's samples now do. A lint step holds the rule. It imports the site's rule module and keeps no copy of it.
 
-Ian ruled on 2026-09-26 that every code sample names its answer. `sdlc/issues/2026-09-26-site-samples-assert-on-unnamed-answers.md` records the ruling. The marketing lead fixed `site/` at `648a965f`. It then moved the rule into `site/scripts/named-answers.mjs` at `e0a6150a`, and that file's contract names "the builder's lint rung" as its second reader. The authority for this ticket is the coordinator's ruling of 2026-09-26. Under it, the named-answers rule reaches `demos/`, the library and database READMEs, `specification/` and `spec/`. Ian can overturn it. Ian later ruled "make sure all config documented" and gave the coordinator the full queue, and he has not ruled against this reach. The ruling answers question 4 of `sdlc/planning/backlog-0-1-2026-09-26.md`, which asked whether the code-sample ruling reaches `demos/` and the library READMEs.
+Ian ruled on 2026-09-26 that every code sample names its answer. `sdlc/issues/2026-09-26-site-samples-assert-on-unnamed-answers.md` records the ruling. The marketing lead fixed `site/` at `648a965f`. It then moved the rule into `site/scripts/named-answers.mjs` at `e0a6150a`, and that file's contract names "the builder's lint rung" as its second reader. The authority for this ticket is the coordinator's ruling of 2026-09-26. Under it, the named-answers rule reaches `demos/`, the library and database READMEs, `specification/` and `spec/`. Ian can overturn it. Ian later ruled "make sure all config documented" and gave the coordinator the full queue, and he has not ruled against this reach. The ruling answers question 4 of `sdlc/planning/backlog-0-1-2026-09-26.md`, which asked whether the code-sample ruling reaches `demos/` and the library READMEs, and so moves that question off Ian's list. The ruling can be reversed cheaply, because it only adds a text check and renames variables in pages. The lander marks question 4 answered in that file, citing the coordinator's ruling and this ticket.
 
 ## What happens today
 
@@ -53,7 +53,9 @@ The fifteen problems, one row each:
 
 Rows 8, 9 and 12 are false positives. The module's Bash `direct` rule fires on a `test`, `[`, `[[`, `echo` or `printf` line that holds any `$(` when the whole statement holds a ThinkThen call. In these three lines the command substitution runs `jq` or `git`, and the `printf` feeds the call's input. No answer is read in place.
 
-Two help samples break the rule too. They sit in doc comments, which this check does not read. `crates/thinkthen/src/cli/args/command.rs:48` reads `case $? in` in the `decide` help. `command.rs:110` names the `choose` answer `pick`, which the module lists as generic, and its exit code `rc`. `specification/decide.md:72` says the help shows the `case` block, and `specification/choose.md:53` names `$rc`. Fixing the page without the help would make the page misquote the help.
+Two more samples read an answer in place, and the module does not flag them today. `specification/choose.md:85` reads `case "$(thinkthen choose 'Which team owns this request?' ... --raw < message.txt)" in`, and `specification/score.md:77` reads `case "$(thinkthen choose 'How much disruption does this report?' ... --raw < ticket.txt)" in`. Request R2 asks the module to flag this form.
+
+Two help samples break the rule too. They sit in doc comments, which this check does not read. `crates/thinkthen/src/cli/args/command.rs:48` reads `case $? in` in the `decide` help. `command.rs:110` names the `choose` answer `pick`, which the module lists as generic, and its exit code `rc`. `specification/decide.md:72` says the help shows the `case` block. Fixing the page without the help would make the page misquote the help.
 
 ## Design
 
@@ -74,7 +76,7 @@ A new Node script, `sdlc/scripts/named-answers.mjs`, runs from the lint rung. It
 
 `node sdlc/scripts/named-answers.mjs --self-test` runs before the real check in lint. It writes no file. It follows the `--self-test` form of `sdlc/scripts/tickets` and `children`.
 
-- **One plant for each folder.** It lists the real pages as the check does. For each of the five folders it takes the first page in sorted order and appends one planted block to that page's text in memory. It scans the whole real set twice: once as it is, and once with the planted page. The planted run must print exactly the lines of the first run plus the one expected line, pinned whole. The plants are:
+- **One plant for each folder.** The self-test holds its own literal list of the five plant folders, separate from the list the check walks. It lists the real pages through the check's own walk. For each plant folder it takes the first walked page whose path starts with the folder name plus `/`, so `spec/` never matches `specification/`. A plant folder that yields no page fails the self-test with ``named answers: self-test: no page under FOLDER/``. It then takes that page and appends one planted block to that page's text in memory. It scans the whole real set twice: once as it is, and once with the planted page. The planted run must print exactly the lines of the first run plus one new line. That line must start with ``named answers: PATH:LINE: RULE: `` for the planted page, the plant's line and the expected rule, and a non-empty message must follow. The self-test never pins the module's message text. The plants are:
 
   | Folder | Tag | Planted block | Expected rule |
   | --- | --- | --- | --- |
@@ -84,7 +86,7 @@ A new Node script, `sdlc/scripts/named-answers.mjs`, runs from the lint rung. It
   | `libraries` | `python` | `assert tt.decide(question, message)` | direct |
   | `databases` | `sql` | `SELECT id FROM t WHERE thinkthen_decide('Q?', body);` | unnamed |
 
-- **Fence and tag rows.** One small page in memory for each row, scanned alone, with its whole output pinned. Each row holds the Bash plant `answer=$(thinkthen decide 'Q?' < m.txt)`:
+- **Fence and tag rows.** One small page in memory for each row, scanned alone. A module problem is pinned as ``named answers: PATH:LINE: RULE: `` plus a non-empty message. The check's own sentences, for an unknown tag and an unclosed fence, are pinned whole. Each row holds the Bash plant `answer=$(thinkthen decide 'Q?' < m.txt)`:
 
   | Row | Opening and closing | Expected |
   | --- | --- | --- |
@@ -130,7 +132,7 @@ Each fix keeps the page's lesson and its commands. Only the names change.
 - **`specification/channels.md`, row 13.** The same form: `asks_for_refund() { thinkthen decide 'the customer asks for a refund' --quiet; }` on three lines, then `if asks_for_refund < message.txt; then`.
 - **`specification/decide.md`, row 14.** The same form, with `requests_refund` and `--threshold 0.1:0.9`.
 - **`specification/decide.md`, row 15, and the `decide` help.** The command line ends `&& refund_code=0 || refund_code=$?`, and the block reads `case $refund_code in`. This form also survives `set -e`, which the help's own warning asks for. The help's two lines at `command.rs:46` and `:48` change the same way, so the page still quotes the help. The prose at `decide.md:72` says "a `case` block on the named exit code".
-- **The `choose` help.** `command.rs:110` to `:114` names the answer `team` and the exit code `team_code`: `team=$(thinkthen choose ...) && team_code=0 || team_code=$?`, then `case $team_code in 0) ;; 3) team=not_sure ;; *) exit "$team_code" ;; esac`, then `case $team in ...`. `specification/choose.md:53` says the first `case` reads `$team_code`.
+- **The `choose` help.** `command.rs:110` to `:114` names the answer `team` and the exit code `team_code`: `team=$(thinkthen choose ...) && team_code=0 || team_code=$?`, then `case $team_code in 0) ;; 3) team=not_sure ;; *) exit "$team_code" ;; esac`, then `case $team in ...`. `specification/choose.md:53` stays as it is. Its `$rc` sentence describes demo 02, not the help.
 - **`spec/decide.md`, row 10.** `no_records_output=$(...)`, then `test -z "$no_records_output"`.
 - **`spec/decide.md`, row 11.** The block names the output and the exit code, and pins the exit code it captured, as `CLAUDE.md` asks of a block that catches a failure:
 
@@ -145,18 +147,33 @@ Each fix keeps the page's lesson and its commands. Only the names change.
 - **SQL, rows 1 to 5.** The call takes an alias named for its meaning, and a filter reads the alias from a subquery, as the site's `filter/postgresql.sql` does. The outer query selects only the id, so each row calls the function once.
   - DuckDB: `SELECT id FROM (SELECT id, thinkthen_decide('Does the writer ask for a refund?', body) AS asks_refund FROM tickets) WHERE asks_refund;` on three lines. `thinkthen_choose(...) AS team`. `thinkthen_relate(...) AS works_for`, as the site's relate sample aliases its table.
   - PostgreSQL: `SELECT id FROM (SELECT id, thinkthen_decide('@refund.json', body) AS asks_refund FROM tickets) AS judged WHERE asks_refund IS NULL;` on three lines. PostgreSQL before 16 needs the subquery alias. `check.sh`'s `slide_sample` runs the same statement, so the README's claim that the sample runs as drawn stays true. Its expected output does not change. The sentence before the block says `check.sh` runs it, in place of "The slide sample", because the deck lives in another repository.
+  - PostgreSQL's annotate line renames the alias `a` to `triage`: `SELECT id, triage->>'team', (triage->>'urgency')::float AS urgency FROM tickets, thinkthen_annotate('@form.json', body) AS triage ORDER BY urgency DESC;`. `check.sh:145` changes the same way and keeps its `, id` tie-break. Its expected output does not change.
   - SQLite: `SELECT id, body FROM (SELECT id, body, thinkthen_decide('Is this a complaint?', body) AS is_complaint FROM reviews) WHERE is_complaint;` on three lines.
-- **Rows 8, 9 and 12.** No change, once request R1 lands. If the marketing lead declines R1, the build goes ahead without it, and the fallback rewrites each line so no `$(` shares the line with the pipe into the call. Demo 28 pipes `printf '%s' "$example" | jq -j '.body'` into the call. Demo 41 pipes `jq -j 'select(.id == "C-01") | .body' claims.jsonl` into it. `jq -j` prints no newline, and neither C-01 body ends in one (checked with `od -c` in the survey), so the bytes sent match the recordings. `spec/recognize.md` names the recording first: `recording="$(git rev-parse --show-toplevel)/crates/thinkthen/tests/fixtures/recognize-225/C01"`, then `--replay "$recording"`.
+- **`specification/choose.md:85` and `specification/score.md:77`.** Each names the answer first, then branches on the name. The branches do not change:
+
+  ```sh
+  team=$(thinkthen choose 'Which team owns this request?' billing shipping account --threshold 0.8 --raw < message.txt)
+  case $team in
+  ```
+
+  ```sh
+  disruption=$(thinkthen choose 'How much disruption does this report?' none workaround blocked --raw < ticket.txt)
+  case $disruption in
+  ```
+
+  These two rewrites stay whatever the marketing lead answers to R2.
+- **Rows 8, 9 and 12.** No change. The marketing lead accepted R1, and the build does not rewrite `demos/28:67`, `demos/41:12` or `spec/recognize.md:13`.
 
 ## Requests to the marketing lead
 
-The marketing lead owns the module. This ticket edits no file under `site/`. The coordinator relays these two.
+The marketing lead owns the module. This ticket edits no file under `site/`. The coordinator relays them.
 
 - **R0, in progress.** `namedAnswerProblems` throws on a language it does not accept, in place of returning an empty array. The check's unknown-tag step depends on it. The contract comment and the `unknown` rows of `named-answers.test.mjs` change with it.
-- **R1, a false positive.** The Bash `direct` rule for a `test`, `[`, `[[`, `echo` or `printf` line tests the whole statement for a call. It should test only the text inside the line's `$(...)`. Three correct lines fail today: rows 8, 9 and 12 above. Suggested rows for the table test:
+- **R1, a false positive. Accepted.** The marketing lead's `direct` rule will flag `printf`, `echo` and `test` only when a ThinkThen call sits inside the `$(...)` they read. It lands together with R0, and the rows below go into their tests. Today the Bash `direct` rule for a `test`, `[`, `[[`, `echo` or `printf` line tests the whole statement for a call. It should test only the text inside the line's `$(...)`. Three correct lines fail today: rows 8, 9 and 12 above. Suggested rows for the table test:
   - pass: `printf '%s' "$(jq -r .body m.jsonl)" | thinkthen decide "$q"`
   - pass: `printf 'x' | thinkthen recognize --replay "$(git rev-parse --show-toplevel)/r"`
   - fail, unchanged: `echo "$(thinkthen decide "$q" < mail.txt)"`
+- **R2, `case` over a call.** The coordinator sends it. A `case` whose word is a `$(...)` holding a ThinkThen call becomes a `direct` problem. "What happens today" names the two pages. This ticket rewrites both whatever the answer, so the check does not depend on R2.
 
 An observation, not a request: the generic list lacks `rc`, `status` and `code`, and the form `&& rc=0 || rc=$?` never reaches the generic check, since the name does not open the line. Nine demo lines use `rc` and five `spec/` lines use `code=$?`. Ian's ruling asks for a name of meaning. "Deferred gaps" carries it.
 
@@ -170,8 +187,8 @@ The agent decided each of these within the coordinator's brief. Ian can overturn
 4. **Four skip tags: `text`, `console`, `json`, `toml`.** Three appear today, and the brief names `console`. Any other tag the module refuses fails the check, so a new tag gets a decision, never a silent skip.
 5. **No exception mechanism.** After the fixes and R1, no block needs one. A block that shows output or data takes a skip tag. A per-block marker would be a second way to skip, and none is needed.
 6. **A function or a named exit code, never a bare call in `if`.** Where the exit code is the lesson, the page keeps it and names it, as the ruling says. A function keeps `if` as the lesson of demo 01 and `channels.md`. `refund_code` keeps the four-way `case` of `decide.md`.
-7. **The help samples change with the pages.** `specification/decide.md` quotes the help's `case` block, and `choose.md` names the help's `$rc`. Changing the pages alone would break those quotes. The help reaches more readers than any page, and the ruling covers it. The check does not read doc comments. "Deferred gaps" carries that.
-8. **Wait for R1 instead of rewriting correct lines.** The three lines are right under the ruling. Rewriting them to dodge a false positive would hide the module bug from the site too. The fallback applies only if the marketing lead declines R1.
+7. **The help samples change with the pages.** `specification/decide.md` quotes the help's `case` block. Changing the page alone would break that quote. The `choose` help changes for the same ruling, and no page quotes its names. The help reaches more readers than any page, and the ruling covers it. The check does not read doc comments. "Deferred gaps" carries that.
+8. **Wait for R1 instead of rewriting correct lines.** The three lines are right under the ruling. Rewriting them to dodge a false positive would hide the module bug from the site too. The marketing lead accepted R1.
 9. **SQL filters read the alias from a subquery.** PostgreSQL cannot read a select alias in `WHERE`. DuckDB and SQLite can, but a select list that keeps the alias beside a `WHERE` on it may call the function twice. One subquery form serves all three and matches the site.
 10. **The check pins its own unknown-tag sentence.** It probes the module with empty code and never prints the module's error. A reworded throw on the site then cannot break the lint rung.
 
@@ -206,7 +223,7 @@ Each test runs through the real boundary, the script over the real pages.
 
 | Test | What it checks | Planted fault that turns it red |
 | --- | --- | --- |
-| `named-answers.mjs --self-test`, folder plants | Each of the five folders is walked, and each language reaches the module | P1: drop `spec` from the folder list. The `spec` plant prints nothing. P2: add `sh` to the skip tags. The `specification` plant prints nothing |
+| `named-answers.mjs --self-test`, folder plants | Each of the five folders is walked, and each language reaches the module | P1: drop `spec` from the list the check walks. The self-test's own list still names `spec`, finds no page under `spec/`, and fails. P2: add `sh` to the skip tags. The `specification` plant prints nothing |
 | `named-answers.mjs --self-test`, fence rows | The fence and tag rules in "The self-test" | P3: open fences on backticks only. The tildes row prints nothing. P4: close a fence on any three backticks. The long-fence row prints the wrong line. P5: skip a tag the module refuses. The unknown-tag row prints nothing. P6: drop the end-of-page check. The unclosed row prints nothing |
 | `named-answers.mjs` over the real pages | The fixed pages keep the rule | P7: in the lane, add one planted block to one real page in each folder, run the check, and record each of the five lines and exit 1. Restore and touch each page |
 | `sdlc/scripts/lint` | The rung runs the check | P8: plant one block in `demos/01-refund-gate/README.md` and run `lint`. It stops at the named-answers step with exit 1 before `cargo`. Restore and touch |
@@ -226,14 +243,14 @@ Nonblank lines, counted with `grep -c .` over the diff.
 
 - `sdlc/scripts/named-answers.mjs`: at most 120, self-test included.
 - `sdlc/scripts/lint`: at most 3 added.
-- The pages and `check.sh`: at most 30 added, net, together.
+- The pages and `check.sh`: at most 32 added, net, together.
 - `crates/thinkthen/src/cli/args/command.rs`: 0 net. The help lines change in place. `sdlc/ratchet.json` does not move.
 - No dependency. No change under `site/`.
 
 ## Stop rules
 
 1. Stop before starting if R0 has not landed on main.
-2. Stop before starting if R1 has not landed on main, unless the marketing lead has declined it. A decline starts the fallback under "The fixes".
+2. Stop before starting if R1 has not landed on main.
 3. Stop before starting if 0151, 0152 Part B or 0153 has not landed, or if a later ticket opens a file this one needs. "Build order" names them.
 4. Stop if the survey on the merged main finds a problem outside the table in a page another unlanded ticket opens. Fix a new problem elsewhere in the same style, and list it in the record.
 5. Stop before editing any file under `site/`.
@@ -256,21 +273,22 @@ Every file this ticket edits, and the tickets in flight that open it:
 | `spec/decide.md` | 0146 | Batching lines |
 | `specification/channels.md` | 0146, 0147, 0152 Part B, 0153 | Batching, recognize, the word, and two hint sentences |
 | `specification/decide.md` | 0146, 0152 Part B, 0154 | Batching, the word, and the ceiling |
-| `specification/choose.md` | 0152 Part B | The word, on line 53 itself |
+| `specification/choose.md` | 0152 Part B | The word, on line 53. This ticket edits only the block at line 85 |
+| `specification/score.md` | none | |
 | `crates/thinkthen/src/cli/args/command.rs` | 0153 | One sentence in the `choose` doc comment, beside the sample |
 | `databases/duckdb/README.md` | 0151 (built on its branch), 0148 (the folder) | The details line. Its branch leaves the three SQL lines as they are |
 | `databases/postgresql/README.md`, `check.sh` | 0151 (the README), 0148 (the folder) | Details and settings |
-| `databases/sqlite/README.md` | 0151 | The details line |
+| `databases/sqlite/README.md` | 0151, 0148 (the folder) | The details line, and settings |
 | `sdlc/scripts/lint` | none | |
 | `sdlc/records`, `sdlc/tickets`, `sdlc/issues` | every ticket | New files and one move |
 
-0150 touches none of these files. Demos 28 and 41 and `spec/recognize.md` change only under the R1 fallback, and 0152 Part B opens demo 41.
+0150 touches none of these files. Demos 28 and 41 and `spec/recognize.md` do not change.
 
 Order: 0156 builds after 0152 Part B lands, as the brief prefers, because Part B rewords the same pages. 0152 Part B waits for 0146, and 0153 waits for 0146, so 0146 lands before this ticket. 0151 is built on its branch and lands first. 0153 lands first, so the `choose` doc comment merges once. 0147, 0148 and 0154 may land either side. Whichever lands later merges `origin/main`, and every shared line here is a word or a line swap. The builder merges `origin/main` and reruns the survey before the first edit and again before the final run.
 
 ## Routing
 
-Builder: Claude (Opus subagent), in the lane the coordinator names. Reviewer: a fresh read-only Claude session for design and for code. The coordinator relays R0 and R1 to the marketing lead.
+Builder: Claude (Opus subagent), in the lane the coordinator names. Reviewer: a fresh read-only Claude session for design and for code. The coordinator relays R0, R1 and R2 to the marketing lead.
 
 ## Complexity
 
@@ -284,7 +302,7 @@ Contract 1; state and timing 0; reach 2; proof 1; cost of error 1; total 5. Fina
 - Exit codes named `rc`, `status` or `code`, and the `&& rc=0 || rc=$?` form. The module passes both. Nine demo lines and five `spec/` lines use them.
 - An untagged block is never read. None exists today.
 - A writer can tag code as `text` to skip it. Review is the guard.
-- Single-letter aliases such as the PostgreSQL README's `AS a` pass the module.
+- Single-letter aliases pass the module. The one in the PostgreSQL README changes here.
 
 ## What Ian can overturn
 
@@ -304,8 +322,8 @@ Contract 1; state and timing 0; reach 2; proof 1; cost of error 1; total 5. Fina
 
 ## Evidence
 
-- Starts from: Ian's ruling of 2026-09-26 in the site issue. Site commit `648a965f`, which fixed `site/`. Module commit `e0a6150a` and its 46-row table test. `site/WRITING.md`'s paragraph on named answers, which allows a function named for its meaning. The survey on 2026-09-26 at `e0a6150a`: 194 code blocks in 77 pages, 15 problems, 3 of them false positives. The two help samples at `command.rs:48` and `:110`. The site's `filter/postgresql.sql` and `relate/duckdb.sql` for the SQL shapes. `specification/backends.md:51` for exit 2. `od -c` over the two C-01 bodies for the R1 fallback.
+- Starts from: Ian's ruling of 2026-09-26 in the site issue. Site commit `648a965f`, which fixed `site/`. Module commit `e0a6150a` and its 46-row table test. `site/WRITING.md`'s paragraph on named answers, which allows a function named for its meaning. The survey on 2026-09-26 at `e0a6150a`: 194 code blocks in 77 pages, 15 problems, 3 of them false positives. The two help samples at `command.rs:48` and `:110`. The site's `filter/postgresql.sql` and `relate/duckdb.sql` for the SQL shapes. `specification/backends.md:51` for exit 2. The marketing lead's acceptance of R1.
 - Keeps: Every demo's and spec page's commands, inputs, recordings and assertions. Each page's lesson: `if` on an exit code in demo 01 and `channels.md`, the four-way `case` in `decide.md`. The PostgreSQL slide check's expected output. The module, byte for byte.
-- Changes: A lint step runs the site's rule over every code block under the five folders, with a self-test. Twelve lines across nine pages name their answers. The `decide` and `choose` help samples name their answer and exit code, and two spec sentences follow them. `check.sh` runs the new PostgreSQL statement.
+- Changes: A lint step runs the site's rule over every code block under the five folders, with a self-test. Twelve lines across nine pages, and the two `case` samples in `choose.md` and `score.md`, name their answers. The PostgreSQL annotate alias becomes `triage`. The `decide` and `choose` help samples name their answer and exit code, and two spec sentences follow them. `check.sh` runs the new PostgreSQL statement.
 - Proof: The self-test's five folder plants and seven fence rows, with planted faults P1 to P6. P7's five real-page plants and P8's lint plant, recorded red. The `spec` rung over the rewritten pages, the `test` rung over the help, and the PostgreSQL surface check.
-- Defers: The `examples.json` fixtures, Rust doc comments, the root README and the other folders, `rc`-style exit-code names, untagged blocks, and single-letter aliases.
+- Defers: R2's module rule, which this ticket does not depend on. The `examples.json` fixtures, Rust doc comments, the root README and the other folders, `rc`-style exit-code names, untagged blocks, and single-letter aliases.
