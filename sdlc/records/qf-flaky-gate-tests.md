@@ -1,6 +1,6 @@
 # Quick Fix qf-flaky-gate-tests: three gate tests that failed on a busy machine
 
-Status: built, awaiting review and landing. It closes item 2 of `sdlc/issues/2026-09-25-two-gate-failures-in-a-root-container.md` and both of `sdlc/issues/closed/2026-09-25-postgresql-warm-rows-timing-fails-on-a-busy-machine.md` and `sdlc/issues/closed/2026-09-25-polars-throttle-equality-fails-on-a-busy-machine.md`. Item 1 of the first issue stays open.
+Status: built; the surfaces rung is owed because the disk filled. It awaits review and landing. It closes item 2 of `sdlc/issues/2026-09-25-two-gate-failures-in-a-root-container.md` and both of `sdlc/issues/closed/2026-09-25-postgresql-warm-rows-timing-fails-on-a-busy-machine.md` and `sdlc/issues/closed/2026-09-25-polars-throttle-equality-fails-on-a-busy-machine.md`. Item 1 of the first issue stays open.
 
 ## Result
 
@@ -79,4 +79,10 @@ The pinned C run started at a load of 11.4 from other builders. No Polars or Pos
 
 ## Checks
 
-Recorded below after the final run on the merged branch.
+The ladder ran once on the branch after merging `origin/main` at `2544a8f8`, with `THINKTHEN_API_KEY` unset. `sdlc/scripts/live` did not run.
+
+- `install`: exit 0.
+- `lint`: exit 0.
+- `test`: exit 0, ending with `live-test: all cases passed`.
+- `spec`: exit 0, `demos: 21 green, 0 red`.
+- `surfaces`: exit 1. `libraries/rust` and `libraries/c` passed. Every later surface failed with `No space left on device`: the Beelink's root file system reached 100 percent, with 7.2 MB free, during the rung. This fix's worktree holds 6.3 GB of build output. The Polars and PostgreSQL checks did not run in this rung, and `surfaces` must run again once the disk has room.
