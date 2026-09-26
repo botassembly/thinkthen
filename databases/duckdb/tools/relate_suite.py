@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import sys
 import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -177,6 +178,27 @@ def the_process_throttle_reaches_relate():
         got = run([TABLE, "SET thinkthen_throttle = 8", "SELECT thinkthen_decide('Is it a refund?', 'a')", "SET thinkthen_throttle = 4", RELATE.format(WORKS)], backend.base())
         expect(said(got[4]), "thinkthen usage: throttle 8 is already active for this process; use throttle 8 or drop the throttle argument", "throttle 4 after 8")
         expect(backend.count(), 1, "counted sends")
+
+
+@case
+def the_throttle_reaches_a_relate():
+    """Ticket 0143 restores 0118's first count: nine one-request rules over
+    16 rows hold 8 requests at throttle 8, and the ninth waits for a free one."""
+    with Backend() as backend:
+        rows16 = "CREATE TABLE p AS SELECT i AS id, 'Person ' || i AS name, 'person' AS kind FROM range(16) t(i)"
+        rules = ", ".join(f"'r{rule}'" for rule in range(1, 10))
+        query = f"SELECT count(*) FROM thinkthen_relate('SELECT id, name, kind FROM p', [{rules}])"
+        got: list = []
+        worker = threading.Thread(target=lambda: got.extend(run([rows16, "SET thinkthen_throttle = 8", query], backend.base("arm/held"), timeout=120)))
+        worker.start()
+        try:
+            expect(backend.wait(8), 8, "requests in flight")
+            time.sleep(0.2)
+            expect(backend.count(), 8, "the count while held")
+        finally:
+            backend.release()
+            worker.join(timeout=120)
+        expect([backend.count(), rows(got[2])], [9, [[9 * 16 * 15]]], "the count and the edges after release")
 
 
 @case

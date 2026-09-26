@@ -1,11 +1,13 @@
 //! Scoped request workers shared by the schedulers and the single calls.
 
 use std::cell::Cell;
+use std::collections::BTreeMap;
 use std::sync::Mutex;
-use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, SyncSender, sync_channel};
+use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, SyncSender, channel, sync_channel};
 use std::thread;
 
 use crate::engine::Cancel;
+use crate::engine::error::Error;
 
 thread_local! {
     /// Whether this thread is an engine worker with host signals masked.
@@ -88,6 +90,72 @@ where
         drop(results);
         body(send)
     })
+}
+
+/// Run `items` on up to `jobs` workers and hand each result on in item order.
+///
+/// It feeds one item to each free worker, never more. A failed item, a
+/// failure of `each`, or a stop feeds nothing further. The items in flight
+/// finish, and the first failure in item order returns. The stop runs its
+/// host check here, between feeds and while items are in flight, since this
+/// may be the calling thread.
+pub(crate) fn ordered<W, R, E>(
+    jobs: usize,
+    items: Vec<W>,
+    cancel: &Cancel<'_>,
+    work: &(impl Fn(W) -> Result<R, Error> + Sync),
+    mut each: impl FnMut(R) -> Result<(), E>,
+) -> Result<(), E>
+where
+    W: Send,
+    R: Send,
+    E: From<Error>,
+{
+    let (results, received) = channel();
+    scoped(
+        jobs,
+        results,
+        &|(place, item)| (place, work(item)),
+        |feed| {
+            let mut items = items.into_iter().enumerate().peekable();
+            let (mut held, mut next, mut in_flight) = (BTreeMap::new(), 0, 0);
+            let (mut failure, mut halted) = (None, false);
+            loop {
+                while failure.is_none() {
+                    match held.remove(&next) {
+                        Some(Ok(result)) => failure = each(result).err(),
+                        Some(Err(error)) => failure = Some(E::from(error)),
+                        None => break,
+                    }
+                    next += 1;
+                }
+                if failure.is_none() && !halted && (in_flight > 0 || items.peek().is_some()) {
+                    failure = cancel.stop().map(E::from);
+                }
+                halted |= failure.is_some();
+                let room = if halted { 0 } else { jobs - in_flight };
+                for item in items.by_ref().take(room) {
+                    feed.send(item)
+                        .map_err(|_| Error::Defect("a request worker ended early"))?;
+                    in_flight += 1;
+                }
+                if in_flight == 0 && (halted || items.peek().is_none()) {
+                    return failure.map_or(Ok(()), Err);
+                }
+                match received.recv_timeout(Cancel::poll()) {
+                    Ok((place, result)) => {
+                        in_flight -= 1;
+                        halted |= result.is_err();
+                        held.insert(place, result);
+                    }
+                    Err(RecvTimeoutError::Timeout) => {}
+                    Err(RecvTimeoutError::Disconnected) => {
+                        return Err(Error::Defect("the request workers ended early").into());
+                    }
+                }
+            }
+        },
+    )
 }
 
 fn worker<W, R>(queue: &Mutex<Receiver<W>>, results: &Sender<R>, work: &(impl Fn(W) -> R + Sync)) {

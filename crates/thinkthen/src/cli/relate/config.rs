@@ -24,11 +24,6 @@ pub(super) struct From {
 }
 
 pub(super) fn settle(arguments: &RelateArguments) -> Result<Settled, Failure> {
-    if arguments.common.jobs.is_some() {
-        return Err(Failure::Usage(
-            "`relate` sends its requests in order, so it takes no --jobs",
-        ));
-    }
     if arguments.common.field.len() > 1 {
         return Err(Failure::Usage("--field takes one pointer on `relate`"));
     }
