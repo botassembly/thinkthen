@@ -66,18 +66,18 @@ Nonblank added lines against `origin/main`.
 
 | Budget | Limit | Measured |
 |---|---|---|
-| Production Rust, new and changed | 350 | 432 |
+| Production Rust, new and changed | 350 | 448 |
 | `core/measure/group.rs` | 60 | 26 |
 | Rust tests | 350 | 244 |
 | `specification/audit.md` added | 70 | 35 |
 | `spec/audit.md` added | 20 | 20 |
 | Dependencies | none | none |
 
-**Stop rule crossed.** Production Rust crossed its budget by 82 lines, past the one-tenth line of 385. The first count missed the two new files, so the crossing showed only after the build was complete and green. One trim moved the `--by` pointer into the grouping and named the pooled verbs, and `rustfmt` gave most of it back. What remains is spread across the ticket's own pieces. `pairs.rs` (84) holds the pairs, tie share, and curve. `cli/audit.rs` (91) holds three flags, two refusals, the pointer parser, and three table lines. `core/measure.rs` (63) holds the bias shift, the `Bin` type, and the bins. `audit.rs` (79) holds `Crossed`, `Pooled`, the new row members, and the pointer grouping. The coordinator re-scores.
+**Stop rule crossed.** Production Rust crossed its budget by 98 lines, past the one-tenth line of 385. The first count missed the two new files, so the crossing showed only after the build was complete and green. One trim moved the `--by` pointer into the grouping and named the pooled verbs, and `rustfmt` gave most of it back. Clippy then refused the table function at 106 lines and two tuple types. The fix moved the suggested, steady, crossed, and held lines into `suggested_lines` and the ties line into `ties_line`, and named two types. Those moved lines count as changed, which added 16. What remains is spread across the ticket's own pieces. `pairs.rs` (84) holds the pairs, tie share, and curve. `cli/audit.rs` (117) holds three flags, two refusals, the pointer parser, three table lines, and the moved suggested lines. `core/measure.rs` (63) holds the bias shift, the `Bin` type, and the bins. `audit.rs` (81) holds `Crossed`, `Pooled`, the new row members, and the pointer grouping. The coordinator re-scores.
 
 ## Ratchet
 
-The build commit `411cb67a` raised the ceiling from 65,607 to 66,211 and says what grew and where the builder looked for duplication. The trim removed 7 lines. The merge of `origin/main` brought main's ceiling of 65,801. The help test's move added 1 line: its doc comment. The measured total is 66,399, and the ceiling equals it.
+The build commit `411cb67a` raised the ceiling from 65,607 to 66,211 and says what grew and where the builder looked for duplication. The trim removed 7 lines. The merge of `origin/main` brought main's ceiling of 65,801. The help test's move added 1 line, its doc comment. The clippy fix added 20: two helper functions and two named types. The measured total is 66,419, and the ceiling equals it.
 
 ## Rungs
 

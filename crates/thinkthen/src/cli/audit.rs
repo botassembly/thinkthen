@@ -125,7 +125,10 @@ pub(crate) fn run(arguments: &AuditArguments, writer: impl Write) -> Result<(), 
     write(writer, &text)
 }
 
-fn grade_all(arguments: &AuditArguments) -> Result<(Vec<Row>, Option<Pooled>, String), Refusal> {
+/// The rows, the pooled line when asked, and the `--write` report.
+type Graded = (Vec<Row>, Option<Pooled>, String);
+
+fn grade_all(arguments: &AuditArguments) -> Result<Graded, Refusal> {
     let refusal = |role, cause| Refusal {
         command: "audit",
         role,
@@ -235,13 +238,8 @@ fn table(row: &Row, out: &mut String) {
         row.unresolved,
         row.tied
     ));
-    if let (Some(holding), Some(share), true) = (row.tied_holding_key, row.tie_share, row.tied > 0)
-    {
-        line(format!(
-            "  ties holding the key: {holding} of {}, share {}",
-            row.tied,
-            three(Some(share))
-        ));
+    if let Some(text) = ties_line(row) {
+        line(text);
     }
     if row.true_yes.is_some() {
         line(format!(
@@ -281,23 +279,12 @@ fn table(row: &Row, out: &mut String) {
             calibration.note
         ));
     }
-    if let Some(suggested) = &row.suggested {
-        line(suggested_line(row, suggested));
-        if let Some(Some(steady)) = &suggested.steady {
-            line(steady_line(steady, suggested.seed));
-        }
-        if let Some(Some(crossed)) = &suggested.crossed {
-            let [first, second] = crossed.cuts.map(|cut| python_float_text(rounded(cut)));
-            line(format!(
-                "  crossed: cuts {first} and {second}, each checked on the other part: agreement {}, {} right of {} answered",
-                three(crossed.held.agreement),
-                crossed.held.right,
-                crossed.held.answered
-            ));
-        }
-        if let (true, Some(held)) = (row.true_yes.is_some(), &suggested.held) {
-            line(held_line(&held.at_cut));
-        }
+    for text in row
+        .suggested
+        .iter()
+        .flat_map(|suggested| suggested_lines(row, suggested))
+    {
+        line(text);
     }
     for (place, point) in row.coverage.iter().flatten().enumerate() {
         if place == 0 {
@@ -315,6 +302,40 @@ fn table(row: &Row, out: &mut String) {
             three(point.accuracy)
         ));
     }
+}
+
+/// The ties line of a `choose` or `find` row with ties.
+fn ties_line(row: &Row) -> Option<String> {
+    let (holding, share) = row
+        .tied_holding_key
+        .zip(row.tie_share)
+        .filter(|_| row.tied > 0)?;
+    Some(format!(
+        "  ties holding the key: {holding} of {}, share {}",
+        row.tied,
+        three(Some(share))
+    ))
+}
+
+/// The suggested cut's line, then the steady, crossed, and held-part lines that apply.
+fn suggested_lines(row: &Row, suggested: &Suggested) -> Vec<String> {
+    let mut lines = vec![suggested_line(row, suggested)];
+    if let Some(Some(steady)) = &suggested.steady {
+        lines.push(steady_line(steady, suggested.seed));
+    }
+    if let Some(Some(crossed)) = &suggested.crossed {
+        let [first, second] = crossed.cuts.map(|cut| python_float_text(rounded(cut)));
+        lines.push(format!(
+            "  crossed: cuts {first} and {second}, each checked on the other part: agreement {}, {} right of {} answered",
+            three(crossed.held.agreement),
+            crossed.held.right,
+            crossed.held.answered
+        ));
+    }
+    if let (true, Some(held)) = (row.true_yes.is_some(), &suggested.held) {
+        lines.push(held_line(&held.at_cut));
+    }
+    lines
 }
 
 /// The suggested cut's line, or the sentence that says no cut reaches the target.

@@ -13,6 +13,9 @@ use crate::core::measure::pairs::{Step, curve, pairs};
 use crate::core::measure::rows::{Graded, row};
 use crate::core::measure::{Calibration, MeasureError, calibration};
 
+/// A group's name, and its verb when `--by POINTER` splits a value by verb.
+type Name = (String, Option<Verb>);
+
 /// One group per answer name, else question text, else verb; one per verb;
 /// or one per value of a record field and verb.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -193,7 +196,7 @@ pub(crate) fn audit(
     key: &Key,
     settings: &Settings,
 ) -> Result<Vec<Row>, MeasureError> {
-    let mut groups: Vec<((String, Option<Verb>), Vec<&Answer>)> = Vec::new();
+    let mut groups: Vec<(Name, Vec<&Answer>)> = Vec::new();
     for answer in answers {
         let name = match &settings.by {
             By::Verb => (answer.verb.name().to_owned(), None),
