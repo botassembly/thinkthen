@@ -316,7 +316,7 @@ export const FUNCTIONS = [
     goal: 'A question file saves one question with its threshold, and every place that reads it asks the same question.',
     primitive: 'Not a function',
     line: 'A saved question every function accepts.',
-    lede: 'Save one question in a JSON file. Pass it as <code>@FILE</code> to decide, choose, tag, score, filter, or rank. The hook, the test, and the pipeline then ask the same question.',
+    lede: 'Save one question in a JSON file. Pass it as <code>@FILE</code> to decide, choose, tag, score, filter, or rank. Every place that reads the file then asks the same question.',
     requests: 'None of its own. The function that reads it sends the requests.',
     args: '@FILE in place of the question words, on decide, choose, tag, score, filter, and rank.',
     options: [

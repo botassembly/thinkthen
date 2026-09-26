@@ -19,7 +19,6 @@ const audit = run('beatles/audit', '1-default');
   <p>Take records you have already labeled. Run the question over them with <code>--details</code> and save the answers. Put your labels in a key file, one per record. <code>thinkthen audit</code> grades the saved answers against the key.</p>
   <Terminal run={audit} caption={`Jev was asked whether each song is on Abbey Road. ${auditPage.see['1-default']}`} />
   <p>The <a href={auditPage.route}>audit page</a> runs the same records at the suggested bar.</p>
-  <p>Only a number from your own records tells you how it does on your work.</p>
 
   <h2>The threshold is yours</h2>
   <p>The model reports a probability. Your threshold turns it into an answer. One number is a cut. Two numbers are a band, and the middle is not sure.</p>
