@@ -74,7 +74,6 @@ pub(crate) struct AuditArguments {
 enum Group {
     Question,
     Verb,
-    /// A JSON pointer into each line's input, as typed.
     Field(String),
 }
 
@@ -155,12 +154,6 @@ fn grade_all(arguments: &AuditArguments) -> Result<(Vec<Row>, Option<Pooled>, St
     }
     let pointer =
         Pointer::new(arguments.id.as_str()).map_err(|_| refusal("results", Cause::Pointer))?;
-    let field = match &arguments.by {
-        Group::Field(text) => {
-            Some(Pointer::new(text.as_str()).map_err(|_| refusal("results", Cause::ByPointer))?)
-        }
-        _ => None,
-    };
     let (rule, shown) = rule("--threshold", arguments.threshold.as_deref())
         .map_err(|cause| refusal("results", cause))?;
     let results = lines(&arguments.results).map_err(|cause| refusal("results", cause))?;
@@ -168,12 +161,16 @@ fn grade_all(arguments: &AuditArguments) -> Result<(Vec<Row>, Option<Pooled>, St
     let answers = answer::read(&results, &pointer, Identity::Question)
         .map_err(|e| refusal("results", Cause::Measure(e)))?;
     let key = Key::read(&key_lines).map_err(|e| refusal("key", Cause::Measure(e)))?;
-    let by = match (&arguments.by, &field) {
-        (Group::Verb, _) => By::Verb,
-        (Group::Field(_), Some(field)) => By::Field(
-            group::values(&results, field).map_err(|e| refusal("results", Cause::Measure(e)))?,
-        ),
-        _ => By::Question,
+    let by = match &arguments.by {
+        Group::Question => By::Question,
+        Group::Verb => By::Verb,
+        Group::Field(text) => {
+            let field = Pointer::new(text).map_err(|_| refusal("results", Cause::ByPointer))?;
+            By::Field(
+                group::values(&results, &field)
+                    .map_err(|e| refusal("results", Cause::Measure(e)))?,
+            )
+        }
     };
     let settings = Settings {
         by,

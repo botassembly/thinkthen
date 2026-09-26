@@ -9,7 +9,7 @@ use crate::core::measure::answer::{Answer, Rule, Shown, Verb};
 use crate::core::measure::key::Key;
 use crate::core::measure::levels::LevelCuts;
 use crate::core::measure::optimize::{Measure, Steady};
-use crate::core::measure::pairs::{Step, curve, pairs, pairs_verb};
+use crate::core::measure::pairs::{Step, curve, pairs};
 use crate::core::measure::rows::{Graded, row};
 use crate::core::measure::{Calibration, MeasureError, calibration};
 
@@ -248,14 +248,11 @@ pub(crate) fn audit(
     Ok(rows)
 }
 
-/// The pooled line: every unfailed, labeled answer of a verb that pairs.
-///
-/// `tag` labels stay out, because their errors move together.
+/// The pooled line: every unfailed, labeled answer of a verb that pairs, `tag` labels aside.
 ///
 /// # Errors
 ///
-/// Returns [`MeasureError`] for a key value an answer cannot hold, or an
-/// answer that cannot be read as run.
+/// Returns [`MeasureError`] for a key value or an answer audit cannot read.
 pub(crate) fn pooled(
     answers: &[Answer],
     key: &Key,
@@ -264,8 +261,7 @@ pub(crate) fn pooled(
     let mut labeled: Vec<Graded<'_>> = Vec::new();
     for answer in answers {
         if !answer.failed
-            && answer.verb != Verb::Tag
-            && pairs_verb(answer.verb)
+            && matches!(answer.verb, Verb::Decide | Verb::Choose | Verb::Find)
             && let Some(want) = key.want(answer)?
         {
             labeled.push((answer, want));
