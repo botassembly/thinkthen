@@ -216,9 +216,7 @@ def check(case: dict) -> str | None:
         base = backend.base(f"case/{case['id']}")
         success = case["expect"]["success"]
         kind = success["kind"]
-        if "counters" in success:
-            got, wanted = counters(case, base), success["counters"]
-        elif kind == "relate":
+        if kind == "relate":
             got, wanted = related(case, base), expected(case)[0]
         elif kind == "recognize":
             got, wanted = relations(case, base), relations_wanted(case)
@@ -232,7 +230,10 @@ def check(case: dict) -> str | None:
             got, wanted = decide(case, base), expected(case)
         elif kind == "single":
             pairs = zip(single(case, base), single_wanted(case, base), strict=True)
-            return next((f"{name}: wanted {one[name]!r}, got {other[name]!r}" for other, one in pairs for name in one if one[name] != other[name]), None)
+            why = next((f"{name}: wanted {one[name]!r}, got {other[name]!r}" for other, one in pairs for name in one if one[name] != other[name]), None)
+            if why or "counters" not in success:
+                return why
+            got, wanted = counters(case, base), success["counters"]  # last, on a cache folder of their own
         else:
             raise LookupError(f"no runner for the kind {kind!r}")
         return None if got == wanted else f"wanted {wanted!r}, got {got!r}"
