@@ -22,7 +22,7 @@ backend_start
 # Every library file, unpacked, holds neither the builder's home nor the PostgreSQL test probe. The
 # checks' own scans read their builds, and this one reads the files a user installs.
 scan() {
-	into=$(mktemp -d "$backend/scan.XXXXXX")
+	into=$(mktemp -d "$backend/scan.XXXXXX") || return 1
 	case $1 in
 	*.whl) python3 -m zipfile -e "$1" "$into" ;;
 	*.gem) tar -xOf "$1" data.tar.gz | tar -xzf - -C "$into" ;;
@@ -34,7 +34,7 @@ scan() {
 
 # The command: its version line by path, then the first-run block with it first on PATH.
 command_check() {
-	prefix=$(mktemp -d "$backend/command.XXXXXX")
+	prefix=$(mktemp -d "$backend/command.XXXXXX") || return 1
 	tar -xzf "$1" -C "$prefix"
 	[ "$("$prefix/thinkthen" --version)" = "thinkthen $V" ] ||
 		{ echo "release-smoke: $1 reports $("$prefix/thinkthen" --version)" >&2; return 1; }
