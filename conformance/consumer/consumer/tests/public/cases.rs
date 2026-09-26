@@ -332,7 +332,9 @@ fn annotated(engine: &Engine, set: &str, texts: &[&str], success: &Value) -> Che
     let mut failed = 0;
     for expected in success["answers"].as_array().into_iter().flatten() {
         let exchange = usize::try_from(expected["exchange"].as_u64().unwrap_or_default());
-        let record = &records[exchange.unwrap_or_default().min(records.len().saturating_sub(1))];
+        let record = &records[exchange
+            .unwrap_or_default()
+            .min(records.len().saturating_sub(1))];
         let named = record
             .values()
             .iter()

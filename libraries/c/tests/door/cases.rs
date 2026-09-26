@@ -136,7 +136,9 @@ fn plan<'a>(backend: &'a Backend, case: &Members, script: &mut Script) -> Checke
         ("relate", _) => related(script, &base, case, question, &success),
         ("annotate", _) => {
             let set = case.get("question_set").map_or("{}", |raw| raw.get());
-            let whole = case.get("record").map(|record| json!([record.get()]).to_string());
+            let whole = case
+                .get("record")
+                .map(|record| json!([record.get()]).to_string());
             let records = whole.as_deref().unwrap_or(&records);
             let request = format!(r#"{{"annotate":{set},"records":{records}}}"#);
             script.ask("call", &[&base, &request]);

@@ -12,8 +12,8 @@ use crate::core::pointer::Pointer;
 use crate::core::question::Question;
 use crate::core::question_file::{QuestionFile, QuestionFileError, Typed, Verb, resolve};
 use crate::core::records::{Framing, Reading, ReadingError, RecordError};
-use crate::core::text::Evidence;
 use crate::core::render::{RenderError, json_line};
+use crate::core::text::Evidence;
 use crate::core::threshold::{Threshold, ThresholdError};
 
 /// Why one group's part of a record could not be read.

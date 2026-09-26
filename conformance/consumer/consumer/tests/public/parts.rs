@@ -57,7 +57,9 @@ fn a_none_question_takes_2_to_254_units() {
     let last = found.candidates().last().expect("a candidate");
     assert!(last.is_none() && found.candidates().len() == 255);
     assert_eq!(found.selected().map(String::as_str), Some("unit 0"));
-    engine.find(&plain, units(255)).expect("a plain find of 255");
+    engine
+        .find(&plain, units(255))
+        .expect("a plain find of 255");
     assert_eq!(backend.count(), 2);
 }
 
@@ -71,7 +73,12 @@ fn listening() -> (Listener, Arc<Mutex<Vec<Value>>>) {
             .as_object()
             .into_iter()
             .flatten()
-            .map(|(name, _)| (name.clone(), serde_json::json!({"type": "noul", "noul": 0.9})))
+            .map(|(name, _)| {
+                (
+                    name.clone(),
+                    serde_json::json!({"type": "noul", "noul": 0.9}),
+                )
+            })
             .collect();
         let reply = serde_json::json!({"model": request["model"], "answers": answers});
         kept.lock().expect("the body list").push(request);

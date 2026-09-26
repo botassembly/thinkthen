@@ -26,10 +26,12 @@ fn a_later_group_over_the_profile_sends_nothing() {
         r#"{"version":1,"questions":{"summary":{"decide":"Is this concise?","on":"/summary"},"body":{"decide":"Does this ask for a refund?","on":"/body"}}}"#,
     )
     .expect("set");
-    let record = Evidence::new(r#"{"summary":"Short note.","body":"Please refund me."}"#)
-        .expect("record");
+    let record =
+        Evidence::new(r#"{"summary":"Short note.","body":"Please refund me."}"#).expect("record");
     let plan = |places: &[usize]| {
-        let questions = places.iter().map(|place| set.questions()[*place].question().clone());
+        let questions = places
+            .iter()
+            .map(|place| set.questions()[*place].question().clone());
         Ok(Plan::new(
             set.group_evidence(places, &record).expect("a part"),
             ModelName::new("jev-latest").expect("model"),

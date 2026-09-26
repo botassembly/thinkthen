@@ -214,7 +214,12 @@ fn run(engine: &Engine, call: &Call, options: CallOptions<'_>) -> Answered {
             Value::from(rows).to_string()
         }
         "find" => found(engine, Question::find(spec)?, text, options)?,
-        "find_none" => found(engine, Question::find(spec)?.offering_none()?, text, options)?,
+        "find_none" => found(
+            engine,
+            Question::find(spec)?.offering_none()?,
+            text,
+            options,
+        )?,
         "annotate" => annotated(engine, spec, text, options)?,
         "details" => engine
             .details_with(detail(&question(spec)?), text, options)?

@@ -290,13 +290,13 @@ fn plan_for(
     if group.is_empty() {
         return Err(Failure::Defect("an annotate group is empty"));
     }
-    let evidence = set
-        .group_evidence(group, &base.evidence(record)?)
-        .map_err(|error| match error {
-            PartError::Reading(error) => Failure::from(error),
-            PartError::Render(error) => Failure::from(error),
-            PartError::Record(error) => Failure::from(error),
-        })?;
+    let evidence =
+        set.group_evidence(group, &base.evidence(record)?)
+            .map_err(|error| match error {
+                PartError::Reading(error) => Failure::from(error),
+                PartError::Render(error) => Failure::from(error),
+                PartError::Record(error) => Failure::from(error),
+            })?;
     let questions = group
         .iter()
         .map(|place| {

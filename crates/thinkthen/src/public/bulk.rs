@@ -166,19 +166,14 @@ impl Engine {
             return Err(Error::defect("a find question held no text"));
         };
         let engine = self.asking(question)?;
-        let find = Find::new(
-            text.clone(),
-            &texts,
-            engine.backend().model().clone(),
-            none,
-        )
-        .map_err(|_| {
-            Error::usage(if none {
-                "a find question offering none takes 2 to 254 units"
-            } else {
-                "find takes 2 to 255 units"
-            })
-        })?;
+        let find = Find::new(text.clone(), &texts, engine.backend().model().clone(), none)
+            .map_err(|_| {
+                Error::usage(if none {
+                    "a find question offering none takes 2 to 254 units"
+                } else {
+                    "find takes 2 to 255 units"
+                })
+            })?;
         let stop = Stop::begin(options)?;
         let found = stop.run(|cancel| engine.find(&find, cancel).map_err(Error::from))?;
         Found::new(units, none, &found)
@@ -306,7 +301,9 @@ fn annotated(
             .iter()
             .find(|(_, held)| held == places)
             .map(|(part, _)| part.clone())
-            .ok_or(crate::engine::error::Error::Defect("an annotate group has no part"))?;
+            .ok_or(crate::engine::error::Error::Defect(
+                "an annotate group has no part",
+            ))?;
         let questions = places
             .iter()
             .filter_map(|place| set.questions().get(*place));
