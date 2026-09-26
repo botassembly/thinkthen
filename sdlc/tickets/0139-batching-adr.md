@@ -58,7 +58,7 @@ Status line: accepted 2026-09-26 on Ian's rulings, built by the batching tickets
    1. The batch shape: the quote prefix, the evidence object `{"records":[…]}` without a context, the context as evidence with one, equal evidence asked once, and a batch of one without a context sending today's bytes (design section 1).
    2. Where a batch closes: fill to the limit, the content cut at SHA-256 mod 4,096 with its exact byte rule, the size, the profile limits and the 96,000-byte ceiling, the 50 ms pause and when it is off, and end of input. What an insert moves (section 2).
    3. The setting: `max` or a whole number of at least 1, `--batch 0` and `--batch fill` a usage error at exit 2 (sections 2 and 6).
-   4. Precedence: the typed value, then the environment tier, then the question file, then the default. The environment tier holds `THINKTHEN_BATCH`, the engine setting and the SQL `SET`. It matches ADR 0007's profile order (section 6). `specification/settings.md` carries the row, and ticket C1 owns that page.
+   4. Precedence, in four tiers: the typed value, then the environment, then the question file, then the default. Only a per-call value counts as typed: `--batch` or a per-call `batch=`. The environment tier holds `THINKTHEN_BATCH`, the engine setting and the SQL `SET`. Where the configuration file applies, it sits between the question file and the default (design section 6, restated). The ADR states these tiers directly and cites no older order. ADR 0007's profile order is stale: nothing reads `THINKTHEN_PROFILE`, and ADR 0010 and ticket 0007 removed the profile map. Ticket C1 owns `specification/settings.md`. C1 lists `batch`, `context` and `facts` in its "Settings on the way" list below the table, each with what it does and its designed default. Each moves into the table when the ticket that builds it lands: `batch` with B4, `context` with B7, and `facts` with B5. B8, B9, B10 and the library and SQL tickets B12a to B13e update the row's surface cells as they land.
    5. Order, jobs, cache and replay: `--jobs N` means N batches in flight, 1 to 32, default 4. The cache key is the batch's request digest. `--jobs` changes no batch (section 3).
    6. Failure: one failed request fails its batch. The stop line names the range and echoes no record. A retried status resends the whole batch. No batch is split and resent (section 4).
    7. Which functions batch, and the one-record-a-request cases (section 5 table).
@@ -96,7 +96,7 @@ Settled pages keep today's sentence and gain the new rule after it, in one fixed
 | `channels.md` | 99 | Item 13: record-mode `--dry-run` plans the first batch |
 | `question-file.md` | 3 | Status adds ADR 0048 |
 | `question-file.md` | new row after 92 | Item 3: the batch setting, `--batch N`, key `batch`, default `max`, refusals `0`, a fraction, and any text but `max` |
-| `question-file.md` | new paragraph after 100 | Items 4 and 8: `--batch` replaces the file's `batch`, as the single values on line 100 replace theirs. `batch` takes four tiers: the typed value, then the environment tier, then the file, then the default. It names the setting the threshold was tuned at, as `profile` names the backend. It stays out of the digest. A question set carries at most one top-level `batch`, as it carries one `profile`. Line 98's ruling stands for every other setting |
+| `question-file.md` | new paragraph after 100 | Items 4 and 8: `--batch` replaces the file's `batch`, as the single values on line 100 replace theirs. `batch` takes four tiers: the typed value, then the environment, then the file, then the default. Only a per-call value counts as typed. Where the configuration file applies, it sits between the file and the default. It names the setting the threshold was tuned at, as `profile` names the backend. It stays out of the digest. A question set carries at most one top-level `batch`, as it carries one `profile`. Line 98's ruling stands for every other setting |
 | `backends.md` | 3, 21 | Status adds ADR 0048. Item 2: line 21's last sentence gains that a batched record plan at the built-in address also closes at the ceiling |
 | `backends.md` | new paragraph after 21 | Items 2 and 6: profile limits close batches, a retried status resends the whole batch, and a batch is never split and resent |
 
@@ -138,7 +138,7 @@ Each is the owner's call under Ian's rulings. Ian can overturn any of them.
 | --- | --- |
 | A line ticket 0138 also edits | 0138 changes `backends.md` lines 65 and 77 and `question-file.md` lines 59 and 90. B0 edits `backends.md` lines 3 and 21 and inserts after 21. It inserts in `question-file.md` after 92 and after 100. No hunk touches another. Whichever lands second merges `origin/main` first |
 | `records.md` line 129, which J1 edits | Untouched. B0's `jobs` paragraph goes after line 133 |
-| `specification/settings.md`, which C1 writes | Untouched. The ADR says C1's page carries the `batch`, `context` and `facts` rows |
+| `specification/settings.md`, which C1 writes | Untouched. C1 lands after B0. The ADR says C1 lists `batch`, `context` and `facts` under "Settings on the way", and B4, B7 and B5 move them into the table when they land |
 | `backends.md` line 17, `recognize.md`, `relate.md` | Untouched. R0 and J1 own them |
 | `result.md`, which a test reads | `contract_pages_name_the_tuned_for_key_and_never_the_old_one` (`crates/thinkthen/tests/backend/profile.rs:495`) requires exactly one `{"tuned_for":NAME,"running":NAME}` and no `"calibrated"` or `calibrated:`. The `batch_warning` row writes `{"tuned_for":1,"running":"max"}`, which that shape does not match, and never the old key |
 | An ADR number another branch takes first | Stop rule 5 |
@@ -206,7 +206,7 @@ Contract 2; state and timing 0; reach 2; proof 0; cost of error 1; total 5. Fina
 ## Deferred gaps
 
 - `question-file.schema.json` gains `batch` in B4, B8 and B9 (decision 4).
-- `specification/settings.md` gains the `batch`, `context` and `facts` rows in C1.
+- `specification/settings.md` lists `batch`, `context` and `facts` under "Settings on the way" from C1. B4, B7 and B5 move them into the table.
 - The marked sentences stay on the pages until the tickets that build their items land. The last batching ticket empties the grep.
 - `batch` on an `annotate` question set waits for B10.
 - The library `facts` spelling on a bare-value call waits for the run-facts ADR in B12a.
@@ -231,4 +231,4 @@ None. `sdlc/issues/2026-09-26-batching-design.md` stays open until its last tick
 - Keeps: Every behavior, help line, fixture, schema and test. Every accepted ADR sentence, marked and not deleted. Every Settled page's current sentence, beside its marked replacement. The question digest's canonical form.
 - Changes: A new ADR 0048 holds the batching rulings. ADRs 0007, 0008, 0010, 0032 and 0040 carry markers and dated amendment sections. `roadmap.md` drops two held rows. `records.md`, `result.md`, `channels.md`, `question-file.md` and `backends.md` state each new rule beside today's, with its building ticket.
 - Proof: The item-by-item review against the design and the amendment table. The marker grep and the `spec/` grep. `lint` and the contract-page test on `result.md`, with plants (a) to (c) each turning one red. Plant (c) tests this ticket file.
-- Defers: The schema key to B4, B8, B9 and B10. The settings rows to C1. The library `facts` spelling to B12a. SQL per-call facts. Removing each marker to the ticket that builds its item.
+- Defers: The schema key to B4, B8, B9 and B10. The "Settings on the way" lines to C1, and their table rows to B4, B5 and B7. The library `facts` spelling to B12a. SQL per-call facts. Removing each marker to the ticket that builds its item.
