@@ -93,6 +93,15 @@ After the code review fixes, the trims, and a second merge of `origin/main`, the
 | spec | pass | 25 s |
 | surfaces | pass | 637 s |
 
+`origin/main` moved again when ticket 0137 landed. After a third merge, the ceiling is 67378: main's 66668 plus this ticket's 710. The rungs ran again on merge commit `58bf66ed`:
+
+| Rung | Result | Wall time |
+|---|---|---|
+| lint | pass | 199 s |
+| test | pass | 346 s |
+| spec | pass | 238 s |
+| surfaces | pass | 887 s |
+
 Lane size after the ladder: 9.2G by `du -sh`, and 9.3G after the rerun.
 
 ## Incident
