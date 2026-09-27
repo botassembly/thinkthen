@@ -59,7 +59,7 @@ pub(super) fn bars(
             .filter_map(|lines| spec.question(lines).sha256().ok())
             .collect()
     } else {
-        let file = QuestionFile::parse(&text).map_err(|_| Cause::NotQuestions)?;
+        let (file, _batch) = QuestionFile::parse_top(&text).map_err(|_| Cause::NotQuestions)?;
         let resolved = resolve(file.verb(), None, Some(&file), &Typed::default())
             .map_err(|_| Cause::NotQuestions)?;
         let digest = resolved.question().and_then(|question| {

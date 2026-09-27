@@ -25,6 +25,14 @@ pub(crate) struct Judged {
     pub(crate) profile_mismatch: Option<Mismatch>,
 }
 
+impl Judged {
+    /// One record's row, as the scheduler counts it.
+    pub(crate) fn completed(self) -> Completed<Self, Failure> {
+        let (replayed, partial) = (self.replayed, self.partial_failure);
+        Completed::one(self, replayed, partial)
+    }
+}
+
 impl fmt::Debug for Judged {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
@@ -119,7 +127,7 @@ impl Output<'_> {
         }
     }
 
-    const fn holds(&self) -> bool {
+    pub(crate) const fn holds(&self) -> bool {
         matches!(*self, Self::Ordered { .. })
     }
 }
@@ -167,14 +175,19 @@ where
             thread::spawn(move || read_records(chunks, &requests, &events));
         },
         &|value| {
-            row(value).map(|judged| Completed {
-                replayed: judged.replayed,
-                partial_failure: judged.partial_failure,
-                value: judged,
-            })
+            row(value).map(Judged::completed)
         },
         |judged| output.take(judged),
     )?;
+    ended(outcome, recording, output)
+}
+
+/// The exit code of a run that completed, or the failure that stopped it.
+pub(crate) fn ended(
+    outcome: RunOutcome<Failure>,
+    recording: bool,
+    output: &mut Output<'_>,
+) -> Result<ExitCode, Failure> {
     match outcome {
         RunOutcome::Complete => {
             output.ended()?;

@@ -1,4 +1,5 @@
-//! One record to one request, and one reply to one row.
+//! One record to one request, and one reply to one row. `batched.rs` sends
+//! `decide`, `filter` and `rank` over a stream in batches.
 //!
 //! `judge.rs` decides what a run keeps and what view it prints in.
 
@@ -14,7 +15,7 @@ use crate::core::{
 use crate::args::Common;
 use crate::edge::{self, Environment};
 use crate::engine::Width;
-use crate::engine::facade::{self, Engine, Settings, Storage};
+use crate::engine::facade::{self, Engine, Judgment, Settings, Storage};
 use crate::failure::Failure;
 use crate::judge::{Asked, Keeping, View};
 use crate::profile::{self, Mismatch};
@@ -22,6 +23,7 @@ use crate::result_json::{Run, decision};
 use crate::schedule::{self, Judged, Output};
 use crate::table::{Kind as TableKind, Rows as TableRows};
 
+mod batched;
 mod folders;
 
 pub(crate) use folders::Folders;
@@ -129,6 +131,7 @@ pub(crate) fn run(
         settled,
         view,
         keeping,
+        batch,
     } = asked;
     let threshold = settled.threshold();
     let view = view.checked()?;
@@ -153,6 +156,10 @@ pub(crate) fn run(
         return Err(Failure::QuietOverRecords);
     }
     schedule::jobs_of(common.jobs, reading.streams())?;
+    let batch = batch
+        .map(|tiers| tiers.setting(environment, reading.streams()))
+        .transpose()?
+        .flatten();
     let source = edge::source(common.input.as_deref(), input)?;
     let configuration = JudgingInput {
         common,
@@ -176,6 +183,10 @@ pub(crate) fn run(
             },
         ),
     };
+
+    if let Some(setting) = batch {
+        return batched::run(configuration, &reading, source, setting, output);
+    }
 
     if let Some(kind) = table_kind(common) {
         return over_table(configuration, &reading, source, kind, output);
@@ -331,8 +342,20 @@ fn plan_record(
     )
     .map_err(|_| Failure::Defect("a plan of one question asks nothing"))?;
     let _prepared = facade::split(backend, profile, &plan)?;
+    print_plan(backend, mismatch, reading, planning, &plan, writer)
+}
+
+/// Print the plan document of one checked plan.
+fn print_plan(
+    backend: &Backend,
+    mismatch: &Mismatch,
+    reading: &Reading,
+    planning: &Planning<'_>,
+    plan: &Plan,
+    writer: impl Write,
+) -> Result<ExitCode, Failure> {
     mismatch.print_once()?;
-    let document = PlanDocument::of(backend, &plan)
+    let document = PlanDocument::of(backend, plan)
         .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
     let document = if reading.streams() {
         document.reading(reading)
@@ -439,6 +462,18 @@ impl Judging<'_> {
             sending.evidence,
             self.environment.cancel(),
         )?;
+        self.row_of(reading, sending.record, sending.question, &judged, arrived)
+    }
+
+    /// Build the line one answered record prints. Both paths share it.
+    fn row_of(
+        &self,
+        reading: &Reading,
+        record: Record,
+        question: Question,
+        judged: &Judgment,
+        arrived: Option<&[u8]>,
+    ) -> Result<Judged, Failure> {
         let (outcome, replayed) = (judged.outcome, judged.answered.replayed);
         let probability = judged.answer.yes();
         let printed =
@@ -455,11 +490,11 @@ impl Judging<'_> {
                     tuned_for: self.tuned_for_profile(),
                     warning: self.mismatch.warning(),
                 };
-                let input = self.streams.then_some(sending.record);
+                let input = self.streams.then_some(record);
                 Some(decision(
                     run,
-                    &judged,
-                    sending.question,
+                    judged,
+                    question,
                     self.threshold,
                     shown,
                     input,
@@ -469,7 +504,7 @@ impl Judging<'_> {
             } else if self.keeping.streams_only() {
                 Some(match arrived {
                     Some(bytes) => reading.as_it_arrived(bytes)?.to_owned(),
-                    None => json_line(&sending.record)?,
+                    None => json_line(&record)?,
                 })
             } else if self.view.raw {
                 // One line stands for one record, so an unresolved record prints
@@ -482,7 +517,7 @@ impl Judging<'_> {
             } else if self.view.quiet {
                 None
             } else if self.streams {
-                Some(json_line(&RecordValue::new(sending.record, judged.value))?)
+                Some(json_line(&RecordValue::new(record, judged.value.clone()))?)
             } else {
                 Some(json_line(&judged.value)?)
             };

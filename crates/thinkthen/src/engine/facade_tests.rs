@@ -153,11 +153,7 @@ fn bulk(engine: &Engine, texts: &[&'static str], batch: &Cancel, each: &Cancel) 
         batch,
         reader(texts.to_vec()),
         &|text: &&str| {
-            ask(engine, text, each).map(|yes| Completed {
-                value: yes,
-                replayed: false,
-                partial_failure: false,
-            })
+            ask(engine, text, each).map(|yes| Completed::one(yes, false, false))
         },
         |row| {
             rows.push(row);

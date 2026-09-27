@@ -51,9 +51,27 @@ impl Usage {
         })
     }
 
+    /// The record at `position` of `records`' even share of these counts.
+    #[must_use]
+    pub(crate) fn share(self, records: usize, position: usize) -> Self {
+        Self {
+            input_tokens: share(self.input_tokens, records, position),
+            output_tokens: share(self.output_tokens, records, position),
+        }
+    }
+
     pub(crate) const fn token_counts(self) -> (u64, u64) {
         (self.input_tokens, self.output_tokens)
     }
+}
+
+/// The record at `position` of `records`' even share of `total`, with the
+/// remainder going to the earliest records, by ADR 0048 item 9.
+#[must_use]
+pub(crate) fn share(total: u64, records: usize, position: usize) -> u64 {
+    let wide = |count: usize| u64::try_from(count).unwrap_or(u64::MAX);
+    let records = wide(records).max(1);
+    total / records + u64::from(wide(position) < total % records)
 }
 
 /// Whether recordings answered and which logical requests made one result.

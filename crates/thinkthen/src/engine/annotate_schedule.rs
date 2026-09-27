@@ -58,7 +58,7 @@ struct Row<S, A, G> {
 
 struct Run<S, A, W, G, R, E> {
     rows: BTreeMap<usize, Row<S, A, G>>,
-    ready: BTreeMap<usize, Completed<R>>,
+    ready: BTreeMap<usize, Completed<R, E>>,
     pending: VecDeque<Task<W>>,
     failures: BTreeMap<(usize, usize), E>,
     next_row: usize,
@@ -137,7 +137,7 @@ pub(crate) fn run<T, S, A, W, G, R, E>(
     prepare: impl Fn(T) -> Result<Prepared<S, A, W>, E>,
     answer: &(impl Fn(W) -> Result<G, E> + Sync),
     accept: impl Fn(&mut A, G) -> Result<(), E>,
-    finish: impl Fn(S, A) -> Result<Completed<R>, E>,
+    finish: impl Fn(S, A) -> Result<Completed<R, E>, E>,
     mut emit: impl FnMut(R) -> Result<bool, E>,
     defect: fn(&'static str) -> E,
     stopped: impl Fn(Error) -> E + Sync,
@@ -246,7 +246,7 @@ fn receive<T, S, A, W, G, R, E>(
     streams: bool,
     prepare: &impl Fn(T) -> Result<Prepared<S, A, W>, E>,
     accept: &impl Fn(&mut A, G) -> Result<(), E>,
-    finish: &impl Fn(S, A) -> Result<Completed<R>, E>,
+    finish: &impl Fn(S, A) -> Result<Completed<R, E>, E>,
     defect: fn(&'static str) -> E,
 ) -> Result<(), E> {
     match event {
@@ -448,7 +448,7 @@ mod tests {
                     answers.push(answer);
                     Ok(())
                 },
-                |_, _| -> Result<crate::engine::schedule::Completed<()>, &'static str> {
+                |_, _| -> Result<crate::engine::schedule::Completed<(), &'static str>, &'static str> {
                     unreachable!("a cancelled group leaves the row unfinished")
                 },
                 |_| Ok(true),
@@ -499,7 +499,7 @@ mod tests {
                 },
                 &|_: ()| -> Result<(), &'static str> { unreachable!("no work can start") },
                 |_, _| Ok(()),
-                |_, _| -> Result<crate::engine::schedule::Completed<()>, &'static str> {
+                |_, _| -> Result<crate::engine::schedule::Completed<(), &'static str>, &'static str> {
                     unreachable!("no row can finish")
                 },
                 |_| Ok(true),

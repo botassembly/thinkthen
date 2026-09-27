@@ -217,9 +217,25 @@ pub(crate) struct DecideArguments {
     #[arg(long, hide = true)]
     pub(crate) raw: bool,
 
+    /// How many records of a stream share one request.
+    #[command(flatten)]
+    pub(crate) batching: Batching,
+
     /// The options every judging verb takes.
     #[command(flatten)]
     pub(crate) common: Common,
+}
+
+/// The batch size of `decide`, `filter` and `rank` over a stream.
+#[derive(Args, Debug)]
+pub(crate) struct Batching {
+    /// Send at most N records of a stream in one request, or `max`. [default: max]
+    ///
+    /// `max` fills each request to the backend's limits. `--batch 1` asks one
+    /// record a request, as before batching. It beats `THINKTHEN_BATCH`, which
+    /// beats a question file's `batch`.
+    #[arg(long, value_name = "N|max", hide_short_help = true)]
+    pub(crate) batch: Option<String>,
 }
 
 /// The two texts that say what a yes and a no mean, which every yes/no verb takes.
@@ -274,6 +290,10 @@ pub(crate) struct FilterArguments {
     #[command(flatten)]
     pub(crate) refused: Refused,
 
+    /// How many records of a stream share one request.
+    #[command(flatten)]
+    pub(crate) batching: Batching,
+
     /// The options every judging verb takes.
     #[command(flatten)]
     pub(crate) common: Common,
@@ -306,6 +326,10 @@ pub(crate) struct RankArguments {
     /// The two views `rank` refuses in its own words.
     #[command(flatten)]
     pub(crate) refused: Refused,
+
+    /// How many records of a stream share one request.
+    #[command(flatten)]
+    pub(crate) batching: Batching,
 
     /// The options every judging verb takes.
     #[command(flatten)]

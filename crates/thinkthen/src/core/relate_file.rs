@@ -148,7 +148,7 @@ impl RelateSpec {
             return Err(RelateConfigError::Shape);
         };
         if !members.iter().any(|(name, _)| name == "relate")
-            && (QuestionFile::parse(text).is_ok() || RecognizeSpec::parse(text).is_ok())
+            && (QuestionFile::parse_top(text).is_ok() || RecognizeSpec::parse(text).is_ok())
         {
             return Err(RelateConfigError::WrongVerb);
         }

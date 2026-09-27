@@ -52,6 +52,15 @@ impl Setting {
             .then(|| text.parse().ok().map(Self::Records))
             .flatten()
     }
+
+    /// A question file's `batch`: the string `max` or a whole number of at least 1.
+    pub(crate) fn of_json(value: &Json) -> Option<Self> {
+        match value {
+            Json::String(text) if text == "max" => Some(Self::Max),
+            Json::Number(number) => Self::parse(&number.to_string()),
+            _ => None,
+        }
+    }
 }
 
 /// One record as a batch reads it: today's evidence for a batch of one, and

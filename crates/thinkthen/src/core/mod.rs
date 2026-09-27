@@ -47,7 +47,7 @@ pub(crate) use crate::core::backend_profile::LimitKind;
 pub(crate) use crate::core::backend_profile::{
     BackendProfile, ProfileError, ProfileLimit, ProfileName,
 };
-pub(crate) use crate::core::batch::BatchRecord;
+pub(crate) use crate::core::batch::{Batch, BatchError, BatchRecord, Batcher, Setting};
 #[cfg(test)]
 pub(crate) use crate::core::digest::question_sha256;
 pub(crate) use crate::core::digest::question_sha256_with_profile;
@@ -90,7 +90,7 @@ pub(crate) use crate::core::result::SCHEMA as RESULT_SCHEMA;
 pub(crate) use crate::core::result::{
     AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure,
     AnnotatedValue, DecisionResult, Meta, NamedValues, ProfileWarning, RecordValue, RequestMeta,
-    Usage,
+    Usage, share,
 };
 pub(crate) use crate::core::text::{
     Description, Evidence, Meaning, ModelName, QuestionText, Withheld,
