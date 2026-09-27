@@ -15,7 +15,7 @@ use crate::core::measure::optimize::Bar;
 use crate::core::measure::rows::number;
 use crate::core::measure::splice::splice;
 use crate::core::{
-    Json, ModelName, QuestionFile, QuestionSet, RecognizeSpec, RelateSpec, Typed,
+    BlankTextError, Json, ModelName, QuestionFile, QuestionSet, RecognizeSpec, RelateSpec, Typed,
     question_sha256_with_profile, recognize_sha256, resolve,
 };
 
@@ -103,7 +103,8 @@ pub(super) fn bars(
     if new != text && !set {
         match model(results) {
             Ok(model) => {
-                let value = serde_json::to_string(model).map_err(|_| Cause::NotQuestions)?;
+                let value =
+                    serde_json::to_string(model.as_str()).map_err(|_| Cause::NotQuestions)?;
                 new = splice(&new, &["model"], &value)
                     .ok_or(Cause::NotQuestions)?
                     .0;
@@ -120,8 +121,9 @@ pub(super) fn bars(
     Ok(report)
 }
 
-/// The one model every results line names in `meta.model`, or why no model is written.
-fn model(results: &[Line]) -> Result<&str, &'static str> {
+/// The one model every results line names in `meta.model`, trimmed as a
+/// later run reads it, or why no model is written.
+fn model(results: &[Line]) -> Result<ModelName, &'static str> {
     let named = results
         .iter()
         .map(|(_, line)| line.member("meta")?.member("model")?.as_str())
@@ -129,9 +131,10 @@ fn model(results: &[Line]) -> Result<&str, &'static str> {
         .ok_or("a result names no model")?;
     let mut named = named.into_iter();
     match (named.next(), named.next()) {
-        (Some(model), None) => ModelName::reported(model)
-            .map(|_| model)
-            .map_err(|_| "a result names a blank model"),
+        (Some(model), None) => ModelName::new(model).map_err(|error| match error {
+            BlankTextError::ModelControl => "a result names a model with a control character",
+            _ => "a result names a blank model",
+        }),
         _ => Err("the results name more than one model"),
     }
 }
