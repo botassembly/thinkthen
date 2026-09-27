@@ -158,9 +158,18 @@ Add a check over `dist/` that fails on `</table>` followed by a start tag. Run i
 
 Done when: the build fails on the smallest case above and passes on main.
 
+## 8. Bring two reference lines up to Quick Fix qf-command-edges-and-prune
+
+Quick Fix qf-command-edges-and-prune changed two rules that `site/src/pages/reference.astro` states. `sdlc/records/qf-command-edges-and-prune.md` records both.
+
+- `site/src/pages/reference.astro:32` says `--timeout` "Covers one attempt, connect to last byte. 0 is a usage error." The command now takes a whole number from 1 to 86400, and anything else exits 2 with `--timeout takes a whole number of seconds from 1 to 86400`. `specification/backends.md` and the Timeout row of `specification/settings.md` state it.
+- `site/src/pages/reference.astro:267` says prune refuses the alias passed to `--model`. Prune now also refuses a model that no reply in the folder names, so a typo deletes nothing. An empty folder accepts any name. `specification/recording.md`, "Pruning a cache", states it.
+
+Done when: both lines match the specification.
+
 ## Order
 
-Items 1, 2, 3, 4, and 7 can go now. Item 5 can repoint the pull script now for every landed surface. Its final run waits for DuckDB 0110 and pandas 0122. Item 6 waits for Beatles Bench ticket 0006. Regenerate every sample once, after DuckDB and pandas land, before the site publishes.
+Items 1, 2, 3, 4, 7, and 8 can go now. Item 5 can repoint the pull script now for every landed surface. Its final run waits for DuckDB 0110 and pandas 0122. Item 6 waits for Beatles Bench ticket 0006. Regenerate every sample once, after DuckDB and pandas land, before the site publishes.
 
 ## Already fixed
 
