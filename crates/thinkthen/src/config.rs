@@ -122,7 +122,7 @@ impl Config {
     }
 }
 
-/// Names the first field that breaks the closed shape, and never its value.
+/// Names the first field in name order that breaks the closed shape, and never its value.
 fn shape_fault(bytes: &[u8]) -> &'static str {
     use serde_json::Value;
     let Ok(Value::Object(fields)) = serde_json::from_slice::<Value>(bytes) else {

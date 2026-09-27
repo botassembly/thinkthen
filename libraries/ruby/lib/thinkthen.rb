@@ -52,7 +52,7 @@ module ThinkThen
     def inspect
       fields = each_pair.map do |name, value|
         shown = if value.nil? then "nil"
-                elsif TEXT.include?(name) then value.is_a?(String) ? "<#{value.bytesize} bytes withheld>" : "<withheld>"
+                elsif TEXT.include?(name) then "<#{value.to_s.bytesize} bytes withheld>"
                 elsif value.is_a?(Array) then value.size.to_s
                 else value.inspect
                 end

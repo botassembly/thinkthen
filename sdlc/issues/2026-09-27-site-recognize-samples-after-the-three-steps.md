@@ -14,6 +14,7 @@ Ticket 0147 builds `recognize` in three steps, as ADR 0056 decides. Every recogn
 - `site/src/data/catalog.mjs`, the `recognize` entry. Its `requests` line and its `how` steps describe the old detection and kind questions, the kind vote and the old strength. The recognize page, `specification/recognize.md`, states the three steps plainly.
 - Any recognize entry under `site/recordings`.
 - `site/examples/functions/recognize/sqlite.sql` calls `thinkthen_relations`, which SQLite does not register, and `duckdb.sql` calls DuckDB's `thinkthen_relations` scalar in `FROM`. `closed/2026-09-26-three-items-from-the-named-answers-site-landing.md` item 3 gives the right call for each database.
+- `site/examples/functions/recognize/ruby.rb` calls `one.name` on a `RecognizedEntity`, whose field is `text`. The sample raises `NoMethodError`, and the site skips `.rb` samples, so no check catches it.
 
 ## What to do
 
