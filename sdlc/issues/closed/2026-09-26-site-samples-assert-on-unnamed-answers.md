@@ -1,6 +1,6 @@
 # Site samples assert on unnamed answers
 
-Status: Open.
+Status: Closed on 2026-09-27. Site commit `648a965f` finished the fix on main, after `bd9594ff` named every answer and `494f28ea` failed a branch that acts on a call. Every site sample now stores its answer under a name for its meaning, and `site/scripts/check-samples.mjs` fails an unnamed or generic one.
 
 Found 2026-09-26 while a talk deck brought its library panes in line with a new rule from Ian. Evidence below was read on main at `22f50ab0`.
 

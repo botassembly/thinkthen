@@ -1,4 +1,4 @@
-Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review.
+Status: open for items 3 and 5 and the page half of item 4. Filed 2026-09-26 by the marketing lead from a fresh architect review. Items 1 and 2 are done: ticket 0160 landed on 2026-09-26 (`sdlc/records/0160-build-the-answer-contract-holds.md`). The code half of item 4 is done by Quick Fix qf-config-ruby-issue-status (`sdlc/records/qf-config-ruby-issue-status.md`): the refusal names the field. The settings page half waits for H4.
 
 # Architect review 06: backends and configuration
 
@@ -43,6 +43,8 @@ Evidence. `specification/settings.md:19` says "then the configuration file's `ca
 What an integrator hits. They follow the settings page and lock themselves out of every command, including `status`, with no hint which line is wrong. A fleet configuration that sets a cache folder in the file breaks every command.
 
 Direction. Correct the row to say the file holds on or off only, or add a folder field. Make closed-shape errors name the field.
+
+The code half is done by Quick Fix qf-config-ruby-issue-status. A closed-shape refusal now names the field and never its value. `{"cache":"/tmp/somewhere"}` reads ``configuration field `cache` must be true or false``. A field outside the five reads ``the configuration file holds a field other than `schema`, `url`, `model`, `cache`, and `cache_bytes` ``. The settings page half stays with H4, which corrects the row and line 19 through item 8 of `2026-09-26-settings-table-gaps-a-site-reader-hits.md`.
 
 ## 5. The built-in request ceiling covers only relation plans, so one long record reaches the backend and stops the run (severity 2)
 

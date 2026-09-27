@@ -20,7 +20,7 @@ The gate verifies hashes, archive members, source/member byte equality, C layout
 
 A scalar C call can return success after its cancellation token fires during an accepted, held HTTP request. All four parent consumers reproduced it. Three independent Python ctypes trials also reproduced it without Zig. Held bulk cancellation, held deadlines and fresh-token recovery passed.
 
-[The existing cancellation issue](2026-09-26-cancelled-c-scalar-call-can-return-success.md) owns repair. The wrapper does not hide the fault. The gate explicitly reports `FINDING` and exits 1. Matching expected subprocess exits does not make this an all-pass contract.
+[The existing cancellation issue](closed/2026-09-26-cancelled-c-scalar-call-can-return-success.md) owns repair. The wrapper does not hide the fault. The gate explicitly reports `FINDING` and exits 1. Matching expected subprocess exits does not make this an all-pass contract.
 
 ## Handoff and remaining work
 

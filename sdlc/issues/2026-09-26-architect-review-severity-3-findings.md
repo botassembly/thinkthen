@@ -128,7 +128,7 @@ The review rated these findings severity 3: a sharp edge or a missing feature. N
 - 3.2. Local faults are reported as network faults.
 - 3.3. The configuration file is trusted whatever its mode. With `2026-09-26-folder-writers-decide-the-answers.md`.
 - 3.4. The planted-text guidance is narrower than a reader will take it. Doc line.
-- 3.5. Ruby result values print caller text. Tracked: `2026-09-26-ruby-result-values-inspect-caller-text.md`.
+- 3.5. Ruby result values print caller text. Closed: `closed/2026-09-26-ruby-result-values-inspect-caller-text.md`.
 - 3.6. No release to verify. Tracked: 0128.
 - 3.7. The default destination is a third-party service, and nothing says what it keeps. Doc paragraph.
 
