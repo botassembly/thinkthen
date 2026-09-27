@@ -9,8 +9,8 @@ Filed 2026-09-26. This record copies the measurements that ADR 0056 and ticket 0
 - **The baseline** is local experiment 270's rule-based design: word rules, a trim, a kind question and a confirm question. It is the design issue's planned method, not the build on main.
 - **UNER** is the Universal NER v1 English EWT test split: 2,077 sentences, 21,533 words and 1,088 names (449 PER, 322 ORG, 317 LOC), under CC BY-SA 4.0.
 - **WNUT-17** is the WNUT-17 test set: 1,287 sentences, 23,394 words and 1,079 names over six kinds, under CC BY 4.0.
-- **p1** is the step-1 wording ticket 0147 quotes. **q3** is local experiment 279's shorter wording. **none2** is the step-2 wording ticket 0147 quotes.
-- F1 is on exact Unicode scalar offsets and kind unless marked. "Mean (min to max)" is over three runs. A "95% range" is a bootstrap range over sentences of one run, 2,000 draws.
+- **q3** is local experiment 279's shorter step-1 wording, which ticket 0147 quotes and ships. **p1** is local experiment 278's longer step-1 wording. **none2** is the step-2 wording ticket 0147 quotes.
+- Each public-set figure names its step-1 wording and snippet. F1 is on exact Unicode scalar offsets and kind unless marked. "Mean (min to max)" is over three runs. A "95% range" is a bootstrap range over sentences of one run, 2,000 draws.
 
 ## 1. Local experiment 278: three steps against the baseline
 
@@ -67,6 +67,23 @@ The edge question, wording a, on local experiment 278's recorded names. Mean (mi
 | 10 | 267 | 87.5 | 88.4 (87.6-89.0) | 91.8 (91.2-92.1) |
 | 10 | 277 new | 72.9 | 84.9 (84.7-85.4) | 85.2 (85.1-85.4) |
 
+The same key with q3 at six pieces each side, step 2 with none2, then the edge question, with no cut. Mean (min to max):
+
+| Kinds | Key | q3 plus edge |
+| --- | --- | --- |
+| 0 | 267 | 90.3 (89.8-90.9) |
+| 0 | 277 new | 88.0 (87.7-88.4) |
+| 1, person | 267 | 92.6 (92.6-92.6) |
+| 1, person | 277 new | 77.1 (75.5-78.4) |
+| 3 | 267 | 90.9 (90.6-91.3) |
+| 3 | 277 new | 83.9 (83.3-84.4) |
+| 5 | 267 | 89.4 (88.8-90.5) |
+| 5 | 277 new | 83.6 (83.2-83.9) |
+| 10 | 267 | 89.2 (88.7-89.9) |
+| 10 | 277 new | 84.0 (83.2-84.5) |
+
+Input tokens a word over the 200 key texts, run 1, steps 1 and 2: 284 with q3 against 364 with p1 on the whole sentence at no kinds, 331 against 386 at `person`, 341 against 419 at three kinds, 353 against 431 at five and 374 against 451 at ten.
+
 The edge question fixed 6 or 7 names a run and broke none. It fixed `U.S.`, `U.N.`, `Washington, D.C.`, `Martin Luther King Jr.` and `Acme Widgets Inc.`. It did not fix `Help!` in the relation texts.
 
 A 1,018-word invented text with a 65-name hand key, q3 wording, step-1 requests of 40 pieces with six pieces each side. Its step-2 and edge questions showed 30 pieces each side of the name, set in the experiment's long-text tool:
@@ -104,7 +121,7 @@ Labelled detection alone names the caller's kind in the detection question and a
 
 ## 4. Local experiments 280 and 281: public test sets
 
-Local experiment 280 scored the design on 100 sampled UNER sentences: 78.0 to 78.6 over two runs, against 66.0 for the baseline. Local experiment 281 scored the full sets once each.
+Local experiment 280 scored the design on 100 sampled UNER sentences: 78.0 to 78.6 over two runs, against 66.0 for the baseline. Local experiment 280 used p1 on the whole sentence. Local experiment 281 scored the full sets once each.
 
 UNER, one run each:
 
@@ -116,11 +133,11 @@ UNER, one run each:
 
 Right is a returned name with the gold span and kind. Right over 1,088 gives recall, and right over names returned gives precision. An extra is a returned name that overlaps no gold name, as local experiment 281's scorer counts it. The other wrong names overlap a gold name with the wrong edges or the wrong kind.
 
-Paired bootstrap: design minus baseline +0.8 (-1.2 to +3.1). q3 at six pieces minus the design -1.9 (-3.3 to -0.5). That comparison changes the wording and the snippet at once.
+Paired bootstrap: design minus baseline +0.8 (-1.2 to +3.1). q3 at six pieces minus the design -1.9 (-3.3 to -0.5). That comparison changes the wording and the snippet at once. Local experiment 288 shows the snippet caused the loss, not the wording.
 
 The design's 245 extras on UNER include 55 pieces of web or email addresses and 16 lone marks. Published: XLM-R Large fine-tuned on 12,543 labelled English EWT sentences scores 85.8 (Mayhew et al., NAACL 2024).
 
-WNUT-17, one run, six kinds: 45.9 precision, 63.9 recall, 53.4 F1, 95% range 50.3 to 56.4. About 190 false names are handles tagged as person and about 250 are pieces of web addresses. Published: the best 2017 shared-task system 41.86 (Derczynski et al., W-NUT 2017); zero-shot gpt-3.5-turbo 46.61 on 300-sentence samples (Xie et al., EMNLP 2023); fine-tuned BERTweet, RoBERTa large and XLM-R large 56.5 to 57.1 (Nguyen et al., EMNLP 2020).
+WNUT-17, p1 on the whole sentence, one run, six kinds: 45.9 precision, 63.9 recall, 53.4 F1, 95% range 50.3 to 56.4. About 190 false names are handles tagged as person and about 250 are pieces of web addresses. Published: the best 2017 shared-task system 41.86 (Derczynski et al., W-NUT 2017); zero-shot gpt-3.5-turbo 46.61 on 300-sentence samples (Xie et al., EMNLP 2023); fine-tuned BERTweet, RoBERTa large and XLM-R large 56.5 to 57.1 (Nguyen et al., EMNLP 2020).
 
 ## 5. Local experiment 282: error groups
 
@@ -157,7 +174,7 @@ Every arm labels the key's names plus the design's recorded extra names, so step
 | 10 | Descriptions | 94.0 (93.6-94.2) | 30.0 |
 | 10 | Two way-outs | 88.5 (88.0-88.7) | 29.0 |
 
-The keep rule asks every held-out run to beat the control's best held-out run, with and without two sentences on drinks and planets, no loss on the 100 UNER sentences, and at most one more extra a run. Descriptions passed it at five kinds only. At five kinds they fixed 13 names and broke 2. At three kinds they gave no held-out gain and 3.3 more extras. At ten kinds the gain fell inside the noise once the two sentences were left out. The key's descriptions are its own label lines, so part of the lift restates the key. On the full UNER split descriptions scored 82.1 against 82.3. The broader wording fell on the held-out half at three and five kinds and added 3.7 and 9.7 extras a run there. At ten kinds it gained, 93.4 against 92.5, with no added extras, and the gain sat in the drinks sentence. Two way-outs fell 2.0 held-out points at three kinds and 4.0 to 4.1 at five and ten, and broke 19 to 34 real names. Their gain on the 100 UNER sentences came from dropping extras.
+The keep rule asks every held-out run to beat the control's best held-out run, with and without two sentences on drinks and planets, no loss on the 100 UNER sentences, and at most one more extra a run. Descriptions passed it at five kinds only. At five kinds they fixed 13 names and broke 2. At three kinds they gave no held-out gain and 3.3 more extras. At ten kinds the gain fell inside the noise once the two sentences were left out. The key's descriptions are its own label lines, so part of the lift restates the key. On the full UNER split, over name lists frozen from local experiment 281's whole-sentence p1 run, descriptions scored 82.1 against 82.3. The broader wording fell on the held-out half at three and five kinds and added 3.7 and 9.7 extras a run there. At ten kinds it gained, 93.4 against 92.5, with no added extras, and the gain sat in the drinks sentence. Two way-outs fell 2.0 held-out points at three kinds and 4.0 to 4.1 at five and ten, and broke 19 to 34 real names. Their gain on the 100 UNER sentences came from dropping extras.
 
 On 40 new metonymy and venue sentences at five kinds, none2 scored 60.2 and descriptions 70.5. Capitals and teams came back as places in every arm.
 
@@ -171,14 +188,15 @@ Six whole UNER test documents of 371 to 678 words, 3,128 words and 297 names in 
 | --- | --- | --- | --- |
 | Whole text | 1 | 81.6 | 1,563 |
 | p1, six pieces | 3 | 83.1 (83.0-83.2) | 395 |
+| p1 on one sentence at a time, local experiment 281's recording on gold sentence breaks | 1 | 85.6 | 409 |
 | p1, twelve pieces | 3 | 83.4 (83.2-83.7) | 420 |
 | q3, six pieces | 3 | 83.9 (83.5-84.3) | 322 |
 
-Twelve pieces against six gained 0.3 with overlapping ranges and cost 6% more. q3 against p1 at six pieces gained 0.8 with separate ranges. Errors within six pieces of a request edge were 29 to 30% of all errors for p1 at six pieces, and 30% of pieces sit there.
+Twelve pieces against six gained 0.3 with overlapping ranges and cost 6% more. q3 against p1 at six pieces gained 0.8 with separate ranges. One sentence at a time sat 2.5 points above p1 at six pieces, on one run. Errors within six pieces of a request edge were 29 to 30% of all errors for p1 at six pieces, and 30% of pieces sit there.
 
 ## 9. Local experiment 286: web kinds
 
-Decoys `web address`, `email address`, `social handle` and `punctuation or symbol`. One run each.
+Decoys `web address`, `email address`, `social handle` and `punctuation or symbol`. One run each. The control is local experiment 281's p1 run on the whole sentence, with no cut.
 
 | Set | Arm | F1 | Against control | Paired 95% range | Real names lost |
 | --- | --- | --- | --- | --- | --- |
@@ -207,18 +225,37 @@ Offline over the saved replies of local experiments 279, 281 and 285. No model c
 
 | Set | P(kind): AP, ECE | Lowest tag × P(kind): AP, ECE | P(span) × P(kind): AP, ECE |
 | --- | --- | --- | --- |
-| Key, 5 kinds, 3 runs | 80.9, 8.1 | 83.2, 15.2 | 82.3, 7.4 |
-| UNER, 1 run | 77.9, 20.4 | 80.1, 3.1 | 80.6, 12.1 |
-| WNUT-17, 1 run | 49.1, 33.2 | 50.5, 11.2 | 52.5, 19.5 |
-| Long documents, 3 runs | 78.7, 17.1 | 80.8, 8.6 | 81.9, 6.7 |
+| Key, 5 kinds, p1 on the whole sentence, 3 runs | 80.9, 8.1 | 83.2, 15.2 | 82.3, 7.4 |
+| UNER, p1 on the whole sentence, 1 run | 77.9, 20.4 | 80.1, 3.1 | 80.6, 12.1 |
+| WNUT-17, p1 on the whole sentence, 1 run | 49.1, 33.2 | 50.5, 11.2 | 52.5, 19.5 |
+| Long documents, p1 at six pieces, 3 runs | 78.7, 17.1 | 80.8, 8.6 | 81.9, 6.7 |
 
 F1 at a cut of 0.5, against no cut:
 
 | Set | No cut | P(kind) | Lowest tag × P(kind) | P(span) × P(kind) |
 | --- | --- | --- | --- | --- |
-| Key, 5 kinds, 3 runs | 87.3 | 87.7 | 84.0 | 87.2 |
-| UNER, 1 run | 78.6 | 78.9 | 80.3 | 81.0 |
-| WNUT-17, 1 run | 53.4 | 56.0 | 59.4 | 60.1 |
-| Long documents, 3 runs | 83.1 | 82.9 | 79.8 | 84.3 |
+| Key, 5 kinds, p1 on the whole sentence, 3 runs | 87.3 | 87.7 | 84.0 | 87.2 |
+| UNER, p1 on the whole sentence, 1 run | 78.6 | 78.9 | 80.3 | 81.0 |
+| WNUT-17, p1 on the whole sentence, 1 run | 53.4 | 56.0 | 59.4 | 60.1 |
+| Long documents, p1 at six pieces, 3 runs | 83.1 | 82.9 | 79.8 | 84.3 |
 
 On UNER, P(span) × P(kind) at 0.5 against no cut: paired bootstrap +1.6 to +3.4. The cut removes 127 names, 105 wrong and 22 right. Names scored 0.5 to 0.6 were right 26% to 76% of the time, by set. The edge question's pick probability added nothing. With no kinds on the key, P(span) at 0.5 scored 89.9 against 89.7 with no cut.
+
+## 11. Local experiment 288: p1 against q3 at six pieces on the full public sets
+
+Both arms used the shipped setup except for the step-1 wording. Step 1 showed six pieces each side, in requests of at most 40 pieces, then a Viterbi decode with a floor of one in a million. Step 2 used none2 and showed six pieces each side of the name, one request a name. The `strength` cut was P(kind) × P(span) at 0.5. The edge question went to each name that survived the cut and had more than one option. Each arm ran once on each set. Scoring follows local experiment 281. On WNUT-17, organization precision is `corporation` precision.
+
+| Set | Arm | F1 | 95% range | Precision | Recall | Organization precision | Extras | Tokens a word |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| UNER | p1 | 79.9 | 77.6 to 82.2 | 77.2 | 82.8 | 60.8 | 170 | 383 |
+| UNER | q3 | 80.1 | 77.8 to 82.3 | 76.3 | 84.3 | 58.4 | 193 | 308 |
+| WNUT-17 | p1 | 59.6 | 56.6 to 62.2 | 60.2 | 58.9 | 52.3 | 297 | 385 |
+| WNUT-17 | q3 | 59.1 | 56.2 to 61.9 | 57.0 | 61.4 | 44.7 | 351 | 308 |
+
+Paired bootstrap of F1, p1 minus q3, on the same resampled sentences: UNER -0.2 (-1.3 to +1.0), with 38% of draws favouring p1. WNUT-17 +0.4 (-0.8 to +1.7), with 76% of draws favouring p1.
+
+F1 ties on both sets. q3 uses 20% fewer input tokens. p1 returns 23 fewer extras on UNER and 54 fewer on WNUT-17, with organization precision higher by 2.4 and 7.6 points. q3 finds 16 more right names on UNER and 27 more on WNUT-17.
+
+Before the cut and without the edge question, F1 was 76.2 for p1 and 75.1 for q3 on UNER, and 52.3 and 52.8 on WNUT-17. The edge question added up to 0.6 points on UNER and nothing on WNUT-17.
+
+Against local experiment 287's whole-sentence p1 figures at the same cut, 81.0 on UNER and 60.1 on WNUT-17, the six-piece p1 run sits about 1 point lower on UNER and 0.5 lower on WNUT-17. That comparison crosses runs. Local experiment 281's loss of 1.9 for q3 at six pieces against p1 on the whole sentence came from the snippet, not the wording.

@@ -6,7 +6,7 @@ opens: sdlc/planning/adr/0056-recognize-is-three-steps.md crates/thinkthen/src/c
 
 # 0147: Build recognize in three steps
 
-Status: ready for review. The coordinator filled the step-2 wording, the web kinds and the name score from local experiments 284, 286 and 287. This version replaces the whole earlier ticket, which recorded the design issue's word rules in an ADR numbered 0050. That ADR was never written. Ian's rulings of 2026-09-26 replaced its method, and ADR 0056 now holds the design. A fresh read-only reviewer accepts this ticket before it is built. Owner: Claude.
+Status: ready for review. The coordinator filled the step-2 wording, the web kinds and the name score from local experiments 284, 286 and 287, and the step-1 wording from local experiment 288. This version replaces the whole earlier ticket, which recorded the design issue's word rules in an ADR numbered 0050. That ADR was never written. Ian's rulings of 2026-09-26 replaced its method, and ADR 0056 now holds the design. A fresh read-only reviewer accepts this ticket before it is built. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -36,25 +36,25 @@ Each line is at `origin/main` `19ca8302`.
 
 The splitter makes pieces. White space separates pieces. Each character of Unicode general category P or S is a piece of its own. A run of characters of category Mn, Me or Cf joins the piece that ends right before it, whatever that piece is, so consecutive marks all join. A run after white space or at the text's start begins a piece, as a letter does. Nothing else joins or splits. Offsets count Unicode scalar values.
 
-Each piece gets one pick-one question. The wording is local experiment 278's p1, as local experiments 281 and 285 sent it at six pieces. With kinds it reads:
+Each piece gets one pick-one question. The wording is local experiment 279's q3, as local experiments 285 and 288 sent it at six pieces. It is an owner call in ADR 0056 that Ian can overturn. With kinds it reads:
 
 ```text
-The text is split into tokens at white space and at every punctuation mark or symbol, so a mark such as a period, comma, apostrophe, quote mark, bracket or hyphen is a token of its own. Decide where the marked token stands in a name of one of these kinds: KINDS. Only names of these kinds count. Names of any other kind, ordinary words, dates and numbers are outside any name.
+Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in a name of one of these kinds: KINDS? Other names, ordinary words, dates, numbers, and marks that are not part of a name's own spelling are OUT.
 
 Snippet: SNIPPET
 ```
 
-`KINDS` is the caller's kind names joined by `, `, with no descriptions. With no kinds, every sentence after the first reads `Decide where the marked token stands in the name of an entity. An entity is any particular named person, organization, place, product, creative work, event or other named thing. Ordinary words, dates and numbers that are not part of a name are outside any name.`
+`KINDS` is the caller's kind names joined by `, `, with no descriptions. With no kinds, every sentence after the first reads `Where does the [[ ]] token stand in a name? A name is the proper name of a particular person, organisation, place, product, work, event or other thing. Ordinary words, dates, numbers, and marks that are not part of a name's own spelling are OUT.` The spelling `organisation` is the measured text.
 
 `SNIPPET` is the original text from the start of the sixth piece before to the end of the sixth piece after, with the marked piece wrapped in `[[ ]]`. It stops at the text's edges. The options and their descriptions are:
 
 | Option | Description |
 | --- | --- |
-| `BEGIN` | The token is the first token of a name of two or more tokens. |
-| `INSIDE` | The token is inside a name, after its first token and before its last. |
-| `END` | The token is the last token of a name of two or more tokens. |
-| `SINGLE` | The token is a whole name on its own. |
-| `OUT` | The token is not part of any name. |
+| `BEGIN` | first token of a name of two or more tokens |
+| `INSIDE` | a middle token of a name |
+| `END` | last token of a name of two or more tokens |
+| `SINGLE` | a one-token name |
+| `OUT` | not part of a name |
 
 A step-1 request holds at most 40 consecutive piece questions. Its evidence is the original text from the sixth piece before its first piece to the sixth piece after its last. A text of 40 pieces or fewer therefore sends its whole text once. The requests go out at the engine's width, as ticket 0143 sends one text's parts.
 
@@ -129,7 +129,7 @@ The public Rust type keeps one entity with `text`, `start`, `end`, `length`, `ki
 The owner's calls. Ian can overturn each.
 
 1. **One ticket builds the whole path.** The three steps share one request plan and one output shape. Splitting them would ship a surface that changes twice.
-2. **Each name keeps one ranking score and a cut.** Ian ruled on 2026-09-26: "explain? we lose calibration to trade FN and FP?" and "audit and diff should be fully supported". A score lets a caller trade missed names against false ones, and it lets `audit` suggest the cut. Local experiment 287 chose P(kind) times P(span) and the 0.5 cut offline. At 0.5 against no cut it scored 78.6 to 81.0 on the full public split, 53.4 to 60.1 on WNUT-17, 83.1 to 84.3 on the long documents, and 87.3 to 87.2 on the key. Today's form, the lowest tag probability times the kind probability, is better calibrated on the public sets: expected calibration error 3.1 against 12.1 on the full public split and 11.2 against 19.5 on WNUT-17. It also had higher average precision on the key, 83.2 against 82.3. At 0.5 it scored 84.0 on the key and 79.8 on the long documents, against 87.2 and 84.3 for the chosen score, 3.2 and 4.5 points lower. It had lower average precision on every public set. The choice rests on F1 at the 0.5 cut and on public-set average precision. P(kind) alone trailed by 1.4 to 4.1 F1 at 0.5 on the public sets and the long documents. On the key it scored 87.7 against 87.2. `relation_threshold` keeps its 0.5 default, which local experiment 278 measured.
+2. **Each name keeps one ranking score and a cut.** Ian ruled on 2026-09-26: "explain? we lose calibration to trade FN and FP?" and "audit and diff should be fully supported". A score lets a caller trade missed names against false ones, and it lets `audit` suggest the cut. Local experiment 287 chose P(kind) times P(span) and the 0.5 cut offline. At 0.5 against no cut it scored 78.6 to 81.0 on the full public split and 53.4 to 60.1 on WNUT-17, both with p1 on the whole sentence. It scored 83.1 to 84.3 on the long documents with p1 at six pieces, and 87.3 to 87.2 on the key with p1 on the whole sentence. With the shipped q3 wording at six pieces and the cut, local experiment 288 measured 80.1 on the full public split and 59.1 on WNUT-17. Today's form, the lowest tag probability times the kind probability, is better calibrated on the public sets: expected calibration error 3.1 against 12.1 on the full public split and 11.2 against 19.5 on WNUT-17. It also had higher average precision on the key, 83.2 against 82.3. At 0.5 it scored 84.0 on the key and 79.8 on the long documents, against 87.2 and 84.3 for the chosen score, 3.2 and 4.5 points lower. It had lower average precision on every public set. The choice rests on F1 at the 0.5 cut and on public-set average precision. P(kind) alone trailed by 1.4 to 4.1 F1 at 0.5 on the public sets and the long documents. On the key it scored 87.7 against 87.2. `relation_threshold` keeps its 0.5 default, which local experiment 278 measured.
 3. **The fields are `text` and `strength`.** The coordinator set `text`, and the Python frame already names that column `text`. `audit` keys keep `name`, because `audit` compares offsets and kind only. The score keeps the name `strength`, because local experiment 287 found it ranks well but is not calibrated across kinds of text: expected calibration error 6.7 to 19.5. `result.md` keeps its sentence that `strength` is not itself a probability. The libraries, SQL and `audit` keep their field.
 4. **Step 2 groups by step-1 request.** Local experiment 285 sent one step-2 request a name. Grouping sends fewer requests and keeps the six-piece snippets. On a short text it equals the one request a text that local experiments 278, 279 and 283 measured. Test 5 records one long text under it.
 5. **The edge question goes with the kind question.** Local experiment 279 asked it after step 2, on kept names only. Asking both at once saves a round trip. A declined name's edge answer is ignored.
@@ -140,7 +140,7 @@ The owner's calls. Ian can overturn each.
 ## Choices filled from experiments
 
 1. **The step-2 wording stays `none2` with one way out.** Local experiment 284 rejected a broader wording. Its held-out F1 fell at three and five kinds, and it added 3.7 and 9.7 extras a run there. It gained at ten kinds, 93.4 against 92.5, but the gain sat in one sentence about drinks. It rejected two way-outs, which fell 2.0 to 4.1 held-out points by kind set and broke 19 to 34 real names. Caller descriptions pass into step 2 only when supplied. At five kinds they lifted held-out F1 from 92.2 to 94.0 in all three runs, fixing 13 names and breaking 2, and tied on public text. They failed the keep rule at three and ten kinds. The key's descriptions are its own label lines, so part of the lift restates the key.
-2. **No hidden kinds.** `web address`, `email address` and `social handle` are ordinary kinds a caller may ask for, with no special handling. A run that does not ask for them does not offer them. Local experiment 286 found that hidden decoys in step 2 raised the full public split from 78.6 to 79.7 and WNUT-17 from 53.4 to 55.2, and dropped 127 real WNUT-17 names. Asked for directly, the kinds were right 92% to 100% of the time. Whole addresses came back only 52% to 83% of the time, because pieces split at marks.
+2. **No hidden kinds.** `web address`, `email address` and `social handle` are ordinary kinds a caller may ask for, with no special handling. A run that does not ask for them does not offer them. Local experiment 286 found that hidden decoys in step 2 raised the full public split from 78.6 to 79.7 and WNUT-17 from 53.4 to 55.2, with p1 on the whole sentence and no cut, and dropped 127 real WNUT-17 names. Asked for directly, the kinds were right 92% to 100% of the time. Whole addresses came back only 52% to 83% of the time, because pieces split at marks.
 3. **The score is `strength`, P(kind) times P(span), with a default cut of 0.5.** "Output" gives the definition, and decisions 2 and 3 give the evidence from local experiment 287.
 
 ## Edge cases
@@ -190,13 +190,13 @@ The owner's calls. Ian can overturn each.
 
 ## Proof
 
-Every scored test replays a recording and grades it with `audit --match strict` against `specification/fixtures/recognize/`. Test 4 alone passes its replayed lines through a named `jq` step first. For tests 1, 3 and 5, `kinds.jq` filters the names key to the run's kinds. Test 2 grades under the `ENTITY` rule. Test 4 grades against the two relation keys it names. The bars sit under the lowest measured run, so a pass is stable and a fail is beyond the noise. Every run grades at the default cut of 0.5. `sdlc/records/2026-09-26-recognize-three-step-evidence.md` copies every figure this ticket cites. Local experiment 287 measured the key at 87.2 at that cut and 87.3 with no cut. The key's figures come from p1 with the whole sentence as snippet, from local experiment 279 part 1. Key sentences average 7.4 words, so a six-piece window shows most of each one.
+Every scored test replays a recording and grades it with `audit --match strict` against `specification/fixtures/recognize/`. Test 4 alone passes its replayed lines through a named `jq` step first. For tests 1, 3 and 5, `kinds.jq` filters the names key to the run's kinds. Test 2 grades under the `ENTITY` rule. Test 4 grades against the two relation keys it names. The bars sit under the lowest measured run, so a pass is stable and a fail is beyond the noise. Every run grades at the default cut of 0.5. `sdlc/records/2026-09-26-recognize-three-step-evidence.md` copies every figure this ticket cites. The key's reference figures for tests 1 to 3 come from local experiment 279 part 3a, which ran the shipped q3 wording at six pieces with step 2 and the edge question, and no cut. Local experiment 287 measured the key with p1 on the whole sentence at 87.2 at the 0.5 cut and 87.3 with no cut, so the cut barely moves the key. Key sentences average 7.4 words, so a six-piece window shows most of each one.
 
 ### Outside-in tests
 
-1. **The key at five kinds, replayed.** `person place organisation work thing` over all 200 key lines. Bar: F1 of at least 82. Local experiment 279 measured 90.6 to 91.2 on the first half and 83.6 to 84.8 on the second.
-2. **The key with no kinds, replayed.** Graded by `audit` under the new rule, which grades every name as `ENTITY`. No `jq` mapping runs. Bar: F1 of at least 86. Local experiment 279 measured 91.2 to 92.3 and 87.6 to 88.2.
-3. **The key filtered to `person`, replayed.** `recognize person`. A printed name of any other kind counts against precision. Bar: F1 of at least 70. Local experiment 279 measured 89.8 to 92.6 and 72.2 to 72.9. Main scored 27.0 at `person` on the first half (local experiment 274).
+1. **The key at five kinds, replayed.** `person place organisation work thing` over all 200 key lines. Bar: F1 of at least 82. With q3 at six pieces, local experiment 279 measured 88.8 to 90.5 on the first half and 83.2 to 83.9 on the second.
+2. **The key with no kinds, replayed.** Graded by `audit` under the new rule, which grades every name as `ENTITY`. No `jq` mapping runs. Bar: F1 of at least 86. With q3 at six pieces, local experiment 279 measured 89.8 to 90.9 and 87.7 to 88.4.
+3. **The key filtered to `person`, replayed.** `recognize person`. A printed name of any other kind counts against precision. Bar: F1 of at least 70. With q3 at six pieces, local experiment 279 measured 92.6 in every run and 75.5 to 78.4. Main scored 27.0 at `person` on the first half (local experiment 274).
 4. **Relations, replayed.** The 30 relation sentences at kinds `person song album place` with local experiment 278's four rules: `sang=person:song`, `wrote=person:song`, `appears_on=song:album` and `recorded_at=album:place`. A recognize edge prints as:
 
    ```json
@@ -210,8 +210,8 @@ Every scored test replays a recording and grades it with `audit --match strict` 
    | .value = [.value.relations[] | {relation, source: {name: .source.text, kind: .source.kind}, target: {name: .target.text, kind: .target.kind}, probability}]
    ```
 
-   The stated key comes from `jq -c '{id, value: .relations}' relations.jsonl`. The unstated key comes from `jq -c '{id, value: [.unstated[]?]}' relations.jsonl`. It holds the five unstated edges, on `c01`, `c02`, `c05`, `c06` and `c14`. Each grade prints its row with `thinkthen audit ... --table | sed -n 2p`, in the form the fixture README pins. The stated row reads `  matched M, extra X, missed Y: precision P   recall R   f1 F`, and M is at least 21 of the 27 stated edges. Local experiment 278 found 22 in each run. The unstated row reads exactly `  matched 0, extra E, missed 5: precision 0.000   recall 0.000   f1 0.000`, where E is the number of edges the run kept. Each kept edge counts as extra against that key, so no unstated edge passes.
-5. **A long text, replayed.** Local experiment 279's invented 1,018-word text and its 65-name key join `specification/fixtures/recognize/` as `long.jsonl`. The text splits into 1,183 pieces, measured with this splitter. The dry run therefore shows 1,183 divided by 40, rounded up, which is 30 step-1 requests of at most 40 pieces, and no request carries the whole text. The replay at five kinds scores F1 of at least 88. Local experiment 279 measured 92.9 to 94.5 with the q3 wording. That run's step-1 requests showed six pieces each side. Its step-2 and edge questions showed 30 pieces each side. The reference figure therefore used a wider step-2 and edge window than this ticket's six pieces. The p1 wording at six pieces sat 0.8 points under q3 on public documents (local experiment 285). Input tokens a word stay under 450. Local experiment 285 measured 395.
+   The stated key comes from `jq -c '{id, value: .relations}' relations.jsonl`. The unstated key comes from `jq -c '{id, value: [.unstated[]?]}' relations.jsonl`. It holds the five unstated edges, on `c01`, `c02`, `c05`, `c06` and `c14`. Each grade prints its row with `thinkthen audit ... --table | sed -n 2p`, in the form the fixture README pins. The stated row reads `  matched M, extra X, missed Y: precision P   recall R   f1 F`, and M is at least 21 of the 27 stated edges. Local experiment 278 found 22 in each run with p1 on the whole sentence. No experiment ran these sentences with q3, so the recording run sets the first q3 figure. The unstated row reads exactly `  matched 0, extra E, missed 5: precision 0.000   recall 0.000   f1 0.000`, where E is the number of edges the run kept. Each kept edge counts as extra against that key, so no unstated edge passes.
+5. **A long text, replayed.** Local experiment 279's invented 1,018-word text and its 65-name key join `specification/fixtures/recognize/` as `long.jsonl`. The text splits into 1,183 pieces, measured with this splitter. The dry run therefore shows 1,183 divided by 40, rounded up, which is 30 step-1 requests of at most 40 pieces, and no request carries the whole text. The replay at five kinds scores F1 of at least 88. Local experiment 279 measured 92.9 to 94.5 with the q3 wording. That run's step-1 requests showed six pieces each side. Its step-2 and edge questions showed 30 pieces each side. The reference figure therefore used a wider step-2 and edge window than this ticket's six pieces. Input tokens a word stay under 450. With q3 at six pieces, local experiment 285 measured 322 on public documents and local experiment 288 measured 308 on the full public sets.
 6. **Loopback plans and counts.** A listener counts requests and keeps their bodies. `Ada met Acme.` at kinds `person organization` sends one step-1 request, then one step-2 request. No kinds sends no kind question. A text with no names sends no step-2 request. A step-2 request with no questions is not sent: `Ada met Bob` with no kinds sends one step-1 request only. With `--kind person=DESC --kind organization=ORGDESC`, `DESC` appears in the step-2 `person` option and nowhere in the step-1 body. A failed second request fails the text. A text of 600,000 bytes plans under `--dry-run`. A text of 600,001 bytes sends zero.
 7. **Rules with no kind limits.** Dry runs of `knows`, `'knows=*:*'` and `knows=ANY:ANY` on `recognize person organization` print one plan and digest. A dry run with no kinds prints the canonical question with `"kinds":{}`, and the test pins its digest. A loopback run finds three names and declines one. Its pair request holds 2 questions, the two ordered pairs of the kept names under `knows=*:*`, and asks no pair naming the declined name. `relate` gives one plan for the same three spellings.
 8. **Audit and write, replayed.** `audit --match strict` over test 1's replayed run prints counts, precision, recall, F1, a suggested bar and a crossed line, and null calibration, AUC and coverage curve. The test pins that row exactly. Over test 2's replayed run it grades with the `ENTITY` rule and does not print the old refusal. `--threshold` at the run cut and above it grades. `--write` puts the steady bar into a copy of the run's recognize question file, and a rerun's digest matches it.
@@ -266,18 +266,18 @@ Each break is made, run and reverted. Each must turn the named row red.
 
 ## Recordings
 
-Every recognize request changes, so every recognize recording is made again. Each run below goes through `sdlc/scripts/live` under a token cap, and Ian authorizes it before it starts. Costs use $0.042 a million input tokens and the p1 tokens a word of local experiments 278 and 285.
+Every recognize request changes, so every recognize recording is made again. Each run below goes through `sdlc/scripts/live` under a token cap, and Ian authorizes it before it starts. Costs use $0.042 a million input tokens and the q3 tokens a word of local experiments 279 and 285.
 
 | Run | Words | Estimated cost |
 | --- | --- | --- |
-| Test 1, the key at five kinds | 1,489 | about $0.027 |
-| Test 2, the key with no kinds | 1,489 | about $0.023 |
-| Test 3, the key at `person` | 1,489 | about $0.024 |
-| Test 4, the relation sentences with rules | about 300 | about $0.006 |
-| Test 5, the long text at five kinds | 1,018 | about $0.017 |
-| Demo 44, `spec/recognize.md`, conformance cases 41 to 50 | about 200 | about $0.004 |
+| Test 1, the key at five kinds | 1,489 | about $0.022 |
+| Test 2, the key with no kinds | 1,489 | about $0.018 |
+| Test 3, the key at `person` | 1,489 | about $0.021 |
+| Test 4, the relation sentences with rules | about 300 | about $0.005 |
+| Test 5, the long text at five kinds | 1,018 | about $0.014 |
+| Demo 44, `spec/recognize.md`, conformance cases 41 to 50 | about 200 | about $0.003 |
 
-The total is about $0.10. The 40 harvest cases in `tests/fixtures/recognize-225` and the relation fixtures in `recognize-239` go, and the key recordings replace them. A test that still needs one of them fails loudly, and the builder moves it to a key recording.
+The total is about $0.08. The 40 harvest cases in `tests/fixtures/recognize-225` and the relation fixtures in `recognize-239` go, and the key recordings replace them. A test that still needs one of them fails loudly, and the builder moves it to a key recording.
 
 ## Pages
 
@@ -287,7 +287,7 @@ In the commit that changes each behavior:
 - `specification/question-file.md` and its schema: optional `recognize.kinds`, optional relation sides, `ANY`, the reserved kinds, and the canonical order, unchanged in its keys: `verb`, `kinds`, optional `relations`, `threshold`, `relation_threshold`, optional `profile`.
 - `specification/result.md`: the new `--details` members. Its sentence that `strength` is not itself a probability stays, with the new formula.
 - `specification/audit.md`: a recognize line with an empty kind set grades every said and key name as the kind `ENTITY`.
-- `sdlc/records/2026-09-26-recognize-three-step-evidence.md`: the tables this ticket and ADR 0056 cite, from local experiments 278 to 287. It was filed with this design.
+- `sdlc/records/2026-09-26-recognize-three-step-evidence.md`: the tables this ticket and ADR 0056 cite, from local experiments 278 to 288. It was filed with this design.
 - `specification/channels.md`: `--max-text-bytes`, and plan schema version 2.
 - `specification/settings.md`: the Kinds row default becomes none. The guard moves into the table. The `keep`, `infixes`, `prefixes`, `boundary` and `window` lines go.
 - `specification/backends.md`: step-1 and step-2 requests carry a window. Relation requests carry the whole text.
@@ -327,20 +327,20 @@ Contract 3; state and timing 1; reach 3; proof 2; cost of error 2; total 11. The
 ## Deferred gaps
 
 - **`diff`.** `diff` reads neither `recognize` nor `relate` today. Ticket 0165 adds both after this ticket fixes the output shape.
-- **Public benchmark figures.** ADR 0056 records local experiment 281's figures on the full public split and on WNUT-17. The recognize page states them with R8. Each ran once, so their run-to-run spread is unmeasured.
+- **Public benchmark figures.** ADR 0056 records local experiment 288's figures for the shipped setup: 80.1 on the full public split against the rule-based baseline's 77.7, and 59.1 on WNUT-17. The recognize page states them with R8. Each ran once, so their run-to-run spread is unmeasured.
 - **Long texts.** ADR 0056's window replaces R4's pieces and `--window`. `recognize --jobs` on one text stays R4b.
 - **The `either` wording.** No experiment measured the step-3 wording under `either`. Test 4 uses no `either` rule.
 - **Relation evidence.** Step 3 keeps the whole text as evidence, so a long text with rules can pass the backend's evidence limit and exit 4.
 - **Standalone `relate`.** Its choice planner stays until its own ticket moves it to pairs under Ian's ruling of 2026-09-26.
 - **Batching texts.** Record modes send each text alone, as today, until R7.
-- **The shipped combination.** No experiment measured it end to end: p1 at six pieces on the key, step 2 grouped per step-1 request, and the edge question in the same request. The recording runs for tests 1 to 5 measure it, and their bars stop the build if it falls short.
+- **The shipped combination.** Local experiment 288 measured the shipped wording, window, decode, step 2 and cut on the full public sets. It sent one step-2 request a name and asked the edge question after the cut. No experiment measured step 2 grouped per step-1 request with the edge question in the same request. The recording runs for tests 1 to 5 measure the whole combination on the repository's own key, and their bars stop the build if it falls short.
 - **The accepted limits.** Titles inside names, two first names side by side, weekday names with no kinds, kinds that depend on use, pieces of web addresses and handles on web text, whole web addresses under the web kinds, and `Help!` in relation texts. `strength` is not calibrated across kinds of text.
 
 ## What Ian can overturn
 
 - ADR 0056 as a whole, and each owner call it lists.
 - Decisions 1 to 8.
-- The three choices filled from local experiments 284, 286 and 287.
+- The choices filled from local experiments 284, 286, 287 and 288.
 - The bars of tests 1 to 5.
 - The four kinds items carried from the earlier version: `ENTITY`, bare rules and `ANY`, declining through `none of these`, and pairs only where a rule allows.
 
@@ -350,7 +350,7 @@ None. The design issue stays open for R4b, R7 and R8. `sdlc/issues/2026-09-26-ar
 
 ## Evidence
 
-- Starts from: ADR 0056 and Ian's rulings of 2026-09-26. `sdlc/records/2026-09-26-recognize-three-step-evidence.md`, which copies the cited tables. Local experiments 278 (three steps against the baseline), 279 (the edge question, descriptions, and the rejected title, split and trim arms), 280 and 281 (the public sample, the full public split, WNUT-17, and the rejected q3 wording), 282 (error groups and plan rules), 283 (the rejected span check), 284 (step 2 on the key's own names), 285 (windows on public documents), 286 (web kinds) and 287 (the name score). Local experiment 274 for the one-kind failure. The earlier version of this ticket for the four kinds items. `origin/main` at `19ca8302`.
+- Starts from: ADR 0056 and Ian's rulings of 2026-09-26. `sdlc/records/2026-09-26-recognize-three-step-evidence.md`, which copies the cited tables. Local experiments 278 (three steps against the baseline), 279 (the edge question, descriptions, and the rejected title, split and trim arms), 280 and 281 (the public sample, the full public split, WNUT-17, and q3 at six pieces against p1 on the whole sentence), 282 (error groups and plan rules), 283 (the rejected span check), 284 (step 2 on the key's own names), 285 (windows on public documents), 286 (web kinds), 287 (the name score) and 288 (q3 against p1 at six pieces on the full public sets). Local experiment 274 for the one-kind failure. The earlier version of this ticket for the four kinds items. `origin/main` at `19ca8302`.
 - Keeps: Unicode scalar offsets with an exclusive end. Record modes and their envelope. `--kind KIND=DESCRIPTION`. The `strength` field at four places, `--threshold` above 0 on names, and `audit`'s recognize grading as `audit.md` states it, `--write` included. Relation rules, `--relation-threshold` and its 0.5 default. `relate`'s planner. The request ceiling of ADR 0040. The `audit` key files.
 - Changes: The splitter, all recognize questions, the decode, windows at every length, the output shape, `--details`, the dry-run schema, the guard, the kinds and rule parsing, the `strength` formula, and every surface's entity type. The default kinds go.
 - Proof: Five replayed recordings graded by `audit` against bars under the lowest measured run. One replayed test of `audit`, its `ENTITY` rule and `--write`. Three loopback tests, five edge-case tables, and twenty-two deliberate breaks with the row each turns red.
