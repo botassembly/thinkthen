@@ -1,14 +1,14 @@
 ---
 flow: build
 priority: 170
-opens: sdlc/planning/adr/0048-records-batch-into-full-requests.md sdlc/planning/adr crates/thinkthen/src/cli/args.rs crates/thinkthen/src/cli/args/find.rs crates/thinkthen/src/cli/mod.rs crates/thinkthen/src/cli/facts.rs crates/thinkthen/src/cli/failure.rs crates/thinkthen/src/cli/failure crates/thinkthen/src/cli/schedule.rs crates/thinkthen/src/cli/annotate_schedule.rs crates/thinkthen/src/cli/asking.rs crates/thinkthen/src/cli/asking/batched.rs crates/thinkthen/src/engine/usage.rs crates/thinkthen/src/engine/usage crates/thinkthen/src/engine/request.rs crates/thinkthen/src/engine/error.rs crates/thinkthen/src/core/result.rs crates/thinkthen/src/result_json.rs crates/thinkthen/tests/backend/batching.rs crates/thinkthen/tests/backend/batching crates/thinkthen/tests/backend/facts.rs crates/thinkthen/tests/backend/main.rs specification/records.md specification/result.md specification/channels.md specification/settings.md sdlc/issues sdlc/ratchet.json sdlc/records sdlc/tickets
+opens: sdlc/planning/adr/0048-records-batch-into-full-requests.md sdlc/planning/adr crates/thinkthen/src/cli/args.rs crates/thinkthen/src/cli/args/find.rs crates/thinkthen/src/cli/mod.rs crates/thinkthen/src/cli/facts.rs crates/thinkthen/src/cli/failure.rs crates/thinkthen/src/cli/failure crates/thinkthen/src/cli/schedule.rs crates/thinkthen/src/cli/annotate_schedule.rs crates/thinkthen/src/cli/asking.rs crates/thinkthen/src/cli/asking/batched.rs crates/thinkthen/src/engine/usage.rs crates/thinkthen/src/engine/usage crates/thinkthen/src/engine/request.rs crates/thinkthen/src/engine/error.rs crates/thinkthen/src/core/result.rs crates/thinkthen/src/result_json.rs crates/thinkthen/tests/backend/batching.rs crates/thinkthen/tests/backend/batching crates/thinkthen/tests/backend/facts.rs crates/thinkthen/tests/backend/main.rs crates/thinkthen/tests/backend/interrupt.rs specification/records.md specification/result.md specification/channels.md specification/settings.md sdlc/issues sdlc/ratchet.json sdlc/records sdlc/tickets
 ---
 
 # 0170: Run facts under batches
 
-Status: ready for review. Owner: Claude.
+Status: accepted. The coordinator accepted it on 2026-09-27 after a fresh read-only review, with the fixes that review named. Owner: Claude.
 
-Review route: a fresh read-only Claude session reviews this design and later the final diff. Codex does not review this ticket unless Ian routes it.
+Review route: the builder follows the work plan: Claude now, or Codex after the handover. A fresh read-only session from the builder's vendor reviews the final diff.
 
 ## Outcome and authority
 
@@ -97,6 +97,7 @@ When the run ends in a failure, the line gains `stopped`:
 ```
 
 - `at` is the number the stop line prints. A failed run on one document has `at` 1.
+- A run a signal stopped has no `at`. After ticket 0169 its stop line names no record, so the facts line names none either. A second signal ends the command at once and prints no facts line.
 - `status` appears only beside the cause `status`.
 - A run that exits 6 finished with a partial result. It has no `stopped` member.
 
@@ -108,14 +109,14 @@ When the run ends in a failure, the line gains `stopped`:
 | `local` | Every failure that exits 5, including a replay miss | 5 |
 | `no_key` | The key variable is unset or blank | 4 |
 | `transport` | The backend could not be reached, or the attempt timed out | 4 |
-| `status` | The backend answered with a status that is not a success, after its retries | 4 |
-| `token_limit` | Status 400 naming `max_tokens_exceeded` | 4 |
+| `status` | The backend answered with a status that is not a success and not a too-large refusal, after its retries | 4 |
+| `too_large` | A too-large refusal, as ticket 0154's `Error::too_large()` reads it: status 413, or status 400 naming `max_tokens_exceeded`, after the one halving | 4 |
 | `reply` | The adapter refused the reply, the reply passed its size limit, or a record got no usable answer | 4 |
 | `backend` | Any other failure that exits 4 | 4 |
 | `cancelled` | SIGINT or SIGTERM stopped the run | 130 or 143 |
 | `defect` | A defect in the tool | 70 |
 
-`retryable` is true only for the cause `status` with a retried status: 429, 500, 502, 503, 504 or 529. That is the rule `engine/error.rs` retries by and `Error::retryable()` reports. `engine/error.rs` gains one `pub(crate)` function that answers it for a status, so the list lives once. A transport failure reads false, because the attempt may have reached the backend, as the library says.
+`retryable` is true only for the cause `status` with a retried status: 429, 500, 502, 503, 504 or 529. That is the rule `engine/error.rs` retries by and `Error::retryable()` reports. `engine/error.rs` gains one `pub(crate)` function that says whether a status is retried. It reads `RETRIED`, and `Error::retryable()` calls it, so the list is written once. A transport failure reads false, because the attempt may have reached the backend, as the library says.
 
 ### `meta.batch` under `--details`
 
@@ -127,14 +128,14 @@ A batched row's `meta` gains `batch`, by ADR 0048 item 9. It follows `profile_wa
 
 - `setting` is the run's batch setting, a number or `"max"`. `records` counts the batch's members. `position` counts from 1. `closed` is `content`, `size`, `limit`, `pause` or `end`.
 - `usage` is the batch's whole reported usage, absent when the backend reported none. `requests_sent` is the batch's attempts.
-- `meta.batch` is absent when the batch holds one record and no context.
+- `meta.batch` is absent when the batch holds one member and no context. A batch of two or more members that share one text sends today's single request, by ADR 0055 item 3, but each of its rows carries `meta.batch` with `records` equal to the member count.
 - A row that a half of ticket 0154's split answered carries `"split":true` as the last member. Its `records`, `position`, `usage` and `requests_sent` describe the half. `closed` keeps the whole batch's reason. A half of one record carries `meta.batch` too, by ADR 0051 item 10.
 
 `core/result.rs` gains the `Batch` member of `Meta` as a pure value. `cli/asking/batched.rs` fills it from the batch it already walks.
 
 ### The ADR
 
-ADR 0048 says a change to one of its items takes a new ADR. The build writes one, numbered with the next free number. It adds `stopped` to item 10 with the cause list and the retry rule above. It records decisions 1 to 4 below. ADR 0048 item 10 gains `(Amended by ADR NNNN.)`.
+ADR 0048 says a change to one of its items takes a new ADR. The build writes one, numbered with the next free number in the builder's range: up to 0079 for Claude, 0080 to 0099 for Codex. It adds `stopped` to item 10 with the cause list and the retry rule above. It records decisions 1 to 4 below. ADR 0048 item 10 gains `(Amended by ADR NNNN.)`.
 
 ### Pages
 
@@ -175,7 +176,11 @@ Each is the agent's decision. Ian can overturn any of them.
 | Connection refused | `"cause":"transport","retryable":false`. Exit 4 |
 | A malformed JSONL line at record 7 | Rows 1 to 6. `"stopped":{"at":7,"cause":"usage","retryable":false}`. Exit 2 |
 | `--replay` of a folder missing a batch | `"cause":"local"`. Exit 5 |
-| SIGTERM mid-run | The stop line, then the facts line with `"cause":"cancelled"`. Exit 143 |
+| `decide --lines --jobs 1` with its one request held, SIGTERM after the loopback counted 1 request | `thinkthen: stopped by a signal; 0 records finished`, then facts with `records` 0, `requests_sent` 1 and `"stopped":{"cause":"cancelled","retryable":false}`. The command ends by SIGTERM, 143 |
+| A second signal during that wait | The command ends at once. No facts line |
+| A batch of one record refused with 413 | `"stopped":{"at":1,"cause":"too_large","retryable":false}`. Exit 4 |
+| The usage folder cannot be written, because a file stands where the folder should be | The usage warning line, then the facts line, as the last two lines of standard error |
+| `Come Together` twice, default, `--details` | One request, today's single-record body. Both rows carry `meta.batch` with `records` 2, positions 1 and 2 |
 | `annotate` exit 6 | Facts with no `stopped` |
 | `--details` at `--batch 10` | Each row carries `meta.batch` with its place. The rows' shares of a batch sum to `meta.batch.usage` |
 | `--details` at `--batch 1` | No `meta.batch`. Today's row bytes |
@@ -187,10 +192,10 @@ Every test drives the compiled binary against the in-process loopback. New tests
 
 | Test | What it proves | Deliberate break that turns it red |
 | --- | --- | --- |
-| `the_facts_line_counts_every_record_and_request` | The `filter` row of the edge table under a private usage folder. The last standard error line equals the pinned object with `seconds` removed. Its `requests_sent`, `input_tokens`, `output_tokens` and `cache_answers` equal the change in `thinkthen status` month totals over the run, and the loopback's request count. The `rank --top` row pins `records` 20. Without `--facts`, standard error is empty | (a) Count printed rows: `records` 11. (b) Sum the rows' shares: tokens fall. (c) Print the line before the usage warning: it is not last. (d) Print it without `--facts`: standard error is not empty |
+| `the_facts_line_counts_every_record_and_request` | The `filter` row of the edge table under a private usage folder. The last standard error line equals the pinned object with `seconds` removed. Its `requests_sent`, `input_tokens`, `output_tokens` and `cache_answers` equal the change in the `total_*` fields of `thinkthen status` over the run, and the loopback's request count. The `rank --top` row pins `records` 20. The unwritable usage folder row pins the warning line and then the facts line as the last two lines. Without `--facts`, standard error is empty | (a) Count printed rows: `records` 11. (b) Sum the rows' shares: tokens fall. (c) Print the line before the usage warning: the unwritable-folder row ends with the warning. (d) Print it without `--facts`: standard error is not empty |
 | `facts_say_nothing_nobody_reported` | The replay, cache, no-usage and mixed-usage rows | (a) Write 0 for an unreported count. (b) Count a replayed reply's tokens. (c) Keep tokens when one reply lacked usage |
-| `a_stopped_run_says_why_and_whether_to_retry` | An edge-case table: the 503, 401, unset key, refused connection, malformed record, replay miss and SIGTERM rows. Each pins the whole `stopped` member and the exit code | (a) Mark every exit 4 retryable: the 401 row. (b) Map `NoKey` to `status`: the key row. (c) Take `at` from `finished`: the 503 row reads 10. (d) Mark a transport failure retryable. (e) Re-raise the signal before the line: the SIGTERM row has no facts line |
-| `each_batch_row_names_its_batch`, design test 6 | A 25-line `decide --details` run at `--batch 10`, recorded. For each batch, the rows' shares sum to `meta.batch.usage` and `meta.batch.requests_sent`. Each row's `setting`, `records`, `position` and `closed` match the README's batches. The `--facts` totals equal the sum over batches. A replay of the folder prints no token fields. At `--batch 1` no row carries `meta.batch` | (a) Emit `meta.batch` on a batch of one: the `--batch 1` row. (b) Position from 0. (c) Put the row's share in `meta.batch.usage` |
+| `a_stopped_run_says_why_and_whether_to_retry` | An edge-case table: the 503, 401, 413, unset key, refused connection, malformed record, replay miss and SIGTERM rows. Each pins the whole `stopped` member and the exit code. The SIGTERM row runs in `tests/backend/interrupt.rs` on ticket 0169's held-reply loopback and its acknowledgment variable. It signals only after the loopback counted 1 request, and pins `records` 0 and `requests_sent` 1 | (a) Mark every exit 4 retryable: the 401 row. (b) Map `NoKey` to `status`: the key row. (c) Take `at` from `finished`: the 503 row reads 10. (d) Mark a transport failure retryable. (e) Re-raise the signal before the line: the SIGTERM row has no facts line. (f) Give a cancelled stop an `at`. (g) Map 413 to `status`: the 413 row |
+| `each_batch_row_names_its_batch`, design test 6 | A `decide --details` run at `--batch 10` over design test 3's fixture, `specification/fixtures/batching/grouping.txt`, recorded. Its 25 lines hold content cuts at positions 8 and 17, so the batches are 1 to 8 (`content`), 9 to 17 (`content`) and 18 to 25 (`end`). For each batch, the rows' shares sum to `meta.batch.usage` and `meta.batch.requests_sent`, and each row's `setting`, `records`, `position` and `closed` match those batches. The `--facts` totals equal the sum over batches. A replay of the folder prints no token fields. At `--batch 1` no row carries `meta.batch`. The `Come Together` twice row pins `records` 2 on both rows | (a) Emit `meta.batch` on a batch of one: the `--batch 1` row. (b) Position from 0. (c) Put the row's share in `meta.batch.usage`. (d) Leave out `meta.batch` when the members share one text: the `Come Together` row |
 | `a_split_batch_marks_its_halves` | Ticket 0154's 413 row with `--details`. Rows 1 to 5 carry `split` true with their half's counts and the whole batch's `closed` | (a) No `split`. (b) The whole batch's `records` on a half's row |
 
 The four questions:
@@ -243,7 +248,7 @@ Excluded: library and SQL facts (B12a to B13e), cost (run-facts ask 4), per-requ
 
 ## Routing
 
-Builder: Claude (Opus subagent) in lane 1. Reviewer: a fresh read-only Claude session for the design and the code. The change raises the ceiling and widens a public surface, so the code review names what it checked.
+Builder: the agent the work plan names, Claude now or Codex after the handover. Reviewer: a fresh read-only session from the builder's vendor for the code. The change raises the ceiling and widens a public surface, so the code review names what it checked.
 
 ## Complexity
 
