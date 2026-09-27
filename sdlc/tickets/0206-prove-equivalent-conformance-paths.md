@@ -1,12 +1,12 @@
 ---
 flow: build
 priority: 206
-opens: sdlc/tickets/0206-prove-equivalent-conformance-paths.md sdlc/records/2026-09-27-shared-case-gap-audit.md
+opens: sdlc/tickets/0206-prove-equivalent-conformance-paths.md sdlc/records/0206-design-review.md sdlc/records/0206-prove-equivalent-conformance-paths.md sdlc/records/2026-09-27-shared-case-gap-audit.md
 ---
 
 # 0206: Prove equivalent conformance paths
 
-Status: proposed for independent design review. Owner: Codex. Ian can overturn a host spelling, but a skipped shared case remains visible until its equivalent boundary behavior is proved or a separate feature ticket owns the difference.
+Status: design accepted after independent review at `785425be`; implementation in progress. Owner: Codex. Ian can overturn a host spelling, but a skipped shared case remains visible until its equivalent boundary behavior is proved or a separate feature ticket owns the difference.
 
 ## Outcome
 

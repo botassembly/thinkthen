@@ -721,7 +721,13 @@ conformance() {
 		line=$(BPORT=${BPORT:-} SCRATCH=$SCRATCH python3 tests/runner.py "$SOCK" "$id")
 		echo "         $line"
 		case $line in
-		"pass $id") pass=$((pass + 1)) ;;
+		"pass $id")
+			case $id in
+			13-filter-records|15-rank-records|16-rank-stable-tie) same "$(bcount)" 3 ;;
+			14-filter-none) same "$(bcount)" 2 ;;
+			26-filter-empty-list|31-usage-rank-blank-question) same "$(bcount)" 0 ;;
+			esac
+			pass=$((pass + 1)) ;;
 		"not run $id: "*) skipped=$((skipped + 1)) ;;
 		*) fail=$((fail + 1)) ;;
 		esac
