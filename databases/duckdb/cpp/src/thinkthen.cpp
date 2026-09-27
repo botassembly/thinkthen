@@ -6,6 +6,7 @@
 #include "nested.hpp"
 #include "scalar_owner.hpp"
 #include "scalar_settings.hpp"
+#include "usage.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/file_system.hpp"
 #include "duckdb/common/weak_ptr_ipp.hpp"
@@ -406,6 +407,7 @@ void LoadThinkThen(ExtensionLoader &loader) {
 		}
 	}
 	RegisterNested(loader);
+	RegisterUsage(loader);
 }
 
 } // namespace duckdb

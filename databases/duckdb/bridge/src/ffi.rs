@@ -82,7 +82,7 @@ fn answered(result: Result<Vec<u8>, String>) -> Reply {
     }
 }
 
-fn reply_boundary(call: impl FnOnce() -> Result<Vec<u8>, String>) -> Reply {
+pub(crate) fn reply_boundary(call: impl FnOnce() -> Result<Vec<u8>, String>) -> Reply {
     catch_unwind(AssertUnwindSafe(|| in_bridge(|| answered(call())))).unwrap_or(Reply {
         status: 4,
         bytes: std::ptr::null_mut(),

@@ -95,6 +95,8 @@ Annotate exposed an arity assumption in the C++ bind path: treating every kind n
 
 Recognize and relations now use a separate scalar registration and bind path with their exact signatures. A private typed byte codec carries complete entity and relation fields from the public engine into DuckDB lists of structs. The family-level stock-host check covers bad foldable and later-row arguments, NULLs, allowed and refused rules files, and actual nested outputs. It also caught no new arity alias after the explicit bind split. Usage, warm, relate, host interruption, full file permission, and package proofs still remain before the product extension can replace the shipped C API surface.
 
+The usage table now reads four process counters from the existing Rust registry through a fixed-width private export. A stock-host child sees `requests_sent` advance after one real decision while the usage query itself sends nothing. The new export lives in a separate named FFI module and shares the panic-safe reply boundary. Warm, relate, host interruption, full file permission, and package proofs still remain.
+
 ## Evidence
 
 - Starts from: Local experiment 207's v1.5.5 bind crash, local experiment 253's stock-host settings and file proofs, the two open DuckDB C API issues, the 0110 and 0118 records, current `origin/main` `9b8bf076`, and DuckDB's tagged v1.5.5 C++ headers linked above.

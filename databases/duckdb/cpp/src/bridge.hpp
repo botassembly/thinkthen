@@ -50,6 +50,7 @@ ThinkThenReply thinkthen_cpp_nested_group(const uint8_t *argument, size_t argume
                                           int64_t deadline_ms, int32_t kind, ThinkThenSettings settings,
                                           int32_t from_file);
 void thinkthen_cpp_free(uint8_t *bytes, size_t len);
+ThinkThenReply thinkthen_cpp_usage();
 }
 
 namespace duckdb {
