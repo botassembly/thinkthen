@@ -64,3 +64,7 @@ The batch issue's recommendations, adopted with the ruling:
 
 2. The exact fixed sentence, taken unchanged from the measured arm.
 3. `choose` and `tag` keeping today's form until B8 and B9 measure them on long records.
+
+## Amendment
+
+2026-09-26: Item 5's caution also stays for `score`, because item 4 keeps its records list.
