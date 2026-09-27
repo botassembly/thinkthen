@@ -194,8 +194,7 @@ fn thinkthen_try_details(question: Option<&str>, evidence: Option<&str>) -> Opti
                 .or_raise();
             serde_json::json!({"status":"answered","details":details})
         }
-        Err(error) if error.recoverable() => error.value(),
-        Err(error) => call::raise(error),
+        Err(error) => error.value().unwrap_or_else(|| call::raise(error)),
     };
     Some(JsonB(value))
 }

@@ -49,24 +49,17 @@ impl Refusal {
     }
 
     /// A failed row carries only its public kind and fixed advice.
-    pub(crate) fn value(&self) -> serde_json::Value {
+    pub(crate) fn value(&self) -> Option<serde_json::Value> {
         let message = match self.kind {
             ErrorKind::Usage => {
                 "check the row's question and arguments, or raise the process request total when it is spent"
             }
             ErrorKind::Local => "check the named file and its permissions",
             ErrorKind::Backend => "the backend did not answer; retry if allowed",
-            ErrorKind::Cancelled | ErrorKind::Deadline | ErrorKind::Defect => {
-                unreachable!("fatal failures do not become values")
-            }
+            ErrorKind::Cancelled | ErrorKind::Deadline | ErrorKind::Defect => return None,
         };
-        serde_json::json!({"status":"failed","error":{"kind":self.kind.name(),"message":message,"retryable":self.retryable}})
-    }
-
-    pub(crate) fn recoverable(&self) -> bool {
-        matches!(
-            self.kind,
-            ErrorKind::Usage | ErrorKind::Local | ErrorKind::Backend
+        Some(
+            serde_json::json!({"status":"failed","error":{"kind":self.kind.name(),"message":message,"retryable":self.retryable}}),
         )
     }
 }
@@ -152,9 +145,8 @@ impl Plan {
     }
 }
 
-/// Apply a plan to a seeded builder. The throttle passes only while this
-/// backend has no explicit throttle active, because 0077 refuses a second,
-/// different one in one process.
+/// Apply a plan to a seeded builder. A requested throttle always reaches
+/// the public setter, which accepts the active width and refuses a change.
 fn apply(plan: &Plan, mut builder: EngineBuilder) -> Result<EngineBuilder, Error> {
     if let Some(value) = plan.throttle {
         // The public engine accepts an equal width and refuses a changed one.
