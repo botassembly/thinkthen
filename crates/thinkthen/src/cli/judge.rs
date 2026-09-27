@@ -274,12 +274,8 @@ fn over_kept(
 ) -> Result<ExitCode, Failure> {
     let writer: &mut dyn Write = &mut writer;
     let mut output = match keeping {
-        Keeping::Ordered => Output::Ordered {
-            held: Vec::new(),
-            top,
-            writer,
-        },
-        _ => Output::Streaming(writer),
+        Keeping::Ordered => Output::ordered(writer, top, environment.usage()),
+        _ => Output::streaming(writer, environment.usage()),
     };
     run(
         Asked {
@@ -308,7 +304,12 @@ fn judging(
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     let writer: &mut dyn Write = &mut writer;
-    run(asked, environment, input, &mut Output::Streaming(writer))
+    run(
+        asked,
+        environment,
+        input,
+        &mut Output::streaming(writer, environment.usage()),
+    )
 }
 
 /// Pick one label from the options, and set the exit code from the answer.

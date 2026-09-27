@@ -40,6 +40,10 @@ The 0154 builder confirmed that public `Engine::with_model` really calls `Backen
 
 Platform checks are separate from product support. DuckDB and PostgreSQL check scripts run on Linux, and SQLite uses the pinned 3.50.0 host. A missing macOS or Windows measurement is not evidence that a SQL operation is unsupported there.
 
+## Held-send cancellation check for 0149 and 0207
+
+The active 0201 branch at `c7000a4a` restores `databases/duckdb/src/worker.rs::run`: a worker owns the blocking engine call while the DuckDB caller polls `Invoke::stopped` every 50 ms and cancels its token on a stop. `scalars.rs::on_worker` passes each scalar call through that boundary. The builder confirmed that a signal handler can fire while a held HTTP send blocks, but `CallOptions::interrupt` does not poll a host callback during that wait. A callback alone therefore does not prove prompt host cancellation. For 0149's per-attempt deadline and total cap, keep the atomic send reservation separate from the host's prompt-cancel proof; for proposed 0207 SQL find, reuse 0201's worker boundary and a held-send signal case before claiming host parity. This is active-branch evidence, not a landed 0201 outcome or a change to either accepted ticket.
+
 ## Preparation review
 
 Fresh read-only review found the source paths, separation of missing operations from missing proof, and dependency notes useful. That assessment is about preparation, not implementation success; builders still need to run the named boundary checks. Comparing active 0201 at `04ba4a10` with main withdrew a false finding about its `LIMIT` sentence before handoff. The review also caught a zero-total fixture mistake: main `databases/sqlite/src/settings.rs::max_requests_total` and `tests/test_settings.py` reject zero, while DuckDB `src/engines.rs::total_of` and PostgreSQL `src/call.rs` permit it. The accepted 0149 ticket at `902077e9` repeats a zero-SQL-total proof across hosts. Its preserved branch needs that proof sentence corrected to a direct zero-cap marker check plus an already-spent positive SQLite SQL total. No runtime outcome or accepted setting rule changes.

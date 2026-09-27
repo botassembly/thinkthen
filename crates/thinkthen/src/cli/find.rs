@@ -101,6 +101,7 @@ pub(crate) fn run(
     if let Some(line) = line {
         edge::write_line(writer, &line)?;
     }
+    environment.usage().record_done();
     Ok(if resolved {
         ExitCode::SUCCESS
     } else {

@@ -67,6 +67,8 @@ The throttle holds per loaded copy of the engine. A process that also loads anot
 
 Answers go to the engine's disk cache and outlive the process. A warm pass fills the cache, and the queries after it read it. With `thinkthen_cache(NULL)` a warm pass still judges every row, and the queries after it send again.
 
+The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. Turn it off with `thinkthen_cache(NULL)`.
+
 ## Authority: who may do what
 
 - **Files.** A call reads only the file its `'@name'` argument names, resolved against the process working directory. The file must be a regular file of at most 1 MiB. It is opened once without blocking, so a fifo or a device refuses. The extension confines nothing and follows symlinks. A parsed file is re-read when its modified time or size changes.

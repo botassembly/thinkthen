@@ -33,6 +33,10 @@ pub(crate) struct Cli {
 /// The options every judging verb takes.
 #[derive(Args, Debug)]
 pub(crate) struct Common {
+    /// Print one machine-readable run-facts line last on standard error.
+    #[arg(long, hide_short_help = true)]
+    pub(crate) facts: bool,
+
     /// Print the full result object in place of the bare value.
     ///
     /// In record mode the object also carries `input`, the whole record as it

@@ -55,6 +55,10 @@ FROM tickets, thinkthen_annotate('@form.json', body) AS triage ORDER BY urgency 
 | `thinkthen.file_directory` | superuser | the one folder an unprivileged role may read named files from |
 | `thinkthen.api_key` | nobody | never read. A set value refuses the next call |
 
+The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. There is no off switch on this surface. `thinkthen.cache` moves the folder, and an empty value keeps `THINKTHEN_CACHE` or the platform folder.
+
+The folder belongs to the server's operating-system user. Every role whose calls resolve to the same folder shares its answers, so row text leaves the database's own access control, row-level security included. When roles must not share answers, give each its own folder with `ALTER ROLE ... SET thinkthen.cache`.
+
 The throttle holds for the whole backend process. The first explicit throttle stays until the backend exits. A later equal value works; a different value raises usage with the active width. An administrator's `ALTER ROLE ... SET` applies an engine setting to one role.
 
 `thinkthen.max_requests_total` caps spending on a large query, where each row is its own call. Before each call the backend adds the requests its engines have sent. Once the total is spent, the call refuses with 22023 and sends nothing. Only an array batch and `thinkthen_warm` are cut to what remains: they send the records that fit, then refuse. Any other call that sends several requests runs to its end once any of the total remains, such as `thinkthen_annotate` over several groups or `thinkthen_relate` over up to 255 entities. The total belongs to one backend process: each new connection forks a backend that starts from zero. A pool of N connections can therefore spend up to N times the total. A cancelled call's send already on the wire, and the engine's retries, can each pass the total by one call. `thinkthen status` never sees this spend, because it counts only what the command sends.

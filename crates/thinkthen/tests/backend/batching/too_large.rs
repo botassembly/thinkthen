@@ -2,6 +2,7 @@
 
 use super::{answering, decide, details, folder, lines, places, rows, text};
 use crate::harness::{Canned, Listener};
+use serde_json::json;
 
 fn sent(listener: &Listener) -> Vec<usize> {
     listener
@@ -54,6 +55,16 @@ fn a_too_large_batch_halves_once_and_counts_the_refused_request() {
             assert_eq!(sent(&listener), [5, 3, 2], "{status}");
             let printed = details(&output);
             assert_eq!(printed.len(), 5, "{status}");
+            let expected = [(3, 1, 2), (3, 2, 2), (3, 3, 2), (2, 1, 1), (2, 2, 1)];
+            for (row, (records, position, requests_sent)) in printed.iter().zip(expected) {
+                assert_eq!(
+                    row["meta"]["batch"],
+                    json!({"setting":5,"records":records,"position":position,"closed":"size",
+                        "usage":{"input_tokens":88,"output_tokens":12},
+                        "requests_sent":requests_sent,"split":true}),
+                    "{status}"
+                );
+            }
             let attempts: Vec<_> = printed
                 .iter()
                 .map(|row| row["meta"]["requests_sent"].as_u64())

@@ -81,6 +81,7 @@ pub(crate) fn run(
         warning: mismatch.warning(),
     };
     result::write(&mut writer, &output, &execution)?;
+    environment.usage().record_done();
     mismatch.print_once()?;
     Ok(if partial {
         ExitCode::from(6)
