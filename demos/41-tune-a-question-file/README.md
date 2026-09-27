@@ -103,6 +103,26 @@ Twenty-four rows compare, and three values moved from yes to no. `changes` shows
 
 A fair pair is two live runs or two replays over the same cases. Never mix a live run with a replay. The 0.08 default is the largest movement observed in one repeated yes-or-no run over one model, question, set, and day. It is a reporting tolerance, not a regression boundary. A move just above it does not prove a regression.
 
+## Step 4: let audit write the cut and the model
+
+`audit --write` grades the draft's rows against the labels and writes its steady cut into the file.
+
+```bash
+set -euo pipefail
+work=$(mktemp -d); trap 'rm -rf -- "$work"' EXIT
+
+cp draft.json "$work/draft.json"
+thinkthen decide @"$work/draft.json" --jsonl --field /body --details \
+  --replay recording/ < claims.jsonl > "$work/draft.jsonl"
+jq -c '{id, value: .label}' claims.jsonl > "$work/key.jsonl"
+
+thinkthen audit "$work/draft.jsonl" "$work/key.jsonl" --write "$work/draft.json" 2>&1 >/dev/null \
+  | mustmatch "thinkthen: audit: wrote threshold 0.57 for the question; it was 0.5"
+jq -c '{threshold, model}' "$work/draft.json" | mustmatch '{"threshold":0.57,"model":"jev-1.13.0"}'
+```
+
+A file tuned by `audit --write` names the model its bar was tuned on. Rerun the labeled set, and tune again, whenever that model changes.
+
 ## What can go wrong
 
 - **Tuning against reported cases.** These claims show direction. Hold cases back before quoting accuracy.
