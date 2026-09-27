@@ -6,9 +6,9 @@ opens: crates/thinkthen/src/core/mod.rs crates/thinkthen/src/cli/hint.rs crates/
 
 # 0153: Hints for a guessed verb, a table fed to `--jsonl`, and a second argument
 
-Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. It builds only after ticket 0146 lands on main. Owner: Claude.
+Status: landing verification blocked on 2026-09-27 by existing-test and help-vocabulary conflicts (stop rules 5 and 6). The coordinator accepted the design on 2026-09-26; a reviewed amendment is needed before landing. Owner: Codex.
 
-Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
+Review route: Ian routed the code review to a fresh read-only Codex reviewer, who accepted `9304b75c`. A design amendment and the new one-line ceiling increase need bounded independent review before landing.
 
 ## Outcome and authority
 

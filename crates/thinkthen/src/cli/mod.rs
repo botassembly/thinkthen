@@ -168,7 +168,7 @@ fn told(mut failure: Failure, cli: &Cli, environment: &Environment) -> Failure {
         )
         && cli.command.as_ref().is_some_and(Command::typed_jsonl)
     {
-        *cause = Box::new(Failure::Usage(hint::NOT_JSON_LINES));
+        **cause = Failure::Usage(hint::NOT_JSON_LINES);
     }
     let storage = match &failure {
         Failure::RecordingStorage => true,

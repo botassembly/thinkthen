@@ -31,6 +31,7 @@ fn run(args: &[&OsStr], input: &[u8]) -> io::Result<Output> {
     wait::finish(child, "hints")
 }
 
+#[expect(clippy::expect_used, reason = "the CLI must start")]
 fn check(args: &[&str], input: &[u8], stderr: &str) {
     let args: Vec<&OsStr> = args.iter().map(OsStr::new).collect();
     let output = run(&args, input).expect("binary runs");
