@@ -32,8 +32,16 @@ Do not rewrite history to make an initial assumption look correct. Distinguish c
 
 The fresh code reviewer checks these lessons against the diff and evidence. The coordinator checks the section before marking the ticket complete and landing it. Routine test and documentation checks stay proportional to the change; adding lessons does not require a repeated full suite.
 
+After adding lessons, read the ticket's Status, Closes, Deferred gaps, Evidence and Routing together, and check that numbered lists still sit under the right heading. A completed item must not remain described as deferred in a second section.
+
 ## Improve the next preparation
 
 After the preparation pass, evaluate its accuracy and usefulness. After each ticket finishes, compare the notes with the builder's lessons. Record what reduced discovery, what was missed, and what caused rework in the ticket or shared preparation record. Use that evidence to give the retained agent a specific next brief. Do not measure success by note length or by counting prepared tickets as completed issues.
 
 The first database pass caught useful SQL budget and warm-settings dependencies. It also incorrectly flagged an old main sentence about `LIMIT` as an unresolved DuckDB design defect; the active accepted branch had already corrected it. The coordinator verified the branch and the preparer withdrew the finding. This is why the source comparison above is required. Independent review also caught a shared zero-total proof that SQLite cannot run because it refuses zero. The corrected notes use a spent positive SQL total there and keep a direct typed-budget proof separate. Future briefs must check each host's input domain before copying a test across ports. The first build-usefulness evaluation is still pending.
+
+The 0170 preparation review caught another overstatement: a hook named `attempt_sent` ran before a final deadline check, so it could count a request that never reached transport. Trace the order of waits, final stop checks, counter marks and transport calls before claiming a counter is exact. A proposed move must preserve both no-send-on-expired-deadline and visibility of requests while their responses are held; a single zero-connection test proves only the first half.
+
+Use the [incident log](../records/2026-09-27-ticket-friction-since-1300.md) when briefing the next agent. Add each new substantive review rejection, misunderstanding or build surprise with its evidence and known or unknown cause. Send the retained preparation agent to check the named upcoming tickets for the same failure pattern, claim those note files, and record what it corrected or left unresolved. Keep the pass limited to the affected family.
+
+The first batching pass found complete argument paths and the mixed replay/live counter constraint. Review caught its mistaken assertion that an attempt hook necessarily counts a started transport: current code still checks the deadline after that hook. Check side-effect order through the final operation, not just method names. Pin accepted branch evidence to a commit so later branch cleanup cannot remove the reference. The corrected notes name the existing 0149 owner and a narrow prerequisite for 0170; they do not invent another issue or count the gap as fixed.

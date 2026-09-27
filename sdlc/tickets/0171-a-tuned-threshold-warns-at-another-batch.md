@@ -227,3 +227,11 @@ No issue file holds local experiment 284 file 14 alone. The build records file 1
 - Changes: A `decide`, `filter` or `rank` record run over a file tuned at another batch setting prints one warning and carries `meta.batch_warning`. `audit` and `diff` warn over mixed settings. `audit --write` writes `batch` into a single `decide` file only when the lines hold exactly one setting that is not 1, and removes a stale `batch` when they ran one record a request. A short ADR amends ADR 0048 item 8 and ADR 0053 item 3.
 - Proof: Three outside-in tests, each with deliberate breaks, including design test 13. The `install`, `lint`, `test`, `spec` and `surfaces` rungs.
 - Defers: Mixed results files that include rows asked alone, the later verbs, and library warnings.
+
+## Build preflight, 2026-09-27
+
+The [shared preflight](../records/2026-09-27-batching-ticket-preflight.md) uses executable main `b7efdcc9` and the pending 0154 branch `d10f5d22`. The accepted warning, write and digest rules above stay authoritative.
+
+- Trace the file's raw `batch` through `cli/asked.rs::read_top`, `cli/judge.rs::Tiers::setting`, `cli/asking.rs::run`, and `cli/asking/batched.rs`. `cli/profile.rs::Mismatch` is the existing once-only warning pattern. Keep the typed threshold, file threshold and typed batch tiers distinct before comparing tuned versus running settings. This is the 0148 and 0154 source-map lesson.
+- Read `meta.batch.setting` as a typed nested member in the shared result-line parser used by `audit` and `diff`; preserve literal option names and unrelated strings in fixtures. The 0152 porter correction proved that broad expected-value rewriting can hide a real name. Pin an option literally named `unresolved` and a nested batch setting in the smallest existing fixture family.
+- `cli/audit/write.rs` already parses the question file and re-resolves its digest. Add or remove only the accepted top-level `batch` key for the allowed single-decide-file case; `cli/asked.rs::read_top` and the question digest must still agree. `cli/diff.rs::warnings` already appends two possible warning lines, so the new batch line must preserve their order and the accepted maximum of three. Use the ticket's focused audit-write and diff tests; no live call is needed.
