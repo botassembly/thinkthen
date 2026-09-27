@@ -28,9 +28,10 @@ Ian ruled on the result: "Dame Judi Dench, a doctor, a junior, and all these oth
 4. **Each found name gets one pick-one kind question.** The options are the caller's kinds in order, then `none of these`. A name whose answer is `none of these` is dropped. With no kinds this question is not asked, and every name takes the kind `ENTITY`.
 5. **A caller may describe each kind in one line.** `--kind KIND=DESCRIPTION` already carries it, and the question file's `recognize.kinds` object already holds it. The description goes into the step-2 option for that kind. Step 1 names the kinds only. Descriptions added 2.2 to 2.7 points on the new half and changed nothing on the first half (local experiment 279). Bare kinds stay the default.
 6. **The same request asks one edge question per found name.** Its options are the name as found, the name with a touching punctuation or symbol piece added at either end, and the name with a punctuation or symbol piece removed from either end. The options come only from piece adjacency. A name with one option gets no edge question. The picked stretch becomes the name, and it keeps its step-2 kind. The wording is local experiment 279's edge wording a.
-7. **Two choices stay open.** The coordinator fills both before ticket 0147's review.
+7. **Three choices stay open.** The coordinator fills each before ticket 0147's review.
    - **The step-2 wording.** Local experiment 278's `none2` wording is the measured default. Local experiment 284 tests a new wording on the key's own names, and a second way out. Any way-out label it adds is reserved as a kind, as `none of these` is.
    - **Built-in kinds for web text.** Local experiment 286 tests the built-in kinds `web address`, `email address` and `social handle`. Ian's rule: a caller who asks for one of these kinds gets those names with that kind. Otherwise the questions still offer the three kinds, and a name picked as one of them is dropped.
+   - **The name score and its default cut.** Local experiment 287 compares three definitions offline: the step-2 kind probability, the step-1 span confidence, and their product. It picks the one best calibrated against the key, and it picks the default cut. With no kinds only the step-1 part exists.
 
 ### Step 3: relations
 
@@ -40,7 +41,7 @@ Ian ruled on the result: "Dame Judi Dench, a doctor, a junior, and all these oth
 ### Windows, output and the guard
 
 10. **Every text uses one fixed window of six pieces each side.** A step-1 request holds at most 40 piece questions. Its evidence is the original text from six pieces before its first piece to six pieces after its last. A step-2 request covers the names whose first piece sits in one step-1 request. Its evidence runs from six pieces before its first name to six pieces after its last, and each question shows six pieces each side. No overlap or merge rule runs. The same rule holds at every text length, so a paragraph and a book follow one path.
-11. **Each name prints its text, place and kind.** Bare output is `{"entities":[{"text":…,"start":…,"end":…,"length":…,"kind":…}]}`. `start` and `end` count Unicode scalar values into the original text. `end` is exclusive, and `length` is `end` minus `start`. `strength` and the name cut go, because the decode and `none of these` decide which names print. `--details` keeps every tag, kind, edge and pair probability.
+11. **Each name prints its text, place, kind and score.** Bare output is `{"entities":[{"text":…,"start":…,"end":…,"length":…,"kind":…,"probability":…}]}`. `start` and `end` count Unicode scalar values into the original text. `end` is exclusive, and `length` is `end` minus `start`. `probability` is one calibrated score per name, defined by item 7. `--threshold` keeps a name whose score is at or above the cut, so a caller trades missed names against false ones and `audit` can suggest the cut. `probability` replaces `strength`, and it matches the name `relate` gives an edge's score. `--details` keeps every tag, kind, edge and pair probability.
 12. **A text over 600,000 bytes is refused by default.** It exits 2 before any request, and the message names the size and the limit and echoes no text. The guard caps spending. A caller raises it with `--max-text-bytes N`.
 
 ## Measured results
@@ -89,9 +90,10 @@ These errors remain, and the design accepts them.
 ## Consequences
 
 - Ticket 0147 builds all three steps, the window, the output shape and the guard on the command line, the question file, the libraries and SQL, and `audit`.
-- The design issue's word lists, `confirm`, `boundary`, `--window`, strength and the name cut are not built. Its tickets R2, R3 and R4 retire. Its R4b (`--jobs` on one text), R7 (batching texts) and R8 (the manual page) stay, and each builds on this ADR.
+- The design issue's word lists, `confirm`, `boundary`, `--window` and strength formula are not built. Its tickets R2, R3 and R4 retire. Its R4b (`--jobs` on one text), R7 (batching texts) and R8 (the manual page) stay, and each builds on this ADR.
 - Standalone `relate` keeps its planner. Moving it to yes/no pairs under Ian's ruling of 2026-09-26 stays a separate ticket.
-- `audit` grades `recognize` names without a cut.
+- `audit` keeps full support for `recognize`. It reads each name's `probability` and the run cut, prints calibration, AUC, the coverage curve, the suggested bar and the crossed line, and `--write` puts a steady bar into the recognize question file. Only the field name changes from `strength`.
+- Ticket 0165 teaches `diff` to read `recognize` and `relate` once ticket 0147 fixes the output shape.
 - Every recognize request body and question digest changes, so every recognize recording is made again.
 
 ## What Ian can overturn
@@ -106,7 +108,7 @@ Owner calls, adopted with the ruling:
 
 4. The p1 step-1 wording over q3, from local experiment 281, and the six-piece window, from local experiment 285.
 5. The edge question sharing step 2's request.
-6. Dropping `strength` and the name cut, and the field name `text`.
+6. The field names `text` and `probability`.
 7. The guard's name `--max-text-bytes` and its default of 600,000 bytes.
 8. Rejecting the span check of local experiment 283 by the simplicity rule.
-9. The step-2 wording and the built-in web kinds, once local experiments 284 and 286 fill item 7.
+9. The step-2 wording, the built-in web kinds, and the name score and its cut, once local experiments 284, 286 and 287 fill item 7.
