@@ -47,3 +47,12 @@ cd "$(git rev-parse --show-toplevel)/crates/thinkthen/tests/fixtures/measure"
 
 thinkthen diff small/choose.jsonl small/choose-b.jsonl --key small/choose-key.jsonl --table | tail -1 | mustmatch "A -> B: 2 of 5 changed; red -> green 1; tied -> green 1; gained 1, lost 0 (2 -> 4 right of 5); McNemar p 0.500 on right answers"
 ```
+
+For `recognize` runs, diff lists the names each record gained, lost, or changed in kind. With a key, it counts the key names each side matched and runs McNemar on the key names only one side matched. Under `--match overlap`, record 2's `Abbey Road` pairs with `Abbey Road Studios`, so it prints no row, and `Yesterday` changes kind from `person` to `work`.
+
+```bash
+cd "$(git rev-parse --show-toplevel)/crates/thinkthen/tests/fixtures/measure"
+
+thinkthen diff items/recognize-a.jsonl items/recognize-b.jsonl --key items/recognize-key.jsonl --match overlap --table | tail -1 | mustmatch "A -> B: 3 of 4 changed; items gained 1, lost 0, changed kind 1; key names matched 2 -> 4 of 4; extras 1 -> 0; McNemar p 0.500 on key names"
+thinkthen diff items/recognize-a.jsonl items/recognize-b.jsonl --key items/recognize-key.jsonl --match overlap --table | grep '^  ~' | mustmatch "  ~ Yesterday [0,9) person -> work"
+```
