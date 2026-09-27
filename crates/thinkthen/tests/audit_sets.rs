@@ -30,15 +30,15 @@ const KINDS: [&str; 4] = [
 /// Demo 44's sentence as two records.
 const RECORDS: &str = "{\"id\":1,\"text\":\"Maria Chen joined Northwind Freight in Chicago last spring.\"}\n{\"id\":2,\"text\":\"Maria Chen joined Northwind Freight in Chicago last spring.\"}\n";
 
-/// The key for one demo 44 record, without Chicago when `chicago` is false.
-fn names_key(id: usize, chicago: bool) -> String {
-    let place = if chicago {
-        ",{\"kind\":\"LOC\",\"start\":39,\"end\":46}"
+/// The key for one demo 44 record, without Northwind Freight, its weakest name, when `whole` is false.
+fn names_key(id: usize, whole: bool) -> String {
+    let organization = if whole {
+        ",{\"kind\":\"ORG\",\"start\":18,\"end\":35}"
     } else {
         ""
     };
     format!(
-        "{{\"id\":{id},\"value\":{{\"entities\":[{{\"kind\":\"PER\",\"start\":0,\"end\":10}},{{\"kind\":\"ORG\",\"start\":18,\"end\":35}}{place}]}}}}\n"
+        "{{\"id\":{id},\"value\":{{\"entities\":[{{\"kind\":\"PER\",\"start\":0,\"end\":10}}{organization},{{\"kind\":\"LOC\",\"start\":39,\"end\":46}}]}}}}\n"
     )
 }
 
@@ -284,7 +284,9 @@ fn write_puts_the_cut_in_recognize_and_relate_files() {
         kinds.join(", ")
     );
     let file = write(&folder, "names.json", &names);
-    let lines = recognized(&[&format!("@{file}")], RECORDS);
+    // Every name of demo 44's recording scores above 0.99, past the bar's
+    // grid, so the name the key leaves out is lowered to 0.6 by hand.
+    let lines = recognized(&[&format!("@{file}")], RECORDS).replace("\"strength\":0.997", "\"strength\":0.6");
     let key = write(
         &folder,
         "names-key.jsonl",
@@ -299,10 +301,10 @@ fn write_puts_the_cut_in_recognize_and_relate_files() {
     let edge_keys = write(&folder, "edge-key.jsonl", &(edge_key(1) + &edge_key(2)));
     // The names file gains the model its lines name (ticket 0159). The relate
     // file already names `local-1`, the model its lines name.
-    let named = names.replacen("0.01\n}", "0.67,\n  \"model\": \"jev-1.13.0\"\n}", 1);
+    let named = names.replacen("0.01\n}", "0.61,\n  \"model\": \"jev-1.13.0\"\n}", 1);
     let edged = edges_text.replacen("0.01", "0.5", 1);
     for (path, lines, key, cut, expected) in [
-        (&file, lines, &key, "0.67", named),
+        (&file, lines, &key, "0.61", named),
         (&edges, run.clone() + &run, &edge_keys, "0.5", edged),
     ] {
         let (code, _, stderr) = audit(&["-", key, "--write", path], lines.as_bytes());
