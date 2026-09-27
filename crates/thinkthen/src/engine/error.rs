@@ -13,6 +13,7 @@ pub(crate) enum TransportKind {
     NameLookup,
     Refused,
     PrematureClose,
+    Tls,
     Other,
 }
 
@@ -73,6 +74,11 @@ pub(crate) enum Error {
     RecognizeKinds,
     /// The backend failed one question recognition requires.
     RecognizeLogical,
+    /// A recognize text passed its byte limit, so no request was sent.
+    TextTooLong {
+        bytes: usize,
+        limit: usize,
+    },
 }
 
 /// The statuses a backend is asked again after.
@@ -126,7 +132,8 @@ impl Error {
             | Self::ProfileLimit(_)
             | Self::NoKey(_)
             | Self::WidthActive(_)
-            | Self::RecognizeKinds => Kind::Usage,
+            | Self::RecognizeKinds
+            | Self::TextTooLong { .. } => Kind::Usage,
             Self::Cancelled => Kind::Cancelled,
             Self::Deadline(_) => Kind::Deadline,
         }

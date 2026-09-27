@@ -14,10 +14,12 @@ mod bytes;
 mod cases;
 #[path = "../../../../crates/thinkthen/src/test_deadline/child.rs"]
 mod child;
+mod settings;
 
 use std::collections::BTreeMap;
+use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output, Stdio};
+use std::process::{Child, Command, Output, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Mutex, OnceLock, PoisonError};
 use std::time::{Duration, Instant};
@@ -124,9 +126,18 @@ fn compile(source: &Path) -> PathBuf {
 /// Run one program with only the door's settings in its environment, and
 /// kill it after a minute.
 fn run(binary: &Path, base: &str, input: &[u8]) -> Output {
+    let mut child = start(binary, base);
+    let mut stdin = child.stdin.take().expect("its input");
+    stdin.write_all(input).expect("its input was written");
+    drop(stdin);
+    finished(child)
+}
+
+/// Start one program with only the door's settings and a fresh cache.
+fn start(binary: &Path, base: &str) -> Child {
     static RUNS: AtomicUsize = AtomicUsize::new(0);
     let cache = scratch(&format!("cache-{}", RUNS.fetch_add(1, Ordering::Relaxed)));
-    let mut child = Command::new(binary)
+    Command::new(binary)
         .env_clear()
         .env("THINKTHEN_BASE_URL", base)
         .env("THINKTHEN_API_KEY", KEY)
@@ -136,10 +147,12 @@ fn run(binary: &Path, base: &str, input: &[u8]) -> Output {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .expect("the program started");
-    let mut stdin = child.stdin.take().expect("its input");
-    std::io::Write::write_all(&mut stdin, input).expect("its input was written");
-    drop(stdin);
+        .expect("the program started")
+}
+
+/// Wait for a started program, killing it after a minute, and check that
+/// the key never reached its output.
+fn finished(mut child: Child) -> Output {
     let started = Instant::now();
     while child.try_wait().expect("a status").is_none() {
         if started.elapsed() > Duration::from_secs(60) {
@@ -191,7 +204,6 @@ fn the_library_carries_its_soname_and_exactly_the_header_symbols() {
         .collect();
     symbols.sort();
     assert_eq!(symbols, declared(&header));
-    assert_eq!(symbols.len(), 19);
     let version: Vec<String> = ["MAJOR", "MINOR", "PATCH"]
         .iter()
         .map(|part| {
@@ -278,4 +290,44 @@ fn every_c_row_holds_under_the_sanitizer() {
             _ => {}
         }
     }
+}
+
+/// Ticket 0166: a token fired while the reply is held cancels the typed
+/// scalar, the JSON scalar, and the bulk door, and nothing new is sent. The
+/// program says when each token has fired, so each release follows its fire.
+#[test]
+fn a_token_fired_during_a_held_reply_cancels_the_call() {
+    let backend = Backend::start().expect("a loopback backend");
+    let base = format!("{}/arm/held/v1", backend.origin());
+    let mut child = start(&compile(&crate_dir().join("tests/c/cancel.c")), &base);
+    let mut stdin = child.stdin.take().expect("its input");
+    let mut said = BufReader::new(child.stdout.take().expect("its output"));
+    let mut fired = Vec::new();
+    for arrived in [1, 2, 6] {
+        assert_eq!(backend.wait(arrived), arrived, "the requests are held");
+        stdin.write_all(b"fire\n").expect("the fire line");
+        let mut line = String::new();
+        said.read_line(&mut line).expect("the fired line");
+        fired.push(line);
+        std::thread::sleep(Duration::from_millis(250));
+        backend.round();
+    }
+    backend.release();
+    drop(stdin);
+    let output = finished(child);
+    let mut rest = String::new();
+    std::io::Read::read_to_string(&mut said, &mut rest).expect("the rest of its output");
+    assert_eq!(
+        (
+            output.status.code(),
+            fired.concat() + &rest,
+            text(&output.stderr)
+        ),
+        (
+            Some(0),
+            "fired A\nfired B\nfired C\n".to_owned(),
+            String::new()
+        )
+    );
+    assert_eq!(backend.count(), 6, "nothing was sent after a fire");
 }

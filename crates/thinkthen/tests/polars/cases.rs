@@ -36,6 +36,7 @@ const RUN: &[&str] = &[
     "12-score-upper",
     "17-annotate-mixed",
     "17-annotate-partial",
+    "18-annotate-two-groups",
     "27-decide-many",
     "28-decide-many-repeated-texts",
     "32-score-equal-distribution",
@@ -53,10 +54,6 @@ const NOT_RUN: &[(&str, &str)] = &[
     (
         "13 14 15 16 18-find-second 19 26 31 41 42 43 44 45 46 47 48 49 50 51 52",
         "filter, rank, find, recognize, and relate, which the door does not carry",
-    ),
-    (
-        "18-annotate-two-groups",
-        "two JSON pointers per record, and the door reads one text column",
     ),
     (
         "20 21 22 23 24 25",
@@ -100,10 +97,16 @@ fn cases() -> Vec<Case> {
                 id: word(case, "id"),
                 verb: word(case, "verb"),
                 question: asked.map_or("", |raw| raw.get()).to_owned(),
-                texts: exchanges
-                    .iter()
-                    .map(|one| one["evidence"].as_str().unwrap_or_default().to_owned())
-                    .collect(),
+                // A case with a record sends one JSON record, and its set reads the parts.
+                texts: case.get("record").map_or_else(
+                    || {
+                        let evidence = exchanges.iter().map(|one| one["evidence"].as_str());
+                        evidence
+                            .map(|one| one.unwrap_or_default().to_owned())
+                            .collect()
+                    },
+                    |raw| vec![raw.get().to_owned()],
+                ),
             }
         })
         .collect()
@@ -241,10 +244,11 @@ fn judged(door: &Engine, slice: &Engine, question: &str, texts: &[&str]) -> (Cel
 /// `value_json` member, read by the widened-cell rule.
 fn annotated(door: &Engine, slice: &Engine, set: &str, texts: &[&str]) -> (Vec<Cells>, Vec<Cells>) {
     let set = QuestionSet::from_json(set).expect("the case's set");
-    let frame =
-        DataFrame::new(texts.len(), vec![common::column(texts).into_column()]).expect("a frame");
+    // Case 18's set names a member `body`, so the records ride in `record`.
+    let records = common::column(texts).with_name("record".into());
+    let frame = DataFrame::new(texts.len(), vec![records.into_column()]).expect("a frame");
     let out = door
-        .annotate_frame(&set, &frame, "body", CallOptions::new())
+        .annotate_frame(&set, &frame, "record", CallOptions::new())
         .expect("the door");
     let records: Vec<String> = slice
         .annotate(&set, texts.to_vec())

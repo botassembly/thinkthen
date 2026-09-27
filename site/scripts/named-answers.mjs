@@ -13,8 +13,9 @@
 //   rule      One of four ids:
 //               direct     an assert, print, if, or while acts on a
 //                          ThinkThen call, a Bash until does, or a Bash
-//                          test, [, [[, echo, or printf reads the call's
-//                          output in place
+//                          test, [, [[, echo, printf, or case reads the
+//                          call's output in place, through a $(...) that
+//                          holds the call
 //               unnamed    a SQL call has no alias
 //               generic    an answer or exit code takes a generic name
 //               bare-exit  Bash reads $? in case, test, if, while, [, or [[
@@ -24,8 +25,11 @@
 // order, and several may share a line.
 //
 // Accepted languages: bash, sh, python, typescript, ts, ruby, r, rust, c,
-// and sql. sh is bash, and ts is typescript. An unknown language returns
-// an empty array. Such text holds no ThinkThen call form this rule knows.
+// and sql. sh is bash, and ts is typescript. An unknown language throws a
+// TypeError. Its message names the bad language and lists the accepted
+// names. A name that every JavaScript object inherits, such as constructor
+// or __proto__, is unknown too. A caller skips text that holds no
+// ThinkThen call, such as JSON or program output, before it calls.
 //
 // Generic names, compared without case: result, results, answer, answers,
 // output, outputs, out, res, ret, response, responses, value, values,
@@ -138,6 +142,21 @@ function sql(text) {
   return found;
 }
 
+// The text inside each $(...), nested ones included.
+function substitutions(text) {
+  const found = [];
+  for (let at = text.indexOf('$('); at !== -1; at = text.indexOf('$(', at + 2)) {
+    let depth = 0;
+    let i = at + 1;
+    for (; i < text.length; i++) {
+      if (text[i] === '(') depth += 1;
+      else if (text[i] === ')' && --depth === 0) break;
+    }
+    found.push(text.slice(at + 2, i));
+  }
+  return found;
+}
+
 function bash(text) {
   const found = [];
   const call = CALL.bash;
@@ -177,8 +196,8 @@ function bash(text) {
     if (/^\s*(if|while|until)\s/.test(line) && !/^\s*while\s+read\b/.test(line) && call.test(piped(i))) {
       found.push({ line: at, rule: 'direct', message: 'a branch acts on a thinkthen call. Wrap the call in a function named for its meaning, or name the answer first.' });
     }
-    if (/^\s*(test|\[\[?|echo|printf)\b/.test(line) && /\$\(/.test(line)) {
-      if (call.test(statement(lines, i, 'python'))) found.push({ line: at, rule: 'direct', message: 'an assert or print acts on a thinkthen call. Name the answer first.' });
+    if (/^\s*(?:(?:test|echo|printf|case)\b|\[\[?\s)/.test(line) && /\$\(/.test(line)) {
+      if (substitutions(statement(lines, i, 'python')).some((inner) => call.test(inner))) found.push({ line: at, rule: 'direct', message: 'a test, print, or case reads a thinkthen call in place. Name the answer first.' });
     }
   });
   return found;
@@ -212,9 +231,11 @@ function library(text, lang) {
 
 export function namedAnswerProblems(code, language) {
   const key = String(language).toLowerCase();
-  const lang = Object.hasOwn(LANGUAGE, key) ? LANGUAGE[key] : null;
+  if (!Object.hasOwn(LANGUAGE, key)) {
+    throw new TypeError(`unknown language ${JSON.stringify(String(language))}. Accepted names: ${Object.keys(LANGUAGE).join(', ')}.`);
+  }
+  const lang = LANGUAGE[key];
   if (lang === 'sql') return sql(code);
   if (lang === 'bash') return bash(code);
-  if (lang) return library(code, lang);
-  return [];
+  return library(code, lang);
 }

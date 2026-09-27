@@ -10,6 +10,16 @@ use super::{
 
 static FOLDERS: AtomicU64 = AtomicU64::new(0);
 
+#[test]
+fn an_old_usage_row_without_retries_reads_as_zero() {
+    let row: Counts = serde_json::from_str(
+        r#"{"schema":"thinkthen.usage/1","requests_sent":3,"input_tokens":1,"output_tokens":2,"cache_answers":0}"#,
+    )
+    .expect("old usage schema");
+    assert_eq!(row.requests_sent, 3);
+    assert_eq!(row.retries, 0);
+}
+
 fn folder(name: &str) -> std::path::PathBuf {
     let path = std::env::temp_dir().join(format!(
         "thinkthen-usage-{name}-{}-{}",

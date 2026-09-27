@@ -193,9 +193,21 @@ mod unix {
                 .contains(Signal::SIGINT)
         );
         assert!(
+            SigSet::thread_get_mask()
+                .expect("blocked")
+                .contains(Signal::SIGTERM)
+        );
+        assert!(
             std::thread::spawn(|| SigSet::thread_get_mask()
                 .expect("worker")
                 .contains(Signal::SIGINT))
+            .join()
+            .expect("joined")
+        );
+        assert!(
+            std::thread::spawn(|| SigSet::thread_get_mask()
+                .expect("worker")
+                .contains(Signal::SIGTERM))
             .join()
             .expect("joined")
         );

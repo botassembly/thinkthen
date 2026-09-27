@@ -14,15 +14,16 @@
 | `thinkthen_tag(question, evidence, labels text[])` | the labels that apply, as `text[]` |
 | `thinkthen_annotate(set, evidence)` | each question's value, as `jsonb` |
 | `thinkthen_details(question, evidence)` | the engine's detailed result, as `jsonb` |
+| `thinkthen_try_details(question, evidence)` | an answered details envelope or a safe typed failure, as `jsonb` |
 | `thinkthen_warm(question, evidence)` | an aggregate that judges each distinct pair once and fills the answer cache. It takes a decide question only, and any other reads `thinkthen usage: thinkthen_warm takes a decide question; ask others with thinkthen_decide` before any request |
-| `thinkthen_recognize(body, kinds text[])` or `(body, spec)` | `(name, kind, start, end, strength)` rows |
-| `thinkthen_relations(body, spec)` | `(relation, source_name, source_kind, target_name, target_kind, probability)` rows |
+| `thinkthen_recognize(body, kinds text[])` or `(body, spec)` | `(text, start, end, length, kind, strength)` rows |
+| `thinkthen_relations(body, spec)` | `(relation, source_text, source_kind, target_text, target_kind, probability)` rows |
 | `thinkthen_relate(query, rules text[])` or `(query, spec)` | `(relation, source, target, probability)` rows, with the query's ids |
 | `thinkthen_usage()` | `(requests_sent, cache_answers, input_tokens, output_tokens)` for this backend |
 
 A question, set, or spec is JSON text in the file grammar, or a file named with the `'@refund.json'` spelling. Bare text is never a path. For `choose`, `score`, and `tag`, the array joins the question as its options, levels, or labels. Pass `NULL` when the question already names them.
 
-`start` and `end` count characters, so `substring(body from start + 1 for "end" - start)` is the name. The relate query returns `(id, name)` or `(id, name, kind)`. A two-column query takes bare relation names. Inline rules read `NAME` or `NAME=SOURCE:TARGET`, as the command's `--relation` does. The query may return at most 255 rows.
+`start`, `end`, and `length` count characters, so `substring(body from start + 1 for length)` is the name. The relate query returns `(id, name)` or `(id, name, kind)`. A two-column query takes bare relation names. Inline rules read `NAME` or `NAME=SOURCE:TARGET`, as the command's `--relation` does. The query may return at most 255 rows.
 
 The slide sample runs as drawn:
 
@@ -32,20 +33,27 @@ SELECT id, a->>'team', (a->>'urgency')::float AS urgency
 FROM tickets, thinkthen_annotate('@form.json', body) AS a ORDER BY urgency DESC;
 ```
 
+## Run facts
+
+`thinkthen_details(question, evidence)` returns the command's `--details` line for one text as `jsonb`, schema `thinkthen.result/1`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.
+
+`thinkthen_try_details(question, evidence)` returns `jsonb` with `status: "answered"` and the full details object, or `status: "failed"` and an error with public `kind`, fixed safe `message`, and typed `retryable`. It returns SQL NULL when either input is SQL NULL, before reading a question file or settings. An unresolved answer is answered with JSON `null` in its details. Usage, local, and backend row failures let later rows complete. Cancellation, deadline, and defect still raise. The failed value includes no question, evidence, key, file path, cache path, or backend address.
+
+`thinkthen_usage()` returns this backend process's running totals of requests sent, cache answers and tokens.
+
 ## Settings
 
 | Setting | Who sets it | Meaning |
 | --- | --- | --- |
 | `thinkthen.deadline_ms` | any role | the per-call budget in milliseconds. -1 means none, and 0 means already spent |
-| `thinkthen.throttle` | superuser | requests in flight at once, 0 to 32. -1 keeps the engine's value |
+| `thinkthen.throttle` | superuser | requests in flight at once, 1 to 32. -1 keeps the engine's value. PostgreSQL refuses any other value where it is set. The refusal reads `thinkthen usage: a throttle is a whole number from 1 through 32`. `SET` fails, and a configuration file's bad value draws the refusal as a warning and leaves -1 |
 | `thinkthen.max_requests` | superuser | the most records one call answers. -1 means no limit |
 | `thinkthen.max_requests_total` | superuser | the most requests one backend sends. -1 means no total |
 | `thinkthen.cache` | superuser | the answer cache folder. Empty keeps `THINKTHEN_CACHE` or the platform folder |
-| `thinkthen.cache_bytes` | superuser | the cache cap, such as `'500MB'`. -1 keeps the configured value. 0 refuses every call. The ceiling is 2,147,483,647 bytes |
 | `thinkthen.file_directory` | superuser | the one folder an unprivileged role may read named files from |
 | `thinkthen.api_key` | nobody | never read. A set value refuses the next call |
 
-The throttle holds for the whole backend process. The first explicit throttle stays until the backend exits, and a later, different value is not applied. An administrator's `ALTER ROLE ... SET` applies an engine setting to one role.
+The throttle holds for the whole backend process. The first explicit throttle stays until the backend exits. A later equal value works; a different value raises usage with the active width. An administrator's `ALTER ROLE ... SET` applies an engine setting to one role.
 
 `thinkthen.max_requests_total` caps spending on a large query, where each row is its own call. Before each call the backend adds the requests its engines have sent. Once the total is spent, the call refuses with 22023 and sends nothing. Only an array batch and `thinkthen_warm` are cut to what remains: they send the records that fit, then refuse. Any other call that sends several requests runs to its end once any of the total remains, such as `thinkthen_annotate` over several groups or `thinkthen_relate` over up to 255 entities. The total belongs to one backend process: each new connection forks a backend that starts from zero. A pool of N connections can therefore spend up to N times the total. A cancelled call's send already on the wire, and the engine's retries, can each pass the total by one call. `thinkthen status` never sees this spend, because it counts only what the command sends.
 

@@ -219,14 +219,15 @@ fn loopback_engine(
     (listener, backend, engine)
 }
 
-/// `recognize` reads its evidence as tokens and names, in plain and pretty `Debug`.
+/// `recognize` reads its evidence as names and edge labels, in plain and pretty `Debug`.
 #[test]
 fn no_recognize_debug_line_shows_the_evidence() {
     let name = crate::core::RecognizedName {
-        name: EVIDENCE.to_owned(),
-        kind: "person".to_owned(),
+        text: EVIDENCE.to_owned(),
         start: 0,
         end: 1,
+        length: 1,
+        kind: "person".to_owned(),
         strength: 0.9,
     };
     let edge = crate::core::RelationEdge {
@@ -235,12 +236,7 @@ fn no_recognize_debug_line_shows_the_evidence() {
         target: name.clone(),
         probability: 0.8,
     };
-    let tokens = crate::core::tokenize(EVIDENCE);
-    let input = crate::engine::facade::TokenInput {
-        token: EVIDENCE.to_owned(),
-        detection_probability: 0.9,
-        kind_probabilities: vec![0.9],
-    };
+    let edges = crate::core::Odds(vec![(EVIDENCE.to_owned(), 0.9)]);
     let lines = crate::core::Reading::new(crate::core::Framing::Lines, Vec::new())
         .expect("a text reading")
         .record(format!("\u{e9}{EVIDENCE}").as_bytes())
@@ -248,22 +244,16 @@ fn no_recognize_debug_line_shows_the_evidence() {
     let object =
         crate::core::Record::string_fields(vec![(EVIDENCE.to_owned(), EVIDENCE.to_owned())]);
     let shown = format!(
-        "{name:?} {name:#?} {edge:?} {edge:#?} {tokens:?} {tokens:#?} {input:?} {input:#?} \
+        "{name:?} {name:#?} {edge:?} {edge:#?} {edges:?} {edges:#?} \
          {lines:?} {lines:#?} {object:?} {object:#?}"
     );
     assert!(!shown.contains(EVIDENCE), "{shown}");
-    assert_eq!(shown.matches("withheld").count(), 14, "{shown}");
-    // A two-byte letter sets the byte places apart from the character places.
-    let placed = crate::core::tokenize(&format!("\u{e9} {EVIDENCE}"));
-    assert_eq!(
-        format!("{placed:?}"),
-        "[Token { text: <2 bytes withheld>, byte_start: 0, byte_end: 2, start: 0, end: 1 }, \
-         Token { text: <22 bytes withheld>, byte_start: 3, byte_end: 25, start: 2, end: 24 }]"
-    );
+    assert_eq!(shown.matches("withheld").count(), 12, "{shown}");
+    assert_eq!(format!("{edges:?}"), "Odds([(<22 bytes withheld>, 0.9)])");
     assert_eq!(format!("{lines:?}"), "Record(text, <24 bytes withheld>)");
     assert_eq!(format!("{object:?}"), "Record(json, <51 bytes withheld>)");
     assert!(
-        shown.contains(r#"kind: "person", start: 0, end: 1, strength: 0.9"#),
+        shown.contains(r#"start: 0, end: 1, length: 1, kind: "person", strength: 0.9"#),
         "{shown}"
     );
 }
@@ -427,6 +417,10 @@ fn transport_kinds_give_fixed_actions() {
             "thinkthen: the backend closed the connection before a reply and may have received the request; it was not sent again\n",
         ),
         (
+            TransportKind::Tls,
+            "thinkthen: the TLS connection or certificate check failed; check --url and the backend's certificate trust\n",
+        ),
+        (
             TransportKind::Other,
             "thinkthen: the backend could not be reached; check --url and the network\n",
         ),
@@ -498,7 +492,7 @@ fn stopped_counts_use_record_only_at_one() {
             1,
             1,
             Failure::Cancelled,
-            "thinkthen: stopped at record 2; 1 record finished, 1 record from a recording\n",
+            "thinkthen: stopped by a signal; 1 record finished, 1 record from a recording\n",
         ),
     ];
     for (finished, replayed, cause, summary) in cases {

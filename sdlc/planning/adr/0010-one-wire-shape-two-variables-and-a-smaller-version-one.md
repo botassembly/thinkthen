@@ -73,6 +73,10 @@ What ADR 0010 held is the second adapter and the option that selects one. Both r
 
 A repeated trial therefore shows the service's own play as well as any change in the candidate. A re-record into a used folder stops at exit 5 when the service answers a saved request differently, even with no model change. `specification/recording.md` and `specification/threshold.md` carry the measured play.
 
+## Amendment, 2026-09-27, by Quick Fix qf-command-edges-and-prune: a loopback backend needs no key
+
+With `THINKTHEN_API_KEY` unset or blank, a request to `localhost`, `127.0.0.1`, or `[::1]` goes out with no `Authorization` header, on the command and on every library. A local server that checks no key then needs no pretend secret. Every other address still stops at exit 4 before any connection. The key rule of ruling 2 is unchanged: a set key still goes only to the address the user named. The coordinator ruled this for local experiment 284, file 89. Ian can overturn it.
+
 ## Amendment, 2026-09-26: ADR 0048 batches records
 
 Under ADR 0048 a request carries a batch of records, so `--jobs N` also sets how many batches are in flight. The default of 4 stays, and `records.md` keeps the range of 1 to 32. Ian can overturn this.

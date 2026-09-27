@@ -70,6 +70,9 @@ pub(crate) fn run(
             break;
         }
     }
+    if environment.cancel().fired() {
+        return Err(Failure::Cancelled);
+    }
     let (graded, critical) = report.lines();
     if !arguments.dry_run {
         lines.extend(graded);

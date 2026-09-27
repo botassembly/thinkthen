@@ -3,7 +3,8 @@ use std::fs;
 use serde::Serialize;
 
 use crate::args::RelateArguments;
-use crate::core::{Framing, ModelName, RelateConfigError, RelateSpec, Source};
+use crate::core::{Framing, RelateConfigError, RelateSpec, Source};
+use crate::edge;
 use crate::failure::Failure;
 
 pub(super) struct Settled {
@@ -69,10 +70,7 @@ pub(super) fn settle(arguments: &RelateArguments) -> Result<Settled, Failure> {
         }
     }
     if let Some(model) = arguments.common.model.as_deref() {
-        spec.model = Some(
-            ModelName::new(model)
-                .map_err(|_| Failure::Usage("--model is text, not white space"))?,
-        );
+        spec.model = Some(edge::model_flag(model)?);
         if let Some(sources) = &mut from {
             sources.model = Source::CommandLine;
         }

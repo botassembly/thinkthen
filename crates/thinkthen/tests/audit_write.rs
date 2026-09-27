@@ -14,9 +14,11 @@ mod wait;
 
 use std::fs;
 use std::os::unix::fs::PermissionsExt as _;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use measure_support::{audit, fixture, fixtures, found, ranked, replay, repository, with_ids};
+use measure_support::{
+    audit, fixture, fixtures, found, payment_rows, ranked, replay, repository, with_ids,
+};
 
 /// The payment question of `transforms/rows`, pretty-printed with CRLF line
 /// ends and an escaped `threshold` key, as `write/decide.json` holds it.
@@ -58,26 +60,6 @@ impl Drop for Scratch {
     }
 }
 
-/// Replay the payment question through a question file in the folder.
-fn decide_rows(folder: &Path, file: &str) -> String {
-    let rows = repository().join("transforms/rows");
-    let recording = rows.join("recording");
-    let cases = rows.join("cases.jsonl");
-    let at = format!("@{file}");
-    let [recording, cases] = [&recording, &cases].map(|path| path.to_str().expect("a path"));
-    let arguments = [
-        "decide",
-        &at,
-        "--jsonl",
-        "--details",
-        "--replay",
-        recording,
-        "--input",
-        cases,
-    ];
-    replay(folder, &arguments, b"")
-}
-
 /// The write key: `replay/key.jsonl` with `C-12` keyed no, and `C-15` and
 /// `C-29` held out. The tuning part puts the bar at 0.59; see the fixture README.
 fn key() -> String {
@@ -91,7 +73,7 @@ fn key() -> String {
 fn writes_one_value() {
     let scratch = Scratch::new("one");
     let file = scratch.write("decide.json", &fixture("write/decide.json"));
-    let rows = scratch.write("rows.jsonl", &decide_rows(&scratch.0, "decide.json"));
+    let rows = scratch.write("rows.jsonl", &payment_rows(&scratch.0, "decide.json"));
     let count = scratch.count();
     let (code, stdout, stderr) = audit(&[&rows, &key(), "--write", &file], b"");
     assert_eq!(code, 0, "{stderr}");
@@ -100,10 +82,12 @@ fn writes_one_value() {
         "thinkthen: audit: wrote threshold 0.59 for the question; it was 0.9\n"
     );
     assert!(stdout.starts_with("{\"group\":"), "{stdout}");
-    let expected = format!("{HEAD}  \"\\u0074hreshold\": 0.59,\r\n  \"on\": [\"/body\"]\r\n}}\r\n");
+    let expected = format!(
+        "{HEAD}  \"\\u0074hreshold\": 0.59,\r\n  \"on\": [\"/body\"],\r\n  \"model\": \"jev-1.13.0\"\r\n}}\r\n"
+    );
     assert_eq!(scratch.read("decide.json"), expected);
     assert_eq!(scratch.count(), count);
-    let again = decide_rows(&scratch.0, "decide.json");
+    let again = payment_rows(&scratch.0, "decide.json");
     let first = |text: &str| {
         let line = text.lines().next().expect("a line");
         let row: serde_json::Value = serde_json::from_str(line).expect("a row");
@@ -118,18 +102,42 @@ fn writes_one_value() {
 }
 
 #[test]
+fn keeps_a_model_a_later_run_would_refuse() {
+    let scratch = Scratch::new("control-model");
+    let file = scratch.write("decide.json", &fixture("write/decide.json"));
+    let rows = payment_rows(&scratch.0, "decide.json");
+    assert!(rows.contains("\"model\":\"jev-1.13.0\""), "{rows}");
+    let rows = rows.replace(
+        "\"model\":\"jev-1.13.0\"",
+        "\"model\":\"jev-1.13.0\\u0007\"",
+    );
+    let rows = scratch.write("rows.jsonl", &rows);
+    let (code, _, stderr) = audit(&[&rows, &key(), "--write", &file], b"");
+    assert_eq!(code, 0, "{stderr}");
+    assert_eq!(
+        stderr,
+        "thinkthen: audit: wrote threshold 0.59 for the question; it was 0.9\n\
+         thinkthen: audit: kept the model for the question; a result names a model with a control character or white space but a plain space\n"
+    );
+    let expected = format!("{HEAD}  \"\\u0074hreshold\": 0.59,\r\n  \"on\": [\"/body\"]\r\n}}\r\n");
+    assert_eq!(scratch.read("decide.json"), expected);
+}
+
+#[test]
 fn inserts_when_absent() {
     let scratch = Scratch::new("insert");
     let bare = format!("{HEAD}  \"on\": [\"/body\"]\r\n}}\r\n");
     let file = scratch.write("decide.json", &bare);
-    let rows = scratch.write("rows.jsonl", &decide_rows(&scratch.0, "decide.json"));
+    let rows = scratch.write("rows.jsonl", &payment_rows(&scratch.0, "decide.json"));
     let (code, _, stderr) = audit(&[&rows, &key(), "--write", &file], b"");
     assert_eq!(code, 0, "{stderr}");
     assert_eq!(
         stderr,
         "thinkthen: audit: wrote threshold 0.59 for the question; it was absent\n"
     );
-    let expected = format!("{HEAD}  \"on\": [\"/body\"],\r\n  \"threshold\": 0.59\r\n}}\r\n");
+    let expected = format!(
+        "{HEAD}  \"on\": [\"/body\"],\r\n  \"threshold\": 0.59,\r\n  \"model\": \"jev-1.13.0\"\r\n}}\r\n"
+    );
     assert_eq!(scratch.read("decide.json"), expected);
 
     let demo = repository().join("demos/14-grade-a-batch");
@@ -177,7 +185,7 @@ fn refusals() {
     let scratch = Scratch::new("refused");
     let text = fixture("write/decide.json");
     let file = scratch.write("decide.json", &text);
-    let rows = decide_rows(&scratch.0, "decide.json");
+    let rows = payment_rows(&scratch.0, "decide.json");
     let other = scratch.write(
         "other.json",
         &text.replace("payment failure", "payment problem"),
@@ -191,7 +199,7 @@ fn refusals() {
             question_b.trim()
         ),
     );
-    let mixed = rows.clone() + &decide_rows(&scratch.0, "b.json");
+    let mixed = rows.clone() + &payment_rows(&scratch.0, "b.json");
     let rows = scratch.write("rows.jsonl", &rows);
     let mixed = scratch.write("mixed.jsonl", &mixed);
     let digest = |line: usize| {
@@ -243,14 +251,14 @@ fn keeps() {
     let no_bar = "kept the question unchanged; audit suggests no bar for rank or find";
     let cases = [
         (
-            decide_rows(&scratch.0, "band.json"),
+            payment_rows(&scratch.0, "band.json"),
             band,
             key(),
             "/id",
             "kept the band for the question; audit suggests a single cut",
         ),
         (
-            decide_rows(&scratch.0, "steady.json"),
+            payment_rows(&scratch.0, "steady.json"),
             steady,
             seeded,
             "/id",

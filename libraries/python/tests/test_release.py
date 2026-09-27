@@ -18,6 +18,8 @@ import textwrap
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
+import pytest
+
 from conftest import Backend, child_env, run
 
 TESTS = str(pathlib.Path(__file__).resolve().parent)
@@ -40,33 +42,46 @@ def no_core():
     resource.setrlimit(resource.RLIMIT_CORE, (0, 0))
 
 
-def test_callers_that_leave_still_get_every_batch_released(backend, tmp_path):
-    """Each of 200 calls per producer raises ``Cancelled`` while its worker
-    waits on a 30 ms reply. Every worker then releases all its batches, so
-    ``HELD`` empties and the token's references come back. Regression: a
-    release without attaching aborts on the raw producer."""
+def released_after_cancel(backend, tmp_path, calls):
+    """Run each producer in one real child and inspect its released batches."""
     code = SETUP + """
     engine = tt.Engine(throttle=8, cache=False)
     token = object()
     base = sys.getrefcount(token)
     for kind in ("ctypes", "raw"):
-        for _ in range(200):
+        cancelled = 0
+        for _ in range(int(os.environ["CALLS"])):
             stop = tt.CancelToken()
             threading.Timer(0.005, stop.cancel).start()
             try:
                 engine.decide(late, Stream(3) if kind == "ctypes" else Raw(3, token), token=stop)
             except tt.Cancelled:
-                pass
+                cancelled += 1
+        assert cancelled == int(os.environ["CALLS"]), (kind, cancelled)
         ended = time.monotonic() + 10
         while (HELD or tt._thinkthen._live_workers()) and time.monotonic() < ended:
             time.sleep(0.01)
         print(kind, len(HELD), tt._thinkthen._live_workers(), sys.getrefcount(token) == base)
     """
     done = subprocess.run([sys.executable, "-c", textwrap.dedent(code)], capture_output=True,
-                          text=True, timeout=120, preexec_fn=no_core,
-                          env=child_env(backend, tmp_path, "arm/delay/30"))
+                          text=True, timeout=15 if calls == 1 else 120, preexec_fn=no_core,
+                          env=child_env(backend, tmp_path, "arm/delay/30", CALLS=str(calls)))
     assert done.returncode == 0, done.stderr
     assert done.stdout.splitlines() == ["ctypes 0 0 True", "raw 0 0 True"]
+
+
+def test_one_cancelled_call_releases_each_producer(backend, tmp_path):
+    """A real cancelled call releases both Python and raw Arrow batches."""
+    released_after_cancel(backend, tmp_path, 1)
+
+
+@pytest.mark.stress
+def test_callers_that_leave_still_get_every_batch_released(backend, tmp_path):
+    """Each of 200 calls per producer raises ``Cancelled`` while its worker
+    waits on a 30 ms reply. Every worker then releases all its batches, so
+    ``HELD`` empties and the token's references come back. Regression: a
+    release without attaching aborts on the raw producer."""
+    released_after_cancel(backend, tmp_path, 200)
 
 
 FREEZE = SETUP + """
@@ -157,6 +172,18 @@ def one_run(number, python, folder, stairs):
     return lines, window
 
 
+def test_each_producer_exits_after_one_worker_wake(tmp_path):
+    """One real child per producer reaches one release or leak and exits."""
+    (tmp_path / "package").mkdir()
+    (tmp_path / "package" / "thinkthen").symlink_to(PACKAGE)
+    python, stairs = freeze_python(), Staircase()
+    for kind in range(2):
+        lines, _ = one_run(kind, python, tmp_path, stairs)
+        assert lines.count("wake") == 1 and lines.count("done") == 1, (python, lines)
+        assert len({"released", "leaked"} & set(lines)) == 1, (python, lines)
+
+
+@pytest.mark.stress
 def test_no_worker_freezes_at_exit(tmp_path):
     """Change 6's exit freeze: each child's worker wakes 0 to 8 ms around
     its script's end, stepped toward the edge where the window lies. Every ``wake`` must reach one outcome and ``done``.
@@ -178,4 +205,3 @@ def test_no_worker_freezes_at_exit(tmp_path):
     print(f"{python}: {windows} window runs of {runs}; outcomes {sorted(outcomes)}")
     assert windows >= 100, f"{python}: only {windows} of {runs} runs fell in the exit window"
     assert outcomes == {"released", "leaked"}, (python, outcomes)
-

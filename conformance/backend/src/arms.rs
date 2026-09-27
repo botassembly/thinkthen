@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::io::{self, BufRead, Write};
 use std::str::FromStr;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -17,7 +18,8 @@ use serde::Deserialize;
 use serde::de::{Deserializer, IgnoredAny, MapAccess, SeqAccess, Visitor};
 use serde_json::value::RawValue;
 
-use crate::listener::{Canned, Gate, Listener, Recorded};
+use crate::lifetime::Gate;
+use crate::listener::{Canned, Listener, Recorded};
 
 /// The status every unknown body, arm, or request earns, and no arm serves.
 pub(crate) const DRIFT: u16 = 500;
@@ -128,11 +130,19 @@ impl Backend {
 
     /// The count once it reads at least `least`, or at 5 s, whichever comes first.
     pub fn wait(&self, least: usize) -> usize {
+        self.wait_until(least, &AtomicBool::new(false))
+            .unwrap_or_else(|| self.count())
+    }
+
+    fn wait_until(&self, least: usize, cancelled: &AtomicBool) -> Option<usize> {
         let deadline = Instant::now() + WAIT_BOUND;
         loop {
+            if cancelled.load(Ordering::SeqCst) {
+                return None;
+            }
             let count = self.count();
             if count >= least || Instant::now() >= deadline {
-                return count;
+                return Some(count);
             }
             thread::sleep(Duration::from_millis(5));
         }
@@ -143,26 +153,44 @@ impl Backend {
 /// print the count at the end.
 ///
 /// A `wait` answers on a thread of its own, so the lines behind it run at once.
-/// The output is shared with that thread, and the end does not wait for it.
+/// The output is shared with those threads. Input close cancels and joins them.
 pub fn run(input: impl BufRead, output: impl Write + Send + 'static) -> io::Result<()> {
     let backend = Arc::new(Backend::start()?);
     let output = Arc::new(Mutex::new(output));
     let port = backend.origin().rsplit(':').next().unwrap_or_default();
     say(&output, port)?;
-    for line in input.lines() {
-        match line?.trim() {
-            "count" => say(&output, backend.count())?,
-            "release" => backend.release(),
-            "round" => backend.round(),
-            other => match other.strip_prefix("wait ").and_then(whole) {
-                Some(least) => {
-                    let (backend, output) = (Arc::clone(&backend), Arc::clone(&output));
-                    thread::spawn(move || say(&output, format!("wait {}", backend.wait(least))));
-                }
-                None => writeln!(io::stderr(), "conformance-backend: unknown line `{other}`")?,
-            },
+    let cancelled = Arc::new(AtomicBool::new(false));
+    let mut waits = Vec::new();
+    let read = (|| -> io::Result<()> {
+        for line in input.lines() {
+            match line?.trim() {
+                "count" => say(&output, backend.count())?,
+                "release" => backend.release(),
+                "round" => backend.round(),
+                other => match other.strip_prefix("wait ").and_then(whole) {
+                    Some(least) => {
+                        let (backend, output, cancelled) = (
+                            Arc::clone(&backend),
+                            Arc::clone(&output),
+                            Arc::clone(&cancelled),
+                        );
+                        waits.push(thread::spawn(move || {
+                            if let Some(count) = backend.wait_until(least, &cancelled) {
+                                let _ = say(&output, format!("wait {count}"));
+                            }
+                        }));
+                    }
+                    None => writeln!(io::stderr(), "conformance-backend: unknown line `{other}`")?,
+                },
+            }
         }
+        Ok(())
+    })();
+    cancelled.store(true, Ordering::SeqCst);
+    for wait in waits {
+        let _ = wait.join();
     }
+    read?;
     say(&output, backend.count())
 }
 

@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"the Japanese sushi master met in Lyon.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, some words are wrapped in [[ ]]. Going by what they refer to in this text, which listed kind of name are they? Choose none of these when they are not a proper name, or when they name something that no listed kind covers.\n\nText: the Japanese sushi master met in [[Lyon]].","criteria":{"person":null,"none of these":"They are not a proper name, or no listed kind covers what they name."}},"q2":{"type":"choice","instructions":"In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.\n\nText: the Japanese sushi master met in [[Lyon]].","criteria":{"Lyon":"...the Japanese sushi master met in [[Lyon]].","Lyon.":"...the Japanese sushi master met in [[Lyon.]]"}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"none of these","confidence":0.98,"probabilities":{"none of these":0.99,"person":0.01}},"q2":{"type":"choice","choice":"Lyon","confidence":0.98,"probabilities":{"Lyon.":0.01,"Lyon":0.99}}},"usage":{"input_tokens":531,"output_tokens":69}}
+}

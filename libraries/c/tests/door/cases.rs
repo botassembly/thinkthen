@@ -3,18 +3,15 @@
 //! Each case runs in its own `tests/c/driver.c` process, through the JSON door
 //! and, where one fits, a typed function. Expected request digests were
 //! recorded against the canonical URL, so each is recomputed for the URL the
-//! backend served. Five cases do not apply to the door:
+//! backend served. Two cases do not apply to the door:
 //!
-//! - `18-find-second` and `19-find-none` set `none: true`, and the `find` verb
-//!   takes its question text alone.
-//! - `18-annotate-two-groups` reads parts of a record through `on`, and a
-//!   record at the door is one whole text.
 //! - `25-defect-fault` injects an internal invariant failure, which no outside
 //!   boundary reaches. The panic test in `src/failures.rs` covers the kind.
 //! - `30-local-question-file` loads a question file, and the door reads none.
 
-use std::collections::BTreeMap;
-use std::path::Path;
+use std::collections::{BTreeMap, BTreeSet};
+use std::io::Write;
+use std::path::{Path, PathBuf};
 
 use conformance_backend::Backend;
 use serde_json::value::RawValue;
@@ -25,13 +22,7 @@ use crate::{compile, crate_dir, run, scratch, text};
 
 const CASES: &str = include_str!("../../../../conformance/cases.json");
 const CANONICAL: &str = "https://api.typesafe.ai/v1/systemone";
-const SKIPPED: [&str; 5] = [
-    "18-find-second",
-    "19-find-none",
-    "18-annotate-two-groups",
-    "25-defect-fault",
-    "30-local-question-file",
-];
+const SKIPPED: [&str; 2] = ["25-defect-fault", "30-local-question-file"];
 
 type Checked<T = ()> = Result<T, String>;
 pub(crate) type Members = BTreeMap<String, Box<RawValue>>;
@@ -58,13 +49,25 @@ impl Script {
 fn every_applicable_shared_case_passes_through_the_door() {
     let written: Members = serde_json::from_str(CASES).expect("the shared cases");
     let cases: Vec<Members> = serde_json::from_str(written["cases"].get()).expect("a case list");
+    let selected = selected_ids(&cases).expect("a valid shared case selector");
+    let selected_count = selected.as_ref().map_or(cases.len(), BTreeSet::len);
     let driver = compile(&crate_dir().join("tests/c/driver.c"));
     let backend = Backend::start().expect("the conformance backend");
     let mut failures = Vec::new();
     let mut ran = 0;
+    let mut not_run = 0;
     for case in &cases {
         let id = string(case, "id");
+        if selected.as_ref().is_some_and(|ids| !ids.contains(&id)) {
+            continue;
+        }
         if SKIPPED.contains(&id.as_str()) {
+            not_run += 1;
+            writeln!(
+                std::io::stderr().lock(),
+                "{id}: not run by the C door (internal injection or local question file)"
+            )
+            .expect("write skipped case to stderr");
             continue;
         }
         ran += 1;
@@ -75,8 +78,61 @@ fn every_applicable_shared_case_passes_through_the_door() {
             failures.push(format!("{id}: {why}"));
         }
     }
+    writeln!(
+        std::io::stderr().lock(),
+        "C door: total={} selected={selected_count} pass={} fail={} not_run={not_run} unselected={}",
+        cases.len(),
+        ran - failures.len(),
+        failures.len(),
+        cases.len() - selected_count
+    )
+    .expect("write case counts to stderr");
+    assert_eq!(ran + not_run, selected_count);
     assert!(failures.is_empty(), "{failures:#?}");
-    assert_eq!(ran, cases.len() - SKIPPED.len());
+}
+
+/// Read one optional absolute ID list, and refuse duplicate or unknown IDs.
+fn selected_ids(cases: &[Members]) -> Checked<Option<BTreeSet<String>>> {
+    let mut available = BTreeSet::new();
+    for case in cases {
+        let id = string(case, "id");
+        if id.is_empty() {
+            return Err("a shared case has no ID".to_owned());
+        }
+        if !available.insert(id.clone()) {
+            return Err(format!("duplicate shared case `{id}`"));
+        }
+    }
+    let Some(path) = std::env::var_os("THINKTHEN_CONFORMANCE_IDS") else {
+        return Ok(None);
+    };
+    let path = PathBuf::from(path);
+    if !path.is_absolute() {
+        return Err("THINKTHEN_CONFORMANCE_IDS takes an absolute path".to_owned());
+    }
+    let text =
+        std::fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
+    let mut selected = BTreeSet::new();
+    for id in text
+        .lines()
+        .map(str::trim)
+        .filter(|id| !id.is_empty() && !id.starts_with('#'))
+    {
+        if !selected.insert(id.to_owned()) {
+            return Err(format!("duplicate selected case `{id}`"));
+        }
+    }
+    if selected.is_empty() {
+        return Err("the selected case list is empty".to_owned());
+    }
+    for id in &selected {
+        if !available.contains(id) {
+            return Err(format!(
+                "selected case `{id}` is absent from the shared corpus"
+            ));
+        }
+    }
+    Ok(Some(selected))
 }
 
 /// The retry signal after a failure: 1 for a status the engine retries,
@@ -144,11 +200,15 @@ fn plan<'a>(backend: &'a Backend, case: &Members, script: &mut Script) -> Checke
     match (verb.as_str(), success["kind"].as_str().unwrap_or_default()) {
         ("recognize", _) => Ok(recognized(script, &base, case, question, &success)),
         ("relate", _) => related(script, &base, case, question, &success),
-        ("annotate", _) => {
-            let set = case.get("question_set").map_or("{}", |raw| raw.get());
-            let request = format!(r#"{{"annotate":{set},"records":{records}}}"#);
-            script.ask("call", &[&base, &request]);
-            Ok(Box::new(move |got| annotated(&parsed(&got[0])?, &success)))
+        ("annotate", _) => Ok(annotating(script, &base, case, &records, success)),
+        ("find", _) => {
+            script.ask("call", &[&base, question]);
+            let units: Vec<String> = serde_json::from_str::<Value>(question)
+                .ok()
+                .and_then(|asked| serde_json::from_value(asked["units"].clone()).ok())
+                .unwrap_or_default();
+            let want = picked(&units, &success["operation"]["selected"]);
+            Ok(Box::new(move |got| same("find", &parsed(&got[0])?, &want)))
         }
         ("rank", _) => {
             let asked =
@@ -194,6 +254,25 @@ fn plan<'a>(backend: &'a Backend, case: &Members, script: &mut Script) -> Checke
         }
         _ => Ok(one_answer(script, &base, &verb, question, &first, &success)),
     }
+}
+
+/// Annotate the case's record, when it names one, or its evidence texts.
+fn annotating<'a>(
+    script: &mut Script,
+    base: &str,
+    case: &Members,
+    records: &str,
+    success: Value,
+) -> Judge<'a> {
+    let set = case.get("question_set").map_or("{}", |raw| raw.get());
+    let whole = case
+        .get("record")
+        .map(|record| json!([record.get()]).to_string());
+    let records = whole.as_deref().unwrap_or(records);
+    let request = format!(r#"{{"annotate":{set},"records":{records}}}"#);
+    script.ask("call", &[base, &request]);
+    let one = whole.is_some();
+    Box::new(move |got| annotated(&parsed(&got[0])?, &success, one))
 }
 
 /// Recognize through the JSON door and the typed door.
@@ -249,32 +328,42 @@ fn one_answer<'a>(
 ) -> Judge<'a> {
     let evidence = json!(first).to_string();
     let bare_request = with(question, "evidence", &evidence);
-    // The counters come first, while the cache is still empty.
+    // Details come first, so they are the text's first send.
+    script.ask("call", &[base, &with(&bare_request, "details", "true")]);
+    script.ask("call", &[base, &bare_request]);
+    let decide = verb == "decide";
+    if decide {
+        script.ask("decide", &[base, question, first]);
+    }
+    // The counters run last, on an empty cache folder of their own.
     let counters = success.get("counters").cloned();
     let calls = counters
         .as_ref()
         .and_then(|counters| counters["calls"].as_u64())
         .unwrap_or_default();
     if counters.is_some() {
+        let folder = scratch("counters").display().to_string();
+        script.ask("env", &["THINKTHEN_CACHE", &folder]);
         script.ask("call", &[base, r#"{"usage":true}"#]);
         for _ in 0..calls {
             script.ask("call", &[base, &bare_request]);
         }
         script.ask("call", &[base, r#"{"usage":true}"#]);
     }
-    script.ask("call", &[base, &bare_request]);
-    script.ask("call", &[base, &with(&bare_request, "details", "true")]);
-    let decide = verb == "decide";
-    if decide {
-        script.ask("decide", &[base, question, first]);
-    }
     let expected = success["answers"][0].clone();
+    let served = format!("{base}/systemone");
     Box::new(move |got| {
-        let mut next = 0;
+        single(&got[1], &got[0], &expected, &served)?;
+        if decide {
+            let rows = judged(&got[2])?;
+            let (outcome, probability) = rows.first().copied().ok_or("no judgment")?;
+            same("decide", &bare(outcome), &expected["bare"])?;
+            let yes = &expected["details"]["answer"]["probability"];
+            same("probability", &json!(probability), yes)?;
+        }
         if let Some(counters) = &counters {
-            let before = parsed(&got[0])?;
-            next = usize::try_from(calls).map_err(|error| error.to_string())? + 2;
-            let after = parsed(&got[next - 1])?;
+            let before = parsed(&got[2 + usize::from(decide)])?;
+            let after = parsed(got.last().ok_or("no usage reply")?)?;
             let moved = |name: &str| {
                 after[name]
                     .as_u64()
@@ -288,20 +377,12 @@ fn one_answer<'a>(
             });
             same("counters", &seen, counters)?;
         }
-        single(&got[next], &got[next + 1], &expected)?;
-        if decide {
-            let rows = judged(&got[next + 2])?;
-            let (outcome, probability) = rows.first().copied().ok_or("no judgment")?;
-            same("decide", &bare(outcome), &expected["bare"])?;
-            let yes = &expected["details"]["answer"]["probability"];
-            same("probability", &json!(probability), yes)?;
-        }
         Ok(())
     })
 }
 
 /// A single judgment's bare reply and its `details` reply.
-fn single(plain: &Reply, detailed: &Reply, expected: &Value) -> Checked {
+fn single(plain: &Reply, detailed: &Reply, expected: &Value, served: &str) -> Checked {
     same("bare", &parsed(plain)?, &expected["bare"])?;
     let details = parsed(detailed)?;
     let wanted = &expected["details"];
@@ -309,18 +390,27 @@ fn single(plain: &Reply, detailed: &Reply, expected: &Value) -> Checked {
     for (name, value) in wanted["answer"].as_object().into_iter().flatten() {
         same(name, &details["answer"][name], value)?;
     }
-    for name in ["model", "question_sha256", "requests"] {
-        same(name, &details["meta"][name], &wanted[name])?;
+    // Indexing a missing key reads null, so an absent field reads as the word "absent".
+    let absent = json!("absent");
+    let at = |from: &Value, name| from.get(name).unwrap_or(&absent).clone();
+    let confidence = |from: &Value| at(&from["answer"], "confidence");
+    same("confidence", &confidence(&details), &confidence(wanted))?;
+    for name in "model question_sha256 requests usage requests_sent cached".split(' ') {
+        same(name, &at(&details["meta"], name), &at(wanted, name))?;
     }
-    Ok(())
+    same("url", &details["meta"]["url"], &json!(served))
 }
 
 /// Each expected annotate value against its record's value object.
-fn annotated(rows: &Value, success: &Value) -> Checked {
+fn annotated(rows: &Value, success: &Value, one: bool) -> Checked {
     for expected in success["answers"].as_array().into_iter().flatten() {
-        let record = expected["exchange"]
-            .as_u64()
-            .and_then(|at| usize::try_from(at).ok());
+        let record = if one {
+            Some(0)
+        } else {
+            expected["exchange"]
+                .as_u64()
+                .and_then(|at| usize::try_from(at).ok())
+        };
         let row = record
             .and_then(|at| rows.get(at))
             .ok_or("a record is missing")?;
@@ -570,4 +660,37 @@ fn same(what: &str, actual: &Value, expected: &Value) -> Checked {
     } else {
         Err(format!("{what}: got {actual}, expected {expected}"))
     }
+}
+
+/// ADR 0056: a name `recognize` found carries `text` in place of `name`, and
+/// relate reads it as the name. `name` wins when a record holds both.
+#[test]
+fn relate_reads_what_recognize_found() {
+    let driver = compile(&crate_dir().join("tests/c/driver.c"));
+    let backend = Backend::start().expect("the conformance backend");
+    let base = format!("{}/generic/v1", backend.origin());
+    let recognize = r#"{"version":1,"recognize":{"kinds":{"person":null}}}"#;
+    let relate = r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person"}]}}"#;
+    let mut script = Script::default();
+    script.ask("recognize", &[&base, recognize, "Maria Chen arrived."]);
+    let found = replies(&run(&driver, &base, &script.0).stdout).expect("a reply");
+    let found = parsed(&found[0]).expect("names");
+    let records: Vec<String> = found["entities"]
+        .as_array()
+        .expect("entities")
+        .iter()
+        .map(ToString::to_string)
+        .collect();
+    let named = [
+        r#"{"name":"Maria Chen","text":"not this","kind":"person"}"#,
+        r#"{"name":"arrived.","kind":"person"}"#,
+    ];
+    let mut script = Script::default();
+    for each in [records.iter().map(String::as_str).collect(), named.to_vec()] {
+        script.ask("relate", &[vec![base.as_str(), relate], each].concat());
+    }
+    let got = replies(&run(&driver, &base, &script.0).stdout).expect("replies");
+    let by_text = parsed(&got[0]).expect("edges");
+    assert_eq!(by_text, parsed(&got[1]).expect("edges"));
+    assert_eq!(by_text["edges"].as_array().map(Vec::len), Some(2));
 }

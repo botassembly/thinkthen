@@ -37,6 +37,7 @@ fn questions() -> PathBuf {
         .clone()
 }
 
+mod cache_versions;
 mod partial_failure;
 mod request_identity;
 mod scheduling;
@@ -323,7 +324,7 @@ fn different_safe_model_versions_fail_one_record_and_name_both() {
     assert_eq!(output.status.code(), Some(4));
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the backend returned model versions `jev-1.2` and `jev-1.3` for one record; pin --model and rerun with --record or --cache\n"
+        "thinkthen: the replies for one record named model versions `jev-1.2` and `jev-1.3`; a cache or recording folder may hold answers from the other version, so rerun with --no-cache or prune it with `thinkthen cache prune DIR --answered-by-other-than VERSION`, naming the version a --no-cache run returns\n"
     );
     assert!(output.stdout.is_empty());
     assert_eq!(listener.requests().len(), 2);
@@ -381,8 +382,10 @@ fn hostile_model_names_never_reach_the_diagnostic() {
         ("jev-latest".to_owned(), "jev-1\\u001b".to_owned()),
         ("jev-latest".to_owned(), oversized),
         ("jev-latest".to_owned(), oversized_version),
+        // A requested name with a control character is refused before any
+        // request, as the refusal table shows, so only replies carry one here.
         (
-            "key-marker\u{1b}evidence-marker".to_owned(),
+            "jev-latest".to_owned(),
             "key-marker\\u001bevidence-marker".to_owned(),
         ),
     ];
@@ -408,7 +411,7 @@ fn hostile_model_names_never_reach_the_diagnostic() {
         assert_eq!(output.status.code(), Some(4), "case {place}");
         assert_eq!(
             String::from_utf8_lossy(&output.stderr),
-            "thinkthen: the backend returned different model versions for one record; pin --model and rerun with --record or --cache\n",
+            "thinkthen: the replies for one record named different model versions; a cache or recording folder may hold answers from the other version, so rerun with --no-cache or prune it with thinkthen cache prune DIR --answered-by-other-than VERSION, naming the version a --no-cache run returns\n",
             "case {place}"
         );
         assert!(output.stdout.is_empty(), "case {place}");

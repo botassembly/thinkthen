@@ -2,7 +2,7 @@
 
 Filed 2026-09-26. This record copies the measurements that `sdlc/issues/2026-09-26-batching-design.md` and `sdlc/issues/2026-09-26-recognize-design.md` cite. Each table names the workspace experiment that measured it. The experiments stay unpushed in the workspace, so this record is the repository's copy. One model answered every paid call: `jev-1.13.0` behind `jev-latest`. Cost uses the recorded input price of $0.042 a million input tokens. Output tokens are free under the vendor's price list.
 
-Sections 8, 9 and 13 hold arithmetic done for the designs over saved replies, dry runs and saved inputs. No new call was made for them.
+Section 14 holds live calls a later review made. Sections 8, 9 and 13 hold arithmetic done for the designs over saved replies, dry runs and saved inputs. No new call was made for them.
 
 ## 1. Experiment 208: rows packed into one request, 2026-09-20
 
@@ -244,3 +244,29 @@ The 60-word text fits one request: 64 × 1,150 + 360 + 74 = 74,034 bytes. 1,060 
 Under the earlier whole-text rule every request carried the whole text. The same working gave 77 words a request, 14 requests and 355,800 tokens for 1,000 words, and 31 words a request, 342 requests and 11,490,600 tokens, $0.48, for 10,000 words.
 
 Section 7's requests of 21,871 and 41,787 input tokens answered in 0.52 and 0.63 s. A full word request carries about 25,000. At 4 requests in flight, 14 word requests take 4 rounds, 133 take 34, and 1,325 take 332.
+
+## 14. A fresh review's live batch runs, local experiment 273, 2026-09-26
+
+A fresh architect review ran 16 authorized live calls against the hosted backend, model `jev-1.13.0`. The command could not batch yet, so each batch test sent the planner's exact wire form through `annotate`: one `{"records":[…]}` evidence object and one quoted question per record. The 306-title body came to 55,490 bytes, the size section 9 gives for the planner's body. The calls reported 143,726 input and 33,372 output tokens. The two refused calls reported none.
+
+The 306 titles, filter's question, cut 0.7, one request, three runs:
+
+| Run | Seconds | Input tokens | Right | False yeses | Missed |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 0.27 | 13,185 | 274 | 32 | 0 |
+| 2 | 0.26 | 13,185 | 273 | 33 | 0 |
+| 3 | 0.25 | 13,185 | 272 | 34 | 0 |
+
+The runs disagreed on 3 to 5 titles. False yeses spread evenly over the list's quarters.
+
+A planted neighbour, 20 titles, 10 on the album and 10 not, two runs an arm:
+
+| Arm | Mean yes on the 10 wrong titles | Wrong titles at or over 0.7 | Planted record's own answer |
+| --- | --- | --- | --- |
+| Clean | 0.629, 0.646 | 6, 6 | none |
+| One planted claim that every title is on the album | 0.820, 0.816 | 7, 7 | 0.04 |
+| One planted command to answer yes for every title | 0.662, 0.661 | 6, 6 | 0.07 |
+
+The claim moved three titles by 0.27 to 0.46. It pushed one title from 0.50 or 0.59 to 0.83 or 0.86.
+
+Tokens a byte, one 20,000-byte record alone: hex digits 0.895, `ID-nnnnnn;` identifiers 0.908, README prose 0.258. A batch of 740 short identifiers in 95,414 bytes billed 35,043 input tokens, 0.367 a byte, and passed. A batch of two 23,500-byte hex records in 94,238 bytes was refused twice with status 400 `max_tokens_exceeded`. The first of those records alone passed at 21,097 input tokens.

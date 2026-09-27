@@ -21,7 +21,7 @@ const ROWS: [&str; 13] = [
     r#"tag 1 {"/group": "Which apply?/x", "/labeled": 5, "/right": 4, "/false_no": 1, "/precision": 1.0, "/yes_recall": 0.75, "/f1": 0.857143, "/suggested/crossed/cuts": [0.4, 0.5]}"#,
     r#"tag 2 {"/group": "Which apply?/y", "/labeled": 5, "/right": 4, "/false_yes": 1, "/precision": 0.666667, "/yes_recall": 1.0, "/f1": 0.8, "/suggested/crossed/cuts": [0.5, 0.61]}"#,
     r#"score 0 {"/right": 4, "/wrong": 2, "/mean_level_distance": 0.333333, "/disagreements": [{"key": "low", "said": "mid", "count": 1}, {"key": "mid", "said": "high", "count": 1}], "/suggested/cut": null, "/suggested/cuts": [0.71, 1.61], "/suggested/tune/at_cut/right": 6}"#,
-    r#"rank 0 {"/verb": "rank", "/labeled": 6, "/unresolved": 6, "/r_precision": 0.5}"#,
+    r#"rank 0 {"/verb": "rank", "/labeled": 6, "/unsure": 6, "/r_precision": 0.5}"#,
     r#"rank 1 {"/labeled": 3, "/r_precision": 1.0}"#,
     r#"rank 2 {"/labeled": 2, "/r_precision": null}"#,
     r#"rank 3 {"/labeled": 0, "/r_precision": null}"#,

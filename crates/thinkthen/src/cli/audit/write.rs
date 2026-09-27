@@ -4,16 +4,18 @@
 //! question digest against it, and writes it back whole with one
 //! `std::fs::write`. `sdlc/scripts/policy.py` allows that call here alone.
 
+use std::collections::BTreeSet;
 use std::path::Path;
 
 use crate::cli::measure::Cause;
+use crate::core::measure::Line;
 use crate::core::measure::answer::{Answer, Verb};
 use crate::core::measure::audit::{Kind, Row};
 use crate::core::measure::optimize::Bar;
 use crate::core::measure::rows::number;
 use crate::core::measure::splice::splice;
 use crate::core::{
-    Json, QuestionFile, QuestionSet, RecognizeSpec, RelateSpec, Typed,
+    BlankTextError, Json, ModelName, QuestionFile, QuestionSet, RecognizeSpec, RelateSpec, Typed,
     question_sha256_with_profile, recognize_sha256, resolve,
 };
 
@@ -26,13 +28,19 @@ enum Choice {
 }
 
 /// Write each steady bar into the file and return the report, one line per bar.
+/// A single file that gains a bar also records the one model every results line names.
 ///
 /// # Errors
 ///
 /// Returns [`Cause::Unreadable`] or [`Cause::NotQuestions`] for a file a run
 /// would not accept, [`Cause::Digest`] for a line another question asked, and
 /// [`Cause::Unwritable`] when the new text cannot be written.
-pub(super) fn bars(path: &Path, answers: &[Answer], rows: &[Row]) -> Result<String, Cause> {
+pub(super) fn bars(
+    path: &Path,
+    results: &[Line],
+    answers: &[Answer],
+    rows: &[Row],
+) -> Result<String, Cause> {
     let bytes = std::fs::read(path).map_err(|_| Cause::Unreadable)?;
     let text = String::from_utf8(bytes).map_err(|_| Cause::NotQuestions)?;
     let json = Json::parse(&text).map_err(|_| Cause::NotQuestions)?;
@@ -51,7 +59,7 @@ pub(super) fn bars(path: &Path, answers: &[Answer], rows: &[Row]) -> Result<Stri
             .filter_map(|lines| spec.question(lines).sha256().ok())
             .collect()
     } else {
-        let file = QuestionFile::parse(&text).map_err(|_| Cause::NotQuestions)?;
+        let (file, _batch) = QuestionFile::parse_top(&text).map_err(|_| Cause::NotQuestions)?;
         let resolved = resolve(file.verb(), None, Some(&file), &Typed::default())
             .map_err(|_| Cause::NotQuestions)?;
         let digest = resolved.question().and_then(|question| {
@@ -92,10 +100,45 @@ pub(super) fn bars(path: &Path, answers: &[Answer], rows: &[Row]) -> Result<Stri
         };
         report.push_str(&format!("{}: audit: {line}\n", crate::core::NAME));
     }
+    if new != text && !set {
+        match model(results) {
+            Ok(model) => {
+                let value =
+                    serde_json::to_string(model.as_str()).map_err(|_| Cause::NotQuestions)?;
+                new = splice(&new, &["model"], &value)
+                    .ok_or(Cause::NotQuestions)?
+                    .0;
+            }
+            Err(reason) => report.push_str(&format!(
+                "{}: audit: kept the model for the question; {reason}\n",
+                crate::core::NAME
+            )),
+        }
+    }
     if new != text {
         std::fs::write(path, new).map_err(|_| Cause::Unwritable)?;
     }
     Ok(report)
+}
+
+/// The one model every results line names in `meta.model`, trimmed as a
+/// later run reads it, or why no model is written.
+fn model(results: &[Line]) -> Result<ModelName, &'static str> {
+    let named = results
+        .iter()
+        .map(|(_, line)| line.member("meta")?.member("model")?.as_str())
+        .collect::<Option<BTreeSet<_>>>()
+        .ok_or("a result names no model")?;
+    let mut named = named.into_iter();
+    match (named.next(), named.next()) {
+        (Some(model), None) => ModelName::new(model).map_err(|error| match error {
+            BlankTextError::ModelControl => {
+                "a result names a model with a control character or white space but a plain space"
+            }
+            _ => "a result names a blank model",
+        }),
+        _ => Err("the results name more than one model"),
+    }
 }
 
 /// Whether one row's steady bar is written, and why it is kept when it is not.

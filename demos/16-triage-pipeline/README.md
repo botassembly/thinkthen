@@ -48,7 +48,7 @@ done
 rmdir -- "$tmp"
 ```
 
-The rules run in this order: an unresolved answer goes to `review`; a credential request goes to `block`; the `other` queue goes to `review`; an urgent request goes to `review`; everything else goes to `draft`. The exact reasons are `unresolved`, `credential_request`, `out_of_scope`, `urgent`, and `routine`.
+The rules run in this order: a not sure answer goes to `review`; a credential request goes to `block`; the `other` queue goes to `review`; an urgent request goes to `review`; everything else goes to `draft`. The exact reasons are `unsure`, `credential_request`, `out_of_scope`, `urgent`, and `routine`.
 
 ## Step 2: keep the audit row
 
@@ -65,9 +65,9 @@ jq -c '{id: .input.id, values: .value, policy}' "$work/triage/block.jsonl" \
   | mustmatch '{"id":"SUP-1044","values":{"credential_request":true,"queue":"account","urgency":1.02},"policy":{"action":"block","reason":"credential_request"}}'
 ```
 
-The script reserves the output name before it judges, then builds inside a hidden staging directory. A failed question, malformed policy input, failed file write, or catchable interruption removes the directory. A caller reads it only after the script returns successfully. An unresolved value remains JSON `null` and fails closed into the review file.
+The script reserves the output name before it judges, then builds inside a hidden staging directory. A failed question, malformed policy input, failed file write, or catchable interruption removes the directory. A caller reads it only after the script returns successfully. A not sure value remains JSON `null` and fails closed into the review file.
 
-## Step 3: fail unresolved answers closed
+## Step 3: fail not sure answers closed
 
 The policy checks null before every automated rule. A null in any of the three answer kinds goes to a person.
 
@@ -75,7 +75,7 @@ The policy checks null before every automated rule. A null in any of the three a
 printf '%s\n' '{"value":{"credential_request":false,"queue":null,"urgency":0}}' \
   | jq -c -f ../../transforms/triage/triage.jq \
   | jq -c '.policy' \
-  | mustmatch '{"action":"review","reason":"unresolved"}'
+  | mustmatch '{"action":"review","reason":"unsure"}'
 ```
 
 ## What can go wrong
@@ -88,6 +88,6 @@ printf '%s\n' '{"value":{"credential_request":false,"queue":null,"urgency":0}}' 
 
 ## Related how-tos
 
-- [How to gate a risky command and fail closed](../19-no-or-could-not-ask/) explains unresolved decisions.
+- [How to gate a risky command and fail closed](../19-no-or-could-not-ask/) explains not sure decisions.
 - [How to grade an assistant's answers with a rubric](../14-grade-a-batch/) asks several question types together.
 - [How to resume a long run that stopped](../12-keep-going/) reuses completed recordings.

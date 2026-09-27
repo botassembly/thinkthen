@@ -25,7 +25,7 @@ tt_filter_places <- function(question, records, deadline) .Call(wrap__tt_filter_
 
 tt_rank_all <- function(question, records, deadline) .Call(wrap__tt_rank_all, question, records, deadline)
 
-tt_find_one <- function(question, units, deadline) .Call(wrap__tt_find_one, question, units, deadline)
+tt_find_one <- function(question, units, none, deadline) .Call(wrap__tt_find_one, question, units, none, deadline)
 
 tt_annotate_file <- function(path, records, taken, deadline) .Call(wrap__tt_annotate_file, path, records, taken, deadline)
 
@@ -39,6 +39,6 @@ tt_recognize_column <- function(spec, path, texts, deadline) .Call(wrap__tt_reco
 
 tt_relate_frame <- function(spec, path, names, kinds, deadline) .Call(wrap__tt_relate_frame, spec, path, names, kinds, deadline)
 
-tt_engine_set <- function(base_url, model, throttle, max_requests, cache, cache_bytes) .Call(wrap__tt_engine_set, base_url, model, throttle, max_requests, cache, cache_bytes)
+tt_engine_set <- function(base_url, model, throttle, max_requests, cache, timeout, max_retries, record, replay, profile) .Call(wrap__tt_engine_set, base_url, model, throttle, max_requests, cache, timeout, max_retries, record, replay, profile)
 
 # nolint end

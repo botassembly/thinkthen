@@ -90,6 +90,9 @@ impl From<EngineError> for Failure {
             EngineError::RecognizeLogical => {
                 Self::Recognize(super::recognize::Error::LogicalQuestion)
             }
+            EngineError::TextTooLong { bytes, limit } => {
+                Self::Recognize(super::recognize::Error::TextTooLong { bytes, limit })
+            }
         }
     }
 }

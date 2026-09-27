@@ -1,0 +1,6 @@
+r1  +1 -0 ~0
+  + Revolver [3,11) work strength 0.9000
+r3  +0 -0 ~0
+r4  +0 -0 ~1
+  ~ Yesterday [0,9) person -> work
+A -> B: 3 of 4 changed; items gained 1, lost 0, changed kind 1; key names matched 2 -> 4 of 4; extras 1 -> 0; McNemar p 0.500 on key names

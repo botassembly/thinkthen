@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, OnceLock};
 
 use crate::cli::edge::Environment;
@@ -23,6 +23,7 @@ const ACTIONS: [Action; 4] = [
 
 struct State {
     cancel: Cancel<'static>,
+    signal: Arc<AtomicUsize>,
     default_armed: Arc<AtomicBool>,
     active: Arc<AtomicBool>,
     installed: bool,
@@ -36,6 +37,9 @@ impl State {
     ) -> Self {
         let mut state = Self {
             cancel: Cancel::default(),
+            signal: Arc::new(AtomicUsize::new(
+                signal_hook::consts::signal::SIGINT as usize,
+            )),
             default_armed: Arc::new(AtomicBool::new(true)),
             active: Arc::new(AtomicBool::new(false)),
             installed: false,
@@ -102,7 +106,14 @@ impl Guard<'_> {
     pub(super) fn finish(mut self, code: ExitCode) -> Result<ExitCode, Failure> {
         let (cancelled, restored) = self.finalize();
         if cancelled {
-            Ok(ExitCode::from(130))
+            let code = if self.state.signal.load(Ordering::SeqCst)
+                == signal_hook::consts::signal::SIGTERM as usize
+            {
+                143
+            } else {
+                130
+            };
+            Ok(ExitCode::from(code))
         } else if restored.is_err() {
             Err(Failure::Defect("SIGINT routing could not be restored"))
         } else {
@@ -275,6 +286,7 @@ impl Acknowledgment {
 fn sigint_set() -> nix::sys::signal::SigSet {
     let mut signal = nix::sys::signal::SigSet::empty();
     signal.add(nix::sys::signal::Signal::SIGINT);
+    signal.add(nix::sys::signal::Signal::SIGTERM);
     signal
 }
 
@@ -318,21 +330,34 @@ fn process_state() -> &'static State {
 }
 
 fn register(action: Action, state: &State) -> Result<(), ()> {
-    use signal_hook::consts::signal::SIGINT;
-    let registered = match action {
-        Action::ConditionalDefault => signal_hook::flag::register_conditional_default(
-            SIGINT,
-            Arc::clone(&state.default_armed),
-        ),
-        Action::Cancel => signal_hook::flag::register(SIGINT, state.cancel.flag()),
-        Action::ArmDefault => signal_hook::flag::register(SIGINT, Arc::clone(&state.default_armed)),
-    };
-    registered.map(|_id| ()).map_err(|_error| ())
+    use signal_hook::consts::signal::{SIGINT, SIGTERM};
+    for signal in [SIGINT, SIGTERM] {
+        let registered = match action {
+            Action::ConditionalDefault => signal_hook::flag::register_conditional_default(
+                signal,
+                Arc::clone(&state.default_armed),
+            ),
+            Action::Cancel => {
+                signal_hook::flag::register_usize(
+                    signal,
+                    Arc::clone(&state.signal),
+                    signal as usize,
+                )
+                .map_err(|_error| ())?;
+                signal_hook::flag::register(signal, state.cancel.flag())
+            }
+            Action::ArmDefault => {
+                signal_hook::flag::register(signal, Arc::clone(&state.default_armed))
+            }
+        };
+        registered.map(|_id| ()).map_err(|_error| ())?;
+    }
+    Ok(())
 }
 
-fn emulate(_state: &State) -> Result<(), ()> {
-    signal_hook::low_level::emulate_default_handler(signal_hook::consts::signal::SIGINT)
-        .map_err(|_error| ())
+fn emulate(state: &State) -> Result<(), ()> {
+    let signal = i32::try_from(state.signal.load(Ordering::SeqCst)).map_err(|_error| ())?;
+    signal_hook::low_level::emulate_default_handler(signal).map_err(|_error| ())
 }
 
 pub(super) fn activate(environment: &mut Environment) -> Result<Guard<'static>, Failure> {

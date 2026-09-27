@@ -179,6 +179,10 @@ impl From<EngineError> for Error {
 fn message(error: &EngineError) -> String {
     let fixed = match error {
         EngineError::Transport(kind) => transport(*kind),
+        EngineError::Status(302) => {
+            return "the backend answered with status 302: the redirect was not followed"
+                .to_owned();
+        }
         EngineError::Status(status) => return format!("the backend answered with status {status}"),
         EngineError::TokenLimit => "the backend answered with status 400",
         EngineError::ReplyTooLarge(limit) => return reply_too_large(*limit),
@@ -195,7 +199,9 @@ fn message(error: &EngineError) -> String {
         EngineError::RecordingBackendMismatch(..) => {
             "the recording folder belongs to another backend address"
         }
-        EngineError::RecordingFolderLegacy => "the recording folder uses a retired layout",
+        EngineError::RecordingFolderLegacy => {
+            "the recording folder predates backend binding; replay it read-only or choose a new folder"
+        }
         EngineError::DefaultCachePrivate => {
             "the default cache folder is not private; set its permissions to 0700 or use no_cache"
         }
@@ -213,14 +219,17 @@ fn message(error: &EngineError) -> String {
         EngineError::Cancelled => "the call was cancelled",
         EngineError::Deadline(budget) => return budget.to_string(),
         EngineError::NoKey(variable) => {
-            return format!("no key is set; set {variable} or call EngineBuilder::api_key");
+            return format!("no key is set; configure an API key for the engine ({variable})");
         }
         EngineError::WidthActive(active) => return active.to_string(),
         EngineError::ModelsDiffer(_) => {
-            "the backend returned different model versions for one call; pin the model and use a cache"
+            "the replies for one call named different model versions; a cache may hold answers from the other version, so turn the cache off or prune it with thinkthen cache prune DIR --answered-by-other-than VERSION, naming the version a call with the cache off returns"
         }
         EngineError::UsageOverflow => "the backend reported token counts whose total is too large",
-        EngineError::RecognizeKinds => "recognize takes 1 to 20 distinct, nonblank kinds",
+        EngineError::RecognizeKinds => "recognize takes 0 to 20 distinct, nonblank kinds",
+        EngineError::TextTooLong { bytes, limit } => {
+            return format!("the text is {bytes} bytes, over recognize's limit of {limit}");
+        }
         EngineError::RecognizeLogical => "the backend failed a question recognition requires",
     };
     fixed.to_owned()
@@ -233,6 +242,9 @@ const fn transport(kind: TransportKind) -> &'static str {
         TransportKind::Refused => "the backend refused the connection",
         TransportKind::PrematureClose => {
             "the backend closed the connection before a reply and may have received the request; it was not sent again"
+        }
+        TransportKind::Tls => {
+            "the TLS connection or certificate check failed; check the backend's certificate trust"
         }
         TransportKind::Other => "the backend could not be reached",
     }

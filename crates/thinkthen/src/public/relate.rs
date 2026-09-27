@@ -267,7 +267,8 @@ impl Engine {
             return Ok(Vec::new());
         }
         let engine = self.for_model(ask.0.model.as_ref())?;
-        let prepared = facade::relations(&admitted, &ask.0, engine.backend(), None)?;
+        let prepared =
+            facade::relations(&admitted, &ask.0, engine.backend(), self.profile.as_ref())?;
         let threshold = ask.0.threshold.cut_value().unwrap_or(0.5);
         let execution = stop.run(|cancel| {
             engine

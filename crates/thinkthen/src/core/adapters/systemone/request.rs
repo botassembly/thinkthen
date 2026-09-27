@@ -262,7 +262,10 @@ impl RequestQuestion {
                     .map(|(name, described)| {
                         described.map_or_else(
                             || Json::String(name.clone()),
-                            |held| held.as_json().clone(),
+                            |held| match held.as_json() {
+                                Json::Null => Json::Object(Vec::new()),
+                                held => held.clone(),
+                            },
                         )
                     })
                     .collect(),
@@ -275,6 +278,7 @@ impl RequestQuestion {
 #[cfg(test)]
 mod tests {
     use super::{Request, RequestQuestion, encode};
+    use crate::core::adapters::built_in::DEFAULT_MODEL;
     use crate::core::adapters::systemone::tests::{
         disruption_plan, plan_for, tag_plan, team_plan, urgency_plan,
     };
@@ -426,20 +430,6 @@ mod tests {
     }
 
     #[test]
-    fn a_score_map_writes_its_descriptions_in_order_and_null_stays_null() {
-        let bytes = encode(&file_plan(
-            r#"{"score":"How much?","levels":{"low":{"what":"Little."},"high":null}}"#,
-            Verb::Score,
-        ))
-        .expect("a plan is writable");
-        let text = String::from_utf8(bytes).expect("a request is text");
-        assert!(
-            text.contains(r#""criteria":[{"what":"Little."},null]"#),
-            "{text}"
-        );
-    }
-
-    #[test]
     fn one_structured_tag_value_expands_every_label_into_the_array_form() {
         let bytes = encode(&file_plan(
             r#"{"tag":"Which?","labels":{"a":{"d":1},"b":null}}"#,
@@ -449,11 +439,8 @@ mod tests {
         let text = String::from_utf8(bytes).expect("a request is text");
         assert_eq!(
             text,
-            concat!(
-                r#"{"state":"Refund me please.","model":"jev-latest","questions":{"q1":{"type":"noul","#,
-                r#""instructions":["Which?",{"label":"a","description":{"d":1}}],"#,
-                r#""criteria":{"true":{"d":1}}},"#,
-                r#""q2":{"type":"noul","instructions":["Which?",{"label":"b"}]}}}"#,
+            format!(
+                r#"{{"state":"Refund me please.","model":"{DEFAULT_MODEL}","questions":{{"q1":{{"type":"noul","instructions":["Which?",{{"label":"a","description":{{"d":1}}}}],"criteria":{{"true":{{"d":1}}}}}},"q2":{{"type":"noul","instructions":["Which?",{{"label":"b"}}]}}}}}}"#
             )
         );
     }

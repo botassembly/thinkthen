@@ -7,13 +7,14 @@ choice's first option 0.9, so each person works for the one organization.
 
 from __future__ import annotations
 
+import os
 import sys
 import tempfile
 import threading
 import time
 from pathlib import Path
 
-from harness import Backend, case, expect, main, rows, run, said
+from harness import CASES, Backend, case, expect, main, rows, run, said
 
 TABLE = (
     "CREATE TABLE t AS SELECT * FROM (VALUES (1, 'Ada', 'person'), (2, 'Acme', 'organization'),"
@@ -23,6 +24,7 @@ RELATE = "SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM t', {}) ORD
 WORKS = "['works_for=person:organization']"
 EDGES = [["works_for", "1", "2", 0.9], ["works_for", "3", "2", 0.9], ["works_for", "4", "2", 0.9]]
 NOT_SELECT = "thinkthen usage: the relate query must be a SELECT; relate reads records, it does not write files, attach databases, change settings, or load extensions"
+MISSING_ADVICE = "; relate reads only committed tables on its separate connection; if you created this table in an open transaction, commit it before retrying"
 
 
 @case
@@ -99,21 +101,31 @@ def r2_6_a_nested_relate_refuses_at_once():
         expect(took < 1000, True, f"refused in {took} ms")
 
 
-@case
-def r3_12_more_than_255_rows_refuses_under_the_cap():
+def more_than_255_rows_refuses_under_the_cap(count: int, time_limit: int | None):
     with Backend() as backend:
         got = run(
-            ["CREATE TABLE big AS SELECT i AS id, 'n' || i AS name, 'thing' AS kind FROM range(8000000) t(i)",
+            [f"CREATE TABLE big AS SELECT i AS id, 'n' || i AS name, 'thing' AS kind FROM range({count}) t(i)",
              "SELECT epoch_ms(now())",
              "SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM big', ['near'])",
              "SELECT epoch_ms(now())"],
             backend.base(),
             timeout=120,
         )
-        expect(said(got[2]), "thinkthen usage: the relate query returned more than 255 rows, and relate reads at most 255; add a WHERE or a LIMIT", "eight million rows")
+        expect(said(got[2]), "thinkthen usage: the relate query returned more than 255 rows, and relate reads at most 255; add a WHERE or a LIMIT", f"{count} rows")
         expect(backend.count(), 0, "counted sends")
-        took = rows(got[3])[0][0] - rows(got[1])[0][0]
-        expect(took < 2000, True, f"the refusal came in {took} ms")
+        if time_limit is not None:
+            took = rows(got[3])[0][0] - rows(got[1])[0][0]
+            expect(took < time_limit, True, f"the refusal came in {took} ms")
+
+
+@case
+def row_256_refuses_without_a_send():
+    more_than_255_rows_refuses_under_the_cap(256, None)
+
+
+@case
+def r3_12_more_than_255_rows_refuses_under_the_cap():
+    more_than_255_rows_refuses_under_the_cap(8_000_000, 2000)
 
 
 @case
@@ -156,6 +168,51 @@ def a_temporary_table_names_the_adr_0038_boundary():
     with Backend() as backend:
         got = run([TABLE.replace("CREATE TABLE t", "CREATE TEMP TABLE tt"), RELATE.format(WORKS).replace("FROM t'", "FROM tt'")], backend.base())
         expect(said(got[1]).split(";")[0], "thinkthen local: the relate query names the temporary table tt, and the stable C API cannot run a query on the calling connection, so relate cannot see temporary tables", "a temp table")
+        expect(backend.count(), 0, "counted sends")
+
+
+@case
+def an_uncommitted_table_gets_the_connection_rule():
+    with Backend() as backend:
+        query = RELATE.format(WORKS)
+        got = run(["BEGIN", TABLE, query, "ROLLBACK", query.replace("FROM t'", "FROM typo'")], backend.base())
+        expect(said(got[2]), "thinkthen usage: the relate query failed: Catalog Error: Table with name t does not exist!" + MISSING_ADVICE, "an uncommitted table")
+        expect(said(got[4]), "thinkthen usage: the relate query failed: Catalog Error: Table with name typo does not exist!" + MISSING_ADVICE, "a genuinely missing table")
+        expect(backend.count(), 0, "counted sends")
+
+
+@case
+def an_uncommitted_table_in_the_active_catalog_gets_the_rule():
+    with Backend() as backend:
+        query = RELATE.format(WORKS)
+        got = run(["ATTACH ':memory:' AS other", "USE other", "BEGIN", TABLE, query], backend.base())
+        expect(said(got[4]), "thinkthen usage: the relate query failed: Catalog Error: Table with name t does not exist!" + MISSING_ADVICE, "the active catalog's table")
+        expect(backend.count(), 0, "counted sends")
+
+
+@case
+def an_uncommitted_table_in_an_explicit_schema_gets_the_rule():
+    with Backend() as backend:
+        got = run(["CREATE SCHEMA alt", "USE alt", "BEGIN", TABLE, RELATE.format(WORKS)], backend.base())
+        expect(said(got[4]), "thinkthen usage: the relate query failed: Catalog Error: Table with name t does not exist!" + MISSING_ADVICE, "the active schema's table")
+        expect(backend.count(), 0, "counted sends")
+
+
+@case
+def an_uncommitted_table_qualified_outside_the_active_schema_gets_the_rule():
+    with Backend() as backend:
+        got = run(["CREATE SCHEMA alt", "BEGIN", TABLE.replace("CREATE TABLE t", "CREATE TABLE alt.t"), RELATE.format(WORKS).replace("FROM t'", "FROM alt.t'")], backend.base())
+        expect(said(got[3]), "thinkthen usage: the relate query failed: Catalog Error: Table with name t does not exist!" + MISSING_ADVICE, "a qualified uncommitted table")
+        expect(backend.count(), 0, "counted sends")
+
+
+@case
+def an_unrelated_query_error_keeps_its_original_words():
+    with Backend() as backend:
+        query = "SELECT error(''Table with name x already exists'') AS id, ''n'' AS name, ''k'' AS kind"
+        got = run([f"SELECT * FROM thinkthen_relate('{query}', {WORKS})"], backend.base())
+        expect(said(got[0]), "thinkthen usage: the relate query failed: Invalid Input Error: Table with name x already exists", "an unrelated query error")
+        expect(backend.count(), 0, "counted sends")
 
 
 @case
@@ -215,4 +272,7 @@ def a_second_relate_over_the_same_rows_reads_the_cache():
 
 
 if __name__ == "__main__":
+    stress = {"r3_12_more_than_255_rows_refuses_under_the_cap"}
+    only_stress = os.environ.get("THINKTHEN_TEST_PROFILE") == "stress"
+    CASES[:] = [function for function in CASES if (function.__name__ in stress) == only_stress]
     sys.exit(main())

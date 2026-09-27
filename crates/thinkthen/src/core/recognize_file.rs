@@ -6,6 +6,7 @@ use sha2::{Digest as _, Sha256};
 use thiserror::Error;
 
 use crate::core::json::Json;
+use crate::core::recognize::{ENTITY, NONE_OF_THESE};
 use crate::core::{Description, Labels, ModelName, Pointer, ProfileName, RelationRule, Threshold};
 
 pub(crate) type RecognizeKinds = Vec<(String, Option<Description>)>;
@@ -50,8 +51,10 @@ impl Serialize for Kinds<'_> {
 pub(crate) enum RecognizeConfigError {
     #[error("a recognize question file is one closed version-one object")]
     Shape,
-    #[error("recognize takes 1 to 20 distinct, nonblank kinds")]
+    #[error("recognize takes 0 to 20 distinct, nonblank kinds")]
     Kinds,
+    #[error("recognize reserves the kind names none of these, ENTITY and ANY in any ASCII case")]
+    Reserved,
     #[error(
         "a recognize relation has a distinct name, source, target, optional reads, and optional either"
     )]
@@ -151,8 +154,10 @@ fn number_u64(value: &Json) -> Option<u64> {
 }
 
 fn parse_kinds(value: Option<&Json>) -> Result<RecognizeKinds, RecognizeConfigError> {
-    let Some(Json::Object(members)) = value else {
-        return Err(RecognizeConfigError::Kinds);
+    let members = match value {
+        None => return Ok(Vec::new()),
+        Some(Json::Object(members)) => members,
+        Some(_) => return Err(RecognizeConfigError::Kinds),
     };
     let kinds = members
         .iter()
@@ -166,10 +171,32 @@ fn parse_kinds(value: Option<&Json>) -> Result<RecognizeKinds, RecognizeConfigEr
     Ok(kinds)
 }
 
+/// The kind names no caller may use: `none of these` declines a name,
+/// `ENTITY` is the kind of every name in a run with no kinds, and `ANY` spells `*`.
+const RESERVED: [&str; 3] = [NONE_OF_THESE, ENTITY, "ANY"];
+
 fn validate_kinds(kinds: &[(String, Option<Description>)]) -> Result<(), RecognizeConfigError> {
-    Labels::tags(kinds.to_vec())
-        .map(|_| ())
-        .map_err(|_| RecognizeConfigError::Kinds)
+    if kinds.is_empty() {
+        return Ok(());
+    }
+    Labels::tags(kinds.to_vec()).map_err(|_| RecognizeConfigError::Kinds)?;
+    if kinds.iter().any(|(kind, _)| {
+        RESERVED
+            .iter()
+            .any(|reserved| kind.eq_ignore_ascii_case(reserved))
+    }) {
+        return Err(RecognizeConfigError::Reserved);
+    }
+    Ok(())
+}
+
+/// A rule side: `*`, and `ANY` in any ASCII case, mean any kind.
+pub(crate) fn rule_side(side: &str) -> String {
+    if side.eq_ignore_ascii_case("ANY") {
+        "*".to_owned()
+    } else {
+        side.to_owned()
+    }
 }
 
 pub(super) fn parse_relations(
@@ -195,8 +222,12 @@ fn parse_relation(value: &Json) -> Result<RelationRule, RecognizeConfigError> {
         return Err(RecognizeConfigError::Relation);
     }
     let name = required_text(value, "name")?;
-    let source = required_text(value, "source")?;
-    let target = required_text(value, "target")?;
+    let side = |key| match value.member(key) {
+        None => Ok("*".to_owned()),
+        Some(_) => required_text(value, key).map(|held| rule_side(&held)),
+    };
+    let source = side("source")?;
+    let target = side("target")?;
     let reads = optional_text(value, "reads")?.unwrap_or_else(|| name.replace('_', " "));
     let either = match value.member("either") {
         None => false,
@@ -288,28 +319,6 @@ fn parse_on(value: Option<&Json>) -> Result<Vec<Pointer>, RecognizeConfigError> 
         .map_err(|_| RecognizeConfigError::Shape)
 }
 
-/// The kinds recognition asks when the caller names none.
-pub(crate) fn default_kinds() -> RecognizeKinds {
-    vec![
-        (
-            "person".to_owned(),
-            Some(Description::text("Part of a person's name.")),
-        ),
-        (
-            "organization".to_owned(),
-            Some(Description::text(
-                "Part of the name of an organization: a company, band, team, agency, government body, or media outlet.",
-            )),
-        ),
-        (
-            "place".to_owned(),
-            Some(Description::text(
-                "Part of the name of a place: a country, region, city, or geographic feature.",
-            )),
-        ),
-    ]
-}
-
 pub(crate) fn recognize_sha256(spec: &RecognizeSpec) -> Result<String, crate::core::RenderError> {
     let canonical = crate::core::json_line(spec)?;
     let mut hasher = Sha256::new();
@@ -357,10 +366,10 @@ mod tests {
     }
 
     #[test]
-    fn invalid_references_wildcard_spelling_and_policy_members_are_refused() {
+    fn invalid_references_reserved_kinds_and_policy_members_are_refused() {
         for text in [
             r#"{"version":1,"recognize":{"kinds":{"person":"A person."},"relations":[{"name":"x","source":"person","target":"organization"}]}}"#,
-            r#"{"version":1,"recognize":{"kinds":{"person":"A person."},"relations":[{"name":"x","source":"any","target":"person"}]}}"#,
+            r#"{"version":1,"recognize":{"kinds":{"person":"A person.","Entity":null}}}"#,
             r#"{"version":1,"recognize":{"kinds":{"person":"A person."},"depth":2}}"#,
         ] {
             assert!(RecognizeSpec::parse(text).is_err(), "{text}");

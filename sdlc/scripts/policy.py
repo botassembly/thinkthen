@@ -284,13 +284,13 @@ def check_crates() -> None:
         fail("dependencies", "the conformance backend declares no feature and no target table")
     manifest = check_member("thinkthen")
     target = manifest.get("target", {}).get("cfg(unix)", {}).get("dependencies", {})
-    # Ticket 0078: engine workers mask host signals, so the library needs nix.
+    # Ticket 0078 masks signals. Ticket 0162 polls stdout for a closed pipe.
     if target.get("nix") != {
         "version": "0.29",
         "default-features": False,
-        "features": ["signal"],
+        "features": ["poll", "signal"],
     }:
-        fail("dependencies", "nix is a Unix library dependency with only its signal feature")
+        fail("dependencies", "nix is a Unix library dependency with only its poll and signal features")
     target_dev = manifest.get("target", {}).get("cfg(unix)", {}).get("dev-dependencies", {})
     if target_dev.get("nix") != {
         "version": "0.29",
@@ -466,13 +466,23 @@ def lock_tree(lock: dict) -> set[tuple[str, str]]:
     return reached
 
 
-def binding_test_failures(relative: str, tokens: list[str]) -> list[str]:
-    """R2-28: no binding test is ignored, and none returns before its first assertion."""
+def binding_test_failures(relative: str, tokens: list[str], allowed_ignore: str | None = None) -> list[str]:
+    """R2-28: no binding test is ignored except one named stress test; no early return."""
     held = []
+    allowed_seen = False
     for place in range(len(tokens)):
         attribute = tokens[place:place + 3]
         if attribute == ["#", "[", "ignore"]:
-            held.append(f"{relative} ignores a test")
+            close = tokens.index("]", place + 3) if "]" in tokens[place + 3:] else len(tokens)
+            approved = (relative == POLARS_STRESS and allowed_ignore == POLARS_STRESS_FUNCTION
+                        and not allowed_seen
+                        and tokens[place - 4:place] == ["#", "[", "test", "]"]
+                        and tokens[place + 3:close] == ["="]
+                        and tokens[close + 1:close + 3] == ["fn", allowed_ignore])
+            if approved:
+                allowed_seen = True
+            else:
+                held.append(f"{relative} ignores a test")
         if attribute != ["#", "[", "test"] or "{" not in tokens[place:]:
             continue
         start = tokens.index("{", place)
@@ -486,6 +496,8 @@ def binding_test_failures(relative: str, tokens: list[str]) -> list[str]:
                          if token.startswith(("assert", "debug_assert")) and body[at + 1] == "!"), len(body))
         if "return" in body[:asserted]:
             held.append(f"{relative} has a test that returns before its first assertion")
+    if allowed_ignore is not None and not allowed_seen:
+        held.append(f"{relative} lacks its named ignored stress test {allowed_ignore}")
     return held
 
 
@@ -612,6 +624,8 @@ def check_bindings() -> None:
 # Ticket 0130: the Rust Polars door is the `polars` feature of `thinkthen`. Its
 # tests keep R2-28's scan, and no rung builds every feature.
 POLARS_TESTS = "crates/thinkthen/tests/polars"
+POLARS_STRESS = f"{POLARS_TESTS}/throttle_equality.rs"
+POLARS_STRESS_FUNCTION = "two_hundred_series_records_match_the_slice"
 RUNGS = ("install", "lint", "test", "spec", "surfaces", "package")
 
 
@@ -621,10 +635,20 @@ def check_polars_feature() -> None:
         fail("polars", f"{POLARS_TESTS} holds the Polars door's tests")
     for path in tests:
         relative = path.relative_to(REPO).as_posix()
-        for failure in binding_test_failures(relative, rust_tokens(path.read_text(encoding="utf-8"))):
+        allowed = POLARS_STRESS_FUNCTION if relative == POLARS_STRESS else None
+        for failure in binding_test_failures(relative, rust_tokens(path.read_text(encoding="utf-8")), allowed):
             fail("polars", failure)
     if not binding_test_failures("planted.rs", rust_tokens("#[test]\n#[ignore]\nfn planted() {}\n")):
         fail("polars", "an ignored Polars test is refused")
+    stress = (REPO / POLARS_STRESS).read_text(encoding="utf-8")
+    extra = stress + "\n#[test]\n#[ignore]\nfn planted() { assert!(true); }\n"
+    if not binding_test_failures(POLARS_STRESS, rust_tokens(extra), POLARS_STRESS_FUNCTION):
+        fail("polars", "another ignored test in the approved file is refused")
+    sample = '#[test]\n#[ignore = "stress"]\nfn two_hundred_series_records_match_the_slice() { assert!(true); }\n'
+    if not binding_test_failures("planted.rs", rust_tokens(sample), POLARS_STRESS_FUNCTION):
+        fail("polars", "the approved name in another file is refused")
+    if not binding_test_failures(POLARS_STRESS, rust_tokens(sample.replace(POLARS_STRESS_FUNCTION, "planted")), POLARS_STRESS_FUNCTION):
+        fail("polars", "another ignored name in the approved file is refused")
     for rung in RUNGS:
         if rung_failures(rung, (REPO / "sdlc/scripts" / rung).read_text(encoding="utf-8")):
             fail("polars", f"sdlc/scripts/{rung} builds with every feature, and Polars belongs to its lane")
@@ -1745,6 +1769,43 @@ def check_library_graph() -> None:
             elif not graph_failures(planted):
                 fail("dependencies", f"the planted graph {plant.splitlines()[0]!r} is refused")
 
+HEADER_WORDS = ("header", "authorization", "api-key", "api_key", "x-api-key", "cookie")
+
+
+def recording_failures(held: object, place: str = "") -> list[str]:
+    """Every header, credential key, or bearer value in one recording entry."""
+    found: list[str] = []
+    if isinstance(held, dict):
+        for key, value in held.items():
+            if any(word in key.lower() for word in HEADER_WORDS):
+                found.append(f"{place}/{key} is a header or credential key")
+            found += recording_failures(value, f"{place}/{key}")
+    elif isinstance(held, list):
+        for at, value in enumerate(held):
+            found += recording_failures(value, f"{place}/{at}")
+    elif isinstance(held, str) and held.lower().lstrip().startswith("bearer "):
+        found.append(f"{place} holds a bearer value")
+    return found
+
+
+def check_recordings() -> None:
+    """Ticket 0147: a recording keeps no header, so it can never hold a key."""
+    for plant in ({"request": {"headers": {}}}, {"Authorization": "x"}, {"response": ["Bearer x"]}):
+        if not recording_failures(plant):
+            fail("recordings", f"the planted entry {plant!r} is refused")
+    listed = subprocess.run(["git", "ls-files", "-z", "*.json"], cwd=REPO, capture_output=True, check=True)
+    for relative in listed.stdout.decode().split("\0"):
+        if "/recording" not in f"/{relative}":
+            continue
+        try:
+            held = json.loads((REPO / relative).read_text(encoding="utf-8"))
+        except (OSError, ValueError) as error:
+            fail("recordings", f"cannot read {relative}: {error}")
+            continue
+        for failure in recording_failures(held):
+            fail("recordings", f"{relative}: {failure}")
+
+
 def main() -> int:
     check_toolchain()
     check_workspace()
@@ -1764,6 +1825,7 @@ def main() -> int:
     check_seam()
     check_license_grammar()
     check_dependencies()
+    check_recordings()
     for failure in FAILURES:
         print(failure, file=sys.stderr)
     if FAILURES:

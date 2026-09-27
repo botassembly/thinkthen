@@ -2,7 +2,7 @@ use super::{
     Asked, CASES, Document, STAGED, asked, command, expected, find_asked, finding, outcomes,
     record_requests, validate_operation,
 };
-use crate::core::{Backend, Evidence, ModelName, Url, Value};
+use crate::core::{Backend, DEFAULT_MODEL, Evidence, ModelName, Url, Value};
 use crate::engine::Cancel;
 use crate::engine::error::Error as EngineError;
 use crate::engine::facade::{Answered, Completed, Engine, Input, RunOutcome, Settings, Storage};
@@ -74,7 +74,7 @@ fn facade_answer(
 fn every_case_crosses_the_private_facade_under_replay() {
     let document: Document = serde_json::from_str(CASES).expect("shared document");
     let backend_url = Url::new(&document.backend_url).expect("canonical URL");
-    let backend = Backend::from_parts(backend_url, ModelName::new("jev-latest").expect("model"));
+    let backend = Backend::from_parts(backend_url, ModelName::new(DEFAULT_MODEL).expect("model"));
     for case in &document.cases {
         if let Some(expected) = &case.expect.error {
             run_fault(case, &expected.kind);
@@ -174,7 +174,7 @@ fn run_fault(case: &super::Case, expected: &str) {
         return;
     }
     let injection = &case.operation.as_ref().expect("fault injection").injection;
-    let backend = Backend::resolve(None, None, "jev-latest").expect("backend");
+    let backend = Backend::resolve(None, None, DEFAULT_MODEL).expect("backend");
     let engine = replaying(&backend, std::env::temp_dir());
     let outcome = engine
         .records(
@@ -188,7 +188,7 @@ fn run_fault(case: &super::Case, expected: &str) {
                         .expect("scheduler receives input");
                 });
             },
-            &|()| Err::<Completed<()>, _>(injected(injection)),
+            &|()| Err::<Completed<(), _>, _>(injected(injection)),
             |()| Ok(true),
         )
         .expect("scheduler itself remains sound");

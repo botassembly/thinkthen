@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"{\"context\":\"Report damage within 48 hours. A prepaid return label is issued and a replacement is sent at no cost.\",\"output\":\"Report it within 48 hours and a replacement is sent free.\"}","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Is every claim in the answer stated in the source text?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.85}},"usage":{"input_tokens":321,"output_tokens":21}}
-}

@@ -32,7 +32,7 @@ pub(crate) const NAME: &str = "systemone";
 pub(crate) const DEFAULT_BASE: &str = "https://api.typesafe.ai/v1";
 
 /// The model this adapter names when `--model` and the question file name none.
-pub(crate) const DEFAULT_MODEL: &str = "jev-latest";
+pub(crate) const DEFAULT_MODEL: &str = "jev-1.13.0";
 
 /// The path under a base that this adapter's endpoint sits at.
 ///

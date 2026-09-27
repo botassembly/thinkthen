@@ -8,27 +8,46 @@
 # backend served. It prints one line a case and a count line, and exits
 # nonzero after any failure or a count that does not add up.
 #
-# Five cases do not run here:
+# Two cases do not run here:
 NOT_RUN = {
-  "18-find-second" => "none: true; the public find has no switch for the none option",
-  "19-find-none" => "none: true; the public find has no switch for the none option",
-  "18-annotate-two-groups" => "reads parts of a record through a member's on; a call's evidence is one whole text",
   "25-defect-fault" => "injects an internal invariant failure that no outside boundary reaches; src/lib.rs tests the guard",
   "30-local-question-file" => "the surface has no question-file loader; ThinkThen.question takes keywords"
 }.freeze
 
 require "digest"
 require "json"
+require "pathname"
 require "tmpdir"
 
 CASES = JSON.parse(File.read(File.expand_path("../../../conformance/cases.json", __dir__)))
 CANONICAL = "https://api.typesafe.ai/v1/systemone"
+ALL = CASES.fetch("cases")
+IDS = ALL.map { |one| one.fetch("id") }
+raise "shared case count differs from the document" unless ALL.size == CASES.fetch("case_count")
+raise "duplicate shared case ID" unless IDS.uniq.size == IDS.size
+
+selector = ENV["THINKTHEN_CONFORMANCE_IDS"]
+if selector
+  raise "THINKTHEN_CONFORMANCE_IDS takes an absolute path" unless Pathname.new(selector).absolute?
+
+  chosen = File.readlines(selector, chomp: true).map(&:strip).reject { |id| id.empty? || id.start_with?("#") }
+  raise "the selected case list is empty" if chosen.empty?
+  raise "duplicate selected case ID" unless chosen.uniq.size == chosen.size
+
+  absent = chosen - IDS
+  raise "selected case #{absent.first} is absent from the shared corpus" unless absent.empty?
+  SELECTED = chosen.freeze
+else
+  SELECTED = IDS.freeze
+end
 
 unless ARGV.first == "--child"
   require_relative "backend"
   backend = TestBackend::Backend.new
   status = Dir.mktmpdir do |root|
-    env = TestBackend.env(backend.url, root, "CONFORMANCE_PORT" => backend.port.to_s)
+    extra = { "CONFORMANCE_PORT" => backend.port.to_s }
+    extra["THINKTHEN_CONFORMANCE_IDS"] = selector if selector
+    env = TestBackend.env(backend.url, root, extra)
     system(env, RbConfig.ruby, "-I", TestBackend::LIB, __FILE__, "--child", unsetenv_others: true)
   end
   backend.close
@@ -68,19 +87,23 @@ def engine(base, **settings) = T::Engine.new(base_url: base, cache: false, **set
 
 def question(held) = T.question(**held.transform_keys(&:to_sym))
 
-def entity(one) = { "name" => one.name, "kind" => one.kind, "start" => one.start, "end" => one.end, "strength" => one.strength }
+def entity(one) = %w[text start end length kind strength].to_h { |key| [key, one[key]] }
 
-def detailed(document, expected)
+def detailed(document, expected, base)
   wanted = expected["details"]
   answer = wanted["answer"]
   %w[probability probabilities level].each { |name| same(name, document["answer"][name], answer[name]) if answer.key?(name) }
-  %w[model question_sha256 requests].each { |name| same(name, document["meta"][name], wanted[name]) }
+  same("confidence", document["answer"].fetch("confidence", "absent"), answer.fetch("confidence", "absent"))
+  %w[model question_sha256 requests usage requests_sent cached].each do |name|
+    same(name, document["meta"].fetch(name, "absent"), wanted.fetch(name, "absent"))
+  end
+  same("url", document["meta"]["url"], "#{base}/systemone")
 end
 
 def single(engine, asked, text, success, base)
   expected = success["answers"][0]
   document = engine.details(asked, text)
-  detailed(document, expected)
+  detailed(document, expected, base)
   typed = case document["answer"]["kind"]
           when "yes_no" then engine.decide(asked, text)
           when "score" then engine.score(asked, text)
@@ -99,14 +122,14 @@ def single(engine, asked, text, success, base)
   end
 end
 
-def annotated(engine, set, texts, success)
+def annotated(engine, set, texts, success, one)
   records = Dir.mktmpdir do |folder|
     File.write(File.join(folder, "set.json"), JSON.generate(set))
     engine.annotate(T.set(File.join(folder, "set.json")), texts)
   end
   failed = 0
   success["answers"].each do |expected|
-    value = records[expected["exchange"]].fetch(expected["name"].to_sym)
+    value = records[one ? 0 : expected["exchange"]].fetch(expected["name"].to_sym)
     failed += 1 if value.is_a?(Hash) && value.key?("failed")
     same("bare #{expected['name']}", value, expected["bare"])
   end
@@ -142,7 +165,14 @@ def check(one)
     same("result", edges.map { |e| { "relation" => e.relation, "source" => pair.(e.source), "target" => pair.(e.target), "probability" => e.probability } },
          success["answers"][0]["bare"])
   in ["annotate", _]
-    annotated(engine, one["question_set"], texts, success)
+    whole = one.key?("record")
+    annotated(engine, one["question_set"], whole ? [JSON.generate(one["record"])] : texts, success, whole)
+  in ["find", _]
+    found = engine.find(held["find"], held["units"], none: held["none"])
+    selected = success["operation"]["selected"]
+    picked = success["operation"]["probabilities"].find { |row| row["index"] == selected }
+    want = selected.nil? ? nil : [selected, held["units"][selected], picked["probability"]]
+    same("found", found.index.nil? ? nil : found.to_a, want)
   in ["rank", _]
     ranked = engine.rank(held["decide"], texts)
     same("ranking", ranked.map { |row| { "index" => row.index, "probability" => row.probability } }, success["operation"]["ranking"])
@@ -197,6 +227,7 @@ end
 passed = failed = skipped = 0
 CASES["cases"].each do |one|
   id = one["id"]
+  next unless SELECTED.include?(id)
   if (why = NOT_RUN[id])
     skipped += 1
     puts "not run #{id}: #{why}"
@@ -212,5 +243,5 @@ CASES["cases"].each do |one|
   end
 end
 total = passed + failed + skipped
-puts "conformance: #{passed} passed, #{failed} failed, #{skipped} not run, #{total} of #{CASES['case_count']}"
-exit(failed.zero? && total == CASES["case_count"] && total == CASES["cases"].size ? 0 : 1)
+puts "conformance: total=#{CASES['case_count']} selected=#{SELECTED.size} pass=#{passed} fail=#{failed} not_run=#{skipped} unselected=#{CASES['case_count'] - SELECTED.size}"
+exit(failed.zero? && total == SELECTED.size ? 0 : 1)

@@ -73,6 +73,9 @@ int main(void) {
 
     row(tt, "call null request", thinkthen_call(tt, NULL) == NULL, 1, "a null request");
     row(tt, "call request not UTF-8", thinkthen_call(tt, bad) == NULL, 1, "the request is not UTF-8");
+    row(tt, "find none not a boolean",
+        thinkthen_call(tt, "{\"find\":\"Which?\",\"none\":\"yes\",\"units\":[\"a\",\"b\"]}") == NULL, 1,
+        "find takes `none` as true or false");
 
     row(tt, "recognize null spec", thinkthen_recognize(tt, NULL, "x", 1, &out, &out_len), 1, "a null spec");
     row(tt, "recognize null out", thinkthen_recognize(tt, "{}", "x", 1, NULL, &out_len), 1, "a null out pointer");

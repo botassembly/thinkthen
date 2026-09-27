@@ -4,9 +4,42 @@ use std::env;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, ErrorKind, IsTerminal as _, Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use crate::core::KEY_VAR;
+use crate::core::{KEY_VAR, Reading};
+
+/// The command's shared, latched observation of a closed output pipe.
+#[derive(Clone, Default)]
+pub(crate) struct Downstream(Arc<AtomicBool>);
+
+impl Downstream {
+    pub(crate) fn gone(&self) -> bool {
+        if self.latched() {
+            return true;
+        }
+        #[cfg(unix)]
+        {
+            use nix::poll::{PollFd, PollFlags, PollTimeout, poll};
+            use std::os::fd::AsFd;
+            let stdout = io::stdout();
+            let mut fds = [PollFd::new(stdout.as_fd(), PollFlags::POLLOUT)];
+            if poll(&mut fds, PollTimeout::ZERO).is_ok()
+                && fds[0]
+                    .revents()
+                    .is_some_and(|flags| flags.intersects(PollFlags::POLLERR | PollFlags::POLLHUP))
+            {
+                self.0.store(true, Ordering::SeqCst);
+            }
+        }
+        self.latched()
+    }
+
+    pub(crate) fn latched(&self) -> bool {
+        self.0.load(Ordering::SeqCst)
+    }
+}
 
 use crate::config::{self, Config};
 use crate::engine::error::Error as EngineError;
@@ -27,12 +60,13 @@ const BOUND: u64 = crate::core::MAX_RECORD_BYTES as u64 + 2;
 /// The environment the command reads, read once.
 ///
 /// `THINKTHEN_BASE_URL` names where the System One interface lives. The other
-/// variables shorten the retry wait and acknowledge SIGINT, and only tests set
-/// them. The key itself is read later, by name, and only when a request is about
-/// to go out.
+/// variables shorten the retry wait and acknowledge SIGINT. Only a build with
+/// debug assertions reads them, so a release binary ignores them. The key
+/// itself is read later, by name, and only when a request is about to go out.
 #[derive(Debug, Default)]
 pub(crate) struct Environment {
     base_url: Option<String>,
+    batch: Option<String>,
     named_cache: bool,
     cache: Option<PathBuf>,
     cache_is_platform_default: bool,
@@ -54,6 +88,7 @@ impl Environment {
         let usage_path = config::usage_path();
         Ok(Self {
             base_url: read("THINKTHEN_BASE_URL"),
+            batch: read("THINKTHEN_BATCH"),
             cache: named_cache
                 .as_ref()
                 .map(PathBuf::from)
@@ -62,8 +97,9 @@ impl Environment {
             named_cache: named_cache.is_some(),
             config,
             config_path,
-            retry_wait_ms: read("THINKTHEN_TEST_RETRY_WAIT_MS").and_then(|text| text.parse().ok()),
-            sigint_ack: read("THINKTHEN_TEST_SIGINT_ACK").map(PathBuf::from),
+            retry_wait_ms: test_only("THINKTHEN_TEST_RETRY_WAIT_MS")
+                .and_then(|text| text.parse().ok()),
+            sigint_ack: test_only("THINKTHEN_TEST_SIGINT_ACK").map(PathBuf::from),
             cancel: crate::engine::Cancel::default(),
             usage: std::sync::Arc::new(Counters::new(usage_path.clone())),
             usage_path,
@@ -117,6 +153,11 @@ impl Environment {
         read(KEY_VAR).is_some()
     }
 
+    /// `THINKTHEN_BATCH`, which only `decide`, `filter` and `rank` read.
+    pub(crate) fn batch(&self) -> Option<&str> {
+        self.batch.as_deref()
+    }
+
     /// The base the request is posted under, or `None` when the variable is empty.
     pub(crate) fn base_url(&self) -> Option<&str> {
         self.base_url.as_deref().or_else(|| self.config.url())
@@ -129,6 +170,28 @@ impl Environment {
 
     pub(crate) const fn cancel(&self) -> &crate::engine::Cancel<'static> {
         &self.cancel
+    }
+}
+
+/// Take `--model` on the commands that build their own specification.
+pub(crate) fn model_flag(text: &str) -> Result<crate::core::ModelName, Failure> {
+    crate::core::ModelName::new(text).map_err(|error| {
+        Failure::Usage(match error {
+            crate::core::BlankTextError::ModelControl => {
+                "--model holds no control character or white space but a plain space"
+            }
+            _ => "--model is text, not white space",
+        })
+    })
+}
+
+/// Read a `THINKTHEN_TEST_` variable in a build with debug assertions, which
+/// is what the test suites spawn. A release binary reads `None`.
+fn test_only(name: &str) -> Option<String> {
+    if cfg!(debug_assertions) {
+        read(name)
+    } else {
+        None
     }
 }
 
@@ -223,6 +286,21 @@ impl<R: BufRead> Iterator for Chunks<R> {
             Ok(_) => Some(Ok(bytes)),
         }
     }
+}
+
+/// Keep the input line number while dropping only blank lines in line framing.
+pub(crate) fn numbered<R: BufRead>(
+    chunks: Chunks<R>,
+    reading: &Reading,
+) -> impl Iterator<Item = (usize, Result<Vec<u8>, Failure>)> + use<R> {
+    let reading = reading.clone();
+    chunks.enumerate().filter_map(move |(place, row)| {
+        if row.as_ref().is_ok_and(|bytes| reading.skips(bytes)) {
+            None
+        } else {
+            Some((place + 1, row))
+        }
+    })
 }
 
 /// What a user sitting at a terminal is told the command is waiting for.

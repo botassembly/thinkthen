@@ -5,6 +5,9 @@
 set -eu
 cd -- "$(dirname -- "$0")"
 unset THINKTHEN_API_KEY
+profile=${THINKTHEN_TEST_PROFILE:-routine}
+case $profile in routine|full|stress) ;; *) echo "typescript: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+[ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 repo=$(cd ../.. && pwd)
 . "$repo/sdlc/scripts/scratch.sh"
 # macOS has no `timeout` (ticket 0128).
@@ -80,7 +83,12 @@ npm ci --offline --no-audit --no-fund --silent --prefix target/npm
 sh build-addon.sh
 
 step 'node tests'
-sh "$LIMIT" 300 node --test --test-timeout=30000 tests/*.test.mjs
+if [ "$profile" = stress ]; then
+    sh "$LIMIT" 300 node --test --test-timeout=30000 --test-name-pattern='^stress:' tests/abort.test.mjs
+    echo 'typescript: pass, stress'
+    exit 0
+fi
+sh "$LIMIT" 300 node --test --test-timeout=30000 --test-skip-pattern='^stress:' tests/*.test.mjs
 
 step 'the conformance runner fails a corrupted case and names it'
 for id in 12-score-upper 17-annotate-mixed 27-decide-many; do
@@ -91,7 +99,8 @@ for id in 12-score-upper 17-annotate-mixed 27-decide-many; do
         fs.writeFileSync(process.argv[3], JSON.stringify(file));
     ' "$repo/conformance/cases.json" "$id" "$plant/cases.json"
     set +e
-    THINKTHEN_TEST_CASES="$plant/cases.json" sh "$LIMIT" 300 node --test tests/conformance.test.mjs >"$plant/run" 2>&1
+    env -u THINKTHEN_CONFORMANCE_IDS THINKTHEN_TEST_CASES="$plant/cases.json" \
+        sh "$LIMIT" 300 node --test tests/conformance.test.mjs >"$plant/run" 2>&1
     code=$?
     set -e
     [ "$code" -ne 0 ] && grep -q "fail $id" "$plant/run" || fail "a corrupted $id passed (exit $code)"

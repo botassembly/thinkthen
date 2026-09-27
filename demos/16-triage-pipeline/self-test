@@ -108,7 +108,7 @@ test "$("$HERE/run" --replay fixture)" = "SUP-1042	Duplicate renewal charge	draf
 SUP-1043	Package needed for a flight	review	urgent
 SUP-1044	Locked out after changing phones	block	credential_request
 SUP-1045	Request for a product integration	review	out_of_scope
-SUP-1046	Delivery address may be wrong	review	unresolved
+SUP-1046	Delivery address may be wrong	review	unsure
 SUP-1047	Remove an old shipping address	draft	routine
 draft=2
 block=1

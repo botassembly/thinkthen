@@ -29,6 +29,7 @@ description: Use when writing or editing any page or code example on the ThinkTh
 - Name each answer for its meaning before you use it: `is_spam = ...`, then `assert is_spam`. Never assert on the call, and never name an answer `result` or `answer`. Bash uses `is_spam=$(...)` or `refund_code=$?`. SQL uses an alias such as `AS is_refund`.
 - Assert, never print. Bash: `test "$x" = "..."`. Python `assert`, TypeScript `node:assert/strict`, Ruby `raise unless`, R `stopifnot(identical(...))`, Rust `assert_eq!`, C `assert()`. SQL shows the query and its output.
 - No comments in code. The caption says what to look at.
+- Never type a setting's default, range or allowed values. Read it with `setting('Name')` from `site/src/lib/settings-table.mjs`, which parses `specification/settings.md`. The build fails when the name leaves the table.
 
 ## Examples are smoke tests
 
@@ -37,4 +38,4 @@ description: Use when writing or editing any page or code example on the ThinkTh
 - An article includes an example with `<!-- example: <page>/<name> -->` and a file with `<!-- file: <path> -->`.
 - Capture with `node scripts/smoke.mjs --update <page>/<name>` from `site/`. Read the new output, check every `test` value and the caption against it, then run `npm run build`.
 - Every call answers from a saved recording. Make no live call: it costs money. If a request has no recording, change the example to one a recording answers, or stop and ask the site's owner.
-- `npm run build` runs `check-samples`, the smoke run, the Astro build, the Markdown twins, the settings check, and the link check. The smoke run uses `target/release/thinkthen` from the same commit.
+- `npm run build` runs `check-samples`, the slide check, the smoke run, the Astro build, the Markdown twins, the settings check, and the link check. The smoke run uses `target/release/thinkthen` from the same commit.
