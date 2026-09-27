@@ -197,11 +197,12 @@ impl Engine {
     }
 
     /// The key a live request carries. With the variable unset, a backend
-    /// proven to be this machine takes no key, so a local server that checks
-    /// none needs no pretend secret. Every other address still refuses.
+    /// proven to be this machine takes an empty key, which sends no
+    /// authorization header, so a local server that checks none needs no
+    /// pretend secret. Every other address still refuses.
     fn key(&self) -> Result<Key, Error> {
         match (self.key)() {
-            Err(Error::NoKey(_)) if self.backend.is_loopback() => Ok(Key::none()),
+            Err(Error::NoKey(_)) if self.backend.is_loopback() => Ok(Key::new(String::new())),
             read => read,
         }
     }

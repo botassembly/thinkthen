@@ -160,12 +160,13 @@ fn shape_fault(bytes: &[u8]) -> &'static str {
     "the configuration file is not valid closed JSON"
 }
 
-/// Whether a user other than this process's can change a file: its group or
-/// others may write it, or another user owns it.
+/// Whether another user can change a file because its group or others may
+/// write it. Checking the owner needs `nix`'s `user` feature, which the
+/// dependency policy does not accept.
 #[cfg(unix)]
 pub(crate) fn writable_by_another(metadata: &fs::Metadata) -> bool {
-    use std::os::unix::fs::{MetadataExt as _, PermissionsExt as _};
-    metadata.permissions().mode() & 0o022 != 0 || metadata.uid() != nix::unistd::geteuid().as_raw()
+    use std::os::unix::fs::PermissionsExt as _;
+    metadata.permissions().mode() & 0o022 != 0
 }
 
 #[cfg(not(unix))]
