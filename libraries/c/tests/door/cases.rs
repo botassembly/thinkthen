@@ -624,7 +624,7 @@ fn relate_reads_what_recognize_found() {
         script.ask("relate", &[vec![base.as_str(), relate], each].concat());
     }
     let got = replies(&run(&driver, &base, &script.0).stdout).expect("replies");
-    let (by_text, by_name) = (parsed(&got[0]).expect("edges"), parsed(&got[1]).expect("edges"));
-    assert_eq!(by_text, by_name);
+    let by_text = parsed(&got[0]).expect("edges");
+    assert_eq!(by_text, parsed(&got[1]).expect("edges"));
     assert_eq!(by_text["edges"].as_array().map(Vec::len), Some(2));
 }
