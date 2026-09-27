@@ -81,3 +81,24 @@ fn a_spent_request_closes_the_address_for_other_engines_but_not_cache_or_another
     assert_eq!(waiting.kind(), ErrorKind::Deadline);
     assert_eq!(a.count(), 2, "a waiting request sent nothing");
 }
+
+#[test]
+fn a_zero_retry_after_waits_instead_of_hammering_the_backend() {
+    let listener =
+        Listener::answering(|_| Canned::status(503, "busy").asking("retry-after-ms", "0"))
+            .expect("listener");
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("loopback address")
+        .api_key("sk-test")
+        .expect("fake key")
+        .no_cache()
+        .build()
+        .expect("engine");
+    let question = Question::decide("Is it?").expect("question").cut();
+    let stopped = engine
+        .decide_with(&question, "evidence", quick_call())
+        .expect_err("the call deadline ends the header floor");
+    assert_eq!(stopped.kind(), ErrorKind::Deadline);
+    assert_eq!(listener.count(), 1, "zero did not prompt a second send");
+}
