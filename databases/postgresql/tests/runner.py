@@ -49,6 +49,28 @@ def load(path):
     return json.loads(pathlib.Path(path).read_text())
 
 
+def selected_ids(cases):
+    available = [case["id"] for case in cases]
+    if len(available) != len(set(available)):
+        raise ValueError("duplicate shared case ID")
+    path = os.environ.get("THINKTHEN_CONFORMANCE_IDS")
+    if path is None:
+        return set(available)
+    source = pathlib.Path(path)
+    if not source.is_absolute():
+        raise ValueError("THINKTHEN_CONFORMANCE_IDS takes an absolute path")
+    chosen = [line.strip() for line in source.read_text().splitlines()]
+    chosen = [one for one in chosen if one and not one.startswith("#")]
+    if not chosen:
+        raise ValueError("the selected case list is empty")
+    if len(chosen) != len(set(chosen)):
+        raise ValueError("duplicate selected case ID")
+    absent = set(chosen) - set(available)
+    if absent:
+        raise ValueError(f"selected case is absent from the shared corpus: {sorted(absent)[0]}")
+    return set(chosen)
+
+
 def skipped(case):
     if case["id"] in NOT_RUN:
         return NOT_RUN[case["id"]]
@@ -255,11 +277,26 @@ def main():
         path = args[at + 1]
         del args[at : at + 2]
     cases = load(path)["cases"]
+    try:
+        selected = selected_ids(cases)
+    except (OSError, ValueError) as error:
+        print(f"fail selector: {error}", file=sys.stderr)
+        return 1
+    chosen = [case for case in cases if case["id"] in selected]
     if args == ["plan"]:
-        return plan(cases)
+        plan(chosen)
+        not_run = sum(skipped(case) is not None for case in chosen)
+        print(f"postgresql plan: total={len(cases)} selected={len(chosen)} supported={len(chosen) - not_run} not_run={not_run} unselected={len(cases) - len(chosen)}", file=sys.stderr)
+        return 0
     global SOCKET
     SOCKET, wanted = args
-    case = next(one for one in cases if one["id"] == wanted)
+    if wanted not in selected:
+        print(f"fail {wanted}: not selected")
+        return 0
+    case = next((one for one in cases if one["id"] == wanted), None)
+    if case is None:
+        print(f"fail {wanted}: absent from the shared corpus")
+        return 0
     if skipped(case):
         print(f"not run {wanted}: {skipped(case).removeprefix('not run: ')}")
         return 0
