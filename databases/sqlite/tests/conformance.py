@@ -24,7 +24,6 @@ from helper import ROOT, Backend, child, environment
 
 CANONICAL = "https://api.typesafe.ai/v1/systemone"
 NOT_RUN = {
-    "rank": "no SQL form",
     "find": "no SQL find function yet",
     "relations": "no SQL form: thinkthen_recognize takes no relations, and thinkthen_relate reads rows",
     "defect": "no SQL form: no outside boundary reaches an internal invariant failure",
@@ -36,7 +35,7 @@ SENDING_ERRORS = {"21-backend-fault": 1, "23-cancelled-fault": 1}
 
 def form(case: dict) -> str | None:
     """The NOT_RUN key for a case with no SQL spelling, or None."""
-    if case["verb"] in ("rank", "find"):
+    if case["verb"] == "find":
         return case["verb"]
     if "relations" in case.get("question", {}).get("recognize", {}):
         return "relations"
@@ -124,6 +123,8 @@ def refused(case: dict, backend: Backend) -> None:
         setup = "threading.Timer(0.3, db.interrupt).start()"
     elif ident == "24-deadline-fault":
         steps = [["SELECT thinkthen_decide(?, ?, 0)", [question, evidence]]]
+    elif ident == "31-usage-rank-blank-question":
+        steps = [["SELECT thinkthen_details(?, ?)", [question, evidence]]]
     elif ident == "30-local-question-file":
         setup = f"open(os.environ['SCRATCH'] + '/q.json', 'w').write({question!r})"
         steps = [["SELECT thinkthen_decide(?, ?)", ["@__SCRATCH__/q.json", evidence]]]
@@ -177,6 +178,13 @@ def check(case: dict, backend: Backend) -> None:
     elif kind == "filter":
         results = asked([["SELECT i FROM r WHERE thinkthen_decide(?, t) ORDER BY i", [question]]], env, rows_table(texts))
         same("indexes", [row[0] for row in results[0]], success["operation"]["indexes"])
+    elif kind == "rank":
+        sql = ("WITH scored AS MATERIALIZED (SELECT i, "
+               "json_extract(thinkthen_details(?, t), '$.answer.probability') AS p FROM r) "
+               "SELECT i, p FROM scored ORDER BY p DESC, i")
+        rows = asked([[sql, [question]]], env, rows_table(texts))[0]
+        same("ranking", [{"index": row[0], "probability": row[1]} for row in rows], success["operation"]["ranking"])
+        same("judgments sent", backend.count(), len(texts))
     elif kind == "decide_many":
         steps = [["SELECT thinkthen_warm(?, t) FROM r", [question]], ["SELECT thinkthen_decide(?, t) FROM r ORDER BY i", [question]]]
         results = asked(steps, env, rows_table(texts))

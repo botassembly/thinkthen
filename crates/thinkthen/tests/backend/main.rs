@@ -20,6 +20,7 @@ mod asked;
     reason = "a helper that cannot start the command stops the test; rows and requests are counted before they are read"
 )]
 mod batching;
+mod blank_lines;
 mod cache_configuration;
 mod cache_identity;
 mod cache_locking;
@@ -32,6 +33,7 @@ mod cache_prune_locking;
 )]
 mod check;
 mod choosing;
+mod closed_pipe;
 mod default_cache;
 #[cfg(target_os = "linux")]
 mod default_cache_storage;

@@ -19,7 +19,6 @@ pub(crate) enum Outcome<E> {
     },
     Failed(E),
     Stopped {
-        at: usize,
         finished: usize,
         replayed: usize,
         cause: E,
@@ -380,7 +379,6 @@ fn outcome<S, A, W, G, R, E>(mut state: Run<S, A, W, G, R, E>, streams: bool) ->
     };
     if streams {
         Outcome::Stopped {
-            at: row + 1,
             finished: state.next_row.min(row),
             replayed: state.replayed,
             cause,

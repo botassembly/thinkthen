@@ -79,7 +79,6 @@ fn annotate_cancellation_clears_undispatched_groups_and_joins() {
     assert!(matches!(
         result,
         Outcome::Stopped {
-            at: 1,
             finished: 0,
             cause: "cancelled",
             ..
