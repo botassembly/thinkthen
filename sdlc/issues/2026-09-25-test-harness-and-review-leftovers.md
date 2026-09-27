@@ -151,6 +151,14 @@ Fix: give each of the five spawns an allow-listed environment through its langua
 
 Done when: `PENDING` names no landed ticket, and `children` stays green.
 
+## 14. The host-signal test failed once beside other signal tests
+
+Status: unresolved observation, recorded 2026-09-27 during ticket 0169. At HEAD `22332a38` with the uncommitted 0169 command changes, `cargo test --locked -p thinkthen --lib signal -- --nocapture` selected six tests: four passed, one failed, and one was ignored. `engine::host_signal_tests::a_host_signal_during_a_held_send_on_a_worker_leaves_the_call_whole` failed at its `host_signal_tests.rs:98` assertion with `the worker kept SIGUSR1 blocked`. Running that exact test once in isolation passed in 0.10 seconds. No engine or worker source had changed in that lane.
+
+Neither run redirected a raw log. The builder transcribed the tool results and their provenance into `worktrees/thinkthen-codex-1/target/codex-builds/0169/host-signal-observation.md`; the 0169 build record also names the observation. This is not a clean-main reproduction and the isolated pass does not establish a root cause. Parallel signal interference and a timing-sensitive assertion remain hypotheses.
+
+Next step: inspect which selected tests change process signal handlers or thread masks, then use one bounded case that controls the relevant interaction. If the test requires process isolation, encode that isolation in its ordinary functional path. Do not run a repeated statistical campaign, weaken the blocked-mask assertion, or mark the problem fixed because a retry passed. This belongs to the remaining test-harness cleanup and is not an external blocker.
+
 ## Already fixed
 
 - rusqlite's second trap, the workspace feature clash with `load_extension`: ADR 0047 gives each binding its own workspace. The root `Cargo.toml:4` to `:6` excludes `databases`.
