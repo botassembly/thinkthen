@@ -104,8 +104,6 @@ impl<T, E: Into<Refusal>> OrRaise<T> for Result<T, E> {
 /// The registered value that leaves a numeric engine setting unset.
 pub(crate) const UNSET: i32 = -1;
 
-/// The refusal for a zero cache cap (decision 3).
-
 /// The throttle's refusal where it is set, in the engine's own sentence, or
 /// `None` for -1 (unset) and 1 through 32 (Ian's range).
 pub(crate) fn throttle_refusal(value: i32) -> Option<String> {
