@@ -6,9 +6,9 @@ opens: libraries/python/src/worker.rs libraries/python/tests/test_stopping.py li
 
 # 0168: A stop reaches every caller
 
-Status: accepted. The coordinator accepted it on 2026-09-27 after a fresh read-only review, with the fixes that review named. Owner: Claude.
+Status: building. The coordinator accepted it on 2026-09-27 after a fresh read-only review, with the fixes that review named. Owner: Codex.
 
-Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
+Review route: the accepted design keeps its original review. A fresh read-only Codex session reviews the final diff, under Ian's 2026-09-27 handover.
 
 ## Outcome and authority
 
@@ -167,7 +167,7 @@ Excluded: the four host-interrupt loops, a detached-work counter, a cancellable 
 
 ## Routing
 
-Builder: Claude (Opus subagent) in the lane the coordinator names. Reviewer: a fresh read-only Claude session for the design and the code.
+Builder: Codex in `worktrees/thinkthen-codex-2`. Reviewer: a fresh read-only Codex session for the code. The accepted design's Claude review stands.
 
 ## Complexity
 

@@ -135,6 +135,29 @@ def test_a_token_stops_a_held_single_send(backend, tmp_path):
     settle(backend, child, 1)
 
 
+def test_a_token_fired_as_the_reply_lands_cancels_the_call(backend, tmp_path):
+    """A token fired before a held reply is released wins at the wait boundary."""
+    child = start(HOLD + """
+    def fire():
+        sys.stdin.readline()
+        token.cancel()
+        print("stopped", flush=True)
+    threading.Thread(target=fire, daemon=True).start()
+    try:
+        answer = engine.decide(late, "one note", token=token)
+        print("answer", answer, flush=True)
+    except tt.Cancelled as error:
+        print("cancelled", str(error), flush=True)
+    """, child_env(backend, tmp_path, "arm/held"))
+    assert backend.wait(1) == 1
+    tell_child(child)
+    assert child.stdout.readline().strip() == "stopped"
+    backend.release()
+    assert child.stdout.readline().strip() == "cancelled the call was cancelled"
+    assert child.wait(timeout=10) == 0, child.stderr.read()
+    assert backend.count() == 1
+
+
 def test_ctrl_c_stops_a_held_single_send_at_once(backend, tmp_path):
     """R4-23 (single): ``SIGINT`` during one held send raises ``Cancelled``
     within 100 ms, and the send is not repeated."""
