@@ -203,7 +203,7 @@ where
             }
             Event::End(ended) => {
                 let ended = self.join().and(ended);
-                self.stop.finish();
+                let ended = self.stop.finish(ended);
                 return Some(ended.err().map(Err));
             }
         }

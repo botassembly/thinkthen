@@ -24,6 +24,9 @@ const DECIDED: &str = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","n
 const MOST: &str = "4294967295 seconds";
 const BOUND: Duration = Duration::from_secs(3);
 
+#[path = "public_controls/fired.rs"]
+mod fired;
+
 static SERIAL: Mutex<()> = Mutex::new(());
 
 fn serial() -> MutexGuard<'static, ()> {
