@@ -24,7 +24,7 @@ struct ResolvedQuestion {
 	}
 };
 
-ResolvedQuestion ResolveQuestion(ClientContext &context, const string &argument);
+ResolvedQuestion ResolveQuestion(ClientContext &context, const string &argument, const char *role = "question");
 
 struct StatementOwner : ClientContextState {
 	std::mutex lock;

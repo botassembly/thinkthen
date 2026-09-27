@@ -1,5 +1,6 @@
 #include "warm.hpp"
 #include "bridge.hpp"
+#include "relate_query.hpp"
 #include "scalar_owner.hpp"
 #include "duckdb/common/weak_ptr_ipp.hpp"
 #include "duckdb/function/aggregate_function.hpp"
@@ -100,6 +101,9 @@ int64_t Finish(WarmData &data, ClientContext &context) {
 	}
 	if (data.question->rfind("@~", 0) == 0) {
 		throw InvalidInputException("thinkthen usage: thinkthen_warm cannot read an '@~' path, because home_directory is a session setting it cannot see; write the full path");
+	}
+	if (!data.question->empty() && data.question->front() == '@' && RelateBusyFor(context)) {
+		throw InvalidInputException("thinkthen usage: thinkthen_warm cannot read '@file' while a relate query runs on this database; run it before or after the relate, or pass the file's JSON text");
 	}
 	const auto resolved = ResolveQuestion(context, *data.question);
 	vector<string> texts(data.texts.begin(), data.texts.end());

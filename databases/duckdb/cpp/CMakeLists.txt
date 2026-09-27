@@ -47,7 +47,8 @@ foreach(LINE IN LISTS ARCHIVE_MANIFEST)
 endforeach()
 
 build_loadable_extension(thinkthen " " src/thinkthen.cpp src/scalar_owner.cpp src/scalar_settings.cpp
-  src/listed_result.cpp src/nested.cpp src/nested_result.cpp src/usage.cpp src/warm.cpp)
+  src/listed_result.cpp src/nested.cpp src/nested_result.cpp src/usage.cpp src/warm.cpp
+  src/relate.cpp src/relate_query.cpp)
 target_link_libraries(thinkthen_loadable_extension "${THINKTHEN_RUST_STATICLIB}")
 target_link_libraries(thinkthen_loadable_extension
   -Wl,--start-group ${DUCKDB_ARCHIVES} -Wl,--end-group dl pthread)

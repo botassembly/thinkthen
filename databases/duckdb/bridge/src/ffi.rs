@@ -22,6 +22,15 @@ thread_local! {
 
 static HOOK: Once = Once::new();
 
+unsafe extern "C" {
+    fn thinkthen_cpp_interrupt_busy();
+}
+
+fn interrupt_relate() {
+    // SAFETY: the C++ callback is no-throw and touches only live registry entries.
+    unsafe { thinkthen_cpp_interrupt_busy() };
+}
+
 fn install_hook() {
     HOOK.call_once(|| {
         let previous = std::panic::take_hook();
@@ -101,6 +110,7 @@ pub(crate) extern "C" fn thinkthen_cpp_init() -> i32 {
     catch_unwind(AssertUnwindSafe(|| {
         install_hook();
         signal::install();
+        signal::start_bridge(interrupt_relate);
     }))
     .map_or(4, |_| 0)
 }
@@ -355,7 +365,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_validate_listed(
     })
 }
 
-fn copied_texts(rows: *const BridgeText, count: usize) -> Result<Vec<String>, String> {
+pub(crate) fn copied_texts(rows: *const BridgeText, count: usize) -> Result<Vec<String>, String> {
     if count > 2048 || (rows.is_null() && count != 0) {
         return Err("thinkthen defect: the bridge got an invalid chunk size".to_owned());
     }
@@ -468,7 +478,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_listed_group(
     })
 }
 
-fn asked(settings: &BridgeSettings) -> Result<engines::Asked, String> {
+pub(crate) fn asked(settings: &BridgeSettings) -> Result<engines::Asked, String> {
     let present = |value| (value != i64::MIN).then_some(value);
     let cache = (!settings.cache_bytes.is_null())
         .then(|| text(settings.cache_bytes, settings.cache_len).map(str::to_owned))
@@ -481,7 +491,7 @@ fn asked(settings: &BridgeSettings) -> Result<engines::Asked, String> {
     })
 }
 
-fn probe(settings: &BridgeSettings) -> engines::Probe {
+pub(crate) fn probe(settings: &BridgeSettings) -> engines::Probe {
     if settings.cache_allowed != 0 {
         engines::Probe::Allowed
     } else {
