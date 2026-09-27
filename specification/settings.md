@@ -20,7 +20,7 @@ The orders on record follow the rule:
 
 `--profile FILE` loads a backend profile and has no environment or file tier, by ADR 0032. The question file's `profile` is calibration identity, a separate setting with its own row.
 
-The configuration file is `thinkthen.config/1` under the platform configuration home. The tool reads it and never writes it. The cache folder and the configuration file follow `XDG_CACHE_HOME`, `XDG_CONFIG_HOME` and `HOME`, as ADR 0033 states.
+The configuration file is `thinkthen.config/1` under the platform configuration home. The tool reads it and never writes it. The tool reads it whatever its mode and owner. The file names the address and the model, so whoever can write it decides where the key and the evidence go. On a shared machine, keep it writable by its owner alone. The cache folder and the configuration file follow `XDG_CACHE_HOME`, `XDG_CONFIG_HOME` and `HOME`, as ADR 0033 states.
 
 ## How to read a cell
 
