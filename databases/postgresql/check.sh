@@ -513,6 +513,32 @@ try_details_keeps_later_rows() {
     same "$(bcount)" 2
 }
 check try_details_keeps_later_rows
+try_details_keeps_good_after_backend_failure() {
+    fresh generic
+    pg_stop
+    mkfifo "$RUN/proxy.in"
+    python3 ../conditional_backend.py "http://127.0.0.1:$BPORT/generic/v1" 'private evidence' \
+        <"$RUN/proxy.in" >"$RUN/proxy.out" 2>"$RUN/proxy.err" &
+    PROXYPID=$!
+    exec {PROXYFD}>"$RUN/proxy.in"
+    trap 'if [ -n "${PROXYPID:-}" ]; then printf "quit\n" >&"$PROXYFD"; wait "$PROXYPID" || true; fi' EXIT
+    for _ in $(seq 100); do [ -s "$RUN/proxy.out" ] && break; sleep 0.05; done
+    proxyport=$(head -1 "$RUN/proxy.out")
+    [ -n "$proxyport" ]
+    pg_start "http://127.0.0.1:$proxyport/v1" "$CACHEDIR"
+    out=$(q -c "WITH rows(i,q,e) AS (VALUES (1, '$Q', 'first'), (2, '$Q', 'private evidence'), (3, '$Q', 'last')),
+        measured AS MATERIALIZED (SELECT i, thinkthen_try_details(q,e) AS v FROM rows)
+        SELECT i::text || ':' || (v->>'status') || ':' || coalesce(v->'error'->>'kind','ok') || ':' ||
+            CASE WHEN v::text LIKE '%private evidence%' THEN 'leaked' ELSE 'safe' END FROM measured ORDER BY i")
+    same "$out" "$(printf '1:answered:ok:safe\n2:failed:backend:safe\n3:answered:ok:safe')"
+    same "$(bcount)" 2
+    printf 'quit\n' >&"$PROXYFD"
+    wait "$PROXYPID"
+    PROXYPID=
+    exec {PROXYFD}>&-
+    same "$(tail -1 "$RUN/proxy.out")" 3
+}
+check try_details_keeps_good_after_backend_failure
 try_details_null_skips_settings() {
     fresh generic
     out=$(q -c "SET thinkthen.api_key = 'planted-private-key'" \
