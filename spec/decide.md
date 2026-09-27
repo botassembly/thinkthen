@@ -148,8 +148,8 @@ printf '{"body":"x"}\n' | thinkthen decide 'reports a payment failure' --jsonl -
 `--input FILE` names a path. An empty record stream succeeds with no output and no request, and `--quiet` cannot act over records, because no record's answer reaches the exit code.
 
 ```bash
-out=$(printf '' | thinkthen decide 'reports a payment failure' --jsonl --dry-run)
-test -z "$out"
+no_records_output=$(printf '' | thinkthen decide 'reports a payment failure' --jsonl --dry-run)
+test -z "$no_records_output"
 status=0
 printf 'a line\n' | thinkthen decide 'reports a payment failure' --lines --quiet --dry-run >/dev/null 2>&1 || status=$?
 echo "$status" | mustmatch "2"
@@ -228,6 +228,9 @@ echo "$status" | mustmatch "5"
 A diagnostic goes to standard error and never to standard output, so a script reading a result never reads an explanation.
 
 ```bash
-test -z "$(printf 'x' | thinkthen decide 'asks for a refund' --dry-run --url ftp://127.0.0.1/v1 2>/dev/null)"
+refusal_code=0
+refusal_stdout=$(printf 'x' | thinkthen decide 'asks for a refund' --dry-run --url ftp://127.0.0.1/v1 2>/dev/null) || refusal_code=$?
+test -z "$refusal_stdout"
+echo "$refusal_code" | mustmatch "2"
 printf 'x' | thinkthen decide 'asks for a refund' --dry-run --url ftp://127.0.0.1/v1 2>&1 >/dev/null | mustmatch like "thinkthen: a base address begins with \`http://\` or \`https://\`"
 ```

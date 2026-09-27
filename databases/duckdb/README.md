@@ -26,8 +26,10 @@ A question is plain text, `'@path.json'`, or the question file's JSON. Choose, s
 
 ```sql
 LOAD 'build/thinkthen.duckdb_extension';
-SELECT id FROM tickets WHERE thinkthen_decide('Does the writer ask for a refund?', body);
-SELECT id, thinkthen_choose('Which team owns this?', body, ['billing', 'shipping']) FROM tickets;
+SELECT id FROM (
+  SELECT id, thinkthen_decide('Does the writer ask for a refund?', body) AS asks_refund FROM tickets
+) WHERE asks_refund;
+SELECT id, thinkthen_choose('Which team owns this?', body, ['billing', 'shipping']) AS team FROM tickets;
 ```
 
 ## Run facts
@@ -56,7 +58,7 @@ The current C scalar API has no shared query clock across expressions and chunks
 `thinkthen_relate(query, rules)` runs `query` on the calling database and asks the engine how its rows relate. The query returns `id, name, kind` or `id, name`. Rows with the same name and kind become one entity, and each edge returns one row for every pair of their ids. A two-column query reads every kind as `*`, so each rule must be bare or `*:*`. The rules are a list such as `['works_for=person:organization', 'same_as']`, a rules file's JSON, or `'@rules.json'`, read through the caller's own file system.
 
 ```sql
-SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM staff', ['works_for=person:organization']);
+SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM staff', ['works_for=person:organization']) AS works_for;
 ```
 
 - The query runs read-only as one `SELECT`. A statement that writes, attaches, loads, or changes a setting reads `thinkthen usage: the relate query must be a SELECT; relate reads records, it does not write files, attach databases, change settings, or load extensions`.

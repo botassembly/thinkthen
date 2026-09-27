@@ -9,8 +9,12 @@ Use this when a script has to take one branch or another and the thing that deci
 ```bash
 set -euo pipefail
 
-if thinkthen decide 'Does the customer ask for money back?' \
-     --quiet --replay recording/ < message.txt
+asks_for_money_back() {
+  thinkthen decide 'Does the customer ask for money back?' \
+    --quiet --replay recording/
+}
+
+if asks_for_money_back < message.txt
 then
   printf 'refunds\n'
 else
@@ -31,8 +35,12 @@ fi | mustmatch "refunds"
 ```bash
 set -euo pipefail
 
-if thinkthen decide 'Does the customer ask for money back?' \
-     --quiet --replay recording/ < question.txt
+asks_for_money_back() {
+  thinkthen decide 'Does the customer ask for money back?' \
+    --quiet --replay recording/
+}
+
+if asks_for_money_back < question.txt
 then
   printf 'refunds\n'
 else
