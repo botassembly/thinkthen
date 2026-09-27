@@ -132,7 +132,9 @@ fn model(results: &[Line]) -> Result<ModelName, &'static str> {
     let mut named = named.into_iter();
     match (named.next(), named.next()) {
         (Some(model), None) => ModelName::new(model).map_err(|error| match error {
-            BlankTextError::ModelControl => "a result names a model with a control character",
+            BlankTextError::ModelControl => {
+                "a result names a model with a control character or white space but a plain space"
+            }
             _ => "a result names a blank model",
         }),
         _ => Err("the results name more than one model"),

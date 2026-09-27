@@ -117,7 +117,7 @@ fn keeps_a_model_a_later_run_would_refuse() {
     assert_eq!(
         stderr,
         "thinkthen: audit: wrote threshold 0.59 for the question; it was 0.9\n\
-         thinkthen: audit: kept the model for the question; a result names a model with a control character\n"
+         thinkthen: audit: kept the model for the question; a result names a model with a control character or white space but a plain space\n"
     );
     let expected = format!("{HEAD}  \"\\u0074hreshold\": 0.59,\r\n  \"on\": [\"/body\"]\r\n}}\r\n");
     assert_eq!(scratch.read("decide.json"), expected);
