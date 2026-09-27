@@ -161,6 +161,9 @@ const DEFAULT_CACHE_STORAGE: &str = "the default cache folder could not be read 
 /// storage failure in the platform default cache names that cache, and a
 /// refused pointer is echoed with JSON escapes.
 fn told(mut failure: Failure, cli: &Cli, environment: &Environment) -> Failure {
+    if environment.cancel().fired() {
+        failure = failure.after_signal();
+    }
     if let Failure::Stopped { at: 1, cause, .. } = &mut failure
         && matches!(
             cause.as_ref(),

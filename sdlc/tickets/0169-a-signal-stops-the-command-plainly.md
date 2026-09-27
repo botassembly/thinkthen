@@ -6,9 +6,9 @@ opens: crates/thinkthen/src/cli/interrupt.rs crates/thinkthen/src/cli/interrupt 
 
 # 0169: A signal stops the command plainly
 
-Status: accepted. The coordinator accepted it on 2026-09-27 after a fresh read-only review, with the fixes that review named. Owner: Claude.
+Status: complete. Fresh read-only Codex code review accepted corrected source `84de0a7d` on 2026-09-27. The coordinator accepted it on 2026-09-27 after a fresh read-only design review, with the fixes that review named. Owner: Codex in the retained command lane.
 
-Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
+Review route: a fresh read-only Codex reviewer checks the final diff. Ian's handover routes the accepted Claude ticket to Codex. The accepted behavior stays fixed.
 
 ## Outcome and authority
 
@@ -80,7 +80,7 @@ Read from `origin/main` `18f0381e`.
 pub(crate) fn after_signal(self) -> Self
 ```
 
-It replaces a backend cause with `Failure::Cancelled`. The backend causes are the failures that say exit 4 about a sent request: `Transport`, `Status`, `TokenLimit`, `ReplyTooLarge`, `Reply`, and `Recognize(recognize::Error::LogicalQuestion)`. The last one comes from `engine/facade/recognize.rs:239`, and the engine gives it `Kind::Backend` at `engine/error.rs:119`. The build lists every `Failure` variant that the engine's `Kind::Backend` reaches and gives each one an arm. A `Stopped` run keeps its counts and gets `Cancelled` as its cause. After ticket 0146, a batched stop also carries the batch's range or the partial-reply form. `after_signal` clears both, so a signal stop never prints a range. Every other failure returns unchanged. `told` in `cli/mod.rs` calls it first when `environment.cancel.fired()`.
+It replaces a backend cause with `Failure::Cancelled`. The backend causes are the failures that say exit 4 about a sent request: `Transport`, `Status`, `TokenLimit`, `ReplyTooLarge`, `Reply`, `ModelsDiffer`, `UsageOverflow`, and `Recognize(recognize::Error::LogicalQuestion)`. The last one comes from `engine/facade/recognize.rs:239`, and the engine gives it `Kind::Backend` at `engine/error.rs:119`. The build lists every `Failure` variant that the engine's `Kind::Backend` reaches and gives each one an arm. A `Stopped` run keeps its counts and gets `Cancelled` as its cause. After ticket 0146, a batched stop also carries the batch's range or the partial-reply form. `after_signal` clears both, so a signal stop never prints a range. Every other failure returns unchanged. `told` in `cli/mod.rs` calls it first when `environment.cancel.fired()`.
 
 ### The stop line after a signal names no record
 
@@ -146,23 +146,26 @@ Rows 1, 2, 5 and 6 release the reply only after the child ends. So the attempt t
 
 ## Tests and proof
 
+Build amendment, 2026-09-27: Ian kept the routine gate functional and moved stress and mutation campaigns out of this handoff. The edge table below names credible regressions; the build runs focused compiled-binary signal behavior, the failure mapping table, the carrier mask tests and strict lint. It does not execute nine deliberate breaks or a full stress ladder. The change uses the existing SIGINT acknowledgment, held listener and cache test. The new held-until-exit flow differs because a timeout or a second signal must end the child before the listener releases its reply.
+
 | Test | What it proves | Deliberate breaks that turn it red |
 | --- | --- | --- |
 | `a_signal_after_a_hung_request_is_the_stop`, new, a three-row table | Rows 1, 2 and 6 | (a) `told` skips `after_signal`: every row prints the timeout line. (f) `stopped` chooses 0146's batch form before it checks for `Cancelled`: row 6 prints a range |
-| `a_backend_cause_after_a_signal_is_the_stop`, new table in `cli/failure/tests.rs`, about 20 lines | Each backend cause, bare and inside `Stopped`, becomes `Cancelled` and keeps its counts. `RecordingStorage`, `Input` and `Defect` come back unchanged | (g) Drop any one backend arm: its row stays a backend failure. (h) Match every failure: the three local rows change |
+| `a_signal_replaces_only_backend_causes_and_keeps_stop_counts`, new table in `cli/failure/after_signal.rs` | Each backend cause, bare and inside `Stopped`, becomes `Cancelled` and keeps its counts. `RecordingStorage`, `Input` and `Defect` come back unchanged | (g) Drop any one backend arm: its row stays a backend failure. (h) Match every failure: the three local rows change |
 | `record_finishes_the_started_row_stops_before_another_and_completes_cache` and `stopped_counts_use_record_only_at_one`, existing, their lines updated | Rows 3 and 7 | (b) `stopped` keeps `stopped at record {at}` for a signal: rows 1, 3 and 4 turn red |
 | `carrier_masks_workers_and_cleanup_restores_the_mask`, existing in `cli/interrupt/tests.rs:186-200` | It gains `contains(Signal::SIGTERM)` asserts for the main thread and for a spawned thread | (c) SIGTERM left out of `sigint_set`: this test turns red |
-| `sigterm_stops_a_record_run_as_sigint_does`, new | Row 4 | (c2) SIGTERM left out of `register`: the child dies at once with empty output. (d) `emulate` re-raises SIGINT: the child ends by SIGINT |
+| `record_finishes_the_started_row_stops_before_another_and_completes_cache`, extended to both signals | Rows 3 and 4, including the completed cache entry | (c2) SIGTERM left out of `register`: the child dies at once with empty output. (d) `emulate` re-raises SIGINT: the child ends by SIGINT |
 | `a_second_signal_of_either_kind_ends_the_run_at_once`, new | Row 5 | (e) SIGTERM's conditional default reads its own flag: the child waits for its held reply and misses the deadline |
+| `sigterm_after_a_check_probe_fails_prints_no_report`, added after code review | A held probe returns 401 after SIGTERM; the check prints nothing, exits by SIGTERM and sends once | Omit the cancellation check before report output: the check prints its critical finding |
 
-The build runs each deliberate break by hand, confirms the named test turns red, and records the failing line.
+The compiled-binary edge cases use one loopback listener and request counts per run. The timeout and second-signal cases bound the child wait to four seconds and release their held reply afterward. No paid or live backend is used.
 
 Overlap was checked.
 
 - `sent_single_decide_and_aggregate_commands_flush_before_sigint_status` releases the reply at once, so no request fails after the signal. It still passes.
 - `sigint_during_retry_wait_makes_exactly_one_request` ends in a retry wait, not a failed send. It prints nothing today and after.
 - `cli/interrupt/tests.rs` pins `ACTIONS`, the install prefixes and the armed follow-up SIGINT through a child. It does not send SIGTERM. Its mask test gains two SIGTERM asserts, and no expected result changes.
-- No test sends SIGTERM or lets a send fail after a signal.
+- Before this ticket, no test sent SIGTERM or let a send fail after a signal. The new check case covers a 401 returned after SIGTERM; the existing retry-wait case cannot catch report output.
 
 The four questions:
 
@@ -171,30 +174,32 @@ The four questions:
 - **Why does no existing test catch it?** No test sends SIGTERM, and no test lets a sent request fail after a signal.
 - **Does it need a test-only hook?** No. It uses the existing acknowledgment variable, the loopback listener and `kill`.
 
-The gate ladder `sdlc/scripts/{install,lint,test,spec,surfaces}` runs before handing back.
+The coordinator runs the required landing gates after fresh code review. The builder runs formatting, policy, strict Clippy and the smallest affected CLI and compiled-binary tests before handing back.
 
-## Budgets and ratchet estimate
+## Budgets and measured ratchet
 
-Nonblank lines, measured with `grep -c .`.
+Nonblank lines against main `22332a38`, measured with the same rule as `sdlc/scripts/ratchet.mjs`. The accepted estimate of +167 understated the real-signal, end-before-release flow and the backend/local cause table. Ian's handover keeps the functional proof and removes the nine-mutation campaign. The coordinator authorized routine budget amendments within the settled outcome. This amendment changes line budgets, not signal behavior.
 
-- `cli/interrupt.rs`: at most 18 net.
-- `cli/failure.rs`: at most 24 net. `lint` caps a file at 500 nonblank lines. After 0146, 0154 and 0162 land, if this would pass 500, `after_signal` and the signal line move into a module under `cli/failure/`.
-- `cli/mod.rs`: at most 3 net.
-- `tests/backend/interrupt.rs`: at most 85 net. The end-then-release flow for rows 1, 2, 5 and 6 adds about 15 lines beside the `held` helper.
-- `cli/failure/tests.rs`: at most 25 net.
-- `cli/interrupt/tests.rs`: at most 12 net.
-- `sdlc/ratchet.json`: at most 167 above main at build time, the sum of the file budgets above.
+- `cli/interrupt.rs`: measured +25, at most +28. It registers both signals with the existing action order and remembers which arrived. I checked `register` and `emulate` for a shared path and use one loop over both signals.
+- `cli/failure.rs`: measured +6, at most +8. Its current 492 nonblank lines stay under the 500-line cap. `after_signal` and the signal stop sentence live in `cli/failure/after_signal.rs` so the dispatcher stays short.
+- `cli/failure/after_signal.rs`: measured 141 new lines, at most 145. It includes the backend/local cause table, the nested batch and stopped mappings, and the one signal stop sentence. The table uses one backend constructor list for bare and stopped cases, including differing models and usage overflow found in review. The result reuses `Failure::Cancelled` and keeps all existing local failure variants.
+- `cli/mod.rs`: measured +3, at most +3.
+- `cli/check.rs`: measured +3, at most +3. It checks the existing cancellation flag immediately before printing its report.
+- `tests/backend/interrupt.rs`: measured +183, at most +183. Existing held-request, listener, acknowledgment, cache and answer helpers serve the new SIGTERM, hung-request and check-probe rows. A second flow keeps the backend reply held until after the child exits, which the existing helper cannot do. Its four-second deadline gives a failure bound; no timing threshold decides success. The second-signal row checks both signal orders. The check-probe row reuses the original held-request flow without another helper.
+- `cli/failure/tests.rs`: measured 0; one existing expected line changes.
+- `cli/interrupt/tests.rs`: measured +12, at most +12, adding SIGTERM mask assertions on both the command and worker threads.
+- `sdlc/ratchet.json`: main's 75,724 becomes the measured 76,097 nonblank Rust lines, +373: +112 source and +261 test lines. The correction adds +7 source and +13 test lines to the accepted 76,077. I checked the carrier's registration and emulation, the failure dispatcher, both test helpers, and the low-level carrier tests for duplication before raising it. For the correction I reused the existing backend-cause table and held-request helper rather than adding another setup path. The fresh reviewer checks this accounting.
 - Pages: `channels.md`, `records.md`, `check.md`, the ADR 0017 amendment and one `CHANGELOG.md` line.
 - No dependency. `signal_hook::flag::register_usize` is in the crate the command already uses. No paid call.
 
-Each ratchet moves to the measured total in the commit that needs it, and that commit says what grew. The build looks first for duplication to delete in `register` and `emulate`.
+The commit names this growth and the duplication check. No low-level carrier test was added where a compiled-binary signal case already proves the same result.
 
 ## Stop rules
 
-1. Stop before crossing any budget by more than a tenth, or before adding a dependency.
+1. Stop before crossing the amended measured budgets by more than a tenth, or before adding a dependency.
 2. Stop if the change needs the engine, the public API, a library or an extension.
 3. Stop if an existing test changes its expected result, other than rows 3, 7 and 8 and the mask test's added asserts.
-4. Stop if any deliberate break stays green.
+4. Stop if a focused signal boundary or the backend/local mapping table fails.
 5. Stop if a row passes or fails by timing alone. Each signal waits for the listener's request count, and each release waits for the acknowledgment or the child's end.
 6. Stop if the build needs a live call. None is authorized. Never run `sdlc/scripts/live`.
 
@@ -210,7 +215,7 @@ Excluded: a cancellable socket read, a notice on the first signal, SIGHUP and SI
 
 ## Routing
 
-Builder: Claude (Opus subagent) in the lane the coordinator names. Reviewer: a fresh read-only Claude session for the design and the code.
+Builder: Codex in the retained command lane under Ian's handover. Reviewer: a fresh read-only Codex session for the final code.
 
 ## Complexity
 
@@ -238,5 +243,6 @@ Local experiment 284 files 46, 56 and 116. The repository holds them in `sdlc/is
 - Starts from: Local experiment 284 files 46, 56 and 116, their sources in local experiment 273, and the author's scratch runs of the `origin/main` `18f0381e` debug binary against loopback listeners. The code: `cli/interrupt.rs:17-22`, `:91-111`, `:182-185`, `:275-336`; `cli/mod.rs:85-88`, `:146`; `cli/failure.rs:182-184`, `:273-307`, `:450-464`; `engine/schedule.rs:132-136`, `:151-186`, `:263-264`; `engine/workers.rs:177-195`; `channels.md:5`, `:48-61`; `records.md:109`; ADR 0017's amendment of 2026-09-22.
 - Keeps: Sent requests finish within their attempt timeout. Finished output and cache entries are written. The command ends by the signal. A second signal escapes at once. Stops no signal caused keep their lines byte for byte. Local failures and defects keep their lines.
 - Changes: SIGTERM stops a run as SIGINT does and ends by SIGTERM. A backend failure after a signal is reported as the stop. The signal stop line gives the finished count and names no record. `channels.md`, `records.md`, `check.md` and ADR 0017 state both signals, the second-signal escape and the exit statuses.
-- Proof: Rows 1 to 8 across `tests/backend/interrupt.rs`, `cli/failure/tests.rs` and `cli/interrupt/tests.rs`, the `after_signal` table, nine deliberate breaks each run by hand, and the `install`, `lint`, `test`, `spec` and `surfaces` rungs.
+- Proof: Focused rows 1 to 8 across `tests/backend/interrupt.rs`, `cli/failure/after_signal.rs` and the existing low-level carrier tests; formatting, policy, strict Clippy and affected tests in the build lane. The coordinator runs landing gates after the fresh code review. The nine-mutation campaign is deferred under Ian's functional-gate ruling.
+- One broader library `signal` filter observed the unrelated worker SIGUSR1 test fail once, and that exact test passed once in isolation. Its cause is unproven; `sdlc/records/0169-a-signal-stops-the-command-plainly.md` records the bounded observation and the coordinator tracks test reliability. No worker or engine source changed.
 - Defers: A cancellable socket read, a first-signal notice, and SIGHUP and SIGQUIT.

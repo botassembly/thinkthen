@@ -97,7 +97,7 @@ Each `reply PROBE JSON` line holds one decoded reply: `model` is the model that 
 | Not reached after a stop | no | `unchecked` |
 | The reply names another model than the one sent | yes, with the reply's model | no finding |
 
-The last line counts the finding lines. The report prints once, after the last probe. On SIGINT the check prints no report and follows the interrupt rule of [channels.md](channels.md).
+The last line counts the finding lines. The report prints once, after the last probe. On SIGINT or SIGTERM the check prints no report and follows the interrupt rule of [channels.md](channels.md).
 
 | Exit | When |
 | --- | --- |

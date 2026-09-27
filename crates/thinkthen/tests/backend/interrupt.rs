@@ -1,4 +1,4 @@
-//! SIGINT cooperatively stops new attempts and preserves completed output.
+//! SIGINT and SIGTERM cooperatively stop new attempts and preserve completed output.
 
 use conformance_backend::Rendezvous;
 use std::fs;
@@ -86,6 +86,22 @@ fn held(
     input: &[u8],
     reply: impl Fn() -> Canned + Send + Sync + 'static,
 ) -> io::Result<Output> {
+    held_with_signal(
+        signal_hook::consts::signal::SIGINT,
+        count,
+        arguments,
+        input,
+        reply,
+    )
+}
+
+fn held_with_signal(
+    signal: i32,
+    count: usize,
+    arguments: &[&str],
+    input: &[u8],
+    reply: impl Fn() -> Canned + Send + Sync + 'static,
+) -> io::Result<Output> {
     let acknowledgment = Acknowledgment::new();
     let release = Arc::new(Rendezvous::new(count + 1));
     let backend_release = Arc::clone(&release);
@@ -102,9 +118,14 @@ fn held(
             Ok(Observed::Request)
         ));
     }
+    let flag = if signal == signal_hook::consts::signal::SIGTERM {
+        "-TERM"
+    } else {
+        "-INT"
+    };
     assert!(
         crate::child::command("kill", &[])
-            .args(["-INT", &child.id().to_string()])
+            .args([flag, &child.id().to_string()])
             .status()?
             .success()
     );
@@ -113,7 +134,7 @@ fn held(
     let output = finish(child, "the interrupted command")?;
     assert_eq!(
         output.status.signal(),
-        Some(signal_hook::consts::signal::SIGINT),
+        Some(signal),
         "stdout={} stderr={}",
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
@@ -122,39 +143,193 @@ fn held(
     Ok(output)
 }
 
+fn finish_promptly(mut child: Child, what: &str) -> io::Result<Output> {
+    let deadline = std::time::Instant::now() + Duration::from_secs(4);
+    loop {
+        if child.try_wait()?.is_some() {
+            return finish(child, what);
+        }
+        if std::time::Instant::now() >= deadline {
+            child.kill()?;
+            child.wait()?;
+            return Err(io::Error::new(io::ErrorKind::TimedOut, what));
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    }
+}
+
+/// A held reply ends only at the command's one-second attempt timeout.
+fn signal_before_timeout(
+    arguments: &[&str],
+    input: &[u8],
+    first: &str,
+    second: Option<&str>,
+) -> io::Result<Output> {
+    let acknowledgment = Acknowledgment::new();
+    let release = Arc::new(Rendezvous::new(2));
+    let backend_release = Arc::clone(&release);
+    let (events_send, events) = channel();
+    let listener = Listener::answering_with_events(
+        move |_| Canned::status(503, "{}").after_release(Arc::clone(&backend_release)),
+        events_send,
+    )?;
+    let fixed = ["--url", listener.base(), "--model", "local-1"];
+    let child = spawn(&[arguments, &fixed].concat(), input, &acknowledgment)?;
+    assert!(matches!(
+        events.recv_timeout(Duration::from_secs(5)),
+        Ok(Observed::Request)
+    ));
+    assert!(
+        crate::child::command("kill", &[])
+            .args([first, &child.id().to_string()])
+            .status()?
+            .success()
+    );
+    acknowledgment.wait()?;
+    if let Some(signal) = second {
+        assert!(
+            crate::child::command("kill", &[])
+                .args([signal, &child.id().to_string()])
+                .status()?
+                .success()
+        );
+    }
+    let output = finish_promptly(child, "signal-stopped request");
+    release.wait();
+    let output = output?;
+    assert_eq!(listener.requests().len(), 1);
+    Ok(output)
+}
+
+#[test]
+fn a_signal_after_a_hung_request_is_the_stop() {
+    type Case<'a> = (&'a [&'a str], &'a [u8], &'a str);
+    let cases: [Case<'_>; 3] = [
+        (
+            &[
+                "decide",
+                "Accepted?",
+                "--lines",
+                "--jobs",
+                "1",
+                "--timeout",
+                "1",
+                "--max-retries",
+                "0",
+            ],
+            b"first\n",
+            "thinkthen: stopped by a signal; 0 records finished\n",
+        ),
+        (
+            &[
+                "decide",
+                "Accepted?",
+                "--timeout",
+                "1",
+                "--max-retries",
+                "0",
+            ],
+            b"first",
+            "",
+        ),
+        (
+            &[
+                "decide",
+                "Accepted?",
+                "--lines",
+                "--batch",
+                "2",
+                "--jobs",
+                "1",
+                "--timeout",
+                "1",
+                "--max-retries",
+                "0",
+            ],
+            b"first\nsecond\n",
+            "thinkthen: stopped by a signal; 0 records finished\n",
+        ),
+    ];
+    for (arguments, input, stderr) in cases {
+        let output = signal_before_timeout(arguments, input, "-INT", None)
+            .expect("interrupted request ends");
+        assert_eq!(
+            output.status.signal(),
+            Some(signal_hook::consts::signal::SIGINT)
+        );
+        assert!(output.stdout.is_empty());
+        assert_eq!(String::from_utf8_lossy(&output.stderr), stderr);
+    }
+}
+
+#[test]
+fn a_second_signal_of_either_kind_ends_the_run_at_once() {
+    for (first, second, exited) in [
+        ("-INT", "-TERM", signal_hook::consts::signal::SIGTERM),
+        ("-TERM", "-INT", signal_hook::consts::signal::SIGINT),
+    ] {
+        let output = signal_before_timeout(
+            &[
+                "decide",
+                "Accepted?",
+                "--lines",
+                "--jobs",
+                "1",
+                "--timeout",
+                "4",
+                "--max-retries",
+                "0",
+            ],
+            b"first\n",
+            first,
+            Some(second),
+        )
+        .expect("second signal ends without waiting for the reply");
+        assert_eq!(output.status.signal(), Some(exited));
+        assert!(output.stdout.is_empty());
+        assert!(output.stderr.is_empty());
+    }
+}
+
 #[test]
 fn record_finishes_the_started_row_stops_before_another_and_completes_cache() {
-    let cache = Path::new(env!("CARGO_TARGET_TMPDIR"))
-        .join(format!("interrupt-cache-{}", std::process::id()));
-    let _removed = fs::remove_dir_all(&cache);
-    let cache_name = cache.to_string_lossy();
-    let output = held(
-        1,
-        &[
-            "decide",
-            "Is it accepted?",
-            "--lines",
-            "--jobs",
-            "1",
-            "--cache",
-            &cache_name,
-        ],
-        b"first\nsecond\n",
-        || Canned::ok(YES),
-    )
-    .expect("interrupt run");
-    assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
-        "{\"input\":\"first\",\"value\":true}\n",
-        "stderr={}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: stopped at record 2; 1 record finished, 0 records from a recording\n"
-    );
-    let (_name, entry) = crate::recordings::only_entry(&cache).expect("one cache entry");
-    assert!(serde_json::from_str::<serde_json::Value>(&entry).is_ok());
+    for signal in [
+        signal_hook::consts::signal::SIGINT,
+        signal_hook::consts::signal::SIGTERM,
+    ] {
+        let cache = Path::new(env!("CARGO_TARGET_TMPDIR"))
+            .join(format!("interrupt-cache-{}-{signal}", std::process::id()));
+        let _removed = fs::remove_dir_all(&cache);
+        let cache_name = cache.to_string_lossy();
+        let output = held_with_signal(
+            signal,
+            1,
+            &[
+                "decide",
+                "Is it accepted?",
+                "--lines",
+                "--jobs",
+                "1",
+                "--cache",
+                &cache_name,
+            ],
+            b"first\nsecond\n",
+            || Canned::ok(YES),
+        )
+        .expect("interrupt run");
+        assert_eq!(
+            String::from_utf8_lossy(&output.stdout),
+            "{\"input\":\"first\",\"value\":true}\n",
+            "signal {signal}: stderr={}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(
+            String::from_utf8_lossy(&output.stderr),
+            "thinkthen: stopped by a signal; 1 record finished, 0 records from a recording\n"
+        );
+        let (_name, entry) = crate::recordings::only_entry(&cache).expect("one cache entry");
+        assert!(serde_json::from_str::<serde_json::Value>(&entry).is_ok());
+    }
 }
 
 /// A batched run keeps today's cancellation line, and no new batch starts.
@@ -181,7 +356,7 @@ fn an_interrupted_batch_finishes_and_starts_no_other() {
     );
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        "thinkthen: stopped at record 3; 2 records finished\n"
+        "thinkthen: stopped by a signal; 2 records finished\n"
     );
 }
 
@@ -223,6 +398,20 @@ fn sigint_during_retry_wait_makes_exactly_one_request() {
         || Canned::status(500, "retry"),
     )
     .expect("interrupt run");
+    assert!(output.stdout.is_empty());
+    assert!(output.stderr.is_empty());
+}
+
+#[test]
+fn sigterm_after_a_check_probe_fails_prints_no_report() {
+    let output = held_with_signal(
+        signal_hook::consts::signal::SIGTERM,
+        1,
+        &["check"],
+        b"",
+        || Canned::status(401, "unauthorized"),
+    )
+    .expect("interrupted check ends");
     assert!(output.stdout.is_empty());
     assert!(output.stderr.is_empty());
 }
