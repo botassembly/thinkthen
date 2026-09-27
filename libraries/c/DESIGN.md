@@ -37,7 +37,7 @@ A request names one verb of ten: `decide`, `choose`, `score`, `tag`, `filter`, `
 | `details` | the four single judgments | `true` or `false` |
 | `usage` | alone | `true` |
 
-Every other key forms the question object. `Question::from_json` validates it, so an unknown question key is a usage failure there. `filter` asks its text as a `decide` question at a single cut. `rank` and `find` take their text alone. `annotate` carries the question set as its value.
+Every other key forms the question object. `Question::from_json` validates it, so an unknown question key is a usage failure there. `filter` asks its text as a `decide` question at a single cut. `rank` takes its text alone. `find` takes its text and an optional `"none": true`, which offers a none candidate. `annotate` carries the question set as its value, and a member's `on` reads that part of each record as JSON text.
 
 The replies are bare values:
 

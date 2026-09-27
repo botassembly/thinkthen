@@ -8,11 +8,8 @@
 # backend served. It prints one line a case and a count line, and exits
 # nonzero after any failure or a count that does not add up.
 #
-# Five cases do not run here:
+# Two cases do not run here:
 NOT_RUN = {
-  "18-find-second" => "none: true; the public find has no switch for the none option",
-  "19-find-none" => "none: true; the public find has no switch for the none option",
-  "18-annotate-two-groups" => "reads parts of a record through a member's on; a call's evidence is one whole text",
   "25-defect-fault" => "injects an internal invariant failure that no outside boundary reaches; src/lib.rs tests the guard",
   "30-local-question-file" => "the surface has no question-file loader; ThinkThen.question takes keywords"
 }.freeze
@@ -103,14 +100,14 @@ def single(engine, asked, text, success, base)
   end
 end
 
-def annotated(engine, set, texts, success)
+def annotated(engine, set, texts, success, one)
   records = Dir.mktmpdir do |folder|
     File.write(File.join(folder, "set.json"), JSON.generate(set))
     engine.annotate(T.set(File.join(folder, "set.json")), texts)
   end
   failed = 0
   success["answers"].each do |expected|
-    value = records[expected["exchange"]].fetch(expected["name"].to_sym)
+    value = records[one ? 0 : expected["exchange"]].fetch(expected["name"].to_sym)
     failed += 1 if value.is_a?(Hash) && value.key?("failed")
     same("bare #{expected['name']}", value, expected["bare"])
   end
@@ -146,7 +143,14 @@ def check(one)
     same("result", edges.map { |e| { "relation" => e.relation, "source" => pair.(e.source), "target" => pair.(e.target), "probability" => e.probability } },
          success["answers"][0]["bare"])
   in ["annotate", _]
-    annotated(engine, one["question_set"], texts, success)
+    whole = one.key?("record")
+    annotated(engine, one["question_set"], whole ? [JSON.generate(one["record"])] : texts, success, whole)
+  in ["find", _]
+    found = engine.find(held["find"], held["units"], none: held["none"])
+    selected = success["operation"]["selected"]
+    picked = success["operation"]["probabilities"].find { |row| row["index"] == selected }
+    want = selected.nil? ? nil : [selected, held["units"][selected], picked["probability"]]
+    same("found", found.index.nil? ? nil : found.to_a, want)
   in ["rank", _]
     ranked = engine.rank(held["decide"], texts)
     same("ranking", ranked.map { |row| { "index" => row.index, "probability" => row.probability } }, success["operation"]["ranking"])

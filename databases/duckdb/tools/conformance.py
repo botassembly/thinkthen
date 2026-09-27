@@ -26,16 +26,12 @@ CASES = Path(os.environ.get("THINKTHEN_CONFORMANCE_CASES", ROOT.parent.parent / 
 
 # The one closed list of reasons a case does not run here.
 NOT_RUN = {
-    "find": "SQL finds with ORDER BY and LIMIT over decide, so the find wire question never goes out",
-    "on": "main's public API refuses `on` in a library question set, so SQL passes each record whole",
+    "find": "no SQL find function yet",
 }
 
 
 def reason(case: dict) -> str | None:
-    if case["verb"] == "find":
-        return NOT_RUN[case["verb"]]
-    members = case.get("question_set", {}).get("questions", {}).values()
-    return NOT_RUN["on"] if any("on" in member for member in members) else None
+    return NOT_RUN.get(case["verb"])
 
 
 def quoted(text: str) -> str:
@@ -100,13 +96,11 @@ def ranked(case: dict, base: str) -> list:
 
 
 def record(case: dict) -> list[str]:
-    """The records an annotate case reads: one per exchange, or one JSON
-    record whose `on` pointers select each group's evidence."""
-    members = case["question_set"]["questions"]
-    pointers = [member.get("on") for member in members.values()]
-    if not any(pointers):
-        return list(dict.fromkeys(evidence(case)))
-    return [json.dumps({pointer.lstrip("/"): text for pointer, text in zip(pointers, evidence(case), strict=True)})]
+    """The records an annotate case reads: its one JSON record, whose parts
+    the set's `on` pointers select, or one per distinct exchange."""
+    if "record" in case:
+        return [json.dumps(case["record"])]
+    return list(dict.fromkeys(evidence(case)))
 
 
 def annotated(case: dict, base: str) -> list:

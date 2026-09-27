@@ -71,6 +71,7 @@ const QUESTION_KEYS = {
   score: ['levels'],
   tag: ['labels'],
   rank: ['top'],
+  find: ['none'],
   recognize: ['kinds', 'relations', 'threshold', 'relationThreshold'],
   relate: ['relations', 'either', 'threshold'],
 };
@@ -255,8 +256,10 @@ const verbs = {
     return inputs.top === undefined ? rows : rows.slice(0, inputs.top);
   },
   async find(engine, asked, units, last) {
-    const { call } = splitLast('find', last);
-    const found = await invoke(engine, 'find', textFrom('find', asked), checkRecords(units), call);
+    const { inputs, call } = splitLast('find', last);
+    if (has(inputs, 'none') && typeof inputs.none !== 'boolean') throw usageError('options.none is true or false');
+    const op = inputs.none ? 'find_none' : 'find';
+    const found = await invoke(engine, op, textFrom('find', asked), checkRecords(units), call);
     return found === null ? null : { index: found.index, unit: units[found.index], probability: found.probability };
   },
   async annotate(engine, set, records, last) {

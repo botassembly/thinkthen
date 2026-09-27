@@ -125,7 +125,7 @@ Experiment 271 measured every row, three runs each, at filter's cut of 0.7 and 4
 
 The tool's own form row comes from evidence section 14. It sent the planner's exact body through `annotate`, three runs, because the command could not batch yet. It is the figure to quote for the default until test 9 runs.
 
-The user types the first command and gets 44 to 46 titles in under half a second. Today they get 29 to 31 in 14 seconds. The full request made the filter more generous. It missed 1 Abbey Road song where today misses 4 or 5, and it kept 27 to 29 songs from other albums where today keeps 16 or 17. Ian ruled that speed wins, so the default accepts that cost, and the page states it. A user who wants today's answers types `--batch 1`. The same user adds `--context catalog.txt` and gets 17 to 19 titles in a third of a second. Only 2 or 3 of them are wrong.
+The user types the first command and gets 50 to 52 titles in about a quarter of a second, by the tool's own form in evidence section 14. Today they get 29 to 31 in 14 seconds. The full request made the filter more generous. It missed no Abbey Road song where today misses 4 or 5, and it kept 32 to 34 songs from other albums where today keeps 16 or 17. Ian ruled that speed wins, so the default accepts that cost, and the page states it. A user who wants today's answers types `--batch 1`. The same user adds `--context catalog.txt` and gets 17 to 19 titles in a third of a second. Only 2 or 3 of them are wrong.
 
 ### Friction list
 
@@ -133,7 +133,7 @@ The user types the first command and gets 44 to 46 titles in under half a second
 | --- | --- |
 | That batching exists | Designed away. It is on by default for every stream |
 | How many records to batch | Designed away. Each request fills to the backend's limits |
-| That a live stream could wait for a full batch | Designed away. A live, unrecorded batch sends after a 50 ms pause in input |
+| That a live stream could wait for a full batch | Designed away. A live batch sends after a 50 ms pause in input, in every mode |
 | How to share a reference text | One option, `--context FILE` |
 | How to get today's exact answers | One flag, `--batch 1` |
 | That old recordings and caches answer only under `--batch 1` | Kept. A batch is a new request. Resending costs cents, and `--batch 1` replays old folders |
@@ -178,7 +178,7 @@ The batch setting is `max` by default, or the whole number `N` that `--batch N` 
 | Size | The setting is a number `N`, and the batch holds `N` records |
 | Member cap | The batch holds 4,096 members, repeats included (ADR 0053 item 2) |
 | Profile limit | The next record would put the request over `max_questions`, `max_evidence_bytes` or `max_request_bytes`. At the built-in address the 96,000-byte ceiling stands in for `max_request_bytes` |
-| Pause | A live, unrecorded run has waited 50 ms with no new record |
+| Pause | A live run has waited 50 ms with no new record, in every mode |
 | End of input | Always |
 
 The content hash is the SHA-256 of the record's evidence in compact JSON, the same bytes its question quotes. Its first 8 bytes, read as a big-endian unsigned integer, give the value taken mod 4,096. A context does not change the rule. At `N` of 1 every record closes its batch, so `--batch 1` sends today's requests.
@@ -190,7 +190,7 @@ The content hash is the SHA-256 of the record's evidence in compact JSON, the sa
 - An inserted record that is a cut splits its stretch in two. The batches after it re-form up to the next cut.
 - A removed cut merges two stretches. A changed record that becomes or stops being a cut does the same. The batches from the merged or split point re-form up to the next cut.
 
-**Why fill to the limit.** Ian ruled that speed wins over accuracy and that batches fill to the limit. On 306 songs one full request answered in 0.30 to 0.39 s for 11,913 input tokens. Today's filter took 13.0 to 14.2 s for 88,933. The same request scored 276 to 278 right against today's 285, and its false yeses rose from 16 or 17 to 27 to 29. Experiment 208 found a larger cost on longer records: 1,000 SMS messages at 40 a request scored 0.882 accuracy and 0.434 recall, against 0.968 and 0.941 one a request. Test 9 measures the tool's own cost, and ticket D1's page states it.
+**Why fill to the limit.** Ian ruled that speed wins over accuracy and that batches fill to the limit. On 306 songs one full request in the tool's own form answered in 0.25 to 0.27 s for 13,185 input tokens (evidence section 14). Today's filter took 13.0 to 14.2 s for 88,933. The same request scored 272 to 274 right against today's 285, and its false yeses rose from 16 or 17 to 32 to 34, by ADR 0053 item 4. Experiment 208 found a larger cost on longer records: 1,000 SMS messages at 40 a request scored 0.882 accuracy and 0.434 recall, against 0.968 and 0.941 one a request. Test 9 measures the tool's own cost, and ticket D1's page states it.
 
 **Why 4,096.** A content cut costs at most one partly filled batch. The plain body over the 306 titles holds about 181 bytes a title, by section 9 of the evidence record. A request at the ceiling then holds about 529 short titles. One cut in 4,096 records therefore adds at most one request to about 8 full ones. A table of 100,000 short titles takes about 189 full requests and about 24 partial ones. At 4 in flight and an estimated half a second a request, that run takes an estimated half a minute. No title of the 306 falls on a cut at 4,096, so the list goes in one request. At 1,024 the 72nd title would cut it into two requests.
 
@@ -262,7 +262,7 @@ The SQL and frame surfaces batch the rows one call receives: a DuckDB vector of 
 
 ### 7. The batch setting is calibration identity
 
-A threshold tuned at one batch setting may not fit another, because batching shifts probabilities. Experiment 271's false yeses rose from 16 or 17 to 27 to 29 with all 306 titles in one request. The batch setting therefore joins the threshold's calibration identity under ADR 0032.
+A threshold tuned at one batch setting may not fit another, because batching shifts probabilities. In the tool's own form, false yeses rose from 16 or 17 to 32 to 34 with all 306 titles in one request (evidence section 14). The batch setting therefore joins the threshold's calibration identity under ADR 0032.
 
 - The question file's `batch` names the setting its threshold was tuned at, as its `profile` names the backend.
 - A run whose batch setting differs from the file's `batch` carries `meta.batch_warning` as `{"tuned_for":1,"running":"max"}`. It prints `threshold tuned at batch 1 is running at batch max` once on standard error, as ADR 0032's profile warning does. A file with a `threshold` and no `batch` counts as tuned at batch 1, by ADR 0053 item 3. A file with neither warns nobody.
@@ -324,7 +324,7 @@ The fields are `records`, `requests_sent`, `cache_answers`, `input_tokens`, `out
 | Question file `"batch": 1` and no other setting | One record a request |
 | Question file `"batch": 1` with `tt.Engine(batch=10)` | At most 10 a request. The engine setting sits in the environment tier. The warning shows in `meta.batch_warning` |
 | `--batch 10` with `--jobs 1` | Same output bytes as `--jobs 8` |
-| A live, unrecorded stream that pauses | The open batch sends after 50 ms |
+| A live stream that pauses, with or without a folder | The open batch sends after 50 ms |
 | A stream that pauses under `--cache DIR`, `--record DIR` or `--replay DIR` | The open batch sends after 50 ms, as in a live run |
 | 10,000 records of 5 distinct values, none a content cut | Three batches of 4,096, 4,096 and 1,808 members |
 | `--replay` with another `--batch` than the recording | Exit 5 at the first missing batch |
