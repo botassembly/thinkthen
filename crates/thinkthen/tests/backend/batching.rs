@@ -329,10 +329,25 @@ fn repeats_close_a_batch_at_the_member_cap() {
     }
 }
 
+/// Thirty lines at `--jobs 1` and no retry, in batches of `batch`: what printed,
+/// what the run said, and its exit code.
+fn failing(
+    batch: &str,
+    answer: impl Fn(&[u8]) -> Canned + Send + Sync + 'static,
+) -> (String, String, Option<i32>) {
+    let listener = Listener::answering(answer).expect("a loopback listener");
+    let fixed = ["--jobs", "1", "--max-retries", "0", "--no-cache"];
+    let arguments = [&fixed[..], &["--batch", batch]].concat();
+    let output = decide(listener.base(), &arguments, &[], &lines(1..=30));
+    (
+        text(&output.stdout),
+        text(&output.stderr),
+        output.status.code(),
+    )
+}
+
 #[test]
 fn a_failed_batch_stops_at_its_first_record() {
-    let input = lines(1..=30);
-    let fixed = ["--jobs", "1", "--max-retries", "0", "--no-cache"];
     let unavailable = |body: &[u8]| -> Canned {
         if places(body).iter().any(|&(_, at)| at == 11) {
             Canned::status(503, "{}")
@@ -340,56 +355,33 @@ fn a_failed_batch_stops_at_its_first_record() {
             answering(body)
         }
     };
-    let listener = Listener::answering(unavailable).expect("a loopback listener");
-    let output = decide(
-        listener.base(),
-        &[&fixed[..], &["--batch", "10"]].concat(),
-        &[],
-        &input,
-    );
-    assert_eq!(text(&output.stdout), rows(1..=10));
+    let cause = "the backend answered with status 503: the backend failed after the allowed attempts; try again later or change --max-retries";
     assert_eq!(
-        text(&output.stderr),
-        concat!(
-            "thinkthen: stopped at record 11; the request for records 11 to 20 failed: ",
-            "the backend answered with status 503: the backend failed after the allowed attempts; ",
-            "try again later or change --max-retries; 10 records finished\n"
+        failing("10", unavailable),
+        (
+            rows(1..=10),
+            format!(
+                "thinkthen: stopped at record 11; the request for records 11 to 20 failed: {cause}; 10 records finished\n"
+            ),
+            Some(4)
         )
     );
-    assert_eq!(output.status.code(), Some(4));
-
-    let listener = Listener::answering(|body| reply(body, Some(13), Some((88, 12))))
-        .expect("a loopback listener");
-    let output = decide(
-        listener.base(),
-        &[&fixed[..], &["--batch", "10"]].concat(),
-        &[],
-        &input,
-    );
-    assert_eq!(text(&output.stdout), rows(1..=12));
     assert_eq!(
-        text(&output.stderr),
-        "thinkthen: stopped at record 13; the reply for records 11 to 20 gave record 13 no usable answer; 12 records finished\n"
-    );
-    assert_eq!(output.status.code(), Some(4));
-
-    let listener = Listener::answering(unavailable).expect("a loopback listener");
-    let output = decide(
-        listener.base(),
-        &[&fixed[..], &["--batch", "1"]].concat(),
-        &[],
-        &input,
-    );
-    assert_eq!(text(&output.stdout), rows(1..=10));
-    assert_eq!(
-        text(&output.stderr),
-        concat!(
-            "thinkthen: the backend answered with status 503: the backend failed after the allowed attempts; ",
-            "try again later or change --max-retries\n",
-            "thinkthen: stopped at record 11; 10 records finished\n"
+        failing("10", |body| reply(body, Some(13), Some((88, 12)))),
+        (
+            rows(1..=12),
+            "thinkthen: stopped at record 13; the reply for records 11 to 20 gave record 13 no usable answer; 12 records finished\n".to_owned(),
+            Some(4)
         )
     );
-    assert_eq!(output.status.code(), Some(4));
+    assert_eq!(
+        failing("1", unavailable),
+        (
+            rows(1..=10),
+            format!("thinkthen: {cause}\nthinkthen: stopped at record 11; 10 records finished\n"),
+            Some(4)
+        )
+    );
 }
 
 #[test]
