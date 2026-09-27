@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":{"evidence":"Northwind Freight is based in Chicago and Denver.","entities":[{"id":"i1","name":"Northwind Freight","kind":"organization"},{"id":"i2","name":"Chicago","kind":"place"},{"id":"i3","name":"Denver","kind":"place"}]},"model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the text itself state that i1 based in i2?"},"q2":{"type":"noul","instructions":"Does the text itself state that i1 based in i3?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.96},"q2":{"type":"noul","noul":0.96}},"usage":{"input_tokens":408,"output_tokens":38}}
+}

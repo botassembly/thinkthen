@@ -421,7 +421,7 @@ fn rule_of(rule: &Rule) -> Checked<RelationRule> {
 }
 
 fn recognized(found: &Recognized) -> Value {
-    let entity = |one: &thinkthen::RecognizedEntity| json!({"name": one.name(), "kind": one.kind(), "start": one.start(), "end": one.end(), "strength": one.strength()});
+    let entity = |one: &thinkthen::RecognizedEntity| json!({"text": one.text(), "start": one.start(), "end": one.end(), "length": one.length(), "kind": one.kind(), "strength": one.strength()});
     let mut value = json!({"entities": found.entities().iter().map(entity).collect::<Vec<_>>()});
     if let Some(relations) = found.relations() {
         value["relations"] = relations

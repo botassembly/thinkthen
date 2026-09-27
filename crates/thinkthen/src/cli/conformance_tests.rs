@@ -26,9 +26,6 @@ mod mutations;
 mod runner;
 
 const CASES: &str = include_str!("../../../../conformance/cases.json");
-const CAPTURED_REFUND: &str = include_str!(
-    "../../../../demos/01-refund-gate/recording/d5c0ecd838ff31e91ba78c1b7584b7aac6c777d6c34fc3cc68ba8a0145ca1e6e.json"
-);
 const VERBS: [&str; 8] = [
     "annotate", "choose", "decide", "filter", "find", "rank", "score", "tag",
 ];
@@ -479,13 +476,15 @@ impl conformance_support::Provenance {
         match self {
             Self::SyntheticContract => Ok(()),
             Self::Captured { path } => {
-                if path
-                    != "demos/01-refund-gate/recording/d5c0ecd838ff31e91ba78c1b7584b7aac6c777d6c34fc3cc68ba8a0145ca1e6e.json"
-                {
+                let committed = path.starts_with("demos/") || path.starts_with("specification/");
+                if !committed || path.contains("..") || !path.contains("/recording") {
                     return Err(format!("unknown captured recording `{path}`"));
                 }
+                let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../../");
+                let text = std::fs::read_to_string(format!("{root}{path}"))
+                    .map_err(|_| format!("unknown captured recording `{path}`"))?;
                 let recorded: conformance_support::Recording =
-                    serde_json::from_str(CAPTURED_REFUND).map_err(|error| error.to_string())?;
+                    serde_json::from_str(&text).map_err(|error| error.to_string())?;
                 if !same_json(recorded.request.get(), &exchange.request)?
                     || !same_json(recorded.response.get(), exchange.response.get())?
                 {
