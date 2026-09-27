@@ -13,13 +13,14 @@ use clap::builder::{PossibleValuesParser, TypedValueParser as _};
 use crate::cli::measure::{Cause, Refusal, lines, rule, write};
 use crate::core::Json;
 use crate::core::Pointer;
+use crate::core::measure::MeasureError::{MixesSets, MixesVerbs, PairsVerbs};
 use crate::core::measure::answer::{self, Identity};
 use crate::core::measure::diff::{
     self as compare, Change, Effect, ItemChange, KindChange, Last, Row, Side, Summary,
 };
 use crate::core::measure::items::{Matching, number};
 use crate::core::measure::key::Key;
-use crate::core::measure::{MeasureError, places, rounded, rounded_line};
+use crate::core::measure::{places, rounded, rounded_line};
 use crate::failure::Failure;
 
 /// The command line of `diff`. Its help is on the `Diff` command.
@@ -158,7 +159,6 @@ fn compare_all(arguments: &DiffArguments) -> Result<(Vec<Row>, Summary), Refusal
     let compared = if second.is_some() { "runs" } else { "cuts" };
     let shown = [shown_a, shown_b];
     compare::diff(a, b, key.as_ref(), shown, compared, arguments.matching).map_err(|cause| {
-        use MeasureError::{MixesSets, MixesVerbs, PairsVerbs};
         let mixed = matches!(cause, PairsVerbs(_) | MixesVerbs(_) | MixesSets(_));
         let role = if mixed && second.is_some() {
             "second run"
