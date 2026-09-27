@@ -6,7 +6,7 @@ opens: conformance/backend/src/listener.rs conformance/backend/src/lifetime.rs c
 
 # 0202: Bound loopback fixture lifetimes
 
-Status: accepted 2026-09-27 by the Codex queue owner after fresh read-only design review and its corrections. A second fresh read-only Sol Medium review accepted `1046d8ca`. Owner: Codex. Runtime starts only after its exact file claim lands on main.
+Status: landing review candidate on 2026-09-27. The accepted design received a fresh read-only Sol Medium review at `1046d8ca`; the runtime received fresh independent ACCEPT at `589a2f8c`. The full 1,024-file proof passed after merge. The surfaces rung failed one existing Python timing-window assertion twice; see the landing record. Owner: Codex. Ian can overturn the fixture retirement contract.
 
 ## Outcome and authority
 
