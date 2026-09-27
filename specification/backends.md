@@ -60,7 +60,7 @@ The four address rules have these exact safe refusals. An invalid scheme says ``
 
 The adapter sends one `POST` with `Content-Type: application/json`. When a key is present it adds `Authorization: Bearer KEY`.
 
-`--timeout SECONDS` covers one attempt from connect to the last byte, takes a whole number greater than zero, and defaults to 30. Zero exits 2 before key access, input access, or a connection. `--max-retries N` bounds how many times a retried status is sent again, and it defaults to 2.
+`--timeout SECONDS` covers one attempt from connect to the last byte, takes a whole number from 1 to 86400, and defaults to 30. Zero or a number past 86400 exits 2 with `--timeout takes a whole number of seconds from 1 to 86400`, before key access, input access, or a connection. The bound is one day, because the HTTP client adds the timeout to the clock and a larger number can overflow there. `--max-retries N` bounds how many times a retried status is sent again, and it defaults to 2.
 
 A retry happens after a status of 429, 500, 502, 503, 504, or 529. A transport failure is never sent again, because the backend may already hold the request and may bill it. The wait doubles from one second, and no wait follows the last attempt. No retry wait exceeds `--timeout`. A reply carrying a `Retry-After-Ms` header in whole milliseconds or a `Retry-After` header in the delta-seconds form waits the time it names instead, capped by both 60 seconds and `--timeout`. The milliseconds header is read first, because the backend sends the finer number there. The HTTP-date form of `Retry-After` is ignored, because reading it needs a clock and a date reader. Any other error status fails at once.
 

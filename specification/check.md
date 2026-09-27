@@ -102,7 +102,7 @@ The last line counts the finding lines. The report prints once, after the last p
 | Exit | When |
 | --- | --- |
 | 0 | The report holds no critical line. Warnings may stand |
-| 2 | No named address, an address the rules refuse, a blank model, a zero timeout, or an unknown option. Nothing is sent |
+| 2 | No named address, an address the rules refuse, a blank model, a timeout outside 1 to 86400, or an unknown option. Nothing is sent |
 | 4 | The report holds a critical line, or the key is unset or blank. An unset key prints nothing on standard output |
 | 5 | Standard output could not be written |
 | 70 | A defect |
