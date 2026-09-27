@@ -1,4 +1,5 @@
 use super::*;
+use crate::harness::spawn_one as spawn;
 
 #[test]
 fn a_live_reply_counts_valid_usage_when_its_only_answer_is_refused() {

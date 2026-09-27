@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, mpsc};
 use std::time::Duration;
 
-use crate::harness::{Canned, Gathering, Listener, finish, spawn};
+use crate::harness::{Canned, Gathering, Listener, finish, spawn_one as spawn};
 
 /// The question every case on this page asks.
 const QUESTION: &str = "Does this report a payment failure?";
@@ -83,7 +83,7 @@ fn piped(base: &str, jobs: &str) -> io::Result<Child> {
         .env_clear()
         .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
-        .args(["decide", QUESTION, "--model", "local-1", "--no-cache"])
+        .args(["decide", QUESTION, "--model", "local-1", "--no-cache", "--batch", "1"])
         .args(["--url", base, "--jsonl", "--field", "/body", "--jobs", jobs])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

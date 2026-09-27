@@ -47,6 +47,16 @@ pub(crate) fn spawn(
     finish(child, &format!("thinkthen {}", arguments.join(" ")))
 }
 
+/// Run as `spawn` does, one record a request, as every run was before
+/// batching. A file whose subject is not batching imports it as `spawn`.
+pub(crate) fn spawn_one(
+    arguments: &[&str],
+    environment: &[(&str, &str)],
+    evidence: &[u8],
+) -> io::Result<Output> {
+    spawn(arguments, &[environment, &[("THINKTHEN_BATCH", "1")]].concat(), evidence)
+}
+
 /// Start the compiled binary as `spawn` does, feed it the evidence, and hand
 /// back the running child.
 pub(crate) fn start(

@@ -1,6 +1,6 @@
-{"function":"decide","args":["The text names a place.","--lines"],"input":"titles.txt","items":12,"floor":1,"list":{"ticket":"B4","number":null}}
-{"function":"filter","args":["The text names a place.","--threshold","0.95"],"input":"titles.txt","items":12,"floor":1,"list":{"ticket":"B4","number":null}}
-{"function":"rank","args":["The text names a place."],"input":"titles.txt","items":12,"floor":1,"list":{"ticket":"B4","number":null}}
+{"function":"decide","args":["The text names a place.","--lines"],"input":"titles.txt","items":12,"floor":1}
+{"function":"filter","args":["The text names a place.","--threshold","0.95"],"input":"titles.txt","items":12,"floor":1}
+{"function":"rank","args":["The text names a place."],"input":"titles.txt","items":12,"floor":1}
 {"function":"choose","args":["Which mood fits the title?","calm","lively","sad","--lines"],"input":"titles.txt","items":12,"floor":1,"list":{"ticket":"B8","number":null}}
 {"function":"tag","args":["Which subjects does the title mention?","water","light","travel","--lines"],"input":"titles.txt","items":12,"floor":1,"list":{"ticket":"B9","number":null}}
 {"function":"score","args":["How long does the title feel?","short","medium","long","--lines"],"input":"titles.txt","items":12,"floor":1,"list":{"ticket":"B9","number":null}}

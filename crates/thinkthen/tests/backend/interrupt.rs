@@ -63,6 +63,7 @@ fn spawn(arguments: &[&str], input: &[u8], acknowledgment: &Acknowledgment) -> i
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .env("THINKTHEN_TEST_RETRY_WAIT_MS", "5000")
         .env("THINKTHEN_TEST_SIGINT_ACK", &acknowledgment.0)
+        .env("THINKTHEN_BATCH", "1")
         .args(arguments)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

@@ -67,7 +67,7 @@ trap 'rm -f "$full"' EXIT
 jq -c 'select(.input.id <= "C-24") | .input' "$rows" > "$full"
 
 for cut in 0.5 0.9; do
-  thinkthen filter 'Does the message report a payment failure?' --jsonl --field /body \
+  thinkthen filter 'Does the message report a payment failure?' --jsonl --field /body --batch 1 \
     --threshold "$cut" --replay ../../transforms/rows/recording/ < "$full" |
     jq -c -s --argjson cut "$cut" --slurpfile all "$full" '. as $kept | {cut:$cut,ids:($all | map(select(.id as $id | $kept | any(.[]; .id == $id)) | .id))}'
 done | mustmatch '{"cut":0.5,"ids":["C-01","C-03","C-05","C-07","C-09","C-11","C-12","C-14","C-15","C-17","C-19","C-21","C-23"]}

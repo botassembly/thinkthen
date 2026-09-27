@@ -5,7 +5,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-use super::harness::{Canned, Listener, finish, spawn};
+use super::harness::{Canned, Listener, finish, spawn_one as spawn};
 
 const KEY: [(&str, &str); 1] = [("THINKTHEN_API_KEY", "sk-test-value")];
 

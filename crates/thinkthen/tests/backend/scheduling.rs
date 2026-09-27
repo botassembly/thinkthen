@@ -44,8 +44,9 @@ fn interactive(
     base: &str,
     jobs: Option<&str>,
     events: Option<mpsc::Sender<Observed>>,
+    extra: &[&str],
 ) -> io::Result<(Child, ChildStdin, Receiver<String>)> {
-    let (child, input, output) = raw_child(base, jobs, &[])?;
+    let (child, input, output) = raw_child(base, jobs, extra)?;
     let (send, receive) = mpsc::channel();
     thread::spawn(move || {
         for line in BufReader::new(output).lines() {
@@ -129,7 +130,7 @@ fn an_answer_arrives_before_the_next_record_at_one_job_and_the_default() {
         let listener = Listener::answering(|body| Canned::ok(&answered(ordinal(body))))
             .expect("a loopback listener");
         let (mut child, mut input, output) =
-            interactive(listener.base(), jobs, None).expect("the compiled binary runs");
+            interactive(listener.base(), jobs, None, &[]).expect("the compiled binary runs");
 
         for place in 1..=2 {
             input
@@ -178,7 +179,12 @@ fn ordered_output_bounds_every_dispatched_row() {
         events_send.clone(),
     )
     .expect("a loopback listener");
-    let (mut child, mut input, output) = interactive(listener.base(), Some("4"), Some(events_send))
+    let (mut child, mut input, output) = interactive(
+        listener.base(),
+        Some("4"),
+        Some(events_send),
+        &["--batch", "1"],
+    )
         .expect("the compiled binary runs");
     input
         .write_all(records(8).as_bytes())

@@ -4,7 +4,7 @@ use std::io;
 use std::process::Output;
 
 use super::{BY_BODY, QUESTION, RECORDS, by_body, code, printed, said};
-use crate::harness::{Listener, spawn};
+use crate::harness::{Listener, spawn_one as spawn};
 
 /// Three text lines, each earning its own probability from [`BY_BODY`].
 const LINES: &str =

@@ -5,7 +5,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Output;
 
-use crate::harness::{Canned, Listener, spawn};
+use crate::harness::{Canned, Listener, spawn_one as spawn};
 
 mod record_rows;
 

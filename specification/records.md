@@ -78,17 +78,20 @@ The request carries the evidence object as the `state` value itself, in the orde
 
 ## Order and requests
 
-Records never share model context, except that `find` deliberately sends its complete bounded set as one aggregate request. Not built yet, by ADR 0048 item 1: records of one batch share one request and see each other, and `--batch 1` keeps them apart. Default `decide`, `choose`, `tag`, and `score` output keeps each parsed record under `input` and its answer under `value`. Output keeps input order everywhere but `rank` and `find`. No record is dropped for being unresolved, except that `filter` prints only what it keeps and `find --none` prints nothing. `choose --raw` keeps printing plain labels for lines and JSONL. `filter` prints kept line and JSONL records as they arrived. CSV and TSV rows print as compact JSON objects in header order. Every output from CSV and TSV input is JSONL.
+Records never share model context, except that `find` deliberately sends its complete bounded set as one aggregate request. On `decide`, `filter` and `rank`, records of one batch share one request. A batch of two or more distinct records sends the evidence `Each question quotes the text it asks about.`, and each record appears once, inside its own question: `The text is `, the record's compact JSON, `. `, then the question. A record is not evidence for any other record in its batch, by ADR 0055. A batch of one record sends the record as the evidence, as before batching. Not built yet, by ADR 0048 item 7: `choose`, `tag` and `score` batches will list every record in the evidence, so each record's text is evidence for every other record in that batch, and `--batch 1` keeps them apart. Default `decide`, `choose`, `tag`, and `score` output keeps each parsed record under `input` and its answer under `value`. Output keeps input order everywhere but `rank` and `find`. No record is dropped for being unresolved, except that `filter` prints only what it keeps and `find --none` prints nothing. `choose --raw` keeps printing plain labels for lines and JSONL. `filter` prints kept line and JSONL records as they arrived. CSV and TSV rows print as compact JSON objects in header order. Every output from CSV and TSV input is JSONL.
 
 ### How many requests each command makes
 
-Settled by ADR 0008, accepted in ADR 0010, with the `find` exception settled by ADR 0030. One request normally carries one piece of evidence and every question asked of it. `find` sends all of its units together because choosing the best unit requires comparison across the set. Not built yet, by ADR 0048 item 2: by default each request fills with records up to the backend's limits, and N records make N requests only at `--batch 1`.
+Settled by ADR 0008, accepted in ADR 0010, with the `find` exception settled by ADR 0030. One request normally carries one piece of evidence and every question asked of it. `find` sends all of its units together because choosing the best unit requires comparison across the set. On `decide`, `filter` and `rank`, each request fills with records up to the backend's limits by default, and N records make N requests only at `--batch 1`. Not built yet, by ADR 0048 item 7: `choose`, `tag` and `score` fill requests the same way.
+
+A live run sends the open batch after 50 ms with no new record, in every mode, with or without a folder. A file or a fast pipe never pauses, so it forms the same batches every run. A live pipe forms batches by its timing, so a replay fed with other timing can miss a batch and stop at exit 5 naming its range, and a cache pays for the batches that moved. A batch also closes at 4,096 records, repeats included, so a stream of a few repeated values never holds more than 4,096 records in one batch.
 
 | Command | Requests |
 | --- | --- |
 | `decide`, `choose`, `tag`, `score` on one document | 1 |
 | `annotate` on one document | 1 for each distinct `on` |
-| `decide`, `choose`, `tag`, `score`, `filter`, `rank` over N records | N. Not built yet, by ADR 0048 item 2: one for each batch, and N at `--batch 1` |
+| `decide`, `filter`, `rank` over N records | One for each batch, and N at `--batch 1` |
+| `choose`, `tag`, `score` over N records | N. Not built yet, by ADR 0048 item 7: one for each batch, and N at `--batch 1` |
 | `annotate` over N records | N times the number of distinct `on` sets |
 | `find` | 1 |
 | `relate` | The shared relation planner's exact request count for the complete set |
@@ -106,7 +109,7 @@ For `relate`, an empty line or JSONL stream and a header-only table are successf
 
 Settled by ADR 0008 item 5, accepted in ADR 0010. A run stops at the first failed record. Rows already printed stay printed, and the run ends with the code the failure earns: 4 for a backend failure, 5 for a local failure, 2 for a record the tool refused before sending it. No failure ever becomes `false`, `null`, a label, or a zero.
 
-A run that stops early prints one line on standard error with the record where it stopped and how many records it finished. When `--record`, `--replay`, or `--cache` made recordings relevant, the line also says how many finished records came from one. A run that finishes prints nothing there. Not built yet, by ADR 0048 item 6: when a batch fails, the line names the range its request carried. Not built yet, by ADR 0048 item 10: `--facts` adds one `thinkthen.run/1` line at the end of any run. Printed output after a failure is a prefix of the input. It is not a finished dataset.
+A run that stops early prints one line on standard error with the record where it stopped and how many records it finished. When `--record`, `--replay`, or `--cache` made recordings relevant, the line also says how many finished records came from one. A run that finishes prints nothing there. When the request for a batch of two or more records fails, the run stops at the batch's first record and the line names the range its request carried: `thinkthen: stopped at record 11; the request for records 11 to 20 failed: CAUSE; 10 records finished`. A request failure, a reply that fails as a whole, and a replay miss take this form. When a reply answers some records of a batch and fails one, the rows before it print and the line names that record: `thinkthen: stopped at record 13; the reply for records 11 to 20 gave record 13 no usable answer; 12 records finished`, at exit 4. A batch of one record, a cancellation, and a refused record keep the cause line and the stop line. Not built yet, by ADR 0048 item 10: `--facts` adds one `thinkthen.run/1` line at the end of any run. Printed output after a failure is a prefix of the input. It is not a finished dataset.
 
 An unresolved answer is never retried. In record mode the exit code reports the run, and no record's answer sets it. A completed run exits 0 unless `annotate` preserves one or more failed questions beside good answers and exits 6. Codes 7 and 8 stay reserved.
 
@@ -120,7 +123,7 @@ A rerun with `--record DIR --replay DIR` on one folder answers the finished reco
 thinkthen decide 'This reports a payment failure.' --jsonl --field /body --record runs/tickets --replay runs/tickets < tickets.jsonl
 ```
 
-A first run that stops at record 400 leaves 399 entries. The same command run again replays those 399 and pays for the rest. A record whose reply was partial has no entry, so the resumed run asks for it again.
+At `--batch 1`, a first run that stops at record 400 leaves 399 entries, and the same command run again replays those 399 and pays for the rest. Under batching, `decide`, `filter` and `rank` leave one entry for each batch that finished. A rerun replays those batches and pays again from the first record of the batch that failed. A batch whose reply was partial has no entry, so the resumed run asks for the whole batch again. At `--batch 1` that batch is one record.
 
 Each digest keeps the first complete response installed in the folder. A partial reply, one that failed a question beside a good answer, is not complete. Under ADR 0053 item 6 and its amendment, a cache does not install it, and reads an entry that holds one as a miss. Concurrent cache misses for that digest wait on one operating-system file lock. The owner checks again, sends unless a complete entry now exists, and installs the response only when it is complete. Waiters replay it. A failed or stopped owner releases the lock automatically; the next waiter sends if no entry was installed. Record-only writers remain independent, and a later writer holding another stored response stops at exit 5. The winner stays intact, so every successful run can replay the answers it printed.
 
@@ -132,7 +135,7 @@ The default can run past the vendor's documented 1,200 requests a minute on shor
 
 Output order never depends on `jobs`. A run with any number prints the bytes that `--jobs 1` prints, on standard output and on standard error, whether it finished or stopped. The tool holds finished rows in a bounded buffer until the rows before them are written, and the buffer holds at most `jobs` rows, so the memory of a long run stays flat.
 
-Not built yet, by ADR 0048 item 5: `jobs` counts batches in flight. A batch is one request, so it still counts requests in flight. The buffer holds at most `jobs` batches of rows. `--jobs` changes no batch.
+On `decide`, `filter` and `rank`, `jobs` counts batches in flight. A batch is one request, so it still counts requests in flight. The buffer holds at most `jobs` batches of rows. `--jobs` changes no batch.
 
 One process opens one pool of connections and every worker posts through it, so a run over many records pays for one handshake rather than one for each record. A run opens up to one connection for each request in flight, so `--jobs N` opens up to N connections. Experiment 218 saw 30 to 35 open file descriptors at `--jobs 32` and 7 at `--jobs 4`. A backend or proxy that caps connections per client needs a lower `--jobs`.
 

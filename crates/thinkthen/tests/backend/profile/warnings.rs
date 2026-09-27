@@ -1,6 +1,7 @@
 //! Warning timing at the ordered command-output boundary.
 
 use super::*;
+use crate::harness::spawn_one as spawn;
 
 #[test]
 fn a_parallel_record_run_prints_one_profile_warning() {
