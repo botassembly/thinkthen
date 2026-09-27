@@ -1,6 +1,6 @@
 # 0081: DuckDB uses its C++ extension API
 
-Status: proposed 2026-09-27 for ticket 0201. Ian directed the C++ migration. He can overturn the bridge and packaging choices below. A fresh design reviewer checks them before runtime work starts.
+Status: accepted 2026-09-27 by the Codex queue owner after fresh review for ticket 0201. Ian directed the C++ migration. He can overturn the bridge and packaging choices below. Runtime work follows a separate file claim.
 
 ## Decision
 

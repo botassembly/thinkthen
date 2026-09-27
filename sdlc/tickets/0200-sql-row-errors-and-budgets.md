@@ -6,7 +6,7 @@ opens: sdlc/tickets/0200-sql-row-errors-and-budgets.md sdlc/planning/adr/0080-sq
 
 # 0200: Keep good SQL rows and bound their calls
 
-Status: ready for fresh read-only design review. Owner: Codex. ADR 0080 is proposed with this ticket. Ian can overturn its routine choices.
+Status: accepted 2026-09-27 by the Codex queue owner after fresh read-only review and its two corrections. The reviewed design is `e982bfec`; `sdlc/records/0200-0201-design-review.md` records the paired review. Owner: Codex. Ian can overturn its routine choices.
 
 ## Outcome and authority
 

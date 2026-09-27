@@ -1,6 +1,6 @@
 # ADR 0080: SQL row errors and budgets
 
-Date: 2026-09-27. Status: proposed for ticket 0200. Ian can overturn every decision here.
+Date: 2026-09-27. Status: accepted 2026-09-27 by the Codex queue owner after fresh review for ticket 0200. Ian can overturn every decision here.
 
 ## Context
 

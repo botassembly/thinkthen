@@ -6,7 +6,7 @@ opens: databases/duckdb sdlc/scripts/policy.py sdlc/scripts/surfaces sdlc/script
 
 # 0201: Move the DuckDB extension to the C++ API
 
-Status: in progress, design review pending 2026-09-27. Owner: Codex. Runtime files stay unclaimed until a fresh design review accepts this ticket and ADR 0081.
+Status: accepted 2026-09-27 by the Codex queue owner after fresh read-only review and its correction. The reviewed design is `c7000a4a`; `sdlc/records/0200-0201-design-review.md` records the paired review. Owner: Codex. Runtime files remain unclaimed while ticket 0200 implements the shared SQL contract.
 
 ## Outcome and authority
 
