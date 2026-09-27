@@ -138,6 +138,7 @@ struct StatementOwner : ClientContextState {
 	bool active = false;
 	bool first_use = false;
 	std::optional<std::chrono::steady_clock::time_point> expiry;
+	std::map<string, ResolvedQuestion> files;
 
 	void QueryBegin(ClientContext &context) override {
 		std::lock_guard<std::mutex> held(lock);
@@ -146,6 +147,7 @@ struct StatementOwner : ClientContextState {
 	void QueryEnd(ClientContext &, optional_ptr<ErrorData>) override {
 		std::lock_guard<std::mutex> held(lock);
 		active = false;
+		files.clear();
 	}
 	void Start(ClientContext &context, bool late) {
 		Value setting;
@@ -158,6 +160,7 @@ struct StatementOwner : ClientContextState {
 		active = true;
 		first_use = late;
 		generation++;
+		files.clear();
 		expiry = budget < 0 ? std::nullopt
 		                    : std::optional<std::chrono::steady_clock::time_point>(
 		                          std::chrono::steady_clock::now() + std::chrono::milliseconds(budget));
@@ -175,6 +178,23 @@ struct StatementOwner : ClientContextState {
 			throw InvalidInputException("thinkthen deadline: the query has spent its time budget");
 		}
 		return std::chrono::duration_cast<std::chrono::milliseconds>(*expiry - now).count();
+	}
+	ResolvedQuestion Resolve(ClientContext &context, const string &argument) {
+		{
+			std::lock_guard<std::mutex> held(lock);
+			if (!active) {
+				Start(context, true);
+			}
+			if (auto found = files.find(argument); found != files.end()) {
+				return found->second;
+			}
+		}
+		auto resolved = ResolveQuestion(context, argument);
+		if (resolved.from_file) {
+			std::lock_guard<std::mutex> held(lock);
+			return files.emplace(argument, std::move(resolved)).first->second;
+		}
+		return resolved;
 	}
 };
 
@@ -281,7 +301,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 			auto evidence_text = evidence.GetValue<string>();
 			ResolvedQuestion resolved;
 			try {
-				resolved = ResolveQuestion(*context, question_text);
+				resolved = owner->Resolve(*context, question_text);
 			} catch (const InvalidInputException &) {
 				resolved = {question_text, false}; // Rust turns an unreadable @file into a safe local value.
 			}
@@ -316,7 +336,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		auto question_text = question.GetValue<string>();
 		if (checked_questions.insert(question_text).second) {
 			auto resolved = bound.constant_question && *bound.constant_question == question_text && bound.resolved_question
-			                    ? *bound.resolved_question : ResolveQuestion(*context, question_text);
+				                    ? *bound.resolved_question : owner->Resolve(*context, question_text);
 			ValidateQuestion(resolved);
 			resolved_questions.emplace(question_text, std::move(resolved));
 		}
