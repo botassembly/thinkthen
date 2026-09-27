@@ -172,13 +172,13 @@ fn a_named_cache_enables_storage_over_disabled_configuration() {
     assert!(cache.is_dir());
 }
 
-/// A configuration another user can write decides where the key goes, so the
-/// run warns. One its owner alone can write stays quiet.
+/// A configuration any user can write decides where the key goes, so the run
+/// warns. A group bit alone stays quiet, since the usual umask sets it.
 #[test]
 fn a_configuration_another_user_can_write_is_warned_about() {
     use std::os::unix::fs::PermissionsExt as _;
     const WARNING: &str = "thinkthen: the configuration file is writable by another user; it decides where the key and evidence go\n";
-    for (mode, says) in [(0o666, WARNING), (0o620, WARNING), (0o644, ""), (0o600, "")] {
+    for (mode, says) in [(0o666, WARNING), (0o602, WARNING), (0o664, ""), (0o600, "")] {
         let root = folder(&format!("configuration-mode-{mode:o}"));
         let path = root.join("thinkthen/config.json");
         fs::create_dir_all(root.join("thinkthen")).expect("configuration directory");
