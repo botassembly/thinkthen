@@ -1,4 +1,4 @@
-Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review. Item 1, the default model half, is done: ticket 0159 landed on 2026-09-26 and pinned the default to `jev-1.13.0`. The rest of item 1 waits. Item 3: ticket 0163 on `ticket/0163-the-cache-folder-and-its-pages`, ready for review.
+Status: open for the rest of item 1 and for item 3. Filed 2026-09-26 by the marketing lead from a fresh architect review. Item 1, the default model half, is done: ticket 0159 landed on 2026-09-26 and pinned the default to `jev-1.13.0`. The rest of item 1 waits. Item 2 is done: ticket 0158 landed on 2026-09-26 (`sdlc/records/0158-build-a-cache-keeps-no-failed-question.md`). Item 3: ticket 0163 on `ticket/0163-the-cache-folder-and-its-pages`, ready for review.
 
 # Architect review 08: the answer cache
 

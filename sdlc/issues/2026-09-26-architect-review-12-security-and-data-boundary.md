@@ -1,4 +1,4 @@
-Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review.
+Status: open for items 1 and 2. Filed 2026-09-26 by the marketing lead from a fresh architect review. Item 3 is done: Quick Fix qf-review-273 landed it (`sdlc/records/qf-review-273.md`).
 
 # Architect review 12: security and the data boundary
 
@@ -38,6 +38,6 @@ Fixed by Quick Fix qf-review-273 in commit `d1835925`, from branch `ticket/qf-re
 - Local faults are reported as network or bare-status faults: a key with a line feed reads as "could not be reached", and a 302 gives a bare status.
 - The configuration file is trusted whatever its mode: a `0666` `config.json` with a loopback `url` received the key.
 - The planted-text guidance is narrower than a reader will take it. `decide.md:92` does not name the one question and one model behind "0.04 or less". Live, a command moved a different question by 0.16 to 0.18, with a confound. Planted claims flipped `decide` on a second question (0.01 to 0.64) and flipped `choose` from shipping to billing (0.78). The default cut of 0.5 turns the H-08 claim into `true` (0.54 live). Direction: name the question and model, say that the default cut is where claims flip answers, and add a hostile fixture for `choose`. Under the batching design, planted text also steers neighbours; see `2026-09-26-batching-design-review-before-0146.md`.
-- Ruby result values print caller text. Already filed in `2026-09-26-ruby-result-values-inspect-caller-text.md`.
+- Ruby result values print caller text. Closed in `closed/2026-09-26-ruby-result-values-inspect-caller-text.md`.
 - No release to verify, and the install check will not catch a replaced release. See `2026-09-25-release-and-install-for-0-1.md`.
 - The default destination is a third-party service, and nothing says what it keeps. `README.md`, `SECURITY.md` and `specification/` say nothing on the vendor's retention, training or terms.
