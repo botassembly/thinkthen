@@ -1,4 +1,4 @@
-Status: open for items 1 and 3. Filed 2026-09-26 by the marketing lead from a fresh architect review. Item 2 is done: Quick Fix qf-review-273 landed it (`sdlc/records/qf-review-273.md`). Ticket 0168 (`sdlc/tickets/0168-a-stop-reaches-every-caller.md`) carries the SQLite held permit.
+Status: open for items 1 and 3. Filed 2026-09-26 by the marketing lead from a fresh architect review. Item 2 is done: Quick Fix qf-review-273 landed it (`sdlc/records/qf-review-273.md`). The SQLite held permit is a non-issue: it bounds detached sends, as shown in `sdlc/records/2026-09-27-register-76-disposition.md`.
 
 # Architect review 04: libraries and databases
 

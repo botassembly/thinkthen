@@ -6,7 +6,7 @@ Status: done 2026-09-27. Fresh read-only code review accepted commit `91096c8a`,
 
 Python and Ruby now read the caller's token after each wait and before taking an answer or error. The existing cancellation path fires the worker's own token. Signal and Ruby interrupt handling keep their positions. The throttle row of `specification/settings.md` states that a sent request keeps its place until its attempt ends, so a later call can wait. `CHANGELOG.md` names the binding correction.
 
-The four host-interrupt loops have no caller token that can be read back. Their same-tick answer has no durable contradiction, so they need no code change. The held throttle place is a real cost. The experiment's detached-work counter is unnecessary: attempts enter process usage before send, and the throttle bounds work in flight. A cancellable socket read remains open as a possible full fix.
+The four host-interrupt loops have no caller token that can be read back. Their same-tick answer has no durable contradiction, so they need no code change. Register 76 is a non-issue: the held throttle place keeps detached sends inside the concurrency bound. The experiment's detached-work counter is unnecessary. The code and regression evidence are recorded in `sdlc/records/2026-09-27-register-76-disposition.md`. The page sentence is a clarification, not a fix for register 76.
 
 ## Proof
 
