@@ -6,7 +6,7 @@ opens: libraries/python/src/worker.rs libraries/python/tests/test_stopping.py li
 
 # 0168: A stop reaches every caller
 
-Status: ready for review. Owner: Claude.
+Status: accepted. The coordinator accepted it on 2026-09-27 after a fresh read-only review, with the fixes that review named. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -85,7 +85,7 @@ A token that fires after that read races the call's return. The call returns wha
 
 The throttle row of `specification/settings.md` gains this sentence after "The most requests in flight at once in one process.":
 
-> A request already sent when its call stops keeps its place until it ends, within its request timeout, so a later call can wait that long for a place.
+> A request already sent when its call stops keeps its place until it ends, within its attempt timeout (the Timeout row), so a later call can wait that long for a place.
 
 That row serves every surface, so one sentence reaches all of them. `databases/sqlite/README.md:69` keeps its own sentence. `CHANGELOG.md` gains one line for the Python and Ruby fix.
 
@@ -114,10 +114,11 @@ Each row runs on the conformance backend's held arm, one call, cache off, as `te
 
 | Test | What it proves | Deliberate break that turns it red |
 | --- | --- | --- |
-| `test_a_token_fired_as_the_reply_lands_cancels_the_call`, new in `libraries/python/tests/test_stopping.py` | Row 1 | (a) Move the Python token read back below the match. The child prints the answer |
+| `a_fired_token_beats_an_answer_already_waiting`, new unit test beside `a_closed_channel_with_no_result_is_a_defect` in `libraries/python/src/worker.rs`, about 12 lines | The loop's order, with no timing. It sends `Some(Ok(3))` on a `sync_channel` before the wait, fires the caller's `CancelToken`, calls `wait(py, receiver, &internal, Some(&token))`, and asserts the raised message is exactly "the call was cancelled" | (a) Move the Python token read back below the match: `wait` returns 3 on every run |
+| `test_a_token_fired_as_the_reply_lands_cancels_the_call`, new in `libraries/python/tests/test_stopping.py` | Row 1, end to end | (a) The child prints the answer in most runs |
 | `test_a_token_fired_as_the_reply_lands_cancels_the_call`, new in `libraries/ruby/tests/test_interrupt_single.rb` | Row 2 | (b) Move the Ruby token read back below `take`. The child prints the answer |
 
-The fixed code passes whatever the timing. The token fires before the release, so any wake of the loop reads a fired token. The break turns red only when the answer wakes the loop before its next tick. The release comes a few milliseconds after the fire, and a tick is 50 ms, so that is most runs. The build runs each break 5 times and records how many runs turned red. It runs each new test 20 times on the fixed code.
+The Python unit test turns break (a) red on every run, because the answer already waits in the channel when the loop starts. The two held-arm tests pass on the fixed code whatever the timing. The token fires before the release, so any wake of the loop reads a fired token. A break turns a held-arm test red only when the answer wakes the loop before its next tick. The release comes a few milliseconds after the fire, and a tick is 50 ms, so that is most runs. Ruby has no unit seam, so its held-arm test carries its proof. The build runs break (b) 10 times and records how many runs turned red. It runs each new held-arm test 20 times on the fixed code.
 
 Overlap was checked. Row 3's tests fire the token while the reply stays held, so the loop always reads the token on a timeout. No test releases the reply right after the fire.
 
@@ -134,7 +135,7 @@ The gate ladder `sdlc/scripts/{install,lint,test,spec,surfaces}` runs before han
 
 Nonblank lines, measured with `grep -c .`.
 
-- `libraries/python/src/worker.rs`: at most 2 net. `libraries/python/ratchet.json` moves by the same amount.
+- `libraries/python/src/worker.rs`: at most 15 net, the unit test included. `libraries/python/ratchet.json` moves by the same amount.
 - `libraries/ruby/src/ffi.rs`: at most 2 net. `libraries/ruby/ratchet.json` moves by the same amount.
 - `libraries/python/tests/test_stopping.py`: at most 25 net. `libraries/python/ratchet.py.json` moves by the same amount.
 - `libraries/ruby/tests/test_interrupt_single.rb`: at most 22 net. `libraries/ruby/ratchet.rb.json` moves by the same amount.
@@ -149,7 +150,7 @@ Each ratchet moves to the measured total in the commit that needs it, and that c
 1. Stop before crossing any budget by more than a tenth, or before adding a dependency.
 2. Stop if the fix needs a file outside the two wait loops, their two test files and the pages named here.
 3. Stop if an existing Python or Ruby test changes its expected result.
-4. Stop if either deliberate break stays green in 2 or more of 5 runs. Then the test does not reach the race, and the design needs another look.
+4. Stop if break (a) leaves the Python unit test green once, or if break (b) leaves the Ruby held-arm test green in 3 or more of 10 runs. Then the test does not reach the race, and the design needs another look.
 5. Stop if either new test fails once in 20 runs on the fixed code.
 6. Stop if the build needs a live call. None is authorized. Never run `sdlc/scripts/live`.
 
@@ -192,5 +193,5 @@ Contract 2; State/timing 3; Reach 2; Proof 2; Cost of error 1; Total 10. Minimum
 - Starts from: The wait-loop issue that ticket 0166 files, local experiment 284 file 76, and a reading of `origin/main` `18f0381e`: `libraries/python/src/worker.rs:112-155`, `libraries/ruby/src/ffi.rs:154-189`, the R, DuckDB, SQLite and PostgreSQL wait loops, `engine/http.rs:125-134`, `engine/mod.rs:339-359`, `engine/request.rs:100`, `databases/sqlite/README.md:69` and `specification/settings.md:58`.
 - Keeps: A pre-fired token sends nothing. A token fired during a held send cancels within one tick. An interrupt never fires the caller's token. Sent requests finish and reach the cache and the counters. The four host-interrupt loops, TypeScript, the C door and the command behave as today.
 - Changes: The Python and Ruby loops read the caller's token after every wait and before the answer, so a fired token always wins. The settings page states that a stopped call's sent request keeps its throttle place until it ends.
-- Proof: One new held-arm test each in Python and Ruby that fires the token and then releases the reply. Each fixed test runs 20 times green. Each deliberate break runs 5 times and turns red in at least 4. The `install`, `lint`, `test`, `spec` and `surfaces` rungs pass.
+- Proof: A Python unit test that finds an answer already waiting and a fired token, red on every run of its break. One held-arm test each in Python and Ruby that fires the token and then releases the reply, each run 20 times green. The Ruby break runs 10 times and turns red in at least 8. The `install`, `lint`, `test`, `spec` and `surfaces` rungs pass.
 - Defers: A fire after the last read, the four host-interrupt loops, a detached-work counter, and a cancellable socket read.
