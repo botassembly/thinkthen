@@ -196,6 +196,15 @@ def an_uncommitted_table_qualified_outside_the_active_schema_gets_the_rule():
 
 
 @case
+def an_unrelated_query_error_keeps_its_original_words():
+    with Backend() as backend:
+        query = "SELECT error(''Table with name x already exists'') AS id, ''n'' AS name, ''k'' AS kind"
+        got = run([f"SELECT * FROM thinkthen_relate('{query}', {WORKS})"], backend.base())
+        expect(said(got[0]), "thinkthen usage: the relate query failed: Invalid Input Error: Table with name x already exists", "an unrelated query error")
+        expect(backend.count(), 0, "counted sends")
+
+
+@case
 def the_cache_probe_runs_on_relates_bind():
     """Decision 5: a cache folder the caller's settings refuse reads the
     probe's refusal with zero sends and nothing created."""

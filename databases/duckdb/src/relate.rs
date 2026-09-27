@@ -476,9 +476,9 @@ fn under_limit<T>(connection: Conn, at: Option<Instant>, body: impl FnOnce() -> 
 /// Another missing name keeps DuckDB's error and gains the connection rule.
 fn boundary(files: &Files, message: String) -> String {
     let Some(name) = message
-        .split("Table with name ")
-        .nth(1)
-        .and_then(|rest| rest.split(" does not exist").next())
+        .strip_prefix("thinkthen usage: the relate query failed: Catalog Error: Table with name ")
+        .and_then(|rest| rest.split_once(" does not exist"))
+        .map(|(name, _)| name)
         .map(|name| name.trim().trim_matches('"').to_owned())
     else {
         return message;
