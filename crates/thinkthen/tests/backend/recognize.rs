@@ -2,7 +2,7 @@
 
 use crate::harness::{Canned, Listener, spawn};
 use serde_json::Value;
-use std::{fs, path::PathBuf, process::Output, sync::Arc, sync::Barrier};
+use std::{fs, path::PathBuf, process::Output, sync::Arc};
 
 mod rules;
 mod stores;

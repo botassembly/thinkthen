@@ -10,12 +10,13 @@ result, and a failed statement prints its error.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
-from harness import EXTENSION, HOOKS, Backend, case, child_env, expect, main
+from harness import CASES, EXTENSION, HOOKS, Backend, case, child_env, expect, main
 
 PRELUDE = r"""
 import json, os, sys, time
@@ -205,13 +206,12 @@ say(round((after - before) / 10 * 100, 2))
         expect(got[0] < 5.0, True, f"500 idle databases took {got[0]} percent of one core")
 
 
-@case
-def r3_1_a_bound_relate_outlives_a_forced_reaper_pass():
+def bound_relate_survives_reaper(rounds: int):
     with Backend() as backend:
         got = script(
-            """
+            f"""
 answered = 0
-for _ in range(200):
+for _ in range({rounds}):
     a = db(); staff(a, 2)
     a.execute("PREPARE r AS " + RELATE.format("t"))
     a.execute("SELECT * FROM thinkthen_test_hook_reap()").fetchall()
@@ -223,7 +223,17 @@ say(answered)
             extension=HOOKS,
             timeout=600,
         )
-        expect(got, [200], "rounds answered")
+        expect(got, [rounds], "rounds answered")
+
+
+@case
+def one_bound_relate_outlives_a_forced_reaper_pass():
+    bound_relate_survives_reaper(1)
+
+
+@case
+def r3_1_a_bound_relate_outlives_a_forced_reaper_pass():
+    bound_relate_survives_reaper(200)
 
 
 @case
@@ -271,4 +281,7 @@ say(said)
 
 
 if __name__ == "__main__":
+    stress = {"r3_23_idle_databases_cost_little", "r3_1_a_bound_relate_outlives_a_forced_reaper_pass"}
+    only_stress = os.environ.get("THINKTHEN_TEST_PROFILE") == "stress"
+    CASES[:] = [function for function in CASES if (function.__name__ in stress) == only_stress]
     sys.exit(main())

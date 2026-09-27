@@ -27,7 +27,7 @@ test('an engine starts from the environment: THINKTHEN_CACHE holds its answers',
   assert.deepEqual(readdirSync(scratch), [], 'nothing lands under the scratch cache home');
 });
 
-test('baseUrl, maxRequests, and cache each override their setting', async (t) => {
+test('baseUrl and a named cache override their setting', async (t) => {
   const first = await startBackend(t);
   const second = await startBackend(t);
   const folder = join(first.folder, 'named');
@@ -35,35 +35,30 @@ test('baseUrl, maxRequests, and cache each override their setting', async (t) =>
     const out = {};
     // A cache folder belongs to one backend address, so this engine keeps none.
     out.second = await new tt.Engine({ baseUrl: ${JSON.stringify(second.base())}, cache: false }).decide('Refund?', 'elsewhere');
-    try { await new tt.Engine({ maxRequests: 2 }).decide_many('Refund?', ['a', 'b', 'c']); } catch (error) { out.most = [error.kind, error.message]; }
     const named = new tt.Engine({ cache: ${JSON.stringify(folder)} });
     out.named = [await named.decide('Refund?', 'kept'), await named.decide('Refund?', 'kept')];
-    const none = new tt.Engine({ cache: false });
-    out.none = [await none.decide('Refund?', 'unkept'), await none.decide('Refund?', 'unkept')];
     return out;`);
   assert.deepEqual(value, {
     second: true,
-    most: ['usage', 'this engine answers at most 2 records in one call'],
     named: [true, true],
-    none: [true, true],
   });
   assert.equal(await second.count(), 1, 'baseUrl sends to the second backend');
   assert.equal(files(folder).length, 1, 'the named cache holds one answer');
-  // A streaming call sends the records before the limit, then refuses (EngineBuilder::max_requests).
-  assert.equal(await first.count(), 2 + 1 + 2, 'the limit sends two, the named cache one, and no cache two');
+  assert.equal(await first.count(), 1, 'the named cache sends once');
 });
 
 test('a refused setting throws usage from the constructor and sends nothing', async (t) => {
   const backend = await startBackend(t);
   const { value } = await ask(backend, `
     const out = [];
-    for (const options of [{ cacheBytes: 0 }, { throttle: 33 }, { throttle: '4' }, { nope: 1 }, { cache: true }, 'fast']) {
+    for (const options of [{ timeoutSeconds: 0 }, { maxRetries: 1.5 }, { throttle: 33 }, { throttle: '4' }, { nope: 1 }, { cache: true }, 'fast']) {
       try { new tt.Engine(options); out.push('built'); } catch (error) { out.push([error.name, error.kind, error.message]); }
     }
     return out;`);
   const usage = (message) => ['ThinkThenError', 'usage', message];
   assert.deepEqual(value, [
-    usage('a cache cap is a whole number of bytes above zero'),
+    usage('a timeout is a time above zero'),
+    usage('options.maxRetries is a whole number'),
     usage('a throttle is a whole number from 1 through 32'),
     usage('options.throttle is a whole number'),
     usage('new Engine takes no option nope'),

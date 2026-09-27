@@ -9,8 +9,9 @@
 //!   boundary reaches. The panic test in `src/failures.rs` covers the kind.
 //! - `30-local-question-file` loads a question file, and the door reads none.
 
-use std::collections::BTreeMap;
-use std::path::Path;
+use std::collections::{BTreeMap, BTreeSet};
+use std::io::Write;
+use std::path::{Path, PathBuf};
 
 use conformance_backend::Backend;
 use serde_json::value::RawValue;
@@ -48,13 +49,25 @@ impl Script {
 fn every_applicable_shared_case_passes_through_the_door() {
     let written: Members = serde_json::from_str(CASES).expect("the shared cases");
     let cases: Vec<Members> = serde_json::from_str(written["cases"].get()).expect("a case list");
+    let selected = selected_ids(&cases).expect("a valid shared case selector");
+    let selected_count = selected.as_ref().map_or(cases.len(), BTreeSet::len);
     let driver = compile(&crate_dir().join("tests/c/driver.c"));
     let backend = Backend::start().expect("the conformance backend");
     let mut failures = Vec::new();
     let mut ran = 0;
+    let mut not_run = 0;
     for case in &cases {
         let id = string(case, "id");
+        if selected.as_ref().is_some_and(|ids| !ids.contains(&id)) {
+            continue;
+        }
         if SKIPPED.contains(&id.as_str()) {
+            not_run += 1;
+            writeln!(
+                std::io::stderr().lock(),
+                "{id}: not run by the C door (internal injection or local question file)"
+            )
+            .expect("write skipped case to stderr");
             continue;
         }
         ran += 1;
@@ -65,8 +78,61 @@ fn every_applicable_shared_case_passes_through_the_door() {
             failures.push(format!("{id}: {why}"));
         }
     }
+    writeln!(
+        std::io::stderr().lock(),
+        "C door: total={} selected={selected_count} pass={} fail={} not_run={not_run} unselected={}",
+        cases.len(),
+        ran - failures.len(),
+        failures.len(),
+        cases.len() - selected_count
+    )
+    .expect("write case counts to stderr");
+    assert_eq!(ran + not_run, selected_count);
     assert!(failures.is_empty(), "{failures:#?}");
-    assert_eq!(ran, cases.len() - SKIPPED.len());
+}
+
+/// Read one optional absolute ID list, and refuse duplicate or unknown IDs.
+fn selected_ids(cases: &[Members]) -> Checked<Option<BTreeSet<String>>> {
+    let mut available = BTreeSet::new();
+    for case in cases {
+        let id = string(case, "id");
+        if id.is_empty() {
+            return Err("a shared case has no ID".to_owned());
+        }
+        if !available.insert(id.clone()) {
+            return Err(format!("duplicate shared case `{id}`"));
+        }
+    }
+    let Some(path) = std::env::var_os("THINKTHEN_CONFORMANCE_IDS") else {
+        return Ok(None);
+    };
+    let path = PathBuf::from(path);
+    if !path.is_absolute() {
+        return Err("THINKTHEN_CONFORMANCE_IDS takes an absolute path".to_owned());
+    }
+    let text =
+        std::fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
+    let mut selected = BTreeSet::new();
+    for id in text
+        .lines()
+        .map(str::trim)
+        .filter(|id| !id.is_empty() && !id.starts_with('#'))
+    {
+        if !selected.insert(id.to_owned()) {
+            return Err(format!("duplicate selected case `{id}`"));
+        }
+    }
+    if selected.is_empty() {
+        return Err("the selected case list is empty".to_owned());
+    }
+    for id in &selected {
+        if !available.contains(id) {
+            return Err(format!(
+                "selected case `{id}` is absent from the shared corpus"
+            ));
+        }
+    }
+    Ok(Some(selected))
 }
 
 /// The retry signal after a failure: 1 for a status the engine retries,

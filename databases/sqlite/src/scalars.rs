@@ -400,7 +400,7 @@ impl Aggregate<WarmState, i64> for Warm {
     }
 }
 
-/// Register the fifteen names in twenty-two arities, none deterministic.
+/// Register the scalar functions for direct calls, without deterministic flags.
 pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
     let volatile = FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DIRECTONLY;
     for arity in [2, 3] {
@@ -428,12 +428,6 @@ pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
         settings::max_requests_total,
     )?;
     connection.create_scalar_function("thinkthen_cache", 1, volatile, settings::cache)?;
-    connection.create_scalar_function(
-        "thinkthen_cache_bytes",
-        1,
-        volatile,
-        settings::cache_bytes,
-    )?;
     Ok(())
 }
 

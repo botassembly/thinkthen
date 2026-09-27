@@ -76,7 +76,11 @@ The settings a host can reach, with one spelling each:
 | The width | `--jobs N` | the engine value | 4 |
 | The request limit | `--max-requests N` | `max_requests` on the engine value | no limit |
 | The cache folder | `--cache DIR`, or `THINKTHEN_CACHE=DIR` | `cache` on the engine value | the XDG cache home |
-| The cache cap | applied by `thinkthen cache prune DIR` | `cache_bytes` on the engine value | 100 MB |
+| Attempt timeout | `--timeout N` | `timeout` on a library engine; SQL waits for ticket 0149 | 30 seconds |
+| Retries | `--max-retries N` | `max_retries` on a library engine; SQL waits for ticket 0149 | 2 |
+| Backend profile | `--profile FILE` | `profile` on a library engine; SQL waits for ticket 0149 | none |
+| Recording | `--record DIR` | `record` on a library engine; SQL waits for ticket 0149 | off |
+| Strict replay | `--replay DIR` | `replay` on a library engine; SQL waits for ticket 0149 | off |
 
 The request limit is stateless. It refuses a run before its first request when the input holds more than `N` records, it writes nothing, and `--dry-run` prints the request count the run would make. It earns its place in the databases, where one `WHERE` over a hundred million rows is a real bill.
 
@@ -230,3 +234,7 @@ The throttle is the most requests in flight at once, per loaded copy of the libr
 - The command's flag stays `--jobs N`, because `jobs` is the usual command-line name for parallel work. The pages for `--jobs` say it sets the throttle.
 - Private names in code may stay `width` for now. The conflict message of the width amendment reaches a user only through a second engine in one process, and only the public API can build one. The range message reaches a user the same way, because `--jobs` refuses an out-of-range number first. Ticket 0086 rewords both: `throttle 4 is already active for this process; use throttle 4 or drop the throttle argument` and `a throttle is a whole number from 1 through 32`.
 - Records, reviews, and issues written before this date keep the word they used.
+
+## Amendment, 2026-09-27, by ticket 0148
+
+Section 5 now gives every library engine a timeout, retry count, backend profile, recording folder, and strict replay folder. `cache_bytes` leaves the library and SQL settings because it did not prune; the configuration file's `cache_bytes` remains the command's prune target. SQL gains the five settings in ticket 0149. The key stays in `THINKTHEN_API_KEY` on every surface except Rust. Ian can overturn the scope of these settings.

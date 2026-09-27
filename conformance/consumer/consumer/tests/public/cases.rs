@@ -6,15 +6,15 @@
 //! `25-defect-fault` injects an internal invariant failure, which no outside
 //! boundary reaches. The crate's own panic-door test covers the defect kind.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
+use std::io::Write;
 
 use conformance_backend::Backend;
 use serde::Deserialize;
 use serde::de::{MapAccess, Visitor};
 use serde_json::value::RawValue;
 use serde_json::{Value, json};
-use sha2::{Digest, Sha256};
 use thinkthen::{
     Annotated, Choice, Description, Details, Engine, Entity, Error, FailureCause, Judgment, Kind,
     LoadedQuestion, Probabilities, Question, QuestionSet, Recognize, Recognized, Relate,
@@ -26,6 +26,8 @@ const CANONICAL: &str = "https://api.typesafe.ai/v1/systemone";
 const SKIPPED: [&str; 1] = ["25-defect-fault"];
 
 pub(crate) type Checked<T = ()> = Result<T, String>;
+pub(crate) use crate::values::same;
+use crate::values::{digest, selected_ids, swap};
 
 thinkthen::choices! { enum Team { Billing => "billing", Shipping => "shipping", Other => "other" } }
 thinkthen::choices! { enum Mark { Billing => "billing", Urgent => "urgent", Security => "security" } }
@@ -99,12 +101,24 @@ fn every_applicable_shared_case_passes_through_the_public_api() {
     let document: Value = serde_json::from_str(CASES).expect("the shared cases");
     let written: Written = serde_json::from_str(CASES).expect("the cases as written");
     let cases = document["cases"].as_array().expect("a case list");
+    let selected = selected_ids(cases).expect("a valid shared case selector");
+    let selected_count = selected.as_ref().map_or(cases.len(), BTreeSet::len);
     let backend = Backend::start().expect("the conformance backend");
     let mut failures = Vec::new();
     let mut ran = 0;
+    let mut not_run = 0;
     for (case, verbatim) in cases.iter().zip(&written.cases) {
         let id = case["id"].as_str().expect("an id");
+        if selected.as_ref().is_some_and(|ids| !ids.contains(id)) {
+            continue;
+        }
         if SKIPPED.contains(&id) {
+            not_run += 1;
+            writeln!(
+                std::io::stderr().lock(),
+                "{id}: not run by the public API (internal invariant injection)"
+            )
+            .expect("write skipped case to stderr");
             continue;
         }
         ran += 1;
@@ -112,8 +126,17 @@ fn every_applicable_shared_case_passes_through_the_public_api() {
             failures.push(format!("{id}: {why}"));
         }
     }
+    writeln!(
+        std::io::stderr().lock(),
+        "public Rust API: total={} selected={selected_count} pass={} fail={} not_run={not_run} unselected={}",
+        cases.len(),
+        ran - failures.len(),
+        failures.len(),
+        cases.len() - selected_count
+    )
+    .expect("write case counts to stderr");
+    assert_eq!(ran + not_run, selected_count);
     assert!(failures.is_empty(), "{failures:#?}");
-    assert_eq!(ran, cases.len() - SKIPPED.len());
 }
 
 pub(crate) fn said(error: Error) -> String {
@@ -472,56 +495,4 @@ pub(crate) fn at(texts: &[&str], text: &str) -> Option<usize> {
     texts
         .iter()
         .position(|one| std::ptr::eq(one.as_ptr(), text.as_ptr()))
-}
-
-fn digest(url: &str, request: &[u8]) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(b"systemone\n");
-    hasher.update(url.as_bytes());
-    hasher.update(b"\n");
-    hasher.update(request);
-    hasher
-        .finalize()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
-}
-
-fn swap(value: &Value, renamed: &BTreeMap<String, String>) -> Value {
-    match value {
-        Value::String(held) => json!(renamed.get(held).unwrap_or(held)),
-        Value::Array(items) => items.iter().map(|item| swap(item, renamed)).collect(),
-        Value::Object(fields) => fields
-            .iter()
-            .map(|(name, field)| (name.clone(), swap(field, renamed)))
-            .collect(),
-        other => other.clone(),
-    }
-}
-
-/// Compare two values, holding numbers to a rounding tolerance.
-pub(crate) fn same(what: &str, actual: &Value, expected: &Value) -> Checked {
-    fn close(one: &Value, other: &Value) -> bool {
-        match (one, other) {
-            (Value::Number(one), Value::Number(other)) => {
-                (one.as_f64().unwrap_or(f64::NAN) - other.as_f64().unwrap_or(f64::NAN)).abs() < 1e-9
-            }
-            (Value::Array(one), Value::Array(other)) => {
-                one.len() == other.len()
-                    && one.iter().zip(other).all(|(one, other)| close(one, other))
-            }
-            (Value::Object(one), Value::Object(other)) => {
-                one.len() == other.len()
-                    && one
-                        .iter()
-                        .all(|(name, value)| other.get(name).is_some_and(|held| close(value, held)))
-            }
-            (one, other) => one == other,
-        }
-    }
-    if close(actual, expected) {
-        Ok(())
-    } else {
-        Err(format!("{what}: got {actual}, expected {expected}"))
-    }
 }

@@ -14,6 +14,7 @@ mod bytes;
 mod cases;
 #[path = "../../../../crates/thinkthen/src/test_deadline/child.rs"]
 mod child;
+mod settings;
 
 use std::collections::BTreeMap;
 use std::io::{BufRead, BufReader, Write};
@@ -203,7 +204,6 @@ fn the_library_carries_its_soname_and_exactly_the_header_symbols() {
         .collect();
     symbols.sort();
     assert_eq!(symbols, declared(&header));
-    assert_eq!(symbols.len(), 19);
     let version: Vec<String> = ["MAJOR", "MINOR", "PATCH"]
         .iter()
         .map(|part| {

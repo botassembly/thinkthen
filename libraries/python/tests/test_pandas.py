@@ -263,6 +263,7 @@ def test_every_pandas_refusal_sends_nothing(backend, tmp_path):
     assert backend.count() == 0
 
 
+@pytest.mark.stress
 def test_a_series_runs_at_the_lists_throttle(backend, tmp_path):
     """Proof 3: at 100 ms a reply and throttle 8, 200 texts take about 2.5 s
     as a list and as a Series on each route the lane offers, within 5 percent

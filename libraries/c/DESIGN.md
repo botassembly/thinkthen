@@ -6,11 +6,12 @@ The shape: one engine value built from the environment, one JSON door that carri
 
 ## The header table
 
-The tag header declares 19 functions. The port kept all 19 and added none.
+The header declares 20 functions. The port kept its 19, and ticket 0148 added one settings constructor before 0.1 shipped.
 
 | Symbol | Verdict | Change |
 |---|---|---|
 | `thinkthen_engine_new` | changed | Builds through `Engine::from_env`, the constructor `default_engine` uses. It reads the variables that constructor reads. `THINKTHEN_TIMEOUT_SECS` and `THINKTHEN_MAX_RETRIES` are not read. NULL means the environment settings are invalid. A cache folder or configuration file the engine cannot read also returns NULL, as the local kind. The calling thread keeps that failure in its own slot, and the three error functions called with NULL name it until the thread's next engine builds. No throttle argument and no throttle variable exist. |
+| `thinkthen_engine_new_with` | added | Reads one closed JSON settings object over `EngineBuilder::from_env`. The keys are `base_url`, `model`, `throttle`, `max_requests`, `cache`, `timeout`, `max_retries`, `profile`, `record`, and `replay`; `api_key` is refused. Null or `{}` matches `thinkthen_engine_new`. Wrong types, unknown or repeated keys, and builder refusals enter the calling thread's null-engine error slot. |
 | `thinkthen_engine_free` | kept | |
 | `thinkthen_error_message` | kept | Messages come from the engine's `Error` display text. |
 | `thinkthen_error_code` | kept | Codes 1 to 6 map from `ErrorKind` in the header's order. |
@@ -137,6 +138,6 @@ Every result of open size crosses as JSON text, so a new field never changes a l
 
 ## Deferred
 
-- A checked throttle constructor, if a host needs one. A later ADR 0037 amendment adds it.
+- A checked throttle constructor landed as `thinkthen_engine_new_with` in ticket 0148.
 - Partial rows, which need an engine capability that exposes a stopped call's finished judgments.
 - Windows. The first release is Linux and macOS.

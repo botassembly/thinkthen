@@ -69,12 +69,12 @@ test('a settled call lets Node exit, after a result and after an error', async (
   }
 });
 
-test('calls on one shared signal leave no listener behind', async (t) => {
+async function sharedSignalLeavesNoListener(t, calls) {
   const backend = await startBackend(t);
   const { value } = await ask(backend, `
     const { getEventListeners } = await import('node:events');
     const shared = new AbortController();
-    for (let at = 0; at < 2000; at += 1) await tt.decide('Refund?', 'same text', { signal: shared.signal });
+    for (let at = 0; at < ${calls}; at += 1) await tt.decide('Refund?', 'same text', { signal: shared.signal });
     const afterCalls = getEventListeners(shared.signal, 'abort').length;
     const gone = AbortSignal.abort();
     await tt.decide('Refund?', 'x', { signal: gone }).catch(() => {});
@@ -84,4 +84,12 @@ test('calls on one shared signal leave no listener behind', async (t) => {
     await pending;
     return [afterCalls, getEventListeners(gone, 'abort').length, getEventListeners(midCall.signal, 'abort').length];`);
   assert.deepEqual(value, [0, 0, 0]);
+}
+
+test('settled and aborted shared-signal calls leave no listener behind', async (t) => {
+  await sharedSignalLeavesNoListener(t, 3);
+});
+
+test('stress: two thousand shared-signal calls leave no listener behind', async (t) => {
+  await sharedSignalLeavesNoListener(t, 2000);
 });

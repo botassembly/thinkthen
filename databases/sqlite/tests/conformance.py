@@ -15,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import pathlib
 import re
 import sys
@@ -42,6 +43,28 @@ def form(case: dict) -> str | None:
     if case["expect"].get("error", {}).get("kind") == "defect":
         return "defect"
     return None
+
+
+def selected_ids(cases: list[dict]) -> set[str]:
+    available = [case["id"] for case in cases]
+    if len(available) != len(set(available)):
+        raise ValueError("duplicate shared case ID")
+    path = os.environ.get("THINKTHEN_CONFORMANCE_IDS")
+    if path is None:
+        return set(available)
+    source = pathlib.Path(path)
+    if not source.is_absolute():
+        raise ValueError("THINKTHEN_CONFORMANCE_IDS takes an absolute path")
+    chosen = [line.strip() for line in source.read_text().splitlines()]
+    chosen = [one for one in chosen if one and not one.startswith("#")]
+    if not chosen:
+        raise ValueError("the selected case list is empty")
+    if len(chosen) != len(set(chosen)):
+        raise ValueError("duplicate selected case ID")
+    absent = set(chosen) - set(available)
+    if absent:
+        raise ValueError(f"selected case is absent from the shared corpus: {sorted(absent)[0]}")
+    return set(chosen)
 
 
 def digest(url: str, request: str) -> str:
@@ -187,8 +210,15 @@ def check(case: dict, backend: Backend) -> None:
 def main() -> int:
     path = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT.parents[1] / "conformance" / "cases.json"
     document = json.loads(path.read_text())
+    try:
+        selected = selected_ids(document["cases"])
+    except (OSError, ValueError) as error:
+        print(f"FAIL     selector: {error}")
+        return 1
     counts = {"pass": 0, "FAIL": 0, "not run": 0}
     for case in document["cases"]:
+        if case["id"] not in selected:
+            continue
         if (reason := form(case)) is not None:
             counts["not run"] += 1
             print(f"not run  {case['id']}: {NOT_RUN[reason]}")
@@ -204,8 +234,8 @@ def main() -> int:
         finally:
             backend.process.kill()
     total = sum(counts.values())
-    print(f"{counts['pass']} pass, {counts['FAIL']} FAIL, {counts['not run']} not run, {total} of {document['case_count']}")
-    if total != document["case_count"] or len(document["cases"]) != document["case_count"]:
+    print(f"{counts['pass']} pass, {counts['FAIL']} FAIL, {counts['not run']} not run, {total} of {document['case_count']}; total={document['case_count']} selected={len(selected)} pass={counts['pass']} fail={counts['FAIL']} not_run={counts['not run']} unselected={document['case_count'] - len(selected)}")
+    if total != len(selected) or len(document["cases"]) != document["case_count"]:
         print(f"FAIL     the counts sum to {total}, and the file holds {document['case_count']}")
         return 1
     return 1 if counts["FAIL"] else 0

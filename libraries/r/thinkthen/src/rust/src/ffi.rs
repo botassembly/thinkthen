@@ -296,13 +296,21 @@ fn tt_relate_frame(
 }
 
 #[extendr]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "R's engine constructor passes all ten public settings through this binding"
+)]
 fn tt_engine_set(
     base_url: Robj,
     model: Robj,
     throttle: Robj,
     max_requests: Robj,
     cache: Robj,
-    cache_bytes: Robj,
+    timeout: Robj,
+    max_retries: Robj,
+    record: Robj,
+    replay: Robj,
+    profile: Robj,
 ) -> Crossed<()> {
     let optional =
         |value: &Robj, what: &str| (!value.is_null()).then(|| text_of(value, what)).transpose();
@@ -317,7 +325,11 @@ fn tt_engine_set(
         throttle: whole_of(&throttle, "throttle")?,
         max_requests: whole_of(&max_requests, "max_requests")?,
         cache,
-        cache_bytes: whole_of(&cache_bytes, "cache_bytes")?,
+        timeout: whole_of(&timeout, "timeout")?,
+        max_retries: whole_of(&max_retries, "max_retries")?,
+        record: optional(&record, "record")?,
+        replay: optional(&replay, "replay")?,
+        profile: optional(&profile, "profile")?,
     })
 }
 

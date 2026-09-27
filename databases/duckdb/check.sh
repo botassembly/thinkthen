@@ -5,6 +5,9 @@
 set -eu
 HERE=$(cd -- "$(dirname -- "$0")" && pwd)
 cd -- "$HERE"
+profile=${THINKTHEN_TEST_PROFILE:-routine}
+case $profile in routine|full|stress) ;; *) echo "duckdb: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+[ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 # macOS has no `timeout` (ticket 0128).
 LIMIT=$HERE/../../sdlc/scripts/time-limit
 . "$HERE/tools/version.env"
@@ -92,6 +95,15 @@ set -e
 rm -f -- "$planted.out"
 
 stock_cli
+
+if [ "$profile" = stress ]; then
+	echo "== opt-in host campaigns"
+	for suite in signal_suite settings_suite databases_suite relate_suite; do
+		sh "$LIMIT" 900 "$PY" "tools/$suite.py"
+	done
+	echo "check: databases/duckdb passes, stress"
+	exit 0
+fi
 
 echo "== suites"
 for suite in verbs_suite settings_suite signal_suite relate_suite databases_suite conformance; do

@@ -64,7 +64,11 @@ pub(crate) struct Settings {
     pub(crate) max_requests: Option<usize>,
     /// A folder, or `None` inside for `cache = FALSE`.
     pub(crate) cache: Option<Option<String>>,
-    pub(crate) cache_bytes: Option<u64>,
+    pub(crate) timeout: Option<u64>,
+    pub(crate) max_retries: Option<u32>,
+    pub(crate) record: Option<String>,
+    pub(crate) replay: Option<String>,
+    pub(crate) profile: Option<String>,
 }
 
 impl Settings {
@@ -80,7 +84,13 @@ impl Settings {
             self.throttle.map(|it| format!("throttle = {it}")),
             self.max_requests.map(|it| format!("max_requests = {it}")),
             cache,
-            self.cache_bytes.map(|it| format!("cache_bytes = {it}")),
+            self.timeout.map(|it| format!("timeout = {it}")),
+            self.max_retries.map(|it| format!("max_retries = {it}")),
+            self.record.as_ref().map(|_| "record = <folder>".to_owned()),
+            self.replay.as_ref().map(|_| "replay = <folder>".to_owned()),
+            self.profile
+                .as_ref()
+                .map(|_| "profile = <folder>".to_owned()),
         ]
         .into_iter()
         .flatten()
@@ -112,8 +122,20 @@ impl Settings {
             Some(None) => builder.no_cache(),
             None => builder,
         };
-        if let Some(bytes) = self.cache_bytes {
-            builder = builder.cache_bytes(bytes)?;
+        if let Some(seconds) = self.timeout {
+            builder = builder.timeout(std::time::Duration::from_secs(seconds))?;
+        }
+        if let Some(retries) = self.max_retries {
+            builder = builder.max_retries(retries);
+        }
+        if let Some(folder) = &self.record {
+            builder = builder.record(folder)?;
+        }
+        if let Some(folder) = &self.replay {
+            builder = builder.replay(folder)?;
+        }
+        if let Some(path) = &self.profile {
+            builder = builder.profile(path)?;
         }
         builder.build()
     }

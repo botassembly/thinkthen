@@ -1,13 +1,14 @@
 //! SIGINT cooperatively stops new attempts and preserves completed output.
 
+use conformance_backend::Rendezvous;
 use std::fs;
 use std::io::{self, Write as _};
 use std::os::unix::process::ExitStatusExt as _;
 use std::path::Path;
 use std::process::{Child, Command, Output, Stdio};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::channel;
-use std::sync::{Arc, Barrier};
 use std::time::Duration;
 
 use crate::harness::{Canned, Listener, Observed, finish};
@@ -86,7 +87,7 @@ fn held(
     reply: impl Fn() -> Canned + Send + Sync + 'static,
 ) -> io::Result<Output> {
     let acknowledgment = Acknowledgment::new();
-    let release = Arc::new(Barrier::new(count + 1));
+    let release = Arc::new(Rendezvous::new(count + 1));
     let backend_release = Arc::clone(&release);
     let (events_send, events) = channel();
     let listener = Listener::answering_with_events(

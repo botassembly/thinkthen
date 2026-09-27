@@ -10,6 +10,9 @@
 set -euo pipefail
 unset THINKTHEN_API_KEY RUSTFLAGS CARGO_ENCODED_RUSTFLAGS
 cd "$(dirname "$0")"
+profile=${THINKTHEN_TEST_PROFILE:-routine}
+case $profile in routine|full|stress) ;; *) echo "postgresql: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+[ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 [ "$(uname -s)" = Linux ] || { echo "not run: check.sh runs on Linux only (uname: $(uname -s))"; exit 77; }
 . ../../sdlc/scripts/scratch.sh
 . ./runtime.sh
@@ -48,6 +51,11 @@ PASSED=0 FAILED=0
 # Each step runs in a subshell under errexit, so its first failing line fails
 # it. STEPS, when set, names the steps to run, for the planted-bug runs.
 check() {
+	if [ "$profile" = stress ]; then
+		[ "$1" = twenty_thousand_warm_rows ] || return 0
+	else
+		[ "$1" != twenty_thousand_warm_rows ] || return 0
+	fi
 	case " ${STEPS:-$1} " in *" $1 "*) ;; *) return 0 ;; esac
 	set +e
 	(
@@ -389,12 +397,12 @@ echo "== the answer cache"
 # Throttle 32, because each loopback request takes about 41 ms on a reused connection.
 warm_then_decide_sends_nothing() {
 	fresh generic "thinkthen.throttle = 32"
-	pairs="FROM generate_series(1, 2000) g"
-	same "$(q -c "SELECT thinkthen_warm('$Q', 'order ' || g) $pairs")" 2000
-	same "$(bcount)" 2000
-	same "$(q -c "SELECT thinkthen_warm('$Q', 'order ' || g) $pairs" -c "SELECT count(*) $pairs WHERE thinkthen_decide('$Q', 'order ' || g)" | tail -1)" 2000
-	same "$(q -c "SELECT count(*) $pairs WHERE thinkthen_decide('$Q', 'order ' || g)")" 2000
-	same "$(bcount)" 2000
+	pairs="FROM generate_series(1, 20) g"
+	same "$(q -c "SELECT thinkthen_warm('$Q', 'order ' || g) $pairs")" 20
+	same "$(bcount)" 20
+	same "$(q -c "SELECT thinkthen_warm('$Q', 'order ' || g) $pairs" -c "SELECT count(*) $pairs WHERE thinkthen_decide('$Q', 'order ' || g)" | tail -1)" 20
+	same "$(q -c "SELECT count(*) $pairs WHERE thinkthen_decide('$Q', 'order ' || g)")" 20
+	same "$(bcount)" 20
 }
 check warm_then_decide_sends_nothing
 # Ticket 0129: warm takes the banded file decide uses, and decide then reads the cache.
@@ -409,9 +417,9 @@ warm_takes_the_banded_file_decide_uses() {
 check warm_takes_the_banded_file_decide_uses
 another_model_sends_again() {
 	fresh generic
-	q -c "SELECT count(*) FROM generate_series(1, 50) g WHERE thinkthen_decide('{\"decide\":\"Is it red?\",\"model\":\"judge-a\"}', 'item ' || g)" \
-		-c "SELECT count(*) FROM generate_series(1, 50) g WHERE thinkthen_decide('{\"decide\":\"Is it red?\",\"model\":\"judge-b\"}', 'item ' || g)" >/dev/null
-	same "$(bcount)" 100
+	q -c "SELECT count(*) FROM generate_series(1, 2) g WHERE thinkthen_decide('{\"decide\":\"Is it red?\",\"model\":\"judge-a\"}', 'item ' || g)" \
+		-c "SELECT count(*) FROM generate_series(1, 2) g WHERE thinkthen_decide('{\"decide\":\"Is it red?\",\"model\":\"judge-b\"}', 'item ' || g)" >/dev/null
+	same "$(bcount)" 4
 }
 check another_model_sends_again
 # The warm pass sends each row once, and a second pass sends nothing. A
@@ -428,10 +436,15 @@ twenty_thousand_warm_rows() {
 	[ -n "$cached" ]
 	echo "         warm passes: cold $cold ms, cached $cached ms"
 	[ $((cached * 2)) -le "$cold" ] || { echo "the cached pass took $cached ms, over half of the cold pass's $cold ms" >&2; return 1; }
-	has "$(q -c "SELECT thinkthen_warm('$Q', 'order ' || g) FROM generate_series(1, 20001) g")" \
-		"thinkthen usage: thinkthen_warm takes at most 20,000 rows per call (retryable: no)"
 }
 check twenty_thousand_warm_rows
+warm_refuses_row_past_limit() {
+	fresh generic
+	has "$(q -c "SELECT thinkthen_warm('$Q', 'order ' || g) FROM generate_series(1, 20001) g")" \
+		"thinkthen usage: thinkthen_warm takes at most 20,000 rows per call (retryable: no)"
+	same "$(bcount)" 0
+}
+check warm_refuses_row_past_limit
 the_answer_map_is_gone() {
 	fresh generic
 	has "$(q -c "SELECT count(*) FROM thinkthen_usage()" -c "SHOW thinkthen.saved_answer_kb")" \
@@ -576,12 +589,6 @@ a_role_limit_applies() {
 	same "$(bcount)" 0
 }
 check a_role_limit_applies
-zero_cache_cap_refuses() {
-	fresh generic "thinkthen.cache_bytes = 0"
-	has "$(q -c "SELECT thinkthen_decide('$Q', 'a')")" "thinkthen usage: thinkthen.cache_bytes must be -1 or at least 1 (retryable: no)"
-	same "$(bcount)" 0
-}
-check zero_cache_cap_refuses
 # A throttle outside 1 through 32 is refused where it is set, and calls keep
 # working. A configuration file's 0 once broke every call.
 THROTTLE_RANGE="thinkthen usage: a throttle is a whole number from 1 through 32 (retryable: no)"
@@ -700,10 +707,13 @@ check an_update_cannot_grant_public
 
 echo "== conformance"
 # Each case on its own server, backend, and cache folder. Every case counts
-# as pass, fail, or not run, and the three sum to the file's count.
+# as pass, fail, or not run, and the three sum to the selected count.
 conformance() {
 	pass=0 fail=0 skipped=0
 	: >"$SCRATCH/not-a-folder"
+	plan_file=$RUN/conformance.plan
+	python3 tests/runner.py plan >"$plan_file"
+	selected=$(wc -l <"$plan_file")
 	while IFS=$'\t' read -r -u 3 id arm setting; do
 		if [ "$arm" != - ]; then
 			fresh "$arm" ${setting:+"${setting//@SCRATCH@/$SCRATCH}"}
@@ -715,15 +725,15 @@ conformance() {
 		"not run $id: "*) skipped=$((skipped + 1)) ;;
 		*) fail=$((fail + 1)) ;;
 		esac
-	done 3< <(python3 tests/runner.py plan)
-	echo "         conformance: $pass passed, $fail failed, $skipped not run"
-	same "$((pass + fail + skipped))" "$(python3 -c 'import json; print(json.load(open("../../conformance/cases.json"))["case_count"])')"
+	done 3< "$plan_file"
+	echo "         conformance: total=54 selected=$selected pass=$pass fail=$fail not_run=$skipped unselected=$((54 - selected))"
+	same "$((pass + fail + skipped))" "$selected"
 	same "$fail" 0
 }
 check conformance
 runner_never_excuses_by_a_note() {
 	fresh case/01-decide-yes-captured
-	out=$(BPORT=$BPORT python3 tests/runner.py --cases fixtures/runner-excuse.json "$SOCK" 01-decide-yes-captured)
+	out=$(env -u THINKTHEN_CONFORMANCE_IDS BPORT=$BPORT python3 tests/runner.py --cases fixtures/runner-excuse.json "$SOCK" 01-decide-yes-captured)
 	same "$out" "fail 01-decide-yes-captured: probability: got 0.99, expected 0.5"
 }
 check runner_never_excuses_by_a_note

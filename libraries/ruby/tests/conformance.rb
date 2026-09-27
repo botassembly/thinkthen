@@ -16,16 +16,38 @@ NOT_RUN = {
 
 require "digest"
 require "json"
+require "pathname"
 require "tmpdir"
 
 CASES = JSON.parse(File.read(File.expand_path("../../../conformance/cases.json", __dir__)))
 CANONICAL = "https://api.typesafe.ai/v1/systemone"
+ALL = CASES.fetch("cases")
+IDS = ALL.map { |one| one.fetch("id") }
+raise "shared case count differs from the document" unless ALL.size == CASES.fetch("case_count")
+raise "duplicate shared case ID" unless IDS.uniq.size == IDS.size
+
+selector = ENV["THINKTHEN_CONFORMANCE_IDS"]
+if selector
+  raise "THINKTHEN_CONFORMANCE_IDS takes an absolute path" unless Pathname.new(selector).absolute?
+
+  chosen = File.readlines(selector, chomp: true).map(&:strip).reject { |id| id.empty? || id.start_with?("#") }
+  raise "the selected case list is empty" if chosen.empty?
+  raise "duplicate selected case ID" unless chosen.uniq.size == chosen.size
+
+  absent = chosen - IDS
+  raise "selected case #{absent.first} is absent from the shared corpus" unless absent.empty?
+  SELECTED = chosen.freeze
+else
+  SELECTED = IDS.freeze
+end
 
 unless ARGV.first == "--child"
   require_relative "backend"
   backend = TestBackend::Backend.new
   status = Dir.mktmpdir do |root|
-    env = TestBackend.env(backend.url, root, "CONFORMANCE_PORT" => backend.port.to_s)
+    extra = { "CONFORMANCE_PORT" => backend.port.to_s }
+    extra["THINKTHEN_CONFORMANCE_IDS"] = selector if selector
+    env = TestBackend.env(backend.url, root, extra)
     system(env, RbConfig.ruby, "-I", TestBackend::LIB, __FILE__, "--child", unsetenv_others: true)
   end
   backend.close
@@ -205,6 +227,7 @@ end
 passed = failed = skipped = 0
 CASES["cases"].each do |one|
   id = one["id"]
+  next unless SELECTED.include?(id)
   if (why = NOT_RUN[id])
     skipped += 1
     puts "not run #{id}: #{why}"
@@ -220,5 +243,5 @@ CASES["cases"].each do |one|
   end
 end
 total = passed + failed + skipped
-puts "conformance: #{passed} passed, #{failed} failed, #{skipped} not run, #{total} of #{CASES['case_count']}"
-exit(failed.zero? && total == CASES["case_count"] && total == CASES["cases"].size ? 0 : 1)
+puts "conformance: total=#{CASES['case_count']} selected=#{SELECTED.size} pass=#{passed} fail=#{failed} not_run=#{skipped} unselected=#{CASES['case_count'] - SELECTED.size}"
+exit(failed.zero? && total == SELECTED.size ? 0 : 1)

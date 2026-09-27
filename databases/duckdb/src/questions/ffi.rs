@@ -199,9 +199,6 @@ impl Files {
             cache: self
                 .setting(c"thinkthen_cache")
                 .and_then(|value| value.text),
-            cache_bytes: self
-                .setting(c"thinkthen_cache_bytes")
-                .and_then(|value| value.number),
             max_requests_total: self
                 .setting(c"thinkthen_max_requests_total")
                 .and_then(|value| value.number),

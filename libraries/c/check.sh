@@ -2,6 +2,13 @@
 # The C surface. The surface rung passes its loopback port as $1.
 set -eu
 cd -- "$(dirname -- "$0")"
+profile=${THINKTHEN_TEST_PROFILE:-routine}
+case $profile in routine|full|stress) ;; *) echo "libraries/c: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+[ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
+if [ "$profile" = stress ]; then
+	echo 'libraries/c: not run: no port load campaign'
+	exit 77
+fi
 
 command -v cc >/dev/null 2>&1 || { echo 'libraries/c: no C compiler' >&2; exit 77; }
 . ../../sdlc/scripts/scratch.sh
@@ -25,7 +32,7 @@ fi
 	export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build" CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$HOME=/build"
 	cargo fmt --check
 	cargo clippy --locked --offline --all-targets -- -D warnings
-	cargo test --locked --offline
+	cargo test --locked --offline -- --nocapture
 	# The rung's own backend answers the slide as the test's backends do.
 	cargo build --quiet --locked --offline --lib
 	target=${CARGO_TARGET_DIR:-target}/debug
