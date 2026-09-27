@@ -113,6 +113,17 @@ One rule is new. A recognize line whose `question.kinds` is empty grades every s
 
 The public Rust type keeps one entity with `text`, `start`, `end`, `length`, `kind` and `strength`. Python, TypeScript, Ruby, R, C, DuckDB, PostgreSQL and SQLite return those six fields in that order, with each surface's existing offset unit. `text` replaces `name`, and `length` is new. `strength` keeps its name and type on every surface. The shared conformance cases carry the new shape.
 
+## Changed declarations
+
+Normative after rustfmt, under the same rules as the 0084 block. `RecognizedEntity::name` is removed, and these replace it.
+
+```rust
+impl RecognizedEntity {
+    pub fn text(&self) -> &str;
+    pub fn length(&self) -> usize;
+}
+```
+
 ## The design issue's rows
 
 - R0, the ADR of Ian's rulings, is replaced by ADR 0056.
