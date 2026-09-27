@@ -67,7 +67,7 @@ The four questions of `2026-09-24-tests-earn-their-place.md`:
 
 With `THINKTHEN_API_KEY` unset. `sdlc/scripts/live` did not run, and no paid call was made.
 
-The rungs ran one at a time at `69cbcde2`, which holds every change of the three rounds, the mask ruling, and main as of that commit. The later commit adds only this section.
+The rungs ran one at a time at `896d91a5`, which holds every change of the three rounds, the mask ruling, and main merged in. The later commit adds only this line. An earlier full run at `69cbcde2`, before main moved, gave the same results.
 
 - `lint` with the private-names list: exit 0, `ratchet: crates + conformance 72630/72630`. The expected `Killed` line appeared. An earlier run at `7c42cdba` failed twice. `nix` had gained its `user` feature, and `engine/http.rs` had 509 non-blank lines over its 500 ceiling. Change 5 and `d837dec2` answer both.
 - `test`: exit 0, 980 passed, 0 failed, 13 ignored across 38 result lines, `live-test: all cases passed`.
