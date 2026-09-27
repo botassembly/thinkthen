@@ -1,6 +1,6 @@
 # Relation requests carry one rule and every entity
 
-Status: Open. Filed 2026-09-26 from the ten-function efficiency audit under ADR 0054, local experiment 275. Owner: ticket R5, which builds ADR 0050 items 5 and 6. It absorbs severity 3 title 11 of report 10 in `2026-09-26-architect-review-severity-3-findings.md`. Does not block 0.1.
+Status: Open. Filed 2026-09-26 from the ten-function efficiency audit under ADR 0054, local experiment 275. Ticket 0147 built the shared state for `recognize`. Ticket 0167 carries it to `relate`. Owner: ticket R5, which builds ADR 0050 items 5 and 6. It absorbs severity 3 title 11 of report 10 in `2026-09-26-architect-review-severity-3-findings.md`. Does not block 0.1.
 
 ## What happens today
 
