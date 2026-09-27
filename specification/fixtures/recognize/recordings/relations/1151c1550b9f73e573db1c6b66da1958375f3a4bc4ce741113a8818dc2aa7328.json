@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":{"evidence":"John Lennon and Paul McCartney wrote Yesterday.","entities":[{"id":"i1","name":"John Lennon","kind":"person"},{"id":"i2","name":"Paul McCartney","kind":"person"},{"id":"i3","name":"Yesterday","kind":"song"}]},"model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the text itself state that i1 sang i3?"},"q2":{"type":"noul","instructions":"Does the text itself state that i2 sang i3?"},"q3":{"type":"noul","instructions":"Does the text itself state that i1 wrote i3?"},"q4":{"type":"noul","instructions":"Does the text itself state that i2 wrote i3?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.03},"q2":{"type":"noul","noul":0.03},"q3":{"type":"noul","noul":0.91},"q4":{"type":"noul","noul":0.92}},"usage":{"input_tokens":444,"output_tokens":72}}
+}

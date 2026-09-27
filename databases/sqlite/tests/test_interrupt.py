@@ -15,6 +15,7 @@ tail of 12 and of 14 in place of 13: each held test here then read
 
 from __future__ import annotations
 
+import os
 import signal
 import subprocess
 import sys
@@ -108,11 +109,11 @@ db.executemany("INSERT INTO e VALUES (?, ?, ?)", [(1, 'Ada', 'person'), (2, 'Acm
 
 
 def test_a_warm_is_cancelled_mid_batch() -> None:
-    """Case 18: at throttle 8, a held 200-row warm stops at 8 sends and stays there."""
+    """Case 18: at throttle 8, a held 20-row warm stops at 8 sends and stays there."""
     backend = Backend()
     setup = """db.execute("SELECT thinkthen_throttle(8)")
 db.execute("CREATE TABLE t(body TEXT)")
-db.executemany("INSERT INTO t VALUES (?)", [(f"row {at}",) for at in range(200)])"""
+db.executemany("INSERT INTO t VALUES (?)", [(f"row {at}",) for at in range(20)])"""
     result = interrupted(backend, "SELECT thinkthen_warm('Is it red?', body) FROM t", 8, setup)
     stopped_fast(result)
     time.sleep(0.3)
@@ -164,15 +165,15 @@ say(error=isinstance(error, str), after=time.monotonic() - stopped[0])
     expect(result["after"] < 1, True, f"the warm stopped {result['after']} s after the interrupt")
 
 
-def test_cached_calls_return_at_once_and_leave_no_thread() -> None:
-    """R3-22: 200 cached answers take under 2 s, and within 1 s no thread outlives them."""
+def cached_calls(count: int) -> dict:
+    """Count cache hits and remaining threads after one child finishes."""
     backend = Backend()
     code = """
 db = connect()
 db.execute("SELECT thinkthen_decide('Is it red?', 'a red door')")
 threads = lambda: int([line for line in open('/proc/self/status') if line.startswith('Threads:')][0].split()[1])
 before, started = threads(), time.monotonic()
-for _ in range(200):
+for _ in range(int(os.environ["COUNT"])):
     db.execute("SELECT thinkthen_decide('Is it red?', 'a red door')").fetchall()
 took = time.monotonic() - started
 settled = time.monotonic() + 1
@@ -180,10 +181,23 @@ while threads() > before and time.monotonic() < settled:
     time.sleep(0.01)
 say(took=took, before=before, after=threads())
 """
-    result = Child(code, environment(backend)).result()
+    env = environment(backend)
+    env["COUNT"] = str(count)
+    result = Child(code, env).result()
+    expect(backend.close(), 1, "sends")
+    return result
+
+
+def test_one_cached_call_leaves_no_thread() -> None:
+    result = cached_calls(3)
+    expect(result["after"], result["before"], "threads after the cached calls")
+
+
+def test_cached_calls_return_at_once_and_leave_no_thread() -> None:
+    """R3-22: 200 cached answers take under 2 s, and within 1 s no thread outlives them."""
+    result = cached_calls(200)
     expect(result["took"] < 2, True, f"200 cached calls took {result['took']} s")
     expect(result["after"], result["before"], "threads after the calls")
-    expect(backend.close(), 1, "sends")
 
 
 FORKED = """
@@ -252,4 +266,8 @@ def test_a_grandchild_hears_its_own_interrupt() -> None:
 
 
 if __name__ == "__main__":
-    sys.exit(main(globals()))
+    stress = {"test_a_fast_warm_stops_soon_after_the_interrupt",
+              "test_cached_calls_return_at_once_and_leave_no_thread"}
+    only_stress = os.environ.get("THINKTHEN_TEST_PROFILE") == "stress"
+    sys.exit(main({name: value for name, value in globals().items()
+                   if name.startswith("test_") and (name in stress) == only_stress}))

@@ -34,41 +34,11 @@ pub(crate) enum Ask {
     DecideMany(LoadedQuestion, Vec<String>),
     Filter(LoadedQuestion, Vec<String>),
     Rank(String, Vec<String>),
-    Find(String, Vec<String>),
+    /// The question text, whether it offers none, and the units.
+    Find(String, bool, Vec<String>),
     Annotate(QuestionSet, Vec<String>),
     Recognize(Recognize, String),
     Relate(Relate, Vec<Entity>),
-}
-
-impl Ask {
-    /// How many records a many-record call reads.
-    pub(crate) fn records(&self) -> Option<usize> {
-        match self {
-            Self::DecideMany(_, records)
-            | Self::Filter(_, records)
-            | Self::Rank(_, records)
-            | Self::Find(_, records)
-            | Self::Annotate(_, records) => Some(records.len()),
-            // The engine does not cap relate's entities by the record limit.
-            Self::Decide(..)
-            | Self::Details(..)
-            | Self::Score(..)
-            | Self::Recognize(..)
-            | Self::Relate(..) => None,
-        }
-    }
-}
-
-/// Refuse a call over the engine's record limit before any request. The
-/// engine's own batches refuse only once they reach the limit, and the
-/// binding has read every record already.
-pub(crate) fn within(most: Option<usize>, ask: &Ask) -> Result<(), Fault> {
-    match (most, ask.records()) {
-        (Some(most), Some(records)) if records > most => Err(Fault::usage(format!(
-            "this engine answers at most {most} records in one call"
-        ))),
-        _ => Ok(()),
-    }
 }
 
 /// One judgment's value in the shape Ruby reads.
@@ -153,12 +123,16 @@ pub(crate) fn run(
             engine
                 .decide_many_with(&question, records, options)
                 .map(|row| row.map(|row| (answer(*row.value()), row.probability())))
+                .collect::<Vec<_>>()
+                .into_iter()
                 .collect::<Result<_, _>>()?,
         ),
         Ask::DecideMany(LoadedQuestion::Banded(question), records) => Output::Rows(
             engine
                 .decide_many_with(&question, records, options)
                 .map(|row| row.map(|row| (answer(*row.value()), row.probability())))
+                .collect::<Vec<_>>()
+                .into_iter()
                 .collect::<Result<_, _>>()?,
         ),
         Ask::Filter(question, records) => {
@@ -177,8 +151,10 @@ pub(crate) fn run(
                 .map(|ranked| (ranked.input().0, ranked.probability()))
                 .collect(),
         ),
-        Ask::Find(text, units) => {
-            let found = engine.find_with(&Question::find(&text)?, texts(units), options)?;
+        Ask::Find(text, none, units) => {
+            let asked = Question::find(&text)?;
+            let asked = if none { asked.offering_none()? } else { asked };
+            let found = engine.find_with(&asked, texts(units), options)?;
             Output::Found(found.selected().and_then(|Text(place, _)| {
                 let candidate = found.candidates().get(*place)?;
                 Some((*place, candidate.probability()))

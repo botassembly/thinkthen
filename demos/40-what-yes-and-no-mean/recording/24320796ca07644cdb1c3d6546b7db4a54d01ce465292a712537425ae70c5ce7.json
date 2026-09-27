@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Planned upgrade of the booking service, Saturday night.\n\nThe upgrade replaces the storage layer and moves the search index onto the new\ncluster. Bookings will not be taken while the window is open. Saved searches\nare kept. The desk will post an update when the service is back.\n","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The notice leaves the upgrade window at risk of running longer than the plan it announced before.","criteria":{"true":"The notice says the window runs longer than the earlier plan, or the notice does not settle the length at all.","false":"The notice says the window runs no longer than the earlier plan."}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.81}},"usage":{"input_tokens":397,"output_tokens":21}}
-}

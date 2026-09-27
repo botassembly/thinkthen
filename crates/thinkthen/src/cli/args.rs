@@ -1,5 +1,6 @@
 //! The command line, as the clap types that parse it.
 
+use std::ffi::OsString;
 use std::path::PathBuf;
 
 use crate::core::{DEFAULT_MODEL, Framing};
@@ -143,7 +144,7 @@ pub(crate) struct Common {
     #[arg(long, conflicts_with = "cache")]
     pub(crate) no_cache: bool,
 
-    /// Positive seconds that bound one attempt from connect to last byte, and each retry wait.
+    /// Seconds from 1 to 86400 that bound one attempt from connect to last byte, and each retry wait.
     #[arg(
         long,
         value_name = "SECONDS",
@@ -200,6 +201,10 @@ pub(crate) struct DecideArguments {
     /// written in a file.
     pub(crate) question: String,
 
+    /// Taken so the command can say where the evidence goes.
+    #[arg(value_name = "EVIDENCE", hide = true)]
+    pub(crate) extra: Vec<OsString>,
+
     /// What a yes and a no mean.
     #[command(flatten)]
     pub(crate) meanings: Meanings,
@@ -217,9 +222,25 @@ pub(crate) struct DecideArguments {
     #[arg(long, hide = true)]
     pub(crate) raw: bool,
 
+    /// How many records of a stream share one request.
+    #[command(flatten)]
+    pub(crate) batching: Batching,
+
     /// The options every judging verb takes.
     #[command(flatten)]
     pub(crate) common: Common,
+}
+
+/// The batch size of `decide`, `filter` and `rank` over a stream.
+#[derive(Args, Debug)]
+pub(crate) struct Batching {
+    /// Send at most N records of a stream in one request, or `max`. [default: max]
+    ///
+    /// `max` fills each request to the backend's limits. `--batch 1` asks one
+    /// record a request, as before batching. It beats `THINKTHEN_BATCH`, which
+    /// beats a question file's `batch`.
+    #[arg(long, value_name = "N|max", hide_short_help = true)]
+    pub(crate) batch: Option<String>,
 }
 
 /// The two texts that say what a yes and a no mean, which every yes/no verb takes.
@@ -258,6 +279,10 @@ pub(crate) struct FilterArguments {
     /// value typed beside it replaces the file's value.
     pub(crate) question: String,
 
+    /// Taken so the command can say where the evidence goes.
+    #[arg(value_name = "EVIDENCE", hide = true)]
+    pub(crate) extra: Vec<OsString>,
+
     /// One cut T on the probability of yes. A band is a usage error. It defaults to 0.5.
     #[arg(long, value_name = "T", allow_negative_numbers = true)]
     pub(crate) threshold: Option<String>,
@@ -274,6 +299,10 @@ pub(crate) struct FilterArguments {
     #[command(flatten)]
     pub(crate) refused: Refused,
 
+    /// How many records of a stream share one request.
+    #[command(flatten)]
+    pub(crate) batching: Batching,
+
     /// The options every judging verb takes.
     #[command(flatten)]
     pub(crate) common: Common,
@@ -287,6 +316,10 @@ pub(crate) struct RankArguments {
     /// As `@FILE` it is a question file holding one `decide` question, and a
     /// value typed beside it replaces the file's value.
     pub(crate) question: String,
+
+    /// Taken so the command can say where the evidence goes.
+    #[arg(value_name = "EVIDENCE", hide = true)]
+    pub(crate) extra: Vec<OsString>,
 
     /// Print the first N records of the order, from 1 upward.
     ///
@@ -306,6 +339,10 @@ pub(crate) struct RankArguments {
     /// The two views `rank` refuses in its own words.
     #[command(flatten)]
     pub(crate) refused: Refused,
+
+    /// How many records of a stream share one request.
+    #[command(flatten)]
+    pub(crate) batching: Batching,
 
     /// The options every judging verb takes.
     #[command(flatten)]
@@ -429,7 +466,7 @@ pub(crate) struct RecognizeArguments {
     #[arg(long = "kind", value_name = "KIND=DESCRIPTION")]
     pub(crate) described: Vec<String>,
 
-    /// A beta relation rule, as NAME=SOURCE:TARGET. `*` explicitly means any kind.
+    /// A beta relation rule, as NAME or NAME=SOURCE:TARGET. `*` or `ANY` means any kind.
     #[arg(long = "relation", value_name = "NAME=SOURCE:TARGET")]
     pub(crate) relations: Vec<String>,
 
@@ -440,6 +477,15 @@ pub(crate) struct RecognizeArguments {
     /// Keep beta relation edges whose model probability reaches this cut. [default: 0.5]
     #[arg(long, value_name = "T", allow_negative_numbers = true)]
     pub(crate) relation_threshold: Option<String>,
+
+    /// Refuse a text over this many UTF-8 bytes before any request. [default: 600000]
+    #[arg(
+        long,
+        value_name = "N",
+        value_parser = clap::builder::RangedU64ValueParser::<usize>::new().range(1..=9_007_199_254_740_991),
+        hide_short_help = true
+    )]
+    pub(crate) max_text_bytes: Option<usize>,
 
     /// The options every judging verb takes.
     #[command(flatten)]

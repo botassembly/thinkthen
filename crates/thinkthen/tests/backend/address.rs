@@ -369,29 +369,47 @@ fn a_variable_that_holds_nothing_counts_as_absent() {
     }
 }
 
+/// With no key, an address the rules cannot prove is this machine stops at
+/// exit 4 before any connection. `https://127.0.0.2` is such an address: the
+/// rule reads text, and the listener behind 127.0.0.1 refuses it, so a key
+/// check that let it through would print the refused-connection sentence.
 #[test]
-fn a_key_that_is_unset_or_empty_is_exit_four_and_names_the_variable_it_read() {
+fn a_key_that_is_unset_or_empty_is_exit_four_away_from_loopback() {
+    const NO_KEY: &str = "thinkthen: the environment variable `THINKTHEN_API_KEY` is unset or blank, so no key is sent\n";
     let listener = Listener::serving(Vec::new()).expect("a loopback listener");
-    let unset: &[(&str, &str)] = &[("THINKTHEN_BASE_URL", listener.base())];
-    let empty: &[(&str, &str)] = &[
-        ("THINKTHEN_BASE_URL", listener.base()),
-        ("THINKTHEN_API_KEY", ""),
-    ];
-    let blank: &[(&str, &str)] = &[
-        ("THINKTHEN_BASE_URL", listener.base()),
-        ("THINKTHEN_API_KEY", "   "),
-    ];
-
-    for environment in [unset, empty, blank] {
-        let output = decide(&[], environment).expect("the compiled binary runs");
-
-        assert_eq!(output.status.code(), Some(4), "{environment:?}");
-        let message = String::from_utf8_lossy(&output.stderr);
-        assert!(message.contains("THINKTHEN_API_KEY"), "{message}");
-        assert!(output.stdout.is_empty(), "{environment:?}");
+    let elsewhere = listener
+        .base()
+        .replace("http://127.0.0.1", "https://127.0.0.2");
+    for key in [None, Some(""), Some("   ")] {
+        let mut environment = vec![("THINKTHEN_BASE_URL", elsewhere.as_str())];
+        environment.extend(key.map(|key| ("THINKTHEN_API_KEY", key)));
+        let output = decide(&["--no-cache"], &environment).expect("the compiled binary runs");
+        assert_eq!(output.status.code(), Some(4), "{key:?}");
+        assert_eq!(String::from_utf8_lossy(&output.stderr), NO_KEY, "{key:?}");
+        assert!(output.stdout.is_empty(), "{key:?}");
     }
+    assert_eq!(listener.connections(), 0, "no key, no connection");
+}
 
-    assert!(listener.requests().is_empty(), "no key, no request");
+/// A loopback server that checks no key needs none: with the variable unset
+/// or blank, the request goes out with no authorization header.
+#[test]
+fn a_loopback_backend_takes_a_request_with_no_key_and_no_authorization_header() {
+    for key in [None, Some(""), Some("   ")] {
+        let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
+        let mut environment = vec![("THINKTHEN_BASE_URL", listener.base())];
+        environment.extend(key.map(|key| ("THINKTHEN_API_KEY", key)));
+        let output = decide(&["--no-cache"], &environment).expect("the compiled binary runs");
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "{key:?}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let requests = listener.requests();
+        assert_eq!(requests.len(), 1, "{key:?}");
+        assert_eq!(requests[0].header("authorization"), None, "{key:?}");
+    }
 }
 
 /// A proxy variable never carries a plain `http://` request off this machine.

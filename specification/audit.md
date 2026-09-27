@@ -49,7 +49,7 @@ Each input is read whole. Lines split on newline. A blank line is skipped and st
 - A `tag` entry becomes one yes/no answer per label, in the order of `E.answer.probabilities`, else `E.question.labels`. A label is yes as run when `E.value` lists it, and its `p` is its probability.
 - A `score` entry reads its levels from `E.question.levels` and its number from `E.value`.
 - A `find` entry's distribution covers the unit ids and `none`. As run, a text value says `E.answer.pick`. A null value says the top, or `"tied"` when the top is tied. A `find`, `recognize`, or `relate` line with no `input` takes its one-based line number as its record id. `find` names units `u001`, `u002`, and on, as [find.md](find.md) says.
-- A `recognize` entry reads its names from `E.value.entities`, each with `kind`, `start`, `end`, and `strength`, and its kinds from the member names of `E.question.kinds`. A `relate` entry reads its edges from `E.value`, each with `relation`, `source` and `target` as `{name, kind}`, and `probability`, and its relations from `E.question.relations`. Both read their run cut from `E.question.threshold`. A line without its run cut, its kinds or relations, or a value of that shape cannot be graded. A `relate` line whose `meta.failed_questions` is above 0 lost the edges of those questions, so it counts as failed.
+- A `recognize` entry reads its names from `E.value.entities`, each with `kind`, `start`, `end`, and `strength`, and its kinds from the member names of `E.question.kinds`. When `E.question.kinds` is empty, audit grades every said name and every key name as the kind `ENTITY`, so a key of any kinds grades a run with no kinds. A `relate` entry reads its edges from `E.value`, each with `relation`, `source` and `target` as `{name, kind}`, and `probability`, and its relations from `E.question.relations`. Both read their run cut from `E.question.threshold`. A line without its run cut, its kinds or relations, or a value of that shape cannot be graded. A `relate` line whose `meta.failed_questions` is above 0 lost the edges of those questions, so it counts as failed.
 - The text is `E.question.text`, or null.
 - `p` is `E.answer.probability`, or null. The distribution is `E.answer.probabilities`, or null. Its top is its largest value. Its pick is the first member, in member order, equal to the top. It is tied when two or more members equal the top.
 
@@ -174,6 +174,14 @@ audit follows ReAnchor's rule: keep the current bar unless another scores strict
 | A band | `thinkthen: audit: kept the band for TARGET; audit suggests a single cut` |
 | `score` | `thinkthen: audit: kept TARGET unchanged; a score question takes no threshold` |
 | `rank` or `find` | `thinkthen: audit: kept TARGET unchanged; audit suggests no bar for rank or find` |
+
+A single question file that gains a bar also records the model the bar was tuned on. audit writes the file's `model` member with the one model that every results line names in `meta.model`, by the same byte rule as `threshold`. Every line counts, including a line whose answer failed and a line the key does not label. When the file already names a model, such as a typed `jev-latest`, audit replaces it with the version the lines name, because the bar was tuned on that version. It writes no model when it writes no bar. A question set holds no model, so a set gets no model member. When the lines name no single model a question file accepts, audit writes the bar, keeps the model, and prints one more line after the bar lines:
+
+| Case | Standard error line |
+| --- | --- |
+| Lines name more than one model | `thinkthen: audit: kept the model for TARGET; the results name more than one model` |
+| A line names no model | `thinkthen: audit: kept the model for TARGET; a result names no model` |
+| Lines name a blank model | `thinkthen: audit: kept the model for TARGET; a result names a blank model` |
 
 To undo a write, put the old value back by hand or through version control. A second `--write` from the old results refuses, because the digest moved with the threshold. A crash during the write could leave a short file; the file is small, and a temporary file would be one the user did not name.
 

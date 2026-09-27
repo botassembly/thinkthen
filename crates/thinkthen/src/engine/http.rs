@@ -237,11 +237,11 @@ fn send(agent: &Agent, exchange: &Exchange<'_>, limit: Duration) -> Result<Vec<u
         .config()
         .timeout_global(Some(limit))
         .build()
-        .header("content-type", "application/json")
-        .header(
-            "authorization",
-            &format!("Bearer {}", exchange.key.as_str()),
-        );
+        .header("content-type", "application/json");
+    let request = match exchange.key.as_str() {
+        "" => request,
+        key => request.header("authorization", &format!("Bearer {key}")),
+    };
     let mut response = request
         .send(exchange.body)
         .map_err(|error| Attempt::from(Error::Transport(transport(&error))))?;

@@ -8,12 +8,43 @@ use std::thread;
 
 use crate::core::{Outcome, Withheld, ranking};
 use crate::edge;
+use crate::engine::error::Error as EngineError;
 use crate::engine::facade::{Completed, Engine, Input, InputPort, RunOutcome};
 use crate::engine::{Width, Widths};
 use crate::failure::Failure;
 use crate::profile::Mismatch;
 
 type Asking<'a, T> = dyn Fn(&T) -> Result<Judged, Failure> + Sync + 'a;
+
+/// A command failure and the input line it names, when one is known.
+pub(crate) struct Placed {
+    pub(crate) cause: Failure,
+    pub(crate) at: Option<usize>,
+}
+
+impl Placed {
+    pub(crate) fn at(cause: Failure, at: usize) -> Self {
+        Self {
+            cause,
+            at: Some(at),
+        }
+    }
+}
+
+impl From<EngineError> for Placed {
+    fn from(error: EngineError) -> Self {
+        Self {
+            cause: error.into(),
+            at: None,
+        }
+    }
+}
+
+impl From<Failure> for Placed {
+    fn from(cause: Failure) -> Self {
+        Self { cause, at: None }
+    }
+}
 
 /// One record's answer, as the line it prints and what the run counts.
 pub(crate) struct Judged {
@@ -23,6 +54,14 @@ pub(crate) struct Judged {
     pub(crate) probability: Option<f64>,
     pub(crate) partial_failure: bool,
     pub(crate) profile_mismatch: Option<Mismatch>,
+}
+
+impl Judged {
+    /// One record's row, as the scheduler counts it.
+    pub(crate) fn completed<E>(self) -> Completed<Self, E> {
+        let (replayed, partial) = (self.replayed, self.partial_failure);
+        Completed::one(self, replayed, partial)
+    }
 }
 
 impl fmt::Debug for Judged {
@@ -119,7 +158,7 @@ impl Output<'_> {
         }
     }
 
-    const fn holds(&self) -> bool {
+    pub(crate) const fn holds(&self) -> bool {
         matches!(*self, Self::Ordered { .. })
     }
 }
@@ -156,7 +195,7 @@ pub(crate) fn over_records<T, I>(
 ) -> Result<ExitCode, Failure>
 where
     T: Send + 'static,
-    I: Iterator<Item = Result<T, Failure>> + Send + 'static,
+    I: Iterator<Item = Result<(usize, T), Placed>> + Send + 'static,
 {
     let recording = engine.recording();
     let held = output.holds();
@@ -166,33 +205,39 @@ where
         |requests, events| {
             thread::spawn(move || read_records(chunks, &requests, &events));
         },
-        &|value| {
-            row(value).map(|judged| Completed {
-                replayed: judged.replayed,
-                partial_failure: judged.partial_failure,
-                value: judged,
-            })
+        &|(at, value)| {
+            row(value)
+                .map(Judged::completed)
+                .map_err(|error| Placed::at(error, *at))
         },
-        |judged| output.take(judged),
+        |judged| output.take(judged).map_err(Placed::from),
     )?;
+    ended(outcome, recording, output)
+}
+
+/// The exit code of a run that completed, or the failure that stopped it.
+pub(crate) fn ended(
+    outcome: RunOutcome<Placed>,
+    recording: bool,
+    output: &mut Output<'_>,
+) -> Result<ExitCode, Failure> {
     match outcome {
         RunOutcome::Complete => {
             output.ended()?;
             Ok(ExitCode::SUCCESS)
         }
         RunOutcome::Stopped {
-            at,
             finished,
             replayed,
             held,
             cause,
         } => Err(Failure::Stopped {
-            at,
+            at: cause.at.unwrap_or(finished + 1),
             finished,
             replayed,
             recording,
             held,
-            cause: Box::new(cause),
+            cause: Box::new(cause.cause),
         }),
     }
 }
@@ -200,9 +245,9 @@ where
 fn read_records<T, I>(
     mut chunks: I,
     requests: &Receiver<()>,
-    events: &InputPort<T, Judged, Failure>,
+    events: &InputPort<(usize, T), Judged, Placed>,
 ) where
-    I: Iterator<Item = Result<T, Failure>>,
+    I: Iterator<Item = Result<(usize, T), Placed>>,
 {
     while requests.recv().is_ok() {
         let event = match chunks.next() {

@@ -37,7 +37,7 @@ judge() {
 	: >"$target"
 	while IFS= read -r case; do
 		printf '%s' "$(printf '%s\n' "$case" | jq -r .text)" |
-			thinkthen choose "$@" --details $folder >row.json && exit=0 || exit=$?
+			thinkthen choose "$@" --details --model jev-latest $folder >row.json && exit=0 || exit=$?
 		# 0 is a label. 3 is unresolved, which `choose` gives on an exact tie
 		# of the top two options, with or without a cut. Anything else stops.
 		case "$exit" in

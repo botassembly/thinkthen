@@ -360,6 +360,69 @@ fn different_models_across_chunks_keep_the_safe_failure() {
     assert!(output.stdout.is_empty());
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the backend returned different model versions for one record; pin --model and rerun with --record or --cache\n"
+        "thinkthen: the replies for one record named different model versions; a cache or recording folder may hold answers from the other version, so rerun with --no-cache or prune it with thinkthen cache prune DIR --answered-by-other-than VERSION, naming the version a --no-cache run returns\n"
+    );
+}
+
+/// Edge rows 9 and 10: `--dry-run` prints the first request a live run sends
+/// and counts the requests each `on` group makes.
+#[test]
+fn the_plan_shows_each_request() {
+    let dry_run = |set: &Path, extra: &[&str], input: &[u8]| {
+        let set = set.to_str().expect("set path");
+        let mut arguments = vec![
+            "annotate",
+            set,
+            "--dry-run",
+            "--model",
+            "local-1",
+            "--no-cache",
+        ];
+        arguments.extend_from_slice(extra);
+        let output = spawn(&arguments, &[], input).expect("annotate");
+        let shown = [output.stdout, output.stderr].concat();
+        (
+            String::from_utf8_lossy(&shown).into_owned(),
+            output.status.code(),
+        )
+    };
+
+    // Row 9: 250 questions under a profile of 100 a request.
+    let questions = (1..=250)
+        .map(|place| format!(r#""q{place}":{{"decide":"Question {place}?"}}"#))
+        .collect::<Vec<_>>()
+        .join(",");
+    let many = set(
+        "plan-many",
+        &format!(r#"{{"version":1,"questions":{{{questions}}}}}"#),
+    );
+    let hundred = profile("hundred", r#""max_questions":100"#);
+    let (line, code) = dry_run(
+        &many,
+        &["--profile", hundred.to_str().expect("profile path")],
+        b"evidence",
+    );
+    assert_eq!(code, Some(0), "{line}");
+    let counts = r#"]},"request_count":3,"group_requests":[3],"request":{"#;
+    assert!(line.contains(counts), "{line}");
+    let plan: serde_json::Value = serde_json::from_str(&line).expect("one JSON plan");
+    let sent = plan["request"]["questions"].as_object().expect("questions");
+    let last = sent["q100"]["instructions"].as_str();
+    assert_eq!((sent.len(), last), (100, Some("Question 100?")));
+
+    // Row 10: two `on` groups and no profile print the first group's request.
+    let two = set(
+        "plan-two-groups",
+        r#"{"version":1,"questions":{"concise":{"decide":"Is this concise?","on":"/summary"},"refund":{"decide":"Does this ask for a refund?","on":"/body"}}}"#,
+    );
+    assert_eq!(
+        dry_run(&two, &[], br#"{"summary":"Short note.","body":"Refund me."}"#),
+        (concat!(
+            r#"{"url":"https://api.typesafe.ai/v1/systemone","model":"local-1","key_env":"THINKTHEN_API_KEY","#,
+            r#""on":{"concise":["/summary"],"refund":["/body"]},"request_count":2,"group_requests":[1,1],"#,
+            r#""request":{"state":"Short note.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"Is this concise?"}}}}"#,
+            "\n",
+        )
+        .to_owned(), Some(0))
     );
 }

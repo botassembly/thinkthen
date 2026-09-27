@@ -1,13 +1,14 @@
 //! SIGINT cooperatively stops new attempts and preserves completed output.
 
+use conformance_backend::Rendezvous;
 use std::fs;
 use std::io::{self, Write as _};
 use std::os::unix::process::ExitStatusExt as _;
 use std::path::Path;
 use std::process::{Child, Command, Output, Stdio};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::channel;
-use std::sync::{Arc, Barrier};
 use std::time::Duration;
 
 use crate::harness::{Canned, Listener, Observed, finish};
@@ -63,6 +64,7 @@ fn spawn(arguments: &[&str], input: &[u8], acknowledgment: &Acknowledgment) -> i
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .env("THINKTHEN_TEST_RETRY_WAIT_MS", "5000")
         .env("THINKTHEN_TEST_SIGINT_ACK", &acknowledgment.0)
+        .env("THINKTHEN_BATCH", "1")
         .args(arguments)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -85,7 +87,7 @@ fn held(
     reply: impl Fn() -> Canned + Send + Sync + 'static,
 ) -> io::Result<Output> {
     let acknowledgment = Acknowledgment::new();
-    let release = Arc::new(Barrier::new(count + 1));
+    let release = Arc::new(Rendezvous::new(count + 1));
     let backend_release = Arc::clone(&release);
     let (events_send, events) = channel();
     let listener = Listener::answering_with_events(
@@ -153,6 +155,34 @@ fn record_finishes_the_started_row_stops_before_another_and_completes_cache() {
     );
     let (_name, entry) = crate::recordings::only_entry(&cache).expect("one cache entry");
     assert!(serde_json::from_str::<serde_json::Value>(&entry).is_ok());
+}
+
+/// A batched run keeps today's cancellation line, and no new batch starts.
+#[test]
+fn an_interrupted_batch_finishes_and_starts_no_other() {
+    let output = held(
+        1,
+        &[
+            "decide",
+            "Is it accepted?",
+            "--lines",
+            "--jobs",
+            "1",
+            "--batch",
+            "2",
+        ],
+        b"first\nsecond\nthird\nfourth\n",
+        || Canned::ok(RELATED),
+    )
+    .expect("interrupt run");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "{\"input\":\"first\",\"value\":true}\n{\"input\":\"second\",\"value\":false}\n"
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: stopped at record 3; 2 records finished\n"
+    );
 }
 
 #[test]

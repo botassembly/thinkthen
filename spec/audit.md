@@ -68,7 +68,7 @@ trap 'rm -rf "$work"' EXIT
 cp "$root/crates/thinkthen/tests/fixtures/measure/write/decide.json" "$work/decide.json"
 cd "$work"
 
-env -u THINKTHEN_API_KEY thinkthen decide @decide.json --jsonl --details \
+env -u THINKTHEN_API_KEY thinkthen decide @decide.json --jsonl --batch 1 --details \
   --replay "$root/transforms/rows/recording" --input "$root/transforms/rows/cases.jsonl" > rows.jsonl
 key="$root/crates/thinkthen/tests/fixtures/measure/write/key.jsonl"
 thinkthen audit rows.jsonl "$key" --write decide.json 2>&1 >/dev/null \
@@ -92,4 +92,15 @@ trap 'rm -rf "$work"' EXIT
 echo '{"id":1,"value":[{"relation":"calls","source":{"name":"gateway","kind":"service"},"target":{"name":"billing","kind":"service"}}]}' > "$work/key.jsonl"
 env -u THINKTHEN_API_KEY thinkthen relate @relations.json --threshold 0.01 --url https://api.typesafe.ai/v1 --details --replay recording < entities.json \
   | thinkthen audit - "$work/key.jsonl" --table | sed -n 2p | mustmatch "  matched 1, extra 1, missed 0: precision 0.500   recall 1.000   f1 0.667"
+```
+
+A `recognize` run with no kinds prints every name as `ENTITY`. audit grades such a line with every said name and every key name as `ENTITY`, so a key that gives real kinds still grades it. Demo 44's key names three kinds, and a run with no kinds that finds two of the three names matches both.
+
+```bash
+set -euo pipefail
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+echo '{"id":1,"value":{"entities":[{"kind":"PER","start":0,"end":10},{"kind":"ORG","start":18,"end":35},{"kind":"LOC","start":39,"end":46}]}}' > "$work/key.jsonl"
+echo '{"input":{"id":1},"value":{"entities":[{"text":"Maria Chen","start":0,"end":10,"length":10,"kind":"ENTITY","strength":0.99},{"text":"Chicago","start":39,"end":46,"length":7,"kind":"ENTITY","strength":0.98}]},"question":{"verb":"recognize","kinds":{},"threshold":0.5,"relation_threshold":0.5}}' \
+  | thinkthen audit - "$work/key.jsonl" --table | sed -n 2p | mustmatch "  matched 2, extra 0, missed 1: precision 1.000   recall 0.667   f1 0.800"
 ```

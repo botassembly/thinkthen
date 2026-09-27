@@ -11,7 +11,7 @@ use std::sync::Arc;
 use thinkthen::{Engine, Error, ErrorKind, LoadedQuestion, Question, QuestionSet, Recognize};
 
 use crate::engines::Asked;
-use crate::errors::{failure, prefix, usage};
+use crate::errors::{RowError, failure, prefix, usage};
 
 mod ffi;
 
@@ -59,10 +59,15 @@ impl Caller {
     /// One `@file` text, named `what` in its refusals: a question file, or
     /// relate's rules file.
     pub(crate) fn named_file(&mut self, path: &str, what: &str) -> Result<String, String> {
+        self.named_file_typed(path, what)
+            .map_err(|error| error.text)
+    }
+
+    fn named_file_typed(&mut self, path: &str, what: &str) -> Result<String, RowError> {
         if let Some(text) = self.read.get(path) {
             return Ok(text.clone());
         }
-        let text = read_named(&self.files, path, what)?;
+        let text = read_named_typed(&self.files, path, what)?;
         self.read.insert(path.to_owned(), text.clone());
         Ok(text)
     }
@@ -70,11 +75,15 @@ impl Caller {
     /// A question: plain text as a decide under the default cut, a file, or
     /// JSON. A file or JSON question may carry a band or any verb.
     pub(crate) fn question(&mut self, argument: &str) -> Result<LoadedQuestion, String> {
+        self.question_typed(argument).map_err(|error| error.text)
+    }
+
+    pub(crate) fn question_typed(&mut self, argument: &str) -> Result<LoadedQuestion, RowError> {
         if let Some(path) = argument.strip_prefix('@') {
-            let text = self.file(path)?;
-            Question::from_json(&text).map_err(|error| from_file(&error))
+            let text = self.named_file_typed(path, "question file")?;
+            Question::from_json(&text).map_err(from_file_typed)
         } else {
-            inline(argument)
+            inline_typed(argument)
         }
     }
 
@@ -105,6 +114,10 @@ impl Caller {
 
 /// One `@file` text read through `files`, named `what` in its refusals.
 pub(crate) fn read_named(files: &Files, path: &str, what: &str) -> Result<String, String> {
+    read_named_typed(files, path, what).map_err(|error| error.text)
+}
+
+fn read_named_typed(files: &Files, path: &str, what: &str) -> Result<String, RowError> {
     let why = match files.read(path) {
         Opened::Text(text) => return Ok(text),
         Opened::Missing => "it does not exist or could not be opened",
@@ -112,18 +125,24 @@ pub(crate) fn read_named(files: &Files, path: &str, what: &str) -> Result<String
         Opened::NotText => "it is not UTF-8 text",
         Opened::Refused => "this database's file settings refuse it",
     };
-    Err(local(&format!("the {what} {path} was not read: {why}")))
+    Err(RowError::local(&format!(
+        "the {what} {path} was not read: {why}"
+    )))
 }
 
 /// A question written in the call: JSON, or plain text as a decide under
 /// the default cut.
 pub(crate) fn inline(argument: &str) -> Result<LoadedQuestion, String> {
+    inline_typed(argument).map_err(|error| error.text)
+}
+
+fn inline_typed(argument: &str) -> Result<LoadedQuestion, RowError> {
     if argument.starts_with('{') {
-        Question::from_json(argument).map_err(|error| failure(&error))
+        Question::from_json(argument).map_err(Into::into)
     } else {
         Question::decide(argument)
             .map(|built| LoadedQuestion::Question(built.cut()))
-            .map_err(|error| failure(&error))
+            .map_err(Into::into)
     }
 }
 
@@ -175,6 +194,14 @@ pub(crate) fn from_file(error: &Error) -> String {
         local(error.detail().message())
     } else {
         failure(error)
+    }
+}
+
+fn from_file_typed(error: Error) -> RowError {
+    if error.kind() == ErrorKind::Usage {
+        RowError::local(error.detail().message())
+    } else {
+        error.into()
     }
 }
 

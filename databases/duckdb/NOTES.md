@@ -12,7 +12,6 @@ The tag's `NOTES.md` stays at tag `surfaces-wave7-frozen-2026-09-24b` as history
 
 - The binding depends on `libduckdb-sys` alone. The `duckdb` crate's scalar trait registers no init callback, and every function already goes through the raw C API, so the wrapper and its `arrow` and `hashlink` trees leave. The deny exceptions for `foldhash` and `tiny-keccak` leave with them. Only `zlib-rs` remains, and the deny plant removes that exception.
 - A struct result writes every member. A member the verb lacks is `NULL`.
-- `thinkthen_details(...).value` is the judgment as JSON text: `"yes"`, `"no"`, or `"unsure"` for decide, the pick or `null` for choose, the position for score, and the label list for tag.
 - A `NULL` member inside a list argument makes that row `NULL`.
 - An `@file` that is not UTF-8 reads `thinkthen local: the question file PATH was not read: it is not UTF-8 text`.
 - A member verb whose one answer failed reads `thinkthen backend: the backend's answer could not be read: CAUSE`, with the cause in plain words.
@@ -23,8 +22,8 @@ The tag's `NOTES.md` stays at tag `surfaces-wave7-frozen-2026-09-24b` as history
 - A SIGINT that lands between a chunked query's last engine call and its return cancels nothing. The query-hook issue names the lever.
 - `thinkthen_warm` cannot read a caller's settings, so it uses the environment's engine and sits outside `thinkthen_max_requests_total`. It reads `@file` through its database's kept connection under the gate (ticket 0129). It refuses `'@~'` paths and refuses during a relate query.
 - Main has no per-call request limit. Under `thinkthen_max_requests_total`, a call sends only as many texts as the total leaves, then refuses with the total's sentence.
-- Main's public API refuses `on` in a library question set, so `thinkthen_annotate` reads each record whole. Conformance case `18-annotate-two-groups` does not run here for that reason.
-- SQL finds with `ORDER BY` and `LIMIT` over decide, so the find cases do not run here.
+- `thinkthen_annotate` takes each record as JSON text. A set member's `on` pointer reads its part of the record, so conformance case `18-annotate-two-groups` runs here (ticket 0150).
+- No SQL find function exists yet, so the find cases do not run here.
 - `thinkthen_recognize` takes kind names with no descriptions. The conformance runner checks recognize cases through `thinkthen_relations`, which reads the case's own question file.
 
 ## Tests

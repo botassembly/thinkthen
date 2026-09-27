@@ -213,7 +213,13 @@ fn run(engine: &Engine, call: &Call, options: CallOptions<'_>) -> Answered {
                 .collect();
             Value::from(rows).to_string()
         }
-        "find" => found(engine, spec, text, options)?,
+        "find" => found(engine, Question::find(spec)?, text, options)?,
+        "find_none" => found(
+            engine,
+            Question::find(spec)?.offering_none()?,
+            text,
+            options,
+        )?,
         "annotate" => annotated(engine, spec, text, options)?,
         "details" => engine
             .details_with(detail(&question(spec)?), text, options)?
@@ -227,8 +233,8 @@ fn run(engine: &Engine, call: &Call, options: CallOptions<'_>) -> Answered {
 }
 
 /// The selected unit's index and probability, or `null` when none was selected.
-fn found(engine: &Engine, spec: &str, text: &str, options: CallOptions<'_>) -> Answered {
-    let found = engine.find_with(&Question::find(spec)?, indexed(text)?, options)?;
+fn found(engine: &Engine, asked: Question, text: &str, options: CallOptions<'_>) -> Answered {
+    let found = engine.find_with(&asked, indexed(text)?, options)?;
     let picked = found.candidates().iter().find_map(|candidate| {
         let unit = candidate.input()?;
         (found.selected().map(|held| held.0) == Some(unit.0))
@@ -371,7 +377,14 @@ fn setting(builder: EngineBuilder, key: &str, value: &Value) -> Result<EngineBui
         ("cache", Value::Bool(false)) => builder.no_cache(),
         ("cache", Value::String(folder)) => builder.cache_at(folder)?,
         ("cache", _) => return Err(Failure::usage("options.cache is false or a folder path")),
-        ("cacheBytes", _) => builder.cache_bytes(whole()?)?,
+        ("timeoutSeconds", _) => builder.timeout(std::time::Duration::from_secs(whole()?))?,
+        ("maxRetries", _) => builder.max_retries(
+            u32::try_from(whole()?)
+                .map_err(|_| Failure::usage("options.maxRetries is a whole number"))?,
+        ),
+        ("record", _) => builder.record(text()?)?,
+        ("replay", _) => builder.replay(text()?)?,
+        ("profile", _) => builder.profile(text()?)?,
         _ => return Err(Failure::usage(format!("new Engine takes no option {key}"))),
     })
 }

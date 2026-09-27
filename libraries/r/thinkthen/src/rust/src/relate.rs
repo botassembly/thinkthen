@@ -34,22 +34,24 @@ fn relate_ask(spec: &Spec) -> Crossed<Relate> {
 
 /// One record's names as R's own: `substr(text, start, end)` is the name,
 /// because offsets count Unicode scalar values and `start` shifts to one-based.
+/// `length` is the name's count of scalar values, `end - start + 1` in R.
 fn names(found: &Recognized) -> List {
     let entities = found.entities();
     let relations = found.relations().unwrap_or_default();
     let links = list!(
-        source = each(relations, |held| held.source().name()),
+        source = each(relations, |held| held.source().text()),
         source_kind = each(relations, |held| held.source().kind()),
-        target = each(relations, |held| held.target().name()),
+        target = each(relations, |held| held.target().text()),
         target_kind = each(relations, |held| held.target().kind()),
         relation = each(relations, |held| held.relation()),
         probability = each(relations, |held| held.probability())
     );
     list!(
-        name = each(entities, |held| held.name()),
-        kind = each(entities, |held| held.kind()),
+        text = each(entities, |held| held.text()),
         start = each(entities, |held| place(held.start()) + 1.0),
         end = each(entities, |held| place(held.end())),
+        length = each(entities, |held| place(held.length())),
+        kind = each(entities, |held| held.kind()),
         strength = each(entities, |held| held.strength()),
         relations = links
     )

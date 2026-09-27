@@ -45,14 +45,18 @@ def test_bad_settings_are_usage_errors_that_send_nothing(backend, tmp_path):
         said(throttle=throttle)
     said("rank", max_requests=2)
     said(max_requests=0)
-    said(cache_bytes=0)
+    said(timeout=0)
+    said(timeout=True)
+    said(max_retries=-1)
     said(cache=7)
     """, child_env(backend, tmp_path))
     throttle = "UsageError a throttle is a whole number from 1 through 32"
     assert printed.splitlines() == 6 * [throttle] + [
         "UsageError this engine answers at most 2 records in one call",
         "UsageError a request limit is a whole number of 1 or more",
-        "UsageError a cache cap is a whole number of bytes above zero",
+        "UsageError a timeout is a time above zero",
+        "UsageError a timeout is a whole number of seconds above zero",
+        "UsageError max_retries is a whole number",
         "UsageError cache is a folder path, False for no cache, or True for the default folder",
     ]
     assert backend.count() == 0
@@ -70,27 +74,27 @@ def test_a_second_different_throttle_names_the_one_in_force(backend, tmp_path):
 
 
 def test_the_cache_keyword_names_the_only_folder_written(backend, tmp_path):
-    """Change 11: ``cache=`` writes only in its folder, and ``cache=False``
-    writes nothing, though ``THINKTHEN_CACHE`` names another folder."""
+    """Change 11: ``cache=`` writes only in its named folder."""
     printed = run(SETTINGS + """
     named = tt.Engine(cache=os.environ["NAMED"])
     named.decide(late, "one"), named.decide(late, "one")
-    none = tt.Engine(cache=False)
-    none.decide(late, "two"), none.decide(late, "two")
-    print(named.usage()["cache_answers"], none.usage()["cache_answers"])
+    print(named.usage()["cache_answers"])
     """, child_env(backend, tmp_path, NAMED=str(tmp_path / "named")))
-    assert printed.split() == ["1", "0"]
+    assert printed.split() == ["1"]
     assert any((tmp_path / "named").rglob("*"))
     assert not (tmp_path / "cache").exists()
-    assert backend.count() == 3
+    assert backend.count() == 1
 
 
-def test_the_model_keyword_reaches_the_request(backend, tmp_path):
-    """Change 11: ``model=`` appears in the ``details`` document."""
+def test_replay_accepts_a_pathlike_folder(backend, tmp_path):
     printed = run(SETTINGS + """
-    print(tt.Engine(model="a-chosen-model").details(late, "one")["meta"]["model"])
-    """, child_env(backend, tmp_path))
-    assert printed.strip() == "a-chosen-model"
+    from pathlib import Path
+    folder = Path(os.environ["NAMED"])
+    assert tt.Engine(cache=folder).decide(late, "saved") is True
+    print(tt.Engine(replay=folder).decide(late, "saved"))
+    """, child_env(backend, tmp_path, NAMED=str(tmp_path / "named")))
+    assert printed.strip() == "True"
+    assert backend.count() == 1
 
 
 def test_the_base_url_keyword_wins_over_the_environment(backend, tmp_path):

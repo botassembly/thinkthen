@@ -274,6 +274,7 @@ fn resident() -> usize {
 
 #[cfg(target_os = "linux")]
 #[test]
+#[ignore = "20,000-record memory campaign; run sdlc/scripts/test-stress --run"]
 fn a_long_batch_keeps_memory_flat_as_its_input_grows() {
     let _serial = serial();
     let backend = Backend::start().expect("backend");
@@ -308,6 +309,7 @@ fn a_long_batch_keeps_memory_flat_as_its_input_grows() {
 }
 
 #[test]
+#[ignore = "repeated engine churn; run sdlc/scripts/test-stress --run"]
 fn engines_built_and_dropped_across_threads_fail_fast_on_a_refused_port() {
     let _serial = serial();
     let port = std::net::TcpListener::bind("127.0.0.1:0")

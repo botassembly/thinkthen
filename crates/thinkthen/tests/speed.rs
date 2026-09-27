@@ -76,10 +76,9 @@ fn the_speed_gate_holds_and_names_each_fault() {
     assert_eq!(committed.status.code(), Some(0), "{stderr}");
     assert_eq!(stderr, "");
 
-    let listed = r#","list":{"ticket":"B4","number":null}"#;
     let cases = [
         (
-            planted("filter", listed, ""),
+            planted("filter", r#""0.95""#, r#""0.95","--batch","1""#),
             "speed: filter sent 12 requests for 12 items where 1 fits. Batch it, or list it with its ticket.\n",
         ),
         (
@@ -91,8 +90,8 @@ fn the_speed_gate_holds_and_names_each_fault() {
             "speed: find is listed for ticket B99 but sent 1 request for 12 items. Remove its entry.\n",
         ),
         (
-            planted("decide", r#""number":null"#, r#""number":"0141""#),
-            "speed: decide is listed for ticket 0141, which has landed. Remove its entry.\n",
+            planted("choose", r#""number":null"#, r#""number":"0141""#),
+            "speed: choose is listed for ticket 0141, which has landed. Remove its entry.\n",
         ),
     ];
     for (list, sentence) in cases {

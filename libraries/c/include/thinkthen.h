@@ -12,12 +12,19 @@
  * thread between calls, and rebuilds its state after a fork.
  *
  * Every call may carry two options beside its arguments: a budget in
- * `deadline_ms` and a cancel token. Every `_opts` spelling takes them, and
- * every plain spelling is exactly its `_opts` twin called with
+ * `deadline_ms` and a cancel token. Every `_opts` spelling takes them,
+ * and every plain spelling is exactly its `_opts` twin called with
  * THINKTHEN_NO_DEADLINE and a null token. A C host hears its own
- * interrupts by firing a token from another thread: the wait checks the
- * token and the budget on every tick, so a cancel or a spent budget ends
- * the call within one tick. One engine serves any number of threads at
+ * interrupts by firing a token from another thread. The call reads the
+ * token before every request and every retry, and its wait reads the
+ * token and the budget on every tick. A spent budget ends the call
+ * within one tick. A fired token starts no new request and no retry. A
+ * request already sent runs to its end, within its attempt timeout and
+ * the budget, and a complete answer it brings still reaches the cache
+ * and the counters. Then the call returns THINKTHEN_ECANCELLED with no
+ * results, whatever that reply held. The call reads the token a last
+ * time after its last request ends; a token fired after that read does
+ * not change the result. One engine serves any number of threads at
  * once, and each caller sees the answers it would get alone.
  *
  * The lifetime rules: an engine lives until `thinkthen_engine_free`; a
@@ -121,6 +128,14 @@ typedef struct thinkthen_answer {
  * the error functions called with NULL then name that failure. */
 thinkthen_engine *thinkthen_engine_new(void);
 
+/* Build from the environment plus one UTF-8 JSON object. NULL or {} uses the
+ * environment alone. Keys: base_url, model, throttle, max_requests, cache,
+ * record, replay, timeout (whole seconds), max_retries, profile. cache takes
+ * false or a folder; max_requests alone may be null. Unknown or repeated
+ * keys and wrong types fail with THINKTHEN_EUSAGE in the calling thread's
+ * null-engine error slot. Building sends nothing. */
+thinkthen_engine *thinkthen_engine_new_with(const char *settings_json);
+
 /* Free an engine. NULL is accepted and ignored. Free it only after every
  * call on it has returned. */
 void thinkthen_engine_free(thinkthen_engine *engine);
@@ -151,10 +166,12 @@ int thinkthen_error_code(const thinkthen_engine *engine);
 /* Create a cancel token. */
 thinkthen_cancel_token *thinkthen_cancel_token_new(void);
 
-/* Fire a token: the calls carrying it stop starting new requests and
- * return THINKTHEN_ECANCELLED with no results. A token is one-shot: a
- * fire leaves it fired, a second fire is ignored, and no call re-arms it.
- * Thread-safe from any thread; a null token is accepted and ignored. */
+/* Fire a token: the calls carrying it start no new request or retry, let
+ * the requests they sent finish, and return THINKTHEN_ECANCELLED with no
+ * results, even when a sent request's reply arrives after the fire. A
+ * token is one-shot: a fire leaves it fired, a second fire is ignored,
+ * and no call re-arms it. Thread-safe from any thread, and it allocates
+ * nothing; a null token is accepted and ignored. */
 void thinkthen_cancel(thinkthen_cancel_token *token);
 
 /* Free a token. NULL is accepted and ignored. */
@@ -233,9 +250,11 @@ char *thinkthen_call(const thinkthen_engine *engine, const char *request_json);
  * key forms the question object, in the question file's own grammar, so
  * `{"choose": "Which team?", "options": ["billing", "other"],
  * "evidence": "..."}` asks one choose question. `filter` asks its text as
- * a decide question; `rank` and `find` take their text alone; `annotate`
- * carries the question set; `recognize` and `relate` carry `version` and
- * their section beside the verb.
+ * a decide question; `rank` takes its text alone; `find` takes its text
+ * and `"none": true` to offer a none candidate, so it may answer `null`;
+ * `annotate` carries the question set, and a member's `on` reads that
+ * part of each record as JSON text; `recognize` and `relate` carry
+ * `version` and their section beside the verb.
  *
  * The answer is the bare value the command prints: `true`, `false`, or
  * `null` for decide; a label or `null` for choose; a number for score; an
@@ -260,8 +279,9 @@ char *thinkthen_call_opts(const thinkthen_engine *engine, const char *request_js
  * token. The result has no fixed size, so it crosses as one JSON string
  * written to `*out` (freed with `thinkthen_free_string`) with its length
  * in `*out_len`: `{"entities": [...], "relations": [...]}`. Each entity
- * carries `name`, `kind`, `start`, `end`, and `strength`, with `start`
- * and `end` counting code points of `text`. `spec_json` is a version-one
+ * carries `text`, `start`, `end`, `length`, `kind`, and `strength`, with
+ * `start`, `end`, and `length` counting code points of `text`. With no
+ * kinds, every name has the kind `ENTITY`. `spec_json` is a version-one
  * question file with its `recognize` section (`kinds`, `relations`) and
  * optional `threshold` and `relation_threshold`. The call follows the
  * engine's cache like every call. Returns THINKTHEN_OK on success and the

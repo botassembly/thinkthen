@@ -35,7 +35,7 @@ PYEOF
 	[ "$code" -eq 1 ] || fail "the planted $1 case exited $code"
 }
 planted answer
-grep -qx "FAIL 01-decide-yes-captured: wanted \[False\], got \[True\]" "$work/out" || fail "the wrong answer was not reported"
+grep -qx "FAIL 01-decide-yes-captured: bare: wanted False, got True" "$work/out" || fail "the wrong answer was not reported"
 planted kind
 grep -qx "FAIL 01-decide-yes-captured: refused: no runner for the kind 'no-such-kind'" "$work/out" || fail "the unknown kind was not refused"
 echo "ok   the conformance runner fails on a wrong answer and refuses an unknown kind"

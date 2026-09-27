@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"My subscription renewal did not go through. I got an email saying the charge was rejected and my plan is now on hold.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does the customer report that a payment or a payout did not go through?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.98}},"usage":{"input_tokens":306,"output_tokens":21}}
-}

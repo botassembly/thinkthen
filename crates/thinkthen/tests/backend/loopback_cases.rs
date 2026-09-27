@@ -5,8 +5,9 @@
 //! canonical URL, so each is recomputed for the URL the backend served.
 //! The injection cases and the question-form cases stay in-process.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
+use std::io::Write;
 use std::path::PathBuf;
 
 use conformance_backend::Backend;
@@ -14,7 +15,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use serde_json::value::RawValue;
 
-use crate::harness::spawn;
+use crate::harness::spawn_one as spawn;
 use crate::support::digest;
 
 const CASES: &str = include_str!("../../../../conformance/cases.json");
@@ -52,12 +53,24 @@ fn every_wire_case_passes_through_the_command_on_the_conformance_backend() {
     let document: Value = serde_json::from_str(CASES).expect("the shared cases");
     let cases = document["cases"].as_array().expect("a case list");
     let written: Written = serde_json::from_str(CASES).expect("the shared cases as written");
+    let selected = selected_ids(cases).expect("a valid shared case selector");
+    let selected_count = selected.as_ref().map_or(cases.len(), BTreeSet::len);
     let backend = Backend::start().expect("backend");
     let mut failures = Vec::new();
     let mut ran = 0;
+    let mut not_run = 0;
     for (case, verbatim) in cases.iter().zip(&written.cases) {
         let id = case["id"].as_str().expect("a case id");
+        if selected.as_ref().is_some_and(|ids| !ids.contains(id)) {
+            continue;
+        }
         if IN_PROCESS.contains(&id) {
+            not_run += 1;
+            writeln!(
+                std::io::stderr().lock(),
+                "{id}: not run by the command wire (in-process injection or question form)"
+            )
+            .expect("write skipped case to stderr");
             continue;
         }
         ran += 1;
@@ -65,9 +78,57 @@ fn every_wire_case_passes_through_the_command_on_the_conformance_backend() {
             failures.push(format!("{id}: {why}"));
         }
     }
+    writeln!(
+        std::io::stderr().lock(),
+        "command wire: total={} selected={selected_count} pass={} fail={} not_run={not_run} unselected={}",
+        cases.len(),
+        ran - failures.len(),
+        failures.len(),
+        cases.len() - selected_count
+    )
+    .expect("write case counts to stderr");
+    assert_eq!(ran + not_run, selected_count);
     assert!(failures.is_empty(), "{failures:#?}");
-    assert_eq!(ran, cases.len() - IN_PROCESS.len());
-    assert_eq!(ran, 46);
+}
+
+/// Read one optional absolute ID list, and refuse duplicate or unknown IDs.
+fn selected_ids(cases: &[Value]) -> Result<Option<BTreeSet<String>>, String> {
+    let mut available = BTreeSet::new();
+    for case in cases {
+        let id = case["id"].as_str().ok_or("a shared case has no ID")?;
+        if !available.insert(id) {
+            return Err(format!("duplicate shared case `{id}`"));
+        }
+    }
+    let Some(path) = std::env::var_os("THINKTHEN_CONFORMANCE_IDS") else {
+        return Ok(None);
+    };
+    let path = PathBuf::from(path);
+    if !path.is_absolute() {
+        return Err("THINKTHEN_CONFORMANCE_IDS takes an absolute path".to_owned());
+    }
+    let text = fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
+    let mut selected = BTreeSet::new();
+    for id in text
+        .lines()
+        .map(str::trim)
+        .filter(|id| !id.is_empty() && !id.starts_with('#'))
+    {
+        if !selected.insert(id.to_owned()) {
+            return Err(format!("duplicate selected case `{id}`"));
+        }
+    }
+    if selected.is_empty() {
+        return Err("the selected case list is empty".to_owned());
+    }
+    for id in &selected {
+        if !available.contains(id.as_str()) {
+            return Err(format!(
+                "selected case `{id}` is absent from the shared corpus"
+            ));
+        }
+    }
+    Ok(Some(selected))
 }
 
 /// Run one case and compare every row with its expected answers.

@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Fans call Manchester United the Red Devils.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.\n\nText: Fans call Manchester United the [[Red Devils]].","criteria":{"Red Devils":"Fans call Manchester United the [[Red Devils]].","Red Devils.":"Fans call Manchester United the [[Red Devils.]]"}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"Red Devils","confidence":1.0,"probabilities":{"Red Devils":1.0,"Red Devils.":0.0}}},"usage":{"input_tokens":407,"output_tokens":36}}
+}

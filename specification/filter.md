@@ -12,9 +12,11 @@ thinkthen filter QUESTION [--lines|--jsonl|--csv|--tsv] [--threshold T] [--field
 
 ## What it reads
 
-A stream of records. With no framing flag it reads lines, or JSON Lines when a pointer names part of each record. The pointer comes from `--field` or from a question file's `on`. `--lines`, `--jsonl`, `--csv`, or `--tsv` names the framing outright. `--input FILE` reads a file instead of standard input. [records.md](records.md) gives the framing, the pointer rules, and the order.
+A stream of records. With no framing flag it reads lines, or JSON Lines when a pointer names part of each record. The pointer comes from `--field` or from a question file's `on`. `--lines`, `--jsonl`, `--csv`, or `--tsv` names the framing outright. `--input FILE` reads a file instead of standard input. A blank text line is skipped, as [records.md](records.md) gives. That page also gives the pointer rules and the order.
 
 `QUESTION` is one argument. It states a fact that is true or false of each record.
+
+By default a stream of records shares requests, filling each to the backend's limits. The evidence of a batch is one fixed sentence, and each record appears once, inside its own question. Every run moves a few answers, and batching moves a few more. ADR 0055 records local experiment 275, which asked four yes/no questions over the 306 Beatles songs. It ran each batched form three times on the same bytes and once on each of three shuffled record orders. The batched form stayed within 4 right answers across repeats and orders on every task. It never fell more than 3 right answers below one song a request. On "It appears on the album Abbey Road" it scored 283 to 287 right of 306, where one title a request scored 286. It sent 11,468 input tokens for the 306 titles, where one title a request sent 88,933. Its one measured loss came on "It was released before 1965", against the earlier batch form, which listed every record in the evidence. That form scored 276 to 283 right in the table's own order and 258 to 270 over shuffled orders. The quoted form scored 255 to 259, and one title a request scored 253. `--batch 1` asks one record a request and sends the requests the tool sent before batching.
 
 ## What it prints
 
@@ -34,7 +36,7 @@ Each kept line or JSONL record prints as it arrived, in input order. A kept CSV 
 | `--true TEXT`, `--false TEXT` | What a yes and a no mean, sent beside the question | No text |
 | `--dry-run` | Prints the plan for the first record and sends nothing | Off |
 | Record options | `--jobs N`, `--record DIR`, `--replay DIR`, `--cache DIR`, as [records.md](records.md) and [recording.md](recording.md) give them | `--jobs 4` |
-| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-latest` |
+| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-1.13.0` |
 
 `filter` takes no `--quiet`, no `--raw`, and no `--top`. Each is refused by name. `--top` belongs to `rank`, because `filter` keeps records and has no order to cut.
 

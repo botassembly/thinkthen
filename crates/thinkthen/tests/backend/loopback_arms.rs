@@ -188,7 +188,10 @@ fn the_generic_arm_answers_every_verb() {
         (
             &["recognize", recognize.as_str()],
             "Maria Chen arrived.",
-            "{\"entities\":[{\"name\":\"Maria Chen arrived.\",\"kind\":\"person\",\"start\":0,\"end\":19,\"strength\":0.9}]}\n",
+            concat!(
+                "{\"entities\":[{\"text\":\"Maria Chen\",\"start\":0,\"end\":10,\"length\":10,\"kind\":\"person\",\"strength\":0.6736},",
+                "{\"text\":\"arrived.\",\"start\":11,\"end\":19,\"length\":8,\"kind\":\"person\",\"strength\":0.6736}]}\n"
+            ),
         ),
         (
             &["relate", relate.as_str()],

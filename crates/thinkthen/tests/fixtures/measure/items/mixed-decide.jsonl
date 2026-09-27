@@ -1,0 +1,2 @@
+{"input":{"id":"r1","text":"In Revolver Paul McCartney sings"},"value":{"entities":[{"text":"Revolver Paul McCartney","start":3,"end":26,"length":23,"kind":"person","strength":0.81}]},"question":{"verb":"recognize","kinds":{"person":null,"place":null,"work":null},"threshold":0.5,"relation_threshold":0.5}}
+{"input":{"id":"d1"},"value":true}

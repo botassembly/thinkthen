@@ -322,7 +322,7 @@ const REFUSALS: [(&str, &str, i32, &str); 47] = [
         "diff @run.jsonl -",
         "{\"input\":{\"id\":\"secret-id-5150\"},\"value\":[],\"question\":{\"verb\":\"tag\",\"labels\":[\"secret-text\"]}}\n",
         2,
-        "second run line 1 holds an answer diff cannot grade; diff grades decide and choose",
+        "second run line 1 holds an answer diff cannot grade; diff grades decide, choose, recognize and relate",
     ),
     (
         "diff @run.jsonl @run.jsonl --key @dup.jsonl",

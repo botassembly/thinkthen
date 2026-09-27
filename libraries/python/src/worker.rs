@@ -131,6 +131,10 @@ fn wait<T: Send>(
         // `Receiver` is not `Sync`, so it moves into the detached closure and back.
         let (waited, back) = py.detach(move || (receiver.recv_timeout(TICK), receiver));
         receiver = back;
+        if caller.is_some_and(CancelToken::is_cancelled) {
+            internal.cancel();
+            return Err(raise(py, ErrorKind::Cancelled, CANCELLED, false));
+        }
         match waited {
             Ok(Some(Ok(value))) => return Ok(value),
             Ok(Some(Err(error))) => return Err(raised(py, &error)),
@@ -139,10 +143,6 @@ fn wait<T: Send>(
                 return Err(defect(py, "the call ended with no result"));
             }
             Err(RecvTimeoutError::Timeout) => {}
-        }
-        if caller.is_some_and(CancelToken::is_cancelled) {
-            internal.cancel();
-            return Err(raise(py, ErrorKind::Cancelled, CANCELLED, false));
         }
         if let Err(signal) = py.check_signals() {
             internal.cancel();
@@ -213,6 +213,23 @@ mod tests {
             assert_eq!(
                 error.map(|error| error.value(py).to_string()).as_deref(),
                 Some("defect: the call ended with no result")
+            );
+        });
+    }
+
+    /// A fired caller token wins when the answer already waits in the channel.
+    #[test]
+    fn a_fired_token_beats_an_answer_already_waiting() {
+        Python::initialize();
+        let (sender, receiver) = sync_channel::<Outcome<u8>>(1);
+        assert!(sender.send(Some(Ok(3))).is_ok());
+        let caller = CancelToken::new();
+        caller.cancel();
+        Python::attach(|py| {
+            let error = wait(py, receiver, &CancelToken::new(), Some(&caller)).err();
+            assert_eq!(
+                error.map(|error| error.value(py).to_string()).as_deref(),
+                Some("the call was cancelled")
             );
         });
     }

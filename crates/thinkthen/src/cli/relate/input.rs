@@ -1,6 +1,6 @@
 use std::io::BufRead;
 
-use crate::core::{Framing, Reading, Record, RelateSpec, RelationEntity};
+use crate::core::{Framing, Pointer, Reading, Record, RecordError, RelateSpec, RelationEntity};
 use crate::edge::Chunks;
 use crate::failure::Failure;
 use crate::table::{Kind as TableKind, Rows as TableRows};
@@ -20,11 +20,24 @@ pub(super) fn read(
     let mut pairs = Vec::new();
     for record in records {
         pairs.push((
-            record.entity_text(spec.name_field())?.to_owned(),
+            name_of(&record, spec)?.to_owned(),
             record.entity_text(spec.kind_field())?.to_owned(),
         ));
     }
     admitted(spec, &pairs)
+}
+
+/// The entity's name. A name `recognize` found carries `text` in place of
+/// `name`, so a record with no `name` at the default field reads its `text`.
+fn name_of<'a>(record: &'a Record, spec: &RelateSpec) -> Result<&'a str, RecordError> {
+    let field = spec.name_field();
+    match record.entity_text(field) {
+        Err(missed @ RecordError::Missed(_)) if field.as_str() == "/name" => Pointer::new("/text")
+            .ok()
+            .and_then(|text| record.entity_text(&text).ok())
+            .ok_or(missed),
+        read => read,
+    }
 }
 
 fn document(source: Box<dyn BufRead + Send>, spec: &RelateSpec) -> Result<Vec<Record>, Failure> {

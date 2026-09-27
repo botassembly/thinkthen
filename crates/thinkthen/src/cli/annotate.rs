@@ -6,7 +6,10 @@ use std::path::Path;
 use std::process::ExitCode;
 
 use crate::core::adapters::built_in;
-use crate::core::{Backend, Framing, ModelName, Plan, Pointer, QuestionSet, Reading, Record};
+use crate::core::{
+    Backend, Framing, ModelName, PartError, Plan, Pointer, QuestionSet, Reading, ReadingError,
+    Record,
+};
 
 use crate::args::{AnnotateArguments, Common};
 use crate::asking::{self, Folders};
@@ -69,6 +72,9 @@ pub(crate) fn run(
     let profile = profile::read(&arguments.common)?;
     let mismatch = Mismatch::new(set.profile(), profile.as_ref());
     let reading = reading(&arguments.common)?;
+    if let (Framing::Lines, Some(name)) = (arguments.common.framing(), set.first_part()) {
+        return Err(Failure::Reading(ReadingError::LinesPart(name.to_owned())));
+    }
     let source = edge::source(arguments.common.input.as_deref(), input)?;
     if let Some(kind) = table_kind(&arguments.common) {
         let mut rows = TableRows::new(source, kind)?;
@@ -100,12 +106,15 @@ pub(crate) fn run(
         return crate::annotate_schedule::run(
             &judging,
             &reading,
-            rows.map(|row| row.map(crate::annotate_schedule::Input::Record)),
+            rows.enumerate().map(|(place, row)| {
+                row.map(|record| crate::annotate_schedule::Input::Record(place + 1, record))
+                    .map_err(|error| crate::schedule::Placed::at(error, place + 1))
+            }),
             environment.cancel(),
             &mut Output::Streaming(&mut writer),
         );
     }
-    let mut chunks = edge::Chunks::new(source, reading.streams());
+    let mut chunks = edge::numbered(edge::Chunks::new(source, reading.streams()), &reading);
     if arguments.common.dry_run {
         return dry_run(
             &set,
@@ -113,7 +122,7 @@ pub(crate) fn run(
             &reading,
             profile.as_ref(),
             &mismatch,
-            chunks.next().transpose()?,
+            chunks.next().map(|(_, row)| row).transpose()?,
             &mut writer,
         );
     }
@@ -134,7 +143,10 @@ pub(crate) fn run(
     crate::annotate_schedule::run(
         &judging,
         &reading,
-        chunks.map(|row| row.map(crate::annotate_schedule::Input::Bytes)),
+        chunks.map(|(at, row)| {
+            row.map(|bytes| crate::annotate_schedule::Input::Bytes(at, bytes))
+                .map_err(|error| crate::schedule::Placed::at(error, at))
+        }),
         environment.cancel(),
         &mut Output::Streaming(&mut writer),
     )
@@ -229,10 +241,10 @@ impl<'a> Judging<'a> {
         input: crate::annotate_schedule::Input,
     ) -> Result<Record, Failure> {
         let record = match input {
-            crate::annotate_schedule::Input::Bytes(bytes) => base
+            crate::annotate_schedule::Input::Bytes(_, bytes) => base
                 .annotation_record(&bytes)
                 .map_err(|error| Failure::record(error, base.streams()))?,
-            crate::annotate_schedule::Input::Record(record) => record,
+            crate::annotate_schedule::Input::Record(_, record) => record,
         };
         collisions(&self.set, &record)?;
         Ok(record)
@@ -285,21 +297,15 @@ fn plan_for(
     base: &Reading,
     record: &Record,
 ) -> Result<Plan, Failure> {
-    let first_place = group
-        .first()
-        .ok_or(Failure::Defect("an annotate group is empty"))?;
-    let first = set
-        .questions()
-        .get(*first_place)
-        .ok_or(Failure::Defect("a group points outside its set"))?;
-    let base_evidence = base.evidence(record)?;
-    let evidence = if matches!(first.on(), [root] if root.as_str().is_empty()) {
-        base_evidence
-    } else {
-        let nested = Reading::new(Framing::Document, first.on().to_vec())?;
-        let record = nested.record(base_evidence.as_text()?.as_bytes())?;
-        nested.evidence(&record)?
-    };
+    if group.is_empty() {
+        return Err(Failure::Defect("an annotate group is empty"));
+    }
+    let evidence = set
+        .group_evidence(group, &base.batch_record(record)?)
+        .map_err(|error| match error {
+            PartError::Reading(error) => Failure::from(error),
+            PartError::Record(error) => Failure::from(error),
+        })?;
     let questions = group
         .iter()
         .map(|place| {

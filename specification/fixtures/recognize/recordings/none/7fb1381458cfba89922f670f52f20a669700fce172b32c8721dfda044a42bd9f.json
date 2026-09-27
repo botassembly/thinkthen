@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Studio 54 opened in April 1977 on West 54th Street.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.\n\nText: 54 opened in April 1977 on [[West 54th Street]].","criteria":{"West 54th Street":"...54 opened in April 1977 on [[West 54th Street]].","West 54th Street.":"...54 opened in April 1977 on [[West 54th Street.]]"}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"West 54th Street","confidence":0.98,"probabilities":{"West 54th Street":0.99,"West 54th Street.":0.01}}},"usage":{"input_tokens":460,"output_tokens":48}}
+}

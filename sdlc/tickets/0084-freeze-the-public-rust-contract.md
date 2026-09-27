@@ -22,7 +22,7 @@ This design may be reviewed and recorded now. `Engine`, `EngineBuilder`, and `de
 - All calls block. Every fallible constructor or builder step returns `Result<_, Error>` at the step that receives the bad value. Builder terminal methods consume the builder.
 - `ChooseQuestion<C>` and `TagQuestion<C>` retain their `Choice` type from builder through call. `Question` holds decide, score, rank, find, and parsed unbound values; `into_choose::<C>` and `into_tag::<C>` check a loaded value before binding it. `BandedQuestion` is separate. Only `decide` and `details` accept a band. `filter(&BandedQuestion, ..)` does not compile; a non-decision `Question` returns `Error::Usage` before an external effect.
 - Streaming functions are `filter`, `decide_many`, and `annotate`. They accept `IntoIterator`, return `Batch`, bound retained work by effective width, and preserve input order. `rank`, `find`, and `relate` consume a finite iterator before they can answer and return one finite aggregate.
-- Bulk records implement `Evidence`; `String` and `&str` work directly. JSON Pointer extraction stays command-only in 0.1.
+- Bulk records implement `Evidence`; `String` and `&str` work directly. Annotate reads each set member's `on` part from a record's JSON text. A single question and recognize still read their evidence whole (amended 2026-09-26).
 - The first release keeps the typed `Description` and `QuestionSet` builders, `choices!`, and no derive. Structured descriptions retain insertion order. Duplicate named or extension fields fail. An implicit engine omits width; it never materializes the command default as an explicit width.
 
 ## Changes on reopening, 2026-09-24
@@ -105,7 +105,11 @@ impl EngineBuilder {
     pub fn default_cache(self) -> Self;
     pub fn cache_at(self, value: impl AsRef<std::path::Path>) -> Result<Self, Error>;
     pub fn no_cache(self) -> Self;
-    pub fn cache_bytes(self, value: u64) -> Result<Self, Error>;
+    pub fn timeout(self, value: std::time::Duration) -> Result<Self, Error>;
+    pub fn max_retries(self, value: u32) -> Self;
+    pub fn profile(self, path: impl AsRef<std::path::Path>) -> Result<Self, Error>;
+    pub fn record(self, path: impl AsRef<std::path::Path>) -> Result<Self, Error>;
+    pub fn replay(self, path: impl AsRef<std::path::Path>) -> Result<Self, Error>;
     pub fn build(self) -> Result<Engine, Error>;
 }
 
@@ -154,6 +158,7 @@ impl Question {
     pub fn score(text: &str) -> Result<ScoreBuilder, Error>;
     pub fn rank(text: &str) -> Result<Self, Error>;
     pub fn find(text: &str) -> Result<Self, Error>;
+    pub fn offering_none(self) -> Result<Self, Error>;
     pub fn from_json(value: &str) -> Result<LoadedQuestion, Error>;
     pub fn load(path: impl AsRef<std::path::Path>) -> Result<LoadedQuestion, Error>;
     pub fn into_choose<C: Choice>(self) -> Result<ChooseQuestion<C>, Error>;
@@ -258,6 +263,8 @@ impl Details {
     pub fn requests_sent(&self) -> u64;
     pub fn cached(&self) -> bool;
     pub fn usage(&self) -> Option<&Usage>;
+    pub fn confidence(&self) -> Option<f64>;
+    pub fn url(&self) -> &str;
     pub fn failed_questions(&self) -> usize;
 }
 pub struct Row<T, V> { /* private */ }
@@ -387,7 +394,15 @@ Amended 2026-09-24: the ADR 0017 amendment of that date renames the width to the
 
 The optional `polars` feature adds two root names, `PolarsEngine` and the re-exported `polars` crate, only when it is on. The frozen inventory is built with `--no-default-features`, and it does not change. Ian can overturn this.
 
+## Amended 2026-09-26 (ticket 0150)
+
+`Question::offering_none` joins the `Question` block above. It turns a find question into one that offers a none candidate, and it refuses any other kind with a usage error. `QuestionSet::from_json` now accepts a member's `on` pointer, and annotate reads that part of each record's JSON text. This reverses the 0.1 line that kept pointer extraction in the command. Ian can overturn this.
+
 ## Review
 
 - Design review: `sdlc/records/2026-09-24-spine-review-contract.md` rejected, then `2026-09-24-rereview-contract.md` accepted after fixes.
 - Code review: `sdlc/records/0084-0095-code-review.md`.
+
+## Amended 2026-09-27 (ticket 0148)
+
+The frozen `EngineBuilder` inventory above removes the ineffective `cache_bytes` setter and adds `timeout(Duration)`, `max_retries(u32)`, `profile(path)`, `record(path)`, and strict `replay(path)`. The builder applies the command's folder conflicts and passes the settings to the existing facade. No engine module changes. Ian can overturn these setters.

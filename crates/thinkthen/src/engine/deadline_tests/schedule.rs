@@ -46,12 +46,8 @@ fn reader<T: Send + 'static>(
     }
 }
 
-const fn done<T>(value: T) -> Result<Completed<T>, &'static str> {
-    Ok(Completed {
-        value,
-        replayed: false,
-        partial_failure: false,
-    })
+const fn done<T>(value: T) -> Result<Completed<T, &'static str>, &'static str> {
+    Ok(Completed::one(value, false, false))
 }
 
 #[test]
@@ -65,14 +61,16 @@ fn a_spent_deadline_over_empty_bulk_input_stops_before_reading() {
             false,
             &cancel,
             reader(Vec::<usize>::new(), &asks),
-            &|_: &usize| -> Result<Completed<usize>, &'static str> { unreachable!("no input") },
+            &|_: &usize| -> Result<Completed<usize, &'static str>, &'static str> {
+                unreachable!("no input")
+            },
             |_| Ok(true),
             |_| "defect",
             named,
         )
         .expect("metadata");
         assert!(
-            matches!(outcome, Outcome::Stopped { at: 1, finished: 0, cause, .. } if cause == stop),
+            matches!(outcome, Outcome::Stopped { finished: 0, cause, .. } if cause == stop),
             "{stop}"
         );
     }
@@ -88,7 +86,9 @@ fn a_spent_deadline_over_empty_bulk_input_stops_before_reading() {
             },
             &|()| -> Result<(), &'static str> { unreachable!("no work") },
             |_: &mut (), ()| Ok(()),
-            |(), ()| -> Result<Completed<()>, &'static str> { unreachable!("no row") },
+            |(), ()| -> Result<Completed<(), &'static str>, &'static str> {
+                unreachable!("no row")
+            },
             |()| Ok(true),
             |_| "defect",
             named,
@@ -98,7 +98,6 @@ fn a_spent_deadline_over_empty_bulk_input_stops_before_reading() {
             matches!(
                 outcome,
                 annotate_schedule::Outcome::Stopped {
-                    at: 1,
                     finished: 0,
                     cause: "deadline",
                     ..
@@ -153,7 +152,6 @@ fn one_deadline_spans_every_record_and_starts_no_undispatched_request() {
     assert!(matches!(
         outcome,
         Outcome::Stopped {
-            at: 3,
             finished: 2,
             cause: "deadline",
             ..
@@ -164,7 +162,7 @@ fn one_deadline_spans_every_record_and_starts_no_undispatched_request() {
 /// A later result is queued while the coordinator is still emitting; the
 /// deadline passes; only then does the coordinator reach its stop check.
 fn queued_before_the_check(
-    later: Result<Completed<usize>, &'static str>,
+    later: Result<Completed<usize, &'static str>, &'static str>,
 ) -> (Vec<usize>, Outcome<&'static str>, usize) {
     let budget = Duration::from_millis(300);
     let asks = Arc::new(AtomicUsize::new(0));
@@ -226,7 +224,6 @@ fn a_result_queued_before_the_deadline_check_keeps_its_place_and_the_order() {
     assert!(matches!(
         outcome,
         Outcome::Stopped {
-            at: 3,
             finished: 2,
             cause: "deadline",
             ..
@@ -239,7 +236,6 @@ fn a_result_queued_before_the_deadline_check_keeps_its_place_and_the_order() {
     assert!(matches!(
         outcome,
         Outcome::Stopped {
-            at: 2,
             finished: 1,
             cause: "backend",
             ..
@@ -291,7 +287,7 @@ fn a_deadline_clears_undispatched_annotation_groups() {
                 answers.push(answer);
                 Ok(())
             },
-            |(), _| -> Result<Completed<()>, &'static str> {
+            |(), _| -> Result<Completed<(), &'static str>, &'static str> {
                 unreachable!("the stopped row never finishes")
             },
             |()| Ok(true),
@@ -306,7 +302,6 @@ fn a_deadline_clears_undispatched_annotation_groups() {
     assert!(matches!(
         outcome,
         annotate_schedule::Outcome::Stopped {
-            at: 1,
             finished: 0,
             cause: "deadline",
             ..

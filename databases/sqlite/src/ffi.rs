@@ -16,7 +16,7 @@ use rusqlite::vtab::{
 };
 
 use crate::tables::{self, Recognizer, Relater, Table};
-use crate::{guard, scalars};
+use crate::{budget, guard, scalars};
 
 /// The host's `sqlite3_api_routines`, extended past the 3.34 bindings of
 /// `libsqlite3-sys` to the `is_interrupted` field SQLite 3.41 added. Every
@@ -125,6 +125,7 @@ fn init(connection: Connection) -> rusqlite::Result<bool> {
         IS_INTERRUPTED.store(check as *mut (), Ordering::Release);
     }
     scalars::register(&connection)?;
+    budget::register(&connection)?;
     connection.create_module(c"thinkthen_recognize", &RECOGNIZE, None)?;
     connection.create_module(c"thinkthen_relate", &RELATE, None)?;
     pin();

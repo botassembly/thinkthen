@@ -358,6 +358,7 @@ pub(crate) fn replay(folder: &Path, arguments: &[&str], input: &[u8]) -> String 
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .args(arguments)
         .env_clear()
+        .env("THINKTHEN_BATCH", "1")
         .current_dir(folder)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -371,6 +372,16 @@ pub(crate) fn replay(folder: &Path, arguments: &[&str], input: &[u8]) -> String 
     let stderr = String::from_utf8_lossy(&output.stderr);
     assert_eq!(output.status.code(), Some(0), "{arguments:?} {stderr}");
     String::from_utf8(output.stdout).expect("UTF-8 output")
+}
+
+/// The payment question of `transforms/rows`, replayed through the question file FILE in FOLDER.
+pub(crate) fn payment_rows(folder: &Path, file: &str) -> String {
+    let rows = repository().join("transforms/rows");
+    let [recording, cases] = [rows.join("recording"), rows.join("cases.jsonl")];
+    let [recording, cases] = [&recording, &cases].map(|path| path.to_str().expect("a path"));
+    let at = format!("@{file}");
+    let arguments = ["decide", &at, "--jsonl", "--details", "--replay", recording];
+    replay(folder, &[&arguments[..], &["--input", cases]].concat(), b"")
 }
 
 /// Each named member of a JSON line, as compact JSON with sorted keys.

@@ -3,7 +3,7 @@
 use std::fmt;
 use std::path::Path;
 
-use crate::core::{self, Pointer, Threshold};
+use crate::core::{self, Threshold};
 use crate::public::choice::Choice;
 use crate::public::error::Error;
 use crate::public::question::{
@@ -27,25 +27,15 @@ impl fmt::Debug for QuestionSet {
 
 impl QuestionSet {
     /// Read one version-one question set. A member whose `on` names a part
-    /// of a record is refused, because a library call's evidence is one
-    /// whole text.
+    /// of a record reads that part from each record as JSON text.
     ///
     /// # Errors
     ///
     /// Returns [`Error::Usage`] naming what the set breaks.
     pub fn from_json(value: &str) -> Result<Self, Error> {
-        let set = core::QuestionSet::parse(value).map_err(Error::refused)?;
-        let root = Pointer::new("").map_err(|_| Error::defect("the root pointer was refused"))?;
-        if set
-            .questions()
-            .iter()
-            .any(|member| member.on() != [root.clone()])
-        {
-            return Err(Error::usage(
-                "a library question set reads each record whole, so no member takes `on`",
-            ));
-        }
-        Ok(Self(set))
+        core::QuestionSet::parse(value)
+            .map(Self)
+            .map_err(Error::refused)
     }
 
     /// Read one question set from disk.
@@ -86,7 +76,7 @@ impl QuestionSetBuilder {
     /// Returns [`Error::Usage`] for a bad or repeated name, a `rank` or
     /// `find` question, or a question naming its own model.
     pub fn question(mut self, name: &str, value: Question) -> Result<Self, Error> {
-        if matches!(value.kind, Kind::Rank | Kind::Find) {
+        if matches!(value.kind, Kind::Rank | Kind::Find | Kind::FindNone) {
             return Err(Error::usage(
                 "a question set takes decide, choose, tag, and score questions",
             ));

@@ -52,7 +52,7 @@ The generated unit id is `u` and the unit's one-based input position, zero-padde
 | `--details` | Prints the full result object | Off |
 | `--input FILE` | Reads the units from a file | Standard input |
 | `--dry-run` | Prints the plan and sends nothing | Off |
-| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-latest` |
+| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-1.13.0` |
 
 ## Exit codes
 

@@ -4,7 +4,8 @@ use std::fmt;
 use std::ops::Range;
 use std::path::Path;
 
-use crate::core::{self, ModelName, RecognizeSpec, RecognizedName, default_kinds};
+use crate::core::{self, ModelName, RecognizeSpec, RecognizedName};
+use crate::engine::facade::MAX_TEXT_BYTES;
 use crate::public::engine::Engine;
 use crate::public::error::Error;
 use crate::public::options::{CallOptions, Stop};
@@ -123,7 +124,7 @@ pub(super) use crate::public::question::model_of as model;
 pub struct Recognize(RecognizeSpec);
 
 impl Recognize {
-    /// Start one; with no kind it looks for people, organizations, and places.
+    /// Start one; with no kind every name takes the kind `ENTITY`.
     #[must_use]
     pub fn builder() -> RecognizeBuilder {
         RecognizeBuilder {
@@ -182,7 +183,7 @@ impl RecognizeBuilder {
     pub fn kind(mut self, value: Kind) -> Result<Self, Error> {
         if self.kinds.len() == 20 || self.kinds.iter().any(|held| held.name == value.name) {
             return Err(Error::usage(
-                "recognize takes 1 to 20 distinct, nonblank kinds",
+                "recognize takes 0 to 20 distinct, nonblank kinds",
             ));
         }
         self.kinds.push(value);
@@ -235,19 +236,16 @@ impl RecognizeBuilder {
     ///
     /// Returns [`Error::Usage`] for a relation naming an absent kind.
     pub fn build(self) -> Result<Recognize, Error> {
-        let kinds = if self.kinds.is_empty() {
-            default_kinds()
-        } else {
-            self.kinds
-                .into_iter()
-                .map(|kind| {
-                    Ok((
-                        kind.name,
-                        kind.description.map(|held| held.core()).transpose()?,
-                    ))
-                })
-                .collect::<Result<_, Error>>()?
-        };
+        let kinds = self
+            .kinds
+            .into_iter()
+            .map(|kind| {
+                Ok((
+                    kind.name,
+                    kind.description.map(|held| held.core()).transpose()?,
+                ))
+            })
+            .collect::<Result<_, Error>>()?;
         let written = |value: Option<f64>| value.map(|cut| cut.to_string());
         let mut spec = RecognizeSpec::from_parts(
             kinds,
@@ -261,7 +259,7 @@ impl RecognizeBuilder {
     }
 }
 
-/// One recognized name, its kind, its place in the text, and its strength.
+/// One recognized name, its place in the text, its kind, and its strength.
 /// Offsets count Unicode scalar values.
 #[derive(Clone, PartialEq)]
 pub struct RecognizedEntity(RecognizedName);
@@ -275,14 +273,8 @@ impl fmt::Debug for RecognizedEntity {
 impl RecognizedEntity {
     /// The name as it reads in the text.
     #[must_use]
-    pub fn name(&self) -> &str {
-        &self.0.name
-    }
-
-    /// Its kind.
-    #[must_use]
-    pub fn kind(&self) -> &str {
-        &self.0.kind
+    pub fn text(&self) -> &str {
+        &self.0.text
     }
 
     /// The first scalar value's place.
@@ -297,7 +289,20 @@ impl RecognizedEntity {
         self.0.end
     }
 
-    /// How strongly the tokens read as this kind.
+    /// How many scalar values the name holds: `end` minus `start`.
+    #[must_use]
+    pub fn length(&self) -> usize {
+        self.0.length
+    }
+
+    /// Its kind, or `ENTITY` when the request named no kind.
+    #[must_use]
+    pub fn kind(&self) -> &str {
+        &self.0.kind
+    }
+
+    /// A ranking score: P(kind) times P(span). It ranks names but is not a
+    /// calibrated probability.
     #[must_use]
     pub fn strength(&self) -> f64 {
         self.0.strength
@@ -412,7 +417,7 @@ impl Engine {
         let found = stop
             .run(|cancel| {
                 engine
-                    .recognize(&ask.0, evidence, cancel)
+                    .recognize(&ask.0, evidence, MAX_TEXT_BYTES, cancel)
                     .map_err(Error::from)
             })?
             .value;
