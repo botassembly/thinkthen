@@ -57,7 +57,8 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	export THINKTHEN_DUCKDB_EXTENSION="$scratch/thinkthen.duckdb_extension" THINKTHEN_CONFORMANCE_CASES="$scratch/cases.json"
 	jq '.cases |= map(select(.operation.injection != "internal_invariant_failure"))' "$REPO/conformance/cases.json" >"$THINKTHEN_CONFORMANCE_CASES"
 	stock_cli
-	"$PY" cpp/verify_package.py --extension "$THINKTHEN_DUCKDB_EXTENSION"
+	"$PY" cpp/verify_package.py --extension "$THINKTHEN_DUCKDB_EXTENSION" --different-host "$TOOLS/older-host/duckdb"
+	"$PY" cpp/verify_interrupt.py --extension "$THINKTHEN_DUCKDB_EXTENSION"
 	sh "$LIMIT" 900 "$PY" tools/conformance.py
 	echo "check: databases/duckdb passes, installed"
 	exit 0
@@ -74,7 +75,8 @@ python3 tools/source_checks.py
 cargo deny --locked --offline --manifest-path bridge/Cargo.toml check --config ../../deny.toml advisories bans licenses sources
 
 stock_cli
-"$PY" cpp/verify_package.py --extension build/thinkthen.duckdb_extension
+"$PY" cpp/verify_package.py --extension build/thinkthen.duckdb_extension --different-host "$TOOLS/older-host/duckdb"
+"$PY" cpp/verify_interrupt.py --extension build/thinkthen.duckdb_extension
 
 if [ "$profile" = stress ]; then
 	echo "== opt-in host campaigns"

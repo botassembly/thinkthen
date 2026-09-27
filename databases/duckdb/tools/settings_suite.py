@@ -233,13 +233,14 @@ def judged(result: dict) -> str:
 
 @case
 def access_cases_match_duckdb():
-    """The 35 cache cases against COPY, then the 35 `@file` cases against
-    read_text. A refused cache case sends nothing and creates nothing."""
+    """The 35 cache cases against COPY, then caller-file cases against
+    read_text for decide, warm, and relate. Refused paths send nothing."""
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         root = Path(folder)
         paths = folders(root)
         for place in ("ok", "out"):
             (root / place / "q.json").write_text('{"decide": "Is it a refund?"}')
+            (root / place / "r.json").write_text('{"version":1,"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]}}')
         wrong = []
         for setting, setup in settings(root).items():
             for name, path in paths.items():
@@ -258,12 +259,13 @@ def access_cases_match_duckdb():
                 if not ours and (backend.count() != sent or before != (sorted(os.listdir(root / "out")), sorted(os.listdir(root / "ok")))):
                     wrong.append(f"cache {setting} {name}: a refused folder sent or created something")
                 sent = backend.count()
+                relate = f"SELECT count(*) FROM thinkthen_relate('SELECT 1 AS id, ''Ada'' AS name, ''person'' AS kind WHERE FALSE', '@{path}/r.json')"
                 files = run(
-                    [*setup, f"SELECT count(*) FROM read_text('{path}/q.json')", *(f"SELECT {verb}('@{path}/q.json', 'refund now')" for verb in ("thinkthen_decide", "thinkthen_warm"))],
+                    [*setup, f"SELECT count(*) FROM read_text('{path}/q.json')", *(f"SELECT {verb}('@{path}/q.json', 'refund now')" for verb in ("thinkthen_decide", "thinkthen_warm")), relate],
                     backend.base(),
                 )
-                oracle = judged(files[-3])
-                for verb, got in (("decide", files[-2]), ("warm", files[-1])):
+                oracle = judged(files[-4])
+                for verb, got in (("decide", files[-3]), ("warm", files[-2]), ("relate", files[-1])):
                     ours = "allowed" if "error" not in got else ("refused" if "file settings refuse it" in said(got) else "missing")
                     if oracle != ours:
                         wrong.append(f"@file {verb} {setting} {name}: read_text {oracle}, we {ours}")

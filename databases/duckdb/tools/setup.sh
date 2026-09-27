@@ -26,6 +26,16 @@ if [ "${1:-}" = --fetch ]; then
 	if [ ! -f "$static_zip" ]; then
 		curl -fsSL -o "$static_zip" "https://github.com/duckdb/duckdb/releases/download/$DUCKDB_VERSION/static-libs-linux-amd64.zip"
 	fi
+	older_zip="$HOME_DIR/duckdb_cli-$DUCKDB_OLDER_VERSION.zip"
+	if [ ! -f "$older_zip" ]; then
+		curl -fsSL -o "$older_zip" "https://github.com/duckdb/duckdb/releases/download/$DUCKDB_OLDER_VERSION/duckdb_cli-linux-amd64.zip"
+	fi
+	echo "$DUCKDB_OLDER_CLI_ZIP_SHA256  $older_zip" | sha256sum -c --quiet - || {
+		echo "setup: $older_zip differs from the pinned release" >&2
+		exit 1
+	}
+	mkdir -p "$HOME_DIR/older-host"
+	unzip -o -q "$older_zip" duckdb -d "$HOME_DIR/older-host"
 	echo "$DUCKDB_STATIC_ZIP_SHA256  $static_zip" | sha256sum -c --quiet - || {
 		echo "setup: $static_zip differs from the pinned release" >&2
 		exit 1
@@ -39,6 +49,14 @@ if [ -f "$HOME_DIR/duckdb" ]; then
 		exit 1
 	}
 fi
+if [ ! -x "$HOME_DIR/older-host/duckdb" ]; then
+	echo "setup: the pinned $DUCKDB_OLDER_VERSION host is missing; run tools/setup.sh --fetch" >&2
+	exit 77
+fi
+echo "$DUCKDB_OLDER_CLI_SHA256  $HOME_DIR/older-host/duckdb" | sha256sum -c --quiet - || {
+	echo "setup: the $DUCKDB_OLDER_VERSION host differs from the pinned release" >&2
+	exit 1
+}
 if [ ! -d "$HOME_DIR/source" ] || [ ! -f "$HOME_DIR/static-libs/libduckdb_static.a" ]; then
 	echo "setup: DuckDB C++ source or static archives are missing; run tools/setup.sh --fetch" >&2
 	exit 77

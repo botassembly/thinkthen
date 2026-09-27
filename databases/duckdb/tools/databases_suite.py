@@ -85,6 +85,45 @@ say([edges(a), edges(b)])
 
 
 @case
+def a_read_only_file_keeps_caller_permissions_and_committed_data():
+    """The C++ route opens a separate read-only connection to a read-only file."""
+    with Backend() as backend:
+        got = script(
+            """
+path = sys.argv[2] + "/a.db"
+a = db(path); staff(a, 2); a.close()
+a = duckdb.connect(path, read_only=True, config={"allow_unsigned_extensions": "true"})
+a.execute(f"LOAD '{EXT}'")
+allowed = edges(a)
+a.execute("CREATE TEMP TABLE only_here AS SELECT 9 AS id, 'Uncommitted' AS name, 'person' AS kind")
+hidden = edges(a, "only_here")
+try:
+    a.execute("SELECT count(*) FROM thinkthen_relate('DELETE FROM t', ['works_for=person:organization'])")
+    mutation = "answered"
+except Exception as error:
+    mutation = str(error).split("\\n")[0]
+rules = sys.argv[2] + "/r.json"
+open(rules, "w").write('{"version": 1, "relate": {"relations": [{"name": "works_for", "source": "person", "target": "organization"}]}}')
+file_edges = a.execute(f"SELECT count(*) FROM thinkthen_relate('SELECT id, name, kind FROM t', '@{rules}')").fetchone()[0]
+a.execute("SET enable_external_access = false")
+try:
+    a.execute(f"SELECT count(*) FROM thinkthen_relate('SELECT id, name, kind FROM t', '@{rules}')")
+    denied = "answered"
+except Exception as error:
+    denied = str(error).split("\\n")[0]
+say([allowed, hidden, mutation, file_edges, denied])
+""",
+            backend.base(),
+        )
+        allowed, hidden, mutation, file_edges, denied = got[0]
+        expect([allowed, file_edges], [2, 2], "committed rows in the read-only file")
+        expect("relate runs on a separate connection, so it cannot see temporary tables" in hidden, True, "temporary rows remain invisible")
+        expect("the relate query must be a SELECT" in mutation, True, "mutating query refusal")
+        expect("this database's file settings refuse it" in denied, True, "caller file permissions")
+        expect(backend.count(), 1, "one allowed send; the equivalent file rule reused the answer and refusals sent none")
+
+
+@case
 def r3_6_no_setting_names_the_identity_and_b_cannot_read_a():
     with Backend() as backend:
         got = script(

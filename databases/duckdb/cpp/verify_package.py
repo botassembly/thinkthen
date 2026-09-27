@@ -1,8 +1,9 @@
-"""Load the built C++ artifact and prove DuckDB refuses another version footer."""
+"""Load the packaged C++ artifact and prove stock cross-version refusal."""
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import subprocess
 import sys
 import tempfile
@@ -10,6 +11,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from harness import child_env  # noqa: E402  shared isolated host environment
+
+OLDER_SHA256 = next(
+    line.split("=", 1)[1] for line in (Path(__file__).resolve().parents[1] / "tools" / "version.env").read_text().splitlines()
+    if line.startswith("DUCKDB_OLDER_CLI_SHA256=")
+)
 
 
 def load(path: Path, folder: Path) -> subprocess.CompletedProcess[str]:
@@ -31,7 +37,11 @@ def load(path: Path, folder: Path) -> subprocess.CompletedProcess[str]:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--extension", required=True, type=Path)
-    source = parser.parse_args().extension.resolve(strict=True)
+    parser.add_argument("--different-host", required=True, type=Path)
+    args = parser.parse_args()
+    source = args.extension.resolve(strict=True)
+    older = args.different_host.resolve(strict=True)
+    assert hashlib.sha256(older.read_bytes()).hexdigest() == OLDER_SHA256, "the older stock host differs from its pin"
     with tempfile.TemporaryDirectory(prefix="thinkthen-duckdb-package-") as scratch:
         root = Path(scratch)
         good = root / "matching" / "thinkthen.duckdb_extension"
@@ -51,7 +61,15 @@ def main() -> None:
         assert refused.returncode != 0, "the stock v1.5.5 host loaded a v1.5.4 footer"
         assert "can only be loaded with that version" in refused.stderr, refused.stderr[:800]
         assert "this version of DuckDB is 'v1.5.5'" in refused.stderr, refused.stderr[:800]
-        print("C++ package loads in v1.5.5 and refuses a v1.5.4 footer")
+        mismatch = subprocess.run(
+            [str(older), "-unsigned", "-noheader", "-list", "-c", f"LOAD '{good}'"],
+            env=child_env("http://127.0.0.1:1/v1", root / "older-stock-host"),
+            text=True, capture_output=True, timeout=20, check=False,
+        )
+        assert mismatch.returncode != 0, "the unchanged v1.5.5 package loaded in a stock v1.5.4 host"
+        assert "built specifically for DuckDB version 'v1.5.5'" in mismatch.stderr, mismatch.stderr[:800]
+        assert "this version of DuckDB is 'v1.5.4'" in mismatch.stderr, mismatch.stderr[:800]
+        print("C++ package loads in v1.5.5 and the unchanged artifact refuses stock v1.5.4")
 
 
 if __name__ == "__main__":
