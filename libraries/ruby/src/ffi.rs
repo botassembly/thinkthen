@@ -64,7 +64,6 @@ impl SetValue {
 #[derive(Debug)]
 pub(crate) struct EngineValue {
     engine: Engine,
-    most: Option<usize>,
 }
 
 /// Raise one fault as its `ThinkThen` class, with the kind and retry
@@ -272,7 +271,6 @@ impl EngineValue {
         deadline: Option<f64>,
     ) -> Result<Value, Error> {
         let asked = ask(ruby, &verb, subject, input)?;
-        checked(ruby, crate::call::within(rb_self.most, &asked))?;
         let caller = caller.map(|token| &token.0);
         if own.0.is_cancelled() || caller.is_some_and(CancelToken::is_cancelled) {
             return Err(raise(ruby, Fault::cancelled()));
@@ -309,7 +307,6 @@ fn default_engine(ruby: &Ruby) -> Result<EngineValue, Error> {
     let engine = thinkthen::default_engine().map_err(Fault::from);
     checked(ruby, engine).map(|engine| EngineValue {
         engine: engine.clone(),
-        most: None,
     })
 }
 
@@ -317,26 +314,28 @@ fn default_engine(ruby: &Ruby) -> Result<EngineValue, Error> {
     clippy::too_many_arguments,
     reason = "magnus maps each Ruby argument to one parameter"
 )]
-fn new_engine(
-    ruby: &Ruby,
-    base_url: Option<String>,
-    model: Option<String>,
-    throttle: Option<i64>,
-    max_requests: Option<i64>,
-    cache_at: Option<String>,
-    no_cache: bool,
-    cache_bytes: Option<i64>,
-) -> Result<EngineValue, Error> {
+fn new_engine(ruby: &Ruby, options: RHash) -> Result<EngineValue, Error> {
+    fn read<T: TryConvert>(ruby: &Ruby, options: RHash, key: &str) -> Result<Option<T>, Error> {
+        options
+            .get(ruby.to_symbol(key))
+            .filter(|value| !value.is_nil())
+            .map(T::try_convert)
+            .transpose()
+    }
     let settings = Settings {
-        base_url,
-        model,
-        throttle,
-        max_requests,
-        cache_at,
-        no_cache,
-        cache_bytes,
+        base_url: read(ruby, options, "base_url")?,
+        model: read(ruby, options, "model")?,
+        throttle: read(ruby, options, "throttle")?,
+        max_requests: read(ruby, options, "max_requests")?,
+        cache_at: read(ruby, options, "cache_at")?,
+        no_cache: read(ruby, options, "no_cache")?.unwrap_or(false),
+        timeout: read(ruby, options, "timeout")?,
+        max_retries: read(ruby, options, "max_retries")?,
+        record: read(ruby, options, "record")?,
+        replay: read(ruby, options, "replay")?,
+        profile: read(ruby, options, "profile")?,
     };
-    checked(ruby, guarded(|| settings.build())).map(|(engine, most)| EngineValue { engine, most })
+    checked(ruby, guarded(|| settings.build())).map(|engine| EngineValue { engine })
 }
 
 fn question(ruby: &Ruby, json: String) -> Result<QuestionValue, Error> {
@@ -370,7 +369,7 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     engine.define_method("call", method!(EngineValue::call, 6))?;
     engine.define_method("usage", method!(EngineValue::usage, 0))?;
     native.define_module_function("default_engine", function!(default_engine, 0))?;
-    native.define_module_function("engine", function!(new_engine, 7))?;
+    native.define_module_function("engine", function!(new_engine, 1))?;
     native.define_module_function("question", function!(question, 1))?;
     native.define_module_function("set_json", function!(set_json, 1))?;
     native.define_module_function("set_file", function!(set_file, 1))?;

@@ -23,5 +23,10 @@ mod parts;
 mod paths;
 #[path = "../../../../../crates/thinkthen/src/test_deadline/run.rs"]
 mod run;
+#[allow(
+    clippy::expect_used,
+    reason = "public settings regression fixtures must load"
+)]
+mod settings;
 #[path = "../../../../../crates/thinkthen/src/test_deadline/wait.rs"]
 mod wait;

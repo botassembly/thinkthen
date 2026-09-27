@@ -168,15 +168,6 @@ def an_annotate_set_spends_one_request_per_text():
 
 
 @case
-def cache_cap_is_checked_on_a_map_hit():
-    with Backend() as backend:
-        got = run([ASK, "SET thinkthen_cache_bytes = 0", "SELECT thinkthen_decide('Is it a refund?', 'other')"], backend.base())
-        expect(rows(got[0]), [[True]], "the first decide")
-        expect(said(got[2]), "thinkthen usage: a cache cap is a whole number of bytes above zero", "a zero cap")
-        expect(backend.count(), 1, "counted sends")
-
-
-@case
 def cache_folder_shape():
     with Backend() as backend:
         for folder in ("~/c", "c", "s3://b/c", "file:///tmp/c"):

@@ -18,7 +18,6 @@ use crate::{guard, raised, usage};
 
 const THROTTLE: &str = "a throttle is a whole number from 1 through 32";
 const MAX_REQUESTS: &str = "a request limit is a whole number of 1 or more";
-const CACHE_BYTES: &str = "a cache cap is a whole number of bytes above zero";
 const CACHE: &str = "cache is a folder path, False for no cache, or True for the default folder";
 
 pub(crate) type Arg<'a, 'py> = Option<&'a Bound<'py, PyAny>>;
@@ -146,7 +145,11 @@ struct Settings<'a> {
     model: Option<&'a str>,
     throttle: Option<u8>,
     most: Option<usize>,
-    cap: Option<u64>,
+    timeout: Option<u64>,
+    retries: Option<u32>,
+    record: Option<std::path::PathBuf>,
+    replay: Option<std::path::PathBuf>,
+    profile: Option<std::path::PathBuf>,
 }
 
 impl Settings<'_> {
@@ -162,8 +165,22 @@ impl Settings<'_> {
         if self.most.is_some() {
             builder = builder.max_requests(self.most).map_err(refused)?;
         }
-        if let Some(cap) = self.cap {
-            builder = builder.cache_bytes(cap).map_err(refused)?;
+        if let Some(seconds) = self.timeout {
+            builder = builder
+                .timeout(std::time::Duration::from_secs(seconds))
+                .map_err(refused)?;
+        }
+        if let Some(retries) = self.retries {
+            builder = builder.max_retries(retries);
+        }
+        if let Some(folder) = self.record {
+            builder = builder.record(folder).map_err(refused)?;
+        }
+        if let Some(folder) = self.replay {
+            builder = builder.replay(folder).map_err(refused)?;
+        }
+        if let Some(path) = self.profile {
+            builder = builder.profile(path).map_err(refused)?;
         }
         if let Some(cache) = cache {
             builder = cached(builder, cache)?;
@@ -265,14 +282,18 @@ impl Engine {
     /// Start from what `thinkthen` reads from the environment, then apply
     /// each given setting (amendment changes 11 to 13).
     #[new]
-    #[pyo3(signature = (*, base_url=None, model=None, throttle=None, max_requests=None, cache=None, cache_bytes=None))]
+    #[pyo3(signature = (*, base_url=None, model=None, throttle=None, max_requests=None, cache=None, timeout=None, max_retries=None, record=None, replay=None, profile=None))]
     fn new(
         base_url: Option<&str>,
         model: Option<&str>,
         throttle: Arg<'_, '_>,
         max_requests: Arg<'_, '_>,
         cache: Arg<'_, '_>,
-        cache_bytes: Arg<'_, '_>,
+        timeout: Arg<'_, '_>,
+        max_retries: Arg<'_, '_>,
+        record: Arg<'_, '_>,
+        replay: Arg<'_, '_>,
+        profile: Arg<'_, '_>,
     ) -> PyResult<Self> {
         Python::attach(|py| {
             let read = || -> PyResult<Self> {
@@ -281,7 +302,29 @@ impl Engine {
                     model,
                     throttle: checked_throttle(throttle)?,
                     most: setting(max_requests, MAX_REQUESTS)?,
-                    cap: setting(cache_bytes, CACHE_BYTES)?,
+                    timeout: setting(timeout, "a timeout is a whole number of seconds above zero")?,
+                    retries: setting(max_retries, "max_retries is a whole number")?,
+                    record: record
+                        .map(|value| {
+                            value
+                                .extract()
+                                .map_err(|_| usage(py, "record is a folder path"))
+                        })
+                        .transpose()?,
+                    replay: replay
+                        .map(|value| {
+                            value
+                                .extract()
+                                .map_err(|_| usage(py, "replay is a folder path"))
+                        })
+                        .transpose()?,
+                    profile: profile
+                        .map(|value| {
+                            value
+                                .extract()
+                                .map_err(|_| usage(py, "profile is a file path"))
+                        })
+                        .transpose()?,
                 };
                 settings.build(py, cache).map(Self)
             };

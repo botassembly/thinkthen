@@ -58,13 +58,12 @@ Five setting functions change the engine before it builds. Each returns its argu
 - `thinkthen_max_requests(n)`: the most records one engine call may answer. `NULL` means no limit. Each scalar row is its own one-record call, and each warm flush is one call of up to 256 rows, so this limit does not cap a statement's spending. Use the total below for that.
 - `thinkthen_max_requests_total(n)`: the most requests this process may send, summed over every call. It is unset by default, and `NULL` unsets it. Before each call the extension adds up the requests sent so far. Once the total is spent, every call raises `usage` and sends nothing, even a call the cache could answer. Otherwise a warm pass judges at most as many rows as requests remain, then raises `usage` saying it stopped at the remaining total. The cut counts rows, and a cached row costs no request, so a cut warm can spend less than what remained. The judged part of a cut warm stays in the cache, so a later process reads those rows with no send. Settings apply before the first call, so the total is lifted only in a new process. It holds to within one call's retries for the scalars and `thinkthen_warm`. A `thinkthen_recognize` or `thinkthen_relate` call counts as one record but may send several requests, so it can pass the total by that call's own requests as well. Calls running at the same time can each spend what remains, so the total can be exceeded by one call per thread in flight, plus retries. A forked child starts again from zero. `thinkthen status` never sees this spend, because it counts only what the command sends.
 - `thinkthen_cache(folder)`: the answer cache's folder. `NULL` turns the cache off.
-- `thinkthen_cache_bytes(n)`: the cache's size cap in bytes.
 
 The throttle holds per loaded copy of the engine. A process that also loads another surface's native package, such as a Python wheel, holds two copies and can run up to twice the throttle (ADR 0047 item 5).
 
 ## The cache
 
-Answers go to the engine's disk cache and outlive the process. A warm pass fills the cache, and the queries after it read it. Raise `thinkthen_cache_bytes` before `thinkthen_warm` runs over a table larger than the cap. With `thinkthen_cache(NULL)` a warm pass still judges every row, and the queries after it send again.
+Answers go to the engine's disk cache and outlive the process. A warm pass fills the cache, and the queries after it read it. With `thinkthen_cache(NULL)` a warm pass still judges every row, and the queries after it send again.
 
 ## Authority: who may do what
 

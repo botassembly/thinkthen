@@ -105,7 +105,6 @@ impl<T, E: Into<Refusal>> OrRaise<T> for Result<T, E> {
 pub(crate) const UNSET: i32 = -1;
 
 /// The refusal for a zero cache cap (decision 3).
-pub(crate) const CACHE_BYTES_ZERO: &str = "thinkthen.cache_bytes must be -1 or at least 1";
 
 /// The throttle's refusal where it is set, in the engine's own sentence, or
 /// `None` for -1 (unset) and 1 through 32 (Ian's range).
@@ -121,7 +120,6 @@ pub(crate) struct Plan {
     throttle: Option<u8>,
     max_requests: Option<usize>,
     cache: Option<PathBuf>,
-    cache_bytes: Option<u64>,
 }
 
 impl Plan {
@@ -131,16 +129,11 @@ impl Plan {
         throttle: i32,
         max_requests: i32,
         cache: Option<&str>,
-        cache_bytes: i32,
     ) -> Result<Self, Refusal> {
-        if cache_bytes == 0 {
-            return Err(Refusal::usage(CACHE_BYTES_ZERO));
-        }
         Ok(Self {
             throttle: (throttle != UNSET).then(|| u8::try_from(throttle).unwrap_or(u8::MAX)),
             max_requests: usize::try_from(max_requests).ok(),
             cache: cache.filter(|folder| !folder.is_empty()).map(PathBuf::from),
-            cache_bytes: u64::try_from(cache_bytes).ok(),
         })
     }
 }
@@ -158,9 +151,6 @@ fn apply(plan: &Plan, mut builder: EngineBuilder) -> Result<EngineBuilder, Error
     }
     if let Some(folder) = &plan.cache {
         builder = builder.cache_at(folder)?;
-    }
-    if let Some(value) = plan.cache_bytes {
-        builder = builder.cache_bytes(value)?;
     }
     Ok(builder)
 }
@@ -365,7 +355,6 @@ static THROTTLE: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
 static MAX_REQUESTS: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
 static MAX_REQUESTS_TOTAL: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
 static CACHE: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
-static CACHE_BYTES: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
 
 fn text_of(setting: &GucSetting<Option<CString>>) -> Option<String> {
     setting
@@ -388,12 +377,7 @@ pub(crate) fn read_result() -> Result<Call, Refusal> {
         ));
     }
     let cache = text_of(&CACHE);
-    let plan = Plan::of(
-        THROTTLE.get(),
-        MAX_REQUESTS.get(),
-        cache.as_deref(),
-        CACHE_BYTES.get(),
-    )?;
+    let plan = Plan::of(THROTTLE.get(), MAX_REQUESTS.get(), cache.as_deref())?;
     let active = ACTIVE_THROTTLE.load(Ordering::Acquire);
     if plan
         .throttle
@@ -452,14 +436,6 @@ pub(crate) fn register() {
         GucContext::Suset,
         GucFlags::default(),
     );
-    int(
-        c"thinkthen.cache_bytes",
-        c"cache cap in bytes; -1 leaves the configured value",
-        &CACHE_BYTES,
-        i32::MAX,
-        GucContext::Suset,
-        GucFlags::UNIT_BYTE,
-    );
     GucRegistry::define_string_guc(
         c"thinkthen.cache",
         c"answer cache folder; empty leaves the environment's",
@@ -496,28 +472,14 @@ mod tests {
     /// value reaches the plan. PostgreSQL's `'1MB'` arrives as bytes.
     #[test]
     fn the_registered_defaults_plan_nothing_and_set_values_carry() {
-        assert_eq!(Plan::of(UNSET, UNSET, None, UNSET), Ok(Plan::default()));
-        assert_eq!(Plan::of(UNSET, UNSET, Some(""), UNSET), Ok(Plan::default()));
+        assert_eq!(Plan::of(UNSET, UNSET, None), Ok(Plan::default()));
+        assert_eq!(Plan::of(UNSET, UNSET, Some("")), Ok(Plan::default()));
         let set = Plan {
             throttle: Some(8),
             max_requests: Some(3),
             cache: Some(PathBuf::from("/srv/cache")),
-            cache_bytes: Some(1_048_576),
         };
-        assert_eq!(Plan::of(8, 3, Some("/srv/cache"), 1_048_576), Ok(set));
-    }
-
-    /// A zero cache cap refuses with the pinned sentence before any setter.
-    #[test]
-    fn a_zero_cache_cap_refuses_before_any_setter() {
-        assert_eq!(
-            Plan::of(UNSET, UNSET, None, 0),
-            Err(Refusal::usage(CACHE_BYTES_ZERO))
-        );
-        assert_eq!(
-            Refusal::usage(CACHE_BYTES_ZERO).text(),
-            "thinkthen usage: thinkthen.cache_bytes must be -1 or at least 1 (retryable: no)"
-        );
+        assert_eq!(Plan::of(8, 3, Some("/srv/cache")), Ok(set));
     }
 
     /// R1-31 and R2-31: the one table maps every kind to its SQLSTATE.

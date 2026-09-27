@@ -130,7 +130,7 @@ EVERY_CALL = """
 db = connect()
 db.execute("CREATE TABLE e(id INTEGER, name TEXT, kind TEXT)")
 db.executemany("INSERT INTO e VALUES (?, ?, ?)", [(1, "Ada", "person"), (2, "Acme", "organization")])
-calls = ["SELECT thinkthen_throttle(4)", "SELECT thinkthen_max_requests(NULL)", "SELECT thinkthen_max_requests_total(1000)", "SELECT thinkthen_cache_bytes(1000000)",
+calls = ["SELECT thinkthen_throttle(4)", "SELECT thinkthen_max_requests(NULL)", "SELECT thinkthen_max_requests_total(1000)",
          "SELECT thinkthen_cache('" + os.environ["SCRATCH"] + "/cache')"]
 calls += [f"SELECT {name}('Is it red?', 'a red door'{deadline})" for name in ("thinkthen_decide", "thinkthen_details", "thinkthen_warm") for deadline in ("", ", 0")]
 calls += ["SELECT thinkthen_choose('{\\"choose\\":\\"Which?\\",\\"options\\":[\\"a\\",\\"b\\"]}', 'x')",

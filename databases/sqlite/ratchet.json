@@ -1,5 +1,7 @@
 {
-  "directory": ["src"],
+  "directory": [
+    "src"
+  ],
   "extension": ".rs",
-  "max": 1777
+  "max": 1754
 }

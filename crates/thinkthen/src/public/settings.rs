@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::config::{self, Config};
-use crate::core::{Backend, DEFAULT_MODEL, KEY_VAR, ModelName};
+use crate::core::{Backend, BackendProfile, DEFAULT_MODEL, KEY_VAR, ModelName};
 use crate::engine::Width;
 use crate::engine::error::Error as EngineError;
 use crate::engine::facade::{Key, Settings, Storage};
@@ -55,6 +55,11 @@ pub struct EngineBuilder {
     max_requests: Option<usize>,
     cache: Cache,
     seeded: Option<Seeded>,
+    timeout: Duration,
+    max_retries: u32,
+    profile: Option<PathBuf>,
+    record: Option<PathBuf>,
+    replay: Option<PathBuf>,
 }
 
 impl EngineBuilder {
@@ -67,6 +72,11 @@ impl EngineBuilder {
             max_requests: None,
             cache: Cache::Default,
             seeded: None,
+            timeout: Duration::from_secs(30),
+            max_retries: 2,
+            profile: None,
+            record: None,
+            replay: None,
         }
     }
 
@@ -189,11 +199,10 @@ impl EngineBuilder {
     ///
     /// Returns [`Error::Usage`] for an empty path.
     pub fn cache_at(mut self, value: impl AsRef<Path>) -> Result<Self, Error> {
-        let folder = value.as_ref();
-        if folder.as_os_str().is_empty() {
-            return Err(Error::usage("a cache folder is a path, not empty"));
-        }
-        self.cache = Cache::At(folder.to_owned());
+        self.cache = Cache::At(folder(
+            value.as_ref(),
+            "a cache folder is a path, not empty",
+        )?);
         Ok(self)
     }
 
@@ -204,18 +213,54 @@ impl EngineBuilder {
         self
     }
 
-    /// Check a cache cap. In 0.1 the library keeps no cap and prunes nothing,
-    /// so a valid value has no effect; `thinkthen cache prune` reads its own.
-    ///
+    /// End each live attempt after this duration.
     /// # Errors
-    ///
-    /// Returns [`Error::Usage`] for 0.
-    pub fn cache_bytes(self, value: u64) -> Result<Self, Error> {
-        if value == 0 {
-            return Err(Error::usage(
-                "a cache cap is a whole number of bytes above zero",
-            ));
+    /// Returns [`Error::Usage`] for zero.
+    pub fn timeout(mut self, value: Duration) -> Result<Self, Error> {
+        if value.is_zero() {
+            return Err(Error::usage("a timeout is a time above zero"));
         }
+        self.timeout = value;
+        Ok(self)
+    }
+
+    /// Retry a failed live attempt at most this many times.
+    #[must_use]
+    pub fn max_retries(mut self, value: u32) -> Self {
+        self.max_retries = value;
+        self
+    }
+
+    /// Read this backend profile at build time.
+    /// # Errors
+    /// Returns [`Error::Usage`] for an empty path.
+    pub fn profile(mut self, value: impl AsRef<Path>) -> Result<Self, Error> {
+        self.profile = Some(folder(
+            value.as_ref(),
+            "a profile file is a path, not empty",
+        )?);
+        Ok(self)
+    }
+
+    /// Write every exchange to this folder.
+    /// # Errors
+    /// Returns [`Error::Usage`] for an empty path.
+    pub fn record(mut self, value: impl AsRef<Path>) -> Result<Self, Error> {
+        self.record = Some(folder(
+            value.as_ref(),
+            "a recording folder is a path, not empty",
+        )?);
+        Ok(self)
+    }
+
+    /// Read only saved exchanges from this folder.
+    /// # Errors
+    /// Returns [`Error::Usage`] for an empty path.
+    pub fn replay(mut self, value: impl AsRef<Path>) -> Result<Self, Error> {
+        self.replay = Some(folder(
+            value.as_ref(),
+            "a recording folder is a path, not empty",
+        )?);
         Ok(self)
     }
 
@@ -226,15 +271,25 @@ impl EngineBuilder {
     /// Returns [`Error::Usage`] when the default cache is selected and no
     /// folder is available, or when a different throttle is already active.
     pub fn build(self) -> Result<super::Engine, Error> {
+        let profile = self
+            .profile
+            .as_ref()
+            .map(|path| {
+                let text = std::fs::read_to_string(path)
+                    .map_err(|_| Error::local("the profile file could not be read"))?;
+                BackendProfile::parse(&text)
+                    .map_err(|error| Error::local(format!("the profile file {error}")))
+            })
+            .transpose()?;
         let model = self.model.as_ref().map_or(DEFAULT_MODEL, ModelName::as_str);
         let backend =
             Backend::resolve(self.base_url.as_deref(), None, model).map_err(Error::refused)?;
         let key = self.key.clone();
         let settings = Settings {
             backend,
-            profile: None,
-            timeout: Duration::from_secs(30),
-            max_retries: 2,
+            profile: profile.clone(),
+            timeout: self.timeout,
+            max_retries: self.max_retries,
             retry_wait: Duration::from_secs(1),
             width: self.width,
             storage: self.storage()?,
@@ -245,10 +300,29 @@ impl EngineBuilder {
             }),
             usage: Arc::new(Counters::new(None)),
         };
-        super::Engine::from_settings(settings, self.max_requests)
+        super::Engine::from_settings(settings, self.max_requests, profile)
     }
 
     fn storage(&self) -> Result<Storage, Error> {
+        if matches!((&self.record, &self.replay), (Some(record), Some(replay)) if record != replay)
+        {
+            return Err(Error::usage(
+                "record and replay name two different folders, and one engine keeps one",
+            ));
+        }
+        if self.record.is_some() || self.replay.is_some() {
+            if matches!(self.cache, Cache::At(_)) {
+                return Err(Error::usage(
+                    "a cache folder is record and replay on one folder, so it stands beside neither",
+                ));
+            }
+            return Ok(Storage {
+                record: self.record.clone(),
+                replay: self.replay.clone(),
+                private_default: false,
+                cache_answers: false,
+            });
+        }
         let (folder, private_default) = match &self.cache {
             Cache::Off => return Ok(Storage::default()),
             Cache::At(folder) => (folder.clone(), false),
@@ -273,6 +347,14 @@ impl EngineBuilder {
             private_default,
             cache_answers: true,
         })
+    }
+}
+
+fn folder(path: &Path, sentence: &str) -> Result<PathBuf, Error> {
+    if path.as_os_str().is_empty() {
+        Err(Error::usage(sentence))
+    } else {
+        Ok(path.to_owned())
     }
 }
 

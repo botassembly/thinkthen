@@ -428,12 +428,6 @@ pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
         settings::max_requests_total,
     )?;
     connection.create_scalar_function("thinkthen_cache", 1, volatile, settings::cache)?;
-    connection.create_scalar_function(
-        "thinkthen_cache_bytes",
-        1,
-        volatile,
-        settings::cache_bytes,
-    )?;
     Ok(())
 }
 

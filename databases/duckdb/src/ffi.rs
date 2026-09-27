@@ -357,7 +357,6 @@ fn register_all(connection: sys::duckdb_connection, serial: u64) -> Result<(), S
     register_setting(connection, c"thinkthen_throttle", &Type::BigInt)?;
     register_setting(connection, c"thinkthen_max_requests", &Type::BigInt)?;
     register_setting(connection, c"thinkthen_cache", &Type::Text)?;
-    register_setting(connection, c"thinkthen_cache_bytes", &Type::BigInt)?;
     register_setting(connection, c"thinkthen_max_requests_total", &Type::BigInt)?;
     for scalar in &SCALARS {
         register_scalar(connection, scalar)?;

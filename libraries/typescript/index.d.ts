@@ -223,7 +223,11 @@ export interface EngineOptions {
   maxRequests?: number;
   /** `false` reads and writes no cache; a string names the cache folder. */
   cache?: false | string;
-  cacheBytes?: number;
+  timeoutSeconds?: number;
+  maxRetries?: number;
+  record?: string;
+  replay?: string;
+  profile?: string;
 }
 
 export interface Verbs {

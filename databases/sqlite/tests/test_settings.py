@@ -149,22 +149,6 @@ say(off=run(db, "SELECT thinkthen_cache(NULL)"),
     expect(backend.close(), 3, "sends: the query after the warm sent again")
 
 
-def test_cache_bytes_is_checked_at_the_setting_call() -> None:
-    backend = Backend()
-    held = child("""
-db = connect()
-say(zero=run(db, "SELECT thinkthen_cache_bytes(0)"),
-    cap=run(db, "SELECT thinkthen_cache_bytes(1000000)"),
-    answer=run(db, "SELECT thinkthen_decide('Is it red?', 'a red door')"))
-""", environment(backend))
-    expect(held, {
-        "zero": "thinkthen usage: a cache cap is a whole number of bytes above zero",
-        "cap": [[1000000]],
-        "answer": [[1]],
-    }, "the cache cap")
-    expect(backend.close(), 1, "sends")
-
-
 def test_a_setting_after_the_first_call_is_refused() -> None:
     """`thinkthen_usage` builds no engine, so a setting after it still applies."""
     backend = Backend()

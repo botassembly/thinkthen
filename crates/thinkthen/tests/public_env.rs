@@ -209,7 +209,6 @@ fn overrides(argument: &str) -> Vec<String> {
         ask(&uncached),
         ask(&uncached),
         ask(&seed().no_cache().default_cache().build().unwrap()),
-        shown(seed().cache_bytes(0)),
     ]
 }
 
@@ -326,10 +325,6 @@ fn settings_after_the_seed_take_effect() {
         lines[2].starts_with("sent 1 cached false") && lines[3].starts_with("sent 1 cached false")
     );
     assert!(lines[4].starts_with("sent 1 cached false"), "{said}");
-    assert_eq!(
-        lines[5],
-        "Usage: a cache cap is a whole number of bytes above zero"
-    );
     let moved = second.requests();
     assert_eq!(moved.len(), 1);
     assert_eq!(moved[0].header("authorization"), Some("Bearer sk-key-b"));

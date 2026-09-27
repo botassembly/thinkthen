@@ -10,7 +10,7 @@ urgent = ThinkThen.rank("Is this urgent?", inbox, top: 5)
 ThinkThen.score("How urgent is this?", outage, levels: ["Routine.", "Soon.", "Immediate."])
 ```
 
-The module methods use one engine built on first use from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, and the rest that the command reads. `ThinkThen::Engine.new(base_url:, model:, throttle:, max_requests:, cache:, cache_bytes:)` builds another. Each omitted keyword comes from the environment. `cache: false` turns the cache off. There is no key keyword, and the key never enters a Ruby object.
+The module methods use one engine built on first use from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, and the rest that the command reads. `ThinkThen::Engine.new(base_url:, model:, throttle:, max_requests:, cache:, timeout:, max_retries:, profile:, record:, replay:)` builds another. Each omitted keyword comes from the environment. `cache: false` turns the cache off. There is no key keyword, and the key never enters a Ruby object.
 
 ## The verbs
 
