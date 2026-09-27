@@ -12,8 +12,8 @@ The review rated these findings severity 3: a sharp edge or a missing feature. N
 - I6. One bad record ends the stream with no machine-readable stop point. Tracked in part: `2026-09-26-run-facts-b5-owe-cause-retryable-and-stop-record.md`.
 - I7. `filter` records have no default size guard. Tracked: 0154, ADR 0051.
 - I8. `filter` cannot serve as a coprocess, and the README does not say so. Doc line.
-- I9. After Ctrl-C, the stop line names a record that never arrived. Wording fix.
-- I10. The second-Ctrl-C escape is undocumented. Doc line in `channels.md`.
+- I9. After Ctrl-C, the stop line names a record that never arrived. Wording fix. Tracked: 0169.
+- I10. The second-Ctrl-C escape is undocumented. Doc line in `channels.md`. Tracked: 0169.
 
 ## Report 03, `annotate`
 
@@ -113,12 +113,12 @@ The review rated these findings severity 3: a sharp edge or a missing feature. N
 
 ## Report 11, failure and scripting
 
-- 3. SIGTERM is unspecified and ends a run abruptly.
+- 3. SIGTERM is unspecified and ends a run abruptly. Tracked: 0169.
 - 4. Killed runs leave temporary cache entries that prune ignores. With report 08 finding 12.
 - 5. A stored partial reply replays forever. Tracked: ticket 0158 and `2026-09-26-recording-page-says-a-failure-is-never-recorded.md`.
 - 6. A deterministic refusal on one record blocks every rerun. Tracked: 0154 and the roadmap's `--on-error` hold.
 - 7. An absurd `--timeout` panics with exit 101. Quick Fix, with report 06 I-11.
-- 8. Ctrl-C waits out a hung request, then blames the backend. Wording fix.
+- 8. Ctrl-C waits out a hung request, then blames the backend. Wording fix. Tracked: 0169.
 - 9. The default cache binds to one address. Tracked: ticket 0124's deferred gaps.
 - 10. No catalog of error sentences with stable identifiers. With `2026-09-26-run-facts-b5-owe-cause-retryable-and-stop-record.md`.
 

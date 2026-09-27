@@ -1,4 +1,4 @@
-Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review.
+Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review. Ticket 0169 (`sdlc/tickets/0169-a-signal-stops-the-command-plainly.md`) carries item 2 and the SIGTERM finding.
 
 # Architect review 11: failure handling and scripting
 
