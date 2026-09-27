@@ -261,7 +261,7 @@ Rejected: 0167 first. It would delete `SettledRelation::settle`'s fallback befor
 
 ## Ratchet
 
-The build-start ceiling is 77,421 nonblank Rust lines after 0154. The current pair implementation measures 76,594, a drop of 827; the final review rechecks this after any main merge. The older -525 estimate came from `a057c594` before 0154.
+The build-start ceiling after 0154 was 77,421 nonblank Rust lines. At source checkpoint `c27fc529`, the pair implementation measured 76,594, a drop of 827. After merging main `9bf7b15c`, main measures 77,650 and this branch measures 76,823, still 827 lower. The older -525 estimate came from `a057c594` before 0154.
 
 - Shrinks: the choice planner and its expansion (about 150 lines), the choice assembler (about 35), the fallback (about 30), the relate facade's per-relation plumbing (about 30), the choice detail entry (about 90), the dry-run fallback (about 12), and the choice and fallback tests, experiment 239's replay included (about 480).
 - Grows: the generic pair planner and its wording enum (about 20), the shared split helper (about 10), the relate facade on pairs (about 20), the edge-case table (about 90), tests 2 and 3 (about 150), and the rewritten tests (about 10).
@@ -313,7 +313,7 @@ The owner's calls, which ADR 0057 lists. Ian can overturn each.
 
 - The preflight correctly identified the shared planner, replay digest changes, and the SQLite cancellation setup. It missed DuckDB's throttle case: nine old per-rule requests became six shared requests, so the case now uses sixteen rules and still proves eight held requests with later work waiting.
 - A recording entry stores the exact request as raw JSON. Pretty-printing the rebuilt synthetic request under the correct digest made replay reject it; keeping the compiled dry-run's compact request bytes fixed the executable spec. The 0152 fixture-hash lesson helped find the new digest, but did not predict this raw-byte requirement.
-- The two synthetic conformance cases now share one request where case 51 formerly had two. Their replies were remapped to ordered pair questions, while their expected edges and question digests stayed. The source ratchet fell from 77,421 to 76,594 after removing choice-only code and tests; see `sdlc/records/0167-build.md` for the focused proof and deleted-test replacements.
+- The two synthetic conformance cases now share one request where case 51 formerly had two. Their replies were remapped to ordered pair questions, while their expected edges and question digests stayed. The source ratchet is 76,823 against merged main's 77,650, after removing choice-only code and tests; see `sdlc/records/0167-build.md` for the focused proof and deleted-test replacements.
 - The public-fact inputs and key are ready without a provider call. Run A and run B still need Ian's separate authorization after fresh code review. The related command and surface checkpoint belongs to the batch coordinator.
 
 ## What Ian can overturn
