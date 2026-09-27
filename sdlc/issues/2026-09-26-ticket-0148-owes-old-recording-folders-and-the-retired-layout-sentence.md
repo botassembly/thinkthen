@@ -27,3 +27,7 @@ Verified: `crates/thinkthen/src/public/error.rs:198` reads "the recording folder
 ## Done when
 
 0148 lands with these three items, or the coordinator records why one moved elsewhere.
+
+## Candidate proof, 2026-09-27
+
+The 0148 ticket branch now maps library `replay` to a read-only recorder. A Rust public-boundary regression copies demo 27's unmarked recording, replays its hit with no key, checks an exact local miss, and verifies that the entry and marker state do not change. A write-capable use of the copy gets the command-equivalent backend-binding advice. The shared settings replay case counts zero extra loopback requests after a miss on each of the seven tested surfaces. Focused Rust and C settings tests pass. This issue stays open until the reviewed ticket lands.

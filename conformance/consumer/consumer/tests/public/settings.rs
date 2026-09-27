@@ -23,6 +23,16 @@ fn builder_validates_new_settings_at_the_public_edge() {
         (replay.kind(), replay.to_string().as_str()),
         (ErrorKind::Usage, "a recording folder is a path, not empty")
     );
+    let missing = std::env::temp_dir().join(format!("consumer-profile-missing-{}", std::process::id()));
+    let error = Engine::builder().profile(&missing).expect("path").build().expect_err("missing");
+    assert_eq!((error.kind(), error.to_string().as_str()),
+        (ErrorKind::Local, "the profile file could not be read"));
+    let bad = std::env::temp_dir().join(format!("consumer-profile-invalid-{}", std::process::id()));
+    std::fs::write(&bad, r#"{"schema":"thinkthen.backend-profile/1","unknown":1}"#).expect("bad profile");
+    let error = Engine::builder().profile(&bad).expect("path").build().expect_err("invalid");
+    assert_eq!((error.kind(), error.to_string().as_str()),
+        (ErrorKind::Local, "the profile file holds no unknown keys"));
+    std::fs::remove_file(bad).expect("clean profile");
 }
 
 #[test]
@@ -42,6 +52,7 @@ fn an_old_recording_replays_read_only_without_a_key() {
         .args(["--exact", "--ignored", "settings::old_recording_child"])
         .env_clear()
         .env("THINKTHEN_0148_LEGACY", &copied)
+        .env("THINKTHEN_CACHE", copied.join("seeded-cache"))
         .output()
         .expect("child");
     assert!(
@@ -64,7 +75,8 @@ fn old_recording_child() {
     let Ok(folder) = std::env::var("THINKTHEN_0148_LEGACY") else {
         return;
     };
-    let engine = Engine::builder()
+    let engine = thinkthen::EngineBuilder::from_env()
+        .expect("seeded builder")
         .replay(&folder)
         .expect("replay")
         .build()
@@ -109,6 +121,60 @@ fn old_recording_child() {
 }
 
 #[test]
+fn the_builder_follows_the_command_folder_rules() {
+    use conformance_backend::Backend;
+    let backend = Backend::start().expect("loopback");
+    let base = format!("{}/generic/v1", backend.origin());
+    let root = std::env::temp_dir().join(format!("consumer-folders-{}", std::process::id()));
+    std::fs::create_dir(&root).expect("fresh root");
+    let saved = root.join("saved");
+    let other = root.join("other");
+    let missing = root.join("missing");
+    let file = root.join("file");
+    std::fs::write(&file, b"not a folder").expect("file");
+    let ask = Question::decide("Does this need attention?").expect("question").cut();
+    let error = Engine::builder().cache_at(&saved).expect("cache")
+        .replay(&saved).expect("replay").build().expect_err("cache conflict");
+    assert_eq!(error.to_string(), "a cache folder is record and replay on one folder, so it stands beside neither");
+    let error = Engine::builder().record(&saved).expect("record")
+        .replay(&other).expect("replay").build().expect_err("two folders");
+    assert_eq!(error.to_string(), "record and replay name two different folders, and one engine keeps one");
+    let error = Engine::builder().record(&file).expect("record path")
+        .build().expect_err("file is not a folder");
+    assert_eq!((error.kind(), error.to_string().as_str()),
+        (ErrorKind::Local, "the recording folder names a file"));
+    let miss = Engine::builder().base_url(&base).expect("base")
+        .replay(&missing).expect("replay").build().expect("missing replay");
+    assert_eq!(miss.decide(&ask, "never saved").expect_err("miss").kind(), ErrorKind::Local);
+    assert!(!missing.exists(), "replay does not make a folder");
+    let paired = Engine::builder().base_url(&base).expect("base")
+        .api_key("loopback").expect("key").record(&saved).expect("record")
+        .replay(&saved).expect("replay").build().expect("pair");
+    assert_eq!(paired.decide(&ask, "one").expect("send"), Answer::Yes);
+    assert_eq!(paired.decide(&ask, "one").expect("replay"), Answer::Yes);
+    assert_eq!((backend.count(), paired.usage().cache_answers()), (1, 0));
+    let recorder = Engine::builder().base_url(&base).expect("base")
+        .api_key("loopback").expect("key").record(&saved).expect("record")
+        .build().expect("record only");
+    assert_eq!(recorder.decide(&ask, "one").expect("send again"), Answer::Yes);
+    assert_eq!(backend.count(), 2);
+    let reader = Engine::builder().base_url(&base).expect("base")
+        .no_cache().replay(&saved).expect("replay").build().expect("reader");
+    assert_eq!(reader.decide(&ask, "one").expect("saved"), Answer::Yes);
+    assert_eq!(backend.count(), 2);
+    let wrong = Engine::builder().base_url(&format!("{}/arm/503/v1", backend.origin()))
+        .expect("other base").replay(&saved).expect("replay").build().expect("wrong reader");
+    assert_eq!(wrong.decide(&ask, "one").expect_err("mismatch").kind(), ErrorKind::Local);
+    assert_eq!(backend.count(), 2, "a mismatch sends nothing");
+    std::fs::remove_dir_all(root).expect("clean root");
+}
+
+#[test]
+#[expect(
+    clippy::excessive_nesting,
+    clippy::too_many_lines,
+    reason = "one shared corpus row maps settings, runs the engine, and checks its wire effect"
+)]
 fn every_shared_setting_reaches_the_public_engine() {
     use conformance_backend::Backend;
     use serde_json::Value;

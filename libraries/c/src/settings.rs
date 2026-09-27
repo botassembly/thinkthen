@@ -1,16 +1,11 @@
 //! The closed JSON settings object for the C constructor.
 
-use std::collections::HashSet;
-use std::time::Duration;
+use std::{collections::HashSet, time::Duration};
 
 use serde_json::{Map, Value};
 use thinkthen::{Engine, EngineBuilder};
 
 use crate::failures::Failure;
-
-fn usage(message: impl Into<String>) -> Failure {
-    Failure::usage(message)
-}
 
 /// Reject repeated top-level keys before `serde_json::Map` can lose them.
 #[expect(
@@ -19,10 +14,9 @@ fn usage(message: impl Into<String>) -> Failure {
 )]
 fn duplicates(text: &str) -> Result<(), Failure> {
     let bytes = text.as_bytes();
-    let mut at = bytes
-        .iter()
-        .position(|byte| *byte == b'{')
-        .ok_or_else(|| usage("settings JSON is one object"))?
+    let mut at = text
+        .find('{')
+        .ok_or_else(|| Failure::usage("settings JSON is one object"))?
         + 1;
     let mut keys = HashSet::new();
     while at < bytes.len() {
@@ -46,9 +40,9 @@ fn duplicates(text: &str) -> Result<(), Failure> {
             at += 1;
         }
         let key: String = serde_json::from_str(&text[start..at])
-            .map_err(|_| usage("settings JSON is one object"))?;
+            .map_err(|_| Failure::usage("settings JSON is one object"))?;
         if !keys.insert(key.clone()) {
-            return Err(usage(format!("settings JSON repeats key {key}")));
+            return Err(Failure::usage(format!("settings JSON repeats key {key}")));
         }
         while at < bytes.len() && bytes[at] != b':' {
             at += 1;
@@ -78,69 +72,60 @@ fn duplicates(text: &str) -> Result<(), Failure> {
     Ok(())
 }
 
-fn text<'a>(key: &str, value: &'a Value) -> Result<&'a str, Failure> {
-    value
-        .as_str()
-        .ok_or_else(|| usage(format!("settings {key} is a string")))
-}
-
-fn whole(key: &str, value: &Value) -> Result<u64, Failure> {
-    value
-        .as_u64()
-        .ok_or_else(|| usage(format!("settings {key} is a whole number")))
-}
-
 fn apply(
     mut builder: EngineBuilder,
     values: &Map<String, Value>,
 ) -> Result<EngineBuilder, Failure> {
     for (key, value) in values {
-        builder = match key.as_str() {
-            "base_url" => builder.base_url(text(key, value)?).map_err(Failure::from)?,
-            "model" => builder.model(text(key, value)?).map_err(Failure::from)?,
-            "throttle" => builder
-                .throttle(
-                    u8::try_from(whole(key, value)?)
-                        .map_err(|_| usage("a throttle is a whole number from 1 through 32"))?,
-                )
-                .map_err(Failure::from)?,
-            "max_requests" if value.is_null() => {
-                builder.max_requests(None).map_err(Failure::from)?
-            }
-            "max_requests" => builder
-                .max_requests(Some(usize::try_from(whole(key, value)?).map_err(|_| {
-                    usage("a request limit is a whole number of 1 or more")
-                })?))
-                .map_err(Failure::from)?,
-            "cache" if value == &Value::Bool(false) => builder.no_cache(),
-            "cache" if value.is_string() => {
-                builder.cache_at(text(key, value)?).map_err(Failure::from)?
-            }
-            "cache" => return Err(usage("settings cache is false or a folder path")),
-            "record" => builder.record(text(key, value)?).map_err(Failure::from)?,
-            "replay" => builder.replay(text(key, value)?).map_err(Failure::from)?,
-            "profile" => builder.profile(text(key, value)?).map_err(Failure::from)?,
-            "timeout" => builder
-                .timeout(Duration::from_secs(whole(key, value)?))
-                .map_err(Failure::from)?,
-            "max_retries" => builder.max_retries(
-                u32::try_from(whole(key, value)?)
-                    .map_err(|_| usage("settings max_retries is a whole number"))?,
-            ),
-            _ => return Err(usage(format!("settings JSON has unknown key {key}"))),
+        let text = || {
+            value
+                .as_str()
+                .ok_or_else(|| Failure::usage(format!("settings {key} is a string")))
         };
+        let whole = || {
+            value
+                .as_u64()
+                .ok_or_else(|| Failure::usage(format!("settings {key} is a whole number")))
+        };
+        let unknown = || Failure::usage(format!("settings JSON has unknown key {key}"));
+        builder =
+            match key.as_str() {
+                "base_url" => builder.base_url(text()?)?,
+                "model" => builder.model(text()?)?,
+                "throttle" => builder.throttle(u8::try_from(whole()?).map_err(|_| {
+                    Failure::usage("a throttle is a whole number from 1 through 32")
+                })?)?,
+                "max_requests" if value.is_null() => builder.max_requests(None)?,
+                "max_requests" => {
+                    builder.max_requests(Some(usize::try_from(whole()?).map_err(|_| {
+                        Failure::usage("a request limit is a whole number of 1 or more")
+                    })?))?
+                }
+                "cache" if value == &Value::Bool(false) => builder.no_cache(),
+                "cache" if value.is_string() => builder.cache_at(text()?)?,
+                "cache" => return Err(Failure::usage("settings cache is false or a folder path")),
+                "record" => builder.record(text()?)?,
+                "replay" => builder.replay(text()?)?,
+                "profile" => builder.profile(text()?)?,
+                "timeout" => builder.timeout(Duration::from_secs(whole()?))?,
+                "max_retries" => builder.max_retries(
+                    u32::try_from(whole()?)
+                        .map_err(|_| Failure::usage("settings max_retries is a whole number"))?,
+                ),
+                _ => return Err(unknown()),
+            };
     }
     Ok(builder)
 }
 
 pub(crate) fn build(text: &str) -> Result<Engine, Failure> {
     let value: Value =
-        serde_json::from_str(text).map_err(|_| usage("settings JSON is one object"))?;
+        serde_json::from_str(text).map_err(|_| Failure::usage("settings JSON is one object"))?;
     let values = value
         .as_object()
-        .ok_or_else(|| usage("settings JSON is one object"))?;
+        .ok_or_else(|| Failure::usage("settings JSON is one object"))?;
     duplicates(text)?;
-    apply(EngineBuilder::from_env().map_err(Failure::from)?, values)?
+    apply(EngineBuilder::from_env()?, values)?
         .build()
         .map_err(Failure::from)
 }
