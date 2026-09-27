@@ -1,6 +1,6 @@
 # Loopback listeners exhaust the test process's file limit
 
-Status: closed by ticket 0202, verified for landing 2026-09-27. The full test passed under a child-only 1,024 soft file limit; its 411 backend cases completed with peaks of 131 descriptors and 102 tasks. Component: Release and tooling. Severity: 3.
+Status: in progress under ticket 0202; the Python exposure proof remains unresolved on 2026-09-27. The full test passed under a child-only 1,024 soft file limit; its 411 backend cases completed with peaks of 131 descriptors and 102 tasks. Component: Release and tooling. Severity: 3.
 
 ## Evidence
 

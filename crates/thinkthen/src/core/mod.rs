@@ -53,6 +53,8 @@ pub(crate) use crate::core::digest::question_sha256;
 pub(crate) use crate::core::digest::question_sha256_with_profile;
 pub(crate) use crate::core::find::Find;
 pub(crate) use crate::core::json::Json;
+#[cfg(feature = "cli")]
+pub(crate) use crate::core::json::JsonError;
 pub(crate) use crate::core::order::ranking;
 pub(crate) use crate::core::plan::Plan;
 pub(crate) use crate::core::plan_document::PlanDocument;
