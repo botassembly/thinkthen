@@ -5,7 +5,7 @@ use thiserror::Error;
 
 use crate::core::digest::hex;
 use crate::core::json::Json;
-use crate::core::recognize_file::{parse_json_cut, parse_relations, parse_typed_cut};
+use crate::core::recognize_file::{parse_json_cut, parse_relations, parse_typed_cut, rule_side};
 use crate::core::{
     ModelName, Pointer, ProfileName, QuestionFile, RecognizeConfigError, RecognizeSpec,
     RelationEntity, RelationEntityView, RelationRule, RenderError, Threshold, json_line,
@@ -306,8 +306,8 @@ fn inline_rule(text: &str, either: bool) -> Result<RelationRule, RelateConfigErr
     };
     let rule = RelationRule {
         name: checked_text(name)?,
-        source: checked_text(source)?,
-        target: checked_text(target)?,
+        source: rule_side(&checked_text(source)?),
+        target: rule_side(&checked_text(target)?),
         reads: name.replace('_', " "),
         either,
     };

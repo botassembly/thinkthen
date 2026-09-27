@@ -54,7 +54,7 @@ impl RelationEntityView for RelationEntity {
 
 impl RelationEntityView for RecognizedName {
     fn name(&self) -> &str {
-        &self.name
+        &self.text
     }
 
     fn kind(&self) -> &str {
@@ -450,6 +450,10 @@ fn reference<E: RelationEntityView>(entity: &E, place: usize) -> String {
         entity.name()
     )
 }
+
+#[path = "relation/stated.rs"]
+mod stated;
+pub(crate) use stated::{plan_stated, stated_edges};
 
 #[cfg(test)]
 #[rustfmt::skip]
