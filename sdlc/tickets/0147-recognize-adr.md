@@ -6,7 +6,7 @@ opens: sdlc/planning/adr/0056-recognize-is-three-steps.md crates/thinkthen/src/c
 
 # 0147: Build recognize in three steps
 
-Status: built 2026-09-27, awaiting code review. The coordinator accepted it on 2026-09-27 after five rounds of fresh read-only reviews, with step 1 moved to the q3 wording on local experiment 288's evidence. Owner: Claude.
+Status: landed 2026-09-27 (`sdlc/records/0147-build-recognize-in-three-steps.md`). Two fresh read-only code reviews and a fresh re-review accepted it after their findings were fixed. The coordinator accepted it on 2026-09-27 after five rounds of fresh read-only reviews, with step 1 moved to the q3 wording on local experiment 288's evidence. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 

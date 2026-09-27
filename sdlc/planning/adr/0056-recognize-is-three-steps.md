@@ -1,6 +1,6 @@
 # ADR 0056: Recognize is three steps: BILOU boundaries, labels, then stated relations
 
-- Status: Accepted 2026-09-27 by the coordinator after five rounds of fresh read-only reviews, on Ian's rulings of 2026-09-26. Ian can overturn it. Ticket 0147 builds it
+- Status: Accepted 2026-09-27 by the coordinator after five rounds of fresh read-only reviews, on Ian's rulings of 2026-09-26. Ian can overturn it. Ticket 0147 built it, landed 2026-09-27
 - Date: 2026-09-26
 
 This ADR replaces the method in `sdlc/issues/2026-09-26-recognize-design.md` sections 1 to 4 and the pieces and windows of its section 6. It keeps that design's stated relations, its `--jobs` ruling and its batch rules. Its hard cap of 600,000 bytes becomes a default the caller can raise, which changes the design issue author's call 6, and the refusal's message changes to name the new option. Ian can overturn that change. It keeps Ian's four kinds rulings of 2026-09-26 that ticket 0147 recorded. Local experiments 278 to 288 hold the measurements, and `sdlc/records/2026-09-26-recognize-three-step-evidence.md` copies the tables this ADR cites.
