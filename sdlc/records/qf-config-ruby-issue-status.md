@@ -35,10 +35,12 @@ Status: built and checked, waiting for a fresh code review and landing. Owner: C
 
 With `THINKTHEN_API_KEY` unset. `sdlc/scripts/live` did not run, and no paid call was made.
 
-- `lint` with the private-names list: see the landing report.
-- `test`: see the landing report.
-- `spec`: see the landing report.
-- `surfaces`: see the landing report.
+The rungs ran at `b2e17154`. The later commit adds only this section.
+
+- `lint` with the private-names list: exit 0, `ratchet: crates + conformance 72224/72224`, Ruby `lib + tests 1635/1635`.
+- `test`: exit 0, 973 passed, 0 failed, 13 ignored across 38 result lines, `live-test: all cases passed`.
+- `spec`: exit 0, `demos: 21 green, 0 red`.
+- `surfaces`: exit 0, 19 `surfaces: pass` lines, `check ruby: pass` and `check ruby: pass, installed`.
 
 ## Deferred
 
