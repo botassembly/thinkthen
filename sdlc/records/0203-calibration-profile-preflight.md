@@ -1,6 +1,6 @@
 # Calibration profile preparation
 
-Read-only preparation at `fc587946` on 2026-09-27, verified by the coordinator from local experiment 2029. Accepted SQL settings tickets 0149/0157 are pinned at `2999814e0013926c2e14bd7b3927374c4b2c4775`. This note corrects build assumptions without changing 0203's outcome. Independent review is pending.
+Read-only preparation at `fc587946` on 2026-09-27, verified by the coordinator from local experiment 2029. Accepted SQL settings tickets 0149/0157 are pinned at `2999814e0013926c2e14bd7b3927374c4b2c4775`. This note corrects build assumptions without changing 0203's outcome. A fresh independent Sol Medium reviewer accepted the notes at `f8e43868`, checking the cited source, all five line counts, prerequisites and preservation of the accepted outcome. No build or test was needed for these notes.
 
 ## Current behavior and the missing paths
 
