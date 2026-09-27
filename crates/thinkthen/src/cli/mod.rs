@@ -114,12 +114,15 @@ pub fn entry() -> ExitCode {
             .and_then(|()| writer.flush());
     }
     if wants_facts {
-        facts::write(
-            stderr.lock(),
-            environment.usage().run_snapshot(),
-            started.elapsed(),
-            stopped,
-        );
+        let snapshot = environment.usage().run_snapshot();
+        let elapsed = started.elapsed();
+        let writer = stderr.lock();
+        let stopped = if activation.cancelled() {
+            Some(failure::facts::Stopped::of(&Failure::Cancelled, 130))
+        } else {
+            stopped
+        };
+        facts::write(writer, snapshot, elapsed, stopped);
     }
     match activation.finish(code) {
         Ok(code) => code,

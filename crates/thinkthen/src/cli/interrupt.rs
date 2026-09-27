@@ -92,6 +92,10 @@ pub(super) struct Guard<'a> {
 }
 
 impl Guard<'_> {
+    pub(super) fn cancelled(&self) -> bool {
+        self.state.cancel.fired()
+    }
+
     fn finalize(&mut self) -> (bool, Result<(), ()>) {
         self.state.default_armed.store(true, Ordering::SeqCst);
         let cancelled = self.state.cancel.fired();

@@ -1,6 +1,6 @@
 # 0170 run facts under batches: build record
 
-Status: Candidate on `ticket/0170-run-facts-under-batches` from main `83e3cf5c`, awaiting fresh code review. No paid request or load campaign ran.
+Status: Correction candidate on `ticket/0170-run-facts-under-batches` from main `83e3cf5c`, awaiting fresh follow-up code review. No paid request or load campaign ran.
 
 ## Result and proof boundaries
 
@@ -21,19 +21,20 @@ Focused validation on the candidate passed: `cargo test -p thinkthen --test back
 
 ## Measured scope and budget amendment
 
-At baseline `83e3cf5c`, the Rust ratchet was 77,650 nonblank lines. This candidate measures 78,611, a net increase of 961. The accepted estimate was 567: 247 product and 320 tests. The coordinator authorized a measured amendment because the accepted behavior crosses more adapters than the estimate listed; the fresh reviewer must assess each group. No Rust file exceeds 500 nonblank lines. Closest are `cli/failure.rs` 496, `cli/asking/batched.rs` 490, `tests/backend/interrupt.rs` 489 and `cli/args.rs` 489.
+At baseline `83e3cf5c`, the Rust ratchet was 77,650 nonblank lines. The corrected candidate measures 78,704, a net increase of 1,054. The accepted estimate was 567: 247 product and 320 tests. The coordinator authorized a measured amendment because the accepted behavior crosses more adapters than the estimate listed; the fresh reviewer must assess each group. No Rust file exceeds 500 nonblank lines. Closest are `cli/failure.rs` 496, `cli/asking/batched.rs` 490, `tests/backend/interrupt.rs` 490 and `cli/args.rs` 489.
 
 | Responsibility | Accepted estimate | Measured net | Why it grew |
 | --- | ---: | ---: | --- |
 | Facts line and failure map | 110 | 128 | Separate compact serialization and one stop classifier; the status retry list is shared with the engine. |
-| Flags and command lifecycle | 27 | 41 | `FindCommon` copies flags; early setup failures need a final line; `entry` writes after usage flush and before signal finish. |
+| Flags and command lifecycle | 27 | 44 | `FindCommon` copies flags; early setup failures need a final line; `entry` writes after usage flush and before signal finish. |
 | Completion adapters | 15 | 47 | `Output::take` counts hidden rows; judge, find, annotate, recognize and relate each hand off their completed result. |
 | Batch metadata builder | 20 | 66 | A small private constructor holds the split and batch-one predicates; the worker carries setting and close reason across whole and half batches. |
 | Engine in-memory reply facts | 35 | 87 | Presence and model state sit beside the existing counters without changing persisted `Counts`; the request path records them at its existing reply boundary. |
 | Typed result and JSON path | 40 | 82 | Optional typed `BatchMeta` plus a result-only constructor preserves old callers and bytes. |
-| Product total | 247 | 451 | The above exact groups. |
-| Tests | 320 | 510 | New outside-in facts module 431; existing batching 22, split 11, signal 40 and module registration 6. |
-| Rust total | 567 | 961 | `sdlc/ratchet.json` equals 78,611. |
+| Finalization signal state | 0 | 3 | A read-only guard accessor checks cancellation after the blocking usage flush. |
+| Product total | 247 | 457 | The above exact groups. |
+| Tests | 320 | 597 | New outside-in facts module 431; existing batching 22, split 11, signal 41, module registration 6 and a private held-flush child 86. |
+| Rust total | 567 | 1,054 | `sdlc/ratchet.json` equals 78,704. |
 
 Before raising the ratchet, I reused the existing `Counters`, `Output::take`, result serializer, loopback, signal fixture and split fixture. The old enum-only `Output` constructors were replaced with a single struct that carries the counter; no parallel completion walker was added. New stop tests use one status table and existing failure paths; they do not enumerate every command/status pair. Existing batch and signal tests gained assertions where they already own the boundary. Test functions were split by contract to pass strict cognitive-complexity and length lint; compacting them into one case would hide the failure being proved. No scaffold-only test was added or left behind.
 
@@ -43,3 +44,9 @@ Before raising the ratchet, I reused the existing `Counters`, `Output::take`, re
 - A loopback address permits a missing key by contract, so the no-key proof must use the built-in non-loopback address; it exits before any transport. Concurrent batches can withhold a successful first batch when the next fails, so the record-11 stop proof uses `--jobs 1` to establish its printed prefix.
 - The initial signal proof counted a completed held response. The accepted zero-record edge instead returns a failed held response after SIGTERM; the signal remains the final cause and the sent-attempt count stays one.
 - Existing source headroom matters more than a ticket's aggregate estimate. Local experiment 2028 independently confirmed 0172's `core/batch.rs` and `cli/args.rs` risks at frozen main. Refresh those numbers after this ticket lands. The 0170 measured growth needs independent review and does not alter any accepted behavior.
+
+## Fresh review correction: signal during usage flush
+
+The first fresh code review of `9f3c71d4` found one required race. `cli/mod.rs::entry` decided `stopped` before `Counters::finish`, which can wait on the usage ledger's file lock. A first SIGINT or SIGTERM during that wait produced a facts line with no `stopped`, followed by signal exit 130 or 143. The correction takes the usage snapshot and standard-error lock after the flush, then reads the guard's cancellation state immediately before writing facts. A late signal overrides the earlier cause only for this final facts member; the existing human diagnostic, usage warning, second-signal action and signal re-raise remain in their prior order.
+
+The new child `tests/backend/interrupt/facts_flush.rs` reuses the command harness, signal acknowledgment and held usage lock. It reads a completed row before sending SIGTERM, keeps the ledger lock held until the signal is acknowledged, then proves the final facts line says `cancelled` with one sent request and signal exit 143. Removing only the new final-boundary check made that case fail at exit 101; restoring it made the case pass. The corrected interrupt module passes 11/11 and the facts module 9/9. The correction adds six product and 87 test nonblank lines to the independently reviewed +961 candidate. It does not add a timing campaign or another signal framework. The lesson for 0171/0172 is that finalization includes a potentially blocking persistence flush; a stop-state snapshot taken at request completion is too early for a final report.

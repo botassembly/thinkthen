@@ -6,7 +6,7 @@ opens: sdlc/planning/adr/0048-records-batch-into-full-requests.md sdlc/planning/
 
 # 0170: Run facts under batches
 
-Status: built candidate awaiting fresh code review on 2026-09-27. The coordinator accepted the design after a fresh read-only review and authorized a measured budget amendment for necessary adapters and module extraction. Owner: Codex.
+Status: corrected candidate awaiting fresh code rereview on 2026-09-27. The first review of `9f3c71d4` found a signal-during-usage-flush gap, now covered by a focused held-lock regression. The coordinator accepted the design and authorized a measured budget amendment for necessary adapters and module extraction. Owner: Codex.
 
 Review route: the builder follows the work plan: Claude now, or Codex after the handover. A fresh read-only session from the builder's vendor reviews the final diff.
 
@@ -225,7 +225,7 @@ Nonblank lines, measured with `grep -c .`, net against main after the tickets un
 - Pages: at most 40 net lines under `specification/`. One ADR of at most 50 lines.
 - No dependency. No paid call.
 
-The measured candidate is +451 product and +510 test Rust lines against the landed 77,650-line baseline, for a 78,611-line ratchet. The [build record](../records/0170-run-facts-build.md) compares every original group estimate with actual growth and explains reuse. This is the coordinator's reviewed amendment route, not a change to the outcome or a waiver of the 500-line file ceiling. Fresh code review must accept the concrete delta before landing.
+The corrected candidate is +457 product and +597 test Rust lines against the landed 77,650-line baseline, for a 78,704-line ratchet. The [build record](../records/0170-run-facts-build.md) compares every original group estimate with actual growth and explains reuse. This is the coordinator's reviewed amendment route, not a change to the outcome or a waiver of the 500-line file ceiling. Fresh code review must accept the concrete delta before landing.
 
 ## Stop rules
 
@@ -300,4 +300,5 @@ The [shared preflight](../records/2026-09-27-batching-ticket-preflight.md) compa
 - At landed baseline `83e3cf5c`, the reviewed send-boundary correction and counted `Completed.replayed` have replaced the two pending constraints in the older preflight. The process counters can supply exact attempted sends without changing the usage file.
 - The preflight named call paths but omitted completion adapters and `core/mod.rs` from its mutation inventory. The coordinator claimed those files, and the [shared handoff](../records/2026-09-27-batching-ticket-preflight.md) now asks 0171/0172 to inventory copied adapters and exports.
 - A loopback address permits no key. The no-key proof uses the default address and stops before transport. A successful first batch needs `--jobs 1` to prove the printed prefix before a second batch fails. A held failed response after SIGTERM proves the accepted zero-record signal row while retaining one sent attempt.
-- The measured +961 Rust lines exceed the initial +567 estimate across specific adapter, typed metadata and test boundaries. The [build record](../records/0170-run-facts-build.md) gives every group's actual growth and reused helpers for independent review. No accepted behavior was reduced to fit the estimate. Library and SQL facts remain with B12a and later tickets.
+- The measured +1,054 Rust lines exceed the initial +567 estimate across specific adapter, typed metadata and test boundaries. The [build record](../records/0170-run-facts-build.md) gives every group's actual growth and reused helpers for independent review. No accepted behavior was reduced to fit the estimate. Library and SQL facts remain with B12a and later tickets.
+- Fresh review of `9f3c71d4` caught a signal arriving while usage persistence blocked after the first stop-state snapshot. The correction reads cancellation again at the final facts boundary. A private held-lock child proves the signal exit and final `stopped` member together; the build record carries its red/green proof and +93-line measured delta.
