@@ -133,6 +133,16 @@ impl Environment {
     }
 }
 
+/// Take `--model` on the commands that build their own specification.
+pub(crate) fn model_flag(text: &str) -> Result<crate::core::ModelName, Failure> {
+    crate::core::ModelName::new(text).map_err(|error| {
+        Failure::Usage(match error {
+            crate::core::BlankTextError::ModelControl => "--model holds no control character",
+            _ => "--model is text, not white space",
+        })
+    })
+}
+
 /// Read a `THINKTHEN_TEST_` variable in a build with debug assertions, which
 /// is what the test suites spawn. A release binary reads `None`.
 fn test_only(name: &str) -> Option<String> {

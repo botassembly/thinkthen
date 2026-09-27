@@ -113,6 +113,9 @@ pub(super) const RELATE: [Refusal; 10] = [
 pub(super) fn own_sentence(verb: &str, row: &str) -> Option<&'static str> {
     Some(match (verb, row) {
         ("recognize" | "relate", "a blank model") => "--model is text, not white space",
+        ("recognize" | "relate", "a model with a line break inside") => {
+            "--model holds no control character"
+        }
         ("relate", "blank evidence") => "the input is not valid JSON",
         ("relate", "a pointer in another language") => {
             "relate fields are RFC 6901 pointers named `name` and `kind`"

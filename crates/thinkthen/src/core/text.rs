@@ -21,6 +21,10 @@ pub(crate) enum BlankTextError {
     /// A model name reports what answered, so it carries text.
     #[error("a model name is text, not white space")]
     ModelName,
+    /// A model name travels in the request, the recording, and the result,
+    /// so it carries no line break or other control character.
+    #[error("a model name holds no control character")]
+    ModelControl,
     /// A URL names where the request is posted, so it carries text.
     #[error("a URL is text, not white space")]
     Url,
@@ -149,7 +153,44 @@ impl fmt::Debug for Evidence {
     }
 }
 
-text_value!(ModelName, ModelName, "model that answered");
+/// The model that answered, as text that is not blank.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(into = "String")]
+pub(crate) struct ModelName(String);
+
+impl ModelName {
+    /// Take a model name with the white space around it dropped, as a base
+    /// address drops its own.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BlankTextError`] when the text is empty, holds only white
+    /// space, or holds a control character.
+    pub(crate) fn new(text: impl Into<String>) -> Result<Self, BlankTextError> {
+        let text = text.into();
+        let name = text.trim();
+        if name.is_empty() {
+            return Err(BlankTextError::ModelName);
+        }
+        if name.chars().any(char::is_control) {
+            return Err(BlankTextError::ModelControl);
+        }
+        Ok(Self(name.to_owned()))
+    }
+
+    /// Read the model that answered back as text.
+    #[must_use]
+    pub(crate) fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<ModelName> for String {
+    fn from(value: ModelName) -> Self {
+        value.0
+    }
+}
+
 text_value!(Url, Url, "URL a request is posted to");
 
 /// The question a judgment asks, as text that is not blank, an object, or a
@@ -320,6 +361,25 @@ mod tests {
         );
         let model = ModelName::new("jev-1.13.0").expect("not blank");
         assert_eq!(model.as_str(), "jev-1.13.0");
+    }
+
+    #[test]
+    fn a_model_name_drops_surrounding_space_and_refuses_a_control_character() {
+        for (text, kept) in [
+            (" jev-1.13.0 ", Ok("jev-1.13.0")),
+            ("jev-1.13.0\n", Ok("jev-1.13.0")),
+            ("\tlocal model\r\n", Ok("local model")),
+            ("jev\n1.13.0", Err(BlankTextError::ModelControl)),
+            ("jev\u{0}", Err(BlankTextError::ModelControl)),
+            ("jev\u{7f}", Err(BlankTextError::ModelControl)),
+            ("jev\u{85}x", Err(BlankTextError::ModelControl)),
+        ] {
+            assert_eq!(
+                ModelName::new(text).as_ref().map(ModelName::as_str),
+                kept.as_ref().map(|name| *name),
+                "{text:?}"
+            );
+        }
     }
 
     #[test]
