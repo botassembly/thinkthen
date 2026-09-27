@@ -14,6 +14,7 @@
 | `thinkthen_tag(question, evidence, labels text[])` | the labels that apply, as `text[]` |
 | `thinkthen_annotate(set, evidence)` | each question's value, as `jsonb` |
 | `thinkthen_details(question, evidence)` | the engine's detailed result, as `jsonb` |
+| `thinkthen_try_details(question, evidence)` | an answered details envelope or a safe typed failure, as `jsonb` |
 | `thinkthen_warm(question, evidence)` | an aggregate that judges each distinct pair once and fills the answer cache. It takes a decide question only, and any other reads `thinkthen usage: thinkthen_warm takes a decide question; ask others with thinkthen_decide` before any request |
 | `thinkthen_recognize(body, kinds text[])` or `(body, spec)` | `(text, start, end, length, kind, strength)` rows |
 | `thinkthen_relations(body, spec)` | `(relation, source_text, source_kind, target_text, target_kind, probability)` rows |
@@ -36,6 +37,8 @@ FROM tickets, thinkthen_annotate('@form.json', body) AS a ORDER BY urgency DESC;
 
 `thinkthen_details(question, evidence)` returns the command's `--details` line for one text as `jsonb`, schema `thinkthen.result/1`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.
 
+`thinkthen_try_details(question, evidence)` returns `jsonb` with `status: "answered"` and the full details object, or `status: "failed"` and an error with public `kind`, fixed safe `message`, and typed `retryable`. It returns SQL NULL when either input is SQL NULL, before reading a question file or settings. An unresolved answer is answered with JSON `null` in its details. Usage, local, and backend row failures let later rows complete. Cancellation, deadline, and defect still raise. The failed value includes no question, evidence, key, file path, cache path, or backend address.
+
 `thinkthen_usage()` returns this backend process's running totals of requests sent, cache answers and tokens.
 
 ## Settings
@@ -51,7 +54,7 @@ FROM tickets, thinkthen_annotate('@form.json', body) AS a ORDER BY urgency DESC;
 | `thinkthen.file_directory` | superuser | the one folder an unprivileged role may read named files from |
 | `thinkthen.api_key` | nobody | never read. A set value refuses the next call |
 
-The throttle holds for the whole backend process. The first explicit throttle stays until the backend exits, and a later, different value is not applied. An administrator's `ALTER ROLE ... SET` applies an engine setting to one role.
+The throttle holds for the whole backend process. The first explicit throttle stays until the backend exits. A later equal value works; a different value raises usage with the active width. An administrator's `ALTER ROLE ... SET` applies an engine setting to one role.
 
 `thinkthen.max_requests_total` caps spending on a large query, where each row is its own call. Before each call the backend adds the requests its engines have sent. Once the total is spent, the call refuses with 22023 and sends nothing. Only an array batch and `thinkthen_warm` are cut to what remains: they send the records that fit, then refuse. Any other call that sends several requests runs to its end once any of the total remains, such as `thinkthen_annotate` over several groups or `thinkthen_relate` over up to 255 entities. The total belongs to one backend process: each new connection forks a backend that starts from zero. A pool of N connections can therefore spend up to N times the total. A cancelled call's send already on the wire, and the engine's retries, can each pass the total by one call. `thinkthen status` never sees this spend, because it counts only what the command sends.
 

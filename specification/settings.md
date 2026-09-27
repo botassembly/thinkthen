@@ -12,6 +12,8 @@ The typed value wins, then the environment, then the question file, then the con
 
 Only a per-call value counts as typed. That is a command flag, or an argument on one library or SQL call, such as a question's `threshold` or a call's deadline. An engine-level library setting, such as `EngineBuilder::throttle` or Python's `Engine(throttle=)`, sits in the environment tier. So does a SQL session setting, such as DuckDB's `SET thinkthen_throttle` or SQLite's `thinkthen_throttle(n)`. Each is set once for a process or a session, as a variable is. The batching design's section 6 puts them there.
 
+ADR 0080 adds `thinkthen_try_details` to the three SQL extensions. It returns an answered details envelope or a typed, safe failed envelope for recoverable row errors. SQLite's `thinkthen_budget_ms(n)` starts one connection-scoped clock across ThinkThen calls: `-1` clears, `0` spends, and positive milliseconds bound subsequent calls until reset. PostgreSQL continues to use native `statement_timeout` for its query and `thinkthen.deadline_ms` for each call. DuckDB's `SET thinkthen_query_budget_ms` and its shared query clock are the accepted contract for ticket 0201; the current C scalar implementation does not enforce that setting.
+
 The orders on record follow the rule:
 
 - The address: `--url`, then `THINKTHEN_BASE_URL`, then the configuration file's `url`, then the built-in address. ADR 0033.

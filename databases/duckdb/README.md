@@ -13,6 +13,7 @@ A loadable DuckDB v1.5.5 extension that puts the `thinkthen` engine behind SQL. 
 | `thinkthen_tag(question, text, labels)` | `VARCHAR[]` |
 | `thinkthen_annotate(set, text)` | `VARCHAR`, the record's values as JSON |
 | `thinkthen_details(question, text)` | the command's `--details` line, as JSON text |
+| `thinkthen_try_details(question, text)` | an answered JSON envelope, or a safe failed envelope for a recoverable row error |
 | `thinkthen_recognize(text, kinds)` | a list of `(text, start, end, length, kind, strength)` |
 | `thinkthen_relations(text, file)` | a list of `(relation, source, source_kind, target, target_kind, probability)` |
 | `thinkthen_relate(query, rules)` | a table of `(relation, source, target, probability)`, one row per edge between the query's ids |
@@ -35,6 +36,8 @@ SELECT id, thinkthen_choose('Which team owns this?', body, ['billing', 'shipping
 
 `thinkthen_usage()` returns this process's running totals of requests sent, cache answers and tokens.
 
+`thinkthen_try_details` returns `{"status":"answered","details":...}` with the full details object, or `{"status":"failed","error":{"kind":"usage","message":"check the row's question and arguments, or raise the process request total when it is spent","retryable":false}}`. It asks distinct rows independently so one recoverable usage, local, or backend failure does not stop later good rows. SQL NULL inputs return SQL NULL; unresolved answers stay answered with JSON `null` in their details. Failed values omit questions, evidence, keys, paths, and backend addresses. Cancellation, deadlines, and defects still stop the statement.
+
 ## Settings
 
 The engine starts from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, and `THINKTHEN_CACHE`. SQL cannot name a backend or a key. Four session settings reach the engine's own setters, and a fifth caps the whole process:
@@ -45,7 +48,9 @@ The engine starts from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY
 - `SET thinkthen_cache_bytes = N` caps the cache's size.
 - `SET thinkthen_max_requests_total = N` caps the requests this process sends. Before each call the extension adds up what its engines have sent. A spent total reads `thinkthen usage: this process has spent its request total of N; raise SET thinkthen_max_requests_total or RESET it` and sends nothing. A call with more texts than remain sends only the first ones that fit, then raises the same sentence. Calls running at the same time can each spend what remains, so the total can be passed by one call per thread in flight, plus retries. A forked child starts from zero. `thinkthen_warm` reads no session setting, so the total does not bind it. `thinkthen status` never sees this spend, because it counts only what the command sends.
 
-A bad value's `SET` succeeds, since DuckDB has no check step for an extension setting, and the next call refuses it. The refusal uses the setter's own sentence, so a bad `SET` never wraps into an accepted one. The extension keeps one engine per distinct throttle, request limit, and cache folder, at most 16.
+A bad value's `SET` succeeds, since DuckDB has no check step for an extension setting, and the next call refuses it. The refusal uses the setter's own sentence, so a bad `SET` never wraps into an accepted one. The extension keeps at most 16 resident engines, one per distinct throttle, request limit, and cache folder. A new plan retires the least recently used idle engine and keeps its requests and tokens in the process total. When all 16 plans are held, the new plan refuses: `16 ThinkThen engine settings plans are in use; finish a holding query, reuse current settings, or start a new process`.
+
+The current C scalar API has no shared query clock across expressions and chunks. Ticket 0201 moves this extension to DuckDB's C++ API and adds `SET thinkthen_query_budget_ms`; this release of the C scalar does not yet enforce that query budget.
 
 ## Relate
 

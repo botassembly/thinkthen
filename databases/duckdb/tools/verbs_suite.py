@@ -11,6 +11,9 @@ import sys
 import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "sqlite" / "tests"))
+from conditional_backend import ConditionalBackend
+
 from harness import Backend, case, expect, main, rows, run, said
 
 REFUND = "Does the writer ask for a refund?"
@@ -84,6 +87,83 @@ def probability_equals_details_with_no_added_send():
         )
         expect(column(got[0]), column(got[1]), "probability and details")
         expect(backend.count(), 1, "one counted send for both")
+
+
+@case
+def try_details_keeps_later_good_rows():
+    """A bad question and an unreadable named file return safe values within one chunk."""
+    with Backend() as backend:
+        sql = """SELECT thinkthen_try_details(q, e) FROM (VALUES
+            (1, 'Is it a refund?', 'first refund'),
+            (2, '', 'private evidence'),
+            (3, '@private-missing.json', 'private evidence'),
+            (4, 'Is it a refund?', 'last refund'),
+            (5, NULL, 'private evidence')) t(i,q,e) ORDER BY i"""
+        got = run([sql], backend.base())
+        values = [json.loads(value) if value is not None else None for value in column(got[0])]
+        expect([value["status"] if value else None for value in values],
+               ["answered", "failed", "failed", "answered", None], "row statuses")
+        expect(values[1]["error"], {"kind": "usage", "message": "check the row's question and arguments, or raise the process request total when it is spent", "retryable": False}, "safe usage failure")
+        expect(values[2]["error"], {"kind": "local", "message": "check the named file and its permissions", "retryable": False}, "safe local failure")
+        for value in values[1:3]:
+            for private in ("private evidence", "private-missing.json"):
+                expect(private in json.dumps(value), False, "no private text in a failed value")
+        expect(backend.count(), 2, "later good row sent")
+
+
+@case
+def try_details_keeps_a_good_row_after_a_backend_failure():
+    with Backend() as backend, ConditionalBackend(backend.base()) as proxy:
+        sql = """SELECT thinkthen_try_details(q,e) FROM (VALUES
+            (1, 'Is it a refund?', 'first'),
+            (2, 'Is it a refund?', 'private evidence'),
+            (3, 'Is it a refund?', 'last')) t(i,q,e) ORDER BY i"""
+        got = run([sql], proxy.base)
+        values = [json.loads(value) for value in column(got[0])]
+        expect([value["status"] for value in values], ["answered", "failed", "answered"], "good rows after backend failure")
+        expect(values[1]["error"], {"kind": "backend", "message": "the backend did not answer; retry if allowed", "retryable": False}, "typed backend failure")
+        expect("private evidence" in json.dumps(values[1]), False, "failed value hides evidence")
+        expect(proxy.count(), 3, "three requests reached the proxy")
+        expect(backend.count(), 2, "good requests reached the generic backend")
+
+
+@case
+def try_details_null_skips_invalid_settings():
+    with Backend() as backend:
+        got = run(
+            ["SET thinkthen_throttle = 33", "SELECT thinkthen_try_details(NULL, 'private evidence', NULL)",
+             "SELECT thinkthen_try_details('Is it a refund?', 'private evidence', NULL)"],
+            backend.base(),
+        )
+        expect(column(got[1]), [None], "SQL NULL before settings")
+        expect(json.loads(column(got[2])[0])["error"]["kind"], "usage", "NULL deadline still checks settings")
+        expect(backend.count(), 0, "a NULL row sent nothing")
+
+
+@case
+def try_details_null_deadline_answers():
+    with Backend() as backend:
+        got = run(["SELECT thinkthen_try_details('Is it a refund?', 'refund now', NULL)"], backend.base())
+        value = json.loads(column(got[0])[0])
+        expect(value["status"], "answered", "NULL optional deadline")
+        expect(backend.count(), 1, "NULL deadline sends once")
+
+
+@case
+def try_details_keeps_unresolved_and_spent_total_distinct():
+    with Backend() as backend:
+        question = '{"decide":"Is it red?","threshold":"0:1"}'
+        got = run([f"SELECT thinkthen_try_details('{question}', 'red door')",
+                   "SET thinkthen_max_requests_total = 1",
+                   "SELECT thinkthen_try_details('Is it blue?', 'a blue door')"], backend.base())
+        unresolved = json.loads(column(got[0])[0])
+        expect(unresolved["status"], "answered", "unresolved is an answer")
+        expect(unresolved["details"]["value"], None, "unresolved details use JSON null")
+        expect("error" in unresolved, False, "answered envelope has no error")
+        spent = json.loads(column(got[2])[0])
+        expect(spent["error"], {"kind": "usage", "message": "check the row's question and arguments, or raise the process request total when it is spent", "retryable": False}, "spent total becomes safe value")
+        expect("details" in spent, False, "failed envelope has no details")
+        expect(backend.count(), 1, "spent total sends nothing")
 
 
 @case

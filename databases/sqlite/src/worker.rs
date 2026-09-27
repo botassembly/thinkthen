@@ -12,12 +12,12 @@
 
 use std::sync::mpsc::{Receiver, RecvTimeoutError, channel};
 use std::thread::{self, JoinHandle};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use rusqlite::ffi::sqlite3;
 use thinkthen::{CallOptions, CancelToken, Engine, ErrorKind};
 
-use crate::{Failure, ffi, guard, settings};
+use crate::{Failure, budget, ffi, guard, settings};
 
 /// How often the calling thread reads the interrupt flag.
 const TICK: Duration = Duration::from_millis(50);
@@ -31,18 +31,42 @@ pub(crate) fn run<T: Send + 'static>(
     deadline: Option<i64>,
     work: impl FnOnce(&'static Engine, CallOptions<'_>) -> Result<T, Failure> + Send + 'static,
 ) -> Result<T, Failure> {
+    let due = budget::remaining(db)?.map(|(_, due)| due);
     let engine = settings::engine()?;
     settings::remaining()?;
     let token = CancelToken::new();
     let theirs = token.clone();
     let (answers, _detached) = spawn(move || {
         let mut options = CallOptions::new().cancel(&theirs);
+        let left = due
+            .map(|due| {
+                let left = due.checked_duration_since(Instant::now()).ok_or_else(|| {
+                    Failure::of(
+                        ErrorKind::Deadline,
+                        "the connection's ThinkThen budget passed",
+                    )
+                })?;
+                let millis = i64::try_from(left.as_millis()).unwrap_or(i64::MAX);
+                if millis == 0 {
+                    return Err(Failure::of(
+                        ErrorKind::Deadline,
+                        "the connection's ThinkThen budget passed",
+                    ));
+                }
+                Ok(millis)
+            })
+            .transpose()?;
+        let deadline = match (deadline, left) {
+            (Some(call), Some(budget)) if call >= 0 => Some(call.min(budget)),
+            (_, Some(budget)) => Some(budget),
+            (call, None) => call,
+        };
         if let Some(millis) = deadline {
             options = options.deadline_millis(millis)?;
         }
         work(engine, options)
     })?;
-    wait(&answers, &token, || ffi::interrupted(db))
+    wait(&answers, &token, || ffi::interrupted(db), due)
 }
 
 /// A worker's answers and its handle, which the caller drops to detach it.
@@ -68,13 +92,30 @@ fn wait<T>(
     answers: &Receiver<Result<T, Failure>>,
     token: &CancelToken,
     interrupted: impl Fn() -> bool,
+    due: Option<Instant>,
 ) -> Result<T, Failure> {
     loop {
         match answers.recv_timeout(TICK) {
-            Ok(result) => return result,
+            Ok(result) => {
+                if due.is_some_and(|due| Instant::now() >= due) {
+                    token.cancel();
+                    return Err(Failure::of(
+                        ErrorKind::Deadline,
+                        "the connection's ThinkThen budget passed",
+                    ));
+                }
+                return result;
+            }
             Err(RecvTimeoutError::Timeout) if interrupted() => {
                 token.cancel();
                 return Err(Failure::of(ErrorKind::Cancelled, "the call was cancelled"));
+            }
+            Err(RecvTimeoutError::Timeout) if due.is_some_and(|due| Instant::now() >= due) => {
+                token.cancel();
+                return Err(Failure::of(
+                    ErrorKind::Deadline,
+                    "the connection's ThinkThen budget passed",
+                ));
             }
             Err(RecvTimeoutError::Timeout) => {}
             Err(RecvTimeoutError::Disconnected) => {
@@ -111,7 +152,7 @@ mod tests {
         })
         .map_err(|failure| failure.message)
         .unwrap();
-        let kind = wait(&answers, &token, || true)
+        let kind = wait(&answers, &token, || true, None)
             .err()
             .map(|failure| failure.kind);
         assert_eq!(kind, Some(ErrorKind::Cancelled));
@@ -127,7 +168,7 @@ mod tests {
     fn a_channel_closed_with_no_result_is_a_defect() {
         let (send, answers) = channel::<Result<(), Failure>>();
         drop(send);
-        let failure = wait(&answers, &CancelToken::new(), || false).err();
+        let failure = wait(&answers, &CancelToken::new(), || false, None).err();
         assert_eq!(
             failure.map(|failure| (failure.kind, failure.message)),
             Some((

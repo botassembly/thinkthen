@@ -65,6 +65,88 @@ def the_process_request_total_holds_across_calls():
 
 
 @case
+def seventeen_idle_plans_keep_all_prior_usage():
+    """An idle plan can leave the resident map without resetting spending."""
+    with Backend() as backend:
+        statements = []
+        for value in range(1, 18):
+            statements += [f"SET thinkthen_max_requests = {value}",
+                           f"SELECT thinkthen_decide('Is it a refund?', 'unique row {value}')"]
+        statements += ["SELECT metric, value FROM thinkthen_usage()",
+                       "SET thinkthen_max_requests_total = 17",
+                       "SELECT thinkthen_decide('Is it a refund?', 'after total')"]
+        got = run(statements, backend.base("arm/full"))
+        for index in range(1, 34, 2):
+            expect(rows(got[index]), [[True]], f"plan {(index + 1) // 2} answers")
+        totals = dict(rows(got[34]))
+        expect({name: totals[name] for name in ("requests_sent", "input_tokens", "output_tokens")},
+               {"requests_sent": 17, "input_tokens": 17, "output_tokens": 17},
+               "historical sends and tokens survive retirement")
+        expect(said(got[36]), "thinkthen usage: this process has spent its request total of 17; raise SET thinkthen_max_requests_total or RESET it", "spent total survives retirement")
+        expect(backend.count(), 17, "all sends remain counted")
+
+
+HELD_PLANS = r"""
+import concurrent.futures, json, sys
+import duckdb
+def opened(limit):
+    db = duckdb.connect(config={"allow_unsigned_extensions": "true"})
+    db.execute(f"LOAD '{sys.argv[1]}'")
+    db.execute("SET thinkthen_throttle = 16")
+    db.execute(f"SET thinkthen_max_requests = {limit}")
+    return db
+def held(limit):
+    db = opened(limit)
+    return db.execute(f"SELECT thinkthen_decide('Is it a refund?', 'held {limit}')").fetchall()
+with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
+    waiting = [pool.submit(held, limit) for limit in range(1, 17)]
+    print("ready", flush=True)
+    sys.stdin.readline()
+    extra = opened(17)
+    try:
+        extra.execute("SELECT thinkthen_decide('Is it a refund?', 'seventeenth')").fetchall()
+        first = "answered"
+    except Exception as error:
+        first = str(error)
+    print(json.dumps({"first": first}), flush=True)
+    sys.stdin.readline()
+    previous = [future.result(timeout=30) for future in waiting]
+    again = extra.execute("SELECT thinkthen_decide('Is it a refund?', 'seventeenth')").fetchall()
+    print(json.dumps({"previous": previous, "again": again}), flush=True)
+"""
+
+
+@case
+def sixteen_held_plans_refuse_without_eviction():
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        process = subprocess.Popen(
+            [sys.executable, "-c", HELD_PLANS, str(EXTENSION)],
+            env=child_env(backend.base("arm/held"), Path(folder)),
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        )
+        try:
+            expect(process.stdout.readline().strip(), "ready", "the child started")
+            expect(backend.wait(16), 16, "all 16 sends are held")
+            process.stdin.write("go\n")
+            process.stdin.flush()
+            first = json.loads(process.stdout.readline())["first"]
+            expect("16 ThinkThen engine settings plans are in use; finish a holding query, reuse current settings, or start a new process" in first,
+                   True, "pathless cap refusal")
+            expect(backend.count(), 16, "the 17th sent nothing")
+            backend.release()
+            process.stdin.write("go\n")
+            process.stdin.flush()
+            last = json.loads(process.stdout.readline())
+            expect(last["previous"], [[[True]]] * 16, "held plans finish")
+            expect(last["again"], [[True]], "released plan makes room")
+            expect(backend.count(), 17, "the 17th now sends")
+        finally:
+            backend.release()
+            process.kill()
+            process.communicate(timeout=10)
+
+
+@case
 def a_negative_request_total_refuses_before_the_map():
     with Backend() as backend:
         # A NULL text reaches no engine call, so only the init's check sees it.
@@ -287,11 +369,11 @@ def opened():
     database.execute(f"LOAD '{sys.argv[1]}'")
     return database
 def usage(database):
-    return dict(database.execute("SELECT * FROM thinkthen_usage()").fetchall())["requests_sent"]
+    return dict(database.execute("SELECT * FROM thinkthen_usage()").fetchall())
 parent = opened()
-parent.execute("SELECT thinkthen_warm('Is it a refund?', 'warm text')").fetchall()
-parent.execute("SET thinkthen_max_requests_total = 10")
-parent.execute("SELECT thinkthen_decide('Is it a refund?', 'parent text')").fetchall()
+for limit in range(1, 18):
+    parent.execute(f"SET thinkthen_max_requests = {limit}")
+    parent.execute(f"SELECT thinkthen_decide('Is it a refund?', 'parent {limit}')").fetchall()
 before = usage(parent)
 reader, writer = os.pipe()
 pid = os.fork()
@@ -299,9 +381,10 @@ if pid == 0:
     os.close(reader)
     try:
         child = opened()
+        zero = usage(child)
         child.execute("SET thinkthen_max_requests_total = 1")
         answer = child.execute("SELECT thinkthen_decide('Is it a refund?', 'child text')").fetchall()
-        report = {"answer": answer, "sent": usage(child)}
+        report = {"answer": answer, "zero": zero, "after": usage(child)}
     except BaseException as error:
         report = {"error": str(error)}
     os.write(writer, json.dumps(report).encode())
@@ -321,13 +404,11 @@ print(json.dumps({"before": before, "after": usage(parent), "child": json.loads(
 
 @case
 def a_forked_child_answers_from_a_zero_total():
-    """Ticket 0110 (0096): a warmed parent forks, and the child answers under
-    a total of 1, since its counters start from zero. The parent's usage does
-    not move. The child's wait is bounded at 30 s."""
+    """A child drops the parent's retired and resident counters after fork."""
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         done = subprocess.run(
             [sys.executable, "-c", FORKED, str(EXTENSION)],
-            env=child_env(backend.base(), Path(folder)),
+            env=child_env(backend.base("arm/full"), Path(folder)),
             capture_output=True,
             text=True,
             timeout=90,
@@ -337,9 +418,13 @@ def a_forked_child_answers_from_a_zero_total():
         if not lines:
             raise AssertionError(f"the parent printed nothing: {done.stderr[-800:]}")
         got = json.loads(lines[-1])
-        expect(got["child"], {"answer": [[True]], "sent": 1}, "the child's answer and its requests_sent")
-        expect((got["before"], got["after"]), (2, 2), "the parent's requests_sent before and after the fork")
-        expect(backend.count(), 3, "counted sends")
+        expect(got["child"].get("answer"), [[True]], "the child answers under a total of one")
+        for metric in ("requests_sent", "input_tokens", "output_tokens"):
+            expect(got["before"][metric], 17, f"parent {metric} after retirement")
+            expect(got["after"][metric], 17, f"parent {metric} after fork")
+            expect(got["child"]["zero"][metric], 0, f"child resets {metric}")
+            expect(got["child"]["after"][metric], 1, f"child counts new {metric}")
+        expect(backend.count(), 18, "counted sends")
 
 
 if __name__ == "__main__":

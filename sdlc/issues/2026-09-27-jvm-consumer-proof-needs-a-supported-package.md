@@ -4,7 +4,7 @@ Status: the local JVM package experiment is complete, and ticket 0166 fixed the 
 
 ## Gap
 
-The ideal state makes the C interface the route to additional languages. Experiment 289 (renumbered from a collided 275 claim) now supplies Java, Kotlin, and Scala implementations, JAR-shaped package artifacts, documentation, tests and local archive rehearsal on Beelink. The repository still needs reviewed integration, the native cancellation repair, and final-release verification before offering supported JVM use.
+The ideal state makes the C interface the route to additional languages. Experiment 289 (renumbered from a collided 275 claim) now supplies Java, Kotlin, and Scala implementations, JAR-shaped package artifacts, documentation, tests and local archive rehearsal on Beelink. The repository still needs reviewed integration, release packaging and final-release verification before offering supported JVM use.
 
 ## Evidence
 
@@ -16,13 +16,15 @@ Stage two pinned main `95f0458b` and delivered `stage2/package/` (door and facad
 
 The parent independently verified all input blobs at both pins, all manifest hashes, archive members and JAR rebuild equality, and reran both gates with identical results. Two fresh read-only reviews accepted each stage; the stage-two reviews returned ACCEPT with no findings.
 
-## Native blocker
+## Sealed native blocker evidence
 
-A scalar C call can return success after its token fires during an accepted held request. All three languages reproduce it through their own cancellable facades, as do Zig, direct ctypes, and Go in experiments 273 and 274. [The cancellation issue](2026-09-26-cancelled-c-scalar-call-can-return-success.md) owns repair. The gate records `FINDING` and exits 1; no wrapper workaround exists.
+This section records the pre-fix failure. Ticket 0166 repaired it; the post-fix verification below records the passing strict proof.
+
+At the sealed stage-two pin, a scalar C call could return success after its token fired during an accepted held request. All three languages reproduced it through their own cancellable facades, as do Zig, direct ctypes, and Go in experiments 273 and 274. [The closed cancellation issue](closed/2026-09-26-cancelled-c-scalar-call-can-return-success.md) records repair. The sealed stage-two gate recorded `FINDING` and exited 1; no wrapper workaround was available at that pin.
 
 ## Handoff and remaining work
 
-Local, unpushed deliverables live in the experiment folder: `stage2/package/`, `stage2/artifacts/` with its manifest, `stage2/fixtures/` and `stage2/gate.sh`, and `stage2/HANDOFF.md` with exact destinations. The integration ticket copies `package/` into `libraries/jvm/`, adapts fixtures into product offline tests, decides JAR distribution and the native archive route, and adds the surface registry entry. After the native fix, update both the strict classifier and the ordinary Java/Kotlin/Scala held-call expectations, rebuild from the final landed release commit, and earn an all-pass gate. Do not publish the rehearsal archives or JARs.
+Historical evidence remains local and unchanged under `stage2/`, including its package, artifacts, fixtures, gate and handoff. Product integration must use `post-fix/package/`, `post-fix/fixtures/` and `post-fix/gate.sh`, which carry the passing strict expectations. The integration ticket copies `post-fix/package/` into `libraries/jvm/`, adapts fixtures into product offline tests, decides JAR distribution and the native archive route, and adds the surface registry entry. The post-fix experiment copy already updated the strict classifier and Java/Kotlin/Scala held-call expectations and passed its gate. Product integration must carry those expectations, rebuild from the final release commit and rerun its gate. Do not publish the rehearsal archives or JARs.
 
 ## Limits
 
