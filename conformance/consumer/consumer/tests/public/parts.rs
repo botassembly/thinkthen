@@ -96,9 +96,8 @@ fn states(set: &str, record: &str) -> Result<Vec<Value>, Error> {
     let row = engine.annotate(&set, [record]).next().expect("one row");
     let sent = seen.lock().expect("the body list").clone();
     row.map(|_| sent.iter().map(|body| body["state"].clone()).collect())
-        .map_err(|error| {
+        .inspect_err(|_| {
             assert!(sent.is_empty(), "a refused record sent {}", sent.len());
-            error
         })
 }
 
