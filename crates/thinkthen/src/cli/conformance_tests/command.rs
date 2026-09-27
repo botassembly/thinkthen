@@ -255,9 +255,12 @@ fn form_child() {
     assert!(seen.is_empty(), "the child sees {seen:?}");
 }
 
-/// Ask a valid question with loopback as the only address, and report what went out.
+/// Ask a valid question at an address the rules cannot prove is this machine,
+/// where a missing key still refuses, and report what went out. The counting
+/// listener on loopback sees any request that strays to it.
 fn probe() {
     let (url, count) = counting();
+    let url = url.replace("http://127.0.0.1", "https://127.0.0.2");
     let arguments = [
         "thinkthen",
         "decide",

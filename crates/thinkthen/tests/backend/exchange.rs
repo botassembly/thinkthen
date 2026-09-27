@@ -491,18 +491,3 @@ fn a_refused_port_fails_before_the_first_default_retry_wait() {
     assert!(output.stdout.is_empty());
     assert_eq!(String::from_utf8_lossy(&output.stderr), REFUSED_DIAGNOSTIC);
 }
-
-#[test]
-fn a_key_variable_that_is_unset_or_blank_is_exit_four_and_never_shows_a_value() {
-    let listener = Listener::serving(Vec::new()).expect("a loopback listener");
-
-    for key in [None, Some(""), Some("   ")] {
-        let output =
-            decide(listener.base(), &[], key, "Refund.").expect("the compiled binary runs");
-
-        assert_eq!(output.status.code(), Some(4), "{key:?}");
-        assert!(listener.requests().is_empty(), "{key:?}");
-        let message = String::from_utf8_lossy(&output.stderr);
-        assert!(message.contains("THINKTHEN_API_KEY"), "{message}");
-    }
-}

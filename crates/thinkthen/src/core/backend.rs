@@ -92,6 +92,15 @@ impl Backend {
         })
     }
 
+    /// Whether the address names `localhost`, `127.0.0.1`, or `[::1]`, the
+    /// hosts the clear-text rule proves are this machine.
+    #[must_use]
+    pub(crate) fn is_loopback(&self) -> bool {
+        after_scheme(self.url.as_str())
+            .and_then(|(_, rest)| host_of(rest.split('/').next().unwrap_or(rest)).ok())
+            .is_some_and(|host| LOOPBACK.iter().any(|kind| host.eq_ignore_ascii_case(kind)))
+    }
+
     /// Read the URL the request is posted to.
     #[must_use]
     pub(crate) const fn url(&self) -> &Url {

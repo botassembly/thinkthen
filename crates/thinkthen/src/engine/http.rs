@@ -21,6 +21,12 @@ impl Key {
         Self(value)
     }
 
+    /// No key, for a loopback backend when the variable is unset. The request
+    /// then carries no authorization header.
+    pub(crate) const fn none() -> Self {
+        Self(String::new())
+    }
+
     pub(crate) fn as_str(&self) -> &str {
         &self.0
     }
@@ -237,11 +243,15 @@ fn send(agent: &Agent, exchange: &Exchange<'_>, limit: Duration) -> Result<Vec<u
         .config()
         .timeout_global(Some(limit))
         .build()
-        .header("content-type", "application/json")
-        .header(
+        .header("content-type", "application/json");
+    let request = if exchange.key.as_str().is_empty() {
+        request
+    } else {
+        request.header(
             "authorization",
             &format!("Bearer {}", exchange.key.as_str()),
-        );
+        )
+    };
     let mut response = request
         .send(exchange.body)
         .map_err(|error| Attempt::from(Error::Transport(transport(&error))))?;

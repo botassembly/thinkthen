@@ -196,6 +196,16 @@ impl Engine {
         &self.backend
     }
 
+    /// The key a live request carries. With the variable unset, a backend
+    /// proven to be this machine takes no key, so a local server that checks
+    /// none needs no pretend secret. Every other address still refuses.
+    fn key(&self) -> Result<Key, Error> {
+        match (self.key)() {
+            Err(Error::NoKey(_)) if self.backend.is_loopback() => Ok(Key::none()),
+            read => read,
+        }
+    }
+
     /// Whether a folder the caller named, rather than the private default, is in use.
     pub(crate) const fn recording(&self) -> bool {
         self.recording
@@ -272,7 +282,7 @@ impl Engine {
                 &state.recorder,
                 cancel,
                 self.transport(&state),
-                || (self.key)(),
+                || self.key(),
             )
         };
         let jobs = state.width.min(chunks.len());
@@ -363,7 +373,7 @@ impl Engine {
             &state.recorder,
             cancel,
             self.transport(&state),
-            || (self.key)(),
+            || self.key(),
         )
     }
 

@@ -58,7 +58,7 @@ The four address rules have these exact safe refusals. An invalid scheme says ``
 
 ## The request
 
-The adapter sends one `POST` with `Content-Type: application/json`. When a key is present it adds `Authorization: Bearer KEY`. A command reads the key before it sends, and an unset or blank key exits 4. A local server that checks no key still needs some value in `THINKTHEN_API_KEY`.
+The adapter sends one `POST` with `Content-Type: application/json`. When a key is present it adds `Authorization: Bearer KEY`. A command reads the key before it sends. With the key unset or blank, a base whose host is `localhost`, `127.0.0.1`, or `[::1]` gets the request with no `Authorization` header, so a local server that checks no key needs no pretend secret. Any other address exits 4 before any connection. ADR 0010's amendment of 2026-09-27 records the rule.
 
 `--timeout SECONDS` covers one attempt from connect to the last byte, takes a whole number from 1 to 86400, and defaults to 30. Zero or a number past 86400 exits 2 with `--timeout takes a whole number of seconds from 1 to 86400`, before key access, input access, or a connection. The bound is one day, because the HTTP client adds the timeout to the clock and a larger number can overflow there. `--max-retries N` bounds how many times a retried status is sent again, and it defaults to 2.
 

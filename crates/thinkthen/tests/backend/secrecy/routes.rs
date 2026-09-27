@@ -185,15 +185,17 @@ pub(crate) const PATHS: [Route; 17] = [
         0,
         5,
     ),
+    // A loopback backend takes a run with no key, so this run names an
+    // address the rules cannot prove is this machine. Nothing listens there.
     Route {
         named: "a run with no key",
-        adds: &[],
+        adds: &["--url", "https://127.0.0.2:9/v1"],
         answers: Answers::Nothing,
         requests: 0,
         code: 4,
         primed: false,
         damage: None,
-        says: None,
+        says: Some("`THINKTHEN_API_KEY` is unset or blank, so no key is sent"),
         keyed: false,
     },
 ];
