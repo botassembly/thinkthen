@@ -124,39 +124,73 @@
       "properties": {"kind": {"const": "score"}, "level": {"type": "string"},
         "probabilities": {"type": "object", "additionalProperties": {"$ref": "#/$defs/probability"}}}
     },
-    "detailed": {"oneOf": [{"$ref": "#/$defs/details"}, {"$ref": "#/$defs/aggregateDetails"}]},
+    "findAnswer": {
+      "type": "object", "required": ["kind", "pick", "probabilities"],
+      "properties": {"kind": {"const": "find"}, "pick": {"type": "string"},
+        "probabilities": {"type": "object", "additionalProperties": {"$ref": "#/$defs/probability"}}}
+    },
+    "detailed": {"oneOf": [
+      {"$ref": "#/$defs/details"}, {"$ref": "#/$defs/annotateDetails"},
+      {"$ref": "#/$defs/recognizeDetails"}, {"$ref": "#/$defs/relateDetails"}
+    ]},
     "details": {
       "type": "object", "required": ["schema", "value", "question", "answer", "threshold", "meta"],
       "properties": {
         "schema": {"const": "thinkthen.result/1"},
-        "value": {}, "question": {"type": "object", "required": ["verb", "text"]},
+        "value": {}, "question": {"type": "object", "required": ["verb", "text"],
+          "properties": {"verb": {"enum": ["decide", "choose", "tag", "score", "find"]},
+            "text": {"type": ["string", "object", "array"]}}},
         "answer": {"oneOf": [
           {"$ref": "#/$defs/yesNoAnswer"}, {"$ref": "#/$defs/choiceAnswer"},
-          {"$ref": "#/$defs/tagAnswer"}, {"$ref": "#/$defs/scoreAnswer"}
+          {"$ref": "#/$defs/tagAnswer"}, {"$ref": "#/$defs/scoreAnswer"},
+          {"$ref": "#/$defs/findAnswer"}
         ]},
         "threshold": {"type": ["number", "string", "null"]},
         "meta": {"$ref": "#/$defs/meta"}
       }, "additionalProperties": true,
       "allOf": [
-        {"if": {"properties": {"answer": {"properties": {"kind": {"const": "yes_no"}}}}},
-          "then": {"properties": {"value": {"$ref": "#/$defs/decide"}}}},
-        {"if": {"properties": {"answer": {"properties": {"kind": {"const": "choice"}}}}},
-          "then": {"properties": {"value": {"$ref": "#/$defs/choose"}}}},
-        {"if": {"properties": {"answer": {"properties": {"kind": {"const": "tag"}}}}},
-          "then": {"properties": {"value": {"$ref": "#/$defs/tag"}}}},
-        {"if": {"properties": {"answer": {"properties": {"kind": {"const": "score"}}}}},
-          "then": {"properties": {"value": {"$ref": "#/$defs/score"}}}}
+        {"if": {"properties": {"question": {"properties": {"verb": {"const": "decide"}}}}},
+          "then": {"properties": {"answer": {"$ref": "#/$defs/yesNoAnswer"}, "value": {"$ref": "#/$defs/decide"}}}},
+        {"if": {"properties": {"question": {"properties": {"verb": {"const": "choose"}}}}},
+          "then": {"properties": {"answer": {"$ref": "#/$defs/choiceAnswer"}, "value": {"$ref": "#/$defs/choose"}}}},
+        {"if": {"properties": {"question": {"properties": {"verb": {"const": "tag"}}}}},
+          "then": {"properties": {"answer": {"$ref": "#/$defs/tagAnswer"}, "value": {"$ref": "#/$defs/tag"}}}},
+        {"if": {"properties": {"question": {"properties": {"verb": {"const": "score"}}}}},
+          "then": {"properties": {"answer": {"$ref": "#/$defs/scoreAnswer"}, "value": {"$ref": "#/$defs/score"}}}},
+        {"if": {"properties": {"question": {"properties": {"verb": {"const": "find"}}}}},
+          "then": {"properties": {"answer": {"$ref": "#/$defs/findAnswer"}, "value": {"$ref": "#/$defs/find"}}}}
       ]
     },
-    "aggregateDetails": {
+    "annotateDetails": {
+      "type": "object", "required": ["schema", "input", "value", "answers", "meta"],
+      "properties": {
+        "schema": {"const": "thinkthen.result/1"},
+        "value": {"$ref": "#/$defs/annotatedRow"},
+        "answers": {"type": "object", "additionalProperties": {"type": "object"}},
+        "meta": {"$ref": "#/$defs/meta"}
+      }, "additionalProperties": true
+    },
+    "recognizeDetails": {
+      "type": "object", "required": ["schema", "value", "question", "answer", "meta"],
+      "properties": {
+        "schema": {"const": "thinkthen.result/1"}, "value": {"$ref": "#/$defs/recognize"},
+        "question": {"type": "object", "required": ["verb"],
+          "properties": {"verb": {"const": "recognize"}}},
+        "answer": {"type": "object", "required": ["pieces", "names", "pairs"],
+          "properties": {"pieces": {"type": "array"}, "names": {"type": "array"},
+            "pairs": {"type": "array"}}},
+        "meta": {"$ref": "#/$defs/meta"}
+      }, "additionalProperties": true
+    },
+    "relateDetails": {
       "type": "object", "required": ["schema", "value", "question", "answer", "meta"],
       "properties": {
         "schema": {"const": "thinkthen.result/1"},
-        "value": {"oneOf": [
-          {"$ref": "#/$defs/recognize"}, {"type": "array", "items": {"$ref": "#/$defs/edge"}},
-          {"$ref": "#/$defs/annotatedRow"}
-        ]},
-        "question": {"type": "object"}, "answer": {"type": "object"},
+        "value": {"type": "array", "items": {"$ref": "#/$defs/edge"}},
+        "question": {"type": "object", "required": ["verb"],
+          "properties": {"verb": {"const": "relate"}}},
+        "answer": {"type": "object", "required": ["questions"],
+          "properties": {"questions": {"type": "array"}}},
         "meta": {"$ref": "#/$defs/meta"}
       }, "additionalProperties": true
     },
@@ -165,7 +199,15 @@
       "properties": {
         "evidence": {"type": "string"}, "records": {"type": "array"},
         "units": {"type": "array", "items": {"type": "string"}},
-        "details": {"type": "boolean"}, "usage": {"const": true}
+        "details": {"type": "boolean"}, "usage": {"const": true},
+        "rank": {"type": "string"}, "find": {"type": "string"},
+        "annotate": {"type": "object"}, "recognize": {"type": "object"},
+        "relate": {"type": "object"}, "none": {"type": "boolean"},
+        "decide": {"type": ["string", "object", "array"]},
+        "choose": {"type": ["string", "object", "array"]},
+        "tag": {"type": ["string", "object", "array"]},
+        "score": {"type": ["string", "object", "array"]},
+        "filter": {"type": ["string", "object", "array"]}
       },
       "oneOf": [
         {"required": ["usage"]},
@@ -184,6 +226,7 @@
           {"required": ["annotate"]}, {"required": ["relate"]}]},
           "then": {"required": ["records"]}},
         {"if": {"required": ["find"]}, "then": {"required": ["units"]}},
+        {"if": {"required": ["none"]}, "then": {"required": ["find"]}},
         {"if": {"anyOf": [{"required": ["filter"]}, {"required": ["rank"]},
           {"required": ["annotate"]}]},
           "then": {"properties": {"records": {"items": {"type": "string"}}}}},
@@ -193,6 +236,14 @@
           {"required": ["decide"]}, {"required": ["choose"]},
           {"required": ["tag"]}, {"required": ["score"]}
         ]}},
+        {"if": {"anyOf": [{"required": ["decide"]}, {"required": ["choose"]},
+          {"required": ["tag"]}, {"required": ["score"]}, {"required": ["recognize"]}]},
+          "then": {"not": {"anyOf": [{"required": ["records"]}, {"required": ["units"]}]}}},
+        {"if": {"anyOf": [{"required": ["filter"]}, {"required": ["rank"]},
+          {"required": ["annotate"]}, {"required": ["relate"]}]},
+          "then": {"not": {"anyOf": [{"required": ["evidence"]}, {"required": ["units"]}]}}},
+        {"if": {"required": ["find"]},
+          "then": {"not": {"anyOf": [{"required": ["evidence"]}, {"required": ["records"]}]}}},
         {"not": {"anyOf": [
           {"required": ["evidence", "records"]}, {"required": ["evidence", "units"]},
           {"required": ["records", "units"]}

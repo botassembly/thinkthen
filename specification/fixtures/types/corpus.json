@@ -377,6 +377,8 @@
       "request_valid": false,
       "expected_error": "usage"
     },
+    {"name":"rank-question-number","definition":"doorRequest","request":{"rank":42,"records":["x"]},"request_valid":false,"expected_error":"usage"},
+    {"name":"rank-none-envelope","definition":"doorRequest","request":{"rank":"Which?","records":["x"],"none":true},"request_valid":false,"expected_error":"usage"},
     {
       "name": "relate-string-record",
       "definition": "doorRequest",
@@ -444,14 +446,12 @@
       },
       "response_valid": false
     },
-    {
-      "name": "record-row-null",
-      "definition": "recordRow",
-      "response": {
-        "input": "hello",
-        "value": null
-      }
-    },
+    {"name":"record-row-null","definition":"recordRow","response":{"input":"hello","value":null}},
+    {"name":"detailed-kind-mismatch","definition":"details","response":{"schema":"thinkthen.result/1","value":true,"question":{"verb":"choose","text":"Which?"},"answer":{"kind":"yes_no","probability":0.9},"threshold":0.5,"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}},"response_valid":false},
+    {"name":"find-details","definition":"details","response":{"schema":"thinkthen.result/1","value":null,"question":{"verb":"find","text":"Which?","none":true},"answer":{"kind":"find","pick":"none","probabilities":{"u001":0.1,"none":0.9}},"threshold":null,"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}}},
+    {"name":"annotate-details","definition":"annotateDetails","response":{"schema":"thinkthen.result/1","input":"note","value":{"ready":true},"answers":{"ready":{"value":true,"question":{"verb":"decide","text":"Ready?"},"answer":{"kind":"yes_no","probability":0.9},"threshold":0.5,"request":"x"}},"meta":{"tool":"thinkthen","questions_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}}},
+    {"name":"recognize-details","definition":"recognizeDetails","response":{"schema":"thinkthen.result/1","value":{"entities":[]},"question":{"verb":"recognize"},"answer":{"pieces":[],"names":[],"pairs":[]},"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}}},
+    {"name":"relate-details","definition":"relateDetails","response":{"schema":"thinkthen.result/1","value":[],"question":{"verb":"relate"},"answer":{"questions":[]},"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}}},
     {
       "name": "call-error",
       "definition": "callError",
