@@ -156,6 +156,7 @@ Build amendment, 2026-09-27: Ian kept the routine gate functional and moved stre
 | `carrier_masks_workers_and_cleanup_restores_the_mask`, existing in `cli/interrupt/tests.rs:186-200` | It gains `contains(Signal::SIGTERM)` asserts for the main thread and for a spawned thread | (c) SIGTERM left out of `sigint_set`: this test turns red |
 | `record_finishes_the_started_row_stops_before_another_and_completes_cache`, extended to both signals | Rows 3 and 4, including the completed cache entry | (c2) SIGTERM left out of `register`: the child dies at once with empty output. (d) `emulate` re-raises SIGINT: the child ends by SIGINT |
 | `a_second_signal_of_either_kind_ends_the_run_at_once`, new | Row 5 | (e) SIGTERM's conditional default reads its own flag: the child waits for its held reply and misses the deadline |
+| `sigterm_after_a_check_probe_fails_prints_no_report`, added after code review | A held probe returns 401 after SIGTERM; the check prints nothing, exits by SIGTERM and sends once | Omit the cancellation check before report output: the check prints its critical finding |
 
 The compiled-binary edge cases use one loopback listener and request counts per run. The timeout and second-signal cases bound the child wait to four seconds and release their held reply afterward. No paid or live backend is used.
 
@@ -164,7 +165,7 @@ Overlap was checked.
 - `sent_single_decide_and_aggregate_commands_flush_before_sigint_status` releases the reply at once, so no request fails after the signal. It still passes.
 - `sigint_during_retry_wait_makes_exactly_one_request` ends in a retry wait, not a failed send. It prints nothing today and after.
 - `cli/interrupt/tests.rs` pins `ACTIONS`, the install prefixes and the armed follow-up SIGINT through a child. It does not send SIGTERM. Its mask test gains two SIGTERM asserts, and no expected result changes.
-- No test sends SIGTERM or lets a send fail after a signal.
+- Before this ticket, no test sent SIGTERM or let a send fail after a signal. The new check case covers a 401 returned after SIGTERM; the existing retry-wait case cannot catch report output.
 
 The four questions:
 
@@ -181,12 +182,13 @@ Nonblank lines against main `22332a38`, measured with the same rule as `sdlc/scr
 
 - `cli/interrupt.rs`: measured +25, at most +28. It registers both signals with the existing action order and remembers which arrived. I checked `register` and `emulate` for a shared path and use one loop over both signals.
 - `cli/failure.rs`: measured +6, at most +8. Its current 492 nonblank lines stay under the 500-line cap. `after_signal` and the signal stop sentence live in `cli/failure/after_signal.rs` so the dispatcher stays short.
-- `cli/failure/after_signal.rs`: measured 137 new lines, at most 145. It includes the backend/local cause table, the nested batch and stopped mappings, and the one signal stop sentence. The table uses one backend constructor list for bare and stopped cases. The result reuses `Failure::Cancelled` and keeps all existing local failure variants.
+- `cli/failure/after_signal.rs`: measured 141 new lines, at most 145. It includes the backend/local cause table, the nested batch and stopped mappings, and the one signal stop sentence. The table uses one backend constructor list for bare and stopped cases, including differing models and usage overflow found in review. The result reuses `Failure::Cancelled` and keeps all existing local failure variants.
 - `cli/mod.rs`: measured +3, at most +3.
-- `tests/backend/interrupt.rs`: measured +170, at most +170. Existing held-request, listener, acknowledgment, cache and answer helpers serve the new SIGTERM and hung-request rows. A second flow keeps the backend reply held until after the child exits, which the existing helper cannot do. Its four-second deadline gives a failure bound; no timing threshold decides success. The second-signal row checks both signal orders.
+- `cli/check.rs`: measured +3, at most +3. It checks the existing cancellation flag immediately before printing its report.
+- `tests/backend/interrupt.rs`: measured +183, at most +183. Existing held-request, listener, acknowledgment, cache and answer helpers serve the new SIGTERM, hung-request and check-probe rows. A second flow keeps the backend reply held until after the child exits, which the existing helper cannot do. Its four-second deadline gives a failure bound; no timing threshold decides success. The second-signal row checks both signal orders. The check-probe row reuses the original held-request flow without another helper.
 - `cli/failure/tests.rs`: measured 0; one existing expected line changes.
 - `cli/interrupt/tests.rs`: measured +12, at most +12, adding SIGTERM mask assertions on both the command and worker threads.
-- `sdlc/ratchet.json`: main's 75,724 becomes the measured 76,077 nonblank Rust lines, +353: +105 source and +248 test lines. I checked the carrier's registration and emulation, the failure dispatcher, both test helpers, and the low-level carrier tests for duplication before raising it. The fresh reviewer checks this accounting.
+- `sdlc/ratchet.json`: main's 75,724 becomes the measured 76,097 nonblank Rust lines, +373: +112 source and +261 test lines. The correction adds +7 source and +13 test lines to the accepted 76,077. I checked the carrier's registration and emulation, the failure dispatcher, both test helpers, and the low-level carrier tests for duplication before raising it. For the correction I reused the existing backend-cause table and held-request helper rather than adding another setup path. The fresh reviewer checks this accounting.
 - Pages: `channels.md`, `records.md`, `check.md`, the ADR 0017 amendment and one `CHANGELOG.md` line.
 - No dependency. `signal_hook::flag::register_usize` is in the crate the command already uses. No paid call.
 

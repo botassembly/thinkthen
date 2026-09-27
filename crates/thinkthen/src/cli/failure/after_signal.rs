@@ -39,6 +39,8 @@ impl Failure {
             | Self::TokenLimit
             | Self::ReplyTooLarge(_)
             | Self::Reply(_)
+            | Self::ModelsDiffer(_)
+            | Self::UsageOverflow
             | Self::PartialReply { .. }
             | Self::Recognize(recognize::Error::LogicalQuestion) => Self::Cancelled,
             other => other,
@@ -87,6 +89,8 @@ mod tests {
             Failure::TokenLimit,
             Failure::ReplyTooLarge(12),
             Failure::Reply(DecodeError::NoModel),
+            Failure::ModelsDiffer(Some(("one".into(), "two".into()))),
+            Failure::UsageOverflow,
             Failure::PartialReply { first: 1, last: 2 },
             Failure::Recognize(recognize::Error::LogicalQuestion),
             Failure::BatchFailed {

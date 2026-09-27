@@ -402,6 +402,20 @@ fn sigint_during_retry_wait_makes_exactly_one_request() {
     assert!(output.stderr.is_empty());
 }
 
+#[test]
+fn sigterm_after_a_check_probe_fails_prints_no_report() {
+    let output = held_with_signal(
+        signal_hook::consts::signal::SIGTERM,
+        1,
+        &["check"],
+        b"",
+        || Canned::status(401, "unauthorized"),
+    )
+    .expect("interrupted check ends");
+    assert!(output.stdout.is_empty());
+    assert!(output.stderr.is_empty());
+}
+
 /// Ticket 0143: a split text holds up to the default width of 4 in flight.
 /// The text makes 14 one-question chunks, and none starts after the signal.
 #[test]
