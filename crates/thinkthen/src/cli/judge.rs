@@ -35,6 +35,7 @@ pub(crate) struct Asked<'a> {
 #[derive(Debug)]
 pub(crate) struct Tiers<'a> {
     pub(crate) flag: Option<&'a str>,
+    pub(crate) request_size: Option<&'a str>,
     pub(crate) file: Option<Json>,
 }
 
@@ -237,6 +238,7 @@ pub(crate) fn rank(
 fn tiers(batching: &Batching, file: Option<Json>) -> Tiers<'_> {
     Tiers {
         flag: batching.batch.as_deref(),
+        request_size: batching.max_request_bytes.as_deref(),
         file,
     }
 }

@@ -19,8 +19,8 @@ fn a_status_names_its_fixed_action_and_only_the_known_reason() {
     );
     let too_long = concat!(
         "thinkthen: the backend answered with status 400 (max_tokens_exceeded): the request has ",
-        "more input tokens than the backend takes; shorten the text or set a lower ",
-        "max_request_bytes with --profile\n"
+        "more input tokens than the backend takes; shorten the text, or set a lower ",
+        "--max-request-bytes or max_request_bytes with --profile\n"
     );
     let retried = [500, 502, 503, 504, 529].map(|status| {
         let said = format!("thinkthen: the backend answered with status {status}: {RETRIED_OUT}");
@@ -33,6 +33,11 @@ fn a_status_names_its_fixed_action_and_only_the_known_reason() {
         (400, "not json", REFUSED),
         (400, r#"{"detail":"max_tokens_exceeded"}"#, REFUSED),
         (400, long.as_str(), REFUSED),
+        (
+            413,
+            "{}",
+            "thinkthen: the backend answered with status 413: the backend refused the request as too large; shorten the text, or set a lower --max-request-bytes or max_request_bytes with --profile\n",
+        ),
         (
             422,
             NAMED,

@@ -121,6 +121,10 @@ pub(crate) fn fixed(settled: &Resolved) -> Result<Asks, Failure> {
 ///
 /// Returns [`Failure`] for every outcome `channels.md` gives a code above 3,
 /// and for every option that cannot act in the mode the run is in.
+#[expect(
+    clippy::too_many_lines,
+    reason = "the command edge keeps mode, setting, and output decisions in their observable order"
+)]
 pub(crate) fn run(
     asked: Asked<'_>,
     environment: &Environment,
@@ -146,11 +150,19 @@ pub(crate) fn run(
         .model_is_default()
         .then(|| environment.model())
         .flatten();
+    let request_size = batch
+        .as_ref()
+        .map(|tiers| environment.request_size(tiers.request_size))
+        .transpose()?;
     let backend = Backend::resolve(
         common.url.as_deref(),
         environment.base_url(),
         configured_model.unwrap_or_else(|| settled.model().as_str()),
-    )?;
+    )?
+    .with_request_size(request_size.unwrap_or(Backend::DEFAULT_REQUEST_SIZE));
+    if request_size.is_some() {
+        environment.warn_request_size(&backend)?;
+    }
     let profile = profile::read(common)?;
     let mismatch = Mismatch::new(settled.profile(), profile.as_ref());
     let reading = read_by(common, settled, keeping)?;

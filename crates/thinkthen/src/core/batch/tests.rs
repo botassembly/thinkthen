@@ -17,6 +17,7 @@ use crate::core::records::{Framing, Reading, Record};
 use crate::core::render::json_line;
 use crate::core::text::{Evidence, Meaning, ModelName, QuestionText};
 
+mod ceiling;
 mod refusals;
 
 const LOOPBACK: &str = "http://127.0.0.1:9";
@@ -288,6 +289,17 @@ fn batches_close_where_the_readme_says() {
     assert!(!kept.contains(&before[1]) && !kept.contains(&before[2]));
 }
 
+#[test]
+fn a_half_whose_last_member_is_a_content_cut_closes_during_push() {
+    let records = grouping(None).into_iter().take(8).collect();
+    let [first, second] = super::halves(&loopback(), None, &decide(SONG), None, records)
+        .expect("both halves form one request");
+    assert_eq!(
+        shape(&[first, second]),
+        [(4, Closed::End), (4, Closed::Content)]
+    );
+}
+
 /// A body fixture's question, records, context, fixture, and each record's first question.
 type BodyCase<'a> = (
     Question,
@@ -379,50 +391,6 @@ fn limits_close_batches_by_exact_bytes_and_the_ceiling() {
             decide("Q"),
             twelve(),
             vec![(11, Limit), (1, End)],
-        ),
-    ];
-    check(cases);
-}
-
-#[test]
-fn the_ceiling_closes_batches_at_the_built_in_address_only() {
-    use Closed::{End, Limit};
-    let built_in = || backend(BUILT_IN, "jev-latest");
-    let cases: [LimitCase; 5] = [
-        (
-            built_in(),
-            None,
-            decide(SONG),
-            sized(20_000),
-            vec![(3, End)],
-        ),
-        (
-            built_in(),
-            None,
-            decide(SONG),
-            sized(40_000),
-            vec![(2, Limit), (1, End)],
-        ),
-        (
-            built_in(),
-            None,
-            decide(SONG),
-            vec![text(&"a".repeat(100_000))],
-            vec![(1, End)],
-        ),
-        (
-            built_in(),
-            profile(r#""max_request_bytes":200000"#),
-            decide(SONG),
-            sized(40_000),
-            vec![(3, End)],
-        ),
-        (
-            loopback(),
-            None,
-            decide(SONG),
-            sized(40_000),
-            vec![(3, End)],
         ),
     ];
     check(cases);

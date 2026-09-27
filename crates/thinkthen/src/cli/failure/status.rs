@@ -4,7 +4,7 @@
 const RETRIED_OUT: &str =
     "the backend failed after the allowed attempts; try again later or change --max-retries";
 
-const PHRASES: [(u16, &str); 13] = [
+const PHRASES: [(u16, &str); 14] = [
     (
         302,
         "the redirect was not followed; use the final --url directly",
@@ -18,6 +18,10 @@ const PHRASES: [(u16, &str); 13] = [
     (403, "the key may not use this model or address"),
     (404, "nothing answers at this address"),
     (
+        413,
+        "the backend refused the request as too large; shorten the text, or set a lower --max-request-bytes or max_request_bytes with --profile",
+    ),
+    (
         422,
         "the backend refused the request as malformed or too large",
     ),
@@ -30,7 +34,7 @@ const PHRASES: [(u16, &str); 13] = [
 ];
 
 /// Status 400 whose body named `max_tokens_exceeded`, the one reason printed.
-pub(super) const TOKEN_LIMIT: &str = "the backend answered with status 400 (max_tokens_exceeded): the request has more input tokens than the backend takes; shorten the text or set a lower max_request_bytes with --profile";
+pub(super) const TOKEN_LIMIT: &str = "the backend answered with status 400 (max_tokens_exceeded): the request has more input tokens than the backend takes; shorten the text, or set a lower --max-request-bytes or max_request_bytes with --profile";
 
 /// Name the status and its fixed phrase without carrying a response body.
 pub(super) fn said(status: u16) -> String {

@@ -196,6 +196,11 @@ impl Engine {
         &self.backend
     }
 
+    /// The enforceable profile the batch planner must retain on a split.
+    pub(crate) fn profile(&self) -> Option<&BackendProfile> {
+        self.profile.as_ref()
+    }
+
     /// The key a live request carries. With the variable unset, a backend
     /// proven to be this machine takes an empty key, which sends no
     /// authorization header, so a local server that checks none needs no

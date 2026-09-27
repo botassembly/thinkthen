@@ -359,7 +359,7 @@ fn drain<S, A, W, G, R, E>(
         let Some(completed) = state.ready.remove(&state.next_row) else {
             break;
         };
-        state.replayed += usize::from(completed.replayed);
+        state.replayed += completed.replayed;
         state.partial_failure |= completed.partial_failure;
         if !emit(completed.value)? {
             state.stop();

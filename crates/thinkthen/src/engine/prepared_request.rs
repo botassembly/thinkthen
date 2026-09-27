@@ -61,14 +61,16 @@ impl PreparedRequests {
     }
 }
 
-/// The request-byte ceiling a relation request splits at, unless the profile limits bytes.
+/// The smaller request-byte limit a relation request splits under.
 pub(crate) fn relation_ceiling(
     backend: &Backend,
     profile: Option<&BackendProfile>,
 ) -> Option<usize> {
-    backend
-        .ceiling()
-        .filter(|_| profile.is_none_or(|profile| !profile.limits_request_bytes()))
+    Some(
+        profile
+            .and_then(|profile| profile.max_request_bytes)
+            .map_or(backend.ceiling(), |limit| limit.min(backend.ceiling())),
+    )
 }
 
 /// One concrete relation after the only relation fallback decision.

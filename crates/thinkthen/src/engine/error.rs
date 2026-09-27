@@ -108,6 +108,11 @@ impl fmt::Display for Budget {
     reason = "the command runner reads kinds while normal command paths preserve exact causes"
 )]
 impl Error {
+    /// A refusal that a smaller batch may answer.
+    pub(crate) const fn too_large(&self) -> bool {
+        matches!(self, Self::TokenLimit | Self::Status(413))
+    }
+
     pub(crate) const fn kind(&self) -> Kind {
         match self {
             Self::Transport(_)

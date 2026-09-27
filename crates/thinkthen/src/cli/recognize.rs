@@ -74,11 +74,14 @@ pub(crate) fn run(
         .as_ref()
         .map(ModelName::as_str)
         .or_else(|| environment.model());
+    let request_size = environment.request_size(arguments.max_request_bytes.as_deref())?;
     let backend = Backend::resolve(
         arguments.common.url.as_deref(),
         environment.base_url(),
         configured.unwrap_or(crate::core::DEFAULT_MODEL),
-    )?;
+    )?
+    .with_request_size(request_size);
+    environment.warn_request_size(&backend)?;
     let selected_profile = profile::read(&arguments.common)?;
     let mismatch = profile::Mismatch::new(spec.profile.as_ref(), selected_profile.as_ref());
 
