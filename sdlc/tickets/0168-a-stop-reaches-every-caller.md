@@ -6,7 +6,7 @@ opens: libraries/python/src/worker.rs libraries/python/tests/test_stopping.py li
 
 # 0168: A stop reaches every caller
 
-Status: built, code review accepted, combined full gates pending. The coordinator accepted it on 2026-09-27 after a fresh read-only review, with the fixes that review named. Owner: Codex.
+Status: done in the verified landing candidate; final metadata review and main push remain. The coordinator accepted it on 2026-09-27 after a fresh read-only review, with the fixes that review named. Owner: Codex.
 
 Review route: the accepted design keeps its original review. A fresh read-only Codex session reviews the final diff, under Ian's 2026-09-27 handover.
 
