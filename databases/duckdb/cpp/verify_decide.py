@@ -206,7 +206,35 @@ def main() -> None:
             )
             assert "thinkthen usage: the cache folder is outside what this database's file settings allow" in forbidden[2]["error"]
             assert backend.count() == 14, "a caller-refused cache folder sent no request"
-    print("C++ scalar, budget, limits, cache permissions, NULL, type, deduplication, and loopback boundaries pass")
+        listed = run(
+            ["SELECT thinkthen_choose('Which team?', t, ['billing', 'shipping']) "
+             "FROM (VALUES ('my card was charged twice'), ('my card was charged twice')) AS x(t)",
+             "SELECT thinkthen_score('How strong is the claim?', 'refund now', ['weak', 'moderate', 'strong'])",
+             "SELECT thinkthen_tag('Which topics?', 'charged twice and late', ['billing', 'shipping'])",
+             "SELECT thinkthen_choose('Which team?', NULL, ['billing', 'shipping'])"],
+            backend.base(), extension=extension,
+        )
+        assert listed[0] == {"rows": [["billing"], ["billing"]]}
+        assert isinstance(listed[1]["rows"][0][0], float)
+        assert listed[2] == {"rows": [[["billing", "shipping"]]]}
+        assert listed[3] == {"rows": [[None]]}
+        assert backend.count() == 17, "listed group deduplicated, and NULL sent nothing"
+        bad_listed = run(
+            ["SELECT thinkthen_choose('Which team?', t, opts) FROM "
+             "(VALUES ('charged twice', ['billing', 'shipping']), ('refund now', ['billing'])) AS x(t, opts)"],
+            backend.base(), extension=extension,
+        )
+        assert "thinkthen usage:" in bad_listed[0]["error"]
+        assert backend.count() == 17, "a later invalid list sent no partial chunk"
+        bind_listed = run(
+            ["PREPARE bad_options AS SELECT thinkthen_choose('Which team?', 'refund now', ['billing'])",
+             "SELECT thinkthen_tag('Which topics?', 'refund now', ['billing', NULL])"],
+            backend.base(), extension=extension,
+        )
+        assert "thinkthen usage:" in bind_listed[0]["error"]
+        assert bind_listed[1] == {"rows": [[None]]}
+        assert backend.count() == 17, "bad foldable members and a NULL list member sent nothing"
+    print("C++ scalar, listed, budget, limits, cache, NULL, deduplication, and loopback boundaries pass")
 
 
 if __name__ == "__main__":

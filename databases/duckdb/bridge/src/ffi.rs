@@ -8,6 +8,8 @@ use std::sync::Once;
 use crate::{engines, errors};
 use thinkthen::{Answer, CallOptions, LoadedQuestion, Question};
 
+mod listed;
+
 thread_local! {
     static BRIDGE_DEPTH: Cell<usize> = const { Cell::new(0) };
 }
@@ -178,6 +180,78 @@ pub(crate) struct BridgeSettings {
     cache_allowed: i32,
 }
 
+/// Validate one listed question and its members before any group sends.
+///
+/// # Safety
+/// The question and each member must stay readable through this call.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_cpp_validate_listed(
+    question: *const u8,
+    question_len: usize,
+    members: *const BridgeText,
+    member_count: usize,
+    kind: i32,
+) -> Reply {
+    reply_boundary(|| {
+        let question = text(question, question_len)?;
+        let members = copied_texts(members, member_count)?;
+        listed::set(kind, question, &members).map(|_| Vec::new())
+    })
+}
+
+fn copied_texts(rows: *const BridgeText, count: usize) -> Result<Vec<String>, String> {
+    if count > 2048 || (rows.is_null() && count != 0) {
+        return Err("thinkthen defect: the bridge got an invalid chunk size".to_owned());
+    }
+    if count == 0 {
+        return Ok(Vec::new());
+    }
+    // SAFETY: C++ owns the fixed array through the synchronous call.
+    let rows = unsafe { std::slice::from_raw_parts(rows, count) };
+    rows.iter()
+        .map(|row| text(row.bytes, row.len).map(str::to_owned))
+        .collect()
+}
+
+/// Evaluate one listed group through the public engine.
+///
+/// # Safety
+/// The question, members, and texts must stay readable through this call.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_cpp_listed_group(
+    question: *const u8,
+    question_len: usize,
+    members: *const BridgeText,
+    member_count: usize,
+    texts: *const BridgeText,
+    text_count: usize,
+    deadline_ms: i64,
+    kind: i32,
+    settings: BridgeSettings,
+) -> Reply {
+    reply_boundary(|| {
+        let question = text(question, question_len)?;
+        let members = copied_texts(members, member_count)?;
+        let texts = copied_texts(texts, text_count)?;
+        let set = listed::set(kind, question, &members)?;
+        let asked = asked(&settings)?;
+        let engine = engines::engine_for(&asked, |_| probe(&settings))?;
+        let (texts, cut) = engines::within_total(&asked, texts)?;
+        let options = if deadline_ms == -1 {
+            CallOptions::new()
+        } else {
+            CallOptions::new()
+                .deadline_millis(deadline_ms)
+                .map_err(|error| errors::RowError::from(error).text)?
+        };
+        let values = listed::run(&engine, &set, texts, options)?;
+        if let Some(error) = cut {
+            return Err(error);
+        }
+        Ok(values)
+    })
+}
+
 fn asked(settings: &BridgeSettings) -> Result<engines::Asked, String> {
     let present = |value| (value != i64::MIN).then_some(value);
     let cache = (!settings.cache_bytes.is_null())
@@ -217,18 +291,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_scalar_group(
     reply_boundary(|| {
         let question = question_typed(text(question_bytes, question_len)?, from_file != 0)
             .map_err(|error| error.text)?;
-        if count > 2048 || (texts.is_null() && count != 0) {
-            return Err("thinkthen defect: the bridge got an invalid chunk size".to_owned());
-        }
-        let copied = if count == 0 {
-            Vec::new()
-        } else {
-            // SAFETY: C++ owns this fixed array until the call returns.
-            let rows = unsafe { std::slice::from_raw_parts(texts, count) };
-            rows.iter()
-                .map(|row| text(row.bytes, row.len).map(str::to_owned))
-                .collect::<Result<Vec<_>, _>>()?
-        };
+        let copied = copied_texts(texts, count)?;
         let asked = asked(&settings)?;
         let engine = engines::engine_for(&asked, |_| probe(&settings))?;
         let (copied, cut) = engines::within_total(&asked, copied)?;
