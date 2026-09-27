@@ -53,3 +53,10 @@ Scope: ticket work observed after 13:00 EDT, starting from the [work-plan baseli
 For each newly encountered ticket, review finding, test failure or build surprise, the coordinator asks the retained preparation agent for a **bounded related-ticket pass**. Verify the incident against its source revision and observed output, mark cause confirmed or unknown, identify the next tickets that share that boundary, and amend only their claimed preparation notes. Keep independent design/code review and the builder's later `What the build taught us` section as the checks on whether the preparation helped. Do not reopen accepted outcomes from a symptom alone or scan the whole queue again.
 
 Independent read-only review accepted this incident log and separately verified the 0149/0157 note application at `2999814e`. The coordinator updated the 0152 disposition after its accepted landing. The next targeted preparation pass covers 0170–0172, applying the observed counter, serialization, stop-state, fixture and setting-map lessons before their builds.
+
+
+## Coordinator execution corrections
+
+The first retained CLI preparation resume for 0163 inherited the coordinator worktree instead of codex-5 and a read-only default. Its first `pwd` and fetch result exposed that launch error. The coordinator interrupted it, verified no tracked edit in codex-4, and resumed the same session from codex-5 with explicit cwd and the authorized sandbox. The completed note is `111387e5`. Future CLI resumes set cwd, approval policy and sandbox deliberately, then verify cwd and branch before any mutation. This is an execution-process correction, not a product defect or a reason to re-investigate unrelated tickets.
+
+The first 0156 landing update failed to replace its full Status sentence because the replacement expected a shorter exact string. The immediately following check showed it still said awaiting review. Commit `c1d1ac2b` corrected the sentence after asserting the expected old text existed. Future completion edits assert their target or inspect the resulting status before committing; a successful command exit alone does not prove a text replacement matched.
