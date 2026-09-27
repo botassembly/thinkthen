@@ -60,3 +60,7 @@ The coordinator's rulings of 2026-09-26:
 5. `--batch 1` as the defence for mixed or untrusted records, with no new isolation key, item 5.
 6. `--record` alone still writing a reply that failed a question, item 6.
 7. A cache reading a partial entry as a miss, and `--replay` alone replaying it byte for byte, by the amendment to item 6.
+
+## Amendment, 2026-09-26: ADR 0055 narrows item 5
+
+ADR 0055 takes the records list out of the evidence of `decide`, `filter` and `rank` batches. Without a context, their records are no longer evidence for each other, so item 5's caution no longer applies to them. It still applies to `choose` and `tag`. Ian can overturn it.

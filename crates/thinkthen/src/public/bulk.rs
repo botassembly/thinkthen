@@ -127,11 +127,13 @@ impl Engine {
     }
 
     /// Select the one unit that best answers the question, from 2 to 255.
+    /// A question from [`Question::offering_none`] takes 2 to 254 units and
+    /// may select none.
     ///
     /// # Errors
     ///
     /// As [`Engine::decide`], and [`Error::Usage`] for another kind of
-    /// question or a unit count outside 2 to 255.
+    /// question or a unit count outside its range.
     pub fn find<I>(&self, question: &Question, units: I) -> Result<Found<I::Item>, Error>
     where
         I: IntoIterator,
@@ -155,7 +157,8 @@ impl Engine {
         I: IntoIterator,
         I::Item: Evidence,
     {
-        only(question, &[Kind::Find], "find")?;
+        only(question, &[Kind::Find, Kind::FindNone], "find")?;
+        let none = question.kind == Kind::FindNone;
         let units: Vec<I::Item> = self.within_limit(units)?.collect();
         let texts = units
             .iter()
@@ -165,19 +168,22 @@ impl Engine {
             return Err(Error::defect("a find question held no text"));
         };
         let engine = self.asking(question)?;
-        let find = Find::new(
-            text.clone(),
-            &texts,
-            engine.backend().model().clone(),
-            false,
-        )
-        .map_err(|_| Error::usage("find takes 2 to 255 units"))?;
+        let find = Find::new(text.clone(), &texts, engine.backend().model().clone(), none)
+            .map_err(|_| {
+                Error::usage(if none {
+                    "a find question offering none takes 2 to 254 units"
+                } else {
+                    "find takes 2 to 255 units"
+                })
+            })?;
         let stop = Stop::begin(options)?;
         let found = stop.run(|cancel| engine.find(&find, cancel).map_err(Error::from))?;
-        Found::new(units, &found)
+        Found::new(units, none, &found)
     }
 
     /// Each record with every value of the set, lazily, in input order. A
+    /// member with an `on` pointer reads that part of the record's JSON text,
+    /// and a record missing a part is refused before its first request. A
     /// question the backend failed reads [`Annotated::Failed`](crate::Annotated::Failed).
     pub fn annotate<'a, I>(
         &'a self,
@@ -282,13 +288,31 @@ fn annotated(
     cancel: &crate::engine::Cancel<'_>,
 ) -> Result<Completed<Values>, Error> {
     let evidence = evidence(text)?;
+    let parts = set
+        .groups()
+        .into_iter()
+        .map(|places| Ok((set.group_evidence(&places, &evidence)?, places)))
+        .collect::<Result<Vec<_>, core::PartError>>()
+        .map_err(|error| match error {
+            core::PartError::Record(error) => Error::usage(error.to_string()),
+            core::PartError::Reading(_) | core::PartError::Render(_) => {
+                Error::defect("a checked question set could not read its parts")
+            }
+        })?;
     let model = engine.backend().model();
     let plan = |places: &[usize]| {
+        let part = parts
+            .iter()
+            .find(|(_, held)| held == places)
+            .map(|(part, _)| part.clone())
+            .ok_or(crate::engine::error::Error::Defect(
+                "an annotate group has no part",
+            ))?;
         let questions = places
             .iter()
             .filter_map(|place| set.questions().get(*place));
         Plan::new(
-            evidence.clone(),
+            part,
             model.clone(),
             questions.map(|named| named.question().clone()).collect(),
         )

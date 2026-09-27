@@ -68,6 +68,11 @@ export interface RankOptions extends CallOptions {
   top?: number;
 }
 
+export interface FindOptions extends CallOptions {
+  /** Offer a none candidate, as `find --none` does, so the answer may be `null`. */
+  none?: boolean;
+}
+
 /** `true`, `false`, or `null` when the answer is unsure. */
 export type Answer = boolean | null;
 
@@ -226,7 +231,8 @@ export interface Verbs {
   tag(question: TagSpec | Question, text: string, options?: CallOptions): Promise<string[]>;
   filter(question: string | Question | DecideSpec, records: readonly string[], options?: CallOptions): Promise<string[]>;
   rank(question: string | Question | DecideSpec, records: readonly string[], options?: RankOptions): Promise<Ranked[]>;
-  find(question: string | Question | DecideSpec, units: readonly string[], options?: CallOptions): Promise<Found | null>;
+  find(question: string | Question | DecideSpec, units: readonly string[], options?: FindOptions): Promise<Found | null>;
+  /** A set member whose `on` names a part reads it from each record as JSON text. */
   annotate(set: QuestionSet, records: readonly string[], options?: CallOptions): Promise<AnnotatedRow[]>;
   details(question: string | Question | QuestionSpec, text: string, options?: CallOptions): Promise<Details>;
   recognize(text: string, options?: RecognizeOptions): Promise<Recognized>;
