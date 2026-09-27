@@ -18,7 +18,7 @@ use bilou::best_of;
 pub(crate) use bilou::{SpanOdds, TAGS, TagRow, decode};
 pub(crate) use pieces::{Piece, pieces};
 pub(crate) use questions::{
-    NONE_OF_THESE, edge_options, edge_question, evidence, kind_question, name_groups,
+    NONE_OF_THESE, edge_label, edge_options, edge_question, evidence, kind_question, name_groups,
     step_one_groups, step_one_questions,
 };
 
@@ -79,9 +79,17 @@ pub(crate) fn step_two_questions(
     let mut questions = Vec::new();
     let mut asked = Vec::new();
     for stretch in found.get(group).unwrap_or_default().iter().copied() {
+        let mut edges = edge_options(text, pieces, stretch);
+        // A blank label would fail after step 1 is paid, so the name keeps its span.
+        if edges
+            .iter()
+            .any(|edge| edge_label(text, pieces, *edge).is_empty())
+        {
+            edges.truncate(1);
+        }
         let held = Asked {
             kind: !kinds.is_empty(),
-            edges: edge_options(text, pieces, stretch),
+            edges,
         };
         if held.kind {
             questions.push(kind_question(text, pieces, stretch, kinds)?);

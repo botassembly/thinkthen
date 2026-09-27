@@ -204,9 +204,19 @@ pub(crate) fn edge_options(
     options
 }
 
-/// The edge question over `options`. Each label is its own text with every
-/// run of white space or control characters shown as one space, so no label
-/// fails the label check. The description keeps the real snippet.
+/// A stretch's edge label: its text with every run of white space or control
+/// characters shown as one space. It is empty when the stretch holds only those.
+pub(crate) fn edge_label(text: &str, pieces: &[Piece], (first, last): (usize, usize)) -> String {
+    text.get(bytes(pieces, first, last))
+        .unwrap_or_default()
+        .split(|c: char| c.is_whitespace() || c.is_control())
+        .filter(|word| !word.is_empty())
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// The edge question over `options`, each labelled by [`edge_label`]. The
+/// description keeps the real snippet.
 pub(crate) fn edge_question(
     text: &str,
     pieces: &[Piece],
@@ -214,13 +224,7 @@ pub(crate) fn edge_question(
 ) -> Result<Question, LabelsError> {
     let mut labels: Vec<(String, Option<Description>)> = Vec::with_capacity(options.len());
     for (first, last) in options.iter().copied() {
-        let mut label = text
-            .get(bytes(pieces, first, last))
-            .unwrap_or_default()
-            .split(|c: char| c.is_whitespace() || c.is_control())
-            .filter(|word| !word.is_empty())
-            .collect::<Vec<_>>()
-            .join(" ");
+        let mut label = edge_label(text, pieces, (first, last));
         while labels.iter().any(|(held, _)| *held == label) {
             label.push(' ');
         }

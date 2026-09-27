@@ -3,7 +3,7 @@
 
 use super::{
     Asked, NameOdds, Odds, TagRow, decode, edge_options, edge_question, evidence, name_groups,
-    pieces, settle, step_one_groups,
+    pieces, settle, step_one_groups, step_two_questions,
 };
 use crate::core::Question;
 
@@ -256,6 +256,23 @@ fn edge_options_come_from_touching_marks_alone() {
             panic!("the edge question is a choice");
         };
         assert_eq!(labels.names().collect::<Vec<_>>(), expected, "{text:?}");
+    }
+    // A stretch of control characters alone would label blank: no edge question.
+    let blank: [(&str, (usize, usize)); 4] = [
+        ("a \u{1b}! b", (1, 1)),
+        ("a \u{0}. b", (1, 1)),
+        ("a .\u{7f} b", (1, 2)),
+        ("a .\u{7f} b", (2, 2)),
+    ];
+    for (text, name) in blank {
+        let pieces = pieces(text);
+        assert!(edge_options(text, &pieces, name).len() > 1, "{text:?}");
+        let asked = step_two_questions(text, &pieces, &[name], 0..1, &[]).unwrap();
+        let kept = vec![Asked {
+            kind: false,
+            edges: vec![name],
+        }];
+        assert_eq!(asked, (Vec::new(), kept), "{text:?}");
     }
 }
 
