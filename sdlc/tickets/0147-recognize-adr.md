@@ -34,7 +34,7 @@ Each line is at `origin/main` `19ca8302`.
 
 ### Step 1: boundaries
 
-The splitter makes pieces. White space separates pieces. Each character of Unicode general category P or S is a piece of its own. A character of category Mn, Me or Cf right after a symbol piece joins that piece. Nothing else joins or splits. Offsets count Unicode scalar values.
+The splitter makes pieces. White space separates pieces. Each character of Unicode general category P or S is a piece of its own. A run of characters of category Mn, Me or Cf joins the piece that ends right before it, whatever that piece is, so consecutive marks all join. A run after white space or at the text's start begins a piece, as a letter does. Nothing else joins or splits. Offsets count Unicode scalar values.
 
 Each piece gets one pick-one question. The wording is local experiment 278's p1, as local experiments 281 and 285 sent it at six pieces. With kinds it reads:
 
@@ -65,7 +65,7 @@ After every step-1 request returns, a Viterbi decode picks the most likely valid
 Step 2 sends one request for each step-1 request whose pieces hold the first piece of a found name. Its evidence is the original text from the sixth piece before its first name to the sixth piece after its last. It holds two kinds of question.
 
 - **The kind question.** One per found name, when the run has kinds. The wording is local experiment 278's `none2`, which local experiment 284 kept: `In the text below, some words are wrapped in [[ ]]. Going by what they refer to in this text, which listed kind of name are they? Choose none of these when they are not a proper name, or when they name something that no listed kind covers.` Then `Text: ` and the name's six-piece snippet. The options are the caller's kinds in order, each with the caller's description or none, then `none of these`, described as `They are not a proper name, or no listed kind covers what they name.`
-- **The edge question.** One per found name that has two or more options. The options are the name as found, the name plus a touching P or S piece at its right end, the name plus one at its left end, the name less its last piece when that piece is P or S, and the name less its first piece when that piece is P or S. "Touching" means no white space between. The wording is local experiment 279's edge wording a: `In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.` Then `Text: ` and the name's six-piece snippet. Each option's label is its stretch's text, with a space added until it differs from the labels before it. Its description is the stretch's six-piece snippet, with `...` at an end that stops short of the text's edge.
+- **The edge question.** One per found name that has two or more options. The options are the name as found, the name plus a touching P or S piece at its right end, the name plus one at its left end, the name less its last piece when that piece is P or S, and the name less its first piece when that piece is P or S. A removal option never leaves an empty stretch, so a one-piece name gets no removal option. "Touching" means no white space between. The wording is local experiment 279's edge wording a: `In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.` Then `Text: ` and the name's six-piece snippet. Each option's label is its stretch's text, with a space added until it differs from the labels before it. Its description is the stretch's six-piece snippet, with `...` at an end that stops short of the text's edge.
 
 A name whose kind answer is `none of these` is dropped. Every other name takes its picked stretch and its picked kind. With no kinds, only edge questions go out, and every name takes the kind `ENTITY`. A name with no edge question keeps its span. Names print in order of `start`, then `end`. Two names with the same span and kind print once, as "Output" says. Beyond the cut under "Output", no other rule touches a name.
 
@@ -79,7 +79,7 @@ Each ordered pair of kept names whose kinds match some rule's source and target 
 {"entities":[{"text":"Maria Chen","start":0,"end":10,"length":10,"kind":"person","strength":0.97}]}
 ```
 
-`strength` is P(kind) times P(span), rounded to four decimal places as today. P(kind) is step 2's probability of the chosen kind. P(span) is the probability that exactly the step-1 stretch of pieces is one name. It belongs to the stretch step 1 found, before the edge pick, so a widened name keeps its step-1 P(span). One forward-backward pass over the step-1 tag probabilities sums it over every valid BILOU path, under the decode's transitions and its floor of one in a million. The pass reuses the probabilities the decode already holds, so it asks nothing new. With no kinds, `strength` is P(span). When two names end with the same span and kind, the one with the higher strength prints, and on equal strength the first. `--threshold` keeps a name whose printed four-place strength is at or above the cut, so `audit` rescoring a saved line matches a live run. The default cut is 0.5. The cut stays above 0, as today, and a low cut such as 0.01 keeps nearly every name. A name under the cut leaves before step 3, so no pair names it. `strength` is a ranking score, not a probability, and the pages say so. An edge repeats both names in that shape and keeps `relation` and `probability`. `relations` is absent with no rule, and an empty list when rules gave no edge. Record modes keep `{"input":…,"value":…}`.
+`strength` is P(kind) times P(span), rounded to four decimal places as today. P(kind) is step 2's probability of the chosen kind. P(span) belongs to the stretch step 1 found, before the edge pick, so a widened name keeps its step-1 P(span). It is the summed weight of the valid BILOU paths that tag exactly this stretch as one name, divided by the summed weight of all valid paths. Each tag probability is first floored at one in a million, with no renormalization, and a path's weight is the product of its floored tag probabilities. This is local experiment 287's form, computed by one forward-backward pass in log space. Valid paths follow the decode's transitions. The pass reuses the probabilities the decode already holds, so it asks nothing new. With no kinds, `strength` is P(span). When two names end with the same span and kind, the one with the higher strength prints, and on equal strength the first. `--threshold` keeps a name whose printed four-place strength is at or above the cut, so `audit` rescoring a saved line matches a live run. The default cut is 0.5. The cut stays above 0, as today, and a low cut such as 0.01 keeps nearly every name. A name under the cut leaves before step 3, so no pair names it. `strength` is a ranking score, not a probability, and the pages say so. An edge repeats both names in that shape and keeps `relation` and `probability`. `relations` is absent with no rule, and an empty list when rules gave no edge. Record modes keep `{"input":…,"value":…}`.
 
 `--details` keeps `thinkthen.result/1`. `answer.pieces` lists each piece's offsets and its five tag probabilities. `answer.names` lists each found name's span as found, its kind probabilities and its edge option probabilities. `answer.pairs` lists each pair's probability.
 
@@ -112,7 +112,7 @@ The public Rust type keeps one entity with `text`, `start`, `end`, `length`, `ki
 The owner's calls. Ian can overturn each.
 
 1. **One ticket builds the whole path.** The three steps share one request plan and one output shape. Splitting them would ship a surface that changes twice.
-2. **Each name keeps one ranking score and a cut.** Ian ruled on 2026-09-26: "explain? we lose calibration to trade FN and FP?" and "audit and diff should be fully supported". A score lets a caller trade missed names against false ones, and it lets `audit` suggest the cut. Local experiment 287 chose P(kind) times P(span) and the 0.5 cut offline. At 0.5 against no cut it scored 78.6 to 81.0 on the full public split, 53.4 to 60.1 on WNUT-17, 83.1 to 84.3 on the long documents, and 87.3 to 87.2 on the key. Today's form, the lowest tag probability times the kind probability, is better calibrated on the public sets: expected calibration error 3.1 against 12.1 on the full public split and 11.2 against 19.5 on WNUT-17. It also had higher average precision on the key, 83.2 against 82.3. It cost 3.3 F1 at 0.5 on the key and the documents and had lower average precision on every public set. The choice rests on F1 at the 0.5 cut and on public-set average precision. P(kind) alone trailed by 1.4 to 4.1 F1 at 0.5 on the public sets and the long documents. On the key it scored 87.7 against 87.2. `relation_threshold` keeps its 0.5 default, which local experiment 278 measured.
+2. **Each name keeps one ranking score and a cut.** Ian ruled on 2026-09-26: "explain? we lose calibration to trade FN and FP?" and "audit and diff should be fully supported". A score lets a caller trade missed names against false ones, and it lets `audit` suggest the cut. Local experiment 287 chose P(kind) times P(span) and the 0.5 cut offline. At 0.5 against no cut it scored 78.6 to 81.0 on the full public split, 53.4 to 60.1 on WNUT-17, 83.1 to 84.3 on the long documents, and 87.3 to 87.2 on the key. Today's form, the lowest tag probability times the kind probability, is better calibrated on the public sets: expected calibration error 3.1 against 12.1 on the full public split and 11.2 against 19.5 on WNUT-17. It also had higher average precision on the key, 83.2 against 82.3. At 0.5 it scored 84.0 on the key and 79.8 on the long documents, against 87.2 and 84.3 for the chosen score, 3.2 and 4.5 points lower. It had lower average precision on every public set. The choice rests on F1 at the 0.5 cut and on public-set average precision. P(kind) alone trailed by 1.4 to 4.1 F1 at 0.5 on the public sets and the long documents. On the key it scored 87.7 against 87.2. `relation_threshold` keeps its 0.5 default, which local experiment 278 measured.
 3. **The fields are `text` and `strength`.** The coordinator set `text`, and the Python frame already names that column `text`. `audit` keys keep `name`, because `audit` compares offsets and kind only. The score keeps the name `strength`, because local experiment 287 found it ranks well but is not calibrated across kinds of text: expected calibration error 6.7 to 19.5. `result.md` keeps its sentence that `strength` is not itself a probability. The libraries, SQL and `audit` keep their field.
 4. **Step 2 groups by step-1 request.** Local experiment 285 sent one step-2 request a name. Grouping sends fewer requests and keeps the six-piece snippets. On a short text it equals the one request a text that local experiments 278, 279 and 283 measured. Test 5 records one long text under it.
 5. **The edge question goes with the kind question.** Local experiment 279 asked it after step 2, on kept names only. Asking both at once saves a round trip. A declined name's edge answer is ignored.
@@ -139,11 +139,17 @@ The owner's calls. Ian can overturn each.
 | `Drakeʼs` with U+02BC | One piece. Accepted limit |
 | `Dame Judi Dench` | Kept whole with its title. Accepted limit |
 | `Paul John` | One name. Accepted limit |
-| `é` written as `e` plus U+0301 | U+0301 is category Mn after a letter, so it stays in the word piece |
+| `é` written as `e` plus U+0301 | U+0301 joins the word piece. One piece |
+| `e` plus U+0301 plus U+0302 | Both marks join the word piece. One piece |
+| `♥` plus U+FE0F | U+FE0F is category Mn and joins the symbol piece. One piece |
+| `.` plus U+0301 | U+0301 joins the punctuation piece. One piece |
+| `👨` U+200D `👩` | U+200D is category Cf and joins `👨`. Pieces `👨` U+200D and `👩` |
+| U+0301 after white space, then `a` | The mark begins a piece, and `a` continues it. One piece |
 | `👍🏽` | Two pieces of one scalar each. Both characters are category So or Sk |
+| `Hi "!" ok` with the one-mark name `!` | Edge options `!`, `!"` and `"!`, in that order. No removal option |
 | A name across two step-1 requests | One name. The decode runs after every step-1 request |
 | 40 pieces | One step-1 request with the whole text |
-| 41 pieces | Two step-1 requests. The second's evidence starts six pieces before piece 41 |
+| 41 pieces | Two step-1 requests. The Requests table gives the offsets |
 | One step-1 or step-2 request fails | The text fails at exit 4. No partial names print |
 | Text of 600,000 bytes | Planned |
 | Text of 600,001 bytes | Exit 2, zero sends |
@@ -171,11 +177,11 @@ Every scored test replays a recording and grades it with `audit --match strict` 
 
 1. **The key at five kinds, replayed.** `person place organisation work thing` over all 200 key lines. Bar: F1 of at least 82. Local experiment 279 measured 90.6 to 91.2 on the first half and 83.6 to 84.8 on the second.
 2. **The key with no kinds, replayed.** Graded by `audit` under the new rule, which grades every name as `ENTITY`. No `jq` mapping runs. Bar: F1 of at least 86. Local experiment 279 measured 91.2 to 92.3 and 87.6 to 88.2.
-3. **The key filtered to `person`, replayed.** `recognize person`. A printed name of any other kind counts against precision. Bar: F1 of at least 70. Local experiment 279 measured 89.8 to 92.6 and 72.2 to 72.9. Main scores 27 to 32 (local experiment 274).
+3. **The key filtered to `person`, replayed.** `recognize person`. A printed name of any other kind counts against precision. Bar: F1 of at least 70. Local experiment 279 measured 89.8 to 92.6 and 72.2 to 72.9. Main scored 27.0 at `person` on the first half (local experiment 274).
 4. **Relations, replayed.** The 30 relation sentences at kinds `person song album place` with local experiment 278's four rules: `sang=person:song`, `wrote=person:song`, `appears_on=song:album` and `recorded_at=album:place`. The bar runs over all 27 stated edges. None of the five unstated edges passes. At least 21 of the 27 stated edges pass. Local experiment 278 found 22 in each run.
-5. **A long text, replayed.** Local experiment 279's invented 1,018-word text and its 65-name key join `specification/fixtures/recognize/` as `long.jsonl`. The dry run shows 30 step-1 requests of at most 40 pieces, and no request carries the whole text. The replay at five kinds scores F1 of at least 88. Local experiment 279 measured 92.9 to 94.5 with the q3 wording, and p1 at six pieces sat 0.8 points under q3 on public documents (local experiment 285). Input tokens a word stay under 450. Local experiment 285 measured 395.
+5. **A long text, replayed.** Local experiment 279's invented 1,018-word text and its 65-name key join `specification/fixtures/recognize/` as `long.jsonl`. The text splits into 1,183 pieces, measured with this splitter. The dry run therefore shows 1,183 divided by 40, rounded up, which is 30 step-1 requests of at most 40 pieces, and no request carries the whole text. The replay at five kinds scores F1 of at least 88. Local experiment 279 measured 92.9 to 94.5 with the q3 wording, and p1 at six pieces sat 0.8 points under q3 on public documents (local experiment 285). Input tokens a word stay under 450. Local experiment 285 measured 395.
 6. **Loopback plans and counts.** A listener counts requests. `Ada met Acme.` sends one step-1 request, then one step-2 request. No kinds sends no kind question. A text with no names sends no step-2 request. A failed second request fails the text. A text of 600,000 bytes plans under `--dry-run`. A text of 600,001 bytes sends zero.
-7. **Rules with no kind limits.** Dry runs of `knows`, `'knows=*:*'` and `knows=ANY:ANY` on `recognize person organization` print one plan and digest. A dry run with no kinds prints the canonical question with `"kinds":{}`, and the test pins its digest. A loopback run that declines one name asks no pair naming it. `relate` gives one plan for the same three spellings.
+7. **Rules with no kind limits.** Dry runs of `knows`, `'knows=*:*'` and `knows=ANY:ANY` on `recognize person organization` print one plan and digest. A dry run with no kinds prints the canonical question with `"kinds":{}`, and the test pins its digest. A loopback run finds three names and declines one. Its pair request holds 2 questions, the two ordered pairs of the kept names under `knows=*:*`, and asks no pair naming the declined name. `relate` gives one plan for the same three spellings.
 8. **Audit and write, replayed.** `audit --match strict` over test 1's replayed run prints counts, precision, recall, F1, a suggested bar and a crossed line, and null calibration, AUC and coverage curve. The test pins that row exactly. Over test 2's replayed run it grades with the `ENTITY` rule and does not print the old refusal. `--threshold` at the run cut and above it grades. `--write` puts the steady bar into a copy of the run's recognize question file, and a rerun's digest matches it.
 9. **Secrecy.** A secret in the text and in a kind description never reaches standard output, standard error or any `Debug` line, on every new failure path: the guard, a failed step-2 request, a reserved kind.
 
@@ -183,12 +189,19 @@ Each answers the four questions. They protect the three steps' output on real re
 
 ### Edge-case tables
 
-Four table tests in `core`, each a list of inputs and exact outputs:
+Five table tests in `core`, each a list of inputs and exact outputs:
 
 - **Pieces.** Every splitter row of "Edge cases", with each piece's scalar offsets.
 - **Decode.** Tag probabilities and the names they give: a lone `BEGIN` at the end, `BEGIN` then `OUT`, equal scores, a name across a request edge, and a floor row. In the floor row one path holds a zero beside high probabilities and the other holds only small nonzero ones. The first path wins only with the floor.
-- **Score.** Tag and kind probabilities, the exact `strength` they give, and whether the default cut keeps or drops the name: one-piece and three-piece names, a name whose decoded path is not the only likely one, a name with no kinds, a name at 0.5 and one at 0.49, a raw product of 0.49996 that prints 0.5 and is kept, a raw product of 0.49994 that prints 0.4999 and is dropped, a name the edge pick widened that keeps its step-1 P(span), and two names that end with one span and kind, where the higher strength stays.
-- **Edge options.** Each case's option stretches: marks at both ends, a one-piece name, a name that is one mark, and two equal labels.
+- **Score.** Tag and kind probabilities, the exact `strength` they give under local experiment 287's form, and whether the default cut keeps or drops the name. A worked row: a one-piece text with `SINGLE` 0.9, `OUT` 0.1 and 0 for the other tags has two valid paths, so P(span) is 0.9 over 1.0, and a kind probability of 0.8 gives 0.72. The other rows: one-piece and three-piece names, a name whose decoded path is not the only likely one, a name with no kinds, a name at 0.5 and one at 0.49, a raw product of 0.49996 that prints 0.5 and is kept, a raw product of 0.49994 that prints 0.4999 and is dropped, a name the edge pick widened that keeps its step-1 P(span), and two names that end with one span and kind, where the higher strength stays.
+- **Edge options.** Each case's option stretches: marks at both ends, a one-piece name, the one-mark name `!`, and two equal labels.
+- **Requests.** The text is 41 one-letter words `a` joined by single spaces, 81 scalars long, so piece k spans `[2k-2, 2k-1)`. The first 40 words give the 40-piece text, 79 scalars long. The table pins each request's pieces and evidence offsets, and the step-2 grouping:
+
+| Input | Step-1 requests | Step-2 requests |
+| --- | --- | --- |
+| 40 pieces, a name at piece 3 | One: pieces 1 to 40, evidence `[0,79)` | One: evidence `[0,17)`, from the text's start to the end of piece 9 |
+| 41 pieces, names at pieces 3 and 41 | Two: pieces 1 to 40 with evidence `[0,81)`; piece 41 with evidence `[68,81)`, from the start of piece 35 | Two: evidence `[0,17)` for the name at piece 3; `[68,81)` for the name at piece 41 |
+| 41 pieces, one name over pieces 40 and 41 | As above | One, grouped with the first request, because the name's first piece sits there: evidence `[66,81)`, from the start of piece 34 |
 
 ### Deliberate breaks
 
@@ -204,8 +217,8 @@ Each break is made, run and reverted. Each must turn the named row red.
 | Ask the kind question with no kinds | Test 6: no kinds |
 | Send the edge question in its own request | Test 6: `Ada met Acme.` request count |
 | Send the whole text as step-1 evidence | Test 5: the dry run |
-| Refuse at 600,000 bytes | Edge case: text of 600,000 bytes |
-| Expand `*` to a declined name's kind | Test 7 |
+| Refuse at 600,000 bytes | Test 6: the text of 600,000 bytes plans |
+| Let a declined name enter the pair list | Test 7: the pair request holds 6 questions, not 2 |
 | Read `ANY` as a concrete kind | Test 7 |
 | Print the text in the guard's message | Test 9 |
 | Drop `strength` from a name | Test 8 |
@@ -214,6 +227,8 @@ Each break is made, run and reverted. Each must turn the named row red.
 | Cut on the raw product, not the printed strength | Score: the raw product of 0.49996 |
 | Compute P(span) over the widened stretch | Score: the widened name |
 | Drop the `ENTITY` rule in `audit` | Test 2 |
+| Chunk at 41 pieces | Requests: the 41-piece rows |
+| Use a five-piece window | Requests: evidence `[68,81)` |
 
 ## Recordings
 
@@ -253,7 +268,7 @@ In the commit that changes each behavior:
 
 The ceiling is 70,015 lines. The estimate is +430, from +280 to +730.
 
-- Grows: the splitter, the step-1 questions and chunking (about 70 lines), the decode (about 45), the forward-backward score (about 30), the step-2 kind and edge questions (about 110), the three-round facade (about 60), the guard and the rule parser (about 40), and the tests: four tables and nine outside-in tests (about 500).
+- Grows: the splitter, the step-1 questions and chunking (about 70 lines), the decode (about 45), the forward-backward score (about 30), the step-2 kind and edge questions (about 110), the three-round facade (about 60), the guard and the rule parser (about 40), and the tests: five tables and nine outside-in tests (about 500).
 - Shrinks: the old splitter, the five-word window, the detection and kind questions, the kind vote and the strength formula (about 230), and the old recognize tests that pin them (about 200).
 - Before raising the ceiling, the builder looks for duplication in `core/relation.rs`, whose yes/no pair path step 3 reuses, and in the old recognize facade.
 
@@ -304,5 +319,5 @@ None. The design issue stays open for R4b, R6, R7 and R8. `sdlc/issues/2026-09-2
 - Starts from: ADR 0056 and Ian's rulings of 2026-09-26. `sdlc/records/2026-09-26-recognize-three-step-evidence.md`, which copies the cited tables. Local experiments 278 (three steps against the baseline), 279 (the edge question, descriptions, and the rejected title, split and trim arms), 280 and 281 (the public sample, the full public split, WNUT-17, and the rejected q3 wording), 282 (error groups and plan rules), 283 (the rejected span check), 284 (step 2 on the key's own names), 285 (windows on public documents), 286 (web kinds) and 287 (the name score). Local experiment 274 for the one-kind failure. The earlier version of this ticket for the four kinds items. `origin/main` at `19ca8302`.
 - Keeps: Unicode scalar offsets with an exclusive end. Record modes and their envelope. `--kind KIND=DESCRIPTION`. The `strength` field at four places, `--threshold` above 0 on names, and `audit`'s recognize grading as `audit.md` states it, `--write` included. Relation rules, `--relation-threshold` and its 0.5 default. `relate`'s planner. The request ceiling of ADR 0040. The `audit` key files.
 - Changes: The splitter, all recognize questions, the decode, windows at every length, the output shape, `--details`, the dry-run schema, the guard, the kinds and rule parsing, the `strength` formula, and every surface's entity type. The default kinds go.
-- Proof: Five replayed recordings graded by `audit` against bars under the lowest measured run. One replayed test of `audit`, its `ENTITY` rule and `--write`. Three loopback tests, four edge-case tables, and nineteen deliberate breaks with the row each turns red.
+- Proof: Five replayed recordings graded by `audit` against bars under the lowest measured run. One replayed test of `audit`, its `ENTITY` rule and `--write`. Three loopback tests, five edge-case tables, and twenty deliberate breaks with the row each turns red.
 - Defers: `diff` over recognize and relate to ticket 0165. Public benchmark figures to R8. `--jobs` on one text to R4b. Batching to R7. Windowed relation evidence. Standalone `relate`'s pair method. The accepted limits.

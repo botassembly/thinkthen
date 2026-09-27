@@ -78,13 +78,15 @@ A 1,018-word invented text with a 65-name hand key, q3 wording, requests of 40 p
 | Whole text everywhere | 0 | 1 | 91.2 | 1,723 |
 | Six-piece window plus step 2 | 5 | 3 | 93.7 (92.9-94.5) | 292 |
 
-Rejected arms, mean F1:
+Rejected arms, mean F1 of three runs. The controls are the best design of that part: local experiment 278 plus the edge question for the trim, and the q3 design plus the edge question for the step-2 options.
 
 | Arm | Key | Kinds | Control | Arm |
 | --- | --- | --- | --- | --- |
 | White-space pieces plus a model trim | 277 new | 0 | 88.0 | 83.0 |
+| White-space pieces plus a model trim | 277 new | 1, person | 72.7 | 64.1 |
 | White-space pieces plus a model trim | 277 new | 5 | 84.0 | 77.9 |
 | White-space pieces plus a model trim | 277 new | 10 | 85.2 | 78.5 |
+| Title option in step 2 | 277 new | 1, person | 77.1 | 85.7 |
 | Title option in step 2 | 277 new | 3 | 83.9 | 89.3 |
 | Title option in step 2 | 277 new | 5 | 83.6 | 89.2 |
 | Title option in step 2 | 267 | 3 | 90.9 | 89.3 |
@@ -94,29 +96,37 @@ Rejected arms, mean F1:
 
 The title option cut `Duke of Wellington` to `of Wellington` in every run, and at `person` it turned `Mona Lisa` into a person `Lisa` in every run. A one-name-or-two question fixed `Portland Oregon`, `Dallas Texas` and `Austin Texas` and never split `Paul John`, `Sarah Emily` or `Emma James`.
 
-## 3. Local experiments 280 and 281: public test sets
+## 3. Local experiment 274: labelled detection on main
+
+Main's detection question with one kind labels every detected name with that kind. On the 267 half, mean of three runs, main scored F1 27.0 at `person`, 32.0 at `place` and 27.4 at `work`, at 17% to 20% precision. It returned about 120 names of other kinds a run.
+
+Labelled detection alone names the caller's kind in the detection question and asks no kind question. At bare `work`, one run, it scored 51.4. Main's detection plus a kind question that can answer `none` scored 67.5. On the song-and-album sentences at `person`, labelled detection alone scored 13 points under that kind question.
+
+## 4. Local experiments 280 and 281: public test sets
 
 Local experiment 280 scored the design on 100 sampled UNER sentences: 78.0 to 78.6 over two runs, against 66.0 for the baseline. Local experiment 281 scored the full sets once each.
 
 UNER, one run each:
 
-| Arm | Overall P / R / F1 | 95% range | ORG precision | Tokens a word |
-| --- | --- | --- | --- | --- |
-| Baseline | 78.7 / 76.7 / 77.7 | 75.3 to 80.1 | 61.5 | 255 |
-| Design, p1 with the whole sentence | 72.3 / 86.0 / 78.6 | 76.3 to 80.9 | 56.4 | 396 |
-| q3 with six pieces | 68.8 / 86.6 / 76.7 | 74.3 to 79.1 | 51.1 | 299 |
+| Arm | Overall P / R / F1 | 95% range | ORG precision | Names returned | Right | Wrong | Extras | Tokens a word |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Baseline | 78.7 / 76.7 / 77.7 | 75.3 to 80.1 | 61.5 | | | | 117 | 255 |
+| Design, p1 with the whole sentence | 72.3 / 86.0 / 78.6 | 76.3 to 80.9 | 56.4 | 1,295 | 936 | 359 | 245 | 396 |
+| q3 with six pieces | 68.8 / 86.6 / 76.7 | 74.3 to 79.1 | 51.1 | 1,369 | 942 | 427 | 301 | 299 |
+
+Right is a returned name with the gold span and kind. Right over 1,088 gives recall, and right over names returned gives precision. An extra is a returned name that overlaps no gold name, as local experiment 281's scorer counts it. The other wrong names overlap a gold name with the wrong edges or the wrong kind.
 
 Paired bootstrap: design minus baseline +0.8 (-1.2 to +3.1). q3 at six pieces minus the design -1.9 (-3.3 to -0.5). That comparison changes the wording and the snippet at once.
 
-The design's 245 false names on UNER include 55 pieces of web or email addresses and 16 lone marks. Published: XLM-R Large fine-tuned on 12,543 labelled English EWT sentences scores 85.8 (Mayhew et al., NAACL 2024).
+The design's 245 extras on UNER include 55 pieces of web or email addresses and 16 lone marks. Published: XLM-R Large fine-tuned on 12,543 labelled English EWT sentences scores 85.8 (Mayhew et al., NAACL 2024).
 
 WNUT-17, one run, six kinds: 45.9 precision, 63.9 recall, 53.4 F1, 95% range 50.3 to 56.4. About 190 false names are handles tagged as person and about 250 are pieces of web addresses. Published: the best 2017 shared-task system 41.86 (Derczynski et al., W-NUT 2017); zero-shot gpt-3.5-turbo 46.61 on 300-sentence samples (Xie et al., EMNLP 2023); fine-tuned BERTweet, RoBERTa large and XLM-R large 56.5 to 57.1 (Nguyen et al., EMNLP 2020).
 
-## 4. Local experiment 282: error groups
+## 5. Local experiment 282: error groups
 
 Upper bounds at five kinds if every error in a group were fixed: touching names +2.1 F1, averaged step-1 views +0.3, an inner-name question after a decline +1.6. Nationality and language words at no kinds: at most +1.6.
 
-## 5. Local experiment 283: a span check
+## 6. Local experiment 283: a span check
 
 On the key's held-out half, pooled over five kind sets, per run:
 
@@ -128,7 +138,7 @@ On the key's held-out half, pooled over five kind sets, per run:
 
 The span check gained 0.9 against the paired control in every run. Run 1 sat inside the recorded control's range, and the held-out gain rested on two names. It cost 3 to 4% more tokens.
 
-## 6. Local experiment 284: step 2 on the key's own names
+## 7. Local experiment 284: step 2 on the key's own names
 
 Every arm labels the key's names plus the design's recorded extra names, so step 1 cannot move the result. Mean (min to max):
 
@@ -153,7 +163,7 @@ On 40 new metonymy and venue sentences at five kinds, none2 scored 60.2 and desc
 
 Step 3 on 60 new relation sentences with 70 stated edges, from the key's own names: 66, 68 and 67 found over three runs, one inferred edge passed a run, and no negated or hypothetical edge passed.
 
-## 7. Local experiment 285: windows on public documents
+## 8. Local experiment 285: windows on public documents
 
 Six whole UNER test documents of 371 to 678 words, 3,128 words and 297 names in all.
 
@@ -166,7 +176,7 @@ Six whole UNER test documents of 371 to 678 words, 3,128 words and 297 names in 
 
 Twelve pieces against six gained 0.3 with overlapping ranges and cost 6% more. q3 against p1 at six pieces gained 0.8 with separate ranges. Errors within six pieces of a request edge were 29 to 30% of all errors for p1 at six pieces, and 30% of pieces sit there.
 
-## 8. Local experiment 286: web kinds
+## 9. Local experiment 286: web kinds
 
 Decoys `web address`, `email address`, `social handle` and `punctuation or symbol`. One run each.
 
@@ -191,9 +201,9 @@ The web kinds asked for directly, from a hand check of samples:
 
 Most other returns are pieces such as `t.co`, `https` or a lone `@`.
 
-## 9. Local experiment 287: the name score
+## 10. Local experiment 287: the name score
 
-Offline over the saved replies of local experiments 279, 281 and 285. No model call. P(kind) is step 2's probability of the chosen kind. The lowest-tag form is today's `strength`: the lowest step-1 tag probability in the name times P(kind). P(span) is the forward-backward probability of exactly that stretch. AP is average precision. ECE is expected calibration error over ten bins.
+Offline over the saved replies of local experiments 279, 281 and 285. No model call. P(kind) is step 2's probability of the chosen kind. The lowest-tag form is today's `strength`: the lowest step-1 tag probability in the name times P(kind). P(span) is the forward-backward probability of exactly that stretch. Each tag probability is first floored at one in a million, with no renormalization. A valid path's weight is the product of its floored tag probabilities. P(span) is the summed weight of the valid paths that tag exactly that stretch as one name, divided by the summed weight of all valid paths. AP is average precision. ECE is expected calibration error over ten bins.
 
 | Set | P(kind): AP, ECE | Lowest tag × P(kind): AP, ECE | P(span) × P(kind): AP, ECE |
 | --- | --- | --- | --- |
