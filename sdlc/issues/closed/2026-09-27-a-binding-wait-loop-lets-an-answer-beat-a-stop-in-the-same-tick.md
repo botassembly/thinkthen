@@ -1,6 +1,8 @@
 # A binding's wait loop lets an answer beat a stop in the same tick
 
-Status: open. Ticket 0168 (`sdlc/tickets/0168-a-stop-reaches-every-caller.md`, on its branch) owns the fix for Python and Ruby, and its builder closes this issue. The race is a non-issue for R, DuckDB, SQLite and PostgreSQL, which read only a host interrupt. Found by reading while writing ticket 0166.
+Status: closed by ticket 0168 on 2026-09-27. Python and Ruby now read their caller token before taking a waiting answer. The old order returned an answer beside a fired token in both binding proofs; the new order passed 20 held-reply runs on each binding. The race is a non-issue for R, DuckDB, SQLite and PostgreSQL, whose loops read only a host interrupt, with no caller token to contradict a returned answer. Found by reading while writing ticket 0166.
+
+The held throttle place in local experiment 284 file 76 is real and separate from the four host-interrupt loops. Ticket 0168 states the wait it can impose on a later call in `specification/settings.md`. Sent attempts already enter usage counters, and the throttle bounds concurrent work. A cancellable socket read remains a deferred possible fix for the held place; this closure does not declare that cost a non-issue.
 
 ## What happens
 

@@ -1,6 +1,6 @@
 # 0168: Build a stop that reaches every caller
 
-Status: building 2026-09-27. Owner: Codex. Ticket: `sdlc/tickets/0168-a-stop-reaches-every-caller.md`. Branch: `ticket/0168-a-stop-reaches-every-caller`, lane: `worktrees/thinkthen-codex-2`.
+Status: built 2026-09-27. Fresh read-only code review accepted commit `91096c8a`. The coordinator's combined full gate ladder is pending. Owner: Codex. Ticket: `sdlc/tickets/0168-a-stop-reaches-every-caller.md`. Branch: `ticket/0168-a-stop-reaches-every-caller`, lane: `worktrees/thinkthen-codex-2`.
 
 ## Result
 
@@ -12,11 +12,11 @@ The four host-interrupt loops have no caller token that can be read back. Their 
 
 - Python unit, old order: red. A queued `Ok(3)` returned success despite a fired caller token. The assertion saw `None` instead of `Some("the call was cancelled")`. The fixed order passes. Logs: `target/codex-logs/0168-python-unit-old-order.log` and `0168-python-unit-fixed.log` in this lane.
 - Ruby held-reply test, old order: red in 10 of 10 runs. Every failure returned `["answer", true]` in place of `["ThinkThen::CancelledError", true]`. The fixed order passed 20 of 20 runs. Logs: `target/codex-logs/0168-ruby-old-order-10.log` and `0168-ruby-fixed-20.log` in this lane.
-- Python held-reply test: pending extension build and 20-run fixed proof.
-- Existing Python and Ruby stop regressions: pending targeted checks.
-- Fresh read-only code review and combined full gate ladder: pending.
+- Python held-reply test, fixed order: green in 20 of 20 runs. Log: `target/codex-logs/0168-python-fixed-20.log` in this lane.
+- Existing Python stop regressions: all 9 tests in `test_stopping.py` passed. Existing Ruby stop regressions: all 6 tests and 25 assertions in `test_interrupt_single.rb` passed. Logs: `target/codex-logs/0168-python-stopping.log` and `0168-ruby-stopping.log` in this lane.
+- A fresh read-only Codex reviewer accepted the diff at `91096c8a`, checking token order, retained interrupts, test value and ratchets. The coordinator's combined full gate ladder is pending.
 
-Only loopback conformance backend calls run. No live or paid call runs. Targeted heavy commands use `THINKTHEN_HEAVY_LOCK=/run/user/1000/thinkthen-heavy.lock` and `flock -o`.
+Only loopback conformance backend calls ran. No live or paid call ran. Targeted builds used `THINKTHEN_HEAVY_LOCK=/run/user/1000/thinkthen-heavy.lock` and `flock -o`. The already-built binding tests ran directly while another lane held the build lock; they compiled nothing.
 
 ## Ratchets
 
