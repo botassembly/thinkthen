@@ -20,6 +20,8 @@ Direction. With one kind, ask the kind question against an implicit "something e
 
 ## 2. A cross-kind relation keeps at most one edge per asking name, and the asking side depends on unrelated names (severity 1)
 
+Carried by ticket 0167, ready for review 2026-09-27. ADR 0057 moves `relate` to one yes/no question per pair.
+
 Evidence. Live, "John Lennon wrote Help!, Girl and In My Life" gave 1 of 3 edges (0.81, 0.12, 0.02). In replay, the same facts gave 0 edges with 3 songs and 3 edges after adding an unrelated fourth song. Code: `relation.rs:188-257` and `:194`. ADR 0019 makes the options total one. The bench states the same effect on real duets.
 
 What an integrator hits. True edges vanish silently for any one-to-many fact, such as the authors of a paper or the members of a band. Adding or removing an unrelated name changes which edges come back, so two runs over overlapping texts disagree.
