@@ -1,4 +1,4 @@
-Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review.
+Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review. Ticket 0168 (`sdlc/tickets/0168-a-stop-reaches-every-caller.md`) carries the SQLite held permit.
 
 # Architect review 04: libraries and databases
 
