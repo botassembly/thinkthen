@@ -9,6 +9,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::fs;
+use std::io::Write;
 use std::path::PathBuf;
 
 use conformance_backend::Backend;
@@ -114,7 +115,11 @@ fn every_applicable_shared_case_passes_through_the_public_api() {
         }
         if SKIPPED.contains(&id) {
             not_run += 1;
-            eprintln!("{id}: not run by the public API (internal invariant injection)");
+            writeln!(
+                std::io::stderr().lock(),
+                "{id}: not run by the public API (internal invariant injection)"
+            )
+            .expect("write skipped case to stderr");
             continue;
         }
         ran += 1;
@@ -122,13 +127,15 @@ fn every_applicable_shared_case_passes_through_the_public_api() {
             failures.push(format!("{id}: {why}"));
         }
     }
-    eprintln!(
+    writeln!(
+        std::io::stderr().lock(),
         "public Rust API: total={} selected={selected_count} pass={} fail={} not_run={not_run} unselected={}",
         cases.len(),
         ran - failures.len(),
         failures.len(),
         cases.len() - selected_count
-    );
+    )
+    .expect("write case counts to stderr");
     assert_eq!(ran + not_run, selected_count);
     assert!(failures.is_empty(), "{failures:#?}");
 }

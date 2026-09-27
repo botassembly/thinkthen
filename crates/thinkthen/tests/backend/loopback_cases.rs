@@ -7,6 +7,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
+use std::io::Write;
 use std::path::PathBuf;
 
 use conformance_backend::Backend;
@@ -65,7 +66,11 @@ fn every_wire_case_passes_through_the_command_on_the_conformance_backend() {
         }
         if IN_PROCESS.contains(&id) {
             not_run += 1;
-            eprintln!("{id}: not run by the command wire (in-process injection or question form)");
+            writeln!(
+                std::io::stderr().lock(),
+                "{id}: not run by the command wire (in-process injection or question form)"
+            )
+            .expect("write skipped case to stderr");
             continue;
         }
         ran += 1;
@@ -73,13 +78,15 @@ fn every_wire_case_passes_through_the_command_on_the_conformance_backend() {
             failures.push(format!("{id}: {why}"));
         }
     }
-    eprintln!(
+    writeln!(
+        std::io::stderr().lock(),
         "command wire: total={} selected={selected_count} pass={} fail={} not_run={not_run} unselected={}",
         cases.len(),
         ran - failures.len(),
         failures.len(),
         cases.len() - selected_count
-    );
+    )
+    .expect("write case counts to stderr");
     assert_eq!(ran + not_run, selected_count);
     assert!(failures.is_empty(), "{failures:#?}");
 }
