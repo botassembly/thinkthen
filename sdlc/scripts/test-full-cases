@@ -21,6 +21,8 @@ esac
 . "$(dirname -- "$0")/heavy-lock"
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
+THINKTHEN_TEST_PROFILE=full
+export THINKTHEN_TEST_PROFILE
 unset THINKTHEN_CONFORMANCE_IDS
 cargo test --locked --offline --workspace --all-targets
 cargo test --locked --offline --manifest-path conformance/consumer/Cargo.toml \
