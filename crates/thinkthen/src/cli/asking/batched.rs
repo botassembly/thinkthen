@@ -16,7 +16,7 @@ use crate::core::{
 use crate::edge;
 use crate::engine::facade::{Answered, Completed, Input, InputPort, Judgment};
 use crate::failure::Failure;
-use crate::schedule::{self, Judged, Output};
+use crate::schedule::{self, Judged, Output, Placed};
 use crate::table::Rows as TableRows;
 
 /// How long input may pause before the open batch goes out, by ADR 0048 item 2.
@@ -29,6 +29,7 @@ const AHEAD: usize = 64;
 struct Held {
     record: Record,
     arrived: Option<Vec<u8>>,
+    at: usize,
 }
 
 /// One batch for a worker: its request, its first record's number, its records.
@@ -38,7 +39,7 @@ pub(super) struct Item {
     records: Vec<Held>,
 }
 
-type Records = Box<dyn Iterator<Item = Result<Held, Failure>> + Send>;
+type Records = Box<dyn Iterator<Item = Result<Held, Placed>> + Send>;
 
 /// Send the stream in batches of `setting`, or print the first batch's plan.
 pub(super) fn run(
@@ -50,24 +51,29 @@ pub(super) fn run(
 ) -> Result<ExitCode, Failure> {
     let records: Records = if let Some(kind) = table_kind(configuration.common) {
         let rows = TableRows::new(source, kind)?;
-        Box::new(rows.map(|row| {
+        Box::new(rows.enumerate().map(|(place, row)| {
             row.map(|record| Held {
                 record,
                 arrived: None,
+                at: place + 1,
             })
+            .map_err(|error| Placed::at(error, place + 1))
         }))
     } else {
         let reading = reading.clone();
-        Box::new(edge::Chunks::new(source, true).map(move |bytes| {
-            let bytes = bytes?;
-            let record = reading
-                .record(&bytes)
-                .map_err(|error| Failure::record(error, true))?;
-            Ok(Held {
-                record,
-                arrived: Some(bytes),
-            })
-        }))
+        Box::new(
+            edge::numbered(edge::Chunks::new(source, true), &reading).map(move |(at, bytes)| {
+                let bytes = bytes.map_err(|error| Placed::at(error, at))?;
+                let record = reading
+                    .record(&bytes)
+                    .map_err(|error| Placed::at(Failure::record(error, true), at))?;
+                Ok(Held {
+                    record,
+                    arrived: Some(bytes),
+                    at,
+                })
+            }),
+        )
     };
     let Asks::Fixed(question) = &configuration.asks else {
         return Err(Failure::Defect("a batched verb asks one question"));
@@ -81,11 +87,12 @@ pub(super) fn run(
         None,
     )
     .map_err(refused)?;
+    let downstream = edge::Downstream::default();
     let former = Former {
         batcher,
         reading: reading.clone(),
         held: Vec::new(),
-        taken: 0,
+        downstream: downstream.clone(),
         queue: VecDeque::new(),
     };
     if configuration.common.dry_run {
@@ -104,18 +111,21 @@ pub(super) fn run(
         &|item| answered(&judging, reading, &question, item),
         |rows| {
             for row in rows {
-                if !output.take(row)? {
+                if !output.take(row).map_err(Placed::from)? {
                     return Ok(false);
                 }
             }
             Ok(true)
         },
     )?;
+    if downstream.latched() {
+        return Ok(ExitCode::SUCCESS);
+    }
     schedule::ended(outcome, recording, output)
 }
 
 /// Read records ahead into the channel, and stop after the first refusal.
-fn feed(records: Records, sender: &SyncSender<Result<Held, Failure>>) {
+fn feed(records: Records, sender: &SyncSender<Result<Held, Placed>>) {
     for record in records {
         let failed = record.is_err();
         if sender.send(record).is_err() || failed {
@@ -149,7 +159,7 @@ fn planned(
             &item.batch.plan,
             output.writer(),
         ),
-        Some(Input::Failed(error)) => Err(error),
+        Some(Input::Failed(error)) => Err(error.cause),
         Some(Input::End) | None => Ok(ExitCode::SUCCESS),
     }
 }
@@ -160,18 +170,17 @@ struct Former {
     batcher: Batcher,
     reading: Reading,
     held: Vec<Held>,
-    /// How many records went into batches before the open one.
-    taken: usize,
-    queue: VecDeque<Input<Item, Failure>>,
+    downstream: edge::Downstream,
+    queue: VecDeque<Input<Item, Placed>>,
 }
 
 impl Former {
     /// Answer each ask with the next batch.
     fn answer(
         mut self,
-        raw: &Receiver<Result<Held, Failure>>,
+        raw: &Receiver<Result<Held, Placed>>,
         asks: &Receiver<()>,
-        events: &InputPort<Item, Vec<Judged>, Failure>,
+        events: &InputPort<Item, Vec<Judged>, Placed>,
     ) {
         while asks.recv().is_ok() {
             if events.send(self.next(raw)).is_err() {
@@ -182,8 +191,11 @@ impl Former {
 
     /// The next closed batch or refusal. It pulls records only while an ask
     /// waits, and sends the open batch when input pauses.
-    fn next(&mut self, raw: &Receiver<Result<Held, Failure>>) -> Input<Item, Failure> {
+    fn next(&mut self, raw: &Receiver<Result<Held, Placed>>) -> Input<Item, Placed> {
         loop {
+            if self.downstream.gone() {
+                return Input::End;
+            }
             if let Some(event) = self.queue.pop_front() {
                 return event;
             }
@@ -208,9 +220,12 @@ impl Former {
 
     /// Parse one record and plan it, queueing the batches it closes. A record
     /// refused before planning sends the open batch first.
-    fn push(&mut self, held: Result<Held, Failure>) {
+    fn push(&mut self, held: Result<Held, Placed>) {
         let parsed = held.and_then(|held| {
-            let record = self.reading.batch_record(&held.record)?;
+            let record = self
+                .reading
+                .batch_record(&held.record)
+                .map_err(|error| Placed::at(error.into(), held.at))?;
             Ok((record, held))
         });
         let (record, held) = match parsed {
@@ -229,7 +244,8 @@ impl Former {
         }
         if let Err(error) = pushed {
             self.held.clear();
-            self.queue.push_back(Input::Failed(refused(error)));
+            self.queue
+                .push_back(Input::Failed(Placed::from(refused(error))));
         }
     }
 
@@ -242,7 +258,9 @@ impl Former {
         match batch {
             Ok(Some(batch)) => self.queue_batch(batch),
             Ok(None) => {}
-            Err(error) => self.queue.push_back(Input::Failed(refused(error))),
+            Err(error) => self
+                .queue
+                .push_back(Input::Failed(Placed::from(refused(error)))),
         }
     }
 
@@ -250,8 +268,7 @@ impl Former {
     fn queue_batch(&mut self, batch: Batch) {
         let count = batch.questions.len().min(self.held.len());
         let records: Vec<Held> = self.held.drain(..count).collect();
-        let first = self.taken + 1;
-        self.taken += count;
+        let first = records.first().map_or(1, |record| record.at);
         self.queue.push_back(Input::Item(Item {
             batch,
             first,
@@ -267,27 +284,30 @@ fn answered(
     reading: &Reading,
     question: &Question,
     item: &Item,
-) -> Result<Completed<Vec<Judged>, Failure>, Failure> {
+) -> Result<Completed<Vec<Judged>, Placed>, Placed> {
     let Item {
         batch,
         first,
         records,
     } = item;
     let count = records.len();
-    let last = first + count.saturating_sub(1);
+    let last = records.last().map_or(*first, |held| held.at);
     let whole = judging
         .engine
         .ask_batch(batch, judging.environment.cancel())
-        .map_err(|error| failed(error.into(), *first, last))?;
+        .map_err(|error| Placed::at(failed(error.into(), *first, last), *first))?;
     let reply = &whole.reply;
     let mut rows = Vec::with_capacity(count);
     let mut stop = None;
     for (position, (held, &asked)) in records.iter().zip(&batch.questions).enumerate() {
         let Some(AnswerOutcome::Answered(answer)) = reply.outcomes().get(asked) else {
-            stop = Some(Failure::PartialReply {
-                first: *first,
-                last,
-            });
+            stop = Some(Placed::at(
+                Failure::PartialReply {
+                    first: *first,
+                    last,
+                },
+                held.at,
+            ));
             break;
         };
         let (value, outcome) = answer.read(judging.threshold);
@@ -307,13 +327,17 @@ fn answered(
             outcome,
             answered: own,
         };
-        rows.push(judging.row_of(
-            reading,
-            held.record.clone(),
-            question.clone(),
-            &judgment,
-            held.arrived.as_deref(),
-        )?);
+        rows.push(
+            judging
+                .row_of(
+                    reading,
+                    held.record.clone(),
+                    question.clone(),
+                    &judgment,
+                    held.arrived.as_deref(),
+                )
+                .map_err(|error| Placed::at(error, held.at))?,
+        );
     }
     Ok(Completed {
         records: rows.len(),

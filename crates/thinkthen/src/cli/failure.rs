@@ -177,6 +177,12 @@ pub(crate) enum Failure {
     Render(RenderError),
 }
 
+impl From<crate::schedule::Placed> for Failure {
+    fn from(placed: crate::schedule::Placed) -> Self {
+        placed.cause
+    }
+}
+
 /// Every message a user reads is written here. No message carries a key or any
 /// evidence text. A backend that answers with an error status is named by that
 /// status and by the fixed phrase its status carries, never by its body,

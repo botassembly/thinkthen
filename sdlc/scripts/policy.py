@@ -284,13 +284,13 @@ def check_crates() -> None:
         fail("dependencies", "the conformance backend declares no feature and no target table")
     manifest = check_member("thinkthen")
     target = manifest.get("target", {}).get("cfg(unix)", {}).get("dependencies", {})
-    # Ticket 0078: engine workers mask host signals, so the library needs nix.
+    # Ticket 0078 masks signals. Ticket 0162 polls stdout for a closed pipe.
     if target.get("nix") != {
         "version": "0.29",
         "default-features": False,
-        "features": ["signal"],
+        "features": ["poll", "signal"],
     }:
-        fail("dependencies", "nix is a Unix library dependency with only its signal feature")
+        fail("dependencies", "nix is a Unix library dependency with only its poll and signal features")
     target_dev = manifest.get("target", {}).get("cfg(unix)", {}).get("dev-dependencies", {})
     if target_dev.get("nix") != {
         "version": "0.29",

@@ -4,9 +4,42 @@ use std::env;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, ErrorKind, IsTerminal as _, Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use crate::core::KEY_VAR;
+use crate::core::{KEY_VAR, Reading};
+
+/// The command's shared, latched observation of a closed output pipe.
+#[derive(Clone, Default)]
+pub(crate) struct Downstream(Arc<AtomicBool>);
+
+impl Downstream {
+    pub(crate) fn gone(&self) -> bool {
+        if self.latched() {
+            return true;
+        }
+        #[cfg(unix)]
+        {
+            use nix::poll::{PollFd, PollFlags, PollTimeout, poll};
+            use std::os::fd::AsFd;
+            let stdout = io::stdout();
+            let mut fds = [PollFd::new(stdout.as_fd(), PollFlags::POLLOUT)];
+            if poll(&mut fds, PollTimeout::ZERO).is_ok()
+                && fds[0]
+                    .revents()
+                    .is_some_and(|flags| flags.intersects(PollFlags::POLLERR | PollFlags::POLLHUP))
+            {
+                self.0.store(true, Ordering::SeqCst);
+            }
+        }
+        self.latched()
+    }
+
+    pub(crate) fn latched(&self) -> bool {
+        self.0.load(Ordering::SeqCst)
+    }
+}
 
 use crate::config::{self, Config};
 use crate::engine::error::Error as EngineError;
@@ -253,6 +286,21 @@ impl<R: BufRead> Iterator for Chunks<R> {
             Ok(_) => Some(Ok(bytes)),
         }
     }
+}
+
+/// Keep the input line number while dropping only blank lines in line framing.
+pub(crate) fn numbered<R: BufRead>(
+    chunks: Chunks<R>,
+    reading: &Reading,
+) -> impl Iterator<Item = (usize, Result<Vec<u8>, Failure>)> + use<R> {
+    let reading = reading.clone();
+    chunks.enumerate().filter_map(move |(place, row)| {
+        if row.as_ref().is_ok_and(|bytes| reading.skips(bytes)) {
+            None
+        } else {
+            Some((place + 1, row))
+        }
+    })
 }
 
 /// What a user sitting at a terminal is told the command is waiting for.

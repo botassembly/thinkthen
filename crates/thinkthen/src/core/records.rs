@@ -309,6 +309,12 @@ impl Reading {
         self.framing != Framing::Document
     }
 
+    /// A blank text line has a place in the input, but no record to judge.
+    pub(crate) fn skips(&self, bytes: &[u8]) -> bool {
+        self.framing == Framing::Lines
+            && str::from_utf8(self.ended(bytes)).is_ok_and(|text| text.trim().is_empty())
+    }
+
     /// Name the framing and the pointers, as the record-mode plan prints them.
     pub(crate) fn plan(&self) -> ReadingPlan<'_> {
         ReadingPlan {

@@ -6,7 +6,9 @@ opens: crates/thinkthen/Cargo.toml sdlc/scripts/policy.py crates/thinkthen/src/c
 
 # 0162: A record stream ends cleanly
 
-Status: ready. The coordinator accepted it on 2026-09-26 after five fresh read-only reviews, the last with three small fixes the coordinator made. It builds after tickets 0161 and 0146 land. Owner: Claude.
+Status: building. The coordinator accepted it on 2026-09-26 after five fresh read-only reviews, the last with three small fixes the coordinator made. It builds after tickets 0161 and 0146 land. Owner: Claude.
+
+2026-09-27 WIP checkpoint: The first closed-pipe and blank-line compiled-binary regressions were red for the named behaviors and now pass after the initial implementation. The work is not ready for review or landing. Formatting measures `cli/edge.rs` at +44 nonblank lines against its +30 budget and `cli/schedule.rs` at +30 against +25; both need a reviewed budget amendment or reduction before further coding. The command/core total is +142 against +135 and remains within the ticket's ten-percent stop threshold. All-target compilation has one obsolete `at` pattern in `engine/annotate_schedule/tests.rs`; the coordinator is claiming that exact file for a mechanical update. The ratchet, remaining edge rows, docs and focused strict lint remain. Ian's 2026-09-27 priority change defers the broader test campaign to opt-in suites, so the proof table also needs review before the build resumes.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. A second agent also reviews the final diff, because it raises the source size ceiling, adds the `poll` feature to `nix`, and widens one table in `sdlc/scripts/policy.py`. `AGENTS.md` line 11 asks for that review on these changes, and the second agent names what it checked.
 

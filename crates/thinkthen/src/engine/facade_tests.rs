@@ -407,10 +407,13 @@ fn completed_results_keep_input_order_and_reading_them_sends_nothing() {
     });
 
     assert_eq!(rows, [Some(0.9), Some(0.5)], "good outcomes in input order");
-    let Ok(RunOutcome::Stopped { at, cause, .. }) = outcome else {
+    let Ok(RunOutcome::Stopped {
+        finished, cause, ..
+    }) = outcome
+    else {
         panic!("{outcome:?}")
     };
-    assert_eq!((at, cause.kind()), (3, Kind::Backend), "{cause:?}");
+    assert_eq!((finished, cause.kind()), (2, Kind::Backend), "{cause:?}");
     let sent = listener.count();
     let usage = engine.usage().expect("usage");
     assert_eq!((sent, usage.requests_sent), (3, 3));
