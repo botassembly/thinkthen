@@ -4,11 +4,11 @@ Filed 2026-09-27. Status: open. The bounded gap review checked main `0fb8d55f` a
 
 | Surface | Evidence | Next owner |
 | --- | --- | --- |
-| C | `libraries/c/src/failures.rs::guard` copies a caught string payload into `Failure::defect`. Its `a_panic_behind_the_door_is_the_defect_kind` test expects that payload in the error. `built` and `guard` catch unwinding without suppressing the panic hook. | Separate reviewed follow-on ticket after 0155 releases the library files |
+| C | `libraries/c/src/failures.rs::guard` copies a caught string payload into `Failure::defect`. Its `a_panic_behind_the_door_is_the_defect_kind` test expects that payload in the error. `built` and `guard` catch unwinding without suppressing the panic hook. | Separate reviewed follow-on ticket; 0155 released its unused library holds at 970b7980. Coordinate the C-header hold of 0152 Part B by exact file if needed |
 | SQLite | `databases/sqlite/src/lib.rs::guard` copies a caught payload into its defect message. `a_panic_is_a_defect_and_the_next_call_answers` expects the payload. | The same follow-on design can cover this guard, with an independent SQLite boundary proof |
 | DuckDB | `databases/duckdb/src/errors.rs::guarded` copies the payload, and its guard test expects it. The new C++/Rust prerequisite proof catches a forced panic but the default Rust hook prints it twice. | Active ticket 0201 must resolve its panic boundary before porting functions; closing that slice does not close C or SQLite |
 
-`catch_unwind` runs after the panic hook. Replacing the returned message alone therefore leaves a diagnostic route. Other bindings have not been audited by this bounded review.
+`catch_unwind` runs after the panic hook. Replacing the returned message alone therefore leaves a diagnostic route. Other bindings have not been audited by this bounded review. Before claiming that every port prevents panic-payload disclosure, perform a bounded source audit of their guards and diagnostic hooks, and add only confirmed gaps with their own boundary proofs.
 
 Retain the six error kinds, the defect classification, non-retryable behavior, ABI containment and the ability to make another call after a caught panic. Return a fixed message without payload text. The design must also prevent guarded panic payloads from reaching standard error without suppressing unrelated host diagnostics. Panic hooks belong to the process: do not swap one on every call or silently discard a host's existing hook. Review coexistence, threads, nesting and teardown before adopting a shared helper. Keep C++ exceptions on their own side of the bridge.
 
