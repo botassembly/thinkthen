@@ -10,7 +10,7 @@ thinkthen rank QUESTION [--lines|--jsonl|--csv|--tsv] [--top N] [--field POINTER
 
 ## What it reads
 
-A stream of records. With no framing flag it reads lines, or JSON Lines when a pointer names part of each record. The pointer comes from `--field` or from a question file's `on`. `--lines`, `--jsonl`, `--csv`, or `--tsv` names the framing outright. `--input FILE` reads a file instead of standard input. [records.md](records.md) gives the framing and the pointer rules.
+A stream of records. With no framing flag it reads lines, or JSON Lines when a pointer names part of each record. The pointer comes from `--field` or from a question file's `on`. `--lines`, `--jsonl`, `--csv`, or `--tsv` names the framing outright. `--input FILE` reads a file instead of standard input. A blank text line is skipped, as [records.md](records.md) gives. That page also gives the pointer rules.
 
 `QUESTION` is one argument. The tool asks it of each record as a yes/no question. It is the question text, or `@` and the path of a question file holding one `decide` question, and `--true TEXT` and `--false TEXT` say what a yes and a no mean, exactly as they do on `decide`.
 

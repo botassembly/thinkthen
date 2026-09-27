@@ -202,18 +202,14 @@ pub(crate) fn run(
             &configuration.mismatch,
             &reading,
             &configuration.planning(),
-            chunks.next().map(|(_, row)| row).transpose()?,
+            first(&mut chunks)?,
             output.writer(),
         );
     }
 
     let judging = Judging::new(configuration)?;
     if !judging.streams {
-        let bytes = chunks
-            .next()
-            .map(|(_, row)| row)
-            .transpose()?
-            .unwrap_or_default();
+        let bytes = first(&mut chunks)?.unwrap_or_default();
         let judged = judging.row(&reading, &bytes)?;
         let outcome = judged.outcome;
         output.take(judged)?;
@@ -222,13 +218,23 @@ pub(crate) fn run(
     schedule::over_records(
         &judging.engine,
         &|bytes: &Vec<u8>| judging.row(&reading, bytes),
-        chunks.map(|(at, row)| {
-            row.map(|bytes| (at, bytes))
-                .map_err(|error| schedule::Placed::at(error, at))
-        }),
+        chunks.map(place),
         judging.environment.cancel(),
         output,
     )
+}
+
+fn first(
+    chunks: &mut impl Iterator<Item = (usize, Result<Vec<u8>, Failure>)>,
+) -> Result<Option<Vec<u8>>, Failure> {
+    chunks.next().map(|(_, row)| row).transpose()
+}
+
+fn place(
+    (at, row): (usize, Result<Vec<u8>, Failure>),
+) -> Result<(usize, Vec<u8>), schedule::Placed> {
+    row.map(|bytes| (at, bytes))
+        .map_err(|error| schedule::Placed::at(error, at))
 }
 
 fn over_table(

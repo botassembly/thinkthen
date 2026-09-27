@@ -11,7 +11,7 @@ The default input is one text document. A record stream turns a command into a m
 | Flag | What one record is |
 | --- | --- |
 | none | The whole input is one text document and one record |
-| `--lines` | Each line is one text record. A trailing newline ends the last record |
+| `--lines` | Each nonblank line is one text record. Empty lines and lines holding only white space are skipped before any request or batch. They keep their input line numbers, while "records finished" counts only records sent. A trailing newline ends the last record |
 | `--jsonl` | Each line is one JSON value and one record. No blank lines |
 | `--csv` | The first logical row is a header. Each later row becomes one JSON object of string cells |
 | `--tsv` | The CSV rules with a tab delimiter |
@@ -131,7 +131,7 @@ Each digest keeps the first complete response installed in the folder. A partial
 
 `jobs` sets the throttle. The throttle is the most requests in flight at once, per loaded copy of the library. The configuration file that held it left version one with ADR 0010, and [roadmap.md](roadmap.md) says so. ADR 0010 gives it the advanced option `--jobs N`, which takes a whole number from 1 to 32 and defaults to 4. The vendor's own example code uses 4 to 12 workers and says the public endpoint limits concurrency above about eight. A measured run can raise it. `annotate` also accepts `--jobs` for one document because distinct evidence groups make distinct requests. `relate` accepts it for its one entity set because its relations and split requests are distinct requests. Another command refuses it outside record mode. The split requests of one text also run under the throttle, and their answers keep request order.
 
-The default can run past the vendor's documented 1,200 requests a minute on short records. Experiment 206 measured it from one machine, and `sdlc/issues/closed/2026-09-20-accuracy-round-on-three-public-sets-and-a-speed-rerun.md` records it. On three 200-record checks of short lines, a throttle of 4 sent 1,267, 1,319, and 1,272 requests a minute. On five checks, a throttle of 3 sent between 972 and 1,017. At a throttle of 3, 3,000 short lines took 183.6 seconds, or 980 a minute. The accuracy record reports that longer records answer more slowly and stay under the limit at 4. It gives no rate for them. The service refused nothing in those runs, or at about 4,300 a minute in an earlier run that `sdlc/issues/closed/2026-09-20-live-probe-findings-packing-tagging-status-and-cost.md` records. A run that must stay inside the documented limit on short records sets `--jobs 3`. `sdlc/issues/closed/2026-09-24-the-default-jobs-width-runs-past-the-documented-limit.md` records why the default stays at 4.
+The default can run past the vendor's documented 1,200 requests a minute on short records. Experiment 206 measured it from one machine, and `sdlc/issues/closed/2026-09-20-accuracy-round-on-three-public-sets-and-a-speed-rerun.md` records it. On three 200-record checks of short lines, a throttle of 4 sent 1,267, 1,319, and 1,272 requests a minute. On five checks, a throttle of 3 sent between 972 and 1,017. At a throttle of 3, 3,000 short lines took 183.6 seconds, or 980 a minute. That rate implies about 0.18 seconds per reply at three requests in flight; the reply time was derived, not measured. The accuracy record reports that longer records answer more slowly and stay under the limit at 4. It gives no rate for them. The service refused nothing in those runs, or at about 4,300 a minute in an earlier run that `sdlc/issues/closed/2026-09-20-live-probe-findings-packing-tagging-status-and-cost.md` records. A 0.1-second reply can send `--jobs 3` past 1,200 requests a minute: local experiment 273, report 07 measured 1,285 a minute on loopback. No setting caps requests a minute; `sdlc/issues/2026-09-26-no-requests-per-minute-pacer.md` tracks that gap. `sdlc/issues/closed/2026-09-24-the-default-jobs-width-runs-past-the-documented-limit.md` records why the default stays at 4.
 
 Output order never depends on `jobs`. A run with any number prints the bytes that `--jobs 1` prints, on standard output and on standard error, whether it finished or stopped. The tool holds finished rows in a bounded buffer until the rows before them are written, and the buffer holds at most `jobs` rows, so the memory of a long run stays flat.
 
@@ -141,7 +141,7 @@ One process opens one pool of connections and every worker posts through it, so 
 
 A run still stops at the first failed record. No new request starts once a failure is seen, and a request that finished after the failed record is still written under `--record`, because it was billed and a resume should not pay for it twice.
 
-When the program downstream closes the pipe, the tool stops reading and stops scheduling. Requests already sent may still be billed.
+When the program downstream closes the pipe, the tool stops reading and stops scheduling. Where the platform reports the closed pipe, the tool notices between requests, so a command such as `filter`, which prints only some records, stops as soon as the reader is gone. Where it does not, the tool stops at its next write. Requests already sent may still be billed.
 
 ## The default backend's published limits
 

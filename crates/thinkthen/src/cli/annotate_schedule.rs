@@ -23,6 +23,8 @@ struct Answers {
     at: usize,
 }
 
+type PreparedInput = Prepared<(usize, Record), Answers, Work>;
+
 pub(crate) enum Input {
     Bytes(usize, Vec<u8>),
     Record(usize, Record),
@@ -96,7 +98,7 @@ fn prepare(
     judging: &Judging<'_>,
     reading: &Reading,
     input: Input,
-) -> Result<Prepared<(usize, Record), Answers, Work>, Placed> {
+) -> Result<PreparedInput, Placed> {
     let at = match &input {
         Input::Bytes(at, _) | Input::Record(at, _) => *at,
     };

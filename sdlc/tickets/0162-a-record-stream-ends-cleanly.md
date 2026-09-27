@@ -6,11 +6,11 @@ opens: crates/thinkthen/Cargo.toml sdlc/scripts/policy.py crates/thinkthen/src/c
 
 # 0162: A record stream ends cleanly
 
-Status: building. The coordinator accepted it on 2026-09-26 after five fresh read-only reviews, the last with three small fixes the coordinator made. It builds after tickets 0161 and 0146 land. Owner: Claude.
+Status: built, awaiting fresh read-only code review. The coordinator accepted it on 2026-09-26 after five fresh read-only design reviews, the last with three small fixes the coordinator made. It builds after tickets 0161 and 0146 land. Owner: Codex.
 
-2026-09-27 WIP checkpoint: The first closed-pipe and blank-line compiled-binary regressions were red for the named behaviors and now pass after the initial implementation. The work is not ready for review or landing. Formatting measures `cli/edge.rs` at +44 nonblank lines against its +30 budget and `cli/schedule.rs` at +30 against +25; both need a reviewed budget amendment or reduction before further coding. The command/core total is +142 against +135 and remains within the ticket's ten-percent stop threshold. All-target compilation has one obsolete `at` pattern in `engine/annotate_schedule/tests.rs`; the coordinator is claiming that exact file for a mechanical update. The ratchet, remaining edge rows, docs and focused strict lint remain. Ian's 2026-09-27 priority change defers the broader test campaign to opt-in suites, so the proof table also needs review before the build resumes.
+2026-09-27 build amendment: The closed-pipe and blank-line compiled-binary regressions failed for the named behaviors before the fix and pass now. A third compiled-binary table pins the stop line after a skipped blank and the unchanged JSONL refusal. The coordinator authorized routine source-budget amendments within the accepted outcome. The measured file and total budgets below replace estimates that understated the command-side numbering and its shared adapter. The coordinator claimed `engine/annotate_schedule/tests.rs` for its obsolete `at` pattern. Ian's priority change keeps the proof focused on observable behavior; this build does not run a mutation or stress campaign.
 
-Review route: a fresh read-only Claude session reviews this design and the final diff. A second agent also reviews the final diff, because it raises the source size ceiling, adds the `poll` feature to `nix`, and widens one table in `sdlc/scripts/policy.py`. `AGENTS.md` line 11 asks for that review on these changes, and the second agent names what it checked.
+Review route: a fresh read-only Codex reviewer checks the final diff. A second reviewer also checks the source size ceiling, the `poll` feature on `nix`, and the exact table in `sdlc/scripts/policy.py`. `AGENTS.md` asks for that review on these changes, and the second reviewer names what it checked.
 
 ## Outcome and authority
 
@@ -170,19 +170,18 @@ thinkthen: stopped at record 3; 1 record finished
 
 ## Proof
 
-Every test drives the compiled binary against the in-process loopback in `tests/backend/harness`, which counts requests.
+Every new test drives the compiled binary against the in-process loopback in `tests/backend/harness`, which counts requests. These focused proofs replace the proposed eighteen-plant campaign after Ian's priority change.
 
-| Test | What it proves | Planted faults that turn it red |
+| Test | Observable proof | Credible regression it catches |
 | --- | --- | --- |
-| `a_reader_that_closes_the_pipe_stops_filter_between_dispatches`, new in `tests/backend/closed_pipe.rs` | Edge rows 1 to 4. A small helper starts `filter` with a verb, its arguments and a real pipe on standard output. The test reads one line, drops the reader, waits for the exit, and counts the loopback's requests. The bound of at most 12 follows `parallel.rs:359`'s `sent <= 12` at `--jobs 4`. Row 2's loopback answers yes only to the question that quotes `keep first`, with 0146's batching loopback. Row 4 dispatches lines 1 to 3 in the 100 ms before line 1's row prints, so line 3's failure is in flight whenever the pipe closes, and the latch is set by the ask that follows line 2 | (a) Check the pipe only on write: row 1 counts 301 and row 2 counts 31. (b) Put the check only in the one-record reader, `cli/schedule.rs::read_records`: rows 1 and 2 run `filter`, which 0146 sends through `batched.rs` at every `--batch`, so no check runs, and row 1 counts 301 and row 2 counts 31. (c) Treat a file as closed: row 3 stops early. (d) Answer `Input::End` but leave the latch out of the stop mapping: row 4 prints the 500 stop line and exits 4 |
-| `a_blank_line_is_skipped_and_keeps_its_number`, new in `tests/backend/blank_lines.rs` | Edge rows 5 to 16, each pinning standard output, the whole standard error, the exit code and the request count | (e) Refuse the blank line as today: row 5 stops at exit 2. (f) Skip without numbering: row 8 says `stopped at record 3` and `records 3 to 4`. (g) Count a blank line as finished: row 8 says `3 records finished`. (h) Put a blank line in a batch: row 7 sends 2 requests. (i) Number a partial stop by `finished + 1`: row 9 says `record 4`. (j) Skip under `--jsonl` too: row 11 exits 0. (k) Leave `annotate`'s reader off the adapter: row 12 stops at exit 2 at record 2. (l) Number `annotate` by the engine's row: row 12 says `stopped at record 2`. (m) Leave `recognize`'s reader off the adapter: row 13 stops at exit 2 at record 2. (n) Number `over_records` by the engine's place: row 13 says `stopped at record 2`. (o) Plan `decide`'s dry run from the first input line: row 14 exits 2. (p) Plan `annotate`'s dry run from the first input line: row 15 exits 2. (q) Plan `recognize`'s dry run from the first input line: row 16 exits 2. (r) Apply the adapter after 0146's split, on `batched.rs`'s feed only: row 6's `choose` run stops at exit 2 |
-
-Why plant (b) turns red, where the second review's old plant stayed green: at `--jobs 4` a batch that finishes frees the next slot, so a check that ran only after a batch finished still halted within 12 requests. Plant (b) removes the check from the only reader `filter` uses after 0146. Row 1 needs 301 dispatches and row 2 needs 31 to reach the end, and no write fails before then, because `filter` prints nothing after `keep first`. Row 2 also shows that the check runs between batch dispatches, not only between single records.
+| `a_reader_that_closes_the_pipe_stops_filter_between_dispatches` | A real pipe closes after `filter` keeps the first of 301 lines. At both `--batch 1` and `--batch 10`, the command exits 0, stays quiet and sends at most 12 requests at `--jobs 4` | Waiting for the next kept write, or putting the check outside the batch reader, sends all 301 records. This test failed before the fix. |
+| `a_blank_line_is_skipped_and_keeps_its_number` | `decide --lines --batch 1` sends exactly three requests for five lines with two white-space lines plus a trailing empty line. It prints three results, exits 0 and stays quiet | Treating a blank as a record or end-of-run fails or sends extra requests. This test failed before the fix. |
+| `blank_lines_keep_stop_positions_and_jsonl_still_refuses_them` | After a skipped line, invalid UTF-8 stops at input line 3 with one finished record and one request. A blank JSONL line still stops at line 2 with exit 2, one finished record and one request. Both pin complete stderr and output counts | Renumbering only dispatched records reports line 2 in the first case. Skipping every blank regardless of framing lets the second case continue. |
 
 The four questions:
 
-- **What behavior does it protect?** `records.md`'s closed-pipe promise for a command that prints some records, the quiet end after the pipe closes, and the blank-line rule with its record numbers in every reader that streams lines, the dry runs included.
-- **What credible regression fails it?** A pipe check that only a write can trip, a check in the wrong reader, a failure that speaks after the pipe closed, a blank line that stops the run again in any reader or verb, a blank line that joins a batch, and record numbers that drift from line numbers in any of the three stop paths.
+- **What behavior does it protect?** The closed-pipe promise for `filter`, a blank line's lack of request or output, input-line stop numbering, and JSONL's unchanged refusal.
+- **What credible regression fails it?** A check that waits for another kept write, a blank line sent as a record, numbering that counts only dispatched rows, or a blanket skip applied to JSONL.
 - **Why does no existing test catch it?** The seven closed-pipe tests listed under "What happens today" each run a command that writes a row for every record or its one result at once. A failed write stops each of them, so none sees a pipe close while the command writes nothing. No test feeds a blank line under line framing.
 - **Does it need a test-only hook?** No. The pipe is a real pipe and the loopback counts real requests. The reply delay is an ordinary server choice.
 
@@ -190,23 +189,23 @@ The four questions:
 
 Nonblank lines, measured with `grep -c .`, net against main after 0146 lands.
 
-- `crates/thinkthen/src/cli/edge.rs`: at most 30 net, for `Downstream` and the numbering adapter.
+- `crates/thinkthen/src/cli/edge.rs`: at most 45 net, measured +44. Polling standard output needs the latched check and a separate numbered adapter. I checked `Chunks` and the existing write path; neither can detect a closed pipe before another kept write or discard blank lines while retaining their input positions.
 - `crates/thinkthen/src/core/records.rs`: at most 12 net, for `Reading::skips`.
-- `crates/thinkthen/src/cli/schedule.rs`: at most 25 net, for `Placed`, the numbered item, and `at` from the cause.
+- `crates/thinkthen/src/cli/schedule.rs`: at most 30 net, measured +30. `Placed` carries the command's line number through the engine without changing its library API. I checked the existing `Failure::Stopped` mapping and kept the shared `Placed` type there instead of repeating it in the three command readers.
 - `crates/thinkthen/src/cli/asking/batched.rs`: at most 30 net, for the check before each ask, each held record's line number, the wrapped errors, the range, and the latch in the stop mapping.
 - `crates/thinkthen/src/cli/annotate_schedule.rs`: at most 20 net, for the numbered record and works, the wrapped errors, and `at` from the cause.
-- `crates/thinkthen/src/cli/asking.rs`, `cli/annotate.rs`, `cli/recognize.rs` and `cli/recognize/dry_run.rs`: at most 15 net together, for using the adapter and numbering table rows.
+- `crates/thinkthen/src/cli/asking.rs`, `cli/annotate.rs`, `cli/recognize.rs` and `cli/recognize/dry_run.rs`: at most 30 net together, measured +30. Each command reader must preserve line numbers through its own dry run and table route. I checked the first-record reads and reused `edge::numbered` instead of copying skip logic.
 - `crates/thinkthen/src/cli/failure.rs` and its folder: at most 5 net.
 - `crates/thinkthen/src/engine/schedule.rs` and `engine/annotate_schedule.rs`: 0 net or fewer each. Each deletes the `at` field, the line that sets it, and the `at` in its own unit tests, about 7 lines together.
-- `crates/thinkthen/src/engine/deadline_tests/schedule.rs` and `engine/facade_tests.rs`: 0 net or fewer each. They delete or narrow each `at` pattern, about 5 lines together. `facade_tests.rs` swaps `at: 3` for `finished: 2` and adds no line.
-- Command and core code total: at most 135 net. No file under `public/` or a library binding changes.
-- `tests/backend/closed_pipe.rs`: at most 95, new.
-- `tests/backend/blank_lines.rs`: at most 225, new.
+- `crates/thinkthen/src/engine/deadline_tests/schedule.rs`, `engine/facade_tests.rs` and `engine/annotate_schedule/tests.rs`: at most 0 net together. The measured changes are -5, +3 and -1. The `facade_tests.rs` pattern swaps `at: 3` for `finished: 2`; rustfmt expands its match by three lines.
+- Command, core and engine source and unit-test code total: at most 150 net, measured +146. This remains within ten percent of the accepted +135 total. No file under `public/` or a library binding changes.
+- `tests/backend/closed_pipe.rs`: at most 95, measured 72.
+- `tests/backend/blank_lines.rs`: at most 225, measured 94.
 - `tests/backend/main.rs`: 2 net, the two `mod` lines.
 - Pages: at most 20 net.
 - `crates/thinkthen/Cargo.toml`: one feature word. `Cargo.lock` does not change, because `nix`'s `poll` feature adds no package.
 - `sdlc/scripts/policy.py`: at most 2 net, for the widened list, its comment and its message.
-- `sdlc/ratchet.json` moves to the measured total in the commit that needs it. The ceiling counts every `.rs` file under `crates` and `conformance`, tests included. The budgets above bound the raise at about 445 lines above main after 0146: 135 of command and core code, 320 of new tests, and 2 `mod` lines, less about 12 lines the engine and its tests delete. The commit says what grew and where it looked for duplication, and the second agent reviews it.
+- `sdlc/ratchet.json` moves from main's 75,356 to the measured 75,670 nonblank Rust lines. The +314 comprises +146 in source and unit tests, +166 in the two compiled-binary test files, and +2 module lines. I checked the shared numbered adapter, the stop mapping and the test loopback answer builders for duplication before raising the ceiling. The second agent reviews this accounting and the feature and policy changes.
 - No paid call.
 
 ## Stop rules
@@ -214,7 +213,7 @@ Nonblank lines, measured with `grep -c .`, net against main after 0146 lands.
 1. Stop before crossing any budget by more than a tenth, or before adding a package to `Cargo.lock`.
 2. Stop if polling needs `unsafe` code. The crate forbids it.
 3. Stop if a run whose output is a file or a terminal changes.
-4. Stop if any plant stays green.
+4. Stop if either initially red compiled-binary regression still fails after the fix, or if the new line-number and JSONL boundary table fails.
 5. Stop if the build needs a live call. None is authorized. Never run `sdlc/scripts/live`.
 6. Stop if ticket 0146 has not landed.
 7. Stop if carrying line numbers needs an engine change beyond deleting `at` from the two `Outcome::Stopped` variants and their unit tests, needs any change under `public/` or a library binding, or changes a stop line over input with no blank line. Hand back the simpler rule under "What Ian can overturn" for a ruling.
@@ -230,7 +229,7 @@ Excluded: a requests-per-minute pacer, `relate`'s and `find`'s line rules, blank
 
 ## Routing
 
-Builder: Claude (Opus subagent) in the lane the coordinator names. Reviewer: a fresh read-only Claude session for the design and for the code. A second agent reviews the final diff for the ceiling raise, the `nix` feature and the `policy.py` edit, by `AGENTS.md` line 11, and names what it checked.
+Builder: Codex in the lane the coordinator names. Reviewer: a fresh read-only Codex session for the code. A second agent reviews the final diff for the ceiling raise, the `nix` feature and the `policy.py` edit, by `AGENTS.md`, and names what it checked.
 
 ## Complexity
 
@@ -261,5 +260,5 @@ Contract 2; state and timing 2; reach 2; proof 2; cost of error 1; total 9. Fina
 - Starts from: Local experiment 273, report 01 issues 1 and 2, report 11 issue 1, and report 07 finding I1, as the three issues record them. The code at `origin/main` `6b9476c1`: `cli/edge.rs:278`, `core/text.rs:19`, `cli/schedule.rs::read_records`, `cli/annotate_schedule.rs::read`, the `at` readers in `cli/schedule.rs:183-190`, `cli/annotate_schedule.rs:74-80` and `public/batch.rs:148`, `engine/schedule.rs:27-28` and `153-179`, `engine/annotate_schedule.rs:21-22`, `engine/annotate_schedule.rs:383`, `core/batch.rs:32-33` and `188-190`, `cli/asking.rs::read_by`, and `sdlc/scripts/policy.py:287-293`. The seven closed-pipe tests on main and `annotate/scheduling.rs:384`. `records.md` lines 14, 131 and 141, `audit.md` line 41 and `relate.md` line 34. Experiment 206's rate as `records.md` cites it. Ticket 0161's `annotate` dry run and its `--lines` refusal for an `on` group, read from `origin/ticket/0161-annotate-reads-what-it-names`. Ticket 0146's batch reader, dry run, stop lines, member-cap rows and `--batch 1` pins, read from `origin/ticket/0146-command-batches-decide-filter-rank`. ADR 0053 item 2 and ADR 0054 item 2. A local Linux check that a zero-length write to a widowed pipe returns 0 and that `poll` reports `POLLERR` on it.
 - Keeps: Every run whose output is a file or a terminal. `decide`'s closed-pipe stop. The quiet end after a closed pipe. Record numbers as line numbers, and table numbers as data rows. `--jsonl`, CSV, TSV, `relate` and `find` rules. Output order and exit codes. Every stop line over input with no blank line. Every engine behavior. Every file under `public/`.
 - Changes: A closed pipe stops the batch reader between dispatches. A blank line under line framing is skipped before dispatch and before a dry run plans, joins no batch, prints no row, counts in no total, and keeps its line number. Stop lines take their record number from the command's item. The `--jobs 3` sentence states its arithmetic and labels its reply time derived. `policy.py` accepts `nix` with `["poll", "signal"]`. The engine's `Outcome::Stopped` loses its unread `at` field in both schedulers.
-- Proof: Two outside-in tests in two new files with eighteen plants, and the `install`, `lint`, `test`, `spec` and `surfaces` rungs.
+- Proof: Three focused compiled-binary regressions in two new files. The first two failed before the fix for their stated behaviors. The third pins a line-number and JSONL boundary that neither first test covers. Strict formatting, policy, all-target Clippy and the focused backend tests run in the build lane. The coordinator runs required landing gates after independent review.
 - Defers: The pacer, the check on platforms without `poll`, macOS verification of the closed-pipe check, a measured reply time, and the check in the other two readers.

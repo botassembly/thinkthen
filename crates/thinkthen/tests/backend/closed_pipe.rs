@@ -6,14 +6,21 @@ use serde_json::{Map, Value, json};
 use crate::harness::{Canned, Listener, finish, start};
 
 fn reply(body: &[u8]) -> Canned {
-    let request: Value = serde_json::from_slice(body).expect("a request");
-    let state = request["state"].as_str().unwrap_or_default();
-    let answers: Map<String, Value> = request["questions"]
-        .as_object()
-        .expect("questions")
-        .iter()
+    let request: Value = serde_json::from_slice(body).unwrap_or(Value::Null);
+    let state = request
+        .get("state")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+    let answers: Map<String, Value> = request
+        .get("questions")
+        .and_then(Value::as_object)
+        .into_iter()
+        .flat_map(|questions| questions.iter())
         .map(|(name, question)| {
-            let text = question["instructions"].as_str().unwrap_or_default();
+            let text = question
+                .get("instructions")
+                .and_then(Value::as_str)
+                .unwrap_or_default();
             let yes = state.contains("keep first") || text.contains("keep first");
             (
                 name.clone(),
