@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 202
-opens: conformance/backend/src/listener.rs conformance/backend/src/lifetime.rs conformance/backend/src/lib.rs conformance/backend/src/arms.rs conformance/backend/tests/listener.rs conformance/backend/tests/binary.rs crates/thinkthen/src/engine/facade_tests.rs crates/thinkthen/tests/backend/cache_locking.rs crates/thinkthen/tests/backend/cache_prune_locking.rs crates/thinkthen/tests/backend/interrupt.rs crates/thinkthen/tests/backend/recognize/stores.rs crates/thinkthen/tests/backend/scheduling.rs crates/thinkthen/tests/backend/secrecy.rs crates/thinkthen/tests/public_controls/fired.rs sdlc/issues/2026-09-27-loopback-listeners-exhaust-the-test-process-file-limit.md sdlc/records sdlc/tickets sdlc/ratchet.json
+opens: conformance/backend/src/listener.rs conformance/backend/src/lifetime.rs conformance/backend/src/lib.rs conformance/backend/src/arms.rs conformance/backend/tests/listener.rs conformance/backend/tests/binary.rs crates/thinkthen/src/engine/facade_tests.rs crates/thinkthen/tests/backend/cache_locking.rs crates/thinkthen/tests/backend/cache_prune_locking.rs crates/thinkthen/tests/backend/interrupt.rs crates/thinkthen/tests/backend/recognize.rs crates/thinkthen/tests/backend/recognize/stores.rs crates/thinkthen/tests/backend/scheduling.rs crates/thinkthen/tests/backend/secrecy.rs crates/thinkthen/tests/public_controls/fired.rs sdlc/issues/2026-09-27-loopback-listeners-exhaust-the-test-process-file-limit.md sdlc/records sdlc/tickets sdlc/ratchet.json
 ---
 
 # 0202: Bound loopback fixture lifetimes
