@@ -67,12 +67,12 @@ The four questions of `2026-09-24-tests-earn-their-place.md`:
 
 With `THINKTHEN_API_KEY` unset. `sdlc/scripts/live` did not run, and no paid call was made.
 
-The rungs ran one at a time at `d837dec2`, which holds every code change of both rounds and main merged in. The later commit adds only this section.
+The rungs ran one at a time at `69cbcde2`, which holds every change of the three rounds, the mask ruling, and main as of that commit. The later commit adds only this section.
 
-- `lint` with the private-names list: exit 0, `ratchet: crates + conformance 72606/72606`. The expected `Killed` line appeared. An earlier run at `7c42cdba` failed twice. `nix` had gained its `user` feature, and `engine/http.rs` had 509 non-blank lines over its 500 ceiling. Change 5 and `d837dec2` answer both.
-- `test`: exit 0, 979 passed, 0 failed, 13 ignored across 38 result lines, `live-test: all cases passed`.
+- `lint` with the private-names list: exit 0, `ratchet: crates + conformance 72630/72630`. The expected `Killed` line appeared. An earlier run at `7c42cdba` failed twice. `nix` had gained its `user` feature, and `engine/http.rs` had 509 non-blank lines over its 500 ceiling. Change 5 and `d837dec2` answer both.
+- `test`: exit 0, 980 passed, 0 failed, 13 ignored across 38 result lines, `live-test: all cases passed`.
 - `spec`: exit 0, `demos: 21 green, 0 red`.
-- `surfaces`: exit 0, 19 `surfaces: pass` lines, `release smoke` among them. Every conformance line reads 0 failed, and each case not run gives its surface's reason.
+- `surfaces`: exit 0, 19 `surfaces: pass` lines, `release smoke` among them. No conformance line reports a failure.
 
 ## Deferred
 
