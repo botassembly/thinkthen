@@ -12,7 +12,7 @@ The marketing repository holds two copied examples. `sdlc/issues/2026-09-27-mark
 
 ## Proof
 
-- Focused Rust tests passed: `audit::old_goldens_hold`, `audit::every_fixture_keeps_its_checksum`, `audit::a_replayed_recording_piped_to_audit_grades_as_the_prototype_does`, `diff::goldens_match`, `diff::tables_match_byte_for_byte`, `audit_verbs::each_verb_grades`, and `version::no_page_or_transform_says_unresolved`.
+- Focused Rust tests passed: `audit::old_goldens_hold`, `audit::every_fixture_keeps_its_checksum`, `audit::a_replayed_recording_piped_to_audit_grades_as_the_prototype_does`, `diff::goldens_match`, `diff::tables_match_byte_for_byte`, `diff::an_option_named_unresolved_stays_an_option`, `audit_verbs::each_verb_grades`, and `version::no_page_or_transform_says_unresolved`.
 - `mustmatch test` passed 30 blocks and skipped one across changed `spec/audit.md`, `spec/annotate.md`, `transforms/README.md`, and demos 02, 13, 16, and 25, with the built command on `PATH`.
 - The compare, sweep, and triage transform tests passed. Their bundled and standalone jq files match byte for byte. `demos-self-test` passed 28 cases. The pages and tickets scripts passed their checks.
 - `cargo fmt --all -- --check`, strict workspace Clippy, `python3 sdlc/scripts/policy.py`, `git diff --check`, and the ratchet passed. The public page, demo, and built-in transform word scan found no `unresolved`.
@@ -23,6 +23,6 @@ Ian's current batch ruling asks for small functional proof. No mutation campaign
 
 ## Size and duplication
 
-The ratchet moves from 76,121 to 76,149 nonblank lines, net 28. Product Rust source adds one nonblank line, the nested serde rename. Rust tests add 27; the measure fixture README adds one documentation line outside the ratchet. The ticket caps are six product lines and 45 test lines. The expected-side `ported` function sits beside the existing fixture normalizer and is used by the existing audit and diff goldens. The vocabulary guard replaces an older definition test. No new golden or duplicate vocabulary inventory was added.
+The ratchet moves from 76,121 to 76,166 nonblank lines, net 45. Product Rust source adds one nonblank line, the nested serde rename. Rust tests add 44; the measure fixture README adds one documentation line outside the ratchet. The ticket caps are six product lines and 45 test lines. The expected-side `ported` function sits beside the existing fixture normalizer and is used by the audit goldens. Fresh review found its unrestricted string replacement could rewrite a user option. The corrected porter changes only the audit count member and count line; diff goldens compare directly apart from the existing capture's named below-cut states and move. The added compiled diff case proves an option literally named `unresolved` stays unchanged and the porter leaves that row untouched. It failed against the original porter and passed after correction. The vocabulary guard replaces an older definition test. No new golden or duplicate vocabulary inventory was added.
 
 The prototype fixture checksums stay fixed. The two `spec/annotate.md` local fixtures are separate from those prototype goldens: only their request text and digest names changed to follow the renamed question.

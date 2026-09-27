@@ -31,7 +31,15 @@ fn goldens_match() {
             _ => String::new(),
         };
         assert_eq!((code, stderr), (0, warned), "{golden}");
-        assert_eq!(stdout, ported(fixture(golden)), "{golden}");
+        let mut expected = fixture(golden);
+        if golden == "golden/extra/diff-annotate.jsonl" {
+            // The captured rows fall below the 0.75 cut; their move has count 2.
+            for end in ["probability\":[0.6", "probability\":[0.7", "count\":2"] {
+                let state = format!("\"to\":\"unresolved\",\"{end}");
+                expected = expected.replace(&state, &state.replace("unresolved", "unsure"));
+            }
+        }
+        assert_eq!(stdout, expected, "{golden}");
     }
 }
 
@@ -40,8 +48,19 @@ fn tables_match_byte_for_byte() {
     for (capture, arguments) in DIFF_TABLES {
         let (code, stdout, stderr) = diff(&[arguments, &["--table"]].concat(), b"");
         assert_eq!((code, stderr.as_str()), (0, ""), "{capture}");
-        assert_eq!(stdout, ported(fixture(capture)), "{capture}");
+        assert_eq!(stdout, fixture(capture), "{capture}");
     }
+}
+
+#[test]
+fn an_option_named_unresolved_stays_an_option() {
+    let run = fixture("small/choose.jsonl").replace("\"red\"", "\"unresolved\"");
+    let (code, stdout, stderr) = diff(&["-", "small/choose-b.jsonl"], run.as_bytes());
+    assert_eq!((code, stderr.as_str()), (0, ""));
+    let first = stdout.lines().next().expect("a changed option");
+    assert_eq!(member(first, "/from"), "\"unresolved\"");
+    assert_eq!(member(first, "/to"), "\"red\"");
+    assert_eq!(ported(format!("{first}\n")), format!("{first}\n"));
 }
 
 #[test]
@@ -52,7 +71,7 @@ fn a_run_line_with_a_member_diff_does_not_use_still_pairs() {
         wider.as_bytes(),
     );
     assert_eq!(code, 0);
-    assert_eq!(stdout, ported(fixture("golden/diff-decide-wordings.jsonl")));
+    assert_eq!(stdout, fixture("golden/diff-decide-wordings.jsonl"));
 }
 
 #[test]

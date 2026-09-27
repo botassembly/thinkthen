@@ -74,13 +74,13 @@ Every surface that passes a seconds deadline to `deadline_seconds` prints the sa
 
 #### The prototype fixtures
 
-The fixtures under `tests/fixtures/measure/golden/` stay byte copies of the prototype, with the checksums `every_fixture_keeps_its_checksum` pins. `support/measure.rs` gains one function, `ported`, next to `without_added`. It rewrites the prototype's spelling to the port's before a test compares:
+The fixtures under `tests/fixtures/measure/golden/` stay byte copies of the prototype, with the checksums `every_fixture_keeps_its_checksum` pins. `support/measure.rs` gains one function, `ported`, next to `without_added`. It rewrites only the audit count spelling on the expected side before a test compares:
 
-- in JSON lines, the string `"unresolved"` becomes `"unsure"`, as a member name and as a value;
+- in audit JSON lines, the count member `"unresolved":` becomes `"unsure":`, including nested `suggested` and `held` counts;
 - in an `audit` table, ` unresolved, ` becomes ` not sure, `;
-- in a `diff` table, the word `unresolved` becomes `unsure`.
+- in the existing `extra/diff-annotate.jsonl` golden, two captured below-cut `kind` states and their summary move change explicitly in `diff.rs`. The porter leaves every user option string alone. No current `diff` table golden holds the old state token.
 
-Four tests compare against the ported fixture: `audit::old_goldens_hold`, the test in `audit.rs` that compares with `golden/audit-decide.jsonl` (about line 91), the replay test in `audit.rs` that compares with `replay/audit.jsonl` (about lines 124 to 140), and `diff::goldens_match`. `replay/audit.jsonl` holds the prototype's spelling too. `tests/fixtures/measure/README.md` records the rename beside the members ticket 0125 added. No `diff` table golden holds the word today, so the third rule guards the next capture.
+The existing audit golden, specific audit comparison, and audit replay test compare against the ported fixture. `replay/audit.jsonl` holds the prototype's spelling too. The diff goldens compare directly, except the named `extra/diff-annotate.jsonl` state changes above. `tests/fixtures/measure/README.md` records the rename beside the members ticket 0125 added. A compiled `diff` regression keeps an option literally named `unresolved` unchanged in output and through the porter.
 
 #### The checks that keep the old word out
 
@@ -247,6 +247,7 @@ Contract 2; state and timing 0; reach 3; proof 2; cost of error 1; total 8. Fina
 - The audit golden exposed `Counts.unresolved` inside the serialized `suggested` and `held` objects. A serde field rename kept the internal Rust name while making every public member `unsure`. Tracing nested serialization before the edit would have found it sooner.
 - J1 added `specification/types.md`, executable `spec/annotate.md`, and two digest-named local request fixtures after this ticket's first inventory. A current public-surface search and the fixture filename formula belonged in the preparation. The prototype measure fixtures remained byte copies.
 - Executable pages need the built command on `PATH`. The first targeted invocation missed that setup; the corrected invocation passed. One full-demo attempt exposed an extra usage-counter warning in unchanged demo 12 under the normal home directory. Its cause is unproven; the changed pages passed targeted checks.
+- Fresh review found that the first golden porter rewrote every `unresolved` string, including a user option. The correction limits shared rewriting to audit count members and the count line. The existing diff capture names its two below-cut states and summary move exactly; a compiled diff case pins an option literally named `unresolved`. Preparation missed that option/value boundary.
 - The remaining limits are the internal names, historical artifacts, and marketing copies listed above. No broader mutation campaign or full port ladder was run under Ian's current focused-proof ruling.
 
 ## Closes

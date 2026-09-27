@@ -249,8 +249,7 @@ pub(crate) fn fixture(path: &str) -> String {
 pub(crate) fn ported(fixture: String) -> String {
     fixture
         .replace(" unresolved, ", " not sure, ")
-        .replace("\"unresolved\"", "\"unsure\"")
-        .replace("unresolved", "unsure")
+        .replace("\"unresolved\":", "\"unsure\":")
 }
 
 /// One row member as its compact JSON text.
