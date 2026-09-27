@@ -9,7 +9,9 @@
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
 
+#include <algorithm>
 #include <cstdint>
+#include <chrono>
 #include <cstring>
 #include <memory>
 #include <map>
@@ -72,25 +74,44 @@ struct StatementOwner : ClientContextState {
 	uint64_t generation = 0;
 	bool active = false;
 	bool first_use = false;
+	std::optional<std::chrono::steady_clock::time_point> expiry;
 
-	void QueryBegin(ClientContext &) override {
+	void QueryBegin(ClientContext &context) override {
 		std::lock_guard<std::mutex> held(lock);
-		Start(false);
+		Start(context, false);
 	}
 	void QueryEnd(ClientContext &, optional_ptr<ErrorData>) override {
 		std::lock_guard<std::mutex> held(lock);
 		active = false;
 	}
-	void Start(bool late) {
+	void Start(ClientContext &context, bool late) {
+		Value setting;
+		const auto budget = context.TryGetCurrentSetting("thinkthen_query_budget_ms", setting) && !setting.IsNull()
+		                        ? setting.GetValue<int64_t>()
+		                        : -1;
+		if (budget < -1 || budget > 4294967295000LL) {
+			throw InvalidInputException("thinkthen usage: the query budget is outside the supported range");
+		}
 		active = true;
 		first_use = late;
 		generation++;
+		expiry = budget < 0 ? std::nullopt
+		                    : std::optional<std::chrono::steady_clock::time_point>(
+		                          std::chrono::steady_clock::now() + std::chrono::milliseconds(budget));
 	}
-	void Observe() {
+	int64_t Remaining(ClientContext &context) {
 		std::lock_guard<std::mutex> held(lock);
 		if (!active) {
-			Start(true);
+			Start(context, true);
 		}
+		if (!expiry) {
+			return -1;
+		}
+		const auto now = std::chrono::steady_clock::now();
+		if (now >= *expiry) {
+			throw InvalidInputException("thinkthen deadline: the query has spent its time budget");
+		}
+		return std::chrono::duration_cast<std::chrono::milliseconds>(*expiry - now).count();
 	}
 };
 
@@ -159,7 +180,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 	if (!context) {
 		throw InvalidInputException("thinkthen defect: the caller session ended");
 	}
-	context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY)->Observe();
+	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	vector<DecisionGroup> groups;
 	std::map<std::pair<string, int64_t>, idx_t> known_groups;
 	std::set<string> checked_questions;
@@ -199,13 +220,16 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 	}
 	vector<vector<uint8_t>> outcomes;
 	for (auto &group : groups) {
+		const auto budget = owner->Remaining(*context);
+		const auto due = budget < 0 ? group.deadline
+		                           : group.deadline < 0 ? budget : std::min(group.deadline, budget);
 		vector<ThinkThenText> texts;
 		texts.reserve(group.texts.size());
 		for (auto &text : group.texts) {
 			texts.push_back({reinterpret_cast<const uint8_t *>(text.data()), text.size()});
 		}
 		RustReply answered(thinkthen_cpp_decision_group(reinterpret_cast<const uint8_t *>(group.question.data()),
-		                                               group.question.size(), texts.data(), texts.size(), group.deadline,
+		                                               group.question.size(), texts.data(), texts.size(), due,
 		                                               bound.probability ? 1 : 0));
 		Checked(answered.value);
 		const auto width = bound.probability ? sizeof(double) : sizeof(uint8_t);
@@ -245,6 +269,9 @@ void LoadThinkThen(ExtensionLoader &loader) {
 	if (thinkthen_cpp_init() != 0) {
 		throw InvalidInputException("thinkthen defect: the Rust bridge did not initialize");
 	}
+	auto &config = DBConfig::GetConfig(loader.GetDatabaseInstance());
+	config.AddExtensionOption("thinkthen_query_budget_ms", "Whole-statement ThinkThen time budget in milliseconds",
+	                          LogicalType::BIGINT, Value::BIGINT(-1));
 	for (auto name : {"thinkthen_decide", "thinkthen_probability"}) {
 		const auto result = string(name) == "thinkthen_probability" ? LogicalType::DOUBLE : LogicalType::BOOLEAN;
 		for (auto parameters : {vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR},

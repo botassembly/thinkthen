@@ -58,7 +58,36 @@ def main() -> None:
         assert isinstance(values[0][0], float) and 0 <= values[0][0] <= 1
         assert probabilities[1] == {"rows": [["DOUBLE"]]}
         assert backend.count() == 4, "probability should deduplicate its repeated text"
-    print("C++ decision and probability bind, chunk, deduplication, NULL, type, and loopback send boundary pass")
+        spent = run(
+            ["SET thinkthen_query_budget_ms = 0",
+             "SELECT thinkthen_decide('Is it a refund?', 'refund now'), "
+             "thinkthen_probability('Is it a refund?', 'a separate refund')",
+             "SET thinkthen_query_budget_ms = -1",
+             "SELECT thinkthen_decide('Is it a refund?', 'refund now')"],
+            backend.base(), extension=extension,
+        )
+        assert "thinkthen deadline: the query has spent its time budget" in spent[1]["error"]
+        assert spent[3] == {"rows": [[True]]}
+        assert backend.count() == 5, "a spent statement sent nothing and the next query recovered"
+        across_chunks = run(
+            ["SET thinkthen_query_budget_ms = 10000",
+             "SELECT count(*) FILTER (WHERE thinkthen_decide("
+             "CASE WHEN i = 2048 THEN 'Is it a refund?' END, "
+             "CASE WHEN i = 2048 THEN 'refund now' END)) FROM range(2049) AS x(i)",
+             "SET thinkthen_query_budget_ms = -1"],
+            backend.base(), extension=extension,
+        )
+        assert across_chunks[1] == {"rows": [[1]]}
+        assert backend.count() == 6, "one live row across the vector boundary should send once"
+        bad_budget = run(
+            ["SET thinkthen_query_budget_ms = -2",
+             "SELECT thinkthen_decide('Is it a refund?', 'refund now')",
+             "SET thinkthen_query_budget_ms = -1"],
+            backend.base(), extension=extension,
+        )
+        assert "thinkthen usage: the query budget is outside the supported range" in bad_budget[1]["error"]
+        assert backend.count() == 6, "an invalid query budget sent nothing"
+    print("C++ decision, probability, query-budget, NULL, type, deduplication, and loopback send boundary pass")
 
 
 if __name__ == "__main__":
