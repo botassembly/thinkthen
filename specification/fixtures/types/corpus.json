@@ -450,16 +450,13 @@
     {"name":"detailed-kind-mismatch","definition":"details","response":{"schema":"thinkthen.result/1","value":true,"question":{"verb":"choose","text":"Which?"},"answer":{"kind":"yes_no","probability":0.9},"threshold":0.5,"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}},"response_valid":false},
     {"name":"find-details","definition":"details","response":{"schema":"thinkthen.result/1","value":null,"question":{"verb":"find","text":"Which?","none":true},"answer":{"kind":"find","pick":"none","probabilities":{"u001":0.1,"none":0.9}},"threshold":null,"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}}},
     {"name":"annotate-details","definition":"annotateDetails","response":{"schema":"thinkthen.result/1","input":"note","value":{"ready":true},"answers":{"ready":{"value":true,"question":{"verb":"decide","text":"Ready?"},"answer":{"kind":"yes_no","probability":0.9},"threshold":0.5,"request":"x"}},"meta":{"tool":"thinkthen","questions_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}}},
+    {"name":"annotate-details-empty-success","definition":"annotateDetails","response":{"schema":"thinkthen.result/1","input":"note","value":{"ready":{"failed":{"kind":"backend","cause":"missing_answer"}}},"answers":{"ready":{}},"meta":{"tool":"thinkthen","questions_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":1}},"response_valid":false},
+    {"name":"annotate-success-missing-answer","definition":"annotateEntry","response":{"value":true,"question":{"verb":"decide","text":"Ready?"},"threshold":0.5,"request":"x"},"response_valid":false},
+    {"name":"annotate-failed-entry","definition":"annotateEntry","response":{"question":{"verb":"decide","text":"Ready?"},"failure":{"kind":"backend","cause":"missing_answer"},"request":"x"}},
+    {"name":"annotate-failed-entry-with-value","definition":"annotateEntry","response":{"question":{"verb":"decide","text":"Ready?"},"failure":{"kind":"backend","cause":"missing_answer"},"request":"x","value":null},"response_valid":false},
+    {"name":"annotate-find-not-a-member","definition":"annotateEntry","response":{"question":{"verb":"find","text":"Which?"},"failure":{"kind":"backend","cause":"missing_answer"},"request":"x"},"response_valid":false},
     {"name":"recognize-details","definition":"recognizeDetails","response":{"schema":"thinkthen.result/1","value":{"entities":[]},"question":{"verb":"recognize"},"answer":{"pieces":[],"names":[],"pairs":[]},"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}}},
     {"name":"relate-details","definition":"relateDetails","response":{"schema":"thinkthen.result/1","value":[],"question":{"verb":"relate"},"answer":{"questions":[]},"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}}},
-    {
-      "name": "call-error",
-      "definition": "callError",
-      "response": {
-        "kind": "deadline",
-        "retryable": false,
-        "message": "the budget ran out"
-      }
-    }
+    {"name":"call-error","definition":"callError","response":{"kind":"deadline","retryable":false,"message":"the budget ran out"}}
   ]
 }

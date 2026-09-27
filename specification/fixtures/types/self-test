@@ -8,4 +8,4 @@ LOCK=${THINKTHEN_HEAVY_LOCK:-${XDG_RUNTIME_DIR:-/tmp}/thinkthen-heavy.lock}
 if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$LOCK" ]; then
 	exec flock -o "$LOCK" env THINKTHEN_HEAVY_LOCK_HELD="$LOCK" /bin/sh "$0"
 fi
-exec python3.12 "$HERE/check.py"
+exec python3 "$HERE/check.py"

@@ -20,7 +20,8 @@ HERE = Path(__file__).resolve().parent
 SCHEMA = ROOT / "specification/result.schema.json"
 CORPUS = HERE / "corpus.json"
 BACKEND = ROOT / "target/debug/conformance-backend"
-C_LIBRARY = ROOT / "libraries/c/target/debug/libthinkthen_c.so"
+LIBRARY_NAME = "libthinkthen_c.dylib" if sys.platform == "darwin" else "libthinkthen_c.so"
+C_LIBRARY = ROOT / "libraries/c/target/debug" / LIBRARY_NAME
 
 
 def checked(command):

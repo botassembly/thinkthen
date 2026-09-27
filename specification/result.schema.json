@@ -14,12 +14,13 @@
         "retryable": {"type": "boolean"}, "message": {"type": "string"}},
       "additionalProperties": true
     },
+    "failure": {
+      "type": "object", "required": ["kind", "cause"], "additionalProperties": false,
+      "properties": {"kind": {"const": "backend"}, "cause": {"$ref": "#/$defs/failureCause"}}
+    },
     "failed": {
       "type": "object", "required": ["failed"], "additionalProperties": false,
-      "properties": {"failed": {
-        "type": "object", "required": ["kind", "cause"], "additionalProperties": false,
-        "properties": {"kind": {"const": "backend"}, "cause": {"$ref": "#/$defs/failureCause"}}
-      }}
+      "properties": {"failed": {"$ref": "#/$defs/failure"}}
     },
     "decide": {"type": ["boolean", "null"]},
     "choose": {"type": ["string", "null"]},
@@ -133,21 +134,26 @@
       {"$ref": "#/$defs/details"}, {"$ref": "#/$defs/annotateDetails"},
       {"$ref": "#/$defs/recognizeDetails"}, {"$ref": "#/$defs/relateDetails"}
     ]},
-    "details": {
-      "type": "object", "required": ["schema", "value", "question", "answer", "threshold", "meta"],
+    "judgmentQuestion": {
+      "type": "object", "required": ["verb", "text"],
+      "properties": {"verb": {"enum": ["decide", "choose", "tag", "score", "find"]},
+        "text": {"type": ["string", "object", "array"]}}
+    },
+    "annotateQuestion": {
+      "allOf": [{"$ref": "#/$defs/judgmentQuestion"}],
+      "properties": {"verb": {"enum": ["decide", "choose", "tag", "score"]}}
+    },
+    "judgmentFields": {
+      "type": "object", "required": ["value", "question", "answer", "threshold"],
       "properties": {
-        "schema": {"const": "thinkthen.result/1"},
-        "value": {}, "question": {"type": "object", "required": ["verb", "text"],
-          "properties": {"verb": {"enum": ["decide", "choose", "tag", "score", "find"]},
-            "text": {"type": ["string", "object", "array"]}}},
+        "value": {}, "question": {"$ref": "#/$defs/judgmentQuestion"},
         "answer": {"oneOf": [
           {"$ref": "#/$defs/yesNoAnswer"}, {"$ref": "#/$defs/choiceAnswer"},
           {"$ref": "#/$defs/tagAnswer"}, {"$ref": "#/$defs/scoreAnswer"},
           {"$ref": "#/$defs/findAnswer"}
         ]},
-        "threshold": {"type": ["number", "string", "null"]},
-        "meta": {"$ref": "#/$defs/meta"}
-      }, "additionalProperties": true,
+        "threshold": {"type": ["number", "string", "null"]}
+      },
       "allOf": [
         {"if": {"properties": {"question": {"properties": {"verb": {"const": "decide"}}}}},
           "then": {"properties": {"answer": {"$ref": "#/$defs/yesNoAnswer"}, "value": {"$ref": "#/$defs/decide"}}}},
@@ -161,12 +167,37 @@
           "then": {"properties": {"answer": {"$ref": "#/$defs/findAnswer"}, "value": {"$ref": "#/$defs/find"}}}}
       ]
     },
+    "details": {
+      "allOf": [{"$ref": "#/$defs/judgmentFields"}],
+      "type": "object", "required": ["schema", "meta"],
+      "properties": {"schema": {"const": "thinkthen.result/1"},
+        "meta": {"$ref": "#/$defs/meta"}},
+      "additionalProperties": true
+    },
+    "annotateSuccess": {
+      "allOf": [{"$ref": "#/$defs/judgmentFields"}],
+      "type": "object", "required": ["request"],
+      "properties": {"question": {"$ref": "#/$defs/annotateQuestion"},
+        "request": {"type": "string"}},
+      "not": {"required": ["failure"]}
+    },
+    "annotateFailure": {
+      "type": "object", "required": ["question", "failure", "request"],
+      "properties": {"question": {"$ref": "#/$defs/annotateQuestion"},
+        "failure": {"$ref": "#/$defs/failure"}, "request": {"type": "string"}},
+      "not": {"anyOf": [
+        {"required": ["value"]}, {"required": ["answer"]}, {"required": ["threshold"]}
+      ]}
+    },
+    "annotateEntry": {"oneOf": [
+      {"$ref": "#/$defs/annotateSuccess"}, {"$ref": "#/$defs/annotateFailure"}
+    ]},
     "annotateDetails": {
       "type": "object", "required": ["schema", "input", "value", "answers", "meta"],
       "properties": {
         "schema": {"const": "thinkthen.result/1"},
         "value": {"$ref": "#/$defs/annotatedRow"},
-        "answers": {"type": "object", "additionalProperties": {"type": "object"}},
+        "answers": {"type": "object", "additionalProperties": {"$ref": "#/$defs/annotateEntry"}},
         "meta": {"$ref": "#/$defs/meta"}
       }, "additionalProperties": true
     },
