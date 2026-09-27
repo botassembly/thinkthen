@@ -30,6 +30,10 @@ pub(crate) struct FindArguments {
 /// The shared options that apply to one aggregate `find` request.
 #[derive(Args, Debug)]
 pub(crate) struct FindCommon {
+    /// Print one machine-readable run-facts line last on standard error.
+    #[arg(long, hide_short_help = true)]
+    pub(crate) facts: bool,
+
     /// Print the full result object in place of the original selected line or record.
     /// The result names each line or record by its one-based place, zero-padded
     /// to three digits: u001 is the first and u255 the 255th.
@@ -102,6 +106,7 @@ impl FindCommon {
     /// Adapt the narrow parsed surface to the one shared request configuration.
     pub(crate) fn as_common(&self) -> Common {
         Common {
+            facts: self.facts,
             details: self.details,
             input: self.input.clone(),
             lines: self.lines,

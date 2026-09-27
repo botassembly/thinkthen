@@ -12,8 +12,12 @@ Add concise investigation notes to the ticket. A shared record may hold facts co
 
 - What the code does, where it does it, and how the reported problem arises.
 - The agreed outcome, retained behavior, prerequisites, exact files and live lane conflicts.
+- Inventory every completion adapter, copied argument conversion and private parent export that the change mutates. A call path alone can omit files needed at the final handoff.
+- Measure existing nonblank lines against each enforced file ceiling before treating a ticket's estimated growth as headroom. If a file is close, plan reuse or one coherent private extraction and review the actual growth.
 - Reusable code, experiments, fixtures and test helpers. Name fixture hashing, copied examples, serialized fields or host contracts that can surprise the build.
+- Keep one intended failure per fixture. Preserve valid digest names and inputs when testing a schema or file-open error, so an earlier failure cannot mask the target boundary.
 - Check each host's accepted value ranges and NULL rules before reusing a proof across ports; a value valid in one host may be refused in another.
+- For port settings, inspect every current constructor and overload before copying an accepted ticket's sentence. A later landed adapter may already support a value that older prose called absent.
 - The smallest relevant validation commands and what each proves. Keep setup, compile, execution and lock wait separate when measured. No load campaign belongs in preparation.
 - Unresolved questions and missing evidence. Distinguish a proposed solution from an accepted decision; seek design review before changing the contract.
 

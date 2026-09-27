@@ -44,6 +44,14 @@ pub(crate) fn prune(
             result.remaining_bytes
         ),
     )?;
+    let stderr = std::io::stderr();
+    let mut diagnostic = stderr.lock();
+    for name in result.bad_names {
+        edge::write_line(
+            &mut diagnostic,
+            &format!("thinkthen: cache prune: left `{name}` in place; it is not a valid entry"),
+        )?;
+    }
     Ok(ExitCode::SUCCESS)
 }
 

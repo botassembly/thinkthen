@@ -11,7 +11,7 @@ Status: **Settled** for version one, by ADR 0007, amended by ADR 0048.
 | Arguments | The command, its options, and the question. Never data |
 | Standard input | The evidence. Never instructions |
 | Standard output | Results, and nothing else. One bare JSON value, or one value per record |
-| Standard error | Diagnostics for a person. Never parsed by a script. Not built yet, by ADR 0048 item 10: the one `--facts` line is for a script |
+| Standard error | Diagnostics for a person, except the final `thinkthen.run/1` line requested by `--facts`, which a script may parse |
 | Exit code | The outcome class, from the table below |
 
 ## What the tool never does
@@ -32,7 +32,7 @@ An unknown option is a usage error. So is a repeated single-value option, and so
 
 Everyday options are `--threshold`, `--details`, `--quiet`, `--raw`, `--input FILE`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field POINTER`, `--options POINTER`, `--top N`, `--none`, and `--dry-run`. The list names every one. Each verb's page says which of them it takes.
 
-Advanced options appear in the long help alone: `--model`, `--timeout`, `--max-retries`, `--record DIR`, `--replay DIR`, `--cache DIR`, `--jobs N`, and `--batch N` on `decide`, `filter` and `rank`. `--url` and `--profile FILE` also appear in short help. They decide where evidence goes and whether a request is locally refused before it goes there. Not built yet, by ADR 0048 item 10 and 11: `--facts` and `--context FILE` join the advanced options.
+Advanced options appear in the long help alone: `--model`, `--timeout`, `--max-retries`, `--record DIR`, `--replay DIR`, `--cache DIR`, `--jobs N`, `--facts`, and `--batch N` on `decide`, `filter` and `rank`. `--url` and `--profile FILE` also appear in short help. They decide where evidence goes and whether a request is locally refused before it goes there. Not built yet, by ADR 0048 item 11: `--context FILE` joins the advanced options.
 
 ## Standard input
 

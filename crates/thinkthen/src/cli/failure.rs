@@ -15,6 +15,7 @@ use crate::table;
 
 mod after_signal;
 mod convert;
+pub(crate) mod facts;
 pub(crate) mod recognize;
 mod recording;
 pub(crate) mod relate;

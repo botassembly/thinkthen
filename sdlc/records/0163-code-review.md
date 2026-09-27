@@ -1,0 +1,13 @@
+# 0163 code review and landing
+
+Fresh independent Codex High review examined frozen `0033257dd25da940e35dbdbb9097b0023573a0df` against main `9bf7b15c`. High was selected because prune deletes cache files and reads untrusted paths. The reviewer required two corrections: the C README omitted the existing JSON constructor's cache-off setting, and a metadata check before an ordinary open could follow a replacement symlink or block on a replacement FIFO.
+
+The same independent reviewer accepted `0292cba2adb75924cddfb30d419688efe4d9dd52` after inspecting both corrections. Unix opens use `O_NOFOLLOW | O_NONBLOCK` with the existing identity checks. The Windows branch requests opening the reparse point itself. The Linux trace proves the flags on actual status entry opens; it does not reproduce the replacement interleaving. No Windows host run was available. The C README now names `thinkthen_engine_new_with` with `cache: false`.
+
+The coordinator accepts the measured amendment: 67 product and 151 test nonblank lines, 218 aggregate over main's 77,650, giving an exact ratchet of 77,868. Engine growth is 56, CLI 11, the default-cache test group 146, and status tests 5. The reviewer checked the distinct invalid-entry, alias, symlink, secrecy, count and exact-output contracts and shared helpers. Each file remains below 500; cache_prune.rs has 463 nonblank lines. No dependency or feature was added.
+
+Retained final-source evidence in [the build record](0163-build.md) includes 20 default-cache and five status cases, strict Clippy, policy, formatting, ratchet, settings, pages and ticket checks. Main's intervening changes were queue and preparation records. Integration adds no runtime change to the reviewed source, so those focused results remain applicable. A full functional integration checkpoint remains assigned to the related-ticket batch; no full port run, stress campaign or provider call was added for this landing.
+
+Register 32 is fixed in code. Register 34's drift statement and register 39's disclosure defect are fixed in pages. The usage-lock page issue also closes, but register 31's unbounded runtime wait stays to do. Folder-writer authority is documented; register 40's warning and integrity work remain open. Other findings routed to this family remain open unless their actual outcome is separately proved.
+
+Preparation helped identify the alias fixture, current status fields, benchmark pin and file holds. It missed file headroom, isolation of malformed fixtures, the C JSON constructor and the check-to-open boundary. These concrete misses feed the next cache and settings preparation. The preparation count is not a product completion count.

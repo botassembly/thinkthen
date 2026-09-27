@@ -35,7 +35,7 @@ Every result is compact and sits on one line, so one answer is also one record f
 - `question` names the question kind and the text the model received. `filter` and `rank` ask a `decide` question, so their `question.verb` is `decide`.
 - `answer` is everything the backend said, in thinkthen's own words. No vendor field name appears in it.
 - `threshold` is a number for a single cut, the string `"LOW:HIGH"` for a band, and `null` when none applies. `decide` never prints `null` here, because a rule always exists and the default is the cut of one half. [threshold.md](threshold.md) gives the rule.
-- `meta` carries the run. `usage` may be absent when the backend reports none. `profile_warning` appears only for a calibration mismatch. The other fields are always present. Not built yet, by ADR 0048 item 9: `batch` and `context_sha256` may be absent too, and item 8's `batch_warning` appears only for a batch-setting mismatch.
+- `meta` carries the run. `usage` may be absent when the backend reports none. `profile_warning` appears only for a calibration mismatch. `batch` appears under `--details` for a batch of two or more records, or a split half. The other fields are always present. Not built yet, by ADR 0048 item 9: `context_sha256` may be absent too, and item 8's `batch_warning` appears only for a batch-setting mismatch.
 
 ## A detailed result keeps everything
 
@@ -105,9 +105,15 @@ ADR 0032 adds `meta.profile_warning` only when a saved calibration name and the 
 | `requests` | The recording digests of the logical requests that produced the result, in construction order. Retries add nothing, and equal logical requests keep separate positions |
 | `failed_questions` | The number of failed logical questions in this result. Always present, including zero |
 | `profile_warning` | The saved calibration profile and selected run profile when both exist and differ. Absent otherwise |
-| `batch` | Not built yet, by ADR 0048 item 9: the batch this row rode in, with `setting`, `records`, `position`, `closed`, and the batch's own `usage` and `requests_sent`. Absent for a batch of one record with no context |
+| `batch` | The batch this row rode in, with `setting`, `records`, one-based `position`, `closed` (`content`, `size`, `limit`, `pause` or `end`), and the batch's whole `usage` when reported and `requests_sent`. Absent for a batch of one record with no context. A row answered by a half of a refused batch also has `split:true`, even when that half holds one record. The half's counts and position describe that half; `closed` keeps the whole batch's reason |
 | `batch_warning` | Not built yet, by ADR 0048 item 8: the file's tuned batch setting and the running one when they differ, as `{"tuned_for":1,"running":"max"}`. Absent otherwise |
 | `context_sha256` | Not built yet, by ADR 0048 item 11: the SHA-256 of the `--context` file's bytes. Absent without a context |
+
+## The run facts line
+
+On an asking command, `--facts` prints one compact `thinkthen.run/1` JSON object as the last standard-error line. Without the flag, a finished run stays silent there. The line follows a stop diagnostic and any usage-counter warning, and precedes a stopping signal's re-raise. `records` counts finished input records, including filtered rows and rows dropped by `rank --top`; a one-document success and one finished `find` or `relate` set count one, while a dry run counts zero. `requests_sent`, `retries`, and `cache_answers` come from this process's counters. `seconds` is elapsed wall time in seconds, rounded to three decimals. `input_tokens` and `output_tokens` appear only if at least one live reply arrived and every live reply reported usage. `model` appears only if at least one reply arrived and all live or stored replies named the same model.
+
+A failed run adds `stopped` with `cause` and `retryable`, plus `at` when the stop line names a record. A signal stop has no `at`. `status` appears only for the `status` cause. The stable causes are `usage` for exit 2, `local` for exit 5, `no_key`, `transport`, `status`, `too_large`, `reply`, and `backend` for exit 4, `cancelled` for a stopping signal, and `defect` for exit 70. `too_large` covers status 413 and status 400 naming `max_tokens_exceeded`. Only `status` with 429, 500, 502, 503, 504, or 529 has `retryable:true`; transport has false because the request may have arrived. Exit 6 is a finished partial result and has no `stopped`.
 
 ## Compatibility
 

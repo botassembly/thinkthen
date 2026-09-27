@@ -152,9 +152,7 @@ where
             let (permit, key) = finish_or_cancel(permit, key())?;
             let (permit, answered) = finish_or_cancel(permit, send(&prepared, &key))?;
             let decoded = built_in::decode_observed(plan, &answered.body);
-            if let Some(tokens) = decoded.usage {
-                usage.tokens(tokens);
-            }
+            usage.live_reply(decoded.usage);
             let reply = match decoded.reply {
                 Ok(reply) => reply,
                 Err(error) => {
@@ -171,6 +169,7 @@ where
             (reply, false, answered.requests_sent)
         }
     };
+    usage.answered_by(reply.model());
     Ok(Answered {
         reply,
         replayed,
