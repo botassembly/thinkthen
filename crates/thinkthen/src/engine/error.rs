@@ -13,6 +13,7 @@ pub(crate) enum TransportKind {
     NameLookup,
     Refused,
     PrematureClose,
+    Tls,
     Other,
 }
 
