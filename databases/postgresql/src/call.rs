@@ -47,6 +47,21 @@ impl Refusal {
             self.message
         )
     }
+
+    /// A failed row carries only its public kind and fixed advice.
+    pub(crate) fn value(&self) -> Option<serde_json::Value> {
+        let message = match self.kind {
+            ErrorKind::Usage => {
+                "check the row's question and arguments, or raise the process request total when it is spent"
+            }
+            ErrorKind::Local => "check the named file and its permissions",
+            ErrorKind::Backend => "the backend did not answer; retry if allowed",
+            ErrorKind::Cancelled | ErrorKind::Deadline | ErrorKind::Defect => return None,
+        };
+        Some(
+            serde_json::json!({"status":"failed","error":{"kind":self.kind.name(),"message":message,"retryable":self.retryable}}),
+        )
+    }
 }
 
 impl From<Error> for Refusal {
@@ -130,15 +145,12 @@ impl Plan {
     }
 }
 
-/// Apply a plan to a seeded builder. The throttle passes only while this
-/// backend has no explicit throttle active, because 0077 refuses a second,
-/// different one in one process.
-fn apply(
-    plan: &Plan,
-    active_throttle: Option<u8>,
-    mut builder: EngineBuilder,
-) -> Result<EngineBuilder, Error> {
-    if let (Some(value), None) = (plan.throttle, active_throttle) {
+/// Apply a plan to a seeded builder. A requested throttle always reaches
+/// the public setter, which accepts the active width and refuses a change.
+fn apply(plan: &Plan, mut builder: EngineBuilder) -> Result<EngineBuilder, Error> {
+    if let Some(value) = plan.throttle {
+        // The public engine accepts an equal width and refuses a changed one.
+        // Apply even when a width is already active.
         builder = builder.throttle(value)?;
     }
     if let Some(value) = plan.max_requests {
@@ -169,7 +181,7 @@ fn engines() -> std::sync::MutexGuard<'static, Vec<(Plan, Engine)>> {
 /// Build an engine from the server's environment and the plan.
 fn build(plan: &Plan) -> Result<Engine, Error> {
     let active = std::num::NonZeroU8::new(ACTIVE_THROTTLE.load(Ordering::Acquire)).map(u8::from);
-    let engine = apply(plan, active, EngineBuilder::from_env()?)?.build()?;
+    let engine = apply(plan, EngineBuilder::from_env()?)?.build()?;
     if let (None, Some(value)) = (active, plan.throttle) {
         ACTIVE_THROTTLE.store(value, Ordering::Release);
     }
@@ -286,6 +298,14 @@ pub(crate) fn run<T: Send + 'static>(
     call: Call,
     work: impl FnOnce(&Engine, CallOptions<'_>) -> Result<T, Error> + Send + 'static,
 ) -> T {
+    run_result(call, work).or_raise()
+}
+
+/// Return row failures as typed data. Host cancel and deadline still raise.
+pub(crate) fn run_result<T: Send + 'static>(
+    call: Call,
+    work: impl FnOnce(&Engine, CallOptions<'_>) -> Result<T, Error> + Send + 'static,
+) -> Result<T, Refusal> {
     let held = engines()
         .iter()
         .find(|(plan, _)| *plan == call.plan)
@@ -321,7 +341,7 @@ pub(crate) fn run<T: Send + 'static>(
         }
     });
     match waited {
-        Waited::Done(result) => result.or_raise(),
+        Waited::Done(result) => result.map_err(Into::into),
         Waited::Lost => raise(lost()),
         Waited::Cancel => {
             token.cancel();
@@ -357,8 +377,13 @@ fn text_of(setting: &GucSetting<Option<CString>>) -> Option<String> {
 /// panics off the backend thread, so this runs first in every function.
 /// A set key refuses every call (decision 12), and names no value.
 pub(crate) fn read() -> Call {
+    read_result().or_raise()
+}
+
+/// Read settings without raising recoverable row failures.
+pub(crate) fn read_result() -> Result<Call, Refusal> {
     if text_of(&API_KEY).is_some_and(|key| !key.trim().is_empty()) {
-        raise(Refusal::usage(
+        return Err(Refusal::usage(
             "thinkthen.api_key is not read; unset it and set THINKTHEN_API_KEY in the server's environment",
         ));
     }
@@ -368,20 +393,28 @@ pub(crate) fn read() -> Call {
         MAX_REQUESTS.get(),
         cache.as_deref(),
         CACHE_BYTES.get(),
-    )
-    .or_raise();
+    )?;
+    let active = ACTIVE_THROTTLE.load(Ordering::Acquire);
+    if plan
+        .throttle
+        .is_some_and(|requested| active != 0 && requested != active)
+    {
+        return Err(Refusal::usage(format!(
+            "throttle {active} is already active for this process; use throttle {active} or drop the throttle argument"
+        )));
+    }
     // Ian's ruling of 2026-09-25: the backend's total, computed once per call.
     let total = u64::try_from(MAX_REQUESTS_TOTAL.get()).ok();
     let left = total.map(|total| total.saturating_sub(totals()[0]));
     if left == Some(0) {
-        raise(spent(total.unwrap_or_default()));
+        return Err(spent(total.unwrap_or_default()));
     }
-    Call {
+    Ok(Call {
         plan,
         deadline_ms: DEADLINE_MS.get(),
         total,
         left,
-    }
+    })
 }
 
 /// The one directory an unprivileged named-file read may touch.

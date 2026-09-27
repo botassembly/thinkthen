@@ -493,23 +493,80 @@ a_changed_limit_rebuilds() {
 	same "$(bcount)" 3
 }
 check a_changed_limit_rebuilds
-a_changed_throttle_follows_the_first() {
-	fresh arm/held
-	q -c "SET thinkthen.throttle = 8" -c "SELECT thinkthen_decide('$Q', 'x')" -c "SET thinkthen.throttle = 6" \
-		-c "SELECT thinkthen_decide('$Q', 'y')" -c "SELECT count(*) FROM thinkthen_decide('$Q', $(rows 64))" >"$RUN/held.out" &
-	HELD=$!
-	bwait 1
-	echo round >&7
-	bwait 2
-	echo round >&7
-	bwait 10
-	sleep 0.3
-	same "$(bcount)" 10
-	brelease
-	wait "$HELD"
-	same "$(cat "$RUN/held.out")" "$(printf 't\nt\n64')"
+a_changed_throttle_refuses() {
+    fresh generic
+    out=$(q -c '\set VERBOSITY verbose' -c "SET thinkthen.throttle = 8" \
+        -c "SELECT thinkthen_decide('$Q', 'first')" -c "SELECT thinkthen_decide('$Q', 'second')" \
+        -c "SET thinkthen.throttle = 6" -c "SELECT thinkthen_decide('$Q', 'third')")
+    has "$out" "throttle 8 is already active for this process; use throttle 8 or drop the throttle argument"
+    has "$out" "22023"
+    same "$(bcount)" 2
 }
-check a_changed_throttle_follows_the_first
+check a_changed_throttle_refuses
+try_details_keeps_later_rows() {
+    fresh generic
+    out=$(q -c "WITH rows(i,q,e) AS (VALUES (1, '$Q', 'first'), (2, '{broken', 'bad'), (3, '@missing-private-question.json', 'bad'), (4, '$Q', 'last')),
+        measured AS MATERIALIZED (SELECT i, thinkthen_try_details(q,e) AS v FROM rows)
+        SELECT i::text || ':' || coalesce(v->>'status', 'null') || ':' ||
+            coalesce(v->'error'->>'kind', 'ok') FROM measured ORDER BY i")
+    same "$out" "$(printf '1:answered:ok\n2:failed:usage\n3:failed:local\n4:answered:ok')"
+    same "$(bcount)" 2
+}
+check try_details_keeps_later_rows
+try_details_keeps_good_after_backend_failure() {
+    fresh generic
+    pg_stop
+    mkfifo "$RUN/proxy.in"
+    python3 ../sqlite/tests/conditional_backend.py "http://127.0.0.1:$BPORT/generic/v1" 'private evidence' \
+        <"$RUN/proxy.in" >"$RUN/proxy.out" 2>"$RUN/proxy.err" &
+    PROXYPID=$!
+    exec {PROXYFD}>"$RUN/proxy.in"
+    trap 'if [ -n "${PROXYPID:-}" ]; then printf "quit\n" >&"$PROXYFD"; wait "$PROXYPID" || true; fi' EXIT
+    for _ in $(seq 100); do [ -s "$RUN/proxy.out" ] && break; sleep 0.05; done
+    proxyport=$(head -1 "$RUN/proxy.out")
+    [ -n "$proxyport" ]
+    pg_start "http://127.0.0.1:$proxyport/v1" "$CACHEDIR"
+    out=$(q -c "WITH rows(i,q,e) AS (VALUES (1, '$Q', 'first'), (2, '$Q', 'private evidence'), (3, '$Q', 'last')),
+        measured AS MATERIALIZED (SELECT i, thinkthen_try_details(q,e) AS v FROM rows)
+        SELECT i::text || ':' || (v->>'status') || ':' || coalesce(v->'error'->>'kind','ok') || ':' ||
+            CASE WHEN v::text LIKE '%private evidence%' THEN 'leaked' ELSE 'safe' END FROM measured ORDER BY i")
+    same "$out" "$(printf '1:answered:ok:safe\n2:failed:backend:safe\n3:answered:ok:safe')"
+    same "$(bcount)" 2
+    printf 'quit\n' >&"$PROXYFD"
+    wait "$PROXYPID"
+    PROXYPID=
+    exec {PROXYFD}>&-
+    same "$(tail -1 "$RUN/proxy.out")" 3
+}
+check try_details_keeps_good_after_backend_failure
+try_details_null_skips_settings() {
+    fresh generic
+    out=$(q -c "SET thinkthen.api_key = 'planted-private-key'" \
+        -c "SELECT thinkthen_try_details(NULL, 'private evidence') IS NULL")
+    same "$out" t
+    same "$(bcount)" 0
+}
+check try_details_null_skips_settings
+try_details_keeps_unresolved_and_spent_total_distinct() {
+    fresh generic "thinkthen.max_requests_total = 1"
+    out=$(q -c "SELECT (v->>'status') || ':' || coalesce(v->'details'->>'value', 'null') || ':' || (v ? 'error')::text
+        FROM (SELECT thinkthen_try_details('{\"decide\":\"Is it red?\",\"threshold\":\"0:1\"}', 'red door') AS v) s" \
+        -c "SELECT (v->>'status') || ':' || (v->'error'->>'kind') || ':' || (v->'error'->>'message') || ':' || (v->'error'->>'retryable') || ':' || (v ? 'details')::text
+        FROM (SELECT thinkthen_try_details('$Q', 'second row') AS v) s")
+    same "$out" "$(printf 'answered:null:false\nfailed:usage:check the row\047s question and arguments, or raise the process request total when it is spent:false:false')"
+    same "$(bcount)" 1
+}
+check try_details_keeps_unresolved_and_spent_total_distinct
+try_details_keeps_native_timeout() {
+    fresh arm/held
+    held "SET statement_timeout = '300ms'; SELECT thinkthen_try_details('$Q', 'held')"
+    bwait 1
+    wait "$HELD" || true
+    has "$(cat "$RUN/held.out")" "canceling statement due to statement timeout"
+    brelease
+    same "$(bcount)" 1
+}
+check try_details_keeps_native_timeout
 a_role_limit_applies() {
 	fresh generic
 	q -c "CREATE ROLE tt_limited LOGIN" -c "GRANT EXECUTE ON FUNCTION thinkthen_decide(text, text[]) TO tt_limited" \
