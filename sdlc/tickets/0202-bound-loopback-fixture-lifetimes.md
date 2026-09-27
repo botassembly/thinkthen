@@ -6,7 +6,7 @@ opens: libraries/python/tests/test_release.py conformance/backend/src/listener.r
 
 # 0202: Bound loopback fixture lifetimes
 
-Status: landing review candidate on 2026-09-27. The accepted design received a fresh read-only Sol Medium review at `1046d8ca`; the runtime received fresh independent ACCEPT at `589a2f8c`. The full 1,024-file proof passed after merge. The surfaces rung failed one existing Python timing-window assertion twice; see the landing record. Owner: Codex. Ian can overturn the fixture retirement contract.
+Status: integration candidate with 0205 on 2026-09-27. The accepted design received a fresh read-only Sol Medium review at `1046d8ca`; the runtime received fresh independent ACCEPT at `589a2f8c`. The full 1,024-file proof passed after merge. Ian's later functional-gate ruling supersedes the Python statistical proof amendments below. Owner: Codex. Ian can overturn the fixture retirement contract.
 
 ## Outcome and authority
 
@@ -79,3 +79,9 @@ This authorizes only the claimed Python test. Do not change product Python, fixt
 ## Superseding Python controller amendment, 2026-09-27
 
 The parent-ready and zero-duration hypotheses failed their bounded proof and were reverted. The coordinator accepts the independently reviewed controlled-exit design in the0202 record. It supersedes the earlier probabilistic parent-release amendment. Keep the100 true windows within1,000 runs, both producers, one wake/outcome/done per child, and both released/leaked outcomes. Use a per-child mmap handshake, the existing observational trace and GIL-retaining ctypes.PyDLL operations to order wake before exit without a new product hook. Use a bounded GIL-retaining teardown hold in the fault-sensitive cohort and separate early/late release rows. All startup, wait, completion and cleanup pipe operations have deadlines; kill and reap the child before retiring the backend on failure. Do not reuse unbounded readline/stdout.read helpers here. Run a small smoke proof, then one full focused proof, and stop on failure. Acceptance requires an isolated missing-gate plant to fail under that exact controller, followed by fresh code review and the remaining Python surface steps. No product code or existing API changes. Root owns the requested root-cause analysis and must distinguish observed exposure loss from unproved scheduling mechanisms.
+
+## Ian's later functional-gate ruling, 2026-09-27
+
+This ruling supersedes both Python amendments and their statistical acceptance requirements above. The controller was never implemented. Ticket 0205 preserves the original exit-window and repeated-release campaigns behind an explicit opt-in profile and supplies bounded functional exit and release checks. Do not run another 1,000-child experiment or call its historical failures green. Its unexplained exposure decline remains recorded.
+
+The 80-cycle descriptor/thread retirement campaign also becomes explicitly ignored in ordinary Rust checks and is named by 0205's stress launcher. Keep its code and the previously passing 1,024-file full-suite evidence. The single final-owner port-close and late-owner drift proofs remain routine. Integration must run the previously failing command secrecy check at the unchanged 1,024-file limit, the relevant small fixture proofs, and the new routine Python checks. Reuse unchanged broader passes and obtain independent review of the integration before landing; no new stress or full-suite baseline is required.

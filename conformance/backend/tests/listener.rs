@@ -117,6 +117,7 @@ fn a_connection_past_the_script_answers_the_drift_status_after_a_drop_too() -> T
 
 #[cfg(target_os = "linux")]
 #[test]
+#[ignore = "opt-in resource churn; sdlc/scripts/test-stress --run"]
 fn retired_listeners_release_descriptors_and_threads_before_drop_returns() -> Tested {
     fn count(path: &str) -> Result<usize, Box<dyn Error>> {
         Ok(std::fs::read_dir(path)?.count())

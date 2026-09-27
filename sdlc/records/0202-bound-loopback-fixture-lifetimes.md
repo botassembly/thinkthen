@@ -1,6 +1,6 @@
 # Verify bounded loopback fixture lifetimes
 
-Status: landing review candidate on 2026-09-27, with one unresolved Python surface gate failure. Owner: Codex. Ian can overturn ticket 0202's fixture retirement contract.
+Status: integration candidate with 0205 on 2026-09-27. Historical Python statistical failures remain recorded; Ian has moved those campaigns outside ordinary acceptance. Owner: Codex. Ian can overturn ticket 0202's fixture retirement contract.
 
 Ticket 0202 follows the open file-limit issue, the red boundary proof at `e7e8cd77`, and the accepted design review in `sdlc/records/0202-design-review.md`. The old listener still accepted a connection after its final owner dropped. An isolated 80-cycle regression grew from 9 to 249 descriptors and from 7 to 247 tasks. A prior full backend run at soft nofile 1,024 passed 297 of 399 cases and failed 102 with `Too many open files`; raising the child limit to 4,096 passed while sampling 1,275 descriptors.
 
@@ -18,3 +18,9 @@ The Python gate remains unresolved. A valid temporary feedback-before-close chan
 ## Controlled exit proof amendment, 2026-09-27
 
 The parent-ready experiment found44/1,000 windows and the under-lock zero-duration experiment found48/1,000; both changes were reverted. The backend was rebuilt to the baseline artifact. A fresh design review of an explicit mmap/process handshake found two weaknesses: a teardown sleep could release the GIL and mask the planted fault, and backend helper reads were unbounded. The revised design uses GIL-retaining teardown, a separate released cohort, and bounded pipe/cleanup operations. A fresh read-only rereview returned ACCEPT, contingent on the same controller detecting the isolated missing-gate fault. The experiment and implementation remain pending. Details and reports are under target/codex-reviews/0202-controlled-exit/. The latest main merge retains the plan from main and measures the combined source ratchet; no runtime source changed during this merge.
+
+## Functional-gate integration, 2026-09-27
+
+Ian stopped the controlled-exit experiment and directed performance, saturation, churn and statistical campaigns out of routine checks. Ticket 0205 retains the original Python campaigns opt-in and adds bounded functional witnesses. The 80-cycle Rust resource campaign is now ignored in ordinary runs and remains available to the explicit stress launcher. No fixture runtime source changed in this amendment. Its single final-owner and late-client regressions remain routine.
+
+At 2:22 p.m. EDT, the coordinator reproduced the old fixture defect on 0205 core candidate `4be9b05b`: the 518-row command secrecy check failed at `secrecy.rs:357` with OS error 24, Too many open files, under the unchanged 1,024-file soft limit. Compilation took 3.68 seconds; the failing test reported 16.93 seconds, and its Cargo command took 17.04 seconds after 0.259 seconds of lock waiting. The log is `target/codex-audits/test-timing/logs/coordinator-secrecy-execution.log` in codex-2. This is a failed run, not a completed 518-case timing. It confirms that test selection alone cannot repair the listener lifetime. Integrating the already-reviewed 0202 runtime and checking the same retained functional case is the next proof. The earlier passing full 1,024-file run remains historical evidence; no campaign was rerun for this amendment.
