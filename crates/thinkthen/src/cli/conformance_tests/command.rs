@@ -256,8 +256,10 @@ fn form_child() {
 }
 
 /// Ask a valid question at an address the rules cannot prove is this machine,
-/// where a missing key still refuses, and report what went out. The counting
-/// listener on loopback sees any request that strays to it.
+/// where a missing key still refuses, and report what went out. Nothing listens
+/// at that address, so the counting listener cannot see a stray request. The
+/// pinned `says` line catches one, because a send would print a connection
+/// failure in place of the missing-key sentence.
 fn probe() {
     let (url, count) = counting();
     let url = url.replace("http://127.0.0.1", "https://127.0.0.2");
