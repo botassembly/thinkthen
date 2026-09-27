@@ -6,7 +6,7 @@ opens: libraries/python/tests/test_release.py conformance/backend/src/listener.r
 
 # 0202: Bound loopback fixture lifetimes
 
-Status: integration candidate with 0205 on 2026-09-27. The accepted design received a fresh read-only Sol Medium review at `1046d8ca`; the runtime received fresh independent ACCEPT at `589a2f8c`. The full 1,024-file proof passed after merge. Ian's later functional-gate ruling supersedes the Python statistical proof amendments below. Owner: Codex. Ian can overturn the fixture retirement contract.
+Status: verified for combined landing with 0205 on 2026-09-27. The accepted design received a fresh read-only Sol Medium review at `1046d8ca`; the runtime received fresh independent ACCEPT at `589a2f8c`. The full 1,024-file proof and the combined functional checks passed. The record names the final lint at `08a8f6f9` and retained validation. Ian's later functional-gate ruling supersedes the Python statistical proof amendments below. Owner: Codex. Ian can overturn the fixture retirement contract.
 
 ## Outcome and authority
 
