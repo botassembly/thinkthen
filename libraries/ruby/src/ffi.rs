@@ -310,10 +310,6 @@ fn default_engine(ruby: &Ruby) -> Result<EngineValue, Error> {
     })
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "magnus maps each Ruby argument to one parameter"
-)]
 fn new_engine(ruby: &Ruby, options: RHash) -> Result<EngineValue, Error> {
     fn read<T: TryConvert>(ruby: &Ruby, options: RHash, key: &str) -> Result<Option<T>, Error> {
         options
