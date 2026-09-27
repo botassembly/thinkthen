@@ -30,3 +30,8 @@ The 0156 PostgreSQL validation supplies a useful cost warning, not 0163 proof: `
 No new product choice is proposed. The builder merges shared pages second, leaves `engine/error.rs` and DuckDB implementation to their assigned lanes, refreshes the usage sentence after landed `83e3cf5c`, and confirms the pinned benchmark object remains readable. If the offline drift source is absent or a budget crosses the accepted stop rule, report the concrete evidence to the coordinator for routine resolution. Do not change the accepted outcome from an old line number or a held file.
 
 After 0163 builds, compare its `What the build taught us` and review findings with this note: did the literal alias fixture, current status shape, pinned drift source and file holds avoid rediscovery or rework; which fact was wrong or missing; and which focused check caught it? The coordinator can then update the next cache-related brief. Note length or a prepared-ticket count is not the measure.
+
+
+## Review and handoff
+
+Fresh independent preparation review accepted `c3c78f0b` after the two ownership corrections. The first pass missed a newly assigned `engine/error.rs` hold and treated shared pages as exclusively held. The current plan now states the shared library/database README exception explicitly, matching Ian's original handover. Source and fixture findings were accepted. The retained 0156 builder has started the cache scan and CLI slice in the accepted 0163 branch; no outcome is counted complete by this preparation. Compare its final build lessons against the four concrete predictions above.
