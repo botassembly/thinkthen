@@ -1,4 +1,4 @@
-Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review.
+Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review. Ticket 0169 (`sdlc/tickets/0169-a-signal-stops-the-command-plainly.md`) carries the stop line after Ctrl-C and the second-press escape.
 
 # Architect review 01: `filter` and stream processing
 

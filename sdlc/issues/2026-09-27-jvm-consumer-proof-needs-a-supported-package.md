@@ -33,3 +33,11 @@ Java 21 FFM is a preview; behavior on final-FFM JDKs is untested. Concurrent eng
 Ticket 0166 landed the engine fix. A parent-verified rerun at pin `22f36d0006fd34e7390a71d15c0458e493f3e844` (header `7fdca29a...`) rebuilt the native library and all three JARs and passed the complete copied gate with exit 0: strict held scalar returns `THINKTHEN_ECANCELLED` with untouched seeded native outputs, fresh-token recovery passes, held bulk returns 5, held deadline returns 3, and all 35 outer plus 33 child receipts match. Evidence: `post-fix/POST-FIX-REPORT.md`, worker gate `post-fix/logs/gate-20260927T130613Z`, parent rerun `post-fix/logs/gate-20260927T132352Z`. Integrators carry the strict-pass expectations into the product ticket and rerun on its final release pin.
 
 Remaining integration work is unchanged: integration ticket, JAR and native-archive distribution decisions, final-release rebuild, and the preview-FFM/carrier/close/one-MiB limits recorded in the handoff.
+
+## Dependencies and installation (Beelink, recorded 2026-09-27)
+
+Host: Ubuntu 24.04.3 LTS, kernel 6.17.0-35-generic, glibc 2.39, x86_64. JDK: `openjdk-21-jdk` 21.0.12.1 via apt (Ian installed). Kotlin 2.4.20 and Scala 3.9.0 from upstream archives unpacked at `~/.local/opt` with `~/.local/bin` links; archive SHA-256 hashes recorded in the experiment's `inputs/toolchain.json`. FFM is preview in Java 21: every compile and run carries `--enable-preview` and `--enable-native-access`. Native rebuild needs Rust 1.95.0 with an offline Cargo registry copy, clang 18.1.3, bwrap, Python 3.12. The package ships as JARs plus a matching native C shared archive; the FFM loader cannot use a static C archive.
+
+## CI and release direction (Ian, 2026-09-27)
+
+Each port must state its dependencies and how they were installed, and the product must also build and release on GitHub Actions `ubuntu-24.04` runners (JDK 21 is preinstalled; pin Kotlin and Scala versions in the workflow), publish native archives through GitHub Releases, and distribute JARs directly or through the JVM repository the queue owner chooses. The queue owner owns the workflow, release, and publishing tickets; nothing is published from the experiments.

@@ -1,6 +1,6 @@
 # `relate.md` should say its edges come from the model's knowledge
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 10, finding 5. Owner: backlog ticket R8, the recognize manual, or H3 if H3 lands first. Blocks 0.1 under goal 4, honest docs. The `recognize` half is tracked by recognize design section 5 and ticket R5.
+Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 10, finding 5. Ticket 0167 carries the sentence. Owner: backlog ticket R8, the recognize manual, or H3 if H3 lands first. Blocks 0.1 under goal 4, honest docs. The `recognize` half is tracked by recognize design section 5 and ticket R5.
 
 ## What happens
 
