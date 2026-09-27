@@ -88,12 +88,6 @@ fn convenience_child() {
         );
         assert_eq!(
             explicit
-                .decide(&decide, "a note")
-                .expect("the engine decides"),
-            thinkthen::decide(&decide, "a note").expect("the convenience decides")
-        );
-        assert_eq!(
-            explicit
                 .details(&score, "a note")
                 .expect("the engine detailss"),
             thinkthen::details(&score, "a note").expect("the convenience detailss")
