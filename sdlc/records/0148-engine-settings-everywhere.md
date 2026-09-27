@@ -1,6 +1,6 @@
 # 0148 engine settings: preflight
 
-Status: design amendment drafted on 2026-09-27 at ticket branch `7089d431`, merged with main `8ff1f0fe`. No runtime file changed and no gate run. Fresh design review remains before a builder starts.
+Status: design amendment accepted on 2026-09-27. It started at ticket branch `7089d431`, merged with main `8ff1f0fe`. No runtime file changed and no runtime gate ran. A fresh read-only reviewer accepted corrected amendment `2d5c842a`; the coordinator accepts it within the authorized settings outcome. The exact additional file claim must land before the builder starts.
 
 ## Findings
 
@@ -14,4 +14,4 @@ Status: design amendment drafted on 2026-09-27 at ticket branch `7089d431`, merg
 
 Read-only code and specification checks above confirm the issue. No loopback run was needed before the builder creates `replay`, and no paid call is authorized. `git diff --check` passed and `sdlc/scripts/tickets` reported zero evidence failures. The fresh reviewer should inspect the exact new `opens` entries, the old-folder rule, the copied-fixture regression, the error wording, and the 185-line edge-test budget. A builder then follows the accepted ticket and the amendment. Ian can overturn the library wording or added test budget.
 
-The fresh amendment review found that a loopback count could not observe the unchanged demo 27 fixture’s saved remote address. The corrected proof keeps that fixture unchanged, checks a no-key replay hit and an exact local legacy-folder miss, and verifies marker and entry state. The existing shared settings case owns the counted loopback no-send proof. A fresh bounded rereview follows this correction.
+The fresh amendment review found that a loopback count could not observe the unchanged demo 27 fixture’s saved remote address. The corrected proof keeps that fixture unchanged, checks a no-key replay hit and an exact local legacy-folder miss, and verifies marker and entry state. The existing shared settings case owns the counted loopback no-send proof. A fresh bounded rereview returned ACCEPT at `2d5c842a`. It checked the separate legacy-folder and counted loopback proof, retained identity rules, exact added file scope, unchanged engine, and the 185-line edge-test budget.
