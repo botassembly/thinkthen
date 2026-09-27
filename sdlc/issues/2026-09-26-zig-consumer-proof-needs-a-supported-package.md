@@ -44,3 +44,15 @@ An earlier intermediate static run accepted 33 rather than 34 requests without i
 The first-stage proof remains intact at the experiment root. It tested source `873b04abdeca56bcfc5fcc15b99665b7c32ee116` with a 14-line direct example, an 81-line wrapper, ten independently counted requests and deliberately faulty ordering/message-lifetime copies. Its `FINDINGS.md`, `REVIEW.md` and `HARVEST.md` describe that narrower result. Experiment 205 supplied earlier stand-in lessons; ADR 0037 and ticket 0094 establish the landed C interface.
 
 JVM and Go remain future experiments. Both must account for same-native-thread C error retrieval when their runtimes schedule calls. No experiment number was claimed for either.
+
+## Post-fix verification (2026-09-27)
+
+Ticket 0166 landed the engine fix. A parent-verified rerun at pin `22f36d0006fd34e7390a71d15c0458e493f3e844` (header `7fdca29a...`) rebuilt the native library offline and passed the complete copied gate with exit 0 across two shared and two static-C isolated consumers: held scalar returns cancellation code 5 with untouched outputs, held bulk 5, held deadline 3, fresh-token recovery passes, and a direct-C ctypes proof (`STRICT_C_CANCEL_PASS`) shows code 5, drained accepted request, spent-token refusal, and exact counted states. Evidence: `post-fix/POST-FIX-REPORT.md`, worker gate `post-fix/logs/gate-20260927T140739Z`, parent rerun `post-fix/logs/gate-20260927T142411Z`. The recognize schedule now sends two requests per name on main; consumers must re-derive counts per pin. Integrators carry the strict-pass expectations into the product ticket and rerun on its final release pin.
+
+## Dependencies and installation (Beelink, recorded 2026-09-27)
+
+Host: Ubuntu 24.04.3 LTS, kernel 6.17.0-35-generic, glibc 2.39, x86_64. Zig 0.15.2 at `~/.local/opt/zig-0.15.2` (upstream tarball, pre-existing). Native rebuild needs Rust 1.95.0 with an offline Cargo registry copy. Consumers linking C need clang 18.1.3 (ASan checks) and bwrap for namespace-isolated installs; fixtures are Python 3.12. The package ships as a Zig source archive plus a separate matching native C archive with an explicit absolute path option; no automatic artifact download.
+
+## CI and release direction (Ian, 2026-09-27)
+
+Each port must state its dependencies and how they were installed, and the product must also build and release on GitHub Actions `ubuntu-24.04` runners (x86_64 matches this rehearsal; Zig and the pinned Go/JDK/Kotlin/Scala versions must be fetched or pinned in the workflow), publish native archives through GitHub Releases, and let consumers install directly or through the proper language repository. The queue owner owns the workflow, release, and publishing tickets; nothing is published from the experiments.
