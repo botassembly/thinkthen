@@ -10,7 +10,7 @@ cd -- "$(dirname -- "$0")"
 # The query rides in every record, so the question stays fixed for the run and
 # one run is one measurement. The page builds the same records the same way.
 jq -c '{query: "Why is signing in slow or failing?", path, passage: .body}' hits.jsonl |
-	thinkthen rank 'The passage answers the query.' \
+	thinkthen rank 'The passage answers the query.' --batch 1 \
 		--jsonl --field /query --field /passage \
 		--cache recording/ | jq -r '.path'
 

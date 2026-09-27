@@ -73,35 +73,12 @@ def verbs_answer_through_the_generic_arm():
 
 
 @case
-def r3_11_details_read_null_for_an_absent_member():
-    got = run_generic(
-        [
-            "SELECT d.probability, d.answer, d.value, d.nearest, d.requests_sent FROM (SELECT thinkthen_details('{\"score\": \"How strong?\", \"levels\": [\"weak\", \"strong\"]}', 'claim') AS d)",
-            "SELECT d.probability, d.answer, d.value FROM (SELECT thinkthen_details('Is it a refund?', 'refund now') AS d)",
-        ]
-    )
-    probability, answer, value, nearest, sent = rows(got[0])[0]
-    expect((probability, answer), (None, None), "score details carry no yes probability or answer word")
-    expect(nearest, "weak", "score details name the nearest level")
-    expect(sent, 1, "requests_sent")
-    expect(json.loads(value) is not None, True, "score details fill value")
-    expect(tuple(rows(got[1])[0]), (0.9, "yes", '"yes"'), "decide details")
-    filled = run_generic(
-        [
-            "SELECT (thinkthen_details('{\"choose\": \"Which team?\", \"options\": [\"billing\", \"shipping\"]}', 'charged twice')).value",
-            "SELECT (thinkthen_details('{\"tag\": \"Which topics?\", \"labels\": [\"billing\", \"shipping\"]}', 'charged twice')).value",
-        ]
-    )
-    expect([column(result) for result in filled], [['"billing"'], ['["billing","shipping"]']], "choose and tag details fill value")
-
-
-@case
 def probability_equals_details_with_no_added_send():
     with Backend() as backend:
         got = run(
             [
                 "SELECT thinkthen_probability('Is it a refund?', 'refund now')",
-                "SELECT (thinkthen_details('Is it a refund?', 'refund now')).probability",
+                "SELECT CAST(thinkthen_details('Is it a refund?', 'refund now') ->> '$.answer.probability' AS DOUBLE)",
             ],
             backend.base(),
         )
@@ -112,11 +89,11 @@ def probability_equals_details_with_no_added_send():
 @case
 def case_41_offsets_count_code_points():
     text = "Le café 😀 Maria Chen arrived."
-    got = run_generic([f"SELECT r.name, r.start, r.\"end\" FROM (SELECT unnest(thinkthen_recognize('{text}', ['person'])) AS r)"])
-    # The generic arm names the whole text. Its end is 29 in code points
-    # and would be 33 in UTF-8 bytes.
-    expect(rows(got[0]), [[text, 0, 29]], "names and code-point offsets")
-    for name, start, end in rows(got[0]):
+    got = run_generic([f"SELECT r.text, r.start, r.\"end\", r.length FROM (SELECT unnest(thinkthen_recognize('{text}', ['person'])) AS r)"])
+    # The generic arm names the text's last piece. Its start is 21 and its
+    # end 29 in code points, and they would be 25 and 33 in UTF-8 bytes.
+    expect(rows(got[0]), [["arrived.", 21, 29, 8]], "names and code-point offsets")
+    for name, start, end, _ in rows(got[0]):
         expect(text[start:end], name, "a recognized name sits at its code-point offsets")
 
 
@@ -222,7 +199,7 @@ def secrecy_no_key_or_credential_in_any_message():
         answered = run(
             [
                 *CALLS,
-                "SELECT d.* FROM (SELECT thinkthen_details('Is it a refund?', 'refund now') AS d)",
+                "SELECT thinkthen_details('Is it a refund?', 'refund now')",
                 "SELECT thinkthen_decide('{\"decide\": \"Is it?\", \"threshold\": 2}', 'a')",
                 f"SELECT thinkthen_decide('@{folder}/missing.json', 'a')",
                 f"SELECT * FROM thinkthen_relate('SELECT 1 AS id, ''a'' AS name', '@{folder}/missing.json')",

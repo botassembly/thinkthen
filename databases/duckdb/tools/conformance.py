@@ -12,6 +12,7 @@ plants a wrong answer through it.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -25,16 +26,12 @@ CASES = Path(os.environ.get("THINKTHEN_CONFORMANCE_CASES", ROOT.parent.parent / 
 
 # The one closed list of reasons a case does not run here.
 NOT_RUN = {
-    "find": "SQL finds with ORDER BY and LIMIT over decide, so the find wire question never goes out",
-    "on": "main's public API refuses `on` in a library question set, so SQL passes each record whole",
+    "find": "no SQL find function yet",
 }
 
 
 def reason(case: dict) -> str | None:
-    if case["verb"] == "find":
-        return NOT_RUN[case["verb"]]
-    members = case.get("question_set", {}).get("questions", {}).values()
-    return NOT_RUN["on"] if any("on" in member for member in members) else None
+    return NOT_RUN.get(case["verb"])
 
 
 def quoted(text: str) -> str:
@@ -53,14 +50,30 @@ def evidence(case: dict) -> list[str]:
     return [exchange["evidence"] for exchange in case["exchanges"]]
 
 
+FIELDS = ("model", "question_sha256", "requests", "usage", "requests_sent", "cached")
+CANONICAL = "https://api.typesafe.ai/v1/systemone"
+
+
+def digest(url: str, request: str) -> str:
+    return hashlib.sha256(f"systemone\n{url}\n{request}".encode()).hexdigest()
+
+
 def single(case: dict, base: str) -> list:
-    """decide, choose, tag, and score: the value `thinkthen_details` reads."""
+    """decide, choose, tag, and score: the whole line `thinkthen_details` returns."""
     question = quoted(json.dumps(case["question"]))
-    table = values(evidence(case))
-    got = run([f"SELECT (thinkthen_details({question}, x)).value FROM {table} ORDER BY i"], base)
-    answers = [json.loads(value) for (value,) in rows(got[0])]
-    words = {"yes": True, "no": False, "unsure": None}
-    return [words.get(answer, answer) if isinstance(answer, str) else answer for answer in answers]
+    got = run([f"SELECT thinkthen_details({question}, x) FROM {values(evidence(case))} ORDER BY i"], base)
+    lines = [json.loads(line) for (line,) in rows(got[0])]
+    return [{"bare": line["value"], "answer": line["answer"], "url": line["meta"]["url"]} | {name: line["meta"].get(name, "absent") for name in FIELDS} for line in lines]
+
+
+def single_wanted(case: dict, base: str) -> list:
+    served = base + "/systemone"
+    renamed = {digest(CANONICAL, one["request"]): digest(served, one["request"]) for one in case["exchanges"]}
+    wanted = []
+    for answer in case["expect"]["success"]["answers"]:
+        details = answer["details"] | {"requests": [renamed[held] for held in answer["details"]["requests"]]}
+        wanted.append({"bare": answer["bare"], "answer": details["answer"], "url": served} | {name: details.get(name, "absent") for name in FIELDS})
+    return wanted
 
 
 def decide(case: dict, base: str) -> list:
@@ -83,13 +96,11 @@ def ranked(case: dict, base: str) -> list:
 
 
 def record(case: dict) -> list[str]:
-    """The records an annotate case reads: one per exchange, or one JSON
-    record whose `on` pointers select each group's evidence."""
-    members = case["question_set"]["questions"]
-    pointers = [member.get("on") for member in members.values()]
-    if not any(pointers):
-        return list(dict.fromkeys(evidence(case)))
-    return [json.dumps({pointer.lstrip("/"): text for pointer, text in zip(pointers, evidence(case), strict=True)})]
+    """The records an annotate case reads: its one JSON record, whose parts
+    the set's `on` pointers select, or one per distinct exchange."""
+    if "record" in case:
+        return [json.dumps(case["record"])]
+    return list(dict.fromkeys(evidence(case)))
 
 
 def annotated(case: dict, base: str) -> list:
@@ -125,8 +136,8 @@ def relations_wanted(case: dict) -> list:
     return [
         {
             "relation": found["relation"],
-            "source": [found["source"]["name"], found["source"]["kind"]],
-            "target": [found["target"]["name"], found["target"]["kind"]],
+            "source": [found["source"]["text"], found["source"]["kind"]],
+            "target": [found["target"]["text"], found["target"]["kind"]],
             "probability": found["probability"],
         }
         for found in expected(case)[0].get("relations") or []
@@ -199,9 +210,7 @@ def check(case: dict) -> str | None:
         base = backend.base(f"case/{case['id']}")
         success = case["expect"]["success"]
         kind = success["kind"]
-        if "counters" in success:
-            got, wanted = counters(case, base), success["counters"]
-        elif kind == "relate":
+        if kind == "relate":
             got, wanted = related(case, base), expected(case)[0]
         elif kind == "recognize":
             got, wanted = relations(case, base), relations_wanted(case)
@@ -214,7 +223,11 @@ def check(case: dict) -> str | None:
         elif kind == "decide_many":
             got, wanted = decide(case, base), expected(case)
         elif kind == "single":
-            got, wanted = single(case, base), expected(case)
+            pairs = zip(single(case, base), single_wanted(case, base), strict=True)
+            why = next((f"{name}: wanted {one[name]!r}, got {other[name]!r}" for other, one in pairs for name in one if one[name] != other[name]), None)
+            if why or "counters" not in success:
+                return why
+            got, wanted = counters(case, base), success["counters"]  # last, on a cache folder of their own
         else:
             raise LookupError(f"no runner for the kind {kind!r}")
         return None if got == wanted else f"wanted {wanted!r}, got {got!r}"

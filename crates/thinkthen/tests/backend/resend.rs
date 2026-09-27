@@ -11,7 +11,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
-use crate::harness::{Canned, Listener, spawn};
+use crate::harness::{Canned, Listener, spawn_one as spawn};
 use crate::support::digest;
 
 /// The key every case sends, which no output may carry.

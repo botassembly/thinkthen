@@ -78,6 +78,14 @@ pub fn entry() -> ExitCode {
         Ok(environment) => environment,
         Err(failure) => return failure::report(&failure, stderr.lock()),
     };
+    if environment.config().shared() {
+        let mut writer = stderr.lock();
+        let _unwritten = writeln!(
+            writer,
+            "thinkthen: the configuration file is writable by another user; it decides where the key and evidence go"
+        )
+        .and_then(|()| writer.flush());
+    }
     let activation = match interrupt::activate(&mut environment) {
         Ok(activation) => activation,
         Err(failure) => return failure::report(&failure, stderr.lock()),
@@ -99,13 +107,15 @@ pub fn entry() -> ExitCode {
 }
 
 fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitCode, Failure> {
+    // A day bounds the timeout, because the HTTP client adds it to the clock
+    // and a larger number can overflow there.
     if cli
         .command
         .as_ref()
-        .is_some_and(|command| command.timeout() == 0)
+        .is_some_and(|command| !(1..=86_400).contains(&command.timeout()))
     {
         return Err(Failure::Usage(
-            "--timeout takes a whole number of seconds greater than zero",
+            "--timeout takes a whole number of seconds from 1 to 86400",
         ));
     }
     if let Some(command) = cli.command.as_ref().filter(|command| command.reads_input()) {

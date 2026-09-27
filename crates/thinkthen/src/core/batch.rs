@@ -1,16 +1,12 @@
 //! Batches: runs of consecutive records that share one request, by ADR 0048
 //! items 1 and 2.
 //!
-//! A batch without a context sends `{"records":[…]}` as its evidence and one
-//! quoted question per distinct record. A batch of one distinct record without
+//! A batch of decide questions without a context sends `QUOTED` as its
+//! evidence, by ADR 0055, and other kinds send `{"records":[…]}`. Each distinct
+//! record gets one quoted question. A batch of one distinct record without
 //! a context sends today's request of that record, byte for byte. The batcher
 //! keeps running byte counts, so it encodes each record once and each batch
 //! once, and it checks every closed body against those counts.
-
-#![cfg_attr(
-    not(test),
-    expect(dead_code, reason = "ticket B4 puts batches on the command")
-)]
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -32,11 +28,39 @@ use crate::core::text::{Evidence, QuestionText};
 /// A record closes its batch when its content hash is 0 mod this.
 const CUT: u64 = 4_096;
 
+/// A batch closes when it holds this many records, repeats included.
+const MEMBERS: usize = 4_096;
+
+/// The evidence of a batch of decide questions without a context, by ADR 0055.
+const QUOTED: &str = "Each question quotes the text it asks about.";
+
 /// How many records a batch may hold: as many as fit, or at most `N`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Setting {
     Max,
     Records(NonZeroUsize),
+}
+
+impl Setting {
+    /// `max`, or a decimal whole number of at least 1, and nothing else.
+    pub(crate) fn parse(text: &str) -> Option<Self> {
+        if text == "max" {
+            return Some(Self::Max);
+        }
+        text.bytes()
+            .all(|byte| byte.is_ascii_digit())
+            .then(|| text.parse().ok().map(Self::Records))
+            .flatten()
+    }
+
+    /// A question file's `batch`: the string `max` or a whole number of at least 1.
+    pub(crate) fn of_json(value: &Json) -> Option<Self> {
+        match value {
+            Json::String(text) if text == "max" => Some(Self::Max),
+            Json::Number(number) => Self::parse(&number.to_string()),
+            _ => None,
+        }
+    }
 }
 
 /// One record as a batch reads it: today's evidence for a batch of one, and
@@ -52,6 +76,7 @@ pub(crate) enum Closed {
     Content,
     Size,
     Limit,
+    Pause,
     End,
 }
 
@@ -113,9 +138,11 @@ pub(crate) struct Batcher {
     text: Option<String>,
     size: Option<usize>,
     context: Option<Evidence>,
+    /// The batched evidence: the context, `QUOTED`, or `None` for the records' list.
+    shared: Option<Evidence>,
     /// The batched body's bytes with no record in it.
     skeleton: usize,
-    /// The bytes of `{"records":[]}`, or of the context.
+    /// The bytes of `{"records":[]}`, or of the shared evidence.
     evidence: usize,
     open: Open,
 }
@@ -152,8 +179,13 @@ impl Batcher {
             Setting::Max => None,
             Setting::Records(most) => Some(most.get()),
         };
-        let evidence = match &context {
-            Some(context) => context.as_text().map_err(|_| defect())?.len(),
+        let shared = match (&context, &question) {
+            (Some(context), _) => Some(context.clone()),
+            (None, Question::Decide { .. }) => Some(Evidence::new(QUOTED).map_err(|_| defect())?),
+            (None, _) => None,
+        };
+        let evidence = match &shared {
+            Some(shared) => shared.as_text().map_err(|_| defect())?.len(),
             None => json_line(&records(Vec::new())).map_err(|_| defect())?.len(),
         };
         let mut batcher = Self {
@@ -163,6 +195,7 @@ impl Batcher {
             text,
             size,
             context,
+            shared,
             skeleton: 0,
             evidence,
             open: Open::default(),
@@ -211,14 +244,25 @@ impl Batcher {
             closed.push(self.close(Closed::Content)?);
         } else if self.size == Some(self.open.members.len()) {
             closed.push(self.close(Closed::Size)?);
+        } else if self.open.members.len() == MEMBERS {
+            closed.push(self.close(Closed::Limit)?);
         }
         Ok(())
     }
 
     /// Close the open batch at the end of input, if it holds a record.
     pub(crate) fn finish(&mut self) -> Result<Option<Batch>, BatchError> {
+        self.close_open(Closed::End)
+    }
+
+    /// Close the open batch because input paused, if it holds a record.
+    pub(crate) fn pause(&mut self) -> Result<Option<Batch>, BatchError> {
+        self.close_open(Closed::Pause)
+    }
+
+    fn close_open(&mut self, closed: Closed) -> Result<Option<Batch>, BatchError> {
         (!self.open.members.is_empty())
-            .then(|| self.close(Closed::End))
+            .then(|| self.close(closed))
             .transpose()
     }
 
@@ -271,10 +315,10 @@ impl Batcher {
             .is_none()
     }
 
-    /// The batched evidence's bytes: the context, or the records' list with
-    /// `lines` bytes of records and commas.
+    /// The batched evidence's bytes: the shared evidence, or the records' list
+    /// with `lines` bytes of records and commas.
     fn listed(&self, lines: usize) -> usize {
-        self.evidence + if self.context.is_some() { 0 } else { lines }
+        self.evidence + if self.shared.is_some() { 0 } else { lines }
     }
 
     /// The first limit these counts pass, with its value and the count.
@@ -378,11 +422,11 @@ impl Batcher {
         Ok((plan, body))
     }
 
-    /// The batched plan of these records: the context or their values as evidence.
+    /// The batched plan of these records: the shared evidence or their values.
     fn plan(&self, pairs: &[(&Json, &Question)]) -> Result<Plan, BatchError> {
         let values = || records(pairs.iter().map(|(value, _)| (*value).clone()).collect());
-        let evidence = match &self.context {
-            Some(context) => context.clone(),
+        let evidence = match &self.shared {
+            Some(shared) => shared.clone(),
             None => Evidence::structured(values()).map_err(|_| defect())?,
         };
         let questions = pairs

@@ -12,7 +12,7 @@ use crate::core::{
     json_line, recognize_sha256,
 };
 use crate::edge::{self, Environment};
-use crate::engine::facade::{Engine, Recognized, TokenInput};
+use crate::engine::facade::{Engine, MAX_TEXT_BYTES, Probabilities, Recognized};
 use crate::failure::Failure;
 use crate::profile;
 use crate::schedule;
@@ -28,17 +28,13 @@ struct Detailed<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     input: Option<Record>,
     question: &'a RecognizeSpec,
-    answer: StrengthInputs<'a>,
+    answer: &'a Probabilities,
     meta: Meta,
-}
-
-#[derive(Debug, Serialize)]
-struct StrengthInputs<'a> {
-    tokens: &'a [TokenInput],
 }
 
 struct Running<'a> {
     common: &'a Common,
+    max_text_bytes: usize,
     environment: &'a Environment,
     engine: Engine,
     mismatch: profile::Mismatch,
@@ -55,6 +51,7 @@ pub(crate) fn run(
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     let mut spec = config::settle(arguments)?;
+    let max_text_bytes = arguments.max_text_bytes.unwrap_or(MAX_TEXT_BYTES);
     let pointers = if arguments.common.field.is_empty() {
         spec.on.clone()
     } else {
@@ -67,10 +64,7 @@ pub(crate) fn run(
         crate::core::pointers(&fields, crate::core::Source::CommandLine, "field")?
     };
     if let Some(model) = arguments.common.model.as_deref() {
-        spec.model = Some(
-            ModelName::new(model)
-                .map_err(|_| Failure::Usage("--model is text, not white space"))?,
-        );
+        spec.model = Some(edge::model_flag(model)?);
     }
     let reading = Reading::new(arguments.common.framing(), pointers)?;
     schedule::jobs_of(arguments.common.jobs, reading.streams())?;
@@ -104,6 +98,7 @@ pub(crate) fn run(
                     .kinds
                     .first()
                     .is_some_and(|kind| kind.starts_with('@')),
+                max_text_bytes,
             ),
             &mut writer,
         );
@@ -111,6 +106,7 @@ pub(crate) fn run(
 
     let running = Running {
         common: &arguments.common,
+        max_text_bytes,
         environment,
         engine: asking::engine(
             &arguments.common,
@@ -166,10 +162,13 @@ fn judged_record(
 ) -> Result<schedule::Judged, Failure> {
     let evidence = reading.evidence(&record)?;
     let text = evidence.as_text()?.into_owned();
-    let recognition = running
-        .engine
-        .recognize(spec, &text, running.environment.cancel())?;
-    let (value, inputs, aggregate) = (recognition.value, recognition.inputs, recognition.meta);
+    let recognition = running.engine.recognize(
+        spec,
+        &text,
+        running.max_text_bytes,
+        running.environment.cancel(),
+    )?;
+    let (value, details, aggregate) = (recognition.value, recognition.details, recognition.meta);
     let line = if running.common.details {
         let model = aggregate
             .model
@@ -180,19 +179,15 @@ fn judged_record(
             running.engine.backend().url().clone(),
             model,
             aggregate.usage,
-            RequestMeta::new(
-                aggregate.replayed,
-                aggregate.requests_sent,
-                aggregate.requests,
-            )
-            .with_profile_warning(running.mismatch.warning()),
+            RequestMeta::new(!aggregate.live, aggregate.requests_sent, aggregate.requests)
+                .with_profile_warning(running.mismatch.warning()),
         );
         json_line(&Detailed {
             schema: crate::core::RESULT_SCHEMA,
             value: &value,
             input: streams.then_some(record),
             question: spec,
-            answer: StrengthInputs { tokens: &inputs },
+            answer: &details,
             meta,
         })?
     } else if streams {
@@ -203,7 +198,7 @@ fn judged_record(
     Ok(schedule::Judged {
         printed: Some(line),
         outcome: Outcome::Yes,
-        replayed: aggregate.replayed,
+        replayed: !aggregate.live,
         probability: None,
         partial_failure: false,
         profile_mismatch: running.mismatch.notice(),

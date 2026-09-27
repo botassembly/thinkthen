@@ -249,7 +249,7 @@ fn a_score_map_sends_descriptions_in_order_and_reports_the_names() {
         concat!(
             r#"{"state":"Refund me please.","model":"local-1","questions":{"q1":{"type":"score","#,
             r#""instructions":"how much disruption","#,
-            r#""criteria":[{"what":"No impact."},"Partial.",null]}}}"#,
+            r#""criteria":[{"what":"No impact."},"Partial.",{}]}}}"#,
         )
     );
     let printed = String::from_utf8_lossy(&output.stdout).into_owned();

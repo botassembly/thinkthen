@@ -169,6 +169,8 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<asked::Relate>()?;
     module.add_class::<asked::Entity>()?;
     module.add_class::<asked::Edge>()?;
+    module.add_class::<asked::RecognizedEntity>()?;
+    module.add_class::<asked::Relation>()?;
     module.add_class::<asked::Recognized>()?;
     module.add_class::<arrow::Arrow>()?;
     module.add_class::<input::Pandas>()?;

@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Oslo","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in a name? A name is the proper name of a particular person, organisation, place, product, work, event or other thing. Ordinary words, dates, numbers, and marks that are not part of a name's own spelling are OUT.\n\nSnippet: [[Oslo]]","criteria":{"BEGIN":"first token of a name of two or more tokens","INSIDE":"a middle token of a name","END":"last token of a name of two or more tokens","SINGLE":"a one-token name","OUT":"not part of a name"}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"SINGLE","confidence":0.81,"probabilities":{"SINGLE":0.85,"INSIDE":0.0,"OUT":0.15,"BEGIN":0.0,"END":0.0}}},"usage":{"input_tokens":446,"output_tokens":58}}
+}

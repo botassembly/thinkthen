@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":{"evidence":"At Abbey Road Studios George Martin recorded Revolver.","entities":[{"id":"i1","name":"Abbey Road Studios","kind":"place"},{"id":"i2","name":"George Martin","kind":"person"},{"id":"i3","name":"Revolver","kind":"album"}]},"model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the text itself state that i3 recorded at i1?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.12}},"usage":{"input_tokens":391,"output_tokens":21}}
+}

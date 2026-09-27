@@ -71,6 +71,7 @@ const QUESTION_KEYS = {
   score: ['levels'],
   tag: ['labels'],
   rank: ['top'],
+  find: ['none'],
   recognize: ['kinds', 'relations', 'threshold', 'relationThreshold'],
   relate: ['relations', 'either', 'threshold'],
 };
@@ -171,11 +172,12 @@ function invoke(engine, op, spec, payload, call) {
 function utf16(text) {
   const units = [0];
   for (const ch of text) units.push(units[units.length - 1] + ch.length);
-  return (held) => ({ ...held, start: units[held.start], end: units[held.end] });
+  // The spread keeps the engine's key order: text, start, end, length, kind, strength.
+  return (held) => ({ ...held, start: units[held.start], end: units[held.end], length: units[held.end] - units[held.start] });
 }
 
 function recognizeSpec(inputs) {
-  const kinds = inputs.kinds ?? ['person', 'organization', 'place'];
+  const kinds = inputs.kinds ?? [];
   const recognize = {
     kinds: Array.isArray(kinds) ? Object.fromEntries(kinds.map((kind) => [kind, null])) : kinds,
   };
@@ -211,8 +213,9 @@ function relateSpec(inputs) {
   return JSON.stringify(spec);
 }
 
+// A name recognize found carries text in place of name; name wins when both are there.
 function entityPair(held, at) {
-  const [name, kind] = Array.isArray(held) ? held : [held?.name, held?.kind];
+  const [name, kind] = Array.isArray(held) ? held : [held?.name ?? held?.text, held?.kind];
   if (typeof name !== 'string' || typeof kind !== 'string') throw usageError(`entity ${at} is { name, kind } or [name, kind]`);
   return [checkText(name, `entity ${at}`), checkText(kind, `entity ${at}`)];
 }
@@ -255,8 +258,10 @@ const verbs = {
     return inputs.top === undefined ? rows : rows.slice(0, inputs.top);
   },
   async find(engine, asked, units, last) {
-    const { call } = splitLast('find', last);
-    const found = await invoke(engine, 'find', textFrom('find', asked), checkRecords(units), call);
+    const { inputs, call } = splitLast('find', last);
+    if (has(inputs, 'none') && typeof inputs.none !== 'boolean') throw usageError('options.none is true or false');
+    const op = inputs.none ? 'find_none' : 'find';
+    const found = await invoke(engine, op, textFrom('find', asked), checkRecords(units), call);
     return found === null ? null : { index: found.index, unit: units[found.index], probability: found.probability };
   },
   async annotate(engine, set, records, last) {

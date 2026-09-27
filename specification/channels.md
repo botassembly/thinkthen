@@ -29,7 +29,7 @@ An unknown option is a usage error. So is a repeated single-value option, and so
 
 Everyday options are `--threshold`, `--details`, `--quiet`, `--raw`, `--input FILE`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field POINTER`, `--options POINTER`, `--top N`, `--none`, and `--dry-run`. The list names every one. Each verb's page says which of them it takes.
 
-Advanced options appear in the long help alone: `--model`, `--timeout`, `--max-retries`, `--record DIR`, `--replay DIR`, `--cache DIR`, and `--jobs N`. `--url` and `--profile FILE` also appear in short help. They decide where evidence goes and whether a request is locally refused before it goes there. Not built yet, by ADR 0048 item 3, 10 and 11: `--batch N`, `--facts`, and `--context FILE` join the advanced options.
+Advanced options appear in the long help alone: `--model`, `--timeout`, `--max-retries`, `--record DIR`, `--replay DIR`, `--cache DIR`, `--jobs N`, and `--batch N` on `decide`, `filter` and `rank`. `--url` and `--profile FILE` also appear in short help. They decide where evidence goes and whether a request is locally refused before it goes there. Not built yet, by ADR 0048 item 10 and 11: `--facts` and `--context FILE` join the advanced options.
 
 ## Standard input
 
@@ -60,7 +60,7 @@ A reader that closes the pipe early is no error. `thinkthen ... | head -1` ends 
 
 Codes 7 and 8 stay reserved. One function maps every error to its exit code. Exit 6 prints no diagnostic because the result marks each failed question.
 
-`recognize` exits 0 for every complete result, including no names. It never uses 1 or 3. A failed required detection, kind, or relation question exits 4 and prints no partial value for that input.
+`recognize` exits 0 for every complete result, including no names. It never uses 1 or 3. A failed step-1, step-2, or relation request exits 4 and prints no partial value for that input. A text over `--max-text-bytes`, 600,000 bytes by default, exits 2 before any request.
 
 `relate` exits 0 for a complete result, including no accepted edges. Recoverable mixed logical failure prints the buffered partial result and exits 6. If no valid logical answer remains, it exits 4 with no output. [relate.md](relate.md) fixes its aggregate behavior.
 
@@ -89,17 +89,17 @@ A gate is a command whose exit code decides whether something happens. Word the 
 The plan is one compact JSON document on standard output with four fields that are always present.
 
 ```json
-{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","request":{"state":"Help! My payouts have been failing for 3 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this convey urgency?"}}}}
+{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY","request":{"state":"Help! My payouts have been failing for 3 days.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does this convey urgency?"}}}}
 ```
 
 `request` is the body the adapter would send, as a JSON value and never as a string. `key_env` names the variable a key would be read from, so a script can prove that a key stays home. The plan never holds the value.
 
 The plan carries the evidence, because the evidence is what leaves the machine. A plan deserves the same care as the request itself. The plan never holds a key.
 
-In record mode `--dry-run` prints the plan for the first record and stops. It reads no further than that record, and the plan carries a fifth field, `input`, naming the framing and the pointers. When `filter` or `rank` took its framing by default, `input` also carries `"from":"default"`. Not built yet, by ADR 0048 item 13: it plans the first batch, reads until that batch closes, and never waits on a pause.
+In record mode `--dry-run` prints the plan for the first record and stops. It reads no further than that record, and the plan carries a fifth field, `input`, naming the framing and the pointers. When `filter` or `rank` took its framing by default, `input` also carries `"from":"default"`. On `decide`, `filter` and `rank` it plans the first batch instead. It reads until that batch closes and never waits on a pause. At `--batch 1` that batch is the first record.
 
 ```json
-{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Payouts have failed for 3 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this report a payment failure?"}}}}
+{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Payouts have failed for 3 days.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does this report a payment failure?"}}}}
 ```
 
 A run that read a question file carries one more field, `from`, between `input` and `request`. It names only settings the verb takes, and gives each source as `file`, `command line`, or `default`, so a confused user can see what won. A run with no question file carries no `from`, and [question-file.md](question-file.md) gives the rest.
@@ -110,6 +110,6 @@ A run that read a question file carries one more field, `from`, between `input` 
 
 `annotate --dry-run` also checks the saved file, and its `input` object names each question's pointers. [annotate.md](annotate.md) gives both.
 
-`recognize --dry-run` reports its counts and every exact split request for the first record under `thinkthen.recognize-plan/1`. [recognize.md](recognize.md) fixes that schema.
+`recognize --dry-run` reports its piece count and every exact step-1 request for the first record under `thinkthen.recognize-plan/2`. [recognize.md](recognize.md) fixes that schema.
 
 `relate --dry-run` reports the complete entity set, expanded relations, method and fallback choices, and every exact split request under `thinkthen.relate-plan/1`. It sends nothing and makes no token or price claim. [relate.md](relate.md) fixes that schema.

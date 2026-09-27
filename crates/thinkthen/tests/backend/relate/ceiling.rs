@@ -78,7 +78,7 @@ fn the_beatles_set_splits_at_the_hosted_address_and_nowhere_else() {
     assert_eq!(bytes(&elsewhere), [81_943, 161_252]);
     assert_eq!(
         elsewhere["requests"][1]["digest"],
-        "fd43d9c93746aa6a3e7dcbdbe0c0ba37cebc3aabae3e68e672d897c7d988b429"
+        "5fb2630212ea2666c1eff52b3baec2158c9e983c0e6974117fc59dbfe084d279"
     );
 }
 

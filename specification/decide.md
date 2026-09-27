@@ -14,6 +14,8 @@ One text document on standard input, read to its end as UTF-8. `--input FILE` re
 
 `QUESTION` is one argument. It states a fact that is true or false of the evidence. The model reads it as the question. A question that is empty or holds only white space is a usage error. `@FILE` reads the question from a question file instead, and [question-file.md](question-file.md) holds the grammar, the defaults, and the precedence. An empty document is a usage error, because a judgment about nothing is a mistake in the pipeline.
 
+By default a stream of records shares requests, filling each to the backend's limits. The evidence of a batch is one fixed sentence, and each record appears once, inside its own question. Every run moves a few answers, and batching moves a few more. ADR 0055 records local experiment 275, which asked four yes/no questions over the 306 Beatles songs. It ran each batched form three times on the same bytes and once on each of three shuffled record orders. The batched form stayed within 4 right answers across repeats and orders on every task. It never fell more than 3 right answers below one song a request. On "It appears on the album Abbey Road" it scored 283 to 287 right of 306, where one title a request scored 286. It sent 11,468 input tokens for the 306 titles, where one title a request sent 88,933. Its one measured loss came on "It was released before 1965", against the earlier batch form, which listed every record in the evidence. That form scored 276 to 283 right in the table's own order and 258 to 270 over shuffled orders. The quoted form scored 255 to 259, and one title a request scored 253. `--batch 1` asks one record a request and sends the requests the tool sent before batching.
+
 ## What it prints
 
 On one document, `true`, `false`, or `null`. `null` is an unresolved answer, and it arises only under a band. `unresolved` is the formal name for a not sure answer. In record mode each compact JSONL row is `{"input":RECORD,"value":ANSWER}` in input order. `--details` prints the object in [result.md](result.md) instead, with an `answer.kind` of `yes_no`.
@@ -29,7 +31,7 @@ On one document, `true`, `false`, or `null`. `null` is an unresolved answer, and
 | `--details` | Prints the full result object in place of the bare value | Off |
 | `--dry-run` | Prints the plan and sends nothing. See [channels.md](channels.md) | Off |
 | Record options | `--input`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field`. See [records.md](records.md) | One document |
-| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-latest` |
+| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-1.13.0` |
 
 ## Saying what yes and no mean
 
@@ -90,5 +92,7 @@ The help shows one piece of advice beside that block. Word the question in the f
 Writing a good question matters more than any option. A question works when it names one fact that is visible in the evidence. "Mentions a delivery date" works. "Is a good reply" does not. Measurement of the first System One model showed a narrow question of the first kind catching every planted mismatch while wrongly rejecting 2% to 3% of good work. Outcome questions of the second kind rejected 18% to 46% of work people had accepted.
 
 A claim planted in the evidence moves the answer. A live run judged twenty made-up messages twice, once clean and once with hostile text appended. The cases are few and they are made up. A command aimed at the judge moved the probability of yes by 0.04 or less, in seventeen wordings. A false claim about the case moved it by as much as 0.57, and a third planted claim moved it by 0.02. The tool cannot tell a planted claim from a true one, because both are evidence.
+
+A batch keeps each record in its own question and out of the evidence. A planted claim in one record is therefore not evidence for another record, by ADR 0055 item 5.
 
 Three defenses hold. `--field` keeps the untrusted parts of a record off the wire. A band sends the moved rows to a person: under `0.2:0.8` the twenty hostile rows held their answer on 18 of 20 and turned 2 into unresolved, and no answer flipped to its opposite. An eval with hostile cases measures what is left.

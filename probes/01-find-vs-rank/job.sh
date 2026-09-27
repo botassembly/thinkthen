@@ -60,7 +60,7 @@ while IFS= read -r doc; do
 		text=$(printf '%s\n' "$doc" | jq -r --argjson n "$line" '.lines[$n - 1]')
 		# shellcheck disable=SC2086
 		printf '%s' "$text" | thinkthen decide "$decide" \
-			--details $folder >row.json && exit=0 || exit=$?
+			--details --model jev-latest $folder >row.json && exit=0 || exit=$?
 		answered "$exit" || {
 			printf 'job: %s %s stopped with exit %s\n' "$id" "$unit" "$exit" >&2
 			exit "$exit"
@@ -86,7 +86,7 @@ while IFS= read -r doc; do
 		shift
 		# shellcheck disable=SC2086
 		printf '%s' "$numbered" | thinkthen choose "$choose" "$@" \
-			--details $folder >row.json && exit=0 || exit=$?
+			--details --model jev-latest $folder >row.json && exit=0 || exit=$?
 		answered "$exit" || {
 			printf 'job: %s choose stopped with exit %s\n' "$id" "$exit" >&2
 			exit "$exit"

@@ -211,3 +211,81 @@ fn mcnemar_counts_every_pair_that_becomes_right_or_stops_being_right() {
         assert_eq!((code, stdout.lines().last()), (0, Some(line)), "{a} {b}");
     }
 }
+
+/// Run `diff` with arguments split on spaces, from the fixture folder.
+fn words(arguments: &str) -> (i32, String, String) {
+    diff(&arguments.split(' ').collect::<Vec<_>>(), b"")
+}
+
+#[test]
+fn recognize_and_relate_rows_match_the_hand_worked_outputs() {
+    let rows = [
+        "items/recognize-a.jsonl items/recognize-b.jsonl = strict.jsonl",
+        "items/recognize-a.jsonl items/recognize-b.jsonl --key items/recognize-key.jsonl = strict-key.jsonl",
+        "items/recognize-a.jsonl items/recognize-b.jsonl --key items/recognize-key.jsonl --match overlap = overlap-key.jsonl",
+        "items/recognize-a.jsonl items/recognize-none.jsonl --key items/recognize-key.jsonl --match overlap = none-key.jsonl",
+        "items/recognize-a.jsonl items/recognize-b.jsonl --key items/recognize-key.jsonl --table = strict-key.txt",
+        "items/recognize-a.jsonl items/recognize-b.jsonl --key items/recognize-key.jsonl --match overlap --table = overlap-key.txt",
+        "items/abbey-work.jsonl items/recognize-b.jsonl --match overlap --table = abbey-work.txt",
+        "items/relate-a.jsonl items/relate-b.jsonl --key items/relate-key.jsonl = relate-key.jsonl",
+        "items/relate-a.jsonl items/relate-b.jsonl --key items/relate-key.jsonl --table = relate-key.txt",
+        "items/decide-c1.jsonl small/choose.jsonl --table = decide-choose.txt",
+    ];
+    for (arguments, golden) in rows.iter().filter_map(|row| row.split_once(" = ")) {
+        let expected = fixture(&format!("golden/items/{golden}"));
+        assert_eq!(words(arguments), (0, expected, String::new()), "{golden}");
+    }
+}
+
+#[test]
+fn two_cuts_on_a_replayed_recognize_run_lose_the_names_between_them() {
+    let (code, stdout, _) =
+        words("diff-recognize-key-run.jsonl --threshold 0.5 --compare-threshold 0.8");
+    let summary = r#"{"summary":{"records":200,"changed":52,"only_a":0,"only_b":0,"moves":[],"labeled":null,"right_a":null,"right_b":null,"gained":null,"lost":null,"mcnemar_on":null,"mcnemar_p":null,"key_items":null,"items_gained":0,"items_lost":64,"items_changed_kind":0,"extra_a":null,"extra_b":null,"compare":"cuts","a":0.5,"b":0.8}}"#;
+    assert_eq!((code, stdout.lines().last()), (0, Some(summary)));
+    let rows = stdout
+        .lines()
+        .filter_map(|row| serde_json::from_str(row).ok());
+    let lost: Vec<serde_json::Value> = rows
+        .flat_map(|row: serde_json::Value| row["lost"].as_array().cloned())
+        .flatten()
+        .collect();
+    assert!(lost.iter().all(|name| {
+        name["strength"]
+            .as_f64()
+            .is_some_and(|s| (0.5..0.8).contains(&s))
+    }));
+}
+
+#[test]
+fn mcnemar_on_key_names_leaves_the_extras_out() {
+    let (code, stdout, _) =
+        words("items/mcnemar-a.jsonl items/mcnemar-b.jsonl --key items/mcnemar-key.jsonl");
+    let last = stdout.lines().last().expect("a summary");
+    let got = ["mcnemar_p", "gained", "lost", "extra_a", "extra_b"]
+        .map(|name| member(last, &format!("/summary/{name}")));
+    assert_eq!((code, got.join(" ")), (0, "0.145996 9 3 2 0".to_owned()));
+}
+
+#[test]
+fn item_verbs_refuse_what_diff_cannot_compare() {
+    let cut = "recognize and relate take a single --threshold at or above the cut they ran with";
+    let grade =
+        "holds an answer diff cannot grade; diff grades decide, choose, recognize and relate";
+    let rows = [
+        format!("items/recognize-a.jsonl --compare-threshold 0.3 = {cut}"),
+        format!("items/recognize-a.jsonl items/recognize-b.jsonl --threshold 0.4:0.6 = {cut}"),
+        "items/recognize-a.jsonl items/pair-decide.jsonl = second run line 1 pairs recognize or relate with another verb".to_owned(),
+        "items/mixed-decide.jsonl --compare-threshold 0.6 = first run line 2 mixes recognize or relate with other verbs".to_owned(),
+        "items/mixed-relate.jsonl --compare-threshold 0.6 = first run line 2 mixes recognize with relate".to_owned(),
+        "items/recognize-a.jsonl items/person-only.jsonl --key items/recognize-key.jsonl = key line 1 names a level, label, or unit the question does not have".to_owned(),
+        format!("items/record-mode.jsonl items/recognize-b.jsonl = first run line 1 {grade}"),
+        format!("items/tag.jsonl items/recognize-b.jsonl = first run line 1 {grade}"),
+        "items/bare.jsonl items/recognize-b.jsonl = first run line 1 has no string or integer id at the --id pointer".to_owned(),
+        "small/decide.jsonl small/decide-b.jsonl --match overlap = --match applies to recognize and relate".to_owned(),
+    ];
+    for (arguments, sentence) in rows.iter().filter_map(|row| row.split_once(" = ")) {
+        let refused = (2, String::new(), format!("thinkthen: diff: {sentence}\n"));
+        assert_eq!(words(arguments), refused, "{sentence}");
+    }
+}

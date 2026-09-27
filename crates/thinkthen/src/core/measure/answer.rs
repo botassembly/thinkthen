@@ -5,7 +5,7 @@ use std::collections::BTreeSet;
 use serde::{Serialize, Serializer};
 
 use crate::core::json::Json;
-use crate::core::measure::items::{self, Items};
+use crate::core::measure::items::{self, Item, Items};
 use crate::core::measure::levels::{LevelCuts, level_at};
 use crate::core::measure::{MeasureError, python_float_text, record_id, rounded};
 use crate::core::pointer::Pointer;
@@ -17,7 +17,7 @@ mod verbs;
 
 use verbs::{names, probability, top, verb};
 
-/// The verbs audit grades. diff reads only `decide` and `choose`.
+/// The verbs audit grades. diff reads `decide`, `choose`, `recognize`, and `relate`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum Verb {
     /// A yes or no answer, from `decide` or `filter`.
@@ -105,7 +105,7 @@ impl Shown {
 }
 
 /// What one answer says under a rule. An option named `tied` stays an option.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) enum Said<'a> {
     /// A yes.
     Yes,
@@ -117,6 +117,8 @@ pub(crate) enum Said<'a> {
     Unresolved,
     /// Two or more options share the top probability.
     Tied,
+    /// The names or edges a rule keeps, strongest first.
+    Items(&'a [Item]),
 }
 
 impl Said<'_> {
@@ -128,6 +130,7 @@ impl Said<'_> {
             Self::Option(option) => option,
             Self::Unresolved => "unresolved",
             Self::Tied => "tied",
+            Self::Items(_) => "items",
         }
     }
 }
@@ -139,7 +142,7 @@ pub(crate) enum Identity {
     /// which reads every verb it grades.
     Question,
     /// One answer name and record id: one answer in a `diff` run, which reads
-    /// `decide` and `choose` alone.
+    /// `decide`, `choose`, `recognize`, and `relate`.
     Answer,
 }
 
@@ -216,9 +219,9 @@ pub(crate) fn read(
         let found = row.member("input").and_then(|input| id.resolve(input));
         let record = match found.and_then(record_id) {
             Some(record) => record,
-            None if identity == Identity::Question
-                && row.member("input").is_none()
-                && matches!(verb_named(row), Some("find" | "recognize" | "relate")) =>
+            None if row.member("input").is_none()
+                && (matches!(verb_named(row), Some("recognize" | "relate"))
+                    || identity == Identity::Question && verb_named(row) == Some("find")) =>
             {
                 line.to_string()
             }
@@ -421,7 +424,11 @@ impl Answer {
             return Err(MeasureError::NeedsProbabilities);
         }
         match self.verb {
-            Verb::Recognize | Verb::Relate => Ok(Said::Unresolved),
+            Verb::Recognize | Verb::Relate => {
+                self.items.as_ref().map_or(Ok(Said::Unresolved), |items| {
+                    items.kept(rule).map(Said::Items)
+                })
+            }
             Verb::Decide | Verb::Tag | Verb::Rank => Ok(match rule {
                 Rule::Threshold(threshold) => match self.probability.map(|p| threshold.judge(p)) {
                     Some(Judged::Yes) => Said::Yes,

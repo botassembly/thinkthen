@@ -12,8 +12,8 @@ A loadable DuckDB v1.5.5 extension that puts the `thinkthen` engine behind SQL. 
 | `thinkthen_score(question, text, levels)` | `DOUBLE`, the position from 0 for the first level |
 | `thinkthen_tag(question, text, labels)` | `VARCHAR[]` |
 | `thinkthen_annotate(set, text)` | `VARCHAR`, the record's values as JSON |
-| `thinkthen_details(question, text)` | a struct: `probability`, `answer`, `value`, `nearest`, `model`, `question_sha256`, `requests_sent`, `cached` |
-| `thinkthen_recognize(text, kinds)` | a list of `(name, kind, start, end, strength)` |
+| `thinkthen_details(question, text)` | the command's `--details` line, as JSON text |
+| `thinkthen_recognize(text, kinds)` | a list of `(text, start, end, length, kind, strength)` |
 | `thinkthen_relations(text, file)` | a list of `(relation, source, source_kind, target, target_kind, probability)` |
 | `thinkthen_relate(query, rules)` | a table of `(relation, source, target, probability)`, one row per edge between the query's ids |
 | `thinkthen_warm(question, text)` | an aggregate: asks each distinct text once and returns how many |
@@ -21,13 +21,19 @@ A loadable DuckDB v1.5.5 extension that puts the `thinkthen` engine behind SQL. 
 
 `WHERE`, `ORDER BY`, and `LIMIT` are the filter, rank, and find verbs. Every scalar except `thinkthen_recognize` also takes a last `BIGINT` deadline in milliseconds. A `NULL` in any argument gives a `NULL` row. A failure is an error whose text starts `thinkthen <kind>: `, with one of the six kinds, and never reads as `NULL`.
 
-A question is plain text, `'@path.json'`, or the question file's JSON. Choose, score, and tag take plain text and put their members in the list. `thinkthen_annotate` takes a question set file or its JSON. A member a verb lacks reads `NULL` in `thinkthen_details`, never 0. `start` and `end` count code points, as DuckDB's string indexing does.
+A question is plain text, `'@path.json'`, or the question file's JSON. Choose, score, and tag take plain text and put their members in the list. `thinkthen_annotate` takes a question set file or its JSON. `start`, `end`, and `length` count code points, as DuckDB's string indexing does.
 
 ```sql
 LOAD 'build/thinkthen.duckdb_extension';
 SELECT id FROM tickets WHERE thinkthen_decide('Does the writer ask for a refund?', body);
 SELECT id, thinkthen_choose('Which team owns this?', body, ['billing', 'shipping']) FROM tickets;
 ```
+
+## Run facts
+
+`thinkthen_details(question, text)` returns the command's `--details` line for one text as JSON text, schema `thinkthen.result/1`. Read a member with DuckDB's JSON functions, such as `thinkthen_details(q, t) ->> '$.meta.usage.input_tokens'`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.
+
+`thinkthen_usage()` returns this process's running totals of requests sent, cache answers and tokens.
 
 ## Settings
 
@@ -55,7 +61,7 @@ SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM staff', ['works_for=p
 - `SET thinkthen_relate_holding_rows = N` refuses, before the query runs, a plan whose estimate feeds more than N rows into a sorting, grouping, windowing, or joining step, 1,000,000 by default.
 - Relates on one database run one at a time. A relate that waits past its limit reads `thinkthen deadline: the relate query waited past its N-second limit in the queue behind another relate on this database and did not run; retry after that relate ends or raise SET thinkthen_relate_seconds (0 turns the limit off)`.
 - A relate inside a relate's query reads `thinkthen usage: the relate query calls thinkthen_relate while its own query is running; nested relate cannot run, because the outer query waits on the connection the inner one needs`.
-- A table function cannot run SQL on its caller's connection, so LOAD opens one connection of its own on each database (ADR 0038). Relate therefore sees committed tables, not the caller's temporary tables or open transaction. A temporary table reads `thinkthen local: the relate query names the temporary table NAME, and the stable C API cannot run a query on the calling connection, so relate cannot see temporary tables`.
+- A table function cannot run SQL on its caller's connection, so LOAD opens one connection of its own on each database (ADR 0038). Relate therefore sees committed tables, not the caller's temporary tables or open transaction. A temporary table reads `thinkthen local: the relate query names the temporary table NAME, and the stable C API cannot run a query on the calling connection, so relate cannot see temporary tables`. Another missing-table error keeps DuckDB's catalog wording and adds `relate reads only committed tables on its separate connection; if you created this table in an open transaction, commit it before retrying`. The catalog error alone cannot tell a typo from a table the caller has not committed.
 - Each loaded database carries an in-memory probe database named `thinkthen_instance_` and 32 random hex characters. Relate finds the caller's own database through it, never through a database name. A read-only database cannot carry one, so relate refuses there. The extension closes its connection once the database has no other, so a closed file database frees its lock.
 - A Ctrl-C stops a running relate query and its engine call within 100 ms.
 

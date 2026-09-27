@@ -28,7 +28,13 @@ The last object of each verb takes `signal` and `deadlineMs`. An `AbortSignal` c
 
 A failure rejects with one `ThinkThenError` class. Its `kind` is `usage`, `backend`, `local`, `cancelled`, `deadline`, or `defect`, and `retryable` says whether the same call may pass later.
 
-`recognize` returns `start` and `end` in UTF-16 units, so `text.slice(start, end)` is the name.
+`recognize` returns each name as `text`, `start`, `end`, `length`, `kind`, and `strength`. `start`, `end`, and `length` count UTF-16 units, so `text.slice(start, end)` is the name. With no kinds, every name has the kind `ENTITY`.
+
+## Run facts
+
+`details(question, text)` returns the command's `--details` line for one text, typed as `Details`, schema `thinkthen.result/1`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.
+
+`usage()` returns this engine's running totals of requests sent, cache answers and tokens.
 
 ## Build and check
 

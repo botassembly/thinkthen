@@ -20,9 +20,12 @@ export async function sample(text: string, message: string, inbox: string[], rev
   const found: tt.Found | null = await tt.find('Which unit answers best?', reviews);
   const audit: tt.Details = await tt.details('Refund?', text, { deadlineMs: 5_000 });
   const digests: string[] = audit.meta.requests;
+  const confidence: number | undefined = audit.answer.confidence;
+  const url: string = audit.meta.url;
   const many: tt.Answer[] = await tt.decide_many('Refund?', reviews);
   const names: tt.Recognized = await tt.recognize(text, { kinds: ['person'], relations: { works_for: ['person', '*'] } });
   const edges: tt.Edge[] = await tt.relate([['Ann', 'person'], { name: 'Acme', kind: 'organization' }], { relations: ['works_for'] });
+  const related: tt.Edge[] = await tt.relate(names.entities, { relations: ['works_for'] });
   const counters: tt.Usage = tt.usage();
 
   const engine = new tt.Engine({ throttle: 4, baseUrl: 'http://127.0.0.1:1/v1', cache: false, maxRequests: 10 });
@@ -39,5 +42,5 @@ export async function sample(text: string, message: string, inbox: string[], rev
   } catch (error) {
     if (error instanceof tt.ThinkThenError && error.kind === 'cancelled') return null;
   }
-  return { team, topics, first, answered, second, level, complaints, found, digests, many, names, edges, counters, fromEngine, sent };
+  return { team, topics, first, answered, second, level, complaints, found, digests, confidence, url, many, names, edges, counters, fromEngine, sent };
 }

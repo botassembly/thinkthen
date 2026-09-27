@@ -337,7 +337,29 @@ impl QuestionFile {
     /// when it names no question type or two of them, when it holds a key the
     /// verb does not take, and when a value is not the shape its key takes.
     pub(crate) fn parse(text: &str) -> Result<Self, QuestionFileError> {
-        let value = Json::parse(text)?;
+        Self::parsed(Json::parse(text)?)
+    }
+
+    /// Read one whole question file, taking `batch` off the top of a `decide`
+    /// file first and returning its raw value. A question set's entries use
+    /// [`Self::parse`], so they still refuse `batch`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`QuestionFileError`] as [`Self::parse`] does.
+    pub(crate) fn parse_top(text: &str) -> Result<(Self, Option<Json>), QuestionFileError> {
+        let mut value = Json::parse(text)?;
+        let mut batch = None;
+        if let Json::Object(members) = &mut value
+            && verb_of(members) == Ok(Verb::Decide)
+            && let Some(at) = members.iter().position(|(name, _)| name == "batch")
+        {
+            batch = Some(members.remove(at).1);
+        }
+        Ok((Self::parsed(value)?, batch))
+    }
+
+    fn parsed(value: Json) -> Result<Self, QuestionFileError> {
         let Json::Object(members) = &value else {
             return Err(QuestionFileError::NotAnObject);
         };

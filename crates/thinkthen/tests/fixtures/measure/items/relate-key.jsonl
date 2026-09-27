@@ -1,0 +1,3 @@
+{"id":1,"value":[{"relation":"wrote","source":{"name":"Paul McCartney","kind":"person"},"target":{"name":"Yesterday","kind":"song"}}]}
+{"id":2,"value":[{"relation":"worked_with","source":{"name":"John Lennon","kind":"person"},"target":{"name":"Paul McCartney","kind":"person"}}]}
+{"id":3,"value":[{"relation":"wrote","source":{"name":"John Lennon","kind":"person"},"target":{"name":"Help!","kind":"song"}}]}

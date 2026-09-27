@@ -3,10 +3,11 @@ use crate::core::recognize::RecognizedName;
 
 fn entity(name: &str, kind: &str, start: usize) -> RecognizedName {
     RecognizedName {
-        name: name.to_owned(),
-        kind: kind.to_owned(),
+        text: name.to_owned(),
         start,
         end: start + name.chars().count(),
+        length: name.chars().count(),
+        kind: kind.to_owned(),
         strength: 1.0,
     }
 }

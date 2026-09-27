@@ -6,13 +6,25 @@ use std::fmt;
 use thiserror::Error;
 
 use crate::core::backend_profile::{ProfileError, ProfileName};
+use crate::core::batch::BatchRecord;
 use crate::core::digest::Canonical;
 use crate::core::json::{Json, JsonError};
 use crate::core::pointer::Pointer;
 use crate::core::question::Question;
 use crate::core::question_file::{QuestionFile, QuestionFileError, Typed, Verb, resolve};
+use crate::core::records::{Framing, Reading, ReadingError, RecordError};
 use crate::core::render::{RenderError, json_line};
+use crate::core::text::Evidence;
 use crate::core::threshold::{Threshold, ThresholdError};
+
+/// Why one group's part of a record could not be read.
+#[derive(Debug)]
+pub(crate) enum PartError {
+    /// The group's pointers could not form a reading; a parsed set checked them.
+    Reading(ReadingError),
+    /// The record's selection is text, or holds nothing at a pointer.
+    Record(RecordError),
+}
 
 /// Why a question set was refused.
 #[derive(Clone, Error, PartialEq)]
@@ -275,6 +287,36 @@ impl QuestionSet {
         groups.into_iter().map(|(_, places)| places).collect()
     }
 
+    /// The name of the first question, in file order, that reads a part.
+    #[must_use]
+    pub(crate) fn first_part(&self) -> Option<&str> {
+        self.questions
+            .iter()
+            .find(|question| !reads_root(&question.on))
+            .map(NamedQuestion::name)
+    }
+
+    /// The evidence one group sees: the record's own evidence when the group
+    /// reads the root, or else the parts its pointers select inside the
+    /// record's JSON value. A string is text and is never parsed again.
+    pub(crate) fn group_evidence(
+        &self,
+        group: &[usize],
+        record: &BatchRecord,
+    ) -> Result<Evidence, PartError> {
+        let first = group.first().and_then(|place| self.questions.get(*place));
+        let on = first.map_or(&[][..], |first| first.on.as_slice());
+        if reads_root(on) {
+            return Ok(record.evidence.clone());
+        }
+        if !matches!(record.value, Json::Object(_) | Json::Array(_)) {
+            let name = first.map_or(String::new(), |first| first.name.clone());
+            return Err(PartError::Record(RecordError::TextPart(name)));
+        }
+        let reading = Reading::new(Framing::Document, on.to_vec()).map_err(PartError::Reading)?;
+        reading.part(&record.value).map_err(PartError::Record)
+    }
+
     /// Digest the resolved behavior, independent of its path and whitespace.
     pub(crate) fn sha256(&self) -> Result<String, RenderError> {
         let canonical = json_line(&CanonicalSet(self))?;
@@ -292,6 +334,11 @@ impl QuestionSet {
     fn resolved_json(&self) -> Result<String, RenderError> {
         resolved::json(self)
     }
+}
+
+/// True when an `on` list reads the whole record.
+fn reads_root(on: &[Pointer]) -> bool {
+    matches!(on, [root] if root.as_str().is_empty())
 }
 
 fn profile(value: &Json) -> Result<Option<ProfileName>, QuestionSetError> {

@@ -2,14 +2,9 @@
 //!
 //! Each success case runs on its own case arm. Expected request digests were
 //! recorded against the canonical URL, so each is recomputed for the URL the
-//! backend served. Four cases do not apply to the library:
-//!
-//! - `18-find-second` and `19-find-none` set `none: true`, and 0084's
-//!   `Question::find` has no switch for the none option.
-//! - `18-annotate-two-groups` reads parts of a record through `on`, and a
-//!   library call's evidence is one whole text.
-//! - `25-defect-fault` injects an internal invariant failure, which no outside
-//!   boundary reaches. The crate's own panic-door test covers the defect kind.
+//! backend served. One case does not apply to the library:
+//! `25-defect-fault` injects an internal invariant failure, which no outside
+//! boundary reaches. The crate's own panic-door test covers the defect kind.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -28,12 +23,7 @@ use thinkthen::{
 
 const CASES: &str = include_str!("../../../../cases.json");
 const CANONICAL: &str = "https://api.typesafe.ai/v1/systemone";
-const SKIPPED: [&str; 4] = [
-    "18-find-second",
-    "19-find-none",
-    "18-annotate-two-groups",
-    "25-defect-fault",
-];
+const SKIPPED: [&str; 1] = ["25-defect-fault"];
 
 pub(crate) type Checked<T = ()> = Result<T, String>;
 
@@ -178,7 +168,13 @@ fn check(backend: &Backend, case: &Value, verbatim: &Verbatim) -> Checked {
             )
         }
         ("relate", _) => related(&engine, &question, case, &success),
-        ("annotate", _) => annotated(&engine, &raw(&verbatim.question_set), &texts, &success),
+        ("annotate", _) => {
+            let record = case.get("record").map(Value::to_string);
+            let records = record.as_deref().map_or(texts, |whole| vec![whole]);
+            let set = raw(&verbatim.question_set);
+            annotated(&engine, &set, &records, &success, record.is_some())
+        }
+        ("find", _) => crate::parts::found(&engine, &case["question"], &success),
         ("rank", _) => {
             let asked = Question::rank(case["question"]["decide"].as_str().unwrap_or_default());
             let ranked = engine
@@ -209,7 +205,7 @@ fn loaded(
             let answer = engine.decide(&banded, texts[0]).map_err(said)?;
             let bare = &success["answers"][0]["bare"];
             same("decide", &json!(decision(answer)), bare)?;
-            return detailed(&details, &success["answers"][0]);
+            return detailed(&details, &success["answers"][0], base);
         }
     };
     match kind {
@@ -242,7 +238,7 @@ fn single(engine: &Engine, asked: &Question, text: &str, success: &Value, base: 
     let expected = &success["answers"][0];
     let details = engine.details(asked, text).map_err(said)?;
     same("bare", &judgment(details.value()), &expected["bare"])?;
-    detailed(&details, expected)?;
+    detailed(&details, expected, base)?;
     let typed = match details.value() {
         Judgment::Decision(_) => json!(decision(engine.decide(asked, text).map_err(said)?)),
         Judgment::Score(_) => json!(engine.score(asked, text).map_err(said)?),
@@ -284,7 +280,7 @@ fn single(engine: &Engine, asked: &Question, text: &str, success: &Value, base: 
     same("counters", &moved, counters)
 }
 
-fn detailed(details: &Details, expected: &Value) -> Checked {
+fn detailed(details: &Details, expected: &Value, base: &str) -> Checked {
     let wanted = &expected["details"];
     let answer = &wanted["answer"];
     let probabilities = match details.probabilities() {
@@ -307,17 +303,38 @@ fn detailed(details: &Details, expected: &Value) -> Checked {
         &json!(details.question_sha256()),
         &wanted["question_sha256"],
     )?;
-    same("requests", &json!(details.requests()), &wanted["requests"])
+    same("requests", &json!(details.requests()), &wanted["requests"])?;
+    same(
+        "confidence",
+        &json!(details.confidence()),
+        &answer["confidence"],
+    )?;
+    let usage = details.usage().map(|usage| {
+        json!({"input_tokens": usage.input_tokens(), "output_tokens": usage.output_tokens()})
+    });
+    same("usage", &json!(usage), &wanted["usage"])?;
+    same(
+        "requests_sent",
+        &json!(details.requests_sent()),
+        &wanted["requests_sent"],
+    )?;
+    same("cached", &json!(details.cached()), &wanted["cached"])?;
+    let served = json!(format!("{base}/systemone"));
+    same("url", &json!(details.url()), &served)?;
+    let line: Value =
+        serde_json::from_str(&details.to_json()).map_err(|error| error.to_string())?;
+    same("line url", &line["meta"]["url"], &served)
 }
 
-fn annotated(engine: &Engine, set: &str, texts: &[&str], success: &Value) -> Checked {
+/// With `one`, the case names one record, and every answer reads it.
+fn annotated(engine: &Engine, set: &str, texts: &[&str], success: &Value, one: bool) -> Checked {
     let set = QuestionSet::from_json(set).map_err(said)?;
     let records: Result<Vec<_>, _> = engine.annotate(&set, texts.to_vec()).collect();
     let records = records.map_err(said)?;
     let mut failed = 0;
     for expected in success["answers"].as_array().into_iter().flatten() {
-        let record = &records[usize::try_from(expected["exchange"].as_u64().unwrap_or_default())
-            .unwrap_or_default()];
+        let exchange = usize::try_from(expected["exchange"].as_u64().unwrap_or_default());
+        let record = &records[if one { 0 } else { exchange.unwrap_or_default() }];
         let named = record
             .values()
             .iter()
@@ -404,7 +421,7 @@ fn rule_of(rule: &Rule) -> Checked<RelationRule> {
 }
 
 fn recognized(found: &Recognized) -> Value {
-    let entity = |one: &thinkthen::RecognizedEntity| json!({"name": one.name(), "kind": one.kind(), "start": one.start(), "end": one.end(), "strength": one.strength()});
+    let entity = |one: &thinkthen::RecognizedEntity| json!({"text": one.text(), "start": one.start(), "end": one.end(), "length": one.length(), "kind": one.kind(), "strength": one.strength()});
     let mut value = json!({"entities": found.entities().iter().map(entity).collect::<Vec<_>>()});
     if let Some(relations) = found.relations() {
         value["relations"] = relations
@@ -451,7 +468,7 @@ fn cause(cause: FailureCause) -> String {
 }
 
 /// The input index a returned borrowed text came from.
-fn at(texts: &[&str], text: &str) -> Option<usize> {
+pub(crate) fn at(texts: &[&str], text: &str) -> Option<usize> {
     texts
         .iter()
         .position(|one| std::ptr::eq(one.as_ptr(), text.as_ptr()))

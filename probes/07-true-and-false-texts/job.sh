@@ -38,7 +38,7 @@ judge() {
 	: >"$target"
 	while IFS= read -r case; do
 		printf '%s' "$(printf '%s\n' "$case" | jq -r .text)" |
-			thinkthen decide "$@" --details $folder >row.json && exit=0 || exit=$?
+			thinkthen decide "$@" --details --model jev-latest $folder >row.json && exit=0 || exit=$?
 		# 0 is yes and 1 is no. There is no band here, so 3 cannot arise.
 		case "$exit" in
 		0 | 1) ;;

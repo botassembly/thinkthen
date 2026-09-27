@@ -10,10 +10,10 @@ use std::path::PathBuf;
 use pyo3::prelude::*;
 use thinkthen::{
     BandedQuestion, DecisionQuestion, Description, DetailQuestion, Kind, LoadedQuestion,
-    QuestionKind, RecognizedEntity, RelationRule,
+    QuestionKind, RelationRule,
 };
 
-use crate::raised;
+use crate::{raised, usage};
 
 /// A question under one cut, or a `decide` question under a band.
 #[derive(Clone, Debug, PartialEq)]
@@ -99,6 +99,18 @@ impl Question {
         };
         made.map(|question| Self(Asked::Plain(question)))
             .map_err(|error| raised(py, &error))
+    }
+
+    /// This find question with a `none` candidate beside the units.
+    fn _offering_none(&self, py: Python<'_>) -> PyResult<Self> {
+        match &self.0 {
+            Asked::Plain(question) => question
+                .clone()
+                .offering_none()
+                .map(|question| Self(Asked::Plain(question)))
+                .map_err(|error| raised(py, &error)),
+            Asked::Banded(_) => Err(usage(py, "only a find question offers none")),
+        }
     }
 
     /// What the question asks: `decide`, `choose`, `tag`, `score`, `rank`, or `find`.
@@ -235,8 +247,7 @@ impl Relate {
     }
 }
 
-/// A name and its kind. `recognize` also gives where the name sits, counted
-/// in Python string positions, and its strength.
+/// A name and its kind, as `relate` reads and returns them.
 #[pyclass(frozen, skip_from_py_object, module = "thinkthen._thinkthen")]
 #[derive(Clone, Debug)]
 pub(crate) struct Entity {
@@ -244,25 +255,13 @@ pub(crate) struct Entity {
     pub(crate) name: String,
     #[pyo3(get)]
     pub(crate) kind: String,
-    #[pyo3(get)]
-    start: Option<usize>,
-    #[pyo3(get)]
-    end: Option<usize>,
-    #[pyo3(get)]
-    strength: Option<f64>,
 }
 
 #[pymethods]
 impl Entity {
     #[new]
     fn new(name: String, kind: String) -> Self {
-        Self {
-            name,
-            kind,
-            start: None,
-            end: None,
-            strength: None,
-        }
+        Self { name, kind }
     }
 
     /// Withholds the name and kind, as the Rust `Entity`'s `Debug` does.
@@ -275,14 +274,50 @@ impl Entity {
     }
 }
 
-impl Entity {
-    fn found(entity: &RecognizedEntity) -> Self {
+/// One name `recognize` found: its text, where it sits counted in Python
+/// string positions, its length in the same unit, its kind, and its strength.
+#[pyclass(frozen, skip_from_py_object, module = "thinkthen._thinkthen")]
+#[derive(Clone, Debug)]
+pub(crate) struct RecognizedEntity {
+    #[pyo3(get)]
+    pub(crate) text: String,
+    #[pyo3(get)]
+    start: usize,
+    #[pyo3(get)]
+    end: usize,
+    #[pyo3(get)]
+    length: usize,
+    #[pyo3(get)]
+    pub(crate) kind: String,
+    #[pyo3(get)]
+    strength: f64,
+}
+
+#[pymethods]
+impl RecognizedEntity {
+    /// Withholds the text and kind, as `Entity` does.
+    fn __repr__(&self) -> String {
+        format!(
+            "RecognizedEntity(text=<{} bytes withheld>, start={}, end={}, length={}, kind=<{} bytes withheld>, strength={})",
+            self.text.len(),
+            self.start,
+            self.end,
+            self.length,
+            self.kind.len(),
+            self.strength
+        )
+    }
+}
+
+impl From<&thinkthen::RecognizedEntity> for RecognizedEntity {
+    fn from(entity: &thinkthen::RecognizedEntity) -> Self {
         Self {
-            name: entity.name().to_owned(),
+            text: entity.text().to_owned(),
+            start: entity.start(),
+            end: entity.end(),
+            length: entity.length(),
             kind: entity.kind().to_owned(),
-            start: Some(entity.start()),
-            end: Some(entity.end()),
-            strength: Some(entity.strength()),
+            strength: entity.strength(),
         }
     }
 }
@@ -327,14 +362,41 @@ impl From<&thinkthen::Edge> for Edge {
     }
 }
 
+/// One relation between two recognized names and its probability.
+#[pyclass(frozen, skip_from_py_object, module = "thinkthen._thinkthen")]
+#[derive(Clone, Debug)]
+pub(crate) struct Relation {
+    #[pyo3(get)]
+    relation: String,
+    #[pyo3(get)]
+    source: RecognizedEntity,
+    #[pyo3(get)]
+    target: RecognizedEntity,
+    #[pyo3(get)]
+    probability: f64,
+}
+
+#[pymethods]
+impl Relation {
+    fn __repr__(&self) -> String {
+        format!(
+            "Relation(relation={:?}, source={}, target={}, probability={})",
+            self.relation,
+            self.source.__repr__(),
+            self.target.__repr__(),
+            self.probability
+        )
+    }
+}
+
 /// What `recognize` found: the names, and the relations when rules were given.
 #[pyclass(frozen, skip_from_py_object, module = "thinkthen._thinkthen")]
 #[derive(Clone, Debug)]
 pub(crate) struct Recognized {
     #[pyo3(get)]
-    entities: Vec<Entity>,
+    entities: Vec<RecognizedEntity>,
     #[pyo3(get)]
-    relations: Option<Vec<Edge>>,
+    relations: Option<Vec<Relation>>,
 }
 
 #[pymethods]
@@ -353,14 +415,18 @@ impl Recognized {
 impl From<&thinkthen::Recognized> for Recognized {
     fn from(found: &thinkthen::Recognized) -> Self {
         Self {
-            entities: found.entities().iter().map(Entity::found).collect(),
+            entities: found
+                .entities()
+                .iter()
+                .map(RecognizedEntity::from)
+                .collect(),
             relations: found.relations().map(|relations| {
                 relations
                     .iter()
-                    .map(|one| Edge {
+                    .map(|one| Relation {
                         relation: one.relation().to_owned(),
-                        source: Entity::found(one.source()),
-                        target: Entity::found(one.target()),
+                        source: RecognizedEntity::from(one.source()),
+                        target: RecognizedEntity::from(one.target()),
                         probability: one.probability(),
                     })
                     .collect()

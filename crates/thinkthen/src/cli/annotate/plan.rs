@@ -55,19 +55,24 @@ pub(super) fn dry_run_record(
         .into_iter()
         .map(|group| plan_for(set, &group, backend, base, &record))
         .collect::<Result<Vec<_>, _>>()?;
-    for plan in &plans {
-        let _chunks = facade::split(backend, profile, plan)?;
-    }
+    let chunks = plans
+        .iter()
+        .map(|plan| facade::split(backend, profile, plan))
+        .collect::<Result<Vec<_>, _>>()?;
     mismatch.print_once()?;
-    let plan = plans.first().ok_or(Failure::Defect("a set has no group"))?;
+    let first = chunks
+        .first()
+        .and_then(|group| group.first())
+        .ok_or(Failure::Defect("a set has no group"))?;
     let on = set
         .questions()
         .iter()
         .map(|question| (question.name().to_owned(), question.on().to_vec()))
         .collect();
-    let document = PlanDocument::of(backend, plan)
+    let document = PlanDocument::of(backend, &first.plan)
         .map_err(|_| Failure::Defect("a request could not be written as JSON"))?
-        .questions_on(on);
+        .questions_on(on)
+        .requests(chunks.iter().map(Vec::len).collect());
     let document = if base.streams() {
         document.reading(base)
     } else {

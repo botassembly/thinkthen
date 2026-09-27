@@ -4,7 +4,7 @@ use super::conformance_support::{Case, Counters, Document, QuestionForm, Success
 use super::{CASES, asked, same_json};
 use crate::args::{Cli, Command};
 use crate::core::recording::{Entry, Exchange as Recorded};
-use crate::core::{Backend, ModelName, Url};
+use crate::core::{Backend, DEFAULT_MODEL, ModelName, Url};
 use crate::edge::Environment;
 use crate::engine::error::Error as EngineError;
 use crate::engine::http::{Client, Key};
@@ -255,9 +255,14 @@ fn form_child() {
     assert!(seen.is_empty(), "the child sees {seen:?}");
 }
 
-/// Ask a valid question with loopback as the only address, and report what went out.
+/// Ask a valid question at an address the rules cannot prove is this machine,
+/// where a missing key still refuses, and report what went out. Nothing listens
+/// at that address, so the counting listener cannot see a stray request. The
+/// pinned `says` line catches one, because a send would print a connection
+/// failure in place of the missing-key sentence.
 fn probe() {
     let (url, count) = counting();
+    let url = url.replace("http://127.0.0.1", "https://127.0.0.2");
     let arguments = [
         "thinkthen",
         "decide",
@@ -402,7 +407,7 @@ pub(super) fn counters(case: &Case, expected: &Counters) {
     let server = thread::spawn(move || serve_once(listener, request, response));
     let backend = Backend::from_parts(
         Url::new(format!("http://{address}/v1/systemone")).expect("loopback URL"),
-        ModelName::new("jev-latest").expect("model"),
+        ModelName::new(DEFAULT_MODEL).expect("model"),
     );
     let recorder = Recorder::of_private(Some(&cache), Some(&cache), false, true).expect("cache");
     let client = Client::new(

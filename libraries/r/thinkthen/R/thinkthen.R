@@ -208,9 +208,10 @@ tt_rank <- function(question, records, top = NULL, deadline = NULL) {
   if (!is.null(top)) utils::head(held, top) else held
 }
 
-tt_find <- function(question, units, deadline = NULL) {
+tt_find <- function(question, units, none = FALSE, deadline = NULL) {
   units <- as.character(units)
-  found <- .tt_call(tt_find_one(.tt_text(question), units, deadline))
+  if (!is.logical(none) || length(none) != 1L || is.na(none)) .tt_usage("none is TRUE or FALSE")
+  found <- .tt_call(tt_find_one(.tt_text(question), units, none, deadline))
   place <- if (is.null(found$place)) NA_integer_ else as.integer(found$place)
   list(place = place, unit = if (is.na(place)) NA_character_ else units[[place]],
        probability = if (is.null(found$probability)) NA_real_ else found$probability)
@@ -290,10 +291,11 @@ tt_annotate <- function(file, data, on, deadline = NULL) {
 .tt_frame <- function(columns) as.data.frame(columns, stringsAsFactors = FALSE)
 
 # recognize: every name in each text with its kind. Each record is a data
-# frame of names (name, kind, start, end, strength), and the relations the
-# rules turn on ride in its "relations" attribute. substr(text, start, end)
-# is the name.
-tt_recognize <- function(evidence, kinds = c("person", "organization", "place"),
+# frame of names (text, start, end, length, kind, strength), and the
+# relations the rules turn on ride in its "relations" attribute.
+# substr(text, start, end) is the name, and length is its character count.
+# With no kinds, every name has the kind ENTITY.
+tt_recognize <- function(evidence, kinds = NULL,
                          relations = NULL, threshold = NULL,
                          relation_threshold = NULL, deadline = NULL) {
   path <- .tt_path(kinds)
@@ -303,14 +305,14 @@ tt_recognize <- function(evidence, kinds = c("person", "organization", "place"),
     .tt_spec("recognize", section, threshold, relation_threshold)
   }
   evidence <- as.character(evidence)
-  empty <- .tt_frame(list(name = character(), kind = character(), start = numeric(),
-                          end = numeric(), strength = numeric()))
+  empty <- .tt_frame(list(text = character(), start = numeric(), end = numeric(),
+                          length = numeric(), kind = character(), strength = numeric()))
   held <- rep(list(empty), length(evidence))
   live <- which(!is.na(evidence))
   if (length(live)) {
     found <- .tt_call(tt_recognize_column(spec, !is.null(path), evidence[live], deadline))
     for (i in seq_along(live)) {
-      frame <- .tt_frame(found[[i]][c("name", "kind", "start", "end", "strength")])
+      frame <- .tt_frame(found[[i]][c("text", "start", "end", "length", "kind", "strength")])
       links <- .tt_frame(found[[i]]$relations)
       if (nrow(links)) attr(frame, "relations") <- links
       held[[live[[i]]]] <- frame
@@ -320,19 +322,21 @@ tt_recognize <- function(evidence, kinds = c("person", "organization", "place"),
 }
 
 # relate: the edges among entities given as a data frame with name and kind
-# columns, such as tidyr::unnest() of tt_recognize. The first two columns
-# are the endpoints, so igraph::graph_from_data_frame reads it unchanged.
+# columns, such as tidyr::unnest() of tt_recognize. A frame with text and no
+# name column is named by its text. The first two columns are the endpoints,
+# so igraph::graph_from_data_frame reads it unchanged.
 tt_relate <- function(entities, relations = NULL, either = NULL, threshold = NULL,
                       deadline = NULL) {
   path <- .tt_path(relations)
   if (is.null(path) && !length(relations) && !length(either)) {
     .tt_usage("relate needs at least one relation rule")
   }
-  if (!is.data.frame(entities) || !all(c("name", "kind") %in% names(entities))) {
-    .tt_usage("relate takes a data frame with name and kind columns")
+  if (!is.data.frame(entities) || !"kind" %in% names(entities) ||
+      !any(c("name", "text") %in% names(entities))) {
+    .tt_usage("relate takes a data frame with name (or text) and kind columns")
   }
   spec <- path %||% .tt_spec("relate", list(relations = .tt_rules(relations, either)), threshold)
-  named <- as.character(entities$name)
+  named <- as.character(if ("name" %in% names(entities)) entities$name else entities$text)
   kinds <- as.character(entities$kind)
   if (anyNA(named) || anyNA(kinds)) .tt_usage("relate takes no NA name or kind")
   .tt_frame(.tt_call(tt_relate_frame(spec, !is.null(path), named, kinds, deadline)))

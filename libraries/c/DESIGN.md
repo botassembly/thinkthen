@@ -19,8 +19,8 @@ The tag header declares 19 functions. The port kept all 19 and added none.
 | `thinkthen_decide`, `thinkthen_decide_opts` | kept | `question_json` goes through `Question::from_json`. `deadline_ms` stays `int64_t` and goes through `CallOptions::deadline_millis` (ADR 0041). |
 | `thinkthen_decide_many`, `thinkthen_decide_many_opts` | kept | A cancelled or expired call still returns no rows. |
 | `thinkthen_call`, `thinkthen_call_opts` | changed | The envelope grammar below replaces the branch's eight verbs. |
-| `thinkthen_recognize`, `thinkthen_recognize_opts` | changed | The spec is a version-one question file. Entities take the engine's `{name, kind, start, end, strength}` through `Recognized::to_json`. Recognize follows the engine's cache and replay settings like every call. |
-| `thinkthen_relate`, `thinkthen_relate_opts` | changed | The spec is a version-one relate file read by `Relate::from_json`. Each text is one JSON record with `name` and `kind` at the default fields. A non-default `fields` pointer is refused as usage. Edges take `Edge::to_json`'s shape inside `{"edges":[...]}`. The 255 cap stays. |
+| `thinkthen_recognize`, `thinkthen_recognize_opts` | changed | The spec is a version-one question file. Entities take the engine's `{text, start, end, length, kind, strength}` through `Recognized::to_json`. Recognize follows the engine's cache and replay settings like every call. |
+| `thinkthen_relate`, `thinkthen_relate_opts` | changed | The spec is a version-one relate file read by `Relate::from_json`. Each text is one JSON record with `name` and `kind` at the default fields. A record with `text` and no `name`, as `recognize` writes, is read by its `text`. A non-default `fields` pointer is refused as usage. Edges take `Edge::to_json`'s shape inside `{"edges":[...]}`. The 255 cap stays. |
 | `thinkthen_free_string` | kept | |
 
 The version macros equal the `thinkthen-c` crate version. `tests/door/main.rs` compares the exported symbols and the macros with the header.
@@ -37,7 +37,7 @@ A request names one verb of ten: `decide`, `choose`, `score`, `tag`, `filter`, `
 | `details` | the four single judgments | `true` or `false` |
 | `usage` | alone | `true` |
 
-Every other key forms the question object. `Question::from_json` validates it, so an unknown question key is a usage failure there. `filter` asks its text as a `decide` question at a single cut. `rank` and `find` take their text alone. `annotate` carries the question set as its value.
+Every other key forms the question object. `Question::from_json` validates it, so an unknown question key is a usage failure there. `filter` asks its text as a `decide` question at a single cut. `rank` takes its text alone. `find` takes its text and an optional `"none": true`, which offers a none candidate. `annotate` carries the question set as its value, and a member's `on` reads that part of each record as JSON text.
 
 The replies are bare values:
 
@@ -59,7 +59,7 @@ The door writes the bare `decide`, `choose`, `score`, `tag`, `filter`, `rank`, a
 
 ## 1. Cancellation
 
-The door owns a token handle. `thinkthen_cancel_token_new` creates it, `thinkthen_cancel` fires it, and `thinkthen_cancel_token_free` frees it. Every `_opts` spelling takes a token, and a null token means none. A fired token stays fired, and one token can stop many calls. No new request starts after the fire, requests already sent finish, and the calls that carried the token return `THINKTHEN_ECANCELLED` with no results.
+The door owns a token handle. `thinkthen_cancel_token_new` creates it, `thinkthen_cancel` fires it, and `thinkthen_cancel_token_free` frees it. Every `_opts` spelling takes a token, and a null token means none. A fired token stays fired, and one token can stop many calls. No new request or retry starts after the fire. A request already sent finishes within its attempt timeout and the budget. A complete answer reaches the cache, and every reply reaches the counters, so the same call with a fresh token replays it and pays nothing more. The call that carried the token then returns `THINKTHEN_ECANCELLED` with no results, whatever the reply held, a failure included. The call reads the token on every thread it uses, and once more after its last request ends. A fire after that last read does not change the result.
 
 C has no standard interrupt channel, and every host that binds this door has threads. A Go, Java, or C++ host fires the token from whatever thread receives its stop gesture. A fire allocates nothing, so a POSIX signal handler can fire it too.
 

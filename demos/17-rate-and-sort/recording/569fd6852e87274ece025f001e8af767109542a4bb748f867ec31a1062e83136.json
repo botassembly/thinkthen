@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Subject: reissuing last quarter\n\nOur group reorganised in March. We need every invoice from last quarter split\nby tax jurisdiction and reissued under the new entity name, with the old\nnumbers referenced on each one. Our finance team needs this before the audit.\n","model":"jev-1.13.0","questions":{"q1":{"type":"score","instructions":"How hard is this request to answer?","criteria":["A canned reply answers it.","One person can answer it after a look at the account.","It needs a specialist and more than one system."]}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"score","score":1.87,"confidence":0.8,"legend":{"0":"A canned reply answers it.","1":"One person can answer it after a look at the account.","2":"It needs a specialist and more than one system."},"probabilities":{"0":0.01,"1":0.11,"2":0.88}}},"usage":{"input_tokens":381,"output_tokens":18}}
+}

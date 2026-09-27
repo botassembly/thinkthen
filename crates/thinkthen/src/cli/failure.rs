@@ -116,6 +116,16 @@ pub(crate) enum Failure {
         /// What stopped the record, which sets the exit code.
         cause: Box<Failure>,
     },
+    /// The request for records `at` to `last` failed as a whole.
+    BatchFailed {
+        last: usize,
+        cause: Box<Failure>,
+    },
+    /// The reply for records `first` to `last` gave the stopped record no usable answer.
+    PartialReply {
+        first: usize,
+        last: usize,
+    },
     Cancelled,
     /// Standard input could not be read.
     Input(io::Error),
@@ -259,7 +269,9 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         Failure::FindCount { none: true } => (2, "`find --none` takes 2 to 254 units".to_owned()),
         Failure::FindCount { none: false } => (2, "`find` takes 2 to 255 units".to_owned()),
         Failure::FindTooLarge => (2, "`find` reads at most 16 MiB across all units".to_owned()),
-        Failure::Stopped { .. } => (70, "defect: a stopped run reports its cause".to_owned()),
+        Failure::Stopped { .. } | Failure::BatchFailed { .. } | Failure::PartialReply { .. } => {
+            (70, "defect: a stopped run reports its cause".to_owned())
+        }
         Failure::Defect(what) => (70, format!("defect: {what}")),
         Failure::Render(error) => (70, format!("defect: {error}")),
         Failure::Measure(refusal) => (refusal.code(), refusal.to_string()),
@@ -282,10 +294,26 @@ fn stopped(failure: &Failure, writer: &mut dyn Write) -> Option<u8> {
     else {
         return None;
     };
-    let code = say(cause, writer);
-    if matches!(cause.as_ref(), Failure::RecordingStorage) {
-        return Some(code);
-    }
+    let (code, reason) = match cause.as_ref() {
+        Failure::BatchFailed { last, cause } => {
+            let mut said = Vec::new();
+            let code = say(cause, &mut said);
+            let said = String::from_utf8_lossy(&said);
+            let prefix = format!("{}: ", crate::core::NAME);
+            let said = said.trim_end();
+            let said = said.strip_prefix(&prefix).unwrap_or(said);
+            (
+                code,
+                format!("the request for records {at} to {last} failed: {said}; "),
+            )
+        }
+        Failure::PartialReply { first, last } => (
+            4,
+            format!("the reply for records {first} to {last} gave record {at} no usable answer; "),
+        ),
+        Failure::RecordingStorage => return Some(say(cause, writer)),
+        _ => (say(cause, writer), String::new()),
+    };
     let withheld = if *held {
         ", and nothing was printed because an order needs every record"
     } else {
@@ -300,7 +328,7 @@ fn stopped(failure: &Failure, writer: &mut dyn Write) -> Option<u8> {
     };
     let _unwritten = writeln!(
         writer,
-        "{}: stopped at record {at}; {finished} {finished_noun} finished{recording_clause}{withheld}",
+        "{}: stopped at record {at}; {reason}{finished} {finished_noun} finished{recording_clause}{withheld}",
         crate::core::NAME
     );
     Some(code)
@@ -343,11 +371,11 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
         ),
         Failure::ModelsDiffer(Some((first, second))) => (
             4,
-            format!("the backend returned model versions `{first}` and `{second}` for one record; pin --model and rerun with --record or --cache"),
+            format!("the replies for one record named model versions `{first}` and `{second}`; a cache or recording folder may hold answers from the other version, so rerun with --no-cache or prune it with `thinkthen cache prune DIR --answered-by-other-than VERSION`, naming the version a --no-cache run returns"),
         ),
         Failure::ModelsDiffer(None) => (
             4,
-            "the backend returned different model versions for one record; pin --model and rerun with --record or --cache".to_owned(),
+            "the replies for one record named different model versions; a cache or recording folder may hold answers from the other version, so rerun with --no-cache or prune it with thinkthen cache prune DIR --answered-by-other-than VERSION, naming the version a --no-cache run returns".to_owned(),
         ),
         Failure::WidthActive(active) => (2, active.to_string()),
         Failure::UsageOverflow => (

@@ -29,11 +29,6 @@ PARTS = {"true": "true_", "false": "false_"}
 
 def not_run(case):
     """Why the library cannot run this case, or ``None``."""
-    if case.get("question", {}).get("none"):
-        return "the library's find has no switch for the none option"
-    questions = (case.get("question_set") or {}).get("questions", {}).values()
-    if any(question.get("on") for question in questions):
-        return "a library call reads each record whole and takes no on"
     if case["expect"].get("error", {}).get("kind") == "defect":
         return "no outside boundary reaches an internal invariant failure"
     return None
@@ -74,20 +69,22 @@ def asked(case):
     return tt.question(**{PARTS.get(name, name): value for name, value in case["question"].items()})
 
 
-def detailed(details, expected):
+def detailed(details, expected, base):
     wanted = expected["details"]
     for field in ("probability", "probabilities", "level"):
         if field in wanted["answer"]:
             same(field, details["answer"].get(field), wanted["answer"][field])
-    for field in ("model", "question_sha256", "requests"):
-        same(field, details["meta"][field], wanted[field])
+    same("confidence", details["answer"].get("confidence", "absent"), wanted["answer"].get("confidence", "absent"))
+    for field in ("model", "question_sha256", "requests", "usage", "requests_sent", "cached"):
+        same(field, details["meta"].get(field, "absent"), wanted.get(field, "absent"))
+    same("url", details["meta"]["url"], base + "/systemone")
 
 
 def single(engine, question, text, success, base):
     expected = success["answers"][0]
     details = engine.details(question, text)
     same("bare", details["value"], expected["bare"])
-    detailed(details, expected)
+    detailed(details, expected, base)
     typed = getattr(engine, question.kind)(question, text)
     same("typed", typed, expected["bare"])
     same("column", getattr(engine, question.kind)(question, pl.Series([text])).to_list(),
@@ -109,7 +106,7 @@ def annotated(engine, case, texts, success):
     records = engine.annotate(case["question_set"], texts)
     failed = 0
     for expected in success["answers"]:
-        value = records[expected["exchange"]][expected["name"]]
+        value = records[0 if "record" in case else expected["exchange"]][expected["name"]]
         failed += isinstance(value, dict) and "failed" in value
         same("bare", value, expected["bare"])
     same("failed", failed, success.get("failed_questions", 0))
@@ -121,11 +118,13 @@ def annotated(engine, case, texts, success):
             same("frame", json.loads(got[name]) if widened else got[name], value)
 
 
-def entity(one, place=True):
-    found = {"name": one.name, "kind": one.kind}
-    if place:
-        found.update(start=one.start, end=one.end, strength=one.strength)
-    return found
+def entity(one):
+    return {"name": one.name, "kind": one.kind}
+
+
+def recognized(one):
+    return {"text": one.text, "start": one.start, "end": one.end, "length": one.length,
+            "kind": one.kind, "strength": one.strength}
 
 
 def succeeded(port, case):
@@ -139,21 +138,31 @@ def succeeded(port, case):
     verb, kind = case["verb"], success["kind"]
     if verb == "recognize":
         found = engine.recognize(case["text"], case["question"])
-        result = {"entities": [entity(one) for one in found.entities]}
+        result = {"entities": [recognized(one) for one in found.entities]}
         if found.relations is not None:
             result["relations"] = [
-                {"relation": one.relation, "source": entity(one.source),
-                 "target": entity(one.target), "probability": one.probability}
+                {"relation": one.relation, "source": recognized(one.source),
+                 "target": recognized(one.target), "probability": one.probability}
                 for one in found.relations]
         return same("result", result, success["answers"][0]["bare"])
     if verb == "relate":
         edges = engine.relate(case["entities"], case["question"])
-        result = [{"relation": edge.relation, "source": entity(edge.source, False),
-                   "target": entity(edge.target, False), "probability": edge.probability}
+        result = [{"relation": edge.relation, "source": entity(edge.source),
+                   "target": entity(edge.target), "probability": edge.probability}
                   for edge in edges]
         return same("result", result, success["answers"][0]["bare"])
     if verb == "annotate":
-        return annotated(engine, case, texts, success)
+        records = [json.dumps(case["record"])] if "record" in case else texts
+        return annotated(engine, case, records, success)
+    if verb == "find":
+        spec = case["question"]
+        found = engine.find(spec["find"], spec["units"], none=spec["none"])
+        operation = success["operation"]
+        picked = [row for row in operation["probabilities"] if row["index"] == operation["selected"]]
+        want = None if operation["selected"] is None else {
+            "index": operation["selected"], "unit": spec["units"][operation["selected"]],
+            "probability": picked[0]["probability"]}
+        return same("found", found, want)
     if verb == "rank":
         ranked = engine.rank(case["question"]["decide"], texts)
         rows = [{"index": row["index"], "probability": row["probability"]} for row in ranked]

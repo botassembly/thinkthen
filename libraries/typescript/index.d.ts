@@ -68,6 +68,11 @@ export interface RankOptions extends CallOptions {
   top?: number;
 }
 
+export interface FindOptions extends CallOptions {
+  /** Offer a none candidate, as `find --none` does, so the answer may be `null`. */
+  none?: boolean;
+}
+
 /** `true`, `false`, or `null` when the answer is unsure. */
 export type Answer = boolean | null;
 
@@ -82,6 +87,7 @@ export interface Details {
     probabilities?: Record<string, number>;
     pick?: string | null;
     level?: string;
+    confidence?: number;
   };
   threshold?: number | string;
   meta: {
@@ -135,13 +141,16 @@ export type AnnotatedRow = Record<string, AnnotatedField>;
 export type QuestionSet = string | { version: 1; questions: Record<string, QuestionSpec> };
 
 /** One name `recognize` found. `text.slice(start, end)` is the name, since
- * `start` and `end` count UTF-16 units. `strength` is the least word
- * probability behind the name times the mean kind probability. */
+ * `start` and `end` count UTF-16 units, and `length` is `end - start`.
+ * `kind` is `ENTITY` when the call named no kind. `strength` ranks names:
+ * the kind probability times the span probability. It is not itself a
+ * probability. */
 export interface RecognizedEntity {
-  name: string;
-  kind: string;
+  text: string;
   start: number;
   end: number;
+  length: number;
+  kind: string;
   strength: number;
 }
 
@@ -169,8 +178,11 @@ export interface RecognizeOptions extends CallOptions {
   relationThreshold?: number;
 }
 
-/** An entity `relate` reads. */
-export type Entity = { name: string; kind: string } | readonly [name: string, kind: string];
+/** An entity `relate` reads. A name `recognize` found is read by its `text`. */
+export type Entity =
+  | { name: string; kind: string }
+  | { text: string; kind: string }
+  | readonly [name: string, kind: string];
 
 export interface Edge {
   relation: string;
@@ -225,7 +237,8 @@ export interface Verbs {
   tag(question: TagSpec | Question, text: string, options?: CallOptions): Promise<string[]>;
   filter(question: string | Question | DecideSpec, records: readonly string[], options?: CallOptions): Promise<string[]>;
   rank(question: string | Question | DecideSpec, records: readonly string[], options?: RankOptions): Promise<Ranked[]>;
-  find(question: string | Question | DecideSpec, units: readonly string[], options?: CallOptions): Promise<Found | null>;
+  find(question: string | Question | DecideSpec, units: readonly string[], options?: FindOptions): Promise<Found | null>;
+  /** A set member whose `on` names a part reads it from each record as JSON text. */
   annotate(set: QuestionSet, records: readonly string[], options?: CallOptions): Promise<AnnotatedRow[]>;
   details(question: string | Question | QuestionSpec, text: string, options?: CallOptions): Promise<Details>;
   recognize(text: string, options?: RecognizeOptions): Promise<Recognized>;

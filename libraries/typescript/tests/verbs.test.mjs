@@ -43,6 +43,20 @@ test('each verb resolves its host shape, on the module and on an engine', async 
   assert.equal(await backend.count(), 27);
 });
 
+// ADR 0056: a found name carries text in place of name, and relate reads it as the name.
+test('relate reads what recognize found', async (t) => {
+  const backend = await startBackend(t);
+  const { value } = await ask(backend, `
+    const relations = ['knows=person:person'];
+    const found = (await tt.recognize('Maria Chen arrived.', { kinds: ['person'] })).entities;
+    const forms = [found, found.map((one) => ({ name: one.text, text: 'not this', kind: one.kind })),
+      [['Maria Chen', 'person'], ['arrived.', 'person']]];
+    const edges = await Promise.all(forms.map((form) => tt.relate(form, { relations })));
+    return edges.map((each) => each.map((edge) => [edge.source.name, edge.target.name]));`);
+  const both = [['Maria Chen', 'arrived.'], ['arrived.', 'Maria Chen']];
+  assert.deepEqual(value, [both, both, both]);
+});
+
 test('the slide sample runs as drawn', async (t) => {
   const backend = await startBackend(t);
   const { value } = await ask(backend, `
@@ -73,6 +87,7 @@ const REFUSALS = [
   ["tt.decide('Refund?', 'x', { urgent: true })", 'options.urgent is not a decide key'],
   ["tt.choose('Which team?', 'x', { labels: ['a'] })", 'options.labels is not a choose key'],
   ["tt.rank('Urgent?', ['a', 'b'], { top: 0 })", 'options.top is a positive whole number'],
+  ["tt.find('Which?', ['a', 'b'], { none: 'yes' })", 'options.none is true or false'],
   [
     "tt.score({ score: 'How urgent?', levels: ['low', 'high'] }, 'x', { levels: ['a', 'b'] })",
     'score: a question value carries its own levels; the last object holds call options and top',

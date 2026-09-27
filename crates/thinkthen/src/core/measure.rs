@@ -71,6 +71,14 @@ pub(crate) enum MeasureError {
     SetCut,
     /// A key gives a `recognize` or `relate` answer a value unlike the command's own.
     KeyItems(usize),
+    /// diff paired a `recognize` or `relate` answer with an answer of another verb.
+    PairsVerbs(usize),
+    /// diff found `recognize` or `relate` pairs beside pairs of other verbs.
+    MixesVerbs(usize),
+    /// diff found `recognize` pairs beside `relate` pairs.
+    MixesSets(usize),
+    /// diff was given `--match` over pairs of other verbs.
+    MatchNotSet,
 }
 
 /// One numbered JSON line of an input.

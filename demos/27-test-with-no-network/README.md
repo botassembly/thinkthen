@@ -16,9 +16,17 @@ env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL \
 
 ## Input
 
-`triage.sh` is the script under test. It reads one bug report and prints the queue it belongs in. Arguments after the file name go straight to `thinkthen`, which is how a test points the script at a recording.
+`triage.sh` is the script under test, and the block below prints it past its header comment. It reads one bug report and prints the queue it belongs in. Arguments after the file name go straight to `thinkthen`, which is how a test points the script at a recording.
 
-```sh
+```bash
+set -euo pipefail
+
+sed -n '/^set -eu$/,$p' triage.sh | mustmatch "$(cat <<'SCRIPT'
+set -eu
+
+report=$1
+shift
+
 thinkthen decide 'Does this report say what the person did before the problem appeared?' \
 	--quiet "$@" <"$report" && rc=0 || rc=$?
 case $rc in
@@ -29,6 +37,8 @@ case $rc in
 	exit "$rc"
 	;;
 esac
+SCRIPT
+)"
 ```
 
 `report.txt` is a bug report that says what the person did. `vague.txt` is a bug report that says nothing, and it is left out of the recording on purpose. Every probability here is illustrative.
@@ -47,8 +57,8 @@ The file name is the digest of the wire shape, the address, and the request byte
 set -euo pipefail
 
 jq -r 'input_filename, (keys_unsorted | join(","))' \
-  recording/01c476cebd5a5b2e7e2bf649d0604516f4bdd555a7cabb4ab1b8def6c840c4dc.json \
-  | mustmatch "recording/01c476cebd5a5b2e7e2bf649d0604516f4bdd555a7cabb4ab1b8def6c840c4dc.json
+  recording/4492d4e8f2d047146e41dfe2eeb5ba6c5ab91140bd6be76eca6e66051f4d48e7.json \
+  | mustmatch "recording/4492d4e8f2d047146e41dfe2eeb5ba6c5ab91140bd6be76eca6e66051f4d48e7.json
 schema,adapter,url,request,response"
 ```
 
@@ -73,22 +83,20 @@ env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL \
 `vague.txt` was never recorded, so the folder holds no answer for it. `--replay` opens no connection, so the run ends in a local failure, exit 5, and the message on standard error carries the digest, which is the name the entry would have had.
 
 ```bash
-set +e
-set -uo pipefail
+set -euo pipefail
 
 env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL \
-  sh triage.sh vague.txt --replay recording/ 2>/dev/null
-printf 'rc=%s\n' "$?" | mustmatch "rc=5"
+  sh triage.sh vague.txt --replay recording/ 2>/dev/null && rc=0 || rc=$?
+printf 'rc=%s\n' "$rc" | mustmatch "rc=5"
 ```
 
 ```bash
-set +e
-set -uo pipefail
+set -euo pipefail
 
 said=$(env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL \
   thinkthen decide 'Does this report say what the person did before the problem appeared?' \
-  --quiet --replay recording/ < vague.txt 2>&1 >/dev/null)
-printf '%s\n' "$said" | mustmatch like "holds no entry named"
+  --quiet --replay recording/ < vague.txt 2>&1 >/dev/null) && rc=0 || rc=$?
+printf 'rc=%s %s\n' "$rc" "$said" | mustmatch like "rc=5 thinkthen: the replay folder holds no entry named"
 ```
 
 Record the missing case and the test passes again. A recording is grown one case at a time.

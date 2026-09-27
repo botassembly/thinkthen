@@ -1,5 +1,5 @@
 use super::{asked, conformance_support::Document};
-use crate::core::{Backend, BackendProfile, ProfileName, ProfileWarning};
+use crate::core::{Backend, BackendProfile, DEFAULT_MODEL, ProfileName, ProfileWarning};
 use crate::engine::error::Error;
 use crate::engine::facade;
 use serde::Deserialize;
@@ -49,7 +49,7 @@ fn shared_profile_cases_cross_the_facade_preparation() {
     let source: Document = serde_json::from_str(CASES).expect("main cases");
     let profiles: ProfileDocument = serde_json::from_str(PROFILES).expect("profile cases");
     assert_eq!(profiles.schema, "thinkthen.backend-profile-conformance/1");
-    let backend = Backend::resolve(None, None, "jev-latest").expect("backend");
+    let backend = Backend::resolve(None, None, DEFAULT_MODEL).expect("backend");
     for profile_case in profiles.cases {
         let case = source
             .cases
