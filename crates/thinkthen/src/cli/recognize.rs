@@ -123,15 +123,22 @@ pub(crate) fn run(
         return schedule::over_records(
             &running.engine,
             &|record: &Record| judged_record(&running, &reading, &spec, record.clone(), true),
-            rows,
+            rows.enumerate().map(|(place, row)| {
+                row.map(|record| (place + 1, record))
+                    .map_err(|error| schedule::Placed::at(error, place + 1))
+            }),
             environment.cancel(),
             &mut schedule::Output::Streaming(&mut writer),
         );
     }
     let streams = reading.streams();
-    let mut chunks = edge::Chunks::new(source, streams);
+    let mut chunks = edge::numbered(edge::Chunks::new(source, streams), &reading);
     if !streams {
-        let bytes = chunks.next().transpose()?.unwrap_or_default();
+        let bytes = chunks
+            .next()
+            .map(|(_, row)| row)
+            .transpose()?
+            .unwrap_or_default();
         let record = reading
             .record(&bytes)
             .map_err(|error| Failure::record(error, streams))?;
@@ -147,7 +154,10 @@ pub(crate) fn run(
                 .map_err(|error| Failure::record(error, streams))?;
             judged_record(&running, &reading, &spec, record, streams)
         },
-        chunks,
+        chunks.map(|(at, row)| {
+            row.map(|bytes| (at, bytes))
+                .map_err(|error| schedule::Placed::at(error, at))
+        }),
         environment.cancel(),
         &mut schedule::Output::Streaming(&mut writer),
     )

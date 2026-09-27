@@ -70,7 +70,7 @@ fn a_spent_deadline_over_empty_bulk_input_stops_before_reading() {
         )
         .expect("metadata");
         assert!(
-            matches!(outcome, Outcome::Stopped { at: 1, finished: 0, cause, .. } if cause == stop),
+            matches!(outcome, Outcome::Stopped { finished: 0, cause, .. } if cause == stop),
             "{stop}"
         );
     }
@@ -98,7 +98,6 @@ fn a_spent_deadline_over_empty_bulk_input_stops_before_reading() {
             matches!(
                 outcome,
                 annotate_schedule::Outcome::Stopped {
-                    at: 1,
                     finished: 0,
                     cause: "deadline",
                     ..
@@ -153,7 +152,6 @@ fn one_deadline_spans_every_record_and_starts_no_undispatched_request() {
     assert!(matches!(
         outcome,
         Outcome::Stopped {
-            at: 3,
             finished: 2,
             cause: "deadline",
             ..
@@ -226,7 +224,6 @@ fn a_result_queued_before_the_deadline_check_keeps_its_place_and_the_order() {
     assert!(matches!(
         outcome,
         Outcome::Stopped {
-            at: 3,
             finished: 2,
             cause: "deadline",
             ..
@@ -239,7 +236,6 @@ fn a_result_queued_before_the_deadline_check_keeps_its_place_and_the_order() {
     assert!(matches!(
         outcome,
         Outcome::Stopped {
-            at: 2,
             finished: 1,
             cause: "backend",
             ..
@@ -306,7 +302,6 @@ fn a_deadline_clears_undispatched_annotation_groups() {
     assert!(matches!(
         outcome,
         annotate_schedule::Outcome::Stopped {
-            at: 1,
             finished: 0,
             cause: "deadline",
             ..

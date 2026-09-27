@@ -41,7 +41,6 @@ impl<R, E> Completed<R, E> {
 pub(crate) enum Outcome<E> {
     Complete,
     Stopped {
-        at: usize,
         finished: usize,
         replayed: usize,
         held: bool,
@@ -200,7 +199,6 @@ impl<R, E> Run<R, E> {
     fn finish(self, held: bool) -> Outcome<E> {
         match self.stop {
             Some(cause) => Outcome::Stopped {
-                at: self.finished + 1,
                 finished: self.finished,
                 replayed: self.replayed,
                 held,
@@ -366,7 +364,6 @@ mod tests {
         assert!(matches!(
             outcome,
             Outcome::Stopped {
-                at: 1,
                 finished: 0,
                 cause: "cancelled",
                 ..
@@ -444,7 +441,6 @@ mod tests {
         assert!(matches!(
             result,
             Outcome::Stopped {
-                at: 2,
                 finished: 1,
                 cause: "cancelled",
                 ..
