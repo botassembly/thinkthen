@@ -21,6 +21,7 @@ use crate::engine::recorder::{PreparedRecording, Recorder};
 use crate::engine::{Cancel, Widths, workers};
 
 const SECOND: Duration = Duration::from_secs(1);
+const HOST_SIGNAL_CHILD: &str = "THINKTHEN_TEST_HOST_SIGNAL_CHILD";
 
 /// Read one request through its body, then hold the reply until released.
 fn held_reply() -> (
@@ -57,6 +58,30 @@ fn held_reply() -> (
 
 #[test]
 fn a_host_signal_during_a_held_send_on_a_worker_leaves_the_call_whole() {
+    let output = crate::test_deadline::output(
+        std::process::Command::new(std::env::current_exe().expect("test binary"))
+            .env_clear()
+            .env(HOST_SIGNAL_CHILD, "1")
+            .args([
+                "--ignored",
+                "--exact",
+                "engine::host_signal_tests::host_signal_child",
+            ]),
+    )
+    .expect("host signal child");
+    assert!(output.status.success(), "{output:?}");
+    assert!(
+        String::from_utf8_lossy(&output.stdout).contains("1 passed; 0 failed"),
+        "{output:?}"
+    );
+}
+
+#[test]
+#[ignore = "subprocess harness"]
+fn host_signal_child() {
+    if std::env::var_os(HOST_SIGNAL_CHILD).is_none() {
+        return;
+    }
     let handled = Arc::new(AtomicBool::new(false));
     let _handler =
         signal_hook::flag::register(signal_hook::consts::signal::SIGUSR1, Arc::clone(&handled))
@@ -79,22 +104,26 @@ fn a_host_signal_during_a_held_send_on_a_worker_leaves_the_call_whole() {
         1,
         results,
         &|()| client.post_observed(&exchange, &Cancel::default(), || ()),
-        &|| published.send(pthread_self()),
+        &|| {
+            published
+                .send((
+                    pthread_self(),
+                    SigSet::thread_get_mask().expect("worker mask"),
+                ))
+                .expect("worker published");
+        },
         |work| {
             work.send(()).expect("work queued");
-            let worker = worker.recv_timeout(SECOND * 2).expect("worker thread");
+            let (worker, mask) = worker.recv_timeout(SECOND * 2).expect("worker thread");
+            assert!(mask.contains(Signal::SIGUSR1), "the worker masks SIGUSR1");
             held.recv_timeout(SECOND * 2).expect("the send is held");
-            // Several sends, so an unmasked worker meets one inside its read.
-            for _ in 0..10 {
-                pthread_kill(worker, Signal::SIGUSR1).expect("signal delivered");
-                thread::sleep(Duration::from_millis(10));
-            }
+            pthread_kill(worker, Signal::SIGUSR1).expect("signal delivered");
             release.send(()).expect("reply released");
         },
     );
 
     // A blocked signal stays pending on the worker and ends with it, so the
-    // handler never runs. This holds however the scheduler times the sends.
+    // handler never runs. The child keeps this process-wide flag isolated.
     assert!(
         !handled.load(Ordering::SeqCst),
         "the worker kept SIGUSR1 blocked"

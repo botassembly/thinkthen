@@ -1,0 +1,11 @@
+# Quick Fix: Isolate host signal tests
+
+Status: Built on `qf/isolate-host-signal-tests`, awaiting fresh read-only code review and landing.
+
+The 0169 signal filter failed once because two tests registered process-wide SIGUSR1 flags. The facade test sent SIGUSR1 to its unblocked caller while the worker test expected its own flag to stay false. An isolated run of the worker test passed, which did not distinguish a correct worker mask from cross-test interference.
+
+A temporary coordinated test registered the worker flag on an engine worker, confirmed that worker's SIGUSR1 mask was blocked, registered a second flag on the caller, then sent one SIGUSR1 to the caller. Both flags became true. Its one exact run passed; I removed the temporary test afterward. `signal-hook` returns a `SigId`; dropping that integer does not unregister the process-wide action. Unregistering the worker test's action after its own run would not protect an overlapping run. The worker test now runs its original held-request proof in a bounded child process with an empty inherited environment. The parent checks that exactly one ignored child test ran and succeeded. The child still checks the worker and caller masks, an untouched host flag, one request, a good reply and one response. One signal during the held worker read replaces ten repeated sends. The facade test likewise sends one signal during each of its two held calls.
+
+Focused Rust 1.95 proof: the temporary causal test passed once before removal. The exact worker test and exact facade test each passed, then the two-test `a_host_signal_` filter passed once with ordinary test parallelism. After the final lint fix, the same two-test filter passed again. Formatting, policy, strict all-target Clippy and the ratchet passed. No live backend or paid call ran; both tests use loopback servers.
+
+The Rust ratchet rises from 76,097 to 76,121, a net 24 nonblank test lines and zero product source lines. The worker test adds a bounded wrapper and a direct worker-mask assertion; the facade test removes repeated-signal setup. I checked `limited_child`, `test_deadline::output` and the existing host-signal helpers for duplication. The wrapper reuses `test_deadline::output`; a separate harness would add more code. No dependency or policy rule changed.
