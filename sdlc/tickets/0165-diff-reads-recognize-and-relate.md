@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 165
-opens: specification/diff.md spec/diff.md crates/thinkthen/src/core/measure crates/thinkthen/src/cli crates/thinkthen/tests/diff.rs crates/thinkthen/tests/audit_refusals.rs crates/thinkthen/tests/fixtures/measure sdlc/ratchet.json sdlc/records sdlc/tickets CHANGELOG.md
+opens: specification/diff.md specification/settings.md spec/diff.md crates/thinkthen/src/core/measure crates/thinkthen/src/cli crates/thinkthen/tests/diff.rs crates/thinkthen/tests/audit_refusals.rs crates/thinkthen/tests/fixtures/measure sdlc/ratchet.json sdlc/records sdlc/tickets CHANGELOG.md
 ---
 
 # 0165: diff reads recognize and relate
@@ -26,7 +26,8 @@ Each line is at `origin/main` `19ca8302`.
 - `diff` has no `--match` option.
 - `audit` already reads each line's names or edges, their scores and the run cut in `core/measure/items.rs`. It matches them against a key under `--match strict` or `--match overlap`, and it refuses a band or a cut below the run cut.
 - Under audit, the shared reader counts a `relate` line whose `meta.failed_questions` is above 0 as failed (`core/measure/answer.rs` line 360). It refuses a key item whose kind or relation the line's question lacks, with the row `key line N names a level, label, or unit the question does not have`. diff reaches neither today, because `verb()` refuses the line first.
-- A recognize line saved without `--details` has no `question.verb`. `verb()` reads its object value as a `choose` value that is not text, and the reader refuses it through `MeasureError::Ungradable` (`cli/measure.rs`), for diff as for audit.
+- A recognize record-mode line saved without `--details`, such as `{"input":{"id":"r1"},"value":{"entities":[]}}`, has no `question.verb`. Under audit, `verb()` returns `NoQuestion` for a value that is not text (`core/measure/verbs.rs` lines 130 to 132): `thinkthen: audit: results line N holds an answer without its question; save it with --details`. Under diff, `verb()` reads the object value as a `choose` value that is not text, and the reader refuses it through `MeasureError::Ungradable` (`cli/measure.rs`).
+- A bare one-text recognize line, such as `{"entities":[]}`, has no `input`. diff refuses it before reading the verb: `thinkthen: diff: first run line N has no string or integer id at the --id pointer`.
 
 ## Design
 
@@ -74,9 +75,13 @@ A name that keeps its place and changes kind prints in `changed_kind`:
 
 Each `changed_kind` entry is `{"from": A item, "to": B item}`. Items print in the command's own shape, whole. Today `items.rs` keeps only each item's kind and place, so the reader must now keep each item's whole object and its output index beside it. Within `lost`, `gained` and `changed_kind`, items keep their line's output order. Names print by `start`, then `end`, as `recognize` prints them. Edges keep the order `relate.md` gives them. A `changed_kind` entry takes its A item's place in that order. `key` is null without a key value for the record.
 
-The summary line keeps every member it prints today. For an item verb, `moves` is an empty list. `labeled` counts records with a key value. `right_a` and `right_b` count key items matched on each side. `gained` and `lost` count key items matched only in B and only in A. The summary adds `key_items`, `items_gained`, `items_lost`, `items_changed_kind`, `extra_a` and `extra_b`. `key_items` counts the key items of the labeled records. They are null for other verbs, and the key members are null without a key. A reader ignores members it does not know, as `diff.md` already says.
+The summary line keeps every member it prints today. An item summary prints, in order: `records`, `changed`, `only_a`, `only_b`, `moves`, `labeled`, `right_a`, `right_b`, `gained`, `lost`, `mcnemar_on`, `mcnemar_p`, `key_items`, `items_gained`, `items_lost`, `items_changed_kind`, `extra_a`, `extra_b`, `compare`, `a` and `b`. For an item verb, `moves` is an empty list. `labeled` counts records with a key value. `right_a` and `right_b` count key items matched on each side. `gained` and `lost` count key items matched only in B and only in A. The summary adds `key_items`, `items_gained`, `items_lost`, `items_changed_kind`, `extra_a` and `extra_b`. `key_items` counts the key items of the labeled records. The six new members are absent from a summary of other verbs: the fields are skipped, so every `decide` and `choose` golden stays byte for byte. Without a key, `key_items`, `extra_a` and `extra_b` are null. A reader ignores members it does not know, as `diff.md` already says.
 
-`--table` prints a changed row as `ID[/NAME]  +G -L ~K`, then one line per item: `  + TEXT [START,END) KIND strength S`, `  - …`, or `  ~ TEXT [START,END) KIND -> KIND`. When a changed-kind entry's two places differ, as under `overlap`, its line prints both: `  ~ TEXT [S,E) KIND -> TEXT [S,E) KIND`. `S` prints with four decimals, as ticket 0147 keeps `strength`. An edge line prints `RELATION SOURCE (KIND) -> TARGET (KIND) p P`, with two decimals as today. The count line starts as today, with `A -> B`, the rule form, or the two-cuts form, and goes on with `: C of N changed; items gained G, lost L, changed kind K`. With a key it adds `; key names matched MA -> MB of T; extras XA -> XB` and the McNemar clause as today. For `relate` the clause reads `key edges` in place of `key names`. The only-in clause stays as today.
+`--table` prints a changed row as `ID[/NAME]  +G -L ~K`, then one line per item: `  + TEXT [START,END) KIND strength S`, `  - …`, or `  ~ TEXT [START,END) KIND -> KIND`. When a changed-kind entry's two places differ, as under `overlap`, its line prints both: `  ~ TEXT [S,E) KIND -> TEXT [S,E) KIND`. `S` prints with four decimals, as ticket 0147 keeps `strength`. An edge line prints `  + RELATION SOURCE (KIND) -> TARGET (KIND) p P` for a gained edge and `  - …` for a lost one, with two decimals as today. The count line starts as today, with `A -> B`, the rule form, or the two-cuts form, and goes on with `: C of N changed; items gained G, lost L, changed kind K`. With a key, item verbs drop the old `; gained G, lost L (RA -> RB right of LABELED)` clause. They print `; key names matched MA -> MB of T; extras XA -> XB` in its place, then the McNemar clause as today. For `relate` the clause reads `key edges` in place of `key names`. The only-in clause stays as today. One whole count line:
+
+```text
+A -> B: 2 of 3 changed; items gained 3, lost 1, changed kind 1; key names matched 5 -> 6 of 7; extras 2 -> 1; McNemar p 1.000 on key names
+```
 
 ### Warnings and failures
 
@@ -126,12 +131,13 @@ The owner's calls. Ian can overturn each.
 | `relate` edge whose source kind changes | One lost and one gained edge |
 | `either` edge printed `Ann`→`Bob` in A and `Bob`→`Ann` in B | Paired, no row |
 | The same edges under a directed relation | One lost and one gained edge |
-| `relate` line in B with `meta.failed_questions` of 1 | The pair leaves, as today. A regression guard |
+| `relate` line in B with `meta.failed_questions` of 1 | The pair leaves: no row, and `only_a` counts it |
 | A key name of a kind that side B's question lacks | Exit 2, `thinkthen: diff: key line N names a level, label, or unit the question does not have` |
 | A with kinds `person`, B with no kinds, both finding `Ada` at `[0,3)` | One changed-kind entry, `person` -> `ENTITY` |
 | The same, with the key `{"entities":[{"kind":"person","start":0,"end":3}]}` | A matches as `person`, and B reads the key name as `ENTITY` and matches. `key` is `{"matched":[1,1],"extra":[0,0]}`. No refusal |
 | A `decide` answer paired with a `choose` answer | A row, as today. No refusal |
-| A recognize line saved without `--details` | Exit 2, `thinkthen: diff: first run line N holds an answer diff cannot grade; diff grades decide, choose, recognize and relate` |
+| The record-mode line `{"input":{"id":"r1"},"value":{"entities":[]}}`, saved without `--details` | Exit 2, `thinkthen: diff: first run line N holds an answer diff cannot grade; diff grades decide, choose, recognize and relate` |
+| The bare one-text line `{"entities":[]}` | Exit 2, `thinkthen: diff: first run line N has no string or integer id at the --id pointer`, as today |
 | A `tag` line in A | Exit 2, `thinkthen: diff: first run line N holds an answer diff cannot grade; diff grades decide, choose, recognize and relate` |
 | `relate` lines with no `input` at lines 1 to 3 of each run | Record ids `1`, `2` and `3`. Line N of A pairs with line N of B |
 | `--match overlap` over two `decide` runs | Exit 2, `thinkthen: diff: --match applies to recognize and relate` |
@@ -146,11 +152,11 @@ The owner's calls. Ian can overturn each.
 
 Each drives `thinkthen diff` on saved `--details` result lines in `tests/diff.rs`. Diff sends nothing, so no recording is needed beyond saved lines.
 
-1. **Two recognize runs.** Two hand-written three-record runs in the ticket 0147 output shape, and a hand-written key for the three records. The test pins every row and the summary line exactly, with and without the key. A third run with no kinds, diffed against A with the key, pins the `person` -> `ENTITY` rows.
+1. **Two recognize runs.** Two hand-written three-record runs in the ticket 0147 output shape, and a hand-written key for the three records. The test pins every row and the summary line exactly, with and without the key. A third run with no kinds, diffed against A with the key, pins the `person` -> `ENTITY` rows. Record 2 holds `Abbey Road` `[0,10)` as `place` in A and `Abbey Road Studios` `[0,18)` as `place` in B. Under the default `strict` it prints one lost and one gained name. A run with `--match overlap` pins that record printing no row and `changed` one lower.
 2. **Two cuts on one real run.** `crates/thinkthen/tests/fixtures/measure/diff-recognize-key-run.jsonl` holds the output of ticket 0147's replayed key run at five kinds. The builder saves it once from that replay and commits it as a fixture. The diff test replays nothing. It diffs the file at its run cut of 0.5 and at a higher cut of 0.8, and pins the summary line. Every lost name's `strength` falls between the two cuts.
-3. **Relate.** Each run file holds three `relate --details` lines, one per entity set, in the same order in A and B. The lines carry no `input`, so each takes its one-based line number as its record id, and line N of A pairs with line N of B. Lines 1 and 2 carry the pinned edges: line 1 gains one edge and loses one, and line 2 holds the `either` edge printed both ways. B's line 3 carries `meta.failed_questions` of 1, and the test pins that its pair leaves. The test pins the rows and the key test.
+3. **Relate.** Each run file holds three `relate --details` lines, one per entity set, in the same order in A and B. The lines carry no `input`, so each takes its one-based line number as its record id, and line N of A pairs with line N of B. Lines 1 and 2 carry the pinned edges: line 1 gains one edge and loses one, and line 2 holds the `either` edge printed both ways. B's line 3 carries `meta.failed_questions` of 1, so its pair leaves. The test pins `records` 2 and `only_a` 1, the rows and the key test. Under `--table` it pins line 1's gained edge line, `  + wrote Paul McCartney (person) -> Yesterday (song) p 0.97`.
 4. **McNemar.** `thinkthen diff` runs end to end over two saved recognize runs and a key. The runs give exactly 3 key names matched only in A and 9 matched only in B. A holds extra names, so counting extras would move the result. The test pins `mcnemar_p` at 0.145996, the existing exact function's value, and pins `extra_a` and `extra_b`.
-5. **Refusals.** A cut below the run cut, a band, a mixed-verb pair, a recognize pair beside a decide pair, a recognize pair beside a relate pair, a key kind that side B's question lacks, a recognize line without `--details`, a `tag` line, and `--match` over `decide` runs each exit 2 with their exact sentences and print nothing on standard output. A `decide` answer paired with a `choose` answer still prints its row, as today.
+5. **Refusals.** A cut below the run cut, a band, a mixed-verb pair, a recognize pair beside a decide pair, a recognize pair beside a relate pair, a key kind that side B's question lacks, the record-mode line without `--details`, a `tag` line, and `--match` over `decide` runs each exit 2 with their exact sentences and print nothing on standard output. A `decide` answer paired with a `choose` answer still prints its row, as today.
 6. **The table.** `--table` over test 1 pins every line.
 
 Each answers the four questions. They protect diff's reading of name and edge sets, the key test, the cut rule and the refusals. Keeping `verb()`'s refusal of item verbs under diff, as today, fails tests 1 to 4. So does returning `Said::Unresolved` for them. No existing test covers an item verb in `diff`. None needs a test-only hook.
@@ -167,7 +173,7 @@ One table test in `core/measure/diff.rs` runs every row of "Edge cases" that nee
 | Keep `Said::Unresolved` for recognize | Test 1 |
 | Keep the old tail | Test 5 and the diff `tag` row in `tests/audit_refusals.rs` |
 | Drop the line-number id for diff | Test 3 |
-| Ignore `--match` in diff's arguments | Edge row: `Abbey Road` under `overlap`, run through the command line in test 1 |
+| Ignore `--match` in diff's arguments | Test 1: the `--match overlap` run |
 | Count a changed kind as a loss and a gain | Edge row: `person` to `work` |
 | Ignore `--match overlap` | Edge row: `Abbey Road` under `overlap` |
 | Pair many to one under `overlap` | Edge row: the stronger B name comes second in output order |
@@ -184,9 +190,11 @@ One table test in `core/measure/diff.rs` runs every row of "Edge cases" that nee
 
 ## Pages
 
-- `specification/diff.md`: `[--match strict|overlap]` on the command line. A section "Names and edges" with the reading, the line-number id, matching, key test, the item row members, summary members, table lines and the four new failure rows. The failures table gains the `--match` row, and the cannot-grade row takes the new tail. Status adds ticket 0165.
+- `specification/diff.md`: `[--match strict|overlap]` on the command line. The summary sentence at line 61 lists the six new members after `mcnemar_p` and before `compare`, present for `recognize` and `relate` only. The table paragraph gives the item count line. A section "Names and edges" with the reading, the line-number id, matching, key test, the item row members, summary members, table lines and the four new failure rows. The failures table gains the `--match` row, and the cannot-grade row takes the new tail. Status adds ticket 0165.
 - `crates/thinkthen/src/cli/args/command.rs`: diff's help text. "A and B hold the lines `decide` or `choose` printed" names `recognize` and `relate` too.
 - `crates/thinkthen/src/cli/diff.rs`: `DiffArguments` gains `--match`.
+- `specification/settings.md`: the "Diff comparison" row gains `--match` with default `strict`.
+- `crates/thinkthen/tests/fixtures/measure/README.md`: a provenance row for each new fixture file, `diff-recognize-key-run.jsonl` from ticket 0147's replay and the hand-written runs and keys of tests 1, 3 and 4.
 - `crates/thinkthen/tests/audit_refusals.rs`: the diff `tag` row near line 325 expects the new tail. This is an expected change.
 - `spec/diff.md`: one block over two recognize runs.
 - `CHANGELOG.md`: one line.
