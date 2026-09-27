@@ -84,7 +84,7 @@ pub(crate) fn read(
         .ok_or(ungradable)?;
     let mut items = Vec::new();
     for held in said {
-        let what = what(verb, held).ok_or(ungradable)?;
+        let what = entity_rule(verb, &names, what(verb, held).ok_or(ungradable)?);
         let score = number(held.member(if relate { "probability" } else { "strength" }))
             .and_then(|p| Probability::new(p).ok())
             .ok_or(MeasureError::Probability(line))?
@@ -147,11 +147,25 @@ pub(crate) fn key(
         .iter()
         .map(|held| {
             let what = what(verb, held).ok_or(MeasureError::KeyItems(line))?;
+            let what = entity_rule(verb, names, what);
             let (What::Name(named, ..) | What::Edge(named, _)) = &what;
-            let known = names.contains(named);
+            let known = names.contains(named) || (verb == Verb::Recognize && names.is_empty());
             known.then_some(what).ok_or(MeasureError::KeyUnknown(line))
         })
         .collect()
+}
+
+/// The kind a `recognize` run with no kinds gives every name.
+const ENTITY: &str = "ENTITY";
+
+/// A `recognize` line with an empty kind set grades every said and key name as `ENTITY`.
+fn entity_rule(verb: Verb, names: &[String], what: What) -> What {
+    match what {
+        What::Name(_, start, end) if verb == Verb::Recognize && names.is_empty() => {
+            What::Name(ENTITY.to_owned(), start, end)
+        }
+        held => held,
+    }
 }
 
 /// Matched, extra, and missed under the rule. Said items are taken strongest
