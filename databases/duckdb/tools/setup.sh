@@ -9,12 +9,29 @@ HERE=$(cd -- "$(dirname -- "$0")" && pwd)
 . "$HERE/version.env"
 HOME_DIR=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/duckdb/$DUCKDB_VERSION
 mkdir -p "$HOME_DIR"
+case $(uname -s):$(uname -m) in
+Linux:x86_64) ;;
+*) echo "setup: the pinned DuckDB C++ inputs target Linux x86_64" >&2; exit 77 ;;
+esac
 
 if [ "${1:-}" = --fetch ]; then
 	zip="$HOME_DIR/duckdb_cli.zip"
 	curl -fsSL -o "$zip" "https://github.com/duckdb/duckdb/releases/download/$DUCKDB_VERSION/duckdb_cli-linux-amd64.zip"
 	unzip -o -q "$zip" duckdb -d "$HOME_DIR"
 	rm -f -- "$zip"
+	if [ ! -d "$HOME_DIR/source" ]; then
+		git clone --quiet --depth 1 --branch "$DUCKDB_VERSION" https://github.com/duckdb/duckdb.git "$HOME_DIR/source"
+	fi
+	static_zip="$HOME_DIR/static-libs-linux-amd64.zip"
+	if [ ! -f "$static_zip" ]; then
+		curl -fsSL -o "$static_zip" "https://github.com/duckdb/duckdb/releases/download/$DUCKDB_VERSION/static-libs-linux-amd64.zip"
+	fi
+	echo "$DUCKDB_STATIC_ZIP_SHA256  $static_zip" | sha256sum -c --quiet - || {
+		echo "setup: $static_zip differs from the pinned release" >&2
+		exit 1
+	}
+	mkdir -p "$HOME_DIR/static-libs"
+	unzip -o -q "$static_zip" -d "$HOME_DIR/static-libs"
 fi
 if [ -f "$HOME_DIR/duckdb" ]; then
 	echo "$DUCKDB_CLI_SHA256  $HOME_DIR/duckdb" | sha256sum -c --quiet - || {
@@ -22,6 +39,18 @@ if [ -f "$HOME_DIR/duckdb" ]; then
 		exit 1
 	}
 fi
+if [ ! -d "$HOME_DIR/source" ] || [ ! -f "$HOME_DIR/static-libs/libduckdb_static.a" ]; then
+	echo "setup: DuckDB C++ source or static archives are missing; run tools/setup.sh --fetch" >&2
+	exit 77
+fi
+[ "$(git -C "$HOME_DIR/source" rev-parse HEAD)" = "$DUCKDB_CPP_SOURCE_COMMIT" ] || {
+	echo "setup: DuckDB C++ source differs from the pinned commit" >&2
+	exit 1
+}
+(cd "$HOME_DIR/static-libs" && sha256sum -c --quiet "$HERE/../cpp/archive-sha256.txt") || {
+	echo "setup: DuckDB static archives differ from the fixed manifest" >&2
+	exit 1
+}
 
 python3 "$HERE/source_checks.py" --requirements "$HERE/requirements.txt" >/dev/null
 if [ ! -x "$HOME_DIR/venv/bin/python" ]; then

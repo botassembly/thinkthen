@@ -1,5 +1,5 @@
 #!/bin/sh
-# The DuckDB surface (tickets 0110 and 0118). The surfaces rung passes its
+# The DuckDB surface (tickets 0110, 0118, and 0201). The surfaces rung passes its
 # loopback port as $1. Each suite also starts its own backend, so counts
 # never mix. A missing toolchain reports "not run" (exit 77), never "pass".
 set -eu
@@ -57,44 +57,24 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	export THINKTHEN_DUCKDB_EXTENSION="$scratch/thinkthen.duckdb_extension" THINKTHEN_CONFORMANCE_CASES="$scratch/cases.json"
 	jq '.cases |= map(select(.operation.injection != "internal_invariant_failure"))' "$REPO/conformance/cases.json" >"$THINKTHEN_CONFORMANCE_CASES"
 	stock_cli
+	"$PY" cpp/verify_package.py --extension "$THINKTHEN_DUCKDB_EXTENSION"
 	sh "$LIMIT" 900 "$PY" tools/conformance.py
 	echo "check: databases/duckdb passes, installed"
 	exit 0
 fi
 
 echo "== build, lint, and unit tests"
-cargo fmt --check
-cargo clippy --locked --offline --all-targets --all-features -- -D warnings
-cargo test --locked --offline --lib
-cargo build --locked --offline --release
-cargo build --locked --offline --release --features test-hooks --target-dir target/hooks
-package() {
-	mkdir -p "$(dirname -- "$2")"
-	printf '%s' "$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)" >build/extension_version.txt
-	"$PY" vendor/append_extension_metadata.py -l "$1" -o "$2" -n thinkthen -dv "$DUCKDB_VERSION" \
-		-evf build/extension_version.txt -pf "$TOOLS/platform.txt" --abi-type C_STRUCT_UNSTABLE >/dev/null
-}
-mkdir -p build
-package target/release/libthinkthen_duckdb.so build/thinkthen.duckdb_extension
-package target/hooks/release/libthinkthen_duckdb.so build/hooks/thinkthen.duckdb_extension
+cargo fmt --all --manifest-path bridge/Cargo.toml -- --check
+cargo clippy --locked --offline --manifest-path bridge/Cargo.toml --all-targets --all-features -- -D warnings
+cargo test --locked --offline --manifest-path bridge/Cargo.toml --lib
+sh cpp/build.sh
 
 echo "== source checks and deny"
 python3 tools/source_checks.py
-cargo deny --locked --offline --manifest-path Cargo.toml check --config deny.toml advisories bans licenses sources
-scratch_dir deny
-planted=$deny/deny.toml
-sed '/{ crate = "zlib-rs"/d' deny.toml >"$planted"
-set +e
-cargo deny --locked --offline --manifest-path Cargo.toml check --config "$planted" licenses >"$planted.out" 2>&1
-code=$?
-set -e
-[ "$code" -ne 0 ] && grep -q '├ zlib-rs v' "$planted.out" || {
-	echo "check: deny passed with the zlib-rs exception removed (exit $code)" >&2
-	exit 1
-}
-rm -f -- "$planted.out"
+cargo deny --locked --offline --manifest-path bridge/Cargo.toml check --config ../../deny.toml advisories bans licenses sources
 
 stock_cli
+"$PY" cpp/verify_package.py --extension build/thinkthen.duckdb_extension
 
 if [ "$profile" = stress ]; then
 	echo "== opt-in host campaigns"

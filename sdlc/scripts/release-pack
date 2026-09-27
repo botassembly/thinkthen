@@ -103,23 +103,45 @@ part_sqlite() {
 
 # DuckDB reads its footer: the platform, the DuckDB version, and the extension's version.
 part_duckdb() {
+	case $TARGET in
+	x86_64-unknown-linux-gnu) ;;
+	*)
+		# Keep the existing C API package on other targets until the C++ input
+		# and host proofs are reviewed for each platform.
+		if [ -z "$reuse" ]; then
+			(cd databases/duckdb && cargo build --locked --quiet --release)
+			. databases/duckdb/tools/version.env
+			case $TARGET in
+			aarch64-*linux*) platform=linux_arm64 ;;
+			x86_64-apple*) platform=osx_amd64 ;; *) platform=osx_arm64 ;;
+			esac
+			printf '%s' "$platform" >"$stage/platform.txt"
+			printf '%s' "$V" >"$stage/version.txt"
+			mkdir -p databases/duckdb/build
+			python3 databases/duckdb/vendor/append_extension_metadata.py \
+				-l "$(built databases/duckdb)/release/libthinkthen_duckdb.$dl" -o databases/duckdb/build/thinkthen.duckdb_extension \
+				-n thinkthen -dv "$DUCKDB_VERSION" -evf "$stage/version.txt" -pf "$stage/platform.txt" \
+				--abi-type C_STRUCT_UNSTABLE >/dev/null
+		fi
+		folder=$(fresh duckdb)
+		cp databases/duckdb/build/thinkthen.duckdb_extension "$folder/"
+		pack "thinkthen-duckdb-$V-$TARGET.tar.gz" "$folder"
+		return
+		;;
+	esac
 	if [ -z "$reuse" ]; then
-		(cd databases/duckdb && cargo build --locked --quiet --release)
-		. databases/duckdb/tools/version.env
-		case $TARGET in
-		x86_64-*linux*) platform=linux_amd64 ;; aarch64-*linux*) platform=linux_arm64 ;;
-		x86_64-apple*) platform=osx_amd64 ;; *) platform=osx_arm64 ;;
-		esac
-		printf '%s' "$platform" >"$stage/platform.txt"
-		printf '%s' "$V" >"$stage/version.txt"
-		mkdir -p databases/duckdb/build
-		python3 databases/duckdb/vendor/append_extension_metadata.py \
-			-l "$(built databases/duckdb)/release/libthinkthen_duckdb.$dl" -o databases/duckdb/build/thinkthen.duckdb_extension \
-			-n thinkthen -dv "$DUCKDB_VERSION" -evf "$stage/version.txt" -pf "$stage/platform.txt" \
-			--abi-type C_STRUCT_UNSTABLE >/dev/null
+		sh databases/duckdb/cpp/build.sh
 	fi
 	folder=$(fresh duckdb)
 	cp databases/duckdb/build/thinkthen.duckdb_extension "$folder/"
+	cp LICENSE "$folder/LICENSE.thinkthen"
+	. databases/duckdb/tools/version.env
+	tools=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/duckdb/$DUCKDB_VERSION
+	source=${THINKTHEN_DUCKDB_CPP_SOURCE:-$tools/source}
+	cp "$source/LICENSE" "$folder/LICENSE.duckdb"
+	printf 'ThinkThen %s: MIT (LICENSE.thinkthen)\nDuckDB %s source and static archives: MIT (LICENSE.duckdb)\n' \
+		"$V" "$DUCKDB_VERSION" >"$folder/NOTICE"
+	chmod 644 "$folder"/*
 	pack "thinkthen-duckdb-$V-$TARGET.tar.gz" "$folder"
 }
 
