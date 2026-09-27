@@ -161,32 +161,36 @@ pub fn run(input: impl BufRead, output: impl Write + Send + 'static) -> io::Resu
     say(&output, port)?;
     let cancelled = Arc::new(AtomicBool::new(false));
     let mut waits = Vec::new();
-    for line in input.lines() {
-        match line?.trim() {
-            "count" => say(&output, backend.count())?,
-            "release" => backend.release(),
-            "round" => backend.round(),
-            other => match other.strip_prefix("wait ").and_then(whole) {
-                Some(least) => {
-                    let (backend, output, cancelled) = (
-                        Arc::clone(&backend),
-                        Arc::clone(&output),
-                        Arc::clone(&cancelled),
-                    );
-                    waits.push(thread::spawn(move || {
-                        if let Some(count) = backend.wait_until(least, &cancelled) {
-                            let _ = say(&output, format!("wait {count}"));
-                        }
-                    }));
-                }
-                None => writeln!(io::stderr(), "conformance-backend: unknown line `{other}`")?,
-            },
+    let read = (|| -> io::Result<()> {
+        for line in input.lines() {
+            match line?.trim() {
+                "count" => say(&output, backend.count())?,
+                "release" => backend.release(),
+                "round" => backend.round(),
+                other => match other.strip_prefix("wait ").and_then(whole) {
+                    Some(least) => {
+                        let (backend, output, cancelled) = (
+                            Arc::clone(&backend),
+                            Arc::clone(&output),
+                            Arc::clone(&cancelled),
+                        );
+                        waits.push(thread::spawn(move || {
+                            if let Some(count) = backend.wait_until(least, &cancelled) {
+                                let _ = say(&output, format!("wait {count}"));
+                            }
+                        }));
+                    }
+                    None => writeln!(io::stderr(), "conformance-backend: unknown line `{other}`")?,
+                },
+            }
         }
-    }
+        Ok(())
+    })();
     cancelled.store(true, Ordering::SeqCst);
     for wait in waits {
         let _ = wait.join();
     }
+    read?;
     say(&output, backend.count())
 }
 

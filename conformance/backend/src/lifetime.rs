@@ -166,7 +166,7 @@ impl Lifetime {
         !state.stopped
     }
 
-    fn watch(&self, gate: &Arc<Rendezvous>) {
+    pub(crate) fn watch(&self, gate: &Arc<Rendezvous>) {
         let mut state = self.state.lock().unwrap_or_else(|error| error.into_inner());
         if state.stopped {
             gate.cancel();
@@ -196,12 +196,12 @@ impl Lifetime {
                 self.wake.notify_all();
             }
         }
-        if let Some(accept) = self
+        let accept = self
             .accept
             .lock()
             .unwrap_or_else(|error| error.into_inner())
-            .take()
-        {
+            .take();
+        if let Some(accept) = accept {
             let _ = accept.join();
         }
         let workers = std::mem::take(
@@ -240,8 +240,7 @@ impl Rendezvous {
         self.wait_inner(None)
     }
 
-    pub(crate) fn wait_owned(self: &Arc<Self>, lifetime: &Lifetime) -> bool {
-        lifetime.watch(self);
+    pub(crate) fn wait_owned(&self, lifetime: &Lifetime) -> bool {
         self.wait_inner(Some(lifetime))
     }
 

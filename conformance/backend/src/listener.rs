@@ -160,8 +160,7 @@ impl Recorded {
     }
 }
 
-/// A listener serving one scripted response per connection, then the drift
-/// status. Its final owner joins the accept and connection workers.
+/// Serves scripted replies, then drift; its final owner joins the workers.
 #[derive(Debug)]
 pub struct Listener {
     origin: String,
@@ -227,7 +226,6 @@ impl Listener {
         )
     }
 
-    /// Build an answering listener with optional request observations.
     fn answering_observed(
         reply: impl Fn(&Recorded) -> Canned + Send + Sync + 'static,
         events: Option<Sender<Observed>>,
@@ -295,7 +293,6 @@ impl Listener {
 
     /// Every request the listener has read so far, in the order it read them.
     pub fn requests(&self) -> Vec<Recorded> {
-        // The lock keeps a listener shareable across threads.
         self.recorded
             .lock()
             .map(|recorded| recorded.try_iter().collect())
@@ -491,6 +488,9 @@ fn serve(stream: &TcpStream, canned: &Canned, lifetime: &Lifetime) {
 }
 
 fn wait_answer(canned: &Canned, lifetime: &Lifetime) -> bool {
+    if let Some(release) = canned.release.as_ref() {
+        lifetime.watch(release);
+    }
     if !lifetime.pause(canned.delay) {
         return false;
     }

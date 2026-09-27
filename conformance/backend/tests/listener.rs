@@ -229,5 +229,45 @@ fn a_held_reply_releases_normally_and_retirement_interrupts_an_unreleased_reply(
     );
     retirement.join().map_err(|_| "retirement panicked")?;
     participant.join().map_err(|_| "participant panicked")?;
+
+    // The worker must register the gate before entering its cancellable delay.
+    let release = Arc::new(Rendezvous::new(3));
+    let (arrived, events) = mpsc::channel();
+    let listener = Listener::answering_with_events(
+        {
+            let release = Arc::clone(&release);
+            move |_| {
+                Canned::ok("too late")
+                    .after(10_000)
+                    .after_release(Arc::clone(&release))
+            }
+        },
+        arrived,
+    )?;
+    let mut stream = connect(&listener)?;
+    stream.write_all(b"POST /v1/systemone HTTP/1.1\r\ncontent-length: 0\r\n\r\n")?;
+    assert!(matches!(
+        events.recv_timeout(PATIENCE),
+        Ok(Observed::Request)
+    ));
+    let (awoken, wake) = mpsc::channel();
+    let participant = thread::spawn(move || {
+        let _ = awoken.send(release.wait());
+    });
+    let (retired, done) = mpsc::channel();
+    let retirement = thread::spawn(move || {
+        drop(listener);
+        let _ = retired.send(());
+    });
+    assert_eq!(done.recv_timeout(Duration::from_secs(1)), Ok(()));
+    assert_eq!(wake.recv_timeout(Duration::from_secs(1)), Ok(false));
+    let mut body = String::new();
+    stream.read_to_string(&mut body)?;
+    assert!(
+        body.is_empty(),
+        "a delayed reply escaped retirement: {body}"
+    );
+    retirement.join().map_err(|_| "retirement panicked")?;
+    participant.join().map_err(|_| "participant panicked")?;
     Ok(())
 }
