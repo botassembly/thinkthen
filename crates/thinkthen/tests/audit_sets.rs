@@ -297,16 +297,20 @@ fn write_puts_the_cut_in_recognize_and_relate_files() {
     let edges = write(&folder, "edges.json", &edges_text);
     let run = related(&format!("@{edges}"));
     let edge_keys = write(&folder, "edge-key.jsonl", &(edge_key(1) + &edge_key(2)));
-    for (path, before, lines, key, cut) in [
-        (&file, &names, lines, &key, "0.67"),
-        (&edges, &edges_text, run.clone() + &run, &edge_keys, "0.5"),
+    // The names file gains the model its lines name (ticket 0159). The relate
+    // file already names `local-1`, the model its lines name.
+    let named = names.replacen("0.01\n}", "0.67,\n  \"model\": \"jev-1.13.0\"\n}", 1);
+    let edged = edges_text.replacen("0.01", "0.5", 1);
+    for (path, lines, key, cut, expected) in [
+        (&file, lines, &key, "0.67", named),
+        (&edges, run.clone() + &run, &edge_keys, "0.5", edged),
     ] {
         let (code, _, stderr) = audit(&["-", key, "--write", path], lines.as_bytes());
         let said =
             format!("thinkthen: audit: wrote threshold {cut} for the question; it was 0.01\n");
         assert_eq!((code, stderr.as_str()), (0, said.as_str()));
         let after = fs::read_to_string(path).expect("the written file");
-        assert_eq!(after, before.replacen("0.01", cut, 1));
+        assert_eq!(after, expected);
     }
     // No recording holds a `--lines` run, so this line is written by hand. Its
     // digest is the sha256sum of the lines-form question in the fixture README.

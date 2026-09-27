@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"From: sam.okafor@example.net\nSubject: order 4417\n\nThe blender arrived with a cracked jug. I do not want a replacement.\nPlease put the money back on my card.\n\nOrder 4417, bought on the 3rd.\n","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the customer ask for money back?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.99}},"usage":{"input_tokens":331,"output_tokens":21}}
+}

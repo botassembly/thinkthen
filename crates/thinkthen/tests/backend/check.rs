@@ -18,25 +18,25 @@ const PASS: &str = "ok connection\nok key\nok endpoint\nok noul\nok choice\nok s
 
 /// The four decoded replies of `/arm/full/v1`, each answer by the arm's fixed rule.
 const FULL_REPLIES: &str = concat!(
-    r#"reply noul {"model":"jev-latest","answers":[{"kind":"yes_no","probability":0.9}],"usage":{"input_tokens":1,"output_tokens":1}}"#,
+    r#"reply noul {"model":"jev-1.13.0","answers":[{"kind":"yes_no","probability":0.9}],"usage":{"input_tokens":1,"output_tokens":1}}"#,
     "\n",
-    r#"reply choice {"model":"jev-latest","answers":[{"kind":"choice","pick":"Monday","probabilities":{"Monday":0.9,"Tuesday":0.05,"Wednesday":0.05},"confidence":0.9}],"usage":{"input_tokens":1,"output_tokens":1}}"#,
+    r#"reply choice {"model":"jev-1.13.0","answers":[{"kind":"choice","pick":"Monday","probabilities":{"Monday":0.9,"Tuesday":0.05,"Wednesday":0.05},"confidence":0.9}],"usage":{"input_tokens":1,"output_tokens":1}}"#,
     "\n",
-    r#"reply score {"model":"jev-latest","answers":[{"kind":"score","level":"fair","probabilities":{"fair":0.9,"good":0.05,"excellent":0.05},"confidence":0.9}],"usage":{"input_tokens":1,"output_tokens":1}}"#,
+    r#"reply score {"model":"jev-1.13.0","answers":[{"kind":"score","level":"fair","probabilities":{"fair":0.9,"good":0.05,"excellent":0.05},"confidence":0.9}],"usage":{"input_tokens":1,"output_tokens":1}}"#,
     "\n",
-    r#"reply mixed {"model":"jev-latest","answers":[{"kind":"yes_no","probability":0.9},{"kind":"choice","pick":"Monday","probabilities":{"Monday":0.9,"Tuesday":0.1},"confidence":0.9},{"kind":"score","level":"poor","probabilities":{"poor":0.9,"good":0.1},"confidence":0.9},{"kind":"tag","probabilities":{"on_time":0.9,"damaged":0.9}}],"usage":{"input_tokens":1,"output_tokens":1}}"#,
+    r#"reply mixed {"model":"jev-1.13.0","answers":[{"kind":"yes_no","probability":0.9},{"kind":"choice","pick":"Monday","probabilities":{"Monday":0.9,"Tuesday":0.1},"confidence":0.9},{"kind":"score","level":"poor","probabilities":{"poor":0.9,"good":0.1},"confidence":0.9},{"kind":"tag","probabilities":{"on_time":0.9,"damaged":0.9}}],"usage":{"input_tokens":1,"output_tokens":1}}"#,
     "\n",
 );
 
 /// The generic arm's replies carry no confidence and no usage.
 const GENERIC_REPLIES: &str = concat!(
-    r#"reply noul {"model":"jev-latest","answers":[{"kind":"yes_no","probability":0.9}],"usage":null}"#,
+    r#"reply noul {"model":"jev-1.13.0","answers":[{"kind":"yes_no","probability":0.9}],"usage":null}"#,
     "\n",
-    r#"reply choice {"model":"jev-latest","answers":[{"kind":"choice","pick":"Monday","probabilities":{"Monday":0.9,"Tuesday":0.05,"Wednesday":0.05}}],"usage":null}"#,
+    r#"reply choice {"model":"jev-1.13.0","answers":[{"kind":"choice","pick":"Monday","probabilities":{"Monday":0.9,"Tuesday":0.05,"Wednesday":0.05}}],"usage":null}"#,
     "\n",
-    r#"reply score {"model":"jev-latest","answers":[{"kind":"score","level":"fair","probabilities":{"fair":0.9,"good":0.05,"excellent":0.05}}],"usage":null}"#,
+    r#"reply score {"model":"jev-1.13.0","answers":[{"kind":"score","level":"fair","probabilities":{"fair":0.9,"good":0.05,"excellent":0.05}}],"usage":null}"#,
     "\n",
-    r#"reply mixed {"model":"jev-latest","answers":[{"kind":"yes_no","probability":0.9},{"kind":"choice","pick":"Monday","probabilities":{"Monday":0.9,"Tuesday":0.1}},{"kind":"score","level":"poor","probabilities":{"poor":0.9,"good":0.1}},{"kind":"tag","probabilities":{"on_time":0.9,"damaged":0.9}}],"usage":null}"#,
+    r#"reply mixed {"model":"jev-1.13.0","answers":[{"kind":"yes_no","probability":0.9},{"kind":"choice","pick":"Monday","probabilities":{"Monday":0.9,"Tuesday":0.1}},{"kind":"score","level":"poor","probabilities":{"poor":0.9,"good":0.1}},{"kind":"tag","probabilities":{"on_time":0.9,"damaged":0.9}}],"usage":null}"#,
     "\n",
 );
 
@@ -86,7 +86,7 @@ fn at(backend: &Backend, path: &str) -> Output {
 /// The report's four opening lines for one arm when no model is named.
 fn head(backend: &Backend, path: &str) -> String {
     format!(
-        "url {}{path}/systemone\nprovider systemone\nmodel asked unspecified\nmodel sent jev-latest\n",
+        "url {}{path}/systemone\nprovider systemone\nmodel asked unspecified\nmodel sent jev-1.13.0\n",
         backend.origin()
     )
 }
@@ -143,7 +143,7 @@ fn a_missing_answer_is_critical_in_every_probe_and_names_the_tag_range() {
         warning usage: a reply carries no token counts, so results and usage totals leave them out\n\
         critical 4, warning 3\n",
         // Only the mixed reply decodes. Its tag answer carries the failure marker.
-        r#"reply mixed {"model":"jev-latest","answers":[{"kind":"yes_no","probability":0.9},{"kind":"choice","pick":"Monday","probabilities":{"Monday":0.9,"Tuesday":0.1}},{"kind":"score","level":"poor","probabilities":{"poor":0.9,"good":0.1}},{"failed":{"kind":"backend","cause":"missing_answer"}}],"usage":null}"#
+        r#"reply mixed {"model":"jev-1.13.0","answers":[{"kind":"yes_no","probability":0.9},{"kind":"choice","pick":"Monday","probabilities":{"Monday":0.9,"Tuesday":0.1}},{"kind":"score","level":"poor","probabilities":{"poor":0.9,"good":0.1}},{"failed":{"kind":"backend","cause":"missing_answer"}}],"usage":null}"#
     );
     assert_eq!(text(&output.stdout), head(&backend, path) + &report);
     assert_eq!(output.status.code(), Some(4));
@@ -371,7 +371,7 @@ fn a_reply_over_its_limit_fails_its_probe_and_the_check_goes_on() {
         text(&output.stderr)
     );
     let report = format!(
-        "url {}/systemone\nprovider systemone\nmodel asked unspecified\nmodel sent jev-latest\n\
+        "url {}/systemone\nprovider systemone\nmodel asked unspecified\nmodel sent jev-1.13.0\n\
         ok connection\nok key\nok endpoint\n\
         critical noul: {}\ncritical choice: {}\ncritical score: {}\ncritical mixed: {}\n\
         unchecked usage\ncritical 4, warning 0\n",

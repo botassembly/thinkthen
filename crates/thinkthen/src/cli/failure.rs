@@ -343,11 +343,11 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
         ),
         Failure::ModelsDiffer(Some((first, second))) => (
             4,
-            format!("the backend returned model versions `{first}` and `{second}` for one record; pin --model and rerun with --record or --cache"),
+            format!("the replies for one record named model versions `{first}` and `{second}`; a cache or recording folder may hold answers from the other version, so rerun with --no-cache or prune it with `thinkthen cache prune DIR --answered-by-other-than VERSION`, naming the version a --no-cache run returns"),
         ),
         Failure::ModelsDiffer(None) => (
             4,
-            "the backend returned different model versions for one record; pin --model and rerun with --record or --cache".to_owned(),
+            "the replies for one record named different model versions; a cache or recording folder may hold answers from the other version, so rerun with --no-cache or prune it with thinkthen cache prune DIR --answered-by-other-than VERSION, naming the version a --no-cache run returns".to_owned(),
         ),
         Failure::WidthActive(active) => (2, active.to_string()),
         Failure::UsageOverflow => (

@@ -21,7 +21,7 @@ thinkthen decide --help | grep -c -- '\[default: 4\]' | mustmatch not like "0"
 `--dry-run` prints what would be sent, in the four fields the specification fixes, and opens no connection. The plan carries the evidence, because the evidence is what leaves the machine.
 
 ```bash
-printf 'Refund me please.' | thinkthen decide 'asks for a refund' --dry-run | mustmatch like '{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","request":{"state":"Refund me please.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}}'
+printf 'Refund me please.' | thinkthen decide 'asks for a refund' --dry-run | mustmatch like '{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY","request":{"state":"Refund me please.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}}'
 ```
 
 The plan needs no key. It names the variable a key would be read from and never a value.
@@ -41,7 +41,7 @@ printf 'x' | env THINKTHEN_BASE_URL=http://127.0.0.1:1/v2 thinkthen decide 'asks
 `--url` names a base and takes no companion option. The key still comes from `THINKTHEN_API_KEY`, because naming the address is the user's own act.
 
 ```bash
-printf 'x' | thinkthen decide 'asks for a refund' --dry-run --url http://127.0.0.1:1/v1 | grep -c '"url":"http://127.0.0.1:1/v1/systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY"' | mustmatch "1"
+printf 'x' | thinkthen decide 'asks for a refund' --dry-run --url http://127.0.0.1:1/v1 | grep -c '"url":"http://127.0.0.1:1/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY"' | mustmatch "1"
 ```
 
 A base that is not an `http` or `https` address is a usage error, and so is a base carrying user information, because the address is printed in a plan and kept in a recording. Neither message shows the address it refused.
@@ -69,7 +69,7 @@ printf 'x' | thinkthen decide 'asks for a refund' --dry-run --url '   ' 2>&1 >/d
 The five `THINKTHEN_*` backend variables of ADR 0004 are gone. None of them changes the plan.
 
 ```bash
-env THINKTHEN_BACKEND=nowhere THINKTHEN_URL=http://127.0.0.1:1/v1 THINKTHEN_ADAPTER=systemone THINKTHEN_MODEL=local-1 THINKTHEN_KEY_ENV=OTHER_KEY sh -c "printf 'x' | thinkthen decide 'asks for a refund' --dry-run" | grep -c '"url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY"' | mustmatch "1"
+env THINKTHEN_BACKEND=nowhere THINKTHEN_URL=http://127.0.0.1:1/v1 THINKTHEN_ADAPTER=systemone THINKTHEN_MODEL=local-1 THINKTHEN_KEY_ENV=OTHER_KEY sh -c "printf 'x' | thinkthen decide 'asks for a refund' --dry-run" | grep -c '"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY"' | mustmatch "1"
 ```
 
 `--model` replaces the default model, which is how a run is pinned to one version.
@@ -119,7 +119,7 @@ echo "$status" | mustmatch "2"
 `--lines` and `--jsonl` turn the input into records, and the plan then shows the first record with a fifth field naming the framing and the pointers. It reads no further than that record.
 
 ```bash
-printf '{"id":"T-1","body":"Payouts failed."}\n{"id":"T-2","body":"x"}\n' | thinkthen decide 'reports a payment failure' --jsonl --field /body --dry-run | mustmatch like '{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Payouts failed.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"reports a payment failure"}}}}'
+printf '{"id":"T-1","body":"Payouts failed."}\n{"id":"T-2","body":"x"}\n' | thinkthen decide 'reports a payment failure' --jsonl --field /body --dry-run | mustmatch like '{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Payouts failed.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"reports a payment failure"}}}}'
 printf 'first line\nsecond line\n' | thinkthen decide 'reports a payment failure' --lines --dry-run | grep -c '"input":{"framing":"lines","field":\[\]},"request":{"state":"first line"' | mustmatch "1"
 ```
 

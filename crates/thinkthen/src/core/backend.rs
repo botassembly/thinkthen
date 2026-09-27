@@ -258,7 +258,7 @@ mod tests {
         let backend = resolve(None, None).expect("the default base resolves");
 
         assert_eq!(backend.url().as_str(), BUILT_IN);
-        assert_eq!(backend.model().as_str(), "jev-latest");
+        assert_eq!(backend.model().as_str(), DEFAULT_MODEL);
     }
 
     #[test]

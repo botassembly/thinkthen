@@ -236,6 +236,22 @@ fn a_reply_that_answers_with_the_wrong_shape_or_leaves_an_option_out_is_refused(
     }
 }
 
+/// A repeated option name is refused whole, because either copy could be meant.
+#[test]
+fn a_repeated_option_name_refuses_the_reply() {
+    let response = concat!(
+        r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"billing","#,
+        r#""probabilities":{"billing":0.1,"billing":0.9,"shipping":0.04,"account":0.04,"other":0.02}}}}"#,
+    );
+    let (_listener, output) = choose(response, &[]).expect("a loopback exchange");
+    assert_eq!(output.status.code(), Some(4));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: the reply was refused: the response is not a systemone response: the JSON at line 1 column 165 is not one\n"
+    );
+}
+
 /// A list of the given length, so a case can sit on each edge of the range.
 fn many(count: usize) -> Vec<String> {
     (0..count).map(|place| format!("option{place}")).collect()

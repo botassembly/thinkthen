@@ -150,7 +150,7 @@ mod tests {
     fn plan() -> Plan {
         Plan::new(
             Evidence::new("Help!").expect("not blank"),
-            ModelName::new("jev-latest").expect("not blank"),
+            ModelName::new(DEFAULT_MODEL).expect("not blank"),
             vec![Question::Decide {
                 text: QuestionText::new("is urgent").expect("not blank"),
                 yes: None,
@@ -168,11 +168,8 @@ mod tests {
 
         assert_eq!(
             json_line(&document).expect("a plan document serializes"),
-            concat!(
-                r#"{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","#,
-                r#""key_env":"THINKTHEN_API_KEY","#,
-                r#""request":{"state":"Help!","model":"jev-latest","#,
-                r#""questions":{"q1":{"type":"noul","instructions":"is urgent"}}}}"#,
+            format!(
+                r#"{{"url":"https://api.typesafe.ai/v1/systemone","model":"{DEFAULT_MODEL}","key_env":"THINKTHEN_API_KEY","request":{{"state":"Help!","model":"{DEFAULT_MODEL}","questions":{{"q1":{{"type":"noul","instructions":"is urgent"}}}}}}}}"#
             )
         );
     }

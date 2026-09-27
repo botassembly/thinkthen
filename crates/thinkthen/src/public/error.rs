@@ -217,7 +217,7 @@ fn message(error: &EngineError) -> String {
         }
         EngineError::WidthActive(active) => return active.to_string(),
         EngineError::ModelsDiffer(_) => {
-            "the backend returned different model versions for one call; pin the model and use a cache"
+            "the replies for one call named different model versions; a cache may hold answers from the other version, so turn the cache off or prune it with thinkthen cache prune DIR --answered-by-other-than VERSION, naming the version a call with the cache off returns"
         }
         EngineError::UsageOverflow => "the backend reported token counts whose total is too large",
         EngineError::RecognizeKinds => "recognize takes 1 to 20 distinct, nonblank kinds",

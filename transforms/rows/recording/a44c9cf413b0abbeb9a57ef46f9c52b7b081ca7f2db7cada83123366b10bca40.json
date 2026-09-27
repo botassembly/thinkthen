@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"The tracking page says my parcel is two days late. Is there a way to have it redirected to a pickup point?","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does the customer report that a payment or a payout did not go through?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.01}},"usage":{"input_tokens":305,"output_tokens":21}}
-}

@@ -27,16 +27,18 @@ That is the gate. The rest of this page is how `receipt.json` earned it.
 ```bash
 set -euo pipefail
 work=$(mktemp -d); trap 'rm -rf -- "$work"' EXIT
-
 thinkthen decide @draft.json --jsonl --field /body --details \
   --replay recording/ < claims.jsonl > "$work/draft.jsonl"
-
 jq -n --argjson cut 0.5 -f ../../transforms/score/score.jq "$work/draft.jsonl" \
   | jq -c '{rows, accuracy, false_positive, false_negative}' \
   | mustmatch '{"rows":24,"accuracy":0.875,"false_positive":3,"false_negative":0}'
+cp draft.json "$work/draft.json"
+jq -c '{id, value: .label}' claims.jsonl \
+  | thinkthen audit "$work/draft.jsonl" - --write "$work/draft.json" > /dev/null 2>&1
+jq -c '{threshold, model}' "$work/draft.json" | mustmatch '{"threshold":0.57,"model":"jev-1.13.0"}'
 ```
 
-Three claims were called yes that the rule calls no, and none the other way. The draft says nothing about the 25 pound line or outside suppliers.
+Three claims were called yes that the rule calls no, and none the other way. The draft says nothing about the 25 pound line or outside suppliers. A file tuned by `audit --write` names the model its bar was tuned on. Rerun the labeled set, and tune again, whenever that model changes.
 
 ## Step 2: change the file and never the command
 
@@ -45,7 +47,6 @@ The fix goes in the file, under `true` and `false`. The command does not move.
 ```bash
 set -euo pipefail
 work=$(mktemp -d); trap 'rm -rf -- "$work"' EXIT
-
 jq '. + {
   true: "The claim is for more than 25 pounds, or it is for anything bought from an outside supplier whatever the amount.",
   false: "The claim is mileage at the fixed rate per mile, a per-day subsistence allowance at the fixed rate, or anything under 25 pounds that is not from an outside supplier."
@@ -99,9 +100,9 @@ c2c9a714"
 sh ../../transforms/compare/example.sh | jq -c '{paired, same}' | mustmatch '{"paired":40,"same":36}'
 ```
 
-Twenty-four rows compare, and three values moved from yes to no. `changes` shows those values and same-value probability movements above 0.08. Both runs print the same question text, but their digests differ. The last line runs the transform.
+Twenty-four rows compare, and three values moved from yes to no. `changes` shows those values and same-value probability movements above 0.08. Both runs print the same question text, but their digests differ.
 
-A fair pair is two live runs or two replays over the same cases. Never mix a live run with a replay. The 0.08 default is the largest movement observed in one repeated yes-or-no run over one model, question, set, and day. It is a reporting tolerance, not a regression boundary. A move just above it does not prove a regression.
+A fair pair is two live runs or two replays over the same cases. The 0.08 default is the largest movement observed in one repeated yes-or-no run over one model, question, set, and day. It is a reporting tolerance, not a regression boundary.
 
 ## What can go wrong
 

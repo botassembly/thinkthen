@@ -213,9 +213,8 @@ fn grade_all(arguments: &AuditArguments) -> Result<Graded, Refusal> {
         return Err(refusal("key", Cause::NoneLabeled));
     }
     let report = match &arguments.write {
-        Some(path) => {
-            write::bars(path, &answers, &rows).map_err(|cause| refusal("question", cause))?
-        }
+        Some(path) => write::bars(path, &results, &answers, &rows)
+            .map_err(|cause| refusal("question", cause))?,
         None => String::new(),
     };
     let pooled = arguments

@@ -67,7 +67,7 @@ An unresolved answer is `null`. A failed question is a failure marker and never 
 | `--input FILE` | Reads the evidence from a file | Standard input |
 | `--dry-run` | Checks the file, prints the plan, and sends nothing. See below | Off |
 | `--profile FILE` | Applies explicit local backend limits and names the running calibration profile. See [backends.md](backends.md) | None |
-| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-latest` |
+| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-1.13.0` |
 
 `annotate` takes no `--threshold`, no `--quiet`, and no `--raw`. A question carries its own threshold.
 

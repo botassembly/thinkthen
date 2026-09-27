@@ -360,7 +360,7 @@ fn different_models_across_chunks_keep_the_safe_failure() {
     assert!(output.stdout.is_empty());
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the backend returned different model versions for one record; pin --model and rerun with --record or --cache\n"
+        "thinkthen: the replies for one record named different model versions; a cache or recording folder may hold answers from the other version, so rerun with --no-cache or prune it with thinkthen cache prune DIR --answered-by-other-than VERSION, naming the version a --no-cache run returns\n"
     );
 }
 
