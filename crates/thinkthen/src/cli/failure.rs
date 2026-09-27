@@ -13,6 +13,7 @@ use crate::core::{
 use crate::engine::error::{TransportKind, reply_too_large};
 use crate::table;
 
+mod after_signal;
 mod convert;
 pub(crate) mod recognize;
 mod recording;
@@ -300,6 +301,11 @@ fn stopped(failure: &Failure, writer: &mut dyn Write) -> Option<u8> {
     else {
         return None;
     };
+    if matches!(cause.as_ref(), Failure::Cancelled) {
+        return Some(after_signal::stopped(
+            *finished, *replayed, *recording, *held, writer,
+        ));
+    }
     let (code, reason) = match cause.as_ref() {
         Failure::BatchFailed { last, cause } => {
             let mut said = Vec::new();

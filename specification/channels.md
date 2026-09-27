@@ -2,7 +2,7 @@
 
 Status: **Settled** for version one, by ADR 0007, amended by ADR 0048.
 
-`thinkthen` is an ordinary Unix program. Every command obeys these rules. On SIGINT, it stops starting work, finishes and flushes work already started, then terminates with the normal signal status.
+`thinkthen` is an ordinary Unix program. Every command obeys these rules. On SIGINT or SIGTERM, it stops starting work. Each request already sent finishes within its attempt timeout. The command writes the output it finished, prints the stop line, then ends by the same signal, so a shell reports 130 or 143. A backend failure that ends a sent request after the signal is reported as the signal's stop. A second SIGINT or SIGTERM ends the command at once by that signal. It prints no stop line, and output not yet written is lost. A supervisor that sends SIGTERM should wait longer than `--timeout`, 30 seconds by default, before it kills the command, so sent requests can finish.
 
 ## The five channels
 
@@ -60,6 +60,7 @@ A reader that closes the pipe early is no error. `thinkthen ... | head -1` ends 
 | 5 | A local failure: a file or a recording |
 | 6 | `annotate` or `relate` completed with at least one valid and one failed logical question |
 | 70 | A defect in the tool |
+| 130, 143 | SIGINT or SIGTERM stopped the command. It ends by that signal, and a shell reports 128 plus the signal's number |
 
 Codes 7 and 8 stay reserved. One function maps every error to its exit code. Exit 6 prints no diagnostic because the result marks each failed question.
 
