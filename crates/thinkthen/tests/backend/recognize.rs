@@ -10,19 +10,6 @@ const ADA: &[u8] = b"Ada met Acme.";
 
 const ADA_AND_ACME: &str = r#"{"entities":[{"text":"Ada","start":0,"end":3,"length":3,"kind":"person","strength":0.9},{"text":"Acme","start":8,"end":12,"length":4,"kind":"organization","strength":0.9}]}"#;
 
-pub(super) fn run(listener: &Listener, options: &[&str], input: &[u8]) -> Output {
-    let mut arguments = vec![
-        "recognize",
-        "--url",
-        listener.base(),
-        "--model",
-        "local-1",
-        "--no-cache",
-    ];
-    arguments.extend_from_slice(options);
-    spawn(&arguments, &[("THINKTHEN_API_KEY", "secret-value")], input).expect("command")
-}
-
 fn capital(word: &str) -> bool {
     word.chars().next().is_some_and(char::is_uppercase)
 }
@@ -143,7 +130,7 @@ fn options(question: &Value) -> Vec<String> {
         .collect()
 }
 
-fn stdout(output: &Output) -> String {
+pub(super) fn stdout(output: &Output) -> String {
     assert_eq!(
         output.status.code(),
         Some(0),
@@ -153,13 +140,77 @@ fn stdout(output: &Output) -> String {
     String::from_utf8(output.stdout.clone()).expect("output text")
 }
 
+pub(super) fn json(output: &Output) -> Value {
+    serde_json::from_str(&stdout(output)).expect("one JSON value")
+}
+
+/// Run `recognize` at the listener, under `key` when one is given.
+pub(super) fn local(
+    listener: &Listener,
+    options: &[&str],
+    key: Option<&str>,
+    input: &[u8],
+) -> Output {
+    let mut arguments = vec!["recognize", "--url", listener.base(), "--model", "local-1"];
+    arguments.extend_from_slice(options);
+    let environment: Vec<(&str, &str)> = key
+        .map(|key| ("THINKTHEN_API_KEY", key))
+        .into_iter()
+        .collect();
+    spawn(&arguments, &environment, input).expect("command")
+}
+
+pub(super) fn run(listener: &Listener, options: &[&str], input: &[u8]) -> Output {
+    local(
+        listener,
+        &[options, &["--no-cache"]].concat(),
+        Some("secret-value"),
+        input,
+    )
+}
+
+/// A listener that sends `reply` to each request holding `marker` and answers the rest.
+pub(super) fn failing_on(marker: &'static str, reply: String) -> Listener {
+    Listener::answering(move |body| {
+        if String::from_utf8_lossy(body).contains(marker) {
+            Canned::ok(&reply)
+        } else {
+            automatic(body)
+        }
+    })
+    .expect("listener")
+}
+
+pub(super) const REFUSED: &str = "thinkthen: the reply was refused: the answer to question `q1` is not the shape the question asked for\n";
+
+fn profile(name: &str, body: &str) -> PathBuf {
+    let path = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!("recognize-{name}.json"));
+    fs::write(
+        &path,
+        format!(r#"{{"schema":"thinkthen.backend-profile/1","name":"{name}",{body}}}"#),
+    )
+    .expect("profile");
+    path
+}
+
+const KINDS: [&str; 2] = ["person", "organization"];
+
+const WORKS: [&str; 4] = [
+    "person",
+    "organization",
+    "--relation",
+    "works_for=person:organization",
+];
+
 /// Ticket 0147, test 6: one step-1 request, then one step-2 request holding
 /// both kind questions and `Acme`'s edge question.
 #[test]
 fn ada_met_acme_sends_one_step_one_request_then_one_step_two_request() {
     let listener = Listener::answering(automatic).expect("listener");
-    let output = run(&listener, &["person", "organization"], ADA);
-    assert_eq!(stdout(&output), format!("{ADA_AND_ACME}\n"));
+    assert_eq!(
+        stdout(&run(&listener, &KINDS, ADA)),
+        format!("{ADA_AND_ACME}\n")
+    );
     let requests = listener.requests();
     assert_eq!(requests.len(), 2);
     let first = questions(&requests[0].body);
@@ -169,50 +220,44 @@ fn ada_met_acme_sends_one_step_one_request_then_one_step_two_request() {
             .iter()
             .all(|question| options(question) == ["BEGIN", "END", "INSIDE", "OUT", "SINGLE"])
     );
-    let second = questions(&requests[1].body);
-    let shapes: Vec<Vec<String>> = second.iter().map(options).collect();
-    assert_eq!(
-        shapes,
-        [
-            vec!["none of these", "organization", "person"],
-            vec!["none of these", "organization", "person"],
-            vec!["Acme", "Acme."],
-        ]
-    );
+    let kinds = vec!["none of these", "organization", "person"];
+    let second: Vec<Vec<String>> = questions(&requests[1].body).iter().map(options).collect();
+    assert_eq!(second, [kinds.clone(), kinds, vec!["Acme", "Acme."]]);
 }
 
 /// Ticket 0147, test 6: no kinds asks only edge questions, a step-2 request
 /// with no questions is not sent, and a text with no names sends one request.
 #[test]
 fn no_kinds_asks_only_edges_and_sends_no_empty_step_two_request() {
-    let listener = Listener::answering(automatic).expect("listener");
-    let output = run(&listener, &[], ADA);
-    assert_eq!(
-        stdout(&output),
-        concat!(
-            r#"{"entities":[{"text":"Ada","start":0,"end":3,"length":3,"kind":"ENTITY","strength":1.0},"#,
-            r#"{"text":"Acme","start":8,"end":12,"length":4,"kind":"ENTITY","strength":1.0}]}"#,
-            "\n"
+    let entity = |text: &str, start: usize| {
+        format!(
+            r#"{{"text":"{text}","start":{start},"end":{},"length":{},"kind":"ENTITY","strength":1.0}}"#,
+            start + text.len(),
+            text.len()
         )
+    };
+    let listener = Listener::answering(automatic).expect("listener");
+    let names = [entity("Ada", 0), entity("Acme", 8)].join(",");
+    assert_eq!(
+        stdout(&run(&listener, &[], ADA)),
+        format!("{{\"entities\":[{names}]}}\n")
     );
     let requests = listener.requests();
     assert_eq!(requests.len(), 2);
     let second: Vec<Vec<String>> = questions(&requests[1].body).iter().map(options).collect();
     assert_eq!(second, [vec!["Acme", "Acme."]]);
 
-    let output = run(&listener, &[], b"Ada met Bob");
+    let names = [entity("Ada", 0), entity("Bob", 8)].join(",");
     assert_eq!(
-        stdout(&output),
-        concat!(
-            r#"{"entities":[{"text":"Ada","start":0,"end":3,"length":3,"kind":"ENTITY","strength":1.0},"#,
-            r#"{"text":"Bob","start":8,"end":11,"length":3,"kind":"ENTITY","strength":1.0}]}"#,
-            "\n"
-        )
+        stdout(&run(&listener, &[], b"Ada met Bob")),
+        format!("{{\"entities\":[{names}]}}\n")
     );
     assert_eq!(listener.requests().len(), 1);
 
-    let output = run(&listener, &["person"], b"the cat sat");
-    assert_eq!(stdout(&output), "{\"entities\":[]}\n");
+    assert_eq!(
+        stdout(&run(&listener, &["person"], b"the cat sat")),
+        "{\"entities\":[]}\n"
+    );
     assert_eq!(listener.requests().len(), 1);
 }
 
@@ -244,21 +289,11 @@ fn descriptions_reach_the_step_two_option_and_never_step_one() {
 #[test]
 fn a_failed_step_two_request_fails_the_text() {
     let wrong = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.5}}}"#;
-    let listener = Listener::answering(move |body| {
-        if String::from_utf8_lossy(body).contains("none of these") {
-            Canned::ok(wrong)
-        } else {
-            automatic(body)
-        }
-    })
-    .expect("listener");
-    let output = run(&listener, &["person", "organization"], ADA);
+    let listener = failing_on("none of these", wrong.to_owned());
+    let output = run(&listener, &KINDS, ADA);
     assert_eq!(output.status.code(), Some(4));
     assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the reply was refused: the answer to question `q1` is not the shape the question asked for\n"
-    );
+    assert_eq!(String::from_utf8_lossy(&output.stderr), REFUSED);
     assert_eq!(listener.requests().len(), 2);
 }
 
@@ -267,14 +302,17 @@ fn a_failed_step_two_request_fails_the_text() {
 #[test]
 fn the_guard_plans_600000_bytes_and_refuses_600001_before_any_send() {
     let listener = Listener::answering(automatic).expect("listener");
-    let word = format!("{} ", "w".repeat(9_999));
-    let at_limit = word.repeat(60);
+    let at_limit = format!("{} ", "w".repeat(9_999)).repeat(60);
     assert_eq!(at_limit.len(), 600_000);
-    let planned = run(&listener, &["person", "--dry-run"], at_limit.as_bytes());
-    let plan: Value = serde_json::from_str(&stdout(&planned)).expect("plan");
-    assert_eq!(plan["pieces"], 60);
-    assert_eq!(plan["request_count"], 2);
-
+    let plan = json(&run(
+        &listener,
+        &["person", "--dry-run"],
+        at_limit.as_bytes(),
+    ));
+    assert_eq!(
+        (&plan["pieces"], &plan["request_count"]),
+        (&Value::from(60), &Value::from(2))
+    );
     let over = format!("{at_limit}w");
     let refused = run(&listener, &["person"], over.as_bytes());
     assert_eq!(refused.status.code(), Some(2));
@@ -282,15 +320,18 @@ fn the_guard_plans_600000_bytes_and_refuses_600001_before_any_send() {
         String::from_utf8_lossy(&refused.stderr),
         "thinkthen: recognize: the text is 600001 bytes, over the limit of 600000; raise it with --max-text-bytes\n"
     );
-    let raised = run(
+    let raised = json(&run(
         &listener,
         &["person", "--dry-run", "--max-text-bytes", "700000"],
         over.as_bytes(),
+    ));
+    assert_eq!(raised["pieces"], 61);
+    assert_eq!(
+        run(&listener, &["person", "--max-text-bytes", "0"], ADA)
+            .status
+            .code(),
+        Some(2)
     );
-    let plan: Value = serde_json::from_str(&stdout(&raised)).expect("plan");
-    assert_eq!(plan["pieces"], 61);
-    let zero = run(&listener, &["person", "--max-text-bytes", "0"], ADA);
-    assert_eq!(zero.status.code(), Some(2));
     assert_eq!(listener.connections(), 0);
 }
 
@@ -298,8 +339,7 @@ fn the_guard_plans_600000_bytes_and_refuses_600001_before_any_send() {
 #[test]
 fn the_dry_run_prints_the_step_one_requests_a_live_run_sends() {
     let listener = Listener::answering(automatic).expect("listener");
-    let dry = run(&listener, &["person", "organization", "--dry-run"], ADA);
-    let plan: Value = serde_json::from_str(&stdout(&dry)).expect("dry-run JSON");
+    let plan = json(&run(&listener, &[&KINDS[..], &["--dry-run"]].concat(), ADA));
     let head = [
         "schema",
         "url",
@@ -311,32 +351,26 @@ fn the_dry_run_prints_the_step_one_requests_a_live_run_sends() {
     ]
     .map(|key| plan[key].clone());
     let url = format!("{}/systemone", listener.base());
-    assert_eq!(
-        head,
-        serde_json::json!([
-            "thinkthen.recognize-plan/2",
-            url,
-            "local-1",
-            "THINKTHEN_API_KEY",
-            4,
-            1,
-            1
-        ])
-        .as_array()
-        .unwrap()
-        .as_slice()
-    );
+    let expected = serde_json::json!([
+        "thinkthen.recognize-plan/2",
+        url,
+        "local-1",
+        "THINKTHEN_API_KEY",
+        4,
+        1,
+        1
+    ]);
+    assert_eq!(Value::from(head.to_vec()), expected);
     assert_eq!(listener.connections(), 0);
-    let live = run(&listener, &["person", "organization", "--details"], ADA);
-    let result: Value = serde_json::from_str(&stdout(&live)).expect("result JSON");
-    let planned = plan["requests"].as_array().expect("a request list");
-    assert_eq!(planned[0]["digest"], result["meta"]["requests"][0]);
+    let result = json(&run(&listener, &[&KINDS[..], &["--details"]].concat(), ADA));
+    let planned = &plan["requests"][0];
+    assert_eq!(planned["digest"], result["meta"]["requests"][0]);
     let sent = listener.requests();
     assert_eq!(
-        planned[0]["body_utf8"],
+        planned["body_utf8"],
         Value::from(String::from_utf8_lossy(&sent[0].body))
     );
-    assert_eq!(planned[0]["bytes"], sent[0].body.len());
+    assert_eq!(planned["bytes"], sent[0].body.len());
 }
 
 #[test]
@@ -344,19 +378,12 @@ fn question_file_dry_run_attributes_source_and_sums_every_rule_bound() {
     let path = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("recognize-question.json");
     fs::write(&path, r#"{"version":1,"recognize":{"kinds":{"person":"A person.","organization":"An organization."},"relations":[{"name":"directed","source":"person","target":"person"},{"name":"either","source":"person","target":"person","either":true},{"name":"cross","source":"person","target":"organization"}]}}"#).expect("question file");
     let listener = Listener::serving(Vec::new()).expect("listener");
-    let output = spawn(
-        &[
-            "recognize",
-            &format!("@{}", path.display()),
-            "--dry-run",
-            "--url",
-            listener.base(),
-        ],
-        &[],
+    let report = json(&local(
+        &listener,
+        &[&format!("@{}", path.display()), "--dry-run"],
+        None,
         ADA,
-    )
-    .expect("dry run");
-    let report: Value = serde_json::from_str(&stdout(&output)).expect("dry-run JSON");
+    ));
     assert_eq!(report["from"], serde_json::json!({"question":"file"}));
     assert_eq!(report["relation_pairs_upper_bound"], 30);
     assert_eq!(report["relation_requests_upper_bound"], 30);
@@ -365,125 +392,114 @@ fn question_file_dry_run_attributes_source_and_sums_every_rule_bound() {
 
 #[test]
 fn local_validation_matrix_never_sends() {
-    for options in [
-        vec!["person", "person"],
-        vec!["person", "organization", "--relation", "x=person:place"],
-        vec!["person", "organization", "--threshold", "0"],
-        vec!["person", "organization", "--kind", "place=A place."],
-        vec!["person", "--relation", "works_for=person"],
-    ] {
+    let lacking_sign: [&[&str]; 2] = [&["--kind", "PER"], &["--kind", "PER", "--kind", "ORG"]];
+    for options in lacking_sign {
         let listener = Listener::answering(automatic).expect("listener");
-        let output = run(&listener, &options, ADA);
-        assert_eq!(output.status.code(), Some(2), "{options:?}");
-        assert_eq!(listener.connections(), 0, "{options:?}");
-    }
-}
-
-#[test]
-fn a_kind_without_a_sign_names_the_sign() {
-    for options in [
-        vec!["--kind", "PER"],
-        vec!["--kind", "PER", "--kind", "ORG"],
-    ] {
-        let listener = Listener::answering(automatic).expect("listener");
-        let output = run(&listener, &options, ADA);
+        let output = run(&listener, options, ADA);
         assert_eq!(
             String::from_utf8_lossy(&output.stderr),
             "thinkthen: --kind is KIND=DESCRIPTION, and this one holds no `=`; give a bare kind without --kind\n",
             "{options:?}"
         );
-        assert_eq!(output.status.code(), Some(2), "{options:?}");
-        assert_eq!(listener.connections(), 0, "{options:?}");
+        assert_eq!(
+            (output.status.code(), listener.connections()),
+            (Some(2), 0),
+            "{options:?}"
+        );
+    }
+    let refused: [&[&str]; 5] = [
+        &["person", "person"],
+        &["person", "organization", "--relation", "x=person:place"],
+        &["person", "--threshold", "0"],
+        &["person", "--kind", "place=A place."],
+        &["person", "--relation", "works_for=person"],
+    ];
+    for options in refused {
+        let listener = Listener::answering(automatic).expect("listener");
+        let output = run(&listener, options, ADA);
+        assert_eq!(
+            (output.status.code(), listener.connections()),
+            (Some(2), 0),
+            "{options:?}"
+        );
     }
 }
 
 #[test]
 fn relations_are_self_contained_and_absent_without_a_rule() {
     let listener = Listener::answering(automatic).expect("listener");
-    let output = run(
-        &listener,
-        &[
-            "person",
-            "organization",
-            "--relation",
-            "works_for=person:organization",
-        ],
-        ADA,
-    );
-    let value: Value = serde_json::from_str(&stdout(&output)).expect("relation output");
+    let value = json(&run(&listener, &WORKS, ADA));
+    let edge = &value["relations"][0];
     assert_eq!(value["relations"].as_array().expect("relations").len(), 1);
-    assert_eq!(value["relations"][0]["relation"], "works_for");
-    assert_eq!(value["relations"][0]["source"], value["entities"][0]);
-    assert_eq!(value["relations"][0]["target"], value["entities"][1]);
-    assert_eq!(value["relations"][0]["probability"], 0.9);
+    assert_eq!(
+        (&edge["relation"], &edge["probability"]),
+        (&Value::from("works_for"), &Value::from(0.9))
+    );
+    assert_eq!(
+        (&edge["source"], &edge["target"]),
+        (&value["entities"][0], &value["entities"][1])
+    );
     let pairs = listener.requests().pop().expect("pair request");
-    let state: Value = serde_json::from_slice::<Value>(&pairs.body).unwrap()["state"].clone();
+    let state = serde_json::from_slice::<Value>(&pairs.body).unwrap()["state"].clone();
     assert_eq!(
         state,
         serde_json::json!({"evidence":"Ada met Acme.","entities":[{"id":"i1","name":"Ada","kind":"person"},{"id":"i2","name":"Acme","kind":"organization"}]})
     );
 
-    let empty = run(
+    let empty = json(&run(
         &listener,
         &[
-            "person",
-            "organization",
-            "--relation",
-            "visits=organization:organization",
-        ],
+            &KINDS[..],
+            &["--relation", "visits=organization:organization"],
+        ]
+        .concat(),
         ADA,
-    );
-    let value: Value = serde_json::from_str(&stdout(&empty)).expect("empty relation output");
-    assert_eq!(value["relations"], serde_json::json!([]));
+    ));
+    assert_eq!(empty["relations"], serde_json::json!([]));
     assert_eq!(listener.requests().len(), 2);
 }
 
 /// A one-question profile splits every request and prints the same names and edges.
 #[test]
 fn a_one_question_profile_prints_what_the_whole_requests_print() {
-    let profile = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("recognize-one-question.json");
-    fs::write(
-        &profile,
-        r#"{"schema":"thinkthen.backend-profile/1","name":"one","max_questions":1}"#,
-    )
-    .expect("profile");
+    let one = profile("one-question", r#""max_questions":1"#);
     let text = b"Ada Lovelace met Acme and Corp.";
     let options = [
-        "person",
-        "organization",
-        "--relation",
-        "works_for=person:organization",
-        "--relation",
-        "partners=organization:organization",
-    ];
+        &WORKS[..],
+        &["--relation", "partners=organization:organization"],
+    ]
+    .concat();
     let listener = Listener::answering(automatic).expect("listener");
     let whole = stdout(&run(&listener, &options, text));
     let whole_requests = listener.requests().len();
-    let mut split_options = options.to_vec();
-    split_options.extend(["--profile", profile.to_str().unwrap()]);
-    let split = stdout(&run(&listener, &split_options, text));
+    let split = stdout(&run(
+        &listener,
+        &[&options[..], &["--profile", one.to_str().unwrap()]].concat(),
+        text,
+    ));
     assert_eq!(split, whole);
     let value: Value = serde_json::from_str(&split).unwrap();
     assert_eq!(value["entities"][0]["text"], "Ada Lovelace");
-    let edges = value["relations"]
+    let edges: Vec<[&str; 3]> = value["relations"]
         .as_array()
         .unwrap()
         .iter()
         .map(|edge| {
-            (
-                edge["relation"].as_str().unwrap(),
-                edge["source"]["text"].as_str().unwrap(),
-                edge["target"]["text"].as_str().unwrap(),
-            )
+            ["relation", "source", "target"].map(|at| {
+                edge[at]
+                    .as_str()
+                    .or_else(|| edge[at]["text"].as_str())
+                    .unwrap()
+            })
         })
-        .collect::<Vec<_>>();
+        .collect();
     assert_eq!(
         edges,
         [
-            ("works_for", "Ada Lovelace", "Acme"),
-            ("works_for", "Ada Lovelace", "Corp"),
-            ("partners", "Acme", "Corp"),
-            ("partners", "Corp", "Acme")
+            ["works_for", "Ada Lovelace", "Acme"],
+            ["works_for", "Ada Lovelace", "Corp"],
+            ["partners", "Acme", "Corp"],
+            ["partners", "Corp", "Acme"]
         ]
     );
     let requests = listener.requests();
@@ -499,27 +515,11 @@ fn a_one_question_profile_prints_what_the_whole_requests_print() {
 fn split_recognition_mixes_cache_and_live_then_replays_without_a_key() {
     let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("recognize-mixed-cache");
     let _removed = fs::remove_dir_all(&root);
-    let profile = root.with_extension("profile.json");
-    fs::write(
-        &profile,
-        r#"{"schema":"thinkthen.backend-profile/1","name":"one","max_questions":1}"#,
-    )
-    .expect("profile");
+    let one = profile("one-question", r#""max_questions":1"#);
     let listener = Listener::answering(automatic).expect("listener");
-    let arguments = [
-        "recognize",
-        "person",
-        "organization",
-        "--url",
-        listener.base(),
-        "--model",
-        "local-1",
-        "--profile",
-        &profile.to_string_lossy(),
-        "--cache",
-        &root.to_string_lossy(),
-    ];
-    let first = spawn(&arguments, &[("THINKTHEN_API_KEY", "key")], ADA).expect("fill cache");
+    let (one, cache) = (one.to_string_lossy(), root.to_string_lossy());
+    let options = [&KINDS[..], &["--profile", &one, "--cache", &cache]].concat();
+    let first = local(&listener, &options, Some("key"), ADA);
     assert_eq!(first.status.code(), Some(0));
     let _filled = listener.requests();
     let missing = fs::read_dir(&root)
@@ -531,13 +531,13 @@ fn split_recognition_mixes_cache_and_live_then_replays_without_a_key() {
         })
         .expect("entry");
     fs::remove_file(missing.path()).expect("remove one answer");
-    let mixed = spawn(&arguments, &[("THINKTHEN_API_KEY", "key")], ADA).expect("mixed run");
-    assert_eq!(mixed.status.code(), Some(0));
+    let mixed = local(&listener, &options, Some("key"), ADA);
     assert_eq!(listener.requests().len(), 1);
-    let replay = spawn(&arguments, &[], ADA).expect("replay");
-    assert_eq!(replay.status.code(), Some(0));
-    assert_eq!(mixed.stdout, replay.stdout);
-    assert_eq!(first.stdout, replay.stdout);
+    let replay = local(&listener, &options, None, ADA);
+    assert_eq!(
+        (stdout(&mixed), stdout(&replay)),
+        (stdout(&first), stdout(&first))
+    );
     assert!(listener.requests().is_empty());
 }
 
@@ -545,38 +545,25 @@ fn split_recognition_mixes_cache_and_live_then_replays_without_a_key() {
 fn relation_identity_drives_recording_replay_and_cache_without_changing_recognition_bytes() {
     let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("recognize-relation-identity");
     let _removed = fs::remove_dir_all(&root);
-    let kinds = ["person", "organization"];
     let baseline = Listener::answering(automatic).expect("baseline");
-    let output = run(&baseline, &kinds, ADA);
-    assert_eq!(output.status.code(), Some(0));
+    stdout(&run(&baseline, &KINDS, ADA));
     let recognition: Vec<Vec<u8>> = baseline
         .requests()
         .into_iter()
         .map(|request| request.body)
         .collect();
 
-    let recording = root.join("recording");
     let listener = Listener::answering(automatic).expect("recording listener");
-    let recorded = spawn(
-        &[
-            "recognize",
-            "person",
-            "organization",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-            "--record",
-            &recording.to_string_lossy(),
-            "--no-cache",
-            "--relation",
-            "works_for=person:organization",
-        ],
-        &[("THINKTHEN_API_KEY", "key")],
+    let (recording, cache) = (
+        root.join("recording").to_string_lossy().into_owned(),
+        root.join("cache"),
+    );
+    let recorded = local(
+        &listener,
+        &[&WORKS[..], &["--record", &recording, "--no-cache"]].concat(),
+        Some("key"),
         ADA,
-    )
-    .expect("record");
-    assert_eq!(recorded.status.code(), Some(0));
+    );
     let requests = listener.requests();
     let bodies: Vec<Vec<u8>> = requests
         .iter()
@@ -584,53 +571,32 @@ fn relation_identity_drives_recording_replay_and_cache_without_changing_recognit
         .map(|request| request.body.clone())
         .collect();
     assert_eq!(bodies, recognition);
-    let relation = requests.last().expect("relation request");
-    let digest = crate::support::digest(listener.url(), &relation.body);
-    assert!(recording.join(format!("{digest}.json")).is_file());
-
-    let replayed = spawn(
-        &[
-            "recognize",
-            "person",
-            "organization",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-            "--replay",
-            &recording.to_string_lossy(),
-            "--no-cache",
-            "--relation",
-            "works_for=person:organization",
-        ],
-        &[],
+    let digest = crate::support::digest(
+        listener.url(),
+        &requests.last().expect("relation request").body,
+    );
+    assert!(
+        root.join("recording")
+            .join(format!("{digest}.json"))
+            .is_file()
+    );
+    let replayed = local(
+        &listener,
+        &[&WORKS[..], &["--replay", &recording, "--no-cache"]].concat(),
+        None,
         ADA,
-    )
-    .expect("replay");
-    assert_eq!(replayed.status.code(), Some(0));
-    assert_eq!(replayed.stdout, recorded.stdout);
+    );
+    assert_eq!(stdout(&replayed), stdout(&recorded));
     assert!(listener.requests().is_empty());
 
-    let cache = root.join("cache");
-    let arguments = [
-        "recognize",
-        "person",
-        "organization",
-        "--url",
-        listener.base(),
-        "--model",
-        "local-1",
-        "--cache",
-        &cache.to_string_lossy(),
-        "--relation",
-        "works_for=person:organization",
-    ];
-    let filled = spawn(&arguments, &[("THINKTHEN_API_KEY", "key")], ADA).expect("fill cache");
-    assert_eq!(filled.status.code(), Some(0));
+    let held = cache.to_string_lossy();
+    let options = [&WORKS[..], &["--cache", &held]].concat();
+    let filled = local(&listener, &options, Some("key"), ADA);
     let _sent = listener.requests();
-    let cached = spawn(&arguments, &[], ADA).expect("cached");
-    assert_eq!(cached.status.code(), Some(0));
-    assert_eq!(cached.stdout, filled.stdout);
+    assert_eq!(
+        stdout(&local(&listener, &options, None, ADA)),
+        stdout(&filled)
+    );
     assert!(listener.requests().is_empty());
     assert!(cache.join(format!("{digest}.json")).is_file());
 }
@@ -638,21 +604,10 @@ fn relation_identity_drives_recording_replay_and_cache_without_changing_recognit
 #[test]
 fn details_carry_every_probability_and_request_metadata() {
     let listener = Listener::answering(automatic).expect("listener");
-    let output = run(
-        &listener,
-        &[
-            "person",
-            "organization",
-            "--relation",
-            "works_for=person:organization",
-            "--details",
-        ],
-        ADA,
-    );
-    let requests = listener.requests();
+    let output = run(&listener, &[&WORKS[..], &["--details"]].concat(), ADA);
     let mut expected =
         include_str!("../fixtures/recognize-detailed.json").replace("$URL", listener.url());
-    for (place, request) in requests.iter().enumerate() {
+    for (place, request) in listener.requests().iter().enumerate() {
         expected = expected.replace(
             &format!("$REQUEST{}", place + 1),
             &crate::support::digest(listener.url(), &request.body),
@@ -664,32 +619,14 @@ fn details_carry_every_probability_and_request_metadata() {
 #[test]
 fn failed_relation_question_prints_no_partial_entity_or_edge_object() {
     let wrong = r#"{"model":"local-1","marker":"PRIVATE-RESPONSE","answers":{"q1":{"type":"choice","choice":"x","probabilities":{"x":1.0}}}}"#;
-    let listener = Listener::answering(move |body| {
-        if String::from_utf8_lossy(body).contains("Does the text itself state") {
-            Canned::ok(wrong)
-        } else {
-            automatic(body)
-        }
-    })
-    .expect("listener");
     let output = run(
-        &listener,
-        &[
-            "person",
-            "organization",
-            "--relation",
-            "works_for=person:organization",
-        ],
+        &failing_on("Does the text itself state", wrong.to_owned()),
+        &WORKS,
         ADA,
     );
     assert_eq!(output.status.code(), Some(4));
     assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the reply was refused: the answer to question `q1` is not the shape the question asked for\n"
-    );
-    assert!(!String::from_utf8_lossy(&output.stderr).contains("PRIVATE-RESPONSE"));
-    assert!(!String::from_utf8_lossy(&output.stderr).contains("secret-value"));
+    assert_eq!(String::from_utf8_lossy(&output.stderr), REFUSED);
 }
 
 #[test]
@@ -699,17 +636,14 @@ fn concurrent_record_workers_print_in_input_order() {
         .expect("listener");
     let output = run(
         &listener,
-        &["person", "organization", "--lines", "--jobs", "2"],
+        &[&KINDS[..], &["--lines", "--jobs", "2"]].concat(),
         b"Ada met Acme.\nBob met Corp.\n",
     );
-    let rows = stdout(&output);
+    let bob = ADA_AND_ACME.replace("Ada", "Bob").replace("Acme", "Corp");
     assert_eq!(
-        rows,
-        concat!(
-            r#"{"input":"Ada met Acme.","value":{"entities":[{"text":"Ada","start":0,"end":3,"length":3,"kind":"person","strength":0.9},{"text":"Acme","start":8,"end":12,"length":4,"kind":"organization","strength":0.9}]}}"#,
-            "\n",
-            r#"{"input":"Bob met Corp.","value":{"entities":[{"text":"Bob","start":0,"end":3,"length":3,"kind":"person","strength":0.9},{"text":"Corp","start":8,"end":12,"length":4,"kind":"organization","strength":0.9}]}}"#,
-            "\n"
+        stdout(&output),
+        format!(
+            "{{\"input\":\"Ada met Acme.\",\"value\":{ADA_AND_ACME}}}\n{{\"input\":\"Bob met Corp.\",\"value\":{bob}}}\n"
         )
     );
     assert_eq!(listener.peak(), 2);
@@ -717,23 +651,14 @@ fn concurrent_record_workers_print_in_input_order() {
 
 #[test]
 fn an_impossible_profile_sends_nothing() {
-    let path = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("recognize-tiny-profile.json");
-    fs::write(&path, r#"{"schema":"thinkthen.backend-profile/1","name":"tiny-recognize","max_evidence_bytes":2}"#).expect("profile");
+    let tiny = profile("tiny", r#""max_evidence_bytes":2"#);
     let listener = Listener::answering(automatic).expect("listener");
-    let output = spawn(
-        &[
-            "recognize",
-            "person",
-            "--profile",
-            &path.to_string_lossy(),
-            "--url",
-            listener.base(),
-            "--no-cache",
-        ],
-        &[],
+    let output = local(
+        &listener,
+        &["person", "--profile", &tiny.to_string_lossy(), "--no-cache"],
+        None,
         ADA,
-    )
-    .expect("command");
+    );
     assert_eq!(output.status.code(), Some(2));
     assert!(output.stdout.is_empty());
     assert_eq!(listener.connections(), 0);

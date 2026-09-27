@@ -1,7 +1,7 @@
 //! Pair refusals after cached recognition answers.
 
-use crate::harness::{Listener, spawn};
-use crate::recognize::automatic;
+use crate::harness::Listener;
+use crate::recognize::{automatic, local, stdout};
 use std::{
     fs, io,
     path::{Path, PathBuf},
@@ -14,47 +14,28 @@ fn impossible_relation_state_uses_cached_recognition_and_sends_nothing() {
     let _removed = fs::remove_dir_all(&root);
     let listener = Listener::answering(automatic).expect("listener");
     let cache = root.to_string_lossy();
-    let common = [
-        "recognize",
-        "person",
-        "--url",
-        listener.base(),
-        "--model",
-        "local-1",
-        "--cache",
-        &cache,
-    ];
-    let filled =
-        spawn(&common, &[("THINKTHEN_API_KEY", "key")], b"Ada x Grace").expect("fill cache");
-    assert_eq!(
-        filled.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&filled.stderr)
+    let filled = local(
+        &listener,
+        &["person", "--cache", &cache],
+        Some("key"),
+        b"Ada x Grace",
     );
+    stdout(&filled);
     assert_eq!(listener.requests().len(), 2);
 
     let profile = root.with_extension("profile.json");
     fs::write(&profile, r#"{"schema":"thinkthen.backend-profile/1","name":"source-only","max_evidence_bytes":11,"max_options":2}"#).expect("profile");
-    let refused = spawn(
-        &[
-            "recognize",
-            "person",
-            "--relation",
-            "knows=person:person",
-            "--profile",
-            &profile.to_string_lossy(),
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-            "--cache",
-            &cache,
-        ],
-        &[],
-        b"Ada x Grace",
-    )
-    .expect("refusal");
+    let profile = profile.to_string_lossy();
+    let options = [
+        "person",
+        "--relation",
+        "knows=person:person",
+        "--profile",
+        &profile,
+        "--cache",
+        &cache,
+    ];
+    let refused = local(&listener, &options, None, b"Ada x Grace");
     assert_eq!(refused.status.code(), Some(2));
     assert!(refused.stdout.is_empty());
     assert_eq!(listener.requests().len(), 0);
@@ -96,25 +77,19 @@ impl Fixture {
 
     fn run(&self, profile: &Path, relation: bool, keyed: bool) -> io::Result<Output> {
         let profile = profile.to_string_lossy();
-        let mut arguments = vec![
-            "recognize",
+        let mut options = vec![
             "person",
             "organization",
             "--profile",
             &profile,
-            "--url",
-            self.listener.base(),
-            "--model",
-            "local-1",
             "--cache",
             &self.cache,
         ];
         if relation {
-            arguments.extend(["--relation", "works=person:organization"]);
+            options.extend(["--relation", "works=person:organization"]);
         }
-        let key = [("THINKTHEN_API_KEY", "PRIVATE-KEY")];
-        let environment = if keyed { &key[..] } else { &[] };
-        let output = spawn(&arguments, environment, self.input.as_bytes())?;
+        let key = keyed.then_some("PRIVATE-KEY");
+        let output = local(&self.listener, &options, key, self.input.as_bytes());
         if keyed && !output.status.success() {
             return Err(io::Error::other(
                 String::from_utf8_lossy(&output.stderr).into_owned(),
