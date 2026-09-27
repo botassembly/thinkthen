@@ -262,6 +262,26 @@ mod tests {
         Backend::resolve(url, base, DEFAULT_MODEL)
     }
 
+    /// Only the three spellings the clear-text rule names prove an `https://`
+    /// base is this machine, so only they send with no key.
+    #[test]
+    fn only_the_three_loopback_spellings_are_loopback() {
+        for (host, loopback) in [
+            ("localhost", true),
+            ("LOCALHOST", true),
+            ("127.0.0.1:9", true),
+            ("[::1]", true),
+            ("localhost.", false),
+            ("localhost.evil.com", false),
+            ("127.0.0.1.nip.io", false),
+            ("127.0.0.2", false),
+            ("0.0.0.0", false),
+        ] {
+            let backend = resolve(Some(&format!("https://{host}/v1")), None).expect("a base");
+            assert_eq!(backend.is_loopback(), loopback, "{host}");
+        }
+    }
+
     #[test]
     fn nothing_named_resolves_the_default_base_and_the_default_model() {
         let backend = resolve(None, None).expect("the default base resolves");
