@@ -12,3 +12,6 @@ mod ffi;
 
 #[path = "usage/ffi.rs"]
 mod usage_ffi;
+
+#[path = "warm/ffi.rs"]
+mod warm_ffi;

@@ -51,6 +51,8 @@ ThinkThenReply thinkthen_cpp_nested_group(const uint8_t *argument, size_t argume
                                           int32_t from_file);
 void thinkthen_cpp_free(uint8_t *bytes, size_t len);
 ThinkThenReply thinkthen_cpp_usage();
+ThinkThenReply thinkthen_cpp_warm(const uint8_t *question, size_t question_len,
+                                 const ThinkThenText *texts, size_t count, int32_t from_file);
 }
 
 namespace duckdb {

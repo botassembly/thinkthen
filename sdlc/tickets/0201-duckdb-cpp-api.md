@@ -97,6 +97,8 @@ Recognize and relations now use a separate scalar registration and bind path wit
 
 The usage table now reads four process counters from the existing Rust registry through a fixed-width private export. A stock-host child sees `requests_sent` advance after one real decision while the usage query itself sends nothing. The new export lives in a separate named FFI module and shares the panic-safe reply boundary. Warm, relate, host interruption, full file permission, and package proofs still remain.
 
+The warm aggregate needed a state that survives DuckDB partial-group updates and combines. The C++ state owns one question and a sorted set of distinct texts; Rust finishes on the environment-only engine as before. The focused host check uses a 2,049-row input with only one live final row, so it crosses the vector boundary without thousands of requests. It checks mixed-question refusal, NULL-only count zero, file permission and `@~` behavior, and independence from the SQL process request total. The C++ API can see the caller context at aggregate finalize, but the port explicitly refuses `@~` to preserve the old warm result under the separate-connection contract. Relate, real host interruption, full file permission, and package proofs remain.
+
 ## Evidence
 
 - Starts from: Local experiment 207's v1.5.5 bind crash, local experiment 253's stock-host settings and file proofs, the two open DuckDB C API issues, the 0110 and 0118 records, current `origin/main` `9b8bf076`, and DuckDB's tagged v1.5.5 C++ headers linked above.

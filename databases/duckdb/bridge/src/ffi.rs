@@ -111,7 +111,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_free(bytes: *mut u8, len: usize) {
     });
 }
 
-fn text<'a>(bytes: *const u8, len: usize) -> Result<&'a str, String> {
+pub(crate) fn text<'a>(bytes: *const u8, len: usize) -> Result<&'a str, String> {
     if bytes.is_null() {
         return Err("thinkthen defect: the bridge got a null text pointer".to_owned());
     }
@@ -121,7 +121,10 @@ fn text<'a>(bytes: *const u8, len: usize) -> Result<&'a str, String> {
         .map_err(|_| "thinkthen usage: a text argument is not UTF-8".to_owned())
 }
 
-fn question_typed(argument: &str, from_file: bool) -> Result<LoadedQuestion, errors::RowError> {
+pub(crate) fn question_typed(
+    argument: &str,
+    from_file: bool,
+) -> Result<LoadedQuestion, errors::RowError> {
     if from_file {
         Question::from_json(argument).map_err(|error| {
             if error.kind() == thinkthen::ErrorKind::Usage {
@@ -205,8 +208,8 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_validate_set(
 #[repr(C)]
 #[derive(Debug)]
 pub(crate) struct BridgeText {
-    bytes: *const u8,
-    len: usize,
+    pub(crate) bytes: *const u8,
+    pub(crate) len: usize,
 }
 
 /// Unset numeric SQL settings use `i64::MIN`; every valid setting is larger.
