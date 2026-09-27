@@ -1,6 +1,6 @@
 # Quick Fix: clarify library key and cache guidance
 
-Status: built, awaiting final checks and review. Owner: Codex. Branch: `qf/independent-library-guidance`.
+Status: built and targeted checks passed, awaiting fresh review and the full gate. Owner: Codex. Branch: `qf/independent-library-guidance`.
 
 ## Evidence
 
@@ -16,7 +16,7 @@ The shared library error now says `no key is set; configure an API key for the e
 
 ## Proof
 
-`test_missing_key_names_a_remedy_for_a_library_call` calls the real Python API with no key and a local address that the engine's exact loopback rule does not exempt. It pins the complete `UsageError` sentence. Before the message edit it failed on `or call EngineBuilder::api_key`. The test does not measure sends; the existing backend and Python secrecy tests cover the no-key send rule at their own listener boundaries.
+`test_missing_key_names_a_remedy_for_a_library_call` calls the real Python API with no key and a local address that the engine's exact loopback rule does not exempt. It pins the complete `UsageError` sentence. Before the message edit it failed on `or call EngineBuilder::api_key`. After rebuilding the Python extension it passed. The test does not measure sends; the existing backend and Python secrecy tests cover the no-key send rule at their own listener boundaries.
 
 The test protects the public error kind and usable remedy. Restoring the Rust-only phrase fails it. Existing Python tests do not pin this missing-key sentence; existing command tests pin the separate exit-4 path. The test uses no test-only export, flag, or hook. Documentation of the deliberately distinct constructors needs no wording test.
 
@@ -24,7 +24,7 @@ The Rust size ratchet remains 72,630 of 72,630 nonblank lines. The production ed
 
 ## Checks
 
-Pending final targeted test and coordinator gate.
+With `THINKTHEN_API_KEY` unset, `maturin develop --locked --offline --features probe` rebuilt the Python extension under the shared heavy lock. `pytest -q tests/test_inputs.py` passed: 5 tests. The root Rust ratchet read 72,630/72,630, the Python Rust ratchet 4,726/4,726, and the Python source and test ratchet 2,386/2,386. `git diff --check` passed. The coordinator owns the full gate after review. No paid call ran.
 
 ## Deferred
 
