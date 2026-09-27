@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:thinkthen:result",
+  "title": "thinkthen result and JSON door structures",
+  "description": "Structural contract. Validate a C door result against the named bare definition for its verb; this root checks a detailed thinkthen.result/1 object. Question grammar and semantic checks remain in their existing parser and question-file schema.",
+  "$ref": "#/$defs/detailed",
+  "$defs": {
+    "probability": {"type": "number", "minimum": 0, "maximum": 1},
+    "failureKind": {"enum": ["usage", "backend", "deadline", "local", "cancelled", "defect"]},
+    "failureCause": {"enum": ["missing_answer", "wrong_kind", "missing_probability", "invalid_probability", "invalid_distribution", "unexpected_probability"]},
+    "callError": {
+      "type": "object", "required": ["kind", "retryable", "message"],
+      "properties": {"kind": {"$ref": "#/$defs/failureKind"},
+        "retryable": {"type": "boolean"}, "message": {"type": "string"}},
+      "additionalProperties": true
+    },
+    "failed": {
+      "type": "object", "required": ["failed"], "additionalProperties": false,
+      "properties": {"failed": {
+        "type": "object", "required": ["kind", "cause"], "additionalProperties": false,
+        "properties": {"kind": {"const": "backend"}, "cause": {"$ref": "#/$defs/failureCause"}}
+      }}
+    },
+    "decide": {"type": ["boolean", "null"]},
+    "choose": {"type": ["string", "null"]},
+    "tag": {"type": "array", "items": {"type": "string"}},
+    "score": {"type": "number"},
+    "filter": {"type": "array", "items": {"type": "string"}},
+    "rank": {"type": "array", "items": {"type": "string"}},
+    "find": {"type": ["string", "null"]},
+    "annotatedField": {
+      "oneOf": [
+        {"type": "boolean"}, {"type": "string"}, {"type": "number"},
+        {"type": "null"}, {"$ref": "#/$defs/tag"}, {"$ref": "#/$defs/failed"}
+      ]
+    },
+    "annotatedRow": {"type": "object", "additionalProperties": {"$ref": "#/$defs/annotatedField"}},
+    "annotate": {"type": "array", "items": {"$ref": "#/$defs/annotatedRow"}},
+    "entity": {
+      "type": "object", "required": ["text", "start", "end", "length", "kind", "strength"],
+      "properties": {
+        "text": {"type": "string"}, "start": {"type": "integer", "minimum": 0},
+        "end": {"type": "integer", "minimum": 0}, "length": {"type": "integer", "minimum": 0},
+        "kind": {"type": "string"}, "strength": {"type": "number", "minimum": 0}
+      }, "additionalProperties": false
+    },
+    "recognizedRelation": {
+      "type": "object", "required": ["relation", "source", "target", "probability"],
+      "properties": {
+        "relation": {"type": "string"}, "source": {"$ref": "#/$defs/entity"},
+        "target": {"$ref": "#/$defs/entity"}, "probability": {"$ref": "#/$defs/probability"}
+      }, "additionalProperties": false
+    },
+    "recognize": {
+      "type": "object", "required": ["entities"], "additionalProperties": false,
+      "properties": {
+        "entities": {"type": "array", "items": {"$ref": "#/$defs/entity"}},
+        "relations": {"type": "array", "items": {"$ref": "#/$defs/recognizedRelation"}}
+      }
+    },
+    "relatedEntity": {
+      "type": "object", "required": ["name", "kind"], "additionalProperties": false,
+      "properties": {"name": {"type": "string"}, "kind": {"type": "string"}}
+    },
+    "edge": {
+      "type": "object", "required": ["relation", "source", "target", "probability"],
+      "additionalProperties": false,
+      "properties": {
+        "relation": {"type": "string"}, "source": {"$ref": "#/$defs/relatedEntity"},
+        "target": {"$ref": "#/$defs/relatedEntity"}, "probability": {"$ref": "#/$defs/probability"}
+      }
+    },
+    "relate": {
+      "type": "object", "required": ["edges"], "additionalProperties": false,
+      "properties": {"edges": {"type": "array", "items": {"$ref": "#/$defs/edge"}}}
+    },
+    "recordRow": {
+      "type": "object", "required": ["input", "value"], "additionalProperties": false,
+      "properties": {"input": {}, "value": {"anyOf": [
+        {"$ref": "#/$defs/decide"}, {"$ref": "#/$defs/choose"},
+        {"$ref": "#/$defs/tag"}, {"$ref": "#/$defs/score"},
+        {"$ref": "#/$defs/recognize"}
+      ]}}
+    },
+    "usage": {
+      "type": "object", "required": ["requests_sent", "input_tokens", "output_tokens", "cache_answers"],
+      "additionalProperties": false,
+      "properties": {
+        "requests_sent": {"type": "integer", "minimum": 0},
+        "input_tokens": {"type": "integer", "minimum": 0},
+        "output_tokens": {"type": "integer", "minimum": 0},
+        "cache_answers": {"type": "integer", "minimum": 0}
+      }
+    },
+    "meta": {
+      "type": "object", "required": ["tool", "url", "model", "requests_sent", "cached", "requests", "failed_questions"],
+      "anyOf": [{"required": ["question_sha256"]}, {"required": ["questions_sha256"]}],
+      "properties": {
+        "tool": {"type": "string"}, "question_sha256": {"type": "string"},
+        "questions_sha256": {"type": "string"}, "url": {"type": "string"},
+        "model": {"type": "string"}, "requests_sent": {"type": "integer", "minimum": 0},
+        "cached": {"type": "boolean"}, "requests": {"type": "array", "items": {"type": "string"}},
+        "failed_questions": {"type": "integer", "minimum": 0},
+        "usage": {"type": "object", "required": ["input_tokens", "output_tokens"],
+          "properties": {"input_tokens": {"type": "integer", "minimum": 0}, "output_tokens": {"type": "integer", "minimum": 0}}}
+      }, "additionalProperties": true
+    },
+    "yesNoAnswer": {
+      "type": "object", "required": ["kind", "probability"],
+      "properties": {"kind": {"const": "yes_no"}, "probability": {"$ref": "#/$defs/probability"}}
+    },
+    "choiceAnswer": {
+      "type": "object", "required": ["kind", "pick", "probabilities"],
+      "properties": {"kind": {"const": "choice"}, "pick": {"type": "string"},
+        "probabilities": {"type": "object", "additionalProperties": {"$ref": "#/$defs/probability"}}}
+    },
+    "tagAnswer": {
+      "type": "object", "required": ["kind", "probabilities"],
+      "properties": {"kind": {"const": "tag"},
+        "probabilities": {"type": "object", "additionalProperties": {"$ref": "#/$defs/probability"}}}
+    },
+    "scoreAnswer": {
+      "type": "object", "required": ["kind", "level", "probabilities"],
+      "properties": {"kind": {"const": "score"}, "level": {"type": "string"},
+        "probabilities": {"type": "object", "additionalProperties": {"$ref": "#/$defs/probability"}}}
+    },
+    "detailed": {"oneOf": [{"$ref": "#/$defs/details"}, {"$ref": "#/$defs/aggregateDetails"}]},
+    "details": {
+      "type": "object", "required": ["schema", "value", "question", "answer", "threshold", "meta"],
+      "properties": {
+        "schema": {"const": "thinkthen.result/1"},
+        "value": {}, "question": {"type": "object", "required": ["verb", "text"]},
+        "answer": {"oneOf": [
+          {"$ref": "#/$defs/yesNoAnswer"}, {"$ref": "#/$defs/choiceAnswer"},
+          {"$ref": "#/$defs/tagAnswer"}, {"$ref": "#/$defs/scoreAnswer"}
+        ]},
+        "threshold": {"type": ["number", "string", "null"]},
+        "meta": {"$ref": "#/$defs/meta"}
+      }, "additionalProperties": true,
+      "allOf": [
+        {"if": {"properties": {"answer": {"properties": {"kind": {"const": "yes_no"}}}}},
+          "then": {"properties": {"value": {"$ref": "#/$defs/decide"}}}},
+        {"if": {"properties": {"answer": {"properties": {"kind": {"const": "choice"}}}}},
+          "then": {"properties": {"value": {"$ref": "#/$defs/choose"}}}},
+        {"if": {"properties": {"answer": {"properties": {"kind": {"const": "tag"}}}}},
+          "then": {"properties": {"value": {"$ref": "#/$defs/tag"}}}},
+        {"if": {"properties": {"answer": {"properties": {"kind": {"const": "score"}}}}},
+          "then": {"properties": {"value": {"$ref": "#/$defs/score"}}}}
+      ]
+    },
+    "aggregateDetails": {
+      "type": "object", "required": ["schema", "value", "question", "answer", "meta"],
+      "properties": {
+        "schema": {"const": "thinkthen.result/1"},
+        "value": {"oneOf": [
+          {"$ref": "#/$defs/recognize"}, {"type": "array", "items": {"$ref": "#/$defs/edge"}},
+          {"$ref": "#/$defs/annotatedRow"}
+        ]},
+        "question": {"type": "object"}, "answer": {"type": "object"},
+        "meta": {"$ref": "#/$defs/meta"}
+      }, "additionalProperties": true
+    },
+    "doorRequest": {
+      "type": "object", "minProperties": 1,
+      "properties": {
+        "evidence": {"type": "string"}, "records": {"type": "array"},
+        "units": {"type": "array", "items": {"type": "string"}},
+        "details": {"type": "boolean"}, "usage": {"const": true}
+      },
+      "oneOf": [
+        {"required": ["usage"]},
+        {"required": ["decide"]}, {"required": ["choose"]},
+        {"required": ["tag"]}, {"required": ["score"]},
+        {"required": ["filter"]}, {"required": ["rank"]},
+        {"required": ["find"]}, {"required": ["annotate"]},
+        {"required": ["recognize"]}, {"required": ["relate"]}
+      ],
+      "allOf": [
+        {"if": {"required": ["usage"]}, "then": {"maxProperties": 1}},
+        {"if": {"anyOf": [{"required": ["decide"]}, {"required": ["choose"]},
+          {"required": ["tag"]}, {"required": ["score"]}, {"required": ["recognize"]}]},
+          "then": {"required": ["evidence"]}},
+        {"if": {"anyOf": [{"required": ["filter"]}, {"required": ["rank"]},
+          {"required": ["annotate"]}, {"required": ["relate"]}]},
+          "then": {"required": ["records"]}},
+        {"if": {"required": ["find"]}, "then": {"required": ["units"]}},
+        {"if": {"anyOf": [{"required": ["filter"]}, {"required": ["rank"]},
+          {"required": ["annotate"]}]},
+          "then": {"properties": {"records": {"items": {"type": "string"}}}}},
+        {"if": {"required": ["relate"]},
+          "then": {"properties": {"records": {"items": {"type": "object"}}}}},
+        {"if": {"required": ["details"]}, "then": {"anyOf": [
+          {"required": ["decide"]}, {"required": ["choose"]},
+          {"required": ["tag"]}, {"required": ["score"]}
+        ]}},
+        {"not": {"anyOf": [
+          {"required": ["evidence", "records"]}, {"required": ["evidence", "units"]},
+          {"required": ["records", "units"]}
+        ]}}
+      ]
+    }
+  }
+}

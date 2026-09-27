@@ -1,0 +1,465 @@
+{
+  "schema": "thinkthen.type-corpus/1",
+  "cases": [
+    {
+      "name": "01-decide-yes-captured",
+      "definition": "decide",
+      "request": {
+        "decide": "Does the customer ask for money back?",
+        "evidence": "From: sam.okafor@example.net\nSubject: order 4417\n\nThe blender arrived with a cracked jug. I do not want a replacement.\nPlease put the money back on my card.\n\nOrder 4417, bought on the 3rd.\n"
+      },
+      "response": true,
+      "case_id": "01-decide-yes-captured"
+    },
+    {
+      "name": "02-decide-no",
+      "definition": "decide",
+      "request": {
+        "decide": "Does this need attention?",
+        "threshold": 0.5,
+        "evidence": "A short note."
+      },
+      "response": false,
+      "case_id": "02-decide-no"
+    },
+    {
+      "name": "03-decide-band-unsure",
+      "definition": "decide",
+      "request": {
+        "decide": "Does this need attention?",
+        "threshold": "0.2:0.8",
+        "evidence": "A short note."
+      },
+      "response": null,
+      "case_id": "03-decide-band-unsure"
+    },
+    {
+      "name": "described-choice",
+      "definition": "choose",
+      "request": {
+        "choose": "Which team owns this?",
+        "options": {
+          "billing": {
+            "what": "Charges and refunds.",
+            "not_for": "Shipping.",
+            "examples": [
+              "refund"
+            ]
+          },
+          "other": "Everything else."
+        },
+        "evidence": "Refund requested."
+      },
+      "response": "billing"
+    },
+    {
+      "name": "09-tag-two",
+      "definition": "tag",
+      "request": {
+        "tag": "Which labels apply?",
+        "labels": [
+          "billing",
+          "urgent",
+          "security"
+        ],
+        "threshold": 0.5,
+        "evidence": "Classify this note."
+      },
+      "response": [
+        "billing",
+        "urgent"
+      ],
+      "case_id": "09-tag-two"
+    },
+    {
+      "name": "10-tag-none",
+      "definition": "tag",
+      "request": {
+        "tag": "Which labels apply?",
+        "labels": [
+          "billing",
+          "urgent",
+          "security"
+        ],
+        "threshold": 0.5,
+        "evidence": "Classify this note."
+      },
+      "response": [],
+      "case_id": "10-tag-none"
+    },
+    {
+      "name": "11-score-middle",
+      "definition": "score",
+      "request": {
+        "score": "How severe is this?",
+        "levels": [
+          "low",
+          "medium",
+          "high"
+        ],
+        "evidence": "Rate this note."
+      },
+      "response": 1.0,
+      "case_id": "11-score-middle"
+    },
+    {
+      "name": "13-filter-records",
+      "definition": "filter",
+      "request": {
+        "filter": "Does this ask for a refund?",
+        "threshold": 0.5,
+        "records": [
+          "row 0",
+          "row 1",
+          "row 2"
+        ]
+      },
+      "response": [
+        "row 0",
+        "row 2"
+      ],
+      "case_id": "13-filter-records"
+    },
+    {
+      "name": "15-rank-records",
+      "definition": "rank",
+      "request": {
+        "rank": "How relevant is this?",
+        "records": [
+          "item 0",
+          "item 1",
+          "item 2"
+        ]
+      },
+      "response": [
+        "item 1",
+        "item 2",
+        "item 0"
+      ],
+      "case_id": "15-rank-records"
+    },
+    {
+      "name": "18-find-second",
+      "definition": "find",
+      "request": {
+        "find": "Which passage answers the question?",
+        "none": true,
+        "units": [
+          "First passage.",
+          "Second passage.",
+          "Third passage."
+        ]
+      },
+      "response": "Second passage.",
+      "case_id": "18-find-second"
+    },
+    {
+      "name": "19-find-none",
+      "definition": "find",
+      "request": {
+        "find": "Which passage answers the question?",
+        "none": true,
+        "units": [
+          "First passage.",
+          "Second passage."
+        ]
+      },
+      "response": null,
+      "case_id": "19-find-none"
+    },
+    {
+      "name": "17-annotate-partial",
+      "definition": "annotate",
+      "request": {
+        "annotate": {
+          "version": 1,
+          "questions": {
+            "refund": {
+              "decide": "Does this ask for a refund?",
+              "threshold": "0.1:0.9"
+            },
+            "team": {
+              "choose": "Which team owns this?",
+              "options": [
+                "billing",
+                "other"
+              ],
+              "threshold": 0.5
+            },
+            "severity": {
+              "score": "How severe is this?",
+              "levels": [
+                "low",
+                "medium",
+                "high"
+              ]
+            },
+            "topics": {
+              "tag": "Which labels apply?",
+              "labels": [
+                "billing",
+                "urgent"
+              ],
+              "threshold": 0.5
+            }
+          }
+        },
+        "records": [
+          "Refund requested for a failed payment."
+        ]
+      },
+      "response": [
+        {
+          "refund": null,
+          "team": {
+            "failed": {
+              "kind": "backend",
+              "cause": "missing_probability"
+            }
+          },
+          "severity": 1.2,
+          "topics": [
+            "billing",
+            "urgent"
+          ]
+        }
+      ],
+      "case_id": "17-annotate-partial"
+    },
+    {
+      "name": "41-offsets-past-an-accent-and-an-emoji",
+      "definition": "recognize",
+      "request": {
+        "version": 1,
+        "recognize": {
+          "kinds": {
+            "person": "A person's name."
+          }
+        },
+        "threshold": 0.5,
+        "relation_threshold": 0.5,
+        "evidence": "Le café 😀 Maria Chen arrived."
+      },
+      "response": {
+        "entities": [
+          {
+            "text": "Maria Chen",
+            "start": 10,
+            "end": 20,
+            "length": 10,
+            "kind": "person",
+            "strength": 0.9877
+          }
+        ]
+      },
+      "case_id": "41-offsets-past-an-accent-and-an-emoji",
+      "offsets": {
+        "scalar": [
+          10,
+          20
+        ],
+        "utf16": [
+          11,
+          21
+        ],
+        "r_one_based_inclusive": [
+          11,
+          20
+        ]
+      }
+    },
+    {
+      "name": "51-same-kind-alerts",
+      "definition": "relate",
+      "request": {
+        "version": 1,
+        "relate": {
+          "relations": [
+            {
+              "name": "caused_by",
+              "source": "alert",
+              "target": "alert"
+            },
+            {
+              "name": "same_as",
+              "source": "alert",
+              "target": "alert",
+              "either": true
+            }
+          ]
+        },
+        "threshold": 0.5,
+        "records": [
+          {
+            "name": "Checkout returns 500 at the payment step.",
+            "kind": "alert"
+          },
+          {
+            "name": "Card charges are failing for every customer.",
+            "kind": "alert"
+          },
+          {
+            "name": "The nightly export ran two hours late.",
+            "kind": "alert"
+          },
+          {
+            "name": "The payments database ran out of disk space.",
+            "kind": "alert"
+          }
+        ]
+      },
+      "case_id": "51-same-kind-alerts",
+      "expect_count": 5,
+      "expect_first_edge": {
+        "relation": "caused_by",
+        "source": {
+          "name": "Checkout returns 500 at the payment step.",
+          "kind": "alert"
+        },
+        "target": {
+          "name": "The payments database ran out of disk space.",
+          "kind": "alert"
+        },
+        "probability": 0.71
+      }
+    },
+    {
+      "name": "02-decide-details",
+      "definition": "details",
+      "request": {
+        "decide": "Does this need attention?",
+        "threshold": 0.5,
+        "evidence": "A short note.",
+        "details": true
+      },
+      "case_id": "02-decide-no",
+      "expect_fields": {
+        "schema": "thinkthen.result/1",
+        "value": false,
+        "answer": {
+          "kind": "yes_no",
+          "probability": 0.12
+        }
+      }
+    },
+    {
+      "name": "usage",
+      "definition": "usage",
+      "request": {
+        "usage": true
+      },
+      "expect_keys": [
+        "requests_sent",
+        "input_tokens",
+        "output_tokens",
+        "cache_answers"
+      ]
+    },
+    {
+      "name": "two-verbs",
+      "definition": "doorRequest",
+      "request": {
+        "decide": "Q?",
+        "choose": "Which?",
+        "evidence": "x"
+      },
+      "request_valid": false,
+      "expected_error": "usage"
+    },
+    {
+      "name": "details-number",
+      "definition": "doorRequest",
+      "request": {
+        "decide": "Q?",
+        "evidence": "x",
+        "details": 1
+      },
+      "request_valid": false,
+      "expected_error": "usage"
+    },
+    {
+      "name": "relate-string-record",
+      "definition": "doorRequest",
+      "request": {
+        "version": 1,
+        "relate": {
+          "relations": []
+        },
+        "records": [
+          "x"
+        ]
+      },
+      "request_valid": false,
+      "expected_error": "usage"
+    },
+    {
+      "name": "filter-object-record",
+      "definition": "doorRequest",
+      "request": {
+        "filter": "Q?",
+        "records": [
+          {
+            "text": "x"
+          }
+        ]
+      },
+      "request_valid": false,
+      "expected_error": "usage"
+    },
+    {
+      "name": "score-label-is-not-value",
+      "definition": "score",
+      "response": "medium",
+      "response_valid": false
+    },
+    {
+      "name": "failure-null-is-not-marker",
+      "definition": "annotatedRow",
+      "response": {
+        "team": {
+          "failed": null
+        }
+      },
+      "response_valid": false
+    },
+    {
+      "name": "relate-array-is-not-door-value",
+      "definition": "relate",
+      "response": [],
+      "response_valid": false
+    },
+    {
+      "name": "recognize-missing-end",
+      "definition": "recognize",
+      "response": {
+        "entities": [
+          {
+            "text": "Maria",
+            "start": 0,
+            "length": 5,
+            "kind": "person",
+            "strength": 1.0
+          }
+        ]
+      },
+      "response_valid": false
+    },
+    {
+      "name": "record-row-null",
+      "definition": "recordRow",
+      "response": {
+        "input": "hello",
+        "value": null
+      }
+    },
+    {
+      "name": "call-error",
+      "definition": "callError",
+      "response": {
+        "kind": "deadline",
+        "retryable": false,
+        "message": "the budget ran out"
+      }
+    }
+  ]
+}

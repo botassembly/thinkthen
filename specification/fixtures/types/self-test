@@ -1,0 +1,11 @@
+#!/bin/sh
+# Run the result schema and real C JSON door against the same type corpus.
+set -eu
+
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+. "$HERE/../../../sdlc/scripts/allow-list"
+LOCK=${THINKTHEN_HEAVY_LOCK:-${XDG_RUNTIME_DIR:-/tmp}/thinkthen-heavy.lock}
+if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$LOCK" ]; then
+	exec flock -o "$LOCK" env THINKTHEN_HEAVY_LOCK_HELD="$LOCK" /bin/sh "$0"
+fi
+exec python3.12 "$HERE/check.py"

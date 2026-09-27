@@ -1,6 +1,6 @@
 # 0082: One type contract for every surface
 
-Status: proposed 2026-09-27 for ticket 0204. The type-contract issue and Batch J are the authority. Ian accepts the recommendations subject to overturning any ruling below. A fresh design review precedes acceptance.
+Status: accepted 2026-09-27 by the Codex queue owner after fresh read-only review at `target/codex-reviews/0204-design/REVIEW.md`. The type-contract issue and Batch J are the authority. Ian can overturn any ruling below.
 
 ## Decision
 
