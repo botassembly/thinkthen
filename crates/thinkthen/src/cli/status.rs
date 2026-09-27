@@ -43,6 +43,7 @@ struct Cache {
     path_source: &'static str,
     entries: Option<u64>,
     bytes: Option<u64>,
+    bad_entries: Option<u64>,
     #[serde(rename = "prune_target_bytes")]
     target_bytes: u64,
     #[serde(rename = "prune_target_source")]
@@ -165,6 +166,7 @@ fn gather(environment: &Environment) -> Result<Status, Failure> {
             },
             entries: cache_counts.as_ref().map(|counts| counts.entries),
             bytes: cache_counts.as_ref().map(|counts| counts.bytes),
+            bad_entries: cache_counts.as_ref().map(|counts| counts.bad_entries),
             target_bytes: environment.cache_bytes(),
             target_source,
         },
@@ -226,6 +228,7 @@ fn write_human(status: &Status, mut writer: impl Write) -> Result<(), Failure> {
     )?;
     optional_line(&mut writer, "cache_entries", status.cache.entries)?;
     optional_line(&mut writer, "cache_bytes", status.cache.bytes)?;
+    optional_line(&mut writer, "cache_bad_entries", status.cache.bad_entries)?;
     edge::write_line(
         &mut writer,
         &format!("cache_prune_target_bytes {}", status.cache.target_bytes),

@@ -42,7 +42,7 @@ Under a single cut, "no" means the answer did not reach the mark. It does not me
 
 Measurement of the first System One model showed answers inside a not sure band flipping between identical runs 5% to 14% of the time. Answers outside such a band flipped 0.5% to 2%. Section 5 of `sdlc/planning/design-study.md` records both rates. A band names the region where a second look pays. A single cut hides it.
 
-The movement behind a flip is small but real. In experiment 212, a borderline answer moved by up to 0.08 between two identical requests. Experiment 259 saw gaps up to 0.09 on the same model. A band narrower than about 0.1 on each side of a cut does not keep a flip out.
+Repeated calls can move an answer far enough to cross a cut. In experiment 212, a borderline answer moved by up to 0.08 between two identical requests. The offline [0163 drift record](../sdlc/records/0163-answer-drift.md) found a largest gap of 0.45 and 430 repeated digests crossing 0.5 in the pinned benchmark; the repository probes had no repeats, and its other recordings had three repeats but no crossing. Size a band from the gaps that record reports.
 
 ## Which verbs take which form
 
