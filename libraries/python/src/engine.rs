@@ -139,6 +139,17 @@ fn checked_throttle(value: Arg<'_, '_>) -> PyResult<Option<u8>> {
     }
 }
 
+/// Read one optional folder setting with its own public refusal sentence.
+fn folder_path(
+    py: Python<'_>,
+    value: Arg<'_, '_>,
+    refusal: &'static str,
+) -> PyResult<Option<std::path::PathBuf>> {
+    value
+        .map(|value| value.extract().map_err(|_| usage(py, refusal)))
+        .transpose()
+}
+
 /// The checked settings of `tt.Engine`, each applied over the environment.
 struct Settings<'a> {
     base_url: Option<&'a str>,
@@ -283,6 +294,10 @@ impl Engine {
     /// each given setting (amendment changes 11 to 13).
     #[new]
     #[pyo3(signature = (*, base_url=None, model=None, throttle=None, max_requests=None, cache=None, timeout=None, max_retries=None, record=None, replay=None, profile=None))]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "PyO3's keyword-only constructor exposes the ten engine settings"
+    )]
     fn new(
         base_url: Option<&str>,
         model: Option<&str>,
@@ -304,27 +319,9 @@ impl Engine {
                     most: setting(max_requests, MAX_REQUESTS)?,
                     timeout: setting(timeout, "a timeout is a whole number of seconds above zero")?,
                     retries: setting(max_retries, "max_retries is a whole number")?,
-                    record: record
-                        .map(|value| {
-                            value
-                                .extract()
-                                .map_err(|_| usage(py, "record is a folder path"))
-                        })
-                        .transpose()?,
-                    replay: replay
-                        .map(|value| {
-                            value
-                                .extract()
-                                .map_err(|_| usage(py, "replay is a folder path"))
-                        })
-                        .transpose()?,
-                    profile: profile
-                        .map(|value| {
-                            value
-                                .extract()
-                                .map_err(|_| usage(py, "profile is a file path"))
-                        })
-                        .transpose()?,
+                    record: folder_path(py, record, "record is a folder path")?,
+                    replay: folder_path(py, replay, "replay is a folder path")?,
+                    profile: folder_path(py, profile, "profile is a file path")?,
                 };
                 settings.build(py, cache).map(Self)
             };
