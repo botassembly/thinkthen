@@ -1,0 +1,7 @@
+# Correct the consumer handover records
+
+Status: record correction, 2026-09-27. Owner: Codex. No package integration or release is claimed.
+
+The Zig, Go and JVM issues now distinguish their sealed pre-fix cancellation findings from the passing post-fix experiments. Ticket 0166 repaired native scalar cancellation. The local copied gates rebuilt against main `22f36d0006fd34e7390a71d15c0458e493f3e844` and passed strict held-scalar cancellation with untouched outputs, held bulk cancellation, held deadlines and fresh-token recovery. Zig's worker and parent gates are `gate-20260927T140739Z` and `gate-20260927T142411Z`; Go's are `gate-20260927T140304Z` and `gate-20260927T141134Z`; the JVM's are `gate-20260927T130613Z` and `gate-20260927T132352Z`, each under its local experiment's `post-fix/logs/`. The bounded evidence inventory at `target/codex-jobs/handover-issue-files/REPORT.md` checked Zig and Go receipts against the local source pins, sentinel outputs and request counts. The issue files retain the fuller evidence and experiment limits.
+
+This Quick Fix changes status, gap and handoff prose only. It corrects Zig's obsolete claim that Go and JVM were future experiments and the JVM's obsolete request for native repair. The work plan retains all three issue rows as `todo`, with 166 items: 24 done, 137 to do, 1 non-issue and 4 blocked. Reviewed package integration, release packaging and a final-release-pin rebuild and gate remain open. No experiment artifact enters the repository, and no release is published.

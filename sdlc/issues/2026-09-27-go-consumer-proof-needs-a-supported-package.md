@@ -1,10 +1,10 @@
 # A Go consumer works through C, but no supported package exists
 
-Status: the local Go package experiment is complete, with a verified native cancellation blocker owned separately. The queue owner decides the integration ticket and release. Ian authorized the local engineering and testing, not publication. He can overturn the thread-pinning choice and the explicit native-archive route.
+Status: the local Go package experiment is complete. Ticket 0166 repaired the native cancellation blocker, and a post-fix rerun at main `22f36d00` passed the strict contract. The queue owner decides the integration ticket and release. Ian authorized the local engineering and testing, not publication. He can overturn the thread-pinning choice and the explicit native-archive route.
 
 ## Gap
 
-The ideal state makes the C interface the route to additional languages. Experiment 274 now supplies the Go implementation, package metadata, examples, documentation, tests and local archive rehearsal on Beelink. The repository still needs reviewed integration, the native cancellation repair, and final-release verification before offering supported Go use.
+The ideal state makes the C interface the route to additional languages. Experiment 274 now supplies the Go implementation, package metadata, examples, documentation, tests and local archive rehearsal on Beelink. The repository still needs reviewed integration, release packaging and final-release verification before offering supported Go use.
 
 ## Evidence
 
@@ -16,13 +16,15 @@ Stage two pinned main `19ca8302` and delivered `stage2/package/` (seven module f
 
 The parent independently verified all input blobs at both pins, all manifest hashes, archive members and exports, and reran the complete gate with identical results. Two fresh read-only reviews accepted the bounded engineering with no findings.
 
-## Native blocker
+## Sealed native blocker evidence
 
-A scalar C call can return success after its token fires during an accepted held request. All four stage-two consumers reproduce it through Go, as do Zig and direct ctypes in experiment 273. [The cancellation issue](closed/2026-09-26-cancelled-c-scalar-call-can-return-success.md) owns repair. The Go wrapper reports exactly what C returns; the gate records `FINDING` and exits 1; no Go workaround exists.
+This section records the pre-fix failure. Ticket 0166 repaired it; the post-fix verification below records the passing strict proof.
+
+At the sealed stage-two pin, a scalar C call could return success after its token fired during an accepted held request. All four stage-two consumers reproduced it through Go, as do Zig and direct ctypes in experiment 273. [The closed cancellation issue](closed/2026-09-26-cancelled-c-scalar-call-can-return-success.md) records the repair. The stage-two Go wrapper reported exactly what C returned; the sealed stage-two gate recorded `FINDING` and exited 1; no Go workaround was available at that pin.
 
 ## Handoff and remaining work
 
-Local, unpushed deliverables live in the experiment folder: `stage2/package/`, `stage2/artifacts/` with its manifest, `stage2/fixtures/` and `stage2/gate.sh`, and `stage2/HANDOFF.md` with exact destinations. The integration ticket copies `package/` into `libraries/go/`, relocates fixture controls into product offline tests, adapts release packaging and documentation, and adds the surface registry entry. After the native fix, replace the gate's exact known-failure expectation with the strict cancellation contract and rerun everything on the final landed release commit. Do not publish the rehearsal archives.
+Local, unpushed deliverables live in the experiment folder: `stage2/package/`, `stage2/artifacts/` with its manifest, `stage2/fixtures/` and `stage2/gate.sh`, and `stage2/HANDOFF.md` with exact destinations. The integration ticket copies `package/` into `libraries/go/`, relocates fixture controls into product offline tests, adapts release packaging and documentation, and adds the surface registry entry. The post-fix experiment copy already requires strict cancellation success and passed. Product integration must carry that contract and rerun everything on the final release pin. Do not publish the rehearsal archives.
 
 ## Limits
 
