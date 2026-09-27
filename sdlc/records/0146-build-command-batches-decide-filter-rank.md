@@ -98,13 +98,15 @@ The batched path holds the reader thread, the batch queue with its pause, the dr
 
 ## Ladder
 
-Each rung ran once, alone, with the load average under 10, at `314f5e8d` and after.
+The build ran each rung once, alone, with the load average under 10, at `314f5e8d` and after. `surfaces` first failed on `libraries/c`, whose door compares its bytes with the command's under the default. It passed after the pin.
+
+After the code review fixes and the merge of `origin/main`, each rung ran again at `f39ca1b3` and the status commit after it:
 
 | Rung | Result |
 | --- | --- |
-| `lint` | exit 0; ratchet 73,400 of 73,400 |
-| `test` | exit 0; 982 passed, 0 failed across 38 test binaries |
+| `lint` | exit 0; ratchet 73,582 of 73,582 |
+| `test` | exit 0; 985 passed, 0 failed across 38 test binaries |
 | `spec` | exit 0; demos 21 green, 0 red |
-| `surfaces` | exit 1 on `libraries/c`, the door's byte comparison under the default. After the pin, exit 0: every surface and the release smoke pass |
+| `surfaces` | exit 0; every surface and the release smoke pass |
 
 `install` did not run. No dependency changed.
