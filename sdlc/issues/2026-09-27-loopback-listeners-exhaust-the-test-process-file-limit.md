@@ -1,6 +1,6 @@
 # Loopback listeners exhaust the test process's file limit
 
-Status: in progress under ticket 0202; the Python exposure proof remains unresolved on 2026-09-27. The full test passed under a child-only 1,024 soft file limit; its 411 backend cases completed with peaks of 131 descriptors and 102 tasks. Component: Release and tooling. Severity: 3.
+Status: reviewed fix awaiting the combined 0202/0205 functional batch landing on 2026-09-27. Ian moved the unresolved Python statistical campaign outside ordinary acceptance; it is not evidence of an unresolved descriptor leak. The full test passed under a child-only 1,024 soft file limit; its 411 backend cases completed with peaks of 131 descriptors and 102 tasks. Component: Release and tooling. Severity: 3.
 
 ## Evidence
 
