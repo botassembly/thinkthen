@@ -25,6 +25,10 @@ const fn refused(message: &'static str) -> ConfigError {
 
 pub(crate) const DEFAULT_CACHE_BYTES: u64 = 100_000_000;
 
+const SCHEMA: &str = "configuration field `schema` must be `thinkthen.config/1`";
+const CACHE_BYTES: &str =
+    "configuration field `cache_bytes` must be a whole number greater than zero";
+
 #[derive(Debug, Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Config {
@@ -54,8 +58,12 @@ impl Config {
                 });
             }
         };
-        let mut parsed: Self = serde_json::from_slice(&bytes)
-            .map_err(|_| refused("the configuration file is not valid closed JSON"))?;
+        Self::parse(&bytes)
+    }
+
+    fn parse(bytes: &[u8]) -> Result<Self, ConfigError> {
+        let mut parsed: Self =
+            serde_json::from_slice(bytes).map_err(|_| refused(shape_fault(bytes)))?;
         parsed.present = true;
         parsed.validate()?;
         Ok(parsed)
@@ -63,9 +71,7 @@ impl Config {
 
     fn validate(&self) -> Result<(), ConfigError> {
         if self.schema != "thinkthen.config/1" {
-            return Err(refused(
-                "configuration field `schema` must be `thinkthen.config/1`",
-            ));
+            return Err(refused(SCHEMA));
         }
         if self
             .model
@@ -75,9 +81,7 @@ impl Config {
             return Err(refused("configuration field `model` must not be blank"));
         }
         if self.cache_bytes == Some(0) {
-            return Err(refused(
-                "configuration field `cache_bytes` must be greater than zero",
-            ));
+            return Err(refused(CACHE_BYTES));
         }
         if let Some(url) = self.url.as_deref()
             && Backend::resolve(Some(url), None, DEFAULT_MODEL).is_err()
@@ -116,6 +120,35 @@ impl Config {
     pub(crate) fn cache_bytes(&self) -> u64 {
         self.cache_bytes.unwrap_or(DEFAULT_CACHE_BYTES)
     }
+}
+
+/// Names the first field that breaks the closed shape, and never its value.
+fn shape_fault(bytes: &[u8]) -> &'static str {
+    use serde_json::Value;
+    let Ok(Value::Object(fields)) = serde_json::from_slice::<Value>(bytes) else {
+        return "the configuration file is not valid closed JSON";
+    };
+    if !fields.contains_key("schema") {
+        return SCHEMA;
+    }
+    for (name, value) in &fields {
+        let fault = match (name.as_str(), value) {
+            ("schema", Value::String(_))
+            | ("url" | "model", Value::String(_) | Value::Null)
+            | ("cache", Value::Bool(_) | Value::Null) => continue,
+            ("cache_bytes", value) if value.is_null() || value.is_u64() => continue,
+            ("schema", _) => SCHEMA,
+            ("url", _) => "configuration field `url` must be a string",
+            ("model", _) => "configuration field `model` must be a string",
+            ("cache", _) => "configuration field `cache` must be true or false",
+            ("cache_bytes", _) => CACHE_BYTES,
+            _ => {
+                "the configuration file holds a field other than `schema`, `url`, `model`, `cache`, and `cache_bytes`"
+            }
+        };
+        return fault;
+    }
+    "the configuration file is not valid closed JSON"
 }
 
 #[derive(Clone, Copy)]
@@ -205,25 +238,51 @@ mod tests {
     use super::{Config, Platform, resolve_cache, resolve_config, resolve_usage};
 
     #[test]
-    fn the_closed_shape_requires_its_schema_and_positive_limit() {
-        let valid: Config = serde_json::from_str(r#"{"schema":"thinkthen.config/1"}"#)
-            .expect("closed config parses");
-        assert!(valid.validate().is_ok());
-        for text in [
-            r#"{}"#,
-            r#"{"schema":"wrong"}"#,
-            r#"{"schema":"thinkthen.config/1","extra":true}"#,
-            r#"{"schema":"thinkthen.config/1","cache_bytes":0}"#,
-            r#"{"schema":"thinkthen.config/1","model":"  "}"#,
-            r#"{"schema":"thinkthen.config/1","url":"http://example.com"}"#,
-            r#"{"schema":"thinkthen.config/1","cache":"yes"}"#,
-            r#"{"schema":"thinkthen.config/1","cache_bytes":-1}"#,
-            r#"{"schema":"thinkthen.config/1""#,
+    fn each_refusal_names_its_field_and_never_its_value() {
+        assert!(Config::parse(br#"{"schema":"thinkthen.config/1"}"#).is_ok());
+        let not_closed = "the configuration file is not valid closed JSON";
+        let schema = "configuration field `schema` must be `thinkthen.config/1`";
+        let bytes = "configuration field `cache_bytes` must be a whole number greater than zero";
+        for (text, sentence) in [
+            (r#"{"schema":"thinkthen.config/1""#, not_closed),
+            (r#"["schema"]"#, not_closed),
+            (
+                r#"{"schema":"thinkthen.config/1","cache":true,"cache":false}"#,
+                not_closed,
+            ),
+            (r#"{}"#, schema),
+            (r#"{"schema":"wrong"}"#, schema),
+            (r#"{"schema":1}"#, schema),
+            (
+                r#"{"schema":"thinkthen.config/1","extra":true}"#,
+                "the configuration file holds a field other than `schema`, `url`, `model`, `cache`, and `cache_bytes`",
+            ),
+            (
+                r#"{"schema":"thinkthen.config/1","cache":"/folder"}"#,
+                "configuration field `cache` must be true or false",
+            ),
+            (
+                r#"{"schema":"thinkthen.config/1","url":7}"#,
+                "configuration field `url` must be a string",
+            ),
+            (
+                r#"{"schema":"thinkthen.config/1","model":["m"]}"#,
+                "configuration field `model` must be a string",
+            ),
+            (r#"{"schema":"thinkthen.config/1","cache_bytes":0}"#, bytes),
+            (r#"{"schema":"thinkthen.config/1","cache_bytes":-1}"#, bytes),
+            (
+                r#"{"schema":"thinkthen.config/1","model":"  "}"#,
+                "configuration field `model` must not be blank",
+            ),
+            (
+                r#"{"schema":"thinkthen.config/1","url":"http://example.com"}"#,
+                "configuration field `url` must be a safe backend base",
+            ),
         ] {
-            let refused = serde_json::from_str::<Config>(text)
-                .map_err(|_| ())
-                .and_then(|config| config.validate().map_err(|_| ()));
-            assert!(refused.is_err(), "{text}");
+            let refused = Config::parse(text.as_bytes()).expect_err(text);
+            assert_eq!(refused.message, sentence, "{text}");
+            assert!(!refused.unreadable, "{text}");
         }
     }
 
