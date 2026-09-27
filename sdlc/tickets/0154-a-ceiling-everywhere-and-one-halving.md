@@ -6,9 +6,9 @@ opens: sdlc/planning/adr/0051-every-address-has-a-ceiling-and-a-refused-batch-ha
 
 # 0154: The request size is a setting with a default everywhere, and a refused batch halves once
 
-Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Claude. It carries ADR 0051. It builds only after tickets 0146 (B4) and 0155 land on main, and before the batching design's ticket B5, by the coordinator's ruling of 2026-09-26.
+Status: building. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Codex, by Ian's later routing. It carries ADR 0051. Tickets 0146 (B4) and 0155 have landed on main. This ticket builds before the batching design's ticket B5, by the coordinator's ruling of 2026-09-26.
 
-Review route: a fresh read-only Claude session reviews this design, ADR 0051, and later the final diff. Codex does not review this ticket unless Ian routes it.
+Review route: the accepted design and ADR 0051 retain their earlier review. A fresh read-only Codex reviewer checks the final diff, by Ian's later routing.
 
 ## Outcome and authority
 
@@ -23,6 +23,14 @@ The rulings of 2026-09-26 set the scope. ADR 0048 says that changing one of its 
 ## What happens today
 
 Read from `origin/main` `6fbebfdf` and the branch of ticket 0146 at `6cdbe075`.
+
+### Build preflight, 2026-09-27
+
+The concise source and verification record is `sdlc/records/0154-build.md`.
+
+Rechecked the accepted branch against main `c76de10d`, after 0146, 0148, 0147 and 0155 landed. The preceding snapshot records the design's starting point; those prerequisites are now present. Ticket 0155 added the live attempt counter and changed the default retry count to three. This ticket must keep its cancellation and retry behavior when it asks the halves. The existing batch planner in `core/batch.rs`, relation planner in `engine/prepared_request.rs`, and command worker in `cli/asking/batched.rs` are the paths to reuse. The request-size setting must reach only the five named verbs; `engine/mod.rs`, `engine/workers.rs` and `public/options.rs` are held by ticket 0201 and are outside this build.
+
+`core/batch/tests.rs::the_ceiling_closes_batches_at_the_built_in_address_only` shows that three 20,000-byte records already fit one 96,000-byte request, while three 40,000-byte records close as two then one. The edge table below uses 40,000-byte records for that boundary. The current recording folder identity uses the URL alone. The earlier committed recording size scan found no file over 90,000 bytes under `demos/`, `probes/`, `transforms/` or the test fixtures; the build will report any executable fixture that actually changes before expanding scope. The focused proof uses that batch test, `tests/backend/batching.rs` and its existing helpers, `tests/backend/relate/ceiling.rs`, and `tests/backend/status_reason.rs`. The final reviewer will check the command boundary, measured ratchet and this ticket's build lessons. The related command integration checkpoint follows this ticket; the old mutation plants and full surfaces rung below are design examples, not a mandatory campaign for this build.
 
 - `core/backend.rs::Backend::ceiling` returns `Some(96_000)` only when the posting URL, less `/systemone` and one trailing slash, equals the built-in base. Two callers read it. `core/batch.rs::Batcher::over` uses it as the request limit when no profile sets one. `engine/prepared_request.rs::SettledRelation::settle` splits relation plans under it when no profile limits request bytes.
 - `specification/backends.md`, "Explicit profiles and local preflight", says: "A profile's `max_request_bytes` replaces it" and "Every other plan and every other address has no ceiling."
@@ -170,7 +178,7 @@ Overlap with other tickets:
 
 | Input | Expected |
 | --- | --- |
-| Three 20,000-byte lines, `decide`, loopback, nothing set | 2 requests: 2 records, then 1. Each body at most 96,000 bytes |
+| Three 40,000-byte lines, `decide`, loopback, nothing set | 2 requests: 2 records, then 1. Each body at most 96,000 bytes |
 | The same with `--max-request-bytes 200000` | 1 request of 3 records. No warning |
 | The same with `THINKTHEN_MAX_REQUEST_BYTES=200000` | 1 request of 3 records |
 | The same with `THINKTHEN_MAX_REQUEST_BYTES=200000 --max-request-bytes 50000` | 3 requests of 1 record. The flag wins |
@@ -257,18 +265,18 @@ Nonblank lines, measured with `grep -c .`. Net lines against main after tickets 
 - ADR 0040 and the batching design issue: at most 4 net together.
 - `sdlc/ratchet.json` moves to the measured total, at most 680 above main after 0146 and 0155 land: 215, 170, 260 and 35. The commit says what grew.
 - No dependency.
-- The `surfaces` rung runs, because the default size changes the libraries' relation plans at other addresses.
+- Run focused affected command and planner proof for this slice. The related batch checkpoint covers the wider surfaces rung under Ian's later verification ruling.
 
 ## Stop rules
 
 1. Stop before crossing any budget by more than a tenth, or before adding a dependency.
-2. Stop if ticket 0146 or 0155 has not landed on main.
+2. Tickets 0146 and 0155 have landed on main; keep their behavior while building this ticket.
 3. Stop if `--batch 1` changes one byte of any request, row, standard error line or exit code, except the two too-large phrases. Edge row "Batch of 1 refused with 413" carries the new 413 phrase, and the `max_tokens_exceeded` line takes its new ending. A batch of one never splits.
 4. Stop if a committed recording, demo, probe replay or spec page changes under the new default. None is expected. Hand back which one.
 5. Stop if the halving needs a recording format change, a new entry kind, a second scheduler, or a change to what `--jobs` counts.
 6. Stop if the request size changes the recording folder's identity.
-7. Stop if any plant stays green.
-8. Stop if the change needs a file that ticket 0146, 0147, 0148 or 0155 still opens and has not landed. ADR 0040, `backends.md`, `records.md`, `result.md`, `settings.md`, `relate.md` and `recognize.md` wait for 0147. `settings.md` also waits for 0148. `cli/failure/status.rs` and every file in 0146's overlap list wait for 0146. `crates/thinkthen/tests`, `tests/backend/main.rs` and ADR 0048 wait for 0155.
+7. Stop if focused outside-in proof does not detect a real regression. The planted faults above explain the test intent; Ian's later ruling does not call for a mutation campaign.
+8. Stop before editing a file another live lane owns. The earlier 0146, 0147, 0148 and 0155 overlaps have landed. Ticket 0201 still owns `engine/mod.rs`, `engine/workers.rs` and `public/options.rs`; coordinate the shared `specification/settings.md` merge.
 9. Stop if the build needs a live call. None is authorized. Never run `sdlc/scripts/live`.
 
 ## Scope and exclusions
@@ -277,7 +285,7 @@ Excluded: the setting on the libraries and SQL, which ticket 0157 carries. Halvi
 
 ## Routing
 
-Builder: Claude (Opus subagent) in the lane the coordinator names. Reviewer: a fresh read-only Claude session for the design and for the code. The change raises the ceiling and adds a setting, so the code review names what it checked.
+Builder: Codex in the coordinator's lane, by Ian's later routing. Reviewer: a fresh read-only Codex session for the final code. The accepted design review remains valid. The code review names its checks of the setting, split, replay and counts.
 
 ## Complexity
 
