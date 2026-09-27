@@ -166,7 +166,8 @@ impl Lifetime {
         !state.stopped
     }
 
-    pub(crate) fn watch(&self, gate: &Arc<Rendezvous>) {
+    pub(crate) fn watch(&self, gate: Option<&Arc<Rendezvous>>) {
+        let Some(gate) = gate else { return };
         let mut state = self.state.lock().unwrap_or_else(|error| error.into_inner());
         if state.stopped {
             gate.cancel();

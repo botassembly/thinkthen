@@ -229,8 +229,11 @@ fn a_held_reply_releases_normally_and_retirement_interrupts_an_unreleased_reply(
     );
     retirement.join().map_err(|_| "retirement panicked")?;
     participant.join().map_err(|_| "participant panicked")?;
+    Ok(())
+}
 
-    // The worker must register the gate before entering its cancellable delay.
+#[test]
+fn retirement_cancels_a_gate_during_the_reply_delay() -> Tested {
     let release = Arc::new(Rendezvous::new(3));
     let (arrived, events) = mpsc::channel();
     let listener = Listener::answering_with_events(
@@ -268,6 +271,33 @@ fn a_held_reply_releases_normally_and_retirement_interrupts_an_unreleased_reply(
         "a delayed reply escaped retirement: {body}"
     );
     retirement.join().map_err(|_| "retirement panicked")?;
+    participant.join().map_err(|_| "participant panicked")?;
+    Ok(())
+}
+
+#[test]
+fn retirement_cancels_a_gate_when_the_reply_exits_before_its_wait() -> Tested {
+    let release = Arc::new(Rendezvous::new(2));
+    let (arrived, events) = mpsc::channel();
+    let listener = Listener::answering_with_events(
+        {
+            let release = Arc::clone(&release);
+            move |_| Canned::reset().after_release(Arc::clone(&release))
+        },
+        arrived,
+    )?;
+    let mut stream = connect(&listener)?;
+    stream.write_all(b"POST /v1/systemone HTTP/1.1\r\ncontent-length: 0\r\n\r\n")?;
+    assert!(matches!(
+        events.recv_timeout(PATIENCE),
+        Ok(Observed::Request)
+    ));
+    let (awoken, wake) = mpsc::channel();
+    let participant = thread::spawn(move || {
+        let _ = awoken.send(release.wait());
+    });
+    drop(listener);
+    assert_eq!(wake.recv_timeout(Duration::from_secs(1)), Ok(false));
     participant.join().map_err(|_| "participant panicked")?;
     Ok(())
 }

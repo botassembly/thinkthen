@@ -182,6 +182,9 @@ impl Listener {
         let counts = Arc::new(Counts::default());
         let serving = Arc::clone(&counts);
         let lifetime = Lifetime::new();
+        for canned in &responses {
+            lifetime.watch(canned.release.as_ref());
+        }
         lifetime.start(listener, move |listener, lifetime| {
             serve_script(&listener, responses, &sender, &serving, &lifetime);
         })?;
@@ -386,6 +389,7 @@ fn serve_kept(
         // It is counted after: a held answer takes its round number first,
         // and a `round` sent after the count reads this request lets it go.
         let canned = reply(&request);
+        lifetime.watch(canned.release.as_ref());
         counts.requests.fetch_add(1, Ordering::SeqCst);
         if sender.is_some_and(|sender| sender.send(request).is_err()) {
             return;
@@ -488,9 +492,6 @@ fn serve(stream: &TcpStream, canned: &Canned, lifetime: &Lifetime) {
 }
 
 fn wait_answer(canned: &Canned, lifetime: &Lifetime) -> bool {
-    if let Some(release) = canned.release.as_ref() {
-        lifetime.watch(release);
-    }
     if !lifetime.pause(canned.delay) {
         return false;
     }
