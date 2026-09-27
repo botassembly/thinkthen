@@ -4,6 +4,8 @@ same throttle as the list form. Each child builds its own
 
 import time
 
+import pytest
+
 from conftest import Backend, child_env, run, start
 
 SETUP = """
@@ -15,6 +17,25 @@ SETUP = """
 """
 
 
+def test_a_short_column_shares_one_deadline_and_token(backend, tmp_path):
+    """A bounded column stops under each public call-wide control."""
+    printed = run(SETUP + """
+    try:
+        engine.score(urgent, pl.Series(texts[:12]), deadline=0.05)
+    except tt.DeadlineError:
+        print("deadline")
+    token = tt.CancelToken()
+    threading.Timer(0.05, token.cancel).start()
+    try:
+        engine.score(urgent, pl.Series(texts[12:24]), token=token)
+    except tt.Cancelled:
+        print("cancelled")
+    """, child_env(backend, tmp_path, "arm/delay/100"))
+    assert printed.splitlines() == ["deadline", "cancelled"]
+    assert backend.count() <= 16
+
+
+@pytest.mark.stress
 def test_one_deadline_and_one_token_cover_a_column(backend, tmp_path):
     """R1-24, the Polars half: at 100 ms a reply, a 1 s deadline stops a
     200-row ``score`` near 1 s with at most 96 sends, and a token set at
@@ -50,6 +71,7 @@ def test_one_deadline_and_one_token_cover_a_column(backend, tmp_path):
     assert child.wait(timeout=10) == 0, child.stderr.read()
 
 
+@pytest.mark.stress
 def test_a_column_runs_at_the_lists_throttle(backend, tmp_path):
     """The throttle proof Ian named: 200 texts at 100 ms a reply and
     throttle 8 take about 2.5 s as a list and as a ``Series``, within 5
