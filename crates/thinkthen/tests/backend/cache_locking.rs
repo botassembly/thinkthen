@@ -270,11 +270,12 @@ fn two_processes_share_one_request_and_the_keyless_waiter_replays() {
 #[cfg(target_os = "linux")]
 #[test]
 fn waiter_blocks_on_the_owners_original_inode_before_install_and_unlink() {
-    use std::sync::{Arc, Barrier};
+    use conformance_backend::Rendezvous;
+    use std::sync::Arc;
 
     let cache = folder("cache-original-inode-process-race");
     let named = cache.to_string_lossy().into_owned();
-    let release = Arc::new(Barrier::new(2));
+    let release = Arc::new(Rendezvous::new(2));
     let (events, observed) = mpsc::channel();
     let listener = Listener::answering_with_events(
         {
@@ -363,12 +364,12 @@ fn process_death_releases_the_digest_lock_without_recovery() {
 #[cfg(target_os = "linux")]
 #[test]
 fn a_failed_owner_keeps_the_empty_lock_name_and_a_waiter_sends_nothing() {
+    use conformance_backend::Rendezvous;
     use std::os::unix::fs::PermissionsExt as _;
-    use std::sync::Barrier;
 
     let cache = folder("cache-recording-failure");
     let named = cache.to_string_lossy().into_owned();
-    let release = Arc::new(Barrier::new(2));
+    let release = Arc::new(Rendezvous::new(2));
     let (events, observed) = mpsc::channel();
     let listener = Listener::answering_with_events(
         {

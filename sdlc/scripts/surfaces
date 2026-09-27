@@ -11,15 +11,34 @@ set -eu
 # `surfaces --release` counts a check that reports "not run" as a failure (ticket 0128).
 . "$(dirname -- "$0")/verdict.sh"
 mode=plain
-[ "${1:-}" != --release ] || { mode=release; shift; }
+profile=routine
+registry_only=0
+while [ "$#" -gt 0 ]; do
+    case $1 in
+    --release) mode=release ;;
+    --full-functional) profile=full ;;
+    --stress) profile=stress ;;
+    --registry) registry_only=1 ;;
+    *) echo "surfaces: unknown option $1" >&2; exit 2 ;;
+    esac
+    shift
+done
 
-if [ "${1:-}" != --registry ]; then
+if [ "$registry_only" -eq 0 ]; then
 	# One heavy rung at a time on this machine. See heavy-lock.
 	. "$(dirname -- "$0")/heavy-lock"
 fi
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
+THINKTHEN_TEST_PROFILE=$profile
+export THINKTHEN_TEST_PROFILE
+if [ "$profile" = routine ]; then
+    THINKTHEN_CONFORMANCE_IDS="$REPO/conformance/routine-ids.txt"
+    export THINKTHEN_CONFORMANCE_IDS
+else
+    unset THINKTHEN_CONFORMANCE_IDS
+fi
 
 landed() {
 	awk '!/^#/ && $2 == "landed" { print $1 }' "$1"
@@ -68,7 +87,7 @@ registry() {
 	return "$status"
 }
 
-if [ "${1:-}" = --registry ]; then
+if [ "$registry_only" -eq 1 ]; then
 	registry sdlc/surfaces.txt
 	planted=$(mktemp)
 	trap 'rm -f -- "$planted" "$planted.json" "$planted.pid" "$planted.term"' EXIT

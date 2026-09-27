@@ -1,6 +1,6 @@
 # Loopback listeners exhaust the test process's file limit
 
-Status: open. Verified 2026-09-27 while checking `ece8b1f1`; its listener source matches main at `95f0458b`. Component: Release and tooling. Severity: 3.
+Status: in progress under ticket 0202; the Python exposure proof remains unresolved on 2026-09-27. The full test passed under a child-only 1,024 soft file limit; its 411 backend cases completed with peaks of 131 descriptors and 102 tasks. Component: Release and tooling. Severity: 3.
 
 ## Evidence
 
@@ -19,3 +19,7 @@ Ticket 0127 deliberately kept scripted ports open so a late connection could not
 Give fixtures a bounded, safe lifetime so completed work does not accumulate listening sockets or detached threads. Verify repeated fixture creation and retirement, late connections, and held responses through the real loopback boundary. The full backend suite must pass at a 1,024-file soft limit with bounded descriptor and thread counts. Raising the gate's default limit alone does not close this issue.
 
 Ticket 0146 opens `crates/thinkthen/tests` but does not open `conformance/backend`. Claim the exact fixture and proof files before building, and merge any new caller changes first. This issue authorizes no implementation by itself.
+
+## Resolution
+
+Ticket 0202 owns and retires each listener and its workers synchronously. The full rung proof is in `sdlc/records/0202-bound-loopback-fixture-lifetimes.md`; its runner and log are under `target/codex-builds/0202/`. The late-connection regression keeps the scripted port and drift reply while another owner exists, then proves final retirement closes it.

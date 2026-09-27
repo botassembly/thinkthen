@@ -6,7 +6,7 @@ Read `README.md`, `specification/README.md`, and `sdlc/planning/rust-standards.m
 
 - Red-green test-driven development: watch the new test fail for the stated reason, make it pass, clean up. A red-green test is scaffolding. Before a ticket lands, turn it into an outside-in CLI or API test, an edge-case table, a contract check, or a regression test that failed before its fix, or delete it. Review checks this.
 - Build simply: YAGNI, DRY, local behavior, separate concerns. A command or option enters only when a demo needs it.
-- The gate ladder is `sdlc/scripts/{install,lint,test,spec,surfaces}`. Run the cheapest rung first and all five before handing back.
+- The gate ladder is `sdlc/scripts/{install,lint,test,spec,surfaces}`. Run focused format, lint, and functional checks for each change. Run full integration at the related-ticket batch checkpoint. Repeated load, churn, timing, and contention campaigns run only through `sdlc/scripts/test-stress --run`. Keep the full functional cases available through `sdlc/scripts/test-full-cases --run`.
 - `sdlc/ratchet.json` holds the source size ceiling, equal to the measured total. A commit that raises it says what grew, why it earns its lines, and where you looked for duplication to delete first.
 - A second agent reviews any change that raises the ceiling, widens a public surface, or adds a dependency, and names what it checked.
 - A ticket that turns a demo green writes its page in ADR 0011's how-to form, and `sdlc/scripts/demos` checks it.
@@ -47,6 +47,7 @@ This repository will go public. Never name a private project or customer. Descri
 - A number on a page names the record that measured it. A behavior change updates its pages in the same commit.
 - A script that checks something runs from a rung, or it rots.
 - A new test answers four questions. What behavior does it protect? What credible regression fails it? Why does no existing test catch it? Does it need a test-only export, flag, or hook? A missing answer rejects it. A test needing a test-only hook moves to the real boundary. Review rejects the OpenClaw `test-audit` junk: no assertion, self-comparison, expectations the code under test computed, mocks doing the asserted work, copied inventories or export lists, and one contract tested at several layers. See workspace decision `2026-09-24-tests-earn-their-place.md`.
+- The build record names each deleted or consolidated test and the stronger routine proof that replaces it. A distinct parser, secrecy, cancellation, cache-miss, invalid-input, or conflict regression stays until a stronger boundary test proves the same behavior.
 
 ## Where things are
 
