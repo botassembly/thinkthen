@@ -1,6 +1,6 @@
 # 0152 Part B: Use one public word for a not sure answer
 
-Status: built for fresh read-only code review. Owner: Codex. Branch: `ticket/0152-not-sure-vocabulary`. The base before the final main merge was `d5610070`; the accepted ticket is `sdlc/tickets/0152-two-wording-fixes.md`.
+Status: complete after fresh read-only code review of 4a90c9e6. Owner: Codex. Branch: `ticket/0152-not-sure-vocabulary`. The base before the final main merge was `d5610070`; the accepted ticket is `sdlc/tickets/0152-two-wording-fixes.md`.
 
 ## Result
 
@@ -19,7 +19,7 @@ The marketing repository holds two copied examples. `sdlc/issues/2026-09-27-mark
 
 The full demos runner was attempted after the targeted examples with `PATH="$PWD/target/debug:$PATH"`, `THINKTHEN_API_KEY` unset, and the normal `HOME=/home/ian`, with no `XDG_CACHE_HOME`. It stopped in unchanged `demos/12-keep-going/README.md`, “Step 1: the run stops where the record is” at line 25, after five passing blocks on that page. Its actual standard error had the two expected lines, then `thinkthen: usage counters could not be updated; check the usage folder permissions and free space`. The runner output was captured in the tool transcript, not a log file. `cli/mod.rs` emits that warning when usage-counter storage fails; this observation does not establish why storage failed. The changed executable examples above passed. The first targeted example attempt lacked `target/debug` on `PATH`; rerunning with the built command on `PATH` passed. These setup observations did not change product code.
 
-Ian's current batch ruling asks for small functional proof. No mutation campaign or whole port ladder was run. The coordinator will run the related integration checkpoint after this ticket lands.
+Ian's current batch ruling asks for small functional proof. No mutation campaign or whole port ladder was run. The related core and all-port runtime checkpoint passed with landed 0155; this wording change retains that unchanged runtime evidence and its focused command, transform and executable-example proofs.
 
 ## Size and duplication
 

@@ -1,6 +1,6 @@
 # Command wording and help fixes before 0.1
 
-Status: Open. Items 1 and 16 remain. Ticket 0138 fixed items 10 to 15 and 17 and checked items 2 to 9 against main `3b6954d6` on 2026-09-26.
+Status: closed on 2026-09-27. Ticket 0152 Part A fixed item 1; reviewed Part B at 4a90c9e6 fixed item 16. Ticket 0138 fixed items 10 to 15 and 17 and checked items 2 to 9 against main `3b6954d6` on 2026-09-26.
 
 Ian's ruling, 2026-09-25, on item 6: `check` shows the model, the provider, the URL, and all its outputs. When no model name is given, it prints "unspecified". It shows the model the user asked for and the model each reply names. Option 2, an optional model in every request, is not ruled.
 

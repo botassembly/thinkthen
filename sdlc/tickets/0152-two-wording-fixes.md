@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/public/options.rs crates/thinkthen/tests/public_cont
 
 # 0152: A huge deadline prints a short number, and "not sure" replaces "unresolved"
 
-Status: Part B in progress. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Part A landed on 2026-09-26 after a fresh read-only code review; its record is `sdlc/records/0152-build-part-a.md`. Part B builds after ticket 0146 lands. Owner: Codex under Ian's handover.
+Status: complete. Part B passed fresh code review and focused validation on 2026-09-27. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Part A landed on 2026-09-26 after a fresh read-only code review; its record is `sdlc/records/0152-build-part-a.md`. Part B builds after ticket 0146 lands. Owner: Codex under Ian's handover.
 
 Review route: a fresh read-only Codex reviewer checks Part B's final diff. Ian's handover routes this accepted ticket to Codex; the settled behavior stays fixed.
 
