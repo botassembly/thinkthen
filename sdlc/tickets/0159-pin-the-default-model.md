@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 159
-opens: crates/thinkthen/src/core/adapters/systemone.rs crates/thinkthen/src/cli/failure.rs crates/thinkthen/src/public/error.rs crates/thinkthen/src/cli/audit/write.rs crates/thinkthen/src/cli/audit crates/thinkthen/tests crates/thinkthen/src/core/recording.rs crates/thinkthen/src/core/backend.rs crates/thinkthen/src/core/plan_document.rs crates/thinkthen/src/cli/conformance_tests.rs crates/thinkthen/src/cli/conformance_tests/mutations.rs crates/thinkthen/src/cli/conformance_tests/runner.rs crates/thinkthen/src/cli/conformance_tests/command.rs crates/thinkthen/src/cli/conformance_tests/profile_cases.rs specification/backends.md specification/settings.md specification/question-file.md specification/check.md specification/recognize.md specification/recording.md specification/result.md specification/audit.md specification/decide.md specification/choose.md specification/score.md specification/rank.md specification/filter.md specification/find.md specification/annotate.md specification/relate.md specification/channels.md specification/fixtures spec demos transforms/rows probes conformance/cases.json databases/postgresql/fixtures/runner-excuse.json libraries CHANGELOG.md sdlc/scripts/rekey-model sdlc/scripts/fixtures/rekey-model sdlc/scripts/lint sdlc/scripts/README.md sdlc/issues sdlc/planning/backlog-0-1-2026-09-26.md sdlc/ratchet.json sdlc/records sdlc/tickets
+opens: crates/thinkthen/src/core/adapters/systemone.rs crates/thinkthen/src/cli/failure.rs crates/thinkthen/src/public/error.rs crates/thinkthen/src/cli/audit/write.rs crates/thinkthen/src/cli/audit crates/thinkthen/tests crates/thinkthen/src/core/backend.rs crates/thinkthen/src/core/plan_document.rs crates/thinkthen/src/core/question_file/resolve/tests.rs crates/thinkthen/src/cli/conformance_tests.rs crates/thinkthen/src/cli/conformance_tests/mutations.rs crates/thinkthen/src/cli/conformance_tests/runner.rs crates/thinkthen/src/cli/conformance_tests/command.rs crates/thinkthen/src/cli/conformance_tests/profile_cases.rs specification/backends.md specification/settings.md specification/question-file.md specification/check.md specification/recognize.md specification/recording.md specification/result.md specification/audit.md specification/decide.md specification/choose.md specification/score.md specification/rank.md specification/filter.md specification/find.md specification/annotate.md specification/relate.md specification/channels.md specification/fixtures spec demos transforms/rows probes conformance/cases.json databases/postgresql/fixtures/runner-excuse.json libraries CHANGELOG.md sdlc/scripts/rekey-model sdlc/scripts/fixtures/rekey-model sdlc/scripts/lint sdlc/scripts/README.md sdlc/issues sdlc/planning/backlog-0-1-2026-09-26.md sdlc/ratchet.json sdlc/records sdlc/tickets
 ---
 
 # 0159: The default model is a pinned version
@@ -48,7 +48,7 @@ Read from `origin/main` `40eae81e`, the base of this branch.
 
 Ruling 2 also asks that a run with a model other than the question file's either refuse or take an explicit flag. `--model` is that explicit flag. It already outranks the file's `model`, and a user types it on purpose. So this ticket adds no refusal and no new flag, and `question-file.md` line 101 gains: "`--model` beside a file that names a model is the explicit way to run that file on another model."
 
-The pages change with it: `settings.md` lines 18, 52 and 78 (the default leaves the "no recorded reason" list and cites this ticket), `backends.md` line 57, `question-file.md` line 91 and its two examples (lines 12 and 20), `relate.md`'s file example on line 19, `check.md` line 16 and its examples, `recognize.md` line 56, `channels.md` lines 92 and 102, `recording.md`'s example entry, and the "Backend options" row of `decide.md`, `choose.md`, `score.md`, `rank.md`, `filter.md`, `find.md` and `annotate.md`. `backends.md` gains one sentence: "The default is a pinned version, so a vendor's move of its alias moves no default answer. A later release that changes the default says so in the changelog, and every default cache entry then misses once." `CHANGELOG.md` gets one line under 0.1.
+The pages change with it: `settings.md` lines 18, 52 and 78 (the default leaves the "no recorded reason" list and cites this ticket), `backends.md` line 57, `question-file.md` line 91 and its two examples (lines 12 and 20), `relate.md`'s file example on line 19, `check.md` line 16 and its examples, `recognize.md` line 56, `channels.md` lines 92 and 102, and the "Backend options" row of `decide.md`, `choose.md`, `score.md`, `rank.md`, `filter.md`, `find.md` and `annotate.md`. `backends.md` gains one sentence: "The default is a pinned version, so a vendor's move of its alias moves no default answer. A later release that changes the default says so in the changelog, and every default cache entry then misses once." `CHANGELOG.md` gets one line under 0.1.
 
 ### Re-keying the recordings
 
@@ -77,6 +77,7 @@ Where the script and the rule apply:
   - `databases/postgresql/fixtures/runner-excuse.json` copies case `01-decide-yes-captured` for the PostgreSQL runner's self-test, so its request body changes with that case. Its one expected `details.requests` digest takes case 01's new digest by the same computation.
   - `specification/fixtures/check/requests.jsonl` changes, because `check` sends the default model. `check.md`'s copy of those bodies changes with it.
   - `specification/fixtures/systemone/*` keeps `jev-latest`. The adapter tests build their plans with that literal (`core/adapters/systemone.rs` test plans) and pin the wire shape, not the default.
+  - Three copies of the fixture's `decide-urgent` exchange keep `jev-latest` with it. `backends.md` lines 107 and 113 show its request and response. `core/recording.rs` holds it in `plan()`, `RESPONSE` and `FILE` (lines 250 to 262), and its `PINNED` digest, `bd370a64…4a78.json`, is that exchange's name. The example entry in `recording.md` (lines 53 and 54) is the same exchange, and neither its request line nor its response line changes. One rule covers all of them: a reply keeps the model its backend named, and the re-key moves only an entry whose reply names the pinned version. This exchange's reply names `jev-latest`, so the script would refuse it, and it stays whole. These copies pin the adapter's wire shape and the entry format, not the default. `core/recording.rs` does not change, and it is not in `opens`.
 - `probes/01` to `probes/09` are measurements of what the tool sent then. Their recordings keep their bytes. Each `probes/0N/job.sh` gains `--model jev-latest` on every command it runs, so its replay sends the request that was recorded, and the committed rows do not change.
 - `probes/annotate-0015` and `probes/find-0040` keep their bytes. No rung replays them against the command.
 - `crates/thinkthen/tests/backend/support.rs` line 12 sets the tests' `DEFAULT_MODEL` constant. It becomes `jev-1.13.0`, because every test that reads it builds a default request. One test needs the alias on purpose. `prune_refuses_the_alias_and_keeps_the_upgrade` in `tests/backend/default_cache.rs` builds its planted request and its echoed reply from that constant, and its rows 1, 2 and 7 prune by `jev-latest`. That test names the literal `jev-latest` for its planted request and its echoed reply, so those rows still plant a request that asked for the alias.
@@ -86,6 +87,60 @@ Where the script and the rule apply:
 The re-keyed entries say what happened to them. `recording.md` gains, under "An entry": "The repository's recordings made before ticket 0159 asked for `jev-latest`. `sdlc/scripts/rekey-model` re-keyed them to `jev-1.13.0`, the version every one of their replies named, and left each reply unchanged." The ticket's record lists every re-keyed folder and the count of entries in each.
 
 The script stays until the site issue closes. A Quick Fix then removes it, its fixture and its lint line.
+
+### Every `jev-latest` in `crates/`, `spec/` and `demos/`
+
+`git grep -n jev-latest -- crates spec demos` on this branch, merged with `origin/main`, finds each hit below. Each one moves or stays for the reason given. Paths under `crates/thinkthen` drop that prefix.
+
+Product code names the version once, at `src/core/adapters/systemone.rs:35`. The unit tests under `src` read `DEFAULT_MODEL`, so no other line there names `jev-1.13.0`. The tests that drive the binary and the pages under `spec/` pin the literal `jev-1.13.0`, so plant (a) turns them red.
+
+These unit tests in product code move to the default constant.
+
+- `src/core/backend.rs:261` asserts the model that `Backend::resolve` returns when nothing names one.
+- `src/core/question_file/resolve/tests.rs:205` asserts the model that `resolve.rs:321` takes from `DEFAULT_MODEL` when no source names one.
+- `src/core/plan_document.rs` lines 137, 156 and 158 all move. Line 137 builds `plan()` with `DEFAULT_MODEL`, the constant line 150 already passes to the backend. Lines 156 and 158 build their expected text with `format!` from the same constant. The test pins the order of the plan document's fields. It does not pin the default.
+- The conformance runners named above move too: `src/cli/conformance_tests.rs` lines 147 and 181, `runner.rs` lines 77 and 177, `command.rs` line 405, and `profile_cases.rs` line 52.
+
+These pins in tests that drive the binary, and in `spec/`, move to `jev-1.13.0`.
+
+- `tests/backend/support.rs:12` and `tests/decide_edge.rs:11` are the two test constants for the default. The dry-run pins at `decide_edge.rs` lines 82, 84 and 112 move with them.
+- `tests/choose_and_score_edge.rs` lines 60, 63, 80 and 83 pin default dry-run plans.
+- `tests/backend/check.rs` lines 89 and 374 pin `model sent jev-latest` in the report's opening lines.
+- `tests/backend/streaming.rs` lines 394 and 396 pin a default dry-run plan.
+- `tests/status.rs` lines 42 and 53 pin `model jev-latest` beside `model_source built_in`, in the JSON and the human form.
+- `tests/backend/profile.rs:77` builds the default request body to set a byte limit. It passes today only because `jev-latest` and `jev-1.13.0` are both 10 bytes long. It reads `support::DEFAULT_MODEL` in place of the literal.
+- `spec/decide.md` lines 24, 44, 72 and 122 pin default plans. Line 72 shows that the environment's model is ignored. Line 122 is a default `--jsonl` plan.
+- `spec/check.md:16` pins `model sent`.
+
+The script re-keys the 131 entries under `demos/*/recording/` and the 40 under `tests/fixtures/recognize-225/`. No demo page names the alias.
+
+These hits stay, because each is a reply that a fake backend gives, and a stored reply keeps its model.
+
+- `tests/backend/check.rs` lines 21 to 39, 146 and 361.
+- `src/cli/failure/tests.rs:199`.
+- `src/core/adapters/systemone/response.rs` lines 325, 435, 455, 494, 498, 515 and 530.
+- `src/core/adapters/systemone/response_distribution_tests.rs` lines 13, 25 and 37.
+- `src/core/adapters/systemone/response_partial_tests.rs` lines 29, 44 and 96 to 116.
+- `src/engine/facade_tests.rs` lines 387, 396 and 475, and `src/engine/facade_tests/contract_tests.rs` lines 121 and 170.
+- `src/engine/width_tests.rs:419`.
+- `tests/public_batches.rs:25`, `tests/public_controls.rs:23` and `tests/public_members.rs:215`.
+
+These hits stay, because each test names its model and never reads the default.
+
+- `src/core/adapters/systemone.rs` lines 169, 171 and 186 feed names to the model-name diagnostic rule. Lines 213 and 223 build the adapter's test plans.
+- `src/core/adapters/systemone/request.rs:453` pins the adapter's wire shape. `response_partial_tests.rs:9` builds a plan.
+- `src/core/batch/tests.rs` lines 63 and 390, `src/core/batch/tests/refusals.rs:76` and `src/core/plan.rs:80` build backends and plans.
+- `src/core/question_set/tests.rs:48` plants a `model` member that a question set refuses. Any name would do.
+- `src/engine/deadline_tests.rs` lines 334 and 338, `src/engine/facade_tests.rs` lines 35, 87, 121 and 130, `src/engine/request.rs` lines 218 and 222, `src/engine/width_tests.rs` lines 382 and 398, and `src/cli/failure/tests.rs:206` build backends and plans.
+- `src/core/recording.rs` lines 250, 260, 262, 273 and 316 hold the `decide-urgent` exchange, which keeps `jev-latest` with the adapter fixture.
+
+These hits stay, because the command types `--model jev-latest` on purpose.
+
+- `tests/backend/annotate.rs` lines 317 and 381 to 383.
+- `tests/backend/annotate/scheduling.rs:311`.
+- The alias rows of `tests/backend/default_cache.rs` at lines 275, 276, 281 and 336.
+
+The builder runs the same `git grep` again before review. A hit that no list above names stops the build until the ticket names it.
 
 ### `audit --write` records the model
 
@@ -139,11 +194,11 @@ Every test drives the compiled binary. The backend rows use the in-process loopb
 
 | Test | What it proves | Planted faults that turn it red |
 | --- | --- | --- |
-| The existing literal pins, updated to `jev-1.13.0`: `spec/decide.md` lines 24 and 44, the `model sent` pin in `spec/check.md`, `core/backend.rs:261`, the dry-run pins in `tests/decide_edge.rs` and `tests/choose_and_score_edge.rs`, and `specification/fixtures/check/requests.jsonl` | The default request, the `check` plan and the resolved backend name the pin | (a) `DEFAULT_MODEL` back to `jev-latest`: every updated pin fails |
+| The existing literal pins that "Every `jev-latest`" moves to `jev-1.13.0`: `spec/decide.md` lines 24, 44, 72 and 122, `spec/check.md:16`, `tests/decide_edge.rs`, `tests/choose_and_score_edge.rs`, `tests/backend/check.rs` lines 89 and 374, `tests/backend/streaming.rs` lines 394 to 396, `tests/status.rs` lines 42 and 53, every test that reads `tests/backend/support.rs:12`, including `tests/backend/profile.rs:77`, and `specification/fixtures/check/requests.jsonl` | The default request, the default plan, the `check` report and `status` name the pin | (a) `DEFAULT_MODEL` back to `jev-latest`: every one of these pins fails. The unit tests in `src` that read `DEFAULT_MODEL` stay green by design. They pin resolution and field order |
 | `rekey-model --self-test` in `lint` | The five script rules against a digest the Rust recorder produced | (h) Re-serialize the JSON: the second entry's file differs from the Rust original. (i) Skip the old-name check: the misnamed-entry plant passes. (m) Skip the Git check: the untracked or edited plant moves. (j) Write before checking all: a planted refusal leaves a written file. (k) Follow a symlink or overwrite a target: its plant passes |
 | Every replay rung (`test`, `spec`, `surfaces`) after the re-key | Every re-keyed recording replays, and every page and row prints its new digest | (b) Skip one folder in the re-key: that folder's replay misses at exit 5 |
 | `audit_writes_the_model_it_tuned_on`, new in `tests/audit_model.rs` | The seven `audit --write` rows of the edge table, each pinning the file's bytes and standard error | (c) Write the model when lines disagree: the two-model row fails. (d) Write the requested alias in place of `meta.model`: the alias row fails. (e) Write the model with no bar: the no-bar row fails. (l) Skip lines without `meta.model`: the no-model row writes a model |
-| `a_cache_that_mixes_versions_stops_the_record`, new in `tests/backend/annotate` | The last edge row: a `--cache` folder recorded from a loopback answering `fake-1`, one question edited, then a loopback answering `fake-2`. Exit 4, the whole new sentence, and no row | (f) Skip the version check for cached chunks: the row prints with exit 0. (g) Restore the old message: the sentence differs |
+| `a_cache_that_mixes_versions_stops_the_record`, new in `tests/backend/annotate` | The last edge row. A cache folder is bound to its endpoint URL, port included, so a second loopback would get a new port and the second run would stop at exit 5. One listener therefore stays up across both runs. The test starts one `Listener::serving` over a list of `Canned::ok` replies: one `fake-1` reply for each group of the first run, then one `fake-2` reply. `serving` answers one scripted reply per connection, in order. The first run fills the `--cache` folder with `fake-1` answers. The test edits one question. The second run replays the unchanged groups from the cache and sends only the edited group, which gets `fake-2`. Exit 4, the whole new sentence, and no row | (f) Skip the version check for cached chunks: the row prints with exit 0. (g) Restore the old message: the sentence differs |
 
 The existing two-version tests in `tests/backend/annotate.rs` and `annotate/splitting.rs` update to the new sentence.
 
@@ -161,11 +216,12 @@ Nonblank lines, measured with `grep -c .`.
 - `core/adapters/systemone.rs`: 1 changed line.
 - `cli/failure.rs` and `public/error.rs`: at most 6 net together.
 - `cli/audit/write.rs` and the rest of `cli/audit`: at most 45 net.
+- `core/plan_document.rs`: at most 4 net, for the `format!` of the expected text.
 - `tests/audit_model.rs`: at most 120, new. The new annotate test: at most 70.
 - `sdlc/scripts/rekey-model`: at most 160 with its self-test, new. Its fixture: two entries. `sdlc/scripts/lint` and `sdlc/scripts/README.md`: at most 6 net together.
 - Pages under `specification/`, `demos/`, `CHANGELOG.md`: at most 30 net, beside the replaced model names and digests.
 - Renamed recordings change only the model value and their file names.
-- `sdlc/ratchet.json` moves to the measured total, at most 250 above main. The ratchet counts `.rs` files under `crates` and `conformance`, and the Rust budgets above add up to 242 lines. The Python script falls outside it. The commit says what grew.
+- `sdlc/ratchet.json` moves to the measured total, at most 250 above main. The ratchet counts `.rs` files under `crates` and `conformance`, and the Rust budgets above add up to 246 lines. The Python script falls outside it. The commit says what grew.
 - No dependency. The `surfaces` rung runs.
 
 ## Stop rules
@@ -183,7 +239,7 @@ Nonblank lines, measured with `grep -c .`.
 It builds after tickets 0150 and 0158 land and before ticket 0146 builds, and it builds alone. The order follows the files.
 
 - Ticket 0150 opens `conformance/cases.json`, `cli/conformance_tests.rs` and the library conformance runners. This ticket rewrites the request bodies in that file and the runner's model.
-- Ticket 0158 opens `specification/recording.md` and `crates/thinkthen/tests/backend/main.rs`. This ticket edits `recording.md`'s example entry, adds the re-key sentence, and adds a test module beside 0158's.
+- Ticket 0158 opens `specification/recording.md` and `crates/thinkthen/tests/backend/main.rs`. This ticket adds the re-key sentence to `recording.md`, and adds a test module beside 0158's.
 - Ticket 0146 opens `cli/failure.rs`, `cli/audit/write.rs`, `specification/backends.md`, `question-file.md`, `settings.md`, `result.md`, `decide.md`, `filter.md`, `rank.md`, `demos` and `crates/thinkthen/tests`. This ticket edits each of them. Landing first lets 0146 rebase onto re-keyed fixtures once, instead of this ticket re-keying 0146's new recordings.
 
 S1 live run 1 may run before or after this ticket. Its record notes that the alias resolved to `jev-1.13.0`.
@@ -224,7 +280,7 @@ Ruling 8 and the pin half of ruling 2 in `sdlc/issues/2026-09-22-what-the-vendor
 ## Evidence
 
 - Starts from: Ian's approval of 2026-09-26. Rulings 2 and 8 of the 2026-09-22 vendor issue. Local experiment 273, report 03 finding 2-5, report 05 findings 2.1 and 2.2, report 08 item 1 and report 09 item 8, as filed in the issues above. The recording scan at `origin/main` `40eae81e`. Experiments 212 and 259 as ADR 0010's amendment records them. `systemone.rs:35`, `cli/failure.rs:344-351`, `public/error.rs:220` and `audit.md`, "Writing the bar".
-- Keeps: The resolution order of `--model`, the question file, the configuration file and the default. `jev-latest` as a name a user may type. Every answer, exit code and row except the model name and request digests. Every reply byte in every re-keyed entry. The two-version refusal. The probes' recording bytes and measured rows, replayed through `--model jev-latest` in each `job.sh`. The adapter fixtures under `specification/fixtures/systemone`.
+- Keeps: The resolution order of `--model`, the question file, the configuration file and the default. `jev-latest` as a name a user may type. Every answer, exit code and row except the model name and request digests. Every reply byte in every re-keyed entry. The two-version refusal. The probes' recording bytes and measured rows, replayed through `--model jev-latest` in each `job.sh`. The adapter fixtures under `specification/fixtures/systemone` and the three copies of their `decide-urgent` exchange.
 - Changes: The default model. Re-keyed recordings and digests in queue-owned folders. `audit --write` records the model beside a written bar in a single file. The two-version message. Pages that name the default.
 - Proof: Updated literal pins, the replay rungs over every re-keyed folder, the re-key script's self-test in `lint`, two new outside-in tests, thirteen plants in all, and the `install`, `lint`, `test`, `spec` and `surfaces` rungs.
 - Defers: The mixed-model cache fix, a run-wide model check, a cache freshness rule and refresh mode, a set's model member, the site's re-key, and a comparison against another model.
