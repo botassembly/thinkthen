@@ -15,7 +15,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from harness import EXTENSION, Backend, case, child_env, expect, main, rows, run, said
+from harness import CASES, EXTENSION, Backend, case, child_env, expect, main, rows, run, said
 
 ASK = "SELECT thinkthen_decide('Is it a refund?', 'refund now')"
 PROBE_REFUSAL = "thinkthen usage: the cache folder is outside what this database's file settings allow"
@@ -326,22 +326,20 @@ def opens(trace: Path, name: str) -> int:
     return sum(1 for line in trace.read_text().splitlines() if "openat(" in line and f'/{name}"' in line)
 
 
-@case
-def r1_15_and_r2_18_file_opens_under_strace():
-    """A refused `@file` never opens the file (R1-15), and 20,000 rows on one
-    thread open it once (R2-18). strace counts the opens."""
+def file_opens_under_strace(count: int):
+    """A refused file stays shut and repeated rows share one file open."""
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         question = Path(folder) / "q.json"
         question.write_text('{"decide": "Is it a refund?"}')
         many, refused = Path(folder) / "many.trace", Path(folder) / "refused.trace"
         got = run(
-            ["SET threads = 1", f"SELECT sum(thinkthen_decide('@{question}', 'refund now')::INTEGER) FROM range(20000)"],
+            ["SET threads = 1", f"SELECT sum(thinkthen_decide('@{question}', 'refund now')::INTEGER) FROM range({count})"],
             backend.base(),
             wrap=["strace", "-f", "-e", "trace=openat", "-o", str(many)],
             timeout=300,
         )
-        expect(rows(got[1]), [[20000]], "yes answers over 20,000 rows")
-        expect(opens(many, "q.json"), 1, "opens of q.json over 20,000 rows")
+        expect(rows(got[1]), [[count]], f"yes answers over {count} rows")
+        expect(opens(many, "q.json"), 1, f"opens of q.json over {count} rows")
         got = run(
             ["SET enable_external_access = false", f"SELECT thinkthen_decide('@{question}', 'refund now')"],
             backend.base(),
@@ -350,6 +348,17 @@ def r1_15_and_r2_18_file_opens_under_strace():
         )
         expect(said(got[1]), f"thinkthen local: the question file {question} was not read: this database's file settings refuse it", "the refused read")
         expect(opens(refused, "q.json"), 0, "opens of q.json with access off")
+
+
+@case
+def two_file_rows_share_one_open_and_a_refusal_opens_none():
+    file_opens_under_strace(2)
+
+
+@case
+def r1_15_and_r2_18_file_opens_under_strace():
+    """The original 20,000-row file-open campaign stays opt in."""
+    file_opens_under_strace(20_000)
 
 
 FORKED = r"""
@@ -419,4 +428,7 @@ def a_forked_child_answers_from_a_zero_total():
 
 
 if __name__ == "__main__":
+    stress = {"r1_15_and_r2_18_file_opens_under_strace"}
+    only_stress = os.environ.get("THINKTHEN_TEST_PROFILE") == "stress"
+    CASES[:] = [function for function in CASES if (function.__name__ in stress) == only_stress]
     sys.exit(main())

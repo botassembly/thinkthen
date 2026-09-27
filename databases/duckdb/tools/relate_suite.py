@@ -7,13 +7,14 @@ choice's first option 0.9, so each person works for the one organization.
 
 from __future__ import annotations
 
+import os
 import sys
 import tempfile
 import threading
 import time
 from pathlib import Path
 
-from harness import Backend, case, expect, main, rows, run, said
+from harness import CASES, Backend, case, expect, main, rows, run, said
 
 TABLE = (
     "CREATE TABLE t AS SELECT * FROM (VALUES (1, 'Ada', 'person'), (2, 'Acme', 'organization'),"
@@ -100,21 +101,31 @@ def r2_6_a_nested_relate_refuses_at_once():
         expect(took < 1000, True, f"refused in {took} ms")
 
 
-@case
-def r3_12_more_than_255_rows_refuses_under_the_cap():
+def more_than_255_rows_refuses_under_the_cap(count: int, time_limit: int | None):
     with Backend() as backend:
         got = run(
-            ["CREATE TABLE big AS SELECT i AS id, 'n' || i AS name, 'thing' AS kind FROM range(8000000) t(i)",
+            [f"CREATE TABLE big AS SELECT i AS id, 'n' || i AS name, 'thing' AS kind FROM range({count}) t(i)",
              "SELECT epoch_ms(now())",
              "SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM big', ['near'])",
              "SELECT epoch_ms(now())"],
             backend.base(),
             timeout=120,
         )
-        expect(said(got[2]), "thinkthen usage: the relate query returned more than 255 rows, and relate reads at most 255; add a WHERE or a LIMIT", "eight million rows")
+        expect(said(got[2]), "thinkthen usage: the relate query returned more than 255 rows, and relate reads at most 255; add a WHERE or a LIMIT", f"{count} rows")
         expect(backend.count(), 0, "counted sends")
-        took = rows(got[3])[0][0] - rows(got[1])[0][0]
-        expect(took < 2000, True, f"the refusal came in {took} ms")
+        if time_limit is not None:
+            took = rows(got[3])[0][0] - rows(got[1])[0][0]
+            expect(took < time_limit, True, f"the refusal came in {took} ms")
+
+
+@case
+def row_256_refuses_without_a_send():
+    more_than_255_rows_refuses_under_the_cap(256, None)
+
+
+@case
+def r3_12_more_than_255_rows_refuses_under_the_cap():
+    more_than_255_rows_refuses_under_the_cap(8_000_000, 2000)
 
 
 @case
@@ -261,4 +272,7 @@ def a_second_relate_over_the_same_rows_reads_the_cache():
 
 
 if __name__ == "__main__":
+    stress = {"r3_12_more_than_255_rows_refuses_under_the_cap"}
+    only_stress = os.environ.get("THINKTHEN_TEST_PROFILE") == "stress"
+    CASES[:] = [function for function in CASES if (function.__name__ in stress) == only_stress]
     sys.exit(main())

@@ -99,7 +99,8 @@ for id in 12-score-upper 17-annotate-mixed 27-decide-many; do
         fs.writeFileSync(process.argv[3], JSON.stringify(file));
     ' "$repo/conformance/cases.json" "$id" "$plant/cases.json"
     set +e
-    THINKTHEN_TEST_CASES="$plant/cases.json" sh "$LIMIT" 300 node --test tests/conformance.test.mjs >"$plant/run" 2>&1
+    env -u THINKTHEN_CONFORMANCE_IDS THINKTHEN_TEST_CASES="$plant/cases.json" \
+        sh "$LIMIT" 300 node --test tests/conformance.test.mjs >"$plant/run" 2>&1
     code=$?
     set -e
     [ "$code" -ne 0 ] && grep -q "fail $id" "$plant/run" || fail "a corrupted $id passed (exit $code)"

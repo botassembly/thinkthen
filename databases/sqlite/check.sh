@@ -7,6 +7,9 @@ set -eu
 unset THINKTHEN_API_KEY
 here=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 cd -- "$here"
+profile=${THINKTHEN_TEST_PROFILE:-routine}
+case $profile in routine|full|stress) ;; *) echo "sqlite: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+[ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 # macOS has no `timeout` (ticket 0128).
 LIMIT=$here/../../sdlc/scripts/time-limit
 source=${SQLITE_AMALGAMATION:-$HOME/.cache/thinkthen-toolchains/sqlite-amalgamation-3500000}
@@ -71,6 +74,15 @@ step "the loopback backend"
 cargo build --locked --offline --quiet --manifest-path ../../Cargo.toml --package conformance-backend
 
 failed=""
+if [ "$profile" = stress ]; then
+	for test in tests/test_interrupt.py tests/test_settings.py; do
+		step "$test, stress"
+		sh "$LIMIT" 300 python3 "$test" || failed="$failed $test"
+	done
+	[ -z "$failed" ] || { echo "FAIL     databases/sqlite:$failed" >&2; exit 1; }
+	echo "pass     databases/sqlite, stress"
+	exit 0
+fi
 for test in tests/test_*.py tests/examples.py tests/conformance.py; do
 	step "$test"
 	sh "$LIMIT" 300 python3 "$test" || failed="$failed $test"

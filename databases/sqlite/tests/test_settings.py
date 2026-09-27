@@ -34,21 +34,31 @@ say(throttle=run(db, "SELECT thinkthen_throttle(8)"),
     expect(entries(env["THINKTHEN_CACHE"]) > 0, True, "the entry is in THINKTHEN_CACHE")
 
 
-def test_throttle_is_checked_and_caps_a_warm() -> None:
+def warm_at_throttle(rows: int) -> None:
     backend = Backend()
     warm = Child("""
 db = connect()
 db.execute("SELECT thinkthen_throttle(8)")
 db.execute("CREATE TABLE t(body TEXT)")
-db.executemany("INSERT INTO t VALUES (?)", [(f"row {at}",) for at in range(200)])
+db.executemany("INSERT INTO t VALUES (?)", [(f"row {at}",) for at in range(int(os.environ["ROWS"]))])
 say(warm=run(db, "SELECT thinkthen_warm('Is it red?', body) FROM t"))
-""", environment(backend, "arm/held"))
+""", environment(backend, "arm/held") | {"ROWS": str(rows)})
     expect(backend.wait(8), 8, "sends held at throttle 8")
     time.sleep(0.3)
     expect(backend.count(), 8, "sends after 300 ms")
     backend.release()
-    expect(warm.result(), {"warm": [[200]]}, "the warm")
-    expect(backend.close(), 200, "sends")
+    expect(warm.result(), {"warm": [[rows]]}, "the warm")
+    expect(backend.close(), rows, "sends")
+
+
+def test_throttle_holds_eight_before_the_ninth() -> None:
+    """A held eighth request prevents the ninth from starting."""
+    warm_at_throttle(9)
+
+
+def test_throttle_is_checked_and_caps_a_warm() -> None:
+    """The original 200-row warm checks sustained throttle behavior."""
+    warm_at_throttle(200)
 
 
 def test_throttle_answers_and_refuses_before_any_send() -> None:
@@ -166,4 +176,7 @@ say(usage=run(db, "SELECT thinkthen_usage()"),
 
 if __name__ == "__main__":
     os.chdir(pathlib.Path(__file__).resolve().parent)
-    sys.exit(main(globals()))
+    only_stress = os.environ.get("THINKTHEN_TEST_PROFILE") == "stress"
+    sys.exit(main({name: value for name, value in globals().items()
+                   if name.startswith("test_") and
+                   (name == "test_throttle_is_checked_and_caps_a_warm") == only_stress}))

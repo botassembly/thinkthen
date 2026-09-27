@@ -17,7 +17,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from harness import EXTENSION, HOOKS, Backend, case, child_env, expect, main, run, said
+from harness import CASES, EXTENSION, HOOKS, Backend, case, child_env, expect, main, run, said
 
 CANCELLED = "thinkthen cancelled: the call was cancelled"
 
@@ -407,4 +407,7 @@ def r5_21_ten_thousand_signals_while_four_threads_allocate():
 
 
 if __name__ == "__main__":
+    stress = {"r5_21_ten_thousand_signals_while_four_threads_allocate"}
+    only_stress = os.environ.get("THINKTHEN_TEST_PROFILE") == "stress"
+    CASES[:] = [function for function in CASES if (function.__name__ in stress) == only_stress]
     sys.exit(main())
