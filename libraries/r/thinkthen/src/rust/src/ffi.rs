@@ -296,6 +296,10 @@ fn tt_relate_frame(
 }
 
 #[extendr]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "R's engine constructor passes all ten public settings through this binding"
+)]
 fn tt_engine_set(
     base_url: Robj,
     model: Robj,
