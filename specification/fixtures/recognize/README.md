@@ -78,12 +78,12 @@ mustmatch "thinkthen: audit: key line 1 names a level, label, or unit the questi
 jq -c --argjson kinds '["person"]' -f kinds.jq names.jsonl > "$work/person-key.jsonl"
 grade "$work/person-key.jsonl" < "$work/person.jsonl" \
   | mustmatch "  matched 90, extra 0, missed 0: precision 1.000   recall 1.000   f1 1.000"
-jq -c 'if .input.id == "n018" then .value.entities += [{name: "Liverpool", kind: "person", start: 3, end: 12, strength: 1}] else . end' \
+jq -c 'if .input.id == "n035" then .value.entities += [{name: "Rome", kind: "person", start: 17, end: 21, strength: 1}] else . end' \
   "$work/person.jsonl" | grade "$work/person-key.jsonl" \
   | mustmatch "  matched 90, extra 1, missed 0: precision 0.989   recall 1.000   f1 0.994"
 ```
 
-A run under the five core kinds, graded against the key filtered to them, never meets an extra-kind name in the key, so it misses none. It still loses precision when it says a core kind at an extra-kind span, such as `Wimbledon` in n143, an `event`, said as a `thing`. Local experiment 277 counts such an answer neither way, following MUC-7's optional strings. `audit` cannot express that rule, and it affects at most 25 of the 372 names.
+A run under the five core kinds, graded against the key filtered to them, never meets an extra-kind name in the key, so it misses none. It still loses precision when it says a core kind at an extra-kind span, such as `Christmas` in n173, an `event`, said as a `thing`. Local experiment 277 counts such an answer neither way, following MUC-7's optional strings. `audit` cannot express that rule, and it affects at most 25 of the 372 names.
 
 ```bash
 set -euo pipefail
@@ -96,7 +96,7 @@ jq -c --argjson kinds "$core" '{input: {id}, value: {entities: [.value.entities[
   "$work/core-key.jsonl" > "$work/core.jsonl"
 thinkthen audit "$work/core.jsonl" "$work/core-key.jsonl" --table | sed -n 2p \
   | mustmatch "  matched 347, extra 0, missed 0: precision 1.000   recall 1.000   f1 1.000"
-jq -c 'if .input.id == "n143" then .value.entities += [{name: "Wimbledon", kind: "thing", start: 10, end: 19, strength: 1}] else . end' \
+jq -c 'if .input.id == "n173" then .value.entities += [{name: "Christmas", kind: "thing", start: 12, end: 21, strength: 1}] else . end' \
   "$work/core.jsonl" | thinkthen audit - "$work/core-key.jsonl" --table | sed -n 2p \
   | mustmatch "  matched 347, extra 1, missed 0: precision 0.997   recall 1.000   f1 0.999"
 ```

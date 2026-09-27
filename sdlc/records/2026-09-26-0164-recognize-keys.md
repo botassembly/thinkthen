@@ -41,4 +41,4 @@ Plants for test 3: (m) `split_piece` no longer peels `,`, and the test failed wi
 
 ## Gaps found in the build
 
-- Proof (j) and (j2) add their extra name to lines that keep names under the filter, n018 and n143. A `kinds.jq` that dropped emptied lines would still pass both blocks. No block adds an extra name to a line whose names all drop.
+- Closed in review. Proof (j) and (j2) first added their extra name to lines that keep names under the filter, n018 and n143, so a `kinds.jq` that dropped emptied lines still passed both blocks. The blocks now add `Rome` in n035 as a `person` and `Christmas` in n173 as a `thing`. Both lines empty under their filter. With `| select(.value.entities | length > 0)` planted in `kinds.jq`, both blocks turned red with `extra 0`, and the pinned lines are unchanged.
