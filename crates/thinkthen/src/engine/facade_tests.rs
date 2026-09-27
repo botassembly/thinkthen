@@ -16,8 +16,8 @@ use nix::sys::pthread::{pthread_kill, pthread_self};
 use nix::sys::signal::Signal;
 
 use crate::core::{
-    Backend, BackendProfile, Evidence, Find, ModelName, Plan, Question, QuestionText,
-    RecognizeSpec, RelateSpec,
+    Backend, BackendProfile, DEFAULT_MODEL, Evidence, Find, ModelName, Plan, Question,
+    QuestionText, RecognizeSpec, RelateSpec,
 };
 use crate::engine::error::{Error, Kind, TransportKind};
 use crate::engine::facade::{
@@ -32,7 +32,7 @@ const TEST_KEY: &str = "sk-facade-test-7f3a";
 
 fn settings(base: &str) -> Settings {
     Settings {
-        backend: Backend::resolve(Some(base), None, "jev-latest").expect("backend"),
+        backend: Backend::resolve(Some(base), None, DEFAULT_MODEL).expect("backend"),
         profile: None,
         timeout: Duration::from_secs(5),
         max_retries: 0,

@@ -54,7 +54,7 @@ The four address rules have these exact safe refusals. An invalid scheme says ``
 
 ## The model
 
-`--model NAME` names the model the request carries, and it defaults to `jev-latest`. That is how a run is pinned to one version. A model name that is empty or holds only white space is a usage error.
+`--model NAME` names the model the request carries, and it defaults to `jev-1.13.0`. That is how a run is pinned to one version. The default is a pinned version, so a vendor's move of its alias moves no default answer. A later release that changes the default says so in the changelog, and every default cache entry then misses once. A model name that is empty or holds only white space is a usage error.
 
 ## The request
 

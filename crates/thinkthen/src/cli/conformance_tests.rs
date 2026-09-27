@@ -10,9 +10,9 @@ mod profile_cases;
 use crate::core::adapters::systemone;
 use crate::core::recording::Exchange as Recorded;
 use crate::core::{
-    AnswerOutcome, BatchRecord, Cutting, Evidence, Find, Json, ModelName, Plan, QuestionFile,
-    QuestionSet, QuestionText, Threshold, Typed, Url, Value, Verb, question_sha256, ranking,
-    resolve,
+    AnswerOutcome, BatchRecord, Cutting, DEFAULT_MODEL, Evidence, Find, Json, ModelName, Plan,
+    QuestionFile, QuestionSet, QuestionText, Threshold, Typed, Url, Value, Verb, question_sha256,
+    ranking, resolve,
 };
 use conformance_support::{Case, Document, Exchange, ExpectedAnswer, QuestionForm, Success};
 use serde::Deserialize;
@@ -27,7 +27,7 @@ mod runner;
 
 const CASES: &str = include_str!("../../../../conformance/cases.json");
 const CAPTURED_REFUND: &str = include_str!(
-    "../../../../demos/01-refund-gate/recording/e8b7d68fe0567786d9905df174191873ff0876e0c56efc008ff7a07a4de45d3e.json"
+    "../../../../demos/01-refund-gate/recording/d5c0ecd838ff31e91ba78c1b7584b7aac6c777d6c34fc3cc68ba8a0145ca1e6e.json"
 );
 const VERBS: [&str; 8] = [
     "annotate", "choose", "decide", "filter", "find", "rank", "score", "tag",
@@ -146,7 +146,7 @@ fn annotate(case: &Case, place: usize, exchange: &Exchange) -> Result<Asked, Str
     }
     let plan = Plan::new(
         evidence,
-        ModelName::new("jev-latest").map_err(|error| error.to_string())?,
+        ModelName::new(DEFAULT_MODEL).map_err(|error| error.to_string())?,
         questions,
     )
     .map_err(|error| error.to_string())?;
@@ -180,7 +180,7 @@ fn finding(case: &Case) -> Result<Find, String> {
     Find::new(
         QuestionText::new(spec.find).map_err(|error| error.to_string())?,
         &units,
-        ModelName::new("jev-latest").map_err(|error| error.to_string())?,
+        ModelName::new(DEFAULT_MODEL).map_err(|error| error.to_string())?,
         spec.none,
     )
     .map_err(|error| error.to_string())
@@ -480,7 +480,7 @@ impl conformance_support::Provenance {
             Self::SyntheticContract => Ok(()),
             Self::Captured { path } => {
                 if path
-                    != "demos/01-refund-gate/recording/e8b7d68fe0567786d9905df174191873ff0876e0c56efc008ff7a07a4de45d3e.json"
+                    != "demos/01-refund-gate/recording/d5c0ecd838ff31e91ba78c1b7584b7aac6c777d6c34fc3cc68ba8a0145ca1e6e.json"
                 {
                     return Err(format!("unknown captured recording `{path}`"));
                 }

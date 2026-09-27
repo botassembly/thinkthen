@@ -142,6 +142,15 @@ These hits stay, because the command types `--model jev-latest` on purpose.
 
 The builder runs the same `git grep` again before review. A hit that no list above names stops the build until the ticket names it.
 
+The build's `git grep` on 2026-09-26, merged with `origin/main` `19ca8302`, found six hits that the lists above miss or place wrongly. The builder names them here, and each follows the rule of its list.
+
+- `tests/backend/cache_partial.rs:160` stays. It is a reply a fake backend gives.
+- `tests/backend/check.rs` lines 21 to 39 and 146 move to `jev-1.13.0`, and so do `check.md`'s four `reply` lines. The conformance backend's arms echo the model the request sent (`conformance/backend/src/arms.rs`), so these replies follow the default. Line 361 stays, because it is a canned reply.
+- `src/core/adapters/systemone/request.rs:453` moves to the default constant. Its plan resolves the model through a question file, so it reads the default.
+- `src/engine/facade_tests.rs:35` moves to the default constant. The facade's contract tests replay the request bodies of `conformance/cases.json` through it.
+- `tests/find_edge.rs` replays `probes/find-0040/recording`, so a rung does replay that probe. The test names `--model jev-latest` on both runs, as each `probes/0N/job.sh` does, and the probe keeps its bytes.
+- `tests/backend/relate/ceiling.rs:81` pins the digest of a default `relate` dry-run request. It takes the new digest.
+
 ### `audit --write` records the model
 
 When `audit --write` writes a bar into a single question file, it also writes the file's `model` member with the one model that every graded line names in `meta.model`. It writes `model` by the same byte rule it uses for `threshold`. It changes a present member's value bytes, or it appends an absent member. Every results line audit reads counts, including a line whose answer failed and a line the key does not label, because each line names the model that answered its request. It writes no model when those lines name more than one model, and it prints `thinkthen: audit: kept the model for TARGET; the results name more than one model` beside the bar line. It writes no model when any line lacks `meta.model`, and it prints `thinkthen: audit: kept the model for TARGET; a result names no model`. It writes no model when it writes no bar. When the file already names a model, such as a typed `jev-latest`, and the lines name one version, audit replaces the file's value with that version, because the bar was tuned on the version and not on the alias. A question set holds no model (`annotate.md` line 32), so a set gets no model member.
