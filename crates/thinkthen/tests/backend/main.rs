@@ -48,8 +48,12 @@ mod parallel;
 mod pointer_echo;
 mod profile;
 mod public_json;
-#[rustfmt::skip]
-#[allow(clippy::excessive_nesting, clippy::expect_used, clippy::indexing_slicing, clippy::obfuscated_if_else, reason = "fixture failures should stop this compiled command-boundary proof")]
+#[allow(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    clippy::unwrap_used,
+    reason = "fixture failures should stop this compiled command-boundary proof"
+)]
 mod recognize;
 mod recognize_refusals;
 mod record_values;
@@ -69,6 +73,11 @@ mod result_assertions;
 mod scheduling;
 mod secrecy;
 mod secrecy_find;
+#[allow(
+    clippy::expect_used,
+    reason = "fixture failures should stop this recognize secrecy proof"
+)]
+mod secrecy_recognize;
 #[allow(
     clippy::expect_used,
     clippy::indexing_slicing,
