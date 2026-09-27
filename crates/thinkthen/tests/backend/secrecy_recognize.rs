@@ -5,7 +5,9 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Output;
 
-use crate::harness::Listener;
+use serde_json::{Value, json};
+
+use crate::harness::{Canned, Listener};
 use crate::recognize::{REFUSED, automatic, failing_on, local};
 use crate::secrecy::{EVIDENCE, KEY, KIND};
 
@@ -62,6 +64,47 @@ fn a_failed_step_two_request_quotes_neither_text_nor_description() {
     );
     quiet(&output, 4, REFUSED);
     assert_eq!(listener.requests().len(), 2);
+}
+
+#[test]
+fn a_second_model_a_step_two_reply_names_is_withheld() {
+    let hostile = format!("local-{EVIDENCE}");
+    let listener = Listener::answering(move |body| {
+        if !String::from_utf8_lossy(body).contains("none of these") {
+            return automatic(body);
+        }
+        let request: Value = serde_json::from_slice(body).expect("request");
+        let mut answers = serde_json::Map::new();
+        for (name, question) in request["questions"].as_object().expect("questions") {
+            let probabilities = question["criteria"]
+                .as_object()
+                .expect("criteria")
+                .keys()
+                .map(|label| {
+                    (
+                        label.clone(),
+                        Value::from(u8::from(label == "none of these")),
+                    )
+                })
+                .collect::<serde_json::Map<_, _>>();
+            answers.insert(
+                name.clone(),
+                json!({"type":"choice","choice":"none of these","probabilities":probabilities}),
+            );
+        }
+        Canned::ok(&json!({"model": hostile, "answers": answers}).to_string())
+    })
+    .expect("listener");
+    let output = recognize(
+        &listener,
+        &["--kind", "person=a human"],
+        &format!("Ada met {EVIDENCE}."),
+    );
+    quiet(
+        &output,
+        4,
+        "thinkthen: the replies for one record named different model versions; a cache or recording folder may hold answers from the other version, so rerun with --no-cache or prune it with thinkthen cache prune DIR --answered-by-other-than VERSION, naming the version a --no-cache run returns\n",
+    );
 }
 
 #[test]
