@@ -6,7 +6,7 @@ opens: specification/types.md specification/result.schema.json specification/fix
 
 # 0204: Publish one type contract for every surface
 
-Status: in progress, design accepted 2026-09-27 by the Codex queue owner after fresh read-only review at `target/codex-reviews/0204-design/REVIEW.md`. Owner: Codex. Implementation paths are claimed in the lane at `e2d79be7`.
+Status: done 2026-09-27 after fresh code review and correction acceptance at `8fef9b85`. Owner: Codex.
 
 ## Outcome and authority
 

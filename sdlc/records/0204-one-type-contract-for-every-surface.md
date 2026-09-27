@@ -25,3 +25,9 @@ The schema checks structure, not parser semantics such as known labels, probabil
 ## Review route
 
 The second fresh code reviewer should check the repaired annotate entry union and the interpreter and shared-library selection, alongside the settled result pages, C request parser parity, checker isolation, case-41 offsets, and test-rung hook. After ACCEPT, the coordinator can run the related-batch integration gates, record their results here, and land. The initial branch commits are `7443fd17`, `68daf774`, and `6d10c540` after the main claim merge.
+
+## Reviewed landing, 2026-09-27
+
+A fresh code review found an unconstrained detailed-annotate member and fixture host assumptions. The correction at `8fef9b85` enforces the settled success and failure shapes, uses the install-compatible Python interpreter, and selects the C library artifact for Linux or macOS. A fresh bounded reviewer returned ACCEPT. It checked the corrected schema, distinct invalid corpus rows, portability changes and the record's distinction between schema-only aggregate details and real C-door cases.
+
+Main `ffe94254`, including the reviewed library settings, merged without a conflict. The focused fixture then passed all 38 schema cases and its 22 C requests. Total wall time was 5.32 seconds including the shared-lock wrapper and Cargo checks after the merge; this is not isolated test execution time. Ticket and diff checks passed. The earlier 0.71-second warm figure also includes Cargo checks. No stress campaign or full ladder ran. The integration checkpoint follows Ian's highest-priority functional-gate cleanup in 0205. J1 closes; J2 through J8 remain pending under their own requirements.
