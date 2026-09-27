@@ -24,7 +24,7 @@ At the sealed stage-two pin, a scalar C call could return success after its toke
 
 ## Handoff and remaining work
 
-Local, unpushed deliverables live in the experiment folder: `stage2/package/`, `stage2/artifacts/` with its manifest, `stage2/fixtures/` and `stage2/gate.sh`, and `stage2/HANDOFF.md` with exact destinations. The integration ticket copies `package/` into `libraries/jvm/`, adapts fixtures into product offline tests, decides JAR distribution and the native archive route, and adds the surface registry entry. The post-fix experiment copy already updated the strict classifier and Java/Kotlin/Scala held-call expectations and passed its gate. Product integration must carry those expectations, rebuild from the final release commit and rerun its gate. Do not publish the rehearsal archives or JARs.
+Historical evidence remains local and unchanged under `stage2/`, including its package, artifacts, fixtures, gate and handoff. Product integration must use `post-fix/package/`, `post-fix/fixtures/` and `post-fix/gate.sh`, which carry the passing strict expectations. The integration ticket copies `post-fix/package/` into `libraries/jvm/`, adapts fixtures into product offline tests, decides JAR distribution and the native archive route, and adds the surface registry entry. The post-fix experiment copy already updated the strict classifier and Java/Kotlin/Scala held-call expectations and passed its gate. Product integration must carry those expectations, rebuild from the final release commit and rerun its gate. Do not publish the rehearsal archives or JARs.
 
 ## Limits
 

@@ -26,7 +26,7 @@ At the sealed stage-two pin, a scalar C call could return success after its canc
 
 ## Handoff and remaining work
 
-Local, unpushed deliverables:
+Historical stage-two artifacts remain local and unchanged:
 
 - `stage2/package/`: the six source-package files.
 - `stage2/fixtures/` and `stage2/gate.sh`: the implemented Linux tests and offline gate.
@@ -35,7 +35,7 @@ Local, unpushed deliverables:
 - `stage2/CASE-LEDGER.md`, `FINDINGS.md`, `REVIEW.md`, and `reviews/`: coverage, parent verification, limits and independent reviews.
 - `stage2/parent-verification/`: parent source checks, gate launch evidence and unchanged-source hashes.
 
-The integration ticket should copy `package/` to `libraries/zig/`, place the named tests beside it, adapt the gate to the repository's artifact/tool/scratch paths and attach it to the offline surface rung. It should add source-archive release packaging, public API/install documentation and specification registry entries. The release owner must decide distribution and compatibility policy, rebuild from the final release commit and rerun the gate. Do not publish the experiment's rehearsal binaries. The post-fix experiment copy already requires strict success and passed. Product integration must carry that contract and rerun its gate at the final release pin.
+The integration ticket must copy `post-fix/package/` to `libraries/zig/`, place the tests from `post-fix/fixtures/` beside it, and adapt `post-fix/gate.sh` to the repository's artifact/tool/scratch paths and offline surface rung. The sealed stage-two artifacts above retain the earlier evidence; the post-fix copy is the integration source. It should add source-archive release packaging, public API/install documentation and specification registry entries. The release owner must decide distribution and compatibility policy, rebuild from the final release commit and rerun the gate. Do not publish the experiment's rehearsal binaries. The post-fix experiment copy already requires strict success and passed. Product integration must carry that contract and rerun its gate at the final release pin.
 
 Keep Zig 0.15.2 for this measured target. Start with a thin optional source package and a separately supplied matching native archive. The current shared mode embeds the supplied library path and requires rebuilding if it moves. A relocatable installation policy or automatic download is a separate product choice. The C constructor remains environment-based and has no public throttle setter.
 

@@ -24,7 +24,7 @@ At the sealed stage-two pin, a scalar C call could return success after its toke
 
 ## Handoff and remaining work
 
-Local, unpushed deliverables live in the experiment folder: `stage2/package/`, `stage2/artifacts/` with its manifest, `stage2/fixtures/` and `stage2/gate.sh`, and `stage2/HANDOFF.md` with exact destinations. The integration ticket copies `package/` into `libraries/go/`, relocates fixture controls into product offline tests, adapts release packaging and documentation, and adds the surface registry entry. The post-fix experiment copy already requires strict cancellation success and passed. Product integration must carry that contract and rerun everything on the final release pin. Do not publish the rehearsal archives.
+Historical evidence remains local and unchanged under `stage2/`, including its package, artifacts, fixtures, gate and handoff. Product integration must use `post-fix/package/`, `post-fix/fixtures/` and `post-fix/gate.sh`, which carry the passing strict expectations. The integration ticket copies `post-fix/package/` into `libraries/go/`, relocates fixture controls into product offline tests, adapts release packaging and documentation, and adds the surface registry entry. The post-fix package also contains the context-watcher correction described below; the sealed stage-two package lacks it. The integration ticket records the final Go API behavior. The post-fix experiment copy already requires strict cancellation success and passed. Product integration must carry that contract and rerun everything on the final release pin. Do not publish the rehearsal archives.
 
 ## Limits
 
