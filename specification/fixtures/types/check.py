@@ -77,10 +77,30 @@ def start_backend():
         stderr=subprocess.PIPE, env={"PATH": os.environ.get("PATH", "/usr/bin:/bin")},
         text=True,
     )
-    ready, _, _ = select.select([process.stdout], [], [], 5)
-    assert ready, "the offline backend never announced its port"
-    port = int(process.stdout.readline().strip())
-    return process, port
+    try:
+        ready, _, _ = select.select([process.stdout], [], [], 5)
+        assert ready, "the offline backend never announced its port"
+        return process, int(process.stdout.readline().strip())
+    except BaseException:
+        process.kill()
+        process.wait()
+        process.stdin.close()
+        process.stdout.close()
+        process.stderr.close()
+        raise
+
+
+def stop_backend(process):
+    try:
+        process.stdin.close()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait()
+    finally:
+        process.stdout.close()
+        process.stderr.close()
 
 
 def call(door, port, case, cache):
@@ -146,10 +166,7 @@ def check_runtime(cases, checks, conformance):
                 if "offsets" in case:
                     check_offsets(case, actual, conformance)
     finally:
-        backend.stdin.close()
-        backend.wait(timeout=5)
-        backend.stdout.close()
-        backend.stderr.close()
+        stop_backend(backend)
 
 
 def main():
