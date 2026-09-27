@@ -129,7 +129,7 @@ fn decode_response(
     response: Response,
     usage: Option<Usage>,
 ) -> Result<Reply, DecodeError> {
-    let model = ModelName::new(response.model).map_err(|_| DecodeError::NoModel)?;
+    let model = ModelName::reported(response.model).map_err(|_| DecodeError::NoModel)?;
     let wire_count = plan
         .questions()
         .iter()

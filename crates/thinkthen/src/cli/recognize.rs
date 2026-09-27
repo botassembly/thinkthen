@@ -64,10 +64,7 @@ pub(crate) fn run(
         crate::core::pointers(&fields, crate::core::Source::CommandLine, "field")?
     };
     if let Some(model) = arguments.common.model.as_deref() {
-        spec.model = Some(
-            ModelName::new(model)
-                .map_err(|_| Failure::Usage("--model is text, not white space"))?,
-        );
+        spec.model = Some(edge::model_flag(model)?);
     }
     let reading = Reading::new(arguments.common.framing(), pointers)?;
     schedule::jobs_of(arguments.common.jobs, reading.streams())?;

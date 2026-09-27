@@ -66,7 +66,7 @@ Direction. Let prune skip and report bad entries, or quarantine them, and still 
 
 - The key is exact bytes, so input framing changes it. Carried in the architect review 09 file.
 - Prune evicts oldest-written, not least recently used.
-- A typo in `--answered-by-other-than` deletes every entry at exit 0, and prune has no dry run.
+- A typo in `--answered-by-other-than` deletes every entry at exit 0, and prune has no dry run. Quick Fix qf-command-edges-and-prune refuses a model no reply in the folder names. The dry run is still open.
 - A cached result repeats the stored token usage, so a dashboard that sums `meta.usage` overstates spend.
 - The default cache binds to one backend address. Carried in the architect review 06 file.
 - `Engine::builder()` ignores the configuration file's `cache: false` (`public/settings.rs:255-266`).

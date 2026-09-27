@@ -93,7 +93,7 @@ pub(crate) use crate::core::result::{
     Usage, share,
 };
 pub(crate) use crate::core::text::{
-    Description, Evidence, Meaning, ModelName, QuestionText, Withheld,
+    BlankTextError, Description, Evidence, Meaning, ModelName, QuestionText, Withheld,
 };
 pub(crate) use crate::core::threshold::{Outcome, Threshold, ThresholdError};
 

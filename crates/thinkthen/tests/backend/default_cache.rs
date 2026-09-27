@@ -259,26 +259,34 @@ fn allocated(folder: &Path, name: &str) -> io::Result<u64> {
 }
 
 /// MODEL, other options, the second entry's reply, and which of the two
-/// entries leave. `None` means the alias refusal.
-type PruneRow<'a> = (&'a str, &'a [&'a str], &'a str, Option<[bool; 2]>);
+/// entries leave, or the refusal that deletes nothing.
+type PruneRow<'a> = (&'a str, &'a [&'a str], &'a str, Result<[bool; 2], &'a str>);
 
 #[test]
-fn prune_refuses_the_alias_and_keeps_the_upgrade() {
-    const REFUSAL: &str = concat!(
+fn prune_refuses_the_alias_and_an_unknown_model_and_keeps_the_upgrade() {
+    const ALIAS: &str = concat!(
         "thinkthen: --answered-by-other-than names the model the requests asked for, ",
         "and no reply names it, so prune removed nothing; ",
         "name the version a result's meta.model shows, not the alias passed to --model\n",
     );
+    const UNKNOWN: &str = concat!(
+        "thinkthen: --answered-by-other-than names a model no reply in the folder names, ",
+        "so prune removed nothing; name the version a result's meta.model shows, ",
+        "or delete the folder to remove every entry\n",
+    );
     let url = format!("{DEFAULT_BASE}/{ENDPOINT_PATH}");
     let echoed = ANSWERED.replace("jev-1.13.0", "jev-latest");
-    let rows: [PruneRow; 7] = [
-        ("jev-latest", &[], ANSWERED, None),
-        ("jev-latest", &["--older-than", "1d"], ANSWERED, None),
-        ("jev-1.14.0", &[], ANSWERED, Some([true, true])),
-        ("no-such-model", &[], ANSWERED, Some([true, true])),
-        ("JEV-LATEST", &[], ANSWERED, Some([true, true])),
-        ("jev-1.13.0", &[], ANSWERED, Some([false, false])),
-        ("jev-latest", &[], &echoed, Some([true, false])),
+    let upgraded = ANSWERED.replace("jev-1.13.0", "jev-1.14.0");
+    let rows: [PruneRow; 9] = [
+        ("jev-latest", &[], ANSWERED, Err(ALIAS)),
+        ("jev-latest", &["--older-than", "1d"], ANSWERED, Err(ALIAS)),
+        ("jev-1.14.0", &[], ANSWERED, Err(UNKNOWN)),
+        ("no-such-model", &[], ANSWERED, Err(UNKNOWN)),
+        ("jev-1.13", &["--older-than", "1d"], ANSWERED, Err(UNKNOWN)),
+        ("JEV-LATEST", &[], ANSWERED, Err(UNKNOWN)),
+        ("jev-1.13.0", &[], ANSWERED, Ok([false, false])),
+        ("jev-latest", &[], &echoed, Ok([true, false])),
+        ("jev-1.14.0", &[], &upgraded, Ok([true, false])),
     ];
     for (row, (model, options, second_reply, removed)) in rows.into_iter().enumerate() {
         let folder = folder(&format!("prune-alias-{row}"));
@@ -296,14 +304,17 @@ fn prune_refuses_the_alias_and_keeps_the_upgrade() {
         arguments.extend(["--answered-by-other-than", model]);
         arguments.extend_from_slice(options);
         let output = run(&arguments, &[]).expect("prune");
-        let Some(removed) = removed else {
-            assert_eq!(output.status.code(), Some(2), "{row}");
-            assert!(output.stdout.is_empty(), "{row}");
-            assert_eq!(String::from_utf8_lossy(&output.stderr), REFUSAL, "{row}");
-            for (name, bytes) in names.iter().zip(&before) {
-                assert_eq!(&fs::read(folder.join(name)).expect("kept"), bytes, "{row}");
+        let removed = match removed {
+            Ok(removed) => removed,
+            Err(refusal) => {
+                assert_eq!(output.status.code(), Some(2), "{row}");
+                assert!(output.stdout.is_empty(), "{row}");
+                assert_eq!(String::from_utf8_lossy(&output.stderr), refusal, "{row}");
+                for (name, bytes) in names.iter().zip(&before) {
+                    assert_eq!(&fs::read(folder.join(name)).expect("kept"), bytes, "{row}");
+                }
+                continue;
             }
-            continue;
         };
         let out = removed.iter().filter(|leaves| **leaves).count();
         let out_bytes: u64 = (0..2)

@@ -296,7 +296,8 @@ pub(crate) struct PruneArguments {
     pub(crate) older_than: Option<String>,
     /// Remove entries whose reply names another model. Give the version that
     /// answered, as a result's meta.model shows it, not the alias passed to
-    /// --model. A name no reply carries removes every entry.
+    /// --model. A name no reply in the folder carries is refused, and nothing
+    /// is removed.
     #[arg(long, value_name = "MODEL")]
     pub(crate) answered_by_other_than: Option<String>,
 }
@@ -374,7 +375,7 @@ pub(crate) struct CheckArguments {
     /// The model named in each request, resolved as every command resolves it.
     #[arg(long, value_name = "NAME")]
     pub(crate) model: Option<String>,
-    /// Positive seconds that bound one attempt from connect to last byte, and each retry wait.
+    /// Seconds from 1 to 86400 that bound one attempt from connect to last byte, and each retry wait.
     #[arg(long, value_name = "SECONDS", default_value_t = 30)]
     pub(crate) timeout: u64,
     /// Print the four request bodies and stop. No key is read and nothing is sent.

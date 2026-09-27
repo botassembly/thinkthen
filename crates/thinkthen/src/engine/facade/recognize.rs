@@ -239,7 +239,7 @@ impl Engine {
                     AnswerOutcome::Failed(_) => return Err(Error::RecognizeLogical),
                 }
             }
-            meta.add_answered(&answered)
+            meta.add_answered(&answered, self.backend.model())
         })?;
         Ok(answers)
     }
@@ -337,17 +337,10 @@ fn odds(answer: &Answer) -> Result<Odds, Error> {
 }
 
 impl Aggregate {
-    fn add_answered(&mut self, answered: &Answered) -> Result<(), Error> {
-        if let Some(model) = &self.model {
-            if model != answered.reply.model() {
-                return Err(Error::ModelsDiffer(Some((
-                    model.as_str().to_owned(),
-                    answered.reply.model().as_str().to_owned(),
-                ))));
-            }
-        } else {
-            self.model = Some(answered.reply.model().clone());
-        }
+    /// Keep the first model the replies named and refuse a second, naming
+    /// both only when each is safe to print, as `annotate` does.
+    fn add_answered(&mut self, answered: &Answered, requested: &ModelName) -> Result<(), Error> {
+        super::annotate::check_model(&mut self.model, answered.reply.model(), requested)?;
         self.usage = match (self.usage, answered.reply.usage()) {
             (Some(left), Some(right)) => left
                 .checked_plus(right)

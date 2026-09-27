@@ -382,8 +382,10 @@ fn hostile_model_names_never_reach_the_diagnostic() {
         ("jev-latest".to_owned(), "jev-1\\u001b".to_owned()),
         ("jev-latest".to_owned(), oversized),
         ("jev-latest".to_owned(), oversized_version),
+        // A requested name with a control character is refused before any
+        // request, as the refusal table shows, so only replies carry one here.
         (
-            "key-marker\u{1b}evidence-marker".to_owned(),
+            "jev-latest".to_owned(),
             "key-marker\\u001bevidence-marker".to_owned(),
         ),
     ];

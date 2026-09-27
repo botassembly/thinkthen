@@ -71,7 +71,7 @@ Direction. Apply the built-in ceiling to every verb at the default address, so g
 - There is no request size or token setting on main, and outside the built-in address nothing bounds a request. Carried above as item 5 and in ticket 0154.
 - A broken configuration file stops every command, including `status` and runs that override all its values.
 - The model has no environment tier, and a question file's model beats the machine's configured model.
-- A keyless local server still needs a dummy key, and the run fails at exit 4.
+- A keyless local server still needs a dummy key, and the run fails at exit 4. Done by Quick Fix qf-command-edges-and-prune, which sends to loopback with no key.
 - The default cache serves one address. Carried above as item 3.
 - An extreme `--timeout` panics with exit 101. Carried in the architect review 11 file.
 - The release binary honors a test-only variable that removes retry backoff. Carried in the architect review 07 file.

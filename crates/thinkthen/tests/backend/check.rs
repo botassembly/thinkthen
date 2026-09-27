@@ -241,7 +241,10 @@ fn the_check_sends_only_to_the_address_the_user_named() {
 #[test]
 fn an_unset_key_stops_the_check_before_any_request() {
     let backend = Backend::start().expect("backend");
-    let url = format!("{}/arm/full/v1", backend.origin());
+    // A loopback backend takes a run with no key, so the check names an
+    // address the rules cannot prove is this machine.
+    let url = format!("{}/arm/full/v1", backend.origin())
+        .replace("http://127.0.0.1", "https://127.0.0.2");
     let output = check(&["--url", url.as_str()], &[]);
     assert_eq!(
         text(&output.stderr),

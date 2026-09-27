@@ -92,6 +92,15 @@ impl Backend {
         })
     }
 
+    /// Whether the address names `localhost`, `127.0.0.1`, or `[::1]`, the
+    /// hosts the clear-text rule proves are this machine.
+    #[must_use]
+    pub(crate) fn is_loopback(&self) -> bool {
+        after_scheme(self.url.as_str())
+            .and_then(|(_, rest)| host_of(rest.split('/').next().unwrap_or(rest)).ok())
+            .is_some_and(|host| LOOPBACK.iter().any(|kind| host.eq_ignore_ascii_case(kind)))
+    }
+
     /// Read the URL the request is posted to.
     #[must_use]
     pub(crate) const fn url(&self) -> &Url {
@@ -251,6 +260,26 @@ mod tests {
     /// Resolve from the two sources a case names, with the default model.
     fn resolve(url: Option<&str>, base: Option<&str>) -> Result<Backend, BackendError> {
         Backend::resolve(url, base, DEFAULT_MODEL)
+    }
+
+    /// Only the three spellings the clear-text rule names prove an `https://`
+    /// base is this machine, so only they send with no key.
+    #[test]
+    fn only_the_three_loopback_spellings_are_loopback() {
+        for (host, loopback) in [
+            ("localhost", true),
+            ("LOCALHOST", true),
+            ("127.0.0.1:9", true),
+            ("[::1]", true),
+            ("localhost.", false),
+            ("localhost.evil.com", false),
+            ("127.0.0.1.nip.io", false),
+            ("127.0.0.2", false),
+            ("0.0.0.0", false),
+        ] {
+            let backend = resolve(Some(&format!("https://{host}/v1")), None).expect("a base");
+            assert_eq!(backend.is_loopback(), loopback, "{host}");
+        }
     }
 
     #[test]

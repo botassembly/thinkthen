@@ -135,7 +135,9 @@ fn no_key_reaches_a_result_an_error_a_recording_or_a_count() {
     let failed = ask(&engine, "broken", &cancel).expect_err("closed");
     let refused = Engine::new(Settings {
         key: std::sync::Arc::new(|| Err(Error::NoKey("THINKTHEN_API_KEY"))),
-        ..settings(listener.base())
+        // Loopback takes a request with no key, so this engine names an
+        // address the rules cannot prove is this machine.
+        ..settings("https://127.0.0.2:9/v1")
     })
     .and_then(|engine| ask(&engine, "no key here", &cancel))
     .expect_err("no key");

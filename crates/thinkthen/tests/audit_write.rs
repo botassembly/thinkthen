@@ -102,6 +102,28 @@ fn writes_one_value() {
 }
 
 #[test]
+fn keeps_a_model_a_later_run_would_refuse() {
+    let scratch = Scratch::new("control-model");
+    let file = scratch.write("decide.json", &fixture("write/decide.json"));
+    let rows = payment_rows(&scratch.0, "decide.json");
+    assert!(rows.contains("\"model\":\"jev-1.13.0\""), "{rows}");
+    let rows = rows.replace(
+        "\"model\":\"jev-1.13.0\"",
+        "\"model\":\"jev-1.13.0\\u0007\"",
+    );
+    let rows = scratch.write("rows.jsonl", &rows);
+    let (code, _, stderr) = audit(&[&rows, &key(), "--write", &file], b"");
+    assert_eq!(code, 0, "{stderr}");
+    assert_eq!(
+        stderr,
+        "thinkthen: audit: wrote threshold 0.59 for the question; it was 0.9\n\
+         thinkthen: audit: kept the model for the question; a result names a model with a control character or white space but a plain space\n"
+    );
+    let expected = format!("{HEAD}  \"\\u0074hreshold\": 0.59,\r\n  \"on\": [\"/body\"]\r\n}}\r\n");
+    assert_eq!(scratch.read("decide.json"), expected);
+}
+
+#[test]
 fn inserts_when_absent() {
     let scratch = Scratch::new("insert");
     let bare = format!("{HEAD}  \"on\": [\"/body\"]\r\n}}\r\n");
