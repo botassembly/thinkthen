@@ -182,12 +182,8 @@ fn judged_record(
             running.engine.backend().url().clone(),
             model,
             aggregate.usage,
-            RequestMeta::new(
-                aggregate.replayed,
-                aggregate.requests_sent,
-                aggregate.requests,
-            )
-            .with_profile_warning(running.mismatch.warning()),
+            RequestMeta::new(!aggregate.live, aggregate.requests_sent, aggregate.requests)
+                .with_profile_warning(running.mismatch.warning()),
         );
         json_line(&Detailed {
             schema: crate::core::RESULT_SCHEMA,
@@ -205,7 +201,7 @@ fn judged_record(
     Ok(schedule::Judged {
         printed: Some(line),
         outcome: Outcome::Yes,
-        replayed: aggregate.replayed,
+        replayed: !aggregate.live,
         probability: None,
         partial_failure: false,
         profile_mismatch: running.mismatch.notice(),

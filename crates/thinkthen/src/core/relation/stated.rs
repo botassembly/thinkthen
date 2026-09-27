@@ -28,25 +28,24 @@ fn admits(side: &str, kind: &str) -> bool {
 
 /// Whether `rule` asks about the pair of asked names at `left` and `right`,
 /// each with its kind. An `either` rule asks each unordered pair once.
-fn allowed(rule: &RelationRule, left: (usize, &str), right: (usize, &str)) -> bool {
-    let ((left, from), (right, to)) = (left, right);
+fn allowed(rule: &RelationRule, (left, from): (usize, &str), (right, to): (usize, &str)) -> bool {
+    let forward = admits(&rule.source, from) && admits(&rule.target, to);
     if rule.either {
-        left < right
-            && ((admits(&rule.source, from) && admits(&rule.target, to))
-                || (admits(&rule.source, to) && admits(&rule.target, from)))
+        left < right && (forward || (admits(&rule.source, to) && admits(&rule.target, from)))
     } else {
-        left != right && admits(&rule.source, from) && admits(&rule.target, to)
+        left != right && forward
     }
 }
 
 /// The step-3 question about the asked names at `left` and `right`.
 fn pair_words(rule: &RelationRule, left: usize, right: usize) -> String {
     let (one, two, reads) = (entity_id(left), entity_id(right), &rule.reads);
-    if rule.either {
-        format!("Does the text itself state that {one} {reads} {two}, or that {two} {reads} {one}?")
+    let also = if rule.either {
+        format!(", or that {two} {reads} {one}")
     } else {
-        format!("Does the text itself state that {one} {reads} {two}?")
-    }
+        String::new()
+    };
+    format!("Does the text itself state that {one} {reads} {two}{also}?")
 }
 
 /// Plan the pair questions, or `None` when no pair is allowed. Names with

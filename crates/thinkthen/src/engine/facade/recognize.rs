@@ -60,26 +60,15 @@ impl Place {
     }
 }
 
-/// The request metadata of every stage, in construction order.
-#[derive(Debug)]
+/// The request metadata of every stage, in construction order. `live` says
+/// whether any answer came from the backend rather than a recording or cache.
+#[derive(Debug, Default)]
 pub(crate) struct Aggregate {
     pub(crate) model: Option<ModelName>,
     pub(crate) usage: Option<Usage>,
-    pub(crate) replayed: bool,
+    pub(crate) live: bool,
     pub(crate) requests_sent: u64,
     pub(crate) requests: Vec<String>,
-}
-
-impl Default for Aggregate {
-    fn default() -> Self {
-        Self {
-            model: None,
-            usage: None,
-            replayed: true,
-            requests_sent: 0,
-            requests: Vec::new(),
-        }
-    }
 }
 
 /// One text's recognition, its probabilities, and the metadata.
@@ -366,7 +355,7 @@ impl Aggregate {
                 .map(Some)?,
             (None, held) | (held, None) => held,
         };
-        self.replayed &= answered.replayed;
+        self.live |= !answered.replayed;
         self.requests_sent = self
             .requests_sent
             .checked_add(answered.requests_sent)
