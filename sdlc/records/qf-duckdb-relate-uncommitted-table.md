@@ -1,6 +1,6 @@
 # DuckDB relate explains its committed-table boundary
 
-Quick Fix `qf/duckdb-relate-uncommitted-table`, 2026-09-27. Status: code accepted by a fresh reviewer and combined ladder passed; final metadata review and main push remain.
+Quick Fix `qf/duckdb-relate-uncommitted-table`, 2026-09-27. Status: done. A fresh reviewer accepted the code, and the combined ladder passed.
 
 - Starts from: Register 77 in local experiment 284 and main at `22f36d00`. A real DuckDB relate over `t` created in the caller's open transaction returned `thinkthen usage: the relate query failed: Catalog Error: Table with name t does not exist!`. The outside-in case failed with this error before the fix.
 - Keeps: A genuinely missing name retains DuckDB's original catalog error. A temporary table retains its existing ADR 0038 sentence. An unrelated SQL error containing `Table with name` retains its words. Every refusal occurs before an engine request.
