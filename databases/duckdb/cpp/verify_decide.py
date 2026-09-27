@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -105,7 +106,18 @@ def main() -> None:
         assert "thinkthen usage: this process has spent its request total" in limits[7]["error"]
         assert limits[9] == {"rows": [[True]]}
         assert backend.count() == 7, "invalid limits sent nothing and reset recovered"
-    print("C++ decision, probability, query budget, numeric limits, NULL, type, deduplication, and loopback send boundary pass")
+        detail_rows = run(
+            ["SELECT thinkthen_details('Is it a refund?', t) "
+             "FROM (VALUES ('refund now'), ('refund now')) AS x(t)",
+             "SELECT typeof(thinkthen_details('Is it a refund?', 'refund now'))"],
+            backend.base(), extension=extension,
+        )
+        rows = detail_rows[0]["rows"]
+        assert len(rows) == 2 and rows[0] == rows[1]
+        assert isinstance(json.loads(rows[0][0]), dict)
+        assert detail_rows[1] == {"rows": [["VARCHAR"]]}
+        assert backend.count() == 8, "details should deduplicate its repeated text"
+    print("C++ decision, probability, details, query budget, numeric limits, NULL, type, deduplication, and loopback send boundary pass")
 
 
 if __name__ == "__main__":

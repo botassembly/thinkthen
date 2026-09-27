@@ -14,7 +14,9 @@ The C++ statement owner now captures `thinkthen_query_budget_ms` once at `QueryB
 
 The C++ candidate also registers the existing numeric session settings for throttle, per-call requests, and process request total. A narrow by-value bridge record carries each unset or set number to the existing Rust registry. The stock-host check shows zero-send usage refusals for invalid throttle and per-call limit, zero-send refusal for a spent process total, and a successful call after reset. The SQL cache folder and caller-file-system permission proof remain separate work.
 
-This candidate is not feature complete: `@file`, the cache SQL setting, complete query-lifetime and real SIGINT proofs, the eight other scalar names, usage, warm, relate, final package ABI/version refusal and notices remain. The old shipped C API extension still owns them. This partial scalar smoke does not close 0201 or its issues.
+The third real scalar, `thinkthen_details`, shares the ordinary bind and whole-chunk validation path. The Rust bridge calls the public `details_with` engine method for distinct texts and length-frames each JSON reply before C++ copies it into a DuckDB `VARCHAR`. The stock-host verifier parses the returned JSON, checks the SQL type, and sees one backend send for two repeated rows. This is a product-path check; the typed `thinkthen_try_details` recovery path remains open.
+
+This candidate is not feature complete: `@file`, the cache SQL setting, complete query-lifetime and real SIGINT proofs, the seven other scalar names, usage, warm, relate, final package ABI/version refusal and notices remain. The old shipped C API extension still owns them. This partial scalar smoke does not close 0201 or its issues.
 
 The first proof at `981c686d` used pinned DuckDB v1.5.5 source, official release static archives, and the stock CLI and Python module. It proved loadable C++/Rust linkage, copied nested values with Rust-owned free, prepared caller settings changing from 7 to 13, and two independent sessions reporting 11, 29, 11. A forced Rust panic returned tagged error 4 but printed its payload twice to stderr.
 

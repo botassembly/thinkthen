@@ -172,18 +172,18 @@ fn asked(settings: BridgeSettings) -> engines::Asked {
     }
 }
 
-/// One real grouped decision or probability call. The caller currently supplies no SQL settings.
+/// One real grouped decision, probability, or details call.
 ///
 /// # Safety
 /// The question and every entry in `texts` must remain readable through this call.
 #[unsafe(no_mangle)]
-pub(crate) unsafe extern "C" fn thinkthen_cpp_decision_group(
+pub(crate) unsafe extern "C" fn thinkthen_cpp_scalar_group(
     question_bytes: *const u8,
     question_len: usize,
     texts: *const BridgeText,
     count: usize,
     deadline_ms: i64,
-    probability: i32,
+    kind: i32,
     settings: BridgeSettings,
 ) -> Reply {
     reply_boundary(|| {
@@ -203,20 +203,44 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_decision_group(
         let asked = asked(settings);
         let engine = engines::engine_for(&asked, |_| engines::Probe::Allowed)?;
         let (copied, cut) = engines::within_total(&asked, copied)?;
-        let options = if deadline_ms == -1 {
-            CallOptions::new()
-        } else {
-            CallOptions::new()
-                .deadline_millis(deadline_ms)
-                .map_err(|error| errors::RowError::from(error).text)?
+        let options = || {
+            if deadline_ms == -1 {
+                Ok(CallOptions::new())
+            } else {
+                CallOptions::new()
+                    .deadline_millis(deadline_ms)
+                    .map_err(|error| errors::RowError::from(error).text)
+            }
         };
+        if kind == 2 {
+            let mut bytes = Vec::new();
+            for text in copied {
+                let result = match &question {
+                    LoadedQuestion::Question(held) => engine.details_with(held, &text, options()?),
+                    LoadedQuestion::Banded(held) => engine.details_with(held, &text, options()?),
+                }
+                .map_err(|error| errors::RowError::from(error).text)?;
+                let json = result.to_json();
+                let len = u32::try_from(json.len())
+                    .map_err(|_| "thinkthen defect: a details value is too large".to_owned())?;
+                bytes.extend_from_slice(&len.to_ne_bytes());
+                bytes.extend_from_slice(json.as_bytes());
+            }
+            if let Some(error) = cut {
+                return Err(error);
+            }
+            return Ok(bytes);
+        }
+        if kind != 0 && kind != 1 {
+            return Err("thinkthen defect: the bridge got an unknown scalar kind".to_owned());
+        }
         let answers: Vec<(Answer, f64)> = match &question {
             LoadedQuestion::Question(held) => engine
-                .decide_many_with(held, copied, options)
+                .decide_many_with(held, copied, options()?)
                 .map(|row| row.map(|row| (*row.value(), row.probability())))
                 .collect::<Result<Vec<_>, _>>(),
             LoadedQuestion::Banded(held) => engine
-                .decide_many_with(held, copied, options)
+                .decide_many_with(held, copied, options()?)
                 .map(|row| row.map(|row| (*row.value(), row.probability())))
                 .collect::<Result<Vec<_>, _>>(),
         }
@@ -224,7 +248,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_decision_group(
         if let Some(error) = cut {
             return Err(error);
         }
-        if probability != 0 {
+        if kind == 1 {
             Ok(answers
                 .into_iter()
                 .flat_map(|(_, value)| value.to_ne_bytes())
