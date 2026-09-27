@@ -17,17 +17,16 @@ import os
 import pathlib
 import subprocess
 import sys
+import tempfile
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance" / "children"))
 from children import child_env  # noqa: E402  the shared helper, ticket 0127
 
 CASES = pathlib.Path(__file__).resolve().parents[3] / "conformance" / "cases.json"
 CANONICAL = "https://api.typesafe.ai/v1/systemone"
-SQL_VERBS = "not run: SQL spells filter, rank, and find with WHERE and ORDER BY"
 NOT_RUN = {
     "23-cancelled-fault": "not run: SQL has no token; the R1-22 and R2-24 tests cover cancel",
     "25-defect-fault": "not run: no outside boundary reaches a defect; the panic-probe test covers XX000",
-    "18-annotate-two-groups": "not run: a SQL call's evidence is one whole text, and this case reads parts through `on`",
 }
 # The arm and server setting of each fault case; every other case runs on its own case arm.
 FAULTS = {
@@ -49,11 +48,33 @@ def load(path):
     return json.loads(pathlib.Path(path).read_text())
 
 
+def selected_ids(cases):
+    available = [case["id"] for case in cases]
+    if len(available) != len(set(available)):
+        raise ValueError("duplicate shared case ID")
+    path = os.environ.get("THINKTHEN_CONFORMANCE_IDS")
+    if path is None:
+        return set(available)
+    source = pathlib.Path(path)
+    if not source.is_absolute():
+        raise ValueError("THINKTHEN_CONFORMANCE_IDS takes an absolute path")
+    chosen = [line.strip() for line in source.read_text().splitlines()]
+    chosen = [one for one in chosen if one and not one.startswith("#")]
+    if not chosen:
+        raise ValueError("the selected case list is empty")
+    if len(chosen) != len(set(chosen)):
+        raise ValueError("duplicate selected case ID")
+    absent = set(chosen) - set(available)
+    if absent:
+        raise ValueError(f"selected case is absent from the shared corpus: {sorted(absent)[0]}")
+    return set(chosen)
+
+
 def skipped(case):
     if case["id"] in NOT_RUN:
         return NOT_RUN[case["id"]]
-    if case["verb"] in ("filter", "rank", "find"):
-        return SQL_VERBS
+    if case["verb"] == "find":
+        return "not run: no SQL find function yet"
     return None
 
 
@@ -100,15 +121,18 @@ def same(what, got, want):
         raise Failed(f"{what}: got {json.dumps(got)}, expected {json.dumps(want)}")
 
 
-def digest(url, request):
-    return hashlib.sha256(b"systemone\n" + url.encode() + b"\n" + request.encode()).hexdigest()
+def digest(address, request):
+    return hashlib.sha256(b"systemone\n" + address.encode() + b"\n" + request.encode()).hexdigest()
+
+
+def url(case):
+    return f"http://127.0.0.1:{os.environ['BPORT']}/case/{case['id']}/v1/systemone"
 
 
 def served(case):
-    url = f"http://127.0.0.1:{os.environ['BPORT']}/case/{case['id']}/v1/systemone"
     renamed = {}
     for exchange in case.get("exchanges", []):
-        renamed[digest(CANONICAL, exchange["request"])] = digest(url, exchange["request"])
+        renamed[digest(CANONICAL, exchange["request"])] = digest(url(case), exchange["request"])
     return renamed
 
 
@@ -128,8 +152,9 @@ def detailed(got, want):
     same(key, answer.get(key), wanted[key])
     if "level" in wanted:
         same("level", answer.get("level"), wanted["level"])
-    for key in ("model", "question_sha256", "requests"):
-        same(key, got["meta"].get(key), want["details"][key])
+    same("confidence", answer.get("confidence", "absent"), wanted.get("confidence", "absent"))
+    for key in ("model", "question_sha256", "requests", "usage", "requests_sent", "cached"):
+        same(key, got["meta"].get(key, "absent"), want["details"].get(key, "absent"))
 
 
 TYPED = {
@@ -151,19 +176,21 @@ def typed(verb, text):
 def single(case, success):
     want = success["answers"][0]
     question, evidence = lit(json.dumps(case["question"])), lit(case["exchanges"][0]["evidence"])
-    counters = success.get("counters")
-    if counters:  # first, while the case's cache folder is empty
-        usage = "SELECT requests_sent || ' ' || cache_answers FROM thinkthen_usage()"
-        calls = [f"SELECT 1 FROM thinkthen_details({question}, {evidence})"] * counters["calls"]
-        lines = psql(usage, *calls, usage).splitlines()
-        (sent0, cached0), (sent1, cached1) = map(int, lines[0].split()), map(int, lines[-1].split())
-        moved = {"calls": counters["calls"], "requests": sent1 - sent0, "cache_answers": cached1 - cached0}
-        same("counters", moved, counters)
     got = json.loads(psql(f"SELECT thinkthen_details({question}, {evidence})"))
     same("bare", got["value"], want["bare"])
     detailed(got, want)
+    same("url", got["meta"]["url"], url(case))
     bare = psql("SELECT " + TYPED[case["verb"]].format(q=question, e=evidence))
     same("typed", typed(case["verb"], bare), want["bare"])
+    counters = success.get("counters")
+    if counters:  # last, on an empty cache folder of their own
+        usage = "SELECT requests_sent || ' ' || cache_answers FROM thinkthen_usage()"
+        calls = [f"SELECT 1 FROM thinkthen_details({question}, {evidence})"] * counters["calls"]
+        with tempfile.TemporaryDirectory() as folder:
+            lines = psql(f"SET thinkthen.cache = {lit(folder)}", usage, *calls, usage).splitlines()
+        (sent0, cached0), (sent1, cached1) = map(int, lines[0].split()), map(int, lines[-1].split())
+        moved = {"calls": counters["calls"], "requests": sent1 - sent0, "cache_answers": cached1 - cached0}
+        same("counters", moved, counters)
 
 
 def many(case, success):
@@ -173,11 +200,32 @@ def many(case, success):
     same("decided", got, [answer["bare"] for answer in success["answers"]])
 
 
+def selected_rows(case, success):
+    records = [exchange["evidence"] for exchange in case["exchanges"]]
+    question = lit(json.dumps(case["question"]))
+    input_rows = f"SELECT ordinal - 1 AS i, evidence FROM unnest({texts(records)}) WITH ORDINALITY AS rows(evidence, ordinal)"
+    if case["verb"] == "filter":
+        query = (f"WITH input AS MATERIALIZED ({input_rows}), "
+                 f"kept AS MATERIALIZED (SELECT i FROM input WHERE thinkthen_decide({question}, evidence)) "
+                 "SELECT coalesce(json_agg(i ORDER BY i), '[]'::json) FROM kept")
+        wanted = success["operation"]["indexes"]
+    else:
+        query = (f"WITH input AS MATERIALIZED ({input_rows}), "
+                 f"scored AS MATERIALIZED (SELECT i, thinkthen_probability({question}, evidence) AS probability FROM input) "
+                 "SELECT coalesce(json_agg(json_build_object('index', i, 'probability', probability) "
+                 "ORDER BY probability DESC, i), '[]'::json) FROM scored")
+        wanted = success["operation"]["ranking"]
+    lines = psql("SELECT requests_sent FROM thinkthen_usage()", query,
+                 "SELECT requests_sent FROM thinkthen_usage()").splitlines()
+    same("SQL rows", json.loads(lines[1]), wanted)
+    same("judgments sent", int(lines[2]) - int(lines[0]), len(records))
+
+
 def annotated(case, success):
     question_set = lit(json.dumps(case["question_set"]))
     failed = 0
     for want in success["answers"]:
-        evidence = case["exchanges"][want["exchange"]]["evidence"]
+        evidence = json.dumps(case["record"]) if "record" in case else case["exchanges"][want["exchange"]]["evidence"]
         record = json.loads(psql(f"SELECT thinkthen_annotate({question_set}, {lit(evidence)})"))
         got = record.get(want["name"])
         failed += isinstance(got, dict) and "failed" in got
@@ -186,16 +234,16 @@ def annotated(case, success):
 
 
 def pair(entity):
-    return {"name": entity["name"], "kind": entity["kind"]}
+    return {"text": entity["text"], "kind": entity["kind"]}
 
 
 def recognized(case, success):
     spec, text = lit(json.dumps(case["question"])), lit(case["text"])
     want = success["answers"][0]["bare"]
-    rows = psql(f"SELECT json_agg(json_build_object('name', name, 'kind', kind, 'start', start, 'end', \"end\", 'strength', strength)) FROM thinkthen_recognize({text}, {spec})")
+    rows = psql(f"SELECT json_agg(json_build_object('text', text, 'start', start, 'end', \"end\", 'length', length, 'kind', kind, 'strength', strength)) FROM thinkthen_recognize({text}, {spec})")
     same("entities", json.loads(rows) or [], want["entities"])
     if "relations" in want:
-        rows = psql(f"SELECT json_agg(json_build_object('relation', relation, 'source', json_build_object('name', source_name, 'kind', source_kind), 'target', json_build_object('name', target_name, 'kind', target_kind), 'probability', probability)) FROM thinkthen_relations({text}, {spec})")
+        rows = psql(f"SELECT json_agg(json_build_object('relation', relation, 'source', json_build_object('text', source_text, 'kind', source_kind), 'target', json_build_object('text', target_text, 'kind', target_kind), 'probability', probability)) FROM thinkthen_relations({text}, {spec})")
         wanted = [dict(one, source=pair(one["source"]), target=pair(one["target"])) for one in want["relations"]]
         same("relations", json.loads(rows) or [], wanted)
 
@@ -218,7 +266,8 @@ def refused(case, kind):
         path.write_text(json.dumps(case["question"]))
         question = lit(f"@{path}")
     try:
-        got = psql(f"SELECT thinkthen_decide({question}, {lit(evidence)})")
+        function = "thinkthen_probability" if case["id"] == "31-usage-rank-blank-question" else "thinkthen_decide"
+        got = psql(f"SELECT {function}({question}, {lit(evidence)})")
     except Failed as error:
         said = str(error)
         if f"ERROR:  {SQLSTATE[kind]}: thinkthen {kind}: " not in said:
@@ -235,6 +284,8 @@ def run(case):
     verb, kind = case["verb"], success["kind"]
     if kind == "decide_many":
         return many(case, success)
+    if verb in ("filter", "rank"):
+        return selected_rows(case, success)
     handler = {"annotate": annotated, "recognize": recognized, "relate": related}.get(verb, single)
     return handler(case, success)
 
@@ -247,11 +298,26 @@ def main():
         path = args[at + 1]
         del args[at : at + 2]
     cases = load(path)["cases"]
+    try:
+        selected = selected_ids(cases)
+    except (OSError, ValueError) as error:
+        print(f"fail selector: {error}", file=sys.stderr)
+        return 1
+    chosen = [case for case in cases if case["id"] in selected]
     if args == ["plan"]:
-        return plan(cases)
+        plan(chosen)
+        not_run = sum(skipped(case) is not None for case in chosen)
+        print(f"postgresql plan: total={len(cases)} selected={len(chosen)} supported={len(chosen) - not_run} not_run={not_run} unselected={len(cases) - len(chosen)}", file=sys.stderr)
+        return 0
     global SOCKET
     SOCKET, wanted = args
-    case = next(one for one in cases if one["id"] == wanted)
+    if wanted not in selected:
+        print(f"fail {wanted}: not selected")
+        return 0
+    case = next((one for one in cases if one["id"] == wanted), None)
+    if case is None:
+        print(f"fail {wanted}: absent from the shared corpus")
+        return 0
     if skipped(case):
         print(f"not run {wanted}: {skipped(case).removeprefix('not run: ')}")
         return 0

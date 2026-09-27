@@ -16,7 +16,7 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 
 use measure_support::{
-    GOLDENS, TABLES, audit, compact, fixture, fixtures, member, members, without_added,
+    GOLDENS, TABLES, audit, compact, fixture, fixtures, member, members, ported, without_added,
     without_added_lines,
 };
 use sha2::{Digest as _, Sha256};
@@ -28,12 +28,16 @@ fn old_goldens_hold() {
     for (golden, arguments) in GOLDENS {
         let (code, stdout, stderr) = audit(arguments, b"");
         assert_eq!((code, stderr.as_str()), (0, ""), "{golden}");
-        assert_eq!(without_added(&stdout), fixture(golden), "{golden}");
+        assert_eq!(without_added(&stdout), ported(fixture(golden)), "{golden}");
     }
     for (capture, [results, key]) in TABLES {
         let (code, stdout, stderr) = audit(&[results, key, "--table"], b"");
         assert_eq!((code, stderr.as_str()), (0, ""), "{capture}");
-        assert_eq!(without_added_lines(&stdout), fixture(capture), "{capture}");
+        assert_eq!(
+            without_added_lines(&stdout),
+            ported(fixture(capture)),
+            "{capture}"
+        );
     }
 }
 
@@ -72,7 +76,7 @@ fn every_fixture_keeps_its_checksum() {
     }
     found.sort();
     assert_eq!(found, listed);
-    assert_eq!(listed.len(), 85);
+    assert_eq!(listed.len(), 115);
 }
 
 #[test]
@@ -88,7 +92,10 @@ fn readers_ignore_members_they_do_not_use_and_a_band_prints_as_typed() {
     let (code, stdout, _) = audit(&["-", wider.to_str().expect("a path")], results.as_bytes());
     fs::remove_file(&wider).expect("cleanup");
     assert_eq!(code, 0);
-    assert_eq!(without_added(&stdout), fixture("golden/audit-decide.jsonl"));
+    assert_eq!(
+        without_added(&stdout),
+        ported(fixture("golden/audit-decide.jsonl"))
+    );
 
     let key = key.to_str().expect("a path");
     let (_, band, _) = audit(
@@ -112,6 +119,8 @@ fn a_replayed_recording_piped_to_audit_grades_as_the_prototype_does() {
             "--field",
             "/body",
             "--details",
+            "--batch",
+            "1",
             "--replay",
         ])
         .arg(rows.join("recording"))
@@ -136,7 +145,7 @@ fn a_replayed_recording_piped_to_audit_grades_as_the_prototype_does() {
     assert_eq!(String::from_utf8_lossy(&output.stderr), "");
     assert_eq!(
         without_added(&String::from_utf8_lossy(&output.stdout)),
-        fixture("replay/audit.jsonl")
+        ported(fixture("replay/audit.jsonl"))
     );
 }
 

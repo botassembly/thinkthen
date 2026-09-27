@@ -8,6 +8,13 @@
 [ -z "${THINKTHEN_API_KEY+set}" ] || exec env -u THINKTHEN_API_KEY bash "$0" "$@"
 set -euo pipefail
 cd -- "$(dirname -- "$0")"
+profile=${THINKTHEN_TEST_PROFILE:-routine}
+case $profile in routine|full|stress) ;; *) echo "r: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+[ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
+if [ "$profile" = stress ]; then
+  echo 'r: not run: no port load campaign'
+  exit 77
+fi
 here=$PWD
 root=$(cd ../.. && pwd)
 rust=thinkthen/src/rust

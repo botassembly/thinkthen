@@ -8,7 +8,7 @@ cd -- "$(dirname -- "$0")"
 
 for file in draft.json receipt.json; do
 	printf '%s: ' "$file"
-	thinkthen decide @"$file" --jsonl --field /body --details \
+	thinkthen decide @"$file" --jsonl --field /body --details --batch 1 \
 		--record recording/ --replay recording/ <claims.jsonl |
 		jq -s -c '{rows: length, yes: (map(select(.value)) | length),
 		           digest: (.[0].meta.question_sha256 | .[0:8])}'

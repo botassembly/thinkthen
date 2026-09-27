@@ -28,10 +28,12 @@ impl Deadline {
 }
 
 /// One private cooperative stop flag shared by a whole engine run, and the
-/// optional deadline and host interrupt check of the one call that carries it.
+/// optional deadline, caller's token and host interrupt check of the one call
+/// that carries it.
 #[derive(Clone, Debug, Default)]
 pub(crate) struct Cancel<'a> {
     fired: Arc<AtomicBool>,
+    token: Option<Arc<AtomicBool>>,
     deadline: Option<Deadline>,
     check: Option<Check<'a>>,
     sends: Arc<AtomicUsize>,
@@ -97,6 +99,14 @@ impl<'a> Cancel<'a> {
         }
     }
 
+    /// Share this stop flag with one call that a caller's token also stops.
+    pub(crate) fn with_token(&self, token: Option<Arc<AtomicBool>>) -> Self {
+        Self {
+            token,
+            ..self.clone()
+        }
+    }
+
     /// Share this stop flag with one call whose host check runs on this thread.
     #[allow(
         dead_code,
@@ -119,7 +129,11 @@ impl<'a> Cancel<'a> {
     /// Observe cancellation, then the host check on its calling thread, then
     /// the deadline, or return the budget left.
     pub(crate) fn stop_or_remaining(&self) -> Result<Option<Duration>, error::Error> {
-        if self.fired() || self.checked() {
+        let token = self
+            .token
+            .as_ref()
+            .is_some_and(|token| token.load(Ordering::Acquire));
+        if self.fired() || token || self.checked() {
             return Err(error::Error::Cancelled);
         }
         self.remaining()
@@ -344,7 +358,7 @@ impl Widths {
             let width = state.selected.unwrap_or(Width::FALLBACK).get();
             if state.active < width {
                 state.active += 1;
-                return Ok(Permit(self));
+                return Ok(Permit(self, true));
             }
             if !observed {
                 observed = true;
@@ -365,10 +379,30 @@ impl Widths {
 
 /// Room for one live attempt, given back when dropped.
 #[derive(Debug)]
-pub(crate) struct Permit<'a>(&'a Widths);
+pub(crate) struct Permit<'a>(&'a Widths, bool);
+
+impl Permit<'_> {
+    /// Close the provider gate before another request can take this send slot.
+    pub(crate) fn release_closing(
+        mut self,
+        gates: &backoff::Gates,
+        url: &str,
+        wait: Duration,
+        server_floor: bool,
+    ) {
+        let mut state = self.0.lock();
+        gates.close(url, wait, server_floor);
+        state.active = state.active.saturating_sub(1);
+        self.1 = false;
+        self.0.freed.notify_all();
+    }
+}
 
 impl Drop for Permit<'_> {
     fn drop(&mut self) {
+        if !self.1 {
+            return;
+        }
         let mut state = self.0.lock();
         state.active = state.active.saturating_sub(1);
         self.0.freed.notify_all();
@@ -423,6 +457,7 @@ pub(crate) fn client_width(process: &'static Widths) -> &'static Widths {
 }
 
 pub(crate) mod annotate_schedule;
+pub(crate) mod backoff;
 pub(crate) mod cache_lock;
 pub(crate) mod cache_prune;
 #[cfg(test)]

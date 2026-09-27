@@ -48,6 +48,9 @@ pub(crate) enum ReadingError {
     /// Two pointers end in one name, so one would hide the other.
     #[error("--field: two pointers end in `{0}`, and one evidence object holds each name once")]
     KeyClash(String),
+    /// A question reads `on` under `--lines`, whose records have no members.
+    #[error("question `{0}` reads `on`, and a --lines record is text with no members")]
+    LinesPart(String),
 }
 
 /// Why one record could not become the evidence of one request.
@@ -85,6 +88,9 @@ pub(crate) enum RecordError {
     /// A pointer was taken into a text record, which has no members.
     #[error("{}", ReadingError::TextHasNoMembers)]
     TextHasNoMembers,
+    /// A question reads `on` in a record whose selection is text.
+    #[error("question `{0}` reads `on`, and this record's evidence is text with no members")]
+    TextPart(String),
     /// The evidence the record yields is blank.
     #[error("{0}")]
     Blank(#[from] BlankTextError),
@@ -303,6 +309,12 @@ impl Reading {
         self.framing != Framing::Document
     }
 
+    /// A blank text line has a place in the input, but no record to judge.
+    pub(crate) fn skips(&self, bytes: &[u8]) -> bool {
+        self.framing == Framing::Lines
+            && str::from_utf8(self.ended(bytes)).is_ok_and(|text| text.trim().is_empty())
+    }
+
     /// Name the framing and the pointers, as the record-mode plan prints them.
     pub(crate) fn plan(&self) -> ReadingPlan<'_> {
         ReadingPlan {
@@ -410,10 +422,6 @@ impl Reading {
 
     /// Build the record a batch reads: today's evidence, and the value a batch
     /// quotes. A whole JSON record keeps its own value, not its compact text.
-    #[cfg_attr(
-        not(test),
-        expect(dead_code, reason = "ticket B4 puts batches on the command")
-    )]
     pub(crate) fn batch_record(&self, record: &Record) -> Result<BatchRecord, RecordError> {
         let selected = self.selected(record)?;
         let value = match &selected {
@@ -427,12 +435,25 @@ impl Reading {
 
     /// What this reading selects from one record.
     fn selected<'a>(&self, record: &'a Record) -> Result<Selected<'a>, RecordError> {
-        Ok(match (&record.0, self.fields.as_slice()) {
-            (Held::Text(text), []) => Selected::Text(text),
-            (Held::Text(_), _) => return Err(RecordError::TextHasNoMembers),
-            (Held::Json(value), []) => Selected::Whole(value),
-            (Held::Json(value), [pointer]) => Selected::Chosen(found(pointer, value)?.clone()),
-            (Held::Json(value), pointers) => Selected::Chosen(Json::Object(
+        match (&record.0, self.fields.as_slice()) {
+            (Held::Text(text), []) => Ok(Selected::Text(text)),
+            (Held::Text(_), _) => Err(RecordError::TextHasNoMembers),
+            (Held::Json(value), _) => self.chosen(value),
+        }
+    }
+
+    /// The evidence these pointers select inside one JSON value, by the
+    /// `state` rule. `annotate` reads each `on` group's part this way.
+    pub(crate) fn part(&self, value: &Json) -> Result<Evidence, RecordError> {
+        self.chosen(value)?.evidence()
+    }
+
+    /// What this reading selects from one JSON value.
+    fn chosen<'a>(&self, value: &'a Json) -> Result<Selected<'a>, RecordError> {
+        Ok(match self.fields.as_slice() {
+            [] => Selected::Whole(value),
+            [pointer] => Selected::Chosen(found(pointer, value)?.clone()),
+            pointers => Selected::Chosen(Json::Object(
                 pointers
                     .iter()
                     .map(|pointer| Ok((pointer.key().to_owned(), found(pointer, value)?.clone())))

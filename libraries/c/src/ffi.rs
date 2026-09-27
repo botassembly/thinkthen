@@ -10,7 +10,7 @@
 
 use std::ffi::{CStr, CString, c_char};
 
-use thinkthen::{CancelToken, Engine};
+use thinkthen::CancelToken;
 
 use crate::failures::{self, DEFECT, Failure, Held, NO_MESSAGE, OK, USAGE, guard};
 use crate::{Door, Judgment, door};
@@ -158,8 +158,28 @@ macro_rules! plain {
 /// the error functions then answer with a null engine for the failure.
 #[unsafe(no_mangle)]
 pub extern "C" fn thinkthen_engine_new() -> *mut Door {
+    // SAFETY: the constructor accepts null as the empty settings object.
+    unsafe { thinkthen_engine_new_with(std::ptr::null()) }
+}
+
+/// Build with a UTF-8 JSON settings object; null uses the environment.
+///
+/// # Safety
+///
+/// `settings_json` is null or a live NUL-terminated string.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_engine_new_with(settings_json: *const c_char) -> *mut Door {
     guard(None, std::ptr::null_mut(), || {
-        failures::built(Engine::from_env).map_or(std::ptr::null_mut(), |engine| {
+        let build = || {
+            let text = if settings_json.is_null() {
+                "{}"
+            } else {
+                // SAFETY: the host promises a live NUL-terminated string.
+                unsafe { string(settings_json, "settings JSON") }?
+            };
+            crate::settings::build(text)
+        };
+        failures::built(build).map_or(std::ptr::null_mut(), |engine| {
             Box::into_raw(Box::new(Door(Held::new(engine))))
         })
     })

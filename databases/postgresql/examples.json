@@ -41,8 +41,8 @@
       "expected": "2"
     },
     "recognize": {
-      "sql": "SELECT n.name, n.kind FROM (VALUES ('Maria Chen joined Northwind Freight in Chicago last spring.')) AS v(body), LATERAL thinkthen_recognize(v.body, ARRAY['person','organization','place']) n ORDER BY n.\"start\";",
-      "expected": "Maria Chen joined Northwind Freight in Chicago last spring.|person"
+      "sql": "SELECT n.text, n.kind FROM (VALUES ('Maria Chen joined Northwind Freight in Chicago last spring.')) AS v(body), LATERAL thinkthen_recognize(v.body, ARRAY['person','organization','place']) n ORDER BY n.\"start\";",
+      "expected": "Maria Chen|person\nspring.|person"
     },
     "relations": {
       "sql": "SELECT count(*) FROM thinkthen_relations('Maria Chen joined Northwind Freight in Chicago last spring.', '@names.json');",

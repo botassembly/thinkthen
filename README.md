@@ -58,7 +58,7 @@ for row in engine.filter(&question, ["Please refund my order.", "Where is my par
 }
 ```
 
-`Engine::from_env` reads the same variables and configuration file as the command. `Engine::builder()` sets each value in code, and `throttle(n)` caps the requests in flight for the whole process. The bulk calls `filter`, `decide_many`, and `annotate` read any iterator lazily and return rows in input order. `sdlc/planning/libraries/rust.md` holds the goals, and ticket 0084 holds the frozen declarations.
+`Engine::from_env` reads the same variables and configuration file as the command, including `cache: false`. A bare `Engine::builder()` starts with library defaults and does not read that file. Call its `no_cache()` setter to turn the cache off. `throttle(n)` caps the requests in flight for the whole process. The bulk calls `filter`, `decide_many`, and `annotate` read any iterator lazily and return rows in input order. `sdlc/planning/libraries/rust.md` holds the goals, and ticket 0084 holds the frozen declarations.
 
 ## Four names
 

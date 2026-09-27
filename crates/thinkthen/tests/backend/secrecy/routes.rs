@@ -3,9 +3,17 @@
 use super::{DAMAGED, EVIDENCE, HOSTILE};
 use crate::harness::Canned;
 
+/// A good reply giving `answer` to each question the verb asked. `recognize`
+/// asks one question for each of the evidence's five pieces.
 pub(super) fn good(answer: &str) -> String {
-    format!(r#"{{"model":"jev-1.13.0","answers":{{"q1":{{{answer}}}}},"#,)
-        + r#""usage":{"input_tokens":9,"output_tokens":3}}"#
+    let asked = if answer.contains("BEGIN") { 5 } else { 1 };
+    let answers: Vec<String> = (1..=asked)
+        .map(|place| format!(r#""q{place}":{{{answer}}}"#))
+        .collect();
+    format!(
+        r#"{{"model":"jev-1.13.0","answers":{{{}}},"#,
+        answers.join(",")
+    ) + r#""usage":{"input_tokens":9,"output_tokens":3}}"#
 }
 
 /// An error body that quotes the evidence back, as a real backend may.
@@ -177,15 +185,17 @@ pub(crate) const PATHS: [Route; 17] = [
         0,
         5,
     ),
+    // A loopback backend takes a run with no key, so this run names an
+    // address the rules cannot prove is this machine. Nothing listens there.
     Route {
         named: "a run with no key",
-        adds: &[],
+        adds: &["--url", "https://127.0.0.2:9/v1"],
         answers: Answers::Nothing,
         requests: 0,
         code: 4,
         primed: false,
         damage: None,
-        says: None,
+        says: Some("`THINKTHEN_API_KEY` is unset or blank, so no key is sent"),
         keyed: false,
     },
 ];

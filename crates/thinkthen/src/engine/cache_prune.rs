@@ -15,6 +15,11 @@ const ALIAS: &str = "--answered-by-other-than names the model the requests asked
     and no reply names it, so prune removed nothing; \
     name the version a result's meta.model shows, not the alias passed to --model";
 
+/// A model no reply names would remove every entry, which is what a typo does.
+const UNKNOWN: &str = "--answered-by-other-than names a model no reply in the folder names, \
+    so prune removed nothing; name the version a result's meta.model shows, \
+    or delete the folder to remove every entry";
+
 #[derive(Debug)]
 pub(crate) struct Prune {
     pub(crate) max_size: u64,
@@ -91,12 +96,13 @@ pub(crate) fn run(folder: &Path, options: &Prune) -> Result<Pruned, Error> {
 fn run_at(folder: &Path, options: &Prune, now: SystemTime) -> Result<Pruned, Error> {
     let mut found = scan(folder)?;
     if let Some(model) = options.answered_by_other_than.as_deref()
-        && found
-            .iter()
-            .any(|entry| entry.requested.as_deref() == Some(model))
+        && !found.is_empty()
         && !found.iter().any(|entry| entry.model == model)
     {
-        return Err(Error::Usage(ALIAS));
+        let alias = found
+            .iter()
+            .any(|entry| entry.requested.as_deref() == Some(model));
+        return Err(Error::Usage(if alias { ALIAS } else { UNKNOWN }));
     }
     for entry in &mut found {
         let old = options.older_than.is_some_and(|age| {

@@ -9,7 +9,7 @@ Verbs: `filter`
 ```bash
 set -euo pipefail
 
-thinkthen filter 'Does the report give steps that would reproduce a defect?' \
+thinkthen filter 'Does the report give steps that would reproduce a defect?' --batch 1 \
   --csv --field /body --threshold 0.9 --replay recording/ < issues.csv \
   | jq -r '.id' \
   | mustmatch "ISS-101
@@ -34,7 +34,7 @@ env -u THINKTHEN_API_KEY thinkthen filter 'Does the report give steps that would
   | jq -S -c 'keys, .input, {state: (.request.state | .[0:20])}' \
   | mustmatch '["input","key_env","model","request","url"]
 {"field":["/body"],"framing":"csv"}
-{"state":"Export to CSV writes"}'
+{"state":"Each question quotes"}'
 ```
 
 The plan names the key variable and never a key. The reporter's address is in every record and in no request.
@@ -56,7 +56,7 @@ Drop `--field` and the whole record becomes the evidence. Run the plan again and
 ```bash
 set -euo pipefail
 
-thinkthen filter 'Does the report give steps that would reproduce a defect?' \
+thinkthen filter 'Does the report give steps that would reproduce a defect?' --batch 1 \
   --csv --field /body --threshold 0.9 --replay recording/ --input issues.csv \
   | head -1 \
   | mustmatch '{"id":"ISS-101","opened":"2026-03-02","reporter":"sam.okafor@example.net","body":"Export to CSV writes an empty file. Steps: open any report, choose Export, pick CSV, save. The file is 0 bytes every time on build 4.2.1."}'

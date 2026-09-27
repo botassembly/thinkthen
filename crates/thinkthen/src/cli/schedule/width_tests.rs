@@ -162,7 +162,7 @@ fn command_setup_child() {
             listener.base(),
             "--no-cache",
         ];
-        line.extend(["--lines", "--model", "local-1"]);
+        line.extend(["--lines", "--model", "local-1", "--batch", "1"]);
         line.extend(jobs.iter().flat_map(|jobs| ["--jobs", jobs]));
         let input = Counted(Cursor::new(b"one\ntwo\n".to_vec()), Arc::clone(reads));
         dispatch(&line, &environment, input)

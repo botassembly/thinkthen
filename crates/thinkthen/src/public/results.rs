@@ -53,7 +53,7 @@ pub enum Answer {
 pub enum Judgment {
     /// A `decide` answer.
     Decision(Answer),
-    /// A `choose` pick, or `None` when the pick is unresolved.
+    /// A `choose` pick, or `None` when the answer is not sure.
     Choice(Option<String>),
     /// A `score` position on the levels.
     Score(f64),
@@ -179,6 +179,8 @@ pub struct Details {
     requests_sent: u64,
     cached: bool,
     usage: Option<Usage>,
+    confidence: Option<f64>,
+    url: String,
     json: Written,
 }
 
@@ -229,6 +231,8 @@ impl Details {
             requests_sent: judged.answered.requests_sent,
             cached: judged.answered.replayed,
             usage: reply.usage().map(usage),
+            confidence: answer.confidence().map(|held| held.as_f64()),
+            url: backend.url().as_str().to_owned(),
             json: Written(json),
         })
     }
@@ -291,6 +295,18 @@ impl Details {
     #[must_use]
     pub fn usage(&self) -> Option<&Usage> {
         self.usage.as_ref()
+    }
+
+    /// The backend's own confidence in a choice or score, when it sent one.
+    #[must_use]
+    pub fn confidence(&self) -> Option<f64> {
+        self.confidence
+    }
+
+    /// The address that answered.
+    #[must_use]
+    pub fn url(&self) -> &str {
+        &self.url
     }
 
     /// Questions that failed inside the result. A single judgment has none.
@@ -453,7 +469,8 @@ impl<T> Candidate<T> {
     }
 }
 
-/// Every `find` candidate in input order and the one selected.
+/// Every `find` candidate in input order, the `none` candidate last when
+/// the question offers it, and the one selected.
 #[derive(Clone, PartialEq)]
 pub struct Found<T> {
     candidates: Vec<Candidate<T>>,
@@ -463,16 +480,19 @@ pub struct Found<T> {
 withheld_debug!(Found<T> { selected });
 
 impl<T> Found<T> {
-    pub(crate) fn new(units: Vec<T>, found: &facade::Found) -> Result<Self, Error> {
+    /// Pair each unit, and the `none` candidate last when asked, with its probability.
+    pub(crate) fn new(units: Vec<T>, none: bool, found: &facade::Found) -> Result<Self, Error> {
         let probabilities = found.selection.probabilities();
-        if probabilities.len() != units.len() {
+        if probabilities.len() != units.len() + usize::from(none) {
             return Err(Error::defect("a find answer did not cover its units"));
         }
         let candidates = units
             .into_iter()
+            .map(Some)
+            .chain(none.then_some(None))
             .zip(probabilities)
             .map(|(input, (_, probability))| Candidate {
-                input: Some(input),
+                input,
                 probability: *probability,
             })
             .collect();
@@ -488,7 +508,8 @@ impl<T> Found<T> {
         self.candidates.get(self.selected?)?.input()
     }
 
-    /// Every candidate, in input order.
+    /// Every candidate, in input order, with the `none` candidate last when
+    /// the question offers it.
     #[must_use]
     pub fn candidates(&self) -> &[Candidate<T>] {
         &self.candidates

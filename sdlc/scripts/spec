@@ -32,6 +32,9 @@ mustmatch test spec
 # answers with lists that are empty until something is wrong.
 mustmatch test transforms/README.md
 
+# Ticket 0164: audit grades the recognize keys, whole and filtered by kind.
+mustmatch test specification/fixtures/recognize/README.md
+
 # Every probe reproduces its committed rows from its own recording. The check
 # ran by hand once and rotted, so the rung runs it. It takes a few seconds.
 for probe in "$REPO"/probes/[0-9]*/; do

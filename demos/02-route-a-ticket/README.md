@@ -22,7 +22,7 @@ The fourth option is typed by hand: nothing adds a catch-all, and the sent list 
 
 ## Step 1: act on the label
 
-A script reads the exit code first and the label second, so it takes two `case` blocks. Exit 0 is a label, 3 is unresolved, and anything else is a failure. `--threshold 0.8` cuts on the winning option's probability.
+A script reads the exit code first and the label second, so it takes two `case` blocks. Exit 0 is a label, 3 is not sure, and anything else is a failure. `--threshold 0.8` cuts on the winning option's probability.
 
 ```bash
 set -euo pipefail
@@ -34,7 +34,7 @@ label=$(
 
 case $rc in
   0) ;;
-  3) label=unresolved ;;
+  3) label=not_sure ;;
   *) printf 'choose failed: %d\n' "$rc" >&2; exit "$rc" ;;
 esac
 
@@ -43,14 +43,14 @@ case $label in
   shipping)   queue=logistics ;;
   account)    queue=identity ;;
   other)      queue=triage ;;
-  unresolved) queue=triage ;;
+  not_sure) queue=triage ;;
   *) printf 'unknown label: %s\n' "$label" >&2; exit 2 ;;
 esac
 
 printf 'queue=%s\n' "$queue" | mustmatch "queue=payments"
 ```
 
-`--raw` prints nothing when the answer is unresolved, and an empty string is no label. Only the exit code tells an unresolved pick from a crash, which is why the first `case` reads `$rc`. `--details` prints a probability for every option instead, in the order they were sent.
+`--raw` prints nothing when the answer is not sure, and an empty string is no label. Only the exit code tells a not sure pick from a crash, which is why the first `case` reads `$rc`. `--details` prints a probability for every option instead, in the order they were sent.
 
 ## Step 2: run the same shape over a whole folder
 
@@ -98,7 +98,7 @@ Two notes name a broken thing plainly, and the model put every point of probabil
 | 5 | A local failure: the recording folder, standard input | Fix the machine |
 
 - `choose` never exits 1. A pick is not a two-sided decision, so there is no "no".
-- Under `set -e` an unresolved answer ends the script. Capture the code with `&& rc=0 || rc=$?`.
+- Under `set -e` a not sure answer ends the script. Capture the code with `&& rc=0 || rc=$?`.
 - An empty file is a usage error, not a label, and a real inbox holds one. A loop needs a branch for exit 2 or a `find -size +0` filter.
 - `mv` over an existing name overwrites it, so two notes sharing a basename collide. Use `mv -n`.
 - Nothing here runs the queue the model named. The `case` is code, and the model moved a string.

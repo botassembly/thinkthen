@@ -54,7 +54,7 @@ impl RelationEntityView for RelationEntity {
 
 impl RelationEntityView for RecognizedName {
     fn name(&self) -> &str {
-        &self.name
+        &self.text
     }
 
     fn kind(&self) -> &str {
@@ -306,6 +306,16 @@ pub(crate) fn relation_evidence<E: RelationEntityView>(
     entities: &[E],
     relation: &RelationRule,
 ) -> Result<Evidence, RelationPlanError> {
+    state_evidence(source, entities, Some(relation))
+}
+
+/// The state every pair request carries: the text when there is one, each
+/// entity by id, and the rule when the request asks about one rule.
+fn state_evidence<E: RelationEntityView>(
+    source: Option<&str>,
+    entities: &[E],
+    relation: Option<&RelationRule>,
+) -> Result<Evidence, RelationPlanError> {
     let state = RelationState {
         evidence: source,
         entities: entities
@@ -333,7 +343,8 @@ struct RelationState<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     evidence: Option<&'a str>,
     entities: Vec<StateEntity>,
-    relation: &'a RelationRule,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    relation: Option<&'a RelationRule>,
 }
 
 #[derive(Serialize)]
@@ -450,6 +461,10 @@ fn reference<E: RelationEntityView>(entity: &E, place: usize) -> String {
         entity.name()
     )
 }
+
+#[path = "relation/stated.rs"]
+mod stated;
+pub(crate) use stated::{plan_stated, stated_edges};
 
 #[cfg(test)]
 #[rustfmt::skip]

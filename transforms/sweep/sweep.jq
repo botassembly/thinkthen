@@ -20,7 +20,7 @@
 #     request and the run's own threshold does not bind.
 #   - A row whose `input.label` is neither true nor false is listed by id in
 #     `unlabeled` and is scored at no cut.
-#   - A single cut answers every row, so `unresolved` is zero at every line of
+#   - A single cut answers every row, so `unsure` is zero at every line of
 #     the grid. The column stays, because the same arithmetic under a band
 #     fills it, and band.jq reads a band.
 #   - A zero denominator yields null, and a null F1 never wins the pick.
@@ -37,7 +37,7 @@
 #     better here than a module every command line has to name.
 # Choice and score policies:
 #   - A choice cut is a minimum winning probability. A unique leader at or
-#     above it resolves. A lower leader and every exact tie stay unresolved.
+#     above it resolves. A lower leader and every exact tie yield a not sure answer.
 #     Ties enter neither accuracy rate because their stored pick is arbitrary.
 #   - A score cut is each integer boundary between ordered levels. Stored value
 #     and trusted numeric label are positive at or above it.
@@ -62,7 +62,7 @@ def has_repeated_ids($rows):
 
 def verdict($p; $cut):
   if ($cut | type) == "array" then
-    if $p >= $cut[1] then "yes" elif $p <= $cut[0] then "no" else "unresolved" end
+    if $p >= $cut[1] then "yes" elif $p <= $cut[0] then "no" else "unsure" end
   else
     if $p >= $cut then "yes" else "no" end
   end;
@@ -110,13 +110,13 @@ def validate_case_ids($rows; $shape):
 
 def decision_metrics($rows; $cut):
   reduce $rows[] as $row (
-    {unlabeled: [], unresolved: 0, tp: 0, fp: 0, tn: 0, fn: 0};
+    {unlabeled: [], unsure: 0, tp: 0, fp: 0, tn: 0, fn: 0};
     $row.answer.probability as $p
     | $row.input.label as $label
     | if $label != true and $label != false then .unlabeled += [($row.input.id // "with no id")]
       else
         verdict($p; $cut) as $said
-        | if $said == "unresolved" then .unresolved += 1
+        | if $said == "unsure" then .unsure += 1
           elif $said == "yes" and $label then .tp += 1
           elif $said == "yes" then .fp += 1
           elif $label then .fn += 1
@@ -125,14 +125,14 @@ def decision_metrics($rows; $cut):
       end
   )
   | (.tp + .fp + .tn + .fn) as $resolved
-  | ($resolved + .unresolved) as $labeled
+  | ($resolved + .unsure) as $labeled
   | (if .tp + .fp == 0 then null else .tp / (.tp + .fp) end) as $precision
   | (if .tp + .fn == 0 then null else .tp / (.tp + .fn) end) as $recall
   | {
       cut: $cut,
       labeled: $labeled,
       unlabeled,
-      unresolved,
+      unsure,
       coverage: rate($resolved; $labeled),
       accuracy: rate(.tp + .tn; $resolved),
       precision: ($precision | round4),
@@ -175,7 +175,7 @@ def decision_report($rows; $cuts):
             }
         end
       ),
-      sweep: [$sweep[] | {cut, coverage, unresolved, accuracy, precision, recall, f1}]
+      sweep: [$sweep[] | {cut, coverage, unsure, accuracy, precision, recall, f1}]
     };
 
 def grouped_decision_report($rows; $cuts; $pointer):
@@ -233,29 +233,29 @@ def choice_report($rows; $cuts):
              | select(($label | type) == "string" and ($options | index($label)) != null)] as $labeled
   | [$cuts[] as $cut
       | reduce $labeled[] as $row (
-          {cut: $cut, resolved: 0, unresolved: 0, ties: 0,
-           right_resolved: 0, unique_unresolved: 0, right_unresolved: 0};
+          {cut: $cut, resolved: 0, unsure: 0, ties: 0,
+           right_resolved: 0, unique_unsure: 0, right_unsure: 0};
           $row.answer.probabilities as $p
           | ($options | map($p[.]) | max) as $maximum
           | [$options[] | select($p[.] == $maximum)] as $leaders
           | if ($leaders | length) > 1 then
-              .unresolved += 1 | .ties += 1
+              .unsure += 1 | .ties += 1
             elif $maximum >= $cut then
               .resolved += 1
               | if $row.answer.pick == $row.input.label then .right_resolved += 1 else . end
             else
-              .unresolved += 1 | .unique_unresolved += 1
-              | if $row.answer.pick == $row.input.label then .right_unresolved += 1 else . end
+              .unsure += 1 | .unique_unsure += 1
+              | if $row.answer.pick == $row.input.label then .right_unsure += 1 else . end
             end
         )
       | {
           cut,
           resolved,
-          unresolved,
+          unsure,
           ties,
           coverage: rate(.resolved; $labeled | length),
           accuracy_resolved: rate(.right_resolved; .resolved),
-          accuracy_unresolved: rate(.right_unresolved; .unique_unresolved)
+          accuracy_unsure: rate(.right_unsure; .unique_unsure)
         }
     ] as $sweep
   | {mode: "choose", rows: ($rows | length), labeled: ($labeled | length), unlabeled: $unlabeled,

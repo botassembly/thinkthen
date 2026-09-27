@@ -57,8 +57,8 @@ The file name is the digest of the wire shape, the address, and the request byte
 set -euo pipefail
 
 jq -r 'input_filename, (keys_unsorted | join(","))' \
-  recording/01c476cebd5a5b2e7e2bf649d0604516f4bdd555a7cabb4ab1b8def6c840c4dc.json \
-  | mustmatch "recording/01c476cebd5a5b2e7e2bf649d0604516f4bdd555a7cabb4ab1b8def6c840c4dc.json
+  recording/4492d4e8f2d047146e41dfe2eeb5ba6c5ab91140bd6be76eca6e66051f4d48e7.json \
+  | mustmatch "recording/4492d4e8f2d047146e41dfe2eeb5ba6c5ab91140bd6be76eca6e66051f4d48e7.json
 schema,adapter,url,request,response"
 ```
 

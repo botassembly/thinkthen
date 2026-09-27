@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Can I add a second user to the team plan? Billing stays on the same card.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the customer report that a payment or a payout did not go through?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.03}},"usage":{"input_tokens":299,"output_tokens":21}}
+}

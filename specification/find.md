@@ -52,7 +52,7 @@ The generated unit id is `u` and the unit's one-based input position, zero-padde
 | `--details` | Prints the full result object | Off |
 | `--input FILE` | Reads the units from a file | Standard input |
 | `--dry-run` | Prints the plan and sends nothing | Off |
-| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-latest` |
+| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-1.13.0` |
 
 ## Exit codes
 
@@ -70,4 +70,4 @@ thinkthen find 'This ticket should be worked next.' --jsonl --field /body < queu
 
 ## Selection rule
 
-Equal top probabilities among real units select the first input unit. A strict `none` lead or any top tie involving `none` produces the unresolved result. The command prints one unit and has no threshold or top-count option.
+Equal top probabilities among real units select the first input unit. A strict `none` lead or any top tie involving `none` produces the not sure result. The command prints one unit and has no threshold or top-count option.

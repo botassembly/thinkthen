@@ -5,6 +5,9 @@
 # not use it. It runs from the repository root, where the manifest is.
 set -eu
 cd -- "$(dirname -- "$0")/../.."
+profile=${THINKTHEN_TEST_PROFILE:-routine}
+case $profile in routine|full|stress) ;; *) echo "polars: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+[ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 
 # The probe: every crate the root lock names must already be in cargo's cache.
 if ! cargo fetch --locked --offline >/dev/null 2>&1; then
@@ -28,5 +31,9 @@ export RUSTFLAGS='--cfg thinkthen_internal_doctest' RUSTDOCFLAGS='--cfg thinkthe
 set -- --locked --offline --package thinkthen --features polars
 cargo clippy "$@" --lib --bins --test 'polars_*' -- -D warnings
 cargo clippy "$@" --no-default-features --lib -- -D warnings
+if [ "$profile" = stress ]; then
+    cargo test "$@" --test polars_throttle two_hundred_series_records_match_the_slice -- --ignored --exact
+    exit 0
+fi
 cargo test "$@" --test 'polars_*'
 cargo test "$@" --doc PolarsEngine

@@ -1,7 +1,6 @@
-//! The process engine and the five settings SQL gives it before it is
+//! The process engine and the four settings SQL gives it before it is
 //! built: `thinkthen_throttle`, `thinkthen_max_requests`, `thinkthen_cache`,
-//! and `thinkthen_cache_bytes` (ticket 0109 decision 2), and the process
-//! request total `thinkthen_max_requests_total` (decision 17).
+//! and the process request total `thinkthen_max_requests_total` (decision 17).
 
 use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
@@ -19,7 +18,6 @@ struct Stored {
     throttle: Option<u8>,
     max_requests: Option<Option<usize>>,
     cache: Option<Option<PathBuf>>,
-    cache_bytes: Option<u64>,
     total: Option<u64>,
 }
 
@@ -36,9 +34,6 @@ impl Stored {
             Some(None) => builder = builder.no_cache(),
             None => {}
         }
-        if let Some(value) = self.cache_bytes {
-            builder = builder.cache_bytes(value)?;
-        }
         Ok(builder)
     }
 }
@@ -47,7 +42,6 @@ static STORED: Mutex<Stored> = Mutex::new(Stored {
     throttle: None,
     max_requests: None,
     cache: None,
-    cache_bytes: None,
     total: None,
 });
 
@@ -180,18 +174,6 @@ pub(crate) fn max_requests_total(context: &Context<'_>) -> rusqlite::Result<Opti
             })
             .transpose()?;
         set(|held| held.total = total)?;
-        Ok(value)
-    })?)
-}
-
-/// `thinkthen_cache_bytes(n)`: the cache cap, checked here.
-pub(crate) fn cache_bytes(context: &Context<'_>) -> rusqlite::Result<i64> {
-    Ok(guard("thinkthen_cache_bytes", || {
-        let value = whole(context, "thinkthen_cache_bytes")?.ok_or_else(|| {
-            Failure::usage("thinkthen_cache_bytes takes a whole number, not NULL")
-        })?;
-        let bytes = u64::try_from(value).unwrap_or(0);
-        set(|held| held.cache_bytes = Some(bytes))?;
         Ok(value)
     })?)
 }

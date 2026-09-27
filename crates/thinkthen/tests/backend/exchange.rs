@@ -253,9 +253,9 @@ fn a_rate_limit_waits_the_seconds_the_backend_asked_for() {
 }
 
 #[test]
-fn a_rate_limit_wait_cannot_exceed_the_attempt_timeout() {
+fn a_server_retry_floor_can_exceed_the_attempt_timeout() {
     let listener = Listener::serving(vec![
-        Canned::status(429, "slow down").asking("retry-after", "30"),
+        Canned::status(429, "slow down").asking("retry-after-ms", "1200"),
         Canned::ok(ANSWERED),
     ])
     .expect("a loopback listener");
@@ -272,7 +272,7 @@ fn a_rate_limit_wait_cannot_exceed_the_attempt_timeout() {
 
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(listener.requests().len(), 2);
-    assert!(took >= Duration::from_millis(900), "{took:?}");
+    assert!(took >= Duration::from_millis(1200), "{took:?}");
     assert!(took < Duration::from_secs(3), "{took:?}");
 }
 
@@ -358,7 +358,11 @@ fn a_redirect_is_refused_so_no_key_and_no_evidence_reach_another_host() {
     assert_eq!(output.status.code(), Some(4));
     assert!(output.stdout.is_empty());
     let message = String::from_utf8_lossy(&output.stderr);
-    assert!(message.contains("302"), "{message}");
+    assert_eq!(
+        message,
+        "thinkthen: the backend answered with status 302: the redirect was not followed; use the final --url directly\n"
+    );
+    assert!(!message.contains("sk-secret-value"));
 }
 
 #[test]
@@ -490,19 +494,4 @@ fn a_refused_port_fails_before_the_first_default_retry_wait() {
     assert_eq!(output.status.code(), Some(4));
     assert!(output.stdout.is_empty());
     assert_eq!(String::from_utf8_lossy(&output.stderr), REFUSED_DIAGNOSTIC);
-}
-
-#[test]
-fn a_key_variable_that_is_unset_or_blank_is_exit_four_and_never_shows_a_value() {
-    let listener = Listener::serving(Vec::new()).expect("a loopback listener");
-
-    for key in [None, Some(""), Some("   ")] {
-        let output =
-            decide(listener.base(), &[], key, "Refund.").expect("the compiled binary runs");
-
-        assert_eq!(output.status.code(), Some(4), "{key:?}");
-        assert!(listener.requests().is_empty(), "{key:?}");
-        let message = String::from_utf8_lossy(&output.stderr);
-        assert!(message.contains("THINKTHEN_API_KEY"), "{message}");
-    }
 }

@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Dwayne \"The Rock\" Johnson filmed in Hawaii.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.\n\nText: The Rock\" Johnson filmed in [[Hawaii]].","criteria":{"Hawaii":"...The Rock\" Johnson filmed in [[Hawaii]].","Hawaii.":"...The Rock\" Johnson filmed in [[Hawaii.]]"}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"Hawaii","confidence":0.94,"probabilities":{"Hawaii.":0.03,"Hawaii":0.97}}},"usage":{"input_tokens":416,"output_tokens":36}}
+}

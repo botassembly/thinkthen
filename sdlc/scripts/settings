@@ -38,6 +38,19 @@ COMMAND = re.compile(r"^  ([a-z][a-z-]*)\s")
 LISTED = re.compile(r"!\[((?:\s*\"[a-z_]+\",?)+)\s*\]\s*\.contains")
 NAMES = (re.compile(r"[\"'](THINKTHEN_[A-Z0-9_]+)[\"']"), re.compile(r"\benv\.(THINKTHEN_[A-Z0-9_]+)"))
 SOURCE = {".rs", ".py", ".pyi", ".ts", ".js", ".mjs", ".cjs", ".rb", ".R", ".r", ".c", ".h", ".sql"}
+ENGINE_CELLS = {
+    "Address": ("base_url",), "Model": ("model",), "Throttle": ("throttle",),
+    "Request limit": ("max_requests",), "Answer cache": ("cache_at",),
+    "Backend profile": ("profile",), "Timeout": ("timeout",),
+    "Retries": ("max_retries",), "Recording": ("record", "replay"),
+}
+ENGINE_SOURCES = {
+    "Rust": "crates/thinkthen/src/public/settings.rs", "Python": "libraries/python/src/engine.rs",
+    "TypeScript": "libraries/typescript/src/door.rs", "Ruby": "libraries/ruby/src/lib.rs",
+    "R": "libraries/r/thinkthen/src/rust/src/lib.rs", "C": "libraries/c/src/settings.rs",
+    "DuckDB": "databases/duckdb/src/engines.rs", "PostgreSQL": "databases/postgresql/src/call.rs",
+    "SQLite": "databases/sqlite/src/settings.rs",
+}
 
 
 def prose(text):
@@ -127,6 +140,30 @@ def both_ways(page, have, want, missing, stale):
     return out + [f"{page}: {name} {stale}" for name in sorted(have - want)]
 
 
+def engine_cells(page, rows):
+    """A builder setter and its library or SQL cell must appear together."""
+    by_name = {row[0]: row for row in rows}
+    out = []
+    for name, setters in ENGINE_CELLS.items():
+        row = by_name.get(name)
+        if row is None:
+            out.append(f'{page}: engine setting "{name}" has no row')
+            continue
+        for surface, path in ENGINE_SOURCES.items():
+            if name == "Model" and surface in ("DuckDB", "PostgreSQL", "SQLite"):
+                continue  # those cells describe question JSON, not an engine setter
+            source = (REPO / path).read_text(encoding="utf-8")
+            cell = row[COLUMNS.index(surface)]
+            for setter in setters:
+                code = (f"pub fn {setter}(" in source if surface == "Rust" else
+                        re.search(rf"\bbuilder\s*\.\s*{re.escape(setter)}\s*\(", source) is not None)
+                page_has = not cell.startswith("not on this surface") and setter.split("_")[0] in cell
+                if code != page_has:
+                    side = "source has no setter" if page_has else "source setter has no cell"
+                    out.append(f'{page}: {surface} {name} {side}: {setter}')
+    return out
+
+
 def check(path, flags, names, keys):
     """Every sentence that says how the page misses the rules."""
     page = path.name
@@ -158,6 +195,7 @@ def check(path, flags, names, keys):
                      "is in a row and read by no product code")
     out += both_ways(page, ticked(rows, KEY, KEY_NAME), keys, "is a question-file key and has no row",
                      "is in a row and is no question-file key")
+    out += engine_cells(page, rows)
     return out, len(rows)
 
 
@@ -175,6 +213,17 @@ def edit(text, column, old, new):
     return "".join(out)
 
 
+def cell_edit(text, name, column, new):
+    out = []
+    for line in text.splitlines(keepends=True):
+        row = cells(line) if line.lstrip().startswith("|") else []
+        if len(row) == len(COLUMNS) and row[0] == name:
+            row[column] = new
+            line = "| " + " | ".join(row) + " |\n"
+        out.append(line)
+    return "".join(out)
+
+
 PLANTED = "| Planted | x | x | x | `--planted-setting` | `THINKTHEN_PLANTED` |" + " not on this surface |" * 11 + "\n"
 
 
@@ -184,7 +233,7 @@ def cases(text):
     decoy = "## Settings\n\n```\n| Setting | Planted |\n| --- | --- |\n```\n"
     page = "settings.md: "
     return [
-        ("a missing row", edit(text, FLAG, "`--jobs`", None), [page + "--jobs is in the help and has no row"]),
+        ("a missing row", edit(text, FLAG, "`--jobs`", None), [page + "--jobs is in the help and has no row", page + 'engine setting "Throttle" has no row']),
         ("a stale row", text[:after] + PLANTED + text[after:], [
             page + "--planted-setting is in a row and in no help",
             page + "THINKTHEN_PLANTED is in a row and read by no product code"]),
@@ -196,6 +245,10 @@ def cases(text):
         ("a missing key", edit(text, KEY, "`on`", ""), [page + "on is a question-file key and has no row"]),
         ("a fenced decoy table", text.replace("## Settings\n", decoy, 1), []),
         ("a repeated row", text[:after] + first + text[after:], [page + 'the setting "Threshold" has two rows']),
+        ("a missing engine cell", edit(text, COLUMNS.index("Python"), "`Engine(timeout=)`", "not on this surface"),
+         [page + "Python Timeout source setter has no cell: timeout"]),
+        ("a stale SQL cell", cell_edit(text, "Timeout", COLUMNS.index("SQLite"), "`thinkthen_timeout(n)`"),
+         [page + "SQLite Timeout source has no setter: timeout"]),
         ("the real page", text, []),
     ]
 

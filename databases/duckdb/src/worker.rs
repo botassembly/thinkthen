@@ -12,7 +12,7 @@ use std::time::Duration;
 
 use thinkthen::{CancelToken, Error};
 
-use crate::errors::{defect, failure, prefix};
+use crate::errors::RowError;
 use crate::signal::Invoke;
 
 /// How often the waiting thread reads the interrupt predicate.
@@ -26,6 +26,13 @@ pub(crate) fn run<T: Send + 'static>(
     invoke: &Invoke,
     work: impl FnOnce(&CancelToken) -> Result<T, Error> + Send + 'static,
 ) -> Result<T, String> {
+    run_typed(invoke, work).map_err(|error| error.text)
+}
+
+pub(crate) fn run_typed<T: Send + 'static>(
+    invoke: &Invoke,
+    work: impl FnOnce(&CancelToken) -> Result<T, Error> + Send + 'static,
+) -> Result<T, RowError> {
     let token = CancelToken::new();
     let (answer, answered) = channel();
     let owned = token.clone();
@@ -34,29 +41,35 @@ pub(crate) fn run<T: Send + 'static>(
         .spawn(move || {
             let _ = answer.send(work(&owned));
         })
-        .map_err(|_| defect("the engine worker could not start"))?;
-    wait(|| answered.recv_timeout(TICK), || invoke.stopped(), &token)
+        .map_err(|_| RowError::defect("the engine worker could not start"))?;
+    wait_typed(|| answered.recv_timeout(TICK), || invoke.stopped(), &token)
 }
 
 /// Wait for one answer, reading `stopped` at every tick.
+#[cfg(test)]
 fn wait<T>(
     mut next: impl FnMut() -> Result<Result<T, Error>, RecvTimeoutError>,
     stopped: impl Fn() -> bool,
     token: &CancelToken,
 ) -> Result<T, String> {
+    wait_typed(&mut next, stopped, token).map_err(|error| error.text)
+}
+
+fn wait_typed<T>(
+    mut next: impl FnMut() -> Result<Result<T, Error>, RecvTimeoutError>,
+    stopped: impl Fn() -> bool,
+    token: &CancelToken,
+) -> Result<T, RowError> {
     loop {
         if stopped() {
             token.cancel();
-            return Err(format!(
-                "{}{CANCELLED}",
-                prefix(thinkthen::ErrorKind::Cancelled)
-            ));
+            return Err(RowError::of(thinkthen::ErrorKind::Cancelled, CANCELLED));
         }
         match next() {
-            Ok(answer) => return answer.map_err(|error| failure(&error)),
+            Ok(answer) => return answer.map_err(Into::into),
             Err(RecvTimeoutError::Timeout) => {}
             Err(RecvTimeoutError::Disconnected) => {
-                return Err(defect("the engine worker ended with no answer"));
+                return Err(RowError::defect("the engine worker ended with no answer"));
             }
         }
     }

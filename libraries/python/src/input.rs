@@ -10,7 +10,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyDict, PyInt, PyString};
 use thinkthen::{CallOptions, CancelToken};
 
-use crate::asked::Entity;
+use crate::asked::{Entity, RecognizedEntity};
 use crate::worker::{Controls, Token};
 use crate::{raised, usage};
 
@@ -157,14 +157,22 @@ pub(crate) fn entities(values: &Bound<'_, PyAny>) -> PyResult<Vec<thinkthen::Ent
         let (name, kind): (String, String) = if let Ok(entity) = item.cast::<Entity>() {
             let entity = entity.get();
             (entity.name.clone(), entity.kind.clone())
+        } else if let Ok(entity) = item.cast::<RecognizedEntity>() {
+            let entity = entity.get();
+            (entity.text.clone(), entity.kind.clone())
         } else if let Ok(fields) = item.cast::<PyDict>() {
-            let field = |key: &str| -> PyResult<String> {
+            // A name `recognize` found carries `text` in place of `name`.
+            let field = |key: &str| -> PyResult<Option<String>> {
                 fields
                     .get_item(key)?
-                    .and_then(|value| value.extract().ok())
-                    .ok_or_else(refused)
+                    .map(|value| value.extract().map_err(|_| refused()))
+                    .transpose()
             };
-            (field("name")?, field("kind")?)
+            let name = match field("name")? {
+                Some(name) => name,
+                None => field("text")?.ok_or_else(refused)?,
+            };
+            (name, field("kind")?.ok_or_else(refused)?)
         } else {
             item.extract().map_err(|_| refused())?
         };

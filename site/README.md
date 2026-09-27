@@ -14,17 +14,20 @@ npm install
 npm run build
 ```
 
-`npm run build` does seven things in order:
+`npm run build` does eight things in order:
 
 1. `scripts/write-version.mjs` writes `public/version.json` with the commit it is building.
 2. `scripts/check-samples.mjs` checks the rules in `WRITING.md` that a script can see: line length, asserts, whole details, no comments, and a goal on every page.
-3. `scripts/smoke.mjs` runs every example against the command built from this commit and compares what it printed with the saved output.
-4. `astro build` writes `dist/`. It fails when a script has no caption or no saved output. The Settings page reads `../specification/settings.md`, and the build fails when that table's columns change.
-5. `scripts/emit-md.mjs` writes a Markdown twin of every page and `dist/llms.txt`.
-6. `scripts/check-settings.mjs` fails the build when the Settings page and `../specification/settings.md` disagree.
-7. `scripts/check-links.mjs` fails the build on a broken internal link.
+3. `scripts/check-slides.mjs` checks that the Beatles Bench slides come from a deck that quotes the pinned bench.
+4. `scripts/smoke.mjs` runs every example against the command built from this commit and compares what it printed with the saved output.
+5. `astro build` writes `dist/`. It fails when a script has no caption or no saved output. The Settings page reads `../specification/settings.md`, and the build fails when that table's columns change.
+6. `scripts/emit-md.mjs` writes a Markdown twin of every page and `dist/llms.txt`.
+7. `scripts/check-settings.mjs` fails the build when the Settings page and `../specification/settings.md` disagree. It also fails when a source file types a number after "default is", "defaults to" or "default of", and when a built page states a default the table does not hold.
+8. `scripts/check-links.mjs` fails the build on a broken internal link.
 
-`npm run dev` serves the site while you work. `npm run check` runs the sample check, the smoke run, the settings check, and the link check on the last build.
+A page reads a setting's default, range or allowed values with `setting('Name')` from `src/lib/settings-table.mjs`: `.default`, `.number`, `.range`, `.bounds`, `.allowed`, `.note`, `.defaultOn('decide')` and `.surface('Configuration file')`. A name the table does not hold fails the build at that call.
+
+`npm run dev` serves the site while you work. `npm run check` runs the sample check, the slide check, the smoke run, the settings check, and the link check on the last build.
 
 ## Writing a page
 
@@ -47,6 +50,14 @@ The pages under `/learn/beatles-bench/` follow the talk "Analyzing the Beatles u
 ```
 BEATLES_BENCH=path/to/beatles-bench npm run pull-bench
 ```
+
+The slides come from the talk's deck, which quotes one bench commit. The deck's own build renders and commits each `slide.png`. `src/data/slides.json` names the deck slide behind each image, the deck commit, the bench the deck quotes, and each image's SHA-256. To export them again from the deck's committed `slide.png` files:
+
+```
+DECK=path/to/deck npm run export-slides
+```
+
+The export stops unless the deck's `BENCH_AT` names the bench in `examples/beatles/BENCH`. It trusts the deck's build to have rendered the slides after that pin moved. `scripts/check-slides.mjs` runs in the build. It fails when the recorded bench differs from `examples/beatles/BENCH`, or when an image differs from its recorded SHA-256. Move the pin and the build fails until the slides are exported again.
 
 ## The Bash techniques
 

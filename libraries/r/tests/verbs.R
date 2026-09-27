@@ -32,6 +32,8 @@ check("rank top", identical(nrow(tt_rank("Is this urgent?", c("r1", "r2"), top =
 found <- tt_find("Which line asks for money?", c("u1", "u2"))
 check("find is place, unit, probability", identical(found, list(place = 1L, unit = "u1", probability = 0.9)))
 check("find needs two units", identical(kind_of(tt_find("Q?", "one")), "usage"))
+check("a none other than TRUE or FALSE is refused before any request", sent_by(check("the none sentence",
+  identical(message_of(tt_find("Q?", c("u1", "u2"), none = NA)), "none is TRUE or FALSE"))) == 0)
 
 # details: the command's --details document.
 details <- tt_details(tt_question(score = "How urgent?", levels = levels3), "urgent now")
@@ -91,9 +93,30 @@ for (value in list(NA_integer_, factor("5"), I(factor("5")), as.difftime(5, unit
 }
 
 # The six kinds as conditions with the retry signal.
-refused <- tryCatch(tt_decide("", "x"), thinkthen_error = function(e) e)
+blank_sent <- sent_by(refused <- tryCatch(tt_decide("", "x"), thinkthen_error = function(e) e))
 check("a blank question is usage, and usage is not retryable",
-      inherits(refused, "thinkthen_usage") && isFALSE(refused$retryable) && inherits(refused, "error"))
+      inherits(refused, "thinkthen_usage") && isFALSE(refused$retryable) && inherits(refused, "error") && blank_sent == 0L)
+
+# The shared local fault is a recording read on decide, not an annotate file.
+recording <- tempfile("replay-read-")
+dir.create(recording)
+seeded <- sent_by(seed <- child(c(
+  sprintf('tt_engine(record = "%s", cache = FALSE)', recording),
+  'invisible(tt_decide("Q?", "recording read proof"))'
+)))
+entry <- list.files(recording, pattern = "^[[:xdigit:]]{64}\\.json$", full.names = TRUE)
+check("one recorded decide exchange was seeded", seed$status == 0L && seeded == 1L && length(entry) == 1L)
+if (length(entry) == 1L) {
+  unlink(entry)
+  dir.create(entry)
+}
+replayed <- sent_by(read_result <- child(c(
+  sprintf('tt_engine(replay = "%s")', recording),
+  'e <- tryCatch(tt_decide("Q?", "recording read proof"), thinkthen_error = function(e) e)',
+  'cat(inherits(e, "thinkthen_local"), identical(e$kind, "local"), isFALSE(e$retryable), "\\n")'
+)))
+check("a failed recording read is a non-retryable local error before any send",
+      read_result$status == 0L && identical(trimws(read_result$text), "TRUE TRUE TRUE") && replayed == 0L)
 
 # The failed marker: the malformed arm breaks the last question.
 failed <- child(c(
@@ -120,4 +143,4 @@ invisible(tt_decide("Q?", c("u1-new", "u2-new")))
 check("two judgments are two sends", identical(tt_usage()$requests_sent - before$requests_sent, 2))
 check("the counters are the four doubles", identical(names(before), c("requests_sent", "cache_answers", "input_tokens", "output_tokens")))
 
-finish("verbs", 28L)
+finish("verbs", 29L)

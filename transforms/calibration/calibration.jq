@@ -13,7 +13,7 @@
 #   - A row whose `input.label` is neither true nor false is listed by id in
 #     `unlabeled` and enters no share. It is still counted in the band's
 #     `rows`, so a band never hides a case.
-#   - `unresolved` counts the rows in the band whose saved `value` is null,
+#   - `unsure` counts the rows in the band whose saved `value` is null,
 #     the answers the run's own threshold refused. They are counted apart and
 #     they still carry a probability, so they stay in the band.
 #   - A band with no labeled row yields null for both rates. A small run
@@ -38,7 +38,7 @@ def has_repeated_ids($rows):
   {
     rows: 0,
     unlabeled: [],
-    bands: [range(0; 10) | {rows: 0, unresolved: 0, labeled: 0, truly_yes: 0, total: 0}]
+    bands: [range(0; 10) | {rows: 0, unsure: 0, labeled: 0, truly_yes: 0, total: 0}]
   };
   .rows += 1
   | ($row.input.id // "with no id") as $id
@@ -48,7 +48,7 @@ def has_repeated_ids($rows):
   | slot($p) as $i
   | .bands[$i].rows += 1
   | .bands[$i].total += $p
-  | (if $row.value == null then .bands[$i].unresolved += 1 else . end)
+  | (if $row.value == null then .bands[$i].unsure += 1 else . end)
   | if $label != true and $label != false then .unlabeled += [$id]
     else
       .bands[$i].labeled += 1
@@ -64,7 +64,7 @@ def has_repeated_ids($rows):
       | {
           band: "\($i / 10)-\(($i + 1) / 10)",
           rows,
-          unresolved,
+          unsure,
           labeled,
           truly_yes,
           share_truly_yes: (if .labeled == 0 then null else .truly_yes / .labeled | round4 end),

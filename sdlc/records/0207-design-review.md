@@ -1,0 +1,11 @@
+# 0207 design review
+
+Reviewed on 2026-09-27 against main `0fb8d55f` by a fresh read-only Codex Sol Medium reviewer. Result: findings to fix before implementation. No product source or tests changed during this review.
+
+1. Set the SQL name, argument grammar, NULL behavior and result shape in the ticket. The current proposal leaves them undecided. The review recommends a direct-only volatile scalar `thinkthen_recognize_document(body, spec)` returning the existing public `Recognized::to_json()` object. State whether the spec accepts a full JSON recognize section and `@file`. State what body NULL, spec NULL and wrong SQL types do. These are design recommendations until the ticket is revised and accepted.
+2. Distinguish one public engine call from one backend request. Full recognition can require several backend requests under the settled recognize contract. The proof must compare their bodies and counts to each captured arm, rather than assume one send.
+3. Name the exact source, registration, README, conformance and check files. Preflight direct-only registration, extension symbol checks, 500-nonblank-line ceilings and the measured ratchet. Include all nine relation cases, complete entities and directed edges, thresholds and no-edge results, plus one malformed-spec refusal with zero sends.
+
+The feature gap is confirmed. SQLite's table recognize rejects relations, and the standalone relate operation omits the original text. Ticket 0206's case-42 comparison did not match the captured recognize request. Keep the existing APIs and all nine skips until their individual replacement proofs pass. Ian can overturn the proposed SQL form.
+
+The same bounded review checked gap ownership. SQL find has its own issue. Decide question-file forms remain in the shared-conformance issue. PostgreSQL filter/rank, SQLite rank and R usage/local errors already have focused proof from 0206; their stale issue wording must not create duplicate implementation work. Host interrupt and internal-defect differences retain their existing proof links. A separate issue records panic payload diagnostics in C, SQLite and DuckDB. Other bindings were not audited by this review.

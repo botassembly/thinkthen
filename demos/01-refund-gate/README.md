@@ -58,7 +58,7 @@ set -euo pipefail
 
 ## What can go wrong
 
-- **An `if` has two branches, and `decide` has five outcomes.** Exit 0 is yes, 1 is no, 3 is unresolved, 4 is a backend failure and 5 is a local one. An `else` swallows the last three and routes a failed request to the normal queue. [How to gate a risky command and fail closed](../19-no-or-could-not-ask/) reads all five with `case`.
+- **An `if` has two branches, and `decide` has five outcomes.** Exit 0 is yes, 1 is no, 3 is not sure, 4 is a backend failure and 5 is a local one. An `else` swallows the last three and routes a failed request to the normal queue. [How to gate a risky command and fail closed](../19-no-or-could-not-ask/) reads all five with `case`.
 - **Exit 1 is a no.** Under `set -e` a bare `thinkthen decide ...` ends the script on it. Put the command in an `if`, a `case`, or a `&& rc=0 || rc=$?` list.
 - **A `decide` record run exits 0 when it completes without a partial or whole-run failure, even when every record answers no.** Test the printed values, as the count above does. `filter` plus a count is the same gate when only passing records should remain.
 - **Exit 2 is a usage error, and it goes out before any request.** `--quiet` beside `--details` is one, because the gate wants no output and the audit wants the object.
@@ -73,7 +73,7 @@ printf 'bad=%s\n' "$bad" | mustmatch "bad=2"
 ```
 
 - **The model's word never runs anything.** The `if` is code. `decide` moved the exit code and nothing else.
-- **A single cut never says the model is sure.** With no threshold the cut is 0.5 and nothing is ever unresolved, so a borderline message lands in one of the two queues with no sign that it was close. A probability of 0.48 and one of 0.02 both come back as a no.
+- **A single cut never says the model is sure.** With no threshold the cut is 0.5 and nothing is ever not sure, so a borderline message lands in one of the two queues with no sign that it was close. A probability of 0.48 and one of 0.02 both come back as a no.
 
 ## Related how-tos
 

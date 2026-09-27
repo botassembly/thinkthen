@@ -5,56 +5,74 @@ use std::path::Path;
 use crate::harness::{Canned, Listener, spawn};
 
 const KEY: &str = "test-key";
-const MESSAGE: &str = "thinkthen: --timeout takes a whole number of seconds greater than zero\n";
+const MESSAGE: &str = "thinkthen: --timeout takes a whole number of seconds from 1 to 86400\n";
 const ANSWER: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
 
 #[test]
-fn zero_timeout_precedes_input_key_and_connection_in_both_argument_homes() {
+fn a_timeout_outside_one_to_a_day_precedes_input_key_and_connection_in_every_argument_home() {
     let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("a loopback listener");
     let absent = Path::new(env!("CARGO_TARGET_TMPDIR"))
         .join("timeout")
         .join("absent-input");
     let absent = absent.to_string_lossy();
 
-    let cases = [
-        vec![
-            "decide",
-            "Does this pass?",
-            "--timeout",
-            "0",
-            "--input",
-            absent.as_ref(),
-            "--url",
-            listener.base(),
-        ],
-        vec![
-            "find",
-            "Which unit answers?",
-            "--timeout",
-            "0",
-            "--input",
-            absent.as_ref(),
-            "--url",
-            listener.base(),
-        ],
-    ];
-
-    for arguments in cases {
-        let output = spawn(&arguments, &[], b"").expect("the compiled binary runs");
-        assert_eq!(output.status.code(), Some(2), "{arguments:?}");
-        assert!(output.stdout.is_empty(), "{arguments:?}");
-        assert_eq!(String::from_utf8_lossy(&output.stderr), MESSAGE);
+    // 9223372036854775807 panicked with exit 101 in the HTTP client's clock
+    // arithmetic before the bound.
+    for timeout in ["0", "86401", "9223372036854775807", "18446744073709551615"] {
+        for command in [
+            ["decide", "Does this pass?"],
+            ["find", "Which unit answers?"],
+        ] {
+            let mut arguments = command.to_vec();
+            arguments.extend([
+                "--timeout",
+                timeout,
+                "--input",
+                absent.as_ref(),
+                "--url",
+                listener.base(),
+            ]);
+            let output = spawn(&arguments, &[], b"").expect("the compiled binary runs");
+            assert_eq!(output.status.code(), Some(2), "{arguments:?}");
+            assert!(output.stdout.is_empty(), "{arguments:?}");
+            assert_eq!(String::from_utf8_lossy(&output.stderr), MESSAGE);
+        }
     }
+
+    // `check` keeps its own timeout field and reads no input.
+    let output = spawn(
+        &["check", "--url", listener.base(), "--timeout", "86401"],
+        &[],
+        b"",
+    )
+    .expect("the compiled binary runs");
+    assert_eq!(output.status.code(), Some(2), "check");
+    assert!(output.stdout.is_empty(), "check");
+    assert_eq!(String::from_utf8_lossy(&output.stderr), MESSAGE);
 
     assert!(
         listener.requests().is_empty(),
-        "zero timeout sent a request"
+        "a refused timeout sent a request"
     );
     assert_eq!(
         listener.connections(),
         0,
-        "zero timeout opened a connection"
+        "a refused timeout opened a connection"
     );
+
+    let day = spawn(
+        &[
+            "decide",
+            "Does this pass?",
+            "--timeout",
+            "86400",
+            "--dry-run",
+        ],
+        &[],
+        b"yes",
+    )
+    .expect("the compiled binary runs");
+    assert_eq!(day.status.code(), Some(0), "a day is the largest timeout");
 }
 
 #[test]

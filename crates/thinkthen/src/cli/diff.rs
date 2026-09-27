@@ -9,10 +9,15 @@ use std::path::{Path, PathBuf};
 
 use clap::Args;
 
-use crate::cli::measure::{Cause, Refusal, lines, rule, write};
+use crate::cli::measure::{Cause, Match, Refusal, lines, rule, write};
+use crate::core::Json;
 use crate::core::Pointer;
+use crate::core::measure::MeasureError::{MixesSets, MixesVerbs, PairsVerbs};
 use crate::core::measure::answer::{self, Identity};
-use crate::core::measure::diff::{self as compare, Change, Effect, Last, Side, Summary};
+use crate::core::measure::diff::{
+    self as compare, Change, Effect, ItemChange, KindChange, Last, Row, Side, Summary,
+};
+use crate::core::measure::items::number;
 use crate::core::measure::key::Key;
 use crate::core::measure::{places, rounded, rounded_line};
 use crate::failure::Failure;
@@ -41,6 +46,9 @@ pub(crate) struct DiffArguments {
         allow_hyphen_values = true
     )]
     id: String,
+    /// How a recognize name matches a name on the other side: the same places and kind, or overlapping places and the same kind. The default is strict.
+    #[arg(long = "match", value_enum)]
+    matching: Option<Match>,
     /// Print the results for a person instead of JSON lines.
     #[arg(long)]
     table: bool,
@@ -85,7 +93,7 @@ fn warnings(summary: &Summary) -> String {
     out
 }
 
-fn compare_all(arguments: &DiffArguments) -> Result<(Vec<Change>, Summary), Refusal> {
+fn compare_all(arguments: &DiffArguments) -> Result<(Vec<Row>, Summary), Refusal> {
     let refusal = |role, cause| Refusal {
         command: "diff",
         role,
@@ -147,18 +155,33 @@ fn compare_all(arguments: &DiffArguments) -> Result<(Vec<Change>, Summary), Refu
         rule: rule_b,
     };
     let compared = if second.is_some() { "runs" } else { "cuts" };
-    compare::diff(a, b, key.as_ref(), [shown_a, shown_b], compared)
-        .map_err(|cause| refusal("first run", Cause::Measure(cause)))
+    let (shown, matching) = ([shown_a, shown_b], arguments.matching.map(Into::into));
+    compare::diff(a, b, key.as_ref(), shown, compared, matching).map_err(|cause| {
+        let mixed = matches!(cause, PairsVerbs(_) | MixesVerbs(_) | MixesSets(_));
+        let role = if mixed && second.is_some() {
+            "second run"
+        } else {
+            "first run"
+        };
+        refusal(role, Cause::Measure(cause))
+    })
 }
 
-/// The prototype's table, word for word.
-fn table(changes: &[Change], summary: &Summary) -> String {
+/// The prototype's table, word for word, and the item rows of `recognize` and `relate`.
+fn table(rows: &[Row], summary: &Summary) -> String {
     let mut out = String::new();
-    for change in changes {
-        let name = change
-            .name
+    for row in rows {
+        let (Row::Answer(Change { name, .. }) | Row::Items(ItemChange { name, .. })) = row;
+        let name = name
             .as_ref()
             .map_or_else(String::new, |name| format!("/{name}"));
+        let change = match row {
+            Row::Answer(change) => change,
+            Row::Items(change) => {
+                item_rows(&mut out, change, &name);
+                continue;
+            }
+        };
         let [pa, pb] = change.probability.map(|p| places(p.map(rounded), 2));
         let _ = write!(
             out,
@@ -183,7 +206,23 @@ fn table(changes: &[Change], summary: &Summary) -> String {
     for step in &summary.moves {
         let _ = write!(out, "; {} -> {} {}", step.from, step.to, step.count);
     }
-    if let (Some(gained), Some(lost), Some(right_a), Some(right_b), Some(labeled)) = (
+    if let Some(items) = &summary.items {
+        let _ = write!(
+            out,
+            "; items gained {}, lost {}, changed kind {}",
+            items.items_gained, items.items_lost, items.items_changed_kind
+        );
+        if let (Some(total), Some(on)) = (items.key_items, summary.mcnemar_on) {
+            let _ = write!(
+                out,
+                "; {on} matched {} -> {} of {total}; extras {} -> {}",
+                summary.right_a.unwrap_or_default(),
+                summary.right_b.unwrap_or_default(),
+                items.extra_a.unwrap_or_default(),
+                items.extra_b.unwrap_or_default()
+            );
+        }
+    } else if let (Some(gained), Some(lost), Some(right_a), Some(right_b), Some(labeled)) = (
         summary.gained,
         summary.lost,
         summary.right_a,
@@ -207,4 +246,65 @@ fn table(changes: &[Change], summary: &Summary) -> String {
     }
     out.push('\n');
     out
+}
+
+/// One `recognize` or `relate` row: `ID[/NAME]  +G -L ~K`, then its gained, lost, and changed-kind items.
+fn item_rows(out: &mut String, change: &ItemChange, name: &str) {
+    let (lost, gained) = (&change.lost, &change.gained);
+    let _ = writeln!(
+        out,
+        "{}{name}  +{} -{} ~{}",
+        change.id,
+        gained.len(),
+        lost.len(),
+        change.changed_kind.len()
+    );
+    for (sign, item) in gained
+        .iter()
+        .map(|item| ('+', item))
+        .chain(lost.iter().map(|item| ('-', item)))
+    {
+        let (label, member, digits) = match item.member("relation") {
+            Some(_) => ("p", "probability", 2),
+            None => ("strength", "strength", 4),
+        };
+        let score = places(number(item.member(member)).map(rounded), digits);
+        let _ = writeln!(out, "  {sign} {} {label} {score}", item_text(item));
+    }
+    for KindChange { from, to } in &change.changed_kind {
+        let place = |item: &Json| [text(item, "start"), text(item, "end")];
+        let to = match place(from) == place(to) {
+            true => text(to, "kind"),
+            false => item_text(to),
+        };
+        let _ = writeln!(out, "  ~ {} -> {to}", item_text(from));
+    }
+}
+
+/// A name as `TEXT [START,END) KIND`, or an edge as `RELATION SOURCE (KIND) -> TARGET (KIND)`.
+fn item_text(item: &Json) -> String {
+    let end = |side| {
+        let side = item.member(side).unwrap_or(&Json::Null);
+        format!("{} ({})", text(side, "name"), text(side, "kind"))
+    };
+    let [words, start, end_at, kind] =
+        ["text", "start", "end", "kind"].map(|name| text(item, name));
+    match item.member("relation") {
+        Some(_) => format!(
+            "{} {} -> {}",
+            text(item, "relation"),
+            end("source"),
+            end("target")
+        ),
+        None => format!("{words} [{start},{end_at}) {kind}"),
+    }
+}
+
+/// A member as a table writes it: a string as is, a number as its JSON text.
+fn text(item: &Json, name: &str) -> String {
+    match item.member(name) {
+        Some(Json::String(held)) => held.clone(),
+        Some(Json::Number(number)) => number.to_string(),
+        _ => "-".to_owned(),
+    }
 }

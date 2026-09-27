@@ -11,7 +11,7 @@ The question is “Does the changed code break the house rule?” True means the
 ```bash
 set -euo pipefail
 
-thinkthen filter @convention.json --jsonl --replay recording/ < hunks.jsonl \
+thinkthen filter @convention.json --jsonl --batch 1 --replay recording/ < hunks.jsonl \
   | jq -r '.file' \
   | mustmatch "billing/invoice.rs
 checkout/cart.ts"
@@ -55,7 +55,7 @@ A kept hunk comes back byte for byte as it went in, so the report is the change 
 ```bash
 set -euo pipefail
 
-thinkthen filter @convention.json --jsonl --replay recording/ --input hunks.jsonl \
+thinkthen filter @convention.json --jsonl --batch 1 --replay recording/ --input hunks.jsonl \
   | head -1 \
   | mustmatch '{"file":"billing/invoice.rs","hunk":"@@ -41,6 +41,9 @@ impl Invoice {\n+    pub fn total(&self) -> f64 {\n+        self.lines.iter().map(|line| line.price * line.quantity as f64).sum()\n+    }"}'
 ```

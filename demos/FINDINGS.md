@@ -23,7 +23,7 @@ ADR 0010 took `segment`, `report`, and the configuration file out of version one
 | A top-level `threshold` in an `annotate` file reaches `decide` questions only. A file of twenty `choose` questions at one cut repeats that cut twenty times | 08 | The `annotate` file | The top-level key applies to every question that names none, whatever its verb | strong |
 | A record run's `--dry-run` reads the first record and stops. A pointer missing on record two is invisible, and `input` names the pointer asked for and not the record that answered | 09, 14 | The clarifications | The plan names the record it came from | medium |
 | One code for two repairs is still a cost. Exit 2 covers a mistyped flag and a bad record alike, and a `case` branch has to read the message to tell them apart | 03, 07, 12 | Exit codes | No change. The stopped-run line leads with the record, because that word is what a reader greps for | medium |
-| A `choose --raw` run prints an empty line for an unresolved record. A pipeline that strips blank lines drops the record and shifts every later row | 02 | The clarifications | The `--raw` help says the blank line is a record | medium |
+| A `choose --raw` run prints an empty line for a not sure record. A pipeline that strips blank lines drops the record and shifts every later row | 02 | The clarifications | The `--raw` help says the blank line is a record | medium |
 | `decide --jsonl` without `--details` prints `true`, `false`, and `null` with nothing tying a line to a record. Zipping with `paste` is a trap, because a stopped run prints a short file and the zip shifts | 04 | Records | The `--jsonl` help says a record-mode script that needs the record uses `--details` | medium |
 | A careful `choose` script reads the exit code and then ignores it, because exit 0 and exit 3 both carry a usable `--details` object. The `case` exists only to let a real failure through | 02 | Commands, `choose` | The `choose` help shows the shape. Anybody who wants the distribution will hit it | medium |
 | No request budget exists anywhere. A per-file loop is many runs and `jobs` bounds only the inside of one run. A ranked run over a million-line file makes a million requests with no lever | 06 | Records | No new flag. The record-flag help says a per-file loop is outside every budget, and shows `find -print0 \| xargs -0 -n 1 -P 4` next to the `jobs` setting | medium |
@@ -31,10 +31,10 @@ ADR 0010 took `segment`, `report`, and the configuration file out of version one
 | Parallelism left the command line. A user with a rate limit edits a JSON file to change one number for one run, and nothing on the command line points at the file | 03 | Records | No new flag. The record-flag help names the `jobs` setting | medium |
 | `rank` buffers the whole stream, because an order needs every record. `filter` streams. The two read identically on the command line | 06 | Output, `rank` | One line in the `rank` help | medium |
 | `annotate --dry-run` checks the question file and not the records, so it passes a file that fails on the first record because of a name collision | 07 | The `annotate` file | One line in the help saying what `--dry-run` does and does not check | weak |
-| An unresolved answer is `null` everywhere. JSONL preserves the difference between `null` and an empty string | 07 | The `annotate` file | Keep every output record as JSONL | weak |
+| A not sure answer is `null` everywhere. JSONL preserves the difference between `null` and an empty string | 07 | The `annotate` file | Keep every output record as JSONL | weak |
 | `--details` carries `input`, the whole record including what was never sent. A user with megabyte records pays for it on every row to read one probability | 04 | Output, `--details` | No change. The help names the cost | weak |
 | A threshold is measured for one model and nothing on the command line says so | 10, 13 | The threshold | The `--threshold` help says the mark belongs to a model | weak |
-| Under the default cut of 0.5 nothing is ever unresolved, so a two-way `if` routes a borderline message with no sign that it was close | 01 | The threshold | The `decide` help says a three-way gate needs a band, next to the warning about `set -e` | weak |
+| Under the default cut of 0.5 nothing is ever not sure, so a two-way `if` routes a borderline message with no sign that it was close | 01 | The threshold | The `decide` help says a three-way gate needs a band, next to the warning about `set -e` | weak |
 | Every page reads its evidence by redirect, because `--input FILE` arrives with the records slice. Whether an option beats a redirect for a single document is still open | 01 | Records | No change now. The records slice answers it | weak |
 
 ## Settled by the specification pages
@@ -53,7 +53,7 @@ Earlier pages raised these, and the ADR answered them. They are listed once and 
 - `--replay DIR` is in the specification, with a miss as a local failure at exit 5.
 - The result has one shape with a bare value in front of it, and `--status`, `unassessed`, and the symmetric `--min-prob` are gone.
 - `answer` carries a probability for every option on `choose` and every level on `score`, and `question` carries `options` and `levels`. A margin test is one `jq` line, so `--min-gap` is not missed.
-- Under `--lines` or `--jsonl`, `choose --raw` prints an empty line for an unresolved answer, so one line still stands for one record.
+- Under `--lines` or `--jsonl`, `choose --raw` prints an empty line for a not sure answer, so one line still stands for one record.
 - Exit 2 covers a usage error and an input error alike. A name collision in `annotate` exits 2.
 - A record run that stops early prints one line on standard error naming the record, the records finished, and the records replayed.
 - An `annotate` file may carry one top-level `threshold`.

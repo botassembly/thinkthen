@@ -10,7 +10,7 @@ A keyword search brings back six wiki pages and an engineer has time for three. 
 set -euo pipefail
 
 jq -c '{query: "Why is signing in slow or failing?", path, passage: .body}' hits.jsonl \
-  | thinkthen rank 'The passage answers the query.' \
+  | thinkthen rank 'The passage answers the query.' --batch 1 \
       --jsonl --field /query --field /passage --top 3 --replay recording/ \
   | jq -r '.path' \
   | mustmatch "runbooks/database.md
@@ -34,9 +34,9 @@ set -euo pipefail
 jq -c '{query: "Why is signing in slow or failing?", path, passage: .body}' hits.jsonl \
   | env -u THINKTHEN_API_KEY thinkthen rank 'The passage answers the query.' \
       --jsonl --field /query --field /passage --dry-run \
-  | jq -c '.input, {state: (.request.state | keys_unsorted)}' \
+  | jq -c '.input, {state: .request.state, q1: (.request.questions.q1.instructions | .[0:21])}' \
   | mustmatch '{"framing":"jsonl","field":["/query","/passage"]}
-{"state":["query","passage"]}'
+{"state":"Each question quotes the text it asks about.","q1":"The text is {\"query\":"}'
 ```
 
 `path` is in every record and in no request, because no pointer names it. The question stays the same for all six, so one run is one measurement.
@@ -49,7 +49,7 @@ jq -c '{query: "Why is signing in slow or failing?", path, passage: .body}' hits
 set -euo pipefail
 
 jq -c '{query: "Why is signing in slow or failing?", path, passage: .body}' hits.jsonl \
-  | thinkthen rank 'The passage answers the query.' \
+  | thinkthen rank 'The passage answers the query.' --batch 1 \
       --jsonl --field /query --field /passage --details --replay recording/ \
   | jq -c '{path: .input.path, p: .answer.probability, value, threshold}' \
   | mustmatch '{"path":"runbooks/database.md","p":0.91,"value":null,"threshold":null}

@@ -9,6 +9,9 @@ here=$(pwd)
 repo=$(cd ../.. && pwd)
 . "$repo/sdlc/scripts/scratch.sh"
 port=${1:?usage: check.sh PORT}
+profile=${THINKTHEN_TEST_PROFILE:-routine}
+case $profile in routine|full|stress) ;; *) echo "unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+[ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 
 not_run() {
 	echo "not run: libraries/python: $1"
@@ -104,9 +107,22 @@ echo "== the extension, with the test-only probe feature"
 VIRTUAL_ENV=$venv maturin develop --quiet --locked --offline --features probe
 
 echo "== the Python tests, each engine call in a child on its own backend: the door,"
-echo "   the Arrow safety suite, the exit freeze, throttle equality, and the address proof"
+echo "   Arrow safety, bounded exit/release, throttle, and the address proof"
 precondition "$python" True "pandas 3"
-"$python" -m pytest -q -p no:cacheprovider --tb=short tests/
+if [ "$profile" = stress ]; then
+	"$python" -m pytest -q -p no:cacheprovider --tb=short -m stress \
+		tests/test_release.py tests/test_column_timing.py tests/test_pandas.py
+else
+	"$python" -m pytest -q -p no:cacheprovider --tb=short -m 'not stress' tests/
+fi
+
+if [ "$profile" = stress ]; then
+	echo "== the pandas 2 stress lane"
+	pinned requirements-pandas2.txt requirements-pandas2.txt
+	precondition "$venv/bin/python" False "pandas 2"
+	"$venv/bin/python" -m pytest -q -p no:cacheprovider --tb=short -m stress tests/test_pandas.py
+	exit 0
+fi
 
 echo "== the shared cases and the examples, on the rung's backend"
 scratch_dir scratch
@@ -121,5 +137,5 @@ sh build-wheel.sh
 echo "== the pandas 2 lane: the same extension, the pandas tests, and the secrecy test"
 pinned requirements-pandas2.txt requirements-pandas2.txt
 precondition "$venv/bin/python" False "pandas 2"
-"$venv/bin/python" -m pytest -q -p no:cacheprovider --tb=short tests/test_pandas.py tests/test_secrecy.py
+"$venv/bin/python" -m pytest -q -p no:cacheprovider --tb=short -m 'not stress' tests/test_pandas.py tests/test_secrecy.py
 echo "pandas 2 lane passed on pandas $("$venv/bin/python" -c 'import pandas; print(pandas.__version__)')"

@@ -6,7 +6,7 @@
 
 use std::fs;
 
-use crate::core::{Cutting, Description, QuestionFile, Resolved, Typed, Verb, resolve};
+use crate::core::{Cutting, Description, Json, QuestionFile, Resolved, Typed, Verb, resolve};
 
 use crate::args::{
     ChooseArguments, Common, DecideArguments, FilterArguments, Meanings, RankArguments,
@@ -19,13 +19,19 @@ fn path_of(question: &str) -> Option<&str> {
     question.strip_prefix('@')
 }
 
-/// Read and check the question file the first argument names, if it names one.
-fn read(question: &str) -> Result<Option<QuestionFile>, Failure> {
+/// A question file, if the first argument names one, and a `decide` file's raw `batch`.
+/// Clippy's type-complexity rule asks for the name.
+type Top = (Option<QuestionFile>, Option<Json>);
+
+/// Read and check the question file the first argument names, if it names
+/// one, with a `decide` file's raw `batch`.
+fn read_top(question: &str) -> Result<Top, Failure> {
     let Some(path) = path_of(question) else {
-        return Ok(None);
+        return Ok((None, None));
     };
     let text = fs::read_to_string(path).map_err(Failure::OpenQuestionFile)?;
-    Ok(Some(QuestionFile::parse(&text)?))
+    let (file, batch) = QuestionFile::parse_top(&text)?;
+    Ok((Some(file), batch))
 }
 
 /// The question text the command line carries, or `None` when a file holds it.
@@ -50,8 +56,8 @@ fn yes_no(
     threshold: Option<&String>,
     cutting: Cutting,
     common: &Common,
-) -> Result<Resolved, Failure> {
-    let file = read(question)?;
+) -> Result<(Resolved, Option<Json>), Failure> {
+    let (file, batch) = read_top(question)?;
     let typed = Typed {
         threshold: threshold.cloned(),
         yes: meanings.yes.clone(),
@@ -76,10 +82,11 @@ fn yes_no(
         }
         other => Failure::Question(other),
     })
+    .map(|resolved| (resolved, batch))
 }
 
 /// Settle everything `decide` was asked.
-pub(crate) fn decide(arguments: &DecideArguments) -> Result<Resolved, Failure> {
+pub(crate) fn decide(arguments: &DecideArguments) -> Result<(Resolved, Option<Json>), Failure> {
     yes_no(
         "decide",
         &arguments.question,
@@ -91,7 +98,7 @@ pub(crate) fn decide(arguments: &DecideArguments) -> Result<Resolved, Failure> {
 }
 
 /// Settle everything `filter` was asked, which takes a single cut alone.
-pub(crate) fn filter(arguments: &FilterArguments) -> Result<Resolved, Failure> {
+pub(crate) fn filter(arguments: &FilterArguments) -> Result<(Resolved, Option<Json>), Failure> {
     yes_no(
         "filter",
         &arguments.question,
@@ -103,7 +110,7 @@ pub(crate) fn filter(arguments: &FilterArguments) -> Result<Resolved, Failure> {
 }
 
 /// Settle everything `rank` was asked, which reads no rule at all.
-pub(crate) fn rank(arguments: &RankArguments) -> Result<Resolved, Failure> {
+pub(crate) fn rank(arguments: &RankArguments) -> Result<(Resolved, Option<Json>), Failure> {
     yes_no(
         "rank",
         &arguments.question,
@@ -116,7 +123,7 @@ pub(crate) fn rank(arguments: &RankArguments) -> Result<Resolved, Failure> {
 
 /// Settle everything `choose` was asked.
 pub(crate) fn choose(arguments: &ChooseArguments) -> Result<Resolved, Failure> {
-    let file = read(&arguments.question)?;
+    let file = read_top(&arguments.question)?.0;
     let listed = !arguments.options.is_empty();
     let described = !arguments.described.is_empty();
     if listed && described {
@@ -162,7 +169,7 @@ pub(crate) fn choose(arguments: &ChooseArguments) -> Result<Resolved, Failure> {
 
 /// Settle everything `tag` was asked.
 pub(crate) fn tag(arguments: &TagArguments) -> Result<Resolved, Failure> {
-    let file = read(&arguments.question)?;
+    let file = read_top(&arguments.question)?.0;
     let listed = !arguments.labels.is_empty();
     let described = !arguments.described.is_empty();
     if listed && described {
@@ -205,7 +212,7 @@ pub(crate) fn tag(arguments: &TagArguments) -> Result<Resolved, Failure> {
 
 /// Settle everything `score` was asked.
 pub(crate) fn score(arguments: &ScoreArguments) -> Result<Resolved, Failure> {
-    let file = read(&arguments.question)?;
+    let file = read_top(&arguments.question)?.0;
     let typed = Typed {
         // `score` takes no rule, and the core writes that refusal, so the
         // value reaches it rather than being refused twice.

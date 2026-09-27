@@ -87,17 +87,22 @@ impl Engine {
         Ok(GroupAnswer { answered, model })
     }
 
-    /// Answer every group of one text in set order and assemble the record.
+    /// Prepare every group of one text before sending any, as the command
+    /// does, then answer them in set order and assemble the record.
     pub(crate) fn annotate(
         &self,
         set: &QuestionSet,
         plan: impl Fn(&[usize]) -> Result<Plan, Error>,
         cancel: &Cancel,
     ) -> Result<Annotation, Error> {
+        let prepared = set
+            .groups()
+            .into_iter()
+            .map(|places| self.prepare_group(&plan(&places)?, places))
+            .collect::<Result<Vec<_>, _>>()?;
         let mut answered = Vec::new();
         let mut model = None;
-        for places in set.groups() {
-            let group = self.prepare_group(&plan(&places)?, places)?;
+        for group in prepared {
             let group = self.answer_group(group, cancel)?;
             if let Some(reported) = &group.model {
                 check_model(&mut model, reported, self.backend().model())?;

@@ -38,3 +38,7 @@ Ticket 0094 ported the door onto the public API as the crate `thinkthen-c` at `l
 - The shared library carries the soname `libthinkthen.so.0`, and the crate's library name `thinkthen_c` keeps its files from colliding with the engine's (R2-26).
 
 Ian can overturn any line. The verb spellings and the retryable rule are the ones a host would notice.
+
+## Amendment, 2026-09-27, by ticket 0148
+
+The door adds `thinkthen_engine_new_with(const char *settings_json)` before a 0.1 release. It accepts the ten engine settings as a closed JSON object and refuses repeated keys and wrong types. Null or `{}` uses the environment alone. The key remains in `THINKTHEN_API_KEY`; `api_key` is an unknown JSON key. A failed constructor reports through the calling thread's existing null-engine error slot. The header now declares 20 symbols. Ian can overturn this constructor shape.

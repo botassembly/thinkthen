@@ -472,23 +472,29 @@ fn under_limit<T>(connection: Conn, at: Option<Instant>, body: impl FnOnce() -> 
     (outcome, timer.join().unwrap_or(false))
 }
 
-/// A missing table that is the caller's own temporary table gets the ADR
-/// 0038 boundary sentence instead of DuckDB's.
+/// A caller-owned temporary table gets the ADR 0038 boundary sentence.
+/// Another missing name keeps DuckDB's error and gains the connection rule.
 fn boundary(files: &Files, message: String) -> String {
     let Some(name) = message
-        .split("Table with name ")
-        .nth(1)
-        .and_then(|rest| rest.split(" does not exist").next())
+        .strip_prefix("thinkthen usage: the relate query failed: Catalog Error: Table with name ")
+        .and_then(|rest| rest.split_once(" does not exist"))
+        .map(|(name, _)| name)
         .map(|name| name.trim().trim_matches('"').to_owned())
     else {
         return message;
     };
-    if name.is_empty() || !files.has_table("temp", &name) {
+    if name.is_empty() {
         return message;
     }
+    if files.has_table("temp", &name) {
+        return format!(
+            "{}the relate query names the temporary table {name}, and the stable C API cannot run a query on the calling connection, so relate cannot see temporary tables; materialize it (CREATE TABLE ... AS SELECT) or run the query directly",
+            prefix(thinkthen::ErrorKind::Local)
+        );
+    }
+    let (line, details) = message.split_at(message.find('\n').unwrap_or(message.len()));
     format!(
-        "{}the relate query names the temporary table {name}, and the stable C API cannot run a query on the calling connection, so relate cannot see temporary tables; materialize it (CREATE TABLE ... AS SELECT) or run the query directly",
-        prefix(thinkthen::ErrorKind::Local)
+        "{line}; relate reads only committed tables on its separate connection; if you created this table in an open transaction, commit it before retrying{details}"
     )
 }
 

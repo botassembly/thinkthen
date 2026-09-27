@@ -10,9 +10,6 @@ const CANONICAL = 'https://api.typesafe.ai/v1/systemone';
 
 /** Cases this surface cannot express, each with its reason. */
 const NOT_RUN = {
-  '18-annotate-two-groups': 'its set reads record parts through `on`, and a library record is one whole text',
-  '18-find-second': 'the public find takes no `none` candidate',
-  '19-find-none': 'the public find takes no `none` candidate',
   '25-defect-fault': 'no input makes the engine panic; the Rust unit test covers the binding guard',
   '30-local-question-file': 'this surface reads a question file only as an annotate set',
 };
@@ -29,7 +26,7 @@ function same(what, actual, expected) {
 function units(text, held) {
   const widths = [...text].map((ch) => ch.length);
   const at = (point) => widths.slice(0, point).reduce((sum, width) => sum + width, 0);
-  return { ...held, start: at(held.start), end: at(held.end) };
+  return { ...held, start: at(held.start), end: at(held.end), length: at(held.end) - at(held.start) };
 }
 
 /** Each fault case, as this surface raises its kind. */
@@ -73,6 +70,8 @@ async function check(tt, one, origin, folder) {
       same('question_sha256', details.meta.question_sha256, expected.question_sha256);
       same('model', details.meta.model, expected.model);
       same('requests', details.meta.requests, expected.requests.map((held) => renamed.get(held)));
+      for (const name of ['usage', 'requests_sent', 'cached']) same(name, details.meta[name], expected[name]);
+      same('url', details.meta.url, served);
       if (success.counters) {
         const cached = new tt.Engine({ baseUrl: base, cache: join(folder, one.id) });
         for (let call = 0; call < success.counters.calls; call += 1) await cached.decide(one.question, texts[0]);
@@ -90,10 +89,18 @@ async function check(tt, one, origin, folder) {
       return same('ranking', ranked.map(({ index, probability }) => ({ index, probability })), success.operation.ranking);
     }
     case 'annotate': {
-      const rows = await engine.annotate(one.question_set, texts);
-      const expected = texts.map(() => ({}));
-      for (const answer of success.answers) expected[answer.exchange][answer.name] = answer.bare;
+      const records = one.record ? [JSON.stringify(one.record)] : texts;
+      const rows = await engine.annotate(one.question_set, records);
+      const expected = records.map(() => ({}));
+      for (const answer of success.answers) expected[one.record ? 0 : answer.exchange][answer.name] = answer.bare;
       return same('rows', rows, expected);
+    }
+    case 'find': {
+      const { find, none, units: listed } = one.question;
+      const found = await engine.find(find, listed, { none });
+      const { selected, probabilities } = success.operation;
+      const picked = probabilities.find((row) => row.index === selected);
+      return same('found', found, selected === null ? null : { index: selected, unit: listed[selected], probability: picked.probability });
     }
     case 'recognize': {
       const { kinds, relations } = one.question.recognize;
@@ -102,7 +109,7 @@ async function check(tt, one, origin, folder) {
       const bare = success.answers[0].bare;
       const shaped = { entities: bare.entities.map((held) => units(one.text, held)) };
       if (bare.relations) shaped.relations = bare.relations.map((held) => ({ ...held, source: units(one.text, held.source), target: units(one.text, held.target) }));
-      for (const held of found.entities) same('slice', one.text.slice(held.start, held.end), held.name);
+      for (const held of found.entities) same('slice', one.text.slice(held.start, held.end), held.text);
       return same('recognized', found, shaped);
     }
     case 'relate': {

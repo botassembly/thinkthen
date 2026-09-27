@@ -6,6 +6,9 @@
 set -eu
 cd -- "$(dirname -- "$0")"
 unset THINKTHEN_API_KEY
+profile=${THINKTHEN_TEST_PROFILE:-routine}
+case $profile in routine|full|stress) ;; *) echo "check ruby: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+[ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 repo=$(cd ../.. && pwd)
 . "$repo/sdlc/scripts/scratch.sh"
 # macOS has no `timeout` (ticket 0128).
@@ -128,7 +131,13 @@ fi
 cargo fmt --check
 cargo clippy --locked --offline --all-targets --quiet -- -D warnings
 cargo test --locked --offline --quiet --lib
+if [ "$profile" = stress ]; then
+  sh "$LIMIT" 120 "$RUBY" -I lib tests/test_flood.rb || fail "the trap flood failed"
+  echo "check ruby: pass, stress"
+  exit 0
+fi
 for test in tests/test_*.rb; do
+  [ "$test" = tests/test_flood.rb ] && continue
   sh "$LIMIT" 120 "$RUBY" -I lib "$test" || fail "$test failed"
 done
 sh "$LIMIT" 120 "$RUBY" -I lib tests/conformance.rb || fail "the conformance runner failed"
