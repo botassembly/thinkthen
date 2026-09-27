@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine/cache_prune.rs crates/thinkthen/src/engine/er
 
 # 0163: The cache folder survives a bad entry, and the pages say what it holds
 
-Status: ready for review. Written 2026-09-26 by Claude, the queue owner's planner. Revised 2026-09-26 after the first and second reviews. A fresh read-only review must accept it before it builds. Owner: Claude.
+Status: ready for review. Written 2026-09-26 by Claude, the queue owner's planner. Revised 2026-09-26 after the first, second and third reviews. A fresh read-only review must accept it before it builds. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -106,10 +106,13 @@ The settings table's "Answer cache" row says "Each entry holds the judged text" 
 
 ### Drift is a measurement
 
-The builder measures drift over two recording sets with no network.
+The builder measures drift over three recording sets with no network.
 
-- The repository set is every tracked `thinkthen.recording/1` entry outside `site/`, read after ticket 0159 lands. 0159 re-keys these entries onto the pinned model, and the measurement runs over the re-keyed entries. The re-key renames entries and leaves every reply unchanged, but it can bring two entries under one digest that differed before. `site/` is excluded because its Beatles recordings copy the second set and its re-key belongs to the marketing lead.
-- The second set is the Beatles Bench recordings. They live in the separate Beatles Bench Git repository, which `site/scripts/pull-bench.mjs` reads from a local clone. The builder reads that repository at the commit `site/examples/beatles/BENCH` names, with `git archive` or `git show` at that commit. It does not check out, fetch or change the clone.
+- The repository set is every tracked `thinkthen.recording/1` entry outside `site/`, read after ticket 0159 lands. `site/` is excluded because its Beatles recordings copy the Beatles Bench set and its re-key belongs to the marketing lead.
+- Ticket 0159 re-keys `crates/thinkthen/tests`, `demos/` and `transforms/rows` onto `jev-1.13.0`. It keeps the 879 entries in `probes/01` to `probes/09` and the entries in `specification/fixtures/systemone` on `jev-latest` keys (0159 lines 79 and 80, and decision 3). So the repository set mixes keys that asked for `jev-latest` with keys that ask for `jev-1.13.0`.
+- The measurement compares entries only within one key. A repeat counts only when both entries hold the same digest. A question recorded both in a probe and in a re-keyed demo has two different digests, so it does not count as a repeat.
+- The record reports the probes in `probes/01` to `probes/09` as their own set. It reports the rest of the repository set beside them, and the Beatles Bench recordings as a third set.
+- The Beatles Bench set is the Beatles Bench recordings. They live in the separate Beatles Bench Git repository, which `site/scripts/pull-bench.mjs` reads from a local clone. The builder reads that repository at the commit `site/examples/beatles/BENCH` names, with `git archive` or `git show` at that commit. It does not check out, fetch or change the clone.
 
 The measurement compares answer probabilities only. It never compares usage, models, or any other field. These terms hold in the record and on the pages:
 
@@ -156,12 +159,16 @@ Every prune row runs with `--max-size 1` unless it names other options. "Good" m
 | The same with a digest-named directory | The same |
 | The same with an entry naming `thinkthen.recording/2` | The same |
 | The same with a digest-named file of mode `0000`, on Unix | The same, and the file keeps its mode |
-| The same with a digest-named symlink to a file outside the folder | The symlink stays and is named. The target keeps its bytes. Exit 0 |
+| The same with a digest-named symlink to a good entry outside the folder. The link's name is that entry's own digest name | The symlink stays and is named. The target keeps its bytes. Standard output is `removed 1 entries and B bytes; 0 entries and 0 bytes remain`, where B is the in-folder entry's bytes. Exit 0 |
 | `status` with `THINKTHEN_CACHE` naming the folder of any of rows 2 to 7, before prune | `cache_entries 1` and `cache_bad_entries 1`. Exit 0 |
 | `status --json` over a platform cache holding only a digest-named symlink | Exit 0. `cache.entries` is 0 and `cache.bad_entries` is 1. No output carries the target's bytes |
 | `status` over a folder with no bad entry | Output as today, with `cache_bad_entries 0` after `cache_bytes` |
 | `status` with no absolute home | `cache.bad_entries` is `null` |
 | A digest-named file that vanishes between `read_dir` and open | Skipped as not an entry. Neither counted nor named |
+
+Row 1 plants all three entries with `plant_recording` and the literal `jev-latest` in each request. It does not use the `plant` helper or the tests' `DEFAULT_MODEL` constant. Ticket 0159 changes that constant to `jev-1.13.0`, and the `plant` helper (`default_cache.rs:29-35`) builds its request from it. The alias check refuses only a model that some good request asked for, so a request built from the constant would let the second prune remove the current entry. Ticket 0159 line 82 makes the same change for `prune_refuses_the_alias_and_keeps_the_upgrade`.
+
+Row 7's link must pass every check if a scan follows it. So the test plants a good entry with `plant_recording` in a sibling folder, `folder.with_extension("outside")`, with a question that differs from the in-folder entry's. It names the link with the digest name that `plant_recording` returned for that outside entry. It records the outside entry's bytes before prune and checks after prune that they are unchanged. It removes the sibling folder at the end.
 
 ## Proof
 
@@ -171,7 +178,7 @@ No new test file. Four existing tests pin today's whole-folder refusal, and all 
 | --- | --- | --- |
 | `tests/backend/default_cache.rs:197`, `prune_model_selection_and_scan_before_delete_hold`, renamed to `prune_selects_by_model_and_names_a_bad_entry` | Row 1 | (a) Stop at the bad entry as today: exit 5 and the old entry stays. (b) Delete the bad entry: the file is gone. (c) Let the alias check read the bad entry: its reply names `jev-latest`, so the second prune exits 0 and removes the current entry |
 | `tests/backend/default_cache.rs:349`, `prune_refuses_digest_mismatch_blank_model_and_nonregular_entries_before_deletion`, renamed to `prune_leaves_and_names_each_kind_of_bad_entry` | Rows 2 to 6, and row 8 over those five folders. It gains the other-schema and mode `0000` cases and a `status` run before each prune | (a) again. (d) Fail the whole scan when one file cannot be opened: the mode `0000` case exits 5. (e) Count a bad entry as good: `status` prints `cache_entries 2`. (f) Count a bad entry's bytes: the remaining bytes are not 0 |
-| `tests/backend/default_cache.rs:401`, `prune_refuses_a_digest_shaped_symlink_without_following_it`, renamed to `prune_names_a_digest_shaped_symlink_without_following_it` | Row 7, and row 8 over its folder. It gains a `status` run before prune | (g) Follow the symlink: the target is read or removed. (e) again: `status` prints `cache_entries 2` |
+| `tests/backend/default_cache.rs:401`, `prune_refuses_a_digest_shaped_symlink_without_following_it`, renamed to `prune_names_a_digest_shaped_symlink_without_following_it` | Row 7, and row 8 over its folder. It gains a `status` run before prune | (g) Follow the symlink as a regular file. The link then passes every check, so `status` prints `cache_entries 2` and `cache_bad_entries 0`, and prune prints `removed 2 entries and B bytes; 0 entries and 0 bytes remain`, writes no bad-entry line, and removes the link. The correct build prints `cache_entries 1` and `cache_bad_entries 1`, and its prune removes only the in-folder entry, leaves the link in place, and writes exactly one bad-entry line naming it. Under both builds the outside entry keeps its bytes, because `remove_file` at `cache_prune.rs:149` removes the link and not its target. (e) again: `status` prints `cache_entries 2` |
 | `tests/status.rs:174`, `an_unsafe_cache_entry_uses_the_status_failure_without_leaking_local_bytes`, renamed to `an_unsafe_cache_entry_is_counted_without_leaking_local_bytes` | Row 9 | (h) Fail status as today: exit 5 |
 | `tests/status.rs:22` and `:67`, the exact-shape pins | Rows 10 and 11. In the `:22` test, the JSON pin at line 43 and the human pin at line 53 gain the new field in place. The `:67` test gains `assert_eq!(value["cache"]["bad_entries"], serde_json::Value::Null);` beside its single-field asserts at lines 76 to 81. It also runs the human `status` with the same relative home and asserts that standard output holds the line `cache_bad_entries unavailable` | (i) Omit the field or print it in another place: the whole-output pin differs. (j) Print 0 in place of `null` with no cache: the `:67` JSON assert differs. (k) Print 0 in place of `unavailable` with no cache: the `:67` human assert differs |
 
