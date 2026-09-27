@@ -6,7 +6,7 @@ Filed 2026-09-26. This record copies the measurements that ADR 0056 and ticket 0
 
 - **The key** is the 200-sentence key of 372 names. "267" is its first 100 sentences and 168 names. "277 new" is its second 100 sentences and 204 names. Key sentences average 7.4 words.
 - **T and H** are local experiment 282's halves of the key. Within each key category, in id order, odd positions tune (T) and even positions are held out (H).
-- **The baseline** is the rule-based design on main: word rules, a trim, a kind question and a confirm question.
+- **The baseline** is local experiment 270's rule-based design: word rules, a trim, a kind question and a confirm question. It is the design issue's planned method, not the build on main.
 - **UNER** is the Universal NER v1 English EWT test split: 2,077 sentences, 21,533 words and 1,088 names (449 PER, 322 ORG, 317 LOC), under CC BY-SA 4.0.
 - **WNUT-17** is the WNUT-17 test set: 1,287 sentences, 23,394 words and 1,079 names over six kinds, under CC BY 4.0.
 - **p1** is the step-1 wording ticket 0147 quotes. **q3** is local experiment 279's shorter wording. **none2** is the step-2 wording ticket 0147 quotes.
@@ -157,7 +157,7 @@ Every arm labels the key's names plus the design's recorded extra names, so step
 | 10 | Descriptions | 94.0 (93.6-94.2) | 30.0 |
 | 10 | Two way-outs | 88.5 (88.0-88.7) | 29.0 |
 
-The keep rule asks every held-out run to beat the control's best held-out run, with and without two sentences on drinks and planets, no loss on the 100 UNER sentences, and at most one more extra a run. Descriptions passed it at five kinds only. At five kinds they fixed 13 names and broke 2. At three kinds they gave no held-out gain and 3.3 more extras. At ten kinds the gain fell inside the noise once the two sentences were left out. The key's descriptions are its own label lines, so part of the lift restates the key. On the full UNER split descriptions scored 82.1 against 82.3. The broader wording added 3.7 to 9.7 extras a run. Two way-outs broke 19 to 34 real names.
+The keep rule asks every held-out run to beat the control's best held-out run, with and without two sentences on drinks and planets, no loss on the 100 UNER sentences, and at most one more extra a run. Descriptions passed it at five kinds only. At five kinds they fixed 13 names and broke 2. At three kinds they gave no held-out gain and 3.3 more extras. At ten kinds the gain fell inside the noise once the two sentences were left out. The key's descriptions are its own label lines, so part of the lift restates the key. On the full UNER split descriptions scored 82.1 against 82.3. The broader wording fell on the held-out half at three and five kinds and added 3.7 and 9.7 extras a run there. At ten kinds it gained, 93.4 against 92.5, with no added extras, and the gain sat in the drinks sentence. Two way-outs fell 2.0 held-out points at three kinds and 4.0 to 4.1 at five and ten, and broke 19 to 34 real names. Their gain on the 100 UNER sentences came from dropping extras.
 
 On 40 new metonymy and venue sentences at five kinds, none2 scored 60.2 and descriptions 70.5. Capitals and teams came back as places in every arm.
 
