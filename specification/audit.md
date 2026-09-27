@@ -175,12 +175,13 @@ audit follows ReAnchor's rule: keep the current bar unless another scores strict
 | `score` | `thinkthen: audit: kept TARGET unchanged; a score question takes no threshold` |
 | `rank` or `find` | `thinkthen: audit: kept TARGET unchanged; audit suggests no bar for rank or find` |
 
-A single question file that gains a bar also records the model the bar was tuned on. audit writes the file's `model` member with the one model that every results line names in `meta.model`, by the same byte rule as `threshold`. Every line counts, including a line whose answer failed and a line the key does not label. When the file already names a model, such as a typed `jev-latest`, audit replaces it with the version the lines name, because the bar was tuned on that version. It writes no model when it writes no bar. A question set holds no model, so a set gets no model member. When the lines name no single model, audit writes the bar, keeps the model, and prints one more line after the bar lines:
+A single question file that gains a bar also records the model the bar was tuned on. audit writes the file's `model` member with the one model that every results line names in `meta.model`, by the same byte rule as `threshold`. Every line counts, including a line whose answer failed and a line the key does not label. When the file already names a model, such as a typed `jev-latest`, audit replaces it with the version the lines name, because the bar was tuned on that version. It writes no model when it writes no bar. A question set holds no model, so a set gets no model member. When the lines name no single model a question file accepts, audit writes the bar, keeps the model, and prints one more line after the bar lines:
 
 | Case | Standard error line |
 | --- | --- |
 | Lines name more than one model | `thinkthen: audit: kept the model for TARGET; the results name more than one model` |
 | A line names no model | `thinkthen: audit: kept the model for TARGET; a result names no model` |
+| Lines name a blank model | `thinkthen: audit: kept the model for TARGET; a result names a blank model` |
 
 To undo a write, put the old value back by hand or through version control. A second `--write` from the old results refuses, because the digest moved with the threshold. A crash during the write could leave a short file; the file is small, and a temporary file would be one the user did not name.
 

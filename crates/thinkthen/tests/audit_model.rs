@@ -47,8 +47,10 @@ fn audit_writes_the_model_it_tuned_on() {
     let named = "\"model\":\"jev-1.13.0\"";
     let two = lines.replacen(named, "\"model\":\"jev-1.14.0\"", 1);
     let none = lines.replacen(&format!(",{named}"), "", 1);
+    let blank = lines.replace(named, "\"model\":\" \"");
     let more = format!("{WROTE}{KEPT}the results name more than one model\n");
     let unnamed = format!("{WROTE}{KEPT}a result names no model\n");
+    let blanked = format!("{WROTE}{KEPT}a result names a blank model\n");
     let kept = "thinkthen: audit: kept the band for the question; audit suggests a single cut\n";
     let replaced = alias
         .replacen("0.9", "0.59", 1)
@@ -61,6 +63,7 @@ fn audit_writes_the_model_it_tuned_on() {
         ("two versions", &base, &two, &tuned, &*more),
         ("an alias typed", &alias, &lines, &replaced, WROTE),
         ("a line with no model", &base, &none, &tuned, &*unnamed),
+        ("a blank model", &base, &blank, &tuned, &*blanked),
         ("failed and unlabeled", &base, &every, &pinned, WROTE),
         ("no bar", &band, &banded, &band, kept),
     ];

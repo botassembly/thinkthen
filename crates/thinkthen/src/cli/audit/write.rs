@@ -15,7 +15,7 @@ use crate::core::measure::optimize::Bar;
 use crate::core::measure::rows::number;
 use crate::core::measure::splice::splice;
 use crate::core::{
-    Json, QuestionFile, QuestionSet, RecognizeSpec, RelateSpec, Typed,
+    Json, ModelName, QuestionFile, QuestionSet, RecognizeSpec, RelateSpec, Typed,
     question_sha256_with_profile, recognize_sha256, resolve,
 };
 
@@ -129,7 +129,9 @@ fn model(results: &[Line]) -> Result<&str, &'static str> {
         .ok_or("a result names no model")?;
     let mut named = named.into_iter();
     match (named.next(), named.next()) {
-        (Some(model), None) => Ok(model),
+        (Some(model), None) => ModelName::new(model)
+            .map(|_| model)
+            .map_err(|_| "a result names a blank model"),
         _ => Err("the results name more than one model"),
     }
 }

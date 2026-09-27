@@ -10,7 +10,7 @@ Branch `ticket/0159-pin-the-default-model`, built in lane 2. The ticket is `sdlc
 - `sdlc/scripts/rekey-model FROM TO FOLDER...` is new, with its fixture of two recorder-written entries and its `--self-test` in `lint`. `sdlc/scripts/README.md` lists it.
 - The script re-keyed 251 entries, and every reply named `jev-1.13.0`. The table below counts them. `conformance/cases.json` takes 56 new request digests in 93 places and the demo entry's new path. `databases/postgresql/fixtures/runner-excuse.json`, `specification/fixtures/check/requests.jsonl`, `check.md`'s copy of those bodies, `demos/27`'s page and the conformance mutation take the new bodies and digests.
 - Each `probes/0N/job.sh` names `--model jev-latest` on every command. The `spec` rung replayed all nine probes, every committed row matched, and no recording byte changed.
-- `audit --write` writes a single file's `model` member beside a written bar, with the one model every results line names. It keeps the model and prints the ticket's two sentences when the lines name more than one model or a line names none. A question set gets no model.
+- `audit --write` writes a single file's `model` member beside a written bar, with the one model every results line names. It keeps the model and prints the ticket's two sentences when the lines name more than one model or a line names none. Code review found that audit wrote a blank name, such as `" "`, that the question file's reader then refuses. audit now checks the one name the way the reader does, keeps the model, and prints `a result names a blank model`, which `specification/audit.md` lists. A question set gets no model.
 - The two-version stop prints the ticket's two sentences, and the library prints its own.
 - Pages: `settings.md`, `backends.md`, `question-file.md`, `relate.md`, `check.md`, `recognize.md`, `channels.md`, the seven "Backend options" rows, `recording.md`, `audit.md`, `result.md`, demo 41 and `CHANGELOG.md`.
 - `sdlc/issues/2026-09-26-site-recordings-rekey-for-the-default-model-pin.md` hands the site's 247 entries to the marketing lead with the exact command.
@@ -41,7 +41,7 @@ A check over all 251 renames found that each new file equals its old bytes with 
 ## Tests
 
 - The literal pins the ticket lists moved to `jev-1.13.0`, and the unit tests under `src` read `DEFAULT_MODEL`.
-- `tests/audit_model.rs`, `audit_writes_the_model_it_tuned_on`, runs six rows through the compiled binary over replayed `transforms/rows` results. Each row pins the file's bytes and standard error: one version, two versions, a typed alias, a line with no model, a failed and an unlabeled line, and no bar. It went red before the change, because the file gained no model.
+- `tests/audit_model.rs`, `audit_writes_the_model_it_tuned_on`, runs seven rows through the compiled binary over replayed `transforms/rows` results. Each row pins the file's bytes and standard error: one version, two versions, a typed alias, a line with no model, a blank model, a failed and an unlabeled line, and no bar. It went red before the change, because the file gained no model.
 - `tests/backend/annotate/cache_versions.rs`, `a_cache_that_mixes_versions_stops_the_record`, keeps one `Listener::serving` up across two runs over one `--cache` folder. It pins exit 4, the whole sentence, no row, and three requests. It went red before the change on the old sentence.
 - `rekey-model --self-test` in `lint` re-keys the fixture and plants six refusals.
 - `audit_write.rs` and `audit_sets.rs` now pin the model member their writes add. The two existing two-version tests pin the new sentences.
@@ -49,7 +49,7 @@ A check over all 251 renames found that each new file equals its old bytes with 
 The four questions, for the two new tests:
 
 - **What behavior does it protect?** A tuned file records the version its bar was tuned on, and a two-version stop names the cache as the likely cause.
-- **What credible regression fails it?** Plants (c) to (g) and (l) below.
+- **What credible regression fails it?** Plants (c) to (g), (l) and (n) below.
 - **Why does no existing test catch it?** Nothing read audit's model, and the two-version tests used live chunks only.
 - **Does it need a test-only hook?** No. The question file, the result lines, the loopback and the cache folder are the real boundaries.
 
@@ -73,6 +73,7 @@ Each plant was applied in the working tree, run, and restored from a copy. `git 
 | (k) Overwrite a target | Red. `git mv` fails with a trace in place of the refusal |
 | (l) Skip lines without `meta.model` | Red at the "a line with no model" row |
 | (m) Skip the Git check | Red. The untracked entry fails in `git mv`, and the edited entry moves |
+| (n) Write the one name without the reader's blank check, after code review | Red at the "a blank model" row. audit wrote `" "` and printed no kept line |
 
 ## Budgets
 
@@ -82,16 +83,16 @@ Nonblank lines, net against `origin/main`.
 | --- | --- | --- |
 | `core/adapters/systemone.rs` | 1 changed line | 1 |
 | `cli/failure.rs` and `public/error.rs` | at most 6 | 0 |
-| `cli/audit` | at most 45 | 34 (35 in `write.rs`, −1 in `audit.rs`) |
+| `cli/audit` | at most 45 | 36 (37 in `write.rs`, −1 in `audit.rs`) |
 | `core/plan_document.rs` | at most 4 | −3 |
-| `tests/audit_model.rs` | at most 120 | 76 |
+| `tests/audit_model.rs` | at most 120 | 79 |
 | The new annotate test | at most 70 | 65, and one `mod` line |
 | `sdlc/scripts/rekey-model` | at most 160 | 160 |
 | `lint` and `scripts/README.md` | at most 6 | 3 |
-| Pages under `specification/`, `demos/`, `CHANGELOG.md` | at most 30 | 10 |
-| `sdlc/ratchet.json` | at most 265 above main | 173, from 70,015 to 70,188 |
+| Pages under `specification/`, `demos/`, `CHANGELOG.md` | at most 30 | 12 |
+| `sdlc/ratchet.json` | at most 265 above main | 178, from 70,015 to 70,193 |
 
-No dependency was added. The ratchet's growth is the two new tests (141), `write.rs` (35), the shared replay helper in `tests/support/measure.rs` (9), the `audit_sets.rs` expectation (4), the `find_edge.rs` model line (2), and the new `mod` line (1). Moving the replay helper out of `audit_write.rs` removed 13 lines there, the plan document and tag request tests lost 5, and `audit.rs` lost 1. The commit `d5d6bb6e` says the `audit_sets.rs` expectation shrank. It grew by 4 lines, as this table says.
+No dependency was added. The ratchet's growth is the two new tests (144), `write.rs` (37), the shared replay helper in `tests/support/measure.rs` (9), the `audit_sets.rs` expectation (4), the `find_edge.rs` model line (2), and the new `mod` line (1). Moving the replay helper out of `audit_write.rs` removed 13 lines there, the plan document and tag request tests lost 5, and `audit.rs` lost 1. The commit `d5d6bb6e` says the `audit_sets.rs` expectation shrank. It grew by 4 lines, as this table says.
 
 ## Ladder
 
