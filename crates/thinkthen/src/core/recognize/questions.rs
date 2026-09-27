@@ -205,7 +205,8 @@ pub(crate) fn edge_options(
 }
 
 /// The edge question over `options`. Each label is its own text with every
-/// white-space run shown as one space. The description keeps the real snippet.
+/// run of white space or control characters shown as one space, so no label
+/// fails the label check. The description keeps the real snippet.
 pub(crate) fn edge_question(
     text: &str,
     pieces: &[Piece],
@@ -216,7 +217,8 @@ pub(crate) fn edge_question(
         let mut label = text
             .get(bytes(pieces, first, last))
             .unwrap_or_default()
-            .split_whitespace()
+            .split(|c: char| c.is_whitespace() || c.is_control())
+            .filter(|word| !word.is_empty())
             .collect::<Vec<_>>()
             .join(" ");
         while labels.iter().any(|(held, _)| *held == label) {

@@ -240,10 +240,11 @@ fn edge_options_come_from_touching_marks_alone() {
     for (text, name, expected) in rows {
         assert_eq!(option_texts(text, name), expected, "{text}");
     }
-    let labelled: [Offered; 3] = [
+    let labelled: [Offered; 4] = [
         ("x ... y", (2, 2), &[".", "..", ".. "]),
         ("Maria\nChen.", (0, 1), &["Maria Chen", "Maria Chen."]),
         ("Maria\tChen!", (0, 1), &["Maria Chen", "Maria Chen!"]),
+        ("Mar\u{1b}ia Chen.", (0, 1), &["Mar ia Chen", "Mar ia Chen."]),
     ];
     for (text, name, expected) in labelled {
         let pieces = pieces(text);
