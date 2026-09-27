@@ -1,4 +1,4 @@
-//! Relation plans split under the built-in ceiling at the hosted address (ticket 0123).
+//! Relation plans split under the request size at every address (ADR 0051).
 //!
 //! Every run is a dry run: it reads no key and sends nothing. With no `--url`
 //! the plan resolves to the built-in address. `http://127.0.0.1:9/v1` stands
@@ -65,7 +65,7 @@ fn bytes(plan: &Value) -> Vec<u64> {
 }
 
 #[test]
-fn the_beatles_set_splits_at_the_hosted_address_and_nowhere_else() {
+fn the_beatles_set_splits_at_every_address() {
     let input = beatles();
     let hosted = plan(&BEATLES, &input);
     assert_eq!(hosted["url"], "https://api.typesafe.ai/v1/systemone");
@@ -74,20 +74,34 @@ fn the_beatles_set_splits_at_the_hosted_address_and_nowhere_else() {
     assert_eq!(bytes(&hosted), [81_943, 95_779, 76_411]);
 
     let elsewhere = plan(&[BEATLES[0], BEATLES[1], "--url", ELSEWHERE], &input);
-    assert_eq!(counts(&elsewhere), [1, 1]);
-    assert_eq!(bytes(&elsewhere), [81_943, 161_252]);
+    assert_eq!(counts(&elsewhere), [1, 2]);
+    assert_eq!(bytes(&elsewhere), [81_943, 95_779, 76_411]);
+
+    let raised = plan(
+        &[
+            BEATLES[0],
+            BEATLES[1],
+            "--url",
+            ELSEWHERE,
+            "--max-request-bytes",
+            "200000",
+        ],
+        &input,
+    );
+    assert_eq!(counts(&raised), [1, 1]);
+    assert_eq!(bytes(&raised), [81_943, 161_252]);
     assert_eq!(
-        elsewhere["requests"][1]["digest"],
+        raised["requests"][1]["digest"],
         "5fb2630212ea2666c1eff52b3baec2158c9e983c0e6974117fc59dbfe084d279"
     );
 }
 
 #[test]
-fn a_trailing_slash_keeps_the_ceiling_and_another_version_drops_it() {
+fn a_trailing_slash_and_another_version_keep_the_default() {
     let input = beatles();
     let cases = [
         ("https://api.typesafe.ai/v1/", [1, 2]),
-        ("https://api.typesafe.ai/v2", [1, 1]),
+        ("https://api.typesafe.ai/v2", [1, 2]),
     ];
     for (base, expected) in cases {
         let run = plan(&[BEATLES[0], BEATLES[1], "--url", base], &input);
@@ -96,7 +110,7 @@ fn a_trailing_slash_keeps_the_ceiling_and_another_version_drops_it() {
 }
 
 #[test]
-fn a_profile_byte_limit_replaces_the_ceiling_and_other_limits_join_it() {
+fn a_profile_byte_limit_lowers_the_size_and_other_limits_join_it() {
     let input = beatles();
     let wide = profile("wide", r#""max_request_bytes":200000"#);
     let replaced = plan(
@@ -108,8 +122,21 @@ fn a_profile_byte_limit_replaces_the_ceiling_and_other_limits_join_it() {
         ],
         &input,
     );
-    assert_eq!(counts(&replaced), [1, 1]);
-    assert_eq!(bytes(&replaced), [81_943, 161_252]);
+    assert_eq!(counts(&replaced), [1, 2]);
+    assert_eq!(bytes(&replaced), [81_943, 95_779, 76_411]);
+    let raised = plan(
+        &[
+            BEATLES[0],
+            BEATLES[1],
+            "--profile",
+            wide.to_str().expect("path"),
+            "--max-request-bytes",
+            "200000",
+        ],
+        &input,
+    );
+    assert_eq!(counts(&raised), [1, 1]);
+    assert_eq!(bytes(&raised), [81_943, 161_252]);
 
     let questions = profile("sixty-four", r#""max_questions":64"#);
     let joined = plan(
@@ -140,7 +167,7 @@ fn one_question_over_the_ceiling_goes_alone_and_is_not_refused() {
     let hosted = plan(&["appears_on=song:album"], &input);
     assert_eq!(bytes(&hosted), [200_493, 200_493]);
     let elsewhere = plan(&["appears_on=song:album", "--url", ELSEWHERE], &input);
-    assert_eq!(bytes(&elsewhere), [300_710]);
+    assert_eq!(bytes(&elsewhere), [200_493, 200_493]);
 }
 
 fn lines(count: usize) -> Vec<u8> {
@@ -175,7 +202,14 @@ fn a_full_line_set_plans_inside_the_child_deadline() {
     let input = lines(255);
     let elsewhere = plan(
         &[
-            "linked", "--lines", "--url", ELSEWHERE, "--model", "local-1",
+            "linked",
+            "--lines",
+            "--url",
+            ELSEWHERE,
+            "--model",
+            "local-1",
+            "--max-request-bytes",
+            "6000000",
         ],
         &input,
     );

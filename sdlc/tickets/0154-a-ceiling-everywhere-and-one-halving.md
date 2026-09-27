@@ -267,6 +267,8 @@ Nonblank lines, measured with `grep -c .`. Net lines against main after tickets 
 - No dependency.
 - Run focused affected command and planner proof for this slice. The related batch checkpoint covers the wider surfaces rung under Ian's later verification ruling.
 
+The 2026-09-27 source checkpoint amends the estimates to the measured 236 source and 499 test lines, 735 total over main's 76,686. Each is within ten percent of its accepted cap. The added source carries the omitted CLI argument adapters and the private per-record replay count needed when halves have different cache outcomes. The tests reuse the existing listener, spawner, record parser and fixtures. The ceiling test moved into its own module to keep its original file under the policy size limit. `sdlc/records/0154-build.md` holds the measured rationale and focused results; no dependency was added.
+
 ## Stop rules
 
 1. Stop before crossing any budget by more than a tenth, or before adding a dependency.

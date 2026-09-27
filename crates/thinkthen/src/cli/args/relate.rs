@@ -20,6 +20,15 @@ pub(crate) struct RelateArguments {
     #[arg(long, value_name = "POINTER")]
     pub(crate) kind_field: Option<String>,
 
+    /// Split relation plans before a request exceeds N bytes. [default: 96000]
+    #[arg(
+        long,
+        value_name = "N",
+        hide_short_help = true,
+        allow_negative_numbers = true
+    )]
+    pub(crate) max_request_bytes: Option<String>,
+
     #[command(flatten)]
     pub(crate) common: Common,
 }

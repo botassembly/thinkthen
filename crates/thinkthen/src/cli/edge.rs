@@ -8,7 +8,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use crate::core::{KEY_VAR, Reading};
+use crate::core::{Backend, KEY_VAR, Reading};
 
 /// The command's shared, latched observation of a closed output pipe.
 #[derive(Clone, Default)]
@@ -67,6 +67,7 @@ const BOUND: u64 = crate::core::MAX_RECORD_BYTES as u64 + 2;
 pub(crate) struct Environment {
     base_url: Option<String>,
     batch: Option<String>,
+    max_request_bytes: Option<String>,
     named_cache: bool,
     cache: Option<PathBuf>,
     cache_is_platform_default: bool,
@@ -89,6 +90,7 @@ impl Environment {
         Ok(Self {
             base_url: read("THINKTHEN_BASE_URL"),
             batch: read("THINKTHEN_BATCH"),
+            max_request_bytes: env::var("THINKTHEN_MAX_REQUEST_BYTES").ok(),
             cache: named_cache
                 .as_ref()
                 .map(PathBuf::from)
@@ -156,6 +158,36 @@ impl Environment {
     /// `THINKTHEN_BATCH`, which only `decide`, `filter` and `rank` read.
     pub(crate) fn batch(&self) -> Option<&str> {
         self.batch.as_deref()
+    }
+
+    /// Resolve the byte limit only for a command where the setting acts.
+    pub(crate) fn request_size(&self, flag: Option<&str>) -> Result<usize, Failure> {
+        let chosen = flag.or(self.max_request_bytes.as_deref());
+        let Some(value) = chosen else {
+            return Ok(Backend::DEFAULT_REQUEST_SIZE);
+        };
+        let number = value
+            .parse::<usize>()
+            .ok()
+            .filter(|&number| number > 0 && value.bytes().all(|byte| byte.is_ascii_digit()));
+        number.ok_or(Failure::Usage(if flag.is_some() {
+            "--max-request-bytes takes a whole number of at least 1"
+        } else {
+            "THINKTHEN_MAX_REQUEST_BYTES takes a whole number of at least 1"
+        }))
+    }
+
+    /// Warn before planning or sending a request above the built-in default.
+    pub(crate) fn warn_request_size(&self, backend: &Backend) -> Result<(), Failure> {
+        let size = backend.ceiling();
+        if backend.is_built_in() && size > Backend::DEFAULT_REQUEST_SIZE {
+            writeln!(
+                io::stderr().lock(),
+                "thinkthen: warning: max_request_bytes {size} is above the default of 96000; the built-in backend refuses a request over 65536 input tokens"
+            )
+            .map_err(Failure::Output)?;
+        }
+        Ok(())
     }
 
     /// The base the request is posted under, or `None` when the variable is empty.
