@@ -4,6 +4,7 @@
 use std::error::Error;
 use std::io::{Read, Write};
 use std::net::TcpStream;
+use std::sync::Arc;
 use std::time::Duration;
 
 use conformance_backend::{Canned, Listener};
@@ -80,7 +81,8 @@ fn a_reset_of_a_request_too_long_to_peek_answers_the_drift_status() -> Tested {
 
 #[test]
 fn a_connection_past_the_script_answers_the_drift_status_after_a_drop_too() -> Tested {
-    let listener = Listener::serving(vec![Canned::ok("first")])?;
+    let listener = Arc::new(Listener::serving(vec![Canned::ok("first")])?);
+    let last_owner = Arc::clone(&listener);
     let origin = listener.origin().to_owned();
     assert_eq!(
         post(&listener, 4)?,
@@ -103,5 +105,35 @@ fn a_connection_past_the_script_answers_the_drift_status_after_a_drop_too() -> T
     stream.read_to_string(&mut answer)?;
     assert!(answer.starts_with("HTTP/1.1 500 X\r\n"), "{answer}");
     assert!(answer.ends_with(EXHAUSTED), "{answer}");
+    drop(last_owner);
+    assert!(
+        TcpStream::connect(origin.trim_start_matches("http://")).is_err(),
+        "the final owner left the port listening"
+    );
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn retired_listeners_release_descriptors_and_threads_before_drop_returns() -> Tested {
+    fn count(path: &str) -> Result<usize, Box<dyn Error>> {
+        Ok(std::fs::read_dir(path)?.count())
+    }
+    let before = (count("/proc/self/fd")?, count("/proc/self/task")?);
+    for _ in 0..80 {
+        let scripted = Listener::serving(vec![Canned::ok("first")])?;
+        assert_eq!(post(&scripted, 0)?.1, "first");
+        assert_eq!(post(&scripted, 0)?.1, EXHAUSTED);
+        drop(scripted);
+        let empty = Listener::serving(Vec::new())?;
+        drop(empty);
+        let answering = Listener::answering(|_| Canned::ok("ok"))?;
+        let idle = connect(&answering)?;
+        drop(answering);
+        drop(idle);
+    }
+    let after = (count("/proc/self/fd")?, count("/proc/self/task")?);
+    assert!(after.0 <= before.0 + 4, "descriptors: {before:?} -> {after:?}");
+    assert!(after.1 <= before.1 + 2, "threads: {before:?} -> {after:?}");
     Ok(())
 }
