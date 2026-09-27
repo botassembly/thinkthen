@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core/adapters/systemone/response.rs crates/thinkthen
 
 # 0160: The answer contract holds at both ends
 
-Status: ready for review. Written 2026-09-26 by Claude, the queue owner's planner. Revised the same day after the first and second reviews. A fresh read-only review must accept it before it builds. Owner: Claude.
+Status: ready. The coordinator accepted it on 2026-09-26 after three fresh read-only reviews and a coordinator fix to the ratchet budget. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -185,7 +185,7 @@ Nonblank lines, measured with `grep -c .`.
 - `tests/question_file/structured.rs` and `tests/backend/asked.rs`: at most 0 net.
 - `spec/result.md`: at most 60, new.
 - Pages: at most 30 net, the compatibility section and the shape table included.
-- `sdlc/ratchet.json` moves to the measured total, at most 45 above main. The commit says what grew.
+- `sdlc/ratchet.json` moves to the measured total, at most 135 above main. The ratchet counts test files too, so this is the sum of the per-file budgets above. The commit says what grew. The new shape table must not repeat the string `{"tuned_for":NAME,"running":NAME}`, because `tests/backend/profile.rs:498` counts it once in `result.md`.
 - No dependency. The `surfaces` rung runs, because the adapter that every surface shares changes.
 - Paid calls: one `check` run, only with Ian's authorization.
 
