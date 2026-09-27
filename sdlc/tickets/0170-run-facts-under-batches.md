@@ -6,7 +6,7 @@ opens: sdlc/planning/adr/0048-records-batch-into-full-requests.md sdlc/planning/
 
 # 0170: Run facts under batches
 
-Status: accepted. The coordinator accepted it on 2026-09-27 after a fresh read-only review, with the fixes that review named. Owner: Claude.
+Status: complete. The coordinator accepted source `23418bb3` after fresh independent code review and combined focused validation with 0163 on 2026-09-27. Owner: Codex. See `sdlc/records/0170-code-review.md`.
 
 Review route: the builder follows the work plan: Claude now, or Codex after the handover. A fresh read-only session from the builder's vendor reviews the final diff.
 
@@ -14,7 +14,7 @@ Review route: the builder follows the work plan: Claude now, or Codex after the 
 
 A user runs `thinkthen filter ... --facts < songs.txt`. The tool prints the kept titles on standard output, as today. The last line on standard error is one `thinkthen.run/1` object. It counts every record and every request the run made, dropped records included. A stopped run's line also says where it stopped, why, and whether a later retry can help. A script reads that one line and never parses prose. Under `--details`, a batched row also says which batch it rode in.
 
-This is batching row B5 of `sdlc/issues/2026-09-26-batching-design.md`: "`meta.batch`, `--facts` and the `thinkthen.run/1` line", proof test 6. Ticket 0146 took the shares out of B5 and builds them. ADR 0048 items 9 and 10 give the shapes. ADR 0052 item 9 adds `retries` to the facts. ADR 0051 item 10 adds `split` to `meta.batch`. `sdlc/issues/2026-09-26-run-facts-b5-owe-cause-retryable-and-stop-record.md` asks for a cause, a retry flag and the stop record. It is Batch D item 4 of `sdlc/planning/work-plan-2026-09-27.md`.
+This is batching row B5 of `sdlc/issues/2026-09-26-batching-design.md`: "`meta.batch`, `--facts` and the `thinkthen.run/1` line", proof test 6. Ticket 0146 took the shares out of B5 and builds them. ADR 0048 items 9 and 10 give the shapes. ADR 0052 item 9 adds `retries` to the facts. ADR 0051 item 10 adds `split` to `meta.batch`. `sdlc/issues/closed/2026-09-26-run-facts-b5-owe-cause-retryable-and-stop-record.md` asks for a cause, a retry flag and the stop record. It is Batch D item 4 of `sdlc/planning/work-plan-2026-09-27.md`.
 
 Ian's rulings set the frame. Ian can overturn each.
 
@@ -225,6 +225,8 @@ Nonblank lines, measured with `grep -c .`, net against main after the tickets un
 - Pages: at most 40 net lines under `specification/`. One ADR of at most 50 lines.
 - No dependency. No paid call.
 
+The corrected candidate is +457 product and +597 test Rust lines against the landed 77,650-line baseline, for a 78,704-line ratchet. The [build record](../records/0170-run-facts-build.md) compares every original group estimate with actual growth and explains reuse. This is the coordinator's reviewed amendment route, not a change to the outcome or a waiver of the 500-line file ceiling. Fresh code review must accept the concrete delta before landing.
+
 ## Stop rules
 
 1. Stop before crossing any budget by more than a tenth, or before adding a dependency.
@@ -272,14 +274,14 @@ Contract 2; state and timing 1; reach 2; proof 2; cost of error 1; total 8. Fina
 
 ## Closes
 
-`sdlc/issues/2026-09-26-run-facts-b5-owe-cause-retryable-and-stop-record.md`. The build moves it to `closed/` and records the route chosen. It settles run-facts ask 2 and gap 5 of `sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md`, which stays open for asks 1, 3 and 4. It settles local experiment 284 files 38 and 94. The batching design issue stays open.
+`sdlc/issues/closed/2026-09-26-run-facts-b5-owe-cause-retryable-and-stop-record.md`. The facts line carries the cause and retry signal without changing exit codes. It settles the command portion of run-facts ask 2 and gap 5 of `sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md`, which stays open for the library, SQL, cost and other asks. It settles local experiment 284 files 38 and 94 for the command. The batching design issue stays open.
 
 ## Evidence
 
 - Starts from: Local experiment 284 files 38 and 94, each checked on `origin/main` `40783433`: `cli/failure.rs::say`, `engine/usage.rs::Counters`, `engine/request.rs:100-153`, `engine/error.rs:84-145`, `public/error.rs:97`, `channels.md` line 14, `records.md` line 109 and `result.md` lines 38 and 108. The B5 amendment issue. The run-facts issue's tally of 2,545 reply bodies. ADR 0048 items 9 and 10, ADR 0051 item 10 and ADR 0052 item 9. Tickets 0146, 0154, 0155, 0162 and 0169 on their branches.
 - Keeps: Every run without `--facts`, byte for byte. Every exit code, including exit 4 for a missing key. `--batch 1` rows. The usage file's schema. The libraries and SQL surfaces.
 - Changes: `--facts` on every asking verb prints one `thinkthen.run/1` line last on standard error, from the process counters. A failed run's line carries `stopped` with the stop number, one of ten causes and a retry flag. Batched rows carry `meta.batch`, and a half of a split batch carries `split`. A new ADR amends ADR 0048 item 10. Four pages lose their markers.
-- Proof: Five outside-in tests at the loopback, each with deliberate breaks, including design test 6 and file 94's acceptance that the line equals the usage counters' change. The `install`, `lint`, `test`, `spec` and `surfaces` rungs.
+- Proof: Nine focused compiled-command facts cases and existing batching/signal fixtures pin counts, presence, stop placement and typed metadata. Strict all-feature Clippy, formatting, ticket/page/settings checks and the related tests run on this branch; the coordinator owns the related-batch full gate before landing. [Build record](../records/0170-run-facts-build.md) names exact commands and proof boundaries.
 - Defers: Library and SQL facts, a retryable transport failure, a full cause catalog, cost, and a row share of retries.
 
 ## Build preflight, 2026-09-27
@@ -292,3 +294,11 @@ The [shared preflight](../records/2026-09-27-batching-ticket-preflight.md) compa
 - `schedule::Output::take` can hold or drop printable rows, while `engine.records` owns completion. Count finished input records, including filtered rows and `rank --top` omissions, at the completion boundary; use the accepted `Outcome::Complete` alternative only if the batched callback bypasses the taking point. This addresses the 0162 stopped-record lesson.
 - Walk the full path before coding: `Cli` parsing of `Common` or `FindCommon` -> the verb dispatcher in `cli/mod.rs::run` -> `judge`, `find`, `annotate`, `recognize` or `relate` -> `asking`/`schedule` or that verb's completion path -> `engine/request.rs` attempt callback and `Counters::snapshot` -> `cli/mod.rs::entry` final stderr and signal handling. A dry run takes the planning branch before the engine send; it still needs the accepted zero-record facts line. A live run may exit with a value code, a partial result, a typed error or a signal. Pin the line in all relevant classes without duplicating per-verb counting machinery. This is a path checklist, not a new requirement.
 - Keep four units separate: finished rows, logical batch requests, actual HTTP attempts (including retries), and replayed records. Main `engine/schedule.rs::Completed.replayed` is a Boolean and `Run::drain` charges all `completed.records` or none; a halved batch can have one replayed and one live half. The 0154 builder is changing this private representation on its pending branch. Verify the landed representation before adding facts, and assert the accepted whole-run attempt/retry totals independently from row shares and replay counts. This is an observed representation constraint, not a landed fix or a new facts field.
+
+## What the build taught us
+
+- At landed baseline `83e3cf5c`, the reviewed send-boundary correction and counted `Completed.replayed` have replaced the two pending constraints in the older preflight. The process counters can supply exact attempted sends without changing the usage file.
+- The preflight named call paths but omitted completion adapters and `core/mod.rs` from its mutation inventory. The coordinator claimed those files, and the [shared handoff](../records/2026-09-27-batching-ticket-preflight.md) now asks 0171/0172 to inventory copied adapters and exports.
+- A loopback address permits no key. The no-key proof uses the default address and stops before transport. A successful first batch needs `--jobs 1` to prove the printed prefix before a second batch fails. A held failed response after SIGTERM proves the accepted zero-record signal row while retaining one sent attempt.
+- The measured +1,054 Rust lines exceed the initial +567 estimate across specific adapter, typed metadata and test boundaries. The [build record](../records/0170-run-facts-build.md) gives every group's actual growth and reused helpers for independent review. No accepted behavior was reduced to fit the estimate. Library and SQL facts remain with B12a and later tickets.
+- Fresh review of `9f3c71d4` caught a signal arriving while usage persistence blocked after the first stop-state snapshot. The correction reads cancellation again at the final facts boundary. A private held-lock child proves the signal exit and final `stopped` member together; the build record carries its red/green proof and +93-line measured delta.

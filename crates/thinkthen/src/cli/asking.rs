@@ -8,8 +8,8 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 use crate::core::{
-    Backend, BackendProfile, Evidence, Framing, Outcome, Pointer, Question, QuestionText, Reading,
-    Record, RecordValue, Resolved, Sources, Threshold, Value, json_line,
+    Backend, BackendProfile, BatchMeta, Evidence, Framing, Outcome, Pointer, Question,
+    QuestionText, Reading, Record, RecordValue, Resolved, Sources, Threshold, Value, json_line,
 };
 
 use crate::args::Common;
@@ -19,16 +19,22 @@ use crate::engine::facade::{Engine, Judgment, Settings, Storage};
 use crate::failure::Failure;
 use crate::judge::{Asked, Keeping, View};
 use crate::profile::{self, Mismatch};
-use crate::result_json::{Run, decision};
+use crate::result_json::{Run, decision_with_batch};
 use crate::schedule::{self, Judged, Output};
 use crate::table::{Kind as TableKind, Rows as TableRows};
 
+mod batch_meta;
 mod batched;
 mod folders;
 mod plan;
 
 pub(crate) use folders::Folders;
 use plan::{plan, plan_record, print_plan};
+
+struct RowContext<'a> {
+    arrived: Option<&'a [u8]>,
+    batch: Option<BatchMeta>,
+}
 
 /// Build the one engine a command calls, from what the command resolved.
 ///
@@ -396,7 +402,16 @@ impl Judging<'_> {
             sending.evidence,
             self.environment.cancel(),
         )?;
-        self.row_of(reading, sending.record, sending.question, &judged, arrived)
+        self.row_of(
+            reading,
+            sending.record,
+            sending.question,
+            &judged,
+            RowContext {
+                arrived,
+                batch: None,
+            },
+        )
     }
 
     /// Build the line one answered record prints. Both paths share it.
@@ -406,7 +421,7 @@ impl Judging<'_> {
         record: Record,
         question: Question,
         judged: &Judgment,
-        arrived: Option<&[u8]>,
+        context: RowContext<'_>,
     ) -> Result<Judged, Failure> {
         let (outcome, replayed) = (judged.outcome, judged.answered.replayed);
         let probability = judged.answer.yes();
@@ -425,18 +440,19 @@ impl Judging<'_> {
                     warning: self.mismatch.warning(),
                 };
                 let input = self.streams.then_some(record);
-                Some(decision(
+                Some(decision_with_batch(
                     run,
                     judged,
                     question,
                     self.threshold,
                     shown,
                     input,
+                    context.batch,
                 )?)
             } else if self.keeping == Keeping::Passing && outcome != Outcome::Yes {
                 None
             } else if self.keeping.streams_only() {
-                Some(match arrived {
+                Some(match context.arrived {
                     Some(bytes) => reading.as_it_arrived(bytes)?.to_owned(),
                     None => json_line(&record)?,
                 })

@@ -10,6 +10,7 @@ pub(crate) mod cache;
 mod check;
 mod diff;
 pub(crate) mod edge;
+mod facts;
 pub(crate) mod failure;
 mod file_size;
 pub(crate) mod find;
@@ -31,6 +32,7 @@ mod conformance_tests;
 
 use std::io::{self, Write};
 use std::process::ExitCode;
+use std::time::Instant;
 
 use crate::cli::args::{Cli, Command, Common};
 use crate::cli::asking::Folders;
@@ -42,10 +44,12 @@ use clap::Parser as _;
 /// Parse the process inputs, run one command, and report its exit code.
 #[must_use]
 pub fn entry() -> ExitCode {
+    let started = Instant::now();
     let cli = match Cli::try_parse_from(normalize::arguments(std::env::args_os())) {
         Ok(cli) => cli,
         Err(error) => return hint::refused(error),
     };
+    let wants_facts = cli.command.as_ref().is_some_and(facts::enabled);
     let stdout = io::stdout();
     let stderr = io::stderr();
     if cli.version {
@@ -76,11 +80,11 @@ pub fn entry() -> ExitCode {
     if cli.command.as_ref().is_some_and(Command::reads_input)
         && let Err(failure) = file_size::claim()
     {
-        return failure::report(&failure, stderr.lock());
+        return report_early(&failure, wants_facts, started, stderr.lock());
     }
     let mut environment = match Environment::read() {
         Ok(environment) => environment,
-        Err(failure) => return failure::report(&failure, stderr.lock()),
+        Err(failure) => return report_early(&failure, wants_facts, started, stderr.lock()),
     };
     if environment.config().shared() {
         let mut writer = stderr.lock();
@@ -92,22 +96,56 @@ pub fn entry() -> ExitCode {
     }
     let activation = match interrupt::activate(&mut environment) {
         Ok(activation) => activation,
-        Err(failure) => return failure::report(&failure, stderr.lock()),
+        Err(failure) => return report_early(&failure, wants_facts, started, stderr.lock()),
     };
     let result = run(&cli, &environment, stdout.lock());
-    let code = match result {
-        Ok(code) => code,
-        Err(failure) => failure::report(&told(failure, &cli, &environment), stderr.lock()),
+    let (code, stopped) = match result {
+        Ok(code) => (code, None),
+        Err(failure) => {
+            let failure = told(failure, &cli, &environment);
+            let code = failure::facts::report(&failure, stderr.lock());
+            let stopped = wants_facts.then(|| failure::facts::Stopped::of(&failure, code));
+            (ExitCode::from(code), stopped)
+        }
     };
     if environment.usage().finish() {
         let mut writer = stderr.lock();
         let _unwritten = writeln!(writer, "thinkthen: usage counters could not be updated; check the usage folder permissions and free space")
             .and_then(|()| writer.flush());
     }
+    if wants_facts {
+        let snapshot = environment.usage().run_snapshot();
+        let elapsed = started.elapsed();
+        let writer = stderr.lock();
+        let stopped = if activation.cancelled() {
+            Some(failure::facts::Stopped::of(&Failure::Cancelled, 130))
+        } else {
+            stopped
+        };
+        facts::write(writer, snapshot, elapsed, stopped);
+    }
     match activation.finish(code) {
         Ok(code) => code,
         Err(failure) => failure::report(&failure, stderr.lock()),
     }
+}
+
+fn report_early(
+    failure: &Failure,
+    wants_facts: bool,
+    started: Instant,
+    mut writer: impl Write,
+) -> ExitCode {
+    let code = failure::facts::report(failure, &mut writer);
+    if wants_facts {
+        facts::write(
+            &mut writer,
+            crate::engine::usage::Counters::default().run_snapshot(),
+            started.elapsed(),
+            Some(failure::facts::Stopped::of(failure, code)),
+        );
+    }
+    ExitCode::from(code)
 }
 
 fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitCode, Failure> {

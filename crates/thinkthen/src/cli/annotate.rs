@@ -111,7 +111,7 @@ pub(crate) fn run(
                     .map_err(|error| crate::schedule::Placed::at(error, place + 1))
             }),
             environment.cancel(),
-            &mut Output::Streaming(&mut writer),
+            &mut Output::streaming(&mut writer, environment.usage()),
         );
     }
     let mut chunks = edge::numbered(edge::Chunks::new(source, reading.streams()), &reading);
@@ -148,7 +148,7 @@ pub(crate) fn run(
                 .map_err(|error| crate::schedule::Placed::at(error, at))
         }),
         environment.cancel(),
-        &mut Output::Streaming(&mut writer),
+        &mut Output::streaming(&mut writer, environment.usage()),
     )
 }
 
