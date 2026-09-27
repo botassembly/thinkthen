@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/public/settings.rs crates/thinkthen/src/public/optio
 
 # 0149: Give SQL the engine settings and charge every send
 
-Status: draft for fresh independent design review. Owner: Codex. Runtime files remain read-only until this design is accepted and their exact claims are published.
+Status: design accepted 2026-09-27 after fresh independent review of corrected `291d7532`. Owner: Codex. Runtime work needs exact claims and its prerequisites.
 
 ## Outcome and authority
 

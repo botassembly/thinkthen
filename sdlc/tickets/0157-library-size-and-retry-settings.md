@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/public/settings.rs crates/thinkthen/src/public/resul
 
 # 0157: Expose request size and retry counts through the libraries
 
-Status: draft for fresh independent design review. Owner: Codex. Implementation waits for 0149, 0154 and 0155 to land. Runtime files remain read-only until this design is accepted and their exact claims are published.
+Status: design accepted 2026-09-27 after fresh independent review at `5f3b943e`. Owner: Codex. Implementation waits for corrected 0149, 0154 and 0155 to land and needs exact runtime claims.
 
 ## Outcome and authority
 
