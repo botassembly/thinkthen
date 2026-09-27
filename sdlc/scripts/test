@@ -19,6 +19,7 @@ RUSTDOCFLAGS='--cfg thinkthen_internal_doctest' \
 cargo test --locked --offline --manifest-path conformance/consumer/Cargo.toml \
     --target-dir target/consumer
 sh specification/fixtures/question-file/self-test
+sh specification/fixtures/types/self-test
 sh probes/probability-total-0038/self-test
 sh probes/find-0040/self-test
 # Ticket 0127: each non-Rust child helper against planted sentinels.
