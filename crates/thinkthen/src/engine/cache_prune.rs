@@ -248,7 +248,7 @@ fn read_entry(path: &Path, name: &str) -> Result<Option<Found>, ()> {
     if !metadata.file_type().is_file() {
         return Err(());
     }
-    let file = match fs::File::open(path) {
+    let file = match open_entry(path) {
         Ok(file) => file,
         Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
         Err(_) => return Err(()),
@@ -285,6 +285,26 @@ fn read_entry(path: &Path, name: &str) -> Result<Option<Found>, ()> {
         requested,
         remove: false,
     }))
+}
+
+fn open_entry(path: &Path) -> io::Result<fs::File> {
+    let mut options = fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt as _;
+        // The path can change after symlink_metadata. Reject a new symlink at
+        // open, and never wait for a replacement FIFO before checking identity.
+        options.custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_NONBLOCK);
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt as _;
+        // Open a reparse point itself, so a replaced link cannot redirect the read.
+        const FILE_FLAG_OPEN_REPARSE_POINT: u32 = 0x0020_0000;
+        options.custom_flags(FILE_FLAG_OPEN_REPARSE_POINT);
+    }
+    options.open(path)
 }
 
 #[cfg(unix)]
