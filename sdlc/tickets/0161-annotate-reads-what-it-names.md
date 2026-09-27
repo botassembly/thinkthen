@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 161
-opens: crates/thinkthen/src/cli/annotate.rs crates/thinkthen/src/cli/annotate/plan.rs crates/thinkthen/src/cli/annotate crates/thinkthen/src/core/question_set.rs crates/thinkthen/src/core/records.rs crates/thinkthen/src/core/mod.rs crates/thinkthen/src/core/plan_document.rs crates/thinkthen/src/public/bulk.rs crates/thinkthen/src/cli/conformance_tests.rs crates/thinkthen/src/engine/facade_tests/annotate_order.rs crates/thinkthen/tests/backend/annotate_on.rs crates/thinkthen/tests/backend/main.rs crates/thinkthen/tests/annotate_plan.rs conformance/consumer/consumer/tests/public/parts.rs specification/annotate.md spec/annotate.md spec/fixtures/annotate demos/16-triage-pipeline/README.md sdlc/issues sdlc/ratchet.json sdlc/records sdlc/tickets
+opens: crates/thinkthen/src/cli/annotate.rs crates/thinkthen/src/cli/annotate/plan.rs crates/thinkthen/src/cli/annotate crates/thinkthen/src/core/question_set.rs crates/thinkthen/src/core/records.rs crates/thinkthen/src/core/mod.rs crates/thinkthen/src/core/plan_document.rs crates/thinkthen/src/public/bulk.rs crates/thinkthen/src/cli/conformance_tests.rs crates/thinkthen/src/engine/facade_tests/annotate_order.rs crates/thinkthen/tests/backend/annotate_on.rs crates/thinkthen/tests/backend/main.rs crates/thinkthen/tests/backend/annotate/splitting.rs conformance/consumer/consumer/tests/public/parts.rs specification/annotate.md spec/annotate.md spec/fixtures/annotate demos/16-triage-pipeline/README.md sdlc/issues sdlc/ratchet.json sdlc/records sdlc/tickets
 ---
 
 # 0161: `annotate` reads what its set names, and its plan shows what it sends
@@ -141,7 +141,7 @@ Each is the ticket author's call unless marked. Ian can overturn any of them.
 | Test | What it proves | Planted faults that turn it red |
 | --- | --- | --- |
 | `on_reads_the_selected_value`, new in `tests/backend/annotate_on.rs` | Edge rows 1 to 8. Each row pins standard output, the whole standard error and the exit code, and counts the loopback's requests, so a refused record sends none. Rows 1 and 2 pin both stream lines. Row 8 pins the one document line. Rows 4 and 5 pin the one `--lines` line | (a) Re-parse text again: rows 1 and 2 differ. (b) Refuse every non-root `on`: rows 3 and 7 fail. (c) Refuse `--lines` in each record, after reading: row 5 exits 0 with nothing printed, and row 4 gains the stop line. `annotate_schedule.rs:95-104` prepares every group before anything is sent, so the plant sends no request and prints no row, and the counts cannot catch it. (g) Pass `Reading::evidence` to `group_evidence` and read its text: row 1 sends `1` |
-| `the_plan_shows_each_request`, new in `tests/annotate_plan.rs` | Edge rows 9 and 10 through `--dry-run`, pinning the question count of the printed request and both new members | (d) Print the unsplit group: row 9 holds 250 questions. (e) Count groups, not chunks: row 9's `request_count` is 1 |
+| `the_plan_shows_each_request`, new in `tests/backend/annotate/splitting.rs` | Edge rows 9 and 10 through `--dry-run`, pinning the question count of the printed request and both new members | (d) Print the unsplit group: row 9 holds 250 questions. (e) Count groups, not chunks: row 9's `request_count` is 1 |
 | `each_group_sees_its_part_and_a_bad_part_sends_nothing`, in the Rust consumer's `parts.rs` | Edge row 11 replaces its row that pins the parser's sentence. Edge row 12 is new. Its other rows and the secrecy check stay | (h) Keep the parser's refusal in `bulk.rs` before `group_evidence`: row 11 reads the old sentence. (i) Parse every library record, root-only sets included: row 12 is refused for its duplicate name |
 | `spec/annotate.md`, new, in the `spec` rung | Every example on `annotate.md` | (f) Put `--field /body` back in the JSONL example: the page exits 2 |
 
@@ -162,7 +162,7 @@ Nonblank lines, measured with `grep -c .`.
 - `core/plan_document.rs`: at most 15 net.
 - `public/bulk.rs`: at most 15 net, for the part-group check and the root-only path.
 - `cli/conformance_tests.rs` and `engine/facade_tests/annotate_order.rs`: at most 8 net together.
-- `tests/backend/annotate_on.rs`: at most 150, new, and one `mod` line. `tests/annotate_plan.rs`: at most 80, new. The consumer's `parts.rs`: at most 30 net, for rows 11 and 12.
+- `tests/backend/annotate_on.rs`: at most 150, new, and one `mod` line. `the_plan_shows_each_request` in `tests/backend/annotate/splitting.rs`: at most 80 net. The consumer's `parts.rs`: at most 30 net, for rows 11 and 12.
 - `spec/annotate.md`: at most 90, new. `spec/fixtures/annotate/`: hand-built `local-1` entries only.
 - Pages: at most 20 net.
 - `sdlc/ratchet.json` moves to the measured total in the commit that needs it, and that commit defends the number as `ratchet.mjs` requires. The budgets above bound it.

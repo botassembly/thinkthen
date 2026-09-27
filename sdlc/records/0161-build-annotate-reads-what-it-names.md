@@ -35,7 +35,7 @@ Branch `ticket/0161-annotate-reads-what-it-names`, in lane 1. The ticket is `sdl
 ## Tests
 
 - `on_reads_the_selected_value` in `crates/thinkthen/tests/backend/annotate_on.rs` covers rows 1 to 8. Each row pins standard output, the whole standard error, the exit code, and the `state` of every request the loopback saw.
-- `the_plan_shows_each_request` in `crates/thinkthen/tests/annotate_plan.rs` covers rows 9 and 10. Row 10 pins the whole plan line.
+- `the_plan_shows_each_request` in `crates/thinkthen/tests/backend/annotate/splitting.rs` covers rows 9 and 10. Row 10 pins the whole plan line.
 - `each_group_sees_its_part_and_a_bad_part_sends_nothing` in the Rust consumer's `parts.rs` replaces the parser-sentence row with row 11 and adds row 12. Its other rows and the secrecy check stay.
 - `spec/annotate.md` runs in the `spec` rung.
 
@@ -73,11 +73,11 @@ Nonblank lines, net against `origin/main`.
 | `public/bulk.rs` | at most 15 | 15 |
 | `cli/conformance_tests.rs` and `annotate_order.rs` | at most 8 | 6 (2, 4) |
 | `tests/backend/annotate_on.rs` | at most 150, and one `mod` line | 147, and one `mod` line |
-| `tests/annotate_plan.rs` | at most 80 | 78 |
+| `the_plan_shows_each_request` in `tests/backend/annotate/splitting.rs` | at most 80 | 60 |
 | The consumer's `parts.rs` | at most 30 | 2 |
 | `spec/annotate.md` | at most 90 | 37 |
 | Pages | at most 20 | 0 net, six lines rewritten |
-| `sdlc/ratchet.json` | the measured total | 298 above main |
+| `sdlc/ratchet.json` | the measured total | 280 above main |
 
 No dependency was added.
 
@@ -98,6 +98,7 @@ The first `lint` run failed on `expect` in the new plan test's helpers. The help
 - The ticket's line numbers for `core/records.rs` had drifted by a few lines. The code matched its description.
 - Plants (a), (b) and (c) name the first failing row, as the plant table says.
 - Plant (f) makes `thinkthen` exit 2 inside the page's pipeline, and the page block fails with exit 1 under `pipefail`.
+- Code review moved `the_plan_shows_each_request` from its own `tests/annotate_plan.rs` into `tests/backend/annotate/splitting.rs`. It now uses the backend harness's `spawn`, `profile` and `set` helpers in place of copies. It keeps every pin for rows 9 and 10, and plants (d) and (e) still turn it red. The move removed 18 lines, and the ceiling fell to 70015.
 
 ## Left for landing and later
 
