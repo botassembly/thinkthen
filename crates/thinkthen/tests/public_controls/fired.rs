@@ -1,7 +1,8 @@
 //! Ticket 0166: a token fired while a send is in flight ends the call cancelled.
 
+use conformance_backend::Rendezvous;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Barrier};
 use std::thread;
 use std::time::Duration;
 
@@ -16,7 +17,7 @@ use super::{DECIDED, engine, kind, question, serial};
 fn a_token_fired_during_a_send_ends_the_call_cancelled() {
     let _serial = serial();
     for status in [503, 422] {
-        let release = Arc::new(Barrier::new(2));
+        let release = Arc::new(Rendezvous::new(2));
         let held = Arc::clone(&release);
         let first = AtomicUsize::new(0);
         let listener = Listener::answering(move |_| {
@@ -65,7 +66,7 @@ fn a_token_fired_before_a_batch_ends_ends_it_cancelled() {
 }
 
 /// Fire the token once the listener has the request, then let its reply go.
-fn fire_on_arrival(listener: &Listener, token: &CancelToken, release: &Barrier) {
+fn fire_on_arrival(listener: &Listener, token: &CancelToken, release: &Rendezvous) {
     let start = std::time::Instant::now();
     while listener.count() < 1 {
         assert!(start.elapsed() < super::BOUND, "no request arrived");

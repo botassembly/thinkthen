@@ -1,10 +1,11 @@
 //! The bounds between record input and ordered output.
 
+use conformance_backend::Rendezvous;
 use std::io::{self, BufRead, BufReader, Write};
 use std::process::{Child, ChildStdin, ChildStdout, Command, ExitStatus, Stdio};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver};
-use std::sync::{Arc, Barrier};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -174,7 +175,7 @@ fn an_answer_arrives_before_the_next_record_at_one_job_and_the_default() {
 
 #[test]
 fn ordered_output_bounds_every_dispatched_row() {
-    let release = Arc::new(Barrier::new(2));
+    let release = Arc::new(Rendezvous::new(2));
     let (completed_send, completed) = mpsc::channel();
     let (events_send, events) = mpsc::channel();
     let listener = Listener::answering_with_events(

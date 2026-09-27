@@ -4,9 +4,10 @@
 //! under replay. These tests prove what that runner cannot see: which thread
 //! sends, what is never sent again, and what is never sent at all.
 
+use conformance_backend::Rendezvous;
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{Receiver, channel};
-use std::sync::{Arc, Barrier};
 use std::thread;
 use std::time::Duration;
 use std::{fs, path::PathBuf};
@@ -371,7 +372,7 @@ fn local_refusals_send_nothing_and_store_nothing() {
 
 #[test]
 fn completed_results_keep_input_order_and_reading_them_sends_nothing() {
-    let first = Arc::new(Barrier::new(2));
+    let first = Arc::new(Rendezvous::new(2));
     let (answered, later) = channel();
     let listener = {
         let first = Arc::clone(&first);
