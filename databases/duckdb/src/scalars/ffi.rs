@@ -116,7 +116,7 @@ fn answer(
         })
         .collect();
     if let State::Pending(files) = state {
-        if (0..rows).all(|row| columns.iter().any(|column| !column.present(row))) {
+        if (0..rows).all(|row| columns.iter().take(2).any(|column| !column.present(row))) {
             for row in 0..rows {
                 write(output, &scalar.result, row, &Value::Null);
             }
@@ -138,7 +138,7 @@ fn answer(
             let value = error.value().ok_or_else(|| error.text.clone())?.to_string();
             (0..rows)
                 .map(|row| {
-                    if columns.iter().all(|column| column.present(row)) {
+                    if columns.iter().take(2).all(|column| column.present(row)) {
                         Value::Text(value.clone())
                     } else {
                         Value::Null
@@ -180,6 +180,9 @@ pub(crate) fn register_scalar(
             sys::duckdb_scalar_function_set_function(function, Some(scalar_invoke));
             sys::duckdb_scalar_function_set_init(function, Some(scalar_init));
             sys::duckdb_scalar_function_set_volatile(function);
+            if scalar.verb == Verb::TryDetails {
+                sys::duckdb_scalar_function_set_special_handling(function);
+            }
             sys::duckdb_scalar_function_set_extra_info(
                 function,
                 std::ptr::from_ref(scalar).cast_mut().cast(),

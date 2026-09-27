@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Test-only loopback backend: refuse one evidence, forward other requests.
+"""Shared SQL test proxy, counted in SQLite's Python test ratchet.
 
-The three SQL bindings use this to prove that a backend failure remains a
+SQLite, DuckDB, and PostgreSQL use this loopback-only proxy to prove that a backend failure remains a
 value for one row while later rows in the same statement still reach the
 generic conformance backend. No user key is forwarded.
 """

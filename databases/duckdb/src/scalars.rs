@@ -294,7 +294,7 @@ fn try_details(
 ) -> Result<Vec<Value>, String> {
     let mut answers = Vec::with_capacity(rows);
     for row in 0..rows {
-        if !columns.iter().all(|column| column.present(row)) {
+        if columns.iter().take(2).any(|column| !column.present(row)) {
             answers.push(Value::Null);
             continue;
         }

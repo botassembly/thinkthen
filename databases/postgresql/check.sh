@@ -517,7 +517,7 @@ try_details_keeps_good_after_backend_failure() {
     fresh generic
     pg_stop
     mkfifo "$RUN/proxy.in"
-    python3 ../conditional_backend.py "http://127.0.0.1:$BPORT/generic/v1" 'private evidence' \
+    python3 ../sqlite/tests/conditional_backend.py "http://127.0.0.1:$BPORT/generic/v1" 'private evidence' \
         <"$RUN/proxy.in" >"$RUN/proxy.out" 2>"$RUN/proxy.err" &
     PROXYPID=$!
     exec {PROXYFD}>"$RUN/proxy.in"
@@ -547,6 +547,16 @@ try_details_null_skips_settings() {
     same "$(bcount)" 0
 }
 check try_details_null_skips_settings
+try_details_keeps_unresolved_and_spent_total_distinct() {
+    fresh generic "thinkthen.max_requests_total = 1"
+    out=$(q -c "SELECT (v->>'status') || ':' || coalesce(v->'details'->>'value', 'null') || ':' || (v ? 'error')::text
+        FROM (SELECT thinkthen_try_details('{\"decide\":\"Is it red?\",\"threshold\":\"0:1\"}', 'red door') AS v) s" \
+        -c "SELECT (v->>'status') || ':' || (v->'error'->>'kind') || ':' || (v->'error'->>'message') || ':' || (v->'error'->>'retryable') || ':' || (v ? 'details')::text
+        FROM (SELECT thinkthen_try_details('$Q', 'second row') AS v) s")
+    same "$out" "$(printf 'answered:null:false\nfailed:usage:check the row\047s question and arguments, or raise the process request total when it is spent:false:false')"
+    same "$(bcount)" 1
+}
+check try_details_keeps_unresolved_and_spent_total_distinct
 try_details_keeps_native_timeout() {
     fresh arm/held
     held "SET statement_timeout = '300ms'; SELECT thinkthen_try_details('$Q', 'held')"
