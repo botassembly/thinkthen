@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 153
-opens: crates/thinkthen/src/cli/hint.rs crates/thinkthen/src/cli/mod.rs crates/thinkthen/src/cli/args.rs crates/thinkthen/src/cli/args/command.rs crates/thinkthen/src/cli/args/find.rs crates/thinkthen/tests/hints.rs specification/channels.md specification/records.md sdlc/issues/2026-09-20-new-user-stumble-register.md sdlc/issues/2026-09-25-docs-how-tos-and-spec-claims-owed.md sdlc/ratchet.json sdlc/records sdlc/tickets
+opens: crates/thinkthen/src/core/mod.rs crates/thinkthen/src/cli/hint.rs crates/thinkthen/src/cli/mod.rs crates/thinkthen/src/cli/args.rs crates/thinkthen/src/cli/args/command.rs crates/thinkthen/src/cli/args/find.rs crates/thinkthen/tests/hints.rs specification/channels.md specification/records.md sdlc/issues/2026-09-20-new-user-stumble-register.md sdlc/issues/2026-09-25-docs-how-tos-and-spec-claims-owed.md sdlc/ratchet.json sdlc/records sdlc/tickets
 ---
 
 # 0153: Hints for a guessed verb, a table fed to `--jsonl`, and a second argument
@@ -57,6 +57,8 @@ Each tail reuses the words of the named function's own help line. The word is ma
 `cli/mod.rs::told` already restates a failure in the words the command line calls for. It gains one arm. The failure is `Failure::Stopped` at record 1, and its cause is `Failure::Record(RecordError::Json(JsonError::Syntax { .. }))`. The command line typed `--jsonl` and no `--field`. Then the cause becomes `Failure::Usage(NOT_JSON_LINES)`, and the stop line after it is unchanged. The sentence is:
 
 `the record is not valid JSON; read a table with `--csv` or `--tsv`, and plain text with `--lines``
+
+The accepted scope was corrected on 2026-09-27 after the builder found that `core::json` is private. `core/mod.rs` re-exports `JsonError` within the crate under `#[cfg(feature = "cli")]`, so `cli/mod.rs` can match `JsonError::Syntax` directly. This adds no public library surface and changes no parser or error behavior. Duplicate-name and nonfinite-number errors keep their existing messages. The command never classifies an error by its displayed sentence.
 
 `Command::typed_jsonl(&self) -> bool` in `cli/args/command.rs` reads the two typed options. It sits beside `input()` and `timeout()`, which read one option of every verb the same way. `find` reads its own `FindCommon`.
 
@@ -160,6 +162,7 @@ No unit test is added. No existing test changes its expected output.
 
 Nonblank lines, measured with `grep -c .` on the diff.
 
+- `crates/thinkthen/src/core/mod.rs`: at most 2 net, for the command-only crate-private error re-export.
 - `crates/thinkthen/src/cli/hint.rs`: at most 55, for `GUESSED`, `CHOOSE_OR_TAG`, `WRITES_NONE`, `NOT_JSON_LINES`, `ONE_QUESTION` and `refused`.
 - `crates/thinkthen/src/cli/mod.rs`: at most 20 net.
 - `crates/thinkthen/src/cli/args/command.rs`: at most 40 net, for `stray`, `typed_jsonl` and the `choose` help sentence.
