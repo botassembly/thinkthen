@@ -1,6 +1,6 @@
 # 0207 SQLite recognize document preflight
 
-Design-only read at `origin/main` `f5900775` on 2026-09-27, with pending 0167 source inspected separately at `cc5f9d4a`. The proposed ticket is not an accepted SQL API. No runtime edit, build, test, or paid call belongs to this record.
+Design-only read at `origin/main` `f5900775` on 2026-09-27, with pending 0167 source inspected separately at `cc5f9d4a`. Independent design review accepted the bounded capture at `39b6dcbe`; the queue owner approved the additive SQL API, and main `f7080025` claimed the build files. This preflight made no runtime edit, build, test, or paid call.
 
 ## Confirmed boundary and design inputs
 
