@@ -6,7 +6,7 @@ opens: specification/diff.md spec/diff.md crates/thinkthen/src/core/measure crat
 
 # 0165: diff reads recognize and relate
 
-Status: draft. It waits for ticket 0147 to fix the recognize output shape and its name score. A fresh read-only reviewer accepts this ticket before it is built. Owner: Claude.
+Status: ready for review. Its only dependency is ticket 0147's output shape, which ADR 0056 now fixes with `strength` as each name's score. It builds after ticket 0147 lands. A fresh read-only reviewer accepts this ticket before it is built. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -53,7 +53,7 @@ The key is read as audit reads it, and `kinds.jq` filters work as they do for au
 A changed record prints one row, in A's order:
 
 ```json
-{"id":"r1","name":null,"lost":[{"text":"Revolver Paul McCartney","start":3,"end":26,"length":23,"kind":"person","probability":0.81}],"gained":[{"text":"Revolver","start":3,"end":11,"length":8,"kind":"work","probability":0.9},{"text":"Paul McCartney","start":12,"end":26,"length":14,"kind":"person","probability":0.97}],"changed_kind":[],"key":{"matched":[0,2],"extra":[1,0]}}
+{"id":"r1","name":null,"lost":[{"text":"Revolver Paul McCartney","start":3,"end":26,"length":23,"kind":"person","strength":0.81}],"gained":[{"text":"Revolver","start":3,"end":11,"length":8,"kind":"work","strength":0.9},{"text":"Paul McCartney","start":12,"end":26,"length":14,"kind":"person","strength":0.97}],"changed_kind":[],"key":{"matched":[0,2],"extra":[1,0]}}
 ```
 
 Items print in the command's own shape. `key` is null without a key value for the record.
@@ -109,7 +109,7 @@ The owner's calls. Ian can overturn each.
 Each drives `thinkthen diff` on saved result lines in `tests/diff.rs`. Diff sends nothing, so no recording is needed beyond saved lines.
 
 1. **Two recognize runs.** Two hand-written three-record runs in the ticket 0147 output shape. The test pins every row and the summary line exactly, with and without the 200-sentence key filtered by `kinds.jq`.
-2. **Two cuts on one real run.** Ticket 0147's replayed key run at five kinds, at its run cut and at a higher cut. The test pins the summary line. Every lost item's `probability` falls between the two cuts.
+2. **Two cuts on one real run.** Ticket 0147's replayed key run at five kinds, at its run cut and at a higher cut. The test pins the summary line. Every lost name's `strength` falls between the two cuts.
 3. **Relate.** Two relate runs over one entity set. The test pins gained and lost edges and the key test.
 4. **McNemar.** Discordant counts of 3 and 9 give `mcnemar_p` 0.145996, pinned against the existing exact function.
 5. **Refusals.** A cut below the run cut, a band, and a mixed-verb pair each exit 2 with their exact sentences and print nothing on standard output.
@@ -149,7 +149,7 @@ The ceiling is whatever ticket 0147 leaves. The estimate is +300 lines, from +20
 
 ## Stop rules
 
-1. Stop until ticket 0147 lands and fixes the output shape and the name score.
+1. Stop until ticket 0147 lands with the output shape and `strength`.
 2. Stop if the ceiling would pass 600 lines over the ceiling ticket 0147 leaves.
 3. Stop if any existing diff golden changes.
 4. Stop if matching two sides needs a rule audit's matcher does not give. Report it with options.
@@ -181,7 +181,7 @@ None.
 
 ## Evidence
 
-- Starts from: Ian's ruling of 2026-09-26, "audit and diff should be fully supported". `specification/diff.md`, settled by ticket 0114. `core/measure/answer.rs` line 424 and `core/measure/items.rs` at `origin/main` `19ca8302`. Ticket 0135, which built audit's item grading. Ticket 0147 and ADR 0056 for the output shape and the name score.
+- Starts from: Ian's ruling of 2026-09-26, "audit and diff should be fully supported". `specification/diff.md`, settled by ticket 0114. `core/measure/answer.rs` line 424 and `core/measure/items.rs` at `origin/main` `19ca8302`. Ticket 0135, which built audit's item grading. Ticket 0147 and ADR 0056 for the output shape and `strength`.
 - Keeps: Pairing by answer name and record id. Every `decide`, `choose`, `tag`, `score`, `rank`, `find` and `annotate` behavior, golden and failure row. The two warnings. The exact McNemar function. audit's readers, matching and cut refusal.
 - Changes: diff reads name and edge sets under each side's cut, reports gained, lost and changed-kind items, and runs McNemar on key items. The summary gains five members. One failure row is new.
 - Proof: Six outside-in tests over saved lines and one replayed run, one edge-case table, and eight deliberate breaks with the row each turns red.
