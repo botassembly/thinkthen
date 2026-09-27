@@ -149,11 +149,13 @@ impl<'a> Cancel<'a> {
         else {
             return false;
         };
-        let interrupted = std::panic::catch_unwind(std::panic::AssertUnwindSafe(check.run))
-            .unwrap_or_else(|panic| {
-                self.fired.store(true, Ordering::Release);
-                std::panic::resume_unwind(panic)
-            });
+        let interrupted = workers::with_host_diagnostics(|| {
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(check.run))
+        })
+        .unwrap_or_else(|panic| {
+            self.fired.store(true, Ordering::Release);
+            std::panic::resume_unwind(panic)
+        });
         if interrupted {
             self.fired.store(true, Ordering::Release);
         }

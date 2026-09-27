@@ -383,6 +383,23 @@ mod tests {
         assert_eq!(resumed.downcast_ref::<&str>(), Some(&"host stop marker"));
         assert!(joined.load(Ordering::Acquire));
 
+        let (release, held) = mpsc::channel();
+        let joined = Arc::new(AtomicBool::new(false));
+        let check = || -> bool {
+            let _sent = release.send(());
+            panic_any("host cancel marker");
+        };
+        let cancel = Cancel::default().with_check(&check);
+        let joined_worker = Arc::clone(&joined);
+        let resumed = catch_unwind(AssertUnwindSafe(|| {
+            workers::with_engine_diagnostics(|| {
+                workers::on_worker(&cancel, move || wait_for_host_check(held, joined_worker));
+            });
+        }))
+        .expect_err("direct host check panic resumes");
+        assert_eq!(resumed.downcast_ref::<&str>(), Some(&"host cancel marker"));
+        assert!(joined.load(Ordering::Acquire));
+
         let _unrelated = std::thread::spawn(|| panic_any("unrelated host marker")).join();
         assert_eq!(guarded(|| Ok(7)).ok(), Some(7));
     }
@@ -410,6 +427,7 @@ mod tests {
             assert!(!stream.contains("scoped key evidence secret"));
         }
         assert!(stderr.contains("prior hook: host stop marker"));
+        assert!(stderr.contains("prior hook: host cancel marker"));
         assert!(stderr.contains("prior hook: unrelated host marker"));
     }
 }
