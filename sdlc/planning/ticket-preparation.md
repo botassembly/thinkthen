@@ -32,6 +32,8 @@ Do not rewrite history to make an initial assumption look correct. Distinguish c
 
 The fresh code reviewer checks these lessons against the diff and evidence. The coordinator checks the section before marking the ticket complete and landing it. Routine test and documentation checks stay proportional to the change; adding lessons does not require a repeated full suite.
 
+After adding lessons, read the ticket's Status, Closes, Deferred gaps, Evidence and Routing together, and check that numbered lists still sit under the right heading. A completed item must not remain described as deferred in a second section.
+
 ## Improve the next preparation
 
 After the preparation pass, evaluate its accuracy and usefulness. After each ticket finishes, compare the notes with the builder's lessons. Record what reduced discovery, what was missed, and what caused rework in the ticket or shared preparation record. Use that evidence to give the retained agent a specific next brief. Do not measure success by note length or by counting prepared tickets as completed issues.
