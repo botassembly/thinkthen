@@ -12,9 +12,12 @@
 #include <cstdint>
 #include <cstring>
 #include <memory>
+#include <map>
 #include <mutex>
 #include <optional>
+#include <set>
 #include <string>
+#include <vector>
 
 extern "C" {
 struct ThinkThenReply {
@@ -22,10 +25,14 @@ struct ThinkThenReply {
 	uint8_t *bytes;
 	size_t len;
 };
+struct ThinkThenText {
+	const uint8_t *bytes;
+	size_t len;
+};
 int32_t thinkthen_cpp_init();
 ThinkThenReply thinkthen_cpp_validate_question(const uint8_t *bytes, size_t len);
-ThinkThenReply thinkthen_cpp_decide(const uint8_t *question, size_t question_len, const uint8_t *evidence,
-                                    size_t evidence_len, int64_t deadline_ms, void *caller);
+ThinkThenReply thinkthen_cpp_decide_group(const uint8_t *question, size_t question_len, const ThinkThenText *texts,
+                                          size_t count, int64_t deadline_ms);
 void thinkthen_cpp_free(uint8_t *bytes, size_t len);
 }
 
@@ -134,6 +141,13 @@ ScalarBind &Bound(ExpressionState &state) {
 	return state.expr.Cast<BoundFunctionExpression>().bind_info->Cast<ScalarBind>();
 }
 
+struct DecisionGroup {
+	string question;
+	int64_t deadline;
+	vector<string> texts;
+	std::map<string, idx_t> seen;
+};
+
 void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &bound = Bound(state);
 	auto context = bound.context.lock();
@@ -141,6 +155,10 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		throw InvalidInputException("thinkthen defect: the caller session ended");
 	}
 	context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY)->Observe();
+	vector<DecisionGroup> groups;
+	std::map<std::pair<string, int64_t>, idx_t> known_groups;
+	std::set<string> checked_questions;
+	vector<std::optional<std::pair<idx_t, idx_t>>> slots(args.size());
 	// Validate the entire chunk before its first real engine call.
 	for (idx_t row = 0; row < args.size(); ++row) {
 		auto question = args.data[0].GetValue(row);
@@ -151,38 +169,58 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		if (args.ColumnCount() == 3 && args.data[2].GetValue(row).IsNull()) {
 			continue;
 		}
-		auto text = question.GetValue<string>();
-		RustReply checked(thinkthen_cpp_validate_question(reinterpret_cast<const uint8_t *>(text.data()), text.size()));
-		Checked(checked.value);
-		if (args.ColumnCount() == 3) {
-			auto due = args.data[2].GetValue(row).GetValue<int64_t>();
-			if (due < -1 || due > 4294967295000LL) {
-				throw InvalidInputException("thinkthen usage: the deadline is outside the supported range");
-			}
+		auto question_text = question.GetValue<string>();
+		if (checked_questions.insert(question_text).second) {
+			RustReply checked(thinkthen_cpp_validate_question(reinterpret_cast<const uint8_t *>(question_text.data()),
+			                                              question_text.size()));
+			Checked(checked.value);
 		}
+		auto due = args.ColumnCount() == 3 ? args.data[2].GetValue(row).GetValue<int64_t>() : -1;
+		if (due < -1 || due > 4294967295000LL) {
+			throw InvalidInputException("thinkthen usage: the deadline is outside the supported range");
+		}
+		auto key = std::make_pair(question_text, due);
+		auto [place, new_group] = known_groups.emplace(key, groups.size());
+		if (new_group) {
+			groups.push_back({question_text, due, {}, {}});
+		}
+		auto &group = groups[place->second];
+		auto evidence_text = evidence.GetValue<string>();
+		auto [position, new_text] = group.seen.emplace(evidence_text, group.texts.size());
+		if (new_text) {
+			group.texts.push_back(evidence_text);
+		}
+		slots[row] = std::make_pair(place->second, position->second);
+	}
+	vector<vector<uint8_t>> outcomes;
+	for (auto &group : groups) {
+		vector<ThinkThenText> texts;
+		texts.reserve(group.texts.size());
+		for (auto &text : group.texts) {
+			texts.push_back({reinterpret_cast<const uint8_t *>(text.data()), text.size()});
+		}
+		RustReply answered(thinkthen_cpp_decide_group(reinterpret_cast<const uint8_t *>(group.question.data()),
+		                                             group.question.size(), texts.data(), texts.size(), group.deadline));
+		Checked(answered.value);
+		if (answered.value.len != texts.size() || !answered.value.bytes) {
+			throw InvalidInputException("thinkthen defect: the bridge returned an invalid decision group");
+		}
+		outcomes.emplace_back(answered.value.bytes, answered.value.bytes + answered.value.len);
 	}
 	for (idx_t row = 0; row < args.size(); ++row) {
-		auto question = args.data[0].GetValue(row);
-		auto evidence = args.data[1].GetValue(row);
-		if (question.IsNull() || evidence.IsNull() ||
-		    (args.ColumnCount() == 3 && args.data[2].GetValue(row).IsNull())) {
+		if (!slots[row]) {
 			result.SetValue(row, Value(LogicalType::BOOLEAN));
 			continue;
 		}
-		auto question_text = question.GetValue<string>();
-		auto evidence_text = evidence.GetValue<string>();
-		auto due = args.ColumnCount() == 3 ? args.data[2].GetValue(row).GetValue<int64_t>() : -1;
-		RustReply answered(thinkthen_cpp_decide(reinterpret_cast<const uint8_t *>(question_text.data()),
-		                                       question_text.size(), reinterpret_cast<const uint8_t *>(evidence_text.data()),
-		                                       evidence_text.size(), due, context.get()));
-		Checked(answered.value);
-		if (answered.value.len != 1 || !answered.value.bytes || answered.value.bytes[0] > 2) {
-			throw InvalidInputException("thinkthen defect: the bridge returned an invalid decision");
+		auto [group, text] = *slots[row];
+		if (group >= outcomes.size() || text >= outcomes[group].size()) {
+			throw InvalidInputException("thinkthen defect: a decision row lost its answer");
 		}
-		switch (answered.value.bytes[0]) {
+		switch (outcomes[group][text]) {
 		case 0: result.SetValue(row, Value::BOOLEAN(false)); break;
 		case 1: result.SetValue(row, Value::BOOLEAN(true)); break;
-		default: result.SetValue(row, Value(LogicalType::BOOLEAN)); break;
+		case 2: result.SetValue(row, Value(LogicalType::BOOLEAN)); break;
+		default: throw InvalidInputException("thinkthen defect: the bridge returned an invalid decision");
 		}
 	}
 }

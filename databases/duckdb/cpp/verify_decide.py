@@ -39,7 +39,15 @@ def main() -> None:
         )
         assert answered == [{"rows": [[None]]}, {"rows": [[True]]}, {"rows": [["BOOLEAN"]]}]
         assert backend.count() == 1, "only the evaluated non-NULL call should send"
-    print("C++ decide bind, chunk, NULL, type, and loopback send boundary pass")
+
+        grouped = run(
+            ["SELECT thinkthen_decide('Is it a refund?', t) "
+             "FROM (VALUES ('refund now'), ('refund now'), ('a separate refund')) AS x(t)"],
+            backend.base(), extension=extension,
+        )
+        assert grouped == [{"rows": [[True], [True], [True]]}]
+        assert backend.count() == 3, "the repeated text should share its first request"
+    print("C++ decide bind, chunk, deduplication, NULL, type, and loopback send boundary pass")
 
 
 if __name__ == "__main__":
