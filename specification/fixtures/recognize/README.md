@@ -6,6 +6,9 @@ Two answer keys for `recognize`, and one `jq` filter. Ticket 0164 put them here,
 | --- | --- |
 | `names.jsonl` | 200 sentences with 372 names, one per line, in the source's order. Kinds: `place`, `person`, `organisation`, `work`, `thing`, `event`, `language`, `law`, `award` and `nationality`. `organisation` is spelled as the key spells it |
 | `relations.jsonl` | 30 sentences with 73 names, 27 stated edges and 5 unstated edges. Kinds: `person`, `song`, `album`, `place` and `organisation` |
+| `long.jsonl` | One invented text of 1,018 words with 65 names, in the name key's shape. Kinds: `place`, `person`, `organisation`, `work` and `thing` |
+| `edges-as-relate.jq` | Turns a `recognize` line with relations into a `relate` line, so `audit` grades its edges |
+| `recordings/` | Ticket 0147's live runs, replayed by the blocks under "Replayed runs": `five`, `none`, `person`, `relations`, `long`, and `conformance` for the shared cases 41 to 50 |
 | `kinds.jq` | Keeps each key line, and keeps only the names and edges whose kinds a run asked for |
 
 Each line is an `audit` key line and a `recognize` input record at once. `value.entities` takes the command's own value shape, `name`, `kind`, `start` and `end`, in text order. Offsets count Unicode code points. A run reads the text with `--field /text`, and `audit` finds the record by `id`. `audit` ignores `text`, `category`, `note` and `types`. A line with no names has `"entities":[]`, which `audit` counts as labeled.
@@ -17,6 +20,8 @@ Each line is an `audit` key line and a `recognize` input record at once. `value.
 `names.jsonl` was written by hand for this repository in local experiments 267 and 277. It converts local experiment 277's `cases.jsonl`, SHA-256 `c361329c6d5b16f816f9d3059f42f010a15d74c47130f7fff474c597227abdc8`, on 2026-09-26. Lines n001 to n100 are local experiment 267's key unchanged, SHA-256 `87b49d13e01d6f641aaf9e5aeb1521fc859210f155b27a7e27ce677c3011ded5`. The conversion renames `label` to `kind` and `text` to `name`, and writes "Local experiment 265" for "Experiment 265" in the notes of n001, n017, n019, n024 and n034.
 
 `relations.jsonl` converts local experiment 265's `cases/cases.jsonl`, SHA-256 `3b63bb99b5f6c0cf11198e9b4c34c80c01634d57da2e743c6aca0a67e2fc1a6e`, at that experiment's commit `2aea0a7`. Offsets come from a forward search that starts at the previous name's end. The five unstated edges come from that experiment's README, misses row 11.
+
+`long.jsonl` copies local experiment 279's `long1.json`, SHA-256 `30bd83084ff26ab9a2aa3a68c94cc858a04e94433c87a77e7f12584fa04030e3`. The text was invented for that experiment. Its 65 names follow the convention below.
 
 ```sh
 sdlc/scripts/recognize-keys convert names SOURCE > specification/fixtures/recognize/names.jsonl
@@ -115,6 +120,111 @@ thinkthen audit "$work/stated.jsonl" "$work/key.jsonl" --table | sed -n 2p \
   | mustmatch "  matched 27, extra 0, missed 0: precision 1.000   recall 1.000   f1 1.000"
 jq -c '.value += [.unstated[]? | .probability = 1]' "$work/stated.jsonl" | thinkthen audit - "$work/key.jsonl" --table | sed -n 2p \
   | mustmatch "  matched 27, extra 5, missed 0: precision 0.844   recall 1.000   f1 0.915"
+```
+
+## Replayed runs
+
+Ticket 0147 recorded one live run for each block below on 2026-09-27, at model `jev-1.13.0`. Each block replays its recording with no key or network and pins the grade row. The ticket sets the bars: F1 of at least 0.82 at five kinds, 0.86 with no kinds, 0.70 at `person` and 0.88 on the long text, and at least 19 of the 27 stated edges.
+
+The key at the five core kinds, graded against the key filtered to them:
+
+```bash
+set -euo pipefail
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+replay() { env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL thinkthen recognize "$@" --details --jsonl --field /text --jobs 8; }
+jq -c --argjson kinds '["person","place","organisation","work","thing"]' -f kinds.jq names.jsonl > "$work/key.jsonl"
+replay person place organisation work thing --replay recordings/five < names.jsonl \
+  | thinkthen audit - "$work/key.jsonl" --match strict --table | sed -n 2p \
+  | mustmatch "  matched 292, extra 36, missed 55: precision 0.890   recall 0.841   f1 0.865"
+```
+
+With no kinds, every name has the kind `ENTITY`, and `audit` grades the whole key under that rule with no filter:
+
+```bash
+set -euo pipefail
+env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL thinkthen recognize --replay recordings/none --details --jsonl --field /text --jobs 8 < names.jsonl \
+  | thinkthen audit - names.jsonl --match strict --table | sed -n 2p \
+  | mustmatch "  matched 336, extra 52, missed 36: precision 0.866   recall 0.903   f1 0.884"
+```
+
+At `person` alone, a printed name of any other kind counts as extra:
+
+```bash
+set -euo pipefail
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+jq -c --argjson kinds '["person"]' -f kinds.jq names.jsonl > "$work/key.jsonl"
+env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL thinkthen recognize person --replay recordings/person --details --jsonl --field /text --jobs 8 < names.jsonl \
+  | thinkthen audit - "$work/key.jsonl" --match strict --table | sed -n 2p \
+  | mustmatch "  matched 80, extra 19, missed 10: precision 0.808   recall 0.889   f1 0.847"
+```
+
+The relation sentences at five kinds and four rules. `edges-as-relate.jq` turns each line into a `relate` line, and `audit` grades it against the stated edges and against the unstated ones. The run finds 20 of the 27 stated edges. Four misses are `Help!`, on c06, c07, c09 and c23: step 1 ends the name before its `!`, and each of the four prints a `Help` edge that counts as extra. Step 3 said no on c08, c16 and c29. The other two extras are the optional edges of c10 and c12. In c23, step 1 also found a stray `"` as a song. Every kept edge counts as extra against the unstated key, so no unstated edge passes.
+
+```bash
+set -euo pipefail
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL thinkthen recognize person song album place organisation \
+  --relation sang=person:song --relation wrote=person:song --relation appears_on=song:album --relation recorded_at=album:place \
+  --replay recordings/relations --details --jsonl --field /text --jobs 8 < relations.jsonl \
+  | jq -c -f edges-as-relate.jq > "$work/edges.jsonl"
+jq -c '{id, value: .relations}' relations.jsonl > "$work/stated.jsonl"
+jq -c '{id, value: [.unstated[]?]}' relations.jsonl > "$work/unstated.jsonl"
+thinkthen audit "$work/edges.jsonl" "$work/stated.jsonl" --match strict --table | sed -n 2p \
+  | mustmatch "  matched 20, extra 6, missed 7: precision 0.769   recall 0.741   f1 0.755"
+thinkthen audit "$work/edges.jsonl" "$work/unstated.jsonl" --match strict --table | sed -n 2p \
+  | mustmatch "  matched 0, extra 26, missed 5: precision 0.000   recall 0.000   f1 0.000"
+```
+
+The long text splits into 1,183 pieces. Its dry run plans 30 step-1 requests of at most 40 pieces each, and no request carries the whole text. The replay grades against the long key, and its input tokens come to 258 a word.
+
+```bash
+set -euo pipefail
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+kinds='["person","place","organisation","work","thing"]'
+jq -r .text long.jsonl | env -u THINKTHEN_API_KEY thinkthen recognize person place organisation work thing --dry-run \
+  | jq -c --argjson whole "$(jq '.text | length' long.jsonl)" '{pieces, request_count, most: ([.requests[].body_utf8 | fromjson | .questions | length] | max), whole: ([.requests[].body_utf8 | fromjson | .state | length] | max >= $whole)}' \
+  | mustmatch '{"pieces":1183,"request_count":30,"most":40,"whole":false}'
+jq -c --argjson kinds "$kinds" -f kinds.jq long.jsonl > "$work/key.jsonl"
+env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL thinkthen recognize person place organisation work thing --replay recordings/long --details --jsonl --field /text < long.jsonl > "$work/run.jsonl"
+thinkthen audit "$work/run.jsonl" "$work/key.jsonl" --match strict --table | sed -n 2p \
+  | mustmatch "  matched 60, extra 2, missed 3: precision 0.968   recall 0.952   f1 0.960"
+jq --argjson words "$(jq -r .text long.jsonl | wc -w)" '.meta.usage.input_tokens / $words | round' "$work/run.jsonl" | mustmatch '258'
+```
+
+`audit` over the five-kind run prints the whole grade: counts, precision, recall and F1, a suggested cut, how steady it is, and the crossed check. A name has no single probability to calibrate, so AUC, calibration and the coverage curve are null. `--threshold` grades at the run's cut and above it. A run from a question file at a low cut lets `--write` put the steady bar into that file, and the model with it. A rerun from the written file carries the file's new digest, so a second `--write` accepts its lines and keeps the bar.
+
+```bash
+set -euo pipefail
+work="$(mktemp -d)"
+trap 'rm -rf "$work"' EXIT
+replay() { env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL thinkthen recognize "$@" --replay recordings/five --details --jsonl --field /text --jobs 8 < names.jsonl; }
+jq -c --argjson kinds '["person","place","organisation","work","thing"]' -f kinds.jq names.jsonl > "$work/key.jsonl"
+replay person place organisation work thing > "$work/run.jsonl"
+thinkthen audit "$work/run.jsonl" "$work/key.jsonl" --match strict --table | mustmatch "recognize  (recognize, 200 rows, 200 labeled, 0 failed, rule as run)
+  matched 292, extra 36, missed 55: precision 0.890   recall 0.841   f1 0.865
+  suggested cut 0.53 (most f1 on the tuning part; seeded split, tuned on 100, checked on 100 held out): held f1 0.875 as run -> 0.869 at the cut
+  steady: 0.5 on 11 of 20 splits, range 0.5 to 0.55; beat the run's rule on 0 of 20 held parts (seed 0)
+  crossed: cuts 0.53 and 0.5, each checked on the other part: f1 0.862
+  at the suggested cut on the held part: precision 0.899, recall 0.840, f1 0.869"
+thinkthen audit "$work/run.jsonl" "$work/key.jsonl" --match strict | jq -c '{auc, calibration, coverage, curve}' \
+  | mustmatch '{"auc":null,"calibration":null,"coverage":null,"curve":null}'
+thinkthen audit "$work/run.jsonl" "$work/key.jsonl" --match strict --threshold 0.5 --table | sed -n 2p \
+  | mustmatch "  matched 292, extra 36, missed 55: precision 0.890   recall 0.841   f1 0.865"
+thinkthen audit "$work/run.jsonl" "$work/key.jsonl" --match strict --threshold 0.9 --table | sed -n 2p \
+  | mustmatch "  matched 215, extra 11, missed 132: precision 0.951   recall 0.620   f1 0.750"
+
+printf '%s\n' '{"version":1,"recognize":{"kinds":{"person":null,"place":null,"organisation":null,"work":null,"thing":null}},"threshold":0.01}' > "$work/five.json"
+replay "@$work/five.json" > "$work/low.jsonl"
+thinkthen audit "$work/low.jsonl" "$work/key.jsonl" --write "$work/five.json" 2>&1 >/dev/null \
+  | mustmatch "thinkthen: audit: wrote threshold 0.44 for the question; it was 0.01"
+mustmatch '{"version":1,"recognize":{"kinds":{"person":null,"place":null,"organisation":null,"work":null,"thing":null}},"threshold":0.44,"model":"jev-1.13.0"}' < "$work/five.json"
+replay "@$work/five.json" > "$work/again.jsonl"
+thinkthen audit "$work/again.jsonl" "$work/key.jsonl" --write "$work/five.json" 2>&1 >/dev/null \
+  | mustmatch "thinkthen: audit: kept the bar for the question; the steady bar beat it on 0 of 20 held parts"
 ```
 
 ## Known key limits
