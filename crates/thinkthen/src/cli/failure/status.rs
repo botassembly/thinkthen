@@ -4,7 +4,11 @@
 const RETRIED_OUT: &str =
     "the backend failed after the allowed attempts; try again later or change --max-retries";
 
-const PHRASES: [(u16, &str); 12] = [
+const PHRASES: [(u16, &str); 13] = [
+    (
+        302,
+        "the redirect was not followed; use the final --url directly",
+    ),
     (
         400,
         "the backend refused the request; check --model and the request size",

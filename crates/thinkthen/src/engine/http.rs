@@ -290,9 +290,12 @@ fn send(agent: &Agent, exchange: &Exchange<'_>, limit: Duration) -> Result<Vec<u
         "" => request,
         key => request.header("authorization", &format!("Bearer {key}")),
     };
-    let mut response = request
-        .send(exchange.body)
-        .map_err(|error| Attempt::from(Error::Transport(transport(&error))))?;
+    let mut response = request.send(exchange.body).map_err(|error| {
+        Attempt::from(Error::Transport(transport(
+            &error,
+            exchange.url.starts_with("https://"),
+        )))
+    })?;
     let status = response.status().as_u16();
     if !(200..300).contains(&status) {
         let header = |name: &str| {
@@ -325,7 +328,7 @@ fn send(agent: &Agent, exchange: &Exchange<'_>, limit: Duration) -> Result<Vec<u
         .read_to_vec()
         .map_err(|error| match error {
             ureq::Error::BodyExceedsLimit(_) => Attempt::from(Error::ReplyTooLarge(most)),
-            error => Attempt::from(Error::Transport(transport(&error))),
+            error => Attempt::from(Error::Transport(transport(&error, false))),
         })
 }
 
@@ -352,10 +355,18 @@ fn names_token_limit(body: &[u8]) -> bool {
 const BODY_REASON_BYTES: u64 = 4096;
 
 /// Reduce an HTTP-library error to the safe class the command contract knows.
-fn transport(error: &ureq::Error) -> TransportKind {
+/// Only a secure request still opening its response can wrap a rustls handshake
+/// failure as `Io(InvalidData)`. A body read has already passed the handshake.
+fn transport(error: &ureq::Error, may_be_handshake: bool) -> TransportKind {
     match error {
         ureq::Error::Timeout(_) => TransportKind::Timeout,
         ureq::Error::HostNotFound => TransportKind::NameLookup,
+        ureq::Error::Tls(_) | ureq::Error::Rustls(_) => TransportKind::Tls,
+        ureq::Error::Io(error)
+            if may_be_handshake && error.kind() == io::ErrorKind::InvalidData =>
+        {
+            TransportKind::Tls
+        }
         ureq::Error::Io(error) => io_transport(error),
         _ => TransportKind::Other,
     }

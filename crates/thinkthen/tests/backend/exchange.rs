@@ -358,7 +358,11 @@ fn a_redirect_is_refused_so_no_key_and_no_evidence_reach_another_host() {
     assert_eq!(output.status.code(), Some(4));
     assert!(output.stdout.is_empty());
     let message = String::from_utf8_lossy(&output.stderr);
-    assert!(message.contains("302"), "{message}");
+    assert_eq!(
+        message,
+        "thinkthen: the backend answered with status 302: the redirect was not followed; use the final --url directly\n"
+    );
+    assert!(!message.contains("sk-secret-value"));
 }
 
 #[test]

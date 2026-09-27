@@ -243,6 +243,9 @@ const fn transport(kind: TransportKind) -> &'static str {
         TransportKind::PrematureClose => {
             "the backend closed the connection before a reply and may have received the request; it was not sent again"
         }
+        TransportKind::Tls => {
+            "the TLS connection or certificate check failed; check the backend's certificate trust"
+        }
         TransportKind::Other => "the backend could not be reached",
     }
 }

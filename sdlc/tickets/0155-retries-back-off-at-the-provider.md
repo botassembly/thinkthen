@@ -6,7 +6,7 @@ opens: sdlc/planning/adr/0052-retries-back-off-at-the-provider.md sdlc/planning/
 
 # 0155: Retries back off at the provider and count apart
 
-Status: building on 2026-09-27. The coordinator accepted it on 2026-09-26 after a fresh read-only review. It carries ADR 0052. Tickets 0146 and 0148 have landed. The 2026-09-27 work plan adds review-register items 91, 92, 119 and the message half of 118 to this build.
+Status: code candidate under focused validation on 2026-09-27; fresh code review is still owed. The coordinator accepted it on 2026-09-26 after a fresh read-only review. It carries ADR 0052. Tickets 0146 and 0148 have landed. The 2026-09-27 work plan adds review-register items 91, 92, 119 and the message half of 118 to this build.
 
 ## Current-main reproduction and added scope
 
@@ -146,7 +146,7 @@ The compact routine proof drives the compiled command and public API against loc
 
 `public_backoff.rs` warms a cache on listener A, then another engine receives 503 with `max_retries(0)` and a 500 ms server floor. A 100 ms whole-call deadline proves a new live call at A sends nothing, while the cached call at A and a call to listener B answer. Its second case gives a zero header and proves a 100 ms deadline stops after one send. This distinguishes an address gate from a process-wide gate, an engine-local gate, and a cache-path gate with only a few sends. The existing width test proves the retry releases its permit. A new deterministic width test closes the gate while the only permit is held, then proves the waiting poster rechecks it and sends nothing before its deadline. `release_closing` holds the width lock while closing the provider gate.
 
-The HTTP table checks zero, positive subsecond and long server headers against the floor and an unheaded local cap. The loopback's accepted 429/503 arm counts change from three to four under the new default. The redirect test keeps its no-follow/no-secret assertion and gains the safe fixed phrase after the command failure files transfer. A TLS classification and safe certificate message receive separate focused proof after that same transfer. The previous 3-second and 5-second held-call timing campaign is not a routine gate under Ian's 2026-09-27 ruling. No live provider call or stress campaign runs.
+The HTTP table checks zero, positive subsecond and long server headers against the floor and an unheaded local cap. The loopback's accepted 429/503 arm counts change from three to four under the new default. The redirect test keeps its no-follow/no-secret assertion and asserts the safe fixed phrase. A local self-signed OpenSSL handshake produces the fixed TLS certificate diagnostic without a provider request or secret leak. The transport table keeps distinct refusal and timeout messages, and checks that `Io(InvalidData)` on a plain HTTP request or a completed response body remains generic. The previous 3-second and 5-second held-call timing campaign is not a routine gate under Ian's 2026-09-27 ruling. No live provider call or stress campaign runs.
 
 ## Budgets and stop rules
 

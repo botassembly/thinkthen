@@ -32,6 +32,7 @@ The key is read from `THINKTHEN_API_KEY`. No option names another variable.
 
 - A key variable that is absent or empty is exit code 4. An empty variable counts as absent. The message names the variable and never a value.
 - No key appears in a plan, a result, a recording, a log line, or an error.
+- A key with a carriage return or line feed is a usage error before any send. The fixed message repeats no part of the key.
 - **The key goes to the address the user named.** That is the whole rule. Naming an address is the user's own act, so a run pointed at another address carries the key of `THINKTHEN_API_KEY` and nothing else.
 
 ## The address
@@ -64,12 +65,13 @@ The adapter sends one `POST` with `Content-Type: application/json`. When a key i
 
 A retry happens after a status of 429, 500, 502, 503, 504, or 529. A transport failure is never sent again, because the backend may already hold the request and may bill it. Every such status closes one process gate for the exact posting URL before its send slot is freed. First sends and retries to that URL wait without a slot; cache and replay answers do not wait. The throttle stays at its chosen width and each request keeps its own retry count. Without a header the wait doubles from one second and is capped by 60 seconds and the caller's attempt timeout. A valid `Retry-After-Ms` header in whole milliseconds, or delta-seconds `Retry-After`, is a minimum wait instead; zero waits at least one second. The milliseconds header takes precedence. Cancellation or a whole-call deadline can end the wait without another send. The HTTP-date form is ignored. A request whose retries are spent still closes the gate. Other failures do not close it.
 
-A failure after the last retry is exit code 4. The message gives the status code and never the response body, because a backend can quote the evidence back in an error. A fixed phrase follows the code. For connection reuse, the client drains at most 1 MiB of each error body and retains none of it. On status 400 alone, the command examines at most 4 KiB of that body and only its `detail.error_type`. When that value is exactly `max_tokens_exceeded`, the message names it. Any other body, and any body it cannot read or parse, gives the plain 400 phrase. The library keeps `the backend answered with status 400`. The libraries and SQL surfaces print the bare status line for every status, with no phrase.
+A failure after the last retry is exit code 4. The message gives the status code and never the response body, because a backend can quote the evidence back in an error. A fixed phrase follows the code. For connection reuse, the client drains at most 1 MiB of each error body and retains none of it. On status 400 alone, the command examines at most 4 KiB of that body and only its `detail.error_type`. When that value is exactly `max_tokens_exceeded`, the message names it. Any other body, and any body it cannot read or parse, gives the plain 400 phrase. The public API keeps `the backend answered with status 400`; status 302 also names that its redirect was not followed. The SQL surfaces print the bare status line for every status, with no phrase.
 
 | Status | Phrase |
 | --- | --- |
 | 400 | the backend refused the request; check `--model` and the request size |
 | 400, body naming `max_tokens_exceeded` | the request has more input tokens than the backend takes; shorten the text or set a lower max_request_bytes with `--profile`. The status reads `400 (max_tokens_exceeded)` |
+| 302 | the redirect was not followed; use the final `--url` directly |
 | 401 | the key was refused |
 | 402 | the account has no credit |
 | 403 | the key may not use this model or address |
@@ -78,7 +80,7 @@ A failure after the last retry is exit code 4. The message gives the status code
 | 429 | the backend's rate limit was reached |
 | 500, 502, 503, 504, or 529 after the allowed attempts | the backend failed after the allowed attempts; try again later or change `--max-retries` |
 
-A connection failure is reduced from the HTTP client's structured error before it reaches the command. The command prints fixed guidance and never the client text, operating-system text, address, key, evidence, or response body. A timeout says to increase `--timeout` or try again. A missing host says to check `--url` and the network. Every transport failure, a refused connection included, fails after its first attempt. A refused connection says to check that the backend is running and that `--url` is correct. A connection that closes or resets before a reply, or cuts its reply short, says the backend may have received the request and that it was not sent again. Every other transport failure says to check `--url` and the network.
+A connection failure is reduced from the HTTP client's structured error before it reaches the command. The command prints fixed guidance and never the client text, operating-system text, address, key, evidence, or response body. A timeout says to increase `--timeout` or try again. A missing host says to check `--url` and the network. Every transport failure, a refused connection included, fails after its first attempt. A refused connection says to check that the backend is running and that `--url` is correct. A connection that closes or resets before a reply, or cuts its reply short, says the backend may have received the request and that it was not sent again. A TLS connection or certificate failure names certificate trust and advises checking `--url`. Every other transport failure says to check `--url` and the network.
 
 A reply may hold at most 1 MiB plus 8 bytes for each byte of its request. A reply echoes what its request named, and its worst honest shape runs about five times its request, as ticket 0132, decision 2, works out. The limit stops a backend that never stops writing. A longer reply is exit code 4 and is never sent again. The message names the limit in bytes: `the backend's reply passed this request's limit of N bytes, so the answer was not kept; the request was not sent again`. The library keeps the same sentence.
 

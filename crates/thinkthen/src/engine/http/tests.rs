@@ -75,6 +75,10 @@ fn structured_transport_errors_map_without_reading_their_display_text() {
         ),
         (ureq::Error::HostNotFound, TransportKind::NameLookup),
         (
+            ureq::Error::Tls("hostile certificate text"),
+            TransportKind::Tls,
+        ),
+        (
             ureq::Error::Io(io::Error::new(
                 io::ErrorKind::ConnectionRefused,
                 "hostile refused text",
@@ -91,8 +95,14 @@ fn structured_transport_errors_map_without_reading_their_display_text() {
         (ureq::Error::ConnectionFailed, TransportKind::Other),
     ];
     for (error, expected) in cases {
-        assert_eq!(transport(&error), expected, "{error:?}");
+        assert_eq!(transport(&error, false), expected, "{error:?}");
     }
+    let wrapped = ureq::Error::Io(io::Error::new(
+        io::ErrorKind::InvalidData,
+        "hostile certificate text",
+    ));
+    assert_eq!(transport(&wrapped, true), TransportKind::Tls);
+    assert_eq!(transport(&wrapped, false), TransportKind::Other);
     for kind in [
         io::ErrorKind::ConnectionReset,
         io::ErrorKind::ConnectionAborted,
@@ -112,6 +122,7 @@ fn no_transport_failure_is_sent_again() {
         (Error::Transport(TransportKind::Timeout), false),
         (Error::Transport(TransportKind::NameLookup), false),
         (Error::Transport(TransportKind::PrematureClose), false),
+        (Error::Transport(TransportKind::Tls), false),
         (Error::Transport(TransportKind::Other), false),
         (Error::Status(429), true),
         (Error::Status(500), true),
