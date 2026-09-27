@@ -10,8 +10,13 @@ use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::time::Instant;
 
+#[path = "signal/ffi.rs"]
 mod ffi;
 
+#[allow(
+    unused_imports,
+    reason = "the C++ bridge uses the shared handler without relate's pipe"
+)]
 pub(crate) use ffi::{install, start_bridge};
 
 /// Every SIGINT the handler has seen in this process.

@@ -336,6 +336,7 @@ dependencies = [
 name = "thinkthen-duckdb-bridge"
 version = "0.0.1"
 dependencies = [
+ "libc",
  "thinkthen",
 ]
 

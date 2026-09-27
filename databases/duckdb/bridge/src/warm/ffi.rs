@@ -5,7 +5,9 @@ use thinkthen::{LoadedQuestion, QuestionKind};
 
 use crate::engines;
 use crate::errors::RowError;
-use crate::ffi::{BridgeText, Reply, question_typed, reply_boundary, text};
+use crate::ffi::{
+    BridgeStop, BridgeText, Reply, question_typed, reply_boundary, run_detached, text,
+};
 
 /// Judge every distinct aggregate text once, ignoring SQL session settings.
 ///
@@ -18,6 +20,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_warm(
     texts: *const BridgeText,
     count: usize,
     from_file: i32,
+    stop: BridgeStop,
 ) -> Reply {
     reply_boundary(|| {
         let question = text(question, question_len)?;
@@ -40,16 +43,18 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_warm(
             .map(|row| text(row.bytes, row.len).map(str::to_owned))
             .collect::<Result<Vec<_>, _>>()?;
         let engine = engines::from_env()?;
-        let answered = match &question {
-            LoadedQuestion::Question(held) => engine
-                .decide_many_with(held, copied, thinkthen::CallOptions::new())
-                .collect::<Result<Vec<_>, _>>(),
-            LoadedQuestion::Banded(held) => engine
-                .decide_many_with(held, copied, thinkthen::CallOptions::new())
-                .collect::<Result<Vec<_>, _>>(),
-        }
-        .map_err(|error| RowError::from(error).text)?;
-        let count = i64::try_from(answered.len()).unwrap_or(i64::MAX);
-        Ok(count.to_ne_bytes().to_vec())
+        run_detached(stop, move |token| {
+            let answered = match &question {
+                LoadedQuestion::Question(held) => engine
+                    .decide_many_with(held, copied, thinkthen::CallOptions::new().cancel(&token))
+                    .collect::<Result<Vec<_>, _>>(),
+                LoadedQuestion::Banded(held) => engine
+                    .decide_many_with(held, copied, thinkthen::CallOptions::new().cancel(&token))
+                    .collect::<Result<Vec<_>, _>>(),
+            }
+            .map_err(|error| RowError::from(error).text)?;
+            let count = i64::try_from(answered.len()).unwrap_or(i64::MAX);
+            Ok(count.to_ne_bytes().to_vec())
+        })
     })
 }

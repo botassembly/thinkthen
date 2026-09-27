@@ -4,6 +4,15 @@
 
 namespace duckdb {
 
+bool QueryInterrupted(ClientContext &context) noexcept {
+	try {
+		auto owner = context.registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
+		return owner->Stopped(context);
+	} catch (...) {
+		return true;
+	}
+}
+
 ResolvedQuestion ResolveQuestion(ClientContext &context, const string &argument) {
 	if (argument.empty() || argument[0] != '@') {
 		return {argument, false};

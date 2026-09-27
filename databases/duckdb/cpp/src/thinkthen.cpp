@@ -166,7 +166,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 			                                                 resolved.text.size(),
 			                                                 reinterpret_cast<const uint8_t *>(evidence_text.data()),
 			                                                 evidence_text.size(), due, settings.Bridge(),
-			                                                 resolved.from_file ? 1 : 0));
+			                                                 resolved.from_file ? 1 : 0, StopFor(*context)));
 			Checked(answered.value);
 			if (!answered.value.bytes) {
 				throw InvalidInputException("thinkthen defect: the bridge returned no try-details value");
@@ -229,7 +229,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		}
 		RustReply answered(thinkthen_cpp_scalar_group(reinterpret_cast<const uint8_t *>(group.question.data()),
 		                                             group.question.size(), texts.data(), texts.size(), due, bound.kind,
-		                                             settings.Bridge(), group.from_file ? 1 : 0));
+		                                             settings.Bridge(), group.from_file ? 1 : 0, StopFor(*context)));
 		Checked(answered.value);
 		if (!answered.value.bytes) {
 			throw InvalidInputException("thinkthen defect: the bridge returned an invalid decision group");
@@ -354,7 +354,7 @@ void Listed(DataChunk &args, ExpressionState &state, Vector &result) {
 		}
 		RustReply reply(thinkthen_cpp_listed_group(reinterpret_cast<const uint8_t *>(group.question.data()),
 		                                           group.question.size(), members.data(), members.size(), texts.data(),
-		                                           texts.size(), due, bound.kind, settings.Bridge()));
+		                                           texts.size(), due, bound.kind, settings.Bridge(), StopFor(*context)));
 		Checked(reply.value);
 		answered.push_back(DecodeListed(reply.value.bytes, reply.value.len, texts.size(), bound.kind));
 	}

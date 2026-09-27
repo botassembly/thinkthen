@@ -108,7 +108,7 @@ int64_t Finish(WarmData &data, ClientContext &context) {
 		copied.push_back({reinterpret_cast<const uint8_t *>(text.data()), text.size()});
 	}
 	RustReply reply(thinkthen_cpp_warm(reinterpret_cast<const uint8_t *>(resolved.text.data()), resolved.text.size(),
-	                                  copied.data(), copied.size(), resolved.from_file ? 1 : 0));
+	                                  copied.data(), copied.size(), resolved.from_file ? 1 : 0, StopFor(context)));
 	Checked(reply.value);
 	if (!reply.value.bytes || reply.value.len != sizeof(int64_t)) {
 		throw InvalidInputException("thinkthen defect: the bridge returned an invalid warm count");

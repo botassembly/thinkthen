@@ -11,8 +11,12 @@ publish = false
 [lib]
 crate-type = ["staticlib"]
 
+[features]
+test-hooks = []
+
 [dependencies]
 thinkthen = { path = "../../../crates/thinkthen", default-features = false }
+libc = "0.2.189"
 
 [profile.release]
 overflow-checks = true

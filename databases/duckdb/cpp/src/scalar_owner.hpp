@@ -4,6 +4,7 @@
 #include "duckdb/common/exception.hpp"
 #include "duckdb/main/client_context.hpp"
 #include "duckdb/main/client_context_state.hpp"
+#include "bridge.hpp"
 
 #include <chrono>
 #include <map>
@@ -32,6 +33,11 @@ struct StatementOwner : ClientContextState {
 	bool first_use = false;
 	std::optional<std::chrono::steady_clock::time_point> expiry;
 	std::map<string, ResolvedQuestion> files;
+	void *signal_scope = nullptr;
+
+	~StatementOwner() override {
+		thinkthen_cpp_query_end(signal_scope);
+	}
 
 	void QueryBegin(ClientContext &context) override {
 		std::lock_guard<std::mutex> held(lock);
@@ -41,6 +47,8 @@ struct StatementOwner : ClientContextState {
 		std::lock_guard<std::mutex> held(lock);
 		active = false;
 		files.clear();
+		thinkthen_cpp_query_end(signal_scope);
+		signal_scope = nullptr;
 	}
 	void Start(ClientContext &context, bool late) {
 		Value setting;
@@ -50,6 +58,11 @@ struct StatementOwner : ClientContextState {
 		if (budget < -1 || budget > 4294967295000LL) {
 			throw InvalidInputException("thinkthen usage: the query budget is outside the supported range");
 		}
+		thinkthen_cpp_query_end(signal_scope);
+		signal_scope = thinkthen_cpp_query_begin();
+		if (!signal_scope) {
+			throw InvalidInputException("thinkthen defect: the signal scope could not start");
+		}
 		active = true;
 		first_use = late;
 		generation++;
@@ -57,6 +70,13 @@ struct StatementOwner : ClientContextState {
 		expiry = budget < 0 ? std::nullopt
 		                    : std::optional<std::chrono::steady_clock::time_point>(
 		                          std::chrono::steady_clock::now() + std::chrono::milliseconds(budget));
+	}
+	bool Stopped(ClientContext &context) {
+		std::lock_guard<std::mutex> held(lock);
+		if (!signal_scope) {
+			signal_scope = thinkthen_cpp_query_begin();
+		}
+		return context.IsInterrupted() || !signal_scope || thinkthen_cpp_query_stopped(signal_scope) != 0;
 	}
 	int64_t Remaining(ClientContext &context) {
 		std::lock_guard<std::mutex> held(lock);

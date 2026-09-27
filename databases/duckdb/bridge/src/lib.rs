@@ -10,6 +10,13 @@ mod engines;
 mod errors;
 mod ffi;
 
+#[allow(
+    dead_code,
+    reason = "the C++ bridge reuses the shipped signal handler without relate's pipe"
+)]
+#[path = "../../src/signal.rs"]
+mod signal;
+
 #[path = "usage/ffi.rs"]
 mod usage_ffi;
 

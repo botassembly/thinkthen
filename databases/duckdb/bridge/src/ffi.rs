@@ -2,14 +2,19 @@
 #![allow(unsafe_code, reason = "the bridge copies caller-owned byte ranges")]
 
 use std::cell::Cell;
+use std::ffi::c_void;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Once;
+use std::sync::mpsc::{RecvTimeoutError, channel};
+use std::time::Duration;
 
-use crate::{engines, errors};
-use thinkthen::{Answer, CallOptions, LoadedQuestion, Question, QuestionSet};
+use crate::{engines, errors, signal};
+use thinkthen::{CallOptions, CancelToken, LoadedQuestion, Question, QuestionSet};
 
 mod listed;
 mod nested;
+#[path = "ffi/scalar/ffi.rs"]
+mod scalar;
 
 thread_local! {
     static BRIDGE_DEPTH: Cell<usize> = const { Cell::new(0) };
@@ -93,7 +98,51 @@ pub(crate) fn reply_boundary(call: impl FnOnce() -> Result<Vec<u8>, String>) -> 
 /// Initialize the direct bridge hook at extension load, before bind.
 #[unsafe(no_mangle)]
 pub(crate) extern "C" fn thinkthen_cpp_init() -> i32 {
-    catch_unwind(AssertUnwindSafe(install_hook)).map_or(4, |_| 0)
+    catch_unwind(AssertUnwindSafe(|| {
+        install_hook();
+        signal::install();
+    }))
+    .map_or(4, |_| 0)
+}
+
+/// Start the host-signal scope for one SQL statement.
+#[unsafe(no_mangle)]
+pub(crate) extern "C" fn thinkthen_cpp_query_begin() -> *mut signal::Invoke {
+    catch_unwind(AssertUnwindSafe(|| {
+        in_bridge(|| Box::into_raw(Box::new(signal::Invoke::begin())))
+    }))
+    .unwrap_or(std::ptr::null_mut())
+}
+
+/// Read one still-owned statement's host-signal scope.
+///
+/// # Safety
+/// `scope` is a live value returned by `thinkthen_cpp_query_begin`.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_cpp_query_stopped(scope: *const signal::Invoke) -> i32 {
+    catch_unwind(AssertUnwindSafe(|| {
+        in_bridge(|| {
+            // SAFETY: the C++ statement owner retains this value through the call.
+            unsafe { scope.as_ref() }.is_none_or(signal::Invoke::stopped)
+        })
+    }))
+    .map_or(1, i32::from)
+}
+
+/// End one SQL statement's host-signal scope.
+///
+/// # Safety
+/// `scope` is a live value returned by `thinkthen_cpp_query_begin`, freed once.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_cpp_query_end(scope: *mut signal::Invoke) {
+    let _ = catch_unwind(AssertUnwindSafe(|| {
+        in_bridge(|| {
+            if !scope.is_null() {
+                // SAFETY: the C++ statement owner calls end once on this allocation.
+                drop(unsafe { Box::from_raw(scope) });
+            }
+        })
+    }));
 }
 
 /// Free one returned byte buffer, including an error reply.
@@ -224,6 +273,69 @@ pub(crate) struct BridgeSettings {
     cache_allowed: i32,
 }
 
+/// A no-throw query interrupt predicate, valid for the synchronous bridge call.
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub(crate) struct BridgeStop {
+    context: *mut c_void,
+    interrupted: Option<extern "C" fn(*mut c_void) -> i32>,
+}
+
+// SAFETY: the public engine invokes the host check only on the FFI calling
+// thread. The C++ context outlives that synchronous call; the callback catches
+// its own exceptions before returning across the ABI.
+unsafe impl Sync for BridgeStop {}
+
+impl BridgeStop {
+    pub(crate) fn stopped(self) -> bool {
+        self.interrupted
+            .is_some_and(|check| check(self.context) != 0)
+    }
+}
+
+/// Keep DuckDB's callback on its calling thread while a blocking model send
+/// runs on an owned worker. A stopped query detaches only that worker; its
+/// cancel token prevents new sends or retries after the held attempt ends.
+pub(crate) fn run_detached<T: Send + 'static>(
+    stop: BridgeStop,
+    work: impl FnOnce(CancelToken) -> Result<T, String> + Send + 'static,
+) -> Result<T, String> {
+    let cancelled = || "thinkthen cancelled: the call was cancelled".to_owned();
+    if stop.stopped() {
+        return Err(cancelled());
+    }
+    let token = CancelToken::new();
+    let owned = token.clone();
+    let (sender, receiver) = channel();
+    std::thread::Builder::new()
+        .name("thinkthen-duckdb-call".to_owned())
+        .spawn(move || {
+            let result = catch_unwind(AssertUnwindSafe(|| in_bridge(|| work(owned))))
+                .unwrap_or_else(|_| Err("thinkthen defect: the engine worker panicked".to_owned()));
+            let _ = sender.send(result);
+        })
+        .map_err(|_| "thinkthen defect: the engine worker could not start".to_owned())?;
+    loop {
+        if stop.stopped() {
+            token.cancel();
+            return Err(cancelled());
+        }
+        match receiver.recv_timeout(Duration::from_millis(50)) {
+            Ok(result) => {
+                if stop.stopped() {
+                    token.cancel();
+                    return Err(cancelled());
+                }
+                return result;
+            }
+            Err(RecvTimeoutError::Timeout) => {}
+            Err(RecvTimeoutError::Disconnected) => {
+                return Err("thinkthen defect: the engine worker ended with no answer".to_owned());
+            }
+        }
+    }
+}
+
 /// Validate one listed question and its members before any group sends.
 ///
 /// # Safety
@@ -255,14 +367,6 @@ fn copied_texts(rows: *const BridgeText, count: usize) -> Result<Vec<String>, St
     rows.iter()
         .map(|row| text(row.bytes, row.len).map(str::to_owned))
         .collect()
-}
-
-fn frame(bytes: &mut Vec<u8>, json: &str) -> Result<(), String> {
-    let len = u32::try_from(json.len())
-        .map_err(|_| "thinkthen defect: a JSON value is too large".to_owned())?;
-    bytes.extend_from_slice(&len.to_ne_bytes());
-    bytes.extend_from_slice(json.as_bytes());
-    Ok(())
 }
 
 /// Validate one recognize kind list or relation question before any send.
@@ -301,6 +405,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_nested_group(
     kind: i32,
     settings: BridgeSettings,
     from_file: i32,
+    stop: BridgeStop,
 ) -> Reply {
     reply_boundary(|| {
         let argument = text(argument, argument_len)?;
@@ -310,11 +415,13 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_nested_group(
         let asked = asked(&settings)?;
         let engine = engines::engine_for(&asked, |_| probe(&settings))?;
         let (texts, cut) = engines::within_total(&asked, texts)?;
-        let values = nested::run(&engine, &ask, texts, deadline_ms, kind)?;
-        if let Some(error) = cut {
-            return Err(error);
-        }
-        Ok(values)
+        run_detached(stop, move |token| {
+            let values = nested::run(&engine, &ask, texts, deadline_ms, kind, &token)?;
+            if let Some(error) = cut {
+                return Err(error);
+            }
+            Ok(values)
+        })
     })
 }
 
@@ -333,6 +440,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_listed_group(
     deadline_ms: i64,
     kind: i32,
     settings: BridgeSettings,
+    stop: BridgeStop,
 ) -> Reply {
     reply_boundary(|| {
         let question = text(question, question_len)?;
@@ -342,18 +450,21 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_listed_group(
         let asked = asked(&settings)?;
         let engine = engines::engine_for(&asked, |_| probe(&settings))?;
         let (texts, cut) = engines::within_total(&asked, texts)?;
-        let options = if deadline_ms == -1 {
-            CallOptions::new()
-        } else {
-            CallOptions::new()
-                .deadline_millis(deadline_ms)
-                .map_err(|error| errors::RowError::from(error).text)?
-        };
-        let values = listed::run(&engine, &set, texts, options)?;
-        if let Some(error) = cut {
-            return Err(error);
-        }
-        Ok(values)
+        run_detached(stop, move |token| {
+            let options = if deadline_ms == -1 {
+                CallOptions::new().cancel(&token)
+            } else {
+                CallOptions::new()
+                    .deadline_millis(deadline_ms)
+                    .map_err(|error| errors::RowError::from(error).text)?
+                    .cancel(&token)
+            };
+            let values = listed::run(&engine, &set, texts, options)?;
+            if let Some(error) = cut {
+                return Err(error);
+            }
+            Ok(values)
+        })
     })
 }
 
@@ -376,157 +487,4 @@ fn probe(settings: &BridgeSettings) -> engines::Probe {
     } else {
         engines::Probe::Refused
     }
-}
-
-/// One real grouped decision, probability, or details call.
-///
-/// # Safety
-/// The question and every entry in `texts` must remain readable through this call.
-#[unsafe(no_mangle)]
-pub(crate) unsafe extern "C" fn thinkthen_cpp_scalar_group(
-    question_bytes: *const u8,
-    question_len: usize,
-    texts: *const BridgeText,
-    count: usize,
-    deadline_ms: i64,
-    kind: i32,
-    settings: BridgeSettings,
-    from_file: i32,
-) -> Reply {
-    reply_boundary(|| {
-        let argument = text(question_bytes, question_len)?;
-        let question = if kind == 7 {
-            None
-        } else {
-            Some(question_typed(argument, from_file != 0).map_err(|error| error.text)?)
-        };
-        let copied = copied_texts(texts, count)?;
-        let asked = asked(&settings)?;
-        let engine = engines::engine_for(&asked, |_| probe(&settings))?;
-        let (copied, cut) = engines::within_total(&asked, copied)?;
-        let options = || {
-            if deadline_ms == -1 {
-                Ok(CallOptions::new())
-            } else {
-                CallOptions::new()
-                    .deadline_millis(deadline_ms)
-                    .map_err(|error| errors::RowError::from(error).text)
-            }
-        };
-        if kind == 7 {
-            let set = set_typed(argument, from_file != 0).map_err(|error| error.text)?;
-            let rows = engine
-                .annotate_with(&set, copied, options()?)
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|error| errors::RowError::from(error).text)?;
-            let mut bytes = Vec::new();
-            for row in rows {
-                frame(&mut bytes, &row.value_json())?;
-            }
-            if let Some(error) = cut {
-                return Err(error);
-            }
-            return Ok(bytes);
-        }
-        let question = question.ok_or_else(|| "thinkthen defect: no scalar question".to_owned())?;
-        if kind == 2 {
-            let mut bytes = Vec::new();
-            for text in copied {
-                let result = match &question {
-                    LoadedQuestion::Question(held) => engine.details_with(held, &text, options()?),
-                    LoadedQuestion::Banded(held) => engine.details_with(held, &text, options()?),
-                }
-                .map_err(|error| errors::RowError::from(error).text)?;
-                frame(&mut bytes, &result.to_json())?;
-            }
-            if let Some(error) = cut {
-                return Err(error);
-            }
-            return Ok(bytes);
-        }
-        if kind != 0 && kind != 1 {
-            return Err("thinkthen defect: the bridge got an unknown scalar kind".to_owned());
-        }
-        let answers: Vec<(Answer, f64)> = match &question {
-            LoadedQuestion::Question(held) => engine
-                .decide_many_with(held, copied, options()?)
-                .map(|row| row.map(|row| (*row.value(), row.probability())))
-                .collect::<Result<Vec<_>, _>>(),
-            LoadedQuestion::Banded(held) => engine
-                .decide_many_with(held, copied, options()?)
-                .map(|row| row.map(|row| (*row.value(), row.probability())))
-                .collect::<Result<Vec<_>, _>>(),
-        }
-        .map_err(|error| errors::RowError::from(error).text)?;
-        if let Some(error) = cut {
-            return Err(error);
-        }
-        if kind == 1 {
-            Ok(answers
-                .into_iter()
-                .flat_map(|(_, value)| value.to_ne_bytes())
-                .collect())
-        } else {
-            Ok(answers
-                .into_iter()
-                .map(|(answer, _)| match answer {
-                    Answer::No => 0,
-                    Answer::Yes => 1,
-                    Answer::Unsure => 2,
-                })
-                .collect())
-        }
-    })
-}
-
-/// One try-details row; only usage, local, and backend errors become JSON values.
-///
-/// # Safety
-/// Both byte ranges must remain readable through this call.
-#[unsafe(no_mangle)]
-pub(crate) unsafe extern "C" fn thinkthen_cpp_try_details_row(
-    question_bytes: *const u8,
-    question_len: usize,
-    evidence_bytes: *const u8,
-    evidence_len: usize,
-    deadline_ms: i64,
-    settings: BridgeSettings,
-    from_file: i32,
-) -> Reply {
-    reply_boundary(|| {
-        let result = (|| -> Result<String, errors::RowError> {
-            let argument = text(question_bytes, question_len)
-                .map_err(|_| errors::RowError::usage("a question is not UTF-8 text"))?;
-            let evidence = text(evidence_bytes, evidence_len)
-                .map_err(|_| errors::RowError::usage("evidence is not UTF-8 text"))?;
-            let question = question_typed(argument, from_file != 0)?;
-            let asked = asked(&settings)
-                .map_err(|_| errors::RowError::usage("a cache folder is not UTF-8 text"))?;
-            let engine = engines::engine_for_typed(&asked, |_| probe(&settings))?;
-            let (_, cut) = engines::within_total_typed(&asked, vec![evidence.to_owned()])?;
-            let options = if deadline_ms == -1 {
-                CallOptions::new()
-            } else {
-                CallOptions::new()
-                    .deadline_millis(deadline_ms)
-                    .map_err(errors::RowError::from)?
-            };
-            let details = match &question {
-                LoadedQuestion::Question(held) => engine.details_with(held, evidence, options),
-                LoadedQuestion::Banded(held) => engine.details_with(held, evidence, options),
-            }
-            .map_err(errors::RowError::from)?;
-            if let Some(error) = cut {
-                return Err(error);
-            }
-            Ok(format!(
-                "{{\"status\":\"answered\",\"details\":{}}}",
-                details.to_json()
-            ))
-        })();
-        match result {
-            Ok(value) => Ok(value.into_bytes()),
-            Err(error) => error.value().map(String::into_bytes).ok_or(error.text),
-        }
-    })
 }

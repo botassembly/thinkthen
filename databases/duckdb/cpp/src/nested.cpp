@@ -150,7 +150,7 @@ void Nested(DataChunk &args, ExpressionState &state, Vector &result) {
 		RustReply reply(thinkthen_cpp_nested_group(reinterpret_cast<const uint8_t *>(group.argument.text.data()),
 		                                           group.argument.text.size(), members.data(), members.size(), texts.data(),
 		                                           texts.size(), due, bound.kind, settings.Bridge(),
-		                                           group.argument.from_file ? 1 : 0));
+		                                           group.argument.from_file ? 1 : 0, StopFor(*context)));
 		Checked(reply.value);
 		answered.push_back(DecodeNested(reply.value.bytes, reply.value.len, texts.size(), bound.kind));
 	}
