@@ -9,6 +9,20 @@ home <- normalizePath(file.path(Sys.getenv("TT_TESTS"), "..", "..", ".."))
 document <- jsonlite::fromJSON(file.path(home, "conformance", "cases.json"), simplifyVector = FALSE)
 canonical <- "https://api.typesafe.ai/v1/systemone"
 `%||%` <- function(one, two) if (is.null(one)) two else one
+all_ids <- vapply(document$cases, function(case) case$id, character(1))
+if (length(all_ids) != document$case_count || anyDuplicated(all_ids)) stop("shared case IDs or count disagree", call. = FALSE)
+selector <- Sys.getenv("THINKTHEN_CONFORMANCE_IDS", unset = NA_character_)
+selected_ids <- all_ids
+if (!is.na(selector)) {
+  if (!startsWith(selector, "/")) stop("THINKTHEN_CONFORMANCE_IDS takes an absolute path", call. = FALSE)
+  chosen <- trimws(readLines(selector, warn = FALSE))
+  chosen <- chosen[nzchar(chosen) & !startsWith(chosen, "#")]
+  if (!length(chosen)) stop("the selected case list is empty", call. = FALSE)
+  if (anyDuplicated(chosen)) stop("duplicate selected case ID", call. = FALSE)
+  absent <- setdiff(chosen, all_ids)
+  if (length(absent)) stop(paste("selected case is absent from the shared corpus:", absent[[1]]), call. = FALSE)
+  selected_ids <- chosen
+}
 
 # The cases no R call can carry, each with the reason.
 unreachable <- c(
@@ -185,6 +199,7 @@ counts <- c(pass = 0L, fail = 0L, "not run" = 0L)
 sent <- 0L
 for (case in document$cases) {
   id <- case$id
+  if (!(id %in% selected_ids)) next
   if (!is.na(unreachable[id])) {
     cat("not run ", id, ": ", unreachable[[id]], "\n", sep = "")
     counts[["not run"]] <- counts[["not run"]] + 1L
@@ -200,8 +215,9 @@ for (case in document$cases) {
   counts[[verdict]] <- counts[[verdict]] + 1L
   cat(verdict, " ", id, if (verdict == "fail") paste0(": ", sub("^fail: ", "", said)), "\n", sep = "")
 }
-cat(sprintf("conformance: %d pass, %d fail, %d not run, of %d cases\n",
-            counts[["pass"]], counts[["fail"]], counts[["not run"]], document$case_count))
-check("the three counts sum to the file's count", sum(counts) == document$case_count && length(document$cases) == document$case_count)
+cat(sprintf("conformance: total=%d selected=%d pass=%d fail=%d not_run=%d unselected=%d\n",
+            document$case_count, length(selected_ids), counts[["pass"]], counts[["fail"]],
+            counts[["not run"]], document$case_count - length(selected_ids)))
+check("the three counts sum to the selected cases", sum(counts) == length(selected_ids))
 check("every run case passes", counts[["fail"]] == 0L)
 finish("conformance", sent)
