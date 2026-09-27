@@ -6,13 +6,13 @@ opens: sdlc/planning/adr/0056-recognize-is-three-steps.md crates/thinkthen/src/c
 
 # 0147: Build recognize in three steps
 
-Status: draft. It becomes ready for review when the coordinator fills open choices 1 to 3 from local experiments 284, 286 and 287. This version replaces the whole earlier ticket, which recorded the design issue's word rules in an ADR numbered 0050. That ADR was never written. Ian's rulings of 2026-09-26 replaced its method, and ADR 0056 now holds the design. A fresh read-only reviewer accepts this ticket before it is built. Owner: Claude.
+Status: ready for review. The coordinator filled the step-2 wording, the web kinds and the name score from local experiments 284, 286 and 287. This version replaces the whole earlier ticket, which recorded the design issue's word rules in an ADR numbered 0050. That ADR was never written. Ian's rulings of 2026-09-26 replaced its method, and ADR 0056 now holds the design. A fresh read-only reviewer accepts this ticket before it is built. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
 ## Outcome and authority
 
-`recognize` finds names in three steps, as ADR 0056 decides. Step 1 splits the text into pieces and asks one BILOU question per piece. Step 2 labels each found name and checks its edges in one request. Step 3 asks only the relation pairs a rule allows, about what the text itself states. Each name prints its text, start, end, length, kind and one calibrated score, and `--threshold` cuts on that score. `audit` supports it fully, as it does today. The same path serves a sentence and a book.
+`recognize` finds names in three steps, as ADR 0056 decides. Step 1 splits the text into pieces and asks one BILOU question per piece. Step 2 labels each found name and checks its edges in one request. Step 3 asks only the relation pairs a rule allows, about what the text itself states. Each name prints its text, start, end, length, kind and one ranking score, `strength`, and `--threshold` cuts on it. `audit` supports it fully, as it does today. The same path serves a sentence and a book.
 
 The authority is ADR 0056, accepted 2026-09-26 by Ian's ruling. Ian's words: "I just want to make sure it's doing a reasonably good job, it's simple, and it's the three-step process using BILU labeling and relationships." His earlier rulings stand: "No rule-based systems. Only use the agent to figure out where the boundaries of the starting and ending of entities are." "A simple approach is worth at least 3-5% over a complex, brittle idea. Don't overfit!"
 
@@ -64,7 +64,7 @@ After every step-1 request returns, a Viterbi decode picks the most likely valid
 
 Step 2 sends one request for each step-1 request whose pieces hold the first piece of a found name. Its evidence is the original text from the sixth piece before its first name to the sixth piece after its last. It holds two kinds of question.
 
-- **The kind question.** One per found name, when the run has kinds. The wording is open choice 1 below. Until it is filled, it is local experiment 278's `none2`: `In the text below, some words are wrapped in [[ ]]. Going by what they refer to in this text, which listed kind of name are they? Choose none of these when they are not a proper name, or when they name something that no listed kind covers.` Then `Text: ` and the name's six-piece snippet. The options are the caller's kinds in order, each with the caller's description or none, then `none of these`, described as `They are not a proper name, or no listed kind covers what they name.`
+- **The kind question.** One per found name, when the run has kinds. The wording is local experiment 278's `none2`, which local experiment 284 kept: `In the text below, some words are wrapped in [[ ]]. Going by what they refer to in this text, which listed kind of name are they? Choose none of these when they are not a proper name, or when they name something that no listed kind covers.` Then `Text: ` and the name's six-piece snippet. The options are the caller's kinds in order, each with the caller's description or none, then `none of these`, described as `They are not a proper name, or no listed kind covers what they name.`
 - **The edge question.** One per found name that has two or more options. The options are the name as found, the name plus a touching P or S piece at its right end, the name plus one at its left end, the name less its last piece when that piece is P or S, and the name less its first piece when that piece is P or S. "Touching" means no white space between. The wording is local experiment 279's edge wording a: `In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.` Then `Text: ` and the name's six-piece snippet. Each option's label is its stretch's text, with a space added until it differs from the labels before it. Its description is the stretch's six-piece snippet, with `...` at an end that stops short of the text's edge.
 
 A name whose kind answer is `none of these` is dropped. Every other name takes its picked stretch and its picked kind. With no kinds, only edge questions go out, and every name takes the kind `ENTITY`. A name with no edge question keeps its span. Names print in order of `start`, then `end`. Two names with the same span and kind print once. Beyond the cut under "Output", no other rule touches a name.
@@ -76,10 +76,10 @@ Each ordered pair of kept names whose kinds match some rule's source and target 
 ### Output
 
 ```json
-{"entities":[{"text":"Maria Chen","start":0,"end":10,"length":10,"kind":"person","probability":0.97}]}
+{"entities":[{"text":"Maria Chen","start":0,"end":10,"length":10,"kind":"person","strength":0.97}]}
 ```
 
-`probability` is the name's score, defined by open choice 3. `--threshold` keeps a name whose score is at or above the cut. Its default is also open choice 3. A name under the cut leaves before step 3, so no pair names it. An edge repeats both names in that shape and keeps `relation` and its own `probability`. `relations` is absent with no rule, and an empty list when rules gave no edge. Record modes keep `{"input":…,"value":…}`.
+`strength` is P(kind) times P(span), rounded to two places. P(kind) is step 2's probability of the chosen kind. P(span) is the probability that exactly this stretch of pieces is one name. One forward-backward pass over the step-1 tag probabilities sums it over every valid BILOU path, under the decode's transitions and its floor of one in a million. The pass reuses the probabilities the decode already holds, so it asks nothing new. With no kinds, `strength` is P(span). `--threshold` keeps a name whose strength is at or above the cut. The default cut is 0.5, and `--threshold 0` returns every name the decode and step 2 keep. A name under the cut leaves before step 3, so no pair names it. `strength` is a ranking score, not a probability, and the pages say so. An edge repeats both names in that shape and keeps `relation` and `probability`. `relations` is absent with no rule, and an empty list when rules gave no edge. Record modes keep `{"input":…,"value":…}`.
 
 `--details` keeps `thinkthen.result/1`. `answer.pieces` lists each piece's offsets and its five tag probabilities. `answer.names` lists each found name's span as found, its kind probabilities and its edge option probabilities. `answer.pairs` lists each pair's probability.
 
@@ -99,30 +99,30 @@ The five-word snippets, the detection and kind questions, the kind vote, the `st
 
 ### `audit`
 
-`audit` keeps full support for `recognize`, as today. It reads each name's `probability` in place of `strength`, and the run cut from `question.threshold`. It prints calibration, AUC, the coverage curve, the suggested bar and the crossed line. It accepts `--threshold` at or above the run cut. `--write` puts a steady bar into the recognize question file's top-level `threshold`. Only the field name it reads changes. `relate` grading is unchanged.
+`audit` keeps full support for `recognize`, unchanged. It reads each name's `strength` and the run cut from `question.threshold`. It prints calibration, AUC, the coverage curve, the suggested bar and the crossed line. It accepts `--threshold` at or above the run cut. `--write` puts a steady bar into the recognize question file's top-level `threshold`. `relate` grading is unchanged.
 
 ### Surfaces
 
-The public Rust type keeps one entity with `text`, `start`, `end`, `length`, `kind` and `probability`. Python, TypeScript, Ruby, R, C, DuckDB, PostgreSQL and SQLite return those six fields in that order, with each surface's existing offset unit. `probability` replaces `strength` on every surface. The shared conformance cases carry the new shape.
+The public Rust type keeps one entity with `text`, `start`, `end`, `length`, `kind` and `strength`. Python, TypeScript, Ruby, R, C, DuckDB, PostgreSQL and SQLite return those six fields in that order, with each surface's existing offset unit. `text` replaces `name`, and `length` is new. `strength` keeps its name and type on every surface. The shared conformance cases carry the new shape.
 
 ## Decisions
 
 The owner's calls. Ian can overturn each.
 
 1. **One ticket builds the whole path.** The three steps share one request plan and one output shape. Splitting them would ship a surface that changes twice.
-2. **Each name keeps one calibrated score and a cut.** Ian ruled on 2026-09-26: "explain? we lose calibration to trade FN and FP?" and "audit and diff should be fully supported". A score lets a caller trade missed names against false ones, and it lets `audit` suggest the cut. Local experiment 287 picks the definition and the default cut offline. `relation_threshold` keeps its 0.5 default, which local experiment 278 measured.
-3. **The fields are `text` and `probability`.** The coordinator set `text`, and the Python frame already names that column `text`. `audit` keys keep `name`, because `audit` compares offsets and kind only. `probability` matches the name `relate` gives an edge's score. It breaks no existing contract. `result.md` says today that `strength` "is not itself a probability", and that sentence goes with `strength`. Inside a recognize edge, the edge's `probability` and each name's `probability` sit in different objects, so no key collides.
+2. **Each name keeps one ranking score and a cut.** Ian ruled on 2026-09-26: "explain? we lose calibration to trade FN and FP?" and "audit and diff should be fully supported". A score lets a caller trade missed names against false ones, and it lets `audit` suggest the cut. Local experiment 287 chose P(kind) times P(span) and the 0.5 cut offline. At 0.5 against no cut it scored 78.6 to 81.0 on the full public split, 53.4 to 60.1 on WNUT-17, 83.1 to 84.3 on the long documents, and 87.3 to 87.2 on the key. Today's form, the lowest tag probability times the kind probability, cost 3.3 F1 at 0.5 on the key and the documents. P(kind) alone did too little. `relation_threshold` keeps its 0.5 default, which local experiment 278 measured.
+3. **The fields are `text` and `strength`.** The coordinator set `text`, and the Python frame already names that column `text`. `audit` keys keep `name`, because `audit` compares offsets and kind only. The score keeps the name `strength`, because local experiment 287 found it ranks well but is not calibrated across kinds of text: expected calibration error 6.7 to 19.5. `result.md` keeps its sentence that `strength` is not itself a probability. The libraries, SQL and `audit` keep their field.
 4. **Step 2 groups by step-1 request.** Local experiment 285 sent one step-2 request a name. Grouping sends fewer requests and keeps the six-piece snippets. On a short text it equals the one request a text that local experiments 278, 279 and 283 measured. Test 5 records one long text under it.
 5. **The edge question goes with the kind question.** Local experiment 279 asked it after step 2, on kept names only. Asking both at once saves a round trip. A declined name's edge answer is ignored.
 6. **The guard is `--max-text-bytes`, command line only.** A library or SQL caller gets the default. R6 may carry it further when a demo needs it.
 7. **Overlap after an edge pick stays.** A widened name may overlap a neighbour by one mark, as `Help!` over a stray `!` name did in local experiment 283. Resolving it would be a rule.
 8. **Plan schema version 2.** The key set changes, so `thinkthen.recognize-plan/1` becomes `/2`.
 
-## Open choices
+## Choices filled from experiments
 
-1. **The step-2 wording.** Local experiment 284 tests a new wording on the key's own names, and a second way out. The coordinator writes the winner into "Step 2" and into ADR 0056 item 7 before review. If 284 finds no gain beyond the noise, `none2` stays. Any added way-out label is reserved as a kind, as `none of these` is.
-2. **Built-in kinds for web text.** Local experiment 286 tests the built-in kinds `web address`, `email address` and `social handle`, with `punctuation or symbol` as a decoy only. Ian's rule: a caller who asks for one of these kinds gets those names with that kind. Otherwise the questions still offer the three kinds, and a name picked as one of them is dropped. The coordinator writes the result into "Step 1", "Step 2", the edge cases, the tests and ADR 0056 item 7 before review. If 286 finds no gain beyond the noise, no built-in kind is added, and pieces of web addresses stay an accepted limit.
-3. **The name score and its default cut.** Local experiment 287 compares three definitions offline: the step-2 kind probability, the step-1 span confidence (the lowest tag probability along the name's decoded tags), and their product. It picks the best calibrated against the key, and the default cut. With no kinds only the step-1 part exists, so 287 also says what the score is there. The coordinator writes both into "Output", test bars 1 to 5, and ADR 0056 item 7 before review.
+1. **The step-2 wording stays `none2` with one way out.** Local experiment 284 rejected a broader wording, whose held-out F1 fell and whose extras rose by 3.7 to 9.7 a run. It rejected two way-outs, which fell 4.0 to 4.1 held-out points and dropped 19 to 34 real names. Caller descriptions pass into step 2 only when supplied. At five kinds they lifted held-out F1 to 92.2 to 94.0 in all three runs, fixing 13 names and breaking 2, and tied on public text.
+2. **No hidden kinds.** `web address`, `email address` and `social handle` are ordinary kinds a caller may ask for, with no special handling. A run that does not ask for them does not offer them. Local experiment 286 found that hidden decoys in step 2 raised the full public split from 78.6 to 79.7 and WNUT-17 from 53.4 to 55.2, and dropped 127 real WNUT-17 names. Asked for directly, the kinds were right 92% to 100% of the time. Whole addresses came back only 52% to 83% of the time, because pieces split at marks.
+3. **The score is `strength`, P(kind) times P(span), with a default cut of 0.5.** "Output" gives the definition, and decisions 2 and 3 give the evidence from local experiment 287.
 
 ## Edge cases
 
@@ -154,12 +154,14 @@ The owner's calls. Ian can overturn each.
 | `--relation works_for=person` | Malformed, exit 2 |
 | A name declined as `none of these` | Never expands a wildcard or enters a pair |
 | Twenty kinds under a profile with `max_options` 20 | Exit 2 before any request, naming 21 options and the limit |
-| `recognize --threshold 0.9` | Keeps only names whose `probability` is at least 0.9 |
+| `recognize --threshold 0.9` | Keeps only names whose `strength` is at least 0.9 |
+| `recognize --threshold 0` | Every name the decode and step 2 keep |
+| `https://t.co/x` with the kind `web address` | Pieces split at `:`, `/` and `.`, so the whole address may not come back. Accepted limit |
 | A name under the cut | Not printed, and no pair names it |
 
 ## Proof
 
-Every scored test replays a recording and grades it with `audit --match strict` against `specification/fixtures/recognize/`. `kinds.jq` filters the key to the run's kinds. The bars sit under the lowest measured run, so a pass is stable and a fail is beyond the noise. Every run grades at the default cut that open choice 3 sets. The key's figures come from p1 with the whole sentence as snippet, from local experiment 279 part 1. Key sentences average 7.4 words, so a six-piece window shows most of each one.
+Every scored test replays a recording and grades it with `audit --match strict` against `specification/fixtures/recognize/`. `kinds.jq` filters the key to the run's kinds. The bars sit under the lowest measured run, so a pass is stable and a fail is beyond the noise. Every run grades at the default cut of 0.5. Local experiment 287 measured the key at 87.2 at that cut and 87.3 with no cut. The key's figures come from p1 with the whole sentence as snippet, from local experiment 279 part 1. Key sentences average 7.4 words, so a six-piece window shows most of each one.
 
 ### Outside-in tests
 
@@ -181,7 +183,7 @@ Four table tests in `core`, each a list of inputs and exact outputs:
 
 - **Pieces.** Every splitter row of "Edge cases", with each piece's scalar offsets.
 - **Decode.** Tag probabilities and the names they give: a lone `BEGIN` at the end, `BEGIN` then `OUT`, equal scores, a probability of zero, and a name across a request edge.
-- **Score.** Tag, kind and edge probabilities and the score they give under open choice 3's definition, with a name at the cut and one just under it.
+- **Score.** Tag and kind probabilities and the exact `strength` they give: one-piece and three-piece names, a name whose decoded path is not the only likely one, a name with no kinds, a name at 0.5 and one at 0.49.
 - **Edge options.** Each case's option stretches: marks at both ends, a one-piece name, a name that is one mark, and two equal labels.
 
 ### Deliberate breaks
@@ -202,9 +204,9 @@ Each break is made, run and reverted. Each must turn the named row red.
 | Expand `*` to a declined name's kind | Test 7 |
 | Read `ANY` as a concrete kind | Test 7 |
 | Print the text in the guard's message | Test 9 |
-| Drop `probability` from a name | Test 8 |
-| Compute the score from the wrong probabilities | Score: each row |
-| Keep a name just under the cut | Score: a name at the cut less 0.0001 |
+| Drop `strength` from a name | Test 8 |
+| Score with the lowest tag probability, today's form | Score: the name whose decoded path is not the only likely one |
+| Keep a name under the cut | Score: the name at 0.49 |
 
 ## Recordings
 
@@ -227,14 +229,13 @@ In the commit that changes each behavior:
 
 - `specification/recognize.md`: rewritten around the three steps, the window, the output, the guard and the kinds rules.
 - `specification/question-file.md` and its schema: optional `recognize.kinds`, optional relation sides, `ANY`, the reserved kinds, and the canonical order, unchanged in its keys: `verb`, `kinds`, optional `relations`, `threshold`, `relation_threshold`, optional `profile`.
-- `specification/result.md`: the new `--details` members, and `probability` in place of the `strength` sentence.
+- `specification/result.md`: the new `--details` members. Its sentence that `strength` is not itself a probability stays, with the new formula.
 - `specification/channels.md`: `--max-text-bytes`, and plan schema version 2.
 - `specification/settings.md`: the Kinds row default becomes none. The guard moves into the table. The `keep`, `infixes`, `prefixes`, `boundary` and `window` lines go.
 - `specification/backends.md`: step-1 and step-2 requests carry a window. Relation requests carry the whole text.
-- `specification/audit.md`: a recognize name's score is `probability`.
 - `specification/relate.md`: the `ANY` alias and optional file sides.
 - `specification/fixtures/recognize/README.md`: `long.jsonl` and its source.
-- `spec/recognize.md` and demo 44: the new plan and output. Demo 44's step on reading the score reads `probability`.
+- `spec/recognize.md` and demo 44: the new plan and output. Demo 44 keeps its strength step.
 - `sdlc/issues/2026-09-26-recognize-design.md`: already marked superseded by ADR 0056 where it rejects BILOU. Its R2, R3 and R4 rows gain the same marker.
 - `CHANGELOG.md`: one line naming the output change, the removed options and the new guard.
 - Two issues for the marketing lead name the site's recognize and relate recordings and examples, because `site/` changes hands only through them.
@@ -249,14 +250,13 @@ The ceiling is 70,015 lines. The estimate is +400, from +250 to +700.
 
 ## Stop rules
 
-1. Stop before building until the coordinator fills open choices 1 to 3.
-2. Stop if the ceiling would pass 70,915, 900 over today. Report what grew.
-3. Stop if a recorded run misses its bar. Report the scores to the coordinator with the error groups. Do not tune the wording to the key.
-4. Stop before any paid run that Ian has not authorized.
-5. Stop if a design rule here needs a ruling ADR 0056 does not give. Report it with options.
-6. Stop if a deliberate break stays green.
-7. Stop if `Labels` refuses an edge option label that the key produces. Report the case, and do not invent a label rule.
-8. Stop if another in-flight ticket edits the same recognize files. The coordinator orders the two.
+1. Stop if the ceiling would pass 70,915, 900 over today. Report what grew.
+2. Stop if a recorded run misses its bar. Report the scores to the coordinator with the error groups. Do not tune the wording to the key.
+3. Stop before any paid run that Ian has not authorized.
+4. Stop if a design rule here needs a ruling ADR 0056 does not give. Report it with options.
+5. Stop if a deliberate break stays green.
+6. Stop if `Labels` refuses an edge option label that the key produces. Report the case, and do not invent a label rule.
+7. Stop if another in-flight ticket edits the same recognize files. The coordinator orders the two.
 
 ## Routing
 
@@ -275,13 +275,13 @@ Contract 3; state and timing 1; reach 3; proof 2; cost of error 2; total 11. The
 - **Relation evidence.** Step 3 keeps the whole text as evidence, so a long text with rules can pass the backend's evidence limit and exit 4.
 - **Standalone `relate`.** Its choice planner stays until its own ticket moves it to pairs under Ian's ruling of 2026-09-26.
 - **Batching texts.** Record modes send each text alone, as today, until R7.
-- **The accepted limits.** Titles inside names, two first names side by side, weekday names with no kinds, kinds that depend on use, pieces of web addresses and handles on web text, and `Help!` in relation texts.
+- **The accepted limits.** Titles inside names, two first names side by side, weekday names with no kinds, kinds that depend on use, pieces of web addresses and handles on web text, whole web addresses under the web kinds, and `Help!` in relation texts. `strength` is not calibrated across kinds of text.
 
 ## What Ian can overturn
 
 - ADR 0056 as a whole, and each owner call it lists.
 - Decisions 1 to 8.
-- Open choices 1 to 3, once filled.
+- The three choices filled from local experiments 284, 286 and 287.
 - The bars of tests 1 to 5.
 - The four kinds items carried from the earlier version: `ENTITY`, bare rules and `ANY`, declining through `none of these`, and pairs only where a rule allows.
 
@@ -292,7 +292,7 @@ None. The design issue stays open for R4b, R6, R7 and R8. `sdlc/issues/2026-09-2
 ## Evidence
 
 - Starts from: ADR 0056 and Ian's rulings of 2026-09-26. Local experiments 278 (three steps against the baseline), 279 (the edge question, descriptions, and the rejected title, split and trim arms), 280 and 281 (the public sample, the full public split, WNUT-17, and the rejected q3 wording), 282 (error groups and plan rules), 283 (the rejected span check) and 285 (windows on public documents). Local experiment 274 for the one-kind failure. The earlier version of this ticket for the four kinds items. `origin/main` at `19ca8302`.
-- Keeps: Unicode scalar offsets with an exclusive end. Record modes and their envelope. `--kind KIND=DESCRIPTION`. `--threshold` on names. Full `audit` support for recognize, `--write` included. Relation rules, `--relation-threshold` and its 0.5 default. `relate`'s planner. The request ceiling of ADR 0040. The `audit` key files.
-- Changes: The splitter, all recognize questions, the decode, windows at every length, the output shape, `--details`, the dry-run schema, the guard, the kinds and rule parsing, the name score's definition, `audit`'s field name for recognize, and every surface's entity type. The `strength` formula and the default kinds go.
+- Keeps: Unicode scalar offsets with an exclusive end. Record modes and their envelope. `--kind KIND=DESCRIPTION`. The `strength` field, `--threshold` on names, and full `audit` support for recognize, `--write` included. Relation rules, `--relation-threshold` and its 0.5 default. `relate`'s planner. The request ceiling of ADR 0040. The `audit` key files.
+- Changes: The splitter, all recognize questions, the decode, windows at every length, the output shape, `--details`, the dry-run schema, the guard, the kinds and rule parsing, the `strength` formula, and every surface's entity type. The default kinds go.
 - Proof: Five replayed recordings graded by `audit` against bars under the lowest measured run. One replayed test of `audit` and `--write`. Three loopback tests, four edge-case tables, and fourteen deliberate breaks with the row each turns red.
 - Defers: `diff` over recognize and relate to ticket 0165. Public benchmark figures to R8. `--jobs` on one text to R4b. Batching to R7. Windowed relation evidence. Standalone `relate`'s pair method. The accepted limits.
