@@ -57,4 +57,9 @@ Each edited one source file, ran the named test under the heavy lock, and was re
 
 ## Rungs
 
-RUNGS
+Each rung ran once, alone, with `THINKTHEN_API_KEY` unset, at load under 10.
+
+- `lint` with `THINKTHEN_PRIVATE_NAMES`: exit 0.
+- `test`: exit 0.
+- `spec`: exit 0. Demos: 21 green, 0 red.
+- `surfaces`: exit 0. Every binding and every installed archive passed, `libraries/c` included, and the release smoke passed.
