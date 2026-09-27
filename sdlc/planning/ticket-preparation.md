@@ -13,6 +13,7 @@ Add concise investigation notes to the ticket. A shared record may hold facts co
 - What the code does, where it does it, and how the reported problem arises.
 - The agreed outcome, retained behavior, prerequisites, exact files and live lane conflicts.
 - Reusable code, experiments, fixtures and test helpers. Name fixture hashing, copied examples, serialized fields or host contracts that can surprise the build.
+- Check each host's accepted value ranges and NULL rules before reusing a proof across ports; a value valid in one host may be refused in another.
 - The smallest relevant validation commands and what each proves. Keep setup, compile, execution and lock wait separate when measured. No load campaign belongs in preparation.
 - Unresolved questions and missing evidence. Distinguish a proposed solution from an accepted decision; seek design review before changing the contract.
 
@@ -35,4 +36,4 @@ The fresh code reviewer checks these lessons against the diff and evidence. The 
 
 After the preparation pass, evaluate its accuracy and usefulness. After each ticket finishes, compare the notes with the builder's lessons. Record what reduced discovery, what was missed, and what caused rework in the ticket or shared preparation record. Use that evidence to give the retained agent a specific next brief. Do not measure success by note length or by counting prepared tickets as completed issues.
 
-The first database pass caught useful SQL budget and warm-settings dependencies. It also incorrectly flagged an old main sentence about `LIMIT` as an unresolved DuckDB design defect; the active accepted branch had already corrected it. The coordinator verified the branch and the preparer withdrew the finding. This is why the source comparison above is required. The first build-usefulness evaluation is still pending.
+The first database pass caught useful SQL budget and warm-settings dependencies. It also incorrectly flagged an old main sentence about `LIMIT` as an unresolved DuckDB design defect; the active accepted branch had already corrected it. The coordinator verified the branch and the preparer withdrew the finding. This is why the source comparison above is required. Independent review also caught a shared zero-total proof that SQLite cannot run because it refuses zero. The corrected notes use a spent positive SQL total there and keep a direct typed-budget proof separate. Future briefs must check each host's input domain before copying a test across ports. The first build-usefulness evaluation is still pending.
