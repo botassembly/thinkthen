@@ -14,6 +14,8 @@ A release renames the built files `libthinkthen.so` and `libthinkthen.a`, with t
 
 `thinkthen_engine_new_with` accepts JSON for the address, model, throttle, request limit, cache, timeout, retries, profile, record, and strict replay; the key stays in `THINKTHEN_API_KEY`.
 
+The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. There is no off switch on this surface. Set `THINKTHEN_CACHE` before `thinkthen_engine_new` runs to move the folder.
+
 ## Run facts
 
 A call with `"details": true` returns the command's `--details` line for one text, schema `thinkthen.result/1`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.

@@ -73,6 +73,10 @@ What ADR 0010 held is the second adapter and the option that selects one. Both r
 
 A repeated trial therefore shows the service's own play as well as any change in the candidate. A re-record into a used folder stops at exit 5 when the service answers a saved request differently, even with no model change. `specification/recording.md` and `specification/threshold.md` carry the measured play.
 
+## Amendment, 2026-09-27, by ticket 0163: measure drift from saved probabilities
+
+The 2026-09-25 amendment remains a record of its experiment. The offline [0163 drift record](../../records/0163-answer-drift.md) defines a probability-pair comparison over three saved recording sets. In the pinned benchmark, 4,075 of 5,111 repeated digests differ, 310 have a gap above 0.1, 430 cross 0.5, and the largest gap is 0.45. The fixed-width inference from experiment 259 is withdrawn; size a not-sure band from the measured gaps for the use at hand.
+
 ## Amendment, 2026-09-27, by Quick Fix qf-command-edges-and-prune: a loopback backend needs no key
 
 With `THINKTHEN_API_KEY` unset or blank, a request to `localhost`, `127.0.0.1`, or `[::1]` goes out with no `Authorization` header, on the command and on every library. A local server that checks no key then needs no pretend secret. Every other address still stops at exit 4 before any connection. The key rule of ruling 2 is unchanged: a set key still goes only to the address the user named. The coordinator ruled this for local experiment 284, file 89. Ian can overturn it.

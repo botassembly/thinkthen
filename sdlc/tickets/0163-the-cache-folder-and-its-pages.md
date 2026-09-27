@@ -1,14 +1,14 @@
 ---
 flow: build
 priority: 163
-opens: crates/thinkthen/src/engine/cache_prune.rs crates/thinkthen/src/engine/error.rs crates/thinkthen/src/cli/status.rs crates/thinkthen/src/cli/cache.rs crates/thinkthen/tests/backend/default_cache.rs crates/thinkthen/tests/status.rs specification/recording.md specification/threshold.md specification/settings.md sdlc/planning/adr/0010-one-wire-shape-two-variables-and-a-smaller-version-one.md SECURITY.md libraries/c/README.md libraries/polars/README.md libraries/python/README.md libraries/r/README.md libraries/ruby/README.md libraries/rust/README.md libraries/typescript/README.md databases/duckdb/README.md databases/postgresql/README.md databases/sqlite/README.md sdlc/issues sdlc/ratchet.json sdlc/records sdlc/tickets
+opens: crates/thinkthen/src/engine/cache_prune.rs crates/thinkthen/src/cli/status.rs crates/thinkthen/src/cli/cache.rs crates/thinkthen/tests/backend/default_cache.rs crates/thinkthen/tests/backend/default_cache/prune.rs crates/thinkthen/tests/status.rs specification/recording.md specification/threshold.md specification/settings.md sdlc/planning/adr/0010-one-wire-shape-two-variables-and-a-smaller-version-one.md SECURITY.md libraries/c/README.md libraries/polars/README.md libraries/python/README.md libraries/r/README.md libraries/ruby/README.md libraries/rust/README.md libraries/typescript/README.md databases/duckdb/README.md databases/postgresql/README.md databases/sqlite/README.md sdlc/issues sdlc/ratchet.json sdlc/records sdlc/tickets
 ---
 
 # 0163: The cache folder survives a bad entry, and the pages say what it holds
 
-Status: ready. The coordinator accepted it on 2026-09-26 after four fresh read-only reviews and a coordinator fix to plant (g). Owner: Claude. It builds after 0148, 0155, 0158 and 0159.
+Status: built on the codex-5 ticket branch, pending fresh independent code review and landing. The accepted outcome remains the 2026-09-26 ruling. Owner: Codex. Prerequisites 0148, 0155, 0158 and 0159 landed before this build.
 
-Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
+Review route: a fresh independent Codex reviewer checks the frozen final diff, including the measured source-ceiling amendment, before landing.
 
 ## Outcome and authority
 
@@ -172,13 +172,13 @@ Row 7's link must pass every check if a scan follows it. So the test plants a go
 
 ## Proof
 
-No new test file. Four existing tests pin today's whole-folder refusal, and all four go red under this design. Each turns into edge rows above. The two exact-shape pins in `tests/status.rs` gain the new field.
+The existing bad-entry tests were moved into a private child module under `tests/backend/default_cache/`, reusing the parent helpers. The old unsafe status case failed red at exit 5 against the accepted exit 0 before the code change. The cases now exercise the CLI boundary with exact diagnostics and status shapes.
 
 | Test | What it proves | Planted faults that turn it red |
 | --- | --- | --- |
-| `tests/backend/default_cache.rs:197`, `prune_model_selection_and_scan_before_delete_hold`, renamed to `prune_selects_by_model_and_names_a_bad_entry` | Row 1 | (a) Stop at the bad entry as today: exit 5 and the old entry stays. (b) Delete the bad entry: the file is gone. (c) Let the alias check read the bad entry: its reply names `jev-latest`, so the second prune exits 0 and removes the current entry |
-| `tests/backend/default_cache.rs:349`, `prune_refuses_digest_mismatch_blank_model_and_nonregular_entries_before_deletion`, renamed to `prune_leaves_and_names_each_kind_of_bad_entry` | Rows 2 to 6, and row 8 over those five folders. It gains the other-schema and mode `0000` cases and a `status` run before each prune | (a) again. (d) Fail the whole scan when one file cannot be opened: the mode `0000` case exits 5. (e) Count a bad entry as good: `status` prints `cache_entries 2`. (f) Count a bad entry's bytes: the remaining bytes are not 0 |
-| `tests/backend/default_cache.rs:401`, `prune_refuses_a_digest_shaped_symlink_without_following_it`, renamed to `prune_names_a_digest_shaped_symlink_without_following_it` | Row 7, and row 8 over its folder. It gains a `status` run before prune | (g) Follow the symlink as a regular file: replace both `symlink_metadata` calls in `scan`, the first check at `cache_prune.rs:208` and the check after the read at `:224-225`, with `fs::metadata`. The link then passes every check, so `status` prints `cache_entries 2` and `cache_bad_entries 0`, and prune prints `removed 2 entries and B bytes; 0 entries and 0 bytes remain`, writes no bad-entry line, and removes the link. The correct build prints `cache_entries 1` and `cache_bad_entries 1`, and its prune removes only the in-folder entry, leaves the link in place, and writes exactly one bad-entry line naming it. Under both builds the outside entry keeps its bytes, because `remove_file` at `cache_prune.rs:149` removes the link and not its target. (e) again: `status` prints `cache_entries 2` |
+| `tests/backend/default_cache/prune.rs`, `prune_model_selection_and_scan_before_delete_hold`, renamed to `prune_selects_by_model_and_names_a_bad_entry` | Row 1 | (a) Stop at the bad entry as today: exit 5 and the old entry stays. (b) Delete the bad entry: the file is gone. (c) Let the alias check read the bad entry: its reply names `jev-latest`, so the second prune exits 0 and removes the current entry |
+| `tests/backend/default_cache/prune.rs`, `prune_refuses_digest_mismatch_blank_model_and_nonregular_entries_before_deletion`, renamed to `prune_leaves_and_names_each_kind_of_bad_entry` | Rows 2 to 6, and row 8 over those five folders. It gains the other-schema and mode `0000` cases and a `status` run before each prune | (a) again. (d) Fail the whole scan when one file cannot be opened: the mode `0000` case exits 5. (e) Count a bad entry as good: `status` prints `cache_entries 2`. (f) Count a bad entry's bytes: the remaining bytes are not 0 |
+| `tests/backend/default_cache/prune.rs`, `prune_refuses_a_digest_shaped_symlink_without_following_it`, renamed to `prune_names_a_digest_shaped_symlink_without_following_it` | Row 7, and row 8 over its folder. It gains a `status` run before prune | (g) Follow the symlink as a regular file: replace both `symlink_metadata` calls in `scan`, the first check at `cache_prune.rs:208` and the check after the read at `:224-225`, with `fs::metadata`. The link then passes every check, so `status` prints `cache_entries 2` and `cache_bad_entries 0`, and prune prints `removed 2 entries and B bytes; 0 entries and 0 bytes remain`, writes no bad-entry line, and removes the link. The correct build prints `cache_entries 1` and `cache_bad_entries 1`, and its prune removes only the in-folder entry, leaves the link in place, and writes exactly one bad-entry line naming it. Under both builds the outside entry keeps its bytes, because `remove_file` at `cache_prune.rs:149` removes the link and not its target. (e) again: `status` prints `cache_entries 2` |
 | `tests/status.rs:174`, `an_unsafe_cache_entry_uses_the_status_failure_without_leaking_local_bytes`, renamed to `an_unsafe_cache_entry_is_counted_without_leaking_local_bytes` | Row 9 | (h) Fail status as today: exit 5 |
 | `tests/status.rs:22` and `:67`, the exact-shape pins | Rows 10 and 11. In the `:22` test, the JSON pin at line 43 and the human pin at line 53 gain the new field in place. The `:67` test gains `assert_eq!(value["cache"]["bad_entries"], serde_json::Value::Null);` beside its single-field asserts at lines 76 to 81. It also runs the human `status` with the same relative home and asserts that standard output holds the line `cache_bad_entries unavailable` | (i) Omit the field or print it in another place: the whole-output pin differs. (j) Print 0 in place of `null` with no cache: the `:67` JSON assert differs. (k) Print 0 in place of `unavailable` with no cache: the `:67` human assert differs |
 
@@ -190,23 +190,23 @@ The four questions, for the changed tests:
 
 - **What behavior does it protect?** Prune as the one bound on the cache, and `status` as a read-only report, with one bad file present.
 - **What credible regression fails it?** A scan that stops at the first bad file again, a prune that deletes or follows a file it could not read, a bad file counted as good, and one unopenable file failing the whole folder.
-- **Why does no existing test catch it?** Existing tests do catch the change. `default_cache.rs:197`, `:349` and `:401` and `status.rs:174` plant bad entries and pin the whole-folder refusal, so all four go red. This ticket rewrites them to pin the new rule rather than adding a new file. No existing test plants another schema or an unopenable file, so those become new rows in the `:349` table.
+- **Why does no existing test catch it?** Existing tests do catch the change. `default_cache/prune.rs` cases for model selection, bad-entry kinds and symlink handling and `status.rs:174` plant bad entries and pin the whole-folder refusal, so all four go red. This ticket rewrites them to pin the new rule rather than adding a new file. No existing test plants another schema or an unopenable file, so those become new rows in the `:349` table.
 - **Does it need a test-only hook?** No. The folders, files, modes and symlinks are real.
 
 ## Budgets
 
 Nonblank lines, measured with `grep -c .`.
 
-- `engine/cache_prune.rs` and `engine/error.rs`: at most 40 net together.
-- `cli/status.rs` and `cli/cache.rs`: at most 20 net together.
-- `tests/backend/default_cache.rs`: at most 45 net. `tests/status.rs`: at most 10 net.
-- Pages, READMEs, `SECURITY.md` and the ADR amendment: at most 75 net.
-- `sdlc/ratchet.json` moves to the measured total, at most 60 above main. The commit says what grew.
+- `engine/cache_prune.rs`: measured +37 nonblank lines against the old engine estimate of 40. `engine/error.rs` stayed with ticket 0170 and was untouched.
+- `cli/status.rs` and `cli/cache.rs`: measured +11 against the old estimate of 20.
+- `tests/backend/default_cache.rs` and its private `prune.rs` child: measured +146 together against the old 45 estimate; each file stays under 500 nonblank lines. `tests/status.rs`: +5 against 10.
+- Pages, READMEs, `SECURITY.md` and the ADR amendment: measured +15 nonblank lines against the old 75 estimate, separate from Rust source; see `sdlc/records/0163-build.md`.
+- `sdlc/ratchet.json` equals the measured 77,849 after the code slice, +199 over its previous 77,650. Product +48 and tests +151 are separate. The coordinator authorized a measured amendment for necessary distinct behavior; fresh review judges it.
 - No dependency. No paid call.
 
 ## Stop rules
 
-1. Stop before crossing any budget by more than a tenth, or before adding a dependency.
+1. A necessary budget overrun receives an exact group, per-file and aggregate measurement and a duplication review before fresh code review. A dependency still requires coordinator routing.
 2. Stop if prune would delete, open again or follow an entry it set aside.
 3. Stop if a printed line would carry anything from inside an entry.
 4. Stop if the drift measurement needs a network call, or if the local Beatles Bench clone lacks the commit `site/examples/beatles/BENCH` names. Record what was measured and report.
@@ -224,7 +224,7 @@ Excluded: a new off switch on any surface, a warning or refusal for a writable f
 
 ## Routing
 
-Builder: Claude (Opus subagent) in the lane the coordinator names. Reviewer: a fresh read-only Claude session for the design and for the code.
+Builder: Codex Sol Medium in codex-5. Reviewer: a fresh independent Codex session for the frozen final code and documentation diff.
 
 ## Complexity
 
@@ -251,8 +251,12 @@ Contract 1; state and timing 1; reach 2; proof 1; cost of error 2; total 7. Fina
 
 ## Evidence
 
-- Starts from: Local experiment 273, report 08 finding 3, report 12 findings 2.1 and 2.2, report 09 finding 3, and report 07 finding I2, as the five issues record them. The code at `origin/main` `8084d38a`: `cache_prune.rs:66`, `:92`, `:200-240`, `:208` and `:212`, `core/recording.rs:212`, `cli/status.rs:123-129`, `recorder.rs:137`, `usage.rs:263`, `databases/duckdb/src/engines.rs:129`, and `databases/postgresql/src/call.rs:127` and `:147`. The tests `default_cache.rs:197`, `:349` and `:401` and `status.rs:22`, `:67` and `:174`. `recording.md` lines 20, 26, 62, 78, 92, 94 and 96, `threshold.md` line 45, `settings.md` line 63, ADR 0010's 2026-09-25 amendment, ADR 0049 item 3, and `README.md` line 38. Ticket 0158's commit `c09e9551` and ticket 0159's re-key.
+- Starts from: Local experiment 273, report 08 finding 3, report 12 findings 2.1 and 2.2, report 09 finding 3, and report 07 finding I2, as the five issues record them. The starting code at `origin/main` `8084d38a`: `cache_prune.rs:66`, `:92`, `:200-240`, `:208` and `:212`, `core/recording.rs:212`, `cli/status.rs:123-129`, `recorder.rs:137`, `usage.rs:263`, `databases/duckdb/src/engines.rs:129`, and `databases/postgresql/src/call.rs:127` and `:147`. The tests `default_cache/prune.rs` cases for model selection, bad-entry kinds and symlink handling and `status.rs:22`, `:67` and `:174`. `recording.md` lines 20, 26, 62, 78, 92, 94 and 96, `threshold.md` line 45, `settings.md` line 63, ADR 0010's 2026-09-25 amendment, ADR 0049 item 3, and `README.md` line 38. Ticket 0158's commit `c09e9551` and ticket 0159's re-key.
 - Keeps: Prune's order, target and alias rule over good entries. The success line's wording. `status` over a folder with no bad entry, beside the new count. The whole-command failure for an unreadable folder, a symlinked folder or a lock failure. Every default. Every entry's bytes.
 - Changes: Prune skips and names a bad entry. `status` counts bad entries. One unopenable file no longer fails the folder. Pages name what the cache holds, how to turn it off or move it, who decides its answers, the measured drift, and the exit wait.
-- Proof: Four existing tests rewritten to pin the new rule and two shape pins extended, with eleven plants, an offline drift record in `sdlc/records/0163-answer-drift.md`, and the `install`, `lint`, `test`, `spec` and `surfaces` rungs.
+- Proof: The affected `default_cache` and `status` CLI tests, including a private prune child module; exact source and checks in `sdlc/records/0163-build.md`; offline measurement in `sdlc/records/0163-answer-drift.md`. Full integration belongs to the related-ticket batch checkpoint.
 - Defers: The writable-folder warning, an entry integrity check, an off switch on DuckDB, PostgreSQL and C, SQL cache defaults, an expiry setting, the builder's `cache: false` gap, and a test for a vanished file.
+
+## What the build taught us
+
+The preflight saved work by identifying the held `engine/error.rs`, the literal `jev-latest` alias fixture, the current status shape and the benchmark pin. It missed the parent test file's remaining headroom and initially allowed schema and unreadable fixtures to change their digest names too. The corrected table retains each valid request digest and changes only the tested property; the blank-model case reports its actual name. The first source estimate undercounted the distinct outside-in regression rows, so the coordinator authorized the measured +199 aggregate amendment while retaining the 500-line file cap. Related prune cases moved into one private child using parent helpers. The next prep should measure current file headroom and isolate each intended failure before handing a builder a budget or fixture recipe.
