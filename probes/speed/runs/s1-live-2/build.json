@@ -1,0 +1,11 @@
+{
+  "commit": "18f0381ed7091b0a3a518aa9329e55c2a8f8a909",
+  "binary_sha256": "7837785a17453db36b5c1a56548bd39e705293e7a4e9d031c0ce519459425dcc",
+  "version": "thinkthen 0.0.1",
+  "profile": "debug",
+  "bench_commit": "ed8ffe498a21f9f60d5b5905008e1b3c249d87bb",
+  "bench_clean": true,
+  "processors": 16,
+  "loadavg_start": "0.83 0.91 1.27 4/1010 628448",
+  "loadavg_end": "1.32 1.10 1.29 1/976 634749"
+}
