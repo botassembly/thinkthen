@@ -5,6 +5,8 @@ set -eu
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
+THINKTHEN_TEST_PROFILE=routine
+export THINKTHEN_TEST_PROFILE
 export THINKTHEN_CONFORMANCE_IDS="$REPO/conformance/routine-ids.txt"
 
 # An exact filter that matches nothing makes Cargo exit successfully. Refuse it.
