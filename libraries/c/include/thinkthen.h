@@ -12,12 +12,19 @@
  * thread between calls, and rebuilds its state after a fork.
  *
  * Every call may carry two options beside its arguments: a budget in
- * `deadline_ms` and a cancel token. Every `_opts` spelling takes them, and
- * every plain spelling is exactly its `_opts` twin called with
+ * `deadline_ms` and a cancel token. Every `_opts` spelling takes them,
+ * and every plain spelling is exactly its `_opts` twin called with
  * THINKTHEN_NO_DEADLINE and a null token. A C host hears its own
- * interrupts by firing a token from another thread: the wait checks the
- * token and the budget on every tick, so a cancel or a spent budget ends
- * the call within one tick. One engine serves any number of threads at
+ * interrupts by firing a token from another thread. The call reads the
+ * token before every request and every retry, and its wait reads the
+ * token and the budget on every tick. A spent budget ends the call
+ * within one tick. A fired token starts no new request and no retry. A
+ * request already sent runs to its end, within its attempt timeout and
+ * the budget, and a complete answer it brings still reaches the cache
+ * and the counters. Then the call returns THINKTHEN_ECANCELLED with no
+ * results, whatever that reply held. The call reads the token a last
+ * time after its last request ends; a token fired after that read does
+ * not change the result. One engine serves any number of threads at
  * once, and each caller sees the answers it would get alone.
  *
  * The lifetime rules: an engine lives until `thinkthen_engine_free`; a
@@ -151,10 +158,12 @@ int thinkthen_error_code(const thinkthen_engine *engine);
 /* Create a cancel token. */
 thinkthen_cancel_token *thinkthen_cancel_token_new(void);
 
-/* Fire a token: the calls carrying it stop starting new requests and
- * return THINKTHEN_ECANCELLED with no results. A token is one-shot: a
- * fire leaves it fired, a second fire is ignored, and no call re-arms it.
- * Thread-safe from any thread; a null token is accepted and ignored. */
+/* Fire a token: the calls carrying it start no new request or retry, let
+ * the requests they sent finish, and return THINKTHEN_ECANCELLED with no
+ * results, even when a sent request's reply arrives after the fire. A
+ * token is one-shot: a fire leaves it fired, a second fire is ignored,
+ * and no call re-arms it. Thread-safe from any thread, and it allocates
+ * nothing; a null token is accepted and ignored. */
 void thinkthen_cancel(thinkthen_cancel_token *token);
 
 /* Free a token. NULL is accepted and ignored. */

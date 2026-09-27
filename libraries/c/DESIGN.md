@@ -59,7 +59,7 @@ The door writes the bare `decide`, `choose`, `score`, `tag`, `filter`, `rank`, a
 
 ## 1. Cancellation
 
-The door owns a token handle. `thinkthen_cancel_token_new` creates it, `thinkthen_cancel` fires it, and `thinkthen_cancel_token_free` frees it. Every `_opts` spelling takes a token, and a null token means none. A fired token stays fired, and one token can stop many calls. No new request starts after the fire, requests already sent finish, and the calls that carried the token return `THINKTHEN_ECANCELLED` with no results.
+The door owns a token handle. `thinkthen_cancel_token_new` creates it, `thinkthen_cancel` fires it, and `thinkthen_cancel_token_free` frees it. Every `_opts` spelling takes a token, and a null token means none. A fired token stays fired, and one token can stop many calls. No new request or retry starts after the fire. A request already sent finishes within its attempt timeout and the budget. A complete answer reaches the cache, and every reply reaches the counters, so the same call with a fresh token replays it and pays nothing more. The call that carried the token then returns `THINKTHEN_ECANCELLED` with no results, whatever the reply held, a failure included. The call reads the token on every thread it uses, and once more after its last request ends. A fire after that last read does not change the result.
 
 C has no standard interrupt channel, and every host that binds this door has threads. A Go, Java, or C++ host fires the token from whatever thread receives its stop gesture. A fire allocates nothing, so a POSIX signal handler can fire it too.
 
