@@ -36,6 +36,8 @@ Fixed by Quick Fix qf-h1-h3-h6, 2026-09-26. The page now says an empty or blank 
 
 ### 5. A guessed verb, a CSV file, or a second path gets no hint
 
+Fixed by ticket 0153 on 2026-09-27, code `3e8ad635`. The exact command hints, JSONL advice and second-argument refusal pass compiled-CLI tests. The `choose` help points to `tag`.
+
 **Gap.** The headline sells semantic `if`, `grep`, and `sort`. Checked against the debug build on 2026-09-25: `thinkthen grep` and `thinkthen classify` print clap's `unrecognized subcommand` and the usage line. A CSV file piped into `filter --jsonl` prints `thinkthen: the record is not valid JSON` and exits 2, with no mention of `--csv`. `thinkthen decide 'Q?' README.md` prints `unexpected argument 'README.md' found`. Only `annotate` has a second-path hint (`crates/thinkthen/src/cli/annotate.rs:139`). `thinkthen choose --help` never points to `tag` for many labels. Rows 3, 5, and 6 of `2026-09-20-new-user-stumble-register.md` track the same three stumbles.
 
 **Fix.** Add a hint table for unknown verbs: `grep` names `filter`, `if` names `decide`, `classify` and `switch` name `choose`, `sort` names `rank`, and `summarize` and `rewrite` say the tool writes no text. Add a hint to the JSONL parse failure on the first record that names `--csv` and `--lines`. Give every function the second-path hint `annotate` has. Add one line to `choose --help` that names `tag` for zero or more labels. Close rows 3, 5, and 6 of the register with the commit.

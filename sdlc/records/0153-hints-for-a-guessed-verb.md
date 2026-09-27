@@ -36,3 +36,8 @@ The final source total is 74,141 nonblank lines, exactly the ratchet ceiling. Fo
 Retained from `3dadbb76`: final install and lint passed. Its spec run passed executable spec pages, how-tos, and earlier checks, then failed only the help vocabulary check; the normal demos check now passes after the wording fix. Ticket 0153's accepted budget explicitly exempts a full surfaces rerun; the main SQL surface evidence remains applicable because this ticket changes no library or database behavior. No other full rung was rerun.
 
 Closure remains a landing task, after fresh root review: mark item 5 of the docs issue fixed by the landing commit, mark stumble-register rows 3, 5 and 6 closed by that commit, and update the H5 planning row. The issue and register stay open for their other work. Main and the lane remain untouched by this candidate.
+
+
+## Landing, 2026-09-27
+
+Fresh independent final review returned ACCEPT at `3e8ad635` in `target/codex-reviews/0153-final/REVIEW.md`. It checked the post-review corrections, preserved threshold-option rows, all reported verification, closure mapping and exact 74,141-line count. Main `f42775fb` merged as `3519f37f`; its only additions were the type-contract issue and planning metadata. No checked runtime input changed. The coordinator retained the valid gate results, reran the ticket and source-count checks for closure, and kept both umbrella issues open. Ticket 0153 is done; docs item 5 and stumble rows 3, 5 and 6 are settled. The queue now has 174 items: 28 done, 141 to do, 1 non-issue and 4 blocked. Codex-1 releases its files. The next full integration checkpoint combines the reviewed command, fixture and settings changes under Ian's batch-validation ruling.

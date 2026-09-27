@@ -6,9 +6,9 @@ opens: crates/thinkthen/tests/backend/threshold_args.rs crates/thinkthen/src/cor
 
 # 0153: Hints for a guessed verb, a table fed to `--jsonl`, and a second argument
 
-Status: accepted with the bounded landing amendment on 2026-09-27 after a fresh independent read-only Sol Medium review. The coordinator accepts both gate-conflict resolutions below. Owner: Codex.
+Status: done on 2026-09-27. Fresh independent final review accepted `3e8ad635`, and the checked change landed with its issue-row closures. Owner: Codex.
 
-Review route: Ian routed this work to Codex. A fresh read-only reviewer accepted code `9304b75c`, and a separate fresh reviewer accepted the bounded landing amendment below. The final code corrections and ceiling need bounded independent review before landing.
+Review route: Ian routed this work to Codex. A fresh read-only reviewer accepted code `9304b75c`, and a separate fresh reviewer accepted the bounded landing amendment below. A fresh final reviewer accepted the code corrections, ceiling and evidence at `3e8ad635`.
 
 ## Outcome and authority
 
