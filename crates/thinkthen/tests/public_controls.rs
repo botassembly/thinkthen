@@ -11,7 +11,7 @@
 
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Barrier, Mutex, MutexGuard, PoisonError};
+use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::thread::{self, ThreadId};
 use std::time::{Duration, Instant};
 
@@ -23,6 +23,9 @@ use thinkthen::{
 const DECIDED: &str = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":3,"output_tokens":1}}"#;
 const MOST: &str = "4294967295 seconds";
 const BOUND: Duration = Duration::from_secs(3);
+
+#[path = "public_controls/fired.rs"]
+mod fired;
 
 static SERIAL: Mutex<()> = Mutex::new(());
 
@@ -175,66 +178,6 @@ fn a_spent_batch_sends_nothing() {
     assert_eq!(rows.len(), 1);
     assert_eq!(kind(&rows[0]), Some(ErrorKind::Cancelled));
     assert_eq!(listener.count(), 0);
-}
-
-/// Ticket 0166: a token fired during a send ends the call cancelled, whatever
-/// the reply, and a retry the reply asks for never goes.
-#[test]
-fn a_token_fired_during_a_send_ends_the_call_cancelled() {
-    let _serial = serial();
-    for status in [503, 422] {
-        let release = Arc::new(Barrier::new(2));
-        let held = Arc::clone(&release);
-        let first = AtomicUsize::new(0);
-        let listener = Listener::answering(move |_| {
-            if first.fetch_add(1, Ordering::SeqCst) > 0 {
-                return Canned::ok(DECIDED);
-            }
-            let refused = Canned::status(status, "").after_release(Arc::clone(&held));
-            refused.asking("retry-after-ms", "0")
-        })
-        .expect("listener");
-        let (token, engine) = (CancelToken::new(), engine(listener.base()));
-        let result = thread::scope(|scope| {
-            scope.spawn(|| {
-                while listener.count() < 1 {
-                    thread::sleep(Duration::from_millis(5));
-                }
-                token.cancel();
-                release.wait();
-            });
-            let options = CallOptions::new().cancel(&token);
-            engine.decide_with(&question(), "Refund me.", options)
-        });
-        assert_eq!(kind(&result), Some(ErrorKind::Cancelled), "{status}");
-        assert_eq!(
-            listener.count(),
-            1,
-            "{status}: nothing was sent after the fire"
-        );
-    }
-}
-
-/// Ticket 0166: a token fired after a batch's last row ends the batch cancelled.
-#[test]
-fn a_token_fired_before_a_batch_ends_ends_it_cancelled() {
-    let _serial = serial();
-    let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
-    let engine = engine(listener.base());
-    let (token, asked) = (CancelToken::new(), question());
-    let options = CallOptions::new().cancel(&token);
-    let mut rows = engine.decide_many_with(&asked, ["Refund me."], options);
-    assert_eq!(
-        rows.next().map(|row| row.map(|row| *row.value()).ok()),
-        Some(Some(Answer::Yes))
-    );
-    token.cancel();
-    assert_eq!(
-        rows.next().as_ref().and_then(kind),
-        Some(ErrorKind::Cancelled)
-    );
-    assert!(rows.next().is_none());
-    assert_eq!(listener.count(), 1);
 }
 
 /// What a check saw: the thread of each run and the sends at that run.
