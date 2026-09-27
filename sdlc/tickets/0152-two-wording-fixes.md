@@ -6,9 +6,9 @@ opens: crates/thinkthen/src/public/options.rs crates/thinkthen/tests/public_cont
 
 # 0152: A huge deadline prints a short number, and "not sure" replaces "unresolved"
 
-Status: in progress. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Part A landed on 2026-09-26 after a fresh read-only code review; its record is `sdlc/records/0152-build-part-a.md`. Part B builds after ticket 0146 lands. Owner: Claude.
+Status: complete. Part B passed fresh code review and focused validation on 2026-09-27. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Part A landed on 2026-09-26 after a fresh read-only code review; its record is `sdlc/records/0152-build-part-a.md`. Part B builds after ticket 0146 lands. Owner: Codex under Ian's handover.
 
-Review route: a fresh read-only Claude session reviews this design and each part's final diff. Codex does not review this ticket unless Ian routes it.
+Review route: a fresh read-only Codex reviewer checks Part B's final diff. Ian's handover routes this accepted ticket to Codex; the settled behavior stays fixed.
 
 ## Outcome and authority
 
@@ -56,7 +56,7 @@ Every surface that passes a seconds deadline to `deadline_seconds` prints the sa
 
 `unresolved` becomes `unsure` wherever a program reads it:
 
-1. The `audit` row member `unresolved` becomes `unsure`. The field of `Row` in `core/measure/audit.rs` takes the new name, and `rows.rs` and `cli/audit/table.rs` follow it. The internal count field and the `Outcome` and `Said` variant names stay.
+1. The `audit` row member `unresolved` becomes `unsure`. The field of `Row` in `core/measure/audit.rs` takes the new name, and `rows.rs` and `cli/audit/table.rs` follow it. The internal `Counts.unresolved` field keeps its Rust name, with a serde rename so nested `suggested` and `held` counts also serialize as `unsure`. The `Outcome` and `Said` variant names stay.
 2. `Said::text` in `core/measure/answer.rs` returns `"unsure"` for the no-answer state. That token reaches `audit` disagreements and `diff`'s `from`, `to`, and `moves`, in JSON and in the `diff` table.
 3. The built-in transforms rename the key and value. In each of `band`, `calibration`, `compare`, `counts`, `score`, `sweep`, and `triage`, the key `unresolved` becomes `unsure` and `accuracy_unresolved` becomes `accuracy_unsure`. Sweep's internal `unique_unresolved` and `right_unresolved` become `unique_unsure` and `right_unsure`. `compare`'s flip names read `no to unsure` and `unsure to yes`. `triage`'s reason reads `unsure`. `crates/thinkthen/transforms/*.jq` and `transforms/*/*.jq` stay identical copies. The comments in `transforms/counts/example.sh` (line 2) and `transforms/rows/record.sh` (line 28) say not sure. Their tests and expected files (`transforms/compare/test.sh`, `transforms/sweep/test.sh`, `transforms/sweep/decision-expected.json`, `transforms/sweep/decision-empty-expected.json`, `transforms/triage/cases.jsonl`, `transforms/triage/expected.jsonl`) take the new names.
 
@@ -67,19 +67,20 @@ Every surface that passes a seconds deadline to `deadline_seconds` prints the sa
 - `specification/decide.md` replaces the definition sentence with: `` `unsure` is the machine name for a not sure answer, in `audit`, `diff`, and the built-in transforms. ``
 - `specification/audit.md` and `diff.md` drop the sentence that the table keeps the prototype's word. They say the port prints `unsure` where the prototype printed its older word for a not sure answer, and the audit table's count line says not sure. The state-name rule at `audit.md:240` stays true to the prototype: the prototype reads an option spelled with its older word, or `tied`, as that state, and the port keeps each one an option. The page describes that option without writing the older word.
 - Two examples use "unresolved" in its plain sense, a failure still open. The `annotate.md` and `result.md` example question `unresolved` becomes `open`, asking "Is this still open?". `filter.md`'s example evidence reads "This mentions an open action." `specification/` then holds no "unresolved" at all, which the zero-hit check needs.
+- The later `specification/types.md` page uses "not sure" in prose. The executable `spec/annotate.md` example uses the same `open` question, and its two local request fixtures take SHA-256 filenames computed from the changed requests. Their responses do not change.
 - The conformance case `null-and-unresolved` in `conformance/record-values.json` becomes `null-and-unsure`. No surface names the case id, by a search of every tracked file.
 - Demo 02's shell variable reads `label=not_sure`, as `choose --help` already teaches with `pick=not_sure`.
 - ADR 0017 gains an amendment dated at the build. Item 4 keeps "unsure" as the machine word. The specification now uses it too, and pages say "not sure". It notes that this reverses the item's "the specification keeps unresolved" clause.
 
 #### The prototype fixtures
 
-The fixtures under `tests/fixtures/measure/golden/` stay byte copies of the prototype, with the checksums `every_fixture_keeps_its_checksum` pins. `support/measure.rs` gains one function, `ported`, next to `without_added`. It rewrites the prototype's spelling to the port's before a test compares:
+The fixtures under `tests/fixtures/measure/golden/` stay byte copies of the prototype, with the checksums `every_fixture_keeps_its_checksum` pins. `support/measure.rs` gains one function, `ported`, next to `without_added`. It rewrites only the audit count spelling on the expected side before a test compares:
 
-- in JSON lines, the string `"unresolved"` becomes `"unsure"`, as a member name and as a value;
+- in audit JSON lines, the count member `"unresolved":` becomes `"unsure":`, including nested `suggested` and `held` counts;
 - in an `audit` table, ` unresolved, ` becomes ` not sure, `;
-- in a `diff` table, the word `unresolved` becomes `unsure`.
+- in the existing `extra/diff-annotate.jsonl` golden, two captured below-cut `kind` states and their summary move change explicitly in `diff.rs`. The porter leaves every user option string alone. No current `diff` table golden holds the old state token.
 
-Four tests compare against the ported fixture: `audit::old_goldens_hold`, the test in `audit.rs` that compares with `golden/audit-decide.jsonl` (about line 91), the replay test in `audit.rs` that compares with `replay/audit.jsonl` (about lines 124 to 140), and `diff::goldens_match`. `replay/audit.jsonl` holds the prototype's spelling too. `tests/fixtures/measure/README.md` records the rename beside the members ticket 0125 added. No `diff` table golden holds the word today, so the third rule guards the next capture.
+The existing audit golden, specific audit comparison, and audit replay test compare against the ported fixture. `replay/audit.jsonl` holds the prototype's spelling too. The diff goldens compare directly, except the named `extra/diff-annotate.jsonl` state changes above. `tests/fixtures/measure/README.md` records the rename beside the members ticket 0125 added. A compiled `diff` regression keeps an option literally named `unresolved` unchanged in output and through the porter.
 
 #### The checks that keep the old word out
 
@@ -209,7 +210,7 @@ Beatles Bench belongs to marketing, and two of its pages print the old lines. No
 - `functions/diff/README.md` line 44, which says `unresolved -> no 44`. After Part B, `diff` prints `unsure -> no 44` there.
 - The vocabulary note: the product vocabulary can add `unsure` as the machine word for "not sure". It needs no other change.
 
-The lander then tells the marketing lead about the issue.
+The coordinator records the follow-up issue. No external message is authorized in this handoff.
 
 ## Scope and exclusions
 
@@ -217,7 +218,7 @@ Excluded: every verb's output and exit code, the result schema, `site/`, `probes
 
 ## Routing
 
-Builder: Claude (Opus subagent) in the lane the coordinator names. Reviewer: a fresh read-only Claude session for the design and for each part's code.
+Builder: Codex in the retained command lane for Part B. Reviewer: a fresh read-only Codex reviewer for Part B's code.
 
 ## Complexity
 
@@ -230,7 +231,7 @@ Contract 2; state and timing 0; reach 3; proof 2; cost of error 1; total 8. Fina
 3. `sdlc/` history keeps the word: records, tickets, closed issues, planning pages, and ADRs other than 0017.
 4. The sweep transform's `resolved`, `right_resolved`, and `accuracy_resolved` keep their names. `audit` calls the same count `answered`. Aligning them is a separate choice.
 5. The prototype's own output still says `unresolved`. The test ports it.
-6. Beatles Bench's two pages and the vocabulary note belong to marketing. The lander files the issue and tells the marketing lead, as "Marketing's files" says.
+6. Beatles Bench's two pages and the vocabulary note belong to marketing. The coordinator keeps the follow-up issue named in "Marketing's files"; no external message is part of this handoff.
 7. Question-file tests that name a question `unresolved` (`tests/backend/annotate.rs`, `core/question_set/tests.rs`) keep it. There it is a question name.
 
 ## What Ian can overturn
@@ -240,6 +241,14 @@ Contract 2; state and timing 0; reach 3; proof 2; cost of error 1; total 8. Fina
 - Decision 4: a deadline past 20 characters prints in exponent form. The other choice names only the cap.
 - Decision 5: internal identifiers keep the old word.
 - Decision 6: Part B waits for 0146.
+
+## What the build taught us
+
+- The audit golden exposed `Counts.unresolved` inside the serialized `suggested` and `held` objects. A serde field rename kept the internal Rust name while making every public member `unsure`. Tracing nested serialization before the edit would have found it sooner.
+- J1 added `specification/types.md`, executable `spec/annotate.md`, and two digest-named local request fixtures after this ticket's first inventory. A current public-surface search and the fixture filename formula belonged in the preparation. The prototype measure fixtures remained byte copies.
+- Executable pages need the built command on `PATH`. The first targeted invocation missed that setup; the corrected invocation passed. One full-demo attempt exposed an extra usage-counter warning in unchanged demo 12 under the normal home directory. Its cause is unproven; the changed pages passed targeted checks.
+- Fresh review found that the first golden porter rewrote every `unresolved` string, including a user option. The correction limits shared rewriting to audit count members and the count line. The existing diff capture names its two below-cut states and summary move exactly; a compiled diff case pins an option literally named `unresolved`. Preparation missed that option/value boundary.
+- The remaining limits are the internal names, historical artifacts, and marketing copies listed above. No broader mutation campaign or full port ladder was run under Ian's current focused-proof ruling.
 
 ## Closes
 

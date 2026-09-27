@@ -49,7 +49,7 @@ Each input is read whole. Lines split on newline. A blank line is skipped and st
 - A `tag` entry becomes one yes/no answer per label, in the order of `E.answer.probabilities`, else `E.question.labels`. A label is yes as run when `E.value` lists it, and its `p` is its probability.
 - A `score` entry reads its levels from `E.question.levels` and its number from `E.value`.
 - A `find` entry's distribution covers the unit ids and `none`. As run, a text value says `E.answer.pick`. A null value says the top, or `"tied"` when the top is tied. A `find`, `recognize`, or `relate` line with no `input` takes its one-based line number as its record id. `find` names units `u001`, `u002`, and on, as [find.md](find.md) says.
-- A `recognize` entry reads its names from `E.value.entities`, each with `kind`, `start`, `end`, and `strength`, and its kinds from the member names of `E.question.kinds`. A `relate` entry reads its edges from `E.value`, each with `relation`, `source` and `target` as `{name, kind}`, and `probability`, and its relations from `E.question.relations`. Both read their run cut from `E.question.threshold`. A line without its run cut, its kinds or relations, or a value of that shape cannot be graded. A `relate` line whose `meta.failed_questions` is above 0 lost the edges of those questions, so it counts as failed.
+- A `recognize` entry reads its names from `E.value.entities`, each with `kind`, `start`, `end`, and `strength`, and its kinds from the member names of `E.question.kinds`. When `E.question.kinds` is empty, audit grades every said name and every key name as the kind `ENTITY`, so a key of any kinds grades a run with no kinds. A `relate` entry reads its edges from `E.value`, each with `relation`, `source` and `target` as `{name, kind}`, and `probability`, and its relations from `E.question.relations`. Both read their run cut from `E.question.threshold`. A line without its run cut, its kinds or relations, or a value of that shape cannot be graded. A `relate` line whose `meta.failed_questions` is above 0 lost the edges of those questions, so it counts as failed.
 - The text is `E.question.text`, or null.
 - `p` is `E.answer.probability`, or null. The distribution is `E.answer.probabilities`, or null. Its top is its largest value. Its pick is the first member, in member order, equal to the top. It is tied when two or more members equal the top.
 
@@ -61,11 +61,11 @@ Both readers ignore members they do not use. A later version may read more of th
 
 ## The math
 
-**The answer under a rule.** For `decide`, a `tag` label, and `rank` as run: `true` is yes, `false` is no, and anything else is `"unresolved"`. Every `rank` answer is `"unresolved"` as run, because `rank` makes no selection. For `score`, the level is the count of cuts at or below the number, with cuts at `0.5, 1.5, …` as run. `--threshold` over a `score` or `find` answer is refused. Under a cut `T`: yes when `p >= T`, else no. Under a band: yes when `p >= HIGH`, no when `p < LOW`, else `"unresolved"`. For `choose`: a tied distribution is `"tied"` under every rule. As run, a null value is `"unresolved"` and any other value is itself. Under a cut, the pick when `top >= T`, else `"unresolved"`.
+**The answer under a rule.** For `decide`, a `tag` label, and `rank` as run: `true` is yes, `false` is no, and anything else is `"unsure"`. Every `rank` answer is `"unsure"` as run, because `rank` makes no selection. For `score`, the level is the count of cuts at or below the number, with cuts at `0.5, 1.5, …` as run. `--threshold` over a `score` or `find` answer is refused. Under a cut `T`: yes when `p >= T`, else no. Under a band: yes when `p >= HIGH`, no when `p < LOW`, else `"unsure"`. For `choose`: a tied distribution is `"tied"` under every rule. As run, a null value is `"unsure"` and any other value is itself. Under a cut, the pick when `top >= T`, else `"unsure"`.
 
-**The outcome.** `"tied"` and `"unresolved"` stay themselves. Otherwise the answer is `right` when it equals the key's value and `wrong` when it does not. An option named `tied` stays an option.
+**The outcome.** `"tied"` and `"unsure"` stay themselves. Otherwise the answer is `right` when it equals the key's value and `wrong` when it does not. An option named `tied` stays an option.
 
-**Counts under one rule** over labeled answers: `n`, `right`, `wrong`, `unresolved`, `tied`, and `answered = right + wrong`. For a yes/no verb, a right yes adds to `true_yes`, a right no to `true_no`, a wrong yes to `false_yes`, and a wrong no to `false_no`. `agreement = right / answered` and `coverage = answered / n`, each null on a zero denominator. For a yes/no verb, `yes_recall = true_yes / (true_yes + false_no)`, `precision = true_yes / (true_yes + false_yes)`, and `f1 = 2·true_yes / (2·true_yes + false_yes + false_no)`, each null on a zero denominator and for other verbs. A count object prints `n, answered, right, wrong, unresolved, tied, true_yes, false_yes, true_no, false_no, agreement, coverage, yes_recall, precision, f1`.
+**Counts under one rule** over labeled answers: `n`, `right`, `wrong`, `unsure`, `tied`, and `answered = right + wrong`. For a yes/no verb, a right yes adds to `true_yes`, a right no to `true_no`, a wrong yes to `false_yes`, and a wrong no to `false_no`. `agreement = right / answered` and `coverage = answered / n`, each null on a zero denominator. For a yes/no verb, `yes_recall = true_yes / (true_yes + false_no)`, `precision = true_yes / (true_yes + false_yes)`, and `f1 = 2·true_yes / (2·true_yes + false_yes + false_no)`, each null on a zero denominator and for other verbs. A count object prints `n, answered, right, wrong, unsure, tied, true_yes, false_yes, true_no, false_no, agreement, coverage, yes_recall, precision, f1`.
 
 **Wilson at 95%.** `Z = 1.959963984540054`, `k = right`, `n = answered`, `p = k / n`:
 
@@ -87,7 +87,7 @@ interval = [max(0, centre − half), min(1, centre + half)], or null when n = 0
 | --- | --- | ---: |
 | Yes/no said yes | `p` | 1 when the key is yes, else 0 |
 | Yes/no said no | `1 − p` | 1 when the key is no, else 0 |
-| Yes/no unresolved | `max(p, 1 − p)` | 0 |
+| Yes/no not sure | `max(p, 1 − p)` | 0 |
 | `choose` or `find` | the top | 1 or 0 by the outcome, or the tie share for a tie |
 
 Yes/no covers `decide`, `filter`, and each `tag` label. `score` and `rank` pair nothing, so their `calibration` and `curve` are null, as are the `tag` pooled row's. Failed and unlabeled answers pair nothing.
@@ -143,11 +143,11 @@ Yes/no covers `decide`, `filter`, and each `tag` label. `score` and `rank` pair 
 
 ## Output
 
-One JSON object per group per line, in the order of each group's first answer. The group name is the answer name, else the question text, else the verb, and an empty name falls through. Each row prints `group`, `verb`, `rows` (unfailed answers), `failed`, `labeled`, `unlabeled`, `threshold`, `right`, `wrong`, `unresolved`, `tied`, `tied_holding_key`, `tie_share`, `agreement`, `interval`, `true_yes`, `false_yes`, `true_no`, `false_no`, `yes_recall`, `precision`, `f1`, `mean_probability`, `auc`, `r_precision`, `mean_level_distance`, `disagreements`, `calibration`, `coverage`, `curve`, and `suggested`. `suggested` ends with `crossed`. The four directions, `yes_recall`, `precision`, and `f1` are null for `choose`, `score`, and `find`. "Names and edges" gives the members of `recognize` and `relate` rows. `r_precision` is null except for `rank`, and `mean_level_distance` except for `score`. The last five need labeled answers that all carry probabilities, and are null otherwise. A group whose answers all failed prints `verb: null`.
+One JSON object per group per line, in the order of each group's first answer. The group name is the answer name, else the question text, else the verb, and an empty name falls through. Each row prints `group`, `verb`, `rows` (unfailed answers), `failed`, `labeled`, `unlabeled`, `threshold`, `right`, `wrong`, `unsure`, `tied`, `tied_holding_key`, `tie_share`, `agreement`, `interval`, `true_yes`, `false_yes`, `true_no`, `false_no`, `yes_recall`, `precision`, `f1`, `mean_probability`, `auc`, `r_precision`, `mean_level_distance`, `disagreements`, `calibration`, `coverage`, `curve`, and `suggested`. `suggested` ends with `crossed`. The four directions, `yes_recall`, `precision`, and `f1` are null for `choose`, `score`, and `find`. "Names and edges" gives the members of `recognize` and `relate` rows. `r_precision` is null except for `rank`, and `mean_level_distance` except for `score`. The last five need labeled answers that all carry probabilities, and are null otherwise. A group whose answers all failed prints `verb: null`.
 
 Every float rounds to six places. `threshold` prints `"as run"`, a cut as a number, or a band exactly as typed. An empty RESULTS prints nothing. A reader of this output ignores members it does not know, because a later version may add them.
 
-`--table` prints the prototype's table from the rounded values. Numbers print with three decimals, rounded half to even on the exact binary value, and `-` stands for null. The table keeps the prototype's words, `unresolved` and `tied` included, because they label the JSON members of the same names. It adds these lines where their values apply:
+`--table` prints the port's table from the rounded values. Numbers print with three decimals, rounded half to even on the exact binary value, and `-` stands for null. The port prints `unsure` where the prototype used its older word for a not sure answer. Its count line says `not sure`, and `tied` keeps its name. It adds these lines where their values apply:
 
 - `  precision P   f1 F`, after the `said yes, key no` line of a yes/no row.
 - `  r-precision R` for `rank`, and `  mean level distance D` for `score`.
@@ -174,6 +174,14 @@ audit follows ReAnchor's rule: keep the current bar unless another scores strict
 | A band | `thinkthen: audit: kept the band for TARGET; audit suggests a single cut` |
 | `score` | `thinkthen: audit: kept TARGET unchanged; a score question takes no threshold` |
 | `rank` or `find` | `thinkthen: audit: kept TARGET unchanged; audit suggests no bar for rank or find` |
+
+A single question file that gains a bar also records the model the bar was tuned on. audit writes the file's `model` member with the one model that every results line names in `meta.model`, by the same byte rule as `threshold`. Every line counts, including a line whose answer failed and a line the key does not label. When the file already names a model, such as a typed `jev-latest`, audit replaces it with the version the lines name, because the bar was tuned on that version. It writes no model when it writes no bar. A question set holds no model, so a set gets no model member. When the lines name no single model a question file accepts, audit writes the bar, keeps the model, and prints one more line after the bar lines:
+
+| Case | Standard error line |
+| --- | --- |
+| Lines name more than one model | `thinkthen: audit: kept the model for TARGET; the results name more than one model` |
+| A line names no model | `thinkthen: audit: kept the model for TARGET; a result names no model` |
+| Lines name a blank model | `thinkthen: audit: kept the model for TARGET; a result names a blank model` |
 
 To undo a write, put the old value back by hand or through version control. A second `--write` from the old results refuses, because the digest moved with the threshold. A crash during the write could leave a short file; the file is small, and a temporary file would be one the user did not name.
 
@@ -237,6 +245,6 @@ No golden file reaches these. Each is the agent's decision, and Ian can overturn
 - **Seed and target.** The port refuses a negative seed and a target outside 0 to 1.
 - **Key values.** Python reads a `decide` key of `1` or `0` as yes or no. The port leaves it unlabeled. The port refuses a `choose` key value that is not text.
 - **Choose values.** The prototype grades a saved `choose` value that is neither text nor null, `true` and `false` included. As run it compares the value with the key and counts it wrong, and under `--threshold` it grades the pick. The port refuses it as an answer it cannot grade.
-- **State names.** The prototype reads an option named `tied` or `unresolved` as that state. The port keeps it an option.
+- **State names.** The prototype reads an option named `tied` or spelled with its older word for a not sure answer as that state. The port keeps either one an option.
 - **Calibration.** Ticket 0131 moved calibration off the prototype's rule, and the goldens were recaptured with that change. The prototype pairs `(p, key is yes)`, drops ties, and takes a plain percentile interval. The port pairs the answer given, counts a tie at its share, and shifts the interval by the bootstrap bias. Errors from an older run do not compare with newer ones.
 - **Parts.** The prototype README says every key line has a part or none does. The code checks each group's labeled records. The port follows the code.

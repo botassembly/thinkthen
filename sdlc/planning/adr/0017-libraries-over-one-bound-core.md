@@ -76,7 +76,11 @@ The settings a host can reach, with one spelling each:
 | The width | `--jobs N` | the engine value | 4 |
 | The request limit | `--max-requests N` | `max_requests` on the engine value | no limit |
 | The cache folder | `--cache DIR`, or `THINKTHEN_CACHE=DIR` | `cache` on the engine value | the XDG cache home |
-| The cache cap | applied by `thinkthen cache prune DIR` | `cache_bytes` on the engine value | 100 MB |
+| Attempt timeout | `--timeout N` | `timeout` on a library engine; SQL waits for ticket 0149 | 30 seconds |
+| Retries | `--max-retries N` | `max_retries` on a library engine; SQL waits for ticket 0149 | 2 |
+| Backend profile | `--profile FILE` | `profile` on a library engine; SQL waits for ticket 0149 | none |
+| Recording | `--record DIR` | `record` on a library engine; SQL waits for ticket 0149 | off |
+| Strict replay | `--replay DIR` | `replay` on a library engine; SQL waits for ticket 0149 | off |
 
 The request limit is stateless. It refuses a run before its first request when the input holds more than `N` records, it writes nothing, and `--dry-run` prints the request count the run would make. It earns its place in the databases, where one `WHERE` over a hundred million rows is a real bill.
 
@@ -102,6 +106,8 @@ The one-shape page made ten picks. This ADR adopts each, with the objections sta
 8. **Bulk is the same verbs over the host's container.** Adopted. `filter`, `rank`, and `annotate` take the container and cross once. R and SQL keep a vectorized `decide`, which is their habit. Python, TypeScript, and Ruby spell the bulk form `decide_many`, because a string is also a sequence there and guessing is a trap. `decide_many` is `decide`'s bulk spelling, not a ninth verb, and the surface check admits it by name on those three surfaces. The C door carries the same shape as `thinkthen_decide_many`, because every language that loads the C library needs one bulk entry point, and the surface check admits that name there too.
 9. **SQL names a question file as `'@refund.json'`.** Adopted, the command's own spelling. Where the file may be read from is the database ADR's to rule.
 10. **`thinkthen_warm` is answered, and all three databases ship it.** Experiment 207 proved it in DuckDB, SQLite, and PostgreSQL. The DuckDB page still lists it open and carries the correction. SQLite needs it most, because a query there judges row by row.
+
+Amendment, 2026-09-27, ticket 0152 Part B: Item 4's clause that the specification keeps "unresolved" is superseded. `unsure` is the machine word in the specification, `audit`, `diff`, and built-in transforms; prose says "not sure". The Rust enum names remain internal.
 
 The slides leave off details, counters, cancel tokens, deadlines, and the cache setting. They exist on every surface with one spelling each, and the reference pages own them. The C surface stays the door to the rest: one call that takes a request as JSON text and returns the answer as JSON text, and one call that frees it, behind one generated header.
 
@@ -200,6 +206,10 @@ No cancellation, deadline, retry, durability, signal, or fork guarantee is weake
 
 Ian ruled that the command catches SIGINT cooperatively, stops starting requests after cancellation is observed, lets already-sent requests finish within their existing attempt timeout, prints completed ordered output and the stopped-at line, then re-raises SIGINT so the shell still observes exit 130. A single-document or aggregate request already sent follows the same finish-then-re-raise rule and writes its completed output first. The engine owns the private cancel token and poll behavior; the CLI alone owns SIGINT registration and default-signal emulation. No deadline, public library API, or host signal policy is fixed by this amendment. Ian can overturn it.
 
+## Amendment, 2026-09-27: SIGTERM stops the command as SIGINT does
+
+Ticket 0169 extends the 2026-09-22 command ruling to SIGTERM. The command stops starting requests, lets sent requests finish within their attempt timeout, prints completed output and the stop line, then re-raises the signal that stopped it. A shell sees 130 or 143. A second SIGINT or SIGTERM takes its default action at once. A backend failure after either signal is reported as the stop. The stopped-at line of the earlier amendment now reads `stopped by a signal; N records finished` after either signal. The CLI alone still owns signal registration and default-signal emulation. No library or host signal policy changes. Ian can overturn it.
+
 ## Amendment, 2026-09-24: one width for the process
 
 Ticket 0077 settles the width row of section 5. The row reads as though every engine value defaults its own width to 4. Ian ruled otherwise. One process has one width, and every live attempt from every engine, command path, and convenience call passes one attempt gate. An engine built with no width selects nothing and follows the process width, which is 4 until an explicit width is selected. The first engine built with an explicit width selects it. A later engine with the same width is accepted. A later engine with a different width fails with a usage error before any request: `width 4 is already active for this process; use width 4 or drop the width argument`. The command's `--jobs N` is an explicit width, and an omitted `--jobs` is none. A permit covers one attempt and never a retry wait, decoding, recording, or output. A cached or replayed answer takes none. The width is 1 through 32. One cap covers one loaded copy of the library; ADR 0047 holds the duplicate-copy question. Ian can overturn the fallback, the range, and the sentence.
@@ -230,3 +240,7 @@ The throttle is the most requests in flight at once, per loaded copy of the libr
 - The command's flag stays `--jobs N`, because `jobs` is the usual command-line name for parallel work. The pages for `--jobs` say it sets the throttle.
 - Private names in code may stay `width` for now. The conflict message of the width amendment reaches a user only through a second engine in one process, and only the public API can build one. The range message reaches a user the same way, because `--jobs` refuses an out-of-range number first. Ticket 0086 rewords both: `throttle 4 is already active for this process; use throttle 4 or drop the throttle argument` and `a throttle is a whole number from 1 through 32`.
 - Records, reviews, and issues written before this date keep the word they used.
+
+## Amendment, 2026-09-27, by ticket 0148
+
+Section 5 now gives every library engine a timeout, retry count, backend profile, recording folder, and strict replay folder. `cache_bytes` leaves the library and SQL settings because it did not prune; the configuration file's `cache_bytes` remains the command's prune target. SQL gains the five settings in ticket 0149. The key stays in `THINKTHEN_API_KEY` on every surface except Rust. Ian can overturn the scope of these settings.

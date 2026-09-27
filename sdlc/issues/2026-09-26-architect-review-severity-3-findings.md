@@ -1,3 +1,5 @@
+Disposition, 2026-09-27: ticket 0169 settles register 46, 56 and 116 after fresh review of `84de0a7d`. The stop reports the signal without a guessed record, SIGTERM follows SIGINT, and the second-signal escape is documented and proved. Already-sent requests still finish within their attempt timeout by the retained contract. A first-signal waiting notice and cancellable socket reads remain deferred; this umbrella issue stays open for its other findings.
+
 # Architect review severity 3 findings, for triage after 0.1
 
 Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, reports 01 and 03 to 12. For triage after 0.1. Nothing here blocks 0.1.
@@ -12,8 +14,8 @@ The review rated these findings severity 3: a sharp edge or a missing feature. N
 - I6. One bad record ends the stream with no machine-readable stop point. Tracked in part: `2026-09-26-run-facts-b5-owe-cause-retryable-and-stop-record.md`.
 - I7. `filter` records have no default size guard. Tracked: 0154, ADR 0051.
 - I8. `filter` cannot serve as a coprocess, and the README does not say so. Doc line.
-- I9. After Ctrl-C, the stop line names a record that never arrived. Wording fix.
-- I10. The second-Ctrl-C escape is undocumented. Doc line in `channels.md`.
+- I9. After Ctrl-C, the stop line names a record that never arrived. Wording fix. Tracked: 0169.
+- I10. The second-Ctrl-C escape is undocumented. Doc line in `channels.md`. Tracked: 0169.
 
 ## Report 03, `annotate`
 
@@ -34,7 +36,7 @@ The review rated these findings severity 3: a sharp edge or a missing feature. N
 - I9. DuckDB refuses every call after 16 distinct engines.
 - I10. The throttle belongs to the process for its whole life. Tracked in part: ADR 0047 item 5.
 - I11. Libraries cannot set timeout, retries, profile or replay. Tracked: 0148, 0149.
-- I12. A SQLite cancel leaves a detached worker holding its permit.
+- I12. A SQLite cancel leaves a detached worker holding its permit. Tracked: 0168.
 - I13. DuckDB relate's message for an uncommitted table misleads.
 - I14. List calls refuse `choose`, `score` and `tag` over many texts. Tracked: the equivalence page, E2.
 - I15. The missing-key error has a different kind on each surface. Consider folding into 0148.
@@ -55,11 +57,11 @@ The review rated these findings severity 3: a sharp edge or a missing feature. N
 - I-6. No request-size setting on main. Tracked: 0154, then 0157.
 - I-7. A broken configuration file stops every command, and the message names no field.
 - I-8. The model has no environment tier.
-- I-9. A keyless local server still needs a dummy key. Doc line.
+- I-9. A keyless local server still needs a dummy key. Done by Quick Fix qf-command-edges-and-prune.
 - I-10. The default cache serves one address. Tracked: ticket 0124's deferred gaps.
-- I-11. An extreme `--timeout` panics with exit 101. Quick Fix, with report 11 issue 7.
-- I-12. The release binary honors `THINKTHEN_TEST_RETRY_WAIT_MS`. Quick Fix, with report 07 I13.
-- I-13. Model names are not trimmed or checked for control characters. Quick Fix.
+- I-11. An extreme `--timeout` panics with exit 101. Done by Quick Fix qf-command-edges-and-prune.
+- I-12. The release binary honors `THINKTHEN_TEST_RETRY_WAIT_MS`. Done by Quick Fix qf-command-edges-and-prune.
+- I-13. Model names are not trimmed or checked for control characters. Done by Quick Fix qf-command-edges-and-prune.
 - I-14. Refusal phrases give advice that misfits the case.
 
 ## Report 07, throughput, limits and cost
@@ -95,7 +97,7 @@ The review rated these findings severity 3: a sharp edge or a missing feature. N
 - 6. No process-wide strict replay switch.
 - 7. `--record` into a used folder pays again and discards the answer. Help line.
 - 8. Replay cannot tell a recording is stale. Waits on backlog question 1, the default-model pin.
-- 9. Golden-file tests break across versions. With `2026-09-26-the-result-schema-identifier-never-versions.md`.
+- 9. Golden-file tests break across versions. With `closed/2026-09-26-the-result-schema-identifier-never-versions.md`.
 - 10. A token in the base path is written into every recording.
 - 11. Byte-exact keys make recordings fragile. Doc line.
 - 12. No way to find unused fixture entries.
@@ -113,12 +115,12 @@ The review rated these findings severity 3: a sharp edge or a missing feature. N
 
 ## Report 11, failure and scripting
 
-- 3. SIGTERM is unspecified and ends a run abruptly.
+- 3. SIGTERM is unspecified and ends a run abruptly. Tracked: 0169.
 - 4. Killed runs leave temporary cache entries that prune ignores. With report 08 finding 12.
 - 5. A stored partial reply replays forever. Tracked: ticket 0158 and `2026-09-26-recording-page-says-a-failure-is-never-recorded.md`.
 - 6. A deterministic refusal on one record blocks every rerun. Tracked: 0154 and the roadmap's `--on-error` hold.
 - 7. An absurd `--timeout` panics with exit 101. Quick Fix, with report 06 I-11.
-- 8. Ctrl-C waits out a hung request, then blames the backend. Wording fix.
+- 8. Ctrl-C waits out a hung request, then blames the backend. Wording fix. Tracked: 0169.
 - 9. The default cache binds to one address. Tracked: ticket 0124's deferred gaps.
 - 10. No catalog of error sentences with stable identifiers. With `2026-09-26-run-facts-b5-owe-cause-retryable-and-stop-record.md`.
 
@@ -128,7 +130,7 @@ The review rated these findings severity 3: a sharp edge or a missing feature. N
 - 3.2. Local faults are reported as network faults.
 - 3.3. The configuration file is trusted whatever its mode. With `2026-09-26-folder-writers-decide-the-answers.md`.
 - 3.4. The planted-text guidance is narrower than a reader will take it. Doc line.
-- 3.5. Ruby result values print caller text. Tracked: `2026-09-26-ruby-result-values-inspect-caller-text.md`.
+- 3.5. Ruby result values print caller text. Closed: `closed/2026-09-26-ruby-result-values-inspect-caller-text.md`.
 - 3.6. No release to verify. Tracked: 0128.
 - 3.7. The default destination is a third-party service, and nothing says what it keeps. Doc paragraph.
 

@@ -13,6 +13,7 @@ pub(crate) mod edge;
 pub(crate) mod failure;
 mod file_size;
 pub(crate) mod find;
+mod hint;
 mod interrupt;
 pub(crate) mod judge;
 mod measure;
@@ -35,13 +36,16 @@ use crate::cli::args::{Cli, Command, Common};
 use crate::cli::asking::Folders;
 use crate::cli::edge::Environment;
 use crate::cli::failure::Failure;
-use crate::core::{safe_key, version_line};
+use crate::core::{JsonError, RecordError, safe_key, version_line};
 use clap::Parser as _;
 
 /// Parse the process inputs, run one command, and report its exit code.
 #[must_use]
 pub fn entry() -> ExitCode {
-    let cli = Cli::parse_from(normalize::arguments(std::env::args_os()));
+    let cli = match Cli::try_parse_from(normalize::arguments(std::env::args_os())) {
+        Ok(cli) => cli,
+        Err(error) => return hint::refused(error),
+    };
     let stdout = io::stdout();
     let stderr = io::stderr();
     if cli.version {
@@ -78,6 +82,14 @@ pub fn entry() -> ExitCode {
         Ok(environment) => environment,
         Err(failure) => return failure::report(&failure, stderr.lock()),
     };
+    if environment.config().shared() {
+        let mut writer = stderr.lock();
+        let _unwritten = writeln!(
+            writer,
+            "thinkthen: the configuration file is writable by another user; it decides where the key and evidence go"
+        )
+        .and_then(|()| writer.flush());
+    }
     let activation = match interrupt::activate(&mut environment) {
         Ok(activation) => activation,
         Err(failure) => return failure::report(&failure, stderr.lock()),
@@ -99,14 +111,19 @@ pub fn entry() -> ExitCode {
 }
 
 fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitCode, Failure> {
+    // A day bounds the timeout, because the HTTP client adds it to the clock
+    // and a larger number can overflow there.
     if cli
         .command
         .as_ref()
-        .is_some_and(|command| command.timeout() == 0)
+        .is_some_and(|command| !(1..=86_400).contains(&command.timeout()))
     {
         return Err(Failure::Usage(
-            "--timeout takes a whole number of seconds greater than zero",
+            "--timeout takes a whole number of seconds from 1 to 86400",
         ));
+    }
+    if cli.command.as_ref().is_some_and(Command::stray) {
+        return Err(Failure::Usage(hint::ONE_QUESTION));
     }
     if let Some(command) = cli.command.as_ref().filter(|command| command.reads_input()) {
         edge::waiting(command.input(), io::stderr().lock());
@@ -143,7 +160,19 @@ const DEFAULT_CACHE_STORAGE: &str = "the default cache folder could not be read 
 /// Say a failure in the words this run's own command line calls for: a
 /// storage failure in the platform default cache names that cache, and a
 /// refused pointer is echoed with JSON escapes.
-fn told(failure: Failure, cli: &Cli, environment: &Environment) -> Failure {
+fn told(mut failure: Failure, cli: &Cli, environment: &Environment) -> Failure {
+    if environment.cancel().fired() {
+        failure = failure.after_signal();
+    }
+    if let Failure::Stopped { at: 1, cause, .. } = &mut failure
+        && matches!(
+            cause.as_ref(),
+            Failure::Record(RecordError::Json(JsonError::Syntax { .. }))
+        )
+        && cli.command.as_ref().is_some_and(Command::typed_jsonl)
+    {
+        **cause = Failure::Usage(hint::NOT_JSON_LINES);
+    }
     let storage = match &failure {
         Failure::RecordingStorage => true,
         Failure::Stopped { cause, .. } => matches!(cause.as_ref(), Failure::RecordingStorage),

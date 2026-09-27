@@ -108,13 +108,13 @@ fn summary_line(row: &Row, set: bool) -> String {
         );
     }
     format!(
-        "  agreement {} (95% {} to {}): {} right, {} wrong, {} unresolved, {} tied{}",
+        "  agreement {} (95% {} to {}): {} right, {} wrong, {} not sure, {} tied{}",
         three(row.agreement),
         three(low),
         three(high),
         row.right,
         row.wrong,
-        row.unresolved,
+        row.unsure,
         row.tied,
         ties_line(row)
     )

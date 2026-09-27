@@ -11,6 +11,7 @@ use std::time::Duration;
 use std::{fs, io};
 
 use crate::core::{Backend, Evidence, ModelName, Plan, Question, QuestionText};
+use crate::engine::backoff;
 use crate::engine::error::{Budget, Error, Kind};
 use crate::engine::http::{Client, Exchange, HttpAnswer, Key};
 use crate::engine::recorder::Recorder;
@@ -113,33 +114,43 @@ fn the_first_explicit_width_wins_and_only_a_different_one_is_refused() {
 
 #[test]
 fn two_racing_first_widths_select_exactly_one_and_the_loser_names_it() {
+    race_once();
+}
+
+#[test]
+#[ignore = "repeated width race; run sdlc/scripts/test-stress --run"]
+fn fifty_racing_first_widths_select_exactly_one_and_the_loser_names_it() {
     for _ in 0..50 {
-        let widths = widths();
-        let start = Arc::new(Barrier::new(2));
-        let racers = [2, 16].map(|value| {
-            let start = Arc::clone(&start);
-            thread::spawn(move || {
-                start.wait();
-                widths.select(Some(width(value)))
-            })
-        });
-        let results = racers.map(|racer| racer.join().expect("racer"));
-        let winner = widths.selected().expect("one width won");
-        assert_eq!(
-            results
-                .iter()
-                .filter(|result| **result == Ok(winner))
-                .count(),
-            1
-        );
-        assert_eq!(
-            results
-                .iter()
-                .filter(|result| **result == Err(WidthActive(winner)))
-                .count(),
-            1
-        );
+        race_once();
     }
+}
+
+fn race_once() {
+    let widths = widths();
+    let start = Arc::new(Barrier::new(2));
+    let racers = [2, 16].map(|value| {
+        let start = Arc::clone(&start);
+        thread::spawn(move || {
+            start.wait();
+            widths.select(Some(width(value)))
+        })
+    });
+    let results = racers.map(|racer| racer.join().expect("racer"));
+    let winner = widths.selected().expect("one width won");
+    assert_eq!(
+        results
+            .iter()
+            .filter(|result| **result == Ok(winner))
+            .count(),
+        1
+    );
+    assert_eq!(
+        results
+            .iter()
+            .filter(|result| **result == Err(WidthActive(winner)))
+            .count(),
+        1
+    );
 }
 
 #[test]
@@ -373,6 +384,33 @@ fn a_retry_gives_its_permit_back_for_the_wait_and_takes_a_new_one() {
     assert_eq!(answer.requests_sent, 2);
     assert_eq!(attempts.load(Ordering::SeqCst), 2);
     assert_eq!(during_attempts.load(Ordering::SeqCst), 1);
+    assert_eq!(widths.active(), 0);
+}
+
+#[test]
+fn a_gate_closed_while_the_send_slot_is_full_is_rechecked_before_sending() {
+    let widths = widths();
+    assert_eq!(widths.select(Some(width(1))), Ok(width(1)));
+    let full = held(widths, 1);
+    let (listener, url) = silent();
+    let (blocked_send, blocked_on) = channel();
+    let budget = Duration::from_millis(100);
+    let cancel = Cancel::observed(blocked_send).with_deadline(Deadline::after(budget));
+    let attempts = AtomicUsize::new(0);
+
+    let result = thread::scope(|scope| {
+        let waiting = scope.spawn(|| post(widths, &url, &cancel, &attempts));
+        blocked(&blocked_on, 1);
+        backoff::process_gates(&Cancel::default())
+            .expect("process gate")
+            .close(&url, Duration::from_millis(200), true);
+        drop(full);
+        waiting.join().expect("waiter")
+    });
+
+    assert!(matches!(result, Err(Error::Deadline(Budget(spent))) if spent == budget));
+    assert_eq!(attempts.load(Ordering::SeqCst), 0);
+    assert!(!reached(&listener));
     assert_eq!(widths.active(), 0);
 }
 

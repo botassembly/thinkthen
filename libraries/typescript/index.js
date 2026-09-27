@@ -172,11 +172,12 @@ function invoke(engine, op, spec, payload, call) {
 function utf16(text) {
   const units = [0];
   for (const ch of text) units.push(units[units.length - 1] + ch.length);
-  return (held) => ({ ...held, start: units[held.start], end: units[held.end] });
+  // The spread keeps the engine's key order: text, start, end, length, kind, strength.
+  return (held) => ({ ...held, start: units[held.start], end: units[held.end], length: units[held.end] - units[held.start] });
 }
 
 function recognizeSpec(inputs) {
-  const kinds = inputs.kinds ?? ['person', 'organization', 'place'];
+  const kinds = inputs.kinds ?? [];
   const recognize = {
     kinds: Array.isArray(kinds) ? Object.fromEntries(kinds.map((kind) => [kind, null])) : kinds,
   };
@@ -212,8 +213,9 @@ function relateSpec(inputs) {
   return JSON.stringify(spec);
 }
 
+// A name recognize found carries text in place of name; name wins when both are there.
 function entityPair(held, at) {
-  const [name, kind] = Array.isArray(held) ? held : [held?.name, held?.kind];
+  const [name, kind] = Array.isArray(held) ? held : [held?.name ?? held?.text, held?.kind];
   if (typeof name !== 'string' || typeof kind !== 'string') throw usageError(`entity ${at} is { name, kind } or [name, kind]`);
   return [checkText(name, `entity ${at}`), checkText(kind, `entity ${at}`)];
 }

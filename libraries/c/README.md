@@ -1,6 +1,6 @@
 # The C door
 
-`libthinkthen` exports the engine to any language that can call a C library. `include/thinkthen.h` declares its 19 functions, and [DESIGN.md](DESIGN.md) gives the ownership, threading, and error rules behind them.
+`libthinkthen` exports the engine to any language that can call a C library. `include/thinkthen.h` declares its 20 functions, and [DESIGN.md](DESIGN.md) gives the ownership, threading, and error rules behind them.
 
 ```sh
 cargo build --release
@@ -11,6 +11,8 @@ cc -std=c11 -I include examples/slide.c -L lib -lthinkthen -Wl,-rpath,"$PWD/lib"
 ```
 
 A release renames the built files `libthinkthen.so` and `libthinkthen.a`, with the soname `libthinkthen.so.0`. `thinkthen_engine_new` reads `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, and `THINKTHEN_CACHE` as the command does.
+
+`thinkthen_engine_new_with` accepts JSON for the address, model, throttle, request limit, cache, timeout, retries, profile, record, and strict replay; the key stays in `THINKTHEN_API_KEY`.
 
 ## Run facts
 

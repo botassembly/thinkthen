@@ -1,4 +1,4 @@
-Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review.
+Status: open for items 1 and 3. Filed 2026-09-26 by the marketing lead from a fresh architect review. Item 2 is done: Quick Fix qf-review-273 landed it (`sdlc/records/qf-review-273.md`). The SQLite held permit is a non-issue: it bounds detached sends, as shown in `sdlc/records/2026-09-27-register-76-disposition.md`.
 
 # Architect review 04: libraries and databases
 
@@ -30,7 +30,7 @@ Reviews 04 (I8) and 08 (issue 13) both found this. `04-work/p12.sql`: warm sent 
 
 ## Already filed
 
-- A cancelled Rust or C call can return success (review 04, I2, severity 2). See `2026-09-26-cancelled-c-scalar-call-can-return-success.md`. The reviewer verified the code path at `public/options.rs:241-250` and `engine/mod.rs:156-160`.
+- A cancelled Rust or C call can return success (review 04, I2, severity 2). Settled by ticket 0166 on 2026-09-27. See `closed/2026-09-26-cancelled-c-scalar-call-can-return-success.md`. The reviewer verified the code path at `public/options.rs:241-250` and `engine/mod.rs:156-160`.
 - `cache_bytes` does nothing, and three database READMEs call it a cap (reviews 04 I3 and 08 issue 5, severity 2). See `2026-09-26-settings-some-surfaces-cannot-reach.md` item 3 and `2026-09-25-public-library-api-gaps.md` item 4. Review 08 adds one fact: ADR 0017 line 87 says a warm pass "evicts its own answers", and that sentence needs a correction too. In a fresh SQLite process, `SELECT thinkthen_cache_bytes(1);` returns 1 and leaves a 1,913-byte cache untouched.
 - Libraries and SQL cannot set the timeout, retries, a backend profile, replay-only or record-only (reviews 04 I11 and 07 I11). See `2026-09-26-settings-some-surfaces-cannot-reach.md` item 1 and tickets 0148 and 0149.
 

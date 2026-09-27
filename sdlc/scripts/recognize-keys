@@ -1,0 +1,183 @@
+#!/usr/bin/env python3
+"""Convert and check the recognize keys in specification/fixtures/recognize/ (ticket 0164).
+
+With no argument, check both files: every name's code-point offsets cut it out of its text.
+--self-test plants each fault and checks a clean file. `convert names SOURCE` prints local
+experiment 277's key as key lines, and `convert relations SOURCE` local experiment 265's cases.
+"""
+
+import json
+import pathlib
+import sys
+import tempfile
+
+FOLDER = pathlib.Path(__file__).resolve().parents[2] / "specification/fixtures/recognize"
+EDGES = ("relations", "optional_relations", "unstated")
+# Local experiment 265's README, misses row 11: true in the world, and not stated.
+UNSTATED = {
+    "c01": ("wrote", "Ringo Starr", "Octopus's Garden"),
+    "c02": ("sang", "John Lennon", "All You Need Is Love"),
+    "c05": ("sang", "Paul McCartney", "Let It Be"),
+    "c06": ("wrote", "Paul McCartney", "Help!"),
+    "c14": ("sang", "Paul McCartney", "Yesterday"),
+}
+
+
+def dump(line):
+    return json.dumps(line, ensure_ascii=False, separators=(",", ":"))
+
+
+def convert_names(source):
+    for raw in source:
+        case = json.loads(raw)
+        note = case["note"].replace("Experiment 265", "Local experiment 265")
+        names = [{"name": e["text"], "kind": e["label"], "start": e["start"], "end": e["end"]} for e in case["entities"]]
+        yield {"id": case["id"], "text": case["text"], "category": case["category"], "note": note,
+               "value": {"entities": names}}
+
+
+def convert_relations(source):
+    for raw in source:
+        case = json.loads(raw)
+        text, names, after = case["text"], [], 0
+        for name, kind in case["entities"]:
+            start = text.index(name, after)
+            after = start + len(name)
+            names.append({"name": name, "kind": kind, "start": start, "end": after})
+        kinds = {name["name"]: name["kind"] for name in names}
+
+        def edge(relation, source, target):
+            return {"relation": relation, "source": {"name": source, "kind": kinds[source]},
+                    "target": {"name": target, "kind": kinds[target]}}
+
+        line = {"id": case["id"], "text": text, "types": case["type"], "value": {"entities": names},
+                "relations": [edge(*e) for e in case["relations"]]}
+        if "optional_relations" in case:
+            line["optional_relations"] = [edge(*e) for e in case["optional_relations"]]
+        if case["id"] in UNSTATED:
+            line["unstated"] = [edge(*UNSTATED[case["id"]])]
+        if "alt_labels" in case:
+            line["alt_kinds"] = case["alt_labels"]
+        yield line
+
+
+def line_problem(line, relations):
+    """Return the first problem with one parsed line, or None."""
+    if not isinstance(line, dict) or not isinstance(line.get("id"), str):
+        return "the line is not an object with a string id"
+    text = line.get("text")
+    if not isinstance(text, str) or not text:
+        return "text is not a nonempty string"
+    value = line.get("value")
+    names = value.get("entities") if isinstance(value, dict) else None
+    if not isinstance(names, list):
+        return "value.entities is not a list"
+    after = 0
+    for name in names:
+        if not isinstance(name, dict) or set(name) != {"name", "kind", "start", "end"}:
+            return "a name does not hold exactly name, kind, start and end"
+        start, end, said = name["start"], name["end"], name["name"]
+        if not all(type(n) is int for n in (start, end)) or not 0 <= start < end <= len(text):
+            return f"offsets {start} to {end} do not fit a text of {len(text)} code points"
+        if text[start:end] != said:
+            return f"text[{start}:{end}] is {text[start:end]!r}, not {said!r}"
+        if said != said.strip():
+            return f"{said!r} has white space at an end"
+        if start < after:
+            return f"{said!r} at {start} overlaps or precedes the name before it"
+        if not isinstance(name["kind"], str) or not name["kind"]:
+            return f"{said!r} has no kind"
+        after = end
+    if relations:
+        known = {(n["name"], n["kind"]) for n in names}
+        for member in EDGES:
+            for edge in line.get(member, []):
+                for end in ("source", "target"):
+                    if (edge[end]["name"], edge[end]["kind"]) not in known:
+                        return f"{member} {end} {edge[end]['name']!r} as {edge[end]['kind']!r} is no name of its line"
+        if any(edge in line.get("unstated", []) for edge in line.get("relations", [])):
+            return "an edge is both stated and unstated"
+    return None
+
+
+def check(path, relations):
+    """Return the first problem in a file as one sentence, or None."""
+    ids = {}
+    for number, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        try:
+            line = json.loads(raw)
+        except json.JSONDecodeError:
+            return f"{path.name} line {number}: not JSON"
+        problem = line_problem(line, relations)
+        if problem is None and line["id"] in ids:
+            problem = f"id {line['id']!r} repeats line {ids[line['id']]}"
+        if problem:
+            return f"{path.name} line {number}: {problem}"
+        ids[line["id"]] = number
+    return None
+
+
+def planted():
+    """Yield (name, relations, lines, expected sentence), each built from the committed files."""
+    names = [json.loads(raw) for raw in (FOLDER / "names.jsonl").read_text(encoding="utf-8").splitlines()]
+    edges = [json.loads(raw) for raw in (FOLDER / "relations.jsonl").read_text(encoding="utf-8").splitlines()]
+    first, second = names[0], names[1]
+    shifted = json.loads(dump(first))
+    shifted["value"]["entities"][0]["start"] += 1
+    yield "(a) start plus one", False, [shifted, second], "line 1: text[1:15] is 'eorge Harrison', not 'George Harrison'"
+    yield "(b) repeated id", False, [first, first], "line 2: id 'n001' repeats line 1"
+    renamed = json.loads(dump(first))
+    renamed["value"]["entities"][1]["name"] = "Somethink"
+    yield "(c) name changed", False, [renamed], "line 1: text[23:32] is 'Something', not 'Somethink'"
+    overlapping = json.loads(dump(first))
+    overlapping["value"]["entities"][1]["start"] = 10
+    overlapping["value"]["entities"][1]["name"] = first["text"][10:32]
+    yield "(d) overlapping names", False, [overlapping], "line 1: \"rison's song Something\" at 10 overlaps or precedes the name before it"
+    wrong = json.loads(dump(edges[0]))
+    wrong["relations"][0]["target"]["kind"] = "album"
+    yield "(e) endpoint kind", True, [wrong], "line 1: relations target \"Octopus's Garden\" as 'album' is no name of its line"
+    bytewise = json.loads(dump(second))
+    bytewise["value"]["entities"][1].update(start=33, end=45)
+    yield "(f) byte offsets", False, [bytewise], "line 1: offsets 33 to 45 do not fit a text of 44 code points"
+    yield "clean", False, [first, second], None
+
+
+def self_test():
+    bad = 0
+    cases = list(planted())
+    with tempfile.TemporaryDirectory() as folder:
+        for name, relations, lines, expected in cases:
+            path = pathlib.Path(folder) / "key.jsonl"
+            path.write_text("".join(dump(line) + "\n" for line in lines), encoding="utf-8")
+            actual = check(path, relations)
+            want = expected and f"key.jsonl {expected}"
+            if actual != want:
+                bad += 1
+                print(f"recognize-keys self-test: {name}: expected {want}, got {actual}", file=sys.stderr)
+    print(f"recognize-keys self-test: {len(cases) - bad}/{len(cases)} cases hold")
+    return bad
+
+
+def main(argv):
+    if argv[1:] == ["--self-test"]:
+        return 1 if self_test() else 0
+    if len(argv) == 4 and argv[1] == "convert" and argv[2] in ("names", "relations"):
+        convert = convert_names if argv[2] == "names" else convert_relations
+        with open(argv[3], encoding="utf-8") as source:
+            sys.stdout.write("".join(dump(line) + "\n" for line in convert(source)))
+        return 0
+    if len(argv) != 1:
+        print(__doc__, file=sys.stderr)
+        return 2
+    for name, relations in (("names.jsonl", False), ("relations.jsonl", True)):
+        problem = check(FOLDER / name, relations)
+        if problem:
+            print(f"recognize-keys: {problem}", file=sys.stderr)
+            return 1
+        lines = [json.loads(raw) for raw in (FOLDER / name).read_text(encoding="utf-8").splitlines()]
+        print(f"{name}: {len(lines)} lines, {sum(len(n['value']['entities']) for n in lines)} names, every offset exact")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

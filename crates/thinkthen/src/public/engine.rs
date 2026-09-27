@@ -4,7 +4,7 @@
 use std::fmt;
 use std::sync::Arc;
 
-use crate::core::{self, Value};
+use crate::core::{self, BackendProfile, Value};
 use crate::engine::facade::{self, Settings};
 use crate::public::choice::Choice;
 use crate::public::error::Error;
@@ -21,6 +21,7 @@ use crate::public::settings::EngineBuilder;
 pub struct Engine {
     pub(crate) inner: Arc<facade::Engine>,
     pub(super) most: Option<usize>,
+    pub(crate) profile: Option<BackendProfile>,
 }
 
 impl fmt::Debug for Engine {
@@ -127,11 +128,16 @@ impl Engine {
         EngineBuilder::new()
     }
 
-    pub(crate) fn from_settings(settings: Settings, most: Option<usize>) -> Result<Self, Error> {
+    pub(crate) fn from_settings(
+        settings: Settings,
+        most: Option<usize>,
+        profile: Option<BackendProfile>,
+    ) -> Result<Self, Error> {
         let inner = guarded(|| facade::Engine::new(settings).map_err(Error::from))?;
         Ok(Self {
             inner: Arc::new(inner),
             most,
+            profile,
         })
     }
 
@@ -173,7 +179,7 @@ impl Engine {
         ))
     }
 
-    /// Pick one option of `C`, or `None` when the pick is unresolved.
+    /// Pick one option of `C`, or `None` when the answer is not sure.
     ///
     /// # Errors
     ///

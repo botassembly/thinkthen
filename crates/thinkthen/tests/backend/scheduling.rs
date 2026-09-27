@@ -1,10 +1,11 @@
 //! The bounds between record input and ordered output.
 
+use conformance_backend::Rendezvous;
 use std::io::{self, BufRead, BufReader, Write};
 use std::process::{Child, ChildStdin, ChildStdout, Command, ExitStatus, Stdio};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver};
-use std::sync::{Arc, Barrier};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -44,8 +45,9 @@ fn interactive(
     base: &str,
     jobs: Option<&str>,
     events: Option<mpsc::Sender<Observed>>,
+    extra: &[&str],
 ) -> io::Result<(Child, ChildStdin, Receiver<String>)> {
-    let (child, input, output) = raw_child(base, jobs, &[])?;
+    let (child, input, output) = raw_child(base, jobs, extra)?;
     let (send, receive) = mpsc::channel();
     thread::spawn(move || {
         for line in BufReader::new(output).lines() {
@@ -125,11 +127,23 @@ fn wait_promptly(child: &mut Child) -> io::Result<Option<ExitStatus>> {
 
 #[test]
 fn an_answer_arrives_before_the_next_record_at_one_job_and_the_default() {
-    for jobs in [Some("1"), None] {
-        let listener = Listener::answering(|body| Canned::ok(&answered(ordinal(body))))
-            .expect("a loopback listener");
+    let folder = std::path::Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("scheduling-recording-{}", std::process::id()));
+    let _removed = std::fs::remove_dir_all(&folder);
+    let folder = folder.to_string_lossy();
+    let rows: [(Option<&str>, &[&str]); 4] = [
+        (Some("1"), &[]),
+        (None, &[]),
+        (None, &["--record", &folder]),
+        (None, &["--replay", &folder]),
+    ];
+    // One listener serves every row, because a recording's entry names its address.
+    let listener = Listener::answering(|body| Canned::ok(&answered(ordinal(body))))
+        .expect("a loopback listener");
+    for (jobs, extra) in rows {
+        let before = listener.count();
         let (mut child, mut input, output) =
-            interactive(listener.base(), jobs, None).expect("the compiled binary runs");
+            interactive(listener.base(), jobs, None, extra).expect("the compiled binary runs");
 
         for place in 1..=2 {
             input
@@ -153,12 +167,15 @@ fn an_answer_arrives_before_the_next_record_at_one_job_and_the_default() {
                 .code(),
             Some(0)
         );
+        if extra.first() == Some(&"--replay") {
+            assert_eq!(listener.count(), before, "a replay sends nothing");
+        }
     }
 }
 
 #[test]
 fn ordered_output_bounds_every_dispatched_row() {
-    let release = Arc::new(Barrier::new(2));
+    let release = Arc::new(Rendezvous::new(2));
     let (completed_send, completed) = mpsc::channel();
     let (events_send, events) = mpsc::channel();
     let listener = Listener::answering_with_events(
@@ -178,8 +195,13 @@ fn ordered_output_bounds_every_dispatched_row() {
         events_send.clone(),
     )
     .expect("a loopback listener");
-    let (mut child, mut input, output) = interactive(listener.base(), Some("4"), Some(events_send))
-        .expect("the compiled binary runs");
+    let (mut child, mut input, output) = interactive(
+        listener.base(),
+        Some("4"),
+        Some(events_send),
+        &["--batch", "1"],
+    )
+    .expect("the compiled binary runs");
     input
         .write_all(records(8).as_bytes())
         .expect("the records are written");

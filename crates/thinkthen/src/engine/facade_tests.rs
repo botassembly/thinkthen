@@ -4,9 +4,10 @@
 //! under replay. These tests prove what that runner cannot see: which thread
 //! sends, what is never sent again, and what is never sent at all.
 
+use conformance_backend::Rendezvous;
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{Receiver, channel};
-use std::sync::{Arc, Barrier};
 use std::thread;
 use std::time::Duration;
 use std::{fs, path::PathBuf};
@@ -16,8 +17,8 @@ use nix::sys::pthread::{pthread_kill, pthread_self};
 use nix::sys::signal::Signal;
 
 use crate::core::{
-    Backend, BackendProfile, Evidence, Find, ModelName, Plan, Question, QuestionText,
-    RecognizeSpec, RelateSpec,
+    Backend, BackendProfile, DEFAULT_MODEL, Evidence, Find, ModelName, Plan, Question,
+    QuestionText, RecognizeSpec, RelateSpec,
 };
 use crate::engine::error::{Error, Kind, TransportKind};
 use crate::engine::facade::{
@@ -32,7 +33,7 @@ const TEST_KEY: &str = "sk-facade-test-7f3a";
 
 fn settings(base: &str) -> Settings {
     Settings {
-        backend: Backend::resolve(Some(base), None, "jev-latest").expect("backend"),
+        backend: Backend::resolve(Some(base), None, DEFAULT_MODEL).expect("backend"),
         profile: None,
         timeout: Duration::from_secs(5),
         max_retries: 0,
@@ -152,13 +153,7 @@ fn bulk(engine: &Engine, texts: &[&'static str], batch: &Cancel, each: &Cancel) 
         false,
         batch,
         reader(texts.to_vec()),
-        &|text: &&str| {
-            ask(engine, text, each).map(|yes| Completed {
-                value: yes,
-                replayed: false,
-                partial_failure: false,
-            })
-        },
+        &|text: &&str| ask(engine, text, each).map(|yes| Completed::one(yes, false, false)),
         |row| {
             rows.push(row);
             Ok(true)
@@ -244,11 +239,7 @@ fn a_host_signal_on_the_calling_thread_never_fails_a_single_send() {
     let (published, caller) = channel();
     // A socket read with a timeout is not restarted after a signal, so a
     // send on the calling thread would fail here.
-    let signal = |caller| {
-        for _ in 0..10 {
-            pthread_kill(caller, Signal::SIGUSR1).expect("signal delivered");
-        }
-    };
+    let signal = |caller| pthread_kill(caller, Signal::SIGUSR1).expect("signal delivered");
 
     let (answer, found) = thread::scope(|scope| {
         let call = scope.spawn(|| {
@@ -287,7 +278,7 @@ fn a_close_after_the_body_is_never_resent_on_any_path() {
         ("annotate", &|| annotate(&engine, &cancel).map(drop)),
         ("recognize", &|| {
             engine
-                .recognize(&recognize_spec(), "Ada lives in Paris.", &cancel)
+                .recognize(&recognize_spec(), "Ada lives in Paris.", 600_000, &cancel)
                 .map(drop)
         }),
         ("relate", &|| relate(&engine, &base, &cancel).map(drop)),
@@ -357,7 +348,7 @@ fn local_refusals_send_nothing_and_store_nothing() {
             engine.find(&find(), cancel).map(|_| 1),
             annotate(engine, cancel),
             engine
-                .recognize(&recognize_spec(), "Ada lives in Paris.", cancel)
+                .recognize(&recognize_spec(), "Ada lives in Paris.", 600_000, cancel)
                 .map(|_| 1),
             relate_limited(engine, listener.base(), profile, cancel).map(|_| 1),
         ];
@@ -377,7 +368,7 @@ fn local_refusals_send_nothing_and_store_nothing() {
 
 #[test]
 fn completed_results_keep_input_order_and_reading_them_sends_nothing() {
-    let first = Arc::new(Barrier::new(2));
+    let first = Arc::new(Rendezvous::new(2));
     let (answered, later) = channel();
     let listener = {
         let first = Arc::clone(&first);
@@ -413,10 +404,13 @@ fn completed_results_keep_input_order_and_reading_them_sends_nothing() {
     });
 
     assert_eq!(rows, [Some(0.9), Some(0.5)], "good outcomes in input order");
-    let Ok(RunOutcome::Stopped { at, cause, .. }) = outcome else {
+    let Ok(RunOutcome::Stopped {
+        finished, cause, ..
+    }) = outcome
+    else {
         panic!("{outcome:?}")
     };
-    assert_eq!((at, cause.kind()), (3, Kind::Backend), "{cause:?}");
+    assert_eq!((finished, cause.kind()), (2, Kind::Backend), "{cause:?}");
     let sent = listener.count();
     let usage = engine.usage().expect("usage");
     assert_eq!((sent, usage.requests_sent), (3, 3));

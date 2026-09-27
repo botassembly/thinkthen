@@ -1,6 +1,6 @@
 # No requests-per-minute pacer
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 07, finding I1. The `records.md` wording fix blocks 0.1 under goal 4. The pacer does not block 0.1. Owner for the wording fix: ticket 0162 on `ticket/0162-a-record-stream-ends-cleanly`, ready for review.
+Status: open for the pacer. Ticket 0162 fixed the records-page arithmetic on 2026-09-27 and labels the reply time as derived. Register 30 remains to do after 0155; the wording change does not implement a rate limit.
 
 ## What happens
 
@@ -19,7 +19,7 @@ A long job at the defaults runs until the vendor starts enforcing the limit, the
 
 ## Checked on main
 
-Verified: `records.md:131` gives the `--jobs 3` advice. The rates are measurements from the report and were not rerun.
+The original finding read `records.md:131` as `--jobs 3` advice. Ticket 0162 replaces that claim with the reply-time arithmetic and says no setting caps requests per minute. Historical rates were not rerun.
 
 ## What would fix it
 

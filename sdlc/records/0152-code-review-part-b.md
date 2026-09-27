@@ -1,0 +1,9 @@
+# 0152 Part B code review
+
+A fresh read-only Codex Sol Medium reviewer inspected `41ee7ff9` and required one correction: the expected-side golden porter replaced every `unresolved` string, including a possible literal user option, although the ticket preserves option names. It accepted the nested count serialization, transform parity, request fixture digests, untouched prototype fixtures and other recorded evidence. The unchanged demo 12 storage warning has no proven cause and is not recorded as a full-demo pass.
+
+The author reproduced the option-name failure, narrowed the shared porter to audit count members and the count line, and kept diff goldens direct except three identified state positions in the existing annotate capture. That capture's source options are `bug` and `feature`, so those positions cannot be a literal user option. A compiled diff regression now proves an option named `unresolved` is unchanged and the expected-side porter leaves that row intact. The same independent reviewer accepted `4a90c9e6`, containing correction `6382032f` and main `26ae542e`.
+
+The reviewer measured 76,686 nonblank Rust lines, a net 45 over merged main: one product line and 44 test lines, within the accepted caps. It checked the new ticket lessons and retained unaffected evidence. It ran no builds or tests. The author reran the affected goldens, option case, audit tests, strict workspace Clippy, formatting and ratchet after the merge. Root's completed 0155 all-port runtime checkpoint remains evidence for unchanged engine and port behavior; this wording change uses its focused command, transform and executable-example proofs.
+
+The fresh review session is `01a0e4aa-4605-7a93-8ccc-a9479e665262`; raw review artifacts remain under ignored `target/codex-builds/0152/review/`. No external marketing message was sent. The separate issue records the remaining copied examples.

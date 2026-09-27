@@ -2,7 +2,8 @@
 
 # One error base, the deadline's bounds (R2-10, R1-11), each fault kind at
 # its real boundary, and secrecy: no raised message or inspect line holds
-# the key or the address's credentials.
+# the key or the address's credentials, and no result value prints the
+# caller's text.
 require "minitest/autorun"
 require_relative "backend"
 
@@ -75,5 +76,38 @@ class TestErrors < Minitest::Test
     refute_includes errors, TestBackend::FAKE_KEY
     refute_includes errors, "hunter2"
     assert_includes errors, "cancelled"
+  end
+
+  # Every result value prints the caller's text as a byte count, through
+  # inspect, pp, to_s, and interpolation. Ranked's to_s is its record by
+  # design, so it stays out. The loopback backend's recognize finds no
+  # relation, so the relation is built from the names it found.
+  def test_result_values_print_no_caller_text
+    lines, count = TestBackend.run(<<~RUBY)
+      require "pp"
+      found = T.recognize("x MARK-Ana", kinds: %w[MARK-kind])
+      first, last = found.entities
+      relation = T::Relation.new("knows", first, last, 0.5)
+      values = [relation, T::Recognized.new(found.entities, [relation]), found,
+                T.relate([%w[MARK-Ana MARK-kind], %w[MARK-Bo MARK-kind]], relations: %w[knows]).first,
+                T.rank("Is it urgent?", %w[MARK-one]).first, T.find("Which?", %w[MARK-one MARK-two]), T::Found.new]
+      say values.map(&:inspect)
+      say values.flat_map { |value| [value.pretty_inspect.chomp, *([value.to_s, "\#{value}"] unless value.is_a?(T::Ranked))] }.grep(/MARK/)
+    RUBY
+    one = "#<struct ThinkThen::RecognizedEntity text=<6 bytes withheld>, start=0, end=6, length=6, kind=<9 bytes withheld>, strength=0.6736>"
+    two = "#<struct ThinkThen::RecognizedEntity text=<4 bytes withheld>, start=6, end=10, length=4, kind=<9 bytes withheld>, strength=0.6736>"
+    ends = "source=#<struct ThinkThen::Entity name=<8 bytes withheld>, kind=<9 bytes withheld>>, " \
+           "target=#<struct ThinkThen::Entity name=<7 bytes withheld>, kind=<9 bytes withheld>>"
+    assert_equal [
+      "#<struct ThinkThen::Relation relation=\"knows\", source=#{one}, target=#{two}, probability=0.5>",
+      "#<struct ThinkThen::Recognized entities=2, relations=1>",
+      "#<struct ThinkThen::Recognized entities=2, relations=nil>",
+      "#<struct ThinkThen::Edge relation=\"knows\", #{ends}, probability=0.9>",
+      "#<struct ThinkThen::Ranked index=0, record=<8 bytes withheld>, probability=0.9>",
+      "#<struct ThinkThen::Found index=0, unit=<8 bytes withheld>, probability=0.9>",
+      "#<struct ThinkThen::Found index=nil, unit=nil, probability=nil>"
+    ], lines[0]
+    assert_equal [], lines[1]
+    assert_equal 5, count
   end
 end

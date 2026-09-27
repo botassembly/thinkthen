@@ -7,23 +7,27 @@ use std::thread;
 use crate::annotate::{GroupAnswer, Judging, PreparedGroup, check_model};
 use crate::core::{ModelName, Reading, Record};
 use crate::engine::facade::{
-    Completed, GroupOutcome as RunOutcome, GroupPort as InputPort, Input as EngineInput, Prepared,
+    GroupOutcome as RunOutcome, GroupPort as InputPort, Input as EngineInput, Prepared,
 };
 use crate::failure::Failure;
-use crate::schedule::Output;
+use crate::schedule::{Judged, Output, Placed};
 
 struct Work {
     group: PreparedGroup,
+    at: usize,
 }
 
 struct Answers {
     ordered: Vec<GroupAnswer>,
     model: Option<ModelName>,
+    at: usize,
 }
 
+type PreparedInput = Prepared<(usize, Record), Answers, Work>;
+
 pub(crate) enum Input {
-    Bytes(Vec<u8>),
-    Record(Record),
+    Bytes(usize, Vec<u8>),
+    Record(usize, Record),
 }
 
 pub(crate) fn run<I>(
@@ -34,7 +38,7 @@ pub(crate) fn run<I>(
     output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure>
 where
-    I: Iterator<Item = Result<Input, Failure>> + Send + 'static,
+    I: Iterator<Item = Result<Input, Placed>> + Send + 'static,
 {
     let outcome = judging.engine().groups(
         reading.streams(),
@@ -43,26 +47,30 @@ where
             thread::spawn(move || read(chunks, &requests, &events));
         },
         |input| prepare(judging, reading, input),
-        &|work: Work| judging.answer_group(work.group),
+        &|work: Work| {
+            judging
+                .answer_group(work.group)
+                .map_err(|error| Placed::at(error, work.at))
+        },
         |answers, answer| {
-            let model = answer
-                .model
-                .as_ref()
-                .ok_or(Failure::Defect("an annotate group reported no model"))?;
-            check_model(&mut answers.model, model, judging.requested_model())?;
+            let model = answer.model.as_ref().ok_or_else(|| {
+                Placed::at(
+                    Failure::Defect("an annotate group reported no model"),
+                    answers.at,
+                )
+            })?;
+            check_model(&mut answers.model, model, judging.requested_model())
+                .map_err(|error| Placed::at(error.into(), answers.at))?;
             answers.ordered.push(answer);
             Ok(())
         },
-        |record, answers| {
+        |(_, record), answers| {
             judging
                 .finish(record, answers.ordered)
-                .map(|judged| Completed {
-                    replayed: judged.replayed,
-                    partial_failure: judged.partial_failure,
-                    value: judged,
-                })
+                .map(Judged::completed)
+                .map_err(|error| Placed::at(error, answers.at))
         },
-        |judged| output.take(judged),
+        |judged| output.take(judged).map_err(Placed::from),
     )?;
     match outcome {
         RunOutcome::Complete { partial_failure } => Ok(if partial_failure {
@@ -70,19 +78,18 @@ where
         } else {
             ExitCode::SUCCESS
         }),
-        RunOutcome::Failed(cause) => Err(cause),
+        RunOutcome::Failed(cause) => Err(cause.cause),
         RunOutcome::Stopped {
-            at,
             finished,
             replayed,
             cause,
         } => Err(Failure::Stopped {
-            at,
+            at: cause.at.unwrap_or(finished + 1),
             finished,
             replayed,
             recording: judging.engine().recording(),
             held: false,
-            cause: Box::new(cause),
+            cause: Box::new(cause.cause),
         }),
     }
 }
@@ -91,30 +98,37 @@ fn prepare(
     judging: &Judging<'_>,
     reading: &Reading,
     input: Input,
-) -> Result<Prepared<Record, Answers, Work>, Failure> {
-    let record = judging.record(reading, input)?;
+) -> Result<PreparedInput, Placed> {
+    let at = match &input {
+        Input::Bytes(at, _) | Input::Record(at, _) => *at,
+    };
+    let record = judging
+        .record(reading, input)
+        .map_err(|error| Placed::at(error, at))?;
     let work = judging
         .groups()
         .into_iter()
         .map(|places| {
             judging
                 .prepare_group(reading, &record, places)
-                .map(|group| Work { group })
+                .map(|group| Work { group, at })
         })
-        .collect::<Result<Vec<_>, _>>()?;
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| Placed::at(error, at))?;
     Ok(Prepared {
-        seed: record,
+        seed: (at, record),
         accumulator: Answers {
             ordered: Vec::with_capacity(work.len()),
             model: None,
+            at,
         },
         work,
     })
 }
 
-fn read<I>(mut chunks: I, requests: &Receiver<()>, events: &InputPort<Input, GroupAnswer, Failure>)
+fn read<I>(mut chunks: I, requests: &Receiver<()>, events: &InputPort<Input, GroupAnswer, Placed>)
 where
-    I: Iterator<Item = Result<Input, Failure>>,
+    I: Iterator<Item = Result<Input, Placed>>,
 {
     while requests.recv().is_ok() {
         let event = match chunks.next() {

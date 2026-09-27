@@ -1,4 +1,4 @@
-Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review. Item 1, the default model half: ticket 0159 on `ticket/0159-pin-the-default-model`. Item 3: ticket 0163 on `ticket/0163-the-cache-folder-and-its-pages`. Both are ready for review.
+Status: open for the rest of item 1 and for item 3. Filed 2026-09-26 by the marketing lead from a fresh architect review. Item 1, the default model half, is done: ticket 0159 landed on 2026-09-26 and pinned the default to `jev-1.13.0`. The rest of item 1 waits. Item 2 is done: ticket 0158 landed on 2026-09-26 (`sdlc/records/0158-build-a-cache-keeps-no-failed-question.md`). Item 3: ticket 0163 on `ticket/0163-the-cache-folder-and-its-pages`, ready for review.
 
 # Architect review 08: the answer cache
 
@@ -19,6 +19,8 @@ Evidence from review 05. The default model is `jev-latest` (`core/adapters/syste
 Evidence from review 09. `--model jev-1.13.0` misses a recording made under `jev-latest`. No setting warns when the replayed `meta.model` differs from what the alias now resolves to.
 
 What an integrator hits. After a vendor model update, a pipeline returns old decisions indefinitely for every text it has seen, while new texts get the new model. One run mixes model versions, and `rank` and `filter` compare them across two probability scales, without the bare output saying so. Every tuned gate follows the alias to the new model with no signal. CI stays green on answers from an older model. `cache prune --answered-by-other-than MODEL` exists but is manual.
+
+Done by ticket 0159: the default model is the pinned version `jev-1.13.0`, and `audit --write` records the model beside a bar it writes in a single file. Still open: a freshness rule, a run-wide model check and a refresh mode.
 
 Direction. Pin the default model to a version, or put a freshness rule in the lookup, such as treating an entry as stale when the alias resolves to a newer version. Record the answering model version with a tuned threshold, as `audit --write` records the cut, and warn or refuse when `meta.model` differs. Fail or warn a record run whose rows name more than one model version. Add a refresh mode that sends and replaces.
 
@@ -64,7 +66,7 @@ Direction. Let prune skip and report bad entries, or quarantine them, and still 
 
 - The key is exact bytes, so input framing changes it. Carried in the architect review 09 file.
 - Prune evicts oldest-written, not least recently used.
-- A typo in `--answered-by-other-than` deletes every entry at exit 0, and prune has no dry run.
+- A typo in `--answered-by-other-than` deletes every entry at exit 0, and prune has no dry run. Quick Fix qf-command-edges-and-prune refuses a model no reply in the folder names. The dry run is still open.
 - A cached result repeats the stored token usage, so a dashboard that sums `meta.usage` overstates spend.
 - The default cache binds to one backend address. Carried in the architect review 06 file.
 - `Engine::builder()` ignores the configuration file's `cache: false` (`public/settings.rs:255-266`).

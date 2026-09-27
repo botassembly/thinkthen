@@ -43,9 +43,9 @@ pub(crate) enum Command {
     ///
     /// A script that acts on the answer reads all four outcomes:
     ///
-    /// thinkthen decide 'The customer asks for a refund.' --threshold 0.1:0.9 --quiet < m.txt
+    /// thinkthen decide 'The customer asks for a refund.' --threshold 0.1:0.9 --quiet < m.txt && refund_code=0 || refund_code=$?
     ///
-    /// case $? in 0) route refunds ;; 1) route support ;; 3) route triage ;; *) exit 4 ;; esac
+    /// case $refund_code in 0) route refunds ;; 1) route support ;; 3) route triage ;; *) exit 4 ;; esac
     ///
     /// Word the question in the form where yes permits the action. A broken run
     /// then never permits anything, because every outcome other than 0 leaves
@@ -94,6 +94,8 @@ pub(crate) enum Command {
 
     /// Pick one option from your list.
     ///
+    /// Use `tag` when more than one answer can apply.
+    ///
     /// The answer is a bare JSON string, or `null` when the winning option
     /// falls under `--threshold` or the top two options tie exactly. Exit 0 is
     /// an option and exit 3 is not sure. `choose` never exits 1, because a pick
@@ -107,11 +109,11 @@ pub(crate) enum Command {
     /// and an empty string is no option, so only the exit code tells a not
     /// sure pick from a broken run:
     ///
-    /// pick=$(thinkthen choose 'Which team owns this?' billing shipping other --raw < m.txt) && rc=0 || rc=$?
+    /// team=$(thinkthen choose 'Which team owns this?' billing shipping other --raw < m.txt) && team_code=0 || team_code=$?
     ///
-    /// case $rc in 0) ;; 3) pick=not_sure ;; *) exit "$rc" ;; esac
+    /// case $team_code in 0) ;; 3) team=not_sure ;; *) exit "$team_code" ;; esac
     ///
-    /// case $pick in billing) pay ;; not_sure) triage ;; *) exit 2 ;; esac
+    /// case $team in billing) pay ;; not_sure) triage ;; *) exit 2 ;; esac
     ///
     /// "Not stated" is a different answer from "false". "Does the text
     /// establish X?" and "Is X true?" are different questions. When the
@@ -253,12 +255,13 @@ pub(crate) enum Command {
 
     /// Show which saved answers changed between two runs or two cuts.
     ///
-    /// A and B hold the lines `decide` or `choose` printed for the same
-    /// records. Without B, diff compares A under --threshold with A under
-    /// --compare-threshold. Two cuts on one run cost nothing. The probabilities
-    /// are already saved. Each changed answer prints on one line, and a summary
-    /// with its McNemar test prints last. With --key, each change says whether
-    /// it gained or lost a right answer. An answer inside a band is not sure.
+    /// A and B hold the lines `decide`, `choose`, `recognize`, or `relate` printed for the same
+    /// records. Without B, diff compares A under --threshold with A under --compare-threshold.
+    /// Two cuts on one run cost nothing. The probabilities are already saved. Each change prints
+    /// one JSON line, or under --table one line and a line per changed item. A summary with its
+    /// McNemar test prints last. With --key, a changed answer says whether it gained or lost a right
+    /// answer, and a changed record counts the key names or edges each side matched. An answer
+    /// inside a band is not sure.
     ///
     /// diff pairs answers by record id and answer name only. It compares
     /// question digests only when both runs saved --details.
@@ -295,12 +298,44 @@ pub(crate) struct PruneArguments {
     pub(crate) older_than: Option<String>,
     /// Remove entries whose reply names another model. Give the version that
     /// answered, as a result's meta.model shows it, not the alias passed to
-    /// --model. A name no reply carries removes every entry.
+    /// --model. A name no reply in the folder carries is refused, and nothing
+    /// is removed.
     #[arg(long, value_name = "MODEL")]
     pub(crate) answered_by_other_than: Option<String>,
 }
 
 impl Command {
+    /// Whether a one-question verb received a loose second argument.
+    pub(crate) fn stray(&self) -> bool {
+        match self {
+            Self::Decide(arguments) => !arguments.extra.is_empty(),
+            Self::Filter(arguments) => !arguments.extra.is_empty(),
+            Self::Rank(arguments) => !arguments.extra.is_empty(),
+            Self::Find(arguments) => !arguments.extra.is_empty(),
+            _ => false,
+        }
+    }
+
+    /// Whether the command line itself selected JSON Lines with no pointer.
+    pub(crate) fn typed_jsonl(&self) -> bool {
+        match self {
+            Self::Find(arguments) => arguments.common.jsonl && arguments.common.field.is_empty(),
+            Self::Decide(arguments) => arguments.common.jsonl && arguments.common.field.is_empty(),
+            Self::Choose(arguments) => arguments.common.jsonl && arguments.common.field.is_empty(),
+            Self::Tag(arguments) => arguments.common.jsonl && arguments.common.field.is_empty(),
+            Self::Score(arguments) => arguments.common.jsonl && arguments.common.field.is_empty(),
+            Self::Filter(arguments) => arguments.common.jsonl && arguments.common.field.is_empty(),
+            Self::Rank(arguments) => arguments.common.jsonl && arguments.common.field.is_empty(),
+            Self::Annotate(arguments) => {
+                arguments.common.jsonl && arguments.common.field.is_empty()
+            }
+            Self::Recognize(arguments) => {
+                arguments.common.jsonl && arguments.common.field.is_empty()
+            }
+            _ => false,
+        }
+    }
+
     pub(crate) const fn reads_input(&self) -> bool {
         !matches!(
             self,
@@ -373,7 +408,7 @@ pub(crate) struct CheckArguments {
     /// The model named in each request, resolved as every command resolves it.
     #[arg(long, value_name = "NAME")]
     pub(crate) model: Option<String>,
-    /// Positive seconds that bound one attempt from connect to last byte, and each retry wait.
+    /// Seconds from 1 to 86400 that bound one attempt from connect to last byte, and each retry wait.
     #[arg(long, value_name = "SECONDS", default_value_t = 30)]
     pub(crate) timeout: u64,
     /// Print the four request bodies and stop. No key is read and nothing is sent.

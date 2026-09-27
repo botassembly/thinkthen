@@ -412,7 +412,8 @@ impl Question {
     ///
     /// Returns [`Error::Usage`] naming what the file breaks.
     pub fn from_json(value: &str) -> Result<LoadedQuestion, Error> {
-        let file = QuestionFile::parse(value).map_err(Error::refused)?;
+        // The command reads a `decide` file's `batch`. The library ignores it until B12a.
+        let (file, _batch) = QuestionFile::parse_top(value).map_err(Error::refused)?;
         let resolved =
             resolve(file.verb(), None, Some(&file), &Typed::default()).map_err(Error::refused)?;
         if resolved

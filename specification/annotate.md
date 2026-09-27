@@ -20,7 +20,7 @@ thinkthen annotate FILE [--lines|--jsonl|--csv|--tsv] [--field POINTER] [--detai
   "threshold": "0.1:0.9",
   "profile": "jev",
   "questions": {
-    "unresolved": {"decide": "Does this report a failure that is still unresolved?", "true": "The report names a failure that is still happening.", "false": "Anything else.", "threshold": "0.1:0.9", "on": "/body"},
+    "open": {"decide": "Is this still open?", "true": "The report names a failure that is still happening.", "false": "Anything else.", "threshold": "0.1:0.9", "on": "/body"},
     "kind": {"choose": "Which kind of request is this?", "options": {"bug": "Reports broken behavior.", "feature": "Asks for new behavior.", "other": "Neither fits."}, "threshold": 0.8},
     "impact": {"score": "How much disruption does this report?", "levels": ["None.", "Work continues with a workaround.", "Work is blocked."]}
   }
@@ -31,7 +31,7 @@ Each entry has the shape of one question file, and [question-file.md](question-f
 
 The top-level `threshold` applies to every `decide` question that names none. The optional top-level `profile` names the backend profile used to calibrate the set's thresholds. `version`, `threshold`, `profile`, and `questions` are the only top-level keys. A nested question cannot carry another profile. The set holds no backend address, model, output path, or format. An exact check beyond equality is a `jq` field on the record, by ADR 0008 item 6.
 
-`on` is a JSON Pointer inside the evidence that `--field` selected. It can never reach outside that evidence. A table asks different questions of different columns, and no question should see a column it does not need. The selection follows the `state` rule of [records.md](records.md): an object or a list travels as that JSON value, and several pointers send one ordered object.
+`on` is a JSON Pointer inside the value that the record selected: the whole record, or what `--field` selected. A string is text, even when it holds JSON, and `on` never parses it. A text record or a selected string has no members, and a question that reads `on` in one is refused at exit 2 with a sentence naming the question. It can never reach outside that evidence. Under `--lines`, a set with such a question is refused at exit 2 before any input is read. A table asks different questions of different columns, and no question should see a column it does not need. The selection follows the `state` rule of [records.md](records.md): an object or a list travels as that JSON value, and several pointers send one ordered object.
 
 ### Several pointers on `on`
 
@@ -45,14 +45,14 @@ Settled by ADR 0008 item 2, accepted in ADR 0010. `on` takes one pointer or seve
 
 One JSON object per record. In record mode an object record gains one top-level field per question, so a chain of judgments stays flat. A line, JSON scalar, or JSON array keeps its parsed record under `input` and its named answer object under `value`. CSV and TSV rows are objects and stay flat. On one document, an object still gains the answers and every other JSON shape or text document still yields the named answers alone.
 
-An unresolved answer is `null`. A failed question is a failure marker and never `null`. When the same reply contains a usable answer, the good answer and failed marker both print and the completed run exits 6. A reply with no usable answer ends the run at exit 4.
+A not sure answer is `null`. A failed question is a failure marker and never `null`. When the same reply contains a usable answer, the good answer and failed marker both print and the completed run exits 6. A reply with no usable answer ends the run at exit 4.
 
 ```json
-{"id":"T-91","body":"Payouts have failed for 3 days.","unresolved":true,"kind":"bug","impact":1.6}
+{"id":"T-91","body":"Payouts have failed for 3 days.","open":true,"kind":"bug","impact":1.6}
 ```
 
 ```json
-{"input":"Payouts have failed for 3 days.","value":{"unresolved":true,"kind":"bug","impact":1.6}}
+{"input":"Payouts have failed for 3 days.","value":{"open":true,"kind":"bug","impact":1.6}}
 ```
 
 `--details` prints `input`, `value`, `answers`, and `meta`, as [result.md](result.md) gives them.
@@ -67,7 +67,7 @@ An unresolved answer is `null`. A failed question is a failure marker and never 
 | `--input FILE` | Reads the evidence from a file | Standard input |
 | `--dry-run` | Checks the file, prints the plan, and sends nothing. See below | Off |
 | `--profile FILE` | Applies explicit local backend limits and names the running calibration profile. See [backends.md](backends.md) | None |
-| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-latest` |
+| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-1.13.0` |
 
 `annotate` takes no `--threshold`, no `--quiet`, and no `--raw`. A question carries its own threshold.
 
@@ -78,22 +78,22 @@ An unresolved answer is `null`. A failed question is a failure marker and never 
 ## Examples
 
 ```sh
-thinkthen annotate triage.json < issue.txt
+thinkthen annotate triage.json < issue.json
 ```
 
 ```sh
-thinkthen annotate triage.json --jsonl --field /body < issues.jsonl | jq -c 'select(.kind == "bug")'
+thinkthen annotate triage.json --jsonl < issues.jsonl | jq -c 'select(.kind == "bug")'
 ```
 
 ```sh
-thinkthen annotate triage.json --dry-run
+thinkthen annotate triage.json --dry-run < issue.json
 ```
 
 ## `--dry-run`
 
-`--dry-run` validates the file and sends nothing. It needs no key. An empty document is a usage error. An empty line or JSONL stream succeeds and prints nothing. An empty CSV or TSV input fails because its required header is missing. With evidence it prints the first request and an `on` object that names the normalized pointers for every question.
+`--dry-run` validates the file and sends nothing. It needs no key. An empty document is a usage error. An empty line or JSONL stream succeeds and prints nothing, unless a question reads `on` under `--lines`. An empty CSV or TSV input fails because its required header is missing. With evidence it prints the first request a live run sends, which is the first chunk under a profile, and an `on` object that names the normalized pointers for every question. `request_count` counts the requests the first record makes, and `group_requests` counts each `on` group's requests in group order.
 
-One record makes one request per distinct `on`, and the plan shows one request. It is the first record's first `on` set, taking the questions in file order. The plan's `input` object names the framing and, under `on`, the pointers of every question, so a reviewer sees what each check would see and not only the check that the plan printed.
+One record makes at least one request per distinct `on`, and a profile can split a group into several. The plan prints one request: the first that the first record's first `on` set sends, taking the questions in file order. `request_count` and `group_requests` count the rest. The plan's `input` object names the framing and, under `on`, the pointers of every question, so a reviewer sees what each check would see and not only the check that the plan printed.
 
 ```json
 {"framing":"jsonl","on":{"correct":["/input","/gold","/output"],"grounded":["/context","/output"]}}
@@ -115,7 +115,7 @@ A failed bare value is `{"failed":{"kind":"backend","cause":CAUSE}}`. In detaile
 
 A profile enforces only limits stated in bytes, expanded questions, or options. A backend limit stated only in tokens remains unenforceable without a tokenizer or a measured byte ceiling.
 
-Each exact encoded chunk has its own cache key. A group that fits remains one historical chunk, so adding or changing one question asks that whole group again for every record. A split group reuses only chunks whose exact bytes and positions remain unchanged; changing one question can also move later chunk boundaries and their keys. An answer near its threshold can move when neighboring questions change. In six deliberately borderline cases, one answer moved from `false` to unresolved when neighboring questions joined it. The largest probability shift was 0.04. Keep the group fixed while comparing runs and retain `--details` probabilities. Use a narrower, distinct `on` group when the record permits it and the questions need separate stability.
+Each exact encoded chunk has its own cache key. A group that fits remains one historical chunk, so adding or changing one question asks that whole group again for every record. A split group reuses only chunks whose exact bytes and positions remain unchanged; changing one question can also move later chunk boundaries and their keys. An answer near its threshold can move when neighboring questions change. In six deliberately borderline cases, one answer moved from `false` to not sure when neighboring questions joined it. The largest probability shift was 0.04. Keep the group fixed while comparing runs and retain `--details` probabilities. Use a narrower, distinct `on` group when the record permits it and the questions need separate stability.
 
 ## An eval is `annotate` and a saved run
 

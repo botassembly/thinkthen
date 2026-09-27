@@ -3,8 +3,9 @@
 Run as ``python tests/conformance.py PORT`` with a conformance backend on
 that loopback port. Each success case runs on its own case arm, with each
 expected request digest recomputed for the URL the backend served. Every
-case ends as pass, fail, or not run with its reason, and the three counts
-sum to the file's count. A case is not run only by a rule the library
+selected case ends as pass, fail, or not run with its reason, and the three
+counts sum to the selected count. With no ID file the runner selects all 54.
+A case is not run only by a rule the library
 cannot meet, never by its id. Each typed, ``decide_many``, and ``annotate``
 case also runs over a Polars column or frame, and must give the list form's
 values.
@@ -118,11 +119,13 @@ def annotated(engine, case, texts, success):
             same("frame", json.loads(got[name]) if widened else got[name], value)
 
 
-def entity(one, place=True):
-    found = {"name": one.name, "kind": one.kind}
-    if place:
-        found.update(start=one.start, end=one.end, strength=one.strength)
-    return found
+def entity(one):
+    return {"name": one.name, "kind": one.kind}
+
+
+def recognized(one):
+    return {"text": one.text, "start": one.start, "end": one.end, "length": one.length,
+            "kind": one.kind, "strength": one.strength}
 
 
 def succeeded(port, case):
@@ -136,17 +139,17 @@ def succeeded(port, case):
     verb, kind = case["verb"], success["kind"]
     if verb == "recognize":
         found = engine.recognize(case["text"], case["question"])
-        result = {"entities": [entity(one) for one in found.entities]}
+        result = {"entities": [recognized(one) for one in found.entities]}
         if found.relations is not None:
             result["relations"] = [
-                {"relation": one.relation, "source": entity(one.source),
-                 "target": entity(one.target), "probability": one.probability}
+                {"relation": one.relation, "source": recognized(one.source),
+                 "target": recognized(one.target), "probability": one.probability}
                 for one in found.relations]
         return same("result", result, success["answers"][0]["bare"])
     if verb == "relate":
         edges = engine.relate(case["entities"], case["question"])
-        result = [{"relation": edge.relation, "source": entity(edge.source, False),
-                   "target": entity(edge.target, False), "probability": edge.probability}
+        result = [{"relation": edge.relation, "source": entity(edge.source),
+                   "target": entity(edge.target), "probability": edge.probability}
                   for edge in edges]
         return same("result", result, success["answers"][0]["bare"])
     if verb == "annotate":
@@ -216,8 +219,26 @@ def refused(port, case):
 
 def main(port):
     document = json.loads(CASES.read_text())
+    cases = document["cases"]
+    ids = [case["id"] for case in cases]
+    if len(ids) != len(set(ids)) or len(ids) != document["case_count"]:
+        raise ValueError("the canonical conformance cases need unique IDs and their declared count")
+    selected = os.environ.get("THINKTHEN_CONFORMANCE_IDS")
+    if selected is not None:
+        path = pathlib.Path(selected)
+        if not path.is_absolute():
+            raise ValueError("THINKTHEN_CONFORMANCE_IDS must be an absolute path")
+        wanted = [line.strip() for line in path.read_text().splitlines()
+                  if line.strip() and not line.lstrip().startswith("#")]
+        if len(wanted) != len(set(wanted)) or not wanted:
+            raise ValueError("the routine conformance IDs must be nonempty and unique")
+        missing = set(wanted) - set(ids)
+        if missing:
+            raise ValueError(f"unknown routine conformance IDs: {', '.join(sorted(missing))}")
+        wanted_ids = set(wanted)
+        cases = [case for case in cases if case["id"] in wanted_ids]
     passed, failed, skipped = [], [], []
-    for case in document["cases"]:
+    for case in cases:
         reason = not_run(case)
         if reason:
             skipped.append(f"{case['id']}: {reason}")
@@ -232,9 +253,10 @@ def main(port):
     for line in skipped:
         print("NOT RUN", line)
     total = len(passed) + len(failed) + len(skipped)
-    print(f"conformance: {len(passed)} passed, {len(failed)} failed, {len(skipped)} not run, "
-          f"of {document['case_count']}")
-    return 0 if not failed and total == document["case_count"] == len(document["cases"]) else 1
+    print(f"conformance: total={document['case_count']} selected={len(cases)} "
+          f"pass={len(passed)} fail={len(failed)} not_run={len(skipped)} "
+          f"unselected={document['case_count'] - len(cases)}")
+    return 0 if not failed and total == len(cases) else 1
 
 
 if __name__ == "__main__":

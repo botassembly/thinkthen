@@ -11,6 +11,10 @@ import textwrap
 
 import pytest
 
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "stress: opt-in load, timing, or repeated contention campaign")
+
 FAKE = "sk-fake-loopback-python-0105"
 REPO = pathlib.Path(__file__).resolve().parents[3]
 TARGET = pathlib.Path(os.environ.get("CARGO_TARGET_DIR") or REPO / "target")

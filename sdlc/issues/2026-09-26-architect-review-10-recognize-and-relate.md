@@ -10,6 +10,8 @@ Severity 1 means a wrong answer, data loss, a security problem or a hang. Severi
 
 ## 1. One kind gives that kind to every name the model detects (severity 1)
 
+Settled by ticket 0147, landed 2026-09-27. Every run with kinds asks the kind question with `none of these`, so a name no listed kind covers is dropped. Item 2 stays open for standalone `relate`.
+
 Evidence. Live, `recognize person` labeled `Acme Corp` (0.99) and `Paris` (0.79) as `person`. Replayed real Jev detection answers label a song, an island, a studio and an album as `person` at 0.98 to 0.99. `facade/recognize.rs:219-231` sets the kind probability to 1.0, and the detection question at `recognize.rs:7` asks about every kind of named entity.
 
 What an integrator hits. "Find the people in this text" is the most natural first call. It returns every organization and place as a person, with a strength that looks certain. Nothing in the output marks the mistake.
@@ -17,6 +19,8 @@ What an integrator hits. "Find the people in this text" is the most natural firs
 Direction. With one kind, ask the kind question against an implicit "something else" option, or ask a yes/no "is this a KIND?" per name. Until then, state on `recognize.md` that one kind means "every name", and refuse or warn.
 
 ## 2. A cross-kind relation keeps at most one edge per asking name, and the asking side depends on unrelated names (severity 1)
+
+Carried by ticket 0167, ready for review 2026-09-27. ADR 0057 moves `relate` to one yes/no question per pair.
 
 Evidence. Live, "John Lennon wrote Help!, Girl and In My Life" gave 1 of 3 edges (0.81, 0.12, 0.02). In replay, the same facts gave 0 edges with 3 songs and 3 edges after adding an unrelated fourth song. Code: `relation.rs:188-257` and `:194`. ADR 0019 makes the options total one. The bench states the same effect on real duets.
 

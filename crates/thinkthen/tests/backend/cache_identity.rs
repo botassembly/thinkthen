@@ -5,7 +5,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::thread;
 
-use crate::harness::{Canned, Listener, spawn};
+use crate::harness::{Canned, Listener, spawn_one as spawn};
 use crate::support::{encoded_decide, plant_recording};
 
 const QUESTION: &str = "asks for a refund";

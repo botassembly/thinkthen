@@ -17,7 +17,7 @@ Status: built and checked, waiting for landing. Owner: Claude. Base: `origin/mai
 
 1. PostgreSQL registers `thinkthen.throttle` with a check (`databases/postgresql/src/ffi.rs`). The check refuses any value other than -1 and 1 through 32. The refusal reads `thinkthen usage: a throttle is a whole number from 1 through 32 (retryable: no)`, the sentence the other surfaces show. `SET` fails with SQLSTATE 22023. A configuration file's or `ALTER ROLE`'s bad value draws the same sentence as a warning when the library loads, and the setting stays -1, so calls keep working. The setting's range widened to the full integer range, so the check alone judges and 0, 33, and -2 read one sentence. The cost is that `pg_settings` shows the integer bounds as `min_val` and `max_val`. Ian can overturn that choice. The README row now says 1 to 32 and names the refusal.
 2. ADR 0004's status line names ADR 0010 as the replacement for the four-value profile and the key rule. A new amendment of 2026-09-26 states the current rule. The key comes from `THINKTHEN_API_KEY` alone. It goes only to the address the user named, or to the default base when the user names none. The amendment also marks the profile paragraph as history under ADR 0032.
-3. Both architect review issues record their fixes. Review found that the check script's `has` passes any needle that holds a newline. `sdlc/issues/2026-09-26-postgresql-check-has-passes-any-multi-line-needle.md` records the five older steps it weakens.
+3. Both architect review issues record their fixes. Review found that the check script's `has` passes any needle that holds a newline. `sdlc/issues/closed/2026-09-26-postgresql-check-has-passes-any-multi-line-needle.md` records the five older steps it weakens.
 
 ## The other surfaces
 

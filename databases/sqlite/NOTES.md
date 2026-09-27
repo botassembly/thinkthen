@@ -4,9 +4,9 @@ The tag's `NOTES.md` stays at `surfaces-wave7-frozen-2026-09-24b` as history. Th
 
 ## Where the port departs from the ticket's text
 
-- **The loopback key.** The engine refuses to send with no key. Every test child therefore gets the fixed fake key `sk-sqlite-loopback` beside its own loopback address. The caller's `THINKTHEN_API_KEY` never reaches a child. Decision 16's text says the key stays unset in every test but the secrecy test. Its purpose holds: no child can reach a paid backend, and no real key crosses into a test.
+- **The loopback key.** The engine refuses to send with no key unless the base is a loopback address, and there it sends the request with no `Authorization` header (Quick Fix qf-command-edges-and-prune). Every test child therefore gets the fixed fake key `sk-sqlite-loopback` beside its own loopback address. The caller's `THINKTHEN_API_KEY` never reaches a child. Decision 16's text says the key stays unset in every test but the secrecy test. Its purpose holds: no child can reach a paid backend, and no real key crosses into a test.
 - **`thinkthen_max_requests` on a warm.** The engine's `max_requests` sends the records inside the limit, then refuses. A limit of 2 over three rows counts 2 sends, not 0. The test pins 2.
-- **Retries.** `EngineBuilder::build` sets `max_retries: 2` (`crates/thinkthen/src/public/settings.rs`). The 503 arm therefore counts three sends, and the test cites the setting.
+- **Retries.** Ticket 0155 changed `EngineBuilder::build` to `max_retries: 3` (`crates/thinkthen/src/public/settings.rs`). The 503 arm therefore counts four sends, and the test cites the setting.
 - **`thinkthen_usage()` builds no engine.** Before the first call it reads 0 for every total, and a setting after it still applies. The settings test pins that order.
 - **The seed plant.** The planted `Engine::builder()` copies the loopback address and the loopback key. It counts 1 send in the planted run too, so its second call still read a cached answer. Nothing lands in `THINKTHEN_CACHE`, and the test turns red there.
 - **Case numbers.** The ticket's "case 68" is `41-offsets-past-an-accent-and-an-emoji` in `conformance/cases.json`. Its branch provenance is 68.

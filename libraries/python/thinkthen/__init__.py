@@ -39,6 +39,8 @@ from ._thinkthen import (
     LocalError,
     Question,
     Recognized,
+    RecognizedEntity,
+    Relation,
     ThinkThenError,
     UsageError,
 )
@@ -46,9 +48,10 @@ from ._thinkthen import (
 __all__ = [
     "BackendError", "Cancelled", "CancelToken", "DeadlineError", "DefectError",
     "Edge", "Engine", "Entity", "LocalError", "Question", "Recognized",
-    "ThinkThenError", "UsageError", "annotate", "choose", "decide",
-    "decide_many", "details", "filter", "find", "question", "rank",
-    "recognize", "relate", "score", "tag", "usage",
+    "RecognizedEntity", "Relation", "ThinkThenError", "UsageError",
+    "annotate", "choose", "decide", "decide_many", "details", "filter",
+    "find", "question", "rank", "recognize", "relate", "score", "tag",
+    "usage",
 ]
 
 _VERBS = ("decide", "choose", "score", "tag")
@@ -221,7 +224,7 @@ class Engine:
 
     ``base_url``, ``model``, ``throttle`` (1 to 32 requests in flight),
     ``max_requests``, ``cache`` (a folder, ``False`` for none, or ``True``
-    for the default folder), and ``cache_bytes``. An omitted setting comes
+    for the default folder), ``timeout``, ``max_retries``, ``record``, ``replay``, and ``profile``. An omitted setting comes
     from the environment. The throttle is one per loaded copy of this
     package: a second, different throttle raises ``UsageError``.
 
@@ -233,10 +236,12 @@ class Engine:
     __slots__ = ("_engine",)
 
     def __init__(self, *, base_url=None, model=None, throttle=None,
-                 max_requests=None, cache=None, cache_bytes=None):
+                 max_requests=None, cache=None, timeout=None, max_retries=None,
+                 record=None, replay=None, profile=None):
         self._engine = _thinkthen._Engine(
             base_url=base_url, model=model, throttle=throttle,
-            max_requests=max_requests, cache=cache, cache_bytes=cache_bytes)
+            max_requests=max_requests, cache=cache, timeout=timeout,
+            max_retries=max_retries, record=record, replay=replay, profile=profile)
 
     def __repr__(self):
         return "Engine()"
@@ -335,11 +340,13 @@ class Engine:
         and ``either`` names the rules that read both ways. ``ask`` is a
         file path or the file's ``dict`` in place of the keywords. Offsets
         count Python string positions, so ``text[e.start:e.end]`` is the
-        name. With ``on=``, ``text`` is a Polars ``DataFrame``, and a frame
-        comes back with one row per name: ``row`` (counted from 1), ``text``,
-        ``kind``, ``start``, ``end``, and ``strength``. A pandas ``DataFrame``
-        comes back with a new ``names`` column: one list per row of ``dict``
-        with those fields but ``row``. Relations take one text.
+        name and ``e.length`` is ``e.end - e.start``. With no kinds, every
+        name has the kind ``ENTITY``. With ``on=``, ``text`` is a Polars
+        ``DataFrame``, and a frame comes back with one row per name: ``row``
+        (counted from 1), ``text``, ``start``, ``end``, ``length``, ``kind``,
+        and ``strength``. A pandas ``DataFrame`` comes back with a new
+        ``names`` column: one list per row of ``dict`` with those fields but
+        ``row``. Relations take one text.
         """
         if on is not None and relations is not None:
             raise UsageError("recognize with on= takes no relations; ask them of one text")
@@ -364,8 +371,10 @@ class Engine:
         """Say how the entities relate: a list of ``Edge``.
 
         ``entities`` holds ``(name, kind)`` pairs, dicts with ``name`` and
-        ``kind``, or ``Entity`` values. ``relations`` and ``either`` read as
-        for ``recognize``.
+        ``kind``, ``Entity`` values, or what ``recognize`` found. A
+        ``RecognizedEntity``, or a dict with ``text`` and no ``name``, is
+        named by its ``text``. ``relations`` and ``either`` read as for
+        ``recognize``.
         """
         if ask is not None:
             spec = _spec(_thinkthen._Relate, ask)

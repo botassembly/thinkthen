@@ -16,7 +16,11 @@ pub(crate) const KEY_VAR: &str = "THINKTHEN_API_KEY";
 pub(crate) struct Backend {
     url: Url,
     model: ModelName,
+    request_size: usize,
 }
+
+/// The default maximum request size at every address, in bytes.
+const DEFAULT_REQUEST_SIZE: usize = 96_000;
 
 /// Why the given address and model name no backend.
 #[derive(Clone, Debug, Eq, Error, PartialEq)]
@@ -63,9 +67,15 @@ pub(crate) enum BackendError {
 const LOOPBACK: [&str; 3] = ["localhost", "127.0.0.1", "[::1]"];
 
 impl Backend {
+    pub(crate) const DEFAULT_REQUEST_SIZE: usize = DEFAULT_REQUEST_SIZE;
+
     #[cfg(test)]
     pub(crate) const fn from_parts(url: Url, model: ModelName) -> Self {
-        Self { url, model }
+        Self {
+            url,
+            model,
+            request_size: DEFAULT_REQUEST_SIZE,
+        }
     }
 
     /// Resolve the backend from the option, the environment, and the default.
@@ -89,7 +99,23 @@ impl Backend {
         Ok(Self {
             url: address(url.or(base).unwrap_or(built_in::DEFAULT_BASE))?,
             model: ModelName::new(model)?,
+            request_size: DEFAULT_REQUEST_SIZE,
         })
+    }
+
+    /// Carry the command's resolved request size into both planners.
+    pub(crate) fn with_request_size(mut self, size: usize) -> Self {
+        self.request_size = size;
+        self
+    }
+
+    /// Whether the address names `localhost`, `127.0.0.1`, or `[::1]`, the
+    /// hosts the clear-text rule proves are this machine.
+    #[must_use]
+    pub(crate) fn is_loopback(&self) -> bool {
+        after_scheme(self.url.as_str())
+            .and_then(|(_, rest)| host_of(rest.split('/').next().unwrap_or(rest)).ok())
+            .is_some_and(|host| LOOPBACK.iter().any(|kind| host.eq_ignore_ascii_case(kind)))
     }
 
     /// Read the URL the request is posted to.
@@ -104,18 +130,21 @@ impl Backend {
         &self.model
     }
 
-    /// The request-byte ceiling a relation plan splits under and a batch
-    /// closes at: 96,000 at the built-in address, and none elsewhere. The
-    /// hosted backend refuses over 65,536 input tokens, and relate's JSON runs
-    /// 0.516 a byte (ticket 0123).
+    /// The request-byte ceiling a relation plan splits under and a batch closes at.
     #[must_use]
-    pub(crate) fn ceiling(&self) -> Option<usize> {
+    pub(crate) fn ceiling(&self) -> usize {
+        self.request_size
+    }
+
+    /// Whether the posting URL names the built-in backend, for its warning.
+    #[must_use]
+    pub(crate) fn is_built_in(&self) -> bool {
         let base = self
             .url
             .as_str()
             .strip_suffix(built_in::ENDPOINT_PATH)
             .and_then(|rest| rest.strip_suffix('/'));
-        (base == Some(built_in::DEFAULT_BASE)).then_some(96_000)
+        base == Some(built_in::DEFAULT_BASE)
     }
 
     /// Say whether the request travels under TLS.
@@ -253,12 +282,32 @@ mod tests {
         Backend::resolve(url, base, DEFAULT_MODEL)
     }
 
+    /// Only the three spellings the clear-text rule names prove an `https://`
+    /// base is this machine, so only they send with no key.
+    #[test]
+    fn only_the_three_loopback_spellings_are_loopback() {
+        for (host, loopback) in [
+            ("localhost", true),
+            ("LOCALHOST", true),
+            ("127.0.0.1:9", true),
+            ("[::1]", true),
+            ("localhost.", false),
+            ("localhost.evil.com", false),
+            ("127.0.0.1.nip.io", false),
+            ("127.0.0.2", false),
+            ("0.0.0.0", false),
+        ] {
+            let backend = resolve(Some(&format!("https://{host}/v1")), None).expect("a base");
+            assert_eq!(backend.is_loopback(), loopback, "{host}");
+        }
+    }
+
     #[test]
     fn nothing_named_resolves_the_default_base_and_the_default_model() {
         let backend = resolve(None, None).expect("the default base resolves");
 
         assert_eq!(backend.url().as_str(), BUILT_IN);
-        assert_eq!(backend.model().as_str(), "jev-latest");
+        assert_eq!(backend.model().as_str(), DEFAULT_MODEL);
     }
 
     #[test]

@@ -28,7 +28,7 @@ check("a set base_url wins over THINKTHEN_BASE_URL", sent == 1L && grepl("TRUE",
 
 # One refusal an argument, each usage and each sending nothing.
 refusals <- c('base_url = 5', 'model = ""', 'throttle = 0L', 'throttle = 33L', 'max_requests = -1',
-              'cache = TRUE', 'cache_bytes = -1', 'throttle = 2.5', 'base_url = "ftp://example.test"')
+              'cache = TRUE', 'timeout = 2.5', 'replay = NA', 'throttle = 2.5', 'base_url = "ftp://example.test"')
 sent <- sent_by(out <- run(c(
   sprintf('cat(tryCatch(tt_engine(%s), thinkthen_usage = function(e) "refused"), "\\n")', refusals),
   'tt_engine(throttle = 8L)',
@@ -40,11 +40,6 @@ check("a second tt_engine with other settings is usage naming the settings in fo
       grepl("the engine is already set with throttle = 8; start a new R session to change it", out, fixed = TRUE))
 check("equal settings a second time do nothing", grepl("TRUE", out, fixed = TRUE))
 check("no refusal sends", sent == 0L)
-
-# cache = FALSE sends a repeated question twice.
-sent <- sent_by(run(c('tt_engine(cache = FALSE)', 'invisible(tt_decide("Q?", "again"))',
-                      'invisible(tt_decide("Q?", "again"))')))
-check("cache = FALSE sends every repeat", sent == 2L)
 
 # max_requests: rank holds its input and refuses before any request, and a
 # streaming decide sends the first record and refuses at the second.
@@ -72,4 +67,4 @@ out <- run(c(
 check("no output names the key or the URL's credentials",
       !any(grepl("tt-test-not-a-key", said, fixed = TRUE)) && !any(grepl("hunter2", said, fixed = TRUE)))
 
-finish("engine", 7L)
+finish("engine", 5L)

@@ -33,7 +33,7 @@ The number is a position on the levels the user named. It is not a probability t
 | `--details` | Prints the full result object | Off |
 | `--dry-run` | Prints the plan and sends nothing | Off |
 | Record options | `--input`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field` | One document |
-| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-latest` |
+| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-1.13.0` |
 
 `score` takes no `--threshold`, no `--quiet`, and no `--raw`. It has no answer exit code, so quiet output would discard its result. Its result is a JSON number; `choose --raw` is the command that prints a bare label.
 
@@ -74,7 +74,8 @@ thinkthen score 'How much disruption does this report?' 'None.' 'Work continues 
 The Bash way to branch on levels is `choose` with the levels as ordered labels. The help shows it beside the `jq` line.
 
 ```sh
-case "$(thinkthen choose 'How much disruption does this report?' none workaround blocked --raw < ticket.txt)" in
+disruption=$(thinkthen choose 'How much disruption does this report?' none workaround blocked --raw < ticket.txt)
+case $disruption in
   blocked) page oncall ;;
   workaround) queue review ;;
   none) : ;;

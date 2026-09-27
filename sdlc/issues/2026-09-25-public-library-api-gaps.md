@@ -38,6 +38,8 @@ Done when: the PostgreSQL binding raises its own refusals as `thinkthen::Error` 
 
 ## 4. `EngineBuilder::cache_bytes` has no effect in the library
 
+Settled by ticket0148 on 2026-09-27: the no-op setter is gone from the public contract and every binding/SQL surface. The command retains its separately implemented prune target.
+
 What happens today. `cache_bytes` refuses 0 and otherwise returns the builder unchanged (`crates/thinkthen/src/public/settings.rs:208` to `220`). Its doc says the library "keeps no cap and prunes nothing". Python's `tt.Engine(cache_bytes=)`, Ruby's `cache_bytes:`, and PostgreSQL's `thinkthen.cache_bytes` all pass through this setter, so none of them caps the cache. The command's `thinkthen cache prune` reads its own configured cap.
 
 What the record says. Ticket 0084 freezes `cache_bytes(self, value: u64) -> Result<Self, Error>` (`sdlc/tickets/0084-freeze-the-public-rust-contract.md:108`). A frozen setter that does nothing misleads every binding's user.

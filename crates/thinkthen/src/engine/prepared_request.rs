@@ -61,6 +61,18 @@ impl PreparedRequests {
     }
 }
 
+/// The smaller request-byte limit a relation request splits under.
+pub(crate) fn relation_ceiling(
+    backend: &Backend,
+    profile: Option<&BackendProfile>,
+) -> Option<usize> {
+    Some(
+        profile
+            .and_then(|profile| profile.max_request_bytes)
+            .map_or(backend.ceiling(), |limit| limit.min(backend.ceiling())),
+    )
+}
+
 /// One concrete relation after the only relation fallback decision.
 pub(crate) struct SettledRelation {
     pub(crate) planned: RelationPlan,
@@ -70,7 +82,7 @@ pub(crate) struct SettledRelation {
 }
 
 impl SettledRelation {
-    /// Prepare one planned concrete relation for `recognize` and `relate`.
+    /// Prepare one planned concrete relation for `relate`.
     ///
     /// A choice refused by a backend-profile option or request-byte limit
     /// becomes yes/no questions for this concrete relation alone.
@@ -81,9 +93,7 @@ impl SettledRelation {
         entities: &[E],
         planned: RelationPlan,
     ) -> Result<Self, Error> {
-        let ceiling = backend
-            .ceiling()
-            .filter(|_| profile.is_none_or(|profile| !profile.limits_request_bytes()));
+        let ceiling = relation_ceiling(backend, profile);
         let plan = relation_request(backend, source, entities, &planned)?;
         match PreparedRequests::with_profile(backend, &plan, profile, ceiling) {
             Ok(requests) => Ok(Self {

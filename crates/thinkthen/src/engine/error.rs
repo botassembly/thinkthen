@@ -13,6 +13,7 @@ pub(crate) enum TransportKind {
     NameLookup,
     Refused,
     PrematureClose,
+    Tls,
     Other,
 }
 
@@ -73,6 +74,11 @@ pub(crate) enum Error {
     RecognizeKinds,
     /// The backend failed one question recognition requires.
     RecognizeLogical,
+    /// A recognize text passed its byte limit, so no request was sent.
+    TextTooLong {
+        bytes: usize,
+        limit: usize,
+    },
 }
 
 /// The statuses a backend is asked again after.
@@ -102,6 +108,11 @@ impl fmt::Display for Budget {
     reason = "the command runner reads kinds while normal command paths preserve exact causes"
 )]
 impl Error {
+    /// A refusal that a smaller batch may answer.
+    pub(crate) const fn too_large(&self) -> bool {
+        matches!(self, Self::TokenLimit | Self::Status(413))
+    }
+
     pub(crate) const fn kind(&self) -> Kind {
         match self {
             Self::Transport(_)
@@ -126,7 +137,8 @@ impl Error {
             | Self::ProfileLimit(_)
             | Self::NoKey(_)
             | Self::WidthActive(_)
-            | Self::RecognizeKinds => Kind::Usage,
+            | Self::RecognizeKinds
+            | Self::TextTooLong { .. } => Kind::Usage,
             Self::Cancelled => Kind::Cancelled,
             Self::Deadline(_) => Kind::Deadline,
         }

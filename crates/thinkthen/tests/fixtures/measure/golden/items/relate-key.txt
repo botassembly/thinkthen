@@ -1,0 +1,4 @@
+1  +1 -1 ~0
+  + wrote Paul McCartney (person) -> Yesterday (song) p 0.97
+  - wrote John Lennon (person) -> Yesterday (song) p 0.80
+A -> B: 1 of 2 changed; items gained 1, lost 1, changed kind 0; key edges matched 1 -> 2 of 2; extras 1 -> 0; McNemar p 1.000 on key edges; only in A 1, only in B 0

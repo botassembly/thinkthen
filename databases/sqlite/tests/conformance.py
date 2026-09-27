@@ -15,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import pathlib
 import re
 import sys
@@ -23,7 +24,6 @@ from helper import ROOT, Backend, child, environment
 
 CANONICAL = "https://api.typesafe.ai/v1/systemone"
 NOT_RUN = {
-    "rank": "no SQL form",
     "find": "no SQL find function yet",
     "relations": "no SQL form: thinkthen_recognize takes no relations, and thinkthen_relate reads rows",
     "defect": "no SQL form: no outside boundary reaches an internal invariant failure",
@@ -35,13 +35,35 @@ SENDING_ERRORS = {"21-backend-fault": 1, "23-cancelled-fault": 1}
 
 def form(case: dict) -> str | None:
     """The NOT_RUN key for a case with no SQL spelling, or None."""
-    if case["verb"] in ("rank", "find"):
+    if case["verb"] == "find":
         return case["verb"]
     if "relations" in case.get("question", {}).get("recognize", {}):
         return "relations"
     if case["expect"].get("error", {}).get("kind") == "defect":
         return "defect"
     return None
+
+
+def selected_ids(cases: list[dict]) -> set[str]:
+    available = [case["id"] for case in cases]
+    if len(available) != len(set(available)):
+        raise ValueError("duplicate shared case ID")
+    path = os.environ.get("THINKTHEN_CONFORMANCE_IDS")
+    if path is None:
+        return set(available)
+    source = pathlib.Path(path)
+    if not source.is_absolute():
+        raise ValueError("THINKTHEN_CONFORMANCE_IDS takes an absolute path")
+    chosen = [line.strip() for line in source.read_text().splitlines()]
+    chosen = [one for one in chosen if one and not one.startswith("#")]
+    if not chosen:
+        raise ValueError("the selected case list is empty")
+    if len(chosen) != len(set(chosen)):
+        raise ValueError("duplicate selected case ID")
+    absent = set(chosen) - set(available)
+    if absent:
+        raise ValueError(f"selected case is absent from the shared corpus: {sorted(absent)[0]}")
+    return set(chosen)
 
 
 def digest(url: str, request: str) -> str:
@@ -101,6 +123,8 @@ def refused(case: dict, backend: Backend) -> None:
         setup = "threading.Timer(0.3, db.interrupt).start()"
     elif ident == "24-deadline-fault":
         steps = [["SELECT thinkthen_decide(?, ?, 0)", [question, evidence]]]
+    elif ident == "31-usage-rank-blank-question":
+        steps = [["SELECT thinkthen_details(?, ?)", [question, evidence]]]
     elif ident == "30-local-question-file":
         setup = f"open(os.environ['SCRATCH'] + '/q.json', 'w').write({question!r})"
         steps = [["SELECT thinkthen_decide(?, ?)", ["@__SCRATCH__/q.json", evidence]]]
@@ -154,6 +178,13 @@ def check(case: dict, backend: Backend) -> None:
     elif kind == "filter":
         results = asked([["SELECT i FROM r WHERE thinkthen_decide(?, t) ORDER BY i", [question]]], env, rows_table(texts))
         same("indexes", [row[0] for row in results[0]], success["operation"]["indexes"])
+    elif kind == "rank":
+        sql = ("WITH scored AS MATERIALIZED (SELECT i, "
+               "json_extract(thinkthen_details(?, t), '$.answer.probability') AS p FROM r) "
+               "SELECT i, p FROM scored ORDER BY p DESC, i")
+        rows = asked([[sql, [question]]], env, rows_table(texts))[0]
+        same("ranking", [{"index": row[0], "probability": row[1]} for row in rows], success["operation"]["ranking"])
+        same("judgments sent", backend.count(), len(texts))
     elif kind == "decide_many":
         steps = [["SELECT thinkthen_warm(?, t) FROM r", [question]], ["SELECT thinkthen_decide(?, t) FROM r ORDER BY i", [question]]]
         results = asked(steps, env, rows_table(texts))
@@ -168,9 +199,9 @@ def check(case: dict, backend: Backend) -> None:
         failed = sum(isinstance(value, dict) and "failed" in value for record in records for value in record.values())
         same("failed", failed, success.get("failed_questions", 0))
     elif kind == "recognize":
-        sql = 'SELECT name, kind, start, "end", strength FROM thinkthen_recognize(?, ?)'
+        sql = 'SELECT text, start, "end", length, kind, strength FROM thinkthen_recognize(?, ?)'
         rows = asked([[sql, [case["text"], question]]], env)[0]
-        names = ("name", "kind", "start", "end", "strength")
+        names = ("text", "start", "end", "length", "kind", "strength")
         same("result", {"entities": [dict(zip(names, row)) for row in rows]}, answers[0]["bare"])
     elif kind == "relate":
         entities = case["entities"]
@@ -187,8 +218,15 @@ def check(case: dict, backend: Backend) -> None:
 def main() -> int:
     path = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT.parents[1] / "conformance" / "cases.json"
     document = json.loads(path.read_text())
+    try:
+        selected = selected_ids(document["cases"])
+    except (OSError, ValueError) as error:
+        print(f"FAIL     selector: {error}")
+        return 1
     counts = {"pass": 0, "FAIL": 0, "not run": 0}
     for case in document["cases"]:
+        if case["id"] not in selected:
+            continue
         if (reason := form(case)) is not None:
             counts["not run"] += 1
             print(f"not run  {case['id']}: {NOT_RUN[reason]}")
@@ -204,8 +242,8 @@ def main() -> int:
         finally:
             backend.process.kill()
     total = sum(counts.values())
-    print(f"{counts['pass']} pass, {counts['FAIL']} FAIL, {counts['not run']} not run, {total} of {document['case_count']}")
-    if total != document["case_count"] or len(document["cases"]) != document["case_count"]:
+    print(f"{counts['pass']} pass, {counts['FAIL']} FAIL, {counts['not run']} not run, {total} of {document['case_count']}; total={document['case_count']} selected={len(selected)} pass={counts['pass']} fail={counts['FAIL']} not_run={counts['not run']} unselected={document['case_count'] - len(selected)}")
+    if total != len(selected) or len(document["cases"]) != document["case_count"]:
         print(f"FAIL     the counts sum to {total}, and the file holds {document['case_count']}")
         return 1
     return 1 if counts["FAIL"] else 0

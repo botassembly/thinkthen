@@ -27,6 +27,10 @@ fn given(arg: Option<&str>, what: &str) -> Given {
     Given::read(arg, what, call::file_directory().as_deref()).or_raise()
 }
 
+fn given_result(arg: Option<&str>, what: &str) -> Result<Given, Refusal> {
+    Given::read(arg, what, call::file_directory().as_deref())
+}
+
 /// The question argument, with the function's members joined under `key`.
 fn question(arg: Option<&str>, key: &str, members: Option<Array<'_, &str>>) -> LoadedQuestion {
     let members = members.map(|held| held.iter().flatten().map(str::to_owned).collect());
@@ -34,6 +38,10 @@ fn question(arg: Option<&str>, key: &str, members: Option<Array<'_, &str>>) -> L
         .with_members(key, members)
         .and_then(|held| held.parse(thinkthen::Question::from_json))
         .or_raise()
+}
+
+fn question_result(arg: Option<&str>) -> Result<LoadedQuestion, Refusal> {
+    given_result(arg, "question")?.parse(thinkthen::Question::from_json)
 }
 
 fn decide(
@@ -165,6 +173,32 @@ fn thinkthen_details(question: Option<&str>, evidence: Option<&str>) -> Option<J
     Some(jsonb(&judged(question, evidence?).to_json()))
 }
 
+/// Return recoverable row failures as safe JSON so a statement can continue.
+#[pg_extern(parallel_restricted)]
+fn thinkthen_try_details(question: Option<&str>, evidence: Option<&str>) -> Option<JsonB> {
+    let (Some(question), Some(evidence)) = (question, evidence) else {
+        return None;
+    };
+    let result = (|| {
+        let question = question_result(Some(question))?;
+        let call = call::read_result()?;
+        let evidence = evidence.to_owned();
+        call::run_result(call, move |engine, options| {
+            details(engine, &question, &evidence, options)
+        })
+    })();
+    let value = match result {
+        Ok(answer) => {
+            let details: serde_json::Value = serde_json::from_str(&answer.to_json())
+                .map_err(|_| Refusal::of(thinkthen::ErrorKind::Defect, "a result is not JSON"))
+                .or_raise();
+            serde_json::json!({"status":"answered","details":details})
+        }
+        Err(error) => error.value().unwrap_or_else(|| call::raise(error)),
+    };
+    Some(JsonB(value))
+}
+
 /// This backend's totals. Tests read differences around a call (0095).
 #[pg_extern(parallel_restricted)]
 fn thinkthen_usage() -> TableIterator<
@@ -181,7 +215,7 @@ fn thinkthen_usage() -> TableIterator<
     TableIterator::once((wide(sent), wide(cached), wide(input), wide(output)))
 }
 
-type Names = Vec<(String, String, i32, i32, f64)>;
+type Names = Vec<(String, i32, i32, i32, String, f64)>;
 
 /// One recognize call on the worker, or none for a NULL text.
 fn recognized(body: Option<&str>, ask: Recognize) -> Option<thinkthen::Recognized> {
@@ -191,7 +225,8 @@ fn recognized(body: Option<&str>, ask: Recognize) -> Option<thinkthen::Recognize
     }))
 }
 
-/// Every name the engine finds in the text. `start` and `end` count characters.
+/// Every name the engine finds in the text. `start`, `end`, and `length`
+/// count characters.
 fn names(body: Option<&str>, ask: Recognize) -> Names {
     let place = |at: usize| i32::try_from(at).unwrap_or(i32::MAX);
     let Some(found) = recognized(body, ask) else {
@@ -202,10 +237,11 @@ fn names(body: Option<&str>, ask: Recognize) -> Names {
         .iter()
         .map(|held| {
             (
-                held.name().to_owned(),
-                held.kind().to_owned(),
+                held.text().to_owned(),
                 place(held.start()),
                 place(held.end()),
+                place(held.length()),
+                held.kind().to_owned(),
                 held.strength(),
             )
         })
@@ -224,10 +260,11 @@ fn thinkthen_recognize(
 ) -> TableIterator<
     'static,
     (
-        name!(name, String),
-        name!(kind, String),
+        name!(text, String),
         name!(start, i32),
         name!(end, i32),
+        name!(length, i32),
+        name!(kind, String),
         name!(strength, f64),
     ),
 > {
@@ -252,10 +289,11 @@ fn thinkthen_recognize_spec(
 ) -> TableIterator<
     'static,
     (
-        name!(name, String),
-        name!(kind, String),
+        name!(text, String),
         name!(start, i32),
         name!(end, i32),
+        name!(length, i32),
+        name!(kind, String),
         name!(strength, f64),
     ),
 > {
@@ -278,9 +316,9 @@ fn thinkthen_relations(
     'static,
     (
         name!(relation, String),
-        name!(source_name, String),
+        name!(source_text, String),
         name!(source_kind, String),
-        name!(target_name, String),
+        name!(target_text, String),
         name!(target_kind, String),
         name!(probability, f64),
     ),
@@ -299,9 +337,9 @@ fn thinkthen_relations(
             let (source, target) = (held.source(), held.target());
             (
                 held.relation().to_owned(),
-                source.name().to_owned(),
+                source.text().to_owned(),
                 source.kind().to_owned(),
-                target.name().to_owned(),
+                target.text().to_owned(),
                 target.kind().to_owned(),
                 held.probability(),
             )

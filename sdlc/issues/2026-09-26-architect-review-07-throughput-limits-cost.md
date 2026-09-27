@@ -1,4 +1,4 @@
-Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review.
+Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review. Item 5 is done: Quick Fix qf-command-edges-and-prune makes a release binary ignore the test variables (`sdlc/records/qf-command-edges-and-prune.md`).
 
 # Architect review 07: throughput, rate limits, retries and cost
 

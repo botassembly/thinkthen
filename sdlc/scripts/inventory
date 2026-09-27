@@ -149,6 +149,8 @@ def contract() -> set[str]:
     page = text("0084-*.md")
     items = declared(block(page, "## Normative public inventory"))
     items |= declared(block(text("0095-*.md"), "## Added declarations"))
+    items.discard("fn RecognizedEntity::name(&self) -> &str")
+    items |= declared(block(text("0147-*.md"), "## Changed declarations"))
     new, old = re.search(r"`EngineBuilder::(\w+)\(n\)`\. It replaces `EngineBuilder::(\w+)`", ADR.read_text()).groups()
     items = {i.replace(f"fn EngineBuilder::{old}(", f"fn EngineBuilder::{new}(") for i in items}
     items.add("macro " + re.search(r"The crate root exports `(\w+!)`", page).group(1))

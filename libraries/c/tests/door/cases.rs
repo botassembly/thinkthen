@@ -9,8 +9,9 @@
 //!   boundary reaches. The panic test in `src/failures.rs` covers the kind.
 //! - `30-local-question-file` loads a question file, and the door reads none.
 
-use std::collections::BTreeMap;
-use std::path::Path;
+use std::collections::{BTreeMap, BTreeSet};
+use std::io::Write;
+use std::path::{Path, PathBuf};
 
 use conformance_backend::Backend;
 use serde_json::value::RawValue;
@@ -48,13 +49,25 @@ impl Script {
 fn every_applicable_shared_case_passes_through_the_door() {
     let written: Members = serde_json::from_str(CASES).expect("the shared cases");
     let cases: Vec<Members> = serde_json::from_str(written["cases"].get()).expect("a case list");
+    let selected = selected_ids(&cases).expect("a valid shared case selector");
+    let selected_count = selected.as_ref().map_or(cases.len(), BTreeSet::len);
     let driver = compile(&crate_dir().join("tests/c/driver.c"));
     let backend = Backend::start().expect("the conformance backend");
     let mut failures = Vec::new();
     let mut ran = 0;
+    let mut not_run = 0;
     for case in &cases {
         let id = string(case, "id");
+        if selected.as_ref().is_some_and(|ids| !ids.contains(&id)) {
+            continue;
+        }
         if SKIPPED.contains(&id.as_str()) {
+            not_run += 1;
+            writeln!(
+                std::io::stderr().lock(),
+                "{id}: not run by the C door (internal injection or local question file)"
+            )
+            .expect("write skipped case to stderr");
             continue;
         }
         ran += 1;
@@ -65,8 +78,61 @@ fn every_applicable_shared_case_passes_through_the_door() {
             failures.push(format!("{id}: {why}"));
         }
     }
+    writeln!(
+        std::io::stderr().lock(),
+        "C door: total={} selected={selected_count} pass={} fail={} not_run={not_run} unselected={}",
+        cases.len(),
+        ran - failures.len(),
+        failures.len(),
+        cases.len() - selected_count
+    )
+    .expect("write case counts to stderr");
+    assert_eq!(ran + not_run, selected_count);
     assert!(failures.is_empty(), "{failures:#?}");
-    assert_eq!(ran, cases.len() - SKIPPED.len());
+}
+
+/// Read one optional absolute ID list, and refuse duplicate or unknown IDs.
+fn selected_ids(cases: &[Members]) -> Checked<Option<BTreeSet<String>>> {
+    let mut available = BTreeSet::new();
+    for case in cases {
+        let id = string(case, "id");
+        if id.is_empty() {
+            return Err("a shared case has no ID".to_owned());
+        }
+        if !available.insert(id.clone()) {
+            return Err(format!("duplicate shared case `{id}`"));
+        }
+    }
+    let Some(path) = std::env::var_os("THINKTHEN_CONFORMANCE_IDS") else {
+        return Ok(None);
+    };
+    let path = PathBuf::from(path);
+    if !path.is_absolute() {
+        return Err("THINKTHEN_CONFORMANCE_IDS takes an absolute path".to_owned());
+    }
+    let text =
+        std::fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
+    let mut selected = BTreeSet::new();
+    for id in text
+        .lines()
+        .map(str::trim)
+        .filter(|id| !id.is_empty() && !id.starts_with('#'))
+    {
+        if !selected.insert(id.to_owned()) {
+            return Err(format!("duplicate selected case `{id}`"));
+        }
+    }
+    if selected.is_empty() {
+        return Err("the selected case list is empty".to_owned());
+    }
+    for id in &selected {
+        if !available.contains(id) {
+            return Err(format!(
+                "selected case `{id}` is absent from the shared corpus"
+            ));
+        }
+    }
+    Ok(Some(selected))
 }
 
 /// The retry signal after a failure: 1 for a status the engine retries,
@@ -594,4 +660,37 @@ fn same(what: &str, actual: &Value, expected: &Value) -> Checked {
     } else {
         Err(format!("{what}: got {actual}, expected {expected}"))
     }
+}
+
+/// ADR 0056: a name `recognize` found carries `text` in place of `name`, and
+/// relate reads it as the name. `name` wins when a record holds both.
+#[test]
+fn relate_reads_what_recognize_found() {
+    let driver = compile(&crate_dir().join("tests/c/driver.c"));
+    let backend = Backend::start().expect("the conformance backend");
+    let base = format!("{}/generic/v1", backend.origin());
+    let recognize = r#"{"version":1,"recognize":{"kinds":{"person":null}}}"#;
+    let relate = r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person"}]}}"#;
+    let mut script = Script::default();
+    script.ask("recognize", &[&base, recognize, "Maria Chen arrived."]);
+    let found = replies(&run(&driver, &base, &script.0).stdout).expect("a reply");
+    let found = parsed(&found[0]).expect("names");
+    let records: Vec<String> = found["entities"]
+        .as_array()
+        .expect("entities")
+        .iter()
+        .map(ToString::to_string)
+        .collect();
+    let named = [
+        r#"{"name":"Maria Chen","text":"not this","kind":"person"}"#,
+        r#"{"name":"arrived.","kind":"person"}"#,
+    ];
+    let mut script = Script::default();
+    for each in [records.iter().map(String::as_str).collect(), named.to_vec()] {
+        script.ask("relate", &[vec![base.as_str(), relate], each].concat());
+    }
+    let got = replies(&run(&driver, &base, &script.0).stdout).expect("replies");
+    let by_text = parsed(&got[0]).expect("edges");
+    assert_eq!(by_text, parsed(&got[1]).expect("edges"));
+    assert_eq!(by_text["edges"].as_array().map(Vec::len), Some(2));
 }

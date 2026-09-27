@@ -45,7 +45,7 @@
     "recognize": {
       "arm": "case/41-offsets-past-an-accent-and-an-emoji",
       "ts": "tt.recognize(\"Le café 😀 Maria Chen arrived.\", { kinds: { person: \"A person's name.\" } })",
-      "expected": "{\"entities\":[{\"name\":\"Maria Chen\",\"kind\":\"person\",\"start\":11,\"end\":21,\"strength\":0.94}]}"
+      "expected": "{\"entities\":[{\"text\":\"Maria Chen\",\"start\":11,\"end\":21,\"length\":10,\"kind\":\"person\",\"strength\":0.9877}]}"
     },
     "relate": {
       "arm": "case/52-cross-kind-staff",

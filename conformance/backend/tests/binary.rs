@@ -3,14 +3,15 @@
 
 use std::collections::HashSet;
 use std::error::Error;
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::TcpStream;
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, channel};
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use conformance_backend::Backend;
+use conformance_backend::{Backend, run};
 
 type Tested = Result<(), Box<dyn Error>>;
 
@@ -53,6 +54,79 @@ fn start() -> Result<Started, Box<dyn Error>> {
     });
     let port = lines.recv_timeout(LINE)?.parse()?;
     Ok(Started(child, input, lines, port))
+}
+
+struct FailingInput(bool);
+
+impl Read for FailingInput {
+    fn read(&mut self, bytes: &mut [u8]) -> io::Result<usize> {
+        if self.0 {
+            Err(io::Error::other("input failed"))
+        } else {
+            self.0 = true;
+            let line = b"wait 1\n";
+            bytes
+                .get_mut(..line.len())
+                .ok_or_else(|| io::Error::other("short buffer"))?
+                .copy_from_slice(line);
+            Ok(line.len())
+        }
+    }
+}
+
+struct FailingOutput {
+    bytes: Arc<Mutex<Vec<u8>>>,
+    flushes: usize,
+    fail_second: bool,
+}
+
+impl Write for FailingOutput {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        self.bytes
+            .lock()
+            .map_err(|_| io::Error::other("capture poisoned"))?
+            .extend_from_slice(bytes);
+        Ok(bytes.len())
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.flushes += 1;
+        if self.fail_second && self.flushes == 2 {
+            Err(io::Error::other("output failed"))
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[test]
+fn an_input_or_output_error_retires_a_pending_wait_before_returning() -> Tested {
+    for fail_output in [false, true] {
+        let bytes = Arc::new(Mutex::new(Vec::new()));
+        let output = FailingOutput {
+            bytes: Arc::clone(&bytes),
+            flushes: 0,
+            fail_second: fail_output,
+        };
+        let input: Box<dyn BufRead> = if fail_output {
+            Box::new(io::Cursor::new(b"wait 1\ncount\n"))
+        } else {
+            Box::new(BufReader::new(FailingInput(false)))
+        };
+        let started = Instant::now();
+        assert!(run(input, output).is_err());
+        assert!(
+            started.elapsed() < Duration::from_secs(1),
+            "pending wait delayed error return"
+        );
+        let text = String::from_utf8(bytes.lock().map_err(|_| "capture poisoned")?.clone())?;
+        let port: u16 = text.lines().next().ok_or("no port line")?.parse()?;
+        assert!(
+            TcpStream::connect(("127.0.0.1", port)).is_err(),
+            "listener survived error return"
+        );
+    }
+    Ok(())
 }
 
 /// Send one line.
@@ -249,6 +323,7 @@ fn four_rounds_on_one_backend_each_let_go_only_the_reply_held_then() -> Tested {
 }
 
 #[test]
+#[ignore = "repeated 50-round campaign; run sdlc/scripts/test-stress --run"]
 fn fifty_rounds_back_to_back_each_let_go_the_reply_they_counted() -> Tested {
     let mut backend = start()?;
     let began = Instant::now();
@@ -394,6 +469,7 @@ fn two_backend_binaries_keep_their_own_count_gate_and_port() -> Tested {
 }
 
 #[test]
+#[ignore = "twenty concurrent backends; run sdlc/scripts/test-stress --run"]
 fn twenty_backends_start_at_once_on_twenty_ports() -> Tested {
     let began = Instant::now();
     let started = (0..20).map(|_| start()).collect::<Result<Vec<_>, _>>()?;

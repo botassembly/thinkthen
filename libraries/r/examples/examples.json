@@ -40,8 +40,8 @@
    "expected": "TRUE TRUE"
   },
   "recognize": {
-   "r": "found <- tt_recognize(\"Maria Chen joined Northwind Freight in Chicago last spring.\", kinds = c(\"person\", \"organization\", \"place\"))[[1]]; cat(paste(found$name, found$kind, found$start, found$end, sep = \"|\"), \"\\n\")",
-   "expected": "Maria Chen joined Northwind Freight in Chicago last spring.|person|1|59"
+   "r": "found <- tt_recognize(\"Maria Chen joined Northwind Freight in Chicago last spring.\", kinds = c(\"person\", \"organization\", \"place\"))[[1]]; cat(paste(found$text, found$kind, found$start, found$end, sep = \"|\"), \"\\n\")",
+   "expected": "Maria Chen|person|1|10 spring.|person|53|59"
   },
   "relate": {
    "r": "alerts <- data.frame(name = c(\"Checkout returns 500 at the payment step.\", \"The payments database ran out of disk space.\"), kind = \"alert\"); edges <- tt_relate(alerts, relations = \"caused_by\"); cat(edges$relation, edges$probability, \"\\n\")",

@@ -44,8 +44,8 @@
       "expected": "8"
     },
     "recognize": {
-      "sql": "SELECT name, kind, start, \"end\" FROM thinkthen_recognize('Maria Chen joined Northwind Freight in Chicago last spring.', 'person,organization,place');",
-      "expected": "Maria Chen joined Northwind Freight in Chicago last spring.|person|0|59"
+      "sql": "SELECT text, kind, start, \"end\" FROM thinkthen_recognize('Maria Chen joined Northwind Freight in Chicago last spring.', 'person,organization,place');",
+      "expected": "Maria Chen|person|0|10\nspring.|person|52|59"
     },
     "relate": {
       "setup": [

@@ -3,7 +3,9 @@
 use std::fs;
 
 use crate::args::{Common, RecognizeArguments};
-use crate::core::{Description, RecognizeConfigError, RecognizeKinds, RecognizeSpec, RelationRule};
+use crate::core::{
+    Description, RecognizeConfigError, RecognizeKinds, RecognizeSpec, RelationRule, rule_side,
+};
 use crate::failure::Failure;
 use crate::failure::recognize::Error;
 use crate::table::Kind as TableKind;
@@ -71,25 +73,31 @@ fn command_kinds(arguments: &RecognizeArguments) -> Result<RecognizeKinds, Failu
             })
             .collect();
     }
-    let names = if arguments.kinds.is_empty() {
-        return Ok(crate::core::default_kinds());
-    } else {
-        arguments.kinds.clone()
-    };
-    Ok(names.into_iter().map(|name| (name, None)).collect())
+    Ok(arguments
+        .kinds
+        .iter()
+        .map(|name| (name.clone(), None))
+        .collect())
 }
 
+/// `NAME` relates any kind to any kind; `NAME=SOURCE:TARGET` names the sides.
 fn command_rule(text: &str) -> Result<RelationRule, Failure> {
-    let (name, ends) = text
-        .split_once('=')
-        .ok_or_else(|| error(false, RecognizeConfigError::Relation))?;
-    let (source, target) = ends
-        .split_once(':')
-        .ok_or_else(|| error(false, RecognizeConfigError::Relation))?;
+    let malformed = || error(false, RecognizeConfigError::Relation);
+    let (name, source, target) = match text.split_once('=') {
+        None if text.contains(':') => return Err(malformed()),
+        None => (text, "*".to_owned(), "*".to_owned()),
+        Some((name, ends)) => {
+            let (source, target) = ends.split_once(':').ok_or_else(malformed)?;
+            if source.contains(['=', ':']) || target.contains(['=', ':']) {
+                return Err(malformed());
+            }
+            (name, rule_side(source), rule_side(target))
+        }
+    };
     Ok(RelationRule {
         name: name.to_owned(),
-        source: source.to_owned(),
-        target: target.to_owned(),
+        source,
+        target,
         either: false,
         reads: name.replace('_', " "),
     })

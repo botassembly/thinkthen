@@ -9,3 +9,7 @@ Filling the settings table showed three gaps. The table states each one as main 
 3. **Wrong `cache_bytes` claims.** `databases/duckdb/README.md` line 39 says `SET thinkthen_cache_bytes = N` caps the cache's size. `databases/sqlite/README.md` line 50 calls `thinkthen_cache_bytes(n)` the cache's size cap, and line 56 tells the reader to raise it before a warm pass. `databases/postgresql/README.md` line 44 calls `thinkthen.cache_bytes` the cache cap. The setting has no effect on any library or SQL surface. Item 4 of `2026-09-25-public-library-api-gaps.md` holds its removal. These README lines should go with it, or say now that it has no effect.
 
 One gap is deliberate and is not filed here. SQL cannot name an address or a key. Ticket 0109 decision 2, ticket 0110 decision 5 and `databases/postgresql/README.md` line 94 rule that the address and the key come from the environment on every SQL surface.
+
+## Partial resolution, 2026-09-27
+
+Ticket 0148 settles items1 and2 for libraries and C, and item3 on every surface. SQL settings in items1 and2 remain for0149. See `sdlc/records/0148-engine-settings-everywhere.md`.

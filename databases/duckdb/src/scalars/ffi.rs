@@ -6,21 +6,42 @@ use std::ffi::c_void;
 
 use libduckdb_sys as sys;
 
-use super::Scalar;
+use super::{Scalar, Verb};
 use crate::engines;
-use crate::errors::{defect, guarded};
-use crate::ffi::{Column, Logical, Type, message, read_column, write};
+use crate::errors::{RowError, defect, guarded};
+use crate::ffi::{Column, Logical, Type, Value, message, read_column, write};
 use crate::questions::{Caller, Files};
 use crate::signal::Invoke;
+
+enum State {
+    Pending(Option<Files>),
+    Ready(Caller),
+    Failed(RowError),
+}
 
 /// The per-thread init: the caller's handles, its settings, the cache
 /// folder's check, and the engine, before any row runs.
 unsafe extern "C" fn scalar_init(info: sys::duckdb_init_info) {
     let made = guarded("scalar init", || {
+        // SAFETY: registration stores a static Scalar as extra info.
+        let scalar = unsafe {
+            sys::duckdb_scalar_function_init_get_extra_info(info)
+                .cast::<Scalar>()
+                .as_ref()
+        }
+        .ok_or_else(|| defect("the scalar init had no function record"))?;
         let files = Files::of(info)?;
-        let asked = files.settings();
-        let engine = engines::engine_for(&asked, |path| files.probe(path))?;
-        Ok(Box::new(Caller::new(engine, asked, files)))
+        let state = if scalar.verb == Verb::TryDetails {
+            State::Pending(Some(files))
+        } else {
+            let asked = files.settings();
+            State::Ready(Caller::new(
+                engines::engine_for(&asked, |path| files.probe(path))?,
+                asked,
+                files,
+            ))
+        };
+        Ok(Box::new(state))
     });
     // SAFETY: DuckDB owns the state and calls `drop_caller` once.
     unsafe {
@@ -39,7 +60,7 @@ unsafe extern "C" fn drop_caller(state: *mut c_void) {
     let _ = guarded("scalar state destruction", || {
         if !state.is_null() {
             // SAFETY: the state is the box `scalar_init` leaked.
-            drop(unsafe { Box::from_raw(state.cast::<Caller>()) });
+            drop(unsafe { Box::from_raw(state.cast::<State>()) });
         }
         Ok(())
     });
@@ -63,20 +84,20 @@ fn answer(
 ) -> Result<(), String> {
     // SAFETY: extra info is a `&'static Scalar`; the state is this thread's
     // own `Caller`, or null when DuckDB ran no init.
-    let (scalar, caller, rows, count) = unsafe {
+    let (scalar, state, rows, count) = unsafe {
         (
             sys::duckdb_scalar_function_get_extra_info(info)
                 .cast::<Scalar>()
                 .as_ref(),
             sys::duckdb_scalar_function_get_state(info)
-                .cast::<Caller>()
+                .cast::<State>()
                 .as_mut(),
             sys::duckdb_data_chunk_get_size(input) as usize,
             sys::duckdb_data_chunk_get_column_count(input),
         )
     };
     let scalar = scalar.ok_or_else(|| defect("the scalar ran with no function record"))?;
-    let caller = caller.ok_or_else(|| defect("the scalar ran with no init state"))?;
+    let state = state.ok_or_else(|| defect("the scalar ran with no init state"))?;
     // The invoke begins before the chunk read, so a SIGINT during the read
     // counts as one during this query (R6-6).
     let invoke = Invoke::begin();
@@ -94,7 +115,40 @@ fn answer(
             )
         })
         .collect();
-    let values = crate::scalars::run(scalar.verb, caller, &invoke, &columns, rows)?;
+    if let State::Pending(files) = state {
+        if (0..rows).all(|row| columns.iter().take(2).any(|column| !column.present(row))) {
+            for row in 0..rows {
+                write(output, &scalar.result, row, &Value::Null);
+            }
+            return Ok(());
+        }
+        let files = files
+            .take()
+            .ok_or_else(|| defect("the scalar lost its init files"))?;
+        let asked = files.settings();
+        *state = match engines::engine_for_typed(&asked, |path| files.probe(path)) {
+            Ok(engine) => State::Ready(Caller::new(engine, asked, files)),
+            Err(error) if error.recoverable() => State::Failed(error),
+            Err(error) => return Err(error.text),
+        };
+    }
+    let values = match state {
+        State::Ready(caller) => crate::scalars::run(scalar.verb, caller, &invoke, &columns, rows)?,
+        State::Failed(error) if scalar.verb == Verb::TryDetails => {
+            let value = error.value().ok_or_else(|| error.text.clone())?.to_string();
+            (0..rows)
+                .map(|row| {
+                    if columns.iter().take(2).all(|column| column.present(row)) {
+                        Value::Text(value.clone())
+                    } else {
+                        Value::Null
+                    }
+                })
+                .collect()
+        }
+        State::Failed(error) => return Err(error.text.clone()),
+        State::Pending(_) => return Err(defect("the scalar still has pending init files")),
+    };
     for (row, value) in values.iter().enumerate() {
         write(output, &scalar.result, row, value);
     }
@@ -126,6 +180,9 @@ pub(crate) fn register_scalar(
             sys::duckdb_scalar_function_set_function(function, Some(scalar_invoke));
             sys::duckdb_scalar_function_set_init(function, Some(scalar_init));
             sys::duckdb_scalar_function_set_volatile(function);
+            if scalar.verb == Verb::TryDetails {
+                sys::duckdb_scalar_function_set_special_handling(function);
+            }
             sys::duckdb_scalar_function_set_extra_info(
                 function,
                 std::ptr::from_ref(scalar).cast_mut().cast(),

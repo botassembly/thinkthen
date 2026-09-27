@@ -41,7 +41,7 @@ while IFS= read -r case; do
 
 	# shellcheck disable=SC2086
 	printf '%s' "$body" | thinkthen score "$question" $levels \
-		--details $folder >row.json || {
+		--details --model jev-latest $folder >row.json || {
 		exit=$?
 		printf 'job: %s score stopped with exit %s\n' "$id" "$exit" >&2
 		exit "$exit"
@@ -52,7 +52,7 @@ while IFS= read -r case; do
 
 	# shellcheck disable=SC2086
 	printf '%s' "$body" | thinkthen choose "$question" $levels \
-		--details $folder >row.json && exit=0 || exit=$?
+		--details --model jev-latest $folder >row.json && exit=0 || exit=$?
 	# 0 is a label and 3 is unresolved. choose never exits 1.
 	case "$exit" in
 	0 | 3) ;;

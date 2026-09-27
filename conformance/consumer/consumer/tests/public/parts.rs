@@ -96,9 +96,8 @@ fn states(set: &str, record: &str) -> Result<Vec<Value>, Error> {
     let row = engine.annotate(&set, [record]).next().expect("one row");
     let sent = seen.lock().expect("the body list").clone();
     row.map(|_| sent.iter().map(|body| body["state"].clone()).collect())
-        .map_err(|error| {
+        .inspect_err(|_| {
             assert!(sent.is_empty(), "a refused record sent {}", sent.len());
-            error
         })
 }
 
@@ -110,8 +109,8 @@ fn each_group_sees_its_part_and_a_bad_part_sends_nothing() {
             "the record holds nothing at `/body`",
         ),
         (
-            "a private note",
-            "the input is not valid JSON: the JSON at line 1 column 1 is not one",
+            NOTE,
+            "question `summary` reads `on`, and this record's evidence is text with no members",
         ),
     ];
     for (record, sentence) in refusals {
@@ -126,6 +125,8 @@ fn each_group_sees_its_part_and_a_bad_part_sends_nothing() {
     );
     let root = r#"{"version":1,"questions":{"whole":{"decide":"Is this long?"}}}"#;
     assert_eq!(states(root, NOTE).expect("answered"), [Value::from(NOTE)]);
+    let twice = r#"{"a":1,"a":2}"#;
+    assert_eq!(states(root, twice).expect("answered"), [Value::from(twice)]);
     let mixed = r#"{"version":1,"questions":{"whole":{"decide":"Is this long?"},"body":{"decide":"Does this ask for a refund?","on":"/body"}}}"#;
     let record = r#"{"body":"Refund me."}"#;
     assert_eq!(

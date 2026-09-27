@@ -40,7 +40,7 @@ judge() {
 	while IFS= read -r case; do
 		body=$(printf '%s\n' "$case" | jq -r ".$arm")
 		printf '%s' "$body" | thinkthen decide "$question" \
-			--threshold 0.2:0.8 --details $folder >row.json && exit=0 || exit=$?
+			--threshold 0.2:0.8 --details --model jev-latest $folder >row.json && exit=0 || exit=$?
 		# 0 is yes, 1 is no, 3 is unresolved. Anything else stops the run.
 		case "$exit" in
 		0 | 1 | 3) ;;

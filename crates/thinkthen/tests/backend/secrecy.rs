@@ -1,7 +1,7 @@
 //! One sweep checks output and files across commands, paths, framings, and views.
 
 use std::fs;
-use std::io;
+use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
 use std::process::Output;
 
@@ -45,7 +45,7 @@ pub(crate) const VERBS: [(&str, &[&str], &str); 6] = [
     (
         "recognize",
         &["person"],
-        r#""type":"choice","choice":"IN","probabilities":{"IN":0.9,"OUT":0.1}"#,
+        r#""type":"choice","choice":"OUT","probabilities":{"BEGIN":0,"INSIDE":0,"END":0,"SINGLE":0,"OUT":1}"#,
     ),
     // Two entities of one kind ask one unordered yes/no question.
     (
@@ -330,12 +330,28 @@ pub(crate) fn environment(keyed: bool) -> Vec<(&'static str, &'static str)> {
     }
 }
 
+/// Keep both document views on every route, and distinct framed answer/plan paths.
+fn routine_way(route: &Route, verb: &str, view: &[&str], framing: Option<&str>) -> bool {
+    let document = framing.is_none();
+    let framed_answer = ["a success", "an unreadable answer"].contains(&route.named);
+    let framed_plan = route.named == "a plan"
+        && view.is_empty()
+        && ["decide", "recognize", "relate"].contains(&verb);
+    document || framed_answer || framed_plan
+}
+
 #[test]
 fn no_command_on_any_backend_path_writes_the_key_or_quotes_the_evidence() {
+    let routine = std::env::var("THINKTHEN_TEST_PROFILE").is_ok_and(|value| value == "routine");
+    let mut selected = 0;
     for route in &PATHS {
         for verb in VERBS {
-            for (view, framing) in WAYS {
+            for (view, framing) in WAYS
+                .into_iter()
+                .filter(|(view, framing)| !routine || routine_way(route, verb.0, view, *framing))
+            {
                 sweep(route, verb, view, framing).expect("the compiled binary runs");
+                selected += 1;
             }
         }
     }
@@ -346,6 +362,7 @@ fn no_command_on_any_backend_path_writes_the_key_or_quotes_the_evidence() {
     for verb in RECORD_VERBS {
         for (view, framing) in RECORD_WAYS {
             sweep(hostile, verb, view, framing).expect("the compiled binary runs");
+            selected += 1;
         }
     }
     let relate = VERBS
@@ -354,9 +371,20 @@ fn no_command_on_any_backend_path_writes_the_key_or_quotes_the_evidence() {
         .expect("relate stays in the matrix");
     for route in &PATHS {
         for (view, framing) in TABLE_WAYS {
-            sweep(route, relate, view, framing).expect("the compiled binary runs");
+            let all_framings = ["a success", "a hostile entry"].contains(&route.named);
+            if !routine || all_framings || (view.is_empty() && framing == Some("--lines")) {
+                sweep(route, relate, view, framing).expect("the compiled binary runs");
+                selected += 1;
+            }
         }
     }
+    assert_eq!(selected, if routine { 266 } else { 518 });
+    writeln!(
+        io::stderr().lock(),
+        "command secrecy sweep: selected={selected} full=518 profile={}",
+        if routine { "routine" } else { "full" }
+    )
+    .expect("write secrecy case count");
 }
 
 ///

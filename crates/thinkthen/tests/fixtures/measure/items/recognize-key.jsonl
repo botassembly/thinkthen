@@ -1,0 +1,4 @@
+{"id":"r1","value":{"entities":[{"name":"Revolver","kind":"work","start":3,"end":11},{"name":"Paul McCartney","kind":"person","start":12,"end":26}]}}
+{"id":"r2","value":{"entities":[{"name":"Abbey Road Studios","kind":"place","start":0,"end":18}]}}
+{"id":"r3","value":{"entities":[{"name":"Studios","kind":"place","start":11,"end":18}]}}
+{"id":"r4","value":null}

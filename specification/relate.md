@@ -11,21 +11,21 @@ thinkthen relate @entities.json --jsonl < entities.jsonl
 
 ## Relations
 
-The command takes one or more ordered inline rules. `NAME=SOURCE_KIND:TARGET_KIND` names a directed rule. Bare `NAME` means `NAME=*:*`. `--either` makes every inline rule unordered. A rule name, source kind, and target kind are nonblank text without control characters. A line with another `=` or `:` is malformed.
+The command takes one or more ordered inline rules. `NAME=SOURCE_KIND:TARGET_KIND` names a directed rule. Bare `NAME` means `NAME=*:*`. `ANY` on either side means `*`, in any ASCII case, and the plan and digest write `*`. `--either` makes every inline rule unordered. A rule name, source kind, and target kind are nonblank text without control characters. A line with another `=` or `:` is malformed.
 
 The alternative form takes exactly one `@FILE`. The closed version-one file is:
 
 ```json
-{"version":1,"relate":{"fields":{"name":"/name","kind":"/kind"},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":false}]},"threshold":0.5,"model":"jev-latest","profile":"measured"}
+{"version":1,"relate":{"fields":{"name":"/name","kind":"/kind"},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":false}]},"threshold":0.5,"model":"jev-1.13.0","profile":"measured"}
 ```
 
-`relations` is required, ordered, nonempty, and has distinct names. `reads` defaults to the relation name with underscores replaced by spaces. `either` defaults to false. `fields` defaults to `{"name":"/name","kind":"/kind"}`. `threshold` defaults to `0.5`. `model` and saved calibration `profile` are optional. Inline rules and `@FILE` never mix. An `@FILE` beside any other rule exits 2 with zero sends.
+`relations` is required, ordered, nonempty, and has distinct names. A rule may leave out `source` or `target`, which means `*`. `reads` defaults to the relation name with underscores replaced by spaces. `either` defaults to false. `fields` defaults to `{"name":"/name","kind":"/kind"}`. `threshold` defaults to `0.5`. `model` and saved calibration `profile` are optional. Inline rules and `@FILE` never mix. An `@FILE` beside any other rule exits 2 with zero sends.
 
 `--field`, `--kind-field`, `--threshold`, and `--model` independently replace file values. Framing and `--input` are command-only. `--jobs N` bounds the requests in flight, 1 to 32, default 4, as [records.md](records.md) gives it. Relations and split requests go out together. Output keeps relation, expansion, question, and candidate order whatever `--jobs` is. A failed request stops the run as `--jobs 1` would, and requests already in flight finish. Saved `profile` has no command-line replacement. `--profile FILE` selects a runtime backend profile and does not replace saved calibration identity.
 
 ## Entities
 
-Without a framing flag, input is one JSON array. Under `--jsonl`, `--csv`, or `--tsv`, every record is one entity in the same complete set. The name and kind pointers resolve independently against each original object. Each selected value must be a nonblank string. CSV and TSV headers form the addressed object.
+Without a framing flag, input is one JSON array. Under `--jsonl`, `--csv`, or `--tsv`, every record is one entity in the same complete set. The name and kind pointers resolve independently against each original object. Each selected value must be a nonblank string. A name `recognize` found carries `text` in place of `name`. So when the name pointer is the default `/name` and an object has no `name`, its `text` is the name. An object with both reads `name`. Each library's `relate` reads a found name, or a record with `text` and no `name`, the same way. CSV and TSV headers form the addressed object.
 
 `--lines` uses each complete nonempty line as a name and assigns kind `*`. It takes neither pointer and accepts only bare or `*:*` rules.
 
@@ -51,7 +51,7 @@ Different-kind relations use a choice from the larger side to the smaller side p
 
 Each relation carries `name`, `source`, `target`, `reads`, `either`, `method`, nullable `fallback`, `logical_questions`, and `request_count`. Each request carries its recording `digest`, UTF-8 `bytes`, and exact `body_utf8`. The plan makes no token or price claim.
 
-A plan at the built-in address splits each relation under the built-in ceiling of `specification/backends.md`, so `request_count` can exceed one with no profile. `backend_profile` is the resolved runtime profile name or null. `fields` is null for lines. Inline rules omit `from`. A file-backed run writes `question`, `threshold`, `model`, `field`, `kind_field`, and optional saved `profile`, each as `file`, `command line`, or `default`.
+`--max-request-bytes N` sets the request size for relation plans, with `THINKTHEN_MAX_REQUEST_BYTES` next and 96,000 bytes at every address by default. A plan splits each relation at the smaller of that size and a profile limit, so `request_count` can exceed one with no profile. `backend_profile` is the resolved runtime profile name or null. `fields` is null for lines. Inline rules omit `from`. A file-backed run writes `question`, `threshold`, `model`, `field`, `kind_field`, and optional saved `profile`, each as `file`, `command line`, or `default`.
 
 ## Detailed result
 

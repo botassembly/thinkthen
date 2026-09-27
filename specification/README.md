@@ -44,7 +44,7 @@ Each section carries one of three words. **Settled** means code may be built aga
 
 | Command | One line |
 | --- | --- |
-| `decide QUESTION` | Answers yes, no, or unresolved, and sets the exit code |
+| `decide QUESTION` | Answers yes, no, or not sure, and sets the exit code |
 | `choose QUESTION OPTION...` | Picks one label from a fixed list |
 | `tag QUESTION LABEL...` | Returns every applicable label |
 | `score QUESTION LEVEL...` | Places the evidence on named levels and prints a number |

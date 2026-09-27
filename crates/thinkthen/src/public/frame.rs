@@ -30,7 +30,6 @@ const MEMBER: &str = "answer";
 ///         .throttle(8)?
 ///         .max_requests(Some(10_000))?
 ///         .cache_at("answers")?
-///         .cache_bytes(1 << 30)?
 ///         .build()?;
 ///     let notes = Series::new("note".into(), ["Please refund my order.", "Thanks, all good."]);
 ///     let refund = Question::decide("Does the writer ask for a refund?")?.cut();

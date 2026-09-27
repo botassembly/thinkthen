@@ -6,16 +6,17 @@ from typing import Any, Iterable, Mapping, Optional, Sequence, Union
 __all__ = [
     "BackendError", "Cancelled", "CancelToken", "DeadlineError", "DefectError",
     "Edge", "Engine", "Entity", "LocalError", "Question", "Recognized",
-    "ThinkThenError", "UsageError", "annotate", "choose", "decide",
-    "decide_many", "details", "filter", "find", "question", "rank",
-    "recognize", "relate", "score", "tag", "usage",
+    "RecognizedEntity", "Relation", "ThinkThenError", "UsageError",
+    "annotate", "choose", "decide", "decide_many", "details", "filter",
+    "find", "question", "rank", "recognize", "relate", "score", "tag",
+    "usage",
 ]
 
 Path = Union[str, os.PathLike[str]]
 Deadline = Optional[float]
 Spec = Union[Path, Mapping[str, Any]]
 Asked = Union[str, "Question"]
-Pair = Union[tuple[str, str], Mapping[str, str], "Entity"]
+Pair = Union[tuple[str, str], Mapping[str, Any], "Entity", "RecognizedEntity"]
 # A Polars or pandas Series or another Arrow column, and a Polars or pandas
 # DataFrame. A pandas Series comes back as the caller's Series, with its index
 # and name. This package imports neither library, so the stub names none.
@@ -49,12 +50,6 @@ class Entity:
     def name(self) -> str: ...
     @property
     def kind(self) -> str: ...
-    @property
-    def start(self) -> Optional[int]: ...
-    @property
-    def end(self) -> Optional[int]: ...
-    @property
-    def strength(self) -> Optional[float]: ...
 
 class Edge:
     @property
@@ -66,11 +61,35 @@ class Edge:
     @property
     def probability(self) -> float: ...
 
+class RecognizedEntity:
+    @property
+    def text(self) -> str: ...
+    @property
+    def start(self) -> int: ...
+    @property
+    def end(self) -> int: ...
+    @property
+    def length(self) -> int: ...
+    @property
+    def kind(self) -> str: ...
+    @property
+    def strength(self) -> float: ...
+
+class Relation:
+    @property
+    def relation(self) -> str: ...
+    @property
+    def source(self) -> RecognizedEntity: ...
+    @property
+    def target(self) -> RecognizedEntity: ...
+    @property
+    def probability(self) -> float: ...
+
 class Recognized:
     @property
-    def entities(self) -> list[Entity]: ...
+    def entities(self) -> list[RecognizedEntity]: ...
     @property
-    def relations(self) -> Optional[list[Edge]]: ...
+    def relations(self) -> Optional[list[Relation]]: ...
 
 def question(
     *,
@@ -97,7 +116,11 @@ class Engine:
         throttle: Optional[int] = ...,
         max_requests: Optional[int] = ...,
         cache: Union[Path, bool, None] = ...,
-        cache_bytes: Optional[int] = ...,
+        timeout: Optional[int] = ...,
+        max_retries: Optional[int] = ...,
+        record: Union[str, Path, None] = ...,
+        replay: Union[str, Path, None] = ...,
+        profile: Union[str, Path, None] = ...,
     ) -> None: ...
     def decide(self, question: Asked, text: Union[str, Column], *, deadline: Deadline = ..., token: Optional[CancelToken] = ...) -> Union[Optional[bool], Column]: ...
     def decide_many(self, question: Asked, records: Union[Iterable[str], Column], *, deadline: Deadline = ..., token: Optional[CancelToken] = ...) -> Union[list[Optional[bool]], Column]: ...

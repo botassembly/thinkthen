@@ -57,6 +57,7 @@ pub(crate) struct Counts {
     pub(crate) answered: usize,
     pub(crate) right: usize,
     pub(crate) wrong: usize,
+    #[serde(rename = "unsure")]
     pub(crate) unresolved: usize,
     pub(crate) tied: usize,
     pub(crate) true_yes: usize,
@@ -148,7 +149,7 @@ pub(crate) struct Row {
     pub(crate) threshold: Shown,
     pub(crate) right: usize,
     pub(crate) wrong: usize,
-    pub(crate) unresolved: usize,
+    pub(crate) unsure: usize,
     pub(crate) tied: usize,
     pub(crate) tied_holding_key: Option<usize>,
     pub(crate) tie_share: Option<f64>,

@@ -68,6 +68,11 @@ python3 sdlc/scripts/policy.py
 python3 sdlc/scripts/catalog.py
 python3 sdlc/scripts/tickets --self-test
 python3 sdlc/scripts/tickets
+# Ticket 0164: every offset in the recognize keys cuts its name out of its text.
+python3 sdlc/scripts/recognize-keys --self-test
+python3 sdlc/scripts/recognize-keys
+# Ticket 0159: the re-key script moves only the model value of a clean, tracked entry.
+python3 sdlc/scripts/rekey-model --self-test
 # Ticket 0127: a test child builds its whole environment, and test code reads
 # the environment one name at a time.
 python3 sdlc/scripts/children --self-test
@@ -107,6 +112,8 @@ head -c 4194304 /dev/urandom \
 sh sdlc/scripts/package
 python3 sdlc/scripts/pages-self-test
 python3 sdlc/scripts/pages
+node sdlc/scripts/named-answers.mjs --self-test
+node sdlc/scripts/named-answers.mjs
 node sdlc/scripts/ratchet.mjs
 # ADR 0047: the surface registry, and each binding's ratchet and lock.
 sh sdlc/scripts/surfaces --registry

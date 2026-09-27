@@ -291,10 +291,11 @@ tt_annotate <- function(file, data, on, deadline = NULL) {
 .tt_frame <- function(columns) as.data.frame(columns, stringsAsFactors = FALSE)
 
 # recognize: every name in each text with its kind. Each record is a data
-# frame of names (name, kind, start, end, strength), and the relations the
-# rules turn on ride in its "relations" attribute. substr(text, start, end)
-# is the name.
-tt_recognize <- function(evidence, kinds = c("person", "organization", "place"),
+# frame of names (text, start, end, length, kind, strength), and the
+# relations the rules turn on ride in its "relations" attribute.
+# substr(text, start, end) is the name, and length is its character count.
+# With no kinds, every name has the kind ENTITY.
+tt_recognize <- function(evidence, kinds = NULL,
                          relations = NULL, threshold = NULL,
                          relation_threshold = NULL, deadline = NULL) {
   path <- .tt_path(kinds)
@@ -304,14 +305,14 @@ tt_recognize <- function(evidence, kinds = c("person", "organization", "place"),
     .tt_spec("recognize", section, threshold, relation_threshold)
   }
   evidence <- as.character(evidence)
-  empty <- .tt_frame(list(name = character(), kind = character(), start = numeric(),
-                          end = numeric(), strength = numeric()))
+  empty <- .tt_frame(list(text = character(), start = numeric(), end = numeric(),
+                          length = numeric(), kind = character(), strength = numeric()))
   held <- rep(list(empty), length(evidence))
   live <- which(!is.na(evidence))
   if (length(live)) {
     found <- .tt_call(tt_recognize_column(spec, !is.null(path), evidence[live], deadline))
     for (i in seq_along(live)) {
-      frame <- .tt_frame(found[[i]][c("name", "kind", "start", "end", "strength")])
+      frame <- .tt_frame(found[[i]][c("text", "start", "end", "length", "kind", "strength")])
       links <- .tt_frame(found[[i]]$relations)
       if (nrow(links)) attr(frame, "relations") <- links
       held[[live[[i]]]] <- frame
@@ -321,19 +322,21 @@ tt_recognize <- function(evidence, kinds = c("person", "organization", "place"),
 }
 
 # relate: the edges among entities given as a data frame with name and kind
-# columns, such as tidyr::unnest() of tt_recognize. The first two columns
-# are the endpoints, so igraph::graph_from_data_frame reads it unchanged.
+# columns, such as tidyr::unnest() of tt_recognize. A frame with text and no
+# name column is named by its text. The first two columns are the endpoints,
+# so igraph::graph_from_data_frame reads it unchanged.
 tt_relate <- function(entities, relations = NULL, either = NULL, threshold = NULL,
                       deadline = NULL) {
   path <- .tt_path(relations)
   if (is.null(path) && !length(relations) && !length(either)) {
     .tt_usage("relate needs at least one relation rule")
   }
-  if (!is.data.frame(entities) || !all(c("name", "kind") %in% names(entities))) {
-    .tt_usage("relate takes a data frame with name and kind columns")
+  if (!is.data.frame(entities) || !"kind" %in% names(entities) ||
+      !any(c("name", "text") %in% names(entities))) {
+    .tt_usage("relate takes a data frame with name (or text) and kind columns")
   }
   spec <- path %||% .tt_spec("relate", list(relations = .tt_rules(relations, either)), threshold)
-  named <- as.character(entities$name)
+  named <- as.character(if ("name" %in% names(entities)) entities$name else entities$text)
   kinds <- as.character(entities$kind)
   if (anyNA(named) || anyNA(kinds)) .tt_usage("relate takes no NA name or kind")
   .tt_frame(.tt_call(tt_relate_frame(spec, !is.null(path), named, kinds, deadline)))
@@ -352,19 +355,22 @@ tt_usage <- function() .tt_call(tt_usage_counters())
 # The engine settings (ADR 0017 section 5). NULL keeps what the environment
 # gives. The key stays on THINKTHEN_API_KEY alone.
 tt_engine <- function(base_url = NULL, model = NULL, throttle = NULL, max_requests = NULL,
-                      cache = NULL, cache_bytes = NULL) {
+                      cache = NULL, timeout = NULL, max_retries = NULL,
+                      record = NULL, replay = NULL, profile = NULL) {
   string <- function(x) is.null(x) || (is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x))
   whole <- function(x) is.null(x) || (is.numeric(x) && is.null(attr(x, "class")) &&
     length(x) == 1L && !is.na(x) && x == round(x))
   checks <- list(base_url = string(base_url), model = string(model),
                  throttle = whole(throttle), max_requests = whole(max_requests),
                  cache = identical(cache, FALSE) || string(cache),
-                 cache_bytes = whole(cache_bytes))
+                 timeout = whole(timeout), max_retries = whole(max_retries),
+                 record = string(record), replay = string(replay), profile = string(profile))
   refused <- names(checks)[!unlist(checks)]
   if (length(refused)) {
     .tt_usage(paste0(refused[[1L]], " is one string, one whole number, or FALSE for cache"))
   }
-  .tt_call(tt_engine_set(base_url, model, throttle, max_requests, cache, cache_bytes))
+  .tt_call(tt_engine_set(base_url, model, throttle, max_requests, cache,
+                         timeout, max_retries, record, replay, profile))
   invisible(NULL)
 }
 

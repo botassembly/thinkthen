@@ -28,7 +28,7 @@ elif (.value.urgency != null
   refuse("urgency is not a number from zero through two or null")
 elif ([.value.credential_request, .value.queue, .value.urgency]
       | any(. == null)) then
-  . + {policy: {action: "review", reason: "unresolved"}}
+  . + {policy: {action: "review", reason: "unsure"}}
 elif .value.credential_request then
   . + {policy: {action: "block", reason: "credential_request"}}
 elif .value.queue == "other" then

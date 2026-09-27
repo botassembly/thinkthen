@@ -12,6 +12,7 @@ use std::sync::Arc;
 use thinkthen::{CancelToken, Engine, Error};
 
 use crate::engines::{self, Asked};
+use crate::errors::RowError;
 use crate::ffi::{Column, Type, Value};
 use crate::questions::{Caller, Members, members};
 use crate::signal::Invoke;
@@ -34,6 +35,7 @@ pub(crate) enum Verb {
     Tag,
     Annotate,
     Details,
+    TryDetails,
     Recognize,
     Relations,
 }
@@ -54,10 +56,11 @@ const TWO: &[Type] = &[Type::Text, Type::Text];
 const LISTED: &[Type] = &[Type::Text, Type::Text, TEXTS];
 
 const RECOGNIZED: Type = Type::List(&Type::Struct(&[
-    ("name", Type::Text),
-    ("kind", Type::Text),
+    ("text", Type::Text),
     ("start", Type::BigInt),
     ("end", Type::BigInt),
+    ("length", Type::BigInt),
+    ("kind", Type::Text),
     ("strength", Type::Double),
 ]));
 
@@ -71,7 +74,7 @@ const RELATIONS: Type = Type::List(&Type::Struct(&[
 ]));
 
 /// Every scalar the extension registers.
-pub(crate) static SCALARS: [Scalar; 9] = [
+pub(crate) static SCALARS: [Scalar; 10] = [
     scalar("thinkthen_decide", Verb::Decide, TWO, Type::Bool, true),
     scalar(
         "thinkthen_probability",
@@ -85,6 +88,13 @@ pub(crate) static SCALARS: [Scalar; 9] = [
     scalar("thinkthen_tag", Verb::Tag, LISTED, TEXTS, true),
     scalar("thinkthen_annotate", Verb::Annotate, TWO, Type::Text, true),
     scalar("thinkthen_details", Verb::Details, TWO, Type::Text, true),
+    scalar(
+        "thinkthen_try_details",
+        Verb::TryDetails,
+        TWO,
+        Type::Text,
+        true,
+    ),
     scalar(
         "thinkthen_recognize",
         Verb::Recognize,
@@ -195,6 +205,9 @@ pub(crate) fn run(
     columns: &[Column],
     rows: usize,
 ) -> Result<Vec<Value>, String> {
+    if verb == Verb::TryDetails {
+        return try_details(caller, invoke, columns, rows);
+    }
     let text = |column: usize, row: usize| columns.get(column).and_then(|found| found.text(row));
     let list = |column: usize, row: usize| columns.get(column).and_then(|found| found.list(row));
     let listed = matches!(verb, Verb::Choose | Verb::Score | Verb::Tag);
@@ -266,6 +279,76 @@ pub(crate) fn run(
                     },
                 )
             })
+        }
+        Verb::TryDetails => Err(crate::errors::defect(
+            "the try-details verb missed its row path",
+        )),
+    }
+}
+
+fn try_details(
+    caller: &mut Caller,
+    invoke: &Invoke,
+    columns: &[Column],
+    rows: usize,
+) -> Result<Vec<Value>, String> {
+    let mut answers = Vec::with_capacity(rows);
+    for row in 0..rows {
+        if columns.iter().take(2).any(|column| !column.present(row)) {
+            answers.push(Value::Null);
+            continue;
+        }
+        let result = (|| -> Result<Value, RowError> {
+            let argument = columns
+                .first()
+                .and_then(|column| column.text(row))
+                .ok_or_else(|| RowError::defect("a question column was not text"))?;
+            let evidence = columns
+                .get(1)
+                .and_then(|column| column.text(row))
+                .ok_or_else(|| RowError::defect("an evidence column was not text"))?;
+            let due = columns.get(2).and_then(|column| column.int(row));
+            let question = caller.question_typed(argument)?;
+            let evidence = evidence.to_owned();
+            let (_, cut) = engines::within_total_typed(&caller.asked, vec![evidence.clone()])?;
+            let engine = Arc::clone(&caller.engine);
+            let details = worker::run_typed(invoke, move |token| {
+                one_details(&engine, &question, &evidence, token, due)
+            })?;
+            if let Some(error) = cut {
+                return Err(error);
+            }
+            let details: serde_json::Value = serde_json::from_str(&details.to_json())
+                .map_err(|_| RowError::defect("a result is not JSON"))?;
+            Ok(Value::Text(
+                serde_json::json!({"status":"answered","details":details}).to_string(),
+            ))
+        })();
+        match result {
+            Ok(value) => answers.push(value),
+            Err(error) => match error.value() {
+                Some(value) => answers.push(Value::Text(value.to_string())),
+                None => return Err(error.text),
+            },
+        }
+    }
+    Ok(answers)
+}
+
+fn one_details(
+    engine: &Engine,
+    question: &thinkthen::LoadedQuestion,
+    evidence: &str,
+    token: &CancelToken,
+    due: Option<i64>,
+) -> Result<thinkthen::Details, Error> {
+    let options = calls::options(token, due)?;
+    match question {
+        thinkthen::LoadedQuestion::Question(question) => {
+            engine.details_with(question, evidence, options)
+        }
+        thinkthen::LoadedQuestion::Banded(question) => {
+            engine.details_with(question, evidence, options)
         }
     }
 }

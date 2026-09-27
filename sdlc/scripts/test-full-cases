@@ -1,0 +1,30 @@
+#!/bin/sh
+# The full functional checkpoint, separate from routine and stress checks.
+set -eu
+case ${1:-} in
+--list)
+    unset THINKTHEN_CONFORMANCE_IDS
+    REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+    count=$(jq -r '.case_count' "$REPO/conformance/cases.json")
+    rows=$(jq -r '.cases | length' "$REPO/conformance/cases.json")
+    [ "$count" = 54 ] && [ "$rows" = 54 ] || {
+        echo 'test-full-cases: canonical corpus is not 54 cases' >&2
+        exit 1
+    }
+    echo 'THINKTHEN_CONFORMANCE_IDS is unset; canonical cases: 54'
+    echo 'cargo test --locked --offline --workspace --all-targets (ignored stress excluded)'
+    echo 'external consumer full public tests; surfaces --full-functional (all 54 shared cases)'
+    exit 0 ;;
+--run) ;;
+*) echo 'usage: sdlc/scripts/test-full-cases --list|--run' >&2; exit 2 ;;
+esac
+. "$(dirname -- "$0")/heavy-lock"
+REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+cd -- "$REPO"
+THINKTHEN_TEST_PROFILE=full
+export THINKTHEN_TEST_PROFILE
+unset THINKTHEN_CONFORMANCE_IDS
+cargo test --locked --offline --workspace --all-targets
+cargo test --locked --offline --manifest-path conformance/consumer/Cargo.toml \
+    --target-dir target/consumer
+sh sdlc/scripts/surfaces --full-functional

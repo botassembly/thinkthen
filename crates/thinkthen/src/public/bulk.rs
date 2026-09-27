@@ -260,14 +260,14 @@ impl Engine {
         );
         let answer: Arc<batch::Answer<Decided>> = Arc::new(move |text: &str| {
             let judged = worker.judge(&core, threshold, evidence(text)?, &cancel)?;
-            Ok(Completed {
-                value: (
+            Ok(Completed::one(
+                (
                     results::answer(&judged.value),
                     judged.answer.yes().unwrap_or_default(),
                 ),
-                replayed: judged.answered.replayed,
-                partial_failure: false,
-            })
+                judged.answered.replayed,
+                false,
+            ))
         });
         Ok(batch::start(
             engine,
@@ -286,16 +286,16 @@ fn annotated(
     set: &core::QuestionSet,
     text: &str,
     cancel: &crate::engine::Cancel<'_>,
-) -> Result<Completed<Values>, Error> {
-    let evidence = evidence(text)?;
+) -> Result<Completed<Values, Error>, Error> {
+    let record = record(set, text)?;
     let parts = set
         .groups()
         .into_iter()
-        .map(|places| Ok((set.group_evidence(&places, &evidence)?, places)))
+        .map(|places| Ok((set.group_evidence(&places, &record)?, places)))
         .collect::<Result<Vec<_>, core::PartError>>()
         .map_err(|error| match error {
             core::PartError::Record(error) => Error::usage(error.to_string()),
-            core::PartError::Reading(_) | core::PartError::Render(_) => {
+            core::PartError::Reading(_) => {
                 Error::defect("a checked question set could not read its parts")
             }
         })?;
@@ -320,9 +320,25 @@ fn annotated(
     };
     let annotation = engine.annotate(set, plan, cancel)?;
     let json = Written::of(&core::NamedValues::new(annotation.values.clone()))?;
-    Ok(Completed {
-        replayed: annotation.replayed,
-        partial_failure: annotation.failed_questions > 0,
-        value: (annotation.values, json),
-    })
+    Ok(Completed::one(
+        (annotation.values, json),
+        annotation.replayed,
+        annotation.failed_questions > 0,
+    ))
+}
+
+/// One record as its groups read it. Only a part group parses the text, once,
+/// as the command reads a whole document, so a root-only set sends it as given.
+fn record(set: &core::QuestionSet, text: &str) -> Result<core::BatchRecord, Error> {
+    let evidence = evidence(text)?;
+    if set.first_part().is_none() {
+        let value = core::Json::String(text.to_owned());
+        return Ok(core::BatchRecord { evidence, value });
+    }
+    let usage = |error: core::RecordError| Error::usage(error.to_string());
+    let reading = core::Reading::new(core::Framing::Document, Vec::new())
+        .map_err(|_| Error::defect("a document reading takes no pointer"))?;
+    let held = reading.annotation_record(text.as_bytes()).map_err(usage)?;
+    let value = reading.batch_record(&held).map_err(usage)?.value;
+    Ok(core::BatchRecord { evidence, value })
 }

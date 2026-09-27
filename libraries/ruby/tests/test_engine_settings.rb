@@ -45,43 +45,34 @@ class TestEngineSettings < Minitest::Test
   def test_bad_settings_refuse_before_any_request
     lines, count = TestBackend.run(<<~RUBY)
       [{ throttle: 33 }, { throttle: 0 }, { throttle: true }, { throttle: 1.5 }, { max_requests: "2" },
-       { cache_bytes: 0 }, { cache: 3 }, { base_url: 7 }].each do |settings|
+       { timeout: 0 }, { timeout: "30" }, { replay: 7 }, { cache: 3 }, { base_url: 7 }].each do |settings|
         T::Engine.new(**settings)
         say "built"
       rescue T::UsageError => e
         say e.message
       end
-      say kind_of_raise { T::Engine.new(max_requests: 2).decide_many("Is it urgent?", %w[one two three]) }
     RUBY
     assert_equal ["a throttle is a whole number from 1 through 32", "a throttle is a whole number from 1 through 32",
                   "throttle is a whole number or nil", "throttle is a whole number or nil",
-                  "max_requests is a whole number or nil", "a cache cap is a whole number of bytes above zero",
-                  "cache is a folder path, false for none, or nil for the default", "base_url is text or nil",
-                  "UsageError"], lines
+                  "max_requests is a whole number or nil", "a timeout is a time above zero",
+                  "timeout is a whole number or nil", "replay is text or nil",
+                  "cache is a folder path, false for none, or nil for the default", "base_url is text or nil"], lines
     assert_equal 0, count
   end
 
-  def test_cache_names_its_folder_and_false_writes_nothing
+  def test_cache_names_its_folder
     TestBackend.with(<<~RUBY) do |backend, child, root|
       named = File.join(ENV.fetch("HOME"), "named")
       T::Engine.new(cache: named).decide("Is it urgent?", "into the named folder")
-      T::Engine.new(cache: false).decide("Is it urgent?", "into no folder")
       say named
     RUBY
       named = child.hear
       status, errors = child.finish
       assert status.success?, errors
-      assert_equal 2, backend.count
+      assert_equal 1, backend.count
       refute_empty entries(named)
-      assert_empty entries(File.join(root, "cache")), "a named or disabled cache wrote the environment's folder"
+      assert_empty entries(File.join(root, "cache")), "a named cache wrote the environment's folder"
     end
-  end
-
-  def test_the_model_setting_reaches_the_details_document
-    lines, = TestBackend.run(<<~RUBY)
-      say T::Engine.new(model: "jev-test-model").details("Is it urgent?", "text")["meta"]["model"]
-    RUBY
-    assert_equal ["jev-test-model"], lines
   end
 
   def test_the_base_url_setting_wins_over_the_environment

@@ -1,4 +1,4 @@
-Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review.
+Status: open for items 3 and 5 and the page half of item 4. Filed 2026-09-26 by the marketing lead from a fresh architect review. Items 1 and 2 are done: ticket 0160 landed on 2026-09-26 (`sdlc/records/0160-build-the-answer-contract-holds.md`). The code half of item 4 is done by Quick Fix qf-config-ruby-issue-status (`sdlc/records/qf-config-ruby-issue-status.md`): the refusal names the field. The settings page half waits for H4.
 
 # Architect review 06: backends and configuration
 
@@ -44,6 +44,8 @@ What an integrator hits. They follow the settings page and lock themselves out o
 
 Direction. Correct the row to say the file holds on or off only, or add a folder field. Make closed-shape errors name the field.
 
+The code half is done by Quick Fix qf-config-ruby-issue-status. A closed-shape refusal now names the field and never its value. `{"cache":"/tmp/somewhere"}` reads ``configuration field `cache` must be true or false``. A field outside the five reads ``the configuration file holds a field other than `schema`, `url`, `model`, `cache`, and `cache_bytes` ``. The settings page half stays with H4, which corrects the row and line 19 through item 8 of `2026-09-26-settings-table-gaps-a-site-reader-hits.md`.
+
 ## 5. The built-in request ceiling covers only relation plans, so one long record reaches the backend and stops the run (severity 2)
 
 Five reviews found this: 10 (issue 4, severity 2), and 01 (issue 7), 03 (issue 3-5), 06 (I-6) and 11 (issue 6) at severity 3. This file carries it. Ticket 0154 plans a request size setting, and `2026-09-26-recognize-design.md` section 6 (R4) plans the recognize fix. Neither covers every verb at the built-in address today.
@@ -69,7 +71,7 @@ Direction. Apply the built-in ceiling to every verb at the default address, so g
 - There is no request size or token setting on main, and outside the built-in address nothing bounds a request. Carried above as item 5 and in ticket 0154.
 - A broken configuration file stops every command, including `status` and runs that override all its values.
 - The model has no environment tier, and a question file's model beats the machine's configured model.
-- A keyless local server still needs a dummy key, and the run fails at exit 4.
+- A keyless local server still needs a dummy key, and the run fails at exit 4. Done by Quick Fix qf-command-edges-and-prune, which sends to loopback with no key.
 - The default cache serves one address. Carried above as item 3.
 - An extreme `--timeout` panics with exit 101. Carried in the architect review 11 file.
 - The release binary honors a test-only variable that removes retry backoff. Carried in the architect review 07 file.

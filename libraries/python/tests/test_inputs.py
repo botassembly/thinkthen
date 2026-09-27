@@ -3,7 +3,7 @@
 import pathlib
 
 import thinkthen as tt
-from conftest import child_env, run
+from conftest import child_env, clean_env, run
 
 ARROW = ("filter, rank, find, and relate read a list of str, not a column, and annotate and "
          "recognize read a column only from a Polars or pandas frame with on=. "
@@ -53,6 +53,16 @@ def test_every_record_is_read_before_the_first_send(backend, tmp_path):
         "UsageError the evidence is a str",
     ]
     assert backend.count() == 0
+
+
+def test_missing_key_names_a_remedy_for_a_library_call():
+    """A keyless library call keeps its Usage kind and names a usable remedy."""
+    printed = run(REFUSED + """
+    said(lambda: tt.Engine(base_url="https://127.0.0.2:9/v1", cache=False)
+         .decide(late, "one"))
+    """, clean_env())
+    assert printed.strip() == ("UsageError no key is set; configure an API key for the engine "
+                               "(THINKTHEN_API_KEY)")
 
 
 def test_the_deadline_sentence_is_pinned_in_the_docstring_and_readme():

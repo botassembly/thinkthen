@@ -169,6 +169,38 @@ fn details(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
     })?)
 }
 
+fn try_details(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
+    if matches!(context.get_raw(0), ValueRef::Null) || matches!(context.get_raw(1), ValueRef::Null)
+    {
+        return Ok(None);
+    }
+    let result = guard("thinkthen_try_details", || {
+        let Some((held, evidence, deadline)) = inputs(context)? else {
+            return Ok(None);
+        };
+        let details = worker::run(ffi::handle_of(context), deadline, move |engine, options| {
+            Ok(match &*held {
+                LoadedQuestion::Question(asked) => {
+                    engine.details_with(asked, &evidence, options)?
+                }
+                LoadedQuestion::Banded(asked) => engine.details_with(asked, &evidence, options)?,
+            })
+        })?;
+        let details: serde_json::Value = serde_json::from_str(&details.to_json())
+            .map_err(|_| Failure::defect("a result is not JSON"))?;
+        Ok(Some(
+            serde_json::json!({"status":"answered","details":details}).to_string(),
+        ))
+    });
+    match result {
+        Ok(value) => Ok(value),
+        Err(failure) => match failure.value() {
+            Some(value) => Ok(Some(value.to_string())),
+            None => Err(failure.into()),
+        },
+    }
+}
+
 fn annotate(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
     Ok(guard("thinkthen_annotate", || {
         let deadline = deadline(context)?;
@@ -368,7 +400,7 @@ impl Aggregate<WarmState, i64> for Warm {
     }
 }
 
-/// Register the thirteen names in nineteen arities, none deterministic.
+/// Register the scalar functions for direct calls, without deterministic flags.
 pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
     let volatile = FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DIRECTONLY;
     for arity in [2, 3] {
@@ -378,6 +410,7 @@ pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
         connection.create_scalar_function("thinkthen_tag", arity, volatile, tag)?;
         connection.create_scalar_function("thinkthen_annotate", arity, volatile, annotate)?;
         connection.create_scalar_function("thinkthen_details", arity, volatile, details)?;
+        connection.create_scalar_function("thinkthen_try_details", arity, volatile, try_details)?;
     }
     connection.create_scalar_function("thinkthen_usage", -1, volatile, usage)?;
     connection.create_aggregate_function("thinkthen_warm", 2, volatile, Warm)?;
@@ -395,12 +428,6 @@ pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
         settings::max_requests_total,
     )?;
     connection.create_scalar_function("thinkthen_cache", 1, volatile, settings::cache)?;
-    connection.create_scalar_function(
-        "thinkthen_cache_bytes",
-        1,
-        volatile,
-        settings::cache_bytes,
-    )?;
     Ok(())
 }
 

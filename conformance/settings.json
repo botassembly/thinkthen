@@ -1,0 +1,76 @@
+{
+  "schema": "thinkthen.settings-cases/1",
+  "question": "Is this a refund?",
+  "cases": [
+    {
+      "id": "timeout-ends-a-slow-attempt",
+      "setting": "timeout",
+      "arm": "arm/delay/2000/v1",
+      "steps": [
+        {"settings": {"timeout": 1}, "text": "refund now", "error": "backend", "count": 1}
+      ]
+    },
+    {
+      "id": "max-retries-zero-sends-once",
+      "setting": "max_retries",
+      "arm": "arm/503/v1",
+      "steps": [
+        {"settings": {"max_retries": 0}, "text": "refund now", "error": "backend", "count": 1}
+      ]
+    },
+    {
+      "id": "profile-refuses-before-sending",
+      "setting": "profile",
+      "arm": "generic/v1",
+      "profile": {"schema": "thinkthen.backend-profile/1", "name": "small", "max_evidence_bytes": 4},
+      "steps": [
+        {"settings": {"profile": "$PROFILE"}, "text": "refund now", "error": "usage", "count": 0}
+      ]
+    },
+    {
+      "id": "model-names-the-request",
+      "setting": "model",
+      "arm": "generic/v1",
+      "steps": [
+        {"settings": {"model": "other-model"}, "text": "refund now", "value": true, "model": "other-model", "count": 1}
+      ]
+    },
+    {
+      "id": "record-sends-every-time",
+      "setting": "record",
+      "arm": "generic/v1",
+      "steps": [
+        {"settings": {"record": "$FOLDER"}, "text": "refund now", "value": true, "count": 1},
+        {"settings": {"record": "$FOLDER"}, "text": "refund now", "value": true, "count": 2}
+      ],
+      "entries": 1
+    },
+    {
+      "id": "replay-answers-from-the-folder-alone",
+      "setting": "replay",
+      "arm": "generic/v1",
+      "steps": [
+        {"settings": {"cache": "$FOLDER"}, "text": "refund now", "value": true, "count": 1},
+        {"settings": {"replay": "$FOLDER"}, "text": "refund now", "value": true, "count": 1},
+        {"settings": {"replay": "$FOLDER"}, "text": "another text", "error": "local", "count": 1}
+      ]
+    },
+    {
+      "id": "max-requests-refuses-past-the-limit",
+      "setting": "max_requests",
+      "arm": "generic/v1",
+      "steps": [
+        {"settings": {"max_requests": 2}, "verb": "decide_many", "records": ["refund one", "refund two", "refund three"], "error": "usage", "count": 2}
+      ]
+    },
+    {
+      "id": "cache-off-sends-again",
+      "setting": "cache",
+      "arm": "generic/v1",
+      "steps": [
+        {"settings": {"cache": false}, "text": "refund now", "value": true, "count": 1},
+        {"settings": {"cache": false}, "text": "refund now", "value": true, "count": 2}
+      ]
+    }
+  ]
+}

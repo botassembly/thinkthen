@@ -8,6 +8,7 @@
  * request to that base until an `env` request or another base comes.
  *
  *   env NAME VALUE                    -> setenv, for the engines after it
+ *   settings BASE JSON                -> build with the JSON settings object
  *   call BASE REQUEST                 -> thinkthen_call
  *   decide BASE QUESTION TEXT         -> thinkthen_decide
  *   expired BASE QUESTION TEXT        -> thinkthen_decide_opts, budget 0
@@ -148,6 +149,22 @@ int main(void) {
         }
         /* One engine serves every request to one base, so its counters
          * carry from call to call as a host's engine's do. */
+        if (strcmp(verb, "settings") == 0) {
+            thinkthen_engine_free(tt);
+            free(base);
+            base = strdup(fields[0]);
+            setenv("THINKTHEN_BASE_URL", base, 1);
+            tt = thinkthen_engine_new_with(fields[1]);
+            if (tt == NULL) {
+                const char *message = thinkthen_error_message(NULL);
+                said(thinkthen_error_code(NULL), message, strlen(message));
+            } else {
+                said(THINKTHEN_OK, "", 0);
+            }
+            fflush(stdout);
+            for (size_t place = 0; place < count; place++) free(fields[place]);
+            continue;
+        }
         if (tt == NULL || strcmp(base, fields[0]) != 0) {
             thinkthen_engine_free(tt);
             free(base);

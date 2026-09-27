@@ -151,6 +151,16 @@ Fix: give each of the five spawns an allow-listed environment through its langua
 
 Done when: `PENDING` names no landed ticket, and `children` stays green.
 
+## 14. The host-signal test failed once beside other signal tests
+
+Status: fixed by Quick Fix `qf/isolate-host-signal-tests` on 2026-09-27. At HEAD `22332a38` with the uncommitted 0169 command changes, `cargo test --locked -p thinkthen --lib signal -- --nocapture` selected six tests: four passed, one failed, and one was ignored. `engine::host_signal_tests::a_host_signal_during_a_held_send_on_a_worker_leaves_the_call_whole` failed at its `host_signal_tests.rs:98` assertion with `the worker kept SIGUSR1 blocked`. Running that exact test once in isolation passed in 0.10 seconds. No engine or worker source had changed in that lane.
+
+Neither run redirected a raw log. The builder transcribed the tool results and their provenance into `worktrees/thinkthen-codex-1/target/codex-builds/0169/host-signal-observation.md`; the 0169 build record also names the observation. At that point, it was not a clean-main reproduction and the isolated pass did not establish a root cause. Parallel signal interference and a timing-sensitive assertion remained hypotheses.
+
+Source inspection identified a concrete interference path: `engine/facade_tests.rs::a_host_signal_on_the_calling_thread_never_fails_a_single_send` registers a process-wide SIGUSR1 flag and sends SIGUSR1 to an unblocked calling thread. `engine/host_signal_tests.rs::a_host_signal_during_a_held_send_on_a_worker_leaves_the_call_whole` registers another process-wide flag for the same signal, then asserts its flag stayed false because its own worker blocked SIGUSR1. The installed signal-hook 0.4.4 `flag::register` registers a callback that sets the flag whenever that signal is handled; it does not filter by sending test or target thread. If these tests overlap, the caller test can set the worker test's flag even when the worker mask is correct. The bounded proof below confirmed that interference path.
+
+The Quick Fix ran one coordinated proof: the engine worker had SIGUSR1 blocked, yet a signal sent to an unblocked caller set both registered flags. It then removed that temporary proof, ran the ordinary worker test in a bounded child process, and kept the worker mask, caller mask, one request, and good reply assertions. Both affected tests passed individually and together once. The build record gives the exact checks. This closes item 14 only; the other cleanup items remain open. The older 50-run high-load request in item 4 remains outside the current functional gate under Ian's opt-in ruling.
+
 ## Already fixed
 
 - rusqlite's second trap, the workspace feature clash with `load_extension`: ADR 0047 gives each binding its own workspace. The root `Cargo.toml:4` to `:6` excludes `databases`.

@@ -23,6 +23,7 @@ from harness import HOOKS, ROOT, Backend, rows, run, said
 from signal_suite import CANCELLED, held_cancel
 
 CASES = Path(os.environ.get("THINKTHEN_CONFORMANCE_CASES", ROOT.parent.parent / "conformance" / "cases.json"))
+CANONICAL_CASES = ROOT.parent.parent / "conformance" / "cases.json"
 
 # The one closed list of reasons a case does not run here.
 NOT_RUN = {
@@ -32,6 +33,29 @@ NOT_RUN = {
 
 def reason(case: dict) -> str | None:
     return NOT_RUN.get(case["verb"])
+
+
+def selected_ids(cases: list[dict]) -> set[str]:
+    """Validate one optional absolute ID list against the canonical corpus."""
+    available = [case["id"] for case in cases]
+    if len(available) != len(set(available)):
+        raise ValueError("duplicate shared case ID")
+    path = os.environ.get("THINKTHEN_CONFORMANCE_IDS")
+    if path is None:
+        return set(available)
+    source = Path(path)
+    if not source.is_absolute():
+        raise ValueError("THINKTHEN_CONFORMANCE_IDS takes an absolute path")
+    chosen = [line.strip() for line in source.read_text().splitlines()]
+    chosen = [one for one in chosen if one and not one.startswith("#")]
+    if not chosen:
+        raise ValueError("the selected case list is empty")
+    if len(chosen) != len(set(chosen)):
+        raise ValueError("duplicate selected case ID")
+    absent = set(chosen) - set(available)
+    if absent:
+        raise ValueError(f"selected case is absent from the shared corpus: {sorted(absent)[0]}")
+    return set(chosen)
 
 
 def quoted(text: str) -> str:
@@ -136,8 +160,8 @@ def relations_wanted(case: dict) -> list:
     return [
         {
             "relation": found["relation"],
-            "source": [found["source"]["name"], found["source"]["kind"]],
-            "target": [found["target"]["name"], found["target"]["kind"]],
+            "source": [found["source"]["text"], found["source"]["kind"]],
+            "target": [found["target"]["text"], found["target"]["kind"]],
             "probability": found["probability"],
         }
         for found in expected(case)[0].get("relations") or []
@@ -234,9 +258,26 @@ def check(case: dict) -> str | None:
 
 
 def main() -> int:
-    cases = json.loads(CASES.read_text())["cases"]
+    canonical = json.loads(CANONICAL_CASES.read_text())
+    cases = canonical["cases"]
+    if len(cases) != canonical["case_count"]:
+        raise ValueError("the canonical case count differs from its cases")
+    selected = selected_ids(cases)
+    alternate = json.loads(CASES.read_text())["cases"]
+    by_id = {case["id"]: case for case in alternate}
+    if len(by_id) != len(alternate) or set(by_id) - {case["id"] for case in cases}:
+        raise ValueError("the executable case file has duplicate or unknown IDs")
     passed, failed, skipped = 0, 0, 0
     for case in cases:
+        if case["id"] not in selected:
+            continue
+        if case["id"] not in by_id:
+            if case["id"] != "25-defect-fault":
+                raise ValueError(f"selected case is absent from the executable file: {case['id']}")
+            skipped += 1
+            print("not run 25-defect-fault: installed extension has no invariant-failure test hook")
+            continue
+        case = by_id[case["id"]]
         why = reason(case)
         if why:
             skipped += 1
@@ -252,9 +293,9 @@ def main() -> int:
         else:
             passed += 1
             print(f"pass {case['id']}")
-    print(f"conformance: {passed} pass, {failed} fail, {skipped} not run, {len(cases)} cases")
-    if passed + failed + skipped != len(cases):
-        print("conformance: the counts do not sum to the cases")
+    print(f"conformance: total={len(cases)} selected={len(selected)} pass={passed} fail={failed} not_run={skipped} unselected={len(cases) - len(selected)}")
+    if passed + failed + skipped != len(selected):
+        print("conformance: the counts do not sum to the selected cases")
         return 1
     return 1 if failed else 0
 

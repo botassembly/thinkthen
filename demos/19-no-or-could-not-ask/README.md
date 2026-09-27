@@ -62,7 +62,7 @@ printf '%s' "$audit" \
   | mustmatch '{"value":null,"threshold":"0.1:0.8","probability":0.22,"verb":"decide"}'
 ```
 
-`threshold` comes back as the string `0.1:0.8`, and that string works again on the command line. `value` is `null`, the one spelling of unresolved in the bare output, in the object, and beside exit 3.
+`threshold` returns the string `0.1:0.8`, which works again on the command line. `value` is `null`, the spelling of not sure in the bare output, in the object, and beside exit 3.
 
 ## Step 3: word the question so that yes permits the action
 
@@ -72,7 +72,7 @@ The reversed wording, "Is this command dangerous?", makes no the permitting answ
 
 ## What can go wrong
 
-- **`set -e` ends the script on a no.** A bare `thinkthen decide` exits 1 on a no and 3 on an unresolved answer, and `set -o pipefail` carries the code out of a pipeline. The script below ends at the no, prints nothing, and leaves exit 1 behind.
+- **`set -e` ends the script on a no.** A bare `thinkthen decide` exits 1 on a no and 3 on a not sure answer, and `set -o pipefail` carries the code out of a pipeline. The script below ends at the no, prints nothing, and leaves exit 1 behind.
 
 ```bash
 set -euo pipefail

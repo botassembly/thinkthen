@@ -21,12 +21,12 @@ engine.decide_many(refund, reviews)
 
 ```python
 df = tt.annotate("form.json", df, on="body")  # one new column per question
-names = tt.recognize(df, kinds=["product"], on="body")  # row, text, kind, start, end, strength
+names = tt.recognize(df, kinds=["product"], on="body")  # row, text, start, end, length, kind, strength
 ```
 
 In a Polars frame, a `tag` column holds each row's JSON array text, such as `["bill"]`. In a Polars or pandas frame, a question the backend failed widens its column to text. Each cell holds the answer's text as the engine writes it, the plain label for a choice, or the failed marker. A not-sure answer stays null. The Rust Polars door writes the same text. A question named as one of the frame's columns is refused before any request.
 
-A pandas `Series` works in the same five verbs and comes back as a pandas `Series` with the caller's index and name. `decide` and `decide_many` give `boolean`, `score` gives `Float64`, `choose` gives `string`, and `tag` gives `object` with one list of labels per row. "Not sure" is `pd.NA`, or `None` in `tag`. A pandas `DataFrame` with `on=` comes back from `annotate` with one new column per question, and from `recognize` with a new `names` column: one list per row of `dict` with `text`, `kind`, `start`, `end`, and `strength`. The index stays the caller's. A null in the text column, a repeated or missing `on` label, `MultiIndex` columns, and a question named as a column are refused before any request. The answer keeps the input's name, so rename it to add it as a column:
+A pandas `Series` works in the same five verbs and comes back as a pandas `Series` with the caller's index and name. `decide` and `decide_many` give `boolean`, `score` gives `Float64`, `choose` gives `string`, and `tag` gives `object` with one list of labels per row. "Not sure" is `pd.NA`, or `None` in `tag`. A pandas `DataFrame` with `on=` comes back from `annotate` with one new column per question, and from `recognize` with a new `names` column: one list per row of `dict` with `text`, `start`, `end`, `length`, `kind`, and `strength`. The index stays the caller's. A null in the text column, a repeated or missing `on` label, `MultiIndex` columns, and a question named as a column are refused before any request. The answer keeps the input's name, so rename it to add it as a column:
 
 ```python
 df = df.join(tt.decide("Is it late?", df["body"]).rename("late"))
@@ -36,7 +36,7 @@ What is fast: a pandas 2 column crosses at list speed and still makes one engine
 
 `filter`, `rank`, `find`, and `relate` read lists only. The optional extra `thinkthen[polars]` names the tested Polars floor. The package never imports Polars itself. A warm Polars pool hangs a forked child, so start children with `spawn`.
 
-The module functions use one engine that the environment configures: `THINKTHEN_BASE_URL`, `THINKTHEN_CACHE`, and the rest. `tt.Engine` takes `base_url`, `model`, `throttle`, `max_requests`, `cache`, and `cache_bytes` as keywords and reads the environment for the rest. The key comes only from `THINKTHEN_API_KEY`. The throttle is the number of requests in flight. It is one per loaded copy of this package: the first explicit throttle sets it, and a second, different one raises `UsageError`.
+The module functions use one engine that the environment configures: `THINKTHEN_BASE_URL`, `THINKTHEN_CACHE`, and the rest. `tt.Engine` takes `base_url`, `model`, `throttle`, `max_requests`, `cache`, `timeout`, `max_retries`, `profile`, `record`, and `replay` as keywords and reads the environment for the rest. The key comes only from `THINKTHEN_API_KEY`. The throttle is the number of requests in flight. It is one per loaded copy of this package: the first explicit throttle sets it, and a second, different one raises `UsageError`.
 
 Every verb takes `deadline`, in seconds from the call, and `token`, a `CancelToken` any thread can set. No deadline is spelled ``deadline=None`` or ``deadline=-1`` (ADR 0041). Zero is a spent deadline: the call sends nothing and raises `DeadlineError`. Any other negative, a bool, and a non-number raise `UsageError`.
 
