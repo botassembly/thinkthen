@@ -322,7 +322,7 @@ fn limits_close_batches_by_exact_bytes_and_the_ceiling() {
             .into()
     };
     let body = compact(fixture!("batch-three")).len();
-    let state = r#"{"records":["Come Together","Say \"hello\"\nthen leave","Because"]}"#.len();
+    let state = super::QUOTED.len();
     let urgent = || text("Help! My payouts have been failing for 3 days.");
     let today = compact(fixture!("decide-urgent")).len();
     let twelve = || {
@@ -357,7 +357,7 @@ fn limits_close_batches_by_exact_bytes_and_the_ceiling() {
             profile(&format!(r#""max_evidence_bytes":{}"#, state - 1)),
             decide(SONG),
             three(),
-            vec![(2, Limit), (1, End)],
+            vec![(1, Limit), (1, Limit), (1, End)],
         ),
         (
             loopback(),
@@ -368,14 +368,14 @@ fn limits_close_batches_by_exact_bytes_and_the_ceiling() {
         ),
         (
             loopback(),
-            profile(r#""max_request_bytes":817"#),
+            profile(r#""max_request_bytes":802"#),
             decide("Q"),
             twelve(),
             vec![(12, End)],
         ),
         (
             loopback(),
-            profile(r#""max_request_bytes":816"#),
+            profile(r#""max_request_bytes":801"#),
             decide("Q"),
             twelve(),
             vec![(11, Limit), (1, End)],
@@ -394,14 +394,14 @@ fn the_ceiling_closes_batches_at_the_built_in_address_only() {
             None,
             decide(SONG),
             sized(20_000),
-            vec![(2, Limit), (1, End)],
+            vec![(3, End)],
         ),
         (
             built_in(),
             None,
             decide(SONG),
             sized(40_000),
-            vec![(1, Limit), (1, Limit), (1, End)],
+            vec![(2, Limit), (1, End)],
         ),
         (
             built_in(),
@@ -415,7 +415,7 @@ fn the_ceiling_closes_batches_at_the_built_in_address_only() {
             profile(r#""max_request_bytes":200000"#),
             decide(SONG),
             sized(40_000),
-            vec![(2, Limit), (1, End)],
+            vec![(3, End)],
         ),
         (
             loopback(),

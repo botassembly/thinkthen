@@ -12,13 +12,13 @@ use std::sync::mpsc::Receiver;
 use std::time::Duration;
 
 use crate::core::{
-    Answer, AnswerOutcome, Backend, BackendProfile, Evidence, Find, FindAnswer, ModelName, Outcome,
-    Plan, Question, Threshold, Value,
+    Answer, AnswerOutcome, Backend, BackendProfile, Batch, Evidence, Find, FindAnswer, ModelName,
+    Outcome, Plan, Question, Threshold, Value,
 };
 use crate::engine::annotate_schedule;
 use crate::engine::error::Error;
 use crate::engine::http::Client;
-use crate::engine::prepared_request::PreparedRequests;
+use crate::engine::prepared_request::{PreparedRequest, PreparedRequests};
 use crate::engine::process::Guarded;
 use crate::engine::recorder::Recorder;
 use crate::engine::request::{self, Transport};
@@ -252,6 +252,25 @@ impl Engine {
         })
     }
 
+    /// Send one batch's exact body as one request, through the same replay,
+    /// retries, recording, cache, and counters as every other request.
+    pub(crate) fn ask_batch(&self, batch: &Batch, cancel: &Cancel) -> Result<Answered, Error> {
+        let state = self.state(cancel)?;
+        let prepared = PreparedRequest {
+            body: batch.body.clone(),
+            digest: batch.digest.clone(),
+        };
+        request::ask_sent(
+            &self.backend,
+            &batch.plan,
+            prepared,
+            &state.recorder,
+            cancel,
+            self.transport(&state),
+            || (self.key)(),
+        )
+    }
+
     /// Ask one aggregate question over a bounded set and select one unit.
     pub(crate) fn find(&self, find: &Find, cancel: &Cancel) -> Result<Found, Error> {
         let answered = self.ask(find.plan(), cancel)?;
@@ -305,7 +324,7 @@ impl Engine {
         held: bool,
         cancel: &Cancel,
         start_reader: impl FnOnce(Receiver<()>, InputPort<T, R, E>),
-        answer: &(impl Fn(&T) -> Result<Completed<R>, E> + Sync),
+        answer: &(impl Fn(&T) -> Result<Completed<R, E>, E> + Sync),
         emit: impl FnMut(R) -> Result<bool, E>,
     ) -> Result<RunOutcome<E>, E>
     where
@@ -339,7 +358,7 @@ impl Engine {
         prepare: impl Fn(T) -> Result<Prepared<S, A, W>, E>,
         answer: &(impl Fn(W) -> Result<G, E> + Sync),
         accept: impl Fn(&mut A, G) -> Result<(), E>,
-        finish: impl Fn(S, A) -> Result<Completed<R>, E>,
+        finish: impl Fn(S, A) -> Result<Completed<R, E>, E>,
         emit: impl FnMut(R) -> Result<bool, E>,
     ) -> Result<GroupOutcome<E>, E>
     where

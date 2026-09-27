@@ -14,7 +14,7 @@ use serde::Deserialize;
 use serde_json::Value;
 use serde_json::value::RawValue;
 
-use crate::harness::spawn;
+use crate::harness::spawn_one as spawn;
 use crate::support::digest;
 
 const CASES: &str = include_str!("../../../../conformance/cases.json");

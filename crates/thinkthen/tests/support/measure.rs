@@ -358,6 +358,7 @@ pub(crate) fn replay(folder: &Path, arguments: &[&str], input: &[u8]) -> String 
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
         .args(arguments)
         .env_clear()
+        .env("THINKTHEN_BATCH", "1")
         .current_dir(folder)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

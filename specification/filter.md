@@ -16,6 +16,8 @@ A stream of records. With no framing flag it reads lines, or JSON Lines when a p
 
 `QUESTION` is one argument. It states a fact that is true or false of each record.
 
+By default a stream of records shares requests, filling each to the backend's limits. The evidence of a batch is one fixed sentence, and each record appears once, inside its own question. Every run moves a few answers, and batching moves a few more. ADR 0055 records local experiment 275, which asked four yes/no questions over the 306 Beatles songs. It ran each batched form three times on the same bytes and once on each of three shuffled record orders. The batched form stayed within 4 right answers across repeats and orders on every task. It never fell more than 3 right answers below one song a request. On "It appears on the album Abbey Road" it scored 283 to 287 right of 306, where one title a request scored 286. It sent 11,468 input tokens for the 306 titles, where one title a request sent 88,933. Its one measured loss came on "It was released before 1965", against the earlier batch form, which listed every record in the evidence. That form scored 276 to 283 right in the table's own order and 258 to 270 over shuffled orders. The quoted form scored 255 to 259, and one title a request scored 253. `--batch 1` asks one record a request and sends the requests the tool sent before batching.
+
 ## What it prints
 
 Each kept line or JSONL record prints as it arrived, in input order. A kept CSV or TSV row prints as one compact JSON object in header order. A record that did not reach the mark prints nothing.

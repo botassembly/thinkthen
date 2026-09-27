@@ -1,6 +1,7 @@
 //! Warning timing at the ordered command-output boundary.
 
 use super::*;
+use crate::harness::spawn_one as spawn;
 
 #[test]
 fn a_parallel_record_run_prints_one_profile_warning() {
@@ -140,7 +141,11 @@ fn an_over_limit_first_record_suppresses_a_later_parallel_warning_and_output() {
     )
     .expect("command");
     assert_eq!(output.status.code(), Some(2));
-    assert_eq!(listener.connections(), 1, "the passing later row completed");
+    assert_eq!(
+        listener.connections(),
+        0,
+        "the refused first record sent nothing after it"
+    );
     assert!(output.stdout.is_empty());
     let error = String::from_utf8_lossy(&output.stderr);
     assert!(error.contains("stopped at record 1"), "{error}");

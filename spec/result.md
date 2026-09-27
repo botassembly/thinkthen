@@ -14,8 +14,8 @@ demos="$top/demos"
 row() { head -n 1 | jq -c --arg command "$1" '{from: "replayed", command: $command, row: .}'; }
 {
   (cd "$demos/01-refund-gate" && thinkthen decide 'Does the customer ask for money back?' --details --replay recording/ < message.txt | row decide)
-  (cd "$demos/03-grep-for-meaning" && thinkthen filter 'Does the report give steps that would reproduce a defect?' --csv --field /body --threshold 0.9 --details --replay recording/ < issues.csv | row filter)
-  (cd "$demos/06-top-search-hits" && jq -c '{query: "Why is signing in slow or failing?", path, passage: .body}' hits.jsonl | thinkthen rank 'The passage answers the query.' --jsonl --field /query --field /passage --top 3 --details --replay recording/ | row rank)
+  (cd "$demos/03-grep-for-meaning" && thinkthen filter 'Does the report give steps that would reproduce a defect?' --csv --field /body --threshold 0.9 --batch 1 --details --replay recording/ < issues.csv | row filter)
+  (cd "$demos/06-top-search-hits" && jq -c '{query: "Why is signing in slow or failing?", path, passage: .body}' hits.jsonl | thinkthen rank 'The passage answers the query.' --batch 1 --jsonl --field /query --field /passage --top 3 --details --replay recording/ | row rank)
   (cd "$demos/02-route-a-ticket" && thinkthen choose 'Which team owns this request?' billing shipping account other --details --replay recording/ < ticket.txt | row choose)
   (cd "$demos/39-screen-a-message" && thinkthen tag @hazards.json --details --replay recording --input message.txt | row tag)
   (cd "$demos/17-rate-and-sort" && thinkthen score 'How hard is this request to answer?' 'A canned reply answers it.' 'One person can answer it after a look at the account.' 'It needs a specialist and more than one system.' --details --replay recording/ < requests/tax-split.txt | row score)

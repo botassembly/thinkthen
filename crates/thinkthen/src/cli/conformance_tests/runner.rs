@@ -188,7 +188,7 @@ fn run_fault(case: &super::Case, expected: &str) {
                         .expect("scheduler receives input");
                 });
             },
-            &|()| Err::<Completed<()>, _>(injected(injection)),
+            &|()| Err::<Completed<(), _>, _>(injected(injection)),
             |()| Ok(true),
         )
         .expect("scheduler itself remains sound");

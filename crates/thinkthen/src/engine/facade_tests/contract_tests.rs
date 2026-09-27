@@ -49,11 +49,7 @@ fn bulk_and_one_question_annotate_answers_match_the_shared_cases() {
         &|text: &&str| {
             bulk_engine
                 .judge(&question, None, evidence(text), &cancel)
-                .map(|judged| Completed {
-                    value: judged.answer.yes(),
-                    replayed: false,
-                    partial_failure: false,
-                })
+                .map(|judged| Completed::one(judged.answer.yes(), false, false))
         },
         |row| {
             rows.push(row);

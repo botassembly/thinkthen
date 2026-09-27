@@ -260,14 +260,14 @@ impl Engine {
         );
         let answer: Arc<batch::Answer<Decided>> = Arc::new(move |text: &str| {
             let judged = worker.judge(&core, threshold, evidence(text)?, &cancel)?;
-            Ok(Completed {
-                value: (
+            Ok(Completed::one(
+                (
                     results::answer(&judged.value),
                     judged.answer.yes().unwrap_or_default(),
                 ),
-                replayed: judged.answered.replayed,
-                partial_failure: false,
-            })
+                judged.answered.replayed,
+                false,
+            ))
         });
         Ok(batch::start(
             engine,
@@ -286,7 +286,7 @@ fn annotated(
     set: &core::QuestionSet,
     text: &str,
     cancel: &crate::engine::Cancel<'_>,
-) -> Result<Completed<Values>, Error> {
+) -> Result<Completed<Values, Error>, Error> {
     let record = record(set, text)?;
     let parts = set
         .groups()
@@ -320,11 +320,11 @@ fn annotated(
     };
     let annotation = engine.annotate(set, plan, cancel)?;
     let json = Written::of(&core::NamedValues::new(annotation.values.clone()))?;
-    Ok(Completed {
-        replayed: annotation.replayed,
-        partial_failure: annotation.failed_questions > 0,
-        value: (annotation.values, json),
-    })
+    Ok(Completed::one(
+        (annotation.values, json),
+        annotation.replayed,
+        annotation.failed_questions > 0,
+    ))
 }
 
 /// One record as its groups read it. Only a part group parses the text, once,

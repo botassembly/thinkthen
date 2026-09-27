@@ -112,6 +112,8 @@ fn a_replayed_recording_piped_to_audit_grades_as_the_prototype_does() {
             "--field",
             "/body",
             "--details",
+            "--batch",
+            "1",
             "--replay",
         ])
         .arg(rows.join("recording"))

@@ -90,7 +90,7 @@ The schema is structural; agreement with it is not agreement with this page. The
 | The evidence | `--field POINTER` | `on` | The whole record | Anything that is not RFC 6901, or that holds a control character: `a pointer is one line of printable text`. A refusal writes the pointer with JSON escapes |
 | The model | `--model NAME` | `model` | `jev-1.13.0` | Empty or only white space |
 | The threshold's calibration identity | none | `profile` | absent | Anything outside lowercase letters, digits, hyphens, and underscores |
-| Not built yet, by ADR 0048 item 3: the batch setting | `--batch N` | `batch` | `max` | 0, a fraction, and any text but `max` |
+| The batch setting of a `decide` file. Not built yet, by ADR 0048 item 7: on `choose`, `tag` and `score` files | `--batch N` | `batch` | `max` | 0, a fraction, and any text but `max` |
 
 Nothing has a default where a guess would hide a mistake. `choose` with no options in either home is a usage error, and so is `score` with no levels.
 
@@ -100,7 +100,7 @@ Ruled by Ian on 2026-09-19: **the command line, then the file, then the default.
 
 A single value typed beside `@FILE` replaces the file's value. That covers `--threshold`, `--true`, `--false`, `--model`, and `--field`, which replaces `on`. `profile` is calibration identity and has no command-line override. `--profile FILE` selects the run profile instead. `--model` beside a file that names a model is the explicit way to run that file on another model.
 
-Not built yet, by ADR 0048 item 4 and 8: `--batch` replaces the file's `batch`. `batch` takes four tiers: the typed value, then the environment, then the file, then the default. Only a per-call value counts as typed. The environment tier holds `THINKTHEN_BATCH`, a library engine setting, and a SQL `SET`. The read-only configuration file holds no `batch` key. The file's `batch` names the setting its threshold was tuned at, as `profile` names the backend, and it stays out of the digest. A question set carries at most one top-level `batch`. Every other setting keeps the ruling above.
+`--batch` replaces the file's `batch`. On `decide`, `filter` and `rank` over a stream, `batch` takes four tiers: `--batch`, then `THINKTHEN_BATCH`, then the file's `batch`, then `max`. Only a per-call value counts as typed. The read-only configuration file holds no `batch` key. The file's `batch` stays out of the digest. On one document `--batch` is a usage error, and `THINKTHEN_BATCH` and the file's `batch` are ignored. A bad `--batch` or `THINKTHEN_BATCH` exits 2, and a bad file `batch` exits 5. Not built yet, by ADR 0048 item 8: the file's `batch` names the setting its threshold was tuned at, as `profile` names the backend. A library engine setting and a SQL `SET` join the environment tier, and a question set carries at most one top-level `batch`. Every other setting keeps the ruling above.
 
 A list typed beside `@FILE` replaces the file's whole list and never merges with it. That covers the options of `choose`, the labels of `tag`, and the levels of `score`. A typed list carries no descriptions, so replacing a described list drops every description the file held.
 

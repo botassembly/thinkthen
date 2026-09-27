@@ -29,7 +29,7 @@ An unknown option is a usage error. So is a repeated single-value option, and so
 
 Everyday options are `--threshold`, `--details`, `--quiet`, `--raw`, `--input FILE`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field POINTER`, `--options POINTER`, `--top N`, `--none`, and `--dry-run`. The list names every one. Each verb's page says which of them it takes.
 
-Advanced options appear in the long help alone: `--model`, `--timeout`, `--max-retries`, `--record DIR`, `--replay DIR`, `--cache DIR`, and `--jobs N`. `--url` and `--profile FILE` also appear in short help. They decide where evidence goes and whether a request is locally refused before it goes there. Not built yet, by ADR 0048 item 3, 10 and 11: `--batch N`, `--facts`, and `--context FILE` join the advanced options.
+Advanced options appear in the long help alone: `--model`, `--timeout`, `--max-retries`, `--record DIR`, `--replay DIR`, `--cache DIR`, `--jobs N`, and `--batch N` on `decide`, `filter` and `rank`. `--url` and `--profile FILE` also appear in short help. They decide where evidence goes and whether a request is locally refused before it goes there. Not built yet, by ADR 0048 item 10 and 11: `--facts` and `--context FILE` join the advanced options.
 
 ## Standard input
 
@@ -96,7 +96,7 @@ The plan is one compact JSON document on standard output with four fields that a
 
 The plan carries the evidence, because the evidence is what leaves the machine. A plan deserves the same care as the request itself. The plan never holds a key.
 
-In record mode `--dry-run` prints the plan for the first record and stops. It reads no further than that record, and the plan carries a fifth field, `input`, naming the framing and the pointers. When `filter` or `rank` took its framing by default, `input` also carries `"from":"default"`. Not built yet, by ADR 0048 item 13: it plans the first batch, reads until that batch closes, and never waits on a pause.
+In record mode `--dry-run` prints the plan for the first record and stops. It reads no further than that record, and the plan carries a fifth field, `input`, naming the framing and the pointers. When `filter` or `rank` took its framing by default, `input` also carries `"from":"default"`. On `decide`, `filter` and `rank` it plans the first batch instead. It reads until that batch closes and never waits on a pause. At `--batch 1` that batch is the first record.
 
 ```json
 {"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Payouts have failed for 3 days.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does this report a payment failure?"}}}}
