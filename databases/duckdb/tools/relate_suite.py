@@ -1,8 +1,8 @@
 """`thinkthen_relate` from rows, its guard, and its settings (ticket 0118
 decisions 3 to 5, rows R2-2, R3-7, R2-6, R3-12, and R5-22).
 
-Every case runs on its own loopback backend. The generic arm gives a
-choice's first option 0.9, so each person works for the one organization.
+Every case runs on its own loopback backend. The generic arm answers each
+pair yes with probability 0.9, so each person works for the organization.
 """
 
 from __future__ import annotations

@@ -3,11 +3,9 @@ use std::io::Write;
 use serde::Serialize;
 
 use super::config::From;
-use crate::core::{
-    Backend, BackendProfile, Framing, LimitKind, RelateFields, RelateSpec, json_line,
-};
+use crate::core::{Backend, BackendProfile, Framing, RelateFields, RelateSpec, json_line};
 use crate::edge;
-use crate::engine::facade::{Method, PreparedRelation};
+use crate::engine::facade::PreparedRelations;
 use crate::failure::Failure;
 
 #[derive(Serialize)]
@@ -35,7 +33,7 @@ struct Relation<'a> {
     target: &'a str,
     reads: &'a str,
     either: bool,
-    method: Method,
+    method: &'static str,
     fallback: Option<&'static str>,
     logical_questions: usize,
     request_count: usize,
@@ -61,31 +59,37 @@ pub(super) struct Context<'a> {
 pub(super) fn write(
     writer: &mut dyn Write,
     context: Context<'_>,
-    prepared: &[PreparedRelation],
+    prepared: &PreparedRelations,
 ) -> Result<(), Failure> {
-    let mut relations = Vec::new();
-    let mut requests = Vec::new();
-    for planned in prepared {
-        relations.push(Relation {
-            name: &planned.relation.name,
-            source: &planned.relation.source,
-            target: &planned.relation.target,
-            reads: &planned.relation.reads,
-            either: planned.relation.either,
-            method: planned.method,
-            fallback: planned.fallback.map(fallback_name),
-            logical_questions: planned.mappings.len(),
-            request_count: planned.chunks.len(),
-        });
-        for chunk in &planned.chunks {
-            requests.push(Request {
+    let relations = prepared
+        .rules
+        .iter()
+        .zip(&prepared.questions_per_rule)
+        .zip(&prepared.requests_per_rule)
+        .map(|((rule, questions), requests)| Relation {
+            name: &rule.name,
+            source: &rule.source,
+            target: &rule.target,
+            reads: &rule.reads,
+            either: rule.either,
+            method: "yes_no",
+            fallback: None,
+            logical_questions: *questions,
+            request_count: *requests,
+        })
+        .collect::<Vec<_>>();
+    let requests = prepared
+        .chunks
+        .iter()
+        .map(|chunk| {
+            Ok(Request {
                 digest: chunk.request.digest.as_str(),
                 bytes: chunk.request.body.len(),
                 body_utf8: str::from_utf8(&chunk.request.body)
                     .map_err(|_| Failure::Defect("an encoded request is not UTF-8"))?,
-            });
-        }
-    }
+            })
+        })
+        .collect::<Result<Vec<_>, Failure>>()?;
     let report = Report {
         schema: "thinkthen.relate-plan/1",
         url: context.backend.url().as_str(),
@@ -102,14 +106,4 @@ pub(super) fn write(
         requests,
     };
     edge::write_line(writer, &json_line(&report)?).map(|_| ())
-}
-
-/// The backend-profile key whose limit turned a choice into yes/no questions.
-const fn fallback_name(kind: LimitKind) -> &'static str {
-    match kind {
-        LimitKind::Options => "max_options",
-        LimitKind::RequestBytes => "max_request_bytes",
-        LimitKind::EvidenceBytes => "max_evidence_bytes",
-        LimitKind::Questions => "max_questions",
-    }
 }
