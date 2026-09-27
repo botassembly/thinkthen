@@ -1,6 +1,6 @@
 # A cancelled C scalar call can return success
 
-Status: verified, open. Found while finishing the Zig package in experiment 273. The queue owner owns the engine fix and contract reconciliation. The experiment changes no product implementation and treats this as a blocker to its in-flight cancellation claim.
+Status: verified, open. Ticket 0166 (`sdlc/tickets/0166-a-cancelled-call-never-succeeds.md`) owns the fix. Found while finishing the Zig package in experiment 273. The queue owner owns the engine fix and contract reconciliation. The experiment changes no product implementation and treats this as a blocker to its in-flight cancellation claim.
 
 ## Failure
 
