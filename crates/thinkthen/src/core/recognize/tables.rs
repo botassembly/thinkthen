@@ -2,10 +2,15 @@
 //! and requests. Each row is an input and its exact output.
 
 use super::{
-    Asked, NameOdds, Odds, decode, edge_options, edge_question, evidence, name_groups, pieces,
-    settle, step_one_groups,
+    Asked, NameOdds, Odds, TagRow, decode, edge_options, edge_question, evidence, name_groups,
+    pieces, settle, step_one_groups,
 };
 use crate::core::Question;
+
+type Places = &'static [(usize, usize)];
+
+/// A row name, a found name's pieces, and the edge option labels it offers.
+type Offered = (&'static str, (usize, usize), &'static [&'static str]);
 
 fn places(text: &str) -> Vec<(usize, usize)> {
     pieces(text)
@@ -16,7 +21,7 @@ fn places(text: &str) -> Vec<(usize, usize)> {
 
 #[test]
 fn pieces_split_at_white_space_and_marks_and_join_combining_runs() {
-    let rows: [(&str, &[(usize, usize)]); 13] = [
+    let rows: [(&str, Places); 13] = [
         ("George Harrison's", &[(0, 6), (7, 15), (15, 16), (16, 17)]),
         ("U.S.", &[(0, 1), (1, 2), (2, 3), (3, 4)]),
         ("Help!", &[(0, 4), (4, 5)]),
@@ -43,7 +48,7 @@ fn decode_keeps_the_most_likely_valid_sequence() {
     let mut across = vec![O; 41];
     across[39] = [0.9, 0.0, 0.0, 0.05, 0.05];
     across[40] = [0.0, 0.05, 0.9, 0.0, 0.05];
-    let rows: [(&str, Vec<[f64; 5]>, &[(usize, usize)]); 5] = [
+    let rows: [(&str, Vec<TagRow>, Places); 5] = [
         (
             "a lone BEGIN at the end",
             vec![O, [0.9, 0.0, 0.0, 0.06, 0.04]],
@@ -222,7 +227,7 @@ fn option_texts(text: &str, name: (usize, usize)) -> Vec<String> {
 
 #[test]
 fn edge_options_come_from_touching_marks_alone() {
-    let rows: [(&str, (usize, usize), &[&str]); 4] = [
+    let rows: [Offered; 4] = [
         (
             "say \"Acme!\" now",
             (1, 3),
@@ -253,7 +258,7 @@ fn requests_hold_forty_pieces_and_show_six_each_side() {
     let (forty, forty_one) = (words(40), words(41));
     let (short, long) = (pieces(&forty), pieces(&forty_one));
     assert_eq!(forty.len(), 79);
-    assert_eq!(step_one_groups(40), [0..40]);
+    assert_eq!(step_one_groups(40), std::slice::from_ref(&(0..40)));
     assert_eq!(evidence(&short, 0, 39), 0..79);
     assert_eq!(step_one_groups(41), [0..40, 40..41]);
     assert_eq!(evidence(&long, 0, 39), 0..81);
