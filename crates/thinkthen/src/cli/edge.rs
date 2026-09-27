@@ -27,8 +27,8 @@ const BOUND: u64 = crate::core::MAX_RECORD_BYTES as u64 + 2;
 /// The environment the command reads, read once.
 ///
 /// `THINKTHEN_BASE_URL` names where the System One interface lives. The other
-/// variables shorten the retry wait and acknowledge SIGINT, and only tests set
-/// them. The key itself is read later, by name, and only when a request is about
+/// variables shorten the retry wait and acknowledge SIGINT. Only a build with
+/// debug assertions reads them, so a release binary ignores them. The key itself is read later, by name, and only when a request is about
 /// to go out.
 #[derive(Debug, Default)]
 pub(crate) struct Environment {
@@ -62,8 +62,9 @@ impl Environment {
             named_cache: named_cache.is_some(),
             config,
             config_path,
-            retry_wait_ms: read("THINKTHEN_TEST_RETRY_WAIT_MS").and_then(|text| text.parse().ok()),
-            sigint_ack: read("THINKTHEN_TEST_SIGINT_ACK").map(PathBuf::from),
+            retry_wait_ms: test_only("THINKTHEN_TEST_RETRY_WAIT_MS")
+                .and_then(|text| text.parse().ok()),
+            sigint_ack: test_only("THINKTHEN_TEST_SIGINT_ACK").map(PathBuf::from),
             cancel: crate::engine::Cancel::default(),
             usage: std::sync::Arc::new(Counters::new(usage_path.clone())),
             usage_path,
@@ -129,6 +130,16 @@ impl Environment {
 
     pub(crate) const fn cancel(&self) -> &crate::engine::Cancel<'static> {
         &self.cancel
+    }
+}
+
+/// Read a `THINKTHEN_TEST_` variable in a build with debug assertions, which
+/// is what the test suites spawn. A release binary reads `None`.
+fn test_only(name: &str) -> Option<String> {
+    if cfg!(debug_assertions) {
+        read(name)
+    } else {
+        None
     }
 }
 
