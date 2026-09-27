@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/cli/annotate.rs crates/thinkthen/src/cli/annotate/pl
 
 # 0161: `annotate` reads what its set names, and its plan shows what it sends
 
-Status: ready for review. Written 2026-09-26 by Claude, the queue owner's planner. Revised the same day after the first review. A fresh read-only review must accept it before it builds. Owner: Claude.
+Status: ready. The coordinator accepted it on 2026-09-26 after three fresh read-only reviews and a coordinator fix to the document refusal line. Owner: Claude. It lands before ticket 0146 builds.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -68,14 +68,19 @@ The whole standard error, for the set on `annotate.md`:
   thinkthen: question `unresolved` reads `on`, and a --lines record is text with no members
   ```
 
-- For a record whose selection is text, two lines. The refusal stops the stream at that record, and `cli/failure.rs` adds the stop line, as `tests/backend/annotate.rs:170-175` pins for another refused record. The `--jsonl` path and the document path both run through `annotate_schedule::run`, so both print it:
+- For a stream record (`--jsonl`, `--csv` or `--tsv`) whose selection is text, two lines. The refusal stops the stream at that record, and `cli/failure.rs` adds the stop line, as `tests/backend/annotate.rs:170-175` pins for another refused record:
 
   ```text
   thinkthen: question `unresolved` reads `on`, and this record's evidence is text with no members
   thinkthen: stopped at record 1; 0 records finished
   ```
+- For a document whose selection is text, one line. The document path also runs through `annotate_schedule::run`, but `cli/annotate.rs` passes `reading.streams()`, which is false for a document. `engine/annotate_schedule.rs::outcome` then returns `Outcome::Failed`, not `Outcome::Stopped`, so `failure.rs::stopped` never runs:
 
-Each stream row pins both lines. A library caller sees the first sentence of the stream refusal alone, as `Usage`.
+  ```text
+  thinkthen: question `unresolved` reads `on`, and this record's evidence is text with no members
+  ```
+
+Each stream row pins both lines, and the document row pins its one line. A library caller sees the first sentence of the stream refusal alone, as `Usage`.
 
 ### The page's examples run
 
@@ -125,7 +130,7 @@ Each is the ticket author's call unless marked. Ian can overturn any of them.
 | `--lines` with empty input and a question with `on: /x` | Refused before reading at exit 2 with the one `--lines` line. A check on each record would see no record and exit 0 with nothing printed |
 | `--lines` with a set whose questions have no `on` | Runs as today |
 | A document `{"body":"text"}` with `on: /body` | The question reads `text` |
-| A plain-text document with `on: /body` | Refused at exit 2 with the two stream lines. No request |
+| A plain-text document with `on: /body` | Refused at exit 2 with the one document line. No request |
 | A 250-question set, a profile capping 100 questions a request, `--dry-run` | The printed request holds 100 questions. `request_count` is 3. `group_requests` is `[3]` |
 | A set with two `on` groups, no profile, `--dry-run` | The first group's request, `request_count` 2, `group_requests` `[1,1]` |
 | Library, the two-group set over `a private note` | `Usage`: ``question `summary` reads `on`, and this record's evidence is text with no members``. No request |
@@ -135,7 +140,7 @@ Each is the ticket author's call unless marked. Ian can overturn any of them.
 
 | Test | What it proves | Planted faults that turn it red |
 | --- | --- | --- |
-| `on_reads_the_selected_value`, new in `tests/backend/annotate_on.rs` | Edge rows 1 to 8. Each row pins standard output, the whole standard error and the exit code, and counts the loopback's requests, so a refused record sends none. Rows 1, 2 and 8 pin both stream lines. Rows 4 and 5 pin the one `--lines` line | (a) Re-parse text again: rows 1 and 2 differ. (b) Refuse every non-root `on`: rows 3 and 7 fail. (c) Refuse `--lines` in each record, after reading: row 5 exits 0 with nothing printed, and row 4 gains the stop line. `annotate_schedule.rs:95-104` prepares every group before anything is sent, so the plant sends no request and prints no row, and the counts cannot catch it. (g) Pass `Reading::evidence` to `group_evidence` and read its text: row 1 sends `1` |
+| `on_reads_the_selected_value`, new in `tests/backend/annotate_on.rs` | Edge rows 1 to 8. Each row pins standard output, the whole standard error and the exit code, and counts the loopback's requests, so a refused record sends none. Rows 1 and 2 pin both stream lines. Row 8 pins the one document line. Rows 4 and 5 pin the one `--lines` line | (a) Re-parse text again: rows 1 and 2 differ. (b) Refuse every non-root `on`: rows 3 and 7 fail. (c) Refuse `--lines` in each record, after reading: row 5 exits 0 with nothing printed, and row 4 gains the stop line. `annotate_schedule.rs:95-104` prepares every group before anything is sent, so the plant sends no request and prints no row, and the counts cannot catch it. (g) Pass `Reading::evidence` to `group_evidence` and read its text: row 1 sends `1` |
 | `the_plan_shows_each_request`, new in `tests/annotate_plan.rs` | Edge rows 9 and 10 through `--dry-run`, pinning the question count of the printed request and both new members | (d) Print the unsplit group: row 9 holds 250 questions. (e) Count groups, not chunks: row 9's `request_count` is 1 |
 | `each_group_sees_its_part_and_a_bad_part_sends_nothing`, in the Rust consumer's `parts.rs` | Edge row 11 replaces its row that pins the parser's sentence. Edge row 12 is new. Its other rows and the secrecy check stay | (h) Keep the parser's refusal in `bulk.rs` before `group_evidence`: row 11 reads the old sentence. (i) Parse every library record, root-only sets included: row 12 is refused for its duplicate name |
 | `spec/annotate.md`, new, in the `spec` rung | Every example on `annotate.md` | (f) Put `--field /body` back in the JSONL example: the page exits 2 |
