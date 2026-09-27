@@ -16,9 +16,9 @@ One text document on standard input, read to its end as UTF-8. `--input FILE` re
 
 ## What it prints
 
-On one document, a JSON string or `null` when the answer is unresolved. In the default record view each compact JSONL row is `{"input":RECORD,"value":ANSWER}` in input order. `--details` prints the object in [result.md](result.md), with an `answer.kind` of `choice`.
+On one document, a JSON string or `null` when the answer is not sure. In the default record view each compact JSONL row is `{"input":RECORD,"value":ANSWER}` in input order. `--details` prints the object in [result.md](result.md), with an `answer.kind` of `choice`.
 
-`--raw` is available for one document, `--lines`, and `--jsonl`. It prints the label without its quotation marks, as `jq -r` does. On one document an unresolved answer prints nothing. Under `--lines` or `--jsonl` an unresolved answer prints an empty line, so one line still stands for one record. CSV and TSV always print JSONL and refuse `--raw`. A blank label is a usage error, so an empty line never means a label.
+`--raw` is available for one document, `--lines`, and `--jsonl`. It prints the label without its quotation marks, as `jq -r` does. On one document a not sure answer prints nothing. Under `--lines` or `--jsonl` a not sure answer prints an empty line, so one line still stands for one record. CSV and TSV always print JSONL and refuse `--raw`. A blank label is a usage error, so an empty line never means a label.
 
 ## Options
 
@@ -66,14 +66,14 @@ thinkthen choose 'Which team owns this request?' $(jq -r '.[]' teams.json) < mes
 | --- | --- |
 | 0 | Single input: a label was returned. Record mode: the run finished |
 | 2 | A usage error or an input error |
-| 3 | Single input only: the answer is unresolved |
+| 3 | Single input only: the answer is not sure |
 | 4, 5, 70 | As [channels.md](channels.md) gives them |
 
 `choose` never exits 1. A pick is not a two-sided decision.
 
-## Unresolved
+## Not sure
 
-The answer is unresolved when the winning option's probability falls under the cut, and when the top two options tie exactly. An exact tie is unresolved with or without a threshold, because alphabetical order is no evidence. `--details` still names the option that led, in `answer.pick`.
+The answer is not sure when the winning option's probability falls under the cut, and when the top two options tie exactly. An exact tie is not sure with or without a threshold, because alphabetical order is no evidence. `--details` still names the option that led, in `answer.pick`.
 
 ## Examples
 

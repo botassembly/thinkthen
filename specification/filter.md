@@ -57,7 +57,7 @@ thinkthen filter 'This describes a reproducible bug.' --jsonl --field /body < is
 ```
 
 ```sh
-thinkthen filter 'This mentions an unresolved action.' --threshold 0.9 < notes.txt
+thinkthen filter 'This mentions an open action.' --threshold 0.9 < notes.txt
 ```
 
 ```sh

@@ -7,7 +7,7 @@ mod measure_support;
 #[path = "../src/test_deadline/wait.rs"]
 mod wait;
 
-use measure_support::{DIFF_GOLDENS, DIFF_TABLES, fixture, measure, member, run};
+use measure_support::{DIFF_GOLDENS, DIFF_TABLES, fixture, measure, member, ported, run};
 
 fn diff(arguments: &[&str], input: &[u8]) -> (i32, String, String) {
     measure(&[&["diff"], arguments].concat(), input)
@@ -31,7 +31,7 @@ fn goldens_match() {
             _ => String::new(),
         };
         assert_eq!((code, stderr), (0, warned), "{golden}");
-        assert_eq!(stdout, fixture(golden), "{golden}");
+        assert_eq!(stdout, ported(fixture(golden)), "{golden}");
     }
 }
 
@@ -40,7 +40,7 @@ fn tables_match_byte_for_byte() {
     for (capture, arguments) in DIFF_TABLES {
         let (code, stdout, stderr) = diff(&[arguments, &["--table"]].concat(), b"");
         assert_eq!((code, stderr.as_str()), (0, ""), "{capture}");
-        assert_eq!(stdout, fixture(capture), "{capture}");
+        assert_eq!(stdout, ported(fixture(capture)), "{capture}");
     }
 }
 
@@ -52,7 +52,7 @@ fn a_run_line_with_a_member_diff_does_not_use_still_pairs() {
         wider.as_bytes(),
     );
     assert_eq!(code, 0);
-    assert_eq!(stdout, fixture("golden/diff-decide-wordings.jsonl"));
+    assert_eq!(stdout, ported(fixture("golden/diff-decide-wordings.jsonl")));
 }
 
 #[test]
@@ -131,7 +131,7 @@ fn the_second_side_reads_under_compare_threshold_when_both_rules_are_given() {
         ),
         (
             &["small/decide-band.jsonl", "--threshold", "0.3:0.6"],
-            "r3  unresolved -> yes  p 0.45 -> 0.45\nr4  unresolved -> no  p 0.30 -> 0.30\n0.3:0.6 -> 0.4: 2 of 6 changed; unresolved -> no 1; unresolved -> yes 1; McNemar p 1.000 on yes answers\n",
+            "r3  unsure -> yes  p 0.45 -> 0.45\nr4  unsure -> no  p 0.30 -> 0.30\n0.3:0.6 -> 0.4: 2 of 6 changed; unsure -> no 1; unsure -> yes 1; McNemar p 1.000 on yes answers\n",
         ),
     ];
     for (arguments, table) in cases {

@@ -11,7 +11,7 @@
 #   - The label set is yes and no. A row whose `input.label` is neither true
 #     nor false is listed by id in `unlabeled` and is scored in nothing. No
 #     row is dropped silently.
-#   - Under a band, a row between the two sides is unresolved. Unresolved rows
+#   - Under a band, a row between the two sides is not sure. Those rows
 #     are counted apart, and they are never scored right or wrong. The test is
 #     an explicit three-way `if`.
 #   - `coverage` is the share of labeled rows that resolved. Every other rate
@@ -27,7 +27,7 @@ def round4: if . == null then null else (. * 10000 | round) / 10000 end;
 
 def verdict($p):
   if ($cut | type) == "array" then
-    if $p >= $cut[1] then "yes" elif $p <= $cut[0] then "no" else "unresolved" end
+    if $p >= $cut[1] then "yes" elif $p <= $cut[0] then "no" else "unsure" end
   elif ($cut | type) == "number" then
     if $p >= $cut then "yes" else "no" end
   else error("cut is a number, or a pair [low, high]")
@@ -42,7 +42,7 @@ def has_repeated_ids($rows):
 | if has_repeated_ids($rows)
   then error("metric: repeated case ids; run trials.jq first")
   else reduce $rows[] as $row (
-  {rows: 0, unlabeled: [], unresolved: 0, tp: 0, fp: 0, tn: 0, fn: 0};
+  {rows: 0, unlabeled: [], unsure: 0, tp: 0, fp: 0, tn: 0, fn: 0};
   .rows += 1
   | ($row.input.id // "with no id") as $id
   | $row.answer.probability as $p
@@ -51,7 +51,7 @@ def has_repeated_ids($rows):
   | if $label != true and $label != false then .unlabeled += [$id]
     else
       verdict($p) as $said
-      | if $said == "unresolved" then .unresolved += 1
+      | if $said == "unsure" then .unsure += 1
         elif $said == "yes" and $label then .tp += 1
         elif $said == "yes" then .fp += 1
         elif $label then .fn += 1
@@ -60,7 +60,7 @@ def has_repeated_ids($rows):
     end
   )
 | (.tp + .fp + .tn + .fn) as $resolved
-| ($resolved + .unresolved) as $labeled
+| ($resolved + .unsure) as $labeled
 | (if .tp + .fp == 0 then null else .tp / (.tp + .fp) end) as $precision
 | (if .tp + .fn == 0 then null else .tp / (.tp + .fn) end) as $recall
 | {
@@ -68,7 +68,7 @@ def has_repeated_ids($rows):
     rows,
     labeled: $labeled,
     unlabeled,
-    unresolved,
+    unsure,
     true_positive: .tp,
     false_positive: .fp,
     true_negative: .tn,

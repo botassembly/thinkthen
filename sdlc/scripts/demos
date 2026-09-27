@@ -59,14 +59,13 @@ vocabulary() {
 			check("the mark", "fixed-phrase")
 			check("judgment", "fixed-phrase")
 			check("judgement", "fixed-phrase")
+			check("unresolved", "fixed-phrase")
 			if (scope == "prose") next
 			# A CSV table has a header row; that row is the table'"'"'s, not a record.
 			gsub(/header row/, " ", line)
 			check("row", "help-word")
 			check("document", "help-word")
 			check("unit", "help-word")
-			# The formal name belongs to the specification; help says not sure.
-			check("unresolved", "help-word")
 			# `tag` owns label, and a `choose` pick is an option. LABEL=DESCRIPTION
 			# is the placeholder `choose.md` and the `--option` refusal share.
 			gsub(/label=description/, " ", line)

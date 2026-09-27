@@ -107,6 +107,8 @@ The one-shape page made ten picks. This ADR adopts each, with the objections sta
 9. **SQL names a question file as `'@refund.json'`.** Adopted, the command's own spelling. Where the file may be read from is the database ADR's to rule.
 10. **`thinkthen_warm` is answered, and all three databases ship it.** Experiment 207 proved it in DuckDB, SQLite, and PostgreSQL. The DuckDB page still lists it open and carries the correction. SQLite needs it most, because a query there judges row by row.
 
+Amendment, 2026-09-27, ticket 0152 Part B: Item 4's clause that the specification keeps "unresolved" is superseded. `unsure` is the machine word in the specification, `audit`, `diff`, and built-in transforms; prose says "not sure". The Rust enum names remain internal.
+
 The slides leave off details, counters, cancel tokens, deadlines, and the cache setting. They exist on every surface with one spelling each, and the reference pages own them. The C surface stays the door to the rest: one call that takes a request as JSON text and returns the answer as JSON text, and one call that frees it, behind one generated header.
 
 ### 7. The conformance cases

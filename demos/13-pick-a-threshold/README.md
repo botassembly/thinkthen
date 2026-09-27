@@ -30,8 +30,8 @@ rows=../../transforms/rows/runs/run-a.jsonl
 jq -n -f ../../transforms/sweep/sweep.jq <(jq -c 'select(.input.id <= "C-24")' "$rows") \
   | jq -c '{rows, labeled, unlabeled} , (.sweep[] | select(.cut == 0.5 or .cut == 0.9))' \
   | mustmatch '{"rows":24,"labeled":23,"unlabeled":["C-12"]}
-{"cut":0.5,"coverage":1,"unresolved":0,"accuracy":0.9565,"precision":0.9167,"recall":1,"f1":0.9565}
-{"cut":0.9,"coverage":1,"unresolved":0,"accuracy":0.8696,"precision":1,"recall":0.7273,"f1":0.8421}'
+{"cut":0.5,"coverage":1,"unsure":0,"accuracy":0.9565,"precision":0.9167,"recall":1,"f1":0.9565}
+{"cut":0.9,"coverage":1,"unsure":0,"accuracy":0.8696,"precision":1,"recall":0.7273,"f1":0.8421}'
 ```
 
 `C-12` has no label, so the sweep lists it and scores it nowhere. The holdout is weak evidence, not proof. Current two-decimal probabilities do not promise finer resolution.
@@ -43,7 +43,7 @@ Each cut belongs to one question, model, output signal, labeled population, and 
 | Function | Rows required | Signal and boundary |
 | --- | --- | --- |
 | `decide` | Complete detailed rows | `answer.probability`; existing cuts 0.05 through 0.95 |
-| `choose` | Complete detailed rows | winning `answer.probabilities[answer.pick]`; existing cuts 0.05 through 0.95, with ties unresolved |
+| `choose` | Complete detailed rows | winning `answer.probabilities[answer.pick]`; existing cuts 0.05 through 0.95, with ties not sure |
 | `tag` | Complete detailed rows plus one human-label pointer | each label's probability independently; existing cuts 0.05 through 0.95 |
 | `score` | Complete detailed rows with trusted numeric levels | `value`; integer boundaries 1 through K minus 1 |
 | `filter` | Full labeled input joined to one recording-backed output per tested cut | output membership at each explicit tested cut; never infer records omitted at a lower cut |
@@ -76,7 +76,7 @@ done | mustmatch '{"cut":0.5,"ids":["C-01","C-03","C-05","C-07","C-09","C-11","C
 
 ## What can go wrong
 
-- **`.value // false` turns unresolved into no.** Test the three answers explicitly.
+- **`.value // false` turns not sure into no.** Test the three answers explicitly.
 - **A cut does not travel.** It belongs to one question and model. Change either and measure again.
 - **Forty cases are few.** Treat the cut as a starting point.
 

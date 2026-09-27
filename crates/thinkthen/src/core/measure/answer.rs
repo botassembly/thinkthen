@@ -128,7 +128,7 @@ impl Said<'_> {
             Self::Yes => "yes",
             Self::No => "no",
             Self::Option(option) => option,
-            Self::Unresolved => "unresolved",
+            Self::Unresolved => "unsure",
             Self::Tied => "tied",
             Self::Items(_) => "items",
         }

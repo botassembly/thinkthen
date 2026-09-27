@@ -95,8 +95,8 @@ extern "C" {
  */
 #define THINKTHEN_NO_DEADLINE INT64_C(-1)
 
-/* The three answers a yes-or-no question gives. UNSURE is the public word;
- * the specification keeps "unresolved" in its own grammar. */
+/* The three answers a yes-or-no question gives. UNSURE is the machine word;
+ * the specification says "not sure" in prose. */
 #define THINKTHEN_YES 1
 #define THINKTHEN_NO 0
 #define THINKTHEN_UNSURE 2

@@ -202,13 +202,21 @@ fn recognize_and_relate_keep_the_beta_warning_the_cuts_and_the_disclosure() {
 }
 
 #[test]
-fn the_specification_defines_unresolved_once_and_keeps_the_closed_wording() {
-    const DEFINITION: &str = "`unresolved` is the formal name for a not sure answer.";
+fn no_page_or_transform_says_unresolved() {
+    const DEFINITION: &str = "`unsure` is the machine name for a not sure answer, in `audit`, `diff`, and the built-in transforms.";
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let mut defined = Vec::new();
-    let mut pages = vec![root.join("crates/thinkthen/Cargo.toml")];
+    let mut pages = vec![
+        root.join("crates/thinkthen/Cargo.toml"),
+        root.join("transforms/README.md"),
+    ];
     for entry in std::fs::read_dir(root.join("specification")).expect("the specification") {
         pages.push(entry.expect("a page").path());
+    }
+    for entry in std::fs::read_dir(root.join("crates/thinkthen/transforms"))
+        .expect("the built-in transforms")
+    {
+        pages.push(entry.expect("a transform").path());
     }
     for page in pages.iter().filter(|page| page.is_file()) {
         let text = std::fs::read_to_string(page).expect("a readable page");
@@ -221,6 +229,11 @@ fn the_specification_defines_unresolved_once_and_keeps_the_closed_wording() {
             );
         }
         let lower = text.to_lowercase();
+        assert!(
+            !lower.contains("unresolved"),
+            "{} says the old word",
+            page.display()
+        );
         for banned in ["decider model", "decision model"] {
             assert!(!lower.contains(banned), "{} says {banned}", page.display());
         }

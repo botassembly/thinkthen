@@ -18,7 +18,7 @@ By default a stream of records shares requests, filling each to the backend's li
 
 ## What it prints
 
-On one document, `true`, `false`, or `null`. `null` is an unresolved answer, and it arises only under a band. `unresolved` is the formal name for a not sure answer. In record mode each compact JSONL row is `{"input":RECORD,"value":ANSWER}` in input order. `--details` prints the object in [result.md](result.md) instead, with an `answer.kind` of `yes_no`.
+On one document, `true`, `false`, or `null`. `null` is a not sure answer, and it arises only under a band. `unsure` is the machine name for a not sure answer, in `audit`, `diff`, and the built-in transforms. In record mode each compact JSONL row is `{"input":RECORD,"value":ANSWER}` in input order. `--details` prints the object in [result.md](result.md) instead, with an `answer.kind` of `yes_no`.
 
 ## Options
 
@@ -48,7 +48,7 @@ Both texts have a home in a question file, under `true` and `false`. A file may 
 | 0 | Single input: the answer is yes. Record mode: the run finished |
 | 1 | Single input only: the answer is no |
 | 2 | Usage error |
-| 3 | Single input only: the answer is unresolved |
+| 3 | Single input only: the answer is not sure |
 | 4, 5, 70 | As [channels.md](channels.md) gives them |
 
 In record mode the exit code reports the run, and no record's answer sets it.
@@ -71,7 +71,7 @@ thinkthen decide 'Does this report a payment failure?' --jsonl --field /body --d
 
 ## Reading the exit code
 
-The help shows a `case $?` block. It separates a no from an unresolved answer and from a failure, and a script that acts on the answer reads all four outcomes.
+The help shows a `case $?` block. It separates a no from a not sure answer and from a failure, and a script that acts on the answer reads all four outcomes.
 
 ```sh
 thinkthen decide 'The customer explicitly requests a refund.' --threshold 0.1:0.9 --quiet < message.txt
@@ -87,7 +87,7 @@ The help shows one piece of advice beside that block. Word the question in the f
 
 ## Cautions
 
-`decide` exits 1 on a no and 3 on an unresolved answer. Under `set -e` or `set -o pipefail` that ends a script. Put the command in an `if`, a `case`, or a `||` list. [channels.md](channels.md) says more.
+`decide` exits 1 on a no and 3 on a not sure answer. Under `set -e` or `set -o pipefail` that ends a script. Put the command in an `if`, a `case`, or a `||` list. [channels.md](channels.md) says more.
 
 Writing a good question matters more than any option. A question works when it names one fact that is visible in the evidence. "Mentions a delivery date" works. "Is a good reply" does not. Measurement of the first System One model showed a narrow question of the first kind catching every planted mismatch while wrongly rejecting 2% to 3% of good work. Outcome questions of the second kind rejected 18% to 46% of work people had accepted.
 
@@ -95,4 +95,4 @@ A claim planted in the evidence moves the answer. A live run judged twenty made-
 
 A batch keeps each record in its own question and out of the evidence. A planted claim in one record is therefore not evidence for another record, by ADR 0055 item 5.
 
-Three defenses hold. `--field` keeps the untrusted parts of a record off the wire. A band sends the moved rows to a person: under `0.2:0.8` the twenty hostile rows held their answer on 18 of 20 and turned 2 into unresolved, and no answer flipped to its opposite. An eval with hostile cases measures what is left.
+Three defenses hold. `--field` keeps the untrusted parts of a record off the wire. A band sends the moved rows to a person: under `0.2:0.8` the twenty hostile rows held their answer on 18 of 20 and left 2 not sure, and no answer flipped to its opposite. An eval with hostile cases measures what is left.
