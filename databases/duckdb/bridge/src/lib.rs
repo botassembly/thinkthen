@@ -33,8 +33,17 @@ mod errors {
 
     impl From<Error> for RowError {
         fn from(error: Error) -> Self {
+            let retry = if error.retryable() {
+                " (a second try could help)"
+            } else {
+                ""
+            };
             Self {
-                text: format!("{}{}", prefix(error.kind()), error.detail().message()),
+                text: format!(
+                    "{}{retry}{}",
+                    prefix(error.kind()),
+                    error.detail().message()
+                ),
             }
         }
     }
