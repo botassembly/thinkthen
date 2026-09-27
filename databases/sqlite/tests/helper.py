@@ -85,6 +85,14 @@ class Backend:
         self._say("count")
         return int(self.counts.get(timeout=5))
 
+    def capture(self) -> list[str]:
+        """Exact bodies from the bounded, opted-in recognize case arm."""
+        self._say("capture")
+        held = json.loads(self.counts.get(timeout=5))
+        if "error" in held:
+            raise AssertionError(held["error"])
+        return held["bodies"]
+
     def wait(self, least: int) -> int:
         """The count once it reads at least `least`, or at 5 s."""
         self._say(f"wait {least}")
