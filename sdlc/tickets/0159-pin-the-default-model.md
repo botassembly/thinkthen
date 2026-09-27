@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core/adapters/systemone.rs crates/thinkthen/src/cli/
 
 # 0159: The default model is a pinned version
 
-Status: built 2026-09-26, awaiting code review (`sdlc/records/0159-build-pin-the-default-model.md`). The coordinator accepted it on 2026-09-26 after five fresh read-only reviews and a coordinator fix to two lines. Owner: Claude. It builds after 0150 and 0158 land and beside no other ticket.
+Status: landed 2026-09-26 (`sdlc/records/0159-build-pin-the-default-model.md`). A fresh read-only code review accepted it after one fix. The coordinator accepted it on 2026-09-26 after five fresh read-only reviews and a coordinator fix to two lines. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -14,7 +14,7 @@ Review route: a fresh read-only Claude session reviews this design and the final
 
 A user who names no model gets answers from `jev-1.13.0`, and every request, cache key and recording says so. The vendor can move its `jev-latest` alias without moving a tuned cut or a cached answer. `jev-latest` still works when the user types it. A cut that `audit --write` tunes also records the model it was tuned on, so a later default change cannot move it silently. A run that stops because one record's replies came from two model versions says that a cache or recording may hold the older version, and it no longer blames the backend alone.
 
-Ian approved the pin on 2026-09-26. That answers question 1 of `sdlc/planning/backlog-0-1-2026-09-26.md` with option A. It carries rulings 2 and 8 of `sdlc/issues/2026-09-22-what-the-vendors-founder-said-about-where-the-model-goes.md`. Ruling 8 reads: "the default the tool writes into a new question file and into every cache key is the current pinned version (today `jev-1.13.0`), and `jev-latest` is accepted only when the user types it."
+Ian approved the pin on 2026-09-26. That answers question 1 of `sdlc/planning/backlog-0-1-2026-09-26.md` with option A. It carries rulings 2 and 8 of `sdlc/issues/closed/2026-09-22-what-the-vendors-founder-said-about-where-the-model-goes.md`. Ruling 8 reads: "the default the tool writes into a new question file and into every cache key is the current pinned version (today `jev-1.13.0`), and `jev-latest` is accepted only when the user types it."
 
 ## Which version, and why
 
@@ -284,7 +284,7 @@ Contract 2; state and timing 1; reach 3; proof 1; cost of error 2; total 9. Fina
 
 ## Closes
 
-Ruling 8 and the pin half of ruling 2 in `sdlc/issues/2026-09-22-what-the-vendors-founder-said-about-where-the-model-goes.md`, which then has no open item. Question 1 of the 0.1 backlog. The message half of `sdlc/issues/2026-09-26-a-mixed-model-cache-fails-every-annotate-record.md`. Finding 2.1 of `sdlc/issues/2026-09-26-architect-review-05-answer-contract.md` for single files, and the default half of item 1 in `sdlc/issues/2026-09-26-architect-review-08-cache.md`.
+Ruling 8 and the pin half of ruling 2 in `sdlc/issues/closed/2026-09-22-what-the-vendors-founder-said-about-where-the-model-goes.md`, which then has no open item. Question 1 of the 0.1 backlog. The message half of `sdlc/issues/2026-09-26-a-mixed-model-cache-fails-every-annotate-record.md`. Finding 2.1 of `sdlc/issues/2026-09-26-architect-review-05-answer-contract.md` for single files, and the default half of item 1 in `sdlc/issues/2026-09-26-architect-review-08-cache.md`.
 
 ## Evidence
 

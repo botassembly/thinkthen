@@ -1,4 +1,4 @@
-Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review. Findings 1 and 2: ticket 0160 on `ticket/0160-the-answer-contract-holds`. Finding 2.1 for single question files: ticket 0159 on `ticket/0159-pin-the-default-model`. Both are ready for review.
+Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review. Findings 1 and 2: ticket 0160 on `ticket/0160-the-answer-contract-holds`. Ticket 0160 is ready for review. Finding 2.1 for single question files is done: ticket 0159 landed on 2026-09-26, and `audit --write` now records the model beside a written bar.
 
 # Architect review 05: the question and answer contract
 
@@ -28,7 +28,7 @@ Direction. Before 0.1, publish a result JSON Schema per shape and give aggregate
 
 ## Carried in other files
 
-- 2.1, a tuned threshold silently follows a floating model alias, and 2.2, one run and one cache can mix model versions (severity 2). Both share one root cause with review 08's issue 1. The architect review 08 file carries them with review 05's evidence.
+- 2.1, a tuned threshold silently follows a floating model alias (done for single question files by ticket 0159; a set's model member waits), and 2.2, one run and one cache can mix model versions (severity 2). Both share one root cause with review 08's issue 1. The architect review 08 file carries them with review 05's evidence.
 - 2.5, details differ by surface on main (severity 2). Ticket 0151 landed on main after the review base. Recheck DuckDB `thinkthen_details` against the `--details` line before closing this point. If 0151 covers it, nothing is owed.
 - 2.6, accepted default batching will change what a per-record probability means, and today's tuned files will not warn (severity 2). See `2026-09-26-batching-design-review-before-0146.md` item 7.
 

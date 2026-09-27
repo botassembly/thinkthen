@@ -1,6 +1,6 @@
 # A mixed-model cache fails every `annotate` record
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 03, finding 2-5. Placement waits on question 1 in the 0.1 backlog, the default-model pin. The message fix can land in 0.1 on its own. Owner for the message fix: ticket 0159 on `ticket/0159-pin-the-default-model`, ready for review. The cache fix still waits.
+Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 03, finding 2-5. Question 1 in the 0.1 backlog, the default-model pin, is answered. The message half is done: ticket 0159 landed on 2026-09-26, and the message now says a cache or recording folder may hold answers from the other version and names `--no-cache` and `cache prune`. The cache fix still waits and has no owner.
 
 ## What happens
 
@@ -18,7 +18,7 @@ Verified by reading the code: `crates/thinkthen/src/engine/facade/annotate.rs:24
 
 Treat a cached group answered by another model version as a cache miss for that record. Or allow mixed versions and list each group's model in `--details`. Either way, rewrite the message so it does not blame the backend when a cache mixed the versions.
 
-If Ian pins the default model (backlog question 1, option A), the alias stops moving under a default run, and this fault needs an explicit model change to appear. The message fix is still owed.
+Ticket 0159 pinned the default model (backlog question 1, option A). The alias no longer moves under a default run, and this fault needs an explicit model change to appear. Ticket 0159 also landed the message fix.
 
 ## Done when
 
