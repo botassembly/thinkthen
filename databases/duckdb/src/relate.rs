@@ -492,8 +492,9 @@ fn boundary(files: &Files, message: String) -> String {
             prefix(thinkthen::ErrorKind::Local)
         );
     }
+    let (line, details) = message.split_at(message.find('\n').unwrap_or(message.len()));
     format!(
-        "{message}; relate reads only committed tables on its separate connection; if you created this table in an open transaction, commit it before retrying"
+        "{line}; relate reads only committed tables on its separate connection; if you created this table in an open transaction, commit it before retrying{details}"
     )
 }
 
