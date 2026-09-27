@@ -61,6 +61,7 @@ fn no_kinds_writes_the_canonical_empty_kinds_and_its_pinned_digest() {
 }
 
 /// A declined name never enters a pair: two kept names give two ordered pairs.
+/// A rule that allows no pair sends no pair request and prints no edge.
 #[test]
 fn a_declined_name_enters_no_pair_under_a_bare_rule() {
     let listener = Listener::answering(automatic).expect("listener");
@@ -90,9 +91,21 @@ fn a_declined_name_enters_no_pair_under_a_bare_rule() {
     );
     let state = &serde_json::from_slice::<Value>(&pairs.body).unwrap()["state"];
     assert_eq!(
-        state["entities"],
-        serde_json::json!([{"id":"i1","name":"Ada","kind":"person"},{"id":"i2","name":"Acme","kind":"organization"}])
+        *state,
+        serde_json::json!({"evidence":"Ada met Nobody and Acme.","entities":[{"id":"i1","name":"Ada","kind":"person"},{"id":"i2","name":"Acme","kind":"organization"}]})
     );
+    let none = json(&run(
+        &listener,
+        &[
+            "person",
+            "organization",
+            "--relation",
+            "visits=organization:organization",
+        ],
+        b"Ada met Acme.",
+    ));
+    assert_eq!(none["relations"], serde_json::json!([]));
+    assert_eq!(listener.requests().len(), 2);
 }
 
 #[test]

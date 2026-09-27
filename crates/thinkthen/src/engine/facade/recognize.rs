@@ -12,7 +12,7 @@ use crate::core::{
 };
 use crate::engine::Cancel;
 use crate::engine::error::Error;
-use crate::engine::prepared_request::{PreparedChunk, PreparedRequests};
+use crate::engine::prepared_request::{PreparedChunk, PreparedRequests, relation_ceiling};
 
 /// The default limit on one text's UTF-8 bytes, which caps spending.
 pub(crate) const MAX_TEXT_BYTES: usize = 600_000;
@@ -133,7 +133,13 @@ impl Engine {
                 .get(group.end.saturating_sub(1))
                 .map_or(first, |name| name.1);
             if !questions.is_empty() {
-                prepared.extend(self.prepare(text, &pieces, (first, last), questions)?);
+                prepared.extend(prepare(
+                    &self.backend,
+                    self.profile.as_ref(),
+                    (text, &pieces),
+                    (first, last),
+                    questions,
+                )?);
             }
         }
         let answers = self.execute(prepared, &mut meta, cancel)?;
@@ -166,22 +172,6 @@ impl Engine {
         })
     }
 
-    fn prepare(
-        &self,
-        text: &str,
-        pieces: &[Piece],
-        stretch: (usize, usize),
-        questions: Vec<Question>,
-    ) -> Result<Vec<PreparedChunk>, Error> {
-        prepare(
-            &self.backend,
-            self.profile.as_ref(),
-            (text, pieces),
-            stretch,
-            questions,
-        )
-    }
-
     /// Ask each pair a rule allows about what the text itself states.
     fn relations(
         &self,
@@ -199,11 +189,7 @@ impl Engine {
         else {
             return Ok(Some(Vec::new()));
         };
-        let ceiling = self.backend.ceiling().filter(|_| {
-            self.profile
-                .as_ref()
-                .is_none_or(|profile| !profile.limits_request_bytes())
-        });
+        let ceiling = relation_ceiling(&self.backend, self.profile.as_ref());
         let mut prepared = Vec::new();
         for questions in planned.questions.chunks(MOST_PAIRS) {
             let plan = Plan::new(

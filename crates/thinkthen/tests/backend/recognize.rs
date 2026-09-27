@@ -425,40 +425,6 @@ fn local_validation_matrix_never_sends() {
     }
 }
 
-#[test]
-fn relations_are_self_contained_and_absent_without_a_rule() {
-    let listener = Listener::answering(automatic).expect("listener");
-    let value = json(&run(&listener, &WORKS, ADA));
-    let edge = &value["relations"][0];
-    assert_eq!(value["relations"].as_array().expect("relations").len(), 1);
-    assert_eq!(
-        (&edge["relation"], &edge["probability"]),
-        (&Value::from("works_for"), &Value::from(0.9))
-    );
-    assert_eq!(
-        (&edge["source"], &edge["target"]),
-        (&value["entities"][0], &value["entities"][1])
-    );
-    let pairs = listener.requests().pop().expect("pair request");
-    let state = serde_json::from_slice::<Value>(&pairs.body).unwrap()["state"].clone();
-    assert_eq!(
-        state,
-        serde_json::json!({"evidence":"Ada met Acme.","entities":[{"id":"i1","name":"Ada","kind":"person"},{"id":"i2","name":"Acme","kind":"organization"}]})
-    );
-
-    let empty = json(&run(
-        &listener,
-        &[
-            &KINDS[..],
-            &["--relation", "visits=organization:organization"],
-        ]
-        .concat(),
-        ADA,
-    ));
-    assert_eq!(empty["relations"], serde_json::json!([]));
-    assert_eq!(listener.requests().len(), 2);
-}
-
 /// A one-question profile splits every request and prints the same names and edges.
 #[test]
 fn a_one_question_profile_prints_what_the_whole_requests_print() {
