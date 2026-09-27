@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/public/question.rs crates/thinkthen/src/public/set.r
 
 # 0203: Preserve calibration profiles across libraries
 
-Status: draft. Owner: Codex. Root owns review, acceptance and landing.
+Status: ready. Owner: Codex. Design accepted; runtime build and proof remain open.
 
 ## Outcome
 
