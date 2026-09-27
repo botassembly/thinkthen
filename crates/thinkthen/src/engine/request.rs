@@ -122,8 +122,12 @@ where
     E: From<Error>,
 {
     let recorded = prepared.recorded(backend);
+    let caches = recorder.caches();
+    let complete = |response: &[u8]| {
+        !caches || !built_in::decode(plan, response).is_ok_and(|reply| reply.failed_any())
+    };
     let operation = recorder
-        .prepare_cancelled(&recorded, &prepared.digest, cancel)
+        .prepare_checked(&recorded, &prepared.digest, cancel, &complete)
         .map_err(E::from)?;
     let operation = observe_cancel(operation, cancel)?;
     let (reply, replayed, requests_sent) = match operation {
@@ -155,9 +159,12 @@ where
                     return Err(E::from(Error::from(error)));
                 }
             };
-            permit
-                .finish(&recorded, &answered.body, &prepared.digest.file_name())
-                .map_err(E::from)?;
+            if caches && reply.failed_any() {
+                permit.cancel()
+            } else {
+                permit.finish(&recorded, &answered.body, &prepared.digest.file_name())
+            }
+            .map_err(E::from)?;
             (reply, false, answered.requests_sent)
         }
     };
