@@ -22,7 +22,7 @@
   ],
   "$defs": {
     "decide": {
-      "description": "A `decide` entry: the question text, what a yes and a no each mean, and the cut or band the answer is read under.",
+      "description": "A `decide` entry: the question text, what a yes and a no each mean, and the cut or band the answer is read under. A question file's `batch` is the most records of a stream one request carries. An annotate question set's entries take no `batch`.",
       "type": "object",
       "required": [
         "decide"
@@ -49,6 +49,18 @@
         },
         "profile": {
           "$ref": "#/$defs/profile"
+        },
+        "batch": {
+          "description": "`max`, or a whole number of at least 1.",
+          "anyOf": [
+            {
+              "const": "max"
+            },
+            {
+              "type": "integer",
+              "minimum": 1
+            }
+          ]
         }
       }
     },
