@@ -187,7 +187,26 @@ def main() -> None:
             )
             assert "it holds more than 1 MiB" in endless[0]["error"]
             assert backend.count() == 13, "an endless file must stop before a send"
-    print("C++ decide, probability, details, try-details, budget, limits, NULL, type, deduplication, and loopback boundaries pass")
+        with tempfile.TemporaryDirectory() as folder:
+            cache = run(
+                [f"SET thinkthen_cache = '{folder}'",
+                 "SELECT thinkthen_decide('Is it a refund?', 'refund now')",
+                 "SET thinkthen_cache = 'relative-cache'",
+                 "SELECT thinkthen_decide('Is it a refund?', 'refund now')"],
+                backend.base(), extension=extension,
+            )
+            assert cache[1] == {"rows": [[True]]}
+            assert "thinkthen usage: a cache folder set from SQL is an absolute local path" in cache[3]["error"]
+            assert backend.count() == 14, "an invalid cache path sent no request"
+            forbidden = run(
+                [f"SET thinkthen_cache = '{folder}'",
+                 "SET enable_external_access = false",
+                 "SELECT thinkthen_decide('Is it a refund?', 'refund now')"],
+                backend.base(), extension=extension,
+            )
+            assert "thinkthen usage: the cache folder is outside what this database's file settings allow" in forbidden[2]["error"]
+            assert backend.count() == 14, "a caller-refused cache folder sent no request"
+    print("C++ scalar, budget, limits, cache permissions, NULL, type, deduplication, and loopback boundaries pass")
 
 
 if __name__ == "__main__":

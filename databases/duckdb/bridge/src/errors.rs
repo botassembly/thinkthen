@@ -37,7 +37,8 @@ impl RowError {
         };
         Some(format!(
             "{{\"status\":\"failed\",\"error\":{{\"kind\":\"{}\",\"message\":\"{message}\",\"retryable\":{}}}}}",
-            self.kind.name(), self.retryable
+            self.kind.name(),
+            self.retryable
         ))
     }
 }

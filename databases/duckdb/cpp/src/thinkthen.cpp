@@ -39,6 +39,9 @@ struct ThinkThenSettings {
 	int64_t throttle;
 	int64_t max_requests;
 	int64_t max_requests_total;
+	const uint8_t *cache_bytes;
+	size_t cache_len;
+	int32_t cache_allowed;
 };
 int32_t thinkthen_cpp_init();
 ThinkThenReply thinkthen_cpp_validate_question(const uint8_t *bytes, size_t len, int32_t from_file);
@@ -271,9 +274,39 @@ int64_t NumericSetting(ClientContext &context, const char *name) {
 	                                                                      : std::numeric_limits<int64_t>::min();
 }
 
-ThinkThenSettings Settings(ClientContext &context) {
-	return {NumericSetting(context, "thinkthen_throttle"), NumericSetting(context, "thinkthen_max_requests"),
-	        NumericSetting(context, "thinkthen_max_requests_total")};
+struct SessionSettings {
+	int64_t throttle;
+	int64_t max_requests;
+	int64_t max_requests_total;
+	std::optional<string> cache;
+	int32_t cache_allowed = 1;
+
+	ThinkThenSettings Bridge() const {
+		return {throttle, max_requests, max_requests_total,
+		        cache ? reinterpret_cast<const uint8_t *>(cache->data()) : nullptr,
+		        cache ? cache->size() : 0, cache_allowed};
+	}
+};
+
+SessionSettings Settings(ClientContext &context) {
+	SessionSettings settings {NumericSetting(context, "thinkthen_throttle"),
+	                          NumericSetting(context, "thinkthen_max_requests"),
+	                          NumericSetting(context, "thinkthen_max_requests_total")};
+	Value value;
+	if (context.TryGetCurrentSetting("thinkthen_cache", value) && !value.IsNull()) {
+		settings.cache = value.GetValue<string>();
+		const auto &folder = *settings.cache;
+		if (!folder.empty() && folder[0] == '/' && folder.find("://") == string::npos) {
+			try {
+				FileSystem::GetFileSystem(context).OpenFile(folder + "/.probe", FileOpenFlags::FILE_FLAGS_READ);
+			} catch (const IOException &) {
+				// A missing probe file still means the caller could open the folder.
+			} catch (const Exception &) {
+				settings.cache_allowed = 0;
+			}
+		}
+	}
+	return settings;
 }
 
 void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
@@ -308,7 +341,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 			RustReply answered(thinkthen_cpp_try_details_row(reinterpret_cast<const uint8_t *>(resolved.text.data()),
 			                                                 resolved.text.size(),
 			                                                 reinterpret_cast<const uint8_t *>(evidence_text.data()),
-			                                                 evidence_text.size(), due, settings,
+			                                                 evidence_text.size(), due, settings.Bridge(),
 			                                                 resolved.from_file ? 1 : 0));
 			Checked(answered.value);
 			if (!answered.value.bytes) {
@@ -372,7 +405,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		}
 		RustReply answered(thinkthen_cpp_scalar_group(reinterpret_cast<const uint8_t *>(group.question.data()),
 		                                             group.question.size(), texts.data(), texts.size(), due, bound.kind,
-		                                             settings, group.from_file ? 1 : 0));
+		                                             settings.Bridge(), group.from_file ? 1 : 0));
 		Checked(answered.value);
 		if (!answered.value.bytes) {
 			throw InvalidInputException("thinkthen defect: the bridge returned an invalid decision group");
@@ -451,6 +484,7 @@ void LoadThinkThen(ExtensionLoader &loader) {
 	config.AddExtensionOption("thinkthen_max_requests", "Maximum ThinkThen requests in one call", LogicalType::BIGINT);
 	config.AddExtensionOption("thinkthen_max_requests_total", "Maximum ThinkThen requests in this process",
 	                          LogicalType::BIGINT);
+	config.AddExtensionOption("thinkthen_cache", "Local ThinkThen cache folder", LogicalType::VARCHAR);
 	for (auto name : {"thinkthen_decide", "thinkthen_probability", "thinkthen_details", "thinkthen_try_details"}) {
 		const auto result = string(name) == "thinkthen_details" || string(name) == "thinkthen_try_details" ? LogicalType::VARCHAR
 		                    : string(name) == "thinkthen_probability" ? LogicalType::DOUBLE : LogicalType::BOOLEAN;

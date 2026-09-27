@@ -173,15 +173,29 @@ pub(crate) struct BridgeSettings {
     throttle: i64,
     max_requests: i64,
     max_requests_total: i64,
+    cache_bytes: *const u8,
+    cache_len: usize,
+    cache_allowed: i32,
 }
 
-fn asked(settings: BridgeSettings) -> engines::Asked {
+fn asked(settings: &BridgeSettings) -> Result<engines::Asked, String> {
     let present = |value| (value != i64::MIN).then_some(value);
-    engines::Asked {
+    let cache = (!settings.cache_bytes.is_null())
+        .then(|| text(settings.cache_bytes, settings.cache_len).map(str::to_owned))
+        .transpose()?;
+    Ok(engines::Asked {
         throttle: present(settings.throttle),
         max_requests: present(settings.max_requests),
         max_requests_total: present(settings.max_requests_total),
-        cache: None,
+        cache,
+    })
+}
+
+fn probe(settings: &BridgeSettings) -> engines::Probe {
+    if settings.cache_allowed != 0 {
+        engines::Probe::Allowed
+    } else {
+        engines::Probe::Refused
     }
 }
 
@@ -215,8 +229,8 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_scalar_group(
                 .map(|row| text(row.bytes, row.len).map(str::to_owned))
                 .collect::<Result<Vec<_>, _>>()?
         };
-        let asked = asked(settings);
-        let engine = engines::engine_for(&asked, |_| engines::Probe::Allowed)?;
+        let asked = asked(&settings)?;
+        let engine = engines::engine_for(&asked, |_| probe(&settings))?;
         let (copied, cut) = engines::within_total(&asked, copied)?;
         let options = || {
             if deadline_ms == -1 {
@@ -302,8 +316,9 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_try_details_row(
             let evidence = text(evidence_bytes, evidence_len)
                 .map_err(|_| errors::RowError::usage("evidence is not UTF-8 text"))?;
             let question = question_typed(argument, from_file != 0)?;
-            let asked = asked(settings);
-            let engine = engines::engine_for_typed(&asked, |_| engines::Probe::Allowed)?;
+            let asked = asked(&settings)
+                .map_err(|_| errors::RowError::usage("a cache folder is not UTF-8 text"))?;
+            let engine = engines::engine_for_typed(&asked, |_| probe(&settings))?;
             let (_, cut) = engines::within_total_typed(&asked, vec![evidence.to_owned()])?;
             let options = if deadline_ms == -1 {
                 CallOptions::new()
