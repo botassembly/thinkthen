@@ -119,14 +119,20 @@ fn text<'a>(bytes: *const u8, len: usize) -> Result<&'a str, String> {
 }
 
 fn question(argument: &str) -> Result<LoadedQuestion, String> {
+    question_typed(argument).map_err(|error| error.text)
+}
+
+fn question_typed(argument: &str) -> Result<LoadedQuestion, errors::RowError> {
     if argument.starts_with('@') {
-        Err("thinkthen local: question files are not yet enabled in this C++ candidate".to_owned())
+        Err(errors::RowError::local(
+            "question files are not yet enabled in this C++ candidate",
+        ))
     } else if argument.starts_with('{') {
-        Question::from_json(argument).map_err(|error| errors::RowError::from(error).text)
+        Question::from_json(argument).map_err(Into::into)
     } else {
         Question::decide(argument)
             .map(|built| LoadedQuestion::Question(built.cut()))
-            .map_err(|error| errors::RowError::from(error).text)
+            .map_err(Into::into)
     }
 }
 
@@ -262,6 +268,56 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_scalar_group(
                     Answer::Unsure => 2,
                 })
                 .collect())
+        }
+    })
+}
+
+/// One try-details row; only usage, local, and backend errors become JSON values.
+///
+/// # Safety
+/// Both byte ranges must remain readable through this call.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_cpp_try_details_row(
+    question_bytes: *const u8,
+    question_len: usize,
+    evidence_bytes: *const u8,
+    evidence_len: usize,
+    deadline_ms: i64,
+    settings: BridgeSettings,
+) -> Reply {
+    reply_boundary(|| {
+        let result = (|| -> Result<String, errors::RowError> {
+            let argument = text(question_bytes, question_len)
+                .map_err(|_| errors::RowError::usage("a question is not UTF-8 text"))?;
+            let evidence = text(evidence_bytes, evidence_len)
+                .map_err(|_| errors::RowError::usage("evidence is not UTF-8 text"))?;
+            let question = question_typed(argument)?;
+            let asked = asked(settings);
+            let engine = engines::engine_for_typed(&asked, |_| engines::Probe::Allowed)?;
+            let (_, cut) = engines::within_total_typed(&asked, vec![evidence.to_owned()])?;
+            let options = if deadline_ms == -1 {
+                CallOptions::new()
+            } else {
+                CallOptions::new()
+                    .deadline_millis(deadline_ms)
+                    .map_err(errors::RowError::from)?
+            };
+            let details = match &question {
+                LoadedQuestion::Question(held) => engine.details_with(held, evidence, options),
+                LoadedQuestion::Banded(held) => engine.details_with(held, evidence, options),
+            }
+            .map_err(errors::RowError::from)?;
+            if let Some(error) = cut {
+                return Err(error);
+            }
+            Ok(format!(
+                "{{\"status\":\"answered\",\"details\":{}}}",
+                details.to_json()
+            ))
+        })();
+        match result {
+            Ok(value) => Ok(value.into_bytes()),
+            Err(error) => error.value().map(String::into_bytes).ok_or(error.text),
         }
     })
 }

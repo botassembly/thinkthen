@@ -117,7 +117,38 @@ def main() -> None:
         assert isinstance(json.loads(rows[0][0]), dict)
         assert detail_rows[1] == {"rows": [["VARCHAR"]]}
         assert backend.count() == 8, "details should deduplicate its repeated text"
-    print("C++ decision, probability, details, query budget, numeric limits, NULL, type, deduplication, and loopback send boundary pass")
+        prepared_try = run(
+            ["PREPARE try_bad AS SELECT thinkthen_try_details('', 'x'), "
+             "thinkthen_try_details('Is it a refund?', 'refund now')",
+             "EXECUTE try_bad"],
+            backend.base(), extension=extension,
+        )
+        assert backend.count() == 9, "try-details bind should send nothing"
+        bad, good = [json.loads(value) for value in prepared_try[1]["rows"][0]]
+        assert bad["status"] == "failed" and bad["error"]["kind"] == "usage"
+        assert good["status"] == "answered" and isinstance(good["details"], dict)
+        row_try = run(
+            ["SELECT thinkthen_try_details(q, t) FROM "
+             "(VALUES ('', 'x'), ('Is it a refund?', 'refund now')) AS x(q,t)"],
+            backend.base(), extension=extension,
+        )
+        assert [json.loads(row[0])["status"] for row in row_try[0]["rows"]] == ["failed", "answered"]
+        assert backend.count() == 10, "a failed row should not send or stop a later good row"
+        file_try = run(
+            ["SELECT thinkthen_try_details('@missing-question.json', 'x'), "
+             "thinkthen_try_details('Is it a refund?', 'refund now')"],
+            backend.base(), extension=extension,
+        )
+        failed_file, good_after_file = [json.loads(value) for value in file_try[0]["rows"][0]]
+        assert failed_file["status"] == "failed" and failed_file["error"]["kind"] == "local"
+        assert "missing-question.json" not in json.dumps(failed_file)
+        assert good_after_file["status"] == "answered"
+        assert backend.count() == 11, "a local failure should not stop a later good expression"
+        assert run(["SELECT thinkthen_try_details(NULL, 'x')"], backend.base(), extension=extension) == [
+            {"rows": [[None]]}
+        ]
+        assert backend.count() == 11, "a NULL try-details row should not send"
+    print("C++ decide, probability, details, try-details, budget, limits, NULL, type, deduplication, and loopback boundaries pass")
 
 
 if __name__ == "__main__":

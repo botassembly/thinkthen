@@ -44,6 +44,9 @@ ThinkThenReply thinkthen_cpp_validate_question(const uint8_t *bytes, size_t len)
 ThinkThenReply thinkthen_cpp_scalar_group(const uint8_t *question, size_t question_len, const ThinkThenText *texts,
                                           size_t count, int64_t deadline_ms, int32_t kind,
                                           ThinkThenSettings settings);
+ThinkThenReply thinkthen_cpp_try_details_row(const uint8_t *question, size_t question_len,
+                                             const uint8_t *evidence, size_t evidence_len,
+                                             int64_t deadline_ms, ThinkThenSettings settings);
 void thinkthen_cpp_free(uint8_t *bytes, size_t len);
 }
 
@@ -148,21 +151,25 @@ unique_ptr<FunctionData> BindDecide(ClientContext &context, ScalarFunction &func
                                      vector<unique_ptr<Expression>> &arguments) {
 	context.registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	auto bound = make_uniq<ScalarBind>(context.shared_from_this());
-	bound->kind = function.name == "thinkthen_probability" ? 1 : function.name == "thinkthen_details" ? 2 : 0;
+	bound->kind = function.name == "thinkthen_probability" ? 1
+	            : function.name == "thinkthen_details" ? 2
+	            : function.name == "thinkthen_try_details" ? 3 : 0;
 	if (arguments[0]->IsFoldable()) {
 		auto value = ExpressionExecutor::EvaluateScalar(context, *arguments[0]);
 		if (!value.IsNull()) {
 			bound->constant_question = value.GetValue<string>();
 			auto &text = *bound->constant_question;
-			RustReply checked(thinkthen_cpp_validate_question(reinterpret_cast<const uint8_t *>(text.data()), text.size()));
-			Checked(checked.value);
+			if (bound->kind != 3) {
+				RustReply checked(thinkthen_cpp_validate_question(reinterpret_cast<const uint8_t *>(text.data()), text.size()));
+				Checked(checked.value);
+			}
 		}
 	}
 	if (arguments.size() == 3 && arguments[2]->IsFoldable()) {
 		auto value = ExpressionExecutor::EvaluateScalar(context, *arguments[2]);
 		if (!value.IsNull()) {
 			bound->constant_deadline = value.GetValue<int64_t>();
-			if (*bound->constant_deadline < -1 || *bound->constant_deadline > 4294967295000LL) {
+			if (bound->kind != 3 && (*bound->constant_deadline < -1 || *bound->constant_deadline > 4294967295000LL)) {
 				throw InvalidInputException("thinkthen usage: the deadline is outside the supported range");
 			}
 		}
@@ -199,6 +206,34 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		throw InvalidInputException("thinkthen defect: the caller session ended");
 	}
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
+	if (bound.kind == 3) {
+		const auto settings = Settings(*context);
+		for (idx_t row = 0; row < args.size(); ++row) {
+			auto question = args.data[0].GetValue(row);
+			auto evidence = args.data[1].GetValue(row);
+			if (question.IsNull() || evidence.IsNull() ||
+			    (args.ColumnCount() == 3 && args.data[2].GetValue(row).IsNull())) {
+				result.SetValue(row, Value(LogicalType::VARCHAR));
+				continue;
+			}
+			const auto budget = owner->Remaining(*context);
+			const auto trailing = args.ColumnCount() == 3 ? args.data[2].GetValue(row).GetValue<int64_t>() : -1;
+			const auto due = trailing < -1 || budget < 0 ? trailing
+			                 : trailing < 0 ? budget : std::min(trailing, budget);
+			auto question_text = question.GetValue<string>();
+			auto evidence_text = evidence.GetValue<string>();
+			RustReply answered(thinkthen_cpp_try_details_row(reinterpret_cast<const uint8_t *>(question_text.data()),
+			                                                 question_text.size(),
+			                                                 reinterpret_cast<const uint8_t *>(evidence_text.data()),
+			                                                 evidence_text.size(), due, settings));
+			Checked(answered.value);
+			if (!answered.value.bytes) {
+				throw InvalidInputException("thinkthen defect: the bridge returned no try-details value");
+			}
+			result.SetValue(row, Value(ReplyText(answered.value)));
+		}
+		return;
+	}
 	vector<DecisionGroup> groups;
 	std::map<std::pair<string, int64_t>, idx_t> known_groups;
 	std::set<string> checked_questions;
@@ -329,8 +364,8 @@ void LoadThinkThen(ExtensionLoader &loader) {
 	config.AddExtensionOption("thinkthen_max_requests", "Maximum ThinkThen requests in one call", LogicalType::BIGINT);
 	config.AddExtensionOption("thinkthen_max_requests_total", "Maximum ThinkThen requests in this process",
 	                          LogicalType::BIGINT);
-	for (auto name : {"thinkthen_decide", "thinkthen_probability", "thinkthen_details"}) {
-		const auto result = string(name) == "thinkthen_details" ? LogicalType::VARCHAR
+	for (auto name : {"thinkthen_decide", "thinkthen_probability", "thinkthen_details", "thinkthen_try_details"}) {
+		const auto result = string(name) == "thinkthen_details" || string(name) == "thinkthen_try_details" ? LogicalType::VARCHAR
 		                    : string(name) == "thinkthen_probability" ? LogicalType::DOUBLE : LogicalType::BOOLEAN;
 		for (auto parameters : {vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR},
 		                        vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::BIGINT}}) {
