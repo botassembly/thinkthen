@@ -466,13 +466,23 @@ def lock_tree(lock: dict) -> set[tuple[str, str]]:
     return reached
 
 
-def binding_test_failures(relative: str, tokens: list[str]) -> list[str]:
-    """R2-28: no binding test is ignored, and none returns before its first assertion."""
+def binding_test_failures(relative: str, tokens: list[str], allowed_ignore: str | None = None) -> list[str]:
+    """R2-28: no binding test is ignored except one named stress test; no early return."""
     held = []
+    allowed_seen = False
     for place in range(len(tokens)):
         attribute = tokens[place:place + 3]
         if attribute == ["#", "[", "ignore"]:
-            held.append(f"{relative} ignores a test")
+            close = tokens.index("]", place + 3) if "]" in tokens[place + 3:] else len(tokens)
+            approved = (relative == POLARS_STRESS and allowed_ignore == POLARS_STRESS_FUNCTION
+                        and not allowed_seen
+                        and tokens[place - 4:place] == ["#", "[", "test", "]"]
+                        and tokens[place + 3:close] == ["="]
+                        and tokens[close + 1:close + 3] == ["fn", allowed_ignore])
+            if approved:
+                allowed_seen = True
+            else:
+                held.append(f"{relative} ignores a test")
         if attribute != ["#", "[", "test"] or "{" not in tokens[place:]:
             continue
         start = tokens.index("{", place)
@@ -486,6 +496,8 @@ def binding_test_failures(relative: str, tokens: list[str]) -> list[str]:
                          if token.startswith(("assert", "debug_assert")) and body[at + 1] == "!"), len(body))
         if "return" in body[:asserted]:
             held.append(f"{relative} has a test that returns before its first assertion")
+    if allowed_ignore is not None and not allowed_seen:
+        held.append(f"{relative} lacks its named ignored stress test {allowed_ignore}")
     return held
 
 
@@ -612,6 +624,8 @@ def check_bindings() -> None:
 # Ticket 0130: the Rust Polars door is the `polars` feature of `thinkthen`. Its
 # tests keep R2-28's scan, and no rung builds every feature.
 POLARS_TESTS = "crates/thinkthen/tests/polars"
+POLARS_STRESS = f"{POLARS_TESTS}/throttle_equality.rs"
+POLARS_STRESS_FUNCTION = "two_hundred_series_records_match_the_slice"
 RUNGS = ("install", "lint", "test", "spec", "surfaces", "package")
 
 
@@ -621,10 +635,20 @@ def check_polars_feature() -> None:
         fail("polars", f"{POLARS_TESTS} holds the Polars door's tests")
     for path in tests:
         relative = path.relative_to(REPO).as_posix()
-        for failure in binding_test_failures(relative, rust_tokens(path.read_text(encoding="utf-8"))):
+        allowed = POLARS_STRESS_FUNCTION if relative == POLARS_STRESS else None
+        for failure in binding_test_failures(relative, rust_tokens(path.read_text(encoding="utf-8")), allowed):
             fail("polars", failure)
     if not binding_test_failures("planted.rs", rust_tokens("#[test]\n#[ignore]\nfn planted() {}\n")):
         fail("polars", "an ignored Polars test is refused")
+    stress = (REPO / POLARS_STRESS).read_text(encoding="utf-8")
+    extra = stress + "\n#[test]\n#[ignore]\nfn planted() { assert!(true); }\n"
+    if not binding_test_failures(POLARS_STRESS, rust_tokens(extra), POLARS_STRESS_FUNCTION):
+        fail("polars", "another ignored test in the approved file is refused")
+    sample = '#[test]\n#[ignore = "stress"]\nfn two_hundred_series_records_match_the_slice() { assert!(true); }\n'
+    if not binding_test_failures("planted.rs", rust_tokens(sample), POLARS_STRESS_FUNCTION):
+        fail("polars", "the approved name in another file is refused")
+    if not binding_test_failures(POLARS_STRESS, rust_tokens(sample.replace(POLARS_STRESS_FUNCTION, "planted")), POLARS_STRESS_FUNCTION):
+        fail("polars", "another ignored name in the approved file is refused")
     for rung in RUNGS:
         if rung_failures(rung, (REPO / "sdlc/scripts" / rung).read_text(encoding="utf-8")):
             fail("polars", f"sdlc/scripts/{rung} builds with every feature, and Polars belongs to its lane")
