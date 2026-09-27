@@ -6,9 +6,9 @@ opens: sdlc/scripts/named-answers.mjs sdlc/scripts/lint demos/01-refund-gate/REA
 
 # 0156: The named-answers rule reaches the queue's own pages
 
-Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Claude. It builds only after the module changes under "Requests to the marketing lead" land on main, and after tickets 0151, 0152 Part B and 0153 land. "Build order" gives the rule.
+Status: built on the ticket branch, awaiting fresh independent code review and landing. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Codex in lane codex-5. The site module changes R0/R1/R2 and tickets 0151, 0152 Part B and 0153 are on main.
 
-Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
+Review route: the coordinator assigns a fresh independent Codex reviewer to the frozen final diff. The accepted design review remains on record.
 
 ## Outcome and authority
 
@@ -18,7 +18,9 @@ Ian ruled on 2026-09-26 that every code sample names its answer. `sdlc/issues/20
 
 ## What happens today
 
-Survey run on 2026-09-26 at `origin/main` `e0a6150a`. A throwaway script in the scratchpad, `t0156/survey.mjs`, walked every tracked `.md` file under the five folders, split out each fenced block, and handed each block whose tag the module accepts to `namedAnswerProblems`. Nothing in the tree changed.
+The original survey ran on 2026-09-26 at `origin/main` `e0a6150a`. A throwaway script in the scratchpad, `t0156/survey.mjs`, walked every tracked `.md` file under the five folders, split out each fenced block, and handed each block whose tag the module accepts to `namedAnswerProblems`. Nothing in the tree changed. The rows below preserve that preparation evidence.
+
+Current-source preflight on 2026-09-27 merged `origin/main` `65aede94` before editing. The site's module accepts R0/R1/R2, including unknown-language refusal, the corrected `printf` pipeline handling, and `case` substitutions. The first run of the new scanner found 14 problems in the claimed pages: five unnamed SQL calls, two demo branches, two `spec/decide` lines, one `channels` branch, one `decide` branch and one bare exit, and two `case` substitutions. It saw 82 pages, 210 accepted-language blocks, and 57 skipped blocks. The older 15-problem table is a historical snapshot, not the current failure count.
 
 | Folder | Pages | Code blocks | Skipped by tag | Untagged | direct | unnamed | generic | bare-exit |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -100,10 +102,9 @@ A new Node script, `sdlc/scripts/named-answers.mjs`, runs from the lint rung. It
 
 ### The lint rung
 
-`sdlc/scripts/lint` gains three lines after `python3 sdlc/scripts/tickets`:
+`sdlc/scripts/lint` gains two commands after the page checks:
 
 ```sh
-# Ticket 0156: Ian's named-answers rule over the queue's own pages.
 node sdlc/scripts/named-answers.mjs --self-test
 node sdlc/scripts/named-answers.mjs
 ```
@@ -164,16 +165,16 @@ Each fix keeps the page's lesson and its commands. Only the names change.
   These two rewrites happen either way, whatever R2 does.
 - **Rows 8, 9 and 12.** No change. The marketing lead accepted R1, and the build does not rewrite `demos/28:67`, `demos/41:12` or `spec/recognize.md:13`.
 
-## Requests to the marketing lead
+## Prerequisites from the marketing lead (landed)
 
-The marketing lead owns the module. This ticket edits no file under `site/`. The coordinator relays them.
+The marketing lead owns the module. R0/R1/R2 are on main at the current-source preflight. This ticket edits no file under `site/`. The requests below record why the check can import it.
 
-- **R0, in progress.** `namedAnswerProblems` throws on a language it does not accept, in place of returning an empty array. The check's unknown-tag step depends on it. The contract comment and the `unknown` rows of `named-answers.test.mjs` change with it.
-- **R1, a false positive. Accepted.** The marketing lead's `direct` rule will flag `printf`, `echo` and `test` only when a ThinkThen call sits inside the `$(...)` they read. It lands together with R0, and the rows below go into their tests. Today the Bash `direct` rule for a `test`, `[`, `[[`, `echo` or `printf` line tests the whole statement for a call. It should test only the text inside the line's `$(...)`. Three correct lines fail today: rows 8, 9 and 12 above. Suggested rows for the table test:
+- **R0, landed.** `namedAnswerProblems` throws on a language it does not accept, in place of returning an empty array. The check's unknown-tag step depends on it. The contract comment and the `unknown` rows of `named-answers.test.mjs` changed with it.
+- **R1, landed.** The marketing lead's `direct` rule flags `printf`, `echo` and `test` only when a ThinkThen call sits inside the `$(...)` they read. The old Bash rule tested the whole statement for a call. Three correct lines formerly failed: rows 8, 9 and 12 above. The module's table now includes these cases:
   - pass: `printf '%s' "$(jq -r .body m.jsonl)" | thinkthen decide "$q"`
   - pass: `printf 'x' | thinkthen recognize --replay "$(git rev-parse --show-toplevel)/r"`
   - fail, unchanged: `echo "$(thinkthen decide "$q" < mail.txt)"`
-- **R2, `case` over a call. Accepted.** It lands together with R0 and R1. A `case` whose word is a `$(...)` holding a ThinkThen call becomes a `direct` problem. "What happens today" names the two pages. This ticket rewrites both either way, so the check does not depend on R2.
+- **R2, landed.** A `case` whose word is a `$(...)` holding a ThinkThen call becomes a `direct` problem. The historical survey above names the two pages. This ticket rewrites both.
 
 An observation, not a request: the generic list lacks `rc`, `status` and `code`, and the form `&& rc=0 || rc=$?` never reaches the generic check, since the name does not open the line. Nine demo lines use `rc` and five `spec/` lines use `code=$?`. Ian's ruling asks for a name of meaning. "Deferred gaps" carries it.
 
@@ -219,16 +220,16 @@ The agent decided each of these within the coordinator's brief. Ian can overturn
 
 ## Proof
 
-Each test runs through the real boundary, the script over the real pages.
+The accepted proof plan below names fault plants. The build exercised the five folder plants and seven fence rows in memory over the real page walk, plus the initial 14-problem red run. P7 and P8 remain proposed fault injections; the current focused-batch policy does not require redundant real-file plants after the red run and self-test.
 
 | Test | What it checks | Planted fault that turns it red |
 | --- | --- | --- |
 | `named-answers.mjs --self-test`, folder plants | Each of the five folders is walked, and each language reaches the module | P1: drop `spec` from the list the check walks. The self-test's own list still names `spec`, finds no page under `spec/`, and fails. P2: add `sh` to the skip tags. The `specification` plant prints nothing |
 | `named-answers.mjs --self-test`, fence rows | The fence and tag rules in "The self-test" | P3: open fences on backticks only. The tildes row prints nothing. P4: close a fence on any three backticks. The long-fence row prints the wrong line. P5: skip a tag the module refuses. The unknown-tag row prints nothing. P6: drop the end-of-page check. The unclosed row prints nothing |
-| `named-answers.mjs` over the real pages | The fixed pages keep the rule | P7: in the lane, add one planted block to one real page in each folder, run the check, and record each of the five lines and exit 1. Restore and touch each page |
-| `sdlc/scripts/lint` | The rung runs the check | P8: plant one block in `demos/01-refund-gate/README.md` and run `lint`. It stops at the named-answers step with exit 1 before `cargo`. Restore and touch |
+| `named-answers.mjs` over the real pages | The fixed pages keep the rule | P7, optional: plant one block in each real folder and observe each refusal |
+| `sdlc/scripts/lint` | The rung runs the check | P8, optional: plant one block in demo 01 and observe lint stop before `cargo` |
 
-The fixed pages keep their own proof. `spec` runs every `spec/` page and green demo, so demo 01 and `spec/decide.md` must pass with the new names. `databases/postgresql/check.sh` runs the new slide statement. The `test` rung covers the help change.
+The fixed pages keep their own proof. The builder ran `mustmatch test spec/decide.md` and demo 01 against the newly built command, and inspected the generated `decide` and `choose` help for the changed names. The PostgreSQL `slide_sample` check runs the new statement. The current focused-batch policy in `sdlc/planning/work-plan-2026-09-27.md` supersedes the original full-rung-per-ticket plan: the coordinator owns the next full integration checkpoint after independent review.
 
 The four questions for the one new test, the self-test:
 
@@ -241,10 +242,10 @@ The four questions for the one new test, the self-test:
 
 Nonblank lines, counted with `grep -c .` over the diff.
 
-- `sdlc/scripts/named-answers.mjs`: at most 120, self-test included.
-- `sdlc/scripts/lint`: at most 3 added.
-- The pages and `check.sh`: at most 32 added, net, together.
-- `crates/thinkthen/src/cli/args/command.rs`: 0 net. The help lines change in place. `sdlc/ratchet.json` does not move.
+- `sdlc/scripts/named-answers.mjs`: at most 120, self-test included. The build measures 120 nonblank lines.
+- `sdlc/scripts/lint`: at most 3 added. The build adds 2.
+- The pages and `check.sh`: at most 32 added, net, together. The build measures 25 net added lines.
+- `crates/thinkthen/src/cli/args/command.rs`: 0 net. The help lines change in place. `sdlc/ratchet.json` does not move. The aggregate ratchet measures 76,686/76,686; that is a separate ceiling from these file and group estimates.
 - No dependency. No change under `site/`.
 
 ## Stop rules
@@ -284,11 +285,11 @@ Every file this ticket edits, and the tickets in flight that open it:
 
 0150 touches none of these files. Demos 28 and 41 and `spec/recognize.md` do not change.
 
-Order: 0156 builds after 0152 Part B lands, as the brief prefers, because Part B rewords the same pages. 0152 Part B waits for 0146, and 0153 waits for 0146, so 0146 lands before this ticket. 0151 is built on its branch and lands first. 0153 lands first, so the `choose` doc comment merges once. 0147, 0148 and 0154 may land either side. Whichever lands later merges `origin/main`, and every shared line here is a word or a line swap. The builder merges `origin/main` and reruns the survey before the first edit and again before the final run.
+At the `65aede94` preflight, 0146, 0151, 0152 Part B, 0153 and the site module prerequisites were on main. Ticket 0154 uses `args.rs`, while this ticket changes `args/command.rs`; its shared specification pages merge second. The builder merged `origin/main` and reran the survey before editing. The coordinator handles later shared-page merges at landing.
 
 ## Routing
 
-Builder: Claude (Opus subagent), in the lane the coordinator names. Reviewer: a fresh read-only Claude session for design and for code. The coordinator relays R0 to the marketing lead.
+Builder: Codex in codex-5. Reviewer: a fresh independent Codex session assigned by the coordinator. R0/R1/R2 landed in the marketing-owned module before this build.
 
 ## Complexity
 
@@ -302,7 +303,7 @@ Contract 1; state and timing 0; reach 2; proof 1; cost of error 1; total 5. Fina
 - Exit codes named `rc`, `status` or `code`, and the `&& rc=0 || rc=$?` form. The module passes both. Nine demo lines and five `spec/` lines use them.
 - An untagged block is never read. None exists today.
 - A writer can tag code as `text` to skip it. Review is the guard.
-- Single-letter aliases pass the module. The one in the PostgreSQL README changes here.
+- Single-letter aliases pass the module. The PostgreSQL README's `a` alias was replaced with `triage` in this build; other occurrences remain outside this ticket.
 
 ## What Ian can overturn
 
@@ -317,13 +318,20 @@ Contract 1; state and timing 0; reach 2; proof 1; cost of error 1; total 5. Fina
 
 ## Closes
 
-- `sdlc/issues/2026-09-26-site-samples-assert-on-unnamed-answers.md`. The lander closes it with the landing commit. The status line names site commit `648a965f` for the site and this ticket for the queue's pages. It moves to `closed/`.
-- Item 2 of `sdlc/issues/2026-09-26-three-items-from-the-named-answers-site-landing.md`. The lander marks it done with the landing commit. The issue stays open for items 1 and 3.
+- The queue-owned page gap under Ian's named-answer ruling. The site issue was already closed by Quick Fix qf-config-ruby-issue-status for its marketing-owned scope; this ticket completes the separate queue-owned reach.
+- No item in `sdlc/issues/closed/2026-09-26-three-items-from-the-named-answers-site-landing.md` remains open. Item 2 was the issue move, already done by that Quick Fix; this build does not reopen it.
 
 ## Evidence
 
-- Starts from: Ian's ruling of 2026-09-26 in the site issue. Site commit `648a965f`, which fixed `site/`. Module commit `e0a6150a` and its 46-row table test. `site/WRITING.md`'s paragraph on named answers, which allows a function named for its meaning. The survey on 2026-09-26 at `e0a6150a`: 194 code blocks in 77 pages, 15 problems, 3 of them false positives. The two help samples at `command.rs:48` and `:110`. The site's `filter/postgresql.sql` and `relate/duckdb.sql` for the SQL shapes. `specification/backends.md:51` for exit 2. The marketing lead's acceptance of R1.
+- Starts from: Ian's ruling of 2026-09-26 in the closed site issue. Site commit `648a965f`, which fixed `site/`. Module commit `e0a6150a` and its later R0/R1/R2 changes on main. `site/WRITING.md`'s paragraph on named answers, which allows a function named for its meaning. The historical survey at `e0a6150a`: 194 code blocks in 77 pages, 15 problems, 3 of them false positives. The refreshed preflight at `65aede94`: 82 pages, 210 accepted-language blocks, 57 skipped, 14 problems in claimed pages. The two help samples in `command.rs`. `specification/backends.md` for exit 2.
 - Keeps: Every demo's and spec page's commands, inputs, recordings and assertions. Each page's lesson: `if` on an exit code in demo 01 and `channels.md`, the four-way `case` in `decide.md`. The PostgreSQL slide check's expected output. The module, byte for byte.
-- Changes: A lint step runs the site's rule over every code block under the five folders, with a self-test. Twelve lines across nine pages, and the two `case` samples in `choose.md` and `score.md`, name their answers. The PostgreSQL annotate alias becomes `triage`. The `decide` and `choose` help samples name their answer and exit code, and one spec sentence, `specification/decide.md:72`, follows them. `check.sh` runs the new PostgreSQL statement.
-- Proof: The self-test's five folder plants and seven fence rows, with planted faults P1 to P6. P7's five real-page plants and P8's lint plant, recorded red. The `spec` rung over the rewritten pages, the `test` rung over the help, and the PostgreSQL surface check.
-- Defers: The `examples.json` fixtures, Rust doc comments, the root README and the other folders, `rc`-style exit-code names, untagged blocks, and single-letter aliases.
+- Changes: A lint step runs the site's rule over every accepted-language code block under the five folders, with a self-test. The 14 current-page failures now name their answers. The PostgreSQL annotate alias becomes `triage`. The `decide` and `choose` help samples name their answer and exit code, and the specification follows them. `check.sh` runs the new PostgreSQL statement.
+- Proof: The first scanner run failed on 14 existing samples, then the self-test's five in-memory folder plants and seven fence rows passed with the real pages clean. Focused `mustmatch` runs passed 24 `spec/decide` blocks and 3 demo 01 blocks with 1 skipped. The built command's help shows `refund_code`, `team_code`, and `team`. The PostgreSQL slide check result is recorded in the build record. Full batch rungs remain at the coordinator's checkpoint under the current focused-batch ruling.
+- Defers: The `examples.json` fixtures, Rust doc comments beyond the two changed help samples, the root README and the other folders, `rc`-style exit-code names, untagged blocks, and remaining single-letter aliases. The two closed site issues are already resolved on main and are not deferred by this ticket.
+
+## What the build taught us
+
+- The [build record](../records/2026-09-27-0156-named-answers-build.md) holds the focused commands and measured limits.
+- The old survey was useful as a file map, but current main had more pages and working R0/R1/R2 rules. Re-running the scanner before edits reduced the actual fix list to 14 problems and prevented edits to the three correct pipeline samples.
+- A warm command from codex-4 at `bbf9d6ce` ran the documentation samples before this lane built its own command. That result did not prove the changed Rust help; a local `cargo build` and generated-help inspection did.
+- The two named-answer issues were already closed by a separate Quick Fix. This build closes the queue-owned page gap and does not move or reopen those issues. The remaining `examples.json`, unscanned folders, generic exit-code names and Rust doc comments need a later owner if Ian broadens the rule; the coordinator owns routing and the next full-batch checkpoint.

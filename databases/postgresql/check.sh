@@ -155,8 +155,8 @@ examples() { python3 tests/examples.py "$SOCK"; }
 check examples
 slide_sample() {
 	fresh generic
-	out=$(q -c "SELECT id FROM tickets WHERE thinkthen_decide('@refund.json', body) IS NULL" \
-		-c "SELECT id, a->>'team', (a->>'urgency')::float AS urgency FROM tickets, thinkthen_annotate('@form.json', body) AS a ORDER BY urgency DESC, id")
+	out=$(q -c "SELECT id FROM (SELECT id, thinkthen_decide('@refund.json', body) AS asks_refund FROM tickets) AS judged WHERE asks_refund IS NULL" \
+		-c "SELECT id, triage->>'team', (triage->>'urgency')::float AS urgency FROM tickets, thinkthen_annotate('@form.json', body) AS triage ORDER BY urgency DESC, id")
 	same "$out" "$(printf '1|billing|0.15\n2|billing|0.15\n3|billing|0.15')"
 }
 check slide_sample

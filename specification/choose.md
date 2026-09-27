@@ -82,7 +82,8 @@ thinkthen choose 'Which kind of request is this?' bug feature question other < i
 ```
 
 ```sh
-case "$(thinkthen choose 'Which team owns this request?' billing shipping account --threshold 0.8 --raw < message.txt)" in
+team=$(thinkthen choose 'Which team owns this request?' billing shipping account --threshold 0.8 --raw < message.txt)
+case $team in
   billing) route billing ;;
   "") route triage ;;
 esac

@@ -60,7 +60,10 @@ thinkthen decide 'The customer explicitly requests a refund.' < message.txt
 ```
 
 ```sh
-if thinkthen decide 'The customer explicitly requests a refund.' --threshold 0.1:0.9 --quiet < message.txt; then
+requests_refund() {
+  thinkthen decide 'The customer explicitly requests a refund.' --threshold 0.1:0.9 --quiet
+}
+if requests_refund < message.txt; then
   route refunds
 fi
 ```
@@ -71,11 +74,11 @@ thinkthen decide 'Does this report a payment failure?' --jsonl --field /body --d
 
 ## Reading the exit code
 
-The help shows a `case $?` block. It separates a no from a not sure answer and from a failure, and a script that acts on the answer reads all four outcomes.
+The help shows a `case` block on the named exit code. It separates a no from a not sure answer and from a failure, and a script that acts on the answer reads all four outcomes.
 
 ```sh
-thinkthen decide 'The customer explicitly requests a refund.' --threshold 0.1:0.9 --quiet < message.txt
-case $? in
+thinkthen decide 'The customer explicitly requests a refund.' --threshold 0.1:0.9 --quiet < message.txt && refund_code=0 || refund_code=$?
+case $refund_code in
   0) route refunds ;;
   1) route support ;;
   3) route triage ;;

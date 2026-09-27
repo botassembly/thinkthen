@@ -25,12 +25,14 @@ A question, set, or spec is JSON text in the file grammar, or a file named with 
 
 `start`, `end`, and `length` count characters, so `substring(body from start + 1 for length)` is the name. The relate query returns `(id, name)` or `(id, name, kind)`. A two-column query takes bare relation names. Inline rules read `NAME` or `NAME=SOURCE:TARGET`, as the command's `--relation` does. The query may return at most 255 rows.
 
-The slide sample runs as drawn:
+`check.sh` runs this sample:
 
 ```sql
-SELECT id FROM tickets WHERE thinkthen_decide('@refund.json', body) IS NULL;
-SELECT id, a->>'team', (a->>'urgency')::float AS urgency
-FROM tickets, thinkthen_annotate('@form.json', body) AS a ORDER BY urgency DESC;
+SELECT id FROM (
+  SELECT id, thinkthen_decide('@refund.json', body) AS asks_refund FROM tickets
+) AS judged WHERE asks_refund IS NULL;
+SELECT id, triage->>'team', (triage->>'urgency')::float AS urgency
+FROM tickets, thinkthen_annotate('@form.json', body) AS triage ORDER BY urgency DESC;
 ```
 
 ## Run facts
