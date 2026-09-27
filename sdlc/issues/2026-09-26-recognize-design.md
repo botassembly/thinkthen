@@ -18,6 +18,8 @@ Three things make it delightful. The first call needs no options. Common English
 
 This is not a BILOU scheme, and it asks no begin, inside or outside question. Experiment 270 measured an in-or-out question plus `confirm` against a BILOU-style begin, inside or outside question. The in-or-out scheme did no worse overall: 87.5% recall and 88.6% precision, against 88.5% and 86.8%. Both separated 12 of 18 touching pairs.
 
+(Superseded by ADR 0056. Recognize now asks one five-option BILOU question per piece, with no word rules and no `confirm`. Local experiments 278 to 285 measured it.)
+
 ## What the user sees
 
 ### Command line
@@ -142,7 +144,7 @@ Jev takes one evidence text and many questions, and answers each question with p
 Rejected:
 - Asking Jev to return spans. Jev answers only fixed questions with probabilities.
 - Asking about every candidate span. The number of spans grows with the square of the word count.
-- A BILOU-style scheme: a three-way begin, inside or outside question per word. Experiment 270 measured it against in-or-out plus `confirm`. It scored 88.5% recall and 86.8% precision against 87.5% and 88.6%. It separated no pair that `confirm` missed, and it lost titles that start with `The`.
+- A BILOU-style scheme: a three-way begin, inside or outside question per word. Experiment 270 measured it against in-or-out plus `confirm`. It scored 88.5% recall and 86.8% precision against 87.5% and 88.6%. It separated no pair that `confirm` missed, and it lost titles that start with `The`. (Superseded by ADR 0056, which adopts a five-option BILOU question per piece.)
 
 ### 2. Words
 
