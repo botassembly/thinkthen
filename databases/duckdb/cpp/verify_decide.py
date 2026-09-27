@@ -87,7 +87,25 @@ def main() -> None:
         )
         assert "thinkthen usage: the query budget is outside the supported range" in bad_budget[1]["error"]
         assert backend.count() == 6, "an invalid query budget sent nothing"
-    print("C++ decision, probability, query-budget, NULL, type, deduplication, and loopback send boundary pass")
+        limits = run(
+            ["SET thinkthen_max_requests = 0",
+             "SELECT thinkthen_decide('Is it a refund?', 'refund now')",
+             "RESET thinkthen_max_requests",
+             "SET thinkthen_throttle = 0",
+             "SELECT thinkthen_decide('Is it a refund?', 'refund now')",
+             "RESET thinkthen_throttle",
+             "SET thinkthen_max_requests_total = 0",
+             "SELECT thinkthen_decide('Is it a refund?', 'refund now')",
+             "RESET thinkthen_max_requests_total",
+             "SELECT thinkthen_decide('Is it a refund?', 'refund now')"],
+            backend.base(), extension=extension,
+        )
+        assert "thinkthen usage: a request limit" in limits[1]["error"]
+        assert "thinkthen usage: a throttle" in limits[4]["error"]
+        assert "thinkthen usage: this process has spent its request total" in limits[7]["error"]
+        assert limits[9] == {"rows": [[True]]}
+        assert backend.count() == 7, "invalid limits sent nothing and reset recovered"
+    print("C++ decision, probability, query budget, numeric limits, NULL, type, deduplication, and loopback send boundary pass")
 
 
 if __name__ == "__main__":

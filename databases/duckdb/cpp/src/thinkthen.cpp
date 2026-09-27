@@ -15,6 +15,7 @@
 #include <cstring>
 #include <memory>
 #include <map>
+#include <limits>
 #include <mutex>
 #include <optional>
 #include <set>
@@ -33,10 +34,16 @@ struct ThinkThenText {
 	const uint8_t *bytes;
 	size_t len;
 };
+struct ThinkThenSettings {
+	int64_t throttle;
+	int64_t max_requests;
+	int64_t max_requests_total;
+};
 int32_t thinkthen_cpp_init();
 ThinkThenReply thinkthen_cpp_validate_question(const uint8_t *bytes, size_t len);
 ThinkThenReply thinkthen_cpp_decision_group(const uint8_t *question, size_t question_len, const ThinkThenText *texts,
-                                            size_t count, int64_t deadline_ms, int32_t probability);
+                                            size_t count, int64_t deadline_ms, int32_t probability,
+                                            ThinkThenSettings settings);
 void thinkthen_cpp_free(uint8_t *bytes, size_t len);
 }
 
@@ -174,6 +181,17 @@ struct DecisionGroup {
 	std::map<string, idx_t> seen;
 };
 
+int64_t NumericSetting(ClientContext &context, const char *name) {
+	Value value;
+	return context.TryGetCurrentSetting(name, value) && !value.IsNull() ? value.GetValue<int64_t>()
+	                                                                      : std::numeric_limits<int64_t>::min();
+}
+
+ThinkThenSettings Settings(ClientContext &context) {
+	return {NumericSetting(context, "thinkthen_throttle"), NumericSetting(context, "thinkthen_max_requests"),
+	        NumericSetting(context, "thinkthen_max_requests_total")};
+}
+
 void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &bound = Bound(state);
 	auto context = bound.context.lock();
@@ -219,6 +237,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		slots[row] = std::make_pair(place->second, position->second);
 	}
 	vector<vector<uint8_t>> outcomes;
+	const auto settings = Settings(*context);
 	for (auto &group : groups) {
 		const auto budget = owner->Remaining(*context);
 		const auto due = budget < 0 ? group.deadline
@@ -230,7 +249,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		}
 		RustReply answered(thinkthen_cpp_decision_group(reinterpret_cast<const uint8_t *>(group.question.data()),
 		                                               group.question.size(), texts.data(), texts.size(), due,
-		                                               bound.probability ? 1 : 0));
+		                                               bound.probability ? 1 : 0, settings));
 		Checked(answered.value);
 		const auto width = bound.probability ? sizeof(double) : sizeof(uint8_t);
 		if (answered.value.len != texts.size() * width || !answered.value.bytes) {
@@ -272,6 +291,10 @@ void LoadThinkThen(ExtensionLoader &loader) {
 	auto &config = DBConfig::GetConfig(loader.GetDatabaseInstance());
 	config.AddExtensionOption("thinkthen_query_budget_ms", "Whole-statement ThinkThen time budget in milliseconds",
 	                          LogicalType::BIGINT, Value::BIGINT(-1));
+	config.AddExtensionOption("thinkthen_throttle", "Maximum concurrent ThinkThen requests", LogicalType::BIGINT);
+	config.AddExtensionOption("thinkthen_max_requests", "Maximum ThinkThen requests in one call", LogicalType::BIGINT);
+	config.AddExtensionOption("thinkthen_max_requests_total", "Maximum ThinkThen requests in this process",
+	                          LogicalType::BIGINT);
 	for (auto name : {"thinkthen_decide", "thinkthen_probability"}) {
 		const auto result = string(name) == "thinkthen_probability" ? LogicalType::DOUBLE : LogicalType::BOOLEAN;
 		for (auto parameters : {vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR},

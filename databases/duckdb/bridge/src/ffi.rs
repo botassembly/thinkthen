@@ -153,6 +153,25 @@ pub(crate) struct BridgeText {
     len: usize,
 }
 
+/// Unset numeric SQL settings use `i64::MIN`; every valid setting is larger.
+#[repr(C)]
+#[derive(Debug)]
+pub(crate) struct BridgeSettings {
+    throttle: i64,
+    max_requests: i64,
+    max_requests_total: i64,
+}
+
+fn asked(settings: BridgeSettings) -> engines::Asked {
+    let present = |value| (value != i64::MIN).then_some(value);
+    engines::Asked {
+        throttle: present(settings.throttle),
+        max_requests: present(settings.max_requests),
+        max_requests_total: present(settings.max_requests_total),
+        cache: None,
+    }
+}
+
 /// One real grouped decision or probability call. The caller currently supplies no SQL settings.
 ///
 /// # Safety
@@ -165,6 +184,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_decision_group(
     count: usize,
     deadline_ms: i64,
     probability: i32,
+    settings: BridgeSettings,
 ) -> Reply {
     reply_boundary(|| {
         let question = question(text(question_bytes, question_len)?)?;
@@ -180,7 +200,9 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_decision_group(
                 .map(|row| text(row.bytes, row.len).map(str::to_owned))
                 .collect::<Result<Vec<_>, _>>()?
         };
-        let engine = engines::engine_for(&engines::Asked::default(), |_| engines::Probe::Allowed)?;
+        let asked = asked(settings);
+        let engine = engines::engine_for(&asked, |_| engines::Probe::Allowed)?;
+        let (copied, cut) = engines::within_total(&asked, copied)?;
         let options = if deadline_ms == -1 {
             CallOptions::new()
         } else {
@@ -199,6 +221,9 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_decision_group(
                 .collect::<Result<Vec<_>, _>>(),
         }
         .map_err(|error| errors::RowError::from(error).text)?;
+        if let Some(error) = cut {
+            return Err(error);
+        }
         if probability != 0 {
             Ok(answers
                 .into_iter()
