@@ -10,8 +10,9 @@ mod profile_cases;
 use crate::core::adapters::systemone;
 use crate::core::recording::Exchange as Recorded;
 use crate::core::{
-    AnswerOutcome, Cutting, Evidence, Find, ModelName, Plan, QuestionFile, QuestionSet,
-    QuestionText, Threshold, Typed, Url, Value, Verb, question_sha256, ranking, resolve,
+    AnswerOutcome, BatchRecord, Cutting, Evidence, Find, Json, ModelName, Plan, QuestionFile,
+    QuestionSet, QuestionText, Threshold, Typed, Url, Value, Verb, question_sha256, ranking,
+    resolve,
 };
 use conformance_support::{Case, Document, Exchange, ExpectedAnswer, QuestionForm, Success};
 use serde::Deserialize;
@@ -123,8 +124,9 @@ fn annotate(case: &Case, place: usize, exchange: &Exchange) -> Result<Asked, Str
     let evidence = match &case.record {
         Some(record) => Evidence::new(record.get())
             .map_err(|error| error.to_string())
-            .and_then(|whole| {
-                set.group_evidence(&group, &whole)
+            .and_then(|evidence| {
+                let value = Json::parse(record.get()).map_err(|error| error.to_string())?;
+                set.group_evidence(&group, &BatchRecord { evidence, value })
                     .map_err(|error| format!("{} record: {error:?}", case.id))
             })?,
         None => Evidence::new(&exchange.evidence).map_err(|error| error.to_string())?,

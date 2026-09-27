@@ -12,6 +12,7 @@ mod harness;
 
 mod address;
 mod annotate;
+mod annotate_on;
 mod asked;
 mod cache_configuration;
 mod cache_identity;

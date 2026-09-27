@@ -26,6 +26,10 @@ pub(crate) struct PlanDocument<'a> {
     from: Option<Sources>,
     #[serde(skip_serializing_if = "Option::is_none")]
     on: Option<QuestionPointers>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    request_count: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    group_requests: Option<Vec<usize>>,
     request: Box<RawValue>,
 }
 
@@ -41,6 +45,8 @@ impl std::fmt::Debug for PlanDocument<'_> {
             .field("input", &self.input)
             .field("from", &self.from)
             .field("on", &self.on)
+            .field("request_count", &self.request_count)
+            .field("group_requests", &self.group_requests)
             .field("request", &Withheld(self.request.get().len()))
             .finish()
     }
@@ -60,6 +66,8 @@ impl<'a> PlanDocument<'a> {
             input: None,
             from: None,
             on: None,
+            request_count: None,
+            group_requests: None,
             request: built_in::encode_raw(plan)?,
         })
     }
@@ -108,6 +116,14 @@ impl<'a> PlanDocument<'a> {
                 })
                 .collect(),
         ));
+        self
+    }
+
+    /// Count the requests each `on` group makes, in group order, and their sum.
+    #[must_use]
+    pub(crate) fn requests(mut self, groups: Vec<usize>) -> Self {
+        self.request_count = Some(groups.iter().sum());
+        self.group_requests = Some(groups);
         self
     }
 }

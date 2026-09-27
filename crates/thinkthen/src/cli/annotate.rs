@@ -7,7 +7,8 @@ use std::process::ExitCode;
 
 use crate::core::adapters::built_in;
 use crate::core::{
-    Backend, Framing, ModelName, PartError, Plan, Pointer, QuestionSet, Reading, Record,
+    Backend, Framing, ModelName, PartError, Plan, Pointer, QuestionSet, Reading, ReadingError,
+    Record,
 };
 
 use crate::args::{AnnotateArguments, Common};
@@ -71,6 +72,9 @@ pub(crate) fn run(
     let profile = profile::read(&arguments.common)?;
     let mismatch = Mismatch::new(set.profile(), profile.as_ref());
     let reading = reading(&arguments.common)?;
+    if let (Framing::Lines, Some(name)) = (arguments.common.framing(), set.first_part()) {
+        return Err(Failure::Reading(ReadingError::LinesPart(name.to_owned())));
+    }
     let source = edge::source(arguments.common.input.as_deref(), input)?;
     if let Some(kind) = table_kind(&arguments.common) {
         let mut rows = TableRows::new(source, kind)?;
@@ -290,13 +294,12 @@ fn plan_for(
     if group.is_empty() {
         return Err(Failure::Defect("an annotate group is empty"));
     }
-    let evidence =
-        set.group_evidence(group, &base.evidence(record)?)
-            .map_err(|error| match error {
-                PartError::Reading(error) => Failure::from(error),
-                PartError::Render(error) => Failure::from(error),
-                PartError::Record(error) => Failure::from(error),
-            })?;
+    let evidence = set
+        .group_evidence(group, &base.batch_record(record)?)
+        .map_err(|error| match error {
+            PartError::Reading(error) => Failure::from(error),
+            PartError::Record(error) => Failure::from(error),
+        })?;
     let questions = group
         .iter()
         .map(|place| {
