@@ -113,33 +113,43 @@ fn the_first_explicit_width_wins_and_only_a_different_one_is_refused() {
 
 #[test]
 fn two_racing_first_widths_select_exactly_one_and_the_loser_names_it() {
+    race_once();
+}
+
+#[test]
+#[ignore = "repeated width race; run sdlc/scripts/test-stress --run"]
+fn fifty_racing_first_widths_select_exactly_one_and_the_loser_names_it() {
     for _ in 0..50 {
-        let widths = widths();
-        let start = Arc::new(Barrier::new(2));
-        let racers = [2, 16].map(|value| {
-            let start = Arc::clone(&start);
-            thread::spawn(move || {
-                start.wait();
-                widths.select(Some(width(value)))
-            })
-        });
-        let results = racers.map(|racer| racer.join().expect("racer"));
-        let winner = widths.selected().expect("one width won");
-        assert_eq!(
-            results
-                .iter()
-                .filter(|result| **result == Ok(winner))
-                .count(),
-            1
-        );
-        assert_eq!(
-            results
-                .iter()
-                .filter(|result| **result == Err(WidthActive(winner)))
-                .count(),
-            1
-        );
+        race_once();
     }
+}
+
+fn race_once() {
+    let widths = widths();
+    let start = Arc::new(Barrier::new(2));
+    let racers = [2, 16].map(|value| {
+        let start = Arc::clone(&start);
+        thread::spawn(move || {
+            start.wait();
+            widths.select(Some(width(value)))
+        })
+    });
+    let results = racers.map(|racer| racer.join().expect("racer"));
+    let winner = widths.selected().expect("one width won");
+    assert_eq!(
+        results
+            .iter()
+            .filter(|result| **result == Ok(winner))
+            .count(),
+        1
+    );
+    assert_eq!(
+        results
+            .iter()
+            .filter(|result| **result == Err(WidthActive(winner)))
+            .count(),
+        1
+    );
 }
 
 #[test]

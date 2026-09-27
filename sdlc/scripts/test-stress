@@ -1,0 +1,55 @@
+#!/bin/sh
+# Explicitly opt in to repeated load and timing campaigns.
+set -eu
+case ${1:-} in
+--list)
+    echo 'backend binary: fifty rounds; twenty concurrent ports'
+    echo 'public batches: 20,000-record memory; engine churn'
+    echo 'engine width: 50 repeated first-width races'
+    echo 'Polars: 200-record throttle equality'
+    echo 'ports: THINKTHEN_TEST_PROFILE=stress via surfaces --stress'
+    exit 0 ;;
+--check|--run) mode=$1 ;;
+*) echo 'usage: sdlc/scripts/test-stress --list|--check|--run' >&2; exit 2 ;;
+esac
+. "$(dirname -- "$0")/heavy-lock"
+REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+cd -- "$REPO"
+
+ignored_case() {
+    package=$1 target=$2 filter=$3
+    shift 3
+    cargo test --locked --offline -p "$package" "$@" --test "$target" "$filter" -- --ignored --list |
+        grep -Fqx "$filter: test" || {
+            echo "test-stress: $package/$target has no ignored $filter" >&2
+            exit 1
+        }
+    if [ "$mode" = --run ]; then
+        cargo test --locked --offline -p "$package" "$@" --test "$target" "$filter" -- --ignored --exact
+    fi
+}
+
+ignored_lib() {
+    filter=$1
+    cargo test --locked --offline -p thinkthen --lib "$filter" -- --ignored --list |
+        grep -Fqx "$filter: test" || {
+            echo "test-stress: the library has no ignored $filter" >&2
+            exit 1
+        }
+    if [ "$mode" = --run ]; then
+        cargo test --locked --offline -p thinkthen --lib "$filter" -- --ignored --exact
+    fi
+}
+
+ignored_case conformance-backend binary fifty_rounds_back_to_back_each_let_go_the_reply_they_counted
+ignored_case conformance-backend binary twenty_backends_start_at_once_on_twenty_ports
+ignored_case thinkthen public_batches a_long_batch_keeps_memory_flat_as_its_input_grows
+ignored_case thinkthen public_batches engines_built_and_dropped_across_threads_fail_fast_on_a_refused_port
+ignored_lib engine::width_tests::fifty_racing_first_widths_select_exactly_one_and_the_loser_names_it
+THINKTHEN_API_KEY=sk-polars-loopback THINKTHEN_BASE_URL=http://127.0.0.1:9/v1 \
+    ignored_case thinkthen polars_throttle two_hundred_series_records_match_the_slice --features polars
+if [ "$mode" = --run ]; then
+    sh sdlc/scripts/surfaces --stress
+else
+    echo 'test-stress: all six ignored Rust filters exist; port stress selections are checked by their own check.sh'
+fi

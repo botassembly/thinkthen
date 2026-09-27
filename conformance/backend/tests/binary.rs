@@ -249,6 +249,7 @@ fn four_rounds_on_one_backend_each_let_go_only_the_reply_held_then() -> Tested {
 }
 
 #[test]
+#[ignore = "repeated 50-round campaign; run sdlc/scripts/test-stress --run"]
 fn fifty_rounds_back_to_back_each_let_go_the_reply_they_counted() -> Tested {
     let mut backend = start()?;
     let began = Instant::now();
@@ -394,6 +395,7 @@ fn two_backend_binaries_keep_their_own_count_gate_and_port() -> Tested {
 }
 
 #[test]
+#[ignore = "twenty concurrent backends; run sdlc/scripts/test-stress --run"]
 fn twenty_backends_start_at_once_on_twenty_ports() -> Tested {
     let began = Instant::now();
     let started = (0..20).map(|_| start()).collect::<Result<Vec<_>, _>>()?;
