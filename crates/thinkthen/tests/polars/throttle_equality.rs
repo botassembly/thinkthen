@@ -102,7 +102,7 @@ fn equal_answers(question: &Question, series: &Series, refs: &[&str], count: usi
     };
     let (from_series, series_count) = answered(&|engine| {
         let answered = engine
-            .decide_series(question, &series, CallOptions::new())
+            .decide_series(question, series, CallOptions::new())
             .expect("the series call");
         answered.bool().expect("a Boolean series").iter().collect()
     });
