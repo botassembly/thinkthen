@@ -7,7 +7,10 @@ use std::fmt;
 use std::io::{ErrorKind, Read as _, Write};
 use std::path::Path;
 
+use clap::ValueEnum;
+
 use crate::core::measure::answer::{Rule, Shown};
+use crate::core::measure::items::Matching;
 use crate::core::measure::{Line, MeasureError, json_lines};
 use crate::core::{Threshold, ThresholdError};
 use crate::failure::Failure;
@@ -23,6 +26,22 @@ pub(crate) struct Refusal {
     pub(crate) role: &'static str,
     /// What was refused.
     pub(crate) cause: Cause,
+}
+
+/// How a `recognize` name matches another name: `--match strict` or `--match overlap`.
+#[derive(Clone, Copy, Debug, ValueEnum)]
+pub(crate) enum Match {
+    Strict,
+    Overlap,
+}
+
+impl From<Match> for Matching {
+    fn from(held: Match) -> Self {
+        match held {
+            Match::Strict => Self::Strict,
+            Match::Overlap => Self::Overlap,
+        }
+    }
 }
 
 /// The sentence a `--by` value that is neither a word nor a pointer gets.
@@ -145,7 +164,7 @@ fn said(
         ),
         MeasureError::Ungradable(line) => write!(
             formatter,
-            "{role} line {line} holds an answer {command} cannot grade; {command} grades decide and choose"
+            "{role} line {line} holds an answer diff cannot grade; diff grades decide, choose, recognize and relate"
         ),
         MeasureError::NoQuestion(line) => write!(
             formatter,
@@ -198,6 +217,20 @@ fn said(
         ),
         MeasureError::BandOnChoose => {
             formatter.write_str("choose takes a single cut; a band applies to decide")
+        }
+        MeasureError::PairsVerbs(line) => write!(
+            formatter,
+            "{role} line {line} pairs recognize or relate with another verb"
+        ),
+        MeasureError::MixesVerbs(line) => write!(
+            formatter,
+            "{role} line {line} mixes recognize or relate with other verbs"
+        ),
+        MeasureError::MixesSets(line) => {
+            write!(formatter, "{role} line {line} mixes recognize with relate")
+        }
+        MeasureError::MatchNotSet => {
+            formatter.write_str("--match applies to recognize and relate")
         }
     }
 }

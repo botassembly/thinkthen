@@ -25,8 +25,20 @@ pub(crate) enum What {
     Edge(String, [(String, String); 2]),
 }
 
-/// One said item: what it is, its strength or probability, and whether its relation has no direction.
-type Item = (What, f64, bool);
+/// One said item.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct Item {
+    /// What it is.
+    pub(crate) what: What,
+    /// Its strength or probability.
+    score: f64,
+    /// True when its relation has no direction.
+    loose: bool,
+    /// Its zero-based place in the line's output.
+    pub(crate) place: usize,
+    /// Its object as the command printed it.
+    pub(crate) printed: Json,
+}
 
 /// What one line said, strongest first, and the cut it ran with.
 #[derive(Clone, Debug, PartialEq)]
@@ -34,6 +46,25 @@ pub(crate) struct Items {
     said: Vec<Item>,
     /// The line's `question.threshold`.
     pub(crate) cut: f64,
+}
+
+impl Items {
+    /// The items a rule keeps, strongest first: every item as run, or those at or above a single cut.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`MeasureError::SetCut`] for a band or a cut below the line's run cut.
+    pub(crate) fn kept(&self, rule: Rule) -> Result<&[Item], MeasureError> {
+        let floor = match rule {
+            Rule::Threshold(threshold) => threshold
+                .cut_value()
+                .filter(|cut| *cut >= self.cut)
+                .ok_or(MeasureError::SetCut)?,
+            Rule::AsRun | Rule::Levels(_) => 0.0,
+        };
+        let kept = self.said.partition_point(|item| item.score >= floor);
+        Ok(self.said.get(..kept).unwrap_or_default())
+    }
 }
 
 /// A JSON number as a float, or nothing.
@@ -84,16 +115,23 @@ pub(crate) fn read(
         .and_then(|value| list(verb, value))
         .ok_or(ungradable)?;
     let mut items = Vec::new();
-    for held in said {
+    for (place, held) in said.iter().enumerate() {
         let what = entity_rule(verb, &names, what(verb, held).ok_or(ungradable)?);
         let score = number(held.member(if relate { "probability" } else { "strength" }))
             .and_then(|p| Probability::new(p).ok())
             .ok_or(MeasureError::Probability(line))?
             .as_f64();
         let loose = matches!(&what, What::Edge(relation, _) if either.iter().any(|name| name.as_str() == Some(relation)));
-        items.push((what, score, loose));
+        let printed = held.clone();
+        items.push(Item {
+            what,
+            score,
+            loose,
+            place,
+            printed,
+        });
     }
-    items.sort_by(|a, b| b.1.total_cmp(&a.1));
+    items.sort_by(|a, b| b.score.total_cmp(&a.score));
     let meta = entry.member("meta");
     let lost = number(meta.and_then(|meta| meta.member("failed_questions")));
     let partial = lost.is_some_and(|lost| lost > 0.0);
@@ -166,8 +204,7 @@ fn entity_rule(verb: Verb, names: &[String], what: What) -> What {
     }
 }
 
-/// Matched, extra, and missed under the rule. Said items are taken strongest
-/// first, and each takes the first unmatched key item it matches.
+/// Matched, extra, and missed under the rule.
 ///
 /// # Errors
 ///
@@ -178,30 +215,39 @@ pub(crate) fn tally(
     matching: Matching,
     rule: Rule,
 ) -> Result<[usize; 3], MeasureError> {
-    let floor = match rule {
-        Rule::Threshold(threshold) => threshold
-            .cut_value()
-            .filter(|cut| *cut >= items.cut)
-            .ok_or(MeasureError::SetCut)?,
-        Rule::AsRun | Rule::Levels(_) => 0.0,
-    };
-    let mut open = vec![true; key.len()];
-    let [mut hit, mut extra] = [0, 0];
-    for item in items.said.iter().filter(|item| item.1 >= floor) {
-        let mut found = key.iter().zip(open.iter_mut());
-        if let Some((_, open)) = found.find(|(want, open)| **open && matches(item, want, matching))
-        {
-            *open = false;
-            hit += 1;
-        } else {
-            extra += 1;
-        }
-    }
-    Ok([hit, extra, key.len() - hit])
+    let kept = items.kept(rule)?;
+    let hit = pair(kept, key, |item, want| matches(item, want, matching))
+        .iter()
+        .flatten()
+        .count();
+    Ok([hit, kept.len() - hit, key.len() - hit])
 }
 
-fn matches((what, _, loose): &Item, want: &What, matching: Matching) -> bool {
-    match (what, want) {
+/// One match each: the said items are taken in order, strongest first, and each
+/// takes the first open wanted item, in order, that fits it. Gives each said item's match.
+pub(crate) fn pair<'a, T>(
+    said: impl IntoIterator<Item = &'a Item>,
+    wanted: &[T],
+    fits: impl Fn(&Item, &T) -> bool,
+) -> Vec<Option<usize>> {
+    let mut open = vec![true; wanted.len()];
+    said.into_iter()
+        .map(|item| {
+            let found = wanted
+                .iter()
+                .zip(&open)
+                .position(|(want, open)| *open && fits(item, want));
+            if let Some(slot) = found.and_then(|place| open.get_mut(place)) {
+                *slot = false;
+            }
+            found
+        })
+        .collect()
+}
+
+/// True when a said item matches a wanted name or edge under the rule.
+pub(crate) fn matches(item: &Item, want: &What, matching: Matching) -> bool {
+    match (&item.what, want) {
         (What::Name(kind, start, end), What::Name(key_kind, key_start, key_end)) => {
             kind == key_kind
                 && match matching {
@@ -211,7 +257,17 @@ fn matches((what, _, loose): &Item, want: &What, matching: Matching) -> bool {
         }
         (What::Edge(relation, [source, target]), What::Edge(key_relation, [from, to])) => {
             relation == key_relation
-                && ((source, target) == (from, to) || (*loose && (target, source) == (from, to)))
+                && ((source, target) == (from, to) || (item.loose && (target, source) == (from, to)))
+        }
+        _ => false,
+    }
+}
+
+/// True when two names sit at places that match under the rule and differ in kind.
+pub(crate) fn kind_changed(a: &Item, b: &Item, matching: Matching) -> bool {
+    match (&a.what, &b.what) {
+        (What::Name(kind, ..), What::Name(other, start, end)) => {
+            kind != other && matches(a, &What::Name(kind.clone(), *start, *end), matching)
         }
         _ => false,
     }
