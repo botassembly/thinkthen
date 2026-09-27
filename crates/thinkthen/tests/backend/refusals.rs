@@ -137,7 +137,7 @@ const REFUSALS: [Refusal; 33] = [
     every(
         "a model with a line break inside",
         &["--model", "jev\n1.13.0"],
-        "a model name holds no control character",
+        "a model name holds no control character or white space but a plain space",
         2,
     ),
     Refusal {

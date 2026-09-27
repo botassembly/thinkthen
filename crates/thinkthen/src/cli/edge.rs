@@ -137,7 +137,9 @@ impl Environment {
 pub(crate) fn model_flag(text: &str) -> Result<crate::core::ModelName, Failure> {
     crate::core::ModelName::new(text).map_err(|error| {
         Failure::Usage(match error {
-            crate::core::BlankTextError::ModelControl => "--model holds no control character",
+            crate::core::BlankTextError::ModelControl => {
+                "--model holds no control character or white space but a plain space"
+            }
             _ => "--model is text, not white space",
         })
     })

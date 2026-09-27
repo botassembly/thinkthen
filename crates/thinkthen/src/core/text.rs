@@ -22,8 +22,9 @@ pub(crate) enum BlankTextError {
     #[error("a model name is text, not white space")]
     ModelName,
     /// A model name travels in the request, the recording, and the result,
-    /// so it carries no line break or other control character.
-    #[error("a model name holds no control character")]
+    /// so it carries no line break, other control character, or white space
+    /// but a plain space.
+    #[error("a model name holds no control character or white space but a plain space")]
     ModelControl,
     /// A URL names where the request is posted, so it carries text.
     #[error("a URL is text, not white space")]
@@ -165,14 +166,17 @@ impl ModelName {
     /// # Errors
     ///
     /// Returns [`BlankTextError`] when the text is empty, holds only white
-    /// space, or holds a control character.
+    /// space, or holds a control character or white space but a plain space.
     pub(crate) fn new(text: impl Into<String>) -> Result<Self, BlankTextError> {
         let text = text.into();
         let name = text.trim();
         if name.is_empty() {
             return Err(BlankTextError::ModelName);
         }
-        if name.chars().any(char::is_control) {
+        if name
+            .chars()
+            .any(|c| c.is_control() || (c.is_whitespace() && c != ' '))
+        {
             return Err(BlankTextError::ModelControl);
         }
         Ok(Self(name.to_owned()))
@@ -390,6 +394,7 @@ mod tests {
             ("jev\u{0}", Err(BlankTextError::ModelControl)),
             ("jev\u{7f}", Err(BlankTextError::ModelControl)),
             ("jev\u{85}x", Err(BlankTextError::ModelControl)),
+            ("jev\u{2028}x", Err(BlankTextError::ModelControl)),
         ] {
             assert_eq!(
                 ModelName::new(text).as_ref().map(ModelName::as_str),
