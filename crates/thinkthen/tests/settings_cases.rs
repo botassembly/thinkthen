@@ -11,7 +11,10 @@ use serde_json::Value;
 use std::io::Write;
 use std::process::{Command, Stdio};
 
-#[expect(clippy::panic, reason = "an unmapped shared case is a failed test fixture")]
+#[expect(
+    clippy::panic,
+    reason = "an unmapped shared case is a failed test fixture"
+)]
 fn flags(
     name: &str,
     value: &Value,
