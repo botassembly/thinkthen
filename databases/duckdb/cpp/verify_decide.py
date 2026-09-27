@@ -47,7 +47,18 @@ def main() -> None:
         )
         assert grouped == [{"rows": [[True], [True], [True]]}]
         assert backend.count() == 3, "the repeated text should share its first request"
-    print("C++ decide bind, chunk, deduplication, NULL, type, and loopback send boundary pass")
+        probabilities = run(
+            ["SELECT thinkthen_probability('Is it a refund?', t) "
+             "FROM (VALUES ('refund now'), ('refund now')) AS x(t)",
+             "SELECT typeof(thinkthen_probability('Is it a refund?', 'refund now'))"],
+            backend.base(), extension=extension,
+        )
+        values = probabilities[0]["rows"]
+        assert len(values) == 2 and values[0] == values[1]
+        assert isinstance(values[0][0], float) and 0 <= values[0][0] <= 1
+        assert probabilities[1] == {"rows": [["DOUBLE"]]}
+        assert backend.count() == 4, "probability should deduplicate its repeated text"
+    print("C++ decision and probability bind, chunk, deduplication, NULL, type, and loopback send boundary pass")
 
 
 if __name__ == "__main__":

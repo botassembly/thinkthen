@@ -153,17 +153,18 @@ pub(crate) struct BridgeText {
     len: usize,
 }
 
-/// One real grouped decision call. The caller currently supplies no SQL settings.
+/// One real grouped decision or probability call. The caller currently supplies no SQL settings.
 ///
 /// # Safety
 /// The question and every entry in `texts` must remain readable through this call.
 #[unsafe(no_mangle)]
-pub(crate) unsafe extern "C" fn thinkthen_cpp_decide_group(
+pub(crate) unsafe extern "C" fn thinkthen_cpp_decision_group(
     question_bytes: *const u8,
     question_len: usize,
     texts: *const BridgeText,
     count: usize,
     deadline_ms: i64,
+    probability: i32,
 ) -> Reply {
     reply_boundary(|| {
         let question = question(text(question_bytes, question_len)?)?;
@@ -187,24 +188,31 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_decide_group(
                 .deadline_millis(deadline_ms)
                 .map_err(|error| errors::RowError::from(error).text)?
         };
-        let answers: Vec<Answer> = match &question {
+        let answers: Vec<(Answer, f64)> = match &question {
             LoadedQuestion::Question(held) => engine
                 .decide_many_with(held, copied, options)
-                .map(|row| row.map(|row| *row.value()))
+                .map(|row| row.map(|row| (*row.value(), row.probability())))
                 .collect::<Result<Vec<_>, _>>(),
             LoadedQuestion::Banded(held) => engine
                 .decide_many_with(held, copied, options)
-                .map(|row| row.map(|row| *row.value()))
+                .map(|row| row.map(|row| (*row.value(), row.probability())))
                 .collect::<Result<Vec<_>, _>>(),
         }
         .map_err(|error| errors::RowError::from(error).text)?;
-        Ok(answers
-            .into_iter()
-            .map(|answer| match answer {
-                Answer::No => 0,
-                Answer::Yes => 1,
-                Answer::Unsure => 2,
-            })
-            .collect::<Vec<u8>>())
+        if probability != 0 {
+            Ok(answers
+                .into_iter()
+                .flat_map(|(_, value)| value.to_ne_bytes())
+                .collect())
+        } else {
+            Ok(answers
+                .into_iter()
+                .map(|(answer, _)| match answer {
+                    Answer::No => 0,
+                    Answer::Yes => 1,
+                    Answer::Unsure => 2,
+                })
+                .collect())
+        }
     })
 }

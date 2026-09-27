@@ -19,6 +19,8 @@
 #include <string>
 #include <vector>
 
+static_assert(sizeof(double) == 8, "the Rust bridge returns eight-byte probabilities");
+
 extern "C" {
 struct ThinkThenReply {
 	int32_t status;
@@ -31,8 +33,8 @@ struct ThinkThenText {
 };
 int32_t thinkthen_cpp_init();
 ThinkThenReply thinkthen_cpp_validate_question(const uint8_t *bytes, size_t len);
-ThinkThenReply thinkthen_cpp_decide_group(const uint8_t *question, size_t question_len, const ThinkThenText *texts,
-                                          size_t count, int64_t deadline_ms);
+ThinkThenReply thinkthen_cpp_decision_group(const uint8_t *question, size_t question_len, const ThinkThenText *texts,
+                                            size_t count, int64_t deadline_ms, int32_t probability);
 void thinkthen_cpp_free(uint8_t *bytes, size_t len);
 }
 
@@ -96,6 +98,7 @@ struct ScalarBind : FunctionData {
 	weak_ptr<ClientContext> context;
 	std::optional<string> constant_question;
 	std::optional<int64_t> constant_deadline;
+	bool probability = false;
 
 	explicit ScalarBind(weak_ptr<ClientContext> context_p) : context(std::move(context_p)) {
 	}
@@ -103,19 +106,21 @@ struct ScalarBind : FunctionData {
 		auto copy = make_uniq<ScalarBind>(context);
 		copy->constant_question = constant_question;
 		copy->constant_deadline = constant_deadline;
+		copy->probability = probability;
 		return copy;
 	}
 	bool Equals(const FunctionData &other) const override {
 		auto &held = other.Cast<ScalarBind>();
 		return context.lock() == held.context.lock() && constant_question == held.constant_question &&
-		       constant_deadline == held.constant_deadline;
+		       constant_deadline == held.constant_deadline && probability == held.probability;
 	}
 };
 
-unique_ptr<FunctionData> BindDecide(ClientContext &context, ScalarFunction &,
+unique_ptr<FunctionData> BindDecide(ClientContext &context, ScalarFunction &function,
                                      vector<unique_ptr<Expression>> &arguments) {
 	context.registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	auto bound = make_uniq<ScalarBind>(context.shared_from_this());
+	bound->probability = function.name == "thinkthen_probability";
 	if (arguments[0]->IsFoldable()) {
 		auto value = ExpressionExecutor::EvaluateScalar(context, *arguments[0]);
 		if (!value.IsNull()) {
@@ -199,22 +204,31 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		for (auto &text : group.texts) {
 			texts.push_back({reinterpret_cast<const uint8_t *>(text.data()), text.size()});
 		}
-		RustReply answered(thinkthen_cpp_decide_group(reinterpret_cast<const uint8_t *>(group.question.data()),
-		                                             group.question.size(), texts.data(), texts.size(), group.deadline));
+		RustReply answered(thinkthen_cpp_decision_group(reinterpret_cast<const uint8_t *>(group.question.data()),
+		                                               group.question.size(), texts.data(), texts.size(), group.deadline,
+		                                               bound.probability ? 1 : 0));
 		Checked(answered.value);
-		if (answered.value.len != texts.size() || !answered.value.bytes) {
+		const auto width = bound.probability ? sizeof(double) : sizeof(uint8_t);
+		if (answered.value.len != texts.size() * width || !answered.value.bytes) {
 			throw InvalidInputException("thinkthen defect: the bridge returned an invalid decision group");
 		}
 		outcomes.emplace_back(answered.value.bytes, answered.value.bytes + answered.value.len);
 	}
 	for (idx_t row = 0; row < args.size(); ++row) {
 		if (!slots[row]) {
-			result.SetValue(row, Value(LogicalType::BOOLEAN));
+			result.SetValue(row, Value(bound.probability ? LogicalType::DOUBLE : LogicalType::BOOLEAN));
 			continue;
 		}
 		auto [group, text] = *slots[row];
-		if (group >= outcomes.size() || text >= outcomes[group].size()) {
+		const auto width = bound.probability ? sizeof(double) : sizeof(uint8_t);
+		if (group >= outcomes.size() || (text + 1) * width > outcomes[group].size()) {
 			throw InvalidInputException("thinkthen defect: a decision row lost its answer");
+		}
+		if (bound.probability) {
+			double value;
+			std::memcpy(&value, outcomes[group].data() + text * width, sizeof(value));
+			result.SetValue(row, Value::DOUBLE(value));
+			continue;
 		}
 		switch (outcomes[group][text]) {
 		case 0: result.SetValue(row, Value::BOOLEAN(false)); break;
@@ -231,11 +245,14 @@ void LoadThinkThen(ExtensionLoader &loader) {
 	if (thinkthen_cpp_init() != 0) {
 		throw InvalidInputException("thinkthen defect: the Rust bridge did not initialize");
 	}
-	for (auto parameters : {vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR},
-	                        vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::BIGINT}}) {
-		ScalarFunction decide("thinkthen_decide", parameters, LogicalType::BOOLEAN, Decide, BindDecide);
-		decide.SetStability(FunctionStability::VOLATILE);
-		loader.RegisterFunction(decide);
+	for (auto name : {"thinkthen_decide", "thinkthen_probability"}) {
+		const auto result = string(name) == "thinkthen_probability" ? LogicalType::DOUBLE : LogicalType::BOOLEAN;
+		for (auto parameters : {vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR},
+		                        vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::BIGINT}}) {
+			ScalarFunction function(name, parameters, result, Decide, BindDecide);
+			function.SetStability(FunctionStability::VOLATILE);
+			loader.RegisterFunction(function);
+		}
 	}
 }
 
