@@ -68,7 +68,7 @@ trap 'rm -rf "$work"' EXIT
 cp "$root/crates/thinkthen/tests/fixtures/measure/write/decide.json" "$work/decide.json"
 cd "$work"
 
-env -u THINKTHEN_API_KEY thinkthen decide @decide.json --jsonl --details \
+env -u THINKTHEN_API_KEY thinkthen decide @decide.json --jsonl --batch 1 --details \
   --replay "$root/transforms/rows/recording" --input "$root/transforms/rows/cases.jsonl" > rows.jsonl
 key="$root/crates/thinkthen/tests/fixtures/measure/write/key.jsonl"
 thinkthen audit rows.jsonl "$key" --write decide.json 2>&1 >/dev/null \

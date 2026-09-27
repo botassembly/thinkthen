@@ -14,6 +14,12 @@ mod address;
 mod annotate;
 mod annotate_on;
 mod asked;
+#[allow(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    reason = "a helper that cannot start the command stops the test; rows and requests are counted before they are read"
+)]
+mod batching;
 mod cache_configuration;
 mod cache_identity;
 mod cache_locking;

@@ -116,11 +116,11 @@ printf 'x' | thinkthen decide 'asks for a refund' --record here/ --replay there/
 echo "$status" | mustmatch "2"
 ```
 
-`--lines` and `--jsonl` turn the input into records, and the plan then shows the first record with a fifth field naming the framing and the pointers. It reads no further than that record.
+`--lines` and `--jsonl` turn the input into records, and the plan then shows the first batch with a fifth field naming the framing and the pointers. The batch quotes each record inside its own question, beside one fixed sentence of evidence.
 
 ```bash
-printf '{"id":"T-1","body":"Payouts failed."}\n{"id":"T-2","body":"x"}\n' | thinkthen decide 'reports a payment failure' --jsonl --field /body --dry-run | mustmatch like '{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Payouts failed.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"reports a payment failure"}}}}'
-printf 'first line\nsecond line\n' | thinkthen decide 'reports a payment failure' --lines --dry-run | grep -c '"input":{"framing":"lines","field":\[\]},"request":{"state":"first line"' | mustmatch "1"
+printf '{"id":"T-1","body":"Payouts failed."}\n{"id":"T-2","body":"x"}\n' | thinkthen decide 'reports a payment failure' --jsonl --field /body --dry-run | mustmatch like '{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"Payouts failed.\". reports a payment failure"},"q2":{"type":"noul","instructions":"The text is \"x\". reports a payment failure"}}}}'
+printf 'first line\nsecond line\n' | thinkthen decide 'reports a payment failure' --lines --dry-run | grep -c '"input":{"framing":"lines","field":\[\]},"request":{"state":"Each question quotes' | mustmatch "1"
 ```
 
 `--field` given more than once sends an object of the named parts, keyed by the last part of each pointer. Two pointers that end in one name are a usage error, and so is `--field` beside `--lines`.

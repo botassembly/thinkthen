@@ -33,6 +33,7 @@ const BOUND: u64 = crate::core::MAX_RECORD_BYTES as u64 + 2;
 #[derive(Debug, Default)]
 pub(crate) struct Environment {
     base_url: Option<String>,
+    batch: Option<String>,
     named_cache: bool,
     cache: Option<PathBuf>,
     cache_is_platform_default: bool,
@@ -54,6 +55,7 @@ impl Environment {
         let usage_path = config::usage_path();
         Ok(Self {
             base_url: read("THINKTHEN_BASE_URL"),
+            batch: read("THINKTHEN_BATCH"),
             cache: named_cache
                 .as_ref()
                 .map(PathBuf::from)
@@ -116,6 +118,11 @@ impl Environment {
     }
     pub(crate) fn api_key_set(&self) -> bool {
         read(KEY_VAR).is_some()
+    }
+
+    /// `THINKTHEN_BATCH`, which only `decide`, `filter` and `rank` read.
+    pub(crate) fn batch(&self) -> Option<&str> {
+        self.batch.as_deref()
     }
 
     /// The base the request is posted under, or `None` when the variable is empty.
