@@ -475,6 +475,7 @@ fn a_closed_table_output_pipe_stops_reading_and_scheduling() {
         .env_clear()
         .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
+        .env("THINKTHEN_BATCH", "1")
         .args([
             "decide",
             "Question",
