@@ -1,0 +1,7 @@
+# Name the integration checkpoint before running every surface
+
+Ian asked for focused functional checks during implementation and a full integration check after a related batch. The existing AGENTS instruction said to use a related-ticket checkpoint, but it did not say who names that checkpoint. During 0171, the builder started `sdlc/scripts/surfaces` for that ticket alone. Monitoring found an R installation holding the shared heavy lock while DuckDB's build waited. The builder confirmed no changed R behavior justified the rebuild and stopped the broad run with SIGINT. Its exit 130 is partial evidence, not a passing surface run; the focused 0171 checks remain independently valid. This is a confirmed execution-process miss, not test flakiness or evidence of hardware saturation.
+
+The clarification assigns that checkpoint to the coordinator before a full test, spec or surfaces run. Focused format, lint and functional checks continue routinely. The coordinator brief names the related tickets, changed boundaries, existing proof to retain and necessary combined checks. It does not require Ian to approve ordinary tests. The opt-in stress rule and full-functional case inventory remain unchanged.
+
+Only AGENTS and this record change. The instruction stays below its 5,000-byte budget at 4,976 bytes. No runtime code, test, dependency or gate script changes, so no build or test campaign is needed. Independent review is pending. The separate incident and preparation records remain owned by the 0171 builder and record the same confirmed cause.
