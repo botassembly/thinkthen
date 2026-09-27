@@ -16,6 +16,11 @@ mod annotate_on;
 mod asked;
 #[allow(
     clippy::expect_used,
+    reason = "a failed loopback fixture stops the proof"
+)]
+mod backoff;
+#[allow(
+    clippy::expect_used,
     clippy::indexing_slicing,
     reason = "a helper that cannot start the command stops the test; rows and requests are counted before they are read"
 )]

@@ -73,7 +73,7 @@ impl EngineBuilder {
             cache: Cache::Default,
             seeded: None,
             timeout: Duration::from_secs(30),
-            max_retries: 2,
+            max_retries: 3,
             profile: None,
             record: None,
             replay: None,

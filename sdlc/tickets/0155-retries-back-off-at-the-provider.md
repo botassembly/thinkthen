@@ -6,9 +6,17 @@ opens: sdlc/planning/adr/0052-retries-back-off-at-the-provider.md sdlc/planning/
 
 # 0155: Retries back off at the provider and count apart
 
-Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Claude. It carries ADR 0052. It builds only after tickets 0146 and 0148 land on main, and before ticket 0154 and the batching design's B5, by the coordinator's ruling of 2026-09-26.
+Status: building on 2026-09-27. The coordinator accepted it on 2026-09-26 after a fresh read-only review. It carries ADR 0052. Tickets 0146 and 0148 have landed. The 2026-09-27 work plan adds review-register items 91, 92, 119 and the message half of 118 to this build.
 
-Review route: a fresh read-only Claude session reviews this design, ADR 0052, and later the final diff. Codex does not review this ticket unless Ian routes it.
+## Current-main reproduction and added scope
+
+At current main `0fb8d55f`, the exact HTTP unit test `a_retry_after_header_is_read_in_seconds_and_stops_at_the_ceiling` passes: it expects a zero header to cause no wait and a large header to become 60 seconds. The source passes `requests_sent` through one hook for every attempt, drops the width permit before the private retry sleep, and has no address gate. `engine/http.rs` is exactly 500 nonblank lines and `engine/usage.rs` is 498, so the existing HTTP test module and the small usage count type must move into claimed child files before adding behavior. The reproduction was one offline, locked library test; it took 10.48 seconds to compile and 0.00 seconds to run.
+
+The work plan also assigns these existing review findings here. Item 91 requires a positive server `Retry-After` to remain a floor, including a zero-value minimum delay; cancellation or a call deadline may end without another send. Item 92 requires bounded consumption of an error response body before the connection returns to the pool. Item 119 requires a key containing a line break to fail locally without sending, and a fixed explanation for a refused 302 without following it. The message half of item 118 requires a certificate failure to name TLS trust rather than generic reachability. Private TLS root configuration remains separate. Tests use local listeners and safe fixed diagnostics; no response body or key enters an error message.
+
+This added scope supersedes the older ticket's 60-second then-send rule only where it would violate a valid server retry floor. The default, fixed width, exact-address process gate, per-request retry count, permit release, and separately counted retries stay as ADR 0052 settled them. The previous five-run timing campaign and whole-ladder handoff are historical plans; current routine proof uses a few held calls, actual send counts, focused format and strict policy checks, and the related batch integration checkpoint.
+
+Review route: the accepted design had fresh read-only review. The coordinator assigns a fresh independent code reviewer for the final diff, then owns verification and landing.
 
 ## Outcome and authority
 
@@ -47,7 +55,7 @@ A new `engine/backoff.rs` holds one process-wide table from posting URL to the i
 
 `post_observed` changes in three places.
 
-1. Before each attempt it sets one wait deadline: now plus the smaller of 60 seconds and its own `--timeout`. The call's deadline ends the wait sooner, as it ends a retry wait today. The attempt calls `wait_open(url, until, cancel)`, then `self.width.acquire`. After it takes the permit, it checks the gate once more. If the gate closed meanwhile and the wait deadline has not passed, it drops the permit and calls `wait_open` again under the same deadline. Once the deadline passes, it sends with the permit it holds, even if the gate is closed. So a waiting request never holds a slot, and the recheck loop always ends.
+1. Before each attempt it sets one local wait cap: now plus the smaller of 60 seconds and its attempt timeout. It waits outside the width permit, takes the permit, then checks the gate again. If another response closed the gate, it drops the permit and waits again. The local cap lets an unheaded exponential gate pass. A valid server retry header remains a floor even past that cap; cancellation or a whole-call deadline can end it without a send.
 2. `send` returns, and the attempt is classified before the permit goes back. On a retried status, one call, `permit.release_closing(url, bounded_wait(asked, wait, timeout))`, closes the gate and frees the slot, in place of `drop((sending, permit))`. Every other outcome drops the permit as today. So a request that takes the freed slot always finds the gate closed on its recheck. The request's own doubling and retry count go on as today, and its next attempt waits in step 1.
 3. When its retries are spent on a retried status, it closes the gate through the same `release_closing` call, then returns the failure.
 
@@ -81,9 +89,9 @@ Each is the ticket author's call unless marked. Ian can overturn any of them.
 
 1. **Three retries by default.** Ian ruled it. The reason recorded: three doubling waits ride out about 7 seconds of overload where two rode out about 3. The cost: a request that fails every attempt may be billed four times.
 2. **One gate for each process and exact posting URL.** Ian ruled a gate per process and address. The author keys it by the exact URL string, because `Backend::url` is already canonical: the address rules lower-case the scheme and host and keep the rest as typed.
-3. **The gate closes for the wait the failing request would take today.** No new timing rule enters. The gate keeps the later opening, so a short wait never cuts a long one.
+3. **The gate keeps the later opening.** A valid server header gives a minimum delay, with zero raised to one second. An unheaded status uses the caller's bounded exponential wait. A later short wait never cuts an earlier long one.
 4. **A request with spent retries closes the gate too.** Its status still says the backend is overloaded, and the next request would meet it.
-5. **One wait deadline for each attempt, capped by the waiter's own `--timeout` and 60 seconds, then the request sends.** The deadline covers the first wait and every recheck after a permit, so a gate that keeps closing cannot hold a request longer. Engines in one process may carry different timeouts. Each keeps its own promise that no wait exceeds its timeout.
+5. **One local wait cap per attempt, and a server-header floor.** The cap covers an unheaded gate and every permit recheck. A valid server delay is never cut short by that cap. Engines may carry different attempt timeouts. A whole-call deadline or cancellation can stop either wait without another send.
 6. **The throttle is fixed, counts retries, and a wait holds no slot.** Ian ruled it. The code already does this. The ticket adds a gate recheck after the permit, so a slot taken as the gate closes goes back. A retried status closes the gate before its permit drops, so the recheck cannot miss it.
 7. **`requests_sent` keeps counting every send, and `retries` names the subset.** Ian ruled that retries count apart. This reading keeps every existing count's meaning and keeps retries inside the SQL request total with no code change, as Ian's correction requires. The other reading, `requests_sent` as first sends only, would change every row and let retries escape the total. ADR 0052 gives both. Ian can choose the other.
 8. **Old usage files read as 0 retries under the same schema name.** No release has shipped. Ticket 0124 changed `thinkthen.status/1` in place for the same reason. An older binary refuses a file this build writes, and prints its one persistence warning.
@@ -113,18 +121,18 @@ Order, ruled by the coordinator on 2026-09-26: 0146, then 0148, then 0155, then 
 | One record, backend answers 503 three times then 200, nothing set | 4 sends. Exit 0. Usage: `requests_sent` 4, `retries` 3 |
 | The same with `--max-retries 2` | 3 sends. Exit 4, today's 503 line |
 | The same with `--max-retries 0` | 1 send. Exit 4 |
-| Three records, `--jobs 2 --timeout 10`: record 1 meets 503 with `retry-after-ms: 3000`, record 2 answers once record 1's 503 is written, record 3 answers | Record 3 arrives no sooner than 3,000 ms after the listener's instant before it wrote the 503. 4 sends in all. Rows 1 to 3 in order |
-| The same, record 1 meets 503 with no header, `THINKTHEN_TEST_RETRY_WAIT_MS=1` | Record 3 arrives less than 2 seconds after that instant. The gate's length follows the failing request's wait |
+| Three records, `--jobs 2`: record 1 meets 503 with a valid server delay, record 2 is already in flight, record 3 is queued | Record 3 waits without a send slot until the address gate opens. The throttle remains fixed and rows stay in order |
+| The same, with no header | The gate follows the failing request's bounded exponential wait, not a server floor |
 | Record 1 meets 429 with `retry-after: 1` | The gate closes for 1 second, as for 503 |
 | Record 1 meets 400, 401, 422 or a transport failure | The gate stays open. Today's failure |
-| `retry-after-ms: 120000`, `--timeout 2` | The gate closes for 2 seconds. No request waits longer than 2 seconds before an attempt |
+| `retry-after-ms: 120000`, `--timeout 2` | The gate remains closed for the server's two minutes; a whole-call deadline or cancellation may stop the caller without another send |
 | Record 1's retries run out on 503 | The gate closes for its last wait. The run stops at record 1 as today |
 | A request waiting on the only slot takes it just after a retried status frees it | The gate is already closed. The request gives the slot back and waits |
-| A gate that closes again at every recheck | The request sends once its one wait deadline passes |
+| An unheaded gate that closes again at every recheck | The request sends once its one local wait cap passes; a server-header floor still holds |
 | An interrupt while requests wait on the gate | No new send. Today's cancellation lines |
 | `--replay DIR` of any run | No wait, no send |
 | `--cache DIR` with record 2 cached, record 1 meeting 503 | Record 2's answer comes from the cache. Only live sends wait |
-| Two engines in one process at the same address, one with `max_retries(0)` meets 503 with a 5-second wait | Its call fails at once and the gate stays closed. The other engine's next call waits for the gate |
+| Two engines in one process at the same address, one with `max_retries(0)` meets 503 with a 500 ms header | Its call fails at once; the other engine's live call with a 100 ms whole-call deadline sends nothing. A cached answer proceeds |
 | Two engines at two addresses, one meets 503 | The other's call answers at once |
 | A forked child after its parent closed a gate | The child's gate is open |
 | A usage file written before this ticket | Reads as 0 retries. `status` prints `month_retries 0` |
@@ -134,54 +142,17 @@ Order, ruled by the coordinator on 2026-09-26: 0146, then 0148, then 0155, then 
 
 ## Proof
 
-The command tests drive the compiled binary against the loopback (`tests/backend/harness`, `Listener::answering`). The library test drives the public API against two loopback listeners. The loopback's closure runs on its own thread as each request arrives, so it records the arrival instant and order with no hook in the tool.
+The compact routine proof drives the compiled command and public API against local counted listeners. `backend/backoff.rs` covers four versus three versus one sends for default, explicit two and explicit zero retries; a 503 body drained before a second request reuses one connection; a linefeed key fails locally with zero sends; and a live 503 then 200 yields `requests_sent: 2`, `retries: 1` in `status`. The existing `status.rs` shape proof gains the new fields. The usage count test reads an old row without `retries` as zero.
 
-| Test | What it proves | Planted faults that turn it red |
-| --- | --- | --- |
-| `a_503_holds_every_request_to_that_address`, new in `tests/backend/backoff.rs` | The three-record gate row and its no-header partner, at `--jobs 2 --timeout 10`. Both rows set the existing `THINKTHEN_TEST_RETRY_WAIT_MS=1`, so a request's own doubling wait is 1 ms and only the header can make the gate long. The listener holds record 2's answer on a barrier until record 1's 503 is written, so record 3 can only go out after that 503. The listener takes its instant T just before it writes the 503. The test pins the send count and the stdout rows. With `retry-after-ms: 3000` it asserts record 3 arrived at or after T plus 3,000 ms, with no margin. That bound is exact: the tool reads the 503 after T, so the gate opens after T plus 3,000 ms, and record 3 cannot arrive before it opens. With no header it asserts record 3 arrived before T plus 2 seconds | (a) No gate, today's per-request wait: record 3 arrives within a few ms of T. (b) The gate ignores `retry-after-ms`: the gate lasts the 1 ms test wait and record 3 arrives early. (c) The gate never opens before its cap, say a fixed 60 s: the no-header row holds record 3 until the 10-second timeout, past 2 seconds |
-| `retries_count_apart_from_first_sends`, new in the same file | The first three edge rows and the two `status` rows, with a private `XDG_CACHE_HOME`. A pre-written usage file without `retries` is read too | (a) The default stays 2: the nothing-set row exits 4 after 3 sends. (b) `requests_sent` stops counting retries: it reads 1. (c) `retries` is not written: `status` reads 0. (d) `retries` is required when reading: the old file fails to read |
-| `the_gate_is_per_address_and_shared_by_engines`, new in `crates/thinkthen/tests/public_backoff.rs` | Two engines at listener A and one at listener B, in one process. Engine 2 first answers one text from A, so that text is in its cache. Engine 1 is built with `max_retries(0)` and meets 503 with `retry-after-ms: 5000`, so its call fails at once and leaves the gate closed. Listener A takes its instant T just before it writes the 503. Right after engine 1's call returns, the test starts three calls, each on its own thread and in this order: engine 2 at A, engine 2's cached text, and the engine at B. Called one after another, the call at A would outlast the gate and hide it from the other two. It asserts engine 2's call arrived at A at or after T plus 5,000 ms, with no margin, and that the cache answer and the call to B both returned before T plus 2.5 seconds | (a) One gate for the process: the call to B returns after 5 seconds. (b) One gate per engine: engine 2's call arrives at A before T plus 5,000 ms. (c) The cache answer waits on the gate: it returns after 5 seconds. (d) A request with spent retries leaves the gate open: engine 2's call arrives at A early |
-| `a_retry_gives_its_permit_back_for_the_wait_and_takes_a_new_one`, amended in `engine/width_tests.rs` | Two rows on the process's backoff gate, where each row's listener port gives its URL its own gate, and a private `Widths` passed through the existing `gated`. Row 1: while the retry waits on the gate, another caller takes the only permit, as today. Row 2, the recheck: the test holds the only permit, and the poster runs with `Cancel::observed` (`engine/mod.rs:204`). The poster finds the gate open and blocks on the permit, and `observed_block` tells the test so. The test takes its instant, closes the gate for 2 seconds, and releases the permit. The listener's arrival must come at or after that instant plus 2 seconds, and the test must take the permit again before the gate opens. An optional plain test of `release_closing` may check that after it the slot is free and the gate is closed | (a) Wait on the gate while holding the permit: row 1's other caller times out. (b) Drop the recheck after the permit: row 2's send arrives before the gate opens. (c) Wait on the gate while holding the permit after the recheck: row 2's test cannot take the permit before the gate opens |
-| Existing tests that count the default's sends | `tests/backend/exchange.rs`, `tests/backend/resend.rs`, `tests/backend/secrecy/routes.rs`, `cli/schedule/width_tests.rs`, `databases/sqlite/tests/test_deadline.py` and any other the build finds change 3 sends to 4 where they rely on the default. Each keeps its own subject | (a) The default stays 2: each is red |
+`public_backoff.rs` warms a cache on listener A, then another engine receives 503 with `max_retries(0)` and a 500 ms server floor. A 100 ms whole-call deadline proves a new live call at A sends nothing, while the cached call at A and a call to listener B answer. This distinguishes an address gate from a process-wide gate, an engine-local gate, and a cache-path gate with only a few sends. The existing width test proves the retry releases its permit. The new `release_closing` holds the width lock while closing the provider gate; a focused recheck witness is added if review finds the public proof insufficient.
 
-The four questions:
+The HTTP table checks zero, positive subsecond and long server headers against the floor and an unheaded local cap. The loopback's accepted 429/503 arm counts change from three to four under the new default. The redirect test keeps its no-follow/no-secret assertion and gains the safe fixed phrase after the command failure files transfer. A TLS classification and safe certificate message receive separate focused proof after that same transfer. The previous 3-second and 5-second held-call timing campaign is not a routine gate under Ian's 2026-09-27 ruling. No live provider call or stress campaign runs.
 
-- **`a_503_holds_every_request_to_that_address`.** It protects ADR 0052 items 2 to 4: one request's retried status holds every other send to that address, for the time the backend asked. A per-request wait, a gate that ignores the header, or a gate with a fixed length fails it. No test checks that one request's status delays another's send. It adds no hook. It uses the binary's existing `THINKTHEN_TEST_RETRY_WAIT_MS`, which other retry tests already set, because a real one-second doubling wait would hide whether the header set the gate. The loopback's barrier and arrival instants are an ordinary server's behavior. Order alone cannot prove the delay, because record 3 and record 1's retry leave the gate at the same instant and race for a slot. So the test asserts an exact lower bound, measured from the listener's own instant before the 503, and a generous upper bound for the no-header row. It never sleeps to wait for an absence.
-- **`retries_count_apart_from_first_sends`.** It protects ADR 0052 items 1 and 9: the new default and the separate count. The default left at 2, a `requests_sent` that drops retries, or a count never written fails it. `status.rs` checks today's fields with no retries, and no test sends a retry and reads the totals. It needs no hook: `XDG_CACHE_HOME` is the real place the usage file lives.
-- **`the_gate_is_per_address_and_shared_by_engines`.** It protects ADR 0052 items 2, 3, 4 and 11: the gate's scope on the libraries, that a request with spent retries closes the gate, and that answers from disk never wait. A gate per process, per engine, in front of the cache, or left open by a spent request fails it. The command runs one address and one engine, so no command test reaches the scope. It needs no hook: two public engines at two listeners are ordinary callers, and `max_retries` is a public setting after ticket 0148. Its own test binary keeps the process gate apart from other tests.
-- **The amended permit test** extends an existing contract to the gate path. It needs no new hook: `Cancel::observed` and `gated` are existing test seams, and the process gate serves each row by its own listener's URL. The close before release needs no plant of its own. `release_closing` makes it one step under one lock, so a later edit cannot split it without replacing that call. The command test and row 2 carry the behavior's proof. The code's structure, not a race in a test, guards the order.
-- **The count changes** keep existing tests on their subjects under the new default.
+## Budgets and stop rules
 
-## Budgets
+The 2026-09-27 addition of four review-register findings supersedes the original 159-line product and 659-line total caps, which measured only the accepted provider gate. The applicable source-size policy remains 500 nonblank lines per Rust file. The implementation moves the existing HTTP test module to `engine/http/tests.rs` and the existing usage count type to `engine/usage/counts.rs` rather than weakening that check. Revised review bounds are 130 nonblank lines for new `backoff.rs`, 220 for the moved HTTP test file, 60 for the moved count type, 180 for new compiled-command `backoff.rs`, and 150 for `public_backoff.rs`. Review any growth past those bounds before it lands; the broad source file cap remains a hard check. There is no new dependency.
 
-Nonblank lines, measured with `grep -c .`. Net lines against main after tickets 0146 and 0148 land.
-
-- `crates/thinkthen/src/engine/backoff.rs`: at most 90, new.
-- `crates/thinkthen/src/engine/http.rs`: at most 30 net.
-- `crates/thinkthen/src/engine/mod.rs`: at most 8 net, for `release_closing`.
-- `crates/thinkthen/src/engine/usage.rs`: at most 15 net.
-- `crates/thinkthen/src/cli/status.rs`: at most 12 net.
-- `crates/thinkthen/src/cli/args.rs` and `public/settings.rs`: at most 4 net together.
-- Product code total: at most 159 net.
-- `crates/thinkthen/tests/backend/backoff.rs`: at most 220, new.
-- `crates/thinkthen/tests/public_backoff.rs`: at most 150, new.
-- `engine/width_tests.rs`: at most 70 net.
-- `crates/thinkthen/tests/status.rs` and the existing tests that count the default's sends, including the library and conformance tests that ticket 0148 adds: at most 60 changed lines together, in at most 12 files.
-- Pages under `specification/`: at most 30 net together. The library, conformance and SQL READMEs: at most 12 changed lines together, each changing 2 to 3. ADR markers: at most 3 lines.
-- `sdlc/ratchet.json` moves to the measured total, at most 659 above main after 0146 and 0148 land: 159 of product code, 220 in `tests/backend/backoff.rs`, 150 in `tests/public_backoff.rs`, 70 in `width_tests.rs` and 60 changed lines in existing tests, which sum to 659. The commit says what grew.
-- No dependency.
-- The `surfaces` rung runs, because the libraries and SQL surfaces take the new default and share the gate.
-
-## Stop rules
-
-1. Stop before crossing any budget by more than a tenth, or before adding a dependency.
-2. Stop if ticket 0146 or 0148 has not landed on main.
-3. Stop if more than 12 existing test files change for the new default, or if any test must change for a reason other than the count of sends. Hand back the list.
-4. Stop if a replay or cache answer waits on the gate, or if a recorded run's output changes.
-5. Stop if the gate needs a change to what `--jobs` or the throttle counts, or an adaptive width.
-6. Stop if any plant stays green, or if `a_503_holds_every_request_to_that_address` fails once in five runs on an idle machine. Report the timings. Do not widen the margin to pass.
-7. Stop if the change needs a file in `databases/` beyond the SQLite test, the SQLite notes and the retries lines of the three SQL READMEs, or any SQL product code, or any library or conformance change beyond a stated default and a test that counts the default's sends. That work is ticket 0149's or ticket 0157's.
-8. Stop if the build needs a live call. None is authorized. Never run `sdlc/scripts/live`, and unset `THINKTHEN_API_KEY` for every rung.
+Stop and report if a replay or cache answer waits, if a fixed throttle changes width, if a retry escapes `requests_sent`, or if a live/provider call or paid service becomes necessary. A file outside the main lane's exact claim needs a new claim before edit. The routine validation uses selected small contract tests, format, policy and strict lint. Full integration belongs to the related batch checkpoint. The older five-run 3-second/5-second timing campaign is opt-in, not a handoff gate.
 
 ## Scope and exclusions
 
@@ -209,7 +180,7 @@ Contract 2; state and timing 2; reach 2; proof 2; cost of error 1; total 9. Fina
 - Ian's rulings: three retries by default, one gate for each process and address, a fixed throttle that counts retries with waits holding no slot, retry counts per request, every send spending a unit of a request budget, and retries counted apart.
 - Decision 2: the gate keyed by the exact posting URL.
 - Decision 4: a request with spent retries closes the gate too.
-- Decision 5: one wait deadline per attempt, capped by the waiter's own timeout and 60 seconds, then a send.
+- Decision 5: one local cap per attempt for an unheaded gate, with a valid server header as a floor.
 - Decision 7: `requests_sent` keeps every send, and `retries` is the subset.
 - Decision 8: old usage files read as 0 retries under the same schema name.
 - Decision 9: the mid-request budget check left to ticket 0149.
@@ -224,7 +195,7 @@ No issue. No issue was filed for these rulings, and this ticket and ADR 0052 rec
 ## Evidence
 
 - Starts from: Ian's rulings of 2026-09-26, relayed by the coordinator with his two corrections. The code at `origin/main` `e0a6150a`: `engine/http.rs::post_observed`, `bounded_wait` and `honored`; `engine/mod.rs::Widths` and `process_width`; `engine/usage.rs::Counts` and `Counters`; `cli/status.rs`; `cli/args.rs:171`; `public/settings.rs:237`; `public/bulk.rs::within_limit`; `databases/duckdb/src/engines.rs::within_total` and `databases/sqlite/src/scalars.rs::flush`; `conformance/backend/src/arms.rs`'s 503 arm. The unit tests `a_retry_gives_its_permit_back_for_the_wait_and_takes_a_new_one` and `a_replayed_answer_takes_no_permit`. Ticket 0148 at `d1afe98a` for the library default, its pages and its shared cases. `Cancel::observed` and `observed_block` at `engine/mod.rs:186-208`, and `Client::gated` at `engine/http.rs:98`. Ticket 0089's premise that a retried status may be billed. `specification/backends.md` "The request", `settings.md`, `check.md` and `recording.md`. No experiment ran. The rulings need no measurement, and the loopback proves the behavior.
-- Keeps: The retried statuses, the headers read, the 60-second cap, the doubling from one second, and no resend after a transport failure. The throttle's number and what it counts. Replay and cache answers that never wait. Every row's `meta.requests_sent`. The library's `max_requests`. Every SQL product file.
+- Keeps: The retried statuses, the headers read, the 60-second cap on unheaded waits, the doubling from one second, and no resend after a transport failure. The throttle's number and what it counts. Replay and cache answers that never wait. Every row's `meta.requests_sent`. The library's `max_requests`. Every SQL product file.
 - Changes: `--max-retries` and the engine default become 3. A process-wide backoff gate for each posting URL, closed by a retried status and waited on before every live attempt. A `retries` count in the engine counters, the usage file and `thinkthen status`. ADR 0052, and four specification pages.
 - Proof: Three new loopback and public-API tests, one amended unit test, and the existing tests that count the default's sends, each with its plants, under "Proof".
 - Defers: The SQL total checked at each send (0149). `retries()` on the libraries (ticket 0157). `retries` in the run facts (B5). A row share of retries. The HTTP-date header. ADR 0017's marker after 0148.

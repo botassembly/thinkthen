@@ -97,7 +97,9 @@ where
             crate::engine::workers::on_worker(cancel, || {
                 transport
                     .client
-                    .post_observed(&exchange, cancel, || transport.usage.request_sent())
+                    .post_observed_with_retry(&exchange, cancel, |retry| {
+                        transport.usage.attempt_sent(retry);
+                    })
             })
             .map_err(E::from)
         },

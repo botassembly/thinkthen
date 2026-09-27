@@ -253,9 +253,9 @@ fn a_rate_limit_waits_the_seconds_the_backend_asked_for() {
 }
 
 #[test]
-fn a_rate_limit_wait_cannot_exceed_the_attempt_timeout() {
+fn a_server_retry_floor_can_exceed_the_attempt_timeout() {
     let listener = Listener::serving(vec![
-        Canned::status(429, "slow down").asking("retry-after", "30"),
+        Canned::status(429, "slow down").asking("retry-after-ms", "1200"),
         Canned::ok(ANSWERED),
     ])
     .expect("a loopback listener");
@@ -272,7 +272,7 @@ fn a_rate_limit_wait_cannot_exceed_the_attempt_timeout() {
 
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(listener.requests().len(), 2);
-    assert!(took >= Duration::from_millis(900), "{took:?}");
+    assert!(took >= Duration::from_millis(1200), "{took:?}");
     assert!(took < Duration::from_secs(3), "{took:?}");
 }
 

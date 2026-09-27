@@ -5,13 +5,13 @@
 
 use std::fmt;
 use std::io;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use ureq::Agent;
 
 use crate::core::{Json, Withheld};
 use crate::engine::error::{Error, TransportKind};
-use crate::engine::{Width, Widths};
+use crate::engine::{Permit, Width, Widths, backoff};
 
 /// The key one request carries. Diagnostics and `Debug` never expose it.
 pub(crate) struct Key(String);
@@ -43,12 +43,9 @@ const MAX_RESPONSE_BYTES: u64 = 1024 * 1024;
 /// Reply bytes per request byte. The worst honest reply runs about 5 reply bytes per request byte (ticket 0132).
 const REPLY_BYTES_PER_REQUEST_BYTE: u64 = 8;
 
-/// The longest a `Retry-After` header moves the wait to.
-///
-/// The header is the backend's own number and this process trusts it only so
-/// far. A backend asking for an hour would hang a script with no way out but
-/// a signal, so the wait stops here and the attempt goes out.
+/// The longest unheaded exponential wait before an attempt is allowed through.
 const MAX_RETRY_WAIT: Duration = Duration::from_secs(60);
+const MIN_HEADER_WAIT: Duration = Duration::from_secs(1);
 
 /// One connection pool, built once and shared by every worker.
 ///
@@ -68,6 +65,23 @@ impl fmt::Debug for Client {
 }
 
 impl Client {
+    fn acquire_open<'a>(
+        &'a self,
+        gates: &backoff::Gates,
+        url: &str,
+        cap: Instant,
+        cancel: &crate::engine::Cancel,
+    ) -> Result<Permit<'a>, Error> {
+        loop {
+            let _open = gates.wait_open(url, cap, cancel)?;
+            let permit = self.width.acquire(cancel)?;
+            if gates.may_send(url, cap) {
+                return Ok(permit);
+            }
+            drop(permit);
+        }
+    }
+
     /// Build the one pool this process posts through.
     ///
     /// `secure` says whether the resolved address is an `https://` one. A
@@ -111,27 +125,60 @@ impl Client {
     /// Returns [`Error`] when the backend cannot be reached, when it answers
     /// with an error status, or when a retried status still holds after the
     /// last retry. A transport failure returns after its one attempt.
+    #[cfg(test)]
     pub(crate) fn post_observed(
         &self,
         exchange: &Exchange<'_>,
         cancel: &crate::engine::Cancel,
         before_attempt: impl Fn(),
     ) -> Result<HttpAnswer, Error> {
+        self.post_observed_with_retry(exchange, cancel, |_| before_attempt())
+    }
+
+    pub(crate) fn post_observed_with_retry(
+        &self,
+        exchange: &Exchange<'_>,
+        cancel: &crate::engine::Cancel,
+        before_attempt: impl Fn(bool),
+    ) -> Result<HttpAnswer, Error> {
+        if exchange
+            .key
+            .as_str()
+            .bytes()
+            .any(|byte| byte == b'\n' || byte == b'\r')
+        {
+            return Err(Error::Usage("the API key contains a line break"));
+        }
+        let gates = backoff::process_gates(cancel)?;
         let mut wait = exchange.retry_wait;
         let mut retries = 0;
         loop {
-            // The permit covers the attempt alone: never a retry wait, decoding,
-            // recording, or output.
-            let permit = self.width.acquire(cancel)?;
+            let now = Instant::now();
+            let cap = now + self.timeout.min(MAX_RETRY_WAIT);
+            // A gate wait owns no send slot. Recheck after acquiring one, since
+            // another in-flight reply could have closed the gate meanwhile.
+            let permit = self.acquire_open(gates, exchange.url, cap, cancel)?;
             cancel.stop_or_remaining()?;
-            before_attempt();
+            before_attempt(retries > 0);
             // The hook before the attempt may be slow, so read the budget after
             // it. Cancellation keeps its one pre-attempt checkpoint.
             let budget = cancel.remaining()?;
             let limit = budget.map_or(self.timeout, |budget| budget.min(self.timeout));
             let sending = cancel.sending();
             let sent = send(&self.agent, exchange, limit);
-            drop((sending, permit));
+            drop(sending);
+            if let Err(attempt) = &sent
+                && is_retried(&attempt.failure)
+            {
+                permit.release_closing(
+                    gates,
+                    exchange.url,
+                    bounded_wait(attempt.asked, wait, self.timeout),
+                    attempt.asked.is_some(),
+                );
+            } else {
+                drop(permit);
+            }
             let attempt = match sent {
                 Ok(body) => {
                     return Ok(HttpAnswer {
@@ -149,9 +196,6 @@ impl Client {
             }
             if retries >= exchange.max_retries || !is_retried(&attempt.failure) {
                 return Err(attempt.failure);
-            }
-            if let Some(stop) = cancel.wait(bounded_wait(attempt.asked, wait, self.timeout)) {
-                return Err(stop);
             }
             wait = wait.saturating_mul(2);
             retries += 1;
@@ -210,7 +254,7 @@ impl From<Error> for Attempt {
     }
 }
 
-/// The wait the two retry headers ask for, capped at [`MAX_RETRY_WAIT`].
+/// The wait the two retry headers ask for, with zero given a one-second floor.
 ///
 /// The backend sends `retry-after-ms` in whole milliseconds beside the standard
 /// `retry-after` in whole seconds, and the finer one is read first.
@@ -222,12 +266,16 @@ fn honored(millis: Option<&str>, seconds: Option<&str>) -> Option<Duration> {
         Some(number) => Duration::from_millis(number),
         None => Duration::from_secs(asked(seconds)?),
     };
-    Some(wait.min(MAX_RETRY_WAIT))
+    Some(if wait.is_zero() {
+        MIN_HEADER_WAIT
+    } else {
+        wait
+    })
 }
 
-/// Bound either retry-wait source by the public per-attempt timeout.
+/// The server's valid delay is a floor; cap only an unheaded local wait.
 fn bounded_wait(asked: Option<Duration>, exponential: Duration, timeout: Duration) -> Duration {
-    asked.unwrap_or(exponential).min(timeout)
+    asked.unwrap_or_else(|| exponential.min(timeout).min(MAX_RETRY_WAIT))
 }
 
 /// Post the request once, blocking for at most `limit`.
@@ -254,7 +302,13 @@ fn send(agent: &Agent, exchange: &Exchange<'_>, limit: Duration) -> Result<Vec<u
                 .and_then(|value| value.to_str().ok())
         };
         let asked = honored(header("retry-after-ms"), header("retry-after"));
-        let failure = if status == 400 && names_token_limit(&mut response) {
+        let body = response
+            .body_mut()
+            .with_config()
+            .limit(MAX_RESPONSE_BYTES)
+            .read_to_vec()
+            .ok();
+        let failure = if status == 400 && body.as_deref().is_some_and(names_token_limit) {
             Error::TokenLimit
         } else {
             Error::Status(status)
@@ -278,16 +332,11 @@ fn send(agent: &Agent, exchange: &Exchange<'_>, limit: Duration) -> Result<Vec<u
 /// Whether a 400 reply's body names `max_tokens_exceeded` as its
 /// `detail.error_type`. The body is read up to 4 KiB and never kept: an
 /// unreadable, longer, or other body answers no, and the caller keeps status 400.
-fn names_token_limit(response: &mut ureq::http::Response<ureq::Body>) -> bool {
-    let Ok(body) = response
-        .body_mut()
-        .with_config()
-        .limit(BODY_REASON_BYTES)
-        .read_to_vec()
-    else {
+fn names_token_limit(body: &[u8]) -> bool {
+    if body.len() > BODY_REASON_BYTES as usize {
         return false;
-    };
-    let Ok(text) = std::str::from_utf8(&body) else {
+    }
+    let Ok(text) = std::str::from_utf8(body) else {
         return false;
     };
     Json::parse(text).ok().is_some_and(|value| {
@@ -331,211 +380,4 @@ fn is_retried(failure: &Error) -> bool {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::{
-        Client, Exchange, Key, bounded_wait, honored, io_transport, is_retried, transport,
-    };
-    use crate::engine::error::{Error, TransportKind};
-    use std::cell::Cell;
-    use std::io::{self, Read as _, Write as _};
-    use std::net::TcpListener;
-    use std::sync::Arc;
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    use std::thread;
-    use std::time::Duration;
-
-    #[test]
-    fn a_retry_after_header_is_read_in_seconds_and_stops_at_the_ceiling() {
-        let cases = [
-            (Some("2"), Some(Duration::from_secs(2))),
-            (Some("  7 "), Some(Duration::from_secs(7))),
-            (Some("0"), Some(Duration::ZERO)),
-            (Some("99999"), Some(Duration::from_secs(60))),
-            (Some("Wed, 21 Oct 2026 07:28:00 GMT"), None),
-            (Some("-1"), None),
-            (Some(""), None),
-            (None, None),
-        ];
-        for (header, expected) in cases {
-            assert_eq!(honored(None, header), expected, "{header:?}");
-        }
-    }
-
-    #[test]
-    fn the_milliseconds_header_is_read_first_and_the_seconds_header_follows_it() {
-        let cases = [
-            (Some("250"), None, Some(Duration::from_millis(250))),
-            (Some("1500"), Some("9"), Some(Duration::from_millis(1500))),
-            (Some("600000"), None, Some(Duration::from_secs(60))),
-            // A milliseconds header nobody can read leaves the seconds one.
-            (Some("soon"), Some("3"), Some(Duration::from_secs(3))),
-            (Some(""), Some("3"), Some(Duration::from_secs(3))),
-            (Some("-5"), None, None),
-            (None, None, None),
-        ];
-        for (millis, seconds, expected) in cases {
-            assert_eq!(honored(millis, seconds), expected, "{millis:?} {seconds:?}");
-        }
-    }
-
-    #[test]
-    fn either_retry_wait_source_stops_at_the_attempt_timeout() {
-        let timeout = Duration::from_secs(2);
-        assert_eq!(
-            bounded_wait(
-                Some(Duration::from_secs(30)),
-                Duration::from_secs(1),
-                timeout
-            ),
-            timeout
-        );
-        assert_eq!(bounded_wait(None, Duration::from_secs(4), timeout), timeout);
-        assert_eq!(
-            bounded_wait(
-                Some(Duration::from_millis(250)),
-                Duration::from_secs(4),
-                timeout
-            ),
-            Duration::from_millis(250)
-        );
-    }
-
-    #[test]
-    fn structured_transport_errors_map_without_reading_their_display_text() {
-        let cases = [
-            (
-                ureq::Error::Timeout(ureq::Timeout::Global),
-                TransportKind::Timeout,
-            ),
-            (ureq::Error::HostNotFound, TransportKind::NameLookup),
-            (
-                ureq::Error::Io(io::Error::new(
-                    io::ErrorKind::ConnectionRefused,
-                    "hostile refused text",
-                )),
-                TransportKind::Refused,
-            ),
-            (
-                ureq::Error::Io(io::Error::new(
-                    io::ErrorKind::UnexpectedEof,
-                    "hostile close text",
-                )),
-                TransportKind::PrematureClose,
-            ),
-            (ureq::Error::ConnectionFailed, TransportKind::Other),
-        ];
-        for (error, expected) in cases {
-            assert_eq!(transport(&error), expected, "{error:?}");
-        }
-        for kind in [
-            io::ErrorKind::ConnectionReset,
-            io::ErrorKind::ConnectionAborted,
-            io::ErrorKind::BrokenPipe,
-        ] {
-            assert_eq!(
-                io_transport(&io::Error::new(kind, "hostile close text")),
-                TransportKind::PrematureClose
-            );
-        }
-    }
-
-    #[test]
-    fn no_transport_failure_is_sent_again() {
-        let cases = [
-            (Error::Transport(TransportKind::Refused), false),
-            (Error::Transport(TransportKind::Timeout), false),
-            (Error::Transport(TransportKind::NameLookup), false),
-            (Error::Transport(TransportKind::PrematureClose), false),
-            (Error::Transport(TransportKind::Other), false),
-            (Error::Status(429), true),
-            (Error::Status(500), true),
-            (Error::Status(502), true),
-            (Error::Status(503), true),
-            (Error::Status(504), true),
-            (Error::Status(529), true),
-            (Error::Status(401), false),
-        ];
-        for (failure, expected) in cases {
-            assert_eq!(is_retried(&failure), expected, "{failure:?}");
-        }
-    }
-
-    #[test]
-    #[allow(clippy::excessive_nesting, reason = "synchronized server fixture")]
-    fn cancellation_during_a_retry_wait_starts_no_second_attempt() {
-        let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
-        let address = listener.local_addr().expect("address");
-        let received = Arc::new(AtomicUsize::new(0));
-        let counted = Arc::clone(&received);
-        let cancel = crate::engine::Cancel::default();
-        let server_cancel = cancel.clone();
-        let server = thread::spawn(move || {
-            for stream in listener.incoming().take(2) {
-                let mut stream = stream.expect("request");
-                let mut request = [0_u8; 1024];
-                let _read = stream.read(&mut request).expect("request bytes");
-                counted.fetch_add(1, Ordering::SeqCst);
-                stream
-                    .write_all(b"HTTP/1.1 503 Unavailable\r\nContent-Length: 0\r\n\r\n")
-                    .expect("response");
-                if server_cancel.fired() {
-                    break;
-                }
-            }
-        });
-        let url = format!("http://{address}/v1/systemone");
-        let key = Key::of("sk-test-value");
-        let client = Client::new(
-            Duration::from_secs(2),
-            false,
-            crate::engine::process_width(),
-        );
-        let attempts = Cell::new(0_u32);
-        let exchange = Exchange {
-            url: &url,
-            body: b"{}",
-            key: &key,
-            max_retries: 1,
-            retry_wait: Duration::from_secs(1),
-        };
-
-        let result = client.post_observed(&exchange, &cancel, || {
-            attempts.set(attempts.get() + 1);
-            cancel.fire();
-        });
-        server.join().expect("server thread");
-
-        assert!(matches!(result, Err(Error::Cancelled)));
-        assert_eq!(attempts.get(), 1);
-        assert_eq!(received.load(Ordering::SeqCst), 1);
-    }
-
-    /// Port zero can never listen, so the refusal is deterministic.
-    #[test]
-    fn a_refused_attempt_is_observed_once_and_returned_without_a_retry() {
-        let key = Key::of("sk-test-value");
-        let client = Client::new(
-            Duration::from_secs(4),
-            false,
-            crate::engine::process_width(),
-        );
-        let observed = Cell::new(0_u32);
-        let exchange = Exchange {
-            url: "http://127.0.0.1:0/v1/systemone",
-            body: b"{}",
-            key: &key,
-            max_retries: 2,
-            retry_wait: Duration::from_millis(1),
-        };
-
-        let result = client.post_observed(&exchange, &crate::engine::Cancel::default(), || {
-            observed.set(observed.get() + 1)
-        });
-
-        assert_eq!(observed.get(), 1);
-        assert!(matches!(
-            result,
-            Err(Error::Transport(TransportKind::Refused))
-        ));
-    }
-}
+mod tests;

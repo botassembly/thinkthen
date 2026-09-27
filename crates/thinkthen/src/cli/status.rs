@@ -60,6 +60,7 @@ struct UsageStatus {
 #[derive(Serialize)]
 struct StatusCounts {
     requests_sent: u64,
+    retries: u64,
     input_tokens: u64,
     output_tokens: u64,
     cache_answers: u64,
@@ -69,6 +70,7 @@ impl From<crate::engine::usage::Counts> for StatusCounts {
     fn from(value: crate::engine::usage::Counts) -> Self {
         Self {
             requests_sent: value.requests_sent,
+            retries: value.retries,
             input_tokens: value.input_tokens,
             output_tokens: value.output_tokens,
             cache_answers: value.cache_answers,
@@ -265,6 +267,11 @@ fn counts(
         writer,
         &format!("{prefix}_requests_sent"),
         value.map(|counts| counts.requests_sent),
+    )?;
+    optional_line(
+        writer,
+        &format!("{prefix}_retries"),
+        value.map(|counts| counts.retries),
     )?;
     optional_line(
         writer,

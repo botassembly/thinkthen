@@ -15,7 +15,7 @@ thinkthen check [--url BASE] [--model NAME] [--timeout SECONDS] [--dry-run]
 - The address comes from `--url`, then `THINKTHEN_BASE_URL`, then the configuration file's `url`. The rules of [backends.md](backends.md) apply unchanged. The built-in default address is refused, because the check would otherwise spend requests at the hosted service when you named nothing. The refusal exits 2 before the key is read and sends nothing. Its whole standard error line reads `thinkthen: check needs an address you name: give --url, set THINKTHEN_BASE_URL, or set url in the configuration file`.
 - `--model` resolves as every command resolves it: the option, then the configuration file's `model`, then `jev-1.13.0`. `model asked` prints the option or the file's value, or `unspecified` when neither names one. `model sent` prints the resolved value, which every request carries.
 - The key comes only from `THINKTHEN_API_KEY`. An unset or blank key exits 4 with the sentence every command prints, before any request, unless the address is `localhost`, `127.0.0.1`, or `[::1]`. There the probes go out with no `Authorization` header, as on every command.
-- `--timeout` works as it does everywhere. `--max-retries` keeps its default of 2 and is not accepted. Four probes send at most twelve attempts.
+- `--timeout` works as it does everywhere. `--max-retries` keeps its default of 3 and is not accepted. Four probes send at most sixteen attempts.
 - The check reads no standard input and no cache, recording, replay, or profile. `--cache`, `--no-cache`, `--record`, `--replay`, and `--profile` are unknown options and exit 2.
 - Its attempts and reported tokens count in the usage totals, as every live request does.
 
