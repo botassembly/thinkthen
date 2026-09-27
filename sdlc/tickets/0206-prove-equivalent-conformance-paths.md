@@ -6,7 +6,7 @@ opens: sdlc/tickets/0206-prove-equivalent-conformance-paths.md sdlc/records/0206
 
 # 0206: Prove equivalent conformance paths
 
-Status: design accepted after independent review at `785425be`; implementation in progress. Owner: Codex. Ian can overturn a host spelling, but a skipped shared case remains visible until its equivalent boundary behavior is proved or a separate feature ticket owns the difference.
+Status: done on 2026-09-27. Fresh independent code review accepted `21564a96` with source `69664a05`; focused SQL/R boundary and affected policy/syntax checks passed. Owner: Codex. The broader issue and proposed 0207 remain open.
 
 ## Outcome
 
