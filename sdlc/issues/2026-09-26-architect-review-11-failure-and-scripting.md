@@ -1,4 +1,4 @@
-Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review.
+Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review. Item 4 is done: Quick Fix qf-command-edges-and-prune bounds `--timeout` at 86400 seconds (`sdlc/records/qf-command-edges-and-prune.md`).
 
 # Architect review 11: failure handling and scripting
 

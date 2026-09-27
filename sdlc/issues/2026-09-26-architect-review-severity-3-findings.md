@@ -55,11 +55,11 @@ The review rated these findings severity 3: a sharp edge or a missing feature. N
 - I-6. No request-size setting on main. Tracked: 0154, then 0157.
 - I-7. A broken configuration file stops every command, and the message names no field.
 - I-8. The model has no environment tier.
-- I-9. A keyless local server still needs a dummy key. Doc line.
+- I-9. A keyless local server still needs a dummy key. Done by Quick Fix qf-command-edges-and-prune.
 - I-10. The default cache serves one address. Tracked: ticket 0124's deferred gaps.
-- I-11. An extreme `--timeout` panics with exit 101. Quick Fix, with report 11 issue 7.
-- I-12. The release binary honors `THINKTHEN_TEST_RETRY_WAIT_MS`. Quick Fix, with report 07 I13.
-- I-13. Model names are not trimmed or checked for control characters. Quick Fix.
+- I-11. An extreme `--timeout` panics with exit 101. Done by Quick Fix qf-command-edges-and-prune.
+- I-12. The release binary honors `THINKTHEN_TEST_RETRY_WAIT_MS`. Done by Quick Fix qf-command-edges-and-prune.
+- I-13. Model names are not trimmed or checked for control characters. Done by Quick Fix qf-command-edges-and-prune.
 - I-14. Refusal phrases give advice that misfits the case.
 
 ## Report 07, throughput, limits and cost

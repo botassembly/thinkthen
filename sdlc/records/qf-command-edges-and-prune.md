@@ -1,6 +1,6 @@
 # Quick Fix qf-command-edges-and-prune: refuse an unknown prune model, bound the timeout, gate the test variables, check model names, warn on a shared configuration, and let loopback go keyless
 
-Status: built and checked, waiting for a fresh code review and landing. Owner: Claude. Base: `origin/main` at `18f0381e`, with main merged in at `3c409cbc` and again before the review round. Lane: `thinkthen-lane-4`. Branch: `qf/command-edges-and-prune`.
+Status: landed. A fresh review accepted the branch at `1db6eeb2`. Owner: Claude. Base: `origin/main` at `18f0381e`, with main merged in at `3c409cbc` and again before the review round. Lane: `thinkthen-lane-4`. Branch: `qf/command-edges-and-prune`.
 
 ## Evidence it started from
 
@@ -61,7 +61,7 @@ The four questions of `2026-09-24-tests-earn-their-place.md`:
 
 ## Size
 
-`sdlc/ratchet.json` stands at 72607, 285 lines over main's 72322. The first round took 121. `ModelName`'s own constructor takes about 35 lines, because the shared macro would also trim `Url`. The model table and the new refusal row take about 25. The prune table's rows and second sentence take about 25. `ModelName::reported` takes 18. The timeout table, the `test_only` reader, and the `model_flag` helper take the rest. The helper removed two copies of the `--model` mapping, and the timeout table replaced a longer two-case list. The review round took 164, one of them the mask ruling's longer doc comment. The loopback rule takes about 25 in `is_loopback`, `Engine::key`, and the header switch, and its address tests replaced the exchange copy. The configuration warning takes about 15 for the predicate and the print and 25 for its table. Recognize's comparison gave way to `check_model`, and its secrecy test takes about 40. Audit's check and test row, the `check` timeout row, and the U+2028 row take the rest.
+`sdlc/ratchet.json` stands at 72630, 308 lines over main's 72322. The first round took 121. `ModelName`'s own constructor takes about 35 lines, because the shared macro would also trim `Url`. The model table and the new refusal row take about 25. The prune table's rows and second sentence take about 25. `ModelName::reported` takes 18. The timeout table, the `test_only` reader, and the `model_flag` helper take the rest. The helper removed two copies of the `--model` mapping, and the timeout table replaced a longer two-case list. The review round took 164, one of them the mask ruling's longer doc comment. The last round took 23: the loopback table in `core/backend.rs` and the wrapped audit reason. The loopback rule takes about 25 in `is_loopback`, `Engine::key`, and the header switch, and its address tests replaced the exchange copy. The configuration warning takes about 15 for the predicate and the print and 25 for its table. Recognize's comparison gave way to `check_model`, and its secrecy test takes about 40. Audit's check and test row, the `check` timeout row, and the U+2028 row take the rest.
 
 ## Checks
 
