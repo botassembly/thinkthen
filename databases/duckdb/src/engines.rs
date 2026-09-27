@@ -20,7 +20,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 
 use thinkthen::{Engine, EngineBuilder};
 
-use crate::errors::{failure, usage};
+use crate::errors::{RowError, usage};
 
 /// The most engines one process keeps.
 const MOST: usize = 16;
@@ -45,10 +45,75 @@ pub(crate) enum Probe {
 /// One engine's key: the settings that change what an engine is.
 type Key = (Option<u8>, Option<usize>, Option<String>);
 
-/// Each kept engine beside its key.
-type Kept = Vec<(Key, Arc<Engine>)>;
+#[derive(Debug)]
+struct Entry {
+    key: Key,
+    engine: Arc<Engine>,
+    used: u64,
+}
 
-static ENGINES: Mutex<Kept> = Mutex::new(Vec::new());
+#[derive(Debug)]
+struct Registry {
+    pid: u32,
+    clock: u64,
+    historical: [u64; 4],
+    kept: Vec<Entry>,
+}
+
+static ENGINES: Mutex<Registry> = Mutex::new(Registry {
+    pid: 0,
+    clock: 0,
+    historical: [0; 4],
+    kept: Vec::new(),
+});
+
+fn registry() -> std::sync::MutexGuard<'static, Registry> {
+    let mut held = ENGINES.lock().unwrap_or_else(PoisonError::into_inner);
+    let pid = std::process::id();
+    if held.pid != pid {
+        held.pid = pid;
+        held.clock = 0;
+        held.historical = [0; 4];
+        held.kept.clear();
+    }
+    held
+}
+
+impl Registry {
+    fn found(&mut self, key: &Key) -> Option<Arc<Engine>> {
+        let entry = self.kept.iter_mut().find(|entry| &entry.key == key)?;
+        self.clock = self.clock.saturating_add(1);
+        entry.used = self.clock;
+        Some(Arc::clone(&entry.engine))
+    }
+
+    fn room(&mut self) -> Result<(), String> {
+        if self.kept.len() < MOST {
+            return Ok(());
+        }
+        let at = self.kept.iter().enumerate()
+            .filter(|(_, entry)| Arc::strong_count(&entry.engine) == 1)
+            .min_by_key(|(_, entry)| entry.used)
+            .map(|(at, _)| at)
+            .ok_or_else(|| usage("16 ThinkThen engine settings plans are in use; finish a holding query, reuse current settings, or start a new process"))?;
+        let old = self.kept.remove(at);
+        add_counts(&mut self.historical, &old.engine);
+        Ok(())
+    }
+}
+
+fn add_counts(total: &mut [u64; 4], engine: &Engine) {
+    let counts = engine.usage();
+    let each = [
+        counts.requests_sent(),
+        counts.cache_answers(),
+        counts.input_tokens(),
+        counts.output_tokens(),
+    ];
+    for (sum, value) in total.iter_mut().zip(each) {
+        *sum = sum.saturating_add(value);
+    }
+}
 
 /// The engine for these settings, built on first use. `probe` opens a path
 /// through the caller's own file system.
@@ -56,45 +121,58 @@ pub(crate) fn engine_for(
     asked: &Asked,
     probe: impl FnOnce(&str) -> Probe,
 ) -> Result<Arc<Engine>, String> {
+    engine_for_typed(asked, probe).map_err(|error| error.text)
+}
+
+pub(crate) fn engine_for_typed(
+    asked: &Asked,
+    probe: impl FnOnce(&str) -> Probe,
+) -> Result<Arc<Engine>, RowError> {
     let (key, builder) = checked(asked)?;
     if let Some(folder) = &key.2 {
         if !folder.starts_with('/') || folder.contains("://") {
-            return Err(usage(
+            return Err(RowError::usage(
                 "a cache folder set from SQL is an absolute local path with no scheme",
             ));
         }
         if probe(&format!("{}/.probe", folder.trim_end_matches('/'))) == Probe::Refused {
-            return Err(usage(
+            return Err(RowError::usage(
                 "the cache folder is outside what this database's file settings allow",
             ));
         }
     }
-    let full = || {
-        usage(
-            "this process already keeps 16 engines, one per throttle, request limit, and cache folder; reuse settings already in use",
-        )
-    };
     {
-        let engines = ENGINES.lock().unwrap_or_else(PoisonError::into_inner);
-        if let Some((_, engine)) = engines.iter().find(|(held, _)| *held == key) {
-            return Ok(Arc::clone(engine));
+        let mut engines = registry();
+        if let Some(engine) = engines.found(&key) {
+            return Ok(engine);
         }
-        if engines.len() >= MOST {
-            return Err(full());
+        if engines.kept.len() >= MOST
+            && !engines
+                .kept
+                .iter()
+                .any(|entry| Arc::strong_count(&entry.engine) == 1)
+        {
+            return Err(RowError::usage(
+                "16 ThinkThen engine settings plans are in use; finish a holding query, reuse current settings, or start a new process",
+            ));
         }
     }
     // The build runs outside the lock, so a fork during a build never
     // leaves the child's map locked. A racing build of the same key loses
     // to the one stored first.
-    let built = Arc::new(builder.build().map_err(|error| failure(&error))?);
-    let mut engines = ENGINES.lock().unwrap_or_else(PoisonError::into_inner);
-    if let Some((_, engine)) = engines.iter().find(|(held, _)| *held == key) {
-        return Ok(Arc::clone(engine));
+    let built = Arc::new(builder.build().map_err(RowError::from)?);
+    let mut engines = registry();
+    if let Some(engine) = engines.found(&key) {
+        return Ok(engine);
     }
-    if engines.len() >= MOST {
-        return Err(full());
-    }
-    engines.push((key, Arc::clone(&built)));
+    engines.room().map_err(|_| RowError::usage("16 ThinkThen engine settings plans are in use; finish a holding query, reuse current settings, or start a new process"))?;
+    engines.clock = engines.clock.saturating_add(1);
+    let used = engines.clock;
+    engines.kept.push(Entry {
+        key,
+        engine: Arc::clone(&built),
+        used,
+    });
     Ok(built)
 }
 
@@ -105,13 +183,14 @@ pub(crate) fn from_env() -> Result<Arc<Engine>, String> {
 }
 
 /// Every value converted and run through its setter on a fresh builder.
-fn checked(asked: &Asked) -> Result<(Key, EngineBuilder), String> {
-    let refused = |error: thinkthen::Error| failure(&error);
+fn checked(asked: &Asked) -> Result<(Key, EngineBuilder), RowError> {
+    let refused = RowError::from;
     let mut builder = EngineBuilder::from_env().map_err(refused)?;
     let throttle = asked
         .throttle
         .map(|value| {
-            u8::try_from(value).map_err(|_| usage("a throttle is a whole number from 1 through 32"))
+            u8::try_from(value)
+                .map_err(|_| RowError::usage("a throttle is a whole number from 1 through 32"))
         })
         .transpose()?;
     if let Some(value) = throttle {
@@ -121,7 +200,7 @@ fn checked(asked: &Asked) -> Result<(Key, EngineBuilder), String> {
         .max_requests
         .map(|value| {
             usize::try_from(value)
-                .map_err(|_| usage("a request limit is a whole number of 1 or more"))
+                .map_err(|_| RowError::usage("a request limit is a whole number of 1 or more"))
         })
         .transpose()?;
     builder = builder.max_requests(most).map_err(refused)?;
@@ -130,11 +209,12 @@ fn checked(asked: &Asked) -> Result<(Key, EngineBuilder), String> {
     }
     if let Some(cap) = asked.cache_bytes {
         let cap = u64::try_from(cap)
-            .map_err(|_| usage("a cache cap is a whole number of bytes above zero"))?;
+            .map_err(|_| RowError::usage("a cache cap is a whole number of bytes above zero"))?;
         builder = builder.cache_bytes(cap).map_err(refused)?;
     }
     if let Some(total) = asked.max_requests_total {
-        total_of(total)?;
+        total_of(total)
+            .map_err(|_| RowError::usage("a request total is a whole number of 0 or more"))?;
     }
     Ok(((throttle, most, asked.cache.clone()), builder))
 }
@@ -145,18 +225,29 @@ fn total_of(total: i64) -> Result<u64, String> {
 
 /// The texts a call may send, and the refusal it raises after them.
 type Allowed = (Vec<String>, Option<String>);
+type TypedAllowed = (Vec<String>, Option<RowError>);
 
 /// The texts one call may send under the process's request total, and the
 /// refusal the call raises after it sends them when the total cut it short.
 /// A spent total refuses before anything is sent.
-pub(crate) fn within_total(asked: &Asked, mut texts: Vec<String>) -> Result<Allowed, String> {
+pub(crate) fn within_total(asked: &Asked, texts: Vec<String>) -> Result<Allowed, String> {
+    within_total_typed(asked, texts)
+        .map(|(texts, cut)| (texts, cut.map(|error| error.text)))
+        .map_err(|error| error.text)
+}
+
+pub(crate) fn within_total_typed(
+    asked: &Asked,
+    mut texts: Vec<String>,
+) -> Result<TypedAllowed, RowError> {
     let Some(total) = asked.max_requests_total else {
         return Ok((texts, None));
     };
-    let total = total_of(total)?;
+    let total = total_of(total)
+        .map_err(|_| RowError::usage("a request total is a whole number of 0 or more"))?;
     let [(_, spent), ..] = usage_totals();
     let spent_out = || {
-        usage(&format!(
+        RowError::usage(&format!(
             "this process has spent its request total of {total}; raise SET thinkthen_max_requests_total or RESET it"
         ))
     };
@@ -171,24 +262,12 @@ pub(crate) fn within_total(asked: &Asked, mut texts: Vec<String>) -> Result<Allo
     Ok((texts, Some(spent_out())))
 }
 
-/// The counters of every engine this process keeps, summed.
+/// Historical counters and the counters of every resident engine, summed.
 pub(crate) fn usage_totals() -> [(&'static str, u64); 4] {
-    let mut totals = [0_u64; 4];
-    for (_, engine) in ENGINES
-        .lock()
-        .unwrap_or_else(PoisonError::into_inner)
-        .iter()
-    {
-        let counts = engine.usage();
-        let each = [
-            counts.requests_sent(),
-            counts.cache_answers(),
-            counts.input_tokens(),
-            counts.output_tokens(),
-        ];
-        for (total, count) in totals.iter_mut().zip(each) {
-            *total = total.saturating_add(count);
-        }
+    let engines = registry();
+    let mut totals = engines.historical;
+    for entry in &engines.kept {
+        add_counts(&mut totals, &entry.engine);
     }
     let [requests, cache, input, output] = totals;
     [

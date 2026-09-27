@@ -65,6 +65,85 @@ def the_process_request_total_holds_across_calls():
 
 
 @case
+def seventeen_idle_plans_keep_all_prior_usage():
+    """An idle plan can leave the resident map without resetting spending."""
+    with Backend() as backend:
+        statements = []
+        for value in range(1, 18):
+            statements += [f"SET thinkthen_max_requests = {value}",
+                           f"SELECT thinkthen_decide('Is it a refund?', 'unique row {value}')"]
+        statements += ["SELECT value FROM thinkthen_usage() WHERE metric = 'requests_sent'",
+                       "SET thinkthen_max_requests_total = 17",
+                       "SELECT thinkthen_decide('Is it a refund?', 'after total')"]
+        got = run(statements, backend.base())
+        for index in range(1, 34, 2):
+            expect(rows(got[index]), [[True]], f"plan {(index + 1) // 2} answers")
+        expect(rows(got[34]), [[17]], "historical and resident sends")
+        expect(said(got[36]), "thinkthen usage: this process has spent its request total of 17; raise SET thinkthen_max_requests_total or RESET it", "spent total survives retirement")
+        expect(backend.count(), 17, "all sends remain counted")
+
+
+HELD_PLANS = r"""
+import concurrent.futures, json, sys
+import duckdb
+def opened(limit):
+    db = duckdb.connect(config={"allow_unsigned_extensions": "true"})
+    db.execute(f"LOAD '{sys.argv[1]}'")
+    db.execute("SET thinkthen_throttle = 16")
+    db.execute(f"SET thinkthen_max_requests = {limit}")
+    return db
+def held(limit):
+    db = opened(limit)
+    return db.execute(f"SELECT thinkthen_decide('Is it a refund?', 'held {limit}')").fetchall()
+with concurrent.futures.ThreadPoolExecutor(max_workers=16) as pool:
+    waiting = [pool.submit(held, limit) for limit in range(1, 17)]
+    print("ready", flush=True)
+    sys.stdin.readline()
+    extra = opened(17)
+    try:
+        extra.execute("SELECT thinkthen_decide('Is it a refund?', 'seventeenth')").fetchall()
+        first = "answered"
+    except Exception as error:
+        first = str(error)
+    print(json.dumps({"first": first}), flush=True)
+    sys.stdin.readline()
+    previous = [future.result(timeout=30) for future in waiting]
+    again = extra.execute("SELECT thinkthen_decide('Is it a refund?', 'seventeenth')").fetchall()
+    print(json.dumps({"previous": previous, "again": again}), flush=True)
+"""
+
+
+@case
+def sixteen_held_plans_refuse_without_eviction():
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        process = subprocess.Popen(
+            [sys.executable, "-c", HELD_PLANS, str(EXTENSION)],
+            env=child_env(backend.base("arm/held"), Path(folder)),
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        )
+        try:
+            expect(process.stdout.readline().strip(), "ready", "the child started")
+            expect(backend.wait(16), 16, "all 16 sends are held")
+            process.stdin.write("go\n")
+            process.stdin.flush()
+            first = json.loads(process.stdout.readline())["first"]
+            expect("16 ThinkThen engine settings plans are in use; finish a holding query, reuse current settings, or start a new process" in first,
+                   True, "pathless cap refusal")
+            expect(backend.count(), 16, "the 17th sent nothing")
+            backend.release()
+            process.stdin.write("go\n")
+            process.stdin.flush()
+            last = json.loads(process.stdout.readline())
+            expect(last["previous"], [[[True]]] * 16, "held plans finish")
+            expect(last["again"], [[True]], "released plan makes room")
+            expect(backend.count(), 17, "the 17th now sends")
+        finally:
+            backend.release()
+            process.kill()
+            process.communicate(timeout=10)
+
+
+@case
 def a_negative_request_total_refuses_before_the_map():
     with Backend() as backend:
         # A NULL text reaches no engine call, so only the init's check sees it.

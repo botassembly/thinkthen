@@ -42,6 +42,65 @@ pub(crate) fn defect(message: &str) -> String {
     format!("{}{message}", prefix(ErrorKind::Defect))
 }
 
+/// Typed scalar failure. Its diagnostic stays on the raising path only.
+#[derive(Debug)]
+pub(crate) struct RowError {
+    pub(crate) kind: ErrorKind,
+    pub(crate) retryable: bool,
+    pub(crate) text: String,
+}
+
+impl RowError {
+    pub(crate) fn of(kind: ErrorKind, message: &str) -> Self {
+        Self {
+            kind,
+            retryable: false,
+            text: format!("{}{message}", prefix(kind)),
+        }
+    }
+
+    pub(crate) fn usage(message: &str) -> Self {
+        Self::of(ErrorKind::Usage, message)
+    }
+    pub(crate) fn local(message: &str) -> Self {
+        Self::of(ErrorKind::Local, message)
+    }
+    pub(crate) fn defect(message: &str) -> Self {
+        Self::of(ErrorKind::Defect, message)
+    }
+
+    pub(crate) fn recoverable(&self) -> bool {
+        matches!(
+            self.kind,
+            ErrorKind::Usage | ErrorKind::Local | ErrorKind::Backend
+        )
+    }
+
+    pub(crate) fn value(&self) -> Option<serde_json::Value> {
+        let message = match self.kind {
+            ErrorKind::Usage => {
+                "check the row's question and arguments, or raise the process request total when it is spent"
+            }
+            ErrorKind::Local => "check the named file and its permissions",
+            ErrorKind::Backend => "the backend did not answer; retry if allowed",
+            ErrorKind::Cancelled | ErrorKind::Deadline | ErrorKind::Defect => return None,
+        };
+        Some(
+            serde_json::json!({"status":"failed","error":{"kind":self.kind.name(),"message":message,"retryable":self.retryable}}),
+        )
+    }
+}
+
+impl From<Error> for RowError {
+    fn from(error: Error) -> Self {
+        Self {
+            kind: error.kind(),
+            retryable: error.retryable(),
+            text: failure(&error),
+        }
+    }
+}
+
 /// Run one callback body so a panic becomes that callback's error and never
 /// unwinds into DuckDB. Every callback the C API calls runs through here.
 pub(crate) fn guarded<T>(
