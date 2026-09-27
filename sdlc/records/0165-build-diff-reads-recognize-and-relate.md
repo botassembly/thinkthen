@@ -1,6 +1,6 @@
 # 0165: Build diff reads recognize and relate
 
-Status: built 2026-09-27, awaiting code review. Owner: Claude.
+Status: landed 2026-09-27. Owner: Claude.
 
 Branch `ticket/0147-recognize-adr`, built in lane 3 on top of ticket 0147. The ticket is `sdlc/tickets/0165-diff-reads-recognize-and-relate.md`. `origin/main` was at `e4b7bbee`, which the branch already held, so no merge was needed. No paid call ran. Ian can overturn every decision the ticket lists.
 
@@ -67,7 +67,17 @@ All four ran with `THINKTHEN_API_KEY` unset and exited 0 on the final commit: `l
 3. Test 2 runs without a key. The ticket pins only the summary and the lost strengths.
 4. Tests 5 and 6 read their inputs from fixture files, not inline text.
 5. Test 5's two mix rows use two cuts on one mixed file, so the role reads `first run`.
-6. `--match` parses through clap's `PossibleValuesParser`, not a new value enum, so audit's `Match` value enum stays where it is and the line budget holds. The core may not use clap.
+6. The build first parsed `--match` through clap's `PossibleValuesParser`. Review cleanup 2 replaced it with audit's `Match` value enum, now shared from `cli/measure.rs`. The core may not use clap.
+
+## Review
+
+A fresh read-only code review accepted the build with no defects. It also served as the second agent for the ceiling raise. It named three cleanups, made in one commit:
+
+1. The table passes the key counts straight into its `write!`.
+2. audit's `Match` value enum moved to `cli/measure.rs` with one `From<Match> for Matching`, and audit and diff both parse `--match` through it. diff keeps `--match` optional, because it refuses `--match` over other verbs, so its help names the default in words.
+3. diff's help says what `--table` prints for a changed record.
+
+The line count stayed at 72,168.
 
 ## Left for later
 

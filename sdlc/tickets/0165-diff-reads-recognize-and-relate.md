@@ -6,7 +6,7 @@ opens: specification/diff.md specification/settings.md spec/diff.md crates/think
 
 # 0165: diff reads recognize and relate
 
-Status: built 2026-09-27, awaiting code review. The coordinator accepted it on 2026-09-26 after six fresh read-only reviews and a coordinator decision on item-line order and the `either` flag. Owner: Claude. The build record is `sdlc/records/0165-build-diff-reads-recognize-and-relate.md`.
+Status: landed 2026-09-27 (`sdlc/records/0165-build-diff-reads-recognize-and-relate.md`). A fresh read-only code review accepted it with no defects, and three small cleanups it named were made. The coordinator accepted it on 2026-09-26 after six fresh read-only reviews and a coordinator decision on item-line order and the `either` flag. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
