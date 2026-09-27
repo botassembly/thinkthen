@@ -213,7 +213,7 @@ fn message(error: &EngineError) -> String {
         EngineError::Cancelled => "the call was cancelled",
         EngineError::Deadline(budget) => return budget.to_string(),
         EngineError::NoKey(variable) => {
-            return format!("no key is set; set {variable}");
+            return format!("no key is set; configure an API key for the engine ({variable})");
         }
         EngineError::WidthActive(active) => return active.to_string(),
         EngineError::ModelsDiffer(_) => {

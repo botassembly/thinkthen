@@ -12,15 +12,15 @@ The command keeps its own missing-key sentence and exit 4. Libraries keep `Error
 
 ## Change
 
-The shared library error now says `no key is set; set THINKTHEN_API_KEY`, a remedy every surface can use. The root and Rust library READMEs state that a bare builder ignores the configuration file's cache switch and name `no_cache()` for a caller who wants no answer cache.
+The shared library error now says `no key is set; configure an API key for the engine (THINKTHEN_API_KEY)`. Environment-built engines take the named variable, and a bare Rust builder takes `api_key()`. The root and Rust library READMEs state that a bare builder ignores the configuration file's cache switch and name `no_cache()` for a caller who wants no answer cache.
 
 ## Proof
 
-`test_missing_key_names_a_remedy_python_can_use_before_any_send` calls the real Python API with no key and a non-loopback address. It pins the complete `UsageError` sentence and checks that a loopback listener received zero requests. Before the message edit it failed on `or call EngineBuilder::api_key`.
+`test_missing_key_names_a_remedy_for_a_library_call` calls the real Python API with no key and a local address that the engine's exact loopback rule does not exempt. It pins the complete `UsageError` sentence. Before the message edit it failed on `or call EngineBuilder::api_key`. The test does not measure sends; the existing backend and Python secrecy tests cover the no-key send rule at their own listener boundaries.
 
 The test protects the public error kind and usable remedy. Restoring the Rust-only phrase fails it. Existing Python tests do not pin this missing-key sentence; existing command tests pin the separate exit-4 path. The test uses no test-only export, flag, or hook. Documentation of the deliberately distinct constructors needs no wording test.
 
-The Rust size ratchet remains 72,630 of 72,630 nonblank lines. The production edit replaces one line with one line. The Python source and test ratchet rises from 2,378 to 2,388 for the ten nonblank lines of the real API regression. I checked `public/error.rs`, `test_inputs.py`, and the existing Python secrecy tests for a missing-key message check to reuse; none had one.
+The Rust size ratchet remains 72,630 of 72,630 nonblank lines. The production edit replaces one line with one line. The Python source and test ratchet rises from 2,378 to 2,386 for eight nonblank lines of the real API regression. I checked `public/error.rs`, `test_inputs.py`, and the existing Python secrecy tests for a missing-key message check to reuse; none had one.
 
 ## Checks
 
