@@ -23,6 +23,7 @@ mod budget;
 )]
 mod ffi;
 mod question;
+mod recognize_document;
 mod scalars;
 mod settings;
 mod tables;

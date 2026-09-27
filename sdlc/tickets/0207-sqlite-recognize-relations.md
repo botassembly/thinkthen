@@ -6,7 +6,7 @@ opens: sdlc/tickets/0207-sqlite-recognize-relations.md
 
 # 0207: Give SQLite the full recognize relation result
 
-Status: design accepted on 2026-09-27; building on `ticket/0207-sqlite-recognize-relations`. The queue owner approved the additive SQL surface after independent review of `39b6dcbe`. Owner: Codex. Ian can overturn the SQL spelling and argument behavior.
+Status: design accepted on 2026-09-27; focused implementation proof passed on `ticket/0207-sqlite-recognize-relations`, awaiting fresh code review. The queue owner approved the additive SQL surface after independent review of `39b6dcbe`. Owner: Codex. Ian can overturn the SQL spelling and argument behavior.
 
 ## Outcome
 
@@ -37,3 +37,10 @@ Claim `databases/sqlite/src/lib.rs`, `src/scalars.rs`, `src/tables.rs`, and a ne
 Read at main `30bf6e81`. `databases/sqlite/src/tables.rs::Recognizer::ask` refuses `/recognize/relations`; `Relater::ask` constructs a separate relate spec from rows. The case-42 comparison in `sdlc/records/0206-prove-equivalent-conformance-paths.md` saw two relate request bodies without original text and no matching captured body. This is an absent SQL operation, not merely an untested equivalent query. `crates/thinkthen/src/public/recognize.rs` already exposes `Engine::recognize_with` and `Recognized::to_json`; the new SQL route can use that public result without inventing another recognition planner. `databases/sqlite/src/scalars.rs::register` registers scalar functions as direct-only and volatile. `databases/sqlite/check.sh` checks one `sqlite3_thinkthen_init` export. Preserve that ABI and the existing two table routes.
 
 The preceding contract and bounded capture passed independent design review at `39b6dcbe`. The source claims were pushed on main at `f7080025`. Keep one *public recognize call* distinct from one backend send; compare each captured arm's body sequence and count. Keep all nine skips until cases 42–50 pass their own arms. The selected runner and `databases/sqlite/tests/conformance.py` provide the smallest outside-in proof after a rebuilt pinned SQLite 3.50.0 extension.
+
+## What the build taught us
+
+- The accepted preflight correctly located registration, the public recognize call, the disabled listener retention, and the exact nine-case proof. A bounded capture in the routing closure let the existing case arm compare the three dependent request bodies without retaining generic traffic.
+- The preflight missed the shared SQLite parser's JSON round trip. Its `serde_json::Value` sorts kind members, so eight strict captured arms returned backend 500 despite a correct public call. The new scalar now keeps the source member order while sharing the existing file read, JSON validation and inline-versus-file error mapping. The old table parser remains unchanged. Case 42 was the smallest regression that exposed this.
+- The generic loopback arm provides a distinct threshold check: its default cut yields two directed edges; a cut of 1.0 removes them while keeping entities. This is separate from the nine exact captured outputs and from the empty-result shape for a rules spec.
+- The focused [build record](../records/0207-build.md) names the passing selector, SQL value and schema checks, strict lint, and measured ratchets. SQL find, broader question-file conformance, and B13e remain with their existing owners. No paid provider call or full functional gate ran for this slice.

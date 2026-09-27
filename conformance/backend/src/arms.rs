@@ -30,6 +30,10 @@ const MOST_DELAY: u64 = 10_000;
 /// How long a `wait` line waits for its count.
 const WAIT_BOUND: Duration = Duration::from_secs(5);
 
+/// Only the three dependent requests of one opted-in relation case are retained.
+const CAPTURE_BODIES: usize = 3;
+const CAPTURE_BYTES: usize = 96_000;
+
 /// The shared cases, compiled in so the binary needs no path.
 const CASES: &str = include_str!("../../cases.json");
 
@@ -81,11 +85,56 @@ struct Question {
 #[derive(Default)]
 struct Criteria(Vec<String>);
 
+#[derive(Debug, Default)]
+struct Capture {
+    bodies: Vec<Vec<u8>>,
+    overflow: bool,
+}
+
+impl Capture {
+    fn push(&mut self, body: &[u8]) {
+        if self.bodies.len() == CAPTURE_BODIES || body.len() > CAPTURE_BYTES {
+            self.overflow = true;
+        } else {
+            self.bodies.push(body.to_vec());
+        }
+    }
+
+    fn json(&self) -> String {
+        if self.overflow {
+            return serde_json::json!({"error": "capture overflow"}).to_string();
+        }
+        let bodies = self
+            .bodies
+            .iter()
+            .map(|body| std::str::from_utf8(body))
+            .collect::<Result<Vec<_>, _>>();
+        match bodies {
+            Ok(bodies) => serde_json::json!({"bodies": bodies}).to_string(),
+            Err(_) => serde_json::json!({"error": "capture is not UTF-8"}).to_string(),
+        }
+    }
+}
+
+/// The dedicated case path opts in; ordinary case and generic traffic do not.
+fn capturing(request: &Recorded) -> bool {
+    let path = request.line.split(' ').nth(1).unwrap_or_default();
+    let mut parts = path.trim_start_matches('/').split('/');
+    let (Some("case"), Some(id), Some("capture")) = (parts.next(), parts.next(), parts.next())
+    else {
+        return false;
+    };
+    id.split_once('-')
+        .and_then(|(number, _)| number.parse::<u8>().ok())
+        .is_some_and(|number| (42..=50).contains(&number))
+}
+
 /// The conformance backend: one loopback listener and the gate its held arm waits on.
 #[derive(Debug)]
 pub struct Backend {
     listener: Listener,
     gate: Arc<Gate>,
+    capture: Arc<Mutex<Capture>>,
 }
 
 impl Backend {
@@ -104,8 +153,22 @@ impl Backend {
         }
         let gate = Arc::new(Gate::default());
         let held = Arc::clone(&gate);
-        let listener = Listener::routing(move |request| route(&cases, &held, request))?;
-        Ok(Self { listener, gate })
+        let capture = Arc::new(Mutex::new(Capture::default()));
+        let observed = Arc::clone(&capture);
+        let listener = Listener::routing(move |request| {
+            if capturing(request) {
+                observed
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner)
+                    .push(&request.body);
+            }
+            route(&cases, &held, request)
+        })?;
+        Ok(Self {
+            listener,
+            gate,
+            capture,
+        })
     }
 
     /// The scheme, address, and port. A caller appends an arm's path.
@@ -116,6 +179,14 @@ impl Backend {
     /// How many requests the backend has read so far.
     pub fn count(&self) -> usize {
         self.listener.count()
+    }
+
+    /// The bounded bodies kept by this process's one opted-in case arm.
+    fn capture_json(&self) -> String {
+        self.capture
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .json()
     }
 
     /// Let every held reply go, now and from here on.
@@ -149,7 +220,7 @@ impl Backend {
     }
 }
 
-/// Print the port, answer `count`, `release`, `round`, and `wait N` lines, and
+/// Print the port, answer `count`, `capture`, `release`, `round`, and `wait N` lines, and
 /// print the count at the end.
 ///
 /// A `wait` answers on a thread of its own, so the lines behind it run at once.
@@ -165,6 +236,7 @@ pub fn run(input: impl BufRead, output: impl Write + Send + 'static) -> io::Resu
         for line in input.lines() {
             match line?.trim() {
                 "count" => say(&output, backend.count())?,
+                "capture" => say(&output, backend.capture_json())?,
                 "release" => backend.release(),
                 "round" => backend.round(),
                 other => match other.strip_prefix("wait ").and_then(whole) {
