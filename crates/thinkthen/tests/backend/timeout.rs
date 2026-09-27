@@ -9,7 +9,7 @@ const MESSAGE: &str = "thinkthen: --timeout takes a whole number of seconds from
 const ANSWER: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
 
 #[test]
-fn a_timeout_outside_one_to_a_day_precedes_input_key_and_connection_in_both_argument_homes() {
+fn a_timeout_outside_one_to_a_day_precedes_input_key_and_connection_in_every_argument_home() {
     let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("a loopback listener");
     let absent = Path::new(env!("CARGO_TARGET_TMPDIR"))
         .join("timeout")
@@ -38,6 +38,17 @@ fn a_timeout_outside_one_to_a_day_precedes_input_key_and_connection_in_both_argu
             assert_eq!(String::from_utf8_lossy(&output.stderr), MESSAGE);
         }
     }
+
+    // `check` keeps its own timeout field and reads no input.
+    let output = spawn(
+        &["check", "--url", listener.base(), "--timeout", "86401"],
+        &[],
+        b"",
+    )
+    .expect("the compiled binary runs");
+    assert_eq!(output.status.code(), Some(2), "check");
+    assert!(output.stdout.is_empty(), "check");
+    assert_eq!(String::from_utf8_lossy(&output.stderr), MESSAGE);
 
     assert!(
         listener.requests().is_empty(),
