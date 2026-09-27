@@ -103,16 +103,37 @@ impl Gates {
                 .remaining(now)
                 .min(
                     gate.floor
+                        .filter(|floor| !floor.passed(now))
                         .map_or(Duration::MAX, |floor| floor.remaining(now)),
                 )
                 .min(Cancel::poll())
                 .min(budget.unwrap_or(Duration::MAX));
+            debug_assert!(!poll.is_zero(), "a closed gate needs a positive wait");
             closed = self
                 .changed
                 .wait_timeout(closed, poll)
                 .map_or_else(|poisoned| poisoned.into_inner().0, |(closed, _)| closed);
         }
     }
+}
+
+#[cfg(test)]
+#[test]
+fn an_expired_server_floor_cannot_spin_under_a_later_unheaded_gate() {
+    let gates = Gates::default();
+    let now = Instant::now();
+    gates.lock().insert(
+        "local".into(),
+        Gate {
+            until: Opening::At(now + Duration::from_secs(1)),
+            floor: Some(Opening::At(now)),
+        },
+    );
+    assert!(
+        !gates
+            .wait_open("local", now + Duration::from_millis(20), &Cancel::default())
+            .unwrap()
+    );
 }
 
 static PROCESS_GATES: process::Guarded<&'static Gates> = process::Guarded::empty();
