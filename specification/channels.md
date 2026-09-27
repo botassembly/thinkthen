@@ -71,7 +71,10 @@ Codes 7 and 8 stay reserved. One function maps every error to its exit code. Exi
 In record mode the exit code reports the run. A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers. `annotate` exits 6 when a completed run contains one or more failed questions; good answers and failed markers both print. A valid answer on standard output can accompany exit 1, 3, or 6, so a script that wants the value reads it and then reads `$?`.
 
 ```sh
-if thinkthen decide 'the customer asks for a refund' --quiet < message.txt; then
+asks_for_refund() {
+  thinkthen decide 'the customer asks for a refund' --quiet
+}
+if asks_for_refund < message.txt; then
   echo refund
 fi
 ```

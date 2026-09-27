@@ -139,6 +139,18 @@ impl<'a> Cancel<'a> {
         self.remaining()
     }
 
+    /// Final send check while the usage guard is held. Never calls a host callback.
+    pub(crate) fn remaining_without_check(&self) -> Result<Option<Duration>, error::Error> {
+        let token = self
+            .token
+            .as_ref()
+            .is_some_and(|token| token.load(Ordering::Acquire));
+        if self.fired() || token {
+            return Err(error::Error::Cancelled);
+        }
+        self.remaining()
+    }
+
     /// Run the host check on its calling thread. A `true` return fires this
     /// call's stop. A panic fires it too, then resumes unchanged, so every
     /// worker stops before the unwinding scope joins it.

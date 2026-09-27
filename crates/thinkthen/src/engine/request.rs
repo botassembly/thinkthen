@@ -95,11 +95,12 @@ where
                 retry_wait: transport.retry_wait,
             };
             crate::engine::workers::on_worker(cancel, || {
-                transport
-                    .client
-                    .post_observed_with_retry(&exchange, cancel, |retry| {
-                        transport.usage.attempt_sent(retry);
-                    })
+                transport.client.post_observed_with_retry(
+                    &exchange,
+                    cancel,
+                    transport.usage,
+                    |_| (),
+                )
             })
             .map_err(E::from)
         },

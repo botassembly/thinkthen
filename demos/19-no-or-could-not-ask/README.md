@@ -62,7 +62,7 @@ printf '%s' "$audit" \
   | mustmatch '{"value":null,"threshold":"0.1:0.8","probability":0.22,"verb":"decide"}'
 ```
 
-`threshold` comes back as the string `0.1:0.8`, and that string works again on the command line. `value` is `null`, the one spelling of not sure in the bare output, in the object, and beside exit 3.
+`threshold` returns the string `0.1:0.8`, which works again on the command line. `value` is `null`, the spelling of not sure in the bare output, in the object, and beside exit 3.
 
 ## Step 3: word the question so that yes permits the action
 

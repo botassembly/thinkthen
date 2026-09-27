@@ -22,7 +22,6 @@ set -euo pipefail
 root=$(git rev-parse --show-toplevel)
 
 thinkthen transform show counts | cmp - "$root/transforms/counts/counts.jq"
-thinkthen transform show counts | wc -c | tr -d ' ' | mustmatch "1735"
 ```
 
 An unknown name prints nothing on standard output, exits 2, and never repeats the name.
