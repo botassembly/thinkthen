@@ -6,7 +6,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::Once;
 
 use crate::{engines, errors};
-use thinkthen::{Answer, CallOptions, LoadedQuestion, Question};
+use thinkthen::{Answer, CallOptions, LoadedQuestion, Question, QuestionSet};
 
 mod listed;
 
@@ -142,6 +142,28 @@ fn question_typed(argument: &str, from_file: bool) -> Result<LoadedQuestion, err
     }
 }
 
+fn set_typed(argument: &str, from_file: bool) -> Result<QuestionSet, errors::RowError> {
+    if from_file {
+        QuestionSet::from_json(argument).map_err(|error| {
+            if error.kind() == thinkthen::ErrorKind::Usage {
+                errors::RowError::local(error.detail().message())
+            } else {
+                error.into()
+            }
+        })
+    } else if argument.starts_with('@') {
+        Err(errors::RowError::local(
+            "the question file was not read by this database",
+        ))
+    } else if argument.starts_with('{') {
+        QuestionSet::from_json(argument).map_err(Into::into)
+    } else {
+        Err(errors::RowError::usage(
+            "annotate names a question set as '@form.json' or JSON",
+        ))
+    }
+}
+
 /// Validate a foldable question without reading a key or sending a request.
 ///
 /// # Safety
@@ -155,6 +177,24 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_validate_question(
     reply_boundary(|| {
         let argument = text(bytes, len)?;
         question_typed(argument, from_file != 0)
+            .map(|_| Vec::new())
+            .map_err(|error| error.text)
+    })
+}
+
+/// Validate a foldable question set before any backend request.
+///
+/// # Safety
+/// `bytes` must name `len` readable bytes through this call.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_cpp_validate_set(
+    bytes: *const u8,
+    len: usize,
+    from_file: i32,
+) -> Reply {
+    reply_boundary(|| {
+        let argument = text(bytes, len)?;
+        set_typed(argument, from_file != 0)
             .map(|_| Vec::new())
             .map_err(|error| error.text)
     })
@@ -211,6 +251,14 @@ fn copied_texts(rows: *const BridgeText, count: usize) -> Result<Vec<String>, St
     rows.iter()
         .map(|row| text(row.bytes, row.len).map(str::to_owned))
         .collect()
+}
+
+fn frame(bytes: &mut Vec<u8>, json: &str) -> Result<(), String> {
+    let len = u32::try_from(json.len())
+        .map_err(|_| "thinkthen defect: a JSON value is too large".to_owned())?;
+    bytes.extend_from_slice(&len.to_ne_bytes());
+    bytes.extend_from_slice(json.as_bytes());
+    Ok(())
 }
 
 /// Evaluate one listed group through the public engine.
@@ -289,8 +337,12 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_scalar_group(
     from_file: i32,
 ) -> Reply {
     reply_boundary(|| {
-        let question = question_typed(text(question_bytes, question_len)?, from_file != 0)
-            .map_err(|error| error.text)?;
+        let argument = text(question_bytes, question_len)?;
+        let question = if kind == 7 {
+            None
+        } else {
+            Some(question_typed(argument, from_file != 0).map_err(|error| error.text)?)
+        };
         let copied = copied_texts(texts, count)?;
         let asked = asked(&settings)?;
         let engine = engines::engine_for(&asked, |_| probe(&settings))?;
@@ -304,6 +356,22 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_scalar_group(
                     .map_err(|error| errors::RowError::from(error).text)
             }
         };
+        if kind == 7 {
+            let set = set_typed(argument, from_file != 0).map_err(|error| error.text)?;
+            let rows = engine
+                .annotate_with(&set, copied, options()?)
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|error| errors::RowError::from(error).text)?;
+            let mut bytes = Vec::new();
+            for row in rows {
+                frame(&mut bytes, &row.value_json())?;
+            }
+            if let Some(error) = cut {
+                return Err(error);
+            }
+            return Ok(bytes);
+        }
+        let question = question.ok_or_else(|| "thinkthen defect: no scalar question".to_owned())?;
         if kind == 2 {
             let mut bytes = Vec::new();
             for text in copied {
@@ -312,11 +380,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_scalar_group(
                     LoadedQuestion::Banded(held) => engine.details_with(held, &text, options()?),
                 }
                 .map_err(|error| errors::RowError::from(error).text)?;
-                let json = result.to_json();
-                let len = u32::try_from(json.len())
-                    .map_err(|_| "thinkthen defect: a details value is too large".to_owned())?;
-                bytes.extend_from_slice(&len.to_ne_bytes());
-                bytes.extend_from_slice(json.as_bytes());
+                frame(&mut bytes, &result.to_json())?;
             }
             if let Some(error) = cut {
                 return Err(error);

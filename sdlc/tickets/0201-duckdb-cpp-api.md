@@ -91,6 +91,8 @@ The first product slice found that the repository policy expects raw-pointer cod
 
 The listed `choose`, `score`, and `tag` path uses a checked private result codec because DuckDB owns its SQL list values and Rust owns the engine's annotated records. The stock-host loopback proof now catches a bad foldable list at bind and a bad later list before any chunk send. It also checks nullable rows, first-seen repeated evidence, values, and SQL types. Splitting the C++ statement owner from the scalar entry kept each source under the 500-line policy cap as the listed path arrived. Remaining scalar, table, aggregate, full file-permission, signal, query-budget, and package proofs stay in this ticket; none is a completed product claim.
 
+Annotate exposed an arity assumption in the C++ bind path: treating every kind numbered four or higher as listed made the two-argument annotate bind access argument two and trigger a DuckDB internal error before any send. The correction names the three listed kinds explicitly. A parameterized NULL-row host check binds the current scalar signatures, including annotate with and without its deadline, and confirms their result types without model requests. The annotate parser and result use the existing grouped text and JSON framing paths. Future recognize, relations, warm, and usage dispatch must name their own signatures and cannot inherit the listed predicate by numeric range.
+
 ## Evidence
 
 - Starts from: Local experiment 207's v1.5.5 bind crash, local experiment 253's stock-host settings and file proofs, the two open DuckDB C API issues, the 0110 and 0118 records, current `origin/main` `9b8bf076`, and DuckDB's tagged v1.5.5 C++ headers linked above.

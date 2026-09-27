@@ -234,7 +234,32 @@ def main() -> None:
         assert "thinkthen usage:" in bind_listed[0]["error"]
         assert bind_listed[1] == {"rows": [[None]]}
         assert backend.count() == 17, "bad foldable members and a NULL list member sent nothing"
-    print("C++ scalar, listed, budget, limits, cache, NULL, deduplication, and loopback boundaries pass")
+        set_json = '{"version":1,"questions":{"refund":{"decide":"Is it a refund?"}}}'
+        annotated = run(
+            [f"SELECT thinkthen_annotate('{set_json}', 'refund now')",
+             "SELECT thinkthen_annotate('not a set', 'refund now')",
+             f"SELECT thinkthen_annotate(s, 'refund now') FROM "
+             f"(VALUES ('{set_json}'), ('not a set')) AS x(s)"],
+            backend.base(), extension=extension,
+        )
+        assert json.loads(annotated[0]["rows"][0][0]) == {"refund": True}
+        assert "thinkthen usage: annotate names a question set" in annotated[1]["error"]
+        assert "thinkthen usage: annotate names a question set" in annotated[2]["error"]
+        assert backend.count() == 18, "bad bind and later bad set sent no extra request"
+        signatures = [
+            ("thinkthen_decide('Is it a refund?', NULL)", "BOOLEAN"),
+            ("thinkthen_probability('Is it a refund?', NULL, -1)", "DOUBLE"),
+            ("thinkthen_try_details('Is it a refund?', NULL)", "VARCHAR"),
+            (f"thinkthen_annotate('{set_json}', NULL)", "VARCHAR"),
+            (f"thinkthen_annotate('{set_json}', NULL, -1)", "VARCHAR"),
+            ("thinkthen_choose('Which team?', NULL, ['billing', 'shipping'])", "VARCHAR"),
+            ("thinkthen_score('How strong?', NULL, ['weak', 'strong'], -1)", "DOUBLE"),
+            ("thinkthen_tag('Which topics?', NULL, ['billing', 'shipping'])", "VARCHAR[]"),
+        ]
+        bound = run([f"SELECT typeof({call})" for call, _ in signatures], backend.base(), extension=extension)
+        assert bound == [{"rows": [[type_name]]} for _, type_name in signatures]
+        assert backend.count() == 18, "the signature table only bound NULL rows"
+    print("C++ scalar, listed, annotate, budget, limits, cache, NULL, and loopback boundaries pass")
 
 
 if __name__ == "__main__":

@@ -71,6 +71,20 @@ struct Cursor {
 
 } // namespace
 
+std::optional<vector<string>> Members(const Value &value) {
+	if (value.IsNull()) {
+		return std::nullopt;
+	}
+	vector<string> members;
+	for (auto &child : ListValue::GetChildren(value)) {
+		if (child.IsNull()) {
+			return std::nullopt;
+		}
+		members.push_back(child.GetValue<string>());
+	}
+	return members;
+}
+
 vector<Value> DecodeListed(const uint8_t *bytes, size_t length, idx_t count, int32_t kind) {
 	if (!bytes) {
 		throw InvalidInputException("thinkthen defect: the bridge returned no listed values");

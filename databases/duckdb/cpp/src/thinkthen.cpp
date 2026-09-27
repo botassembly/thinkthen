@@ -48,6 +48,7 @@ struct ThinkThenSettings {
 };
 int32_t thinkthen_cpp_init();
 ThinkThenReply thinkthen_cpp_validate_question(const uint8_t *bytes, size_t len, int32_t from_file);
+ThinkThenReply thinkthen_cpp_validate_set(const uint8_t *bytes, size_t len, int32_t from_file);
 ThinkThenReply thinkthen_cpp_validate_listed(const uint8_t *question, size_t question_len,
                                              const ThinkThenText *members, size_t member_count, int32_t kind);
 ThinkThenReply thinkthen_cpp_scalar_group(const uint8_t *question, size_t question_len, const ThinkThenText *texts,
@@ -92,24 +93,11 @@ void Checked(const ThinkThenReply &reply) {
 	}
 }
 
-void ValidateQuestion(const ResolvedQuestion &resolved) {
-	RustReply checked(thinkthen_cpp_validate_question(reinterpret_cast<const uint8_t *>(resolved.text.data()),
-	                                               resolved.text.size(), resolved.from_file ? 1 : 0));
+void ValidateQuestion(const ResolvedQuestion &resolved, bool set = false) {
+	const auto validate = set ? thinkthen_cpp_validate_set : thinkthen_cpp_validate_question;
+	RustReply checked(validate(reinterpret_cast<const uint8_t *>(resolved.text.data()), resolved.text.size(),
+	                           resolved.from_file ? 1 : 0));
 	Checked(checked.value);
-}
-
-std::optional<vector<string>> Members(const Value &value) {
-	if (value.IsNull()) {
-		return std::nullopt;
-	}
-	vector<string> members;
-	for (auto &child : ListValue::GetChildren(value)) {
-		if (child.IsNull()) {
-			return std::nullopt;
-		}
-		members.push_back(child.GetValue<string>());
-	}
-	return members;
 }
 
 void ValidateListed(const string &question, const vector<string> &members, int32_t kind) {
@@ -147,6 +135,10 @@ struct ScalarBind : FunctionData {
 	}
 };
 
+bool IsListed(int32_t kind) {
+	return kind == 4 || kind == 5 || kind == 6;
+}
+
 unique_ptr<FunctionData> BindDecide(ClientContext &context, ScalarFunction &function,
                                      vector<unique_ptr<Expression>> &arguments) {
 	context.registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
@@ -156,25 +148,26 @@ unique_ptr<FunctionData> BindDecide(ClientContext &context, ScalarFunction &func
 	            : function.name == "thinkthen_try_details" ? 3
 	            : function.name == "thinkthen_choose" ? 4
 	            : function.name == "thinkthen_score" ? 5
-	            : function.name == "thinkthen_tag" ? 6 : 0;
+	            : function.name == "thinkthen_tag" ? 6
+	            : function.name == "thinkthen_annotate" ? 7 : 0;
 	if (arguments[0]->IsFoldable()) {
 		auto value = ExpressionExecutor::EvaluateScalar(context, *arguments[0]);
 		if (!value.IsNull()) {
 			bound->constant_question = value.GetValue<string>();
 			auto &text = *bound->constant_question;
-			if (bound->kind != 3 && bound->kind < 4) {
+			if (bound->kind == 0 || bound->kind == 1 || bound->kind == 2 || bound->kind == 7) {
 				bound->resolved_question = ResolveQuestion(context, text);
-				ValidateQuestion(*bound->resolved_question);
+				ValidateQuestion(*bound->resolved_question, bound->kind == 7);
 			}
 		}
 	}
-	if (bound->kind >= 4 && bound->constant_question && arguments[2]->IsFoldable()) {
+	if (IsListed(bound->kind) && bound->constant_question && arguments[2]->IsFoldable()) {
 		auto value = ExpressionExecutor::EvaluateScalar(context, *arguments[2]);
 		if (auto members = Members(value)) {
 			ValidateListed(*bound->constant_question, *members, bound->kind);
 		}
 	}
-	const auto deadline_index = bound->kind >= 4 ? 3 : 2;
+	const auto deadline_index = IsListed(bound->kind) ? 3 : 2;
 	if (arguments.size() > deadline_index && arguments[deadline_index]->IsFoldable()) {
 		auto value = ExpressionExecutor::EvaluateScalar(context, *arguments[deadline_index]);
 		if (!value.IsNull()) {
@@ -301,7 +294,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		if (checked_questions.insert(question_text).second) {
 			auto resolved = bound.constant_question && *bound.constant_question == question_text && bound.resolved_question
 				                    ? *bound.resolved_question : owner->Resolve(*context, question_text);
-			ValidateQuestion(resolved);
+			ValidateQuestion(resolved, bound.kind == 7);
 			resolved_questions.emplace(question_text, std::move(resolved));
 		}
 		auto due = args.ColumnCount() == 3 ? args.data[2].GetValue(row).GetValue<int64_t>() : -1;
@@ -341,7 +334,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		if (!answered.value.bytes) {
 			throw InvalidInputException("thinkthen defect: the bridge returned an invalid decision group");
 		}
-		if (bound.kind == 2) {
+		if (bound.kind == 2 || bound.kind == 7) {
 			vector<string> values;
 			size_t at = 0;
 			for (idx_t index = 0; index < texts.size(); ++index) {
@@ -371,12 +364,12 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 	}
 	for (idx_t row = 0; row < args.size(); ++row) {
 		if (!slots[row]) {
-			result.SetValue(row, Value(bound.kind == 2 ? LogicalType::VARCHAR
+			result.SetValue(row, Value(bound.kind == 2 || bound.kind == 7 ? LogicalType::VARCHAR
 			                                      : bound.kind == 1 ? LogicalType::DOUBLE : LogicalType::BOOLEAN));
 			continue;
 		}
 		auto [group, text] = *slots[row];
-		if (bound.kind == 2) {
+		if (bound.kind == 2 || bound.kind == 7) {
 			if (group >= details.size() || text >= details[group].size()) {
 				throw InvalidInputException("thinkthen defect: a details row lost its answer");
 			}
@@ -491,8 +484,8 @@ void LoadThinkThen(ExtensionLoader &loader) {
 	config.AddExtensionOption("thinkthen_max_requests_total", "Maximum ThinkThen requests in this process",
 	                          LogicalType::BIGINT);
 	config.AddExtensionOption("thinkthen_cache", "Local ThinkThen cache folder", LogicalType::VARCHAR);
-	for (auto name : {"thinkthen_decide", "thinkthen_probability", "thinkthen_details", "thinkthen_try_details"}) {
-		const auto result = string(name) == "thinkthen_details" || string(name) == "thinkthen_try_details" ? LogicalType::VARCHAR
+	for (auto name : {"thinkthen_decide", "thinkthen_probability", "thinkthen_details", "thinkthen_try_details", "thinkthen_annotate"}) {
+		const auto result = string(name) == "thinkthen_details" || string(name) == "thinkthen_try_details" || string(name) == "thinkthen_annotate" ? LogicalType::VARCHAR
 		                    : string(name) == "thinkthen_probability" ? LogicalType::DOUBLE : LogicalType::BOOLEAN;
 		for (auto parameters : {vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR},
 		                        vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::BIGINT}}) {
