@@ -33,7 +33,7 @@ The first full test run under the default, before any pin, failed in 22 files, u
 
 ## Tests
 
-`crates/thinkthen/tests/backend/batching.rs` holds the seven named tests. Two rows sit elsewhere. The `--record` and `--replay` rows join `an_answer_arrives_before_the_next_record_at_one_job_and_the_default` in `scheduling.rs`. The interrupted batch is `an_interrupted_batch_finishes_and_starts_no_other` in `interrupt.rs`, which holds the signal helpers.
+`crates/thinkthen/tests/backend/batching.rs` and `batching/tiers.rs` hold the seven named tests. The tier test splits in two for clippy's function length: `the_batch_setting_follows_its_tiers` and `a_file_batch_leaves_the_question_digest_and_stays_off_annotate_entries`. Two rows sit elsewhere. The `--record` and `--replay` rows join `an_answer_arrives_before_the_next_record_at_one_job_and_the_default` in `scheduling.rs`. The interrupted batch is `an_interrupted_batch_finishes_and_starts_no_other` in `interrupt.rs`, which holds the signal helpers.
 
 ## Plants
 
@@ -73,14 +73,14 @@ Nonblank lines against `18f0381e`.
 
 | Area | Ticket budget | Measured |
 | --- | --- | --- |
-| `cli/asking/batched.rs` | 250 | 343 |
+| `cli/asking/batched.rs` | 250 | 342 |
 | `edge.rs`, `judge.rs`, `asked.rs` | 35 | 70 |
-| `cli/asking.rs` | 25 | 32 |
-| Product code total | 561 | 616, 10% over |
-| `tests/backend/batching.rs` | 480 | 522, 9% over |
-| Ratchet over main | 1,193 | 1,211, from 72,168 to 73,379 |
+| `cli/asking.rs` | 25 | 25, after the plan path moved out |
+| Product code total | 561 | about 620, 11% over |
+| `tests/backend/batching.rs` and its folder | 480 | 538, 12% over |
+| Ratchet over main | 1,193 | 1,232, from 72,168 to 73,400 |
 
-The batched path grew past its budget. It holds the reader thread, the batch queue with its pause, the dry-run plan, the per-record rows and the stop mapping. The build trimmed it once: parsing moved to the record thread, which dropped a generic parser, and the tier resolution became one `match`. The product total stays within a tenth of 561, and the ratchet within 2% of 1,193. The file budgets for `batched.rs` and for `edge.rs`, `judge.rs` and `asked.rs` are passed by more than a tenth, which stop rule 1 names. The coordinator decides whether to raise them or ask for more trimming.
+The batched path grew past its budget. It holds the reader thread, the batch queue with its pause, the dry-run plan, the per-record rows and the stop mapping. The build trimmed it once: parsing moved to the record thread, which dropped a generic parser, and the tier resolution became one `match`. The product total passes 561 by about a tenth, the new tests pass 480 by 12%, and the ratchet passes 1,193 by 3%. The lint's 500-line file ceiling moved the plan path to `cli/asking/plan.rs`, the unit tests of `core/result.rs` and `engine/annotate_schedule.rs` into sibling `tests.rs` files, and the tier tests to `tests/backend/batching/tiers.rs`. Clippy's nesting and type rules added `feed`, `Former::next` and three type aliases. These cost 21 lines. The file budgets for `batched.rs` and for `edge.rs`, `judge.rs` and `asked.rs` are passed by more than a tenth, which stop rule 1 names. The coordinator decides whether to raise them or ask for more trimming.
 
 ## Ladder
 

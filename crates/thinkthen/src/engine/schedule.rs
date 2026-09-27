@@ -63,8 +63,10 @@ impl<T, R, E> InputPort<T, R, E> {
     }
 }
 
+type Done<R, E> = Result<Completed<R, E>, E>;
+
 struct Run<R, E> {
-    pending: BTreeMap<usize, Result<Completed<R, E>, E>>,
+    pending: BTreeMap<usize, Done<R, E>>,
     next: usize,
     finished: usize,
     dispatched: usize,

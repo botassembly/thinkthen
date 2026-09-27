@@ -5,11 +5,11 @@
 use std::collections::VecDeque;
 use std::io::BufRead;
 use std::process::ExitCode;
-use std::sync::mpsc::{Receiver, RecvTimeoutError, sync_channel};
+use std::sync::mpsc::{Receiver, RecvTimeoutError, SyncSender, sync_channel};
 use std::thread;
 use std::time::Duration;
 
-use super::{Asks, Judging, JudgingInput, Planning, print_plan, table_kind};
+use super::{Asks, Judging, JudgingInput, print_plan, table_kind};
 use crate::core::{
     AnswerOutcome, Batch, BatchError, Batcher, Question, Reading, Record, Reply, Setting, share,
 };
@@ -87,6 +87,7 @@ pub(super) fn run(
         held: Vec::new(),
         taken: 0,
         queue: VecDeque::new(),
+        ended: false,
     };
     if configuration.common.dry_run {
         return planned(former, records, &configuration, output);
@@ -98,14 +99,7 @@ pub(super) fn run(
         judging.environment.cancel(),
         |asks, events| {
             let (sender, raw) = sync_channel(AHEAD);
-            thread::spawn(move || {
-                for record in records {
-                    let failed = record.is_err();
-                    if sender.send(record).is_err() || failed {
-                        return;
-                    }
-                }
-            });
+            thread::spawn(move || feed(records, &sender));
             thread::spawn(move || former.answer(&raw, &asks, &events));
         },
         &|item| answered(&judging, reading, &question, item),
@@ -119,6 +113,16 @@ pub(super) fn run(
         },
     )?;
     schedule::ended(outcome, recording, output)
+}
+
+/// Read records ahead into the channel, and stop after the first refusal.
+fn feed(records: Records, sender: &SyncSender<Result<Held, Failure>>) {
+    for record in records {
+        let failed = record.is_err();
+        if sender.send(record).is_err() || failed {
+            return;
+        }
+    }
 }
 
 /// Print the plan of the first batch that closes without a pause.
@@ -142,10 +146,7 @@ fn planned(
             &configuration.backend,
             &configuration.mismatch,
             &former.reading,
-            &Planning {
-                asks: &configuration.asks,
-                sources: configuration.sources,
-            },
+            &configuration.planning(),
             &item.batch.plan,
             output.writer(),
         ),
@@ -163,49 +164,49 @@ struct Former {
     /// How many records went into batches before the open one.
     taken: usize,
     queue: VecDeque<Input<Item, Failure>>,
+    ended: bool,
 }
 
 impl Former {
-    /// Answer each ask with the next batch, pulling records only while an
-    /// ask waits, and sending the open batch when input pauses.
+    /// Answer each ask with the next batch.
     fn answer(
         mut self,
         raw: &Receiver<Result<Held, Failure>>,
         asks: &Receiver<()>,
         events: &InputPort<Item, Vec<Judged>, Failure>,
     ) {
-        let mut ended = false;
         while asks.recv().is_ok() {
-            let event = loop {
-                if let Some(event) = self.queue.pop_front() {
-                    break event;
-                }
-                if ended {
-                    break Input::End;
-                }
-                let next = if self.held.is_empty() {
-                    raw.recv().ok()
-                } else {
-                    match raw.recv_timeout(PAUSE) {
-                        Ok(record) => Some(record),
-                        Err(RecvTimeoutError::Timeout) => {
-                            let paused = self.batcher.pause();
-                            self.closed(paused);
-                            continue;
-                        }
-                        Err(RecvTimeoutError::Disconnected) => None,
-                    }
-                };
-                match next {
-                    Some(record) => self.push(record),
-                    None => {
-                        self.end();
-                        ended = true;
-                    }
-                }
-            };
-            if events.send(event).is_err() {
+            if events.send(self.next(raw)).is_err() {
                 return;
+            }
+        }
+    }
+
+    /// The next closed batch or refusal. It pulls records only while an ask
+    /// waits, and sends the open batch when input pauses.
+    fn next(&mut self, raw: &Receiver<Result<Held, Failure>>) -> Input<Item, Failure> {
+        loop {
+            if let Some(event) = self.queue.pop_front() {
+                return event;
+            }
+            if self.ended {
+                return Input::End;
+            }
+            let next = if self.held.is_empty() {
+                raw.recv().map_err(|_| RecvTimeoutError::Disconnected)
+            } else {
+                raw.recv_timeout(PAUSE)
+            };
+            match next {
+                Ok(record) => self.push(record),
+                Err(RecvTimeoutError::Timeout) => {
+                    let paused = self.batcher.pause();
+                    self.closed(paused);
+                }
+                Err(RecvTimeoutError::Disconnected) => {
+                    self.end();
+                    self.ended = true;
+                }
             }
         }
     }

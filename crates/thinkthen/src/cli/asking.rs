@@ -3,19 +3,19 @@
 //!
 //! `judge.rs` decides what a run keeps and what view it prints in.
 
-use std::io::{Read, Write};
+use std::io::Read;
 use std::process::ExitCode;
 use std::time::Duration;
 
 use crate::core::{
-    Backend, BackendProfile, Evidence, Framing, Outcome, Plan, PlanDocument, Pointer, Question,
-    QuestionText, Reading, Record, RecordValue, Resolved, Sources, Threshold, Value, json_line,
+    Backend, BackendProfile, Evidence, Framing, Outcome, Pointer, Question, QuestionText, Reading,
+    Record, RecordValue, Resolved, Sources, Threshold, Value, json_line,
 };
 
 use crate::args::Common;
 use crate::edge::{self, Environment};
 use crate::engine::Width;
-use crate::engine::facade::{self, Engine, Judgment, Settings, Storage};
+use crate::engine::facade::{Engine, Judgment, Settings, Storage};
 use crate::failure::Failure;
 use crate::judge::{Asked, Keeping, View};
 use crate::profile::{self, Mismatch};
@@ -25,8 +25,10 @@ use crate::table::{Kind as TableKind, Rows as TableRows};
 
 mod batched;
 mod folders;
+mod plan;
 
 pub(crate) use folders::Folders;
+use plan::{plan, plan_record, print_plan};
 
 /// Build the one engine a command calls, from what the command resolved.
 ///
@@ -156,10 +158,9 @@ pub(crate) fn run(
         return Err(Failure::QuietOverRecords);
     }
     schedule::jobs_of(common.jobs, reading.streams())?;
-    let batch = batch
-        .map(|tiers| tiers.setting(environment, reading.streams()))
-        .transpose()?
-        .flatten();
+    let batch = batch.map_or(Ok(None), |tiers| {
+        tiers.setting(environment, reading.streams())
+    })?;
     let source = edge::source(common.input.as_deref(), input)?;
     let configuration = JudgingInput {
         common,
@@ -200,10 +201,7 @@ pub(crate) fn run(
             configuration.profile.as_ref(),
             &configuration.mismatch,
             &reading,
-            &Planning {
-                asks: &configuration.asks,
-                sources: configuration.sources,
-            },
+            &configuration.planning(),
             chunks.next().transpose()?,
             output.writer(),
         );
@@ -240,10 +238,7 @@ fn over_table(
             configuration.profile.as_ref(),
             &configuration.mismatch,
             reading,
-            &Planning {
-                asks: &configuration.asks,
-                sources: configuration.sources,
-            },
+            &configuration.planning(),
             rows.next().transpose()?,
             output.writer(),
         );
@@ -279,95 +274,6 @@ fn table_kind(common: &Common) -> Option<TableKind> {
         .csv
         .then_some(TableKind::Csv)
         .or_else(|| common.tsv.then_some(TableKind::Tsv))
-}
-
-/// What a plan shows beyond the request: the question and where it came from.
-struct Planning<'a> {
-    asks: &'a Asks,
-    sources: Option<Sources>,
-}
-
-/// Print the plan for the first record, and read no further than that record.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "byte and table inputs share one plan path with explicit profile state"
-)]
-fn plan(
-    backend: &Backend,
-    profile: Option<&BackendProfile>,
-    mismatch: &Mismatch,
-    reading: &Reading,
-    planning: &Planning<'_>,
-    first: Option<Vec<u8>>,
-    writer: impl Write,
-) -> Result<ExitCode, Failure> {
-    let Some(bytes) = first else {
-        return Ok(ExitCode::SUCCESS);
-    };
-    let record = reading
-        .record(&bytes)
-        .map_err(|error| Failure::record(error, reading.streams()))?;
-    plan_record(
-        backend,
-        profile,
-        mismatch,
-        reading,
-        planning,
-        Some(record),
-        writer,
-    )
-}
-
-#[expect(
-    clippy::too_many_arguments,
-    reason = "the plan path receives each resolved concern without a second configuration type"
-)]
-fn plan_record(
-    backend: &Backend,
-    profile: Option<&BackendProfile>,
-    mismatch: &Mismatch,
-    reading: &Reading,
-    planning: &Planning<'_>,
-    first: Option<Record>,
-    writer: impl Write,
-) -> Result<ExitCode, Failure> {
-    let Some(record) = first else {
-        return Ok(ExitCode::SUCCESS);
-    };
-    let sending = asked_of(reading, record, planning.asks)?;
-    let plan = Plan::new(
-        sending.evidence,
-        backend.model().clone(),
-        vec![sending.question],
-    )
-    .map_err(|_| Failure::Defect("a plan of one question asks nothing"))?;
-    let _prepared = facade::split(backend, profile, &plan)?;
-    print_plan(backend, mismatch, reading, planning, &plan, writer)
-}
-
-/// Print the plan document of one checked plan.
-fn print_plan(
-    backend: &Backend,
-    mismatch: &Mismatch,
-    reading: &Reading,
-    planning: &Planning<'_>,
-    plan: &Plan,
-    writer: impl Write,
-) -> Result<ExitCode, Failure> {
-    mismatch.print_once()?;
-    let document = PlanDocument::of(backend, plan)
-        .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
-    let document = if reading.streams() {
-        document.reading(reading)
-    } else {
-        document
-    };
-    let document = match planning.sources {
-        Some(sources) => document.from(sources),
-        None => document,
-    };
-    edge::write_line(writer, &json_line(&document)?)?;
-    Ok(ExitCode::SUCCESS)
 }
 
 /// Read one record and the question it is asked, which both paths do.

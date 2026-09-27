@@ -19,9 +19,12 @@ fn path_of(question: &str) -> Option<&str> {
     question.strip_prefix('@')
 }
 
+/// A question file, if the first argument names one, and a `decide` file's raw `batch`.
+type Top = (Option<QuestionFile>, Option<Json>);
+
 /// Read and check the question file the first argument names, if it names
 /// one, with a `decide` file's raw `batch`.
-fn read_top(question: &str) -> Result<(Option<QuestionFile>, Option<Json>), Failure> {
+fn read_top(question: &str) -> Result<Top, Failure> {
     let Some(path) = path_of(question) else {
         return Ok((None, None));
     };

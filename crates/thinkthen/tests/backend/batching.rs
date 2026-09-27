@@ -17,11 +17,13 @@ use serde_json::{Map, Value, json};
 
 use crate::harness::{Canned, Gathering, Listener, finish, spawn};
 
-const QUESTION: &str = "It names a place.";
-const QUOTED: &str = "Each question quotes the text it asks about.";
-const KEY: (&str, &str) = ("THINKTHEN_API_KEY", "sk-test-value");
+mod tiers;
 
-fn lines(places: impl Iterator<Item = usize>) -> String {
+pub(super) const QUESTION: &str = "It names a place.";
+const QUOTED: &str = "Each question quotes the text it asks about.";
+pub(super) const KEY: (&str, &str) = ("THINKTHEN_API_KEY", "sk-test-value");
+
+pub(super) fn lines(places: impl Iterator<Item = usize>) -> String {
     places.map(|place| format!("line {place}\n")).collect()
 }
 
@@ -89,7 +91,7 @@ fn reply(body: &[u8], skip: Option<usize>, usage: Option<(u64, u64)>) -> Canned 
     Canned::ok(&reply.to_string())
 }
 
-fn answering(body: &[u8]) -> Canned {
+pub(super) fn answering(body: &[u8]) -> Canned {
     reply(body, None, Some((88, 12)))
 }
 
@@ -113,12 +115,12 @@ fn decide(base: &str, extra: &[&str], environment: &[(&str, &str)], input: &str)
     .expect("the command runs")
 }
 
-fn text(bytes: &[u8]) -> String {
+pub(super) fn text(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).into_owned()
 }
 
 /// A fresh folder under the target folder.
-fn folder(name: &str) -> String {
+pub(super) fn folder(name: &str) -> String {
     static FOLDERS: AtomicUsize = AtomicUsize::new(0);
     let path = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!(
         "batching-{name}-{}-{}",
@@ -130,7 +132,7 @@ fn folder(name: &str) -> String {
 }
 
 /// The parsed `--details` rows.
-fn details(output: &Output) -> Vec<Value> {
+pub(super) fn details(output: &Output) -> Vec<Value> {
     text(&output.stdout)
         .lines()
         .map(|line| serde_json::from_str(line).expect("a JSON row"))
@@ -235,11 +237,14 @@ fn replay_answers_every_batch() {
     assert_eq!(text(&again.stdout), text(&cached.stdout));
 }
 
+/// A pause row: its name, its extra arguments and its environment.
+type Mode<'a> = (&'a str, &'a [&'a str], &'a [(&'a str, &'a str)]);
+
 #[test]
 fn a_pause_sends_the_open_batch() {
     let typed = folder("typed");
     let named = folder("named");
-    let modes: [(&str, &[&str], &[(&str, &str)]); 3] = [
+    let modes: [Mode<'_>; 3] = [
         ("no folder", &["--no-cache"], &[]),
         ("the default cache", &[], &[("THINKTHEN_CACHE", &named)]),
         ("a typed folder", &["--cache", &typed], &[]),
@@ -278,6 +283,9 @@ fn a_pause_sends_the_open_batch() {
     }
 }
 
+/// A cap row: its name, its extra arguments, its lines, and the rows that carry a request.
+type Cap<'a> = (&'a str, &'a [&'a str], &'a [String], &'a [usize]);
+
 #[test]
 fn repeats_close_a_batch_at_the_member_cap() {
     let repeats: Vec<String> = (0..10_000)
@@ -285,7 +293,7 @@ fn repeats_close_a_batch_at_the_member_cap() {
         .collect();
     let mut cut = repeats.clone();
     cut[999] = "line 10633\n".to_owned();
-    let cases: [(&str, &[&str], &[String], &[usize]); 3] = [
+    let cases: [Cap<'_>; 3] = [
         ("default", &[], &repeats, &[1, 4_097, 8_193]),
         (
             "--batch 5000",
@@ -381,119 +389,6 @@ fn a_failed_batch_stops_at_its_first_record() {
             format!("thinkthen: {cause}\nthinkthen: stopped at record 11; 10 records finished\n"),
             Some(4)
         )
-    );
-}
-
-#[test]
-fn the_batch_setting_follows_its_tiers() {
-    let place = folder("tiers");
-    fs::create_dir_all(&place).expect("a folder for the question files");
-    let file = |batch: &str| {
-        let path = format!("{place}/{}.json", batch.replace(['"', '.'], "_"));
-        fs::write(
-            &path,
-            format!(r#"{{"decide":"{QUESTION}","batch":{batch}}}"#),
-        )
-        .expect("a question file");
-        format!("@{path}")
-    };
-    let run = |flag: Option<&str>, environment: Option<&str>, batch: Option<&str>, input: &str| {
-        let question = batch.map_or_else(|| QUESTION.to_owned(), file);
-        let mut arguments = vec!["decide", &question, "--dry-run"];
-        if input.contains('\n') {
-            arguments.push("--lines");
-        }
-        if let Some(flag) = flag {
-            arguments.extend(["--batch", flag]);
-        }
-        let environment: Vec<(&str, &str)> = environment
-            .map(|value| ("THINKTHEN_BATCH", value))
-            .into_iter()
-            .collect();
-        spawn(&arguments, &environment, input.as_bytes()).expect("the command runs")
-    };
-    let three = lines(1..=3);
-    let planned = [
-        (None, None, None, 3),
-        (Some("1"), None, None, 1),
-        (Some("2"), None, None, 2),
-        (Some("max"), None, None, 3),
-        (None, Some("2"), None, 2),
-        (None, Some(""), None, 3),
-        (None, None, Some("1"), 1),
-        (Some("2"), None, Some("1"), 2),
-        (None, Some("max"), Some("1"), 3),
-        (Some("max"), None, Some("2"), 3),
-        (None, Some("1"), Some("2"), 1),
-    ];
-    for (flag, environment, batch, count) in planned {
-        let output = run(flag, environment, batch, &three);
-        let plan: Value = serde_json::from_slice(&output.stdout).expect("a plan");
-        let questions = plan["request"]["questions"].as_object().map_or(0, Map::len);
-        assert_eq!(
-            questions,
-            count,
-            "{flag:?} {environment:?} {batch:?}: {}",
-            text(&output.stderr)
-        );
-    }
-
-    let flag = "thinkthen: --batch takes max or a whole number of at least 1\n";
-    let variable = "thinkthen: THINKTHEN_BATCH takes max or a whole number of at least 1\n";
-    let key = "thinkthen: `batch` in the question file takes max or a whole number of at least 1\n";
-    let single =
-        "thinkthen: --batch groups the records of a stream, and a single text is one record\n";
-    let mut refused: Vec<(Output, i32, &str)> = ["0", "1.5", "fill", ""]
-        .into_iter()
-        .map(|value| (run(Some(value), None, None, &three), 2, flag))
-        .collect();
-    refused.push((run(None, Some("0"), None, &three), 2, variable));
-    for value in ["0", "1.5", r#""10""#, r#""fill""#, "true"] {
-        refused.push((run(None, None, Some(value), &three), 5, key));
-    }
-    refused.push((run(Some("5"), None, None, "line 1"), 2, single));
-    for (output, code, sentence) in refused {
-        assert_eq!(
-            (output.status.code(), text(&output.stderr).as_str()),
-            (Some(code), sentence)
-        );
-    }
-    let one = run(None, Some("5"), None, "line 1");
-    assert_eq!(one.status.code(), Some(0), "{}", text(&one.stderr));
-
-    let listener = Listener::answering(answering).expect("a loopback listener");
-    let digests: Vec<Value> = [QUESTION.to_owned(), file("5")]
-        .iter()
-        .map(|question| {
-            let fixed = ["decide", question, "--lines", "--details", "--no-cache"];
-            let base = ["--url", listener.base(), "--model", "jev-1.13.0"];
-            let output = spawn(&[&fixed[..], &base].concat(), &[KEY], b"line 1\n")
-                .expect("the command runs");
-            details(&output)[0]["meta"]["question_sha256"].clone()
-        })
-        .collect();
-    assert!(digests[0].is_string());
-    assert_eq!(
-        digests[0], digests[1],
-        "a file's batch leaves the question digest"
-    );
-
-    let set = format!("{place}/set.json");
-    fs::write(
-        &set,
-        r#"{"version":1,"questions":{"ok":{"decide":"Is it yes?","batch":5}}}"#,
-    )
-    .expect("a question set");
-    let annotate = spawn(
-        &["annotate", &set, "--lines", "--dry-run"],
-        &[],
-        b"line 1\n",
-    )
-    .expect("the command runs");
-    assert_eq!(annotate.status.code(), Some(5));
-    assert_eq!(
-        text(&annotate.stderr),
-        "thinkthen: the question set holds no key `questions.ok.batch`\n"
     );
 }
 
