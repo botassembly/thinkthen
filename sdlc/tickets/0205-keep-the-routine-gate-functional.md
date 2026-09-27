@@ -1,0 +1,90 @@
+---
+flow: build
+priority: 205
+opens: sdlc/tickets/0205-keep-the-routine-gate-functional.md sdlc/records/0205-keep-the-routine-gate-functional.md
+---
+
+# 0205: Keep the routine gate functional
+
+Status: proposed for fresh design review. Owner: Codex. This commit claims only this ticket and its record. Implementation needs a reviewed expansion of the main lane's exact file claim. Ian can overturn the selected cases and the opt-in boundary.
+
+## Outcome and authority
+
+The ordinary gate proves the ten public functions, their distinct result edges, and the core and every landed port with a small outside-in set. Its recorded answers and loopback backend make no paid calls. Performance, saturation, churn, and repeated contention campaigns remain executable by an explicit opt-in command. The gate reports what it ran and how long compilation and execution took. The 2026-09-27 work plan puts this ahead of feature work and supersedes the Python 100-of-1,000 exit-window threshold for ordinary validation. A small cancellation, cache miss, invalid input, and conflicting-input proof stays routine.
+
+## Evidence
+
+- Starts from: `sdlc/planning/work-plan-2026-09-27.md` and the two existing issues `sdlc/issues/2026-09-24-red-green-scaffold-tests-outlive-their-purpose.md` and `sdlc/issues/2026-09-25-test-harness-and-review-leftovers.md`. The former's old 787 Rust-test count was measured at `ffb8fb79`, not this branch. Its engine mutation audit and the latter's eleven hand-rolled listeners belong to 0119, so this ticket does not take their files.
+- Keeps: `conformance/cases.json` as the one 54-case response corpus, the full-case checks as opt-in functional checks, public behavior and distinct edge assertions, secrecy and installed-package probes, the 0204/J1 type-schema fixture hook in `sdlc/scripts/test`, and one bounded proof for each cancellation, cache miss, invalid input, and conflict contract. The 0127 secrecy sweep already passed 50 by 50 at ordinary load; its owed high-load repeat becomes opt-in rather than a routine requirement.
+- Changes: selects a named routine subset from the canonical corpus in all runners; makes routine core and surface entry points call that subset; moves repeated load and timing campaigns intact behind a separately named opt-in entry point; deletes only unit assertions with a stronger named boundary proof. The full suite remains callable and no product hook or second case corpus is introduced.
+- Proof: count collected, selected routine, opt-in, and shared cases by core and each port; show a ten-function and edge coverage matrix; plant at least one omitted selection or changed expected answer so the shared selector fails; run focused routine and opt-in smoke checks; record tool versions, cache state, lock wait, compile time, execution time, and warm no-change versus one small owned source edit. No `cargo clean` or cache deletion.
+- Defers: the 0119 mutation audit and fixture-helper cleanup; broad proof on macOS and Windows until a host exists; the unresolved 0202 Python exit-window exposure diagnosis. Historical 0202 runs under a 1,024-file limit passed 411 backend cases and peaked at 131 descriptors and 102 tasks, but the Python exit-window campaign produced 59/1,000 and focused 52/1,000. Those failures are recorded, not called green or rerun for this ticket.
+
+## Shared routine selection
+
+Keep the original JSON and its `case_count: 54`. Add one checked-in list of **IDs**, `conformance/routine-ids.txt`, rather than copying response bodies. The routine runners read the canonical JSON, verify unique IDs, reject a missing listed ID, and count a skipped case separately from a failed one. With no selector, each runner continues to run all 54 cases. The routine entry points set the selector; an explicit `sdlc/scripts/test-opt-in` runs the full set and the load campaigns. Do not let an unsupported operation disappear silently: each runner reports its selected pass, fail, and not-run counts against the selected total. Preserve the existing deliberate `internal_invariant_failure` exclusion in DuckDB.
+
+The initial selected IDs below name contracts, not a target count. Reduce only after the matrix shows a duplicate proof. The special edges do not need to run through every port if the port cannot represent them; each has at least one public-door proof and an explicit not-run reason elsewhere.
+
+| Function | Selected shared cases and distinct edge |
+| --- | --- |
+| decide | `01-decide-yes-captured`, `03-decide-band-unsure`, `20-usage-fault`, `21-backend-fault`, `22-local-fault`, `23-cancelled-fault`, `24-deadline-fault`, `28-decide-many-repeated-texts`, `40-decide-counters` |
+| choose | `06-choose-billing`, `07-choose-unsure`, `08-choose-tie` |
+| tag | `09-tag-two`, `10-tag-none` |
+| score | `11-score-middle`, `32-score-equal-distribution` |
+| filter | `13-filter-records`, `26-filter-empty-list` |
+| rank | `15-rank-records`, `16-rank-stable-tie`, `31-usage-rank-blank-question` |
+| annotate | `17-annotate-mixed`, `17-annotate-partial`, `36-annotate-two-columns` |
+| find | `18-find-second`, `19-find-none` |
+| recognize | `41-offsets-past-an-accent-and-an-emoji`, `42-recognize-C01-relations` |
+| relate | `51-same-kind-alerts`, `52-cross-kind-staff` |
+
+This is 30 IDs. The nine recognized relation variants `42` through `50` remain in the full opt-in functional set; J1's 33 schema fixtures and selected C-door check already pin types and offsets and must not be rebuilt as a second type matrix. The shared cases use stored loopback replies, not cache hits. A separate small public-door replay/cache-hit and cache-miss case must prove request count zero or one as appropriate. Keep one held-call cancellation and one conflicting-setting/input case at the public door. Use the existing tests if they already prove these edges; do not create parallel tests.
+
+## Implementation ownership and order
+
+1. Review this ticket. The design branch merged 0148 at main `ffe94254` before its first push. Merge the reviewed J1 hook before editing `sdlc/scripts/test`, and record its exact main base. Request exact claims on main for the paths below, divided into non-overlapping core/gate and port batches. The retained 0148 builder may take the port batch after that claim; this designer can take core/gate. No 0205 implementation touches the current 0162 hold.
+2. Core/gate batch: `conformance/routine-ids.txt`, `conformance/README.md`, `sdlc/scripts/test`, `sdlc/scripts/surfaces`, `sdlc/scripts/test-opt-in`, `crates/thinkthen/tests/backend/loopback_cases.rs`, `conformance/consumer/consumer/tests/public/cases.rs`, and `libraries/c/tests/door/cases.rs`. Keep the J1 hook's ordering and assertions in `sdlc/scripts/test`. Make routine and full selections explicit. A selector self-test plants an unknown ID and an altered expected reply and observes failure. The full corpus remains the default when runners are invoked directly.
+3. Port batch after 0148: `libraries/python/tests/conformance.py`, `libraries/typescript/tests/conformance.test.mjs`, `libraries/ruby/tests/conformance.rb`, `libraries/r/tests/conformance.R`, `databases/duckdb/tools/conformance.py`, `databases/sqlite/tests/conformance.py`, `databases/postgresql/tests/runner.py`, their exact `check.sh` files, and each port's timing/load files named below. TypeScript already accepts `THINKTHEN_TEST_CASES`; DuckDB accepts `THINKTHEN_CONFORMANCE_CASES`; SQLite accepts a positional case file. Extend the existing runners to accept the ID list without creating a duplicate corpus. PostgreSQL's runner plan and `check.sh` totals must agree on the selected count. Keep installed-copy conformance and examples checks.
+4. Review every moved or deleted test against its stronger boundary proof, using the four questions in the 2026-09-24 issue. Record a per-test disposition in the build record. Preserve test code for opt-in campaigns and unique regressions. Measure the resulting gate before claiming it is faster. Fresh independent code, feature, and policy review checks the coverage map, J1 hook, every opt-in command, and the deletion table.
+
+## Move campaigns; keep a small functional witness
+
+| Existing path and campaign | Routine witness or retained evidence | Opt-in action |
+| --- | --- | --- |
+| `libraries/python/tests/test_release.py`: `test_no_worker_freezes_at_exit` (1,000 children, eight workers) and `test_callers_that_leave_still_get_every_batch_released` (400 cancelled calls) | Keep one bounded real child-exit and one release-after-cancel assertion. Record the failing 0202 window proof honestly. | Select the original full campaigns explicitly. Do not replace their threshold with a weaker claim. |
+| `libraries/python/tests/test_column_timing.py`: 400-call wall-time ratio and 200-row deadline/token loop | Keep `test_a_column_holds_the_throttle_in_flight` and one small deadline/token case. | Run original ratio and row-count campaigns only on request. |
+| `crates/thinkthen/tests/polars/throttle_equality.rs`: 200-record repeated equality/ratio forms | Keep a small ordered-value and held-in-flight throttle proof. | Run full row and ratio form by explicit filter. |
+| `crates/thinkthen/tests/public_batches.rs`: long memory-flat batch and 20-engine-per-thread refused-port churn | Keep ordered slice/iterator and one shared-engine/refused-port functional case. | Run memory and churn tests by explicit filter. |
+| `conformance/backend/tests/binary.rs`: fifty back-to-back rounds and twenty simultaneous ports | Keep four-round ownership and one port-binding case. | Run exact existing functions by explicit filter. |
+| `databases/duckdb/tools/signal_suite.py` and `settings_suite.py`: huge range/20,000-row host campaigns | Keep one host interrupt and one settings check at a small row count. | Add explicit suite selector around intact large functions. |
+| `databases/sqlite/tests/test_interrupt.py`: 100,000-row and repeated warm interrupt loops | Keep single held-send, warm interrupt, and second-connection isolation witnesses. | Select the large/repeated loops explicitly. |
+| `libraries/ruby/tests/test_flood.rb`: repeated trap flood | Keep `test_interrupt_single.rb` and one trap behavior. | Select full flood file explicitly. |
+| PostgreSQL `databases/postgresql/check.sh` | Keep native timeout, interrupt, one conflict, and SQL edge checks. | Name and move only its measured repeated loops after collection; do not move the monolithic check blindly. |
+
+The optional 0202 `conformance/backend/tests/listener.rs` 80-cycle retirement test joins the opt-in campaign **after 0202 lands**; its single final-owner/closed-port regression remains routine. `libraries/typescript/tests/throttle.test.mjs` uses a bounded event-loop responsiveness check and stays routine unless measurement shows it is a load campaign. No campaign is deleted.
+
+## Delete duplicated scaffolding with named stronger proof
+
+| Candidate | Stronger proof and deletion rule |
+| --- | --- |
+| `crates/thinkthen/src/core/plan_document.rs::a_plan_document_carries_four_fields_in_the_order_the_specification_fixes` | `spec/decide.md` dry-run JSON pins the user-visible plan field order. Delete only after the spec check still runs routine. |
+| `crates/thinkthen/src/core/plan_document.rs::a_plan_names_the_key_variable_wherever_the_request_would_go` | `spec/decide.md` dry-run cases pin `key_env` and chosen URL at the command boundary. Delete only after that check runs routine. |
+| `crates/thinkthen/src/core/plan.rs::a_plan_keeps_its_questions_in_the_order_they_were_given` | Candidate only: first verify a public ordered batch/annotate result and a negative order plant. Keep if that exact order has no stronger proof. |
+
+Do not delete parser/property checks, secrecy checks, a unique cancellation/cache-miss/invalid-input regression, public API-name checks, or the J1 schema hook merely to reduce counts. The 0119 ticket owns the wider engine-test mutation audit. Its broad mutant campaign is outside the ordinary gate under Ian's newer ruling; 0205 does not claim an unrun mutation score. This ticket's three rows are bounded examples; record every actual deletion with the stronger proof before editing.
+
+## Measurement and acceptance
+
+First reuse existing build logs and exact commits. Then collect, without `cargo clean`, on one owned, isolated Linux snapshot. Use the same toolchain, `CARGO_TARGET_DIR`, lock, and case selector for before and after. Measure lock wait separately from run using timestamps around `flock -o`; record the command and whether artifacts were already present. Collect each runner's test-function count, total cases, routine selected cases, opt-in cases, shared IDs run, skipped counts and reasons, and execution time. Separate Cargo compile-only time (`cargo test --locked --offline --no-run` or the surface equivalent) from binary/test execution. Measure a warm no-change invocation, then a small reviewed 0205 source edit that would rebuild a relevant crate; report which crates rebuilt and its compile and execution times. This uses an actual ticket change rather than a fabricated cold rebuild. Never infer a macOS or Windows number from Linux.
+
+Existing `target/codex-builds/0200/gates/surfaces.log` reports Python 60 passed in 82.00 seconds and pandas 2 13 passed/1 skipped in 12.14 seconds. Those are historical test-process durations at the 0200 candidate. They do not identify Cargo build time, lock wait, or the current branch's baseline. The read-only 0205 preflight will add exact current counts and compile-only timing to the build record before implementation starts.
+
+| Platform and port | Tool version and cache state | Collected / routine / opt-in / shared | Lock wait | Compile-only | Test execution | Warm no-change | Small source edit and rebuilt units |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Linux core, Rust consumer, Polars, C, Python, TypeScript, Ruby, R, DuckDB, SQLite, PostgreSQL (one row each) | To measure during implementation | To measure during implementation | To measure | To measure | To measure | To measure | To measure |
+| macOS and Windows (each port) | Not measured on this host | Not measured | Not measured | Not measured | Not measured | Not measured | Not measured |
+
+Acceptance needs the filled Linux rows, not a fixed time target. The routine gate must exercise the ten functions through the shared corpus, named edges at a capable public door, and every installed/landed surface. A skipped host toolchain is reported as not run, never pass. The opt-in command must actually collect and run representative moved cases; the full 54-case corpus must still run there. A planted dropped ID or changed expected answer must turn the routine check red. Formatting, strict lint, and the smallest relevant functional checks run during implementation. The full integration ladder waits for Ian's related-ticket batch checkpoint; passing evidence from unchanged source is reused.
+
+Stop if selection makes a runner silently skip a supported case, an installed-copy test imports editable source, a moved campaign cannot be invoked explicitly, or the J1 schema hook is lost. Correct the gate before removing further tests. Do not add a timing-only variant to the 0202 Python controller.
