@@ -8,9 +8,8 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use clap::Args;
-use clap::builder::{PossibleValuesParser, TypedValueParser as _};
 
-use crate::cli::measure::{Cause, Refusal, lines, rule, write};
+use crate::cli::measure::{Cause, Match, Refusal, lines, rule, write};
 use crate::core::Json;
 use crate::core::Pointer;
 use crate::core::measure::MeasureError::{MixesSets, MixesVerbs, PairsVerbs};
@@ -18,7 +17,7 @@ use crate::core::measure::answer::{self, Identity};
 use crate::core::measure::diff::{
     self as compare, Change, Effect, ItemChange, KindChange, Last, Row, Side, Summary,
 };
-use crate::core::measure::items::{Matching, number};
+use crate::core::measure::items::number;
 use crate::core::measure::key::Key;
 use crate::core::measure::{places, rounded, rounded_line};
 use crate::failure::Failure;
@@ -47,10 +46,9 @@ pub(crate) struct DiffArguments {
         allow_hyphen_values = true
     )]
     id: String,
-    /// How a recognize name matches a name on the other side: the same places and kind, or overlapping places and the same kind.
-    #[arg(long = "match", value_parser = PossibleValuesParser::new(["strict", "overlap"])
-        .map(|held| if held == "overlap" { Matching::Overlap } else { Matching::Strict }))]
-    matching: Option<Matching>,
+    /// How a recognize name matches a name on the other side: the same places and kind, or overlapping places and the same kind. The default is strict.
+    #[arg(long = "match", value_enum)]
+    matching: Option<Match>,
     /// Print the results for a person instead of JSON lines.
     #[arg(long)]
     table: bool,
@@ -157,8 +155,8 @@ fn compare_all(arguments: &DiffArguments) -> Result<(Vec<Row>, Summary), Refusal
         rule: rule_b,
     };
     let compared = if second.is_some() { "runs" } else { "cuts" };
-    let shown = [shown_a, shown_b];
-    compare::diff(a, b, key.as_ref(), shown, compared, arguments.matching).map_err(|cause| {
+    let (shown, matching) = ([shown_a, shown_b], arguments.matching.map(Into::into));
+    compare::diff(a, b, key.as_ref(), shown, compared, matching).map_err(|cause| {
         let mixed = matches!(cause, PairsVerbs(_) | MixesVerbs(_) | MixesSets(_));
         let role = if mixed && second.is_some() {
             "second run"
@@ -214,17 +212,14 @@ fn table(rows: &[Row], summary: &Summary) -> String {
             "; items gained {}, lost {}, changed kind {}",
             items.items_gained, items.items_lost, items.items_changed_kind
         );
-        let [a, b, xa, xb] = [
-            summary.right_a,
-            summary.right_b,
-            items.extra_a,
-            items.extra_b,
-        ];
         if let (Some(total), Some(on)) = (items.key_items, summary.mcnemar_on) {
-            let [a, b, xa, xb] = [a, b, xa, xb].map(Option::unwrap_or_default);
             let _ = write!(
                 out,
-                "; {on} matched {a} -> {b} of {total}; extras {xa} -> {xb}"
+                "; {on} matched {} -> {} of {total}; extras {} -> {}",
+                summary.right_a.unwrap_or_default(),
+                summary.right_b.unwrap_or_default(),
+                items.extra_a.unwrap_or_default(),
+                items.extra_b.unwrap_or_default()
             );
         }
     } else if let (Some(gained), Some(lost), Some(right_a), Some(right_b), Some(labeled)) = (

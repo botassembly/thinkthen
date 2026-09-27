@@ -270,3 +270,18 @@ fn read(path: &Path) -> Result<Vec<u8>, Cause> {
     }
     std::fs::read(path).map_err(|_| Cause::Unreadable)
 }
+
+#[derive(Clone, Copy, Debug, clap::ValueEnum)]
+pub(crate) enum Match {
+    Strict,
+    Overlap,
+}
+
+impl From<Match> for crate::core::measure::items::Matching {
+    fn from(held: Match) -> Self {
+        match held {
+            Match::Strict => Self::Strict,
+            Match::Overlap => Self::Overlap,
+        }
+    }
+}

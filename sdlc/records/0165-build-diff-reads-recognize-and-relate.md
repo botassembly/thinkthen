@@ -54,7 +54,7 @@ All 18 went red. None stayed green, so stop rule 5 did not fire.
 
 ## Ratchet
 
-The ceiling was 71,609 when the build started. The build measures 72,168, +559, inside the approved +560. The ceiling is now 72,168. By raw diff lines, the core diff module grew about 198, the edge table 122, the command's diff module 105, `tests/diff.rs` 78, `items.rs` 56, and the error types and sentences about 27. The core growth is the item pairing and its key test, the row and summary types, and the refusals. The command growth is `--match` and the table lines. I looked for duplication and found audit's key tally and diff's pairing doing the same one-match-each walk. They now share `items::pair`.
+The ceiling was 71,609 when the build started. The build measures 72,168, +559, inside the ticket's estimate of +290 to +570. The ceiling is now 72,168. By raw diff lines, the core diff module grew about 198, the edge table 122, the command's diff module 105, `tests/diff.rs` 78, `items.rs` 56, and the error types and sentences about 27. The core growth is the item pairing and its key test, the row and summary types, and the refusals. The command growth is `--match` and the table lines. I looked for duplication and found audit's key tally and diff's pairing doing the same one-match-each walk. They now share `items::pair`.
 
 ## Rungs
 

@@ -256,9 +256,10 @@ pub(crate) enum Command {
     /// A and B hold the lines `decide`, `choose`, `recognize`, or `relate` printed for the same
     /// records. Without B, diff compares A under --threshold with A under --compare-threshold.
     /// Two cuts on one run cost nothing. The probabilities are already saved. Each change prints
-    /// on one line, and a summary with its McNemar test prints last. With --key, a changed answer
-    /// says whether it gained or lost a right answer, and a changed record counts the key names or
-    /// edges each side matched. An answer inside a band is not sure.
+    /// one JSON line, or under --table one line and a line per changed item. A summary with its
+    /// McNemar test prints last. With --key, a changed answer says whether it gained or lost a right
+    /// answer, and a changed record counts the key names or edges each side matched. An answer
+    /// inside a band is not sure.
     ///
     /// diff pairs answers by record id and answer name only. It compares
     /// question digests only when both runs saved --details.
