@@ -244,7 +244,7 @@ fn edge_options_come_from_touching_marks_alone() {
         ("x ... y", (2, 2), &[".", "..", ".. "]),
         ("Maria\nChen.", (0, 1), &["Maria Chen", "Maria Chen."]),
         ("Maria\tChen!", (0, 1), &["Maria Chen", "Maria Chen!"]),
-        ("Mar\u{1b}ia Chen.", (0, 1), &["Mar ia Chen", "Mar ia Chen."]),
+        ("M\u{1b}ia Chen.", (0, 1), &["M ia Chen", "M ia Chen."]),
     ];
     for (text, name, expected) in labelled {
         let pieces = pieces(text);
