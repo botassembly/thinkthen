@@ -28,5 +28,6 @@ mod run;
     reason = "public settings regression fixtures must load"
 )]
 mod settings;
+mod values;
 #[path = "../../../../../crates/thinkthen/src/test_deadline/wait.rs"]
 mod wait;
