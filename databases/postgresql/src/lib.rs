@@ -27,6 +27,10 @@ fn given(arg: Option<&str>, what: &str) -> Given {
     Given::read(arg, what, call::file_directory().as_deref()).or_raise()
 }
 
+fn given_result(arg: Option<&str>, what: &str) -> Result<Given, Refusal> {
+    Given::read(arg, what, call::file_directory().as_deref())
+}
+
 /// The question argument, with the function's members joined under `key`.
 fn question(arg: Option<&str>, key: &str, members: Option<Array<'_, &str>>) -> LoadedQuestion {
     let members = members.map(|held| held.iter().flatten().map(str::to_owned).collect());
@@ -34,6 +38,10 @@ fn question(arg: Option<&str>, key: &str, members: Option<Array<'_, &str>>) -> L
         .with_members(key, members)
         .and_then(|held| held.parse(thinkthen::Question::from_json))
         .or_raise()
+}
+
+fn question_result(arg: Option<&str>) -> Result<LoadedQuestion, Refusal> {
+    given_result(arg, "question")?.parse(thinkthen::Question::from_json)
 }
 
 fn decide(
@@ -163,6 +171,33 @@ fn thinkthen_annotate(set: Option<&str>, evidence: Option<&str>) -> Option<JsonB
 fn thinkthen_details(question: Option<&str>, evidence: Option<&str>) -> Option<JsonB> {
     let question = self::question(question, "", None);
     Some(jsonb(&judged(question, evidence?).to_json()))
+}
+
+/// Return recoverable row failures as safe JSON so a statement can continue.
+#[pg_extern(parallel_restricted)]
+fn thinkthen_try_details(question: Option<&str>, evidence: Option<&str>) -> Option<JsonB> {
+    let (Some(question), Some(evidence)) = (question, evidence) else {
+        return None;
+    };
+    let result = (|| {
+        let question = question_result(Some(question))?;
+        let call = call::read_result()?;
+        let evidence = evidence.to_owned();
+        call::run_result(call, move |engine, options| {
+            details(engine, &question, &evidence, options)
+        })
+    })();
+    let value = match result {
+        Ok(answer) => {
+            let details: serde_json::Value = serde_json::from_str(&answer.to_json())
+                .map_err(|_| Refusal::of(thinkthen::ErrorKind::Defect, "a result is not JSON"))
+                .or_raise();
+            serde_json::json!({"status":"answered","details":details})
+        }
+        Err(error) if error.recoverable() => error.value(),
+        Err(error) => call::raise(error),
+    };
+    Some(JsonB(value))
 }
 
 /// This backend's totals. Tests read differences around a call (0095).
