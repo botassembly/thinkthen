@@ -55,6 +55,18 @@ def test_every_record_is_read_before_the_first_send(backend, tmp_path):
     assert backend.count() == 0
 
 
+def test_missing_key_names_a_remedy_python_can_use_before_any_send(backend, tmp_path):
+    """A library call with no key keeps its Usage kind and names the environment remedy."""
+    env = child_env(backend, tmp_path)
+    env.pop("THINKTHEN_API_KEY")
+    printed = run(REFUSED + """
+    said(lambda: tt.Engine(base_url="https://example.invalid/v1", cache=False)
+         .decide(late, "one"))
+    """, env)
+    assert printed.strip() == "UsageError no key is set; set THINKTHEN_API_KEY"
+    assert backend.count() == 0
+
+
 def test_the_deadline_sentence_is_pinned_in_the_docstring_and_readme():
     """R5-7: both places a user reads carry the ADR 0041 spelling."""
     assert DEADLINE_SENTENCE in tt.__doc__
