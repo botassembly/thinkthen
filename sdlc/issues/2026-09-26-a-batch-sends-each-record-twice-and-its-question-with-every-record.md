@@ -1,6 +1,6 @@
 # A batch sends each record twice and its question with every record
 
-Status: Open. Filed 2026-09-26 from the ten-function efficiency audit under ADR 0054, local experiment 275. Round 2 added the same day measures long records, repeats and record orders. Owner: the batching queue, before ticket 0146 lands. Does not block 0.1 by itself. Ticket 0146 fixes the batched request bytes, so a later change misses every cached batch.
+Status: Settled for `decide`, `filter` and `rank` by ADR 0055, accepted 2026-09-26 by Ian's ruling. Ticket 0146 builds it. Open for `choose` and `tag` until B8 and B9 measure them on long records. Filed 2026-09-26 from the ten-function efficiency audit under ADR 0054, local experiment 275. Round 2 added the same day measures long records, repeats and record orders.
 
 ## What happens today
 
