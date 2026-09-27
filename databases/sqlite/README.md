@@ -5,7 +5,9 @@ A loadable SQLite extension over the public `thinkthen` Rust API. It is the unpu
 ```sql
 .load ./thinkthen
 SELECT thinkthen_warm('Is this a complaint?', body) FROM reviews;
-SELECT id, body FROM reviews WHERE thinkthen_decide('Is this a complaint?', body);
+SELECT id, body FROM (
+  SELECT id, body, thinkthen_decide('Is this a complaint?', body) AS is_complaint FROM reviews
+) WHERE is_complaint;
 ```
 
 The extension needs SQLite 3.50.0 or newer. Below 3.50.0 a CHECK constraint in a database file from somewhere else can reach a volatile function, so the load refuses and names the host's version.

@@ -40,6 +40,10 @@ Over the 306 Beatles titles, today's filter sent 306 requests in 13.0 to 14.2 s 
 
 ADR 0053 amends items 2, 8 and 12. The pause fires in every mode, not only when no folder is named. A batch also closes at 4,096 members, repeats included. A question file with a `threshold` and no `batch` counts as tuned at batch 1 for item 8's warning. Item 12's cost becomes the tool's own form: 272 to 274 right and 32 to 34 false yeses over the 306 titles, against 285 and 16 or 17 one a request. Records of one batch are evidence for each other, and `--batch 1` keeps them apart. Ian can overturn each change.
 
+## Amendment, 2026-09-26: ADR 0051 sets a request size everywhere and halves a refused batch once
+
+ADR 0051, through ticket 0154, amends items 2, 5, 6, 9 and 11. The request size is a setting, `--max-request-bytes` or `THINKTHEN_MAX_REQUEST_BYTES`, with a default of 96,000 bytes at every address, not only the built-in one. A profile's `max_request_bytes` lowers it and no longer raises it. A batch of two or more records that the backend refuses as too large, by status 413 or status 400 naming `max_tokens_exceeded`, is split into two halves and each half is sent once. A replay asks those halves when the whole batch has no entry. Once B5 builds `meta.batch`, a row a half answers carries `"split":true` there. Until then the rows' per-request counts and digests record a split. Every other status keeps item 6's rule. Item 11's refusal of a context too large for one record now applies at every address, at the request size. Ian can overturn each change.
+
 ## What this amends
 
 | Where | What changes |

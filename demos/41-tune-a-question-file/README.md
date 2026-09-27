@@ -110,7 +110,7 @@ A fair pair is two live runs or two replays over the same cases. The 0.08 defaul
 - **Editing wording on the command line.** Then the gate and measurement ask different questions.
 - **Reading `changed.question` alone.** `changed` also names model and cut. Rerun when two move. Modern rows use the complete question digest; legacy rows name their text fallback.
 - **Reading the flips before the pairing.** `paired`, `only_in_before`, `only_in_after`, `repeated_ids`, and the two mismatch lists say the runs measured the same cases. A run that stopped early is listed there, not passed off as a smaller run.
-- **Folding unresolved into no.** The six directions stay separate.
+- **Folding not sure into no.** The six directions stay separate.
 - **A gate that reads exit codes loosely.** Word the question so yes permits the action. Treat every other code as refusal.
 
 ## Related how-tos

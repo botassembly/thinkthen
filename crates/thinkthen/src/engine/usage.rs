@@ -12,6 +12,7 @@ use crate::core::Usage;
 
 mod counts;
 pub(crate) use counts::Counts;
+mod attempt;
 
 const SCHEMA: &str = "thinkthen.usage/1";
 
@@ -59,6 +60,7 @@ impl Counters {
         self.attempt_sent(false);
     }
 
+    #[cfg(test)]
     pub(crate) fn attempt_sent(&self, retry: bool) {
         self.add(Counts {
             requests_sent: 1,
@@ -486,13 +488,25 @@ fn recognized_month(name: &str) -> bool {
 }
 
 pub(crate) fn month_now() -> String {
+    let mut month = String::with_capacity(32);
+    month_now_into(&mut month);
+    month
+}
+
+/// Write the admission month into a buffer reserved before the final stop check.
+fn month_now_into(month: &mut String) {
+    use std::fmt::Write as _;
+
     let days = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs()
         / 86_400;
-    let (year, month) = year_month(days as i64);
-    format!("{year:04}-{month:02}")
+    let (year, number) = year_month(days as i64);
+    // The largest u64 second reaches a 12-digit year. Thirty-two bytes hold it.
+    month.clear();
+    let _written = write!(month, "{year:04}-{number:02}");
+    debug_assert!(month.len() <= 32);
 }
 
 fn year_month(days_since_epoch: i64) -> (i64, i64) {

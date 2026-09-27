@@ -22,13 +22,16 @@ pub(crate) fn run(
 ) -> Result<ExitCode, Failure> {
     let settled = config::settle(arguments)?;
     let configured = settled.spec.model.as_ref().map(ModelName::as_str);
+    let request_size = environment.request_size(arguments.max_request_bytes.as_deref())?;
     let backend = Backend::resolve(
         arguments.common.url.as_deref(),
         environment.base_url(),
         configured
             .or_else(|| environment.model())
             .unwrap_or(crate::core::DEFAULT_MODEL),
-    )?;
+    )?
+    .with_request_size(request_size);
+    environment.warn_request_size(&backend)?;
     let selected_profile = profile::read(&arguments.common)?;
     let source = crate::edge::source(arguments.common.input.as_deref(), input)?;
     let entities = input::read(source, settled.framing, &settled.spec)?;

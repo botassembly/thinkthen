@@ -241,6 +241,15 @@ pub(crate) struct Batching {
     /// beats a question file's `batch`.
     #[arg(long, value_name = "N|max", hide_short_help = true)]
     pub(crate) batch: Option<String>,
+
+    /// Close a batch before its request exceeds N bytes. [default: 96000]
+    #[arg(
+        long,
+        value_name = "N",
+        hide_short_help = true,
+        allow_negative_numbers = true
+    )]
+    pub(crate) max_request_bytes: Option<String>,
 }
 
 /// The two texts that say what a yes and a no mean, which every yes/no verb takes.
@@ -486,6 +495,15 @@ pub(crate) struct RecognizeArguments {
         hide_short_help = true
     )]
     pub(crate) max_text_bytes: Option<usize>,
+
+    /// Split relation plans before a request exceeds N bytes. [default: 96000]
+    #[arg(
+        long,
+        value_name = "N",
+        hide_short_help = true,
+        allow_negative_numbers = true
+    )]
+    pub(crate) max_request_bytes: Option<String>,
 
     /// The options every judging verb takes.
     #[command(flatten)]

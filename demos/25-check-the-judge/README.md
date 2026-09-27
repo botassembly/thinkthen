@@ -11,7 +11,7 @@ set -euo pipefail
 rows=../../transforms/rows/runs/run-a.jsonl
 
 jq -n --argjson cut 0.5 -f ../../transforms/score/score.jq "$rows" | jq -c . \
-  | mustmatch '{"cut":0.5,"rows":40,"labeled":39,"unlabeled":["C-12"],"unresolved":0,"true_positive":19,"false_positive":1,"true_negative":19,"false_negative":0,"coverage":1,"accuracy":0.9744,"precision":0.95,"recall":1,"f1":0.9744}'
+  | mustmatch '{"cut":0.5,"rows":40,"labeled":39,"unlabeled":["C-12"],"unsure":0,"true_positive":19,"false_positive":1,"true_negative":19,"false_negative":0,"coverage":1,"accuracy":0.9744,"precision":0.95,"recall":1,"f1":0.9744}'
 ```
 
 ## Input
@@ -29,11 +29,11 @@ set -euo pipefail
 rows=../../transforms/rows/runs/run-a.jsonl
 
 jq -n -f ../../transforms/counts/counts.jq "$rows" | jq -c . \
-  | mustmatch '{"rows":40,"yes":18,"no":18,"unresolved":4,"thresholds":["0.2:0.8"],"questions":["Does the message report a payment failure?"]}'
+  | mustmatch '{"rows":40,"yes":18,"no":18,"unsure":4,"thresholds":["0.2:0.8"],"questions":["Does the message report a payment failure?"]}'
 
 jq -n --argjson cut '[0.2,0.8]' -f ../../transforms/score/score.jq "$rows" \
-  | jq -c '{labeled, unresolved, coverage, accuracy, precision, recall, f1}' \
-  | mustmatch '{"labeled":39,"unresolved":3,"coverage":0.9231,"accuracy":1,"precision":1,"recall":1,"f1":1}'
+  | jq -c '{labeled, unsure, coverage, accuracy, precision, recall, f1}' \
+  | mustmatch '{"labeled":39,"unsure":3,"coverage":0.9231,"accuracy":1,"precision":1,"recall":1,"f1":1}'
 ```
 
 Thirty-six rows scored and three counted apart. An accuracy of 1 at a coverage of 0.9231 is a different claim from an accuracy of 1, and the second number keeps the first honest.
@@ -53,7 +53,7 @@ jq -c 'select(.input | has("label"))
   | mustmatch '{"id":"C-15","label":false,"probability":0.51,"said":null}'
 ```
 
-`C-15` concerns an expired discount code. A person called it no payment failure. Its 0.51 probability fell inside the run's unresolved band, so `said` is `null`.
+`C-15` concerns an expired discount code. A person called it no payment failure. Its 0.51 probability fell inside the run's not sure band, so `said` is `null`.
 
 ## Step 3: ask whether the probabilities mean what they say
 
@@ -65,10 +65,10 @@ rows=../../transforms/rows/runs/run-a.jsonl
 
 jq -n -f ../../transforms/calibration/calibration.jq "$rows" \
   | jq -c '.bands[] | select(.band == "0-0.1" or .band == "0.5-0.6" or .band == "0.2-0.3" or .band == "0.9-1")' \
-  | mustmatch '{"band":"0-0.1","rows":17,"unresolved":0,"labeled":17,"truly_yes":0,"share_truly_yes":0,"mean_probability":0.0171}
-{"band":"0.2-0.3","rows":0,"unresolved":0,"labeled":0,"truly_yes":0,"share_truly_yes":null,"mean_probability":null}
-{"band":"0.5-0.6","rows":2,"unresolved":2,"labeled":1,"truly_yes":0,"share_truly_yes":0,"mean_probability":0.545}
-{"band":"0.9-1","rows":12,"unresolved":0,"labeled":12,"truly_yes":12,"share_truly_yes":1,"mean_probability":0.9842}'
+  | mustmatch '{"band":"0-0.1","rows":17,"unsure":0,"labeled":17,"truly_yes":0,"share_truly_yes":0,"mean_probability":0.0171}
+{"band":"0.2-0.3","rows":0,"unsure":0,"labeled":0,"truly_yes":0,"share_truly_yes":null,"mean_probability":null}
+{"band":"0.5-0.6","rows":2,"unsure":2,"labeled":1,"truly_yes":0,"share_truly_yes":0,"mean_probability":0.545}
+{"band":"0.9-1","rows":12,"unsure":0,"labeled":12,"truly_yes":12,"share_truly_yes":1,"mean_probability":0.9842}'
 ```
 
 The two ends match their claims. The 0.5 to 0.6 band holds two rows, one labeled, and that one was no. An empty band yields null because no cases supplied evidence. Thirty-six rows sit at or below 0.2 or at or above 0.8, leaving most bands sparse.
@@ -78,8 +78,8 @@ The two ends match their claims. The 0.5 to 0.6 band holds two rows, one labeled
 ```bash
 set -euo pipefail
 
-sh ../../transforms/counts/example.sh | jq -c '{yes, no, unresolved}' \
-  | mustmatch '{"yes":18,"no":18,"unresolved":4}'
+sh ../../transforms/counts/example.sh | jq -c '{yes, no, unsure}' \
+  | mustmatch '{"yes":18,"no":18,"unsure":4}'
 sh ../../transforms/score/example.sh | jq -c '{accuracy, f1}' \
   | mustmatch '{"accuracy":0.9744,"f1":0.9744}'
 sh ../../transforms/calibration/example.sh \
@@ -97,7 +97,7 @@ For `tag` or `annotate`, point `sweep.jq` at the human fields instead of renamin
 ## What can go wrong
 
 - **A transform stops with exit 5.** The input is malformed or lacks a required field. The error names the file and line.
-- **Treating unresolved as no.** `.value // false` turns a refusal into a wrong answer. Every transform here tests true, false, and null explicitly, and a refused row keeps its probability and stays in its calibration band.
+- **Treating not sure as no.** `.value // false` turns a refusal into a wrong answer. Every transform here tests true, false, and null explicitly, and a refused row keeps its probability and stays in its calibration band.
 - **Scoring a case nobody labeled.** `C-12` is scored nowhere. A rate that included it would be a rate about a guess.
 - **One accuracy number.** Accuracy without coverage hides a band that refused half the file, and accuracy alone hides which side the judge errs on. Read precision and recall together.
 - **Calling a model calibrated from the ends alone.** Forty rows leave several bands empty or holding one noisy case. Calibration needs hundreds.

@@ -11,7 +11,7 @@ use crate::public::results::{Answer, Written, answer, withheld_debug};
 pub enum Annotated {
     /// A `decide` answer.
     Decision(Answer),
-    /// A `choose` pick, or `None` when unresolved.
+    /// A `choose` pick, or `None` when the answer is not sure.
     Choice(Option<String>),
     /// A `score` position.
     Score(f64),

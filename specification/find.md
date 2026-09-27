@@ -70,4 +70,4 @@ thinkthen find 'This ticket should be worked next.' --jsonl --field /body < queu
 
 ## Selection rule
 
-Equal top probabilities among real units select the first input unit. A strict `none` lead or any top tie involving `none` produces the unresolved result. The command prints one unit and has no threshold or top-count option.
+Equal top probabilities among real units select the first input unit. A strict `none` lead or any top tie involving `none` produces the not sure result. The command prints one unit and has no threshold or top-count option.

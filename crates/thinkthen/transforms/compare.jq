@@ -23,7 +23,7 @@ def scalar_value:
 def verdict:
   if .value == true then "yes"
   elif .value == false then "no"
-  elif .value == null then "unresolved"
+  elif .value == null then "unsure"
   else null end;
 
 def yes_no_probability:

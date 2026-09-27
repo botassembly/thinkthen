@@ -1,7 +1,14 @@
 use std::fs;
+use std::io::ErrorKind;
+use std::net::TcpListener;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread;
+use std::time::Duration;
+
+use crate::engine::Cancel;
+use crate::engine::error::Error;
+use crate::engine::http::{Client, Exchange, Key};
 
 use super::{
     CREATION_PAUSE, Counters, Counts, FAILURE, INITIAL_SYNC, Stage, month_now, read,
@@ -18,6 +25,43 @@ fn an_old_usage_row_without_retries_reads_as_zero() {
     .expect("old usage schema");
     assert_eq!(row.requests_sent, 3);
     assert_eq!(row.retries, 0);
+}
+
+#[test]
+fn an_uncountable_attempt_is_refused_before_transport() {
+    let counts = Counters::new(None);
+    counts.add(Counts {
+        requests_sent: u64::MAX,
+        ..Counts::default()
+    });
+    let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
+    listener.set_nonblocking(true).expect("nonblocking");
+    let url = format!(
+        "http://{}/v1/systemone",
+        listener.local_addr().expect("address")
+    );
+    let key = Key::of("sk-test-value");
+    let exchange = Exchange {
+        url: &url,
+        body: b"{}",
+        key: &key,
+        max_retries: 0,
+        retry_wait: Duration::from_millis(10),
+    };
+    let result = Client::new(
+        Duration::from_secs(1),
+        false,
+        crate::engine::process_width(),
+    )
+    .post_observed_with_retry(&exchange, &Cancel::default(), &counts, |_| ());
+
+    assert!(matches!(
+        result,
+        Err(Error::Defect("request attempt count overflow"))
+    ));
+    assert_eq!(counts.snapshot().requests_sent, u64::MAX);
+    assert_eq!(counts.snapshot().retries, 0);
+    assert!(matches!(listener.accept(), Err(error) if error.kind() == ErrorKind::WouldBlock));
 }
 
 fn folder(name: &str) -> std::path::PathBuf {

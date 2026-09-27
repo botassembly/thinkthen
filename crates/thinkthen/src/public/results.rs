@@ -53,7 +53,7 @@ pub enum Answer {
 pub enum Judgment {
     /// A `decide` answer.
     Decision(Answer),
-    /// A `choose` pick, or `None` when the pick is unresolved.
+    /// A `choose` pick, or `None` when the answer is not sure.
     Choice(Option<String>),
     /// A `score` position on the levels.
     Score(f64),

@@ -7,7 +7,7 @@ mod measure_support;
 #[path = "../src/test_deadline/wait.rs"]
 mod wait;
 
-use measure_support::{DIFF_GOLDENS, DIFF_TABLES, fixture, measure, member, run};
+use measure_support::{DIFF_GOLDENS, DIFF_TABLES, fixture, measure, member, ported, run};
 
 fn diff(arguments: &[&str], input: &[u8]) -> (i32, String, String) {
     measure(&[&["diff"], arguments].concat(), input)
@@ -31,7 +31,15 @@ fn goldens_match() {
             _ => String::new(),
         };
         assert_eq!((code, stderr), (0, warned), "{golden}");
-        assert_eq!(stdout, fixture(golden), "{golden}");
+        let mut expected = fixture(golden);
+        if golden == "golden/extra/diff-annotate.jsonl" {
+            // The captured rows fall below the 0.75 cut; their move has count 2.
+            for end in ["probability\":[0.6", "probability\":[0.7", "count\":2"] {
+                let state = format!("\"to\":\"unresolved\",\"{end}");
+                expected = expected.replace(&state, &state.replace("unresolved", "unsure"));
+            }
+        }
+        assert_eq!(stdout, expected, "{golden}");
     }
 }
 
@@ -42,6 +50,17 @@ fn tables_match_byte_for_byte() {
         assert_eq!((code, stderr.as_str()), (0, ""), "{capture}");
         assert_eq!(stdout, fixture(capture), "{capture}");
     }
+}
+
+#[test]
+fn an_option_named_unresolved_stays_an_option() {
+    let run = fixture("small/choose.jsonl").replace("\"red\"", "\"unresolved\"");
+    let (code, stdout, stderr) = diff(&["-", "small/choose-b.jsonl"], run.as_bytes());
+    assert_eq!((code, stderr.as_str()), (0, ""));
+    let first = stdout.lines().next().expect("a changed option");
+    assert_eq!(member(first, "/from"), "\"unresolved\"");
+    assert_eq!(member(first, "/to"), "\"red\"");
+    assert_eq!(ported(format!("{first}\n")), format!("{first}\n"));
 }
 
 #[test]
@@ -131,7 +150,7 @@ fn the_second_side_reads_under_compare_threshold_when_both_rules_are_given() {
         ),
         (
             &["small/decide-band.jsonl", "--threshold", "0.3:0.6"],
-            "r3  unresolved -> yes  p 0.45 -> 0.45\nr4  unresolved -> no  p 0.30 -> 0.30\n0.3:0.6 -> 0.4: 2 of 6 changed; unresolved -> no 1; unresolved -> yes 1; McNemar p 1.000 on yes answers\n",
+            "r3  unsure -> yes  p 0.45 -> 0.45\nr4  unsure -> no  p 0.30 -> 0.30\n0.3:0.6 -> 0.4: 2 of 6 changed; unsure -> no 1; unsure -> yes 1; McNemar p 1.000 on yes answers\n",
         ),
     ];
     for (arguments, table) in cases {

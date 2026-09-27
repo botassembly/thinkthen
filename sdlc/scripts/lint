@@ -112,6 +112,8 @@ head -c 4194304 /dev/urandom \
 sh sdlc/scripts/package
 python3 sdlc/scripts/pages-self-test
 python3 sdlc/scripts/pages
+node sdlc/scripts/named-answers.mjs --self-test
+node sdlc/scripts/named-answers.mjs
 node sdlc/scripts/ratchet.mjs
 # ADR 0047: the surface registry, and each binding's ratchet and lock.
 sh sdlc/scripts/surfaces --registry

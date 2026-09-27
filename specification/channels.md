@@ -55,7 +55,7 @@ A reader that closes the pipe early is no error. `thinkthen ... | head -1` ends 
 | 0 | The command finished. On single-input `decide`, the answer is yes |
 | 1 | Single-input `decide` only: the answer is no |
 | 2 | A usage error or an input error. The failing record sent nothing |
-| 3 | Single-input `decide` and `choose`: the answer is unresolved. `find --none`: nothing fits |
+| 3 | Single-input `decide` and `choose`: the answer is not sure. `find --none`: nothing fits |
 | 4 | The backend failed or sent a reply the adapter refused. For `check`, the report holds a critical line |
 | 5 | A local failure: a file or a recording |
 | 6 | `annotate` or `relate` completed with at least one valid and one failed logical question |
@@ -71,16 +71,19 @@ Codes 7 and 8 stay reserved. One function maps every error to its exit code. Exi
 In record mode the exit code reports the run. A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers. `annotate` exits 6 when a completed run contains one or more failed questions; good answers and failed markers both print. A valid answer on standard output can accompany exit 1, 3, or 6, so a script that wants the value reads it and then reads `$?`.
 
 ```sh
-if thinkthen decide 'the customer asks for a refund' --quiet < message.txt; then
+asks_for_refund() {
+  thinkthen decide 'the customer asks for a refund' --quiet
+}
+if asks_for_refund < message.txt; then
   echo refund
 fi
 ```
 
-A script that must tell a no from an unresolved reads `$?` with `case`.
+A script that must tell a no from a not sure reads `$?` with `case`.
 
 ## A gate
 
-A gate is a command whose exit code decides whether something happens. Word the question so that yes permits the action, and treat every exit code other than 0 as a refusal. A no, an unresolved answer, a usage error, a backend failure, and a defect then all leave the action undone.
+A gate is a command whose exit code decides whether something happens. Word the question so that yes permits the action, and treat every exit code other than 0 as a refusal. A no, a not sure answer, a usage error, a backend failure, and a defect then all leave the action undone.
 
 ## `set -e` and `pipefail`
 

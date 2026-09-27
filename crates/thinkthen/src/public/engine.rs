@@ -179,7 +179,7 @@ impl Engine {
         ))
     }
 
-    /// Pick one option of `C`, or `None` when the pick is unresolved.
+    /// Pick one option of `C`, or `None` when the answer is not sure.
     ///
     /// # Errors
     ///

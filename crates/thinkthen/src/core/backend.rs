@@ -16,7 +16,11 @@ pub(crate) const KEY_VAR: &str = "THINKTHEN_API_KEY";
 pub(crate) struct Backend {
     url: Url,
     model: ModelName,
+    request_size: usize,
 }
+
+/// The default maximum request size at every address, in bytes.
+const DEFAULT_REQUEST_SIZE: usize = 96_000;
 
 /// Why the given address and model name no backend.
 #[derive(Clone, Debug, Eq, Error, PartialEq)]
@@ -63,9 +67,15 @@ pub(crate) enum BackendError {
 const LOOPBACK: [&str; 3] = ["localhost", "127.0.0.1", "[::1]"];
 
 impl Backend {
+    pub(crate) const DEFAULT_REQUEST_SIZE: usize = DEFAULT_REQUEST_SIZE;
+
     #[cfg(test)]
     pub(crate) const fn from_parts(url: Url, model: ModelName) -> Self {
-        Self { url, model }
+        Self {
+            url,
+            model,
+            request_size: DEFAULT_REQUEST_SIZE,
+        }
     }
 
     /// Resolve the backend from the option, the environment, and the default.
@@ -89,7 +99,14 @@ impl Backend {
         Ok(Self {
             url: address(url.or(base).unwrap_or(built_in::DEFAULT_BASE))?,
             model: ModelName::new(model)?,
+            request_size: DEFAULT_REQUEST_SIZE,
         })
+    }
+
+    /// Carry the command's resolved request size into both planners.
+    pub(crate) fn with_request_size(mut self, size: usize) -> Self {
+        self.request_size = size;
+        self
     }
 
     /// Whether the address names `localhost`, `127.0.0.1`, or `[::1]`, the
@@ -113,18 +130,21 @@ impl Backend {
         &self.model
     }
 
-    /// The request-byte ceiling a relation plan splits under and a batch
-    /// closes at: 96,000 at the built-in address, and none elsewhere. The
-    /// hosted backend refuses over 65,536 input tokens, and relate's JSON runs
-    /// 0.516 a byte (ticket 0123).
+    /// The request-byte ceiling a relation plan splits under and a batch closes at.
     #[must_use]
-    pub(crate) fn ceiling(&self) -> Option<usize> {
+    pub(crate) fn ceiling(&self) -> usize {
+        self.request_size
+    }
+
+    /// Whether the posting URL names the built-in backend, for its warning.
+    #[must_use]
+    pub(crate) fn is_built_in(&self) -> bool {
         let base = self
             .url
             .as_str()
             .strip_suffix(built_in::ENDPOINT_PATH)
             .and_then(|rest| rest.strip_suffix('/'));
-        (base == Some(built_in::DEFAULT_BASE)).then_some(96_000)
+        base == Some(built_in::DEFAULT_BASE)
     }
 
     /// Say whether the request travels under TLS.

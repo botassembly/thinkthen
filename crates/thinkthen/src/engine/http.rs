@@ -11,6 +11,7 @@ use ureq::Agent;
 
 use crate::core::{Json, Withheld};
 use crate::engine::error::{Error, TransportKind};
+use crate::engine::usage::Counters;
 use crate::engine::{Permit, Width, Widths, backoff};
 
 /// The key one request carries. Diagnostics and `Debug` never expose it.
@@ -132,13 +133,15 @@ impl Client {
         cancel: &crate::engine::Cancel,
         before_attempt: impl Fn(),
     ) -> Result<HttpAnswer, Error> {
-        self.post_observed_with_retry(exchange, cancel, |_| before_attempt())
+        let usage = Counters::new(None);
+        self.post_observed_with_retry(exchange, cancel, &usage, |_| before_attempt())
     }
 
     pub(crate) fn post_observed_with_retry(
         &self,
         exchange: &Exchange<'_>,
         cancel: &crate::engine::Cancel,
+        usage: &Counters,
         before_attempt: impl Fn(bool),
     ) -> Result<HttpAnswer, Error> {
         if exchange
@@ -160,10 +163,12 @@ impl Client {
             let permit = self.acquire_open(gates, exchange.url, cap, cancel)?;
             cancel.stop_or_remaining()?;
             before_attempt(retries > 0);
-            // The hook before the attempt may be slow, so read the budget after
-            // it. Cancellation keeps its one pre-attempt checkpoint.
-            let budget = cancel.remaining()?;
+            let prepared = usage.prepare_attempt()?;
+            // Bookkeeping and the test hook may wait. The final check reads no
+            // host callback while the usage lock is held.
+            let budget = cancel.remaining_without_check()?;
             let limit = budget.map_or(self.timeout, |budget| budget.min(self.timeout));
+            prepared.mark(retries > 0)?;
             let sending = cancel.sending();
             let sent = send(&self.agent, exchange, limit);
             drop(sending);

@@ -14,6 +14,8 @@ Three inputs are derived from `small/`. `decide-reversed.jsonl` holds the lines 
 
 The files under `golden/extra/`, `golden/table/`, and `replay/audit.jsonl` were captured by running the prototype script with those checksums under Python 3.12.3 from this folder. `replay/key.jsonl` holds the labels of `transforms/rows/cases.jsonl`. `replay/audit.jsonl` grades the replay of `transforms/rows/recording` described in `specification/audit.md`.
 
+The prototype goldens keep their original `unresolved` spelling and checksums. The port's tests rewrite only the expected side to its public `unsure` token and `not sure` count line before comparison. This also covers the nested `suggested` and `held` count members in audit JSON.
+
 | Output | Command line (from this folder) | Test |
 | --- | --- | --- |
 | `golden/audit-decide.jsonl` | `audit small/decide.jsonl small/decide-key.jsonl` | `audit::old_goldens_hold` |

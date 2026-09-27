@@ -329,9 +329,12 @@ impl Batcher {
         wires: usize,
     ) -> Option<(LimitKind, usize, usize)> {
         let held = self.profile.as_ref();
-        let request = held
-            .and_then(|held| held.max_request_bytes)
-            .or(self.backend.ceiling());
+        let request = Some(
+            held.and_then(|held| held.max_request_bytes)
+                .map_or(self.backend.ceiling(), |profile| {
+                    profile.min(self.backend.ceiling())
+                }),
+        );
         let evidence_limit = held.and_then(|held| held.max_evidence_bytes);
         let limits = [
             (LimitKind::EvidenceBytes, evidence_limit, evidence),
@@ -471,6 +474,40 @@ impl Batcher {
     fn model(&self) -> crate::core::text::ModelName {
         self.backend.model().clone()
     }
+}
+
+/// Rebuild one refused batch as two ordinary, consecutive requests.
+pub(crate) fn halves(
+    backend: &Backend,
+    profile: Option<&BackendProfile>,
+    question: &Question,
+    context: Option<&Evidence>,
+    mut records: Vec<BatchRecord>,
+) -> Result<[Batch; 2], BatchError> {
+    if records.len() < 2 {
+        return Err(BatchError::Defect("a batch needs two members to halve"));
+    }
+    let second = records.split_off(records.len().div_ceil(2));
+    let build = |records: Vec<BatchRecord>| -> Result<Batch, BatchError> {
+        let mut batcher = Batcher::new(
+            backend.clone(),
+            profile.cloned(),
+            question.clone(),
+            Setting::Max,
+            context.cloned(),
+        )?;
+        let mut closed = Vec::new();
+        for record in records {
+            batcher.push(record, &mut closed)?;
+        }
+        if let Some(batch) = batcher.finish()? {
+            closed.push(batch);
+        }
+        let [batch] = <[Batch; 1]>::try_from(closed)
+            .map_err(|_| BatchError::Defect("a half formed more than one batch"))?;
+        Ok(batch)
+    };
+    Ok([build(records)?, build(second)?])
 }
 
 /// `{"records":[…]}` over these values.

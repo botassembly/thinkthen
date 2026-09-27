@@ -245,6 +245,13 @@ pub(crate) fn fixture(path: &str) -> String {
     fs::read_to_string(fixtures().join(path)).expect("a fixture")
 }
 
+/// Translate the prototype's not-sure spelling on the expected side only.
+pub(crate) fn ported(fixture: String) -> String {
+    fixture
+        .replace(" unresolved, ", " not sure, ")
+        .replace("\"unresolved\":", "\"unsure\":")
+}
+
 /// One row member as its compact JSON text.
 pub(crate) fn member(line: &str, pointer: &str) -> String {
     let row: serde_json::Value = serde_json::from_str(line).expect("a JSON row");
