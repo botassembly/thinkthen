@@ -8,7 +8,7 @@ opens: sdlc/planning/adr/0051-every-address-has-a-ceiling-and-a-refused-batch-ha
 
 Status: building. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Codex, by Ian's later routing. It carries ADR 0051. Tickets 0146 (B4) and 0155 have landed on main. This ticket builds before the batching design's ticket B5, by the coordinator's ruling of 2026-09-26.
 
-Review route: the accepted design and ADR 0051 retain their earlier review. A fresh read-only Codex reviewer checks the final diff, by Ian's later routing.
+Review route: the accepted design and ADR 0051 retain their earlier review. A fresh read-only Codex reviewer checked the source checkpoint and measured caps. Its completion pass checks the final documentation, by Ian's later routing.
 
 ## Outcome and authority
 
@@ -30,7 +30,7 @@ The concise source and verification record is `sdlc/records/0154-build.md`.
 
 Rechecked the accepted branch against main `c76de10d`, after 0146, 0148, 0147 and 0155 landed. The preceding snapshot records the design's starting point; those prerequisites are now present. Ticket 0155 added the live attempt counter and changed the default retry count to three. This ticket must keep its cancellation and retry behavior when it asks the halves. The existing batch planner in `core/batch.rs`, relation planner in `engine/prepared_request.rs`, and command worker in `cli/asking/batched.rs` are the paths to reuse. The request-size setting must reach only the five named verbs; `engine/mod.rs`, `engine/workers.rs` and `public/options.rs` are held by ticket 0201 and are outside this build.
 
-`core/batch/tests.rs::the_ceiling_closes_batches_at_the_built_in_address_only` shows that three 20,000-byte records already fit one 96,000-byte request, while three 40,000-byte records close as two then one. The edge table below uses 40,000-byte records for that boundary. The current recording folder identity uses the URL alone. The earlier committed recording size scan found no file over 90,000 bytes under `demos/`, `probes/`, `transforms/` or the test fixtures; the build will report any executable fixture that actually changes before expanding scope. The focused proof uses that batch test, `tests/backend/batching.rs` and its existing helpers, `tests/backend/relate/ceiling.rs`, and `tests/backend/status_reason.rs`. The final reviewer will check the command boundary, measured ratchet and this ticket's build lessons. The related command integration checkpoint follows this ticket; the old mutation plants and full surfaces rung below are design examples, not a mandatory campaign for this build.
+`core/batch/tests.rs::the_ceiling_closes_batches_at_the_built_in_address_only` shows that three 20,000-byte records already fit one 96,000-byte request, while three 40,000-byte records close as two then one. The edge table below uses 40,000-byte records for that boundary. The current recording folder identity uses the URL alone. The earlier committed recording size scan found no file over 90,000 bytes under `demos/`, `probes/`, `transforms/` or the test fixtures; the build will report any executable fixture that actually changes before expanding scope. The focused proof uses that batch test, `tests/backend/batching.rs` and its existing helpers, `tests/backend/relate/ceiling.rs`, and `tests/backend/status_reason.rs`. The final reviewer checked the command boundary, measured ratchet and this ticket's build lessons. The related command integration checkpoint follows this ticket; the old mutation plants and full surfaces rung below are design examples, not a mandatory campaign for this build.
 
 - `core/backend.rs::Backend::ceiling` returns `Some(96_000)` only when the posting URL, less `/systemone` and one trailing slash, equals the built-in base. Two callers read it. `core/batch.rs::Batcher::over` uses it as the request limit when no profile sets one. `engine/prepared_request.rs::SettledRelation::settle` splits relation plans under it when no profile limits request bytes.
 - `specification/backends.md`, "Explicit profiles and local preflight", says: "A profile's `max_request_bytes` replaces it" and "Every other plan and every other address has no ceiling."
@@ -134,7 +134,7 @@ The build edits each page and deletes the sentence each rule replaces, in the sa
 - `result.md`: the `requests_sent` row says a split batch's refused request counts in its first half. The `meta.batch` row's `split` waits for B5.
 - `settings.md`: the "Request size" row, the precedence line, the profile row's sentence and the sizing paragraph, as above.
 - `decide.md`, `filter.md`, `rank.md`, `relate.md` and `recognize.md`: one sentence each naming `--max-request-bytes`.
-- ADR 0040's ticket 0123 amendment gains the marker `(Amended by ADR 0051.)`, after ticket 0147 lands, because 0147 edits the same line.
+- ADR 0040's ticket 0123 amendment gains the marker `(Amended by ADR 0051.)`. Ticket 0147 has landed, so its edit to that line is present.
 - `sdlc/issues/2026-09-26-batching-design.md` gains one sentence in section 2's "Other addresses" and one in section 4, each pointing at ADR 0051.
 
 ## Decisions
@@ -267,7 +267,7 @@ Nonblank lines, measured with `grep -c .`. Net lines against main after tickets 
 - No dependency.
 - Run focused affected command and planner proof for this slice. The related batch checkpoint covers the wider surfaces rung under Ian's later verification ruling.
 
-The 2026-09-27 source checkpoint measures 236 source and 499 test lines, 735 total over main's 76,686. These aggregates are within ten percent of the accepted 215, 465 and 680 estimates. The following individual caps need a measured amendment. The independent reviewer checks necessity and duplication before the coordinator approves it:
+The 2026-09-27 source checkpoint measures 236 source and 499 test lines, 735 total over main's 76,686. These aggregates are within ten percent of the accepted 215, 465 and 680 estimates. The fresh read-only reviewer found no required source change, checked necessity and duplication, and recommended the following measured caps. The coordinator approved them:
 
 | Group | Accepted cap | Measured and proposed cap | Why |
 | --- | ---: | ---: | --- |
@@ -295,7 +295,7 @@ Excluded: the setting on the libraries and SQL, which ticket 0157 carries. Halvi
 
 ## Routing
 
-Builder: Codex in the coordinator's lane, by Ian's later routing. Reviewer: a fresh read-only Codex session for the final code. The accepted design review remains valid. The code review names its checks of the setting, split, replay and counts.
+Builder: Codex in the coordinator's lane, by Ian's later routing. Reviewer: a fresh read-only Codex session for the final code. The accepted design review remains valid. The source review checked the setting, split, replay, counts and measured caps; the completion pass checks the public pages and lessons.
 
 ## Complexity
 
@@ -309,17 +309,16 @@ Contract 2; state and timing 1; reach 2; proof 2; cost of error 1; total 8. Fina
 4. A relation chunk refused as too large still fails at exit 4. The default size makes that rare.
 5. The libraries batch from B12a. B12a reuses `halves` and ADR 0051's rules, and its ticket names that.
 6. B6 measures the token rate on batched record text. If it shows 96,000 bytes too loose for the hosted backend, a new ADR changes the default.
-7. ADR 0040's marker, and the edits to `backends.md`, `records.md`, `result.md`, `settings.md`, `relate.md` and `recognize.md`, land after ticket 0147.
-8. The flag joins `choose`, `tag`, `score` and `annotate` with B8, B9 and B10.
+7. The flag joins `choose`, `tag`, `score` and `annotate` with B8, B9 and B10.
+8. B5 builds `meta.batch.split`, by ADR 0051 item 10.
+9. B7 builds `--context`, whose refusal of a context too large for one record now reaches every address at the request size. B7's refusal names `--max-request-bytes`.
 
 ## What the build taught us
 
 - The preflight corrected the old 20,000-byte example before code work and found reusable batch, relation and listener boundaries. It missed two CLI argument adapters and the private replay count consumed by annotation. Trace a setting through every command adapter and every completion consumer before sizing a related ticket.
 - A split can replay one half and send the other live. A single replayed boolean cannot describe the rows; the scheduler now carries one authoritative replayed-record count. Ticket B5 and the later facts builder can consume that count without inferring it from printed rows.
-- `Listener::requests()` drains observed requests. The first split test reused it twice and lost the final observation; the retained assertion uses `count()`. Policy found that adding the ceiling cases made an existing core test file exceed 500 nonblank lines, so its existing ceiling boundary moved into one small module. The measured per-group budget amendments above await the independent review and coordinator decision.
+- `Listener::requests()` drains observed requests. The first split test reused it twice and lost the final observation; the retained assertion uses `count()`. Policy found that adding the ceiling cases made an existing core test file exceed 500 nonblank lines, so its existing ceiling boundary moved into one small module. Independent review and the coordinator accepted the measured caps above.
 - `Engine::with_model` reconstructs a backend, but no CLI override reaches that public path. Ticket 0157 must preserve a nondefault request size there when it adds the public setter. B5 still owns the explicit `meta.batch.split` member. The related command checkpoint owns broader integration proof; this build ran focused checks and no live provider call.
-9. B5 builds `meta.batch.split`, by ADR 0051 item 10.
-10. B7 builds `--context`, whose refusal of a context too large for one record now reaches every address at the request size. B7's refusal names `--max-request-bytes`.
 
 ## What Ian can overturn
 
@@ -347,6 +346,6 @@ No issue. The build adds pointers to ADR 0051 in `sdlc/issues/2026-09-26-batchin
 
 - Starts from: The rulings of 2026-09-26: the coordinator's on the default everywhere and the halving, and Ian's on the setting. ADR 0048 items 2, 5, 6 and 9, and sections 2 and 4 of `sdlc/issues/2026-09-26-batching-design.md`, which argue for failing a refused batch and for never splitting one. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` section 7, where the hosted backend refused 2,448 and 8,000 questions with 400 `max_tokens_exceeded` and took 7,000 short ones, and section 9's 181 bytes a title. Ticket 0123's measurement of 0.516 input tokens a byte for relate's JSON, and experiment 268's 0.40 for record text. Section 14 of the evidence record, from local experiment 273, for the dense-text rates of 0.895 and 0.908 and the refused pair. The code at `origin/main` `6fbebfdf`: `core/backend.rs`, `core/batch.rs`, `core/recording.rs`, `engine/prepared_request.rs`, `engine/http.rs`, `engine/request.rs`, `cli/profile.rs`, `cli/edge.rs`, `cli/failure/status.rs`. Ticket 0146 at `6cdbe075`, and ticket 0148 at `d1afe98a` for the library settings table and its stop rule 3. A size scan of every committed recording file found none over 90,000 bytes.
 - Keeps: Every request at the built-in address with no size set. Every `--batch 1` request, row, stop line and exit code. A profile's refusals. The retry rule and ADR 0048 item 6 for every status but a too-large refusal. The recording format and the folder identity. The throttle's meaning. Ticket 0146's stop lines and replay-miss range.
-- Changes: The request size as a setting, `--max-request-bytes` then `THINKTHEN_MAX_REQUEST_BYTES` then 96,000, applied at every address. A profile's `max_request_bytes` lowers it and no longer raises it. A warning above 96,000 at the built-in address. One halving of a batch refused by 413 or 400 `max_tokens_exceeded`, with replay asking the halves. A 413 phrase and a new `max_tokens_exceeded` ending. A context refusal at every address. ADR 0051, markers in ADR 0048, and ten specification pages.
+- Changes: The request size as a setting, `--max-request-bytes` then `THINKTHEN_MAX_REQUEST_BYTES` then 96,000, applied at every address. A profile's `max_request_bytes` lowers it and no longer raises it. A warning above 96,000 at the built-in address. One halving of a batch refused by 413 or 400 `max_tokens_exceeded`, with replay asking the halves. A 413 phrase and a new `max_tokens_exceeded` ending. A context refusal at every address. ADR 0051, markers in ADR 0048 and ADR 0040, and nine specification pages.
 - Proof: Four new loopback and dry-run tests and three amended ones, each with its plants, under "Proof".
-- Defers: The setting on the libraries and SQL, billing of a refused request, the cached rerun's repeated refusal, relation chunk halving, library halving at B12a, B6's token rate, ADR 0040's marker after ticket 0147, the flag on the verbs that batch later, `meta.batch.split` in B5, and the context refusal's wider reach in B7.
+- Defers: The setting on the libraries and SQL, billing of a refused request, the cached rerun's repeated refusal, relation chunk halving, library halving at B12a, B6's token rate, the flag on the verbs that batch later, `meta.batch.split` in B5, and the context refusal's wider reach in B7.
