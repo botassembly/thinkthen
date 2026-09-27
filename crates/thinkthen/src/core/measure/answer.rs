@@ -220,11 +220,8 @@ pub(crate) fn read(
         let record = match found.and_then(record_id) {
             Some(record) => record,
             None if row.member("input").is_none()
-                && match verb_named(row) {
-                    Some("recognize" | "relate") => true,
-                    Some("find") => identity == Identity::Question,
-                    _ => false,
-                } =>
+                && (matches!(verb_named(row), Some("recognize" | "relate"))
+                    || identity == Identity::Question && verb_named(row) == Some("find")) =>
             {
                 line.to_string()
             }
@@ -427,10 +424,11 @@ impl Answer {
             return Err(MeasureError::NeedsProbabilities);
         }
         match self.verb {
-            Verb::Recognize | Verb::Relate => self
-                .items
-                .as_ref()
-                .map_or(Ok(Said::Unresolved), |items| items.kept(rule).map(Said::Items)),
+            Verb::Recognize | Verb::Relate => {
+                self.items.as_ref().map_or(Ok(Said::Unresolved), |items| {
+                    items.kept(rule).map(Said::Items)
+                })
+            }
             Verb::Decide | Verb::Tag | Verb::Rank => Ok(match rule {
                 Rule::Threshold(threshold) => match self.probability.map(|p| threshold.judge(p)) {
                     Some(Judged::Yes) => Said::Yes,

@@ -25,18 +25,14 @@ pub(crate) enum What {
     Edge(String, [(String, String); 2]),
 }
 
-/// One said item.
+/// One said item: what it is, its strength or probability, whether its relation has no
+/// direction, its zero-based place in the line's output, and its object as printed.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Item {
-    /// What it is.
     pub(crate) what: What,
-    /// Its strength or probability.
     score: f64,
-    /// True when its relation has no direction.
     loose: bool,
-    /// Its zero-based place in the line's output.
     pub(crate) place: usize,
-    /// Its object as the command printed it.
     pub(crate) printed: Json,
 }
 
@@ -68,7 +64,7 @@ impl Items {
 }
 
 /// A JSON number as a float, or nothing.
-fn number(value: Option<&Json>) -> Option<f64> {
+pub(crate) fn number(value: Option<&Json>) -> Option<f64> {
     match value? {
         Json::Number(number) => number.as_f64(),
         _ => None,
@@ -216,33 +212,36 @@ pub(crate) fn tally(
     rule: Rule,
 ) -> Result<[usize; 3], MeasureError> {
     let kept = items.kept(rule)?;
-    let hit = pair(kept, key, |item, want| matches(item, want, matching))
-        .iter()
-        .flatten()
-        .count();
+    let wanted: Vec<&What> = key.iter().collect();
+    let hit = pair(kept, &wanted, |item, want| matches(item, want, matching))
+        .0
+        .len();
     Ok([hit, kept.len() - hit, key.len() - hit])
 }
 
-/// One match each: the said items are taken in order, strongest first, and each
-/// takes the first open wanted item, in order, that fits it. Gives each said item's match.
-pub(crate) fn pair<'a, T>(
+/// The matched pairs, the unmatched said items, and the unmatched wanted items.
+type Paired<'a, T> = (Vec<(&'a Item, T)>, Vec<&'a Item>, Vec<T>);
+
+/// One match each: the said items are taken in order, and each takes the first
+/// open wanted item, in order, that fits it.
+pub(crate) fn pair<'a, T: Copy>(
     said: impl IntoIterator<Item = &'a Item>,
     wanted: &[T],
-    fits: impl Fn(&Item, &T) -> bool,
-) -> Vec<Option<usize>> {
-    let mut open = vec![true; wanted.len()];
-    said.into_iter()
-        .map(|item| {
-            let found = wanted
-                .iter()
-                .zip(&open)
-                .position(|(want, open)| *open && fits(item, want));
-            if let Some(slot) = found.and_then(|place| open.get_mut(place)) {
-                *slot = false;
-            }
-            found
-        })
-        .collect()
+    fits: impl Fn(&Item, T) -> bool,
+) -> Paired<'a, T> {
+    let mut open: Vec<Option<T>> = wanted.iter().copied().map(Some).collect();
+    let (mut matched, mut unmatched) = (Vec::new(), Vec::new());
+    for item in said {
+        let found = open.iter_mut().find_map(|slot| {
+            slot.filter(|want| fits(item, *want))
+                .and_then(|_| slot.take())
+        });
+        match found {
+            Some(want) => matched.push((item, want)),
+            None => unmatched.push(item),
+        }
+    }
+    (matched, unmatched, open.into_iter().flatten().collect())
 }
 
 /// True when a said item matches a wanted name or edge under the rule.
@@ -257,7 +256,8 @@ pub(crate) fn matches(item: &Item, want: &What, matching: Matching) -> bool {
         }
         (What::Edge(relation, [source, target]), What::Edge(key_relation, [from, to])) => {
             relation == key_relation
-                && ((source, target) == (from, to) || (item.loose && (target, source) == (from, to)))
+                && ((source, target) == (from, to)
+                    || (item.loose && (target, source) == (from, to)))
         }
         _ => false,
     }

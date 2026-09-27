@@ -225,58 +225,31 @@ pub(crate) fn diff(
         let Some(y) = by_b.get(&(&x.name, x.id.as_str())) else {
             continue;
         };
-        let class = one_class(x.verb, y, &mut first)?;
-        if class.is_none() && matching.is_some() {
-            return Err(MeasureError::MatchNotSet);
-        }
+        // A diff holds one class of verb: `recognize`, `relate`, or the others, as the first pair.
+        let class = x.verb.set().then_some(x.verb);
+        match *first.get_or_insert(class) {
+            _ if x.verb != y.verb && (x.verb.set() || y.verb.set()) => {
+                Err(MeasureError::PairsVerbs(y.line))
+            }
+            held if held != class && held.is_some() && class.is_some() => {
+                Err(MeasureError::MixesSets(y.line))
+            }
+            held if held != class => Err(MeasureError::MixesVerbs(y.line)),
+            None if matching.is_some() => Err(MeasureError::MatchNotSet),
+            _ => Ok(()),
+        }?;
         tally.records += 1;
         tally.digests_differ += usize::from(matches!(
             (&x.digest, &y.digest),
             (Some(p), Some(q)) if p != q
         ));
-        if class.is_some() {
-            let sides = [x.said(a.rule)?, y.said(b.rule)?];
-            let rule = matching.unwrap_or_default();
-            changes.extend(items(x, y, sides, key, rule, &mut tally)?.map(Row::Items));
-            continue;
-        }
-        let (from, to) = (x.said(a.rule)?, y.said(b.rule)?);
-        let want = match key {
-            Some(key) => key.want(x)?,
-            None => None,
-        };
-        let outcomes = want
-            .as_ref()
-            .map(|want| (outcome(&from, want), outcome(&to, want)));
-        if let Some((oa, ob)) = outcomes {
-            tally.labeled += 1;
-            tally.right[0] += usize::from(oa == Outcome::Right);
-            tally.right[1] += usize::from(ob == Outcome::Right);
-            match discordant(oa, ob) {
-                Some(Discordant::OtherToRight) => tally.discordant[0] += 1,
-                Some(Discordant::RightToOther) => tally.discordant[1] += 1,
-                None => {}
+        let sides = [x.said(a.rule)?, y.said(b.rule)?];
+        changes.extend(match class {
+            Some(_) => {
+                items(x, y, sides, key, matching.unwrap_or_default(), &mut tally)?.map(Row::Items)
             }
-        }
-        if from == to {
-            continue;
-        }
-        let (from, to) = (from.text().to_owned(), to.text().to_owned());
-        *tally.moves.entry((from.clone(), to.clone())).or_default() += 1;
-        tally.yes[0] += usize::from(from == "yes" && to == "no");
-        tally.yes[1] += usize::from(from == "no" && to == "yes");
-        let effect = outcomes.map(|(oa, ob)| effect(oa, ob));
-        tally.effects[0] += usize::from(effect == Some(Effect::Gained));
-        tally.effects[1] += usize::from(effect == Some(Effect::Lost));
-        changes.push(Row::Answer(Change {
-            id: x.id.clone(),
-            name: x.name.clone(),
-            from,
-            to,
-            probability: [x.confidence(), y.confidence()],
-            key: want.as_ref().map(|want| want.text().to_owned()),
-            effect,
-        }));
+            None => answer(x, y, sides, key, &mut tally)?.map(Row::Answer),
+        });
     }
     let only = |one: &BTreeMap<Pair<'_>, _>, other: &BTreeMap<Pair<'_>, _>| {
         one.keys().filter(|pair| !other.contains_key(*pair)).count()
@@ -330,23 +303,54 @@ pub(crate) fn diff(
     Ok((changes, summary))
 }
 
-/// The verb class of a pair: `recognize`, `relate`, or `None` for every other verb.
-/// The first pair's class holds for the whole diff.
+/// One `decide` or `choose` pair against the key. Gives its row when the answer moved.
 ///
 /// # Errors
 ///
-/// Returns the pairing row for a set verb beside another verb in one pair, and
-/// the mix rows for a class unlike the first pair's, each at B's line.
-fn one_class(verb: Verb, y: &Answer, first: &mut Option<Option<Verb>>) -> Result<Option<Verb>, MeasureError> {
-    if verb != y.verb && (verb.set() || y.verb.set()) {
-        return Err(MeasureError::PairsVerbs(y.line));
+/// Returns [`MeasureError`] for a key value the answer cannot take.
+fn answer(
+    x: &Answer,
+    y: &Answer,
+    [from, to]: [Said<'_>; 2],
+    key: Option<&Key>,
+    tally: &mut Tally,
+) -> Result<Option<Change>, MeasureError> {
+    let want = match key {
+        Some(key) => key.want(x)?,
+        None => None,
+    };
+    let outcomes = want
+        .as_ref()
+        .map(|want| (outcome(&from, want), outcome(&to, want)));
+    if let Some((oa, ob)) = outcomes {
+        tally.labeled += 1;
+        tally.right[0] += usize::from(oa == Outcome::Right);
+        tally.right[1] += usize::from(ob == Outcome::Right);
+        match discordant(oa, ob) {
+            Some(Discordant::OtherToRight) => tally.discordant[0] += 1,
+            Some(Discordant::RightToOther) => tally.discordant[1] += 1,
+            None => {}
+        }
     }
-    let class = verb.set().then_some(verb);
-    match *first.get_or_insert(class) {
-        held if held == class => Ok(class),
-        Some(_) if class.is_some() => Err(MeasureError::MixesSets(y.line)),
-        _ => Err(MeasureError::MixesVerbs(y.line)),
+    if from == to {
+        return Ok(None);
     }
+    let (from, to) = (from.text().to_owned(), to.text().to_owned());
+    *tally.moves.entry((from.clone(), to.clone())).or_default() += 1;
+    tally.yes[0] += usize::from(from == "yes" && to == "no");
+    tally.yes[1] += usize::from(from == "no" && to == "yes");
+    let effect = outcomes.map(|(oa, ob)| effect(oa, ob));
+    tally.effects[0] += usize::from(effect == Some(Effect::Gained));
+    tally.effects[1] += usize::from(effect == Some(Effect::Lost));
+    Ok(Some(Change {
+        id: x.id.clone(),
+        name: x.name.clone(),
+        from,
+        to,
+        probability: [x.confidence(), y.confidence()],
+        key: want.as_ref().map(|want| want.text().to_owned()),
+        effect,
+    }))
 }
 
 /// Pair one record's kept items side against side, and each side against its key value.
@@ -368,30 +372,11 @@ fn items(
         Said::Items(items) => items,
         _ => &[],
     });
-    let paired = pair(from, to, |a, b| matches(a, &b.what, matching));
-    let unpaired_a: Vec<&Item> = from
-        .iter()
-        .zip(&paired)
-        .filter_map(|(item, hit)| hit.is_none().then_some(item))
-        .collect();
-    let unpaired_b: Vec<&Item> = (0..to.len())
-        .filter(|place| !paired.contains(&Some(*place)))
-        .filter_map(|place| to.get(place))
-        .collect();
-    let kinds = pair(unpaired_a.iter().copied(), &unpaired_b, |a, b| {
-        kind_changed(a, b, matching)
-    });
-    let (mut lost, mut moved) = (Vec::new(), Vec::new());
-    for (a, hit) in unpaired_a.into_iter().zip(&kinds) {
-        match hit.and_then(|place| unpaired_b.get(place)) {
-            Some(b) => moved.push((a, *b)),
-            None => lost.push(a),
-        }
-    }
-    let gained = (0..unpaired_b.len())
-        .filter(|place| !kinds.contains(&Some(*place)))
-        .filter_map(|place| unpaired_b.get(place).copied());
-    let (lost, gained) = (printed(lost), printed(gained.collect()));
+    let to_all: Vec<&Item> = to.iter().collect();
+    let (_, unpaired_a, unpaired_b) = pair(from, &to_all, |a, b| matches(a, &b.what, matching));
+    let (mut moved, lost, gained) =
+        pair(unpaired_a, &unpaired_b, |a, b| kind_changed(a, b, matching));
+    let (lost, gained) = (printed(lost), printed(gained));
     moved.sort_by_key(|(a, _)| a.place);
     let changed_kind: Vec<KindChange> = moved
         .into_iter()
@@ -410,11 +395,11 @@ fn items(
     let key = match wants {
         [Some(Want::Items(want_a, _)), Some(Want::Items(want_b, _))] => {
             let (hit_a, hit_b) = (hits(from, &want_a, matching), hits(to, &want_b, matching));
-            let only = |one: &[bool], other: &[bool]| {
-                one.iter().zip(other).filter(|(p, q)| **p && !**q).count()
+            let only = |one: &[usize], other: &[usize]| {
+                one.iter().filter(|place| !other.contains(place)).count()
             };
             let (only_a, only_b) = (only(&hit_a, &hit_b), only(&hit_b, &hit_a));
-            let matched = [&hit_a, &hit_b].map(|hit| hit.iter().filter(|held| **held).count());
+            let matched = [hit_a.len(), hit_b.len()];
             let extra = [from.len() - matched[0], to.len() - matched[1]];
             tally.labeled += 1;
             tally.key_items += want_a.len();
@@ -439,18 +424,19 @@ fn items(
     }))
 }
 
-/// Which wanted items a side's kept items match, one match each.
-fn hits(kept: &[Item], wanted: &[What], matching: Matching) -> Vec<bool> {
-    let mut hit = vec![false; wanted.len()];
-    for place in pair(kept, wanted, |item, want| matches(item, want, matching))
+/// The places of the key items a side's kept items match, one match each.
+fn hits(kept: &[Item], wanted: &[What], matching: Matching) -> Vec<usize> {
+    let places: Vec<usize> = (0..wanted.len()).collect();
+    let fits = |item: &Item, place| {
+        wanted
+            .get(place)
+            .is_some_and(|want| matches(item, want, matching))
+    };
+    pair(kept, &places, fits)
+        .0
         .into_iter()
-        .flatten()
-    {
-        if let Some(slot) = hit.get_mut(place) {
-            *slot = true;
-        }
-    }
-    hit
+        .map(|(_, place)| place)
+        .collect()
 }
 
 /// Items as printed, in their line's output order.
@@ -472,3 +458,7 @@ fn sorted(counts: BTreeMap<(String, String), usize>) -> Vec<Move> {
     });
     moves
 }
+
+#[cfg(test)]
+#[path = "diff_tests.rs"]
+mod tests;
