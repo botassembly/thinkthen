@@ -69,7 +69,7 @@ The edge question, wording a, on local experiment 278's recorded names. Mean (mi
 
 The edge question fixed 6 or 7 names a run and broke none. It fixed `U.S.`, `U.N.`, `Washington, D.C.`, `Martin Luther King Jr.` and `Acme Widgets Inc.`. It did not fix `Help!` in the relation texts.
 
-A 1,018-word invented text with a 65-name hand key, q3 wording, requests of 40 pieces with six pieces each side:
+A 1,018-word invented text with a 65-name hand key, q3 wording, step-1 requests of 40 pieces with six pieces each side. Its step-2 and edge questions showed 30 pieces each side of the name, set in the experiment's long-text tool:
 
 | Arm | Kinds | Runs | F1 with edge | Tokens a word |
 | --- | --- | --- | --- | --- |
