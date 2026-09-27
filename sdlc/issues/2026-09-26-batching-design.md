@@ -196,7 +196,7 @@ The content hash is the SHA-256 of the record's evidence in compact JSON, the sa
 
 **Why 96,000 bytes.** The ceiling already exists in `specification/backends.md`. It holds under the token limit at relate's measured 0.516 tokens a byte. Dense text runs higher. A hex record measured 0.895 tokens a byte and an identifier list 0.908, and a batch of two dense records under the ceiling was refused (evidence section 14). ADR 0051's one halving rescues that case. It needs no tokenizer. Record text measured 0.40 tokens a byte in experiment 268. Ticket B6 measures the rate on batched record text again. A record whose batch of one already passes the ceiling goes alone as today's request.
 
-**Other addresses.** An address other than the built-in one has no byte ceiling, as `specification/backends.md` fixes. There a batch closes at a content cut, the size, a pause, the end of input, or a limit from `--profile FILE`. A backend that refuses a batch as too large fails it at exit 4. The caller then sets `max_request_bytes` in a profile, or `--batch 1`.
+**Other addresses.** ADR 0051 amends this rule. The request-size setting, 96,000 bytes by default, closes batches at every address. A profile can lower that size. A too-large refusal of a batch of at least two records halves once; a half that still fails exits 4. The caller can lower `--max-request-bytes` or use `--batch 1`.
 
 **Replies.** Ticket 0132's reply limit, 1 MiB plus 8 bytes per request byte, fits a batch. A reply runs about 105 bytes a question, and each quoted question adds more than that to the request.
 
@@ -220,7 +220,7 @@ thinkthen: stopped at record 41; the request for records 41 to 50 failed: the ba
 
 A reply that answers some questions and not others fails only the records with missing or bad answers. The run stops at the first such record, and the earlier records of that batch print. `annotate` keeps its exit 6 rule for a failed question beside good answers.
 
-A retried status (429, 500, 502, 503, 504 or 529) resends the whole batch as one request, as `specification/backends.md` fixes. Ticket 0089's premise holds here: a retried status means the backend answered, and it may have billed the first attempt. A batch can therefore be paid twice, as a single record can today. No batch is split and resent.
+A retried status (429, 500, 502, 503, 504 or 529) resends the whole batch as one request, as `specification/backends.md` fixes. Ticket 0089's premise holds here: a retried status means the backend answered, and it may have billed the first attempt. A batch can therefore be paid twice, as a single record can today. ADR 0051 amends this: a batch of at least two records refused as too large halves once. Other retried statuses still resend the whole batch.
 
 ### 5. Which functions batch
 

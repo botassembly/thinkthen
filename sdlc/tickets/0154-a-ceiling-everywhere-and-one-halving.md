@@ -267,7 +267,15 @@ Nonblank lines, measured with `grep -c .`. Net lines against main after tickets 
 - No dependency.
 - Run focused affected command and planner proof for this slice. The related batch checkpoint covers the wider surfaces rung under Ian's later verification ruling.
 
-The 2026-09-27 source checkpoint amends the estimates to the measured 236 source and 499 test lines, 735 total over main's 76,686. Each is within ten percent of its accepted cap. The added source carries the omitted CLI argument adapters and the private per-record replay count needed when halves have different cache outcomes. The tests reuse the existing listener, spawner, record parser and fixtures. The ceiling test moved into its own module to keep its original file under the policy size limit. `sdlc/records/0154-build.md` holds the measured rationale and focused results; no dependency was added.
+The 2026-09-27 source checkpoint measures 236 source and 499 test lines, 735 total over main's 76,686. These aggregates are within ten percent of the accepted 215, 465 and 680 estimates. The following individual caps need a measured amendment. The independent reviewer checks necessity and duplication before the coordinator approves it:
+
+| Group | Accepted cap | Measured and proposed cap | Why |
+| --- | ---: | ---: | --- |
+| `cli/edge.rs`, `cli/asking.rs`, `cli/relate.rs`, `cli/recognize.rs`, `cli/failure.rs` | 40 | 48 | Resolve the variable and flag, carry the size to five commands, and warn at the built-in address |
+| `cli/asking/batched.rs` | 70 | 101 | Reuse one send path for live halves and replay misses while keeping cancellation, stop ranges, attempt shares and mixed replay counts |
+| Existing and extracted core tests, relate and status tests, and batching module lines | 35 | 68 | Move the core ceiling boundary out of an over-limit test file (+28 net), cover changed relation planning (+33), exact status phrases (+5), and module registrations (+2) |
+
+The new ceiling and refusal test files measure +169 against 170 and +262 against 260. The accepted scope omitted `cli/args/relate.rs` (+8), `cli/judge.rs` (+2), `engine/facade.rs` (+4), `engine/schedule.rs` (-1), `engine/annotate_schedule.rs` (0), and removal of `core/backend_profile.rs`'s obsolete helper (-4). The private replay count is necessary when halves differ between live and stored answers. The tests reuse the existing listener, spawner, record parser and fixtures. The ceiling test moved into its own module to keep its original file under the policy size limit. `sdlc/records/0154-build.md` holds the full measured rationale and focused results; no dependency was added.
 
 ## Stop rules
 
@@ -303,6 +311,13 @@ Contract 2; state and timing 1; reach 2; proof 2; cost of error 1; total 8. Fina
 6. B6 measures the token rate on batched record text. If it shows 96,000 bytes too loose for the hosted backend, a new ADR changes the default.
 7. ADR 0040's marker, and the edits to `backends.md`, `records.md`, `result.md`, `settings.md`, `relate.md` and `recognize.md`, land after ticket 0147.
 8. The flag joins `choose`, `tag`, `score` and `annotate` with B8, B9 and B10.
+
+## What the build taught us
+
+- The preflight corrected the old 20,000-byte example before code work and found reusable batch, relation and listener boundaries. It missed two CLI argument adapters and the private replay count consumed by annotation. Trace a setting through every command adapter and every completion consumer before sizing a related ticket.
+- A split can replay one half and send the other live. A single replayed boolean cannot describe the rows; the scheduler now carries one authoritative replayed-record count. Ticket B5 and the later facts builder can consume that count without inferring it from printed rows.
+- `Listener::requests()` drains observed requests. The first split test reused it twice and lost the final observation; the retained assertion uses `count()`. Policy found that adding the ceiling cases made an existing core test file exceed 500 nonblank lines, so its existing ceiling boundary moved into one small module. The measured per-group budget amendments above await the independent review and coordinator decision.
+- `Engine::with_model` reconstructs a backend, but no CLI override reaches that public path. Ticket 0157 must preserve a nondefault request size there when it adds the public setter. B5 still owns the explicit `meta.batch.split` member. The related command checkpoint owns broader integration proof; this build ran focused checks and no live provider call.
 9. B5 builds `meta.batch.split`, by ADR 0051 item 10.
 10. B7 builds `--context`, whose refusal of a context too large for one record now reaches every address at the request size. B7's refusal names `--max-request-bytes`.
 
