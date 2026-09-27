@@ -155,7 +155,8 @@ def engine_cells(page, rows):
             source = (REPO / path).read_text(encoding="utf-8")
             cell = row[COLUMNS.index(surface)]
             for setter in setters:
-                code = (f"pub fn {setter}(" if surface == "Rust" else f"builder.{setter}(") in source
+                code = (f"pub fn {setter}(" in source if surface == "Rust" else
+                        re.search(rf"\bbuilder\s*\.\s*{re.escape(setter)}\s*\(", source) is not None)
                 page_has = not cell.startswith("not on this surface") and setter.split("_")[0] in cell
                 if code != page_has:
                     side = "source has no setter" if page_has else "source setter has no cell"
