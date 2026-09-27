@@ -400,7 +400,7 @@ impl Aggregate<WarmState, i64> for Warm {
     }
 }
 
-/// Register the fourteen names in twenty-one arities, none deterministic.
+/// Register the scalar functions for direct calls, without deterministic flags.
 pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
     let volatile = FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DIRECTONLY;
     for arity in [2, 3] {
