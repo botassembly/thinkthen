@@ -77,6 +77,27 @@ class TestInterruptSingle < Minitest::Test
     assert_operator elapsed, :<, 150
   end
 
+  def test_a_token_fired_as_the_reply_lands_cancels_the_call
+    TestBackend.with(<<~RUBY, arm: "arm/held") do |backend, child|
+      token = T::Cancel.new
+      Thread.new { hear; token.cancel; say "stopped" }
+      begin
+        say ["answer", T.decide("Is it urgent?", "text", cancel: token)]
+      rescue T::CancelledError => e
+        say [e.class.name, token.cancelled?]
+      end
+    RUBY
+      assert_equal 1, backend.wait(1)
+      child.tell
+      assert_equal "stopped", child.hear
+      backend.release
+      assert_equal ["ThinkThen::CancelledError", true], child.hear
+      assert_equal 1, backend.count
+      status, errors = child.finish
+      assert status.success?, errors
+    end
+  end
+
   # Thread#kill ends a thread held in a call, and the process goes on.
   def test_thread_kill_ends_a_held_call
     TestBackend.with(<<~RUBY, arm: "arm/held") do |backend, child|

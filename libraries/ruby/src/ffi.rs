@@ -171,6 +171,10 @@ fn cross(
             own.cancel();
             return Err(raised);
         }
+        if own.is_cancelled() || caller.is_some_and(CancelToken::is_cancelled) {
+            own.cancel();
+            return Ok(Err(Fault::cancelled()));
+        }
         match handoff.take() {
             Taken::Ready(answer) => return Ok(answer),
             Taken::Closed => {
@@ -180,10 +184,6 @@ fn cross(
                 )));
             }
             Taken::Waiting => {}
-        }
-        if own.is_cancelled() || caller.is_some_and(CancelToken::is_cancelled) {
-            own.cancel();
-            return Ok(Err(Fault::cancelled()));
         }
     }
 }
