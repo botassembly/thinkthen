@@ -6,7 +6,7 @@ opens: sdlc/planning/adr/0052-retries-back-off-at-the-provider.md sdlc/planning/
 
 # 0155: Retries back off at the provider and count apart
 
-Status: code candidate under focused validation on 2026-09-27; fresh code review is still owed. The coordinator accepted it on 2026-09-26 after a fresh read-only review. It carries ADR 0052. Tickets 0146 and 0148 have landed. The 2026-09-27 work plan adds review-register items 91, 92, 119 and the message half of 118 to this build.
+Status: complete after independent code review and the related runtime batch validation on 2026-09-27. The coordinator accepted it on 2026-09-26 after a fresh read-only review. It carries ADR 0052. Tickets 0146 and 0148 have landed. The 2026-09-27 work plan adds review-register items 91, 92, 119 and the message half of 118 to this build.
 
 ## Current-main reproduction and added scope
 
@@ -160,7 +160,7 @@ Excluded: an adaptive throttle, by Ian's ruling. The request total's check insid
 
 ## Routing
 
-Builder: Claude (Opus subagent) in the lane the coordinator names. Reviewer: a fresh read-only Claude session for the design and for the code. The change raises the ceiling, adds a status field and changes a default on every surface, so the code review names what it checked.
+Owner: Codex after Ian's queue handover. Builder: retained Sol Medium agent in the claimed lane. Reviewer: a fresh independent read-only Codex session. The change raises the ceiling, adds a status field and changes a default on every surface, so the code review names what it checked.
 
 ## Complexity
 
@@ -199,3 +199,11 @@ No issue. No issue was filed for these rulings, and this ticket and ADR 0052 rec
 - Changes: `--max-retries` and the engine default become 3. A process-wide backoff gate for each posting URL, closed by a retried status and waited on before every live attempt. A `retries` count in the engine counters, the usage file and `thinkthen status`. ADR 0052, and four specification pages.
 - Proof: Three new loopback and public-API tests, one amended unit test, and the existing tests that count the default's sends, each with its plants, under "Proof".
 - Defers: The SQL total checked at each send (0149). `retries()` on the libraries (ticket 0157). `retries` in the run facts (B5). A row share of retries. The HTTP-date header. ADR 0017's marker after 0148.
+
+## What the build taught us
+
+- The provider gate changes assumptions in existing public-control tests. The interrupt and deadline retry rows originally shared one address; the interrupted request correctly left that address closed, so the later call sent nothing. Separate counted listeners retain a real first send and retry wait for each row. The public backoff proof separately covers zero sends at an already-closed address.
+- An expired server floor could make Condvar polling use zero duration while a newer unheaded gate remained closed. The build filters expired floors and keeps a bounded deterministic regression instead of a contention campaign.
+- TLS handshake errors may reach ureq as HTTPS opening-phase `Io(InvalidData)`. A real local self-signed handshake supports the fixed safe diagnostic; the structured error cannot distinguish every synthetic non-TLS invalid-data cause. The review accepted and recorded that limitation.
+- Current file-size checks required moving the existing HTTP tests and usage count type before adding behavior. Preparation should identify these size constraints and address-scoped fixture assumptions before the next engine change.
+- SQL per-send budget enforcement remains in 0149, public retry accessors in 0157, and private TLS roots in the open register118 work. The build and code-review records hold focused evidence and integration results; no paid call or repeated load campaign ran.
