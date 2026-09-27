@@ -11,7 +11,7 @@ Two answer keys for `recognize`, and one `jq` filter. Ticket 0164 put them here,
 | `recordings/` | Ticket 0147's live runs, replayed by the blocks under "Replayed runs": `five`, `none`, `person`, `relations`, `long`, and `conformance` for the shared cases 41 to 50 |
 | `kinds.jq` | Keeps each key line, and keeps only the names and edges whose kinds a run asked for |
 
-Each line is an `audit` key line and a `recognize` input record at once. `value.entities` takes the command's own value shape, `name`, `kind`, `start` and `end`, in text order. Offsets count Unicode code points. A run reads the text with `--field /text`, and `audit` finds the record by `id`. `audit` ignores `text`, `category`, `note` and `types`. A line with no names has `"entities":[]`, which `audit` counts as labeled.
+Each line is an `audit` key line and a `recognize` input record at once. `value.entities` takes `audit`'s key shape, `name`, `kind`, `start` and `end`, in text order. `audit` reads only the offsets and the kind. Offsets count Unicode code points. A run reads the text with `--field /text`, and `audit` finds the record by `id`. `audit` ignores `text`, `category`, `note` and `types`. A line with no names has `"entities":[]`, which `audit` counts as labeled.
 
 `relations.jsonl` adds `relations`, the stated edges, in `relate`'s edge shape. `optional_relations`, on c10, c11 and c12, holds the edges local experiment 265 neither credited nor penalised. `unstated`, on c01, c02, c05, c06 and c14, holds one edge each that is true in the world and that its sentence does not state. `alt_kinds` on c17 says `Indica Gallery` may be a `place`.
 
