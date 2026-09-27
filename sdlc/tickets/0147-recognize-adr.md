@@ -148,6 +148,7 @@ The owner's calls. Ian can overturn each.
 7. **Overlap after an edge pick stays.** A widened name may overlap a neighbour by one mark, as `Help!` over a stray `!` name did in local experiment 283. Resolving it would be a rule.
 8. **Plan schema version 2.** The key set changes, so `thinkthen.recognize-plan/1` becomes `/2`.
 9. **Edge labels show white space as one space.** A name that spans a line break or a tab would put a control character in its label, and labels refuse control characters. The coordinator ruled on 2026-09-27 that each label shows every white-space run as one space. The description keeps the real snippet. A step-2 label error is a defect, never a kinds error.
+10. **`relate` reads what `recognize` found.** The rename from `name` to `text` broke the handoff from `recognize` to `relate`. The coordinator ruled on 2026-09-27 that `relate` takes an entity carrying `text` in place of `name` and uses `text` as the name. `name` wins when both are present. The command applies this only at the default `/name` field. Python, Ruby, TypeScript, R and C read a found name the same way. One test on each surface feeds `recognize` output into `relate`.
 
 ## Choices filled from experiments
 
@@ -358,7 +359,7 @@ Contract 3; state and timing 1; reach 3; proof 2; cost of error 2; total 11. The
 ## What Ian can overturn
 
 - ADR 0056 as a whole, and each owner call it lists.
-- Decisions 1 to 9, and the coordinator's call of 2026-09-27 behind decision 9.
+- Decisions 1 to 10, and the coordinator's calls of 2026-09-27 behind decisions 9 and 10.
 - The choices filled from local experiments 284, 286, 287 and 288.
 - The bars of tests 1 to 5, and the coordinator's call of 2026-09-27 that set test 4's bar at 19 of 27 stated edges.
 - The four kinds items carried from the earlier version: `ENTITY`, bare rules and `ANY`, declining through `none of these`, and pairs only where a rule allows.

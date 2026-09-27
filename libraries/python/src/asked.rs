@@ -280,7 +280,7 @@ impl Entity {
 #[derive(Clone, Debug)]
 pub(crate) struct RecognizedEntity {
     #[pyo3(get)]
-    text: String,
+    pub(crate) text: String,
     #[pyo3(get)]
     start: usize,
     #[pyo3(get)]
@@ -288,7 +288,7 @@ pub(crate) struct RecognizedEntity {
     #[pyo3(get)]
     length: usize,
     #[pyo3(get)]
-    kind: String,
+    pub(crate) kind: String,
     #[pyo3(get)]
     strength: f64,
 }

@@ -125,11 +125,13 @@ pub(crate) fn entities(records: &[&str]) -> Result<Vec<Entity>, Failure> {
 }
 
 /// One relate record: a JSON object with a string `name` and `kind`, read
-/// at the default `/name` and `/kind` as the command reads JSONL.
+/// at the default `/name` and `/kind` as the command reads JSONL. A name
+/// `recognize` found carries `text` in place of `name`, and is read by it.
 fn entity(record: &str) -> Result<Entity, Failure> {
     let value: Value =
         serde_json::from_str(record).map_err(|_| Failure::usage("a relate record is not JSON"))?;
-    match (value.get("name"), value.get("kind")) {
+    let name = value.get("name").or_else(|| value.get("text"));
+    match (name, value.get("kind")) {
         (Some(Value::String(name)), Some(Value::String(kind))) => Ok(Entity::new(name, kind)?),
         _ => Err(Failure::usage(
             "a relate record is a JSON object with a string name and a string kind",

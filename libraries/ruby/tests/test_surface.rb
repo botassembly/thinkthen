@@ -139,6 +139,20 @@ class TestSurface < Minitest::Test
     assert_equal [["works_for", ["Ana", "person"], ["Acme", "organization"], 0.9]], lines[2]
   end
 
+  # ADR 0056: a found name carries text in place of name, and relate reads it
+  # as the name. name wins when a Hash holds both.
+  def test_relate_reads_what_recognize_found
+    lines, = run_child(<<~RUBY)
+      rules = { knows: %w[person person] }
+      found = T.recognize("Maria Chen arrived.", kinds: %w[person]).entities
+      forms = [found, found.map { |one| { text: one.text, kind: one.kind } },
+               found.map { |one| { "name" => one.text, "text" => "not this", "kind" => one.kind } },
+               [["Maria Chen", "person"], ["arrived.", "person"]]]
+      say(forms.map { |form| T.relate(form, relations: rules).map { |edge| [edge.source.to_a, edge.target.to_a] } }.uniq)
+    RUBY
+    assert_equal [[[["Maria Chen", "person"], ["arrived.", "person"]], [["arrived.", "person"], ["Maria Chen", "person"]]]], lines[0]
+  end
+
   def test_a_built_question_carries_its_members_once
     lines, count = run_child(<<~RUBY)
       question = T.question(choose: "Which team?", options: %w[billing shipping])

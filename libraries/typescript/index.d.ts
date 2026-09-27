@@ -178,8 +178,11 @@ export interface RecognizeOptions extends CallOptions {
   relationThreshold?: number;
 }
 
-/** An entity `relate` reads. */
-export type Entity = { name: string; kind: string } | readonly [name: string, kind: string];
+/** An entity `relate` reads. A name `recognize` found is read by its `text`. */
+export type Entity =
+  | { name: string; kind: string }
+  | { text: string; kind: string }
+  | readonly [name: string, kind: string];
 
 export interface Edge {
   relation: string;

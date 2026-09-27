@@ -213,8 +213,9 @@ function relateSpec(inputs) {
   return JSON.stringify(spec);
 }
 
+// A name recognize found carries text in place of name; name wins when both are there.
 function entityPair(held, at) {
-  const [name, kind] = Array.isArray(held) ? held : [held?.name, held?.kind];
+  const [name, kind] = Array.isArray(held) ? held : [held?.name ?? held?.text, held?.kind];
   if (typeof name !== 'string' || typeof kind !== 'string') throw usageError(`entity ${at} is { name, kind } or [name, kind]`);
   return [checkText(name, `entity ${at}`), checkText(kind, `entity ${at}`)];
 }

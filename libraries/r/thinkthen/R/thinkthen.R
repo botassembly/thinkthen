@@ -322,19 +322,21 @@ tt_recognize <- function(evidence, kinds = NULL,
 }
 
 # relate: the edges among entities given as a data frame with name and kind
-# columns. The first two columns
-# are the endpoints, so igraph::graph_from_data_frame reads it unchanged.
+# columns, such as tidyr::unnest() of tt_recognize. A frame with text and no
+# name column is named by its text. The first two columns are the endpoints,
+# so igraph::graph_from_data_frame reads it unchanged.
 tt_relate <- function(entities, relations = NULL, either = NULL, threshold = NULL,
                       deadline = NULL) {
   path <- .tt_path(relations)
   if (is.null(path) && !length(relations) && !length(either)) {
     .tt_usage("relate needs at least one relation rule")
   }
-  if (!is.data.frame(entities) || !all(c("name", "kind") %in% names(entities))) {
-    .tt_usage("relate takes a data frame with name and kind columns")
+  if (!is.data.frame(entities) || !"kind" %in% names(entities) ||
+      !any(c("name", "text") %in% names(entities))) {
+    .tt_usage("relate takes a data frame with name (or text) and kind columns")
   }
   spec <- path %||% .tt_spec("relate", list(relations = .tt_rules(relations, either)), threshold)
-  named <- as.character(entities$name)
+  named <- as.character(if ("name" %in% names(entities)) entities$name else entities$text)
   kinds <- as.character(entities$kind)
   if (anyNA(named) || anyNA(kinds)) .tt_usage("relate takes no NA name or kind")
   .tt_frame(.tt_call(tt_relate_frame(spec, !is.null(path), named, kinds, deadline)))

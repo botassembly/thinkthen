@@ -16,7 +16,7 @@ Path = Union[str, os.PathLike[str]]
 Deadline = Optional[float]
 Spec = Union[Path, Mapping[str, Any]]
 Asked = Union[str, "Question"]
-Pair = Union[tuple[str, str], Mapping[str, str], "Entity"]
+Pair = Union[tuple[str, str], Mapping[str, Any], "Entity", "RecognizedEntity"]
 # A Polars or pandas Series or another Arrow column, and a Polars or pandas
 # DataFrame. A pandas Series comes back as the caller's Series, with its index
 # and name. This package imports neither library, so the stub names none.

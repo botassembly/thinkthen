@@ -25,7 +25,7 @@ The alternative form takes exactly one `@FILE`. The closed version-one file is:
 
 ## Entities
 
-Without a framing flag, input is one JSON array. Under `--jsonl`, `--csv`, or `--tsv`, every record is one entity in the same complete set. The name and kind pointers resolve independently against each original object. Each selected value must be a nonblank string. CSV and TSV headers form the addressed object.
+Without a framing flag, input is one JSON array. Under `--jsonl`, `--csv`, or `--tsv`, every record is one entity in the same complete set. The name and kind pointers resolve independently against each original object. Each selected value must be a nonblank string. A name `recognize` found carries `text` in place of `name`. So when the name pointer is the default `/name` and an object has no `name`, its `text` is the name. An object with both reads `name`. Each library's `relate` reads a found name, or a record with `text` and no `name`, the same way. CSV and TSV headers form the addressed object.
 
 `--lines` uses each complete nonempty line as a name and assigns kind `*`. It takes neither pointer and accepts only bare or `*:*` rules.
 

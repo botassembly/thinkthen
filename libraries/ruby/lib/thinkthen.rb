@@ -204,7 +204,8 @@ module ThinkThen
     end
 
     # Say how named entities relate. An entity is a [name, kind] pair, a
-    # Hash with name and kind, or an Entity.
+    # Hash with name and kind, an Entity, or a RecognizedEntity. A found name,
+    # or a Hash with text and no name, is named by its text.
     #
     #   edges = ThinkThen.relate([["Ana", "person"], ["Acme", "organization"]],
     #                            relations: { works_for: %w[person organization] })
@@ -410,13 +411,18 @@ module ThinkThen
     def pair_of(entity, place)
       name, kind = case entity
                    when Entity then [entity.name, entity.kind]
-                   when Hash then [entity[:name] || entity["name"], entity[:kind] || entity["kind"]]
+                   when RecognizedEntity then [entity.text, entity.kind]
+                   when Hash then [first_of(entity, :name) || first_of(entity, :text), first_of(entity, :kind)]
                    when Array then entity
                    else refuse("entity #{place} is a [name, kind] pair, a Hash, or an Entity")
                    end
       refuse("entity #{place} needs a name and a kind as text") unless name.is_a?(String) && kind.is_a?(String)
 
       [text_of(name, "entity #{place}"), text_of(kind, "entity #{place}")]
+    end
+
+    def first_of(hash, key)
+      hash.key?(key) ? hash[key] : hash[key.to_s]
     end
 
     def entity(held)

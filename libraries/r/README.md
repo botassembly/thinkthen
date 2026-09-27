@@ -12,7 +12,7 @@ tickets |>
 
 - `tt_choose`, `tt_score`, and `tt_tag` over a column send one annotate call, so their requests run in parallel.
 - `tt_recognize` returns one data frame per text, with the columns `text`, `start`, `end`, `length`, `kind`, and `strength`. The `start` and `end` columns count characters from one, so `substr(text, start, end)` gives the name, and `length` counts its characters. With no kinds, every name has the kind `ENTITY`. Relations ride in the `relations` attribute.
-- `tt_relate` takes a data frame with `name` and `kind` columns. It returns edges whose first two columns `igraph::graph_from_data_frame` reads.
+- `tt_relate` takes a data frame with `name` and `kind` columns, such as `tidyr::unnest()` of `tt_recognize`. A frame with `text` and no `name` column is named by its `text`. It returns edges whose first two columns `igraph::graph_from_data_frame` reads.
 - `tt_engine()` sets the base URL, model, throttle, request cap, and cache once per R session, over the environment's own settings. The key comes only from `THINKTHEN_API_KEY`.
 - The throttle caps the requests in flight in one loaded copy of the engine. A process that loads two copies, such as this package and a database extension, can run up to twice the throttle (ADR 0047 item 5).
 - Ctrl-C stops a call at the next 100 ms tick and raises R's own `interrupt` condition (ADR 0042). Requests already sent finish on the backend.

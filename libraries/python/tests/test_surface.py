@@ -137,6 +137,26 @@ def test_relate_reads_pairs_dicts_and_entities_alike(backend, tmp_path):
     ]
 
 
+def test_relate_reads_what_recognize_found(backend, tmp_path):
+    """ADR 0056: a found name carries ``text`` in place of ``name``, and
+    relate reads it as the name. ``name`` wins when a dict holds both."""
+    printed = run("""
+        import thinkthen as tt
+        rules = {"knows": ("person", "person")}
+        found = tt.recognize("Maria Chen arrived.", kinds=["person"]).entities
+        forms = [found,
+                 [{"text": one.text, "kind": one.kind} for one in found],
+                 [{"name": one.text, "text": "not this", "kind": one.kind} for one in found],
+                 [("Maria Chen", "person"), ("arrived.", "person")]]
+        print(len({repr(tt.relate(form, relations=rules)) for form in forms}))
+        print([(e.source.name, e.target.name) for e in tt.relate(found, relations=rules)])
+    """, child_env(backend, tmp_path))
+    assert printed.splitlines() == [
+        "1",
+        "[('Maria Chen', 'arrived.'), ('arrived.', 'Maria Chen')]",
+    ]
+
+
 def test_a_forked_child_answers_and_the_parent_counts_nothing(backend, tmp_path):
     """0096 and Q15: the warm process engine answers in a forked child, and
     the child's calls do not move the parent's counters."""

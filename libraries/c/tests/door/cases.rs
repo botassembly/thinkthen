@@ -595,3 +595,36 @@ fn same(what: &str, actual: &Value, expected: &Value) -> Checked {
         Err(format!("{what}: got {actual}, expected {expected}"))
     }
 }
+
+/// ADR 0056: a name `recognize` found carries `text` in place of `name`, and
+/// relate reads it as the name. `name` wins when a record holds both.
+#[test]
+fn relate_reads_what_recognize_found() {
+    let driver = compile(&crate_dir().join("tests/c/driver.c"));
+    let backend = Backend::start().expect("the conformance backend");
+    let base = format!("{}/generic/v1", backend.origin());
+    let recognize = r#"{"version":1,"recognize":{"kinds":{"person":null}}}"#;
+    let relate = r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person"}]}}"#;
+    let mut script = Script::default();
+    script.ask("recognize", &[&base, recognize, "Maria Chen arrived."]);
+    let found = replies(&run(&driver, &base, &script.0).stdout).expect("a reply");
+    let found = parsed(&found[0]).expect("names");
+    let records: Vec<String> = found["entities"]
+        .as_array()
+        .expect("entities")
+        .iter()
+        .map(ToString::to_string)
+        .collect();
+    let named = [
+        r#"{"name":"Maria Chen","text":"not this","kind":"person"}"#,
+        r#"{"name":"arrived.","kind":"person"}"#,
+    ];
+    let mut script = Script::default();
+    for each in [records.iter().map(String::as_str).collect(), named.to_vec()] {
+        script.ask("relate", &[vec![base.as_str(), relate], each].concat());
+    }
+    let got = replies(&run(&driver, &base, &script.0).stdout).expect("replies");
+    let (by_text, by_name) = (parsed(&got[0]).expect("edges"), parsed(&got[1]).expect("edges"));
+    assert_eq!(by_text, by_name);
+    assert_eq!(by_text["edges"].as_array().map(Vec::len), Some(2));
+}

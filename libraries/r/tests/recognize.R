@@ -45,6 +45,11 @@ check("a repeated name and kind is one entity", identical(nrow(edges), 6L) &&
       identical(names(edges), c("source", "target", "relation", "probability", "source_kind", "target_kind")))
 check("each edge carries names and kinds", identical(edges[1, "source"], "a1") && identical(edges[1, "target_kind"], "x"))
 check("igraph reads the edge frame", identical(igraph::ecount(igraph::graph_from_data_frame(edges)), 6))
+unnested <- unnest(data.frame(body = sentence, names = I(found[1])), names)
+check("relate reads tidyr::unnest of tt_recognize by its text, and name wins over text",
+      identical(tt_relate(unnested, "knows"), tt_relate(data.frame(name = found[[1]]$text, kind = found[[1]]$kind), "knows")) &&
+      identical(tt_relate(data.frame(name = found[[1]]$text, text = "not this", kind = found[[1]]$kind), "knows")$source,
+                found[[1]]$text))
 check("relate refuses NA names", identical(kind_of(tt_relate(data.frame(name = c("a", NA), kind = "x"), "r")), "usage"))
 
 # The 255 cap counts unique pairs: 256 names refuse before a send, and 300
@@ -60,4 +65,4 @@ sent <- sent_by(late <- child(c('r <- tryCatch(tt_recognize(c("d1", "d2", "d3"),
                                 'cat(class(r)[[1]], "\\n")'), env = paste0("THINKTHEN_BASE_URL=", arm("arm/delay/600/v1")))$text)
 check("recognize shares one deadline across its texts", identical(late, "thinkthen_deadline ") && sent <= 2L)
 cat("recognize under the deadline sent", sent, "\n")
-finish("recognize", 13L)
+finish("recognize", 14L)

@@ -14,8 +14,8 @@ mod categories;
 mod pieces;
 mod questions;
 
-pub(crate) use bilou::{SpanOdds, TAGS, TagRow, decode};
 use bilou::best_of;
+pub(crate) use bilou::{SpanOdds, TAGS, TagRow, decode};
 pub(crate) use pieces::{Piece, pieces};
 pub(crate) use questions::{
     NONE_OF_THESE, edge_options, edge_question, evidence, kind_question, name_groups,

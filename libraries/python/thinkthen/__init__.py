@@ -369,8 +369,10 @@ class Engine:
         """Say how the entities relate: a list of ``Edge``.
 
         ``entities`` holds ``(name, kind)`` pairs, dicts with ``name`` and
-        ``kind``, or ``Entity`` values. ``relations`` and ``either`` read as
-        for ``recognize``.
+        ``kind``, ``Entity`` values, or what ``recognize`` found. A
+        ``RecognizedEntity``, or a dict with ``text`` and no ``name``, is
+        named by its ``text``. ``relations`` and ``either`` read as for
+        ``recognize``.
         """
         if ask is not None:
             spec = _spec(_thinkthen._Relate, ask)
