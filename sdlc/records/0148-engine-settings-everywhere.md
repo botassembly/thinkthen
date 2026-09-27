@@ -13,3 +13,5 @@ Status: design amendment drafted on 2026-09-27 at ticket branch `7089d431`, merg
 ## Proof and handoff
 
 Read-only code and specification checks above confirm the issue. No loopback run was needed before the builder creates `replay`, and no paid call is authorized. `git diff --check` passed and `sdlc/scripts/tickets` reported zero evidence failures. The fresh reviewer should inspect the exact new `opens` entries, the old-folder rule, the copied-fixture regression, the error wording, and the 185-line edge-test budget. A builder then follows the accepted ticket and the amendment. Ian can overturn the library wording or added test budget.
+
+The fresh amendment review found that a loopback count could not observe the unchanged demo 27 fixture’s saved remote address. The corrected proof keeps that fixture unchanged, checks a no-key replay hit and an exact local legacy-folder miss, and verifies marker and entry state. The existing shared settings case owns the counted loopback no-send proof. A fresh bounded rereview follows this correction.
