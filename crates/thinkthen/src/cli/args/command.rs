@@ -253,12 +253,13 @@ pub(crate) enum Command {
 
     /// Show which saved answers changed between two runs or two cuts.
     ///
-    /// A and B hold the lines `decide` or `choose` printed for the same
-    /// records. Without B, diff compares A under --threshold with A under
-    /// --compare-threshold. Two cuts on one run cost nothing. The probabilities
-    /// are already saved. Each changed answer prints on one line, and a summary
-    /// with its McNemar test prints last. With --key, each change says whether
-    /// it gained or lost a right answer. An answer inside a band is not sure.
+    /// A and B hold the lines `decide`, `choose`, `recognize`, or `relate` printed for the same
+    /// records. Without B, diff compares A under --threshold with A under --compare-threshold.
+    /// Two cuts on one run cost nothing. The probabilities are already saved. Each change prints
+    /// one JSON line, or under --table one line and a line per changed item. A summary with its
+    /// McNemar test prints last. With --key, a changed answer says whether it gained or lost a right
+    /// answer, and a changed record counts the key names or edges each side matched. An answer
+    /// inside a band is not sure.
     ///
     /// diff pairs answers by record id and answer name only. It compares
     /// question digests only when both runs saved --details.
@@ -295,7 +296,8 @@ pub(crate) struct PruneArguments {
     pub(crate) older_than: Option<String>,
     /// Remove entries whose reply names another model. Give the version that
     /// answered, as a result's meta.model shows it, not the alias passed to
-    /// --model. A name no reply carries removes every entry.
+    /// --model. A name no reply in the folder carries is refused, and nothing
+    /// is removed.
     #[arg(long, value_name = "MODEL")]
     pub(crate) answered_by_other_than: Option<String>,
 }
@@ -373,7 +375,7 @@ pub(crate) struct CheckArguments {
     /// The model named in each request, resolved as every command resolves it.
     #[arg(long, value_name = "NAME")]
     pub(crate) model: Option<String>,
-    /// Positive seconds that bound one attempt from connect to last byte, and each retry wait.
+    /// Seconds from 1 to 86400 that bound one attempt from connect to last byte, and each retry wait.
     #[arg(long, value_name = "SECONDS", default_value_t = 30)]
     pub(crate) timeout: u64,
     /// Print the four request bodies and stop. No key is read and nothing is sent.

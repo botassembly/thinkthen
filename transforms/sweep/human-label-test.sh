@@ -2,8 +2,8 @@
 set -eu
 cd -- "$(dirname -- "$0")"
 
-work=$(mktemp -d)
-trap 'rm -rf -- "$work"' EXIT
+. ../../sdlc/scripts/scratch.sh
+scratch_dir work
 : > "$work/empty.jsonl"
 
 jq -n -c '

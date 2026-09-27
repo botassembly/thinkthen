@@ -87,6 +87,19 @@ class TestSurface < Minitest::Test
     assert_equal 0, count
   end
 
+  # find's none is true or false, refused before any request.
+  def test_find_refuses_a_none_that_is_not_true_or_false
+    lines, count = run_child(<<~RUBY)
+      begin
+        T.find("Which?", %w[a b], none: "yes")
+      rescue T::UsageError => e
+        say e.message
+      end
+    RUBY
+    assert_equal ["none is true or false"], lines
+    assert_equal 0, count
+  end
+
   # R3-16 and G11: a nil, invalid UTF-8, or NUL record refuses by its index
   # before any request.
   def test_a_record_with_no_honest_text_refuses_by_index
@@ -103,12 +116,13 @@ class TestSurface < Minitest::Test
   end
 
   # R2-25: a record that is not a String crosses as its JSON text. The
-  # generic arm names the whole text as one entity, so the text comes back.
+  # generic arm names the text's last piece, which ends at the JSON text's
+  # 17th character.
   def test_a_hash_record_crosses_as_its_json_text
     lines, = run_child(<<~RUBY)
-      say T.recognize({ note: "refund" }, kinds: %w[thing]).entities.map(&:name)
+      say T.recognize({ note: "refund" }, kinds: %w[thing]).entities.map { |one| [one.text, one.start, one.end] }
     RUBY
-    assert_equal [['{"note":"refund"}']], lines
+    assert_equal [[['"}', 15, 17]]], lines
   end
 
   def test_recognize_and_relate_return_entity_ends
@@ -120,9 +134,23 @@ class TestSurface < Minitest::Test
       edges = T.relate([["Ana", "person"], { name: "Acme", kind: "organization" }], relations: { works_for: %w[person organization] })
       say edges.map { |edge| [edge.relation, edge.source.to_a, edge.target.to_a, edge.probability] }
     RUBY
-    assert_equal [[["Ana Lima", "person", 0, 8, 0.9]], []], lines[0]
+    assert_equal [[["Ana Lima", 0, 8, 8, "person", 0.81]], []], lines[0]
     assert_nil lines[1]
-    assert_equal [["works_for", ["Ana", "person", nil, nil, nil], ["Acme", "organization", nil, nil, nil], 0.9]], lines[2]
+    assert_equal [["works_for", ["Ana", "person"], ["Acme", "organization"], 0.9]], lines[2]
+  end
+
+  # ADR 0056: a found name carries text in place of name, and relate reads it
+  # as the name. name wins when a Hash holds both.
+  def test_relate_reads_what_recognize_found
+    lines, = run_child(<<~RUBY)
+      rules = { knows: %w[person person] }
+      found = T.recognize("Maria Chen arrived.", kinds: %w[person]).entities
+      forms = [found, found.map { |one| { text: one.text, kind: one.kind } },
+               found.map { |one| { "name" => one.text, "text" => "not this", "kind" => one.kind } },
+               [["Maria Chen", "person"], ["arrived.", "person"]]]
+      say(forms.map { |form| T.relate(form, relations: rules).map { |edge| [edge.source.to_a, edge.target.to_a] } }.uniq)
+    RUBY
+    assert_equal [[[["Maria Chen", "person"], ["arrived.", "person"]], [["arrived.", "person"], ["Maria Chen", "person"]]]], lines[0]
   end
 
   def test_a_built_question_carries_its_members_once

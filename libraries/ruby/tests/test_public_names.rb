@@ -11,7 +11,7 @@ require_relative "../../../conformance/children/children"
 
 class TestPublicNames < Minitest::Test
   CONSTANTS = %i[BackendError Cancel CancelledError DeadlineError DefectError Edge Engine Entity Error Found
-                 LocalError Question QuestionSet Ranked Recognized Relation UsageError VERSION].freeze
+                 LocalError Question QuestionSet Ranked Recognized RecognizedEntity Relation UsageError VERSION].freeze
   VERBS = %i[annotate choose decide decide_many decide_many_with_probabilities details filter find rank
              recognize relate score score_with_level tag usage with_tick].freeze
 

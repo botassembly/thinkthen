@@ -52,8 +52,8 @@
       "expected": "[{'wants_refund': True, 'team': 'billing', 'urgency': 0.15}]"
     },
     "recognize": {
-      "python": "[(one.name, one.kind, one.start, one.end) for one in tt.recognize(\"Maria Chen joined Northwind Freight.\", kinds=[\"person\", \"organization\"]).entities]",
-      "expected": "[('Maria Chen joined Northwind Freight.', 'person', 0, 36)]"
+      "python": "[(one.text, one.kind, one.start, one.end) for one in tt.recognize(\"Maria Chen joined Northwind Freight.\", kinds=[\"person\", \"organization\"]).entities]",
+      "expected": "[('Maria Chen', 'person', 0, 10), ('joined Northwind', 'person', 11, 27), ('Freight.', 'person', 28, 36)]"
     },
     "relate": {
       "python": "[(one.relation, one.source.name, one.target.name, one.probability) for one in tt.relate([(\"Checkout returns 500.\", \"alert\"), (\"The payments database is full.\", \"alert\")], relations={\"caused_by\": (\"alert\", \"alert\")})]",

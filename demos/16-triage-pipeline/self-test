@@ -4,14 +4,15 @@ set -euo pipefail
 HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REAL_JQ=$(command -v jq)
 REAL_MV=$(command -v mv)
-work=$(mktemp -d)
+. "$HERE/../../sdlc/scripts/scratch.sh"
+scratch_dir work
 child=
 cleanup() {
 	if [[ -n $child ]] && kill -0 "$child" 2>/dev/null; then
 		kill "$child" 2>/dev/null || :
 		wait "$child" 2>/dev/null || :
 	fi
-	rm -rf -- "$work"
+	scratch_clean
 }
 trap cleanup EXIT HUP INT TERM
 mkdir "$work/bin" "$work/out-parent"

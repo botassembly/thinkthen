@@ -232,7 +232,11 @@ fn requests_go_out_while_another_process_holds_the_usage_lock() {
         ("XDG_CACHE_HOME", root.to_str().expect("cache root")),
     ];
     let arguments = ["decide", "asks for a refund", "--jsonl", "--field", "/body"];
-    let arguments = [&arguments[..], &["--jobs", "16", "--no-cache"]].concat();
+    let arguments = [
+        &arguments[..],
+        &["--jobs", "16", "--batch", "1", "--no-cache"],
+    ]
+    .concat();
     let mut child =
         start(&arguments, &environment, records.as_bytes()).expect("the command starts");
 

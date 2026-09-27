@@ -8,6 +8,7 @@ import Code from '../../../components/Code.astro';
 import { PAGES } from '../../../data/beatles.mjs';
 import { captioned, benchFile } from '../../../data/samples.mjs';
 import folders from '../../../../examples/beatles/folders.json';
+import slides from '../../../data/slides.json';
 
 export function getStaticPaths() {
   return PAGES.filter((p) => p.slug).map((page) => ({ params: { slug: page.slug }, props: { page } }));
@@ -27,10 +28,11 @@ const [first, ...rest] = page.title.split(' ');
   <div class="eyebrow">Beatles Bench · {page.group}</div>
   <h1>{page.command ? <><code>{first}</code> {rest.join(' ')}</> : page.title}</h1>
   <figure class="slide">
-    <img src={page.slide} alt={`The talk's slide: ${page.title}`} width="1600" height={page.slug === 'backends' ? 720 : 900} loading="eager" />
+    <img src={page.slide} alt={`The talk's slide: ${page.title}`} width="1600" height={slides.slides[page.slug]?.height || 900} loading="eager" />
     {page.credit && <figcaption>{page.credit}</figcaption>}
   </figure>
   {page.idea.map((para) => <p>{parts(para).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>)}
+  {page.source && <p>The numbers come from {[page.source].flat().map((s, i, all) => <Fragment>{i > 0 && (i === all.length - 1 ? ' and ' : ', ')}<a href={s.href}>{s.text}</a></Fragment>)}.</p>}
 
   {inputs.map((file) => <Code code={file.text} caption={`${file.name}, the question set`} />)}
   {runs.map((run, i) => (

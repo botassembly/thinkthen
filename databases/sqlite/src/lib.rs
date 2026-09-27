@@ -16,6 +16,7 @@ use rusqlite::ffi::{
 };
 use thinkthen::ErrorKind;
 
+mod budget;
 #[allow(
     unsafe_code,
     reason = "the SQLite entry point, API table, and virtual-table glue (ADR 0047 item 3)"
@@ -56,6 +57,20 @@ impl Failure {
     /// A fault inside this binding.
     pub(crate) fn defect(message: impl Into<String>) -> Self {
         Self::of(ErrorKind::Defect, message)
+    }
+
+    pub(crate) fn value(&self) -> Option<serde_json::Value> {
+        let message = match self.kind {
+            ErrorKind::Usage => {
+                "check the row's question and arguments, or raise the process request total when it is spent"
+            }
+            ErrorKind::Local => "check the named file and its permissions",
+            ErrorKind::Backend => "the backend did not answer; retry if allowed",
+            ErrorKind::Cancelled | ErrorKind::Deadline | ErrorKind::Defect => return None,
+        };
+        Some(
+            serde_json::json!({"status":"failed","error":{"kind":self.kind.name(),"message":message,"retryable":self.retryable}}),
+        )
     }
 }
 

@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"The card on file expired last week and the retry failed.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does the message report a payment failure?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.98}},"usage":{"input_tokens":286,"output_tokens":21}}
-}

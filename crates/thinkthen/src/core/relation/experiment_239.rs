@@ -86,7 +86,7 @@ fn experiment_239_replays_only_the_recorded_cross_kind_planner_proof() {
                 probabilities.get(label).filter(|probability| **probability >= 0.5).map(|probability| (source.name.clone(), fixture_entity(&input, description).name.clone(), *probability))
             }).collect::<Vec<_>>()
         }).collect::<Vec<_>>();
-        let actual = edges.iter().map(|edge| (edge.source.name.clone(), edge.target.name.clone(), edge.probability)).collect::<Vec<_>>();
+        let actual = edges.iter().map(|edge| (edge.source.text.clone(), edge.target.text.clone(), edge.probability)).collect::<Vec<_>>();
         assert_eq!(actual, expected);
     }
 }
@@ -100,10 +100,11 @@ fn fixture_entity<'a>(input: &'a Input, description: &str) -> &'a InputEntity {
 
 fn entity(item: &InputEntity, start: usize) -> RecognizedName {
     RecognizedName {
-        name: item.name.clone(),
-        kind: item.kind.clone(),
+        text: item.name.clone(),
         start,
         end: start + item.name.chars().count(),
+        length: item.name.chars().count(),
+        kind: item.kind.clone(),
         strength: 1.0,
     }
 }

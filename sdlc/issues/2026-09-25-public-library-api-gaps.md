@@ -48,13 +48,7 @@ Done when: a test sets a cap, fills the cache past it, and sees the cache folder
 
 ## 5. The library cannot ask find with a none option or annotate over record parts
 
-What happens today. `Engine::find` and the free `find` take a question and units with no switch for the "none of these" candidate (`crates/thinkthen/src/public/bulk.rs:135`, `crates/thinkthen/src/public/mod.rs:211`). The command has `find --none`. `QuestionSet::from_json` refuses any member with a non-root `on` (`crates/thinkthen/src/public/set.rs:37` to `47`). The shared-case runner skips `18-find-second`, `19-find-none`, and `18-annotate-two-groups` for these reasons (`conformance/consumer/consumer/tests/public/cases.rs:7` to `34`). It also skips `25-defect-fault`, which R1-10 already covers.
-
-What the record says. Every shared case should run through the library. Ticket 0084 has no spelling for either feature.
-
-The fix. Amend 0084 with a find option for the none candidate, such as a `FindBuilder` step. Decide whether structured records get per-question parts through `Evidence`. Then remove the three skips.
-
-Done when: the three cases run through the public API and `SKIPPED` holds only `25-defect-fault`.
+Settled on 2026-09-26 by ticket 0150.
 
 ## 6. The engine reuse test and the library warm call are missing
 

@@ -1,0 +1,2 @@
+c1  yes -> red  p - -> 0.80
+A -> B: 1 of 1 changed; yes -> red 1; McNemar p 1.000 on yes answers; only in A 0, only in B 4

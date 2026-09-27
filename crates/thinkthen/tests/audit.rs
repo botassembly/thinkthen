@@ -72,7 +72,7 @@ fn every_fixture_keeps_its_checksum() {
     }
     found.sort();
     assert_eq!(found, listed);
-    assert_eq!(listed.len(), 85);
+    assert_eq!(listed.len(), 115);
 }
 
 #[test]
@@ -112,6 +112,8 @@ fn a_replayed_recording_piped_to_audit_grades_as_the_prototype_does() {
             "--field",
             "/body",
             "--details",
+            "--batch",
+            "1",
             "--replay",
         ])
         .arg(rows.join("recording"))

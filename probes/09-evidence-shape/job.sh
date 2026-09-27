@@ -37,7 +37,7 @@ target=$out/text.jsonl
 
 while IFS= read -r case; do
 	printf '%s\n' "$case" | jq -c '{subject, body}' | thinkthen decide "$question" \
-		--jsonl --details $folder >row.json && exit=0 || exit=$?
+		--jsonl --details --model jev-latest $folder >row.json && exit=0 || exit=$?
 	if [ "$exit" != 0 ]; then
 		printf 'job: %s stopped with exit %s\n' \
 			"$(printf '%s\n' "$case" | jq -r .id)" "$exit" >&2

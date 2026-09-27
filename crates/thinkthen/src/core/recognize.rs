@@ -1,55 +1,37 @@
-//! Pure name recognition planning and assembly.
+//! Pure name recognition in three steps (ADR 0056): BILOU boundaries, then
+//! kinds and edges, then stated relations in `relation`.
 
-use serde::Serialize;
+use std::ops::Range;
 
+use serde::{Serialize, Serializer};
+
+use crate::core::question::LabelsError;
 use crate::core::text::Withheld;
+use crate::core::{Description, Question};
 
-const DETECTION_WORDS: &str = "The snippet shows five consecutive words from a news document; the word in question is wrapped in [[ ]]. <BEGINNING> marks the start of the document and <END> the end. Decide whether the wrapped word is part of the name of an entity: a person, an organization, a place, or another named entity such as a nationality, an event, a product, or a creative work. Ordinary words, dates, and numbers that are not part of such a name are not named.";
-const KIND_WORDS: &str = "The snippet shows five consecutive words from a news document; the word in question is wrapped in [[ ]]. <BEGINNING> marks the start of the document and <END> the end. If the wrapped word is part of an entity's name, which kind of entity is it part of? Answer for every word; the answer only matters when the word is part of a name.";
+mod bilou;
+mod categories;
+mod pieces;
+mod questions;
 
-#[derive(Clone, Eq, PartialEq)]
-pub(crate) struct Token {
-    text: String,
-    byte_start: usize,
-    byte_end: usize,
-    start: usize,
-    end: usize,
-}
+use bilou::best_of;
+pub(crate) use bilou::{SpanOdds, TAGS, TagRow, decode};
+pub(crate) use pieces::{Piece, pieces};
+pub(crate) use questions::{
+    NONE_OF_THESE, edge_label, edge_options, edge_question, evidence, kind_question, name_groups,
+    step_one_groups, step_one_questions,
+};
 
-/// A token is evidence, so `Debug` withholds its text and keeps its places.
-impl std::fmt::Debug for Token {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter
-            .debug_struct("Token")
-            .field("text", &Withheld(self.text.len()))
-            .field("byte_start", &self.byte_start)
-            .field("byte_end", &self.byte_end)
-            .field("start", &self.start)
-            .field("end", &self.end)
-            .finish()
-    }
-}
-
-impl Token {
-    pub(crate) fn text(&self) -> &str {
-        &self.text
-    }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub(crate) struct TokenAnswer {
-    pub(crate) detected: bool,
-    pub(crate) detection_probability: f64,
-    pub(crate) kind: usize,
-    pub(crate) kind_probabilities: Vec<f64>,
-}
+/// The kind every name takes when the caller names no kind.
+pub(crate) const ENTITY: &str = "ENTITY";
 
 #[derive(Clone, PartialEq, Serialize)]
 pub(crate) struct RecognizedName {
-    pub(crate) name: String,
-    pub(crate) kind: String,
+    pub(crate) text: String,
     pub(crate) start: usize,
     pub(crate) end: usize,
+    pub(crate) length: usize,
+    pub(crate) kind: String,
     pub(crate) strength: f64,
 }
 
@@ -58,336 +40,202 @@ impl std::fmt::Debug for RecognizedName {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter
             .debug_struct("RecognizedName")
-            .field("name", &Withheld(self.name.len()))
-            .field("kind", &self.kind)
+            .field("text", &Withheld(self.text.len()))
             .field("start", &self.start)
             .field("end", &self.end)
+            .field("length", &self.length)
+            .field("kind", &self.kind)
             .field("strength", &self.strength)
             .finish()
     }
 }
 
-pub(crate) fn tokenize(text: &str) -> Vec<Token> {
-    let mut tokens = Vec::new();
-    let mut piece_start = None;
-    for (byte, character) in text
-        .char_indices()
-        .chain(std::iter::once((text.len(), ' ')))
-    {
-        if !character.is_whitespace() {
-            piece_start.get_or_insert(byte);
-            continue;
-        }
-        if let Some(start) = piece_start.take() {
-            split_piece(text, start, byte, &mut tokens);
-        }
-    }
-    tokens
+/// What step 2 asks about one found name: the kind question when the run has
+/// kinds, and the edge question when the name has two or more stretches.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct Asked {
+    pub(crate) kind: bool,
+    pub(crate) edges: Vec<(usize, usize)>,
 }
 
-fn split_piece(text: &str, start: usize, end: usize, tokens: &mut Vec<Token>) {
-    let Some(piece) = text.get(start..end) else {
-        return;
-    };
-    let trailing: Vec<(usize, char)> = piece
-        .char_indices()
-        .rev()
-        .take_while(|(_, character)| ".!?,:;".contains(*character))
-        .collect();
-    let stem_end = trailing.last().map_or(end, |(byte, _)| start + *byte);
-    if stem_end > start {
-        push_token(text, start, stem_end, tokens);
-    }
-    for (byte, character) in trailing.into_iter().rev() {
-        let punctuation_start = start + byte;
-        push_token(
-            text,
-            punctuation_start,
-            punctuation_start + character.len_utf8(),
-            tokens,
-        );
+impl Asked {
+    pub(crate) fn edge_question(&self) -> bool {
+        self.edges.len() > 1
     }
 }
 
-fn push_token(text: &str, byte_start: usize, byte_end: usize, tokens: &mut Vec<Token>) {
-    let Some(word) = text.get(byte_start..byte_end) else {
-        return;
-    };
-    let start = text
-        .get(..byte_start)
-        .map_or(0, |prefix| prefix.chars().count());
-    tokens.push(Token {
-        text: word.to_owned(),
-        byte_start,
-        byte_end,
-        start,
-        end: start + word.chars().count(),
-    });
-}
+/// One step-2 request's questions, and what each name in it asked.
+pub(crate) type StepTwo = (Vec<Question>, Vec<Asked>);
 
-pub(crate) fn recognition_questions(
-    tokens: &[Token],
-) -> Result<Vec<crate::core::Question>, crate::core::question::LabelsError> {
-    let mut questions = Vec::with_capacity(tokens.len().saturating_mul(2));
-    for place in 0..tokens.len() {
-        questions.push(choice_question(
-            DETECTION_WORDS,
-            window(tokens, place),
-            [
-                ("IN", "This word is part of an entity's name."),
-                ("OUT", "This word is not part of any entity's name."),
-            ],
-        )?);
-    }
-    Ok(questions)
-}
-
-pub(crate) fn kind_questions(
-    tokens: &[Token],
-    kinds: &[(String, Option<crate::core::Description>)],
-) -> Result<Vec<crate::core::Question>, crate::core::question::LabelsError> {
-    if kinds.len() == 1 {
-        return Ok(Vec::new());
-    }
-    let labels = crate::core::Labels::described(kinds.to_vec())?;
-    let mut questions = Vec::with_capacity(tokens.len());
-    for place in 0..tokens.len() {
-        let text = format!("{KIND_WORDS}\n\nSnippet: {}", window(tokens, place));
-        questions.push(crate::core::Question::Choose {
-            text: crate::core::QuestionText::new(text)
-                .map_err(|_| crate::core::question::LabelsError::OptionBlank)?,
-            options: labels.clone(),
-        });
-    }
-    Ok(questions)
-}
-
-fn choice_question<const N: usize>(
-    words: &str,
-    snippet: String,
-    options: [(&str, &str); N],
-) -> Result<crate::core::Question, crate::core::question::LabelsError> {
-    let listed = options
-        .into_iter()
-        .map(|(name, description)| {
-            (
-                name.to_owned(),
-                Some(crate::core::Description::text(description)),
-            )
-        })
-        .collect();
-    Ok(crate::core::Question::Choose {
-        text: crate::core::QuestionText::new(format!("{words}\n\nSnippet: {snippet}"))
-            .map_err(|_| crate::core::question::LabelsError::OptionBlank)?,
-        options: crate::core::Labels::described(listed)?,
-    })
-}
-
-pub(crate) fn window(tokens: &[Token], place: usize) -> String {
-    let at = |index: isize| -> &str {
-        if index < 0 {
-            return "<BEGINNING>";
-        }
-        tokens
-            .get(usize::try_from(index).unwrap_or(usize::MAX))
-            .map_or("<END>", Token::text)
-    };
-    let center = isize::try_from(place).unwrap_or(isize::MAX);
-    format!(
-        "{} {} [[{}]] {} {}",
-        at(center - 2),
-        at(center - 1),
-        at(center),
-        at(center + 1),
-        at(center + 2)
-    )
-}
-
-pub(crate) fn assemble(
+/// The step-2 questions for the found names in `group`, in name order: each
+/// name's kind question, then its edge question.
+pub(crate) fn step_two_questions(
     text: &str,
-    tokens: &[Token],
-    answers: &[TokenAnswer],
-    kinds: &[String],
-    threshold: f64,
+    pieces: &[Piece],
+    found: &[(usize, usize)],
+    group: Range<usize>,
+    kinds: &[(String, Option<Description>)],
+) -> Result<StepTwo, LabelsError> {
+    let mut questions = Vec::new();
+    let mut asked = Vec::new();
+    for stretch in found.get(group).unwrap_or_default().iter().copied() {
+        let mut edges = edge_options(text, pieces, stretch);
+        // A blank label would fail after step 1 is paid, so the name keeps its span.
+        if edges
+            .iter()
+            .any(|edge| edge_label(text, pieces, *edge).is_empty())
+        {
+            edges.truncate(1);
+        }
+        let held = Asked {
+            kind: !kinds.is_empty(),
+            edges,
+        };
+        if held.kind {
+            questions.push(kind_question(text, pieces, stretch, kinds)?);
+        }
+        if held.edge_question() {
+            questions.push(edge_question(text, pieces, &held.edges)?);
+        }
+        asked.push(held);
+    }
+    Ok((questions, asked))
+}
+
+/// Labels and their probabilities, in the order they were asked.
+#[derive(Clone, Default, PartialEq)]
+pub(crate) struct Odds(pub(crate) Vec<(String, f64)>);
+
+/// An edge label is evidence, so `Debug` withholds every label.
+impl std::fmt::Debug for Odds {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let held: Vec<(Withheld, f64)> = self
+            .0
+            .iter()
+            .map(|(label, value)| (Withheld(label.len()), *value))
+            .collect();
+        formatter.debug_tuple("Odds").field(&held).finish()
+    }
+}
+
+impl Serialize for Odds {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.collect_map(self.0.iter().map(|(label, value)| (label, value)))
+    }
+}
+
+impl Odds {
+    /// The most likely label's place, the earliest on a tie.
+    fn leader(&self) -> Option<(usize, &str, f64)> {
+        let (place, value) = best_of(self.0.iter().map(|(_, value)| *value).enumerate())?;
+        let (label, _) = self.0.get(place)?;
+        Some((place, label.as_str(), value))
+    }
+}
+
+/// One found name's step-2 answers, as `--details` lists them.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub(crate) struct NameOdds {
+    pub(crate) start: usize,
+    pub(crate) end: usize,
+    pub(crate) kinds: Option<Odds>,
+    pub(crate) edges: Option<Odds>,
+}
+
+/// One piece's tag probabilities, as `--details` lists them.
+#[derive(Clone, Debug, PartialEq, Serialize)]
+pub(crate) struct PieceOdds {
+    pub(crate) start: usize,
+    pub(crate) end: usize,
+    pub(crate) tags: Odds,
+}
+
+impl PieceOdds {
+    pub(crate) fn new(piece: &Piece, row: &TagRow) -> Self {
+        Self {
+            start: piece.start,
+            end: piece.end,
+            tags: Odds(
+                TAGS.iter()
+                    .zip(row)
+                    .map(|(tag, value)| ((*tag).to_owned(), *value))
+                    .collect(),
+            ),
+        }
+    }
+}
+
+/// `strength` at four places: P(kind) times P(span).
+pub(crate) fn strength(kind: f64, span: f64) -> f64 {
+    let raw = kind * span;
+    format!("{raw:.4}").parse().unwrap_or(raw)
+}
+
+/// The printed names: declined names go, each name takes its picked stretch
+/// and kind, a repeated stretch and kind keeps its stronger name, and a name
+/// under `cut` goes. Names come in order of start, then end.
+/// Each name's P(span) is its decoded stretch's, before any edge pick.
+pub(crate) fn settle(
+    source: (&str, &[Piece]),
+    rows: &[TagRow],
+    found: &[(usize, usize)],
+    answers: &[(Asked, NameOdds)],
+    cut: f64,
 ) -> Vec<RecognizedName> {
-    let mut candidates = Vec::new();
-    let mut place = 0;
-    while place < tokens.len() {
-        if !answers.get(place).is_some_and(|answer| answer.detected) {
-            place += 1;
+    let (text, pieces) = source;
+    let spans = SpanOdds::new(rows);
+    let mut names: Vec<RecognizedName> = Vec::new();
+    for ((first, last), (asked, odds)) in found.iter().copied().zip(answers) {
+        let (kind, kind_odds) = match &odds.kinds {
+            None => (ENTITY, 1.0),
+            Some(kinds) => match kinds.leader() {
+                Some((_, kind, _)) if kind == NONE_OF_THESE => continue,
+                Some((_, kind, value)) => (kind, value),
+                None => continue,
+            },
+        };
+        let picked = odds
+            .edges
+            .as_ref()
+            .and_then(Odds::leader)
+            .and_then(|(place, _, _)| asked.edges.get(place).copied())
+            .unwrap_or((first, last));
+        let strength = strength(kind_odds, spans.span(first, last));
+        let Some(held) = named(text, pieces, picked, kind, strength) else {
             continue;
-        }
-        let start = place;
-        while answers.get(place).is_some_and(|answer| answer.detected) {
-            place += 1;
-        }
-        let mut end = place.saturating_sub(1);
-        if end > start
-            && tokens
-                .get(end)
-                .is_some_and(|token| token.text.eq_ignore_ascii_case("'s"))
-        {
-            end = end.saturating_sub(1);
-        }
-        if let Some(candidate) = candidate(text, tokens, answers, kinds, start, end)
-            && candidate.strength >= threshold
-        {
-            candidates.push(candidate);
+        };
+        match names.iter_mut().find(|other| {
+            (other.start, other.end, &other.kind) == (held.start, held.end, &held.kind)
+        }) {
+            Some(other) if other.strength < held.strength => *other = held,
+            Some(_) => {}
+            None => names.push(held),
         }
     }
-    candidates
+    names.retain(|name| name.strength >= cut);
+    names.sort_by_key(|name| (name.start, name.end));
+    names
 }
 
-fn candidate(
+fn named(
     text: &str,
-    tokens: &[Token],
-    answers: &[TokenAnswer],
-    kinds: &[String],
-    start: usize,
-    end: usize,
+    pieces: &[Piece],
+    stretch: (usize, usize),
+    kind: &str,
+    strength: f64,
 ) -> Option<RecognizedName> {
-    let winner = kind_vote(answers, start, end)?;
-    let kind = kinds.get(winner)?.clone();
-    let first = tokens.get(start)?;
-    let last = tokens.get(end)?;
-    let name = text.get(first.byte_start..last.byte_end)?.to_owned();
-    let mut least = 1.0_f64;
-    let mut kind_total = 0.0;
-    let mut count = 0_usize;
-    for answer in answers.iter().skip(start).take(end - start + 1) {
-        least = least.min(answer.detection_probability);
-        kind_total += answer
-            .kind_probabilities
-            .get(winner)
-            .copied()
-            .unwrap_or(0.0);
-        count += 1;
-    }
-    let mean = kind_total / count as f64;
-    let strength = format!("{:.4}", least * mean)
-        .parse()
-        .unwrap_or(least * mean);
+    let first = pieces.get(stretch.0)?;
+    let last = pieces.get(stretch.1)?;
     Some(RecognizedName {
-        name,
-        kind,
+        text: text.get(first.byte_start..last.byte_end)?.to_owned(),
         start: first.start,
         end: last.end,
+        length: last.end - first.start,
+        kind: kind.to_owned(),
         strength,
     })
 }
 
-fn kind_vote(answers: &[TokenAnswer], start: usize, end: usize) -> Option<usize> {
-    let first = answers.get(start)?.kind;
-    let greatest_kind = answers
-        .iter()
-        .skip(start)
-        .take(end - start + 1)
-        .map(|answer| answer.kind)
-        .max()
-        .unwrap_or(first);
-    let mut counts = vec![0_usize; greatest_kind.saturating_add(1)];
-    for answer in answers.iter().skip(start).take(end - start + 1) {
-        if let Some(count) = counts.get_mut(answer.kind) {
-            *count += 1;
-        }
-    }
-    let winner_count = counts.iter().copied().max().unwrap_or(0);
-    let winner = answers
-        .iter()
-        .skip(start)
-        .take(end - start + 1)
-        .find(|answer| counts.get(answer.kind) == Some(&winner_count))
-        .map_or(first, |answer| answer.kind);
-    let length = end - start + 1;
-    let probabilities: Vec<f64> = answers
-        .iter()
-        .skip(start)
-        .take(length)
-        .filter(|answer| answer.kind == winner)
-        .filter_map(|answer| answer.kind_probabilities.get(winner).copied())
-        .collect();
-    let mean = probabilities.iter().sum::<f64>() / probabilities.len().max(1) as f64;
-    Some(if winner_count.saturating_mul(2) < length || mean < 0.5 {
-        first
-    } else {
-        winner
-    })
-}
-
 #[cfg(test)]
-#[rustfmt::skip]
-mod tests {
-    use super::{TokenAnswer, assemble, kind_questions, tokenize, window};
-
-    #[test]
-    fn tokenization_keeps_internal_marks_and_peels_trailing_punctuation() {
-        let tokens = tokenize("st. bruno's. Karst & Vellum hired");
-        let words: Vec<&str> = tokens.iter().map(|token| token.text.as_str()).collect();
-        assert_eq!(words, ["st", ".", "bruno's", ".", "Karst", "&", "Vellum", "hired"]);
-        assert_eq!(window(&tokens, 0), "<BEGINNING> <BEGINNING> [[st]] . bruno's");
-        assert_eq!(window(&tokens, 6), "Karst & [[Vellum]] hired <END>");
-    }
-
-    #[test]
-    fn offsets_count_unicode_scalars_in_the_exact_source() {
-        let tokens = tokenize("é 😀 e\u{301}lan.");
-        let found: Vec<(&str, usize, usize)> = tokens.iter().map(|token| (token.text.as_str(), token.start, token.end)).collect();
-        assert_eq!(found, [("é", 0, 1), ("😀", 2, 3), ("e\u{301}lan", 4, 9), (".", 9, 10)]);
-    }
-
-    fn answer(detected: bool, detection_probability: f64, kind: usize, probabilities: &[f64]) -> TokenAnswer {
-        TokenAnswer { detected, detection_probability, kind, kind_probabilities: probabilities.to_vec() }
-    }
-
-    #[test]
-    fn assembly_votes_rounds_cuts_inclusively_and_keeps_repeated_names() {
-        let text = "Ada Lovelace met Ada Lovelace";
-        let tokens = tokenize(text);
-        let answers = [
-            answer(true, 0.8, 0, &[0.8, 0.2]),
-            answer(true, 0.9, 0, &[0.7, 0.3]),
-            answer(false, 0.1, 1, &[0.2, 0.8]),
-            answer(true, 0.8, 0, &[0.8, 0.2]),
-            answer(true, 0.9, 1, &[0.7, 0.3]),
-        ];
-        let names = assemble(text, &tokens, &answers, &["person".into(), "place".into()], 0.6);
-        assert_eq!(names.len(), 2);
-        assert_eq!((names[0].start, names[0].end, names[0].strength), (0, 12, 0.6));
-        assert_eq!((names[1].start, names[1].end), (17, 29));
-    }
-
-    #[test]
-    fn tied_kind_vote_keeps_the_first_encountered_kind() {
-        let text = "Ada Labs";
-        let tokens = tokenize(text);
-        let answers = [
-            answer(true, 1.0, 0, &[0.9, 0.1]),
-            answer(true, 1.0, 1, &[0.1, 0.9]),
-        ];
-        let names = assemble(text, &tokens, &answers, &["place".into(), "person".into()], 0.5);
-        assert_eq!(names[0].kind, "place");
-    }
-
-    #[test]
-    fn one_kind_needs_no_model_choice() {
-        let tokens = tokenize("Ada");
-        assert!(kind_questions(&tokens, &[("person".into(), None)]).unwrap().is_empty());
-    }
-
-    #[test]
-    fn no_names_connectors_and_trailing_possessives_follow_the_fixed_policy() {
-        let text = "Lessing 's play and Acme";
-        let tokens = tokenize(text);
-        let answers = [
-            answer(true, 1.0, 0, &[1.0]),
-            answer(true, 1.0, 0, &[1.0]),
-            answer(false, 1.0, 0, &[1.0]),
-            answer(false, 1.0, 0, &[1.0]),
-            answer(true, 1.0, 0, &[1.0]),
-        ];
-        let names = assemble(text, &tokens, &answers, &["person".into()], 0.5);
-        assert_eq!(names.iter().map(|name| name.name.as_str()).collect::<Vec<_>>(), ["Lessing", "Acme"]);
-        let none = vec![answer(false, 1.0, 0, &[1.0]); tokens.len()];
-        assert!(assemble(text, &tokens, &none, &["person".into()], 0.5).is_empty());
-    }
-}
+#[path = "recognize/tables.rs"]
+mod tables;

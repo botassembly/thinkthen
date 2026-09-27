@@ -31,7 +31,7 @@ Each entry has the shape of one question file, and [question-file.md](question-f
 
 The top-level `threshold` applies to every `decide` question that names none. The optional top-level `profile` names the backend profile used to calibrate the set's thresholds. `version`, `threshold`, `profile`, and `questions` are the only top-level keys. A nested question cannot carry another profile. The set holds no backend address, model, output path, or format. An exact check beyond equality is a `jq` field on the record, by ADR 0008 item 6.
 
-`on` is a JSON Pointer inside the evidence that `--field` selected. It can never reach outside that evidence. A table asks different questions of different columns, and no question should see a column it does not need. The selection follows the `state` rule of [records.md](records.md): an object or a list travels as that JSON value, and several pointers send one ordered object.
+`on` is a JSON Pointer inside the value that the record selected: the whole record, or what `--field` selected. A string is text, even when it holds JSON, and `on` never parses it. A text record or a selected string has no members, and a question that reads `on` in one is refused at exit 2 with a sentence naming the question. It can never reach outside that evidence. Under `--lines`, a set with such a question is refused at exit 2 before any input is read. A table asks different questions of different columns, and no question should see a column it does not need. The selection follows the `state` rule of [records.md](records.md): an object or a list travels as that JSON value, and several pointers send one ordered object.
 
 ### Several pointers on `on`
 
@@ -67,7 +67,7 @@ An unresolved answer is `null`. A failed question is a failure marker and never 
 | `--input FILE` | Reads the evidence from a file | Standard input |
 | `--dry-run` | Checks the file, prints the plan, and sends nothing. See below | Off |
 | `--profile FILE` | Applies explicit local backend limits and names the running calibration profile. See [backends.md](backends.md) | None |
-| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-latest` |
+| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-1.13.0` |
 
 `annotate` takes no `--threshold`, no `--quiet`, and no `--raw`. A question carries its own threshold.
 
@@ -78,22 +78,22 @@ An unresolved answer is `null`. A failed question is a failure marker and never 
 ## Examples
 
 ```sh
-thinkthen annotate triage.json < issue.txt
+thinkthen annotate triage.json < issue.json
 ```
 
 ```sh
-thinkthen annotate triage.json --jsonl --field /body < issues.jsonl | jq -c 'select(.kind == "bug")'
+thinkthen annotate triage.json --jsonl < issues.jsonl | jq -c 'select(.kind == "bug")'
 ```
 
 ```sh
-thinkthen annotate triage.json --dry-run
+thinkthen annotate triage.json --dry-run < issue.json
 ```
 
 ## `--dry-run`
 
-`--dry-run` validates the file and sends nothing. It needs no key. An empty document is a usage error. An empty line or JSONL stream succeeds and prints nothing. An empty CSV or TSV input fails because its required header is missing. With evidence it prints the first request and an `on` object that names the normalized pointers for every question.
+`--dry-run` validates the file and sends nothing. It needs no key. An empty document is a usage error. An empty line or JSONL stream succeeds and prints nothing, unless a question reads `on` under `--lines`. An empty CSV or TSV input fails because its required header is missing. With evidence it prints the first request a live run sends, which is the first chunk under a profile, and an `on` object that names the normalized pointers for every question. `request_count` counts the requests the first record makes, and `group_requests` counts each `on` group's requests in group order.
 
-One record makes one request per distinct `on`, and the plan shows one request. It is the first record's first `on` set, taking the questions in file order. The plan's `input` object names the framing and, under `on`, the pointers of every question, so a reviewer sees what each check would see and not only the check that the plan printed.
+One record makes at least one request per distinct `on`, and a profile can split a group into several. The plan prints one request: the first that the first record's first `on` set sends, taking the questions in file order. `request_count` and `group_requests` count the rest. The plan's `input` object names the framing and, under `on`, the pointers of every question, so a reviewer sees what each check would see and not only the check that the plan printed.
 
 ```json
 {"framing":"jsonl","on":{"correct":["/input","/gold","/output"],"grounded":["/context","/output"]}}
@@ -103,7 +103,7 @@ One record makes one request per distinct `on`, and the plan shows one request. 
 
 ## Requests
 
-One record makes one logical request group for each distinct `on`. Every question with the same evidence rides in that group. An explicit backend profile splits a group into the fewest contiguous requests that satisfy its exact request-byte and expanded-question limits. Every chunk repeats the same evidence, and the model sees no answer from another chunk. Without a profile, or when the group fits, the historical single request stays byte for byte unchanged. The project measured forty clear yes-or-no questions over 120 cases. Packed requests changed no answer and used 20.8 times fewer billed input tokens than separate requests. A second measurement packed one decision, one choice, and one score. The values stayed the same, and billed input fell from 915 tokens across three requests to 371 in one request. Neither measurement found a lower question-count limit.
+One record makes one logical request group for each distinct `on`. Every question with the same evidence rides in that group. An explicit backend profile splits a group into the fewest contiguous requests that satisfy its exact request-byte and expanded-question limits. Every chunk repeats the same evidence, and the model sees no answer from another chunk. Without a profile, or when the group fits, the historical single request stays byte for byte unchanged. The project measured forty clear yes-or-no questions over 120 cases. Packed requests changed no answer and used 20.8 times fewer billed input tokens than separate requests (`sdlc/issues/closed/2026-09-20-live-probe-findings-packing-tagging-status-and-cost.md`). A second measurement packed one decision, one choice, and one score. The values stayed the same, and billed input fell from 915 tokens across three requests to 371 in one request (`probes/annotate-0015/mixed-summary.json`). Neither measurement found a lower question-count limit.
 
 Records never share a request. Not built yet, by ADR 0048 item 7: the records of one `on` group share a batch's request, and `--batch 1` keeps them apart. A question never sees another question's answer. Work that depends on an earlier answer is a second command.
 

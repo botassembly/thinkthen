@@ -1,9 +1,8 @@
 //! The engine calls behind the scalars and the rows their answers become.
 
 use thinkthen::{
-    Annotated, AnnotatedRecord, Answer, CallOptions, CancelToken, Details, Engine, Error,
-    FailureCause, Judgment, Kind, LoadedQuestion, NamedAnnotation, Probabilities, QuestionSet,
-    Recognize, Recognized,
+    Annotated, AnnotatedRecord, Answer, CallOptions, CancelToken, Engine, Error, FailureCause,
+    Kind, LoadedQuestion, NamedAnnotation, QuestionSet, Recognize, Recognized,
 };
 
 use crate::errors::{failure, prefix};
@@ -105,46 +104,9 @@ pub(super) fn detailed(
                 }
                 LoadedQuestion::Banded(question) => engine.details_with(question, text, options)?,
             };
-            Ok(details_row(&details))
+            Ok(Value::Text(details.to_json()))
         })
         .collect()
-}
-
-pub(super) fn details_row(details: &Details) -> Value {
-    let text =
-        |value: Option<&str>| value.map_or(Value::Null, |value| Value::Text(value.to_owned()));
-    let (yes, word) = match (details.probabilities(), details.value()) {
-        (Probabilities::YesNo { yes }, Judgment::Decision(answer)) => {
-            (Value::Double(*yes), text(Some(answer_word(*answer))))
-        }
-        _ => (Value::Null, Value::Null),
-    };
-    let value = match details.value() {
-        Judgment::Decision(answer) => serde_json::Value::from(answer_word(*answer)),
-        Judgment::Choice(picked) => picked
-            .clone()
-            .map_or(serde_json::Value::Null, serde_json::Value::from),
-        Judgment::Score(position) => serde_json::Value::from(*position),
-        Judgment::Tags(held) => serde_json::Value::from(held.clone()),
-    };
-    Value::Struct(vec![
-        yes,
-        word,
-        Value::Text(value.to_string()),
-        text(details.nearest()),
-        Value::Text(details.model().to_owned()),
-        Value::Text(details.question_sha256().to_owned()),
-        Value::Int(i64::try_from(details.requests_sent()).unwrap_or(i64::MAX)),
-        Value::Bool(details.cached()),
-    ])
-}
-
-pub(super) const fn answer_word(answer: Answer) -> &'static str {
-    match answer {
-        Answer::Yes => "yes",
-        Answer::No => "no",
-        Answer::Unsure => "unsure",
-    }
 }
 
 pub(super) fn recognize_kinds(kinds: &[String]) -> Result<Recognize, String> {
@@ -185,10 +147,11 @@ pub(super) fn entities(found: &Recognized) -> Value {
             .iter()
             .map(|name| {
                 Value::Struct(vec![
-                    Value::Text(name.name().to_owned()),
-                    Value::Text(name.kind().to_owned()),
+                    Value::Text(name.text().to_owned()),
                     place(name.start()),
                     place(name.end()),
+                    place(name.length()),
+                    Value::Text(name.kind().to_owned()),
                     Value::Double(name.strength()),
                 ])
             })
@@ -205,9 +168,9 @@ pub(super) fn relations(found: &Recognized) -> Value {
             .map(|relation| {
                 Value::Struct(vec![
                     Value::Text(relation.relation().to_owned()),
-                    Value::Text(relation.source().name().to_owned()),
+                    Value::Text(relation.source().text().to_owned()),
                     Value::Text(relation.source().kind().to_owned()),
-                    Value::Text(relation.target().name().to_owned()),
+                    Value::Text(relation.target().text().to_owned()),
                     Value::Text(relation.target().kind().to_owned()),
                     Value::Double(relation.probability()),
                 ])

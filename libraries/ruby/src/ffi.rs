@@ -171,6 +171,10 @@ fn cross(
             own.cancel();
             return Err(raised);
         }
+        if own.is_cancelled() || caller.is_some_and(CancelToken::is_cancelled) {
+            own.cancel();
+            return Ok(Err(Fault::cancelled()));
+        }
         match handoff.take() {
             Taken::Ready(answer) => return Ok(answer),
             Taken::Closed => {
@@ -180,10 +184,6 @@ fn cross(
                 )));
             }
             Taken::Waiting => {}
-        }
-        if own.is_cancelled() || caller.is_some_and(CancelToken::is_cancelled) {
-            own.cancel();
-            return Ok(Err(Fault::cancelled()));
         }
     }
 }
@@ -203,7 +203,11 @@ fn ask(ruby: &Ruby, verb: &str, subject: Value, input: Value) -> Result<Ask, Err
         "decide_many" => Ask::DecideMany(question_of(subject)?, records()?),
         "filter" => Ask::Filter(question_of(subject)?, records()?),
         "rank" => Ask::Rank(String::try_convert(subject)?, records()?),
-        "find" => Ask::Find(String::try_convert(subject)?, records()?),
+        "find" | "find_none" => Ask::Find(
+            String::try_convert(subject)?,
+            verb == "find_none",
+            records()?,
+        ),
         "annotate" => Ask::Annotate(<&SetValue>::try_convert(subject)?.0.clone(), records()?),
         "recognize" => {
             let spec = String::try_convert(subject)?;

@@ -64,10 +64,16 @@ check() {
 		echo "FAILED   $1"
 	fi
 }
-# has TEXT NEEDLE: a fixed-string match that prints what it missed.
-has() { grep -qF -- "$2" <<<"$1" || { printf 'missing: %s\nin: %s\n' "$2" "$1" >&2; return 1; }; }
-hasnt() { ! grep -qF -- "$2" <<<"$1" || { printf 'unexpected: %s\nin: %s\n' "$2" "$1" >&2; return 1; }; }
+# has TEXT NEEDLE: match the whole literal needle, including any newlines.
+has() { [[ $1 == *"$2"* ]] || { printf 'missing: %s\nin: %s\n' "$2" "$1" >&2; return 1; }; }
+hasnt() { [[ $1 != *"$2"* ]] || { printf 'unexpected: %s\nin: %s\n' "$2" "$1" >&2; return 1; }; }
 same() { [ "$1" = "$2" ] || { printf 'want: %s\ngot:  %s\n' "$2" "$1" >&2; return 1; }; }
+a_multiline_needle_must_stay_whole() {
+	has $'first\nlast' $'first\nlast'
+	if has first $'first\nlast' 2>/dev/null; then return 1; fi
+	if has last $'\nlast' 2>/dev/null; then return 1; fi
+}
+check a_multiline_needle_must_stay_whole
 now_ms() { echo $((${EPOCHREALTIME/./} / 1000)); }
 within() { [ "$1" -le "$2" ] || { echo "took ${1} ms, over ${2} ms" >&2; return 1; }; }
 Q='{"decide":"Is this a complaint?"}'
@@ -148,7 +154,7 @@ slide_sample() {
 check slide_sample
 recognize_and_relate_as_drawn() {
 	fresh generic
-	out=$(q -c "SELECT t.id, n.name, n.kind FROM inbox t, LATERAL thinkthen_recognize(t.body, ARRAY['person','organization']) n ORDER BY t.id, n.start" \
+	out=$(q -c "SELECT t.id, n.text, n.kind FROM inbox t, LATERAL thinkthen_recognize(t.body, ARRAY['person','organization']) n ORDER BY t.id, n.start" \
 		-c "SELECT count(*) FROM thinkthen_relate('SELECT id, body FROM alerts', ARRAY['caused_by'])" \
 		-c "SELECT count(*) FROM thinkthen_relations('Maria Chen joined Northwind Freight in Chicago last spring.', '@names.json')")
 	hasnt "$out" ERROR
@@ -225,7 +231,7 @@ dev_zero_refuses_fast() {
 	out=$(q -c "SELECT thinkthen_decide('@/dev/zero', 'x')" -c "SELECT 1")
 	within $(($(now_ms) - start)) 2000
 	has "$out" "thinkthen local: the question file '@/dev/zero' $DID_NOT_READ"
-	has "$out" "$(printf '\n1')"
+	same "$(tail -n1 <<<"$out")" 1
 	head -c 1048577 /dev/zero | tr '\0' ' ' >"$RUN/big.json"
 	has "$(q -c "SELECT thinkthen_decide('@$RUN/big.json', 'x')")" "the question file '@$RUN/big.json' is over the 1048576 byte cap"
 }
@@ -367,7 +373,7 @@ a_timed_out_batch_leaves_the_session_working() {
 	out=$(q -c "SET statement_timeout = '500ms'" -c "SELECT count(*) FROM thinkthen_decide('$Q', $(rows 200))" \
 		-c "\\! echo release > $RUN/b.in" -c "RESET statement_timeout" -c "SELECT thinkthen_decide('$Q', 'after')")
 	has "$out" "canceling statement due to statement timeout"
-	has "$out" "$(printf '\nt')"
+	same "$(tail -n1 <<<"$out")" t
 	same "$(bcount)" 9
 }
 check a_timed_out_batch_leaves_the_session_working
@@ -482,28 +488,85 @@ a_changed_limit_rebuilds() {
 	fresh generic
 	out=$(q -c "SET thinkthen.max_requests = 3" -c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['a', 'b', 'c'])" \
 		-c "SET thinkthen.max_requests = 2" -c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['d', 'e', 'f'])")
-	has "$out" "$(printf '3\n')"
+	same "$(head -n1 <<<"$out")" 3
 	has "$out" "this engine answers at most 2 records in one call"
 	same "$(bcount)" 3
 }
 check a_changed_limit_rebuilds
-a_changed_throttle_follows_the_first() {
-	fresh arm/held
-	q -c "SET thinkthen.throttle = 8" -c "SELECT thinkthen_decide('$Q', 'x')" -c "SET thinkthen.throttle = 6" \
-		-c "SELECT thinkthen_decide('$Q', 'y')" -c "SELECT count(*) FROM thinkthen_decide('$Q', $(rows 64))" >"$RUN/held.out" &
-	HELD=$!
-	bwait 1
-	echo round >&7
-	bwait 2
-	echo round >&7
-	bwait 10
-	sleep 0.3
-	same "$(bcount)" 10
-	brelease
-	wait "$HELD"
-	same "$(cat "$RUN/held.out")" "$(printf 't\nt\n64')"
+a_changed_throttle_refuses() {
+    fresh generic
+    out=$(q -c '\set VERBOSITY verbose' -c "SET thinkthen.throttle = 8" \
+        -c "SELECT thinkthen_decide('$Q', 'first')" -c "SELECT thinkthen_decide('$Q', 'second')" \
+        -c "SET thinkthen.throttle = 6" -c "SELECT thinkthen_decide('$Q', 'third')")
+    has "$out" "throttle 8 is already active for this process; use throttle 8 or drop the throttle argument"
+    has "$out" "22023"
+    same "$(bcount)" 2
 }
-check a_changed_throttle_follows_the_first
+check a_changed_throttle_refuses
+try_details_keeps_later_rows() {
+    fresh generic
+    out=$(q -c "WITH rows(i,q,e) AS (VALUES (1, '$Q', 'first'), (2, '{broken', 'bad'), (3, '@missing-private-question.json', 'bad'), (4, '$Q', 'last')),
+        measured AS MATERIALIZED (SELECT i, thinkthen_try_details(q,e) AS v FROM rows)
+        SELECT i::text || ':' || coalesce(v->>'status', 'null') || ':' ||
+            coalesce(v->'error'->>'kind', 'ok') FROM measured ORDER BY i")
+    same "$out" "$(printf '1:answered:ok\n2:failed:usage\n3:failed:local\n4:answered:ok')"
+    same "$(bcount)" 2
+}
+check try_details_keeps_later_rows
+try_details_keeps_good_after_backend_failure() {
+    fresh generic
+    pg_stop
+    mkfifo "$RUN/proxy.in"
+    python3 ../sqlite/tests/conditional_backend.py "http://127.0.0.1:$BPORT/generic/v1" 'private evidence' \
+        <"$RUN/proxy.in" >"$RUN/proxy.out" 2>"$RUN/proxy.err" &
+    PROXYPID=$!
+    exec {PROXYFD}>"$RUN/proxy.in"
+    trap 'if [ -n "${PROXYPID:-}" ]; then printf "quit\n" >&"$PROXYFD"; wait "$PROXYPID" || true; fi' EXIT
+    for _ in $(seq 100); do [ -s "$RUN/proxy.out" ] && break; sleep 0.05; done
+    proxyport=$(head -1 "$RUN/proxy.out")
+    [ -n "$proxyport" ]
+    pg_start "http://127.0.0.1:$proxyport/v1" "$CACHEDIR"
+    out=$(q -c "WITH rows(i,q,e) AS (VALUES (1, '$Q', 'first'), (2, '$Q', 'private evidence'), (3, '$Q', 'last')),
+        measured AS MATERIALIZED (SELECT i, thinkthen_try_details(q,e) AS v FROM rows)
+        SELECT i::text || ':' || (v->>'status') || ':' || coalesce(v->'error'->>'kind','ok') || ':' ||
+            CASE WHEN v::text LIKE '%private evidence%' THEN 'leaked' ELSE 'safe' END FROM measured ORDER BY i")
+    same "$out" "$(printf '1:answered:ok:safe\n2:failed:backend:safe\n3:answered:ok:safe')"
+    same "$(bcount)" 2
+    printf 'quit\n' >&"$PROXYFD"
+    wait "$PROXYPID"
+    PROXYPID=
+    exec {PROXYFD}>&-
+    same "$(tail -1 "$RUN/proxy.out")" 3
+}
+check try_details_keeps_good_after_backend_failure
+try_details_null_skips_settings() {
+    fresh generic
+    out=$(q -c "SET thinkthen.api_key = 'planted-private-key'" \
+        -c "SELECT thinkthen_try_details(NULL, 'private evidence') IS NULL")
+    same "$out" t
+    same "$(bcount)" 0
+}
+check try_details_null_skips_settings
+try_details_keeps_unresolved_and_spent_total_distinct() {
+    fresh generic "thinkthen.max_requests_total = 1"
+    out=$(q -c "SELECT (v->>'status') || ':' || coalesce(v->'details'->>'value', 'null') || ':' || (v ? 'error')::text
+        FROM (SELECT thinkthen_try_details('{\"decide\":\"Is it red?\",\"threshold\":\"0:1\"}', 'red door') AS v) s" \
+        -c "SELECT (v->>'status') || ':' || (v->'error'->>'kind') || ':' || (v->'error'->>'message') || ':' || (v->'error'->>'retryable') || ':' || (v ? 'details')::text
+        FROM (SELECT thinkthen_try_details('$Q', 'second row') AS v) s")
+    same "$out" "$(printf 'answered:null:false\nfailed:usage:check the row\047s question and arguments, or raise the process request total when it is spent:false:false')"
+    same "$(bcount)" 1
+}
+check try_details_keeps_unresolved_and_spent_total_distinct
+try_details_keeps_native_timeout() {
+    fresh arm/held
+    held "SET statement_timeout = '300ms'; SELECT thinkthen_try_details('$Q', 'held')"
+    bwait 1
+    wait "$HELD" || true
+    has "$(cat "$RUN/held.out")" "canceling statement due to statement timeout"
+    brelease
+    same "$(bcount)" 1
+}
+check try_details_keeps_native_timeout
 a_role_limit_applies() {
 	fresh generic
 	q -c "CREATE ROLE tt_limited LOGIN" -c "GRANT EXECUTE ON FUNCTION thinkthen_decide(text, text[]) TO tt_limited" \
@@ -519,6 +582,22 @@ zero_cache_cap_refuses() {
 	same "$(bcount)" 0
 }
 check zero_cache_cap_refuses
+# A throttle outside 1 through 32 is refused where it is set, and calls keep
+# working. A configuration file's 0 once broke every call.
+THROTTLE_RANGE="thinkthen usage: a throttle is a whole number from 1 through 32 (retryable: no)"
+throttle_setting_range() {
+	fresh generic "thinkthen.throttle = 0"
+	out=$(q -c "SELECT thinkthen_decide('$Q', 'from the file')")
+	has "$out" "WARNING:  $THROTTLE_RANGE"
+	same "$(tail -n1 <<<"$out")" t
+	for value in 0 33 -2; do
+		out=$(q -c '\set VERBOSITY verbose' -c "LOAD 'thinkthen'" -c "SET thinkthen.throttle = $value" -c "SELECT thinkthen_decide('$Q', 'set $value')")
+		has "$out" "ERROR:  22023: $THROTTLE_RANGE"
+		same "$(tail -n1 <<<"$out")" t
+	done
+	same "$(bcount)" 4
+}
+check throttle_setting_range
 
 # Ian's ruling of 2026-09-25: the backend's total holds across row calls.
 the_total_holds_across_rows() {
@@ -530,7 +609,8 @@ the_total_holds_across_rows() {
 	out=$(q -c "SELECT thinkthen_decide('$Q', 'row 1')" -c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['a', 'b', 'c', 'd'])")
 	# A new backend starts from zero: a cached answer sends nothing, and a
 	# four-record batch sends the three the total leaves, then refuses.
-	has "$out" "$(printf 't\nERROR:  thinkthen usage: thinkthen.max_requests_total allows 3 requests in this backend, and they are spent')"
+	same "$out" "t
+ERROR:  thinkthen usage: thinkthen.max_requests_total allows 3 requests in this backend, and they are spent (retryable: no)"
 	same "$(bcount)" 6
 }
 check the_total_holds_across_rows
@@ -603,7 +683,7 @@ a_panic_is_an_error() {
 	out=$(q -c '\set VERBOSITY verbose' -c "SELECT thinkthen_panic_probe()" -c "SELECT 1")
 	has "$out" "XX000"
 	has "$out" "the panic probe fired"
-	has "$out" "$(printf '\n1')"
+	same "$(tail -n1 <<<"$out")" 1
 }
 check a_panic_is_an_error
 

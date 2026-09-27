@@ -67,7 +67,7 @@ impl<T> Source<T> for Option<Error> {
 }
 
 /// One record's answer, computed on an engine worker.
-pub(crate) type Answer<V> = dyn Fn(&str) -> Result<Completed<V>, Error> + Send + Sync;
+pub(crate) type Answer<V> = dyn Fn(&str) -> Result<Completed<V, Error>, Error> + Send + Sync;
 
 enum Event<V> {
     Port(InputPort<String, V, Error>),
@@ -203,7 +203,7 @@ where
             }
             Event::End(ended) => {
                 let ended = self.join().and(ended);
-                self.stop.finish();
+                let ended = self.stop.finish(ended);
                 return Some(ended.err().map(Err));
             }
         }

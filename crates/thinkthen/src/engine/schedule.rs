@@ -13,11 +13,27 @@ pub(crate) enum Input<T, E> {
     End,
 }
 
-/// One completed row and the counters the scheduler owns.
-pub(crate) struct Completed<R> {
+/// One completed item, the records it finished, and the counters the
+/// scheduler owns. A `stop` ends the run at the record after those.
+pub(crate) struct Completed<R, E> {
     pub(crate) value: R,
     pub(crate) replayed: bool,
     pub(crate) partial_failure: bool,
+    pub(crate) records: usize,
+    pub(crate) stop: Option<E>,
+}
+
+impl<R, E> Completed<R, E> {
+    /// One record's row, with no stop after it.
+    pub(crate) const fn one(value: R, replayed: bool, partial_failure: bool) -> Self {
+        Self {
+            value,
+            replayed,
+            partial_failure,
+            records: 1,
+            stop: None,
+        }
+    }
 }
 
 /// The ordered stop metadata returned after all request workers have joined.
@@ -35,7 +51,7 @@ pub(crate) enum Outcome<E> {
 
 enum Event<T, R, E> {
     Input(Input<T, E>),
-    Answered(usize, Result<Completed<R>, E>),
+    Answered(usize, Result<Completed<R, E>, E>),
 }
 
 /// The typed command-to-engine side of the framed-input bridge.
@@ -47,9 +63,12 @@ impl<T, R, E> InputPort<T, R, E> {
     }
 }
 
+type Done<R, E> = Result<Completed<R, E>, E>;
+
 struct Run<R, E> {
-    pending: BTreeMap<usize, Result<Completed<R>, E>>,
+    pending: BTreeMap<usize, Done<R, E>>,
     next: usize,
+    finished: usize,
     dispatched: usize,
     in_flight: usize,
     replayed: usize,
@@ -57,7 +76,7 @@ struct Run<R, E> {
     exhausted: bool,
     halted: bool,
     printing: bool,
-    stop: Option<(usize, E)>,
+    stop: Option<E>,
 }
 
 impl<R, E> Run<R, E> {
@@ -65,6 +84,7 @@ impl<R, E> Run<R, E> {
         Self {
             pending: BTreeMap::new(),
             next: 0,
+            finished: 0,
             dispatched: 0,
             in_flight: 0,
             replayed: 0,
@@ -111,7 +131,7 @@ impl<R, E> Run<R, E> {
             }
             Event::Answered(place, result) => {
                 self.in_flight -= 1;
-                self.halted |= result.is_err();
+                self.halted |= !matches!(&result, Ok(done) if done.stop.is_none());
                 self.pending.insert(place, result);
             }
         }
@@ -155,17 +175,22 @@ impl<R, E> Run<R, E> {
             };
             match result {
                 Err(cause) => {
-                    self.stop = Some((self.next, cause));
+                    self.stop = Some(cause);
                     self.halted = true;
                     self.printing = false;
                 }
                 Ok(completed) => {
-                    self.replayed += usize::from(completed.replayed);
-                    if !emit(completed.value)? {
+                    if completed.replayed {
+                        self.replayed += completed.records;
+                    }
+                    let more = emit(completed.value)?;
+                    self.finished += completed.records;
+                    self.next += 1;
+                    self.stop = completed.stop;
+                    if !more || self.stop.is_some() {
                         self.halted = true;
                         self.printing = false;
                     }
-                    self.next += 1;
                 }
             }
         }
@@ -174,9 +199,9 @@ impl<R, E> Run<R, E> {
 
     fn finish(self, held: bool) -> Outcome<E> {
         match self.stop {
-            Some((place, cause)) => Outcome::Stopped {
-                at: place + 1,
-                finished: place,
+            Some(cause) => Outcome::Stopped {
+                at: self.finished + 1,
+                finished: self.finished,
                 replayed: self.replayed,
                 held,
                 cause,
@@ -196,7 +221,7 @@ pub(crate) fn run_cancelled<T, R, E>(
     held: bool,
     cancel: &crate::engine::Cancel,
     start_reader: impl FnOnce(Receiver<()>, InputPort<T, R, E>),
-    answer: &(impl Fn(&T) -> Result<Completed<R>, E> + Sync),
+    answer: &(impl Fn(&T) -> Result<Completed<R, E>, E> + Sync),
     emit: impl FnMut(R) -> Result<bool, E>,
     defect: fn(&'static str) -> E,
     stopped: impl Fn(Error) -> E + Sync,
@@ -228,7 +253,7 @@ fn run_observed<T, R, E, G>(
     held: bool,
     cancel: &crate::engine::Cancel,
     start_reader: impl FnOnce(Receiver<()>, InputPort<T, R, E>),
-    answer: &(impl Fn(&T) -> Result<Completed<R>, E> + Sync),
+    answer: &(impl Fn(&T) -> Result<Completed<R, E>, E> + Sync),
     mut emit: impl FnMut(R) -> Result<bool, E>,
     defect: fn(&'static str) -> E,
     stopped: &(impl Fn(Error) -> E + Sync),
@@ -311,7 +336,7 @@ mod tests {
                 false,
                 &run_cancel,
                 move |asked, _events| asked_send.send(asked).expect("input requests"),
-                &|_: &()| -> Result<Completed<()>, &'static str> {
+                &|_: &()| -> Result<Completed<(), &'static str>, &'static str> {
                     unreachable!("withheld input cannot be dispatched")
                 },
                 |_| Ok(true),
@@ -390,11 +415,7 @@ mod tests {
                     answer_started.wait();
                     answer_release.wait();
                     answer_active.fetch_sub(1, Ordering::SeqCst);
-                    Ok::<_, &'static str>(Completed {
-                        value: *item,
-                        replayed: false,
-                        partial_failure: false,
-                    })
+                    Ok::<_, &'static str>(Completed::one(*item, false, false))
                 },
                 |value| {
                     emitted_send.send(value).expect("emitted result");
@@ -461,11 +482,7 @@ mod tests {
             },
             &move |item| {
                 gathered.wait();
-                Ok::<_, ()>(Completed {
-                    value: *item,
-                    replayed: false,
-                    partial_failure: false,
-                })
+                Ok::<_, ()>(Completed::one(*item, false, false))
             },
             |_| Ok(true),
             |_| (),

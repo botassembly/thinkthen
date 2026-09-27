@@ -2,8 +2,8 @@
 set -eu
 
 HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-work=$(mktemp -d)
-trap 'rm -rf -- "$work"' EXIT HUP INT TERM
+. "$HERE/../../sdlc/scripts/scratch.sh"
+scratch_dir work
 
 jq -c -f "$HERE/triage.jq" "$HERE/cases.jsonl" > "$work/routed.jsonl"
 jq -c '{id: .input.id, action: .policy.action, reason: .policy.reason}' \

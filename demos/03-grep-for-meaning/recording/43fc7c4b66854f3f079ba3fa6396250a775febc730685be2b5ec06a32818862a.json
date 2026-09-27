@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Could we get a dark theme? The white background is rough at night.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the report give steps that would reproduce a defect?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.05}},"usage":{"input_tokens":292,"output_tokens":21}}
+}

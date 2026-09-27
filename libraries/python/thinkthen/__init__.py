@@ -39,6 +39,8 @@ from ._thinkthen import (
     LocalError,
     Question,
     Recognized,
+    RecognizedEntity,
+    Relation,
     ThinkThenError,
     UsageError,
 )
@@ -46,9 +48,10 @@ from ._thinkthen import (
 __all__ = [
     "BackendError", "Cancelled", "CancelToken", "DeadlineError", "DefectError",
     "Edge", "Engine", "Entity", "LocalError", "Question", "Recognized",
-    "ThinkThenError", "UsageError", "annotate", "choose", "decide",
-    "decide_many", "details", "filter", "find", "question", "rank",
-    "recognize", "relate", "score", "tag", "usage",
+    "RecognizedEntity", "Relation", "ThinkThenError", "UsageError",
+    "annotate", "choose", "decide", "decide_many", "details", "filter",
+    "find", "question", "rank", "recognize", "relate", "score", "tag",
+    "usage",
 ]
 
 _VERBS = ("decide", "choose", "score", "tag")
@@ -285,10 +288,16 @@ class Engine:
                    for index, record, probability in ranked]
         return ordered if top is None else ordered[:top]
 
-    def find(self, question, units, *, deadline=None, token=None):
+    def find(self, question, units, *, none=False, deadline=None, token=None):
         """The unit that answers the question best, as ``{"index", "unit",
-        "probability"}``, or ``None`` when nothing fits."""
-        found = self._engine.order("find", _ordering(question, "find"), units, deadline, token)
+        "probability"}``, or ``None`` when nothing fits. ``none=True`` offers
+        a none candidate, as ``find --none`` does."""
+        if not isinstance(none, bool):
+            raise UsageError("none is True or False")
+        asked = _ordering(question, "find")
+        if none:
+            asked = asked._offering_none()
+        found = self._engine.order("find", asked, units, deadline, token)
         if not found:
             return None
         [(index, unit, probability)] = found
@@ -298,7 +307,8 @@ class Engine:
         """Ask every question in a named set of every record.
 
         ``questions`` is a question-set file path or the file's ``dict``.
-        One ``dict`` comes back per record. A question the backend failed
+        A member whose ``on`` names a part reads it from each record as JSON
+        text. One ``dict`` comes back per record. A question the backend failed
         reads ``{"failed": {"kind": "backend", "cause": ...}}``. With ``on=``,
         ``records`` is a Polars or pandas ``DataFrame``, and the frame comes
         back with one new column per question. A failed question's column
@@ -328,11 +338,13 @@ class Engine:
         and ``either`` names the rules that read both ways. ``ask`` is a
         file path or the file's ``dict`` in place of the keywords. Offsets
         count Python string positions, so ``text[e.start:e.end]`` is the
-        name. With ``on=``, ``text`` is a Polars ``DataFrame``, and a frame
-        comes back with one row per name: ``row`` (counted from 1), ``text``,
-        ``kind``, ``start``, ``end``, and ``strength``. A pandas ``DataFrame``
-        comes back with a new ``names`` column: one list per row of ``dict``
-        with those fields but ``row``. Relations take one text.
+        name and ``e.length`` is ``e.end - e.start``. With no kinds, every
+        name has the kind ``ENTITY``. With ``on=``, ``text`` is a Polars
+        ``DataFrame``, and a frame comes back with one row per name: ``row``
+        (counted from 1), ``text``, ``start``, ``end``, ``length``, ``kind``,
+        and ``strength``. A pandas ``DataFrame`` comes back with a new
+        ``names`` column: one list per row of ``dict`` with those fields but
+        ``row``. Relations take one text.
         """
         if on is not None and relations is not None:
             raise UsageError("recognize with on= takes no relations; ask them of one text")
@@ -357,8 +369,10 @@ class Engine:
         """Say how the entities relate: a list of ``Edge``.
 
         ``entities`` holds ``(name, kind)`` pairs, dicts with ``name`` and
-        ``kind``, or ``Entity`` values. ``relations`` and ``either`` read as
-        for ``recognize``.
+        ``kind``, ``Entity`` values, or what ``recognize`` found. A
+        ``RecognizedEntity``, or a dict with ``text`` and no ``name``, is
+        named by its ``text``. ``relations`` and ``either`` read as for
+        ``recognize``.
         """
         if ask is not None:
             spec = _spec(_thinkthen._Relate, ask)
@@ -415,8 +429,8 @@ def rank(question, records, *, top=None, deadline=None, token=None):
     return _engine().rank(question, records, top=top, deadline=deadline, token=token)
 
 
-def find(question, units, *, deadline=None, token=None):
-    return _engine().find(question, units, deadline=deadline, token=token)
+def find(question, units, *, none=False, deadline=None, token=None):
+    return _engine().find(question, units, none=none, deadline=deadline, token=token)
 
 
 def annotate(questions, records, *, on=None, deadline=None, token=None):

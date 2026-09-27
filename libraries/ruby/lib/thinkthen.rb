@@ -42,22 +42,54 @@ end
 require_relative "thinkthen/thinkthen"
 
 module ThinkThen
-  # One name recognize found. `start` and `end` count characters, so
-  # `text[start...end]` is the name.
-  Entity = Struct.new(:name, :kind, :start, :end, :strength)
+  # The print form of every result value. A field holding the caller's text
+  # prints as its byte count, as the Rust Debug and Python repr forms do. A
+  # list prints as its length. Places, probabilities, and rule names print
+  # in clear.
+  module Withheld
+    TEXT = %i[name kind text record unit].freeze
+
+    def inspect
+      fields = each_pair.map do |name, value|
+        shown = if value.nil? then "nil"
+                elsif TEXT.include?(name) then "<#{value.to_s.bytesize} bytes withheld>"
+                elsif value.is_a?(Array) then value.size.to_s
+                else value.inspect
+                end
+        "#{name}=#{shown}"
+      end
+      "#<struct #{self.class.name} #{fields.join(", ")}>"
+    end
+
+    alias to_s inspect
+
+    def pretty_print(printer)
+      printer.text(inspect)
+    end
+  end
+
+  # A name and its kind, as relate reads and returns them.
+  Entity = Struct.new(:name, :kind) { include Withheld }
+
+  # One name recognize found. `start`, `end`, and `length` count characters,
+  # so `text[start...end]` is the name. `kind` is "ENTITY" when the call
+  # named no kind.
+  RecognizedEntity = Struct.new(:text, :start, :end, :length, :kind, :strength) { include Withheld }
 
   # One relation between two recognized names.
-  Relation = Struct.new(:relation, :source, :target, :probability)
+  Relation = Struct.new(:relation, :source, :target, :probability) { include Withheld }
 
   # What recognize returned. `relations` is nil when no rule was given.
-  Recognized = Struct.new(:entities, :relations)
+  Recognized = Struct.new(:entities, :relations) { include Withheld }
 
   # One edge relate found, with Entity ends.
-  Edge = Struct.new(:relation, :source, :target, :probability)
+  Edge = Struct.new(:relation, :source, :target, :probability) { include Withheld }
 
   # The record's place in the input, the record, and its probability.
-  # Most likely yes first. Ties keep input order.
+  # Most likely yes first. Ties keep input order. `to_s` is the record.
   Ranked = Struct.new(:index, :record, :probability) do
+    include Withheld
+
     def to_s
       record.to_s
     end
@@ -65,12 +97,12 @@ module ThinkThen
 
   # The selected unit's place, the unit, and its probability. Every field
   # is nil when nothing is selected.
-  Found = Struct.new(:index, :unit, :probability)
+  Found = Struct.new(:index, :unit, :probability) { include Withheld }
 
   # The watchdog's cadence and one in-flight call's row.
   WATCHDOG_INTERVAL = 0.1
   Row = Struct.new(:tick, :token, :error)
-  private_constant :WATCHDOG_INTERVAL, :Row, :Native
+  private_constant :WATCHDOG_INTERVAL, :Row, :Native, :Withheld
 
   @rows = {}
   @rows_mutex = Mutex.new
@@ -130,9 +162,12 @@ module ThinkThen
       top ? ranked.first(top) : ranked
     end
 
-    def find(question, units, cancel: nil, deadline: nil)
+    # none: true offers a none candidate, as find --none does, so nothing may fit.
+    def find(question, units, none: false, cancel: nil, deadline: nil)
+      raise UsageError.new("none is true or false", "usage") unless [true, false].include?(none)
+
       list = units.to_a
-      place, probability = crossing("find", ThinkThen.__send__(:question_text, question), ThinkThen.__send__(:texts, list), cancel, deadline)
+      place, probability = crossing(none ? "find_none" : "find", ThinkThen.__send__(:question_text, question), ThinkThen.__send__(:texts, list), cancel, deadline)
       Found.new(place, place.nil? ? nil : list[place], probability)
     end
 
@@ -164,7 +199,8 @@ module ThinkThen
       JSON.parse(json)
     end
 
-    # One Hash per record, named by the set's questions. With `on:`, each
+    # One Hash per record, named by the set's questions. A set member whose
+    # `on` names a part reads it from each record as JSON text. With `on:`, each
     # record is a Hash, its `on` value is the evidence, and the answers
     # join its own keys. A question landing on any record's key refuses
     # before any request.
@@ -196,7 +232,8 @@ module ThinkThen
     end
 
     # Say how named entities relate. An entity is a [name, kind] pair, a
-    # Hash with name and kind, or an Entity.
+    # Hash with name and kind, an Entity, or a RecognizedEntity. A found name,
+    # or a Hash with text and no name, is named by its text.
     #
     #   edges = ThinkThen.relate([["Ana", "person"], ["Acme", "organization"]],
     #                            relations: { works_for: %w[person organization] })
@@ -367,8 +404,8 @@ module ThinkThen
     end
 
     def recognize_spec(kinds, relations, threshold, relation_threshold)
-      kinds = %w[person organization place] if kinds.nil?
-      kinds = kinds.to_h { |name| [name.to_s, name.to_s] } if kinds.is_a?(Array)
+      kinds = [] if kinds.nil?
+      kinds = kinds.to_h { |name| [name.to_s, nil] } if kinds.is_a?(Array)
       body = { "kinds" => kinds.to_h { |name, description| [name.to_s, description] } }
       body["relations"] = relation_rules(relations) if relations
       spec = { "version" => 1, "recognize" => body }
@@ -402,7 +439,8 @@ module ThinkThen
     def pair_of(entity, place)
       name, kind = case entity
                    when Entity then [entity.name, entity.kind]
-                   when Hash then [entity[:name] || entity["name"], entity[:kind] || entity["kind"]]
+                   when RecognizedEntity then [entity.text, entity.kind]
+                   when Hash then [first_of(entity, :name) || first_of(entity, :text), first_of(entity, :kind)]
                    when Array then entity
                    else refuse("entity #{place} is a [name, kind] pair, a Hash, or an Entity")
                    end
@@ -411,15 +449,23 @@ module ThinkThen
       [text_of(name, "entity #{place}"), text_of(kind, "entity #{place}")]
     end
 
+    def first_of(hash, key)
+      hash.key?(key) ? hash[key] : hash[key.to_s]
+    end
+
     def entity(held)
-      Entity.new(held["name"], held["kind"], held["start"], held["end"], held["strength"])
+      Entity.new(held["name"], held["kind"])
+    end
+
+    def recognized_entity(held)
+      RecognizedEntity.new(*held.values_at("text", "start", "end", "length", "kind", "strength"))
     end
 
     def recognized(held)
       relations = held["relations"]&.map do |one|
-        Relation.new(one["relation"], entity(one["source"]), entity(one["target"]), one["probability"])
+        Relation.new(one["relation"], recognized_entity(one["source"]), recognized_entity(one["target"]), one["probability"])
       end
-      Recognized.new(held.fetch("entities").map { |one| entity(one) }, relations)
+      Recognized.new(held.fetch("entities").map { |one| recognized_entity(one) }, relations)
     end
 
     def watch(row)

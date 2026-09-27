@@ -14,10 +14,22 @@ use crate::public::error::Error;
 /// The largest budget a deadline takes: 4,294,967,295 seconds (ADR 0041).
 const MOST_SECONDS: u64 = 4_294_967_295;
 
+/// A number plain up to 20 characters, the width of `u64::MAX`, else as `1e300`.
+fn shown(value: f64) -> String {
+    let plain = value.to_string();
+    if plain.len() <= 20 {
+        plain
+    } else {
+        format!("{value:e}")
+    }
+}
+
 /// A cancel flag a caller may set from any thread.
 ///
-/// Every clone shares one flag. A call that observes it sends nothing new,
-/// lets sent attempts finish, and returns [`Error::Cancelled`].
+/// Every clone shares one flag. A call that carries it starts no request or
+/// retry after the fire, lets sent attempts finish, and returns
+/// [`Error::Cancelled`] whatever those attempts answered. A batch ends with
+/// that error after the rows it already yielded.
 #[derive(Clone, Debug, Default)]
 pub struct CancelToken(Arc<AtomicBool>);
 
@@ -31,6 +43,11 @@ impl CancelToken {
     /// Fire the token for every call that carries it.
     pub fn cancel(&self) {
         self.0.store(true, Ordering::Release);
+    }
+
+    /// The shared flag, which the engine reads on every thread of a call.
+    fn flag(&self) -> Arc<AtomicBool> {
+        Arc::clone(&self.0)
     }
 
     /// Whether the token has fired.
@@ -126,7 +143,8 @@ impl<'a> CallOptions<'a> {
         }
         let refused = || {
             Error::usage(format!(
-                "a deadline of {value} seconds is not -1, 0, or a positive budget of at most {MOST_SECONDS} seconds"
+                "a deadline of {} seconds is not -1, 0, or a positive budget of at most {MOST_SECONDS} seconds",
+                shown(value)
             ))
         };
         if !value.is_finite() || value < 0.0 {
@@ -197,7 +215,9 @@ impl<'a> Stop<'a> {
     /// Fix the deadline and refuse a call whose token already fired.
     pub(crate) fn begin(options: CallOptions<'a>) -> Result<Self, Error> {
         let stop = Self {
-            base: Cancel::default().with_deadline(options.deadline()?),
+            base: Cancel::default()
+                .with_deadline(options.deadline()?)
+                .with_token(options.cancel.map(CancelToken::flag)),
             token: options.cancel,
             check: options.check,
             panic: Mutex::new(None),
@@ -208,7 +228,8 @@ impl<'a> Stop<'a> {
         Ok(stop)
     }
 
-    /// This call's flag and deadline without the check, for engine threads.
+    /// This call's flag, deadline and the caller's token, without the check, for
+    /// engine threads.
     pub(crate) fn shared(&self) -> Cancel<'static> {
         self.base.clone()
     }
@@ -245,16 +266,20 @@ impl<'a> Stop<'a> {
         let polled = || self.interrupted();
         let cancel = self.base.with_check(&polled);
         let result = guarded(|| call(&cancel));
-        self.finish();
-        result
+        self.finish(result)
     }
 
-    /// Resume a check's panic, once every worker of the call has joined.
-    pub(crate) fn finish(&self) {
+    /// Resume a check's panic, once every worker of the call has joined, then
+    /// return the call's result, or cancellation when the token has fired.
+    pub(crate) fn finish<T>(&self, result: Result<T, Error>) -> Result<T, Error> {
         let held = self.panic.lock().ok().and_then(|mut held| held.take());
         if let Some(payload) = held {
             resume_unwind(payload);
         }
+        if self.token.is_some_and(CancelToken::is_cancelled) {
+            return Err(Error::cancelled());
+        }
+        result
     }
 }
 

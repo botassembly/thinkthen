@@ -7,10 +7,10 @@ use std::thread;
 use crate::annotate::{GroupAnswer, Judging, PreparedGroup, check_model};
 use crate::core::{ModelName, Reading, Record};
 use crate::engine::facade::{
-    Completed, GroupOutcome as RunOutcome, GroupPort as InputPort, Input as EngineInput, Prepared,
+    GroupOutcome as RunOutcome, GroupPort as InputPort, Input as EngineInput, Prepared,
 };
 use crate::failure::Failure;
-use crate::schedule::Output;
+use crate::schedule::{Judged, Output};
 
 struct Work {
     group: PreparedGroup,
@@ -56,11 +56,7 @@ where
         |record, answers| {
             judging
                 .finish(record, answers.ordered)
-                .map(|judged| Completed {
-                    replayed: judged.replayed,
-                    partial_failure: judged.partial_failure,
-                    value: judged,
-                })
+                .map(Judged::completed)
         },
         |judged| output.take(judged),
     )?;

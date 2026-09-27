@@ -12,12 +12,11 @@ use std::path::{Path, PathBuf};
 
 use clap::{Args, ValueEnum};
 
-use crate::cli::measure::{BY, Cause, Refusal, lines, rule, write};
+use crate::cli::measure::{BY, Cause, Match, Refusal, lines, rule, write};
 use crate::core::Pointer;
 use crate::core::measure::answer::{self, Identity};
 use crate::core::measure::audit::{self as grade, By, Pooled, Row, Settings};
 use crate::core::measure::group;
-use crate::core::measure::items::Matching;
 use crate::core::measure::key::Key;
 use crate::core::measure::optimize::Measure;
 use crate::core::measure::rounded_line;
@@ -89,12 +88,6 @@ fn group(text: &str) -> Result<Group, String> {
         _ if text.starts_with('/') => Ok(Group::Field(text.to_owned())),
         _ => Err(BY.to_owned()),
     }
-}
-
-#[derive(Clone, Copy, Debug, ValueEnum)]
-enum Match {
-    Strict,
-    Overlap,
 }
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
@@ -175,10 +168,7 @@ fn grade_all(arguments: &AuditArguments) -> Result<Graded, Refusal> {
     let answers = answer::read(&results, &pointer, Identity::Question)
         .map_err(|e| refusal("results", Cause::Measure(e)))?;
     let mut key = Key::read(&key_lines).map_err(|e| refusal("key", Cause::Measure(e)))?;
-    key.1 = match arguments.matching {
-        Match::Strict => Matching::Strict,
-        Match::Overlap => Matching::Overlap,
-    };
+    key.1 = arguments.matching.into();
     let by = match &arguments.by {
         Group::Question => By::Question,
         Group::Verb => By::Verb,
@@ -213,9 +203,8 @@ fn grade_all(arguments: &AuditArguments) -> Result<Graded, Refusal> {
         return Err(refusal("key", Cause::NoneLabeled));
     }
     let report = match &arguments.write {
-        Some(path) => {
-            write::bars(path, &answers, &rows).map_err(|cause| refusal("question", cause))?
-        }
+        Some(path) => write::bars(path, &results, &answers, &rows)
+            .map_err(|cause| refusal("question", cause))?,
         None => String::new(),
     };
     let pooled = arguments
