@@ -203,12 +203,12 @@ The first proposal asked one pick-one question per unordered pair, with every le
 
 ## Superseded history: 2026-09-23 all-H proposal
 
-The all-H proposal asked one yes/no per pair for every relation. Ian's later final direction combines cross-kind choice with same-kind H. The all-H method is superseded.
+The all-H proposal asked one yes/no per pair for every relation. The former hybrid direction superseded that proposal. ADR 0057 later adopted pair questions with one shared state, new wording, and a 400-question request bound; its exact rules, rather than this old proposal, govern the build.
 
 ## Superseded history: 2026-09-23 three-way proposal
 
-The three-way proposal asked a directed pair to choose source-to-target, target-to-source, or neither. It is superseded. One-way relations now use cross-kind choice or ordered same-kind H.
+The three-way proposal asked a directed pair to choose source-to-target, target-to-source, or neither. It is superseded. ADR 0057's one-way relation asks ordered yes/no pairs.
 
-## Current rule
+## Historical ticket 0081 and 0088 delivery rule
 
-Current rule: 0081 first lands first-seen concrete wildcard expansion, cross-kind choice, same-kind H, the lower of 255 and runtime backend-profile `max_options`, per-concrete fallback, one exact typed relation state, request identity, and one shared generic planner and edge assembler while recognition keeps offsets, strength, and its public output. Dependent 0088 then adds the complete `@entities` command grammar, saved calibration identity, name-and-kind-only standalone endpoints, exact dry-run schema, ruled Option A detailed schema, partial output at exit 6, documentation, and secrecy proof. The Luna trial stopped after two remediation passes. Sol Medium drives both tickets, and each starts product code only after independent Sol design acceptance.
+Tickets 0081 and 0088 delivered the former hybrid planner and the standalone command. Their delivery order, review route, and method are history. ADR 0057 and ticket 0167 govern the current pair planner; the retained input, edge shape, and partial-output rules above still apply.
