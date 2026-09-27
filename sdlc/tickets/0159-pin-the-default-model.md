@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core/adapters/systemone.rs crates/thinkthen/src/cli/
 
 # 0159: The default model is a pinned version
 
-Status: ready for review. Written 2026-09-26 by Claude, the queue owner's planner, after Ian approved pinning the default model. A fresh read-only review must accept it before it builds. Owner: Claude.
+Status: ready. The coordinator accepted it on 2026-09-26 after five fresh read-only reviews and a coordinator fix to two lines. Owner: Claude. It builds after 0150 and 0158 land and beside no other ticket.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -84,7 +84,7 @@ Where the script and the rule apply:
 - Files that name `jev-latest` on purpose keep it: the alias tests in `cache prune`, `check`'s "an alias answering as a version" sentence, and test plans that name the model.
 - `site/` is the marketing lead's. The ticket files `sdlc/issues/2026-09-26-site-recordings-rekey-for-the-default-model-pin.md` for the marketing lead. It gives the exact `rekey-model jev-latest jev-1.13.0 site/recordings site/examples/...` command and says that the site build replays against the old key until that commit lands. The Pages workflow runs only by hand, so the gap breaks no deploy that nobody starts.
 
-The re-keyed entries say what happened to them. `recording.md` gains, under "An entry": "The repository's recordings made before ticket 0159 asked for `jev-latest`. `sdlc/scripts/rekey-model` re-keyed them to `jev-1.13.0`, the version every one of their replies named, and left each reply unchanged." The ticket's record lists every re-keyed folder and the count of entries in each.
+The re-keyed entries say what happened to them. `recording.md` gains, under "An entry": "Ticket 0159 re-keyed the repository's recordings that asked for `jev-latest` and were answered by `jev-1.13.0`. `sdlc/scripts/rekey-model` re-keyed them to `jev-1.13.0`, the version every one of their replies named, and left each reply unchanged." The ticket's record lists every re-keyed folder and the count of entries in each.
 
 The script stays until the site issue closes. A Quick Fix then removes it, its fixture and its lint line.
 
@@ -221,7 +221,7 @@ Nonblank lines, measured with `grep -c .`.
 - `sdlc/scripts/rekey-model`: at most 160 with its self-test, new. Its fixture: two entries. `sdlc/scripts/lint` and `sdlc/scripts/README.md`: at most 6 net together.
 - Pages under `specification/`, `demos/`, `CHANGELOG.md`: at most 30 net, beside the replaced model names and digests.
 - Renamed recordings change only the model value and their file names.
-- `sdlc/ratchet.json` moves to the measured total, at most 250 above main. The ratchet counts `.rs` files under `crates` and `conformance`, and the Rust budgets above add up to 246 lines. The Python script falls outside it. The commit says what grew.
+- `sdlc/ratchet.json` moves to the measured total, at most 265 above main. The ratchet counts `.rs` files under `crates` and `conformance`. The Rust budgets above add up to 246 lines, and about 15 more lines fall outside them: the `DEFAULT_MODEL` imports in `resolve/tests.rs` and the four conformance runner files, and the `mod` line for the new annotate test. The Python script falls outside it. The commit says what grew.
 - No dependency. The `surfaces` rung runs.
 
 ## Stop rules
