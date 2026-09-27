@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":{"evidence":"John Lennon sang Help!, and Ringo Starr sang Boys.","entities":[{"id":"i1","name":"John Lennon","kind":"person"},{"id":"i2","name":"Help","kind":"song"},{"id":"i3","name":"Ringo Starr","kind":"person"},{"id":"i4","name":"Boys","kind":"song"}]},"model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the text itself state that i1 sang i2?"},"q2":{"type":"noul","instructions":"Does the text itself state that i1 sang i4?"},"q3":{"type":"noul","instructions":"Does the text itself state that i3 sang i2?"},"q4":{"type":"noul","instructions":"Does the text itself state that i3 sang i4?"},"q5":{"type":"noul","instructions":"Does the text itself state that i1 wrote i2?"},"q6":{"type":"noul","instructions":"Does the text itself state that i1 wrote i4?"},"q7":{"type":"noul","instructions":"Does the text itself state that i3 wrote i2?"},"q8":{"type":"noul","instructions":"Does the text itself state that i3 wrote i4?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.97},"q2":{"type":"noul","noul":0.02},"q3":{"type":"noul","noul":0.02},"q4":{"type":"noul","noul":0.98},"q5":{"type":"noul","noul":0.02},"q6":{"type":"noul","noul":0.01},"q7":{"type":"noul","noul":0.01},"q8":{"type":"noul","noul":0.02}},"usage":{"input_tokens":549,"output_tokens":140}}
+}

@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Parliament passed the Copyright, Designs and Patents Act 1988.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, some words are wrapped in [[ ]]. Going by what they refer to in this text, which listed kind of name are they? Choose none of these when they are not a proper name, or when they name something that no listed kind covers.\n\nText: [[Parliament]] passed the Copyright, Designs and","criteria":{"person":null,"none of these":"They are not a proper name, or no listed kind covers what they name."}},"q2":{"type":"choice","instructions":"In the text below, some words are wrapped in [[ ]]. Going by what they refer to in this text, which listed kind of name are they? Choose none of these when they are not a proper name, or when they name something that no listed kind covers.\n\nText: Parliament passed the [[Copyright, Designs and Patents Act]] 1988.","criteria":{"person":null,"none of these":"They are not a proper name, or no listed kind covers what they name."}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"none of these","confidence":0.97,"probabilities":{"none of these":0.98,"person":0.02}},"q2":{"type":"choice","choice":"none of these","confidence":0.99,"probabilities":{"none of these":0.99,"person":0.01}}},"usage":{"input_tokens":524,"output_tokens":69}}
+}

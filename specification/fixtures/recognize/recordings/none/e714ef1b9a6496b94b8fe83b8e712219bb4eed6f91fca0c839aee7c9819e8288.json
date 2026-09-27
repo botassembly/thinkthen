@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Amazon shipped the book up the Amazon.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.\n\nText: Amazon shipped the book up the [[Amazon]].","criteria":{"Amazon":"Amazon shipped the book up the [[Amazon]].","Amazon.":"Amazon shipped the book up the [[Amazon.]]"}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"Amazon","confidence":0.99,"probabilities":{"Amazon.":0.0,"Amazon":1.0}}},"usage":{"input_tokens":405,"output_tokens":33}}
+}

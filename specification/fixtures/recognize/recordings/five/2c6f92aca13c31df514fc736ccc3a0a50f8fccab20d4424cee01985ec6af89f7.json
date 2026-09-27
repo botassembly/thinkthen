@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Mount Everest is tall.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, some words are wrapped in [[ ]]. Going by what they refer to in this text, which listed kind of name are they? Choose none of these when they are not a proper name, or when they name something that no listed kind covers.\n\nText: [[Mount Everest]] is tall.","criteria":{"person":null,"place":null,"organisation":null,"work":null,"thing":null,"none of these":"They are not a proper name, or no listed kind covers what they name."}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"place","confidence":0.93,"probabilities":{"none of these":0.03,"place":0.94,"organisation":0.0,"thing":0.03,"person":0.0,"work":0.0}}},"usage":{"input_tokens":404,"output_tokens":62}}
+}
