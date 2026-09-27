@@ -376,7 +376,7 @@ module ThinkThen
 
     def recognize_spec(kinds, relations, threshold, relation_threshold)
       kinds = [] if kinds.nil?
-      kinds = kinds.to_h { |name| [name.to_s, name.to_s] } if kinds.is_a?(Array)
+      kinds = kinds.to_h { |name| [name.to_s, nil] } if kinds.is_a?(Array)
       body = { "kinds" => kinds.to_h { |name, description| [name.to_s, description] } }
       body["relations"] = relation_rules(relations) if relations
       spec = { "version" => 1, "recognize" => body }

@@ -105,10 +105,10 @@ Two code reviews of d1ceea41 found the items below. Each fix is its own commit.
 
 1. A name across a line feed or a tab put a control character in its edge label. The label check refused it, and the run exited 2 with the kinds message after step 1 was paid. The coordinator ruled that each edge label shows every white-space run as one space. The description keeps the real snippet. A step-2 label error now maps to a defect. The edge table gains `"Maria\nChen."` and `"Maria\tChen!"` rows. Ian can overturn the ruling.
 2. The decode and the forward pass share one helper for the tags that may come before a tag. The total and a span's `before` share one `closed` sum. `Odds::leader` calls `best_of`. `audit` and the reserved kinds import `ENTITY` and `NONE_OF_THESE` from `recognize`. The ceiling fell to 71,503, the measured total after fixes 1 and 2.
+3. Ruby's `recognize` gave each kind in a plain list a description equal to its name. ADR 0056 forbids a default description, so each such kind now carries none, as in TypeScript.
 
 ## Left for later
 
 - The accepted limits in the ticket's "Deferred gaps" stand, `Help!` among them.
-- Ruby's `recognize` gives array kinds a description equal to the kind's name. TypeScript gives none. That predates this ticket and changes step-2 bodies from Ruby.
 - The flat relation tables of R, DuckDB and PostgreSQL carry only text and kind for each end.
 - `site/` changes through the two marketing issues.
