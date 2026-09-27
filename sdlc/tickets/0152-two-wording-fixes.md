@@ -242,6 +242,13 @@ Contract 2; state and timing 0; reach 3; proof 2; cost of error 1; total 8. Fina
 - Decision 5: internal identifiers keep the old word.
 - Decision 6: Part B waits for 0146.
 
+## What the build taught us
+
+- The audit golden exposed `Counts.unresolved` inside the serialized `suggested` and `held` objects. A serde field rename kept the internal Rust name while making every public member `unsure`. Tracing nested serialization before the edit would have found it sooner.
+- J1 added `specification/types.md`, executable `spec/annotate.md`, and two digest-named local request fixtures after this ticket's first inventory. A current public-surface search and the fixture filename formula belonged in the preparation. The prototype measure fixtures remained byte copies.
+- Executable pages need the built command on `PATH`. The first targeted invocation missed that setup; the corrected invocation passed. One full-demo attempt exposed an extra usage-counter warning in unchanged demo 12 under the normal home directory. Its cause is unproven; the changed pages passed targeted checks.
+- The remaining limits are the internal names, historical artifacts, and marketing copies listed above. No broader mutation campaign or full port ladder was run under Ian's current focused-proof ruling.
+
 ## Closes
 
 - Part A marks item 1 of `sdlc/issues/2026-09-25-command-wording-and-help-fixes-before-0-1.md` fixed by this ticket.
