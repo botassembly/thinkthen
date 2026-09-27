@@ -5,6 +5,9 @@
 set -eu
 cd -- "$(dirname -- "$0")"
 unset THINKTHEN_API_KEY
+profile=${THINKTHEN_TEST_PROFILE:-routine}
+case $profile in routine|full|stress) ;; *) echo "typescript: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+[ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 repo=$(cd ../.. && pwd)
 . "$repo/sdlc/scripts/scratch.sh"
 # macOS has no `timeout` (ticket 0128).
@@ -80,7 +83,12 @@ npm ci --offline --no-audit --no-fund --silent --prefix target/npm
 sh build-addon.sh
 
 step 'node tests'
-sh "$LIMIT" 300 node --test --test-timeout=30000 tests/*.test.mjs
+if [ "$profile" = stress ]; then
+    sh "$LIMIT" 300 node --test --test-timeout=30000 --test-name-pattern='^stress:' tests/abort.test.mjs
+    echo 'typescript: pass, stress'
+    exit 0
+fi
+sh "$LIMIT" 300 node --test --test-timeout=30000 --test-skip-pattern='^stress:' tests/*.test.mjs
 
 step 'the conformance runner fails a corrupted case and names it'
 for id in 12-score-upper 17-annotate-mixed 27-decide-many; do
