@@ -28,8 +28,8 @@ const BOUND: u64 = crate::core::MAX_RECORD_BYTES as u64 + 2;
 ///
 /// `THINKTHEN_BASE_URL` names where the System One interface lives. The other
 /// variables shorten the retry wait and acknowledge SIGINT. Only a build with
-/// debug assertions reads them, so a release binary ignores them. The key itself is read later, by name, and only when a request is about
-/// to go out.
+/// debug assertions reads them, so a release binary ignores them. The key
+/// itself is read later, by name, and only when a request is about to go out.
 #[derive(Debug, Default)]
 pub(crate) struct Environment {
     base_url: Option<String>,

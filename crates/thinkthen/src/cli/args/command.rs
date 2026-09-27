@@ -296,7 +296,8 @@ pub(crate) struct PruneArguments {
     pub(crate) older_than: Option<String>,
     /// Remove entries whose reply names another model. Give the version that
     /// answered, as a result's meta.model shows it, not the alias passed to
-    /// --model. A name no reply carries removes every entry.
+    /// --model. A name no reply in the folder carries is refused, and nothing
+    /// is removed.
     #[arg(long, value_name = "MODEL")]
     pub(crate) answered_by_other_than: Option<String>,
 }
