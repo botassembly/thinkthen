@@ -1,14 +1,14 @@
 ---
 flow: build
 priority: 153
-opens: crates/thinkthen/src/core/mod.rs crates/thinkthen/src/cli/hint.rs crates/thinkthen/src/cli/mod.rs crates/thinkthen/src/cli/args.rs crates/thinkthen/src/cli/args/command.rs crates/thinkthen/src/cli/args/find.rs crates/thinkthen/tests/hints.rs specification/channels.md specification/records.md sdlc/issues/2026-09-20-new-user-stumble-register.md sdlc/issues/2026-09-25-docs-how-tos-and-spec-claims-owed.md sdlc/ratchet.json sdlc/records sdlc/tickets
+opens: crates/thinkthen/tests/backend/threshold_args.rs crates/thinkthen/src/core/mod.rs crates/thinkthen/src/cli/hint.rs crates/thinkthen/src/cli/mod.rs crates/thinkthen/src/cli/args.rs crates/thinkthen/src/cli/args/command.rs crates/thinkthen/src/cli/args/find.rs crates/thinkthen/tests/hints.rs specification/channels.md specification/records.md sdlc/issues/2026-09-20-new-user-stumble-register.md sdlc/issues/2026-09-25-docs-how-tos-and-spec-claims-owed.md sdlc/ratchet.json sdlc/records sdlc/tickets
 ---
 
 # 0153: Hints for a guessed verb, a table fed to `--jsonl`, and a second argument
 
-Status: landing verification blocked on 2026-09-27 by existing-test and help-vocabulary conflicts (stop rules 5 and 6). The coordinator accepted the design on 2026-09-26; a reviewed amendment is needed before landing. Owner: Codex.
+Status: accepted with the bounded landing amendment on 2026-09-27 after a fresh independent read-only Sol Medium review. The coordinator accepts both gate-conflict resolutions below. Owner: Codex.
 
-Review route: Ian routed the code review to a fresh read-only Codex reviewer, who accepted `9304b75c`. A design amendment and the new one-line ceiling increase need bounded independent review before landing.
+Review route: Ian routed this work to Codex. A fresh read-only reviewer accepted code `9304b75c`, and a separate fresh reviewer accepted the bounded landing amendment below. The final code corrections and ceiling need bounded independent review before landing.
 
 ## Outcome and authority
 
@@ -80,7 +80,7 @@ The sentence names no typed word, so it echoes nothing from the command line.
 
 ### `choose --help` names `tag`
 
-The `choose` doc comment in `cli/args/command.rs` gains one sentence after its first line, as its own paragraph: "Use `tag` when any number of the labels can apply." It shows in the long help.
+The `choose` doc comment in `cli/args/command.rs` gains one sentence after its first line, as its own paragraph: "Use `tag` when more than one answer can apply." It shows in the long help.
 
 ### Pages
 
@@ -147,7 +147,7 @@ The four new tests live in a new file, `crates/thinkthen/tests/hints.rs`. Each r
 | `a_second_argument_says_where_the_evidence_goes` | `decide 'Q?' README.md`, `filter 'Q?' README.md`, `rank 'Q?' README.md`, `find 'Q?' README.md`, `decide Is this urgent`, `decide 'Q?' --jsonl --field /a /b`, `decide 'Q?' --input a.txt b.txt`, and `decide 'Q?'` with a second word of the bytes `0xFF 0xFE` | (d) Drop the field from `FindArguments`: the `find` row prints clap's text. (e) Refuse only when the word names an existing file: `this` and `urgent` name no file, so the run goes on with the question `Is` and stops for the missing key. The `Is this urgent` row prints ``thinkthen: the environment variable `THINKTHEN_API_KEY` is unset or blank, so no key is sent`` and exits 4 |
 | `a_table_fed_to_jsonl_names_csv_and_lines` | A two-line CSV with a quoted comma into `filter`, `rank` and `find` with `--jsonl`, each pinned to both lines. `find --jsonl --dry-run` over the same table, pinned to both lines. `find --jsonl --dry-run` over a one-column table whose header is `123`, pinned to the plain sentence and `stopped at record 2; 0 records finished` | (f) Drop the arm in `told`: the four table rows print the plain sentence. (g) Drop the record-1 condition: the `123` row prints the hint. (h) Drop the no-`--field` condition: the existing `json_syntax.rs::jsonl_syntax_keeps_the_record_sentence_and_sends_nothing` turns red |
 
-The fourth, a one-row test, `choose_help_names_tag`, runs `choose --help` and requires the exact line "Use `tag` when any number of the labels can apply." on standard output. Plant (i) deletes the sentence.
+The fourth, a one-row test, `choose_help_names_tag`, runs `choose --help` and requires the exact line "Use `tag` when more than one answer can apply." on standard output. Plant (i) deletes the sentence.
 
 The four questions for each new test:
 
@@ -238,3 +238,12 @@ Contract 2; state and timing 0; reach 1; proof 1; cost of error 1; total 5. Fina
 - Changes: Seven guessed verbs print one sentence that names the function. `decide`, `filter`, `rank` and `find` refuse a loose word with one sentence naming one question, one value an option, quoting and `--input FILE`. A typed `--jsonl` with no `--field` that fails at record 1 names `--csv`, `--tsv` and `--lines`. `choose --help` names `tag`. `channels.md` and `records.md` say so.
 - Proof: The four outside-in tests under "Proof", each an exact-sentence table over the compiled binary with no key and no network. Plants (a) to (i) each turn a test red, and (h) turns the existing `json_syntax.rs` row red.
 - Defers: A hint under `--dry-run`, a hint that knows the settled pointer, second-argument hints on list verbs, and a place for `split`.
+
+
+## Bounded landing amendment, 2026-09-27
+
+The final checks found two conflicts between this ticket and retained checks. The `choose` help sentence now says exactly “Use `tag` when more than one answer can apply.” This keeps the pointer to `tag` without calling a choose option a label. The approved vocabulary and its plants stay unchanged. Update the new exact-sentence hint test with the sentence; this is the only product wording correction.
+
+After the explicit `--` terminator, `--threshold` and `-.5` are literal positional words. For `decide QUESTION -- --threshold -.5`, the accepted extra-word hint correctly gives `ONE_QUESTION`, exit 2 and no output. Update only the final case in `threshold_args::non_numeric_option_tokens_keep_claps_existing_meaning` to pin that exact sentence instead of the broad `error:` prefix. Keep its other five rows, all actual threshold parsing, and the assertion that no threshold-value diagnostic appears. No product parser change is needed for this correction. The original stop rule 6 has this one reviewed exception; every other retained expected output remains unchanged. Add the boundary case to the table above when building. The original gate failures provide the red evidence.
+
+The new exact file is `crates/thinkthen/tests/backend/threshold_args.rs`; claim it before editing. No dependency or feature changes. The file may grow by at most five nonblank lines; existing ticket budgets remain. Run the hints and threshold-argument tests, approved-help vocabulary via the normal demos check, formatting, relevant Clippy and ratchets. Reuse passing unaffected checks from `3dadbb76`; record what ran and what was skipped. The full test rung stopped inside the backend test binary, so finish every not-yet-run root test binary, doctest, external consumer and script step from `sdlc/scripts/test`. No full surfaces rerun is required by the accepted budget. A fresh code review must also cover the two post-review lint corrections (in-place boxed value and scoped expect annotation), this amendment, and exact verification evidence before landing.
