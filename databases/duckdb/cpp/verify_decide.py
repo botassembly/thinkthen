@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
@@ -29,7 +30,7 @@ def main() -> None:
 
         file_question = run(["SELECT thinkthen_decide('@question.json', 'refund now')"],
                             backend.base(), extension=extension)
-        assert "thinkthen local: question files are not yet enabled" in file_question[0]["error"]
+        assert "thinkthen local: the question file question.json was not read: it does not exist or could not be opened" in file_question[0]["error"]
         assert backend.count() == 0, "unfinished file handling sent a request"
 
         answered = run(
@@ -148,6 +149,44 @@ def main() -> None:
             {"rows": [[None]]}
         ]
         assert backend.count() == 11, "a NULL try-details row should not send"
+        with tempfile.TemporaryDirectory() as folder:
+            question_file = Path(folder) / "question.json"
+            question_file.write_text('{"decide":"Is it a refund?"}')
+            malformed = Path(folder) / "malformed.json"
+            malformed.write_text('{"decide":')
+            file_rows = run(
+                [f"SELECT thinkthen_decide('@{question_file}', 'refund now')",
+                 f"SELECT thinkthen_decide('@{malformed}', 'refund now')",
+                 f"SELECT thinkthen_try_details('@{malformed}', 'refund now')",
+                 "SET enable_external_access = false",
+                 f"SELECT thinkthen_decide('@{question_file}', 'refund now')"],
+                backend.base(), extension=extension,
+            )
+            assert file_rows[0] == {"rows": [[True]]}
+            assert "thinkthen local: " in file_rows[1]["error"]
+            assert json.loads(file_rows[2]["rows"][0][0])["error"]["kind"] == "local"
+            assert "file settings refuse it" in file_rows[4]["error"]
+            assert backend.count() == 12, "malformed and forbidden files sent no requests"
+            mixed_files = run(
+                ["SELECT thinkthen_decide(q, 'refund now') FROM "
+                 f"(VALUES ('@{question_file}'), ('@{malformed}')) AS x(q)"],
+                backend.base(), extension=extension,
+            )
+            assert "thinkthen local: " in mixed_files[0]["error"]
+            assert backend.count() == 12, "a later bad file must stop the whole chunk before sends"
+            home_file = run(
+                [f"SET home_directory = '{folder}'",
+                 "SELECT thinkthen_decide('@~/question.json', 'refund now')"],
+                backend.base(), extension=extension,
+            )
+            assert home_file[1] == {"rows": [[True]]}
+            assert backend.count() == 13, "the caller's home_directory should resolve a file once"
+            endless = run(
+                ["SELECT thinkthen_decide('@/dev/zero', 'refund now')"],
+                backend.base(), extension=extension, timeout=15,
+            )
+            assert "it holds more than 1 MiB" in endless[0]["error"]
+            assert backend.count() == 13, "an endless file must stop before a send"
     print("C++ decide, probability, details, try-details, budget, limits, NULL, type, deduplication, and loopback boundaries pass")
 
 

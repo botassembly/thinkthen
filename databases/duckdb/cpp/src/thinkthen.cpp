@@ -2,6 +2,7 @@
 
 #include "duckdb.hpp"
 #include "duckdb/common/exception.hpp"
+#include "duckdb/common/file_system.hpp"
 #include "duckdb/common/weak_ptr_ipp.hpp"
 #include "duckdb/execution/expression_executor.hpp"
 #include "duckdb/main/client_context.hpp"
@@ -40,13 +41,13 @@ struct ThinkThenSettings {
 	int64_t max_requests_total;
 };
 int32_t thinkthen_cpp_init();
-ThinkThenReply thinkthen_cpp_validate_question(const uint8_t *bytes, size_t len);
+ThinkThenReply thinkthen_cpp_validate_question(const uint8_t *bytes, size_t len, int32_t from_file);
 ThinkThenReply thinkthen_cpp_scalar_group(const uint8_t *question, size_t question_len, const ThinkThenText *texts,
                                           size_t count, int64_t deadline_ms, int32_t kind,
-                                          ThinkThenSettings settings);
+                                          ThinkThenSettings settings, int32_t from_file);
 ThinkThenReply thinkthen_cpp_try_details_row(const uint8_t *question, size_t question_len,
                                              const uint8_t *evidence, size_t evidence_len,
-                                             int64_t deadline_ms, ThinkThenSettings settings);
+                                             int64_t deadline_ms, ThinkThenSettings settings, int32_t from_file);
 void thinkthen_cpp_free(uint8_t *bytes, size_t len);
 }
 
@@ -77,6 +78,58 @@ void Checked(const ThinkThenReply &reply) {
 	if (reply.status != 0) {
 		throw InvalidInputException("%s", ReplyText(reply).c_str());
 	}
+}
+
+struct ResolvedQuestion {
+	string text;
+	bool from_file = false;
+	bool operator==(const ResolvedQuestion &other) const {
+		return text == other.text && from_file == other.from_file;
+	}
+};
+
+ResolvedQuestion ResolveQuestion(ClientContext &context, const string &argument) {
+	if (argument.empty() || argument[0] != '@') {
+		return {argument, false};
+	}
+	const auto path = argument.substr(1);
+	auto &files = FileSystem::GetFileSystem(context);
+	string content;
+	bool too_large = false;
+	try {
+		auto handle = files.OpenFile(path, FileOpenFlags::FILE_FLAGS_READ);
+		vector<char> buffer(64 * 1024);
+		for (;;) {
+			const auto read = files.Read(*handle, buffer.data(), static_cast<int64_t>(buffer.size()));
+			if (read <= 0) {
+				break;
+			}
+			content.append(buffer.data(), static_cast<size_t>(read));
+			if (content.size() > 1024 * 1024) {
+				too_large = true;
+				break;
+			}
+		}
+	} catch (const PermissionException &) {
+		throw InvalidInputException("thinkthen local: the question file %s was not read: this database's file settings refuse it", path.c_str());
+	} catch (const IOException &) {
+		throw InvalidInputException("thinkthen local: the question file %s was not read: it does not exist or could not be opened", path.c_str());
+	} catch (const Exception &) {
+		throw InvalidInputException("thinkthen local: the question file %s was not read: this database's file settings refuse it", path.c_str());
+	}
+	if (too_large) {
+		throw InvalidInputException("thinkthen local: the question file %s was not read: it holds more than 1 MiB", path.c_str());
+	}
+	if (!Value::StringIsValid(content)) {
+		throw InvalidInputException("thinkthen local: the question file %s was not read: it is not UTF-8 text", path.c_str());
+	}
+	return {content, true};
+}
+
+void ValidateQuestion(const ResolvedQuestion &resolved) {
+	RustReply checked(thinkthen_cpp_validate_question(reinterpret_cast<const uint8_t *>(resolved.text.data()),
+	                                               resolved.text.size(), resolved.from_file ? 1 : 0));
+	Checked(checked.value);
 }
 
 struct StatementOwner : ClientContextState {
@@ -128,6 +181,7 @@ struct StatementOwner : ClientContextState {
 struct ScalarBind : FunctionData {
 	weak_ptr<ClientContext> context;
 	std::optional<string> constant_question;
+	std::optional<ResolvedQuestion> resolved_question;
 	std::optional<int64_t> constant_deadline;
 	int32_t kind = 0;
 
@@ -136,6 +190,7 @@ struct ScalarBind : FunctionData {
 	unique_ptr<FunctionData> Copy() const override {
 		auto copy = make_uniq<ScalarBind>(context);
 		copy->constant_question = constant_question;
+		copy->resolved_question = resolved_question;
 		copy->constant_deadline = constant_deadline;
 		copy->kind = kind;
 		return copy;
@@ -143,6 +198,7 @@ struct ScalarBind : FunctionData {
 	bool Equals(const FunctionData &other) const override {
 		auto &held = other.Cast<ScalarBind>();
 		return context.lock() == held.context.lock() && constant_question == held.constant_question &&
+		       resolved_question == held.resolved_question &&
 		       constant_deadline == held.constant_deadline && kind == held.kind;
 	}
 };
@@ -160,8 +216,8 @@ unique_ptr<FunctionData> BindDecide(ClientContext &context, ScalarFunction &func
 			bound->constant_question = value.GetValue<string>();
 			auto &text = *bound->constant_question;
 			if (bound->kind != 3) {
-				RustReply checked(thinkthen_cpp_validate_question(reinterpret_cast<const uint8_t *>(text.data()), text.size()));
-				Checked(checked.value);
+				bound->resolved_question = ResolveQuestion(context, text);
+				ValidateQuestion(*bound->resolved_question);
 			}
 		}
 	}
@@ -184,6 +240,7 @@ ScalarBind &Bound(ExpressionState &state) {
 struct DecisionGroup {
 	string question;
 	int64_t deadline;
+	bool from_file;
 	vector<string> texts;
 	std::map<string, idx_t> seen;
 };
@@ -222,10 +279,17 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 			                 : trailing < 0 ? budget : std::min(trailing, budget);
 			auto question_text = question.GetValue<string>();
 			auto evidence_text = evidence.GetValue<string>();
-			RustReply answered(thinkthen_cpp_try_details_row(reinterpret_cast<const uint8_t *>(question_text.data()),
-			                                                 question_text.size(),
+			ResolvedQuestion resolved;
+			try {
+				resolved = ResolveQuestion(*context, question_text);
+			} catch (const InvalidInputException &) {
+				resolved = {question_text, false}; // Rust turns an unreadable @file into a safe local value.
+			}
+			RustReply answered(thinkthen_cpp_try_details_row(reinterpret_cast<const uint8_t *>(resolved.text.data()),
+			                                                 resolved.text.size(),
 			                                                 reinterpret_cast<const uint8_t *>(evidence_text.data()),
-			                                                 evidence_text.size(), due, settings));
+			                                                 evidence_text.size(), due, settings,
+			                                                 resolved.from_file ? 1 : 0));
 			Checked(answered.value);
 			if (!answered.value.bytes) {
 				throw InvalidInputException("thinkthen defect: the bridge returned no try-details value");
@@ -237,6 +301,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 	vector<DecisionGroup> groups;
 	std::map<std::pair<string, int64_t>, idx_t> known_groups;
 	std::set<string> checked_questions;
+	std::map<string, ResolvedQuestion> resolved_questions;
 	vector<std::optional<std::pair<idx_t, idx_t>>> slots(args.size());
 	// Validate the entire chunk before its first real engine call.
 	for (idx_t row = 0; row < args.size(); ++row) {
@@ -250,9 +315,10 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		}
 		auto question_text = question.GetValue<string>();
 		if (checked_questions.insert(question_text).second) {
-			RustReply checked(thinkthen_cpp_validate_question(reinterpret_cast<const uint8_t *>(question_text.data()),
-			                                              question_text.size()));
-			Checked(checked.value);
+			auto resolved = bound.constant_question && *bound.constant_question == question_text && bound.resolved_question
+			                    ? *bound.resolved_question : ResolveQuestion(*context, question_text);
+			ValidateQuestion(resolved);
+			resolved_questions.emplace(question_text, std::move(resolved));
 		}
 		auto due = args.ColumnCount() == 3 ? args.data[2].GetValue(row).GetValue<int64_t>() : -1;
 		if (due < -1 || due > 4294967295000LL) {
@@ -261,7 +327,8 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		auto key = std::make_pair(question_text, due);
 		auto [place, new_group] = known_groups.emplace(key, groups.size());
 		if (new_group) {
-			groups.push_back({question_text, due, {}, {}});
+			auto &resolved = resolved_questions.at(question_text);
+			groups.push_back({resolved.text, due, resolved.from_file, {}, {}});
 		}
 		auto &group = groups[place->second];
 		auto evidence_text = evidence.GetValue<string>();
@@ -285,7 +352,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		}
 		RustReply answered(thinkthen_cpp_scalar_group(reinterpret_cast<const uint8_t *>(group.question.data()),
 		                                             group.question.size(), texts.data(), texts.size(), due, bound.kind,
-		                                             settings));
+		                                             settings, group.from_file ? 1 : 0));
 		Checked(answered.value);
 		if (!answered.value.bytes) {
 			throw InvalidInputException("thinkthen defect: the bridge returned an invalid decision group");

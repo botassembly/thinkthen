@@ -118,14 +118,18 @@ fn text<'a>(bytes: *const u8, len: usize) -> Result<&'a str, String> {
         .map_err(|_| "thinkthen usage: a text argument is not UTF-8".to_owned())
 }
 
-fn question(argument: &str) -> Result<LoadedQuestion, String> {
-    question_typed(argument).map_err(|error| error.text)
-}
-
-fn question_typed(argument: &str) -> Result<LoadedQuestion, errors::RowError> {
-    if argument.starts_with('@') {
+fn question_typed(argument: &str, from_file: bool) -> Result<LoadedQuestion, errors::RowError> {
+    if from_file {
+        Question::from_json(argument).map_err(|error| {
+            if error.kind() == thinkthen::ErrorKind::Usage {
+                errors::RowError::local(error.detail().message())
+            } else {
+                error.into()
+            }
+        })
+    } else if argument.starts_with('@') {
         Err(errors::RowError::local(
-            "question files are not yet enabled in this C++ candidate",
+            "the question file was not read by this database",
         ))
     } else if argument.starts_with('{') {
         Question::from_json(argument).map_err(Into::into)
@@ -144,10 +148,13 @@ fn question_typed(argument: &str) -> Result<LoadedQuestion, errors::RowError> {
 pub(crate) unsafe extern "C" fn thinkthen_cpp_validate_question(
     bytes: *const u8,
     len: usize,
+    from_file: i32,
 ) -> Reply {
     reply_boundary(|| {
         let argument = text(bytes, len)?;
-        question(argument).map(|_| Vec::new())
+        question_typed(argument, from_file != 0)
+            .map(|_| Vec::new())
+            .map_err(|error| error.text)
     })
 }
 
@@ -191,9 +198,11 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_scalar_group(
     deadline_ms: i64,
     kind: i32,
     settings: BridgeSettings,
+    from_file: i32,
 ) -> Reply {
     reply_boundary(|| {
-        let question = question(text(question_bytes, question_len)?)?;
+        let question = question_typed(text(question_bytes, question_len)?, from_file != 0)
+            .map_err(|error| error.text)?;
         if count > 2048 || (texts.is_null() && count != 0) {
             return Err("thinkthen defect: the bridge got an invalid chunk size".to_owned());
         }
@@ -284,6 +293,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_try_details_row(
     evidence_len: usize,
     deadline_ms: i64,
     settings: BridgeSettings,
+    from_file: i32,
 ) -> Reply {
     reply_boundary(|| {
         let result = (|| -> Result<String, errors::RowError> {
@@ -291,7 +301,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_try_details_row(
                 .map_err(|_| errors::RowError::usage("a question is not UTF-8 text"))?;
             let evidence = text(evidence_bytes, evidence_len)
                 .map_err(|_| errors::RowError::usage("evidence is not UTF-8 text"))?;
-            let question = question_typed(argument)?;
+            let question = question_typed(argument, from_file != 0)?;
             let asked = asked(settings);
             let engine = engines::engine_for_typed(&asked, |_| engines::Probe::Allowed)?;
             let (_, cut) = engines::within_total_typed(&asked, vec![evidence.to_owned()])?;
