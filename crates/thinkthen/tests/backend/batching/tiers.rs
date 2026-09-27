@@ -92,7 +92,7 @@ fn the_batch_setting_follows_its_tiers() {
 }
 
 #[test]
-fn a_file_batch_leaves_the_question_digest_and_stays_off_annotate_entries() {
+fn a_file_batch_leaves_the_question_digest_and_stays_off_other_files() {
     let place = folder("digest");
     fs::create_dir_all(&place).expect("a folder for the question files");
     let listener = Listener::answering(answering).expect("a loopback listener");
@@ -125,5 +125,22 @@ fn a_file_batch_leaves_the_question_digest_and_stays_off_annotate_entries() {
     assert_eq!(
         text(&annotate.stderr),
         "thinkthen: the question set holds no key `questions.ok.batch`\n"
+    );
+
+    let choose = format!("{place}/choose.json");
+    fs::write(
+        &choose,
+        r#"{"choose":"Which?","options":["a","b"],"batch":5}"#,
+    )
+    .expect("a choose file");
+    let chosen = spawn(
+        &["choose", &format!("@{choose}"), "--dry-run"],
+        &[],
+        b"line 1",
+    )
+    .expect("the command runs");
+    assert_eq!(
+        (chosen.status.code(), text(&chosen.stderr).as_str()),
+        (Some(5), "thinkthen: a question file takes no key `batch`\n")
     );
 }

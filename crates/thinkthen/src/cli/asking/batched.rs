@@ -87,7 +87,6 @@ pub(super) fn run(
         held: Vec::new(),
         taken: 0,
         queue: VecDeque::new(),
-        ended: false,
     };
     if configuration.common.dry_run {
         return planned(former, records, &configuration, output);
@@ -164,7 +163,6 @@ struct Former {
     /// How many records went into batches before the open one.
     taken: usize,
     queue: VecDeque<Input<Item, Failure>>,
-    ended: bool,
 }
 
 impl Former {
@@ -189,9 +187,6 @@ impl Former {
             if let Some(event) = self.queue.pop_front() {
                 return event;
             }
-            if self.ended {
-                return Input::End;
-            }
             let next = if self.held.is_empty() {
                 raw.recv().map_err(|_| RecvTimeoutError::Disconnected)
             } else {
@@ -205,7 +200,7 @@ impl Former {
                 }
                 Err(RecvTimeoutError::Disconnected) => {
                     self.end();
-                    self.ended = true;
+                    return self.queue.pop_front().unwrap_or(Input::End);
                 }
             }
         }

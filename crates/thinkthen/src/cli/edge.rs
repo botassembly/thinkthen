@@ -119,12 +119,12 @@ impl Environment {
         read(KEY_VAR).is_some()
     }
 
-    /// The base the request is posted under, or `None` when the variable is empty.
     /// `THINKTHEN_BATCH`, which only `decide`, `filter` and `rank` read.
     pub(crate) fn batch(&self) -> Option<&str> {
         self.batch.as_deref()
     }
 
+    /// The base the request is posted under, or `None` when the variable is empty.
     pub(crate) fn base_url(&self) -> Option<&str> {
         self.base_url.as_deref().or_else(|| self.config.url())
     }

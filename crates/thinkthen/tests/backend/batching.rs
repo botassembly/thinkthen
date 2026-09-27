@@ -241,6 +241,27 @@ fn replay_answers_every_batch() {
 type Mode<'a> = (&'a str, &'a [&'a str], &'a [(&'a str, &'a str)]);
 
 #[test]
+fn a_table_shares_one_request_and_filter_prints_its_kept_rows() {
+    let listener = Listener::answering(answering).expect("a loopback listener");
+    let fixed = [
+        "filter",
+        QUESTION,
+        "--csv",
+        "--no-cache",
+        "--url",
+        listener.base(),
+    ];
+    let arguments = [&fixed[..], &["--model", "jev-1.13.0"]].concat();
+    let table = b"body\nline 1\nline 2\nline 3\n";
+    let output = spawn(&arguments, &[KEY], table).expect("the command runs");
+    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    let sent = listener.requests();
+    assert_eq!(sent.len(), 1, "three rows share one request");
+    assert_eq!(places(&sent[0].body).len(), 3);
+    assert_eq!(text(&output.stdout), "{\"body\":\"line 2\"}\n");
+}
+
+#[test]
 fn a_pause_sends_the_open_batch() {
     let typed = folder("typed");
     let named = folder("named");

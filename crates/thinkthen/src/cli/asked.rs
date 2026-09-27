@@ -20,6 +20,7 @@ fn path_of(question: &str) -> Option<&str> {
 }
 
 /// A question file, if the first argument names one, and a `decide` file's raw `batch`.
+/// Clippy's type-complexity rule asks for the name.
 type Top = (Option<QuestionFile>, Option<Json>);
 
 /// Read and check the question file the first argument names, if it names
@@ -31,10 +32,6 @@ fn read_top(question: &str) -> Result<Top, Failure> {
     let text = fs::read_to_string(path).map_err(Failure::OpenQuestionFile)?;
     let (file, batch) = QuestionFile::parse_top(&text)?;
     Ok((Some(file), batch))
-}
-
-fn read(question: &str) -> Result<Option<QuestionFile>, Failure> {
-    Ok(read_top(question)?.0)
 }
 
 /// The question text the command line carries, or `None` when a file holds it.
@@ -126,7 +123,7 @@ pub(crate) fn rank(arguments: &RankArguments) -> Result<(Resolved, Option<Json>)
 
 /// Settle everything `choose` was asked.
 pub(crate) fn choose(arguments: &ChooseArguments) -> Result<Resolved, Failure> {
-    let file = read(&arguments.question)?;
+    let file = read_top(&arguments.question)?.0;
     let listed = !arguments.options.is_empty();
     let described = !arguments.described.is_empty();
     if listed && described {
@@ -172,7 +169,7 @@ pub(crate) fn choose(arguments: &ChooseArguments) -> Result<Resolved, Failure> {
 
 /// Settle everything `tag` was asked.
 pub(crate) fn tag(arguments: &TagArguments) -> Result<Resolved, Failure> {
-    let file = read(&arguments.question)?;
+    let file = read_top(&arguments.question)?.0;
     let listed = !arguments.labels.is_empty();
     let described = !arguments.described.is_empty();
     if listed && described {
@@ -215,7 +212,7 @@ pub(crate) fn tag(arguments: &TagArguments) -> Result<Resolved, Failure> {
 
 /// Settle everything `score` was asked.
 pub(crate) fn score(arguments: &ScoreArguments) -> Result<Resolved, Failure> {
-    let file = read(&arguments.question)?;
+    let file = read_top(&arguments.question)?.0;
     let typed = Typed {
         // `score` takes no rule, and the core writes that refusal, so the
         // value reaches it rather than being refused twice.

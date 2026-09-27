@@ -54,7 +54,6 @@ impl Tiers<'_> {
                 None => Ok(None),
             };
         }
-        let wanted = "takes max or a whole number of at least 1";
         match (self.flag, environment.batch(), &self.file) {
             (Some(flag), ..) => Setting::parse(flag).ok_or(Failure::Usage(
                 "--batch takes max or a whole number of at least 1",
@@ -65,7 +64,7 @@ impl Tiers<'_> {
             (None, None, Some(value)) => {
                 Setting::of_json(value).ok_or(Failure::Question(QuestionFileError::Shape {
                     key: "batch",
-                    wanted,
+                    wanted: "takes max or a whole number of at least 1",
                 }))
             }
             (None, None, None) => Ok(Setting::Max),
