@@ -175,6 +175,8 @@ fn print(command: &Path, arguments: &[&str], input: &str) -> String {
         .env_clear()
         .env("HOME", scratch("bytes-home"))
         .env("THINKTHEN_API_KEY", KEY)
+        // The library asks one record a request until B12a, so the command matches it at one.
+        .env("THINKTHEN_BATCH", "1")
         .args(arguments)
         .arg("--no-cache")
         .stdin(Stdio::piped())

@@ -29,6 +29,7 @@ The first full test run under the default, before any pin, failed in 22 files, u
 - Demos 03, 06, 12, 13, 41 and 43 pin `--batch 1` in their pages and `record.sh`. The dry-run expectations of 03 and 06 show the batch plan. Demo 41 lost seven words of prose to stay under ADR 0016's 900.
 - `spec/audit.md` and `spec/result.md` pin `--batch 1`. `spec/decide.md`'s dry run expects the batch plan.
 - The intended difference under stop rule 3 changed one assertion. In `profile/warnings.rs` a refused first record at `--jobs 2` now sends nothing after it, where today the second record went out.
+- The C library's door test compares its bytes with the command's. It sets `THINKTHEN_BATCH=1`, because the libraries ask one record a request until B12a. The `surfaces` rung found it. `libraries/c` is outside the ticket's opened files, and its ratchet rises 2 lines to 2,211.
 - The speed test's plants moved off the three batched rows. One adds `--batch 1` to `filter`, and one marks `choose`'s entry as landed.
 
 ## Tests
