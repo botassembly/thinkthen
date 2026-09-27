@@ -1,5 +1,7 @@
 //! The compiled filter stops asking after its output reader closes.
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Write};
+use std::process::{Command, Stdio};
+use std::time::{Duration, Instant};
 
 use serde_json::{Map, Value, json};
 
@@ -73,4 +75,59 @@ fn a_reader_that_closes_the_pipe_stops_filter_between_dispatches() {
         let sent = listener.count();
         assert!(sent <= 12, "batch {batch} kept scheduling: {sent}");
     }
+}
+
+#[test]
+fn a_closed_reader_ends_filter_while_its_input_remains_open() {
+    let listener = Listener::answering(reply).expect("a loopback listener");
+    let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+        .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
+        .env("THINKTHEN_API_KEY", "sk-test-value")
+        .args([
+            "filter",
+            "Keep?",
+            "--batch",
+            "1",
+            "--jobs",
+            "1",
+            "--no-cache",
+            "--url",
+            listener.base(),
+            "--model",
+            "jev-1.13.0",
+        ])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("filter starts");
+    let mut input = child.stdin.take().expect("stdin pipe");
+    input.write_all(b"keep first\n").expect("first record");
+    input.flush().expect("record reaches the command");
+    let mut reader = BufReader::new(child.stdout.take().expect("stdout pipe"));
+    let mut first = String::new();
+    reader.read_line(&mut first).expect("first kept row");
+    assert_eq!(first, "keep first\n");
+    drop(reader);
+
+    let deadline = Instant::now() + Duration::from_secs(2);
+    let status = loop {
+        if let Some(status) = child.try_wait().expect("filter status") {
+            break status;
+        }
+        if Instant::now() >= deadline {
+            child.kill().expect("kill hung filter");
+            child.wait().expect("reap hung filter");
+            panic!("filter waited for open stdin after its output reader closed");
+        }
+        std::thread::sleep(Duration::from_millis(10));
+    };
+    let output = child
+        .wait_with_output()
+        .expect("collect the stopped command");
+    assert_eq!(status.code(), Some(0));
+    assert!(output.stderr.is_empty(), "{:?}", output.stderr);
+    assert_eq!(listener.count(), 1);
+    drop(input);
 }

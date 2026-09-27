@@ -93,6 +93,7 @@ pub(super) fn run(
         reading: reading.clone(),
         held: Vec::new(),
         downstream: downstream.clone(),
+        cancel: configuration.environment.cancel().clone(),
         queue: VecDeque::new(),
     };
     if configuration.common.dry_run {
@@ -171,6 +172,7 @@ struct Former {
     reading: Reading,
     held: Vec<Held>,
     downstream: edge::Downstream,
+    cancel: crate::engine::Cancel<'static>,
     queue: VecDeque<Input<Item, Placed>>,
 }
 
@@ -193,19 +195,16 @@ impl Former {
     /// waits, and sends the open batch when input pauses.
     fn next(&mut self, raw: &Receiver<Result<Held, Placed>>) -> Input<Item, Placed> {
         loop {
-            if self.downstream.gone() {
+            if self.downstream.gone() || self.cancel.stop().is_some() {
                 return Input::End;
             }
             if let Some(event) = self.queue.pop_front() {
                 return event;
             }
-            let next = if self.held.is_empty() {
-                raw.recv().map_err(|_| RecvTimeoutError::Disconnected)
-            } else {
-                raw.recv_timeout(PAUSE)
-            };
+            let next = raw.recv_timeout(PAUSE);
             match next {
                 Ok(record) => self.push(record),
+                Err(RecvTimeoutError::Timeout) if self.held.is_empty() => {}
                 Err(RecvTimeoutError::Timeout) => {
                     let paused = self.batcher.pause();
                     self.closed(paused);
