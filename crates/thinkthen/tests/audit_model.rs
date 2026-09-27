@@ -20,12 +20,13 @@ const KEPT: &str = "thinkthen: audit: kept the model for the question; ";
 /// LINES, then a failed line and an unlabeled line, each naming the pinned version.
 fn failed_and_unlabeled(lines: &str) -> String {
     let first = lines.lines().next().expect("a line");
-    let mut failed: serde_json::Value = serde_json::from_str(first).expect("a row");
-    failed["input"]["id"] = "C-98".into();
-    failed["value"] = serde_json::Value::Null;
-    failed["failure"] = serde_json::json!({"kind": "backend"});
-    let answer = failed.as_object_mut().expect("an object").remove("answer");
-    assert!(answer.is_some());
+    let mut failed: serde_json::Map<String, serde_json::Value> =
+        serde_json::from_str(first).expect("a row");
+    failed.insert("input".into(), serde_json::json!({"id": "C-98"}));
+    failed.insert("value".into(), serde_json::Value::Null);
+    failed.insert("failure".into(), serde_json::json!({"kind": "backend"}));
+    assert!(failed.remove("answer").is_some());
+    let failed = serde_json::Value::Object(failed);
     let unlabeled = first.replacen("\"C-01\"", "\"C-99\"", 1);
     format!("{lines}{failed}\n{unlabeled}\n")
 }
