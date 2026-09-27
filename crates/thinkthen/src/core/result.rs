@@ -3,6 +3,8 @@
 use serde::ser::SerializeMap;
 use serde::{Serialize, Serializer};
 
+use crate::core::batch::{Closed, Setting};
+
 use crate::core::answer::{Answer, Value};
 use crate::core::question::Question;
 use crate::core::records::Record;
@@ -82,6 +84,7 @@ pub(crate) struct RequestMeta {
     requests: Vec<String>,
     failed_questions: usize,
     profile_warning: Option<ProfileWarning>,
+    batch: Option<BatchMeta>,
 }
 
 impl RequestMeta {
@@ -94,6 +97,7 @@ impl RequestMeta {
             requests,
             failed_questions: 0,
             profile_warning: None,
+            batch: None,
         }
     }
 
@@ -107,6 +111,69 @@ impl RequestMeta {
     #[must_use]
     pub(crate) const fn with_failed_questions(mut self, failed_questions: usize) -> Self {
         self.failed_questions = failed_questions;
+        self
+    }
+
+    pub(crate) fn with_batch(mut self, batch: Option<BatchMeta>) -> Self {
+        self.batch = batch;
+        self
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[serde(untagged)]
+enum BatchSetting {
+    Max(&'static str),
+    Records(usize),
+}
+
+/// The whole request a detailed batched row rode in.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub(crate) struct BatchMeta {
+    setting: BatchSetting,
+    records: usize,
+    position: usize,
+    closed: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    usage: Option<Usage>,
+    requests_sent: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    split: Option<bool>,
+}
+
+impl BatchMeta {
+    pub(crate) fn new(
+        setting: Setting,
+        records: usize,
+        position: usize,
+        closed: Closed,
+        usage: Option<Usage>,
+        requests_sent: u64,
+    ) -> Self {
+        let setting = match setting {
+            Setting::Max => BatchSetting::Max("max"),
+            Setting::Records(number) => BatchSetting::Records(number.get()),
+        };
+        let closed = match closed {
+            Closed::Content => "content",
+            Closed::Size => "size",
+            Closed::Limit => "limit",
+            Closed::Pause => "pause",
+            Closed::End => "end",
+        };
+        Self {
+            setting,
+            records,
+            position,
+            closed,
+            usage,
+            requests_sent,
+            split: None,
+        }
+    }
+
+    pub(crate) fn with_split(mut self) -> Self {
+        self.split = Some(true);
         self
     }
 }
@@ -215,6 +282,7 @@ impl AnnotateMeta {
             requests,
             failed_questions,
             profile_warning,
+            batch: _,
         } = request_meta;
         Self {
             tool: crate::core::version_line(version),
@@ -303,6 +371,8 @@ pub(crate) struct Meta {
     failed_questions: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
     profile_warning: Option<ProfileWarning>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    batch: Option<BatchMeta>,
 }
 
 impl Meta {
@@ -325,6 +395,7 @@ impl Meta {
             requests,
             failed_questions,
             profile_warning,
+            batch,
         } = request_meta;
         Self {
             tool: crate::core::version_line(version),
@@ -337,6 +408,7 @@ impl Meta {
             requests,
             failed_questions,
             profile_warning,
+            batch,
         }
     }
 }

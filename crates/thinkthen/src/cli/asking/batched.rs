@@ -9,7 +9,8 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError, SyncSender, sync_channel};
 use std::thread;
 use std::time::Duration;
 
-use super::{Asks, Judging, JudgingInput, print_plan, table_kind};
+use super::batch_meta::Description;
+use super::{Asks, Judging, JudgingInput, RowContext, print_plan, table_kind};
 use crate::core::batch::halves;
 use crate::core::{
     AnswerOutcome, Batch, BatchError, Batcher, Question, Reading, Record, Reply, Setting, share,
@@ -110,7 +111,7 @@ pub(super) fn run(
             thread::spawn(move || feed(records, &sender));
             thread::spawn(move || former.answer(&raw, &asks, &events));
         },
-        &|item| answered(&judging, reading, &question, item),
+        &|item| answered(&judging, reading, &question, setting, item),
         |rows| {
             for row in rows {
                 if !output.take(row).map_err(Placed::from)? {
@@ -283,6 +284,7 @@ fn answered(
     judging: &Judging<'_>,
     reading: &Reading,
     question: &Question,
+    setting: Setting,
     item: &Item,
 ) -> Result<Completed<Vec<Judged>, Placed>, Placed> {
     let Item {
@@ -294,7 +296,17 @@ fn answered(
     let last = records.last().map_or(*first, |held| held.at);
     let cancel = judging.environment.cancel();
     let whole = match judging.engine.ask_batch(batch, cancel) {
-        Ok(whole) => return answer_rows(judging, reading, question, batch, records, whole),
+        Ok(whole) => {
+            return answer_rows(
+                judging,
+                reading,
+                question,
+                batch,
+                records,
+                whole,
+                Description::new(setting, batch.closed, false),
+            );
+        }
         Err(error)
             if count > 1
                 && (error.too_large()
@@ -304,7 +316,7 @@ fn answered(
         }
         Err(error) => return Err(Placed::at(failed(error.into(), *first, last), *first)),
     };
-    split_answered(judging, reading, question, item, whole)
+    split_answered(judging, reading, question, setting, item, whole)
 }
 
 /// Rebuild the two halves within the refused batch's scheduled place.
@@ -312,10 +324,16 @@ fn split_answered(
     judging: &Judging<'_>,
     reading: &Reading,
     question: &Question,
+    setting: Setting,
     item: &Item,
     whole: crate::engine::error::Error,
 ) -> Result<Completed<Vec<Judged>, Placed>, Placed> {
-    let Item { first, records, .. } = item;
+    let Item {
+        batch,
+        first,
+        records,
+    } = item;
+    let description = Description::new(setting, batch.closed, true);
     let count = records.len();
     let last = records.last().map_or(*first, |held| held.at);
     let cancel = judging.environment.cancel();
@@ -358,6 +376,7 @@ fn split_answered(
         &left,
         left_records,
         first_answer,
+        description,
     )?;
     if first_done.stop.is_some() {
         return Ok(first_done);
@@ -384,6 +403,7 @@ fn split_answered(
         &right,
         right_records,
         second_answer,
+        description,
     )?;
     first_done.records += second_done.records;
     first_done.replayed += second_done.replayed;
@@ -393,6 +413,10 @@ fn split_answered(
 }
 
 /// Turn one answered request into rows, sharing its attempts over its members.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one batch reply and its accepted run setting make each row"
+)]
 fn answer_rows(
     judging: &Judging<'_>,
     reading: &Reading,
@@ -400,6 +424,7 @@ fn answer_rows(
     batch: &Batch,
     records: &[Held],
     whole: Answered,
+    description: Description,
 ) -> Result<Completed<Vec<Judged>, Placed>, Placed> {
     let count = records.len();
     let first = records.first().map_or(1, |held| held.at);
@@ -429,6 +454,7 @@ fn answer_rows(
             outcome,
             answered: own,
         };
+        let batch_meta = description.row(count, position + 1, reply.usage(), whole.requests_sent);
         rows.push(
             judging
                 .row_of(
@@ -436,7 +462,10 @@ fn answer_rows(
                     held.record.clone(),
                     question.clone(),
                     &judgment,
-                    held.arrived.as_deref(),
+                    RowContext {
+                        arrived: held.arrived.as_deref(),
+                        batch: batch_meta,
+                    },
                 )
                 .map_err(|error| Placed::at(error, held.at))?,
         );

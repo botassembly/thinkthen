@@ -131,7 +131,7 @@ pub(crate) fn run(
                     .map_err(|error| schedule::Placed::at(error, place + 1))
             }),
             environment.cancel(),
-            &mut schedule::Output::Streaming(&mut writer),
+            &mut schedule::Output::streaming(&mut writer, environment.usage()),
         );
     }
     let streams = reading.streams();
@@ -146,7 +146,7 @@ pub(crate) fn run(
             .record(&bytes)
             .map_err(|error| Failure::record(error, streams))?;
         let judged = judged_record(&running, &reading, &spec, record, streams)?;
-        schedule::Output::Streaming(&mut writer).take(judged)?;
+        schedule::Output::streaming(&mut writer, environment.usage()).take(judged)?;
         return Ok(ExitCode::SUCCESS);
     }
     schedule::over_records(
@@ -162,7 +162,7 @@ pub(crate) fn run(
                 .map_err(|error| schedule::Placed::at(error, at))
         }),
         environment.cancel(),
-        &mut schedule::Output::Streaming(&mut writer),
+        &mut schedule::Output::streaming(&mut writer, environment.usage()),
     )
 }
 

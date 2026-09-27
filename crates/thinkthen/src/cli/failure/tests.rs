@@ -46,18 +46,18 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
     // `rank` holds every record in memory until the input ends, so the
     // sink that holds them is the one new place a whole record could leak.
     let mut written = Vec::new();
-    let ordered = crate::schedule::Output::Ordered {
-        held: vec![crate::schedule::Judged {
+    let usage = crate::engine::usage::Counters::new(None);
+    let mut ordered = crate::schedule::Output::ordered(&mut written, Some(2), &usage);
+    ordered
+        .take(crate::schedule::Judged {
             printed: Some(body.clone()),
             outcome: crate::core::Outcome::Yes,
             probability: Some(0.91),
             replayed: false,
             partial_failure: false,
             profile_mismatch: None,
-        }],
-        top: Some(2),
-        writer: &mut written,
-    };
+        })
+        .expect("row held");
 
     // `relate` reads its evidence as entity names and kinds.
     let entity = crate::core::RelationEntity::new(EVIDENCE, EVIDENCE).expect("an entity");
