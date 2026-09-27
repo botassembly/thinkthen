@@ -1,6 +1,6 @@
 # 0146: Build the command batches decide, filter and rank
 
-Status: built 2026-09-27, awaiting a fresh code review. Owner: Claude.
+Status: landed 2026-09-27 after a fresh code review accepted it. Owner: Claude.
 
 Branch `ticket/0146-command-batches-decide-filter-rank`, in the worktree `worktrees/thinkthen-0146`. The ticket is `sdlc/tickets/0146-command-batches-decide-filter-rank.md`. The build merged `origin/main` at `18f0381e` first. ADR 0048, ADR 0053 and ADR 0055 rule the behavior. Ian can overturn every decision the ticket lists. No live call ran. Every rung and plant ran with `THINKTHEN_API_KEY` unset, against the loopback backend.
 
@@ -56,7 +56,7 @@ A scratchpad script applied each plant, ran the named test under the heavy lock,
 ## Deviations
 
 - The shares are built into each record's `Answered`, so `result_json.rs` and `public/results.rs` did not change.
-- An empty `THINKTHEN_BATCH` counts as unset.
+- An empty `THINKTHEN_BATCH` counts as unset, and `settings.md` says so. The ticket's refusal table lists an empty value among the refusals for `--batch` and `THINKTHEN_BATCH`. The command still refuses an empty `--batch`. Ian can overturn this.
 - `ReplyTooLarge` keeps the two-line form. The ticket lists it with neither form.
 - `replay_answers_every_batch` counts requests at a live loopback instead of stopping it. The count proves the replay sent nothing.
 - The replay-miss stop line holds the loopback's port in its entry name, so the test pins the text around the name.
@@ -68,20 +68,33 @@ A scratchpad script applied each plant, ran the named test under the heavy lock,
 - An annotate question set whose entry holds `batch` prints `the question set holds no key `questions.ok.batch``, not `a question file takes no key `batch``. The test pins the real sentence.
 - The budgets for `cli/asking/batched.rs` and for `edge.rs`, `judge.rs` and `asked.rs` were too small. See below.
 
+## Code review
+
+A fresh code review accepted the build. Its fixes landed in `3d52419e`:
+
+- `base_url()` has its doc line back, and `batch()` keeps only its own.
+- `settings.md` says an empty `THINKTHEN_BATCH` counts as unset.
+- `a_table_shares_one_request_and_filter_prints_its_kept_rows` pins one request for three CSV rows, with the kept row printed as a compact JSON object.
+- The `read` wrapper and the single-use `wanted` binding are gone. The `Top` alias stays, because clippy's type-complexity rule refuses the tuple in `read_top`'s signature.
+- The batch reader's `ended` flag is gone. A closed channel ends the open batch and answers with what it queued, or `Input::End`.
+- `tiers.rs` pins that a `choose` file holding `batch` is refused as today, with `a question file takes no key `batch``.
+
 ## Budget
 
-Nonblank lines against `18f0381e`.
+The coordinator ruled the overrun structural, because the reviewer found no duplication beyond the fixes above. The budgets rise to the measured sizes. Ian can overturn this.
 
-| Area | Ticket budget | Measured |
+Nonblank lines against `origin/main` after the merge, at `f39ca1b3`.
+
+| Area | Ticket budget | Measured, and the new budget |
 | --- | --- | --- |
-| `cli/asking/batched.rs` | 250 | 342 |
-| `edge.rs`, `judge.rs`, `asked.rs` | 35 | 70 |
+| `cli/asking/batched.rs` | 250 | 337 |
+| `edge.rs`, `judge.rs`, `asked.rs` | 35 | 69 |
 | `cli/asking.rs` and `cli/asking/plan.rs` | 25 | 46, including the moved plan path's module head and imports |
-| Product code total | 561 | about 620, 11% over |
-| `tests/backend/batching.rs` and its folder | 480 | 538, 12% over |
-| Ratchet over main | 1,193 | 1,232, from 72,168 to 73,400 |
+| Product code total | 561 | 612 |
+| `tests/backend/batching.rs` and its folder | 480 | 574 |
+| Ratchet over main | 1,193 | 1,260, from main's 72,322 to 73,582 |
 
-The batched path grew past its budget. It holds the reader thread, the batch queue with its pause, the dry-run plan, the per-record rows and the stop mapping. The build trimmed it once: parsing moved to the record thread, which dropped a generic parser, and the tier resolution became one `match`. The product total passes 561 by about a tenth, the new tests pass 480 by 12%, and the ratchet passes 1,193 by 3%. The lint's 500-line file ceiling moved the plan path to `cli/asking/plan.rs`, the unit tests of `core/result.rs` and `engine/annotate_schedule.rs` into sibling `tests.rs` files, and the tier tests to `tests/backend/batching/tiers.rs`. Clippy's nesting and type rules added `feed`, `Former::next` and three type aliases. These cost 21 lines. The file budgets for `batched.rs` and for `edge.rs`, `judge.rs` and `asked.rs` are passed by more than a tenth, which stop rule 1 names. The coordinator decides whether to raise them or ask for more trimming.
+The batched path holds the reader thread, the batch queue with its pause, the dry-run plan, the per-record rows and the stop mapping. The build trimmed it before the review: parsing moved to the record thread, which dropped a generic parser, and the tier resolution became one `match`. The lint's 500-line file ceiling moved the plan path to `cli/asking/plan.rs`, the unit tests of `core/result.rs` and `engine/annotate_schedule.rs` into sibling `tests.rs` files, and the tier tests to `tests/backend/batching/tiers.rs`. Clippy's nesting and type rules added `feed`, `Former::next` and three type aliases. The C library's ratchet moves from main's 2,258 to 2,260 for its pin.
 
 ## Ladder
 
