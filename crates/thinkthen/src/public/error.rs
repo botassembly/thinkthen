@@ -180,7 +180,8 @@ fn message(error: &EngineError) -> String {
     let fixed = match error {
         EngineError::Transport(kind) => transport(*kind),
         EngineError::Status(302) => {
-            return "the backend redirected the request; its address was not followed".to_owned();
+            return "the backend answered with status 302: the redirect was not followed"
+                .to_owned();
         }
         EngineError::Status(status) => return format!("the backend answered with status {status}"),
         EngineError::TokenLimit => "the backend answered with status 400",

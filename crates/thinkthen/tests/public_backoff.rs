@@ -102,3 +102,21 @@ fn a_zero_retry_after_waits_instead_of_hammering_the_backend() {
     assert_eq!(stopped.kind(), ErrorKind::Deadline);
     assert_eq!(listener.count(), 1, "zero did not prompt a second send");
 }
+
+#[test]
+fn a_redirect_names_the_refusal_and_never_sends_the_key_to_the_next_host() {
+    let elsewhere = Listener::serving(vec![Canned::ok(ANSWER)]).expect("other listener");
+    let listener = Listener::serving(vec![Canned::redirect(elsewhere.url())]).expect("listener");
+    let engine = engine(listener.base()).no_cache().build().expect("engine");
+    let question = Question::decide("Is it?").expect("question").cut();
+    let error = engine
+        .decide(&question, "evidence")
+        .expect_err("redirect refused");
+    assert_eq!(error.kind(), ErrorKind::Backend);
+    assert_eq!(
+        error.to_string(),
+        "the backend answered with status 302: the redirect was not followed"
+    );
+    assert_eq!(listener.requests().len(), 1);
+    assert!(elsewhere.requests().is_empty());
+}
