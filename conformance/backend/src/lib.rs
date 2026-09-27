@@ -9,5 +9,5 @@ mod lifetime;
 mod listener;
 
 pub use arms::{Backend, run};
-pub use listener::{Canned, Listener, Observed, Recorded};
 pub use lifetime::Rendezvous;
+pub use listener::{Canned, Listener, Observed, Recorded};

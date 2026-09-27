@@ -1,11 +1,11 @@
 //! The bounds between record input and ordered output.
 
+use conformance_backend::Rendezvous;
 use std::io::{self, BufRead, BufReader, Write};
 use std::process::{Child, ChildStdin, ChildStdout, Command, ExitStatus, Stdio};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver};
-use std::sync::Arc;
-use conformance_backend::Rendezvous;
 use std::thread;
 use std::time::{Duration, Instant};
 

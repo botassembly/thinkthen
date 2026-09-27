@@ -1,8 +1,8 @@
 //! Ticket 0166: a token fired while a send is in flight ends the call cancelled.
 
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
 use conformance_backend::Rendezvous;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 use std::time::Duration;
 

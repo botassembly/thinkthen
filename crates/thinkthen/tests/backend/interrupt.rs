@@ -1,14 +1,14 @@
 //! SIGINT cooperatively stops new attempts and preserves completed output.
 
+use conformance_backend::Rendezvous;
 use std::fs;
 use std::io::{self, Write as _};
 use std::os::unix::process::ExitStatusExt as _;
 use std::path::Path;
 use std::process::{Child, Command, Output, Stdio};
+use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::channel;
-use std::sync::Arc;
-use conformance_backend::Rendezvous;
 use std::time::Duration;
 
 use crate::harness::{Canned, Listener, Observed, finish};

@@ -1,12 +1,12 @@
 //! The folder gate keeps pruning in the digest-lock namespace.
 
+use conformance_backend::Rendezvous;
 use std::fs;
 use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Output, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, mpsc};
-use conformance_backend::Rendezvous;
 use std::thread;
 use std::time::{Duration, Instant};
 

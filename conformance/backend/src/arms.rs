@@ -18,7 +18,8 @@ use serde::Deserialize;
 use serde::de::{Deserializer, IgnoredAny, MapAccess, SeqAccess, Visitor};
 use serde_json::value::RawValue;
 
-use crate::listener::{Canned, Gate, Listener, Recorded};
+use crate::lifetime::Gate;
+use crate::listener::{Canned, Listener, Recorded};
 
 /// The status every unknown body, arm, or request earns, and no arm serves.
 pub(crate) const DRIFT: u16 = 500;
@@ -129,13 +130,16 @@ impl Backend {
 
     /// The count once it reads at least `least`, or at 5 s, whichever comes first.
     pub fn wait(&self, least: usize) -> usize {
-        self.wait_until(least, &AtomicBool::new(false)).unwrap_or_else(|| self.count())
+        self.wait_until(least, &AtomicBool::new(false))
+            .unwrap_or_else(|| self.count())
     }
 
     fn wait_until(&self, least: usize, cancelled: &AtomicBool) -> Option<usize> {
         let deadline = Instant::now() + WAIT_BOUND;
         loop {
-            if cancelled.load(Ordering::SeqCst) { return None; }
+            if cancelled.load(Ordering::SeqCst) {
+                return None;
+            }
             let count = self.count();
             if count >= least || Instant::now() >= deadline {
                 return Some(count);
@@ -165,7 +169,9 @@ pub fn run(input: impl BufRead, output: impl Write + Send + 'static) -> io::Resu
             other => match other.strip_prefix("wait ").and_then(whole) {
                 Some(least) => {
                     let (backend, output, cancelled) = (
-                        Arc::clone(&backend), Arc::clone(&output), Arc::clone(&cancelled)
+                        Arc::clone(&backend),
+                        Arc::clone(&output),
+                        Arc::clone(&cancelled),
                     );
                     waits.push(thread::spawn(move || {
                         if let Some(count) = backend.wait_until(least, &cancelled) {
@@ -178,7 +184,9 @@ pub fn run(input: impl BufRead, output: impl Write + Send + 'static) -> io::Resu
         }
     }
     cancelled.store(true, Ordering::SeqCst);
-    for wait in waits { let _ = wait.join(); }
+    for wait in waits {
+        let _ = wait.join();
+    }
     say(&output, backend.count())
 }
 

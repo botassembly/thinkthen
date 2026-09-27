@@ -1,13 +1,13 @@
 //! A loopback listener that serves scripted responses and records what it was sent.
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::Ordering;
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use crate::arms::drift;
-use crate::lifetime::{Lifetime, Rendezvous};
+use crate::lifetime::{Counts, Gate, Lifetime, Rendezvous};
 
 /// The path the engine appends to every base.
 const ENDPOINT_PATH: &str = "systemone";
@@ -130,30 +130,6 @@ impl Canned {
 /// What a listener answers one request with.
 pub(crate) type Reply = dyn Fn(&Recorded) -> Canned + Send + Sync;
 
-/// A gate that holds answers until the next round, or for good once released.
-#[derive(Debug, Default)]
-pub(crate) struct Gate {
-    open: AtomicBool,
-    round: AtomicU64,
-}
-
-impl Gate {
-    /// Let every held answer go, now and from here on.
-    pub(crate) fn release(&self) {
-        self.open.store(true, Ordering::SeqCst);
-    }
-
-    /// Let go every answer held now. A later answer holds again.
-    pub(crate) fn next_round(&self) {
-        self.round.fetch_add(1, Ordering::SeqCst);
-    }
-
-    /// Whether an answer taken in this round still waits.
-    fn holds(&self, round: u64) -> bool {
-        !self.open.load(Ordering::SeqCst) && self.round.load(Ordering::SeqCst) <= round
-    }
-}
-
 /// One request or output event, ordered as the scheduling test observes it.
 #[derive(Debug)]
 pub enum Observed {
@@ -161,15 +137,6 @@ pub enum Observed {
     Request,
     /// One line reached the process reading standard output.
     Output(String),
-}
-
-/// What the listener saw, for the assertions that count connections.
-#[derive(Debug, Default)]
-struct Counts {
-    connections: AtomicUsize,
-    requests: AtomicUsize,
-    in_flight: AtomicUsize,
-    peak: AtomicUsize,
 }
 
 /// One request the listener read, kept for the assertions to compare.
@@ -194,7 +161,7 @@ impl Recorded {
 }
 
 /// A listener serving one scripted response per connection, then the drift
-/// status. Its thread keeps the port until the process exits.
+/// status. Its final owner joins the accept and connection workers.
 #[derive(Debug)]
 pub struct Listener {
     origin: String,
@@ -337,7 +304,9 @@ impl Listener {
 }
 
 impl Drop for Listener {
-    fn drop(&mut self) { self.lifetime.retire(); }
+    fn drop(&mut self) {
+        self.lifetime.retire();
+    }
 }
 
 /// Serve one response per connection until the script runs out, then drift.
@@ -350,12 +319,15 @@ fn serve_script(
 ) {
     let mut script = responses.into_iter();
     while let Some(stream) = lifetime.accept(listener) {
-        let Some(id) = lifetime.register(&stream) else { return };
+        let Some(id) = lifetime.register(&stream) else {
+            return;
+        };
         counts.connections.fetch_add(1, Ordering::SeqCst);
         let _ = stream.set_read_timeout(Some(IDLE));
         if let Some((request, used)) = peek_request(&stream) {
             let _ = sender.send(request);
-            let canned = script.next()
+            let canned = script
+                .next()
                 .unwrap_or_else(|| drift("the script has no reply left for this connection"));
             if canned.reset && used == 0 {
                 serve(&stream, &drift(UNRESETTABLE), lifetime);
@@ -405,7 +377,9 @@ fn serve_kept(
     lifetime: &Lifetime,
 ) {
     loop {
-        if lifetime.stopped() { return; }
+        if lifetime.stopped() {
+            return;
+        }
         let Some((request, used)) = peek_request(stream) else {
             return;
         };
@@ -429,7 +403,9 @@ fn serve_kept(
             counts.in_flight.fetch_sub(1, Ordering::SeqCst);
             return;
         }
-        if !wait_answer(&canned, lifetime) { return; }
+        if !wait_answer(&canned, lifetime) {
+            return;
+        }
         write_answer(stream, &canned, false);
         if let Some(answered) = canned.answered.as_ref() {
             let _ = answered.send(());
@@ -505,7 +481,9 @@ fn read_request(reader: &mut impl BufRead) -> Option<Recorded> {
 
 /// Write one canned response and close the connection.
 fn serve(stream: &TcpStream, canned: &Canned, lifetime: &Lifetime) {
-    if !wait_answer(canned, lifetime) { return; }
+    if !wait_answer(canned, lifetime) {
+        return;
+    }
     write_answer(stream, canned, true);
     if let Some(answered) = canned.answered.as_ref() {
         let _ = answered.send(());
@@ -513,10 +491,24 @@ fn serve(stream: &TcpStream, canned: &Canned, lifetime: &Lifetime) {
 }
 
 fn wait_answer(canned: &Canned, lifetime: &Lifetime) -> bool {
-    if !lifetime.pause(canned.delay) { return false; }
-    if canned.release.as_ref().is_some_and(|release| !release.wait_owned(lifetime)) { return false; }
-    while canned.held.as_ref().is_some_and(|(gate, round)| gate.holds(*round)) {
-        if !lifetime.pause(Duration::from_millis(5)) { return false; }
+    if !lifetime.pause(canned.delay) {
+        return false;
+    }
+    if canned
+        .release
+        .as_ref()
+        .is_some_and(|release| !release.wait_owned(lifetime))
+    {
+        return false;
+    }
+    while canned
+        .held
+        .as_ref()
+        .is_some_and(|(gate, round)| gate.holds(*round))
+    {
+        if !lifetime.pause(Duration::from_millis(5)) {
+            return false;
+        }
     }
     !lifetime.stopped()
 }

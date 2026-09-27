@@ -4,10 +4,10 @@
 //! under replay. These tests prove what that runner cannot see: which thread
 //! sends, what is never sent again, and what is never sent at all.
 
+use conformance_backend::Rendezvous;
+use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::{Receiver, channel};
-use std::sync::Arc;
-use conformance_backend::Rendezvous;
 use std::thread;
 use std::time::Duration;
 use std::{fs, path::PathBuf};
