@@ -6,7 +6,7 @@ opens: conformance/backend/src/listener.rs conformance/backend/src/arms.rs confo
 
 # 0202: Bound loopback fixture lifetimes
 
-Status: in progress, design review pending 2026-09-27. Owner: Codex. Runtime files stay unclaimed until a fresh design review accepts this ticket.
+Status: accepted 2026-09-27 by the Codex queue owner after fresh read-only design review and its corrections. A second fresh read-only Sol Medium review accepted `1046d8ca`. Owner: Codex. Runtime starts only after its exact file claim lands on main.
 
 ## Outcome and authority
 
