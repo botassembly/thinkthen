@@ -1,6 +1,6 @@
 # Ruby result values print the caller's text when inspected
 
-Status: Open. Filed 2026-09-26 by the queue owner from Quick Fix qf-python-reprs-withhold-text (`sdlc/records/qf-python-reprs-withhold-text.md`).
+Status: Closed on 2026-09-27 by Quick Fix qf-config-ruby-issue-status (`sdlc/records/qf-config-ruby-issue-status.md`). Every Ruby result value now prints each caller text field as its byte count through `inspect`, `pp`, `to_s` and interpolation, and `test_result_values_print_no_caller_text` in `libraries/ruby/tests/test_errors.rb` pins each whole line. `Ranked#to_s` stays the record by design. Filed 2026-09-26 by the queue owner from Quick Fix qf-python-reprs-withhold-text (`sdlc/records/qf-python-reprs-withhold-text.md`).
 
 ## What happens
 

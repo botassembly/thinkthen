@@ -28,7 +28,8 @@ impl Deadline {
 }
 
 /// One private cooperative stop flag shared by a whole engine run, and the
-/// optional deadline and host interrupt check of the one call that carries it.
+/// optional deadline, caller's token and host interrupt check of the one call
+/// that carries it.
 #[derive(Clone, Debug, Default)]
 pub(crate) struct Cancel<'a> {
     fired: Arc<AtomicBool>,

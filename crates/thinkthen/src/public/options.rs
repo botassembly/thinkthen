@@ -228,7 +228,8 @@ impl<'a> Stop<'a> {
         Ok(stop)
     }
 
-    /// This call's flag and deadline without the check, for engine threads.
+    /// This call's flag, deadline and the caller's token, without the check, for
+    /// engine threads.
     pub(crate) fn shared(&self) -> Cancel<'static> {
         self.base.clone()
     }

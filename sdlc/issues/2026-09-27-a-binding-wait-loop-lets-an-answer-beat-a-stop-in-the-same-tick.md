@@ -1,6 +1,6 @@
 # A binding's wait loop lets an answer beat a stop in the same tick
 
-Status: open. Found by reading while writing ticket 0166 (`sdlc/tickets/0166-a-cancelled-call-never-succeeds.md`). Not run. Ticket 0166 leaves it, because the fix sits in six separate wait loops and not in the shared public door.
+Status: open. Ticket 0168 (`sdlc/tickets/0168-a-stop-reaches-every-caller.md`, on its branch) owns the fix for Python and Ruby, and its builder closes this issue. The race is a non-issue for R, DuckDB, SQLite and PostgreSQL, which read only a host interrupt. Found by reading while writing ticket 0166.
 
 ## What happens
 

@@ -1,6 +1,6 @@
 # A cancelled C scalar call can return success
 
-Status: verified, open. Ticket 0166 (`sdlc/tickets/0166-a-cancelled-call-never-succeeds.md`) owns the fix. Found while finishing the Zig package in experiment 273. The queue owner owns the engine fix and contract reconciliation. The experiment changes no product implementation and treats this as a blocker to its in-flight cancellation claim.
+Status: Closed on 2026-09-27 by ticket 0166 (`sdlc/tickets/0166-a-cancelled-call-never-succeeds.md`), landed. A fired token now wins over every result on every public route, and a worker sees the token before each attempt and retry. Found while finishing the Zig package in experiment 273.
 
 ## Failure
 

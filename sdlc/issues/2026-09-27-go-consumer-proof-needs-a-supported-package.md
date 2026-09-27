@@ -18,7 +18,7 @@ The parent independently verified all input blobs at both pins, all manifest has
 
 ## Native blocker
 
-A scalar C call can return success after its token fires during an accepted held request. All four stage-two consumers reproduce it through Go, as do Zig and direct ctypes in experiment 273. [The cancellation issue](2026-09-26-cancelled-c-scalar-call-can-return-success.md) owns repair. The Go wrapper reports exactly what C returns; the gate records `FINDING` and exits 1; no Go workaround exists.
+A scalar C call can return success after its token fires during an accepted held request. All four stage-two consumers reproduce it through Go, as do Zig and direct ctypes in experiment 273. [The cancellation issue](closed/2026-09-26-cancelled-c-scalar-call-can-return-success.md) owns repair. The Go wrapper reports exactly what C returns; the gate records `FINDING` and exits 1; no Go workaround exists.
 
 ## Handoff and remaining work
 

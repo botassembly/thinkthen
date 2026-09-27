@@ -66,7 +66,9 @@ fn a_token_fired_before_a_batch_ends_ends_it_cancelled() {
 
 /// Fire the token once the listener has the request, then let its reply go.
 fn fire_on_arrival(listener: &Listener, token: &CancelToken, release: &Barrier) {
+    let start = std::time::Instant::now();
     while listener.count() < 1 {
+        assert!(start.elapsed() < super::BOUND, "no request arrived");
         thread::sleep(Duration::from_millis(5));
     }
     token.cancel();
