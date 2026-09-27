@@ -52,8 +52,8 @@ SETUP = f"""
             return engine.decide_many(asked, rows)
         return [getattr(engine, verb)(asked, text) for text in rows]
     def names(rows):
-        return [[{{"text": one.name, "kind": one.kind, "start": one.start, "end": one.end,
-                  "strength": one.strength}} for one in engine.recognize(text, kinds=["bill", "ship"]).entities]
+        return [[{{"text": one.text, "start": one.start, "end": one.end, "length": one.length,
+                  "kind": one.kind, "strength": one.strength}} for one in engine.recognize(text, kinds=["bill", "ship"]).entities]
                 for text in rows]
 """
 

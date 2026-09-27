@@ -90,7 +90,7 @@ def test_the_module_functions_equal_an_explicit_engine(backend, tmp_path):
             lambda on: on.rank("Which is most urgent?", texts, top=2),
             lambda on: on.find("Which says two?", texts),
             lambda on: on.annotate(form, texts[:1]),
-            lambda on: [(e.name, e.kind, e.start, e.end) for e in on.recognize("Ada is here", kinds=["person"]).entities],
+            lambda on: [(e.text, e.start, e.end, e.length, e.kind) for e in on.recognize("Maria Chen arrived.", kinds=["person"]).entities],
             lambda on: [(e.relation, e.source.name, e.target.name) for e in on.relate([("Ada", "person"), ("Bo", "person")], relations={{"knows": ("person", "person")}})],
         ]
         for call in calls:
@@ -110,7 +110,7 @@ def test_the_module_functions_equal_an_explicit_engine(backend, tmp_path):
         '{"index": 1, "record": "two notes", "probability": 0.9}]',
         '{"index": 0, "unit": "one note", "probability": 0.9}',
         '[{"late": true, "day": "Mon"}]',
-        '[["Ada is here", "person", 0, 11]]',
+        '[["Maria Chen", 0, 10, 10, "person"], ["arrived.", 11, 19, 8, "person"]]',
         '[["knows", "Ada", "Bo"], ["knows", "Bo", "Ada"]]',
         '["cache_answers", "input_tokens", "output_tokens", "requests_sent"]',
     ]

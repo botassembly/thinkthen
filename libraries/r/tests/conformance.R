@@ -129,17 +129,18 @@ run_case <- function(case, served) {
     recognize = {
       found <- tt_recognize(case$text, paste0("@", file))[[1]]
       want <- answers[[1]]$bare
-      same("names", found$name, vapply(want$entities, `[[`, "", "name"))
-      same("kinds", found$kind, vapply(want$entities, `[[`, "", "kind"))
+      same("texts", found$text, vapply(want$entities, `[[`, "", "text"))
       same("starts", found$start, vapply(want$entities, function(one) one$start + 1, 0))
       same("ends", found$end, vapply(want$entities, function(one) as.double(one$end), 0))
+      same("lengths", found$length, vapply(want$entities, function(one) as.double(one$length), 0))
+      same("kinds", found$kind, vapply(want$entities, `[[`, "", "kind"))
       same("strengths", found$strength, vapply(want$entities, function(one) as.double(one$strength), 0))
       relations <- attr(found, "relations")
       same("relations", nrow(relations) %||% 0L, length(want$relations))
       for (at in seq_along(want$relations)) {
         one <- want$relations[[at]]
         same("relation", unlist(relations[at, c("relation", "source", "target")], use.names = FALSE),
-             c(one$relation, one$source$name, one$target$name))
+             c(one$relation, one$source$text, one$target$text))
         same("probability", relations$probability[[at]], one$probability)
       }
     },

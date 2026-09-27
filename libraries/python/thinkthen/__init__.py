@@ -39,6 +39,8 @@ from ._thinkthen import (
     LocalError,
     Question,
     Recognized,
+    RecognizedEntity,
+    Relation,
     ThinkThenError,
     UsageError,
 )
@@ -46,9 +48,10 @@ from ._thinkthen import (
 __all__ = [
     "BackendError", "Cancelled", "CancelToken", "DeadlineError", "DefectError",
     "Edge", "Engine", "Entity", "LocalError", "Question", "Recognized",
-    "ThinkThenError", "UsageError", "annotate", "choose", "decide",
-    "decide_many", "details", "filter", "find", "question", "rank",
-    "recognize", "relate", "score", "tag", "usage",
+    "RecognizedEntity", "Relation", "ThinkThenError", "UsageError",
+    "annotate", "choose", "decide", "decide_many", "details", "filter",
+    "find", "question", "rank", "recognize", "relate", "score", "tag",
+    "usage",
 ]
 
 _VERBS = ("decide", "choose", "score", "tag")
@@ -335,11 +338,13 @@ class Engine:
         and ``either`` names the rules that read both ways. ``ask`` is a
         file path or the file's ``dict`` in place of the keywords. Offsets
         count Python string positions, so ``text[e.start:e.end]`` is the
-        name. With ``on=``, ``text`` is a Polars ``DataFrame``, and a frame
-        comes back with one row per name: ``row`` (counted from 1), ``text``,
-        ``kind``, ``start``, ``end``, and ``strength``. A pandas ``DataFrame``
-        comes back with a new ``names`` column: one list per row of ``dict``
-        with those fields but ``row``. Relations take one text.
+        name and ``e.length`` is ``e.end - e.start``. With no kinds, every
+        name has the kind ``ENTITY``. With ``on=``, ``text`` is a Polars
+        ``DataFrame``, and a frame comes back with one row per name: ``row``
+        (counted from 1), ``text``, ``start``, ``end``, ``length``, ``kind``,
+        and ``strength``. A pandas ``DataFrame`` comes back with a new
+        ``names`` column: one list per row of ``dict`` with those fields but
+        ``row``. Relations take one text.
         """
         if on is not None and relations is not None:
             raise UsageError("recognize with on= takes no relations; ask them of one text")

@@ -141,13 +141,16 @@ export type AnnotatedRow = Record<string, AnnotatedField>;
 export type QuestionSet = string | { version: 1; questions: Record<string, QuestionSpec> };
 
 /** One name `recognize` found. `text.slice(start, end)` is the name, since
- * `start` and `end` count UTF-16 units. `strength` is the least word
- * probability behind the name times the mean kind probability. */
+ * `start` and `end` count UTF-16 units, and `length` is `end - start`.
+ * `kind` is `ENTITY` when the call named no kind. `strength` ranks names:
+ * the kind probability times the span probability. It is not itself a
+ * probability. */
 export interface RecognizedEntity {
-  name: string;
-  kind: string;
+  text: string;
   start: number;
   end: number;
+  length: number;
+  kind: string;
   strength: number;
 }
 

@@ -21,12 +21,12 @@ engine.decide_many(refund, reviews)
 
 ```python
 df = tt.annotate("form.json", df, on="body")  # one new column per question
-names = tt.recognize(df, kinds=["product"], on="body")  # row, text, kind, start, end, strength
+names = tt.recognize(df, kinds=["product"], on="body")  # row, text, start, end, length, kind, strength
 ```
 
 In a Polars frame, a `tag` column holds each row's JSON array text, such as `["bill"]`. In a Polars or pandas frame, a question the backend failed widens its column to text. Each cell holds the answer's text as the engine writes it, the plain label for a choice, or the failed marker. A not-sure answer stays null. The Rust Polars door writes the same text. A question named as one of the frame's columns is refused before any request.
 
-A pandas `Series` works in the same five verbs and comes back as a pandas `Series` with the caller's index and name. `decide` and `decide_many` give `boolean`, `score` gives `Float64`, `choose` gives `string`, and `tag` gives `object` with one list of labels per row. "Not sure" is `pd.NA`, or `None` in `tag`. A pandas `DataFrame` with `on=` comes back from `annotate` with one new column per question, and from `recognize` with a new `names` column: one list per row of `dict` with `text`, `kind`, `start`, `end`, and `strength`. The index stays the caller's. A null in the text column, a repeated or missing `on` label, `MultiIndex` columns, and a question named as a column are refused before any request. The answer keeps the input's name, so rename it to add it as a column:
+A pandas `Series` works in the same five verbs and comes back as a pandas `Series` with the caller's index and name. `decide` and `decide_many` give `boolean`, `score` gives `Float64`, `choose` gives `string`, and `tag` gives `object` with one list of labels per row. "Not sure" is `pd.NA`, or `None` in `tag`. A pandas `DataFrame` with `on=` comes back from `annotate` with one new column per question, and from `recognize` with a new `names` column: one list per row of `dict` with `text`, `start`, `end`, `length`, `kind`, and `strength`. The index stays the caller's. A null in the text column, a repeated or missing `on` label, `MultiIndex` columns, and a question named as a column are refused before any request. The answer keeps the input's name, so rename it to add it as a column:
 
 ```python
 df = df.join(tt.decide("Is it late?", df["body"]).rename("late"))

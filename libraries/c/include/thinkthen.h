@@ -262,8 +262,9 @@ char *thinkthen_call_opts(const thinkthen_engine *engine, const char *request_js
  * token. The result has no fixed size, so it crosses as one JSON string
  * written to `*out` (freed with `thinkthen_free_string`) with its length
  * in `*out_len`: `{"entities": [...], "relations": [...]}`. Each entity
- * carries `name`, `kind`, `start`, `end`, and `strength`, with `start`
- * and `end` counting code points of `text`. `spec_json` is a version-one
+ * carries `text`, `start`, `end`, `length`, `kind`, and `strength`, with
+ * `start`, `end`, and `length` counting code points of `text`. With no
+ * kinds, every name has the kind `ENTITY`. `spec_json` is a version-one
  * question file with its `recognize` section (`kinds`, `relations`) and
  * optional `threshold` and `relation_threshold`. The call follows the
  * engine's cache like every call. Returns THINKTHEN_OK on success and the

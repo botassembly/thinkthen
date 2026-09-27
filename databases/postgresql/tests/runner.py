@@ -194,16 +194,16 @@ def annotated(case, success):
 
 
 def pair(entity):
-    return {"name": entity["name"], "kind": entity["kind"]}
+    return {"text": entity["text"], "kind": entity["kind"]}
 
 
 def recognized(case, success):
     spec, text = lit(json.dumps(case["question"])), lit(case["text"])
     want = success["answers"][0]["bare"]
-    rows = psql(f"SELECT json_agg(json_build_object('name', name, 'kind', kind, 'start', start, 'end', \"end\", 'strength', strength)) FROM thinkthen_recognize({text}, {spec})")
+    rows = psql(f"SELECT json_agg(json_build_object('text', text, 'start', start, 'end', \"end\", 'length', length, 'kind', kind, 'strength', strength)) FROM thinkthen_recognize({text}, {spec})")
     same("entities", json.loads(rows) or [], want["entities"])
     if "relations" in want:
-        rows = psql(f"SELECT json_agg(json_build_object('relation', relation, 'source', json_build_object('name', source_name, 'kind', source_kind), 'target', json_build_object('name', target_name, 'kind', target_kind), 'probability', probability)) FROM thinkthen_relations({text}, {spec})")
+        rows = psql(f"SELECT json_agg(json_build_object('relation', relation, 'source', json_build_object('text', source_text, 'kind', source_kind), 'target', json_build_object('text', target_text, 'kind', target_kind), 'probability', probability)) FROM thinkthen_relations({text}, {spec})")
         wanted = [dict(one, source=pair(one["source"]), target=pair(one["target"])) for one in want["relations"]]
         same("relations", json.loads(rows) or [], wanted)
 

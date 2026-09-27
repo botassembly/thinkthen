@@ -65,7 +65,7 @@ def engine(base, **settings) = T::Engine.new(base_url: base, cache: false, **set
 
 def question(held) = T.question(**held.transform_keys(&:to_sym))
 
-def entity(one) = { "name" => one.name, "kind" => one.kind, "start" => one.start, "end" => one.end, "strength" => one.strength }
+def entity(one) = %w[text start end length kind strength].to_h { |key| [key, one[key]] }
 
 def detailed(document, expected, base)
   wanted = expected["details"]

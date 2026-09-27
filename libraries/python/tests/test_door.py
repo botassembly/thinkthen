@@ -180,7 +180,7 @@ def test_recognize_on_a_frame_equals_each_text_alone(backend, tmp_path):
     printed = run(SETUP + """
     frame = pl.DataFrame({"body": texts})
     got = engine.recognize(frame, kinds=["bill", "ship"], on="body")
-    alone = [(row, one.name, one.kind, one.start, one.end, one.strength)
+    alone = [(row, one.text, one.start, one.end, one.length, one.kind, one.strength)
              for row, text in enumerate(texts, 1)
              for one in engine.recognize(text, kinds=["bill", "ship"]).entities]
     print(got.columns, got.rows() == alone, len(alone) > 0)

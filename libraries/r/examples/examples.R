@@ -13,4 +13,4 @@ for (name in names(examples)) {
   got <- child(c(sprintf("setwd('%s')", folder), example$r))$text
   check(paste0(name, ": want ", example$expected, ", got ", got), identical(trimws(got), example$expected))
 }
-finish("examples", 12L)
+finish("examples", 13L)

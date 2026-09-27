@@ -89,11 +89,11 @@ def probability_equals_details_with_no_added_send():
 @case
 def case_41_offsets_count_code_points():
     text = "Le café 😀 Maria Chen arrived."
-    got = run_generic([f"SELECT r.name, r.start, r.\"end\" FROM (SELECT unnest(thinkthen_recognize('{text}', ['person'])) AS r)"])
-    # The generic arm names the whole text. Its end is 29 in code points
-    # and would be 33 in UTF-8 bytes.
-    expect(rows(got[0]), [[text, 0, 29]], "names and code-point offsets")
-    for name, start, end in rows(got[0]):
+    got = run_generic([f"SELECT r.text, r.start, r.\"end\", r.length FROM (SELECT unnest(thinkthen_recognize('{text}', ['person'])) AS r)"])
+    # The generic arm names the text's last piece. Its start is 21 and its
+    # end 29 in code points, and they would be 25 and 33 in UTF-8 bytes.
+    expect(rows(got[0]), [["arrived.", 21, 29, 8]], "names and code-point offsets")
+    for name, start, end, _ in rows(got[0]):
         expect(text[start:end], name, "a recognized name sits at its code-point offsets")
 
 

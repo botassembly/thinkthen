@@ -42,9 +42,13 @@ end
 require_relative "thinkthen/thinkthen"
 
 module ThinkThen
-  # One name recognize found. `start` and `end` count characters, so
-  # `text[start...end]` is the name.
-  Entity = Struct.new(:name, :kind, :start, :end, :strength)
+  # A name and its kind, as relate reads and returns them.
+  Entity = Struct.new(:name, :kind)
+
+  # One name recognize found. `start`, `end`, and `length` count characters,
+  # so `text[start...end]` is the name. `kind` is "ENTITY" when the call
+  # named no kind.
+  RecognizedEntity = Struct.new(:text, :start, :end, :length, :kind, :strength)
 
   # One relation between two recognized names.
   Relation = Struct.new(:relation, :source, :target, :probability)
@@ -371,7 +375,7 @@ module ThinkThen
     end
 
     def recognize_spec(kinds, relations, threshold, relation_threshold)
-      kinds = %w[person organization place] if kinds.nil?
+      kinds = [] if kinds.nil?
       kinds = kinds.to_h { |name| [name.to_s, name.to_s] } if kinds.is_a?(Array)
       body = { "kinds" => kinds.to_h { |name, description| [name.to_s, description] } }
       body["relations"] = relation_rules(relations) if relations
@@ -416,14 +420,18 @@ module ThinkThen
     end
 
     def entity(held)
-      Entity.new(held["name"], held["kind"], held["start"], held["end"], held["strength"])
+      Entity.new(held["name"], held["kind"])
+    end
+
+    def recognized_entity(held)
+      RecognizedEntity.new(*held.values_at("text", "start", "end", "length", "kind", "strength"))
     end
 
     def recognized(held)
       relations = held["relations"]&.map do |one|
-        Relation.new(one["relation"], entity(one["source"]), entity(one["target"]), one["probability"])
+        Relation.new(one["relation"], recognized_entity(one["source"]), recognized_entity(one["target"]), one["probability"])
       end
-      Recognized.new(held.fetch("entities").map { |one| entity(one) }, relations)
+      Recognized.new(held.fetch("entities").map { |one| recognized_entity(one) }, relations)
     end
 
     def watch(row)

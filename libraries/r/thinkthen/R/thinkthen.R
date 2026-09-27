@@ -291,10 +291,11 @@ tt_annotate <- function(file, data, on, deadline = NULL) {
 .tt_frame <- function(columns) as.data.frame(columns, stringsAsFactors = FALSE)
 
 # recognize: every name in each text with its kind. Each record is a data
-# frame of names (name, kind, start, end, strength), and the relations the
-# rules turn on ride in its "relations" attribute. substr(text, start, end)
-# is the name.
-tt_recognize <- function(evidence, kinds = c("person", "organization", "place"),
+# frame of names (text, start, end, length, kind, strength), and the
+# relations the rules turn on ride in its "relations" attribute.
+# substr(text, start, end) is the name, and length is its character count.
+# With no kinds, every name has the kind ENTITY.
+tt_recognize <- function(evidence, kinds = NULL,
                          relations = NULL, threshold = NULL,
                          relation_threshold = NULL, deadline = NULL) {
   path <- .tt_path(kinds)
@@ -304,14 +305,14 @@ tt_recognize <- function(evidence, kinds = c("person", "organization", "place"),
     .tt_spec("recognize", section, threshold, relation_threshold)
   }
   evidence <- as.character(evidence)
-  empty <- .tt_frame(list(name = character(), kind = character(), start = numeric(),
-                          end = numeric(), strength = numeric()))
+  empty <- .tt_frame(list(text = character(), start = numeric(), end = numeric(),
+                          length = numeric(), kind = character(), strength = numeric()))
   held <- rep(list(empty), length(evidence))
   live <- which(!is.na(evidence))
   if (length(live)) {
     found <- .tt_call(tt_recognize_column(spec, !is.null(path), evidence[live], deadline))
     for (i in seq_along(live)) {
-      frame <- .tt_frame(found[[i]][c("name", "kind", "start", "end", "strength")])
+      frame <- .tt_frame(found[[i]][c("text", "start", "end", "length", "kind", "strength")])
       links <- .tt_frame(found[[i]]$relations)
       if (nrow(links)) attr(frame, "relations") <- links
       held[[live[[i]]]] <- frame
@@ -321,7 +322,7 @@ tt_recognize <- function(evidence, kinds = c("person", "organization", "place"),
 }
 
 # relate: the edges among entities given as a data frame with name and kind
-# columns, such as tidyr::unnest() of tt_recognize. The first two columns
+# columns. The first two columns
 # are the endpoints, so igraph::graph_from_data_frame reads it unchanged.
 tt_relate <- function(entities, relations = NULL, either = NULL, threshold = NULL,
                       deadline = NULL) {

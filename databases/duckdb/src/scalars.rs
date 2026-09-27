@@ -54,10 +54,11 @@ const TWO: &[Type] = &[Type::Text, Type::Text];
 const LISTED: &[Type] = &[Type::Text, Type::Text, TEXTS];
 
 const RECOGNIZED: Type = Type::List(&Type::Struct(&[
-    ("name", Type::Text),
-    ("kind", Type::Text),
+    ("text", Type::Text),
     ("start", Type::BigInt),
     ("end", Type::BigInt),
+    ("length", Type::BigInt),
+    ("kind", Type::Text),
     ("strength", Type::Double),
 ]));
 

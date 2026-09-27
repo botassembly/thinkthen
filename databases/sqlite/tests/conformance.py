@@ -168,9 +168,9 @@ def check(case: dict, backend: Backend) -> None:
         failed = sum(isinstance(value, dict) and "failed" in value for record in records for value in record.values())
         same("failed", failed, success.get("failed_questions", 0))
     elif kind == "recognize":
-        sql = 'SELECT name, kind, start, "end", strength FROM thinkthen_recognize(?, ?)'
+        sql = 'SELECT text, start, "end", length, kind, strength FROM thinkthen_recognize(?, ?)'
         rows = asked([[sql, [case["text"], question]]], env)[0]
-        names = ("name", "kind", "start", "end", "strength")
+        names = ("text", "start", "end", "length", "kind", "strength")
         same("result", {"entities": [dict(zip(names, row)) for row in rows]}, answers[0]["bare"])
     elif kind == "relate":
         entities = case["entities"]

@@ -19,7 +19,7 @@ The tag header declares 19 functions. The port kept all 19 and added none.
 | `thinkthen_decide`, `thinkthen_decide_opts` | kept | `question_json` goes through `Question::from_json`. `deadline_ms` stays `int64_t` and goes through `CallOptions::deadline_millis` (ADR 0041). |
 | `thinkthen_decide_many`, `thinkthen_decide_many_opts` | kept | A cancelled or expired call still returns no rows. |
 | `thinkthen_call`, `thinkthen_call_opts` | changed | The envelope grammar below replaces the branch's eight verbs. |
-| `thinkthen_recognize`, `thinkthen_recognize_opts` | changed | The spec is a version-one question file. Entities take the engine's `{name, kind, start, end, strength}` through `Recognized::to_json`. Recognize follows the engine's cache and replay settings like every call. |
+| `thinkthen_recognize`, `thinkthen_recognize_opts` | changed | The spec is a version-one question file. Entities take the engine's `{text, start, end, length, kind, strength}` through `Recognized::to_json`. Recognize follows the engine's cache and replay settings like every call. |
 | `thinkthen_relate`, `thinkthen_relate_opts` | changed | The spec is a version-one relate file read by `Relate::from_json`. Each text is one JSON record with `name` and `kind` at the default fields. A non-default `fields` pointer is refused as usage. Edges take `Edge::to_json`'s shape inside `{"edges":[...]}`. The 255 cap stays. |
 | `thinkthen_free_string` | kept | |
 

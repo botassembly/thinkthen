@@ -26,7 +26,7 @@ function same(what, actual, expected) {
 function units(text, held) {
   const widths = [...text].map((ch) => ch.length);
   const at = (point) => widths.slice(0, point).reduce((sum, width) => sum + width, 0);
-  return { ...held, start: at(held.start), end: at(held.end) };
+  return { ...held, start: at(held.start), end: at(held.end), length: at(held.end) - at(held.start) };
 }
 
 /** Each fault case, as this surface raises its kind. */
@@ -109,7 +109,7 @@ async function check(tt, one, origin, folder) {
       const bare = success.answers[0].bare;
       const shaped = { entities: bare.entities.map((held) => units(one.text, held)) };
       if (bare.relations) shaped.relations = bare.relations.map((held) => ({ ...held, source: units(one.text, held.source), target: units(one.text, held.target) }));
-      for (const held of found.entities) same('slice', one.text.slice(held.start, held.end), held.name);
+      for (const held of found.entities) same('slice', one.text.slice(held.start, held.end), held.text);
       return same('recognized', found, shaped);
     }
     case 'relate': {

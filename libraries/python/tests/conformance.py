@@ -118,11 +118,13 @@ def annotated(engine, case, texts, success):
             same("frame", json.loads(got[name]) if widened else got[name], value)
 
 
-def entity(one, place=True):
-    found = {"name": one.name, "kind": one.kind}
-    if place:
-        found.update(start=one.start, end=one.end, strength=one.strength)
-    return found
+def entity(one):
+    return {"name": one.name, "kind": one.kind}
+
+
+def recognized(one):
+    return {"text": one.text, "start": one.start, "end": one.end, "length": one.length,
+            "kind": one.kind, "strength": one.strength}
 
 
 def succeeded(port, case):
@@ -136,17 +138,17 @@ def succeeded(port, case):
     verb, kind = case["verb"], success["kind"]
     if verb == "recognize":
         found = engine.recognize(case["text"], case["question"])
-        result = {"entities": [entity(one) for one in found.entities]}
+        result = {"entities": [recognized(one) for one in found.entities]}
         if found.relations is not None:
             result["relations"] = [
-                {"relation": one.relation, "source": entity(one.source),
-                 "target": entity(one.target), "probability": one.probability}
+                {"relation": one.relation, "source": recognized(one.source),
+                 "target": recognized(one.target), "probability": one.probability}
                 for one in found.relations]
         return same("result", result, success["answers"][0]["bare"])
     if verb == "relate":
         edges = engine.relate(case["entities"], case["question"])
-        result = [{"relation": edge.relation, "source": entity(edge.source, False),
-                   "target": entity(edge.target, False), "probability": edge.probability}
+        result = [{"relation": edge.relation, "source": entity(edge.source),
+                   "target": entity(edge.target), "probability": edge.probability}
                   for edge in edges]
         return same("result", result, success["answers"][0]["bare"])
     if verb == "annotate":
