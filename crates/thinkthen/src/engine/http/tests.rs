@@ -2,11 +2,12 @@
 
 use super::{Client, Exchange, Key, bounded_wait, honored, io_transport, is_retried, transport};
 use crate::engine::error::{Error, TransportKind};
+use crate::engine::usage::Counters;
 use std::cell::Cell;
 use std::io::{self, Read as _, Write as _};
 use std::net::TcpListener;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::thread;
 use std::time::Duration;
 
@@ -147,18 +148,14 @@ fn cancellation_during_a_retry_wait_starts_no_second_attempt() {
     let cancel = crate::engine::Cancel::default();
     let server_cancel = cancel.clone();
     let server = thread::spawn(move || {
-        for stream in listener.incoming().take(2) {
-            let mut stream = stream.expect("request");
-            let mut request = [0_u8; 1024];
-            let _read = stream.read(&mut request).expect("request bytes");
-            counted.fetch_add(1, Ordering::SeqCst);
-            stream
-                .write_all(b"HTTP/1.1 503 Unavailable\r\nContent-Length: 0\r\n\r\n")
-                .expect("response");
-            if server_cancel.fired() {
-                break;
-            }
-        }
+        let (mut stream, _) = listener.accept().expect("request");
+        let mut request = [0_u8; 1024];
+        let _read = stream.read(&mut request).expect("request bytes");
+        counted.fetch_add(1, Ordering::SeqCst);
+        stream
+            .write_all(b"HTTP/1.1 503 Unavailable\r\nContent-Length: 0\r\n\r\n")
+            .expect("response");
+        server_cancel.fire();
     });
     let url = format!("http://{address}/v1/systemone");
     let key = Key::of("sk-test-value");
@@ -178,13 +175,45 @@ fn cancellation_during_a_retry_wait_starts_no_second_attempt() {
 
     let result = client.post_observed(&exchange, &cancel, || {
         attempts.set(attempts.get() + 1);
-        cancel.fire();
     });
     server.join().expect("server thread");
 
     assert!(matches!(result, Err(Error::Cancelled)));
     assert_eq!(attempts.get(), 1);
     assert_eq!(received.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+fn a_token_fired_before_the_final_check_counts_and_sends_nothing() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
+    listener.set_nonblocking(true).expect("nonblocking");
+    let url = format!(
+        "http://{}/v1/systemone",
+        listener.local_addr().expect("address")
+    );
+    let key = Key::of("sk-test-value");
+    let exchange = Exchange {
+        url: &url,
+        body: b"{}",
+        key: &key,
+        max_retries: 0,
+        retry_wait: Duration::from_millis(10),
+    };
+    let token = Arc::new(AtomicBool::new(false));
+    let cancel = crate::engine::Cancel::default().with_token(Some(Arc::clone(&token)));
+    let counts = Counters::new(None);
+    let client = Client::new(
+        Duration::from_secs(1),
+        false,
+        crate::engine::process_width(),
+    );
+    let result = client.post_observed_with_retry(&exchange, &cancel, &counts, |_| {
+        token.store(true, Ordering::Release);
+    });
+
+    assert!(matches!(result, Err(Error::Cancelled)));
+    assert_eq!(counts.snapshot().requests_sent, 0);
+    assert!(matches!(listener.accept(), Err(error) if error.kind() == io::ErrorKind::WouldBlock));
 }
 
 /// Port zero can never listen, so the refusal is deterministic.
@@ -197,6 +226,7 @@ fn a_refused_attempt_is_observed_once_and_returned_without_a_retry() {
         crate::engine::process_width(),
     );
     let observed = Cell::new(0_u32);
+    let counts = Counters::new(None);
     let exchange = Exchange {
         url: "http://127.0.0.1:0/v1/systemone",
         body: b"{}",
@@ -205,11 +235,16 @@ fn a_refused_attempt_is_observed_once_and_returned_without_a_retry() {
         retry_wait: Duration::from_millis(1),
     };
 
-    let result = client.post_observed(&exchange, &crate::engine::Cancel::default(), || {
-        observed.set(observed.get() + 1)
-    });
+    let result = client.post_observed_with_retry(
+        &exchange,
+        &crate::engine::Cancel::default(),
+        &counts,
+        |_| observed.set(observed.get() + 1),
+    );
 
     assert_eq!(observed.get(), 1);
+    assert_eq!(counts.snapshot().requests_sent, 1);
+    assert_eq!(counts.snapshot().retries, 0);
     assert!(matches!(
         result,
         Err(Error::Transport(TransportKind::Refused))

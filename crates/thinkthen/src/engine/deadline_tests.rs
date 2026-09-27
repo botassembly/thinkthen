@@ -226,16 +226,55 @@ fn accounting_that_outlasts_the_budget_sends_nothing() {
         retry_wait: Duration::from_millis(10),
     };
     let started = Instant::now();
+    let folder =
+        std::env::temp_dir().join(format!("thinkthen-unsent-attempt-{}", std::process::id()));
+    let _absent = fs::remove_dir_all(&folder);
+    let counts = Counters::new(Some(folder.clone()));
 
-    let result = Client::new(SECOND * 30, false, crate::engine::process_width()).post_observed(
-        &exchange,
-        &within(Duration::from_millis(200)),
-        || thread::sleep(Duration::from_millis(500)),
-    );
+    let result = Client::new(SECOND * 30, false, crate::engine::process_width())
+        .post_observed_with_retry(
+            &exchange,
+            &within(Duration::from_millis(200)),
+            &counts,
+            |_| thread::sleep(Duration::from_millis(500)),
+        );
 
     assert_eq!(deadline_of(result), Duration::from_millis(200));
     assert!(started.elapsed() < SECOND, "the call returned promptly");
     assert!(matches!(listener.accept(), Err(error) if error.kind() == ErrorKind::WouldBlock));
+    assert_eq!(counts.snapshot().requests_sent, 0);
+    assert_eq!(counts.snapshot().retries, 0);
+    assert!(
+        !counts.finish(),
+        "an unsent attempt cannot fail persistence"
+    );
+    assert!(!folder.exists(), "an unsent attempt cannot create a ledger");
+}
+
+#[test]
+fn a_held_response_has_one_visible_in_flight_attempt() {
+    let (server, received) = serve(vec![Reply::Hold]);
+    let counts = Counters::new(None);
+    let key = Key::of("sk-test-value");
+    let url = server.url.clone();
+    let exchange = Exchange {
+        url: &url,
+        body: b"{}",
+        key: &key,
+        max_retries: 0,
+        retry_wait: Duration::from_millis(10),
+    };
+    let client = Client::new(SECOND * 2, false, crate::engine::process_width());
+    thread::scope(|scope| {
+        let sending = scope.spawn(|| {
+            client.post_observed_with_retry(&exchange, &Cancel::default(), &counts, |_| ())
+        });
+        received.recv_timeout(SECOND).expect("the request arrived");
+        assert_eq!(counts.snapshot().requests_sent, 1);
+        assert_eq!(counts.snapshot().retries, 0);
+        assert_eq!(server.finish(), (1, false));
+        let _finished = sending.join().expect("sending thread");
+    });
 }
 
 #[test]
