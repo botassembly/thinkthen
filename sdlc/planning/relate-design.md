@@ -2,7 +2,7 @@
 
 Status: Historical design for tickets 0081 and 0088. ADR 0057 and ticket 0167 supersede its planner, request state, dry-run method and fallback, and choice detail entries. The retained input, edge, and partial-output contracts remain settled. This page authorizes no live or paid run.
 
-Read `recognize-design.md` first. `recognize` and `relate` use one shared relation planner, request-state type, question map, and generic edge assembler. Recognition retains its complete name fields. Standalone relate returns name-and-kind endpoints.
+Read `recognize-design.md` first. `recognize` and `relate` use one shared pair planner, request-state construction, and generic edge assembler. Recognition retains its complete name fields. Standalone relate returns name-and-kind endpoints.
 
 ## Delivery split
 
@@ -45,9 +45,9 @@ Empty bytes under `--lines` or `--jsonl` succeed with no output and no request. 
 
 No planner method, one-or-many marker, runner-up question, or packing control is public. The threshold defaults to `0.5` and accepts the cut.
 
-## Exact dry-run schema (method and fallback superseded by ADR 0057)
+## Former dry-run example (method and fallback superseded by ADR 0057)
 
-The example below records the earlier choice planner. Under ADR 0057, each plan entry is one rule as given. `method` is always `yes_no`, `fallback` is always null, and its `request_count` counts shared requests carrying that rule's questions. `specification/relate.md` gives the current schema.
+The example and description below record the earlier choice planner. Under ADR 0057, each plan entry is one rule as given. `method` is always `yes_no`, `fallback` is always null, and its `request_count` counts shared requests carrying that rule's questions. `specification/relate.md` gives the current schema and request order.
 
 `--dry-run` validates the complete entity set, resolves the runtime backend profile, expands concrete relations, performs final fallback and 0079 splitting, and sends nothing. A nonempty file-backed run prints one compact object with this key order:
 
@@ -69,7 +69,7 @@ Bare output emits one edge per line:
 {"relation":"sung_by","source":{"name":"Octopus's Garden","kind":"song"},"target":{"name":"Ringo Starr","kind":"person"},"probability":0.93}
 ```
 
-One-way edges keep the rule's source-to-target direction even when the target side asked the choice. `--either` normalizes endpoints to input order. Edges print by relation declaration, concrete-kind expansion, asker or pair, then candidate order. No edge prints twice.
+One-way edges keep the rule's source-to-target direction. `--either` normalizes endpoints to input order. Edges print in rule and pair question order. No edge prints twice.
 
 ## Former hybrid planner (superseded by ADR 0057)
 
