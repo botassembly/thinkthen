@@ -13,6 +13,7 @@ use crate::core::{
 use crate::engine::error::{TransportKind, reply_too_large};
 use crate::table;
 
+mod after_signal;
 mod convert;
 pub(crate) mod recognize;
 mod recording;
@@ -177,6 +178,12 @@ pub(crate) enum Failure {
     Render(RenderError),
 }
 
+impl From<crate::schedule::Placed> for Failure {
+    fn from(placed: crate::schedule::Placed) -> Self {
+        placed.cause
+    }
+}
+
 /// Every message a user reads is written here. No message carries a key or any
 /// evidence text. A backend that answers with an error status is named by that
 /// status and by the fixed phrase its status carries, never by its body,
@@ -294,6 +301,11 @@ fn stopped(failure: &Failure, writer: &mut dyn Write) -> Option<u8> {
     else {
         return None;
     };
+    if matches!(cause.as_ref(), Failure::Cancelled) {
+        return Some(after_signal::stopped(
+            *finished, *replayed, *recording, *held, writer,
+        ));
+    }
     let (code, reason) = match cause.as_ref() {
         Failure::BatchFailed { last, cause } => {
             let mut said = Vec::new();

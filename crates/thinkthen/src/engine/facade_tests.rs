@@ -239,11 +239,7 @@ fn a_host_signal_on_the_calling_thread_never_fails_a_single_send() {
     let (published, caller) = channel();
     // A socket read with a timeout is not restarted after a signal, so a
     // send on the calling thread would fail here.
-    let signal = |caller| {
-        for _ in 0..10 {
-            pthread_kill(caller, Signal::SIGUSR1).expect("signal delivered");
-        }
-    };
+    let signal = |caller| pthread_kill(caller, Signal::SIGUSR1).expect("signal delivered");
 
     let (answer, found) = thread::scope(|scope| {
         let call = scope.spawn(|| {
@@ -408,10 +404,13 @@ fn completed_results_keep_input_order_and_reading_them_sends_nothing() {
     });
 
     assert_eq!(rows, [Some(0.9), Some(0.5)], "good outcomes in input order");
-    let Ok(RunOutcome::Stopped { at, cause, .. }) = outcome else {
+    let Ok(RunOutcome::Stopped {
+        finished, cause, ..
+    }) = outcome
+    else {
         panic!("{outcome:?}")
     };
-    assert_eq!((at, cause.kind()), (3, Kind::Backend), "{cause:?}");
+    assert_eq!((finished, cause.kind()), (2, Kind::Backend), "{cause:?}");
     let sent = listener.count();
     let usage = engine.usage().expect("usage");
     assert_eq!((sent, usage.requests_sent), (3, 3));

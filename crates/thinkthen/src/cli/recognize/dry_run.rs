@@ -50,8 +50,8 @@ pub(super) fn run(
     writer: &mut dyn Write,
 ) -> Result<ExitCode, Failure> {
     let (spec, from_file, limit) = question;
-    let mut chunks = edge::Chunks::new(source, reading.streams());
-    let Some(bytes) = chunks.next().transpose()? else {
+    let mut chunks = edge::numbered(edge::Chunks::new(source, reading.streams()), reading);
+    let Some(bytes) = chunks.next().map(|(_, row)| row).transpose()? else {
         return Ok(ExitCode::SUCCESS);
     };
     let record = reading

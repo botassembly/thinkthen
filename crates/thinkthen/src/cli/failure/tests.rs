@@ -488,7 +488,7 @@ fn stopped_counts_use_record_only_at_one() {
             1,
             1,
             Failure::Cancelled,
-            "thinkthen: stopped at record 2; 1 record finished, 1 record from a recording\n",
+            "thinkthen: stopped by a signal; 1 record finished, 1 record from a recording\n",
         ),
     ];
     for (finished, replayed, cause, summary) in cases {
