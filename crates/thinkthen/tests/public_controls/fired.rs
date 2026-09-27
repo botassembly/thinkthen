@@ -29,13 +29,7 @@ fn a_token_fired_during_a_send_ends_the_call_cancelled() {
         .expect("listener");
         let (token, engine) = (CancelToken::new(), engine(listener.base()));
         let result = thread::scope(|scope| {
-            scope.spawn(|| {
-                while listener.count() < 1 {
-                    thread::sleep(Duration::from_millis(5));
-                }
-                token.cancel();
-                release.wait();
-            });
+            scope.spawn(|| fire_on_arrival(&listener, &token, &release));
             let options = CallOptions::new().cancel(&token);
             engine.decide_with(&question(), "Refund me.", options)
         });
@@ -68,4 +62,13 @@ fn a_token_fired_before_a_batch_ends_ends_it_cancelled() {
     );
     assert!(rows.next().is_none());
     assert_eq!(listener.count(), 1);
+}
+
+/// Fire the token once the listener has the request, then let its reply go.
+fn fire_on_arrival(listener: &Listener, token: &CancelToken, release: &Barrier) {
+    while listener.count() < 1 {
+        thread::sleep(Duration::from_millis(5));
+    }
+    token.cancel();
+    release.wait();
 }
