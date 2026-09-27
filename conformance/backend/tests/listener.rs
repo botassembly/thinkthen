@@ -195,7 +195,7 @@ fn a_held_reply_releases_normally_and_retirement_interrupts_an_unreleased_reply(
     client.join().map_err(|_| "client panicked")?;
     drop(listener);
 
-    let release = Arc::new(Rendezvous::new(2));
+    let release = Arc::new(Rendezvous::new(3));
     let (arrived, events) = mpsc::channel();
     let listener = Listener::answering_with_events(
         {
@@ -210,12 +210,17 @@ fn a_held_reply_releases_normally_and_retirement_interrupts_an_unreleased_reply(
         events.recv_timeout(PATIENCE),
         Ok(Observed::Request)
     ));
+    let (awoken, wake) = mpsc::channel();
+    let participant = thread::spawn(move || {
+        let _ = awoken.send(release.wait());
+    });
     let (retired, done) = mpsc::channel();
     let retirement = thread::spawn(move || {
         drop(listener);
         let _ = retired.send(());
     });
     assert_eq!(done.recv_timeout(Duration::from_secs(1)), Ok(()));
+    assert_eq!(wake.recv_timeout(Duration::from_secs(1)), Ok(false));
     let mut body = String::new();
     stream.read_to_string(&mut body)?;
     assert!(
@@ -223,5 +228,6 @@ fn a_held_reply_releases_normally_and_retirement_interrupts_an_unreleased_reply(
         "an unreleased reply escaped retirement: {body}"
     );
     retirement.join().map_err(|_| "retirement panicked")?;
+    participant.join().map_err(|_| "participant panicked")?;
     Ok(())
 }

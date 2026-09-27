@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::io;
 use std::net::{Shutdown, TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
-use std::sync::{Arc, Condvar, Mutex};
+use std::sync::{Arc, Condvar, Mutex, Weak};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
@@ -49,6 +49,7 @@ struct State {
     next: usize,
     sockets: HashMap<usize, TcpStream>,
     workers: Vec<JoinHandle<()>>,
+    gates: Vec<Weak<Rendezvous>>,
 }
 
 /// The accept thread owns the listening socket; the final owner joins it.
@@ -165,6 +166,19 @@ impl Lifetime {
         !state.stopped
     }
 
+    fn watch(&self, gate: &Arc<Rendezvous>) {
+        let mut state = self.state.lock().unwrap_or_else(|error| error.into_inner());
+        if state.stopped {
+            gate.cancel();
+        } else if !state
+            .gates
+            .iter()
+            .any(|held| held.ptr_eq(&Arc::downgrade(gate)))
+        {
+            state.gates.push(Arc::downgrade(gate));
+        }
+    }
+
     pub(crate) fn retire(&self) {
         {
             let mut state = self.state.lock().unwrap_or_else(|error| error.into_inner());
@@ -173,6 +187,11 @@ impl Lifetime {
                 self.stopped.store(true, Ordering::SeqCst);
                 for socket in state.sockets.values() {
                     let _ = socket.shutdown(Shutdown::Both);
+                }
+                for gate in &state.gates {
+                    if let Some(gate) = gate.upgrade() {
+                        gate.cancel();
+                    }
                 }
                 self.wake.notify_all();
             }
@@ -202,7 +221,7 @@ impl Lifetime {
 #[derive(Debug)]
 pub struct Rendezvous {
     parties: usize,
-    state: Mutex<(usize, usize)>,
+    state: Mutex<(usize, usize, bool)>,
     wake: Condvar,
 }
 
@@ -211,7 +230,7 @@ impl Rendezvous {
     pub fn new(parties: usize) -> Self {
         Self {
             parties,
-            state: Mutex::new((0, 0)),
+            state: Mutex::new((0, 0, false)),
             wake: Condvar::new(),
         }
     }
@@ -221,12 +240,22 @@ impl Rendezvous {
         self.wait_inner(None)
     }
 
-    pub(crate) fn wait_owned(&self, lifetime: &Lifetime) -> bool {
+    pub(crate) fn wait_owned(self: &Arc<Self>, lifetime: &Lifetime) -> bool {
+        lifetime.watch(self);
         self.wait_inner(Some(lifetime))
+    }
+
+    fn cancel(&self) {
+        let mut state = self.state.lock().unwrap_or_else(|error| error.into_inner());
+        state.2 = true;
+        self.wake.notify_all();
     }
 
     fn wait_inner(&self, lifetime: Option<&Lifetime>) -> bool {
         let mut state = self.state.lock().unwrap_or_else(|error| error.into_inner());
+        if state.2 {
+            return false;
+        }
         let round = state.1;
         state.0 += 1;
         if state.0 == self.parties {
@@ -236,15 +265,14 @@ impl Rendezvous {
             return true;
         }
         while state.1 == round {
-            if lifetime.is_some_and(Lifetime::stopped) {
+            if state.2 || lifetime.is_some_and(Lifetime::stopped) {
                 return false;
             }
             state = self
                 .wake
-                .wait_timeout(state, POLL)
-                .unwrap_or_else(|error| error.into_inner())
-                .0;
+                .wait(state)
+                .unwrap_or_else(|error| error.into_inner());
         }
-        true
+        !state.2
     }
 }
