@@ -1,6 +1,6 @@
 # ADR 0057: Relate asks one yes/no question per pair
 
-- Status: Proposed 2026-09-27 with ticket 0167, on Ian's ruling of 2026-09-26. The coordinator accepts it after a fresh read-only review. Ian can overturn it
+- Status: Accepted 2026-09-27 by the coordinator after a fresh read-only review, on Ian's ruling of 2026-09-26. Ian can overturn it. Ticket 0167 builds it
 - Date: 2026-09-27
 
 This ADR moves standalone `relate` from the hybrid planner of `sdlc/planning/relate-design.md` to one yes/no question per pair a rule allows. It builds item 5 of the version of ticket 0147 that Ian accepted on 2026-09-26. ADR 0056 left that item to "a separate ticket". Ticket 0167 is that ticket. It adds a note to ADR 0019 and changes no rule of ADR 0019.
@@ -36,19 +36,19 @@ Dry runs of main at `a057c594` give today's figures. A script that builds this A
 | 4 persons, 184 songs, 13 albums | `sung_by`, `appears_on` | 368, 3, 244,892 | 3,128, 8, 319,692 | +31% |
 | 127 persons, 128 organizations | `works_for` | 128, 10, 920,792 | 16,256, 41, 1,869,452 | +103% |
 
-A small set costs less with pairs. Each choice option repeats its entity's kind and name as a description, and each choice repeats the asking entity. A large set costs more, because pairs grow with the product of the two sides. `specification/backends.md` records relate's JSON at 0.516 input tokens a byte. At $0.042 a million input tokens, the 184-song set moves from about $0.0053 to $0.0069 a run. The 255-entity set moves from about $0.020 to $0.041.
+A small set costs less with pairs. Each choice option repeats its entity's kind and name as a description, and each choice repeats the asking entity. A large set costs more, because pairs grow with the product of the two sides. The token figures for pair bodies are unmeasured. `specification/backends.md` records relate's JSON at 0.516 input tokens a byte, measured on choice bodies. Pair questions are short in bytes and long in tokens. Local experiment 260 measured about 73 input tokens a packed yes/no question. At $0.042 a million input tokens, today's 184-song set costs about $0.0053 a run and the 255-entity set about $0.020. At 73 tokens a question plus the state, the pair plans come to about $0.011 and $0.056. Ticket 0167's recorded run measures the pair rate.
 
-The 400-question limit causes part of the growth, because every request repeats the entity list. With the byte ceiling alone, the last three rows would be 72,708, 269,280 and 1,485,228 bytes: -14%, +10% and +61%. Ian's ruling set the limit, and `recognize` step 3 already applies it, so this ADR keeps it.
+The 400-question limit causes part of the growth, because every request repeats the entity list. With the byte ceiling alone, the last three rows would be 72,708, 269,280 and 1,485,228 bytes: -14%, +10% and +61%, a saving of 16% to 21%. The limit guards the backend's limit of 65,536 input tokens. At 73 tokens a question, 900 pair questions in one request come to about 65,700 tokens, and ticket 0147's accepted history set 400 for that reason. 400 questions come to about 29,200 tokens. So this ADR keeps it.
 
 ## Decision
 
 1. **One yes/no question per pair a rule allows.** Every relation asks one yes/no question for each ordered pair of entities whose kinds match the rule's source and target. `*` matches any kind. An `either` rule asks each unordered pair once. No entity pairs with itself. No relation asks a choice. No side asks, and no option limit changes the method.
 2. **One state per entity set.** Every request of a run carries the same state: `{"entities":[…]}`, holding each entity of a kind some rule names, in input order, with ids `i1`, `i2` and onward. The state carries no `relation` key. Every rule's questions share the requests. This is `recognize` step 3's state with no text.
 3. **The question names its relation.** A question reads `Is it true that i1 READS i2?`, where READS is the rule's `reads`. Under `either` it reads `Is it true that i1 READS i2, or that i2 READS i1?`. `recognize` step 3 asks the same sentence with `Does the text itself state that` in place of `Is it true that`. The lead words are the only difference, and one planner builds both.
-4. **Requests hold at most 400 questions.** Questions go into requests in rule order, then source order, then target order. A request holds at most 400 questions and fits under the request-size ceiling of ADR 0040 and ticket 0123. A profile's `max_questions` lowers the 400, as it does for `recognize` step 3. The limit applies at every address.
+4. **Requests hold at most 400 questions.** Questions go into requests in rule order, then source order, then target order. A request holds at most 400 questions and fits under the request-size ceiling of ADR 0040 and ticket 0123. A profile's `max_questions` lowers the 400, as it does for `recognize` step 3. The limit applies at every address. Ian's accepted text reads "A relation request at the built-in address holds at most 400 questions, and a profile's `max_questions` replaces that number." The coordinator ruled on 2026-09-27 to apply it at every address, as `recognize` step 3 does.
 5. **An edge is a yes at or above the cut.** The cut stays inclusive, with its 0.5 default. Edges print in question order. A directed edge keeps the rule's direction. An `either` edge puts its endpoints in input order.
 6. **The edge shape stays.** Bare output, library edges and SQL rows keep `relation`, `source`, `target` and `probability`. `--details` keeps `thinkthen.result/1`, and every entry of `answer.questions` is today's yes/no entry. Partial output at exit 6 stays.
-7. **The dry run becomes version 2.** `thinkthen.relate-plan/2` lists each rule as given, with its question count. It drops each rule's `method`, `fallback` and `request_count`, because rules now share requests.
+7. **The dry run keeps version 1.** `thinkthen.relate-plan/1` keeps its keys, as Ian's accepted text says. Each entry of `relations` is one rule as given. Its `method` is always `yes_no`, and its `fallback` always null. Its `logical_questions` counts its questions, and its `request_count` counts the requests that carry them. Rules share requests, so the entries' counts can add to more than the top-level `request_count`.
 8. **The page says where an edge comes from.** `relate` sends no text, so an edge comes from the model's knowledge of the names. `specification/relate.md` says so, and points to `recognize --relation` for edges a text states.
 
 ## Consequences
@@ -56,8 +56,10 @@ The 400-question limit causes part of the growth, because every request repeats 
 - A one-to-many or many-to-many fact keeps every edge the model believes. An unrelated entity adds questions and changes no other pair's question.
 - Every relate request body changes. Old relate recordings and cache entries miss. The question digest does not change, because no method enters it.
 - `recognize` request bodies stay byte for byte. Ticket 0147's recordings prove it.
-- `max_options` no longer affects `relate`. The fallback, the `method` and `fallback` plan keys, and the choice detail entries go.
-- A large set costs up to about twice today's input tokens. The entity limit of 255 bounds one rule at 16,256 cross-kind pairs. Today's same-kind rules already reach 64,770 pairs.
+- `max_options` no longer affects `relate`. The fallback and the choice detail entries go. The plan keeps `method` and `fallback` as constants.
+- A plan entry is now a rule as given, not a concrete kind pair. A reader that expected one entry per kind pair under a wildcard sees one entry.
+- Edges of a wildcard rule print in question order, where they printed grouped by concrete kind pair.
+- A large set costs up to about twice today's request bytes, and its tokens are unmeasured. The entity limit of 255 bounds one rule at 16,256 cross-kind pairs. Today's same-kind rules already reach 64,770 pairs.
 
 ## What this amends
 
@@ -66,6 +68,7 @@ The 400-question limit causes part of the growth, because every request repeats 
 | `relate-design.md`, "Current final hybrid planner — authoritative" | Superseded. Every relation asks yes/no pairs |
 | `relate-design.md`, "Exact option and backend-profile fallback" | Superseded. No fallback remains |
 | `relate-design.md`, "Exact relation request state" | One state per run with no `relation`, and the question wording of item 3 |
+| `relate-design.md`, "Exact dry-run schema" | Amended. The schema stays version 1. Each entry is a rule as given, `method` is always `yes_no`, `fallback` is always null, and `request_count` counts the requests carrying the rule's questions |
 | `relate-design.md`, "Ruled Option A detailed result" | Choice entries no longer occur. Yes/no entries stay |
 | ADR 0019 | A note: relations ask no choice, so a choice's total no longer limits relation edges. The rule itself stands |
 | Ticket 0123 and `backends.md` | The ceiling's sentence "It never turns a choice into yes/no questions" loses its object, and the relate fallback sentence goes |
@@ -82,5 +85,9 @@ Owner calls, proposed with ticket 0167:
 3. One shared state per run in `relate`, from local experiment 275, in place of one state per rule.
 4. The wording `Is it true that i1 READS i2?` and its `either` form.
 5. A profile's `max_questions` lowering the 400 and never raising it, as `recognize` step 3 does. The ruling's text says "replaces".
-6. The limit at every address, as `recognize` step 3 applies it.
-7. Plan schema version 2, and keeping `method: "yes_no"` in detail entries so that entries keep their shape.
+6. Keeping `method: "yes_no"` in detail entries so that entries keep their shape.
+
+The coordinator's rulings of 2026-09-27:
+
+7. The limit at every address, as `recognize` step 3 applies it. It departs from the accepted text, which limits requests "at the built-in address".
+8. Plan schema version 1 with one entry per rule, as the accepted text keeps `method` and `fallback`.
