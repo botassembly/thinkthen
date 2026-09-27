@@ -112,10 +112,10 @@ struct ResponseUsage {
 /// # Errors
 ///
 /// Returns [`DecodeError`] when the body is not a `systemone` response, when it
-/// answers a planned question with nothing, when an answer carries the wrong
-/// shape, when it leaves an option or a level without a probability, or when a
-/// probability falls outside zero to one, or when its probabilities do not
-/// make a complete distribution.
+/// names an answer or a label twice, when it answers a place the plan never
+/// asked, or when every planned question fails. A missing answer, a wrong
+/// shape, a missing probability, a probability outside zero to one, or an
+/// incomplete distribution fails only that question.
 mod observed;
 
 pub(crate) use observed::decode_observed;

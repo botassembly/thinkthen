@@ -1,6 +1,6 @@
 # A duplicate answer name is accepted, and the last one wins
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 06, finding I-4. Blocks 0.1: the tool picks one side of an ambiguous reply without a word. Owner: ticket 0160 on `ticket/0160-the-answer-contract-holds`, ready for review.
+Status: Closed on 2026-09-26. Done by ticket 0160 on 2026-09-26: a reply that names an answer or a label twice is refused, and a test pins each case. Filed 2026-09-26 by the queue owner from local experiment 273, report 06, finding I-4.
 
 ## What happens
 

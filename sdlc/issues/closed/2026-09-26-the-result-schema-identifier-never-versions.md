@@ -1,6 +1,6 @@
 # The result schema identifier never versions
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 05, finding 2.4. Blocks 0.1: the compatibility rule must exist before the first release, because consumers pin to it from that day. Owner: ticket 0160 on `ticket/0160-the-answer-contract-holds`, ready for review.
+Status: Closed on 2026-09-26. Done by ticket 0160 on 2026-09-26: `specification/result.md` states which changes keep `thinkthen.result/1` and names each row shape, and `spec/result.md` holds that list to rows the binary writes. A result JSON Schema and the batching tickets' use of the rule stay deferred in the ticket. Filed 2026-09-26 by the queue owner from local experiment 273, report 05, finding 2.4.
 
 ## What happens
 

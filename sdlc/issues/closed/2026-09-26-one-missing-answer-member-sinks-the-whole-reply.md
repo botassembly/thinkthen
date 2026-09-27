@@ -1,6 +1,6 @@
 # One missing answer member sinks the whole reply
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 05, finding 2.3. Blocks 0.1: the code breaks a written adapter promise. Owner: ticket 0160 on `ticket/0160-the-answer-contract-holds`, ready for review.
+Status: Closed on 2026-09-26. Done by ticket 0160 on 2026-09-26: a reply in which one answer lacks its probability member fails that question with `missing_probability`, the other answers stand, and the run exits 6. Filed 2026-09-26 by the queue owner from local experiment 273, report 05, finding 2.3.
 
 ## What happens
 
