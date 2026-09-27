@@ -34,6 +34,8 @@ The fresh code reviewer checks these lessons against the diff and evidence. The 
 
 After adding lessons, read the ticket's Status, Closes, Deferred gaps, Evidence and Routing together, and check that numbered lists still sit under the right heading. A completed item must not remain described as deferred in a second section.
 
+For prose and fixture sweeps, inspect executable-page word limits and derived byte or hash assertions. Keep the strongest exact boundary check when a duplicate scalar assertion goes stale, then run the affected documentation segment. A routine text replacement can exceed a page limit without changing code.
+
 ## Improve the next preparation
 
 After the preparation pass, evaluate its accuracy and usefulness. After each ticket finishes, compare the notes with the builder's lessons. Record what reduced discovery, what was missed, and what caused rework in the ticket or shared preparation record. Use that evidence to give the retained agent a specific next brief. Do not measure success by note length or by counting prepared tickets as completed issues.
