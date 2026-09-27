@@ -1,0 +1,46 @@
+"""Outside-in stock-host check for the first real C++ scalar path."""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+from harness import Backend, run  # noqa: E402  the surface's loopback child
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--extension", required=True, type=Path)
+    extension = parser.parse_args().extension.resolve(strict=True)
+    with Backend() as backend:
+        bad_bind = run(["PREPARE bad AS SELECT thinkthen_decide('', 'x')"], backend.base(), extension=extension)
+        assert "thinkthen usage: a question is text, not white space" in bad_bind[0]["error"]
+        assert backend.count() == 0, "bad foldable question sent a request"
+
+        bad_chunk = run(
+            ["SELECT thinkthen_decide(q, 'refund now') FROM (VALUES ('Is it a refund?'), ('')) AS t(q)"],
+            backend.base(), extension=extension,
+        )
+        assert "thinkthen usage: a question is text, not white space" in bad_chunk[0]["error"]
+        assert backend.count() == 0, "nonconstant bad question sent a partial chunk"
+
+        file_question = run(["SELECT thinkthen_decide('@question.json', 'refund now')"],
+                            backend.base(), extension=extension)
+        assert "thinkthen local: question files are not yet enabled" in file_question[0]["error"]
+        assert backend.count() == 0, "unfinished file handling sent a request"
+
+        answered = run(
+            ["SELECT thinkthen_decide(NULL, 'refund now')",
+             "SELECT thinkthen_decide('Is it a refund?', 'refund now')",
+             "SELECT typeof(thinkthen_decide('Is it a refund?', 'a separate refund'))"],
+            backend.base(), extension=extension,
+        )
+        assert answered == [{"rows": [[None]]}, {"rows": [[True]]}, {"rows": [["BOOLEAN"]]}]
+        assert backend.count() == 1, "only the evaluated non-NULL call should send"
+    print("C++ decide bind, chunk, NULL, type, and loopback send boundary pass")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,18 @@
+# 0201 C++ product candidate
+
+This is the in-progress replacement extension, not the shipped DuckDB surface. It calls the real public `thinkthen` engine through `bridge/` and currently registers only `thinkthen_decide` with its two SQL overloads. The old C API extension and its tests remain active until every retained function and host behavior moves and the final candidate passes review.
+
+The source is DuckDB v1.5.5 at `d8cdaa33fda8df955cc76ef58a280f68f4cd43fa`. The official [v1.5.5 Linux static release ZIP](https://github.com/duckdb/duckdb/releases/download/v1.5.5/static-libs-linux-amd64.zip) has SHA-256 `deb47c5300f3c99725e84cdb14d214c3b12bbd748b613b1698b938c894cb68eb`. `archive-sha256.txt` fixes every extracted `.a`; CMake rejects a changed source commit, missing archive, added archive, or hash mismatch. The source and archives are DuckDB MIT inputs. The Rust bridge depends on the repository's public engine and its pinned Cargo lock. The C++ file follows the separately accepted 0201 proof; no template code is copied into it.
+
+With the verified source checkout and extracted archives in `DUCKDB_SOURCE` and `DUCKDB_STATIC`, build offline from the repository root under the canonical heavy lock:
+
+```sh
+export THINKTHEN_HEAVY_LOCK=/run/user/1000/thinkthen-heavy.lock
+flock -o "$THINKTHEN_HEAVY_LOCK" cargo build --locked --offline --release --manifest-path databases/duckdb/bridge/Cargo.toml
+flock -o "$THINKTHEN_HEAVY_LOCK" cmake -S "$DUCKDB_SOURCE" -B target/duckdb-cpp -G 'Unix Makefiles' -DCMAKE_BUILD_TYPE=Release -DBUILD_UNITTESTS=OFF -DBUILD_SHELL=OFF -DEXTENSION_STATIC_BUILD=OFF -DDUCKDB_EXTENSION_CONFIGS="$PWD/databases/duckdb/cpp/extension_config.cmake" -DTHINKTHEN_RUST_STATICLIB="$PWD/databases/duckdb/bridge/target/release/libthinkthen_duckdb_bridge.a" -DTHINKTHEN_DUCKDB_STATIC_DIR="$DUCKDB_STATIC"
+flock -o "$THINKTHEN_HEAVY_LOCK" cmake --build target/duckdb-cpp --target thinkthen_loadable_extension -j 2
+```
+
+`verify_decide.py --extension PATH` uses the surface's loopback backend and isolated child process. Set `THINKTHEN_BACKEND_BIN` to the local `conformance-backend` binary, and use the pinned v1.5.5 Python environment. It asserts bad foldable and row-dependent questions send zero requests, NULL sends none, a valid question sends one, and SQL exposes `BOOLEAN`. It never uses a real key or paid service.
+
+This slice does not yet implement `@file`, session settings, chunk grouping or deduplication, the query deadline and SIGINT, try-value recovery, the other SQL functions, or final package checks. It must not replace the shipped extension until those behaviors and the shared worker panic boundary pass. A loadable binary from this folder is a build artifact for the ticket, not a release file.

@@ -1,0 +1,25 @@
+[workspace]
+
+[package]
+name = "thinkthen-duckdb-bridge"
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.95.0"
+license = "MIT"
+publish = false
+
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+thinkthen = { path = "../../../crates/thinkthen", default-features = false }
+
+[profile.release]
+overflow-checks = true
+panic = "unwind"
+
+[lints.rust]
+unsafe_code = "deny"
+missing_debug_implementations = "forbid"
+unexpected_cfgs = "forbid"
+
