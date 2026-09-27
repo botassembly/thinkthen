@@ -204,7 +204,8 @@ pub(crate) fn edge_options(
     options
 }
 
-/// The edge question over `options`, each labelled with its own text.
+/// The edge question over `options`. Each label is its own text with every
+/// white-space run shown as one space. The description keeps the real snippet.
 pub(crate) fn edge_question(
     text: &str,
     pieces: &[Piece],
@@ -215,7 +216,9 @@ pub(crate) fn edge_question(
         let mut label = text
             .get(bytes(pieces, first, last))
             .unwrap_or_default()
-            .to_owned();
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
         while labels.iter().any(|(held, _)| *held == label) {
             label.push(' ');
         }

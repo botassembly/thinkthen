@@ -115,7 +115,7 @@ impl Engine {
         for group in name_groups(&stretches) {
             let (questions, held) =
                 step_two_questions(text, &pieces, &stretches, group.clone(), &spec.kinds)
-                    .map_err(|_| Error::RecognizeKinds)?;
+                    .map_err(|_| Error::Defect("a step-two question has invalid labels"))?;
             asked.extend(held);
             let first = stretches.get(group.start).map_or(0, |name| name.0);
             let last = stretches

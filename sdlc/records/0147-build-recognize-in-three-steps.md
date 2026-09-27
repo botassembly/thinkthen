@@ -99,6 +99,12 @@ All four ran with `THINKTHEN_API_KEY` unset and exited 0 on the final commit: `l
 8. The speed probe counts 24 recognize requests for 12 items, because each text sends a step-1 and a step-2 request.
 9. `tests/backend/recognize.rs` passed the 500-line ceiling, so its profile, cache, recording, details and worker tests moved to `recognize/stores.rs`.
 
+## Review fixes
+
+Two code reviews of d1ceea41 found the items below. Each fix is its own commit.
+
+1. A name across a line feed or a tab put a control character in its edge label. The label check refused it, and the run exited 2 with the kinds message after step 1 was paid. The coordinator ruled that each edge label shows every white-space run as one space. The description keeps the real snippet. A step-2 label error now maps to a defect. The edge table gains `"Maria\nChen."` and `"Maria\tChen!"` rows. Ian can overturn the ruling.
+
 ## Left for later
 
 - The accepted limits in the ticket's "Deferred gaps" stand, `Help!` among them.

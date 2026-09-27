@@ -240,16 +240,22 @@ fn edge_options_come_from_touching_marks_alone() {
     for (text, name, expected) in rows {
         assert_eq!(option_texts(text, name), expected, "{text}");
     }
-    let text = "x ... y";
-    let pieces = pieces(text);
-    let options = edge_options(text, &pieces, (2, 2));
-    let Question::Choose {
-        options: labels, ..
-    } = edge_question(text, &pieces, &options).unwrap()
-    else {
-        panic!("the edge question is a choice");
-    };
-    assert_eq!(labels.names().collect::<Vec<_>>(), [".", "..", ".. "]);
+    let labelled: [Offered; 3] = [
+        ("x ... y", (2, 2), &[".", "..", ".. "]),
+        ("Maria\nChen.", (0, 1), &["Maria Chen", "Maria Chen."]),
+        ("Maria\tChen!", (0, 1), &["Maria Chen", "Maria Chen!"]),
+    ];
+    for (text, name, expected) in labelled {
+        let pieces = pieces(text);
+        let options = edge_options(text, &pieces, name);
+        let Question::Choose {
+            options: labels, ..
+        } = edge_question(text, &pieces, &options).unwrap()
+        else {
+            panic!("the edge question is a choice");
+        };
+        assert_eq!(labels.names().collect::<Vec<_>>(), expected, "{text:?}");
+    }
 }
 
 #[test]
