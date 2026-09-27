@@ -60,7 +60,7 @@ A reader that closes the pipe early is no error. `thinkthen ... | head -1` ends 
 
 Codes 7 and 8 stay reserved. One function maps every error to its exit code. Exit 6 prints no diagnostic because the result marks each failed question.
 
-`recognize` exits 0 for every complete result, including no names. It never uses 1 or 3. A failed required detection, kind, or relation question exits 4 and prints no partial value for that input.
+`recognize` exits 0 for every complete result, including no names. It never uses 1 or 3. A failed step-1, step-2, or relation request exits 4 and prints no partial value for that input. A text over `--max-text-bytes`, 600,000 bytes by default, exits 2 before any request.
 
 `relate` exits 0 for a complete result, including no accepted edges. Recoverable mixed logical failure prints the buffered partial result and exits 6. If no valid logical answer remains, it exits 4 with no output. [relate.md](relate.md) fixes its aggregate behavior.
 
@@ -110,6 +110,6 @@ A run that read a question file carries one more field, `from`, between `input` 
 
 `annotate --dry-run` also checks the saved file, and its `input` object names each question's pointers. [annotate.md](annotate.md) gives both.
 
-`recognize --dry-run` reports its counts and every exact split request for the first record under `thinkthen.recognize-plan/1`. [recognize.md](recognize.md) fixes that schema.
+`recognize --dry-run` reports its piece count and every exact step-1 request for the first record under `thinkthen.recognize-plan/2`. [recognize.md](recognize.md) fixes that schema.
 
 `relate --dry-run` reports the complete entity set, expanded relations, method and fallback choices, and every exact split request under `thinkthen.relate-plan/1`. It sends nothing and makes no token or price claim. [relate.md](relate.md) fixes that schema.

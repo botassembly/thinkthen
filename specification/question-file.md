@@ -6,7 +6,7 @@ Every structural setting of a question has two homes. One is an option on the co
 
 ## Recognition files
 
-`recognize @FILE` reads a closed version-one object. Ordered `recognize.kinds` is required. Optional `recognize.relations` entries carry `name`, `source`, `target`, optional `reads`, and optional `either`. `*` is the only any-kind spelling. `threshold` and `relation_threshold` are single cuts and default to `0.5`. `model`, calibration `profile`, and ordinary `on` evidence selection use their existing meanings. Recognition policy has no command or file keys.
+`recognize @FILE` reads a closed version-one object. Ordered `recognize.kinds` is optional. Left out or empty, every name has the kind `ENTITY`, and the canonical question writes `"kinds":{}`. The kinds `none of these`, `ENTITY` and `ANY` are reserved in any ASCII case, and a file that names one exits 5. Optional `recognize.relations` entries carry `name`, optional `source`, optional `target`, optional `reads`, and optional `either`. A left-out side means any kind. `*` and `ANY` both mean any kind, and the canonical question writes `*`. `threshold` and `relation_threshold` are single cuts and default to `0.5`. `model`, calibration `profile`, and ordinary `on` evidence selection use their existing meanings. Recognition policy has no command or file keys.
 
 ```json
 {"version":1,"recognize":{"kinds":{"person":"A person's name.","organization":"An organization name."},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for"}]},"threshold":0.5,"relation_threshold":0.5,"model":"jev-1.13.0","profile":"measured-profile","on":"/body"}
@@ -118,7 +118,7 @@ Under `--dry-run`, a run that used a file prints a `from` object before the requ
 
 A run with no question file prints no `from` object, because every setting came from the one place the user is looking at.
 
-`recognize --dry-run` prints the `thinkthen.recognize-plan/1` request plan. Its file-backed plan carries `{"from":{"question":"file"}}` to identify the source of the complete recognize question.
+`recognize --dry-run` prints the `thinkthen.recognize-plan/2` request plan. Its file-backed plan carries `{"from":{"question":"file"}}` to identify the source of the complete recognize question.
 
 ## The digest of a question
 

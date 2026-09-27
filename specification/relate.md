@@ -11,7 +11,7 @@ thinkthen relate @entities.json --jsonl < entities.jsonl
 
 ## Relations
 
-The command takes one or more ordered inline rules. `NAME=SOURCE_KIND:TARGET_KIND` names a directed rule. Bare `NAME` means `NAME=*:*`. `--either` makes every inline rule unordered. A rule name, source kind, and target kind are nonblank text without control characters. A line with another `=` or `:` is malformed.
+The command takes one or more ordered inline rules. `NAME=SOURCE_KIND:TARGET_KIND` names a directed rule. Bare `NAME` means `NAME=*:*`. `ANY` on either side means `*`, in any ASCII case, and the plan and digest write `*`. `--either` makes every inline rule unordered. A rule name, source kind, and target kind are nonblank text without control characters. A line with another `=` or `:` is malformed.
 
 The alternative form takes exactly one `@FILE`. The closed version-one file is:
 
@@ -19,7 +19,7 @@ The alternative form takes exactly one `@FILE`. The closed version-one file is:
 {"version":1,"relate":{"fields":{"name":"/name","kind":"/kind"},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":false}]},"threshold":0.5,"model":"jev-1.13.0","profile":"measured"}
 ```
 
-`relations` is required, ordered, nonempty, and has distinct names. `reads` defaults to the relation name with underscores replaced by spaces. `either` defaults to false. `fields` defaults to `{"name":"/name","kind":"/kind"}`. `threshold` defaults to `0.5`. `model` and saved calibration `profile` are optional. Inline rules and `@FILE` never mix. An `@FILE` beside any other rule exits 2 with zero sends.
+`relations` is required, ordered, nonempty, and has distinct names. A rule may leave out `source` or `target`, which means `*`. `reads` defaults to the relation name with underscores replaced by spaces. `either` defaults to false. `fields` defaults to `{"name":"/name","kind":"/kind"}`. `threshold` defaults to `0.5`. `model` and saved calibration `profile` are optional. Inline rules and `@FILE` never mix. An `@FILE` beside any other rule exits 2 with zero sends.
 
 `--field`, `--kind-field`, `--threshold`, and `--model` independently replace file values. Framing and `--input` are command-only. `--jobs N` bounds the requests in flight, 1 to 32, default 4, as [records.md](records.md) gives it. Relations and split requests go out together. Output keeps relation, expansion, question, and candidate order whatever `--jobs` is. A failed request stops the run as `--jobs 1` would, and requests already in flight finish. Saved `profile` has no command-line replacement. `--profile FILE` selects a runtime backend profile and does not replace saved calibration identity.
 
