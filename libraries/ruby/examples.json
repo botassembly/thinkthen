@@ -40,8 +40,8 @@
    "expected": "[{refund: true, complaint: true}]"
   },
   "recognize": {
-   "ruby": "p ThinkThen.recognize(\"Maria Chen joined Northwind Freight in Chicago last spring.\", kinds: %w[person organization place]).entities.map { |one| [one.name, one.kind] }",
-   "expected": "[[\"Maria Chen joined Northwind Freight in Chicago last spring.\", \"person\"]]"
+   "ruby": "p ThinkThen.recognize(\"Maria Chen joined Northwind Freight in Chicago last spring.\", kinds: %w[person organization place]).entities.map { |one| [one.text, one.kind] }",
+   "expected": "[[\"Maria Chen\", \"person\"], [\"spring.\", \"person\"]]"
   },
   "relate": {
    "ruby": "p ThinkThen.relate([[\"Checkout returns 500 at the payment step.\", \"alert\"], [\"The payments database ran out of disk space.\", \"alert\"]], relations: %w[caused_by]).map { |one| [one.relation, one.source.name, one.target.name, one.probability] }",

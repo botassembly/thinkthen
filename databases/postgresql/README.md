@@ -15,14 +15,14 @@
 | `thinkthen_annotate(set, evidence)` | each question's value, as `jsonb` |
 | `thinkthen_details(question, evidence)` | the engine's detailed result, as `jsonb` |
 | `thinkthen_warm(question, evidence)` | an aggregate that judges each distinct pair once and fills the answer cache. It takes a decide question only, and any other reads `thinkthen usage: thinkthen_warm takes a decide question; ask others with thinkthen_decide` before any request |
-| `thinkthen_recognize(body, kinds text[])` or `(body, spec)` | `(name, kind, start, end, strength)` rows |
-| `thinkthen_relations(body, spec)` | `(relation, source_name, source_kind, target_name, target_kind, probability)` rows |
+| `thinkthen_recognize(body, kinds text[])` or `(body, spec)` | `(text, start, end, length, kind, strength)` rows |
+| `thinkthen_relations(body, spec)` | `(relation, source_text, source_kind, target_text, target_kind, probability)` rows |
 | `thinkthen_relate(query, rules text[])` or `(query, spec)` | `(relation, source, target, probability)` rows, with the query's ids |
 | `thinkthen_usage()` | `(requests_sent, cache_answers, input_tokens, output_tokens)` for this backend |
 
 A question, set, or spec is JSON text in the file grammar, or a file named with the `'@refund.json'` spelling. Bare text is never a path. For `choose`, `score`, and `tag`, the array joins the question as its options, levels, or labels. Pass `NULL` when the question already names them.
 
-`start` and `end` count characters, so `substring(body from start + 1 for "end" - start)` is the name. The relate query returns `(id, name)` or `(id, name, kind)`. A two-column query takes bare relation names. Inline rules read `NAME` or `NAME=SOURCE:TARGET`, as the command's `--relation` does. The query may return at most 255 rows.
+`start`, `end`, and `length` count characters, so `substring(body from start + 1 for length)` is the name. The relate query returns `(id, name)` or `(id, name, kind)`. A two-column query takes bare relation names. Inline rules read `NAME` or `NAME=SOURCE:TARGET`, as the command's `--relation` does. The query may return at most 255 rows.
 
 The slide sample runs as drawn:
 

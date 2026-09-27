@@ -1,4 +1,4 @@
-Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review. Findings 1 and 2: ticket 0160 on `ticket/0160-the-answer-contract-holds`. Finding 2.1 for single question files: ticket 0159 on `ticket/0159-pin-the-default-model`. Both are ready for review.
+Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review. Findings 1 and 2 are done by ticket 0160 on 2026-09-26. Finding 2.1 for single question files is done: ticket 0159 landed on 2026-09-26, and `audit --write` now records the model beside a written bar. Ticket 0160 does not cover the set part of 2.1, which stays open.
 
 # Architect review 05: the question and answer contract
 
@@ -8,6 +8,8 @@ Severity 1 means a wrong answer, data loss, a security problem or a hang. Severi
 
 ## 1. A missing answer member sinks every answer in its request (severity 2)
 
+Done by ticket 0160 on 2026-09-26.
+
 Evidence. `backends.md` "The adapter contract" promises per-question failure when an answer "lacks a probability", and `result.md` lists `missing_probability`. A `noul` answer without `noul`, or a choice without `probabilities`, fails the whole reply at exit 4 (probe5, probe6). `ResponseAnswer` makes those fields mandatory at parse time (`core/adapters/systemone/response.rs:37-56`).
 
 What an integrator hits. An annotate row with four good answers and one malformed member returns nothing and stops the run, instead of exit 6 with one marker.
@@ -15,6 +17,8 @@ What an integrator hits. An annotate row with four good answers and one malforme
 Direction. Parse each answer member leniently and map a missing field to `missing_probability`, as the spec says. Add the missing-field case to `response_partial_tests.rs`.
 
 ## 2. The schema identifier does not version the output (severity 2)
+
+Done by ticket 0160 on 2026-09-26. `specification/result.md` states the compatibility rule and names each shape. A result JSON Schema stays deferred.
 
 Reviews 05 (issue 2.4) and 09 (issue 9) both found this. This file carries it.
 
@@ -28,7 +32,7 @@ Direction. Before 0.1, publish a result JSON Schema per shape and give aggregate
 
 ## Carried in other files
 
-- 2.1, a tuned threshold silently follows a floating model alias, and 2.2, one run and one cache can mix model versions (severity 2). Both share one root cause with review 08's issue 1. The architect review 08 file carries them with review 05's evidence.
+- 2.1, a tuned threshold silently follows a floating model alias (done for single question files by ticket 0159; a set's model member waits), and 2.2, one run and one cache can mix model versions (severity 2). Both share one root cause with review 08's issue 1. The architect review 08 file carries them with review 05's evidence.
 - 2.5, details differ by surface on main (severity 2). Ticket 0151 landed on main after the review base. Recheck DuckDB `thinkthen_details` against the `--details` line before closing this point. If 0151 covers it, nothing is owed.
 - 2.6, accepted default batching will change what a per-record probability means, and today's tuned files will not warn (severity 2). See `2026-09-26-batching-design-review-before-0146.md` item 7.
 

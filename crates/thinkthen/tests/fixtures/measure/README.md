@@ -207,6 +207,19 @@ Ten names are said and twelve keyed. `strict` matches 2, so 8 are extra and 10 m
 
 The hand-written `--lines` relate line in `audit_sets` carries `f2c4e88c6a7b11bd98a7fed97bcc8412f0e6ca7da0b45b0c9bb2014cd41da3fc`, from `printf '%s' '{"verb":"relate","fields":null,"relations":[{"name":"calls","source":"*","target":"*","reads":"calls","either":false}],"threshold":0.01}' | sha256sum`. It also holds a `value` and a `question` with `threshold` and `relations`, so it reaches the digest check.
 
+### Ticket 0165 fixtures
+
+`diff-recognize-key-run.jsonl` is the output of ticket 0147's replayed key run at the five core kinds, saved once from `specification/fixtures/recognize/` with `thinkthen recognize person place organisation work thing --replay recordings/five --details --jsonl --field /text --jobs 8 < names.jsonl`. It ran at the cut 0.5. 64 of its 328 names sit below 0.8, in 52 of its 200 records, as `jq` counts them from the file.
+
+`items/` holds hand-written `diff` inputs, and `golden/items/` holds their outputs, worked by hand before the code ran. Places are `start-end`, end exclusive.
+
+- `recognize-a.jsonl` and `recognize-b.jsonl` hold four records run at 0.5 with kinds `person`, `place` and `work`. r1 says `Revolver Paul McCartney` 3-26 `person` in A, and `Revolver` 3-11 `work` and `Paul McCartney` 12-26 `person` in B. r2 and r3 say `Abbey Road` 0-10 `place` in A and `Abbey Road Studios` 0-18 `place` in B. r4 says `Yesterday` 0-9 as `person` in A and `work` in B. `recognize-none.jsonl` is A with no kinds, every name read as `ENTITY`. `recognize-key.jsonl` keys r1 with `Revolver` and `Paul McCartney`, r2 with `Abbey Road Studios` 0-18, r3 with `Studios` 11-18, and r4 with a null value.
+- Under `strict`, r1 loses one name and gains two, r2 and r3 each lose one and gain one, and r4 changes kind. With the key, B alone matches r1's two names and r2's name, so McNemar runs on 3 against 0: p 0.25. Under `overlap`, r1's A name pairs with `Paul McCartney` and `Revolver` is gained; r2 pairs and both sides match its key name, so it prints no row; r3 pairs and only B matches `Studios`; r4 changes kind. That is 2 against 0: p 0.5. Against `recognize-none.jsonl` under `overlap`, every name changes kind to `ENTITY`. On r1, A matches `Paul McCartney` and the `ENTITY` side matches `Revolver` first, so McNemar runs on 1 against 1: p 1.
+- `abbey-work.jsonl` is A's r2 with the kind `work`, so under `overlap` it changes kind to B's `place` at a longer place.
+- `relate-a.jsonl` and `relate-b.jsonl` hold three `relate --details` lines with no `input`, so their ids are 1, 2 and 3. `wrote` has a direction, and `worked_with` is marked `either`. Line 1 says `wrote John Lennon -> Yesterday` 0.8 in A and `wrote Paul McCartney -> Yesterday` 0.97 in B. Line 2 says `worked_with` both ways. B's line 3 has `meta.failed_questions` 1, so its pair leaves and `only_a` is 1. `relate-key.jsonl` keys B's line 1 edge and A's line 2 edge. McNemar runs on 1 against 0: p 1.
+- `mcnemar-a.jsonl` and `mcnemar-b.jsonl` hold one record whose key, `mcnemar-key.jsonl`, lists twelve `place` names. A says the first three and two names outside the key. B says the other nine. McNemar runs on 9 against 3: `2 × (1 + 12 + 66 + 220) / 4096`, which is 0.145996. The two extras stay out of it.
+- `pair-decide.jsonl`, `mixed-decide.jsonl`, `mixed-relate.jsonl`, `person-only.jsonl`, `record-mode.jsonl`, `tag.jsonl` and `bare.jsonl` each draw one refusal. `person-only.jsonl` is A with only the kind `person`. `decide-c1.jsonl` holds one `decide` answer that pairs with `small/choose.jsonl`'s `c1` and prints a row.
+
 `audit::every_fixture_keeps_its_checksum` fails on a missing, extra, or changed file.
 
 | File | SHA-256 |
@@ -226,6 +239,7 @@ The hand-written `--lines` relate line in `audit_sets` carries `f2c4e88c6a7b11bd
 | `better/decide.jsonl` | `07082f6c1c542f5e70f21e579df3f824280c4dd59e8b015f439e1e72b41aedd8` |
 | `better/tie-key.jsonl` | `8b47ff1106e77c8fd4c00802006c2fe9ca449e4e9e94b00e65bf6b04ad8898b0` |
 | `better/tie.jsonl` | `d74c6d3b93823583fc02fcd2b9ba3be5ef11a98e7ab5bfa32c495d492cdf0386` |
+| `diff-recognize-key-run.jsonl` | `b4df57a858b64759ec923be871971c7d03f80da3bf3f4142cc62e064eed93b6e` |
 | `given/by-key.jsonl` | `2380d356e8c93b6136ddc594557cf62ad369c95818f8becc432d3721ed96cb5e` |
 | `given/by.jsonl` | `8d9094499bf640f84258a1d0495c4e934e5a231023e7789a493357055ab1b2b8` |
 | `given/choose.jsonl` | `6cc988a7406d39ea0f40fe11cd2c7ba8e609258be4e8750a63393703d8c0dbd1` |
@@ -253,12 +267,41 @@ The hand-written `--lines` relate line in `audit_sets` carries `f2c4e88c6a7b11bd
 | `golden/extra/audit-decide-reversed.jsonl` | `b89c70a5f8203bb5d7534f36f0760d091c44cd94428665e051a4a446a2949500` |
 | `golden/extra/diff-249-cuts-nokey.jsonl` | `1fc7ba84a3a666004872ea0e619c5451f64daa67a6bda1aefa9540a398a44458` |
 | `golden/extra/diff-annotate.jsonl` | `ab7ac6f3064bfea00a0ca9d075183f1f1c33947e507584c9206a27f52d51514a` |
+| `golden/items/abbey-work.txt` | `40620eddd56fdb3d602ea3b96f53a7e24ee00bfc353c8fd95a00bea894aae84d` |
+| `golden/items/decide-choose.txt` | `1b49203707ba64dc068ad43901ea3873503174f80a70e2931bba91f114a23b27` |
+| `golden/items/none-key.jsonl` | `771f8a109c09909488a243323187b06f21e9fdc648b9cfe6c9007f4c7309a6f2` |
+| `golden/items/overlap-key.jsonl` | `b4246a6dd8aee2f36e29f65ec7fec0eba7d5eca14f28d09ec19af2d3e0d32955` |
+| `golden/items/overlap-key.txt` | `6af25b5b670dd9e8d379757cbe3c9cf79d28445093aed645ec8ecbc74e628cc5` |
+| `golden/items/relate-key.jsonl` | `2f7540b693a6b73af5fa31dc3b80686848edb4dc59680f08530fd3df6cf3982e` |
+| `golden/items/relate-key.txt` | `e5e45f93f0cd52288deaa652a54dd105d0407676eeb6cbbae50f4b4680b8aabe` |
+| `golden/items/strict-key.jsonl` | `8328228a70b35c930d20278a89c8e6147e38bed0f6136dc740368aa897a935b8` |
+| `golden/items/strict-key.txt` | `3aed753fc6865b16716d17a0ced686f41eef368cc5eab1d94153062d7d9797ee` |
+| `golden/items/strict.jsonl` | `bbd57ce936f239f200c30659e718e91c6d5f75e37b5b9daaf7dc08ff8922d3a2` |
 | `golden/table/audit-annotate.txt` | `1a6729b3aa5f9c0b8e0462235cd05deb42661ccca81c44888f8b3b05918c74a1` |
 | `golden/table/audit-choose.txt` | `5f81c2893de087d4dc50dc4b0372614ad99a7b5768f69495118070f88997770e` |
 | `golden/table/audit-decide.txt` | `bc3bf0c7acaf5635fb9ed3492eb235d535f37cc34b12dc8737e16c9ea2cd4b1d` |
 | `golden/table/diff-choose.txt` | `7f1a11677eba121025ab46b1ad5ffdd6ec09e3cb4ac0d0519960b5ba7301c186` |
 | `golden/table/diff-decide-cuts.txt` | `c56e94bc2e3c09c525e7ef8fc3e2190a5af4216c5d91d769c4176cfea06536c8` |
 | `golden/table/diff-decide-nokey.txt` | `82edef392a2ddee9528a931453abd42c57d99a5c67a98e2984ffcc6e8be9f9c1` |
+| `items/abbey-work.jsonl` | `4b834fc58b147134664ef2c5056f6b25eeabd4f2a43590081f27069ba682e412` |
+| `items/bare.jsonl` | `a4c70d62ddfce7c478bbba1011eab933aa3d234dbe934cbf9aa93a8968e0915b` |
+| `items/decide-c1.jsonl` | `58d1c216824657eadf8b798913edc26dffa790491e88c220cd47977693d86534` |
+| `items/mcnemar-a.jsonl` | `3a3cdcfbe774d90110f9b4476d25aaf1236eb1bd52babe17f32d3b331516ec20` |
+| `items/mcnemar-b.jsonl` | `8a5219be268c3fc8f1f59a61da7745645a53db9eedb1edc9ba445b2203719de9` |
+| `items/mcnemar-key.jsonl` | `08b1355f91bacec1957bad36e7b9d4d72d7195c0e0a12a542ae43a2d30dd32f9` |
+| `items/mixed-decide.jsonl` | `a8e64784b80315466f6b9a85e9ea99332aeea852c863b406437e6b6035214795` |
+| `items/mixed-relate.jsonl` | `ea3dfdebd51805fcb2e57d93ef4b20250ebfd295b8b757c1e386f2644420c9fc` |
+| `items/pair-decide.jsonl` | `acdfa964bb19f2663c33f1a0081b32ee2d5564fc69861300dc32e0461e3681c6` |
+| `items/person-only.jsonl` | `6f24d094a7ceaa214cd56512180f08ee3506d6dd76626fbcfe950ce87b53447d` |
+| `items/recognize-a.jsonl` | `0eadcf13876c07abf815def47ebd31170bfcb5a34c793b58815310b0d5dcc0a8` |
+| `items/recognize-b.jsonl` | `9d35a5f5c3a669d501f6ccd76ab0bd59c8798db86e7d8c02f6a5aab6dc601195` |
+| `items/recognize-key.jsonl` | `14093ac072d004fdcd4ce08c769260125bcde30e4105352e6d20c2bc2ab1080f` |
+| `items/recognize-none.jsonl` | `221b0c12eec3edb7581ca2e685f556fc553e6a91a10e21897e6609c28f681b74` |
+| `items/record-mode.jsonl` | `5752c8338a4606242f22bffa59411f024310e7985beee1ab67184c10707787f8` |
+| `items/relate-a.jsonl` | `4c9acaafbe2448a88ee508925b5b60fc8ae6d2099be5c47643447263703e4830` |
+| `items/relate-b.jsonl` | `03c0b1eeb031fc87ba55f887fa200ff823ae259d9787f8a5036009c395f67678` |
+| `items/relate-key.jsonl` | `d5dd48e496c38c511440232568e07827932525c6738bfd7ec8c9c4f685d78127` |
+| `items/tag.jsonl` | `538c71294f9e7ae38b0f4f0cc9391142441eb1e6cee6d1efa1e6b23fc38bbf3a` |
 | `replay/audit.jsonl` | `d0a1e138ae38922f55363f2f4d446d61580013657dcc4049f69ad1f211e08e8e` |
 | `replay/key.jsonl` | `6469595eef17159ed9563de7b84bdc4396249fb2bb8a704397e5cc31c0619042` |
 | `sets/cut-key.jsonl` | `eb4ae5c67d4accc03efcdacbd4d4918c9479d803165f1f1e3985f94943bdd7ca` |

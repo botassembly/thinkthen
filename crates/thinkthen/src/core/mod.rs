@@ -47,6 +47,7 @@ pub(crate) use crate::core::backend_profile::LimitKind;
 pub(crate) use crate::core::backend_profile::{
     BackendProfile, ProfileError, ProfileLimit, ProfileName,
 };
+pub(crate) use crate::core::batch::BatchRecord;
 #[cfg(test)]
 pub(crate) use crate::core::digest::question_sha256;
 pub(crate) use crate::core::digest::question_sha256_with_profile;
@@ -63,11 +64,12 @@ pub(crate) use crate::core::question_file::{
 };
 pub(crate) use crate::core::question_set::{PartError, QuestionSet, QuestionSetError, check_name};
 pub(crate) use crate::core::recognize::{
-    RecognizedName, TokenAnswer, assemble as assemble_names, kind_questions, recognition_questions,
-    tokenize,
+    Asked, NameOdds, Odds, Piece, PieceOdds, RecognizedName, TAGS, TagRow, decode as found_names,
+    evidence as window, kind_question, name_groups, pieces, settle as settle_names,
+    step_one_groups, step_one_questions, step_two_questions,
 };
 pub(crate) use crate::core::recognize_file::{
-    RecognizeConfigError, RecognizeKinds, RecognizeSpec, default_kinds, recognize_sha256,
+    RecognizeConfigError, RecognizeKinds, RecognizeSpec, recognize_sha256, rule_side,
 };
 pub(crate) use crate::core::records::{
     Framing, MAX_RECORD_BYTES, Reading, ReadingError, Record, RecordError,
@@ -77,7 +79,8 @@ pub(crate) use crate::core::relate_file::{
 };
 pub(crate) use crate::core::relation::{
     QuestionMap, RelationEdge, RelationEntity, RelationEntityView, RelationPlan, RelationRule,
-    assemble_edges, plan as plan_relation, plan_pairs, reaches_cut, relation_evidence,
+    assemble_edges, plan as plan_relation, plan_pairs, plan_stated, reaches_cut, relation_evidence,
+    stated_edges,
 };
 pub(crate) use crate::core::render::{RenderError, json_line};
 pub(crate) use crate::core::reply::{

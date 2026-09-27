@@ -5,6 +5,6 @@
 {"function":"tag","args":["Which subjects does the title mention?","water","light","travel","--lines"],"input":"titles.txt","items":12,"floor":1,"list":{"ticket":"B9","number":null}}
 {"function":"score","args":["How long does the title feel?","short","medium","long","--lines"],"input":"titles.txt","items":12,"floor":1,"list":{"ticket":"B9","number":null}}
 {"function":"annotate","args":["annotate.json","--jsonl"],"input":"records.jsonl","items":24,"floor":2,"list":{"ticket":"B10","number":null}}
-{"function":"recognize","args":["--lines"],"input":"sentences.txt","items":12,"floor":2,"list":{"ticket":"R7","number":null}}
+{"function":"recognize","args":["--lines"],"input":"sentences.txt","items":24,"floor":2,"list":{"ticket":"R7","number":null}}
 {"function":"find","args":["The text names a train."],"input":"titles.txt","items":1,"floor":1}
 {"function":"relate","args":["--lines","knows","works_for","located_in"],"input":"names.txt","items":3,"floor":3}

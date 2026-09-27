@@ -16,8 +16,8 @@ use nix::sys::pthread::{pthread_kill, pthread_self};
 use nix::sys::signal::Signal;
 
 use crate::core::{
-    Backend, BackendProfile, Evidence, Find, ModelName, Plan, Question, QuestionText,
-    RecognizeSpec, RelateSpec,
+    Backend, BackendProfile, DEFAULT_MODEL, Evidence, Find, ModelName, Plan, Question,
+    QuestionText, RecognizeSpec, RelateSpec,
 };
 use crate::engine::error::{Error, Kind, TransportKind};
 use crate::engine::facade::{
@@ -32,7 +32,7 @@ const TEST_KEY: &str = "sk-facade-test-7f3a";
 
 fn settings(base: &str) -> Settings {
     Settings {
-        backend: Backend::resolve(Some(base), None, "jev-latest").expect("backend"),
+        backend: Backend::resolve(Some(base), None, DEFAULT_MODEL).expect("backend"),
         profile: None,
         timeout: Duration::from_secs(5),
         max_retries: 0,
@@ -287,7 +287,7 @@ fn a_close_after_the_body_is_never_resent_on_any_path() {
         ("annotate", &|| annotate(&engine, &cancel).map(drop)),
         ("recognize", &|| {
             engine
-                .recognize(&recognize_spec(), "Ada lives in Paris.", &cancel)
+                .recognize(&recognize_spec(), "Ada lives in Paris.", 600_000, &cancel)
                 .map(drop)
         }),
         ("relate", &|| relate(&engine, &base, &cancel).map(drop)),
@@ -357,7 +357,7 @@ fn local_refusals_send_nothing_and_store_nothing() {
             engine.find(&find(), cancel).map(|_| 1),
             annotate(engine, cancel),
             engine
-                .recognize(&recognize_spec(), "Ada lives in Paris.", cancel)
+                .recognize(&recognize_spec(), "Ada lives in Paris.", 600_000, cancel)
                 .map(|_| 1),
             relate_limited(engine, listener.base(), profile, cancel).map(|_| 1),
         ];

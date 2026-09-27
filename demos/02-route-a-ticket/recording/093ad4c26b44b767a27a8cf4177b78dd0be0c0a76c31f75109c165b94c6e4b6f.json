@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Subject: card declined on renewal\n\nMy yearly plan tried to renew last night and the charge bounced.\nThe card in the account is the right one and it works elsewhere.\nI got three emails about it. Can someone run the charge again?\n","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"Which team owns this request?","criteria":{"billing":null,"shipping":null,"account":null,"other":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"billing","confidence":1.0,"probabilities":{"shipping":0.0,"account":0.0,"other":0.0,"billing":1.0}}},"usage":{"input_tokens":348,"output_tokens":46}}
+}

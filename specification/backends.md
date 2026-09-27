@@ -14,7 +14,7 @@ Settled by ADR 0032 and amended by ADR 0040.
 
 Evidence bytes are the UTF-8 bytes after field extraction and JSON normalization. Request bytes are the exact bytes the adapter encoded. Questions are the expanded wire questions, so each `tag` label counts once. Options are the labels in one `choose` question. An exact limit passes. One unit over exits 2 and names the profile, limit, unit, and actual count. The diagnostic repeats no evidence or request bytes.
 
-Recognition keeps the complete source text in every request and splits only its questions through the shared request splitter. `max_questions` and `max_request_bytes` can create several logical requests without changing offsets or assembly. A beta cross-kind relation choice that exceeds `max_options` or cannot fit alone under `max_request_bytes` changes that whole relation to yes/no pairs. `max_evidence_bytes` never causes that fallback.
+Recognition's step-1 and step-2 requests carry a window of the text: six pieces on each side of the pieces or names they ask about, as [recognize.md](recognize.md) says. A step-1 request holds at most 40 pieces. Relation requests carry the whole text and split their questions through the shared request splitter. `max_questions` and `max_request_bytes` can create several logical requests without changing offsets or assembly. In `relate`, a beta cross-kind relation choice that exceeds `max_options` or cannot fit alone under `max_request_bytes` changes that whole relation to yes/no pairs. `max_evidence_bytes` never causes that fallback.
 
 The engine encodes, digests, and checks every request chunk before reading a recording or cache entry, reading the key, or opening a connection. An ordered multi-question plan takes the longest next contiguous prefix that fits both exact request bytes and expanded questions, then repeats until all questions belong to a chunk. The splitter finds that prefix by doubling the chunk from one question up to the remainder, then halving the gap. Evidence is repeated unchanged. A plan that fits keeps its exact body and digest. Evidence, one-question request, and choice-option overflows fail before any request because splitting them would change meaning.
 
@@ -54,7 +54,7 @@ The four address rules have these exact safe refusals. An invalid scheme says ``
 
 ## The model
 
-`--model NAME` names the model the request carries, and it defaults to `jev-latest`. That is how a run is pinned to one version. A model name that is empty or holds only white space is a usage error.
+`--model NAME` names the model the request carries, and it defaults to `jev-1.13.0`. That is how a run is pinned to one version. The default is a pinned version, so a vendor's move of its alias moves no default answer. A later release that changes the default says so in the changelog, and every default cache entry then misses once. A model name that is empty or holds only white space is a usage error.
 
 ## The request
 
@@ -97,6 +97,8 @@ An adapter touches no network, no file, and no clock. Its tests are the fixture 
 
 A reply that is not a `systemone` response at all is exit code 4, and the message names the line and column the reading stopped at and never the text it stopped on. A backend can send back whatever was sent to it, so a diagnostic never repeats a reply.
 
+A reply that names one member twice, in `answers` or inside a distribution, is refused whole, because two readers could take different values from it.
+
 Decode marks one logical question failed when its answer is missing, has the wrong kind, lacks a probability, holds a probability outside zero to one, has an invalid distribution, or names an unexpected probability. It preserves those failures only when another logical question in the reply is valid. One bad wire member fails one logical `tag`. A reply with no valid logical answer remains a refused reply at exit 4. An adapter never invents a probability. A choice or score answer carries exactly one probability for every label the question sent, and no probability for another label. The generic tolerance is `member count × f64::EPSILON`; an adapter may supply a wider tolerance backed by evidence. The tool keeps the reported members without renormalizing them.
 
 ## The `systemone` adapter
@@ -120,7 +122,7 @@ The response body:
 | What true means and what false means | `criteria.true` and `criteria.false` under the `noul` question, each the string, object, list, or `null` the question held. A text that was not given is absent, and a question with neither sends no `criteria` at all |
 | A yes/no answer's probability | `noul` |
 | Pick one from a list | `type` `choice`, with the options as the keys of `criteria` and each description as the value, or `null` |
-| Place on named levels | `type` `score`, with the `criteria` array in level order: a level with no description sends its name, and a described level sends the description the map held, `null` included |
+| Place on named levels | `type` `score`, with the `criteria` array in level order: a level from a list of names sends its name, a described level sends the description the map held, and a `null` description sends an empty object in its place. The name never stands in for a `null` |
 | A choice answer's probability per option | `probabilities` under the `choice` answer, keyed by option name. The key order carries no meaning, and the adapter rebuilds the distribution in the order the options were sent |
 | A score answer's probability per level | `probabilities` under the `score` answer, keyed by the level's position as a string, counting from `"0"`. The adapter maps each key back to the configured level name |
 | The backend's own confidence | `confidence`, kept and never cut on. The vendor sends it on a pick and a placement, and never on a yes/no answer |

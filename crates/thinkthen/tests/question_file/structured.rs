@@ -102,13 +102,13 @@ fn described_options_and_a_described_score_map_reach_the_plan() {
     );
     let plan = printed(&["score", &score, "--dry-run"]);
     assert!(
-        plan.contains(r#""criteria":[{"what":"Little disruption."},null]"#),
+        plan.contains(r#""criteria":[{"what":"Little disruption."},{}]"#),
         "{plan}"
     );
 }
 
 #[test]
-fn a_score_map_of_nulls_sends_nulls_where_a_list_sends_names() {
+fn a_score_map_of_nulls_sends_empty_objects_where_a_list_sends_names() {
     let listed = written(
         "structured-score-list",
         r#"{"score":"How much?","levels":["low","high"]}"#,
@@ -124,7 +124,7 @@ fn a_score_map_of_nulls_sends_nulls_where_a_list_sends_names() {
         "{listed_plan}"
     );
     assert!(
-        mapped_plan.contains(r#""criteria":[null,null]"#),
+        mapped_plan.contains(r#""criteria":[{},{}]"#),
         "{mapped_plan}"
     );
 }

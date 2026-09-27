@@ -1745,6 +1745,43 @@ def check_library_graph() -> None:
             elif not graph_failures(planted):
                 fail("dependencies", f"the planted graph {plant.splitlines()[0]!r} is refused")
 
+HEADER_WORDS = ("header", "authorization", "api-key", "api_key", "x-api-key", "cookie")
+
+
+def recording_failures(held: object, place: str = "") -> list[str]:
+    """Every header, credential key, or bearer value in one recording entry."""
+    found: list[str] = []
+    if isinstance(held, dict):
+        for key, value in held.items():
+            if any(word in key.lower() for word in HEADER_WORDS):
+                found.append(f"{place}/{key} is a header or credential key")
+            found += recording_failures(value, f"{place}/{key}")
+    elif isinstance(held, list):
+        for at, value in enumerate(held):
+            found += recording_failures(value, f"{place}/{at}")
+    elif isinstance(held, str) and held.lower().lstrip().startswith("bearer "):
+        found.append(f"{place} holds a bearer value")
+    return found
+
+
+def check_recordings() -> None:
+    """Ticket 0147: a recording keeps no header, so it can never hold a key."""
+    for plant in ({"request": {"headers": {}}}, {"Authorization": "x"}, {"response": ["Bearer x"]}):
+        if not recording_failures(plant):
+            fail("recordings", f"the planted entry {plant!r} is refused")
+    listed = subprocess.run(["git", "ls-files", "-z", "*.json"], cwd=REPO, capture_output=True, check=True)
+    for relative in listed.stdout.decode().split("\0"):
+        if "/recording" not in f"/{relative}":
+            continue
+        try:
+            held = json.loads((REPO / relative).read_text(encoding="utf-8"))
+        except (OSError, ValueError) as error:
+            fail("recordings", f"cannot read {relative}: {error}")
+            continue
+        for failure in recording_failures(held):
+            fail("recordings", f"{relative}: {failure}")
+
+
 def main() -> int:
     check_toolchain()
     check_workspace()
@@ -1764,6 +1801,7 @@ def main() -> int:
     check_seam()
     check_license_grammar()
     check_dependencies()
+    check_recordings()
     for failure in FAILURES:
         print(failure, file=sys.stderr)
     if FAILURES:

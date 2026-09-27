@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"The order was found. It shipped nine days ago and the carrier's tracking has not moved for six days. The customer has not been told anything yet.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which of these actions should be taken next?","criteria":{"open_a_carrier_claim":null,"send_the_tracking_link":null,"ask_for_the_order_number":null,"close_the_ticket":null}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"open_a_carrier_claim","confidence":0.58,"probabilities":{"send_the_tracking_link":0.3,"close_the_ticket":0.0,"ask_for_the_order_number":0.01,"open_a_carrier_claim":0.6900000000000001}}},"usage":{"input_tokens":347,"output_tokens":63}}
-}

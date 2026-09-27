@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"We met at St. Mary's Church; it was cold.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.\n\nText: We met at [[St. Mary's Church]]; it was cold.","criteria":{"St. Mary's Church":"We met at [[St. Mary's Church]]; it was cold.","St. Mary's Church;":"We met at [[St. Mary's Church;]] it was cold."}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"St. Mary's Church","confidence":1.0,"probabilities":{"St. Mary's Church":1.0,"St. Mary's Church;":0.0}}},"usage":{"input_tokens":435,"output_tokens":45}}
+}

@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":{"input":"Do I pay for return postage?","gold":"Yes, unless the item arrived damaged.","output":"Return postage is always free."},"model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the answer say the same thing as the reference answer to the question?"},"q2":{"type":"noul","instructions":"Does the answer include every fact needed to answer the question as fully as the reference answer?"},"q3":{"type":"choice","instructions":"Which description best fits the answer's main failure?","criteria":{"none":null,"wrong_fact":null,"unsupported":null,"incomplete":null}},"q4":{"type":"score","instructions":"How much does the answer's main failure change what the reader should do?","criteria":["No change.","A small correction is needed.","The answer could cause the wrong action."]}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.02},"q2":{"type":"noul","noul":0.05},"q3":{"type":"choice","choice":"wrong_fact","confidence":0.98,"probabilities":{"none":0.0,"wrong_fact":0.99,"incomplete":0.0,"unsupported":0.01}},"q4":{"type":"score","score":1.97,"confidence":0.96,"legend":{"0":"No change.","1":"A small correction is needed.","2":"The answer could cause the wrong action."},"probabilities":{"0":0.01,"1":0.01,"2":0.98}}},"usage":{"input_tokens":444,"output_tokens":99}}
+}

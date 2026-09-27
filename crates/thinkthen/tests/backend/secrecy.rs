@@ -45,7 +45,7 @@ pub(crate) const VERBS: [(&str, &[&str], &str); 6] = [
     (
         "recognize",
         &["person"],
-        r#""type":"choice","choice":"IN","probabilities":{"IN":0.9,"OUT":0.1}"#,
+        r#""type":"choice","choice":"OUT","probabilities":{"BEGIN":0,"INSIDE":0,"END":0,"SINGLE":0,"OUT":1}"#,
     ),
     // Two entities of one kind ask one unordered yes/no question.
     (

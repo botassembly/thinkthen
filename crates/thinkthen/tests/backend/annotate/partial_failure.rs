@@ -116,6 +116,58 @@ fn one_bad_tag_member_fails_one_logical_question() -> io::Result<()> {
     Ok(())
 }
 
+/// A missing member, or a `null` distribution, fails only the question it
+/// belongs to, so the neighbors stand and the run exits 6.
+#[test]
+fn a_missing_member_fails_only_its_question() -> io::Result<()> {
+    let file = questions(
+        "missing-member",
+        r#"{"version":1,"questions":{"d":{"decide":"d?"},"c":{"choose":"c?","options":["a","b"]},"s":{"score":"s?","levels":["low","high"]},"t":{"tag":"t?","labels":["x","y"]}}}"#,
+    );
+    let base = [
+        r#"{"type":"noul","noul":0.9}"#,
+        r#"{"type":"choice","probabilities":{"a":0.8,"b":0.2}}"#,
+        r#"{"type":"score","probabilities":{"0":0.3,"1":0.7}}"#,
+        r#"{"type":"noul","noul":0.8}"#,
+        r#"{"type":"noul","noul":0.2}"#,
+    ];
+    let cases = [
+        ("d", 0, r#"{"type":"noul"}"#),
+        ("c", 1, r#"{"type":"choice"}"#),
+        ("s", 2, r#"{"type":"score"}"#),
+        ("t", 4, r#"{"type":"noul"}"#),
+        ("c", 1, r#"{"type":"choice","probabilities":null}"#),
+    ];
+    for (failed, place, broken) in cases {
+        let mut answers = base;
+        answers[place] = broken;
+        let answers = answers
+            .iter()
+            .enumerate()
+            .map(|(at, answer)| format!(r#""q{}":{answer}"#, at + 1));
+        let response = format!(
+            r#"{{"model":"local-1","answers":{{{}}}}}"#,
+            answers.collect::<Vec<_>>().join(",")
+        );
+        let (_, output) = run(&file, &response, true)?;
+        assert_eq!(output.status.code(), Some(6), "{broken}");
+        let row: serde_json::Value = serde_json::from_slice(&output.stdout)?;
+        assert_eq!(row["meta"]["failed_questions"], 1, "{broken}");
+        for name in ["d", "c", "s", "t"] {
+            let failure = &row["answers"][name]["failure"];
+            if name == failed {
+                assert_eq!(
+                    failure,
+                    &serde_json::json!({"kind": "backend", "cause": "missing_probability"})
+                );
+            } else {
+                assert!(failure.is_null(), "{name} {broken}");
+            }
+        }
+    }
+    Ok(())
+}
+
 #[test]
 fn a_group_with_no_valid_answer_remains_a_backend_failure() -> io::Result<()> {
     let file = questions(

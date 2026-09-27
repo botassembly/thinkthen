@@ -429,7 +429,7 @@ pub(crate) struct RecognizeArguments {
     #[arg(long = "kind", value_name = "KIND=DESCRIPTION")]
     pub(crate) described: Vec<String>,
 
-    /// A beta relation rule, as NAME=SOURCE:TARGET. `*` explicitly means any kind.
+    /// A beta relation rule, as NAME or NAME=SOURCE:TARGET. `*` or `ANY` means any kind.
     #[arg(long = "relation", value_name = "NAME=SOURCE:TARGET")]
     pub(crate) relations: Vec<String>,
 
@@ -440,6 +440,15 @@ pub(crate) struct RecognizeArguments {
     /// Keep beta relation edges whose model probability reaches this cut. [default: 0.5]
     #[arg(long, value_name = "T", allow_negative_numbers = true)]
     pub(crate) relation_threshold: Option<String>,
+
+    /// Refuse a text over this many UTF-8 bytes before any request. [default: 600000]
+    #[arg(
+        long,
+        value_name = "N",
+        value_parser = clap::builder::RangedU64ValueParser::<usize>::new().range(1..=9_007_199_254_740_991),
+        hide_short_help = true
+    )]
+    pub(crate) max_text_bytes: Option<usize>,
 
     /// The options every judging verb takes.
     #[command(flatten)]

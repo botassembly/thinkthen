@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":{"evidence":"Octopus's Garden was Ringo Starr's song.","entities":[{"id":"i1","name":"Octopus's Garden","kind":"song"},{"id":"i2","name":"Ringo Starr","kind":"person"}]},"model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the text itself state that i2 sang i1?"},"q2":{"type":"noul","instructions":"Does the text itself state that i2 wrote i1?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.34},"q2":{"type":"noul","noul":0.27}},"usage":{"input_tokens":383,"output_tokens":38}}
+}

@@ -95,7 +95,7 @@ The review rated these findings severity 3: a sharp edge or a missing feature. N
 - 6. No process-wide strict replay switch.
 - 7. `--record` into a used folder pays again and discards the answer. Help line.
 - 8. Replay cannot tell a recording is stale. Waits on backlog question 1, the default-model pin.
-- 9. Golden-file tests break across versions. With `2026-09-26-the-result-schema-identifier-never-versions.md`.
+- 9. Golden-file tests break across versions. With `closed/2026-09-26-the-result-schema-identifier-never-versions.md`.
 - 10. A token in the base path is written into every recording.
 - 11. Byte-exact keys make recordings fragile. Doc line.
 - 12. No way to find unused fixture entries.

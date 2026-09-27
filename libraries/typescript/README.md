@@ -28,7 +28,7 @@ The last object of each verb takes `signal` and `deadlineMs`. An `AbortSignal` c
 
 A failure rejects with one `ThinkThenError` class. Its `kind` is `usage`, `backend`, `local`, `cancelled`, `deadline`, or `defect`, and `retryable` says whether the same call may pass later.
 
-`recognize` returns `start` and `end` in UTF-16 units, so `text.slice(start, end)` is the name.
+`recognize` returns each name as `text`, `start`, `end`, `length`, `kind`, and `strength`. `start`, `end`, and `length` count UTF-16 units, so `text.slice(start, end)` is the name. With no kinds, every name has the kind `ENTITY`.
 
 ## Run facts
 

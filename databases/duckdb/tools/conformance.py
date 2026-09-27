@@ -136,8 +136,8 @@ def relations_wanted(case: dict) -> list:
     return [
         {
             "relation": found["relation"],
-            "source": [found["source"]["name"], found["source"]["kind"]],
-            "target": [found["target"]["name"], found["target"]["kind"]],
+            "source": [found["source"]["text"], found["source"]["kind"]],
+            "target": [found["target"]["text"], found["target"]["kind"]],
             "probability": found["probability"],
         }
         for found in expected(case)[0].get("relations") or []

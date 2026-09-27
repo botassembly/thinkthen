@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":{"query":"Why is signing in slow or failing?","passage":"Deploys go out behind a flag. Roll back by flipping the flag, then drain the old pods."},"model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The passage answers the query."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.04}},"usage":{"input_tokens":310,"output_tokens":21}}
+}

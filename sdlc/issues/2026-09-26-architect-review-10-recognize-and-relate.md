@@ -10,6 +10,8 @@ Severity 1 means a wrong answer, data loss, a security problem or a hang. Severi
 
 ## 1. One kind gives that kind to every name the model detects (severity 1)
 
+Settled by ticket 0147, landed 2026-09-27. Every run with kinds asks the kind question with `none of these`, so a name no listed kind covers is dropped. Item 2 stays open for standalone `relate`.
+
 Evidence. Live, `recognize person` labeled `Acme Corp` (0.99) and `Paris` (0.79) as `person`. Replayed real Jev detection answers label a song, an island, a studio and an album as `person` at 0.98 to 0.99. `facade/recognize.rs:219-231` sets the kind probability to 1.0, and the detection question at `recognize.rs:7` asks about every kind of named entity.
 
 What an integrator hits. "Find the people in this text" is the most natural first call. It returns every organization and place as a person, with a strength that looks certain. Nothing in the output marks the mistake.

@@ -189,11 +189,10 @@
       }
     },
     "relation": {
+      "description": "One relation rule. A left-out source or target means any kind, as `*` and `ANY` do.",
       "type": "object",
       "required": [
-        "name",
-        "source",
-        "target"
+        "name"
       ],
       "additionalProperties": false,
       "properties": {

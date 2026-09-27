@@ -16,10 +16,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let found = tt.recognize(&ask, text)?;
     let mut out = std::io::stdout().lock();
     for name in found.entities() {
-        writeln!(out, "{} {}", name.name(), name.kind())?;
+        writeln!(out, "{} {}", name.text(), name.kind())?;
     }
     for link in found.relations().unwrap_or_default() {
-        let (source, target) = (link.source().name(), link.target().name());
+        let (source, target) = (link.source().text(), link.target().text());
         writeln!(out, "{} {source} {target}", link.relation())?;
     }
     Ok(())

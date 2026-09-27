@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"NASA's rover reached Mars.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.\n\nText: [[NASA]]'s rover reached Mars.","criteria":{"NASA":"[[NASA]]'s rover reached Mars.","NASA'":"[[NASA']]s rover reached Mars."}},"q2":{"type":"choice","instructions":"In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.\n\nText: NASA's rover reached [[Mars]].","criteria":{"Mars":"NASA's rover reached [[Mars]].","Mars.":"NASA's rover reached [[Mars.]]"}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"NASA","confidence":0.99,"probabilities":{"NASA'":0.0,"NASA":1.0}},"q2":{"type":"choice","choice":"Mars","confidence":1.0,"probabilities":{"Mars.":0.0,"Mars":1.0}}},"usage":{"input_tokens":533,"output_tokens":63}}
+}

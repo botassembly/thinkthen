@@ -174,10 +174,12 @@ fn empty_input_succeeds_without_reading_a_key() {
 #[test]
 fn committed_reach_recordings_replay_the_selected_line_and_none() {
     let folder = recording();
+    // The probe's recording asked for the alias, so its replay names it.
+    let replay = ["--model", "jev-latest", "--replay", folder.as_str()];
     let answerable_question =
         "Which unit states the cobalt permit duration for marker TARGET-S100-A1?";
     let answerable = run(
-        &["find", answerable_question, "--replay", &folder],
+        &[["find", answerable_question].as_slice(), &replay].concat(),
         &lines("s100-a1", 100, Some(7)),
     )
     .expect("binary runs");
@@ -188,7 +190,7 @@ fn committed_reach_recordings_replay_the_selected_line_and_none() {
     );
     let blank_question = "Which unit states the cobalt permit duration for marker TARGET-S100-B1?";
     let blank = run(
-        &["find", blank_question, "--none", "--replay", &folder],
+        &[["find", blank_question, "--none"].as_slice(), &replay].concat(),
         &lines("s100-b1", 100, None),
     )
     .expect("binary runs");

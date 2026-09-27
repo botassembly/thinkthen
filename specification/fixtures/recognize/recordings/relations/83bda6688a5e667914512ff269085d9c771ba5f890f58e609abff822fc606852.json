@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":{"evidence":"Ringo Starr sang Yellow Submarine. Yellow Submarine appears on Revolver.","entities":[{"id":"i1","name":"Ringo Starr","kind":"person"},{"id":"i2","name":"Yellow Submarine","kind":"song"},{"id":"i3","name":"Revolver","kind":"album"}]},"model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the text itself state that i1 sang i2?"},"q2":{"type":"noul","instructions":"Does the text itself state that i1 wrote i2?"},"q3":{"type":"noul","instructions":"Does the text itself state that i2 appears on i3?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.98},"q2":{"type":"noul","noul":0.02},"q3":{"type":"noul","noul":0.99}},"usage":{"input_tokens":438,"output_tokens":55}}
+}

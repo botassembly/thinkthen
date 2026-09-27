@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"{\"id\":\"T-92\",\"body\":\"Please add a dark theme.\"}","model":"local-1","questions":{"q1":{"type":"choice","instructions":"Which kind of request is this?","criteria":{"bug":"Reports broken behavior.","feature":"Asks for new behavior.","other":"Neither fits."}},"q2":{"type":"score","instructions":"How much disruption does this report?","criteria":["None.","Work continues with a workaround.","Work is blocked."]}}},
+  "response": {"model":"local-1","answers":{"q1":{"type":"choice","choice":"feature","probabilities":{"bug":0.05,"feature":0.9,"other":0.05}},"q2":{"type":"score","score":0.1,"probabilities":{"0":0.9,"1":0.1,"2":0.0}}},"usage":{"input_tokens":40,"output_tokens":6}}
+}

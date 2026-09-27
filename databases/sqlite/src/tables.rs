@@ -124,7 +124,7 @@ fn read<T>(
     parse(&whole.to_string()).map_err(|error| from_file(error, file))
 }
 
-/// `thinkthen_recognize(text, kinds)`: one row per name in one text.
+/// `thinkthen_recognize(body, kinds)`: one row per name in one text.
 #[derive(Debug)]
 pub(crate) struct Recognizer;
 
@@ -156,9 +156,9 @@ impl Recognizer {
 impl Table for Recognizer {
     const NAME: &'static str = "thinkthen_recognize";
     const SCHEMA: &'static CStr =
-        c"CREATE TABLE x(name, kind, start, end, strength, text HIDDEN, kinds HIDDEN)";
-    const FIRST_HIDDEN: usize = 5;
-    const COLUMNS: usize = 7;
+        c"CREATE TABLE x(text, start, end, length, kind, strength, body HIDDEN, kinds HIDDEN)";
+    const FIRST_HIDDEN: usize = 6;
+    const COLUMNS: usize = 8;
     const REQUIRED: usize = 1;
 
     fn rows(db: *mut sqlite3, arguments: &[Value]) -> Result<Vec<Vec<Value>>, Failure> {
@@ -177,10 +177,11 @@ impl Table for Recognizer {
                     i64::try_from(at).map_err(|_| Failure::defect("an offset is too large"))
                 };
                 Ok(vec![
-                    Value::Text(entity.name().to_owned()),
-                    Value::Text(entity.kind().to_owned()),
+                    Value::Text(entity.text().to_owned()),
                     Value::Integer(offset(entity.start())?),
                     Value::Integer(offset(entity.end())?),
+                    Value::Integer(offset(entity.length())?),
+                    Value::Text(entity.kind().to_owned()),
                     Value::Real(entity.strength()),
                 ])
             })

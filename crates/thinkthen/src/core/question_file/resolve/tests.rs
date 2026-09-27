@@ -5,7 +5,7 @@ use proptest::{prop_assert_eq, proptest};
 use serde::Serialize;
 
 use super::{Resolved, Typed, resolve};
-use crate::core::adapters::built_in::encode;
+use crate::core::adapters::built_in::{DEFAULT_MODEL, encode};
 use crate::core::plan::Plan;
 use crate::core::question::{LabelsError, Question};
 use crate::core::question_file::{
@@ -202,7 +202,7 @@ fn a_question_with_no_file_reads_every_setting_from_the_command_line() {
     };
     let resolved =
         resolve(Verb::Choose, Some("Which kind?"), None, &typed).expect("a resolved pick");
-    assert_eq!(resolved.model().as_str(), "jev-latest");
+    assert_eq!(resolved.model().as_str(), DEFAULT_MODEL);
     assert!(resolved.on().is_empty());
     assert_eq!(
         json_line(resolved.sources()).expect("sources are writable"),

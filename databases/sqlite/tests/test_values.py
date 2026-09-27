@@ -62,14 +62,14 @@ def test_recognize_counts_offsets_as_substr_does_and_refuses_relations() -> None
     held = child(f"""
 db = connect()
 text = "Le caf\\u00e9 \\U0001F600 Maria Chen arrived."
-say(names=run(db, "SELECT name, start, \\"end\\", substr(?, start + 1, \\"end\\" - start) FROM thinkthen_recognize(?, ?)", (text, text, {kinds!r})),
+say(names=run(db, "SELECT text, start, \\"end\\", length, substr(?, start + 1, length) FROM thinkthen_recognize(?, ?)", (text, text, {kinds!r})),
     relations=run(db, "SELECT * FROM thinkthen_recognize('Ada met Bo.', ?)", ({relations!r},)))
 """, environment(backend, f"case/{case}"))
     expect(held, {
-        "names": [["Maria Chen", 10, 20, "Maria Chen"]],
+        "names": [["Maria Chen", 10, 20, 10, "Maria Chen"]],
         "relations": "thinkthen usage: thinkthen_recognize takes no relations; relate rows with thinkthen_relate",
     }, "the rows")
-    expect(backend.close(), 1, "sends: the relations spec sent nothing")
+    expect(backend.close(), 2, "sends: the two recognize steps, and the relations spec sent nothing")
 
 
 RELATE = """

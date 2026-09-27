@@ -6,10 +6,10 @@ Every structural setting of a question has two homes. One is an option on the co
 
 ## Recognition files
 
-`recognize @FILE` reads a closed version-one object. Ordered `recognize.kinds` is required. Optional `recognize.relations` entries carry `name`, `source`, `target`, optional `reads`, and optional `either`. `*` is the only any-kind spelling. `threshold` and `relation_threshold` are single cuts and default to `0.5`. `model`, calibration `profile`, and ordinary `on` evidence selection use their existing meanings. Recognition policy has no command or file keys.
+`recognize @FILE` reads a closed version-one object. Ordered `recognize.kinds` is optional. Left out or empty, every name has the kind `ENTITY`, and the canonical question writes `"kinds":{}`. The kinds `none of these`, `ENTITY` and `ANY` are reserved in any ASCII case, and a file that names one exits 5. Optional `recognize.relations` entries carry `name`, optional `source`, optional `target`, optional `reads`, and optional `either`. A left-out side means any kind. `*` and `ANY` both mean any kind, and the canonical question writes `*`. `threshold` and `relation_threshold` are single cuts and default to `0.5`. `model`, calibration `profile`, and ordinary `on` evidence selection use their existing meanings. Recognition policy has no command or file keys.
 
 ```json
-{"version":1,"recognize":{"kinds":{"person":"A person's name.","organization":"An organization name."},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for"}]},"threshold":0.5,"relation_threshold":0.5,"model":"jev-latest","profile":"measured-profile","on":"/body"}
+{"version":1,"recognize":{"kinds":{"person":"A person's name.","organization":"An organization name."},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for"}]},"threshold":0.5,"relation_threshold":0.5,"model":"jev-1.13.0","profile":"measured-profile","on":"/body"}
 ```
 
 ## Relation files
@@ -17,7 +17,7 @@ Every structural setting of a question has two homes. One is an option on the co
 `relate @FILE` reads a closed version-one object. Ordered `relate.relations` is required. Each entry carries `name`, `source`, `target`, optional `reads`, and optional `either`. Optional `relate.fields` carries RFC 6901 `name` and `kind` pointers. Top-level `threshold`, `model`, and saved calibration `profile` have their ordinary meanings. [relate.md](relate.md) gives the complete grammar and precedence.
 
 ```json
-{"version":1,"relate":{"fields":{"name":"/name","kind":"/kind"},"relations":[{"name":"works_for","source":"person","target":"organization"}]},"threshold":0.5,"model":"jev-latest","profile":"measured-profile"}
+{"version":1,"relate":{"fields":{"name":"/name","kind":"/kind"},"relations":[{"name":"works_for","source":"person","target":"organization"}]},"threshold":0.5,"model":"jev-1.13.0","profile":"measured-profile"}
 ```
 
 ## Naming a file
@@ -64,7 +64,7 @@ The question text under the verb's key is a string, an object, or a list. A stri
 
 `options` and `labels` are lists, or maps from each label to its description. A description is a string, an object, a list, or `null`. A label with no description is written as a list entry, or as a map entry whose value is `null`. A description that is `null`, empty, or holds only white space is no description.
 
-`levels` is a list of names, lowest first, or a map from each name to its description. A map value of `null` is the description the model reads, and the level's name is never substituted for it. A map string that is empty or holds only white space is refused, because the wire would carry it. An object or a list inside a levels list is refused with a message that names the map form. A result still reports the levels as the list of names.
+`levels` is a list of names, lowest first, or a map from each name to its description. A map value of `null` is no description. The request sends an empty object in that level's place, and the level's name is never substituted for it. A map string that is empty or holds only white space is refused, because the wire would carry it. An object or a list inside a levels list is refused with a message that names the map form. A result still reports the levels as the list of names.
 
 `on` is one JSON Pointer, or a list of them, as `--field` takes one or several.
 
@@ -88,7 +88,7 @@ The schema is structural; agreement with it is not agreement with this page. The
 | The levels | The arguments after the question | `levels` | None. `score` requires 2 to 10, lowest first | Fewer than 2, more than 10, repeated, blank, not text, or holding a control character. A map description that is blank text, a number, or a boolean. A nonstring list entry |
 | The rule | `--threshold T` or `--threshold LOW:HIGH` | `threshold` | `0.5` for `decide`, `tag`, and `filter`, none for `choose`, `score`, and `rank` | A cut of 0 or above 1, a band whose low side is not below its high side, a band on `choose`, `tag`, and `filter`, and any threshold on `score` and on `rank` |
 | The evidence | `--field POINTER` | `on` | The whole record | Anything that is not RFC 6901, or that holds a control character: `a pointer is one line of printable text`. A refusal writes the pointer with JSON escapes |
-| The model | `--model NAME` | `model` | `jev-latest` | Empty or only white space |
+| The model | `--model NAME` | `model` | `jev-1.13.0` | Empty or only white space |
 | The threshold's calibration identity | none | `profile` | absent | Anything outside lowercase letters, digits, hyphens, and underscores |
 | Not built yet, by ADR 0048 item 3: the batch setting | `--batch N` | `batch` | `max` | 0, a fraction, and any text but `max` |
 
@@ -98,7 +98,7 @@ Nothing has a default where a guess would hide a mistake. `choose` with no optio
 
 Ruled by Ian on 2026-09-19: **the command line, then the file, then the default.**
 
-A single value typed beside `@FILE` replaces the file's value. That covers `--threshold`, `--true`, `--false`, `--model`, and `--field`, which replaces `on`. `profile` is calibration identity and has no command-line override. `--profile FILE` selects the run profile instead.
+A single value typed beside `@FILE` replaces the file's value. That covers `--threshold`, `--true`, `--false`, `--model`, and `--field`, which replaces `on`. `profile` is calibration identity and has no command-line override. `--profile FILE` selects the run profile instead. `--model` beside a file that names a model is the explicit way to run that file on another model.
 
 Not built yet, by ADR 0048 item 4 and 8: `--batch` replaces the file's `batch`. `batch` takes four tiers: the typed value, then the environment, then the file, then the default. Only a per-call value counts as typed. The environment tier holds `THINKTHEN_BATCH`, a library engine setting, and a SQL `SET`. The read-only configuration file holds no `batch` key. The file's `batch` names the setting its threshold was tuned at, as `profile` names the backend, and it stays out of the digest. A question set carries at most one top-level `batch`. Every other setting keeps the ruling above.
 
@@ -118,7 +118,7 @@ Under `--dry-run`, a run that used a file prints a `from` object before the requ
 
 A run with no question file prints no `from` object, because every setting came from the one place the user is looking at.
 
-`recognize --dry-run` prints the `thinkthen.recognize-plan/1` request plan. Its file-backed plan carries `{"from":{"question":"file"}}` to identify the source of the complete recognize question.
+`recognize --dry-run` prints the `thinkthen.recognize-plan/2` request plan. Its file-backed plan carries `{"from":{"question":"file"}}` to identify the source of the complete recognize question.
 
 ## The digest of a question
 

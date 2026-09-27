@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"{\"context\":\"Refunds are issued to the original payment method within five working days of the returned item arriving at the warehouse.\",\"output\":\"Within five working days of the warehouse receiving it, to the card you paid with.\"}","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Is every claim in the answer stated in the source text?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.8}},"usage":{"input_tokens":323,"output_tokens":21}}
-}

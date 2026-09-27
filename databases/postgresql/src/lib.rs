@@ -181,7 +181,7 @@ fn thinkthen_usage() -> TableIterator<
     TableIterator::once((wide(sent), wide(cached), wide(input), wide(output)))
 }
 
-type Names = Vec<(String, String, i32, i32, f64)>;
+type Names = Vec<(String, i32, i32, i32, String, f64)>;
 
 /// One recognize call on the worker, or none for a NULL text.
 fn recognized(body: Option<&str>, ask: Recognize) -> Option<thinkthen::Recognized> {
@@ -191,7 +191,8 @@ fn recognized(body: Option<&str>, ask: Recognize) -> Option<thinkthen::Recognize
     }))
 }
 
-/// Every name the engine finds in the text. `start` and `end` count characters.
+/// Every name the engine finds in the text. `start`, `end`, and `length`
+/// count characters.
 fn names(body: Option<&str>, ask: Recognize) -> Names {
     let place = |at: usize| i32::try_from(at).unwrap_or(i32::MAX);
     let Some(found) = recognized(body, ask) else {
@@ -202,10 +203,11 @@ fn names(body: Option<&str>, ask: Recognize) -> Names {
         .iter()
         .map(|held| {
             (
-                held.name().to_owned(),
-                held.kind().to_owned(),
+                held.text().to_owned(),
                 place(held.start()),
                 place(held.end()),
+                place(held.length()),
+                held.kind().to_owned(),
                 held.strength(),
             )
         })
@@ -224,10 +226,11 @@ fn thinkthen_recognize(
 ) -> TableIterator<
     'static,
     (
-        name!(name, String),
-        name!(kind, String),
+        name!(text, String),
         name!(start, i32),
         name!(end, i32),
+        name!(length, i32),
+        name!(kind, String),
         name!(strength, f64),
     ),
 > {
@@ -252,10 +255,11 @@ fn thinkthen_recognize_spec(
 ) -> TableIterator<
     'static,
     (
-        name!(name, String),
-        name!(kind, String),
+        name!(text, String),
         name!(start, i32),
         name!(end, i32),
+        name!(length, i32),
+        name!(kind, String),
         name!(strength, f64),
     ),
 > {
@@ -278,9 +282,9 @@ fn thinkthen_relations(
     'static,
     (
         name!(relation, String),
-        name!(source_name, String),
+        name!(source_text, String),
         name!(source_kind, String),
-        name!(target_name, String),
+        name!(target_text, String),
         name!(target_kind, String),
         name!(probability, f64),
     ),
@@ -299,9 +303,9 @@ fn thinkthen_relations(
             let (source, target) = (held.source(), held.target());
             (
                 held.relation().to_owned(),
-                source.name().to_owned(),
+                source.text().to_owned(),
                 source.kind().to_owned(),
-                target.name().to_owned(),
+                target.text().to_owned(),
                 target.kind().to_owned(),
                 held.probability(),
             )

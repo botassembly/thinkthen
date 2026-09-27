@@ -13,7 +13,7 @@ A loadable DuckDB v1.5.5 extension that puts the `thinkthen` engine behind SQL. 
 | `thinkthen_tag(question, text, labels)` | `VARCHAR[]` |
 | `thinkthen_annotate(set, text)` | `VARCHAR`, the record's values as JSON |
 | `thinkthen_details(question, text)` | the command's `--details` line, as JSON text |
-| `thinkthen_recognize(text, kinds)` | a list of `(name, kind, start, end, strength)` |
+| `thinkthen_recognize(text, kinds)` | a list of `(text, start, end, length, kind, strength)` |
 | `thinkthen_relations(text, file)` | a list of `(relation, source, source_kind, target, target_kind, probability)` |
 | `thinkthen_relate(query, rules)` | a table of `(relation, source, target, probability)`, one row per edge between the query's ids |
 | `thinkthen_warm(question, text)` | an aggregate: asks each distinct text once and returns how many |
@@ -21,7 +21,7 @@ A loadable DuckDB v1.5.5 extension that puts the `thinkthen` engine behind SQL. 
 
 `WHERE`, `ORDER BY`, and `LIMIT` are the filter, rank, and find verbs. Every scalar except `thinkthen_recognize` also takes a last `BIGINT` deadline in milliseconds. A `NULL` in any argument gives a `NULL` row. A failure is an error whose text starts `thinkthen <kind>: `, with one of the six kinds, and never reads as `NULL`.
 
-A question is plain text, `'@path.json'`, or the question file's JSON. Choose, score, and tag take plain text and put their members in the list. `thinkthen_annotate` takes a question set file or its JSON. `start` and `end` count code points, as DuckDB's string indexing does.
+A question is plain text, `'@path.json'`, or the question file's JSON. Choose, score, and tag take plain text and put their members in the list. `thinkthen_annotate` takes a question set file or its JSON. `start`, `end`, and `length` count code points, as DuckDB's string indexing does.
 
 ```sql
 LOAD 'build/thinkthen.duckdb_extension';

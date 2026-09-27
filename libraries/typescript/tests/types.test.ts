@@ -25,6 +25,7 @@ export async function sample(text: string, message: string, inbox: string[], rev
   const many: tt.Answer[] = await tt.decide_many('Refund?', reviews);
   const names: tt.Recognized = await tt.recognize(text, { kinds: ['person'], relations: { works_for: ['person', '*'] } });
   const edges: tt.Edge[] = await tt.relate([['Ann', 'person'], { name: 'Acme', kind: 'organization' }], { relations: ['works_for'] });
+  const related: tt.Edge[] = await tt.relate(names.entities, { relations: ['works_for'] });
   const counters: tt.Usage = tt.usage();
 
   const engine = new tt.Engine({ throttle: 4, baseUrl: 'http://127.0.0.1:1/v1', cache: false, maxRequests: 10 });

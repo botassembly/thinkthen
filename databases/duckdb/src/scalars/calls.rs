@@ -147,10 +147,11 @@ pub(super) fn entities(found: &Recognized) -> Value {
             .iter()
             .map(|name| {
                 Value::Struct(vec![
-                    Value::Text(name.name().to_owned()),
-                    Value::Text(name.kind().to_owned()),
+                    Value::Text(name.text().to_owned()),
                     place(name.start()),
                     place(name.end()),
+                    place(name.length()),
+                    Value::Text(name.kind().to_owned()),
                     Value::Double(name.strength()),
                 ])
             })
@@ -167,9 +168,9 @@ pub(super) fn relations(found: &Recognized) -> Value {
             .map(|relation| {
                 Value::Struct(vec![
                     Value::Text(relation.relation().to_owned()),
-                    Value::Text(relation.source().name().to_owned()),
+                    Value::Text(relation.source().text().to_owned()),
                     Value::Text(relation.source().kind().to_owned()),
-                    Value::Text(relation.target().name().to_owned()),
+                    Value::Text(relation.target().text().to_owned()),
                     Value::Text(relation.target().kind().to_owned()),
                     Value::Double(relation.probability()),
                 ])

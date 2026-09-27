@@ -125,7 +125,8 @@ pub(super) fn labels_in(value: &Json, verb: Verb) -> Result<Option<Described>, Q
 ///
 /// `choose` and `tag` read a `null` as no description, and a blank string the
 /// same way later on. `score` keeps `null` as the description the map named,
-/// and refuses a blank string because the wire would carry it.
+/// and the adapter sends it as an empty object in the level's place. `score`
+/// refuses a blank string, because the wire would carry it.
 pub(super) fn described(
     verb: Verb,
     name: &str,
