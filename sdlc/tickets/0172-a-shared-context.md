@@ -1,14 +1,14 @@
 ---
 flow: build
 priority: 172
-opens: sdlc/planning/adr sdlc/planning/adr/0048-records-batch-into-full-requests.md crates/thinkthen/src/cli/args.rs crates/thinkthen/src/cli/edge.rs crates/thinkthen/src/cli/asking.rs crates/thinkthen/src/cli/asking/batched.rs crates/thinkthen/src/cli/failure.rs crates/thinkthen/src/cli/failure crates/thinkthen/src/core/result.rs crates/thinkthen/src/result_json.rs crates/thinkthen/tests/backend/batching.rs crates/thinkthen/tests/backend/batching probes/context probes/README.md specification/records.md specification/result.md specification/channels.md specification/backends.md specification/decide.md specification/filter.md specification/rank.md specification/settings.md specification/roadmap.md sdlc/issues sdlc/ratchet.json sdlc/records sdlc/tickets
+opens: sdlc/planning/adr sdlc/planning/adr/0048-records-batch-into-full-requests.md crates/thinkthen/src/cli/args.rs crates/thinkthen/src/cli/edge.rs crates/thinkthen/src/cli/asking.rs crates/thinkthen/src/cli/asking/batched.rs crates/thinkthen/src/cli/failure.rs crates/thinkthen/src/cli/failure crates/thinkthen/src/core/batch.rs crates/thinkthen/src/core/batch/tests.rs crates/thinkthen/src/core/result.rs crates/thinkthen/src/result_json.rs crates/thinkthen/tests/backend/batching.rs crates/thinkthen/tests/backend/batching probes/context probes/README.md specification/records.md specification/result.md specification/channels.md specification/backends.md specification/decide.md specification/filter.md specification/rank.md specification/settings.md specification/roadmap.md sdlc/issues sdlc/ratchet.json sdlc/records sdlc/tickets
 ---
 
 # 0172: A shared context
 
-Status: ready for review. Owner: Claude.
+Status: accepted. The coordinator accepted it on 2026-09-27 after a fresh read-only review, with the fixes that review named. Owner: Claude.
 
-Review route: a fresh read-only Claude session reviews this design and later the final diff. Codex does not review this ticket unless Ian routes it.
+Review route: the builder follows the work plan: Claude now, or Codex after the handover. A fresh read-only session from the builder's vendor reviews the final diff.
 
 ## Outcome and authority
 
@@ -18,7 +18,7 @@ A user has `songs.txt`, 306 titles, and `catalog.txt`, one line of facts per son
 thinkthen filter 'It appears on the album Abbey Road.' --threshold 0.7 --context catalog.txt < songs.txt
 ```
 
-The tool sends one request. The catalog is its evidence, sent once, and each title rides in its own quoted question. In experiment 271 this form scored 299 to 302 right of 306 with 2 or 3 false yeses. The default without a context scored 283 to 287 right, by ADR 0055. A context too large to send is refused before any request when the tool can tell, and at the record that makes it too large when it cannot.
+The tool sends one request. The catalog is its evidence, sent once, and each title rides in its own quoted question. In experiment 271 a similar form scored 299 to 302 right of 306 with 2 or 3 false yeses. The default without a context scored 283 to 287 right, by ADR 0055. A context too large to send is refused before any request when the tool can tell, and at the record that makes it too large when it cannot.
 
 This is batching row B7 of `sdlc/issues/2026-09-26-batching-design.md`: "`--context FILE` for `decide`, `filter` and `rank`; exit 2 for a context over the ceiling; `meta.context_sha256`. B7 picks the late-overflow policy of ticket 0144's deferred gap 5 and rewrites ADR 0048 item 11 to match." Proof: design tests 2 and 10. It is Batch D item 6 of `sdlc/planning/work-plan-2026-09-27.md`.
 
@@ -50,6 +50,7 @@ Read from `origin/main` `40783433`, and tickets 0146 and 0154 on their branches.
 
 - `core/batch.rs::Batcher::new` takes an optional context as `Evidence`. It refuses a structured question beside a context and a context whose request with no record passes a limit. `BatchError::ContextOverLimit` carries the limit's kind, the limit and the size, and no text. The fixture `batch-context` pins a context batch's bytes.
 - Ticket 0146 passes no context. Its reader turns a refusal from `push` into `Input::Failed` after it queues every batch that closed first. The records before the refused one print, and the run stops there with today's two lines.
+- In `Batcher::push`, `context_fits` checks the new record before the open batch closes as `Limit`. So a record that cannot fit beside the context is refused while the records before it still sit in the open batch. The refusal then empties that batch, and those rows would never be sent or printed. This ticket fixes the order in the core: when the record does not fit, `push` first closes the open batch into `closed`, then calls `context_fits` on the record alone.
 - Ticket 0154 applies the request size at every address, so a context refusal reaches every address.
 - After tickets 0170 and 0171, `meta` carries `batch` and `batch_warning`. `result.md` line 110 marks `context_sha256` as not built.
 
@@ -83,7 +84,7 @@ Each sentence is pinned in a test. None echoes the context or a record.
 | The file is empty | 2 | `--context names an empty file` |
 | A question written as JSON | 2 | `--context needs a question written as text; a question written as JSON cannot quote a record` |
 | The context and the question pass the request size, before any record | 2 | `--context: the context and the question make a request of A bytes, over the request size of L bytes; raise --max-request-bytes or shorten the context` |
-| The same, over a profile limit | 2 | `--context: profile NAME allows at most L WORDS; the context's request has A` |
+| The same, over a profile limit, including a profile `max_request_bytes` below the request size | 2 | `--context: profile NAME allows at most L WORDS; the context's request has A` |
 | A record and the context pass the request size | 2 | `--context: this record and the context make a request of A bytes, over the request size of L bytes; raise --max-request-bytes, or shorten the context or the record` |
 | The same, over a profile limit | 2 | `--context: profile NAME allows at most L WORDS; this record and the context make A` |
 
@@ -91,7 +92,7 @@ The first five refusals and the two "before any record" rows happen before any r
 
 ### The ADR
 
-ADR 0048 says a change to one of its items takes a new ADR. The build writes one, numbered with the next free number, that rewrites item 11:
+ADR 0048 says a change to one of its items takes a new ADR. The build writes one, numbered with the next free number in the builder's range (up to 0079 for Claude, 0080 to 0099 for Codex), that rewrites item 11:
 
 1. Before any request, the run refuses at exit 2 a context whose request with the question and no record passes the request size or a profile limit.
 2. A record whose batch of one with the context passes a limit stops the run at that record, at exit 2. That record sends nothing. Batches before it may already have been sent and printed.
@@ -136,6 +137,7 @@ Each is the agent's decision. Ian can overturn any of them.
 | A JSON question with `--context` | Exit 2, the pinned sentence. No request |
 | A context over the request size with the question alone | Exit 2 before any request. The sentence names `--max-request-bytes` |
 | A context over a profile's `max_evidence_bytes` | Exit 2 before any request. The sentence names the profile |
+| A profile whose `max_request_bytes` is below the request size, and a context over the profile's limit with the question alone | Exit 2 before any request. The profile sentence, not the `--max-request-bytes` one |
 | Records 1 and 2 fit, record 3 overflows beside the context, default | One request of 2 records. Rows 1 and 2 print. The cause line, then `stopped at record 3; 2 records finished`. Exit 2 |
 | Record 1 overflows beside the context | No request. Exit 2 at record 1 |
 | `--dry-run --context` over three lines | The plan of one batch with the context as its evidence |
@@ -147,10 +149,10 @@ Every command test drives the compiled binary against the in-process loopback. N
 
 | Test | What it proves | Deliberate break that turns it red |
 | --- | --- | --- |
-| `a_context_rides_every_batch`, design test 2 at the command | The fixture, `--batch 1` and `--details` rows. The loopback's body equals the fixture. `meta.context_sha256` equals the pinned hex of the fixture context's bytes | (a) List the records in the evidence beside the context: the body differs. (b) Send the context in the first request only: the `--batch 1` row. (c) Hash the text after a trim: the digest differs. (d) Omit `meta.batch` on a context batch of one |
+| `a_context_rides_every_batch`, design test 2 at the command | The fixture, `--batch 1`, `--details`, `--dry-run` and 413 halving rows. The loopback's body equals the fixture. `meta.context_sha256` equals the pinned hex of the fixture context's bytes. The dry-run plan's evidence is the context. Each of the three requests of the halving row carries the context | (a) List the records in the evidence beside the context: the body differs. (b) Send the context in the first request only: the `--batch 1` row. (c) Hash the text after a trim: the digest differs. (d) Omit `meta.batch` on a context batch of one. (e) Build the halves without the context: the halves' bodies differ. (f) Build the plan without the context: the dry-run row differs |
 | `a_context_stays_out_of_the_question_digest` | The two-context and replay rows | (a) Add the context to the question digest: `meta.question_sha256` differs. (b) Leave the context out of the request body: the replay under another context answers |
-| `a_context_that_cannot_fit_is_refused` | Every refusal row of the edge table. Each pins the loopback's request count, standard output, the whole standard error and the exit code. The context and every record hold a marker string, and no standard error line contains it | (a) Check only the first record: the record-3 row sends a request with record 3. (b) Exit 4 for the late refusal. (c) Drop the batches before the refused record: the record-3 row prints nothing. (d) Echo the context in a message: the marker appears |
-| Design test 10, live, recorded in `sdlc/records/` | Three runs of `decide --lines --details --threshold 0.7 --context CATALOG` over the 306 titles, graded by `thinkthen audit` against the Abbey Road key. Each run sends one request. It reports right answers, false yeses, misses and input tokens for each run | Not a gate. See "The paid run" |
+| `a_context_that_cannot_fit_is_refused` | Every refusal row of the edge table. Each pins the loopback's request count, standard output, the whole standard error and the exit code. The context and every record hold a marker string, and no standard error line contains it | (a) Check only the first record: the record-3 row sends a request with record 3. (b) Exit 4 for the late refusal. (c) Drop the batches before the refused record, as `push` does today: the record-3 row prints nothing. (d) Echo the context in a message: the marker appears. (e) Name `--max-request-bytes` when a profile's limit bound: the profile row |
+| Design test 10, live, recorded in `sdlc/records/` | Three runs of `decide --lines --details --threshold 0.7 --context CATALOG` over the 306 titles, graded by `thinkthen audit` against the 18-row Abbey Road key. Each run sends one request. It reports right answers, false yeses, misses and input tokens for each run | Not a gate. See "The paid run" |
 
 The four questions:
 
@@ -163,24 +165,28 @@ The four questions:
 
 The builder runs it after the loopback tests pass and before landing, through `sdlc/scripts/live`.
 
-- **Where.** A new unnumbered folder, `probes/context/`, like `probes/speed/`. Its `job.sh` starts with `#!/bin/sh` and calls a short Python helper. The helper reuses `probes/speed/measure.py`'s `check` for the titles and `catalog_text` for the catalog, and reads the Abbey Road key from the same Beatles Bench checkout. It builds the binary with no key and refuses a dirty checkout, as S1's job does. It keeps counts only: no output text, no standard error, no key.
+- **Where.** A new unnumbered folder, `probes/context/`, like `probes/speed/`. Its `job.sh` starts with `#!/bin/sh` and calls a short Python helper. The helper reuses `probes/speed/measure.py`'s `check` for the titles and `catalog_text` for the catalog. It reuses `plan()`'s build step, or refuses unless the binary is newer than the last commit to the command's sources, and it refuses a dirty checkout, as S1's job does.
+- **Question.** `It appears on the album Abbey Road.`, at `--threshold 0.7`, through `decide --lines --details --no-cache --context CATALOG`.
+- **Key.** The rows of the bench's `data/songs.tsv` whose `first_album` is Abbey Road. There are 18. The helper refuses any other count.
+- **What it keeps.** The detailed rows go only to a scratch file, which the helper grades with `thinkthen audit` and then deletes. The record keeps counts only: right answers, false yeses, misses, input tokens and requests for each run. No output text, no standard error, no key.
 - **Command.** `sdlc/scripts/live --max-tokens 150000 probes/context/job.sh BENCH NAME`.
 - **Cost.** Three requests of about 22,100 input tokens each, by experiment 271: about 66,300 input tokens. At the recorded price of $0.042 a million input tokens, that is about $0.003. Output tokens are free under the vendor's price list. The cap of 150,000 covers input and output with room for one repeat.
 - **Stop rule.** It stops starting runs at 120,000 counted tokens.
-- **Use.** The record names the build. The three pages quote its numbers. If any run scores under 297 right, the builder stops before landing and hands back the record, because the pages would claim a number the tool does not reach.
+- **Use.** The record names the build. The three pages quote its numbers. If any run scores under 297 right, landing stops. The builder hands the scores back to the queue owner, because this wording differs from experiment 271's and the pages would claim a number the tool does not reach.
 
 ## Budgets and ratchet estimate
 
 Nonblank lines, measured with `grep -c .`, net against main after ticket 0171 lands.
 
+- `core/batch.rs`: at most 6 net, to close the open batch before the context check. `core/batch/tests.rs`: at most 12 net, one planner row for it.
 - `cli/args.rs`: at most 10 net.
 - `cli/edge.rs`: at most 20 net, for reading the file.
 - `cli/asking.rs` and `cli/asking/batched.rs`: at most 25 net together.
 - `cli/failure.rs` and its folder: at most 40 net, for the refusals.
 - `core/result.rs` and `result_json.rs`: at most 15 net together.
-- Product code: at most 110 net.
-- Tests: at most 220 net.
-- `sdlc/ratchet.json` moves to the measured total, at most 330 above main after 0171 lands. The commit says what grew.
+- Product code: at most 116 net.
+- Tests: at most 232 net.
+- `sdlc/ratchet.json` moves to the measured total, at most 348 above main after 0171 lands. The commit says what grew.
 - `probes/context/`: a job of at most 10 lines and a helper of at most 90. They sit outside the ratchet.
 - Pages: at most 45 net lines. One ADR of at most 45 lines.
 - No dependency. One paid run, capped at 150,000 tokens.
@@ -192,8 +198,8 @@ Nonblank lines, measured with `grep -c .`, net against main after ticket 0171 la
 3. Stop if the context reaches the question digest, a message, a `Debug` line or a probe row.
 4. Stop if any break stays green.
 5. Stop if tickets 0154, 0170 or 0171 have not landed on main.
-6. Stop if a paid run scores under 297 right, or before the paid run passes 120,000 counted tokens.
-7. Stop if the late-overflow rule needs read-ahead or a change to 0146's reader protocol.
+6. Stop if a paid run scores under 297 right, and hand the scores to the queue owner. Stop before the paid run passes 120,000 counted tokens.
+7. Stop if the late-overflow rule needs read-ahead, a change to 0146's reader protocol, or more than the reordering in `Batcher::push`.
 
 ## Build order
 
@@ -207,7 +213,7 @@ Excluded: `--context` on `choose` (B8), `tag`, `score` and `annotate`. Library a
 
 ## Routing
 
-Builder: Claude (Opus subagent) in lane 1. Reviewer: a fresh read-only Claude session for the design and the code. The change raises the ceiling and widens a public surface, so the code review names what it checked.
+Builder: the agent the work plan names, Claude now or Codex after the handover. Reviewer: a fresh read-only session from the builder's vendor for the code. The change raises the ceiling and widens a public surface, so the code review names what it checked.
 
 ## Complexity
 
@@ -236,6 +242,6 @@ Local experiment 284 file 18, recorded as settled in the landing commit. Ticket 
 
 - Starts from: Local experiment 284 file 18, checked on `origin/main` `40783433`: `core/batch.rs` `Batcher::new`, `context_fits` and `BatchError::ContextOverLimit`, and `result.md` line 110. Ticket 0144's deferred gap 5. Experiment 271's context arm in evidence sections 7 and 9: 299 to 302 of 306 in one request of 22,091 input tokens. ADR 0048 items 9 and 11, ADR 0051, ADR 0055 items 2 and 5. Tickets 0146 and 0154 on their branches, and tickets 0170 and 0171.
 - Keeps: Every run without `--context`. The question digest. ADR 0055's batch form. The verbs that take no context.
-- Changes: `decide`, `filter` and `rank` take `--context FILE`. The context is each batch's evidence, and every row carries `meta.context_sha256`. A context too large with the question alone is refused before any request. A record too large beside the context stops the run at that record at exit 2. A new ADR rewrites ADR 0048 item 11 to that promise. Eight pages change.
+- Changes: `decide`, `filter` and `rank` take `--context FILE`. The context is each batch's evidence, and every row carries `meta.context_sha256`. A context too large with the question alone is refused before any request. A record too large beside the context stops the run at that record at exit 2, after the batches before it print. `Batcher::push` closes the open batch before its context check. A new ADR rewrites ADR 0048 item 11 to that promise. Eight pages change.
 - Proof: Three outside-in tests at the loopback, each with deliberate breaks, including design test 2 at the command. Design test 10, one paid run of three requests under a 150,000-token cap, at least 297 right in each. The `install`, `lint`, `test`, `spec` and `surfaces` rungs.
 - Defers: `--context` on the other verbs, context time at large sizes, a token refusal found after sending, and the libraries and SQL surfaces.
