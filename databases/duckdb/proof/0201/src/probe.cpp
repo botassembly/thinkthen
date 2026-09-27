@@ -23,9 +23,11 @@ struct BridgeReply {
 };
 BridgeReply thinkthen_probe_row(const uint8_t *bytes, size_t len);
 void thinkthen_probe_free(uint8_t *bytes, size_t len);
+int32_t thinkthen_probe_init();
 }
 
 namespace duckdb {
+void LoadBindOwner(ExtensionLoader &loader);
 namespace {
 
 struct RustReply {
@@ -158,6 +160,9 @@ void SettingFinalize(Vector &states, AggregateInputData &, Vector &result, idx_t
 } // namespace
 
 void LoadProbe(ExtensionLoader &loader) {
+	if (thinkthen_probe_init() != 0) {
+		throw InvalidInputException("thinkthen probe: Rust bridge initialization failed");
+	}
 	auto &config = DBConfig::GetConfig(loader.GetDatabaseInstance());
 	config.AddExtensionOption("thinkthen_probe_limit", "Caller-session setting proof", LogicalType::INTEGER,
 	                          Value::INTEGER(0));
@@ -170,6 +175,7 @@ void LoadProbe(ExtensionLoader &loader) {
 	                                   FunctionNullHandling::DEFAULT_NULL_HANDLING);
 	aggregate.bind = SettingBind;
 	loader.RegisterFunction(aggregate);
+	LoadBindOwner(loader);
 }
 
 } // namespace duckdb

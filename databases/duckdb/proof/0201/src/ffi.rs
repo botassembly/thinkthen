@@ -47,6 +47,11 @@ pub struct Reply {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn thinkthen_probe_init() -> i32 {
+    catch_unwind(AssertUnwindSafe(install_hook)).map_or(4, |_| 0)
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn thinkthen_probe_row(input: *const u8, len: usize) -> Reply {
     let result = catch_unwind(AssertUnwindSafe(|| {
         install_hook();
