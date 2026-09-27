@@ -23,6 +23,7 @@ RELATE = "SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM t', {}) ORD
 WORKS = "['works_for=person:organization']"
 EDGES = [["works_for", "1", "2", 0.9], ["works_for", "3", "2", 0.9], ["works_for", "4", "2", 0.9]]
 NOT_SELECT = "thinkthen usage: the relate query must be a SELECT; relate reads records, it does not write files, attach databases, change settings, or load extensions"
+MISSING_ADVICE = "; relate reads only committed tables on its separate connection; if you created this table in an open transaction, commit it before retrying"
 
 
 @case
@@ -156,6 +157,42 @@ def a_temporary_table_names_the_adr_0038_boundary():
     with Backend() as backend:
         got = run([TABLE.replace("CREATE TABLE t", "CREATE TEMP TABLE tt"), RELATE.format(WORKS).replace("FROM t'", "FROM tt'")], backend.base())
         expect(said(got[1]).split(";")[0], "thinkthen local: the relate query names the temporary table tt, and the stable C API cannot run a query on the calling connection, so relate cannot see temporary tables", "a temp table")
+        expect(backend.count(), 0, "counted sends")
+
+
+@case
+def an_uncommitted_table_gets_the_connection_rule():
+    with Backend() as backend:
+        query = RELATE.format(WORKS)
+        got = run(["BEGIN", TABLE, query, "ROLLBACK", query.replace("FROM t'", "FROM typo'")], backend.base())
+        expect(said(got[2]), "thinkthen usage: the relate query failed: Catalog Error: Table with name t does not exist!" + MISSING_ADVICE, "an uncommitted table")
+        expect(said(got[4]), "thinkthen usage: the relate query failed: Catalog Error: Table with name typo does not exist!" + MISSING_ADVICE, "a genuinely missing table")
+        expect(backend.count(), 0, "counted sends")
+
+
+@case
+def an_uncommitted_table_in_the_active_catalog_gets_the_rule():
+    with Backend() as backend:
+        query = RELATE.format(WORKS)
+        got = run(["ATTACH ':memory:' AS other", "USE other", "BEGIN", TABLE, query], backend.base())
+        expect(said(got[4]), "thinkthen usage: the relate query failed: Catalog Error: Table with name t does not exist!" + MISSING_ADVICE, "the active catalog's table")
+        expect(backend.count(), 0, "counted sends")
+
+
+@case
+def an_uncommitted_table_in_an_explicit_schema_gets_the_rule():
+    with Backend() as backend:
+        got = run(["CREATE SCHEMA alt", "USE alt", "BEGIN", TABLE, RELATE.format(WORKS)], backend.base())
+        expect(said(got[4]), "thinkthen usage: the relate query failed: Catalog Error: Table with name t does not exist!" + MISSING_ADVICE, "the active schema's table")
+        expect(backend.count(), 0, "counted sends")
+
+
+@case
+def an_uncommitted_table_qualified_outside_the_active_schema_gets_the_rule():
+    with Backend() as backend:
+        got = run(["CREATE SCHEMA alt", "BEGIN", TABLE.replace("CREATE TABLE t", "CREATE TABLE alt.t"), RELATE.format(WORKS).replace("FROM t'", "FROM alt.t'")], backend.base())
+        expect(said(got[3]), "thinkthen usage: the relate query failed: Catalog Error: Table with name t does not exist!" + MISSING_ADVICE, "a qualified uncommitted table")
+        expect(backend.count(), 0, "counted sends")
 
 
 @case

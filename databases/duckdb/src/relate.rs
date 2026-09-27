@@ -472,8 +472,8 @@ fn under_limit<T>(connection: Conn, at: Option<Instant>, body: impl FnOnce() -> 
     (outcome, timer.join().unwrap_or(false))
 }
 
-/// A missing table that is the caller's own temporary table gets the ADR
-/// 0038 boundary sentence instead of DuckDB's.
+/// A caller-owned temporary table gets the ADR 0038 boundary sentence.
+/// Another missing name keeps DuckDB's error and gains the connection rule.
 fn boundary(files: &Files, message: String) -> String {
     let Some(name) = message
         .split("Table with name ")
@@ -483,12 +483,17 @@ fn boundary(files: &Files, message: String) -> String {
     else {
         return message;
     };
-    if name.is_empty() || !files.has_table("temp", &name) {
+    if name.is_empty() {
         return message;
     }
+    if files.has_table("temp", &name) {
+        return format!(
+            "{}the relate query names the temporary table {name}, and the stable C API cannot run a query on the calling connection, so relate cannot see temporary tables; materialize it (CREATE TABLE ... AS SELECT) or run the query directly",
+            prefix(thinkthen::ErrorKind::Local)
+        );
+    }
     format!(
-        "{}the relate query names the temporary table {name}, and the stable C API cannot run a query on the calling connection, so relate cannot see temporary tables; materialize it (CREATE TABLE ... AS SELECT) or run the query directly",
-        prefix(thinkthen::ErrorKind::Local)
+        "{message}; relate reads only committed tables on its separate connection; if you created this table in an open transaction, commit it before retrying"
     )
 }
 
