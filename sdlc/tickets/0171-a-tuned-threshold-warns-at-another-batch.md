@@ -1,14 +1,14 @@
 ---
 flow: build
 priority: 171
-opens: sdlc/planning/adr crates/thinkthen/src/core/result.rs crates/thinkthen/src/core/result/batch_warning.rs crates/thinkthen/src/core/mod.rs crates/thinkthen/src/result_json.rs crates/thinkthen/src/cli/profile.rs crates/thinkthen/src/cli/asked.rs crates/thinkthen/src/cli/asking.rs crates/thinkthen/src/cli/asking/batched.rs crates/thinkthen/src/cli/audit.rs crates/thinkthen/src/cli/audit/write.rs crates/thinkthen/src/cli/diff.rs crates/thinkthen/tests/backend/batching.rs crates/thinkthen/tests/backend/batching crates/thinkthen/tests/audit_write.rs crates/thinkthen/tests/diff.rs crates/thinkthen/tests/fixtures/measure specification/result.md specification/question-file.md specification/audit.md specification/diff.md specification/records.md specification/settings.md spec/audit.md sdlc/issues sdlc/ratchet.json sdlc/records sdlc/tickets
+opens: sdlc/planning/adr crates/thinkthen/src/core/result.rs crates/thinkthen/src/core/result/batch_warning.rs crates/thinkthen/src/core/measure/splice.rs crates/thinkthen/src/core/measure/splice_tests.rs crates/thinkthen/src/core/mod.rs crates/thinkthen/src/result_json.rs crates/thinkthen/src/public/results.rs crates/thinkthen/src/cli/profile.rs crates/thinkthen/src/cli/asked.rs crates/thinkthen/src/cli/judge.rs crates/thinkthen/src/cli/asking.rs crates/thinkthen/src/cli/asking/batched.rs crates/thinkthen/src/cli/schedule.rs crates/thinkthen/src/cli/audit.rs crates/thinkthen/src/cli/audit/write.rs crates/thinkthen/src/cli/diff.rs crates/thinkthen/tests/backend/batching.rs crates/thinkthen/tests/backend/batching crates/thinkthen/tests/audit_write.rs crates/thinkthen/tests/diff.rs crates/thinkthen/tests/fixtures/measure specification/result.md specification/question-file.md specification/audit.md specification/diff.md specification/records.md specification/settings.md spec/audit.md sdlc/issues sdlc/ratchet.json sdlc/records sdlc/tickets
 ---
 
 # 0171: A tuned threshold warns at another batch setting
 
-Status: accepted. The coordinator accepted it on 2026-09-27 after a fresh read-only review, with the fixes that review named. Owner: Claude.
+Status: candidate built; fresh code review pending. The coordinator accepted the design on 2026-09-27 after a fresh read-only review, with the fixes that review named. Owner: Codex.
 
-Review route: the builder follows the work plan: Claude now, or Codex after the handover. A fresh read-only session from the builder's vendor reviews the final diff.
+Review route: a fresh read-only Codex session reviews the final diff.
 
 ## Outcome and authority
 
@@ -196,7 +196,7 @@ Excluded: the warning for `choose`, `tag`, `score` and `annotate` (B8, B9, B10),
 
 ## Routing
 
-Builder: the agent the work plan names, Claude now or Codex after the handover. Reviewer: a fresh read-only session from the builder's vendor for the code. The change raises the ceiling and adds a row member, so the code review names what it checked.
+Builder: Codex in the retained 0170 lane. Reviewer: a fresh read-only Codex session. The change raises the ceiling and adds a row member, so the code review names what it checked.
 
 ## Complexity
 
@@ -225,8 +225,16 @@ No issue file holds local experiment 284 file 14 alone. The build records file 1
 - Starts from: Local experiment 284 file 14, checked on `origin/main` `40783433`: `core/digest.rs:55-68`, `cli/profile.rs`, `cli/asking.rs:150`, `cli/audit/write.rs::bars` and `model`, `cli/diff.rs::warnings`, and `result.md` line 109. ADR 0048 items 4, 8 and 9, ADR 0053 item 3 and ADR 0055 item 3. Ticket 0146's `parse_top` and tiers, and ticket 0170's `meta.batch`. Evidence section 14 of the batching record.
 - Keeps: The question digest and every cache key. Every run whose setting matches its file's. Files with neither key. The profile warning. Verbs that do not batch.
 - Changes: A `decide`, `filter` or `rank` record run over a file tuned at another batch setting prints one warning and carries `meta.batch_warning`. `audit` and `diff` warn over mixed settings. `audit --write` writes `batch` into a single `decide` file only when the lines hold exactly one setting that is not 1, and removes a stale `batch` when they ran one record a request. A short ADR amends ADR 0048 item 8 and ADR 0053 item 3.
-- Proof: Three outside-in tests, each with deliberate breaks, including design test 13. The `install`, `lint`, `test`, `spec` and `surfaces` rungs.
+- Proof: The outside-in record, audit-write and diff tests cover design test 13 and the distinct boundaries in the table above. Focused checks and the measured growth are in the [build record](../records/2026-09-27-0171-tuned-batch-warning-build.md); final review and landing remain pending.
 - Defers: Mixed results files that include rows asked alone, the later verbs, and library warnings.
+
+## What the build taught us
+
+- The shared `result_json.rs::Run` also has a library initializer in `public/results.rs`. The CLI warning is absent there, so existing library result bytes remain unchanged. Search every initializer when extending a shared result carrier.
+- The existing splice helper could insert or replace a JSON member but could not remove a stale top-level `batch` without rewriting unrelated file bytes. A small byte-preserving removal helper and focused position/CRLF table supplied that missing operation.
+- A draft test helper parsed and reserialized saved `annotate` rows merely to add metadata; it reordered nested answer names and broke an existing exact report. That fixture change was reverted. Exact saved bytes remain the better boundary for order-sensitive results.
+- The measured Rust delta is 545 nonblank lines against `f7080025`: 235 product and 310 tests. This exceeds the original 332-line estimate. The [build record](../records/2026-09-27-0171-tuned-batch-warning-build.md) gives the growth and duplication check for fresh review; no behavior was removed to satisfy a stale estimate.
+- The coordinator authorized a measured amendment to the old estimate before the build finished. The enforced 500-line file cap and ratchet equality still apply. Fresh code review decides whether the measured 545-line increase earns its cost before landing.
 
 ## Build preflight, 2026-09-27
 

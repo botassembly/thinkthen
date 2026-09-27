@@ -13,13 +13,13 @@ use std::path::{Path, PathBuf};
 use clap::{Args, ValueEnum};
 
 use crate::cli::measure::{BY, Cause, Match, Refusal, lines, rule, write};
-use crate::core::Pointer;
 use crate::core::measure::answer::{self, Identity};
 use crate::core::measure::audit::{self as grade, By, Pooled, Row, Settings};
 use crate::core::measure::group;
 use crate::core::measure::key::Key;
 use crate::core::measure::optimize::Measure;
 use crate::core::measure::rounded_line;
+use crate::core::{BatchSetting, Pointer};
 use crate::failure::Failure;
 
 /// The command line of `audit`. Its help is on the `Audit` command.
@@ -167,6 +167,7 @@ fn grade_all(arguments: &AuditArguments) -> Result<Graded, Refusal> {
     let key_lines = lines(&arguments.key).map_err(|cause| refusal("key", cause))?;
     let answers = answer::read(&results, &pointer, Identity::Question)
         .map_err(|e| refusal("results", Cause::Measure(e)))?;
+    let batch_settings = BatchSetting::in_results(&results);
     let mut key = Key::read(&key_lines).map_err(|e| refusal("key", Cause::Measure(e)))?;
     key.1 = arguments.matching.into();
     let by = match &arguments.by {
@@ -206,6 +207,14 @@ fn grade_all(arguments: &AuditArguments) -> Result<Graded, Refusal> {
         Some(path) => write::bars(path, &results, &answers, &rows)
             .map_err(|cause| refusal("question", cause))?,
         None => String::new(),
+    };
+    let report = if batch_settings.len() > 1 {
+        format!(
+            "thinkthen: audit: warning: the results ran at more than one batch setting ({}); a bar tuned over both may fit neither\n{report}",
+            BatchSetting::listed(&batch_settings)
+        )
+    } else {
+        report
     };
     let pooled = arguments
         .pooled

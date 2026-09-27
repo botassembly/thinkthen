@@ -13,10 +13,10 @@ use crate::core::measure::answer::{Answer, Verb};
 use crate::core::measure::audit::{Kind, Row};
 use crate::core::measure::optimize::Bar;
 use crate::core::measure::rows::number;
-use crate::core::measure::splice::splice;
+use crate::core::measure::splice::{remove, splice};
 use crate::core::{
-    BlankTextError, Json, ModelName, QuestionFile, QuestionSet, RecognizeSpec, RelateSpec, Typed,
-    question_sha256_with_profile, recognize_sha256, resolve,
+    BatchSetting, BlankTextError, Json, ModelName, QuestionFile, QuestionSet, RecognizeSpec,
+    RelateSpec, Setting, Typed, question_sha256_with_profile, recognize_sha256, resolve,
 };
 
 /// What `--write` does with one question's bar.
@@ -81,6 +81,7 @@ pub(super) fn bars(
     }
     let mut new = text.clone();
     let mut report = String::new();
+    let batch_settings = BatchSetting::in_results(results);
     for row in rows.iter().filter(|row| row.kind != Kind::Label) {
         let (target, place) = match (&row.name, set) {
             (Some(name), true) => (
@@ -100,7 +101,8 @@ pub(super) fn bars(
         };
         report.push_str(&format!("{}: audit: {line}\n", crate::core::NAME));
     }
-    if new != text && !set {
+    let wrote_threshold = new != text;
+    if wrote_threshold && !set {
         match model(results) {
             Ok(model) => {
                 let value =
@@ -115,10 +117,47 @@ pub(super) fn bars(
             )),
         }
     }
+    if !set && json.member("decide").is_some() {
+        update_batch(
+            &mut new,
+            &json,
+            &batch_settings,
+            wrote_threshold,
+            &mut report,
+        )?;
+    }
     if new != text {
         std::fs::write(path, new).map_err(|_| Cause::Unwritable)?;
     }
     Ok(report)
+}
+
+/// Preserve the file's other bytes when its one `decide` threshold is retuned.
+fn update_batch(
+    text: &mut String,
+    file: &Json,
+    settings: &BTreeSet<BatchSetting>,
+    wrote_threshold: bool,
+    report: &mut String,
+) -> Result<(), Cause> {
+    match settings.iter().copied().collect::<Vec<_>>().as_slice() {
+        [BatchSetting::Records(1)] => {
+            if let Some(old) = file.member("batch") {
+                let old = Setting::of_json(old)
+                    .map(BatchSetting::from)
+                    .ok_or(Cause::NotQuestions)?;
+                *text = remove(text, &["batch"]).ok_or(Cause::NotQuestions)?.0;
+                report.push_str(&format!("{}: audit: removed batch {old} for the question; the results ran one record a request\n", crate::core::NAME));
+            }
+        }
+        [setting] if wrote_threshold => {
+            let value = serde_json::to_string(setting).map_err(|_| Cause::NotQuestions)?;
+            *text = splice(text, &["batch"], &value).ok_or(Cause::NotQuestions)?.0;
+        }
+        [_, _, ..] => report.push_str(&format!("{}: audit: kept the batch setting for the question; the results ran at more than one batch setting\n", crate::core::NAME)),
+        _ => {}
+    }
+    Ok(())
 }
 
 /// The one model every results line names in `meta.model`, trimmed as a

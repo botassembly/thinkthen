@@ -210,6 +210,7 @@ impl Details {
             backend,
             tuned_for: None,
             warning: None,
+            batch_warning: None,
         };
         let json = decision(
             run,

@@ -20,6 +20,7 @@ The orders on record follow the rule:
 - The model: `--model`, then the question file's `model`, then the engine's `model`, then the configuration file's `model`, then `jev-1.13.0`. ADR 0033.
 - The cache: `--cache` or `--no-cache`, then `THINKTHEN_CACHE`, then the configuration file's `cache`, then the platform folder. ADR 0033.
 - The batch: `--batch`, then `THINKTHEN_BATCH`, then the question file's `batch`, then `max`. ADR 0048 item 4.
+- A threshold-bearing question file names its tuned batch setting through `batch`, or 1 when it has no `batch`. The setting still resolves by the four tiers above; another running setting warns instead of changing it. ADR 0085.
 - The request size: `--max-request-bytes`, then `THINKTHEN_MAX_REQUEST_BYTES`, then 96,000 bytes. ADR 0051.
 
 `--profile FILE` loads a backend profile and has no environment or file tier, by ADR 0032. The question file's `profile` is calibration identity, a separate setting with its own row.

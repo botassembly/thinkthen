@@ -20,6 +20,81 @@ use measure_support::{
     audit, fixture, fixtures, found, payment_rows, ranked, replay, repository, with_ids,
 };
 
+/// Give every saved row one explicit batch setting, or make every row unbatched.
+fn at_batch(rows: &str, setting: Option<serde_json::Value>) -> String {
+    rows.lines()
+        .map(|line| {
+            let mut row: serde_json::Value = serde_json::from_str(line).expect("result row");
+            let meta = row
+                .get_mut("meta")
+                .and_then(serde_json::Value::as_object_mut)
+                .expect("result metadata");
+            match &setting {
+                Some(setting) => {
+                    meta.insert("batch".to_owned(), serde_json::json!({"setting":setting}));
+                }
+                None => {
+                    meta.remove("batch");
+                }
+            }
+            format!("{row}\n")
+        })
+        .collect()
+}
+
+#[test]
+fn audit_reads_and_writes_the_batch_setting() {
+    let scratch = Scratch::new("batch-setting");
+    let file = scratch.write("decide.json", &fixture("write/decide.json"));
+    let rows = payment_rows(&scratch.0, "decide.json");
+    let batched = scratch.write(
+        "batched.jsonl",
+        &at_batch(&rows, Some(serde_json::json!("max"))),
+    );
+    let (code, _, stderr) = audit(&[&batched, &key(), "--write", &file], b"");
+    assert_eq!(
+        (code, stderr.as_str()),
+        (
+            0,
+            "thinkthen: audit: wrote threshold 0.59 for the question; it was 0.9\n"
+        )
+    );
+    assert_eq!(
+        scratch.read("decide.json"),
+        format!(
+            "{HEAD}  \"\\u0074hreshold\": 0.59,\r\n  \"on\": [\"/body\"],\r\n  \"model\": \"jev-1.13.0\",\r\n  \"batch\": \"max\"\r\n}}\r\n"
+        )
+    );
+
+    let rows = payment_rows(&scratch.0, "decide.json");
+    let alone = scratch.write("alone.jsonl", &at_batch(&rows, None));
+    let (code, _, stderr) = audit(&[&alone, &key(), "--write", &file], b"");
+    assert_eq!(code, 0, "{stderr}");
+    assert!(stderr.ends_with("thinkthen: audit: removed batch max for the question; the results ran one record a request\n"), "{stderr}");
+    assert_eq!(
+        scratch.read("decide.json"),
+        format!(
+            "{HEAD}  \"\\u0074hreshold\": 0.59,\r\n  \"on\": [\"/body\"],\r\n  \"model\": \"jev-1.13.0\"\r\n}}\r\n"
+        )
+    );
+
+    let max_rows = at_batch(&rows, Some(serde_json::json!("max")));
+    let ten_rows = at_batch(&rows, Some(serde_json::json!(10)));
+    let mixed: String = max_rows
+        .lines()
+        .zip(ten_rows.lines())
+        .enumerate()
+        .map(|(at, (max, ten))| format!("{}\n", if at == 0 { max } else { ten }))
+        .collect();
+    let mixed = scratch.write("mixed.jsonl", &mixed);
+    let before = scratch.read("decide.json");
+    let (code, _, stderr) = audit(&[&mixed, &key(), "--write", &file], b"");
+    assert_eq!(code, 0, "{stderr}");
+    assert!(stderr.starts_with("thinkthen: audit: warning: the results ran at more than one batch setting (10 and max); a bar tuned over both may fit neither\n"), "{stderr}");
+    assert!(stderr.contains("thinkthen: audit: kept the batch setting for the question; the results ran at more than one batch setting\n"), "{stderr}");
+    assert_eq!(scratch.read("decide.json"), before);
+}
+
 /// The payment question of `transforms/rows`, pretty-printed with CRLF line
 /// ends and an escaped `threshold` key, as `write/decide.json` holds it.
 const HEAD: &str = "{\r\n  \"decide\": \"Does the message report a payment failure?\",\r\n";
