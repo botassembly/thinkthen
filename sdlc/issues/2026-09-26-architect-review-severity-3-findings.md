@@ -34,7 +34,7 @@ The review rated these findings severity 3: a sharp edge or a missing feature. N
 - I9. DuckDB refuses every call after 16 distinct engines.
 - I10. The throttle belongs to the process for its whole life. Tracked in part: ADR 0047 item 5.
 - I11. Libraries cannot set timeout, retries, profile or replay. Tracked: 0148, 0149.
-- I12. A SQLite cancel leaves a detached worker holding its permit.
+- I12. A SQLite cancel leaves a detached worker holding its permit. Tracked: 0168.
 - I13. DuckDB relate's message for an uncommitted table misleads.
 - I14. List calls refuse `choose`, `score` and `tag` over many texts. Tracked: the equivalence page, E2.
 - I15. The missing-key error has a different kind on each surface. Consider folding into 0148.
