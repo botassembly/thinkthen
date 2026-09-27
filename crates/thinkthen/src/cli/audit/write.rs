@@ -129,7 +129,7 @@ fn model(results: &[Line]) -> Result<&str, &'static str> {
         .ok_or("a result names no model")?;
     let mut named = named.into_iter();
     match (named.next(), named.next()) {
-        (Some(model), None) => ModelName::new(model)
+        (Some(model), None) => ModelName::reported(model)
             .map(|_| model)
             .map_err(|_| "a result names a blank model"),
         _ => Err("the results name more than one model"),

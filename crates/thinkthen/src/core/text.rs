@@ -159,8 +159,8 @@ impl fmt::Debug for Evidence {
 pub(crate) struct ModelName(String);
 
 impl ModelName {
-    /// Take a model name with the white space around it dropped, as a base
-    /// address drops its own.
+    /// Take the model a request names, with the white space around it
+    /// dropped, as a base address drops its own.
     ///
     /// # Errors
     ///
@@ -176,6 +176,23 @@ impl ModelName {
             return Err(BlankTextError::ModelControl);
         }
         Ok(Self(name.to_owned()))
+    }
+
+    /// Take the model a reply or a saved result names, as it wrote it.
+    ///
+    /// A backend's name is reported, not chosen, so it keeps its bytes and a
+    /// diagnostic withholds it when it is not safe to print.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BlankTextError`] when the text is empty or holds only white
+    /// space.
+    pub(crate) fn reported(text: impl Into<String>) -> Result<Self, BlankTextError> {
+        let text = text.into();
+        if text.trim().is_empty() {
+            return Err(BlankTextError::ModelName);
+        }
+        Ok(Self(text))
     }
 
     /// Read the model that answered back as text.
