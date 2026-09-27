@@ -6,7 +6,7 @@ opens: sdlc/planning/adr/0056-recognize-is-three-steps.md crates/thinkthen/src/c
 
 # 0147: Build recognize in three steps
 
-Status: ready for review. The coordinator filled the step-2 wording, the web kinds and the name score from local experiments 284, 286 and 287, and the step-1 wording from local experiment 288. This version replaces the whole earlier ticket, which recorded the design issue's word rules in an ADR numbered 0050. That ADR was never written. Ian's rulings of 2026-09-26 replaced its method, and ADR 0056 now holds the design. A fresh read-only reviewer accepts this ticket before it is built. Owner: Claude.
+Status: ready. The coordinator accepted it on 2026-09-27 after five rounds of fresh read-only reviews, with step 1 moved to the q3 wording on local experiment 288's evidence. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -197,7 +197,7 @@ Every scored test replays a recording and grades it with `audit --match strict` 
 1. **The key at five kinds, replayed.** `person place organisation work thing` over all 200 key lines. Bar: F1 of at least 82. With q3 at six pieces, local experiment 279 measured 88.8 to 90.5 on the first half and 83.2 to 83.9 on the second.
 2. **The key with no kinds, replayed.** Graded by `audit` under the new rule, which grades every name as `ENTITY`. No `jq` mapping runs. Bar: F1 of at least 86. With q3 at six pieces, local experiment 279 measured 89.8 to 90.9 and 87.7 to 88.4.
 3. **The key filtered to `person`, replayed.** `recognize person`. A printed name of any other kind counts against precision. Bar: F1 of at least 70. With q3 at six pieces, local experiment 279 measured 92.6 in every run and 75.5 to 78.4. Main scored 27.0 at `person` on the first half (local experiment 274).
-4. **Relations, replayed.** The 30 relation sentences at kinds `person song album place` with local experiment 278's four rules: `sang=person:song`, `wrote=person:song`, `appears_on=song:album` and `recorded_at=album:place`. A recognize edge prints as:
+4. **Relations, replayed.** The 30 relation sentences at kinds `person song album place organisation`, as local experiment 278 ran them, so its figure is a same-setup reference. `relations.jsonl` holds 4 `organisation` names. The four rules are local experiment 278's: `sang=person:song`, `wrote=person:song`, `appears_on=song:album` and `recorded_at=album:place`. A recognize edge prints as:
 
    ```json
    {"relation":"sang","source":{"text":"Paul McCartney","start":0,"end":14,"length":14,"kind":"person","strength":0.9712},"target":{"text":"Yesterday","start":20,"end":29,"length":9,"kind":"song","strength":0.9431},"probability":0.97}
@@ -273,7 +273,7 @@ Every recognize request changes, so every recognize recording is made again. Eac
 | Test 1, the key at five kinds | 1,489 | about $0.022 |
 | Test 2, the key with no kinds | 1,489 | about $0.018 |
 | Test 3, the key at `person` | 1,489 | about $0.021 |
-| Test 4, the relation sentences with rules | about 300 | about $0.005 |
+| Test 4, the relation sentences at five kinds with rules | about 300 | about $0.005 |
 | Test 5, the long text at five kinds | 1,018 | about $0.014 |
 | Demo 44, `spec/recognize.md`, conformance cases 41 to 50 | about 200 | about $0.003 |
 
@@ -300,7 +300,7 @@ In the commit that changes each behavior:
 
 ## Ratchet
 
-Main's ceiling is 70,193 lines. The estimate is +430 against it, about 70,623, from +280 to +730.
+Main's ceiling was 70,310 lines on 2026-09-27. The build reads it when it starts. The estimate is +430 against it, about 70,740, from 70,590 to 71,040.
 
 - Grows: the splitter, the step-1 questions and chunking (about 70 lines), the decode (about 45), the forward-backward score (about 30), the step-2 kind and edge questions (about 110), the three-round facade (about 60), the guard and the rule parser (about 40), and the tests: five tables and nine outside-in tests (about 500).
 - Shrinks: the old splitter, the five-word window, the detection and kind questions, the kind vote and the strength formula (about 230), and the old recognize tests that pin them (about 200).
