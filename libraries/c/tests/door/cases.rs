@@ -10,6 +10,7 @@
 //! - `30-local-question-file` loads a question file, and the door reads none.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 use conformance_backend::Backend;
@@ -62,7 +63,11 @@ fn every_applicable_shared_case_passes_through_the_door() {
         }
         if SKIPPED.contains(&id.as_str()) {
             not_run += 1;
-            eprintln!("{id}: not run by the C door (internal injection or local question file)");
+            writeln!(
+                std::io::stderr().lock(),
+                "{id}: not run by the C door (internal injection or local question file)"
+            )
+            .expect("write skipped case to stderr");
             continue;
         }
         ran += 1;
@@ -73,13 +78,15 @@ fn every_applicable_shared_case_passes_through_the_door() {
             failures.push(format!("{id}: {why}"));
         }
     }
-    eprintln!(
+    writeln!(
+        std::io::stderr().lock(),
         "C door: total={} selected={selected_count} pass={} fail={} not_run={not_run} unselected={}",
         cases.len(),
         ran - failures.len(),
         failures.len(),
         cases.len() - selected_count
-    );
+    )
+    .expect("write case counts to stderr");
     assert_eq!(ran + not_run, selected_count);
     assert!(failures.is_empty(), "{failures:#?}");
 }
