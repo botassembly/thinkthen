@@ -64,7 +64,7 @@ The question text under the verb's key is a string, an object, or a list. A stri
 
 `options` and `labels` are lists, or maps from each label to its description. A description is a string, an object, a list, or `null`. A label with no description is written as a list entry, or as a map entry whose value is `null`. A description that is `null`, empty, or holds only white space is no description.
 
-`levels` is a list of names, lowest first, or a map from each name to its description. A map value of `null` is the description the model reads, and the level's name is never substituted for it. A map string that is empty or holds only white space is refused, because the wire would carry it. An object or a list inside a levels list is refused with a message that names the map form. A result still reports the levels as the list of names.
+`levels` is a list of names, lowest first, or a map from each name to its description. A map value of `null` is no description. The request sends an empty object in that level's place, and the level's name is never substituted for it. A map string that is empty or holds only white space is refused, because the wire would carry it. An object or a list inside a levels list is refused with a message that names the map form. A result still reports the levels as the list of names.
 
 `on` is one JSON Pointer, or a list of them, as `--field` takes one or several.
 

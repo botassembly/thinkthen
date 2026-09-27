@@ -239,27 +239,22 @@ fn read(
         (
             Question::Choose { options, .. },
             ResponseAnswer::Choice {
-                probabilities,
+                probabilities: wire,
                 confidence,
             },
         ) => Answer::new_choice(
-            spread(
-                options,
-                options.names().cloned(),
-                probabilities.as_ref(),
-                place,
-            )?,
+            spread(options, options.names().cloned(), wire.as_ref(), place)?,
             reported(*confidence, place)?,
         )
         .ok_or(DecodeError::MissingProbability(place)),
         (
             Question::Score { levels, .. },
             ResponseAnswer::Score {
-                probabilities,
+                probabilities: wire,
                 confidence,
             },
         ) => Answer::new_score(
-            spread(levels, numbered(levels), probabilities.as_ref(), place)?,
+            spread(levels, numbered(levels), wire.as_ref(), place)?,
             reported(*confidence, place)?,
         )
         .ok_or(DecodeError::MissingProbability(place)),
