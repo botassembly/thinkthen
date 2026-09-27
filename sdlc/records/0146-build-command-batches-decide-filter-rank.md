@@ -85,4 +85,13 @@ The batched path grew past its budget. It holds the reader thread, the batch que
 
 ## Ladder
 
-LADDER
+Each rung ran once, alone, with the load average under 10, at `314f5e8d` and after.
+
+| Rung | Result |
+| --- | --- |
+| `lint` | exit 0; ratchet 73,400 of 73,400 |
+| `test` | exit 0; 982 passed, 0 failed across 38 test binaries |
+| `spec` | exit 0; demos 21 green, 0 red |
+| `surfaces` | exit 1 on `libraries/c`, the door's byte comparison under the default. After the pin, exit 0: every surface and the release smoke pass |
+
+`install` did not run. No dependency changed.
