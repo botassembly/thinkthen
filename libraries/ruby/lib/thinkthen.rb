@@ -42,26 +42,54 @@ end
 require_relative "thinkthen/thinkthen"
 
 module ThinkThen
+  # The print form of every result value. A field holding the caller's text
+  # prints as its byte count, as the Rust Debug and Python repr forms do. A
+  # list prints as its length. Places, probabilities, and rule names print
+  # in clear.
+  module Withheld
+    TEXT = %i[name kind text record unit].freeze
+
+    def inspect
+      fields = each_pair.map do |name, value|
+        shown = if value.nil? then "nil"
+                elsif TEXT.include?(name) then value.is_a?(String) ? "<#{value.bytesize} bytes withheld>" : "<withheld>"
+                elsif value.is_a?(Array) then value.size.to_s
+                else value.inspect
+                end
+        "#{name}=#{shown}"
+      end
+      "#<struct #{self.class.name} #{fields.join(", ")}>"
+    end
+
+    alias to_s inspect
+
+    def pretty_print(printer)
+      printer.text(inspect)
+    end
+  end
+
   # A name and its kind, as relate reads and returns them.
-  Entity = Struct.new(:name, :kind)
+  Entity = Struct.new(:name, :kind) { include Withheld }
 
   # One name recognize found. `start`, `end`, and `length` count characters,
   # so `text[start...end]` is the name. `kind` is "ENTITY" when the call
   # named no kind.
-  RecognizedEntity = Struct.new(:text, :start, :end, :length, :kind, :strength)
+  RecognizedEntity = Struct.new(:text, :start, :end, :length, :kind, :strength) { include Withheld }
 
   # One relation between two recognized names.
-  Relation = Struct.new(:relation, :source, :target, :probability)
+  Relation = Struct.new(:relation, :source, :target, :probability) { include Withheld }
 
   # What recognize returned. `relations` is nil when no rule was given.
-  Recognized = Struct.new(:entities, :relations)
+  Recognized = Struct.new(:entities, :relations) { include Withheld }
 
   # One edge relate found, with Entity ends.
-  Edge = Struct.new(:relation, :source, :target, :probability)
+  Edge = Struct.new(:relation, :source, :target, :probability) { include Withheld }
 
   # The record's place in the input, the record, and its probability.
-  # Most likely yes first. Ties keep input order.
+  # Most likely yes first. Ties keep input order. `to_s` is the record.
   Ranked = Struct.new(:index, :record, :probability) do
+    include Withheld
+
     def to_s
       record.to_s
     end
@@ -69,12 +97,12 @@ module ThinkThen
 
   # The selected unit's place, the unit, and its probability. Every field
   # is nil when nothing is selected.
-  Found = Struct.new(:index, :unit, :probability)
+  Found = Struct.new(:index, :unit, :probability) { include Withheld }
 
   # The watchdog's cadence and one in-flight call's row.
   WATCHDOG_INTERVAL = 0.1
   Row = Struct.new(:tick, :token, :error)
-  private_constant :WATCHDOG_INTERVAL, :Row, :Native
+  private_constant :WATCHDOG_INTERVAL, :Row, :Native, :Withheld
 
   @rows = {}
   @rows_mutex = Mutex.new
