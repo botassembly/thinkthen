@@ -13,6 +13,8 @@
 
 namespace duckdb {
 
+inline constexpr const char *OWNER_KEY = "thinkthen_statement_owner";
+
 struct ResolvedQuestion {
 	string text;
 	bool from_file = false;

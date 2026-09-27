@@ -1,8 +1,10 @@
 #define DUCKDB_EXTENSION_MAIN
 
 #include "duckdb.hpp"
+#include "bridge.hpp"
 #include "listed_result.hpp"
 #include "scalar_owner.hpp"
+#include "scalar_settings.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/file_system.hpp"
 #include "duckdb/common/weak_ptr_ipp.hpp"
@@ -26,72 +28,8 @@
 #include <tuple>
 #include <vector>
 
-static_assert(sizeof(double) == 8, "the Rust bridge returns eight-byte probabilities");
-
-extern "C" {
-struct ThinkThenReply {
-	int32_t status;
-	uint8_t *bytes;
-	size_t len;
-};
-struct ThinkThenText {
-	const uint8_t *bytes;
-	size_t len;
-};
-struct ThinkThenSettings {
-	int64_t throttle;
-	int64_t max_requests;
-	int64_t max_requests_total;
-	const uint8_t *cache_bytes;
-	size_t cache_len;
-	int32_t cache_allowed;
-};
-int32_t thinkthen_cpp_init();
-ThinkThenReply thinkthen_cpp_validate_question(const uint8_t *bytes, size_t len, int32_t from_file);
-ThinkThenReply thinkthen_cpp_validate_set(const uint8_t *bytes, size_t len, int32_t from_file);
-ThinkThenReply thinkthen_cpp_validate_listed(const uint8_t *question, size_t question_len,
-                                             const ThinkThenText *members, size_t member_count, int32_t kind);
-ThinkThenReply thinkthen_cpp_scalar_group(const uint8_t *question, size_t question_len, const ThinkThenText *texts,
-                                          size_t count, int64_t deadline_ms, int32_t kind,
-                                          ThinkThenSettings settings, int32_t from_file);
-ThinkThenReply thinkthen_cpp_try_details_row(const uint8_t *question, size_t question_len,
-                                             const uint8_t *evidence, size_t evidence_len,
-                                             int64_t deadline_ms, ThinkThenSettings settings, int32_t from_file);
-ThinkThenReply thinkthen_cpp_listed_group(const uint8_t *question, size_t question_len,
-                                          const ThinkThenText *members, size_t member_count,
-                                          const ThinkThenText *texts, size_t text_count,
-                                          int64_t deadline_ms, int32_t kind, ThinkThenSettings settings);
-void thinkthen_cpp_free(uint8_t *bytes, size_t len);
-}
-
 namespace duckdb {
 namespace {
-
-constexpr const char *OWNER_KEY = "thinkthen_statement_owner";
-
-struct RustReply {
-	explicit RustReply(ThinkThenReply value) : value(value) {
-	}
-	~RustReply() {
-		thinkthen_cpp_free(value.bytes, value.len);
-	}
-	RustReply(const RustReply &) = delete;
-	RustReply &operator=(const RustReply &) = delete;
-	ThinkThenReply value;
-};
-
-string ReplyText(const ThinkThenReply &reply) {
-	if (!reply.bytes) {
-		return "thinkthen defect: the bridge returned no error buffer";
-	}
-	return string(reinterpret_cast<const char *>(reply.bytes), reply.len);
-}
-
-void Checked(const ThinkThenReply &reply) {
-	if (reply.status != 0) {
-		throw InvalidInputException("%s", ReplyText(reply).c_str());
-	}
-}
 
 void ValidateQuestion(const ResolvedQuestion &resolved, bool set = false) {
 	const auto validate = set ? thinkthen_cpp_validate_set : thinkthen_cpp_validate_question;
@@ -191,47 +129,6 @@ struct DecisionGroup {
 	vector<string> texts;
 	std::map<string, idx_t> seen;
 };
-
-int64_t NumericSetting(ClientContext &context, const char *name) {
-	Value value;
-	return context.TryGetCurrentSetting(name, value) && !value.IsNull() ? value.GetValue<int64_t>()
-	                                                                      : std::numeric_limits<int64_t>::min();
-}
-
-struct SessionSettings {
-	int64_t throttle;
-	int64_t max_requests;
-	int64_t max_requests_total;
-	std::optional<string> cache;
-	int32_t cache_allowed = 1;
-
-	ThinkThenSettings Bridge() const {
-		return {throttle, max_requests, max_requests_total,
-		        cache ? reinterpret_cast<const uint8_t *>(cache->data()) : nullptr,
-		        cache ? cache->size() : 0, cache_allowed};
-	}
-};
-
-SessionSettings Settings(ClientContext &context) {
-	SessionSettings settings {NumericSetting(context, "thinkthen_throttle"),
-	                          NumericSetting(context, "thinkthen_max_requests"),
-	                          NumericSetting(context, "thinkthen_max_requests_total")};
-	Value value;
-	if (context.TryGetCurrentSetting("thinkthen_cache", value) && !value.IsNull()) {
-		settings.cache = value.GetValue<string>();
-		const auto &folder = *settings.cache;
-		if (!folder.empty() && folder[0] == '/' && folder.find("://") == string::npos) {
-			try {
-				FileSystem::GetFileSystem(context).OpenFile(folder + "/.probe", FileOpenFlags::FILE_FLAGS_READ);
-			} catch (const IOException &) {
-				// A missing probe file still means the caller could open the folder.
-			} catch (const Exception &) {
-				settings.cache_allowed = 0;
-			}
-		}
-	}
-	return settings;
-}
 
 void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &bound = Bound(state);
