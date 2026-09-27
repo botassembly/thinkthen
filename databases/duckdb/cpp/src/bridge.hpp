@@ -41,6 +41,14 @@ ThinkThenReply thinkthen_cpp_listed_group(const uint8_t *question, size_t questi
                                           const ThinkThenText *members, size_t member_count,
                                           const ThinkThenText *texts, size_t text_count,
                                           int64_t deadline_ms, int32_t kind, ThinkThenSettings settings);
+ThinkThenReply thinkthen_cpp_validate_nested(const uint8_t *argument, size_t argument_len,
+                                             const ThinkThenText *members, size_t member_count,
+                                             int32_t kind, int32_t from_file);
+ThinkThenReply thinkthen_cpp_nested_group(const uint8_t *argument, size_t argument_len,
+                                          const ThinkThenText *members, size_t member_count,
+                                          const ThinkThenText *texts, size_t text_count,
+                                          int64_t deadline_ms, int32_t kind, ThinkThenSettings settings,
+                                          int32_t from_file);
 void thinkthen_cpp_free(uint8_t *bytes, size_t len);
 }
 

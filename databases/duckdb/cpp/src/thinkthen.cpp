@@ -3,6 +3,7 @@
 #include "duckdb.hpp"
 #include "bridge.hpp"
 #include "listed_result.hpp"
+#include "nested.hpp"
 #include "scalar_owner.hpp"
 #include "scalar_settings.hpp"
 #include "duckdb/common/exception.hpp"
@@ -404,6 +405,7 @@ void LoadThinkThen(ExtensionLoader &loader) {
 			loader.RegisterFunction(function);
 		}
 	}
+	RegisterNested(loader);
 }
 
 } // namespace duckdb

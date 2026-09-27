@@ -9,6 +9,7 @@ use crate::{engines, errors};
 use thinkthen::{Answer, CallOptions, LoadedQuestion, Question, QuestionSet};
 
 mod listed;
+mod nested;
 
 thread_local! {
     static BRIDGE_DEPTH: Cell<usize> = const { Cell::new(0) };
@@ -259,6 +260,59 @@ fn frame(bytes: &mut Vec<u8>, json: &str) -> Result<(), String> {
     bytes.extend_from_slice(&len.to_ne_bytes());
     bytes.extend_from_slice(json.as_bytes());
     Ok(())
+}
+
+/// Validate one recognize kind list or relation question before any send.
+///
+/// # Safety
+/// The argument and members must stay readable through this call.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_cpp_validate_nested(
+    argument: *const u8,
+    argument_len: usize,
+    members: *const BridgeText,
+    member_count: usize,
+    kind: i32,
+    from_file: i32,
+) -> Reply {
+    reply_boundary(|| {
+        let argument = text(argument, argument_len)?;
+        let members = copied_texts(members, member_count)?;
+        nested::ask(kind, argument, &members, from_file != 0).map(|_| Vec::new())
+    })
+}
+
+/// Evaluate one grouped recognize or relations call through the public engine.
+///
+/// # Safety
+/// The argument, members, and texts must stay readable through this call.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_cpp_nested_group(
+    argument: *const u8,
+    argument_len: usize,
+    members: *const BridgeText,
+    member_count: usize,
+    texts: *const BridgeText,
+    text_count: usize,
+    deadline_ms: i64,
+    kind: i32,
+    settings: BridgeSettings,
+    from_file: i32,
+) -> Reply {
+    reply_boundary(|| {
+        let argument = text(argument, argument_len)?;
+        let members = copied_texts(members, member_count)?;
+        let texts = copied_texts(texts, text_count)?;
+        let ask = nested::ask(kind, argument, &members, from_file != 0)?;
+        let asked = asked(&settings)?;
+        let engine = engines::engine_for(&asked, |_| probe(&settings))?;
+        let (texts, cut) = engines::within_total(&asked, texts)?;
+        let values = nested::run(&engine, &ask, texts, deadline_ms, kind)?;
+        if let Some(error) = cut {
+            return Err(error);
+        }
+        Ok(values)
+    })
 }
 
 /// Evaluate one listed group through the public engine.

@@ -93,6 +93,8 @@ The listed `choose`, `score`, and `tag` path uses a checked private result codec
 
 Annotate exposed an arity assumption in the C++ bind path: treating every kind numbered four or higher as listed made the two-argument annotate bind access argument two and trigger a DuckDB internal error before any send. The correction names the three listed kinds explicitly. A parameterized NULL-row host check binds the current scalar signatures, including annotate with and without its deadline, and confirms their result types without model requests. The annotate parser and result use the existing grouped text and JSON framing paths. Future recognize, relations, warm, and usage dispatch must name their own signatures and cannot inherit the listed predicate by numeric range.
 
+Recognize and relations now use a separate scalar registration and bind path with their exact signatures. A private typed byte codec carries complete entity and relation fields from the public engine into DuckDB lists of structs. The family-level stock-host check covers bad foldable and later-row arguments, NULLs, allowed and refused rules files, and actual nested outputs. It also caught no new arity alias after the explicit bind split. Usage, warm, relate, host interruption, full file permission, and package proofs still remain before the product extension can replace the shipped C API surface.
+
 ## Evidence
 
 - Starts from: Local experiment 207's v1.5.5 bind crash, local experiment 253's stock-host settings and file proofs, the two open DuckDB C API issues, the 0110 and 0118 records, current `origin/main` `9b8bf076`, and DuckDB's tagged v1.5.5 C++ headers linked above.
