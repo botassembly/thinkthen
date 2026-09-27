@@ -167,12 +167,10 @@ for thread in threads:
 """
 
 
-@case
-def r4_22_one_signal_stops_every_held_query_and_relate_asks_once():
-    """Two and then four queries at once, a relate among them: one SIGINT
-    stops each within 100 ms, and the backend's count stays put. 20 runs."""
+def held_queries_stop_together(rounds: int):
+    """Exercise both thread widths and keep the repeated run opt-in."""
     queries = [PAIR, "SELECT thinkthen_decide('Is it a refund?', 'held a')", "SELECT thinkthen_details('Is it a refund?', 'held b')", "SELECT thinkthen_probability('Is it a refund?', 'held c')"]
-    for run_number in range(20):
+    for run_number in range(rounds):
         for width in (2, 4):
             with Backend() as backend, tempfile.TemporaryDirectory() as folder:
                 child = subprocess.Popen(
@@ -196,13 +194,22 @@ def r4_22_one_signal_stops_every_held_query_and_relate_asks_once():
 
 
 @case
-def r1_21_the_next_query_answers_after_a_stop():
-    """50 rounds on the re-holding arm: a stopped query, then one that answers."""
+def one_signal_stops_two_and_four_held_queries():
+    held_queries_stop_together(1)
+
+
+@case
+def r4_22_one_signal_stops_every_held_query_and_relate_asks_once():
+    """Twenty rounds at each width, retained as an opt-in campaign."""
+    held_queries_stop_together(20)
+
+
+def stop_then_answer(rounds: int):
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         child = Child(backend.base("arm/held"), Path(folder))
         try:
             sent = 0
-            for index in range(50):
+            for index in range(rounds):
                 child.ask(f"SELECT thinkthen_decide('Is it a refund?', 'stopped {index}')")
                 sent = backend.wait(sent + 1)
                 child.interrupt()
@@ -217,17 +224,38 @@ def r1_21_the_next_query_answers_after_a_stop():
 
 
 @case
-def r2_14_a_signal_between_queries_stops_nothing():
+def the_next_query_answers_after_one_stop():
+    stop_then_answer(1)
+
+
+@case
+def r1_21_the_next_query_answers_after_a_stop():
+    """Fifty stop/recovery rounds, retained as an opt-in campaign."""
+    stop_then_answer(50)
+
+
+def signal_between_queries(rounds: int):
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         child = Child(backend.base(), Path(folder))
         try:
-            for index in range(50):
+            for index in range(rounds):
                 child.interrupt()
                 time.sleep(0.02)
                 child.ask(f"SELECT thinkthen_decide('Is it a refund?', 'after {index}')")
                 expect(child.read(), {"rows": [[True]]}, f"round {index}")
         finally:
             child.close()
+
+
+@case
+def a_signal_between_queries_stops_nothing_once():
+    signal_between_queries(1)
+
+
+@case
+def r2_14_a_signal_between_queries_stops_nothing():
+    """Fifty between-query interrupts, retained as an opt-in campaign."""
+    signal_between_queries(50)
 
 
 @case
@@ -256,22 +284,32 @@ def r3_13_a_default_action_still_ends_the_process():
         backend.release()
 
 
-@case
-def r6_6_a_chained_host_handler_sees_every_signal():
+def chained_host_handler(rounds: int):
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         child = Child(backend.base("arm/held"), Path(folder))
         try:
             sent = 0
-            for index in range(20):
+            for index in range(rounds):
                 child.ask(f"SELECT thinkthen_decide('Is it a refund?', 'chained {index}')")
                 sent = backend.wait(sent + 1)
                 child.interrupt()
                 expect(said(child.read()), CANCELLED, f"signal {index}")
                 backend.round()
             child.ask("seen")
-            expect(child.read(), {"seen": 20}, "the host handler's count")
+            expect(child.read(), {"seen": rounds}, "the host handler's count")
         finally:
             child.close()
+
+
+@case
+def a_chained_host_handler_sees_two_signals():
+    chained_host_handler(2)
+
+
+@case
+def r6_6_a_chained_host_handler_sees_every_signal():
+    """Twenty held signals, retained as an opt-in campaign."""
+    chained_host_handler(20)
 
 
 @case
@@ -407,7 +445,11 @@ def r5_21_ten_thousand_signals_while_four_threads_allocate():
 
 
 if __name__ == "__main__":
-    stress = {"r5_21_ten_thousand_signals_while_four_threads_allocate"}
+    stress = {"r4_22_one_signal_stops_every_held_query_and_relate_asks_once",
+              "r1_21_the_next_query_answers_after_a_stop",
+              "r2_14_a_signal_between_queries_stops_nothing",
+              "r6_6_a_chained_host_handler_sees_every_signal",
+              "r5_21_ten_thousand_signals_while_four_threads_allocate"}
     only_stress = os.environ.get("THINKTHEN_TEST_PROFILE") == "stress"
     CASES[:] = [function for function in CASES if (function.__name__ in stress) == only_stress]
     sys.exit(main())
