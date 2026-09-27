@@ -96,9 +96,9 @@ Done when: `libraries/ruby/check.sh` passes on a Mac, the run is recorded, and R
 
 Today: `gate.yml` runs only by hand, under Ian's 2026-09-22 ruling. Both workflows were disabled by hand on GitHub the same day. `pages.yml` still names a push trigger on `site/**`. Its actions use tags such as `actions/checkout@v4`, while `gate.yml` pins every action to a commit. The 2026-09-24 plan says the site needs a deploy path Ian approves. The README's Gates section still says `gate.yml` "runs the first four rungs on every push and every pull request", and that sentence is wrong.
 
-Asked: a release workflow started by a version tag. Trusted publishing in items 4 to 7 needs GitHub Actions, and Ian's 2026-09-22 ruling pauses them. Every action gets pinned to a commit. The release workflow does not change in the cycle that ships. A full dry release to a draft runs before the real one.
+Asked: a release workflow started by a version tag. Ian's 2026-09-25 ruling above authorizes GitHub Actions for release publishing in items 4 to 7; the ordinary gate remains manual. Every action gets pinned to a commit. The release workflow does not change in the cycle that ships. A full dry release to a draft runs before the real one.
 
-Done when: Ian rules on Actions for releases, the release workflow runs a dry release from a tag, `pages.yml` pins its actions, and the README's Gates sentence matches `gate.yml`.
+Done when: the release workflow runs a dry release from a tag, `pages.yml` pins its actions, and the README's Gates sentence matches `gate.yml`.
 
 ## 11. Smoke tests and the release checklist
 
