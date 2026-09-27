@@ -335,6 +335,30 @@ mod tests {
         assert_eq!(found, [("é", 0, 1), ("😀", 2, 3), ("e\u{301}lan", 4, 9), (".", 9, 10)]);
     }
 
+    #[derive(serde::Deserialize)]
+    struct KeyLine { text: String, value: KeyValue }
+    #[derive(serde::Deserialize)]
+    struct KeyValue { entities: Vec<KeyName> }
+    #[derive(serde::Deserialize)]
+    struct KeyName { start: usize, end: usize }
+
+    /// Ticket 0164: a key name is reachable when one word starts where it starts and one ends where it ends.
+    #[test]
+    fn todays_words_reach_322_of_the_name_keys_372_names() {
+        let (mut reached, mut names, mut words) = (0, 0, 0);
+        for line in include_str!("../../../../specification/fixtures/recognize/names.jsonl").lines() {
+            let line: KeyLine = serde_json::from_str(line).unwrap();
+            let tokens = tokenize(&line.text);
+            words += tokens.len();
+            for name in line.value.entities {
+                names += 1;
+                let edge = |at: fn(&super::Token) -> usize, place| tokens.iter().any(|token| at(token) == place);
+                reached += usize::from(edge(|token| token.start, name.start) && edge(|token| token.end, name.end));
+            }
+        }
+        assert_eq!((reached, names, words), (322, 372, 1735));
+    }
+
     fn answer(detected: bool, detection_probability: f64, kind: usize, probabilities: &[f64]) -> TokenAnswer {
         TokenAnswer { detected, detection_probability, kind, kind_probabilities: probabilities.to_vec() }
     }

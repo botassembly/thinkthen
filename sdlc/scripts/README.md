@@ -15,6 +15,7 @@ The repository gate and its hand-run support scripts.
 | `pages`, `pages-self-test` | Keep the how-to lists, titles, states, and links aligned |
 | `settings`, run by `spec` | Fails rung 3 when `specification/settings.md` lacks a row for a flag in any command's help, a product `THINKTHEN_` variable, or a question-file key, names one that no longer exists, or moves a column (ticket 0140). `--self-test` plants each fault into a copy of the page first |
 | `tickets` | Fails rung 1 when a ticket numbered 0120 or higher lacks its five-part Evidence section. `--self-test` runs its planted cases first |
+| `recognize-keys` | Fails rung 1 when a line of `specification/fixtures/recognize/names.jsonl` or `relations.jsonl` has a name whose code-point offsets do not cut it out of its text, overlaps the name before, repeats an id, or names an edge endpoint its line lacks (ticket 0164). `--self-test` plants each fault first. `convert names SOURCE` and `convert relations SOURCE` print the converted keys |
 | `live` | The hand-run paid-call door. It initializes, reads, locks, validates, and appends the shared ledger, then replaces itself with one charged job |
 | `policy.py` | Holds accepted Rust policy tables for rung 1 |
 | `catalog.py` | Holds the shipped transform copies, the catalog table, and the source package byte-identical to `transforms/` for rung 1 |

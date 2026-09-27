@@ -87,6 +87,19 @@ class TestSurface < Minitest::Test
     assert_equal 0, count
   end
 
+  # find's none is true or false, refused before any request.
+  def test_find_refuses_a_none_that_is_not_true_or_false
+    lines, count = run_child(<<~RUBY)
+      begin
+        T.find("Which?", %w[a b], none: "yes")
+      rescue T::UsageError => e
+        say e.message
+      end
+    RUBY
+    assert_equal ["none is true or false"], lines
+    assert_equal 0, count
+  end
+
   # R3-16 and G11: a nil, invalid UTF-8, or NUL record refuses by its index
   # before any request.
   def test_a_record_with_no_honest_text_refuses_by_index

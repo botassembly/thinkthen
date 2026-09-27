@@ -31,7 +31,7 @@ Each entry has the shape of one question file, and [question-file.md](question-f
 
 The top-level `threshold` applies to every `decide` question that names none. The optional top-level `profile` names the backend profile used to calibrate the set's thresholds. `version`, `threshold`, `profile`, and `questions` are the only top-level keys. A nested question cannot carry another profile. The set holds no backend address, model, output path, or format. An exact check beyond equality is a `jq` field on the record, by ADR 0008 item 6.
 
-`on` is a JSON Pointer inside the evidence that `--field` selected. It can never reach outside that evidence. A table asks different questions of different columns, and no question should see a column it does not need. The selection follows the `state` rule of [records.md](records.md): an object or a list travels as that JSON value, and several pointers send one ordered object.
+`on` is a JSON Pointer inside the value that the record selected: the whole record, or what `--field` selected. A string is text, even when it holds JSON, and `on` never parses it. A text record or a selected string has no members, and a question that reads `on` in one is refused at exit 2 with a sentence naming the question. It can never reach outside that evidence. Under `--lines`, a set with such a question is refused at exit 2 before any input is read. A table asks different questions of different columns, and no question should see a column it does not need. The selection follows the `state` rule of [records.md](records.md): an object or a list travels as that JSON value, and several pointers send one ordered object.
 
 ### Several pointers on `on`
 
@@ -78,22 +78,22 @@ An unresolved answer is `null`. A failed question is a failure marker and never 
 ## Examples
 
 ```sh
-thinkthen annotate triage.json < issue.txt
+thinkthen annotate triage.json < issue.json
 ```
 
 ```sh
-thinkthen annotate triage.json --jsonl --field /body < issues.jsonl | jq -c 'select(.kind == "bug")'
+thinkthen annotate triage.json --jsonl < issues.jsonl | jq -c 'select(.kind == "bug")'
 ```
 
 ```sh
-thinkthen annotate triage.json --dry-run
+thinkthen annotate triage.json --dry-run < issue.json
 ```
 
 ## `--dry-run`
 
-`--dry-run` validates the file and sends nothing. It needs no key. An empty document is a usage error. An empty line or JSONL stream succeeds and prints nothing. An empty CSV or TSV input fails because its required header is missing. With evidence it prints the first request and an `on` object that names the normalized pointers for every question.
+`--dry-run` validates the file and sends nothing. It needs no key. An empty document is a usage error. An empty line or JSONL stream succeeds and prints nothing, unless a question reads `on` under `--lines`. An empty CSV or TSV input fails because its required header is missing. With evidence it prints the first request a live run sends, which is the first chunk under a profile, and an `on` object that names the normalized pointers for every question. `request_count` counts the requests the first record makes, and `group_requests` counts each `on` group's requests in group order.
 
-One record makes one request per distinct `on`, and the plan shows one request. It is the first record's first `on` set, taking the questions in file order. The plan's `input` object names the framing and, under `on`, the pointers of every question, so a reviewer sees what each check would see and not only the check that the plan printed.
+One record makes at least one request per distinct `on`, and a profile can split a group into several. The plan prints one request: the first that the first record's first `on` set sends, taking the questions in file order. `request_count` and `group_requests` count the rest. The plan's `input` object names the framing and, under `on`, the pointers of every question, so a reviewer sees what each check would see and not only the check that the plan printed.
 
 ```json
 {"framing":"jsonl","on":{"correct":["/input","/gold","/output"],"grounded":["/context","/output"]}}

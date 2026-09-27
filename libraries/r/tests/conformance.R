@@ -16,10 +16,7 @@ unreachable <- c(
   "22-local-fault" = "an injection point inside the engine, which no R call reaches",
   "23-cancelled-fault" = "R raises its own interrupt; tests/interrupt.R proves the batch stop",
   "25-defect-fault" = "an injection point inside the engine, which no R call reaches",
-  "30-local-question-file" = "the R verbs take no decide question file",
-  "18-annotate-two-groups" = "tt_annotate reads one column, so a set with `on` pointers has no R form",
-  "18-find-second" = "tt_find asks with no none candidate, so the request differs",
-  "19-find-none" = "tt_find asks with no none candidate, so the request differs"
+  "30-local-question-file" = "the R verbs take no decide question file"
 )
 
 sha <- function(url, request) {
@@ -113,11 +110,19 @@ run_case <- function(case, served) {
       same("places", ranked$place, vapply(ranking, function(at) at$index + 1L, integer(1)))
       same("probabilities", ranked$probability, vapply(ranking, function(at) at$probability, numeric(1)))
     },
+    find = {
+      operation <- case$expect$success$operation
+      found <- tt_find(asked$find, unlist(asked$units), none = asked$none)
+      picked <- Filter(function(row) identical(row$index, operation$selected), operation$probabilities)
+      same("found", found, if (is.null(operation$selected)) list(place = NA_integer_, unit = NA_character_, probability = NA_real_)
+           else list(place = operation$selected + 1L, unit = asked$units[[operation$selected + 1L]], probability = picked[[1]]$probability))
+    },
     annotate = {
-      frame <- data.frame(input = evidence, stringsAsFactors = FALSE)
+      records <- if (is.null(case$record)) evidence else as.character(jsonlite::toJSON(case$record, auto_unbox = TRUE))
+      frame <- data.frame(input = records, stringsAsFactors = FALSE)
       got <- tt_annotate(file, frame, on = "input")
       for (want in answers) {
-        cell <- got[[want$name]][[want$exchange + 1L]]
+        cell <- got[[want$name]][[if (is.null(case$record)) want$exchange + 1L else 1L]]
         same(want$name, if (is.list(cell)) cell else bare(cell), want$bare)
       }
     },

@@ -1,6 +1,6 @@
 # The recording page says a failure is never recorded
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, reports 03 (2-4), 06 (I-1), 08 (2) and 11 (5). Blocks 0.1 under goal 4. This issue covers only the wrong sentence. Ticket 0158 carries the partial-reply cache fix. Owner for the sentence, after 0158 lands: ticket 0163 on `ticket/0163-the-cache-folder-and-its-pages`, ready for review.
+Status: Closed 2026-09-26 by ticket 0158 (`sdlc/records/0158-build-a-cache-keeps-no-failed-question.md`). `recording.md` now says which failures are never recorded, that `--record` alone writes a partial reply, and that a cache neither installs one nor replays one. Its line 84 says how a user retries a failed question. Filed 2026-09-26 by the queue owner from local experiment 273, reports 03 (2-4), 06 (I-1), 08 (2) and 11 (5).
 
 ## What happens
 

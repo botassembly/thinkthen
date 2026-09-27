@@ -27,6 +27,7 @@ pub(crate) enum Kind {
     Score,
     Rank,
     Find,
+    FindNone,
 }
 
 impl Kind {
@@ -37,7 +38,7 @@ impl Kind {
             Self::Tag => QuestionKind::Tag,
             Self::Score => QuestionKind::Score,
             Self::Rank => QuestionKind::Rank,
-            Self::Find => QuestionKind::Find,
+            Self::Find | Self::FindNone => QuestionKind::Find,
         }
     }
 }
@@ -386,6 +387,22 @@ impl Question {
     /// Returns [`Error::Usage`] for blank text.
     pub fn find(text: &str) -> Result<Self, Error> {
         Ok(Self::yes_no(text_of(text)?, None, None, None, Kind::Find))
+    }
+
+    /// This find question with a `none` candidate beside the units, as
+    /// `find --none` asks. The model may then answer that no unit fits.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Usage`] for a question that is not a find question.
+    pub fn offering_none(self) -> Result<Self, Error> {
+        match self.kind {
+            Kind::Find | Kind::FindNone => Ok(Self {
+                kind: Kind::FindNone,
+                ..self
+            }),
+            _ => Err(Error::usage("only a find question offers none")),
+        }
     }
 
     /// Read one question file. A file whose `on` names a part of a record is

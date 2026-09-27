@@ -47,6 +47,7 @@ pub(crate) use crate::core::backend_profile::LimitKind;
 pub(crate) use crate::core::backend_profile::{
     BackendProfile, ProfileError, ProfileLimit, ProfileName,
 };
+pub(crate) use crate::core::batch::BatchRecord;
 #[cfg(test)]
 pub(crate) use crate::core::digest::question_sha256;
 pub(crate) use crate::core::digest::question_sha256_with_profile;
@@ -61,7 +62,7 @@ pub(crate) use crate::core::question_file::{
     Cutting, QuestionFile, QuestionFileError, Resolved, Source, Sources, Typed, Verb, pointers,
     resolve, safe_key,
 };
-pub(crate) use crate::core::question_set::{QuestionSet, QuestionSetError, check_name};
+pub(crate) use crate::core::question_set::{PartError, QuestionSet, QuestionSetError, check_name};
 pub(crate) use crate::core::recognize::{
     RecognizedName, TokenAnswer, assemble as assemble_names, kind_questions, recognition_questions,
     tokenize,
