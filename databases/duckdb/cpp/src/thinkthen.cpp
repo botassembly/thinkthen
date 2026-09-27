@@ -1,6 +1,7 @@
 #define DUCKDB_EXTENSION_MAIN
 
 #include "duckdb.hpp"
+#include "scalar_owner.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/file_system.hpp"
 #include "duckdb/common/weak_ptr_ipp.hpp"
@@ -83,123 +84,11 @@ void Checked(const ThinkThenReply &reply) {
 	}
 }
 
-struct ResolvedQuestion {
-	string text;
-	bool from_file = false;
-	bool operator==(const ResolvedQuestion &other) const {
-		return text == other.text && from_file == other.from_file;
-	}
-};
-
-ResolvedQuestion ResolveQuestion(ClientContext &context, const string &argument) {
-	if (argument.empty() || argument[0] != '@') {
-		return {argument, false};
-	}
-	const auto path = argument.substr(1);
-	auto &files = FileSystem::GetFileSystem(context);
-	string content;
-	bool too_large = false;
-	try {
-		auto handle = files.OpenFile(path, FileOpenFlags::FILE_FLAGS_READ);
-		vector<char> buffer(64 * 1024);
-		for (;;) {
-			const auto read = files.Read(*handle, buffer.data(), static_cast<int64_t>(buffer.size()));
-			if (read <= 0) {
-				break;
-			}
-			content.append(buffer.data(), static_cast<size_t>(read));
-			if (content.size() > 1024 * 1024) {
-				too_large = true;
-				break;
-			}
-		}
-	} catch (const PermissionException &) {
-		throw InvalidInputException("thinkthen local: the question file %s was not read: this database's file settings refuse it", path.c_str());
-	} catch (const IOException &) {
-		throw InvalidInputException("thinkthen local: the question file %s was not read: it does not exist or could not be opened", path.c_str());
-	} catch (const Exception &) {
-		throw InvalidInputException("thinkthen local: the question file %s was not read: this database's file settings refuse it", path.c_str());
-	}
-	if (too_large) {
-		throw InvalidInputException("thinkthen local: the question file %s was not read: it holds more than 1 MiB", path.c_str());
-	}
-	if (!Value::StringIsValid(content)) {
-		throw InvalidInputException("thinkthen local: the question file %s was not read: it is not UTF-8 text", path.c_str());
-	}
-	return {content, true};
-}
-
 void ValidateQuestion(const ResolvedQuestion &resolved) {
 	RustReply checked(thinkthen_cpp_validate_question(reinterpret_cast<const uint8_t *>(resolved.text.data()),
 	                                               resolved.text.size(), resolved.from_file ? 1 : 0));
 	Checked(checked.value);
 }
-
-struct StatementOwner : ClientContextState {
-	std::mutex lock;
-	uint64_t generation = 0;
-	bool active = false;
-	bool first_use = false;
-	std::optional<std::chrono::steady_clock::time_point> expiry;
-	std::map<string, ResolvedQuestion> files;
-
-	void QueryBegin(ClientContext &context) override {
-		std::lock_guard<std::mutex> held(lock);
-		Start(context, false);
-	}
-	void QueryEnd(ClientContext &, optional_ptr<ErrorData>) override {
-		std::lock_guard<std::mutex> held(lock);
-		active = false;
-		files.clear();
-	}
-	void Start(ClientContext &context, bool late) {
-		Value setting;
-		const auto budget = context.TryGetCurrentSetting("thinkthen_query_budget_ms", setting) && !setting.IsNull()
-		                        ? setting.GetValue<int64_t>()
-		                        : -1;
-		if (budget < -1 || budget > 4294967295000LL) {
-			throw InvalidInputException("thinkthen usage: the query budget is outside the supported range");
-		}
-		active = true;
-		first_use = late;
-		generation++;
-		files.clear();
-		expiry = budget < 0 ? std::nullopt
-		                    : std::optional<std::chrono::steady_clock::time_point>(
-		                          std::chrono::steady_clock::now() + std::chrono::milliseconds(budget));
-	}
-	int64_t Remaining(ClientContext &context) {
-		std::lock_guard<std::mutex> held(lock);
-		if (!active) {
-			Start(context, true);
-		}
-		if (!expiry) {
-			return -1;
-		}
-		const auto now = std::chrono::steady_clock::now();
-		if (now >= *expiry) {
-			throw InvalidInputException("thinkthen deadline: the query has spent its time budget");
-		}
-		return std::chrono::duration_cast<std::chrono::milliseconds>(*expiry - now).count();
-	}
-	ResolvedQuestion Resolve(ClientContext &context, const string &argument) {
-		{
-			std::lock_guard<std::mutex> held(lock);
-			if (!active) {
-				Start(context, true);
-			}
-			if (auto found = files.find(argument); found != files.end()) {
-				return found->second;
-			}
-		}
-		auto resolved = ResolveQuestion(context, argument);
-		if (resolved.from_file) {
-			std::lock_guard<std::mutex> held(lock);
-			return files.emplace(argument, std::move(resolved)).first->second;
-		}
-		return resolved;
-	}
-};
 
 struct ScalarBind : FunctionData {
 	weak_ptr<ClientContext> context;
