@@ -112,7 +112,7 @@ An unresolved answer is never retried. In record mode the exit code reports the 
 
 ## Resume
 
-A rerun with `--record DIR --replay DIR` on one folder answers the finished records from disk and pays only for the rest. [recording.md](recording.md) gives the folder and the entry.
+A rerun with `--record DIR --replay DIR` on one folder answers the finished records from disk and pays only for the rest. A record whose reply was partial counts as unfinished, so the rerun asks for it again. [recording.md](recording.md) gives the folder and the entry.
 
 `--cache DIR` means `--record DIR --replay DIR`, by ADR 0010. It is Settled. `--cache` beside either of the two options it stands for is a usage error.
 
@@ -120,9 +120,9 @@ A rerun with `--record DIR --replay DIR` on one folder answers the finished reco
 thinkthen decide 'This reports a payment failure.' --jsonl --field /body --record runs/tickets --replay runs/tickets < tickets.jsonl
 ```
 
-A first run that stops at record 400 leaves 399 entries. The same command run again replays those 399 and pays for the rest.
+A first run that stops at record 400 leaves 399 entries. The same command run again replays those 399 and pays for the rest. A record whose reply was partial has no entry, so the resumed run asks for it again.
 
-Each digest keeps the first complete response installed in the folder. Concurrent cache misses for that digest wait on one operating-system file lock. The owner checks again, sends only if the entry remains absent, and installs the complete response. Waiters replay it. A failed or stopped owner releases the lock automatically; the next waiter sends if no entry was installed. Record-only writers remain independent, and a later writer holding another stored response stops at exit 5. The winner stays intact, so every successful run can replay the answers it printed.
+Each digest keeps the first complete response installed in the folder. A partial reply, one that failed a question beside a good answer, is not complete. Under ADR 0053 item 6 and its amendment, a cache does not install it, and reads an entry that holds one as a miss. Concurrent cache misses for that digest wait on one operating-system file lock. The owner checks again, sends unless a complete entry now exists, and installs the response only when it is complete. Waiters replay it. A failed or stopped owner releases the lock automatically; the next waiter sends if no entry was installed. Record-only writers remain independent, and a later writer holding another stored response stops at exit 5. The winner stays intact, so every successful run can replay the answers it printed.
 
 ## `jobs`
 

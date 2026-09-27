@@ -16,6 +16,7 @@ mod asked;
 mod cache_configuration;
 mod cache_identity;
 mod cache_locking;
+mod cache_partial;
 #[cfg(target_os = "linux")]
 mod cache_prune_locking;
 #[allow(
