@@ -1,6 +1,6 @@
 # The PostgreSQL check's `has` passes any needle that holds a newline
 
-Status: open. Filed 2026-09-26 by Quick Fix qf-review-273's review.
+Status: Closed 2026-09-27 by Quick Fix `qf/postgresql-check-exact-lines`. Filed 2026-09-26 by Quick Fix qf-review-273's review. See `sdlc/records/qf-postgresql-check-exact-lines.md`.
 
 ## Problem
 

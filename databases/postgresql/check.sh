@@ -64,10 +64,16 @@ check() {
 		echo "FAILED   $1"
 	fi
 }
-# has TEXT NEEDLE: a fixed-string match that prints what it missed.
-has() { grep -qF -- "$2" <<<"$1" || { printf 'missing: %s\nin: %s\n' "$2" "$1" >&2; return 1; }; }
-hasnt() { ! grep -qF -- "$2" <<<"$1" || { printf 'unexpected: %s\nin: %s\n' "$2" "$1" >&2; return 1; }; }
+# has TEXT NEEDLE: match the whole literal needle, including any newlines.
+has() { [[ $1 == *"$2"* ]] || { printf 'missing: %s\nin: %s\n' "$2" "$1" >&2; return 1; }; }
+hasnt() { [[ $1 != *"$2"* ]] || { printf 'unexpected: %s\nin: %s\n' "$2" "$1" >&2; return 1; }; }
 same() { [ "$1" = "$2" ] || { printf 'want: %s\ngot:  %s\n' "$2" "$1" >&2; return 1; }; }
+a_multiline_needle_must_stay_whole() {
+	has $'first\nlast' $'first\nlast'
+	if has first $'first\nlast' 2>/dev/null; then return 1; fi
+	if has last $'\nlast' 2>/dev/null; then return 1; fi
+}
+check a_multiline_needle_must_stay_whole
 now_ms() { echo $((${EPOCHREALTIME/./} / 1000)); }
 within() { [ "$1" -le "$2" ] || { echo "took ${1} ms, over ${2} ms" >&2; return 1; }; }
 Q='{"decide":"Is this a complaint?"}'
@@ -225,7 +231,7 @@ dev_zero_refuses_fast() {
 	out=$(q -c "SELECT thinkthen_decide('@/dev/zero', 'x')" -c "SELECT 1")
 	within $(($(now_ms) - start)) 2000
 	has "$out" "thinkthen local: the question file '@/dev/zero' $DID_NOT_READ"
-	has "$out" "$(printf '\n1')"
+	same "$(tail -n1 <<<"$out")" 1
 	head -c 1048577 /dev/zero | tr '\0' ' ' >"$RUN/big.json"
 	has "$(q -c "SELECT thinkthen_decide('@$RUN/big.json', 'x')")" "the question file '@$RUN/big.json' is over the 1048576 byte cap"
 }
@@ -367,7 +373,7 @@ a_timed_out_batch_leaves_the_session_working() {
 	out=$(q -c "SET statement_timeout = '500ms'" -c "SELECT count(*) FROM thinkthen_decide('$Q', $(rows 200))" \
 		-c "\\! echo release > $RUN/b.in" -c "RESET statement_timeout" -c "SELECT thinkthen_decide('$Q', 'after')")
 	has "$out" "canceling statement due to statement timeout"
-	has "$out" "$(printf '\nt')"
+	same "$(tail -n1 <<<"$out")" t
 	same "$(bcount)" 9
 }
 check a_timed_out_batch_leaves_the_session_working
@@ -482,7 +488,7 @@ a_changed_limit_rebuilds() {
 	fresh generic
 	out=$(q -c "SET thinkthen.max_requests = 3" -c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['a', 'b', 'c'])" \
 		-c "SET thinkthen.max_requests = 2" -c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['d', 'e', 'f'])")
-	has "$out" "$(printf '3\n')"
+	same "$(head -n1 <<<"$out")" 3
 	has "$out" "this engine answers at most 2 records in one call"
 	same "$(bcount)" 3
 }
@@ -546,7 +552,8 @@ the_total_holds_across_rows() {
 	out=$(q -c "SELECT thinkthen_decide('$Q', 'row 1')" -c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['a', 'b', 'c', 'd'])")
 	# A new backend starts from zero: a cached answer sends nothing, and a
 	# four-record batch sends the three the total leaves, then refuses.
-	has "$out" "$(printf 't\nERROR:  thinkthen usage: thinkthen.max_requests_total allows 3 requests in this backend, and they are spent')"
+	same "$out" "t
+ERROR:  thinkthen usage: thinkthen.max_requests_total allows 3 requests in this backend, and they are spent (retryable: no)"
 	same "$(bcount)" 6
 }
 check the_total_holds_across_rows
@@ -619,7 +626,7 @@ a_panic_is_an_error() {
 	out=$(q -c '\set VERBOSITY verbose' -c "SELECT thinkthen_panic_probe()" -c "SELECT 1")
 	has "$out" "XX000"
 	has "$out" "the panic probe fired"
-	has "$out" "$(printf '\n1')"
+	same "$(tail -n1 <<<"$out")" 1
 }
 check a_panic_is_an_error
 
