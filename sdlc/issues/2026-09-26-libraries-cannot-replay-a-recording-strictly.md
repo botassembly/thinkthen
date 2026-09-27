@@ -17,3 +17,7 @@ The website shows every function in every language. The language examples cannot
 A replay-only setting on the public engine that matches `--replay`: answers come only from the named folder, and a miss is an error that sends nothing. Each library and database extension exposes it through its own settings, in the same shape it exposes the cache. The command's recording folder format stays the one format, so one recording serves the command and every library.
 
 The design belongs to this repository. Ian can overturn the request.
+
+## Partial resolution, 2026-09-27
+
+Ticket 0148 settles strict replay for Rust, Python, TypeScript, Ruby, R, C and their frame adapters. SQL replay remains for0149; this issue stays open. See `sdlc/records/0148-engine-settings-everywhere.md`.

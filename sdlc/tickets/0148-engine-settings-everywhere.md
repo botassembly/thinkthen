@@ -6,9 +6,9 @@ opens: crates/thinkthen/src/public/settings.rs crates/thinkthen/src/public/engin
 
 # 0148: Every library gets the command's engine settings
 
-Status: ready. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Claude. It builds after ticket 0146 lands, by the coordinator's ruling of 2026-09-26.
+Status: done 2026-09-27 after fresh Codex semantic review, correction and fresh acceptance at 9117961d. Owner: Codex under Ian's handover.
 
-Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
+Review route: Ian handed this accepted ticket to Codex; fresh read-only Codex reviewers checked its implementation and final correction.
 
 ## Outcome and authority
 
