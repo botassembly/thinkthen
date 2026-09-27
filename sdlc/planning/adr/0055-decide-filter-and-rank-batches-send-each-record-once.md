@@ -67,4 +67,4 @@ The batch issue's recommendations, adopted with the ruling:
 
 ## Amendment
 
-2026-09-26: Item 5's caution also stays for `score`, because item 4 keeps its records list.
+2026-09-26: Item 5's caution, and the consequence for `records.md` and `decide.md`, also stay for `score`, because item 4 leaves `score` unchanged and the planner keeps its records list.
