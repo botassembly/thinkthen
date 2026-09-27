@@ -104,9 +104,9 @@ The review rated these findings severity 3: a sharp edge or a missing feature. N
 
 - 7. Lowering the name threshold never adds a word. Doc line in R8.
 - 8. Possessives and quotes stay in names, and touching names merge. Tracked: R2, R3.
-- 9. Mentions, not entities, multiply relation cost.
+- 9. Mentions, not entities, multiply relation cost. Measured and carried by `2026-09-26-relation-pairs-span-every-mention-and-the-whole-text.md`.
 - 10. `recognize --relation` has no entity cap. Check within 0147.
-- 11. `recognize` sends its relation rules one after another. Check R4b's scope.
+- 11. `recognize` sends its relation rules one after another. Check R4b's scope. Measured and carried by `2026-09-26-relation-requests-carry-one-rule-and-every-entity.md`.
 - 12. `recognize --details` hides relation probabilities.
 - 13. Offset units and field names change by surface.
 - 14. Split texts repeat the whole text in every request. Tracked in part: R4.
