@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/cli/interrupt.rs crates/thinkthen/src/cli/interrupt 
 
 # 0169: A signal stops the command plainly
 
-Status: built, awaiting fresh read-only code review. The coordinator accepted it on 2026-09-27 after a fresh read-only design review, with the fixes that review named. Owner: Codex in the retained command lane.
+Status: complete. Fresh read-only Codex code review accepted corrected source `84de0a7d` on 2026-09-27. The coordinator accepted it on 2026-09-27 after a fresh read-only design review, with the fixes that review named. Owner: Codex in the retained command lane.
 
 Review route: a fresh read-only Codex reviewer checks the final diff. Ian's handover routes the accepted Claude ticket to Codex. The accepted behavior stays fixed.
 
@@ -80,7 +80,7 @@ Read from `origin/main` `18f0381e`.
 pub(crate) fn after_signal(self) -> Self
 ```
 
-It replaces a backend cause with `Failure::Cancelled`. The backend causes are the failures that say exit 4 about a sent request: `Transport`, `Status`, `TokenLimit`, `ReplyTooLarge`, `Reply`, and `Recognize(recognize::Error::LogicalQuestion)`. The last one comes from `engine/facade/recognize.rs:239`, and the engine gives it `Kind::Backend` at `engine/error.rs:119`. The build lists every `Failure` variant that the engine's `Kind::Backend` reaches and gives each one an arm. A `Stopped` run keeps its counts and gets `Cancelled` as its cause. After ticket 0146, a batched stop also carries the batch's range or the partial-reply form. `after_signal` clears both, so a signal stop never prints a range. Every other failure returns unchanged. `told` in `cli/mod.rs` calls it first when `environment.cancel.fired()`.
+It replaces a backend cause with `Failure::Cancelled`. The backend causes are the failures that say exit 4 about a sent request: `Transport`, `Status`, `TokenLimit`, `ReplyTooLarge`, `Reply`, `ModelsDiffer`, `UsageOverflow`, and `Recognize(recognize::Error::LogicalQuestion)`. The last one comes from `engine/facade/recognize.rs:239`, and the engine gives it `Kind::Backend` at `engine/error.rs:119`. The build lists every `Failure` variant that the engine's `Kind::Backend` reaches and gives each one an arm. A `Stopped` run keeps its counts and gets `Cancelled` as its cause. After ticket 0146, a batched stop also carries the batch's range or the partial-reply form. `after_signal` clears both, so a signal stop never prints a range. Every other failure returns unchanged. `told` in `cli/mod.rs` calls it first when `environment.cancel.fired()`.
 
 ### The stop line after a signal names no record
 

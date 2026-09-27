@@ -1,6 +1,6 @@
 # 0169: A signal stops the command plainly
 
-Status: Built on `ticket/0169-a-signal-stops-the-command-plainly`, awaiting fresh read-only code review and landing gates.
+Status: complete. Fresh read-only Codex Sol Medium review accepted corrected source `84de0a7d` on 2026-09-27, including the raised ceiling and test reuse.
 
 The command now routes SIGINT and SIGTERM through the same carrier. The first signal stops new requests, allows sent work to finish within its existing attempt timeout, writes finished output and cache entries, then re-raises the signal that arrived. The same armed default ends the process on a second signal of either kind. The process mask test checks both signals on the command and worker threads. No library or engine signal rule changed.
 
@@ -15,3 +15,5 @@ Rust 1.95 validation: `cargo fmt --all -- --check`, `sdlc/scripts/policy.py`, `s
 One broader `cargo test --lib signal` filter observed a failure in the unrelated worker SIGUSR1 test. The exact worker test passed once in isolation. The observations and commands are transcribed in ignored `target/codex-builds/0169/host-signal-observation.md`; the original tool calls did not write raw logs. The coordinator traced interference to a process-wide handler in the facade test and records the separate harness fix on main. The 0169 signal proof above passed, and no repeated campaign followed.
 
 The first signal still waits for already-sent work up to its attempt timeout. A cancellable socket read and a first-signal waiting notice remain deferred by the accepted ticket.
+
+The coordinator retained the command batch checkpoint at `e8005b8b`: the specification rung passed its settings checks, executable pages and 21 green demos in 23.62 seconds outer wall time; the routine shared command selection passed 25 cases with 6 explicit not-run cases in 0.82 seconds test time and 0.93 seconds outer wall time. Outer timings include any lock wait. The later correction changed only post-signal check output and two backend-cause mappings; its held-401 regression, ten existing check tests and expanded cause table replace the affected evidence. Unchanged results were retained. The final merge brought only main planning and issue metadata; policy, pages, ticket validation and the measured 76,097-line ratchet were checked again before landing. No whole surface ladder or repeated signal campaign was run.

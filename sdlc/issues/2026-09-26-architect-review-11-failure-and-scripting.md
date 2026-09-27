@@ -1,3 +1,5 @@
+Disposition, 2026-09-27: ticket 0169 settles register 46, 56 and 116 after fresh review of `84de0a7d`. The stop reports the signal without a guessed record, SIGTERM follows SIGINT, and the second-signal escape is documented and proved. Already-sent requests still finish within their attempt timeout by the retained contract. A first-signal waiting notice and cancellable socket reads remain deferred; this umbrella issue stays open for its other findings.
+
 Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review. Item 4 is done: Quick Fix qf-command-edges-and-prune bounds `--timeout` at 86400 seconds (`sdlc/records/qf-command-edges-and-prune.md`). Ticket 0169 (`sdlc/tickets/0169-a-signal-stops-the-command-plainly.md`) carries item 2 and the SIGTERM finding.
 
 # Architect review 11: failure handling and scripting

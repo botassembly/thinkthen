@@ -1,3 +1,5 @@
+Disposition, 2026-09-27: ticket 0169 settles register 46, 56 and 116 after fresh review of `84de0a7d`. The stop reports the signal without a guessed record, SIGTERM follows SIGINT, and the second-signal escape is documented and proved. Already-sent requests still finish within their attempt timeout by the retained contract. A first-signal waiting notice and cancellable socket reads remain deferred; this umbrella issue stays open for its other findings.
+
 # Architect review severity 3 findings, for triage after 0.1
 
 Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, reports 01 and 03 to 12. For triage after 0.1. Nothing here blocks 0.1.
