@@ -391,9 +391,9 @@ fn the_record_mode_plan_shows_the_first_record_and_names_the_framing() {
     assert_eq!(
         printed(&output),
         concat!(
-            r#"{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","#,
+            r#"{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","#,
             r#""key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"#,
-            r#""request":{"state":"The payout failed again.","model":"jev-latest","#,
+            r#""request":{"state":"The payout failed again.","model":"jev-1.13.0","#,
             r#""questions":{"q1":{"type":"noul","instructions":"Does this report a payment failure?"}}}}"#,
             "\n",
         )

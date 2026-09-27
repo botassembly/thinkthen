@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"I bought printer cartridges from an outside supplier for twenty four pounds because the office ran out before the delivery from our usual stockist arrived this week.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"This expense claim needs a receipt attached before it can be paid."}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.75}},"usage":{"input_tokens":309,"output_tokens":21}}
-}

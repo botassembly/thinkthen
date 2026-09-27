@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"@@ -12,3 +12,4 @@ use std::fmt;\n+use std::collections::BTreeMap;","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does the changed code break the house rule?","criteria":{"true":"The change holds an amount of money in a floating-point number: a float, a double, a decimal literal used as money, or arithmetic on money that yields one.","false":"The change holds no amount of money at all, or it holds money only as a whole number of pence in an integer."}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.04}},"usage":{"input_tokens":378,"output_tokens":21}}
-}

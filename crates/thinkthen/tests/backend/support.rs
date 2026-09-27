@@ -9,7 +9,7 @@ use std::process::Output;
 use crate::harness::spawn;
 
 pub(crate) const DEFAULT_BASE: &str = "https://api.typesafe.ai/v1";
-pub(crate) const DEFAULT_MODEL: &str = "jev-latest";
+pub(crate) const DEFAULT_MODEL: &str = "jev-1.13.0";
 pub(crate) const ENDPOINT_PATH: &str = "systemone";
 pub(crate) const MAX_RECORD_BYTES: usize = 16 * 1024 * 1024;
 

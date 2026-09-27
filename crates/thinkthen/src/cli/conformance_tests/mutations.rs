@@ -25,8 +25,8 @@ fn focused_mutations_are_refused() {
             1,
         ),
         CASES.replacen(
-            "e8b7d68fe0567786d9905df174191873ff0876e0c56efc008ff7a07a4de45d3e",
-            "08b7d68fe0567786d9905df174191873ff0876e0c56efc008ff7a07a4de45d3e",
+            "d5c0ecd838ff31e91ba78c1b7584b7aac6c777d6c34fc3cc68ba8a0145ca1e6e",
+            "05c0ecd838ff31e91ba78c1b7584b7aac6c777d6c34fc3cc68ba8a0145ca1e6e",
             1,
         ),
         CASES.replacen("{\\\"state\\\":\\\"From:", "{\\\"state\\\":\\\"XFrom:", 1),

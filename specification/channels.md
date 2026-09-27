@@ -89,7 +89,7 @@ A gate is a command whose exit code decides whether something happens. Word the 
 The plan is one compact JSON document on standard output with four fields that are always present.
 
 ```json
-{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","request":{"state":"Help! My payouts have been failing for 3 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this convey urgency?"}}}}
+{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY","request":{"state":"Help! My payouts have been failing for 3 days.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does this convey urgency?"}}}}
 ```
 
 `request` is the body the adapter would send, as a JSON value and never as a string. `key_env` names the variable a key would be read from, so a script can prove that a key stays home. The plan never holds the value.
@@ -99,7 +99,7 @@ The plan carries the evidence, because the evidence is what leaves the machine. 
 In record mode `--dry-run` prints the plan for the first record and stops. It reads no further than that record, and the plan carries a fifth field, `input`, naming the framing and the pointers. When `filter` or `rank` took its framing by default, `input` also carries `"from":"default"`. Not built yet, by ADR 0048 item 13: it plans the first batch, reads until that batch closes, and never waits on a pause.
 
 ```json
-{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Payouts have failed for 3 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this report a payment failure?"}}}}
+{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Payouts have failed for 3 days.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does this report a payment failure?"}}}}
 ```
 
 A run that read a question file carries one more field, `from`, between `input` and `request`. It names only settings the verb takes, and gives each source as `file`, `command line`, or `default`, so a confused user can see what won. A run with no question file carries no `from`, and [question-file.md](question-file.md) gives the rest.

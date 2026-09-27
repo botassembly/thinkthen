@@ -4,7 +4,7 @@ use super::conformance_support::{Case, Counters, Document, QuestionForm, Success
 use super::{CASES, asked, same_json};
 use crate::args::{Cli, Command};
 use crate::core::recording::{Entry, Exchange as Recorded};
-use crate::core::{Backend, ModelName, Url};
+use crate::core::{Backend, DEFAULT_MODEL, ModelName, Url};
 use crate::edge::Environment;
 use crate::engine::error::Error as EngineError;
 use crate::engine::http::{Client, Key};
@@ -402,7 +402,7 @@ pub(super) fn counters(case: &Case, expected: &Counters) {
     let server = thread::spawn(move || serve_once(listener, request, response));
     let backend = Backend::from_parts(
         Url::new(format!("http://{address}/v1/systemone")).expect("loopback URL"),
-        ModelName::new("jev-latest").expect("model"),
+        ModelName::new(DEFAULT_MODEL).expect("model"),
     );
     let recorder = Recorder::of_private(Some(&cache), Some(&cache), false, true).expect("cache");
     let client = Client::new(

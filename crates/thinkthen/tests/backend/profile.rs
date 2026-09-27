@@ -74,7 +74,7 @@ fn evidence_and_exact_request_bytes_pass_at_the_edge_and_fail_one_past_it() {
     );
     assert!(failed.stdout.is_empty());
 
-    let body = encoded_decide("four", "jev-latest", "Is this relevant?");
+    let body = encoded_decide("four", crate::support::DEFAULT_MODEL, "Is this relevant?");
     let exact_request = profile(
         "edge-request",
         &format!(r#""max_request_bytes":{}"#, body.len()),

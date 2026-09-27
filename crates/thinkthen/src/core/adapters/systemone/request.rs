@@ -275,6 +275,7 @@ impl RequestQuestion {
 #[cfg(test)]
 mod tests {
     use super::{Request, RequestQuestion, encode};
+    use crate::core::adapters::built_in::DEFAULT_MODEL;
     use crate::core::adapters::systemone::tests::{
         disruption_plan, plan_for, tag_plan, team_plan, urgency_plan,
     };
@@ -449,11 +450,8 @@ mod tests {
         let text = String::from_utf8(bytes).expect("a request is text");
         assert_eq!(
             text,
-            concat!(
-                r#"{"state":"Refund me please.","model":"jev-latest","questions":{"q1":{"type":"noul","#,
-                r#""instructions":["Which?",{"label":"a","description":{"d":1}}],"#,
-                r#""criteria":{"true":{"d":1}}},"#,
-                r#""q2":{"type":"noul","instructions":["Which?",{"label":"b"}]}}}"#,
+            format!(
+                r#"{{"state":"Refund me please.","model":"{DEFAULT_MODEL}","questions":{{"q1":{{"type":"noul","instructions":["Which?",{{"label":"a","description":{{"d":1}}}}],"criteria":{{"true":{{"d":1}}}}}},"q2":{{"type":"noul","instructions":["Which?",{{"label":"b"}}]}}}}}}"#
             )
         );
     }

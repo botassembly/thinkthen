@@ -373,6 +373,16 @@ pub(crate) fn replay(folder: &Path, arguments: &[&str], input: &[u8]) -> String 
     String::from_utf8(output.stdout).expect("UTF-8 output")
 }
 
+/// The payment question of `transforms/rows`, replayed through the question file FILE in FOLDER.
+pub(crate) fn payment_rows(folder: &Path, file: &str) -> String {
+    let rows = repository().join("transforms/rows");
+    let [recording, cases] = [rows.join("recording"), rows.join("cases.jsonl")];
+    let [recording, cases] = [&recording, &cases].map(|path| path.to_str().expect("a path"));
+    let at = format!("@{file}");
+    let arguments = ["decide", &at, "--jsonl", "--details", "--replay", recording];
+    replay(folder, &[&arguments[..], &["--input", cases]].concat(), b"")
+}
+
 /// Each named member of a JSON line, as compact JSON with sorted keys.
 pub(crate) fn members<const N: usize>(line: &str, pointers: [&str; N]) -> [String; N] {
     pointers.map(|pointer| member(line, pointer))

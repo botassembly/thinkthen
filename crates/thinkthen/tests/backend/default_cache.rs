@@ -270,7 +270,7 @@ fn prune_refuses_the_alias_and_keeps_the_upgrade() {
         "name the version a result's meta.model shows, not the alias passed to --model\n",
     );
     let url = format!("{DEFAULT_BASE}/{ENDPOINT_PATH}");
-    let echoed = ANSWERED.replace("jev-1.13.0", DEFAULT_MODEL);
+    let echoed = ANSWERED.replace("jev-1.13.0", "jev-latest");
     let rows: [PruneRow; 7] = [
         ("jev-latest", &[], ANSWERED, None),
         ("jev-latest", &["--older-than", "1d"], ANSWERED, None),
@@ -283,7 +283,7 @@ fn prune_refuses_the_alias_and_keeps_the_upgrade() {
     for (row, (model, options, second_reply, removed)) in rows.into_iter().enumerate() {
         let folder = folder(&format!("prune-alias-{row}"));
         let first = plant(&folder, ANSWERED).expect("first entry");
-        let request = encoded_decide(EVIDENCE, DEFAULT_MODEL, "another question");
+        let request = encoded_decide(EVIDENCE, "jev-latest", "another question");
         let second = plant_recording(&folder, &url, &request, second_reply).expect("second");
         let names = [&first, &second];
         let bytes = [&first, &second].map(|name| allocated(&folder, name).expect("allocated"));
