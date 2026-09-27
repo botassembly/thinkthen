@@ -576,12 +576,6 @@ a_role_limit_applies() {
 	same "$(bcount)" 0
 }
 check a_role_limit_applies
-zero_cache_cap_refuses() {
-	fresh generic "thinkthen.cache_bytes = 0"
-	has "$(q -c "SELECT thinkthen_decide('$Q', 'a')")" "thinkthen usage: thinkthen.cache_bytes must be -1 or at least 1 (retryable: no)"
-	same "$(bcount)" 0
-}
-check zero_cache_cap_refuses
 # A throttle outside 1 through 32 is refused where it is set, and calls keep
 # working. A configuration file's 0 once broke every call.
 THROTTLE_RANGE="thinkthen usage: a throttle is a whole number from 1 through 32 (retryable: no)"

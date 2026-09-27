@@ -2,6 +2,8 @@
 
 `cases.json` is the language-neutral behavior contract for the command, the Rust library, later language bindings, and database extensions. Every surface reads the same cases. The file fixes one canonical backend URL, question grammar, exact System One request bytes, decoded answers, bare values, detailed request identities, host-neutral bulk results, and the six public error kinds.
 
+`settings.json` holds eight engine-setting cases under `thinkthen.settings-cases/1`. The command, Rust, Python, TypeScript, Ruby, R, and C runners map each setting to their own public spelling, run each step against a loopback arm or a fresh folder, and compare the answer or error with the listener count. SQL joins this corpus in ticket 0149.
+
 A successful exchange has one of two provenance values. `captured` names a committed public recording, under `demos/` or `specification/`, whose request and response match the embedded exchange exactly. `synthetic_contract` says the exchange was written against the accepted wire contract. Fault cases name deterministic injection points. They are schema contracts until the private engine runner lands with the one-crate merge.
 
 The mixed `annotate` case keeps successful `decide`, `choose`, `score`, and `tag` answers together in one request. The separate partial case keeps three good answers, distinguishes one valid `null` answer from one failed answer, checks the exact failure marker and count, and keeps the logical request identity. The two-group case fixes aggregate request identity in question-set group order.

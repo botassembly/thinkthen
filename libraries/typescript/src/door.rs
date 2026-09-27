@@ -377,7 +377,14 @@ fn setting(builder: EngineBuilder, key: &str, value: &Value) -> Result<EngineBui
         ("cache", Value::Bool(false)) => builder.no_cache(),
         ("cache", Value::String(folder)) => builder.cache_at(folder)?,
         ("cache", _) => return Err(Failure::usage("options.cache is false or a folder path")),
-        ("cacheBytes", _) => builder.cache_bytes(whole()?)?,
+        ("timeoutSeconds", _) => builder.timeout(std::time::Duration::from_secs(whole()?))?,
+        ("maxRetries", _) => builder.max_retries(
+            u32::try_from(whole()?)
+                .map_err(|_| Failure::usage("options.maxRetries is a whole number"))?,
+        ),
+        ("record", _) => builder.record(text()?)?,
+        ("replay", _) => builder.replay(text()?)?,
+        ("profile", _) => builder.profile(text()?)?,
         _ => return Err(Failure::usage(format!("new Engine takes no option {key}"))),
     })
 }

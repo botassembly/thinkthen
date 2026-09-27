@@ -16,7 +16,7 @@ const rows = await tt.annotate("form.json", tickets, { signal });
 
 ## Settings
 
-The module-level verbs use the engine the environment describes: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, and the rest. `new tt.Engine({ baseUrl, model, throttle, maxRequests, cache, cacheBytes })` starts from the same environment, and each given key overrides one setting. `cache: false` keeps no cache. A refused setting throws `ThinkThenError` of kind `usage`. An engine counts its own usage.
+The module-level verbs use the engine the environment describes: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, and the rest. `new tt.Engine({ baseUrl, model, throttle, maxRequests, cache, timeoutSeconds, maxRetries, profile, record, replay })` starts from the same environment, and each given key overrides one setting. `cache: false` keeps no cache. A refused setting throws `ThinkThenError` of kind `usage`. An engine counts its own usage.
 
 The throttle is the most requests in flight at once. It holds per loaded copy of the engine, and the first explicit throttle holds for the process. A later engine that asks for another throttle is refused.
 

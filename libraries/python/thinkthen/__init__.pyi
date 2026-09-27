@@ -116,7 +116,11 @@ class Engine:
         throttle: Optional[int] = ...,
         max_requests: Optional[int] = ...,
         cache: Union[Path, bool, None] = ...,
-        cache_bytes: Optional[int] = ...,
+        timeout: Optional[int] = ...,
+        max_retries: Optional[int] = ...,
+        record: Union[str, Path, None] = ...,
+        replay: Union[str, Path, None] = ...,
+        profile: Union[str, Path, None] = ...,
     ) -> None: ...
     def decide(self, question: Asked, text: Union[str, Column], *, deadline: Deadline = ..., token: Optional[CancelToken] = ...) -> Union[Optional[bool], Column]: ...
     def decide_many(self, question: Asked, records: Union[Iterable[str], Column], *, deadline: Deadline = ..., token: Optional[CancelToken] = ...) -> Union[list[Optional[bool]], Column]: ...

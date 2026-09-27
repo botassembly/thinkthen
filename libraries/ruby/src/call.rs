@@ -41,37 +41,6 @@ pub(crate) enum Ask {
     Relate(Relate, Vec<Entity>),
 }
 
-impl Ask {
-    /// How many records a many-record call reads.
-    pub(crate) fn records(&self) -> Option<usize> {
-        match self {
-            Self::DecideMany(_, records)
-            | Self::Filter(_, records)
-            | Self::Rank(_, records)
-            | Self::Find(_, _, records)
-            | Self::Annotate(_, records) => Some(records.len()),
-            // The engine does not cap relate's entities by the record limit.
-            Self::Decide(..)
-            | Self::Details(..)
-            | Self::Score(..)
-            | Self::Recognize(..)
-            | Self::Relate(..) => None,
-        }
-    }
-}
-
-/// Refuse a call over the engine's record limit before any request. The
-/// engine's own batches refuse only once they reach the limit, and the
-/// binding has read every record already.
-pub(crate) fn within(most: Option<usize>, ask: &Ask) -> Result<(), Fault> {
-    match (most, ask.records()) {
-        (Some(most), Some(records)) if records > most => Err(Fault::usage(format!(
-            "this engine answers at most {most} records in one call"
-        ))),
-        _ => Ok(()),
-    }
-}
-
 /// One judgment's value in the shape Ruby reads.
 #[derive(Debug, PartialEq)]
 pub(crate) enum Value {
@@ -154,12 +123,16 @@ pub(crate) fn run(
             engine
                 .decide_many_with(&question, records, options)
                 .map(|row| row.map(|row| (answer(*row.value()), row.probability())))
+                .collect::<Vec<_>>()
+                .into_iter()
                 .collect::<Result<_, _>>()?,
         ),
         Ask::DecideMany(LoadedQuestion::Banded(question), records) => Output::Rows(
             engine
                 .decide_many_with(&question, records, options)
                 .map(|row| row.map(|row| (answer(*row.value()), row.probability())))
+                .collect::<Vec<_>>()
+                .into_iter()
                 .collect::<Result<_, _>>()?,
         ),
         Ask::Filter(question, records) => {

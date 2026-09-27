@@ -195,7 +195,9 @@ fn message(error: &EngineError) -> String {
         EngineError::RecordingBackendMismatch(..) => {
             "the recording folder belongs to another backend address"
         }
-        EngineError::RecordingFolderLegacy => "the recording folder uses a retired layout",
+        EngineError::RecordingFolderLegacy => {
+            "the recording folder predates backend binding; replay it read-only or choose a new folder"
+        }
         EngineError::DefaultCachePrivate => {
             "the default cache folder is not private; set its permissions to 0700 or use no_cache"
         }

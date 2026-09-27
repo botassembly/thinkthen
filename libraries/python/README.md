@@ -36,7 +36,7 @@ What is fast: a pandas 2 column crosses at list speed and still makes one engine
 
 `filter`, `rank`, `find`, and `relate` read lists only. The optional extra `thinkthen[polars]` names the tested Polars floor. The package never imports Polars itself. A warm Polars pool hangs a forked child, so start children with `spawn`.
 
-The module functions use one engine that the environment configures: `THINKTHEN_BASE_URL`, `THINKTHEN_CACHE`, and the rest. `tt.Engine` takes `base_url`, `model`, `throttle`, `max_requests`, `cache`, and `cache_bytes` as keywords and reads the environment for the rest. The key comes only from `THINKTHEN_API_KEY`. The throttle is the number of requests in flight. It is one per loaded copy of this package: the first explicit throttle sets it, and a second, different one raises `UsageError`.
+The module functions use one engine that the environment configures: `THINKTHEN_BASE_URL`, `THINKTHEN_CACHE`, and the rest. `tt.Engine` takes `base_url`, `model`, `throttle`, `max_requests`, `cache`, `timeout`, `max_retries`, `profile`, `record`, and `replay` as keywords and reads the environment for the rest. The key comes only from `THINKTHEN_API_KEY`. The throttle is the number of requests in flight. It is one per loaded copy of this package: the first explicit throttle sets it, and a second, different one raises `UsageError`.
 
 Every verb takes `deadline`, in seconds from the call, and `token`, a `CancelToken` any thread can set. No deadline is spelled ``deadline=None`` or ``deadline=-1`` (ADR 0041). Zero is a spent deadline: the call sends nothing and raises `DeadlineError`. Any other negative, a bool, and a non-number raise `UsageError`.
 

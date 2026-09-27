@@ -1,8 +1,7 @@
 //! The engines this process keeps, one per distinct set of session settings
 //! (ticket 0110 decision 5).
 //!
-//! `SET thinkthen_throttle`, `thinkthen_max_requests`, `thinkthen_cache`, and
-//! `thinkthen_cache_bytes` reach the engine through `EngineBuilder`'s own
+//! `SET thinkthen_throttle`, `thinkthen_max_requests`, and `thinkthen_cache` reach the engine through `EngineBuilder`'s own
 //! setters on `EngineBuilder::from_env()`. Each call checks every value it
 //! was given, the request total among them, before it reads the map, so a map hit never skips a check. The
 //! map is keyed by the throttle, the request limit, and the cache folder. It
@@ -31,7 +30,6 @@ pub(crate) struct Asked {
     pub(crate) throttle: Option<i64>,
     pub(crate) max_requests: Option<i64>,
     pub(crate) cache: Option<String>,
-    pub(crate) cache_bytes: Option<i64>,
     pub(crate) max_requests_total: Option<i64>,
 }
 
@@ -206,11 +204,6 @@ fn checked(asked: &Asked) -> Result<(Key, EngineBuilder), RowError> {
     builder = builder.max_requests(most).map_err(refused)?;
     if let Some(folder) = &asked.cache {
         builder = builder.cache_at(folder).map_err(refused)?;
-    }
-    if let Some(cap) = asked.cache_bytes {
-        let cap = u64::try_from(cap)
-            .map_err(|_| RowError::usage("a cache cap is a whole number of bytes above zero"))?;
-        builder = builder.cache_bytes(cap).map_err(refused)?;
     }
     if let Some(total) = asked.max_requests_total {
         total_of(total)

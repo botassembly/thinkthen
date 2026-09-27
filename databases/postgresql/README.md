@@ -50,7 +50,6 @@ FROM tickets, thinkthen_annotate('@form.json', body) AS a ORDER BY urgency DESC;
 | `thinkthen.max_requests` | superuser | the most records one call answers. -1 means no limit |
 | `thinkthen.max_requests_total` | superuser | the most requests one backend sends. -1 means no total |
 | `thinkthen.cache` | superuser | the answer cache folder. Empty keeps `THINKTHEN_CACHE` or the platform folder |
-| `thinkthen.cache_bytes` | superuser | the cache cap, such as `'500MB'`. -1 keeps the configured value. 0 refuses every call. The ceiling is 2,147,483,647 bytes |
 | `thinkthen.file_directory` | superuser | the one folder an unprivileged role may read named files from |
 | `thinkthen.api_key` | nobody | never read. A set value refuses the next call |
 

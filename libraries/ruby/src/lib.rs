@@ -187,14 +187,16 @@ struct Settings {
     max_requests: Option<i64>,
     cache_at: Option<String>,
     no_cache: bool,
-    cache_bytes: Option<i64>,
+    timeout: Option<i64>,
+    max_retries: Option<i64>,
+    record: Option<String>,
+    replay: Option<String>,
+    profile: Option<String>,
 }
 
 impl Settings {
     /// Start from `EngineBuilder::from_env()`, then apply each given setting.
-    /// The record limit comes back beside the engine.
-    fn build(self) -> Result<(Engine, Option<usize>), Fault> {
-        let mut most = None;
+    fn build(self) -> Result<Engine, Fault> {
         let mut builder = EngineBuilder::from_env()?;
         if let Some(value) = &self.base_url {
             builder = builder.base_url(value)?;
@@ -211,7 +213,6 @@ impl Settings {
             let value = usize::try_from(value)
                 .map_err(|_| Fault::usage("a request limit is a whole number of 1 or more"))?;
             builder = builder.max_requests(Some(value))?;
-            most = Some(value);
         }
         if let Some(folder) = &self.cache_at {
             builder = builder.cache_at(folder)?;
@@ -219,12 +220,26 @@ impl Settings {
         if self.no_cache {
             builder = builder.no_cache();
         }
-        if let Some(value) = self.cache_bytes {
+        if let Some(value) = self.timeout {
             let value = u64::try_from(value)
-                .map_err(|_| Fault::usage("a cache cap is a whole number of bytes above zero"))?;
-            builder = builder.cache_bytes(value)?;
+                .map_err(|_| Fault::usage("a timeout is a whole number of seconds above zero"))?;
+            builder = builder.timeout(std::time::Duration::from_secs(value))?;
         }
-        Ok((builder.build()?, most))
+        if let Some(value) = self.max_retries {
+            let value =
+                u32::try_from(value).map_err(|_| Fault::usage("max_retries is a whole number"))?;
+            builder = builder.max_retries(value);
+        }
+        if let Some(folder) = self.record {
+            builder = builder.record(folder)?;
+        }
+        if let Some(folder) = self.replay {
+            builder = builder.replay(folder)?;
+        }
+        if let Some(path) = self.profile {
+            builder = builder.profile(path)?;
+        }
+        Ok(builder.build()?)
     }
 }
 

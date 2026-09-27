@@ -224,7 +224,7 @@ class Engine:
 
     ``base_url``, ``model``, ``throttle`` (1 to 32 requests in flight),
     ``max_requests``, ``cache`` (a folder, ``False`` for none, or ``True``
-    for the default folder), and ``cache_bytes``. An omitted setting comes
+    for the default folder), ``timeout``, ``max_retries``, ``record``, ``replay``, and ``profile``. An omitted setting comes
     from the environment. The throttle is one per loaded copy of this
     package: a second, different throttle raises ``UsageError``.
 
@@ -236,10 +236,12 @@ class Engine:
     __slots__ = ("_engine",)
 
     def __init__(self, *, base_url=None, model=None, throttle=None,
-                 max_requests=None, cache=None, cache_bytes=None):
+                 max_requests=None, cache=None, timeout=None, max_retries=None,
+                 record=None, replay=None, profile=None):
         self._engine = _thinkthen._Engine(
             base_url=base_url, model=model, throttle=throttle,
-            max_requests=max_requests, cache=cache, cache_bytes=cache_bytes)
+            max_requests=max_requests, cache=cache, timeout=timeout,
+            max_retries=max_retries, record=record, replay=replay, profile=profile)
 
     def __repr__(self):
         return "Engine()"

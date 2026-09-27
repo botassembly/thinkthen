@@ -105,7 +105,11 @@ impl EngineBuilder {
     pub fn default_cache(self) -> Self;
     pub fn cache_at(self, value: impl AsRef<std::path::Path>) -> Result<Self, Error>;
     pub fn no_cache(self) -> Self;
-    pub fn cache_bytes(self, value: u64) -> Result<Self, Error>;
+    pub fn timeout(self, value: std::time::Duration) -> Result<Self, Error>;
+    pub fn max_retries(self, value: u32) -> Self;
+    pub fn profile(self, path: impl AsRef<std::path::Path>) -> Result<Self, Error>;
+    pub fn record(self, path: impl AsRef<std::path::Path>) -> Result<Self, Error>;
+    pub fn replay(self, path: impl AsRef<std::path::Path>) -> Result<Self, Error>;
     pub fn build(self) -> Result<Engine, Error>;
 }
 
@@ -398,3 +402,7 @@ The optional `polars` feature adds two root names, `PolarsEngine` and the re-exp
 
 - Design review: `sdlc/records/2026-09-24-spine-review-contract.md` rejected, then `2026-09-24-rereview-contract.md` accepted after fixes.
 - Code review: `sdlc/records/0084-0095-code-review.md`.
+
+## Amended 2026-09-27 (ticket 0148)
+
+The frozen `EngineBuilder` inventory above removes the ineffective `cache_bytes` setter and adds `timeout(Duration)`, `max_retries(u32)`, `profile(path)`, `record(path)`, and strict `replay(path)`. The builder applies the command's folder conflicts and passes the settings to the existing facade. No engine module changes. Ian can overturn these setters.

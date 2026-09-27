@@ -14,6 +14,7 @@ mod bytes;
 mod cases;
 #[path = "../../../../crates/thinkthen/src/test_deadline/child.rs"]
 mod child;
+mod settings;
 
 use std::collections::BTreeMap;
 use std::io::{BufRead, BufReader, Write};

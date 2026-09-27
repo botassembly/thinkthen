@@ -128,6 +128,14 @@ typedef struct thinkthen_answer {
  * the error functions called with NULL then name that failure. */
 thinkthen_engine *thinkthen_engine_new(void);
 
+/* Build from the environment plus one UTF-8 JSON object. NULL or {} uses the
+ * environment alone. Keys: base_url, model, throttle, max_requests, cache,
+ * record, replay, timeout (whole seconds), max_retries, profile. cache takes
+ * false or a folder; max_requests alone may be null. Unknown or repeated
+ * keys and wrong types fail with THINKTHEN_EUSAGE in the calling thread's
+ * null-engine error slot. Building sends nothing. */
+thinkthen_engine *thinkthen_engine_new_with(const char *settings_json);
+
 /* Free an engine. NULL is accepted and ignored. Free it only after every
  * call on it has returned. */
 void thinkthen_engine_free(thinkthen_engine *engine);
