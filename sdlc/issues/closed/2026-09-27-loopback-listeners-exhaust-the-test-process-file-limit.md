@@ -1,6 +1,6 @@
 # Loopback listeners exhaust the test process's file limit
 
-Status: reviewed fix awaiting the combined 0202/0205 functional batch landing on 2026-09-27. Ian moved the unresolved Python statistical campaign outside ordinary acceptance; it is not evidence of an unresolved descriptor leak. The full test passed under a child-only 1,024 soft file limit; its 411 backend cases completed with peaks of 131 descriptors and 102 tasks. Component: Release and tooling. Severity: 3.
+Status: closed by ticket 0202 with the combined 0205 functional batch on 2026-09-27. Synchronous listener retirement passes the 1,024-file proof: 411 backend cases with peaks of 131 descriptors and 102 tasks. Integrated functional validation passes. The separate Python statistical campaign remains opt-in and is not marked passed. Component: Release and tooling. Severity: 3.
 
 ## Evidence
 
@@ -12,7 +12,7 @@ A second full test rung passed with a child-only soft limit of 4,096. Sampling t
 
 ## Retained behavior
 
-Ticket 0127 deliberately kept scripted ports open so a late connection could not consume another test's reply. It also retained extra-connection diagnostics. [The earlier harness issue](2026-09-25-test-harness-and-review-leftovers.md), section 4, records that evidence. A fix must preserve isolation between tests and those diagnostics; simply closing a port when its response script ends would undo that correction.
+Ticket 0127 deliberately kept scripted ports open so a late connection could not consume another test's reply. It also retained extra-connection diagnostics. [The earlier harness issue](../2026-09-25-test-harness-and-review-leftovers.md), section 4, records that evidence. A fix must preserve isolation between tests and those diagnostics; simply closing a port when its response script ends would undo that correction.
 
 ## Outcome and proof
 

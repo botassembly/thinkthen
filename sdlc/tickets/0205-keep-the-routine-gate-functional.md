@@ -6,7 +6,7 @@ opens: sdlc/tickets/0205-keep-the-routine-gate-functional.md sdlc/records/0205-k
 
 # 0205: Keep the routine gate functional
 
-Status: accepted design and implementation with segmented Linux routine validation and final root lint passed; the coordinator owns bounded assembled-evidence review and landing. The claim began on main `8126742f`; later exact-file claims and reviewed amendments cover fixture retirement and the bounded secrecy matrix. The integrated port branch `5a0afa8c` includes all three implementation slices. Fresh review accepted core and boundary selectors and the final secrecy amendment at `a9e5039f`; the bounded assembled-evidence review remains before landing. Owner: Codex. Ian can overturn the selected cases and the opt-in boundary.
+Status: done on 2026-09-27 in the combined 0202/0205 landing. Independent source reviews and final evidence review accepted the changes; the final root lint passed at `08a8f6f9`. The record retains exact earlier functional checks and historical statistical failures. Owner: Codex. Ian can overturn the fixture ownership and routine/full/stress boundaries.
 
 ## Outcome and authority
 

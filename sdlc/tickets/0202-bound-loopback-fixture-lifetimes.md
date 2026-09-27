@@ -6,13 +6,13 @@ opens: libraries/python/tests/test_release.py conformance/backend/src/listener.r
 
 # 0202: Bound loopback fixture lifetimes
 
-Status: verified for combined landing with 0205 on 2026-09-27. The accepted design received a fresh read-only Sol Medium review at `1046d8ca`; the runtime received fresh independent ACCEPT at `589a2f8c`. The full 1,024-file proof and the combined functional checks passed. The record names the final lint at `08a8f6f9` and retained validation. Ian's later functional-gate ruling supersedes the Python statistical proof amendments below. Owner: Codex. Ian can overturn the fixture retirement contract.
+Status: done on 2026-09-27 in the combined 0202/0205 landing. Independent source reviews and final evidence review accepted the changes; the final root lint passed at `08a8f6f9`. The record retains exact earlier functional checks and historical statistical failures. Owner: Codex. Ian can overturn the fixture ownership and routine/full/stress boundaries.
 
 ## Outcome and authority
 
 Each loopback fixture owns its listening socket, accept thread, and active connection workers for a finite lifetime. A completed case releases those resources before the next case accumulates them. While a fixture still has an owner, a scripted listener keeps its port after its planned replies and answers every extra complete request with the existing drift status. A late client of one case cannot consume another case's reply.
 
-The authority is `sdlc/issues/2026-09-27-loopback-listeners-exhaust-the-test-process-file-limit.md`. A full backend test process under a 1,024-file soft limit passed 297 of 399 cases and then failed 102 with `Too many open files`. A retry under 4,096 passed and sampled 1,275 descriptors. The listener at `conformance/backend/src/listener.rs` moves sockets into detached accept loops and documents process-exit lifetime. Ticket 0127 made that lifetime deliberate to protect late-connection isolation; this ticket keeps the isolation while ending the ownership when client work ends. This serves the ideal state's offline shared-case gate and strict Rust checks. Ian can overturn the fixture retirement contract; it changes test support, not product behavior or the settled specification.
+The authority is `sdlc/issues/closed/2026-09-27-loopback-listeners-exhaust-the-test-process-file-limit.md`. A full backend test process under a 1,024-file soft limit passed 297 of 399 cases and then failed 102 with `Too many open files`. A retry under 4,096 passed and sampled 1,275 descriptors. The listener at `conformance/backend/src/listener.rs` moves sockets into detached accept loops and documents process-exit lifetime. Ticket 0127 made that lifetime deliberate to protect late-connection isolation; this ticket keeps the isolation while ending the ownership when client work ends. This serves the ideal state's offline shared-case gate and strict Rust checks. Ian can overturn the fixture retirement contract; it changes test support, not product behavior or the settled specification.
 
 ## Retained behavior and ownership boundary
 
