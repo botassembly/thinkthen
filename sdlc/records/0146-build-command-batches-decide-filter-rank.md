@@ -75,7 +75,7 @@ Nonblank lines against `18f0381e`.
 | --- | --- | --- |
 | `cli/asking/batched.rs` | 250 | 342 |
 | `edge.rs`, `judge.rs`, `asked.rs` | 35 | 70 |
-| `cli/asking.rs` | 25 | 25, after the plan path moved out |
+| `cli/asking.rs` and `cli/asking/plan.rs` | 25 | 46, including the moved plan path's module head and imports |
 | Product code total | 561 | about 620, 11% over |
 | `tests/backend/batching.rs` and its folder | 480 | 538, 12% over |
 | Ratchet over main | 1,193 | 1,232, from 72,168 to 73,400 |
