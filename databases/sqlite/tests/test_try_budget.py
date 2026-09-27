@@ -4,6 +4,10 @@
 import json
 import sys
 import threading
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from conditional_backend import ConditionalBackend
 
 from helper import Backend, Child, child, environment, expect, main
 
@@ -43,6 +47,22 @@ say(spent=run(a, "SELECT thinkthen_try_details('Is it red?', 'a red door')"),
     expect(json.loads(held["other"][0][0])["status"], "answered", "other connection")
     expect(held["cleared"], [[-1]], "clear budget")
     expect(backend.close(), 1, "only the other connection sent")
+
+
+def test_backend_failure_keeps_a_later_good_row() -> None:
+    backend = Backend()
+    with ConditionalBackend(backend.base()) as proxy:
+        held = child("""
+db = connect()
+rows = run(db, "WITH t(i,q,e) AS (VALUES (1, 'Is it a refund?', 'first'), (2, 'Is it a refund?', 'private evidence'), (3, 'Is it a refund?', 'last')) SELECT thinkthen_try_details(q,e) FROM t ORDER BY i")
+say(rows=rows)
+""", environment(backend, THINKTHEN_BASE_URL=proxy.base))
+        expect(proxy.count(), 3, "three requests reached the proxy")
+    rows = [json.loads(row[0]) for row in held["rows"]]
+    expect([row["status"] for row in rows], ["answered", "failed", "answered"], "good rows after backend refusal")
+    expect(rows[1]["error"]["kind"], "backend", "typed backend failure")
+    expect("private evidence" in json.dumps(rows[1]), False, "failed value hides evidence")
+    expect(backend.close(), 2, "two good requests reached the generic backend")
 
 
 def test_budget_ends_a_held_send_without_erasing_it() -> None:

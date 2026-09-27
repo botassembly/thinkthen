@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 200
-opens: sdlc/tickets/0200-sql-row-errors-and-budgets.md sdlc/planning/adr/0080-sql-row-errors-and-budgets.md databases/sqlite databases/duckdb databases/postgresql specification/settings.md CHANGELOG.md
+opens: sdlc/tickets/0200-sql-row-errors-and-budgets.md sdlc/planning/adr/0080-sql-row-errors-and-budgets.md databases/sqlite databases/duckdb databases/postgresql databases/conditional_backend.py specification/settings.md CHANGELOG.md
 ---
 
 # 0200: Keep good SQL rows and bound their calls
@@ -18,6 +18,7 @@ A query can ask for an error value on a bad ThinkThen row, count or route that f
 - Keeps: ordinary scalar failures raising with their current SQLSTATE or result code and diagnostic text; SQL `NULL` as missing input or unresolved answer; the six public error kinds; PostgreSQL `statement_timeout` and `thinkthen.deadline_ms`; the 16 resident DuckDB engine cap; one selected throttle per process and one scope per loaded copy; cumulative usage and the 0149/0155 checks before each send and retry.
 - Changes: adds one JSON error-as-value form to each SQL extension; adds an explicit connection budget for SQLite; specifies DuckDB's future shared query owner; safely retires idle DuckDB engines without losing their counts; and makes PostgreSQL reject a changed throttle.
 - Proof: loopback SQL cases distinguish answered, unresolved, failed, and SQL-`NULL` rows; count later good rows and requests; cross a SQLite budget during a held send; run 17 idle DuckDB plans and 16 held plans; check usage and totals after retirement and fork; and check PostgreSQL's changed throttle, cancel, and native timeout. Run the five gate rungs after implementation.
+- Test support: `databases/conditional_backend.py` is a loopback-only proxy shared by the three database suites. It refuses one marked evidence and forwards the other requests to the generic conformance backend, so one SQL statement proves answer, backend failure, and later answer with counted attempts. It adds no product hook or public API.
 - Defers: DuckDB's `SET thinkthen_query_budget_ms` implementation, statement-lifetime hook, and stock-host proof to ticket 0201/ADR 0081; full SQLite VM time outside ThinkThen callbacks to the host; and a general error-as-value family for recognize and relate until a use case asks for it.
 
 ## Current behavior and the exact defects
