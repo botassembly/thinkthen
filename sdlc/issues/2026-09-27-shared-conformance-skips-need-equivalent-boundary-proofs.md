@@ -2,6 +2,8 @@
 
 Filed 2026-09-27. Status: open. Source: `conformance/cases.json` and the per-surface skip rules listed in `sdlc/records/2026-09-27-shared-case-gap-audit.md`. This issue owns proof gaps and unresolved API differences. SQL find has its own issue.
 
+Ticket 0206 has a reviewed design and a focused implementation checkpoint at `69664a05`. PostgreSQL filter/rank and SQLite rank now pass their named captured arms with indexed order and counted sends; R now has public usage and recording-read Local checks. Its source-based skip counts and focused proof are in the updated gap audit. These checks have not run the whole 31-ID routine or 54-case functional gate. The issue stays open for SQLite's nine recognize-relation cases, full-only decide question-file forms, and exact final coverage mapping. A case-42 request comparison found that standalone SQLite relate omits the original text and splits the captured relation request into two different bodies. Proposed ticket 0207 presents a feature design for fresh review; no API has been added.
+
 The full 54-case corpus makes skipped behavior visible, but a skip reason alone does not prove equivalent behavior. The selected routine 31 includes both actionable proof gaps and deliberate host differences. Do not add test-only product hooks to force internal faults through an outside boundary. Keep the small functional proofs at the actual host boundary. Ticket 0205 owns routine selection and case accounting, not the missing behavior in this issue.
 
 ## Proofs to add or link
