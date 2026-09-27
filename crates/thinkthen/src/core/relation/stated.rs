@@ -1,10 +1,7 @@
 //! Step 3 of `recognize`: one yes/no question per pair a rule allows, about
 //! what the text itself states (ADR 0056).
 
-use serde::Serialize;
-
-use super::{RelationEdge, RelationPlanError, RelationRule, entity_id, reaches_cut};
-use crate::core::json::Json;
+use super::{RelationEdge, RelationPlanError, RelationRule, entity_id, push_edge, state_evidence};
 use crate::core::recognize::RecognizedName;
 use crate::core::{Answer, Evidence, Question, QuestionText};
 
@@ -22,19 +19,6 @@ pub(crate) struct StatedPair {
     pub(crate) rule: usize,
     pub(crate) source: usize,
     pub(crate) target: usize,
-}
-
-#[derive(Serialize)]
-struct State<'a> {
-    evidence: &'a str,
-    entities: Vec<StateEntity<'a>>,
-}
-
-#[derive(Serialize)]
-struct StateEntity<'a> {
-    id: String,
-    name: &'a str,
-    kind: &'a str,
 }
 
 /// Whether a rule side, `*` or one kind, admits `kind`.
@@ -104,25 +88,12 @@ pub(crate) fn plan_stated(
     if questions.is_empty() {
         return Ok(None);
     }
-    let state = State {
-        evidence: text,
-        entities: asked
-            .iter()
-            .enumerate()
-            .filter_map(|(place, at)| {
-                let name = names.get(*at)?;
-                Some(StateEntity {
-                    id: entity_id(place),
-                    name: &name.text,
-                    kind: &name.kind,
-                })
-            })
-            .collect(),
-    };
-    let written = serde_json::to_string(&state).map_err(|_| RelationPlanError)?;
-    let value = Json::parse(&written).map_err(|_| RelationPlanError)?;
+    let kept: Vec<RecognizedName> = asked
+        .iter()
+        .filter_map(|at| names.get(*at).cloned())
+        .collect();
     Ok(Some(StatedPlan {
-        evidence: Evidence::structured(value).map_err(|_| RelationPlanError)?,
+        evidence: state_evidence(Some(text), &kept, None)?,
         questions,
         pairs,
     }))
@@ -136,17 +107,19 @@ pub(crate) fn stated_edges(
     answers: &[Answer],
     cut: f64,
 ) -> Vec<RelationEdge<RecognizedName>> {
-    pairs
-        .iter()
-        .zip(answers)
-        .filter_map(|(pair, answer)| {
-            let probability = answer.yes().filter(|value| reaches_cut(*value, cut))?;
-            Some(RelationEdge {
-                relation: rules.get(pair.rule)?.name.clone(),
-                source: names.get(pair.source)?.clone(),
-                target: names.get(pair.target)?.clone(),
+    let mut edges = Vec::new();
+    for (pair, answer) in pairs.iter().zip(answers) {
+        let probability = answer.yes().filter(|value| super::reaches_cut(*value, cut));
+        if let (Some(probability), Some(rule)) = (probability, rules.get(pair.rule)) {
+            push_edge(
+                &mut edges,
+                names,
+                rule,
+                pair.source,
+                pair.target,
                 probability,
-            })
-        })
-        .collect()
+            );
+        }
+    }
+    edges
 }

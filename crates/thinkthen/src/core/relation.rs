@@ -306,6 +306,16 @@ pub(crate) fn relation_evidence<E: RelationEntityView>(
     entities: &[E],
     relation: &RelationRule,
 ) -> Result<Evidence, RelationPlanError> {
+    state_evidence(source, entities, Some(relation))
+}
+
+/// The state every pair request carries: the text when there is one, each
+/// entity by id, and the rule when the request asks about one rule.
+fn state_evidence<E: RelationEntityView>(
+    source: Option<&str>,
+    entities: &[E],
+    relation: Option<&RelationRule>,
+) -> Result<Evidence, RelationPlanError> {
     let state = RelationState {
         evidence: source,
         entities: entities
@@ -333,7 +343,8 @@ struct RelationState<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     evidence: Option<&'a str>,
     entities: Vec<StateEntity>,
-    relation: &'a RelationRule,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    relation: Option<&'a RelationRule>,
 }
 
 #[derive(Serialize)]
