@@ -130,6 +130,24 @@ fn each_invalid_tag_reply_is_a_backend_failure() {
     }
 }
 
+/// Two readers could take different copies of a repeated name, so the reply is
+/// refused whole, and the refusal names neither the name nor either value.
+#[test]
+fn a_repeated_answer_name_refuses_the_reply() {
+    let body = concat!(
+        r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.1},"#,
+        r#""q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.1}}}"#,
+    );
+    let listener = Listener::serving(vec![Canned::ok(body)]).expect("listener");
+    let output = tag(listener.base(), &[], b"evidence").expect("tag runs");
+    assert_eq!(output.status.code(), Some(4));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: the reply was refused: the response is not a systemone response: the JSON at line 1 column 93 is not one\n"
+    );
+}
+
 #[test]
 fn dry_run_prints_the_complete_expansion_without_a_key_or_connection() {
     let listener = Listener::serving(Vec::new()).expect("listener");

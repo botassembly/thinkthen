@@ -1,8 +1,10 @@
 //! Reading one response body as the answers the plan asked for.
 
 use std::collections::BTreeMap;
+use std::marker::PhantomData;
 
 use serde::Deserialize;
+use serde::de::{Deserializer, Error, MapAccess, Visitor};
 
 use crate::core::adapters::systemone::{DecodeError, wire_name, wire_place};
 use crate::core::answer::{Answer, Distribution, DistributionError};
@@ -22,6 +24,7 @@ const DISTRIBUTION_ROUNDING: f64 = 0.01;
 #[cfg_attr(test, derive(Debug))]
 struct Response {
     model: String,
+    #[serde(deserialize_with = "unique")]
     answers: BTreeMap<String, ResponseAnswer>,
     #[serde(default)]
     usage: Option<ResponseUsage>,
@@ -37,22 +40,60 @@ struct Response {
 #[serde(tag = "type", rename_all = "snake_case")]
 enum ResponseAnswer {
     /// The answer to a yes/no question, as one probability.
-    Noul { noul: f64 },
+    Noul {
+        #[serde(default)]
+        noul: Option<f64>,
+    },
     /// The answer to a pick, keyed by option name.
     Choice {
-        probabilities: BTreeMap<String, f64>,
+        #[serde(default, deserialize_with = "unique_some")]
+        probabilities: Option<BTreeMap<String, f64>>,
         #[serde(default)]
         confidence: Option<f64>,
     },
     /// The answer to a placement, keyed by the level's number as a string.
     Score {
-        probabilities: BTreeMap<String, f64>,
+        #[serde(default, deserialize_with = "unique_some")]
+        probabilities: Option<BTreeMap<String, f64>>,
         #[serde(default)]
         confidence: Option<f64>,
     },
     /// An answer of some other shape, which this version does not read.
     #[serde(other)]
     Other,
+}
+
+/// Read one JSON object into a map, refusing a member name it already holds.
+/// The refusal names no member, because a name can be the user's own label.
+fn unique<'de, D: Deserializer<'de>, V: Deserialize<'de>>(
+    deserializer: D,
+) -> Result<BTreeMap<String, V>, D::Error> {
+    struct Unique<V>(PhantomData<V>);
+    impl<'de, V: Deserialize<'de>> Visitor<'de> for Unique<V> {
+        type Value = BTreeMap<String, V>;
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("an object")
+        }
+        fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Self::Value, A::Error> {
+            let mut read = BTreeMap::new();
+            while let Some((name, value)) = map.next_entry::<String, V>()? {
+                if read.insert(name, value).is_some() {
+                    return Err(A::Error::custom("a member name repeats"));
+                }
+            }
+            Ok(read)
+        }
+    }
+    deserializer.deserialize_map(Unique(PhantomData))
+}
+
+/// Read an optional distribution, where `null` reads as absent.
+fn unique_some<'de, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<BTreeMap<String, f64>>, D::Error> {
+    #[derive(Deserialize)]
+    struct Present(#[serde(deserialize_with = "unique")] BTreeMap<String, f64>);
+    Ok(Option::<Present>::deserialize(deserializer)?.map(|Present(map)| map))
 }
 
 /// The token counts a response reports.
@@ -202,7 +243,12 @@ fn read(
                 confidence,
             },
         ) => Answer::new_choice(
-            spread(options, options.names().cloned(), probabilities, place)?,
+            spread(
+                options,
+                options.names().cloned(),
+                probabilities.as_ref(),
+                place,
+            )?,
             reported(*confidence, place)?,
         )
         .ok_or(DecodeError::MissingProbability(place)),
@@ -213,7 +259,7 @@ fn read(
                 confidence,
             },
         ) => Answer::new_score(
-            spread(levels, numbered(levels), probabilities, place)?,
+            spread(levels, numbered(levels), probabilities.as_ref(), place)?,
             reported(*confidence, place)?,
         )
         .ok_or(DecodeError::MissingProbability(place)),
@@ -231,9 +277,10 @@ fn numbered(levels: &Labels) -> impl Iterator<Item = String> {
 fn spread(
     labels: &Labels,
     keys: impl Iterator<Item = String>,
-    wire: &BTreeMap<String, f64>,
+    wire: Option<&BTreeMap<String, f64>>,
     place: usize,
 ) -> Result<Distribution, DecodeError> {
+    let wire = wire.ok_or(DecodeError::MissingProbability(place))?;
     let keys: Vec<String> = keys.collect();
     for key in &keys {
         if !wire.contains_key(key) {
@@ -245,7 +292,7 @@ fn spread(
         let value = wire
             .get(key)
             .ok_or(DecodeError::MissingProbability(place))?;
-        entries.push((label.clone(), probability(*value, place)?));
+        entries.push((label.clone(), probability(Some(*value), place)?));
     }
     if wire
         .keys()
@@ -268,14 +315,18 @@ fn spread(
     })
 }
 
-/// Take one number from the wire as a probability.
-fn probability(value: f64, place: usize) -> Result<Probability, DecodeError> {
+/// Take one number from the wire as a probability, failing its question when
+/// the answer left the number out.
+fn probability(value: Option<f64>, place: usize) -> Result<Probability, DecodeError> {
+    let value = value.ok_or(DecodeError::MissingProbability(place))?;
     Probability::new(value).map_err(|_| DecodeError::ProbabilityOutOfRange(place))
 }
 
 /// Take the backend's own confidence, when the backend reported one.
 fn reported(value: Option<f64>, place: usize) -> Result<Option<Probability>, DecodeError> {
-    value.map(|value| probability(value, place)).transpose()
+    value
+        .map(|value| probability(Some(value), place))
+        .transpose()
 }
 
 #[cfg(test)]

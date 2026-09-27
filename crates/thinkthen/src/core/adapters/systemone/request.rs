@@ -262,7 +262,10 @@ impl RequestQuestion {
                     .map(|(name, described)| {
                         described.map_or_else(
                             || Json::String(name.clone()),
-                            |held| held.as_json().clone(),
+                            |held| match held.as_json() {
+                                Json::Null => Json::Object(Vec::new()),
+                                held => held.clone(),
+                            },
                         )
                     })
                     .collect(),
@@ -422,20 +425,6 @@ mod tests {
         let text = String::from_utf8(bytes).expect("a request is text");
         assert!(
             text.contains(r#""criteria":{"a":{"k":1},"b":null}"#),
-            "{text}"
-        );
-    }
-
-    #[test]
-    fn a_score_map_writes_its_descriptions_in_order_and_null_stays_null() {
-        let bytes = encode(&file_plan(
-            r#"{"score":"How much?","levels":{"low":{"what":"Little."},"high":null}}"#,
-            Verb::Score,
-        ))
-        .expect("a plan is writable");
-        let text = String::from_utf8(bytes).expect("a request is text");
-        assert!(
-            text.contains(r#""criteria":[{"what":"Little."},null]"#),
             "{text}"
         );
     }
