@@ -1,14 +1,14 @@
 ---
 flow: build
 priority: 171
-opens: crates/thinkthen/src/core/result.rs crates/thinkthen/src/core/result/batch_warning.rs crates/thinkthen/src/core/mod.rs crates/thinkthen/src/result_json.rs crates/thinkthen/src/cli/profile.rs crates/thinkthen/src/cli/asked.rs crates/thinkthen/src/cli/asking.rs crates/thinkthen/src/cli/asking/batched.rs crates/thinkthen/src/cli/audit.rs crates/thinkthen/src/cli/audit/write.rs crates/thinkthen/src/cli/diff.rs crates/thinkthen/tests/backend/batching.rs crates/thinkthen/tests/backend/batching crates/thinkthen/tests/audit_write.rs crates/thinkthen/tests/diff.rs crates/thinkthen/tests/fixtures/measure specification/result.md specification/question-file.md specification/audit.md specification/diff.md specification/records.md specification/settings.md spec/audit.md sdlc/issues sdlc/ratchet.json sdlc/records sdlc/tickets
+opens: sdlc/planning/adr crates/thinkthen/src/core/result.rs crates/thinkthen/src/core/result/batch_warning.rs crates/thinkthen/src/core/mod.rs crates/thinkthen/src/result_json.rs crates/thinkthen/src/cli/profile.rs crates/thinkthen/src/cli/asked.rs crates/thinkthen/src/cli/asking.rs crates/thinkthen/src/cli/asking/batched.rs crates/thinkthen/src/cli/audit.rs crates/thinkthen/src/cli/audit/write.rs crates/thinkthen/src/cli/diff.rs crates/thinkthen/tests/backend/batching.rs crates/thinkthen/tests/backend/batching crates/thinkthen/tests/audit_write.rs crates/thinkthen/tests/diff.rs crates/thinkthen/tests/fixtures/measure specification/result.md specification/question-file.md specification/audit.md specification/diff.md specification/records.md specification/settings.md spec/audit.md sdlc/issues sdlc/ratchet.json sdlc/records sdlc/tickets
 ---
 
 # 0171: A tuned threshold warns at another batch setting
 
-Status: ready for review. Owner: Claude.
+Status: accepted. The coordinator accepted it on 2026-09-27 after a fresh read-only review, with the fixes that review named. Owner: Claude.
 
-Review route: a fresh read-only Claude session reviews this design and later the final diff. Codex does not review this ticket unless Ian routes it.
+Review route: the builder follows the work plan: Claude now, or Codex after the handover. A fresh read-only session from the builder's vendor reviews the final diff.
 
 ## Outcome and authority
 
@@ -18,13 +18,13 @@ A user tuned `refund.json` with `audit --write` when every record went in its ow
 thinkthen: warning: threshold tuned at batch 1 is running at batch max
 ```
 
-Each `--details` row carries `meta.batch_warning`. `audit` and `diff` warn when the results they read ran at different batch settings. `audit --write` records the setting the bar was tuned at, so the file says what it was tuned for.
+Each `--details` row carries `meta.batch_warning`. `audit` and `diff` warn when the results they read ran at different batch settings. `audit --write` records a batched setting the bar was tuned at, so the file says what it was tuned for. A bar tuned one record a request writes no `batch`, and the file then warns at the batched default.
 
 This is batching row B16 of `sdlc/issues/2026-09-26-batching-design.md`, proof test 13. ADR 0048 item 8 gives the rule. ADR 0053 item 3 makes a file with a `threshold` and no `batch` count as tuned at batch 1. It is Batch D item 5 of `sdlc/planning/work-plan-2026-09-27.md`.
 
 Ian's rulings set the frame. Ian can overturn each.
 
-- Speed wins over accuracy. The default stays `max`, and a warning, not a refusal, carries the cost.
+- Speed wins over accuracy. The default stays `max`, and a warning, not a refusal, carries the cost. The coordinator ruled on 2026-09-27 that `audit --write` never writes `"batch": 1`, so a tuned file never slows a run by itself.
 - The batch part of calibration identity stays out of the question digest (batching design, ruling 5 of "Open items").
 - Simple beats clever.
 
@@ -68,8 +68,8 @@ Read from `origin/main` `40783433` and ticket 0146's branch.
 
 On a record run of `decide`, `filter` or `rank`:
 
-- **Tuned for.** The file's `batch` when it has one. Otherwise 1 when the file has a `threshold`. Otherwise none, and no warning.
-- **Running.** The resolved batch setting from ticket 0146's four tiers.
+- **Tuned for.** Only a file with a `threshold` has one. It is the file's `batch` when it has one, and 1 otherwise. A file with no `threshold` warns nobody, even when it holds `batch`.
+- **Running.** The resolved batch setting from ticket 0146's four tiers. A question written as JSON runs one record a request, by ticket 0144's rule, so its running setting is 1.
 - **Mismatch.** Tuned for and running differ. `10` and `max` differ. `max` and `max` do not.
 
 On a mismatch the run prints `thinkthen: warning: threshold tuned at batch T is running at batch R` once, where the profile line prints and by the same rule: at the first successful logical result, and also when `filter` keeps nothing. Each `--details` row carries `meta.batch_warning` as `{"tuned_for":T,"running":R}`, a number or the string `"max"` on each side. It sits after `batch` in `meta`, in the order the `result.md` table gives. A run on one document never warns, because it does not batch.
@@ -81,7 +81,9 @@ On a mismatch the run prints `thinkthen: warning: threshold tuned at batch T is 
 **The setting of a results set.** It is the set of `meta.batch.setting` values the lines carry. When no line carries one, it is `{1}`. A line with no `meta.batch` was asked alone, so it adds nothing to a set that already holds a batched setting.
 
 - `audit` prints one line on standard error when the graded lines hold more than one setting: `thinkthen: audit: warning: the results ran at more than one batch setting (1 and max); a bar tuned over both may fit neither`. The values are listed in ascending order, numbers before `max`, joined by `and` or commas.
-- `audit --write` writes `batch` beside the threshold, as it writes `model`, when it writes a threshold into a single `decide` file and the lines hold one setting. The value is the number or `"max"`. When they hold more than one, it keeps the file's `batch` and adds `thinkthen: audit: kept the batch setting for the question; the results ran at more than one batch setting` to its report.
+- `audit --write` writes `batch` beside the threshold, as it writes `model`, when it writes a threshold into a single `decide` file and the lines hold exactly one setting that is not 1. The value is the number or `"max"`. It never writes `"batch": 1`.
+- When the lines hold only 1 and the file holds a `batch`, the write removes that stale key and adds `thinkthen: audit: removed batch B for the question; the results ran one record a request` to its report. The file then counts as tuned at 1 and warns at a batched run.
+- When the lines hold more than one setting, it keeps the file's `batch` and adds `thinkthen: audit: kept the batch setting for the question; the results ran at more than one batch setting` to its report.
 - It never writes `batch` into a `choose`, `tag` or `score` file, a question set, a `recognize` file or a `relate` file. Their parsers refuse the key until B8, B9 and B10 add it.
 
 ### `diff` warns
@@ -91,12 +93,16 @@ On a mismatch the run prints `thinkthen: warning: threshold tuned at batch T is 
 ### Pages
 
 - `result.md`: the `batch_warning` row and the `meta` paragraph lose their item 8 markers.
-- `question-file.md`, "Precedence": the item 8 half of the marker becomes the rule. It says that `audit --write` writes `batch` and that the file's `batch` then runs by the file tier.
+- `question-file.md`, "Precedence": the item 8 half of the marker becomes the rule. It says that `audit --write` writes a batched `batch` and never 1, and that the file's `batch` then runs by the file tier.
 - `audit.md`: the warning line, the `batch` write and the kept line.
 - `diff.md`, "Warnings": the third line, and "at most three".
 - `records.md`: one sentence that a tuned file warns at another batch setting.
 
 After this ticket, `grep -rn "Not built yet, by ADR 0048 item 8" specification` returns nothing.
+
+### The ADR
+
+The build writes a short ADR, numbered with the next free number in the builder's range: up to 0079 for Claude, 0080 to 0099 for Codex. It amends ADR 0048 item 8 and ADR 0053 item 3. It records that only a file with a `threshold` has a tuned-for setting, that `audit --write` writes only a batched setting and removes a stale one, and that the batch setting stays out of the question digest, which settles local experiment 284 file 14. ADR 0048 item 8 and ADR 0053 item 3 each gain `(Amended by ADR NNNN.)`.
 
 ## Decisions
 
@@ -105,8 +111,8 @@ Each is the agent's decision. Ian can overturn any of them.
 1. **A warning, not a refusal.** Ian ruled speed ahead of accuracy. A refusal would stop every tuned file at the new default.
 2. **No digest change.** ADR 0048 item 8 and Ian's ruling decide it. File 14's question is answered by citation, not by a new rule.
 3. **A row asked alone counts as batch 1 only when no line was batched.** Its request is byte for byte the batch-1 request, by ADR 0055 item 3. In a batched run a single-record batch is common, at a content cut or a pause, and must not make every batched run look mixed.
-4. **`audit --write` writes `batch` silently when it writes a threshold, as it writes `model`.** The spec page and demo 41 then change nothing they pin.
-5. **A written `batch` also sets the run's batch through the file tier.** ADR 0048 item 4 gives the file one `batch` key for both. A file tuned one record a request then runs one record a request unless a typed value or `THINKTHEN_BATCH` overrides it, and those print the warning.
+4. **`audit --write` writes a batched `batch` silently when it writes a threshold, as it writes `model`.** It writes only when the lines hold exactly one setting and it is not 1. Demo 41 and `spec/audit.md` tune one record a request, so they write no `batch` and change nothing they pin.
+5. **A written N or `max` also sets the run by the file tier.** ADR 0048 item 4 gives the file one `batch` key for both. A bar tuned one record a request writes nothing and warns at the default. That keeps speed first, by the coordinator's ruling.
 6. **A typed `--threshold` beside the file still warns.** The profile warning behaves the same way. One rule for both is simpler.
 7. **Only `decide`, `filter` and `rank` warn.** They alone batch. B8, B9 and B10 extend the rule with their verbs.
 
@@ -116,16 +122,19 @@ Each is the agent's decision. Ian can overturn any of them.
 | --- | --- |
 | File with `threshold`, no `batch`, default setting | Warns `tuned at batch 1 is running at batch max`. Rows carry `{"tuned_for":1,"running":"max"}` |
 | The same file at `--batch 1` | No warning. Today's bytes |
-| File `"batch": 10`, `--batch 1`, from a recording | Warns once `tuned at batch 10 is running at batch 1` (design test 13) |
-| File `"batch": 10`, `THINKTHEN_BATCH=max` | Warns `tuned at batch 10 is running at batch max` |
-| File `"batch": "max"`, default | No warning |
+| File with `threshold` and `"batch": 10`, `--batch 1`, from a recording | Warns once `tuned at batch 10 is running at batch 1` (design test 13) |
+| File with `threshold` and `"batch": 10`, `THINKTHEN_BATCH=max` | Warns `tuned at batch 10 is running at batch max` |
+| File with `threshold` and `"batch": "max"`, default | No warning |
+| File with `"batch": 10` and no `threshold`, `--batch 1` | No warning |
+| File with `threshold` and a question written as JSON, default | No warning. It runs one record a request |
 | File `"batch": 1`, nothing else | No warning. One record a request |
 | File with neither key | No warning |
 | File with `threshold`, one document | No warning |
 | `filter` over a tuned file that keeps nothing | The line prints once |
 | A failure at the first record | No warning, as the profile line |
 | `choose @FILE` with a `threshold` | No warning |
-| `audit` over lines all without `meta.batch` | No warning. `--write` writes `"batch": 1` |
+| `audit` over lines all without `meta.batch` | No warning. No `batch` written; the file then warns at a batched run |
+| `audit --write` over lines all without `meta.batch`, into a file holding `"batch": "max"` | The key is removed, and the report says so |
 | `audit` over lines at `max` and some single-record batches | No warning. `--write` writes `"batch": "max"` |
 | `audit` over lines at `max` and lines at 10 | The audit warning. `--write` keeps `batch` and reports why |
 | `audit --write` into a `choose` file | No `batch` written. The file still parses |
@@ -139,8 +148,8 @@ Every command test drives the compiled binary. Run tests use the loopback or a r
 
 | Test | What it proves | Deliberate break that turns it red |
 | --- | --- | --- |
-| `a_tuned_file_warns_at_another_batch`, design test 13, in `tests/backend/batching` | The run rows of the edge table. Each pins the whole standard error and, under `--details`, `meta.batch_warning` on every row. The `--batch 1` row pins today's standard error | (a) Treat a file with a threshold and no `batch` as untuned: the default row is silent. (b) Compare against the file tier after the typed value replaced it: the `--batch 1` row is silent. (c) Print per row: the line repeats. (d) Warn on one document |
-| `audit_reads_and_writes_the_batch_setting`, in `tests/audit_write.rs` | The `audit` rows, over fixture lines with and without `meta.batch`. It pins standard error and the written file's bytes | (a) Count a line without `meta.batch` as 1 in a batched set: the `max` row warns. (b) Write `batch` into a `choose` file: the file stops parsing. (c) Write the first setting when there are two |
+| `a_tuned_file_warns_at_another_batch`, design test 13, in `tests/backend/batching` | The run rows of the edge table. Each pins the whole standard error and, under `--details`, `meta.batch_warning` on every row. The `--batch 1` row pins today's standard error | (a) Treat a file with a threshold and no `batch` as untuned: the default row is silent. (b) Compare against the file tier after the typed value replaced it: the `--batch 1` row is silent. (c) Print per row: the line repeats. (d) Warn on one document. (e) Take the tiers for a JSON question: the JSON row warns. (f) Take `batch` as tuned-for without a `threshold`: the no-threshold row warns |
+| `audit_reads_and_writes_the_batch_setting`, in `tests/audit_write.rs` | The `audit` rows, over fixture lines with and without `meta.batch`. It pins standard error and the written file's bytes | (a) Count a line without `meta.batch` as 1 in a batched set: the `max` row warns. (b) Write `batch` into a `choose` file: the file stops parsing. (c) Write the first setting when there are two. (d) Write `"batch": 1` for an unbatched set: the file bytes differ. (e) Keep a stale `batch` when re-tuning over unbatched lines: the file bytes differ |
 | `diff_warns_at_different_batch_settings`, in `tests/diff.rs` | The two `diff` rows. Standard output and exit code match today's | (a) Compare only the first line of each side. (b) Print the warning on standard output |
 
 The four questions:
@@ -157,12 +166,12 @@ Nonblank lines, measured with `grep -c .`, net against main after ticket 0170 la
 - `core/result/batch_warning.rs`: at most 30, new. `core/result.rs`, `core/mod.rs` and `result_json.rs`: at most 12 net together.
 - `cli/profile.rs`: at most 25 net.
 - `cli/asked.rs`, `cli/asking.rs` and `cli/asking/batched.rs`: at most 20 net together.
-- `cli/audit.rs` and `cli/audit/write.rs`: at most 45 net together.
+- `cli/audit.rs` and `cli/audit/write.rs`: at most 55 net together, with the removal.
 - `cli/diff.rs`: at most 20 net.
-- Product code: at most 152 net.
+- Product code: at most 162 net.
 - Tests: at most 170 net, and at most 8 small fixture files.
-- `sdlc/ratchet.json` moves to the measured total, at most 322 above main after 0170 lands. The commit says what grew.
-- Pages: at most 20 net lines.
+- `sdlc/ratchet.json` moves to the measured total, at most 332 above main after 0170 lands. The commit says what grew.
+- Pages: at most 20 net lines. One ADR of about 30 lines.
 - No dependency. No paid call.
 
 ## Stop rules
@@ -187,7 +196,7 @@ Excluded: the warning for `choose`, `tag`, `score` and `annotate` (B8, B9, B10),
 
 ## Routing
 
-Builder: Claude (Opus subagent) in lane 1. Reviewer: a fresh read-only Claude session for the design and the code. The change raises the ceiling and adds a row member, so the code review names what it checked.
+Builder: the agent the work plan names, Claude now or Codex after the handover. Reviewer: a fresh read-only session from the builder's vendor for the code. The change raises the ceiling and adds a row member, so the code review names what it checked.
 
 ## Complexity
 
@@ -203,8 +212,8 @@ Contract 2; state and timing 0; reach 2; proof 1; cost of error 1; total 6. Fina
 
 - Decision 1: a warning, not a refusal.
 - Decision 3: a row asked alone counts only when no line was batched.
-- Decision 4: a silent `batch` write beside the threshold.
-- Decision 5: the written `batch` also sets the run by the file tier. This follows ADR 0048 item 4.
+- Decision 4: a silent write of a batched `batch` beside the threshold, and never `"batch": 1`. The coordinator ruled it.
+- Decision 5: a written N or `max` also sets the run by the file tier. This follows ADR 0048 item 4.
 - Decision 6: a typed threshold still warns.
 
 ## Closes
@@ -215,6 +224,6 @@ No issue file holds local experiment 284 file 14 alone. The build records file 1
 
 - Starts from: Local experiment 284 file 14, checked on `origin/main` `40783433`: `core/digest.rs:55-68`, `cli/profile.rs`, `cli/asking.rs:150`, `cli/audit/write.rs::bars` and `model`, `cli/diff.rs::warnings`, and `result.md` line 109. ADR 0048 items 4, 8 and 9, ADR 0053 item 3 and ADR 0055 item 3. Ticket 0146's `parse_top` and tiers, and ticket 0170's `meta.batch`. Evidence section 14 of the batching record.
 - Keeps: The question digest and every cache key. Every run whose setting matches its file's. Files with neither key. The profile warning. Verbs that do not batch.
-- Changes: A `decide`, `filter` or `rank` record run over a file tuned at another batch setting prints one warning and carries `meta.batch_warning`. `audit` and `diff` warn over mixed settings. `audit --write` writes `batch` into a single `decide` file when the lines hold one setting.
+- Changes: A `decide`, `filter` or `rank` record run over a file tuned at another batch setting prints one warning and carries `meta.batch_warning`. `audit` and `diff` warn over mixed settings. `audit --write` writes `batch` into a single `decide` file only when the lines hold exactly one setting that is not 1, and removes a stale `batch` when they ran one record a request. A short ADR amends ADR 0048 item 8 and ADR 0053 item 3.
 - Proof: Three outside-in tests, each with deliberate breaks, including design test 13. The `install`, `lint`, `test`, `spec` and `surfaces` rungs.
 - Defers: Mixed results files that include rows asked alone, the later verbs, and library warnings.
