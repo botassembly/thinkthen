@@ -151,6 +151,6 @@ fn choose_help_names_tag() {
     assert!(
         String::from_utf8_lossy(&output.stdout)
             .lines()
-            .any(|line| line == "Use `tag` when any number of the labels can apply.")
+            .any(|line| line == "Use `tag` when more than one answer can apply.")
     );
 }

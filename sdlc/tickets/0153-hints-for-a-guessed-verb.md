@@ -117,6 +117,7 @@ Each is the agent's decision within the backlog row. Ian can overturn any of the
 | `thinkthen think about it` | Clap's refusal, exit 2 (`decide_edge.rs`) | Kept |
 | `thinkthen --help`, `thinkthen decide --help`, `thinkthen --version` | Clap's bytes and exit 0 | Kept |
 | `thinkthen decide --bogus` | Clap's `unexpected argument '--bogus'`, exit 2 | Kept |
+| `thinkthen decide 'Q?' -- --threshold -.5` | The exact `ONE_QUESTION` sentence, exit 2, empty standard output; the words after `--` are positional | Changed |
 | `thinkthen decide 'Q?' README.md` | `thinkthen: ` and `ONE_QUESTION`, exit 2 | Changed |
 | `thinkthen decide Is this urgent` | The same sentence, exit 2 | Changed |
 | `filter`, `rank` or `find` with a second argument | The same sentence, exit 2 | Changed |

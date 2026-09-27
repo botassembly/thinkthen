@@ -94,7 +94,7 @@ pub(crate) enum Command {
 
     /// Pick one option from your list.
     ///
-    /// Use `tag` when any number of the labels can apply.
+    /// Use `tag` when more than one answer can apply.
     ///
     /// The answer is a bare JSON string, or `null` when the winning option
     /// falls under `--threshold` or the top two options tie exactly. Exit 0 is
