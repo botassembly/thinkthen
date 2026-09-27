@@ -417,6 +417,10 @@ fn transport_kinds_give_fixed_actions() {
             "thinkthen: the backend closed the connection before a reply and may have received the request; it was not sent again\n",
         ),
         (
+            TransportKind::Tls,
+            "thinkthen: the TLS connection or certificate check failed; check --url and the backend's certificate trust\n",
+        ),
+        (
             TransportKind::Other,
             "thinkthen: the backend could not be reached; check --url and the network\n",
         ),

@@ -259,13 +259,14 @@ fn a_stop_during_a_retry_wait_sends_nothing_new() {
     // The backend asks for a ten-second wait, so an early end is plain on a loaded machine.
     let busy = Listener::answering(|_| Canned::status(503, "").asking("retry-after", "10"))
         .expect("listener");
-    let engine = engine(busy.base());
+    let busy_engine = engine(busy.base());
     let asked = question();
 
     let runs = Runs::default();
     let check = || runs.record(busy.count()) > 1 && busy.count() == 1;
     let started = Instant::now();
-    let result = engine.decide_with(&asked, "Refund me.", CallOptions::new().interrupt(&check));
+    let result =
+        busy_engine.decide_with(&asked, "Refund me.", CallOptions::new().interrupt(&check));
     assert_eq!(kind(&result), Some(ErrorKind::Cancelled));
     assert!(runs.all_on(thread::current().id()));
     assert_eq!(busy.count(), 1, "the retry after the wait never went");
@@ -274,11 +275,15 @@ fn a_stop_during_a_retry_wait_sends_nothing_new() {
         "the wait ended early"
     );
 
+    let deadline_busy =
+        Listener::answering(|_| Canned::status(503, "").asking("retry-after", "10"))
+            .expect("deadline listener");
+    let deadline_engine = engine(deadline_busy.base());
     let started = Instant::now();
     let options = CallOptions::new().deadline_after(Duration::from_millis(300));
-    let result = engine.decide_with(&asked, "Refund me.", options.expect("options"));
+    let result = deadline_engine.decide_with(&asked, "Refund me.", options.expect("options"));
     assert_eq!(kind(&result), Some(ErrorKind::Deadline));
-    assert_eq!(busy.count(), 2, "one more first attempt, no retry");
+    assert_eq!(deadline_busy.count(), 1, "one first attempt, no retry");
     assert!(
         started.elapsed() < Duration::from_secs(5),
         "the wait ended early"

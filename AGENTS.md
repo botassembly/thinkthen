@@ -10,6 +10,7 @@ Read `README.md`, `specification/README.md`, and `sdlc/planning/rust-standards.m
 - `sdlc/ratchet.json` equals the measured source total. A raised ceiling records growth, why it earns its lines, and where duplication was sought for deletion.
 - A second agent reviews raised ceilings, wider public surfaces, and dependencies, naming what it checked.
 - A ticket that turns a demo green writes its page in ADR 0011's how-to form, and `sdlc/scripts/demos` checks it.
+- Prepare related tickets per `sdlc/planning/ticket-preparation.md`; preserve outcomes. Before landing, add `## What the build taught us` to the ticket. Review its lessons and improve the next brief.
 - Commit each whole change and push it at once.
 - Never add agent attribution to a commit or pull request.
 - Use a lane per `sdlc/planning/worktrees.md`. The lander frees it.
@@ -51,7 +52,7 @@ This repository will go public. Never name a private project or customer. Descri
 
 ## Where things are
 
-`crates/thinkthen` holds `core`, `engine`, `cli`, and binary. `specification/` is the contract; `spec/` holds `mustmatch` pages. `demos/` holds how-tos; each green one is an ADR 0016 test. `transforms/` holds `jq` over saved rows. Marketing owns `site/` (`sdlc/planning/ownership.md`). `probes/` holds ruled live measurements. `sdlc/` holds records, mapped by `sdlc/README.md`; `README.md` defines terms.
+`README.md` defines terms; `sdlc/README.md` maps the repo. Marketing owns `site/` per `sdlc/planning/ownership.md`. Green demos are ADR 0016 tests. `probes/` holds ruled live measurements.
 
 ## Where decisions go
 

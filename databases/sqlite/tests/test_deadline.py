@@ -59,11 +59,11 @@ say(error=error, took=time.monotonic() - started)
 
 
 def test_a_busy_backend_ends_after_its_retries() -> None:
-    """R2-24: the engine retries twice (`max_retries: 2` in EngineBuilder::build),
-    so a 503 arm takes three sends and ends retryable before a 150 ms deadline."""
+    """R2-24: the engine retries three times (`max_retries: 3` in EngineBuilder::build),
+    so a 503 arm takes four sends and ends retryable before a 150 ms deadline."""
     held, sends = decided(["150"], "arm/503")
     expect(held, ["thinkthen backend (retryable): the backend answered with status 503"], "the error")
-    expect(sends, 3, "sends")
+    expect(sends, 4, "sends")
 
 
 if __name__ == "__main__":

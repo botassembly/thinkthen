@@ -65,12 +65,12 @@ fn each_wire_fault_arm_yields_its_kind_and_sentence() {
         ),
         (
             "429",
-            3,
+            4,
             "thinkthen: the backend answered with status 429: the backend's rate limit was reached\n",
         ),
         (
             "503",
-            3,
+            4,
             "thinkthen: the backend answered with status 503: the backend failed after the allowed attempts; try again later or change --max-retries\n",
         ),
         (
