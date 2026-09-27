@@ -6,7 +6,7 @@ opens: specification/fixtures/recognize sdlc/scripts/recognize-keys sdlc/scripts
 
 # 0164: The recognize keys live in the repository, and audit grades them
 
-Status: ready for review. Owner: Claude.
+Status: ready. The coordinator accepted it on 2026-09-26 after two fresh read-only reviews. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
@@ -89,13 +89,13 @@ A reader runs `jq -c --argjson kinds '["person"]' -f specification/fixtures/reco
 **`README.md`** says:
 
 - the source of each file: "written by hand for this repository in local experiments 267 and 277" and "local experiment 265", with each source's SHA-256 and the date, 2026-09-26. It says lines n001 to n100 are local experiment 267's key unchanged;
-- the counts: 200 sentences, 372 names, the 33 categories with their counts, and the names per kind, core and extra;
+- the counts: 200 sentences, 372 names, the 33 categories with their counts in one paragraph, as in line 28 of this ticket, and the names per kind, core and extra;
 - the license: every sentence was written for this project, and the files are under the repository's MIT license. No sentence comes from a dataset. Local experiment 267 kept a 25-group WNUT-17 sample, which is CC-BY 4.0, and this ticket copies none of it. Note n066 names WNUT-17 as the source of a known confusion, and copies no WNUT-17 text. Local experiment 277's rules cite Universal NER, MUC-7, OntoNotes, ACE, WNUT-17, CheckList and RockNER, and copy no text from any of them;
 - the convention the name key follows: local experiment 277's 29 rules, copied. Rules 1 to 11 are 267's rules, and 277 widened rules 1, 3 and 5;
 - the agreement result: a blind second annotator agreed with the key on 59 of 60 sampled cases after one key fix, with span F1 and labelled F1 both 0.995. The second annotator is the same model family as the key's author, so the figure is likely high;
 - the kinds of each file, and that `organisation` is spelled as the key spells it;
 - how to grade a run, and how to filter by kind, as executable blocks (proof test 2);
-- the known key limits: the optional-span rule above, c17's alternative kind, the optional edges, and `Mr. and Mrs. Smith` in n152 as one span for two people.
+- the known key limits: the optional-span rule above, c17's alternative kind, the optional edges, and `Mr. and Mrs. Smith` in n152, where the key gives one span, `Smith` at 13 to 18, for two people.
 
 ### The script
 
@@ -211,7 +211,7 @@ The four questions:
 
 Nonblank lines, measured with `grep -c .`.
 
-- `specification/fixtures/recognize/names.jsonl`: 200. `relations.jsonl`: 30. `kinds.jq`: at most 4. `README.md`: at most 150, since it copies 29 rules and 33 categories.
+- `specification/fixtures/recognize/names.jsonl`: 200. `relations.jsonl`: 30. `kinds.jq`: at most 4. `README.md`: at most 150. It copies the 29 rules verbatim, about 48 lines, and gives the 33 categories as one paragraph.
 - `sdlc/scripts/recognize-keys`: at most 160, with its self-test.
 - `sdlc/scripts/lint`: 3 added. `sdlc/scripts/spec`: 2 added. `sdlc/scripts/README.md`: 1 row.
 - `crates/thinkthen/src/core/recognize.rs`: at most 25 added. `sdlc/ratchet.json` moves to the measured total. The commit says the reach test grew it and names the tests it looked at for duplication first.
