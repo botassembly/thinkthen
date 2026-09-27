@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/core/adapters/systemone.rs crates/thinkthen/src/cli/
 
 # 0159: The default model is a pinned version
 
-Status: ready. The coordinator accepted it on 2026-09-26 after five fresh read-only reviews and a coordinator fix to two lines. Owner: Claude. It builds after 0150 and 0158 land and beside no other ticket.
+Status: built 2026-09-26, awaiting code review (`sdlc/records/0159-build-pin-the-default-model.md`). The coordinator accepted it on 2026-09-26 after five fresh read-only reviews and a coordinator fix to two lines. Owner: Claude. It builds after 0150 and 0158 land and beside no other ticket.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
