@@ -256,6 +256,9 @@ impl Engine {
     }
 }
 
+/// A text's pieces and its prepared step-1 requests.
+pub(crate) type StepOne = (Vec<Piece>, Vec<PreparedChunk>);
+
 /// Refuse a text over `limit` bytes, then split it into pieces and prepare
 /// every step-1 request. A kind question the profile refuses stops the text
 /// here, before any request.
@@ -265,7 +268,7 @@ pub(crate) fn step_one(
     spec: &RecognizeSpec,
     text: &str,
     limit: usize,
-) -> Result<(Vec<Piece>, Vec<PreparedChunk>), Error> {
+) -> Result<StepOne, Error> {
     if text.len() > limit {
         return Err(Error::TextTooLong {
             bytes: text.len(),

@@ -175,7 +175,9 @@ fn spec_readers_keep_the_parsers_rules_and_split_usage_from_local() {
         message(Relate::load(&relate_file)),
         (ErrorKind::Local, relate_sentence)
     );
-    let recognize_sentence = "recognize reserves the kind names none of these, ENTITY and ANY in any ASCII case".to_owned();
+    let recognize_sentence =
+        "recognize reserves the kind names none of these, ENTITY and ANY in any ASCII case"
+            .to_owned();
     assert_eq!(
         message(Recognize::from_json(broken_recognize)),
         (ErrorKind::Usage, recognize_sentence.clone())

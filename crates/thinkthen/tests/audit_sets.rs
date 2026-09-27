@@ -286,7 +286,8 @@ fn write_puts_the_cut_in_recognize_and_relate_files() {
     let file = write(&folder, "names.json", &names);
     // Every name of demo 44's recording scores above 0.99, past the bar's
     // grid, so the name the key leaves out is lowered to 0.6 by hand.
-    let lines = recognized(&[&format!("@{file}")], RECORDS).replace("\"strength\":0.997", "\"strength\":0.6");
+    let lines = recognized(&[&format!("@{file}")], RECORDS)
+        .replace("\"strength\":0.997", "\"strength\":0.6");
     let key = write(
         &folder,
         "names-key.jsonl",

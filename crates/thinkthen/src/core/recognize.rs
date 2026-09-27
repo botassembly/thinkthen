@@ -63,6 +63,9 @@ impl Asked {
     }
 }
 
+/// One step-2 request's questions, and what each name in it asked.
+pub(crate) type StepTwo = (Vec<Question>, Vec<Asked>);
+
 /// The step-2 questions for the found names in `group`, in name order: each
 /// name's kind question, then its edge question.
 pub(crate) fn step_two_questions(
@@ -71,7 +74,7 @@ pub(crate) fn step_two_questions(
     found: &[(usize, usize)],
     group: Range<usize>,
     kinds: &[(String, Option<Description>)],
-) -> Result<(Vec<Question>, Vec<Asked>), LabelsError> {
+) -> Result<StepTwo, LabelsError> {
     let mut questions = Vec::new();
     let mut asked = Vec::new();
     for stretch in found.get(group).unwrap_or_default().iter().copied() {

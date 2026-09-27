@@ -26,6 +26,29 @@ fn admits(side: &str, kind: &str) -> bool {
     side == "*" || side == kind
 }
 
+/// Whether `rule` asks about the pair of asked names at `left` and `right`,
+/// each with its kind. An `either` rule asks each unordered pair once.
+fn allowed(rule: &RelationRule, left: (usize, &str), right: (usize, &str)) -> bool {
+    let ((left, from), (right, to)) = (left, right);
+    if rule.either {
+        left < right
+            && ((admits(&rule.source, from) && admits(&rule.target, to))
+                || (admits(&rule.source, to) && admits(&rule.target, from)))
+    } else {
+        left != right && admits(&rule.source, from) && admits(&rule.target, to)
+    }
+}
+
+/// The step-3 question about the asked names at `left` and `right`.
+fn pair_words(rule: &RelationRule, left: usize, right: usize) -> String {
+    let (one, two, reads) = (entity_id(left), entity_id(right), &rule.reads);
+    if rule.either {
+        format!("Does the text itself state that {one} {reads} {two}, or that {two} {reads} {one}?")
+    } else {
+        format!("Does the text itself state that {one} {reads} {two}?")
+    }
+}
+
 /// Plan the pair questions, or `None` when no pair is allowed. Names with
 /// equal text and kind are asked once, as the first.
 pub(crate) fn plan_stated(
@@ -51,38 +74,25 @@ pub(crate) fn plan_stated(
     let mut questions = Vec::new();
     let mut pairs = Vec::new();
     for (rule_place, rule) in rules.iter().enumerate() {
-        for (left, source) in asked.iter().enumerate() {
-            for (right, target) in asked.iter().enumerate() {
-                let (from, to) = (kind(*source), kind(*target));
-                let allowed = if rule.either {
-                    left < right
-                        && ((admits(&rule.source, from) && admits(&rule.target, to))
-                            || (admits(&rule.source, to) && admits(&rule.target, from)))
-                } else {
-                    left != right && admits(&rule.source, from) && admits(&rule.target, to)
-                };
-                if !allowed {
-                    continue;
-                }
-                let (one, two, reads) = (entity_id(left), entity_id(right), &rule.reads);
-                let words = if rule.either {
-                    format!(
-                        "Does the text itself state that {one} {reads} {two}, or that {two} {reads} {one}?"
-                    )
-                } else {
-                    format!("Does the text itself state that {one} {reads} {two}?")
-                };
-                questions.push(Question::Decide {
-                    text: QuestionText::new(words).map_err(|_| RelationPlanError)?,
-                    yes: None,
-                    no: None,
-                });
-                pairs.push(StatedPair {
-                    rule: rule_place,
-                    source: *source,
-                    target: *target,
-                });
+        let ordered = asked
+            .iter()
+            .enumerate()
+            .flat_map(|left| asked.iter().enumerate().map(move |right| (left, right)));
+        for ((left, source), (right, target)) in ordered {
+            if !allowed(rule, (left, kind(*source)), (right, kind(*target))) {
+                continue;
             }
+            questions.push(Question::Decide {
+                text: QuestionText::new(pair_words(rule, left, right))
+                    .map_err(|_| RelationPlanError)?,
+                yes: None,
+                no: None,
+            });
+            pairs.push(StatedPair {
+                rule: rule_place,
+                source: *source,
+                target: *target,
+            });
         }
     }
     if questions.is_empty() {
