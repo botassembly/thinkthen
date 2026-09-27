@@ -7,7 +7,8 @@ use std::path::Path;
 use std::process::{Child, Command, Output, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::channel;
-use std::sync::{Arc, Barrier};
+use std::sync::Arc;
+use conformance_backend::Rendezvous;
 use std::time::Duration;
 
 use crate::harness::{Canned, Listener, Observed, finish};
@@ -86,7 +87,7 @@ fn held(
     reply: impl Fn() -> Canned + Send + Sync + 'static,
 ) -> io::Result<Output> {
     let acknowledgment = Acknowledgment::new();
-    let release = Arc::new(Barrier::new(count + 1));
+    let release = Arc::new(Rendezvous::new(count + 1));
     let backend_release = Arc::clone(&release);
     let (events_send, events) = channel();
     let listener = Listener::answering_with_events(

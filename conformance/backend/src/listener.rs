@@ -3,11 +3,11 @@ use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
-use std::sync::{Arc, Barrier, Mutex};
-use std::thread;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use crate::arms::drift;
+use crate::lifetime::{Lifetime, Rendezvous};
 
 /// The path the engine appends to every base.
 const ENDPOINT_PATH: &str = "systemone";
@@ -30,7 +30,7 @@ pub struct Canned {
     location: Option<String>,
     promised: Option<usize>,
     delay: Duration,
-    release: Option<Arc<Barrier>>,
+    release: Option<Arc<Rendezvous>>,
     held: Option<(Arc<Gate>, u64)>,
     answered: Option<Sender<()>>,
     asked: Vec<(String, String)>,
@@ -101,8 +101,8 @@ impl Canned {
         self
     }
 
-    /// Wait at this barrier before answering, so a test controls the release.
-    pub fn after_release(mut self, release: Arc<Barrier>) -> Self {
+    /// Wait at this rendezvous before answering, so a test controls the release.
+    pub fn after_release(mut self, release: Arc<Rendezvous>) -> Self {
         self.release = Some(release);
         self
     }
@@ -202,6 +202,7 @@ pub struct Listener {
     url: String,
     recorded: Mutex<Receiver<Recorded>>,
     counts: Arc<Counts>,
+    lifetime: Arc<Lifetime>,
 }
 
 impl Listener {
@@ -214,13 +215,17 @@ impl Listener {
         let (sender, recorded) = channel();
         let counts = Arc::new(Counts::default());
         let serving = Arc::clone(&counts);
-        thread::spawn(move || serve_script(&listener, responses, &sender, &serving));
+        let lifetime = Lifetime::new();
+        lifetime.start(listener, move |listener, lifetime| {
+            serve_script(&listener, responses, &sender, &serving, &lifetime);
+        })?;
         Ok(Self {
             origin,
             base,
             url,
             recorded: Mutex::new(recorded),
             counts,
+            lifetime,
         })
     }
 
@@ -270,21 +275,24 @@ impl Listener {
         let counts = Arc::new(Counts::default());
         let serving = Arc::clone(&counts);
         let reply: Arc<Reply> = Arc::new(reply);
-        thread::spawn(move || {
+        let lifetime = Lifetime::new();
+        lifetime.start(listener, move |listener, lifetime| {
             accept_every(
                 &listener,
                 &reply,
                 sender.as_ref(),
                 &serving,
                 events.as_ref(),
+                &lifetime,
             );
-        });
+        })?;
         Ok(Self {
             origin,
             base,
             url,
             recorded: Mutex::new(recorded),
             counts,
+            lifetime,
         })
     }
 
@@ -328,30 +336,34 @@ impl Listener {
     }
 }
 
+impl Drop for Listener {
+    fn drop(&mut self) { self.lifetime.retire(); }
+}
+
 /// Serve one response per connection until the script runs out, then drift.
 fn serve_script(
     listener: &TcpListener,
     responses: Vec<Canned>,
     sender: &Sender<Recorded>,
     counts: &Counts,
+    lifetime: &Lifetime,
 ) {
     let mut script = responses.into_iter();
-    for accepted in listener.incoming() {
-        let Ok(stream) = accepted else { return };
+    while let Some(stream) = lifetime.accept(listener) {
+        let Some(id) = lifetime.register(&stream) else { return };
         counts.connections.fetch_add(1, Ordering::SeqCst);
         let _ = stream.set_read_timeout(Some(IDLE));
-        let Some((request, used)) = peek_request(&stream) else {
-            continue;
-        };
-        let _ = sender.send(request);
-        let canned = script
-            .next()
-            .unwrap_or_else(|| drift("the script has no reply left for this connection"));
-        if canned.reset && used == 0 {
-            serve(stream, &drift(UNRESETTABLE));
-        } else if !canned.reset && consume(&stream, used).is_some() {
-            serve(stream, &canned);
+        if let Some((request, used)) = peek_request(&stream) {
+            let _ = sender.send(request);
+            let canned = script.next()
+                .unwrap_or_else(|| drift("the script has no reply left for this connection"));
+            if canned.reset && used == 0 {
+                serve(&stream, &drift(UNRESETTABLE), lifetime);
+            } else if !canned.reset && consume(&stream, used).is_some() {
+                serve(&stream, &canned, lifetime);
+            }
         }
+        lifetime.finish(id);
     }
 }
 
@@ -362,21 +374,22 @@ fn accept_every(
     sender: Option<&Sender<Recorded>>,
     counts: &Arc<Counts>,
     events: Option<&Sender<Observed>>,
+    lifetime: &Arc<Lifetime>,
 ) {
-    for accepted in listener.incoming() {
-        let Ok(stream) = accepted else { return };
+    while let Some(stream) = lifetime.accept(listener) {
         counts.connections.fetch_add(1, Ordering::SeqCst);
         let reply = Arc::clone(reply);
         let counts = Arc::clone(counts);
         let sender = sender.cloned();
         let events = events.cloned();
-        thread::spawn(move || {
+        lifetime.spawn(stream, move |stream, lifetime| {
             serve_kept(
                 &stream,
                 reply.as_ref(),
                 sender.as_ref(),
                 &counts,
                 events.as_ref(),
+                &lifetime,
             );
         });
     }
@@ -389,8 +402,10 @@ fn serve_kept(
     sender: Option<&Sender<Recorded>>,
     counts: &Counts,
     events: Option<&Sender<Observed>>,
+    lifetime: &Lifetime,
 ) {
     loop {
+        if lifetime.stopped() { return; }
         let Some((request, used)) = peek_request(stream) else {
             return;
         };
@@ -414,17 +429,7 @@ fn serve_kept(
             counts.in_flight.fetch_sub(1, Ordering::SeqCst);
             return;
         }
-        thread::sleep(canned.delay);
-        if let Some(release) = canned.release.as_ref() {
-            release.wait();
-        }
-        while canned
-            .held
-            .as_ref()
-            .is_some_and(|(gate, round)| gate.holds(*round))
-        {
-            thread::sleep(Duration::from_millis(5));
-        }
+        if !wait_answer(&canned, lifetime) { return; }
         write_answer(stream, &canned, false);
         if let Some(answered) = canned.answered.as_ref() {
             let _ = answered.send(());
@@ -458,7 +463,7 @@ fn peek_request(stream: &TcpStream) -> Option<(Recorded, usize)> {
         if seen == buffer.len() || last.1.elapsed() >= STALL {
             return read_request(&mut BufReader::new(stream)).map(|request| (request, 0));
         }
-        thread::sleep(Duration::from_millis(1));
+        std::thread::sleep(Duration::from_millis(1));
     }
 }
 
@@ -499,14 +504,21 @@ fn read_request(reader: &mut impl BufRead) -> Option<Recorded> {
 }
 
 /// Write one canned response and close the connection.
-fn serve(stream: TcpStream, canned: &Canned) {
-    if let Some(release) = canned.release.as_ref() {
-        release.wait();
-    }
-    write_answer(&stream, canned, true);
+fn serve(stream: &TcpStream, canned: &Canned, lifetime: &Lifetime) {
+    if !wait_answer(canned, lifetime) { return; }
+    write_answer(stream, canned, true);
     if let Some(answered) = canned.answered.as_ref() {
         let _ = answered.send(());
     }
+}
+
+fn wait_answer(canned: &Canned, lifetime: &Lifetime) -> bool {
+    if !lifetime.pause(canned.delay) { return false; }
+    if canned.release.as_ref().is_some_and(|release| !release.wait_owned(lifetime)) { return false; }
+    while canned.held.as_ref().is_some_and(|(gate, round)| gate.holds(*round)) {
+        if !lifetime.pause(Duration::from_millis(5)) { return false; }
+    }
+    !lifetime.stopped()
 }
 
 /// Write one canned response, closing the connection or keeping it open.

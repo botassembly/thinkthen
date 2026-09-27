@@ -1,6 +1,7 @@
 //! Recognize over profiles, the cache, recordings, details and record workers.
 
 use super::*;
+use conformance_backend::Rendezvous;
 
 /// A one-question profile splits every request and prints the same names and edges.
 #[test]
@@ -174,7 +175,7 @@ fn failed_relation_question_prints_no_partial_entity_or_edge_object() {
 
 #[test]
 fn concurrent_record_workers_print_in_input_order() {
-    let release = Arc::new(Barrier::new(2));
+    let release = Arc::new(Rendezvous::new(2));
     let listener = Listener::answering(move |body| automatic(body).after_release(release.clone()))
         .expect("listener");
     let output = run(

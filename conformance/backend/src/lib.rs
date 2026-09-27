@@ -5,7 +5,9 @@
 //! by the URL path a caller gives as its base.
 
 mod arms;
+mod lifetime;
 mod listener;
 
 pub use arms::{Backend, run};
 pub use listener::{Canned, Listener, Observed, Recorded};
+pub use lifetime::Rendezvous;

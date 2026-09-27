@@ -5,7 +5,8 @@ use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Output, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Barrier, mpsc};
+use std::sync::{Arc, mpsc};
+use conformance_backend::Rendezvous;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -105,7 +106,7 @@ fn wait_on(child: &Reaped, file: &fs::Metadata, what: &str) -> io::Result<()> {
 fn prune_waits_for_owner_and_original_inode_waiter_before_a_later_fill() {
     let cache = folder();
     let named = cache.to_string_lossy().into_owned();
-    let release = Arc::new(Barrier::new(2));
+    let release = Arc::new(Rendezvous::new(2));
     let calls = Arc::new(AtomicUsize::new(0));
     let (events, observed) = mpsc::channel();
     let listener = Listener::answering_with_events(
