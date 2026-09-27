@@ -110,3 +110,7 @@ Ticket 0139's calls:
 17. The schema gains `batch` with the parser that reads it, not before.
 18. `--batch`, `--context` and `--facts` in the long help only.
 19. An `annotate` question set taking one top-level `batch`, built by B10.
+
+## Amendment, 2026-09-26: ADR 0055 sends each record once
+
+ADR 0055 amends item 1 for `decide`, `filter` and `rank`. Without a context, a batch of two or more distinct records sends the fixed sentence `Each question quotes the text it asks about.` as its evidence in place of `{"records":[…]}`. Each question still quotes its record as item 1 says. A batch of one still sends today's request byte for byte. `choose` and `tag` keep item 1's form until B8 and B9 measure them on long records. Ian can overturn it.
