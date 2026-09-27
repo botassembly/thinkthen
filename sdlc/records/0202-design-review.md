@@ -11,3 +11,5 @@ The queue owner accepts the ticket within Ian's instruction to settle every item
 ## File layout amendment
 
 A fresh read-only Sol Medium reviewer accepted `50b5d814` on 2026-09-27. It checked the proposed `lifetime.rs` and `lib.rs` file split against the accepted ownership contract and current source. The existing listener has 492 nonblank lines against the 500-line ceiling. The private module holds the already-required shutdown, tracked connections and workers, and cancellable rendezvous. This changes no retirement, cancellation, ordering or product-surface contract. The builder resumes only after the new exact file claim lands on main.
+
+The queue owner extended the file list to `crates/thinkthen/tests/backend/recognize.rs` for one mechanical cleanup: removing the unused `Barrier` import after the already-approved `stores.rs` migration. A source search found no remaining use in that module or its children. This adds no caller, lifecycle rule, or design decision. The runtime diff remains subject to fresh code review, and the file claim lands before editing.
