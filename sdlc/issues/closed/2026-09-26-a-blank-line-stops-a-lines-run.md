@@ -1,6 +1,6 @@
 # A blank line stops a `--lines` run, and the spec does not say so
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, reports 01 (issue 2) and 11 (issue 1). Blocks 0.1: it is the default framing for `filter`, and the spec says nothing. Owner: ticket 0162 on `ticket/0162-a-record-stream-ends-cleanly`, ready for review.
+Status: closed by ticket 0162 on 2026-09-27. Line framing skips blank text before batching while preserving original input positions. Space, CRLF and trailing blank cases pass; blank JSONL remains a usage error.
 
 ## What happens
 
@@ -28,3 +28,7 @@ The queue owner picks the rule and records why.
 ## Done when
 
 The chosen rule is on the pages, and an edge-case table covers an empty line, a line of spaces, a CRLF blank line and a trailing blank line.
+
+## Resolution
+
+The independently reviewed code at `66da9fb1` and focused passing checks are recorded in `sdlc/records/0162-a-record-stream-ends-cleanly.md`. The coordinator also ran the selected 31-ID command boundary: 25 passed, six deliberate not-run cases, zero failures.

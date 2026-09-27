@@ -1,6 +1,6 @@
 # 0162: A record stream ends cleanly
 
-Status: Built on `ticket/0162-a-record-stream-ends-cleanly`, awaiting fresh read-only code review and landing gates.
+Status: done on 2026-09-27. Fresh code and independent ceiling/dependency/policy reviews accepted `66da9fb1`; focused checks passed. Owner: Codex.
 
 The batch reader now polls standard output between requests and stops when the platform reports a closed downstream pipe. A real-pipe compiled-binary test reads the first kept `filter` row and closes its reader. At `--batch 1` and `--batch 10`, the command exits 0, stays quiet and sends at most 12 of 301 possible requests with `--jobs 4`. The test failed before the change because the command sent all 301. Fresh code review then found that an idle batch reader could wait forever for another input record after the first kept row. A fourth compiled-binary case kept standard input open after closing the output reader and failed at its bounded two-second deadline before the correction. The idle receive now wakes every 50 ms to check the closed pipe and cancellation, while a partially filled batch still closes after the original 50 ms pause. Existing closed-pipe tests still cover commands that write each result and quiet termination after a concurrent backend failure.
 
@@ -12,4 +12,12 @@ Main at `22150794` had a 75,356-line Rust source ceiling. This branch measures 7
 
 Focused validation on Rust 1.95: `cargo fmt --all -- --check`, `sdlc/scripts/policy.py`, and `cargo clippy --locked --workspace --all-targets -- -D warnings` passed after the correction. Both closed-pipe cases, both blank-line cases, the existing 50 ms open-batch pause case, the existing open-input backend-failure case, and the existing open-input closed-output case passed. Before the correction, four other existing closed-output-pipe cases, the stopped-run replay case, and the quiet concurrent-failure case passed. The new open-input closed-output case failed before the correction as described above. `sdlc/scripts/ratchet.mjs` measures 75,724/75,724. No paid or live backend call ran. The API key was unset in the parent process; compiled-binary loopback cases used only a fake key.
 
-The Linux poll behavior is covered here. macOS closed-pipe reporting remains unverified, so a macOS run may still stop at its next write. The pacer remains open. The two behavior issues and the wording subitem can close after review and landing.
+The Linux poll behavior is covered here. macOS closed-pipe reporting remains unverified, so a macOS run may still stop at its next write. The pacer remains open. The landing closes the two behavior issues and only the wording subitem of the pacer issue.
+
+## Review and landing
+
+The fresh code review found the idle-input hang, then accepted its correction at `66da9fb1`. The independent second reviewer accepted the unchanged dependency/policy inputs and recounted the corrected 75,724-line total with every file at or below 500. Both reviews checked the new test disposition and recorded growth. The merge of later main changed only queue metadata.
+
+The coordinator additionally ran the existing command conformance boundary with the routine selector: 31 selected IDs, 25 passed, six deliberate not-run cases and zero failures. One test function took 0.83 seconds; its command took 0.97 seconds including any lock wait. The log is `target/codex-builds/0162/final-command-cases.log`. This is a focused ten-function boundary check, not a full suite or a port/platform result.
+
+Ian's batch-validation ruling applies. The completed 0205 integration checkpoint remains prior evidence for unchanged surfaces. The full ladder was not repeated for 0162; the next related command checkpoint follows 0169. A new failure or changed shared contract can require an earlier broader check. No stress or paid call ran.
