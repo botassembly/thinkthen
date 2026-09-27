@@ -32,6 +32,7 @@ impl Deadline {
 #[derive(Clone, Debug, Default)]
 pub(crate) struct Cancel<'a> {
     fired: Arc<AtomicBool>,
+    token: Option<Arc<AtomicBool>>,
     deadline: Option<Deadline>,
     check: Option<Check<'a>>,
     sends: Arc<AtomicUsize>,
@@ -97,6 +98,14 @@ impl<'a> Cancel<'a> {
         }
     }
 
+    /// Share this stop flag with one call that a caller's token also stops.
+    pub(crate) fn with_token(&self, token: Option<Arc<AtomicBool>>) -> Self {
+        Self {
+            token,
+            ..self.clone()
+        }
+    }
+
     /// Share this stop flag with one call whose host check runs on this thread.
     #[allow(
         dead_code,
@@ -119,7 +128,11 @@ impl<'a> Cancel<'a> {
     /// Observe cancellation, then the host check on its calling thread, then
     /// the deadline, or return the budget left.
     pub(crate) fn stop_or_remaining(&self) -> Result<Option<Duration>, error::Error> {
-        if self.fired() || self.checked() {
+        let token = self
+            .token
+            .as_ref()
+            .is_some_and(|token| token.load(Ordering::Acquire));
+        if self.fired() || token || self.checked() {
             return Err(error::Error::Cancelled);
         }
         self.remaining()

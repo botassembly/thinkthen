@@ -125,7 +125,7 @@ The `ECANCELLED` comment at `thinkthen.h:74` stays true and does not change.
 Each is the ticket author's call unless marked. Ian can overturn any of them.
 
 1. **A fired token wins over every result.** A call whose token fired returns cancellation even when a sent request failed after the fire, for example with a 422. The header already promises `THINKTHEN_ECANCELLED` to every call carrying a fired token, and the six bindings with their own wait loops already return cancellation whatever their worker met. The alternative keeps a failure's own kind and replaces only success. It would tell a host more, and it would weaken the header's promise.
-2. **The door reads the token after the join.** The answer is decoded, cached and counted first, so no paid reply is lost and a fresh-token call never pays twice.
+2. **The door reads the token after the join.** The answer is decoded, counted and, when complete, cached first, so no paid reply is lost and a fresh-token call never pays twice.
 3. **The engine reads the token on every thread.** This closes the retry leak with one field. It opens `engine/mod.rs` beside ticket 0155 on disjoint lines.
 4. **A batch keeps yielding rows it finished before its end.** Only its end changes. Withholding rows after a fire would change the lazy iterator's contract for Rust consumers, and the C door already returns no rows on any error.
 5. **The binding wait-loop race goes to an issue.** It is not in the shared path.
