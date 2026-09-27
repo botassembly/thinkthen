@@ -4,7 +4,7 @@ Status: closed by ticket 0168 on 2026-09-27. Python and Ruby now read their call
 
 The held throttle place in local experiment 284 file 76 is real and separate from the four host-interrupt loops. Ticket 0168 states the wait it can impose on a later call in `specification/settings.md`. Sent attempts already enter usage counters, and the throttle bounds concurrent work. A cancellable socket read remains a deferred possible fix for the held place; this closure does not declare that cost a non-issue.
 
-## What happens
+## Behavior before 0168
 
 Python, Ruby, R, DuckDB, SQLite and PostgreSQL run each call on a worker thread. The calling thread waits for the worker's answer in ticks of 50 or 100 ms. At each tick it reads its stop: the caller's token, a pending signal, or the host's interrupt flag. On a stop it fires its own token for the worker and returns cancellation at once.
 
