@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine/request.rs crates/thinkthen/src/engine/record
 
 # 0158: A cache keeps no reply that failed a question
 
-Status: ready. The coordinator accepted it on 2026-09-26 after three fresh read-only reviews. Owner: Claude. It lands before ticket 0146's (B4) build starts.
+Status: built 2026-09-26, awaiting code review (`sdlc/records/0158-build-a-cache-keeps-no-failed-question.md`). The coordinator accepted it on 2026-09-26 after three fresh read-only reviews. Owner: Claude. It lands before ticket 0146's (B4) build starts.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 
