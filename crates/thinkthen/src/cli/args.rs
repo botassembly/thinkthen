@@ -1,5 +1,6 @@
 //! The command line, as the clap types that parse it.
 
+use std::ffi::OsString;
 use std::path::PathBuf;
 
 use crate::core::{DEFAULT_MODEL, Framing};
@@ -200,6 +201,10 @@ pub(crate) struct DecideArguments {
     /// written in a file.
     pub(crate) question: String,
 
+    /// Taken so the command can say where the evidence goes.
+    #[arg(value_name = "EVIDENCE", hide = true)]
+    pub(crate) extra: Vec<OsString>,
+
     /// What a yes and a no mean.
     #[command(flatten)]
     pub(crate) meanings: Meanings,
@@ -274,6 +279,10 @@ pub(crate) struct FilterArguments {
     /// value typed beside it replaces the file's value.
     pub(crate) question: String,
 
+    /// Taken so the command can say where the evidence goes.
+    #[arg(value_name = "EVIDENCE", hide = true)]
+    pub(crate) extra: Vec<OsString>,
+
     /// One cut T on the probability of yes. A band is a usage error. It defaults to 0.5.
     #[arg(long, value_name = "T", allow_negative_numbers = true)]
     pub(crate) threshold: Option<String>,
@@ -307,6 +316,10 @@ pub(crate) struct RankArguments {
     /// As `@FILE` it is a question file holding one `decide` question, and a
     /// value typed beside it replaces the file's value.
     pub(crate) question: String,
+
+    /// Taken so the command can say where the evidence goes.
+    #[arg(value_name = "EVIDENCE", hide = true)]
+    pub(crate) extra: Vec<OsString>,
 
     /// Print the first N records of the order, from 1 upward.
     ///

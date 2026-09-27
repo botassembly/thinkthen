@@ -18,12 +18,15 @@ Status: **Settled** for version one, by ADR 0007, amended by ADR 0048.
 
 - It never runs a command, and it never writes a file the user did not name.
 - It never reads free text as a command. An unknown word is a usage error.
+  Seven exact guessed words, `grep`, `if`, `classify`, `switch`, `sort`, `summarize` and `rewrite`, get a hint and still exit 2. The first five name `filter`, `decide`, `choose` or `tag`, and `rank`; the last two say the tool writes no text.
 - Code parses the command line. The model reads only the question text, the options or levels, and the evidence.
 - It never prints a key. No key appears in a plan, a result, a recording, or an error.
 
 ## Arguments
 
 The grammar is the verb, then the question, then what the verb needs. No verb has a hidden default question. Options may sit before or after the operands, and `--` ends option parsing. A question that begins with a dash follows `--`.
+
+`decide`, `filter`, `rank` and `find` take one question, and each option takes one value. A loose word is refused at exit 2: `the question is one argument and each option takes one value; quote a question of several words, and send evidence on standard input or as `--input FILE``.
 
 An unknown option is a usage error. So is a repeated single-value option, and so is an option that cannot act in the chosen mode. Every one of them exits 2 before any request goes out.
 

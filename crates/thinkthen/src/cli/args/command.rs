@@ -94,6 +94,8 @@ pub(crate) enum Command {
 
     /// Pick one option from your list.
     ///
+    /// Use `tag` when more than one answer can apply.
+    ///
     /// The answer is a bare JSON string, or `null` when the winning option
     /// falls under `--threshold` or the top two options tie exactly. Exit 0 is
     /// an option and exit 3 is not sure. `choose` never exits 1, because a pick
@@ -303,6 +305,37 @@ pub(crate) struct PruneArguments {
 }
 
 impl Command {
+    /// Whether a one-question verb received a loose second argument.
+    pub(crate) fn stray(&self) -> bool {
+        match self {
+            Self::Decide(arguments) => !arguments.extra.is_empty(),
+            Self::Filter(arguments) => !arguments.extra.is_empty(),
+            Self::Rank(arguments) => !arguments.extra.is_empty(),
+            Self::Find(arguments) => !arguments.extra.is_empty(),
+            _ => false,
+        }
+    }
+
+    /// Whether the command line itself selected JSON Lines with no pointer.
+    pub(crate) fn typed_jsonl(&self) -> bool {
+        match self {
+            Self::Find(arguments) => arguments.common.jsonl && arguments.common.field.is_empty(),
+            Self::Decide(arguments) => arguments.common.jsonl && arguments.common.field.is_empty(),
+            Self::Choose(arguments) => arguments.common.jsonl && arguments.common.field.is_empty(),
+            Self::Tag(arguments) => arguments.common.jsonl && arguments.common.field.is_empty(),
+            Self::Score(arguments) => arguments.common.jsonl && arguments.common.field.is_empty(),
+            Self::Filter(arguments) => arguments.common.jsonl && arguments.common.field.is_empty(),
+            Self::Rank(arguments) => arguments.common.jsonl && arguments.common.field.is_empty(),
+            Self::Annotate(arguments) => {
+                arguments.common.jsonl && arguments.common.field.is_empty()
+            }
+            Self::Recognize(arguments) => {
+                arguments.common.jsonl && arguments.common.field.is_empty()
+            }
+            _ => false,
+        }
+    }
+
     pub(crate) const fn reads_input(&self) -> bool {
         !matches!(
             self,

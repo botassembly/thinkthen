@@ -1,5 +1,6 @@
 //! The deliberately smaller option surface of `find`.
 
+use std::ffi::OsString;
 use std::path::PathBuf;
 
 use crate::core::DEFAULT_MODEL;
@@ -12,6 +13,10 @@ use super::Common;
 pub(crate) struct FindArguments {
     /// The question the selected line or record best answers.
     pub(crate) question: String,
+
+    /// Taken so the command can say where the evidence goes.
+    #[arg(value_name = "EVIDENCE", hide = true)]
+    pub(crate) extra: Vec<OsString>,
 
     /// Let the answer say that no line or record fits.
     #[arg(long)]
