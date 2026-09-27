@@ -39,7 +39,7 @@ Every result is compact and sits on one line, so one answer is also one record f
 
 ## A detailed result keeps everything
 
-`relate --details` is an aggregate Option A result. `value` holds accepted edges. `question` holds the resolved fields, ordered relation rules, threshold, and optional saved calibration profile. `answer.questions` keeps each choice or yes/no relation question, including its asker or endpoints, candidates, probabilities, pre-threshold pick, accepted markers, failure marker, and request digest. `meta.failed_questions` counts failed entries and is always present. [relate.md](relate.md) fixes the exact ordered schema.
+`relate --details` is an aggregate Option A result. `value` holds accepted edges. `question` holds the resolved fields, ordered relation rules, threshold, and optional saved calibration profile. `answer.questions` keeps each yes/no relation pair, including its endpoints, probability, accepted marker or failure, and request digest. `meta.failed_questions` counts failed entries and is always present. [relate.md](relate.md) fixes the exact ordered schema.
 
 `recognize --details` keeps the bare object under `value` and the resolved recognition shape under `question`. `answer.pieces` lists each piece's offsets and its five tag probabilities. `answer.names` lists each found name's span as step 1 found it, its kind probabilities, and its edge option probabilities, or null when it had no edge question. `answer.pairs` lists each relation pair's probability. `meta.requests` lists the step-1 requests, then the step-2 requests, then the relation requests. Name `strength` is P(kind) times P(span), computed from these inputs, and is not itself a probability.
 

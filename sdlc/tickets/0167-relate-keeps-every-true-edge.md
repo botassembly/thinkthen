@@ -6,9 +6,9 @@ opens: sdlc/planning/adr/0057-relate-asks-one-yes-no-question-per-pair.md sdlc/p
 
 # 0167: Relate keeps every true edge
 
-Status: ready. The coordinator accepted it on 2026-09-27 after a fresh read-only review, with the review's nine findings and two notes fixed. Owner: Claude.
+Status: building on `ticket/0167-relate-keeps-every-true-edge`. The coordinator accepted the outcome on 2026-09-27 after a fresh read-only design review. Ian's later handover routes build and fresh review to Codex. The separately authorized paid recordings are pending.
 
-Review route: a fresh read-only Claude session reviews this design and ADR 0057, and later the final diff. Codex does not review this ticket unless Ian routes it.
+Review route: the accepted design was reviewed before the handover. A fresh read-only Codex reviewer checks the final diff and build lessons before the coordinator offers the paid validation to Ian.
 
 ## Outcome and authority
 
@@ -198,12 +198,12 @@ One table test in `core/relation/tests.rs` replaces the choice tests. Each row g
 - `databases/sqlite/tests/test_interrupt.py` line 95, `test_relate_is_cancelled_and_sends_no_more_after_release`, needs two sends. With shared requests its three entities send one, and the test goes hollow. It is rebuilt on 21 persons under `knows=person:person`: 420 questions in 2 requests.
 - `databases/duckdb/tools/relate_suite.py` line 5: the docstring's choice sentence, and any case built on it, describe the yes answer.
 - `src/public/relate.rs` line 270 calls `facade::relations`. It follows the facade's new signature.
-- The `surfaces` rung runs, because relate request bodies change on every library and database.
+- The related-batch surfaces checkpoint runs after the focused source, conformance and host checks. It is not repeated for each 0167 slice.
 - Conformance cases 51 and 52 regenerate their synthetic exchanges offline. `spec/fixtures/relate-partial/` and demo 45's recording are rebuilt offline, because their probabilities are illustrative.
 
 ### Deliberate breaks
 
-Each break is made, run and reverted. Each must turn the named test red.
+This table maps each credible regression to its focused proof. The older fourteen-mutation campaign is superseded by Ian's focused functional-check ruling; it is not a separate required rung for this slice.
 
 | Break | Test that turns red |
 | --- | --- |
@@ -228,8 +228,8 @@ Ian authorizes each run before it starts. Each goes through `sdlc/scripts/live` 
 
 | Run | When | Questions | Estimated input tokens | Cap | Estimated cost |
 | --- | --- | --- | --- | --- | --- |
-| A. Today's choice, three runs, from main's binary | Before the build starts | 31 a run | about 26,000 | 60,000 tokens | about $0.001 |
-| B. The pairs, three runs, recorded | After tests 2 to 4 pass | 220 a run | unmeasured; about 54,000 at 73 tokens a question | 80,000 tokens | about $0.0023 |
+| A. Choice baseline, three runs, from the saved pre-0167 binary | After source, synthetic proof and review are concrete, with separate authorization | 31 a run | about 26,000 | 60,000 tokens | about $0.001 |
+| B. The pairs, three runs, recorded | After source, synthetic proof and review are concrete, with separate authorization | 220 a run | unmeasured; about 54,000 at 73 tokens a question | 80,000 tokens | about $0.0023 |
 
 The total cap is 140,000 tokens, about $0.006. Run A is local experiment evidence. Its answers stay unpushed, and the build record cites its figures. It measures today's recall and tokens on the same sets, as ADR 0054 item 5 asks. Run B's recordings join the fixture. The build record also reports run B's pair rate: input tokens, less 300 times the requests, divided by the questions. Stop rule 8 uses it. No other recording is re-made, because every other relate exchange in the repository is synthetic.
 
@@ -261,7 +261,7 @@ Rejected: 0167 first. It would delete `SettledRelation::settle`'s fallback befor
 
 ## Ratchet
 
-Main's ceiling is 72,168 lines at `a057c594`. The build reads it when it starts. The estimate is -525 against it, from -750 to -300.
+The build-start ceiling is 77,421 nonblank Rust lines after 0154. The current pair implementation measures 76,594, a drop of 827; the final review rechecks this after any main merge. The older -525 estimate came from `a057c594` before 0154.
 
 - Shrinks: the choice planner and its expansion (about 150 lines), the choice assembler (about 35), the fallback (about 30), the relate facade's per-relation plumbing (about 30), the choice detail entry (about 90), the dry-run fallback (about 12), and the choice and fallback tests, experiment 239's replay included (about 480).
 - Grows: the generic pair planner and its wording enum (about 20), the shared split helper (about 10), the relate facade on pairs (about 20), the edge-case table (about 90), tests 2 and 3 (about 150), and the rewritten tests (about 10).
@@ -274,13 +274,13 @@ Main's ceiling is 72,168 lines at `a057c594`. The build reads it when it starts.
 3. Stop if run B misses a bar. Report the audit rows and the missed and extra edges, grouped by set. Do not tune the wording to the key.
 4. Stop if any recognize recording or request body changes.
 5. Stop if a deliberate break stays green.
-6. Stop if 0154 or 0155 has not landed and the build needs a file in its list, including 0155's test tree.
+6. Ticket 0155 and 0154 landed before this build. If a later merge changes their retained behavior, stop and review that exact conflict.
 7. Stop if a design rule here needs a ruling ADR 0057 does not give. Report it with options.
 8. Stop if 400 times run B's pair rate, plus the tokens of the largest state the tests plan, plus 300, passes 65,536. Report the rate and propose a lower limit.
 
 ## Routing
 
-Owner and builder: Claude. Reviewer: a fresh read-only Claude session for the design and for the diff. The change alters public output and request bodies, so the diff review names what it checked.
+Owner and builder: Codex under Ian's handover. Reviewer: a fresh read-only Codex session for the final diff. The review names the public output and request bytes it checked.
 
 ## Complexity
 
@@ -309,6 +309,13 @@ The owner's calls, which ADR 0057 lists. Ian can overturn each.
 8. **ADR 0019 gains a note and keeps its rule.** The coordinator asked for an amendment to ADR 0019. ADR 0057 amends `relate-design.md`, which holds the planner.
 9. **Run A measures today's choice before the build.** It costs about $0.001 and answers ADR 0054 item 5.
 
+## What the build taught us
+
+- The preflight correctly identified the shared planner, replay digest changes, and the SQLite cancellation setup. It missed DuckDB's throttle case: nine old per-rule requests became six shared requests, so the case now uses sixteen rules and still proves eight held requests with later work waiting.
+- A recording entry stores the exact request as raw JSON. Pretty-printing the rebuilt synthetic request under the correct digest made replay reject it; keeping the compiled dry-run's compact request bytes fixed the executable spec. The 0152 fixture-hash lesson helped find the new digest, but did not predict this raw-byte requirement.
+- The two synthetic conformance cases now share one request where case 51 formerly had two. Their replies were remapped to ordered pair questions, while their expected edges and question digests stayed. The source ratchet fell from 77,421 to 76,594 after removing choice-only code and tests; see `sdlc/records/0167-build.md` for the focused proof and deleted-test replacements.
+- The public-fact inputs and key are ready without a provider call. Run A and run B still need Ian's separate authorization after fresh code review. The related command and surface checkpoint belongs to the batch coordinator.
+
 ## What Ian can overturn
 
 - ADR 0057 as a whole, and each owner call it lists.
@@ -328,5 +335,5 @@ The owner's calls, which ADR 0057 lists. Ian can overturn each.
 - Starts from: Ian's ruling of 2026-09-26, item 5 of ticket 0147 before commit `2e0c6551`. ADR 0056 and ticket 0147, which built the pair path for `recognize` step 3. Item 2 of the architect review 10 issue, with its live and replayed failures. Local experiment 237, where yes/no per pair found 89 of 89 true edges against 79 for the choice. Local experiment 275, where one shared state cut input tokens by 51% to 59% within the noise. Local experiment 284's step-3 figures, 66 to 68 of 70 stated edges, in `sdlc/records/2026-09-26-recognize-three-step-evidence.md`. Main's dry runs at `a057c594` for today's bytes, relate's 0.516 tokens a byte on choice bodies in `specification/backends.md`, and local experiment 260's 73 tokens a yes/no question.
 - Keeps: Rules, entity input, validation, the cut, the edge shape on every surface, the yes/no detail entry, exit 6, the question digest, `--jobs`, the ceiling, profiles, record, replay, cache, and every recognize request body.
 - Changes: Every relation asks yes/no pairs. One state per run holds only rule kinds. Questions name their relation with `Is it true that`. Requests hold at most 400 questions at every address. The fallback and choice entries go. The dry run keeps version 1 with one entry per rule. The page says an edge comes from the model's knowledge.
-- Proof: Three recorded runs over public facts graded by `audit` against bars. A loopback one-to-many test with an unrelated entity. Dry-run plans pinned for the state, the limit and the profile rules. Retained detail, secrecy and recognize replay tests. One edge-case table. Fourteen deliberate breaks, each with the test it turns red.
+- Proof: The compiled one-to-many command, dry-run plans, partial details, shared conformance cases, recognize request identity, and focused SQLite and DuckDB cases pass. The public-fact inputs and key are prepared. Three paid recorded runs and their `audit` bars remain pending separate authorization. The regression table maps the older proposed breaks to these focused proofs.
 - Defers: A large set's cost, the 400 limit's repeated state, a state over the backend's token limit, precision on one-target facts, the `either` wording, and recognize's mention and distance limits.

@@ -1,6 +1,6 @@
 # `relate`: design authority for the command and future surfaces
 
-Status: ticket 0081 landed on remote main at `4229bbfa`. Accepted ticket 0088 is unblocked. Ian's method, Option A detailed-result, and partial-output exit rulings remain settled. Sol Medium drives ticket 0088. This page authorizes no live or paid run.
+Status: Historical design for tickets 0081 and 0088. ADR 0057 and ticket 0167 supersede its planner, request state, dry-run method and fallback, and choice detail entries. The retained input, edge, and partial-output contracts remain settled. This page authorizes no live or paid run.
 
 Read `recognize-design.md` first. `recognize` and `relate` use one shared relation planner, request-state type, question map, and generic edge assembler. Recognition retains its complete name fields. Standalone relate returns name-and-kind endpoints.
 
@@ -45,7 +45,9 @@ Empty bytes under `--lines` or `--jsonl` succeed with no output and no request. 
 
 No planner method, one-or-many marker, runner-up question, or packing control is public. The threshold defaults to `0.5` and accepts the cut.
 
-## Exact dry-run schema
+## Exact dry-run schema (method and fallback superseded by ADR 0057)
+
+The example below records the earlier choice planner. Under ADR 0057, each plan entry is one rule as given. `method` is always `yes_no`, `fallback` is always null, and its `request_count` counts shared requests carrying that rule's questions. `specification/relate.md` gives the current schema.
 
 `--dry-run` validates the complete entity set, resolves the runtime backend profile, expands concrete relations, performs final fallback and 0079 splitting, and sends nothing. A nonempty file-backed run prints one compact object with this key order:
 
@@ -69,9 +71,9 @@ Bare output emits one edge per line:
 
 One-way edges keep the rule's source-to-target direction even when the target side asked the choice. `--either` normalizes endpoints to input order. Edges print by relation declaration, concrete-kind expansion, asker or pair, then candidate order. No edge prints twice.
 
-## Current final hybrid planner — authoritative
+## Former hybrid planner (superseded by ADR 0057)
 
-This is the only current method ruling. It applies to standalone relate and to recognition relations.
+The following method and fallback rules record the former planner. ADR 0057 makes both verbs use one pair planner and one shared splitter.
 
 ### Shared entity and edge ownership
 
@@ -87,7 +89,7 @@ Same-kind concrete relations use H. Both-way rules ask one unordered yes/no per 
 
 `--either` removes reverse duplicates by first-seen kind and entity order. One-way `*:*` retains both directions. The user supplies no method or one-to-many marker.
 
-### Exact option and backend-profile fallback
+### Exact option and backend-profile fallback (superseded by ADR 0057)
 
 The fixed ceiling is 255 total wire options in one choice, including `none`. With runtime backend profile `max_options = N`, the effective ceiling is `min(255, N)`. A choice with exactly the effective ceiling stays choice. One over changes only that expanded concrete relation to H. Other concrete relations from the same wildcard rule retain their independently selected method.
 
@@ -95,7 +97,9 @@ The fixed ceiling is 255 total wire options in one choice, including `none`. Wit
 
 Tests pin 255 and backend-profile equality as choice, 256 and backend-profile N+1 as H, a splittable request-byte overflow as choice chunks, an unsplittable one-choice byte overflow as H, and impossible final H as zero sends. For one wildcard rule, one mixed option-limit case and one mixed unsplittable-byte case each prove that exactly one concrete relation falls back while a sibling remains choice, with requests and edges in concrete expansion order. Recognition runs the same cases, and ticket 0081 updates `specification/recognize.md` from whole-rule wording to this per-concrete rule.
 
-## Exact relation request state
+## Former relation request state (superseded by ADR 0057)
+
+The examples below record the former per-relation state and wording. Current requests carry one state of admitted entities with no `relation` member. `relate` asks `Is it true that i1 READS i2?`; `recognize` asks `Does the text itself state that i1 READS i2?`.
 
 Every relation request uses a typed state with this key order. Entity ids are `i1`, `i2`, and onward in original input order. The entity array contains the complete entity set. After wildcard expansion, `relation.source` and `relation.target` are the concrete kinds for this plan.
 
@@ -128,6 +132,8 @@ An either H wire question is exactly:
 H sends no `criteria`. Its instructions repeat no name, kind, relation name, or `reads` text. The state carries those values once per request. Directed H question order is source entity then target entity. Either H uses normalized input order. Compiled recognize and relate tests pin both complete request bodies, source preservation, question order, and digest changes. A non-relation request fixture pins unchanged bytes.
 
 ## Ruled Option A detailed result — exact public schema
+
+ADR 0057 removes the choice entries below. The aggregate result, yes/no entries, failure entries, and partial-output exit remain; `specification/relate.md` is the current public contract.
 
 One `--details` run prints one compact `thinkthen.result/1` object. It has no top-level `input` or `threshold`; the resolved question carries fields, threshold, and optional saved calibration `profile` like recognize carries its resolved settings. Key order is `schema`, `value`, `question`, `answer`, `meta`.
 

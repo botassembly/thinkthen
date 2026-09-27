@@ -1665,7 +1665,10 @@
     {
       "id": "18-annotate-two-groups",
       "verb": "annotate",
-      "record": {"summary": "Short note.", "body": "Please refund me."},
+      "record": {
+        "summary": "Short note.",
+        "body": "Please refund me."
+      },
       "question_set": {
         "version": 1,
         "questions": {
@@ -7166,8 +7169,8 @@
           "provenance": {
             "kind": "synthetic_contract"
           },
-          "evidence": "{\"entities\":[{\"id\":\"i1\",\"name\":\"Checkout returns 500 at the payment step.\",\"kind\":\"alert\"},{\"id\":\"i2\",\"name\":\"Card charges are failing for every customer.\",\"kind\":\"alert\"},{\"id\":\"i3\",\"name\":\"The nightly export ran two hours late.\",\"kind\":\"alert\"},{\"id\":\"i4\",\"name\":\"The payments database ran out of disk space.\",\"kind\":\"alert\"}],\"relation\":{\"name\":\"caused_by\",\"source\":\"alert\",\"target\":\"alert\",\"reads\":\"caused by\",\"either\":false}}",
-          "request": "{\"state\":{\"entities\":[{\"id\":\"i1\",\"name\":\"Checkout returns 500 at the payment step.\",\"kind\":\"alert\"},{\"id\":\"i2\",\"name\":\"Card charges are failing for every customer.\",\"kind\":\"alert\"},{\"id\":\"i3\",\"name\":\"The nightly export ran two hours late.\",\"kind\":\"alert\"},{\"id\":\"i4\",\"name\":\"The payments database ran out of disk space.\",\"kind\":\"alert\"}],\"relation\":{\"name\":\"caused_by\",\"source\":\"alert\",\"target\":\"alert\",\"reads\":\"caused by\",\"either\":false}},\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"Does the relation hold from i1 to i2?\"},\"q2\":{\"type\":\"noul\",\"instructions\":\"Does the relation hold from i1 to i3?\"},\"q3\":{\"type\":\"noul\",\"instructions\":\"Does the relation hold from i1 to i4?\"},\"q4\":{\"type\":\"noul\",\"instructions\":\"Does the relation hold from i2 to i1?\"},\"q5\":{\"type\":\"noul\",\"instructions\":\"Does the relation hold from i2 to i3?\"},\"q6\":{\"type\":\"noul\",\"instructions\":\"Does the relation hold from i2 to i4?\"},\"q7\":{\"type\":\"noul\",\"instructions\":\"Does the relation hold from i3 to i1?\"},\"q8\":{\"type\":\"noul\",\"instructions\":\"Does the relation hold from i3 to i2?\"},\"q9\":{\"type\":\"noul\",\"instructions\":\"Does the relation hold from i3 to i4?\"},\"q10\":{\"type\":\"noul\",\"instructions\":\"Does the relation hold from i4 to i1?\"},\"q11\":{\"type\":\"noul\",\"instructions\":\"Does the relation hold from i4 to i2?\"},\"q12\":{\"type\":\"noul\",\"instructions\":\"Does the relation hold from i4 to i3?\"}}}",
+          "evidence": "{\"entities\":[{\"id\":\"i1\",\"name\":\"Checkout returns 500 at the payment step.\",\"kind\":\"alert\"},{\"id\":\"i2\",\"name\":\"Card charges are failing for every customer.\",\"kind\":\"alert\"},{\"id\":\"i3\",\"name\":\"The nightly export ran two hours late.\",\"kind\":\"alert\"},{\"id\":\"i4\",\"name\":\"The payments database ran out of disk space.\",\"kind\":\"alert\"}]}",
+          "request": "{\"state\":{\"entities\":[{\"id\":\"i1\",\"name\":\"Checkout returns 500 at the payment step.\",\"kind\":\"alert\"},{\"id\":\"i2\",\"name\":\"Card charges are failing for every customer.\",\"kind\":\"alert\"},{\"id\":\"i3\",\"name\":\"The nightly export ran two hours late.\",\"kind\":\"alert\"},{\"id\":\"i4\",\"name\":\"The payments database ran out of disk space.\",\"kind\":\"alert\"}]},\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"Is it true that i1 caused by i2?\"},\"q2\":{\"type\":\"noul\",\"instructions\":\"Is it true that i1 caused by i3?\"},\"q3\":{\"type\":\"noul\",\"instructions\":\"Is it true that i1 caused by i4?\"},\"q4\":{\"type\":\"noul\",\"instructions\":\"Is it true that i2 caused by i1?\"},\"q5\":{\"type\":\"noul\",\"instructions\":\"Is it true that i2 caused by i3?\"},\"q6\":{\"type\":\"noul\",\"instructions\":\"Is it true that i2 caused by i4?\"},\"q7\":{\"type\":\"noul\",\"instructions\":\"Is it true that i3 caused by i1?\"},\"q8\":{\"type\":\"noul\",\"instructions\":\"Is it true that i3 caused by i2?\"},\"q9\":{\"type\":\"noul\",\"instructions\":\"Is it true that i3 caused by i4?\"},\"q10\":{\"type\":\"noul\",\"instructions\":\"Is it true that i4 caused by i1?\"},\"q11\":{\"type\":\"noul\",\"instructions\":\"Is it true that i4 caused by i2?\"},\"q12\":{\"type\":\"noul\",\"instructions\":\"Is it true that i4 caused by i3?\"},\"q13\":{\"type\":\"noul\",\"instructions\":\"Is it true that i1 same as i2, or that i2 same as i1?\"},\"q14\":{\"type\":\"noul\",\"instructions\":\"Is it true that i1 same as i3, or that i3 same as i1?\"},\"q15\":{\"type\":\"noul\",\"instructions\":\"Is it true that i1 same as i4, or that i4 same as i1?\"},\"q16\":{\"type\":\"noul\",\"instructions\":\"Is it true that i2 same as i3, or that i3 same as i2?\"},\"q17\":{\"type\":\"noul\",\"instructions\":\"Is it true that i2 same as i4, or that i4 same as i2?\"},\"q18\":{\"type\":\"noul\",\"instructions\":\"Is it true that i3 same as i4, or that i4 same as i3?\"}}}",
           "response": {
             "model": "jev-latest",
             "answers": {
@@ -7218,51 +7221,35 @@
               "q12": {
                 "type": "noul",
                 "noul": 0.1
-              }
-            },
-            "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
-            }
-          }
-        },
-        {
-          "provenance": {
-            "kind": "synthetic_contract"
-          },
-          "evidence": "{\"entities\":[{\"id\":\"i1\",\"name\":\"Checkout returns 500 at the payment step.\",\"kind\":\"alert\"},{\"id\":\"i2\",\"name\":\"Card charges are failing for every customer.\",\"kind\":\"alert\"},{\"id\":\"i3\",\"name\":\"The nightly export ran two hours late.\",\"kind\":\"alert\"},{\"id\":\"i4\",\"name\":\"The payments database ran out of disk space.\",\"kind\":\"alert\"}],\"relation\":{\"name\":\"same_as\",\"source\":\"alert\",\"target\":\"alert\",\"reads\":\"same as\",\"either\":true}}",
-          "request": "{\"state\":{\"entities\":[{\"id\":\"i1\",\"name\":\"Checkout returns 500 at the payment step.\",\"kind\":\"alert\"},{\"id\":\"i2\",\"name\":\"Card charges are failing for every customer.\",\"kind\":\"alert\"},{\"id\":\"i3\",\"name\":\"The nightly export ran two hours late.\",\"kind\":\"alert\"},{\"id\":\"i4\",\"name\":\"The payments database ran out of disk space.\",\"kind\":\"alert\"}],\"relation\":{\"name\":\"same_as\",\"source\":\"alert\",\"target\":\"alert\",\"reads\":\"same as\",\"either\":true}},\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"Does the relation hold between i1 and i2?\"},\"q2\":{\"type\":\"noul\",\"instructions\":\"Does the relation hold between i1 and i3?\"},\"q3\":{\"type\":\"noul\",\"instructions\":\"Does the relation hold between i1 and i4?\"},\"q4\":{\"type\":\"noul\",\"instructions\":\"Does the relation hold between i2 and i3?\"},\"q5\":{\"type\":\"noul\",\"instructions\":\"Does the relation hold between i2 and i4?\"},\"q6\":{\"type\":\"noul\",\"instructions\":\"Does the relation hold between i3 and i4?\"}}}",
-          "response": {
-            "model": "jev-latest",
-            "answers": {
-              "q1": {
+              },
+              "q13": {
                 "type": "noul",
                 "noul": 0.61
               },
-              "q2": {
+              "q14": {
                 "type": "noul",
                 "noul": 0.1
               },
-              "q3": {
+              "q15": {
                 "type": "noul",
                 "noul": 0.1
               },
-              "q4": {
+              "q16": {
                 "type": "noul",
                 "noul": 0.1
               },
-              "q5": {
+              "q17": {
                 "type": "noul",
                 "noul": 0.1
               },
-              "q6": {
+              "q18": {
                 "type": "noul",
                 "noul": 0.1
               }
             },
             "usage": {
-              "input_tokens": 10,
-              "output_tokens": 2
+              "input_tokens": 20,
+              "output_tokens": 4
             }
           }
         }
@@ -7340,8 +7327,7 @@
                 "model": "jev-latest",
                 "question_sha256": "d9a5efed455ed93a80b3e8b4272cd5fa4ec195bdf92d767ae1cc564e68b5d1b3",
                 "requests": [
-                  "14086cc2c0e629cd7cd71e78bc33a10a785d2fa2ec89e5e190ad942ffa4a39fb",
-                  "b4083a34d6b2d8a9567b074b4060b17be22483ec7f34c195ab9abe9fe0960b17"
+                  "af0817b4ba7ce16c566988ad9b1d5c0615ee73a94368fa4e7ab94dbd324a6cce"
                 ]
               }
             }
@@ -7415,65 +7401,110 @@
           "provenance": {
             "kind": "synthetic_contract"
           },
-          "evidence": "{\"entities\":[{\"id\":\"i1\",\"name\":\"Iris Vangelis works for Kestrel Logistics, handling regional accounts.\",\"kind\":\"person\"},{\"id\":\"i2\",\"name\":\"Noor Haddad works for Brookline Freight, handling regional accounts.\",\"kind\":\"person\"},{\"id\":\"i3\",\"name\":\"Petr Novak works for Grayline Foundation, handling regional accounts.\",\"kind\":\"person\"},{\"id\":\"i4\",\"name\":\"Rosa Iglesias works for Fenwick Press, handling regional accounts.\",\"kind\":\"person\"},{\"id\":\"i5\",\"name\":\"Tariq Mensah works for Hull Analytics, handling regional accounts.\",\"kind\":\"person\"},{\"id\":\"i6\",\"name\":\"Kestrel Logistics, a freight and logistics firm.\",\"kind\":\"organization\"},{\"id\":\"i7\",\"name\":\"Brookline Freight, a freight and logistics firm.\",\"kind\":\"organization\"},{\"id\":\"i8\",\"name\":\"Grayline Foundation, a freight and logistics firm.\",\"kind\":\"organization\"},{\"id\":\"i9\",\"name\":\"Fenwick Press, a freight and logistics firm.\",\"kind\":\"organization\"},{\"id\":\"i10\",\"name\":\"Hull Analytics, a freight and logistics firm.\",\"kind\":\"organization\"}],\"relation\":{\"name\":\"works_for\",\"source\":\"person\",\"target\":\"organization\",\"reads\":\"works for\",\"either\":false}}",
-          "request": "{\"state\":{\"entities\":[{\"id\":\"i1\",\"name\":\"Iris Vangelis works for Kestrel Logistics, handling regional accounts.\",\"kind\":\"person\"},{\"id\":\"i2\",\"name\":\"Noor Haddad works for Brookline Freight, handling regional accounts.\",\"kind\":\"person\"},{\"id\":\"i3\",\"name\":\"Petr Novak works for Grayline Foundation, handling regional accounts.\",\"kind\":\"person\"},{\"id\":\"i4\",\"name\":\"Rosa Iglesias works for Fenwick Press, handling regional accounts.\",\"kind\":\"person\"},{\"id\":\"i5\",\"name\":\"Tariq Mensah works for Hull Analytics, handling regional accounts.\",\"kind\":\"person\"},{\"id\":\"i6\",\"name\":\"Kestrel Logistics, a freight and logistics firm.\",\"kind\":\"organization\"},{\"id\":\"i7\",\"name\":\"Brookline Freight, a freight and logistics firm.\",\"kind\":\"organization\"},{\"id\":\"i8\",\"name\":\"Grayline Foundation, a freight and logistics firm.\",\"kind\":\"organization\"},{\"id\":\"i9\",\"name\":\"Fenwick Press, a freight and logistics firm.\",\"kind\":\"organization\"},{\"id\":\"i10\",\"name\":\"Hull Analytics, a freight and logistics firm.\",\"kind\":\"organization\"}],\"relation\":{\"name\":\"works_for\",\"source\":\"person\",\"target\":\"organization\",\"reads\":\"works for\",\"either\":false}},\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"choice\",\"instructions\":\"Which listed organization fills the blank: Item 1 (person \\\"Iris Vangelis works for Kestrel Logistics, handling regional accounts.\\\") works for ___? Choose none if no listed organization does.\",\"criteria\":{\"i6\":\"Item 6 (organization \\\"Kestrel Logistics, a freight and logistics firm.\\\")\",\"i7\":\"Item 7 (organization \\\"Brookline Freight, a freight and logistics firm.\\\")\",\"i8\":\"Item 8 (organization \\\"Grayline Foundation, a freight and logistics firm.\\\")\",\"i9\":\"Item 9 (organization \\\"Fenwick Press, a freight and logistics firm.\\\")\",\"i10\":\"Item 10 (organization \\\"Hull Analytics, a freight and logistics firm.\\\")\",\"none\":\"No listed organization.\"}},\"q2\":{\"type\":\"choice\",\"instructions\":\"Which listed organization fills the blank: Item 2 (person \\\"Noor Haddad works for Brookline Freight, handling regional accounts.\\\") works for ___? Choose none if no listed organization does.\",\"criteria\":{\"i6\":\"Item 6 (organization \\\"Kestrel Logistics, a freight and logistics firm.\\\")\",\"i7\":\"Item 7 (organization \\\"Brookline Freight, a freight and logistics firm.\\\")\",\"i8\":\"Item 8 (organization \\\"Grayline Foundation, a freight and logistics firm.\\\")\",\"i9\":\"Item 9 (organization \\\"Fenwick Press, a freight and logistics firm.\\\")\",\"i10\":\"Item 10 (organization \\\"Hull Analytics, a freight and logistics firm.\\\")\",\"none\":\"No listed organization.\"}},\"q3\":{\"type\":\"choice\",\"instructions\":\"Which listed organization fills the blank: Item 3 (person \\\"Petr Novak works for Grayline Foundation, handling regional accounts.\\\") works for ___? Choose none if no listed organization does.\",\"criteria\":{\"i6\":\"Item 6 (organization \\\"Kestrel Logistics, a freight and logistics firm.\\\")\",\"i7\":\"Item 7 (organization \\\"Brookline Freight, a freight and logistics firm.\\\")\",\"i8\":\"Item 8 (organization \\\"Grayline Foundation, a freight and logistics firm.\\\")\",\"i9\":\"Item 9 (organization \\\"Fenwick Press, a freight and logistics firm.\\\")\",\"i10\":\"Item 10 (organization \\\"Hull Analytics, a freight and logistics firm.\\\")\",\"none\":\"No listed organization.\"}},\"q4\":{\"type\":\"choice\",\"instructions\":\"Which listed organization fills the blank: Item 4 (person \\\"Rosa Iglesias works for Fenwick Press, handling regional accounts.\\\") works for ___? Choose none if no listed organization does.\",\"criteria\":{\"i6\":\"Item 6 (organization \\\"Kestrel Logistics, a freight and logistics firm.\\\")\",\"i7\":\"Item 7 (organization \\\"Brookline Freight, a freight and logistics firm.\\\")\",\"i8\":\"Item 8 (organization \\\"Grayline Foundation, a freight and logistics firm.\\\")\",\"i9\":\"Item 9 (organization \\\"Fenwick Press, a freight and logistics firm.\\\")\",\"i10\":\"Item 10 (organization \\\"Hull Analytics, a freight and logistics firm.\\\")\",\"none\":\"No listed organization.\"}},\"q5\":{\"type\":\"choice\",\"instructions\":\"Which listed organization fills the blank: Item 5 (person \\\"Tariq Mensah works for Hull Analytics, handling regional accounts.\\\") works for ___? Choose none if no listed organization does.\",\"criteria\":{\"i6\":\"Item 6 (organization \\\"Kestrel Logistics, a freight and logistics firm.\\\")\",\"i7\":\"Item 7 (organization \\\"Brookline Freight, a freight and logistics firm.\\\")\",\"i8\":\"Item 8 (organization \\\"Grayline Foundation, a freight and logistics firm.\\\")\",\"i9\":\"Item 9 (organization \\\"Fenwick Press, a freight and logistics firm.\\\")\",\"i10\":\"Item 10 (organization \\\"Hull Analytics, a freight and logistics firm.\\\")\",\"none\":\"No listed organization.\"}}}}",
+          "evidence": "{\"entities\":[{\"id\":\"i1\",\"name\":\"Iris Vangelis works for Kestrel Logistics, handling regional accounts.\",\"kind\":\"person\"},{\"id\":\"i2\",\"name\":\"Noor Haddad works for Brookline Freight, handling regional accounts.\",\"kind\":\"person\"},{\"id\":\"i3\",\"name\":\"Petr Novak works for Grayline Foundation, handling regional accounts.\",\"kind\":\"person\"},{\"id\":\"i4\",\"name\":\"Rosa Iglesias works for Fenwick Press, handling regional accounts.\",\"kind\":\"person\"},{\"id\":\"i5\",\"name\":\"Tariq Mensah works for Hull Analytics, handling regional accounts.\",\"kind\":\"person\"},{\"id\":\"i6\",\"name\":\"Kestrel Logistics, a freight and logistics firm.\",\"kind\":\"organization\"},{\"id\":\"i7\",\"name\":\"Brookline Freight, a freight and logistics firm.\",\"kind\":\"organization\"},{\"id\":\"i8\",\"name\":\"Grayline Foundation, a freight and logistics firm.\",\"kind\":\"organization\"},{\"id\":\"i9\",\"name\":\"Fenwick Press, a freight and logistics firm.\",\"kind\":\"organization\"},{\"id\":\"i10\",\"name\":\"Hull Analytics, a freight and logistics firm.\",\"kind\":\"organization\"}]}",
+          "request": "{\"state\":{\"entities\":[{\"id\":\"i1\",\"name\":\"Iris Vangelis works for Kestrel Logistics, handling regional accounts.\",\"kind\":\"person\"},{\"id\":\"i2\",\"name\":\"Noor Haddad works for Brookline Freight, handling regional accounts.\",\"kind\":\"person\"},{\"id\":\"i3\",\"name\":\"Petr Novak works for Grayline Foundation, handling regional accounts.\",\"kind\":\"person\"},{\"id\":\"i4\",\"name\":\"Rosa Iglesias works for Fenwick Press, handling regional accounts.\",\"kind\":\"person\"},{\"id\":\"i5\",\"name\":\"Tariq Mensah works for Hull Analytics, handling regional accounts.\",\"kind\":\"person\"},{\"id\":\"i6\",\"name\":\"Kestrel Logistics, a freight and logistics firm.\",\"kind\":\"organization\"},{\"id\":\"i7\",\"name\":\"Brookline Freight, a freight and logistics firm.\",\"kind\":\"organization\"},{\"id\":\"i8\",\"name\":\"Grayline Foundation, a freight and logistics firm.\",\"kind\":\"organization\"},{\"id\":\"i9\",\"name\":\"Fenwick Press, a freight and logistics firm.\",\"kind\":\"organization\"},{\"id\":\"i10\",\"name\":\"Hull Analytics, a freight and logistics firm.\",\"kind\":\"organization\"}]},\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"Is it true that i1 works for i6?\"},\"q2\":{\"type\":\"noul\",\"instructions\":\"Is it true that i1 works for i7?\"},\"q3\":{\"type\":\"noul\",\"instructions\":\"Is it true that i1 works for i8?\"},\"q4\":{\"type\":\"noul\",\"instructions\":\"Is it true that i1 works for i9?\"},\"q5\":{\"type\":\"noul\",\"instructions\":\"Is it true that i1 works for i10?\"},\"q6\":{\"type\":\"noul\",\"instructions\":\"Is it true that i2 works for i6?\"},\"q7\":{\"type\":\"noul\",\"instructions\":\"Is it true that i2 works for i7?\"},\"q8\":{\"type\":\"noul\",\"instructions\":\"Is it true that i2 works for i8?\"},\"q9\":{\"type\":\"noul\",\"instructions\":\"Is it true that i2 works for i9?\"},\"q10\":{\"type\":\"noul\",\"instructions\":\"Is it true that i2 works for i10?\"},\"q11\":{\"type\":\"noul\",\"instructions\":\"Is it true that i3 works for i6?\"},\"q12\":{\"type\":\"noul\",\"instructions\":\"Is it true that i3 works for i7?\"},\"q13\":{\"type\":\"noul\",\"instructions\":\"Is it true that i3 works for i8?\"},\"q14\":{\"type\":\"noul\",\"instructions\":\"Is it true that i3 works for i9?\"},\"q15\":{\"type\":\"noul\",\"instructions\":\"Is it true that i3 works for i10?\"},\"q16\":{\"type\":\"noul\",\"instructions\":\"Is it true that i4 works for i6?\"},\"q17\":{\"type\":\"noul\",\"instructions\":\"Is it true that i4 works for i7?\"},\"q18\":{\"type\":\"noul\",\"instructions\":\"Is it true that i4 works for i8?\"},\"q19\":{\"type\":\"noul\",\"instructions\":\"Is it true that i4 works for i9?\"},\"q20\":{\"type\":\"noul\",\"instructions\":\"Is it true that i4 works for i10?\"},\"q21\":{\"type\":\"noul\",\"instructions\":\"Is it true that i5 works for i6?\"},\"q22\":{\"type\":\"noul\",\"instructions\":\"Is it true that i5 works for i7?\"},\"q23\":{\"type\":\"noul\",\"instructions\":\"Is it true that i5 works for i8?\"},\"q24\":{\"type\":\"noul\",\"instructions\":\"Is it true that i5 works for i9?\"},\"q25\":{\"type\":\"noul\",\"instructions\":\"Is it true that i5 works for i10?\"}}}",
           "response": {
             "model": "jev-latest",
             "answers": {
               "q1": {
-                "type": "choice",
-                "probabilities": {
-                  "i6": 0.99,
-                  "i7": 0.0,
-                  "i8": 0.0,
-                  "i9": 0.0,
-                  "i10": 0.0,
-                  "none": 0.01
-                }
+                "type": "noul",
+                "noul": 0.99
               },
               "q2": {
-                "type": "choice",
-                "probabilities": {
-                  "i6": 0.0,
-                  "i7": 0.98,
-                  "i8": 0.0,
-                  "i9": 0.0,
-                  "i10": 0.0,
-                  "none": 0.02
-                }
+                "type": "noul",
+                "noul": 0.02
               },
               "q3": {
-                "type": "choice",
-                "probabilities": {
-                  "i6": 0.0,
-                  "i7": 0.0,
-                  "i8": 0.96,
-                  "i9": 0.0,
-                  "i10": 0.0,
-                  "none": 0.04
-                }
+                "type": "noul",
+                "noul": 0.02
               },
               "q4": {
-                "type": "choice",
-                "probabilities": {
-                  "i6": 0.0,
-                  "i7": 0.0,
-                  "i8": 0.0,
-                  "i9": 0.95,
-                  "i10": 0.0,
-                  "none": 0.05
-                }
+                "type": "noul",
+                "noul": 0.02
               },
               "q5": {
-                "type": "choice",
-                "probabilities": {
-                  "i6": 0.0,
-                  "i7": 0.0,
-                  "i8": 0.0,
-                  "i9": 0.0,
-                  "i10": 0.96,
-                  "none": 0.04
-                }
+                "type": "noul",
+                "noul": 0.02
+              },
+              "q6": {
+                "type": "noul",
+                "noul": 0.02
+              },
+              "q7": {
+                "type": "noul",
+                "noul": 0.98
+              },
+              "q8": {
+                "type": "noul",
+                "noul": 0.02
+              },
+              "q9": {
+                "type": "noul",
+                "noul": 0.02
+              },
+              "q10": {
+                "type": "noul",
+                "noul": 0.02
+              },
+              "q11": {
+                "type": "noul",
+                "noul": 0.02
+              },
+              "q12": {
+                "type": "noul",
+                "noul": 0.02
+              },
+              "q13": {
+                "type": "noul",
+                "noul": 0.96
+              },
+              "q14": {
+                "type": "noul",
+                "noul": 0.02
+              },
+              "q15": {
+                "type": "noul",
+                "noul": 0.02
+              },
+              "q16": {
+                "type": "noul",
+                "noul": 0.02
+              },
+              "q17": {
+                "type": "noul",
+                "noul": 0.02
+              },
+              "q18": {
+                "type": "noul",
+                "noul": 0.02
+              },
+              "q19": {
+                "type": "noul",
+                "noul": 0.95
+              },
+              "q20": {
+                "type": "noul",
+                "noul": 0.02
+              },
+              "q21": {
+                "type": "noul",
+                "noul": 0.02
+              },
+              "q22": {
+                "type": "noul",
+                "noul": 0.02
+              },
+              "q23": {
+                "type": "noul",
+                "noul": 0.02
+              },
+              "q24": {
+                "type": "noul",
+                "noul": 0.02
+              },
+              "q25": {
+                "type": "noul",
+                "noul": 0.96
               }
             },
             "usage": {
@@ -7556,7 +7587,7 @@
                 "model": "jev-latest",
                 "question_sha256": "0a479794f2e5f8821bf972cfcabd12bf5fc31ea79b595f35299f1f0ea4cc08f4",
                 "requests": [
-                  "8c7434d5ef8af190eb69fc85a9023d9da9ea4da19633799175539a9dd1c85d2c"
+                  "06f7e2daf0f739796d464eb6c74aff43805d7507d39cd4d6bff424e5ee9e4dff"
                 ]
               }
             }
