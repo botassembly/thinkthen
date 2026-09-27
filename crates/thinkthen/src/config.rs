@@ -34,6 +34,8 @@ const CACHE_BYTES: &str =
 pub(crate) struct Config {
     #[serde(skip)]
     present: bool,
+    #[serde(skip)]
+    shared: bool,
     schema: String,
     url: Option<String>,
     model: Option<String>,
@@ -58,7 +60,9 @@ impl Config {
                 });
             }
         };
-        Self::parse(&bytes)
+        let mut parsed = Self::parse(&bytes)?;
+        parsed.shared = fs::metadata(path).is_ok_and(|metadata| writable_by_another(&metadata));
+        Ok(parsed)
     }
 
     fn parse(bytes: &[u8]) -> Result<Self, ConfigError> {
@@ -98,6 +102,11 @@ impl Config {
     }
     pub(crate) const fn present(&self) -> bool {
         self.present
+    }
+    /// Whether another user can change the file, which decides where the key
+    /// and the evidence go.
+    pub(crate) const fn shared(&self) -> bool {
+        self.shared
     }
     pub(crate) const fn has_url(&self) -> bool {
         self.url.is_some()
@@ -149,6 +158,19 @@ fn shape_fault(bytes: &[u8]) -> &'static str {
         return fault;
     }
     "the configuration file is not valid closed JSON"
+}
+
+/// Whether a user other than this process's can change a file: its group or
+/// others may write it, or another user owns it.
+#[cfg(unix)]
+pub(crate) fn writable_by_another(metadata: &fs::Metadata) -> bool {
+    use std::os::unix::fs::{MetadataExt as _, PermissionsExt as _};
+    metadata.permissions().mode() & 0o022 != 0 || metadata.uid() != nix::unistd::geteuid().as_raw()
+}
+
+#[cfg(not(unix))]
+pub(crate) const fn writable_by_another(_metadata: &fs::Metadata) -> bool {
+    false
 }
 
 #[derive(Clone, Copy)]

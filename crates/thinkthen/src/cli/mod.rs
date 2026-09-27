@@ -78,6 +78,14 @@ pub fn entry() -> ExitCode {
         Ok(environment) => environment,
         Err(failure) => return failure::report(&failure, stderr.lock()),
     };
+    if environment.config().shared() {
+        let mut writer = stderr.lock();
+        let _unwritten = writeln!(
+            writer,
+            "thinkthen: the configuration file is writable by another user; it decides where the key and evidence go"
+        )
+        .and_then(|()| writer.flush());
+    }
     let activation = match interrupt::activate(&mut environment) {
         Ok(activation) => activation,
         Err(failure) => return failure::report(&failure, stderr.lock()),
