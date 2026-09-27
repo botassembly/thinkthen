@@ -81,7 +81,7 @@ All 22 went red. None stayed green, so stop rule 5 did not fire.
 
 ## Ratchet
 
-The ceiling was 70,310 when the build started. The first full build measured 71,673, over the ticket's +900 stop, and stop rule 1 stopped the build. The coordinator ruled to trim first, then raise by at most 1,200 with reasons. The trim removed the duplicated relation state and edge path between `core/relation.rs` and `relation/stated.rs`, shared the relation ceiling, folded repeated test setup into helpers, and derived the aggregate's default. The edge-case tables stay whole, and the generated Unicode tables stay embedded, because `ratchet.mjs` has no generated-file marking. The ceiling is now 71,510, +1,200, in two commits that say what grew. One similar pair remains: `Odds::leader` and the decode's `best_of` both pick the highest value, earliest on a tie, over different item types. Ian can overturn the raise.
+The ceiling was 70,310 when the build started. The first full build measured 71,673, over the ticket's +900 stop, and stop rule 1 stopped the build. The coordinator ruled to trim first, then raise by at most 1,200 with reasons. The trim removed the duplicated relation state and edge path between `core/relation.rs` and `relation/stated.rs`, shared the relation ceiling, folded repeated test setup into helpers, and derived the aggregate's default. The edge-case tables stay whole, and the generated Unicode tables stay embedded, because `ratchet.mjs` has no generated-file marking. The ceiling is now 71,510, +1,200, in two commits that say what grew. Ian can overturn the raise.
 
 ## Rungs
 
@@ -104,6 +104,7 @@ All four ran with `THINKTHEN_API_KEY` unset and exited 0 on the final commit: `l
 Two code reviews of d1ceea41 found the items below. Each fix is its own commit.
 
 1. A name across a line feed or a tab put a control character in its edge label. The label check refused it, and the run exited 2 with the kinds message after step 1 was paid. The coordinator ruled that each edge label shows every white-space run as one space. The description keeps the real snippet. A step-2 label error now maps to a defect. The edge table gains `"Maria\nChen."` and `"Maria\tChen!"` rows. Ian can overturn the ruling.
+2. The decode and the forward pass share one helper for the tags that may come before a tag. The total and a span's `before` share one `closed` sum. `Odds::leader` calls `best_of`. `audit` and the reserved kinds import `ENTITY` and `NONE_OF_THESE` from `recognize`. The ceiling fell to 71,503, the measured total after fixes 1 and 2.
 
 ## Left for later
 

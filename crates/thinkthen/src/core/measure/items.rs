@@ -4,6 +4,7 @@ use crate::core::json::Json;
 use crate::core::measure::MeasureError;
 use crate::core::measure::answer::{Rule, Verb};
 use crate::core::probability::Probability;
+use crate::core::recognize::ENTITY;
 
 /// How a said name matches a key name.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -154,9 +155,6 @@ pub(crate) fn key(
         })
         .collect()
 }
-
-/// The kind a `recognize` run with no kinds gives every name.
-const ENTITY: &str = "ENTITY";
 
 /// A `recognize` line with an empty kind set grades every said and key name as `ENTITY`.
 fn entity_rule(verb: Verb, names: &[String], what: What) -> What {

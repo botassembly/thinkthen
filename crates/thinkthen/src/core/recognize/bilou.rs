@@ -41,12 +41,7 @@ pub(crate) fn decode(rows: &[TagRow]) -> Vec<(usize, usize)> {
         for (tag, (slot, pointer)) in score.iter_mut().zip(from.iter_mut()).enumerate() {
             let best = match previous {
                 None => follows(None, tag).then_some((0, 0.0)),
-                Some(held) => best_of(
-                    held.iter()
-                        .enumerate()
-                        .filter(|(before, _)| follows(Some(*before), tag))
-                        .map(|(before, value)| (before, *value)),
-                ),
+                Some(held) => best_of(leading_to(&held, tag)),
             };
             if let Some((before, value)) = best {
                 *slot = value + weight(row, tag);
@@ -59,12 +54,7 @@ pub(crate) fn decode(rows: &[TagRow]) -> Vec<(usize, usize)> {
     let Some(last) = scores.last() else {
         return Vec::new();
     };
-    let Some((mut tag, _)) = best_of(
-        last.iter()
-            .enumerate()
-            .filter(|(tag, _)| closes(*tag))
-            .map(|(tag, value)| (tag, *value)),
-    ) else {
+    let Some((mut tag, _)) = best_of(closing(last)) else {
         return Vec::new();
     };
     let mut tags = vec![0; rows.len()];
@@ -77,8 +67,29 @@ pub(crate) fn decode(rows: &[TagRow]) -> Vec<(usize, usize)> {
     stretches(&tags)
 }
 
+/// The scores in `held` whose tag may come before `tag`, with their tags.
+fn leading_to(held: &[f64; 5], tag: usize) -> impl Iterator<Item = (usize, f64)> + '_ {
+    held.iter()
+        .enumerate()
+        .filter(move |(before, _)| follows(Some(*before), tag))
+        .map(|(before, value)| (before, *value))
+}
+
+/// The scores in `held` whose tag may end a text, with their tags.
+fn closing(held: &[f64; 5]) -> impl Iterator<Item = (usize, f64)> + '_ {
+    held.iter()
+        .enumerate()
+        .filter(|(tag, _)| closes(*tag))
+        .map(|(tag, value)| (tag, *value))
+}
+
+/// The log-sum of the scores in `held` whose tag may end a text.
+fn closed(held: &[f64; 5]) -> f64 {
+    log_sum(closing(held).map(|(_, value)| value))
+}
+
 /// The highest value, the earliest on a tie.
-fn best_of(values: impl Iterator<Item = (usize, f64)>) -> Option<(usize, f64)> {
+pub(crate) fn best_of(values: impl Iterator<Item = (usize, f64)>) -> Option<(usize, f64)> {
     values.fold(None, |best, (tag, value)| match best {
         Some((_, held)) if held >= value => best,
         _ => Some((tag, value)),
@@ -117,13 +128,7 @@ impl<'a> SpanOdds<'a> {
                 None if follows(None, tag) => weight(row, tag),
                 None => f64::NEG_INFINITY,
                 Some(held) => {
-                    weight(row, tag)
-                        + log_sum(
-                            held.iter()
-                                .enumerate()
-                                .filter(|(before, _)| follows(Some(*before), tag))
-                                .map(|(_, value)| *value),
-                        )
+                    weight(row, tag) + log_sum(leading_to(&held, tag).map(|(_, value)| value))
                 }
             }));
         }
@@ -144,14 +149,7 @@ impl<'a> SpanOdds<'a> {
             }));
         }
         backward.reverse();
-        let total = log_sum(
-            forward
-                .last()
-                .iter()
-                .flat_map(|last| last.iter().enumerate())
-                .filter(|(tag, _)| closes(*tag))
-                .map(|(_, value)| *value),
-        );
+        let total = forward.last().map_or(f64::NEG_INFINITY, closed);
         Self {
             rows,
             forward,
@@ -163,18 +161,10 @@ impl<'a> SpanOdds<'a> {
     /// P(span): the weight of the valid paths that tag exactly pieces `first`
     /// to `last` as one name, over the weight of all valid paths.
     pub(crate) fn span(&self, first: usize, last: usize) -> f64 {
-        let before = match first
+        let before = first
             .checked_sub(1)
             .and_then(|place| self.forward.get(place))
-        {
-            None => 0.0,
-            Some(held) => log_sum(
-                held.iter()
-                    .enumerate()
-                    .filter(|(tag, _)| closes(*tag))
-                    .map(|(_, value)| *value),
-            ),
-        };
+            .map_or(0.0, closed);
         let row = |place: usize, tag: usize| {
             self.rows
                 .get(place)

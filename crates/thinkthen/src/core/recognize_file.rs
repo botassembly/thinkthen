@@ -6,6 +6,7 @@ use sha2::{Digest as _, Sha256};
 use thiserror::Error;
 
 use crate::core::json::Json;
+use crate::core::recognize::{ENTITY, NONE_OF_THESE};
 use crate::core::{Description, Labels, ModelName, Pointer, ProfileName, RelationRule, Threshold};
 
 pub(crate) type RecognizeKinds = Vec<(String, Option<Description>)>;
@@ -172,7 +173,7 @@ fn parse_kinds(value: Option<&Json>) -> Result<RecognizeKinds, RecognizeConfigEr
 
 /// The kind names no caller may use: `none of these` declines a name,
 /// `ENTITY` is the kind of every name in a run with no kinds, and `ANY` spells `*`.
-const RESERVED: [&str; 3] = ["none of these", "ENTITY", "ANY"];
+const RESERVED: [&str; 3] = [NONE_OF_THESE, ENTITY, "ANY"];
 
 fn validate_kinds(kinds: &[(String, Option<Description>)]) -> Result<(), RecognizeConfigError> {
     if kinds.is_empty() {

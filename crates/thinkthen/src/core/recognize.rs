@@ -15,6 +15,7 @@ mod pieces;
 mod questions;
 
 pub(crate) use bilou::{SpanOdds, TAGS, TagRow, decode};
+use bilou::best_of;
 pub(crate) use pieces::{Piece, pieces};
 pub(crate) use questions::{
     NONE_OF_THESE, edge_options, edge_question, evidence, kind_question, name_groups,
@@ -118,13 +119,9 @@ impl Serialize for Odds {
 impl Odds {
     /// The most likely label's place, the earliest on a tie.
     fn leader(&self) -> Option<(usize, &str, f64)> {
-        self.0
-            .iter()
-            .enumerate()
-            .fold(None, |best, (place, (label, value))| match best {
-                Some((_, _, held)) if held >= *value => best,
-                _ => Some((place, label.as_str(), *value)),
-            })
+        let (place, value) = best_of(self.0.iter().map(|(_, value)| *value).enumerate())?;
+        let (label, _) = self.0.get(place)?;
+        Some((place, label.as_str(), value))
     }
 }
 
