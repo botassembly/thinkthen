@@ -54,23 +54,23 @@ impl Tiers<'_> {
                 None => Ok(None),
             };
         }
-        let setting = if let Some(flag) = self.flag {
-            Setting::parse(flag).ok_or(Failure::Usage(
+        let wanted = "takes max or a whole number of at least 1";
+        match (self.flag, environment.batch(), &self.file) {
+            (Some(flag), ..) => Setting::parse(flag).ok_or(Failure::Usage(
                 "--batch takes max or a whole number of at least 1",
-            ))?
-        } else if let Some(variable) = environment.batch() {
-            Setting::parse(variable).ok_or(Failure::Usage(
+            )),
+            (None, Some(variable), _) => Setting::parse(variable).ok_or(Failure::Usage(
                 "THINKTHEN_BATCH takes max or a whole number of at least 1",
-            ))?
-        } else if let Some(value) = &self.file {
-            Setting::of_json(value).ok_or(Failure::Question(QuestionFileError::Shape {
-                key: "batch",
-                wanted: "takes max or a whole number of at least 1",
-            }))?
-        } else {
-            Setting::Max
-        };
-        Ok(Some(setting))
+            )),
+            (None, None, Some(value)) => {
+                Setting::of_json(value).ok_or(Failure::Question(QuestionFileError::Shape {
+                    key: "batch",
+                    wanted,
+                }))
+            }
+            (None, None, None) => Ok(Setting::Max),
+        }
+        .map(Some)
     }
 }
 

@@ -54,7 +54,11 @@ pub(crate) fn spawn_one(
     environment: &[(&str, &str)],
     evidence: &[u8],
 ) -> io::Result<Output> {
-    spawn(arguments, &[environment, &[("THINKTHEN_BATCH", "1")]].concat(), evidence)
+    spawn(
+        arguments,
+        &[environment, &[("THINKTHEN_BATCH", "1")]].concat(),
+        evidence,
+    )
 }
 
 /// Start the compiled binary as `spawn` does, feed it the evidence, and hand

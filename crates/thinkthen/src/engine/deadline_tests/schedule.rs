@@ -61,7 +61,9 @@ fn a_spent_deadline_over_empty_bulk_input_stops_before_reading() {
             false,
             &cancel,
             reader(Vec::<usize>::new(), &asks),
-            &|_: &usize| -> Result<Completed<usize, &'static str>, &'static str> { unreachable!("no input") },
+            &|_: &usize| -> Result<Completed<usize, &'static str>, &'static str> {
+                unreachable!("no input")
+            },
             |_| Ok(true),
             |_| "defect",
             named,
@@ -84,7 +86,9 @@ fn a_spent_deadline_over_empty_bulk_input_stops_before_reading() {
             },
             &|()| -> Result<(), &'static str> { unreachable!("no work") },
             |_: &mut (), ()| Ok(()),
-            |(), ()| -> Result<Completed<(), &'static str>, &'static str> { unreachable!("no row") },
+            |(), ()| -> Result<Completed<(), &'static str>, &'static str> {
+                unreachable!("no row")
+            },
             |()| Ok(true),
             |_| "defect",
             named,

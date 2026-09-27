@@ -415,46 +415,52 @@ mod tests {
         let (outcome_send, outcome) = std::sync::mpsc::channel();
 
         let run = thread::spawn(move || {
-            let result = super::run(
-                1,
-                true,
-                &run_cancel,
-                move |asked, events| {
-                    thread::spawn(move || {
-                        while asked.recv().is_ok() {
-                            reader_requests.fetch_add(1, Ordering::SeqCst);
-                            if events.send(Input::Item(())).is_err() {
-                                break;
+            let result =
+                super::run(
+                    1,
+                    true,
+                    &run_cancel,
+                    move |asked, events| {
+                        thread::spawn(move || {
+                            while asked.recv().is_ok() {
+                                reader_requests.fetch_add(1, Ordering::SeqCst);
+                                if events.send(Input::Item(())).is_err() {
+                                    break;
+                                }
                             }
-                        }
-                    });
-                },
-                |()| {
-                    Ok::<_, &'static str>(Prepared {
-                        seed: (),
-                        accumulator: Vec::<usize>::new(),
-                        work: vec![0, 1],
-                    })
-                },
-                &move |group| {
-                    answer_starts.fetch_add(1, Ordering::SeqCst);
-                    answer_active.fetch_add(1, Ordering::SeqCst);
-                    answer_started.wait();
-                    answer_release.wait();
-                    answer_active.fetch_sub(1, Ordering::SeqCst);
-                    Ok::<_, &'static str>(group)
-                },
-                |answers, answer| {
-                    answers.push(answer);
-                    Ok(())
-                },
-                |_, _| -> Result<crate::engine::schedule::Completed<(), &'static str>, &'static str> {
-                    unreachable!("a cancelled group leaves the row unfinished")
-                },
-                |_| Ok(true),
-                |_| "defect",
-                |_| "cancelled",
-            );
+                        });
+                    },
+                    |()| {
+                        Ok::<_, &'static str>(Prepared {
+                            seed: (),
+                            accumulator: Vec::<usize>::new(),
+                            work: vec![0, 1],
+                        })
+                    },
+                    &move |group| {
+                        answer_starts.fetch_add(1, Ordering::SeqCst);
+                        answer_active.fetch_add(1, Ordering::SeqCst);
+                        answer_started.wait();
+                        answer_release.wait();
+                        answer_active.fetch_sub(1, Ordering::SeqCst);
+                        Ok::<_, &'static str>(group)
+                    },
+                    |answers, answer| {
+                        answers.push(answer);
+                        Ok(())
+                    },
+                    |_,
+                     _|
+                     -> Result<
+                        crate::engine::schedule::Completed<(), &'static str>,
+                        &'static str,
+                    > {
+                        unreachable!("a cancelled group leaves the row unfinished")
+                    },
+                    |_| Ok(true),
+                    |_| "defect",
+                    |_| "cancelled",
+                );
             outcome_send.send(result).expect("returned outcome");
         });
 
@@ -489,23 +495,27 @@ mod tests {
         let (asked_send, asked_recv) = std::sync::mpsc::channel();
         let (outcome_send, outcome_recv) = std::sync::mpsc::channel();
         let run = thread::spawn(move || {
-            let outcome = super::run(
-                1,
-                false,
-                &run_cancel,
-                move |asked, _events| asked_send.send(asked).expect("input requests"),
-                |_: ()| -> Result<Prepared<(), (), ()>, &'static str> {
-                    unreachable!("withheld input cannot be prepared")
-                },
-                &|_: ()| -> Result<(), &'static str> { unreachable!("no work can start") },
-                |_, _| Ok(()),
-                |_, _| -> Result<crate::engine::schedule::Completed<(), &'static str>, &'static str> {
-                    unreachable!("no row can finish")
-                },
-                |_| Ok(true),
-                |_| "defect",
-                |_| "cancelled",
-            );
+            let outcome =
+                super::run(
+                    1,
+                    false,
+                    &run_cancel,
+                    move |asked, _events| asked_send.send(asked).expect("input requests"),
+                    |_: ()| -> Result<Prepared<(), (), ()>, &'static str> {
+                        unreachable!("withheld input cannot be prepared")
+                    },
+                    &|_: ()| -> Result<(), &'static str> { unreachable!("no work can start") },
+                    |_, _| Ok(()),
+                    |_,
+                     _|
+                     -> Result<
+                        crate::engine::schedule::Completed<(), &'static str>,
+                        &'static str,
+                    > { unreachable!("no row can finish") },
+                    |_| Ok(true),
+                    |_| "defect",
+                    |_| "cancelled",
+                );
             outcome_send.send(outcome).expect("returned outcome");
         });
         let asked = asked_recv

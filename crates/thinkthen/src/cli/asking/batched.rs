@@ -1,9 +1,6 @@
-//! `decide`, `filter` and `rank` over a stream, by ADR 0048 items 1 to 6.
-//!
-//! A record thread reads raw records ahead through a bounded channel. The
-//! batch reader parses them, plans batches, and hands the scheduler one batch
-//! for each ask. A worker sends a batch as one request and builds one row for
-//! each of its records, in input order.
+//! `decide`, `filter` and `rank` over a stream, by ADR 0048 items 1 to 6. A
+//! record thread parses records ahead, a batch reader plans a batch for each
+//! ask, and a worker sends it as one request and builds a row for each record.
 
 use std::collections::VecDeque;
 use std::io::BufRead;
@@ -41,24 +38,7 @@ pub(super) struct Item {
     records: Vec<Held>,
 }
 
-type Parse<T> = fn(&Reading, T) -> Result<Held, Failure>;
-
-fn line(reading: &Reading, bytes: Vec<u8>) -> Result<Held, Failure> {
-    let record = reading
-        .record(&bytes)
-        .map_err(|error| Failure::record(error, true))?;
-    Ok(Held {
-        record,
-        arrived: Some(bytes),
-    })
-}
-
-fn row(_: &Reading, record: Record) -> Result<Held, Failure> {
-    Ok(Held {
-        record,
-        arrived: None,
-    })
-}
+type Records = Box<dyn Iterator<Item = Result<Held, Failure>> + Send>;
 
 /// Send the stream in batches of `setting`, or print the first batch's plan.
 pub(super) fn run(
@@ -68,30 +48,27 @@ pub(super) fn run(
     setting: Setting,
     output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure> {
-    match table_kind(configuration.common) {
-        Some(kind) => {
-            let rows = TableRows::new(source, kind)?;
-            over(configuration, reading, rows, row, setting, output)
-        }
-        None => {
-            let lines = edge::Chunks::new(source, true);
-            over(configuration, reading, lines, line, setting, output)
-        }
-    }
-}
-
-fn over<T, I>(
-    configuration: JudgingInput<'_>,
-    reading: &Reading,
-    records: I,
-    parse: Parse<T>,
-    setting: Setting,
-    output: &mut Output<'_>,
-) -> Result<ExitCode, Failure>
-where
-    T: Send + 'static,
-    I: Iterator<Item = Result<T, Failure>> + Send + 'static,
-{
+    let records: Records = if let Some(kind) = table_kind(configuration.common) {
+        let rows = TableRows::new(source, kind)?;
+        Box::new(rows.map(|row| {
+            row.map(|record| Held {
+                record,
+                arrived: None,
+            })
+        }))
+    } else {
+        let reading = reading.clone();
+        Box::new(edge::Chunks::new(source, true).map(move |bytes| {
+            let bytes = bytes?;
+            let record = reading
+                .record(&bytes)
+                .map_err(|error| Failure::record(error, true))?;
+            Ok(Held {
+                record,
+                arrived: Some(bytes),
+            })
+        }))
+    };
     let Asks::Fixed(question) = &configuration.asks else {
         return Err(Failure::Defect("a batched verb asks one question"));
     };
@@ -112,7 +89,7 @@ where
         queue: VecDeque::new(),
     };
     if configuration.common.dry_run {
-        return planned(former, records, parse, &configuration, output);
+        return planned(former, records, &configuration, output);
     }
     let judging = Judging::new(configuration)?;
     let recording = judging.engine.recording();
@@ -129,7 +106,7 @@ where
                     }
                 }
             });
-            thread::spawn(move || former.answer(parse, &raw, &asks, &events));
+            thread::spawn(move || former.answer(&raw, &asks, &events));
         },
         &|item| answered(&judging, reading, &question, item),
         |rows| {
@@ -145,15 +122,14 @@ where
 }
 
 /// Print the plan of the first batch that closes without a pause.
-fn planned<T>(
+fn planned(
     mut former: Former,
-    records: impl Iterator<Item = Result<T, Failure>>,
-    parse: Parse<T>,
+    records: Records,
     configuration: &JudgingInput<'_>,
     output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure> {
     for record in records {
-        former.push(parse, record);
+        former.push(record);
         if !former.queue.is_empty() {
             break;
         }
@@ -192,10 +168,9 @@ struct Former {
 impl Former {
     /// Answer each ask with the next batch, pulling records only while an
     /// ask waits, and sending the open batch when input pauses.
-    fn answer<T>(
+    fn answer(
         mut self,
-        parse: Parse<T>,
-        raw: &Receiver<Result<T, Failure>>,
+        raw: &Receiver<Result<Held, Failure>>,
         asks: &Receiver<()>,
         events: &InputPort<Item, Vec<Judged>, Failure>,
     ) {
@@ -222,7 +197,7 @@ impl Former {
                     }
                 };
                 match next {
-                    Some(record) => self.push(parse, record),
+                    Some(record) => self.push(record),
                     None => {
                         self.end();
                         ended = true;
@@ -237,8 +212,8 @@ impl Former {
 
     /// Parse one record and plan it, queueing the batches it closes. A record
     /// refused before planning sends the open batch first.
-    fn push<T>(&mut self, parse: Parse<T>, raw: Result<T, Failure>) {
-        let parsed = raw.and_then(|raw| parse(&self.reading, raw)).and_then(|held| {
+    fn push(&mut self, held: Result<Held, Failure>) {
+        let parsed = held.and_then(|held| {
             let record = self.reading.batch_record(&held.record)?;
             Ok((record, held))
         });

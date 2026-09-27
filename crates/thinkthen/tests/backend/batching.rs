@@ -1,0 +1,561 @@
+//! Records of a stream share requests on `decide`, `filter` and `rank`, by
+//! ADR 0048 items 1 to 6 and ADR 0055.
+//!
+//! The loopback answers each wire question with a probability made from the
+//! line the question quotes, so a row's answer follows its record whatever
+//! the batch.
+
+use std::fs;
+use std::io::Write as _;
+use std::path::PathBuf;
+use std::process::{Command, Output, Stdio};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::thread;
+use std::time::{Duration, Instant};
+
+use serde_json::{Map, Value, json};
+
+use crate::harness::{Canned, Gathering, Listener, finish, spawn};
+
+const QUESTION: &str = "It names a place.";
+const QUOTED: &str = "Each question quotes the text it asks about.";
+const KEY: (&str, &str) = ("THINKTHEN_API_KEY", "sk-test-value");
+
+fn lines(places: impl Iterator<Item = usize>) -> String {
+    places.map(|place| format!("line {place}\n")).collect()
+}
+
+/// The number after `line ` in a text, when it holds one.
+fn place(text: &str) -> Option<usize> {
+    let (_, rest) = text.split_once("line ")?;
+    rest.split(|c: char| !c.is_ascii_digit())
+        .next()?
+        .parse()
+        .ok()
+}
+
+fn odds(place: usize) -> f64 {
+    f64::from(u32::try_from(place * 37 % 100).unwrap_or(0)) / 100.0
+}
+
+/// The row a line prints without `--details`.
+fn row(place: usize) -> String {
+    format!(
+        "{{\"input\":\"line {place}\",\"value\":{}}}\n",
+        odds(place) >= 0.5
+    )
+}
+
+fn rows(places: impl Iterator<Item = usize>) -> String {
+    places.map(row).collect()
+}
+
+/// Each wire question's name and the line it asks about. A batch of one
+/// sends the line as the evidence and the question unquoted.
+fn places(body: &[u8]) -> Vec<(String, usize)> {
+    let request: Value = serde_json::from_slice(body).unwrap_or(Value::Null);
+    let state = request["state"].as_str().unwrap_or_default();
+    let Some(questions) = request["questions"].as_object() else {
+        return Vec::new();
+    };
+    questions
+        .iter()
+        .map(|(name, question)| {
+            let text = question["instructions"].as_str().unwrap_or_default();
+            (
+                name.clone(),
+                place(text).or_else(|| place(state)).unwrap_or(0),
+            )
+        })
+        .collect()
+}
+
+fn first(body: &[u8]) -> usize {
+    places(body).iter().map(|&(_, at)| at).min().unwrap_or(0)
+}
+
+/// A reply answering every question but the one about line `skip`, with the
+/// usage given.
+fn reply(body: &[u8], skip: Option<usize>, usage: Option<(u64, u64)>) -> Canned {
+    let answers: Map<String, Value> = places(body)
+        .into_iter()
+        .filter(|&(_, at)| Some(at) != skip)
+        .map(|(name, at)| (name, json!({"type": "noul", "noul": odds(at)})))
+        .collect();
+    let mut reply = json!({"model": "jev-1.13.0", "answers": answers});
+    if let Some((input, output)) = usage {
+        reply["usage"] = json!({"input_tokens": input, "output_tokens": output});
+    }
+    Canned::ok(&reply.to_string())
+}
+
+fn answering(body: &[u8]) -> Canned {
+    reply(body, None, Some((88, 12)))
+}
+
+/// `decide QUESTION --lines` at the loopback, with the extra arguments.
+fn decide(base: &str, extra: &[&str], environment: &[(&str, &str)], input: &str) -> Output {
+    let fixed = [
+        "decide",
+        QUESTION,
+        "--lines",
+        "--url",
+        base,
+        "--model",
+        "jev-1.13.0",
+    ];
+    let arguments = [&fixed[..], extra].concat();
+    spawn(
+        &arguments,
+        &[environment, &[KEY]].concat(),
+        input.as_bytes(),
+    )
+    .expect("the command runs")
+}
+
+fn text(bytes: &[u8]) -> String {
+    String::from_utf8_lossy(bytes).into_owned()
+}
+
+/// A fresh folder under the target folder.
+fn folder(name: &str) -> String {
+    static FOLDERS: AtomicUsize = AtomicUsize::new(0);
+    let path = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join(format!(
+        "batching-{name}-{}-{}",
+        std::process::id(),
+        FOLDERS.fetch_add(1, Ordering::Relaxed)
+    ));
+    let _removed = fs::remove_dir_all(&path);
+    path.to_string_lossy().into_owned()
+}
+
+/// The parsed `--details` rows.
+fn details(output: &Output) -> Vec<Value> {
+    text(&output.stdout)
+        .lines()
+        .map(|line| serde_json::from_str(line).expect("a JSON row"))
+        .collect()
+}
+
+#[test]
+fn order_holds_across_jobs() {
+    let input = lines(1..=306);
+    let mut runs = Vec::new();
+    for jobs in [1, 8] {
+        let gathering = (jobs > 1).then(|| Gathering::new(jobs));
+        let listener = Listener::answering(move |body| {
+            if let Some(gathering) = &gathering {
+                gathering.hold();
+            }
+            let later = 310_usize.saturating_sub(first(body)) / 10;
+            answering(body).after(u64::try_from(later).unwrap_or(0))
+        })
+        .expect("a loopback listener");
+        let jobs_text = jobs.to_string();
+        let output = decide(
+            listener.base(),
+            &["--batch", "10", "--no-cache", "--jobs", &jobs_text],
+            &[],
+            &input,
+        );
+        let mut sizes: Vec<usize> = listener
+            .requests()
+            .iter()
+            .map(|request| places(&request.body).len())
+            .collect();
+        sizes.sort_unstable();
+        assert_eq!(sizes, [&[6][..], &[10; 30]].concat(), "at --jobs {jobs}");
+        if jobs > 1 {
+            assert_eq!(listener.peak(), jobs, "batches in flight");
+        }
+        runs.push(output);
+    }
+    assert_eq!(text(&runs[0].stdout), rows(1..=306));
+    assert_eq!(text(&runs[1].stdout), text(&runs[0].stdout));
+    assert_eq!(text(&runs[1].stderr), text(&runs[0].stderr));
+    assert_eq!(runs[1].status.code(), Some(0));
+}
+
+#[test]
+fn replay_answers_every_batch() {
+    let input = lines(1..=25);
+    let listener = Listener::answering(answering).expect("a loopback listener");
+    let base = listener.base();
+    let recording = folder("recording");
+    let recorded = decide(
+        base,
+        &["--batch", "10", "--record", &recording],
+        &[],
+        &input,
+    );
+    assert_eq!(
+        recorded.status.code(),
+        Some(0),
+        "{}",
+        text(&recorded.stderr)
+    );
+    assert_eq!(listener.count(), 3);
+
+    let replayed = decide(
+        base,
+        &["--batch", "10", "--replay", &recording],
+        &[],
+        &input,
+    );
+    assert_eq!(listener.count(), 3, "a replay sends nothing");
+    assert_eq!(text(&replayed.stdout), text(&recorded.stdout));
+    assert_eq!(text(&replayed.stderr), text(&recorded.stderr));
+    assert_eq!(text(&replayed.stdout), rows(1..=25));
+
+    let missed = decide(base, &["--batch", "5", "--replay", &recording], &[], &input);
+    assert_eq!(missed.status.code(), Some(5));
+    assert_eq!(text(&missed.stdout), "");
+    // The entry name holds the loopback's port, so the line is pinned around it.
+    let stopped = text(&missed.stderr);
+    let (head, tail) = stopped.split_once(".json`").expect("an entry name");
+    assert_eq!(
+        (head.split_once(" named `").map(|(head, _)| head), tail),
+        (
+            Some(concat!(
+                "thinkthen: stopped at record 1; the request for records 1 to 5 failed: ",
+                "the replay folder holds no entry"
+            )),
+            concat!(
+                "; the entry name covers the backend interface, address, and request; ",
+                "0 records finished, 0 records from a recording\n"
+            )
+        )
+    );
+    assert_eq!(listener.count(), 3);
+
+    let cache = folder("cache");
+    let cached = decide(base, &["--batch", "10", "--cache", &cache], &[], &input);
+    let again = decide(base, &["--batch", "10", "--cache", &cache], &[], &input);
+    assert_eq!(listener.count(), 6, "the second cached run sends nothing");
+    assert_eq!(text(&again.stdout), text(&cached.stdout));
+}
+
+#[test]
+fn a_pause_sends_the_open_batch() {
+    let typed = folder("typed");
+    let named = folder("named");
+    let modes: [(&str, &[&str], &[(&str, &str)]); 3] = [
+        ("no folder", &["--no-cache"], &[]),
+        ("the default cache", &[], &[("THINKTHEN_CACHE", &named)]),
+        ("a typed folder", &["--cache", &typed], &[]),
+    ];
+    for (name, extra, environment) in modes {
+        let listener = Listener::answering(answering).expect("a loopback listener");
+        let fixed = ["decide", QUESTION, "--lines", "--url", listener.base()];
+        let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
+        command
+            .env_clear()
+            .env("HOME", folder("home"))
+            .env(KEY.0, KEY.1)
+            .envs(environment.iter().copied())
+            .args(fixed)
+            .args(["--model", "jev-1.13.0"])
+            .args(extra)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        let mut child = command.spawn().expect("the command starts");
+        let mut writer = child.stdin.take().expect("an input pipe");
+        writer
+            .write_all(lines(1..=3).as_bytes())
+            .expect("three records are written");
+        writer.flush().expect("the records reach the pipe");
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while listener.count() == 0 && Instant::now() < deadline {
+            thread::sleep(Duration::from_millis(10));
+        }
+        let sent = listener.requests();
+        drop(writer);
+        let output = finish(child, name).expect("the command ends");
+        assert_eq!(sent.len(), 1, "{name}: a request while the pipe stays open");
+        assert_eq!(places(&sent[0].body).len(), 3, "{name}");
+        assert_eq!(text(&output.stdout), rows(1..=3), "{name}");
+    }
+}
+
+#[test]
+fn repeats_close_a_batch_at_the_member_cap() {
+    let repeats: Vec<String> = (0..10_000)
+        .map(|at| format!("line {}\n", at % 5 + 1))
+        .collect();
+    let mut cut = repeats.clone();
+    cut[999] = "line 10633\n".to_owned();
+    let cases: [(&str, &[&str], &[String], &[usize]); 3] = [
+        ("default", &[], &repeats, &[1, 4_097, 8_193]),
+        (
+            "--batch 5000",
+            &["--batch", "5000"],
+            &repeats,
+            &[1, 4_097, 8_193],
+        ),
+        ("a content cut", &[], &cut, &[1, 1_001, 5_097, 9_193]),
+    ];
+    for (name, extra, input, sending) in cases {
+        let listener = Listener::answering(answering).expect("a loopback listener");
+        let arguments = [&["--details", "--no-cache"][..], extra].concat();
+        let output = decide(listener.base(), &arguments, &[], &input.concat());
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "{name}: {}",
+            text(&output.stderr)
+        );
+        let printed = details(&output);
+        assert_eq!(printed.len(), 10_000, "{name}");
+        let sent: Vec<usize> = printed
+            .iter()
+            .enumerate()
+            .filter(|(_, row)| row["meta"]["requests_sent"] != 0)
+            .map(|(at, row)| {
+                assert_eq!(row["meta"]["requests_sent"], 1, "{name}: row {}", at + 1);
+                at + 1
+            })
+            .collect();
+        assert_eq!(sent, sending, "{name}: the rows that carry a request");
+        let bodies = listener.requests();
+        assert_eq!(bodies.len(), sending.len(), "{name}");
+        if name == "default" {
+            for body in &bodies[..2] {
+                assert!(text(&body.body).contains(QUOTED));
+                assert_eq!(places(&body.body).len(), 5);
+            }
+            assert_eq!(bodies[0].body.len(), bodies[1].body.len());
+        }
+    }
+}
+
+#[test]
+fn a_failed_batch_stops_at_its_first_record() {
+    let input = lines(1..=30);
+    let fixed = ["--jobs", "1", "--max-retries", "0", "--no-cache"];
+    let unavailable = |body: &[u8]| -> Canned {
+        if places(body).iter().any(|&(_, at)| at == 11) {
+            Canned::status(503, "{}")
+        } else {
+            answering(body)
+        }
+    };
+    let listener = Listener::answering(unavailable).expect("a loopback listener");
+    let output = decide(
+        listener.base(),
+        &[&fixed[..], &["--batch", "10"]].concat(),
+        &[],
+        &input,
+    );
+    assert_eq!(text(&output.stdout), rows(1..=10));
+    assert_eq!(
+        text(&output.stderr),
+        concat!(
+            "thinkthen: stopped at record 11; the request for records 11 to 20 failed: ",
+            "the backend answered with status 503: the backend failed after the allowed attempts; ",
+            "try again later or change --max-retries; 10 records finished\n"
+        )
+    );
+    assert_eq!(output.status.code(), Some(4));
+
+    let listener = Listener::answering(|body| reply(body, Some(13), Some((88, 12))))
+        .expect("a loopback listener");
+    let output = decide(
+        listener.base(),
+        &[&fixed[..], &["--batch", "10"]].concat(),
+        &[],
+        &input,
+    );
+    assert_eq!(text(&output.stdout), rows(1..=12));
+    assert_eq!(
+        text(&output.stderr),
+        "thinkthen: stopped at record 13; the reply for records 11 to 20 gave record 13 no usable answer; 12 records finished\n"
+    );
+    assert_eq!(output.status.code(), Some(4));
+
+    let listener = Listener::answering(unavailable).expect("a loopback listener");
+    let output = decide(
+        listener.base(),
+        &[&fixed[..], &["--batch", "1"]].concat(),
+        &[],
+        &input,
+    );
+    assert_eq!(text(&output.stdout), rows(1..=10));
+    assert_eq!(
+        text(&output.stderr),
+        concat!(
+            "thinkthen: the backend answered with status 503: the backend failed after the allowed attempts; ",
+            "try again later or change --max-retries\n",
+            "thinkthen: stopped at record 11; 10 records finished\n"
+        )
+    );
+    assert_eq!(output.status.code(), Some(4));
+}
+
+#[test]
+fn the_batch_setting_follows_its_tiers() {
+    let place = folder("tiers");
+    fs::create_dir_all(&place).expect("a folder for the question files");
+    let file = |batch: &str| {
+        let path = format!("{place}/{}.json", batch.replace(['"', '.'], "_"));
+        fs::write(
+            &path,
+            format!(r#"{{"decide":"{QUESTION}","batch":{batch}}}"#),
+        )
+        .expect("a question file");
+        format!("@{path}")
+    };
+    let run = |flag: Option<&str>, environment: Option<&str>, batch: Option<&str>, input: &str| {
+        let question = batch.map_or_else(|| QUESTION.to_owned(), file);
+        let mut arguments = vec!["decide", &question, "--dry-run"];
+        if input.contains('\n') {
+            arguments.push("--lines");
+        }
+        if let Some(flag) = flag {
+            arguments.extend(["--batch", flag]);
+        }
+        let environment: Vec<(&str, &str)> = environment
+            .map(|value| ("THINKTHEN_BATCH", value))
+            .into_iter()
+            .collect();
+        spawn(&arguments, &environment, input.as_bytes()).expect("the command runs")
+    };
+    let three = lines(1..=3);
+    let planned = [
+        (None, None, None, 3),
+        (Some("1"), None, None, 1),
+        (Some("2"), None, None, 2),
+        (Some("max"), None, None, 3),
+        (None, Some("2"), None, 2),
+        (None, Some(""), None, 3),
+        (None, None, Some("1"), 1),
+        (Some("2"), None, Some("1"), 2),
+        (None, Some("max"), Some("1"), 3),
+        (Some("max"), None, Some("2"), 3),
+        (None, Some("1"), Some("2"), 1),
+    ];
+    for (flag, environment, batch, count) in planned {
+        let output = run(flag, environment, batch, &three);
+        let plan: Value = serde_json::from_slice(&output.stdout).expect("a plan");
+        let questions = plan["request"]["questions"].as_object().map_or(0, Map::len);
+        assert_eq!(
+            questions,
+            count,
+            "{flag:?} {environment:?} {batch:?}: {}",
+            text(&output.stderr)
+        );
+    }
+
+    let flag = "thinkthen: --batch takes max or a whole number of at least 1\n";
+    let variable = "thinkthen: THINKTHEN_BATCH takes max or a whole number of at least 1\n";
+    let key = "thinkthen: `batch` in the question file takes max or a whole number of at least 1\n";
+    let single =
+        "thinkthen: --batch groups the records of a stream, and a single text is one record\n";
+    let mut refused: Vec<(Output, i32, &str)> = ["0", "1.5", "fill", ""]
+        .into_iter()
+        .map(|value| (run(Some(value), None, None, &three), 2, flag))
+        .collect();
+    refused.push((run(None, Some("0"), None, &three), 2, variable));
+    for value in ["0", "1.5", r#""10""#, r#""fill""#, "true"] {
+        refused.push((run(None, None, Some(value), &three), 5, key));
+    }
+    refused.push((run(Some("5"), None, None, "line 1"), 2, single));
+    for (output, code, sentence) in refused {
+        assert_eq!(
+            (output.status.code(), text(&output.stderr).as_str()),
+            (Some(code), sentence)
+        );
+    }
+    let one = run(None, Some("5"), None, "line 1");
+    assert_eq!(one.status.code(), Some(0), "{}", text(&one.stderr));
+
+    let listener = Listener::answering(answering).expect("a loopback listener");
+    let digests: Vec<Value> = [QUESTION.to_owned(), file("5")]
+        .iter()
+        .map(|question| {
+            let fixed = ["decide", question, "--lines", "--details", "--no-cache"];
+            let base = ["--url", listener.base(), "--model", "jev-1.13.0"];
+            let output = spawn(&[&fixed[..], &base].concat(), &[KEY], b"line 1\n")
+                .expect("the command runs");
+            details(&output)[0]["meta"]["question_sha256"].clone()
+        })
+        .collect();
+    assert!(digests[0].is_string());
+    assert_eq!(
+        digests[0], digests[1],
+        "a file's batch leaves the question digest"
+    );
+
+    let set = format!("{place}/set.json");
+    fs::write(
+        &set,
+        r#"{"version":1,"questions":{"ok":{"decide":"Is it yes?","batch":5}}}"#,
+    )
+    .expect("a question set");
+    let annotate = spawn(
+        &["annotate", &set, "--lines", "--dry-run"],
+        &[],
+        b"line 1\n",
+    )
+    .expect("the command runs");
+    assert_eq!(annotate.status.code(), Some(5));
+    assert_eq!(
+        text(&annotate.stderr),
+        "thinkthen: the question set holds no key `questions.ok.batch`\n"
+    );
+}
+
+#[test]
+fn each_row_carries_its_share() {
+    let song = "The text is the title of a song by the Beatles.";
+    let input = "Come Together\nBecause\nCome Together\n";
+    let fixture = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../specification/fixtures/systemone/batch-duplicate.request.json"
+    );
+    let expected = fs::read_to_string(fixture).expect("the fixture");
+    for usage in [Some((100, 10)), None] {
+        let listener =
+            Listener::answering(move |body| reply(body, None, usage)).expect("a loopback listener");
+        let arguments = [
+            "decide",
+            song,
+            "--lines",
+            "--batch",
+            "3",
+            "--details",
+            "--no-cache",
+            "--url",
+            listener.base(),
+            "--model",
+            "jev-latest",
+        ];
+        let output = spawn(&arguments, &[KEY], input.as_bytes()).expect("the command runs");
+        assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+        let sent = listener.requests();
+        assert_eq!(sent.len(), 1);
+        assert_eq!(text(&sent[0].body), expected.trim_end_matches('\n'));
+        let shares: Vec<(Value, Value)> = details(&output)
+            .iter()
+            .map(|row| {
+                (
+                    row["meta"]["usage"].clone(),
+                    row["meta"]["requests_sent"].clone(),
+                )
+            })
+            .collect();
+        let wanted = match usage {
+            Some(_) => vec![
+                (json!({"input_tokens": 34, "output_tokens": 4}), json!(1)),
+                (json!({"input_tokens": 33, "output_tokens": 3}), json!(0)),
+                (json!({"input_tokens": 33, "output_tokens": 3}), json!(0)),
+            ],
+            None => vec![
+                (Value::Null, json!(1)),
+                (Value::Null, json!(0)),
+                (Value::Null, json!(0)),
+            ],
+        };
+        assert_eq!(shares, wanted, "usage {usage:?}");
+    }
+}

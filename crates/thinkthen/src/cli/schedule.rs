@@ -174,9 +174,7 @@ where
         |requests, events| {
             thread::spawn(move || read_records(chunks, &requests, &events));
         },
-        &|value| {
-            row(value).map(Judged::completed)
-        },
+        &|value| row(value).map(Judged::completed),
         |judged| output.take(judged),
     )?;
     ended(outcome, recording, output)

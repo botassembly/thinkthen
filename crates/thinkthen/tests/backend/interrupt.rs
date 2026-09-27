@@ -156,6 +156,34 @@ fn record_finishes_the_started_row_stops_before_another_and_completes_cache() {
     assert!(serde_json::from_str::<serde_json::Value>(&entry).is_ok());
 }
 
+/// A batched run keeps today's cancellation line, and no new batch starts.
+#[test]
+fn an_interrupted_batch_finishes_and_starts_no_other() {
+    let output = held(
+        1,
+        &[
+            "decide",
+            "Is it accepted?",
+            "--lines",
+            "--jobs",
+            "1",
+            "--batch",
+            "2",
+        ],
+        b"first\nsecond\nthird\nfourth\n",
+        || Canned::ok(RELATED),
+    )
+    .expect("interrupt run");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "{\"input\":\"first\",\"value\":true}\n{\"input\":\"second\",\"value\":false}\n"
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: stopped at record 3; 2 records finished\n"
+    );
+}
+
 #[test]
 fn sent_single_decide_and_aggregate_commands_flush_before_sigint_status() {
     let cases = [

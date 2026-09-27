@@ -12,8 +12,8 @@ use std::sync::mpsc::Receiver;
 use std::time::Duration;
 
 use crate::core::{
-    Answer, AnswerOutcome, Batch, Backend, BackendProfile, Evidence, Find, FindAnswer, ModelName, Outcome,
-    Plan, Question, Threshold, Value,
+    Answer, AnswerOutcome, Backend, BackendProfile, Batch, Evidence, Find, FindAnswer, ModelName,
+    Outcome, Plan, Question, Threshold, Value,
 };
 use crate::engine::annotate_schedule;
 use crate::engine::error::Error;

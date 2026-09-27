@@ -302,7 +302,10 @@ fn stopped(failure: &Failure, writer: &mut dyn Write) -> Option<u8> {
             let prefix = format!("{}: ", crate::core::NAME);
             let said = said.trim_end();
             let said = said.strip_prefix(&prefix).unwrap_or(said);
-            (code, format!("the request for records {at} to {last} failed: {said}; "))
+            (
+                code,
+                format!("the request for records {at} to {last} failed: {said}; "),
+            )
         }
         Failure::PartialReply { first, last } => (
             4,

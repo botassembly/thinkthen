@@ -83,7 +83,15 @@ fn piped(base: &str, jobs: &str) -> io::Result<Child> {
         .env_clear()
         .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
-        .args(["decide", QUESTION, "--model", "local-1", "--no-cache", "--batch", "1"])
+        .args([
+            "decide",
+            QUESTION,
+            "--model",
+            "local-1",
+            "--no-cache",
+            "--batch",
+            "1",
+        ])
         .args(["--url", base, "--jsonl", "--field", "/body", "--jobs", jobs])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
