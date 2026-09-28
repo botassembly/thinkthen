@@ -1,6 +1,6 @@
 # ADR 0093: Bound rank top retention
 
-Status: proposed for fresh independent design review with [ticket 0220](../../tickets/0220-bound-rank-top-retention.md). Date: 2026-09-28. This amends the settled retention and `jobs` prose in [rank.md](../../../specification/rank.md) and [records.md](../../../specification/records.md) only after acceptance and implementation. Ian can overturn the outcome.
+Status: accepted by fresh independent design review at `52f0864b` with [ticket 0220](../../tickets/0220-bound-rank-top-retention.md). Date: 2026-09-28. This amends the settled retention and `jobs` prose in [rank.md](../../../specification/rank.md) and [records.md](../../../specification/records.md) with the built candidate. Ian can overturn the outcome.
 
 ## Problem
 

@@ -80,9 +80,10 @@ pub(crate) enum Command {
     /// The printed order puts the most likely yes first. An exact tie keeps
     /// input order. `rank` never runs a tournament.
     ///
-    /// It holds every record until the input ends, because a final order needs
-    /// the whole set, so an endless stream is cut into windows upstream.
-    /// `--top N` prints the first N of the order and saves no request.
+    /// It prints only after the input ends. Without `--top`, it holds every
+    /// scored record; with `--top N`, it keeps N winners and bounded work in
+    /// flight. Cut an endless stream into windows upstream. Every record is
+    /// still judged, so `--top` saves no request on a completed input.
     ///
     /// `rank` orders and never selects. A floor is `filter` in front of it. With
     /// no framing flag it reads lines, or JSON Lines when a pointer is given by
