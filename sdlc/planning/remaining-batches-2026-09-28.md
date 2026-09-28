@@ -18,7 +18,7 @@ This scheduling snapshot reads the 75 to-do rows on main `243cf2b3` on 2026-09-2
 
 ## Later intake
 
-Main through06b0803e adds three distinct issues after the75-row snapshot. The live table now has78 to do. These additions do not change completion counts.
+Main through06b0803e adds three distinct issues after the75-row snapshot. The three additions raised the original75 to78. Reviewed relation proof then retired four already-fixed rows, leaving74 to do. These additions do not change completion counts.
 
 | Issue | Batch | Next action |
 | --- | --- | --- |
@@ -182,3 +182,7 @@ Twelve rows include the J8 umbrella, ten consumer-proof issues and C++. They are
 | issue | `dart-consumer-proof-needs-a-supported-package` | Batch J8: experiment 300 supplies reviewed two-stage Linux package evidence; integration still needs final native pin, full runtime type corpus, Flutter embedding and packaging. No publication or all-platform support is established |
 | ticket | J8: port integrations against the shared type contract | Batch J: one ticket per port after J1; rule 2 gates integration; split this family row when scoped |
 | issue | `add-a-c-plus-plus-binding` | Ian requests a typed C++ layer over the C door, ahead of COBOL. Prepare under J8 contract and package rules; an experiment or header alone does not establish supported integration |
+
+## Reviewed closure after this snapshot
+
+Fresh review798cbaef accepts the compiled proof for register110,112,113 and the shared-rule issue. The live table retires all four as already-fixed non-issues, without claiming four new runtime fixes. Recognition/batching therefore has12 open rows from the original16. No other original row is removed by this update. The three intake rows remain open.

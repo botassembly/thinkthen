@@ -1,6 +1,6 @@
 # Relation requests carry one rule and every entity
 
-Status: Open. Filed 2026-09-26 from the ten-function efficiency audit under ADR 0054, local experiment 275. Ticket 0147 built the shared state for `recognize`. Ticket 0167 carries it to `relate`. Owner: ticket R5, which builds ADR 0050 items 5 and 6. It absorbs severity 3 title 11 of report 10 in `2026-09-26-architect-review-severity-3-findings.md`. Does not block 0.1.
+Status: closed as already fixed by0147/0167. Fresh proof review798cbaef confirms the implemented shared-state outcome; see `sdlc/records/qf-recognition-remainder-proof.md`. The separate whole-text split cost remains under register115. Historical report follows. Filed 2026-09-26 from the ten-function efficiency audit under ADR 0054, local experiment 275. Ticket 0147 built the shared state for `recognize`. Ticket 0167 carries it to `relate`. Owner: ticket R5, which builds ADR 0050 items 5 and 6. It absorbs severity 3 title 11 of report 10 in `2026-09-26-architect-review-severity-3-findings.md`. Does not block 0.1.
 
 ## What happens today
 
