@@ -157,3 +157,9 @@ The fresh 0203 code review found one accepted-message mismatch: implementation a
 
 
 The 0203 and 0220 authors froze accepted source before the coordinator merged it. Their records still said landing was pending after the item rows closed. The coordinator corrected those status sentences with the exact main commits. Future integration includes ticket and review/build status text alongside the item table; it retains the original checked source revision. Final 0210 review uses Sol High because it changes credential inspection, public Debug output and multiple command secrecy boundaries.
+
+
+The next 0222 review accepted the reachable native boundary and same-request partial-answer proof, then found two concrete call-path mistakes. Wrapping every worker result in outer Ok hides a fatal result from admission until ordered delivery. Also, facade::ask_batch sends one body; the CLI currently owns eligible 413 splitting around it. The corrected design must preserve fatal outer errors and name the actual split-aware adapter, with the refused attempt and both halves counted. The coordinator transferred these findings to0212's factual preflight before its first code slice. The designer also refreshes the landed profile-aware Details constructor and source headroom; unchanged accepted behavior does not need a fresh design cycle.
+
+
+Fresh 0210 code review found an implementation inventory miss. The accepted ticket required later URL-bearing Debug carriers, including recognition, but the builder left recognize/dry_run.rs derived Debug and http.rs Exchange Debug unchanged. Core collision checks and the tested early snapshot were correct. The author must complete these two existing contract paths and record focused replacement proof; the rest of the passing key/address checks stay valid. Preparing a complete carrier list helps only when the completion pass checks every listed carrier against the diff.
