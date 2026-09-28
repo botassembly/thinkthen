@@ -13,6 +13,7 @@ use crate::engine::http::Key;
 use crate::engine::prepared_request::{Answered, PreparedRequest};
 use crate::engine::recorder::Recorder;
 use crate::engine::usage::Counters;
+use crate::public::SendBudget;
 
 fn request() -> (Backend, Plan, PreparedRequest) {
     let backend = Backend::resolve(Some("http://127.0.0.1:1/v1/systemone"), None, "jev-latest")
@@ -70,6 +71,83 @@ fn wait_on_request(
             },
         )
     })
+}
+
+#[test]
+fn a_writer_seen_after_the_zero_budget_key_lookup_keeps_hit_or_mismatch() {
+    for (name, winner_url, matching) in [
+        (
+            "zero-budget-race-hit",
+            "http://127.0.0.1:1/v1/systemone",
+            true,
+        ),
+        (
+            "zero-budget-race-mismatch",
+            "http://127.0.0.1:2/v1/systemone",
+            false,
+        ),
+    ] {
+        let path = folder(name);
+        let _absent = fs::remove_dir_all(&path);
+        let backend = Backend::resolve(Some("http://127.0.0.1:1/v1/systemone"), None, "local-1")
+            .expect("outer backend");
+        let winner = Backend::resolve(Some(winner_url), None, "local-1").expect("winner backend");
+        let plan = Plan::new(
+            Evidence::new("evidence").expect("evidence"),
+            ModelName::new("local-1").expect("model"),
+            vec![Question::Decide {
+                text: QuestionText::new("Is this relevant?").expect("question"),
+                yes: None,
+                no: None,
+            }],
+        )
+        .expect("plan");
+        let prepared = PreparedRequest::new(&backend, &plan).expect("outer request");
+        let recorder = Recorder::of(Some(&path), Some(&path)).expect("outer cache");
+        let budget = SendBudget::new();
+        let cancel = crate::engine::Cancel::default().with_send_budget(Some((budget, Some(0))));
+        let sends = Arc::new(AtomicUsize::new(0));
+        let winner_sends = Arc::clone(&sends);
+        let result: Result<Answered, Error> = super::ask_prepared(
+            &backend,
+            &plan,
+            prepared,
+            &recorder,
+            &cancel,
+            &Counters::default(),
+            || {
+                let prepared = PreparedRequest::new(&winner, &plan).expect("winner request");
+                let recorder = Recorder::of(Some(&path), Some(&path)).expect("winner cache");
+                let answered: Result<Answered, Error> = super::ask_prepared(
+                    &winner,
+                    &plan,
+                    prepared,
+                    &recorder,
+                    &crate::engine::Cancel::default(),
+                    &Counters::default(),
+                    || Ok(Key::of("winner key")),
+                    |_, _| {
+                        winner_sends.fetch_add(1, Ordering::SeqCst);
+                        Ok(crate::engine::http::HttpAnswer {
+                            body: br#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#.to_vec(),
+                            requests_sent: 1,
+                        })
+                    },
+                );
+                answered.expect("winner fills cache during outer key lookup");
+                Ok(Key::of("outer key"))
+            },
+            |_, _| Err(Error::Defect("zero-budget outer send reached")),
+        );
+        if matching {
+            assert!(result.expect("matching answer").replayed);
+        } else {
+            assert!(matches!(result, Err(Error::RecordingBackendMismatch(..))));
+        }
+        assert_eq!(sends.load(Ordering::SeqCst), 1, "only winner sent");
+        assert!(path.join(".thinkthen-backend.json").is_file());
+        fs::remove_dir_all(path).expect("fixture removed");
+    }
 }
 
 #[test]

@@ -161,27 +161,10 @@ where
         !caches || !built_in::decode(plan, response).is_ok_and(|reply| reply.failed_any())
     };
     let mut read_key = Some(key);
-    let early_key = if recorder.unbound_empty().map_err(E::from)? {
-        if let Some(stop) = cancel.stop() {
-            return Err(E::from(stop));
-        }
-        cancel.key_lookup();
-        let read = read_key
-            .take()
-            .ok_or_else(|| E::from(Error::Defect("key lookup was already used")))?;
-        let result = read();
-        match result {
-            Err(error) => {
-                if recorder.unbound_empty().map_err(E::from)? {
-                    return Err(error);
-                }
-                Some(Err(error))
-            }
-            Ok(key) => Some(Ok(key)),
-        }
-    } else {
-        None
-    };
+    let FirstUse {
+        key: early_key,
+        zero_limit: early_zero_limit,
+    } = first_use_key(recorder, cancel, &mut read_key)?;
     let refresh = caches && (recorder.force_refresh() || built_in::is_mutable_alias(plan.model()));
     let operation = recorder
         .prepare_checked_refresh(&recorded, &prepared.digest, cancel, &complete, refresh)
@@ -214,6 +197,11 @@ where
                 }
             };
             let (permit, key) = finish_or_cancel(permit, found_key)?;
+            if early_zero_limit {
+                let stop = cancel.stop().unwrap_or(Error::SendBudgetFirst);
+                permit.cancel().map_err(E::from)?;
+                return Err(E::from(stop));
+            }
             let (permit, answered) = finish_or_cancel(permit, send(&prepared, &key))?;
             let decoded = built_in::decode_observed(plan, &answered.body);
             usage.live_reply(decoded.usage);
@@ -241,6 +229,63 @@ where
         replayed,
         request: prepared.digest,
         requests_sent,
+    })
+}
+
+struct FirstUse<E> {
+    key: Option<Result<Key, E>>,
+    zero_limit: bool,
+}
+
+/// Check only refusals certain before an unbound folder's writable admission.
+fn first_use_key<E>(
+    recorder: &Recorder,
+    cancel: &crate::engine::Cancel,
+    read_key: &mut Option<impl FnOnce() -> Result<Key, E>>,
+) -> Result<FirstUse<E>, E>
+where
+    E: From<Error>,
+{
+    if !recorder.unbound_empty().map_err(E::from)? {
+        return Ok(FirstUse {
+            key: None,
+            zero_limit: false,
+        });
+    }
+    if let Some(stop) = cancel.stop() {
+        return Err(E::from(stop));
+    }
+    cancel.key_lookup();
+    let read = read_key
+        .take()
+        .ok_or_else(|| E::from(Error::Defect("key lookup was already used")))?;
+    let key = match read() {
+        Ok(key) => key,
+        Err(error) => {
+            if recorder.unbound_empty().map_err(E::from)? {
+                return Err(error);
+            }
+            return Ok(FirstUse {
+                key: Some(Err(error)),
+                zero_limit: false,
+            });
+        }
+    };
+    if !cancel.has_zero_send_limit() {
+        return Ok(FirstUse {
+            key: Some(Ok(key)),
+            zero_limit: false,
+        });
+    }
+    if recorder.unbound_empty().map_err(E::from)? {
+        if let Some(stop) = cancel.stop() {
+            return Err(E::from(stop));
+        }
+        return Err(E::from(Error::SendBudgetFirst));
+    }
+    Ok(FirstUse {
+        key: Some(Ok(key)),
+        zero_limit: true,
     })
 }
 
