@@ -1,6 +1,6 @@
 # ADR 0096: One ordered SQL set enters one find call
 
-- Status: Proposed for independent design review, then Ian's outward SQL spelling choice. No SQL function or Rust change is built.
+- Status: Technically accepted at `e648e35f` by independent review; proposed outward SQL spelling awaits Ian's choice. No SQL function or Rust change is built.
 - Context: [issue: SQL find is missing](../../issues/2026-09-27-sql-find-is-missing-from-three-databases.md), [ticket 0224](../../tickets/0224-sql-group-find.md), and settled [find](../../../specification/find.md).
 
 ## Proposed decision
@@ -25,4 +25,4 @@ The SQL result contains no request body or digest. Installed proof for shared ca
 
 A custom row aggregate could accept `unit ORDER BY ordinal`, but SQLite's existing `warm` aggregate, PostgreSQL's text transition state and DuckDB's combine callback do not establish a stable original order or distinguish a duplicate without new index state. Empty groups and parallel combine add separate behavior. The pinned hosts already have ordered collection constructors; DuckDB v1.5.5's installed CLI returned `[first, second, second]` for `list(x ORDER BY i)`. PostgreSQL's repo examples already use `array_agg(body ORDER BY id)`. SQLite's pinned 3.50.0 amalgamation contains `json_group_array`; its ordered form needs an installed-host assertion before a runtime claim. A scalar `ORDER BY probability LIMIT 1` sends independent requests and cannot offer none over one shared set.
 
-This design creates three new outward SQL signatures and one common result meaning. Independent review must check host syntax, NULL/empty/duplicate/tie representation, per-host cancellation and settings, and all platform implementations. Ian's decision follows that review. Ticket 0222's proposed public recoverable-details method and the unbuilt B12a shared split adapter are separate; grouped find uses today's public `Engine::find_with` and has no dependency on them.
+This design creates three new outward SQL signatures and one common result meaning. The independent reviewer accepted the technical design and installed capture proof at `e648e35f`; Ian may still approve or overturn the outward names and result types. Host syntax, NULL/empty/duplicate/tie representation, cancellation, settings and every platform still require implementation proof. Ticket 0222's proposed public recoverable-details method and the unbuilt B12a shared split adapter are separate; grouped find uses today's public `Engine::find_with` and has no dependency on them.
