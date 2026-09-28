@@ -169,6 +169,27 @@ say(eight=run(db, "SELECT thinkthen_throttle(8)"),
     expect(backend.close(), 0, "sends")
 
 
+def test_batch_setting_validates_and_null_restores_environment_before_build() -> None:
+    """One SQL setting covers typed values, refusal, fallback and the build boundary."""
+    backend = Backend()
+    held = child("""
+db = connect()
+bad = [run(db, "SELECT thinkthen_batch(?)", (value,)) for value in (0, -1, 1.0, '2', ' ', b'2')]
+maximum = run(db, "SELECT thinkthen_batch('max')")
+two = run(db, "SELECT thinkthen_batch(2)")
+cleared = run(db, "SELECT thinkthen_batch(NULL)")
+db.execute("CREATE TABLE t(body TEXT)")
+db.executemany("INSERT INTO t VALUES (?)", [("red one",), ("red two",), ("red three",), ("red four",)])
+warm = run(db, "SELECT thinkthen_warm('Is it red?', body) FROM t")
+after = run(db, "SELECT thinkthen_batch(1)")
+say(bad=bad, maximum=maximum, two=two, cleared=cleared, warm=warm, after=after)
+""", environment(backend, THINKTHEN_BATCH="2"))
+    refused = "thinkthen usage: a batch is 'max' or a whole number of 1 or more"
+    expect(held, {"bad": [refused] * 6, "maximum": [["max"]], "two": [[2]],
+                  "cleared": [[None]], "warm": [[4]], "after": AFTER_BUILD}, "batch setting and environment fallback")
+    expect(backend.close(), 2, "four rows use the restored cap of two")
+
+
 def test_max_requests_limits_a_warm_and_null_clears_it() -> None:
     backend = Backend()
     held = child("""
@@ -261,6 +282,34 @@ say(replay=run(db, "SELECT thinkthen_replay(?)", ({folder!r},)),
     expect(replayed["saved"], [[1]], "saved answer")
     expect(replayed["missing"].startswith("thinkthen local:"), True, "strict miss")
     expect(backend.close(), 2, "replay sends nothing")
+
+
+def test_warm_empty_input_and_changed_context_replay_are_no_send_boundaries() -> None:
+    """Only the exact contextual warm request replays from its recorded folder."""
+    backend = Backend()
+    env = environment(backend)
+    folder = env["SCRATCH"] + "/context-recorded"
+    recorded = child(f"""
+db = connect()
+db.execute("SELECT thinkthen_batch(1)")
+db.execute("SELECT thinkthen_record(?)", ({folder!r},))
+say(warm=run(db, "SELECT thinkthen_warm('Is it red?', 'red door', -1, 'alpha')"))
+""", env)
+    expect(recorded["warm"], [[1]], "one contextual warm record")
+    expect(backend.count(), 1, "one recorded request")
+    replayed = child(f"""
+db = connect()
+db.execute("SELECT thinkthen_batch(1)")
+db.execute("SELECT thinkthen_replay(?)", ({folder!r},))
+db.execute("CREATE TABLE empty(q TEXT, e TEXT)")
+say(empty=run(db, "SELECT thinkthen_warm(q,e,-1,'alpha') FROM empty"),
+    same=run(db, "SELECT thinkthen_warm('Is it red?', 'red door', -1, 'alpha')"),
+    changed=run(db, "SELECT thinkthen_warm('Is it red?', 'red door', -1, 'beta')"))
+""", env)
+    expect(replayed["empty"], [[0]], "empty warm returns zero")
+    expect(replayed["same"], [[1]], "identical context replays")
+    expect(replayed["changed"].startswith("thinkthen local:"), True, "changed context is a strict replay miss")
+    expect(backend.close(), 1, "empty, same and changed replay send nothing")
 
 
 def test_inline_profile_refuses_an_over_limit_request_before_sending() -> None:

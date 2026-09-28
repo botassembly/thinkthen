@@ -256,6 +256,27 @@ say(warm=warm, one=one, two=two, usage=usage)
     expect(backend.close(), 4, "only the distinct warm triples sent")
 
 
+def test_default_packed_warm_reuses_only_the_identical_cohort() -> None:
+    """B0's complete packed key replays; a later singleton has another key."""
+    backend = Backend()
+    held = child("""
+db = connect()
+db.execute("CREATE TABLE r(body TEXT)")
+db.executemany("INSERT INTO r VALUES (?)", [
+    ("i want a refund now",), ("good morning",), ("refund, please",),
+    ("maybe later",), ("see you",)])
+first = run(db, "SELECT thinkthen_warm('Is this a complaint?', body) FROM r")
+again = run(db, "SELECT thinkthen_warm('Is this a complaint?', body) FROM r")
+scalar = run(db, "SELECT thinkthen_decide('Is this a complaint?', 'i want a refund now')")
+usage = json.loads(run(db, "SELECT thinkthen_usage()")[0][0])
+say(first=first, again=again, scalar=scalar, usage=usage)
+""", environment(backend))
+    expect((held["first"], held["again"], held["scalar"]), ([[5]], [[5]], [[1]]), "warm and scalar values")
+    expect((held["usage"]["requests_sent"], held["usage"]["cache_answers"]), (2, 1),
+           "one packed send, one complete-cohort hit, one different singleton send")
+    expect(backend.close(), 2, "packed warm and singleton requests only")
+
+
 def test_usage_refuses_the_reset_spelling() -> None:
     held = child("""
 db = connect()

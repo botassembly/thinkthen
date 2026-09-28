@@ -262,6 +262,8 @@ Ian ruled the order: the typed value, then the environment, then the question fi
 
 The SQL and frame surfaces batch the rows one call receives: a DuckDB vector of up to 2,048 rows, a PostgreSQL array, a data-frame column, or SQLite's `thinkthen_warm`. Rows with equal evidence are asked once, as DuckDB does today. Batches form by the same rule within the call. A vector's edge also closes a batch, so DuckDB can cut a table differently from the command. A plain SQLite scalar receives one row at a time and cannot batch. DuckDB's parallel scan can hand rows over in another grouping. Exact replay then needs a fixed row order, such as `SET threads = 1`.
 
+SQLite's legacy warm-then-scalar cache recipe selects `thinkthen_batch(1)` before the engine builds. Under default `max`, an identical ordered warm cohort can reuse its complete packed request, while a later singleton scalar has a different request digest, even with the same context. This follows section 3's exact-request cache key; no packed member is recorded as a different singleton request. The [coordinator clarification](../records/2026-09-28-sql-warm-cache-identity.md) pins the 0219 boundary and leaves ordinary scalar throughput open.
+
 ### 7. The batch setting is calibration identity
 
 A threshold tuned at one batch setting may not fit another, because batching shifts probabilities. In the tool's own form, false yeses rose from 16 or 17 to 32 to 34 with all 306 titles in one request (evidence section 14). The batch setting therefore joins the threshold's calibration identity under ADR 0032.
