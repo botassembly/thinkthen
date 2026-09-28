@@ -42,12 +42,12 @@ fn loaded(text: &str) -> Question {
 
 #[test]
 fn a_saved_calibration_name_reaches_the_public_digest_and_warning() {
-    // SHA-256 of the documented canonical UTF-8 bytes:
-    // {"verb":"decide","text":"Is this a request?","threshold":0.5,"profile":"old"}
-    const DIGEST: &str = "f06400cd4a31f433828a9d1dd4b7ad28682d6d3d43b884d8e9b74dfe99a86419";
+    let case: serde_json::Value =
+        serde_json::from_str(include_str!("../../../conformance/calibration.json"))
+            .expect("shared calibration case");
     const ANSWER: &str = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
     let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");
-    let question = loaded(r#"{"decide":"Is this a request?","profile":"old"}"#);
+    let question = loaded(&case["question"].to_string());
     let refused = QuestionSet::builder()
         .question("answer", question.clone())
         .expect_err("a member cannot silently lose its saved profile");
@@ -62,26 +62,21 @@ fn a_saved_calibration_name_reaches_the_public_digest_and_warning() {
         .expect("base")
         .api_key("sk-profile-local")
         .expect("key")
-        .profile_json(
-            r#"{"schema":"thinkthen.backend-profile/1","name":"new","max_evidence_bytes":1000}"#,
-        )
+        .profile_json(&case["runtime_profile"].to_string())
         .expect("running profile")
         .no_cache()
         .build()
         .expect("engine");
     let details = engine
-        .details(&question, "Please help me.")
+        .details(&question, case["evidence"].as_str().expect("evidence"))
         .expect("details");
     assert_eq!(listener.count(), 1);
-    assert_eq!(details.question_sha256(), DIGEST);
+    assert_eq!(details.question_sha256(), case["question_sha256"]);
     assert_eq!(details.profile_warning(), Some(("old", "new")));
     let row: serde_json::Value = serde_json::from_str(&details.to_json()).expect("result JSON");
-    assert_eq!(row["meta"]["question_sha256"], DIGEST);
-    assert_eq!(
-        row["meta"]["profile_warning"],
-        serde_json::json!({"tuned_for":"old","running":"new"})
-    );
-    assert_eq!(row["meta"]["model"], "jev-1.13.0");
+    assert_eq!(row["meta"]["question_sha256"], case["question_sha256"]);
+    assert_eq!(row["meta"]["profile_warning"], case["warning"]);
+    assert_eq!(row["meta"]["model"], case["model"]);
 }
 
 fn message<T: std::fmt::Debug>(result: Result<T, thinkthen::Error>) -> (ErrorKind, String) {

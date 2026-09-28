@@ -26,6 +26,24 @@ SPENT = "thinkthen usage: this process has spent its request total of 3; raise S
 
 case(shared_settings_corpus)
 
+
+@case
+def saved_calibration_details_keep_the_shared_digest_and_warning():
+    """The staged C++ scalar keeps the saved question identity in details."""
+    shared = json.loads((Path(__file__).resolve().parents[3] / "conformance" / "calibration.json").read_text())
+    def literal(value: str) -> str:
+        return "'" + value.replace("'", "''") + "'"
+    question = json.dumps(shared["question"], separators=(",", ":"))
+    profile = json.dumps(shared["runtime_profile"], separators=(",", ":"))
+    with Backend() as backend:
+        got = run([f"SET thinkthen_profile = {literal(profile)}",
+                   f"SELECT thinkthen_details({literal(question)}, {literal(shared['evidence'])})"], backend.base())
+        details = json.loads(rows(got[1])[0][0])
+        expect(details["meta"]["question_sha256"], shared["question_sha256"], "saved digest")
+        expect(details["meta"]["profile_warning"], shared["warning"], "profile mismatch")
+        expect(details["meta"]["model"], shared["model"], "actual model")
+        expect(backend.count(), 1, "one details send")
+
 @case
 def caller_settings_and_warm_share_one_engine():
     """Warm fills only the calling session's selected cache and model plan."""

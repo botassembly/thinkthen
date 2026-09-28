@@ -34,6 +34,23 @@ class TestSurface < Minitest::Test
     assert_equal [["thinkthen.result/1", true, { "kind" => "yes_no", "probability" => 0.9 }, 1, 1]], lines
   end
 
+  def test_saved_profile_details_keep_shared_digest_and_warning
+    fixture = JSON.parse(File.read(File.expand_path("../../../conformance/calibration.json", __dir__)))
+    Dir.mktmpdir("thinkthen-ruby-profile-") do |folder|
+      profile = File.join(folder, "profile.json")
+      File.write(profile, JSON.generate(fixture.fetch("runtime_profile")))
+      lines, count = run_child(<<~RUBY)
+        engine = T::Engine.new(profile: #{profile.inspect}, cache: false)
+        question = T.question(decide: #{fixture.fetch("question").fetch("decide").inspect},
+                              profile: #{fixture.fetch("question").fetch("profile").inspect})
+        found = engine.details(question, #{fixture.fetch("evidence").inspect})
+        say [found["meta"]["question_sha256"], found["meta"]["profile_warning"], found["meta"]["model"]]
+      RUBY
+      assert_equal [[fixture.fetch("question_sha256"), fixture.fetch("warning"), fixture.fetch("model")]], lines
+      assert_equal 1, count
+    end
+  end
+
   def test_the_bulk_verbs_keep_input_order_and_map_places_back
     lines, count = run_child(<<~RUBY)
       records = ["one", { note: "two" }, "three"]

@@ -1,21 +1,22 @@
 # A saved calibration name enters through the public file question and keeps
 # its digest, warning, and per-row fallback at the real R and Rust boundary.
 source(file.path(Sys.getenv("TT_TESTS"), "helper.R"))
+case <- jsonlite::fromJSON(file.path(Sys.getenv("TT_TESTS"), "..", "..", "..",
+                                      "conformance", "calibration.json"), simplifyVector = FALSE)
 
 running <- tempfile(fileext = ".json")
-writeLines('{"schema":"thinkthen.backend-profile/1","name":"new","max_evidence_bytes":1000}', running)
+writeLines(jsonlite::toJSON(case$runtime_profile, auto_unbox = TRUE), running)
 tt_engine(cache = FALSE, profile = running)
 
 saved <- tempfile(fileext = ".json")
-writeLines('{"decide":"Is this a request?","profile":"old"}', saved)
+writeLines(jsonlite::toJSON(case$question, auto_unbox = TRUE), saved)
 question <- tt_question(file = saved)
-details <- tt_details(question, "Please help me.")
+details <- tt_details(question, case$evidence)
 check("the saved name has the pinned canonical digest",
-      identical(details$meta$question_sha256,
-        "f06400cd4a31f433828a9d1dd4b7ad28682d6d3d43b884d8e9b74dfe99a86419"))
+      identical(details$meta$question_sha256, case$question_sha256))
 check("the warning carries saved and running names",
-      identical(details$meta$profile_warning, list(tuned_for = "old", running = "new")))
-check("the actual reply names the model", identical(details$meta$model, "jev-1.13.0"))
+      identical(details$meta$profile_warning, case$warning))
+check("the actual reply names the model", identical(details$meta$model, case$model))
 
 check("mixed file and keywords refuse before send", sent_by(check("mixed file kind",
   identical(kind_of(tt_question(file = saved, decide = "Other?")), "usage"))) == 0L)
