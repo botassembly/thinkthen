@@ -20,11 +20,16 @@ def test_find_preserves_duplicate_positions_and_strict_ties() -> None:
     backend = Backend()
     cases = (
         (["same", "same", "other"], False, {"u001": 0.1, "u002": 0.8, "u003": 0.1},
-         {"index": 1, "value": "same", "probability": 0.8}),
+         {"index": 1, "value": "same", "probability": 0.8,
+          "candidates": [{"index": 0, "probability": 0.1}, {"index": 1, "probability": 0.8},
+                         {"index": 2, "probability": 0.1}]}),
         (["first", "second"], False, {"u001": 0.5, "u002": 0.5},
-         {"index": 0, "value": "first", "probability": 0.5}),
+         {"index": 0, "value": "first", "probability": 0.5,
+          "candidates": [{"index": 0, "probability": 0.5}, {"index": 1, "probability": 0.5}]}),
         (["first", "second"], True, {"u001": 0.4, "u002": 0.2, "none": 0.4},
-         {"index": None, "value": None, "probability": 0.4}),
+         {"index": None, "value": None, "probability": 0.4,
+          "candidates": [{"index": 0, "probability": 0.4}, {"index": 1, "probability": 0.2},
+                         {"index": None, "probability": 0.4}]}),
     )
     for units, offered, probabilities, selected in cases:
         answer = json.dumps({"model": "jev-latest", "answers": {"q1": {
@@ -37,11 +42,7 @@ say(result=run(db, "SELECT thinkthen_find(?, ?, ?)",
 """, environment(backend, THINKTHEN_BASE_URL=proxy.base))
             expect(proxy.count(), 1, "one find request")
         result = json.loads(held["result"][0][0])
-        expect({key: result[key] for key in selected}, selected, "original selected unit")
-        expect(result["candidates"], [
-            {"index": index if name != "none" else None, "probability": probability}
-            for index, (name, probability) in enumerate(probabilities.items())
-        ], "input-order probabilities")
+        expect(result, selected, "original selected unit and input-order probabilities")
     expect(backend.close(), 0, "fixed replies did not reach the generic arm")
 
 
