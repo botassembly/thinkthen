@@ -6,7 +6,7 @@ opens: sdlc/tickets/0217-postgresql-record-batching.md sdlc/records/0217-postgre
 
 # 0217: Batch PostgreSQL records and expose context
 
-Status: proposed B13d design for independent review. Owner: Codex. No runtime, installed extension, paid result or register 73 closure is claimed. The [preflight](../records/0217-postgresql-batching-preflight.md) pins main `0da697c3`, accepted but unbuilt B12a `14cbd4b5`, and building 0157 `92eac8ea` separately.
+Status: B13d design accepted at `3e8dde23484872f6d779e8032c4f34abd143e8c9` by independent reviewer session `01a0e624-595a-7552-9f5b-df8fdd843a86`; the coordinator approves this routine design within B0/B13d. Owner: Codex. No runtime, installed extension, paid result or register 73 closure is claimed. The [preflight](../records/0217-postgresql-batching-preflight.md) pins main `0da697c3`, accepted but unbuilt B12a `14cbd4b5`, and building 0157 `92eac8ea` separately.
 
 ## Accepted outcome and retained behavior
 
