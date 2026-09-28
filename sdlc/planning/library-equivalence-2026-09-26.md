@@ -233,7 +233,7 @@ Closes R1 to R6. B5 and B12a to B12f already hold this work, and B0 set the fiel
 
 ### E7. Batching on every surface. Existing tickets B12a to B13e, large.
 
-Amend the SQL tickets for three findings of this audit before they start.
+This was the pre-build proposal. B13d/0217 and B13e/0219 have now landed; their accepted packed warm paths and the numeric model in section4 close original register73. The three historical suggestions below do not add new mandatory scalar work or supersede the accepted ticket contracts.
 
 - SQLite and PostgreSQL batch only decide, through warm (`databases/sqlite/src/scalars.rs:317-327`, `databases/postgresql/src/warm.rs:148-153`). B13d and B13e should widen warm, or add an aggregate, to every kind.
 - PostgreSQL's warm and SQLite's finalize run question groups one after another (`databases/postgresql/src/warm.rs:144-156`, `databases/sqlite/src/scalars.rs:363-365`). They should run the groups together.
@@ -317,7 +317,7 @@ The tests section 4 and section 5 name. Land E11 before E7, so batching starts f
 
 ### Does each surface reach the engine's concurrency?
 
-The engine gives each loaded copy one throttle, 1 to 32, and one pool that ticket 0142 keeps at the job count. A many-record call streams through `batch.rs` under that throttle. B4 is not built, so no surface batches yet.
+The engine gives each loaded copy one request throttle, 1 to 32. Landed batching routes pack the records supplied by one call under that throttle. SQLite and PostgreSQL ordinary scalar expressions remain serial; warm paths and PostgreSQL array calls submit several records through the shared bulk engine. The dated register73 closure below distinguishes the model from measured cases.
 
 | Surface | Many-record calls reach the throttle | Where it serializes, copies, or blocks |
 | --- | --- | --- |
@@ -330,10 +330,10 @@ The engine gives each loaded copy one throttle, 1 to 32, and one pool that ticke
 | Ruby | Yes. The GVL is released (`src/ffi.rs:161-169`) | One OS thread a call (`src/lib.rs:171-177`). Three copies of the input (`lib/thinkthen.rb:116-121`, `src/ffi.rs:198`) |
 | R | Yes, for vector calls (`src/rust/src/calls.rs:171-199`) | The R thread blocks. Recognize is serial per text (`src/rust/src/relate.rs:76-80`), and so is the named-model fallback (`calls.rs:381-405`) |
 | DuckDB | Yes, within one chunk group, and all threads share one engine (`src/engines.rs:55-99`) | Groups in a chunk run serially (`src/scalars.rs:180-189`). Details, recognize and relations run one text at a time (`src/scalars/calls.rs:91-111`, `:160-178`). Duplicates are removed within a chunk only |
-| SQLite | Only in warm, relate, and one record's annotate questions | Every scalar row holds one request in flight and starts one OS thread, even for a cached answer (`src/worker.rs:30-62`). Warm stalls the scan in `step` (`src/scalars.rs:347-349`) |
-| PostgreSQL | Only in the array form and warm (`src/lib.rs:315-340`) | Scalar rows are serial, about 41 ms each on loopback (`NOTES.md:18`). Warm runs groups one after another (`src/warm.rs:144-156`). Warm state copies grow with the square of the row count, up to its caps (`src/warm.rs:65-75`) |
+| SQLite | Warm uses the configured request throttle, 1–32, within a packed question group; its held test observes 8 at throttle 8 | Ordinary scalar rows remain one call at a time. `src/scalars/warm.rs` packs warm input through `decide_many_with`; accepted0219 proves the installed path |
+| PostgreSQL | Array and warm calls use the configured request throttle, 1–32, within a packed group | Ordinary scalar rows remain serial. `src/warm.rs` submits each group through `decide_many_with` under one deadline. Accepted0217 proves warm request bodies; its held-eight measurement is for arrays |
 
-Once B4 lands, batching reaches every surface that already makes one engine call over many records, with no door change. It does not reach the serial loops above, or the SQL scalar rows. E2 and the amended B13 tickets fix those first.
+Register73's original numeric-documentation and warm-path criteria are complete after B13d/B13e and independent closure review. This does not change the scalar executor contracts described in section3. Other historical rows in this study need their own outcome checks before being treated as current limitations.
 
 ### Tests that prove concurrency today
 

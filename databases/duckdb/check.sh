@@ -15,7 +15,7 @@ TOOLS=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/duckdb/$DUCKDB_
 CLI=${THINKTHEN_DUCKDB_CLI:-$TOOLS/duckdb}
 PY=$TOOLS/venv/bin/python
 case $(uname -s):$(uname -m) in
-Linux:x86_64 | Darwin:arm64) ;;
+Linux:x86_64 | Linux:aarch64 | Darwin:arm64) ;;
 *) echo "not run: no pinned DuckDB C++ host for $(uname -s):$(uname -m)"; exit 77 ;;
 esac
 if [ ! -x "$CLI" ] || [ ! -x "$PY" ] || [ ! -f "$TOOLS/platform.txt" ]; then
@@ -24,6 +24,7 @@ if [ ! -x "$CLI" ] || [ ! -x "$PY" ] || [ ! -f "$TOOLS/platform.txt" ]; then
 fi
 case $(uname -s):$(uname -m) in
 Linux:x86_64) expected_platform=linux_amd64 ;;
+Linux:aarch64) expected_platform=linux_arm64 ;;
 Darwin:arm64) expected_platform=osx_arm64 ;;
 esac
 [ "$(cat "$TOOLS/platform.txt")" = "$expected_platform" ] || {

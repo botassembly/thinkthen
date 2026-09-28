@@ -67,5 +67,6 @@ def shared_settings_corpus():
                 else:
                     expect(backend.count(), step["count"], f"{label} listener count")
             if "entries" in shared:
-                expect(sum(path.is_file() and path.name != ".thinkthen-backend.json" for path in Path(folder).rglob("*")),
+                expect(sum(path.is_file() and path.suffix == ".json" and path.name != ".thinkthen-backend.json"
+                           for path in Path(folder).rglob("*")),
                        shared["entries"], f"{shared['id']} saved entries")

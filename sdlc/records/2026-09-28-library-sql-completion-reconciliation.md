@@ -21,12 +21,19 @@ Rust Polars retains its three series methods; Python columns and pandas retain t
 
 | Outcome | What is already evidenced | What remains |
 | --- | --- | --- |
-| Register 73 | B13d PostgreSQL and B13e SQLite warm batching have landed with installed proof | Check the original success criterion's numeric in-flight documentation against those warm paths. Ordinary scalar one-row behavior is not a new required feature. |
+| Register 73 | B13d PostgreSQL and B13e SQLite warm batching have landed with installed proof | Original numeric documentation and warm criteria passed independent closure review below. Ordinary scalar one-row behavior is retained, not a new required feature. |
 | Every surface gives run facts | Rust, C, Python, TypeScript, Ruby, R and frame call carriers have landed; command facts and uniform details also landed | Per-request server timing and request ID, user-supplied pricing, and exact remaining documentation criteria stay separate. SQL per-call facts were explicitly deferred. Do not confuse call elapsed seconds with server timing. |
 | Persisted spend and SQL totals | Current DuckDB warm reads session settings; actual-attempt caps and PostgreSQL's per-backend pool multiplier have reviewed code and docs | Library/SQL/frame spend is still absent from command status and needs the existing persistence design. Preserve process-local semantics and the expected billing of uncached repeat calls. |
-| SQL find | All three Linux installed extensions passed shared cases18/19 and focused edges; native Apple Silicon DuckDB proof passed independent review at37b57014 | Linux ARM64 package acceptance is in progress; Intel DuckDB still uses the old surface. Keep platform qualification and final release runner proof distinct. |
+| SQL find | All three Linux installed extensions passed shared cases18/19 and focused edges; native Apple Silicon DuckDB proof passed independent review at37b57014 | Linux ARM64 package acceptance passed at aab8baad; Intel DuckDB still uses the old surface. Keep platform qualification and final release runner proof distinct. |
 | Shared conformance | PG filter/rank, SQLite rank/relation and R named-file proof landed; internal failures have named equivalent boundary evidence | Accepted0244 must implement C/TypeScript/Ruby named-file forms and update selected coverage. DuckDB Q5 member-file forms and broader recognize/relate forms remain distinct; no new injection API or duplicate frame54-case suite is required. |
 
 ## Preparation correction
 
 The preparer initially proposed a new scalar concurrency design for register73 because its problem statement describes serialized scalar calls. The coordinator read the original success criterion: it explicitly assigns numeric in-flight documentation and warm-path batching to B13d/B13e, and says no new decision is needed. Review the accepted success criteria before turning retained behavior into new mandatory work. The next audit should check the missing numeric documentation, not invent a scalar scheduler.
+
+
+## Register73: accepted closure against its actual criterion
+
+The same independent closure reviewer checked this adjacent outcome on main `7c797ce8` and returned **ACCEPT**. The equivalence page states the retained scalar model of one request in flight, the shared throttle range1–32 and warm routes. SQLite warm calls `decide_many_with`; its held test observes eight in flight at throttle eight and nine two-row requests for18 inputs. Accepted0219 installed proof covers that path. PostgreSQL warm calls the same shared bulk route per question group under one deadline; accepted0217 proves exact packed warm bodies and22 selected installed checks. PostgreSQL's held-eight measurement belongs to the array path, not a distinct warm measurement.
+
+Earlier ticket statements kept register73 open because scalars remained serial. That extrapolation exceeds the original register criterion, which explicitly asks for numeric documentation and the B13d/e warm paths. The coordinator closes the original finding, corrects current equivalence prose and preserves serial scalar behavior. This does not create a new scalar concurrency promise or erase the historical records.

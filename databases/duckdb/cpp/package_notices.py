@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import platform
 import shutil
 import subprocess
 import sys
@@ -37,7 +38,15 @@ def main() -> None:
         "cargo", "metadata", "--format-version", "1", "--locked", "--offline",
         "--manifest-path", str(BRIDGE),
     ], env=child_env(CARGO)))
-    archives = [line.split(maxsplit=1)[1] for line in (HERE / "archive-sha256.txt").read_text().splitlines()]
+    manifests = {
+        ("Linux", "x86_64"): "archive-sha256.txt",
+        ("Linux", "aarch64"): "archive-sha256-linux-arm64.txt",
+        ("Darwin", "arm64"): "archive-sha256-osx-arm64.txt",
+    }
+    host = (platform.system(), platform.machine())
+    if host not in manifests:
+        raise SystemExit(f"no pinned DuckDB archive inventory for {host[0]}/{host[1]}")
+    archives = [line.split(maxsplit=1)[1] for line in (HERE / manifests[host]).read_text().splitlines()]
     inventory = ["Pinned DuckDB static archives:", *archives, "", "Bundled Rust crates (name version | declared license):"]
     for package in sorted(metadata["packages"], key=lambda value: (value["name"], value["version"])):
         folder = Path(package["manifest_path"]).parent
