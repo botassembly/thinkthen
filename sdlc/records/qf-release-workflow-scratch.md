@@ -1,6 +1,6 @@
 # Release workflow uses guarded scratch cleanup
 
-Status: candidate for fresh code review. The change fixes the baseline lint failure introduced by four direct recursive-removal traps in `sdlc/scripts/release-workflow`. It also cleans the temporary Python seed environment on host-setup exit.
+Status: complete after fresh Sol Medium code-review ACCEPT `f8514bbe46c5e9e42a965fa773ca675222e0b8eb` and focused verification. The reviewer inspected the helper, diff and local fixture and found no correctness issue; the implementation is unchanged from that candidate. The change fixes the baseline lint failure introduced by four direct recursive-removal traps in `sdlc/scripts/release-workflow`. It also cleans the temporary Python seed environment on host-setup exit.
 
 The script sources the existing scratch helper and uses `scratch_dir` for all five temporary folders. The installer smoke keeps its loopback-server kill before `scratch_clean`; the helper retains interrupt handling. Publication logic, inputs, outputs and key permissions are unchanged. No lint exception was added. The source ceiling is unchanged because no counted Rust source changed.
 
