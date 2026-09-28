@@ -1,15 +1,16 @@
 //! The folder gate keeps pruning in the digest-lock namespace.
 
+use conformance_backend::Rendezvous;
 use std::fs;
 use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Output, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Barrier, mpsc};
+use std::sync::{Arc, mpsc};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use crate::harness::{Canned, Listener, Observed, process_has_file};
+use crate::harness::{Canned, Listener, Observed, finish, process_has_file};
 
 const QUESTION: &str = "asks for a refund";
 const EVIDENCE: &str = "Refund me please.";
@@ -31,8 +32,8 @@ impl Reaped {
     fn wait(mut self) -> io::Result<Output> {
         self.0
             .take()
-            .ok_or_else(|| io::Error::other("child already reaped"))?
-            .wait_with_output()
+            .ok_or_else(|| io::Error::other("child already reaped"))
+            .and_then(|child| finish(child, "a cache-prune run"))
     }
 }
 
@@ -105,7 +106,7 @@ fn wait_on(child: &Reaped, file: &fs::Metadata, what: &str) -> io::Result<()> {
 fn prune_waits_for_owner_and_original_inode_waiter_before_a_later_fill() {
     let cache = folder();
     let named = cache.to_string_lossy().into_owned();
-    let release = Arc::new(Barrier::new(2));
+    let release = Arc::new(Rendezvous::new(2));
     let calls = Arc::new(AtomicUsize::new(0));
     let (events, observed) = mpsc::channel();
     let listener = Listener::answering_with_events(

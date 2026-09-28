@@ -1,0 +1,154 @@
+# The local PostgreSQL 16.15 runtime and the per-test loopback backend,
+# sourced by check.sh. It never fetches. A missing or mismatched toolchain
+# reports "not run" with the fetch command and exits 77 (R6-2).
+
+TOOLCHAIN=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/postgresql
+PINNED=$(cut -d' ' -f1 runtime.sha256)
+PACKAGE=$TOOLCHAIN/$(awk '{print $2}' runtime.sha256)
+VERSION=16.15-0ubuntu0.24.04.1
+EXTRACTED=$TOOLCHAIN/$VERSION
+FAKE_KEY=tt-loopback-fake
+
+not_run() {
+	echo "not run: $1"
+	echo "fetch: mkdir -p $TOOLCHAIN && cd $TOOLCHAIN && curl -fLO $(cat runtime.url)"
+	exit 77
+}
+
+# Check the pinned package, extract it once, and match the headers' version.
+runtime_ready() {
+	for tool in dpkg-deb cargo-pgrx psql python3; do
+		command -v "$tool" >/dev/null || not_run "$tool is missing"
+	done
+	[ "$(cargo pgrx --version)" = "cargo-pgrx 0.17.0" ] || not_run "cargo-pgrx is not 0.17.0: $(cargo pgrx --version)"
+	[ -f "$PACKAGE" ] || not_run "the server package $PACKAGE is missing"
+	actual=$(sha256sum "$PACKAGE" | cut -d' ' -f1)
+	[ "$actual" = "$PINNED" ] || not_run "the server package's SHA256 $actual is not the pinned $PINNED"
+	if [ ! -x "$EXTRACTED/usr/lib/postgresql/16/bin/postgres" ]; then
+		scratch_dir partial "$EXTRACTED.XXXXXX"
+		dpkg-deb -x "$PACKAGE" "$partial" && mv "$partial" "$EXTRACTED"
+	fi
+	header=$(/usr/bin/pg_config --version | sed -n 's/.*(Ubuntu \(.*\)).*/\1/p')
+	server=$("$EXTRACTED/usr/lib/postgresql/16/bin/postgres" -V | sed -n 's/.*(Ubuntu \(.*\)).*/\1/p')
+	if [ -z "$header" ] || [ "$header" != "$server" ]; then
+		not_run "header version ${header:-unknown} (pg_config) differs from server version ${server:-unknown} (postgres -V)"
+	fi
+}
+
+# Stop and remove whatever a killed run left behind, then open a new run folder. The old folder
+# is removed only when its name is this TMPDIR's tt-pg. and six letters or digits, as mktemp makes.
+runtime_open() {
+	mkdir -p .runtime
+	if [ -s .runtime/last-run ]; then
+		old=$(cat .runtime/last-run)
+		[ -f "$old/data/postmaster.pid" ] && "$BIN/pg_ctl" -D "$old/data" -m immediate stop >/dev/null 2>&1
+		rest=${old#"$(cd -- "${TMPDIR:-/tmp}" && pwd -P)/tt-pg."}
+		case $rest in "$old" | *[!A-Za-z0-9]*) echo "runtime.sh: refused to remove $old" >&2 ;; ??????) rm -rf -- "$old" ;; esac
+	fi
+	scratch_dir RUN "${TMPDIR:-/tmp}/tt-pg.XXXXXX"
+	chmod 700 "$RUN"
+	echo "$RUN" >.runtime/last-run
+	DATA=$RUN/data SOCK=$RUN/sock LOG=$RUN/server.log SCRATCH=$RUN/home
+	mkdir -p "$SOCK" "$SCRATCH"
+}
+
+BIN=.runtime/tree/usr/lib/postgresql/16/bin
+
+# Copy the extracted tree, install the module from $1 and the extension files from $2,
+# and make a cluster.
+runtime_install() {
+	rm -rf .runtime/tree && mkdir -p .runtime/tree && cp -a "$EXTRACTED/." .runtime/tree/
+	cp "$2"/thinkthen* .runtime/tree/usr/share/postgresql/16/extension/
+	cp "$1"/thinkthen.* .runtime/tree/usr/lib/postgresql/16/lib/
+	BIN=$(pwd)/.runtime/tree/usr/lib/postgresql/16/bin
+	sh "$LIMIT" 60 "$BIN/initdb" -D "$DATA" --auth=trust -U postgres >"$RUN/initdb.log" 2>&1
+	printf "listen_addresses = ''\nunix_socket_directories = '%s'\n" "$SOCK" >>"$DATA/postgresql.conf"
+	cp "$DATA/postgresql.conf" "$RUN/postgresql.conf.base"
+}
+
+# The host of an address, or nothing when it names user information.
+url_host() {
+	rest=${1#http://}
+	[ "$rest" != "$1" ] || return 0
+	authority=${rest%%/*}
+	case $authority in *@*) return 0 ;; esac
+	echo "${authority%%:*}"
+}
+
+# The one start path. It refuses any address whose host is not 127.0.0.1,
+# and gives the server a fake key beside that address alone. A restart is a
+# stop and this start, never `pg_ctl restart`.
+pg_start() {
+	url=$1 cache=$2
+	[ "$(url_host "$url")" = 127.0.0.1 ] || { echo "refused: $url is not loopback" >&2; return 2; }
+	env -u THINKTHEN_API_KEY THINKTHEN_API_KEY=$FAKE_KEY THINKTHEN_BASE_URL="$url" THINKTHEN_CACHE="$cache" \
+		HOME="$SCRATCH" XDG_CACHE_HOME="$SCRATCH/.cache" XDG_CONFIG_HOME="$SCRATCH/.config" \
+		sh "$LIMIT" 30 "$BIN/pg_ctl" -D "$DATA" -l "$LOG" -w -t 10 start >/dev/null || return 1
+	key=$(tr '\0' '\n' <"/proc/$(head -1 "$DATA/postmaster.pid")/environ" | sed -n 's/^THINKTHEN_API_KEY=//p')
+	[ "$key" = "$FAKE_KEY" ] || { echo "the postmaster's key is not the loopback fake" >&2; return 1; }
+}
+
+pg_stop() {
+	[ -f "$DATA/postmaster.pid" ] || return 0
+	sh "$LIMIT" 30 "$BIN/pg_ctl" -D "$DATA" -m fast -w stop >/dev/null 2>&1
+}
+
+# psql as a role (PGUSER_AS, postgres by default), one statement per -c.
+# qs keeps psql's exit status; q prints any error for a test to read.
+# Every output also lands in psql.all, which the check reads for the fake key.
+qs() {
+	local out code
+	out=$(sh "$LIMIT" "${QTIMEOUT:-30}" psql -X -q -At -h "$SOCK" -U "${PGUSER_AS:-postgres}" -d postgres "$@" 2>&1)
+	code=$?
+	printf '%s\n' "$out" | tee -a "$RUN/psql.all"
+	return "$code"
+}
+q() { qs "$@" || true; }
+
+# One loopback backend (ticket 0117): its port in BPORT, its input on fd 7.
+backend_start() {
+	rm -f "$RUN/b.in" "$RUN/b.out" && mkfifo "$RUN/b.in"
+	"$BACKEND" <"$RUN/b.in" >"$RUN/b.out" 2>>"$RUN/backend.err" &
+	BPID=$!
+	exec 7>"$RUN/b.in"
+	for _ in $(seq 100); do [ -s "$RUN/b.out" ] && break; sleep 0.05; done
+	BPORT=$(head -1 "$RUN/b.out")
+	[ -n "$BPORT" ]
+}
+
+# The requests the backend has read so far.
+bcount() {
+	lines=$(wc -l <"$RUN/b.out")
+	echo count >&7
+	for _ in $(seq 200); do [ "$(wc -l <"$RUN/b.out")" -gt "$lines" ] && break; sleep 0.01; done
+	tail -1 "$RUN/b.out"
+}
+
+# Wait up to 10 s for the count to reach $1.
+bwait() {
+	for _ in $(seq 500); do [ "$(bcount)" -ge "$1" ] && return 0; sleep 0.02; done
+	return 1
+}
+
+brelease() { echo release >&7; }
+
+backend_stop() {
+	exec 7>&-
+	wait "$BPID" 2>/dev/null || true
+}
+
+# A fresh server for one test: a new backend on the arm, a new cache
+# folder, and the base configuration plus any lines given.
+fresh() {
+	arm=$1
+	shift
+	pg_stop
+	[ -z "${BPID:-}" ] || backend_stop
+	backend_start
+	CACHEDIR=$(mktemp -d "$RUN/cache.XXXXXX")
+	cp "$RUN/postgresql.conf.base" "$DATA/postgresql.conf"
+	for line in "$@"; do echo "$line" >>"$DATA/postgresql.conf"; done
+	[ ! -f "$LOG" ] || cat "$LOG" >>"$RUN/server.all"
+	: >"$LOG"
+	pg_start "http://127.0.0.1:$BPORT/$arm/v1" "$CACHEDIR"
+}

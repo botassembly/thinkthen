@@ -1,0 +1,24 @@
+#!/bin/sh
+# The Rust examples surface. The surface rung passes its loopback port as $1.
+set -eu
+cd -- "$(dirname -- "$0")"
+profile=${THINKTHEN_TEST_PROFILE:-routine}
+case $profile in routine|full|stress) ;; *) echo "rust: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+[ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
+if [ "$profile" = stress ]; then
+    echo 'rust: not run: no port load campaign'
+    exit 77
+fi
+
+cargo fmt --check
+cargo clippy --locked --offline --all-targets -- -D warnings
+cargo test --locked --offline
+# The rung's own backend answers the slide as the test's backends do.
+cargo build --quiet --locked --offline --example slide
+. ../../sdlc/scripts/scratch.sh
+scratch_dir cache
+env -i THINKTHEN_CACHE="$cache" THINKTHEN_API_KEY=sk-examples-loopback \
+    THINKTHEN_BASE_URL="http://127.0.0.1:$1/generic/v1" \
+    "${CARGO_TARGET_DIR:-target}/debug/examples/slide" >"$cache/out" 2>"$cache/err"
+[ ! -s "$cache/err" ] || { cat -- "$cache/err" >&2; exit 1; }
+diff -u examples/slide.txt "$cache/out"

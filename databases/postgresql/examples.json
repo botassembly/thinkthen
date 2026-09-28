@@ -1,0 +1,62 @@
+{
+  "schema": "thinkthen.examples/1",
+  "surface": "postgresql",
+  "language": "sql",
+  "install": "CREATE EXTENSION thinkthen;",
+  "examples": {
+    "decide": {
+      "sql": "SELECT thinkthen_decide('{\"decide\":\"Is this a complaint?\"}', 'i want a refund now');",
+      "expected": "t"
+    },
+    "probability": {
+      "sql": "SELECT thinkthen_probability('{\"decide\":\"Is this a complaint?\"}', 'i want a refund now');",
+      "expected": "0.9"
+    },
+    "choose": {
+      "sql": "SELECT thinkthen_choose('{\"choose\":\"Which team handles this?\",\"options\":[\"the refund desk\",\"other desk\"]}', 'refund now', NULL);",
+      "expected": "the refund desk"
+    },
+    "score": {
+      "sql": "SELECT thinkthen_score('{\"score\":\"How strong is the refund claim?\",\"levels\":[\"low\",\"mid\",\"high\"]}', 'maybe later', NULL);",
+      "expected": "0.15"
+    },
+    "tag": {
+      "sql": "SELECT array_to_string(thinkthen_tag('{\"tag\":\"What is in this text?\",\"labels\":[\"refund\",\"shipping\"]}', 'the refund and the shipping', NULL), ',');",
+      "expected": "refund,shipping"
+    },
+    "annotate": {
+      "sql": "SELECT thinkthen_annotate('{\"version\":1,\"questions\":{\"spam\":{\"decide\":\"Is this spam?\"},\"band\":{\"decide\":\"Refund?\",\"threshold\":\"0.2:0.8\"}}}', 'maybe later');",
+      "expected": "{\"band\": true, \"spam\": true}"
+    },
+    "details": {
+      "sql": "SELECT jsonb_array_length(thinkthen_details('{\"decide\":\"Is this a complaint?\"}', 'i want a refund now')->'meta'->'requests');",
+      "expected": "1"
+    },
+    "usage": {
+      "sql": "SELECT requests_sent, cache_answers, input_tokens, output_tokens FROM thinkthen_usage();",
+      "expected": "0|0|0|0"
+    },
+    "warm": {
+      "sql": "SELECT thinkthen_warm('{\"decide\":\"Is this a complaint?\"}', t) FROM (VALUES ('refund now'), ('refund again')) AS v(t);",
+      "expected": "2"
+    },
+    "recognize": {
+      "sql": "SELECT n.text, n.kind FROM (VALUES ('Maria Chen joined Northwind Freight in Chicago last spring.')) AS v(body), LATERAL thinkthen_recognize(v.body, ARRAY['person','organization','place']) n ORDER BY n.\"start\";",
+      "expected": "Maria Chen|person\nspring.|person"
+    },
+    "relations": {
+      "sql": "SELECT count(*) FROM thinkthen_relations('Maria Chen joined Northwind Freight in Chicago last spring.', '@names.json');",
+      "expected": "0"
+    },
+    "relate": {
+      "setup": [
+        "SET client_min_messages = warning",
+        "CREATE TABLE IF NOT EXISTS alerts(id integer primary key, body text)",
+        "TRUNCATE alerts",
+        "INSERT INTO alerts VALUES (1,'Checkout returns 500 at the payment step.'),(2,'Card charges are failing for every customer.'),(3,'The nightly export ran two hours late.'),(4,'The payments database ran out of disk space.')"
+      ],
+      "sql": "SELECT relation, source, target, probability FROM thinkthen_relate('SELECT id, body FROM alerts', ARRAY['caused_by']) WHERE source = 1 ORDER BY target;",
+      "expected": "caused_by|1|2|0.9\ncaused_by|1|3|0.9\ncaused_by|1|4|0.9"
+    }
+  }
+}

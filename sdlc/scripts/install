@@ -2,6 +2,9 @@
 # Rung 0: the tools the other rungs need, then the dependency closure.
 set -eu
 
+# One heavy rung at a time on this machine. See heavy-lock.
+. "$(dirname -- "$0")/heavy-lock"
+
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 
 # The version the workflow installs and the version this rung names in its
@@ -29,10 +32,38 @@ if ! python3 -c 'from jsonschema import Draft202012Validator' >/dev/null 2>&1; t
 	exit 1
 fi
 
+# Rung 1's workflow check parses YAML with PyYAML (ticket 0128). The version is
+# pinned, and gate.yml installs the same one.
+PYYAML_VERSION=6.0.1
+if [ "$(python3 -c 'import yaml; print(yaml.__version__)' 2>/dev/null || true)" != "$PYYAML_VERSION" ]; then
+	printf 'install: rung 1 needs the python3 module PyYAML %s\n' "$PYYAML_VERSION" >&2
+	printf 'install: python3 -m pip install --user "PyYAML==%s"\n' "$PYYAML_VERSION" >&2
+	exit 1
+fi
+
 # cargo-deny is a cargo subcommand, so `command -v` does not find it.
 if ! cargo deny --version >/dev/null 2>&1; then
 	printf 'install: cargo-deny is not installed; rung 1 runs it over deny.toml\n' >&2
 	printf 'install: cargo install --locked cargo-deny@%s\n' "$DENY_VERSION" >&2
+	exit 1
+fi
+
+# Rung 1's public API check reads rustdoc JSON, whose format moves with the
+# nightly, so the tool and the nightly are pinned together. The ladder names the
+# dated toolchain itself; sdlc/scripts/inventory calls the same name. That
+# toolchain's rustc reports the previous day's commit date, and the check reads
+# that date so a toolchain installed under the name but built otherwise fails.
+PUBLIC_API_VERSION=0.52.0
+PUBLIC_API_TOOLCHAIN=nightly-2026-08-24
+PUBLIC_API_RUSTC_DATE=2026-08-23
+if ! cargo public-api --version 2>/dev/null | grep -qx "cargo-public-api $PUBLIC_API_VERSION"; then
+	printf 'install: rung 1 needs cargo public-api %s\n' "$PUBLIC_API_VERSION" >&2
+	printf 'install: cargo install --locked cargo-public-api@%s\n' "$PUBLIC_API_VERSION" >&2
+	exit 1
+fi
+if ! rustc "+$PUBLIC_API_TOOLCHAIN" --version 2>/dev/null | grep -q " $PUBLIC_API_RUSTC_DATE)\$"; then
+	printf 'install: rung 1 needs the toolchain %s for cargo public-api\n' "$PUBLIC_API_TOOLCHAIN" >&2
+	printf 'install: rustup toolchain install %s\n' "$PUBLIC_API_TOOLCHAIN" >&2
 	exit 1
 fi
 

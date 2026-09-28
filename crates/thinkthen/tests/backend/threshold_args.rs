@@ -102,7 +102,11 @@ fn non_numeric_option_tokens_keep_claps_existing_meaning() {
     )
     .expect("the compiled binary runs");
     assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
     let message = String::from_utf8_lossy(&output.stderr);
-    assert!(message.starts_with("error:"), "{message}");
+    assert_eq!(
+        message,
+        "thinkthen: the question is one argument and each option takes one value; quote a question of several words, and send evidence on standard input or as `--input FILE`\n"
+    );
     assert!(!message.contains("a threshold is"), "{message}");
 }

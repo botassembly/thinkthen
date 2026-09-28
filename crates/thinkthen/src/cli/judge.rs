@@ -6,14 +6,14 @@
 use std::io::{Read, Write};
 use std::process::ExitCode;
 
-use crate::core::{Pointer, Resolved};
+use crate::core::{Json, Pointer, QuestionFileError, Resolved, Setting};
 
 use crate::args::{
-    ChooseArguments, Common, DecideArguments, FilterArguments, RankArguments, Refused,
+    Batching, ChooseArguments, Common, DecideArguments, FilterArguments, RankArguments, Refused,
     ScoreArguments, TagArguments,
 };
 use crate::asking::{Asks, fixed, run};
-use crate::cli::asked;
+use crate::cli::asked::{self, FileTier};
 use crate::edge::Environment;
 use crate::failure::Failure;
 use crate::schedule::Output;
@@ -26,6 +26,53 @@ pub(crate) struct Asked<'a> {
     pub(crate) settled: &'a Resolved,
     pub(crate) view: View,
     pub(crate) keeping: Keeping,
+    /// Where `decide`, `filter` and `rank` read their batch setting, or `None`.
+    pub(crate) batch: Option<Tiers<'a>>,
+}
+
+/// The typed `--batch` and a question file's `batch`, which with
+/// `THINKTHEN_BATCH` and `max` settle a batch, by ADR 0048 item 4.
+#[derive(Debug)]
+pub(crate) struct Tiers<'a> {
+    pub(crate) flag: Option<&'a str>,
+    pub(crate) request_size: Option<&'a str>,
+    pub(crate) file: Option<Json>,
+    pub(crate) tuned: bool,
+}
+
+impl Tiers<'_> {
+    /// The setting a stream runs at, or `None` on one document, where only a
+    /// typed `--batch` is refused.
+    pub(crate) fn setting(
+        &self,
+        environment: &Environment,
+        streams: bool,
+    ) -> Result<Option<Setting>, Failure> {
+        if !streams {
+            return match self.flag {
+                Some(_) => Err(Failure::Usage(
+                    "--batch groups the records of a stream, and a single text is one record",
+                )),
+                None => Ok(None),
+            };
+        }
+        match (self.flag, environment.batch(), &self.file) {
+            (Some(flag), ..) => Setting::parse(flag).ok_or(Failure::Usage(
+                "--batch takes max or a whole number of at least 1",
+            )),
+            (None, Some(variable), _) => Setting::parse(variable).ok_or(Failure::Usage(
+                "THINKTHEN_BATCH takes max or a whole number of at least 1",
+            )),
+            (None, None, Some(value)) => {
+                Setting::of_json(value).ok_or(Failure::Question(QuestionFileError::Shape {
+                    key: "batch",
+                    wanted: "takes max or a whole number of at least 1",
+                }))
+            }
+            (None, None, None) => Ok(Setting::Max),
+        }
+        .map(Some)
+    }
 }
 
 /// What a run does with each answered record.
@@ -100,7 +147,7 @@ pub(crate) fn decide(
             "`decide` prints JSON; `choose --raw` prints a bare label",
         ));
     }
-    let settled = asked::decide(arguments)?;
+    let (settled, file) = asked::decide(arguments)?;
     let view = View {
         quiet: arguments.quiet,
         raw: false,
@@ -113,6 +160,7 @@ pub(crate) fn decide(
             settled: &settled,
             view,
             keeping: Keeping::Answers,
+            batch: Some(tiers(&arguments.batching, file)),
         },
         environment,
         input,
@@ -125,8 +173,7 @@ pub(crate) fn decide(
 /// # Errors
 ///
 /// Returns [`Failure`] for a band in either home, for a view that prints no
-/// record, for a missing framing, and for every outcome `channels.md` gives a
-/// code above 3.
+/// record, and for every outcome `channels.md` gives a code above 3.
 pub(crate) fn filter(
     arguments: &FilterArguments,
     environment: &Environment,
@@ -139,10 +186,11 @@ pub(crate) fn filter(
             "`filter` keeps records and has no order to cut, so --top belongs to `rank`",
         ));
     }
-    let settled = asked::filter(arguments)?;
+    let (settled, file) = asked::filter(arguments)?;
     over_kept(
         Keeping::Passing,
         &arguments.common,
+        tiers(&arguments.batching, file),
         &settled,
         None,
         environment,
@@ -156,8 +204,7 @@ pub(crate) fn filter(
 /// # Errors
 ///
 /// Returns [`Failure`] for a rule in either home, for a view that prints no
-/// record, for a missing framing, and for every outcome `channels.md` gives a
-/// code above 3.
+/// record, and for every outcome `channels.md` gives a code above 3.
 pub(crate) fn rank(
     arguments: &RankArguments,
     environment: &Environment,
@@ -176,16 +223,26 @@ pub(crate) fn rank(
                 .ok_or(Failure::TopIsZero)
         })
         .transpose()?;
-    let settled = asked::rank(arguments)?;
+    let (settled, file) = asked::rank(arguments)?;
     over_kept(
         Keeping::Ordered,
         &arguments.common,
+        tiers(&arguments.batching, file),
         &settled,
         top,
         environment,
         input,
         writer,
     )
+}
+
+fn tiers(batching: &Batching, file: FileTier) -> Tiers<'_> {
+    Tiers {
+        flag: batching.batch.as_deref(),
+        request_size: batching.max_request_bytes.as_deref(),
+        file: file.batch,
+        tuned: file.tuned,
+    }
 }
 
 /// Refuse a view that prints no record, before anything else is read.
@@ -210,6 +267,7 @@ fn views(refused: &Refused, keeping: Keeping) -> Result<(), Failure> {
 fn over_kept(
     keeping: Keeping,
     common: &Common,
+    batch: Tiers<'_>,
     settled: &Resolved,
     top: Option<usize>,
     environment: &Environment,
@@ -218,12 +276,8 @@ fn over_kept(
 ) -> Result<ExitCode, Failure> {
     let writer: &mut dyn Write = &mut writer;
     let mut output = match keeping {
-        Keeping::Ordered => Output::Ordered {
-            held: Vec::new(),
-            top,
-            writer,
-        },
-        _ => Output::Streaming(writer),
+        Keeping::Ordered => Output::ordered(writer, top, environment.usage()),
+        _ => Output::streaming(writer, environment.usage()),
     };
     run(
         Asked {
@@ -236,6 +290,7 @@ fn over_kept(
                 details: common.details,
             },
             keeping,
+            batch: Some(batch),
         },
         environment,
         input,
@@ -251,7 +306,12 @@ fn judging(
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     let writer: &mut dyn Write = &mut writer;
-    run(asked, environment, input, &mut Output::Streaming(writer))
+    run(
+        asked,
+        environment,
+        input,
+        &mut Output::streaming(writer, environment.usage()),
+    )
 }
 
 /// Pick one label from the options, and set the exit code from the answer.
@@ -295,6 +355,7 @@ pub(crate) fn choose(
             settled: &settled,
             view,
             keeping: Keeping::Answers,
+            batch: None,
         },
         environment,
         input,
@@ -327,6 +388,7 @@ pub(crate) fn tag(
                 details: arguments.common.details,
             },
             keeping: Keeping::Answers,
+            batch: None,
         },
         environment,
         input,
@@ -370,6 +432,7 @@ pub(crate) fn score(
             settled: &settled,
             view,
             keeping: Keeping::Answers,
+            batch: None,
         },
         environment,
         input,

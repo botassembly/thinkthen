@@ -41,6 +41,8 @@ pub(crate) enum EntryError {
     /// The entry could not be written as JSON.
     ///
     /// The message names no cause, for the reason [`Self::Malformed`] gives.
+    /// An entry of strings and raw JSON always writes, so this never fires.
+    /// It stays because removing it needs an `expect`, which the crate denies.
     #[error("the entry could not be written as JSON")]
     Unwritable,
     /// A cache entry cannot support model-based maintenance.
@@ -111,6 +113,12 @@ impl<'a> Exchange<'a> {
     #[must_use]
     pub(crate) fn backend_identity(&self) -> BackendIdentity {
         BackendIdentity::new(self.url)
+    }
+
+    /// The endpoint the exchange goes to.
+    #[must_use]
+    pub(crate) const fn url(&self) -> &Url {
+        self.url
     }
 }
 
@@ -184,11 +192,15 @@ impl Entry {
         Ok(entry.response.get().as_bytes().to_owned())
     }
 
-    /// Validate one final cache entry and return its digest and response model.
-    pub(crate) fn inspected(bytes: &[u8]) -> Result<(Digest, String), EntryError> {
+    /// Validate one final cache entry and return its digest, reply model, and request model.
+    pub(crate) fn inspected(bytes: &[u8]) -> Result<(Digest, String, Option<String>), EntryError> {
         #[derive(Deserialize)]
         struct StoredResponse {
             model: String,
+        }
+        #[derive(Deserialize)]
+        struct StoredRequest {
+            model: Option<String>,
         }
         let entry: Self = serde_json::from_slice(bytes).map_err(place)?;
         if entry.schema != SCHEMA || entry.adapter != built_in::NAME {
@@ -200,7 +212,10 @@ impl Entry {
         if response.model.trim().is_empty() {
             return Err(EntryError::MissingModel);
         }
-        Ok((exchange.digest(), response.model))
+        let requested = serde_json::from_str::<StoredRequest>(entry.request.get())
+            .ok()
+            .and_then(|request| request.model);
+        Ok((exchange.digest(), response.model, requested))
     }
 }
 

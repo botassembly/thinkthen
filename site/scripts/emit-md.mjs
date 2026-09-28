@@ -9,6 +9,9 @@ import path from 'node:path';
 const DIST = path.join(process.cwd(), 'dist');
 const VOID = new Set(['br', 'img', 'meta', 'link', 'input', 'hr', 'source', 'area', 'col']);
 const SKIP = new Set(['button', 'script', 'style', 'svg']);
+// The Beatles Bench side list and phone menu repeat on every page. The
+// Settings page's find box and its no-match line work only in a browser.
+const SKIP_CLASS = ['bench-side', 'bench-menu', 'settings-filter', 'settings-none'];
 
 // ------------------------------------------------------------------ the tree
 
@@ -69,6 +72,7 @@ function find(node, test) {
 // ------------------------------------------------------------------- render
 
 const classOf = (n) => (n.attrs?.class || '').split(/\s+/);
+const skipped = (n) => classOf(n).some((c) => SKIP_CLASS.includes(c));
 
 function inline(node) {
   if (node.tag === '#text') return node.text.replace(/\s+/g, ' ');
@@ -90,7 +94,7 @@ function inline(node) {
 // Text exactly as it stands, for a code block.
 function raw(node) {
   if (node.tag === '#text') return node.text;
-  if (SKIP.has(node.tag)) return '';
+  if (SKIP.has(node.tag) || skipped(node)) return '';
   return (node.kids || []).map(raw).join('');
 }
 
@@ -101,7 +105,7 @@ function tidy(s) {
 function blocks(node, out) {
   for (const kid of node.kids || []) {
     if (kid.tag === '#text') continue;
-    if (SKIP.has(kid.tag)) continue;
+    if (SKIP.has(kid.tag) || skipped(kid)) continue;
     const cls = classOf(kid);
 
     if (cls.includes('tabs')) continue;
@@ -145,6 +149,19 @@ function blocks(node, out) {
       }
       continue;
     }
+    if (kid.tag === 'dl') {
+      const rows = [];
+      const walk = (n) => {
+        for (const k of n.kids || []) {
+          if (k.tag === 'dt') rows.push('- **' + tidy(inline(k)) + '**:');
+          else if (k.tag === 'dd' && rows.length) rows[rows.length - 1] += ' ' + tidy(inline(k));
+          else walk(k);
+        }
+      };
+      walk(kid);
+      if (rows.length) out.push(rows.join('\n'));
+      continue;
+    }
     if (kid.tag === 'div' && cls.includes('note')) {
       out.push('> ' + tidy(inline(kid)));
       continue;
@@ -154,7 +171,7 @@ function blocks(node, out) {
         .filter((k) => k.tag !== '#text' && !SKIP.has(k.tag))
         .map((k) => tidy(inline(k)))
         .filter(Boolean);
-      if (parts.length) out.push('*' + parts.join(' \u2014 ') + '*');
+      if (parts.length) out.push('*' + parts.join('. ') + '*');
       continue;
     }
     if (kid.tag === 'div' && (cls.includes('tile') || cls.includes('fact') || cls.includes('outcome'))) {
@@ -162,7 +179,8 @@ function blocks(node, out) {
       continue;
     }
     if (kid.tag === 'a' && cls.includes('tile')) {
-      out.push('- ' + tidy(inline(kid)));
+      const part = (tag) => tidy(inline(find(kid, (n) => n.tag === tag) || { tag: '#text', text: '' }));
+      out.push(`- [${part('b').replace(/\*/g, '')}](${kid.attrs.href || ''}): ${part('span')}`);
       continue;
     }
     blocks(kid, out);
@@ -190,6 +208,8 @@ for (const file of found) {
   const url = route === '/' ? '/' : route + '/';
   const tree = parse(html);
   const main = find(tree, (n) => n.tag === 'main');
+  // A moved page leaves a redirect behind. It gets no twin.
+  if (!main && /http-equiv="refresh"/.test(html)) continue;
   if (!main) throw new Error(`${file}: no main`);
   const titleNode = find(tree, (n) => n.tag === 'title');
   const title = titleNode ? tidy(inline(titleNode)) : url;
@@ -207,7 +227,6 @@ const llms = [
   '> ThinkThen: code that knows what you mean. Simple functions that give your software the judgment to handle whatever comes its way. Ten functions, in your scripts, your programs, and your queries.',
   '',
   'Every page on this site has a Markdown twin at the same address with .md added.',
-  'Bash ships first. Every library page shows how the calls will read. None of that code has run yet.',
   '',
   '## Pages',
   '',

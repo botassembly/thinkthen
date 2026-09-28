@@ -1,0 +1,18 @@
+{
+  "input": "Too expensive for what it does.",
+  "value": [
+    "price"
+  ]
+}
+{
+  "input": "The app crashes when I upload a file.",
+  "value": [
+    "bugs"
+  ]
+}
+{
+  "input": "Reports take a full minute to load.",
+  "value": [
+    "speed"
+  ]
+}

@@ -9,6 +9,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::io::{self, BufRead, Write};
 use std::str::FromStr;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -17,7 +18,8 @@ use serde::Deserialize;
 use serde::de::{Deserializer, IgnoredAny, MapAccess, SeqAccess, Visitor};
 use serde_json::value::RawValue;
 
-use crate::listener::{Canned, Gate, Listener, Recorded};
+use crate::lifetime::Gate;
+use crate::listener::{Canned, Listener, Recorded};
 
 /// The status every unknown body, arm, or request earns, and no arm serves.
 pub(crate) const DRIFT: u16 = 500;
@@ -27,6 +29,10 @@ const MOST_DELAY: u64 = 10_000;
 
 /// How long a `wait` line waits for its count.
 const WAIT_BOUND: Duration = Duration::from_secs(5);
+
+/// Only the three dependent requests of one opted-in relation case are retained.
+const CAPTURE_BODIES: usize = 3;
+const CAPTURE_BYTES: usize = 96_000;
 
 /// The shared cases, compiled in so the binary needs no path.
 const CASES: &str = include_str!("../../cases.json");
@@ -79,11 +85,56 @@ struct Question {
 #[derive(Default)]
 struct Criteria(Vec<String>);
 
+#[derive(Debug, Default)]
+struct Capture {
+    bodies: Vec<Vec<u8>>,
+    overflow: bool,
+}
+
+impl Capture {
+    fn push(&mut self, body: &[u8]) {
+        if self.bodies.len() == CAPTURE_BODIES || body.len() > CAPTURE_BYTES {
+            self.overflow = true;
+        } else {
+            self.bodies.push(body.to_vec());
+        }
+    }
+
+    fn json(&self) -> String {
+        if self.overflow {
+            return serde_json::json!({"error": "capture overflow"}).to_string();
+        }
+        let bodies = self
+            .bodies
+            .iter()
+            .map(|body| std::str::from_utf8(body))
+            .collect::<Result<Vec<_>, _>>();
+        match bodies {
+            Ok(bodies) => serde_json::json!({"bodies": bodies}).to_string(),
+            Err(_) => serde_json::json!({"error": "capture is not UTF-8"}).to_string(),
+        }
+    }
+}
+
+/// The dedicated case path opts in; ordinary case and generic traffic do not.
+fn capturing(request: &Recorded) -> bool {
+    let path = request.line.split(' ').nth(1).unwrap_or_default();
+    let mut parts = path.trim_start_matches('/').split('/');
+    let (Some("case"), Some(id), Some("capture")) = (parts.next(), parts.next(), parts.next())
+    else {
+        return false;
+    };
+    id.split_once('-')
+        .and_then(|(number, _)| number.parse::<u8>().ok())
+        .is_some_and(|number| (42..=50).contains(&number))
+}
+
 /// The conformance backend: one loopback listener and the gate its held arm waits on.
 #[derive(Debug)]
 pub struct Backend {
     listener: Listener,
     gate: Arc<Gate>,
+    capture: Arc<Mutex<Capture>>,
 }
 
 impl Backend {
@@ -102,8 +153,22 @@ impl Backend {
         }
         let gate = Arc::new(Gate::default());
         let held = Arc::clone(&gate);
-        let listener = Listener::routing(move |request| route(&cases, &held, request))?;
-        Ok(Self { listener, gate })
+        let capture = Arc::new(Mutex::new(Capture::default()));
+        let observed = Arc::clone(&capture);
+        let listener = Listener::routing(move |request| {
+            if capturing(request) {
+                observed
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner)
+                    .push(&request.body);
+            }
+            route(&cases, &held, request)
+        })?;
+        Ok(Self {
+            listener,
+            gate,
+            capture,
+        })
     }
 
     /// The scheme, address, and port. A caller appends an arm's path.
@@ -114,6 +179,14 @@ impl Backend {
     /// How many requests the backend has read so far.
     pub fn count(&self) -> usize {
         self.listener.count()
+    }
+
+    /// The bounded bodies kept by this process's one opted-in case arm.
+    fn capture_json(&self) -> String {
+        self.capture
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .json()
     }
 
     /// Let every held reply go, now and from here on.
@@ -128,41 +201,68 @@ impl Backend {
 
     /// The count once it reads at least `least`, or at 5 s, whichever comes first.
     pub fn wait(&self, least: usize) -> usize {
+        self.wait_until(least, &AtomicBool::new(false))
+            .unwrap_or_else(|| self.count())
+    }
+
+    fn wait_until(&self, least: usize, cancelled: &AtomicBool) -> Option<usize> {
         let deadline = Instant::now() + WAIT_BOUND;
         loop {
+            if cancelled.load(Ordering::SeqCst) {
+                return None;
+            }
             let count = self.count();
             if count >= least || Instant::now() >= deadline {
-                return count;
+                return Some(count);
             }
             thread::sleep(Duration::from_millis(5));
         }
     }
 }
 
-/// Print the port, answer `count`, `release`, `round`, and `wait N` lines, and
+/// Print the port, answer `count`, `capture`, `release`, `round`, and `wait N` lines, and
 /// print the count at the end.
 ///
 /// A `wait` answers on a thread of its own, so the lines behind it run at once.
-/// The output is shared with that thread, and the end does not wait for it.
+/// The output is shared with those threads. Input close cancels and joins them.
 pub fn run(input: impl BufRead, output: impl Write + Send + 'static) -> io::Result<()> {
     let backend = Arc::new(Backend::start()?);
     let output = Arc::new(Mutex::new(output));
     let port = backend.origin().rsplit(':').next().unwrap_or_default();
     say(&output, port)?;
-    for line in input.lines() {
-        match line?.trim() {
-            "count" => say(&output, backend.count())?,
-            "release" => backend.release(),
-            "round" => backend.round(),
-            other => match other.strip_prefix("wait ").and_then(whole) {
-                Some(least) => {
-                    let (backend, output) = (Arc::clone(&backend), Arc::clone(&output));
-                    thread::spawn(move || say(&output, format!("wait {}", backend.wait(least))));
-                }
-                None => writeln!(io::stderr(), "conformance-backend: unknown line `{other}`")?,
-            },
+    let cancelled = Arc::new(AtomicBool::new(false));
+    let mut waits = Vec::new();
+    let read = (|| -> io::Result<()> {
+        for line in input.lines() {
+            match line?.trim() {
+                "count" => say(&output, backend.count())?,
+                "capture" => say(&output, backend.capture_json())?,
+                "release" => backend.release(),
+                "round" => backend.round(),
+                other => match other.strip_prefix("wait ").and_then(whole) {
+                    Some(least) => {
+                        let (backend, output, cancelled) = (
+                            Arc::clone(&backend),
+                            Arc::clone(&output),
+                            Arc::clone(&cancelled),
+                        );
+                        waits.push(thread::spawn(move || {
+                            if let Some(count) = backend.wait_until(least, &cancelled) {
+                                let _ = say(&output, format!("wait {count}"));
+                            }
+                        }));
+                    }
+                    None => writeln!(io::stderr(), "conformance-backend: unknown line `{other}`")?,
+                },
+            }
         }
+        Ok(())
+    })();
+    cancelled.store(true, Ordering::SeqCst);
+    for wait in waits {
+        let _ = wait.join();
     }
+    read?;
     say(&output, backend.count())
 }
 
@@ -193,28 +293,35 @@ fn route(cases: &Cases, gate: &Arc<Gate>, request: &Recorded) -> Canned {
                 || drift(&format!("case `{id}` has no such body")),
                 |body| Canned::ok(body),
             ),
-        (Some("generic"), ..) => generic(&request.body, None),
+        (Some("generic"), ..) => generic(&request.body, None, false),
+        (Some("arm"), Some("full"), _) => generic(&request.body, None, true),
+        (Some("arm"), Some("status"), code) => match code.and_then(whole::<u16>) {
+            Some(code @ 401..=404) => Canned::status(code, "status arm"),
+            _ => drift("the status arm takes 401, 402, 403, or 404"),
+        },
         (Some("arm"), Some("reset"), _) => Canned::reset(),
         (Some("arm"), Some(status @ ("429" | "503")), _) => {
             let status = if status == "429" { 429 } else { 503 };
             Canned::status(status, "try again").asking("retry-after-ms", "10")
         }
         (Some("arm"), Some("refuse"), _) => Canned::status(422, "refused"),
-        (Some("arm"), Some("held"), _) => generic(&request.body, None).held_by(Arc::clone(gate)),
+        (Some("arm"), Some("held"), _) => {
+            generic(&request.body, None, false).held_by(Arc::clone(gate))
+        }
         (Some("arm"), Some("delay"), value) => match value.and_then(whole::<u64>) {
             None => drift("the delay arm needs a whole number of milliseconds"),
             Some(millis) if millis > MOST_DELAY => {
                 drift("the delay arm allows at most 10000 milliseconds")
             }
-            Some(millis) => generic(&request.body, None).after(millis),
+            Some(millis) => generic(&request.body, None, false).after(millis),
         },
-        (Some("arm"), Some("malformed"), Some(cause)) => generic(&request.body, Some(cause)),
+        (Some("arm"), Some("malformed"), Some(cause)) => generic(&request.body, Some(cause), false),
         _ => drift(&format!("no arm at `{path}`")),
     }
 }
 
 /// Answer with the drift status and say why on standard error.
-fn drift(why: &str) -> Canned {
+pub(crate) fn drift(why: &str) -> Canned {
     let _ = writeln!(io::stderr(), "conformance-backend: {why}");
     Canned::status(DRIFT, why)
 }
@@ -224,7 +331,9 @@ fn drift(why: &str) -> Canned {
 /// The first option, level, or yes gets 0.9, and the rest share the remainder
 /// in declared order. A broken answer lands on the last question that can
 /// carry its cause; a distribution cause needs a choice or score question.
-fn generic(body: &[u8], cause: Option<&str>) -> Canned {
+/// A `full` answer adds every optional field the tool reads: a confidence on
+/// each choice and score answer, and the token counts.
+fn generic(body: &[u8], cause: Option<&str>, full: bool) -> Canned {
     let Ok(request) = serde_json::from_slice::<Request>(body) else {
         return drift("the generic arm got no well-formed request");
     };
@@ -253,7 +362,7 @@ fn generic(body: &[u8], cause: Option<&str>) -> Canned {
         let cause = broken
             .as_ref()
             .and_then(|(target, cause)| (target == name).then_some(*cause));
-        let Some(answer) = answer(question, cause) else {
+        let Some(answer) = answer(question, cause, full) else {
             if cause.is_none() {
                 return drift(&format!(
                     "the generic arm cannot answer `{}`",
@@ -264,15 +373,20 @@ fn generic(body: &[u8], cause: Option<&str>) -> Canned {
         };
         answers.push(format!("{}:{answer}", quoted(name)));
     }
+    let usage = if full {
+        r#","usage":{"input_tokens":1,"output_tokens":1}"#
+    } else {
+        ""
+    };
     Canned::ok(&format!(
-        r#"{{"model":{},"answers":{{{}}}}}"#,
+        r#"{{"model":{},"answers":{{{}}}{usage}}}"#,
         quoted(&request.model),
         answers.join(",")
     ))
 }
 
 /// One answer by the fixed rule, or broken for the cause. `None` omits it.
-fn answer(question: &Question, cause: Option<&str>) -> Option<String> {
+fn answer(question: &Question, cause: Option<&str>, full: bool) -> Option<String> {
     let kind = question.kind.as_str();
     if kind == "noul" {
         return match cause {
@@ -313,8 +427,9 @@ fn answer(question: &Question, cause: Option<&str>) -> Option<String> {
         .iter()
         .map(|(key, share)| format!("{}:{share}", quoted(key)))
         .collect();
+    let confidence = if full { r#","confidence":0.9"# } else { "" };
     Some(format!(
-        r#"{{"type":"{kind}","probabilities":{{{}}}}}"#,
+        r#"{{"type":"{kind}","probabilities":{{{}}}{confidence}}}"#,
         entries.join(",")
     ))
 }

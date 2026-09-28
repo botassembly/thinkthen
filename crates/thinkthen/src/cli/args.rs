@@ -1,5 +1,6 @@
 //! The command line, as the clap types that parse it.
 
+use std::ffi::OsString;
 use std::path::PathBuf;
 
 use crate::core::{DEFAULT_MODEL, Framing};
@@ -8,7 +9,7 @@ use clap::{Args, Parser};
 mod command;
 mod find;
 mod relate;
-pub(crate) use command::{CacheCommand, Command, PruneArguments, StatusArguments};
+pub(crate) use command::{CacheCommand, CheckArguments, Command, PruneArguments, StatusArguments};
 pub(crate) use find::FindArguments;
 pub(crate) use relate::RelateArguments;
 
@@ -32,6 +33,10 @@ pub(crate) struct Cli {
 /// The options every judging verb takes.
 #[derive(Args, Debug)]
 pub(crate) struct Common {
+    /// Print one machine-readable run-facts line last on standard error.
+    #[arg(long, hide_short_help = true)]
+    pub(crate) facts: bool,
+
     /// Print the full result object in place of the bare value.
     ///
     /// In record mode the object also carries `input`, the whole record as it
@@ -77,7 +82,8 @@ pub(crate) struct Common {
     ///
     /// Give it more than once to send an object of the named parts, keyed by
     /// the last part of each pointer. On a command that accepts a single text,
-    /// no record framing reads the whole input as one JSON value. The pointer is the disclosure boundary:
+    /// no record framing reads the whole input as one JSON value. On `filter`
+    /// and `rank` it reads JSON Lines. The pointer is the disclosure boundary:
     /// only the pointed value leaves the machine.
     #[arg(long, value_name = "POINTER")]
     pub(crate) field: Vec<String>,
@@ -113,7 +119,9 @@ pub(crate) struct Common {
 
     /// Call the backend, then write the exchange into DIR. DIR is created when absent.
     ///
-    /// An explicit recording folder suppresses the platform default cache.
+    /// An explicit recording folder suppresses the platform default cache. A
+    /// folder that already holds an answer stops at exit 5 when the backend
+    /// answers that request differently.
     #[arg(long, value_name = "DIR", hide_short_help = true)]
     pub(crate) record: Option<PathBuf>,
 
@@ -140,7 +148,7 @@ pub(crate) struct Common {
     #[arg(long, conflicts_with = "cache")]
     pub(crate) no_cache: bool,
 
-    /// Positive seconds that bound one attempt from connect to last byte, and each retry wait.
+    /// Seconds from 1 to 86400 that bound one attempt from connect to last byte, and each retry wait.
     #[arg(
         long,
         value_name = "SECONDS",
@@ -151,8 +159,11 @@ pub(crate) struct Common {
 
     /// How many requests are in flight at once, from 1 to 32. [default: 4]
     ///
-    /// It acts in record mode and on `annotate`, where a single text can make
-    /// several grouped requests. Output follows the order the command defines.
+    /// It acts in record mode, on `annotate`, where a single text can make
+    /// several grouped requests, and on `relate`, where each relation makes its
+    /// own requests. Output follows the order the command defines.
+    /// A run opens up to one connection for each request in flight, so --jobs N
+    /// opens up to N connections.
     #[arg(
         long,
         value_name = "N",
@@ -162,7 +173,7 @@ pub(crate) struct Common {
     pub(crate) jobs: Option<u8>,
 
     /// How many times a retried status is sent again. A transport failure is never sent again.
-    #[arg(long, value_name = "N", default_value_t = 2, hide_short_help = true)]
+    #[arg(long, value_name = "N", default_value_t = 3, hide_short_help = true)]
     pub(crate) max_retries: u32,
 }
 
@@ -194,6 +205,10 @@ pub(crate) struct DecideArguments {
     /// written in a file.
     pub(crate) question: String,
 
+    /// Taken so the command can say where the evidence goes.
+    #[arg(value_name = "EVIDENCE", hide = true)]
+    pub(crate) extra: Vec<OsString>,
+
     /// What a yes and a no mean.
     #[command(flatten)]
     pub(crate) meanings: Meanings,
@@ -211,9 +226,34 @@ pub(crate) struct DecideArguments {
     #[arg(long, hide = true)]
     pub(crate) raw: bool,
 
+    /// How many records of a stream share one request.
+    #[command(flatten)]
+    pub(crate) batching: Batching,
+
     /// The options every judging verb takes.
     #[command(flatten)]
     pub(crate) common: Common,
+}
+
+/// The batch size of `decide`, `filter` and `rank` over a stream.
+#[derive(Args, Debug)]
+pub(crate) struct Batching {
+    /// Send at most N records of a stream in one request, or `max`. [default: max]
+    ///
+    /// `max` fills each request to the backend's limits. `--batch 1` asks one
+    /// record a request, as before batching. It beats `THINKTHEN_BATCH`, which
+    /// beats a question file's `batch`.
+    #[arg(long, value_name = "N|max", hide_short_help = true)]
+    pub(crate) batch: Option<String>,
+
+    /// Close a batch before its request exceeds N bytes. [default: 96000]
+    #[arg(
+        long,
+        value_name = "N",
+        hide_short_help = true,
+        allow_negative_numbers = true
+    )]
+    pub(crate) max_request_bytes: Option<String>,
 }
 
 /// The two texts that say what a yes and a no mean, which every yes/no verb takes.
@@ -252,6 +292,10 @@ pub(crate) struct FilterArguments {
     /// value typed beside it replaces the file's value.
     pub(crate) question: String,
 
+    /// Taken so the command can say where the evidence goes.
+    #[arg(value_name = "EVIDENCE", hide = true)]
+    pub(crate) extra: Vec<OsString>,
+
     /// One cut T on the probability of yes. A band is a usage error. It defaults to 0.5.
     #[arg(long, value_name = "T", allow_negative_numbers = true)]
     pub(crate) threshold: Option<String>,
@@ -268,6 +312,10 @@ pub(crate) struct FilterArguments {
     #[command(flatten)]
     pub(crate) refused: Refused,
 
+    /// How many records of a stream share one request.
+    #[command(flatten)]
+    pub(crate) batching: Batching,
+
     /// The options every judging verb takes.
     #[command(flatten)]
     pub(crate) common: Common,
@@ -281,6 +329,10 @@ pub(crate) struct RankArguments {
     /// As `@FILE` it is a question file holding one `decide` question, and a
     /// value typed beside it replaces the file's value.
     pub(crate) question: String,
+
+    /// Taken so the command can say where the evidence goes.
+    #[arg(value_name = "EVIDENCE", hide = true)]
+    pub(crate) extra: Vec<OsString>,
 
     /// Print the first N records of the order, from 1 upward.
     ///
@@ -300,6 +352,10 @@ pub(crate) struct RankArguments {
     /// The two views `rank` refuses in its own words.
     #[command(flatten)]
     pub(crate) refused: Refused,
+
+    /// How many records of a stream share one request.
+    #[command(flatten)]
+    pub(crate) batching: Batching,
 
     /// The options every judging verb takes.
     #[command(flatten)]
@@ -423,7 +479,7 @@ pub(crate) struct RecognizeArguments {
     #[arg(long = "kind", value_name = "KIND=DESCRIPTION")]
     pub(crate) described: Vec<String>,
 
-    /// A beta relation rule, as NAME=SOURCE:TARGET. `*` explicitly means any kind.
+    /// A beta relation rule, as NAME or NAME=SOURCE:TARGET. `*` or `ANY` means any kind.
     #[arg(long = "relation", value_name = "NAME=SOURCE:TARGET")]
     pub(crate) relations: Vec<String>,
 
@@ -434,6 +490,24 @@ pub(crate) struct RecognizeArguments {
     /// Keep beta relation edges whose model probability reaches this cut. [default: 0.5]
     #[arg(long, value_name = "T", allow_negative_numbers = true)]
     pub(crate) relation_threshold: Option<String>,
+
+    /// Refuse a text over this many UTF-8 bytes before any request. [default: 600000]
+    #[arg(
+        long,
+        value_name = "N",
+        value_parser = clap::builder::RangedU64ValueParser::<usize>::new().range(1..=9_007_199_254_740_991),
+        hide_short_help = true
+    )]
+    pub(crate) max_text_bytes: Option<usize>,
+
+    /// Split relation plans before a request exceeds N bytes. [default: 96000]
+    #[arg(
+        long,
+        value_name = "N",
+        hide_short_help = true,
+        allow_negative_numbers = true
+    )]
+    pub(crate) max_request_bytes: Option<String>,
 
     /// The options every judging verb takes.
     #[command(flatten)]

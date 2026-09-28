@@ -1,10 +1,14 @@
 //! The compiled binary at its own edge: usage, the plan, and standard input.
+#![cfg(feature = "cli")]
 
 use std::io::{self, Write};
 use std::process::{Command, Output, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-const DEFAULT_MODEL: &str = "jev-latest";
+#[path = "../src/test_deadline/wait.rs"]
+mod wait;
+
+const DEFAULT_MODEL: &str = "jev-1.13.0";
 
 /// A port nothing listens on, so a connection would be refused at once.
 const CLOSED: &str = "http://127.0.0.1:1/v1";
@@ -35,7 +39,7 @@ fn run(arguments: &[&str], environment: &[(&str, &str)], evidence: &[u8]) -> io:
         .ok_or_else(|| io::Error::other("no pipe to standard input"))?;
     let _ = input.write_all(evidence);
     drop(input);
-    child.wait_with_output()
+    wait::finish(child, &arguments.join(" "))
 }
 
 /// Run `decide` over one line of evidence.
@@ -75,9 +79,9 @@ fn the_plan_holds_four_fields_and_names_the_key_variable_without_reading_it() {
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
         concat!(
-            r#"{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","#,
+            r#"{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","#,
             r#""key_env":"THINKTHEN_API_KEY","#,
-            r#""request":{"state":"Refund me please.","model":"jev-latest","#,
+            r#""request":{"state":"Refund me please.","model":"jev-1.13.0","#,
             r#""questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}}"#,
             "\n",
         )
@@ -105,7 +109,7 @@ fn the_five_backend_environment_variables_are_gone_and_change_no_plan() {
         printed.contains(r#""url":"https://api.typesafe.ai/v1/systemone""#),
         "{printed}"
     );
-    assert!(printed.contains(r#""model":"jev-latest""#), "{printed}");
+    assert!(printed.contains(r#""model":"jev-1.13.0""#), "{printed}");
     assert!(
         printed.contains(r#""key_env":"THINKTHEN_API_KEY""#),
         "{printed}"

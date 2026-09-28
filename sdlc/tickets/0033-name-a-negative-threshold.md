@@ -14,7 +14,7 @@ A negative value beside `--threshold` reaches the tool's threshold validation an
 
 ## Current Facts
 
-Finding 6 in `sdlc/issues/2026-09-19-hands-on-test-pass-one.md` records the defect. On current main, `thinkthen decide q --threshold -0.1` exits 2 through clap with `unexpected argument '-0' found` and advises `-- -0`. Following that advice would make the value positional input instead of a threshold.
+Finding 6 in `sdlc/issues/closed/2026-09-19-hands-on-test-pass-one.md` records the defect. On current main, `thinkthen decide q --threshold -0.1` exits 2 through clap with `unexpected argument '-0' found` and advises `-- -0`. Following that advice would make the value positional input instead of a threshold.
 
 The same split affects every built command's `--threshold` argument. A space followed by `-0.1` falls out of clap on `decide`, `choose`, `filter`, `rank`, and `score`. The equals spelling `--threshold=-0.1` already reaches the shared parser on all five commands and exits 2 with the exact safe sentence `thinkthen: --threshold: a single cut is above zero and at most one`.
 

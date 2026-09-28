@@ -14,7 +14,7 @@ Status: landed
 
 ## Current Facts
 
-Tickets 0001 to 0004 landed `thinkthen decide if CONDITION` with a full result object on every run, an optional symmetric `--min-prob`, an exit code that carries the answer only under `--status`, `--plan`, `--backend`, and five `THINKTHEN_*` backend variables. The adapter already sends the question text unchanged, so the request bytes and every recording digest stay the same. `sdlc/issues/2026-09-19-review-leftovers-from-the-core-tickets.md` lists thirteen small leftovers, and this ticket rewrites much of the code they touch.
+Tickets 0001 to 0004 landed `thinkthen decide if CONDITION` with a full result object on every run, an optional symmetric `--min-prob`, an exit code that carries the answer only under `--status`, `--plan`, `--backend`, and five `THINKTHEN_*` backend variables. The adapter already sends the question text unchanged, so the request bytes and every recording digest stay the same. `sdlc/issues/closed/2026-09-19-review-leftovers-from-the-core-tickets.md` lists thirteen small leftovers, and this ticket rewrites much of the code they touch.
 
 ## Scope
 

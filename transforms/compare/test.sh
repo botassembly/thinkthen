@@ -2,8 +2,8 @@
 set -eu
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
-work=$(mktemp -d)
-trap 'rm -rf -- "$work"' EXIT
+. "$REPO/sdlc/scripts/scratch.sh"
+scratch_dir work
 
 row() {
 	id=$1 value=$2 answer=$3
@@ -18,11 +18,11 @@ row() {
 	row a-null null null
 	row m-string '"old"' '{"kind":"choice"}'
 	row b-no-to-yes false '{"kind":"yes_no","probability":0.1}'
-	row c-no-to-unresolved false '{"kind":"yes_no","probability":0.2}'
-	row d-unresolved-to-no null '{"kind":"yes_no","probability":0.5}'
-	row e-unresolved-to-yes null '{"kind":"yes_no","probability":0.5}'
+	row c-no-to-unsure false '{"kind":"yes_no","probability":0.2}'
+	row d-unsure-to-no null '{"kind":"yes_no","probability":0.5}'
+	row e-unsure-to-yes null '{"kind":"yes_no","probability":0.5}'
 	row f-yes-to-no true '{"kind":"yes_no","probability":0.9}'
-	row g-yes-to-unresolved true '{"kind":"yes_no","probability":0.8}'
+	row g-yes-to-unsure true '{"kind":"yes_no","probability":0.8}'
 } > "$work/before.jsonl"
 
 {
@@ -30,16 +30,16 @@ row() {
 	row a-null null null
 	row m-string '"new"' '{"kind":"choice"}'
 	row b-no-to-yes true '{"kind":"yes_no","probability":0.17}'
-	row c-no-to-unresolved null '{"kind":"yes_no","probability":0.28}'
-	row d-unresolved-to-no false '{"kind":"yes_no","probability":0.59}'
-	row e-unresolved-to-yes true '{"kind":"yes_no","probability":0.5}'
+	row c-no-to-unsure null '{"kind":"yes_no","probability":0.28}'
+	row d-unsure-to-no false '{"kind":"yes_no","probability":0.59}'
+	row e-unsure-to-yes true '{"kind":"yes_no","probability":0.5}'
 	row f-yes-to-no false '{"kind":"yes_no","probability":0.81}'
-	row g-yes-to-unresolved null '{"kind":"yes_no","probability":0.8}'
+	row g-yes-to-unsure null '{"kind":"yes_no","probability":0.8}'
 } > "$work/after.jsonl"
 
 jq -n --slurpfile before "$work/before.jsonl" -f "$REPO/transforms/compare/compare.jq" "$work/after.jsonl" \
 	| jq -c '{compared,same,changed_values,flips,ids:[.changes[].id],partition:(.compared == .same + .changed_values)}' \
-	| mustmatch '{"compared":9,"same":1,"changed_values":8,"flips":{"no to yes":["b-no-to-yes"],"no to unresolved":["c-no-to-unresolved"],"unresolved to no":["d-unresolved-to-no"],"unresolved to yes":["e-unresolved-to-yes"],"yes to no":["f-yes-to-no"],"yes to unresolved":["g-yes-to-unresolved"]},"ids":["b-no-to-yes","c-no-to-unresolved","d-unresolved-to-no","e-unresolved-to-yes","f-yes-to-no","g-yes-to-unresolved","m-string","z-number"],"partition":true}'
+	| mustmatch '{"compared":9,"same":1,"changed_values":8,"flips":{"no to yes":["b-no-to-yes"],"no to unsure":["c-no-to-unsure"],"unsure to no":["d-unsure-to-no"],"unsure to yes":["e-unsure-to-yes"],"yes to no":["f-yes-to-no"],"yes to unsure":["g-yes-to-unsure"]},"ids":["b-no-to-yes","c-no-to-unsure","d-unsure-to-no","e-unsure-to-yes","f-yes-to-no","g-yes-to-unsure","m-string","z-number"],"partition":true}'
 
 {
 	row below true '{"kind":"yes_no","probability":0.1}'
@@ -202,7 +202,7 @@ jq -n --slurpfile before "$work/annotate-before.jsonl" -f "$REPO/transforms/comp
 	          choose:(.questions.choose|{compared,same,changed_values,ids:[.changes[].id],yes_no_probability}),
 	          tag:(.questions.tag|{compared,same,changed_values,ids:[.changes[].id],yes_no_probability}),
 	          score:(.questions.score|{compared,same,changed_values,ids:[.changes[].id],yes_no_probability})}' \
-	| mustmatch '{"mode":"annotate","before":{"rows":11,"question_sets":["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],"models":["old-model"]},"after":{"rows":11,"question_sets":["bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"],"models":["new-model"]},"changed":{"question_set":true,"model":true},"repeated_ids":{"before":["repeat"],"after":["repeat"]},"only_in_before":["gone"],"only_in_after":["new"],"paired":8,"compared":6,"mismatched_input":["input"],"mismatched_label":["label"],"questions_only_in_before":[],"questions_only_in_after":[],"question_names":["choose","decide","score","tag"],"decide":{"compared":6,"same":0,"changed_values":6,"flips":{"no to yes":["a"],"no to unresolved":["b"],"unresolved to no":["c"],"unresolved to yes":["d"],"yes to no":["e"],"yes to unresolved":["f"]},"ids":["a","b","c","d","e","f"],"yes_no_probability":{"tolerance":0.08,"compared":6,"changed":4,"summarized_same_value":0,"largest_summarized_delta":null}},"choose":{"compared":6,"same":5,"changed_values":1,"ids":["a"],"yes_no_probability":{"tolerance":0.08,"compared":0,"changed":0,"summarized_same_value":0,"largest_summarized_delta":null}},"tag":{"compared":6,"same":5,"changed_values":1,"ids":["a"],"yes_no_probability":{"tolerance":0.08,"compared":0,"changed":0,"summarized_same_value":0,"largest_summarized_delta":null}},"score":{"compared":6,"same":5,"changed_values":1,"ids":["a"],"yes_no_probability":{"tolerance":0.08,"compared":0,"changed":0,"summarized_same_value":0,"largest_summarized_delta":null}}}'
+	| mustmatch '{"mode":"annotate","before":{"rows":11,"question_sets":["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],"models":["old-model"]},"after":{"rows":11,"question_sets":["bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"],"models":["new-model"]},"changed":{"question_set":true,"model":true},"repeated_ids":{"before":["repeat"],"after":["repeat"]},"only_in_before":["gone"],"only_in_after":["new"],"paired":8,"compared":6,"mismatched_input":["input"],"mismatched_label":["label"],"questions_only_in_before":[],"questions_only_in_after":[],"question_names":["choose","decide","score","tag"],"decide":{"compared":6,"same":0,"changed_values":6,"flips":{"no to yes":["a"],"no to unsure":["b"],"unsure to no":["c"],"unsure to yes":["d"],"yes to no":["e"],"yes to unsure":["f"]},"ids":["a","b","c","d","e","f"],"yes_no_probability":{"tolerance":0.08,"compared":6,"changed":4,"summarized_same_value":0,"largest_summarized_delta":null}},"choose":{"compared":6,"same":5,"changed_values":1,"ids":["a"],"yes_no_probability":{"tolerance":0.08,"compared":0,"changed":0,"summarized_same_value":0,"largest_summarized_delta":null}},"tag":{"compared":6,"same":5,"changed_values":1,"ids":["a"],"yes_no_probability":{"tolerance":0.08,"compared":0,"changed":0,"summarized_same_value":0,"largest_summarized_delta":null}},"score":{"compared":6,"same":5,"changed_values":1,"ids":["a"],"yes_no_probability":{"tolerance":0.08,"compared":0,"changed":0,"summarized_same_value":0,"largest_summarized_delta":null}}}'
 
 jq -n --slurpfile before "$work/annotate-before.jsonl" -f "$REPO/transforms/compare/compare.jq" "$work/annotate-after.jsonl" \
 	| jq -c '[.questions.decide.changes[] | select(.id == "a" or .id == "b" or .id == "c")

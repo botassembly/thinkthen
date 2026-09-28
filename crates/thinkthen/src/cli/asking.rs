@@ -1,33 +1,72 @@
-//! One record to one request, and one reply to one row.
+//! One record to one request, and one reply to one row. `batched.rs` sends
+//! `decide`, `filter` and `rank` over a stream in batches.
 //!
 //! `judge.rs` decides what a run keeps and what view it prints in.
 
-use std::io::{Read, Write};
+use std::io::Read;
+use std::num::NonZeroUsize;
 use std::process::ExitCode;
 use std::time::Duration;
 
 use crate::core::{
-    Backend, BackendProfile, DecisionResult, Meta, Outcome, Plan, PlanDocument, Pointer, Question,
-    QuestionText, Reading, Record, RecordValue, RequestMeta, Resolved, Sources, Threshold, Value,
-    json_line, question_sha256_with_profile,
+    Backend, BackendProfile, BatchMeta, Evidence, Framing, Outcome, Pointer, Question,
+    QuestionText, Reading, Record, RecordValue, Resolved, Setting, Sources, Threshold, Value,
+    json_line,
 };
 
 use crate::args::Common;
 use crate::edge::{self, Environment};
+use crate::engine::Width;
+use crate::engine::facade::{Engine, Judgment, Settings, Storage};
 use crate::failure::Failure;
-use crate::http::Client;
 use crate::judge::{Asked, Keeping, View};
-use crate::prepared_request::PreparedRequest;
 use crate::profile::{self, Mismatch};
-use crate::recorder::Recorder;
+use crate::result_json::{Run, decision_with_batch};
 use crate::schedule::{self, Judged, Output};
 use crate::table::{Kind as TableKind, Rows as TableRows};
 
+mod batch_meta;
+mod batched;
 mod folders;
-mod request;
+mod plan;
 
 pub(crate) use folders::Folders;
-pub(crate) use request::{Asking, ask, ask_prepared};
+use plan::{plan, plan_record, print_plan};
+
+struct RowContext<'a> {
+    arrived: Option<&'a [u8]>,
+    batch: Option<BatchMeta>,
+}
+
+/// Build the one engine a command calls, from what the command resolved.
+///
+/// `width` is the `--jobs` a record command registered, or `None`.
+pub(crate) fn engine(
+    common: &Common,
+    environment: &Environment,
+    folders: Folders,
+    backend: Backend,
+    profile: Option<BackendProfile>,
+    width: Option<u8>,
+) -> Result<Engine, Failure> {
+    let width = width.map(|jobs| Width::new(u64::from(jobs))).transpose()?;
+    Ok(Engine::new(Settings {
+        backend,
+        profile,
+        timeout: Duration::from_secs(common.timeout),
+        max_retries: common.max_retries,
+        retry_wait: environment.retry_wait(),
+        width,
+        storage: Storage {
+            record: folders.record,
+            replay: folders.replay,
+            private_default: folders.private_default,
+            cache_answers: folders.cache_answers,
+        },
+        key: std::sync::Arc::new(edge::key),
+        usage: environment.counters(),
+    })?)
+}
 
 /// Where one record's question comes from.
 ///
@@ -60,12 +99,12 @@ impl Asks {
     }
 }
 
-/// One record, the question it was asked, and the request that carries both.
+/// One record, the question it was asked, and the evidence it is asked of.
 #[derive(Debug)]
 struct Sending {
     record: Record,
     question: Question,
-    plan: Plan,
+    evidence: Evidence,
 }
 
 /// The one question every record is asked, which every verb but one has.
@@ -90,6 +129,10 @@ pub(crate) fn fixed(settled: &Resolved) -> Result<Asks, Failure> {
 ///
 /// Returns [`Failure`] for every outcome `channels.md` gives a code above 3,
 /// and for every option that cannot act in the mode the run is in.
+#[expect(
+    clippy::too_many_lines,
+    reason = "the command edge keeps mode, setting, and output decisions in their observable order"
+)]
 pub(crate) fn run(
     asked: Asked<'_>,
     environment: &Environment,
@@ -102,6 +145,7 @@ pub(crate) fn run(
         settled,
         view,
         keeping,
+        batch,
     } = asked;
     let threshold = settled.threshold();
     let view = view.checked()?;
@@ -114,21 +158,46 @@ pub(crate) fn run(
         .model_is_default()
         .then(|| environment.model())
         .flatten();
+    let request_size = batch
+        .as_ref()
+        .map(|tiers| environment.request_size(tiers.request_size))
+        .transpose()?;
     let backend = Backend::resolve(
         common.url.as_deref(),
         environment.base_url(),
         configured_model.unwrap_or_else(|| settled.model().as_str()),
-    )?;
-    let profile = profile::read(common)?;
-    let mismatch = Mismatch::new(settled.profile(), profile.as_ref());
-    let reading = read_by(common, settled)?;
-    if keeping.streams_only() && !reading.streams() {
-        return Err(Failure::NoFraming(keeping.verb()));
+    )?
+    .with_request_size(request_size.unwrap_or(Backend::DEFAULT_REQUEST_SIZE));
+    if request_size.is_some() {
+        environment.warn_request_size(&backend)?;
     }
+    let profile = profile::read(common)?;
+    let reading = read_by(common, settled, keeping)?;
     if view.quiet && reading.streams() {
         return Err(Failure::QuietOverRecords);
     }
-    let jobs = schedule::jobs_of(common.jobs, reading.streams())?;
+    schedule::jobs_of(common.jobs, reading.streams())?;
+    let tuned_for = batch
+        .as_ref()
+        .filter(|tiers| tiers.tuned)
+        .and_then(|tiers| match tiers.file.as_ref() {
+            Some(value) => Setting::of_json(value),
+            None => Some(Setting::Records(NonZeroUsize::MIN)),
+        });
+    let batch = batch.map_or(Ok(None), |tiers| {
+        tiers.setting(environment, reading.streams())
+    })?;
+    let mismatch = match batch {
+        Some(running) => {
+            let running = if settled.text().as_json().as_str().is_some() {
+                running
+            } else {
+                Setting::Records(NonZeroUsize::MIN)
+            };
+            Mismatch::new(settled.profile(), profile.as_ref()).with_batch(tuned_for, running)
+        }
+        None => Mismatch::new(settled.profile(), profile.as_ref()),
+    };
     let source = edge::source(common.input.as_deref(), input)?;
     let configuration = JudgingInput {
         common,
@@ -153,11 +222,15 @@ pub(crate) fn run(
         ),
     };
 
-    if let Some(kind) = table_kind(common) {
-        return over_table(configuration, &reading, source, kind, jobs, output);
+    if let Some(setting) = batch {
+        return batched::run(configuration, &reading, source, setting, output);
     }
 
-    let mut chunks = edge::Chunks::new(source, reading.streams());
+    if let Some(kind) = table_kind(common) {
+        return over_table(configuration, &reading, source, kind, output);
+    }
+
+    let mut chunks = edge::numbered(edge::Chunks::new(source, reading.streams()), &reading);
 
     if common.dry_run {
         return plan(
@@ -165,31 +238,40 @@ pub(crate) fn run(
             configuration.profile.as_ref(),
             &configuration.mismatch,
             &reading,
-            &Planning {
-                asks: &configuration.asks,
-                sources: configuration.sources,
-            },
-            chunks.next().transpose()?,
+            &configuration.planning(),
+            first(&mut chunks)?,
             output.writer(),
         );
     }
 
     let judging = Judging::new(configuration)?;
     if !judging.streams {
-        let bytes = chunks.next().transpose()?.unwrap_or_default();
+        let bytes = first(&mut chunks)?.unwrap_or_default();
         let judged = judging.row(&reading, &bytes)?;
         let outcome = judged.outcome;
         output.take(judged)?;
         return Ok(exit_code(outcome));
     }
     schedule::over_records(
+        &judging.engine,
         &|bytes: &Vec<u8>| judging.row(&reading, bytes),
-        chunks,
-        jobs,
-        judging.recorder.reported(),
+        chunks.map(place),
         judging.environment.cancel(),
         output,
     )
+}
+
+fn first(
+    chunks: &mut impl Iterator<Item = (usize, Result<Vec<u8>, Failure>)>,
+) -> Result<Option<Vec<u8>>, Failure> {
+    chunks.next().map(|(_, row)| row).transpose()
+}
+
+fn place(
+    (at, row): (usize, Result<Vec<u8>, Failure>),
+) -> Result<(usize, Vec<u8>), schedule::Placed> {
+    row.map(|bytes| (at, bytes))
+        .map_err(|error| schedule::Placed::at(error, at))
 }
 
 fn over_table(
@@ -197,7 +279,6 @@ fn over_table(
     reading: &Reading,
     source: Box<dyn std::io::BufRead + Send>,
     kind: TableKind,
-    jobs: usize,
     output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure> {
     let mut rows = TableRows::new(source, kind)?;
@@ -207,28 +288,38 @@ fn over_table(
             configuration.profile.as_ref(),
             &configuration.mismatch,
             reading,
-            &Planning {
-                asks: &configuration.asks,
-                sources: configuration.sources,
-            },
+            &configuration.planning(),
             rows.next().transpose()?,
             output.writer(),
         );
     }
     let judging = Judging::new(configuration)?;
     schedule::over_records(
+        &judging.engine,
         &|record| judging.typed_row(reading, record),
-        rows,
-        jobs,
-        judging.recorder.reported(),
+        rows.enumerate().map(|(place, row)| {
+            row.map(|record| (place + 1, record))
+                .map_err(|error| schedule::Placed::at(error, place + 1))
+        }),
         judging.environment.cancel(),
         output,
     )
 }
 
 /// Read the framing the command line asked for, over the settled pointers.
-fn read_by(common: &Common, settled: &Resolved) -> Result<Reading, Failure> {
-    Ok(Reading::new(common.framing(), settled.on().to_vec())?)
+/// With no flag, `filter` and `rank` read lines, or JSON Lines under a pointer.
+fn read_by(common: &Common, settled: &Resolved, keeping: Keeping) -> Result<Reading, Failure> {
+    let on = settled.on().to_vec();
+    let asked = common.framing();
+    if asked != Framing::Document || !keeping.streams_only() {
+        return Ok(Reading::new(asked, on)?);
+    }
+    let framing = if on.is_empty() {
+        Framing::Lines
+    } else {
+        Framing::Jsonl
+    };
+    Ok(Reading::new(framing, on)?.by_default())
 }
 
 fn table_kind(common: &Common) -> Option<TableKind> {
@@ -238,112 +329,24 @@ fn table_kind(common: &Common) -> Option<TableKind> {
         .or_else(|| common.tsv.then_some(TableKind::Tsv))
 }
 
-/// What a plan shows beyond the request: the question and where it came from.
-struct Planning<'a> {
-    asks: &'a Asks,
-    sources: Option<Sources>,
-}
-
-/// Print the plan for the first record, and read no further than that record.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "byte and table inputs share one plan path with explicit profile state"
-)]
-fn plan(
-    backend: &Backend,
-    profile: Option<&BackendProfile>,
-    mismatch: &Mismatch,
-    reading: &Reading,
-    planning: &Planning<'_>,
-    first: Option<Vec<u8>>,
-    writer: impl Write,
-) -> Result<ExitCode, Failure> {
-    let Some(bytes) = first else {
-        return Ok(ExitCode::SUCCESS);
-    };
-    let record = reading
-        .record(&bytes)
-        .map_err(|error| Failure::record(error, reading.streams()))?;
-    plan_record(
-        backend,
-        profile,
-        mismatch,
-        reading,
-        planning,
-        Some(record),
-        writer,
-    )
-}
-
-#[expect(
-    clippy::too_many_arguments,
-    reason = "the plan path receives each resolved concern without a second configuration type"
-)]
-fn plan_record(
-    backend: &Backend,
-    profile: Option<&BackendProfile>,
-    mismatch: &Mismatch,
-    reading: &Reading,
-    planning: &Planning<'_>,
-    first: Option<Record>,
-    writer: impl Write,
-) -> Result<ExitCode, Failure> {
-    let Some(record) = first else {
-        return Ok(ExitCode::SUCCESS);
-    };
-    let sending = asked_of(reading, record, backend, planning.asks)?;
-    let _prepared = PreparedRequest::with_profile(backend, &sending.plan, profile)?;
-    mismatch.print_once()?;
-    let document = PlanDocument::of(backend, &sending.plan)
-        .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
-    let document = if reading.streams() {
-        document.reading(reading)
-    } else {
-        document
-    };
-    let document = match planning.sources {
-        Some(sources) => document.from(sources),
-        None => document,
-    };
-    edge::write_line(writer, &json_line(&document)?)?;
-    Ok(ExitCode::SUCCESS)
-}
-
-/// Read one record and build the one request it asks, which both paths do.
-fn asked_of(
-    reading: &Reading,
-    record: Record,
-    backend: &Backend,
-    asks: &Asks,
-) -> Result<Sending, Failure> {
-    let question = asks.of(&record)?;
-    let plan = Plan::new(
-        reading.evidence(&record)?,
-        backend.model().clone(),
-        vec![question.clone()],
-    )
-    .map_err(|_| Failure::Defect("a plan of one question asks nothing"))?;
+/// Read one record and the question it is asked, which both paths do.
+fn asked_of(reading: &Reading, record: Record, asks: &Asks) -> Result<Sending, Failure> {
     Ok(Sending {
+        question: asks.of(&record)?,
+        evidence: reading.evidence(&record)?,
         record,
-        question,
-        plan,
     })
 }
 
-/// One question over one backend, asked of every record in turn.
-#[derive(Debug)]
+/// One question over one engine, asked of every record in turn.
 struct Judging<'a> {
-    common: &'a Common,
     environment: &'a Environment,
-    recorder: Recorder,
-    backend: Backend,
-    client: Client,
+    engine: Engine,
     asks: Asks,
     threshold: Option<Threshold>,
     view: View,
     keeping: Keeping,
     streams: bool,
-    profile: Option<BackendProfile>,
     mismatch: Mismatch,
 }
 
@@ -379,22 +382,13 @@ impl Judging<'_> {
             mismatch,
         } = input;
         Ok(Judging {
-            common,
             environment,
-            client: Client::new(Duration::from_secs(common.timeout), backend.is_secure()),
-            recorder: Recorder::of_private(
-                folders.record.as_deref(),
-                folders.replay.as_deref(),
-                folders.private_default,
-                folders.cache_answers,
-            )?,
-            backend,
+            engine: engine(common, environment, folders, backend, profile, common.jobs)?,
             asks,
             threshold,
             view,
             keeping,
             streams,
-            profile,
             mismatch,
         })
     }
@@ -420,82 +414,87 @@ impl Judging<'_> {
         record: Record,
         arrived: Option<&[u8]>,
     ) -> Result<Judged, Failure> {
-        let sending = asked_of(reading, record, &self.backend, &self.asks)?;
-        let answered = ask(
-            &self.backend,
-            &sending.plan,
-            self.common,
-            self.environment,
-            &self.recorder,
-            &self.client,
-            self.profile.as_ref(),
+        let sending = asked_of(reading, record, &self.asks)?;
+        let judged = self.engine.judge(
+            &sending.question,
+            self.threshold,
+            sending.evidence,
+            self.environment.cancel(),
         )?;
-        let [crate::core::AnswerOutcome::Answered(answer)] = answered.reply.outcomes() else {
-            return Err(Failure::Defect("the adapter answered no question"));
-        };
-        let answer = answer.clone();
-        let (value, outcome) = answer.read(self.threshold);
-        let probability = answer.yes();
-        let printed = if self.view.details
-            && (self.keeping != Keeping::Passing || outcome == Outcome::Yes)
-        {
-            let meta = Meta::new(
-                env!("CARGO_PKG_VERSION"),
-                question_sha256_with_profile(
-                    &sending.question,
+        self.row_of(
+            reading,
+            sending.record,
+            sending.question,
+            &judged,
+            RowContext {
+                arrived,
+                batch: None,
+            },
+        )
+    }
+
+    /// Build the line one answered record prints. Both paths share it.
+    fn row_of(
+        &self,
+        reading: &Reading,
+        record: Record,
+        question: Question,
+        judged: &Judgment,
+        context: RowContext<'_>,
+    ) -> Result<Judged, Failure> {
+        let (outcome, replayed) = (judged.outcome, judged.answered.replayed);
+        let probability = judged.answer.yes();
+        let printed =
+            if self.view.details && (self.keeping != Keeping::Passing || outcome == Outcome::Yes) {
+                // `rank` orders and never selects, so a ranked row carries no
+                // value. A value here would be a cut at 0.5 that nobody named.
+                let shown = if self.keeping == Keeping::Ordered {
+                    Value::YesNo(None)
+                } else {
+                    judged.value.clone()
+                };
+                let run = Run {
+                    backend: self.engine.backend(),
+                    tuned_for: self.tuned_for_profile(),
+                    warning: self.mismatch.warning(),
+                    batch_warning: self.mismatch.batch_warning(),
+                };
+                let input = self.streams.then_some(record);
+                Some(decision_with_batch(
+                    run,
+                    judged,
+                    question,
                     self.threshold,
-                    self.tuned_for_profile(),
-                )?,
-                self.backend.url().clone(),
-                answered.reply.model().clone(),
-                answered.reply.usage(),
-                RequestMeta::new(
-                    answered.replayed,
-                    answered.requests_sent,
-                    vec![answered.request.as_str().to_owned()],
-                )
-                .with_profile_warning(self.mismatch.warning()),
-            );
-            // `rank` orders and never selects, so a ranked row carries no
-            // value. A value here would be a cut at 0.5 that nobody named.
-            let shown = if self.keeping == Keeping::Ordered {
-                Value::YesNo(None)
+                    shown,
+                    input,
+                    context.batch,
+                )?)
+            } else if self.keeping == Keeping::Passing && outcome != Outcome::Yes {
+                None
+            } else if self.keeping.streams_only() {
+                Some(match context.arrived {
+                    Some(bytes) => reading.as_it_arrived(bytes)?.to_owned(),
+                    None => json_line(&record)?,
+                })
+            } else if self.view.raw {
+                // One line stands for one record, so an unresolved record prints
+                // an empty line. On one document it prints nothing at all.
+                match judged.value.label() {
+                    Some(label) => Some(label.to_owned()),
+                    None if self.streams => Some(String::new()),
+                    None => None,
+                }
+            } else if self.view.quiet {
+                None
+            } else if self.streams {
+                Some(json_line(&RecordValue::new(record, judged.value.clone()))?)
             } else {
-                value
+                Some(json_line(&judged.value)?)
             };
-            let row = DecisionResult::new(shown, sending.question, answer, self.threshold, meta);
-            let row = if self.streams {
-                row.with_input(sending.record)
-            } else {
-                row
-            };
-            Some(json_line(&row)?)
-        } else if self.keeping == Keeping::Passing && outcome != Outcome::Yes {
-            None
-        } else if self.keeping.streams_only() {
-            Some(match arrived {
-                Some(bytes) => reading.as_it_arrived(bytes)?.to_owned(),
-                None => json_line(&sending.record)?,
-            })
-        } else if self.view.raw {
-            // One line stands for one record, so an unresolved record prints
-            // an empty line. On one document it prints nothing at all.
-            match value.label() {
-                Some(label) => Some(label.to_owned()),
-                None if self.streams => Some(String::new()),
-                None => None,
-            }
-        } else if self.view.quiet {
-            None
-        } else if self.streams {
-            Some(json_line(&RecordValue::new(sending.record, value))?)
-        } else {
-            Some(json_line(&value)?)
-        };
         Ok(Judged {
             printed,
             outcome,
-            replayed: answered.replayed,
+            replayed,
             probability,
             partial_failure: false,
             profile_mismatch: self.mismatch.notice(),

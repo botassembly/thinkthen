@@ -15,8 +15,6 @@ use thiserror::Error;
 
 pub(crate) use crate::core::adapters::systemone::request::encode;
 pub(crate) use crate::core::adapters::systemone::request::encode_raw;
-#[cfg(test)]
-pub(crate) use crate::core::adapters::systemone::request::request;
 pub(crate) use crate::core::adapters::systemone::response::{decode, decode_observed};
 
 /// The name this adapter answers to, in the recording key and the entry.
@@ -34,7 +32,7 @@ pub(crate) const NAME: &str = "systemone";
 pub(crate) const DEFAULT_BASE: &str = "https://api.typesafe.ai/v1";
 
 /// The model this adapter names when `--model` and the question file name none.
-pub(crate) const DEFAULT_MODEL: &str = "jev-latest";
+pub(crate) const DEFAULT_MODEL: &str = "jev-1.13.0";
 
 /// The path under a base that this adapter's endpoint sits at.
 ///
@@ -133,9 +131,30 @@ pub(crate) enum DecodeError {
     UnexpectedAnswer,
 }
 
+/// The wire type one question travels as. The backend check names its
+/// one-question probes by it.
+pub(crate) const fn wire_type(question: &crate::core::question::Question) -> &'static str {
+    use crate::core::question::Question;
+    match question {
+        Question::Decide { .. } | Question::Tag { .. } => "noul",
+        Question::Choose { .. } => "choice",
+        Question::Score { .. } => "score",
+    }
+}
+
 /// The name a question carries on the wire: `q1` onward, in plan order.
-fn wire_name(place: usize) -> String {
+pub(crate) fn wire_name(place: usize) -> String {
     format!("q{}", place + 1)
+}
+
+/// The place a wire name spells, read back as `wire_name` writes it, if any.
+pub(crate) fn wire_place(name: &str) -> Option<usize> {
+    let place = name
+        .strip_prefix('q')?
+        .parse::<usize>()
+        .ok()?
+        .checked_sub(1)?;
+    (wire_name(place) == name).then_some(place)
 }
 
 #[cfg(test)]

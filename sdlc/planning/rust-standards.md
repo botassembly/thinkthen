@@ -59,7 +59,7 @@ Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- 
 - No gate touches the network. Tests replay recorded responses from a fixture directory. One test helper serves canned responses from a loopback listener to prove the request bytes. It uses the standard library only.
 - Property tests cover every parser and round trip: JSON Pointer, the question set, record framing, the wire format. Property tests also cover any total function over a numeric range, such as the threshold rule. `proptest` is a development dependency of the package and exercises core parsers.
 - `spec/*.md` files are executable examples of the command line, run by `mustmatch`. They are the top rung, and they double as the user documentation.
-- The binary reads two hidden, test-only variables. `THINKTHEN_TEST_RETRY_WAIT_MS` keeps retry tests short. `THINKTHEN_TEST_SIGINT_ACK` names an exclusive one-byte carrier acknowledgment used to order SIGINT subprocess tests. Help never shows either setting.
+- The binary reads two hidden, test-only variables. `THINKTHEN_TEST_RETRY_WAIT_MS` keeps retry tests short. `THINKTHEN_TEST_SIGINT_ACK` names an exclusive one-byte carrier acknowledgment used to order SIGINT subprocess tests. Help never shows either setting. Only a build with debug assertions reads them, so a release binary ignores both.
 - Live calls to a paid backend sit outside the ladder in `sdlc/scripts/live`. They run by hand, under a token cap, with Ian's authorization.
 - A claim of secrecy is tested over every command, on the path that succeeds and on each path that fails, and it reads every `Debug` line. One command does not stand for the rest.
 - A test that claims nothing was sent counts the requests on the loopback listener. An exit code and a `--dry-run` prove nothing about a live path.
@@ -73,6 +73,7 @@ Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- 
 | 1 | `sdlc/scripts/lint` | Policy and package checks, the ratchet, the file ceiling, `cargo deny`, `cargo fmt --check`, clippy with warnings denied, `cargo doc` with warnings denied |
 | 2 | `sdlc/scripts/test` | `cargo test --locked --workspace --all-targets --all-features` |
 | 3 | `sdlc/scripts/spec` | The compiled binary against `spec/*.md` |
+| 4 | `sdlc/scripts/surfaces` | Each landed binding's `check.sh` against one loopback backend (ADR 0047) |
 
 Cheapest rung first. The whole ladder runs before any hand-back.
 

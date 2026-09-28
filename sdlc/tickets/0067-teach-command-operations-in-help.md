@@ -10,7 +10,7 @@ Status: landed
 
 ## Outcome and authority
 
-The eight judgment commands begin with the approved description of their text operation, and root help lists them in the teaching order. This closes items 3 and 4 of `../issues/2026-09-22-command-wording-and-help-fixes-for-0-1.md`. Ian authorized creating bounded reviewed tickets within the engine plan. Ticket 0066 is landed; this correction is independent of 0065 and the library team's work. It serves the command-help usability gap without changing answers or options.
+The eight judgment commands begin with the approved description of their text operation, and root help lists them in the teaching order. This closes items 3 and 4 of `../issues/closed/2026-09-22-command-wording-and-help-fixes-for-0-1.md`. Ian authorized creating bounded reviewed tickets within the engine plan. Ticket 0066 is landed; this correction is independent of 0065 and the library team's work. It serves the command-help usability gap without changing answers or options.
 
 ## Current facts and decisions
 

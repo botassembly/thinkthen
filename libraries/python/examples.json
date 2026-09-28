@@ -1,0 +1,67 @@
+{
+  "schema": "thinkthen.examples/1",
+  "surface": "python",
+  "language": "python",
+  "backend": "the conformance backend's generic arm: the first option, level, or yes gets 0.9",
+  "examples": {
+    "decide": {
+      "python": "tt.decide(\"Is this a complaint?\", \"I demand a refund today\")",
+      "expected": "True"
+    },
+    "decide_band": {
+      "python": "tt.decide(tt.question(decide=\"Does the customer ask for a refund?\", threshold=(0.2, 0.95)), \"I was charged twice. Can you fix this?\")",
+      "expected": "None"
+    },
+    "decide_many": {
+      "python": "tt.decide_many(\"Is this a complaint?\", [\"good morning\", \"I demand a refund today\"])",
+      "expected": "[True, True]"
+    },
+    "choose": {
+      "python": "tt.choose(\"Which team owns this?\", \"please route this ticket\", options=[\"billing\", \"shipping\", \"account\"])",
+      "expected": "'billing'"
+    },
+    "tag": {
+      "python": "tt.tag(\"Which words appear?\", \"the refund and the shipping\", labels=[\"refund\", \"shipping\"])",
+      "expected": "['refund', 'shipping']"
+    },
+    "score": {
+      "python": "tt.score(\"How urgent is this?\", \"maybe later\", levels=[\"Routine.\", \"Soon.\", \"Immediate.\"])",
+      "expected": "0.15"
+    },
+    "details": {
+      "python": "tt.details(\"Is this a complaint?\", \"I demand a refund today\")[\"answer\"]",
+      "expected": "{'kind': 'yes_no', 'probability': 0.9}"
+    },
+    "filter": {
+      "python": "tt.filter(\"Is this a complaint?\", [\"good morning\", \"I demand a refund today\"])",
+      "expected": "['good morning', 'I demand a refund today']"
+    },
+    "rank": {
+      "python": "tt.rank(\"Which is a complaint?\", [\"good morning\", \"I demand a refund today\"])",
+      "expected": "[{'index': 0, 'record': 'good morning', 'probability': 0.9}, {'index': 1, 'record': 'I demand a refund today', 'probability': 0.9}]"
+    },
+    "find": {
+      "python": "tt.find(\"Which line asks for money back?\", [\"good morning\", \"I want a refund\"])",
+      "expected": "{'index': 0, 'unit': 'good morning', 'probability': 0.9}"
+    },
+    "annotate": {
+      "files": {
+        "form.json": "{\"version\":1,\"questions\":{\"wants_refund\":{\"decide\":\"Does the customer ask for a refund?\"},\"team\":{\"choose\":\"Which team owns this?\",\"options\":[\"billing\",\"shipping\",\"account\"]},\"urgency\":{\"score\":\"How urgent is this?\",\"levels\":[\"Routine.\",\"Soon.\",\"Immediate.\"]}}}"
+      },
+      "python": "tt.annotate(\"form.json\", [\"maybe later\"])",
+      "expected": "[{'wants_refund': True, 'team': 'billing', 'urgency': 0.15}]"
+    },
+    "recognize": {
+      "python": "[(one.text, one.kind, one.start, one.end) for one in tt.recognize(\"Maria Chen joined Northwind Freight.\", kinds=[\"person\", \"organization\"]).entities]",
+      "expected": "[('Maria Chen', 'person', 0, 10), ('joined Northwind', 'person', 11, 27), ('Freight.', 'person', 28, 36)]"
+    },
+    "relate": {
+      "python": "[(one.relation, one.source.name, one.target.name, one.probability) for one in tt.relate([(\"Checkout returns 500.\", \"alert\"), (\"The payments database is full.\", \"alert\")], relations={\"caused_by\": (\"alert\", \"alert\")})]",
+      "expected": "[('caused_by', 'Checkout returns 500.', 'The payments database is full.', 0.9), ('caused_by', 'The payments database is full.', 'Checkout returns 500.', 0.9)]"
+    },
+    "usage": {
+      "python": "(tt.decide(\"Is this a complaint?\", \"hello\"), tt.decide(\"Is this a complaint?\", \"hello\"), tt.usage()[\"requests_sent\"], tt.usage()[\"cache_answers\"])",
+      "expected": "(True, True, 1, 1)"
+    }
+  }
+}

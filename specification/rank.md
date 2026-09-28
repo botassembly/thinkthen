@@ -5,14 +5,16 @@ Status: **Settled** for version one, by ADR 0007.
 Prints the records in order of the probability of yes.
 
 ```text
-thinkthen rank QUESTION (--lines|--jsonl|--csv|--tsv) [--top N] [--field POINTER] [--details] [BACKEND]
+thinkthen rank QUESTION [--lines|--jsonl|--csv|--tsv] [--top N] [--field POINTER] [--details] [BACKEND]
 ```
 
 ## What it reads
 
-A stream of records. `rank` requires `--lines`, `--jsonl`, `--csv`, or `--tsv`. `--input FILE` reads a file instead of standard input. [records.md](records.md) gives the framing and the pointer rules.
+A stream of records. With no framing flag it reads lines, or JSON Lines when a pointer names part of each record. The pointer comes from `--field` or from a question file's `on`. `--lines`, `--jsonl`, `--csv`, or `--tsv` names the framing outright. `--input FILE` reads a file instead of standard input. A blank text line is skipped, as [records.md](records.md) gives. That page also gives the pointer rules.
 
 `QUESTION` is one argument. The tool asks it of each record as a yes/no question. It is the question text, or `@` and the path of a question file holding one `decide` question, and `--true TEXT` and `--false TEXT` say what a yes and a no mean, exactly as they do on `decide`.
+
+By default a stream of records shares requests, filling each to the smaller of the request-size setting and a backend profile limit. `--max-request-bytes N` sets that size for this command, with `THINKTHEN_MAX_REQUEST_BYTES` next and 96,000 bytes at every address by default; see [settings.md](settings.md). The evidence of a batch is one fixed sentence, and each record appears once, inside its own question. Every run moves a few answers, and batching moves a few more. ADR 0055 records local experiment 275, which asked four yes/no questions over the 306 Beatles songs. It ran each batched form three times on the same bytes and once on each of three shuffled record orders. The batched form stayed within 4 right answers across repeats and orders on every task. It never fell more than 3 right answers below one song a request. On "It appears on the album Abbey Road" it scored 283 to 287 right of 306, where one title a request scored 286. It sent 11,468 input tokens for the 306 titles, where one title a request sent 88,933. Its one measured loss came on "It was released before 1965", against the earlier batch form, which listed every record in the evidence. That form scored 276 to 283 right in the table's own order and 258 to 270 over shuffled orders. The quoted form scored 255 to 259, and one title a request scored 253. `--batch 1` asks one record a request and sends the requests the tool sent before batching.
 
 ## What it prints
 
@@ -25,16 +27,16 @@ Each line or JSONL record as it arrived, and each CSV or TSV row as a compact JS
 | Option | Meaning | Default |
 | --- | --- | --- |
 | `--top N` | Prints the first `N` records of the order. It saves no requests, because every record is judged before anything is sorted | All records |
-| `--lines`, `--jsonl`, `--csv`, or `--tsv` | The framing. One of the four is required | None. Its absence is a usage error |
+| `--lines`, `--jsonl`, `--csv`, or `--tsv` | The framing | `--lines`, or `--jsonl` when a pointer is given |
 | `--field POINTER` | The part of each record the model sees | The whole record |
 | `--details` | Prints one result object for each record it prints | Off |
 | `--input FILE` | Reads the records from a file | Standard input |
 | `--true TEXT`, `--false TEXT` | What a yes and a no mean, sent beside the question | No text |
 | `--dry-run` | Prints the plan for the first record and sends nothing | Off |
 | Record options | `--jobs N`, `--record DIR`, `--replay DIR`, `--cache DIR`, as [records.md](records.md) and [recording.md](recording.md) give them | `--jobs 4` |
-| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-latest` |
+| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-1.13.0` |
 
-`rank` takes no `--threshold`, no `--quiet`, and no `--raw`. Each is refused by name, and the message says which command carries it. A rule is refused in both homes, so a question file holding a `threshold` is refused too, at exit 5. A missing framing is a usage error.
+`rank` takes no `--threshold`, no `--quiet`, and no `--raw`. Each is refused by name, and the message says which command carries it. A rule is refused in both homes, so a question file holding a `threshold` is refused too, at exit 5.
 
 `--top N` takes a whole number of 1 or more. `--top 0` prints nothing and is a usage error.
 

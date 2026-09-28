@@ -9,8 +9,10 @@ use std::{
 
 use serde_json::Value;
 
-use crate::harness::{Canned, Listener, spawn};
+use crate::harness::{Canned, Listener, finish, spawn};
 
+mod at_once;
+mod ceiling;
 mod details;
 
 pub(super) fn run(listener: &Listener, options: &[&str], input: &[u8]) -> Output {
@@ -332,7 +334,7 @@ fn a_closed_output_pipe_ends_the_aggregate_quietly() {
         .write_all(br#"[{"name":"Ada","kind":"person"},{"name":"Acme","kind":"organization"}]"#)
         .expect("input write");
     drop(child.stdout.take().expect("output"));
-    let output = child.wait_with_output().expect("completion");
+    let output = finish(child, "relate with a closed output").expect("completion");
     assert_eq!(output.status.code(), Some(0));
     assert!(output.stderr.is_empty());
 }
@@ -443,4 +445,32 @@ fn the_default_and_named_caches_answer_a_repeated_run_without_a_send() {
     assert!(!named_files.is_empty());
     let default_files = crate::secrecy::written(&root.join("xdg"));
     assert!(!default_files.is_empty());
+}
+
+/// Ticket 0132: a relation whose one loopback reply passes 1 MiB keeps it.
+#[test]
+fn a_relation_of_180_names_keeps_its_reply() {
+    let backend = conformance_backend::Backend::start().expect("backend");
+    let base = format!("{}/generic/v1", backend.origin());
+    let names = (0..180)
+        .map(|place| format!("Name{place}\n"))
+        .collect::<String>();
+    let arguments = ["relate", "r", "--lines", "--url", &base, "--no-cache"];
+    let output = spawn(
+        &arguments,
+        &[("THINKTHEN_API_KEY", "secret-value")],
+        names.as_bytes(),
+    )
+    .expect("command");
+    assert_eq!(String::from_utf8_lossy(&output.stderr), "");
+    assert_eq!(output.status.code(), Some(0));
+    let printed = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(printed.lines().count(), 32_220);
+    assert_eq!(
+        printed.lines().next(),
+        Some(
+            r#"{"relation":"r","source":{"name":"Name0","kind":"*"},"target":{"name":"Name1","kind":"*"},"probability":0.9}"#
+        )
+    );
+    assert_eq!(backend.count(), 1);
 }

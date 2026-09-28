@@ -10,10 +10,22 @@ use super::{
 };
 
 /// The verbs the tool answers to.
+///
+/// Help lists the ten functions in enum order, then clap's own `help`, which
+/// clap numbers 999, then the admin commands, numbered from 1000.
 #[derive(Debug, Subcommand)]
 pub(crate) enum Command {
     /// Report resolved local settings, cache size, and local usage counts.
+    #[command(display_order = 1002)]
     Status(StatusArguments),
+
+    /// Check that a backend you name works with this tool, over four fixed requests.
+    ///
+    /// It exits 0 only when no finding is critical. Every request is real spend.
+    /// The report names the model asked for, the model sent, and the model each
+    /// reply names.
+    #[command(display_order = 1003)]
+    Check(CheckArguments),
 
     /// Answer one yes or no question about a text. A record run exits 0 when
     /// it completes without a partial or whole-run failure. The printed
@@ -31,9 +43,9 @@ pub(crate) enum Command {
     ///
     /// A script that acts on the answer reads all four outcomes:
     ///
-    /// thinkthen decide 'The customer asks for a refund.' --threshold 0.1:0.9 --quiet < m.txt
+    /// thinkthen decide 'The customer asks for a refund.' --threshold 0.1:0.9 --quiet < m.txt && refund_code=0 || refund_code=$?
     ///
-    /// case $? in 0) route refunds ;; 1) route support ;; 3) route triage ;; *) exit 4 ;; esac
+    /// case $refund_code in 0) route refunds ;; 1) route support ;; 3) route triage ;; *) exit 4 ;; esac
     ///
     /// Word the question in the form where yes permits the action. A broken run
     /// then never permits anything, because every outcome other than 0 leaves
@@ -44,8 +56,10 @@ pub(crate) enum Command {
     ///
     /// `filter` asks one yes/no question of each record and prints the records
     /// that reach `--threshold` in input order. Line and JSONL records return
-    /// as they arrived; CSV and TSV records become compact JSON objects. It needs
-    /// a record framing and makes one paid request for every record.
+    /// as they arrived; CSV and TSV records become compact JSON objects. With no
+    /// framing flag it reads lines, or JSON Lines when a pointer is given by
+    /// --field or a question file's `on`. It makes one paid request for every
+    /// record.
     ///
     /// A single cut keeps or drops, and there is no third pile. A run that
     /// wants one asks `decide --details` and splits with `jq`:
@@ -70,13 +84,17 @@ pub(crate) enum Command {
     /// the whole set, so an endless stream is cut into windows upstream.
     /// `--top N` prints the first N of the order and saves no request.
     ///
-    /// `rank` orders and never selects. A floor is `filter` in front of it.
+    /// `rank` orders and never selects. A floor is `filter` in front of it. With
+    /// no framing flag it reads lines, or JSON Lines when a pointer is given by
+    /// --field or a question file's `on`.
     ///
     /// A record run exits 0 when it completes without a partial or whole-run
     /// failure. The printed values carry the individual answers.
     Rank(RankArguments),
 
     /// Pick one option from your list.
+    ///
+    /// Use `tag` when more than one answer can apply.
     ///
     /// The answer is a bare JSON string, or `null` when the winning option
     /// falls under `--threshold` or the top two options tie exactly. Exit 0 is
@@ -91,11 +109,11 @@ pub(crate) enum Command {
     /// and an empty string is no option, so only the exit code tells a not
     /// sure pick from a broken run:
     ///
-    /// pick=$(thinkthen choose 'Which team owns this?' billing shipping other --raw < m.txt) && rc=0 || rc=$?
+    /// team=$(thinkthen choose 'Which team owns this?' billing shipping other --raw < m.txt) && team_code=0 || team_code=$?
     ///
-    /// case $rc in 0) ;; 3) pick=not_sure ;; *) exit "$rc" ;; esac
+    /// case $team_code in 0) ;; 3) team=not_sure ;; *) exit "$team_code" ;; esac
     ///
-    /// case $pick in billing) pay ;; not_sure) triage ;; *) exit 2 ;; esac
+    /// case $team in billing) pay ;; not_sure) triage ;; *) exit 2 ;; esac
     ///
     /// "Not stated" is a different answer from "false". "Does the text
     /// establish X?" and "Is X true?" are different questions. When the
@@ -172,6 +190,11 @@ pub(crate) enum Command {
     /// Relations are beta. `--threshold` gates computed name strength;
     /// `--relation-threshold` gates a relation's model probability.
     ///
+    /// Each record makes paid requests: a detection question for every word, a
+    /// kind question for every word when two or more kinds are given, and
+    /// relation questions when rules are given. --dry-run prints the exact
+    /// requests for the first record.
+    ///
     /// A record run exits 0 when it completes without a partial or whole-run
     /// failure. The printed values carry the individual answers.
     Recognize(RecognizeArguments),
@@ -182,16 +205,72 @@ pub(crate) enum Command {
     /// set and sees every other entity admitted by a rule. Inline rules use
     /// NAME=SOURCE_KIND:TARGET_KIND. A bare NAME means NAME=*:*.
     ///
+    /// A run makes paid requests. A relation between two kinds asks one
+    /// question for every entity of the larger kind, or of the source kind when
+    /// the counts are equal. A same-kind relation asks one yes-or-no question
+    /// for every pair, in both directions unless --either. --dry-run prints the
+    /// questions and requests and sends nothing.
+    ///
     /// A run that answers some relation questions and fails others prints what
     /// it has and exits 6. A run whose relation questions all fail prints
     /// nothing and exits 4.
     Relate(RelateArguments),
 
     /// Inspect and maintain answer-cache folders without sending a request.
+    ///
+    /// The cache never trims itself. It grows until you run cache prune, and
+    /// it holds the judged text until then.
+    #[command(display_order = 1004)]
     Cache(CacheArguments),
 
     /// List or print the built-in jq transforms without running them.
+    #[command(display_order = 1005)]
     Transform(crate::cli::transform::TransformArguments),
+
+    /// Grade saved answers against an answer key and suggest a bar.
+    ///
+    /// RESULTS holds the lines `decide`, `filter`, `choose`, `tag`, `score`,
+    /// `rank`, `find`, `annotate`, `recognize`, or `relate` printed with
+    /// --details, and KEY holds one
+    /// JSON object per record: its id, the right value, and an optional part of
+    /// tune or held. audit prints agreement with its 95% interval, both kinds of
+    /// disagreement, precision and f1, AUC, calibration, a coverage curve, and a
+    /// suggested bar tuned on one part and checked on the other. An answer
+    /// inside a band is not sure, and it counts apart from right and wrong.
+    /// recognize names and relate edges get precision, recall, and f1.
+    ///
+    /// A key may give each record a part of tune or held; without parts audit
+    /// splits the records itself and shows how steady its bar is.
+    ///
+    /// --write changes one threshold in the file and prints the old value on
+    /// standard error.
+    ///
+    /// audit sends no request and reads no key.
+    ///
+    /// To grade a recording, replay it with --details and pass the output:
+    ///
+    /// thinkthen decide 'Is it red?' --jsonl --details --replay runs/red < records.jsonl | thinkthen audit - key.jsonl
+    #[command(display_order = 1000)]
+    Audit(crate::cli::audit::AuditArguments),
+
+    /// Show which saved answers changed between two runs or two cuts.
+    ///
+    /// A and B hold the lines `decide`, `choose`, `recognize`, or `relate` printed for the same
+    /// records. Without B, diff compares A under --threshold with A under --compare-threshold.
+    /// Two cuts on one run cost nothing. The probabilities are already saved. Each change prints
+    /// one JSON line, or under --table one line and a line per changed item. A summary with its
+    /// McNemar test prints last. With --key, a changed answer says whether it gained or lost a right
+    /// answer, and a changed record counts the key names or edges each side matched. An answer
+    /// inside a band is not sure.
+    ///
+    /// diff pairs answers by record id and answer name only. It compares
+    /// question digests only when both runs saved --details.
+    ///
+    /// diff sends no request and reads no key.
+    ///
+    /// thinkthen diff runs/before.jsonl runs/after.jsonl --key key.jsonl --table
+    #[command(display_order = 1001)]
+    Diff(crate::cli::diff::DiffArguments),
 }
 
 #[derive(Args, Debug)]
@@ -202,7 +281,7 @@ pub(crate) struct CacheArguments {
 
 #[derive(Debug, Subcommand)]
 pub(crate) enum CacheCommand {
-    /// Remove selected entries, then the oldest entries above the size target.
+    /// Remove selected entries, then the oldest entries until the folder fits the size target.
     Prune(PruneArguments),
 }
 
@@ -210,20 +289,63 @@ pub(crate) enum CacheCommand {
 pub(crate) struct PruneArguments {
     /// The cache or recording folder to maintain.
     pub(crate) directory: PathBuf,
-    /// Keep recognized entries at or below this many allocated bytes.
+    /// Trim to this many allocated bytes. Without it, the configuration's
+    /// cache_bytes applies, or 100000000.
     #[arg(long, value_name = "BYTES")]
     pub(crate) max_size: Option<String>,
     /// Remove entries strictly older than a duration such as 30d or 12h.
     #[arg(long, value_name = "Nd|Nh|Nm|Ns")]
     pub(crate) older_than: Option<String>,
-    /// Remove entries answered by any other model.
+    /// Remove entries whose reply names another model. Give the version that
+    /// answered, as a result's meta.model shows it, not the alias passed to
+    /// --model. A name no reply in the folder carries is refused, and nothing
+    /// is removed.
     #[arg(long, value_name = "MODEL")]
     pub(crate) answered_by_other_than: Option<String>,
 }
 
 impl Command {
+    /// Whether a one-question verb received a loose second argument.
+    pub(crate) fn stray(&self) -> bool {
+        match self {
+            Self::Decide(arguments) => !arguments.extra.is_empty(),
+            Self::Filter(arguments) => !arguments.extra.is_empty(),
+            Self::Rank(arguments) => !arguments.extra.is_empty(),
+            Self::Find(arguments) => !arguments.extra.is_empty(),
+            _ => false,
+        }
+    }
+
+    /// Whether the command line itself selected JSON Lines with no pointer.
+    pub(crate) fn typed_jsonl(&self) -> bool {
+        match self {
+            Self::Find(arguments) => arguments.common.jsonl && arguments.common.field.is_empty(),
+            Self::Decide(arguments) => arguments.common.jsonl && arguments.common.field.is_empty(),
+            Self::Choose(arguments) => arguments.common.jsonl && arguments.common.field.is_empty(),
+            Self::Tag(arguments) => arguments.common.jsonl && arguments.common.field.is_empty(),
+            Self::Score(arguments) => arguments.common.jsonl && arguments.common.field.is_empty(),
+            Self::Filter(arguments) => arguments.common.jsonl && arguments.common.field.is_empty(),
+            Self::Rank(arguments) => arguments.common.jsonl && arguments.common.field.is_empty(),
+            Self::Annotate(arguments) => {
+                arguments.common.jsonl && arguments.common.field.is_empty()
+            }
+            Self::Recognize(arguments) => {
+                arguments.common.jsonl && arguments.common.field.is_empty()
+            }
+            _ => false,
+        }
+    }
+
     pub(crate) const fn reads_input(&self) -> bool {
-        !matches!(self, Self::Cache(_) | Self::Status(_) | Self::Transform(_))
+        !matches!(
+            self,
+            Self::Cache(_)
+                | Self::Status(_)
+                | Self::Check(_)
+                | Self::Transform(_)
+                | Self::Audit(_)
+                | Self::Diff(_)
+        )
     }
 
     /// The input file one command named, if any.
@@ -239,7 +361,12 @@ impl Command {
             Self::Annotate(arguments) => arguments.common.input.as_deref(),
             Self::Recognize(arguments) => arguments.common.input.as_deref(),
             Self::Relate(arguments) => arguments.common.input.as_deref(),
-            Self::Cache(_) | Self::Status(_) | Self::Transform(_) => None,
+            Self::Cache(_)
+            | Self::Status(_)
+            | Self::Check(_)
+            | Self::Transform(_)
+            | Self::Audit(_)
+            | Self::Diff(_) => None,
         }
     }
 
@@ -256,7 +383,12 @@ impl Command {
             Self::Annotate(arguments) => arguments.common.timeout,
             Self::Recognize(arguments) => arguments.common.timeout,
             Self::Relate(arguments) => arguments.common.timeout,
-            Self::Cache(_) | Self::Status(_) | Self::Transform(_) => 1,
+            Self::Check(arguments) => arguments.timeout,
+            Self::Cache(_)
+            | Self::Status(_)
+            | Self::Transform(_)
+            | Self::Audit(_)
+            | Self::Diff(_) => 1,
         }
     }
 }
@@ -266,4 +398,20 @@ pub(crate) struct StatusArguments {
     /// Print one closed JSON object instead of name-value lines.
     #[arg(long)]
     pub(crate) json: bool,
+}
+
+#[derive(Args, Debug)]
+pub(crate) struct CheckArguments {
+    /// The base the requests are posted under, which outranks THINKTHEN_BASE_URL.
+    #[arg(long, value_name = "URL")]
+    pub(crate) url: Option<String>,
+    /// The model named in each request, resolved as every command resolves it.
+    #[arg(long, value_name = "NAME")]
+    pub(crate) model: Option<String>,
+    /// Seconds from 1 to 86400 that bound one attempt from connect to last byte, and each retry wait.
+    #[arg(long, value_name = "SECONDS", default_value_t = 30)]
+    pub(crate) timeout: u64,
+    /// Print the four request bodies and stop. No key is read and nothing is sent.
+    #[arg(long)]
+    pub(crate) dry_run: bool,
 }

@@ -10,7 +10,7 @@ Status: landed 2026-09-24; record `sdlc/records/0100-quick-fix-manual-gate-and-c
 
 ## Work
 
-1. Set `on:` in `.github/workflows/gate.yml` to `workflow_dispatch:` only. The jobs stay unchanged. Ian ruled on 2026-09-22 that no push or pull request runs GitHub Actions. `sdlc/issues/2026-09-22-stop-github-actions-on-push.md` records the ruling.
+1. Set `on:` in `.github/workflows/gate.yml` to `workflow_dispatch:` only. The jobs stay unchanged. Ian ruled on 2026-09-22 that no push or pull request runs GitHub Actions. `sdlc/issues/closed/2026-09-22-stop-github-actions-on-push.md` records the ruling.
 2. Verify each fix on main by command. Then set the Status line of each issue to closed, naming the ticket and commit that fixed it:
    - `2026-09-22-command-wording-and-help-fixes-for-0-1` (tickets 0082 and 0090)
    - `2026-09-20-accuracy-round-on-three-public-sets-and-a-speed-rerun` (the `cost.jq` defect, ticket 0044)

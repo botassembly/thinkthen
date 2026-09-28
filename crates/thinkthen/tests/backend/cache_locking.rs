@@ -11,7 +11,7 @@ use std::time::Duration;
 
 #[cfg(target_os = "linux")]
 use crate::harness::process_has_file;
-use crate::harness::{Canned, Listener, Observed, spawn};
+use crate::harness::{Canned, Listener, Observed, finish, spawn};
 use crate::result_assertions::normalized_details;
 
 const QUESTION: &str = "asks for a refund";
@@ -76,8 +76,8 @@ impl ReapedChild {
     fn wait(mut self) -> io::Result<Output> {
         self.0
             .take()
-            .ok_or_else(|| io::Error::other("child already reaped"))?
-            .wait_with_output()
+            .ok_or_else(|| io::Error::other("child already reaped"))
+            .and_then(|child| finish(child, "a cache-lock run"))
     }
 
     fn write_input(&mut self, input: &[u8]) -> io::Result<()> {
@@ -107,6 +107,18 @@ impl Drop for ReapedChild {
             let _reaped = child.wait();
         }
     }
+}
+
+#[cfg(target_os = "linux")]
+fn wait_until_open(waiter: &ReapedChild, lock: &fs::Metadata) -> io::Result<()> {
+    let deadline = std::time::Instant::now() + Duration::from_secs(2);
+    while !process_has_file(waiter.id()?, lock)? {
+        if std::time::Instant::now() >= deadline {
+            return Err(io::Error::other("waiter never opened the owner inode"));
+        }
+        thread::yield_now();
+    }
+    Ok(())
 }
 
 fn start(base: &str, folder: &str) -> io::Result<ReapedChild> {
@@ -258,12 +270,12 @@ fn two_processes_share_one_request_and_the_keyless_waiter_replays() {
 #[cfg(target_os = "linux")]
 #[test]
 fn waiter_blocks_on_the_owners_original_inode_before_install_and_unlink() {
-    use std::sync::{Arc, Barrier};
-    use std::time::Instant;
+    use conformance_backend::Rendezvous;
+    use std::sync::Arc;
 
     let cache = folder("cache-original-inode-process-race");
     let named = cache.to_string_lossy().into_owned();
-    let release = Arc::new(Barrier::new(2));
+    let release = Arc::new(Rendezvous::new(2));
     let (events, observed) = mpsc::channel();
     let listener = Listener::answering_with_events(
         {
@@ -288,16 +300,7 @@ fn waiter_blocks_on_the_owners_original_inode_before_install_and_unlink() {
     let owner_file = lock.metadata().expect("owner lock metadata");
 
     let mut waiter = start(listener.base(), &named).expect("waiter starts");
-    let deadline = Instant::now() + Duration::from_secs(2);
-    while !process_has_file(waiter.id().expect("waiter pid"), &owner_file)
-        .expect("waiter descriptors are readable")
-    {
-        assert!(
-            Instant::now() < deadline,
-            "waiter never opened the owner inode"
-        );
-        thread::yield_now();
-    }
+    wait_until_open(&waiter, &owner_file).expect("waiter opened the owner inode");
     assert!(owner.is_running().expect("owner state"));
     assert!(waiter.is_running().expect("waiter state"));
     assert!(observed.recv_timeout(Duration::from_millis(100)).is_err());
@@ -358,50 +361,45 @@ fn process_death_releases_the_digest_lock_without_recovery() {
     assert!(one_entry(&cache).expect("one entry").is_file());
 }
 
-#[cfg(unix)]
+#[cfg(target_os = "linux")]
 #[test]
 fn a_failed_owner_keeps_the_empty_lock_name_and_a_waiter_sends_nothing() {
+    use conformance_backend::Rendezvous;
     use std::os::unix::fs::PermissionsExt as _;
 
     let cache = folder("cache-recording-failure");
     let named = cache.to_string_lossy().into_owned();
+    let release = Arc::new(Rendezvous::new(2));
     let (events, observed) = mpsc::channel();
-    let listener = Listener::answering_with_events(|_| Canned::ok(ANSWER).after(200), events)
-        .expect("a loopback listener");
-    let (owner_send, owner_result) = mpsc::channel();
-    let owner = thread::spawn({
-        let base = listener.base().to_owned();
-        let named = named.clone();
-        move || {
-            owner_send
-                .send(cached(&base, &named, true))
-                .expect("owner reported")
-        }
-    });
+    let listener = Listener::answering_with_events(
+        {
+            let release = Arc::clone(&release);
+            move |_| Canned::ok(ANSWER).after_release(Arc::clone(&release))
+        },
+        events,
+    )
+    .expect("a loopback listener");
+    let owner = start(listener.base(), &named).expect("owner starts");
     assert!(matches!(
         observed.recv_timeout(Duration::from_secs(2)),
         Ok(Observed::Request)
     ));
-    let mut permissions = fs::metadata(&cache).expect("cache metadata").permissions();
-    permissions.set_mode(0o500);
-    fs::set_permissions(&cache, permissions).expect("cache made read only");
-    let waiter = thread::spawn({
-        let base = listener.base().to_owned();
-        let named = named.clone();
-        move || cached(&base, &named, true).expect("waiter runs")
-    });
-    let failed = owner_result
-        .recv_timeout(Duration::from_secs(2))
-        .expect("owner finishes")
-        .expect("owner runs");
-    owner.join().expect("owner joins");
-    assert_eq!(failed.status.code(), Some(5));
-    assert!(observed.recv_timeout(Duration::from_millis(300)).is_err());
-    let mut permissions = fs::metadata(&cache).expect("cache metadata").permissions();
-    permissions.set_mode(0o700);
-    fs::set_permissions(&cache, permissions).expect("cache made writable");
-    let refused = waiter.join().expect("waiter joins");
+    let lock = fs::read_dir(cache.join(".locks"))
+        .expect("lock folder")
+        .find_map(Result::ok)
+        .expect("owner lock");
+    let mut waiter = start(listener.base(), &named).expect("waiter starts");
+    let owner_file = lock.metadata().expect("owner lock metadata");
+    wait_until_open(&waiter, &owner_file).expect("waiter opened the owner inode");
+    assert!(waiter.is_running().expect("waiter state"));
+    // A directory at the entry stops the install even for root; mode 0500 does not.
+    let entry = cache.join(lock.file_name()).with_extension("json");
+    fs::create_dir(&entry).expect("entry path blocked");
 
+    release.wait();
+    let failed = owner.wait().expect("owner finishes");
+    let refused = waiter.wait().expect("waiter finishes");
+    assert_eq!(failed.status.code(), Some(5));
     assert_eq!(refused.status.code(), Some(5));
     assert_eq!(listener.requests().len(), 1);
     let locks = fs::read_dir(cache.join(".locks"))

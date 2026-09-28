@@ -1,13 +1,21 @@
 //! The compiled binary answers for its own identity.
+#![cfg(feature = "cli")]
 
 use std::process::Command;
 
+#[path = "../src/test_deadline/run.rs"]
+mod run;
+#[path = "../src/test_deadline/wait.rs"]
+mod wait;
+
 #[test]
 fn version_flag_prints_the_identity_line_and_exits_zero() {
-    let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .arg("--version")
-        .output()
-        .expect("the compiled binary runs");
+    let output = run::output(
+        Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+            .env_clear()
+            .arg("--version"),
+    )
+    .expect("the compiled binary runs");
 
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
@@ -23,11 +31,12 @@ fn help_opens_with_the_semantic_commands_introduction() {
         "Semantic commands for the shell: if, grep, and sort that understand meaning";
 
     for flag in ["-h", "--help"] {
-        let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-            .arg(flag)
-            .env_clear()
-            .output()
-            .expect("the compiled binary runs");
+        let output = run::output(
+            Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+                .arg(flag)
+                .env_clear(),
+        )
+        .expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(0), "{flag}");
         assert!(output.stderr.is_empty(), "{flag}");
@@ -66,11 +75,12 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
     let mut failures = Vec::new();
     for (verb, sentence) in INTRODUCTIONS {
         for flag in ["-h", "--help"] {
-            let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-                .args([verb, flag])
-                .env_clear()
-                .output()
-                .expect("the compiled binary runs");
+            let output = run::output(
+                Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+                    .args([verb, flag])
+                    .env_clear(),
+            )
+            .expect("the compiled binary runs");
             assert_eq!(output.status.code(), Some(0), "{verb} {flag}");
             assert!(output.stderr.is_empty(), "{verb} {flag}");
             let help = String::from_utf8_lossy(&output.stdout);
@@ -89,11 +99,12 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
         }
     }
 
-    let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .arg("-h")
-        .env_clear()
-        .output()
-        .expect("the compiled binary runs");
+    let output = run::output(
+        Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+            .arg("-h")
+            .env_clear(),
+    )
+    .expect("the compiled binary runs");
     assert_eq!(output.status.code(), Some(0));
     let help = String::from_utf8_lossy(&output.stdout);
     let listed: Vec<&str> = help
@@ -104,8 +115,7 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
         .lines()
         .filter_map(|line| line.split_whitespace().next())
         .collect();
-    const ORDER: [&str; 14] = [
-        "status",
+    const ORDER: [&str; 17] = [
         "decide",
         "filter",
         "rank",
@@ -116,9 +126,13 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
         "annotate",
         "recognize",
         "relate",
+        "help",
+        "audit",
+        "diff",
+        "status",
+        "check",
         "cache",
         "transform",
-        "help",
     ];
     if listed != ORDER {
         failures.push(format!("root Commands order is {listed:?}"));
@@ -129,10 +143,11 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
 
 /// The long or short help one command prints, refused unless it exited 0.
 fn help(arguments: &[&str]) -> std::io::Result<String> {
-    let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .args(arguments)
-        .env_clear()
-        .output()?;
+    let output = run::output(
+        Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+            .args(arguments)
+            .env_clear(),
+    )?;
     if output.status.code() != Some(0) {
         return Err(std::io::Error::other(format!("{arguments:?} failed")));
     }
@@ -187,13 +202,21 @@ fn recognize_and_relate_keep_the_beta_warning_the_cuts_and_the_disclosure() {
 }
 
 #[test]
-fn the_specification_defines_unresolved_once_and_keeps_the_closed_wording() {
-    const DEFINITION: &str = "`unresolved` is the formal name for a not sure answer.";
+fn no_page_or_transform_says_unresolved() {
+    const DEFINITION: &str = "`unsure` is the machine name for a not sure answer, in `audit`, `diff`, and the built-in transforms.";
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let mut defined = Vec::new();
-    let mut pages = vec![root.join("crates/thinkthen/Cargo.toml")];
+    let mut pages = vec![
+        root.join("crates/thinkthen/Cargo.toml"),
+        root.join("transforms/README.md"),
+    ];
     for entry in std::fs::read_dir(root.join("specification")).expect("the specification") {
         pages.push(entry.expect("a page").path());
+    }
+    for entry in std::fs::read_dir(root.join("crates/thinkthen/transforms"))
+        .expect("the built-in transforms")
+    {
+        pages.push(entry.expect("a transform").path());
     }
     for page in pages.iter().filter(|page| page.is_file()) {
         let text = std::fs::read_to_string(page).expect("a readable page");
@@ -206,6 +229,11 @@ fn the_specification_defines_unresolved_once_and_keeps_the_closed_wording() {
             );
         }
         let lower = text.to_lowercase();
+        assert!(
+            !lower.contains("unresolved"),
+            "{} says the old word",
+            page.display()
+        );
         for banned in ["decider model", "decision model"] {
             assert!(!lower.contains(banned), "{} says {banned}", page.display());
         }
@@ -219,4 +247,31 @@ fn the_specification_defines_unresolved_once_and_keeps_the_closed_wording() {
     assert!(readme.contains("\n- A yes, a no, a not sure answer, and a broken run stay four different outcomes in the output and in the exit code.\n"), "{readme}");
     let score = std::fs::read_to_string(root.join("specification/score.md")).expect("score.md");
     assert!(score.contains("showed rubric scores rejecting"), "{score}");
+}
+
+/// Each sentence names a cost or a stop a user meets only after a run starts.
+#[test]
+fn the_long_help_names_connections_conflicts_paid_requests_and_models() {
+    let table = [
+        (
+            "decide",
+            " A run opens up to one connection for each request in flight, so --jobs N opens up to N connections.\n",
+        ),
+        (
+            "decide",
+            " A folder that already holds an answer stops at exit 5 when the backend answers that request differently.\n",
+        ),
+        (
+            "recognize",
+            "\n\nEach record makes paid requests: a detection question for every word, a kind question for every word when two or more kinds are given, and relation questions when rules are given. --dry-run prints the exact requests for the first record.\n\n",
+        ),
+        (
+            "check",
+            " The report names the model asked for, the model sent, and the model each reply names.\n\n",
+        ),
+    ];
+    for (command, sentence) in table {
+        let help = help(&[command, "--help"]).expect("the compiled binary runs");
+        assert!(help.contains(sentence), "{command}: {sentence}: {help}");
+    }
 }

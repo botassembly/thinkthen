@@ -1,0 +1,20 @@
+{
+  "file": "billing.py",
+  "at": "@@ -3,2 +3,2 @@ def late_fee(days):",
+  "changes": false
+}
+{
+  "file": "billing.py",
+  "at": "@@ -8,2 +8,2 @@ def refund(amount, limit):",
+  "changes": true
+}
+{
+  "file": "billing.py",
+  "at": "@@ -14,3 +14,3 @@ def total(items):",
+  "changes": false
+}
+{
+  "file": "billing.py",
+  "at": "@@ -20,1 +20,1 @@ def tax(amount):",
+  "changes": true
+}

@@ -65,13 +65,13 @@ fn each_wire_fault_arm_yields_its_kind_and_sentence() {
         ),
         (
             "429",
-            3,
+            4,
             "thinkthen: the backend answered with status 429: the backend's rate limit was reached\n",
         ),
         (
             "503",
-            3,
-            "thinkthen: the backend answered with status 503\n",
+            4,
+            "thinkthen: the backend answered with status 503: the backend failed after the allowed attempts; try again later or change --max-retries\n",
         ),
         (
             "refuse",
@@ -188,7 +188,10 @@ fn the_generic_arm_answers_every_verb() {
         (
             &["recognize", recognize.as_str()],
             "Maria Chen arrived.",
-            "{\"entities\":[{\"name\":\"Maria Chen arrived.\",\"kind\":\"person\",\"start\":0,\"end\":19,\"strength\":0.9}]}\n",
+            concat!(
+                "{\"entities\":[{\"text\":\"Maria Chen\",\"start\":0,\"end\":10,\"length\":10,\"kind\":\"person\",\"strength\":0.6736},",
+                "{\"text\":\"arrived.\",\"start\":11,\"end\":19,\"length\":8,\"kind\":\"person\",\"strength\":0.6736}]}\n"
+            ),
         ),
         (
             &["relate", relate.as_str()],

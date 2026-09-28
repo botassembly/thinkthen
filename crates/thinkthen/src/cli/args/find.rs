@@ -1,5 +1,6 @@
 //! The deliberately smaller option surface of `find`.
 
+use std::ffi::OsString;
 use std::path::PathBuf;
 
 use crate::core::DEFAULT_MODEL;
@@ -13,6 +14,10 @@ pub(crate) struct FindArguments {
     /// The question the selected line or record best answers.
     pub(crate) question: String,
 
+    /// Taken so the command can say where the evidence goes.
+    #[arg(value_name = "EVIDENCE", hide = true)]
+    pub(crate) extra: Vec<OsString>,
+
     /// Let the answer say that no line or record fits.
     #[arg(long)]
     pub(crate) none: bool,
@@ -25,7 +30,13 @@ pub(crate) struct FindArguments {
 /// The shared options that apply to one aggregate `find` request.
 #[derive(Args, Debug)]
 pub(crate) struct FindCommon {
+    /// Print one machine-readable run-facts line last on standard error.
+    #[arg(long, hide_short_help = true)]
+    pub(crate) facts: bool,
+
     /// Print the full result object in place of the original selected line or record.
+    /// The result names each line or record by its one-based place, zero-padded
+    /// to three digits: u001 is the first and u255 the 255th.
     #[arg(long)]
     pub(crate) details: bool,
     /// Read the lines or records from FILE instead of standard input.
@@ -78,7 +89,7 @@ pub(crate) struct FindCommon {
     /// --record or --replay folder.
     #[arg(long, conflicts_with = "cache")]
     pub(crate) no_cache: bool,
-    /// Positive seconds that bound one attempt from connect to last byte, and each retry wait.
+    /// Seconds from 1 to 86400 that bound one attempt from connect to last byte, and each retry wait.
     #[arg(
         long,
         value_name = "SECONDS",
@@ -95,6 +106,7 @@ impl FindCommon {
     /// Adapt the narrow parsed surface to the one shared request configuration.
     pub(crate) fn as_common(&self) -> Common {
         Common {
+            facts: self.facts,
             details: self.details,
             input: self.input.clone(),
             lines: self.lines,

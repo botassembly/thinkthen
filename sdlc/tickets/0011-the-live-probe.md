@@ -14,7 +14,7 @@ Six open design points are settled by measurement against the hosted model, thro
 
 ## Current Facts
 
-`decide`, `choose`, and `score` work on one document, and `recipes/` holds metric recipes that read `--details` rows. ADR 0009 and ADR 0010 left these points to a measurement: whether one request over many units (`find`) picks as well as `rank --top 1`, whether the vendor's `confidence` separates right from wrong better than the winning probability, and whether `score` is as weak as an earlier measurement said. `sdlc/issues/2026-09-19-what-a-triage-pipeline-asks-of-the-tool.md` and `...-ideas-carried-from-the-design-captures.md` add three more: option order, an added irrelevant option, and hostile text inside the evidence. The spend so far is about a tenth of a cent of a $20 limit.
+`decide`, `choose`, and `score` work on one document, and `recipes/` holds metric recipes that read `--details` rows. ADR 0009 and ADR 0010 left these points to a measurement: whether one request over many units (`find`) picks as well as `rank --top 1`, whether the vendor's `confidence` separates right from wrong better than the winning probability, and whether `score` is as weak as an earlier measurement said. `sdlc/issues/closed/2026-09-19-what-a-triage-pipeline-asks-of-the-tool.md` and `...-ideas-carried-from-the-design-captures.md` add three more: option order, an added irrelevant option, and hostile text inside the evidence. The spend so far is about a tenth of a cent of a $20 limit.
 
 ## Scope
 

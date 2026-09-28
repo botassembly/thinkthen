@@ -1,0 +1,6 @@
+{
+  "decide": "Does the customer ask for a refund?",
+  "true": "The customer asks for money back.",
+  "false": "Anything else, such as a question or a complaint.",
+  "threshold": "0.2:0.8"
+}

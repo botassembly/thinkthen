@@ -1,0 +1,13 @@
+r1  +2 -1 ~0
+  + Revolver [3,11) work strength 0.9000
+  + Paul McCartney [12,26) person strength 0.9700
+  - Revolver Paul McCartney [3,26) person strength 0.8100
+r2  +1 -1 ~0
+  + Abbey Road Studios [0,18) place strength 0.8800
+  - Abbey Road [0,10) place strength 0.7400
+r3  +1 -1 ~0
+  + Abbey Road Studios [0,18) place strength 0.8800
+  - Abbey Road [0,10) place strength 0.7400
+r4  +0 -0 ~1
+  ~ Yesterday [0,9) person -> work
+A -> B: 4 of 4 changed; items gained 4, lost 3, changed kind 1; key names matched 0 -> 3 of 4; extras 3 -> 1; McNemar p 0.250 on key names

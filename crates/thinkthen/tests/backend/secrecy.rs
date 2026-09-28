@@ -1,7 +1,7 @@
 //! One sweep checks output and files across commands, paths, framings, and views.
 
 use std::fs;
-use std::io;
+use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
 use std::process::Output;
 
@@ -23,6 +23,10 @@ pub(crate) const KEY: &str = "sk-marker-2f9d41c6";
 /// and the evidence is the untrusted string.
 pub(crate) const EVIDENCE: &str = "marker-evidence-7b3ac5";
 
+pub(crate) const SECOND: &str = "marker-second-e41d09";
+
+pub(crate) const KIND: &str = "marker-kind-93c2f0";
+
 pub(crate) const QUESTION: &str = "Does this report a payment failure?";
 
 pub(crate) const VERBS: [(&str, &[&str], &str); 6] = [
@@ -41,7 +45,7 @@ pub(crate) const VERBS: [(&str, &[&str], &str); 6] = [
     (
         "recognize",
         &["person"],
-        r#""type":"choice","choice":"IN","probabilities":{"IN":0.9,"OUT":0.1}"#,
+        r#""type":"choice","choice":"OUT","probabilities":{"BEGIN":0,"INSIDE":0,"END":0,"SINGLE":0,"OUT":1}"#,
     ),
     // Two entities of one kind ask one unordered yes/no question.
     (
@@ -63,15 +67,15 @@ pub(crate) fn evidence(verb: &str, framing: Option<&str>) -> Vec<u8> {
     let text = match (verb, framing) {
         ("relate", None) => {
             format!(
-                r#"[{{"name":"{EVIDENCE}","kind":"record"}},{{"name":"Acme","kind":"record"}}]"#
+                r#"[{{"name":"{EVIDENCE}","kind":"{KIND}"}},{{"name":"{SECOND}","kind":"{KIND}"}}]"#
             )
         }
         ("relate", Some("--jsonl")) => format!(
-            "{{\"body\":\"{EVIDENCE}\",\"kind\":\"record\"}}\n{{\"body\":\"Acme\",\"kind\":\"record\"}}\n"
+            "{{\"body\":\"{EVIDENCE}\",\"kind\":\"{KIND}\"}}\n{{\"body\":\"{SECOND}\",\"kind\":\"{KIND}\"}}\n"
         ),
-        ("relate", Some("--lines")) => format!("{EVIDENCE}\nAcme\n"),
-        ("relate", Some("--csv")) => format!("name,kind\n{EVIDENCE},record\nAcme,record\n"),
-        ("relate", Some("--tsv")) => format!("name\tkind\n{EVIDENCE}\trecord\nAcme\trecord\n"),
+        ("relate", Some("--lines")) => format!("{EVIDENCE}\n{SECOND}\n"),
+        ("relate", Some("--csv")) => format!("name,kind\n{EVIDENCE},{KIND}\n{SECOND},{KIND}\n"),
+        ("relate", Some("--tsv")) => format!("name\tkind\n{EVIDENCE}\t{KIND}\n{SECOND}\t{KIND}\n"),
         (_, Some("--jsonl")) => format!("{{\"body\":\"{EVIDENCE}\"}}\n"),
         (_, Some("--lines")) => format!("{EVIDENCE}\n"),
         _ => EVIDENCE.to_owned(),
@@ -134,7 +138,7 @@ pub(crate) fn written(folder: &Path) -> Vec<PathBuf> {
     found
 }
 
-/// Refuse both markers everywhere they may not be, for one finished run.
+/// Refuse the key and each evidence marker wherever it may not be, in one run.
 ///
 /// This is the whole claim of secrecy, in one reader every case calls. The key
 /// may reach no byte of standard output, of standard error, or of any file the
@@ -145,10 +149,12 @@ pub(crate) fn nothing_leaked(named: &str, output: &Output, folder: &Path) {
     let err = String::from_utf8_lossy(&output.stderr);
     assert!(!out.contains(KEY), "{named}: the key is on standard output");
     assert!(!err.contains(KEY), "{named}: the key is on standard error");
-    assert!(
-        !err.contains(EVIDENCE),
-        "{named}: the evidence is in a diagnostic\n{err}"
-    );
+    for marker in [EVIDENCE, SECOND, KIND] {
+        assert!(
+            !err.contains(marker),
+            "{named}: {marker} is in a diagnostic\n{err}"
+        );
+    }
     for path in written(folder) {
         let read = fs::read(&path).unwrap_or_default();
         let text = String::from_utf8_lossy(&read).to_lowercase();
@@ -235,8 +241,9 @@ fn sweep(
     assert_eq!(
         output.status.code(),
         Some(route.code),
-        "{case} {view:?}: {}",
-        String::from_utf8_lossy(&output.stderr)
+        "{case} {view:?}: {}{}",
+        String::from_utf8_lossy(&output.stderr),
+        seen(&listener)
     );
     assert_eq!(
         listener.requests().len(),
@@ -263,6 +270,15 @@ fn sweep(
         }
     }
     Ok(())
+}
+
+/// The connections and requests a listener saw, without the bodies.
+fn seen(listener: &Listener) -> String {
+    let mut saw = format!("the listener saw {} connections:", listener.connections());
+    for request in listener.requests() {
+        saw += &format!(" {} ({} body bytes)", request.line, request.body.len());
+    }
+    saw
 }
 
 /// Overwrite every entry a priming run recorded with the damaged bytes.
@@ -314,12 +330,28 @@ pub(crate) fn environment(keyed: bool) -> Vec<(&'static str, &'static str)> {
     }
 }
 
+/// Keep both document views on every route, and distinct framed answer/plan paths.
+fn routine_way(route: &Route, verb: &str, view: &[&str], framing: Option<&str>) -> bool {
+    let document = framing.is_none();
+    let framed_answer = ["a success", "an unreadable answer"].contains(&route.named);
+    let framed_plan = route.named == "a plan"
+        && view.is_empty()
+        && ["decide", "recognize", "relate"].contains(&verb);
+    document || framed_answer || framed_plan
+}
+
 #[test]
 fn no_command_on_any_backend_path_writes_the_key_or_quotes_the_evidence() {
+    let routine = std::env::var("THINKTHEN_TEST_PROFILE").is_ok_and(|value| value == "routine");
+    let mut selected = 0;
     for route in &PATHS {
         for verb in VERBS {
-            for (view, framing) in WAYS {
+            for (view, framing) in WAYS
+                .into_iter()
+                .filter(|(view, framing)| !routine || routine_way(route, verb.0, view, *framing))
+            {
                 sweep(route, verb, view, framing).expect("the compiled binary runs");
+                selected += 1;
             }
         }
     }
@@ -330,6 +362,7 @@ fn no_command_on_any_backend_path_writes_the_key_or_quotes_the_evidence() {
     for verb in RECORD_VERBS {
         for (view, framing) in RECORD_WAYS {
             sweep(hostile, verb, view, framing).expect("the compiled binary runs");
+            selected += 1;
         }
     }
     let relate = VERBS
@@ -338,9 +371,20 @@ fn no_command_on_any_backend_path_writes_the_key_or_quotes_the_evidence() {
         .expect("relate stays in the matrix");
     for route in &PATHS {
         for (view, framing) in TABLE_WAYS {
-            sweep(route, relate, view, framing).expect("the compiled binary runs");
+            let all_framings = ["a success", "a hostile entry"].contains(&route.named);
+            if !routine || all_framings || (view.is_empty() && framing == Some("--lines")) {
+                sweep(route, relate, view, framing).expect("the compiled binary runs");
+                selected += 1;
+            }
         }
     }
+    assert_eq!(selected, if routine { 266 } else { 518 });
+    writeln!(
+        io::stderr().lock(),
+        "command secrecy sweep: selected={selected} full=518 profile={}",
+        if routine { "routine" } else { "full" }
+    )
+    .expect("write secrecy case count");
 }
 
 ///

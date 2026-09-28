@@ -1,15 +1,15 @@
 # The question file
 
-Status: **Settled** for version one, by ADR 0013 and Ian's ruling of 2026-09-19. ADR 0039 carries structured text and descriptions through it.
+Status: **Settled** for version one, by ADR 0013 and Ian's ruling of 2026-09-19, amended by ADR 0048. ADR 0039 carries structured text and descriptions through it.
 
 Every structural setting of a question has two homes. One is an option on the command line. The other is a key in a question file, under the same word. A question tuned once in a file is the question the test runs and the question the gate runs.
 
 ## Recognition files
 
-`recognize @FILE` reads a closed version-one object. Ordered `recognize.kinds` is required. Optional `recognize.relations` entries carry `name`, `source`, `target`, optional `reads`, and optional `either`. `*` is the only any-kind spelling. `threshold` and `relation_threshold` are single cuts and default to `0.5`. `model`, calibration `profile`, and ordinary `on` evidence selection use their existing meanings. Recognition policy has no command or file keys.
+`recognize @FILE` reads a closed version-one object. Ordered `recognize.kinds` is optional. Left out or empty, every name has the kind `ENTITY`, and the canonical question writes `"kinds":{}`. The kinds `none of these`, `ENTITY` and `ANY` are reserved in any ASCII case, and a file that names one exits 5. Optional `recognize.relations` entries carry `name`, optional `source`, optional `target`, optional `reads`, and optional `either`. A left-out side means any kind. `*` and `ANY` both mean any kind, and the canonical question writes `*`. `threshold` and `relation_threshold` are single cuts and default to `0.5`. `model`, calibration `profile`, and ordinary `on` evidence selection use their existing meanings. Recognition policy has no command or file keys.
 
 ```json
-{"version":1,"recognize":{"kinds":{"person":"A person's name.","organization":"An organization name."},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for"}]},"threshold":0.5,"relation_threshold":0.5,"model":"jev-latest","profile":"measured-profile","on":"/body"}
+{"version":1,"recognize":{"kinds":{"person":"A person's name.","organization":"An organization name."},"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for"}]},"threshold":0.5,"relation_threshold":0.5,"model":"jev-1.13.0","profile":"measured-profile","on":"/body"}
 ```
 
 ## Relation files
@@ -17,7 +17,7 @@ Every structural setting of a question has two homes. One is an option on the co
 `relate @FILE` reads a closed version-one object. Ordered `relate.relations` is required. Each entry carries `name`, `source`, `target`, optional `reads`, and optional `either`. Optional `relate.fields` carries RFC 6901 `name` and `kind` pointers. Top-level `threshold`, `model`, and saved calibration `profile` have their ordinary meanings. [relate.md](relate.md) gives the complete grammar and precedence.
 
 ```json
-{"version":1,"relate":{"fields":{"name":"/name","kind":"/kind"},"relations":[{"name":"works_for","source":"person","target":"organization"}]},"threshold":0.5,"model":"jev-latest","profile":"measured-profile"}
+{"version":1,"relate":{"fields":{"name":"/name","kind":"/kind"},"relations":[{"name":"works_for","source":"person","target":"organization"}]},"threshold":0.5,"model":"jev-1.13.0","profile":"measured-profile"}
 ```
 
 ## Naming a file
@@ -56,7 +56,7 @@ A question file holds exactly one question. The first key names the verb and car
 {"score": "TEXT", "levels": ["LOWEST", "HIGHEST"], "on": "POINTER", "model": "NAME", "profile": "NAME"}
 ```
 
-A file that holds none of `decide`, `choose`, `tag`, and `score` is refused, and so is a file that holds two of them. A key no question file has is refused by name. The diagnostic writes control characters in that local key with JSON escapes and stays on one line. A key another verb takes is refused by name and by the verb the file holds. Every key beyond the verb is optional where the command line makes it optional. Two members of one object that share a name are refused wherever they sit, because an order of two same-named members cannot be told from a mistake.
+A file that holds none of `decide`, `choose`, `tag`, and `score` is refused, and so is a file that holds two of them. A key no question file has is refused by name: ``a question file takes no key `K` ``. The key `version` adds where it belongs: ``a question file takes no key `version`; `version` belongs in a question set, a recognize file, or a relate file``. The diagnostic writes control characters in that local key with JSON escapes and stays on one line. A key another verb takes is refused by name and by the verb the file holds. Every key beyond the verb is optional where the command line makes it optional. Two members of one object that share a name are refused wherever they sit, because an order of two same-named members cannot be told from a mistake.
 
 The question text under the verb's key is a string, an object, or a list. A string that is empty or holds only white space is refused. An object or a list is the instruction the vendor asked for; the tool carries it and never rewrites it into a sentence. An empty object and an empty list are values, not absence. A null, a number, or a boolean is not question text. The same holds wherever this page says TEXT.
 
@@ -64,7 +64,7 @@ The question text under the verb's key is a string, an object, or a list. A stri
 
 `options` and `labels` are lists, or maps from each label to its description. A description is a string, an object, a list, or `null`. A label with no description is written as a list entry, or as a map entry whose value is `null`. A description that is `null`, empty, or holds only white space is no description.
 
-`levels` is a list of names, lowest first, or a map from each name to its description. A map value of `null` is the description the model reads, and the level's name is never substituted for it. A map string that is empty or holds only white space is refused, because the wire would carry it. An object or a list inside a levels list is refused with a message that names the map form. A result still reports the levels as the list of names.
+`levels` is a list of names, lowest first, or a map from each name to its description. A map value of `null` is no description. The request sends an empty object in that level's place, and the level's name is never substituted for it. A map string that is empty or holds only white space is refused, because the wire would carry it. An object or a list inside a levels list is refused with a message that names the map form. A result still reports the levels as the list of names.
 
 `on` is one JSON Pointer, or a list of them, as `--field` takes one or several.
 
@@ -87,9 +87,10 @@ The schema is structural; agreement with it is not agreement with this page. The
 | The tags | The arguments after the question, or `--label LABEL=DESCRIPTION` | `labels` | None. `tag` requires 1 to 20 | Fewer than 1, more than 20, repeated, blank, not text, or holding a control character. A description that is a number or a boolean. An `--label` with no `=`. `--label` beside a list of labels |
 | The levels | The arguments after the question | `levels` | None. `score` requires 2 to 10, lowest first | Fewer than 2, more than 10, repeated, blank, not text, or holding a control character. A map description that is blank text, a number, or a boolean. A nonstring list entry |
 | The rule | `--threshold T` or `--threshold LOW:HIGH` | `threshold` | `0.5` for `decide`, `tag`, and `filter`, none for `choose`, `score`, and `rank` | A cut of 0 or above 1, a band whose low side is not below its high side, a band on `choose`, `tag`, and `filter`, and any threshold on `score` and on `rank` |
-| The evidence | `--field POINTER` | `on` | The whole record | Anything that is not RFC 6901 |
-| The model | `--model NAME` | `model` | `jev-latest` | Empty or only white space |
+| The evidence | `--field POINTER` | `on` | The whole record | Anything that is not RFC 6901, or that holds a control character: `a pointer is one line of printable text`. A refusal writes the pointer with JSON escapes |
+| The model | `--model NAME` | `model` | `jev-1.13.0` | Empty or only white space |
 | The threshold's calibration identity | none | `profile` | absent | Anything outside lowercase letters, digits, hyphens, and underscores |
+| The batch setting of a `decide` file. Not built yet, by ADR 0048 item 7: on `choose`, `tag` and `score` files | `--batch N` | `batch` | `max` | 0, a fraction, and any text but `max` |
 
 Nothing has a default where a guess would hide a mistake. `choose` with no options in either home is a usage error, and so is `score` with no levels.
 
@@ -97,7 +98,9 @@ Nothing has a default where a guess would hide a mistake. `choose` with no optio
 
 Ruled by Ian on 2026-09-19: **the command line, then the file, then the default.**
 
-A single value typed beside `@FILE` replaces the file's value. That covers `--threshold`, `--true`, `--false`, `--model`, and `--field`, which replaces `on`. `profile` is calibration identity and has no command-line override. `--profile FILE` selects the run profile instead.
+A single value typed beside `@FILE` replaces the file's value. That covers `--threshold`, `--true`, `--false`, `--model`, and `--field`, which replaces `on`. `profile` is calibration identity and has no command-line override. `--profile FILE` selects the run profile instead. `--model` beside a file that names a model is the explicit way to run that file on another model.
+
+`--batch` replaces the file's `batch`. On `decide`, `filter` and `rank` over a stream, `batch` takes four tiers: `--batch`, then `THINKTHEN_BATCH`, then the file's `batch`, then `max`. Only a per-call value counts as typed. The read-only configuration file holds no `batch` key. The file's `batch` stays out of the digest. On one document `--batch` is a usage error, and `THINKTHEN_BATCH` and the file's `batch` are ignored. A bad `--batch` or `THINKTHEN_BATCH` exits 2, and a bad file `batch` exits 5. A file with a threshold was tuned at its saved `batch`, or at 1 if it has no `batch`. A record run at another setting warns once and adds `meta.batch_warning` to detailed rows. A file without a threshold has no tuned-for setting. `audit --write` records a batched setting when it writes a threshold and never writes 1; a bar tuned at 1 leaves `batch` absent and warns at the batched default. A library engine setting and a SQL `SET` join the environment tier, and a question set carries at most one top-level `batch`. Every other setting keeps the ruling above.
 
 A list typed beside `@FILE` replaces the file's whole list and never merges with it. That covers the options of `choose`, the labels of `tag`, and the levels of `score`. A typed list carries no descriptions, so replacing a described list drops every description the file held.
 
@@ -115,7 +118,7 @@ Under `--dry-run`, a run that used a file prints a `from` object before the requ
 
 A run with no question file prints no `from` object, because every setting came from the one place the user is looking at.
 
-`recognize --dry-run` prints a count report rather than a request plan. Its file-backed report carries `{"from":{"question":"file"}}` to identify the source of the complete recognize question.
+`recognize --dry-run` prints the `thinkthen.recognize-plan/2` request plan. Its file-backed plan carries `{"from":{"question":"file"}}` to identify the source of the complete recognize question.
 
 ## The digest of a question
 
@@ -134,7 +137,7 @@ The canonical form is one JSON object on one line. Another implementation follow
 5. **A number is written in the shortest form that reads back as the same 64-bit float.** A cut of one half is `0.5`. A band is not a number: it is the string `"LOW:HIGH"`, with each side written by the same shortest form, so `0.20:0.80` and `0.2:0.8` both give `"0.2:0.8"` and one digest. The same rule holds for a number inside a structured value.
 6. **The options and tag labels are maps from each label to its description, in the order the user gave.** A label with no description takes `null`. A list of labels and a map of the same labels to `null` are therefore one question and one digest, and two runs whose descriptions differ are two digests. The levels of `score` keep the form the file held: a list of names, or a map from each name to its description, in the order the user gave. A list and a map of the same names are two questions, because the map says the descriptions ride the wire.
 7. **A structured value keeps the order of its members.** An object the file wrote is written member for member in the file's order, and two orders are two questions. White space between tokens changes nothing: two files that parse to the same value give one digest.
-8. **The threshold rides with the question.** A cut tuned on labeled cases belongs to the question it was tuned for, so `--threshold` changes the digest. The default cut and the same cut typed out are one rule and one digest.
+8. **The threshold rides with the question.** A cut tuned on labeled cases belongs to the question it was tuned for, so `--threshold` changes the digest. The default cut and the same cut typed out are one rule and one digest. `audit --write` puts a tuned cut into the file, and the digest moves with it.
 
 Four worked examples, pinned in the tests:
 

@@ -5,7 +5,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-use super::harness::{Canned, Listener, spawn};
+use super::harness::{Canned, Listener, finish, spawn_one as spawn};
 
 const KEY: [(&str, &str); 1] = [("THINKTHEN_API_KEY", "sk-test-value")];
 
@@ -475,6 +475,7 @@ fn a_closed_table_output_pipe_stops_reading_and_scheduling() {
         .env_clear()
         .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
+        .env("THINKTHEN_BATCH", "1")
         .args([
             "decide",
             "Question",
@@ -506,7 +507,10 @@ fn a_closed_table_output_pipe_stops_reading_and_scheduling() {
     let mut first = String::new();
     reader.read_line(&mut first).expect("one output row");
     drop(reader);
-    assert_eq!(child.wait().expect("command ends").code(), Some(0));
+    assert_eq!(
+        finish(child, "table").expect("command ends").status.code(),
+        Some(0)
+    );
     assert_eq!(first, "{\"input\":{\"body\":\"row 0\"},\"value\":true}\n");
     assert!(listener.requests().len() <= 12);
 }

@@ -2,10 +2,14 @@ use serde::Serialize;
 use serde_json::value::RawValue;
 use sha2::{Digest as _, Sha256};
 use std::fs;
+use std::io;
 use std::path::Path;
+use std::process::Output;
+
+use crate::harness::spawn;
 
 pub(crate) const DEFAULT_BASE: &str = "https://api.typesafe.ai/v1";
-pub(crate) const DEFAULT_MODEL: &str = "jev-latest";
+pub(crate) const DEFAULT_MODEL: &str = "jev-1.13.0";
 pub(crate) const ENDPOINT_PATH: &str = "systemone";
 pub(crate) const MAX_RECORD_BYTES: usize = 16 * 1024 * 1024;
 
@@ -107,4 +111,29 @@ pub(crate) fn plant_recording(
     fs::create_dir_all(folder).ok()?;
     fs::write(folder.join(&name), written).ok()?;
     Some(name)
+}
+
+/// Run `decide` against one URL, with no environment but what the case names.
+///
+/// `key` is the value `THINKTHEN_API_KEY` holds, or `None` for a run with the
+/// variable unset.
+pub(crate) fn decide(
+    base: &str,
+    arguments: &[&str],
+    key: Option<&str>,
+    evidence: &str,
+) -> io::Result<Output> {
+    let asked = [
+        "decide",
+        "asks for a refund",
+        "--url",
+        base,
+        "--model",
+        "local-1",
+    ];
+    spawn(
+        &[&asked[..], arguments].concat(),
+        &key.map_or_else(Vec::new, |value| vec![("THINKTHEN_API_KEY", value)]),
+        evidence.as_bytes(),
+    )
 }

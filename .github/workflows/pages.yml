@@ -1,15 +1,16 @@
+# The site deploy, run only by hand from the Actions tab (ticket 0128).
+#
+# Ian ruled on 2026-09-22 that no push starts a workflow. Every action is
+# pinned to a commit SHA, with the tag it carried in the comment beside it. The
+# SHAs were read with `git ls-remote` on 2026-09-25.
 name: Pages
 
 on:
-  push:
-    branches: [main]
-    paths: ['site/**', '.github/workflows/pages.yml']
   workflow_dispatch:
 
+# Only the deploy job, which runs no npm, holds write. configure-pages reads the site settings.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: pages
@@ -18,31 +19,41 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '22'
           cache: npm
           cache-dependency-path: site/package-lock.json
       - run: npm ci
         working-directory: site
-      # Fails on a missing example, a cell with no status, or a broken link.
+      # The smoke run replays every example against the command built from
+      # this commit. The runner image carries Rust and jq.
+      - run: cargo build --release --locked --bin thinkthen
+      # Fails on a broken example rule, an example whose output changed, a
+      # missing caption, or a broken link.
       - run: npm run build
         working-directory: site
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: site/dist
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
-      - uses: actions/deploy-pages@v4
+      - uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
         id: deploy
 
   prove:
@@ -56,11 +67,11 @@ jobs:
           for i in $(seq 1 30); do
             got=$(curl -fsS "https://thinkthen.dev/version.json?t=$(date +%s)" | sed -n 's/.*"commit": "\([^"]*\)".*/\1/p' || true)
             echo "attempt $i: $got"
-            if [ "$got" = "${{ github.sha }}" ]; then
-              echo "the site serves ${{ github.sha }}"
+            if [ "$got" = "$GITHUB_SHA" ]; then
+              echo "the site serves $GITHUB_SHA"
               exit 0
             fi
             sleep 10
           done
-          echo "the site never served ${{ github.sha }}"
+          echo "the site never served $GITHUB_SHA"
           exit 1

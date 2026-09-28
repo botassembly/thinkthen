@@ -7,6 +7,12 @@ use crate::core::{
 };
 use crate::engine::error::Error as EngineError;
 
+impl From<crate::config::ConfigError> for Failure {
+    fn from(error: crate::config::ConfigError) -> Self {
+        Self::Configuration(error.message)
+    }
+}
+
 impl From<BackendError> for Failure {
     fn from(error: BackendError) -> Self {
         Self::Backend(error)
@@ -54,13 +60,17 @@ impl From<EngineError> for Failure {
         match error {
             EngineError::Transport(message) => Self::Transport(message),
             EngineError::Status(status) => Self::Status(status),
+            EngineError::TokenLimit => Self::TokenLimit,
+            EngineError::ReplyTooLarge(limit) => Self::ReplyTooLarge(limit),
             EngineError::Reply(error) => Self::Reply(error),
             EngineError::ReplayMiss(name) => Self::ReplayMiss(name),
             EngineError::Entry(name, message) => Self::Entry(name, message),
             EngineError::RecordingConflict(name) => Self::RecordingConflict(name),
             EngineError::RecordingStorage => Self::RecordingStorage,
             EngineError::RecordingPathIsFile => Self::RecordingPathIsFile,
-            EngineError::RecordingBackendMismatch => Self::RecordingBackendMismatch,
+            EngineError::RecordingBackendMismatch(url, default) => {
+                Self::RecordingBackendMismatch(url, default)
+            }
             EngineError::RecordingFolderLegacy => Self::RecordingFolderLegacy,
             EngineError::DefaultCachePrivate => Self::DefaultCachePrivate,
             EngineError::CacheEntry => Self::CacheEntry,
@@ -69,6 +79,20 @@ impl From<EngineError> for Failure {
             EngineError::ProfileLimit(limit) => Self::ProfileLimit(limit),
             EngineError::Cancelled => Self::Cancelled,
             EngineError::Deadline(_) => Self::Defect("an unavailable deadline reached the command"),
+            EngineError::NoKey(variable) => Self::NoKey(variable.to_owned()),
+            EngineError::WidthActive(active) => Self::WidthActive(active),
+            EngineError::ModelsDiffer(models) => Self::ModelsDiffer(models),
+            EngineError::UsageOverflow => Self::UsageOverflow,
+            EngineError::RecognizeKinds => Self::Recognize(super::recognize::Error::Config {
+                file: false,
+                error: crate::core::RecognizeConfigError::Kinds,
+            }),
+            EngineError::RecognizeLogical => {
+                Self::Recognize(super::recognize::Error::LogicalQuestion)
+            }
+            EngineError::TextTooLong { bytes, limit } => {
+                Self::Recognize(super::recognize::Error::TextTooLong { bytes, limit })
+            }
         }
     }
 }

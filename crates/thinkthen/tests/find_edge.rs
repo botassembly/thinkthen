@@ -1,10 +1,22 @@
 //! The public find boundary over free plans and committed recordings.
+#![cfg(feature = "cli")]
 
 use std::fs;
 use std::io;
 use std::io::Write as _;
 use std::path::PathBuf;
-use std::process::{Command, Output, Stdio};
+use std::process::{ChildStdin, Command, Output, Stdio};
+
+#[path = "../src/test_deadline/wait.rs"]
+mod wait;
+
+fn feed(stdin: Option<ChildStdin>, input: &[u8]) -> io::Result<()> {
+    let mut stdin = stdin.ok_or_else(|| io::Error::other("no stdin"))?;
+    match stdin.write_all(input) {
+        Err(error) if error.kind() == io::ErrorKind::BrokenPipe => Ok(()),
+        written => written,
+    }
+}
 
 fn run(arguments: &[&str], input: &[u8]) -> io::Result<Output> {
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
@@ -15,12 +27,8 @@ fn run(arguments: &[&str], input: &[u8]) -> io::Result<Output> {
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()?;
-    child
-        .stdin
-        .take()
-        .ok_or_else(|| io::Error::other("no stdin"))?
-        .write_all(input)?;
-    child.wait_with_output()
+    feed(child.stdin.take(), input)?;
+    wait::finish(child, &arguments.join(" "))
 }
 
 fn status_without_output(arguments: &[&str], input: &[u8]) -> io::Result<std::process::ExitStatus> {
@@ -32,12 +40,8 @@ fn status_without_output(arguments: &[&str], input: &[u8]) -> io::Result<std::pr
         .stdout(Stdio::null())
         .stderr(Stdio::null())
         .spawn()?;
-    child
-        .stdin
-        .take()
-        .ok_or_else(|| io::Error::other("no stdin"))?
-        .write_all(input)?;
-    child.wait()
+    feed(child.stdin.take(), input)?;
+    wait::finish(child, &arguments.join(" ")).map(|output| output.status)
 }
 
 fn lines(case: &str, size: usize, answer: Option<usize>) -> Vec<u8> {
@@ -170,10 +174,12 @@ fn empty_input_succeeds_without_reading_a_key() {
 #[test]
 fn committed_reach_recordings_replay_the_selected_line_and_none() {
     let folder = recording();
+    // The probe's recording asked for the alias, so its replay names it.
+    let replay = ["--model", "jev-latest", "--replay", folder.as_str()];
     let answerable_question =
         "Which unit states the cobalt permit duration for marker TARGET-S100-A1?";
     let answerable = run(
-        &["find", answerable_question, "--replay", &folder],
+        &[["find", answerable_question].as_slice(), &replay].concat(),
         &lines("s100-a1", 100, Some(7)),
     )
     .expect("binary runs");
@@ -184,7 +190,7 @@ fn committed_reach_recordings_replay_the_selected_line_and_none() {
     );
     let blank_question = "Which unit states the cobalt permit duration for marker TARGET-S100-B1?";
     let blank = run(
-        &["find", blank_question, "--none", "--replay", &folder],
+        &[["find", blank_question, "--none"].as_slice(), &replay].concat(),
         &lines("s100-b1", 100, None),
     )
     .expect("binary runs");

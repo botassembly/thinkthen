@@ -38,9 +38,9 @@ Ian directed the architect to resume the reviewed plan, record this queue amendm
 
 The library team remains the only writer on `surfaces`. Use SWE-2 for bounded research, accepted implementation, and remediation; use separate Sol sessions for design and code review. Keep complexity floors and escalate irreducible high-risk implementation. The architect's full plan and library handoff are `architect-engine-survey-and-plan.md` and `library-team-architecture-punch-list.md`.
 
-Verification amendment: Ian disabled GitHub Actions and explicitly selected coordinator-run local full gates for future engine tickets. `../issues/2026-09-22-stop-github-actions-on-push.md` records the ruling. Keep independent reviews and `sdlc/scripts/{install,lint,test,spec}`; report cancelled or unavailable hosted checks honestly. Do not re-enable workflows or change their files as part of an engine ticket.
+Verification amendment: Ian disabled GitHub Actions and explicitly selected coordinator-run local full gates for future engine tickets. `../issues/closed/2026-09-22-stop-github-actions-on-push.md` records the ruling. Keep independent reviews and `sdlc/scripts/{install,lint,test,spec}`; report cancelled or unavailable hosted checks honestly. Do not re-enable workflows or change their files as part of an engine ticket.
 
-Product update received with main `692ba59`: structured descriptions now precede recognize/relate under ruling 9 of `../issues/2026-09-21-the-question-file-cannot-carry-typesafes-structured-fields.md`. This supersedes the earlier after-0.1 placement. Typed builders remain the library team's A7 follow-through. The architect must reconcile and bound this grammar/schema work before dispatch; the separate many-state packing probe is evidence, not authorization to change batching or make new paid calls.
+Product update received with main `692ba59`: structured descriptions now precede recognize/relate under ruling 9 of `../issues/closed/2026-09-21-the-question-file-cannot-carry-typesafes-structured-fields.md`. This supersedes the earlier after-0.1 placement. Typed builders remain the library team's A7 follow-through. The architect must reconcile and bound this grammar/schema work before dispatch; the separate many-state packing probe is evidence, not authorization to change batching or make new paid calls.
 
 Observed at resumption: main `c29e445` and surfaces `7fdb1fa` match their remote branches and have passing code gates. Ticket 0065 `6618694` is not an ancestor of main. The library report is committed on `surfaces`; its passing stand-in checks do not prove real-engine integration. The separate Pages workflow on main failed at `actions/configure-pages`, outside this engine lane.
 
@@ -63,7 +63,7 @@ Ticket 0069 implements structured question descriptions, the published question-
 - Landed: 0060. Default streamed value rows keep each parsed record under `input` beside its answer under `value`. Streamed annotation still enriches object records and wraps non-object records. One-document and explicit views stay unchanged.
 - Landed: 0061. Recording writers preflight storage, repair damaged entries atomically, handle file-size signals safely, sync complete entries, preserve valid old bytes, and remove new digest locks after a valid entry lands.
 - Done: tickets 0062 and 0063 enable the bounded platform cache, its read-only configuration, `--no-cache`, explicit prune, offline `status`, and persistent numeric counters.
-- Library team: on the `surfaces` branch in its own worktree, running the fix wave from `../issues/2026-09-21-product-rulings-on-the-surfaces-adversarial-review.md`.
+- Library team: on the `surfaces` branch in its own worktree, running the fix wave from `../issues/closed/2026-09-21-product-rulings-on-the-surfaces-adversarial-review.md`.
 
 ## Lane A: the build team, on main
 
@@ -113,7 +113,7 @@ Tickets 0061 through 0063 complete recording durability, the bounded default cac
 
 **A9. The C door.** Proposed ticket 12. One JSON result, one free function.
 
-**A10. How the command gets installed.** Ruled by Ian: one Homebrew line from a public tap repository and one download script, copied from BioMCP's working pair. The release ticket works from `../issues/2026-09-20-lessons-from-biomcp-for-release-install-ci-and-docs.md`, which is the best-practices checklist for release, install, CI, and the docs site.
+**A10. How the command gets installed.** Ruled by Ian: one Homebrew line from a public tap repository and one download script, copied from BioMCP's working pair. The release ticket works from `../issues/2026-09-25-release-and-install-for-0-1.md`, which is the best-practices checklist for release, install, CI, and the docs site.
 
 **A11. The promise findings.** Proposed ticket 15: public examples, pipeline outcomes, vocabulary, and `printed-speed-and-cost-numbers-name-no-measuring-record`.
 
@@ -134,13 +134,13 @@ The surfaces are built over `contract/` and the stand-in engine, so none of this
 3. **`recognize` and `relate` on all nine surfaces** against the forty recorded cases, including the database shape for relations that the team's own finding says can run.
 4. **The Polars Series door, then pandas through the same door**, as experiment 228 ruled. Buffer-address equality is the proof of no copy.
 5. **Cancel and deadline on every surface**, each with the fast-backend test that caught the poll bug: Ctrl-C in Python and R, `AbortSignal`, `pg_cancel_backend`, `statement_timeout`, DuckDB's interrupt.
-6. **One examples file per surface, keyed by function, run by that surface's tests.** The site's function pages and surface pages draw every tab from these files (`repos/mktg/products/thinkthen/site.md`), so an example nobody runs cannot reach the site. This is the library team's largest gift to the launch.
+6. **One examples file per surface, keyed by function, run by that surface's tests.** The site's function pages and surface pages draw every tab from these files (the marketing repository's `products/thinkthen/site.md`), so an example nobody runs cannot reach the site. This is the library team's largest gift to the launch.
 7. **Packaging rehearsals, local only.** Build the wheel, the npm package, the gem, the R package, the crate, the C archive, and the three extensions, and install each from the local file on a clean machine or container. Record the install line that worked. `yellow.local` is the build host. Nothing is uploaded.
 8. **The two known blockers.** Find the road around `the-scalar-bind-surface-is-unusable-on-duckdbs-stable-c-api` and `rusqlites-loadable-headers-stop-at-sqlite-3-34`, or record that none exists.
 
 Not for the library team: anything on main, publishing, the spreadsheet bridge, and a serve mode. Those wait for Ian.
 
-Everything ships together. Ian ruled on 2026-09-20 that the first release is 0.1 on the command, every library, and every extension at once (`../issues/2026-09-20-the-first-release-is-0-1-on-every-surface.md`). The table below is only the order the library team finishes and proves them in, and Ian can reorder it freely:
+Everything ships together. Ian ruled on 2026-09-20 that the first release is 0.1 on the command, every library, and every extension at once (`../issues/closed/2026-09-20-the-first-release-is-0-1-on-every-surface.md`). The table below is only the order the library team finishes and proves them in, and Ian can reorder it freely:
 
 | # | Surface | Notes |
 | --- | --- | --- |
@@ -159,7 +159,7 @@ Nothing depends on this order except Python before Polars and pandas. A surface 
 
 ## Lane C: spreadsheets, after the libraries
 
-Experiment `229-thinkthen-spreadsheets` is closed. Its verdict replaces the product side's guesses in `../issues/2026-09-21-spreadsheet-surfaces-need-a-spike.md`:
+Experiment `229-thinkthen-spreadsheets` is closed. Its verdict replaces the product side's guesses in `../issues/closed/2026-09-21-spreadsheet-surfaces-need-a-spike.md`:
 
 - **Both need a bridge over HTTP.** Neither host can load the engine the way a library does.
 - **Google Sheets:** the script file is written. It needs an endpoint Google's cloud can reach, which means a small deployed service wrapping the engine, some form of `thinkthen --serve`. It also needs a ruling on a token per sheet, and one live run in a real sheet.
@@ -177,4 +177,4 @@ Experiment `229-thinkthen-spreadsheets` is closed. Its verdict replaces the prod
 
 ## Not in this queue
 
-Linking, coreference, and decomposition (`../issues/2026-09-21-three-next-language-problems-linking-coreference-decomposition.md`), widening `rank`, and a second vendor. All backlog.
+Linking, coreference, and decomposition (`../issues/closed/2026-09-21-three-next-language-problems-linking-coreference-decomposition.md`), widening `rank`, and a second vendor. All backlog.

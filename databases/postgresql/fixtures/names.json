@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "recognize": {
+    "kinds": {
+      "person": "A human being, by name.",
+      "organization": "A company, agency, or institution.",
+      "place": "A city, region, or country."
+    },
+    "relations": [
+      { "name": "works_for", "source": "person", "target": "organization", "reads": "works for" },
+      { "name": "based_in", "source": "organization", "target": "place", "reads": "is based in" }
+    ]
+  },
+  "threshold": 0.5,
+  "relation_threshold": 0.5
+}

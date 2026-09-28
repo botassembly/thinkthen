@@ -1,0 +1,56 @@
+{
+  "schema": "thinkthen.examples/1",
+  "surface": "typescript",
+  "examples": {
+    "decide": {
+      "arm": "generic",
+      "ts": "tt.decide(\"Is this a complaint?\", \"I demand a refund today\")",
+      "expected": "true"
+    },
+    "choose": {
+      "arm": "generic",
+      "ts": "tt.choose(\"Which team owns this?\", \"please route this ticket\", { options: [\"billing\", \"shipping\"] })",
+      "expected": "\"billing\""
+    },
+    "tag": {
+      "arm": "generic",
+      "ts": "tt.tag(\"Which topics apply?\", \"the refund and the shipping\", { labels: [\"refund\", \"shipping\"] })",
+      "expected": "[\"refund\",\"shipping\"]"
+    },
+    "score": {
+      "arm": "generic",
+      "ts": "tt.score(\"How urgent is this?\", \"maybe later\", { levels: [\"Routine.\", \"Soon.\", \"Immediate.\"] })",
+      "expected": "0.15"
+    },
+    "filter": {
+      "arm": "generic",
+      "ts": "tt.filter(\"Is this a complaint?\", [\"good morning\", \"I demand a refund today\"])",
+      "expected": "[\"good morning\",\"I demand a refund today\"]"
+    },
+    "rank": {
+      "arm": "generic",
+      "ts": "tt.rank(\"Is this a complaint?\", [\"good morning\", \"I demand a refund today\"], { top: 1 })",
+      "expected": "[{\"index\":0,\"record\":\"good morning\",\"probability\":0.9}]"
+    },
+    "find": {
+      "arm": "generic",
+      "ts": "tt.find(\"Which line asks for money back?\", [\"I want a refund\", \"good morning\"])",
+      "expected": "{\"index\":0,\"unit\":\"I want a refund\",\"probability\":0.9}"
+    },
+    "annotate": {
+      "arm": "generic",
+      "ts": "tt.annotate({ version: 1, questions: { wants_refund: { decide: \"Does the customer ask for a refund?\" }, urgency: { score: \"How urgent is this?\", levels: [\"Routine.\", \"Soon.\", \"Immediate.\"] } } }, [\"maybe later\"])",
+      "expected": "[{\"wants_refund\":true,\"urgency\":0.15}]"
+    },
+    "recognize": {
+      "arm": "case/41-offsets-past-an-accent-and-an-emoji",
+      "ts": "tt.recognize(\"Le café 😀 Maria Chen arrived.\", { kinds: { person: \"A person's name.\" } })",
+      "expected": "{\"entities\":[{\"text\":\"Maria Chen\",\"start\":11,\"end\":21,\"length\":10,\"kind\":\"person\",\"strength\":0.9877}]}"
+    },
+    "relate": {
+      "arm": "case/52-cross-kind-staff",
+      "ts": "tt.relate([{\"name\": \"Iris Vangelis works for Kestrel Logistics, handling regional accounts.\", \"kind\": \"person\"}, {\"name\": \"Noor Haddad works for Brookline Freight, handling regional accounts.\", \"kind\": \"person\"}, {\"name\": \"Petr Novak works for Grayline Foundation, handling regional accounts.\", \"kind\": \"person\"}, {\"name\": \"Rosa Iglesias works for Fenwick Press, handling regional accounts.\", \"kind\": \"person\"}, {\"name\": \"Tariq Mensah works for Hull Analytics, handling regional accounts.\", \"kind\": \"person\"}, {\"name\": \"Kestrel Logistics, a freight and logistics firm.\", \"kind\": \"organization\"}, {\"name\": \"Brookline Freight, a freight and logistics firm.\", \"kind\": \"organization\"}, {\"name\": \"Grayline Foundation, a freight and logistics firm.\", \"kind\": \"organization\"}, {\"name\": \"Fenwick Press, a freight and logistics firm.\", \"kind\": \"organization\"}, {\"name\": \"Hull Analytics, a freight and logistics firm.\", \"kind\": \"organization\"}], { relations: [\"works_for=person:organization\"] })",
+      "expected": "[{\"relation\":\"works_for\",\"source\":{\"name\":\"Iris Vangelis works for Kestrel Logistics, handling regional accounts.\",\"kind\":\"person\"},\"target\":{\"name\":\"Kestrel Logistics, a freight and logistics firm.\",\"kind\":\"organization\"},\"probability\":0.99},{\"relation\":\"works_for\",\"source\":{\"name\":\"Noor Haddad works for Brookline Freight, handling regional accounts.\",\"kind\":\"person\"},\"target\":{\"name\":\"Brookline Freight, a freight and logistics firm.\",\"kind\":\"organization\"},\"probability\":0.98},{\"relation\":\"works_for\",\"source\":{\"name\":\"Petr Novak works for Grayline Foundation, handling regional accounts.\",\"kind\":\"person\"},\"target\":{\"name\":\"Grayline Foundation, a freight and logistics firm.\",\"kind\":\"organization\"},\"probability\":0.96},{\"relation\":\"works_for\",\"source\":{\"name\":\"Rosa Iglesias works for Fenwick Press, handling regional accounts.\",\"kind\":\"person\"},\"target\":{\"name\":\"Fenwick Press, a freight and logistics firm.\",\"kind\":\"organization\"},\"probability\":0.95},{\"relation\":\"works_for\",\"source\":{\"name\":\"Tariq Mensah works for Hull Analytics, handling regional accounts.\",\"kind\":\"person\"},\"target\":{\"name\":\"Hull Analytics, a freight and logistics firm.\",\"kind\":\"organization\"},\"probability\":0.96}]"
+    }
+  }
+}

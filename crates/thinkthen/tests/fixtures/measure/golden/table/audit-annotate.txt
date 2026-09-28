@@ -1,0 +1,43 @@
+urgent  (decide, 2 rows, 2 labeled, 1 failed, rule as run)
+  agreement 0.500 (95% 0.095 to 0.905): 1 right, 1 wrong, 0 unresolved, 0 tied
+  said yes, key no: 0   said no, key yes: 1   yes recall 0.500   mean p(yes) 0.550   AUC -
+  calibration error 0.450 (95% 0.202 to 0.702); the interval resamples the records; it does not cover rerun noise, so compare two runs of the same records
+  suggested cut 0.5 (most agreement on the tuning part; seeded split, tuned on 1, checked on 1 held out): held agreement 0.000 as run -> 0.000 at the cut, yes recall 0.000 -> 0.000
+    cut  threshold  answered coverage accuracy
+    0.5  0.5               2    1.000    0.500
+   0.55  0.45:0.55         2    1.000    0.500
+    0.6  0.4:0.6           2    1.000    0.500
+   0.65  0.35:0.65         2    1.000    0.500
+    0.7  0.3:0.7           1    0.500    1.000
+   0.75  0.25:0.75         1    0.500    1.000
+    0.8  0.2:0.8           1    0.500    1.000
+   0.85  0.15:0.85         0    0.000        -
+    0.9  0.1:0.9           0    0.000        -
+   0.95  0.05:0.95         0    0.000        -
+    1.0  0:1               0    0.000        -
+kind  (choose, 3 rows, 3 labeled, 0 failed, rule as run)
+  agreement 0.667 (95% 0.208 to 0.939): 2 right, 1 wrong, 0 unresolved, 0 tied
+  disagreements: key feature said bug x1
+  calibration error 0.333 (95% 0.096 to 0.596); the interval resamples the records; it does not cover rerun noise, so compare two runs of the same records
+  suggested cut: none reaches lowest cut with agreement >= 0.9
+    cut  threshold  answered coverage accuracy
+   0.05  0.05              3    1.000    0.667
+    0.1  0.1               3    1.000    0.667
+   0.15  0.15              3    1.000    0.667
+    0.2  0.2               3    1.000    0.667
+   0.25  0.25              3    1.000    0.667
+    0.3  0.3               3    1.000    0.667
+   0.35  0.35              3    1.000    0.667
+    0.4  0.4               3    1.000    0.667
+   0.45  0.45              3    1.000    0.667
+    0.5  0.5               3    1.000    0.667
+   0.55  0.55              3    1.000    0.667
+    0.6  0.6               3    1.000    0.667
+   0.65  0.65              2    0.667    1.000
+    0.7  0.7               2    0.667    1.000
+   0.75  0.75              1    0.333    1.000
+    0.8  0.8               1    0.333    1.000
+   0.85  0.85              1    0.333    1.000
+    0.9  0.9               1    0.333    1.000
+   0.95  0.95              0    0.000        -
+    1.0  1.0               0    0.000        -

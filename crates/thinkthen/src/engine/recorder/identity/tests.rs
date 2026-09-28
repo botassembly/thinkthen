@@ -3,7 +3,6 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread;
-use std::time::Duration;
 
 use crate::core::Url;
 use crate::engine::error::Error;
@@ -227,29 +226,31 @@ fn a_long_address_still_writes_one_private_fixed_marker() {
     complete(&folder, &expected);
 }
 
+/// A child that runs `interruption_child` and pauses at `stage`.
+fn paused_child(folder: &Path, ready: &Path, stage: &str) -> Command {
+    let mut command = Command::new(std::env::current_exe().expect("test executable"));
+    command
+        .env_clear()
+        .args([
+            "--ignored",
+            "--exact",
+            "engine::recorder::identity::tests::interruption_child",
+        ])
+        .env("THINKTHEN_TEST_IDENTITY_FOLDER", folder)
+        .env("THINKTHEN_TEST_IDENTITY_READY", ready)
+        .env("THINKTHEN_TEST_IDENTITY_PAUSE", stage);
+    command
+}
+
 #[test]
 fn interruption_before_and_after_publication_allows_later_reuse() {
     for stage in ["before-install", "after-install"] {
         let folder = folder(stage);
         let ready = folder.join("ready");
-        let mut child = Command::new(std::env::current_exe().expect("test executable"))
-            .args([
-                "--ignored",
-                "--exact",
-                "engine::recorder::identity::tests::interruption_child",
-            ])
-            .env("THINKTHEN_TEST_IDENTITY_FOLDER", &folder)
-            .env("THINKTHEN_TEST_IDENTITY_READY", &ready)
-            .env("THINKTHEN_TEST_IDENTITY_PAUSE", stage)
+        let mut child = paused_child(&folder, &ready, stage)
             .spawn()
             .expect("interruption child");
-        for _ in 0..300 {
-            if ready.exists() {
-                break;
-            }
-            thread::sleep(Duration::from_millis(10));
-        }
-        assert!(ready.exists(), "child reached {stage}");
+        crate::test_deadline::wait_for_file(&ready);
         child.kill().expect("kill interrupted writer");
         let _status = child.wait().expect("reap interrupted writer");
 
@@ -264,6 +265,32 @@ fn interruption_before_and_after_publication_allows_later_reuse() {
 }
 
 #[test]
+fn a_marker_published_while_this_writer_looks_for_entries_is_matched() {
+    let folder = folder("published-during-check");
+    let (ready, resume) = (folder.join("ready"), folder.join("resume"));
+    let child = paused_child(&folder, &ready, "after-missing-marker")
+        .env("THINKTHEN_TEST_IDENTITY_RESUME", &resume)
+        .stdout(std::process::Stdio::piped())
+        .spawn()
+        .expect("paused writer");
+    crate::test_deadline::wait_for_file(&ready);
+
+    // Another writer publishes the marker and installs its first entry.
+    let expected = identity("http://127.0.0.1:1/v1/systemone");
+    check(&folder, &expected, true).expect("the other writer binds");
+    fs::write(folder.join(format!("{}.json", "a".repeat(64))), b"{}").expect("first entry");
+    fs::write(&resume, []).expect("resume the paused writer");
+
+    let output = crate::test_deadline::finish(child, "paused writer").expect("writer ends");
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+    complete(&folder, &expected);
+}
+
+#[test]
 #[ignore = "run as an interrupted subprocess by the parent test"]
 fn interruption_child() {
     let Some(folder) = std::env::var_os("THINKTHEN_TEST_IDENTITY_FOLDER") else {
@@ -272,5 +299,5 @@ fn interruption_child() {
     let folder = PathBuf::from(folder);
     fs::create_dir_all(&folder).expect("child folder");
     let expected = identity("http://127.0.0.1:1/v1/systemone");
-    check(&folder, &expected, true).expect("pause interrupts this call");
+    check(&folder, &expected, true).expect("the child's check succeeds");
 }

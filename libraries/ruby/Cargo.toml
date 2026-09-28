@@ -1,0 +1,59 @@
+# The Ruby surface (ticket 0112, ADR 0047). It is its own workspace with its
+# own lock, and it reaches `thinkthen` only through the public API.
+# `sdlc/scripts/policy.py` holds every table below to the root copies.
+[workspace]
+
+[package]
+name = "thinkthen-ruby"
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.95.0"
+description = "The Ruby extension over the thinkthen public API"
+license = "MIT"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+name = "thinkthen_ruby"
+
+[dependencies]
+thinkthen = { path = "../../crates/thinkthen", default-features = false }
+magnus = { version = "=0.7.1", features = ["rb-sys"] }
+rb-sys = "=0.9.130"
+# The call's worker blocks asynchronous signals with `pthread_sigmask`.
+libc = "=0.2.189"
+
+[dev-dependencies]
+# Unit tests touch Ruby symbols, so the test binaries link libruby. The
+# extension that build.sh copies links none.
+rb-sys = { version = "=0.9.130", features = ["link-ruby"] }
+
+[profile.release]
+overflow-checks = true
+panic = "unwind"
+
+[lints.rust]
+missing_debug_implementations = "forbid"
+missing_docs = "warn"
+unexpected_cfgs = { level = "forbid", check-cfg = ["cfg(thinkthen_internal_doctest)"] }
+unreachable_pub = "forbid"
+unsafe_code = "deny"
+
+[lints.clippy]
+allow_attributes_without_reason = "deny"
+cognitive_complexity = "warn"
+dbg_macro = "deny"
+disallowed_macros = "allow"
+disallowed_methods = "allow"
+disallowed_types = "allow"
+excessive_nesting = "warn"
+expect_used = "deny"
+indexing_slicing = "deny"
+panic = "deny"
+print_stderr = "deny"
+print_stdout = "deny"
+todo = "deny"
+too_many_lines = "warn"
+unimplemented = "deny"
+unwrap_used = "deny"
+wildcard_imports = "warn"

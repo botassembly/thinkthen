@@ -10,7 +10,7 @@ Status: landed on main after a fresh review accepted it (`sdlc/records/0102-revi
 
 ## Outcome
 
-No `Debug` line from `recognize` carries the user's text. This closes `sdlc/issues/2026-09-24-recognized-names-print-their-text-in-debug-output.md`.
+No `Debug` line from `recognize` carries the user's text. This closes `sdlc/issues/closed/2026-09-24-recognized-names-print-their-text-in-debug-output.md`.
 
 ## Work
 

@@ -4,11 +4,12 @@ use std::fs;
 use std::io;
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Output, Stdio};
-use std::sync::Arc;
+use std::process::{Child, Command, Output, Stdio};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, mpsc};
+use std::time::Duration;
 
-use crate::harness::{Canned, Listener, spawn};
+use crate::harness::{Canned, Gathering, Listener, finish, spawn_one as spawn};
 
 /// The question every case on this page asks.
 const QUESTION: &str = "Does this report a payment failure?";
@@ -74,6 +75,28 @@ fn decide(base: &str, arguments: &[&str], input: &str) -> io::Result<Output> {
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         input.as_bytes(),
     )
+}
+
+/// Start `decide` over JSON records without the cache, with standard input left open.
+fn piped(base: &str, jobs: &str) -> io::Result<Child> {
+    Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+        .env_clear()
+        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
+        .env("THINKTHEN_API_KEY", "sk-test-value")
+        .args([
+            "decide",
+            QUESTION,
+            "--model",
+            "local-1",
+            "--no-cache",
+            "--batch",
+            "1",
+        ])
+        .args(["--url", base, "--jsonl", "--field", "/body", "--jobs", jobs])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
 }
 
 /// What the run printed on standard output.
@@ -299,24 +322,44 @@ fn jobs_acts_in_record_mode_alone_and_inside_its_range() {
 }
 
 #[test]
-fn one_process_reuses_the_connections_it_opens() {
-    for (jobs, most) in [("1", 1_usize), ("4", 4)] {
-        let listener = Listener::answering(|body| Canned::ok(&answered(ordinal(body))))
-            .expect("a loopback listener");
-        let output = decide(
-            listener.base(),
-            &["--jsonl", "--field", "/body", "--jobs", jobs],
-            &records(6),
-        )
-        .expect("the compiled binary runs");
+fn a_run_opens_one_connection_for_each_job_and_reuses_it() {
+    for jobs in [1_usize, 4, 16, 32] {
+        // Each round is held until all of its requests are in flight, so the
+        // first opens `jobs` connections and the second needs them all again.
+        let rounds = [(); 2].map(|()| Gathering::new(jobs));
+        let (told, answers) = mpsc::channel();
+        let listener = Listener::answering(move |body| {
+            let place = ordinal(body);
+            rounds[usize::from(place > jobs)].hold();
+            Canned::ok(&answered(place)).notifying(told.clone())
+        })
+        .expect("a loopback listener");
+        let mut child =
+            piped(listener.base(), &jobs.to_string()).expect("the compiled binary runs");
+        let mut input = child.stdin.take().expect("a pipe to standard input");
+        let all = records(2 * jobs);
+        let lines: Vec<&str> = all.split_inclusive('\n').collect();
+        input
+            .write_all(lines[..jobs].concat().as_bytes())
+            .expect("round one");
+        for _ in 0..jobs {
+            answers
+                .recv_timeout(Duration::from_secs(10))
+                .expect("the first round is answered");
+        }
+        // Every connection now sits idle in the pool, where a small pool trims it.
+        std::thread::sleep(Duration::from_millis(200));
+        input
+            .write_all(lines[jobs..].concat().as_bytes())
+            .expect("round two");
+        drop(input);
+        let output = finish(child, "thinkthen over two rounds").expect("the compiled binary ends");
 
         assert_eq!(output.status.code(), Some(0), "{jobs} jobs");
-        assert_eq!(printed(&output).lines().count(), 6, "{jobs} jobs");
-        let opened = listener.connections();
-        assert!(
-            (1..=most).contains(&opened),
-            "{jobs} jobs opened {opened} connections"
-        );
+        assert_eq!(printed(&output).lines().count(), 2 * jobs, "{jobs} jobs");
+        assert_eq!(listener.count(), 2 * jobs, "{jobs} jobs");
+        assert_eq!(listener.peak(), jobs, "{jobs} jobs");
+        assert_eq!(listener.connections(), jobs, "{jobs} jobs");
     }
 }
 
@@ -324,29 +367,7 @@ fn one_process_reuses_the_connections_it_opens() {
 fn a_reader_that_closes_the_pipe_stops_the_reading_and_the_scheduling() {
     let listener = Listener::answering(|body| Canned::ok(&answered(ordinal(body))).after(30))
         .expect("a loopback listener");
-    let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .env_clear()
-        .env("HOME", env!("CARGO_TARGET_TMPDIR"))
-        .env("THINKTHEN_API_KEY", "sk-test-value")
-        .args([
-            "decide",
-            QUESTION,
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-            "--jsonl",
-            "--field",
-            "/body",
-            "--jobs",
-            "4",
-            "--no-cache",
-        ])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .expect("the compiled binary runs");
+    let mut child = piped(listener.base(), "4").expect("the compiled binary runs");
 
     let mut input = child.stdin.take().expect("a pipe to standard input");
     input
@@ -360,7 +381,9 @@ fn a_reader_that_closes_the_pipe_stops_the_reading_and_the_scheduling() {
     reader.read_line(&mut row).expect("one row");
     drop(reader);
 
-    let status = child.wait().expect("the compiled binary ends");
+    let status = finish(child, "thinkthen after `head -1`")
+        .expect("the compiled binary ends")
+        .status;
     assert_eq!(status.code(), Some(0));
     assert_eq!(row, wrapped(1));
     // The tool learns of the closed pipe from the write that fails, so it
@@ -437,8 +460,14 @@ fn equal_cache_misses_send_once_at_every_supported_width() {
 fn different_cache_digests_do_not_share_a_lock() {
     let cache = folder("different-cache-digests");
     let named = cache.to_string_lossy();
-    let listener = Listener::answering(|body| Canned::ok(&answered(ordinal(body))).after(50))
-        .expect("a loopback listener");
+    // Each request waits until both are in flight, so a lock shared across
+    // digests holds the second request back and the peak stays at 1.
+    let gathering = Gathering::new(2);
+    let listener = Listener::answering(move |body| {
+        gathering.hold();
+        Canned::ok(&answered(ordinal(body)))
+    })
+    .expect("a loopback listener");
     let output = decide(
         listener.base(),
         &[

@@ -1,57 +1,59 @@
 # Agent instructions for thinkthen
 
-The package and binary are both `thinkthen`. Read `README.md` first, then `specification/README.md`, then `sdlc/planning/rust-standards.md`. The specification is the contract, and code follows it.
+Read `README.md`, `specification/README.md`, and `sdlc/planning/rust-standards.md` in order. The specification is the contract.
 
 ## Building
 
-- Red-green test-driven development. Write the failing test, watch it fail for the stated reason, make it pass, then clean up. A red-green test is scaffolding. Before a ticket lands, turn each one into an outside-in behavior test through the command line or public API, a table of edge cases, a contract check, or a regression test that failed before its fix. Delete the rest. Code review checks this.
-- Build the simplest thing that works. YAGNI, DRY, locality of behavior, separation of concerns. A command or an option enters only when a demo cannot be written without it.
-- The gate ladder is `sdlc/scripts/{install,lint,test,spec}`. Run the cheapest rung first and the whole ladder before handing back.
-- `sdlc/ratchet.json` holds the source size ceiling. The ceiling equals the measured total. The commit that raises it says what grew, why it earns its lines, and where you looked for duplication to delete first.
-- A second agent reviews any change that raises the ceiling, widens a public surface, or adds a dependency. The review names what it checked.
-- A ticket that turns a demo green writes the page in the how-to form of ADR 0011. `sdlc/scripts/demos` checks it.
-- Commit as soon as a change is whole and push right away. Commit messages are imperative and active.
-- Never add agent attribution to a commit or a pull request: no trailer, no co-author line, no "generated with".
+- Red-green development: see the stated failure, pass it, then clean up. Before landing, turn scaffold tests into outside-in CLI/API, edge-table, contract, or prior-failing regression tests, or delete them. Review checks this.
+- Build simply: YAGNI, DRY, local behavior, separate concerns. A command or option enters only when a demo needs it.
+- The gate ladder is `sdlc/scripts/{install,lint,test,spec,surfaces}`. Run focused format, lint and functional checks per change. The coordinator names the related-ticket checkpoint before a full test, spec or surfaces run. Run load, churn, timing and contention only through `test-stress --run`; retain all functional cases in `test-full-cases --run`.
+- `sdlc/ratchet.json` equals the measured source total. A raised ceiling records growth, why it earns its lines, and where duplication was sought for deletion.
+- A second agent reviews raised ceilings, wider public surfaces, and dependencies, naming what it checked.
+- A ticket that turns a demo green writes its page in ADR 0011's how-to form, and `sdlc/scripts/demos` checks it.
+- Prepare related tickets per `sdlc/planning/ticket-preparation.md`; preserve outcomes. Before landing, add `## What the build taught us` to the ticket. Review its lessons and improve the next brief.
+- Commit each whole change and push it at once.
+- Never add agent attribution to a commit or pull request.
+- Use a lane per `sdlc/planning/worktrees.md`. The lander frees it.
 
 ## The pure core
 
-`crates/thinkthen/src/core` touches no file, no environment variable, no socket, no clock, and no process. Module attributes and `policy.py` enforce the bans and the inward dependency direction. The command parses at the edge and hands typed values inward. Do not weaken the lint or policy tables. `lint` compares them against the accepted copies and runs planted policy failures.
+`crates/thinkthen/src/core` touches no file, environment, socket, clock, or process. Attributes and `policy.py` enforce bans and inward dependencies. The command parses at the edge and passes typed values inward. Never weaken lint or policy tables; `lint` checks accepted copies and planted failures.
 
 ## The tool judges and never acts
 
-`thinkthen` never runs a command and never treats free text as an instruction. It writes only files the user named, its resolved platform cache, and count-only usage totals beside that cache. The command never creates or edits the read-only configuration file.
+`thinkthen` never runs commands or obeys free text. It writes only user-named files, its platform cache, and adjacent count-only usage totals. It never creates or edits read-only configuration.
 
 ## No network in a gate
 
-Tests replay recorded responses. A live call to a paid backend runs only from `sdlc/scripts/live`, by hand, under a token cap, with Ian's authorization.
+Tests replay recorded responses. A paid live call runs only from `sdlc/scripts/live`, by hand, under a token cap, with Ian's authorization.
 
-The live ledger under Git's common directory is the only runtime authority. Do not edit, replace, remove, or copy it by hand. Use `live --status` to audit it. Follow the migration in `sdlc/scripts/README.md` when a ticket explicitly authorizes an authority change.
+The live ledger under Git's common directory is the sole runtime authority. Never manually edit, replace, remove, or copy it. Audit with `live --status`; only a ticket permits migration under `sdlc/scripts/README.md`.
 
 ## Credentials
 
-A key is read from `THINKTHEN_API_KEY`. It is never committed, logged, hashed, echoed in a plan, or written to a recording. It goes only to the address the user named. A recording stores request bodies and responses and never headers.
+The key comes from `THINKTHEN_API_KEY`. It is never committed, logged, hashed, echoed in a plan, or recorded. It goes only to the address the user named. A recording stores request bodies and responses, never headers.
 
 ## Public hygiene
 
-This repository will go public. Never name a private project or a customer. Describe a consumer generically.
+This repository will go public. Never name a private project or customer. Describe a consumer generically.
 
 ## What reviewers keep finding
 
-- A secrecy test covers every command and every failure path, and it reads every `Debug` line too.
-- A test that claims "sends nothing" counts the requests on the loopback listener. `--dry-run` proves nothing about a live path.
-- A test pins the exact sentence it checks. `contains("3")` passes on any text with a 3 in it.
-- A check script strips fenced code blocks before it reads a title or a status line.
+- A secrecy test covers every command, failure path, and `Debug` line.
+- A "sends nothing" test counts loopback listener requests. `--dry-run` proves nothing about a live path.
+- A test pins the exact sentence it checks. `contains("3")` passes on any text with a 3.
+- A check script strips fenced code before it reads a title or status line.
 - A block that turns `set -e` off pins the exit code it captured.
-- A `jq` transform never uses `//` for a three-way rule, because `false` and a missing value read alike under it.
-- A number on a page names the record that measured it, and a change in behavior changes its pages in the same commit.
+- A `jq` transform never uses `//` for a three-way rule, because `false` and a missing value read alike.
+- A number on a page names the record that measured it. A behavior change updates its pages in the same commit.
 - A script that checks something runs from a rung, or it rots.
-- A new test answers four questions: what behavior it protects, what credible regression makes it fail, why no existing test already catches it, and whether it needs an export, flag, or hook that only tests use. A missing answer rejects it. A test that needs a test-only hook moves to the real boundary. The source is the workspace decision `2026-09-24-tests-earn-their-place.md`.
-- Review rejects the junk patterns from the OpenClaw `test-audit` skill (https://github.com/openclaw/openclaw/tree/main/.agents/skills/test-audit). These include a test with no assertion, a value compared to itself, an expected value computed by the code under test, a mock that implements the asserted behavior, a copied inventory or export list, and one contract tested at several layers.
+- A new test answers four questions: protected behavior, credible failing regression, why existing tests miss it, and whether it needs a test-only export, flag, or hook. Missing answers reject it; test-only hooks move to the real boundary. Review rejects OpenClaw `test-audit` junk: absent or self-comparing assertions, code-computed expectations, mocks doing asserted work, copied inventories/exports, and the same contract at several layers. See workspace decision `2026-09-24-tests-earn-their-place.md`.
+- The build record names each deleted or consolidated test and the stronger routine proof that replaces it. A distinct parser, secrecy, cancellation, cache-miss, invalid-input, or conflict regression stays until a stronger boundary test proves the same behavior.
 
 ## Where things are
 
-`crates/thinkthen` holds the `core`, `engine`, and `cli` modules and the binary. `specification/` is the contract. `spec/` holds executable pages that `mustmatch` runs. `demos/` holds the how-tos, and each green one is also a test held to ADR 0016. `transforms/` holds `jq` files over saved rows. `probes/` holds the live measurements behind a ruling. `sdlc/` is the record: `planning/adr/` for decisions, `tickets/` for authorized work, `records/` for what landed and its review, `issues/` for problems found, and `scripts/` for the gate ladder. `README.md` holds the names: question file, question set, transform, how-to, pipeline.
+`README.md` defines terms; `sdlc/README.md` maps the repo. Marketing owns `site/` per `sdlc/planning/ownership.md`. Green demos are ADR 0016 tests. `probes/` holds ruled live measurements.
 
 ## Where decisions go
 
-Every decision lands in `sdlc/`: an ADR for an architecture decision, an issue for a problem found, a ticket for work authorized. Tickets are numbered from 0001 in this repository, and a ticket lands through a worktree. A decision Ian cannot find later was not made. Say which ones he can overturn. A proposal that changes before anyone acts on it is written again whole, with the design and its decisions first. An amendment is for an accepted ADR, where the history matters.
+Decisions land in `sdlc/`: ADRs for architecture, issues for problems, tickets for authorized work. Tickets number from 0001 and land through worktrees. An unfindable decision was not made; name what Ian can overturn. Before action, rewrite changed proposals whole, design first. Amend accepted ADRs when history matters.

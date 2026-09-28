@@ -2,27 +2,20 @@
 
 use std::io::{Read, Write};
 use std::process::ExitCode;
-use std::time::Duration;
 
 use crate::core::{
     Backend, Evidence, Find, Framing, MAX_RECORD_BYTES, Meta, PlanDocument, Pointer, QuestionText,
-    Reading, Record, Reply, RequestMeta, json_line,
+    Reading, Record, RequestMeta, json_line,
 };
 
 use crate::args::{Common, FindArguments};
-use crate::asking::{Folders, ask};
+use crate::asking::{self, Folders};
 use crate::edge::{self, Environment};
+use crate::engine::facade::{self, Found};
 use crate::failure::Failure;
-use crate::http::Client;
-use crate::prepared_request::PreparedRequest;
 use crate::profile;
-use crate::recorder::Recorder;
 
 /// Read one bounded set, ask once, and print its selected original unit.
-#[expect(
-    clippy::too_many_lines,
-    reason = "the one-request command keeps validation and output in their observable order"
-)]
 pub(crate) fn run(
     arguments: &FindArguments,
     environment: &Environment,
@@ -60,13 +53,15 @@ pub(crate) fn run(
         return Err(Failure::DryRunWithRecording);
     }
     let recording = folders.reported();
-    let recorder = (!common.dry_run)
+    let engine = (!common.dry_run)
         .then(|| {
-            Recorder::of_private(
-                folders.record.as_deref(),
-                folders.replay.as_deref(),
-                folders.private_default,
-                folders.cache_answers,
+            asking::engine(
+                common,
+                environment,
+                folders,
+                backend.clone(),
+                profile.clone(),
+                None,
             )
         })
         .transpose()?;
@@ -93,38 +88,20 @@ pub(crate) fn run(
     let find = Find::new(question, &evidence, backend.model().clone(), arguments.none)
         .map_err(|_| Failure::Defect("a validated find set could not become a plan"))?;
     if common.dry_run {
-        let _prepared = PreparedRequest::with_profile(&backend, find.plan(), profile.as_ref())?;
+        let _prepared = facade::split(&backend, profile.as_ref(), find.plan())?;
         let document = PlanDocument::of(&backend, find.plan())
             .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
         let document = document.reading(&reading);
         edge::write_line(writer, &json_line(&document)?)?;
         return Ok(ExitCode::SUCCESS);
     }
-    let recorder = recorder.ok_or(Failure::Defect("a live find run has no recorder"))?;
-    let client = Client::new(Duration::from_secs(common.timeout), backend.is_secure());
-    let answered = ask(
-        &backend,
-        find.plan(),
-        common,
-        environment,
-        &recorder,
-        &client,
-        profile.as_ref(),
-    )?;
-    let (line, resolved) = rendered(
-        common,
-        &find,
-        &backend,
-        &reading,
-        &units,
-        &answered.reply,
-        answered.replayed,
-        answered.requests_sent,
-        answered.request.as_str(),
-    )?;
+    let engine = engine.ok_or(Failure::Defect("a live find run has no engine"))?;
+    let found = engine.find(&find, environment.cancel())?;
+    let (line, resolved) = rendered(common, &find, &backend, &reading, &units, found)?;
     if let Some(line) = line {
         edge::write_line(writer, &line)?;
     }
+    environment.usage().record_done();
     Ok(if resolved {
         ExitCode::SUCCESS
     } else {
@@ -165,27 +142,19 @@ fn read_units(
     Ok(units)
 }
 
-#[expect(
-    clippy::too_many_arguments,
-    reason = "one find result needs the settled command, request, reply, units, and reading"
-)]
 fn rendered(
     common: &Common,
     find: &Find,
     backend: &Backend,
     reading: &Reading,
     units: &[Unit],
-    reply: &Reply,
-    replayed: bool,
-    requests_sent: u64,
-    request: &str,
+    found: Found,
 ) -> Result<(Option<String>, bool), Failure> {
-    let [crate::core::AnswerOutcome::Answered(answer)] = reply.outcomes() else {
-        return Err(Failure::Defect("the adapter answered no question"));
-    };
-    let selected = find
-        .select(answer)
-        .map_err(|_| Failure::Defect("a find choice could not be mapped"))?;
+    let Found {
+        selection: selected,
+        answered,
+    } = found;
+    let reply = &answered.reply;
     let place = selected.selected();
     let line = if common.details {
         let value = place
@@ -203,7 +172,11 @@ fn rendered(
             backend.url().clone(),
             reply.model().clone(),
             reply.usage(),
-            RequestMeta::new(replayed, requests_sent, vec![request.to_owned()]),
+            RequestMeta::new(
+                answered.replayed,
+                answered.requests_sent,
+                vec![answered.request.as_str().to_owned()],
+            ),
         );
         Some(json_line(&find.result(value, selected, meta))?)
     } else {

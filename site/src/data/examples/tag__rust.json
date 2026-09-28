@@ -1,8 +1,0 @@
-{
-  "status": "drawn",
-  "source": "deck surfaces.md",
-  "lang": "rust",
-  "code": "use thinkthen::{Answer, Engine, Question};\nlet tt = Engine::from_env()?;\n\n// praise, a bug, and a double charge in one message\nlet labels = Question::tag(\"Which labels fit this message?\",\n    &[\"praise\", \"bug\", \"billing\"])?;\nlet text = \"Love the new dashboard, but export crashes the app, \\\n    and I was charged twice.\";\nprintln!(\"{:?}\", tt.tag(&labels, text)?);",
-  "function": "tag",
-  "surface": "rust"
-}

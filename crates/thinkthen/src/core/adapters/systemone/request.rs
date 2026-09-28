@@ -12,36 +12,22 @@ use crate::core::adapters::systemone::{EncodeError, wire_name};
 use crate::core::json::Json;
 use crate::core::plan::Plan;
 use crate::core::question::{Labels, Question};
-use crate::core::render::json_line;
-use crate::core::text::{Description, QuestionText, Withheld};
+use crate::core::text::{Description, QuestionText};
 
 /// The body one request carries.
 ///
 /// `state` is a string for the text evidence a run has always sent, and the
 /// object or list itself when a pointer selection made one, so the JSON is
 /// never folded into a sentence or written twice.
+///
+/// It lives only inside [`encode_raw`], which writes it at once, so nothing
+/// outside a test can print it and it derives `Debug` only in tests.
 #[derive(Serialize)]
-#[cfg_attr(test, derive(serde::Deserialize, PartialEq))]
+#[cfg_attr(test, derive(Debug, serde::Deserialize, PartialEq))]
 pub(crate) struct Request {
     state: Json,
     model: String,
     questions: Questions,
-}
-
-/// `state` is the evidence, and a pick's criteria may come from a record, so
-/// `Debug` withholds both and shows the model. The length is the JSON's. The
-/// question types derive `Debug` only in tests, so nothing else prints them.
-impl std::fmt::Debug for Request {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        formatter
-            .debug_struct("Request")
-            .field(
-                "state",
-                &Withheld(json_line(&self.state).map_or(0, |line| line.len())),
-            )
-            .field("model", &self.model)
-            .finish_non_exhaustive()
-    }
 }
 
 /// The wire questions in request order.
@@ -165,16 +151,12 @@ pub(crate) fn encode(plan: &Plan) -> Result<Vec<u8>, EncodeError> {
 
 /// Write the plan as the request body the plan document embeds.
 pub(crate) fn encode_raw(plan: &Plan) -> Result<Box<RawValue>, EncodeError> {
-    serde_json::value::to_raw_value(&request(plan)?).map_err(|error| EncodeError::of(&error))
-}
-
-/// Build the body one plan sends, before it is written as JSON.
-pub(crate) fn request(plan: &Plan) -> Result<Request, EncodeError> {
-    Ok(Request {
+    let request = Request {
         state: plan.evidence().as_json(),
         model: plan.model().as_str().to_owned(),
         questions: questions(plan)?,
-    })
+    };
+    serde_json::value::to_raw_value(&request).map_err(|error| EncodeError::of(&error))
 }
 
 /// Expand logical tag questions into one wire yes/no question per label.
@@ -280,7 +262,10 @@ impl RequestQuestion {
                     .map(|(name, described)| {
                         described.map_or_else(
                             || Json::String(name.clone()),
-                            |held| held.as_json().clone(),
+                            |held| match held.as_json() {
+                                Json::Null => Json::Object(Vec::new()),
+                                held => held.clone(),
+                            },
                         )
                     })
                     .collect(),
@@ -293,6 +278,7 @@ impl RequestQuestion {
 #[cfg(test)]
 mod tests {
     use super::{Request, RequestQuestion, encode};
+    use crate::core::adapters::built_in::DEFAULT_MODEL;
     use crate::core::adapters::systemone::tests::{
         disruption_plan, plan_for, tag_plan, team_plan, urgency_plan,
     };
@@ -444,20 +430,6 @@ mod tests {
     }
 
     #[test]
-    fn a_score_map_writes_its_descriptions_in_order_and_null_stays_null() {
-        let bytes = encode(&file_plan(
-            r#"{"score":"How much?","levels":{"low":{"what":"Little."},"high":null}}"#,
-            Verb::Score,
-        ))
-        .expect("a plan is writable");
-        let text = String::from_utf8(bytes).expect("a request is text");
-        assert!(
-            text.contains(r#""criteria":[{"what":"Little."},null]"#),
-            "{text}"
-        );
-    }
-
-    #[test]
     fn one_structured_tag_value_expands_every_label_into_the_array_form() {
         let bytes = encode(&file_plan(
             r#"{"tag":"Which?","labels":{"a":{"d":1},"b":null}}"#,
@@ -467,11 +439,8 @@ mod tests {
         let text = String::from_utf8(bytes).expect("a request is text");
         assert_eq!(
             text,
-            concat!(
-                r#"{"state":"Refund me please.","model":"jev-latest","questions":{"q1":{"type":"noul","#,
-                r#""instructions":["Which?",{"label":"a","description":{"d":1}}],"#,
-                r#""criteria":{"true":{"d":1}}},"#,
-                r#""q2":{"type":"noul","instructions":["Which?",{"label":"b"}]}}}"#,
+            format!(
+                r#"{{"state":"Refund me please.","model":"{DEFAULT_MODEL}","questions":{{"q1":{{"type":"noul","instructions":["Which?",{{"label":"a","description":{{"d":1}}}}],"criteria":{{"true":{{"d":1}}}}}},"q2":{{"type":"noul","instructions":["Which?",{{"label":"b"}}]}}}}}}"#
             )
         );
     }

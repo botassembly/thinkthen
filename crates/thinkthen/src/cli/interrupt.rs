@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 use std::process::ExitCode;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, OnceLock};
 
 use crate::cli::edge::Environment;
@@ -22,7 +22,8 @@ const ACTIONS: [Action; 4] = [
 ];
 
 struct State {
-    cancel: Cancel,
+    cancel: Cancel<'static>,
+    signal: Arc<AtomicUsize>,
     default_armed: Arc<AtomicBool>,
     active: Arc<AtomicBool>,
     installed: bool,
@@ -36,6 +37,9 @@ impl State {
     ) -> Self {
         let mut state = Self {
             cancel: Cancel::default(),
+            signal: Arc::new(AtomicUsize::new(
+                signal_hook::consts::signal::SIGINT as usize,
+            )),
             default_armed: Arc::new(AtomicBool::new(true)),
             active: Arc::new(AtomicBool::new(false)),
             installed: false,
@@ -88,6 +92,10 @@ pub(super) struct Guard<'a> {
 }
 
 impl Guard<'_> {
+    pub(super) fn cancelled(&self) -> bool {
+        self.state.cancel.fired()
+    }
+
     fn finalize(&mut self) -> (bool, Result<(), ()>) {
         self.state.default_armed.store(true, Ordering::SeqCst);
         let cancelled = self.state.cancel.fired();
@@ -102,7 +110,14 @@ impl Guard<'_> {
     pub(super) fn finish(mut self, code: ExitCode) -> Result<ExitCode, Failure> {
         let (cancelled, restored) = self.finalize();
         if cancelled {
-            Ok(ExitCode::from(130))
+            let code = if self.state.signal.load(Ordering::SeqCst)
+                == signal_hook::consts::signal::SIGTERM as usize
+            {
+                143
+            } else {
+                130
+            };
+            Ok(ExitCode::from(code))
         } else if restored.is_err() {
             Err(Failure::Defect("SIGINT routing could not be restored"))
         } else {
@@ -144,7 +159,7 @@ enum Routing {
 }
 
 impl Routing {
-    fn start(cancel: Cancel, acknowledgment: Option<PathBuf>) -> Result<Self, StartError> {
+    fn start(cancel: Cancel<'static>, acknowledgment: Option<PathBuf>) -> Result<Self, StartError> {
         #[cfg(unix)]
         {
             UnixRouting::start(cancel, acknowledgment).map(Self::Unix)
@@ -172,57 +187,31 @@ struct UnixRouting {
     stop: std::sync::mpsc::Sender<()>,
     carrier: std::thread::JoinHandle<Result<(), ()>>,
     original: nix::sys::signal::SigSet,
-    restore_fails: bool,
 }
 
 #[cfg(unix)]
 impl UnixRouting {
-    fn start(cancel: Cancel, path: Option<PathBuf>) -> Result<Self, StartError> {
-        Self::start_with(cancel, path, [false; 4])
-    }
-
-    fn start_with(
-        cancel: Cancel,
-        path: Option<PathBuf>,
-        failures: [bool; 4],
-    ) -> Result<Self, StartError> {
+    fn start(cancel: Cancel<'static>, path: Option<PathBuf>) -> Result<Self, StartError> {
         use std::sync::mpsc;
 
-        let [block_fails, spawn_fails, readiness_fails, restore_fails] = failures;
         let signal = sigint_set();
-        if block_fails {
-            return Err(StartError::Activation);
-        }
         let original = signal
             .thread_swap_mask(nix::sys::signal::SigmaskHow::SIG_BLOCK)
             .map_err(|_error| StartError::Activation)?;
         let (stop, stopped) = mpsc::channel();
         let (ready_send, ready) = mpsc::sync_channel(1);
         let acknowledgment = Acknowledgment::new(path);
-        let carrier_acknowledgment = acknowledgment.clone();
-        if spawn_fails {
-            return Err(start_error(&original, restore_fails));
-        }
         let carrier = match std::thread::Builder::new()
             .name("thinkthen-sigint".to_owned())
-            .spawn(move || {
-                carrier(
-                    signal,
-                    stopped,
-                    ready_send,
-                    cancel,
-                    carrier_acknowledgment,
-                    readiness_fails,
-                )
-            }) {
+            .spawn(move || carrier(signal, stopped, ready_send, cancel, acknowledgment))
+        {
             Ok(carrier) => carrier,
-            Err(_error) => return Err(start_error(&original, restore_fails)),
+            Err(_error) => return Err(start_error(&original)),
         };
         let routing = Self {
             stop,
             carrier,
             original,
-            restore_fails,
         };
         match ready.recv() {
             Ok(Ok(())) => Ok(routing),
@@ -233,7 +222,7 @@ impl UnixRouting {
     fn abort(self) -> StartError {
         let _stopping = self.stop.send(());
         let _joined = self.carrier.join();
-        start_error(&self.original, self.restore_fails)
+        start_error(&self.original)
     }
 
     fn cleanup(self) -> Result<(), ()> {
@@ -243,14 +232,14 @@ impl UnixRouting {
             .join()
             .map_err(|_panic| ())
             .and_then(|result| result);
-        let restored = restore(&self.original, self.restore_fails);
+        let restored = restore(&self.original);
         stopped.and(joined).and(restored)
     }
 }
 
 #[cfg(unix)]
-fn start_error(original: &nix::sys::signal::SigSet, restore_fails: bool) -> StartError {
-    if restore(original, restore_fails).is_err() {
+fn start_error(original: &nix::sys::signal::SigSet) -> StartError {
+    if restore(original).is_err() {
         StartError::Restoration
     } else {
         StartError::Activation
@@ -258,13 +247,11 @@ fn start_error(original: &nix::sys::signal::SigSet, restore_fails: bool) -> Star
 }
 
 #[cfg(unix)]
-fn restore(original: &nix::sys::signal::SigSet, injected_failure: bool) -> Result<(), ()> {
-    let restored = original.thread_set_mask().map_err(|_error| ());
-    if injected_failure { Err(()) } else { restored }
+fn restore(original: &nix::sys::signal::SigSet) -> Result<(), ()> {
+    original.thread_set_mask().map_err(|_error| ())
 }
 
 #[cfg(unix)]
-#[derive(Clone)]
 struct Acknowledgment {
     path: Option<PathBuf>,
     failed: Arc<AtomicBool>,
@@ -303,6 +290,7 @@ impl Acknowledgment {
 fn sigint_set() -> nix::sys::signal::SigSet {
     let mut signal = nix::sys::signal::SigSet::empty();
     signal.add(nix::sys::signal::Signal::SIGINT);
+    signal.add(nix::sys::signal::Signal::SIGTERM);
     signal
 }
 
@@ -311,15 +299,13 @@ fn carrier(
     signal: nix::sys::signal::SigSet,
     stopped: std::sync::mpsc::Receiver<()>,
     ready: std::sync::mpsc::SyncSender<Result<(), ()>>,
-    cancel: Cancel,
+    cancel: Cancel<'static>,
     acknowledgment: Acknowledgment,
-    readiness_fails: bool,
 ) -> Result<(), ()> {
     use std::sync::mpsc::RecvTimeoutError;
 
     let unblocked = signal.thread_unblock().map_err(|_error| ());
-    let announced = if readiness_fails { Err(()) } else { unblocked };
-    ready.send(announced).map_err(|_error| ())?;
+    ready.send(unblocked).map_err(|_error| ())?;
     unblocked?;
     let mut acknowledged = false;
     loop {
@@ -348,21 +334,34 @@ fn process_state() -> &'static State {
 }
 
 fn register(action: Action, state: &State) -> Result<(), ()> {
-    use signal_hook::consts::signal::SIGINT;
-    let registered = match action {
-        Action::ConditionalDefault => signal_hook::flag::register_conditional_default(
-            SIGINT,
-            Arc::clone(&state.default_armed),
-        ),
-        Action::Cancel => signal_hook::flag::register(SIGINT, state.cancel.flag()),
-        Action::ArmDefault => signal_hook::flag::register(SIGINT, Arc::clone(&state.default_armed)),
-    };
-    registered.map(|_id| ()).map_err(|_error| ())
+    use signal_hook::consts::signal::{SIGINT, SIGTERM};
+    for signal in [SIGINT, SIGTERM] {
+        let registered = match action {
+            Action::ConditionalDefault => signal_hook::flag::register_conditional_default(
+                signal,
+                Arc::clone(&state.default_armed),
+            ),
+            Action::Cancel => {
+                signal_hook::flag::register_usize(
+                    signal,
+                    Arc::clone(&state.signal),
+                    signal as usize,
+                )
+                .map_err(|_error| ())?;
+                signal_hook::flag::register(signal, state.cancel.flag())
+            }
+            Action::ArmDefault => {
+                signal_hook::flag::register(signal, Arc::clone(&state.default_armed))
+            }
+        };
+        registered.map(|_id| ()).map_err(|_error| ())?;
+    }
+    Ok(())
 }
 
-fn emulate(_state: &State) -> Result<(), ()> {
-    signal_hook::low_level::emulate_default_handler(signal_hook::consts::signal::SIGINT)
-        .map_err(|_error| ())
+fn emulate(state: &State) -> Result<(), ()> {
+    let signal = i32::try_from(state.signal.load(Ordering::SeqCst)).map_err(|_error| ())?;
+    signal_hook::low_level::emulate_default_handler(signal).map_err(|_error| ())
 }
 
 pub(super) fn activate(environment: &mut Environment) -> Result<Guard<'static>, Failure> {

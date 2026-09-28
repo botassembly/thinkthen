@@ -263,6 +263,9 @@ in_form() {
 in_form 'say an old word' 'The decider model answers.' | fixture vocabulary-page
 expect vocabulary-page 1 'demos: page/README.md:9: "decider model" breaks the fixed-phrase rule'
 
+in_form 'say the old answer word' 'The answer is unresolved.' | fixture vocabulary-unsure
+expect vocabulary-unsure 1 'demos: page/README.md:9: "unresolved" breaks the fixed-phrase rule'
+
 printf 'choose --help\tPick from one document.\n' >"$REPO/$ROOT/bin/planted"
 in_form 'plant a word in help' 'The help is planted.' | fixture vocabulary-help
 expect vocabulary-help 1 'demos: thinkthen choose --help:1: "document" breaks the help-word rule'
@@ -308,6 +311,21 @@ for form in 'loose-ignore-case mustmatch -i like ""' 'loose-dashes mustmatch lik
 	} | fixture "$name"
 	expect "$name" 1 'demos: page/README.md:12: `like ""` matches any output; use `test -z`'
 done
+
+# Issue 2026-09-25 item 7: a quoted folder name hides its space from the
+# folder check, so any name that is not plain fails and is named.
+in_form 'replay a spaced folder' 'The page runs `thinkthen decide Q --replay "my recording/"`.' |
+	fixture replay-spaced
+expect replay-spaced 1 'demos: page/README.md writes --replay "my recording/", and a folder name holds only'
+
+# Item 9: under set +e a command fails unseen before the pinned one.
+{
+	head_of_a_page 'hide a failure under set +e'
+	printf '```bash\nset +e\nfalse\n%s\n```\n\n' "$ok"
+	printf '## What can go wrong\n\nNothing here reaches a backend.\n\n'
+	printf '## Related how-tos\n\n- [How to read the standard](../one/)\n'
+} | fixture set-e-off
+expect set-e-off 1 'demos: page/README.md turns set -e off on line 10; capture each code with `&& rc=0 || rc=$?`'
 
 if [ "$failures" -ne 0 ]; then
 	printf 'demos-self-test: %s cases failed\n' "$failures" >&2

@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"They visited Washington, D.C., in May.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.\n\nText: They visited [[Washington, D.C]]., in May.","criteria":{"Washington, D.C":"They visited [[Washington, D.C]]., in May.","Washington, D.C.":"They visited [[Washington, D.C.]], in May."}},"q2":{"type":"choice","instructions":"In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.\n\nText: D.C., in [[May]].","criteria":{"May":"...D.C., in [[May]].","May.":"...D.C., in [[May.]]"}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"Washington, D.C.","confidence":0.79,"probabilities":{"Washington, D.C":0.1,"Washington, D.C.":0.9}},"q2":{"type":"choice","choice":"May","confidence":0.97,"probabilities":{"May":0.99,"May.":0.01}}},"usage":{"input_tokens":555,"output_tokens":73}}
+}

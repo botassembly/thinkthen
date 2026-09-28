@@ -8,6 +8,7 @@ use serde::ser::SerializeMap;
 use serde::{Serialize, Serializer};
 use thiserror::Error;
 
+use crate::core::batch::BatchRecord;
 use crate::core::json::{Json, JsonError};
 use crate::core::pointer::Pointer;
 use crate::core::question::{Labels, LabelsError};
@@ -47,6 +48,9 @@ pub(crate) enum ReadingError {
     /// Two pointers end in one name, so one would hide the other.
     #[error("--field: two pointers end in `{0}`, and one evidence object holds each name once")]
     KeyClash(String),
+    /// A question reads `on` under `--lines`, whose records have no members.
+    #[error("question `{0}` reads `on`, and a --lines record is text with no members")]
+    LinesPart(String),
 }
 
 /// Why one record could not become the evidence of one request.
@@ -84,6 +88,9 @@ pub(crate) enum RecordError {
     /// A pointer was taken into a text record, which has no members.
     #[error("{}", ReadingError::TextHasNoMembers)]
     TextHasNoMembers,
+    /// A question reads `on` in a record whose selection is text.
+    #[error("question `{0}` reads `on`, and this record's evidence is text with no members")]
+    TextPart(String),
     /// The evidence the record yields is blank.
     #[error("{0}")]
     Blank(#[from] BlankTextError),
@@ -250,6 +257,7 @@ impl Serialize for AnnotatedRecord {
 pub(crate) struct Reading {
     framing: Framing,
     fields: Vec<Pointer>,
+    by_default: bool,
 }
 
 /// The `input` field a plan carries in record mode.
@@ -257,6 +265,8 @@ pub(crate) struct Reading {
 pub(crate) struct ReadingPlan<'a> {
     framing: Framing,
     field: &'a [Pointer],
+    #[serde(skip_serializing_if = "Option::is_none")]
+    from: Option<&'static str>,
 }
 
 impl Reading {
@@ -279,7 +289,18 @@ impl Reading {
                 return Err(ReadingError::KeyClash(pointer.key().to_owned()));
             }
         }
-        Ok(Self { framing, fields })
+        Ok(Self {
+            framing,
+            fields,
+            by_default: false,
+        })
+    }
+
+    /// Mark the framing as the default's choice, which the plan names.
+    #[must_use]
+    pub(crate) const fn by_default(mut self) -> Self {
+        self.by_default = true;
+        self
     }
 
     /// True when the input is a stream of records rather than one document.
@@ -288,11 +309,18 @@ impl Reading {
         self.framing != Framing::Document
     }
 
+    /// A blank text line has a place in the input, but no record to judge.
+    pub(crate) fn skips(&self, bytes: &[u8]) -> bool {
+        self.framing == Framing::Lines
+            && str::from_utf8(self.ended(bytes)).is_ok_and(|text| text.trim().is_empty())
+    }
+
     /// Name the framing and the pointers, as the record-mode plan prints them.
     pub(crate) fn plan(&self) -> ReadingPlan<'_> {
         ReadingPlan {
             framing: self.framing,
             field: &self.fields,
+            from: self.by_default.then_some("default"),
         }
     }
 
@@ -389,22 +417,69 @@ impl Reading {
     /// Returns [`RecordError`] when a pointer finds nothing, when the evidence
     /// is blank, and when it cannot be written as JSON.
     pub(crate) fn evidence(&self, record: &Record) -> Result<Evidence, RecordError> {
-        let value = match (&record.0, self.fields.as_slice()) {
-            (Held::Text(text), []) => return Ok(Evidence::new(text.as_str())?),
-            (Held::Text(_), _) => return Err(RecordError::TextHasNoMembers),
-            (Held::Json(value), []) => return whole(value),
-            (Held::Json(value), [pointer]) => found(pointer, value)?.clone(),
-            (Held::Json(value), pointers) => Json::Object(
+        self.selected(record)?.evidence()
+    }
+
+    /// Build the record a batch reads: today's evidence, and the value a batch
+    /// quotes. A whole JSON record keeps its own value, not its compact text.
+    pub(crate) fn batch_record(&self, record: &Record) -> Result<BatchRecord, RecordError> {
+        let selected = self.selected(record)?;
+        let value = match &selected {
+            Selected::Text(text) => Json::String((*text).to_owned()),
+            Selected::Whole(value) => (*value).clone(),
+            Selected::Chosen(value) => value.clone(),
+        };
+        let evidence = selected.evidence()?;
+        Ok(BatchRecord { evidence, value })
+    }
+
+    /// What this reading selects from one record.
+    fn selected<'a>(&self, record: &'a Record) -> Result<Selected<'a>, RecordError> {
+        match (&record.0, self.fields.as_slice()) {
+            (Held::Text(text), []) => Ok(Selected::Text(text)),
+            (Held::Text(_), _) => Err(RecordError::TextHasNoMembers),
+            (Held::Json(value), _) => self.chosen(value),
+        }
+    }
+
+    /// The evidence these pointers select inside one JSON value, by the
+    /// `state` rule. `annotate` reads each `on` group's part this way.
+    pub(crate) fn part(&self, value: &Json) -> Result<Evidence, RecordError> {
+        self.chosen(value)?.evidence()
+    }
+
+    /// What this reading selects from one JSON value.
+    fn chosen<'a>(&self, value: &'a Json) -> Result<Selected<'a>, RecordError> {
+        Ok(match self.fields.as_slice() {
+            [] => Selected::Whole(value),
+            [pointer] => Selected::Chosen(found(pointer, value)?.clone()),
+            pointers => Selected::Chosen(Json::Object(
                 pointers
                     .iter()
                     .map(|pointer| Ok((pointer.key().to_owned(), found(pointer, value)?.clone())))
                     .collect::<Result<Vec<_>, RecordError>>()?,
-            ),
-        };
-        match value {
-            Json::Array(_) | Json::Object(_) => Ok(Evidence::structured(value)?),
-            Json::String(text) => Ok(Evidence::new(text)?),
-            scalar => Ok(Evidence::new(json_line(&scalar)?)?),
+            )),
+        })
+    }
+}
+
+/// What a reading selects: a whole text, a whole JSON record, or a selection.
+enum Selected<'a> {
+    Text(&'a str),
+    Whole(&'a Json),
+    Chosen(Json),
+}
+
+impl Selected<'_> {
+    fn evidence(self) -> Result<Evidence, RecordError> {
+        match self {
+            Self::Text(text) => Ok(Evidence::new(text)?),
+            Self::Whole(value) => whole(value),
+            Self::Chosen(value @ (Json::Array(_) | Json::Object(_))) => {
+                Ok(Evidence::structured(value)?)
+            }
+            Self::Chosen(Json::String(text)) => Ok(Evidence::new(text)?),
+            Self::Chosen(scalar) => Ok(Evidence::new(json_line(&scalar)?)?),
         }
     }
 }

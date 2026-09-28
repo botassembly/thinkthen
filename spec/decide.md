@@ -21,7 +21,7 @@ thinkthen decide --help | grep -c -- '\[default: 4\]' | mustmatch not like "0"
 `--dry-run` prints what would be sent, in the four fields the specification fixes, and opens no connection. The plan carries the evidence, because the evidence is what leaves the machine.
 
 ```bash
-printf 'Refund me please.' | thinkthen decide 'asks for a refund' --dry-run | mustmatch like '{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","request":{"state":"Refund me please.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}}'
+printf 'Refund me please.' | thinkthen decide 'asks for a refund' --dry-run | mustmatch like '{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY","request":{"state":"Refund me please.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}}'
 ```
 
 The plan needs no key. It names the variable a key would be read from and never a value.
@@ -41,7 +41,7 @@ printf 'x' | env THINKTHEN_BASE_URL=http://127.0.0.1:1/v2 thinkthen decide 'asks
 `--url` names a base and takes no companion option. The key still comes from `THINKTHEN_API_KEY`, because naming the address is the user's own act.
 
 ```bash
-printf 'x' | thinkthen decide 'asks for a refund' --dry-run --url http://127.0.0.1:1/v1 | grep -c '"url":"http://127.0.0.1:1/v1/systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY"' | mustmatch "1"
+printf 'x' | thinkthen decide 'asks for a refund' --dry-run --url http://127.0.0.1:1/v1 | grep -c '"url":"http://127.0.0.1:1/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY"' | mustmatch "1"
 ```
 
 A base that is not an `http` or `https` address is a usage error, and so is a base carrying user information, because the address is printed in a plan and kept in a recording. Neither message shows the address it refused.
@@ -69,7 +69,7 @@ printf 'x' | thinkthen decide 'asks for a refund' --dry-run --url '   ' 2>&1 >/d
 The five `THINKTHEN_*` backend variables of ADR 0004 are gone. None of them changes the plan.
 
 ```bash
-env THINKTHEN_BACKEND=nowhere THINKTHEN_URL=http://127.0.0.1:1/v1 THINKTHEN_ADAPTER=systemone THINKTHEN_MODEL=local-1 THINKTHEN_KEY_ENV=OTHER_KEY sh -c "printf 'x' | thinkthen decide 'asks for a refund' --dry-run" | grep -c '"url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY"' | mustmatch "1"
+env THINKTHEN_BACKEND=nowhere THINKTHEN_URL=http://127.0.0.1:1/v1 THINKTHEN_ADAPTER=systemone THINKTHEN_MODEL=local-1 THINKTHEN_KEY_ENV=OTHER_KEY sh -c "printf 'x' | thinkthen decide 'asks for a refund' --dry-run" | grep -c '"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY"' | mustmatch "1"
 ```
 
 `--model` replaces the default model, which is how a run is pinned to one version.
@@ -116,11 +116,11 @@ printf 'x' | thinkthen decide 'asks for a refund' --record here/ --replay there/
 echo "$status" | mustmatch "2"
 ```
 
-`--lines` and `--jsonl` turn the input into records, and the plan then shows the first record with a fifth field naming the framing and the pointers. It reads no further than that record.
+`--lines` and `--jsonl` turn the input into records, and the plan then shows the first batch with a fifth field naming the framing and the pointers. The batch quotes each record inside its own question, beside one fixed sentence of evidence.
 
 ```bash
-printf '{"id":"T-1","body":"Payouts failed."}\n{"id":"T-2","body":"x"}\n' | thinkthen decide 'reports a payment failure' --jsonl --field /body --dry-run | mustmatch like '{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-latest","key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Payouts failed.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"reports a payment failure"}}}}'
-printf 'first line\nsecond line\n' | thinkthen decide 'reports a payment failure' --lines --dry-run | grep -c '"input":{"framing":"lines","field":\[\]},"request":{"state":"first line"' | mustmatch "1"
+printf '{"id":"T-1","body":"Payouts failed."}\n{"id":"T-2","body":"x"}\n' | thinkthen decide 'reports a payment failure' --jsonl --field /body --dry-run | mustmatch like '{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"Payouts failed.\". reports a payment failure"},"q2":{"type":"noul","instructions":"The text is \"x\". reports a payment failure"}}}}'
+printf 'first line\nsecond line\n' | thinkthen decide 'reports a payment failure' --lines --dry-run | grep -c '"input":{"framing":"lines","field":\[\]},"request":{"state":"Each question quotes' | mustmatch "1"
 ```
 
 `--field` given more than once sends an object of the named parts, keyed by the last part of each pointer. Two pointers that end in one name are a usage error, and so is `--field` beside `--lines`.
@@ -148,8 +148,8 @@ printf '{"body":"x"}\n' | thinkthen decide 'reports a payment failure' --jsonl -
 `--input FILE` names a path. An empty record stream succeeds with no output and no request, and `--quiet` cannot act over records, because no record's answer reaches the exit code.
 
 ```bash
-out=$(printf '' | thinkthen decide 'reports a payment failure' --jsonl --dry-run)
-test -z "$out"
+no_records_output=$(printf '' | thinkthen decide 'reports a payment failure' --jsonl --dry-run)
+test -z "$no_records_output"
 status=0
 printf 'a line\n' | thinkthen decide 'reports a payment failure' --lines --quiet --dry-run >/dev/null 2>&1 || status=$?
 echo "$status" | mustmatch "2"
@@ -228,6 +228,9 @@ echo "$status" | mustmatch "5"
 A diagnostic goes to standard error and never to standard output, so a script reading a result never reads an explanation.
 
 ```bash
-test -z "$(printf 'x' | thinkthen decide 'asks for a refund' --dry-run --url ftp://127.0.0.1/v1 2>/dev/null)"
+refusal_code=0
+refusal_stdout=$(printf 'x' | thinkthen decide 'asks for a refund' --dry-run --url ftp://127.0.0.1/v1 2>/dev/null) || refusal_code=$?
+test -z "$refusal_stdout"
+echo "$refusal_code" | mustmatch "2"
 printf 'x' | thinkthen decide 'asks for a refund' --dry-run --url ftp://127.0.0.1/v1 2>&1 >/dev/null | mustmatch like "thinkthen: a base address begins with \`http://\` or \`https://\`"
 ```

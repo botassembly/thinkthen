@@ -1,0 +1,10 @@
+{
+  "directory": [
+    "thinkthen/R",
+    "thinkthen/tools",
+    "tests",
+    "examples"
+  ],
+  "extension": ".R",
+  "max": 1372
+}

@@ -1,0 +1,197 @@
+#!/usr/bin/env python3
+"""Move recording entries that asked for one model to the key of another (ticket 0159).
+
+rekey-model FROM TO FOLDER... moves each tracked, clean entry whose request asks for FROM and
+whose reply names TO. It checks every entry before it writes any, changes only the bytes of the
+request's model value, renames with `git mv`, and prints each old digest beside its new one.
+--self-test re-keys the two entries under fixtures/rekey-model and plants each refusal.
+"""
+
+import hashlib
+import json
+import pathlib
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+DIGEST = re.compile(r"[0-9a-f]{64}\.json")
+SCHEMA = "thinkthen.recording/1"
+FIXTURE = pathlib.Path(__file__).resolve().parent / "fixtures/rekey-model"
+
+
+class Refused(Exception):
+    pass
+
+
+def git(root, *args):
+    return subprocess.run(["git", "-C", str(root), *args], capture_output=True, check=True).stdout
+
+
+def request_span(text):
+    start = text.index('"request": ') + len('"request": ')
+    return start, json.JSONDecoder().raw_decode(text, start)[1]
+
+
+def swap_model(text, old, new):
+    start, end = request_span(text)
+    request, pattern = text[start:end], '"model":' + json.dumps(old)
+    if request.count(pattern) != 1:
+        return None
+    return text[:start] + request.replace(pattern, '"model":' + json.dumps(new)) + text[end:]
+
+
+def entry_name(text):
+    entry = json.loads(text)
+    start, end = request_span(text)
+    return hashlib.sha256(f'{entry["adapter"]}\n{entry["url"]}\n{text[start:end]}'.encode()).hexdigest() + ".json"
+
+
+def plan(old, new, folders):
+    try:
+        root = pathlib.Path(git(".", "rev-parse", "--show-toplevel").decode().strip()).resolve()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        raise Refused("rekey-model: this is not a Git work tree; nothing was moved")
+    moves, targets = [], set()
+    for folder in folders:
+        folder = pathlib.Path(folder).resolve()
+        where = str(folder.relative_to(root))
+        tracked = set(git(root, "ls-files", "-z", "--", where).decode().split("\0"))
+        dirty = {line[3:] for line in git(root, "status", "--porcelain=v1", "-z", "--untracked-files=all",
+                                           "--", where).decode().split("\0") if line}
+        for path in sorted(folder.iterdir()):
+            if not DIGEST.fullmatch(path.name):
+                continue
+            name = str(path.relative_to(root))
+            if path.is_symlink() or not path.is_file():
+                raise Refused(f"rekey-model: {name} is not a regular file; nothing was moved")
+            if name not in tracked or name in dirty:
+                raise Refused(f"rekey-model: {name} is not tracked and clean in Git; nothing was moved")
+            text = path.read_bytes().decode()
+            try:
+                entry = json.loads(text)
+            except ValueError:
+                continue
+            if not isinstance(entry, dict) or entry.get("schema") != SCHEMA:
+                continue
+            if entry_name(text) != path.name:
+                raise Refused(f"rekey-model: {name} is named for other bytes; nothing was moved")
+            if entry["request"].get("model") != old:
+                continue
+            if entry["response"].get("model") != new:
+                raise Refused(f"rekey-model: {name} holds a reply from a model other than {new}; nothing was moved")
+            moved = swap_model(text, old, new)
+            if moved is None:
+                raise Refused(f"rekey-model: {name} names the model more than once; nothing was moved")
+            target = path.with_name(entry_name(moved))
+            if target.exists() or target.is_symlink() or target in targets:
+                raise Refused(f"rekey-model: {name} would move onto an existing name; nothing was moved")
+            targets.add(target)
+            moves.append((path, target, moved))
+    return root, moves
+
+
+def rekey(old, new, folders):
+    root, moves = plan(old, new, folders)
+    for path, target, moved in moves:
+        git(root, "mv", "--", str(path), str(target))
+        target.write_bytes(moved.encode())
+        print(path.stem, target.stem)
+
+
+def run(folder, *args):
+    return subprocess.run([sys.executable, __file__, *args], cwd=folder, capture_output=True, text=True)
+
+
+def snapshot(folder):
+    files = {p.name: p.read_bytes() if not p.is_symlink() else b"link" for p in folder.iterdir() if p.name != ".git"}
+    return files, git(folder, "status", "--porcelain=v1", "--untracked-files=all")
+
+
+def commit(folder, message):
+    git(folder, "add", "-A")
+    git(folder, "-c", "user.name=self-test", "-c", "user.email=self-test@example.invalid",
+        "-c", "commit.gpgsign=false", "commit", "-q", "-m", message)
+
+
+def scratch(parent, name):
+    """A Git folder with two clean jev-latest entries: the fixture's second one turned back."""
+    folder = pathlib.Path(parent) / name
+    shutil.copytree(FIXTURE, folder)
+    git(folder, "init", "-q")
+    commit(folder, "copy the fixture")
+    text = swap_model((folder / SECOND).read_text(), "jev-1.13.0", "jev-latest")
+    git(folder, "mv", SECOND, entry_name(text))
+    (folder / entry_name(text)).write_text(text)
+    commit(folder, "turn the second entry back")
+    return folder
+
+
+FIRST = "33ebe7d2dfc7f3755a9d7cc17703168cc9c178417b963e74bbf728400c96ae3f.json"
+SECOND = "e9a0d3f4a135557d5a93ca14a56f27d54e852d7a3b909b56273ed7f7349f1248.json"
+
+
+def pinned(f):
+    return swap_model((f / FIRST).read_text(), "jev-latest", "jev-1.13.0")
+
+
+# Each plant: what it does to a fresh scratch copy, whether it commits, and the refusal it earns.
+PLANTS = [
+    (lambda f: (f / FIRST).write_text((f / FIRST).read_text().replace(
+        '"response": {"model":"jev-1.13.0"', '"response": {"model":"jev-2.0.0"')), True,
+     f"{FIRST} holds a reply from a model other than jev-1.13.0"),
+    (lambda f: git(f, "mv", FIRST, "f" * 64 + ".json"), True, f"{'f' * 64}.json is named for other bytes"),
+    (lambda f: (f / ("1" * 64 + ".json")).symlink_to(FIRST), True, f"{'1' * 64}.json is not a regular file"),
+    (lambda f: (f / entry_name(pinned(f))).write_text(pinned(f)), True,
+     f"{FIRST} would move onto an existing name"),
+    (lambda f: git(f, "rm", "-q", "--cached", FIRST), False, f"{FIRST} is not tracked and clean in Git"),
+    (lambda f: (f / FIRST).write_text((f / FIRST).read_text() + "\n"), False,
+     f"{FIRST} is not tracked and clean in Git"),
+]
+
+
+def self_test():
+    failures = []
+    with tempfile.TemporaryDirectory() as parent:
+        folder = scratch(parent, "clean")
+        expected = pinned(folder)
+        result = run(folder, "jev-latest", "jev-1.13.0", ".")
+        second = folder / SECOND
+        if result.returncode != 0 or not second.is_file() or second.read_bytes() != (FIXTURE / SECOND).read_bytes():
+            failures.append("the second entry does not match the recorder's bytes and name")
+        rekeyed = [p for p in folder.glob("*.json") if p.name != SECOND]
+        if len(rekeyed) != 1 or rekeyed[0].read_text() != expected:
+            failures.append("the first entry changed more than its model value")
+        for index, (plant, commits, refusal) in enumerate(PLANTS):
+            folder = scratch(parent, f"plant-{index}")
+            plant(folder)
+            if commits:
+                commit(folder, "plant")
+            kept = snapshot(folder)
+            result = run(folder, "jev-latest", "jev-1.13.0", ".")
+            if result.returncode != 1 or result.stderr != f"rekey-model: {refusal}; nothing was moved\n" \
+                    or snapshot(folder) != kept:
+                failures.append(f"plant {index}: exit {result.returncode}, {result.stderr.strip()!r}")
+    for failure in failures:
+        print(f"rekey-model --self-test: {failure}", file=sys.stderr)
+    print(f"rekey-model --self-test: {len(PLANTS) + 1} cases, {len(failures)} failed")
+    return 1 if failures else 0
+
+
+def main(argv):
+    if argv == ["--self-test"]:
+        return self_test()
+    if len(argv) < 3:
+        print("usage: rekey-model FROM TO FOLDER... | --self-test", file=sys.stderr)
+        return 2
+    try:
+        rekey(argv[0], argv[1], argv[2:])
+    except Refused as refused:
+        print(refused, file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

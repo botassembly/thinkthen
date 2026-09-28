@@ -73,7 +73,7 @@ const fn only(
 }
 
 /// Every refusal a command line or one record can reach.
-const REFUSALS: [Refusal; 32] = [
+const REFUSALS: [Refusal; 33] = [
     every(
         "a base that is no address",
         &["--url", "ftp://127.0.0.1/v1"],
@@ -132,6 +132,12 @@ const REFUSALS: [Refusal; 32] = [
         "a blank model",
         &["--model", "  "],
         "a model name is text, not white space",
+        2,
+    ),
+    every(
+        "a model with a line break inside",
+        &["--model", "jev\n1.13.0"],
+        "a model name holds no control character or white space but a plain space",
         2,
     ),
     Refusal {
@@ -219,8 +225,10 @@ const REFUSALS: [Refusal; 32] = [
         "--cache is --record and --replay on one folder",
         2,
     ),
-    every(
+    // `relate` takes --jobs over its one entity set (ticket 0143).
+    only(
         "jobs on one document",
+        &["decide", "choose", "tag", "score", "recognize"],
         &["--jobs", "2"],
         "--jobs bounds the requests in flight",
         2,

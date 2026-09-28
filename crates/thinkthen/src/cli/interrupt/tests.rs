@@ -176,14 +176,6 @@ mod unix {
         }
     }
 
-    fn start_failure(flags: [bool; 4], before: &SigSet) -> StartError {
-        let error = UnixRouting::start_with(crate::engine::Cancel::default(), None, flags)
-            .err()
-            .expect("injected activation fails");
-        assert_eq!(SigSet::thread_get_mask().expect("restored"), *before);
-        error
-    }
-
     fn refused(path: &Scratch, unchanged: &[u8]) {
         let acknowledgment = Acknowledgment::new(Some(path.0.clone()));
         acknowledgment.write();
@@ -192,7 +184,7 @@ mod unix {
     }
 
     #[test]
-    fn carrier_masks_workers_and_injected_failures_restore_and_join() {
+    fn carrier_masks_workers_and_cleanup_restores_the_mask() {
         let before = SigSet::thread_get_mask().expect("mask");
         let routing = UnixRouting::start(crate::engine::Cancel::default(), None).expect("routing");
         assert!(
@@ -201,30 +193,25 @@ mod unix {
                 .contains(Signal::SIGINT)
         );
         assert!(
+            SigSet::thread_get_mask()
+                .expect("blocked")
+                .contains(Signal::SIGTERM)
+        );
+        assert!(
             std::thread::spawn(|| SigSet::thread_get_mask()
                 .expect("worker")
                 .contains(Signal::SIGINT))
             .join()
             .expect("joined")
         );
+        assert!(
+            std::thread::spawn(|| SigSet::thread_get_mask()
+                .expect("worker")
+                .contains(Signal::SIGTERM))
+            .join()
+            .expect("joined")
+        );
         routing.cleanup().expect("cleanup");
-        assert_eq!(SigSet::thread_get_mask().expect("restored"), before);
-        for (flags, expected) in [
-            ([true, false, false, false], StartError::Activation),
-            ([false, true, false, false], StartError::Activation),
-            ([false, false, true, false], StartError::Activation),
-            ([false, true, false, true], StartError::Restoration),
-            ([false, false, true, true], StartError::Restoration),
-        ] {
-            assert_eq!(start_failure(flags, &before), expected);
-        }
-        let routing = UnixRouting::start_with(
-            crate::engine::Cancel::default(),
-            None,
-            [false, false, false, true],
-        )
-        .expect("activation");
-        assert!(routing.cleanup().is_err());
         assert_eq!(SigSet::thread_get_mask().expect("restored"), before);
     }
 
@@ -242,7 +229,7 @@ mod unix {
         stop.send(()).expect("stop");
         let (ready_send, ready) = mpsc::sync_channel(1);
         let thread = std::thread::spawn(move || {
-            carrier(signal, stopped, ready_send, cancel, acknowledgment, false)
+            carrier(signal, stopped, ready_send, cancel, acknowledgment)
         });
         assert_eq!(ready.recv().expect("ready"), Ok(()));
         assert_eq!(thread.join().expect("join"), Ok(()));
@@ -261,7 +248,7 @@ mod unix {
 
     fn sigint(process: u32) {
         assert!(
-            Command::new("kill")
+            crate::test_deadline::child::command("kill", &[])
                 .args(["-INT", &process.to_string()])
                 .status()
                 .expect("kill")
@@ -271,6 +258,7 @@ mod unix {
 
     fn child(variable: &str, value: &str) -> (Child, BufReader<ChildStdout>) {
         let mut child = Command::new(std::env::current_exe().expect("test binary"))
+            .env_clear()
             .args([
                 "--exact",
                 "cli::interrupt::tests::unix::sigint_child",
@@ -318,21 +306,27 @@ mod unix {
     #[allow(clippy::excessive_nesting, reason = "synchronized subprocess signals")]
     fn partial_prefixes_and_an_armed_follow_up_sigint_use_the_default() {
         for prefix in 0..4 {
-            let (mut child, mut output) = child("THINKTHEN_SIGINT_PREFIX", &prefix.to_string());
+            let (child, mut output) = child("THINKTHEN_SIGINT_PREFIX", &prefix.to_string());
             await_line(&mut output, "ready");
             sigint(child.id());
             assert_eq!(
-                child.wait().expect("exit").signal(),
+                crate::test_deadline::finish(child, "the SIGINT child")
+                    .expect("exit")
+                    .status
+                    .signal(),
                 Some(Signal::SIGINT as i32)
             );
         }
-        let (mut child, mut output) = child("THINKTHEN_SIGINT_CHILD", "1");
+        let (child, mut output) = child("THINKTHEN_SIGINT_CHILD", "1");
         await_line(&mut output, "ready");
         sigint(child.id());
         await_line(&mut output, "armed");
         sigint(child.id());
         assert_eq!(
-            child.wait().expect("exit").signal(),
+            crate::test_deadline::finish(child, "the SIGINT child")
+                .expect("exit")
+                .status
+                .signal(),
             Some(signal_hook::consts::signal::SIGINT)
         );
     }
@@ -353,9 +347,7 @@ mod unix {
                 );
             }
             announce("ready");
-            loop {
-                std::thread::park();
-            }
+            crate::test_deadline::park_for_signal();
         }
         if std::env::var_os("THINKTHEN_SIGINT_CHILD").is_none() {
             return;
@@ -374,8 +366,6 @@ mod unix {
             std::thread::yield_now();
         }
         announce("armed");
-        loop {
-            std::thread::park();
-        }
+        crate::test_deadline::park_for_signal();
     }
 }

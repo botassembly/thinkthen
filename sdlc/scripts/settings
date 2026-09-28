@@ -1,0 +1,288 @@
+#!/usr/bin/env python3
+"""Keep `specification/settings.md` true to the help, the code, and the question-file keys (ticket 0140).
+
+The table under `## Settings` has fixed columns. Every long flag in any command's help, every `THINKTHEN_` name
+product code reads, and every question-file key needs a row, and a row naming none of them fails. It reads the
+`thinkthen` on PATH, so the `spec` rung runs it after its build. Usage: settings [PAGE]. --self-test plants each
+fault into a copy of the real page, runs the whole check, and pins every sentence.
+"""
+
+import json
+import pathlib
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+
+REPO = pathlib.Path(__file__).resolve().parents[2]
+PAGE = REPO / "specification" / "settings.md"
+SCHEMA = REPO / "specification" / "question-file.schema.json"
+RECOGNIZE = REPO / "crates/thinkthen/src/core/recognize_file.rs"  # its two key lists: the file, then `recognize`
+COLUMNS = ["Setting", "What it does", "Default", "Allowed values", "Command flag", "Environment variable",
+           "Configuration file", "Question-file key", "Rust", "Python", "TypeScript", "Ruby", "R", "C", "DuckDB",
+           "PostgreSQL", "SQLite"]
+FLAG, ENV, KEY = COLUMNS.index("Command flag"), COLUMNS.index("Environment variable"), COLUMNS.index("Question-file key")
+# The named lists: help flags that are not settings, names only tests read (by prefix), and keys
+# that hold the question itself or the file's format.
+NOT_SETTINGS = {"--help", "--version"}
+TEST_ONLY = "THINKTHEN_TEST_"
+NOT_KEYS = {"decide", "choose", "tag", "score", "relate", "recognize", "version"}
+FENCE = re.compile(r"^\s*(```|~~~)")
+CELL = re.compile(r"(?<!\\)\|")
+TICKED = re.compile(r"`([^`]+)`")
+LONG = re.compile(r"--[a-z][a-z0-9-]*")
+ENV_NAME, KEY_NAME = re.compile(r"THINKTHEN_[A-Z0-9_]+"), re.compile(r"^[a-z_.]+$")
+OPTION = re.compile(r"^  (?:-\w, |    )(--[a-z][a-z0-9-]*)")
+COMMAND = re.compile(r"^  ([a-z][a-z-]*)\s")
+LISTED = re.compile(r"!\[((?:\s*\"[a-z_]+\",?)+)\s*\]\s*\.contains")
+NAMES = (re.compile(r"[\"'](THINKTHEN_[A-Z0-9_]+)[\"']"), re.compile(r"\benv\.(THINKTHEN_[A-Z0-9_]+)"))
+SOURCE = {".rs", ".py", ".pyi", ".ts", ".js", ".mjs", ".cjs", ".rb", ".R", ".r", ".c", ".h", ".sql"}
+ENGINE_CELLS = {
+    "Address": ("base_url",), "Model": ("model",), "Throttle": ("throttle",),
+    "Request limit": ("max_requests",), "Answer cache": ("cache_at",),
+    "Backend profile": ("profile",), "Timeout": ("timeout",),
+    "Retries": ("max_retries",), "Recording": ("record", "replay"),
+}
+ENGINE_SOURCES = {
+    "Rust": "crates/thinkthen/src/public/settings.rs", "Python": "libraries/python/src/engine.rs",
+    "TypeScript": "libraries/typescript/src/door.rs", "Ruby": "libraries/ruby/src/lib.rs",
+    "R": "libraries/r/thinkthen/src/rust/src/lib.rs", "C": "libraries/c/src/settings.rs",
+    "DuckDB": "databases/duckdb/src/engines.rs", "PostgreSQL": "databases/postgresql/src/call.rs",
+    "SQLite": "databases/sqlite/src/settings.rs",
+}
+
+
+def prose(text):
+    """The lines outside every fenced block."""
+    out, opener = [], None
+    for line in text.splitlines():
+        hit = FENCE.match(line)
+        if hit and opener is None:
+            opener = hit.group(1)
+        elif hit and hit.group(1) == opener:
+            opener = None
+        elif opener is None:
+            out.append(line)
+    return out
+
+
+def cells(line):
+    return [cell.strip() for cell in CELL.split(line.strip())[1:-1]]
+
+
+def table(lines):
+    """The header and rows of the first pipe table under `## Settings`, or None."""
+    start = next((i for i, line in enumerate(lines) if line.strip() == "## Settings"), None)
+    if start is None:
+        return None
+    rows = []
+    for line in lines[start + 1:]:
+        if line.startswith("#"):
+            break
+        if line.lstrip().startswith("|"):
+            rows.append(cells(line))
+        elif rows:
+            break
+    return (rows[0], rows[2:]) if len(rows) >= 2 else None
+
+
+def ticked(rows, column, pattern):
+    return {hit for row in rows for token in TICKED.findall(row[column]) for hit in pattern.findall(token)}
+
+
+def help_flags():
+    """Every long flag in the help of every command, recursing into command groups."""
+    flags, todo = set(), [[]]
+    while todo:
+        words = todo.pop()
+        text = subprocess.run(["thinkthen", *words, "--help"], capture_output=True, text=True, check=True).stdout
+        section = None
+        for line in text.splitlines():
+            if line.endswith(":") and not line.startswith(" "):
+                section = line
+            elif section == "Commands:" and (hit := COMMAND.match(line)) and hit.group(1) != "help":
+                todo.append([*words, hit.group(1)])
+            elif section not in (None, "Commands:", "Arguments:") and (hit := OPTION.match(line)):
+                flags.add(hit.group(1))
+    return flags - NOT_SETTINGS
+
+
+def product(path):
+    folders = path.parts[:-1]
+    tests = path.name == "tests.rs" or path.stem.endswith("_tests") or path.name.startswith("test_")
+    return path.suffix in SOURCE and not tests and not any(
+        part in {"tests", "test", "tools"} or part.endswith("_tests") for part in folders)
+
+
+def env_names():
+    listed = subprocess.run(["git", "-C", str(REPO), "ls-files", ":(glob)crates/*/src/**", "libraries", "databases"],
+                            capture_output=True, text=True, check=True).stdout.split()
+    found = set()
+    for path in map(pathlib.Path, listed):
+        if product(path) and (REPO / path).is_file():
+            text = (REPO / path).read_text(encoding="utf-8", errors="replace")
+            found |= {hit for pattern in NAMES for hit in pattern.findall(text)}
+    return {name for name in found if not name.startswith(TEST_ONLY)}
+
+
+def schema_keys():
+    defs = json.loads(SCHEMA.read_text(encoding="utf-8"))["$defs"]
+    entries = [(name, entry["properties"]) for name, entry in defs.items() if name in entry.get("properties", {})]
+    keys = {k for _, props in entries for k in props} | {
+        f"{k}.{sub}" for _, props in entries for k, held in props.items() for sub in held.get("properties", {})}
+    top, section = (re.findall(r'"([a-z_]+)"', held) for held in LISTED.findall(RECOGNIZE.read_text(encoding="utf-8"))[:2])
+    return (keys | set(top) | {f"recognize.{k}" for k in section}) - NOT_KEYS
+
+
+def both_ways(page, have, want, missing, stale):
+    out = [f"{page}: {name} {missing}" for name in sorted(want - have)]
+    return out + [f"{page}: {name} {stale}" for name in sorted(have - want)]
+
+
+def engine_cells(page, rows):
+    """A builder setter and its library or SQL cell must appear together."""
+    by_name = {row[0]: row for row in rows}
+    out = []
+    for name, setters in ENGINE_CELLS.items():
+        row = by_name.get(name)
+        if row is None:
+            out.append(f'{page}: engine setting "{name}" has no row')
+            continue
+        for surface, path in ENGINE_SOURCES.items():
+            if name == "Model" and surface in ("DuckDB", "PostgreSQL", "SQLite"):
+                continue  # those cells describe question JSON, not an engine setter
+            source = (REPO / path).read_text(encoding="utf-8")
+            cell = row[COLUMNS.index(surface)]
+            for setter in setters:
+                code = (f"pub fn {setter}(" in source if surface == "Rust" else
+                        re.search(rf"\bbuilder\s*\.\s*{re.escape(setter)}\s*\(", source) is not None)
+                page_has = not cell.startswith("not on this surface") and setter.split("_")[0] in cell
+                if code != page_has:
+                    side = "source has no setter" if page_has else "source setter has no cell"
+                    out.append(f'{page}: {surface} {name} {side}: {setter}')
+    return out
+
+
+def check(path, flags, names, keys):
+    """Every sentence that says how the page misses the rules."""
+    page = path.name
+    found = table(prose(path.read_text(encoding="utf-8")))
+    if found is None:
+        return [f"{page}: no table under ## Settings"], 0
+    header, rows = found
+    out = []
+    for i in range(max(len(header), len(COLUMNS))):
+        got = f'"{header[i]}"' if i < len(header) else "missing"
+        want = f'"{COLUMNS[i]}"' if i < len(COLUMNS) else "none"
+        if got != want:
+            out.append(f"{page}: column {i + 1} is {got}, expected {want}")
+    if out:
+        return out, len(rows)
+    seen = set()
+    for row in rows:
+        name = row[0] if row else ""
+        if len(row) != len(COLUMNS):
+            out.append(f'{page}: the row "{name}" has {len(row)} cells, expected {len(COLUMNS)}')
+            continue
+        out += [f'{page}: the row "{name}" has an empty cell in column "{c}"' for c, cell in zip(COLUMNS, row) if not cell]
+        if name in seen:
+            out.append(f'{page}: the setting "{name}" has two rows')
+        seen.add(name)
+    rows = [row for row in rows if len(row) == len(COLUMNS)]
+    out += both_ways(page, ticked(rows, FLAG, LONG), flags, "is in the help and has no row", "is in a row and in no help")
+    out += both_ways(page, ticked(rows, ENV, ENV_NAME), names, "is read by product code and has no row",
+                     "is in a row and read by no product code")
+    out += both_ways(page, ticked(rows, KEY, KEY_NAME), keys, "is a question-file key and has no row",
+                     "is in a row and is no question-file key")
+    out += engine_cells(page, rows)
+    return out, len(rows)
+
+
+def edit(text, column, old, new):
+    """Replace `old` in one column of every table row, or drop the row when `new` is None."""
+    out = []
+    for line in text.splitlines(keepends=True):
+        row = cells(line) if line.lstrip().startswith("|") else []
+        if len(row) == len(COLUMNS) and old in row[column]:
+            if new is None:
+                continue
+            row[column] = row[column].replace(old, new).strip(" ,") or "not on this surface"
+            line = "| " + " | ".join(row) + " |\n"
+        out.append(line)
+    return "".join(out)
+
+
+def cell_edit(text, name, column, new):
+    out = []
+    for line in text.splitlines(keepends=True):
+        row = cells(line) if line.lstrip().startswith("|") else []
+        if len(row) == len(COLUMNS) and row[0] == name:
+            row[column] = new
+            line = "| " + " | ".join(row) + " |\n"
+        out.append(line)
+    return "".join(out)
+
+
+PLANTED = "| Planted | x | x | x | `--planted-setting` | `THINKTHEN_PLANTED` |" + " not on this surface |" * 11 + "\n"
+
+
+def cases(text):
+    after = text.index("\n", text.index("| --- |")) + 1
+    first = text[after:text.index("\n", after) + 1]
+    decoy = "## Settings\n\n```\n| Setting | Planted |\n| --- | --- |\n```\n"
+    page = "settings.md: "
+    return [
+        ("a missing row", edit(text, FLAG, "`--jobs`", None), [page + "--jobs is in the help and has no row", page + 'engine setting "Throttle" has no row']),
+        ("a stale row", text[:after] + PLANTED + text[after:], [
+            page + "--planted-setting is in a row and in no help",
+            page + "THINKTHEN_PLANTED is in a row and read by no product code"]),
+        ("a moved column", text.replace("| Default | Allowed values |", "| Allowed values | Default |", 1), [
+            page + 'column 3 is "Allowed values", expected "Default"',
+            page + 'column 4 is "Default", expected "Allowed values"']),
+        ("a missing variable", edit(text, ENV, "`THINKTHEN_CACHE`", ""),
+         [page + "THINKTHEN_CACHE is read by product code and has no row"]),
+        ("a missing key", edit(text, KEY, "`on`", ""), [page + "on is a question-file key and has no row"]),
+        ("a fenced decoy table", text.replace("## Settings\n", decoy, 1), []),
+        ("a repeated row", text[:after] + first + text[after:], [page + 'the setting "Threshold" has two rows']),
+        ("a missing engine cell", edit(text, COLUMNS.index("Python"), "`Engine(timeout=)`", "not on this surface"),
+         [page + "Python Timeout source setter has no cell: timeout"]),
+        ("a stale SQL cell", cell_edit(text, "Timeout", COLUMNS.index("SQLite"), "`thinkthen_timeout(n)`"),
+         [page + "SQLite Timeout source has no setter: timeout"]),
+        ("the real page", text, []),
+    ]
+
+
+def self_test(flags, names, keys):
+    bad, text = 0, PAGE.read_text(encoding="utf-8")
+    planted = cases(text)
+    for name, body, expected in planted:
+        with tempfile.TemporaryDirectory() as tmp:
+            copy = pathlib.Path(tmp) / "settings.md"
+            copy.write_text(body, encoding="utf-8")
+            actual = check(copy, flags, names, keys)[0]
+        if actual != expected:
+            bad += 1
+            print(f"settings self-test: {name}: expected {expected}, got {actual}", file=sys.stderr)
+    print(f"settings self-test: {len(planted) - bad}/{len(planted)} cases hold")
+    return bad
+
+
+def main(argv):
+    if shutil.which("thinkthen") is None:
+        print("settings: thinkthen is not on PATH", file=sys.stderr)
+        return 1
+    flags, names, keys = help_flags(), env_names(), schema_keys()
+    if argv[1:] == ["--self-test"]:
+        return 1 if self_test(flags, names, keys) else 0
+    path = pathlib.Path(argv[1]) if len(argv) > 1 else PAGE
+    found, rows = check(path, flags, names, keys)
+    for line in found:
+        print(line, file=sys.stderr)
+    print(f"settings: {rows} rows, {len(flags)} flags, {len(names)} environment names, "
+          f"{len(keys)} question-file keys, {len(found)} failures")
+    return 1 if found else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

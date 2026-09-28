@@ -2,6 +2,9 @@
 # Rung 3: the compiled binary against the executable pages in spec/ and every green demo.
 set -eu
 
+# One heavy rung at a time on this machine. See heavy-lock.
+. "$(dirname -- "$0")/heavy-lock"
+
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
 
@@ -18,11 +21,19 @@ cargo build --locked --quiet --package thinkthen
 PATH="$REPO/target/debug:$PATH"
 export PATH
 
+# Ticket 0140: every flag in the help, product THINKTHEN_ variable, and
+# question-file key has a row in specification/settings.md, and no row is stale.
+python3 sdlc/scripts/settings --self-test
+python3 sdlc/scripts/settings
+
 mustmatch test spec
 
 # The transform page proves the edges its `jq` files claim, and `compare.jq`
 # answers with lists that are empty until something is wrong.
 mustmatch test transforms/README.md
+
+# Ticket 0164: audit grades the recognize keys, whole and filtered by kind.
+mustmatch test specification/fixtures/recognize/README.md
 
 # Every probe reproduces its committed rows from its own recording. The check
 # ran by hand once and rotted, so the rung runs it. It takes a few seconds.

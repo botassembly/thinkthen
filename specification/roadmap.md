@@ -22,17 +22,15 @@ The rule for entry is ADR 0005: a feature enters when a demo cannot be written w
 | Item | Why it is held | What would bring it in |
 | --- | --- | --- |
 | `--from FILE` for `choose` options | On one document the shell already reads a list into the arguments with command substitution. In record mode `--options POINTER` reads the list from the record | A demo whose candidate list is neither in the record nor available to the shell |
-| `--invert` on `filter` | Every demo that wanted the other side wrote the question the other way round | A demo where the question cannot be inverted in words |
+| `--invert` on `filter` | A reworded question is a different measurement with its own threshold, so rewording is no inversion. `decide --jsonl --details` and `jq 'select(.answer.probability < T)'` keep the other side of the same question at the same cut, as the third example in [filter.md](filter.md) shows. Kept on hold 2026-09-26. Ian can overturn this | A demo where that `jq` step cannot serve |
 | `--output FILE`, publishing on success | It would write a file, and it would add a second success path beside the exit code | A demo that must not leave a half-written file behind on a failure |
-| `--context FILE` | One verb carrying extra evidence alone would split the grammar. A user concatenates the context into standard input | A demo where the context has to stay separate from the evidence in the request |
-| `--on-error continue` | It needs an error row shape, a failure count on standard error, and an exit code of its own. Stopping at the first failure needs none of those | A demo over a large file where one bad record must not end the run |
+| `--on-error continue` | It needs an error row shape, a failure count on standard error, and an exit code of its own. Stopping at the first failure needs none of those. `--cache` resumes a stopped run, as `demos/12-keep-going/` shows. Kept on hold 2026-09-26. Ian can overturn this | A demo over a large file where one bad record must not end the run |
 | A request cap | Demo 05 wanted a budget and found it the wrong shape, because a per-file loop spends across processes rather than within a run | A budget that holds across processes. That is a different tool |
 | A `required` mark in the `annotate` file | The file holds questions and nothing else. A required mark is policy | A demo where a missing answer must fail the record |
 | Nesting in `annotate` output | Flat top-level fields keep a chain of judgments flat. Demo 07 found nesting made the next `jq` read `.input.input.sku` | A demo whose answers collide with record fields that cannot be renamed |
 | History across many runs | A comparison of two saved runs keeps nothing. A trend over many runs needs a store, and the tool holds no state | A store that lives outside this tool and reads the saved runs |
 | A threshold on `score` | `jq -e '. >= 2'` after the command cuts on the number in one line, and the help shows it | A demo where the cut has to travel inside a saved question file |
 | A flag that repeats a run for trials | A shell loop does it, and a transform averages within a case before it scores | A demo where the trials have to share one recording folder in one run |
-| Packing many records into one request | Each record is sent once either way, so packing saves no tokens. It saves round trips, and those already run in parallel. It costs isolation, and accuracy falls as the evidence fills with unrelated content | Nothing measured so far |
 | A two-pass `find` beyond 255 units | One request holds 255 units. A second pass over the winners would need a merge rule and a second measurement | A job whose candidate set cannot be cut to 255 upstream |
 | `config set` | An editor changes a JSON file. A writer would be the first thing in this tool that writes a file the user did not name | A demand strong enough to change that rule |
 | A subprocess adapter | It is the escape hatch for a vendor whose shape is not System One. Dynamic plugin libraries stay refused | A vendor worth supporting that no small server can put behind the System One shape |
@@ -41,6 +39,8 @@ The rule for entry is ADR 0005: a feature enters when a demo cannot be written w
 | A library over the core | It is the honest answer to calling the judge from inside a program written in another language, which is use cases 1, 2, 7, and 8 in `sdlc/planning/ten-use-cases.md`. It is a second product, not an option on this one | Version one shipping, and a decision on which language the first binding serves |
 | A `models` listing | The vendor's `GET /v1/models` lists the models with a name, a description, and a release date. A listing reads no evidence and judges nothing, so it earns none of the surface this tool spends on judging | A demo that cannot pin a model without asking the backend which ones exist |
 | A `serve` command or a daemon | Declined by `sdlc/planning/ten-use-cases.md`. A process that waits for work is a service, and this tool is a command that ends. Record mode through a `coproc` already serves a loop from one long-lived process, and a how-to shows it | Nothing. A service is a different program |
+
+ADR 0048 brought two held rows in: `--context FILE`, and packing many records into one request as batching. The batching tickets build them.
 
 ## Held by ADR 0010
 
@@ -84,11 +84,11 @@ The file lived at `$XDG_CONFIG_HOME/thinkthen/config.json`. It held a map of nam
 
 Ian took all of that configuration surface out of version one on 2026-09-19, in the configuration section of ADR 0010. Rulings 1 and 2 emptied an address profile out. One wire shape leaves nothing for an adapter to name, and `THINKTHEN_API_KEY`, `THINKTHEN_BASE_URL`, and `--model` already say the other three values. An address profile was then a second spelling of what a shell user writes in front of the command, and two spellings of one thing cost more than they return.
 
-ADR 0033 later returned one smaller read-only configuration file for the bounded default cache. Its closed shape holds one address, one model, the cache switch, and the prune target. It has no named profiles, selection command, key name, adapter, retry setting, width, or write command. The `config` command and named address profiles remain held here.
+ADR 0033 later returned one smaller read-only configuration file for the default cache. Its closed shape holds one address, one model, the cache switch, and the prune target. It has no named profiles, selection command, key name, adapter, retry setting, throttle, or write command. The `config` command and named address profiles remain held here.
 
-ADR 0032 later reused `--profile FILE` for a smaller explicit file. That file carries a safe calibration name and local evidence-byte, encoded-request-byte, or expanded-question limits. It carries no address, model, adapter, key name, retry setting, width, default, or discovery rule. A user names its path on each run. It does not restore the configuration surface this section holds out.
+ADR 0032 later reused `--profile FILE` for a smaller explicit file. That file carries a safe calibration name and local evidence-byte, encoded-request-byte, or expanded-question limits. It carries no address, model, adapter, key name, retry setting, throttle, default, or discovery rule. A user names its path on each run. It does not restore the configuration surface this section holds out.
 
-A user with several endpoints for whom a variable in front of the command is not enough would bring named address profiles back. The shape to return to is the one above, minus the adapter: named address profiles over an address, a model, and a key variable. The bounded-cache configuration and explicit limits-and-calibration file remain separate inputs.
+A user with several endpoints for whom a variable in front of the command is not enough would bring named address profiles back. The shape to return to is the one above, minus the adapter: named address profiles over an address, a model, and a key variable. The cache configuration and explicit limits-and-calibration file remain separate inputs.
 
 `specification/config.md` and demo 10, `demos/10-another-backend/`, stay in the git history. Ticket 0007 removed both, and 10 stays an empty number.
 

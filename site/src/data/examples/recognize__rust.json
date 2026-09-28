@@ -1,8 +1,0 @@
-{
-  "status": "drawn",
-  "source": "deck recognize-surfaces.md",
-  "lang": "rust",
-  "code": "let text = \"Maria Chen joined Northwind Freight, a company in Chicago.\";\nlet ask = Recognize::new().kinds([\"person\", \"organization\", \"place\"])\n    .relation(\"works_for\", Kind::named(\"person\"), Kind::named(\"organization\"))?\n    .relation(\"based_in\", Kind::named(\"organization\"), Kind::named(\"place\"))?;\nlet found = tt.recognize(&ask, text)?;\n// 1 Maria Chen person, 2 Northwind Freight organization,\n// 3 Chicago place\nfor name in &found.entities {\n    println!(\"{} {} {}\", name.id, name.text, name.kind);\n}\n// works_for 1 2, then based_in 2 3\nfor link in &found.relations {\n    println!(\"{} {} {}\", link.name, link.source, link.target);\n}",
-  "function": "recognize",
-  "surface": "rust"
-}

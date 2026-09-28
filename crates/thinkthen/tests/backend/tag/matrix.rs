@@ -4,7 +4,7 @@ use std::io::{BufRead, BufReader, Write};
 use std::process::{Command, Stdio};
 
 use super::file;
-use crate::harness::{Canned, Listener, spawn};
+use crate::harness::{Canned, Listener, finish, spawn};
 
 fn answer(probabilities: &[f64]) -> String {
     let answers = probabilities
@@ -128,6 +128,24 @@ fn each_invalid_tag_reply_is_a_backend_failure() {
         assert!(output.stdout.is_empty(), "{message}");
         assert!(String::from_utf8_lossy(&output.stderr).contains(message));
     }
+}
+
+/// Two readers could take different copies of a repeated name, so the reply is
+/// refused whole, and the refusal names neither the name nor either value.
+#[test]
+fn a_repeated_answer_name_refuses_the_reply() {
+    let body = concat!(
+        r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.1},"#,
+        r#""q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.1}}}"#,
+    );
+    let listener = Listener::serving(vec![Canned::ok(body)]).expect("listener");
+    let output = tag(listener.base(), &[], b"evidence").expect("tag runs");
+    assert_eq!(output.status.code(), Some(4));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: the reply was refused: the response is not a systemone response: the JSON at line 1 column 93 is not one\n"
+    );
 }
 
 #[test]
@@ -278,7 +296,7 @@ fn a_closed_tag_output_pipe_stops_quietly() {
     let mut first = String::new();
     output.read_line(&mut first).expect("one row");
     drop(output);
-    let finished = child.wait_with_output().expect("tag ends");
+    let finished = finish(child, "tag").expect("tag ends");
     assert_eq!(finished.status.code(), Some(0));
     assert_eq!(first, "{\"input\":\"row 1\",\"value\":[\"billing\"]}\n");
     assert!(finished.stderr.is_empty());

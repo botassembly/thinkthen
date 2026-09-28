@@ -1,0 +1,37 @@
+{
+ "version": 1,
+ "questions": {
+  "singer": {
+   "choose": "The text is the title of a song by the Beatles. Who sings the lead vocal on it?",
+   "options": {
+    "John": "John Lennon",
+    "Paul": "Paul McCartney",
+    "George": "George Harrison",
+    "Ringo": "Ringo Starr"
+   },
+   "threshold": 0.8
+  },
+  "album": {
+   "choose": "The text is the title of a song by the Beatles. On which album did it first appear?",
+   "options": {
+    "Help!": "Help! (1965)",
+    "Rubber Soul": "Rubber Soul (1965)",
+    "Revolver": "Revolver (1966)",
+    "White Album": "The Beatles, the White Album (1968)",
+    "Abbey Road": "Abbey Road (1969)"
+   },
+   "threshold": 0.8
+  },
+  "year": {
+   "choose": "The text is the title of a song by the Beatles. In which year was it first released?",
+   "options": [
+    "1965",
+    "1966",
+    "1967",
+    "1968",
+    "1969"
+   ],
+   "threshold": 0.8
+  }
+ }
+}

@@ -13,7 +13,7 @@ Use this when a nightly job judges a queue and one record ends the run. `queue.j
 ```bash
 set -eu
 
-thinkthen decide 'Does the message report a payment failure?' \
+thinkthen decide 'Does the message report a payment failure?' --batch 1 \
   --jsonl --field /body --input queue.jsonl --cache recording/ 2>/dev/null \
   | mustmatch '{"input":{"id":"Q-01","body":"The card on file expired last week and the retry failed."},"value":true}
 {"input":{"id":"Q-02","body":"Nothing wrong, just saying hello and thanks for the release notes."},"value":false}'
@@ -25,7 +25,7 @@ Each completed row keeps its parsed input beside the answer, so a resumed file s
 ```bash
 set -eu
 
-thinkthen decide 'Does the message report a payment failure?' \
+thinkthen decide 'Does the message report a payment failure?' --batch 1 \
   --jsonl --field /body --input queue.jsonl --cache recording/ 2>&1 >/dev/null \
   | mustmatch "thinkthen: the record holds nothing at \`/body\`
 thinkthen: stopped at record 3; 2 records finished, 2 records from a recording"
@@ -38,7 +38,7 @@ A stopped run prints a prefix that looks exactly like a finished file. The exit 
 ```bash
 set -eu
 
-thinkthen decide 'Does the message report a payment failure?' \
+thinkthen decide 'Does the message report a payment failure?' --batch 1 \
   --jsonl --field /body --input queue.jsonl --cache recording/ \
   >/dev/null 2>&1 && rc=0 || rc=$?
 
@@ -60,7 +60,7 @@ The repaired file goes through the same folder. `meta.cached` is the ledger of w
 set -eu
 
 jq -c 'if has("note") then {id, body: .note} else . end' queue.jsonl \
-  | thinkthen decide 'Does the message report a payment failure?' \
+  | thinkthen decide 'Does the message report a payment failure?' --batch 1 \
       --jsonl --field /body --details --cache recording/ \
   | jq -c '{id: .input.id, value, cached: .meta.cached}' \
   | mustmatch '{"id":"Q-01","value":true,"cached":true}
@@ -73,13 +73,13 @@ Every row reads `true` here, because the committed recording holds all four exch
 
 ## Step 4: send several records at once
 
-`--jobs N` bounds how many requests are in flight, and it defaults to 4. The rows print in input order whatever the number is.
+`--jobs N` sets the throttle. The throttle is the most requests in flight at once, and it defaults to 4. The rows print in input order whatever the number is.
 
 ```bash
 set -eu
 
 jq -c 'if has("note") then {id, body: .note} else . end' queue.jsonl \
-  | thinkthen decide 'Does the message report a payment failure?' \
+  | thinkthen decide 'Does the message report a payment failure?' --batch 1 \
       --jsonl --field /body --cache recording/ --jobs 8 \
   | mustmatch '{"input":{"id":"Q-01","body":"The card on file expired last week and the retry failed."},"value":true}
 {"input":{"id":"Q-02","body":"Nothing wrong, just saying hello and thanks for the release notes."},"value":false}

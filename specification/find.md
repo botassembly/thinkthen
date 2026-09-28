@@ -40,6 +40,8 @@ The chosen unit follows the shared preservation rules in [records.md](records.md
 
 `--details` prints the object in [result.md](result.md). Its question verb and answer kind are `find`. The answer holds the selected generated unit id or `none` and every probability in input order. The value holds the original selected unit or `null`, and the threshold is `null`.
 
+The generated unit id is `u` and the unit's one-based input position, zero-padded to three digits. The first unit is `u001`, and the 255th is `u255`. An answer key for `audit` names units by these ids.
+
 ## Options
 
 | Option | Meaning | Default |
@@ -50,7 +52,7 @@ The chosen unit follows the shared preservation rules in [records.md](records.md
 | `--details` | Prints the full result object | Off |
 | `--input FILE` | Reads the units from a file | Standard input |
 | `--dry-run` | Prints the plan and sends nothing | Off |
-| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-latest` |
+| Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-1.13.0` |
 
 ## Exit codes
 
@@ -68,4 +70,4 @@ thinkthen find 'This ticket should be worked next.' --jsonl --field /body < queu
 
 ## Selection rule
 
-Equal top probabilities among real units select the first input unit. A strict `none` lead or any top tie involving `none` produces the unresolved result. The command prints one unit and has no threshold or top-count option.
+Equal top probabilities among real units select the first input unit. A strict `none` lead or any top tie involving `none` produces the not sure result. The command prints one unit and has no threshold or top-count option.

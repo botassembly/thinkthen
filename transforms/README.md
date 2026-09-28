@@ -20,7 +20,7 @@ These folders are the development sources. The agent's evidence-based verdict de
 
 | Folder | Answers | Page |
 | --- | --- | --- |
-| `counts/` | How many yes, how many no, how many unresolved | [25](../demos/25-check-the-judge/) |
+| `counts/` | How many yes, how many no, how many not sure | [25](../demos/25-check-the-judge/) |
 | `score/` | Accuracy, precision, recall, and F1 at a cut | [25](../demos/25-check-the-judge/) |
 | `sweep/` | What every cut would have done globally, per record group, tag label, or mapped annotation | [13](../demos/13-pick-a-threshold/) and [14](../demos/14-grade-a-batch/) |
 | `band/` | Accuracy beside coverage for a band | [13](../demos/13-pick-a-threshold/) |
@@ -55,7 +55,7 @@ jq -n --argjson cut 0.5 -f score/score.jq "$work/cases.jsonl" \
 
 ## Sweep a pick or a score
 
-The sweep follows the judgment kind. A choice cut asks how much coverage remains when a winning probability must reach the cut. Ties stay unresolved and enter neither accuracy rate. This committed probe has 58 right picks among 60 labeled rows. At 0.95 it resolves 53 and sends seven to a person.
+The sweep follows the judgment kind. A choice cut asks how much coverage remains when a winning probability must reach the cut. A tie stays a not sure answer and enters neither accuracy rate. This committed probe has 58 right picks among 60 labeled rows. At 0.95 it resolves 53 and sends seven to a person.
 
 ```bash
 set -euo pipefail
@@ -63,8 +63,8 @@ set -euo pipefail
 jq -n -f sweep/sweep.jq ../probes/02-confidence/runs/run.jsonl \
   | jq -c '{mode, rows, labeled}, (.sweep[] | select(.cut == 0.5 or .cut == 0.95))' \
   | mustmatch '{"mode":"choose","rows":60,"labeled":60}
-{"cut":0.5,"resolved":60,"unresolved":0,"ties":0,"coverage":1,"accuracy_resolved":0.9667,"accuracy_unresolved":null}
-{"cut":0.95,"resolved":53,"unresolved":7,"ties":0,"coverage":0.8833,"accuracy_resolved":0.9623,"accuracy_unresolved":1}'
+{"cut":0.5,"resolved":60,"unsure":0,"ties":0,"coverage":1,"accuracy_resolved":0.9667,"accuracy_unsure":null}
+{"cut":0.95,"resolved":53,"unsure":7,"ties":0,"coverage":0.8833,"accuracy_resolved":0.9623,"accuracy_unsure":1}'
 ```
 
 A score cut names a boundary between levels. This probe stores the trusted level as `input.level`; the first filter copies it to the transform's `input.label` field. Cut 2 asks whether both the weighted score and the trusted level reach the third named level.
@@ -214,8 +214,8 @@ jq -n --slurpfile before "$work/before.jsonl" -f compare/compare.jq "$work/empty
 
 ## The rules every transform follows
 
-- **Three yes-or-no answers, never two.** true is yes, false is no, and null is unresolved. `.value // false` turns unresolved into no, and no transform uses it.
-- **Unresolved rows are counted apart.** They are never scored right or wrong and never folded into no.
+- **Three yes-or-no answers, never two.** true is yes, false is no, and null is not sure. `.value // false` turns a not sure answer into no, and no transform uses it.
+- **Not sure rows are counted apart.** They are never scored right or wrong and never folded into no.
 - **A metric states its definition.** The header names the label set, what each rate divides by, and what a zero denominator yields, which is null.
 - **A case with no label is reported.** It is listed by id and scored in nothing. No row is dropped silently.
 - **A cut is an argument.** `--argjson` carries it, so one saved run is read at any cut with no second request.

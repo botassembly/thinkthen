@@ -31,7 +31,7 @@ Ian can overturn each of these cheaply.
 - The order of sources for the address is: the hidden `--url` option, then `THINKTHEN_BASE_URL`, then the default. The key is read from `THINKTHEN_API_KEY`. Ticket 0006 still allowed a hidden `--key-env`, and ticket 0007 removes it.
 - The `chat-logprobs` adapter leaves version one. Ruling 1 makes a second wire format inside the binary unnecessary. A local model is reached by a small server that presents the System One shape, and that server is a separate project.
 - The recipes live in `recipes/` as `.jq` files, each with one example of its use. Demos 13 and 14 use them.
-- `--jobs N` sets how many requests are in flight at once. The default is 4, and it is an advanced option. The configuration file held this setting before it left version one.
+- `--jobs N` sets how many requests are in flight at once. (Amended by ADR 0048, below.) The default is 4, and it is an advanced option. The configuration file held this setting before it left version one.
 
 ## The configuration file leaves version one
 
@@ -63,3 +63,24 @@ What ADR 0010 held is the second adapter and the option that selects one. Both r
 - Every new setting enters the neutral plan under the tool's own word. The texts for what true and false mean are `--true` and `--false` in the plan, and the `systemone` adapter alone knows they travel as `criteria`.
 - The libraries that the design study proposes keep the same seam, and no library depends on one vendor's client outside its default adapter.
 
+
+## Amendment, 2026-09-25, by ticket 0126: a repeated request can return another number
+
+"The first live answers" above stays as the record of 2026-09-19. Its sentence "The same request returns the same number" is withdrawn. Two later measurements show the service moves.
+
+- Experiment 212 sent 100 messages twice, minutes apart, all answered by `jev-1.13.0`. 63 of the 100 probabilities moved. Among those that moved, the mean move was 0.02 and the largest 0.08. The fifty borderline messages, 0.33 to 0.67, moved by up to 0.08. The fifty others, 0.02 to 0.96, moved by at most 0.03. Four answers flipped at 0.5, and each sat between 0.43 and 0.51. Its limits: one question, one set, one hundred messages, and one day. Half the sample was picked because it was borderline, so 63 of 100 overstates an ordinary file.
+- Experiment 259 read the recordings of a benchmark. 681 request digests appear in more than one recording, and 178 of them hold different answers. Every one came from `jev-1.13.0`, and the largest gap was 0.09.
+
+A repeated trial therefore shows the service's own play as well as any change in the candidate. A re-record into a used folder stops at exit 5 when the service answers a saved request differently, even with no model change. `specification/recording.md` and `specification/threshold.md` carry the measured play.
+
+## Amendment, 2026-09-27, by ticket 0163: measure drift from saved probabilities
+
+The 2026-09-25 amendment remains a record of its experiment. The offline [0163 drift record](../../records/0163-answer-drift.md) defines a probability-pair comparison over three saved recording sets. In the pinned benchmark, 4,075 of 5,111 repeated digests differ, 310 have a gap above 0.1, 430 cross 0.5, and the largest gap is 0.45. The fixed-width inference from experiment 259 is withdrawn; size a not-sure band from the measured gaps for the use at hand.
+
+## Amendment, 2026-09-27, by Quick Fix qf-command-edges-and-prune: a loopback backend needs no key
+
+With `THINKTHEN_API_KEY` unset or blank, a request to `localhost`, `127.0.0.1`, or `[::1]` goes out with no `Authorization` header, on the command and on every library. A local server that checks no key then needs no pretend secret. Every other address still stops at exit 4 before any connection. The key rule of ruling 2 is unchanged: a set key still goes only to the address the user named. The coordinator ruled this for local experiment 284, file 89. Ian can overturn it.
+
+## Amendment, 2026-09-26: ADR 0048 batches records
+
+Under ADR 0048 a request carries a batch of records, so `--jobs N` also sets how many batches are in flight. The default of 4 stays, and `records.md` keeps the range of 1 to 32. Ian can overturn this.

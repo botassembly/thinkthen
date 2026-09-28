@@ -43,7 +43,10 @@ struct Cache {
     path_source: &'static str,
     entries: Option<u64>,
     bytes: Option<u64>,
+    bad_entries: Option<u64>,
+    #[serde(rename = "prune_target_bytes")]
     target_bytes: u64,
+    #[serde(rename = "prune_target_source")]
     target_source: &'static str,
 }
 
@@ -58,6 +61,7 @@ struct UsageStatus {
 #[derive(Serialize)]
 struct StatusCounts {
     requests_sent: u64,
+    retries: u64,
     input_tokens: u64,
     output_tokens: u64,
     cache_answers: u64,
@@ -67,6 +71,7 @@ impl From<crate::engine::usage::Counts> for StatusCounts {
     fn from(value: crate::engine::usage::Counts) -> Self {
         Self {
             requests_sent: value.requests_sent,
+            retries: value.retries,
             input_tokens: value.input_tokens,
             output_tokens: value.output_tokens,
             cache_answers: value.cache_answers,
@@ -161,6 +166,7 @@ fn gather(environment: &Environment) -> Result<Status, Failure> {
             },
             entries: cache_counts.as_ref().map(|counts| counts.entries),
             bytes: cache_counts.as_ref().map(|counts| counts.bytes),
+            bad_entries: cache_counts.as_ref().map(|counts| counts.bad_entries),
             target_bytes: environment.cache_bytes(),
             target_source,
         },
@@ -222,13 +228,14 @@ fn write_human(status: &Status, mut writer: impl Write) -> Result<(), Failure> {
     )?;
     optional_line(&mut writer, "cache_entries", status.cache.entries)?;
     optional_line(&mut writer, "cache_bytes", status.cache.bytes)?;
+    optional_line(&mut writer, "cache_bad_entries", status.cache.bad_entries)?;
     edge::write_line(
         &mut writer,
-        &format!("cache_target_bytes {}", status.cache.target_bytes),
+        &format!("cache_prune_target_bytes {}", status.cache.target_bytes),
     )?;
     edge::write_line(
         &mut writer,
-        &format!("cache_target_source {}", status.cache.target_source),
+        &format!("cache_prune_target_source {}", status.cache.target_source),
     )?;
     edge::write_line(
         &mut writer,
@@ -263,6 +270,11 @@ fn counts(
         writer,
         &format!("{prefix}_requests_sent"),
         value.map(|counts| counts.requests_sent),
+    )?;
+    optional_line(
+        writer,
+        &format!("{prefix}_retries"),
+        value.map(|counts| counts.retries),
     )?;
     optional_line(
         writer,

@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "questions": {
+    "plan": {
+      "choose": "Which plan is the sender on?",
+      "options": [
+        "free",
+        "team",
+        "enterprise"
+      ]
+    },
+    "topic": {
+      "choose": "What is this about?",
+      "options": [
+        "billing",
+        "access",
+        "export"
+      ]
+    },
+    "call": {
+      "decide": "Does the sender ask for a call?"
+    }
+  }
+}

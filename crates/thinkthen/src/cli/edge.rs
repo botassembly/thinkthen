@@ -4,12 +4,47 @@ use std::env;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, ErrorKind, IsTerminal as _, Read, Write};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use crate::core::KEY_VAR;
+use crate::core::{Backend, KEY_VAR, Reading};
 
-use crate::cli::config::{self, Config};
-use crate::engine::http::Key;
+/// The command's shared, latched observation of a closed output pipe.
+#[derive(Clone, Default)]
+pub(crate) struct Downstream(Arc<AtomicBool>);
+
+impl Downstream {
+    pub(crate) fn gone(&self) -> bool {
+        if self.latched() {
+            return true;
+        }
+        #[cfg(unix)]
+        {
+            use nix::poll::{PollFd, PollFlags, PollTimeout, poll};
+            use std::os::fd::AsFd;
+            let stdout = io::stdout();
+            let mut fds = [PollFd::new(stdout.as_fd(), PollFlags::POLLOUT)];
+            if poll(&mut fds, PollTimeout::ZERO).is_ok()
+                && fds[0]
+                    .revents()
+                    .is_some_and(|flags| flags.intersects(PollFlags::POLLERR | PollFlags::POLLHUP))
+            {
+                self.0.store(true, Ordering::SeqCst);
+            }
+        }
+        self.latched()
+    }
+
+    pub(crate) fn latched(&self) -> bool {
+        self.0.load(Ordering::SeqCst)
+    }
+}
+
+use crate::config::{self, Config};
+use crate::engine::error::Error as EngineError;
+use crate::engine::facade::Key;
+use crate::engine::usage::Counters;
 use crate::failure::Failure;
 
 /// The wait before the first retry, which only a test shortens.
@@ -25,12 +60,14 @@ const BOUND: u64 = crate::core::MAX_RECORD_BYTES as u64 + 2;
 /// The environment the command reads, read once.
 ///
 /// `THINKTHEN_BASE_URL` names where the System One interface lives. The other
-/// variables shorten the retry wait and acknowledge SIGINT, and only tests set
-/// them. The key itself is read later, by name, and only when a request is about
-/// to go out.
+/// variables shorten the retry wait and acknowledge SIGINT. Only a build with
+/// debug assertions reads them, so a release binary ignores them. The key
+/// itself is read later, by name, and only when a request is about to go out.
 #[derive(Debug, Default)]
 pub(crate) struct Environment {
     base_url: Option<String>,
+    batch: Option<String>,
+    max_request_bytes: Option<String>,
     named_cache: bool,
     cache: Option<PathBuf>,
     cache_is_platform_default: bool,
@@ -38,8 +75,8 @@ pub(crate) struct Environment {
     config_path: Option<PathBuf>,
     retry_wait_ms: Option<u64>,
     pub(super) sigint_ack: Option<PathBuf>,
-    pub(super) cancel: crate::engine::Cancel,
-    usage: crate::engine::usage::Counters,
+    pub(super) cancel: crate::engine::Cancel<'static>,
+    usage: std::sync::Arc<Counters>,
     usage_path: Option<PathBuf>,
 }
 
@@ -52,6 +89,8 @@ impl Environment {
         let usage_path = config::usage_path();
         Ok(Self {
             base_url: read("THINKTHEN_BASE_URL"),
+            batch: read("THINKTHEN_BATCH"),
+            max_request_bytes: env::var("THINKTHEN_MAX_REQUEST_BYTES").ok(),
             cache: named_cache
                 .as_ref()
                 .map(PathBuf::from)
@@ -60,10 +99,11 @@ impl Environment {
             named_cache: named_cache.is_some(),
             config,
             config_path,
-            retry_wait_ms: read("THINKTHEN_TEST_RETRY_WAIT_MS").and_then(|text| text.parse().ok()),
-            sigint_ack: read("THINKTHEN_TEST_SIGINT_ACK").map(PathBuf::from),
+            retry_wait_ms: test_only("THINKTHEN_TEST_RETRY_WAIT_MS")
+                .and_then(|text| text.parse().ok()),
+            sigint_ack: test_only("THINKTHEN_TEST_SIGINT_ACK").map(PathBuf::from),
             cancel: crate::engine::Cancel::default(),
-            usage: crate::engine::usage::Counters::new(usage_path.clone()),
+            usage: std::sync::Arc::new(Counters::new(usage_path.clone())),
             usage_path,
         })
     }
@@ -104,11 +144,50 @@ impl Environment {
     pub(crate) fn usage_path(&self) -> Option<&Path> {
         self.usage_path.as_deref()
     }
-    pub(crate) const fn usage(&self) -> &crate::engine::usage::Counters {
+    pub(crate) fn usage(&self) -> &Counters {
         &self.usage
+    }
+    /// The process counters, shared with the engine a command builds.
+    pub(crate) fn counters(&self) -> std::sync::Arc<Counters> {
+        std::sync::Arc::clone(&self.usage)
     }
     pub(crate) fn api_key_set(&self) -> bool {
         read(KEY_VAR).is_some()
+    }
+
+    /// `THINKTHEN_BATCH`, which only `decide`, `filter` and `rank` read.
+    pub(crate) fn batch(&self) -> Option<&str> {
+        self.batch.as_deref()
+    }
+
+    /// Resolve the byte limit only for a command where the setting acts.
+    pub(crate) fn request_size(&self, flag: Option<&str>) -> Result<usize, Failure> {
+        let chosen = flag.or(self.max_request_bytes.as_deref());
+        let Some(value) = chosen else {
+            return Ok(Backend::DEFAULT_REQUEST_SIZE);
+        };
+        let number = value
+            .parse::<usize>()
+            .ok()
+            .filter(|&number| number > 0 && value.bytes().all(|byte| byte.is_ascii_digit()));
+        number.ok_or(Failure::Usage(if flag.is_some() {
+            "--max-request-bytes takes a whole number of at least 1"
+        } else {
+            "THINKTHEN_MAX_REQUEST_BYTES takes a whole number of at least 1"
+        }))
+    }
+
+    /// Warn before planning or sending a request above the built-in default.
+    pub(crate) fn warn_request_size(&self, backend: &Backend) -> Result<(), Failure> {
+        let size = backend.ceiling();
+        if backend.is_built_in() && size > Backend::DEFAULT_REQUEST_SIZE {
+            writeln!(
+                io::stderr().lock(),
+                "thinkthen: warning: max_request_bytes {size} is above the default of 96000; the built-in backend refuses a request over 65536 input tokens"
+            )
+            .map_err(Failure::Output)?;
+        }
+        Ok(())
     }
 
     /// The base the request is posted under, or `None` when the variable is empty.
@@ -121,8 +200,30 @@ impl Environment {
         self.retry_wait_ms.map_or(RETRY_WAIT, Duration::from_millis)
     }
 
-    pub(crate) const fn cancel(&self) -> &crate::engine::Cancel {
+    pub(crate) const fn cancel(&self) -> &crate::engine::Cancel<'static> {
         &self.cancel
+    }
+}
+
+/// Take `--model` on the commands that build their own specification.
+pub(crate) fn model_flag(text: &str) -> Result<crate::core::ModelName, Failure> {
+    crate::core::ModelName::new(text).map_err(|error| {
+        Failure::Usage(match error {
+            crate::core::BlankTextError::ModelControl => {
+                "--model holds no control character or white space but a plain space"
+            }
+            _ => "--model is text, not white space",
+        })
+    })
+}
+
+/// Read a `THINKTHEN_TEST_` variable in a build with debug assertions, which
+/// is what the test suites spawn. A release binary reads `None`.
+fn test_only(name: &str) -> Option<String> {
+    if cfg!(debug_assertions) {
+        read(name)
+    } else {
+        None
     }
 }
 
@@ -219,6 +320,21 @@ impl<R: BufRead> Iterator for Chunks<R> {
     }
 }
 
+/// Keep the input line number while dropping only blank lines in line framing.
+pub(crate) fn numbered<R: BufRead>(
+    chunks: Chunks<R>,
+    reading: &Reading,
+) -> impl Iterator<Item = (usize, Result<Vec<u8>, Failure>)> + use<R> {
+    let reading = reading.clone();
+    chunks.enumerate().filter_map(move |(place, row)| {
+        if row.as_ref().is_ok_and(|bytes| reading.skips(bytes)) {
+            None
+        } else {
+            Some((place + 1, row))
+        }
+    })
+}
+
 /// What a user sitting at a terminal is told the command is waiting for.
 ///
 /// A command reading from a terminal looks hung, because it waits for evidence
@@ -250,12 +366,12 @@ pub(crate) fn waiting(input: Option<&Path>, writer: impl Write) {
 ///
 /// # Errors
 ///
-/// Returns [`Failure::NoKey`] when the variable is unset or blank. The message
+/// Returns [`EngineError::NoKey`] when the variable is unset or blank. The message
 /// names the variable and never a value.
-pub(crate) fn key() -> Result<Key, Failure> {
+pub(crate) fn key() -> Result<Key, EngineError> {
     let value = read(KEY_VAR).unwrap_or_default();
     if value.trim().is_empty() {
-        return Err(Failure::NoKey(KEY_VAR.to_owned()));
+        return Err(EngineError::NoKey(KEY_VAR));
     }
     Ok(Key::new(value))
 }

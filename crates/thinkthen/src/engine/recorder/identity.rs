@@ -37,8 +37,18 @@ pub(super) fn check(folder: &Path, expected: &BackendIdentity, writing: bool) ->
     match read(&marker)? {
         Some(found) => match_identity(folder, &found, expected, writing),
         None if !writing => Ok(()),
-        None if has_entry(folder)? => Err(Error::RecordingFolderLegacy),
-        None => publish(folder, &marker, expected),
+        None => {
+            pause("after-missing-marker");
+            if !has_entry(folder)? {
+                return publish(folder, &marker, expected);
+            }
+            // A writer publishes the marker before it installs an entry, so an
+            // entry found here may follow a marker published since the read.
+            match read(&marker)? {
+                Some(found) => match_identity(folder, &found, expected, writing),
+                None => Err(Error::RecordingFolderLegacy),
+            }
+        }
     }
 }
 
@@ -49,7 +59,8 @@ fn match_identity(
     writing: bool,
 ) -> Result<(), Error> {
     if found != expected {
-        return Err(Error::RecordingBackendMismatch);
+        // The recorder names this run's endpoint and folder kind.
+        return Err(Error::RecordingBackendMismatch(String::new(), false));
     }
     if writing {
         sync_directory(folder)
@@ -212,8 +223,9 @@ fn pause(stage: &str) {
     }
     let ready = std::env::var_os("THINKTHEN_TEST_IDENTITY_READY").expect("test ready path");
     fs::write(ready, []).expect("test pause signal");
-    loop {
-        std::thread::park();
+    match std::env::var_os("THINKTHEN_TEST_IDENTITY_RESUME") {
+        Some(resume) => crate::test_deadline::wait_for_file(resume.as_ref()),
+        None => crate::test_deadline::park_for_signal(),
     }
 }
 

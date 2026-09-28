@@ -2,8 +2,8 @@
 set -eu
 cd -- "$(dirname -- "$0")"
 
-work=$(mktemp -d)
-trap 'rm -rf -- "$work"' EXIT
+. ../../sdlc/scripts/scratch.sh
+scratch_dir work
 
 jq -n -f sweep.jq ../rows/runs/run-a.jsonl > "$work/decision.json"
 cmp decision-expected.json "$work/decision.json"
@@ -34,7 +34,7 @@ jq -n -f sweep.jq "$work/choose.jsonl" \
             tied_neighbors:([.sweep[]|select(.cut==0.6 or .cut==0.65)|del(.cut)]|.[0]==.[1])}' \
   > "$work/choose-report.json"
 cat > "$work/choose-expected.json" <<'EOF'
-{"mode":"choose","rows":5,"labeled":4,"unlabeled":["unlabeled"],"options":["red","blue"],"has_pick":false,"at_half":{"cut":0.5,"resolved":3,"unresolved":1,"ties":1,"coverage":0.75,"accuracy_resolved":0.6667,"accuracy_unresolved":null},"at_fifty_five":{"cut":0.55,"resolved":3,"unresolved":1,"ties":1,"coverage":0.75,"accuracy_resolved":0.6667,"accuracy_unresolved":null},"at_six":{"cut":0.6,"resolved":2,"unresolved":2,"ties":1,"coverage":0.5,"accuracy_resolved":0.5,"accuracy_unresolved":1},"at_ninety_five":{"cut":0.95,"resolved":0,"unresolved":4,"ties":1,"coverage":0,"accuracy_resolved":null,"accuracy_unresolved":0.6667},"tied_neighbors":true}
+{"mode":"choose","rows":5,"labeled":4,"unlabeled":["unlabeled"],"options":["red","blue"],"has_pick":false,"at_half":{"cut":0.5,"resolved":3,"unsure":1,"ties":1,"coverage":0.75,"accuracy_resolved":0.6667,"accuracy_unsure":null},"at_fifty_five":{"cut":0.55,"resolved":3,"unsure":1,"ties":1,"coverage":0.75,"accuracy_resolved":0.6667,"accuracy_unsure":null},"at_six":{"cut":0.6,"resolved":2,"unsure":2,"ties":1,"coverage":0.5,"accuracy_resolved":0.5,"accuracy_unsure":1},"at_ninety_five":{"cut":0.95,"resolved":0,"unsure":4,"ties":1,"coverage":0,"accuracy_resolved":null,"accuracy_unsure":0.6667},"tied_neighbors":true}
 EOF
 cmp "$work/choose-expected.json" "$work/choose-report.json"
 
@@ -103,7 +103,7 @@ jq -n -f sweep.jq ../../probes/02-confidence/runs/run.jsonl \
   | jq -c '{rows,labeled,half:(.sweep[]|select(.cut==0.5)),high:(.sweep[]|select(.cut==0.95))}' \
   > "$work/choice-probe.json"
 cat > "$work/choice-probe-expected.json" <<'EOF'
-{"rows":60,"labeled":60,"half":{"cut":0.5,"resolved":60,"unresolved":0,"ties":0,"coverage":1,"accuracy_resolved":0.9667,"accuracy_unresolved":null},"high":{"cut":0.95,"resolved":53,"unresolved":7,"ties":0,"coverage":0.8833,"accuracy_resolved":0.9623,"accuracy_unresolved":1}}
+{"rows":60,"labeled":60,"half":{"cut":0.5,"resolved":60,"unsure":0,"ties":0,"coverage":1,"accuracy_resolved":0.9667,"accuracy_unsure":null},"high":{"cut":0.95,"resolved":53,"unsure":7,"ties":0,"coverage":0.8833,"accuracy_resolved":0.9623,"accuracy_unsure":1}}
 EOF
 cmp "$work/choice-probe-expected.json" "$work/choice-probe.json"
 

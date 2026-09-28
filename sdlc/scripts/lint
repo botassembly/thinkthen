@@ -1,12 +1,110 @@
 #!/bin/sh
 # Rung 1: the accepted policies, the size ceiling, formatting, clippy, and docs.
 set -eu
+# Ticket 0133: every step and child sees only the names in allow-list.
+. "$(dirname -- "$0")/allow-list"
+. "$(dirname -- "$0")/scratch.sh"
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
+# Worktrees.md rule 11: a recursive rm goes through scratch.sh. Each guard refuses its plant.
+scratch_lint
+scratch_dir planted
+printf '%s -f -r -- "$x"\n' rm >"$planted/check.sh"
+! scratch_lint "$planted/check.sh" 2>/dev/null || { echo 'lint: scratch_lint passed a planted rm' >&2; exit 1; }
+(scratch_made="$REPO/x
+"; rm() { exit 3; }; ! scratch_remove "$REPO" 2>/dev/null) || { echo 'lint: scratch_remove did not refuse the checkout' >&2; exit 1; }
 
+# This repository goes public, so no tracked path or file may name a private
+# project. The names cannot live here, so THINKTHEN_PRIVATE_NAMES points at a
+# list outside the repository: one fixed string per line, matched ignoring
+# case. No variable holds a name, so `sh -x` never prints one. A path hit
+# prints only its number in `git ls-files`. With no path hit, a file hit
+# prints its path and line number.
+if [ -z "${THINKTHEN_PRIVATE_NAMES:-}" ]; then
+    echo "private names: skipped, THINKTHEN_PRIVATE_NAMES is unset"
+else
+    list=$(realpath -- "$THINKTHEN_PRIVATE_NAMES")
+    case $list in "$REPO"/*)
+        echo "lint: THINKTHEN_PRIVATE_NAMES must point outside the repository" >&2
+        exit 1 ;;
+    esac
+    grep -q -v '^[[:space:]]*$' "$list" || {
+        echo "lint: THINKTHEN_PRIVATE_NAMES holds no name" >&2
+        exit 1
+    }
+    scratch_dir found
+    git ls-files >"$found/paths"
+    status=0
+    grep -v '^[[:space:]]*$' "$list" | grep -n -i -F -f - "$found/paths" >"$found/path-hits" || status=$?
+    if [ "$status" -gt 1 ]; then
+        echo "lint: the private-name path check failed (grep exit $status)" >&2
+        exit 1
+    elif [ -s "$found/path-hits" ]; then
+        printf 'lint: %s tracked paths name a private project, numbers in git ls-files: %s\n' \
+            "$(wc -l <"$found/path-hits" | tr -d ' ')" "$(cut -d: -f1 "$found/path-hits" | paste -sd ' ' -)" >&2
+        exit 1
+    fi
+    status=0
+    grep -v '^[[:space:]]*$' "$list" | git grep -n -I -i -F -f - >"$found/file-hits" || status=$?
+    if [ "$status" -gt 1 ]; then
+        echo "lint: the private-name file check failed (git grep exit $status)" >&2
+        exit 1
+    elif [ -s "$found/file-hits" ]; then
+        printf 'lint: a tracked file names a private project at\n%s\n' "$(cut -d: -f1,2 "$found/file-hits")" >&2
+        exit 1
+    fi
+    echo "private names: $(grep -c -v '^[[:space:]]*$' "$list") checked in paths and files, none found"
+fi
+
+# The workspace caps an agents file at 5,000 characters. CLAUDE.md links to AGENTS.md.
+python3 -c '
+import sys
+n = len(open("CLAUDE.md", encoding="utf-8").read())
+print(f"agents file: CLAUDE.md {n}/5000 characters")
+sys.exit(n > 5000)
+'
 python3 sdlc/scripts/policy.py
 python3 sdlc/scripts/catalog.py
+python3 sdlc/scripts/tickets --self-test
+python3 sdlc/scripts/tickets
+# Ticket 0164: every offset in the recognize keys cuts its name out of its text.
+python3 sdlc/scripts/recognize-keys --self-test
+python3 sdlc/scripts/recognize-keys
+# Ticket 0159: the re-key script moves only the model value of a clean, tracked entry.
+python3 sdlc/scripts/rekey-model --self-test
+# Ticket 0127: a test child builds its whole environment, and test code reads
+# the environment one name at a time.
+python3 sdlc/scripts/children --self-test
+python3 sdlc/scripts/children
+# Ticket 0133: a rung's child and allow-list itself both hold exactly the pinned
+# names. Each is planted beside a key, a stray THINKTHEN_ name, a target folder,
+# and a name no shell can hold. gawk's own AWKPATH and AWKLIBPATH are left out.
+seen=$(env -i PATH="$PATH" HOME=/nonexistent/HOME LANG=/nonexistent/LANG LC_ALL=/nonexistent/LC_ALL \
+    TMPDIR=/nonexistent/TMPDIR XDG_RUNTIME_DIR=/nonexistent/XDG_RUNTIME_DIR XDG_CACHE_HOME=/nonexistent/XDG_CACHE_HOME \
+    CARGO_HOME=/nonexistent/CARGO_HOME RUSTUP_HOME=/nonexistent/RUSTUP_HOME RUSTUP_TOOLCHAIN=/nonexistent/RUSTUP_TOOLCHAIN \
+    RUSTC_WRAPPER=/nonexistent/RUSTC_WRAPPER SCCACHE_CONF=/nonexistent/SCCACHE_CONF R_LIBS_USER=/nonexistent/R_LIBS_USER \
+    THINKTHEN_HEAVY_LOCK=/nonexistent/lock THINKTHEN_HEAVY_LOCK_HELD=/nonexistent/lock \
+    THINKTHEN_TOOLCHAINS=/nonexistent/THINKTHEN_TOOLCHAINS THINKTHEN_DUCKDB_CLI=/nonexistent/THINKTHEN_DUCKDB_CLI \
+    SQLITE_AMALGAMATION=/nonexistent/SQLITE_AMALGAMATION THINKTHEN_PRIVATE_NAMES=/nonexistent/THINKTHEN_PRIVATE_NAMES FAKE_SERVICE_API_KEY=planted THINKTHEN_SENTINEL=planted \
+    CARGO_TARGET_DIR=/nonexistent/CARGO_TARGET_DIR FAKE.SERVICE_TOKEN=planted \
+    sh -c '. sdlc/scripts/heavy-lock; exec awk "BEGIN { for (n in ENVIRON) if (n !~ /^AWK(LIB)?PATH\$/) print n }"' \
+    sdlc/scripts/lint | LC_ALL=C sort | tr '\n' ' ')
+allowed="CARGO_HOME HOME LANG LC_ALL PATH PWD RUSTC_WRAPPER RUSTUP_HOME RUSTUP_TOOLCHAIN R_LIBS_USER SCCACHE_CONF SQLITE_AMALGAMATION"
+allowed="$allowed THINKTHEN_DUCKDB_CLI THINKTHEN_HEAVY_LOCK THINKTHEN_HEAVY_LOCK_HELD THINKTHEN_PRIVATE_NAMES THINKTHEN_TOOLCHAINS TMPDIR XDG_CACHE_HOME XDG_RUNTIME_DIR "
+listed=$(sed -n 's/^[[:space:]]*\([A-Z_ |]*\)) ;;$/\1/p' sdlc/scripts/allow-list | tr -d ' ' | tr '|' '\n' |
+    LC_ALL=C sort | tr '\n' ' ')
+if [ "$seen" != "$allowed" ] || [ "$listed" != "$allowed" ]; then
+    printf 'lint: allow-list names %s\nand a rung child saw %s\n' "$listed" "$seen" >&2
+    exit 1
+fi
+# Ticket 0128: one version everywhere, workflows run by hand from pinned code,
+# and the download script's edge table against a loopback fake of GitHub.
+python3 sdlc/scripts/versions --self-test
+python3 sdlc/scripts/versions
+python3 sdlc/scripts/workflows --self-test
+python3 sdlc/scripts/workflows
+python3 sdlc/scripts/installer-test
 # Ticket 0104: a stale crate longer than the fresh one must not reach `tar`.
 mkdir -p target/package
 head -c 4194304 /dev/urandom \
@@ -14,10 +112,37 @@ head -c 4194304 /dev/urandom \
 sh sdlc/scripts/package
 python3 sdlc/scripts/pages-self-test
 python3 sdlc/scripts/pages
+node sdlc/scripts/named-answers.mjs --self-test
+node sdlc/scripts/named-answers.mjs
 node sdlc/scripts/ratchet.mjs
+# ADR 0047: the surface registry, and each binding's ratchet and lock.
+sh sdlc/scripts/surfaces --registry
 # `deny.toml` allows exactly the licenses the tree carries, and an advisory on
 # any crate in the lock file fails here. It reads the lock file and no network.
 cargo deny --offline check advisories bans licenses
+# A binding's deny runs `sources`. A file:// git source under a scratch
+# CARGO_HOME must fail it, with no network and no residue.
+scratch_dir plant
+mkdir -p "$plant/dep/src" "$plant/copy/src"
+printf '[package]\nname = "planted"\nversion = "0.0.1"\nedition = "2024"\nlicense = "MIT"\n' >"$plant/dep/Cargo.toml"
+: >"$plant/dep/src/lib.rs"
+: >"$plant/copy/src/lib.rs"
+git -C "$plant/dep" init -q && git -C "$plant/dep" add -A
+git -C "$plant/dep" -c user.name=plant -c user.email=plant@example.invalid commit -qm plant
+printf '[package]\nname = "copy"\nversion = "0.0.1"\nedition = "2024"\nlicense = "MIT"\n[dependencies]\nplanted = { git = "file://%s/dep" }\n' "$plant" >"$plant/copy/Cargo.toml"
+CARGO_HOME="$plant/home" cargo fetch --quiet --manifest-path "$plant/copy/Cargo.toml"
+set +e
+# cargo-deny sets bit 8 of its exit code when the sources check fails.
+CARGO_HOME="$plant/home" cargo deny --offline --manifest-path "$plant/copy/Cargo.toml" check --config "$REPO/deny.toml" sources >"$plant/deny" 2>&1
+code=$?
+set -e
+if [ "$code" -ne 8 ] || ! grep -q source-not-allowed "$plant/deny"; then
+    echo "lint: deny's sources check passed a file:// git source (exit $code)" >&2
+    exit 1
+fi
 cargo fmt --all -- --check
-cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+cargo clippy --locked --workspace --all-targets -- -D warnings
 RUSTDOCFLAGS='-D warnings' cargo doc --locked --workspace --no-deps
+# Ticket 0086: the built public API equals the frozen declarations, and the
+# check refuses a planted export, removal, signature change, and extra trait.
+python3 sdlc/scripts/inventory

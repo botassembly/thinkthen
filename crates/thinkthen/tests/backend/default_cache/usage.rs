@@ -191,3 +191,77 @@ fn persistence_failure_warns_once_after_the_unchanged_judgment() {
     );
     assert!(!String::from_utf8_lossy(&output.stderr).contains("secret-warning-key"));
 }
+
+/// Another process holding the usage lock stops no request: all 16 jobs reach
+/// the listener while the lock is held, and the totals land once it lets go.
+#[cfg(unix)]
+#[test]
+fn requests_go_out_while_another_process_holds_the_usage_lock() {
+    use std::os::unix::fs::{OpenOptionsExt as _, PermissionsExt as _};
+    use std::time::{Duration, Instant};
+
+    use crate::harness::{Gathering, finish, start};
+
+    let root = folder("usage-lock-held");
+    let usage_folder = root.join("thinkthen-usage");
+    fs::create_dir_all(&usage_folder).expect("usage folder");
+    fs::set_permissions(&usage_folder, fs::Permissions::from_mode(0o700)).expect("private");
+    let lock = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(usage_folder.join(".lock"))
+        .expect("usage lock");
+    lock.lock()
+        .expect("the lock, held as a second process would");
+    let gathering = Gathering::new(16);
+    let listener = Listener::answering(move |_| {
+        gathering.hold();
+        Canned::ok(concat!(
+            r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.92}},"#,
+            r#""usage":{"input_tokens":88,"output_tokens":12}}"#,
+        ))
+    })
+    .expect("listener");
+    let records: String = (1..=16)
+        .map(|place| format!("{{\"body\":\"record {place}\"}}\n"))
+        .collect();
+    let environment = [
+        ("THINKTHEN_BASE_URL", listener.base()),
+        ("THINKTHEN_API_KEY", "secret-key"),
+        ("XDG_CACHE_HOME", root.to_str().expect("cache root")),
+    ];
+    let arguments = ["decide", "asks for a refund", "--jsonl", "--field", "/body"];
+    let arguments = [
+        &arguments[..],
+        &["--jobs", "16", "--batch", "1", "--no-cache"],
+    ]
+    .concat();
+    let mut child =
+        start(&arguments, &environment, records.as_bytes()).expect("the command starts");
+
+    let arrived = Instant::now() + Duration::from_secs(10);
+    while listener.count() < 16 && Instant::now() < arrived {
+        thread::sleep(Duration::from_millis(10));
+    }
+    let (count, peak) = (listener.count(), listener.peak());
+    let settled = Instant::now() + Duration::from_millis(500);
+    let mut exited = child.try_wait().expect("the child's state").is_some();
+    while !exited && Instant::now() < settled {
+        thread::sleep(Duration::from_millis(10));
+        exited = child.try_wait().expect("the child's state").is_some();
+    }
+    drop(lock);
+    let output = finish(child, "decide --jobs 16").expect("the command ends");
+
+    assert_eq!((count, peak), (16, 16), "in flight while the lock was held");
+    assert!(!exited, "the command exited before its totals were written");
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(String::from_utf8_lossy(&output.stdout).lines().count(), 16);
+    assert_eq!(String::from_utf8_lossy(&output.stderr), "");
+    let status = run(&["status", "--json"], &environment).expect("status");
+    assert_eq!(usage(&status, "requests_sent"), Some(16));
+    assert_eq!(usage(&status, "input_tokens"), Some(1408));
+    assert_eq!(usage(&status, "output_tokens"), Some(192));
+    assert_eq!(usage(&status, "cache_answers"), Some(0));
+}

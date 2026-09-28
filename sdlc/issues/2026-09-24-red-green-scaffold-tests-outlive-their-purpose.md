@@ -1,6 +1,6 @@
 # Red-green scaffold tests outlive their purpose
 
-Status: Open. Filed from the workspace on Ian's request. The workspace rule is decision `2026-09-24-tests-earn-their-place.md` in the dotfiles repo.
+Status: Open. Steps 1 and 2 landed, and ticket 0119 holds steps 3 and 4. Filed from the workspace on Ian's request. The workspace rule is decision `2026-09-24-tests-earn-their-place.md` in the workspace's decisions folder.
 
 `AGENTS.md` asks for red-green development and says nothing about the red-green tests afterward. Each one pins a step while the code is written. After green, many guard nothing that a stronger test misses, and they break on behavior-preserving refactors. The OpenClaw project deleted about 400,000 lines of such tests with little change in coverage, using its `test-audit` skill (https://github.com/openclaw/openclaw/tree/main/.agents/skills/test-audit).
 
@@ -17,4 +17,10 @@ Measured on main at `ffb8fb79`:
 3. Run one audit over the engine's test surface. Use `cargo-mutants` for evidence. A test that kills no mutant the rest of the suite misses is a deletion candidate. For each candidate, record what it can catch and which stronger test covers it. Keep conformance cases, secrecy tests, `spec/` pages, and green demos unless the evidence shows a duplicate.
 4. Report the deleted test lines, the mutation score before and after, the suite time before and after, and any pattern that keeps recurring. The workspace uses this report to decide whether other repos get the same audit.
 
-The owner decides whether this lands before or after 0.1.
+## Timing
+
+The owner decided the timing on 2026-09-24. Ian can overturn it.
+
+- Steps 1 and 2 landed as Quick Fix `qf-tests-earn` at merge `dda5ca79`. The record is `sdlc/records/qf-tests-earn.md`, and its review is `sdlc/records/qf-tests-earn-review.md`. Every build in flight already follows the workspace rule.
+- Steps 3 and 4 are ticket 0119, `sdlc/tickets/0119-mutation-audit-of-the-engine-tests.md` on branch `ticket/0119-mutation-audit-of-the-engine-tests`. It builds after 0098 lands and before 0.1 ships. Most test code lives in the engine. Tickets 0085, 0097, 0096, 0086, and 0098 edit the engine until then, so an earlier audit would collide with them. Surface tickets add their own folders, so the audit may build beside them.
+- The 0119 report decides whether other repos get the audit.

@@ -1,0 +1,19 @@
+# The surfaces and their state (ticket 0093, ADR 0047). Each line names a
+# binding folder and `landed` or `planned`. `sdlc/scripts/surfaces` runs each
+# landed surface's `check.sh`, and a surface ticket moves its line to landed.
+# A third field names the crate folder inside the binding when it is not the
+# binding folder itself.
+# The state `feature` names a surface that is a Cargo feature of `thinkthen`
+# (ticket 0130). Its folder holds only `check.sh` and `README.md`. The rung
+# runs its check as it runs a landed one, and the root ratchet and the root
+# `deny.toml` cover its code.
+libraries/rust        landed
+libraries/polars      feature
+libraries/c           landed
+libraries/python      landed
+libraries/typescript  landed
+libraries/ruby        landed
+libraries/r           landed  thinkthen/src/rust
+databases/duckdb      landed
+databases/sqlite      landed
+databases/postgresql  landed

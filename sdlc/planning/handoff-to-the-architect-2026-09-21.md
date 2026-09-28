@@ -18,7 +18,7 @@ Ten functions ask a classifier model (Jev, from TypeSafe) a bounded question abo
 4. `sdlc/planning/adr/0017` (one engine, many surfaces) and `sdlc/planning/polars-plan.md`.
 5. `sdlc/planning/recognize-design.md` and `relate-design.md`. The public shapes of the two special functions.
 6. `sdlc/planning/quality-plan.md` and `experiments/218-thinkthen-release-qa/wave1.5/FINDINGS.md`.
-7. `sdlc/issues/2026-09-21-triage-of-the-open-issues-by-layer.md`. About ninety issues are open. This is the map of them.
+7. `sdlc/issues/closed/2026-09-21-triage-of-the-open-issues-by-layer.md`. About ninety issues are open. This is the map of them.
 
 ## Where things stand, observed 2026-09-21
 
@@ -34,13 +34,13 @@ The method is final and measured. The recognize team's package is `experiments/2
 - **How it works.** Code splits the text into words. The model answers one small pick-one question per word (is it part of a name) and one for its kind, in the same request. Code joins the yes-words into names. For relations, code lists the legal pairs from the caller's rule table and the model answers one pick-one question per pair, with "no relation" always an option.
 - **The exact question wordings are the product.** Seven attempts to improve them failed. A port that rewords them is a new, unmeasured method.
 - **No word list, dictionary, or template exists anywhere in the pipeline.** Ian ruled the last one deleted. Read the tombstone in rule four before anyone proposes one.
-- **Settled names.** A name carries `strength` (ours, computed: the lowest word probability times the mean kind probability, every word counting). A relation carries `probability` and its two ends are `source` and `target` on every host, in the JSON, and in the question file. The vendor's `confidence` field is never used, because it measured backwards as a gate. The rule for every number word is `sdlc/issues/2026-09-21-one-rule-for-every-number-the-tool-prints.md`.
+- **Settled names.** A name carries `strength` (ours, computed: the lowest word probability times the mean kind probability, every word counting). A relation carries `probability` and its two ends are `source` and `target` on every host, in the JSON, and in the question file. The vendor's `confidence` field is never used, because it measured backwards as a gate. The rule for every number word is `sdlc/issues/closed/2026-09-21-one-rule-for-every-number-the-tool-prints.md`.
 - **The measured quality, as the team reported it.** Names: about 0.72 on one public set and 0.76 on the other, strict scoring. Kinds given the right boundaries: 0.93 to 0.98. Relations given the right names: 0.73. Relations end to end: 0.47, so `relate` and relations in `recognize` ship marked as a preview. Cost is about 0.06 cents a sentence today and falls about five-fold once shared instructions are packed once per request (queue item A5).
 - **Your tests are written.** Forty recorded cases replay with no key and no network. The labeled divergences in them are evidence, not bugs to fix.
 - **Limits you inherit.** One model version exists, so pin its explicit name in recordings. The 2026-09-23 probes accepted choices with 101 and 255 options. A 165,154-byte request failed; request size is the likely cause, not a proved diagnosis, so no Jev byte ceiling is named until a measurement supports one. The tool's separate 255-option ceiling remains unchanged. The vendor's probability totals sometimes miss 1.0 by a hair, and the repo's tolerance fix must be verified (A5).
-- **Quality questions still open on these two:** `sdlc/issues/2026-09-21-quality-review-of-the-recognize-and-relate-designs.md`, and the library team's finding that the relations table function cannot run as drawn on any database.
+- **Quality questions still open on these two:** `sdlc/issues/2026-09-25-recognize-and-relate-scale-and-shape.md`, and the library team's finding that the relations table function cannot run as drawn on any database.
 
-Backlog beyond them (linking, coreference, decomposition) is recorded in `sdlc/issues/2026-09-21-three-next-language-problems-linking-coreference-decomposition.md`. None of it is in 0.1.
+Backlog beyond them (linking, coreference, decomposition) is recorded in `sdlc/issues/closed/2026-09-21-three-next-language-problems-linking-coreference-decomposition.md`. None of it is in 0.1.
 
 ## The other eight functions: known quality debt
 
@@ -65,15 +65,15 @@ Roughly twelve can now run side by side where their files and dependencies do no
 | 11 | Release and install: Homebrew tap plus download script copied from BioMCP, CI, packaging for every registry (A10) | Ian claiming the names |
 | 12 | Quality waves 2 to 4 and the release pass (A11, A12) | Everything |
 
-Tracks 7 to 10 do not start from nothing. The `surfaces` branch already holds all nine, and lane B of the queue lists eight jobs the library team does while main is busy: adopt main's new shapes early, port `recognize` and `relate` to every surface, prove cancel on a fast backend, and build one examples file per surface. The merge of that branch into main is a build ticket that comes after the public Rust library exists. The rulings that govern its cleanup are in `sdlc/issues/2026-09-21-product-rulings-on-the-surfaces-adversarial-review.md`.
+Tracks 7 to 10 do not start from nothing. The `surfaces` branch already holds all nine, and lane B of the queue lists eight jobs the library team does while main is busy: adopt main's new shapes early, port `recognize` and `relate` to every surface, prove cancel on a fast backend, and build one examples file per surface. The merge of that branch into main is a build ticket that comes after the public Rust library exists. The rulings that govern its cleanup are in `sdlc/issues/closed/2026-09-21-product-rulings-on-the-surfaces-adversarial-review.md`.
 
 ## Experiments worth knowing
 
-All under `/home/ian/workspace/experiments/`. 205 (libraries) and 207 (databases): the first rehearsals and zero-copy proofs. 206: accuracy and calibration tables. 211: the blocking engine and its width numbers. 218: release quality waves. 220: a second, open backend. 225 and 227: the recognize harvest and the name-number comparison. 226: the relation graph demo. 228: Polars, with the verdict to ship the column form first. 229-thinkthen-spreadsheets: Excel and Google Sheets, both paused by Ian. 230: splitting a packet of pages by composing `choose` and `decide`, the proof that a split function is not needed.
+All under the workspace's `experiments/` folder. 205 (libraries) and 207 (databases): the first rehearsals and zero-copy proofs. 206: accuracy and calibration tables. 211: the blocking engine and its width numbers. 218: release quality waves. 220: a second, open backend. 225 and 227: the recognize harvest and the name-number comparison. 226: the relation graph demo. 228: Polars, with the verdict to ship the column form first. 229-thinkthen-spreadsheets: Excel and Google Sheets, both paused by Ian. 230: splitting a packet of pages by composing `choose` and `decide`, the proof that a split function is not needed.
 
 ## Rulings that are settled. Do not reopen them without Ian.
 
-- Ten functions. No eleventh (`sdlc/issues/2026-09-21-is-there-an-eleventh-function-a-sweep-of-the-three-primitives.md`).
+- Ten functions. No eleventh (`sdlc/issues/closed/2026-09-21-is-there-an-eleventh-function-a-sweep-of-the-three-primitives.md`).
 - 0.1.0 everywhere at once. Builds before it are 0.0.N.
 - Polars is an optional extra, column form only. pandas rides the same door.
 - Spreadsheets, a serve mode, HTTP bridges, and Windows are paused.
@@ -93,9 +93,9 @@ All under `/home/ian/workspace/experiments/`. 205 (libraries) and 207 (databases
 
 ## What marketing needs from the build
 
-The product side keeps owning the deck, the site, and the words (`repos/mktg/products/thinkthen/`, with `vocabulary.md` as the word list). It needs five things from you, and it will ask for nothing else without filing an issue here:
+The product side keeps owning the deck, the site, and the words (the marketing repository's `products/thinkthen/`, with `vocabulary.md` as the word list). It needs five things from you, and it will ask for nothing else without filing an issue here:
 
-1. **One examples file per surface, keyed by function, run by that surface's tests.** Every tab on every site page is drawn from these (`repos/mktg/products/thinkthen/site.md`).
+1. **One examples file per surface, keyed by function, run by that surface's tests.** Every tab on every site page is drawn from these (the marketing repository's `products/thinkthen/site.md`).
 2. **The record-with-answer row (A3).** Two deck slides wait on it.
 3. **The field `meta.replayed` renamed to `meta.cached`** before the shapes freeze. Ian dislikes the word. The `--replay` flag keeps its name.
 4. **The real install lines**, the day they work.

@@ -26,7 +26,7 @@
       "expect": "{\"input\":17,\"value\":1.6}"
     },
     {
-      "id": "null-and-unresolved",
+      "id": "null-and-unsure",
       "input": "null",
       "value": {"kind": "yes_no", "held": null},
       "expect": "{\"input\":null,\"value\":null}"

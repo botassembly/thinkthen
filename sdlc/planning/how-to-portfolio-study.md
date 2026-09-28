@@ -254,18 +254,18 @@ Runs from recordings under `--replay`, depends on `jq` and the committed transfo
 
 **Closing line on an automatic tuner.** An optimizer drives this loop by rewriting step 3: the labeled cases, the metric transform, and the comparison stay exactly as they are, and each round writes one more question file and one more run, so nothing in the tool changes and every round is already traceable by its digest.
 
-**Is a one-line `jq` conversion from jev-align's best candidate honest today?** No. Four reasons, each checked in that project's source:
+**Is a one-line `jq` conversion from a private caller's best candidate honest today?** No. Four reasons, each checked in that project's source:
 
 1. The target does not exist. `--true`, `--false`, and the question file are ticket 0017 and are not built.
-2. jev-align's saved `current_candidate` in `state.json` is an untagged union of four shapes (`BinaryTaskSpec` is `{instructions, true_criteria, false_criteria}`, multiclass is `{instructions, criteria}`, score is `{instructions, levels}`, and there is a multilabel shape). With no type field, a one-liner has to sniff keys.
+2. The caller's saved `current_candidate` in `state.json` is an untagged union of four shapes (`BinaryTaskSpec` is `{instructions, true_criteria, false_criteria}`, multiclass is `{instructions, criteria}`, score is `{instructions, levels}`, and there is a multilabel shape). With no type field, a one-liner has to sniff keys.
 3. Multilabel has no single-question home in thinkthen; it is a question set of several `decide` questions, which is `annotate`, not a question file.
-4. Nothing maps to `threshold`. jev-align applies 0.5 everywhere, so a converted file arrives with its cut untuned, which is the very thing page 41 teaches.
+4. Nothing maps to `threshold`. The caller applies 0.5 everywhere, so a converted file arrives with its cut untuned, which is the very thing page 41 teaches.
 
 After 0017 lands, this is honest for the binary shape alone, and the page must say the cut still has to be swept:
 
 ```sh
 jq '{decide: .current_candidate.instructions, true: .current_candidate.true_criteria, false: .current_candidate.false_criteria}' \
-  .jev-align/runs/<id>/state.json > receipt.json
+  .caller/runs/<id>/state.json > receipt.json
 ```
 
 ## (b) Judge an agent with thinkthen in place of a language model as judge

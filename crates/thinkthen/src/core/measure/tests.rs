@@ -1,0 +1,180 @@
+//! Hand-checked values from the prototype's own tests, and the cases its review planted.
+
+use super::answer::{self, Identity, Rule, Shown};
+use super::audit::{self, By, Settings};
+use super::diff::{Discordant, discordant};
+use super::key::{Key, Outcome};
+use super::optimize::Measure;
+use super::{
+    SplitMix64, calibration, calibration_error, json_lines, mcnemar, places, python_float_text,
+    rounded,
+};
+use crate::core::pointer::Pointer;
+
+/// The six decide answers of `small/decide.jsonl` as `(p(yes), key is yes)`.
+const DECIDE: [(f64, bool); 6] = [
+    (0.9, true),
+    (0.7, false),
+    (0.45, true),
+    (0.3, false),
+    (0.2, false),
+    (0.6, true),
+];
+
+fn near(value: f64, expected: f64, places: i32) -> bool {
+    (value - expected).abs() < 0.5 * 10_f64.powi(-places)
+}
+
+/// Audit result lines against key lines, both given as text, with the default settings.
+fn audit_text(results: &str, key: &str) -> Vec<audit::Row> {
+    let results = json_lines(results.as_bytes()).expect("result lines");
+    let key = Key::read(&json_lines(key.as_bytes()).expect("key lines")).expect("a key");
+    let pointer = Pointer::new("/id").expect("a pointer");
+    let answers = answer::read(&results, &pointer, Identity::Question).expect("answers");
+    let settings = Settings {
+        by: By::Question,
+        rule: Rule::AsRun,
+        shown: Shown::AsRun,
+        seed: 0,
+        target: 0.9,
+        optimize: Measure::Accuracy,
+        curve: false,
+    };
+    audit::audit(&answers, &key, &settings).expect("an audit")
+}
+
+fn decide_line(id: &str, p: f64) -> String {
+    format!(
+        r#"{{"input":{{"id":"{id}"}},"value":{},"answer":{{"probability":{p}}}}}"#,
+        p >= 0.5
+    )
+}
+
+#[test]
+fn splitmix64_matches_the_published_outputs_and_draws_in_range() {
+    let mut generator = SplitMix64::new(0);
+    let drawn = [generator.next(), generator.next(), generator.next()];
+    assert_eq!(
+        drawn,
+        [
+            0xE220_A839_7B1D_CDAF,
+            0x6E78_9E6A_A1B9_65F4,
+            0x06C4_5D18_8009_454F
+        ]
+    );
+    // The high 64 bits of next() times n, not next() modulo n.
+    assert_eq!(SplitMix64::new(0).index(3), 2);
+    assert_eq!(SplitMix64::new(0).index(100), 88);
+}
+
+#[test]
+fn calibration_error_closes_the_last_bin_at_one() {
+    let ones = |pairs: &[(f64, bool)]| -> Vec<(f64, f64)> {
+        pairs
+            .iter()
+            .map(|(p, t)| (*p, f64::from(u8::from(*t))))
+            .collect()
+    };
+    assert!(near(calibration_error(&ones(&DECIDE)), 0.375, 9));
+    let choose = [(0.8, true), (0.7, false), (0.6, true), (0.5, false)];
+    assert!(near(calibration_error(&ones(&choose)), 0.45, 9));
+    assert!(near(calibration_error(&[(1.0, 0.0), (0.0, 0.0)]), 0.5, 9));
+}
+
+/// One pair's shifted resamples sit one float step below its error, so the interval widens to hold it.
+#[test]
+fn the_calibration_interval_holds_the_error_of_one_pair() {
+    let calibration = calibration(&[(0.94, 1.0)], 0).expect("one pair");
+    let [low, high] = calibration.interval;
+    assert!(
+        low <= calibration.error && calibration.error <= high,
+        "{low} {high}"
+    );
+}
+
+#[test]
+fn numbers_print_as_python_prints_them() {
+    let cases = [
+        (1.0, "1.0"),
+        (0.5, "0.5"),
+        (0.42, "0.42"),
+        (0.0001, "0.0001"),
+        (0.00001, "1e-05"),
+    ];
+    for (value, text) in cases {
+        assert_eq!(python_float_text(value), text, "{value}");
+    }
+    assert_eq!(places(Some(0.0625), 3), "0.062");
+    assert_eq!(places(Some(0.6875), 3), "0.688");
+    assert_eq!(places(Some(rounded(0.687_499_6)), 3), "0.688");
+    assert_eq!(places(None, 3), "-");
+}
+
+#[test]
+fn a_decide_tie_between_cuts_goes_to_the_one_nearer_one_half_then_the_smaller() {
+    let results = [decide_line("a", 0.45), decide_line("b", 0.54)].join("\n");
+    let key = "{\"id\":\"a\",\"value\":true,\"part\":\"tune\"}\n\
+               {\"id\":\"b\",\"value\":false,\"part\":\"tune\"}\n";
+    let rows = audit_text(&results, key);
+    let suggested = rows[0].suggested.as_ref().expect("a suggested cut");
+    assert_eq!(suggested.cut, Some(0.45));
+}
+
+#[test]
+fn a_seeded_split_over_five_ids_tunes_on_two() {
+    let ids = ["a", "b", "c", "d", "e"];
+    let results: Vec<String> = ids.iter().map(|id| decide_line(id, 0.6)).collect();
+    let key: String = ids
+        .iter()
+        .map(|id| format!("{{\"id\":\"{id}\",\"value\":true}}\n"))
+        .collect();
+    let rows = audit_text(&results.join("\n"), &key);
+    let suggested = rows[0].suggested.as_ref().expect("a suggested cut");
+    let tune = suggested.tune.as_ref().expect("a tuning part");
+    let held = suggested.held.as_ref().expect("a held part");
+    assert_eq!((suggested.split, tune.n, held.n), ("seeded", 2, 3));
+}
+
+#[test]
+fn mcnemar_matches_exact_integer_sums_to_120_and_the_pinned_values() {
+    for n in 0..=120_u32 {
+        let mut choose = vec![1_u128];
+        for i in 0..n {
+            choose.push(choose[i as usize] * u128::from(n - i) / u128::from(i + 1));
+        }
+        for a in 0..=n {
+            let tail: u128 = choose[..=a.min(n - a) as usize].iter().sum();
+            #[allow(clippy::cast_precision_loss, reason = "the exact sum rounds once")]
+            let exact = (2.0 * tail as f64 / 2_f64.powi(n.cast_signed())).min(1.0);
+            let got = mcnemar(a as usize, (n - a) as usize);
+            assert!((got - exact).abs() <= 1e-12 * exact, "{a}, {}", n - a);
+        }
+    }
+    let pinned = [
+        ((0, 0), 1.0),
+        ((1, 0), 1.0),
+        ((2, 0), 0.5),
+        ((5, 0), 0.0625),
+        ((39, 28), 0.221_549),
+        ((36, 34), 0.904_975),
+    ];
+    for ((a, b), p) in pinned {
+        assert_eq!(rounded(mcnemar(a, b)), p, "{a}, {b}");
+    }
+}
+
+#[test]
+fn discordant_counts_every_pair_that_becomes_right_or_stops_being_right() {
+    use Outcome::{Right, Tied, Unresolved, Wrong};
+    let every = [Right, Wrong, Unresolved, Tied];
+    for a in every {
+        for b in every {
+            let expected = match (a, b) {
+                (Wrong | Unresolved | Tied, Right) => Some(Discordant::OtherToRight),
+                (Right, Wrong | Unresolved | Tied) => Some(Discordant::RightToOther),
+                _ => None,
+            };
+            assert_eq!(discordant(a, b), expected, "{a:?} -> {b:?}");
+        }
+    }
+}

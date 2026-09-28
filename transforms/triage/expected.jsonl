@@ -2,7 +2,7 @@
 {"id":"P-02","action":"review","reason":"urgent"}
 {"id":"P-03","action":"block","reason":"credential_request"}
 {"id":"P-04","action":"review","reason":"out_of_scope"}
-{"id":"P-05","action":"review","reason":"unresolved"}
-{"id":"P-06","action":"review","reason":"unresolved"}
-{"id":"P-07","action":"review","reason":"unresolved"}
+{"id":"P-05","action":"review","reason":"unsure"}
+{"id":"P-06","action":"review","reason":"unsure"}
+{"id":"P-07","action":"review","reason":"unsure"}
 {"id":"P-08","action":"draft","reason":"routine"}

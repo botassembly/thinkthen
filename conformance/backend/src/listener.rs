@@ -1,14 +1,26 @@
 //! A loopback listener that serves scripted responses and records what it was sent.
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
-use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::Ordering;
 use std::sync::mpsc::{Receiver, Sender, channel};
-use std::sync::{Arc, Barrier, Mutex};
-use std::thread;
-use std::time::Duration;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+
+use crate::arms::drift;
+use crate::lifetime::{Counts, Gate, Lifetime, Rendezvous};
 
 /// The path the engine appends to every base.
 const ENDPOINT_PATH: &str = "systemone";
+
+/// How long a peek may see no new bytes before the request is read instead.
+const STALL: Duration = Duration::from_secs(2);
+
+/// How long a scripted connection may send nothing before it is dropped. A
+/// client the scheduler pauses under load stays well inside it.
+const IDLE: Duration = Duration::from_secs(8);
+
+/// Why a reset reply answers the drift status instead of a reset.
+const UNRESETTABLE: &str = "the loopback listener cannot reset a request it had to read";
 
 /// One response the listener will serve, in the order the script gives.
 #[derive(Debug)]
@@ -18,7 +30,7 @@ pub struct Canned {
     location: Option<String>,
     promised: Option<usize>,
     delay: Duration,
-    release: Option<Arc<Barrier>>,
+    release: Option<Arc<Rendezvous>>,
     held: Option<(Arc<Gate>, u64)>,
     answered: Option<Sender<()>>,
     asked: Vec<(String, String)>,
@@ -89,8 +101,8 @@ impl Canned {
         self
     }
 
-    /// Wait at this barrier before answering, so a test controls the release.
-    pub fn after_release(mut self, release: Arc<Barrier>) -> Self {
+    /// Wait at this rendezvous before answering, so a test controls the release.
+    pub fn after_release(mut self, release: Arc<Rendezvous>) -> Self {
         self.release = Some(release);
         self
     }
@@ -118,30 +130,6 @@ impl Canned {
 /// What a listener answers one request with.
 pub(crate) type Reply = dyn Fn(&Recorded) -> Canned + Send + Sync;
 
-/// A gate that holds answers until the next round, or for good once released.
-#[derive(Debug, Default)]
-pub(crate) struct Gate {
-    open: AtomicBool,
-    round: AtomicU64,
-}
-
-impl Gate {
-    /// Let every held answer go, now and from here on.
-    pub(crate) fn release(&self) {
-        self.open.store(true, Ordering::SeqCst);
-    }
-
-    /// Let go every answer held now. A later answer holds again.
-    pub(crate) fn next_round(&self) {
-        self.round.fetch_add(1, Ordering::SeqCst);
-    }
-
-    /// Whether an answer taken in this round still waits.
-    fn holds(&self, round: u64) -> bool {
-        !self.open.load(Ordering::SeqCst) && self.round.load(Ordering::SeqCst) <= round
-    }
-}
-
 /// One request or output event, ordered as the scheduling test observes it.
 #[derive(Debug)]
 pub enum Observed {
@@ -149,15 +137,6 @@ pub enum Observed {
     Request,
     /// One line reached the process reading standard output.
     Output(String),
-}
-
-/// What the listener saw, for the assertions that count connections.
-#[derive(Debug, Default)]
-struct Counts {
-    connections: AtomicUsize,
-    requests: AtomicUsize,
-    in_flight: AtomicUsize,
-    peak: AtomicUsize,
 }
 
 /// One request the listener read, kept for the assertions to compare.
@@ -181,7 +160,7 @@ impl Recorded {
     }
 }
 
-/// A listener serving one scripted response per connection, then closing.
+/// Serves scripted replies, then drift; its final owner joins the workers.
 #[derive(Debug)]
 pub struct Listener {
     origin: String,
@@ -189,6 +168,7 @@ pub struct Listener {
     url: String,
     recorded: Mutex<Receiver<Recorded>>,
     counts: Arc<Counts>,
+    lifetime: Arc<Lifetime>,
 }
 
 impl Listener {
@@ -200,13 +180,21 @@ impl Listener {
         let url = format!("{base}/{ENDPOINT_PATH}");
         let (sender, recorded) = channel();
         let counts = Arc::new(Counts::default());
-        thread::spawn(move || serve_script(&listener, responses, &sender));
+        let serving = Arc::clone(&counts);
+        let lifetime = Lifetime::new();
+        for canned in &responses {
+            lifetime.watch(canned.release.as_ref());
+        }
+        lifetime.start(listener, move |listener, lifetime| {
+            serve_script(&listener, responses, &sender, &serving, &lifetime);
+        })?;
         Ok(Self {
             origin,
             base,
             url,
             recorded: Mutex::new(recorded),
             counts,
+            lifetime,
         })
     }
 
@@ -241,7 +229,6 @@ impl Listener {
         )
     }
 
-    /// Build an answering listener with optional request observations.
     fn answering_observed(
         reply: impl Fn(&Recorded) -> Canned + Send + Sync + 'static,
         events: Option<Sender<Observed>>,
@@ -256,21 +243,24 @@ impl Listener {
         let counts = Arc::new(Counts::default());
         let serving = Arc::clone(&counts);
         let reply: Arc<Reply> = Arc::new(reply);
-        thread::spawn(move || {
+        let lifetime = Lifetime::new();
+        lifetime.start(listener, move |listener, lifetime| {
             accept_every(
                 &listener,
                 &reply,
                 sender.as_ref(),
                 &serving,
                 events.as_ref(),
+                &lifetime,
             );
-        });
+        })?;
         Ok(Self {
             origin,
             base,
             url,
             recorded: Mutex::new(recorded),
             counts,
+            lifetime,
         })
     }
 
@@ -306,7 +296,6 @@ impl Listener {
 
     /// Every request the listener has read so far, in the order it read them.
     pub fn requests(&self) -> Vec<Recorded> {
-        // The lock keeps a listener shareable across threads.
         self.recorded
             .lock()
             .map(|recorded| recorded.try_iter().collect())
@@ -314,25 +303,39 @@ impl Listener {
     }
 }
 
-/// Serve one response per connection until the script runs out, then close.
-fn serve_script(listener: &TcpListener, responses: Vec<Canned>, sender: &Sender<Recorded>) {
-    for canned in responses {
-        let Ok((stream, _)) = listener.accept() else {
+impl Drop for Listener {
+    fn drop(&mut self) {
+        self.lifetime.retire();
+    }
+}
+
+/// Serve one response per connection until the script runs out, then drift.
+fn serve_script(
+    listener: &TcpListener,
+    responses: Vec<Canned>,
+    sender: &Sender<Recorded>,
+    counts: &Counts,
+    lifetime: &Lifetime,
+) {
+    let mut script = responses.into_iter();
+    while let Some(stream) = lifetime.accept(listener) {
+        let Some(id) = lifetime.register(&stream) else {
             return;
         };
-        let Some((request, used)) = peek_request(&stream) else {
-            return;
-        };
-        if sender.send(request).is_err() {
-            return;
+        counts.connections.fetch_add(1, Ordering::SeqCst);
+        let _ = stream.set_read_timeout(Some(IDLE));
+        if let Some((request, used)) = peek_request(&stream) {
+            let _ = sender.send(request);
+            let canned = script
+                .next()
+                .unwrap_or_else(|| drift("the script has no reply left for this connection"));
+            if canned.reset && used == 0 {
+                serve(&stream, &drift(UNRESETTABLE), lifetime);
+            } else if !canned.reset && consume(&stream, used).is_some() {
+                serve(&stream, &canned, lifetime);
+            }
         }
-        if canned.reset {
-            continue;
-        }
-        if consume(&stream, used).is_none() {
-            return;
-        }
-        serve(stream, &canned);
+        lifetime.finish(id);
     }
 }
 
@@ -343,21 +346,22 @@ fn accept_every(
     sender: Option<&Sender<Recorded>>,
     counts: &Arc<Counts>,
     events: Option<&Sender<Observed>>,
+    lifetime: &Arc<Lifetime>,
 ) {
-    for accepted in listener.incoming() {
-        let Ok(stream) = accepted else { return };
+    while let Some(stream) = lifetime.accept(listener) {
         counts.connections.fetch_add(1, Ordering::SeqCst);
         let reply = Arc::clone(reply);
         let counts = Arc::clone(counts);
         let sender = sender.cloned();
         let events = events.cloned();
-        thread::spawn(move || {
+        lifetime.spawn(stream, move |stream, lifetime| {
             serve_kept(
                 &stream,
                 reply.as_ref(),
                 sender.as_ref(),
                 &counts,
                 events.as_ref(),
+                &lifetime,
             );
         });
     }
@@ -370,8 +374,12 @@ fn serve_kept(
     sender: Option<&Sender<Recorded>>,
     counts: &Counts,
     events: Option<&Sender<Observed>>,
+    lifetime: &Lifetime,
 ) {
     loop {
+        if lifetime.stopped() {
+            return;
+        }
         let Some((request, used)) = peek_request(stream) else {
             return;
         };
@@ -381,6 +389,7 @@ fn serve_kept(
         // It is counted after: a held answer takes its round number first,
         // and a `round` sent after the count reads this request lets it go.
         let canned = reply(&request);
+        lifetime.watch(canned.release.as_ref());
         counts.requests.fetch_add(1, Ordering::SeqCst);
         if sender.is_some_and(|sender| sender.send(request).is_err()) {
             return;
@@ -388,20 +397,15 @@ fn serve_kept(
         if let Some(events) = events {
             let _ = events.send(Observed::Request);
         }
+        if canned.reset && used == 0 {
+            write_answer(stream, &drift(UNRESETTABLE), true);
+        }
         if canned.reset || consume(stream, used).is_none() {
             counts.in_flight.fetch_sub(1, Ordering::SeqCst);
             return;
         }
-        thread::sleep(canned.delay);
-        if let Some(release) = canned.release.as_ref() {
-            release.wait();
-        }
-        while canned
-            .held
-            .as_ref()
-            .is_some_and(|(gate, round)| gate.holds(*round))
-        {
-            thread::sleep(Duration::from_millis(5));
+        if !wait_answer(&canned, lifetime) {
+            return;
         }
         write_answer(stream, &canned, false);
         if let Some(answered) = canned.answered.as_ref() {
@@ -415,9 +419,12 @@ fn serve_kept(
 ///
 /// The bytes stay unread, so a reset can drop them. The count says how many
 /// bytes the request took, for [`consume`] to read past. A request too long to
-/// peek whole is read at once instead, and a reset of it is a plain close.
+/// peek whole, or one whose bytes stopped arriving for [`STALL`], is read at
+/// once instead. That read ends at a closed client's end of file, and the
+/// count of 0 turns a later reset into the drift status.
 fn peek_request(stream: &TcpStream) -> Option<(Recorded, usize)> {
     let mut buffer = vec![0; 32 * 1024];
+    let mut last = (0, Instant::now());
     loop {
         let seen = stream.peek(&mut buffer).ok()?;
         if seen == 0 {
@@ -427,10 +434,13 @@ fn peek_request(stream: &TcpStream) -> Option<(Recorded, usize)> {
         if let Some(request) = read_request(&mut rest) {
             return Some((request, seen - rest.len()));
         }
-        if seen == buffer.len() {
+        if seen != last.0 {
+            last = (seen, Instant::now());
+        }
+        if seen == buffer.len() || last.1.elapsed() >= STALL {
             return read_request(&mut BufReader::new(stream)).map(|request| (request, 0));
         }
-        thread::sleep(Duration::from_millis(1));
+        std::thread::sleep(Duration::from_millis(1));
     }
 }
 
@@ -471,14 +481,37 @@ fn read_request(reader: &mut impl BufRead) -> Option<Recorded> {
 }
 
 /// Write one canned response and close the connection.
-fn serve(stream: TcpStream, canned: &Canned) {
-    if let Some(release) = canned.release.as_ref() {
-        release.wait();
+fn serve(stream: &TcpStream, canned: &Canned, lifetime: &Lifetime) {
+    if !wait_answer(canned, lifetime) {
+        return;
     }
-    write_answer(&stream, canned, true);
+    write_answer(stream, canned, true);
     if let Some(answered) = canned.answered.as_ref() {
         let _ = answered.send(());
     }
+}
+
+fn wait_answer(canned: &Canned, lifetime: &Lifetime) -> bool {
+    if !lifetime.pause(canned.delay) {
+        return false;
+    }
+    if canned
+        .release
+        .as_ref()
+        .is_some_and(|release| !release.wait_owned(lifetime))
+    {
+        return false;
+    }
+    while canned
+        .held
+        .as_ref()
+        .is_some_and(|(gate, round)| gate.holds(*round))
+    {
+        if !lifetime.pause(Duration::from_millis(5)) {
+            return false;
+        }
+    }
+    !lifetime.stopped()
 }
 
 /// Write one canned response, closing the connection or keeping it open.
@@ -500,12 +533,12 @@ fn write_answer(mut stream: &TcpStream, canned: &Canned, closing: bool) {
         .iter()
         .map(|(name, value)| format!("{name}: {value}\r\n"))
         .collect();
-    let head = format!(
-        "HTTP/1.1 {} X\r\ncontent-type: application/json\r\n{location}{asked}content-length: {}\r\n{ending}\r\n",
+    let answer = format!(
+        "HTTP/1.1 {} X\r\ncontent-type: application/json\r\n{location}{asked}content-length: {}\r\n{ending}\r\n{}",
         canned.status,
-        canned.promised.unwrap_or(canned.body.len())
+        canned.promised.unwrap_or(canned.body.len()),
+        canned.body
     );
-    let _ = stream.write_all(head.as_bytes());
-    let _ = stream.write_all(canned.body.as_bytes());
+    let _ = stream.write_all(answer.as_bytes());
     let _ = stream.flush();
 }

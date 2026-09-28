@@ -39,9 +39,9 @@ impl ProfileName {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct BackendProfile {
     name: ProfileName,
-    max_evidence_bytes: Option<usize>,
-    max_request_bytes: Option<usize>,
-    max_questions: Option<usize>,
+    pub(crate) max_evidence_bytes: Option<usize>,
+    pub(crate) max_request_bytes: Option<usize>,
+    pub(crate) max_questions: Option<usize>,
     max_options: Option<usize>,
 }
 
@@ -230,11 +230,6 @@ pub(crate) struct ProfileLimit {
 }
 
 impl ProfileLimit {
-    /// Whether another contiguous request can satisfy this kind of limit.
-    pub(crate) const fn permits_split(&self) -> bool {
-        matches!(self.kind, LimitKind::RequestBytes | LimitKind::Questions)
-    }
-
     pub(crate) const fn permits_relation_fallback(&self) -> bool {
         matches!(self.kind, LimitKind::RequestBytes | LimitKind::Options)
     }

@@ -55,6 +55,29 @@ where
     E: From<Error>,
 {
     let prepared = PreparedRequest::with_profile(backend, plan, profile).map_err(E::from)?;
+    ask_sent(backend, plan, prepared, recorder, cancel, transport, key)
+}
+
+/// Send one prepared request through replay, transport, and recording.
+///
+/// Every live attempt goes out on an engine worker, so a host signal on the
+/// calling thread never lands in a socket read. A replay spawns nothing.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one prepared request carries explicit cancellation, transport, storage, and key boundaries"
+)]
+pub(crate) fn ask_sent<E>(
+    backend: &Backend,
+    plan: &Plan,
+    prepared: PreparedRequest,
+    recorder: &Recorder,
+    cancel: &crate::engine::Cancel,
+    transport: Transport<'_>,
+    key: impl FnOnce() -> Result<Key, E>,
+) -> Result<Answered, E>
+where
+    E: From<Error>,
+{
     ask_prepared(
         backend,
         plan,
@@ -64,50 +87,22 @@ where
         transport.usage,
         key,
         |prepared, key| {
-            transport
-                .client
-                .post_observed(
-                    &Exchange {
-                        url: backend.url().as_str(),
-                        body: &prepared.body,
-                        key,
-                        max_retries: transport.max_retries,
-                        retry_wait: transport.retry_wait,
-                    },
+            let exchange = Exchange {
+                url: backend.url().as_str(),
+                body: &prepared.body,
+                key,
+                max_retries: transport.max_retries,
+                retry_wait: transport.retry_wait,
+            };
+            crate::engine::workers::on_worker(cancel, || {
+                transport.client.post_observed_with_retry(
+                    &exchange,
                     cancel,
-                    || transport.usage.request_sent(),
+                    transport.usage,
+                    |_| (),
                 )
-                .map_err(E::from)
-        },
-    )
-}
-
-#[cfg(test)]
-pub(crate) fn ask_with<E>(
-    backend: &Backend,
-    plan: &Plan,
-    recorder: &Recorder,
-    key: impl FnOnce() -> Result<Key, E>,
-    send: impl FnOnce(&PreparedRequest, &Key) -> Result<Vec<u8>, E>,
-) -> Result<Answered, E>
-where
-    E: From<Error>,
-{
-    let prepared = PreparedRequest::new(backend, plan).map_err(E::from)?;
-    let usage = Counters::default();
-    ask_prepared(
-        backend,
-        plan,
-        prepared,
-        recorder,
-        &crate::engine::Cancel::default(),
-        &usage,
-        key,
-        |prepared, key| {
-            send(prepared, key).map(|body| HttpAnswer {
-                body,
-                requests_sent: 1,
             })
+            .map_err(E::from)
         },
     )
 }
@@ -130,8 +125,12 @@ where
     E: From<Error>,
 {
     let recorded = prepared.recorded(backend);
+    let caches = recorder.caches();
+    let complete = |response: &[u8]| {
+        !caches || !built_in::decode(plan, response).is_ok_and(|reply| reply.failed_any())
+    };
     let operation = recorder
-        .prepare_cancelled(&recorded, &prepared.digest, cancel)
+        .prepare_checked(&recorded, &prepared.digest, cancel, &complete)
         .map_err(E::from)?;
     let operation = observe_cancel(operation, cancel)?;
     let (reply, replayed, requests_sent) = match operation {
@@ -153,9 +152,7 @@ where
             let (permit, key) = finish_or_cancel(permit, key())?;
             let (permit, answered) = finish_or_cancel(permit, send(&prepared, &key))?;
             let decoded = built_in::decode_observed(plan, &answered.body);
-            if let Some(tokens) = decoded.usage {
-                usage.tokens(tokens);
-            }
+            usage.live_reply(decoded.usage);
             let reply = match decoded.reply {
                 Ok(reply) => reply,
                 Err(error) => {
@@ -163,12 +160,16 @@ where
                     return Err(E::from(Error::from(error)));
                 }
             };
-            permit
-                .finish(&recorded, &answered.body, &prepared.digest.file_name())
-                .map_err(E::from)?;
+            if caches && reply.failed_any() {
+                permit.cancel()
+            } else {
+                permit.finish(&recorded, &answered.body, &prepared.digest.file_name())
+            }
+            .map_err(E::from)?;
             (reply, false, answered.requests_sent)
         }
     };
+    usage.answered_by(reply.model());
     Ok(Answered {
         reply,
         replayed,
@@ -256,7 +257,7 @@ mod tests {
     fn wait_on_request(
         request: (Backend, Plan, PreparedRequest),
         recorder: Recorder,
-        observed: (crate::engine::Cancel, Counts),
+        observed: (crate::engine::Cancel<'static>, Counts),
     ) -> thread::JoinHandle<Result<Answered, Error>> {
         let (backend, plan, prepared) = request;
         let (cancel, counts) = observed;

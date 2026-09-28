@@ -23,3 +23,22 @@ Provenance: Ian's ruling in the library-team session on 2026-09-22. His words: "
 ## Proof
 
 Landed on branch `surfaces`: `8c83765` ("Give the C door its cancel token, per-call budget, and error code") and `be8374f` ("Give the C door per-thread error slots, a panic guard, and the checked deadline"). The C gate exits 0: the drawn slide and examples compile unchanged, the `_opts` equivalence and null-matrix tests are green, ASan and LSan are clean including the two-thread error test, and the conformance slice reads 68 green lines. The design page's deferred items are named there with their reasons.
+
+## Amendment, 2026-09-24, by ticket 0094
+
+Ticket 0094 ported the door onto the public API as the crate `thinkthen-c` at `libraries/c`, in its own workspace under ADR 0047. The header moved to `libraries/c/include/thinkthen.h`. The decision above names its old path. The port kept all 19 functions and added none. `libraries/c/DESIGN.md` holds the whole header table. The changes:
+
+- `thinkthen_engine_new` builds through `Engine::from_env`. NULL means the environment settings are invalid or the cache or configuration cannot be read. The error functions called with NULL name the calling thread's last failed build. No throttle argument exists.
+- `thinkthen_error_retryable` follows ticket 0089's rule. A retried status earns 1. A transport failure, a 401, and every kind but backend earn 0.
+- `deadline_ms` is `int64_t`, as the header already declared, and goes through `CallOptions::deadline_millis` (ADR 0041). The "unsigned long" above is superseded.
+- `thinkthen_call` owns a grammar of ten verbs and five envelope keys. Every other key forms the question object. `rank` is the only rank spelling.
+- `thinkthen_recognize` takes a version-one spec. Its entities carry `name`, `kind`, `start`, `end`, and `strength`.
+- `thinkthen_relate` takes a version-one relate spec and one JSON record per text, at the default `name` and `kind` fields. Its edges take the engine's shape. The 255 cap stays.
+- A thread's failure entries leave every engine's table when the thread exits (R3-24).
+- The shared library carries the soname `libthinkthen.so.0`, and the crate's library name `thinkthen_c` keeps its files from colliding with the engine's (R2-26).
+
+Ian can overturn any line. The verb spellings and the retryable rule are the ones a host would notice.
+
+## Amendment, 2026-09-27, by ticket 0148
+
+The door adds `thinkthen_engine_new_with(const char *settings_json)` before a 0.1 release. It accepts the ten engine settings as a closed JSON object and refuses repeated keys and wrong types. Null or `{}` uses the environment alone. The key remains in `THINKTHEN_API_KEY`; `api_key` is an unknown JSON key. A failed constructor reports through the calling thread's existing null-engine error slot. The header now declares 20 symbols. Ian can overturn this constructor shape.

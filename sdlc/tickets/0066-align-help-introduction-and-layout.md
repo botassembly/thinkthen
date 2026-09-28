@@ -10,7 +10,7 @@ Status: landed
 
 ## Outcome and authority
 
-Root help introduces the tool with the approved semantic-commands wording. Tag and annotate help lead with their descriptions and put their existing examples after usage and options. This closes items 2 and 5 of `../issues/2026-09-22-command-wording-and-help-fixes-for-0-1.md`, not the entire issue. It serves the reliable command-help gap. Ian explicitly authorized creating bounded tickets within the reviewed engine plan on resumption. The queue's execution amendment permits this non-overlapping correction while 0065 keeps its owner.
+Root help introduces the tool with the approved semantic-commands wording. Tag and annotate help lead with their descriptions and put their existing examples after usage and options. This closes items 2 and 5 of `../issues/closed/2026-09-22-command-wording-and-help-fixes-for-0-1.md`, not the entire issue. It serves the reliable command-help gap. Ian explicitly authorized creating bounded tickets within the reviewed engine plan on resumption. The queue's execution amendment permits this non-overlapping correction while 0065 keeps its owner.
 
 ## Current facts and scope
 

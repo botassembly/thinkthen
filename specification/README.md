@@ -2,7 +2,7 @@
 
 The contract for `thinkthen`. Code follows these documents. A behavior that is absent here is absent from the tool. Ian reads the design here, and a ticket cites the section it builds. ADR 0007 fixes the surface, and changing a Settled section takes a new ADR.
 
-Version one is ten commands: `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `annotate`, `find`, `recognize`, and `relate`. ADR 0010 removed named address profiles and their configuration command. ADR 0033 later added the smaller read-only bounded-cache configuration. `roadmap.md` holds what remains out.
+Version one is ten commands: `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `annotate`, `find`, `recognize`, and `relate`. ADR 0010 removed named address profiles and their configuration command. ADR 0033 later added the smaller read-only cache configuration. `roadmap.md` holds what remains out.
 
 The names table in [`../README.md`](../README.md) fixes the four names: question file, transform, how-to, and pipeline. A question file holds one question, and a question set holds several named questions.
 
@@ -28,6 +28,10 @@ The names table in [`../README.md`](../README.md) fixes the four names: question
 | [recognize.md](recognize.md) | `recognize` and its beta relation output | Settled |
 | [relate.md](relate.md) | `relate`, complete entity sets, relation plans, and edges | Settled |
 | [transform.md](transform.md) | `transform list` and `transform show`, the read-only catalog of built-in `jq` transforms | Settled |
+| [audit.md](audit.md) | `audit`, which grades saved `decide` and `choose` answers against an answer key | Settled |
+| [diff.md](diff.md) | `diff`, which shows the saved answers that changed between two runs or two cuts | Settled |
+| [check.md](check.md) | `check`, which sends four fixed requests to a named backend and reports whether it works with this tool | Settled |
+| [settings.md](settings.md) | Reference: every setting, its default, and its spelling on each surface, with a link to the page that fixes it | Settled |
 | [fixtures/](fixtures/) | Request and response files. Tests read them, and another implementer can test against them | Settled |
 
 [roadmap.md](roadmap.md) lists every held verb and option with the reason it is held. The roadmap is not a contract. It carries no status word.
@@ -40,7 +44,7 @@ Each section carries one of three words. **Settled** means code may be built aga
 
 | Command | One line |
 | --- | --- |
-| `decide QUESTION` | Answers yes, no, or unresolved, and sets the exit code |
+| `decide QUESTION` | Answers yes, no, or not sure, and sets the exit code |
 | `choose QUESTION OPTION...` | Picks one label from a fixed list |
 | `tag QUESTION LABEL...` | Returns every applicable label |
 | `score QUESTION LEVEL...` | Places the evidence on named levels and prints a number |
@@ -49,3 +53,4 @@ Each section carries one of three words. **Settled** means code may be built aga
 | `annotate FILE` | Asks a saved question set and adds one field per question |
 | `find QUESTION` | Picks the unit that best answers a question, out of a set the model sees at once |
 | `relate RELATION...` | Finds named relationships in one complete entity set |
+| `check` | Checks that a backend you name works with this tool, and exits 0 only when nothing is critical |

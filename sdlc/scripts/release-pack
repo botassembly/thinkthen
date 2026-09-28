@@ -1,0 +1,166 @@
+#!/bin/sh
+# release-pack [--reuse] TARGET OUT [PART...] (ticket 0128): pack the release files of one
+# Rust target into OUT, each with a `.sha256` beside it. TARGET is this host's target, since
+# each release target builds on its own runner. The parts are command, c, sqlite, duckdb,
+# postgresql, python, typescript, ruby, and first-run; the default packs them all.
+# Without --reuse it builds each file from this checkout. With --reuse it builds nothing and
+# packs the files each surface check already built in its own build folder, which the
+# `surfaces` rung does. Every cargo call is locked; fetch first where the network is off.
+set -eu
+reuse=
+[ "${1:-}" != --reuse ] || { reuse=1; shift; }
+[ $# -ge 2 ] || { echo 'usage: release-pack [--reuse] TARGET OUT [PART...]' >&2; exit 2; }
+TARGET=$1 OUT=$2
+shift 2
+REPO=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
+mkdir -p -- "$OUT"
+OUT=$(CDPATH='' cd -- "$OUT" && pwd)
+cd -- "$REPO"
+host=$(rustc -vV | sed -n 's/^host: //p')
+[ "$TARGET" = "$host" ] || { echo "release-pack: $TARGET is not this host's target, $host" >&2; exit 2; }
+V=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
+case $TARGET in
+*-apple-darwin) dl=dylib command_target=$TARGET ;;
+*-linux-gnu) dl=so command_target=${TARGET%-gnu}-musl ;;
+*) echo "release-pack: no release for $TARGET" >&2; exit 2 ;;
+esac
+# A built file never names the builder's home, as each surface check requires.
+RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
+CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$HOME=/build"
+export RUSTFLAGS CFLAGS
+. sdlc/scripts/scratch.sh
+scratch_dir stage
+
+# The build folder of the crate in $1, by the one rule every check reads.
+built() { echo "${CARGO_TARGET_DIR:-$REPO/$1/target}"; }
+sha256() { if command -v sha256sum >/dev/null; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
+# pack NAME FOLDER: tar FOLDER's contents into OUT/NAME and write OUT/NAME.sha256.
+pack() {
+	tar -czf "$OUT/$1" -C "$2" .
+	(cd -- "$OUT" && sha256 "$1" >"$1.sha256")
+}
+# keep FILE: copy a file a tool already packed into OUT, with its checksum.
+keep() {
+	[ -f "$1" ] || { echo "release-pack: $1 is missing; build it first" >&2; exit 1; }
+	cp -- "$1" "$OUT/"
+	(cd -- "$OUT" && sha256 "${1##*/}" >"${1##*/}.sha256")
+}
+# fresh NAME: a new folder in the stage, with the mode a plain mkdir gives, which each archive root carries.
+fresh() { fresh=$(mktemp -d "$stage/$1.XXXXXX") && chmod 755 "$fresh" && echo "$fresh"; }
+
+part_command() {
+	if [ -n "$reuse" ]; then
+		binary=${CARGO_TARGET_DIR:-$REPO/target}/debug/thinkthen
+	else
+		cargo build --locked --quiet --release --package thinkthen --target "$command_target"
+		binary=${CARGO_TARGET_DIR:-$REPO/target}/$command_target/release/thinkthen
+	fi
+	folder=$(fresh command)
+	cp -- "$binary" "$folder/thinkthen"
+	pack "thinkthen-$V-$command_target.tar.gz" "$folder"
+}
+
+# The header, both libraries under the soname layout build.rs sets, and a relocatable .pc.
+part_c() {
+	profile=debug
+	[ -n "$reuse" ] || { profile=release; (cd libraries/c && cargo build --locked --quiet --release --lib); }
+	from=$(built libraries/c)/$profile
+	folder=$(fresh c)
+	mkdir -p "$folder/include" "$folder/lib/pkgconfig"
+	cp libraries/c/include/thinkthen.h "$folder/include/"
+	cp -- "$from/libthinkthen_c.a" "$folder/lib/libthinkthen.a"
+	if [ "$dl" = dylib ]; then
+		cp -- "$from/libthinkthen_c.dylib" "$folder/lib/libthinkthen.dylib"
+		ln -s libthinkthen.dylib "$folder/lib/libthinkthen.0.dylib"
+		# The rehearsal on macOS measures its static link line (Phase 3).
+		private=
+	else
+		cp -- "$from/libthinkthen_c.so" "$folder/lib/libthinkthen.so"
+		ln -s libthinkthen.so "$folder/lib/libthinkthen.so.0"
+		private='-lgcc_s -lutil -lrt -lpthread -lm -ldl -lc'
+	fi
+	cat >"$folder/lib/pkgconfig/thinkthen.pc" <<-EOF
+		prefix=\${pcfiledir}/../..
+		libdir=\${prefix}/lib
+		includedir=\${prefix}/include
+
+		Name: thinkthen
+		Description: Semantic judgments over text, through the thinkthen engine
+		Version: $V
+		Libs: -L\${libdir} -lthinkthen
+		Libs.private: $private
+		Cflags: -I\${includedir}
+	EOF
+	pack "thinkthen-c-$V-$TARGET.tar.gz" "$folder"
+}
+
+part_sqlite() {
+	[ -n "$reuse" ] || (cd databases/sqlite && cargo build --locked --quiet --release)
+	folder=$(fresh sqlite)
+	cp -- "$(built databases/sqlite)/release/libthinkthen0.$dl" "$folder/"
+	pack "thinkthen-sqlite-$V-$TARGET.tar.gz" "$folder"
+}
+
+# DuckDB reads its footer: the platform, the DuckDB version, and the extension's version.
+part_duckdb() {
+	if [ -z "$reuse" ]; then
+		(cd databases/duckdb && cargo build --locked --quiet --release)
+		. databases/duckdb/tools/version.env
+		case $TARGET in
+		x86_64-*linux*) platform=linux_amd64 ;; aarch64-*linux*) platform=linux_arm64 ;;
+		x86_64-apple*) platform=osx_amd64 ;; *) platform=osx_arm64 ;;
+		esac
+		printf '%s' "$platform" >"$stage/platform.txt"
+		printf '%s' "$V" >"$stage/version.txt"
+		mkdir -p databases/duckdb/build
+		python3 databases/duckdb/vendor/append_extension_metadata.py \
+			-l "$(built databases/duckdb)/release/libthinkthen_duckdb.$dl" -o databases/duckdb/build/thinkthen.duckdb_extension \
+			-n thinkthen -dv "$DUCKDB_VERSION" -evf "$stage/version.txt" -pf "$stage/platform.txt" \
+			--abi-type C_STRUCT_UNSTABLE >/dev/null
+	fi
+	folder=$(fresh duckdb)
+	cp databases/duckdb/build/thinkthen.duckdb_extension "$folder/"
+	pack "thinkthen-duckdb-$V-$TARGET.tar.gz" "$folder"
+}
+
+part_postgresql() {
+	folder=$(fresh postgresql)
+	sh databases/postgresql/package.sh ${reuse:+--reuse} "$folder"
+	pack "thinkthen-postgresql16-$V-$TARGET.tar.gz" "$folder"
+}
+
+part_python() {
+	[ -n "$reuse" ] || sh libraries/python/build-wheel.sh
+	for wheel in libraries/python/target/wheels/thinkthen-"$V"-*.whl; do keep "$wheel"; done
+}
+
+part_typescript() {
+	if [ -z "$reuse" ]; then
+		sh libraries/typescript/build-addon.sh
+		mkdir -p libraries/typescript/target/pack
+		(cd libraries/typescript && npm pack --silent --offline --pack-destination target/pack >/dev/null)
+	fi
+	keep "libraries/typescript/target/pack/thinkthen-$V.tgz"
+}
+
+part_ruby() {
+	[ -n "$reuse" ] || sh libraries/ruby/build.sh
+	for gem in libraries/ruby/thinkthen-"$V"-*.gem; do keep "$gem"; done
+}
+
+# The README's first run: demo 27's input and its one recorded answer.
+part_first_run() {
+	folder=$(fresh first-run)/thinkthen-first-run
+	mkdir -p "$folder"
+	cp -R demos/27-test-with-no-network/report.txt demos/27-test-with-no-network/recording "$folder/"
+	pack thinkthen-first-run.tar.gz "${folder%/*}"
+}
+
+[ $# -gt 0 ] || set -- command c sqlite duckdb postgresql python typescript ruby first-run
+for part in "$@"; do
+	case $part in
+	command | c | sqlite | duckdb | postgresql | python | typescript | ruby) "part_$part" ;;
+	first-run) part_first_run ;;
+	*) echo "release-pack: no part named $part" >&2; exit 2 ;;
+	esac
+done

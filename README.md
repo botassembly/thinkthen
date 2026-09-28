@@ -14,6 +14,19 @@ The first prints `true`, `false`, or `null`, and its exit code works in a shell 
 
 Those commands are the design. `specification/` is the contract, and code follows it. `annotate` reads a saved question set when several questions belong on the same input.
 
+## First run
+
+The sample needs no key. It holds one bug report and the recorded answer to one question about it, and `--replay` reads that answer with no network.
+
+```sh
+curl -fsSLO https://github.com/botassembly/thinkthen/releases/latest/download/thinkthen-first-run.tar.gz
+tar -xzf thinkthen-first-run.tar.gz
+thinkthen decide 'Does this report say what the person did before the problem appeared?' \
+  --replay thinkthen-first-run/recording < thinkthen-first-run/report.txt
+```
+
+It prints `true`. `demos/27-test-with-no-network` shows how a test replays a recording.
+
 ## What it will and will not do
 
 - The shell sequences programs. `jq` reshapes data. `thinkthen` judges meaning and does nothing else.
@@ -24,14 +37,28 @@ Those commands are the design. `specification/` is the contract, and code follow
 
 The answer cache is on by default. Cache entries contain the complete request and response, including the evidence being judged. Filesystem access and backups can copy that evidence. A platform-default cache is created for its owner alone and an existing Unix folder must already have mode `0700`; an explicitly named `--cache` folder keeps its user-owned mode. The first write binds a folder to the resolved backend address. Reusing it with another address fails before any request and tells the user to restore the old settings or choose another folder. No key enters an entry. Use `--no-cache` for a run that must neither read nor write cached answers.
 
-`thinkthen status` reports the resolved configuration, cache size, and local request, token, and cache-answer counts for the current UTC month and in total. The count-only usage files live beside the platform cache and contain no judged evidence or key. They are local conservative statistics rather than an account bill.
+`thinkthen status` reports the resolved configuration, cache size, and local request, token, and cache-answer counts for the current UTC month and in total. It counts only what the command sends. A library, SQL extension, or data frame keeps its counts in memory for its own process, and `status` never sees them. The count-only usage files live beside the platform cache and contain no judged evidence or key. They are local conservative statistics rather than an account bill.
 
 ## What it is not for
 
-- **A loop that needs many decisions a second.** One measured call took over 300 ms, and a shell tool adds a process start on top of that. No pipeline of separate processes reaches that rate. Record mode through a `coproc` serves a steady loop from one long-lived process, and that is the ceiling.
-- **A call from inside a program written in another language.** Records, recordings, transforms, and exit codes buy a program nothing, because the program already holds its data. The honest answer there is a library over the same pure core, and `specification/roadmap.md` holds it for after version one.
+- **A loop that needs many decisions a second.** Each decision waits on a network round trip to a model, and a shell tool adds a process start to each one. A pipeline of separate processes pays both for every decision. Record mode through a `coproc` serves a steady loop from one long-lived process, and that is the ceiling.
+- **A call from inside a program written in another language.** Records, recordings, transforms, and exit codes buy a program nothing, because the program already holds its data. A Rust program uses the library below. Python, TypeScript, Ruby, R, C, and Polars have libraries under `libraries/`. DuckDB, PostgreSQL, and SQLite have extensions under `databases/`.
 
 `sdlc/planning/ten-use-cases.md` measured both against ten real uses.
+
+## Use it from Rust
+
+The same crate is a library. A dependency on `thinkthen` with `default-features = false` leaves out the command and its argument parser. Every call blocks and returns `Result<_, thinkthen::Error>`. The error has six kinds, and `retryable()` says whether the same call may succeed later.
+
+```rust
+let engine = thinkthen::Engine::from_env()?;
+let question = thinkthen::Question::decide("Asks for money back.")?.cut_at(0.9)?;
+for row in engine.filter(&question, ["Please refund my order.", "Where is my parcel?"]) {
+    println!("{}", row?);
+}
+```
+
+`Engine::from_env` reads the same variables and configuration file as the command, including `cache: false`. A bare `Engine::builder()` starts with library defaults and does not read that file. Call its `no_cache()` setter to turn the cache off. `throttle(n)` caps the requests in flight for the whole process. The bulk calls `filter`, `decide_many`, and `annotate` read any iterator lazily and return rows in input order. `sdlc/planning/libraries/rust.md` holds the goals, and ticket 0084 holds the frozen declarations.
 
 ## Four names
 
@@ -80,9 +107,10 @@ sdlc/scripts/install
 sdlc/scripts/lint
 sdlc/scripts/test
 sdlc/scripts/spec
+sdlc/scripts/surfaces
 ```
 
-Cheapest rung first. No gate touches the network. `.github/workflows/gate.yml` runs the same four rungs on every push and every pull request.
+Cheapest rung first. No gate touches the network. `.github/workflows/gate.yml` runs the first four rungs on every push and every pull request.
 
 ## License
 

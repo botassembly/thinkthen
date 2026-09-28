@@ -2,29 +2,28 @@
 
 use std::fs;
 use std::io::{Read, Write};
+use std::path::Path;
 use std::process::ExitCode;
-use std::time::Duration;
 
 use crate::core::adapters::built_in;
 use crate::core::{
-    Backend, BackendProfile, Framing, ModelName, Plan, Pointer, QuestionSet, Reading, Record,
+    Backend, Framing, ModelName, PartError, Plan, Pointer, QuestionSet, Reading, ReadingError,
+    Record,
 };
 
 use crate::args::{AnnotateArguments, Common};
-use crate::asking::{Folders, ask_prepared};
+use crate::asking::{self, Folders};
 use crate::edge::{self, Environment};
+use crate::engine::facade::Engine;
 use crate::failure::Failure;
-use crate::http::Client;
-use crate::prepared_request::{PreparedRequest, PreparedRequests};
 use crate::profile::{self, Mismatch};
-use crate::recorder::Recorder;
 use crate::schedule::{Judged, Output};
 use crate::table::{Kind as TableKind, Rows as TableRows};
 
 mod aggregation;
 mod plan;
 
-pub(crate) use aggregation::{GroupAnswer, check_model};
+pub(crate) use crate::engine::facade::{GroupAnswer, PreparedGroup, check_model};
 use plan::{dry_run, dry_run_record};
 
 #[expect(
@@ -38,7 +37,13 @@ pub(crate) fn run(
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     refuse_views(arguments)?;
-    let text = fs::read_to_string(&arguments.questions).map_err(Failure::OpenQuestionSet)?;
+    // `@FILE` names the same file, as the other verbs' question files do.
+    let path = arguments
+        .questions
+        .to_str()
+        .and_then(|typed| typed.strip_prefix('@'));
+    let text = fs::read_to_string(path.map_or(arguments.questions.as_path(), Path::new))
+        .map_err(Failure::OpenQuestionSet)?;
     let set = match QuestionSet::parse(&text) {
         Ok(set) => set,
         Err(_) if input_looks_like_set(arguments) => {
@@ -48,7 +53,7 @@ pub(crate) fn run(
         }
         Err(error) => return Err(error.into()),
     };
-    let jobs = crate::schedule::width(arguments.common.jobs)?;
+    crate::schedule::width(arguments.common.jobs)?;
     let folders = Folders::of(&arguments.common, environment)?;
     if arguments.common.dry_run && folders.named() {
         return Err(Failure::DryRunWithRecording);
@@ -67,6 +72,9 @@ pub(crate) fn run(
     let profile = profile::read(&arguments.common)?;
     let mismatch = Mismatch::new(set.profile(), profile.as_ref());
     let reading = reading(&arguments.common)?;
+    if let (Framing::Lines, Some(name)) = (arguments.common.framing(), set.first_part()) {
+        return Err(Failure::Reading(ReadingError::LinesPart(name.to_owned())));
+    }
     let source = edge::source(arguments.common.input.as_deref(), input)?;
     if let Some(kind) = table_kind(&arguments.common) {
         let mut rows = TableRows::new(source, kind)?;
@@ -81,36 +89,32 @@ pub(crate) fn run(
                 &mut writer,
             );
         }
-        let judging = Judging {
-            common: &arguments.common,
+        let judging = Judging::new(
+            arguments,
             environment,
-            recorder: Recorder::of_private(
-                folders.record.as_deref(),
-                folders.replay.as_deref(),
-                folders.private_default,
-                folders.cache_answers,
+            asking::engine(
+                &arguments.common,
+                environment,
+                folders,
+                backend,
+                profile,
+                arguments.common.jobs,
             )?,
-            client: Client::new(
-                Duration::from_secs(arguments.common.timeout),
-                backend.is_secure(),
-            ),
-            backend,
             set,
-            profile,
             mismatch,
-            streams: reading.streams(),
-            recording_reported: folders.reported(),
-        };
+        );
         return crate::annotate_schedule::run(
             &judging,
             &reading,
-            rows.map(|row| row.map(crate::annotate_schedule::Input::Record)),
-            jobs,
+            rows.enumerate().map(|(place, row)| {
+                row.map(|record| crate::annotate_schedule::Input::Record(place + 1, record))
+                    .map_err(|error| crate::schedule::Placed::at(error, place + 1))
+            }),
             environment.cancel(),
-            &mut Output::Streaming(&mut writer),
+            &mut Output::streaming(&mut writer, environment.usage()),
         );
     }
-    let mut chunks = edge::Chunks::new(source, reading.streams());
+    let mut chunks = edge::numbered(edge::Chunks::new(source, reading.streams()), &reading);
     if arguments.common.dry_run {
         return dry_run(
             &set,
@@ -118,37 +122,33 @@ pub(crate) fn run(
             &reading,
             profile.as_ref(),
             &mismatch,
-            chunks.next().transpose()?,
+            chunks.next().map(|(_, row)| row).transpose()?,
             &mut writer,
         );
     }
-    let judging = Judging {
-        common: &arguments.common,
+    let judging = Judging::new(
+        arguments,
         environment,
-        recorder: Recorder::of_private(
-            folders.record.as_deref(),
-            folders.replay.as_deref(),
-            folders.private_default,
-            folders.cache_answers,
+        asking::engine(
+            &arguments.common,
+            environment,
+            folders,
+            backend,
+            profile,
+            arguments.common.jobs,
         )?,
-        client: Client::new(
-            Duration::from_secs(arguments.common.timeout),
-            backend.is_secure(),
-        ),
-        backend,
         set,
-        profile,
         mismatch,
-        streams: reading.streams(),
-        recording_reported: folders.reported(),
-    };
+    );
     crate::annotate_schedule::run(
         &judging,
         &reading,
-        chunks.map(|row| row.map(crate::annotate_schedule::Input::Bytes)),
-        jobs,
+        chunks.map(|(at, row)| {
+            row.map(|bytes| crate::annotate_schedule::Input::Bytes(at, bytes))
+                .map_err(|error| crate::schedule::Placed::at(error, at))
+        }),
         environment.cancel(),
-        &mut Output::Streaming(&mut writer),
+        &mut Output::streaming(&mut writer, environment.usage()),
     )
 }
 
@@ -206,19 +206,33 @@ fn reading(common: &Common) -> Result<Reading, Failure> {
 pub(crate) struct Judging<'a> {
     common: &'a Common,
     environment: &'a Environment,
-    recorder: Recorder,
-    client: Client,
-    backend: Backend,
+    engine: Engine,
     set: QuestionSet,
-    profile: Option<BackendProfile>,
     mismatch: Mismatch,
     streams: bool,
-    recording_reported: bool,
 }
 
-impl Judging<'_> {
-    pub(crate) const fn recording_named(&self) -> bool {
-        self.recording_reported
+impl<'a> Judging<'a> {
+    fn new(
+        arguments: &'a AnnotateArguments,
+        environment: &'a Environment,
+        engine: Engine,
+        set: QuestionSet,
+        mismatch: Mismatch,
+    ) -> Self {
+        let common = &arguments.common;
+        Self {
+            streams: common.framing() != Framing::Document,
+            engine,
+            common,
+            environment,
+            set,
+            mismatch,
+        }
+    }
+
+    pub(crate) const fn engine(&self) -> &Engine {
+        &self.engine
     }
 
     pub(crate) fn record(
@@ -227,10 +241,10 @@ impl Judging<'_> {
         input: crate::annotate_schedule::Input,
     ) -> Result<Record, Failure> {
         let record = match input {
-            crate::annotate_schedule::Input::Bytes(bytes) => base
+            crate::annotate_schedule::Input::Bytes(_, bytes) => base
                 .annotation_record(&bytes)
                 .map_err(|error| Failure::record(error, base.streams()))?,
-            crate::annotate_schedule::Input::Record(record) => record,
+            crate::annotate_schedule::Input::Record(_, record) => record,
         };
         collisions(&self.set, &record)?;
         Ok(record)
@@ -241,7 +255,7 @@ impl Judging<'_> {
     }
 
     pub(crate) const fn requested_model(&self) -> &ModelName {
-        self.backend.model()
+        self.engine.backend().model()
     }
 
     pub(crate) fn finish(
@@ -258,55 +272,13 @@ impl Judging<'_> {
         record: &Record,
         places: Vec<usize>,
     ) -> Result<PreparedGroup, Failure> {
-        let plan = plan_for(&self.set, &places, &self.backend, base, record)?;
-        let prepared = PreparedRequests::with_profile(&self.backend, &plan, self.profile.as_ref())?;
-        let mut places = places.into_iter();
-        let chunks = prepared
-            .into_chunks()
-            .into_iter()
-            .map(|chunk| PreparedGroupChunk {
-                places: places.by_ref().take(chunk.plan.questions().len()).collect(),
-                plan: chunk.plan,
-                prepared: chunk.request,
-            })
-            .collect();
-        Ok(PreparedGroup { chunks })
+        let plan = plan_for(&self.set, &places, self.engine.backend(), base, record)?;
+        Ok(self.engine.prepare_group(&plan, places)?)
     }
 
     pub(crate) fn answer_group(&self, group: PreparedGroup) -> Result<GroupAnswer, Failure> {
-        let mut answered = Vec::with_capacity(group.chunks.len());
-        let mut model = None;
-        for chunk in group.chunks {
-            let result = ask_prepared(
-                &self.backend,
-                &chunk.plan,
-                chunk.prepared,
-                self.common,
-                self.environment,
-                &self.recorder,
-                &self.client,
-            )?;
-            check_model(&mut model, result.reply.model(), self.backend.model())?;
-            answered.push(aggregation::ChunkAnswer {
-                places: chunk.places,
-                reply: result.reply,
-                digest: result.request.as_str().to_owned(),
-                requests_sent: result.requests_sent,
-                replayed: result.replayed,
-            });
-        }
-        Ok(GroupAnswer { answered, model })
+        Ok(self.engine.answer_group(group, self.environment.cancel())?)
     }
-}
-
-pub(crate) struct PreparedGroup {
-    chunks: Vec<PreparedGroupChunk>,
-}
-
-struct PreparedGroupChunk {
-    places: Vec<usize>,
-    plan: Plan,
-    prepared: PreparedRequest,
 }
 
 fn collisions(set: &QuestionSet, record: &Record) -> Result<(), Failure> {
@@ -325,21 +297,15 @@ fn plan_for(
     base: &Reading,
     record: &Record,
 ) -> Result<Plan, Failure> {
-    let first_place = group
-        .first()
-        .ok_or(Failure::Defect("an annotate group is empty"))?;
-    let first = set
-        .questions()
-        .get(*first_place)
-        .ok_or(Failure::Defect("a group points outside its set"))?;
-    let base_evidence = base.evidence(record)?;
-    let evidence = if matches!(first.on(), [root] if root.as_str().is_empty()) {
-        base_evidence
-    } else {
-        let nested = Reading::new(Framing::Document, first.on().to_vec())?;
-        let record = nested.record(base_evidence.as_text()?.as_bytes())?;
-        nested.evidence(&record)?
-    };
+    if group.is_empty() {
+        return Err(Failure::Defect("an annotate group is empty"));
+    }
+    let evidence = set
+        .group_evidence(group, &base.batch_record(record)?)
+        .map_err(|error| match error {
+            PartError::Reading(error) => Failure::from(error),
+            PartError::Record(error) => Failure::from(error),
+        })?;
     let questions = group
         .iter()
         .map(|place| {

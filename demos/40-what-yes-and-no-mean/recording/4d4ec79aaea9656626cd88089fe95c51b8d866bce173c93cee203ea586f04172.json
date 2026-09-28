@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Planned upgrade of the booking service, Saturday night.\n\nThe window was set at four hours. Work on the storage layer has taken longer\nthan we expected in rehearsal, so the window now runs to six hours. Bookings\nwill not be taken while the window is open. The desk will post an update when\nthe service is back.\n","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The notice says the upgrade window runs longer than the plan it announced before."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.97}},"usage":{"input_tokens":353,"output_tokens":21}}
+}

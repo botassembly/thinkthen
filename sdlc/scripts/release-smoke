@@ -1,0 +1,99 @@
+#!/bin/sh
+# release-smoke DIR (ticket 0128): install each release file in DIR into a fresh prefix and
+# run its surface's check against that file alone. `release-pack` writes DIR. The rule is
+# the release rule of verdict.sh: 0 passes, and "not run" (77) or any other code fails.
+# A surface check reads THINKTHEN_ARTIFACT, installs the file, and loads it from there.
+# The command's check runs the unpacked binary by path and then the README's "First run"
+# block with no key: every line but its one curl line, whose download DIR supplies.
+set -eu
+. "$(dirname -- "$0")/verdict.sh"
+. "$(dirname -- "$0")/scratch.sh"
+. "$(dirname -- "$0")/installed.sh"
+[ $# -eq 1 ] && [ -d "$1" ] || { echo 'usage: release-smoke DIR' >&2; exit 2; }
+DIR=$(CDPATH='' cd -- "$1" && pwd)
+REPO=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
+cd -- "$REPO"
+unset THINKTHEN_API_KEY
+V=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
+sha256() { if command -v sha256sum >/dev/null; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
+
+# The conformance loopback backend, as the surfaces rung starts it.
+backend_start
+
+# Every library file, unpacked, holds neither the builder's home nor the PostgreSQL test probe. The
+# checks' own scans read their builds, and this one reads the files a user installs.
+scan() {
+	into=$(mktemp -d "$backend/scan.XXXXXX") || return 1
+	case $1 in
+	*.whl) python3 -m zipfile -e "$1" "$into" ;;
+	*.gem) tar -xOf "$1" data.tar.gz | tar -xzf - -C "$into" ;;
+	*) tar -xzf "$1" -C "$into" ;;
+	esac
+	found=$(grep -rlaF -e "$HOME" -e thinkthen_panic_probe "$into" | sed "s|^$into/||" | tr '\n' ' ')
+	[ -z "$found" ] || { echo "release-smoke: FAIL ${1##*/} (the builder's home or the test probe is in $found)"; return 1; }
+}
+
+# The command: its version line by path, then the first-run block with it first on PATH.
+command_check() {
+	prefix=$(mktemp -d "$backend/command.XXXXXX") || return 1
+	tar -xzf "$1" -C "$prefix"
+	[ "$("$prefix/thinkthen" --version)" = "thinkthen $V" ] ||
+		{ echo "release-smoke: $1 reports $("$prefix/thinkthen" --version)" >&2; return 1; }
+	[ -f "$DIR/thinkthen-first-run.tar.gz" ] || { echo 'release-smoke: DIR holds no thinkthen-first-run.tar.gz' >&2; return 1; }
+	awk '/^## First run$/ { held = 1; next } /^## / { held = 0 } held && /^```/ { if (inside) exit; inside = 1; next } inside' \
+		README.md >"$backend/block"
+	[ "$(grep -c '^curl ' "$backend/block")" = 1 ] ||
+		{ echo "release-smoke: README.md's First run block holds no one curl line" >&2; return 1; }
+	sed "s|^curl .*|cp '$DIR/thinkthen-first-run.tar.gz' .|" "$backend/block" >"$prefix/block.sh"
+	mkdir "$prefix/home"
+	before=$(backend_count)
+	answer=$(cd -- "$prefix/home" && env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL HOME="$prefix/home" \
+		XDG_CACHE_HOME="$prefix/home/.cache" PATH="$prefix:$PATH" sh -eu ../block.sh)
+	[ "$answer" = true ] || { echo "release-smoke: the first-run block printed '$answer', not true" >&2; return 1; }
+	[ "$(backend_count)" = "$before" ] || { echo 'release-smoke: the first-run block reached the loopback backend' >&2; return 1; }
+}
+
+failed=0 seen=
+for file in "$DIR"/*; do
+	name=${file##*/}
+	case $name in
+	*.sha256) continue ;;
+	esac
+	if ! (cd -- "$DIR" && sha256 -c "$name.sha256" >/dev/null 2>&1); then
+		echo "release-smoke: FAIL $name (its .sha256 is missing or does not match)"
+		failed=1
+		continue
+	fi
+	# The rung packs the command's debug build, so the scan reads the libraries alone.
+	case $name in thinkthen-"$V"-*.tar.gz) ;; *) scan "$file" || { failed=1; continue; } ;; esac
+	case $name in
+	thinkthen-first-run.tar.gz) seen="$seen first-run"; continue ;;
+	thinkthen-c-*.tar.gz) surface=libraries/c ;;
+	thinkthen-sqlite-*.tar.gz) surface=databases/sqlite ;;
+	thinkthen-duckdb-*.tar.gz) surface=databases/duckdb ;;
+	thinkthen-postgresql16-*.tar.gz) surface=databases/postgresql ;;
+	thinkthen-*.whl) surface=libraries/python ;;
+	thinkthen-*.tgz) surface=libraries/typescript ;;
+	thinkthen-*.gem) surface=libraries/ruby ;;
+	thinkthen-"$V"-*.tar.gz) surface=command ;;
+	*) echo "release-smoke: FAIL $name (no surface packs this file)"; failed=1; continue ;;
+	esac
+	seen="$seen $surface"
+	set +e
+	if [ "$surface" = command ]; then
+		command_check "$file"
+		code=$?
+	else
+		# A daemon a check starts must not hold the backend's input open.
+		THINKTHEN_ARTIFACT=$file sh "$surface/check.sh" "$port" 3>&-
+		code=$?
+	fi
+	set -e
+	verdict release "$surface $name" "$code" || failed=1
+done
+# Every file the release holds for this target is here.
+for want in command libraries/c databases/sqlite databases/duckdb databases/postgresql \
+	libraries/python libraries/typescript libraries/ruby first-run; do
+	case " $seen " in *" $want "*) ;; *) echo "release-smoke: FAIL $want (DIR holds no file for it)"; failed=1 ;; esac
+done
+exit "$failed"

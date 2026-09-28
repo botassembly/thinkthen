@@ -1,0 +1,512 @@
+//! `decide`, `filter` and `rank` over a stream, by ADR 0048 items 1 to 6. A
+//! record thread parses records ahead, a batch reader plans a batch for each
+//! ask, and a worker sends it as one request and builds a row for each record.
+
+use std::collections::VecDeque;
+use std::io::BufRead;
+use std::process::ExitCode;
+use std::sync::mpsc::{Receiver, RecvTimeoutError, SyncSender, sync_channel};
+use std::thread;
+use std::time::Duration;
+
+use super::batch_meta::Description;
+use super::{Asks, Judging, JudgingInput, RowContext, print_plan, table_kind};
+use crate::core::batch::halves;
+use crate::core::{
+    AnswerOutcome, Batch, BatchError, Batcher, Question, Reading, Record, Reply, Setting, share,
+};
+use crate::edge;
+use crate::engine::facade::{Answered, Completed, Input, InputPort, Judgment};
+use crate::failure::Failure;
+use crate::schedule::{self, Judged, Output, Placed};
+use crate::table::Rows as TableRows;
+
+/// How long input may pause before the open batch goes out, by ADR 0048 item 2.
+const PAUSE: Duration = Duration::from_millis(50);
+
+/// How many raw records the record thread reads ahead of the batch reader.
+const AHEAD: usize = 64;
+
+/// One parsed record, and the bytes it arrived as when it arrived as a line.
+struct Held {
+    record: Record,
+    arrived: Option<Vec<u8>>,
+    at: usize,
+}
+
+/// One batch for a worker: its request, its first record's number, its records.
+pub(super) struct Item {
+    batch: Batch,
+    first: usize,
+    records: Vec<Held>,
+}
+
+type Records = Box<dyn Iterator<Item = Result<Held, Placed>> + Send>;
+
+/// Send the stream in batches of `setting`, or print the first batch's plan.
+pub(super) fn run(
+    configuration: JudgingInput<'_>,
+    reading: &Reading,
+    source: Box<dyn BufRead + Send>,
+    setting: Setting,
+    output: &mut Output<'_>,
+) -> Result<ExitCode, Failure> {
+    let records: Records = if let Some(kind) = table_kind(configuration.common) {
+        let rows = TableRows::new(source, kind)?;
+        Box::new(rows.enumerate().map(|(place, row)| {
+            row.map(|record| Held {
+                record,
+                arrived: None,
+                at: place + 1,
+            })
+            .map_err(|error| Placed::at(error, place + 1))
+        }))
+    } else {
+        let reading = reading.clone();
+        Box::new(
+            edge::numbered(edge::Chunks::new(source, true), &reading).map(move |(at, bytes)| {
+                let bytes = bytes.map_err(|error| Placed::at(error, at))?;
+                let record = reading
+                    .record(&bytes)
+                    .map_err(|error| Placed::at(Failure::record(error, true), at))?;
+                Ok(Held {
+                    record,
+                    arrived: Some(bytes),
+                    at,
+                })
+            }),
+        )
+    };
+    let Asks::Fixed(question) = &configuration.asks else {
+        return Err(Failure::Defect("a batched verb asks one question"));
+    };
+    let question = question.clone();
+    let batcher = Batcher::new(
+        configuration.backend.clone(),
+        configuration.profile.clone(),
+        question.clone(),
+        setting,
+        None,
+    )
+    .map_err(refused)?;
+    let downstream = edge::Downstream::default();
+    let former = Former {
+        batcher,
+        reading: reading.clone(),
+        held: Vec::new(),
+        downstream: downstream.clone(),
+        cancel: configuration.environment.cancel().clone(),
+        queue: VecDeque::new(),
+    };
+    if configuration.common.dry_run {
+        return planned(former, records, &configuration, output);
+    }
+    let judging = Judging::new(configuration)?;
+    let recording = judging.engine.recording();
+    let outcome = judging.engine.records(
+        output.holds(),
+        judging.environment.cancel(),
+        |asks, events| {
+            let (sender, raw) = sync_channel(AHEAD);
+            thread::spawn(move || feed(records, &sender));
+            thread::spawn(move || former.answer(&raw, &asks, &events));
+        },
+        &|item| answered(&judging, reading, &question, setting, item),
+        |rows| {
+            for row in rows {
+                if !output.take(row).map_err(Placed::from)? {
+                    return Ok(false);
+                }
+            }
+            Ok(true)
+        },
+    )?;
+    if downstream.latched() {
+        return Ok(ExitCode::SUCCESS);
+    }
+    schedule::ended(outcome, recording, output)
+}
+
+/// Read records ahead into the channel, and stop after the first refusal.
+fn feed(records: Records, sender: &SyncSender<Result<Held, Placed>>) {
+    for record in records {
+        let failed = record.is_err();
+        if sender.send(record).is_err() || failed {
+            return;
+        }
+    }
+}
+
+/// Print the plan of the first batch that closes without a pause.
+fn planned(
+    mut former: Former,
+    records: Records,
+    configuration: &JudgingInput<'_>,
+    output: &mut Output<'_>,
+) -> Result<ExitCode, Failure> {
+    for record in records {
+        former.push(record);
+        if !former.queue.is_empty() {
+            break;
+        }
+    }
+    if former.queue.is_empty() {
+        former.end();
+    }
+    match former.queue.pop_front() {
+        Some(Input::Item(item)) => print_plan(
+            &configuration.backend,
+            &configuration.mismatch,
+            &former.reading,
+            &configuration.planning(),
+            &item.batch.plan,
+            output.writer(),
+        ),
+        Some(Input::Failed(error)) => Err(error.cause),
+        Some(Input::End) | None => Ok(ExitCode::SUCCESS),
+    }
+}
+
+/// The batch reader: the planner, the open batch's records, and the closed
+/// batches and refusals that wait for an ask, in input order.
+struct Former {
+    batcher: Batcher,
+    reading: Reading,
+    held: Vec<Held>,
+    downstream: edge::Downstream,
+    cancel: crate::engine::Cancel<'static>,
+    queue: VecDeque<Input<Item, Placed>>,
+}
+
+impl Former {
+    /// Answer each ask with the next batch.
+    fn answer(
+        mut self,
+        raw: &Receiver<Result<Held, Placed>>,
+        asks: &Receiver<()>,
+        events: &InputPort<Item, Vec<Judged>, Placed>,
+    ) {
+        while asks.recv().is_ok() {
+            if events.send(self.next(raw)).is_err() {
+                return;
+            }
+        }
+    }
+
+    /// The next closed batch or refusal. It pulls records only while an ask
+    /// waits, and sends the open batch when input pauses.
+    fn next(&mut self, raw: &Receiver<Result<Held, Placed>>) -> Input<Item, Placed> {
+        loop {
+            if self.downstream.gone() || self.cancel.stop().is_some() {
+                return Input::End;
+            }
+            if let Some(event) = self.queue.pop_front() {
+                return event;
+            }
+            let next = raw.recv_timeout(PAUSE);
+            match next {
+                Ok(record) => self.push(record),
+                Err(RecvTimeoutError::Timeout) if self.held.is_empty() => {}
+                Err(RecvTimeoutError::Timeout) => {
+                    let paused = self.batcher.pause();
+                    self.closed(paused);
+                }
+                Err(RecvTimeoutError::Disconnected) => {
+                    self.end();
+                    return self.queue.pop_front().unwrap_or(Input::End);
+                }
+            }
+        }
+    }
+
+    /// Parse one record and plan it, queueing the batches it closes. A record
+    /// refused before planning sends the open batch first.
+    fn push(&mut self, held: Result<Held, Placed>) {
+        let parsed = held.and_then(|held| {
+            let record = self
+                .reading
+                .batch_record(&held.record)
+                .map_err(|error| Placed::at(error.into(), held.at))?;
+            Ok((record, held))
+        });
+        let (record, held) = match parsed {
+            Ok(parsed) => parsed,
+            Err(error) => {
+                self.end();
+                self.queue.push_back(Input::Failed(error));
+                return;
+            }
+        };
+        self.held.push(held);
+        let mut closed = Vec::new();
+        let pushed = self.batcher.push(record, &mut closed);
+        for batch in closed {
+            self.queue_batch(batch);
+        }
+        if let Err(error) = pushed {
+            self.held.clear();
+            self.queue
+                .push_back(Input::Failed(Placed::from(refused(error))));
+        }
+    }
+
+    fn end(&mut self) {
+        let finished = self.batcher.finish();
+        self.closed(finished);
+    }
+
+    fn closed(&mut self, batch: Result<Option<Batch>, BatchError>) {
+        match batch {
+            Ok(Some(batch)) => self.queue_batch(batch),
+            Ok(None) => {}
+            Err(error) => self
+                .queue
+                .push_back(Input::Failed(Placed::from(refused(error)))),
+        }
+    }
+
+    /// Queue a closed batch with the records it answers, the oldest held.
+    fn queue_batch(&mut self, batch: Batch) {
+        let count = batch.questions.len().min(self.held.len());
+        let records: Vec<Held> = self.held.drain(..count).collect();
+        let first = records.first().map_or(1, |record| record.at);
+        self.queue.push_back(Input::Item(Item {
+            batch,
+            first,
+            records,
+        }));
+    }
+}
+
+/// Ask one batch and build each record's row from its question's answer.
+/// The first record with no usable answer stops the run after the rows before it.
+fn answered(
+    judging: &Judging<'_>,
+    reading: &Reading,
+    question: &Question,
+    setting: Setting,
+    item: &Item,
+) -> Result<Completed<Vec<Judged>, Placed>, Placed> {
+    let Item {
+        batch,
+        first,
+        records,
+    } = item;
+    let count = records.len();
+    let last = records.last().map_or(*first, |held| held.at);
+    let cancel = judging.environment.cancel();
+    let whole = match judging.engine.ask_batch(batch, cancel) {
+        Ok(whole) => {
+            return answer_rows(
+                judging,
+                reading,
+                question,
+                batch,
+                records,
+                whole,
+                Description::new(setting, batch.closed, false),
+            );
+        }
+        Err(error)
+            if count > 1
+                && (error.too_large()
+                    || matches!(error, crate::engine::error::Error::ReplayMiss(_))) =>
+        {
+            error
+        }
+        Err(error) => return Err(Placed::at(failed(error.into(), *first, last), *first)),
+    };
+    split_answered(judging, reading, question, setting, item, whole)
+}
+
+/// Rebuild the two halves within the refused batch's scheduled place.
+fn split_answered(
+    judging: &Judging<'_>,
+    reading: &Reading,
+    question: &Question,
+    setting: Setting,
+    item: &Item,
+    whole: crate::engine::error::Error,
+) -> Result<Completed<Vec<Judged>, Placed>, Placed> {
+    let Item {
+        batch,
+        first,
+        records,
+    } = item;
+    let description = Description::new(setting, batch.closed, true);
+    let count = records.len();
+    let last = records.last().map_or(*first, |held| held.at);
+    let cancel = judging.environment.cancel();
+    let refused_attempts = u64::from(whole.too_large());
+    let values = records
+        .iter()
+        .map(|held| {
+            reading
+                .batch_record(&held.record)
+                .map_err(|error| Placed::at(error.into(), held.at))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let [left, right] = halves(
+        judging.engine.backend(),
+        judging.engine.profile(),
+        question,
+        None,
+        values,
+    )
+    .map_err(|error| Placed::at(refused(error), *first))?;
+    let middle = count.div_ceil(2);
+    let (left_records, right_records) = records.split_at(middle);
+    let left_last = left_records.last().map_or(*first, |held| held.at);
+    if let Some(stop) = cancel.stop() {
+        return Err(Placed::at(stop.into(), *first));
+    }
+    let mut first_answer = judging.engine.ask_batch(&left, cancel).map_err(|error| {
+        let range_last = if matches!(error, crate::engine::error::Error::ReplayMiss(_)) {
+            last
+        } else {
+            left_last
+        };
+        Placed::at(failed(error.into(), *first, range_last), *first)
+    })?;
+    first_answer.requests_sent += refused_attempts;
+    let mut first_done = answer_rows(
+        judging,
+        reading,
+        question,
+        &left,
+        left_records,
+        first_answer,
+        description,
+    )?;
+    if first_done.stop.is_some() {
+        return Ok(first_done);
+    }
+    let right_first = right_records.first().map_or(last, |held| held.at);
+    if let Some(stop) = cancel.stop() {
+        first_done.stop = Some(Placed::at(stop.into(), right_first));
+        return Ok(first_done);
+    }
+    let second_answer = match judging.engine.ask_batch(&right, cancel) {
+        Ok(answer) => answer,
+        Err(error) => {
+            first_done.stop = Some(Placed::at(
+                failed(error.into(), right_first, last),
+                right_first,
+            ));
+            return Ok(first_done);
+        }
+    };
+    let second_done = answer_rows(
+        judging,
+        reading,
+        question,
+        &right,
+        right_records,
+        second_answer,
+        description,
+    )?;
+    first_done.records += second_done.records;
+    first_done.replayed += second_done.replayed;
+    first_done.value.extend(second_done.value);
+    first_done.stop = second_done.stop;
+    Ok(first_done)
+}
+
+/// Turn one answered request into rows, sharing its attempts over its members.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one batch reply and its accepted run setting make each row"
+)]
+fn answer_rows(
+    judging: &Judging<'_>,
+    reading: &Reading,
+    question: &Question,
+    batch: &Batch,
+    records: &[Held],
+    whole: Answered,
+    description: Description,
+) -> Result<Completed<Vec<Judged>, Placed>, Placed> {
+    let count = records.len();
+    let first = records.first().map_or(1, |held| held.at);
+    let last = records.last().map_or(first, |held| held.at);
+    let reply = &whole.reply;
+    let mut rows = Vec::with_capacity(count);
+    let mut stop = None;
+    for (position, (held, &asked)) in records.iter().zip(&batch.questions).enumerate() {
+        let Some(AnswerOutcome::Answered(answer)) = reply.outcomes().get(asked) else {
+            stop = Some(Placed::at(Failure::PartialReply { first, last }, held.at));
+            break;
+        };
+        let (value, outcome) = answer.read(judging.threshold);
+        let own = Answered {
+            reply: Reply::new(
+                reply.model().clone(),
+                vec![AnswerOutcome::Answered(answer.clone())],
+                reply.usage().map(|usage| usage.share(count, position)),
+            ),
+            replayed: whole.replayed,
+            request: whole.request.clone(),
+            requests_sent: share(whole.requests_sent, count, position),
+        };
+        let judgment = Judgment {
+            answer: answer.clone(),
+            value,
+            outcome,
+            answered: own,
+        };
+        let batch_meta = description.row(count, position + 1, reply.usage(), whole.requests_sent);
+        rows.push(
+            judging
+                .row_of(
+                    reading,
+                    held.record.clone(),
+                    question.clone(),
+                    &judgment,
+                    RowContext {
+                        arrived: held.arrived.as_deref(),
+                        batch: batch_meta,
+                    },
+                )
+                .map_err(|error| Placed::at(error, held.at))?,
+        );
+    }
+    Ok(Completed {
+        records: rows.len(),
+        replayed: if whole.replayed { rows.len() } else { 0 },
+        value: rows,
+        partial_failure: false,
+        stop,
+    })
+}
+
+/// A request, a whole reply, or a replay that failed a batch of two or more
+/// records names their range on one line. Every other cause stays as it is.
+fn failed(cause: Failure, first: usize, last: usize) -> Failure {
+    match cause {
+        Failure::Transport(_)
+        | Failure::Status(_)
+        | Failure::TokenLimit
+        | Failure::Reply(_)
+        | Failure::ReplayMiss(_)
+            if last > first =>
+        {
+            Failure::BatchFailed {
+                last,
+                cause: Box::new(cause),
+            }
+        }
+        other => other,
+    }
+}
+
+/// The failure a planner refusal stops the run with. The command passes no
+/// context, so only a profile limit or a defect can arise.
+fn refused(error: BatchError) -> Failure {
+    match error {
+        BatchError::Profile(limit) => Failure::ProfileLimit(limit),
+        BatchError::Defect(what) => Failure::Defect(what),
+        BatchError::StructuredQuestionWithContext | BatchError::ContextOverLimit { .. } => {
+            Failure::Defect("a context reached the command's batches")
+        }
+    }
+}

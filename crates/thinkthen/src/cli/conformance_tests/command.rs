@@ -4,14 +4,14 @@ use super::conformance_support::{Case, Counters, Document, QuestionForm, Success
 use super::{CASES, asked, same_json};
 use crate::args::{Cli, Command};
 use crate::core::recording::{Entry, Exchange as Recorded};
-use crate::core::{Backend, ModelName, Url};
+use crate::core::{Backend, DEFAULT_MODEL, ModelName, Url};
 use crate::edge::Environment;
 use crate::engine::error::Error as EngineError;
 use crate::engine::http::{Client, Key};
+use crate::engine::recorder::Recorder;
 use crate::engine::request::{Transport, ask_profile};
 use crate::engine::usage::{self, month_now};
 use crate::failure::{Failure, report};
-use crate::recorder::Recorder;
 use clap::Parser as _;
 use serde::Deserialize;
 use std::collections::BTreeMap;
@@ -25,7 +25,7 @@ use std::time::Duration;
 use std::{fs, thread};
 
 /// A case's temporary folder, removed when the case ends, pass or fail.
-struct Scratch(PathBuf);
+pub(super) struct Scratch(PathBuf);
 
 impl Drop for Scratch {
     fn drop(&mut self) {
@@ -101,10 +101,11 @@ struct PrintedMeta {
 }
 
 /// Replay a recognize or relate case through the command with `--details`.
-pub(super) fn staged(case: &Case, success: &Success) {
+/// A case's scratch folder and, inside it, a replay folder that holds every
+/// exchange of the case under the canonical address.
+pub(super) fn replay(case: &Case) -> (Scratch, PathBuf) {
     let scratch = folder(case);
-    let folder = scratch.0.clone();
-    let replay = folder.join("replay");
+    let replay = scratch.0.join("replay");
     fs::create_dir_all(&replay).expect("replay folder");
     let url = Url::new("https://api.typesafe.ai/v1/systemone").expect("canonical URL");
     for exchange in &case.exchanges {
@@ -113,6 +114,12 @@ pub(super) fn staged(case: &Case, success: &Success) {
         let text = entry.written().expect("entry text");
         fs::write(replay.join(recorded.digest().file_name()), text).expect("replay entry");
     }
+    (scratch, replay)
+}
+
+pub(super) fn staged(case: &Case, success: &Success) {
+    let (scratch, replay) = replay(case);
+    let folder = scratch.0.clone();
     let input = match (&case.text, &case.entities) {
         (Some(text), None) => text.clone().into_bytes(),
         (None, Some(entities)) => entities.get().as_bytes().to_vec(),
@@ -159,17 +166,17 @@ pub(super) fn staged(case: &Case, success: &Success) {
 /// Names a form child's job: a case id, or `probe` for a valid question.
 const CHILD: &str = "THINKTHEN_TEST_FORM_CHILD";
 
-/// Whether a variable names a key or an address, and so could reach a paid backend.
+/// Whether a variable could steer the command: any `THINKTHEN_` name but the job's.
 fn steers(name: &std::ffi::OsStr) -> bool {
-    name.to_str().is_some_and(|name| {
-        name.starts_with("THINKTHEN_") && (name.contains("KEY") || name.contains("URL"))
-    })
+    name.to_str()
+        .is_some_and(|name| name.starts_with("THINKTHEN_") && name != CHILD)
 }
 
-/// Run one ignored test of this module as a child of the test binary.
+/// Run one ignored test of this module as a child of the test binary, with
+/// an empty environment.
 fn test_child(name: &str) -> process::Command {
     let mut command = process::Command::new(std::env::current_exe().expect("test binary"));
-    command.args([
+    command.env_clear().args([
         "--ignored",
         "--exact",
         "--nocapture",
@@ -178,14 +185,11 @@ fn test_child(name: &str) -> process::Command {
     command
 }
 
-/// Run a form child for one job with no key and no address in its environment.
+/// Run a form child for one job with only its job in its environment.
 fn child(job: &str) -> Output {
     let mut command = test_child("form_child");
     command.env(CHILD, job);
-    for (name, _) in std::env::vars_os().filter(|(name, _)| steers(name)) {
-        command.env_remove(name);
-    }
-    command.output().expect("form child")
+    crate::test_deadline::output(&mut command).expect("form child")
 }
 
 /// A loopback address whose listener counts each connection and answers none.
@@ -251,9 +255,14 @@ fn form_child() {
     assert!(seen.is_empty(), "the child sees {seen:?}");
 }
 
-/// Ask a valid question with loopback as the only address, and report what went out.
+/// Ask a valid question at an address the rules cannot prove is this machine,
+/// where a missing key still refuses, and report what went out. Nothing listens
+/// at that address, so the counting listener cannot see a stray request. The
+/// pinned `says` line catches one, because a send would print a connection
+/// failure in place of the missing-key sentence.
 fn probe() {
     let (url, count) = counting();
+    let url = url.replace("http://127.0.0.1", "https://127.0.0.2");
     let arguments = [
         "thinkthen",
         "decide",
@@ -279,11 +288,12 @@ fn probe() {
 #[test]
 fn the_runner_hides_a_key_and_an_address_from_its_children() {
     let (url, count) = counting();
-    let output = test_child("form_runner")
-        .env("THINKTHEN_API_KEY", "test-key-not-real")
-        .env("THINKTHEN_BASE_URL", &url)
-        .output()
-        .expect("form runner");
+    let output = crate::test_deadline::output(
+        test_child("form_runner")
+            .env("THINKTHEN_API_KEY", "test-key-not-real")
+            .env("THINKTHEN_BASE_URL", &url),
+    )
+    .expect("form runner");
     let stdout = String::from_utf8_lossy(&output.stdout);
     let lines = stdout
         .lines()
@@ -397,10 +407,14 @@ pub(super) fn counters(case: &Case, expected: &Counters) {
     let server = thread::spawn(move || serve_once(listener, request, response));
     let backend = Backend::from_parts(
         Url::new(format!("http://{address}/v1/systemone")).expect("loopback URL"),
-        ModelName::new("jev-latest").expect("model"),
+        ModelName::new(DEFAULT_MODEL).expect("model"),
     );
     let recorder = Recorder::of_private(Some(&cache), Some(&cache), false, true).expect("cache");
-    let client = Client::new(Duration::from_secs(5), false);
+    let client = Client::new(
+        Duration::from_secs(5),
+        false,
+        crate::engine::process_width(),
+    );
     let process = usage::Counters::new(Some(totals.clone()));
     let before = usage::read(&totals, &month_now())
         .expect("totals before")
@@ -420,6 +434,7 @@ pub(super) fn counters(case: &Case, expected: &Counters) {
         .expect("counted call");
     }
     server.join().expect("loopback server");
+    process.finish();
     let after = usage::read(&totals, &month_now())
         .expect("totals after")
         .total;

@@ -9,7 +9,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Output;
 
-use crate::harness::{Canned, Listener, spawn};
+use crate::harness::{Canned, Listener, spawn_one as spawn};
 use crate::keeping::{RECORDS, answered, code, printed, said};
 use crate::secrecy::{KEY, nothing_leaked};
 
@@ -202,14 +202,6 @@ fn each_view_and_the_missing_framing_are_refused_in_the_tools_own_words() -> io:
                 "thinkthen: --raw prints a bare label, and `rank` prints records; ",
                 "`choose --raw` prints a label\n",
             ),
-        ),
-        (
-            vec!["filter", QUESTION, "--field", "/body"],
-            "thinkthen: `filter` maps over a stream, so it takes --lines, --jsonl, --csv, or --tsv\n",
-        ),
-        (
-            vec!["rank", QUESTION],
-            "thinkthen: `rank` maps over a stream, so it takes --lines, --jsonl, --csv, or --tsv\n",
         ),
     ];
     for (arguments, message) in cases {

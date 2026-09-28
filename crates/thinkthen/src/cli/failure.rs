@@ -10,10 +10,12 @@ use crate::core::{
     ReadingError, RecordError, RenderError, Source,
 };
 
-use crate::engine::error::TransportKind;
+use crate::engine::error::{TransportKind, reply_too_large};
 use crate::table;
 
+mod after_signal;
 mod convert;
+pub(crate) mod facts;
 pub(crate) mod recognize;
 mod recording;
 pub(crate) mod relate;
@@ -116,6 +118,16 @@ pub(crate) enum Failure {
         /// What stopped the record, which sets the exit code.
         cause: Box<Failure>,
     },
+    /// The request for records `at` to `last` failed as a whole.
+    BatchFailed {
+        last: usize,
+        cause: Box<Failure>,
+    },
+    /// The reply for records `first` to `last` gave the stopped record no usable answer.
+    PartialReply {
+        first: usize,
+        last: usize,
+    },
     Cancelled,
     /// Standard input could not be read.
     Input(io::Error),
@@ -127,6 +139,10 @@ pub(crate) enum Failure {
     Transport(TransportKind),
     /// The backend answered with a status that is not a success.
     Status(u16),
+    /// The backend answered status 400 and named `max_tokens_exceeded`.
+    TokenLimit,
+    /// The reply passed its request's limit of this many bytes and was not kept.
+    ReplyTooLarge(u64),
     /// The adapter refused what the backend answered.
     Reply(DecodeError),
     /// The two recording options named two different folders.
@@ -143,13 +159,13 @@ pub(crate) enum Failure {
     TopIsZero,
     QuietOverKept(&'static str),
     RawOverKept(&'static str),
-    NoFraming(&'static str),
     ReplayMiss(String),
     Entry(String, String),
     RecordingConflict(String),
     RecordingStorage,
     RecordingPathIsFile,
-    RecordingBackendMismatch,
+    /// This run's endpoint URL, and whether the folder is the default cache.
+    RecordingBackendMismatch(String, bool),
     RecordingFolderLegacy,
     DefaultCacheUnavailable,
     DefaultCachePrivate,
@@ -157,8 +173,16 @@ pub(crate) enum Failure {
     CacheEntry,
     StatusState,
     Defect(&'static str),
+    /// A measuring command refused its inputs or options.
+    Measure(crate::cli::measure::Refusal),
     /// A document `thinkthen` built could not be written as JSON.
     Render(RenderError),
+}
+
+impl From<crate::schedule::Placed> for Failure {
+    fn from(placed: crate::schedule::Placed) -> Self {
+        placed.cause
+    }
 }
 
 /// Every message a user reads is written here. No message carries a key or any
@@ -228,7 +252,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         | Failure::RecordingConflict(_)
         | Failure::RecordingStorage
         | Failure::RecordingPathIsFile
-        | Failure::RecordingBackendMismatch
+        | Failure::RecordingBackendMismatch(..)
         | Failure::RecordingFolderLegacy => (
             70,
             "defect: a recording failure was not reported".to_owned(),
@@ -250,16 +274,15 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
                  `choose --raw` prints a label"
             ),
         ),
-        Failure::NoFraming(verb) => (
-            2,
-            format!("`{verb}` maps over a stream, so it takes --lines, --jsonl, --csv, or --tsv"),
-        ),
         Failure::FindCount { none: true } => (2, "`find --none` takes 2 to 254 units".to_owned()),
         Failure::FindCount { none: false } => (2, "`find` takes 2 to 255 units".to_owned()),
         Failure::FindTooLarge => (2, "`find` reads at most 16 MiB across all units".to_owned()),
-        Failure::Stopped { .. } => (70, "defect: a stopped run reports its cause".to_owned()),
+        Failure::Stopped { .. } | Failure::BatchFailed { .. } | Failure::PartialReply { .. } => {
+            (70, "defect: a stopped run reports its cause".to_owned())
+        }
         Failure::Defect(what) => (70, format!("defect: {what}")),
         Failure::Render(error) => (70, format!("defect: {error}")),
+        Failure::Measure(refusal) => (refusal.code(), refusal.to_string()),
         other => (2, refused(other).unwrap_or(UNNAMED).to_owned()),
     };
     // A diagnostic that cannot be written changes neither the failure nor its code.
@@ -279,10 +302,31 @@ fn stopped(failure: &Failure, writer: &mut dyn Write) -> Option<u8> {
     else {
         return None;
     };
-    let code = say(cause, writer);
-    if matches!(cause.as_ref(), Failure::RecordingStorage) {
-        return Some(code);
+    if matches!(cause.as_ref(), Failure::Cancelled) {
+        return Some(after_signal::stopped(
+            *finished, *replayed, *recording, *held, writer,
+        ));
     }
+    let (code, reason) = match cause.as_ref() {
+        Failure::BatchFailed { last, cause } => {
+            let mut said = Vec::new();
+            let code = say(cause, &mut said);
+            let said = String::from_utf8_lossy(&said);
+            let prefix = format!("{}: ", crate::core::NAME);
+            let said = said.trim_end();
+            let said = said.strip_prefix(&prefix).unwrap_or(said);
+            (
+                code,
+                format!("the request for records {at} to {last} failed: {said}; "),
+            )
+        }
+        Failure::PartialReply { first, last } => (
+            4,
+            format!("the reply for records {first} to {last} gave record {at} no usable answer; "),
+        ),
+        Failure::RecordingStorage => return Some(say(cause, writer)),
+        _ => (say(cause, writer), String::new()),
+    };
     let withheld = if *held {
         ", and nothing was printed because an order needs every record"
     } else {
@@ -297,7 +341,7 @@ fn stopped(failure: &Failure, writer: &mut dyn Write) -> Option<u8> {
     };
     let _unwritten = writeln!(
         writer,
-        "{}: stopped at record {at}; {finished} {finished_noun} finished{recording_clause}{withheld}",
+        "{}: stopped at record {at}; {reason}{finished} {finished_noun} finished{recording_clause}{withheld}",
         crate::core::NAME
     );
     Some(code)
@@ -308,6 +352,8 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
         return Some(message);
     }
     Some(match failure {
+        Failure::TokenLimit => (4, status::TOKEN_LIMIT.to_owned()),
+        Failure::ReplyTooLarge(limit) => (4, reply_too_large(*limit)),
         Failure::OpenProfile { path, error } => (
             5,
             format!(
@@ -338,11 +384,11 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
         ),
         Failure::ModelsDiffer(Some((first, second))) => (
             4,
-            format!("the backend returned model versions `{first}` and `{second}` for one record; pin --model and rerun with --record or --cache"),
+            format!("the replies for one record named model versions `{first}` and `{second}`; a cache or recording folder may hold answers from the other version, so rerun with --no-cache or prune it with `thinkthen cache prune DIR --answered-by-other-than VERSION`, naming the version a --no-cache run returns"),
         ),
         Failure::ModelsDiffer(None) => (
             4,
-            "the backend returned different model versions for one record; pin --model and rerun with --record or --cache".to_owned(),
+            "the replies for one record named different model versions; a cache or recording folder may hold answers from the other version, so rerun with --no-cache or prune it with thinkthen cache prune DIR --answered-by-other-than VERSION, naming the version a --no-cache run returns".to_owned(),
         ),
         Failure::WidthActive(active) => (2, active.to_string()),
         Failure::UsageOverflow => (
@@ -453,6 +499,9 @@ const fn transport_message(kind: TransportKind) -> &'static str {
         }
         TransportKind::PrematureClose => {
             "the backend closed the connection before a reply and may have received the request; it was not sent again"
+        }
+        TransportKind::Tls => {
+            "the TLS connection or certificate check failed; check --url and the backend's certificate trust"
         }
         TransportKind::Other => "the backend could not be reached; check --url and the network",
     }

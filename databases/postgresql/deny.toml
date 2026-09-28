@@ -1,0 +1,73 @@
+# What `cargo deny` checks on the PostgreSQL binding's own lock (ticket 0111).
+# It is the root file plus two entries for pgrx 0.17.0's tree.
+#
+# The list of allowed licenses is exactly what the tree carries today. A crate
+# that arrives under anything else fails the rung, and widening this list is a
+# decision with a record behind it. `sdlc/scripts/policy.py` reads the same
+# tree from the other side: it holds the accepted direct dependency set and
+# ties each of the three licenses below that only the TLS stack needs to the
+# crates that force them.
+
+[graph]
+# The gate runs on Linux and the work is done on Linux and on macOS. The
+# Windows crates in the lock file are never built, and their licenses are
+# allowed below anyway.
+all-features = true
+
+[advisories]
+version = 2
+yanked = "deny"
+# Every advisory that fires is a failure. An exception goes here with the
+# record that argued it, and never as a blanket ignore.
+ignore = [
+    # serde_cbor 0.11.2 arrives through pgrx 0.17.0 and is unmaintained. The
+    # issue 2026-09-22-unmaintained-crates-in-the-surface-lockfiles.md argues
+    # it. Revisit at the first pgrx release without serde_cbor.
+    "RUSTSEC-2021-0127",
+]
+
+[licenses]
+version = 2
+# Permissive and with no copyleft term. Each one is in the tree today.
+#
+#   MIT, Apache-2.0, Unlicense   the ordinary Rust licenses
+#   Unicode-3.0                  unicode-ident
+#   ISC                          ring, rustls-webpki, untrusted
+#   BSD-3-Clause                 subtle
+#   CDLA-Permissive-2.0          webpki-roots
+#
+# The last three arrive with the TLS stack under ureq and with nothing else.
+# There is no HTTPS in Rust without them. A license nothing in the tree offers
+# fails the rung too, so this list cannot rot into a blanket allowance.
+allow = [
+    "Apache-2.0",
+    "BSD-3-Clause",
+    "CDLA-Permissive-2.0",
+    "ISC",
+    "MIT",
+    "Unicode-3.0",
+    "Unlicense",
+]
+# A crate offering `Apache-2.0 WITH LLVM-exception` beside plain Apache-2.0 or
+# MIT is taken on one of those, so no exception is needed and none is allowed.
+exceptions = [
+    # foldhash 0.1.5 arrives through petgraph under pgrx-sql-entity-graph.
+    { crate = "foldhash", allow = ["Zlib"] },
+]
+confidence-threshold = 0.9
+unused-allowed-license = "deny"
+
+[bans]
+multiple-versions = "allow"
+# A path dependency inside this workspace carries no version, and that is the
+# one wildcard the tree holds. Every other wildcard fails the rung.
+wildcards = "deny"
+allow-wildcard-paths = true
+# Nothing is banned outright. The accepted direct dependency set is checked by
+# `policy.py`, which fails on any crate the two manifests did not declare.
+deny = []
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

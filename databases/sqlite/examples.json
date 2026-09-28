@@ -1,0 +1,59 @@
+{
+  "schema": "thinkthen.examples/1",
+  "surface": "sqlite",
+  "language": "sql",
+  "install": ".load ./thinkthen",
+  "examples": {
+    "decide": {
+      "sql": "SELECT thinkthen_decide('Is this a complaint?', 'i want a refund now');",
+      "expected": "1"
+    },
+    "choose": {
+      "sql": "SELECT thinkthen_choose('{\"choose\":\"Which team handles this?\",\"options\":[\"the refund desk\",\"other desk\"]}', 'refund now');",
+      "expected": "the refund desk"
+    },
+    "score": {
+      "sql": "SELECT thinkthen_score('{\"score\":\"How strong is the refund claim?\",\"levels\":[\"low\",\"mid\",\"high\"]}', 'maybe later');",
+      "expected": "0.15"
+    },
+    "tag": {
+      "sql": "SELECT thinkthen_tag('{\"tag\":\"What is in this text?\",\"labels\":[\"refund\",\"shipping\"]}', 'the refund and the shipping');",
+      "expected": "[\"refund\",\"shipping\"]"
+    },
+    "annotate": {
+      "sql": "SELECT thinkthen_annotate('{\"version\":1,\"questions\":{\"spam\":{\"decide\":\"Is this spam?\"},\"band\":{\"decide\":\"Refund?\",\"threshold\":\"0.2:0.8\"}}}', 'maybe later');",
+      "expected": "{\"spam\":true,\"band\":true}"
+    },
+    "details": {
+      "sql": "SELECT json_extract(thinkthen_details('Is this a complaint?', 'i want a refund now'), '$.answer.probability');",
+      "expected": "0.9"
+    },
+    "usage": {
+      "setup": [
+        "SELECT thinkthen_decide('Is this a complaint?', 'i want a refund now')"
+      ],
+      "sql": "SELECT thinkthen_usage();",
+      "expected": "{\"requests_sent\":1,\"cache_answers\":0,\"input_tokens\":0,\"output_tokens\":0}"
+    },
+    "warm": {
+      "sql": "SELECT thinkthen_warm('Is this a complaint?', t) FROM (SELECT 'refund now' AS t UNION ALL SELECT 'refund again');",
+      "expected": "2"
+    },
+    "throttle": {
+      "sql": "SELECT thinkthen_throttle(8);",
+      "expected": "8"
+    },
+    "recognize": {
+      "sql": "SELECT text, kind, start, \"end\" FROM thinkthen_recognize('Maria Chen joined Northwind Freight in Chicago last spring.', 'person,organization,place');",
+      "expected": "Maria Chen|person|0|10\nspring.|person|52|59"
+    },
+    "relate": {
+      "setup": [
+        "CREATE TABLE entities(id INTEGER PRIMARY KEY, name TEXT, kind TEXT)",
+        "INSERT INTO entities VALUES (1, 'Maria Chen', 'person'), (2, 'Northwind Freight', 'organization')"
+      ],
+      "sql": "SELECT relation, source, target, probability FROM thinkthen_relate('entities', 'id', 'name', 'kind', 'works_for=person:organization');",
+      "expected": "works_for|1|2|0.9"
+    }
+  }
+}

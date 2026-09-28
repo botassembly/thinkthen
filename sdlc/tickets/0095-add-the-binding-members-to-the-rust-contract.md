@@ -116,6 +116,10 @@ Contract 3; state and timing 1; reach 3; proof 1; cost of error 2; total 10. Fin
 
 Design only. The code tickets use Claude builders (Opus subagent) and fresh Claude reviewers.
 
+## Amended 2026-09-24
+
+The ADR 0017 amendment of that date renames the width to the throttle. The range rule above applies to `EngineBuilder::throttle`, and each surface spells the throttle the host's way. 0086 builds that name.
+
 ## Review
 
 - Design review: the 2026-09-24 review (`sdlc/records/2026-09-24-spine-review-contract.md`) asked for an ADR record of the added members and four clarifications, all applied. The re-review (`sdlc/records/2026-09-24-rereview-contract.md`) asked for the rustfmt wording, cancel before join on a panic, and the `Sync` reason; all applied.

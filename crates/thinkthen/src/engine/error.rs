@@ -13,6 +13,7 @@ pub(crate) enum TransportKind {
     NameLookup,
     Refused,
     PrematureClose,
+    Tls,
     Other,
 }
 
@@ -40,13 +41,19 @@ pub(crate) enum Kind {
 pub(crate) enum Error {
     Transport(TransportKind),
     Status(u16),
+    /// Status 400 whose body named `max_tokens_exceeded`. It keeps no body byte.
+    TokenLimit,
+    /// The reply passed its request's limit of this many bytes and was not kept.
+    ReplyTooLarge(u64),
     Reply(DecodeError),
     ReplayMiss(String),
     Entry(String, String),
     RecordingConflict(String),
     RecordingStorage,
     RecordingPathIsFile,
-    RecordingBackendMismatch,
+    /// The folder is bound to another backend: this run's endpoint URL, and
+    /// whether the folder is the platform default cache.
+    RecordingBackendMismatch(String, bool),
     RecordingFolderLegacy,
     DefaultCachePrivate,
     CacheEntry,
@@ -55,6 +62,30 @@ pub(crate) enum Error {
     ProfileLimit(ProfileLimit),
     Cancelled,
     Deadline(Budget),
+    /// The key variable holds nothing, so no key can be sent.
+    NoKey(&'static str),
+    /// A later explicit width differs from the one this process selected.
+    WidthActive(crate::engine::WidthActive),
+    /// Replies for one logical result named different model versions.
+    ModelsDiffer(Option<(String, String)>),
+    /// Reply token counts cannot be represented as one total.
+    UsageOverflow,
+    /// Recognition asked for more kinds than one kind question can carry.
+    RecognizeKinds,
+    /// The backend failed one question recognition requires.
+    RecognizeLogical,
+    /// A recognize text passed its byte limit, so no request was sent.
+    TextTooLong {
+        bytes: usize,
+        limit: usize,
+    },
+}
+
+/// The statuses a backend is asked again after.
+const RETRIED: [u16; 6] = [429, 500, 502, 503, 504, 529];
+
+pub(crate) fn retried_status(status: u16) -> bool {
+    RETRIED.contains(&status)
 }
 
 /// The whole-call budget a spent deadline was made from.
@@ -81,23 +112,47 @@ impl fmt::Display for Budget {
     reason = "the command runner reads kinds while normal command paths preserve exact causes"
 )]
 impl Error {
+    /// A refusal that a smaller batch may answer.
+    pub(crate) const fn too_large(&self) -> bool {
+        matches!(self, Self::TokenLimit | Self::Status(413))
+    }
+
     pub(crate) const fn kind(&self) -> Kind {
         match self {
-            Self::Transport(_) | Self::Status(_) | Self::Reply(_) => Kind::Backend,
+            Self::Transport(_)
+            | Self::Status(_)
+            | Self::TokenLimit
+            | Self::ReplyTooLarge(_)
+            | Self::Reply(_)
+            | Self::ModelsDiffer(_)
+            | Self::UsageOverflow
+            | Self::RecognizeLogical => Kind::Backend,
             Self::ReplayMiss(_)
             | Self::Entry(_, _)
             | Self::RecordingConflict(_)
             | Self::RecordingStorage
             | Self::RecordingPathIsFile
-            | Self::RecordingBackendMismatch
+            | Self::RecordingBackendMismatch(..)
             | Self::RecordingFolderLegacy
             | Self::DefaultCachePrivate => Kind::Local,
             Self::CacheEntry => Kind::Local,
             Self::Defect(_) => Kind::Defect,
-            Self::Usage(_) | Self::ProfileLimit(_) => Kind::Usage,
+            Self::Usage(_)
+            | Self::ProfileLimit(_)
+            | Self::NoKey(_)
+            | Self::WidthActive(_)
+            | Self::RecognizeKinds
+            | Self::TextTooLong { .. } => Kind::Usage,
             Self::Cancelled => Kind::Cancelled,
             Self::Deadline(_) => Kind::Deadline,
         }
+    }
+
+    /// Whether the same call may succeed when sent again: only a busy or
+    /// failing backend status. A transport failure may already have reached
+    /// the backend, so it is never retried.
+    pub(crate) fn retryable(&self) -> bool {
+        matches!(self, Self::Status(status) if retried_status(*status))
     }
 }
 
@@ -116,6 +171,13 @@ impl Kind {
             Self::Defect => "defect",
         }
     }
+}
+
+/// The sentence a reply past its request's limit earns, in the command and the library.
+pub(crate) fn reply_too_large(limit: u64) -> String {
+    format!(
+        "the backend's reply passed this request's limit of {limit} bytes, so the answer was not kept; the request was not sent again"
+    )
 }
 
 impl From<DecodeError> for Error {

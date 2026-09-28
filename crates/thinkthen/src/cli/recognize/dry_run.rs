@@ -5,26 +5,35 @@ use std::process::ExitCode;
 
 use serde::Serialize;
 
-use crate::core::{
-    Backend, BackendProfile, Plan, Reading, RecognizeSpec, json_line, kind_questions,
-    recognition_questions, tokenize,
-};
+use crate::core::{Backend, BackendProfile, KEY_VAR, Reading, RecognizeSpec, json_line};
 use crate::edge;
+use crate::engine::facade;
 use crate::failure::Failure;
-use crate::prepared_request::PreparedRequests;
 
 #[derive(Debug, Serialize)]
-struct DryRun {
+struct DryRun<'a> {
+    schema: &'static str,
+    url: &'a str,
+    model: &'a str,
+    key_env: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     from: Option<From>,
-    tokens: usize,
-    detection_questions: usize,
-    kind_questions: usize,
-    requests: usize,
+    pieces: usize,
+    request_count: usize,
+    name_requests_upper_bound: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
     relation_pairs_upper_bound: Option<usize>,
     #[serde(skip_serializing_if = "Option::is_none")]
     relation_requests_upper_bound: Option<usize>,
+    requests: Vec<Request>,
+}
+
+/// One exact split request, as the relate plan prints it.
+#[derive(Debug, Serialize)]
+struct Request {
+    digest: String,
+    bytes: usize,
+    body_utf8: String,
 }
 
 #[derive(Debug, Serialize)]
@@ -37,69 +46,45 @@ pub(super) fn run(
     source: Box<dyn std::io::BufRead + Send>,
     backend: &Backend,
     profile: Option<&BackendProfile>,
-    question: (&RecognizeSpec, bool),
+    question: (&RecognizeSpec, bool, usize),
     writer: &mut dyn Write,
 ) -> Result<ExitCode, Failure> {
-    let (spec, from_file) = question;
-    let mut chunks = edge::Chunks::new(source, reading.streams());
-    let Some(bytes) = chunks.next().transpose()? else {
+    let (spec, from_file, limit) = question;
+    let mut chunks = edge::numbered(edge::Chunks::new(source, reading.streams()), reading);
+    let Some(bytes) = chunks.next().map(|(_, row)| row).transpose()? else {
         return Ok(ExitCode::SUCCESS);
     };
     let record = reading
         .record(&bytes)
         .map_err(|error| Failure::record(error, reading.streams()))?;
     let text = reading.evidence(&record)?.as_text()?.into_owned();
-    let tokens = tokenize(&text);
-    if tokens.is_empty() {
-        write_empty(spec, from_file, writer)?;
-        return Ok(ExitCode::SUCCESS);
-    }
-    let mut questions = recognition_questions(&tokens)
-        .map_err(|_| Failure::Defect("fixed detection questions are invalid"))?;
-    let kind_questions = kind_questions(&tokens, &spec.kinds)
-        .map_err(|_| super::config::error(false, crate::core::RecognizeConfigError::Kinds))?;
-    let kind_question_count = kind_questions.len();
-    questions.extend(kind_questions);
-    let evidence = crate::core::Evidence::new(text)
-        .map_err(|_| Failure::Defect("record evidence became blank"))?;
-    let plan = Plan::new(evidence, backend.model().clone(), questions)
-        .map_err(|_| Failure::Defect("recognize dry run planned no questions"))?;
-    let requests = PreparedRequests::with_profile(backend, &plan, profile)?
-        .into_chunks()
-        .len();
-    let relation_pairs_upper_bound = relation_upper_bound(spec, tokens.len());
-    write(
-        writer,
-        DryRun {
-            from: from_file.then_some(From { question: "file" }),
-            tokens: tokens.len(),
-            detection_questions: tokens.len(),
-            kind_questions: kind_question_count,
-            requests,
-            relation_pairs_upper_bound,
-            relation_requests_upper_bound: relation_pairs_upper_bound,
-        },
-    )?;
+    let (pieces, chunks) = facade::step_one(backend, profile, spec, &text, limit)?;
+    let requests = chunks
+        .into_iter()
+        .map(|chunk| {
+            Ok(Request {
+                digest: chunk.request.digest.as_str().to_owned(),
+                bytes: chunk.request.body.len(),
+                body_utf8: String::from_utf8(chunk.request.body)
+                    .map_err(|_| Failure::Defect("an encoded request is not UTF-8"))?,
+            })
+        })
+        .collect::<Result<Vec<_>, Failure>>()?;
+    let report = DryRun {
+        schema: "thinkthen.recognize-plan/2",
+        url: backend.url().as_str(),
+        model: backend.model().as_str(),
+        key_env: KEY_VAR,
+        from: from_file.then_some(From { question: "file" }),
+        pieces: pieces.len(),
+        request_count: requests.len(),
+        name_requests_upper_bound: requests.len(),
+        relation_pairs_upper_bound: relation_upper_bound(spec, pieces.len()),
+        relation_requests_upper_bound: relation_upper_bound(spec, pieces.len()),
+        requests,
+    };
+    edge::write_line(writer, &json_line(&report)?)?;
     Ok(ExitCode::SUCCESS)
-}
-
-fn write_empty(
-    spec: &RecognizeSpec,
-    from_file: bool,
-    writer: &mut dyn Write,
-) -> Result<(), Failure> {
-    write(
-        writer,
-        DryRun {
-            from: from_file.then_some(From { question: "file" }),
-            tokens: 0,
-            detection_questions: 0,
-            kind_questions: 0,
-            requests: 0,
-            relation_pairs_upper_bound: (!spec.relations.is_empty()).then_some(0),
-            relation_requests_upper_bound: (!spec.relations.is_empty()).then_some(0),
-        },
-    )
 }
 
 fn relation_upper_bound(spec: &RecognizeSpec, tokens: usize) -> Option<usize> {
@@ -109,8 +94,4 @@ fn relation_upper_bound(spec: &RecognizeSpec, tokens: usize) -> Option<usize> {
             total.saturating_add(if rule.either { directed / 2 } else { directed })
         })
     })
-}
-
-fn write(writer: &mut dyn Write, report: DryRun) -> Result<(), Failure> {
-    edge::write_line(writer, &json_line(&report)?).map(|_| ())
 }
