@@ -63,8 +63,8 @@ async function check(tt, one, origin, folder) {
   const want = (at) => success.answers.find((answer) => answer.exchange === at);
   switch (success.kind) {
     case 'single': {
-      same('value', await engine[one.verb](one.question, texts[0]), success.answers[0].bare);
-      const details = await engine.details(one.question, texts[0]);
+      same('value', (await engine[one.verb](one.question, texts[0])).value, success.answers[0].bare);
+      const details = (await engine.details(one.question, texts[0])).value;
       const expected = success.answers[0].details;
       same('answer', details.answer, expected.answer);
       same('question_sha256', details.meta.question_sha256, expected.question_sha256);
@@ -81,23 +81,27 @@ async function check(tt, one, origin, folder) {
       return undefined;
     }
     case 'decide_many':
-      return same('values', await engine.decide_many(one.question, texts), texts.map((_, at) => want(at).bare));
+      return same('values', (await engine.decide_many(one.question, texts, { batch: 1 })).value, texts.map((_, at) => want(at).bare));
     case 'filter':
-      return same('kept', await engine.filter(one.question, texts), success.operation.indexes.map((at) => texts[at]));
+      return same('kept', (await engine.filter(one.question, texts, { batch: 1 })).value, success.operation.indexes.map((at) => texts[at]));
     case 'rank': {
-      const ranked = await engine.rank(one.question, texts);
+      const ranked = (await engine.rank(one.question, texts, { batch: 1 })).value;
       return same('ranking', ranked.map(({ index, probability }) => ({ index, probability })), success.operation.ranking);
     }
     case 'annotate': {
       const records = one.record ? [JSON.stringify(one.record)] : texts;
-      const rows = await engine.annotate(one.question_set, records);
+      const call = await engine.annotate(one.question_set, records, { batch: 1 });
+      const rows = call.value;
+      if (one.id === '17-annotate-partial' && !call.details.some((row) => row.member && row.failed)) {
+        throw new Error('the failed annotate member has no distinct call detail');
+      }
       const expected = records.map(() => ({}));
       for (const answer of success.answers) expected[one.record ? 0 : answer.exchange][answer.name] = answer.bare;
       return same('rows', rows, expected);
     }
     case 'find': {
       const { find, none, units: listed } = one.question;
-      const found = await engine.find(find, listed, { none });
+      const found = (await engine.find(find, listed, { none })).value;
       const { selected, probabilities } = success.operation;
       const picked = probabilities.find((row) => row.index === selected);
       return same('found', found, selected === null ? null : { index: selected, unit: listed[selected], probability: picked.probability });
@@ -105,7 +109,7 @@ async function check(tt, one, origin, folder) {
     case 'recognize': {
       const { kinds, relations } = one.question.recognize;
       const asked = { kinds, threshold: one.question.threshold, relationThreshold: one.question.relation_threshold };
-      const found = await engine.recognize(one.text, relations ? { ...asked, relations } : asked);
+      const found = (await engine.recognize(one.text, relations ? { ...asked, relations } : asked)).value;
       const bare = success.answers[0].bare;
       const shaped = { entities: bare.entities.map((held) => units(one.text, held)) };
       if (bare.relations) shaped.relations = bare.relations.map((held) => ({ ...held, source: units(one.text, held.source), target: units(one.text, held.target) }));
@@ -114,11 +118,11 @@ async function check(tt, one, origin, folder) {
     }
     case 'relate': {
       const rules = one.question.relate.relations;
-      const edges = await engine.relate(one.entities, {
+      const edges = (await engine.relate(one.entities, {
         relations: rules.map(({ name, source, target }) => `${name}=${source}:${target}`),
         either: rules.filter((rule) => rule.either).map((rule) => rule.name),
         threshold: one.question.threshold,
-      });
+      })).value;
       return same('edges', edges, success.answers[0].bare);
     }
     default:

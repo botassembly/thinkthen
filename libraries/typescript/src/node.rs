@@ -13,7 +13,7 @@ use std::fmt;
 use std::sync::Mutex;
 
 use napi::threadsafe_function::{ErrorStrategy, ThreadsafeFunction, ThreadsafeFunctionCallMode};
-use napi::{JsFunction, Result};
+use napi::{Env, JsFunction, Result};
 use napi_derive::napi;
 use thinkthen::{CancelToken, Engine};
 
@@ -61,6 +61,30 @@ pub struct CallHandle {
 
 #[napi]
 impl CallHandle {
+    /// Cancel promptly but retain the worker's final callback. Without a
+    /// waiter the callback does not keep the Node process alive.
+    #[napi]
+    pub fn stop(&self, env: Env) -> Result<()> {
+        self.token.cancel();
+        if let Ok(mut slot) = self.done.lock()
+            && let Some(Held(done)) = slot.as_mut()
+        {
+            done.unref(&env)?;
+        }
+        Ok(())
+    }
+
+    /// An observed completion keeps Node alive until its final callback.
+    #[napi]
+    pub fn wait(&self, env: Env) -> Result<()> {
+        if let Ok(mut slot) = self.done.lock()
+            && let Some(Held(done)) = slot.as_mut()
+        {
+            done.refer(&env)?;
+        }
+        Ok(())
+    }
+
     /// Fire the call's token and close its threadsafe function, so a late
     /// envelope is dropped and Node may exit. A second run does nothing.
     #[napi]
@@ -76,12 +100,18 @@ impl CallHandle {
 /// Start one call on its own named worker thread with Rust's default stack.
 /// The envelope reaches `done` once, unless the handle was detached first.
 #[napi]
+#[allow(
+    clippy::too_many_arguments,
+    reason = "the Node door carries the existing call fields plus batch and context"
+)]
 pub fn call(
     engine: Option<&NativeEngine>,
     op: String,
     spec: Option<String>,
     payload: String,
     deadline_ms: Option<f64>,
+    batch: Option<String>,
+    context: Option<String>,
     done: JsFunction,
 ) -> Result<CallHandle> {
     let done: Done = done.create_threadsafe_function(0, |context| Ok(vec![context.value]))?;
@@ -93,6 +123,8 @@ pub fn call(
         spec,
         payload,
         deadline_ms,
+        batch,
+        context,
     };
     let started = std::thread::Builder::new()
         .name("thinkthen-call".to_owned())

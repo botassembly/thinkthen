@@ -62,7 +62,7 @@ export function child(backend, body, { arm = 'generic', env = {}, stdin = false 
 const line = (value) => process.stdout.write(JSON.stringify(value === undefined ? null : value) + '\\n');
 globalThis.line = line;
 try { line({ value: await (async () => { ${body} })() }); }
-catch (error) { line({ error: { name: error.name, kind: error.kind, message: error.message, retryable: error.retryable, text: String(error) } }); }`;
+catch (error) { line({ error: { name: error.name, kind: error.kind, message: error.message, retryable: error.retryable, text: String(error), facts: error.facts, details: error.details } }); }`;
   const proc = spawn(process.execPath, ['--input-type=module', '-e', code], {
     env: childEnv(backend, arm, env),
     stdio: [stdin ? 'pipe' : 'ignore', 'pipe', 'inherit'],

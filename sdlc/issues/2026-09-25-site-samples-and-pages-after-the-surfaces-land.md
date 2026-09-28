@@ -175,6 +175,10 @@ Preparation against main `79244123` found direct bare-result consumers under `si
 
 High-reviewed design0236 at `5283cfe3` makes asking methods return `Call<T>` with the former result in `.value`, plus owned facts and details. Its implementation is in progress; migrate the site against the final accepted package. Preparation found ten direct consumers: `site/examples/install/typescript/first-call.ts` and `site/examples/functions/{decide,question-file,choose,tag,rank,find,annotate,recognize,relate}/typescript.ts`. Include generated copies and `site/scripts/check-samples.mjs` in the marketing owner's verification. Preserve null, false, empty arrays, typed failed fields and actual answers; a truth test of the wrapper is not an answer check. Reuse the existing offline sample route and explicit batch one where historical recordings require it. The library ticket owns its examples and tests only. This belongs with the existing C, Python and Ruby sample migrations before public0.1.
 
+## 11. Migrate R samples with ticket 0237
+
+High-reviewed design 0237 at `e24f2c29` returns `thinkthen_call` with the former answer in `$value`, plus facts and owned details. Its implementation is in progress. The marketing owner must migrate `site/examples/functions/{decide,question-file,filter,rank,find,tag,score,annotate,recognize,relate}/` R consumers and `site/examples/install/r/first-call.R` against the final accepted package. Include generated copies and `site/scripts/named-answers.test.mjs` in verification. Preserve false, NA, empty and failed results and inspect the contained answer. Reuse offline samples and explicit batch one for historical request bodies. Library-owned examples belong to 0237; site examples remain here before public 0.1.
+
 ## Order
 
 Items 1, 2, 3, 4, 7, and 8 can go now. Item 5 can repoint the pull script now for every landed surface. Its final run waits for DuckDB 0110 and pandas 0122. Item 6 waits for Beatles Bench ticket 0006. Regenerate every sample once, after DuckDB and pandas land, before the site publishes.
