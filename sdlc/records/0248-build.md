@@ -20,3 +20,7 @@ The inode proof is a Unix filesystem observation. It establishes skipped replace
 ## Independent review
 
 The fresh High reviewer traced the conditional write after full scan, checked arithmetic, all-month migration and synced base. Changed retries keep the accepted order, and locking, parser, faults and join remain unchanged. The reviewer checked the distinct absence/inode/retry-only proofs and fixture changes, then independently passed policy, 18 usage cases, six status cases, formatting and the exact 96,075 source ratchet. The retained transcript and immutable old binary hash support the 100/7 → 101/7 → 102/7 sequence. No speed improvement is claimed. Root integration preserves accepted source and tests.
+
+## Bounded timing follow-up
+
+The [local comparison](0248-timing.md) uses exact, separately built baseline and accepted source revisions, a loopback fake, private usage folders, five measured calls per build and condition, and retained raw samples. It observes skipped sidecar replacement and lower whole-command medians in this setup. It does not isolate a universal usage-write cost or change the original issue's status.
