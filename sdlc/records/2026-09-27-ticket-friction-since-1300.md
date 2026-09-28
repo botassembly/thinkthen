@@ -193,3 +193,8 @@ The 0221 correction review accepted its two updated diagnostic assertions but fo
 
 
 The bounded follow-up to 0226 confirmed Python, Ruby and TypeScript return fixed binding defects but do not scope the earlier hook. Python’s existing private test uses resume_unwind, which skips that hook. A returned-error assertion therefore cannot prove stderr secrecy. Main records this separate host family in its own issue; the R copy remains separately tracked. The next brief must distinguish starting a panic from resuming an unwind and must inspect opaque-payload destruction as well as the caught error sentence. No production disclosure was demonstrated.
+
+
+The 0119 retained preparer checked all eleven historical listener references and withdrew its first proposed quiet-socket replacement: a background Listener connection count may still be zero after a child exits, while a synchronous nonblocking accept can observe a queued connection. Fresh Medium design review accepted only the scripted width helper at `30d1c597`, preserving its two retry/permit/replay tests and after-write notification. Preparation prevented weaker evidence before any source edit. It did not prove that all direct sockets are duplicates.
+
+The 0226 SQLite worker regression was placed in the existing worker.rs test module before that file was explicitly added to the runtime claim. No other lane held it. The coordinator added the exact file before further work and recorded the miss. Future briefs must claim the existing module that hosts the private child test as well as the production guard and prospective children.
