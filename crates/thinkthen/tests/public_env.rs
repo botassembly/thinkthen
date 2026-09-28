@@ -25,7 +25,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use conformance_backend::{Canned, Listener};
 use thinkthen::{
-    CallOptions, Engine, EngineBuilder, Error, ErrorKind, Question, SendBudget, SendBudgetDenial,
+    BatchSetting, CallOptions, Engine, EngineBuilder, Error, ErrorKind, Question, SendBudget,
+    SendBudgetDenial,
 };
 
 #[test]
@@ -255,6 +256,42 @@ fn run(case: &str, argument: &str) -> Vec<String> {
         ],
         "overrides" => overrides(argument),
         "refused" => vec![shown(EngineBuilder::from_env())],
+        "batch-env" => {
+            let engine = seed().no_cache().build().expect("environment batch");
+            let question = Question::decide("Refund?").unwrap().cut();
+            let rows = engine
+                .decide_many(&question, ["alpha", "beta"])
+                .collect::<Result<Vec<_>, _>>()
+                .expect("two rows");
+            vec![format!("rows {}", rows.len())]
+        }
+        "batch-override" => {
+            let refused = shown(seed().no_cache().build());
+            let engine = seed()
+                .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
+                .no_cache()
+                .build()
+                .expect("explicit batch overrides an invalid environment");
+            let question = Question::decide("Refund?").unwrap().cut();
+            let rows = engine
+                .decide_many(&question, ["gamma"])
+                .collect::<Result<Vec<_>, _>>()
+                .expect("explicit batch row");
+            vec![refused, format!("rows {}", rows.len())]
+        }
+        "batch-conflict" => {
+            let engine = seed()
+                .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
+                .no_cache()
+                .build()
+                .expect("explicit batch outranks environment max");
+            let question = Question::decide("Refund?").unwrap().cut();
+            let rows = engine
+                .decide_many(&question, ["delta", "epsilon"])
+                .collect::<Result<Vec<_>, _>>()
+                .expect("two explicit batch rows");
+            vec![format!("rows {}", rows.len())]
+        }
         "no-home" => vec![
             shown(seed().no_cache().build()),
             shown(seed().build()),
@@ -471,6 +508,37 @@ fn a_malformed_variable_is_usage_and_an_unreadable_configuration_is_local() {
         Engine::builder().max_request_bytes(0),
         Err(Error::Usage(_))
     ));
+}
+
+#[test]
+fn the_batch_environment_is_selected_at_build_and_an_explicit_setter_outranks_it() {
+    let listener = listener();
+    let address = ("THINKTHEN_BASE_URL", listener.base());
+    let key = ("THINKTHEN_API_KEY", "sk-batch-env-fixture");
+    let valid = in_child("batch-env", &[address, key, ("THINKTHEN_BATCH", "1")]);
+    assert_eq!(valid, "rows 2");
+    assert_eq!(listener.count(), 2, "environment batch one sends twice");
+
+    let override_result = in_child(
+        "batch-override",
+        &[address, key, ("THINKTHEN_BATCH", "invalid")],
+    );
+    assert_eq!(
+        override_result,
+        "Usage: THINKTHEN_BATCH takes max or a whole number of at least 1\nrows 1"
+    );
+    assert_eq!(listener.count(), 3, "only the explicit override sends");
+
+    let conflict = in_child(
+        "batch-conflict",
+        &[address, key, ("THINKTHEN_BATCH", "max")],
+    );
+    assert_eq!(conflict, "rows 2");
+    assert_eq!(
+        listener.count(),
+        5,
+        "explicit batch one outranks environment max"
+    );
 }
 
 #[test]

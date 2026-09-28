@@ -104,6 +104,25 @@ fn explicit_batch_one_and_a_question_file_tier_keep_one_record_requests() {
     assert_eq!(decided.len(), 2);
     assert_eq!(listener.count(), 4);
 
+    let engine_default = Engine::builder()
+        .base_url(listener.base())
+        .and_then(|builder| builder.api_key("sk-public-batches"))
+        .map(EngineBuilder::no_cache)
+        .map(|builder| builder.batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)))
+        .and_then(EngineBuilder::build)
+        .expect("engine with a batch default");
+    let thinkthen::LoadedQuestion::Question(file_max) =
+        Question::from_json(r#"{"decide":"Refund?","batch":"max"}"#).expect("question file")
+    else {
+        panic!("a decide question with no band");
+    };
+    let decided = engine_default
+        .decide_many(&file_max, ["one", "two"])
+        .collect::<Result<Vec<_>, _>>()
+        .expect("engine batch one outranks file max");
+    assert_eq!(decided.len(), 2);
+    assert_eq!(listener.count(), 6);
+
     let thinkthen::LoadedQuestion::Question(invalid_file_tier) =
         Question::from_json(r#"{"decide":"Refund?","batch":"bad"}"#)
             .expect("a lower-priority file tier")
@@ -114,7 +133,7 @@ fn explicit_batch_one_and_a_question_file_tier_keep_one_record_requests() {
     assert!(failed.is_some_and(|row| row.is_err_and(|error| error.kind() == ErrorKind::Usage)));
     assert_eq!(
         listener.count(),
-        4,
+        6,
         "selected invalid file tier sends nothing"
     );
     let decided = engine
@@ -122,7 +141,7 @@ fn explicit_batch_one_and_a_question_file_tier_keep_one_record_requests() {
         .collect::<Result<Vec<_>, _>>()
         .expect("typed batch wins over the unused file tier");
     assert_eq!(decided.len(), 1);
-    assert_eq!(listener.count(), 5);
+    assert_eq!(listener.count(), 7);
 
     let blank = CallOptions::new()
         .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
@@ -131,7 +150,7 @@ fn explicit_batch_one_and_a_question_file_tier_keep_one_record_requests() {
         .decide_many_with(&question(), ["epsilon"], blank)
         .next();
     assert!(failed.is_some_and(|row| row.is_err_and(|error| error.kind() == ErrorKind::Usage)));
-    assert_eq!(listener.count(), 5, "invalid context sends nothing");
+    assert_eq!(listener.count(), 7, "invalid context sends nothing");
 }
 
 #[test]

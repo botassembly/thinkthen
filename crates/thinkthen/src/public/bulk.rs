@@ -19,9 +19,16 @@ type Values = (Vec<(String, core::AnnotatedValue)>, Written);
 /// One record's answer and its probability of yes.
 type Decided = (Answer, f64);
 
-fn selected_batch(question: &Question, options: &CallOptions<'_>) -> Result<core::Setting, Error> {
+fn selected_batch(
+    question: &Question,
+    options: &CallOptions<'_>,
+    engine: Option<core::Setting>,
+) -> Result<core::Setting, Error> {
     if let Some(typed) = options.batch_setting() {
         return Ok(typed.into());
+    }
+    if let Some(engine) = engine {
+        return Ok(engine);
     }
     let Some(file) = question.batch.as_ref() else {
         return Ok(core::Setting::Max);
@@ -265,7 +272,7 @@ impl Engine {
         I: IntoIterator + 'a,
         I::Item: Evidence,
     {
-        let setting = selected_batch(question, &options)?;
+        let setting = selected_batch(question, &options, self.batch)?;
         let context = options.context_text().map(evidence).transpose()?;
         let stop = Stop::begin(options)?;
         let engine = self.asking(question)?;

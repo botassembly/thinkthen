@@ -23,6 +23,7 @@ pub struct Engine {
     pub(crate) inner: Arc<facade::Engine>,
     pub(super) most: Option<usize>,
     pub(crate) profile: Option<BackendProfile>,
+    pub(crate) batch: Option<core::Setting>,
 }
 
 impl fmt::Debug for Engine {
@@ -134,12 +135,14 @@ impl Engine {
         most: Option<usize>,
         profile: Option<BackendProfile>,
         roots: Option<Roots>,
+        batch: Option<core::Setting>,
     ) -> Result<Self, Error> {
         let inner = guarded(|| facade::Engine::with_roots(settings, roots).map_err(Error::from))?;
         Ok(Self {
             inner: Arc::new(inner),
             most,
             profile,
+            batch,
         })
     }
 
