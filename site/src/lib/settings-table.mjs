@@ -106,7 +106,13 @@ function uncitedBlocks(blocks) {
 
 // Ian's ruling 5 of 2026-09-25: no setting may do nothing. A surface the
 // table marks "no effect" is left off the site, and so is a note that says so.
-const NO_EFFECT = /\bno effect\b/;
+// A cell that starts "not on this surface" and adds a record or a readiness
+// note is left off too. A binding carries no status (Ian, 2026-09-28).
+const NO_EFFECT = /\bno effect\b|^not on this surface\b/;
+
+// The settings the site leaves out. The docs leave out the Details flag for now
+// (Ian, 2026-09-28).
+export const LEFT_OUT = new Set(['Details']);
 
 export function parseSettings(text) {
   const parts = sections(text);
