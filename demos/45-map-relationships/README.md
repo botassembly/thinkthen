@@ -4,7 +4,7 @@ Status: green
 
 Verbs: `relate`
 
-Use this when names and kinds are already known and one reproducible run should connect them. Replay reads the committed exchange with no network and no key.
+Use this when names and kinds are already known and one reproducible run should connect them. An edge comes from the model's knowledge of the names. Replay reads the committed exchange with no network and no key.
 
 ```bash
 set -euo pipefail
@@ -22,7 +22,7 @@ env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL \
 
 ## Step 1: inspect the plan
 
-The plan expands the relation and shows the exact request without reading a key or opening a connection. Same-kind directed relations ask both directions.
+The plan asks one yes/no question for each allowed pair and shows the exact request without reading a key or opening a connection. Same-kind directed relations ask both directions.
 
 ```bash
 set -euo pipefail

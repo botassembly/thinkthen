@@ -229,12 +229,6 @@ pub(crate) struct ProfileLimit {
     pub(crate) actual: usize,
 }
 
-impl ProfileLimit {
-    pub(crate) const fn permits_relation_fallback(&self) -> bool {
-        matches!(self.kind, LimitKind::RequestBytes | LimitKind::Options)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::{BackendProfile, LimitKind, ProfileError};

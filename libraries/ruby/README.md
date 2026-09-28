@@ -10,7 +10,7 @@ urgent = ThinkThen.rank("Is this urgent?", inbox, top: 5)
 ThinkThen.score("How urgent is this?", outage, levels: ["Routine.", "Soon.", "Immediate."])
 ```
 
-The module methods use one engine built on first use from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, and the rest that the command reads. `ThinkThen::Engine.new(base_url:, model:, throttle:, max_requests:, cache:, timeout:, max_retries:, profile:, record:, replay:)` builds another. Each omitted keyword comes from the environment. `cache: false` turns the cache off. There is no key keyword, and the key never enters a Ruby object.
+The module methods use one engine built on first use from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, and the rest that the command reads. `ThinkThen::Engine.new(base_url:, model:, throttle:, max_requests:, max_request_bytes:, cache:, timeout:, max_retries:, profile:, record:, replay:)` builds another. Each omitted keyword comes from the environment. `cache: false` turns the cache off. There is no key keyword, and the key never enters a Ruby object.
 
 The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. Turn it off with `ThinkThen::Engine.new(cache: false)`.
 
@@ -24,7 +24,7 @@ A record that is not a `String` crosses as its JSON text. `nil`, invalid UTF-8, 
 
 `details(question, text)` returns the command's `--details` line for one text as a `Hash`, schema `thinkthen.result/1`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.
 
-`usage` returns this engine's running totals of requests sent, cache answers and tokens.
+`usage` returns this engine's running totals of requests sent, retries, cache answers and tokens.
 
 ## Stopping a call
 

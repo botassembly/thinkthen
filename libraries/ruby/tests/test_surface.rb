@@ -178,6 +178,6 @@ class TestSurface < Minitest::Test
       2.times { T.decide("Is it urgent?", "the same text") }
       say T.usage
     RUBY
-    assert_equal [{ "requests_sent" => 1, "cache_answers" => 1, "input_tokens" => 0, "output_tokens" => 0 }], lines
+    assert_equal [{ "requests_sent" => 1, "retries" => 0, "cache_answers" => 1, "input_tokens" => 0, "output_tokens" => 0 }], lines
   end
 end

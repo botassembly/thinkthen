@@ -1,38 +1,27 @@
-//! Relations between given entities over the shared relation planner and edge assembler.
-
-use serde::Serialize;
+//! Relations between given entities, planned as one ordered set of pair questions.
 
 use super::{Answered, Chunk, Engine};
 use crate::core::{
-    AnswerOutcome, Backend, BackendProfile, LimitKind, ModelName, Question, QuestionMap,
-    RelateSpec, RelationEdge, RelationEntity, RelationPlan, RelationRule, Usage, assemble_edges,
-    plan_relation,
+    AnswerOutcome, Backend, BackendProfile, Lead, ModelName, Pair, RelateSpec, RelationEdge,
+    RelationEntity, RelationRule, Usage, pair_edges, plan_pairs,
 };
 use crate::engine::Cancel;
 use crate::engine::error::Error;
-use crate::engine::prepared_request::SettledRelation;
+use crate::engine::prepared_request::pair_chunks;
 
-/// How one concrete relation asks: one choice per asker, or one yes/no per pair.
-#[derive(Clone, Copy, Debug, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub(crate) enum Method {
-    Choice,
-    YesNo,
-}
-
-/// One concrete relation, its question map, and the requests prepared for it.
-pub(crate) struct PreparedRelation {
-    pub(crate) relation: RelationRule,
-    pub(crate) mappings: Vec<QuestionMap>,
-    pub(crate) method: Method,
-    pub(crate) fallback: Option<LimitKind>,
+/// All rules share these prepared requests, in question order.
+pub(crate) struct PreparedRelations {
+    pub(crate) rules: Vec<RelationRule>,
+    pub(crate) pairs: Vec<Pair>,
     pub(crate) chunks: Vec<Chunk>,
+    pub(crate) questions_per_rule: Vec<usize>,
+    pub(crate) requests_per_rule: Vec<usize>,
 }
 
-/// One logical question with the answer or failure the backend gave it.
+/// One logical pair answer, including a recoverable failure.
 pub(crate) struct Logical {
     pub(crate) relation: RelationRule,
-    pub(crate) mapping: QuestionMap,
+    pub(crate) pair: Pair,
     pub(crate) outcome: AnswerOutcome,
     pub(crate) request: String,
 }
@@ -51,60 +40,68 @@ pub(crate) struct Execution {
     pub(crate) answered: usize,
 }
 
-/// Plan and prepare every concrete relation before any engine exists.
+/// Plan every rule before any engine exists, then prepare the shared requests.
 pub(crate) fn relations(
     entities: &[RelationEntity],
     spec: &RelateSpec,
     backend: &Backend,
     profile: Option<&BackendProfile>,
-) -> Result<Vec<PreparedRelation>, Error> {
-    let mut prepared = Vec::new();
-    for rule in &spec.relations {
-        for planned in
-            plan_relation(entities, rule).map_err(|_| Error::Defect("relation planning failed"))?
-        {
-            if planned.questions.is_empty() {
-                prepared.push(finished(planned, None, Vec::new()));
-                continue;
-            }
-            let settled = SettledRelation::settle(backend, profile, None, entities, planned)?;
-            let chunks = settled.requests.into_chunks();
-            prepared.push(finished(settled.planned, settled.fallback, chunks));
-        }
-    }
-    Ok(prepared)
-}
-
-fn finished(
-    planned: RelationPlan,
-    fallback: Option<LimitKind>,
-    chunks: Vec<Chunk>,
-) -> PreparedRelation {
-    let choice = match planned.questions.first() {
-        Some(question) => matches!(question, Question::Choose { .. }),
-        None => planned.relation.source != planned.relation.target,
+) -> Result<PreparedRelations, Error> {
+    let rules = spec.relations.clone();
+    let Some(planned) = plan_pairs(None, entities, &rules, Lead::Known)
+        .map_err(|_| Error::Defect("relation planning failed"))?
+    else {
+        return Ok(PreparedRelations {
+            questions_per_rule: vec![0; rules.len()],
+            requests_per_rule: vec![0; rules.len()],
+            rules,
+            pairs: Vec::new(),
+            chunks: Vec::new(),
+        });
     };
-    PreparedRelation {
-        relation: planned.relation,
-        mappings: planned.mappings,
-        method: if choice {
-            Method::Choice
-        } else {
-            Method::YesNo
-        },
-        fallback,
-        chunks,
+    let chunks = pair_chunks(backend, profile, &planned)?;
+    let mut questions_per_rule = vec![0; rules.len()];
+    for pair in &planned.pairs {
+        *questions_per_rule
+            .get_mut(pair.rule)
+            .ok_or(Error::Defect("a pair names no rule"))? += 1;
     }
+    let mut requests_per_rule = vec![0; rules.len()];
+    let mut start = 0;
+    for chunk in &chunks {
+        let end = start + chunk.plan.questions().len();
+        let mut previous = None;
+        for pair in planned
+            .pairs
+            .get(start..end)
+            .ok_or(Error::Defect("a chunk exceeds its pairs"))?
+        {
+            if previous != Some(pair.rule) {
+                *requests_per_rule
+                    .get_mut(pair.rule)
+                    .ok_or(Error::Defect("a pair names no rule"))? += 1;
+                previous = Some(pair.rule);
+            }
+        }
+        start = end;
+    }
+    if start != planned.pairs.len() {
+        return Err(Error::Defect("a pair has no prepared request"));
+    }
+    Ok(PreparedRelations {
+        rules,
+        pairs: planned.pairs,
+        chunks,
+        questions_per_rule,
+        requests_per_rule,
+    })
 }
 
 impl Engine {
-    /// Send the prepared relations and draw the edges their answers reach.
-    ///
-    /// No usable logical answer at all fails the call; some failed answers
-    /// stay in the result beside the good ones.
+    /// Send shared requests and retain recoverable logical failures.
     pub(crate) fn relate(
         &self,
-        prepared: Vec<PreparedRelation>,
+        prepared: PreparedRelations,
         entities: &[RelationEntity],
         threshold: f64,
         cancel: &Cancel,
@@ -113,75 +110,56 @@ impl Engine {
             replayed: true,
             ..Execution::default()
         };
-        let mut rules = Vec::with_capacity(prepared.len());
-        let (mut places, mut chunks) = (Vec::new(), Vec::new());
-        for (place, relation) in prepared.into_iter().enumerate() {
-            places.extend(relation.chunks.iter().map(|_| place));
-            chunks.extend(relation.chunks);
-            rules.push((relation.relation, relation.mappings.into_iter()));
+        if prepared.chunks.is_empty() {
+            return Ok(execution);
         }
-        let mut places = places.into_iter();
-        self.ask_chunks(chunks, cancel, |answered| {
-            let (rule, mappings) = places
-                .next()
-                .and_then(|place| rules.get_mut(place))
-                .ok_or(Error::Defect("a relation reply has no relation"))?;
+        let mut pairs = prepared.pairs.into_iter();
+        self.ask_chunks(prepared.chunks, cancel, |answered| {
             add_meta(&mut execution, &answered)?;
-            add_outcomes(
-                &mut execution,
-                entities,
-                (rule, mappings),
-                &answered,
-                threshold,
-            )
+            for outcome in answered.reply.outcomes() {
+                let pair = pairs
+                    .next()
+                    .ok_or(Error::Defect("a relation reply exceeds its pairs"))?;
+                let relation = prepared
+                    .rules
+                    .get(pair.rule)
+                    .ok_or(Error::Defect("a pair names no rule"))?;
+                let logical = Logical {
+                    relation: relation.clone(),
+                    pair,
+                    outcome: outcome.clone(),
+                    request: answered.request.as_str().to_owned(),
+                };
+                add_logical(
+                    &mut execution,
+                    entities,
+                    &prepared.rules,
+                    logical,
+                    threshold,
+                );
+            }
+            Ok::<(), Error>(())
         })?;
-        if rules
-            .iter_mut()
-            .any(|(_, mappings)| mappings.next().is_some())
-        {
-            return Err(Error::Defect(
-                "a relation reply did not cover its question map",
-            ));
+        if pairs.next().is_some() {
+            return Err(Error::Defect("a relation reply did not cover its pairs"));
         }
         Ok(execution)
     }
 }
 
-/// Keep each logical answer one reply carries, in question-map order.
-fn add_outcomes(
-    execution: &mut Execution,
-    entities: &[RelationEntity],
-    (relation, mappings): (&RelationRule, &mut impl Iterator<Item = QuestionMap>),
-    answered: &Answered,
-    threshold: f64,
-) -> Result<(), Error> {
-    for outcome in answered.reply.outcomes() {
-        let logical = Logical {
-            relation: relation.clone(),
-            mapping: mappings
-                .next()
-                .ok_or(Error::Defect("a relation reply exceeds its question map"))?,
-            outcome: outcome.clone(),
-            request: answered.request.as_str().to_owned(),
-        };
-        add_logical(execution, entities, logical, threshold);
-    }
-    Ok(())
-}
-
-/// Keep one logical answer and the edges the shared assembler draws from it.
 fn add_logical(
     execution: &mut Execution,
     entities: &[RelationEntity],
+    rules: &[RelationRule],
     logical: Logical,
     threshold: f64,
 ) {
     if let AnswerOutcome::Answered(answer) = &logical.outcome {
         execution.answered += 1;
-        execution.edges.extend(assemble_edges(
+        execution.edges.extend(pair_edges(
             entities,
-            &logical.relation,
-            std::slice::from_ref(&logical.mapping),
+            rules,
+            std::slice::from_ref(&logical.pair),
             std::slice::from_ref(answer),
             threshold,
         ));

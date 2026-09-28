@@ -289,6 +289,9 @@ pub(crate) enum CacheCommand {
 pub(crate) struct PruneArguments {
     /// The cache or recording folder to maintain.
     pub(crate) directory: PathBuf,
+    /// Show selected names and allocated bytes without changing the folder.
+    #[arg(long)]
+    pub(crate) dry_run: bool,
     /// Trim to this many allocated bytes. Without it, the configuration's
     /// cache_bytes applies, or 100000000.
     #[arg(long, value_name = "BYTES")]

@@ -296,6 +296,7 @@ impl EngineValue {
         let counts = rb_self.engine.usage();
         let hash = ruby.hash_new();
         hash.aset(ruby.to_symbol("requests_sent"), counts.requests_sent())?;
+        hash.aset(ruby.to_symbol("retries"), counts.retries())?;
         hash.aset(ruby.to_symbol("cache_answers"), counts.cache_answers())?;
         hash.aset(ruby.to_symbol("input_tokens"), counts.input_tokens())?;
         hash.aset(ruby.to_symbol("output_tokens"), counts.output_tokens())?;
@@ -323,6 +324,7 @@ fn new_engine(ruby: &Ruby, options: RHash) -> Result<EngineValue, Error> {
         model: read(ruby, options, "model")?,
         throttle: read(ruby, options, "throttle")?,
         max_requests: read(ruby, options, "max_requests")?,
+        max_request_bytes: read(ruby, options, "max_request_bytes")?,
         cache_at: read(ruby, options, "cache_at")?,
         no_cache: read(ruby, options, "no_cache")?.unwrap_or(false),
         timeout: read(ruby, options, "timeout")?,

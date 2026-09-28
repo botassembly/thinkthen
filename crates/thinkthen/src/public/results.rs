@@ -120,6 +120,7 @@ impl Usage {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct Counters {
     requests_sent: u64,
+    retries: u64,
     cache_answers: u64,
     input_tokens: u64,
     output_tokens: u64,
@@ -128,6 +129,7 @@ pub struct Counters {
 impl Counters {
     pub(crate) const ZERO: Self = Self {
         requests_sent: 0,
+        retries: 0,
         cache_answers: 0,
         input_tokens: 0,
         output_tokens: 0,
@@ -136,6 +138,7 @@ impl Counters {
     pub(crate) const fn of(counts: &crate::engine::usage::Counts) -> Self {
         Self {
             requests_sent: counts.requests_sent,
+            retries: counts.retries,
             cache_answers: counts.cache_answers,
             input_tokens: counts.input_tokens,
             output_tokens: counts.output_tokens,
@@ -146,6 +149,12 @@ impl Counters {
     #[must_use]
     pub fn requests_sent(&self) -> u64 {
         self.requests_sent
+    }
+
+    /// Live attempts that retried after a retriable status; a subset of sent requests.
+    #[must_use]
+    pub fn retries(&self) -> u64 {
+        self.retries
     }
 
     /// Answers the cache gave without a send.
@@ -211,6 +220,7 @@ impl Details {
             tuned_for: None,
             warning: None,
             batch_warning: None,
+            context_sha256: None,
         };
         let json = decision(
             run,

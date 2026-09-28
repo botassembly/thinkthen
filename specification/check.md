@@ -26,7 +26,7 @@ Every probe asks about the same made-up parcel delivery. The text evidence is `T
 | Probe | Serves | Field forms it covers |
 | --- | --- | --- |
 | `noul` | `decide`, `filter`, `rank`, and yes/no questions of `recognize` and `relate` | Text `state`. String `instructions`. `criteria.true` as a string. `criteria.false` as a present `null` |
-| `choice` | `choose`, `find`, and choice questions of `recognize` and `relate` | `criteria` as a map with a `null`, a string, and an object description |
+| `choice` | `choose`, `find`, and choice questions of `recognize` | `criteria` as a map with a `null`, a string, and an object description |
 | `score` | `score` | `criteria` as an array holding an empty object for a `null` description, a string, and an object |
 | `mixed` | `tag`, `annotate`, and many-question requests | Object `state`. Five wire questions of three types. A `noul` with no `criteria`. Bare level names. The structured tag form: array `instructions` and a `criteria.true` object |
 

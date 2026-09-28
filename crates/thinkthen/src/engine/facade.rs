@@ -34,7 +34,7 @@ pub(crate) use crate::engine::prepared_request::{Answered, PreparedChunk as Chun
 pub(crate) use crate::engine::schedule::{Completed, Input, InputPort, Outcome as RunOutcome};
 pub(crate) use annotate::{GroupAnswer, PreparedGroup, assemble, check_model};
 pub(crate) use recognize::{MAX_TEXT_BYTES, Probabilities, Recognized, step_one};
-pub(crate) use relate::{Execution, Logical, Method, PreparedRelation, relations};
+pub(crate) use relate::{Execution, Logical, PreparedRelations, relations};
 
 mod annotate;
 #[cfg(test)]
@@ -184,7 +184,8 @@ impl Engine {
     /// the pool, the recorder, the counters, and the width.
     pub(crate) fn with_model(&self, model: ModelName) -> Result<Self, Error> {
         let backend = Backend::resolve(Some(self.backend.url().as_str()), None, model.as_str())
-            .map_err(|_| Error::Defect("a resolved address was refused again"))?;
+            .map_err(|_| Error::Defect("a resolved address was refused again"))?
+            .with_request_size(self.backend.ceiling());
         Ok(Self {
             backend,
             ..self.clone()

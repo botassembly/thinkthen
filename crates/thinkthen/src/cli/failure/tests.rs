@@ -353,7 +353,10 @@ fn a_common_failure_status_carries_the_phrase_the_specification_fixes() {
             422,
             "the backend refused the request as malformed or too large",
         ),
-        (429, "the backend's rate limit was reached"),
+        (
+            429,
+            "the backend's rate limit was reached after the allowed attempts; try again later or change --max-retries",
+        ),
     ];
 
     for (status, phrase) in cases {

@@ -2,18 +2,20 @@
 //! keeps, and the worker every call runs on (ticket 0111 decisions 3, 7,
 //! and 11; ADR 0043 as amended).
 
-use std::ffi::CString;
-use std::path::PathBuf;
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
+use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use pgrx::prelude::*;
-use pgrx::{GucContext, GucFlags, GucRegistry, GucSetting};
-use thinkthen::{CallOptions, CancelToken, Engine, EngineBuilder, Error, ErrorKind};
+use thinkthen::{
+    CallOptions, CancelToken, Engine, EngineBuilder, Error, ErrorKind, SendBudget, SendBudgetDenial,
+};
 
 use crate::ffi;
+
+mod settings;
+pub(crate) use settings::{Plan, file_directory, read, read_result, register, throttle_refusal};
 
 /// A failure on its way to PostgreSQL: the kind, a safe message, and the
 /// retry signal. `thinkthen::Error` has no public constructor, so the
@@ -66,6 +68,12 @@ impl Refusal {
 
 impl From<Error> for Refusal {
     fn from(error: Error) -> Self {
+        if matches!(
+            error.send_budget_denial(),
+            Some(SendBudgetDenial::BeforeFirstSend | SendBudgetDenial::BeforeRetry { .. })
+        ) {
+            return spent(settings::current_total());
+        }
         Self {
             kind: error.kind(),
             message: error.detail().message().to_owned(),
@@ -101,64 +109,13 @@ impl<T, E: Into<Refusal>> OrRaise<T> for Result<T, E> {
     }
 }
 
-/// The registered value that leaves a numeric engine setting unset.
-pub(crate) const UNSET: i32 = -1;
-
-/// The throttle's refusal where it is set, in the engine's own sentence, or
-/// `None` for -1 (unset) and 1 through 32 (Ian's range).
-pub(crate) fn throttle_refusal(value: i32) -> Option<String> {
-    (value != UNSET && !(1..=32).contains(&value))
-        .then(|| Refusal::usage("a throttle is a whole number from 1 through 32").text())
-}
-
-/// The setter calls the four engine settings ask for. An unset setting
-/// calls nothing, so the value `EngineBuilder::from_env` seeded stands.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
-pub(crate) struct Plan {
-    throttle: Option<u8>,
-    max_requests: Option<usize>,
-    cache: Option<PathBuf>,
-}
-
-impl Plan {
-    /// Read the four raw values. The throttle's check already holds it to
-    /// -1 or 1..=32, and PostgreSQL's range checks hold the others to -1 or more.
-    pub(crate) fn of(
-        throttle: i32,
-        max_requests: i32,
-        cache: Option<&str>,
-    ) -> Result<Self, Refusal> {
-        Ok(Self {
-            throttle: (throttle != UNSET).then(|| u8::try_from(throttle).unwrap_or(u8::MAX)),
-            max_requests: usize::try_from(max_requests).ok(),
-            cache: cache.filter(|folder| !folder.is_empty()).map(PathBuf::from),
-        })
-    }
-}
-
-/// Apply a plan to a seeded builder. A requested throttle always reaches
-/// the public setter, which accepts the active width and refuses a change.
-fn apply(plan: &Plan, mut builder: EngineBuilder) -> Result<EngineBuilder, Error> {
-    if let Some(value) = plan.throttle {
-        // The public engine accepts an equal width and refuses a changed one.
-        // Apply even when a width is already active.
-        builder = builder.throttle(value)?;
-    }
-    if let Some(value) = plan.max_requests {
-        builder = builder.max_requests(Some(value))?;
-    }
-    if let Some(folder) = &plan.cache {
-        builder = builder.cache_at(folder)?;
-    }
-    Ok(builder)
-}
-
 /// The explicit throttle this backend registered, 0 for none.
 static ACTIVE_THROTTLE: AtomicU8 = AtomicU8::new(0);
 
 /// One engine per plan this backend used. Each engine counts its own sends,
 /// so the usage totals add them all.
 static ENGINES: Mutex<Vec<(Plan, Engine)>> = Mutex::new(Vec::new());
+static SEND_BUDGET: OnceLock<SendBudget> = OnceLock::new();
 
 fn engines() -> std::sync::MutexGuard<'static, Vec<(Plan, Engine)>> {
     ENGINES
@@ -169,7 +126,7 @@ fn engines() -> std::sync::MutexGuard<'static, Vec<(Plan, Engine)>> {
 /// Build an engine from the server's environment and the plan.
 fn build(plan: &Plan) -> Result<Engine, Error> {
     let active = std::num::NonZeroU8::new(ACTIVE_THROTTLE.load(Ordering::Acquire)).map(u8::from);
-    let engine = apply(plan, EngineBuilder::from_env()?)?.build()?;
+    let engine = settings::apply(plan, EngineBuilder::from_env()?)?.build()?;
     if let (None, Some(value)) = (active, plan.throttle) {
         ACTIVE_THROTTLE.store(value, Ordering::Release);
     }
@@ -305,6 +262,8 @@ pub(crate) fn run_result<T: Send + 'static>(
     let token = CancelToken::new();
     let (answer, answered) = mpsc::channel::<Result<T, Error>>();
     let (plan, worker_token) = (call.plan.clone(), token.clone());
+    let total = call.total;
+    let send_budget = SEND_BUDGET.get_or_init(SendBudget::new);
     ffi::spawn_masked(move || {
         deliver(&answer, || {
             let engine = match held {
@@ -313,6 +272,7 @@ pub(crate) fn run_result<T: Send + 'static>(
             };
             CallOptions::new()
                 .cancel(&worker_token)
+                .send_budget(send_budget, total)
                 .deadline_millis(i64::from(millis))
                 .and_then(|options| work(&engine, options))
         });
@@ -346,139 +306,9 @@ pub(crate) fn run_result<T: Send + 'static>(
     }
 }
 
-static DEADLINE_MS: GucSetting<i32> = GucSetting::<i32>::new(-1);
-static API_KEY: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
-static FILE_DIRECTORY: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
-static THROTTLE: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
-static MAX_REQUESTS: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
-static MAX_REQUESTS_TOTAL: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
-static CACHE: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
-
-fn text_of(setting: &GucSetting<Option<CString>>) -> Option<String> {
-    setting
-        .get()
-        .map(|held| held.to_string_lossy().into_owned())
-}
-
-/// Everything a call reads before its worker starts. `GucSetting::get`
-/// panics off the backend thread, so this runs first in every function.
-/// A set key refuses every call (decision 12), and names no value.
-pub(crate) fn read() -> Call {
-    read_result().or_raise()
-}
-
-/// Read settings without raising recoverable row failures.
-pub(crate) fn read_result() -> Result<Call, Refusal> {
-    if text_of(&API_KEY).is_some_and(|key| !key.trim().is_empty()) {
-        return Err(Refusal::usage(
-            "thinkthen.api_key is not read; unset it and set THINKTHEN_API_KEY in the server's environment",
-        ));
-    }
-    let cache = text_of(&CACHE);
-    let plan = Plan::of(THROTTLE.get(), MAX_REQUESTS.get(), cache.as_deref())?;
-    let active = ACTIVE_THROTTLE.load(Ordering::Acquire);
-    if plan
-        .throttle
-        .is_some_and(|requested| active != 0 && requested != active)
-    {
-        return Err(Refusal::usage(format!(
-            "throttle {active} is already active for this process; use throttle {active} or drop the throttle argument"
-        )));
-    }
-    // Ian's ruling of 2026-09-25: the backend's total, computed once per call.
-    let total = u64::try_from(MAX_REQUESTS_TOTAL.get()).ok();
-    let left = total.map(|total| total.saturating_sub(totals()[0]));
-    if left == Some(0) {
-        return Err(spent(total.unwrap_or_default()));
-    }
-    Ok(Call {
-        plan,
-        deadline_ms: DEADLINE_MS.get(),
-        total,
-        left,
-    })
-}
-
-/// The one directory an unprivileged named-file read may touch.
-pub(crate) fn file_directory() -> Option<String> {
-    text_of(&FILE_DIRECTORY)
-}
-
-/// Register the settings with PostgreSQL. `_PG_init` calls this alone.
-pub(crate) fn register() {
-    let int = |name, about, setting, most, context, flags| {
-        GucRegistry::define_int_guc(name, about, c"", setting, -1, most, context, flags);
-    };
-    int(
-        c"thinkthen.deadline_ms",
-        c"per-call deadline in milliseconds: -1 none, 0 spent",
-        &DEADLINE_MS,
-        i32::MAX,
-        GucContext::Userset,
-        GucFlags::default(),
-    );
-    ffi::define_throttle(&THROTTLE);
-    int(
-        c"thinkthen.max_requests_total",
-        c"most requests one backend sends; -1 means no total",
-        &MAX_REQUESTS_TOTAL,
-        i32::MAX,
-        GucContext::Suset,
-        GucFlags::default(),
-    );
-    int(
-        c"thinkthen.max_requests",
-        c"most records one call answers; -1 means no limit",
-        &MAX_REQUESTS,
-        i32::MAX,
-        GucContext::Suset,
-        GucFlags::default(),
-    );
-    GucRegistry::define_string_guc(
-        c"thinkthen.cache",
-        c"answer cache folder; empty leaves the environment's",
-        c"",
-        &CACHE,
-        GucContext::Suset,
-        GucFlags::default(),
-    );
-    GucRegistry::define_string_guc(
-        c"thinkthen.file_directory",
-        c"the only directory an unprivileged named-file read may touch",
-        c"",
-        &FILE_DIRECTORY,
-        GucContext::Suset,
-        GucFlags::NO_SHOW_ALL,
-    );
-    // `Userset`, so a `SET` never fails and never logs its statement; the
-    // next call refuses instead (amendment item 2).
-    GucRegistry::define_string_guc(
-        c"thinkthen.api_key",
-        c"not read; the key comes from THINKTHEN_API_KEY in the server's environment",
-        c"",
-        &API_KEY,
-        GucContext::Userset,
-        GucFlags::NO_SHOW_ALL | GucFlags::SUPERUSER_ONLY | GucFlags::DISALLOW_IN_AUTO_FILE,
-    );
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    /// Decision 3: the registered defaults plan no setter, and each set
-    /// value reaches the plan. PostgreSQL's `'1MB'` arrives as bytes.
-    #[test]
-    fn the_registered_defaults_plan_nothing_and_set_values_carry() {
-        assert_eq!(Plan::of(UNSET, UNSET, None), Ok(Plan::default()));
-        assert_eq!(Plan::of(UNSET, UNSET, Some("")), Ok(Plan::default()));
-        let set = Plan {
-            throttle: Some(8),
-            max_requests: Some(3),
-            cache: Some(PathBuf::from("/srv/cache")),
-        };
-        assert_eq!(Plan::of(8, 3, Some("/srv/cache")), Ok(set));
-    }
 
     /// R1-31 and R2-31: the one table maps every kind to its SQLSTATE.
     #[test]

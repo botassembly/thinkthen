@@ -112,12 +112,13 @@ module ThinkThen
   # as the module methods' engine does. The throttle is the most requests
   # in flight at once, per loaded copy of the library.
   class Engine
-    def initialize(base_url: nil, model: nil, throttle: nil, max_requests: nil, cache: nil,
+    def initialize(base_url: nil, model: nil, throttle: nil, max_requests: nil, max_request_bytes: nil, cache: nil,
                    timeout: nil, max_retries: nil, record: nil, replay: nil, profile: nil)
       ThinkThen.__send__(:text_setting, :base_url, base_url)
       ThinkThen.__send__(:text_setting, :model, model)
       ThinkThen.__send__(:whole_setting, :throttle, throttle)
       ThinkThen.__send__(:whole_setting, :max_requests, max_requests)
+      ThinkThen.__send__(:whole_setting, :max_request_bytes, max_request_bytes)
       ThinkThen.__send__(:whole_setting, :timeout, timeout)
       ThinkThen.__send__(:whole_setting, :max_retries, max_retries)
       { record: record, replay: replay, profile: profile }.each do |name, value|
@@ -127,7 +128,8 @@ module ThinkThen
         raise UsageError.new("cache is a folder path, false for none, or nil for the default", "usage")
       end
       @native = Native.engine({ base_url: base_url, model: model, throttle: throttle,
-        max_requests: max_requests, cache_at: cache || nil, no_cache: cache == false,
+        max_requests: max_requests, max_request_bytes: max_request_bytes,
+        cache_at: cache || nil, no_cache: cache == false,
         timeout: timeout, max_retries: max_retries, record: record, replay: replay, profile: profile })
     end
 
