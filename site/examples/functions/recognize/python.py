@@ -1,30 +1,31 @@
 import thinkthen as tt
 
 text = (
-    "Maria Chen joined Northwind Freight, "
-    "a company in Chicago."
+    "Maria Chen joined Northwind Freight "
+    "in Chicago last spring."
 )
-kinds = ["person", "organization", "place"]
-relations = {
-    "works_for": ("person", "organization"),
-    "based_in": ("organization", "place"),
+kinds = {
+    "PER": "Part of a person's name.",
+    "ORG": (
+        "Part of the name of an organization: a company, "
+        "band, team, agency, government body, "
+        "or media outlet."
+    ),
+    "LOC": "Part of the name of a place: a country, "
+           "region, city, or geographic feature.",
+    "MISC": (
+        "Part of another named entity: a nationality, "
+        "an event, a product, or the name of a "
+        "creative work."
+    ),
 }
 facts = tt.recognize(
     text,
     kinds=kinds,
-    relations=relations,
 ).value
 names = [(one.text, one.kind) for one in facts.entities]
 assert names == [
-    ("Maria Chen", "person"),
-    ("Northwind Freight", "organization"),
-    ("Chicago", "place"),
-]
-links = [
-    (one.relation, one.source.text, one.target.text)
-    for one in facts.relations
-]
-assert links == [
-    ("works_for", "Maria Chen", "Northwind Freight"),
-    ("based_in", "Northwind Freight", "Chicago"),
+    ("Maria Chen", "PER"),
+    ("Northwind Freight", "ORG"),
+    ("Chicago", "LOC"),
 ]

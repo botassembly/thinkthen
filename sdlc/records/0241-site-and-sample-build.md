@@ -106,10 +106,10 @@ The repository policy check passed on this merged tree: 189 resolved packages,
 with accepted tables, ban lists and dependencies matching. Its log is
 `target/codex-builds/0241/policy-latest-main.log`.
 
-`target/codex-builds/0241/sample-provenance.json` lists each of the 55 changed
-library or SQL sample files, the current source example or API document used
-to check it, the proof applied, and the explicit `host_runtime_executed: false`
-limit. Python parsed 13 examples; Ruby and R parsed 10 each. C compiled 10
+`target/codex-builds/0241/sample-provenance.json` lists each changed library
+or SQL sample file, its source and proof, and its current
+`host_runtime_executed` state. Python parsed 13 examples; Ruby and R parsed 10
+each. C compiled 10
 snippets against the current header and Rust compiled 11 against the current
 release rlib. A TypeScript `noEmit` check over every site `.ts` sample against
 the current `index.d.ts` caught and corrected recognized-entity `text`
@@ -163,3 +163,54 @@ The site check did not execute that SQL extension.
 The merged-tree policy check also passed: 189 resolved packages, with accepted
 tables, ban lists and dependencies matching. Its log is
 `target/codex-builds/0241/policy-after-0229.log`.
+
+## Original C and Python consumer issue correction
+
+The next independent review found that compilation and Python parsing did not
+meet the original issues' explicit offline-execution criterion, and the C
+examples extracted `value` by string offset. Those two original IDs remained
+partial while I corrected the samples. The seven C examples now parse the
+complete `Call` JSON with json-c 0.17, require a present `value` and `facts`,
+compare typed nested values with `json_object_equal`, and free both parsed
+objects and the native reply. The choose example's valid JSON null is distinct
+from `thinkthen_call` returning native NULL. The install example requires a
+numeric `value` of 2.0. The C surface names `libjson-c-dev` and its pkg-config
+link flags. The parser was used only by site examples; no runtime dependency
+was added.
+
+I built the current C source at branch base `3b22a2cd` in the lane's isolated
+Cargo target. Its `libthinkthen_c.so` SHA-256 is
+`a4a301aa43114047c484bd7816d7ee876b5830d9d5ea09148173423bdaee31eb`.
+The C headers came from `libjson-c-dev` 0.17-1build1 extracted under
+`target/codex-builds/0241`; the linked system runtime is libjson-c5
+0.17-1build1. I also built the current editable Python extension from that
+source into the lane's Python 3.12 virtual environment with Polars 1.44.2;
+`libraries/python/thinkthen/_thinkthen.abi3.so` has SHA-256
+`56b98039c502d9789283b02f5c4d30efe2be0ef26e7d93331bef4e8e2dec7c6f`.
+The build logs are `c-build-host-samples.log` and
+`python-build-host-samples.log` under `target/codex-builds/0241`.
+
+`target/codex-builds/0241/run_host_samples.py` compiled and executed the exact
+seven C site snippets, and executed all thirteen exact Python/Polars snippets
+without replacing their assertions. Its wrapper supplies `main` and logs a
+native call failure; each sample retains its shown requests and value checks.
+For Python, `exec(compile(source))` from an isolated work folder avoids a
+sample named `polars.py` shadowing the installed package. The only transport
+was a loopback server that requires a deep-equal saved request body and returns
+its saved response unchanged. `THINKTHEN_BATCH=1` preserved the legacy
+singleton request identity. The final run matched 54 saved responses with zero
+misses: 20 exact snippets exited zero. Per-file source SHA-256, response paths,
+exit logs, and compile wrappers are under
+`target/codex-builds/0241/host-sample-proof/`; the combined source inventory
+is `target/codex-builds/0241/sample-provenance.json`. No provider call or
+recording regeneration occurred. The recognize sample checks the three
+recorded entities, and the separate relate sample checks the recorded
+`gateway` to `billing` edge. Both have real value assertions.
+
+The final focused site build, `site-build-host-correction.log`, passed under
+Node 22 and the lane lock: 95 CLI replay examples, 92 Astro pages and Markdown
+twins, 51 settings rows, and 130 linked routes. `check-samples` passed. It
+still skips host and SQL samples; the independent host run above proves the
+C/Python rows only. The inventory therefore returns to 12 newly fixed
+candidate documentation IDs, three fixed on baseline, and four partial. The
+remaining partial host/SQL and external Bench criteria stay open.

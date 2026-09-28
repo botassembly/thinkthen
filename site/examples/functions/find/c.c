@@ -1,5 +1,5 @@
 #include <assert.h>
-#include <string.h>
+#include <json-c/json.h>
 #include <thinkthen.h>
 
 thinkthen_engine *tt = thinkthen_engine_new();
@@ -15,13 +15,22 @@ const char *expected =
     "\"Refunds are issued within 30 days of purchase.\"";
 char *deadline_call = thinkthen_call(tt, find);
 assert(deadline_call);
-assert(strncmp(deadline_call, "{\"value\":", 9) == 0);
-const char *refund_deadline = deadline_call + 9;
-size_t deadline_len = strlen(expected);
-assert(strncmp(
-    refund_deadline, expected, deadline_len
-) == 0);
-assert(strncmp(
-    refund_deadline + deadline_len, ",\"facts\":{", 10
-) == 0);
+enum json_tokener_error parse_error;
+struct json_object *result =
+    json_tokener_parse_verbose(deadline_call, &parse_error);
+assert(parse_error == json_tokener_success);
+assert(result && json_object_get_type(result)
+    == json_type_object);
+struct json_object *value;
+assert(json_object_object_get_ex(result, "value", &value));
+struct json_object *facts;
+assert(json_object_object_get_ex(result, "facts", &facts));
+assert(facts && json_object_get_type(facts)
+    == json_type_object);
+struct json_object *wanted =
+    json_tokener_parse_verbose(expected, &parse_error);
+assert(parse_error == json_tokener_success);
+assert(json_object_equal(value, wanted));
+if (wanted) json_object_put(wanted);
+json_object_put(result);
 thinkthen_free_string(deadline_call);

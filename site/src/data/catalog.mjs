@@ -474,8 +474,8 @@ export const SURFACES = [
     unsureWord: 'an outcome of THINKTHEN_UNSURE',
     install: [['thinkthen.h + libthinkthen', 'Each release ships the header, the shared library, and the static library.']],
     particular: [
-      'Every call returns 0 or an error kind.',
-      'The answer lands in a struct: the outcome and its probability.',
+      'The JSON examples parse the `value` and `facts` members with json-c. Install its development headers and link with `pkg-config --cflags --libs json-c` beside libthinkthen.',
+      'A failed JSON call returns NULL. A successful `value` can itself be JSON null. Typed calls use a result struct and an error code.',
     ],
   },
   {

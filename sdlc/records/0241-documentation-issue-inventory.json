@@ -143,21 +143,21 @@
     {
       "id": "2026-09-28-site-c-examples-need-json-value-wrapper",
       "classification": "doc-open",
-      "current_status": "fixed in ticket 0241 candidate",
+      "current_status": "fixed in ticket 0241 candidate; exact site snippets executed offline",
       "action": "close documentation criterion after independent code review and merge",
       "source_evidence": "sdlc/issues/2026-09-28-site-c-examples-need-json-value-wrapper.md",
       "original_status": "open, required before public 0.1. Owner: the marketing lead under `sdlc/planning/ownership.md`. Fresh High review of ticket 0230 source `360f4e7a`, integrated candidate `6ff22a8e`, found this migration gap. The candidate is not landed when this issue is filed. Ian approved the C JSON success contract; the site examples must migrate with that contract before release.",
-      "resolution_evidence": "site/examples/functions/*/c.c; target/codex-builds/0241 C compile proof",
+      "resolution_evidence": "target/codex-builds/0241/host-sample-proof/provenance.json; exact snippet source hashes, per-file exit logs and saved recording matches",
       "resolution": "fixed_by_0241_candidate"
     },
     {
       "id": "2026-09-28-site-python-examples-need-call-values",
       "classification": "doc-open",
-      "current_status": "fixed in ticket 0241 candidate",
+      "current_status": "fixed in ticket 0241 candidate; exact site snippets executed offline",
       "action": "close documentation criterion after independent code review and merge",
       "source_evidence": "sdlc/issues/2026-09-28-site-python-examples-need-call-values.md",
       "original_status": "open, required before public 0.1. Owner: the marketing lead under sdlc/planning/ownership.md. Ticket 0214's approved result contract landed at `1ab24371` after High acceptance of integrated source `dfc1b5fb`. This issue records the required consumer migration before public release.",
-      "resolution_evidence": "site/examples/functions/*/python.py; target/codex-builds/0241 Python parse proof",
+      "resolution_evidence": "target/codex-builds/0241/host-sample-proof/provenance.json; exact snippet source hashes, per-file exit logs and saved recording matches",
       "resolution": "fixed_by_0241_candidate"
     },
     {

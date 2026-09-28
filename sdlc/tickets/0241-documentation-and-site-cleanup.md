@@ -28,14 +28,16 @@ The tracked [issue inventory](../records/0241-documentation-issue-inventory.json
 ## What the build taught us
 
 The initial site replay check could pass while code tabs were wrong: it runs
-the CLI and skips host and SQL. I listed all 56 changed host/SQL sample files
+the CLI and skips host and SQL. I listed all 59 changed host/SQL sample files
 with their source and proof under `target/codex-builds/0241/sample-provenance.json`,
 then compiled C and Rust snippets, parsed Python/Ruby/R, and typechecked
 TypeScript against the current declarations. That last check found stale
 recognized-entity `name` accessors, a nullable relation list, and arrays
-where tuple pairs were required. The remaining host/SQL runtime-execution
-limit is stated in the build record instead of calling those tabs verified by
-the CLI smoke.
+where tuple pairs were required. I later executed the exact seven C and
+thirteen Python/Polars site snippets with current packages and 54 matched
+saved responses. Their source hashes, per-file exits, and request matches are
+in `target/codex-builds/0241/host-sample-proof/`. The remaining host/SQL
+runtime-execution limit is stated in the build record.
 
 The sample and HTML checks earned their place: the replay check caught a
 default-model recording mismatch; the generated-HTML guard failed on a planted
@@ -99,4 +101,18 @@ input count, option summary and sample caption all need the same contract
 read. The corrected catalog says standalone `relate` has no source text,
 accepts at most 255 entities, asks yes/no questions for allowed pairs, and
 permits `--jobs` on that one entity set. This correction changes only site
-copy; the prior host proofs remain valid.
+copy.
+
+The next review found that ticket preparation and design review missed two
+explicit original acceptance criteria: C examples needed a real JSON parser,
+and all seven C plus thirteen Python/Polars site snippets needed offline
+execution, not compilation or syntax checks alone. I used the system json-c
+runtime with pinned 0.17 development headers for the C sample build; site
+copy names its development package and link flags. The exact snippets ran
+through current local packages against matching saved request bodies. Python
+`polars.py` files ran from an isolated working folder so their filenames did
+not shadow the installed Polars package. The C `null` answer remained a parsed
+JSON null, distinct from the native NULL failure signal. Future documentation
+briefs must map each original issue criterion to per-file proof before calling
+a consumer migration fixed. The two original rows now have host-execution
+evidence; no syntax-only proof is used to close them.
