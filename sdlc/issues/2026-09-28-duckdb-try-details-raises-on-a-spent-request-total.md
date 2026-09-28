@@ -1,6 +1,6 @@
 # DuckDB try_details raises on a spent request total
 
-Status: confirmed on the installed 0222 Linux artifact after a bounded independent re-audit. Severity 2; resolve before public 0.1. [Ticket 0240](../tickets/0240-duckdb-try-budget-values.md) and its [preflight](../records/0240-duckdb-try-budget-preflight.md) now propose the partial-outcome correction for fresh High design review. No runtime fix or new installed artifact is claimed yet.
+Status: closed by ticket 0240 after fresh High code/artifact-review ACCEPT `706a133c`. The newly loaded Linux extension preserves safe spent-total values and answered members, and the independent reviewer reran the original regression, both split denials, retry denial and fatal-after-denial proofs. The coordinator integrated the repair with cache 0238 and retained the separate unproved B13c target rows.
 
 ## Expected behavior
 

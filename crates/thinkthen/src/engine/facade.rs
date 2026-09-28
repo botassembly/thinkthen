@@ -60,6 +60,7 @@ pub(crate) struct Storage {
     pub(crate) replay: Option<PathBuf>,
     pub(crate) private_default: bool,
     pub(crate) cache_answers: bool,
+    pub(crate) refresh_cache: bool,
 }
 
 /// Where a live attempt's key comes from: the command's variable, read at
@@ -181,7 +182,8 @@ impl Engine {
             storage.replay.as_deref(),
             storage.private_default,
             storage.cache_answers,
-        )?;
+        )?
+        .with_refresh(storage.refresh_cache);
         let widths = crate::engine::process_width_of(pid, cancel)?;
         let width = widths.select(self.width).map_err(Error::WidthActive)?.get();
         Ok(State {

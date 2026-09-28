@@ -102,6 +102,7 @@ impl Judging<'_> {
                 Some(json_line(&judged.value)?)
             };
         Ok(Judged {
+            model: Some(judged.answered.reply.model().clone()),
             printed,
             outcome,
             replayed,

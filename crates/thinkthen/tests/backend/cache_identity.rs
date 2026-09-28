@@ -83,6 +83,84 @@ fn default_cache(home: &Path) -> PathBuf {
 }
 
 #[test]
+fn explicit_refresh_replaces_a_complete_cache_answer_and_replay_stays_offline() {
+    let old = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
+    let new = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.1}}}"#;
+    let listener = Listener::serving(vec![Canned::ok(old), Canned::ok(new)]).expect("listener");
+    let cache = folder("explicit-refresh-complete-answer");
+    let path = cache.to_str().expect("cache path");
+    let ask = |extra: &[&str]| {
+        let mut args = vec![
+            "decide",
+            QUESTION,
+            "--url",
+            listener.base(),
+            "--model",
+            "local-1",
+            "--cache",
+            path,
+        ];
+        args.extend_from_slice(extra);
+        spawn(
+            &args,
+            &[("THINKTHEN_API_KEY", "sk-test-value")],
+            EVIDENCE.as_bytes(),
+        )
+        .expect("command")
+    };
+    let first = ask(&[]);
+    assert_eq!(first.status.code(), Some(0));
+    let before = files(&cache).expect("old files");
+    let refreshed = ask(&["--refresh-cache"]);
+    assert_eq!(refreshed.status.code(), Some(1));
+    let after = files(&cache).expect("new files");
+    assert_eq!(before.len(), 2, "marker and one entry");
+    assert_eq!(after.len(), 2, "same marker and one entry");
+    fn selected(items: &FolderFiles, marker: bool) -> &(std::ffi::OsString, Vec<u8>) {
+        items
+            .iter()
+            .find(|(name, _)| (name == ".thinkthen-backend.json") == marker)
+            .expect("marker or digest entry")
+    }
+    assert_eq!(
+        selected(&before, true),
+        selected(&after, true),
+        "marker stays unchanged"
+    );
+    assert_eq!(
+        selected(&before, false).0,
+        selected(&after, false).0,
+        "same digest name"
+    );
+    assert_ne!(
+        selected(&before, false).1,
+        selected(&after, false).1,
+        "answer replaced"
+    );
+    assert!(
+        String::from_utf8_lossy(&refreshed.stderr)
+            .contains("sends each planned cache request live")
+    );
+    let replay = spawn(
+        &[
+            "decide",
+            QUESTION,
+            "--url",
+            listener.base(),
+            "--model",
+            "local-1",
+            "--replay",
+            path,
+        ],
+        &[],
+        EVIDENCE.as_bytes(),
+    )
+    .expect("offline replay");
+    assert_eq!(replay.status.code(), Some(1));
+    assert_eq!(listener.requests().len(), 2, "replay sends nothing");
+}
+
+#[test]
 fn a_missing_key_leaves_an_unbound_folder_for_the_next_address() {
     const NO_KEY: &str = "thinkthen: the environment variable `THINKTHEN_API_KEY` is unset or blank, so no key is sent\n";
     let second = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");

@@ -35,6 +35,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
         retry_wait: Duration::from_secs(1),
     };
     let judged = crate::schedule::Judged {
+        model: None,
         printed: Some(body.clone()),
         outcome: crate::core::Outcome::Yes,
         probability: Some(0.91),
@@ -50,6 +51,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
     let mut ordered = crate::schedule::Output::ordered(&mut written, Some(2), &usage);
     ordered
         .take(crate::schedule::Judged {
+            model: None,
             printed: Some(body.clone()),
             outcome: crate::core::Outcome::Yes,
             probability: Some(0.91),

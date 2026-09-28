@@ -182,8 +182,9 @@ where
     } else {
         None
     };
+    let refresh = caches && (recorder.force_refresh() || built_in::is_mutable_alias(plan.model()));
     let operation = recorder
-        .prepare_checked(&recorded, &prepared.digest, cancel, &complete)
+        .prepare_checked_refresh(&recorded, &prepared.digest, cancel, &complete, refresh)
         .map_err(E::from)?;
     let operation = observe_cancel(operation, cancel)?;
     let (reply, replayed, requests_sent) = match operation {
@@ -351,6 +352,21 @@ mod tests {
         let path = folder("folder");
         let _absent = fs::remove_dir_all(&path);
         fs::create_dir_all(&path).expect("recording folder");
+        // A bound folder waits before key lookup. An unbound empty folder now
+        // inspects the key first under ADR 0099.
+        let (backend, _, prepared) = request();
+        let seed = Recorder::of(Some(&path), None).expect("recording owner");
+        let crate::engine::recorder::PreparedRecording::Live(permit) = seed
+            .prepare_cancelled(
+                &prepared.recorded(&backend),
+                &prepared.digest,
+                &crate::engine::Cancel::default(),
+            )
+            .expect("folder bound")
+        else {
+            unreachable!("empty recording cannot replay");
+        };
+        permit.cancel().expect("abandon seed write");
         let owner = cache_lock::exclusive_folder(&path).expect("exclusive owner");
         let (blocked_send, blocked) = mpsc::channel();
         let cancel = crate::engine::Cancel::observed(blocked_send);
@@ -475,5 +491,59 @@ mod tests {
         );
         assert_eq!(usage.snapshot().input_tokens, 7);
         assert_eq!(usage.snapshot().output_tokens, 3);
+    }
+
+    #[test]
+    fn a_complete_live_refresh_that_fails_before_rename_preserves_old_entry() {
+        let (backend, plan, prepared) = request();
+        let folder = folder("refresh-install");
+        let _absent = fs::remove_dir_all(&folder);
+        let name = prepared.digest.file_name();
+        let recorder = Recorder::of(Some(&folder), Some(&folder)).expect("cache recorder");
+        let cancel = crate::engine::Cancel::default();
+        let usage = Counters::new(None);
+        let reply = |model: &str| {
+            format!(r#"{{"model":"{model}","answers":{{"q1":{{"type":"noul","noul":0.9}}}}}}"#)
+        };
+        let first: Result<Answered, Error> = super::ask_prepared(
+            &backend,
+            &plan,
+            prepared,
+            &recorder,
+            &cancel,
+            &usage,
+            || Ok(Key::of("sk-test")),
+            |_, _| {
+                Ok(crate::engine::http::HttpAnswer {
+                    body: reply("jev-1.13.0").into_bytes(),
+                    requests_sent: 1,
+                })
+            },
+        );
+        assert!(first.is_ok(), "seed a complete old cache entry");
+        let entry = folder.join(name);
+        let before = fs::read(&entry).expect("old entry");
+        let (backend, plan, prepared) = request();
+        let second: Result<Answered, Error> = super::ask_prepared(
+            &backend,
+            &plan,
+            prepared,
+            &recorder,
+            &cancel,
+            &usage,
+            || Ok(Key::of("sk-test")),
+            |_, _| {
+                let answer = crate::engine::http::HttpAnswer {
+                    body: reply("jev-1.14.0").into_bytes(),
+                    requests_sent: 1,
+                };
+                crate::engine::recorder::fail_install();
+                Ok(answer)
+            },
+        );
+        assert!(matches!(second, Err(Error::RecordingStorage)));
+        assert_eq!(fs::read(&entry).expect("old entry after refusal"), before);
+        assert!(!has_partial(&folder));
+        fs::remove_dir_all(folder).expect("fixture removed");
     }
 }

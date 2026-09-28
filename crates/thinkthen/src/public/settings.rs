@@ -451,6 +451,7 @@ impl EngineBuilder {
                 replay: self.replay.clone(),
                 private_default: false,
                 cache_answers: false,
+                refresh_cache: false,
             });
         }
         let (folder, private_default) = match &self.cache {
@@ -476,6 +477,7 @@ impl EngineBuilder {
             replay: Some(folder),
             private_default,
             cache_answers: true,
+            refresh_cache: false,
         })
     }
 }

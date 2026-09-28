@@ -66,6 +66,46 @@ fn configuration_supplies_address_model_and_cache_switch_without_a_home() {
 }
 
 #[test]
+fn dry_run_refuses_refresh_when_configuration_disables_the_default_cache() {
+    let root = folder("dry-run-disabled-refresh");
+    let config = root.join("thinkthen/config.json");
+    fs::create_dir_all(config.parent().expect("configuration directory"))
+        .expect("configuration directory");
+    fs::write(&config, r#"{"schema":"thinkthen.config/1","cache":false}"#).expect("configuration");
+    let listener = Listener::answering(|_| Canned::ok(ANSWERED)).expect("listener");
+    let output = run(
+        &[
+            "decide",
+            "asks for a refund",
+            "--refresh-cache",
+            "--dry-run",
+        ],
+        &[
+            ("XDG_CONFIG_HOME", root.to_str().expect("root")),
+            (
+                "XDG_CACHE_HOME",
+                root.join("cache").to_str().expect("cache"),
+            ),
+            ("HOME", ""),
+            ("THINKTHEN_BASE_URL", listener.base()),
+        ],
+    )
+    .expect("dry run");
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: --refresh-cache needs an enabled answer cache; use --cache DIR or enable the default cache\n"
+    );
+    assert!(listener.requests().is_empty());
+    assert_eq!(
+        fs::read(&config).expect("configuration retained"),
+        br#"{"schema":"thinkthen.config/1","cache":false}"#
+    );
+    assert!(!root.join("cache").exists());
+}
+
+#[test]
 fn command_and_environment_precedence_crosses_all_eight_command_families() {
     let root = folder("configuration-precedence");
     fs::create_dir_all(root.join("thinkthen")).expect("configuration directory");

@@ -1,4 +1,4 @@
-Status: open. Only the remaining model freshness, run-wide checking and refresh work in item 1 stays open. Ticket 0159 pinned the default, 0158 completed item 2, and reviewed 0163 source `0292cba2` completes item 3. Proof: `sdlc/records/0163-code-review.md`.
+Status: closed for the three scoped review outcomes. Ticket 0159 pinned the default, 0158 completed item 2, reviewed 0163 completed item 3, and ticket 0238 at High-accepted source `2ab0fe65` completes item 1’s mutable-alias freshness, explicit refresh and filter/rank model checks. Recording vintage (register 105), named-folder trust warning (40) and independent calibration work retain their own records. Historical findings below describe the reviewed baseline, not current defaults.
 
 # Architect review 08: the answer cache
 
@@ -20,7 +20,7 @@ Evidence from review 09. `--model jev-1.13.0` misses a recording made under `jev
 
 What an integrator hits. After a vendor model update, a pipeline returns old decisions indefinitely for every text it has seen, while new texts get the new model. One run mixes model versions, and `rank` and `filter` compare them across two probability scales, without the bare output saying so. Every tuned gate follows the alias to the new model with no signal. CI stays green on answers from an older model. `cache prune --answered-by-other-than MODEL` exists but is manual.
 
-Done by ticket 0159: the default model is the pinned version `jev-1.13.0`, and `audit --write` records the model beside a bar it writes in a single file. Still open: a freshness rule, a run-wide model check and a refresh mode.
+Done by ticket 0159: the default model is the pinned version `jev-1.13.0`, and `audit --write` records the model beside a bar it writes in a single file. Ticket 0238 later completes the mutable-alias freshness rule, filter/rank model check and explicit refresh mode; see its build and code-review records.
 
 Direction. Pin the default model to a version, or put a freshness rule in the lookup, such as treating an entry as stale when the alias resolves to a newer version. Record the answering model version with a tuned threshold, as `audit --write` records the cut, and warn or refuse when `meta.model` differs. Fail or warn a record run whose rows name more than one model version. Add a refresh mode that sends and replaces.
 

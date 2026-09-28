@@ -12,6 +12,7 @@ impl Engine {
         cancel: &Cancel<'_>,
         items: Vec<W>,
         work: &(impl Fn(W) -> Result<R, Error> + Sync),
+        terminal: impl Fn(&R) -> bool,
         each: impl FnMut(R) -> Result<(), E>,
     ) -> Result<(), E>
     where
@@ -20,7 +21,7 @@ impl Engine {
         E: From<Error>,
     {
         let width = self.state(cancel)?.width;
-        workers::ordered(width, items, cancel, work, each)
+        workers::ordered_until(width, items, cancel, work, terminal, each)
     }
 }
 
@@ -30,7 +31,9 @@ mod tests {
     use std::sync::{Arc, Barrier, mpsc};
     use std::time::Duration;
 
-    use super::*;
+    use crate::engine::Cancel;
+    use crate::engine::error::Error;
+    use crate::engine::workers;
 
     #[test]
     fn later_fatal_result_halts_admission_while_first_worker_is_held() {
@@ -82,5 +85,68 @@ mod tests {
             );
         });
         assert_eq!(started.load(Ordering::SeqCst), 2);
+    }
+
+    #[test]
+    fn terminal_denial_joins_later_fatal_and_never_admits_third_work() {
+        let release_fatal = Arc::new(Barrier::new(2));
+        let (denial_sent, denial_seen) = mpsc::channel();
+        let (third_sent, third_seen) = mpsc::channel();
+        let (started, finished) = (AtomicUsize::new(0), AtomicUsize::new(0));
+        let work = |item| {
+            started.fetch_add(1, Ordering::SeqCst);
+            match item {
+                0 => {
+                    finished.fetch_add(1, Ordering::SeqCst);
+                    Ok((0, true))
+                }
+                1 => {
+                    release_fatal.wait();
+                    finished.fetch_add(1, Ordering::SeqCst);
+                    Err(Error::Defect("fatal after denied admission"))
+                }
+                2 => {
+                    third_sent.send(()).expect("third worker notified");
+                    finished.fetch_add(1, Ordering::SeqCst);
+                    Ok((2, false))
+                }
+                _ => unreachable!("three planned requests"),
+            }
+        };
+        std::thread::scope(|scope| {
+            let release_gate = Arc::clone(&release_fatal);
+            let release = scope.spawn(move || {
+                denial_seen
+                    .recv_timeout(Duration::from_secs(2))
+                    .expect("terminal denial delivered");
+                let third_started = third_seen.recv_timeout(Duration::from_millis(100)).is_ok();
+                release_gate.wait();
+                third_started
+            });
+            let mut delivered = Vec::new();
+            let result = workers::ordered_until(
+                2,
+                vec![0, 1, 2],
+                &Cancel::default(),
+                &work,
+                |outcome| outcome.1,
+                |outcome| {
+                    delivered.push(outcome.0);
+                    denial_sent.send(()).expect("denial observed");
+                    Ok::<(), Error>(())
+                },
+            );
+            assert!(matches!(
+                result,
+                Err(Error::Defect("fatal after denied admission"))
+            ));
+            assert_eq!(delivered, [0]);
+            assert!(
+                !release.join().expect("release helper"),
+                "third work admitted"
+            );
+        });
+        assert_eq!(started.load(Ordering::SeqCst), 2);
+        assert_eq!(finished.load(Ordering::SeqCst), 2, "both workers joined");
     }
 }

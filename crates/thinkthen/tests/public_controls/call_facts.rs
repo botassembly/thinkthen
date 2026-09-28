@@ -46,6 +46,57 @@ fn counters_and_cache_answers_match_the_real_attempts() {
     let _gone = std::fs::remove_dir_all(&folder);
 }
 
+#[test]
+fn each_public_question_model_selects_its_own_cache_freshness() {
+    let _serial = serial();
+    let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
+    let folder = std::env::temp_dir().join(format!(
+        "thinkthen-public-model-refresh-{}",
+        std::process::id()
+    ));
+    let _gone = std::fs::remove_dir_all(&folder);
+    let build = |model: &str| {
+        Engine::builder()
+            .base_url(listener.base())
+            .and_then(|builder| builder.api_key("sk-public-controls"))
+            .and_then(|builder| builder.model(model))
+            .and_then(|builder| builder.cache_at(&folder))
+            .and_then(thinkthen::EngineBuilder::build)
+            .expect("engine")
+    };
+    let alias_question = Question::decide("Does this ask for a refund?")
+        .expect("question")
+        .model("jev-latest")
+        .expect("alias")
+        .cut();
+    let pinned_question = Question::decide("Does this ask for a refund?")
+        .expect("question")
+        .model("jev-1.13.0")
+        .expect("pin")
+        .cut();
+    let pinned_engine = build("jev-1.13.0");
+    let first = pinned_engine
+        .decide(&alias_question, "Refund me.")
+        .expect("first alias answer");
+    let second = pinned_engine
+        .decide(&alias_question, "Refund me.")
+        .expect("refreshed alias answer");
+    assert_eq!(first.facts().requests_sent(), 1);
+    assert_eq!(second.facts().requests_sent(), 1);
+    let alias_engine = build("jev-latest");
+    let third = alias_engine
+        .decide(&pinned_question, "Refund me.")
+        .expect("first pinned answer");
+    let fourth = alias_engine
+        .decide(&pinned_question, "Refund me.")
+        .expect("cached pinned answer");
+    assert_eq!(third.facts().requests_sent(), 1);
+    assert_eq!(fourth.facts().requests_sent(), 0);
+    assert_eq!(fourth.facts().cache_answers(), 1);
+    assert_eq!(listener.count(), 3);
+    let _gone = std::fs::remove_dir_all(folder);
+}
+
 /// Ticket 0132: a reply over 1 MiB plus 8 bytes per request byte is refused by name, once.
 #[test]
 fn a_reply_over_its_limit_names_it() {
