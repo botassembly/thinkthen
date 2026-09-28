@@ -1,10 +1,7 @@
 //! The private C++ extension bridge. DuckDB values never cross this ABI.
 #![allow(unsafe_code, reason = "the bridge copies caller-owned byte ranges")]
 
-use std::cell::Cell;
 use std::ffi::c_void;
-use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::sync::Once;
 use std::sync::mpsc::{RecvTimeoutError, channel};
 use std::time::Duration;
 
@@ -16,17 +13,14 @@ mod complete_listed;
 mod find;
 mod listed;
 mod nested;
+mod panic;
 #[path = "ffi/scalar/ffi.rs"]
 mod scalar;
 mod settings;
+#[cfg(test)]
+mod tests;
 
 pub(crate) use settings::{BridgeSettings, asked, batch, probe};
-
-thread_local! {
-    static BRIDGE_DEPTH: Cell<usize> = const { Cell::new(0) };
-}
-
-static HOOK: Once = Once::new();
 
 unsafe extern "C" {
     fn thinkthen_cpp_interrupt_busy();
@@ -37,42 +31,8 @@ fn interrupt_relate() {
     unsafe { thinkthen_cpp_interrupt_busy() };
 }
 
-fn install_hook() {
-    HOOK.call_once(|| {
-        let previous = std::panic::take_hook();
-        std::panic::set_hook(Box::new(move |info| {
-            if !BRIDGE_DEPTH
-                .try_with(|depth| depth.get() > 0)
-                .unwrap_or(false)
-            {
-                previous(info);
-            }
-        }));
-    });
-}
-
-struct BridgeDepth(usize);
-
-impl Drop for BridgeDepth {
-    fn drop(&mut self) {
-        BRIDGE_DEPTH.with(|depth| depth.set(self.0));
-    }
-}
-
-fn in_bridge<T>(call: impl FnOnce() -> T) -> T {
-    install_hook();
-    let prior = BRIDGE_DEPTH.with(|depth| {
-        let prior = depth.get();
-        depth.set(prior.saturating_add(1));
-        prior
-    });
-    let _restore = BridgeDepth(prior);
-    call()
-}
-
 fn guarded<T>(call: impl FnOnce() -> Result<T, String>) -> Result<T, String> {
-    catch_unwind(AssertUnwindSafe(|| in_bridge(call)))
-        .unwrap_or_else(|_| Err("thinkthen defect: the bridge panicked".to_owned()))
+    panic::caught(call).unwrap_or_else(|_| Err("thinkthen defect: the bridge panicked".to_owned()))
 }
 
 /// A Rust-owned reply; C++ copies it before calling `thinkthen_cpp_free`.
@@ -103,7 +63,7 @@ fn answered(result: Result<Vec<u8>, String>) -> Reply {
 }
 
 pub(crate) fn reply_boundary(call: impl FnOnce() -> Result<Vec<u8>, String>) -> Reply {
-    catch_unwind(AssertUnwindSafe(|| in_bridge(|| answered(call())))).unwrap_or(Reply {
+    panic::caught(|| answered(call())).unwrap_or(Reply {
         status: 4,
         bytes: std::ptr::null_mut(),
         len: 0,
@@ -157,21 +117,18 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_find(
 /// Initialize the direct bridge hook at extension load, before bind.
 #[unsafe(no_mangle)]
 pub(crate) extern "C" fn thinkthen_cpp_init() -> i32 {
-    catch_unwind(AssertUnwindSafe(|| {
-        install_hook();
+    panic::caught(|| {
         signal::install();
         signal::start_bridge(interrupt_relate);
-    }))
+    })
     .map_or(4, |_| 0)
 }
 
 /// Start the host-signal scope for one SQL statement.
 #[unsafe(no_mangle)]
 pub(crate) extern "C" fn thinkthen_cpp_query_begin() -> *mut signal::Invoke {
-    catch_unwind(AssertUnwindSafe(|| {
-        in_bridge(|| Box::into_raw(Box::new(signal::Invoke::begin())))
-    }))
-    .unwrap_or(std::ptr::null_mut())
+    panic::caught(|| Box::into_raw(Box::new(signal::Invoke::begin())))
+        .unwrap_or(std::ptr::null_mut())
 }
 
 /// Read one still-owned statement's host-signal scope.
@@ -180,12 +137,10 @@ pub(crate) extern "C" fn thinkthen_cpp_query_begin() -> *mut signal::Invoke {
 /// `scope` is a live value returned by `thinkthen_cpp_query_begin`.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_cpp_query_stopped(scope: *const signal::Invoke) -> i32 {
-    catch_unwind(AssertUnwindSafe(|| {
-        in_bridge(|| {
-            // SAFETY: the C++ statement owner retains this value through the call.
-            unsafe { scope.as_ref() }.is_none_or(signal::Invoke::stopped)
-        })
-    }))
+    panic::caught(|| {
+        // SAFETY: the C++ statement owner retains this value through the call.
+        unsafe { scope.as_ref() }.is_none_or(signal::Invoke::stopped)
+    })
     .map_or(1, i32::from)
 }
 
@@ -195,14 +150,12 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_query_stopped(scope: *const signal
 /// `scope` is a live value returned by `thinkthen_cpp_query_begin`, freed once.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_cpp_query_end(scope: *mut signal::Invoke) {
-    let _ = catch_unwind(AssertUnwindSafe(|| {
-        in_bridge(|| {
-            if !scope.is_null() {
-                // SAFETY: the C++ statement owner calls end once on this allocation.
-                drop(unsafe { Box::from_raw(scope) });
-            }
-        })
-    }));
+    let _ = panic::caught(|| {
+        if !scope.is_null() {
+            // SAFETY: the C++ statement owner calls end once on this allocation.
+            drop(unsafe { Box::from_raw(scope) });
+        }
+    });
 }
 
 /// Free one returned byte buffer, including an error reply.
@@ -367,7 +320,7 @@ pub(crate) fn run_detached<T: Send + 'static>(
     std::thread::Builder::new()
         .name("thinkthen-duckdb-call".to_owned())
         .spawn(move || {
-            let result = catch_unwind(AssertUnwindSafe(|| in_bridge(|| work(owned))))
+            let result = panic::caught(|| work(owned))
                 .unwrap_or_else(|_| Err("thinkthen defect: the engine worker panicked".to_owned()));
             let _ = sender.send(result);
         })
