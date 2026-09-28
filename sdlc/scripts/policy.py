@@ -1315,11 +1315,10 @@ def is_test_source(relative: str) -> bool:
             or relative.endswith(("/tests.rs", "_tests.rs")))
 
 
-def door_failures(sources: dict[str, str]) -> list[str]:
+def door_failures(sources: dict[str, list[str]]) -> list[str]:
     """Name each second live-send door and each second width-state reference."""
     held = []
-    for relative, text in sorted(sources.items()):
-        tokens = rust_tokens(text)
+    for relative, tokens in sorted(sources.items()):
         if "ureq" in tokens and relative != HTTP_DOOR and not is_test_source(relative):
             held.append(f"{relative} reaches ureq outside {HTTP_DOOR}")
         if ("signal_hook" in tokens and relative.startswith(ENGINE)
@@ -1332,11 +1331,12 @@ def door_failures(sources: dict[str, str]) -> list[str]:
 
 
 def check_doors() -> None:
-    sources = {
+    text_sources = {
         source.relative_to(REPO).as_posix(): source.read_text(encoding="utf-8")
         for source in sorted((REPO / "crates/thinkthen/src").rglob("*.rs"))
     }
-    if WIDTH_STATE not in rust_tokens(sources.get(WIDTH_DOOR, "")):
+    sources = {relative: rust_tokens(text) for relative, text in text_sources.items()}
+    if WIDTH_STATE not in sources.get(WIDTH_DOOR, []):
         fail("doors", f"{WIDTH_DOOR} holds the process width state")
     for failure in door_failures(sources):
         fail("doors", failure)
@@ -1349,7 +1349,8 @@ def check_doors() -> None:
         ("crates/thinkthen/src/engine/recorder.rs", "signal_hook::flag::register(SIGXFSZ, flag)"),
     )
     for relative, text in plants:
-        if not door_failures({**sources, relative: sources.get(relative, "") + "\n" + text}):
+        changed = rust_tokens(text_sources.get(relative, "") + "\n" + text)
+        if not door_failures({**sources, relative: changed}):
             fail("doors", f"the planted door {text[-60:]!r} in {relative} is refused")
     controls = (
         ("crates/thinkthen/src/cli/find.rs", "// ureq stays in the HTTP module"),
@@ -1359,7 +1360,8 @@ def check_doors() -> None:
         ("crates/thinkthen/src/cli/file_size.rs", "signal_hook::flag::register"),
     )
     for relative, text in controls:
-        if door_failures({**sources, relative: sources.get(relative, "") + "\n" + text}):
+        changed = rust_tokens(text_sources.get(relative, "") + "\n" + text)
+        if door_failures({**sources, relative: changed}):
             fail("doors", f"the door control {text!r} in {relative} stays allowed")
 
 
@@ -1397,13 +1399,12 @@ def without_test_modules(tokens: list[str]) -> list[str]:
     return kept
 
 
-def facade_failures(sources: dict[str, str]) -> list[str]:
+def facade_failures(sources: dict[str, list[str]]) -> list[str]:
     """Name each second pool builder and each command path under the facade."""
     held = []
-    for relative, text in sorted(sources.items()):
+    for relative, tokens in sorted(sources.items()):
         if is_test_source(relative):
             continue
-        tokens = without_test_modules(rust_tokens(text))
         if relative != FACADE and any(
                 token_path_at(tokens, place, ("Client", "new")) for place in range(len(tokens))):
             held.append(f"{relative} builds the HTTP pool outside {FACADE}")
@@ -1431,12 +1432,17 @@ def facade_failures(sources: dict[str, str]) -> list[str]:
 
 
 def check_facade() -> None:
-    sources = {
+    text_sources = {
         source.relative_to(REPO).as_posix(): source.read_text(encoding="utf-8")
         for source in sorted((REPO / "crates/thinkthen/src").rglob("*.rs"))
     }
-    if not any(token_path_at(rust_tokens(sources.get(FACADE, "")), place, ("Client", "new"))
-               for place in range(len(rust_tokens(sources.get(FACADE, ""))))):
+    raw_sources = {relative: rust_tokens(text) for relative, text in text_sources.items()}
+    sources = {
+        relative: without_test_modules(tokens) for relative, tokens in raw_sources.items()
+    }
+    facade = raw_sources.get(FACADE, [])
+    if not any(token_path_at(facade, place, ("Client", "new"))
+               for place in range(len(facade))):
         fail("facade", f"{FACADE} builds the HTTP pool")
     for failure in facade_failures(sources):
         fail("facade", failure)
@@ -1455,7 +1461,8 @@ def check_facade() -> None:
         (LIBRARY_ROOT, "pub(crate) use engine::{http, recorder};"),
     )
     for relative, text in plants:
-        if not facade_failures({**sources, relative: sources.get(relative, "") + "\n" + text}):
+        changed = without_test_modules(rust_tokens(text_sources.get(relative, "") + "\n" + text))
+        if not facade_failures({**sources, relative: changed}):
             fail("facade", f"the planted facade bypass {text[-60:]!r} in {relative} is refused")
     controls = (
         ("crates/thinkthen/src/cli/find.rs", "use crate::engine::facade::{Engine, Found};"),
@@ -1468,7 +1475,8 @@ def check_facade() -> None:
          "#[cfg(test)]\nmod more { fn f() { Client::new(Duration::ZERO, false); } }"),
     )
     for relative, text in controls:
-        if facade_failures({**sources, relative: sources.get(relative, "") + "\n" + text}):
+        changed = without_test_modules(rust_tokens(text_sources.get(relative, "") + "\n" + text))
+        if facade_failures({**sources, relative: changed}):
             fail("facade", f"the facade control {text!r} in {relative} stays allowed")
 
 
