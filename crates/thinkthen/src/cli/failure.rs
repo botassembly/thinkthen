@@ -180,6 +180,10 @@ pub(crate) enum Failure {
     Configuration(&'static str),
     CacheEntry,
     StatusState,
+    StatusUsage {
+        name: String,
+        category: &'static str,
+    },
     Defect(&'static str),
     /// A measuring command refused its inputs or options.
     Measure(crate::cli::measure::Refusal),
@@ -365,6 +369,10 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
             5,
             "status could not read the local cache or usage state; check its permissions and contents"
                 .to_owned(),
+        ),
+        Failure::StatusUsage { name, category } => (
+            5,
+            format!("status could not read local usage file {name}: {category}"),
         ),
         Failure::InvalidUtf8 { record } => (
             5,
