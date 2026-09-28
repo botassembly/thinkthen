@@ -6,11 +6,11 @@ opens: sdlc/tickets/0251-safe-replay-miss-context.md sdlc/records/0251-replay-co
 
 # 0251: Reconcile safe replay miss context with register 102
 
-Status: coordinator disposition proposal pending fresh independent High review. No implementation or closure approved. [Preflight](../records/0251-replay-context-preflight.md) uses source `3918bba2` and the original experiment 284/102 criterion; root owns the row and count change.
+Status: fresh independent High review accepted `0327a13d`; the coordinator adopts the stated disagreed-approach disposition. No new runtime implementation is claimed. [Preflight](../records/0251-replay-context-preflight.md) uses source `3918bba2` and the original experiment 284/102 criterion; root owns the row and count change.
 
 ## Outcome and proposed design
 
-Preserve 0221's safe strict-replay diagnostic: the stopped record or packed request range, annotate group ordinal/member count, and exact entry digest, with `Local`/exit 5, zero sends, read-only replay, and existing secrecy. Explicitly **decline** printing a caller-controlled question filename, path or member. The original register 102 set-name criterion remains **unmet**; the absence of a top-level schema name does not satisfy it. Propose final row status **nonissue / disagreed approach**, not `done` or already fully fixed, after this High review. This is a disposition, not a new runtime carrier or claim that the original literal outcome shipped. A later materially justified safe naming design could reopen the row.
+Preserve 0221's safe strict-replay diagnostic: the stopped record or packed request range, annotate group ordinal/member count, and exact entry digest, with `Local`/exit 5, zero sends, read-only replay, and existing secrecy. Explicitly **decline** printing a caller-controlled question filename, path or member. The original register 102 set-name criterion remains **unmet**; the absence of a top-level schema name does not satisfy it. The final row status is **nonissue / disagreed approach**, not `done` or already fully fixed. This is a disposition, not a new runtime carrier or claim that the original literal outcome shipped. A later materially justified safe naming design could reopen the row.
 
 ## Evidence
 
@@ -22,8 +22,8 @@ Preserve 0221's safe strict-replay diagnostic: the stopped record or packed requ
 
 ## Routing and retained contract
 
-Proposed final status after High review: **nonissue / disagreed approach**. Credit 0221 only for the position/range, group context and digest that it actually implemented. The literal set-name criterion stays visibly unmet because printing caller-controlled text is declined for secrecy; do not call the row `done` or already fully fixed. Do not reopen 0221's safe labels or infer a unique question from a grouped request. Root owns the status/count edit after review. No source claim or build follows from this disposition.
+Coordinator disposition after High review: **nonissue / disagreed approach**. Credit 0221 only for the position/range, group context and digest that it actually implemented. The literal set-name criterion stays visibly unmet because printing caller-controlled text is declined for secrecy; do not call the row `done` or already fully fixed. Do not reopen 0221's safe labels or infer a unique question from a grouped request. Root records this status in the item table. No source claim or build follows from this disposition.
 
 ## What the build taught us
 
-No build has begun. Preparation found that 0221 carries position and digest, while its remaining component-diagnosis sentence is not an original criterion. High review caught two mistakes in the first note: an absent top-level schema name does not satisfy the original filename criterion, and a streamed annotate miss after record 1 can retain completed stdout. The coordinator therefore proposes a disagreed-approach disposition and no new test or behavior.
+No build has begun. Preparation found that 0221 carries position and digest, while its remaining component-diagnosis sentence is not an original criterion. High review caught two mistakes in the first note: an absent top-level schema name does not satisfy the original filename criterion, and a streamed annotate miss after record 1 can retain completed stdout. The coordinator adopts the disagreed-approach disposition without a new test or behavior.
