@@ -77,7 +77,20 @@ impl fmt::Debug for Judged {
             .field("replayed", &self.replayed)
             .field("probability", &self.probability)
             .field("partial_failure", &self.partial_failure)
-            .field("profile_warning", &self.profile_mismatch.is_some())
+            .field(
+                "profile_warning",
+                &self
+                    .profile_mismatch
+                    .as_ref()
+                    .is_some_and(|mismatch| mismatch.warning().is_some()),
+            )
+            .field(
+                "batch_warning",
+                &self
+                    .profile_mismatch
+                    .as_ref()
+                    .is_some_and(|mismatch| mismatch.batch_warning().is_some()),
+            )
             .finish()
     }
 }

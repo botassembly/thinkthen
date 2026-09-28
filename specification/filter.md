@@ -32,6 +32,7 @@ Each kept line or JSONL record prints as it arrived, in input order. A kept CSV 
 | `--lines`, `--jsonl`, `--csv`, or `--tsv` | The framing | `--lines`, or `--jsonl` when a pointer is given |
 | `--field POINTER` | The part of each record the model sees. See [records.md](records.md) | The whole record |
 | `--details` | Prints one result object per kept record in place of the kept records | Off |
+| `--context FILE` | Uses the file's text once as shared evidence in each record batch; see [records.md](records.md) | None |
 | `--input FILE` | Reads the records from a file | Standard input |
 | `--true TEXT`, `--false TEXT` | What a yes and a no mean, sent beside the question | No text |
 | `--dry-run` | Prints the plan for the first record and sends nothing | Off |
@@ -59,6 +60,12 @@ thinkthen filter 'This describes a reproducible bug.' --jsonl --field /body < is
 ```sh
 thinkthen filter 'This mentions an open action.' --threshold 0.9 < notes.txt
 ```
+
+```sh
+thinkthen filter 'It appears on the album Abbey Road.' --threshold 0.7 --context catalog.txt < songs.txt
+```
+
+Ticket 0172's [live record](../sdlc/records/2026-09-27-0172-shared-context-build.md) used `decide` to expose all 306 answers for audit under this question and cut. Each of three shared-catalog runs sent one request, scored 306 right with no false yeses or misses, and reported 19,634 input and 5,710 output tokens. This measures the shared request form, not a separate `filter` run.
 
 ```sh
 thinkthen decide 'This reports a payment failure.' --jsonl --field /body --details < tickets.jsonl |

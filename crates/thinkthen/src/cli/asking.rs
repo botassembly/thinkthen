@@ -4,12 +4,14 @@
 //! `judge.rs` decides what a run keeps and what view it prints in.
 
 use std::io::Read;
+use std::num::NonZeroUsize;
 use std::process::ExitCode;
 use std::time::Duration;
 
 use crate::core::{
     Backend, BackendProfile, BatchMeta, Evidence, Framing, Outcome, Pointer, Question,
-    QuestionText, Reading, Record, RecordValue, Resolved, Sources, Threshold, Value, json_line,
+    QuestionText, Reading, Record, RecordValue, Resolved, Setting, Sources, Threshold, Value,
+    json_line,
 };
 
 use crate::args::Common;
@@ -25,9 +27,11 @@ use crate::table::{Kind as TableKind, Rows as TableRows};
 
 mod batch_meta;
 mod batched;
+mod context;
 mod folders;
 mod plan;
 
+use context::Context;
 pub(crate) use folders::Folders;
 use plan::{plan, plan_record, print_plan};
 
@@ -170,15 +174,37 @@ pub(crate) fn run(
         environment.warn_request_size(&backend)?;
     }
     let profile = profile::read(common)?;
-    let mismatch = Mismatch::new(settled.profile(), profile.as_ref());
     let reading = read_by(common, settled, keeping)?;
     if view.quiet && reading.streams() {
         return Err(Failure::QuietOverRecords);
     }
     schedule::jobs_of(common.jobs, reading.streams())?;
+    let context = context::for_run(
+        batch.as_ref().and_then(|tiers| tiers.context),
+        reading.streams(),
+        settled.text().as_json().as_str().is_some(),
+    )?;
+    let tuned_for = batch
+        .as_ref()
+        .filter(|tiers| tiers.tuned)
+        .and_then(|tiers| match tiers.file.as_ref() {
+            Some(value) => Setting::of_json(value),
+            None => Some(Setting::Records(NonZeroUsize::MIN)),
+        });
     let batch = batch.map_or(Ok(None), |tiers| {
         tiers.setting(environment, reading.streams())
     })?;
+    let mismatch = match batch {
+        Some(running) => {
+            let running = if settled.text().as_json().as_str().is_some() {
+                running
+            } else {
+                Setting::Records(NonZeroUsize::MIN)
+            };
+            Mismatch::new(settled.profile(), profile.as_ref()).with_batch(tuned_for, running)
+        }
+        None => Mismatch::new(settled.profile(), profile.as_ref()),
+    };
     let source = edge::source(common.input.as_deref(), input)?;
     let configuration = JudgingInput {
         common,
@@ -192,6 +218,7 @@ pub(crate) fn run(
         streams: reading.streams(),
         profile,
         mismatch,
+        context,
         sources: (settled.sources().question_is_from_file() || configured_model.is_some()).then(
             || {
                 if configured_model.is_some() {
@@ -329,6 +356,7 @@ struct Judging<'a> {
     keeping: Keeping,
     streams: bool,
     mismatch: Mismatch,
+    context: Option<Context>,
 }
 
 struct JudgingInput<'a> {
@@ -344,6 +372,7 @@ struct JudgingInput<'a> {
     sources: Option<Sources>,
     profile: Option<BackendProfile>,
     mismatch: Mismatch,
+    context: Option<Context>,
 }
 
 impl Judging<'_> {
@@ -361,6 +390,7 @@ impl Judging<'_> {
             sources: _,
             profile,
             mismatch,
+            context,
         } = input;
         Ok(Judging {
             environment,
@@ -371,6 +401,7 @@ impl Judging<'_> {
             keeping,
             streams,
             mismatch,
+            context,
         })
     }
 
@@ -438,6 +469,11 @@ impl Judging<'_> {
                     backend: self.engine.backend(),
                     tuned_for: self.tuned_for_profile(),
                     warning: self.mismatch.warning(),
+                    batch_warning: self.mismatch.batch_warning(),
+                    context_sha256: self
+                        .context
+                        .as_ref()
+                        .map(|context| context.digest().to_owned()),
                 };
                 let input = self.streams.then_some(record);
                 Some(decision_with_batch(

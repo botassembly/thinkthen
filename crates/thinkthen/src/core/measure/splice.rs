@@ -44,6 +44,30 @@ pub(crate) fn splice(text: &str, path: &[&str], value: &str) -> Option<(String, 
     ))
 }
 
+/// Remove one object member while preserving every other member's bytes.
+/// Returns the new text and the removed value, or `None` when the path is absent.
+pub(crate) fn remove(text: &str, path: &[&str]) -> Option<(String, String)> {
+    let bytes = text.as_bytes();
+    let (last, way) = path.split_last()?;
+    let mut at = space(bytes, 0);
+    for name in way {
+        let (members, _) = object(bytes, at)?;
+        at = members.into_iter().find(|m| m.key == *name)?.value_start;
+    }
+    let (members, _) = object(bytes, at)?;
+    let position = members.iter().position(|member| member.key == *last)?;
+    let found = members.get(position)?;
+    let old = text.get(found.value_start..found.value_end)?.to_owned();
+    let (start, end) = if let Some(comma) = found.comma {
+        (comma, found.value_end)
+    } else if let Some(next) = members.get(position + 1) {
+        (found.key_start, next.key_start)
+    } else {
+        (found.key_start, found.value_end)
+    };
+    Some((format!("{}{}", text.get(..start)?, text.get(end..)?), old))
+}
+
 fn space(bytes: &[u8], mut at: usize) -> usize {
     while bytes.get(at).is_some_and(u8::is_ascii_whitespace) {
         at += 1;

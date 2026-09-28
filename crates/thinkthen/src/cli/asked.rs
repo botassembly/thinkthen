@@ -23,6 +23,12 @@ fn path_of(question: &str) -> Option<&str> {
 /// Clippy's type-complexity rule asks for the name.
 type Top = (Option<QuestionFile>, Option<Json>);
 
+/// The raw file batch tier and whether that file carries a tuned threshold.
+pub(crate) struct FileTier {
+    pub(crate) batch: Option<Json>,
+    pub(crate) tuned: bool,
+}
+
 /// Read and check the question file the first argument names, if it names
 /// one, with a `decide` file's raw `batch`.
 fn read_top(question: &str) -> Result<Top, Failure> {
@@ -56,8 +62,9 @@ fn yes_no(
     threshold: Option<&String>,
     cutting: Cutting,
     common: &Common,
-) -> Result<(Resolved, Option<Json>), Failure> {
+) -> Result<(Resolved, FileTier), Failure> {
     let (file, batch) = read_top(question)?;
+    let tuned = file.as_ref().is_some_and(QuestionFile::has_threshold);
     let typed = Typed {
         threshold: threshold.cloned(),
         yes: meanings.yes.clone(),
@@ -82,11 +89,11 @@ fn yes_no(
         }
         other => Failure::Question(other),
     })
-    .map(|resolved| (resolved, batch))
+    .map(|resolved| (resolved, FileTier { batch, tuned }))
 }
 
 /// Settle everything `decide` was asked.
-pub(crate) fn decide(arguments: &DecideArguments) -> Result<(Resolved, Option<Json>), Failure> {
+pub(crate) fn decide(arguments: &DecideArguments) -> Result<(Resolved, FileTier), Failure> {
     yes_no(
         "decide",
         &arguments.question,
@@ -98,7 +105,7 @@ pub(crate) fn decide(arguments: &DecideArguments) -> Result<(Resolved, Option<Js
 }
 
 /// Settle everything `filter` was asked, which takes a single cut alone.
-pub(crate) fn filter(arguments: &FilterArguments) -> Result<(Resolved, Option<Json>), Failure> {
+pub(crate) fn filter(arguments: &FilterArguments) -> Result<(Resolved, FileTier), Failure> {
     yes_no(
         "filter",
         &arguments.question,
@@ -110,7 +117,7 @@ pub(crate) fn filter(arguments: &FilterArguments) -> Result<(Resolved, Option<Js
 }
 
 /// Settle everything `rank` was asked, which reads no rule at all.
-pub(crate) fn rank(arguments: &RankArguments) -> Result<(Resolved, Option<Json>), Failure> {
+pub(crate) fn rank(arguments: &RankArguments) -> Result<(Resolved, FileTier), Failure> {
     yes_no(
         "rank",
         &arguments.question,

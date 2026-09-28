@@ -285,12 +285,13 @@ def check_crates() -> None:
     manifest = check_member("thinkthen")
     target = manifest.get("target", {}).get("cfg(unix)", {}).get("dependencies", {})
     # Ticket 0078 masks signals. Ticket 0162 polls stdout for a closed pipe.
+    # The configuration owner warning reads the effective Unix user.
     if target.get("nix") != {
         "version": "0.29",
         "default-features": False,
-        "features": ["poll", "signal"],
+        "features": ["poll", "signal", "user"],
     }:
-        fail("dependencies", "nix is a Unix library dependency with only its poll and signal features")
+        fail("dependencies", "nix is a Unix library dependency with only its poll, signal and user features")
     target_dev = manifest.get("target", {}).get("cfg(unix)", {}).get("dev-dependencies", {})
     if target_dev.get("nix") != {
         "version": "0.29",
