@@ -1,12 +1,12 @@
 ---
 flow: build
 priority: 231
-opens: databases/duckdb/tools/setup.sh databases/duckdb/tools/version.env databases/duckdb/cpp/archive-sha256.txt databases/duckdb/cpp/CMakeLists.txt databases/duckdb/cpp/build.sh databases/duckdb/check.sh databases/duckdb/cpp/verify_package.py databases/duckdb/cpp/verify_interrupt.py databases/duckdb/tools/settings_suite.py sdlc/scripts/release-pack sdlc/scripts/release-smoke databases/duckdb/README.md sdlc/planning/databases/duckdb.md sdlc/issues sdlc/records sdlc/tickets
+opens: databases/duckdb/tools/setup.sh databases/duckdb/tools/version.env databases/duckdb/cpp/archive-sha256.txt databases/duckdb/cpp/archive-sha256-osx-arm64.txt databases/duckdb/cpp/CMakeLists.txt databases/duckdb/cpp/build.sh databases/duckdb/check.sh databases/duckdb/cpp/verify_package.py databases/duckdb/cpp/verify_interrupt.py databases/duckdb/tools/settings_suite.py databases/duckdb/tools/settings_cases.py databases/duckdb/tools/conformance.py databases/duckdb/src/signal.rs databases/duckdb/bridge/src/ffi.rs databases/duckdb/ratchet.json databases/duckdb/ratchet.py.json sdlc/scripts/release-pack sdlc/scripts/release-smoke databases/duckdb/README.md sdlc/planning/databases/duckdb.md sdlc/issues sdlc/records sdlc/tickets
 ---
 
 # 0231: Ship the DuckDB C++ extension on the other release platforms
 
-Status: design accepted after fresh independent review at `f1eafad9`; [review record](../records/0231-design-review.md). Owner: Codex. The Linux x86-64 implementation already landed under 0201, 0149 and 0157. This ticket adds Linux ARM64 and macOS x86-64/ARM64 package paths and their native proof before 0.1; it changes no SQL API. Exact implementation files need a new claim before code.
+Status: design accepted after fresh independent review at `f1eafad9`; [review record](../records/0231-design-review.md). Owner: Codex. The first macOS ARM64 source and native installed archive are staged in the [build record](../records/0231-macos-arm64-build.md) and await fresh High code review. Linux ARM64 and macOS x86-64 remain open. The Linux x86-64 implementation already landed under 0201, 0149 and 0157. This ticket changes no SQL API.
 
 ## Outcome and authority
 
@@ -59,4 +59,6 @@ Close a target's 0201/0149/0157 and register 51/72 **DuckDB platform remainder**
 
 ## What the build taught us
 
-Pending implementation and review. Record changes to the input map, native link assumptions and proof selection before landing.
+The official macOS ARM64 static ZIP has 21 archives, so it needs its own manifest and Apple link line. The native M5 link exposed Homebrew Rust 1.95.0 standard-library objects with macOS 26 deployment metadata even when the final extension reported macOS 15. A project-local official Rust 1.95.0 toolchain fixed that input, and the build now rejects an incompatible Rust standard library. The selected installed package passes stock-host load/refusal and the affected settings, query-budget, relation, request-size and SIGINT checks. The earlier 50 ms bridge poll missed the strict 100 ms cancellation bound on M5; 10 ms polling passed it. An atomic live-invoke interval prevents a later query from inheriting the prior signal wave while a sibling invoke in the same interval still sees it.
+
+The landed 0212 Rust default packs multiple records into one request. DuckDB's existing shared cases 27/28 pin the prior per-record request bodies, so the DuckDB adapter selects batch 1 only for those children and checks a separate literal packed-default request. The shared settings corpus's one concurrent max-requests row now checks the transport ceiling and a successful two-record allowance; a failing multirow statement can stop before all allowed transports arrive. The exact archive, source revisions and bounded proof are in the build record. This first target still needs independent High code review. Linux ARM64 and macOS x86-64 need their own C++ manifests, native builds and installed proof. Ticket 0128 separately owns whole-release runner rehearsal.
