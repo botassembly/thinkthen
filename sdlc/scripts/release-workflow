@@ -148,12 +148,18 @@ crate-smoke)
 	[ "$#" = 3 ] || fail 'crate-smoke CRATE_DIR SAMPLE_DIR'
 	work=$(mktemp -d)
 	trap 'rm -rf -- "$work"' EXIT
-	crate=$2/thinkthen-$version.crate
+	crate_dir=$(CDPATH='' cd -- "$2" && pwd)
+	sample_dir=$(CDPATH='' cd -- "$3" && pwd)
+	crate=$crate_dir/thinkthen-$version.crate
 	[ -f "$crate" ] || fail "missing packed crate $crate"
 	tar -xzf "$crate" -C "$work"
-	cargo install --locked --path "$work/thinkthen-$version" --root "$work/install"
-	tar -xzf "$3/thinkthen-first-run.tar.gz" -C "$work"
-	answer=$(env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL "$work/install/bin/thinkthen" decide \
+	cargo install --locked --offline --path "$work/thinkthen-$version" --root "$work/install"
+	tar -xzf "$sample_dir/thinkthen-first-run.tar.gz" -C "$work"
+	mkdir -p "$work/home/.cache" "$work/home/.config" "$work/home/.local/share"
+	answer=$(env -i HOME="$work/home" XDG_CACHE_HOME="$work/home/.cache" \
+		XDG_CONFIG_HOME="$work/home/.config" XDG_DATA_HOME="$work/home/.local/share" \
+		PATH=/usr/bin:/bin LD_LIBRARY_PATH="${LD_LIBRARY_PATH:-}" DYLD_LIBRARY_PATH="${DYLD_LIBRARY_PATH:-}" \
+		"$work/install/bin/thinkthen" decide \
 		'Does this report say what the person did before the problem appeared?' \
 		--replay "$work/thinkthen-first-run/recording" <"$work/thinkthen-first-run/report.txt")
 	[ "$answer" = true ] || fail "the packed crate first run answered $answer"

@@ -184,11 +184,13 @@ jobs:
 
   crates:
     needs: [resolve, draft]
-    if: inputs.mode == 'release' && vars.RELEASE_ARMED == 'true'
+    if: inputs.mode == 'release'
     environment: release
     runs-on: ubuntu-24.04
     permissions: {contents: read, id-token: write}
     steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
       - uses: rust-lang/crates-io-auth-action@63a7064947ceca9989005e118db3a5fecdc9259f # v1.0.0
@@ -198,11 +200,13 @@ jobs:
 
   pypi:
     needs: [resolve, draft]
-    if: inputs.mode == 'release' && vars.RELEASE_ARMED == 'true'
+    if: inputs.mode == 'release'
     environment: release
     runs-on: ubuntu-24.04
     permissions: {actions: read, id-token: write}
     steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {pattern: 'platform-*', path: platform}
       - run: |
@@ -213,11 +217,13 @@ jobs:
 
   npm:
     needs: [resolve, draft]
-    if: inputs.mode == 'release' && vars.RELEASE_ARMED == 'true'
+    if: inputs.mode == 'release'
     environment: release
     runs-on: ubuntu-24.04
     permissions: {actions: read, id-token: write}
     steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with: {node-version: '22.22.3', registry-url: 'https://registry.npmjs.org'}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -228,11 +234,13 @@ jobs:
 
   rubygems:
     needs: [resolve, draft]
-    if: inputs.mode == 'release' && vars.RELEASE_ARMED == 'true'
+    if: inputs.mode == 'release'
     environment: release
     runs-on: ubuntu-24.04
     permissions: {actions: read, id-token: write}
     steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
       - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
         with: {ruby-version: '3.4.11'}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -245,11 +253,13 @@ jobs:
 
   tap:
     needs: [resolve, draft]
-    if: inputs.mode == 'release' && vars.RELEASE_ARMED == 'true'
+    if: inputs.mode == 'release'
     environment: release
     runs-on: ubuntu-24.04
     permissions: {contents: read, actions: read}
     steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -259,11 +269,13 @@ jobs:
 
   publish:
     needs: [resolve, draft, crates, pypi, npm, rubygems, tap]
-    if: inputs.mode == 'release' && vars.RELEASE_ARMED == 'true'
+    if: inputs.mode == 'release'
     environment: release
     runs-on: ubuntu-24.04
     permissions: {contents: write}
     steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
       - env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", NAME: "${{ needs.resolve.outputs.name }}", SHA: "${{ needs.resolve.outputs.sha }}"}

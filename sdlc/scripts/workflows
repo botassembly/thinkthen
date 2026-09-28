@@ -25,6 +25,8 @@ UNPINNED = [
     (re.compile(r"gem install[^\n]*\brubygems-update\b(?! -v)"), "installs gem with no version"),
 ]
 RESOLVED = "${{ needs.resolve.outputs.sha }}"
+ARMED_STEP = {"env": {"RELEASE_ARMED": "${{ vars.RELEASE_ARMED }}"},
+              "run": '[ "$RELEASE_ARMED" = true ]'}
 
 
 def steps(doc):
@@ -99,9 +101,14 @@ def release(name, doc):
             value = [value]
         if set(value) != need:
             out.append(f"{name}: job {job} must need {', '.join(sorted(need))}")
-    for job in ("crates", "pypi", "npm", "rubygems", "tap", "publish"):
-        if "inputs.mode == 'release'" not in str(jobs.get(job, {}).get("if", "")):
+    outward = ("crates", "pypi", "npm", "rubygems", "tap", "publish")
+    for job in outward:
+        spec = jobs.get(job, {})
+        if spec.get("if") != "inputs.mode == 'release'":
             out.append(f"{name}: job {job} must require release mode")
+        first = (spec.get("steps") or [None])[0]
+        if first != ARMED_STEP:
+            out.append(f"{name}: job {job} must check environment RELEASE_ARMED before any outward step")
     for job, spec in (doc.get("jobs") or {}).items():
         permissions = spec.get("permissions") or {}
         text = yaml.safe_dump(spec)
@@ -112,8 +119,8 @@ def release(name, doc):
         environment = environment.get("name") if isinstance(environment, dict) else environment
         if (permissions.get("id-token") == "write" or secret) and environment != "release":
             out.append(f"{name}: job {job} holds id-token or a secret outside environment release")
-        if environment == "release" and "vars.RELEASE_ARMED == 'true'" not in str(spec.get("if", "")):
-            out.append(f"{name}: job {job} runs in environment release without the RELEASE_ARMED condition")
+        if job in outward and environment != "release":
+            out.append(f"{name}: job {job} must use environment release")
     for job, spec, step in steps(doc):
         uses = step.get("uses") or ""
         if "cache" in uses or "cache" in (step.get("with") or {}):
@@ -181,17 +188,49 @@ jobs:
         env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}
   pypi:
     needs: [resolve, draft]
-    if: inputs.mode == 'release' && vars.RELEASE_ARMED == 'true'
+    if: inputs.mode == 'release'
     runs-on: ubuntu-24.04
     environment: release
     permissions: {id-token: write}
     steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
       - run: echo publish
-  crates: {needs: [resolve, draft], if: "inputs.mode == 'release' && vars.RELEASE_ARMED == 'true'", environment: release}
-  npm: {needs: [resolve, draft], if: "inputs.mode == 'release' && vars.RELEASE_ARMED == 'true'", environment: release}
-  rubygems: {needs: [resolve, draft], if: "inputs.mode == 'release' && vars.RELEASE_ARMED == 'true'", environment: release}
-  tap: {needs: [resolve, draft], if: "inputs.mode == 'release' && vars.RELEASE_ARMED == 'true'", environment: release}
-  publish: {needs: [resolve, draft, crates, pypi, npm, rubygems, tap], if: "inputs.mode == 'release' && vars.RELEASE_ARMED == 'true'", environment: release}
+  crates:
+    needs: [resolve, draft]
+    if: inputs.mode == 'release'
+    environment: release
+    steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
+  npm:
+    needs: [resolve, draft]
+    if: inputs.mode == 'release'
+    environment: release
+    steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
+  rubygems:
+    needs: [resolve, draft]
+    if: inputs.mode == 'release'
+    environment: release
+    steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
+  tap:
+    needs: [resolve, draft]
+    if: inputs.mode == 'release'
+    environment: release
+    steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
+  publish:
+    needs: [resolve, draft, crates, pypi, npm, rubygems, tap]
+    if: inputs.mode == 'release'
+    environment: release
+    steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
 """
 
 
@@ -217,10 +256,15 @@ def self_test():
         ("write", "release.yml", lambda t: t.replace("    permissions: {contents: read}\n    container",
                                                       "    permissions: {contents: write}\n    container"),
          ["release.yml: job build holds contents: write; only draft and publish may"]),
-        ("environment", "release.yml", lambda t: t.replace("    environment: release\n", ""),
-         ["release.yml: job pypi holds id-token or a secret outside environment release"]),
-        ("armed", "release.yml", lambda t: t.replace(" && vars.RELEASE_ARMED == 'true'", "", 1),
-         ["release.yml: job pypi runs in environment release without the RELEASE_ARMED condition"]),
+        ("environment", "release.yml", lambda t: t.replace("    environment: release\n", "", 1),
+         ["release.yml: job pypi holds id-token or a secret outside environment release",
+          "release.yml: job pypi must use environment release"]),
+        ("armed", "release.yml", lambda t: t.replace('run: \'[ "$RELEASE_ARMED" = true ]\'', 'run: echo unarmed', 1),
+         ["release.yml: job pypi must check environment RELEASE_ARMED before any outward step"]),
+        ("armed-order", "release.yml", lambda t: t.replace('      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}',
+                                                            '      - run: echo early\n'
+                                                            '      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}', 1),
+         ["release.yml: job pypi must check environment RELEASE_ARMED before any outward step"]),
         ("checkout", "release.yml", lambda t: t.replace('{ref: "${{ needs.resolve.outputs.sha }}"}', '{ref: main}'),
          ["release.yml: job build checks out main, not the resolved SHA"]),
         ("top", "release.yml", lambda t: t.replace("permissions: {}\n", "permissions: {contents: read}\n"),
