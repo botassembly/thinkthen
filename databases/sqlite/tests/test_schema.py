@@ -83,14 +83,38 @@ db = sqlite3.connect(":memory:")
 db.enable_load_extension(True)
 try:
     db.load_extension({str(LIB)!r})
-    say(said="loaded")
+    said = "loaded"
 except sqlite3.Error as failure:
-    say(said=str(failure))
+    said = str(failure)
+db.close()
+later = sqlite3.connect(":memory:")
+say(said=said, later=later.execute("SELECT 7").fetchone()[0],
+    resident={str(LIB)!r} in __import__("pathlib").Path("/proc/self/maps").read_text()
+    if sys.platform.startswith("linux") else None)
 """, stock)
     number = sum(int(part) * scale for part, scale in zip(version.split("."), (1_000_000, 1_000, 1)))
     expect(held["said"], "error during initialization: thinkthen needs SQLite 3.50.0 or newer (below 3.50.0 a CHECK constraint in an untrusted"
            " database reaches the functions, so a schema could spend money or read files); this host is"
            f" {version} ({number})", "the refusal")
+    expect(held["later"], 7, "the host still works after a failed load")
+    if sys.platform.startswith("linux"):
+        expect(held["resident"], False, "a failed load leaves no pinned Linux DSO")
+
+
+def test_pinned_host_keeps_a_successful_registration_available() -> None:
+    """A close after a successful load keeps registered worker code mapped."""
+    held = child(f"""
+db = connect()
+usage = json.loads(db.execute("SELECT thinkthen_usage()").fetchone()[0])
+db.close()
+later = sqlite3.connect(":memory:")
+say(count=usage["requests_sent"], later=later.execute("SELECT 7").fetchone()[0],
+    resident={str(LIB)!r} in __import__("pathlib").Path("/proc/self/maps").read_text()
+    if sys.platform.startswith("linux") else None)
+""", environment(None))
+    expect((held["count"], held["later"]), (0, 7), "successful installed load and later use")
+    if sys.platform.startswith("linux"):
+        expect(held["resident"], True, "successful load retains worker code on Linux")
 
 
 def test_every_function_is_direct_only_and_volatile() -> None:

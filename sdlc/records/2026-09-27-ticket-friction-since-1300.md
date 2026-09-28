@@ -201,3 +201,9 @@ The 0226 SQLite worker regression was placed in the existing worker.rs test modu
 
 
 The 0212 same-candidate test compilation found a final mechanical Call consumer in tests/key_address.rs, outside the original public_*.rs and explicit consumer list. Its two Details accessors need the new carrier access; the credential collision assertion itself remains unchanged. The builder stopped that file before editing and requested its exact claim. For public result migrations, enumerate consumers by returned type and accessors as well as test filename prefixes, then use focused same-candidate compilation to find remaining consumers. This compile failure alone is not a product behavior defect.
+
+
+The 0226 integration missed SQLite’s separate Python source counter while verifying the root and native Rust counters. A post-landing all-counter check found its accepted installed-load proof added 22 Python lines; the remaining counters matched. The coordinator owns the incomplete integration check and corrects the counter with the same reviewer. Every declared source counter should run at native integration; this is a cheap metadata check and requires no rebuild. The root ratchet script uses repository-relative paths only in its default mode, so do not pass sdlc/ratchet.json as a named binding configuration.
+
+
+The 0212 observer pass found three oversized test files. Comparing to main distinguished inherited debt from this ticket: public_batches was 322 on main versus 528 at its earlier checkpoint and 657 in current work; public_controls was 497 versus 556; public_env was 490 versus 558. All three overages belong to 0212. The coordinator claimed coherent child modules under the existing targets, preserving test selection without adding another integration executable. Future checkpoints must run file caps early and compare against main, not label an earlier unreviewed checkpoint as pre-existing debt.

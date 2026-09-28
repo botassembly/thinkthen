@@ -9,7 +9,9 @@
 //! cannot spend money or read files. That promise needs SQLite 3.50.0 or
 //! newer, and the load refuses an older host by name (`ffi`).
 
+use std::cell::Cell;
 use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::sync::Once;
 
 use rusqlite::ffi::{
     self as sqlite, SQLITE_CANTOPEN, SQLITE_CONSTRAINT, SQLITE_ERROR, SQLITE_INTERRUPT,
@@ -30,6 +32,45 @@ mod tables;
 mod worker;
 
 pub use ffi::sqlite3_thinkthen_init;
+
+thread_local! {
+    static SQLITE_DEPTH: Cell<usize> = const { Cell::new(0) };
+}
+
+static SQLITE_HOOK: Once = Once::new();
+
+fn install_hook() {
+    SQLITE_HOOK.call_once(|| {
+        let previous = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            if !SQLITE_DEPTH
+                .try_with(|depth| depth.get() != 0)
+                .unwrap_or(false)
+            {
+                previous(info);
+            }
+        }));
+    });
+}
+
+struct SqliteDepth(usize);
+
+impl Drop for SqliteDepth {
+    fn drop(&mut self) {
+        SQLITE_DEPTH.with(|depth| depth.set(self.0));
+    }
+}
+
+pub(crate) fn in_sqlite_diagnostics<T>(body: impl FnOnce() -> T) -> T {
+    install_hook();
+    let prior = SQLITE_DEPTH.with(|depth| {
+        let prior = depth.get();
+        depth.set(prior.saturating_add(1));
+        prior
+    });
+    let _restore = SqliteDepth(prior);
+    body()
+}
 
 /// One failure on its way to SQLite: a kind, a safe message, and whether the
 /// same call may pass later.
@@ -120,16 +161,14 @@ impl From<Failure> for rusqlite::Error {
 /// Run one function body, virtual-table callback, or worker body, and turn a
 /// panic in this binding into `defect` (R2-31: the one guard).
 pub(crate) fn guard<T>(
-    what: &str,
+    _what: &str,
     body: impl FnOnce() -> Result<T, Failure>,
 ) -> Result<T, Failure> {
-    catch_unwind(AssertUnwindSafe(body)).unwrap_or_else(|payload| {
-        let text = payload
-            .downcast_ref::<&str>()
-            .map(|text| (*text).to_owned())
-            .or_else(|| payload.downcast_ref::<String>().cloned())
-            .unwrap_or_default();
-        Err(Failure::defect(format!("a panic crossed {what}: {text}")))
+    in_sqlite_diagnostics(|| {
+        catch_unwind(AssertUnwindSafe(body)).unwrap_or_else(|payload| {
+            std::mem::forget(payload);
+            Err(Failure::defect("a panic crossed the SQLite boundary"))
+        })
     })
 }
 
@@ -169,7 +208,7 @@ mod tests {
         assert_eq!(sqlite(busy).1, "thinkthen backend (retryable): status 503");
     }
 
-    /// R1-10 host half: a panic is `defect` with its text, and the next call answers.
+    /// R1-10 host half: a panic is a fixed defect, and the next call answers.
     #[test]
     fn a_panic_is_a_defect_and_the_next_call_answers() {
         let held = guard("thinkthen_probe", || -> Result<(), Failure> {
@@ -178,7 +217,7 @@ mod tests {
         let message = held.err().map(|failure| sqlite(failure).1);
         assert_eq!(
             message.as_deref(),
-            Some("thinkthen defect: a panic crossed thinkthen_probe: the probe blew up")
+            Some("thinkthen defect: a panic crossed the SQLite boundary")
         );
         assert_eq!(guard("thinkthen_probe", || Ok(7)).ok(), Some(7));
     }
