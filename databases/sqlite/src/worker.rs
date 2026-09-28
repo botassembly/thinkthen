@@ -25,13 +25,13 @@ const TICK: Duration = Duration::from_millis(50);
 /// Run `work` on a detached worker over the process engine, under the call's
 /// deadline in milliseconds, while this thread listens on `db` for SQLite's
 /// interrupt.
-/// A spent process request total refuses first, with no send.
+/// A spent process request total refuses a scalar before its worker starts.
 pub(crate) fn run<T: Send + 'static>(
     db: *mut sqlite3,
     deadline: Option<i64>,
     work: impl FnOnce(&'static Engine, CallOptions<'_>) -> Result<T, Failure> + Send + 'static,
 ) -> Result<T, Failure> {
-    run_with(db, deadline, None, work)
+    run_with(db, deadline, None, true, work)
 }
 
 /// Keep a warm aggregate's deadline fixed across its separate chunk workers.
@@ -40,18 +40,21 @@ pub(crate) fn run_until<T: Send + 'static>(
     deadline: Option<Instant>,
     work: impl FnOnce(&'static Engine, CallOptions<'_>) -> Result<T, Failure> + Send + 'static,
 ) -> Result<T, Failure> {
-    run_with(db, None, deadline, work)
+    run_with(db, None, deadline, false, work)
 }
 
 fn run_with<T: Send + 'static>(
     db: *mut sqlite3,
     deadline: Option<i64>,
     absolute: Option<Instant>,
+    scalar_preflight: bool,
     work: impl FnOnce(&'static Engine, CallOptions<'_>) -> Result<T, Failure> + Send + 'static,
 ) -> Result<T, Failure> {
     let due = budget::remaining(db)?.map(|(_, due)| due);
     let engine = settings::engine()?;
-    settings::remaining()?;
+    if scalar_preflight {
+        settings::remaining()?;
+    }
     let (send_budget, total) = settings::send_budget();
     let token = CancelToken::new();
     let theirs = token.clone();

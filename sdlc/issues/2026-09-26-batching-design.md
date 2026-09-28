@@ -262,6 +262,8 @@ Ian ruled the order: the typed value, then the environment, then the question fi
 
 The SQL and frame surfaces batch the rows one call receives: a DuckDB vector of up to 2,048 rows, a PostgreSQL array, a data-frame column, or SQLite's `thinkthen_warm`. Rows with equal evidence are asked once, as DuckDB does today. Batches form by the same rule within the call. A vector's edge also closes a batch, so DuckDB can cut a table differently from the command. A plain SQLite scalar receives one row at a time and cannot batch. DuckDB's parallel scan can hand rows over in another grouping. Exact replay then needs a fixed row order, such as `SET threads = 1`.
 
+SQLite's legacy warm-then-scalar cache recipe selects `thinkthen_batch(1)` before the engine builds. Under default `max`, an identical ordered warm cohort can reuse its complete packed request, while a later singleton scalar has a different request digest, even with the same context. This follows section 3's exact-request cache key; no packed member is recorded as a different singleton request. The [coordinator clarification](../records/2026-09-28-sql-warm-cache-identity.md) pins the 0219 boundary and leaves ordinary scalar throughput open.
+
 ### 7. The batch setting is calibration identity
 
 A threshold tuned at one batch setting may not fit another, because batching shifts probabilities. In the tool's own form, false yeses rose from 16 or 17 to 32 to 34 with all 306 titles in one request (evidence section 14). The batch setting therefore joins the threshold's calibration identity under ADR 0032.
@@ -397,6 +399,8 @@ Any ticket that adds or changes a setting updates that setting's row in `specifi
 | B13c | DuckDB batches | Vectors, `SET thinkthen_batch`, the `context` argument | A DuckDB query over the 306 rows sends the command's 1 request at `SET threads = 1`; conformance cases | B12a | covered by B0 |
 | B13d | PostgreSQL batches | Arrays, `SET thinkthen.batch`, the `context` argument | The shared conformance cases | B12a | covered by B0 |
 | B13e | SQLite batches | `thinkthen_warm`, the settings call, the `context` argument | The shared conformance cases | B12a | covered by B0 |
+
+B13d PostgreSQL and B13e SQLite are implemented in reviewed tickets 0217 (`3a73b7e4`) and 0219 (`139f41d6`). Their selected installed Linux proof covers packing, context, deadlines and actual transport attempts. Ordinary scalar throughput in register 73 and broader platform/release proof remain separate.
 | B14 | Dropped | Ticket 0137 makes `filter` and `rank` read lines by default | none | none | none |
 | B15 | Replaced | It is ticket D1 | none | none | none |
 | D1 | The documentation page | Described below | Docs review; every number on the page names its record and build | B6, B7, S1, ticket 0137 | no |

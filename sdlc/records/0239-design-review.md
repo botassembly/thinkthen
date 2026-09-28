@@ -1,0 +1,3 @@
+# 0239 design review
+
+The first independent Sol review of `c82daea2` found one prerequisite: `public/bulk.rs::annotate_with` skipped the saved top-level question-set `batch` that core already stored. The corrected ticket and preflight kept the shared selector, selected-invalid versus overridden-invalid rule, and one public integration proof. The same reviewer accepted `521a7208` in session `25022ebe233d652d89a615672e478efd`. The coordinator approved the routine choices under B13a/B13b and ADR 0089; main `fcf7bbef` granted the exact runtime and evidence claims. This is design acceptance, not product closure or code review.

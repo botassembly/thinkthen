@@ -6,6 +6,8 @@ One internal result model feeds both views. The view never changes the request o
 
 The C JSON door returns `{"value":VALUE,"facts":FACTS}` for every successful asking call. `VALUE` keeps the bare shape below, or the detailed object when `details:true` is requested. The four judgment verbs also accept a `records` array; their `VALUE` is an ordered array of bare judgments or full detailed record objects. Each detailed record keeps its whole original `input`, request digest, batch receipt and applicable warnings and context digest. A failed C call returns `NULL`; `thinkthen_error_facts_json` then exposes final started-call facts. The direct `{"usage":true}` response remains process counters rather than a call result.
 
+The optional Rust Polars door returns `Call<Series>` or `Call<DataFrame>` for every completed column or frame call. Its value keeps the typed Polars shape and its facts count that invocation after all of its batches finish. A started failure returns an error with final facts; a refusal before work starts has no invented account. The existing observer supplies row details when requested.
+
 ## The bare value
 
 | Command | Default standard output |
@@ -200,5 +202,7 @@ The readable `question` in each answer prints `choose` options and `tag` labels 
 ## What a high probability does not mean
 
 The model judges only the evidence it was shown. A probability of 0.98 says nothing about facts that were absent from the input. In one measurement the model approved every case at 0.98 while human reviewers had refused 23% of them. The only test of a question is a measurement against labeled cases.
+
+For `filter` and `rank`, every answered row in one run must also name the same reply model version, including rows a filter drops and rows from separate halves of a request split after status 413. The first answered row in input order fixes that version. A later difference exits 4 before that row is printed or ranked. `filter` keeps any prefix already printed; `rank` prints no ranking on refusal. A parent 413 and both answered halves still count as actual attempts even when the right row is refused after both sends. Pin `--model` and rerun to compare one model.
 
 Every reply behind one row must report the same model version. Different versions fail the record because one row cannot represent two measurements. The diagnostic safely names both short model identifiers when it can. It says that a cache or recording folder may hold answers from the other version, and it tells the user to rerun with `--no-cache` or to prune that folder with `thinkthen cache prune DIR --answered-by-other-than VERSION`, naming the version a `--no-cache` run returns. The library says the same of its cache.

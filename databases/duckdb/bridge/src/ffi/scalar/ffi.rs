@@ -111,12 +111,18 @@ impl TryGroup {
                 .details_many_recoverable_with(held, valid, options),
         } {
             Ok(answered) => answered,
+            Err(error) if error.send_budget_denial().is_some() => {
+                let failed = safe_failure(ErrorKind::Usage, false)?;
+                for place in places {
+                    put(values, place, failed.clone())?;
+                }
+                return Ok(());
+            }
             Err(error)
-                if error.send_budget_denial().is_none()
-                    && matches!(
-                        error.kind(),
-                        ErrorKind::Usage | ErrorKind::Local | ErrorKind::Backend
-                    ) =>
+                if matches!(
+                    error.kind(),
+                    ErrorKind::Usage | ErrorKind::Local | ErrorKind::Backend
+                ) =>
             {
                 let failed = safe_failure(error.kind(), error.retryable())?;
                 for place in places {
@@ -126,6 +132,9 @@ impl TryGroup {
             }
             Err(error) => return Err(engines::call_error(error, self.total).text),
         };
+        if answered.value().len() != places.len() {
+            return Err("thinkthen defect: a try-details group lost its values".to_owned());
+        }
         for (place, row) in places.into_iter().zip(answered.into_value()) {
             let value = match row {
                 RecoverableDetails::Answered(details) => format!(

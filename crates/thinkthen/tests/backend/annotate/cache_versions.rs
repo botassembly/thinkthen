@@ -9,6 +9,8 @@
 use std::fs;
 use std::path::PathBuf;
 use std::process::Output;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use super::set;
 use crate::harness::{Canned, Listener, spawn};
@@ -67,4 +69,62 @@ fn a_cache_that_mixes_versions_stops_the_record() {
     );
     assert!(second.stdout.is_empty());
     assert_eq!(listener.requests().len(), 3);
+}
+
+#[test]
+fn a_mutable_alias_refreshes_old_groups_and_the_new_group_together() {
+    let sent = Arc::new(AtomicUsize::new(0));
+    let observed = Arc::clone(&sent);
+    let listener = Listener::answering(move |_| {
+        let model = if observed.fetch_add(1, Ordering::SeqCst) < 2 {
+            "jev-1.13.0"
+        } else {
+            "jev-1.14.0"
+        };
+        Canned::ok(&reply(model))
+    })
+    .expect("listener");
+    let cache = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("annotate-alias-refresh");
+    let _absent = fs::remove_dir_all(&cache);
+    let run = |right: &str| -> Output {
+        let file = set(
+            "alias-refresh",
+            &format!(
+                r#"{{"version":1,"questions":{{"left_answer":{{"decide":"left?","on":"/left"}},"right_answer":{{"decide":"{right}","on":"/right"}}}}}}"#
+            ),
+        );
+        spawn(
+            &[
+                "annotate",
+                &file.to_string_lossy(),
+                "--url",
+                listener.base(),
+                "--model",
+                "jev-latest",
+                "--cache",
+                cache.to_str().expect("cache path"),
+            ],
+            &[("THINKTHEN_API_KEY", "sk-test-value")],
+            br#"{"left":"yes","right":"yes"}"#,
+        )
+        .expect("command runs")
+    };
+    let first = run("right?");
+    assert_eq!(first.status.code(), Some(0));
+    let second = run("is it right?");
+    assert_eq!(
+        second.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&second.stderr)
+    );
+    assert!(!second.stdout.is_empty());
+    assert_eq!(listener.requests().len(), 4, "both groups refresh");
+    assert_eq!(sent.load(Ordering::SeqCst), 4);
+    assert_eq!(
+        String::from_utf8_lossy(&second.stderr)
+            .matches("sends each planned cache request live")
+            .count(),
+        1
+    );
 }

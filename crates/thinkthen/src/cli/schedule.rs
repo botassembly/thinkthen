@@ -6,7 +6,7 @@ use std::process::ExitCode;
 use std::sync::mpsc::Receiver;
 use std::thread;
 
-use crate::core::{Outcome, Withheld, ranking};
+use crate::core::{ModelName, Outcome, Withheld, ranking};
 use crate::edge;
 use crate::engine::error::Error as EngineError;
 use crate::engine::facade::{Completed, Engine, Input, InputPort, RecordFlow, RunOutcome};
@@ -49,6 +49,7 @@ impl From<Failure> for Placed {
 
 /// One record's answer, as the line it prints and what the run counts.
 pub(crate) struct Judged {
+    pub(crate) model: Option<ModelName>,
     pub(crate) printed: Option<String>,
     pub(crate) outcome: Outcome,
     pub(crate) replayed: bool,
@@ -99,6 +100,8 @@ impl fmt::Debug for Judged {
 pub(crate) struct Output<'a> {
     mode: Mode<'a>,
     usage: &'a Counters,
+    model_guard: bool,
+    run_model: Option<ModelName>,
 }
 
 enum Mode<'a> {
@@ -148,6 +151,8 @@ impl Output<'_> {
         Output {
             mode: Mode::Streaming(writer),
             usage,
+            model_guard: false,
+            run_model: None,
         }
     }
 
@@ -164,10 +169,27 @@ impl Output<'_> {
                 writer,
             },
             usage,
+            model_guard: false,
+            run_model: None,
         }
     }
 
+    pub(crate) fn guard_models(&mut self) {
+        self.model_guard = true;
+    }
+
     pub(crate) fn take(&mut self, judged: Judged) -> Result<bool, Failure> {
+        if self.model_guard {
+            let model = judged
+                .model
+                .as_ref()
+                .ok_or(Failure::Defect("a guarded row has no answer model"))?;
+            match &self.run_model {
+                Some(first) if first != model => return Err(Failure::RunModelsDiffer),
+                None => self.run_model = Some(model.clone()),
+                Some(_) => {}
+            }
+        }
         let result = match &mut self.mode {
             Mode::Streaming(writer) => {
                 if let Some(mismatch) = &judged.profile_mismatch {

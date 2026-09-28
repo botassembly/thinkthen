@@ -2,6 +2,10 @@
 
 use super::splits::digest;
 use super::*;
+use thinkthen::SendBudget;
+
+const SPLIT_ORIGINAL: &str = r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"alpha\". Does this ask for a refund?"},"q2":{"type":"noul","instructions":"The text is \"beta\". Does this ask for a refund?"},"q3":{"type":"noul","instructions":"The text is \"gamma\". Does this ask for a refund?"},"q4":{"type":"noul","instructions":"The text is \"delta\". Does this ask for a refund?"}}}"#;
+const SPLIT_LEFT: &str = r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"alpha\". Does this ask for a refund?"},"q2":{"type":"noul","instructions":"The text is \"beta\". Does this ask for a refund?"}}}"#;
 
 #[test]
 #[allow(
@@ -56,8 +60,8 @@ fn native_recovery_continues_after_one_failed_left_member_but_stopping_rows_do_n
     let requests = listener.requests();
     assert_eq!(requests.len(), 3);
     let expected = [
-        r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"alpha\". Does this ask for a refund?"},"q2":{"type":"noul","instructions":"The text is \"beta\". Does this ask for a refund?"},"q3":{"type":"noul","instructions":"The text is \"gamma\". Does this ask for a refund?"},"q4":{"type":"noul","instructions":"The text is \"delta\". Does this ask for a refund?"}}}"#,
-        r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"alpha\". Does this ask for a refund?"},"q2":{"type":"noul","instructions":"The text is \"beta\". Does this ask for a refund?"}}}"#,
+        SPLIT_ORIGINAL,
+        SPLIT_LEFT,
         r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"gamma\". Does this ask for a refund?"},"q2":{"type":"noul","instructions":"The text is \"delta\". Does this ask for a refund?"}}}"#,
     ];
     for (actual, expected) in requests.iter().zip(expected) {
@@ -155,6 +159,149 @@ fn native_recovery_continues_after_one_failed_left_member_but_stopping_rows_do_n
         Some((0, 2))
     );
     assert_eq!(listener.requests().len(), 2);
+}
+
+#[test]
+fn native_denied_left_fills_unsent_half_and_keeps_stopping_stream_terminal() {
+    let _serial = serial();
+    let texts = ["alpha", "beta", "gamma", "delta"].map(str::to_owned);
+    let question = question();
+    let setting = BatchSetting::Records(std::num::NonZeroUsize::new(4).expect("four"));
+
+    let budget = SendBudget::new();
+    let listener = Listener::serving(vec![Canned::status(413, "too large")]).expect("listener");
+    let result = engine(listener.base())
+        .details_many_recoverable_with(
+            &question,
+            &texts,
+            CallOptions::new()
+                .batch(setting)
+                .send_budget(&budget, Some(1)),
+        )
+        .expect("safe denied left and unsent right");
+    assert_eq!(
+        (result.facts().records(), result.facts().requests_sent()),
+        (4, 1)
+    );
+    assert!(result.value().iter().all(|row| matches!(
+        row,
+        thinkthen::RecoverableDetails::Failed {
+            kind: ErrorKind::Usage,
+            retryable: false,
+            cause: None
+        }
+    )));
+    let requests = listener.requests();
+    assert_eq!(requests.len(), 1);
+    assert_eq!(requests[0].body, SPLIT_ORIGINAL.as_bytes());
+
+    let budget = SendBudget::new();
+    let listener = Listener::serving(vec![Canned::status(413, "too large")]).expect("listener");
+    let stopping_engine = engine(listener.base());
+    let mut stopping = stopping_engine.decide_many_with(
+        &question,
+        texts,
+        CallOptions::new()
+            .batch(setting)
+            .send_budget(&budget, Some(1)),
+    );
+    assert_eq!(
+        stopping
+            .next()
+            .expect("left stop")
+            .expect_err("denied left")
+            .kind(),
+        ErrorKind::Usage
+    );
+    assert!(stopping.next().is_none());
+    assert_eq!(
+        stopping
+            .facts()
+            .map(|facts| (facts.records(), facts.requests_sent())),
+        Some((0, 1))
+    );
+    assert_eq!(listener.requests().len(), 1);
+}
+
+#[test]
+fn native_denied_right_keeps_answered_left_with_both_request_receipts() {
+    let _serial = serial();
+    let texts = ["alpha", "beta", "gamma", "delta"].map(str::to_owned);
+    let question = question();
+    let setting = BatchSetting::Records(std::num::NonZeroUsize::new(4).expect("four"));
+    let budget = SendBudget::new();
+    let left = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.8}}}"#;
+    let listener = Listener::serving(vec![Canned::status(413, "too large"), Canned::ok(left)])
+        .expect("listener");
+    let result = engine(listener.base())
+        .details_many_recoverable_with(
+            &question,
+            &texts,
+            CallOptions::new()
+                .batch(setting)
+                .send_budget(&budget, Some(2)),
+        )
+        .expect("answered left and safe denied right");
+    assert_eq!(
+        (result.facts().records(), result.facts().requests_sent()),
+        (4, 2)
+    );
+    let requests = listener.requests();
+    assert_eq!(requests.len(), 2);
+    assert_eq!(requests[0].body, SPLIT_ORIGINAL.as_bytes());
+    assert_eq!(requests[1].body, SPLIT_LEFT.as_bytes());
+    let digests = [SPLIT_ORIGINAL, SPLIT_LEFT].map(|body| digest(listener.url(), body.as_bytes()));
+    for row in &result.value()[..2] {
+        let thinkthen::RecoverableDetails::Answered(details) = row else {
+            panic!("answered left member")
+        };
+        assert_eq!(details.requests(), &digests);
+    }
+    assert!(result.value()[2..].iter().all(|row| matches!(
+        row,
+        thinkthen::RecoverableDetails::Failed {
+            kind: ErrorKind::Usage,
+            retryable: false,
+            cause: None
+        }
+    )));
+}
+
+#[test]
+fn native_denied_retry_is_usage_without_a_second_send() {
+    let _serial = serial();
+    let budget = SendBudget::new();
+    let listener =
+        Listener::answering(|_| Canned::status(503, "busy").asking("retry-after-ms", "0"))
+            .expect("listener");
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .and_then(|builder| builder.api_key("sk-public-batches"))
+        .and_then(|builder| builder.throttle(THROTTLE))
+        .map(EngineBuilder::no_cache)
+        .map(|builder| builder.max_retries(1))
+        .and_then(EngineBuilder::build)
+        .expect("engine");
+    let result = engine
+        .details_many_recoverable_with(
+            &question(),
+            &["alpha".to_owned()],
+            CallOptions::new().send_budget(&budget, Some(1)),
+        )
+        .expect("safe denied retry");
+    assert_eq!(
+        (result.facts().records(), result.facts().requests_sent()),
+        (1, 1)
+    );
+    assert!(matches!(
+        result.value()[0],
+        thinkthen::RecoverableDetails::Failed {
+            kind: ErrorKind::Usage,
+            retryable: false,
+            cause: None
+        }
+    ));
+    assert_eq!(listener.requests().len(), 1);
 }
 
 #[test]
