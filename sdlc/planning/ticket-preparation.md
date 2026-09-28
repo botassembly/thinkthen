@@ -43,6 +43,8 @@ After adding lessons, read the ticket's Status, Closes, Deferred gaps, Evidence 
 
 For prose and fixture sweeps, inspect executable-page word limits and derived byte or hash assertions. Keep the strongest exact boundary check when a duplicate scalar assertion goes stale, then run the affected documentation segment. A routine text replacement can exceed a page limit without changing code.
 
+When a review changes a shared behavioral promise, inventory and read every applicable copy together before returning a correction. A keyword hit list missed two output and ordering promises in the batching design issue during 0172. Check reviewer advice against each host's own validation order before copying it across ports: the first J7 NULL guidance needed another round because PostgreSQL validates the question before the evidence.
+
 ## Improve the next preparation
 
 After the preparation pass, evaluate its accuracy and usefulness. After each ticket finishes, compare the notes with the builder's lessons. Record what reduced discovery, what was missed, and what caused rework in the ticket or shared preparation record. Use that evidence to give the retained agent a specific next brief. Do not measure success by note length or by counting prepared tickets as completed issues.
