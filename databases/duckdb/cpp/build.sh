@@ -17,6 +17,14 @@ case $CARGO_OUT in /*) ;; *) CARGO_OUT=$REPO/$CARGO_OUT ;; esac
 CMAKE=$(command -v cmake || true)
 if [ "$HOST_TARGET" = aarch64-apple-darwin ]; then CMAKE=$TOOLS/venv/bin/cmake; fi
 [ -x "$CMAKE" ] || { echo "duckdb: project-local CMake is missing; run tools/setup.sh --fetch" >&2; exit 77; }
+RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
+CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$HOME=/build"
+CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }-ffile-prefix-map=$HOME=/build"
+export RUSTFLAGS CFLAGS CXXFLAGS
+if [ "$HOST_TARGET" = aarch64-apple-darwin ]; then
+	MACOSX_DEPLOYMENT_TARGET=15.0
+	export MACOSX_DEPLOYMENT_TARGET
+fi
 VERSION=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$REPO/crates/thinkthen/Cargo.toml" | head -n 1)
 [ -n "$VERSION" ] || { echo 'duckdb: the ThinkThen version is missing' >&2; exit 1; }
 
@@ -26,7 +34,9 @@ VERSION=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$REPO/crates/thinkthen/Cargo.tom
 }
 cd -- "$REPO"
 cargo build --locked --offline --release --manifest-path "$ROOT/bridge/Cargo.toml"
-"$CMAKE" -S "$SOURCE" -B "$BUILD" -G 'Unix Makefiles' -DCMAKE_BUILD_TYPE=Release \
+set -- -DCMAKE_BUILD_TYPE=Release "-DCMAKE_C_FLAGS=$CFLAGS" "-DCMAKE_CXX_FLAGS=$CXXFLAGS"
+if [ "$HOST_TARGET" = aarch64-apple-darwin ]; then set -- "$@" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0; fi
+"$CMAKE" -S "$SOURCE" -B "$BUILD" -G 'Unix Makefiles' "$@" \
 	-DBUILD_UNITTESTS=OFF -DBUILD_SHELL=OFF -DEXTENSION_STATIC_BUILD=OFF \
 	-DDUCKDB_EXTENSION_CONFIGS="$HERE/extension_config.cmake" \
 	-DTHINKTHEN_EXTENSION_VERSION="$VERSION" \
