@@ -1,6 +1,6 @@
 # ADR 0091: Python call results and facts after an early stop
 
-- Status: Proposed for independent 0214 design review; the receipt choice remains Ian's public decision.
+- Status: Proposed pending Ian's public receipt versus blocking decision. Independent 0214 design-quality review ACCEPTED `1d3e750b`; this is not architectural approval or implementation authorization.
 - Date: 2026-09-27
 
 ## Context

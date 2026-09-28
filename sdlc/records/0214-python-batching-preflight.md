@@ -43,3 +43,7 @@ A small table should prove all three new list verbs through method/delegate with
 ADR 0089 freezes returned Rust `Call`, `Batch` and `Error` facts but explicitly lets observer panic unwind after join. A panic before freeze is not a returned `Error`; the Python `caught` boundary sees `None`. Do not infer final facts from process counters or an unfinished observer buffer. A frozen account survives a later conversion error carried in `Result`; `caught` discards it on any worker panic, so the safe Defect receipt exposes `facts=None` and `details=None`. A wider promise would need separately claimed call-owned send/reply/ordered-row accounting that survives unwind, which is outside this bounded Python adapter design.
 
 The receipt is the sole public decision still for Ian after review: prompt raise with eventual terminal account versus waiting to raise with immediate final facts. ADR 0091 now specifies the recommended receipt and its timeout/signal semantics. Refresh source and file headroom again after B12a lands; current main contains 0209 but 0149/0157 remain separate.
+
+## Design review checkpoint
+
+The same independent reviewer ACCEPTED design quality at `1d3e750b`, after the panic correction. This validates the brief, not runtime behavior or Ian's still-pending receipt versus blocking decision. Refresh source and exact claims when B12a and that decision are available.

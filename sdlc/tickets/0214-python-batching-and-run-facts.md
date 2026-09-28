@@ -6,11 +6,11 @@ opens: sdlc/tickets/0214-python-batching-and-run-facts.md sdlc/records/0214-pyth
 
 # 0214: Batch Python calls and return their run facts
 
-Status: Corrected proposed design for the same independent reviewer. No runtime file is claimed or changed. Accepted 0212/ADR 0089 remains unlanded Rust design; 0209 landed on main at `6dbdf03f`. Owner: Codex.
+Status: Independent design-quality review ACCEPTED at `1d3e750b`; ADR 0091 remains proposed pending Ian's receipt versus blocking ruling. No runtime file is claimed or changed. Accepted 0212/ADR 0089 remains unlanded Rust design; 0209 landed on main at `6dbdf03f`. Owner: Codex.
 
 ## Outcome and authority
 
-Deliver Batch G B12c after B12a: automatic maximal batching where the Rust planner permits it, a Python `batch` selector and shared `context` on eligible multi-record calls, and per-call facts on every Python verb without a second provider call. A one-record request with no context keeps its exact existing body and digest. Preserve the six Python error classes, stop precedence, `None` for an unsure answer, failed annotate markers, ordered partial results, and the existing pandas/Polars value schema and index. Ian's [batching](../issues/2026-09-26-batching-design.md) and [run-facts](../issues/2026-09-26-every-surface-should-give-back-run-facts.md) rulings govern the outcome. Accepted ADR 0089 governs the Rust carrier and bounded observer. [Proposed ADR 0091](../planning/adr/0091-python-call-facts-after-an-early-stop.md) isolates Python's early-stop receipt; it needs review before a runtime claim. J5's Enum, Literal, typed annotate and optional Pydantic work is later.
+Deliver Batch G B12c after B12a: automatic maximal batching where the Rust planner permits it, a Python `batch` selector and shared `context` on eligible multi-record calls, and per-call facts on every Python verb without a second provider call. A one-record request with no context keeps its exact existing body and digest. Preserve the six Python error classes, stop precedence, `None` for an unsure answer, failed annotate markers, ordered partial results, and the existing pandas/Polars value schema and index. Ian's [batching](../issues/2026-09-26-batching-design.md) and [run-facts](../issues/2026-09-26-every-surface-should-give-back-run-facts.md) rulings govern the outcome. Accepted ADR 0089 governs the Rust carrier and bounded observer. [Proposed ADR 0091](../planning/adr/0091-python-call-facts-after-an-early-stop.md) isolates Python's early-stop receipt; its design quality passed independent review, but Ian has not ruled on the public stop choice or authorized implementation. J5's Enum, Literal, typed annotate and optional Pydantic work is later.
 
 ## Proposed Python contract
 
@@ -46,7 +46,7 @@ Use the existing loopback conformance listener and Python door tests. One three-
 
 ## Deferred and routing
 
-J5 owns Enum/Literal, typed annotate rows and optional Pydantic. B12b/B12d-B12f and B13a-B13e own their other host results; SQL per-query facts remain separately deferred by the run-facts issue. The old speed and mutation campaigns require explicit related-ticket scope and are not ordinary 0214 validation. An independent fresh reviewer must accept this design, including ADR 0091's distinct early-stop tradeoff, before coordinator claims runtime files. A truly different fast-stop/final-facts choice goes to Ian with the reviewed options; routine Python wrapper and adapter details stay with the queue owner.
+J5 owns Enum/Literal, typed annotate rows and optional Pydantic. B12b/B12d-B12f and B13a-B13e own their other host results; SQL per-query facts remain separately deferred by the run-facts issue. The old speed and mutation campaigns require explicit related-ticket scope and are not ordinary 0214 validation. The same independent reviewer accepted design quality at `1d3e750b`, including the bounded panic correction; this does not accept the public early-stop choice or grant runtime claims. A truly different fast-stop/final-facts choice goes to Ian with the reviewed options; routine Python wrapper and adapter details stay with the queue owner.
 
 ## What the build taught us
 
