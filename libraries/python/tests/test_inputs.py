@@ -29,9 +29,9 @@ def test_containers_are_refused_before_any_send(backend, tmp_path):
     R2-11 are the edge table's in ``test_pandas.py``."""
     printed = run(REFUSED + """
     import polars, pyarrow
-    said(lambda: tt.filter(late, pyarrow.array(["a"])))
-    said(lambda: tt.rank("Late?", polars.Series(["a", "b"])))
-    said(lambda: tt.annotate(form, polars.DataFrame({"body": ["a"]})))
+    said(lambda: tt.filter(late, pyarrow.array(["a"])).value)
+    said(lambda: tt.rank("Late?", polars.Series(["a", "b"])).value)
+    said(lambda: tt.annotate(form, polars.DataFrame({"body": ["a"]})).value)
     """, child_env(backend, tmp_path))
     assert printed.splitlines() == 3 * [f"UsageError {ARROW}"]
     assert backend.count() == 0
@@ -41,10 +41,10 @@ def test_every_record_is_read_before_the_first_send(backend, tmp_path):
     """Decision 7: a bad item names its index, and a generator is read whole,
     so a bad last item stops the call before its first record is sent."""
     printed = run(REFUSED + """
-    said(lambda: tt.decide_many(late, (text for text in ["a", "b", 3])))
-    said(lambda: tt.decide_many(late, ["a", "\\ud800"]))
-    said(lambda: tt.decide_many(late, "one text"))
-    said(lambda: tt.decide(late, b"bytes"))
+    said(lambda: tt.decide_many(late, (text for text in ["a", "b", 3])).value)
+    said(lambda: tt.decide_many(late, ["a", "\\ud800"]).value)
+    said(lambda: tt.decide_many(late, "one text").value)
+    said(lambda: tt.decide(late, b"bytes").value)
     """, child_env(backend, tmp_path))
     assert printed.splitlines() == [
         "UsageError record 2 is not a str",
@@ -59,7 +59,7 @@ def test_missing_key_names_a_remedy_for_a_library_call():
     """A keyless library call keeps its Usage kind and names a usable remedy."""
     printed = run(REFUSED + """
     said(lambda: tt.Engine(base_url="https://127.0.0.2:9/v1", cache=False)
-         .decide(late, "one"))
+         .decide(late, "one").value)
     """, clean_env())
     assert printed.strip() == ("UsageError no key is set; configure an API key for the engine "
                                "(THINKTHEN_API_KEY)")
@@ -79,8 +79,8 @@ def test_deadlines_follow_adr_0041(backend, tmp_path):
     import numpy
     for deadline in (True, False, numpy.bool_(True), "1", -2, 4294967296, 1e300,
                      float("inf"), float("nan"), 0):
-        said(lambda: tt.decide(late, "a note", deadline=deadline))
-    print(tt.decide(late, "no deadline", deadline=-1), tt.decide(late, "none", deadline=None))
+        said(lambda: tt.decide(late, "a note", deadline=deadline).value)
+    print(tt.decide(late, "no deadline", deadline=-1).value, tt.decide(late, "none", deadline=None).value)
     """, child_env(backend, tmp_path))
     spelled = "UsageError deadline is seconds from now, a number; no deadline is spelled None or -1"
     budget = "is not -1, 0, or a positive budget of at most 4294967295 seconds"

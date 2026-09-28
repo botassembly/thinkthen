@@ -1,6 +1,6 @@
 # Child environment isolation Quick Fix
 
-Status: Candidate for fresh independent review on main `65c66cab`. This fixes the 20 inherited child environments reported by `sdlc/scripts/children`. It changes no production command, public result, policy exception, paid-run budget, or release script.
+Status: independent Sol Medium ACCEPT at `042c036d`, integrated with main `1ab24371`. This fixes the 20 inherited child environments reported by `sdlc/scripts/children`. It changes no production command, public result, policy exception, paid-run budget, or release script.
 
 ## What the build taught us
 
@@ -21,3 +21,10 @@ DuckDB `package_notices.py` produced a temporary dependency inventory and copied
 On M5, the changed strip script and shared Python helper ran from an automatically cleaned temporary tree against a **copy** of the retained unstripped DuckDB artifact. Its source hash stayed `bedbf44c48f5e4a03ed60925124dd2aaf2edc2557087ae869d01615c72313f69`; the new output hash matched the accepted stripped artifact `53e33d51276bf2431892e3b6bfcd55d579327ef2ec77b86e417a15eb44d3f9bc`. The native worktree and artifacts were untouched.
 
 Strict affected Clippy passed for the core CA target, fork target, and C, DuckDB, SQLite, Python, R, Ruby and TypeScript test targets. Ruff passed the four changed Python files; rustfmt passed the ten changed Rust files. All nine affected ratchet checks, Python syntax compilation, and `git diff --check` passed. The full test/spec/surfaces ladder, release rehearsal, stress tests and paid comparison were outside this Quick Fix.
+
+
+## Independent review and integration
+
+The fresh read-only reviewer accepted `042c036d`. It checked all targeted launch environments, the preserved secrecy, host-hook, certificate and cache assertions, the fork Call adapter semantics, shared helper reuse and measured counters. It found no blocking issue and ran no broad suite.
+
+The coordinator merged reviewed Python0214 from main `1ab24371`; the only textual conflict was the derived Python Rust counter, remeasured at 6,353. All Quick Fix source hunks remain identical to the accepted candidate. One exact Python diagnostic was rebuilt against the newly integrated Python source and passed: `arrow::probe::diagnostics_tests::a_caught_python_panic_delegates_each_host_callback`, with `--locked --offline --lib --no-default-features --features probe` in the Python manifest. The pinned executable is `/home/ian/.local/share/uv/python/cpython-3.13.5-linux-x86_64-gnu/bin/python3.13`; its prefix supplies PYTHONHOME and its lib folder supplies LD_LIBRARY_PATH. The successful incremental compilation took3.50seconds and the one selected case took0.07seconds. These are one invocation's timings, not a clean-build benchmark. An initial coordinator attempt incorrectly assumed python3.13 was on PATH and failed before tests; the explicit pinned invocation corrected it. Future handoffs retain the actual host path, not only a version name.

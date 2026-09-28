@@ -83,19 +83,19 @@ def detailed(details, expected, base):
 
 def single(engine, question, text, success, base):
     expected = success["answers"][0]
-    details = engine.details(question, text)
+    details = engine.details(question, text).value
     same("bare", details["value"], expected["bare"])
     detailed(details, expected, base)
-    typed = getattr(engine, question.kind)(question, text)
+    typed = getattr(engine, question.kind)(question, text).value
     same("typed", typed, expected["bare"])
-    same("column", getattr(engine, question.kind)(question, pl.Series([text])).to_list(),
+    same("column", getattr(engine, question.kind)(question, pl.Series([text])).value.to_list(),
          [expected["bare"]])
     counters = success.get("counters")
     if counters:
         cached = tt.Engine(base_url=base, cache=tempfile.mkdtemp())
         before = cached.usage()
         for _ in range(counters["calls"]):
-            cached.details(question, text)
+            cached.details(question, text).value
         after = cached.usage()
         moved = {"calls": counters["calls"],
                  "requests": after["requests_sent"] - before["requests_sent"],
@@ -104,14 +104,14 @@ def single(engine, question, text, success, base):
 
 
 def annotated(engine, case, texts, success):
-    records = engine.annotate(case["question_set"], texts)
+    records = engine.annotate(case["question_set"], texts, batch=1).value
     failed = 0
     for expected in success["answers"]:
         value = records[0 if "record" in case else expected["exchange"]][expected["name"]]
         failed += isinstance(value, dict) and "failed" in value
         same("bare", value, expected["bare"])
     same("failed", failed, success.get("failed_questions", 0))
-    frame = engine.annotate(case["question_set"], pl.DataFrame({"record": texts}), on="record")
+    frame = engine.annotate(case["question_set"], pl.DataFrame({"record": texts}), on="record", batch=1).value
     for got, listed in zip(frame.drop("record").to_dicts(), records):
         markers = {name: value if isinstance(value, dict) and "failed" in value else None
                    for name, value in listed.items()}
@@ -139,7 +139,7 @@ def succeeded(port, case):
     engine = tt.Engine(base_url=base, cache=False)
     verb, kind = case["verb"], success["kind"]
     if verb == "recognize":
-        found = engine.recognize(case["text"], case["question"])
+        found = engine.recognize(case["text"], case["question"]).value
         result = {"entities": [recognized(one) for one in found.entities]}
         if found.relations is not None:
             result["relations"] = [
@@ -148,7 +148,7 @@ def succeeded(port, case):
                 for one in found.relations]
         return same("result", result, success["answers"][0]["bare"])
     if verb == "relate":
-        edges = engine.relate(case["entities"], case["question"])
+        edges = engine.relate(case["entities"], case["question"]).value
         result = [{"relation": edge.relation, "source": entity(edge.source),
                    "target": entity(edge.target), "probability": edge.probability}
                   for edge in edges]
@@ -158,7 +158,7 @@ def succeeded(port, case):
         return annotated(engine, case, records, success)
     if verb == "find":
         spec = case["question"]
-        found = engine.find(spec["find"], spec["units"], none=spec["none"])
+        found = engine.find(spec["find"], spec["units"], none=spec["none"]).value
         operation = success["operation"]
         picked = [row for row in operation["probabilities"] if row["index"] == operation["selected"]]
         want = None if operation["selected"] is None else {
@@ -166,17 +166,17 @@ def succeeded(port, case):
             "probability": picked[0]["probability"]}
         return same("found", found, want)
     if verb == "rank":
-        ranked = engine.rank(case["question"]["decide"], texts)
+        ranked = engine.rank(case["question"]["decide"], texts, batch=1).value
         rows = [{"index": row["index"], "probability": row["probability"]} for row in ranked]
         return same("ranking", rows, success["operation"]["ranking"])
     question = asked(case)
     if kind == "filter":
-        kept = engine.filter(question, texts)
+        kept = engine.filter(question, texts, batch=1).value
         return same("indexes", [texts.index(text) for text in kept],
                     success["operation"]["indexes"])
     if kind == "decide_many":
-        answers = engine.decide_many(question, texts)
-        same("column", engine.decide_many(question, pl.Series(texts)).to_list(), answers)
+        answers = engine.decide_many(question, texts, batch=1).value
+        same("column", engine.decide_many(question, pl.Series(texts), batch=1).value.to_list(), answers)
         return same("bare", answers, [answer["bare"] for answer in success["answers"]])
     return single(engine, question, texts[0], success, base)
 
@@ -189,14 +189,14 @@ def refused(port, case):
     token = tt.CancelToken()
     token.cancel()
     calls = {
-        "usage": lambda: tt.Engine(base_url=generic).decide(asked(case), "   "),
+        "usage": lambda: tt.Engine(base_url=generic).decide(asked(case), "   ").value,
         "backend": lambda: tt.Engine(base_url=f"http://127.0.0.1:{port}/arm/refuse/v1",
-                                     cache=False).decide(asked(case), text),
-        "cancelled": lambda: tt.Engine(base_url=generic).decide(asked(case), text, token=token),
-        "deadline": lambda: tt.Engine(base_url=generic).decide(asked(case), text, deadline=0),
+                                     cache=False).decide(asked(case), text).value,
+        "cancelled": lambda: tt.Engine(base_url=generic).decide(asked(case), text, token=token).value,
+        "deadline": lambda: tt.Engine(base_url=generic).decide(asked(case), text, deadline=0).value,
     }
     if case["verb"] == "rank":
-        calls["usage"] = lambda: tt.rank(text, ["one", "two"])
+        calls["usage"] = lambda: tt.rank(text, ["one", "two"]).value
     elif "threshold" in case["question"]:
         calls["usage"] = lambda: asked(case)
     if case.get("question_form") == "file":
@@ -205,7 +205,7 @@ def refused(port, case):
     else:
         (folder / "cache").write_text("not a folder")
         calls["local"] = lambda: tt.Engine(base_url=generic, cache=folder / "cache").decide(
-            asked(case), text)
+            asked(case), text).value
     kind = case["expect"]["error"]["kind"]
     try:
         calls[kind]()

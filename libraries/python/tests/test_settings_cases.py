@@ -28,17 +28,17 @@ try:
     engine = tt.Engine(**settings)
     if {step.get('verb') == 'relate'}:
         entities = {[(one['name'], one['kind']) for one in case.get('entities', [])]!r}
-        result = {{'edges': len(engine.relate(entities, relations={{'linked': ('item', 'item')}}))}}
+        result = {{'edges': len(engine.relate(entities, relations={{'linked': ('item', 'item')}}).value)}}
     elif {step.get('verb') == 'decide_many'}:
         rows = list(engine.decide_many(tt.question(decide={CASES['question']!r}),
-                                       {step.get('records', [])!r}))
+                                       {step.get('records', [])!r}).value)
         result = {{'error': None, 'rows': rows}}
     elif {'model' in step}:
-        details = engine.details(tt.question(decide={CASES['question']!r}), {step.get('text', '')!r})
+        details = engine.details(tt.question(decide={CASES['question']!r}), {step.get('text', '')!r}).value
         result = {{'value': details['value'], 'model': details['meta']['model']}}
     else:
         result = {{'value': engine.decide(tt.question(decide={CASES['question']!r}),
-                                          {step.get('text', '')!r})}}
+                                          {step.get('text', '')!r}).value}}
 except tt.ThinkThenError as error:
     result = {{'error': error.kind}}
 print(json.dumps(result))

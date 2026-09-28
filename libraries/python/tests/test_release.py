@@ -54,7 +54,7 @@ def released_after_cancel(backend, tmp_path, calls):
             stop = tt.CancelToken()
             threading.Timer(0.005, stop.cancel).start()
             try:
-                engine.decide(late, Stream(3) if kind == "ctypes" else Raw(3, token), token=stop)
+                engine.decide(late, Stream(3) if kind == "ctypes" else Raw(3, token), token=stop).value
             except tt.Cancelled:
                 cancelled += 1
         assert cancelled == int(os.environ["CALLS"]), (kind, cancelled)
@@ -103,7 +103,7 @@ FREEZE = SETUP + """
     threading.Thread(target=go, daemon=True).start()
     source = Stream(1) if os.environ["KIND"] == "ctypes" else Raw(1, object())
     try:
-        engine.decide(late, source, token=stop)
+        engine.decide(late, source, token=stop).value
     except tt.Cancelled:
         pass
     slow = Slow()
