@@ -81,6 +81,10 @@ The 2026-09-25 amendment remains a record of its experiment. The offline [0163 d
 
 With `THINKTHEN_API_KEY` unset or blank, a request to `localhost`, `127.0.0.1`, or `[::1]` goes out with no `Authorization` header, on the command and on every library. A local server that checks no key then needs no pretend secret. Every other address still stops at exit 4 before any connection. The key rule of ruling 2 is unchanged: a set key still goes only to the address the user named. The coordinator ruled this for local experiment 284, file 89. Ian can overturn it.
 
+## Amendment, 2026-09-28, by ticket 0210: refuse a known key in the address
+
+The final resolved posting URL must not contain the nonblank effective API key as exact UTF-8 bytes. A collision exits 2 with a fixed sentence before the URL is printed, hashed, read from a folder, or sent. This covers the public builder's final explicit or captured key and the CLI's one optional key snapshot. A dry run and replay inspect that optional value but still require no key and open no connection. Safe gateway paths, request bytes, recording identities, and replay equality are unchanged. The rule does not infer arbitrary secret-looking path segments or inspect question and evidence text. Ian approved optional early inspection at `a2c9057a`; ticket 0210 owns the implementation and proof.
+
 ## Amendment, 2026-09-26: ADR 0048 batches records
 
 Under ADR 0048 a request carries a batch of records, so `--jobs N` also sets how many batches are in flight. The default of 4 stays, and `records.md` keeps the range of 1 to 32. Ian can overturn this.

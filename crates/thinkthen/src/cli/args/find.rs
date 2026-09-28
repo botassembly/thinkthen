@@ -28,7 +28,7 @@ pub(crate) struct FindArguments {
 }
 
 /// The shared options that apply to one aggregate `find` request.
-#[derive(Args, Debug)]
+#[derive(Args)]
 pub(crate) struct FindCommon {
     /// Print one machine-readable run-facts line last on standard error.
     #[arg(long, hide_short_help = true)]

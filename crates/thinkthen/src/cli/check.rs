@@ -6,7 +6,6 @@
 
 use std::io::Write;
 use std::process::ExitCode;
-use std::sync::Arc;
 use std::time::Duration;
 
 use crate::cli::args::CheckArguments;
@@ -32,6 +31,7 @@ pub(crate) fn run(
     let url = url.ok_or(Failure::Usage(NO_ADDRESS))?;
     let asked = arguments.model.as_deref().or_else(|| environment.model());
     let backend = Backend::resolve(Some(url), None, asked.unwrap_or(DEFAULT_MODEL))?;
+    environment.check_key(&backend)?;
     let probes =
         check::probes(backend.model()).ok_or(Failure::Defect("a check probe no longer parses"))?;
     let engine = Engine::new(Settings {
@@ -42,7 +42,7 @@ pub(crate) fn run(
         retry_wait: environment.retry_wait(),
         width: None,
         storage: Storage::default(),
-        key: Arc::new(edge::key),
+        key: environment.key_reader(),
         usage: environment.counters(),
     })?;
     let mut lines = vec![

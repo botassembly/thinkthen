@@ -67,7 +67,7 @@ pub(crate) fn engine(
             private_default: folders.private_default,
             cache_answers: folders.cache_answers,
         },
-        key: std::sync::Arc::new(edge::key),
+        key: environment.key_reader(),
         usage: environment.counters(),
     })?)
 }
@@ -153,10 +153,6 @@ pub(crate) fn run(
     } = asked;
     let threshold = settled.threshold();
     let view = view.checked()?;
-    let folders = Folders::of(common, environment)?;
-    if common.dry_run && folders.named() {
-        return Err(Failure::DryRunWithRecording);
-    }
     let configured_model = settled
         .sources()
         .model_is_default()
@@ -178,6 +174,11 @@ pub(crate) fn run(
         configured_model.unwrap_or_else(|| settled.model().as_str()),
     )?
     .with_request_size(request_size.unwrap_or(Backend::DEFAULT_REQUEST_SIZE));
+    environment.check_key(&backend)?;
+    let folders = Folders::of(common, environment)?;
+    if common.dry_run && folders.named() {
+        return Err(Failure::DryRunWithRecording);
+    }
     if request_size.is_some() {
         environment.warn_request_size(&backend)?;
     }

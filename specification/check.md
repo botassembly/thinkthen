@@ -107,7 +107,7 @@ The last line counts the finding lines. The report prints once, after the last p
 | 5 | Standard output could not be written |
 | 70 | A defect |
 
-`--dry-run` prints the `url`, `provider`, `model asked`, and `model sent` lines, then one `request PROBE BODY` line per probe. It prints no reply line. The bodies come from the same split the live check sends. It reads no key, sends nothing, and exits 0.
+`--dry-run` prints the `url`, `provider`, `model asked`, and `model sent` lines, then one `request PROBE BODY` line per probe. It prints no reply line. The bodies come from the same split the live check sends. It inspects the optional configured key for an address collision first. It requires no key, sends nothing, and exits 0 for a safe address.
 
 ## What the check cannot see
 
