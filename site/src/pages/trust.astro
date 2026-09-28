@@ -9,7 +9,7 @@ import { PAGES } from '../data/beatles.mjs';
 
 const lines = run('functions/decide', '1-lines');
 const auditPage = PAGES.find((p) => p.slug === 'audit');
-const audit = run('beatles/audit', '1-default');
+const audit = run('beatles/audit', '2-default');
 ---
 <Base title="Trust" description="Check ThinkThen against your own labeled records before you rely on it.">
   <h1>Test it before you trust it</h1>
@@ -17,7 +17,7 @@ const audit = run('beatles/audit', '1-default');
 
   <h2>Grade it on your own records</h2>
   <p>Take records you have already labeled. Put your labels in a key file, one per record. <code>thinkthen audit</code> grades ThinkThen's saved answers against the key. <code>thinkthen audit --help</code> shows how to save them.</p>
-  <Terminal run={audit} caption={`Jev was asked whether each song is on Abbey Road. ${auditPage.see['1-default']}`} />
+  <Terminal run={audit} caption={`Jev was asked whether each song is on Abbey Road. ${auditPage.see['2-default']}`} />
   <p>The <a href={auditPage.route}>audit page</a> runs the same records at the suggested bar.</p>
 
   <h2>The threshold is yours</h2>
