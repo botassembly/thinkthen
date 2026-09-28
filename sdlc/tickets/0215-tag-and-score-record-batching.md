@@ -6,7 +6,7 @@ opens: sdlc/tickets/0215-tag-and-score-record-batching.md sdlc/records/0215-batc
 
 # 0215: Batch tag and score records
 
-Status: Design ACCEPT at `70dc1755` by fresh independent reviewer `01a0e5f3-6946-7342-9544-34b9352902db`. B9 runtime and paid proof remain unbuilt; this acceptance grants neither. Owner: Codex.
+Status: Design ACCEPT at `70dc1755` by fresh independent reviewer `01a0e5f3-6946-7342-9544-34b9352902db`. Runtime and a bounded paid helper are implemented on the ticket branch; fresh code/helper review and the separate paid proof remain. Owner: Codex.
 
 ## Outcome and authority
 
@@ -26,7 +26,7 @@ One document keeps its present request, compact JSON array for tag or JSON numbe
 
 ## Dependencies and prospective files
 
-The [preflight](../records/0215-batching-preflight.md) pins current main and the dirty, unlanded 0213 choose builder separately. B4/B5/B7 and 0170 facts are landed; 0213's question-aware planner, schema and extraction are a **pending source dependency**, not proof. Refresh its final diff and all B9 overlap before runtime claims. Accepted 0212 Rust-library facts design is separate and does not block this CLI ticket. Prospective source: `cli/{args,asked,judge,asking}.rs`, `cli/args/command.rs` if Clap parent needs it, `cli/asking/{batched,batch_meta}.rs` and its 0213 children, `core/{batch,question_file}.rs` and the batch child that 0213 lands, plus relevant parent exports. Claim exact files after 0213 lands. The parser, closed `specification/question-file.schema.json`, shared `specification/fixtures/question-file/corpus.json`, `specification/fixtures/question-file/self-test`, and `crates/thinkthen/tests/question_file/corpus.rs` must agree. Later product docs are `specification/{tag,score,records,result,settings,question-file,backends}.md`, affected executable pages, the batching issue's B9/S1 rows, `probes/speed/functions.jsonl`, measured ratchet and an honest build record. Shared pages merge second. No product file is claimed by this design.
+The [preflight](../records/0215-batching-preflight.md) preserves the design-time snapshot. B4/B5/B7, 0170 facts and 0213 choose batching have since landed; the implementation starts from main `8cb674ae` and reuses 0213's question-aware planner, schema and private extraction. Accepted 0212 Rust-library facts design is separate and does not block this CLI ticket. Prospective source: `cli/{args,asked,judge,asking}.rs`, `cli/args/command.rs` if Clap parent needs it, `cli/asking/{batched,batch_meta}.rs` and its 0213 children, `core/{batch,question_file}.rs` and the batch child that 0213 lands, plus relevant parent exports. Claim exact files after 0213 lands. The parser, closed `specification/question-file.schema.json`, shared `specification/fixtures/question-file/corpus.json`, `specification/fixtures/question-file/self-test`, and `crates/thinkthen/tests/question_file/corpus.rs` must agree. Later product docs are `specification/{tag,score,records,result,settings,question-file,backends}.md`, affected executable pages, the batching issue's B9/S1 rows, `probes/speed/functions.jsonl`, measured ratchet and an honest build record. Shared pages merge second. No product file is claimed by this design.
 
 ## Small proof and paid measurement
 
@@ -40,8 +40,8 @@ For the **later authorized** B9 paid proof, the clean Beatles Bench checkout at 
 - Keeps: Fixed tag/score question and description order, empty tag versus failure, score number/no threshold, one-document and batch-one bytes, all six error kinds, ordered prefix, cache/replay, calibration, halving and final facts.
 - Changes: Record-mode tag/score gain the existing batch/context/request-size tiers, top-level file `batch`, multi-record wire packing and logical-answer mapping; later measured B9 cost removes their S1 exception.
 - Proof: Focused exact body/digest and listener table, tag expansion and score descriptions, singleton/soft/hard boundaries, partial answer, 413/facts, shared schema/parser corpus, then separately authorized pinned 219-row live comparison.
-- Defers: 0213's unlanded choose implementation and final overlap refresh, B10 annotate, B12a Rust API and other ports, B6 accuracy page, and all paid execution until a reviewed build plus concrete delegated reservation.
+- Defers: B10 annotate, B12a Rust API and other ports, B6 accuracy page, and paid execution until fresh code/helper review and a concrete delegated reservation.
 
 ## What the build taught us
 
-Design only. The corrected inventory prevented a false tag-shape refusal and preserved the nested-set negative test. Source tracing found a second distinct boundary: tag wire offsets cannot index logical decoded answers. The existing 158/171 case suites also miss B9's 200-item paid minimum; the pinned 219-row intersection gives a feasible later plan without changing either task. Compare these notes with the implementation and fresh review before landing.
+The corrected inventory prevented a false tag-shape refusal and preserved the nested-set negative test. The landed 0213 planner already measured expanded tag wire counts; B9 needed a separate logical outcome index for row decoding. The 158/171 case suites miss the 200-item paid minimum, so the helper pins a clean 219-title intersection with exact IDs, truth, input and suite arguments. A first listener assertion repeated `requests()` after it drained its channel, and concurrent jobs returned split batches out of send order; the corrected tests observe persistent counts or set one job when order itself is the contract. The result schema allows additional `meta`, so the new batch and context fields require documentation and compiled row proof, not a schema shape change. Fresh review and paid execution remain separate.

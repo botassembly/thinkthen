@@ -162,13 +162,14 @@ pub(crate) fn run(
         .model_is_default()
         .then(|| environment.model())
         .flatten();
-    let choose = matches!(
+    let per_document = matches!(
         asks,
-        Asks::Fixed(Question::Choose { .. }) | Asks::FromRecord { .. }
+        Asks::Fixed(Question::Choose { .. } | Question::Tag { .. } | Question::Score { .. })
+            | Asks::FromRecord { .. }
     );
     let request_size = batch
         .as_ref()
-        .filter(|_| !choose || common.framing() != Framing::Document)
+        .filter(|_| !per_document || common.framing() != Framing::Document)
         .map(|tiers| environment.request_size(tiers.request_size))
         .transpose()?;
     let backend = Backend::resolve(
