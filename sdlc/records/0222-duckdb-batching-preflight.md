@@ -1,10 +1,10 @@
 # 0222 DuckDB batching preflight
 
-Status: B13c design correction for the same independent reviewer, with proposed ADR 0094. No runtime claim. The [ticket](../tickets/0222-duckdb-record-batching.md) holds the proposed behavior; the [handoff](0222-design-review.md) names the review seams.
+Status: B13c technical design accepted at `e103c36f`; Ian approved its public carrier and all ten choices. This page preserves the historical preflight audit. Linux implementation is in progress; no installed-host or other-platform completion is claimed. The [ticket](../tickets/0222-duckdb-record-batching.md) holds the accepted behavior; the [handoff](0222-design-review.md) names the review seams.
 
 ## Pinned executable source
 
-The branch merged origin/main `adf2766f` after candidate `cedcbab2`. The DuckDB executable paths below still match the pinned `e99da4a1` audit. The current Rust facade and public results have changed: 0203 landed at main `5261cb93`, while B12a remains accepted design at `14cbd4b5`, not integrated runtime.
+The original design branch merged origin/main `adf2766f` after candidate `cedcbab2`. The paths below describe the pinned `e99da4a1` audit, not current runtime. Since that audit, 0203, Rust 0212, dynamic details 0230 and offline 0216 have landed. The 0222 implementation uses their current planner, worker and profile-aware member paths; actual source and artifact provenance belongs in the build record.
 
 | Source at main `e99da4a1` | What it actually does |
 | --- | --- |

@@ -66,6 +66,8 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	"$PY" cpp/verify_package.py --extension "$THINKTHEN_DUCKDB_EXTENSION" --different-host "$TOOLS/older-host/duckdb"
 	"$PY" cpp/verify_interrupt.py --extension "$THINKTHEN_DUCKDB_EXTENSION"
 	sh "$LIMIT" 900 "$PY" tools/conformance.py
+	sh "$LIMIT" 900 "$PY" tools/verbs_suite.py b13c_try_details_members b13c_try_details_prepared
+	sh "$LIMIT" 900 "$PY" tools/settings_suite.py b13c_warm_zero_budget
 	echo "check: databases/duckdb passes, installed"
 	exit 0
 fi

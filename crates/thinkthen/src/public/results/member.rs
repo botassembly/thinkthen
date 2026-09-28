@@ -140,12 +140,59 @@ impl Details {
         setting: core::Setting,
         context_sha256: Option<&str>,
     ) -> Result<Self, Error> {
-        let mut details = Self::of(&member.judged, question, backend, profile)?;
         let original = serde_json::to_vec(input)
             .map_err(|_| Error::usage("a record cannot be written as JSON"))?;
         let reading = Reading::new(Framing::Jsonl, Vec::new())
             .map_err(|_| Error::defect("JSON record reading was refused"))?;
         let input = reading.record(&original).map_err(Error::refused)?;
+        Self::of_batch_member(
+            member,
+            Some(input),
+            question,
+            backend,
+            profile,
+            setting,
+            context_sha256,
+        )
+    }
+
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "the native scalar shares the member's saved run metadata"
+    )]
+    pub(crate) fn of_native_member(
+        member: Member,
+        question: &Question,
+        backend: &core::Backend,
+        profile: Option<&core::BackendProfile>,
+        setting: core::Setting,
+        context_sha256: Option<&str>,
+    ) -> Result<Self, Error> {
+        Self::of_batch_member(
+            member,
+            None,
+            question,
+            backend,
+            profile,
+            setting,
+            context_sha256,
+        )
+    }
+
+    #[allow(
+        clippy::too_many_arguments,
+        reason = "one batch member carries its saved run metadata"
+    )]
+    fn of_batch_member(
+        member: Member,
+        input: Option<core::Record>,
+        question: &Question,
+        backend: &core::Backend,
+        profile: Option<&core::BackendProfile>,
+        setting: core::Setting,
+        context_sha256: Option<&str>,
+    ) -> Result<Self, Error> {
+        let mut details = Self::of(&member.judged, question, backend, profile)?;
         let file_batch = question
             .batch
             .as_ref()

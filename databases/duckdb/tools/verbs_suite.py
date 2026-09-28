@@ -7,9 +7,12 @@ Each case starts its own backend and runs its SQL in a fresh child.
 from __future__ import annotations
 
 import json
+import hashlib
 import sys
 import tempfile
+import threading
 from pathlib import Path
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "sqlite" / "tests"))
 from conditional_backend import ConditionalBackend
@@ -320,6 +323,89 @@ def atfile_reads_through_the_callers_file_system():
         expect(column(got[0]), [True], "a file question")
         expect(said(got[1]), f"thinkthen local: the question file {folder}/missing.json was not read: it does not exist or could not be opened", "a missing file")
         expect(said(got[3]), f"thinkthen local: the question file {path} was not read: this database's file settings refuse it", "a refused file")
+
+
+class PackedReplies:
+    """Two deterministic loopback replies, keyed by request member count."""
+
+    def __init__(self):
+        self.bodies = []
+        owner = self
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self):
+                body = self.rfile.read(int(self.headers["Content-Length"]))
+                owner.bodies.append(body)
+                questions = json.loads(body)["questions"]
+                if len(questions) == 3:
+                    answers = {"q1": {"type": "noul", "noul": 0.9},
+                               "q3": {"type": "noul", "noul": 0.8}}
+                elif len(questions) == 1:
+                    answers = {"q1": {"type": "noul", "noul": 0.7}}
+                else:
+                    raise AssertionError(f"unexpected packed member count: {len(questions)}")
+                reply = json.dumps({"model": "jev-latest", "answers": answers}).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(reply)))
+                self.end_headers()
+                self.wfile.write(reply)
+
+            def log_message(self, _format, *_args):
+                pass
+
+        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.thread = threading.Thread(target=self.server.serve_forever)
+        self.thread.start()
+
+    @property
+    def base(self):
+        return f"http://127.0.0.1:{self.server.server_port}/v1"
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.server.shutdown()
+        self.thread.join(timeout=10)
+        self.server.server_close()
+
+
+@case
+def b13c_try_details_members():
+    """One reply has good/failed/good, followed by an independent good request."""
+    with PackedReplies() as backend:
+        got = run(["SET threads = 1", "SET thinkthen_batch = '3'",
+                   "SELECT thinkthen_try_details('Is it a refund?', x) FROM "
+                   "(VALUES (1,'alpha'),(2,'beta'),(3,'gamma'),(4,'delta')) t(i,x) ORDER BY i"], backend.base)
+        values = [json.loads(value) for value in column(got[2])]
+        expect([value["status"] for value in values], ["answered", "failed", "answered", "answered"], "packed row outcomes")
+        expect(values[1]["error"], {"kind": "backend", "message": "the backend did not answer; retry if allowed",
+                                      "retryable": False}, "one safe failed member")
+        expect(len(backend.bodies), 2, "one packed and one independent attempt")
+        expected = [
+            b'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"alpha\\". Is it a refund?"},"q2":{"type":"noul","instructions":"The text is \\"beta\\". Is it a refund?"},"q3":{"type":"noul","instructions":"The text is \\"gamma\\". Is it a refund?"}}}',
+            b'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"delta\\". Is it a refund?"}}}',
+        ]
+        expect(set(backend.bodies), set(expected), "full first-seen request bodies")
+        digests = [hashlib.sha256(b"systemone\n" + backend.base.encode() + b"/systemone\n" + body).hexdigest()
+                   for body in expected]
+        for place, request in [(0, 0), (2, 0), (3, 1)]:
+            expect(values[place]["details"]["meta"]["requests"], [digests[request]], "member request identity")
+
+
+@case
+def b13c_try_details_prepared():
+    """An invalid foldable prepared question stays a safe value beside a good answer."""
+    with Backend() as backend:
+        got = run(["PREPARE b13c AS SELECT thinkthen_try_details('', 'private evidence') AS value "
+                   "UNION ALL SELECT thinkthen_try_details('Is it a refund?', 'refund now')",
+                   "EXECUTE b13c"], backend.base())
+        expect(rows(got[0]), [], "prepared statement")
+        values = [json.loads(value) for value, in rows(got[1])]
+        expect([value["status"] for value in values], ["failed", "answered"], "prepared safe and good rows")
+        expect(values[0]["error"]["kind"], "usage", "invalid foldable question kind")
+        expect(backend.count(), 1, "good prepared sibling alone sends")
 
 
 if __name__ == "__main__":

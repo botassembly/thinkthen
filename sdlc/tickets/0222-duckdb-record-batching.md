@@ -6,7 +6,7 @@ opens: sdlc/planning/adr/0094-recoverable-batch-outcomes.md sdlc/tickets/0222-du
 
 # 0222: Batch DuckDB record vectors and warm groups
 
-Status: B13c design technically accepted by the same independent reviewer at `e103c36f`; proposed ADR 0094 awaits Ian's public `Engine::details_many_recoverable_with` method and `RecoverableDetails` enum choice. No implementation is authorized by design acceptance. Owner: Codex. No runtime, installed-package or other-platform completion is claimed. The [preflight](../records/0222-duckdb-batching-preflight.md) pins historical executable main `e99da4a1` and a current-source refresh at `adf2766f`, accepted unbuilt Rust B12a `14cbd4b5` and the staged 0201/0149/0157 platform split.
+Status: B13c technical design accepted at `e103c36f`; Ian approved all ten implementation choices, including the public recoverable Rust carrier, in the work plan. Owner: Codex. Linux x86-64 implementation is in progress; no installed-package or other-platform completion is yet claimed. The [preflight](../records/0222-duckdb-batching-preflight.md) preserves its historical source audit. Rust 0212, dynamic details 0230 and offline 0216 are now on main.
 
 ## Accepted outcome and retained behavior
 

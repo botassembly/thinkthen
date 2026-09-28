@@ -68,7 +68,7 @@ pub(crate) fn decision_with_batch_requests(
     question: Question,
     threshold: Option<Threshold>,
     shown: Value,
-    input: Record,
+    input: Option<Record>,
     batch: Option<BatchMeta>,
     requests: Vec<String>,
 ) -> Result<String, RenderError> {
@@ -79,7 +79,7 @@ pub(crate) fn decision_with_batch_requests(
         question,
         threshold,
         shown,
-        Some(input),
+        input,
         batch,
         Some(requests),
         &digest,

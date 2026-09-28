@@ -28,6 +28,16 @@ case(shared_settings_corpus)
 
 
 @case
+def b13c_warm_zero_budget():
+    """Warm finalization reads the caller's already spent query budget."""
+    with Backend() as backend:
+        got = run(["SET thinkthen_query_budget_ms = 0",
+                   "SELECT thinkthen_warm('Is it a refund?', 'refund now')"], backend.base())
+        expect(said(got[1]), "thinkthen deadline: the deadline of 0 ms passed before the call answered", "warm deadline")
+        expect(backend.count(), 0, "spent warm budget sends nothing")
+
+
+@case
 def saved_calibration_details_keep_the_shared_digest_and_warning():
     """The staged C++ scalar keeps the saved question identity in details."""
     shared = json.loads((Path(__file__).resolve().parents[3] / "conformance" / "calibration.json").read_text())
