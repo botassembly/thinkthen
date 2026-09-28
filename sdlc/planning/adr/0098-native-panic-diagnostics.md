@@ -1,9 +1,9 @@
 # ADR 0098: Scope caught native panic diagnostics to the owning binding
 
-- Status: Proposed after the first independent High design review (session `01a0e6ac-7239-7b31-a3b0-bc2290d75158`); its payload-disposal, package-proof and loader-lifetime findings are corrected here for follow-up review. No runtime source is accepted or built.
+- Status: Accepted design at `5fef9e7a` by independent High follow-up review; the coordinator accepted the routine bounded implementation. Runtime and package proof remain pending.
 - Context: [ticket 0226](../../tickets/0226-native-panic-diagnostics.md), the [panic-diagnostics issue](../../issues/2026-09-27-panic-diagnostics-can-copy-payloads-across-host-boundaries.md), and accepted ADR 0081's engine and Linux C++ bridge scopes.
 
-## Proposed decision
+## Decision
 
 For the remaining C, SQLite and older DuckDB C API routes, install one private delegating Rust panic hook per binding before owned work can panic. It calls the previous hook for unrelated threads and suppresses that hook only while thread-local binding depth is nonzero. An RAII depth guard restores the prior value through nesting, return and unwind. Scope encloses `catch_unwind` and fixed Defect mapping. Workers enter their own scope; caller thread-local state is not inherited. No global hook is taken or set for each call, and no public fault switch or shared framework is introduced.
 
