@@ -26,7 +26,7 @@ def main(source: Path, destination: Path) -> None:
         raw.write_bytes(data[:-len(footer)])
         subprocess.run(["strip", "-S", "-x", str(raw)], check=True)
         stripped = raw.read_bytes()
-        if b"/Users/" in stripped:
+        if str(Path.home()).encode() in stripped:
             raise SystemExit("duckdb: builder-home path remains in stripped Mach-O")
         raw.write_bytes(stripped + footer)
         os.chmod(raw, 0o644)
