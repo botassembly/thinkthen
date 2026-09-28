@@ -110,3 +110,6 @@ For Python host scopes, include ownership and release of returned iterator, item
 
 
 For a new command, identify the executable user workflow before proposing its syntax. An outside-in test proves behavior but does not replace the repository's requirement that a demo needs the command. For fixture maintenance, distinguish result retention from request use: filtered rows and bare output cannot supply a complete access manifest. Name the exact complete route being proved and keep broader harness integration open.
+
+
+For a foreign-language batch, inspect the Rust method's type bounds. A method with the right verb name may require compile-time labels and cannot accept a host's runtime label set. Map every accepted input combination, including records with detailed output, to a real route. Trace serialized fields through their constructor even when no observer is installed. A carrier named `Details` does not by itself promise the record metadata or context required by that host's contract. Preserve each host's stopping and recoverable-error policy when sharing the route.
