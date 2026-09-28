@@ -93,6 +93,13 @@ impl Failure {
             facts: None,
         }
     }
+
+    pub(crate) fn completed(mut self, facts: Option<&Facts>) -> Self {
+        if self.facts.is_none() {
+            self.facts = facts.map(facts_json);
+        }
+        self
+    }
 }
 
 impl From<thinkthen::Error> for Failure {
@@ -327,6 +334,22 @@ pub(crate) fn guard<T>(held: Option<&Held>, fallback: T, body: impl FnOnce() -> 
             if let Some(held) = held {
                 held.fail(Failure::defect("a panic crossed the C door"));
             }
+            fallback
+        })
+    })
+}
+
+/// The typed facts door retains a completed call through post-reply defects.
+pub(crate) fn guard_completed<T>(
+    held: &Held,
+    completed: &mut Option<Facts>,
+    fallback: T,
+    body: impl FnOnce(&mut Option<Facts>) -> T,
+) -> T {
+    in_door(|| {
+        catch_unwind(AssertUnwindSafe(|| body(completed))).unwrap_or_else(|payload| {
+            std::mem::forget(payload);
+            held.fail(Failure::defect("a panic crossed the C door").completed(completed.as_ref()));
             fallback
         })
     })

@@ -81,8 +81,12 @@ int main(void) {
 
     const char *evidence = "I demand a refund today";
     thinkthen_answer answer = {THINKTHEN_UNSURE, 0.0};
-    int rc = thinkthen_decide(tt, "Is this a complaint?", evidence, strlen(evidence), &answer);
+    char *facts_json = NULL;
+    size_t facts_len = 0;
+    int rc = thinkthen_decide_with_facts(tt, "Is this a complaint?", evidence,
+                                        strlen(evidence), &answer, &facts_json, &facts_len);
     printf("decide: %s %.2f\n", rc == 0 ? outcome_text(answer.outcome) : "error", answer.probability);
+    thinkthen_free_string(facts_json);
 
     door(tt, "choose", "{\"choose\":\"Which team owns this?\",\"options\":[\"the refund desk\",\"the maybe desk\",\"anywhere else\"],\"evidence\":\"please route this ticket\"}");
 
@@ -101,13 +105,15 @@ int main(void) {
     char *found = NULL;
     size_t found_len = 0;
     const char *sentence = "Maria Chen joined Northwind Freight in Chicago last spring.";
-    rc = thinkthen_recognize(tt, "{\"version\":1,\"recognize\":{\"kinds\":{\"person\":\"A person's name.\",\"place\":\"A place name.\"}}}", sentence, strlen(sentence), &found, &found_len);
+    facts_json = NULL;
+    rc = thinkthen_recognize_with_facts(tt, "{\"version\":1,\"recognize\":{\"kinds\":{\"person\":\"A person's name.\",\"place\":\"A place name.\"}}}", sentence, strlen(sentence), &found, &found_len, &facts_json, &facts_len);
     if (rc != 0) {
         printf("recognize: %s\n", thinkthen_error_message(tt));
     } else {
         printf("recognize: %.*s\n", (int)found_len, found);
         thinkthen_free_string(found);
     }
+    thinkthen_free_string(facts_json);
 
     const char *alerts[] = {
         "{\"name\":\"Checkout returns 500 at the payment step.\",\"kind\":\"alert\"}",
@@ -116,13 +122,15 @@ int main(void) {
     size_t lengths[2] = {strlen(alerts[0]), strlen(alerts[1])};
     char *edges = NULL;
     size_t edges_len = 0;
-    rc = thinkthen_relate(tt, "{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"caused_by\",\"source\":\"alert\",\"target\":\"alert\"}]}}", alerts, lengths, 2, &edges, &edges_len);
+    facts_json = NULL;
+    rc = thinkthen_relate_with_facts(tt, "{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"caused_by\",\"source\":\"alert\",\"target\":\"alert\"}]}}", alerts, lengths, 2, &edges, &edges_len, &facts_json, &facts_len);
     if (rc != 0) {
         printf("relate: %s\n", thinkthen_error_message(tt));
     } else {
         printf("relate: %.*s\n", (int)edges_len, edges);
         thinkthen_free_string(edges);
     }
+    thinkthen_free_string(facts_json);
 
     door(tt, "usage", "{\"usage\":true}");
 
