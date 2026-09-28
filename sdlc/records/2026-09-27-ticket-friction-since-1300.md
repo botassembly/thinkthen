@@ -177,3 +177,6 @@ The frozen 0211 code candidate will receive fresh Sol High review because a repl
 
 
 The corrected 0224 design e648e35f passed the same reviewer. It reuses bounded shared capture for cases 18/19 through each installed host, and the reviewer withdrew the unnecessary positive-budget sleep suggestion after the exact SQLite setting distinction was confirmed. The next retained SQL designer prepares 0226 native panic diagnostics with Sol High because process-global hook coexistence, unwind containment and payload secrecy cross several native bindings. Fresh review also uses High for that recorded risk; no broad panic campaign or new public fault switch is authorized.
+
+
+Fresh 0211 code review found that validating the environment CA path inside from_env prevents a later explicit builder override. It also found that a bare builder with the same CA in the environment does not prove precedence, and dry-run does not prove live refusal before a send. The retained builder corrects the selected-value validation and adds conflicting override, live no-send and real fork-after-file-change proof through the existing fork helper. The 0226 bounded scan separately confirmed R’s worker copies caught panic text; the coordinator filed its own R issue on main rather than quietly expanding the three-host ticket.
