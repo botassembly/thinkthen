@@ -1,6 +1,6 @@
 # 0240 DuckDB try-details budget repair build
 
-Status: Clean implementation candidate from `b97c57cc`, merged with planning-only main `8360a6e6`, for a new independent High code and artifact review. Design ACCEPT is [0240-design-review.md](0240-design-review.md). This record does not close the spent-total issue or the other B13c platform gaps.
+Status: complete after new independent High code/artifact-review ACCEPT `706a133c09d62a43844409ed2600a980b2dd642d` (runtime `b97c57cc87152e23abc03a6b92846f1aa87825dd`). The repaired Linux behavior is integrated; the other B13c platform gaps remain open.
 
 ## Changed boundary
 
@@ -23,3 +23,7 @@ The root Rust ratchet rose from 93,178 to measured 93,453 nonblank lines, +275: 
 ## What the build taught us
 
 The visible bridge guard was one of several loss points: a denied right split half and the ordered worker's first-error return could each erase a real earlier answer. The successful `BeforeRetry` case also shows why mapping by public error kind alone would mislabel a spent total as Backend. Moving the existing packed listener into a small case child kept exact old body assertions while leaving room for distinct budget cases. A terminal marker must stop new feed when received, yet still drain joined workers so a genuine fatal cannot disappear behind a safe denial. The independent code review must inspect that admission/fatal ordering and verify the measured ratchet increase and artifact provenance.
+
+## Integration with cache 0238
+
+The coordinator merged the unchanged accepted DuckDB and native-source files into main after cache 0238. Only the derived root counter conflicted; a fresh measurement gives 94,033 nonblank lines, comprising the already-reviewed cache growth plus this ticket’s 275-line core increase. DuckDB counters remain 6,192 Rust and 3,289 Python. The five native public-boundary tests passed on the integrated source, and the cache ordinary/split filter-rank model table passed too. This verifies the touched shared paths together without repeating a platform matrix. The previously built DuckDB artifact remains attributed to its exact source above; the final release package must carry the final release pin.

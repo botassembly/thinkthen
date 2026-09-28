@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-28-duckdb-try-details-raises-on-a-spent-request-total
 
 # 0240: Keep DuckDB try-details answers when its request total is spent
 
-Status: Implementation candidate after fresh High design ACCEPT at `0d7aad0d`; fresh High code and newly built artifact review remain. This ticket restores accepted ADR 0080 and ticket 0149 after the 0222 follow-up review's fatal-budget premise was withdrawn. The [preflight](../records/0240-duckdb-try-budget-preflight.md) traces source and artifact history. The [build record](../records/0240-duckdb-try-budget-build.md) names the focused changed-source proof. Owner: Codex.
+Status: complete after fresh independent High code/artifact-review ACCEPT `706a133c`. The coordinator integrated the unchanged repair with cache 0238 and reran the affected native boundary and split-model checks. This restores the accepted ADR 0080/0149 try-value contract; other B13c platform gaps remain open. Owner: Codex.
 
 ## Outcome and retained behavior
 
