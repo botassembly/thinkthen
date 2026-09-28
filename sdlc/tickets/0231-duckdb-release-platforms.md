@@ -6,7 +6,7 @@ opens: databases/duckdb/tools/setup.sh databases/duckdb/tools/version.env databa
 
 # 0231: Ship the DuckDB C++ extension on the other release platforms
 
-Status: design under independent review. Owner: Codex. The Linux x86-64 implementation already landed under 0201, 0149 and 0157. This ticket adds Linux ARM64 and macOS x86-64/ARM64 package paths and their native proof before 0.1; it changes no SQL API. Exact implementation files need a new claim after review.
+Status: design accepted after fresh independent review at `f1eafad9`; [review record](../records/0231-design-review.md). Owner: Codex. The Linux x86-64 implementation already landed under 0201, 0149 and 0157. This ticket adds Linux ARM64 and macOS x86-64/ARM64 package paths and their native proof before 0.1; it changes no SQL API. Exact implementation files need a new claim before code.
 
 ## Outcome and authority
 
