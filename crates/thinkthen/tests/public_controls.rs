@@ -321,24 +321,20 @@ fn a_check_runs_before_a_held_send_and_never_during_it() {
     assert_eq!(answer.ok(), Some(Answer::Yes));
 }
 
-/// Ticket 0143: one-request relations fill the throttle of 4. A host check
-/// that fires while 4 are held feeds no fifth, and the 4 finish. With 4
-/// rules every relation is already fed, and the check still cancels.
+/// Shared pair requests fill the throttle of 4. A host check while four
+/// are held feeds no fifth; with exactly four, every sent request finishes.
 #[test]
 fn a_host_interrupt_during_relate_chunks_sends_nothing_new() {
     let _serial = serial();
-    let entities = ["gateway", "billing"].map(|name| Entity::new(name, "service").expect("entity"));
-    for count in [6, 4] {
+    for count in [60, 40] {
+        let entities = (0..count)
+            .map(|n| Entity::new(&format!("service {n}"), "service").expect("entity"))
+            .collect::<Vec<_>>();
         let backend = Backend::start().expect("backend");
         let held = engine(&format!("{}/arm/held/v1", backend.origin()));
-        let rules: Vec<_> = (1..=count)
-            .map(|n| format!(r#"{{"name":"r{n}","source":"service","target":"service"}}"#))
-            .collect();
-        let ask = Relate::from_json(&format!(
-            r#"{{"version":1,"relate":{{"relations":[{}]}}}}"#,
-            rules.join(",")
-        ))
-        .expect("relate file");
+        let ask = Relate::from_json(
+            r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"service","target":"service"}]}}"#,
+        ).expect("relate file");
         let runs = Runs::default();
         let check = || {
             runs.record(backend.count());
@@ -356,8 +352,12 @@ fn a_host_interrupt_during_relate_chunks_sends_nothing_new() {
             runs.all_on(thread::current().id()),
             "a check ran on a worker"
         );
-        assert_eq!(kind(&result), Some(ErrorKind::Cancelled), "{count} rules");
-        assert_eq!(backend.count(), 4, "{count} rules: nothing new was sent");
+        assert_eq!(
+            kind(&result),
+            Some(ErrorKind::Cancelled),
+            "{count} entities"
+        );
+        assert_eq!(backend.count(), 4, "{count} entities: nothing new was sent");
     }
 }
 

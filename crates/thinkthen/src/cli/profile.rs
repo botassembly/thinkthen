@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::args::Common;
-use crate::core::{BackendProfile, ProfileName, ProfileWarning};
+use crate::core::{BackendProfile, BatchWarning, ProfileName, ProfileWarning, Setting};
 use crate::failure::Failure;
 
 /// Read the profile file a run explicitly selected.
@@ -32,6 +32,8 @@ pub(crate) struct Mismatch {
     tuned_for: Option<ProfileName>,
     warning: Option<ProfileWarning>,
     printed: Arc<AtomicBool>,
+    batch_warning: Option<BatchWarning>,
+    batch_printed: Arc<AtomicBool>,
 }
 
 impl Mismatch {
@@ -40,11 +42,23 @@ impl Mismatch {
             tuned_for: tuned_for.cloned(),
             warning: ProfileWarning::between(tuned_for, profile.map(BackendProfile::name)),
             printed: Arc::new(AtomicBool::new(false)),
+            batch_warning: None,
+            batch_printed: Arc::new(AtomicBool::new(false)),
         }
+    }
+
+    pub(crate) fn with_batch(mut self, tuned_for: Option<Setting>, running: Setting) -> Self {
+        self.batch_warning =
+            tuned_for.and_then(|tuned_for| BatchWarning::between(tuned_for, running));
+        self
     }
 
     pub(crate) fn warning(&self) -> Option<ProfileWarning> {
         self.warning.clone()
+    }
+
+    pub(crate) fn batch_warning(&self) -> Option<BatchWarning> {
+        self.batch_warning.clone()
     }
 
     pub(crate) fn tuned_for(&self) -> Option<&ProfileName> {
@@ -52,7 +66,7 @@ impl Mismatch {
     }
 
     pub(crate) fn notice(&self) -> Option<Self> {
-        self.warning.as_ref().map(|_| self.clone())
+        (self.warning.is_some() || self.batch_warning.is_some()).then(|| self.clone())
     }
 
     pub(crate) fn print_once(&self) -> Result<(), Failure> {
@@ -60,22 +74,34 @@ impl Mismatch {
     }
 
     fn print_once_to(&self, writer: &mut dyn io::Write) -> Result<(), Failure> {
-        let Some(warning) = &self.warning else {
-            return Ok(());
-        };
-        if self.printed.load(Ordering::Acquire) {
-            return Ok(());
-        }
-        let line = format!(
-            "{}: warning: threshold tuned for profile {} is running under profile {}",
-            crate::core::NAME,
-            warning.tuned_for(),
-            warning.running()
-        );
-        writeln!(writer, "{line}")
+        if let Some(warning) = &self.warning
+            && !self.printed.load(Ordering::Acquire)
+        {
+            writeln!(
+                writer,
+                "{}: warning: threshold tuned for profile {} is running under profile {}",
+                crate::core::NAME,
+                warning.tuned_for(),
+                warning.running()
+            )
             .and_then(|()| writer.flush())
             .map_err(Failure::Output)?;
-        self.printed.store(true, Ordering::Release);
+            self.printed.store(true, Ordering::Release);
+        }
+        if let Some(warning) = &self.batch_warning
+            && !self.batch_printed.load(Ordering::Acquire)
+        {
+            writeln!(
+                writer,
+                "{}: warning: threshold tuned at batch {} is running at batch {}",
+                crate::core::NAME,
+                warning.tuned_for(),
+                warning.running()
+            )
+            .and_then(|()| writer.flush())
+            .map_err(Failure::Output)?;
+            self.batch_printed.store(true, Ordering::Release);
+        }
         Ok(())
     }
 }

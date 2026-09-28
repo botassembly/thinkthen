@@ -34,7 +34,7 @@ pub(crate) use crate::engine::prepared_request::{Answered, PreparedChunk as Chun
 pub(crate) use crate::engine::schedule::{Completed, Input, InputPort, Outcome as RunOutcome};
 pub(crate) use annotate::{GroupAnswer, PreparedGroup, assemble, check_model};
 pub(crate) use recognize::{MAX_TEXT_BYTES, Probabilities, Recognized, step_one};
-pub(crate) use relate::{Execution, Logical, Method, PreparedRelation, relations};
+pub(crate) use relate::{Execution, Logical, PreparedRelations, relations};
 
 mod annotate;
 #[cfg(test)]

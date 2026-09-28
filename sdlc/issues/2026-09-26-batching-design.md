@@ -204,21 +204,21 @@ The content hash is the SHA-256 of the record's evidence in compact JSON, the sa
 
 ### 3. Order, jobs, cache and replay
 
-- **Order.** Output keeps input order, as today. A batch's rows print when its reply arrives and every earlier row has printed.
-- **Jobs.** `--jobs N` means N batches in flight. It takes 1 to 32, and the default stays 4, as `specification/records.md` fixes. The output buffer holds at most N batches of rows. The throttle is not the speed lever. A full batch is.
+- **Order.** `decide` and `filter` keep input order. A batch's output rows print when its reply arrives and every earlier output row has printed. `rank` waits for the complete run, then sorts by probability with input order breaking ties.
+- **Jobs.** `--jobs N` means N batches in flight. It takes 1 to 32, and the default stays 4, as `specification/records.md` fixes. The in-order completion buffer holds at most N batches; `rank` also holds judged records until it can sort the complete run. The throttle is not the speed lever. A full batch is.
 - **Cache key.** The cache key is the batch's request digest, the same digest rule as today. A record's answer depends on its neighbours, so a per-record key would serve an answer made beside other records.
 - **Replay.** The same records under the same settings form the same batches and the same digests, because a file never pauses. `--replay` then answers every batch from disk. An inserted, removed or changed record changes the batches section 2 names. `--cache` pays only for those batches. `--replay` stops at the first missing batch at exit 5.
 - **Settings that change batches.** `--batch`, `--context`, the question, the pointers, a profile's limits and the records themselves. `--jobs` changes no batch.
 
 ### 4. Failure
 
-One request carries one batch, so one failed request fails every record in it. The run stops at the batch's first record, as `specification/records.md` stops at the first failed record. Rows before it stay printed. The stop line names the range and echoes no record:
+One request carries one batch, so one failed request fails every record in it. The run stops at the batch's first record, as `specification/records.md` stops at the first failed record. `decide` and `filter` keep rows already printed; `rank` withholds rows on a stop. The stop line names the range and echoes no record:
 
 ```text
 thinkthen: stopped at record 41; the request for records 41 to 50 failed: the backend answered with status 503; 40 records finished
 ```
 
-A reply that answers some questions and not others fails only the records with missing or bad answers. The run stops at the first such record, and the earlier records of that batch print. `annotate` keeps its exit 6 rule for a failed question beside good answers.
+A reply that answers some questions and not others fails only the records with missing or bad answers. The run stops at the first such record, and `decide` and `filter` print the earlier records of that batch, while `rank` withholds them on a stop. `annotate` keeps its exit 6 rule for a failed question beside good answers.
 
 A retried status (429, 500, 502, 503, 504 or 529) resends the whole batch as one request, as `specification/backends.md` fixes. Ticket 0089's premise holds here: a retried status means the backend answered, and it may have billed the first attempt. A batch can therefore be paid twice, as a single record can today. ADR 0051 amends this: a batch of at least two records refused as too large halves once. Other retried statuses still resend the whole batch.
 
@@ -275,7 +275,7 @@ The calibration identity's batch part stays out of the question digest, by Ian's
 
 Bare output does not change.
 
-Every per-record count is a share of its batch. The tool splits the batch's input tokens, output tokens and requests sent evenly across its records and gives any remainder to the earliest records. Shares therefore sum exactly to the batch, and the rows of a run sum exactly to the run. Under `--details` a batched record's `meta` carries:
+Every per-record count is a share of its batch. The tool splits the batch's input tokens, output tokens and requests sent evenly across its records and gives any remainder to the earliest records. Shares therefore sum exactly to the batch across all judged records. Printed rows can omit records filtered out or dropped by `rank --top`; `--facts` retains whole-run totals. Under `--details` a batched record's `meta` carries:
 
 ```json
 "meta":{"usage":{"input_tokens":63,"output_tokens":18},"requests_sent":1,"cached":false,"requests":["6b1f…c4"],"batch":{"setting":10,"records":10,"position":1,"closed":"size","usage":{"input_tokens":624,"output_tokens":175},"requests_sent":1}}
@@ -311,7 +311,8 @@ The fields are `records`, `requests_sent`, `cache_answers`, `input_tokens`, `out
 | A line inserted into a recorded list | Its batch and the later batches of its stretch miss the cache. Batches before it and after the next content cut replay |
 | A record whose batch of one passes 96,000 bytes | Sent alone as today's request |
 | A record that passes Jev's evidence limit | The backend refuses it at exit 4 with today's `max_tokens_exceeded` message |
-| A context whose request with one record passes the ceiling or a profile limit | Exit 2 before any request. The message names the limit and the context's size, and echoes no text |
+| A context whose request with the question and no record passes a request or profile limit | Exit 2 before any request. The message names the binding limit and size, and echoes no text |
+| A later record whose batch of one with the context passes a request or profile limit | Exit 2 at that record. Earlier batches are sent; `decide` and `filter` print completed rows, while `rank` withholds them on a stop. The refused record sends nothing. ADR 0087 |
 | Two equal records in one batch | One question. Both get its answer. Both print where kept |
 | A record holding quote marks or a newline | JSON escapes inside the quote |
 | A CSV row | Quoted as its compact JSON object |
@@ -329,11 +330,11 @@ The fields are `records`, `requests_sent`, `cache_answers`, `input_tokens`, `out
 | 10,000 records of 5 distinct values, none a content cut | Three batches of 4,096, 4,096 and 1,808 members |
 | `--replay` with another `--batch` than the recording | Exit 5 at the first missing batch |
 | An old folder recorded one record a request | Replays under `--batch 1`. Under the default, `--replay` stops at exit 5 and `--cache` pays again |
-| One batch fails | The run stops at its first record. Earlier rows stay printed. The stop line names the range |
-| One question in a reply is missing | That record fails. Earlier records of the batch print |
+| One batch fails | The run stops at its first record. `decide` and `filter` keep earlier printed rows; `rank` prints none. The stop line names the range |
+| One question in a reply is missing | That record fails. `decide` and `filter` print earlier records of the batch; `rank` withholds them |
 | A recorded reply missing one answer | Every replay fails at that record the same way. Replay never resends to fill it |
 | A 429 or 5xx | The whole batch is resent as one request. After a 5xx the backend may bill both attempts |
-| An interrupt mid-batch | No new batch starts. Batches in flight finish and print in order, as `specification/channels.md` fixes for SIGINT. They are billed |
+| An interrupt mid-batch | No new batch starts. Batches in flight finish and are billed. `decide` and `filter` print finished rows in order; `rank` withholds a partial order, as `specification/channels.md` fixes for SIGINT |
 | The reader downstream closes the pipe | No new batch starts. Batches in flight may be billed |
 | `rank --top 5` | Every record is judged in batches. Five print |
 | DuckDB parallel scan | Batches may differ between runs. The cache misses those batches |
@@ -349,7 +350,7 @@ Tests 1 to 8 and 13 need no network. They use recordings and a loopback backend.
 5. **Replay.** A recorded run replays with no network under the same settings. Under another `--batch` it exits 5 and names the first missing batch.
 6. **Shares.** For every batch in a recorded run, the rows' shares of input tokens, output tokens and requests sent sum to the batch. The `--facts` totals equal the sum over live replies. A replayed run's facts carry no token fields.
 7. **Pause.** A real pipe carries 3 records from a writer that then stops and holds the pipe open. The loopback backend receives a first request of 3 records within 5 seconds. The same pipe under `--cache DIR` and under `--record DIR` sends the same request within 5 seconds.
-8. **Failure.** A loopback backend answers 503 to the second batch's request after the retries. The run stops at that batch's first record, with every earlier row printed and exit 4.
+8. **Failure.** A loopback backend answers 503 to the second batch's request after the retries. The run stops at that batch's first record with exit 4. `decide` prints every earlier completed row, `filter` prints earlier kept rows, and `rank` prints none because it cannot sort a partial run.
 9. **Accuracy cost, recorded live.** Run `decide --lines --details` with experiment 271's key and filter's question at a cut of 0.7 over the 306 songs. `decide` prints every record, so `audit` sees every answer. Make three runs at `--batch 1`, three at `--batch 10` and three at the default. Add one run at `--batch 10` and one at the default over each of three shuffled orders with fixed seeds, as local experiment 275 ran them. The default and `--batch 10` arms send ADR 0055's fixed evidence sentence, with each record quoted inside its own question. The ticket reports each batched setting's three same-bytes repeats and its three shuffled orders side by side. For each, it reports right answers, false yeses, misses, the mean calibration error from `thinkthen audit`, and the answers that cross the cut. It gates nothing. Ticket D1's page states the cost with this record. For comparison, ADR 0055's table for the title task "It appears on the album Abbey Road" gives 286 right at one title a request, 266 to 277 in the records-list form, and 283 to 287 in the quoted form. Its one measured loss is the release-year title task "It was released before 1965". There the records-list form scored 276 to 283 in the table's own order and 258 to 270 over shuffled orders. The quoted form scored 255 to 259, and one title a request scored 253. One more arm adds one planted false claim at the end of the 306 titles at the default, and reports how many other answers crossed the cut. Under ADR 0055 item 5 the planted record sits only in its own question, so the arm checks that claim and gates nothing.
 10. **Accuracy, context.** The same songs with the catalog as `--context`: one request, and at least 297 right in each of three repeats. Experiment 271 scored 299 to 302.
 11. **Pick-one.** Experiment 262's 200 `choose` items at the default and at `--batch 10`. The ticket reports both scores against experiment 262's bar of 135 of 200. It gates nothing.

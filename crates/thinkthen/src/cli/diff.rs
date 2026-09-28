@@ -3,6 +3,7 @@
 //! The command reads the paths it is handed and nothing else, sends no
 //! request, and reads no setting. `sdlc/scripts/policy.py` holds it to that.
 
+use std::collections::BTreeSet;
 use std::fmt::Write as _;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -10,7 +11,6 @@ use std::path::{Path, PathBuf};
 use clap::Args;
 
 use crate::cli::measure::{Cause, Match, Refusal, lines, rule, write};
-use crate::core::Json;
 use crate::core::Pointer;
 use crate::core::measure::MeasureError::{MixesSets, MixesVerbs, PairsVerbs};
 use crate::core::measure::answer::{self, Identity};
@@ -20,6 +20,7 @@ use crate::core::measure::diff::{
 use crate::core::measure::items::number;
 use crate::core::measure::key::Key;
 use crate::core::measure::{places, rounded, rounded_line};
+use crate::core::{BatchSetting, Json};
 use crate::failure::Failure;
 
 /// The command line of `diff`. Its help is on the `Diff` command.
@@ -56,7 +57,7 @@ pub(crate) struct DiffArguments {
 
 /// Compare, write JSON lines or the table and flush, then warn on standard error.
 pub(crate) fn run(arguments: &DiffArguments, writer: impl Write) -> Result<(), Failure> {
-    let (changes, summary) = compare_all(arguments).map_err(Failure::Measure)?;
+    let (changes, summary, batch_settings) = compare_all(arguments).map_err(Failure::Measure)?;
     let text = if arguments.table {
         table(&changes, &summary)
     } else {
@@ -71,8 +72,16 @@ pub(crate) fn run(arguments: &DiffArguments, writer: impl Write) -> Result<(), F
     };
     write(writer, &text)?;
     let mut stderr = std::io::stderr().lock();
+    let mut notices = warnings(&summary);
+    if batch_settings.len() > 1 {
+        let _ = writeln!(
+            notices,
+            "thinkthen: diff: warning: the runs used different batch settings ({}); batching moves answers, so some changes may come from it",
+            BatchSetting::listed(&batch_settings)
+        );
+    }
     let _unwritten = stderr
-        .write_all(warnings(&summary).as_bytes())
+        .write_all(notices.as_bytes())
         .and_then(|()| stderr.flush());
     Ok(())
 }
@@ -93,7 +102,9 @@ fn warnings(summary: &Summary) -> String {
     out
 }
 
-fn compare_all(arguments: &DiffArguments) -> Result<(Vec<Row>, Summary), Refusal> {
+type Compared = (Vec<Row>, Summary, BTreeSet<BatchSetting>);
+
+fn compare_all(arguments: &DiffArguments) -> Result<Compared, Refusal> {
     let refusal = |role, cause| Refusal {
         command: "diff",
         role,
@@ -137,13 +148,20 @@ fn compare_all(arguments: &DiffArguments) -> Result<(Vec<Row>, Summary), Refusal
     let run = |role, path: &Path| {
         lines(path)
             .and_then(|read| {
-                answer::read(&read, &pointer, Identity::Answer).map_err(Cause::Measure)
+                let settings = BatchSetting::in_results(&read).map_err(Cause::BatchSetting)?;
+                answer::read(&read, &pointer, Identity::Answer)
+                    .map(|answers| (answers, settings))
+                    .map_err(Cause::Measure)
             })
             .map_err(|cause| refusal(role, cause))
     };
-    let first = run("first run", &arguments.a)?;
+    let (first, mut batch_settings) = run("first run", &arguments.a)?;
     let second = match &arguments.b {
-        Some(path) => Some(run("second run", path)?),
+        Some(path) => {
+            let (answers, settings) = run("second run", path)?;
+            batch_settings.extend(settings);
+            Some(answers)
+        }
         None => None,
     };
     let a = Side {
@@ -156,15 +174,17 @@ fn compare_all(arguments: &DiffArguments) -> Result<(Vec<Row>, Summary), Refusal
     };
     let compared = if second.is_some() { "runs" } else { "cuts" };
     let (shown, matching) = ([shown_a, shown_b], arguments.matching.map(Into::into));
-    compare::diff(a, b, key.as_ref(), shown, compared, matching).map_err(|cause| {
-        let mixed = matches!(cause, PairsVerbs(_) | MixesVerbs(_) | MixesSets(_));
-        let role = if mixed && second.is_some() {
-            "second run"
-        } else {
-            "first run"
-        };
-        refusal(role, Cause::Measure(cause))
-    })
+    compare::diff(a, b, key.as_ref(), shown, compared, matching)
+        .map(|(rows, summary)| (rows, summary, batch_settings))
+        .map_err(|cause| {
+            let mixed = matches!(cause, PairsVerbs(_) | MixesVerbs(_) | MixesSets(_));
+            let role = if mixed && second.is_some() {
+                "second run"
+            } else {
+                "first run"
+            };
+            refusal(role, Cause::Measure(cause))
+        })
 }
 
 /// The prototype's table, word for word, and the item rows of `recognize` and `relate`.
