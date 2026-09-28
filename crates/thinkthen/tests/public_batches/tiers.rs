@@ -27,6 +27,16 @@ fn saved_annotate_batch_tiers() {
     let run = |engine: &Engine, set: &QuestionSet, options| {
         let mut batch = engine.annotate_with(set, records, options);
         let rows = batch.by_ref().collect::<Result<Vec<_>, _>>()?;
+        assert_eq!(
+            rows.iter().map(|row| *row.input()).collect::<Vec<_>>(),
+            records
+        );
+        assert_eq!(
+            rows.iter()
+                .map(AnnotatedRecord::value_json)
+                .collect::<Vec<_>>(),
+            [r#"{"ready":true}"#; 3]
+        );
         Ok::<_, Error>((rows, batch.facts().cloned()))
     };
 

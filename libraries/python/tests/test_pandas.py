@@ -8,6 +8,8 @@ index test's row on shared case 27, whose answers differ by text, show values
 paired to the wrong rows.
 """
 
+import hashlib
+import json
 import pathlib
 import time
 
@@ -15,6 +17,7 @@ import pandas
 import pytest
 
 from conftest import Backend, child_env, run, start
+from test_call import capturing_filter_listener
 
 THREE = pandas.__version__.startswith("3.")
 TESTS = str(pathlib.Path(__file__).resolve().parent)
@@ -56,6 +59,90 @@ SETUP = f"""
                   "kind": one.kind, "strength": one.strength}} for one in engine.recognize(text, kinds=["bill", "ship"]).value.entities]
                 for text in rows]
 """
+
+
+def test_pandas_series_and_frame_batch_facts(backend, tmp_path):
+    """One captured listener proves frame packing and the saved set tier on both pandas lanes."""
+    with capturing_filter_listener() as (url, bodies):
+        env = child_env(backend, tmp_path)
+        env["THINKTHEN_BASE_URL"] = url.removesuffix("/systemone")
+        printed = run("""
+        import json, pandas as pd, thinkthen as tt
+        engine = tt.Engine(model="jev-latest", cache=False)
+        observed = []
+        question = tt.question(decide="Is it late?")
+        rows = pd.Series(["one", "two", "three"], index=[9, 5, 7], name="body")
+        for setting in (None, 1):
+            call = engine.decide(question, rows, **({} if setting is None else {"batch": setting}))
+            print("series", call.value.index.tolist(), call.value.name, call.value.dtype.name,
+                  call.value.tolist(), call.facts.records, call.facts.requests_sent,
+                  [detail["index"] for detail in call.details])
+            observed.append([list(detail["request_digests"]) for detail in call.details])
+        frame = rows.to_frame().assign(number=[4, 6, 8])
+        saved = {"version": 1, "batch": 1,
+                 "questions": {"late": {"decide": "Is it late?"}}}
+        plain = {"version": 1, "questions": saved["questions"]}
+        for label, form, controls in (("default", plain, {}), ("saved", saved, {}),
+                                      ("typed", saved, {"batch": "max"})):
+            call = engine.annotate(form, frame, on="body", **controls)
+            value = call.value
+            print("frame", label, value.index.tolist(), list(value.columns), value["number"].tolist(),
+                  value["late"].dtype.name, value["late"].tolist(),
+                  value["failed"].isna().all(), call.facts.records,
+                  call.facts.requests_sent, [detail["index"] for detail in call.details])
+            observed.append([list(detail["request_digests"]) for detail in call.details])
+        engine_max = tt.Engine(model="jev-latest", batch="max", cache=False)
+        overridden = engine_max.annotate(saved, frame, on="body")
+        print("engine", overridden.facts.records, overridden.facts.requests_sent)
+        observed.append([list(detail["request_digests"]) for detail in overridden.details])
+        context = engine.decide(question, rows, context="review this claim")
+        print("context", context.facts.records, context.facts.requests_sent)
+        observed.append([list(detail["request_digests"]) for detail in context.details])
+        before = engine.usage()["requests_sent"]
+        try:
+            engine.annotate(saved, frame, on="body", context="forbidden")
+        except tt.UsageError as error:
+            print("refused", str(error), engine.usage()["requests_sent"] - before)
+        else:
+            raise AssertionError("annotate context was accepted")
+        print(json.dumps(observed))
+        """, env)
+        *lines, captured = printed.splitlines()
+        assert lines == [
+            "series [9, 5, 7] body boolean [False, True, True] 3 1 [0, 1, 2]",
+            "series [9, 5, 7] body boolean [False, True, True] 3 3 [0, 1, 2]",
+            "frame default [9, 5, 7] ['body', 'number', 'late', 'failed'] [4, 6, 8] boolean "
+            "[False, True, True] True 3 1 [0, 1, 2]",
+            "frame saved [9, 5, 7] ['body', 'number', 'late', 'failed'] [4, 6, 8] boolean "
+            "[False, True, True] True 3 3 [0, 1, 2]",
+            "frame typed [9, 5, 7] ['body', 'number', 'late', 'failed'] [4, 6, 8] boolean "
+            "[False, True, True] True 3 1 [0, 1, 2]",
+            "engine 3 1",
+            "context 3 1",
+            "refused annotate does not take a shared context 0",
+        ]
+        requests = [json.loads(body) for body in bodies]
+        assert [len(request["questions"]) for request in requests] == [3, 1, 1, 1, 3, 1, 1, 1, 3, 3, 3]
+        singleton = (b'{"state":"one","model":"jev-latest","questions":'
+                     b'{"q1":{"type":"noul","instructions":"Is it late?"}}}')
+        assert singleton in bodies[1:4]
+        digest = lambda body: hashlib.sha256(
+            b"systemone\n" + url.encode() + b"\n" + body).hexdigest()
+        def by_state(items):
+            return {json.loads(body)["state"]: digest(body) for body in items}
+        states = ["one", "two", "three"]
+        expected_digests = [
+            [[digest(bodies[0])]] * 3,
+            [[by_state(bodies[1:4])[state]] for state in states],
+            [[digest(bodies[4])]] * 3,
+            [[by_state(bodies[5:8])[state]] for state in states],
+            [[digest(bodies[8])]] * 3,
+            [[digest(bodies[9])]] * 3,
+            [[digest(bodies[10])]] * 3,
+        ]
+        assert json.loads(captured) == expected_digests
+        assert bodies[0] != bodies[-1]
+    assert backend.count() == 0
 
 
 def test_each_verb_answers_a_series_as_its_list_does(backend, tmp_path):

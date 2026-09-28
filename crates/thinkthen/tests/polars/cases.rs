@@ -200,9 +200,9 @@ fn judged(door: &Engine, slice: &Engine, question: &str, texts: &[&str]) -> (Cel
             let listed = decided(listed.collect::<Result<_, _>>().expect("the slice form"));
             return (
                 cells(
-                    &door
-                        .decide_series(&banded, &column, options())
-                        .expect("the door"),
+                    door.decide_series(&banded, &column, options())
+                        .expect("the door")
+                        .value(),
                 ),
                 listed,
             );
@@ -214,9 +214,9 @@ fn judged(door: &Engine, slice: &Engine, question: &str, texts: &[&str]) -> (Cel
             let listed = decided(listed.collect::<Result<_, _>>().expect("the slice form"));
             return (
                 cells(
-                    &door
-                        .decide_series(&asked, &column, options())
-                        .expect("the door"),
+                    door.decide_series(&asked, &column, options())
+                        .expect("the door")
+                        .value(),
                 ),
                 listed,
             );
@@ -237,7 +237,7 @@ fn judged(door: &Engine, slice: &Engine, question: &str, texts: &[&str]) -> (Cel
         })
         .collect::<Result<_, _>>()
         .expect("the one-text form");
-    (cells(&through_door.expect("the door")), listed)
+    (cells(through_door.expect("the door").value()), listed)
 }
 
 /// A set over the texts: each typed answer against its record's JSON member.
@@ -257,7 +257,7 @@ fn annotated(door: &Engine, slice: &Engine, set: &str, texts: &[&str]) -> (Vec<C
     let mut through_door = Vec::new();
     let mut through_slice = Vec::new();
     for (name, _) in set.members() {
-        let column = out.column(name).expect("a new column");
+        let column = out.value().column(name).expect("a new column");
         through_door.push(cells(column.as_materialized_series()));
         through_slice.push(
             records

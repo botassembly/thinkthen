@@ -58,6 +58,28 @@ fn selected_batch(
     })
 }
 
+fn selected_set_batch(
+    questions: &QuestionSet,
+    options: &CallOptions<'_>,
+    engine: Option<core::Setting>,
+) -> Result<core::Setting, Error> {
+    if let Some(typed) = options.batch_setting() {
+        return Ok(typed.into());
+    }
+    if let Some(engine) = engine {
+        return Ok(engine);
+    }
+    let Some(file) = questions.0.batch() else {
+        return Ok(core::Setting::Max);
+    };
+    core::Setting::of_json(file).ok_or_else(|| {
+        Error::refused(core::QuestionSetError::Shape {
+            path: "batch".to_owned(),
+            wanted: "takes max or a whole number of at least 1",
+        })
+    })
+}
+
 impl Engine {
     /// The records whose answer is yes, lazily, in input order.
     pub fn filter<'a, I>(&'a self, question: &'a Question, records: I) -> Batch<'a, I::Item>
@@ -405,20 +427,7 @@ impl Engine {
     {
         Batch::of((|| {
             options.without_context("annotate")?;
-            let setting = if let Some(typed) = options.batch_setting() {
-                typed.into()
-            } else if let Some(engine) = self.batch {
-                engine
-            } else if let Some(file) = questions.0.batch() {
-                core::Setting::of_json(file).ok_or_else(|| {
-                    Error::refused(core::QuestionSetError::Shape {
-                        path: "batch".to_owned(),
-                        wanted: "takes max or a whole number of at least 1",
-                    })
-                })?
-            } else {
-                core::Setting::Max
-            };
+            let setting = selected_set_batch(questions, &options, self.batch)?;
             let stop = Stop::begin(options)?;
             let (engine, set) = (Arc::clone(&self.inner), questions.0.clone());
             batch::start_annotation(engine, set, records.into_iter(), stop, self.most, setting)

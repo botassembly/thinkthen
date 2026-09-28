@@ -104,7 +104,12 @@ fn equal_answers(question: &Question, series: &Series, refs: &[&str], count: usi
         let answered = engine
             .decide_series(question, series, CallOptions::new())
             .expect("the series call");
-        answered.bool().expect("a Boolean series").iter().collect()
+        answered
+            .value()
+            .bool()
+            .expect("a Boolean series")
+            .iter()
+            .collect()
     });
     let (from_slice, slice_count) = answered(&|engine| {
         engine
