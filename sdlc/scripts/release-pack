@@ -106,30 +106,8 @@ part_sqlite() {
 # DuckDB reads its footer: the platform, the DuckDB version, and the extension's version.
 part_duckdb() {
 	case $TARGET in
-	x86_64-unknown-linux-gnu | aarch64-unknown-linux-gnu | aarch64-apple-darwin) ;;
-	*)
-		# Keep the existing C API package on Intel macOS until its C++ input
-		# and native host proof are reviewed.
-		if [ -z "$reuse" ]; then
-			(cd databases/duckdb && cargo build --locked --quiet --release)
-			. databases/duckdb/tools/version.env
-			case $TARGET in
-			aarch64-*linux*) platform=linux_arm64 ;;
-			x86_64-apple*) platform=osx_amd64 ;; *) platform=osx_arm64 ;;
-			esac
-			printf '%s' "$platform" >"$stage/platform.txt"
-			printf '%s' "$V" >"$stage/version.txt"
-			mkdir -p "databases/duckdb/build/artifacts/c-api/$TARGET"
-			python3 databases/duckdb/vendor/append_extension_metadata.py \
-				-l "$(built databases/duckdb)/release/libthinkthen_duckdb.$dl" -o "databases/duckdb/build/artifacts/c-api/$TARGET/thinkthen.duckdb_extension" \
-				-n thinkthen -dv "$DUCKDB_VERSION" -evf "$stage/version.txt" -pf "$stage/platform.txt" \
-				--abi-type C_STRUCT_UNSTABLE >/dev/null
-		fi
-		folder=$(fresh duckdb)
-		cp "databases/duckdb/build/artifacts/c-api/$TARGET/thinkthen.duckdb_extension" "$folder/"
-		pack "thinkthen-duckdb-$V-$TARGET.tar.gz" "$folder"
-		return
-		;;
+	x86_64-unknown-linux-gnu | aarch64-unknown-linux-gnu | aarch64-apple-darwin | x86_64-apple-darwin) ;;
+	*) echo "release-pack: no pinned DuckDB C++ package for $TARGET" >&2; exit 77 ;;
 	esac
 	if [ -z "$reuse" ]; then
 		sh databases/duckdb/cpp/build.sh
@@ -140,8 +118,15 @@ part_duckdb() {
 		machine=$(readelf -h "$extension" | sed -n 's/^[[:space:]]*Machine:[[:space:]]*//p')
 		[ "$machine" = AArch64 ] || { echo "release-pack: DuckDB extension is $machine, not AArch64" >&2; exit 1; }
 	fi
-	if [ "$TARGET" = aarch64-apple-darwin ]; then
-		[ "$(lipo -archs "$extension")" = arm64 ] || { echo "release-pack: $extension is not a single arm64 Mach-O" >&2; exit 1; }
+	case $TARGET in
+	aarch64-apple-darwin) mac_arch=arm64 ;;
+	x86_64-apple-darwin) mac_arch=x86_64 ;;
+	esac
+	if [ -n "${mac_arch:-}" ]; then
+		[ "$(lipo -archs "$extension")" = "$mac_arch" ] || {
+			echo "release-pack: $extension is not a single $mac_arch Mach-O" >&2
+			exit 1
+		}
 	fi
 	folder=$(fresh duckdb)
 	cp "$extension" "$folder/"

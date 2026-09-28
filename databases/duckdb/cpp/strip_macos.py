@@ -12,14 +12,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance" / "ch
 from children import child_env  # noqa: E402
 
 
-def main(source: Path, destination: Path) -> None:
+def main(source: Path, destination: Path, platform: str) -> None:
+    if platform not in ("osx_arm64", "osx_amd64"):
+        raise SystemExit("duckdb: unsupported macOS C++ extension platform")
     # DuckDB appends this unsigned 534-byte metadata block after the Mach-O.
     # Apple's strip refuses a file whose bytes extend past __LINKEDIT.
     data = source.read_bytes()
     footer = data[-534:]
     if (len(data) <= len(footer) or not footer.startswith(b"\x00\x93\x04\x10duckdb_signature\x80\x04")
             or footer[22 + 3 * 32:22 + 4 * 32].rstrip(b"\x00") != b"CPP"
-            or footer[22 + 6 * 32:22 + 7 * 32].rstrip(b"\x00") != b"osx_arm64"
+            or footer[22 + 6 * 32:22 + 7 * 32].rstrip(b"\x00") != platform.encode()
             or footer[22 + 7 * 32:22 + 8 * 32].rstrip(b"\x00") != b"4"):
         raise SystemExit("duckdb: unexpected macOS C++ extension footer")
 
@@ -37,6 +39,6 @@ def main(source: Path, destination: Path) -> None:
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        raise SystemExit("usage: strip_macos.py SOURCE DESTINATION")
-    main(Path(sys.argv[1]), Path(sys.argv[2]))
+    if len(sys.argv) != 4:
+        raise SystemExit("usage: strip_macos.py SOURCE DESTINATION PLATFORM")
+    main(Path(sys.argv[1]), Path(sys.argv[2]), sys.argv[3])

@@ -32,6 +32,15 @@ Darwin:arm64)
 	older_zip_hash=$DUCKDB_OSX_ARM64_OLDER_CLI_ZIP_SHA256 older_hash=$DUCKDB_OSX_ARM64_OLDER_CLI_SHA256
 	manifest=archive-sha256-osx-arm64.txt
 	;;
+Darwin:x86_64)
+	target=x86_64-apple-darwin platform=osx_amd64
+	cli_asset=duckdb_cli-osx-amd64.zip
+	cli_zip_hash=$DUCKDB_OSX_AMD64_CLI_ZIP_SHA256 cli_hash=$DUCKDB_OSX_AMD64_CLI_SHA256
+	static_asset=static-libs-osx-amd64.zip static_hash=$DUCKDB_OSX_AMD64_STATIC_ZIP_SHA256
+	older_asset=duckdb_cli-osx-amd64.zip
+	older_zip_hash=$DUCKDB_OSX_AMD64_OLDER_CLI_ZIP_SHA256 older_hash=$DUCKDB_OSX_AMD64_OLDER_CLI_SHA256
+	manifest=archive-sha256-osx-amd64.txt
+	;;
 *) echo "setup: no pinned DuckDB C++ inputs for $(uname -s):$(uname -m)" >&2; exit 77 ;;
 esac
 case ${1:-} in
@@ -65,11 +74,11 @@ if [ "${1:-}" = --fetch ]; then
 	verify "$older_zip_hash" "$older_zip"
 	mkdir -p "$HOME_DIR/older-host"
 	unzip -o -q "$older_zip" duckdb -d "$HOME_DIR/older-host"
-	if [ "$target" = aarch64-apple-darwin ]; then
+	case $target in *-apple-darwin)
 		wheel=${DUCKDB_OSX_ARM64_CMAKE_WHEEL_URL##*/}
 		[ -f "$HOME_DIR/$wheel" ] || curl -fsSL -o "$HOME_DIR/$wheel" "$DUCKDB_OSX_ARM64_CMAKE_WHEEL_URL"
 		verify "$DUCKDB_OSX_ARM64_CMAKE_WHEEL_SHA256" "$HOME_DIR/$wheel"
-	fi
+	;; esac
 fi
 [ -x "$HOME_DIR/duckdb" ] || { echo "setup: the pinned $DUCKDB_VERSION host is missing; run tools/setup.sh --fetch" >&2; exit 77; }
 verify "$cli_hash" "$HOME_DIR/duckdb"
@@ -94,7 +103,7 @@ if [ "${1:-}" = --fetch ]; then
 else
 	uv pip install --offline --quiet --python "$HOME_DIR/venv/bin/python" -r "$HERE/requirements.txt"
 fi
-if [ "$target" = aarch64-apple-darwin ]; then
+case $target in *-apple-darwin)
 	wheel=${DUCKDB_OSX_ARM64_CMAKE_WHEEL_URL##*/}
 	verify "$DUCKDB_OSX_ARM64_CMAKE_WHEEL_SHA256" "$HOME_DIR/$wheel"
 	uv pip install --offline --quiet --python "$HOME_DIR/venv/bin/python" "$HOME_DIR/$wheel"
@@ -102,7 +111,7 @@ if [ "$target" = aarch64-apple-darwin ]; then
 		echo 'setup: the project-local CMake version differs from its pin' >&2
 		exit 1
 	}
-fi
+;; esac
 (cd "$HOME_DIR" && "$HOME_DIR/venv/bin/python" "$HERE/../vendor/configure_helper.py" -o "$HOME_DIR" -p)
 [ "$(cat "$HOME_DIR/platform.txt")" = "$platform" ] || { echo 'setup: stock DuckDB reports another platform' >&2; exit 1; }
 echo "setup: ready under $HOME_DIR"
