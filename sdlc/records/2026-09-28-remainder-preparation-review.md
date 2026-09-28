@@ -1,0 +1,7 @@
+# Review of remaining contract and SQL preparation
+
+Fresh independent Medium review accepted the corrected five-row cross-surface note at `d879d523` and the DuckDB Q5 note at `03ac1fd1`. It read original criteria, accepted contracts, current selectors and implementations; no build, provider call or product edit ran.
+
+The cross-surface note initially mixed invalid Ruby path arguments with Local file-content failures and treated stale settings-page platform prose as current code. The correction preserves Usage for invalid path bytes, Local for invalid file contents, and separates three existing C++ package routes from remaining native runner qualification. Current0244 source has since landed at `6717d80c`. The Q5 note correctly traces the C++ listed-form refusal, caller file authority and the public metadata-preserving route. Its overload remains a proposal for a reviewed ticket, not approved implementation.
+
+The preparation identified a bounded independent next change in Python's public frame span name, and five distinct cross-surface criteria rather than one blanket parity closure. It avoided repeating accepted package designs. There are no new item completions from these notes. The separate sixteen-row recognition/batching note is still in review and is not accepted by this record.
