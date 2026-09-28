@@ -1,15 +1,15 @@
-//! The warm aggregate's private, environment-only engine call.
+//! The warm aggregate's caller-session engine call.
 #![allow(unsafe_code, reason = "the C ABI copies one complete aggregate group")]
 
 use thinkthen::{LoadedQuestion, QuestionKind};
 
 use crate::engines;
-use crate::errors::RowError;
 use crate::ffi::{
-    BridgeStop, BridgeText, Reply, question_typed, reply_boundary, run_detached, text,
+    BridgeSettings, BridgeStop, BridgeText, Reply, asked, probe, question_typed, reply_boundary,
+    run_detached, text,
 };
 
-/// Judge every distinct aggregate text once, ignoring SQL session settings.
+/// Judge every distinct aggregate text once with the caller's settings.
 ///
 /// # Safety
 /// The question and every entry of `texts` remain readable through this call.
@@ -20,6 +20,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_warm(
     texts: *const BridgeText,
     count: usize,
     from_file: i32,
+    settings: BridgeSettings,
     stop: BridgeStop,
 ) -> Reply {
     reply_boundary(|| {
@@ -42,17 +43,23 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_warm(
             .iter()
             .map(|row| text(row.bytes, row.len).map(str::to_owned))
             .collect::<Result<Vec<_>, _>>()?;
-        let engine = engines::from_env()?;
+        let asked = asked(&settings)?;
+        let engine = engines::engine_for(&asked, |path| probe(&settings, path))?;
+        let (copied, cut) = engines::within_total(&asked, copied)?;
+        let total = asked.max_requests_total;
         run_detached(stop, move |token| {
             let answered = match &question {
                 LoadedQuestion::Question(held) => engine
-                    .decide_many_with(held, copied, thinkthen::CallOptions::new().cancel(&token))
+                    .decide_many_with(held, copied, engines::options(-1, &token, total)?)
                     .collect::<Result<Vec<_>, _>>(),
                 LoadedQuestion::Banded(held) => engine
-                    .decide_many_with(held, copied, thinkthen::CallOptions::new().cancel(&token))
+                    .decide_many_with(held, copied, engines::options(-1, &token, total)?)
                     .collect::<Result<Vec<_>, _>>(),
             }
-            .map_err(|error| RowError::from(error).text)?;
+            .map_err(|error| engines::call_error(error, total).text)?;
+            if let Some(error) = cut {
+                return Err(error);
+            }
             let count = i64::try_from(answered.len()).unwrap_or(i64::MAX);
             Ok(count.to_ne_bytes().to_vec())
         })

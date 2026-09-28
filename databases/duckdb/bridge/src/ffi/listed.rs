@@ -69,11 +69,12 @@ pub(super) fn run(
     set: &QuestionSet,
     texts: Vec<String>,
     options: CallOptions<'_>,
+    total: Option<i64>,
 ) -> Result<Vec<u8>, String> {
     let rows = engine
         .annotate_with(set, texts, options)
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|error| RowError::from(error).text)?;
+        .map_err(|error| crate::engines::call_error(error, total).text)?;
     let mut bytes = Vec::new();
     for row in rows {
         match row.values().first().map(thinkthen::NamedAnnotation::value) {

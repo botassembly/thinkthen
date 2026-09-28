@@ -1,6 +1,8 @@
 //! Compact typed values for DuckDB's recognize and relations scalars.
 
-use thinkthen::{CallOptions, CancelToken, Engine, Kind, Recognize};
+use thinkthen::{Engine, Kind, Recognize};
+
+use super::CallScope;
 
 use crate::errors::RowError;
 
@@ -56,23 +58,15 @@ pub(super) fn run(
     engine: &Engine,
     ask: &Recognize,
     texts: Vec<String>,
-    deadline_ms: i64,
     kind: i32,
-    token: &CancelToken,
+    scope: CallScope<'_>,
 ) -> Result<Vec<u8>, String> {
     let mut bytes = Vec::new();
     for text in texts {
-        let options = if deadline_ms == -1 {
-            CallOptions::new().cancel(token)
-        } else {
-            CallOptions::new()
-                .deadline_millis(deadline_ms)
-                .map_err(|error| RowError::from(error).text)?
-                .cancel(token)
-        };
+        let options = crate::engines::options(scope.due, scope.token, scope.total)?;
         let found = engine
             .recognize_with(ask, &text, options)
-            .map_err(|error| RowError::from(error).text)?;
+            .map_err(|error| crate::engines::call_error(error, scope.total).text)?;
         if kind == 8 {
             count(&mut bytes, found.entities().len())?;
             for entity in found.entities() {

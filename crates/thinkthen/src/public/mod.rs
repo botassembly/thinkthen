@@ -30,7 +30,8 @@ pub use engine::{DecisionQuestion, DetailQuestion, Engine, Evidence};
 pub use error::{Error, ErrorDetail, ErrorKind};
 #[cfg(feature = "polars")]
 pub use frame::PolarsEngine;
-pub use options::{CallOptions, CancelToken};
+pub(crate) use options::SendReservation;
+pub use options::{CallOptions, CancelToken, SendBudget, SendBudgetDenial};
 pub use question::{
     BandedQuestion, ChooseQuestion, Description, DescriptionBuilder, LoadedQuestion, Question,
     QuestionKind, TagQuestion,

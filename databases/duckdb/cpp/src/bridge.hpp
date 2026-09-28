@@ -26,6 +26,18 @@ struct ThinkThenSettings {
 	const uint8_t *cache_bytes;
 	size_t cache_len;
 	int32_t cache_allowed;
+	const uint8_t *model_bytes;
+	size_t model_len;
+	int64_t timeout;
+	int64_t max_retries;
+	const uint8_t *profile_bytes;
+	size_t profile_len;
+	const uint8_t *record_bytes;
+	size_t record_len;
+	const uint8_t *replay_bytes;
+	size_t replay_len;
+	int32_t record_allowed;
+	int32_t replay_allowed;
 };
 struct ThinkThenStop {
 	void *context;
@@ -61,7 +73,8 @@ ThinkThenReply thinkthen_cpp_nested_group(const uint8_t *argument, size_t argume
 void thinkthen_cpp_free(uint8_t *bytes, size_t len);
 ThinkThenReply thinkthen_cpp_usage();
 ThinkThenReply thinkthen_cpp_warm(const uint8_t *question, size_t question_len,
-                                 const ThinkThenText *texts, size_t count, int32_t from_file, ThinkThenStop stop);
+                                 const ThinkThenText *texts, size_t count, int32_t from_file,
+                                 ThinkThenSettings settings, ThinkThenStop stop);
 ThinkThenReply thinkthen_cpp_relate_validate(const uint8_t *rule, size_t rule_len,
                                             const ThinkThenText *members, size_t member_count,
                                             int32_t list, int32_t from_file, ThinkThenSettings settings);

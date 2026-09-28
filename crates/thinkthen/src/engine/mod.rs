@@ -37,6 +37,7 @@ pub(crate) struct Cancel<'a> {
     deadline: Option<Deadline>,
     check: Option<Check<'a>>,
     sends: Arc<AtomicUsize>,
+    send_budget: Option<(crate::public::SendBudget, Option<u64>)>,
     #[cfg(test)]
     blocked: Option<std::sync::mpsc::Sender<()>>,
     #[cfg(test)]
@@ -105,6 +106,37 @@ impl<'a> Cancel<'a> {
             token,
             ..self.clone()
         }
+    }
+
+    pub(crate) fn with_send_budget(
+        &self,
+        send_budget: Option<(crate::public::SendBudget, Option<u64>)>,
+    ) -> Self {
+        Self {
+            send_budget,
+            ..self.clone()
+        }
+    }
+
+    pub(crate) fn reserve_send(
+        &self,
+        last_status: Option<u16>,
+    ) -> Result<Option<crate::public::SendReservation>, error::Error> {
+        self.send_budget
+            .as_ref()
+            .map(|(budget, limit)| {
+                budget
+                    .reserve(*limit, last_status)
+                    .map_err(|denial| match denial {
+                        crate::public::SendBudgetDenial::BeforeFirstSend => {
+                            error::Error::SendBudgetFirst
+                        }
+                        crate::public::SendBudgetDenial::BeforeRetry { last_status } => {
+                            error::Error::SendBudgetRetry(last_status)
+                        }
+                    })
+            })
+            .transpose()
     }
 
     /// Share this stop flag with one call whose host check runs on this thread.

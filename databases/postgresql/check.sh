@@ -621,6 +621,59 @@ ERROR:  thinkthen usage: thinkthen.max_requests_total allows 3 requests in this 
 	same "$(bcount)" 6
 }
 check the_total_holds_across_rows
+sql_settings_and_retry_total() {
+	fresh arm/503
+	out=$(q -c "SET thinkthen.max_requests_total = 1" -c "SET thinkthen.max_retries = 1" \
+		-c "SELECT thinkthen_decide('$Q', 'one')")
+	has "$out" "thinkthen usage: thinkthen.max_requests_total allows 1 requests in this backend, and they are spent (retryable: no)"
+	same "$(bcount)" 1
+	fresh generic
+	out=$(q -c "SET thinkthen.model = 'jev-1.13.0'" -c "SET thinkthen.timeout = '2s'" \
+		-c "SET thinkthen.max_retries = 0" -c "SELECT thinkthen_decide('$Q', 'one')")
+	same "$out" t
+	same "$(bcount)" 1
+	fresh arm/delay/2000
+	out=$(q -c "SET thinkthen.timeout = '1s'" -c "SET thinkthen.max_retries = 0" \
+		-c "SELECT thinkthen_decide('$Q', 'slow')")
+	has "$out" "thinkthen backend: the backend timed out"
+	same "$(bcount)" 1
+	fresh generic
+	out=$(q -c "SET thinkthen.profile = '{}'" -c "SELECT thinkthen_decide('$Q', 'one')")
+	has "$out" "thinkthen usage: the profile JSON"
+	same "$(bcount)" 0
+	fresh generic
+	out=$(q -c 'SET thinkthen.profile = '\''{"schema":"thinkthen.backend-profile/1","name":"small","max_evidence_bytes":4}'\''' \
+		-c "SELECT thinkthen_decide('$Q', 'a red door')")
+	has "$out" "thinkthen usage: profile small allows at most 4 evidence bytes"
+	same "$(bcount)" 0
+	fresh generic
+	out=$(q -c "SET thinkthen.cache = 'off'" -c "SELECT thinkthen_decide('$Q', 'same')" \
+		-c "SELECT thinkthen_decide('$Q', 'same')")
+	same "$out" $'t\nt'
+	same "$(bcount)" 2
+	fresh generic
+	out=$(q -c "SET thinkthen.cache = 'off'" -c "SET thinkthen.record = '$RUN/saved'" \
+		-c "SELECT thinkthen_decide('$Q', 'saved')" -c "SET thinkthen.record = ''" \
+		-c "SET thinkthen.replay = '$RUN/saved'" -c "SELECT thinkthen_decide('$Q', 'saved')" \
+		-c "SELECT thinkthen_decide('$Q', 'missing')")
+	has "$out" "thinkthen local: the replay folder holds no reply for this request"
+	same "$(bcount)" 1
+	q -c "CREATE ROLE tt_setting LOGIN" -c "GRANT EXECUTE ON FUNCTION thinkthen_usage() TO tt_setting" >/dev/null
+	has "$(PGUSER_AS=tt_setting q -c "SELECT count(*) FROM thinkthen_usage()" -c "SET thinkthen.record = '$RUN/other'")" \
+		'permission denied to set parameter "thinkthen.record"'
+}
+check sql_settings_and_retry_total
+shared_settings_cases() {
+	python3 tests/settings_cases.py plan >"$RUN/settings.plan"
+	while IFS=$'\t' read -r id arm expected; do
+		fresh "$arm"
+		line=$(python3 tests/settings_cases.py "$SOCK" "$id" "$RUN/settings-$id")
+		same "$line" "pass $id"
+		actual=$(bcount)
+		[ "$actual" = "$expected" ] || { echo "$id: wanted $expected sends, got $actual" >&2; return 1; }
+	done <"$RUN/settings.plan"
+}
+check shared_settings_cases
 a_cancelled_send_counts_toward_the_total() {
 	fresh arm/held "thinkthen.max_requests_total = 1"
 	q -c "SELECT thinkthen_decide('$Q', 'held')" -c "SELECT thinkthen_decide('$Q', 'next')" >"$RUN/held.out" 2>&1 &
