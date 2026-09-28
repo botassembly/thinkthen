@@ -2,7 +2,9 @@
 
 use std::fmt;
 
-use crate::core::{self, AnswerOutcome, Backend, BackendProfile, ProfileName, Threshold, Value};
+use crate::core::{
+    self, AnswerOutcome, Backend, BackendProfile, ModelName, ProfileName, Threshold, Value,
+};
 use crate::public::annotated::{FailureCause, NamedAnnotation};
 use crate::public::error::Error;
 use crate::public::recognize::Recognized;
@@ -182,6 +184,33 @@ pub(crate) struct ObservedQuestion {
 }
 
 impl ObservedQuestion {
+    pub(crate) fn from_annotated(
+        entry: &core::AnnotatedEntry,
+        profile: Option<&ProfileName>,
+        backend: &Backend,
+        model: &ModelName,
+        receipt: (Option<core::Usage>, u64, bool),
+    ) -> Result<Self, Error> {
+        let (usage, sent, cached) = receipt;
+        let (question, threshold, outcome, request) =
+            if let Some((question, answer, threshold, request)) = entry.answered() {
+                (
+                    question,
+                    threshold,
+                    AnswerOutcome::Answered(answer.clone()),
+                    request,
+                )
+            } else if let Some((question, failure, request)) = entry.failed() {
+                (question, None, AnswerOutcome::Failed(failure), request)
+            } else {
+                return Err(Error::defect("an annotated entry held no answer"));
+            };
+        let reply = core::Reply::new(model.clone(), vec![outcome.clone()], usage);
+        Self::from_reply(
+            question, threshold, profile, backend, &outcome, &reply, request, sent, cached, 1, 0,
+        )
+    }
+
     #[allow(
         clippy::too_many_arguments,
         reason = "one bounded reply supplies the question and its request share"

@@ -4,6 +4,10 @@ use std::sync::Arc;
 
 mod observation;
 use observation::observe_find;
+mod annotate_observation;
+use annotate_observation::observe_annotated;
+mod annotation;
+use annotation::annotated;
 
 use crate::core::{self, Find, Plan, Value, ranking};
 use crate::engine::facade::{self, Completed};
@@ -14,11 +18,15 @@ use crate::public::engine::{DECISIONS, DecisionQuestion, Engine, Evidence, evide
 use crate::public::error::{Error, ErrorKind};
 use crate::public::options::{CallOptions, Stop};
 use crate::public::question::{ChooseQuestion, Kind, Question, TagQuestion};
-use crate::public::results::{Answer, Call, Found, Ranked, Row, Written};
+use crate::public::results::{Answer, Call, Found, ObservedQuestion, Ranked, Row, Written};
 use crate::public::set::QuestionSet;
 
-/// One record's named values, in set order, and their bare JSON line.
-type Values = (Vec<(String, core::AnnotatedValue)>, Written);
+/// One record's named values and bounded per-member observations.
+struct Values {
+    values: Vec<(String, core::AnnotatedValue)>,
+    json: Written,
+    observed: Vec<(String, ObservedQuestion)>,
+}
 
 /// One record's answer and its probability of yes.
 type Decided = (Value, f64);
@@ -398,15 +406,17 @@ impl Engine {
             let (engine, set, cancel) =
                 (Arc::clone(&self.inner), questions.0.clone(), stop.shared());
             let worker = Arc::clone(&engine);
+            let observing = stop.observing();
             let answer: Arc<batch::Answer<_>> =
-                Arc::new(move |text: &str| annotated(&worker, &set, text, &cancel));
+                Arc::new(move |text: &str| annotated(&worker, &set, text, &cancel, observing));
             batch::start(
                 engine,
                 records.into_iter(),
                 stop,
                 self.most,
                 answer,
-                |item, (values, json)| Some(AnnotatedRecord::new(item, values, json)),
+                |item, value: Values| Some(AnnotatedRecord::new(item, value.values, value.json)),
+                observe_annotated,
             )
         }))
     }
@@ -453,67 +463,4 @@ impl Engine {
             pair,
         )
     }
-}
-
-/// Answer every question of the set for one record.
-fn annotated(
-    engine: &facade::Engine,
-    set: &core::QuestionSet,
-    text: &str,
-    cancel: &crate::engine::Cancel<'_>,
-) -> Result<Completed<Values, Error>, Error> {
-    let record = record(set, text)?;
-    let parts = set
-        .groups()
-        .into_iter()
-        .map(|places| Ok((set.group_evidence(&places, &record)?, places)))
-        .collect::<Result<Vec<_>, core::PartError>>()
-        .map_err(|error| match error {
-            core::PartError::Record(error) => Error::usage(error.to_string()),
-            core::PartError::Reading(_) => {
-                Error::defect("a checked question set could not read its parts")
-            }
-        })?;
-    let model = engine.backend().model();
-    let plan = |places: &[usize]| {
-        let part = parts
-            .iter()
-            .find(|(_, held)| held == places)
-            .map(|(part, _)| part.clone())
-            .ok_or(crate::engine::error::Error::Defect(
-                "an annotate group has no part",
-            ))?;
-        let questions = places
-            .iter()
-            .filter_map(|place| set.questions().get(*place));
-        Plan::new(
-            part,
-            model.clone(),
-            questions.map(|named| named.question().clone()).collect(),
-        )
-        .map_err(|_| crate::engine::error::Error::Defect("an annotate group asks nothing"))
-    };
-    let annotation = engine.annotate(set, plan, cancel)?;
-    let json = Written::of(&core::NamedValues::new(annotation.values.clone()))?;
-    Ok(Completed::one(
-        (annotation.values, json),
-        annotation.replayed,
-        annotation.failed_questions > 0,
-    ))
-}
-
-/// One record as its groups read it. Only a part group parses the text, once,
-/// as the command reads a whole document, so a root-only set sends it as given.
-fn record(set: &core::QuestionSet, text: &str) -> Result<core::BatchRecord, Error> {
-    let evidence = evidence(text)?;
-    if set.first_part().is_none() {
-        let value = core::Json::String(text.to_owned());
-        return Ok(core::BatchRecord { evidence, value });
-    }
-    let usage = |error: core::RecordError| Error::usage(error.to_string());
-    let reading = core::Reading::new(core::Framing::Document, Vec::new())
-        .map_err(|_| Error::defect("a document reading takes no pointer"))?;
-    let held = reading.annotation_record(text.as_bytes()).map_err(usage)?;
-    let value = reading.batch_record(&held).map_err(usage)?.value;
-    Ok(core::BatchRecord { evidence, value })
 }

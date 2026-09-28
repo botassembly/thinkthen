@@ -86,6 +86,7 @@ impl<T> Source<T> for Option<Error> {
 pub(crate) type Answer<V> = dyn Fn(&str) -> Result<Completed<V, Error>, Error> + Send + Sync;
 type ScheduledAnswer<'a, W, V> =
     dyn Fn(&W) -> Result<Completed<V, Error>, Error> + Send + Sync + 'a;
+type Observe<V> = for<'a> fn(&V, usize, &Stop<'a>) -> Result<(), Error>;
 
 pub(super) enum Event<W, V> {
     Port(InputPort<W, V, Error>),
@@ -99,17 +100,23 @@ struct Stream<'a, I: Iterator, V, T> {
     items: I,
     held: VecDeque<I::Item>,
     pair: fn(I::Item, V) -> Option<T>,
+    observe: Observe<V>,
     events: Receiver<Event<String, V>>,
     port: Option<InputPort<String, V, Error>>,
     stop: Stop<'a>,
     facts: Option<Facts>,
     fed: usize,
+    returned: usize,
     most: Option<usize>,
     scheduler: Option<JoinHandle<()>>,
 }
 
 /// Start the scheduler for these records. Nothing is read or sent until the
 /// first pull.
+#[allow(
+    clippy::too_many_arguments,
+    reason = "one annotation stream selects its worker, row pairing, and caller observation"
+)]
 pub(crate) fn start<'a, I, V, T>(
     engine: Arc<facade::Engine>,
     records: I,
@@ -117,6 +124,7 @@ pub(crate) fn start<'a, I, V, T>(
     most: Option<usize>,
     answer: Arc<Answer<V>>,
     pair: fn(I::Item, V) -> Option<T>,
+    observe: Observe<V>,
 ) -> Batch<'a, T>
 where
     I: Iterator + 'a,
@@ -134,11 +142,13 @@ where
             items: records,
             held: VecDeque::new(),
             pair,
+            observe,
             events,
             port: None,
             stop,
             facts: None,
             fed: 0,
+            returned: 0,
             most,
             scheduler: Some(scheduler),
         }),
@@ -228,6 +238,10 @@ where
                         self.end(Error::defect("a row arrived with no record"))
                     )));
                 };
+                if let Err(error) = (self.observe)(&value, self.returned, &self.stop) {
+                    return Some(Some(Err(self.end(error))));
+                }
+                self.returned += 1;
                 return (self.pair)(item, value).map(|row| Some(Ok(row)));
             }
             Event::End(ended) => {

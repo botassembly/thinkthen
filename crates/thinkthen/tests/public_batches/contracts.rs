@@ -248,3 +248,90 @@ fn find_observer_names_its_actual_question_and_selected_unit() {
     assert_eq!(backend.count(), 1);
     assert_eq!(*seen.lock().expect("observations"), ["question", "row"]);
 }
+
+#[test]
+fn eager_observer_panic_returns_its_payload_after_the_call() {
+    let _serial = serial();
+    let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
+    let engine = engine(listener.base());
+    let observe =
+        |_: RecordObservation<'_>| std::panic::resume_unwind(Box::new("observer payload"));
+    let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        engine.decide_with(&question(), "alpha", CallOptions::new().observe(&observe))
+    }));
+    let Err(payload) = caught else {
+        panic!("observer panic did not reach its caller");
+    };
+    assert_eq!(payload.downcast_ref::<&str>(), Some(&"observer payload"));
+    assert_eq!(listener.count(), 1);
+    assert_eq!(
+        engine
+            .decide(&question(), "beta")
+            .expect("next call")
+            .value(),
+        &Answer::Yes
+    );
+    assert_eq!(listener.count(), 2);
+}
+
+#[test]
+fn annotation_observer_keeps_named_success_and_failure_in_set_order() {
+    let _serial = serial();
+    let reply = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":3,"output_tokens":1}}"#;
+    let listener = Listener::answering(move |_| Canned::ok(reply)).expect("listener");
+    let engine = engine(listener.base());
+    let set = QuestionSet::from_json(
+        r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
+    )
+    .expect("set");
+    let seen = Mutex::new(Vec::new());
+    let observe = |event: RecordObservation<'_>| match event {
+        RecordObservation::Question {
+            index,
+            member,
+            detail,
+            ..
+        } => {
+            assert_eq!(index, 0);
+            assert_eq!(detail.question_sha256().len(), 64);
+            assert_eq!(detail.requests().len(), 1);
+            assert_eq!(detail.model(), "jev-latest");
+            assert_eq!(detail.url(), listener.url());
+            seen.lock().expect("observations").push((
+                member.expect("member").to_owned(),
+                detail.failure(),
+                detail.requests_sent(),
+                detail.usage().expect("usage share").input_tokens(),
+            ));
+        }
+        RecordObservation::Row { index, value } => {
+            assert_eq!(index, 0);
+            let ObservedRow::Annotated(values) = value else {
+                panic!("an annotated row");
+            };
+            assert_eq!(
+                values.iter().map(|one| one.name()).collect::<Vec<_>>(),
+                ["first", "second"]
+            );
+            assert!(matches!(values[1].value(), thinkthen::Annotated::Failed(_)));
+        }
+    };
+    let rows = engine
+        .annotate_with(&set, ["alpha"], CallOptions::new().observe(&observe))
+        .collect::<Result<Vec<_>, _>>()
+        .expect("one partly answered annotation");
+    assert_eq!(rows.len(), 1);
+    assert_eq!(listener.count(), 1);
+    assert_eq!(
+        *seen.lock().expect("observations"),
+        [
+            ("first".to_owned(), None, 1, 2),
+            (
+                "second".to_owned(),
+                Some(thinkthen::FailureCause::MissingAnswer),
+                0,
+                1,
+            ),
+        ]
+    );
+}

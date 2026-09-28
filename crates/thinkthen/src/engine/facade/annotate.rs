@@ -37,12 +37,20 @@ pub(crate) struct PreparedGroup {
 pub(crate) struct Annotation {
     pub(crate) values: Vec<(String, AnnotatedValue)>,
     pub(crate) details: Vec<(String, AnnotatedEntry)>,
+    pub(crate) receipts: Vec<MemberReceipt>,
     pub(crate) model: Option<ModelName>,
     pub(crate) usage: Option<Usage>,
     pub(crate) requests: Vec<String>,
     pub(crate) requests_sent: u64,
     pub(crate) replayed: bool,
     pub(crate) failed_questions: usize,
+}
+
+/// One set member's even share of the request chunk that answered it.
+pub(crate) struct MemberReceipt {
+    pub(crate) usage: Option<Usage>,
+    pub(crate) requests_sent: u64,
+    pub(crate) replayed: bool,
 }
 
 impl Engine {
@@ -122,9 +130,11 @@ pub(crate) fn assemble(
     let size = set.questions().len();
     let mut values: Vec<Option<AnnotatedValue>> = vec![None; size];
     let mut details: Vec<Option<AnnotatedEntry>> = vec![None; size];
+    let mut receipts: Vec<Option<MemberReceipt>> = (0..size).map(|_| None).collect();
     let mut annotation = Annotation {
         values: Vec::new(),
         details: Vec::new(),
+        receipts: Vec::new(),
         model: None,
         usage: Some(Usage::new(0, 0)),
         requests: Vec::new(),
@@ -146,10 +156,15 @@ pub(crate) fn assemble(
             .requests_sent
             .checked_add(chunk.requests_sent)
             .ok_or(Error::Defect("a request count overflowed"))?;
-        annotation.failed_questions += take_answers(set, &chunk, &mut values, &mut details)?;
+        annotation.failed_questions +=
+            take_answers(set, &chunk, &mut values, &mut details, &mut receipts)?;
     }
     annotation.values = pair(set, values, "a question has no value")?;
     annotation.details = pair(set, details, "a question has no detailed answer")?;
+    annotation.receipts = receipts
+        .into_iter()
+        .map(|receipt| receipt.ok_or(Error::Defect("a question has no request receipt")))
+        .collect::<Result<Vec<_>, _>>()?;
     Ok(annotation)
 }
 
@@ -158,6 +173,7 @@ fn take_answers(
     chunk: &ChunkAnswer,
     values: &mut [Option<AnnotatedValue>],
     details: &mut [Option<AnnotatedEntry>],
+    receipts: &mut [Option<MemberReceipt>],
 ) -> Result<usize, Error> {
     if chunk.places.len() != chunk.reply.outcomes().len() {
         return Err(Error::Defect(
@@ -165,7 +181,8 @@ fn take_answers(
         ));
     }
     let mut failed = 0;
-    for (place, outcome) in chunk.places.iter().zip(chunk.reply.outcomes()) {
+    for (position, (place, outcome)) in chunk.places.iter().zip(chunk.reply.outcomes()).enumerate()
+    {
         let question = set
             .questions()
             .get(*place)
@@ -175,6 +192,17 @@ fn take_answers(
         else {
             return Err(Error::Defect("an answer points outside its set"));
         };
+        let Some(receipt_slot) = receipts.get_mut(*place) else {
+            return Err(Error::Defect("a receipt points outside its set"));
+        };
+        *receipt_slot = Some(MemberReceipt {
+            usage: chunk
+                .reply
+                .usage()
+                .map(|whole| whole.share(chunk.places.len(), position)),
+            requests_sent: crate::core::share(chunk.requests_sent, chunk.places.len(), position),
+            replayed: chunk.replayed,
+        });
         let digest = chunk.digest.clone();
         match outcome {
             AnswerOutcome::Answered(answer) => {
