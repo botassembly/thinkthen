@@ -1,6 +1,6 @@
 # Test harness and review leftovers
 
-Status: Open. Ticket 0127 settles items 2, 3, and 10. It lands the item 4 fix. Item 4's sweep passed 50 runs of 50 at normal load, recorded in `sdlc/records/0127-build-test-harness-fixes.md`. Its proof at high load is still owed. Ticket 0133 settles items 6, 11, 12, and 13 on 2026-09-26. Ticket 0138 settles item 5 on 2026-09-26. Quick Fix qf-h1-h3-h6 settles items 7, 8, and 9 on 2026-09-26.
+Status: Open. Ticket 0127 settles items 2, 3, and 10. It lands the item 4 fix. Item 4's sweep passed 50 runs of 50 at normal load, recorded in `sdlc/records/0127-build-test-harness-fixes.md`. The old high-load repeat demand is historical and separately opt-in under Ian's later functional-gate ruling; it is not a pending ordinary gate or a claim of a high-load pass. Ticket 0133 settles items 6, 11, 12, and 13 on 2026-09-26. Ticket 0138 settles item 5 on 2026-09-26. Quick Fix qf-h1-h3-h6 settles items 7, 8, and 9 on 2026-09-26.
 
 Ian's ruling, 2026-09-25, on item 10: nobody asks the rusqlite maintainers for a fix. Keep the hand-extended API table and add a test.
 
@@ -9,6 +9,10 @@ This issue merges six files: `2026-09-25-test-harness-and-review-leftovers.md`, 
 ## 1. Hand-rolled loopback listeners duplicate the shared backend
 
 Kind: cleanup. Owner: ticket 0119.
+
+The bounded `engine/width_tests.rs::serving` helper replacement landed at reviewed source `b89c58f7`. Its two permit/replay tests remain and passed before and after. The other historical sites remain pending individual equivalence checks; synchronous no-connection and raw-wire tests are not redundant merely because they use sockets. See `sdlc/records/0119-listener-build.md`.
+
+Preparation update, 2026-09-27: this item describes a wider listener-helper cleanup, not an automatic deletion under 0119's proposed first deadline-test slice. Its connection-count and arrival-order assertions need exact replacement proofs, and `conformance/backend` needs a separate file claim before edits. The historical line references below may have moved on current main.
 
 Ticket 0092 moved the loopback listener into `conformance/backend`, so every test can share one backend. Eleven test helpers still open their own `TcpListener`:
 
@@ -67,7 +71,7 @@ The old issue guessed the listener was not yet accepting. That guess is wrong. `
 
 Fix: have `serve_script` keep the port open after its script ends and record each extra connection. Make the sweep's failure message print the requests and connections the listener saw.
 
-Done when: the sweep passes 50 runs in a row under the heavy lock at high load, or a failure names the stray connection.
+Historical 2026-09-25 completion demand: the sweep passes 50 runs in a row under the heavy lock at high load, or a failure names the stray connection. Under Ian's later ruling, that repeated high-load campaign is opt-in. Ticket 0127's functional listener fix and the retained secrecy sweep are the ordinary proof; this issue does not claim a high-load pass or close the umbrella.
 
 ## 5. `--field` and `--options` echo a pointer with control characters
 

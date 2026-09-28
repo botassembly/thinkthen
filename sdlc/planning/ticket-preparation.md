@@ -98,3 +98,6 @@ For layered builder configuration, trace when each candidate value is validated 
 For native panic handling, trace the hook before the catch, detached worker entry, opaque payload destruction and actual artifact linkage. A caught payload may panic from Drop; name the disposal policy and its cost. A process-global Rust hook is not evidence that hook state outlives its DSO. Verify the changed package and exact load outcome before prescribing a new lifetime policy or claiming other platforms.
 
 Before declaring a proof complete, match each promised property to its actual assertion before and after the triggering operation. A read-only success, an absent directory, and a miss in an existing directory establish different guarantees. Extend the closest existing boundary test when its setup already covers the case.
+
+
+Keep the approval work proportional too. A small internal cleanup within an already accepted method needs its exact claim, preservation evidence and fresh code review. Use another design review when it changes the outcome, shared fixture contract or material safety assumption; do not repeat design approval just because another helper is selected. The one-helper 0119 slice retained useful evidence, but its additional planning and review records must not become the default cost of every small cleanup.
