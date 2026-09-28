@@ -116,16 +116,45 @@ pub(crate) fn filter(arguments: &FilterArguments) -> Result<(Resolved, FileTier)
     )
 }
 
-/// Settle everything `rank` was asked, which reads no rule at all.
+/// Settle the ordinary yes/no rank or a saved graded score question.
 pub(crate) fn rank(arguments: &RankArguments) -> Result<(Resolved, FileTier), Failure> {
-    yes_no(
-        "rank",
-        &arguments.question,
-        &arguments.meanings,
-        arguments.threshold.as_ref(),
-        Cutting::NoRule,
-        &arguments.common,
+    let (file, batch) = read_top(&arguments.question)?;
+    let graded = file.as_ref().is_some_and(|held| held.verb() == Verb::Score);
+    if graded && (arguments.meanings.yes.is_some() || arguments.meanings.no.is_some()) {
+        return Err(Failure::Usage(
+            "`rank` with a `score` question file takes no --true or --false",
+        ));
+    }
+    let typed = Typed {
+        threshold: arguments.threshold.clone(),
+        yes: arguments.meanings.yes.clone(),
+        no: arguments.meanings.no.clone(),
+        model: arguments.common.model.clone(),
+        on: fields(&arguments.common),
+        cutting: Cutting::NoRule,
+        ..Typed::default()
+    };
+    let verb = if graded { Verb::Score } else { Verb::Decide };
+    let resolved = resolve(
+        verb,
+        typed_text(&arguments.question, file.is_some()),
+        file.as_ref(),
+        &typed,
     )
+    .map_err(|error| match error {
+        crate::core::QuestionFileError::VerbMismatch { held, .. } => Failure::QuestionKind {
+            command: "rank",
+            held: held.word(),
+        },
+        other => Failure::Question(other),
+    })?;
+    Ok((
+        resolved,
+        FileTier {
+            batch,
+            tuned: false,
+        },
+    ))
 }
 
 /// Settle everything `choose` was asked.

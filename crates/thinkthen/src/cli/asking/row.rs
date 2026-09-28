@@ -49,12 +49,17 @@ impl Judging<'_> {
         context: RowContext<'_>,
     ) -> Result<Judged, Failure> {
         let (outcome, replayed) = (judged.outcome, judged.answered.replayed);
-        let probability = judged.answer.yes();
+        let order_value = match &judged.value {
+            Value::Score(position) => Some(*position),
+            _ => judged.answer.yes(),
+        };
         let printed =
             if self.view.details && (self.keeping != Keeping::Passing || outcome == Outcome::Yes) {
-                // `rank` orders and never selects, so a ranked row carries no
-                // value. A value here would be a cut at 0.5 that nobody named.
-                let shown = if self.keeping == Keeping::Ordered {
+                // Ordinary rank has no cut and therefore no yes/no value.
+                // Graded rank keeps the score value that orders its records.
+                let shown = if self.keeping == Keeping::Ordered
+                    && !matches!(question, Question::Score { .. })
+                {
                     Value::YesNo(None)
                 } else {
                     judged.value.clone()
@@ -106,7 +111,7 @@ impl Judging<'_> {
             printed,
             outcome,
             replayed,
-            probability,
+            order_value,
             partial_failure: false,
             profile_mismatch: self.mismatch.notice(),
         })

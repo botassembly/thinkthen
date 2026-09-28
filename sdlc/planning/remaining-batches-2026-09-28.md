@@ -46,7 +46,7 @@ Main through06b0803e adds three distinct issues after the75-row snapshot. The th
 
 ## Current preparation
 
-Cross-surface5, recognition/batching16 and cache6 passed independent review. Accounting8 passed fresh review at53b28a5 with the Intel current-source refresh. Preparation now covers 54 rows: the prior49, four question-control rows acceptedd1f429f4 and the separately mapped cache status/recovery issue checked by the High reviewer. Eleven have closed or been explicitly retired after review; 43 remain open. 0248 passed fresh correctness and measurement reviews and closed its issue. The original grouping below is a scheduling snapshot; the live table holds newer package evidence and closures. Intel C++ has now landed with translated proof; native Intel/macOS15 and actual release-runner qualification remain separate.
+Cross-surface5, recognition/batching16 and cache6 passed independent review. Accounting8 passed fresh review at53b28a5 with the Intel current-source refresh. Preparation now covers 55 rows: the prior49, four question-control rows acceptedd1f429f4, the separately mapped cache status/recovery issue checked by the High reviewer, and the bounded test-retirement inventory. Eleven have closed or been explicitly retired after review; 44 remain open. Fresh review of five test groups found no safe retirement; the corrected evidence is in `../records/2026-09-28-bounded-test-retirement-inventory.md`. 0248 passed fresh correctness and measurement reviews and closed its issue. The original grouping below is a scheduling snapshot; the live table holds newer package evidence and closures. Intel C++ has now landed with translated proof; native Intel/macOS15 and actual release-runner qualification remain separate.
 
 ## Preparation handoff
 

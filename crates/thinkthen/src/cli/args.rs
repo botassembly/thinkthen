@@ -319,8 +319,8 @@ pub(crate) struct FilterArguments {
 pub(crate) struct RankArguments {
     /// The question asked of each record, or `@` and the path of a question file.
     ///
-    /// As `@FILE` it is a question file holding one `decide` question, and a
-    /// value typed beside it replaces the file's value.
+    /// As `@FILE` it is a saved `decide` or `score` question. A score file
+    /// ranks by its weighted level position; typed meanings fit decide only.
     pub(crate) question: String,
 
     /// Taken so the command can say where the evidence goes.

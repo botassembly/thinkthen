@@ -6,6 +6,7 @@ use std::process::Output;
 use crate::harness::{Canned, Listener, spawn_one as spawn};
 
 mod default_framing;
+mod graded_rank;
 mod model_versions;
 mod rank_top;
 

@@ -21,3 +21,8 @@ A search engine returns 50 to 1,000 candidates for a query. For each candidate, 
 3. RRF is arithmetic over ranks and needs no model. It fits as a `transform`, such as `fuse`, which merges two ranked lists by id. It is not an eleventh function.
 
 The vocabulary already names reranking as a `rank` use (`sdlc/planning/ten-use-cases.md` line 23). Ian can overturn all three.
+
+
+## Graded command slice landed
+
+Ticket 0223 passed fresh independent code review at `0e242567` and integration checks at `96e1058d`. The command now accepts `rank @score-file`, orders by the existing weighted score with stable top ties, retains score details and counts every judged record. Ordinary yes/no rank and library rank APIs retain their behavior. The build and review records identify exact request, digest, output and failure proof. Optional per-level weights and reciprocal rank fusion remain open, and public documentation is held for marketing. This source issue is not closed by the first slice.
